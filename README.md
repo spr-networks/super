@@ -57,10 +57,10 @@ Note that if the built-in wireless is to be used, WPA3 is not currently availabl
 
 ## Running:
 
-
+```
 ./run_docker_compose.sh
 ./run_monitor.sh
-
+```
 
 ## Adding additional devices
 
