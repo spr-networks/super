@@ -15,7 +15,7 @@ All source code can be built on the pi with
 
 ## Configuration
 
-The current setup assumes you'll be using a raspberry pi model 4b with a AWUS036ACM wifi dongle (wlan1) 
+The current setup assumes you'll be using a raspberry pi model 4b with a AWUS036ACM wireless dongle (wlan1) 
 and an additional usb ethernet dongle (eth1) connected to a switch for additional wired devices.
 The built-in ethernet port of the raspberry pi (eth0) is connected to upstream/WAN/internet
 
@@ -32,26 +32,27 @@ For WPA2 passwords (since many devices will not support WPA2 yet), copy wpa2pskf
 
 Lastly, modify configs/zones/ and set which MAC addresses are allowed which level of access
 The default zones are:
-- # This is the default, no devices have to be added to be treated as such. No DNS access, no LAN access, no internet
+- \# This is the default, no devices have to be added to be treated as such. No DNS access, no LAN access, no internet
 - isolated 
-- # Allows DNS access as well as talking to all LAN devices (wireless and wired LAN)
+- \# Allows DNS access as well as talking to all LAN devices (wireless and wired LAN)
 - lan_only 
-- # Allows internet/WAN forwareding on top of the above
+- \# Allows internet/WAN forwareding on top of the above
 - wan_lan
-- # Allows internet access but no lan access
+- \# Allows internet access but no lan access
 - wan_only 
-- # Placeholder for future privileged services, Currently equivalent to the above
+- \# Placeholder for future privileged services, Currently equivalent to the above
 - wan_lan_admin 
 
 The groups directory can be used to create sets of devices that can communicate amongst themselves if a device does not need full LAN access. 
 
 
 
-## Additional Notes
+### Additional Notes
 You may want to modify dns-Corefile to set up DNS server configuration as well as hostapd in configs/gen_hostapd.sh
 
-For using the built-in wifi or a different dongle, the hostapd configuration may need to be modified in configs/gen_hostapd.sh.
-Note that if the built-in WiFi is to be used, WPA3 is not currently available without additional broadcom firmware patches. 
+### Using a different wireless dongle 
+For using the built-in wireless or a different dongle, the hostapd configuration may need to be modified in configs/gen_hostapd.sh.
+Note that if the built-in wireless is to be used, WPA3 is not currently available without additional broadcom firmware patches. 
 
 
 ## Running:
