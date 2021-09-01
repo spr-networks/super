@@ -13,7 +13,7 @@ All source code can be built on the pi with
 ./build_docker_compose.sh
 
 
-## Configuration
+### Configuration
 
 The current setup assumes you'll be using a raspberry pi model 4b with a AWUS036ACM wifi dongle (wlan1) 
 and an additional usb ethernet dongle (eth1) connected to a switch for additional wired devices.
