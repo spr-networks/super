@@ -13,7 +13,7 @@ All source code can be built on the pi with
 ./build_docker_compose.sh
 
 
-### Configuration
+## Configuration
 
 The current setup assumes you'll be using a raspberry pi model 4b with a AWUS036ACM wifi dongle (wlan1) 
 and an additional usb ethernet dongle (eth1) connected to a switch for additional wired devices.
@@ -47,7 +47,7 @@ The groups directory can be used to create sets of devices that can communicate 
 
 
 
-### Additional Notes
+## Additional Notes
 You may want to modify dns-Corefile to set up DNS server configuration as well as hostapd in configs/gen_hostapd.sh
 
 For using the built-in wifi or a different dongle, the hostapd configuration may need to be modified in configs/gen_hostapd.sh.
