@@ -1,0 +1,3 @@
+
+- Consider adding services as a configuration option instead of being hardcoded (Currently mdns + ssdp)
+- Bipartite comms

@@ -1,0 +1,15 @@
+- Virtual ESSIDs are possible. Need to set BSSIDs with specific prefixes though
+Ex:
+..config
+#bssid=04:c0:ca:ae:d1:b0
+
+#virtual bssid for wpa2
+#bss=wlan1_0
+#bssid=06:c0:ca:ae:d1:b0
+#ssid=s5210wpa2
+#wpa=2
+#wpa_key_mgmt=WPA-PSK
+#rsn_pairwise=CCMP
+#wpa_psk_file=/configs/wpa2pskfile
+#ap_isolate=1
+#per_sta_vif=1

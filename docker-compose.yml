@@ -1,0 +1,51 @@
+version: '3.4'
+services:
+  base:
+    container_name: superbase
+    build: base
+    network_mode: host
+    privileged: true
+  dhcp:
+    container_name: superdhcp
+    build: dhcp
+    network_mode: host
+    privileged: true
+    volumes:
+      - type: bind
+        source: ./state/local_mappings
+        target: /local_mappings
+      - type: bind
+        source: ./state/sta_mac_iface_map/
+        target: /sta_mac_iface_map/
+      - type: bind
+        source: ./state/leases.txt
+        target: /leases.txt
+      - type: bind
+        source: /sys/fs/bpf
+        target: /sys/fs/bpf
+  dns:
+    container_name: superdns
+    build: dns
+    network_mode: host
+    privileged: true
+    volumes:
+      - type: bind
+        source: ./state/local_mappings
+        target: /local_mappings
+  wifid:
+    container_name: superwifid
+    build: wifid
+    network_mode: host
+    privileged: true
+    volumes:
+      - type: bind
+        source: ./state/sta_mac_iface_map/
+        target: /sta_mac_iface_map/
+  multicast_udp_proxy:
+    container_name: multicast_udp_proxy
+    build: multicast_udp_proxy
+    network_mode: host
+    privileged: true
+networks: 
+  default:
+    driver: none

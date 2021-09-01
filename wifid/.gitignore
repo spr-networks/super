@@ -1,0 +1,4 @@
+sta_mac_iface_map/*
+configs/sae_passwords
+configs/hostapd.conf
+configs/wpa2pskfile

@@ -1,0 +1,75 @@
+#!/bin/bash
+# netplug command
+. /configs/config.sh
+
+PATH=/usr/bin:/bin:/usr/sbin:/sbin
+export PATH
+
+dev="$1"
+action="$2"
+
+# Grab the iptables lock
+# Use a global exclusive lock to avoid race conditons
+exec 100>/tmp/dhcp_script.lock || exit 1
+flock 100 || exit 1
+
+#find the MAC address for this interface that the hostapd helper set.
+# If this interface was not from hostapd, the mapping wont be there, so ignore it
+
+if grep -q -F "$VLANSIF." <<< "$dev"; then
+  if test -f "/sta_mac_iface_map/$dev"; then
+    MAC=$(cat < /sta_mac_iface_map/$dev)
+  fi
+
+  # Try again
+  if [ "$MAC" = "" ]; then
+    sleep 1
+    MAC=$(cat < /sta_mac_iface_map/$dev)
+  fi
+fi
+
+RLINE=""
+# Delete existing dhcp rules for this interface
+RLINE=$(iptables -v -w -n -L INPUT --line-numbers | grep " $dev " | grep "udp spt:68 dpt:67" | awk '{print $1}' | head -n 1)
+while : ; do
+   test -z "$RLINE" && break
+   iptables -D INPUT "$RLINE"
+   RLINE=$(iptables -v -w -n -L INPUT --line-numbers | grep " $dev " | grep "udp spt:68 dpt:67" | awk '{print $1}' | head -n 1)
+done
+
+# Requires the same directory for xdp-dispatcher.o
+cd /code/xdp-tools/xdp-loader
+
+case "$action" in
+in)
+    # ignore DHCP for WAN interface and SSID interface
+    if [ "$dev" = "$WANIF" ] || [ "$dev" = "$SSID_INTERFACE" ]; then
+      exit 0
+    fi
+
+    # Attach the filter
+    ./xdp-loader load -m skb $dev /code/filter_dhcp_mismatch.o
+
+     # Accept DHCP on this interface now. INSERT at start because of droplog at the end
+     if [ "$MAC" = "" ]; then
+       iptables -I INPUT -i $dev -p udp --sport 68 --dport 67 -j ACCEPT
+     else
+       iptables -I INPUT -i $dev -p udp --sport 68 --dport 67 -m mac --mac-source $MAC -j ACCEPT
+     fi
+
+    ;;
+out)
+    #iptable rules were removed above
+
+    # Detach the filter
+    ./xdp-loader unload -a $dev
+
+    ;;
+probe)
+    exec /sbin/ip link set "$dev" up >/dev/null 2>&1
+    ;;
+*)
+    echo "I have been called with a funny action of '%s'!" 1>&2
+    exit 1
+    ;;
+esac

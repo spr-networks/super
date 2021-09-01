@@ -1,0 +1,27 @@
+# Until 3.9 is available for profiles, split out monitoring into a separate docker-compose file
+version: '3.4'
+services:
+  flowgather:
+    container_name: flowgather
+    build: flowgather
+    network_mode: host
+    privileged: true
+    volumes:
+      - type: bind
+        source: ./state/flowgather.db
+        target: /flowgather.db
+  telegraf:
+    container_name: supermon-telegraf
+    network_mode: host
+    image: telegraf
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+      - type: bind
+        source: ./configs/telegraf.conf
+        target: /etc/telegraf/telegraf.conf
+        read_only: true
+networks:
+  default:
+    driver: none
