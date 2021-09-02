@@ -9,10 +9,6 @@ NAME=$(echo "$3" | tr -cd '[:alnum:]._-')
 NAME=${NAME:=DefaultMissingName}
 IFACE=$4
 ROUTER=$5
-ORIGLAN=$LANIF
-
-#override
-LANIF=$IFACE
 
 # set the router IP on the interface
 ip addr add $ROUTER/$TINYSLASHMASK dev $IFACE
@@ -31,13 +27,13 @@ all_groups="dns internet lan $custom_groups"
 for N in $all_groups
 do
   nft -j list map inet filter ${N}_access | jq -rc '.nftables[1].map | .elem[] | .[] | .concat | if length > 0 then . else empty end | .[0] + " " + .[1] + " " + .[2]' 2>/dev/null | \
-    (while read -a VMAP; do  grep -iE "${IP} |${LANIF} |${MAC}" <<< ${VMAP[@]} && nft delete element inet filter ${N}_access { ${VMAP[0]} . ${VMAP[1]} . ${VMAP[2]} : accept }; done )
+    (while read -a VMAP; do  grep -iE "${IP} |${IFACE} |${MAC}" <<< ${VMAP[@]} && nft delete element inet filter ${N}_access { ${VMAP[0]} . ${VMAP[1]} . ${VMAP[2]} : accept }; done )
 done
 
 
 # Allow this MAC address to talk from this IP
 SET_ADD() {
-  nft add element inet filter ${1}_access { ${IP} . ${LANIF} . ${MAC} : accept }
+  nft add element inet filter ${1}_access { ${IP} . ${IFACE} . ${MAC} : accept }
 }
 
 ALLOW_DNS() {
@@ -92,9 +88,9 @@ do
     nft list map inet filter ${group}_dst_access 2>/dev/null >/dev/null || CREATE_CUSTOM_GROUP ${group}
     # Add the ip/mac/ifname to the group map it belongs in
     # This comes first, continue
-    nft add element inet filter ${group}_dst_access { ${IP} . ${LANIF} : continue }
+    nft add element inet filter ${group}_dst_access { ${IP} . ${IFACE} : continue }
     # This comes second, accept immediately in this case
-    nft add element inet filter ${group}_mac_src_access { ${IP} . ${LANIF} . ${MAC} : accept }
+    nft add element inet filter ${group}_mac_src_access { ${IP} . ${IFACE} . ${MAC} : accept }
   fi
 done
 
