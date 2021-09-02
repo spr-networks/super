@@ -16,7 +16,7 @@ flock 100 || exit 1
 #find the MAC address for this interface that the hostapd helper set.
 # If this interface was not from hostapd, the mapping wont be there, so ignore it
 
-if grep -q -F "$VLANSIF." <<< "$dev"; then
+if grep -q -F "$VLANSIF" <<< "$dev"; then
   if test -f "/sta_mac_iface_map/$dev"; then
     MAC=$(cat < /sta_mac_iface_map/$dev)
   fi
@@ -28,14 +28,10 @@ if grep -q -F "$VLANSIF." <<< "$dev"; then
   fi
 fi
 
-RLINE=""
-# Delete existing dhcp rules for this interface
-RLINE=$(iptables -v -w -n -L INPUT --line-numbers | grep " $dev " | grep "udp spt:68 dpt:67" | awk '{print $1}' | head -n 1)
-while : ; do
-   test -z "$RLINE" && break
-   iptables -D INPUT "$RLINE"
-   RLINE=$(iptables -v -w -n -L INPUT --line-numbers | grep " $dev " | grep "udp spt:68 dpt:67" | awk '{print $1}' | head -n 1)
-done
+
+#remove the mac/dev from any of the dhcp verdict map elements
+nft -j list map inet filter dhcp_access | jq -rc '.nftables[1].map | .elem[] | .[] | .concat | if length > 0 then . else empty end | .[0] + " " + .[1]' 2>/dev/null | \
+    (while read -a VMAP; do  grep -iE "${dev} |${MAC}" <<< ${VMAP[@]} && nft delete element inet filter dhcp_access { ${VMAP[0]} . ${VMAP[1]} : accept }; done )
 
 # Requires the same directory for xdp-dispatcher.o
 cd /code/xdp-tools/xdp-loader
@@ -50,11 +46,9 @@ in)
     # Attach the filter
     ./xdp-loader load -m skb $dev /code/filter_dhcp_mismatch.o
 
-     # Accept DHCP on this interface now. INSERT at start because of droplog at the end
-     if [ "$MAC" = "" ]; then
-       iptables -I INPUT -i $dev -p udp --sport 68 --dport 67 -j ACCEPT
-     else
-       iptables -I INPUT -i $dev -p udp --sport 68 --dport 67 -m mac --mac-source $MAC -j ACCEPT
+     # Add to the dhcp verdict map if there is a MAC
+     if [ '!' -z "$MAC" ]; then
+        nft add element inet filter dhcp_access { ${dev} . ${MAC} : accept }
      fi
 
     ;;

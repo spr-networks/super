@@ -24,58 +24,38 @@ arp -i $IFACE -s $IP $MAC
 exec 100>/tmp/dhcp_script.lock || exit 1
 flock 100 || exit 1
 
-custom_ipset_groups=$(ls /configs/zones/groups)
-ipset_groups="dns internet lan $custom_ipset_groups"
-# remove interface from all existing interface groups
-for N in $ipset_groups
+custom_groups=$(ls /configs/zones/groups)
+all_groups="dns internet lan $custom_groups"
+
+# remove this IP, interface and MAC from all existing interface groups
+for N in $all_groups
 do
-  line=$(ipset list "${N}_iface_access" | grep -i $LANIF | head -n 1)
-  while : ; do
-    ipset del "${N}_iface_access" $line
-    line=$(ipset list "${N}_iface_access" | grep -i $LANIF | head -n 1)
-    test -z $line && break
-  done
+  nft -j list map inet filter ${N}_access | jq -rc '.nftables[1].map | .elem[] | .[] | .concat | if length > 0 then . else empty end | .[0] + " " + .[1] + " " + .[2]' 2>/dev/null | \
+    (while read -a VMAP; do  grep -iE "${IP} |${LANIF} |${MAC}" <<< ${VMAP[@]} && nft delete element inet filter ${N}_access { ${VMAP[0]} . ${VMAP[1]} . ${VMAP[2]} : accept }; done )
 done
 
-#remove the mac from all existing groups
-for N in $ipset_groups
-do
-  line=$(ipset list "${N}_mac_access" | grep -i $MAC | head -n 1)
-  while : ; do
-    ipset del "${N}_mac_access" $line
-    line=$(ipset list "${N}_mac_access" | grep -i $MAC | head -n 1)
-    test -z $line && break
-  done
-done
-
-#do we need to remove the IP as well? hmm
 
 # Allow this MAC address to talk from this IP
-IPSET_ADD() {
-  ipset add ${1}_iface_access ${IP}/${TINYSLASHMASK},${LANIF}
-  ipset add ${1}_mac_access ${IP},${MAC}
+SET_ADD() {
+  nft add element inet filter ${1}_access { ${IP} . ${LANIF} . ${MAC} : accept }
 }
+
 ALLOW_DNS() {
-  IPSET_ADD dns
+  SET_ADD dns
 }
 
 NET_OUTBOUND() {
-  IPSET_ADD internet
+  SET_ADD internet
 }
 
 ALLOW_LAN() {
-  IPSET_ADD lan
+  SET_ADD lan
 }
 
 CREATE_CUSTOM_GROUP() {
-  ipset create ${1}_iface_access hash:net,iface
-  ipset create ${1}_mac_access hash:ip,mac
-
-  # Want to verify both the interface and the mac, need a chain with 1 entry to combine two src,src matches
-  # since ipset takes only the first match for src
-  iptables -N ${1}_iface_access
-  iptables -A ${1}_iface_access -m set --match-set ${1}_iface_access src,src -j ACCEPT
-  iptables -I FORWARD -m set --match-set ${1}_mac_access src,src -m set --match-set ${1}_iface_access dst,dst -j ${1}_iface_access
+  # Map and rule for matching source and destination
+  nft add map ${1}_access { type ipv4_addr . ifname . ether_addr : verdict \; }
+  nft add rule inet FORWARD ip daddr . oifname . ether daddr vmap @${1}_access ip saddr . iifname . ether saddr vmap @${1}_access
 }
 
 # Set up the standard gropu the device is in
@@ -102,14 +82,14 @@ then
   echo isolated
 fi
 
-# For each custom group the device is in, add it to the ipset if it belongs
-for group in $custom_ipset_groups
+# For each custom group the device is in, add it to the verdict map it belongs in
+for group in $custom_groups
 do
   if grep -iE "^${MAC}$" /configs/zones/groups/${group}; then
     # Create the group if it does not already exist
-    ipset list ${group}_iface_access >/dev/null || CREATE_CUSTOM_GROUP ${group}
-    # Add the ip/mac to the ipsets it belongs in
-    IPSET_ADD ${group}
+    nf list map inet ${group}_access 2>/dev/null >/dev/null || CREATE_CUSTOM_GROUP ${group}
+    # Add the ip/mac/ifname to the group map it belongs in
+    SET_ADD ${group}
   fi
 done
 
