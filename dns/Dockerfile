@@ -1,6 +1,7 @@
-FROM --platform=linux/arm ubuntu
+FROM --platform=linux/arm ubuntu:21.04
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get dist-upgrade -y
-RUN apt-get install -y iptables iproute2 netcat inetutils-ping
+RUN apt-get install -y nftables iproute2 netcat inetutils-ping
 RUN apt-get install -y net-tools
 RUN apt-get install -y nano
 RUN apt-get install -y ca-certificates
@@ -40,8 +41,6 @@ RUN --mount=type=tmpfs,target=/root/go/ go generate && \
    go mod tidy && \
    go build -o /coredns
 
-COPY scripts /scripts
-COPY scripts/config.sh /scripts/config.sh
 COPY configs /configs
 
 ENTRYPOINT /coredns -conf /configs/Corefile

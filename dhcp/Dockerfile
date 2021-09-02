@@ -1,11 +1,12 @@
-FROM --platform=linux/arm ubuntu
+FROM --platform=linux/arm ubuntu:21.04
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get dist-upgrade -y
-RUN apt-get install -y iptables iproute2 netcat inetutils-ping
+RUN apt-get install -y nftables iproute2 netcat inetutils-ping
 RUN apt-get install -y net-tools
 RUN apt-get install -y nano
 RUN apt-get install -y ca-certificates
-
 RUN apt-get install -y git
+RUN apt-get install -y jq
 RUN mkdir /code
 WORKDIR /code
 
@@ -37,7 +38,7 @@ ENV CC=clang
 ARG GITHUB_CREDS=github.com
 ENV ENV_GITHUB_CREDS=$GITHUB_CREDS
 RUN git config --global url."https://${ENV_GITHUB_CREDS}".insteadOf "https://github.com"
-RUN git clone https://github.com/Z-Fi/coredhcp
+RUN git clone https://github.com/SPR-Fi/coredhcp
 WORKDIR /code/coredhcp
 
 # Using BUILDKIT, build inside of a ramfs
@@ -46,7 +47,6 @@ RUN --mount=type=tmpfs,target=/root/go/ go build -o /coredhcp ./cmds/coredhcp
 WORKDIR /
 
 RUN apt-get install -y netplug
-RUN apt-get install -y ipset
 COPY scripts /scripts
 COPY configs /configs
 COPY scripts/netplug /etc/netplug/netplug
