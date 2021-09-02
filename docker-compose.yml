@@ -37,6 +37,10 @@ services:
     build: wifid
     network_mode: host
     privileged: true
+    depends_on:
+      - "dhcp"
+      - "dns"
+      - "multicast_udp_proxy"
     volumes:
       - type: bind
         source: ./state/sta_mac_iface_map/
