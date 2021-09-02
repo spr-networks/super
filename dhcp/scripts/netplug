@@ -29,7 +29,6 @@ if grep -q -F "$VLANSIF" <<< "$dev"; then
 fi
 
 
-
 # Requires the same directory for xdp-dispatcher.o
 cd /code/xdp-tools/xdp-loader
 
