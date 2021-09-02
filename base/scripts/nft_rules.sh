@@ -63,7 +63,6 @@ table inet filter {
     iif wg0 udp dport 53 counter accept
 
     # Dynamic verdict map
-# -t filter -A INPUT -p udp -m set --match-set dns_mac_access src,src -m udp --dport 53 -j dns_iface_access
     udp dport 53  ip saddr . iifname . ether saddr vmap @dns_access
 
     # DHCP Allow rules
@@ -78,8 +77,6 @@ table inet filter {
   }
 
   chain FORWARD {
-
-
     type filter hook forward priority 0; policy drop;
 
     counter jump F_EST_RELATED
@@ -119,15 +116,6 @@ table inet filter {
     ip protocol udp ct state related,established counter accept
     ip protocol tcp ct state related,established counter accept
     ip protocol icmp ct state related,established counter accept
-  }
-
-  chain dns_iface_access {
-  }
-
-  chain internet_iface_access {
-  }
-
-  chain lan_iface_access {
   }
 
 }
