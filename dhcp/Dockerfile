@@ -1,4 +1,4 @@
-FROM --platform=linux/arm ubuntu:21.04
+FROM --platform=linux/arm64 ubuntu:21.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get dist-upgrade -y
 RUN apt-get install -y nftables iproute2 netcat inetutils-ping
@@ -11,8 +11,8 @@ RUN mkdir /code
 WORKDIR /code
 
 RUN apt-get install -y curl
-RUN curl -O https://dl.google.com/go/go1.17.linux-armv6l.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-armv6l.tar.gz
+RUN curl -O https://dl.google.com/go/go1.17.linux-arm64.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-arm64.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 
 RUN git clone https://github.com/xdp-project/xdp-tools.git
@@ -24,10 +24,8 @@ RUN apt-get install -y libpcap-dev libelf-dev
 RUN apt-get install -y make
 RUN ./configure
 
-RUN ln -s /usr/include/arm-linux-gnueabihf/asm /usr/include/asm
-
-#fix for libbpf issue
-RUN CFLAGS=-D_FILE_OFFSET_BITS=64 make 
+RUN ln -s /usr/include/aarch64-linux-gnu/asm /usr/include/asm
+RUN make
 COPY code/filter_dhcp_mismatch.c /code/
 WORKDIR /code/
 RUN clang -O3 -target bpf -D __BPF_TRACING__ -I xdp-tools/headers/ -I xdp-tools/lib/libbpf/src/root/usr/include/ -c filter_dhcp_mismatch.c

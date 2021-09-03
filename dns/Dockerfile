@@ -1,4 +1,4 @@
-FROM --platform=linux/arm ubuntu:21.04
+FROM --platform=linux/arm64 ubuntu:21.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get dist-upgrade -y
 RUN apt-get install -y nftables iproute2 netcat inetutils-ping
@@ -11,8 +11,8 @@ RUN mkdir /code
 WORKDIR /code
 
 RUN apt-get install -y curl
-RUN curl -O https://dl.google.com/go/go1.17.linux-armv6l.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-armv6l.tar.gz
+RUN curl -O https://dl.google.com/go/go1.17.linux-arm64.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-arm64.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 
 RUN apt-get install -y clang
