@@ -19,6 +19,21 @@ The current setup assumes you'll be using a raspberry pi model 4b with a AWUS036
 and an additional usb ethernet dongle (eth1) connected to a switch for additional wired devices.
 The built-in ethernet port of the raspberry pi (eth0) is connected to upstream/WAN/internet
 
+### Base System Setup
+
+1. Set up the pi with ubuntu server https://ubuntu.com/download/raspberry-pi/thank-you?version=21.04&architecture=server-arm64+raspi
+2. Install docker, docker-compose (apt-get install docker docker-compose)
+3. Add a bug fix for scatter/gather bugs with USB (before plugging in the module):  echo mt76-usb disable_usb_sg=1 >> /etc/modules
+4. Disable Docker's iptable setup, write the following to /etc/docker/daemon.json
+```
+{
+  "iptables": false
+}
+```
+
+### Configuring the project
+
+
 ```bash
 # To get started, copy base/template_configs to configs/:
 $ sudo -s
