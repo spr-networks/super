@@ -36,6 +36,7 @@ cp configs/wpa2pskfile wifid/configs/wpa2pskfile
 chmod +x multicast_udp_proxy/scripts/startup.sh
 #flowgather
 cp -n flowgather/code/flowgather.db state/flowgather.db
+touch state/flowgather.json
 
 BUILDARGS=""
 if [ -f .github_creds ]; then

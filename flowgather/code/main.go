@@ -1,17 +1,18 @@
 package main
 
 import (
-	//	"bytes"
 	"crypto/md5"
+	b64 "encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
-  "sync"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -22,67 +23,246 @@ import (
 
 	"github.com/dreadl0ck/ja3"
 
-  "crawshaw.io/sqlite/sqlitex"
-  "crawshaw.io/sqlite"
-
+	"crawshaw.io/sqlite"
+	"crawshaw.io/sqlite/sqlitex"
+	"io/ioutil"
 )
 
 var SPool *sqlitex.Pool
 
 //sqlite3 is too inefficient for packet processing (pegs CPU swiftly), so use an in memory cache
 
+var MapsUpdated = false
+
 type eKey struct {
-  srcId int64
-  endpointType gopacket.EndpointType
-  rawval [16]byte
+	SrcId  int64
+	Rawval [16]byte
 }
+
+/*
+func (e *eKey) eKey() ([]byte, error) {
+  type Alias eKey
+  return json.Marshal(&struct{
+                              endpointType int
+                              *Alias
+                      }{ endpointType: int(e.endpointType), Alias: (*Alias)(e)})
+}
+*/
+
+func (e eKey) MarshalText() (text []byte, err error) {
+	return []byte(fmt.Sprintf("%d-%s", e.SrcId, b64.StdEncoding.EncodeToString(e.Rawval[:]))), nil
+}
+
+func (e *eKey) UnmarshalText(data []byte) error {
+	s := string(data)
+	n, err := fmt.Sscanf(s, "%d", &e.SrcId)
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return fmt.Errorf("did not convert srcId")
+	}
+	idx := strings.Index(s, "-") + 1
+	if idx == 0 {
+		return fmt.Errorf("missing separator")
+	}
+
+	_, err = b64.StdEncoding.Decode(e.Rawval[:], data[idx:])
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type eVal struct {
-  t time.Time
-  srcId int64
-  endpointType gopacket.EndpointType
-  rawval [16]byte
+	T            time.Time
+	SrcId        int64
+	EndpointType gopacket.EndpointType
+	Rawval       [16]byte
 }
 
-//TBD, m/v/inc_id can all be maps of maps by types
 type EndpointMap struct {
-  sync.RWMutex
-  m map[gopacket.EndpointType]map[eKey]int64
-  v map[gopacket.EndpointType]map[int64]eVal
-  i map[gopacket.EndpointType]int64
+	sync.RWMutex
+	M map[gopacket.EndpointType]map[eKey]int64
+	V map[gopacket.EndpointType]map[int64]eVal
+	I map[gopacket.EndpointType]int64
 }
-
 
 var eMap EndpointMap
 
 type fKey struct {
-  srcId int64
-  parentId int64
-  aId int64
-  bId int64
+	SrcId    int64
+	ParentId int64
+	AId      int64
+	BId      int64
 }
+
+func (f fKey) MarshalText() (text []byte, err error) {
+	return []byte(fmt.Sprintf("%d-%d-%d-%d", f.SrcId, f.ParentId, f.AId, f.BId)), nil
+}
+
+func (f *fKey) UnmarshalText(data []byte) error {
+	s := string(data)
+	n, err := fmt.Sscanf(s, "%d-%d-%d-%d", &f.SrcId, &f.ParentId, &f.AId, &f.BId)
+	if err != nil || n != 4 {
+		return fmt.Errorf("Failed to convert fKey")
+	}
+	return nil
+}
+
 type fVal struct {
-  t time.Time
-  layerType int
-  srcId int64
-  parentId int64
-  aId int64
-  bId int64
+	T         time.Time
+	LayerType int
+	SrcId     int64
+	ParentId  int64
+	AId       int64
+	BId       int64
 }
 
 type FlowMap struct {
-  sync.RWMutex
-  m map[gopacket.LayerType]map[fKey]int64
-  v map[gopacket.LayerType]map[int64]fVal
-  i map[gopacket.LayerType]int64
+	sync.RWMutex
+	M map[gopacket.LayerType]map[fKey]int64
+	V map[gopacket.LayerType]map[int64]fVal
+	I map[gopacket.LayerType]int64
 }
 
 var fMap FlowMap
 
-var EPHEMERAL_WILDCARD_PORT_ID = int64(-1000);
+var EPHEMERAL_WILDCARD_PORT_ID = int64(-1000)
 
+type FlowGatherDump struct {
+	Endpoints       map[gopacket.EndpointType]map[int64]eVal
+	EndpointKeys    map[gopacket.EndpointType]map[eKey]int64
+	LastEndpointIds map[gopacket.EndpointType]int64
+	Flows           map[gopacket.LayerType]map[int64]fVal
+	FlowKeys        map[gopacket.LayerType]map[fKey]int64
+	LastFlowIds     map[gopacket.LayerType]int64
+}
 
+func TestMarshal() {
+	eMap.M[41][eKey{1, [16]byte{1}}] = 13
+	eMap.V[41][13] = eVal{time.Now(), 1, 11, [16]byte{1}}
+	eMap.I[41] = 14
+
+	fMap.M[42][fKey{1, 2, 3, 4}] = 1337
+	fMap.V[42][1337] = fVal{time.Now(), 42, 1, 2, 3, 4}
+	fMap.I[42] = 1338
+
+	MapsUpdated = true
+
+	saveJSON("/test.json")
+
+	fmt.Println("Hmmm", fMap.I[42], eMap.I[41])
+	fmt.Println("b4", fMap.M[42][fKey{1, 2, 3, 4}], "vs", 1337)
+
+	fmt.Println("saved test data")
+
+	b, err := ioutil.ReadFile("/test.json")
+	if err == nil && len(b) > 2 {
+		var f FlowGatherDump
+		err = json.Unmarshal(b, &f)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		eMap.V = f.Endpoints
+		eMap.M = f.EndpointKeys
+		eMap.I = f.LastEndpointIds
+		fMap.V = f.Flows
+		fMap.M = f.FlowKeys
+		fMap.I = f.LastFlowIds
+
+		fmt.Println("decoded")
+		fmt.Println("endpoints", f.Endpoints)
+		fmt.Println("endpoints[41]", f.Endpoints[41])
+
+		fmt.Println("flows", f.Flows)
+		fmt.Println("flows[42]", f.Flows[42])
+
+		fmt.Println(eMap.M[41][eKey{1, [16]byte{1}}], "vs", 13)
+		fmt.Println(fMap.M[42][fKey{1, 2, 3, 4}], "vs", 1337)
+		fmt.Println(fMap.I[42], "vs", 1338)
+	} else {
+		fmt.Println("no test data read")
+	}
+
+	for {
+		time.Sleep(10000)
+	}
+}
+
+func TestMarshal2() {
+	b, err := ioutil.ReadFile("/flowgather.json")
+	if err == nil && len(b) > 2 {
+		var f FlowGatherDump
+		err = json.Unmarshal(b, &f)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		eMap.V = f.Endpoints
+		eMap.M = f.EndpointKeys
+		eMap.I = f.LastEndpointIds
+		fMap.V = f.Flows
+		fMap.M = f.FlowKeys
+		fMap.I = f.LastFlowIds
+
+		fmt.Println("decoded")
+		fmt.Println("endpoints[17]", f.Endpoints[17])
+		fmt.Println("endpointsKeys[17]", f.EndpointKeys[17])
+
+		//    fmt.Println(fMap.M[20][fKey{1, 2, 3, 4}],"vs",1337)
+	} else {
+		fmt.Println("no test data read")
+	}
+
+	for {
+		time.Sleep(10000)
+	}
+}
 
 func InitDB(filepath string) *sqlitex.Pool {
+	//beware -> registering new endpoint and layer types needs the hot maps updated
+
+	eMap = EndpointMap{M: make(map[gopacket.EndpointType]map[eKey]int64),
+		V: make(map[gopacket.EndpointType]map[int64]eVal),
+		I: make(map[gopacket.EndpointType]int64)}
+
+	fMap = FlowMap{M: make(map[gopacket.LayerType]map[fKey]int64),
+		V: make(map[gopacket.LayerType]map[int64]fVal),
+		I: make(map[gopacket.LayerType]int64)}
+
+	for val := 0; val <= 1000; val++ {
+		eMap.M[gopacket.EndpointType(val)] = make(map[eKey]int64)
+		eMap.V[gopacket.EndpointType(val)] = make(map[int64]eVal)
+		fMap.M[gopacket.LayerType(val)] = make(map[fKey]int64)
+		fMap.V[gopacket.LayerType(val)] = make(map[int64]fVal)
+	}
+
+	//load up the maps from disk
+	b, err := ioutil.ReadFile("flowgather.json")
+	if err == nil && len(b) > 2 {
+		var f FlowGatherDump
+		err = json.Unmarshal(b, &f)
+		if err != nil {
+			log.Fatal(err)
+		}
+		eMap.V = f.Endpoints
+		eMap.M = f.EndpointKeys
+		eMap.I = f.LastEndpointIds
+		fMap.V = f.Flows
+		fMap.M = f.FlowKeys
+		fMap.I = f.LastFlowIds
+	}
+
+	go func() {
+		//    t := time.Tick(1 * time.Minute)
+		t := time.Tick(60 * time.Second)
+		for range t {
+			saveJSON("flowgather.json")
+		}
+	}()
+
 	db, err := sqlitex.Open(filepath, 0, 16)
 	if err != nil {
 		panic(err)
@@ -177,37 +357,40 @@ func findOrSaveInterface(ifaceNameTarget string) int64 {
 	fmt.Println("looking up interface", ifaceName, iface.HardwareAddr, hostname, primaryAddress)
 
 	hardwareAddr := iface.HardwareAddr
-	  if hardwareAddr == nil {
+	if hardwareAddr == nil {
 		hardwareAddr = []byte{0, 0, 0, 0, 0, 0}
 	}
 
-	sql_query_endpoint := `SELECT id FROM datasources WHERE interfaceName=? AND hardwareAddress=? AND hostName=? AND primaryAddress=?`
+	sql_query_endpoint := `SELECT id FROM datasources WHERE interfaceName=? AND hardwareAddress=? AND hostName=? AND primaryAddress=? LIMIT 1`
 
-  S := SPool.Get(nil)
-  defer SPool.Put(S)
+	S := SPool.Get(nil)
+	defer SPool.Put(S)
 
 	var (
 		id int64
 	)
 
-  id = -1
-  fn := func(stmt *sqlite.Stmt) error {
-    id = stmt.ColumnInt64(0)
-    return nil
+retry:
+	id = -1
+	fn := func(stmt *sqlite.Stmt) error {
+		id = stmt.ColumnInt64(0)
+		return nil
 	}
 	err = sqlitex.Exec(S, sql_query_endpoint, fn, ifaceName, hardwareAddr, hostname, primaryAddress)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-  if id != -1 {
-    return id
-  }
+	if id != -1 {
+		return id
+	}
 
 	//not found, so insert it
-  err = sqlitex.Exec(S, "INSERT INTO datasources(interfaceName, hardwareAddress, hostName, primaryAddress) VALUES(?, ?, ?, ?)", nil, ifaceName, hardwareAddr, hostname, primaryAddress)
+	err = sqlitex.Exec(S, "INSERT INTO datasources(interfaceName, hardwareAddress, hostName, primaryAddress) VALUES(?, ?, ?, ?)", nil, ifaceName, hardwareAddr, hostname, primaryAddress)
 	if err != nil {
-		log.Fatal(err)
+		//	log.Fatal(err)
+		fmt.Println("retry")
+		goto retry
 	}
 
 	lastId := S.LastInsertRowID()
@@ -254,25 +437,29 @@ func listenInterface(iface string) {
 	debugPrint(2, "total", count)
 }
 
+func saveJSON(fn string) {
+	var err error
+	var b []byte
+
+	fmt.Println("try save")
+	eMap.Lock()
+	fMap.Lock()
+	if MapsUpdated {
+		b, err = json.Marshal(FlowGatherDump{eMap.V, eMap.M, eMap.I, fMap.V, fMap.M, fMap.I})
+	}
+	MapsUpdated = false
+	fMap.Unlock()
+	eMap.Unlock()
+
+	if err == nil {
+		ioutil.WriteFile(fn, b, 0644)
+	} else {
+		fmt.Println("failed to save", err)
+	}
+}
+
 func main() {
 	debugPrint(2, "--= Flow capture =--")
-
-  //beware -> registering new endpoint and layer types needs the hot maps updated
-
-  eMap = EndpointMap{ m: make(map[gopacket.EndpointType]map[eKey]int64),
-                      v: make(map[gopacket.EndpointType]map[int64]eVal),
-                      i: make(map[gopacket.EndpointType]int64) }
-
-  fMap = FlowMap{ m: make(map[gopacket.LayerType]map[fKey]int64),
-                  v: make(map[gopacket.LayerType]map[int64]fVal),
-                  i: make(map[gopacket.LayerType]int64) }
-
-  for val := 0; val <= 1000; val++ {
-    eMap.m[gopacket.EndpointType(val)] = make(map[eKey]int64)
-    eMap.v[gopacket.EndpointType(val)] = make(map[int64]eVal)
-    fMap.m[gopacket.LayerType(val)] = make(map[fKey]int64)
-    fMap.v[gopacket.LayerType(val)] = make(map[int64]fVal)
-  }
 
 	SPool = InitDB("flowgather.db")
 
@@ -301,25 +488,25 @@ func handlePayload(payload gopacket.Payload, packet gopacket.Packet, dstPort int
 						if clientFingerprint != "" {
 							sum := md5.Sum([]byte(clientFingerprint))
 							md5 := hex.EncodeToString(sum[:])
-              S := SPool.Get(nil)
+							S := SPool.Get(nil)
 							err := sqlitex.Exec(S, "INSERT INTO tlsClientFingerprints(parentBiflowId, fingerprint, fingerprintMD5) VALUES(?, ?, ?)", nil, parentBiflowId, clientFingerprint, md5)
 							if err != nil {
 								log.Fatal(err)
 							}
 
-              SPool.Put(S)
+							SPool.Put(S)
 
 						}
 
 						if serverFingerprint != "" {
 							sum := md5.Sum([]byte(serverFingerprint))
 							md5 := hex.EncodeToString(sum[:])
-              S := SPool.Get(nil)
+							S := SPool.Get(nil)
 							err := sqlitex.Exec(S, "INSERT INTO tlsServerFingerprints(parentBiflowId, fingerprint, fingerprintMD5) VALUES(?, ?, ?)", nil, parentBiflowId, serverFingerprint, md5)
 							if err != nil {
 								log.Fatal(err)
 							}
-              SPool.Put(S)
+							SPool.Put(S)
 						}
 
 					}
@@ -398,10 +585,9 @@ func handleDNS(payload gopacket.Payload, packet gopacket.Packet, dns *layers.DNS
 	debugPrint(2, questionsString)
 	debugPrint(2, answersString)
 
-
 	//HMMM, do we want to stop periodic queries if the question and response is the same? TBD
-  S := SPool.Get(nil)
-  defer SPool.Put(S)
+	S := SPool.Get(nil)
+	defer SPool.Put(S)
 
 	err := sqlitex.Exec(S, "INSERT INTO dnsReplies(parentBiflowId, responseCode, questions, answers) VALUES(?, ?, ?, ?)", nil, parentBiflowId, dns.ResponseCode.String(), questionsString, answersString)
 	if err != nil {
@@ -411,138 +597,138 @@ func handleDNS(payload gopacket.Payload, packet gopacket.Packet, dns *layers.DNS
 }
 
 func findOrMakeEndpoint(ifaceId int64, endpoint gopacket.Endpoint, t time.Time, makeEndpoint bool) int64 {
-  e_type := endpoint.EndpointType()
+	e_type := endpoint.EndpointType()
 
-  var b16 [16]byte
+	var b16 [16]byte
 
-  if len(endpoint.Raw()) > 16 {
-    panic("endpoint too big")
-  }
-  copy(b16[:], endpoint.Raw())
+	if len(endpoint.Raw()) > 16 {
+		panic("endpoint too big")
+	}
+	copy(b16[:], endpoint.Raw())
 
-  eMap.RLock()
-  ret, exists := eMap.m[e_type][eKey{ifaceId, e_type, b16}]
-  eMap.RUnlock()
-  if exists {
-    return ret
-  }
-
-  if !makeEndpoint {
-    return -1
-  }
-
-/*
-//  if eMap[
-
-	sql_query_endpoint := `SELECT id FROM endpoints WHERE raw=? AND datasrcId=?`
-
-	var (
-		id int64
-	)
-
-  id = -1
-  fn := func(stmt *sqlite.Stmt) error {
-    id = stmt.ColumnInt64(0)
-    return nil
+	eMap.RLock()
+	ret, exists := eMap.M[e_type][eKey{ifaceId, b16}]
+	eMap.RUnlock()
+	if exists {
+		return ret
 	}
 
-  S := SPool.Get(nil)
-  defer SPool.Put(S)
-  err := sqlitex.Exec(S, sql_query_endpoint, fn, endpoint.Raw(), ifaceId)
-	if err != nil {
-		log.Fatal(err)
+	if !makeEndpoint {
+		return -1
 	}
 
-  if id != -1 {
-    return id
-  }
+	/*
+	   //  if eMap[
 
-	//not found, so insert it
+	   	sql_query_endpoint := `SELECT id FROM endpoints WHERE raw=? AND datasrcId=?`
 
-	err = sqlitex.Exec(S, "INSERT INTO endpoints(datasrcId, type, raw, discoveryTime) VALUES(?, ?, ?, ?)", nil, ifaceId, endpoint.EndpointType(), endpoint.Raw(), t.Format(time.RFC3339))
-	if err != nil {
-		log.Fatal(err)
-	}
-*/
-//	lastId := S.LastInsertRowID()
+	   	var (
+	   		id int64
+	   	)
 
-  //add to hotmap
-  eMap.Lock()
-  lastId, _ := eMap.i[e_type]
-  eMap.i[e_type] = lastId + 1
-  eMap.m[e_type][eKey{ifaceId, endpoint.EndpointType(), b16}] = lastId
-  eMap.v[e_type][lastId] = eVal{t, ifaceId, endpoint.EndpointType(), b16}
-  eMap.Unlock()
+	     id = -1
+	     fn := func(stmt *sqlite.Stmt) error {
+	       id = stmt.ColumnInt64(0)
+	       return nil
+	   	}
+
+	     S := SPool.Get(nil)
+	     defer SPool.Put(S)
+	     err := sqlitex.Exec(S, sql_query_endpoint, fn, endpoint.Raw(), ifaceId)
+	   	if err != nil {
+	   		log.Fatal(err)
+	   	}
+
+	     if id != -1 {
+	       return id
+	     }
+
+	   	//not found, so insert it
+
+	   	err = sqlitex.Exec(S, "INSERT INTO endpoints(datasrcId, type, raw, discoveryTime) VALUES(?, ?, ?, ?)", nil, ifaceId, endpoint.EndpointType(), endpoint.Raw(), t.Format(time.RFC3339))
+	   	if err != nil {
+	   		log.Fatal(err)
+	   	}
+	*/
+	//	lastId := S.LastInsertRowID()
+
+	//add to hotmap
+	eMap.Lock()
+	MapsUpdated = true
+	lastId, _ := eMap.I[e_type]
+	eMap.I[e_type] = lastId + 1
+	eMap.M[e_type][eKey{ifaceId, b16}] = lastId
+	eMap.V[e_type][lastId] = eVal{t, ifaceId, endpoint.EndpointType(), b16}
+	eMap.Unlock()
 
 	return lastId
 }
 
-
-
 func saveFlow(ifaceId int64, layerType int, previous int64, flow gopacket.Flow, t time.Time, srcPort int, dstPort int) int64 {
 	//look for it in one direction
+	//tbd, bidir flow update
 
 	aEid := findOrMakeEndpoint(ifaceId, flow.Src(), t, true)
 	bEid := findOrMakeEndpoint(ifaceId, flow.Dst(), t, true)
 
-  l_type := gopacket.LayerType(layerType)
+	l_type := gopacket.LayerType(layerType)
 
-  //check if in fCache
-  fMap.RLock()
-  ret, exists := fMap.m[l_type][fKey{ifaceId, previous, aEid, bEid}]
-  if exists {
-    fMap.RUnlock()
-    return ret
-  }
+	//check if in fCache
+	fMap.RLock()
+	ret, exists := fMap.M[l_type][fKey{ifaceId, previous, aEid, bEid}]
+	if exists {
+		fMap.RUnlock()
+		return ret
+	}
 
-  ret, exists = fMap.m[l_type][fKey{ifaceId, previous, bEid, aEid}]
-  if exists {
-    fMap.RUnlock()
-    return ret
-  }
-  fMap.RUnlock()
+	ret, exists = fMap.M[l_type][fKey{ifaceId, previous, bEid, aEid}]
+	if exists {
+		fMap.RUnlock()
+		return ret
+	}
+	fMap.RUnlock()
 
-  fMap.Lock()
-  lastId, _ := fMap.i[l_type]
-  fMap.i[l_type] = lastId + 1
-  fMap.m[l_type][fKey{ifaceId, previous, aEid, bEid}] = lastId
-  fMap.v[l_type][lastId] = fVal{t, layerType, ifaceId, previous, aEid, bEid}
+	fMap.Lock()
+	MapsUpdated = true
+	lastId, _ := fMap.I[l_type]
+	fMap.I[l_type] = lastId + 1
+	fMap.M[l_type][fKey{ifaceId, previous, aEid, bEid}] = lastId
+	fMap.V[l_type][lastId] = fVal{t, layerType, ifaceId, previous, aEid, bEid}
 
-  // ephemeral port heuristic support
-  if gopacket.LayerType(layerType) == layers.LayerTypeUDP || gopacket.LayerType(layerType) == layers.LayerTypeTCP {
-    src_eph, dst_eph := isEphemeralPortPair(srcPort, dstPort)
-    if src_eph && !dst_eph {
-      fMap.m[l_type][fKey{ifaceId, previous, EPHEMERAL_WILDCARD_PORT_ID, bEid}] = lastId
-    } else if !src_eph && dst_eph {
-      fMap.m[l_type][fKey{ifaceId, previous, aEid, EPHEMERAL_WILDCARD_PORT_ID}] = lastId
-    }
-  }
+	// ephemeral port heuristic support
+	if gopacket.LayerType(layerType) == layers.LayerTypeUDP || gopacket.LayerType(layerType) == layers.LayerTypeTCP {
+		src_eph, dst_eph := isEphemeralPortPair(srcPort, dstPort)
+		if src_eph && !dst_eph {
+			fMap.M[l_type][fKey{ifaceId, previous, EPHEMERAL_WILDCARD_PORT_ID, bEid}] = lastId
+		} else if !src_eph && dst_eph {
+			fMap.M[l_type][fKey{ifaceId, previous, aEid, EPHEMERAL_WILDCARD_PORT_ID}] = lastId
+		}
+	}
 
-  fMap.Unlock()
+	fMap.Unlock()
 
-  debugPrint(3, "new flow, layerType: ", layerType, "parent ", previous, flow.String(), " [", lastId, "] total")
-  return lastId; //dont save anything perf test´
+	debugPrint(3, "new flow, layerType: ", layerType, "parent ", previous, flow.String(), " [", lastId, "] total")
+	return lastId //dont save anything perf test´
 
-  S := SPool.Get(nil)
-  defer SPool.Put(S)
+	S := SPool.Get(nil)
+	defer SPool.Put(S)
 
 	//check if this flow is already in the db
 	sql_query_endpoint := `SELECT id, bidir, aEid FROM biflows WHERE type=? AND (aEid=? AND bEid=? OR bEid=? AND aEid=?)`
 
 	var (
-		id int64
-    bidir int64
-    prevA int64
+		id    int64
+		bidir int64
+		prevA int64
 	)
-  id = -1
+	id = -1
 
+	fn := func(stmt *sqlite.Stmt) error {
+		id = stmt.ColumnInt64(0)
+		bidir = stmt.ColumnInt64(1)
+		prevA = stmt.ColumnInt64(2)
 
-  fn := func(stmt *sqlite.Stmt) error {
-    id = stmt.ColumnInt64(0)
-    bidir = stmt.ColumnInt64(1)
-    prevA = stmt.ColumnInt64(2)
-
-    return nil
+		return nil
 	}
 
 	err := sqlitex.Exec(S, sql_query_endpoint, fn, layerType, aEid, bEid, aEid, bEid)
@@ -550,7 +736,7 @@ func saveFlow(ifaceId int64, layerType int, previous int64, flow gopacket.Flow, 
 		log.Fatal(err)
 	}
 
-  if id != -1 {
+	if id != -1 {
 		if bidir == 0 && prevA != aEid {
 			//if this flow is in the other direction, and it hasnt been seen before, update the biflow to indicate that
 			err := sqlitex.Exec(S, "UPDATE biflows SET bidir=1 WHERE id=?", nil, id)
@@ -560,7 +746,7 @@ func saveFlow(ifaceId int64, layerType int, previous int64, flow gopacket.Flow, 
 		}
 
 		return id
-  }
+	}
 	//not found, so insert it fresh
 	err = sqlitex.Exec(S, "INSERT INTO biflows(type, aEid, bEid, parentBiflowId, bidir, discoveryTime) VALUES(?, ?, ?, ?, 0, ?)", nil, layerType, aEid, bEid, previous, t)
 	if err != nil {
@@ -574,48 +760,47 @@ func saveFlow(ifaceId int64, layerType int, previous int64, flow gopacket.Flow, 
 
 // same underlying data structure -- flows
 func saveLinkFlow(ifaceId int64, layerType int, previous int64, flow gopacket.Flow, t time.Time) int64 {
-  return saveFlow(ifaceId, layerType, previous, flow, t, 0, 0)
+	return saveFlow(ifaceId, layerType, previous, flow, t, 0, 0)
 }
+
 var saveNetworkFlow = saveLinkFlow
 
 func saveTransportFlow(ifaceId int64, layerType int, previous int64, flow gopacket.Flow, t time.Time, srcPort int, dstPort int) int64 {
-  return saveFlow(ifaceId, layerType, previous, flow, t, srcPort, dstPort)
+	return saveFlow(ifaceId, layerType, previous, flow, t, srcPort, dstPort)
 }
 
-
 func isEphemeralPortPair(srcPort int, dstPort int) (bool, bool) {
-  src_eph := false
-  dst_eph := false
+	src_eph := false
+	dst_eph := false
 
 	//IANA range is 49152-65535 (RFC 6056)
 	// linux tends to use 32768...
 
-  if srcPort >= 32768 {
-    src_eph = true
-  }
+	if srcPort >= 32768 {
+		src_eph = true
+	}
 
-  if dstPort >= 32768 {
-    dst_eph = true
-  }
+	if dstPort >= 32768 {
+		dst_eph = true
+	}
 
-  //but it gets more complicated.  For client-side DNS spoofing protection,
-  // things can go much lower
-  if dstPort == 53 {
-    return true, false
-  } else if srcPort == 53 {
-    return false, true
-  }
+	//but it gets more complicated.  For client-side DNS spoofing protection,
+	// things can go much lower
+	if dstPort == 53 {
+		return true, false
+	} else if srcPort == 53 {
+		return false, true
+	}
 
-  return src_eph, dst_eph
+	return src_eph, dst_eph
 }
 
 func portHeuristic(ifaceId int64, previousFlowId int64, l_type gopacket.LayerType, srcPort int, dstPort int, srcE gopacket.Endpoint, dstE gopacket.Endpoint) bool {
 	//Heuristic: If one end uses an ephemeral port and the other doesnt, match on the
 	// non ephemeral port
 
-
 	//edge case #1, both above, no clear server
-  src_eph, dst_eph := isEphemeralPortPair(srcPort, dstPort)
+	src_eph, dst_eph := isEphemeralPortPair(srcPort, dstPort)
 
 	if src_eph && dst_eph {
 		return true
@@ -628,75 +813,75 @@ func portHeuristic(ifaceId int64, previousFlowId int64, l_type gopacket.LayerTyp
 
 	endpoint := dstE
 	if dst_eph {
-    endpoint = srcE
+		endpoint = srcE
 	}
 
 	Eid := findOrMakeEndpoint(ifaceId, endpoint, time.Now(), false)
-  if Eid == -1 {
-    // non ephemral port not in endpoint db
-    return true
-  }
-
-  //check if Eid communicated with any ephemeral port under the previous flow
-  fMap.RLock()
-  _, exists := fMap.m[l_type][fKey{ifaceId, previousFlowId, Eid, EPHEMERAL_WILDCARD_PORT_ID}]
-  if exists {
-    fMap.RUnlock()
-    return false
-  }
-
-  _, exists = fMap.m[l_type][fKey{ifaceId, previousFlowId, EPHEMERAL_WILDCARD_PORT_ID, Eid}]
-  if exists {
-    fMap.RUnlock()
-    return false
-  }
-  fMap.RUnlock()
-
-  //if it did not already exist return true
-  return true
-
-/*
-	//look for an existing udp biflow belonging to parent, which is UDP, and has an aEid or bEid with a matching port.
-	// note: this is lazy, there can be some confusion if aEid or bEid got swapped, resulting in information loss
-	sql_query_endpoint := `SELECT endpoints.id FROM biflows INNER JOIN endpoints ON aEid=endpoints.id or bEid=endpoints.id WHERE parentBiflowId=? AND biflows.type=? AND endpoints.raw=? LIMIT 1`
-
-	var (
-		id int64
-	)
-  id = -1
-
-  fn := func(stmt *sqlite.Stmt) error {
-    id = stmt.ColumnInt64(0)
-    return nil
+	if Eid == -1 {
+		// non ephemral port not in endpoint db
+		return true
 	}
 
-  S := SPool.Get(nil)
-  defer SPool.Put(S)
-	err := sqlitex.Exec(S, sql_query_endpoint, fn, previousFlowId, udp.LayerType(), rawPort)
-	if err != nil {
-		log.Fatal(err)
+	//check if Eid communicated with any ephemeral port under the previous flow
+	fMap.RLock()
+	_, exists := fMap.M[l_type][fKey{ifaceId, previousFlowId, Eid, EPHEMERAL_WILDCARD_PORT_ID}]
+	if exists {
+		fMap.RUnlock()
+		return false
 	}
 
-  if id != -1 {
-    return false
-  }
+	_, exists = fMap.M[l_type][fKey{ifaceId, previousFlowId, EPHEMERAL_WILDCARD_PORT_ID, Eid}]
+	if exists {
+		fMap.RUnlock()
+		return false
+	}
+	fMap.RUnlock()
 
-  return true;
-*/
+	//if it did not already exist return true
+	return true
+
+	/*
+	   	//look for an existing udp biflow belonging to parent, which is UDP, and has an aEid or bEid with a matching port.
+	   	// note: this is lazy, there can be some confusion if aEid or bEid got swapped, resulting in information loss
+	   	sql_query_endpoint := `SELECT endpoints.id FROM biflows INNER JOIN endpoints ON aEid=endpoints.id or bEid=endpoints.id WHERE parentBiflowId=? AND biflows.type=? AND endpoints.raw=? LIMIT 1`
+
+	   	var (
+	   		id int64
+	   	)
+	     id = -1
+
+	     fn := func(stmt *sqlite.Stmt) error {
+	       id = stmt.ColumnInt64(0)
+	       return nil
+	   	}
+
+	     S := SPool.Get(nil)
+	     defer SPool.Put(S)
+	   	err := sqlitex.Exec(S, sql_query_endpoint, fn, previousFlowId, udp.LayerType(), rawPort)
+	   	if err != nil {
+	   		log.Fatal(err)
+	   	}
+
+	     if id != -1 {
+	       return false
+	     }
+
+	     return true;
+	*/
 }
 
 func shouldSaveTransportFlowTCP(ifaceId int64, previousFlowId int64, tcp *layers.TCP) bool {
 
 	//If a syn/ack is set, try save that flow since a server accepted a connection
 	if tcp.SYN && tcp.ACK {
-    return portHeuristic(ifaceId, previousFlowId, tcp.LayerType(), int(tcp.SrcPort), int(tcp.DstPort), tcp.TransportFlow().Src(), tcp.TransportFlow().Dst())
+		return portHeuristic(ifaceId, previousFlowId, tcp.LayerType(), int(tcp.SrcPort), int(tcp.DstPort), tcp.TransportFlow().Src(), tcp.TransportFlow().Dst())
 	}
 
 	return false
 }
 
 func shouldSaveTransportFlowUDP(ifaceId int64, previousFlowId int64, udp *layers.UDP) bool {
-  return portHeuristic(ifaceId, previousFlowId, udp.LayerType(), int(udp.SrcPort), int(udp.DstPort), udp.TransportFlow().Src(), udp.TransportFlow().Dst())
+	return portHeuristic(ifaceId, previousFlowId, udp.LayerType(), int(udp.SrcPort), int(udp.DstPort), udp.TransportFlow().Src(), udp.TransportFlow().Dst())
 }
 func saveFlows(ifaceName string, ifaceId int64, packet gopacket.Packet) {
 
@@ -734,25 +919,25 @@ func saveFlows(ifaceName string, ifaceId int64, packet gopacket.Packet) {
 			debugPrint(2, layer.LayerType(), eth.LinkFlow())
 
 			previousFlowId = saveLinkFlow(ifaceId, int(layer.LayerType()), previousFlowId, eth.LinkFlow(), t)
-    case layers.LayerTypeARP:
-      arp, _ := layer.(*layers.ARP)
-      //arp bridges a hardware address layer to a protocol address. Example, Ethernet and IP.... This means theres two flows to record (hw + protocol)
-     	arpFlow := gopacket.NewFlow(layers.EndpointMAC, arp.SourceHwAddress, arp.DstHwAddress)
-      previousFlowId = saveLinkFlow(ifaceId, int(layer.LayerType()), previousFlowId, arpFlow, t)
+		case layers.LayerTypeARP:
+			arp, _ := layer.(*layers.ARP)
+			//arp bridges a hardware address layer to a protocol address. Example, Ethernet and IP.... This means theres two flows to record (hw + protocol)
+			arpFlow := gopacket.NewFlow(layers.EndpointMAC, arp.SourceHwAddress, arp.DstHwAddress)
+			previousFlowId = saveLinkFlow(ifaceId, int(layer.LayerType()), previousFlowId, arpFlow, t)
 
-      protocolFlowType := layers.EndpointMAC
-      //try to get a more specific type
-      if arp.Protocol == layers.EthernetTypeIPv4 {
-        protocolFlowType = layers.EndpointIPv4
-      } else if arp.Protocol == layers.EthernetTypeIPv6 {
-        protocolFlowType = layers.EndpointIPv6
-      } else if arp.Protocol == layers.EthernetTypePPP {
-        protocolFlowType = layers.EndpointPPP
-      }
-      arpProtocolFlow := gopacket.NewFlow(protocolFlowType, arp.SourceProtAddress, arp.DstProtAddress)
+			protocolFlowType := layers.EndpointMAC
+			//try to get a more specific type
+			if arp.Protocol == layers.EthernetTypeIPv4 {
+				protocolFlowType = layers.EndpointIPv4
+			} else if arp.Protocol == layers.EthernetTypeIPv6 {
+				protocolFlowType = layers.EndpointIPv6
+			} else if arp.Protocol == layers.EthernetTypePPP {
+				protocolFlowType = layers.EndpointPPP
+			}
+			arpProtocolFlow := gopacket.NewFlow(protocolFlowType, arp.SourceProtAddress, arp.DstProtAddress)
 
-      // should the layer type be other than ARP? for example the arp protocol?
-      previousFlowId = saveLinkFlow(ifaceId, int(layer.LayerType()), previousFlowId, arpProtocolFlow, t)
+			// should the layer type be other than ARP? for example the arp protocol?
+			previousFlowId = saveLinkFlow(ifaceId, int(layer.LayerType()), previousFlowId, arpProtocolFlow, t)
 
 			debugPrint(2, layer.LayerType(), arpFlow, arpProtocolFlow)
 		case layers.LayerTypeIPv4:
@@ -766,12 +951,12 @@ func saveFlows(ifaceName string, ifaceId int64, packet gopacket.Packet) {
 			debugPrint(2, layer.LayerType(), ip6.NetworkFlow())
 
 			previousFlowId = saveNetworkFlow(ifaceId, int(layer.LayerType()), previousFlowId, ip6.NetworkFlow(), t)
-    case layers.LayerTypeICMPv4:
-      //icmp, _ := layer.(*layers.ICMPv4)
-      //icmp is more of a data payload. logging tbd
-    case layers.LayerTypeICMPv6:
-      //icmp, _ := layer.(*layers.ICMPv6)
-      //logging tbd
+		case layers.LayerTypeICMPv4:
+			//icmp, _ := layer.(*layers.ICMPv4)
+			//icmp is more of a data payload. logging tbd
+		case layers.LayerTypeICMPv6:
+			//icmp, _ := layer.(*layers.ICMPv6)
+			//logging tbd
 		case layers.LayerTypeTCP:
 			tcp, _ := layer.(*layers.TCP)
 			debugPrint(2, layer.LayerType(), tcp.TransportFlow())

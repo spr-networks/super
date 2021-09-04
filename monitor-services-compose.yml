@@ -10,6 +10,9 @@ services:
       - type: bind
         source: ./state/flowgather.db
         target: /flowgather.db
+      - type: bind
+        source: ./state/flowgather.json
+        target: /flowgather.json
   telegraf:
     container_name: supermon-telegraf
     network_mode: host

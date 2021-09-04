@@ -1,5 +1,4 @@
 -- Up
-
 -- Unique Sources
 CREATE TABLE datasources (
   id INTEGER PRIMARY KEY,
@@ -7,38 +6,8 @@ CREATE TABLE datasources (
   primaryAddress TEXT,
   interfaceName TEXT,
   hostName TEXT,
-  description TEXT
-);
-
--- Unique endpoints
--- ISO8601 for times
-
-CREATE TABLE endpoints (
-  id INTEGER PRIMARY KEY,
-  type INTEGER,
-  raw BLOB,
-  discoveryTime TEXT,
   description TEXT,
-  datasrcId INTEGER,
-  FOREIGN KEY(datasrcId) REFERENCES sources(id)
-);
-
--- Biflows
-
-CREATE TABLE biflows (
-  id INTEGER PRIMARY KEY,
-  type INTEGER,
-  aEid INTEGER,
-  bEid INTEGER,
-  bidir INTEGER,
-  parentBiflowId INTEGER,
-  discoveryTime TEXT,
-  description TEXT,
-  datasrcId INTEGER,
-  FOREIGN KEY(aEid) REFERENCES endpoints(id),
-  FOREIGN KEY(bEid) REFERENCES endpoints(id)
-  FOREIGN KEY(parentBiflowId) REFERENCES biflows(id)
-  FOREIGN KEY(datasrcId) REFERENCES sources(id)
+  UNIQUE(hardwareAddress, primaryAddress, interfaceName, hostName)
 );
 
 CREATE TABLE dnsReplies (
