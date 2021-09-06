@@ -19,6 +19,11 @@ The current setup assumes you'll be using a raspberry pi model 4b with a AWUS036
 and an additional usb ethernet dongle (eth1) connected to a switch for additional wired devices.
 The built-in ethernet port of the raspberry pi (eth0) is connected to upstream/WAN/internet
 
+Hardware requirements:
+- At least an 8GB SD card is required, probably 16GB is better and 128gb for development work is best.
+- A WiFi Dongle for better performance and WPA3 support (https://www.alfa.com.tw/products/awus036acm and https://www.netgear.com/home/wifi/adapters/a6210/ have been tested to be good and both use the mt76x2u driver)
+- A USB WiFi Dongle for additional LAN devices since the built-in port (eth1) will be used for the WAN. https://www.tp-link.com/us/home-networking/usb-converter/ue300/ Is good
+
 ### Base System Setup
 
 1. Set up the pi with ubuntu server https://ubuntu.com/download/raspberry-pi/thank-you?version=21.04&architecture=server-arm64+raspi
@@ -62,17 +67,19 @@ Next, set some station passwords. For WPA3, copy sae_passwords.sample to sae_pas
 For WPA2 passwords (since many devices will not support WPA2 yet), copy wpa2pskfile.sample to wpa2pskfile and set your passwords there.
 
 Lastly, modify configs/zones/ and set which MAC addresses are allowed which level of access
-The default zones are:
-- \# This is the default, no devices have to be added to be treated as such. No DNS access, no LAN access, no internet
+The default zones:
+```
+# This is the default, no devices have to be added to be treated as such. No DNS access, no LAN access, no internet
 - isolated 
-- \# Allows DNS access as well as talking to all LAN devices (wireless and wired LAN)
+# Allows DNS access as well as talking to all LAN devices (wireless and wired LAN)
 - lan_only 
-- \# Allows internet/WAN forwareding on top of the above
+# Allows internet/WAN forwareding on top of the above
 - wan_lan
-- \# Allows internet access but no lan access
+# Allows internet access but no lan access
 - wan_only 
-- \# Placeholder for future privileged services, Currently equivalent to the above
+# Placeholder for future privileged services, Currently equivalent to the above
 - wan_lan_admin 
+```
 
 The groups directory can be used to create sets of devices that can communicate amongst themselves if a device does not need full LAN access. 
 
@@ -94,7 +101,7 @@ echo nameserver 127.0.0.1 > /etc/resolv.conf
 
 
 ### Additional Notes
-You may want to tune dns-Corefile to set up DNS server configuration as well as hostapd in configs/gen_hostapd.sh
+You  tune dns-Corefile to set up DNS server configuration as well as hostapd in configs/gen_hostapd.sh
 
 ### Using a different wireless dongle 
 For using the built-in wireless or a different dongle, the hostapd configuration may need to be modified in configs/gen_hostapd.sh.
