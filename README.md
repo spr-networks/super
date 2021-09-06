@@ -18,7 +18,8 @@ The forwarding and input policies are default drop.
 The following ports are exposed to WAN:
 - sshd (tcp 22), iperf3 (tcp 5201) # for development
 - wireguard (udp 51280)
-On LAN the following services are available
+
+On LAN the following services are available:
 - DHCP tied to the authenticated MAC address over WiFi or all wired LAN devices
 - DNS for devices in the dns_access group
 - 1900, 5353 multicast repeater to all devices for SSDP and MDNS
