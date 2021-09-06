@@ -22,22 +22,38 @@ The built-in ethernet port of the raspberry pi (eth0) is connected to upstream/W
 ### Base System Setup
 
 1. Set up the pi with ubuntu server https://ubuntu.com/download/raspberry-pi/thank-you?version=21.04&architecture=server-arm64+raspi
-2. Install docker, docker-compose (apt-get install docker docker-compose)
-3. Add a bug fix for scatter/gather bugs with USB (before plugging in the module):  echo mt76-usb disable_usb_sg=1 >> /etc/modules
-4. Disable Docker's iptable setup, write the following to /etc/docker/daemon.json
 ```
-{
-  "iptables": false
-}
+# Example from mac
+$ mac xzcat ubuntu-21.04-preinstalled-server-arm64+raspi.img.xz | dd of=/dev/rdisk2 bs=$[1024*1024]
+# On the booted pi
+sudo -s
+touch /etc/cloud/cloud-init.disabled
+apt-get update
+sudo apt-get upgrade
+sudo apt-get install docker.io docker-compose 
+# get rid of `predictable` interface names to get eth0, eth1, wlan0, wlan1 instead.
+mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
+ln -s /dev/null  /lib/udev/rules.d/80-net-setup-link.rules
+# Add a bug fix for scatter/gather bugs with USB (before plugging in the module):  
+echo mt76-usb disable_usb_sg=1 >> /etc/modules
+
+# do not use systemd-resolvd, we will use our own container later
+systemctl disable systemd-resolved
+systemctl stop systemd-resolved
+rm /etc/resolv.conf
+echo "nameserver 1.1.1.1" > /etc/resolv.conf
+
+reboot
 ```
 
 ### Configuring the project
 
 
 ```bash
+git clone https://github.com/SPR-FI/super.git 
+cd super 
 # To get started, copy base/template_configs to configs/:
-$ sudo -s
-# cp -R base/template_configs configs
+cp -R base/template_configs configs
 ```
 
 Then modify configs/config.sh to set an SSID_NAME and configure any networking specifics 
@@ -60,10 +76,23 @@ The default zones are:
 
 The groups directory can be used to create sets of devices that can communicate amongst themselves if a device does not need full LAN access. 
 
+### Building the project
+```
+./build_docker_compose.sh 
+6. After initially building, disable Docker's iptable setup, so docker restarts dont mess with the firwall. Write the following to /etc/docker/daemon.json
+```
+{
+  "iptables": false
+}
+7. Optionally, use our own coredns for DNS. The container will need to be running 
+8. 
+echo nameserver 127.0.0.1 > /etc/resolv.conf
+
+```
 
 
 ### Additional Notes
-You may want to modify dns-Corefile to set up DNS server configuration as well as hostapd in configs/gen_hostapd.sh
+You may want to tune dns-Corefile to set up DNS server configuration as well as hostapd in configs/gen_hostapd.sh
 
 ### Using a different wireless dongle 
 For using the built-in wireless or a different dongle, the hostapd configuration may need to be modified in configs/gen_hostapd.sh.
