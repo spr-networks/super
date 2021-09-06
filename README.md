@@ -81,8 +81,7 @@ Hardware requirements:
 ```
 # Example from mac
 $ xzcat ubuntu-21.04-preinstalled-server-arm64+raspi.img.xz | dd of=/dev/rdisk2 bs=$[1024*1024]
-# On the booted pi
-sudo -s
+# On the booted pi (or run base/setup.sh)
 touch /etc/cloud/cloud-init.disabled
 apt-get update
 sudo apt-get upgrade
