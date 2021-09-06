@@ -9,7 +9,7 @@ There project enables a high degree of confidence about where packets come from 
 ## The Network Design
 
 Each device on the network is sequestered into a tiny subnet, and all devices must communicate through the router to communicate with one another. 
-Groups are used to inform nftable sets about a device's network address, by MAC address and IP address.
+Groups are used to inform nftable sets about a device's network access, by MAC address and IP address.
 
 The firewall rules are in https://github.com/SPR-FI/super/blob/main/base/scripts/nft_rules.sh
 
