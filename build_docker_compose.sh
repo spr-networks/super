@@ -20,15 +20,19 @@ if [ '!' -d "state/" ]; then
 fi
 
 # Base
+mkdir -p base/configs
 cp configs/config.sh base/configs/
 # DHCP
 ./configs/gen_coredhcp_yaml.sh > dhcp/configs/coredhcp.yml
+mkdir -p dhcp/configs/zones
 cp configs/config.sh dhcp/configs/
 cp configs/netplugd.conf dhcp/configs/netplugd.conf
 cp -R configs/zones dhcp/configs/zones/
 # DNS
+mkdir -p dns/configs
 cp configs/dns-Corefile dns/configs/Corefile
 # wifi
+mkdir -p wifid/configs
 ./configs/gen_hostapd.sh > wifid/configs/hostapd.conf
 cp configs/wpa2pskfile wifid/configs/wpa2pskfile
 # muproxy
