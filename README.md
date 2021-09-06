@@ -34,7 +34,7 @@ sudo apt-get install docker.io docker-compose
 # get rid of `predictable` interface names to get eth0, eth1, wlan0, wlan1 instead.
 mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
 ln -s /dev/null  /lib/udev/rules.d/80-net-setup-link.rules
-# Add a bug fix for scatter/gather bugs with USB (before plugging in the module):  
+# Add a bug fix for scatter/gather bugs with USB:  
 echo mt76-usb disable_usb_sg=1 >> /etc/modules
 
 # do not use systemd-resolvd, we will use our own container later
@@ -79,7 +79,9 @@ The groups directory can be used to create sets of devices that can communicate 
 ### Building the project
 ```
 ./build_docker_compose.sh 
-6. After initially building, disable Docker's iptable setup, so docker restarts dont mess with the firwall. Write the following to /etc/docker/daemon.json
+```
+
+After initially building, disable Docker's iptable setup, so docker restarts dont mess with the firewall. Write the following to /etc/docker/daemon.json
 ```
 {
   "iptables": false
