@@ -91,7 +91,7 @@ sudo apt-get install docker.io docker-compose
 mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
 ln -s /dev/null  /lib/udev/rules.d/80-net-setup-link.rules
 # Add a bug fix for scatter/gather bugs with USB:  
-echo mt76-usb disable_usb_sg=1 >> /etc/modules
+echo "options mt76_usb disable_usb_sg=1" > /etc/modprobe.d/mt76_usb.conf
 
 # do not use systemd-resolvd, we will use our own container later
 systemctl disable systemd-resolved
