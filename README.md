@@ -6,6 +6,57 @@ This project creates a hardened router setup for connecting IOT devices.
 By employing per-station passphrases and strict firewall rules, a hardened network is created.
 There project enables a high degree of confidence about where packets come from and where they can actually go.
 
+## The Network Design
+
+Each device on the network is sequestered into a tiny subnet, and all devices must communicate through the router to communicate with one another. 
+Groups are used to inform nftable sets about a device's network access, by MAC address and IP address.
+
+The firewall rules are in https://github.com/SPR-FI/super/blob/main/base/scripts/nft_rules.sh
+
+The forwarding and input policies are default drop.
+
+The following ports are exposed to WAN:
+- sshd (tcp 22), iperf3 (tcp 5201) # for development
+- wireguard (udp 51280)
+
+On LAN the following services are available:
+- DHCP tied to the authenticated MAC address over WiFi or all wired LAN devices
+- DNS for devices in the dns_access group
+- 1900, 5353 multicast repeater to all devices for SSDP and MDNS
+
+Routing to the LAN or WAN only happens for authenticated, approved MAC addresses.
+
+## Services Overview
+
+#### base
+Sets up routing, firewall rules, and tunes performance on the pi
+
+#### [wifid](https://github.com/SPR-FI/super/tree/main/wifid)
+Runs hostapd with a hardened [configuration](https://github.com/SPR-FI/super/blob/main/base/template_configs/gen_hostapd.sh) and supports the management of per-station PSKs. It [hands off](https://github.com/SPR-FI/super/blob/main/wifid/scripts/action.sh) MAC addresses to dhcp
+
+#### [dhcp](https://github.com/SPR-FI/super/tree/main/dhcp)
+Runs CoreDHCP (golang) and [netplug scripts](https://github.com/SPR-FI/super/blob/main/dhcp/scripts/netplug) to [dynamically add](https://github.com/SPR-FI/super/blob/main/dhcp/scripts/dhcp_helper.sh) devices to the Sets they belong to. For example, dhcp, dns, internet, lan, or custom groups. For DHCP hardening, an [XDP filter](https://github.com/SPR-FI/super/blob/main/dhcp/code/filter_dhcp_mismatch.c) is applied so that the the layer 2 source addresses matches the client identifier in the layer 3 udp payload for DHCP
+
+Two plugins were added to support this. The first, [tiny_subnets](https://github.com/SPR-FI/coredhcp/tree/master/plugins/tiny_subnets) allows creating /30 subnets and the second, [execute](https://github.com/SPR-FI/coredhcp/blob/master/plugins/execute/plugin.go) runs a bash script, [dhcp_helper.sh](https://github.com/SPR-FI/super/blob/main/dhcp/scripts/dhcp_helper.sh) upon a DHCP with information about the DHCP request and response.
+
+#### [dns](https://github.com/SPR-FI/super/tree/main/dns)
+
+Runs CoreDNS (golang) with custom modules for [ad-blocking](https://github.com/SPR-FI/coredns-block), [dns-rebinding protection](https://github.com/SPR-FI/coredns-rebinding_protection), and [logging JSON](https://github.com/SPR-FI/coredns-jsonlog) to influxdb or postgres. 
+A [local](https://github.com/SPR-FI/super/blob/main/dhcp/scripts/dhcp_helper.sh#L100) [mappings](https://github.com/SPR-FI/super/blob/main/base/template_configs/dns-Corefile#L5) file is used to map DHCP host names to .lan hostnames, for example macbook.lan 
+
+#### [multicast_udp_server](https://github.com/SPR-FI/super/tree/main/multicast_udp_proxy)
+
+Since devices are unable to speak directly to one another, multicast is broken by design. A golang service repeats packets to services with the original sender's address. This currently repeats to all devices. Future work could monitor IGMP to limit noise or create a bipartite graph of IOT devices and users, where devices would not be able to communicate directly with other deviecs. 
+
+#### wireguard
+Additional pis can be connected over wireguard. Description TBD. 
+
+#### [flowgather](https://github.com/SPR-FI/super/tree/main/flowgather)
+Experimental packet monitoring service geared for forensics, written entirely in golang to keep track of unique network flows, DNS queries, and TLS fingerprints
+
+#### Telegraf
+TBD
+https://github.com/SPR-FI/super/blob/main/monitor-services-compose.yml#L17
 
 ## Building:
 
@@ -29,7 +80,7 @@ Hardware requirements:
 1. Set up the pi with ubuntu server https://ubuntu.com/download/raspberry-pi/thank-you?version=21.04&architecture=server-arm64+raspi
 ```
 # Example from mac
-$ mac xzcat ubuntu-21.04-preinstalled-server-arm64+raspi.img.xz | dd of=/dev/rdisk2 bs=$[1024*1024]
+$ xzcat ubuntu-21.04-preinstalled-server-arm64+raspi.img.xz | dd of=/dev/rdisk2 bs=$[1024*1024]
 # On the booted pi
 sudo -s
 touch /etc/cloud/cloud-init.disabled
@@ -40,7 +91,7 @@ sudo apt-get install docker.io docker-compose
 mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
 ln -s /dev/null  /lib/udev/rules.d/80-net-setup-link.rules
 # Add a bug fix for scatter/gather bugs with USB:  
-echo mt76-usb disable_usb_sg=1 >> /etc/modules
+echo "options mt76_usb disable_usb_sg=1" > /etc/modprobe.d/mt76_usb.conf
 
 # do not use systemd-resolvd, we will use our own container later
 systemctl disable systemd-resolved
