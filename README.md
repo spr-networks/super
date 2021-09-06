@@ -80,7 +80,7 @@ Hardware requirements:
 1. Set up the pi with ubuntu server https://ubuntu.com/download/raspberry-pi/thank-you?version=21.04&architecture=server-arm64+raspi
 ```
 # Example from mac
-$ mac xzcat ubuntu-21.04-preinstalled-server-arm64+raspi.img.xz | dd of=/dev/rdisk2 bs=$[1024*1024]
+$ xzcat ubuntu-21.04-preinstalled-server-arm64+raspi.img.xz | dd of=/dev/rdisk2 bs=$[1024*1024]
 # On the booted pi
 sudo -s
 touch /etc/cloud/cloud-init.disabled
