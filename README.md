@@ -33,9 +33,10 @@ Sets up routing, firewall rules, and tunes performance on the pi
 
 #### [wifid](https://github.com/SPR-FI/super/tree/main/wifid)
 Runs hostapd with a hardened [configuration](https://github.com/SPR-FI/super/blob/main/base/template_configs/gen_hostapd.sh) and supports the management of per-station PSKs. It [hands off](https://github.com/SPR-FI/super/blob/main/wifid/scripts/action.sh) MAC addresses to dhcp
+For DHCP hardening, an [XDP filter](https://github.com/SPR-FI/super/blob/main/wifid/code/filter_dhcp_mismatch.c) is applied so that the the layer 2 source addresses matches the client identifier in the layer 3 udp payload for DHCP.
 
 #### [dhcp](https://github.com/SPR-FI/super/tree/main/dhcp)
-Runs CoreDHCP (golang) and [netplug scripts](https://github.com/SPR-FI/super/blob/main/dhcp/scripts/netplug) to [dynamically add](https://github.com/SPR-FI/super/blob/main/dhcp/scripts/dhcp_helper.sh) devices to the Sets they belong to. For example, dhcp, dns, internet, lan, or custom groups. For DHCP hardening, an [XDP filter](https://github.com/SPR-FI/super/blob/main/dhcp/code/filter_dhcp_mismatch.c) is applied so that the the layer 2 source addresses matches the client identifier in the layer 3 udp payload for DHCP
+Runs CoreDHCP (golang) to [dynamically add](https://github.com/SPR-FI/super/blob/main/dhcp/scripts/dhcp_helper.sh) devices to the Sets they belong to. For example, dhcp, dns, internet, lan, or custom groups. 
 
 Two plugins were added to support this. The first, [tiny_subnets](https://github.com/SPR-FI/coredhcp/tree/master/plugins/tiny_subnets) allows creating /30 subnets and the second, [execute](https://github.com/SPR-FI/coredhcp/blob/master/plugins/execute/plugin.go) runs a bash script, [dhcp_helper.sh](https://github.com/SPR-FI/super/blob/main/dhcp/scripts/dhcp_helper.sh) upon a DHCP with information about the DHCP request and response.
 

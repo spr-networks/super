@@ -26,7 +26,6 @@ cp configs/config.sh base/configs/
 ./configs/gen_coredhcp_yaml.sh > dhcp/configs/coredhcp.yml
 mkdir -p dhcp/configs/zones/groups
 cp configs/config.sh dhcp/configs/
-cp configs/netplugd.conf dhcp/configs/netplugd.conf
 cp -R configs/zones/ dhcp/configs/
 # DNS
 mkdir -p dns/configs
