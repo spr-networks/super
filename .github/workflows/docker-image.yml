@@ -11,8 +11,12 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-
+          
     steps:
     - uses: actions/checkout@v2
+    - uses uraimo/run-on-arch-action@v2.0.5
     - name: Build the Docker image
-      run: docker build base --tag superbase:$(date +%s)
+      with: 
+        arch: aarch64
+        distro: ubuntu-latest
+        run: docker build base --tag superbase:$(date +%s)
