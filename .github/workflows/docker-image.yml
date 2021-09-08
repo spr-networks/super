@@ -8,15 +8,19 @@ on:
 
 jobs:
 
-  build:
-
+  buildx:
     runs-on: ubuntu-latest
-          
     steps:
-    - uses: actions/checkout@v2
-    - uses uraimo/run-on-arch-action@v2.0.5
-      name: Build the Docker image
-      with: 
-        arch: aarch64
-        distro: ubuntu-latest
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      -
+        name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+      -
+        name: Available platforms
         run: docker build base --tag superbase:$(date +%s)
