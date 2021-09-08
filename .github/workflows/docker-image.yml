@@ -27,5 +27,5 @@ jobs:
           cp -R base/template_configs configs
           cp configs/sae_passwords.sample configs/sae_passwords
           cp configs/wpa2pskfile.sample configs/wpa2pskfile
-          echo lts-rad:${{ secrets.GITHUB_TOKEN }}@github.com > .github_creds
+          echo ${{ secrets.PAT }}@github.com > .github_creds
           ./build_docker_compose.sh
