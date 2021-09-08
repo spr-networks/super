@@ -1,7 +1,7 @@
 FROM --platform=linux/arm64 ubuntu:21.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-ceriticates hostapd jq git curl
+RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates hostapd jq git curl
 
 RUN mkdir /code
 WORKDIR /code

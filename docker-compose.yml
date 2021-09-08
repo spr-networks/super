@@ -1,5 +1,10 @@
 version: '3.4'
 services:
+  testsecrets:
+    container_name: supertestsecrets
+    build: testsecrets
+    network_mode: host
+    privileged: true
   base:
     container_name: superbase
     build: base
