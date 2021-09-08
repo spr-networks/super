@@ -15,7 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses uraimo/run-on-arch-action@v2.0.5
-    - name: Build the Docker image
+      name: Build the Docker image
       with: 
         arch: aarch64
         distro: ubuntu-latest
