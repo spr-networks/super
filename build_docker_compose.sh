@@ -46,4 +46,4 @@ if [ -f .github_creds ]; then
   BUILDARGS="--build-arg GITHUB_CREDS=`cat .github_creds`"
 fi
 docker-compose build ${BUILDARGS}
-docker-compose -f monitor-services-compose.yml build ${BUILDARGS}
+#docker-compose -f monitor-services-compose.yml build ${BUILDARGS}
