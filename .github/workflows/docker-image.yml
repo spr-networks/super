@@ -23,4 +23,8 @@ jobs:
         uses: docker/setup-buildx-action@v1
       -
         name: Available platforms
-        run: docker build base --tag superbase:$(date +%s)
+        run: |
+          cp -R base/template_configs configs
+          cp configs/sae_passwords.sample configs/sae_passwords
+          cp configs/wpa2pskfile.sample configs/wpa2pskfile
+          ./build_docker_compose.sh
