@@ -7,6 +7,7 @@ RUN apt-get install -y nano
 RUN apt-get install -y ca-certificates
 RUN apt-get install -y git
 RUN apt-get install -y jq
+RUN apt-get install -y clang
 RUN mkdir /code
 WORKDIR /code
 
