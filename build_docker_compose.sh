@@ -23,9 +23,9 @@ fi
 mkdir -p base/configs
 cp configs/config.sh base/configs/
 # DHCP
-./configs/gen_coredhcp_yaml.sh > dhcp/configs/coredhcp.yml
-mkdir -p dhcp/configs/zones/groups
+mkdir -p configs/zones/groups
 cp configs/config.sh dhcp/configs/
+./configs/gen_coredhcp_yaml.sh > dhcp/configs/coredhcp.yml
 cp -R configs/zones/ dhcp/configs/
 # DNS
 mkdir -p dns/configs
