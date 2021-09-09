@@ -1,15 +1,18 @@
 # Until 3.9 is available for profiles, split out monitoring into a separate docker-compose file
-version: '3.4'
+version: '3.6'
 services:
   flowgather:
     container_name: flowgather
     build: flowgather
     network_mode: host
     privileged: true
+    logging:
+      driver: journald
     volumes:
-      - type: bind
-        source: ./state/flowgather.db
-        target: /flowgather.db
+      - type: tmpfs
+        target: /data/
+        tmpfs:
+          size: 104857600
       - type: bind
         source: ./state/flowgather.json
         target: /flowgather.json
@@ -17,6 +20,8 @@ services:
     container_name: supermon-telegraf
     network_mode: host
     image: telegraf
+    logging:
+      driver: journald
     volumes:
       - type: bind
         source: /var/run/docker.sock

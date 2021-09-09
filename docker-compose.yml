@@ -5,11 +5,15 @@ services:
     build: base
     network_mode: host
     privileged: true
+    logging: 
+      driver: journald
   dhcp:
     container_name: superdhcp
     build: dhcp
     network_mode: host
     privileged: true
+    logging: 
+      driver: journald
     volumes:
       - type: bind
         source: ./state/local_mappings
@@ -28,6 +32,8 @@ services:
     build: dns
     network_mode: host
     privileged: true
+    logging: 
+      driver: journald
     volumes:
       - type: bind
         source: ./state/local_mappings
@@ -37,6 +43,8 @@ services:
     build: wifid
     network_mode: host
     privileged: true
+    logging: 
+      driver: journald
     depends_on:
       - "dhcp"
       - "dns"
@@ -50,6 +58,8 @@ services:
     build: multicast_udp_proxy
     network_mode: host
     privileged: true
+    logging: 
+      driver: journald
 networks: 
   default:
     driver: none

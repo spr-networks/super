@@ -37,13 +37,10 @@ cp configs/wpa2pskfile wifid/configs/wpa2pskfile
 # muproxy
 ./configs/gen_multicast_startup.sh > multicast_udp_proxy/scripts/startup.sh
 chmod +x multicast_udp_proxy/scripts/startup.sh
-#flowgather
-cp -n flowgather/code/flowgather.db state/flowgather.db
-touch state/flowgather.json
 
 BUILDARGS=""
 if [ -f .github_creds ]; then
   BUILDARGS="--build-arg GITHUB_CREDS=`cat .github_creds`"
 fi
-docker-compose build ${BUILDARGS}
-#docker-compose -f monitor-services-compose.yml build ${BUILDARGS}
+#docker-compose build ${BUILDARGS}
+docker-compose -f monitor-services-compose.yml build ${BUILDARGS}

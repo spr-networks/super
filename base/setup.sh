@@ -18,3 +18,9 @@ systemctl stop systemd-resolved
 rm /etc/resolv.conf
 echo "nameserver 1.1.1.1" > /etc/resolv.conf
 
+# constrain journal size
+echo -e "[Journal]\n\nSystemMaxUse=50m\nSystemMaxFileSize=10M" > /etc/systemd/journald.conf 
+# mount logs as tmpfs
+echo -e "tmpfs    /tmp    tmpfs    defaults,noatime,nosuid,size=100m    0 0\ntmpfs    /var/tmp    tmpfs    defaults,noatime,nosuid,size=30m    0 0\ntmpfs    /var/log    tmpfs    defaults,noatime,nosuid,mode=0755,size=100m    0 0\ntmpfs    /var/run    tmpfs    defaults,noatime,nosuid,mode=0755,size=2m    0 0\n" >> /etc/fstab
+
+

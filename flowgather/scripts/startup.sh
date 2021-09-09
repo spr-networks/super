@@ -1,2 +1,2 @@
 #!/bin/bash
-/flowgather
+GOGC=4000 /flowgather

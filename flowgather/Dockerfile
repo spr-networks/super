@@ -20,26 +20,10 @@ RUN apt-get install -y libpcap-dev
 
 ENV CC=clang
 
-# incremental build for testing
-COPY code/go.mod /code/
-COPY code/go.sum /code/
-RUN go get github.com/dreadl0ck/ja3                                                                            
-RUN go get github.com/google/gopacket                                                                          
-RUN go get github.com/google/gopacket/layers                                                                   
-RUN go get github.com/google/gopacket/pcap                                                                     
-RUN go get github.com/mattn/go-sqlite3                                                                         
-RUN go get github.com/vishvananda/netlink                                                                      
-RUN go get golang.org/x/sys/unix                                                                               
-RUN go get crawshaw.io/sqlite/sqlitex
-
-COPY code/main.go /code/
-RUN go build -o /flowgather
-
-#build
-#COPY code/ /code/
-#RUN --mount=type=tmpfs,target=/root/go/ go mod tidy && go build -o /flowgather
-
+COPY code/ /code/
+RUN --mount=type=tmpfs,target=/root/go/ go mod tidy && go build -o /flowgather
 COPY scripts /scripts/
 
 WORKDIR /
+RUN mkdir /data
 ENTRYPOINT ["/scripts/startup.sh"]
