@@ -36,7 +36,7 @@ Runs hostapd with a hardened [configuration](https://github.com/SPR-FI/super/blo
 For DHCP hardening, an [XDP filter](https://github.com/SPR-FI/super/blob/main/wifid/code/filter_dhcp_mismatch.c) is applied so that the the layer 2 source addresses matches the client identifier in the layer 3 udp payload for DHCP.
 
 #### [dhcp](https://github.com/SPR-FI/super/tree/main/dhcp)
-Runs CoreDHCP (golang) to [dynamically add](https://github.com/SPR-FI/super/blob/main/dhcp/scripts/dhcp_helper.sh) devices to the Sets they belong to. For example, dhcp, dns, internet, lan, or custom groups. 
+Runs [CoreDHCP (golang)](https://github.com/SPR-FI/coredhcp) to [dynamically add](https://github.com/SPR-FI/super/blob/main/dhcp/scripts/dhcp_helper.sh) devices to the nftable Sets they belong to. For example, dhcp, dns, internet, lan, or custom groups. 
 
 Two plugins were added to support this. The first, [tiny_subnets](https://github.com/SPR-FI/coredhcp/tree/master/plugins/tiny_subnets) allows creating /30 subnets and the second, [execute](https://github.com/SPR-FI/coredhcp/blob/master/plugins/execute/plugin.go) runs a bash script, [dhcp_helper.sh](https://github.com/SPR-FI/super/blob/main/dhcp/scripts/dhcp_helper.sh) upon a DHCP with information about the DHCP request and response.
 
@@ -47,7 +47,7 @@ A [local](https://github.com/SPR-FI/super/blob/main/dhcp/scripts/dhcp_helper.sh#
 
 #### [multicast_udp_server](https://github.com/SPR-FI/super/tree/main/multicast_udp_proxy)
 
-Since devices are unable to speak directly to one another, multicast is broken by design. A golang service repeats packets to services with the original sender's address. This currently repeats to all devices. Future work could monitor IGMP to limit noise or create a bipartite graph of IOT devices and users, where devices would not be able to communicate directly with other deviecs. 
+Since devices are unable to speak directly to one another, multicast is broken by design with the network architecture. A golang service repeats packets to services with the original sender's address. This currently repeats to all devices. Future work could monitor IGMP to limit noise or create a bipartite graph of IOT devices and users, where devices would not be able to communicate directly with other deviecs. 
 
 #### wireguard
 Additional pis can be connected over wireguard. Description TBD. 
@@ -58,12 +58,6 @@ Experimental packet monitoring service geared for forensics, written entirely in
 #### Telegraf
 TBD
 https://github.com/SPR-FI/super/blob/main/monitor-services-compose.yml#L17
-
-## Building:
-
-All source code can be built on the pi with 
-./build_docker_compose.sh
-
 
 ## Configuration
 
@@ -141,7 +135,10 @@ The default zones:
 
 The groups directory can be used to create sets of devices that can communicate amongst themselves if a device does not need full LAN access. 
 
+
 ### Building the project
+All source code can be built on the pi with 
+
 ```
 ./build_docker_compose.sh 
 ```
@@ -151,20 +148,19 @@ After initially building, disable Docker's iptable setup, so docker restarts don
 {
   "iptables": false
 }
-7. Optionally, use our own coredns for DNS. The container will need to be running 
-8. 
+7. Optionally, use our own coredns for DNS on the router itself. The container will need to be running 
+
 echo nameserver 127.0.0.1 > /etc/resolv.conf
 
 ```
 
 
 ### Additional Notes
-You  tune dns-Corefile to set up DNS server configuration as well as hostapd in configs/gen_hostapd.sh
+Check dns-Corefile to tweak DNS server configuration as well as the hostapd settings in configs/gen_hostapd.sh
 
 ### Using a different wireless dongle 
 For using the built-in wireless or a different dongle, the hostapd configuration may need to be modified in configs/gen_hostapd.sh.
 Note that if the built-in wireless is to be used, WPA3 is not currently available without additional broadcom firmware patches. 
-
 
 ## Running:
 
@@ -177,3 +173,4 @@ Note that if the built-in wireless is to be used, WPA3 is not currently availabl
 
 Currently, devices must be added manually as documented above and the superwifid service should be restarted. 
 
+The [add_device.sh](https://github.com/SPR-FI/super/blob/main/add_device.sh) helper script can help add new wifi devices to the network
