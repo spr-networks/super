@@ -24,10 +24,16 @@ custom_groups=$(ls /configs/zones/groups)
 all_groups="dns internet lan $custom_groups"
 
 # remove this IP, interface and MAC from all existing interface groups
+# If not a WiFi/VLAN VIF then do do not match on the interface
+SEARCHSTRING="${IP} |${MAC}"
+if grep -iE $VLANSIF <<< $LANIF; then
+  SEARCHSTRING="${IP} |${IFACE} |${MAC}"
+fi
+
 for N in $all_groups
 do
   nft -j list map inet filter ${N}_access | jq -rc '.nftables[1].map | .elem[] | .[] | .concat | if length > 0 then . else empty end | .[0] + " " + .[1] + " " + .[2]' 2>/dev/null | \
-    (while read -a VMAP; do  grep -iE "${IP} |${IFACE} |${MAC}" <<< ${VMAP[@]} && nft delete element inet filter ${N}_access { ${VMAP[0]} . ${VMAP[1]} . ${VMAP[2]} : accept }; done )
+    (while read -a VMAP; do  grep -iE "$SEARCHSTRING" <<< ${VMAP[@]} && nft delete element inet filter ${N}_access { ${VMAP[0]} . ${VMAP[1]} . ${VMAP[2]} : accept }; done )
 done
 
 
