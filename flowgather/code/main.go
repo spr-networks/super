@@ -30,6 +30,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 )
+
 var DATA_FILE *string
 var MapsUpdated = false
 
@@ -320,6 +321,10 @@ func listenInterface(iface string) {
 	}
 
 	source := gopacket.NewPacketSource(handler, handler.LinkType())
+	source.Lazy = true
+	source.NoCopy = true
+	source.DecodeStreamsAsDatagrams = true
+	source.SkipDecodeRecovery = true
 
 	count := 0
 	for packet := range source.Packets() {
@@ -366,7 +371,7 @@ func main() {
 
 	go listenNewInterfaceUp(listenInterface)
 
-	if profile != nil {
+	if *profile != "" {
 		go handleData()
 		log.Println(http.ListenAndServe("0.0.0.0:6060", nil))
 	} else {
@@ -400,7 +405,26 @@ func dnsRepliesOutput(parent int64, responseCode string, questions string, answe
 	fmt.Fprintf(dns_replies, "kind=dnsReply parent=%d responseCode='%s' questions='%s' answers='%s'\n", parent, responseCode, questions, answers)
 }
 
-func handlePayload(payload gopacket.Payload, packet gopacket.Packet, dstPort int, parentBiflowId int64) {
+func handleTLSFP(tls *layers.TLS, parentBiflowId int64, packet gopacket.Packet) {
+	// do things with tls variable
+	for _, handshake := range tls.Handshake {
+		if handshake.ContentType == layers.TLSHandshake {
+			clientFingerprint := string(ja3.BarePacket(packet))
+			serverFingerprint := string(ja3.BarePacketJa3s(packet))
+
+			if clientFingerprint != "" {
+				tlsFingerprintOutput("tlsFPClient", parentBiflowId, clientFingerprint)
+			}
+
+			if serverFingerprint != "" {
+				tlsFingerprintOutput("tlsFPServer", parentBiflowId, serverFingerprint)
+			}
+
+		}
+	}
+}
+
+func handlePayload(payload gopacket.Payload, packet gopacket.Packet, parentBiflowId int64) {
 	//try to decode as TLS
 	var tls layers.TLS
 	var decoded []gopacket.LayerType
@@ -410,22 +434,7 @@ func handlePayload(payload gopacket.Payload, packet gopacket.Packet, dstPort int
 		for _, layerType := range decoded {
 			switch layerType {
 			case layers.LayerTypeTLS:
-				// do things with tls variable
-				for _, handshake := range tls.Handshake {
-					if handshake.ContentType == layers.TLSHandshake {
-						clientFingerprint := string(ja3.BarePacket(packet))
-						serverFingerprint := string(ja3.BarePacketJa3s(packet))
-
-						if clientFingerprint != "" {
-							tlsFingerprintOutput("tlsFPClient", parentBiflowId, clientFingerprint)
-						}
-
-						if serverFingerprint != "" {
-							tlsFingerprintOutput("tlsFPServer", parentBiflowId, serverFingerprint)
-						}
-
-					}
-				}
+				handleTLSFP(&tls, parentBiflowId, packet)
 			}
 		}
 	}
@@ -687,8 +696,6 @@ func saveFlows(ifaceName string, ifaceId int64, packet gopacket.Packet) {
 	debugPrint(2, "==")
 
 	previousFlowId := (int64)(-1)
-	dstPortNum := -1
-
 	t := packet.Metadata().Timestamp
 
 	for _, layer := range packet.Layers() {
@@ -745,24 +752,22 @@ func saveFlows(ifaceName string, ifaceId int64, packet gopacket.Packet) {
 			if shouldSaveTransportFlowTCP(ifaceId, previousFlowId, tcp) {
 				previousFlowId = saveTransportFlow(ifaceId, int(layer.LayerType()), previousFlowId, tcp.TransportFlow(), t, int(tcp.SrcPort), int(tcp.DstPort))
 			}
-			dstPortNum = int(tcp.DstPort)
 		case layers.LayerTypeUDP:
 			udp, _ := layer.(*layers.UDP)
 			debugPrint(2, layer.LayerType(), udp.TransportFlow())
 			if shouldSaveTransportFlowUDP(ifaceId, previousFlowId, udp) {
 				previousFlowId = saveTransportFlow(ifaceId, int(layer.LayerType()), previousFlowId, udp.TransportFlow(), t, int(udp.SrcPort), int(udp.DstPort))
 			}
-			dstPortNum = int(udp.DstPort)
 		case layers.LayerTypeDNS:
 			dns, _ := layer.(*layers.DNS)
 			handleDNS(layer.LayerContents(), packet, dns, previousFlowId)
-		/* would need to observe tcp as datagrams...
 		case layers.LayerTypeTLS:
-			fmt.Println("TLS ???")
-			//handleTLS(layer.LayerContents(), packet, tls)
-		*/
+			tls := layer.(*layers.TLS)
+			handleTLSFP(tls, previousFlowId, packet)
 		case gopacket.LayerTypePayload:
-			handlePayload(layer.LayerContents(), packet, dstPortNum, previousFlowId)
+			handlePayload(layer.LayerContents(), packet, previousFlowId)
+		case gopacket.LayerTypeDecodeFailure:
+			continue
 		default:
 			debugPrint(3, "- unhandled layer type ", layer.LayerType(), int(layer.LayerType()), "on", ifaceName)
 		}
@@ -784,4 +789,3 @@ func deviceExists(name string) bool {
 	}
 	return false
 }
-
