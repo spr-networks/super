@@ -1,6 +1,6 @@
 FROM --platform=linux/arm64 ubuntu:21.04
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get dist-upgrade -y
+RUN apt-get update
 RUN apt-get install -y nftables iproute2 netcat inetutils-ping
 RUN apt-get install -y net-tools
 RUN apt-get install -y nano
@@ -26,7 +26,7 @@ RUN git config --global url."https://${ENV_GITHUB_CREDS}".insteadOf "https://git
 ARG COREDNS_VER=unknown
 ARG PLUGINS_VER=unknown
 ENV GOPRIVATE=github.com/SPR-Fi/*
-
+ARG CACHEBUST=1
 RUN git clone https://github.com/coredns/coredns.git --depth 1
 WORKDIR /code/coredns/
 

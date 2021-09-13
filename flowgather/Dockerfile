@@ -1,6 +1,6 @@
 FROM --platform=linux/arm64 ubuntu:21.04
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get dist-upgrade -y
+RUN apt-get update
 RUN apt-get install -y nftables iproute2 netcat inetutils-ping
 RUN apt-get install -y net-tools
 RUN apt-get install -y nano
