@@ -17,7 +17,10 @@ fi
 
 if [ '!' -d "state/" ]; then
   mkdir state
+  mkdir state/sta_mac_iface_map
 fi
+
+touch state/local_mappings state/leases.txt
 
 # Base
 mkdir -p base/configs
