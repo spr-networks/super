@@ -15,6 +15,16 @@ iptables-legacy -t nat --delete-chain
 
 nft flush ruleset
 
+LANIFDHCP=""
+if [ "$LANIF" ]; then
+    LANIFDHCP="iif $LANIF udp dport 67 counter accept"
+fi
+
+LANIFFORWARD=""
+if [ "$LANIFFORWARD" ]; then
+    LANIFFORWARD="oif $LANIF ip saddr . iifname . ether saddr vmap @lan_access"
+fi
+
 nft -f - << EOF
 
 table inet filter {
@@ -67,7 +77,7 @@ table inet filter {
 
     # DHCP Allow rules
     # Wired lan
-    iif $LANIF udp dport 67 counter accept
+    $LANIFDHCP
 
     # Authorized wireless stations & MACs. They do not have an ip address yet
     udp dport 67 iifname . ether saddr vmap @dhcp_access
@@ -86,7 +96,7 @@ table inet filter {
     oif $WANIF ip saddr . iifname . ether saddr vmap @internet_access
 
     # Forward to wired LAN
-    oif $LANIF ip saddr . iifname . ether saddr vmap @lan_access
+    $LANIFFORWARD
 
     # Forward to wireless LAN
     oifname "$VLANSIF*" ip saddr . iifname . ether saddr vmap @lan_access

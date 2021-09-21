@@ -3,6 +3,7 @@ SSID_NAME=TestLab
 SSID_INTERFACE=wlan1
 
 WANIF=eth0
+# Comment out the next line if there is no secondary ethernet port with wired lan
 LANIF=eth1
 VLANSIF=wlan1.
 
