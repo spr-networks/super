@@ -2,9 +2,13 @@
 SSID_NAME=TestLab
 SSID_INTERFACE=wlan1
 
+#PPPIF=eth0
+#WANIF=ppp0
+#PPP_VLANID=201
+#PPP_PROVIDER=provider-config
 WANIF=eth0
-# Comment out the next line if there is no secondary ethernet port with wired lan
-LANIF=eth1
+# Uncomment the next line if a second ethernet port goes to wired LAN
+#LANIF=eth1
 VLANSIF=wlan1.
 
 LANIP=192.168.2.1

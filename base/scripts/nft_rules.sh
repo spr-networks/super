@@ -21,7 +21,7 @@ if [ "$LANIF" ]; then
 fi
 
 LANIFFORWARD=""
-if [ "$LANIFFORWARD" ]; then
+if [ "$LANIF" ]; then
     LANIFFORWARD="oif $LANIF ip saddr . iifname . ether saddr vmap @lan_access"
 fi
 
@@ -53,13 +53,16 @@ table inet filter {
     iif lo counter accept
     counter jump F_EST_RELATED
 
-    # Allow wireguard from upstream
-    iif $WANIF udp dport 51280 counter accept
+    # Allow wireguard from all interfaces
+    udp dport 51280 counter accept
 
     # drop dhcp requests, multicast ports from upstream
     iif $WANIF udp dport {67, 1900, 5353} counter jump DROPLOGINP
 
-    # Allow ssh, iperf3
+    # drop ssh, iperf from upstream
+    iif $WANIF tcp dport {22, 5201} counter jump DROPLOGINP
+
+    # Allow ssh, iperf3 from LAN
     tcp dport {22, 5201} counter accept
 
     # Allow multicast
@@ -91,6 +94,9 @@ table inet filter {
 
     counter jump F_EST_RELATED
     iif $DOCKERIF oif $WANIF ip saddr $DOCKERNET counter accept
+
+    # MSS clamping to handle upstream MTU limitations
+    tcp flags syn tcp option maxseg size set rt mtu
 
     # Forward to WAN
     oif $WANIF ip saddr . iifname . ether saddr vmap @internet_access
