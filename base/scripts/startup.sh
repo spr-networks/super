@@ -16,7 +16,7 @@ else
 fi
 
 #wireguard
-if [ "$WIREGUARD_NETWORK"]; then
+if [ "$WIREGUARD_NETWORK" ]; then
   ip link add dev wg0 type wireguard
   ip addr flush dev wg0
   ip addr add $WIREGUARD_NETWORK dev wg0
