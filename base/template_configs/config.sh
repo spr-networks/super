@@ -9,7 +9,8 @@ SSID_INTERFACE=wlan1
 WANIF=eth0
 # Uncomment the next line if a second ethernet port goes to wired LAN
 #LANIF=eth1
-VLANSIF=wlan1.
+VLANIF=wlan1
+VLANSIF=$VLANIF.
 
 LANIP=192.168.2.1
 DNSIP=$LANIP
