@@ -60,6 +60,14 @@ services:
     privileged: true
     logging: 
       driver: journald
+  watchdog:
+    container_name: superwatchdog
+    build: watchdog
+    network_mode: host
+    logging:
+      driver: journald
+    devices:
+      - "/dev/watchdog:/dev/watchdog"
 networks: 
   default:
     driver: none
