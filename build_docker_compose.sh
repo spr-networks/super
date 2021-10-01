@@ -26,6 +26,7 @@ touch state/local_mappings state/leases.txt
 mkdir -p base/configs
 cp configs/config.sh base/configs/
 # DHCP
+mkdir -p dhcp/configs/
 ./configs/gen_coredhcp_yaml.sh > dhcp/configs/coredhcp.yml
 mkdir -p dhcp/configs/zones/groups
 cp configs/config.sh dhcp/configs/
@@ -43,6 +44,10 @@ chmod +x multicast_udp_proxy/scripts/startup.sh
 # prep ppp
 cp configs/config.sh ppp/configs/
 cp -r configs/ppp/ ppp/configs/
+
+# watchdog
+mkdir -p watchdog/configs/
+./configs/gen_watchdog.sh  > watchdog/configs/watchdog.conf
 
 BUILDARGS=""
 if [ -f .github_creds ]; then

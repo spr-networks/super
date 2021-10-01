@@ -25,6 +25,13 @@ if [ "$LANIF" ]; then
     LANIFFORWARD="oifname $LANIF ip saddr . iifname . ether saddr vmap @lan_access"
 fi
 
+WIREGUARD_DNS=""
+WIREGUARD_FORWARD=""
+if [ "$WIREGUARD_NETWORK" ]; then
+  WIREGUARD_DNS="iifname wg0 udp dport 53 counter accept"
+  WIREGUARD_FORWARD="iifname wg0 counter accept"
+fi
+
 nft -f - << EOF
 
 table inet filter {
@@ -73,7 +80,7 @@ table inet filter {
     iif $DOCKERIF ip saddr $DOCKERNET udp dport 53 counter accept
 
     # wireguard can DNS
-    iifname wg0 udp dport 53 counter accept
+    $WIREGUARD_DNS
 
     # Dynamic verdict map
     udp dport 53  ip saddr . iifname . ether saddr vmap @dns_access
@@ -108,7 +115,7 @@ table inet filter {
     oifname "$VLANSIF*" ip saddr . iifname . ether saddr vmap @lan_access
 
     # Forward * from wireguard
-    iifname wg0 counter accept
+    $WIREGUARD_FORWARD
 
     # Fallthrough to log + drop
     counter jump DROPLOGFWD

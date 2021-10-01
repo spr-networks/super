@@ -7,9 +7,12 @@ SSID_INTERFACE=wlan1
 #PPP_VLANID=201
 #PPP_PROVIDER=provider-config
 WANIF=eth0
+RUN_WAN_DHCP=true
+RUN_WAN_DHCP_IPV=4
 # Uncomment the next line if a second ethernet port goes to wired LAN
 #LANIF=eth1
-VLANSIF=wlan1.
+VLANIF=wlan1
+VLANSIF=$VLANIF.
 
 LANIP=192.168.2.1
 DNSIP=$LANIP

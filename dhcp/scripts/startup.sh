@@ -1,2 +1,2 @@
 #!/bin/bash
-/coredhcp -c /configs/coredhcp.yml
+/coredhcpd -c /configs/coredhcp.yml
