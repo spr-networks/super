@@ -40,6 +40,9 @@ cp configs/wpa2pskfile wifid/configs/wpa2pskfile
 # muproxy
 ./configs/gen_multicast_startup.sh > multicast_udp_proxy/scripts/startup.sh
 chmod +x multicast_udp_proxy/scripts/startup.sh
+# prep ppp
+cp configs/config.sh ppp/configs/
+cp -r configs/ppp/ ppp/configs/
 
 BUILDARGS=""
 if [ -f .github_creds ]; then

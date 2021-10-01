@@ -60,6 +60,13 @@ services:
     privileged: true
     logging: 
       driver: journald
+  ppp:
+    container_name: superppp
+    build: ppp
+    network_mode: host
+    privileged: true
+    logging:
+      driver: journald
 networks: 
   default:
     driver: none
