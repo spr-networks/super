@@ -17,12 +17,12 @@ nft flush ruleset
 
 LANIFDHCP=""
 if [ "$LANIF" ]; then
-    LANIFDHCP="iif $LANIF udp dport 67 counter accept"
+    LANIFDHCP="iifname $LANIF udp dport 67 counter accept"
 fi
 
 LANIFFORWARD=""
 if [ "$LANIF" ]; then
-    LANIFFORWARD="oif $LANIF ip saddr . iifname . ether saddr vmap @lan_access"
+    LANIFFORWARD="oifname $LANIF ip saddr . iifname . ether saddr vmap @lan_access"
 fi
 
 nft -f - << EOF
@@ -57,10 +57,10 @@ table inet filter {
     udp dport 51280 counter accept
 
     # drop dhcp requests, multicast ports from upstream
-    iif $WANIF udp dport {67, 1900, 5353} counter jump DROPLOGINP
+    iifname $WANIF udp dport {67, 1900, 5353} counter jump DROPLOGINP
 
     # drop ssh, iperf from upstream
-    iif $WANIF tcp dport {22, 5201} counter jump DROPLOGINP
+    iifname $WANIF tcp dport {22, 5201} counter jump DROPLOGINP
 
     # Allow ssh, iperf3 from LAN
     tcp dport {22, 5201} counter accept
@@ -73,7 +73,7 @@ table inet filter {
     iif $DOCKERIF ip saddr $DOCKERNET udp dport 53 counter accept
 
     # wireguard can DNS
-    iif wg0 udp dport 53 counter accept
+    iifname wg0 udp dport 53 counter accept
 
     # Dynamic verdict map
     udp dport 53  ip saddr . iifname . ether saddr vmap @dns_access
@@ -93,13 +93,13 @@ table inet filter {
     type filter hook forward priority 0; policy drop;
 
     counter jump F_EST_RELATED
-    iif $DOCKERIF oif $WANIF ip saddr $DOCKERNET counter accept
+    iif $DOCKERIF oifname $WANIF ip saddr $DOCKERNET counter accept
 
     # MSS clamping to handle upstream MTU limitations
     tcp flags syn tcp option maxseg size set rt mtu
 
     # Forward to WAN
-    oif $WANIF ip saddr . iifname . ether saddr vmap @internet_access
+    oifname $WANIF ip saddr . iifname . ether saddr vmap @internet_access
 
     # Forward to wired LAN
     $LANIFFORWARD
@@ -108,7 +108,7 @@ table inet filter {
     oifname "$VLANSIF*" ip saddr . iifname . ether saddr vmap @lan_access
 
     # Forward * from wireguard
-    iif wg0 counter accept
+    iifname wg0 counter accept
 
     # Fallthrough to log + drop
     counter jump DROPLOGFWD
@@ -157,7 +157,7 @@ table inet nat {
   chain POSTROUTING {
     type nat hook postrouting priority 100; policy accept;
     # Masquerade upstream traffic
-    oif $WANIF counter masquerade
+    oifname $WANIF counter masquerade
   }
 }
 
