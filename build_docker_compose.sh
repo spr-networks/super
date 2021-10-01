@@ -42,8 +42,10 @@ cp configs/wpa2pskfile wifid/configs/wpa2pskfile
 ./configs/gen_multicast_startup.sh > multicast_udp_proxy/scripts/startup.sh
 chmod +x multicast_udp_proxy/scripts/startup.sh
 # prep ppp
+rm -rf ppp/configs
+mkdir -p ppp/configs
 cp configs/config.sh ppp/configs/
-cp -r configs/ppp/ ppp/configs/
+cp -r configs/ppp/ ppp/configs/ppp
 
 # watchdog
 mkdir -p watchdog/configs/
