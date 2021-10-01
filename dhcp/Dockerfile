@@ -26,7 +26,8 @@ RUN git clone https://github.com/SPR-Fi/coredhcp
 WORKDIR /code/coredhcp
 
 # Using BUILDKIT, build inside of a ramfs
-RUN --mount=type=tmpfs,target=/root/go/ go build -o /coredhcp ./cmds/coredhcp
+RUN --mount=type=tmpfs,target=/root/go/ (go build -o /coredhcpd ./cmds/coredhcp; go build -o /coredhcp_client ./cmds/exdhcp/dhclient/)
+
 
 WORKDIR /
 

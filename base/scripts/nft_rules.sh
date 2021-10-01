@@ -67,7 +67,7 @@ table inet filter {
     iif $WANIF udp dport {67, 1900, 5353} counter jump DROPLOGINP
 
     # drop ssh, iperf from upstream
-    iif $WANIF tcp dport {22, 5201} counter jump DROPLOGINP
+#    iif $WANIF tcp dport {22, 5201} counter jump DROPLOGINP
 
     # Allow ssh, iperf3 from LAN
     tcp dport {22, 5201} counter accept

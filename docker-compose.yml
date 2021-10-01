@@ -12,6 +12,8 @@ services:
     build: dhcp
     network_mode: host
     privileged: true
+    depends_on:
+      - "base"
     logging: 
       driver: journald
     volumes:
@@ -27,6 +29,16 @@ services:
       - type: bind
         source: /sys/fs/bpf
         target: /sys/fs/bpf
+  dhcp_client:
+    container_name: superdhcp_client
+    build: dhcp
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base"
+    logging: 
+      driver: journald
+    entrypoint: /scripts/client.sh
   dns:
     container_name: superdns
     build: dns
@@ -34,6 +46,8 @@ services:
     privileged: true
     logging: 
       driver: journald
+    depends_on:
+      - "base"
     volumes:
       - type: bind
         source: ./state/local_mappings
@@ -58,12 +72,17 @@ services:
     build: multicast_udp_proxy
     network_mode: host
     privileged: true
+    depends_on:
+      - "base"
     logging: 
       driver: journald
   watchdog:
     container_name: superwatchdog
     build: watchdog
     network_mode: host
+    depends_on:
+      - "base"
+      - "wifid"
     logging:
       driver: journald
     devices:
