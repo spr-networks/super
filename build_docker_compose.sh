@@ -46,10 +46,13 @@ rm -rf ppp/configs
 mkdir -p ppp/configs
 cp configs/config.sh ppp/configs/
 cp -r configs/ppp/ ppp/configs/ppp
-
 # watchdog
 mkdir -p watchdog/configs/
 ./configs/gen_watchdog.sh  > watchdog/configs/watchdog.conf
+#wireguard
+mkdir -p wireguard/configs
+cp configs/config.sh wireguard/configs/
+cp configs/wg/wg0.conf wireguard/configs
 
 BUILDARGS=""
 if [ -f .github_creds ]; then

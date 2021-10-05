@@ -61,7 +61,7 @@ table inet filter {
     counter jump F_EST_RELATED
 
     # Allow wireguard from all interfaces
-    udp dport 51280 counter accept
+    udp dport $WIREGUARD_PORT counter accept
 
     # drop dhcp requests, multicast ports from upstream
     iifname $WANIF udp dport {67, 1900, 5353} counter jump DROPLOGINP

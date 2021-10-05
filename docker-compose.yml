@@ -96,6 +96,15 @@ services:
       driver: journald
     devices:
       - "/dev/watchdog:/dev/watchdog"
+  wireguard:
+    container_name: superwireguard
+    build: wireguard
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base"
+    logging:
+      driver: journald
 networks: 
   default:
     driver: none
