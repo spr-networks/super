@@ -1,10 +1,5 @@
 #!/bin/bash
 
-#This script works around unfavorable constraints with
-# docker build and docker-compose which makes it hard to actually
-# compose multiple directories cleanly without bloating the build
-# context with every project directory
-
 export DOCKER_BUILDKIT=1 # or configure in daemon.json
 export COMPOSE_DOCKER_CLI_BUILD=1
 
@@ -15,44 +10,18 @@ if [ '!' -d "configs/" ]; then
   exit 1
 fi
 
-if [ '!' -d "state/" ]; then
-  mkdir state
-  mkdir state/sta_mac_iface_map
-fi
+# gen configs
+./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
+./configs/scripts/gen_hostapd.sh > configs/wifi/hostapd.conf
+./configs/scripts/gen_multicast_startup.sh > multicast_udp_proxy/scripts/startup.sh
+./configs/scripts/gen_watchdog.sh  > configs/watchdog/watchdog.conf
 
-touch state/local_mappings state/leases.txt
-
-# Base
-mkdir -p base/configs
-cp configs/config.sh base/configs/
-# DHCP
-mkdir -p dhcp/configs/
-./configs/gen_coredhcp_yaml.sh > dhcp/configs/coredhcp.yml
-mkdir -p dhcp/configs/zones/groups
-cp configs/config.sh dhcp/configs/
-cp -R configs/zones/ dhcp/configs/
-# DNS
-mkdir -p dns/configs
-cp configs/dns-Corefile dns/configs/Corefile
-# wifi
-mkdir -p wifid/configs
-./configs/gen_hostapd.sh > wifid/configs/hostapd.conf
-cp configs/wpa2pskfile wifid/configs/wpa2pskfile
-# muproxy
-./configs/gen_multicast_startup.sh > multicast_udp_proxy/scripts/startup.sh
-chmod +x multicast_udp_proxy/scripts/startup.sh
-# prep ppp
-rm -rf ppp/configs
-mkdir -p ppp/configs
-cp configs/config.sh ppp/configs/
-cp -r configs/ppp/ ppp/configs/ppp
-# watchdog
-mkdir -p watchdog/configs/
-./configs/gen_watchdog.sh  > watchdog/configs/watchdog.conf
-#wireguard
-mkdir -p wireguard/configs
-cp configs/config.sh wireguard/configs/
-cp configs/wg/wg0.conf wireguard/configs
+# make sure state directories and files exist
+mkdir -p state/dhcp/
+mkdir -p state/dns/
+mkdir -p state/wifi/
+mkdir -p state/wifi/sta_mac_iface_map/
+touch state/dns/local_mappings state/dhcp/leases.txt
 
 BUILDARGS=""
 if [ -f .github_creds ]; then

@@ -1,4 +1,4 @@
-. configs/config.sh
+. configs/base/config.sh
 
 cat << EOF
 watchdog-device = /dev/watchdog

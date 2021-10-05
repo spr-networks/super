@@ -7,6 +7,4 @@ RUN apt-get install -y nano
 RUN apt-get install -y ca-certificates
 RUN apt-get install -y ppp
 COPY scripts /scripts
-COPY configs /configs
-COPY configs/ppp /etc/ppp
 ENTRYPOINT /scripts/startup.sh

@@ -41,6 +41,4 @@ RUN --mount=type=tmpfs,target=/root/go/ go generate && \
    go mod tidy && \
    go build -o /coredns
 
-COPY configs /configs
-
-ENTRYPOINT /coredns -conf /configs/Corefile
+ENTRYPOINT /coredns -conf /configs/dns/Corefile

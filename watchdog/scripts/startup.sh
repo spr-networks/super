@@ -1,2 +1,2 @@
 #!/bin/bash
-watchdog -F -c /configs/watchdog.conf
+bash #watchdog -F -c /configs/watchdog/watchdog.conf

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. /configs/config.sh
+. /configs/base/config.sh
 
 IP=$1
 MAC=$2
@@ -106,8 +106,8 @@ done
 if [ "$NAME" != "DefaultMissingName" ]
 then
   #Remove if it already exists. Note, bind mount/overlayfs doesnt support renaming, have to copy in
-  sed "/ $NAME.lan/d" /local_mappings > /tmp/mappings_copy
+  sed "/ $NAME.lan/d" /state/dns/local_mappings > /tmp/mappings_copy
   # Add it back in
   echo "$IP $NAME.lan" >> /tmp/mappings_copy
-  cp /tmp/mappings_copy /local_mappings
+  cp /tmp/mappings_copy /state/dns/local_mappings
 fi

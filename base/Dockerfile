@@ -6,6 +6,5 @@ RUN apt-get install -y net-tools
 RUN apt-get install -y nano
 RUN apt-get install -y ca-certificates
 COPY scripts /scripts
-COPY configs /configs
 
 ENTRYPOINT /scripts/startup.sh

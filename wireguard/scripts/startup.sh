@@ -1,5 +1,5 @@
 #!/bin/bash
-. /configs/config.sh
+. /configs/base/config.sh
 
 #wireguard
 if [ "$WIREGUARD_NETWORK" ]; then

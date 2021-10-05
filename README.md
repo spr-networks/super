@@ -113,7 +113,7 @@ cd super
 cp -R base/template_configs configs
 ```
 
-Then modify configs/config.sh to set an SSID_NAME and configure any networking specifics 
+Then modify configs/base/config.sh to set an SSID_NAME and configure any networking specifics 
 
 Next, set some station passwords. For WPA3, copy sae_passwords.sample to sae_passwords and add your devices
 For WPA2 passwords (since many devices will not support WPA2 yet), copy wpa2pskfile.sample to wpa2pskfile and set your passwords there.

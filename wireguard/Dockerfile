@@ -7,5 +7,4 @@ RUN apt-get install -y nano
 RUN apt-get install -y ca-certificates
 RUN apt-get install -y --no-install-recommends wireguard-tools
 COPY scripts /scripts
-COPY configs /configs
 ENTRYPOINT /scripts/startup.sh

@@ -1,9 +1,9 @@
-. configs/config.sh
+. configs/base/config.sh
 
-SAE_PASSWORDS=`cat configs/sae_passwords`
+SAE_PASSWORDS=`cat configs/wifi/sae_passwords`
 
 cat << END
-ctrl_interface=/tmp/control
+ctrl_interface=/state/wifi/control
 country_code=US
 interface=$SSID_INTERFACE
 ssid=$SSID_NAME
@@ -47,6 +47,6 @@ per_sta_vif=1
 
 $SAE_PASSWORDS
 
-wpa_psk_file=/configs/wpa2pskfile
+wpa_psk_file=/configs/wifi/wpa2pskfile
 
 END

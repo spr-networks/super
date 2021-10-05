@@ -32,7 +32,6 @@ RUN --mount=type=tmpfs,target=/root/go/ (go build -o /coredhcpd ./cmds/coredhcp;
 WORKDIR /
 
 COPY scripts /scripts
-COPY configs /configs
 
 ENTRYPOINT ["/scripts/startup.sh"]
 

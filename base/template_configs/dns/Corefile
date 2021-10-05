@@ -2,7 +2,7 @@
   block
   rebinding_protection
 
-  hosts /local_mappings { 
+  hosts /state/dns/local_mappings { 
     ttl 60
     reload 30s
     fallthrough

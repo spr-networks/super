@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. /configs/config.sh
+. /configs/base/config.sh
 
 # Clean previous rules
 iptables --flush

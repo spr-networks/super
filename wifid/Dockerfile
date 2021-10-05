@@ -34,5 +34,4 @@ COPY code/main.go /code/
 RUN go build -o /hostap_dhcp_helper main.go
 
 COPY scripts /scripts
-COPY configs /configs
 ENTRYPOINT /scripts/startup.sh

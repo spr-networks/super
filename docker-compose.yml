@@ -7,6 +7,8 @@ services:
     privileged: true
     logging: 
       driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
   dhcp:
     container_name: superdhcp
     build: dhcp
@@ -17,18 +19,13 @@ services:
     logging: 
       driver: journald
     volumes:
-      - type: bind
-        source: ./state/local_mappings
-        target: /local_mappings
-      - type: bind
-        source: ./state/sta_mac_iface_map/
-        target: /sta_mac_iface_map/
-      - type: bind
-        source: ./state/leases.txt
-        target: /leases.txt
-      - type: bind
-        source: /sys/fs/bpf
-        target: /sys/fs/bpf
+      - ./configs/base/:/configs/base/
+      - ./configs/dhcp/:/configs/dhcp/
+      - ./configs/zones/:/configs/zones/
+      - ./state/dns/:/state/dns/
+#      - ./state/wifi:/state/wifi/
+      - ./state/dhcp/:/state/dhcp/
+      - /sys/fs/bpf:/sys/fs/bpf
   dhcp_client:
     container_name: superdhcp_client
     build: dhcp
@@ -39,6 +36,8 @@ services:
     logging: 
       driver: journald
     entrypoint: /scripts/client.sh
+    volumes:
+      - ./configs/base/:/configs/base/
   dns:
     container_name: superdns
     build: dns
@@ -49,9 +48,9 @@ services:
     depends_on:
       - "base"
     volumes:
-      - type: bind
-        source: ./state/local_mappings
-        target: /local_mappings
+      - ./configs/base/:/configs/base/
+      - ./configs/dns/:/configs/dns/
+      - ./state/dns/:/state/dns/
   wifid:
     container_name: superwifid
     build: wifid
@@ -64,9 +63,9 @@ services:
       - "dns"
       - "multicast_udp_proxy"
     volumes:
-      - type: bind
-        source: ./state/sta_mac_iface_map/
-        target: /sta_mac_iface_map/
+      - ./configs/base/:/configs/base/
+      - ./configs/wifi/:/configs/wifi/
+      - ./state/wifi/:/state/wifi/
   multicast_udp_proxy:
     container_name: multicast_udp_proxy
     build: multicast_udp_proxy
@@ -76,6 +75,8 @@ services:
       - "base"
     logging: 
       driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
   ppp:
     container_name: superppp
     build: ppp
@@ -85,6 +86,9 @@ services:
       - "base"
     logging:
       driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/ppp/:/etc/ppp/
   watchdog:
     container_name: superwatchdog
     build: watchdog
@@ -94,6 +98,9 @@ services:
       - "wifid"
     logging:
       driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/watchdog/:/configs/watchdog/
     devices:
       - "/dev/watchdog:/dev/watchdog"
   wireguard:
@@ -105,6 +112,9 @@ services:
       - "base"
     logging:
       driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/wireguard/:/configs/wireguard/
 networks: 
   default:
     driver: none

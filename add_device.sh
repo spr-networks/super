@@ -37,9 +37,9 @@ echo $WPA_TYPE $password $MAC $ZONE
 echo -e "#Name: $NAME\n$MAC" >> configs/zones/$ZONE
 
 if [ "$WPA_TYPE" = "wpa3" ]; then
-  echo "sae_password=$password|mac=$MAC" >> configs/sae_passwords
+  echo "sae_password=$password|mac=$MAC" >> configs/wifi/sae_passwords
 elif [ "$WPA_TYPE" = "wpa2" ]; then
-  echo "$MAC $password" >> configs/wpa2pskfile
+  echo "$MAC $password" >> configs/wifi/wpa2pskfile
 fi
 
 #export DOCKER_BUILDKIT=1 # or configure in daemon.json
