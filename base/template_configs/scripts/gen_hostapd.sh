@@ -31,7 +31,6 @@ rsn_pairwise=CCMP
 
 # Isolate stations and per-station group keys
 ap_isolate=1
-disable_dgaf=1
 multicast_to_unicast=1
 
 # Mitigate krack attack

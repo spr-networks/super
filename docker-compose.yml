@@ -23,7 +23,6 @@ services:
       - ./configs/dhcp/:/configs/dhcp/
       - ./configs/zones/:/configs/zones/
       - ./state/dns/:/state/dns/
-#      - ./state/wifi:/state/wifi/
       - ./state/dhcp/:/state/dhcp/
       - /sys/fs/bpf:/sys/fs/bpf
   dhcp_client:
@@ -115,6 +114,22 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/wireguard/:/configs/wireguard/
+  api:
+    container_name: superapi
+    build: api
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base"
+      - "wifid"
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/zones/:/configs/zones/
+      - ./configs/wifi/:/configs/wifi/
+      - ./configs/scripts/:/configs/scripts/
+      - ./state/wifi/:/state/wifi/
 networks: 
   default:
     driver: none
