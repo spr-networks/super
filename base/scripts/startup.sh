@@ -19,4 +19,4 @@ fi
 
 # performance tuning
 /scripts/perftune.sh
-bash
+while true; do sleep 100000; done
