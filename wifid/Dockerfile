@@ -5,9 +5,6 @@ RUN apt-get install -y nftables iproute2 netcat inetutils-ping
 RUN apt-get install -y net-tools
 RUN apt-get install -y nano
 RUN apt-get install -y ca-certificates
-RUN apt-get install -y hostapd
-
-
 RUN apt-get install -y jq git
 
 RUN mkdir /code
@@ -33,5 +30,19 @@ ENV PATH="/usr/local/go/bin:$PATH"
 COPY code/main.go /code/
 RUN go build -o /hostap_dhcp_helper main.go
 
+# Build hostapd
+ARG GITHUB_CREDS=github.com
+ENV ENV_GITHUB_CREDS=$GITHUB_CREDS
+RUN git config --global url."https://${ENV_GITHUB_CREDS}".insteadOf "https://github.com"
+ARG CACHEBUST=1
+RUN git clone https://github.com/SPR-Fi/hostap
+RUN apt-get install -y libnl-genl-3-dev libssl-dev 
+COPY code/hostapd_config /code/hostap/hostapd/.config
+
+WORKDIR /code/hostap/hostapd
+RUN make
+RUN make install
+
 COPY scripts /scripts
 ENTRYPOINT /scripts/startup.sh
+
