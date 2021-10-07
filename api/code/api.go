@@ -295,6 +295,57 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 
 var PSKConfigPath = "/configs/wifi/psks.json"
 
+type PSKAuthFailure struct {
+	Type string
+	Mac  string
+	Reason  string
+	Status	string
+}
+
+func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
+  PSKmtx.Lock()
+  defer PSKmtx.Unlock()
+
+	pskf := PSKAuthFailure{}
+	err := json.NewDecoder(r.Body).Decode(&pskf)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if pskf.Mac == "" || (pskf.Type != "sae" && pskf.Type != "wpa") || (pskf.Reason != "noentry" && pskf.Reason != "mismatch") {
+		http.Error(w, "malformed data", 400)
+		return
+	}
+
+	if pskf.Reason == "noentry" && gPendingPSK.Psk != "" {
+		auth_type := pskf.Type
+		if auth_type == "wpa" {
+			auth_type = "wpa2"
+		}
+
+		if auth_type != gPendingPSK.Type {
+			fmt.Println("WARNING: mismatch between pending type and client auth attempt", auth_type, gPendingPSK.Type)
+		}
+
+		// take the pending PSK and assign it
+		psk := PSKEntry{Psk: gPendingPSK.Psk, Type: auth_type, Mac: pskf.Mac}
+		psks := getPSKJson()
+    psks[psk.Mac] = psk
+    savePSKs(psks)
+		doReloadPSKFiles()
+
+		gPendingPSK.Psk = ""
+		gPendingPSK.Mac = ""
+		gPendingPSK.Type = ""
+
+		pskf.Status = "Installed pending PSK"
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(pskf)
+}
+
 type PSKEntry struct {
 	Type string
 	Mac  string
@@ -373,6 +424,8 @@ func genSecurePassword() string {
 
 var PSKmtx sync.Mutex
 
+var gPendingPSK PSKEntry
+
 func setPSK(w http.ResponseWriter, r *http.Request) {
   PSKmtx.Lock()
   defer PSKmtx.Unlock()
@@ -394,7 +447,7 @@ func setPSK(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//otherwise, creating an entry. ensure that psk has a Mac and a type
-	if psk.Mac == "" || (psk.Type != "sae" && psk.Type != "wpa2") {
+	if (psk.Type != "sae" && psk.Type != "wpa2") {
 		http.Error(w, "malformed data", 400)
 		return
 	}
@@ -412,8 +465,14 @@ func setPSK(w http.ResponseWriter, r *http.Request) {
 		pskGenerated = true
 	}
 
-	psks[psk.Mac] = psk
-	savePSKs(psks)
+
+	if psk.Mac == "" {
+		//assign a pending PSK for later
+		gPendingPSK = psk
+	} else {
+		psks[psk.Mac] = psk
+		savePSKs(psks)
+	}
 
 	if pskGenerated == false {
 		psk.Psk = "***"
@@ -427,7 +486,10 @@ func setPSK(w http.ResponseWriter, r *http.Request) {
 func reloadPSKFiles(w http.ResponseWriter, r *http.Request) {
   PSKmtx.Lock()
   defer PSKmtx.Unlock()
+	doReloadPSKFiles()
+}
 
+func doReloadPSKFiles() {
 	//generate PSK files for host AP
 	psks := getPSKJson()
 
@@ -459,7 +521,7 @@ func reloadPSKFiles(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//reload the hostapd configuration
-	cmd = exec.Command("hostapd_cli", "-p", "/state/wifi/control", "reload")
+	cmd = exec.Command("hostapd_cli", "-p", "/state/wifi/control", "-s", "/state/wifi/", "reload")
 	err = cmd.Run()
 	if err != nil {
 		log.Fatal(err)
@@ -468,6 +530,10 @@ func reloadPSKFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+//tbd gen if not existing
+//	savePSKs(loadPSKFiles())
+//	saveZones(getZoneFiles())
+
 	router := mux.NewRouter().StrictSlash(true)
 
 	// internal for taking members from zones and putting them into nftable
@@ -484,6 +550,7 @@ func main() {
 	router.HandleFunc("/zone/{name}", delZoneMember).Methods("DELETE")
 
 	// PSK management for stations
+	router.HandleFunc("/reportPSKAuthFailure/", reportPSKAuthFailure).Methods("PUT")
 	router.HandleFunc("/setPSK/", setPSK).Methods("PUT", "DELETE")
 	router.HandleFunc("/reloadPSKFiles/", reloadPSKFiles).Methods("PUT")
 
