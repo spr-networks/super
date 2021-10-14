@@ -122,6 +122,7 @@ services:
     depends_on:
       - "base"
       - "wifid"
+      - "dhcp"
     logging:
       driver: journald
     volumes:
@@ -130,6 +131,7 @@ services:
       - ./configs/wifi/:/configs/wifi/
       - ./configs/scripts/:/configs/scripts/
       - ./state/wifi/:/state/wifi/
+      - ./state/dhcp/:/state/dhcp/
 networks: 
   default:
     driver: none

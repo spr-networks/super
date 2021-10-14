@@ -1,4 +1,9 @@
 #!/bin/sh
+
+#Uncomment and set to enable the external API
+#API_USERAME=admin
+#API_PASSWORD=changeme
+
 SSID_NAME=TestLab
 SSID_INTERFACE=wlan1
 

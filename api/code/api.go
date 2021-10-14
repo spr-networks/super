@@ -5,12 +5,16 @@ package main
 
 import (
 	crand "crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -20,6 +24,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
+var UNIX_WIFID_LISTENER = "/state/wifi/apisock"
+var UNIX_DHCPD_LISTENER = "/state/dhcp/apisock"
+
 func showMap(w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
 
@@ -27,7 +34,7 @@ func showMap(w http.ResponseWriter, r *http.Request) {
 	stdout, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("bye")
+		fmt.Println(err)
 		return
 	}
 
@@ -86,8 +93,8 @@ func readZone(dir string, filename string) *ClientZone {
 }
 
 func getZones(w http.ResponseWriter, r *http.Request) {
-  Zonesmtx.Lock()
-  defer Zonesmtx.Unlock()
+	Zonesmtx.Lock()
+	defer Zonesmtx.Unlock()
 	zones := getZonesJson()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(zones)
@@ -144,8 +151,8 @@ func getZoneFiles() []ClientZone {
 }
 
 func addZoneMember(w http.ResponseWriter, r *http.Request) {
-  Zonesmtx.Lock()
-  defer Zonesmtx.Unlock()
+	Zonesmtx.Lock()
+	defer Zonesmtx.Unlock()
 
 	name := mux.Vars(r)["name"]
 
@@ -183,8 +190,8 @@ func addZoneMember(w http.ResponseWriter, r *http.Request) {
 }
 
 func delZoneMember(w http.ResponseWriter, r *http.Request) {
-  Zonesmtx.Lock()
-  defer Zonesmtx.Unlock()
+	Zonesmtx.Lock()
+	defer Zonesmtx.Unlock()
 
 	name := mux.Vars(r)["name"]
 
@@ -264,8 +271,8 @@ func updateLocalMappings(IP string, Name string) {
 var DHCPmtx sync.Mutex
 
 func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
-  DHCPmtx.Lock()
-  defer DHCPmtx.Unlock()
+	DHCPmtx.Lock()
+	defer DHCPmtx.Unlock()
 
 	//Handle networking tasks upon a DHCP
 
@@ -296,15 +303,15 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 var PSKConfigPath = "/configs/wifi/psks.json"
 
 type PSKAuthFailure struct {
-	Type string
-	Mac  string
-	Reason  string
-	Status	string
+	Type   string
+	Mac    string
+	Reason string
+	Status string
 }
 
 func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
-  PSKmtx.Lock()
-  defer PSKmtx.Unlock()
+	PSKmtx.Lock()
+	defer PSKmtx.Unlock()
 
 	pskf := PSKAuthFailure{}
 	err := json.NewDecoder(r.Body).Decode(&pskf)
@@ -318,7 +325,7 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-  psks := getPSKJson()
+	psks := getPSKJson()
 	pendingPSK, exists := psks["pending"]
 	if pskf.Reason == "noentry" && exists {
 		auth_type := pskf.Type
@@ -333,8 +340,8 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 		// take the pending PSK and assign it
 		psk := PSKEntry{Psk: pendingPSK.Psk, Type: auth_type, Mac: pskf.Mac}
 		psks := getPSKJson()
-    psks[psk.Mac] = psk
-    savePSKs(psks)
+		psks[psk.Mac] = psk
+		savePSKs(psks)
 		doReloadPSKFiles()
 
 		delete(psks, "pending")
@@ -347,15 +354,15 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 }
 
 type PSKAuthSuccess struct {
-	Iface string
-	Event string
-	Mac string
+	Iface  string
+	Event  string
+	Mac    string
 	Status string
 }
 
 func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
-  PSKmtx.Lock()
-  defer PSKmtx.Unlock()
+	PSKmtx.Lock()
+	defer PSKmtx.Unlock()
 
 	pska := PSKAuthSuccess{}
 	err := json.NewDecoder(r.Body).Decode(&pska)
@@ -371,9 +378,9 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 
 	pska.Status = "Okay"
 
-  //check if there is a pending psk to assign. if the mac is not known, then it was the pending psk
+	//check if there is a pending psk to assign. if the mac is not known, then it was the pending psk
 
-  psks := getPSKJson()
+	psks := getPSKJson()
 	pendingPsk, exists := psks["pending"]
 	if exists {
 		var foundPSK = false
@@ -418,7 +425,7 @@ func loadPSKFiles() map[string]PSKEntry {
 		if entry == "" {
 			continue
 		}
-		parts := strings.Split(strings.SplitN(entry, "=", 2)[1], "|")
+		parts := strings.Split(entry, "|")
 		psk := parts[0]
 		mac := parts[1]
 		mac = strings.Split(mac, "=")[1]
@@ -477,8 +484,8 @@ func genSecurePassword() string {
 var PSKmtx sync.Mutex
 
 func setPSK(w http.ResponseWriter, r *http.Request) {
-  PSKmtx.Lock()
-  defer PSKmtx.Unlock()
+	PSKmtx.Lock()
+	defer PSKmtx.Unlock()
 
 	psk := PSKEntry{}
 	err := json.NewDecoder(r.Body).Decode(&psk)
@@ -498,7 +505,7 @@ func setPSK(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Ensure that psk has a Mac and a type
-	if (psk.Type != "sae" && psk.Type != "wpa2") {
+	if psk.Type != "sae" && psk.Type != "wpa2" {
 		http.Error(w, "malformed data", 400)
 		return
 	}
@@ -515,7 +522,6 @@ func setPSK(w http.ResponseWriter, r *http.Request) {
 		psk.Psk = genSecurePassword()
 		pskGenerated = true
 	}
-
 
 	if psk.Mac == "" {
 		//assign a pending PSK for later
@@ -537,8 +543,8 @@ func setPSK(w http.ResponseWriter, r *http.Request) {
 }
 
 func reloadPSKFiles(w http.ResponseWriter, r *http.Request) {
-  PSKmtx.Lock()
-  defer PSKmtx.Unlock()
+	PSKmtx.Lock()
+	defer PSKmtx.Unlock()
 	doReloadPSKFiles()
 }
 
@@ -553,16 +559,16 @@ func doReloadPSKFiles() {
 		if keyval == "pending" {
 			//set wildcard password at front. hostapd uses a FILO for the sae keys
 			if entry.Type == "sae" {
-				sae = "sae_password=" + entry.Psk + "\n" + sae
+				sae = entry.Psk + "|mac=ff:ff:ff:ff:ff:ff" + "\n" + sae
 			} else if entry.Type == "wpa2" {
 				wpa2 = "ff:ff:ff:ff:ff:ff " + entry.Psk + "\n" + wpa2
 			}
 		} else {
-  		if entry.Type == "sae" {
-  			sae += "sae_password=" + entry.Psk + "|mac=" + entry.Mac + "\n"
-  		} else if entry.Type == "wpa2" {
-	  		wpa2 += entry.Mac + " " + entry.Psk + "\n"
-  		}
+			if entry.Type == "sae" {
+				sae += entry.Psk + "|mac=" + entry.Mac + "\n"
+			} else if entry.Type == "wpa2" {
+				wpa2 += entry.Mac + " " + entry.Psk + "\n"
+			}
 		}
 	}
 
@@ -584,12 +590,40 @@ func doReloadPSKFiles() {
 
 }
 
-func main() {
-//tbd gen if not existing
-//	savePSKs(loadPSKFiles())
-//	saveZones(getZoneFiles())
+type authconfig struct {
+	username string
+	password string
+}
 
-	router := mux.NewRouter().StrictSlash(true)
+//https://www.alexedwards.net/blog/basic-authentication-in-go
+func (auth *authconfig) basicAuth(next *mux.Router) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		username, password, ok := r.BasicAuth()
+		if ok {
+			usernameHash := sha256.Sum256([]byte(username))
+			passwordHash := sha256.Sum256([]byte(password))
+			expectedUsernameHash := sha256.Sum256([]byte(auth.username))
+			expectedPasswordHash := sha256.Sum256([]byte(auth.password))
+			usernameMatch := (subtle.ConstantTimeCompare(usernameHash[:], expectedUsernameHash[:]) == 1)
+			passwordMatch := (subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1)
+			if usernameMatch && passwordMatch {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	})
+}
+
+func main() {
+	savePSKs(loadPSKFiles())
+	saveZones(getZoneFiles())
+
+	unix_dhcpd_router := mux.NewRouter().StrictSlash(true)
+	unix_wifid_router := mux.NewRouter().StrictSlash(true)
+	external_router := mux.NewRouter().StrictSlash(true)
 
 	// internal for taking members from zones and putting them into nftable
 	// verdict maps
@@ -600,18 +634,47 @@ func main() {
 	*/
 
 	// Zone management
-	router.HandleFunc("/zones/", getZones).Methods("GET")
-	router.HandleFunc("/zone/{name}", addZoneMember).Methods("PUT")
-	router.HandleFunc("/zone/{name}", delZoneMember).Methods("DELETE")
+	external_router.HandleFunc("/zones/", getZones).Methods("GET")
+	external_router.HandleFunc("/zone/{name}", addZoneMember).Methods("PUT")
+	external_router.HandleFunc("/zone/{name}", delZoneMember).Methods("DELETE")
+	//Assign a PSK
+	external_router.HandleFunc("/setPSK/", setPSK).Methods("PUT", "DELETE")
+	//Force reload
+	external_router.HandleFunc("/reloadPSKFiles/", reloadPSKFiles).Methods("PUT")
 
 	// PSK management for stations
-	router.HandleFunc("/reportPSKAuthFailure/", reportPSKAuthFailure).Methods("PUT")
-	router.HandleFunc("/reportPSKAuthSuccess/", reportPSKAuthSuccess).Methods("PUT")
-	router.HandleFunc("/setPSK/", setPSK).Methods("PUT", "DELETE")
-	router.HandleFunc("/reloadPSKFiles/", reloadPSKFiles).Methods("PUT")
+	unix_wifid_router.HandleFunc("/reportPSKAuthFailure/", reportPSKAuthFailure).Methods("PUT")
+	unix_wifid_router.HandleFunc("/reportPSKAuthSuccess/", reportPSKAuthSuccess).Methods("PUT")
 
 	// DHCP actions
-	router.HandleFunc("/dhcpUpdate/", dhcpUpdate).Methods("PUT")
+	unix_dhcpd_router.HandleFunc("/dhcpUpdate/", dhcpUpdate).Methods("PUT")
 
-	log.Fatal(http.ListenAndServe("127.0.0.1:8080", router))
+	os.Remove(UNIX_WIFID_LISTENER)
+	unixWifidListener, err := net.Listen("unix", UNIX_WIFID_LISTENER)
+	if err != nil {
+		panic(err)
+	}
+
+	os.Remove(UNIX_DHCPD_LISTENER)
+	unixDhcpdListener, err := net.Listen("unix", UNIX_DHCPD_LISTENER)
+	if err != nil {
+		panic(err)
+	}
+
+	wifidServer := http.Server{Handler: unix_wifid_router}
+	dhcpdServer := http.Server{Handler: unix_dhcpd_router}
+
+	auth := new(authconfig)
+	auth.username = os.Getenv("API_USERNAME")
+	auth.password = os.Getenv("API_PASSWORD")
+
+
+
+	if auth.username != "" && auth.password != "" {
+		go http.ListenAndServe("0.0.0.0:8080", auth.basicAuth(external_router))
+	}
+
+	go wifidServer.Serve(unixWifidListener)
+
+	dhcpdServer.Serve(unixDhcpdListener)
 }
