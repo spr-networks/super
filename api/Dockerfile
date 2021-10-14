@@ -20,10 +20,6 @@ RUN apt-get install -y hostapd
 
 ENV CC=clang
 RUN go mod init api
-#RUN go get golang.org/x/net/ipv4@latest
-#RUN go get github.com/vishvananda/netlink@latest
-#COPY code/multicastproxy.go /code/
-
 RUN go get github.com/gorilla/mux
 COPY code/api.go /code/
 RUN go build -o /api /code/api.go
