@@ -24,6 +24,9 @@ Experimental packet monitoring service geared for forensics, written entirely in
 
 Since devices are unable to speak directly to one another, multicast is broken by design with the network architecture. A golang service repeats packets to services with the original sender's address. This currently repeats to all devices. Future work could monitor IGMP to limit noise or create a bipartite graph of IOT devices and users, where devices would not be able to communicate directly with other deviecs. 
 
+#### ppp
+This service supports PPP authentication to the ISP. This is useful if SPR-FI is the main router
+
 #### Telegraf
 TBD
 https://github.com/SPR-FI/super/blob/main/monitor-services-compose.yml#L17
