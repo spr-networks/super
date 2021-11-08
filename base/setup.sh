@@ -25,3 +25,6 @@ echo -e "tmpfs\t/tmp\ttmpfs\tdefaults,noatime,nosuid,size=100m\t0\t0\ntmpfs\t/va
 
 # disable dhclient on the WANIF, since we will run our own dhcp
 echo network: {config: disabled} > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+
+# disable iptables for  docker
+echo -e "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
