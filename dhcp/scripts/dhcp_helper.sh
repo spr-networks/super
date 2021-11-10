@@ -26,7 +26,7 @@ all_groups="dns internet lan $custom_groups"
 # remove this IP, interface and MAC from all existing interface groups
 # If not a WiFi/VLAN VIF then do do not match on the interface
 SEARCHSTRING="${IP} |${MAC}"
-if grep -iE $VLANSIF <<< $LANIF; then
+if grep -iE $VLANSIF <<< $IFACE; then
   SEARCHSTRING="${IP} |${IFACE} |${MAC}"
 fi
 
@@ -36,6 +36,18 @@ do
     (while read -a VMAP; do  grep -iE "$SEARCHSTRING" <<< ${VMAP[@]} && nft delete element inet filter ${N}_access { ${VMAP[0]} . ${VMAP[1]} . ${VMAP[2]} : accept }; done )
 done
 
+
+for N in $all_groups
+do
+  nft -j list map inet filter ${N}_mac_src_access | jq -rc '.nftables[1].map | .elem[] | .[] | .concat | if length > 0 then . else empty end | .[0] + " " + .[1] + " " + .[2]' 2>/dev/null | \
+    (while read -a VMAP; do  grep -iE "$SEARCHSTRING" <<< ${VMAP[@]} && nft delete element inet filter ${N}_mac_src_access { ${VMAP[0]} . ${VMAP[1]} . ${VMAP[2]} : accept }; done )
+done
+
+for N in $all_groups
+do
+  nft -j list map inet filter ${N}_dst_access | jq -rc '.nftables[1].map | .elem[] | .[] | .concat | if length > 0 then . else empty end | .[0] + " " + .[1] + " " + .[2]' 2>/dev/null | \
+    (while read -a VMAP; do  grep -iE "$SEARCHSTRING" <<< ${VMAP[@]} && nft delete element inet filter ${N}_dst_access { ${VMAP[0]} . ${VMAP[1]} : continue }; done )
+done
 
 # Allow this MAC address to talk from this IP
 SET_ADD() {
