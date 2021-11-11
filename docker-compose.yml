@@ -132,6 +132,7 @@ services:
       - ./configs/scripts/:/configs/scripts/
       - ./state/wifi/:/state/wifi/
       - ./state/dhcp/:/state/dhcp/
+      - ./state/api/:/state/api/
 networks: 
   default:
     driver: none

@@ -17,6 +17,7 @@ fi
 ./configs/scripts/gen_watchdog.sh  > configs/watchdog/watchdog.conf
 
 # make sure state directories and files exist
+mkdir -p state/api/
 mkdir -p state/dhcp/
 mkdir -p state/dns/
 mkdir -p state/wifi/

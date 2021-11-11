@@ -5,8 +5,6 @@ package main
 
 import (
 	crand "crypto/rand"
-	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -16,12 +14,16 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"sync"
 )
 
 import (
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+
+	"github.com/duo-labs/webauthn/webauthn"
 )
 
 var UNIX_WIFID_LISTENER = "/state/wifi/apisock"
@@ -92,6 +94,15 @@ func readZone(dir string, filename string) *ClientZone {
 	return zone
 }
 
+func getStatus(w http.ResponseWriter, r *http.Request) {
+	reply := "Online"
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(reply)
+}
+
+var Zonesmtx sync.Mutex
+var ZonesConfigPath = "/configs/zones/zones.json"
+
 func getZones(w http.ResponseWriter, r *http.Request) {
 	Zonesmtx.Lock()
 	defer Zonesmtx.Unlock()
@@ -99,10 +110,6 @@ func getZones(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(zones)
 }
-
-var Zonesmtx sync.Mutex
-
-var ZonesConfigPath = "/configs/zones/zones.json"
 
 func saveZones(zones []ClientZone) {
 	file, _ := json.MarshalIndent(zones, "", " ")
@@ -590,31 +597,11 @@ func doReloadPSKFiles() {
 
 }
 
-type authconfig struct {
-	username string
-	password string
-}
-
-//https://www.alexedwards.net/blog/basic-authentication-in-go
-func (auth *authconfig) basicAuth(next *mux.Router) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		username, password, ok := r.BasicAuth()
-		if ok {
-			usernameHash := sha256.Sum256([]byte(username))
-			passwordHash := sha256.Sum256([]byte(password))
-			expectedUsernameHash := sha256.Sum256([]byte(auth.username))
-			expectedPasswordHash := sha256.Sum256([]byte(auth.password))
-			usernameMatch := (subtle.ConstantTimeCompare(usernameHash[:], expectedUsernameHash[:]) == 1)
-			passwordMatch := (subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1)
-			if usernameMatch && passwordMatch {
-				next.ServeHTTP(w, r)
-				return
-			}
-		}
-
-		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-	})
+// serves index file
+func home(w http.ResponseWriter, r *http.Request) {
+	p := path.Dir("./static/index.html")
+	w.Header().Set("Content-type", "text/html")
+	http.ServeFile(w, r, p)
 }
 
 func main() {
@@ -623,7 +610,8 @@ func main() {
 
 	unix_dhcpd_router := mux.NewRouter().StrictSlash(true)
 	unix_wifid_router := mux.NewRouter().StrictSlash(true)
-	external_router := mux.NewRouter().StrictSlash(true)
+	external_router_authenticated := mux.NewRouter().StrictSlash(true)
+	external_router_public := mux.NewRouter()
 
 	// internal for taking members from zones and putting them into nftable
 	// verdict maps
@@ -633,14 +621,18 @@ func main() {
 		router.HandleFunc("/map/{name}", deleteMapElement).Methods("DELETE")
 	*/
 
+	external_router_public.HandleFunc("/", home)
+
+	//Misc
+	external_router_authenticated.HandleFunc("/status/", getStatus).Methods("GET", "OPTIONS")
 	// Zone management
-	external_router.HandleFunc("/zones/", getZones).Methods("GET")
-	external_router.HandleFunc("/zone/{name}", addZoneMember).Methods("PUT")
-	external_router.HandleFunc("/zone/{name}", delZoneMember).Methods("DELETE")
+	external_router_authenticated.HandleFunc("/zones/", getZones).Methods("GET")
+	external_router_authenticated.HandleFunc("/zone/{name}", addZoneMember).Methods("PUT")
+	external_router_authenticated.HandleFunc("/zone/{name}", delZoneMember).Methods("DELETE")
 	//Assign a PSK
-	external_router.HandleFunc("/setPSK/", setPSK).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/setPSK/", setPSK).Methods("PUT", "DELETE")
 	//Force reload
-	external_router.HandleFunc("/reloadPSKFiles/", reloadPSKFiles).Methods("PUT")
+	external_router_authenticated.HandleFunc("/reloadPSKFiles/", reloadPSKFiles).Methods("PUT")
 
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure/", reportPSKAuthFailure).Methods("PUT")
@@ -664,14 +656,36 @@ func main() {
 	wifidServer := http.Server{Handler: unix_wifid_router}
 	dhcpdServer := http.Server{Handler: unix_dhcpd_router}
 
-	auth := new(authconfig)
-	auth.username = os.Getenv("API_USERNAME")
-	auth.password = os.Getenv("API_PASSWORD")
+	//temp until API and website are in the same spot
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
+	originsOk := handlers.AllowedOrigins([]string{"*"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
+	// start server listen
+	// with error handling
+	//log.Fatal(http.ListenAndServe(":" + os.Getenv("PORT"), handlers.CORS(originsOk, headersOk, methodsOk)(router)))
 
+	if "" == os.Getenv("API_WEBAUTHN_ENABLED") {
+		auth := new(authconfig)
+		auth.username = os.Getenv("API_USERNAME")
+		auth.password = os.Getenv("API_PASSWORD")
+		if auth.username != "" && auth.password != "" {
+			http.ListenAndServe("0.0.0.0:5201", handlers.CORS(originsOk, headersOk, methodsOk)(auth.basicAuth(external_router_authenticated, external_router_public)))
+		}
+	} else {
+		auth := new(webauthnconfig)
+		w, err := webauthn.New(&webauthn.Config{
+			RPDisplayName: "SPR-Fi",
+			RPID:          "localhost",
+			RPOrigin:      "http://localhost:5201", // The origin URL for WebAuthn requests
+		})
 
-	if auth.username != "" && auth.password != "" {
-		go http.ListenAndServe("0.0.0.0:8080", auth.basicAuth(external_router))
+		if err != nil {
+			log.Fatal("failed to create WebAuthn from config:", err)
+		}
+		auth.webAuthn = w
+
+		http.ListenAndServe("0.0.0.0:5201", handlers.CORS(originsOk, headersOk, methodsOk)(auth.webAuthN(external_router_authenticated, external_router_public)))
 	}
 
 	go wifidServer.Serve(unixWifidListener)

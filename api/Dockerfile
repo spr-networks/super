@@ -21,9 +21,14 @@ RUN apt-get install -y hostapd
 ENV CC=clang
 RUN go mod init api
 RUN go get github.com/gorilla/mux
+RUN go get github.com/gorilla/handlers
+RUN go get github.com/duo-labs/webauthn
+RUN go get github.com/duo-labs/webauthn.io/session
 COPY code/api.go /code/
-RUN go build -o /api /code/api.go
-
+COPY code/auth.go /code/
+RUN go mod tidy
+RUN go build -o /api /code/api.go /code/auth.go
+COPY code/static /static/
 COPY scripts /scripts/
 
 ENTRYPOINT ["/scripts/startup.sh"]
