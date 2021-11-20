@@ -3,7 +3,7 @@
 The API service provides a Web API for web front-ends and CLI tools, and internal APIs for IPC over unix sockets.
 Currently there are 2 internal APIs, one for wifid communication and a second one for IPC from the DHCPd serice.
 
-## DHCP API
+## DHCP API (unix socket)
 
 ### DHCP Update
 **PUT /dhcpUpdate/**
@@ -19,7 +19,7 @@ about the request to populate routes, verdict maps, arp entries, and local DNS m
 | Iface       | Iface Name  | string
 | Router      | Router IP   | string
 
-## WiFi API
+## WiFi API  (unix socket)
 
 ### PSK Authentication Failure 
 **PUT /reportPSKAuthFailure/**
@@ -84,13 +84,13 @@ known, it will get assigned to the pending PSK.
 
 Status is "Okay" or "Installed pending PSK"
 
-## Public External API
+## Public External API (tcp http socket)
 
 ### Get Frontend Website
 **GET /**
 
 
-## Authenticated External APIs
+## Authenticated External APIs (tcp http socket)
 
 ### Get status
 **GET /status/**
