@@ -126,7 +126,10 @@ func getZonesJson() []ClientZone {
 	if err != nil {
 		return nil
 	}
-	json.Unmarshal(data, &clientZones)
+	err = json.Unmarshal(data, &clientZones)
+	if err != nil {
+		log.Fatal(err)
+	}
 	return clientZones
 }
 
@@ -311,7 +314,7 @@ var PSKConfigPath = "/configs/wifi/psks.json"
 
 type PSKAuthFailure struct {
 	Type   string
-	Mac    string
+	MAC    string
 	Reason string
 	Status string
 }
@@ -327,7 +330,7 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if pskf.Mac == "" || (pskf.Type != "sae" && pskf.Type != "wpa") || (pskf.Reason != "noentry" && pskf.Reason != "mismatch") {
+	if pskf.MAC == "" || (pskf.Type != "sae" && pskf.Type != "wpa") || (pskf.Reason != "noentry" && pskf.Reason != "mismatch") {
 		http.Error(w, "malformed data", 400)
 		return
 	}
@@ -345,7 +348,7 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// take the pending PSK and assign it
-		psk := PSKEntry{Psk: pendingPSK.Psk, Type: auth_type, Mac: pskf.Mac}
+		psk := PSKEntry{Psk: pendingPSK.Psk, Type: auth_type, Mac: pskf.MAC}
 		psks := getPSKJson()
 		psks[psk.Mac] = psk
 		savePSKs(psks)
@@ -363,7 +366,7 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 type PSKAuthSuccess struct {
 	Iface  string
 	Event  string
-	Mac    string
+	MAC    string
 	Status string
 }
 
@@ -378,7 +381,7 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if pska.Iface == "" || pska.Event != "AP-STA-CONNECTED" || pska.Mac == "" {
+	if pska.Iface == "" || pska.Event != "AP-STA-CONNECTED" || pska.MAC == "" {
 		http.Error(w, "malformed data", 400)
 		return
 	}
@@ -392,16 +395,16 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 	if exists {
 		var foundPSK = false
 		for k := range psks {
-			if k == pska.Mac {
+			if k == pska.MAC {
 				foundPSK = true
 				break
 			}
 		}
 		if !foundPSK {
 			//assign MAC to pendingPSK
-			pendingPsk.Mac = pska.Mac
-			psks[pska.Mac] = pendingPsk
-			pska.Status = "Assigned Pending PSK to new MAC"
+			pendingPsk.Mac = pska.MAC
+			psks[pska.MAC] = pendingPsk
+			pska.Status = "Installed Pending PSK"
 			delete(psks, "pending")
 			savePSKs(psks)
 			doReloadPSKFiles()
@@ -597,9 +600,83 @@ func doReloadPSKFiles() {
 
 }
 
+//hostapd API
+
+func RunHostapdAllStations() (map[string]map[string]string, error) {
+	m := map[string]map[string]string{}
+	out, err := RunHostapdCommand("all_sta")
+	if err != nil {
+		return nil, err
+	}
+
+	mac := ""
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "=") {
+			pair := strings.Split(line, "=")
+			if mac != "" {
+				m[mac][pair[0]] = pair[1]
+			}
+		} else if strings.Contains(line, ":") {
+			mac = line
+			m[mac] = map[string]string{}
+		}
+
+	}
+
+	return m, nil
+}
+
+func RunHostapdStatus() (map[string]string, error) {
+	m := map[string]string{}
+
+	out, err := RunHostapdCommand("status")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "=") {
+			pair := strings.Split(line, "=")
+			m[pair[0]] = pair[1]
+		}
+
+	}
+	return m, nil
+}
+
+func RunHostapdCommand(cmd string) (string, error) {
+
+	outb, err := exec.Command("hostapd_cli", "-p", "/state/wifi/control", "-s", "/state/wifi", cmd).Output()
+	if err != nil {
+		return "", fmt.Errorf("Failed to execute command %s", cmd)
+	}
+	return string(outb), nil
+}
+
+func hostapdStatus(w http.ResponseWriter, r *http.Request) {
+	status, err := RunHostapdStatus()
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(status)
+}
+
+func hostapdAllStations(w http.ResponseWriter, r *http.Request) {
+	stations, err := RunHostapdAllStations()
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stations)
+}
+
 // serves index file
 func home(w http.ResponseWriter, r *http.Request) {
-	p := path.Dir("./static/index.html")
+	fmt.Println("serve home")
+	p := path.Dir("/static/index.html")
 	w.Header().Set("Content-type", "text/html")
 	http.ServeFile(w, r, p)
 }
@@ -633,6 +710,9 @@ func main() {
 	external_router_authenticated.HandleFunc("/setPSK/", setPSK).Methods("PUT", "DELETE")
 	//Force reload
 	external_router_authenticated.HandleFunc("/reloadPSKFiles/", reloadPSKFiles).Methods("PUT")
+	//hostadp information
+	external_router_authenticated.HandleFunc("/hostapd/status", hostapdStatus).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/all_stations", hostapdAllStations).Methods("GET")
 
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure/", reportPSKAuthFailure).Methods("PUT")
@@ -661,32 +741,19 @@ func main() {
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
-	// start server listen
-	// with error handling
-	//log.Fatal(http.ListenAndServe(":" + os.Getenv("PORT"), handlers.CORS(originsOk, headersOk, methodsOk)(router)))
+	auth := new(authnconfig)
+	w, err := webauthn.New(&webauthn.Config{
+		RPDisplayName: "SPR-Fi",
+		RPID:          "localhost",
+		RPOrigin:      "http://localhost", // The origin URL for WebAuthn requests
+	})
 
-	if "" == os.Getenv("API_WEBAUTHN_ENABLED") {
-		auth := new(authconfig)
-		auth.username = os.Getenv("API_USERNAME")
-		auth.password = os.Getenv("API_PASSWORD")
-		if auth.username != "" && auth.password != "" {
-			http.ListenAndServe("0.0.0.0:5201", handlers.CORS(originsOk, headersOk, methodsOk)(auth.basicAuth(external_router_authenticated, external_router_public)))
-		}
-	} else {
-		auth := new(webauthnconfig)
-		w, err := webauthn.New(&webauthn.Config{
-			RPDisplayName: "SPR-Fi",
-			RPID:          "localhost",
-			RPOrigin:      "http://localhost:5201", // The origin URL for WebAuthn requests
-		})
-
-		if err != nil {
-			log.Fatal("failed to create WebAuthn from config:", err)
-		}
-		auth.webAuthn = w
-
-		http.ListenAndServe("0.0.0.0:5201", handlers.CORS(originsOk, headersOk, methodsOk)(auth.webAuthN(external_router_authenticated, external_router_public)))
+	if err != nil {
+		log.Fatal("failed to create WebAuthn from config:", err)
 	}
+	auth.webAuthn = w
+
+	go http.ListenAndServe("0.0.0.0:80", handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public)))
 
 	go wifidServer.Serve(unixWifidListener)
 

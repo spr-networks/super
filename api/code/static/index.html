@@ -13,6 +13,8 @@
   <br>
   <input type="text" name="username" id="email" placeholder="i.e. foo@bar.com">
   <br>
+  Registration OTP
+  <input type="text" name="otp_code" id="otp" placeholder="0">
   <br>
   <button onclick="registerUser()">Register</button>
   <button onclick="loginUser()">Login</button>
@@ -50,8 +52,11 @@
         return;
       }
 
+      otp = $("#otp").val()
+
+
       $.get(
-        '/register/?username=' + username,
+        '/register/?username=' + username + '&otp=' + otp,
         null,
         function (data) {
           return data
@@ -61,7 +66,7 @@
           console.log(credentialCreationOptions)
           credentialCreationOptions.publicKey.challenge = bufferDecode(credentialCreationOptions.publicKey.challenge);
           credentialCreationOptions.publicKey.user.id = bufferDecode(credentialCreationOptions.publicKey.user.id);
-          localStorage.setItem("token", "Bearer " +credentialCreationOptions.publicKey.extensions["SPR-Bearer"])
+          localStorage.setItem("token", "Bearer " + credentialCreationOptions.publicKey.extensions["SPR-Bearer"])
           if (credentialCreationOptions.publicKey.excludeCredentials) {
             for (var i = 0; i < credentialCreationOptions.publicKey.excludeCredentials.length; i++) {
               credentialCreationOptions.publicKey.excludeCredentials[i].id = bufferDecode(credentialCreationOptions.publicKey.excludeCredentials[i].id);

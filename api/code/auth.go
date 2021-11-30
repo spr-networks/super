@@ -5,14 +5,13 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
-	"encoding/json"
-	//	"fmt"
-	"log"
-	"strings"
-	//	"net"
-	"net/http"
-	//	"sync"
 	"encoding/binary"
+	"encoding/json"
+	"log"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
 )
 import (
 	"github.com/gorilla/mux"
@@ -22,6 +21,21 @@ import (
 	"github.com/duo-labs/webauthn/webauthn"
 )
 
+func loadOTP() int {
+	data, err := os.ReadFile("/state/api/webauthn_otp")
+	if err == nil {
+		result, err := strconv.Atoi(string(data))
+		if err == nil {
+			return result
+		}
+	}
+	return 0
+}
+
+func saveOTP(data int) {
+	os.WriteFile("/state/api/webauthn_otp", []byte(strconv.Itoa(data)), 0661)
+}
+
 type User struct {
 	id          uint64
 	username    string
@@ -30,7 +44,7 @@ type User struct {
 
 //webauthn PoC based off of https://github.com/hbolimovsky/webauthn-example
 
-type webauthnconfig struct {
+type authnconfig struct {
 	sessionStore *session.Store
 	webAuthn     *webauthn.WebAuthn
 
@@ -81,7 +95,7 @@ func (u *User) AddCredential(cred webauthn.Credential) {
 	u.credentials = append(u.credentials, cred)
 }
 
-func (auth *webauthnconfig) BeginRegistration(w http.ResponseWriter, r *http.Request) {
+func (auth *authnconfig) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	vals := r.URL.Query()
 	usernames, ok := vals["username"]
 
@@ -90,6 +104,31 @@ func (auth *webauthnconfig) BeginRegistration(w http.ResponseWriter, r *http.Req
 		http.Error(w, "must supply a valid username i.e. admin", http.StatusBadRequest)
 		return
 	}
+
+	webAuthnOTP := loadOTP()
+	if webAuthnOTP == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, "Use CLI to Generate OTP code to register a new device", http.StatusBadRequest)
+		return
+	}
+
+	otpStr, ok := vals["otp"]
+	if !ok {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, "Missing OTP Code", http.StatusBadRequest)
+		return
+	}
+
+	//invalidate the OTP code immediately
+	saveOTP(0)
+
+	otp, err := strconv.Atoi(otpStr[0])
+	if err != nil || otp != webAuthnOTP {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, "Wrong OTP Code", http.StatusBadRequest)
+		return
+	}
+
 	username := usernames[0]
 
 	user := &User{}
@@ -125,18 +164,18 @@ func (auth *webauthnconfig) BeginRegistration(w http.ResponseWriter, r *http.Req
 	json.NewEncoder(w).Encode(options)
 }
 
-func (auth *webauthnconfig) ExtractRequestToken(r *http.Request) string {
+func (auth *authnconfig) ExtractRequestToken(r *http.Request) string {
 	authorizationHeader := r.Header.Get("authorization")
 	if authorizationHeader != "" {
 		bearerToken := strings.Split(authorizationHeader, " ")
-		if len(bearerToken) == 2 {
+		if len(bearerToken) == 2 && bearerToken[0] == "Bearer" {
 			return bearerToken[1]
 		}
 	}
 	return ""
 }
 
-func (auth *webauthnconfig) ExtractSessionData(r *http.Request) (*webauthn.SessionData, *User) {
+func (auth *authnconfig) ExtractSessionData(r *http.Request) (*webauthn.SessionData, *User) {
 	bearerToken := auth.ExtractRequestToken(r)
 	sessionData, exists := auth.sessionMap[bearerToken]
 	if exists {
@@ -148,7 +187,7 @@ func (auth *webauthnconfig) ExtractSessionData(r *http.Request) (*webauthn.Sessi
 	return nil, nil
 }
 
-func (auth *webauthnconfig) FinishRegistration(w http.ResponseWriter, r *http.Request) {
+func (auth *authnconfig) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	sessionData, user := auth.ExtractSessionData(r)
 
 	if sessionData == nil {
@@ -179,7 +218,7 @@ func (auth *webauthnconfig) FinishRegistration(w http.ResponseWriter, r *http.Re
 	json.NewEncoder(w).Encode("success")
 }
 
-func (auth *webauthnconfig) BeginLogin(w http.ResponseWriter, r *http.Request) {
+func (auth *authnconfig) BeginLogin(w http.ResponseWriter, r *http.Request) {
 	vals := r.URL.Query()
 	usernames, ok := vals["username"]
 	if !ok {
@@ -221,7 +260,7 @@ func (auth *webauthnconfig) BeginLogin(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(options)
 }
 
-func (auth *webauthnconfig) FinishLogin(w http.ResponseWriter, r *http.Request) {
+func (auth *authnconfig) FinishLogin(w http.ResponseWriter, r *http.Request) {
 
 	sessionData, user := auth.ExtractSessionData(r)
 
@@ -255,7 +294,7 @@ func (auth *webauthnconfig) FinishLogin(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode("success")
 }
 
-func (auth *webauthnconfig) webAuthN(authenticatedNext *mux.Router, publicNext *mux.Router) http.HandlerFunc {
+func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router) http.HandlerFunc {
 	webauth_router := mux.NewRouter().StrictSlash(true)
 	webauth_router.HandleFunc("/register/", auth.BeginRegistration).Methods("GET", "OPTIONS")
 	webauth_router.HandleFunc("/register/", auth.FinishRegistration).Methods("POST", "OPTIONS")
@@ -277,46 +316,55 @@ func (auth *webauthnconfig) webAuthN(authenticatedNext *mux.Router, publicNext *
 		token := auth.ExtractRequestToken(r)
 
 		if token != "" {
+			// check webauthn
 			_, exists := auth.authMap[token]
+
+			if !exists {
+				//check api tokens
+				tokens := []string{}
+				data, err := os.ReadFile("/state/api/auth_tokens")
+				if err == nil {
+					json.Unmarshal(data, &tokens)
+				}
+
+				for _, s := range tokens {
+					if subtle.ConstantTimeCompare([]byte(token), []byte(s)) == 1 {
+						exists = true
+						break
+					}
+				}
+
+			}
+
 			if exists {
 				authenticatedNext.ServeHTTP(w, r)
 				return
 			}
 		}
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-	})
-}
 
-type authconfig struct {
-	username string
-	password string
-}
-
-//https://www.alexedwards.net/blog/basic-authentication-in-go
-func (auth *authconfig) basicAuth(authenticatedNext *mux.Router, publicNext *mux.Router) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var matchInfo mux.RouteMatch
-
-		if publicNext.Match(r, &matchInfo) {
-			publicNext.ServeHTTP(w, r)
-			return
-		}
-
+		//check basic auth next
+		//https://www.alexedwards.net/blog/basic-authentication-in-go
 		username, password, ok := r.BasicAuth()
 		if ok {
-			usernameHash := sha256.Sum256([]byte(username))
-			passwordHash := sha256.Sum256([]byte(password))
-			expectedUsernameHash := sha256.Sum256([]byte(auth.username))
-			expectedPasswordHash := sha256.Sum256([]byte(auth.password))
-			usernameMatch := (subtle.ConstantTimeCompare(usernameHash[:], expectedUsernameHash[:]) == 1)
-			passwordMatch := (subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1)
-			if usernameMatch && passwordMatch {
-				authenticatedNext.ServeHTTP(w, r)
-				return
+			users := map[string]string{}
+			data, err := os.ReadFile("/state/api/auth_users")
+			if err == nil {
+				json.Unmarshal(data, &users)
+			}
+
+			pwEntry, exists := users[username]
+
+			if exists {
+				passwordHash := sha256.Sum256([]byte(password))
+				expectedPasswordHash := sha256.Sum256([]byte(pwEntry))
+				passwordMatch := (subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1)
+				if passwordMatch {
+					authenticatedNext.ServeHTTP(w, r)
+					return
+				}
 			}
 		}
 
-		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	})
 }
