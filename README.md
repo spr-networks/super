@@ -11,7 +11,7 @@ There project enables a high degree of confidence about where packets come from 
 Each device on the network is sequestered into a tiny subnet, and all devices must communicate through the router to communicate with one another. 
 Groups are used to inform nftable sets about a device's network access, by MAC address and IP address.
 
-The firewall rules are in https://github.com/SPR-FI/super/blob/main/base/scripts/nft_rules.sh
+The firewall rules are in https://github.com/spr-networks/super/blob/main/base/scripts/nft_rules.sh
 
 The forwarding and input policies are default drop.
 
@@ -49,7 +49,7 @@ $ xzcat ubuntu-21.04-preinstalled-server-arm64+raspi.img.xz | dd of=/dev/rdisk2 
 
 ```
 # On the booted pi (see and run base/setup.sh)
-# git clone https://github.com/SPR-FI/super
+# git clone https://github.com/spr-networks/super
 # cd super
 # base/setup.sh
 # reboot
@@ -147,7 +147,7 @@ echo nameserver 127.0.0.1 > /etc/resolv.conf
 
 Currently, devices must be added manually as documented above and the superwifid service should be restarted. 
 
-The [add_device.sh](https://github.com/SPR-FI/super/blob/main/add_device.sh) helper script can help add new wifi devices to the network
+The [add_device.sh](https://github.com/spr-networks/super/blob/main/add_device.sh) helper script can help add new wifi devices to the network
 
 
 

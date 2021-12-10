@@ -743,7 +743,7 @@ func main() {
 
 	auth := new(authnconfig)
 	w, err := webauthn.New(&webauthn.Config{
-		RPDisplayName: "SPR-Fi",
+		RPDisplayName: "SPR",
 		RPID:          "localhost",
 		RPOrigin:      "http://localhost", // The origin URL for WebAuthn requests
 	})

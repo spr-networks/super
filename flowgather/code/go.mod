@@ -1,4 +1,4 @@
-module github.com/SPR-FI/flowgather
+module github.com/spr-networks/flowgather
 
 go 1.17
 

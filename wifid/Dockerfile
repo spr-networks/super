@@ -35,7 +35,7 @@ ARG GITHUB_CREDS=github.com
 ENV ENV_GITHUB_CREDS=$GITHUB_CREDS
 RUN git config --global url."https://${ENV_GITHUB_CREDS}".insteadOf "https://github.com"
 ARG CACHEBUST=1
-RUN git clone https://github.com/SPR-Fi/hostap --depth 1
+RUN git clone https://github.com/spr-networks/hostap --depth 1
 RUN apt-get install -y libnl-genl-3-dev libssl-dev 
 COPY code/hostapd_config /code/hostap/hostapd/.config
 
