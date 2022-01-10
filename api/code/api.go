@@ -29,7 +29,7 @@ import (
 var UNIX_WIFID_LISTENER = "/state/wifi/apisock"
 var UNIX_DHCPD_LISTENER = "/state/dhcp/apisock"
 
-func showMap(w http.ResponseWriter, r *http.Request) {
+func showNFMap(w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
 
 	cmd := exec.Command("nft", "-j", "list", "map", "inet", "filter", name)
@@ -42,16 +42,6 @@ func showMap(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, string(stdout))
-}
-
-func updateMapElement(w http.ResponseWriter, r *http.Request) {
-	name := mux.Vars(r)["name"]
-	fmt.Println(name)
-
-}
-
-func deleteMapElement(w http.ResponseWriter, r *http.Request) {
-
 }
 
 type Client struct {
@@ -238,9 +228,12 @@ type DHCPUpdate struct {
 	Router string
 }
 
+var (
+	builtin_maps  = []string{"internet_access", "dns_access", "lan_access"}
+	default_zones = []string{"isolated", "lan", "wan", "dns"}
+)
+
 func getVerdictMapNames() []string {
-	builtin_maps := []string{"dhcp_access", "internet_access", "dns_access", "lan_access"}
-	default_zones := []string{"isolated", "lan_only", "wan_lan", "wan_lan_admin", "wan_only"}
 	//get custom maps from zones
 	custom_maps := []string{}
 	zones := getZonesJson()
@@ -260,22 +253,173 @@ func getVerdictMapNames() []string {
 	return append(builtin_maps, custom_maps...)
 }
 
-func flushVmaps(IP string, MAC string, vmap_names []string) {
-
+type verdictEntry struct {
+	ipv4   string
+	ifname string
+	mac    string
 }
 
-func updateArp(IP string, MAC string) {
+func getNFTVerdictMap(map_name string) []verdictEntry {
+	//google/nftables is incomplete and does not support custom set key types
+
+	existing := []verdictEntry{}
+
+	//nft -j list map inet filter dhcp_access
+	cmd := exec.Command("nft", "-j", "list", "map", "inet", "filter", map_name)
+	stdout, err := cmd.Output()
+	if err != nil {
+		fmt.Println(err)
+		return existing
+	}
+
+	//jq .nftables[1].map.elem[][0].concat
+	var data map[string]interface{}
+	err = json.Unmarshal(stdout, &data)
+	data2, ok := data["nftables"].([]interface{})
+	if ok != true {
+		log.Fatal("invalid json")
+	}
+	data3, ok := data2[1].(map[string]interface{})
+	data4, ok := data3["map"].(map[string]interface{})
+	data5, ok := data4["elem"].([]interface{})
+	for _, d := range data5 {
+		e, ok := d.([]interface{})
+		f, ok := e[0].(map[string]interface{})
+		g, ok := f["concat"].([]interface{})
+		if ok {
+			first, _ := g[0].(string)
+			second, second_ok := g[1].(string)
+			if len(g) > 2 {
+				third, third_ok := g[2].(string)
+				if third_ok {
+					existing = append(existing, verdictEntry{first, second, third})
+				}
+			} else {
+				if second_ok {
+					existing = append(existing, verdictEntry{"", first, second})
+				}
+			}
+		}
+	}
+	return existing
 }
 
-func updateRoute(IP string, Iface string) {
+func getMapVerdict(name string) string {
+	//custom map filtering for destinations is split between two tables.
+	// the mac_src_access table is the second half, and _dst_access is the first half
+	// The first half uses a continue verdict to transfer into the second verdict map
+	if strings.Contains(name, "_dst_access") {
+		return "continue"
+	}
+	return "accept"
+}
+
+func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string) {
+	for _, name := range vmap_names {
+		entries := getNFTVerdictMap(name)
+		verdict := getMapVerdict(name)
+		for _, entry := range entries {
+			if (entry.ipv4 == IP) || (entry.ifname == Ifname) || (entry.mac == MAC && (MAC != "")) {
+				if entry.mac != "" {
+					exec.Command("nft", "delete", "element", "inet", "filter", name, "{", entry.ipv4, ".", entry.ifname, ".", entry.mac, ":", verdict, "}").Run()
+				} else {
+					exec.Command("nft", "delete", "element", "inet", "filter", name, "{", entry.ipv4, ".", entry.ifname, ":", verdict, "}").Run()
+				}
+			}
+		}
+	}
+}
+
+func updateArp(Ifname string, IP string, MAC string) {
+	exec.Command("arp", "-i", Ifname, "-s", IP, MAC).Run()
+}
+
+func updateAddr(Router string, Ifname string) {
+	exec.Command("ip", "addr", "add", Router+"/24", "dev", Ifname).Run()
+}
+
+func addVerdict(IP string, MAC string, Iface string, Table string) {
+	exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ".", MAC, ":", "accept", "}").Run()
+}
+
+func addDNSVerdict(IP string, MAC string, Iface string) {
+	addVerdict(IP, MAC, Iface, "dns_access")
+}
+
+func addLANVerdict(IP string, MAC string, Iface string) {
+	addVerdict(IP, MAC, Iface, "lan_access")
+}
+
+func addInternetVerdict(IP string, MAC string, Iface string) {
+	addVerdict(IP, MAC, Iface, "internet_access")
+}
+
+func addCustomVerdict(ZoneName string, IP string, MAC string, Iface string) {
+	//create verdict maps if they do not exist
+	err := exec.Command("nft", "list", "map", "inet", "filter", ZoneName+"_dst_access").Run()
+	if err != nil {
+		//two verdict maps are used for establishing custom groups.
+		// the {name}_dst_access map allows Inet packets to a certain IP/interface pair
+		//the {name}_mac_src_access part allows Inet packets from a IP/IFace/MAC set
+
+		exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_mac_src_access", "{", "type", "ipv4_addr", ".", "ifname", ".", "ether_addr", ":", "verdict", ";", "}").Run()
+		exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_dst_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "}").Run()
+		exec.Command("nft", "insert", "rule", "inet", "filter", "FORWARD", "ip", "daddr", ".", "oifname", "vmap", ZoneName+"_dst_access", "ip", "saddr", ".", "iifname", ".", "ether", "saddr", "vmap", ZoneName+"_mac_src_access").Run()
+	}
+
+	exec.Command("nft", "add", "element", "inet", "filter", ZoneName+"_dst_access", "{", IP, ".", Iface, ":", "continue", "}").Run()
+
+	exec.Command("nft", "add", "element", "inet", "filter", ZoneName+"_mac_src_access", "{", IP, ".", Iface, ".", MAC, ":", "accept", "}").Run()
 }
 
 func populateVmapEntries(IP string, MAC string, Iface string) {
-	//4. create verdict map for custom group if necessary
+	zones := getZonesJson()
+	for _, zone := range zones {
+		if zone.Name == "isolated" {
+			continue
+		}
+		for _, entry := range zone.Clients {
+			if entry.Mac == MAC {
+				//client belongs to verdict map, add it
+				switch zone.Name {
+				case "dns":
+					addDNSVerdict(IP, MAC, Iface)
+				case "lan":
+					addLANVerdict(IP, MAC, Iface)
+				case "wan":
+					addInternetVerdict(IP, MAC, Iface)
+				default:
+					//custom group
+					addCustomVerdict(zone.Name, IP, MAC, Iface)
+				}
+			}
+		}
+	}
+
 }
 
 func updateLocalMappings(IP string, Name string) {
-
+	var localMappingsPath = "/state/dns/local_mappings"
+	data, err := ioutil.ReadFile(localMappingsPath)
+	if err != nil {
+		return
+	}
+	entryName := Name + ".lan"
+	new_data := ""
+	for _, line := range strings.Split(string(data), "\n") {
+		pieces := strings.Split(line, " ")
+		if len(pieces) < 2 {
+			continue
+		}
+		ip := pieces[0]
+		hostname := pieces[1]
+		if ip == IP || entryName == hostname {
+			continue
+		}
+		new_data += ip + " " + hostname + "\n"
+	}
+	new_data += IP + " " + entryName + "\n"
+	ioutil.WriteFile(localMappingsPath, []byte(new_data), 0644)
 }
 
 var DHCPmtx sync.Mutex
@@ -297,11 +441,12 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	//DHCP -> IP, MAC, NAME, IFACE, ROUTER
 
 	//1. delete this ip, mac from any existing verdict maps
-	flushVmaps(dhcp.IP, dhcp.MAC, getVerdictMapNames())
+	flushVmaps(dhcp.IP, dhcp.MAC, dhcp.Iface, getVerdictMapNames())
 
 	//2. update static arp entry
-	updateArp(dhcp.IP, dhcp.MAC)
-	updateRoute(dhcp.IP, dhcp.Iface)
+	updateAddr(dhcp.Router, dhcp.Iface)
+
+	updateArp(dhcp.Iface, dhcp.IP, dhcp.MAC)
 
 	//3. add entry to appropriate verdict maps
 	populateVmapEntries(dhcp.IP, dhcp.MAC, dhcp.Iface)
@@ -675,51 +820,42 @@ func hostapdAllStations(w http.ResponseWriter, r *http.Request) {
 
 // serves index file
 func home(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("serve home")
 	p := path.Dir("/static/index.html")
 	w.Header().Set("Content-type", "text/html")
 	http.ServeFile(w, r, p)
 }
 
 func main() {
-	savePSKs(loadPSKFiles())
-	saveZones(getZoneFiles())
-
 	unix_dhcpd_router := mux.NewRouter().StrictSlash(true)
 	unix_wifid_router := mux.NewRouter().StrictSlash(true)
 	external_router_authenticated := mux.NewRouter().StrictSlash(true)
 	external_router_public := mux.NewRouter()
 
-	// internal for taking members from zones and putting them into nftable
-	// verdict maps
-	/*
-		router.HandleFunc("/map/{name}", showMap).Methods("GET")
-		router.HandleFunc("/map/{name}", updateMapElement).Methods("PUT")
-		router.HandleFunc("/map/{name}", deleteMapElement).Methods("DELETE")
-	*/
-
 	external_router_public.HandleFunc("/", home)
 
+	//nftable helpers
+	external_router_authenticated.HandleFunc("/nfmap/{name}", showNFMap).Methods("GET")
+
 	//Misc
-	external_router_authenticated.HandleFunc("/status/", getStatus).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
 	// Zone management
-	external_router_authenticated.HandleFunc("/zones/", getZones).Methods("GET")
+	external_router_authenticated.HandleFunc("/zones", getZones).Methods("GET")
 	external_router_authenticated.HandleFunc("/zone/{name}", addZoneMember).Methods("PUT")
 	external_router_authenticated.HandleFunc("/zone/{name}", delZoneMember).Methods("DELETE")
 	//Assign a PSK
-	external_router_authenticated.HandleFunc("/setPSK/", setPSK).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/setPSK", setPSK).Methods("PUT", "DELETE")
 	//Force reload
-	external_router_authenticated.HandleFunc("/reloadPSKFiles/", reloadPSKFiles).Methods("PUT")
+	external_router_authenticated.HandleFunc("/reloadPSKFiles", reloadPSKFiles).Methods("PUT")
 	//hostadp information
 	external_router_authenticated.HandleFunc("/hostapd/status", hostapdStatus).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/all_stations", hostapdAllStations).Methods("GET")
 
 	// PSK management for stations
-	unix_wifid_router.HandleFunc("/reportPSKAuthFailure/", reportPSKAuthFailure).Methods("PUT")
-	unix_wifid_router.HandleFunc("/reportPSKAuthSuccess/", reportPSKAuthSuccess).Methods("PUT")
+	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
+	unix_wifid_router.HandleFunc("/reportPSKAuthSuccess", reportPSKAuthSuccess).Methods("PUT")
 
 	// DHCP actions
-	unix_dhcpd_router.HandleFunc("/dhcpUpdate/", dhcpUpdate).Methods("PUT")
+	unix_dhcpd_router.HandleFunc("/dhcpUpdate", dhcpUpdate).Methods("PUT")
 
 	os.Remove(UNIX_WIFID_LISTENER)
 	unixWifidListener, err := net.Listen("unix", UNIX_WIFID_LISTENER)

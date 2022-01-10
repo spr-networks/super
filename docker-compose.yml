@@ -22,7 +22,6 @@ services:
       - ./configs/base/:/configs/base/
       - ./configs/dhcp/:/configs/dhcp/
       - ./configs/zones/:/configs/zones/
-      - ./state/dns/:/state/dns/
       - ./state/dhcp/:/state/dhcp/
       - /sys/fs/bpf:/sys/fs/bpf
   dhcp_client:
@@ -134,6 +133,7 @@ services:
       - ./state/wifi/:/state/wifi/
       - ./state/dhcp/:/state/dhcp/
       - ./state/api/:/state/api/
+      - ./state/dns/:/state/dns/
 networks: 
   default:
     driver: none
