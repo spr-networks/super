@@ -25,8 +25,7 @@ jobs:
         name: Build arm64 test containers
         run: |
           cp -R base/template_configs configs
-          cp configs/wifi/sae_passwords.sample configs/wifi/sae_passwords
-          cp configs/wifi/wpa2pskfile.sample configs/wifi/wpa2pskfile
+          cp configs/wifi/psks.json configs/wifi/
           echo ${{ secrets.PAT }}@github.com > .github_creds
           ./build_docker_compose.sh
 
