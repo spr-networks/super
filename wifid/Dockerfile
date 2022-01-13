@@ -9,7 +9,7 @@ RUN apt-get install -y jq git
 
 RUN mkdir /code
 WORKDIR /code
-RUN git clone https://github.com/xdp-project/xdp-tools.git
+RUN git clone -b v1.2.0 --depth 1 https://github.com/xdp-project/xdp-tools.git
 WORKDIR /code/xdp-tools
 RUN apt-get install -y pkg-config
 RUN apt-get install -y gcc clang
@@ -31,9 +31,6 @@ COPY code/main.go /code/
 RUN go build -o /hostap_dhcp_helper main.go
 
 # Build hostapd
-ARG GITHUB_CREDS=github.com
-ENV ENV_GITHUB_CREDS=$GITHUB_CREDS
-RUN git config --global url."https://${ENV_GITHUB_CREDS}".insteadOf "https://github.com"
 ARG CACHEBUST=1
 RUN git clone https://github.com/spr-networks/hostap --depth 1
 RUN apt-get install -y libnl-genl-3-dev libssl-dev 
