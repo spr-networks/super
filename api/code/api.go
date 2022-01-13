@@ -167,7 +167,7 @@ func addZoneMember(w http.ResponseWriter, r *http.Request) {
 	for z_idx, zone := range zones {
 		if zone.Name == name {
 			for c_idx, entry := range zone.Clients {
-				if entry.Mac == client.Mac {
+				if equalMAC(entry.Mac, client.Mac) {
 					if entry.Comment != client.Comment {
 						zone.Clients[c_idx].Comment = client.Comment
 						zones[z_idx] = zone
@@ -206,7 +206,7 @@ func delZoneMember(w http.ResponseWriter, r *http.Request) {
 	for z_idx, zone := range zones {
 		if zone.Name == name {
 			for c_idx, entry := range zone.Clients {
-				if entry.Mac == client.Mac {
+				if equalMAC(entry.Mac, client.Mac) {
 					zone.Clients = append(zone.Clients[:c_idx], zone.Clients[c_idx+1:]...)
 					zones[z_idx] = zone
 					saveZones(zones)
@@ -226,6 +226,14 @@ type DHCPUpdate struct {
 	Name   string
 	Iface  string
 	Router string
+}
+
+func trimLower(a string) string {
+  return strings.TrimSpace(strings.ToLower(a))
+}
+
+func equalMAC(a string, b string) bool {
+  return trimLower(a) == trimLower(b)
 }
 
 var (
@@ -314,12 +322,12 @@ func getMapVerdict(name string) string {
 	return "accept"
 }
 
-func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string) {
+func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, matchInterface bool) {
 	for _, name := range vmap_names {
 		entries := getNFTVerdictMap(name)
 		verdict := getMapVerdict(name)
 		for _, entry := range entries {
-			if (entry.ipv4 == IP) || (entry.ifname == Ifname) || (entry.mac == MAC && (MAC != "")) {
+			if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || (equalMAC(entry.mac, MAC) && (MAC != "")) {
 				if entry.mac != "" {
 					exec.Command("nft", "delete", "element", "inet", "filter", name, "{", entry.ipv4, ".", entry.ifname, ".", entry.mac, ":", verdict, "}").Run()
 				} else {
@@ -379,7 +387,7 @@ func populateVmapEntries(IP string, MAC string, Iface string) {
 			continue
 		}
 		for _, entry := range zone.Clients {
-			if entry.Mac == MAC {
+			if equalMAC(entry.Mac, MAC) {
 				//client belongs to verdict map, add it
 				switch zone.Name {
 				case "dns":
@@ -438,10 +446,17 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-	//DHCP -> IP, MAC, NAME, IFACE, ROUTER
-
 	//1. delete this ip, mac from any existing verdict maps
-	flushVmaps(dhcp.IP, dhcp.MAC, dhcp.Iface, getVerdictMapNames())
+
+
+  //if the interface is vif flush it
+  matchInterface := false
+  vlansif := os.Getenv("VLANSIF")
+  if len(vlansif) > 0 && strings.Contains(dhcp.Iface, vlansif) {
+    matchInterface = true
+  }
+
+	flushVmaps(dhcp.IP, dhcp.MAC, dhcp.Iface, getVerdictMapNames(), matchInterface)
 
 	//2. update static arp entry
 	updateAddr(dhcp.Router, dhcp.Iface)
