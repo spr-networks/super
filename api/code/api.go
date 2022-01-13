@@ -343,7 +343,7 @@ func updateArp(Ifname string, IP string, MAC string) {
 }
 
 func updateAddr(Router string, Ifname string) {
-	exec.Command("ip", "addr", "add", Router+"/24", "dev", Ifname).Run()
+	exec.Command("ip", "addr", "add", Router+"/30", "dev", Ifname).Run()
 }
 
 func addVerdict(IP string, MAC string, Iface string, Table string) {
