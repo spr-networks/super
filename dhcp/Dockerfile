@@ -18,9 +18,6 @@ ENV PATH="/usr/local/go/bin:$PATH"
 
 # Build CoreDHCP
 ENV CC=clang
-ARG GITHUB_CREDS=github.com
-ENV ENV_GITHUB_CREDS=$GITHUB_CREDS
-RUN git config --global url."https://${ENV_GITHUB_CREDS}".insteadOf "https://github.com"
 ARG CACHEBUST=1
 RUN git clone https://github.com/spr-networks/coredhcp
 WORKDIR /code/coredhcp

@@ -18,9 +18,6 @@ ENV PATH="/usr/local/go/bin:$PATH"
 RUN apt-get install -y clang
 
 ENV CC=clang
-ARG GITHUB_CREDS=git@github.com
-ENV ENV_GITHUB_CREDS=$GITHUB_CREDS
-RUN git config --global url."https://${ENV_GITHUB_CREDS}".insteadOf "https://github.com"
 
 # Use a ram disk for golang src
 ARG COREDNS_VER=unknown
