@@ -101,6 +101,36 @@ func getZones(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(zones)
 }
 
+type Device struct {
+	Mac     string
+	Comment string
+	Zones   []string
+}
+
+func getDevices(w http.ResponseWriter, r *http.Request) {
+	Zonesmtx.Lock()
+	defer Zonesmtx.Unlock()
+	zones := getZonesJson()
+
+	devices := map[string]Device{}
+
+	for _, zone := range zones {
+		for _, client := range zone.Clients {
+			mac := trimLower(client.Mac)
+			device, exists := devices[mac]
+			if exists {
+				device.Zones = append(device.Zones, zone.Name)
+				devices[mac] = device
+			} else {
+				devices[mac] = Device{Mac: mac, Comment: client.Comment, Zones: []string{zone.Name}}
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(devices)
+}
+
 func saveZones(zones []ClientZone) {
 	file, _ := json.MarshalIndent(zones, "", " ")
 	err := ioutil.WriteFile(ZonesConfigPath, file, 0644)
@@ -229,11 +259,11 @@ type DHCPUpdate struct {
 }
 
 func trimLower(a string) string {
-  return strings.TrimSpace(strings.ToLower(a))
+	return strings.TrimSpace(strings.ToLower(a))
 }
 
 func equalMAC(a string, b string) bool {
-  return trimLower(a) == trimLower(b)
+	return trimLower(a) == trimLower(b)
 }
 
 var (
@@ -448,13 +478,12 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	//1. delete this ip, mac from any existing verdict maps
 
-
-  //if the interface is vif flush it
-  matchInterface := false
-  vlansif := os.Getenv("VLANSIF")
-  if len(vlansif) > 0 && strings.Contains(dhcp.Iface, vlansif) {
-    matchInterface = true
-  }
+	//if the interface is vif flush it
+	matchInterface := false
+	vlansif := os.Getenv("VLANSIF")
+	if len(vlansif) > 0 && strings.Contains(dhcp.Iface, vlansif) {
+		matchInterface = true
+	}
 
 	flushVmaps(dhcp.IP, dhcp.MAC, dhcp.Iface, getVerdictMapNames(), matchInterface)
 
@@ -857,6 +886,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/zones", getZones).Methods("GET")
 	external_router_authenticated.HandleFunc("/zone/{name}", addZoneMember).Methods("PUT")
 	external_router_authenticated.HandleFunc("/zone/{name}", delZoneMember).Methods("DELETE")
+	external_router_authenticated.HandleFunc("/devices", getDevices).Methods("GET")
+
 	//Assign a PSK
 	external_router_authenticated.HandleFunc("/setPSK", setPSK).Methods("PUT", "DELETE")
 	//Force reload
