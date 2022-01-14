@@ -103,6 +103,7 @@ func getZones(w http.ResponseWriter, r *http.Request) {
 
 type Device struct {
 	Mac     string
+	PskType string
 	Comment string
 	Zones   []string
 }
@@ -110,7 +111,13 @@ type Device struct {
 func getDevices(w http.ResponseWriter, r *http.Request) {
 	Zonesmtx.Lock()
 	defer Zonesmtx.Unlock()
+
+	PSKmtx.Lock()
+	defer PSKmtx.Unlock()
+
 	zones := getZonesJson()
+
+	psks := getPSKJson()
 
 	devices := map[string]Device{}
 
@@ -122,8 +129,21 @@ func getDevices(w http.ResponseWriter, r *http.Request) {
 				device.Zones = append(device.Zones, zone.Name)
 				devices[mac] = device
 			} else {
-				devices[mac] = Device{Mac: mac, Comment: client.Comment, Zones: []string{zone.Name}}
+				pskType := ""
+				pskEntry, exists := psks[mac]
+				if exists {
+					pskType = pskEntry.Type
+				}
+				devices[mac] = Device{Mac: mac, Comment: client.Comment, Zones: []string{zone.Name}, PskType: pskType}
 			}
+		}
+	}
+
+	//find devices configured with psks without a zone
+	for _, psk := range psks {
+		_, exists := devices[psk.Mac]
+		if !exists {
+			devices[psk.Mac] = Device{Mac: psk.Mac, Comment: "", Zones: []string{}, PskType: psk.Type}
 		}
 	}
 
