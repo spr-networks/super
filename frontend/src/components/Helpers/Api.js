@@ -1,4 +1,4 @@
-let API = "http://192.168.2.1"
+let API = document.location.origin;
 
 export const zoneDescriptions = {
   "dns" : "Outbound DNS Access",
