@@ -914,11 +914,21 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
 }
 
+func setSecurityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Frame-Options", "DENY")
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	unix_dhcpd_router := mux.NewRouter().StrictSlash(true)
 	unix_wifid_router := mux.NewRouter().StrictSlash(true)
 	external_router_authenticated := mux.NewRouter().StrictSlash(true)
 	external_router_public := mux.NewRouter()
+
+	external_router_public.Use(setSecurityHeaders)
+	external_router_authenticated.Use(setSecurityHeaders)
 
 	spa := spaHandler{staticPath: "/build", indexPath: "index.html"}
 	external_router_public.PathPrefix("/").Handler(spa)
