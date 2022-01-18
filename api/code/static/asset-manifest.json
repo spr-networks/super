@@ -1,0 +1,26 @@
+{
+  "files": {
+    "main.css": "/static/css/main.de05e9ff.chunk.css",
+    "main.js": "/static/js/main.af8fcf81.chunk.js",
+    "main.js.map": "/static/js/main.af8fcf81.chunk.js.map",
+    "runtime-main.js": "/static/js/runtime-main.7a4573b5.js",
+    "runtime-main.js.map": "/static/js/runtime-main.7a4573b5.js.map",
+    "static/css/2.54208fce.chunk.css": "/static/css/2.54208fce.chunk.css",
+    "static/js/2.26639e9c.chunk.js": "/static/js/2.26639e9c.chunk.js",
+    "static/js/2.26639e9c.chunk.js.map": "/static/js/2.26639e9c.chunk.js.map",
+    "index.html": "/index.html",
+    "static/css/2.54208fce.chunk.css.map": "/static/css/2.54208fce.chunk.css.map",
+    "static/css/main.de05e9ff.chunk.css.map": "/static/css/main.de05e9ff.chunk.css.map",
+    "static/js/2.26639e9c.chunk.js.LICENSE.txt": "/static/js/2.26639e9c.chunk.js.LICENSE.txt",
+    "static/js/main.af8fcf81.chunk.js.LICENSE.txt": "/static/js/main.af8fcf81.chunk.js.LICENSE.txt",
+    "static/media/bg.jpg": "/static/media/bg.303ad63d.jpg",
+    "static/media/paper-dashboard.scss?v=1.3.0": "/static/media/nucleo-icons.ec16bc4c.woff2"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.7a4573b5.js",
+    "static/css/2.54208fce.chunk.css",
+    "static/js/2.26639e9c.chunk.js",
+    "static/css/main.de05e9ff.chunk.css",
+    "static/js/main.af8fcf81.chunk.js"
+  ]
+}
