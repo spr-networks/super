@@ -1,0 +1,111 @@
+.card-pricing{
+    text-align: center;
+
+    .card-body{
+        padding: 15px!important;
+    }
+    .card-category{
+        margin: 10px 0 10px;
+        color: $black-color;
+    }
+    .card-icon{
+        padding: 15px 0 5px;
+        transform: translateY(0%);
+        color: $black-color;
+
+        &.icon-info{
+            color: $info-color;
+        }
+        &.icon-danger{
+            color: $danger-color;
+        }
+        &.icon-primary{
+            color: $primary-color;
+        }
+        &.icon-success{
+            color: $success-color;
+        }
+        &.icon-warning{
+            color: $warning-color;
+        }
+
+        i {
+          font-size: 40px;
+          width: 105px;
+          border: 2px solid $table-line-color;
+          border-radius: 50%;
+          height: 105px;
+          line-height: 105px;
+        }
+    }
+    .card-title{
+        margin-top: 30px !important;
+    }
+    ul{
+        list-style: none;
+        padding: 0;
+        max-width: 240px;
+        margin: 20px auto;
+
+        li{
+            padding: 5px 0;
+            list-style-type: none;
+            b{
+                font-weight: 600;
+                color: $black-color;
+            }
+        }
+    }
+    .btn-neutral{
+        color: $default-color;
+
+        &:hover, :focus{
+            color: $default-states-color;
+        }
+    }
+
+    &.card-background-image{
+        ul{
+            li{
+                color: $white-color;
+                text-align: center;
+                border-color: rgba(255,255,255,.3);
+
+                b{
+                    color: $white-color !important;
+                }
+            }
+        }
+        .card-description{
+            color: $white-color !important;
+        }
+        .card-title{
+            small{
+                color: rgba(255, 255, 255, 0.6);
+            }
+        }
+    }
+}
+
+.card-pricing.card-plain{
+    .card-category,
+    .card-title{
+        color: $black-color;
+    }
+    ul{
+        li{
+            b{
+                font-weight: 600;
+                color: $black-color;
+            }
+        }
+    }
+}
+
+
+.card[data-background="image"] .card-icon i,
+.card[data-background="color"] .card-icon i,
+.card[data-color] .card-icon i {
+  color: $white-color;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}

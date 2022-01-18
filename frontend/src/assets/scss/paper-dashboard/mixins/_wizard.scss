@@ -1,0 +1,41 @@
+@mixin set-wizard-color($color) {
+      .moving-tab{
+          color: $color;
+      }
+
+    .picture{
+        &:hover{
+            border-color: $color;
+        }
+    }
+
+    .choice{
+        &:hover,
+        &.active{
+            .icon{
+                border-color: $color;
+                color: $color;
+            }
+        }
+    }
+
+    // .form-group{
+    //     .form-control{
+    //         background-image: linear-gradient($color, $color), linear-gradient($mdb-input-underline-color, $mdb-input-underline-color);
+    //     }
+    // }
+
+    .checkbox input[type=checkbox]:checked + .checkbox-material{
+        .check{
+            background-color: $color;
+        }
+    }
+
+    .radio input[type=radio]:checked ~ .check {
+        background-color: $color;
+    }
+
+    .radio input[type=radio]:checked ~ .circle {
+        border-color: $color;
+    }
+}

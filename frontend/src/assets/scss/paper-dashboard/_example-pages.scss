@@ -1,0 +1,202 @@
+.login-page{
+  .content .container {
+    margin-top: 8vh;
+  }
+
+    .card-login{
+        border-radius: $border-radius-large;
+        padding-bottom: $padding-base-horizontal;
+
+        .btn-wd{
+            min-width: 180px;
+        }
+
+        .logo-container{
+            width: 65px;
+            margin: 0 auto;
+            margin-bottom: 55px;
+
+            img{
+                width: 100%;
+            }
+        }
+
+        .input-group:last-child{
+            margin-bottom: 40px;
+        }
+
+        &.card-plain{
+            @include input-coloured-bg($opacity-5, $white-color, $white-color, $transparent-bg, $opacity-1, $opacity-2);
+
+            .input-group-addon,
+            .form-group.no-border .input-group-addon,
+            .input-group.no-border .input-group-addon{
+                color: $opacity-8;
+            }
+        }
+    }
+
+    .link{
+        font-size: 10px;
+        color: $white-color;
+        text-decoration: none;
+    }
+}
+
+.full-page{
+    & > .content,
+    & > .footer{
+        position: relative;
+        z-index: 4;
+    }
+
+    &.section-image{
+        position: initial;
+    }
+
+    & > .content{
+        padding-top: 21vh;
+    }
+
+    .footer{
+        position: absolute;
+        width: 100%;
+        bottom: 0;
+
+        .container{
+            color: $white-color;
+        }
+    }
+
+    .full-page-background{
+        position: absolute;
+        z-index: 1;
+        height: 100%;
+        width: 100%;
+        display: block;
+        top: 0;
+        left: 0;
+        background-size: cover;
+        background-position: center center;
+    }
+
+    &:after{
+        position: absolute;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        display: block;
+        left: 0;
+        top: 0;
+        content: "";
+        background-color: rgba(0, 0, 0, 0.6);
+    }
+
+    &.pricing-page{
+        .description{
+            margin-bottom: 65px;
+        }
+    }
+
+    &.register-page{
+        .content > .container {
+          margin-top: 5vh;
+        }
+        .info-horizontal{
+            padding: 0px 0px 20px;
+        }
+
+        .info-horizontal{
+            text-align: left !important;
+
+            .icon{
+                margin-top: 0;
+
+                >i{
+                    font-size: 2em;
+                }
+
+                &.icon-circle{
+                    width: 65px;
+                    height: 65px;
+                    max-width: 65px;
+                    margin-top: 8px;
+
+                    i{
+                        display: table;
+                        margin: 0 auto;
+                        line-height: 3.5;
+                        font-size: 1.9em;
+                    }
+                }
+            }
+            .description{
+                overflow: hidden;
+            }
+
+        }
+    }
+
+    &.lock-page {
+      .content > .container {
+        margin-top: 10vh;
+      }
+    }
+}
+
+.register-page,
+.login-page,
+.lock-page {
+  .navbar {
+    .navbar-collapse {
+      .nav-item .nav-link {
+        text-transform: capitalize;
+        color: $white-color !important;
+      }
+    }
+
+    &.navbar-transparent {
+      border-bottom: 1px solid transparent;
+      margin-top: 25px;
+    }
+
+    .navbar-brand {
+      color: $white-color !important;
+    }
+  }
+}
+
+@media screen and (max-width: 991px){
+  .register-page,
+  .login-page,
+  .lock-page {
+    .navbar {
+      &.bg-white {
+        .navbar-toggler .navbar-toggler-bar.navbar-kebab {
+            background: $default-color !important;
+          }
+        .navbar-collapse {
+          .navbar-nav {
+            .nav-item .nav-link {
+              color: $default-color !important;
+            }
+          }
+        }
+        .navbar-brand {
+          color: $default-color !important;
+        }
+      }
+
+      &.navbar-transparent {
+        .navbar-toggle {
+          display: none;
+        }
+        .navbar-toggler {
+          .navbar-toggler-bar.navbar-kebab {
+            background: $white-color !important;
+          }
+        }
+      }
+    }
+  }
+}

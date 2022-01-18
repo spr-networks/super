@@ -1,0 +1,238 @@
+@mixin transition-input-focus-color() {
+    -webkit-transition: color 0.3s ease-in-out, border-color 0.3s ease-in-out, background-color 0.3s ease-in-out;
+    -moz-transition: color 0.3s ease-in-out, border-color 0.3s ease-in-out, background-color 0.3s ease-in-out;
+    -o-transition: color 0.3s ease-in-out, border-color 0.3s ease-in-out, background-color 0.3s ease-in-out;
+    -ms-transition: color 0.3s ease-in-out, border-color 0.3s ease-in-out, background-color 0.3s ease-in-out;
+    transition: color 0.3s ease-in-out, border-color 0.3s ease-in-out, background-color 0.3s ease-in-out;
+}
+
+@mixin transform-translate-x($value){
+     -webkit-transform:  translate3d($value, 0, 0);
+        -moz-transform: translate3d($value, 0, 0);
+        -o-transform: translate3d($value, 0, 0);
+        -ms-transform: translate3d($value, 0, 0);
+        transform: translate3d($value, 0, 0);
+}
+
+@mixin transform-translate-y($value){
+     -webkit-transform:  translate3d(0,$value,0) !important;
+        -moz-transform: translate3d(0,$value,0) !important;
+        -o-transform: translate3d(0,$value,0) !important;
+        -ms-transform: translate3d(0,$value,0) !important;
+        transform: translate3d(0,$value,0) !important;
+}
+@mixin transform-translate-y-fixed-plugin($value){
+     -webkit-transform:  translate3d(0,$value,0) !important;
+        -moz-transform: translate3d(0,$value,0) !important;
+        -o-transform: translate3d(0,$value,0) !important;
+        -ms-transform: translate3d(0,$value,0) !important;
+        transform: translate3d(0,$value,0) !important;
+}
+
+@mixin transform-translate-y-dropdown($value) {
+    -webkit-transform:  translate3d(-20px,$value,0) !important;
+       -moz-transform: translate3d(-20px,$value,0) !important;
+       -o-transform: translate3d(-20px,$value,0) !important;
+       -ms-transform: translate3d(-20px,$value,0) !important;
+       transform: translate3d(-20px,$value,0) !important;
+}
+
+@mixin icon-gradient($color, $bottomColor: #000){
+    background: $color;
+    background: -webkit-linear-gradient($color 0%, $bottomColor 80%);
+    background: -o-linear-gradient($color 0%, $bottomColor 80%);
+    background: -moz-linear-gradient($color 0%, $bottomColor 80%);
+    background: linear-gradient($color 0%, $bottomColor 80%);
+}
+
+@mixin btn-size($padding-vertical, $padding-horizontal, $font-size, $border){
+   font-size: $font-size;
+   border-radius: $border;
+   padding: $padding-vertical $padding-horizontal;
+
+   &.btn-simple{
+       padding: $padding-vertical - 1 $padding-horizontal - 1;
+   }
+
+}
+
+@mixin rotate-53(){
+    filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=2);
+    -webkit-transform: rotate(53deg);
+    -ms-transform: rotate(53deg);
+    transform: rotate(53deg);
+}
+
+@mixin transform-scale($value){
+     -webkit-transform: scale($value);
+        -moz-transform: scale($value);
+        -o-transform: scale($value);
+        -ms-transform: scale($value);
+        transform: scale($value);
+}
+
+
+@mixin rotate-180(){
+    filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=2);
+    -webkit-transform: rotate(180deg);
+    -ms-transform: rotate(180deg);
+    transform: rotate(180deg);
+}
+
+
+@mixin topbar-x-rotation(){
+    @keyframes topbar-x {
+      0% {top: 0px; transform: rotate(0deg); }
+      45% {top: 6px; transform: rotate(145deg); }
+      75% {transform: rotate(130deg); }
+      100% {transform: rotate(135deg); }
+    }
+    @-webkit-keyframes topbar-x {
+      0% {top: 0px; -webkit-transform: rotate(0deg); }
+      45% {top: 6px; -webkit-transform: rotate(145deg); }
+      75% {-webkit-transform: rotate(130deg); }
+      100% { -webkit-transform: rotate(135deg); }
+    }
+    @-moz-keyframes topbar-x {
+      0% {top: 0px; -moz-transform: rotate(0deg); }
+      45% {top: 6px; -moz-transform: rotate(145deg); }
+      75% {-moz-transform: rotate(130deg); }
+      100% { -moz-transform: rotate(135deg); }
+    }
+}
+
+@mixin topbar-back-rotation(){
+    @keyframes topbar-back {
+      0% { top: 6px; transform: rotate(135deg); }
+      45% { transform: rotate(-10deg); }
+      75% { transform: rotate(5deg); }
+      100% { top: 0px; transform: rotate(0); }
+    }
+
+    @-webkit-keyframes topbar-back {
+      0% { top: 6px; -webkit-transform: rotate(135deg); }
+      45% { -webkit-transform: rotate(-10deg); }
+      75% { -webkit-transform: rotate(5deg); }
+      100% { top: 0px; -webkit-transform: rotate(0); }
+    }
+
+    @-moz-keyframes topbar-back {
+      0% { top: 6px; -moz-transform: rotate(135deg); }
+      45% { -moz-transform: rotate(-10deg); }
+      75% { -moz-transform: rotate(5deg); }
+      100% { top: 0px; -moz-transform: rotate(0); }
+    }
+}
+
+@mixin bottombar-x-rotation(){
+    @keyframes bottombar-x {
+      0% {bottom: 0px; transform: rotate(0deg);}
+      45% {bottom: 6px; transform: rotate(-145deg);}
+      75% {transform: rotate(-130deg);}
+      100% {transform: rotate(-135deg);}
+    }
+    @-webkit-keyframes bottombar-x {
+      0% {bottom: 0px; -webkit-transform: rotate(0deg);}
+      45% {bottom: 6px; -webkit-transform: rotate(-145deg);}
+      75% {-webkit-transform: rotate(-130deg);}
+      100% {-webkit-transform: rotate(-135deg);}
+    }
+    @-moz-keyframes bottombar-x {
+      0% {bottom: 0px; -moz-transform: rotate(0deg);}
+      45% {bottom: 6px; -moz-transform: rotate(-145deg);}
+      75% {-moz-transform: rotate(-130deg);}
+      100% {-moz-transform: rotate(-135deg);}
+    }
+}
+
+@mixin bottombar-back-rotation{
+    @keyframes bottombar-back {
+      0% { bottom: 6px;transform: rotate(-135deg);}
+      45% { transform: rotate(10deg);}
+      75% { transform: rotate(-5deg);}
+      100% { bottom: 0px;transform: rotate(0);}
+    }
+    @-webkit-keyframes bottombar-back {
+      0% {bottom: 6px;-webkit-transform: rotate(-135deg);}
+      45% {-webkit-transform: rotate(10deg);}
+      75% {-webkit-transform: rotate(-5deg);}
+      100% {bottom: 0px;-webkit-transform: rotate(0);}
+    }
+    @-moz-keyframes bottombar-back {
+      0% {bottom: 6px;-moz-transform: rotate(-135deg);}
+      45% {-moz-transform: rotate(10deg);}
+      75% {-moz-transform: rotate(-5deg);}
+      100% {bottom: 0px;-moz-transform: rotate(0);}
+    }
+
+}
+
+@mixin nc-rotate($degrees, $rotation) {
+  filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=#{$rotation});
+  -webkit-transform: rotate($degrees);
+  -moz-transform: rotate($degrees);
+  -ms-transform: rotate($degrees);
+  -o-transform: rotate($degrees);
+  transform: rotate($degrees);
+}
+
+@mixin nc-flip($horiz, $vert, $rotation) {
+  filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=#{$rotation});
+  -webkit-transform: scale($horiz, $vert);
+  -moz-transform: scale($horiz, $vert);
+  -ms-transform: scale($horiz, $vert);
+  -o-transform: scale($horiz, $vert);
+  transform: scale($horiz, $vert);
+}
+
+@mixin transition-opacity($time, $type){
+    -webkit-transition: opacity $time $type;
+    -moz-transition: opacity $time $type;
+    -o-transition: opacity $time $type;
+    -ms-transition: opacity $time $type;
+    transition: opacity $time $type;
+}
+
+
+@mixin sidebar-text-color($text-color){
+    .nav {
+      li {
+        a,
+        a i,
+        a[data-toggle="collapse"],
+        a[data-toggle="collapse"] i,
+        a[data-toggle="collapse"] ~ div > ul > li .sidebar-mini-icon,
+        a[data-toggle="collapse"] ~ div > ul > li > a {
+          color: $text-color;
+          opacity: .7;
+        }
+
+        &:hover:not(.active) > a,
+        &:focus:not(.active) > a {
+            opacity: 1;
+        }
+      }
+    }
+
+    .logo {
+      .simple-text {
+        color: $text-color;
+      }
+      &:after {
+        background-color: $text-color;
+        opacity: .4;
+      }
+    }
+
+    .user {
+      .info a span,
+      .nav .sidebar-mini-icon,
+      .nav .sidebar-normal {
+        color: $text-color !important;
+      }
+      &:after {
+        background-color: $text-color;
+        opacity: .4;
+      }
+    }
+}

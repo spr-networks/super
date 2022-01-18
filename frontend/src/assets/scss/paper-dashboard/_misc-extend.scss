@@ -1,0 +1,68 @@
+
+
+.ct-label.ct-horizontal.ct-end,
+.ct-label.ct-vertical.ct-start {
+  font-size: 14px;
+}
+
+.ct-chart.ct-perfect-fourth {
+  .ct-chart-pie .ct-label {
+    font-size: 14px;
+  }
+}
+
+.card {
+  .card-footer .footer-line {
+    padding-top: 3px;
+  }
+
+  &.bootstrap-table {
+    .dropdown-item.active {
+      background-color: $default-color;
+      color: $white-color;
+    }
+  }
+
+  .team-members {
+    .avatar {
+      margin-top: 5px;
+    }
+    .text-right .btn{
+      margin-top: 5px;
+    }
+  }
+}
+
+.btn-group-sm {
+  .btn-round {
+    border-radius: 30px;
+  }
+}
+
+// Pulsing Heart (footer)
+.heart {
+  color: #EB5E28;
+  animation: hearthing 1s ease infinite,;
+}
+
+@keyframes hearthing {
+  0% { transform: scale( .75 ); }
+  20% { transform: scale( 1 ); }
+  40% { transform: scale( .75 ); }
+  60% { transform: scale( 1 ); }
+  80% { transform: scale( .75 ); }
+  100% { transform: scale( .75 ); }
+}
+
+
+// Datetimepicker
+
+.datepicker {
+  .table-condensed {
+    tbody > tr:first-of-type {
+      .day {
+        padding-top: 5px;
+      }
+    }
+  }
+}

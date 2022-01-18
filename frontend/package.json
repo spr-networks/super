@@ -1,0 +1,76 @@
+{
+  "name": "supernetworks-SPR-ui",
+  "version": "0.0.1",
+  "description": "Supernetworks Secure Programmable Router",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build && gulp licenses",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "install:clean": "rm -rf node_modules/ && rm -rf package-lock.json && npm install && npm start",
+    "compile-sass": "node-sass src/assets/scss/paper-dashboard.scss src/assets/css/paper-dashboard.css",
+    "minify-sass": "node-sass src/assets/scss/paper-dashboard.scss src/assets/css/paper-dashboard.min.css --output-style compressed",
+    "map-sass": "node-sass src/assets/scss/paper-dashboard.scss src/assets/css/paper-dashboard.css --source-map true"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/creativetimofficial/ct-paper-dashboard-pro-react.git"
+  },
+  "keywords": [
+    "react",
+    "admin",
+    "reactjs",
+    "bootstrap",
+    "bootstrap4",
+    "reactstrap"
+  ],
+  "author": "Creative Tim <hello@creative-tim.com> (https://www.creative-tim.com)",
+  "bugs": {
+    "url": "https://github.com/creativetimofficial/ct-paper-dashboard-pro-react/issues"
+  },
+  "homepage": "https://www.supernetworks.org/#/",
+  "dependencies": {
+    "bootstrap": "4.6.0",
+    "chart.js": "3.2.1",
+    "classnames": "2.3.1",
+    "match-sorter": "6.3.0",
+    "moment": "2.29.1",
+    "node-sass": "6.0.0",
+    "nouislider": "15.1.0",
+    "perfect-scrollbar": "1.5.1",
+    "prop-types": "15.7.2",
+    "react": "17.0.2",
+    "react-big-calendar": "0.33.2",
+    "react-bootstrap-sweetalert": "5.2.0",
+    "react-bootstrap-switch": "15.5.3",
+    "react-bootstrap-wizard": "0.0.9",
+    "react-chartjs-2": "3.0.3",
+    "react-datetime": "3.0.4",
+    "react-dom": "17.0.2",
+    "react-jvectormap": "0.0.16",
+    "react-notification-alert": "0.0.13",
+    "react-router-dom": "5.2.0",
+    "react-scripts": "4.0.3",
+    "react-select": "4.3.1",
+    "react-table": "7.7.0",
+    "react-tagsinput": "3.19.0",
+    "reactstrap": "8.9.0"
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ],
+  "optionalDependencies": {
+    "@babel/core": "7.14.2",
+    "jquery": "3.6.0",
+    "typescript": "4.2.4"
+  },
+  "devDependencies": {
+    "gulp": "4.0.2",
+    "gulp-append-prepend": "1.0.9"
+  }
+}

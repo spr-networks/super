@@ -1,0 +1,74 @@
+.card-testimonial{
+    margin-top: 30px;
+    text-align: center;
+
+    .icon{
+        padding: 0;
+
+        i{
+            font-size: 30px;
+            border: 0;
+            display: block;
+            line-height: 100px;
+            margin: 0px auto;
+            margin-bottom: 0px;
+        }
+    }
+    .card-body{
+        padding: 15px 30px;
+
+        .card-description{
+            font-style: italic;
+            font-size: 16px;
+        }
+        .card-category{
+            margin-bottom: 20px;
+        }
+
+        +.card-footer {
+          padding-top: 0;
+          margin-top: -20px;
+        }
+    }
+
+    .card-avatar{
+        margin-top: 0;
+        .img{
+            border-radius: 50%;
+            width: 100px;
+            height: 100px;
+        }
+    }
+
+    .card-footer{
+        .card-title{
+            color: $black-color;
+            text-align: center;
+        }
+        .card-category{
+            color: $dark-gray;
+        }
+        .card-avatar{
+            margin-top: 20px;
+            .img{
+                border-radius: 50%;
+                width: 60px;
+                height: 60px;
+            }
+        }
+    }
+}
+
+.card-testimonial .card-description + .card-title{
+    margin-top: 30px;
+
+    & .card-image{
+        .img{
+            border-radius: $border-radius-extreme;
+        }
+
+        .card-title{
+            text-align: center;
+        }
+    }
+}

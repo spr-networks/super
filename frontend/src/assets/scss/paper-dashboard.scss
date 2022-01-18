@@ -1,0 +1,99 @@
+/*!
+
+ =========================================================
+ * Paper Dashboard PRO React - v1.3.0 based on Paper Dashboard 2 Pro - v2.0.1
+ =========================================================
+
+ * Product Page: https://www.creative-tim.com/product/paper-dashboard-pro-react
+ * Copyright 2021 Creative Tim (http://www.creative-tim.com)
+
+ =========================================================
+
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+ */
+
+@import 'paper-dashboard/variables';
+@import 'paper-dashboard/mixins';
+
+// Plugins CSS
+@import 'paper-dashboard/plugins/plugin-bootstrap-switch';
+@import 'paper-dashboard/plugins/plugin-bootstrap-table';
+@import 'paper-dashboard/plugins/plugin-nouislider';
+@import 'paper-dashboard/plugins/plugin-animate-bootstrap-notify';
+@import 'paper-dashboard/plugins/plugin-perfect-scrollbar';
+@import 'paper-dashboard/plugins/plugin-sweetalert2';
+@import 'paper-dashboard/plugins/plugin-card-wizard';
+@import 'paper-dashboard/plugins/plugin-datetimepicker';
+@import 'paper-dashboard/plugins/plugin-bootstrap-select';
+@import 'paper-dashboard/plugins/plugin-jasny-fileupload';
+@import 'paper-dashboard/plugins/plugin-tagsinput';
+@import 'paper-dashboard/plugins/plugin-datatables.net';
+@import 'paper-dashboard/plugins/plugin-jquery.jvectormap';
+@import 'paper-dashboard/plugins/plugin-fullcalendar';
+
+// Core CSS
+@import 'paper-dashboard/nucleo-outline';
+@import 'paper-dashboard/buttons';
+@import 'paper-dashboard/social-buttons';
+@import 'paper-dashboard/animated-buttons';
+@import 'paper-dashboard/inputs';
+@import 'paper-dashboard/typography';
+@import 'paper-dashboard/misc';
+@import 'paper-dashboard/misc-extend';
+@import 'paper-dashboard/navbar';
+@import 'paper-dashboard/dropdown';
+@import 'paper-dashboard/alerts';
+@import 'paper-dashboard/images';
+@import 'paper-dashboard/tables';
+@import 'paper-dashboard/footers';
+@import 'paper-dashboard/fixed-plugin';
+
+// components
+@import 'paper-dashboard/checkboxes-radio';
+@import 'paper-dashboard/progress';
+@import 'paper-dashboard/badges';
+@import 'paper-dashboard/pagination';
+@import 'paper-dashboard/info-areas';
+@import 'paper-dashboard/pills';
+@import 'paper-dashboard/tabs';
+@import 'paper-dashboard/popups';
+@import 'paper-dashboard/modals';
+@import 'paper-dashboard/carousel';
+@import 'paper-dashboard/sidebar-and-main-panel';
+@import 'paper-dashboard/timeline';
+
+
+
+// cards
+@import 'paper-dashboard/cards';
+@import "paper-dashboard/cards/card-chart";
+@import "paper-dashboard/cards/card-map";
+@import "paper-dashboard/cards/card-user";
+
+@import "paper-dashboard/cards/card-background";
+@import "paper-dashboard/cards/card-collapse";
+@import "paper-dashboard/cards/card-contributions";
+@import "paper-dashboard/cards/card-info-area";
+@import "paper-dashboard/cards/card-lock";
+@import "paper-dashboard/cards/card-pricing";
+@import "paper-dashboard/cards/card-profile";
+@import "paper-dashboard/cards/card-signup";
+@import "paper-dashboard/cards/card-stats-mini";
+@import "paper-dashboard/cards/card-stats";
+@import "paper-dashboard/cards/card-subcategories";
+@import "paper-dashboard/cards/card-testimonials";
+@import "paper-dashboard/cards/card-tasks";
+
+
+
+// example pages and sections
+@import 'paper-dashboard/example-pages';
+@import 'paper-dashboard/sections';
+
+
+@import 'paper-dashboard/responsive';
+@import 'paper-dashboard/media-queries';
+
+// react differences
+@import "paper-dashboard/react/react-differences";

@@ -1,0 +1,15 @@
+.form-control {
+  height: unset
+}
+// Input files - hide actual input - requires specific markup in the sample.
+.form-group input[type=file] {
+  opacity: 1;
+  position: unset;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: unset;
+  z-index: unset;
+}

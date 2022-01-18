@@ -1,0 +1,27 @@
+.card-tasks{
+  text-align: left;
+    .table tbody{
+        td:last-child{
+            padding-right: 0;
+            display: inline-flex;
+            .btn{
+                padding: 3px;
+            }
+        }
+        td:first-child{
+            padding-left: 0;
+        }
+        td {
+          padding: 12px 8px !important;
+        }
+    }
+    .table-full-width{
+        padding-bottom: 0 !important;
+    }
+    .card-footer{
+        padding-top: 0;
+    }
+    .table{
+        margin-bottom: 0 !important;
+    }
+}

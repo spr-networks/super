@@ -1,0 +1,39 @@
+@mixin badge-color($color) {
+    border-color: $color;
+    background-color: $color;
+}
+
+@mixin badge-hover-href($color, $bg-color) {
+    color: $color;
+    background-color: $bg-color;
+    border-color: $bg-color;
+}
+
+@mixin badges-color($color){
+    .tag{
+        background-color: $color;
+        color: $white-color;
+
+        .tagsinput-remove-link{
+            color: $white-color;
+        }
+    }
+}
+@mixin create-colored-badges(){
+    &.primary-badge{
+        @include badges-color($brand-primary);
+    }
+    &.info-badge {
+        @include badges-color($brand-info);
+    }
+    &.success-badge{
+        @include badges-color($brand-success);
+    }
+    &.warning-badge{
+        @include badges-color($brand-warning);
+    }
+    &.danger-badge{
+        @include badges-color($brand-danger);
+    }
+
+}

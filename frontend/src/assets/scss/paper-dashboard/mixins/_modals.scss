@@ -1,0 +1,19 @@
+@mixin modal-colors($bg-color, $color) {
+    .modal-content{
+        background-color: $bg-color;
+        color: $color;
+    }
+
+    .modal-header .close{
+        color: $color;
+    }
+
+    //inputs
+    @include input-coloured-bg($opacity-5, $white-color, $white-color, $transparent-bg, $opacity-1, $opacity-2);
+
+    .input-group-addon,
+    .form-group.no-border .input-group-addon,
+    .input-group.no-border .input-group-addon{
+        color: $opacity-8;
+    }
+}

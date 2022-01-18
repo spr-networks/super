@@ -1,0 +1,273 @@
+.card-wizard{
+    min-height: 410px;
+    box-shadow: $box-shadow;
+    opacity: 0;
+    @include transition($general-transition-time, $transition-linear);
+
+    &.active{
+        opacity: 1;
+    }
+
+    .card-header {
+      padding: 15px 0 !important;
+      padding-bottom: 40px;
+    }
+
+    .nav-pills .nav-item .nav-link{
+        padding: 12px;
+    }
+
+    .nav-pills .nav-item .nav-link,
+    .nav-pills .nav-item .nav-link.active,
+    .nav-pills .nav-item .nav-link:hover,
+    .nav-pills .nav-item .nav-link:focus,
+    .nav-pills .nav-item .nav-link.active:focus,
+    .nav-pills .nav-item .nav-link.active:hover{
+        background-color: transparent;
+        box-shadow: none;
+    }
+
+    .picture-container{
+        position: relative;
+        cursor: pointer;
+        text-align: center;
+    }
+
+    .wizard-navigation{
+      position: relative;
+
+      .nav-link{
+        display: flex;
+        align-items: center;
+        -ms-flex-pack: center;
+        justify-content: center;
+      }
+    }
+
+    .wizard-navigation .nav-link i,
+    .moving-tab i{
+      display: inline-block;
+      font-size: 19px;
+      line-height: initial;
+      margin-right: 6px;
+      padding: 0;
+      vertical-align: bottom;
+    }
+
+    .picture{
+        width: 106px;
+        height: 106px;
+        background-color: #999999;
+        border: 1px solid $light-gray;
+        color: #FFFFFF;
+        border-radius: 50%;
+        margin: 5px auto;
+        overflow: hidden;
+        transition: all 0.2s;
+        -webkit-transition: all 0.2s;
+
+        &:hover{
+            border-color: #2ca8ff;
+        }
+    }
+
+    .moving-tab{
+        position: absolute;
+        text-align: center;
+        padding: 12px;
+        font-size: 12px;
+        text-transform: uppercase;
+        -webkit-font-smoothing: subpixel-antialiased;
+        top: 0px;
+        left: 0px;
+        background-color: $default-color;
+        box-shadow: $box-shadow;
+        color: $white-color !important;
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    &[data-color="primary"]{
+        @include set-wizard-color($brand-primary);
+    }
+    &[data-color="white"]{
+        @include set-wizard-color($white-color);
+    }
+
+    &[data-color="green"]{
+        @include set-wizard-color($brand-success);
+    }
+
+    &[data-color="blue"]{
+        @include set-wizard-color($brand-info);
+    }
+
+    &[data-color="orange"]{
+        @include set-wizard-color($brand-warning);
+    }
+
+    &[data-color="red"]{
+        @include set-wizard-color($brand-danger);
+    }
+
+    .picture input[type="file"] {
+        cursor: pointer;
+        display: block;
+        height: 100%;
+        left: 0;
+        opacity: 0 !important;
+        position: absolute;
+        top: 0;
+        width: 100%;
+    }
+
+    .picture-src{
+        width: 100%;
+    }
+
+    .tab-content{
+        min-height: 355px;
+        padding: 20px 0;
+    }
+
+    .wizard-footer{
+        padding: 0 15px;
+
+        .checkbox{
+            margin-top: 16px;
+        }
+    }
+
+    .disabled{
+        display: none;
+    }
+
+    .wizard-header{
+        text-align: center;
+        padding: 25px 0 35px;
+
+        h5{
+           margin: 5px 0 0;
+       }
+    }
+
+    .nav-pills > li{
+        text-align: center;
+    }
+
+    .btn{
+        text-transform: uppercase;
+    }
+
+    .info-text{
+        text-align: center;
+        font-weight: 300;
+        margin: 10px 0 30px;
+    }
+
+    .choice{
+        text-align: center;
+        cursor: pointer;
+        margin-top: 20px;
+
+        &[disabled]{
+            pointer-events: none;
+            cursor: not-allowed;
+            opacity: .5;
+        }
+
+        .icon{
+            text-align: center;
+            vertical-align: middle;
+            height: 116px;
+            width: 116px;
+            border-radius: 50%;
+            color: $default-color;
+            margin: 0 auto 20px;
+            border: 1px solid $light-gray;
+            transition: all 0.2s;
+            -webkit-transition: all 0.2s;
+        }
+
+        i{
+            font-size: 30px;
+            line-height: 116px;
+            position: absolute;
+            left: 0;
+            right: 0;
+        }
+
+        &:hover,
+        &.active{
+            .icon{
+                border-color: #2ca8ff;
+            }
+        }
+
+        input[type="radio"],
+        input[type="checkbox"]{
+            position: absolute;
+            left: -10000px;
+            z-index: -1;
+        }
+    }
+
+    .btn-finish{
+        display: none;
+    }
+
+    .card-title + .description{
+        font-size: $font-size-base + 3;
+        margin-bottom: 32px;
+    }
+
+    .wizard-title{
+        margin: 0;
+    }
+
+    .nav-pills{
+        background-color: $dark-gray;
+
+        > li + li {
+            margin-left: 0;
+        }
+
+        > li > a {
+            border: 0 !important;
+            border-radius: 0 ;
+            line-height: 18px;
+            text-transform: uppercase;
+            font-size: 12px;
+            font-weight: 500;
+            min-width: 100px;
+            text-align: center;
+            color: $white-color !important;
+        }
+
+        > li.active > a,
+        > li.active > a:hover,
+        > li.active > a:focus,
+        > li > a:hover,
+        > li > a:focus{
+            background-color: inherit;
+            box-shadow: none;
+        }
+
+        > li i{
+            display: block;
+            font-size: 30px;
+            padding: 15px 0;
+        }
+    }
+
+  .form-group.select-wizard {
+    margin-top: 15px;
+  }
+
+  .dropdown.show,
+  .dropup.show {
+    .dropdown-menu {
+      @include transform-translate-y(0px);
+    }
+  }
+}
