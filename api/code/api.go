@@ -14,7 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 )
@@ -889,11 +889,29 @@ func hostapdAllStations(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(stations)
 }
 
-// serves index file
-func home(w http.ResponseWriter, r *http.Request) {
-	p := path.Dir("/static/index.html")
-	w.Header().Set("Content-type", "text/html")
-	http.ServeFile(w, r, p)
+//set up SPA handler. From gorilla mux's documentation
+type spaHandler struct {
+	staticPath string
+	indexPath  string
+}
+
+func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	path, err := filepath.Abs(r.URL.Path)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	path = filepath.Join(h.staticPath, path)
+	_, err = os.Stat(path)
+	if os.IsNotExist(err) {
+		http.ServeFile(w, r, filepath.Join(h.staticPath, h.indexPath))
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
 }
 
 func main() {
@@ -902,7 +920,8 @@ func main() {
 	external_router_authenticated := mux.NewRouter().StrictSlash(true)
 	external_router_public := mux.NewRouter()
 
-	external_router_public.HandleFunc("/", home)
+	spa := spaHandler{staticPath: "/build", indexPath: "index.html"}
+	external_router_public.PathPrefix("/").Handler(spa)
 
 	//nftable helpers
 	external_router_authenticated.HandleFunc("/nfmap/{name}", showNFMap).Methods("GET")

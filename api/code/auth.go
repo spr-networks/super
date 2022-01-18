@@ -296,6 +296,7 @@ func (auth *authnconfig) FinishLogin(w http.ResponseWriter, r *http.Request) {
 
 func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router) http.HandlerFunc {
 	webauth_router := mux.NewRouter().StrictSlash(true)
+
 	webauth_router.HandleFunc("/register/", auth.BeginRegistration).Methods("GET", "OPTIONS")
 	webauth_router.HandleFunc("/register/", auth.FinishRegistration).Methods("POST", "OPTIONS")
 	webauth_router.HandleFunc("/login/", auth.BeginLogin).Methods("GET", "OPTIONS")
@@ -303,15 +304,14 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var matchInfo mux.RouteMatch
-		if publicNext.Match(r, &matchInfo) {
-			publicNext.ServeHTTP(w, r)
-			return
-		}
 
+		//first match webuath
 		if webauth_router.Match(r, &matchInfo) {
 			webauth_router.ServeHTTP(w, r)
 			return
 		}
+
+		//next match api
 
 		token := auth.ExtractRequestToken(r)
 
@@ -363,6 +363,12 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 					return
 				}
 			}
+		}
+
+		//last try public route
+		if publicNext.Match(r, &matchInfo) {
+			publicNext.ServeHTTP(w, r)
+			return
 		}
 
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)

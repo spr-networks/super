@@ -28,7 +28,8 @@ COPY code/api.go /code/
 COPY code/auth.go /code/
 RUN go mod tidy
 RUN go build -o /api /code/api.go /code/auth.go
-COPY code/static /static/
+# Temporary until this is a mounted docker volume
+COPY code/build/ /build/
 COPY scripts /scripts/
 
 ENTRYPOINT ["/scripts/startup.sh"]
