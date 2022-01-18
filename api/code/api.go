@@ -322,7 +322,7 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 
 	existing := []verdictEntry{}
 
-	//nft -j list map inet filter dhcp_access
+	//nft -j list map inet filter name
 	cmd := exec.Command("nft", "-j", "list", "map", "inet", "filter", map_name)
 	stdout, err := cmd.Output()
 	if err != nil {
@@ -354,7 +354,14 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 				}
 			} else {
 				if second_ok {
-					existing = append(existing, verdictEntry{"", first, second})
+					if map_name == "dhcp_access" {
+						// type ifname . ether_addr : verdict (no IP)
+						existing = append(existing, verdictEntry{"", first, second})
+					} else {
+						// for _dst_access
+						// type ipv4_addr . ifname : verdict (no MAC)
+						existing = append(existing, verdictEntry{first, second, ""})
+					}
 				}
 			}
 		}
