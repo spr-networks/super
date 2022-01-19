@@ -141,9 +141,10 @@ func getDevices(w http.ResponseWriter, r *http.Request) {
 
 	//find devices configured with psks without a zone
 	for _, psk := range psks {
-		_, exists := devices[psk.Mac]
+    mac := trimLower(psk.Mac)
+		_, exists := devices[mac]
 		if !exists {
-			devices[psk.Mac] = Device{Mac: psk.Mac, Comment: "", Zones: []string{}, PskType: psk.Type}
+			devices[mac] = Device{Mac: mac, Comment: "", Zones: []string{}, PskType: psk.Type}
 		}
 	}
 
