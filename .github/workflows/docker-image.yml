@@ -26,7 +26,6 @@ jobs:
         run: |
           cp -R base/template_configs configs
           cp base/template_configs/wifi/psks.json configs/wifi/
-          echo ${{ secrets.PAT }}@github.com > .github_creds
           ./build_docker_compose.sh
 
 

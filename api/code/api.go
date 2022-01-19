@@ -141,14 +141,26 @@ func getDevices(w http.ResponseWriter, r *http.Request) {
 
 	//find devices configured with psks without a zone
 	for _, psk := range psks {
-		_, exists := devices[psk.Mac]
+    mac := trimLower(psk.Mac)
+		_, exists := devices[mac]
 		if !exists {
-			devices[psk.Mac] = Device{Mac: psk.Mac, Comment: "", Zones: []string{}, PskType: psk.Type}
+			devices[mac] = Device{Mac: mac, Comment: "", Zones: []string{}, PskType: psk.Type}
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(devices)
+}
+
+func pendingPSK(w http.ResponseWriter, r *http.Request) {
+	PSKmtx.Lock()
+	defer PSKmtx.Unlock()
+
+	psks := getPSKJson()
+	_, exists := psks["pending"]
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(exists)
 }
 
 func saveZones(zones []ClientZone) {
@@ -914,11 +926,21 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
 }
 
+func setSecurityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Frame-Options", "DENY")
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	unix_dhcpd_router := mux.NewRouter().StrictSlash(true)
 	unix_wifid_router := mux.NewRouter().StrictSlash(true)
 	external_router_authenticated := mux.NewRouter().StrictSlash(true)
 	external_router_public := mux.NewRouter()
+
+	external_router_public.Use(setSecurityHeaders)
+	external_router_authenticated.Use(setSecurityHeaders)
 
 	spa := spaHandler{staticPath: "/build", indexPath: "index.html"}
 	external_router_public.PathPrefix("/").Handler(spa)
@@ -933,6 +955,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/zone/{name}", addZoneMember).Methods("PUT")
 	external_router_authenticated.HandleFunc("/zone/{name}", delZoneMember).Methods("DELETE")
 	external_router_authenticated.HandleFunc("/devices", getDevices).Methods("GET")
+	external_router_authenticated.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 
 	//Assign a PSK
 	external_router_authenticated.HandleFunc("/setPSK", setPSK).Methods("PUT", "DELETE")
@@ -967,7 +990,7 @@ func main() {
 	//temp until API and website are in the same spot
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
-	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
 	auth := new(authnconfig)
 	w, err := webauthn.New(&webauthn.Config{
