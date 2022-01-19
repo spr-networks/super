@@ -6,7 +6,6 @@ country_code=US
 interface=$SSID_INTERFACE
 ssid=$SSID_NAME
 hw_mode=a
-channel=36
 ieee80211d=1
 ieee80211n=1
 ieee80211ac=1
