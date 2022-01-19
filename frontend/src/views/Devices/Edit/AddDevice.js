@@ -187,16 +187,14 @@ const Step1 = React.forwardRef((props, ref) => {
               autosize={false}
               className="react-select primary"
               classNamePrefix="react-select"
-              name="wpa"
-              value={wpa}
+              name={wpa}
               onChange={(value) => {
                 setsubmitted(false)
                 setwpa(value.value)
               }}
               options={[
                 {
-                  value: "sae",
-                  label: "WPA3",
+                  value: "sae",  label: "WPA3",
                 },
                 { value: "wpa2", label: "WPA2" },
               ]}
