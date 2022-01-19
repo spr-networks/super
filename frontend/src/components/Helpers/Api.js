@@ -1,5 +1,9 @@
 let API = document.location.origin;
 
+if (process && process.env.REACT_APP_API) {
+  API = process.env.REACT_APP_API
+}
+
 export const zoneDescriptions = {
   "dns" : "Outbound DNS Access",
   "wan": "Outbound Internet Access",
