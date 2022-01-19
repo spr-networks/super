@@ -1,7 +1,7 @@
 #!/bin/bash
 apt-get update
 apt-get -y upgrade
-apt-get -y install docker.io docker-compose 
+apt-get -y install docker.io docker-compose nftables
 
 touch /etc/cloud/cloud-init.disabled
 
