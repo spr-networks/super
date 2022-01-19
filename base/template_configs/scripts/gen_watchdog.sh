@@ -3,6 +3,6 @@
 cat << EOF
 watchdog-device = /dev/watchdog
 watchdog-timeout = 15
-interface = $VLANIF
+#interface = $VLANIF
 
 EOF
