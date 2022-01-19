@@ -151,6 +151,17 @@ func getDevices(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(devices)
 }
 
+func pendingPSK(w http.ResponseWriter, r *http.Request) {
+	PSKmtx.Lock()
+	defer PSKmtx.Unlock()
+
+	psks := getPSKJson()
+	_, exists := psks["pending"]
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(exists)
+}
+
 func saveZones(zones []ClientZone) {
 	file, _ := json.MarshalIndent(zones, "", " ")
 	err := ioutil.WriteFile(ZonesConfigPath, file, 0644)
@@ -943,6 +954,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/zone/{name}", addZoneMember).Methods("PUT")
 	external_router_authenticated.HandleFunc("/zone/{name}", delZoneMember).Methods("DELETE")
 	external_router_authenticated.HandleFunc("/devices", getDevices).Methods("GET")
+	external_router_authenticated.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 
 	//Assign a PSK
 	external_router_authenticated.HandleFunc("/setPSK", setPSK).Methods("PUT", "DELETE")
