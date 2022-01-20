@@ -29,8 +29,6 @@ jobs:
           ./build_docker_compose.sh
       -
         name: Build frontend
-        env:
-          CONTAINERS: api base dhcp dhcp_client dns wifid multicast_udp_proxy ppp wireguard
         run: |
           docker build frontend -t super_frontend
       -
