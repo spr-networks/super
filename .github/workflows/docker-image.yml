@@ -27,5 +27,17 @@ jobs:
           cp -R base/template_configs configs
           cp base/template_configs/wifi/psks.json configs/wifi/
           ./build_docker_compose.sh
-
-
+      -
+        name: Push images
+        run: |
+          docker tag super_api ghcr.io/spr-networks/super_api:latest
+          docker tag super_base ghcr.io/spr-networks/super_base:latest
+          docker tag super_dhcp ghcr.io/spr-networks/super_dhcp:latest
+          docker tag super_dhcp_client ghcr.io/spr-networks/super_dhcp_client:latest
+          docker tag super_dns ghcr.io/spr-networks/super_dns:latest
+          docker tag super_wifid ghcr.io/spr-networks/super_wifid:latest
+          docker tag super_multicast_udp_proxy ghcr.io/spr-networks/super_multicast_udp_proxy:latest
+          docker tag super_ppp ghcr.io/spr-networks/super_ppp:latest
+          docker tag super_watchdog ghcr.io/spr-networks/super_watchdog:latest
+          docker tag super_wireguard ghcr.io/spr-networks/super_wireguard:latest
+          
