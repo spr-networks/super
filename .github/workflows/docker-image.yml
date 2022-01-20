@@ -28,6 +28,10 @@ jobs:
           cp base/template_configs/wifi/psks.json configs/wifi/
           ./build_docker_compose.sh
       -
+        name: Authenticate to ghcr
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      -
         name: Push images
         run: |
           docker tag super_api ghcr.io/spr-networks/super_api:latest
