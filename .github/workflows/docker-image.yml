@@ -33,25 +33,10 @@ jobs:
 
       -
         name: Push images
+        env: 
+          CONTAINERS: api base dhcp dhcp_client dns wifid multicast_udp_proxy ppp wireguard
         run: |
-          docker tag super_api ghcr.io/spr-networks/super_api:latest
-          docker push ghcr.io/spr-networks/super_api:latest
-          docker tag super_base ghcr.io/spr-networks/super_base:latest
-          docker push ghcr.io/spr-networks/super_base:latest
-          docker tag super_dhcp ghcr.io/spr-networks/super_dhcp:latest
-          docker push ghcr.io/spr-networks/super_dhcp:latest
-          docker tag super_dhcp_client ghcr.io/spr-networks/super_dhcp_client:latest
-          docker push ghcr.io/spr-networks/super_dhcp_client:latest
-          docker tag super_dns ghcr.io/spr-networks/super_dns:latest
-          docker push ghcr.io/spr-networks/super_dns:latest
-          docker tag super_wifid ghcr.io/spr-networks/super_wifid:latest
-          docker push ghcr.io/spr-networks/super_wifid:latest
-          docker tag super_multicast_udp_proxy ghcr.io/spr-networks/super_multicast_udp_proxy:latest
-          docker push ghcr.io/spr-networks/super_multicast_udp_proxy:latest
-          docker tag super_ppp ghcr.io/spr-networks/super_ppp:latest
-          docker push ghcr.io/spr-networks/super_ppp:latest
-          docker tag super_watchdog ghcr.io/spr-networks/super_watchdog:latest
-          docker push ghcr.io/spr-networks/super_watchdog:latest
-          docker tag super_wireguard ghcr.io/spr-networks/super_wireguard:latest
-          docker push ghcr.io/spr-networks/super_wireguard:latest
-          
+          for C in CONTAINERS; do
+            docker tag super_api ghcr.io/spr-networks/super_${C}:latest
+            docker push ghcr.io/spr-networks/super_${C}:latest
+          done
