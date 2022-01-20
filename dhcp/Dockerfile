@@ -1,17 +1,10 @@
-FROM --platform=linux/arm64 ubuntu:21.04
+FROM --platform=linux/arm64 ubuntu:21.04 as builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update 
-RUN apt-get install -y nftables iproute2 netcat inetutils-ping
-RUN apt-get install -y net-tools
-RUN apt-get install -y nano
-RUN apt-get install -y ca-certificates
-RUN apt-get install -y git
-RUN apt-get install -y jq
-RUN apt-get install -y clang
+RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl clang
 RUN mkdir /code
 WORKDIR /code
 
-RUN apt-get install -y curl
 RUN curl -O https://dl.google.com/go/go1.17.linux-arm64.tar.gz
 RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-arm64.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
@@ -26,9 +19,16 @@ WORKDIR /code/coredhcp
 RUN --mount=type=tmpfs,target=/root/go/ (go build -o /coredhcpd ./cmds/coredhcp; go build -o /coredhcp_client ./cmds/exdhcp/dhclient/)
 
 
-WORKDIR /
-
+FROM --platform=linux/arm64 ubuntu:21.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update
+RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
+COPY --from=builder /coredhcpd /
+COPY --from=builder /coredhcp_client /
 COPY scripts /scripts
 
 ENTRYPOINT ["/scripts/startup.sh"]
+
+
+
 

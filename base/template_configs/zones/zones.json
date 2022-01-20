@@ -5,7 +5,7 @@
    {
     "Mac": "e4:5f:01:3c:49:db",
     "Comment": "#pia"
-   },
+   }
   ]
  },
  {
@@ -14,7 +14,7 @@
    {
     "Mac": "e4:5f:01:3c:49:db",
     "Comment": "#pia"
-   },
+   }
   ]
  },
  {
@@ -23,7 +23,8 @@
    {
     "Mac": "e4:5f:01:3c:49:db",
     "Comment": "#pia"
-   },
+   }
+  ]
  },
  {
   "Name": "example group",
@@ -31,7 +32,7 @@
    {
     "Mac": "e4:5f:01:3c:49:db",
     "Comment": "#pia"
-   },
+   }
   ]
  }
 ]
