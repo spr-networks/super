@@ -65,7 +65,7 @@ services:
       - ./configs/wifi/:/configs/wifi/
       - ./state/wifi/:/state/wifi/
   multicast_udp_proxy:
-    container_name: multicast_udp_proxy
+    container_name: super_multicast_udp_proxy
     build: multicast_udp_proxy
     network_mode: host
     privileged: true
