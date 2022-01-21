@@ -13,8 +13,6 @@ fi
 # gen configs
 ./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
 ./configs/scripts/gen_hostapd.sh > configs/wifi/hostapd.conf
-./configs/scripts/gen_multicast_startup.sh > multicast_udp_proxy/scripts/startup.sh
-chmod +x multicast_udp_proxy/scripts/startup.sh
 ./configs/scripts/gen_watchdog.sh  > configs/watchdog/watchdog.conf
 
 # make sure state directories and files exist

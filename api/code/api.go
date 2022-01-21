@@ -942,7 +942,7 @@ func main() {
 	external_router_public.Use(setSecurityHeaders)
 	external_router_authenticated.Use(setSecurityHeaders)
 
-	spa := spaHandler{staticPath: "/build", indexPath: "index.html"}
+	spa := spaHandler{staticPath: "/ui", indexPath: "index.html"}
 	external_router_public.PathPrefix("/").Handler(spa)
 
 	//nftable helpers

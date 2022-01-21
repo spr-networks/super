@@ -17,8 +17,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
 RUN apt-get install -y hostapd
-# Temporary until this is a mounted docker volume
-COPY code/build/ /build/
 COPY scripts /scripts/
 COPY --from=builder /api /
 ENTRYPOINT ["/scripts/startup.sh"]

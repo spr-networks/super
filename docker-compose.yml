@@ -134,6 +134,7 @@ services:
       - ./state/dhcp/:/state/dhcp/
       - ./state/api/:/state/api/
       - ./state/dns/:/state/dns/
+      - ./frontend/build:/ui/
 networks: 
   default:
     driver: none
