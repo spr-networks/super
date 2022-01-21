@@ -41,6 +41,6 @@ jobs:
           CONTAINERS: api base dhcp dhcp_client dns frontend multicast_udp_proxy ppp wifid wireguard
         run: |
           for C in $CONTAINERS; do
-            docker tag super_api ghcr.io/spr-networks/super_${C}:latest
+            docker tag super_${c} ghcr.io/spr-networks/super_${C}:latest
             docker push ghcr.io/spr-networks/super_${C}:latest
           done
