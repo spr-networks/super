@@ -1,7 +1,11 @@
 let API = document.location.origin;
 
-if (process && process.env.REACT_APP_API) {
-  API = process.env.REACT_APP_API
+try {
+  if (process && process.env.REACT_APP_API) {
+    API = process.env.REACT_APP_API
+  }
+} catch (e) {
+
 }
 
 export const zoneDescriptions = {

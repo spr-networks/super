@@ -63,12 +63,13 @@ export default class Device extends Component {
 
       for (let tag of device.Zones) {
         if (tags.indexOf(tag) == -1) {
+          console.log("found tag to remove")
           //remove this tag
           delZone(tag, device.Mac, device.Comment)
         }
       }
 
-      //TBD: need to tell API to redo verdict table entries after this update
+      this.props.notifyChange()
 
       this.setState({tags: tags});
   }
