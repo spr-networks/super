@@ -30,7 +30,7 @@ jobs:
       -
         name: Build frontend
         run: |
-          docker build frontend -t super_frontend
+          docker buildx build frontend -t super_frontend
       -
         name: Authenticate to ghcr
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
