@@ -92,6 +92,12 @@ function Login() {
 
   };
 
+  const handleKeyPress = (target) => {
+    if(target.charCode==13){
+      handleLogin(target)
+    }
+  }
+
   if (loggedIn) {
     return <Redirect to='/admin/home' />
   }
@@ -128,23 +134,9 @@ function Login() {
                       placeholder="Password"
                       type="password"
                       autoComplete="off"
-                      value={password} onChange={(e) => setPassword(e.target.value)}
+                      value={password} onChange={(e) => setPassword(e.target.value)} onKeyPress={handleKeyPress}
                     />
                   </InputGroup>
-                  {
-                  /*
-                  <br />
-                  <FormGroup>
-                    <FormGroup check>
-                      <Label check>
-                        <Input defaultChecked defaultValue="" type="checkbox" />
-                        <span className="form-check-sign" />
-                        Subscribe to newsletter
-                      </Label>
-                    </FormGroup>
-                  </FormGroup>
-                  */
-                  }
                 </CardBody>
                 <CardFooter>
                   <Button
