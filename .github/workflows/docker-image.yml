@@ -27,7 +27,8 @@ jobs:
       -
         name: Build and push frontend
         run: |
-          docker buildx build frontend -t ghcr.io/spr-networks/super_frontend:latest --push        
+          docker buildx build frontend -o frontend/output
+          docker buildx build --platform linux/arm64 -f frontend/Dockerfile-helper frontend -t ghcr.io/spr-networks/super_frontend:latest --push 
       -
         name: Build arm64 test containers
         run: |
