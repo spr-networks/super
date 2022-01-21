@@ -7,6 +7,7 @@ import (
 	crand "crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -141,7 +142,7 @@ func getDevices(w http.ResponseWriter, r *http.Request) {
 
 	//find devices configured with psks without a zone
 	for _, psk := range psks {
-    mac := trimLower(psk.Mac)
+		mac := trimLower(psk.Mac)
 		_, exists := devices[mac]
 		if !exists {
 			devices[mac] = Device{Mac: mac, Comment: "", Zones: []string{}, PskType: psk.Type}
@@ -235,6 +236,7 @@ func addZoneMember(w http.ResponseWriter, r *http.Request) {
 						zones[z_idx] = zone
 						saveZones(zones)
 					}
+					json.NewEncoder(w).Encode(true)
 					return
 				}
 			}
@@ -242,13 +244,16 @@ func addZoneMember(w http.ResponseWriter, r *http.Request) {
 			zone.Clients = append(zone.Clients, client)
 			zones[z_idx] = zone
 			saveZones(zones)
+			refreshClientZones(client.Mac)
+			json.NewEncoder(w).Encode(true)
 			return
 		}
 	}
 	//make new zone with client
 	zones = append(zones, ClientZone{Name: name, Clients: []Client{client}})
 	saveZones(zones)
-	return
+
+	json.NewEncoder(w).Encode(true)
 }
 
 func delZoneMember(w http.ResponseWriter, r *http.Request) {
@@ -272,6 +277,8 @@ func delZoneMember(w http.ResponseWriter, r *http.Request) {
 					zone.Clients = append(zone.Clients[:c_idx], zone.Clients[c_idx+1:]...)
 					zones[z_idx] = zone
 					saveZones(zones)
+					refreshClientZones(client.Mac)
+					json.NewEncoder(w).Encode(true)
 					return
 				}
 			}
@@ -407,6 +414,21 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 	}
 }
 
+func searchVmapsByMac(MAC string, VMaps []string) (error, string, string) {
+	//Search verdict maps and return the ipv4 and interface name
+	for _, name := range VMaps {
+		entries := getNFTVerdictMap(name)
+		for _, entry := range entries {
+			if equalMAC(entry.mac, MAC) {
+				if entry.ifname != "" && entry.ipv4 != "" {
+					return nil, entry.ipv4, entry.ifname
+				}
+			}
+		}
+	}
+	return errors.New("Mac not found"), "", ""
+}
+
 func updateArp(Ifname string, IP string, MAC string) {
 	exec.Command("arp", "-i", Ifname, "-s", IP, MAC).Run()
 }
@@ -501,6 +523,15 @@ func updateLocalMappings(IP string, Name string) {
 
 var DHCPmtx sync.Mutex
 
+func shouldFlushByInterface(Iface string) bool {
+	matchInterface := false
+	vlansif := os.Getenv("VLANSIF")
+	if len(vlansif) > 0 && strings.Contains(Iface, vlansif) {
+		matchInterface = true
+	}
+	return matchInterface
+}
+
 func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	DHCPmtx.Lock()
 	defer DHCPmtx.Unlock()
@@ -516,15 +547,7 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//1. delete this ip, mac from any existing verdict maps
-
-	//if the interface is vif flush it
-	matchInterface := false
-	vlansif := os.Getenv("VLANSIF")
-	if len(vlansif) > 0 && strings.Contains(dhcp.Iface, vlansif) {
-		matchInterface = true
-	}
-
-	flushVmaps(dhcp.IP, dhcp.MAC, dhcp.Iface, getVerdictMapNames(), matchInterface)
+	flushVmaps(dhcp.IP, dhcp.MAC, dhcp.Iface, getVerdictMapNames(), shouldFlushByInterface(dhcp.Iface))
 
 	//2. update static arp entry
 	updateAddr(dhcp.Router, dhcp.Iface)
@@ -536,6 +559,103 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 
 	//4. update local mappings file for DNS
 	updateLocalMappings(dhcp.IP, dhcp.Name)
+}
+
+func refreshClientZones(MAC string) {
+	ifname := ""
+	ipv4 := ""
+	//check arp tables for the MAC to get the IP
+	arp_entry, err := GetEntryFromMAC(MAC)
+	if err != nil {
+		fmt.Println("Arp entry not found, insufficient information to refresh %s", MAC)
+		return
+	}
+
+	ipv4 = arp_entry.IPAddress
+
+	//check dhcp vmap for the interface
+	entries := getNFTVerdictMap("dhcp_access")
+	for _, entry := range entries {
+		if equalMAC(entry.mac, MAC) {
+			ifname = entry.ifname
+		}
+	}
+
+	if ifname == "" {
+		fmt.Println("dhcp_access entry not found, insufficient information to refresh %s", MAC)
+	}
+
+	//remove from existing verdict maps
+	flushVmaps(ipv4, MAC, ifname, getVerdictMapNames(), shouldFlushByInterface(ifname))
+
+	//and re-add
+	populateVmapEntries(ipv4, MAC, ifname)
+}
+
+// from https://github.com/ItsJimi/go-arp/blob/master/arp.go
+// Entry define the list available in /proc/net/arp
+type ArpEntry struct {
+	IPAddress string
+	HWType    string
+	Flags     string
+	HWAddress string
+	Mask      string
+	Device    string
+}
+
+func removeWhiteSpace(tab []string) []string {
+	var newTab []string
+	for _, element := range tab {
+		if element == "" {
+			continue
+		}
+		newTab = append(newTab, element)
+	}
+
+	return newTab
+}
+
+// GetEntries list ARP entries in /proc/net/arp
+func GetEntries() ([]ArpEntry, error) {
+	fileDatas, err := ioutil.ReadFile("/proc/net/arp")
+	if err != nil {
+		return nil, err
+	}
+
+	entries := []ArpEntry{}
+	datas := strings.Split(string(fileDatas), "\n")
+	for i, data := range datas {
+		if i == 0 || data == "" {
+			continue
+		}
+		parsedData := removeWhiteSpace(strings.Split(data, " "))
+		entries = append(entries, ArpEntry{
+			IPAddress: parsedData[0],
+			HWType:    parsedData[1],
+			Flags:     parsedData[2],
+			HWAddress: parsedData[3],
+			Mask:      parsedData[4],
+			Device:    parsedData[5],
+		})
+	}
+
+	return entries, nil
+}
+
+// GetEntryFromMAC get an entry by searching with MAC address
+func GetEntryFromMAC(mac string) (ArpEntry, error) {
+	entries, err := GetEntries()
+	if err != nil {
+		return ArpEntry{}, err
+	}
+
+	for _, entry := range entries {
+		if entry.HWAddress == mac {
+			return entry, nil
+		}
+	}
+
+	return ArpEntry{}, errors.New("MAC address not found")
 }
 
 var PSKConfigPath = "/configs/wifi/psks.json"
@@ -799,7 +919,7 @@ func doReloadPSKFiles() {
 			if entry.Type == "sae" {
 				sae = entry.Psk + "|mac=ff:ff:ff:ff:ff:ff" + "\n" + sae
 			} else if entry.Type == "wpa2" {
-				wpa2 = "ff:ff:ff:ff:ff:ff " + entry.Psk + "\n" + wpa2
+				wpa2 = "00:00:00:00:00:00 " + entry.Psk + "\n" + wpa2
 			}
 		} else {
 			if entry.Type == "sae" {
