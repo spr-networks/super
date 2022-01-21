@@ -22,23 +22,22 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v1
       -
+        name: Authenticate to ghcr
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      -
+        name: Build and push frontend
+        run: |
+          docker buildx build frontend -t ghcr.io/spr-networks/super_${C}:latest --push        
+      -
         name: Build arm64 test containers
         run: |
           cp -R base/template_configs configs
           cp base/template_configs/wifi/psks.json configs/wifi/
           ./build_docker_compose.sh
       -
-        name: Build frontend
-        run: |
-          docker buildx build frontend -t super_frontend:latest
-      -
-        name: Authenticate to ghcr
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-      -
         name: Push images
         env: 
-          CONTAINERS: api base dhcp dhcp_client dns frontend multicast_udp_proxy ppp wifid wireguard
+          CONTAINERS: api base dhcp dhcp_client dns multicast_udp_proxy ppp wifid wireguard
         run: |
           for C in $CONTAINERS; do
             docker tag super_${C} ghcr.io/spr-networks/super_${C}:latest
