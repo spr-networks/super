@@ -17,8 +17,6 @@
 import React from "react";
 // react plugin used to create charts
 import { Line, Bar, Doughnut } from "react-chartjs-2";
-// react plugin for creating vector maps
-import { VectorMap } from "react-jvectormap";
 import { hostapdAllStations } from "components/Helpers/Api.js";
 import WifiClientCount from "components/Dashboard/HostapdWidgets.js"
 
