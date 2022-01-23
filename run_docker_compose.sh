@@ -1,4 +1,4 @@
 #!/bin/bash
 ./frontend/gen_frontend.sh
-docker-compose up -do
+docker-compose up -d
 
