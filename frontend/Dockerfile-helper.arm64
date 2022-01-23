@@ -1,2 +1,0 @@
-FROM --platform=linux/arm64 ubuntu
-COPY ./output/app/build/ /build/
