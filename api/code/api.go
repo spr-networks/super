@@ -218,6 +218,7 @@ func addZoneMember(w http.ResponseWriter, r *http.Request) {
 	defer Zonesmtx.Unlock()
 
 	name := mux.Vars(r)["name"]
+	name := trimLower(name)
 
 	client := Client{}
 	err := json.NewDecoder(r.Body).Decode(&client)
@@ -261,6 +262,7 @@ func delZoneMember(w http.ResponseWriter, r *http.Request) {
 	defer Zonesmtx.Unlock()
 
 	name := mux.Vars(r)["name"]
+	name := trimLower(name)
 
 	client := Client{}
 	err := json.NewDecoder(r.Body).Decode(&client)
