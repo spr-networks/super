@@ -52,6 +52,10 @@
     "reactstrap": "8.9.0",
     "source-map-explorer": "^2.5.2"
   },
+  "resolutions": {
+    "immer": "9.0.6",
+    "node-forge": "1.0.0"
+  },
   "browserslist": [
     ">0.2%",
     "not dead",
