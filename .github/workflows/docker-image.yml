@@ -27,7 +27,7 @@ jobs:
       -
         name: Build and push frontend
         run: |
-          docker buildx build frontend -t frontend
+          docker build frontend -t frontend
           mkdir frontend/output
           docker cp $(docker create --rm frontend):/app/build frontend/output/build/
           docker buildx build --platform linux/arm64 -f frontend/Dockerfile-helper frontend -t ghcr.io/spr-networks/super_frontend:latest --push 
