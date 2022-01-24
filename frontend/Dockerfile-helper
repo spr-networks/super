@@ -1,2 +1,2 @@
 FROM ubuntu
-COPY ./output/app/build/ /build/
+COPY ./output/build /build/

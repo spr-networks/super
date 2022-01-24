@@ -1,4 +1,5 @@
 #!/bin/bash
+rm -rf ./frontend/build
 if [ -z LOCALUI ]; then
   docker cp $(docker create --rm frontend):/app/build ./frontend/build
 else
