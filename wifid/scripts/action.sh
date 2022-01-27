@@ -17,6 +17,6 @@ elif [ "$EVENT" = "AP-STA-DISCONNECTED" ]; then
   rm /state/wifi/sta_mac_iface_map/$VLAN_IFACE
 elif [ "$EVENT" = "AP-STA-POSSIBLE-PSK-MISMATCH" ]; then
    TYPE=$4
-   REASON=$4
+   REASON=$5
    curl --unix-socket /state/wifi/apisock http://localhost/reportPSKAuthFailure -X PUT -d "{\"Type\": \"$TYPE\", \"Mac\": \"$MAC\", \"Reason\": \"$REASON\"}"
 fi
