@@ -69,7 +69,7 @@ func (auth *authnconfig) webSocket(w http.ResponseWriter, r *http.Request) {
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		//the API does not use cookie authentication -- this does not weaken security
-		checkOrigin: func(r *http.Request) bool { return true },
+		CheckOrigin: func(r *http.Request) bool { return true },
 	}
 
 	c, err := upgrader.Upgrade(w, r, nil)
