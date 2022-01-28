@@ -15,9 +15,12 @@
 
 */
 import AddDevice from "views/Devices/AddDevice.js";
+import Arp from "views/Devices/Arp.js";
 import Devices from "views/Devices/Devices.js";
+import Dhcp from "views/Zones/Dhcp.js";
 import Home from "views/Home.js";
 import Login from "views/pages/Login.js";
+import Zones from "views/Zones/Zones.js";
 
 const routes = [
   {
@@ -46,7 +49,51 @@ const routes = [
         mini: "AW",
         component: AddDevice,
         layout: "/admin",
+      }
+    ]
+  },
+  {
+    collapse: true,
+    name: "Wireless Settings",
+    icon: "nc-icon nc-settings",
+    state: "systemCollapse",
+    views: [
+      {
+        path: "/wireless",
+        name: "Wireless",
+        mini: "W",
+        component: Dhcp,
+        layout: "/admin",
+      }
+    ]
+  },
+  {
+    collapse: true,
+    name: "System",
+    icon: "nc-icon nc-bullet-list-67",
+    state: "systemCollapse",
+    views: [
+      {
+        path: "/dhcp",
+        name: "DHCP Table",
+        mini: "D",
+        component: Dhcp,
+        layout: "/admin",
       },
+      {
+        path: "/arp",
+        name: "ARP Table",
+        mini: "A",
+        component: Arp,
+        layout: "/admin",
+      },
+      {
+        path: "/zones",
+        name: "Show Zones",
+        mini: "Z",
+        component: Zones,
+        layout: "/admin",
+      }
     ]
   },
   {

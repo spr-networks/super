@@ -29,14 +29,11 @@ import routes from "routes.js";
 
 var ps;
 
-
 const errorState = {
   reportError:  () => {},
 };
 
 export const APIErrorContext = React.createContext(errorState);
-
-//export default useAPIError;
 
 function Admin(props) {
   const location = useLocation();

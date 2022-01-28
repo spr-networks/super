@@ -1,8 +1,12 @@
 let API = document.location.origin;
+let API_HOST = document.location.host;
+let ws;
+const NFT_VERSION = "0.9.7";
 
 try {
   if (process && process.env.REACT_APP_API) {
     API = process.env.REACT_APP_API
+    API_HOST = API.split("//")[1]
   }
 } catch (e) {
 
@@ -57,29 +61,6 @@ export function testLogin(username, password, callback) {
 
 }
 
-export function hostapdAllStations(callback) {
-  fetch(API+'/hostapd/all_stations ', {
-    method: 'GET', // or 'PUT'
-    headers: {
-      'Authorization': authHeader(),
-      'X-Requested-With': 'react',
-      'Content-Type': 'application/json',
-    }
-  })
-  .then(function(response) {
-    if(!response.ok)
-    {
-      throw new Error(response.status)
-    }
-    return response.json()
-  })
-  .then(data => {
-    return callback(data)
-  })
-
-}
-
-
 function getAPIJson(endpoint) {
   return new Promise((resolve, reject) =>  {
     fetch(API+endpoint, {
@@ -103,18 +84,6 @@ function getAPIJson(endpoint) {
       reject(reason)
     })
   })
-}
-
-export function getDevices() {
-  return getAPIJson("/devices")
-}
-
-export function getZones() {
-  return getAPIJson("/zones")
-}
-
-export function pendingPSK() {
-  return getAPIJson("/pendingPSK")
 }
 
 
@@ -209,10 +178,76 @@ export function addZone(zone, mac, comment) {
     return delsetZone('PUT', zone, mac, comment)
 }
 
-export function saveLogin(username, password) {
-    localStorage.setItem('user', JSON.stringify({ "authdata": btoa(username+":"+password) }))
+export function getDevices() {
+  return getAPIJson("/devices")
 }
 
-export function getStations(username, password) {
-    localStorage.setItem('user', JSON.stringify({ "authdata": btoa(username+":"+password) }))
+export function getZones() {
+  return getAPIJson("/zones")
+}
+
+export function pendingPSK() {
+  return getAPIJson("/pendingPSK")
+}
+
+export function getArp() {
+  return getAPIJson("/arp")
+}
+
+export function getNFVerdictMap(zone) {
+  function translate(n) {
+    if (n == "wan") {
+      return "internet_access"
+    } else if (n == "dns") {
+      return "dns_access"
+    } else if (n == "lan") {
+      return "lan_access"
+    } else if (n == "dhcp") {
+      return "dhcp_access"
+    }
+    //tbd handle _dst_access also
+    return n+"_mac_src_access"
+  }
+
+  return getAPIJson("/nfmap/" + translate(zone)).then(
+    (v) => {
+      let vmap = v.nftables[1].map
+      let results = []
+      if (vmap.elem && vmap.type) {
+        let info = {}
+        for (const device of vmap.elem) {
+          let i = 0
+          for (const t of vmap.type) {
+            info[t] = device[0].concat[i]
+            i += 1
+          }
+          results.push(info)
+        }
+      }
+      return results
+    }
+  )
+}
+
+export function hostapdAllStations() {
+  return getAPIJson("/hostapd/all_stations")
+}
+
+export function ConnectWebsocket(username, password) {
+  ws = new WebSocket("ws://" + API_HOST + "/ws")
+
+  ws.addEventListener('open', (event) => {
+    console.log("SEND " + username + ":" + password)
+    //send username + pw
+    ws.send(username + ":" + password)
+  })
+  ws.addEventListener('message', (event) => {
+    console.log("WS> ")
+    console.log(event)
+  })
+}
+
+export function saveLogin(username, password) {
+  localStorage.setItem('user', JSON.stringify({ "authdata": btoa(username+":"+password), "username": username, "password": password }))
+  ConnectWebsocket(username, password)
 }

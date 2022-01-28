@@ -27,14 +27,11 @@ export default class DeviceListing extends Component {
 
   state = { devices : {}, deviceRows: [] };
 
-  static contextType = APIErrorContext;
-
   async componentDidMount() {
 
     const setState = (v) => {
       this.setState(v)
     }
-
 
     async function refreshDevices() {
       const d = await getDevices().catch(error => {
@@ -58,11 +55,15 @@ export default class DeviceListing extends Component {
       refreshDevices()
     }
 
+    refreshDevices = refreshDevices.bind(this)
     refreshDevices()
 
   }
 
+  static contextType = APIErrorContext;
+
   render() {
+
     return (
       <div>
         {this.state.alert}
@@ -70,7 +71,7 @@ export default class DeviceListing extends Component {
           <Col md="12">
             <Card>
               <CardHeader>
-                <CardTitle tag="h4">Device Listing</CardTitle>
+                <CardTitle tag="h4">Configured Devices</CardTitle>
               </CardHeader>
               <CardBody>
                 <Table responsive>

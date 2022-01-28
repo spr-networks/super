@@ -7,17 +7,10 @@ export default class WifiClientCount extends Component {
 
   state = { numberOfClients: 0 };
 
-  getWifiClientCount() {
-    return new Promise((resolve) =>  {
-      hostapdAllStations(function(data) {
-        resolve(Object.keys(data).length)
-      })
-    })
-  }
 
   async componentDidMount() {
-    const num = await this.getWifiClientCount();
-    this.setState({ numberOfWifiClients: num });
+    const stations = await hostapdAllStations();
+    this.setState({ numberOfWifiClients: Object.keys(stations).length });
   }
 
   render() {
