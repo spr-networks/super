@@ -54,7 +54,8 @@
   },
   "resolutions": {
     "immer": "9.0.6",
-    "node-forge": "1.0.0"
+    "node-forge": "1.0.0",
+    "react-error-overlay": "6.0.9"
   },
   "browserslist": [
     ">0.2%",
