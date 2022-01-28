@@ -21,10 +21,9 @@ import (
 )
 
 import (
+	"github.com/duo-labs/webauthn/webauthn"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-
-	"github.com/duo-labs/webauthn/webauthn"
 )
 
 var UNIX_WIFID_LISTENER = "/state/wifi/apisock"
@@ -38,6 +37,7 @@ func showNFMap(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		fmt.Println(err)
+		http.Error(w, "Not found", 404)
 		return
 	}
 
@@ -87,6 +87,7 @@ func readZone(dir string, filename string) *ClientZone {
 
 func getStatus(w http.ResponseWriter, r *http.Request) {
 	reply := "Online"
+	WSNotifyString("StatusCalled", "test")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
 }
@@ -250,6 +251,8 @@ func addZoneMember(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	// hmm bu gsomewhere? why exit 1
 	//make new zone with client
 	zones = append(zones, ClientZone{Name: name, Clients: []Client{client}})
 	saveZones(zones)
@@ -548,6 +551,9 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+
+	WSNotifyValue("DHCPUpdateRequest", dhcp)
+
 	//1. delete this ip, mac from any existing verdict maps
 	flushVmaps(dhcp.IP, dhcp.MAC, dhcp.Iface, getVerdictMapNames(), shouldFlushByInterface(dhcp.Iface))
 
@@ -561,19 +567,21 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 
 	//4. update local mappings file for DNS
 	updateLocalMappings(dhcp.IP, dhcp.Name)
+
+	WSNotifyString("DHCPUpdateProcessed", "")
 }
 
 func refreshClientZones(MAC string) {
 	ifname := ""
 	ipv4 := ""
 	//check arp tables for the MAC to get the IP
-	arp_entry, err := GetEntryFromMAC(MAC)
+	arp_entry, err := GetArpEntryFromMAC(MAC)
 	if err != nil {
 		fmt.Println("Arp entry not found, insufficient information to refresh %s", MAC)
 		return
 	}
 
-	ipv4 = arp_entry.IPAddress
+	ipv4 = arp_entry.IP
 
 	//check dhcp vmap for the interface
 	entries := getNFTVerdictMap("dhcp_access")
@@ -597,12 +605,12 @@ func refreshClientZones(MAC string) {
 // from https://github.com/ItsJimi/go-arp/blob/master/arp.go
 // Entry define the list available in /proc/net/arp
 type ArpEntry struct {
-	IPAddress string
-	HWType    string
-	Flags     string
-	HWAddress string
-	Mask      string
-	Device    string
+	IP     string
+	HWType string
+	Flags  string
+	Mac    string
+	Mask   string
+	Device string
 }
 
 func removeWhiteSpace(tab []string) []string {
@@ -617,8 +625,8 @@ func removeWhiteSpace(tab []string) []string {
 	return newTab
 }
 
-// GetEntries list ARP entries in /proc/net/arp
-func GetEntries() ([]ArpEntry, error) {
+// GetArpEntries lists ARP entries in /proc/net/arp
+func GetArpEntries() ([]ArpEntry, error) {
 	fileDatas, err := ioutil.ReadFile("/proc/net/arp")
 	if err != nil {
 		return nil, err
@@ -632,12 +640,12 @@ func GetEntries() ([]ArpEntry, error) {
 		}
 		parsedData := removeWhiteSpace(strings.Split(data, " "))
 		entries = append(entries, ArpEntry{
-			IPAddress: parsedData[0],
-			HWType:    parsedData[1],
-			Flags:     parsedData[2],
-			HWAddress: parsedData[3],
-			Mask:      parsedData[4],
-			Device:    parsedData[5],
+			IP:     parsedData[0],
+			HWType: parsedData[1],
+			Flags:  parsedData[2],
+			Mac:    parsedData[3],
+			Mask:   parsedData[4],
+			Device: parsedData[5],
 		})
 	}
 
@@ -645,19 +653,31 @@ func GetEntries() ([]ArpEntry, error) {
 }
 
 // GetEntryFromMAC get an entry by searching with MAC address
-func GetEntryFromMAC(mac string) (ArpEntry, error) {
-	entries, err := GetEntries()
+func GetArpEntryFromMAC(mac string) (ArpEntry, error) {
+	entries, err := GetArpEntries()
 	if err != nil {
 		return ArpEntry{}, err
 	}
 
 	for _, entry := range entries {
-		if entry.HWAddress == mac {
+		if entry.Mac == mac {
 			return entry, nil
 		}
 	}
 
 	return ArpEntry{}, errors.New("MAC address not found")
+}
+
+func showARP(w http.ResponseWriter, r *http.Request) {
+	entries, err := GetArpEntries()
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "Failed to get entries", 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(entries)
 }
 
 var PSKConfigPath = "/configs/wifi/psks.json"
@@ -679,6 +699,8 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+
+	WSNotifyValue("ReportPSKAuthFailure", pskf)
 
 	if pskf.MAC == "" || (pskf.Type != "sae" && pskf.Type != "wpa") || (pskf.Reason != "noentry" && pskf.Reason != "mismatch") {
 		http.Error(w, "malformed data", 400)
@@ -730,6 +752,8 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+
+	WSNotifyValue("PSKAuthSuccess", pska)
 
 	if pska.Iface == "" || pska.Event != "AP-STA-CONNECTED" || pska.MAC == "" {
 		http.Error(w, "malformed data", 400)
@@ -1056,6 +1080,18 @@ func setSecurityHeaders(next http.Handler) http.Handler {
 }
 
 func main() {
+	auth := new(authnconfig)
+	w, err := webauthn.New(&webauthn.Config{
+		RPDisplayName: "SPR",
+		RPID:          "localhost",
+		RPOrigin:      "http://localhost", // The origin URL for WebAuthn requests
+	})
+
+	if err != nil {
+		log.Fatal("failed to create WebAuthn from config:", err)
+	}
+	auth.webAuthn = w
+
 	unix_dhcpd_router := mux.NewRouter().StrictSlash(true)
 	unix_wifid_router := mux.NewRouter().StrictSlash(true)
 	external_router_authenticated := mux.NewRouter().StrictSlash(true)
@@ -1064,11 +1100,17 @@ func main() {
 	external_router_public.Use(setSecurityHeaders)
 	external_router_authenticated.Use(setSecurityHeaders)
 
+	//public websocket with internal authentication
+	external_router_public.HandleFunc("/ws", auth.webSocket).Methods("GET")
+
 	spa := spaHandler{staticPath: "/ui", indexPath: "index.html"}
 	external_router_public.PathPrefix("/").Handler(spa)
 
 	//nftable helpers
 	external_router_authenticated.HandleFunc("/nfmap/{name}", showNFMap).Methods("GET")
+
+	//ARP
+	external_router_authenticated.HandleFunc("/arp", showARP).Methods("GET")
 
 	//Misc
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
@@ -1114,17 +1156,8 @@ func main() {
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
-	auth := new(authnconfig)
-	w, err := webauthn.New(&webauthn.Config{
-		RPDisplayName: "SPR",
-		RPID:          "localhost",
-		RPOrigin:      "http://localhost", // The origin URL for WebAuthn requests
-	})
-
-	if err != nil {
-		log.Fatal("failed to create WebAuthn from config:", err)
-	}
-	auth.webAuthn = w
+	//star thte websocket handler
+	WSRunNotify()
 
 	go http.ListenAndServe("0.0.0.0:80", handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public)))
 

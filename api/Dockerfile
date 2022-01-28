@@ -9,7 +9,7 @@ RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-arm64.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 COPY code/ /code/
 
-RUN --mount=type=tmpfs,target=/root/go/ (go build -ldflags "-s -w" -o /api /code/api.go /code/auth.go)
+RUN --mount=type=tmpfs,target=/root/go/ (go build -ldflags "-s -w" -o /api /code/api.go /code/auth.go /code/ws.go)
 
 
 FROM --platform=linux/arm64 ubuntu:21.04

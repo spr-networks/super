@@ -14,11 +14,10 @@ import (
 	"strings"
 )
 import (
-	"github.com/gorilla/mux"
-
 	"github.com/duo-labs/webauthn.io/session"
 	"github.com/duo-labs/webauthn/protocol"
 	"github.com/duo-labs/webauthn/webauthn"
+	"github.com/gorilla/mux"
 )
 
 func loadOTP() int {
@@ -294,6 +293,50 @@ func (auth *authnconfig) FinishLogin(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode("success")
 }
 
+func (auth *authnconfig) authenticateToken(token string) bool {
+	// check webauthn
+	_, exists := auth.authMap[token]
+
+	if !exists {
+		//check api tokens
+		tokens := []string{}
+		data, err := os.ReadFile("/state/api/auth_tokens")
+		if err == nil {
+			json.Unmarshal(data, &tokens)
+		}
+
+		for _, s := range tokens {
+			if subtle.ConstantTimeCompare([]byte(token), []byte(s)) == 1 {
+				exists = true
+				break
+			}
+		}
+
+	}
+
+	return exists
+}
+
+func (auth *authnconfig) authenticateUser(username string, password string) bool {
+	users := map[string]string{}
+	data, err := os.ReadFile("/state/api/auth_users")
+	if err == nil {
+		json.Unmarshal(data, &users)
+	}
+
+	pwEntry, exists := users[username]
+
+	if exists {
+		passwordHash := sha256.Sum256([]byte(password))
+		expectedPasswordHash := sha256.Sum256([]byte(pwEntry))
+		passwordMatch := (subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1)
+		if passwordMatch {
+			return true
+		}
+	}
+	return false
+}
+
 func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router) http.HandlerFunc {
 	webauth_router := mux.NewRouter().StrictSlash(true)
 
@@ -316,27 +359,7 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 		token := auth.ExtractRequestToken(r)
 
 		if token != "" {
-			// check webauthn
-			_, exists := auth.authMap[token]
-
-			if !exists {
-				//check api tokens
-				tokens := []string{}
-				data, err := os.ReadFile("/state/api/auth_tokens")
-				if err == nil {
-					json.Unmarshal(data, &tokens)
-				}
-
-				for _, s := range tokens {
-					if subtle.ConstantTimeCompare([]byte(token), []byte(s)) == 1 {
-						exists = true
-						break
-					}
-				}
-
-			}
-
-			if exists {
+			if auth.authenticateToken(token) {
 				authenticatedNext.ServeHTTP(w, r)
 				return
 			}
@@ -346,22 +369,9 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 		//https://www.alexedwards.net/blog/basic-authentication-in-go
 		username, password, ok := r.BasicAuth()
 		if ok {
-			users := map[string]string{}
-			data, err := os.ReadFile("/state/api/auth_users")
-			if err == nil {
-				json.Unmarshal(data, &users)
-			}
-
-			pwEntry, exists := users[username]
-
-			if exists {
-				passwordHash := sha256.Sum256([]byte(password))
-				expectedPasswordHash := sha256.Sum256([]byte(pwEntry))
-				passwordMatch := (subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1)
-				if passwordMatch {
-					authenticatedNext.ServeHTTP(w, r)
-					return
-				}
+			if auth.authenticateUser(username, password) {
+				authenticatedNext.ServeHTTP(w, r)
+				return
 			}
 		}
 
