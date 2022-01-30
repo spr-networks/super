@@ -1,7 +1,7 @@
 #!/bin/bash
 apt-get update
 apt-get -y upgrade
-apt-get -y install docker.io docker-compose nftables
+apt-get -y install docker.io docker-compose nftables linux-modules-extra-raspi
 
 touch /etc/cloud/cloud-init.disabled
 
