@@ -26,12 +26,6 @@ export default class ZoneListing extends Component {
 
   render() {
 
-    const deleteZone = (e) => {
-        //console.log("Delete Zone ")
-        //delete ourselves  ... and refresh
-      //this.props.notifyChange()
-    }
-
     function translateName(zoneName) {
       if (zoneName === "dns") {
         return "DNS"
@@ -46,19 +40,30 @@ export default class ZoneListing extends Component {
     const zone = this.props.zone;
     const zoneRows = []
 
-    zone.Clients.forEach(function(v) {
-        const generatedID = Math.random().toString(36).substr(2, 9);
-        //if the device was in the vmap, mark it as active
-        v.ifname = "--"
-        for (const entry of zone.vmap) {
-          if (entry.ifname && entry.ether_addr == v.Mac) {
-            v.ifname = entry.ifname
-          }
+    //alert(zone.Name)
+    //alert(zone.Clients.length)
 
-          v.IP = entry.ipv4_addr || (zone.ipMap ? zone.ipMap[entry.ether_addr].IP : "--")
-        }
-        zoneRows.push( <ZoneDevice key={generatedID} device={v} />)
-    })
+//    try {
+    if (zone.Clients.length > 0) {
+      //alert(zone.Clients.length)
+      for (const v of zone.Clients) {
+
+          const generatedID = Math.random().toString(36).substr(2, 9);
+          //if the device was in the vmap, mark it as active
+          v.ifname = "--"
+          for (const entry of zone.vmap) {
+            if (entry.ifname && entry.ether_addr == v.Mac) {
+              v.ifname = entry.ifname
+            }
+
+            v.IP = entry.ipv4_addr || (zone.ipMap ? zone.ipMap[entry.ether_addr].IP : "--")
+          }
+          zoneRows.push( <ZoneDevice key={generatedID} device={v} />)
+      }
+    }
+    //catch (err ){
+//      console.log(err)
+    //}
 
     return (
       <>

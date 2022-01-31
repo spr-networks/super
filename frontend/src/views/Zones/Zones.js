@@ -42,8 +42,8 @@ export default class Zones extends Component {
           this.context.reportError("API Failure: " + error.message)
         })
 
+        let divs = []
         if (d) {
-          let divs = []
           for (const v of d) {
               const vmap = await getNFVerdictMap(v.Name).catch(error => {
                 if (error.message == 404) {
@@ -52,15 +52,13 @@ export default class Zones extends Component {
                   this.context.reportError("API Failure for: " + v.Name + " " + error.message)
                 }
               })
-
               const generatedID = Math.random().toString(36).substr(2, 9);
               v.vmap = vmap
-              //divs.push( <Zone key={generatedID} zone={d[v]} notifyChange={notifyChange} /> )
-              divs.push( <ZoneListing key={generatedID} zone={v} notifyChange={notifyChange} /> )
+              if (vmap) {
+                divs.push( <ZoneListing key={generatedID} zone={v} notifyChange={notifyChange} /> )
+              }
            };
-
-          setState({ zones: d, zoneRows: divs })
-
+           setState({ zones: d, zoneRows: divs })
         }
       }
 
@@ -70,7 +68,6 @@ export default class Zones extends Component {
 
       refreshZones = refreshZones.bind(this)
       refreshZones()
-
     }
 
     render() {
