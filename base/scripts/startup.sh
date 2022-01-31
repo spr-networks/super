@@ -15,7 +15,7 @@ else
   ip link set dev $VLANIF up
 fi
 
-. /configs/base/scripts/nft_rules.sh
+. /configs/base/nft_rules.sh
 
 # performance tuning
 /scripts/perftune.sh
