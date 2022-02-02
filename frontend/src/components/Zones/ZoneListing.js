@@ -50,7 +50,7 @@ export default class ZoneListing extends Component {
             for (const entry of zone.vmap) {
               if (entry.ifname && entry.ether_addr == v.Mac) {
                 v.ifname = entry.ifname
-                v.IP = entry.ipv4_addr || (zone.ipMap ? zone.ipMap[entry.ether_addr].IP : "--")
+                v.IP = entry.ipv4_addr || ((zone.ipMap && zone.ipMap[entry.ether_addr]) ? zone.ipMap[entry.ether_addr].IP : "--")
               }
             }
           }

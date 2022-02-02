@@ -32,13 +32,6 @@ const routes = [
     layout: "/admin",
   },
   {
-    path: "/traffic",
-    name: "Traffic",
-    icon: "nc-icon nc-chart-bar-32",
-    component: Traffic,
-    layout: "/admin",
-  },
-  {
     collapse: true,
     name: "Devices",
     icon: "nc-icon nc-laptop",
@@ -103,6 +96,13 @@ const routes = [
         layout: "/admin",
       }
     ]
+  },
+  {
+    path: "/traffic",
+    name: "Traffic",
+    icon: "nc-icon nc-chart-bar-32",
+    component: Traffic,
+    layout: "/admin",
   },
   {
     path: "/login",
