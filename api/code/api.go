@@ -45,6 +45,82 @@ func showNFMap(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(stdout))
 }
 
+type TrafficElement struct {
+	IP      string
+	Packets uint64
+	Bytes   uint64
+}
+
+func parseTrafficElements(elements []interface{}) []TrafficElement {
+	traffic := []TrafficElement{}
+	for _, _entry := range elements {
+		entry, ok := _entry.(map[string]interface{})
+		if ok {
+			ele, ok := entry["elem"].(map[string]interface{})
+			if ok {
+				counter, ok := ele["counter"].(map[string]interface{})
+				if ok {
+					traffic = append(traffic,
+						TrafficElement{IP: ele["val"].(string),
+							Bytes:   uint64(counter["bytes"].(float64)),
+							Packets: uint64(counter["packets"].(float64))})
+				}
+			}
+		}
+	}
+	return traffic
+}
+
+func getDeviceTrafficSet(setName string) []TrafficElement {
+	cmd := exec.Command("nft", "-j", "list", "set", "ip", "accounting", setName)
+	stdout, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(stdout, &data)
+
+	data2, ok := data["nftables"].([]interface{})
+	if ok != true {
+		log.Fatal("invalid json")
+	}
+
+	for _, s := range data2 {
+		map_entry, ok := s.(map[string]interface{})
+		if ok {
+			set, exists := map_entry["set"].(map[string]interface{})
+			if exists {
+				if set["name"] == setName {
+					elements, ok := set["elem"].([]interface{})
+					if ok {
+						return parseTrafficElements(elements)
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func getDeviceTraffic(w http.ResponseWriter, r *http.Request) {
+	name := mux.Vars(r)["name"]
+
+	data := getDeviceTrafficSet(name)
+
+	if data == nil {
+		err := fmt.Errorf("Failed to collect traffic statistics")
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
+}
+
 type Client struct {
 	Mac     string
 	Comment string
@@ -146,7 +222,7 @@ func getDevices(w http.ResponseWriter, r *http.Request) {
 		mac := trimLower(psk.Mac)
 		_, exists := devices[mac]
 		if !exists {
-			devices[mac] = Device{Mac: mac, Comment: "", Zones: []string{}, PskType: psk.Type}
+			devices[mac] = Device{Mac: mac, Comment: psk.Comment, Zones: []string{}, PskType: psk.Type}
 		}
 	}
 
@@ -720,7 +796,7 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// take the pending PSK and assign it
-		psk := PSKEntry{Psk: pendingPSK.Psk, Type: auth_type, Mac: pskf.MAC}
+		psk := PSKEntry{Psk: pendingPSK.Psk, Type: auth_type, Mac: pskf.MAC, Comment: pendingPSK.Comment}
 		psks := getPSKJson()
 		psks[psk.Mac] = psk
 		savePSKs(psks)
@@ -793,6 +869,7 @@ type PSKEntry struct {
 	Type string
 	Mac  string
 	Psk  string
+	Comment string
 }
 
 func loadPSKFiles() map[string]PSKEntry {
@@ -813,7 +890,7 @@ func loadPSKFiles() map[string]PSKEntry {
 		psk := parts[0]
 		mac := parts[1]
 		mac = strings.Split(mac, "=")[1]
-		pskEntries[mac] = PSKEntry{"sae", mac, psk}
+		pskEntries[mac] = PSKEntry{"sae", mac, psk, ""}
 	}
 
 	data, err = ioutil.ReadFile("/configs/wifi/wpa2pskfile")
@@ -830,7 +907,7 @@ func loadPSKFiles() map[string]PSKEntry {
 		parts := strings.Split(entry, " ")
 		mac := parts[0]
 		psk := parts[1]
-		pskEntries[mac] = PSKEntry{"wpa2", mac, psk}
+		pskEntries[mac] = PSKEntry{"wpa2", mac, psk, ""}
 	}
 
 	return pskEntries
@@ -1079,6 +1156,7 @@ func setSecurityHeaders(next http.Handler) http.Handler {
 	})
 }
 
+
 func main() {
 	auth := new(authnconfig)
 	w, err := webauthn.New(&webauthn.Config{
@@ -1108,6 +1186,9 @@ func main() {
 
 	//nftable helpers
 	external_router_authenticated.HandleFunc("/nfmap/{name}", showNFMap).Methods("GET")
+
+	//traffic monitoring
+	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
 
 	//ARP
 	external_router_authenticated.HandleFunc("/arp", showARP).Methods("GET")
@@ -1151,12 +1232,11 @@ func main() {
 	wifidServer := http.Server{Handler: unix_wifid_router}
 	dhcpdServer := http.Server{Handler: unix_dhcpd_router}
 
-	//temp until API and website are in the same spot
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
-	//star thte websocket handler
+	//start the websocket handler
 	WSRunNotify()
 
 	go http.ListenAndServe("0.0.0.0:80", handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public)))
