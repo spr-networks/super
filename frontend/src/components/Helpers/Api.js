@@ -214,8 +214,8 @@ export function getNFVerdictMap(zone) {
       let vmap = v.nftables[1].map
       let results = []
       if (vmap.elem && vmap.type) {
-        let info = {}
         for (const device of vmap.elem) {
+          let info = {}
           let i = 0
           for (const t of vmap.type) {
             info[t] = device[0].concat[i]
@@ -231,6 +231,10 @@ export function getNFVerdictMap(zone) {
 
 export function hostapdAllStations() {
   return getAPIJson("/hostapd/all_stations")
+}
+
+export function getTraffic(name) {
+  return getAPIJson("/traffic/" + name)
 }
 
 export function ConnectWebsocket(username, password) {

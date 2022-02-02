@@ -20,6 +20,7 @@ import Devices from "views/Devices/Devices.js";
 import Dhcp from "views/Zones/Dhcp.js";
 import Home from "views/Home.js";
 import Login from "views/pages/Login.js";
+import Traffic from "views/Traffic.js";
 import Zones from "views/Zones/Zones.js";
 
 const routes = [
@@ -28,6 +29,13 @@ const routes = [
     name: "Home",
     icon: "nc-icon nc-planet",
     component: Home,
+    layout: "/admin",
+  },
+  {
+    path: "/traffic",
+    name: "Traffic",
+    icon: "nc-icon nc-chart-bar-32",
+    component: Traffic,
     layout: "/admin",
   },
   {
