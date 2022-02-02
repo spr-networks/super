@@ -50,10 +50,12 @@ export default class Dhcp extends Component {
           this.context.reportError("API Failure getArp: " + error.message)
         })
 
+
         let ipMap = {}
         for (const e of arp) {
           ipMap[e.Mac] = e
         }
+
 
         const devices = await getDevices().catch(error => {
           this.context.reportError("API Failure getDevices: " + error.message)
@@ -73,6 +75,7 @@ export default class Dhcp extends Component {
         }
         //divs.push( <Zone key={generatedID} zone={d[v]} notifyChange={notifyChange} /> )
         divs.push( <ZoneListing key={generatedID} zone={v} notifyChange={notifyChange} /> )
+
         setState({zoneRows: divs })
 
       }

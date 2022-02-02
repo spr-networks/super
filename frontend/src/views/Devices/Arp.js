@@ -23,8 +23,7 @@ import {
 } from "reactstrap";
 
 
-export default class Dhcp extends Component {
-
+export default class Arp extends Component {
 
     state = { arpRows: [] };
 
@@ -55,8 +54,14 @@ export default class Dhcp extends Component {
       async function refreshArp() {
         let divs = []
 
-        const arp = await getArp().catch(error => {
+        let arp = await getArp().catch(error => {
           this.context.reportError("API Failure getArp: " + error.message)
+        })
+
+        arp = arp.sort((a, b) => {
+          const num1 = Number(a.IP.split(".").map((num) => (`000${num}`).slice(-3) ).join(""));
+          const num2 = Number(b.IP.split(".").map((num) => (`000${num}`).slice(-3) ).join(""));
+          return num1-num2;
         })
 
         for (const entry of arp) {
@@ -65,7 +70,7 @@ export default class Dhcp extends Component {
           divs.push(
             <tr key={generatedID}>
               <td className=""> { entry.IP} </td>
-              <td className=""> { entry.Mac }</td>
+              <td className=""> { entry.Mac == "00:00:00:00:00:00" ? "<incomplete>" : entry.Mac }</td>
               <td className=""> { translateFlags(entry.Flags) } </td>
               <td className=""> { entry.Device } </td>
             </tr>

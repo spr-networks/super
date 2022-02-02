@@ -54,9 +54,7 @@ export default class Zones extends Component {
               })
               const generatedID = Math.random().toString(36).substr(2, 9);
               v.vmap = vmap
-              if (vmap) {
-                divs.push( <ZoneListing key={generatedID} zone={v} notifyChange={notifyChange} /> )
-              }
+              divs.push( <ZoneListing key={generatedID} zone={v} notifyChange={notifyChange} /> )
            };
            setState({ zones: d, zoneRows: divs })
         }
