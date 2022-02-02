@@ -17,6 +17,9 @@ fi
 
 . /configs/base/nft_rules.sh
 
+# traffic accounting
+. /scripts/accounting.sh
+
 # performance tuning
 /scripts/perftune.sh
 while true; do sleep 100000; done
