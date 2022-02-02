@@ -348,11 +348,14 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var matchInfo mux.RouteMatch
 
+		/*
+		// disable webauth code for now
 		//first match webuath
 		if webauth_router.Match(r, &matchInfo) {
 			webauth_router.ServeHTTP(w, r)
 			return
 		}
+		*/
 
 		//next match api
 
