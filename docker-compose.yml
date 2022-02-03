@@ -113,6 +113,22 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/wireguard/:/configs/wireguard/
+# Use the prebuilt frontend
+  frontend:   
+    container_name: superfrontend
+    network_mode: none
+    image: ghcr.io/spr-networks/super_frontend
+    entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
+    volumes:
+    - ./frontend/:/frontend
+# Use below to build frontend from scratch instead
+#  frontend:   
+#    container_name: superfrontend
+#    network_mode: none
+#    build: frontend
+#    entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
+#    volumes:
+#    - ./frontend/:/frontend
   api:
     container_name: superapi
     build: api
@@ -123,6 +139,7 @@ services:
       - "base"
       - "wifid"
       - "dhcp"
+      - "frontend"
     logging:
       driver: journald
     volumes:
