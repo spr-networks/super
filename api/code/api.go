@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 import (
@@ -119,6 +120,140 @@ func getDeviceTraffic(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
+}
+
+type NetCount struct {
+	LanIn  uint64
+	LanOut uint64
+	WanIn  uint64
+	WanOut uint64
+}
+
+type DeviceHistory struct {
+	Minutes [60]NetCount
+	Hours   [24]NetCount
+	Days    [30]NetCount
+}
+
+type TrafficHistory struct {
+	Devices map[string]DeviceHistory
+}
+
+var Trafficmtx sync.Mutex
+var TrafficStatePath = "/state/api/traffic.json"
+var gTrafficHistory = []map[string]*NetCount{}
+
+func loadTrafficHistory() (TrafficHistory, error) {
+	Trafficmtx.Lock()
+	defer Trafficmtx.Unlock()
+
+	data, err := ioutil.ReadFile(TrafficStatePath)
+	if err != nil {
+		return TrafficHistory{}, err
+	}
+
+	traffic := TrafficHistory{}
+	err = json.Unmarshal(data, &traffic)
+	if err != nil {
+		return TrafficHistory{}, err
+	}
+
+	return traffic, nil
+}
+
+func saveTrafficHistory(t TrafficHistory) {
+	Trafficmtx.Lock()
+	defer Trafficmtx.Unlock()
+
+	file, _ := json.MarshalIndent(t, "", " ")
+	err := ioutil.WriteFile(TrafficStatePath, file, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return
+}
+
+func trafficTimer() {
+
+	runTimer := func() {
+		historyLimit := 60 * 24
+		ticker := time.NewTicker(1 * time.Minute)
+		for {
+			select {
+			case <-ticker.C:
+				readings := make(map[string]*NetCount)
+
+				lan_out := getDeviceTrafficSet("outgoing_traffic_lan")
+				wan_out := getDeviceTrafficSet("outgoing_traffic_wan")
+				lan_in := getDeviceTrafficSet("incoming_traffic_lan")
+				wan_in := getDeviceTrafficSet("incoming_traffic_wan")
+
+				for _, entry := range lan_out {
+					_, exists := readings[entry.IP]
+					if !exists {
+						readings[entry.IP] = &NetCount{LanOut: entry.Bytes}
+					} else {
+						readings[entry.IP].LanOut = entry.Bytes
+					}
+				}
+
+				for _, entry := range wan_out {
+					_, exists := readings[entry.IP]
+					if !exists {
+						readings[entry.IP] = &NetCount{WanOut: entry.Bytes}
+					} else {
+						readings[entry.IP].WanOut = entry.Bytes
+					}
+				}
+
+				for _, entry := range lan_in {
+					_, exists := readings[entry.IP]
+					if !exists {
+						readings[entry.IP] = &NetCount{LanIn: entry.Bytes}
+					} else {
+						readings[entry.IP].LanIn = entry.Bytes
+					}
+				}
+
+				for _, entry := range wan_in {
+					_, exists := readings[entry.IP]
+					if !exists {
+						readings[entry.IP] = &NetCount{WanIn: entry.Bytes}
+					} else {
+						readings[entry.IP].WanIn = entry.Bytes
+					}
+				}
+
+				end := len(gTrafficHistory)
+				if end >= historyLimit {
+					end = historyLimit - 1
+				}
+				//prepend readings
+				gTrafficHistory = append([]map[string]*NetCount{readings}, gTrafficHistory[:end]...)
+			}
+		}
+	}
+
+	go runTimer()
+}
+
+func getTrafficHistory(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(gTrafficHistory)
+}
+
+func ipAddr(w http.ResponseWriter, r *http.Request) {
+	cmd := exec.Command("ip", "-j", "addr")
+	stdout, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, string(stdout))
 }
 
 type Client struct {
@@ -866,9 +1001,9 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 }
 
 type PSKEntry struct {
-	Type string
-	Mac  string
-	Psk  string
+	Type    string
+	Mac     string
+	Psk     string
 	Comment string
 }
 
@@ -1124,6 +1259,15 @@ func hostapdAllStations(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(stations)
 }
 
+func hostapdConfiguration(w http.ResponseWriter, r *http.Request) {
+	data, err := ioutil.ReadFile("/configs/wifi/hostapd.conf")
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	fmt.Fprint(w, string(data))
+}
+
 //set up SPA handler. From gorilla mux's documentation
 type spaHandler struct {
 	staticPath string
@@ -1155,7 +1299,6 @@ func setSecurityHeaders(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
-
 
 func main() {
 	auth := new(authnconfig)
@@ -1189,12 +1332,14 @@ func main() {
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
+	external_router_authenticated.HandleFunc("/traffic_history", getTrafficHistory).Methods("GET")
 
 	//ARP
 	external_router_authenticated.HandleFunc("/arp", showARP).Methods("GET")
 
 	//Misc
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
+
 	// Zone management
 	external_router_authenticated.HandleFunc("/zones", getZones).Methods("GET")
 	external_router_authenticated.HandleFunc("/zone/{name}", addZoneMember).Methods("PUT")
@@ -1209,6 +1354,10 @@ func main() {
 	//hostadp information
 	external_router_authenticated.HandleFunc("/hostapd/status", hostapdStatus).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/all_stations", hostapdAllStations).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/config", hostapdConfiguration).Methods("GET")
+
+	//ip information
+	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")
 
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
@@ -1238,6 +1387,8 @@ func main() {
 
 	//start the websocket handler
 	WSRunNotify()
+	// collect traffic accounting statistics
+	trafficTimer()
 
 	go http.ListenAndServe("0.0.0.0:80", handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public)))
 
