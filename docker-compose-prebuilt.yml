@@ -113,6 +113,13 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/wireguard/:/configs/wireguard/
+  frontend:
+    container_name: superfrontend
+    network_mode: none
+    image: ghcr.io/spr-networks/super_frontend
+    entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
+    volumes:
+    - ./frontend/:/frontend
   api:
     container_name: superapi
     image: ghcr.io/spr-networks/super_api
@@ -123,6 +130,7 @@ services:
       - "base"
       - "wifid"
       - "dhcp"
+      - "frontend"
     logging:
       driver: journald
     volumes:
