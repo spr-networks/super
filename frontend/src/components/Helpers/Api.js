@@ -86,6 +86,31 @@ function getAPIJson(endpoint) {
   })
 }
 
+function getAPI(endpoint) {
+  return new Promise((resolve, reject) =>  {
+    fetch(API+endpoint, {
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader(),
+        'X-Requested-With': 'react',
+        'Content-Type': 'application/json',
+      }
+    })
+    .then(function(response) {
+      if(!response.ok)
+      {
+        throw new Error(response.status)
+      }
+      return response.text()
+    })
+    .then(data => {
+      resolve(data)
+    }).catch(reason => {
+      reject(reason)
+    })
+  })
+}
+
 
 function delsetPSK(verb, mac, psk, wpa_type, comment) {
   let data = {"Type": wpa_type}
@@ -233,16 +258,26 @@ export function hostapdAllStations() {
   return getAPIJson("/hostapd/all_stations")
 }
 
+export function hostapdConfiguration() {
+  return getAPI("/hostapd/config")
+}
+
 export function getTraffic(name) {
   return getAPIJson("/traffic/" + name)
+}
+
+export function getTrafficHistory() {
+  return getAPIJson("/traffic_history")
+}
+
+export function ipAddr() {
+  return getAPI("/ip/addr")
 }
 
 export function ConnectWebsocket(username, password) {
   ws = new WebSocket("ws://" + API_HOST + "/ws")
 
   ws.addEventListener('open', (event) => {
-    console.log("SEND " + username + ":" + password)
-    //send username + pw
     ws.send(username + ":" + password)
   })
   ws.addEventListener('message', (event) => {

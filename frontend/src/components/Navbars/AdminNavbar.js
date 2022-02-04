@@ -115,7 +115,7 @@ function AdminNavbar(props) {
               <span className="d-none d-md-block">
                 SPR Admin
               </span>
-              <span className="d-block d-md-none">PD PRO React</span>
+              <span className="d-block d-md-none">SPR Admin</span>
             </NavbarBrand>
           </div>
           <button

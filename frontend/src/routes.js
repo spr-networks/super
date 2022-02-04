@@ -1,26 +1,12 @@
-/*!
-
-=========================================================
-* Paper Dashboard PRO React - v1.3.0
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/paper-dashboard-pro-react
-* Copyright 2021 Creative Tim (https://www.creative-tim.com)
-
-* Coded by Creative Tim
-
-=========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-*/
 import AddDevice from "views/Devices/AddDevice.js";
 import Arp from "views/Devices/Arp.js";
 import Devices from "views/Devices/Devices.js";
 import Dhcp from "views/Zones/Dhcp.js";
 import Home from "views/Home.js";
 import Login from "views/pages/Login.js";
+import SignalStrength from "views/SignalStrength.js";
 import Traffic from "views/Traffic.js";
+import WirelessConfiguration from "views/WirelessConfiguration"
 import Zones from "views/Zones/Zones.js";
 
 const routes = [
@@ -57,13 +43,13 @@ const routes = [
     collapse: true,
     name: "Wireless Settings",
     icon: "nc-icon nc-settings",
-    state: "systemCollapse",
+    state: "wirelessCollapse",
     views: [
       {
         path: "/wireless",
         name: "Wireless",
         mini: "W",
-        component: Dhcp,
+        component: WirelessConfiguration,
         layout: "/admin",
       }
     ]
@@ -98,11 +84,26 @@ const routes = [
     ]
   },
   {
-    path: "/traffic",
+    collapse: true,
     name: "Traffic",
     icon: "nc-icon nc-chart-bar-32",
-    component: Traffic,
-    layout: "/admin",
+    state: "trafficCollapse",
+    views: [
+      {
+        path: "/traffic",
+        name: "IP Traffic",
+        mini: "IP",
+        component: Traffic,
+        layout: "/admin",
+      },
+      {
+        path: "/signal/strength",
+        name: "Signal Strength",
+        mini: "S",
+        component: SignalStrength,
+        layout: "/admin",
+      }
+    ]
   },
   {
     path: "/login",
