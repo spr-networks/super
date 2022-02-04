@@ -141,11 +141,11 @@ export default class Traffic extends Component {
         let recent_reading = traffic_series[0]
         let offset = 0
         if (scale == "1 Hour") {
-          offset = 60
+          offset = 60-1
         } else if (scale == "1 Day") {
-          offset = 60*24
+          offset = 60*24-1
         } else if (scale == "15 Minutes") {
-          offset = 15
+          offset = 15-1
         }
 
         if (offset >= traffic_series.length) {
@@ -169,10 +169,14 @@ export default class Traffic extends Component {
         //subtract delta from the previous reading
         for (const IP in recent_reading) {
           if (previous_reading[IP]) {
-            clientsLanIn[IP] -= previous_reading[IP].LanIn
-            clientsWanIn[IP] -= previous_reading[IP].WanIn
-            clientsLanOut[IP] -= previous_reading[IP].LanOut
-            clientsWanOut[IP] -= previous_reading[IP].WanOut
+            if (previous_reading[IP].LanIn < clientsLanIn[IP])
+              clientsLanIn[IP] -= previous_reading[IP].LanIn
+            if (previous_reading[IP].WanIn < clientsWanIn[IP])
+              clientsWanIn[IP] -= previous_reading[IP].WanIn
+            if (previous_reading[IP].LanOut < clientsLanOut[IP])
+              clientsLanOut[IP] -= previous_reading[IP].LanOut
+            if (previous_reading[IP].WanOut < clientsWanOut[IP])
+              clientsWanOut[IP] -= previous_reading[IP].WanOut
           }
         }
 
