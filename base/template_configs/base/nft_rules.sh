@@ -152,8 +152,10 @@ table inet nat {
     type nat hook prerouting priority -100; policy accept;
 
     # Reroute external DNS to our own server
-    udp dport 53 counter dnat ip to $DNSIP:53
-    tcp dport 53 counter dnat ip to $DNSIP:53
+    iifname "$LANIF" udp dport 53 counter dnat ip to $DNSIP:53
+    iifname "$VLANSIF*" udp dport 53 counter dnat ip to $DNSIP:53
+    iifname "$LANIF" tcp dport 53 counter dnat ip to $DNSIP:53
+    iifname "$VLANSIF*" tcp dport 53 counter dnat ip to $DNSIP:53
   }
   chain INPUT {
     type nat hook input priority 100; policy accept;
