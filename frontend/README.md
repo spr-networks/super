@@ -5,6 +5,13 @@ The UI is built with [Paper Dashboard Pro React](https://www.creative-tim.com/pr
 ## Documentation
 The documentation for the Material Dashboard Pro is hosted at the Creative Tim Website [website](https://demos.creative-tim.com/paper-dashboard-pro-react/#/documentation/tutorial).
 
+## Running
+
+To test locally, you can point it to your SPR instance with the REACT_APP_API variable.
+Example:
+```bash
+REACT_APP_API=http://192.168.2.1 yarn start
+```
 
 ## Licensing
 

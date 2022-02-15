@@ -244,7 +244,7 @@ const Step1 = React.forwardRef((props, ref) => {
             <Input
               name="psk"
               placeholder=""
-              type="text"
+              type="password"
               onChange={(e) => {
                 setsubmitted(false)
                 if (!validatePassphrase(e.target.value)) {

@@ -1,6 +1,6 @@
 import React, { useContext, Component } from 'react'
 // react plugin used to create charts
-import { Line, Bar, Doughnut } from "react-chartjs-2";
+import { Line, Bar, Scatter } from "react-chartjs-2";
 import { hostapdAllStations, getArp, getDevices } from "components/Helpers/Api.js";
 import {APIErrorContext} from 'layouts/Admin.js';
 import { UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem } from 'reactstrap';
@@ -61,13 +61,34 @@ export default class SignalStrength extends Component {
           datasets: [
             {
               label: "Signal",
+              yAxisID: 'RSSI',
               fill: true,
               backgroundColor: [],
               borderWidth: 1,
               barPercentage: 0.5,
               data: [
               ],
+            },/*
+            {
+              label: "RX Rate",
+              yAxisID: 'Rate',
+              fill: true,
+              backgroundColor: "#4cbdd7",
+              borderWidth: 1,
+              barPercentage: 0.5,
+              data: [
+              ],
             },
+            {
+              label: "TX Rate",
+              yAxisID: 'Rate',
+              fill: true,
+              backgroundColor: "#4cbdd7",
+              borderWidth: 1,
+              barPercentage: 0.5,
+              data: [
+              ],
+            }*/
           ]
         }
 
@@ -75,10 +96,14 @@ export default class SignalStrength extends Component {
 
         let d_labels = []
         let d_signal = []
+        let d_tx = []
+        let d_rx = []
         let d_colors = []
         for (const entry of signals) {
           d_labels.push(entry.Mac)
           d_signal.push(entry.Signal)
+          d_tx.push(entry.TX)
+          d_rx.push(entry.RX)
           let color = ""
           //match _variables.scss
           if (entry.Signal >= -60) {
@@ -96,7 +121,10 @@ export default class SignalStrength extends Component {
         data.labels = d_labels
         data.datasets[0].data = d_signal
         data.datasets[0].backgroundColor = d_colors
-        console.log(data)
+        /*
+        data.datasets[1].data = d_rx
+        data.datasets[2].data = d_tx
+        */
         return data
       }
 
@@ -108,7 +136,7 @@ export default class SignalStrength extends Component {
         let signals = []
         for (let mac in stations) {
           let station = stations[mac]
-          signals.push({Mac: mac, Signal: parseInt(station.signal)})
+          signals.push({Mac: mac, Signal: parseInt(station.signal), TX: parseInt(station.tx_rate_info), RX: parseInt(station.rx_rate_info)})
         }
         return processData(signals)
       }
@@ -117,8 +145,6 @@ export default class SignalStrength extends Component {
 
     async componentDidMount() {
       let signal_data = await this.processTrafficHistory("signal", this.state.signal_scale)
-      console.log(signal_data)
-      console.log("good")
       this.setState({signals: signal_data})
     }
 
@@ -170,15 +196,12 @@ export default class SignalStrength extends Component {
           },
         },
         scales: {
-          y: {
+          'RSSI': {
+            position: 'left',
+            type: 'linear',
             ticks: {
-              /* callback: (a,b,c) => {}, */
-              callback: function (value, index, values) {
-                  return value
-              },
               includeBounds: true,
               color: "#9f9f9f",
-              minTicksLimit: 5,
             },
             grid: {
               zeroLineColor: "transparent",
@@ -187,13 +210,17 @@ export default class SignalStrength extends Component {
               color: "#9f9f9f",
             },
           },
-          x: {
-            grid: {
-              display: false,
-              drawBorder: false,
-            },
+          'Rate' : {
+            position: 'right',
+            type: 'linear',
             ticks: {
-              padding: 20,
+              includeBounds: true,
+              color: "#9f9f9f",
+            },
+            grid: {
+              zeroLineColor: "transparent",
+              display: true,
+              drawBorder: false,
               color: "#9f9f9f",
             },
           },

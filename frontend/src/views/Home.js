@@ -14,10 +14,10 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 */
-import React from "react";
+import React, {useState} from "react";
 // react plugin used to create charts
 import { Line, Bar, Doughnut } from "react-chartjs-2";
-import { hostapdAllStations } from "components/Helpers/Api.js";
+import { hostapdAllStations, ipAddr } from "components/Helpers/Api.js";
 import WifiClientCount from "components/Dashboard/HostapdWidgets.js"
 
 // reactstrap components
@@ -39,44 +39,32 @@ import {
 } from "reactstrap";
 function Home() {
 
+  const [ipInfo, setipInfo] = useState([]);
+
   function hostapdcount() {
     hostapdAllStations(function(data) {
-      console.log(data)
     })
 
   }
+
+
+  ipAddr().then((data) => {
+    let r = []
+    for (let entry of data) {
+      for (let address of entry.addr_info) {
+        if (address.scope == "global") {
+          r.push( <tr> <td> <p className="mb-0">{entry.ifname}</p> </td> <td> {address.local} / {address.prefixlen} </td> </tr>)
+        }
+        break
+      }
+    }
+    setipInfo(r)
+  })
+
   return (
     <>
       <div className="content">
         <Row>
-          <Col lg="4" md="6" sm="6">
-            <Card className="card-stats">
-              <CardBody>
-                <Row>
-                  <Col md="4" xs="5">
-                    <div className="icon-big text-center icon-warning">
-                      <i className="nc-icon nc-globe text-warning" />
-                    </div>
-                  </Col>
-                  <Col md="8" xs="7">
-                    <div className="numbers">
-                      <p className="card-category">Interfaces</p>
-                      <CardTitle tag="p">LAN IP TBD</CardTitle>
-                      <CardTitle tag="p">WAN IP TBD</CardTitle>
-                      <p />
-                    </div>
-                  </Col>
-                </Row>
-              </CardBody>
-              <CardFooter>
-                <hr />
-                <div className="stats" onClick={hostapdcount}>
-                  <i className="fa fa-refresh" />
-                  Update Now
-                </div>
-              </CardFooter>
-            </Card>
-          </Col>
           <Col lg="4" md="6" sm="6">
             <Card className="card-stats">
               <CardBody>
@@ -102,6 +90,40 @@ function Home() {
                   Online
                 </div>
               </CardFooter>
+            </Card>
+          </Col>
+        </Row>
+        <Row>
+          <Col lg="8" md="6" sm="6">
+            <Card className="card-stats">
+              <CardBody>
+                <Row>
+                  <Col md="2" xs="5">
+                    <div className="icon-big text-center icon-warning">
+                      <i className="nc-icon nc-globe text-warning" />
+                    </div>
+                  </Col>
+                  <Col md="8" xs="7">
+                    <p className="card-category">Interfaces</p>
+                    <CardTitle tag="h4"></CardTitle>
+                    <CardBody>
+                      <Table responsive>
+                        <thead className="text-primary">
+                          <tr>
+                            <th>Interface</th>
+                            <th>IP Address</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ipInfo}
+                        </tbody>
+                      </Table>
+
+                    </CardBody>
+                    <p />
+                  </Col>
+                </Row>
+              </CardBody>
             </Card>
           </Col>
         </Row>

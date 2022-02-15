@@ -271,7 +271,7 @@ export function getTrafficHistory() {
 }
 
 export function ipAddr() {
-  return getAPI("/ip/addr")
+  return getAPIJson("/ip/addr")
 }
 
 export function ConnectWebsocket(username, password) {
