@@ -54,7 +54,7 @@ function Home() {
       for (let entry of data) {
         for (let address of entry.addr_info) {
           if (address.scope == "global") {
-            r.push( <tr> <td> <p className="mb-0">{entry.ifname}</p> </td> <td> {address.local} / {address.prefixlen} </td> </tr>)
+            r.push( <tr> <td> <p className="mb-0">{entry.ifname}</p> </td> <td> {address.local}/{address.prefixlen} </td> </tr>)
           }
           break
         }
