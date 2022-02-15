@@ -150,10 +150,6 @@ table inet filter {
 table inet nat {
   chain PREROUTING {
     type nat hook prerouting priority -100; policy accept;
-
-    # Reroute external DNS to our own server
-    udp dport 53 counter dnat ip to $DNSIP:53
-    tcp dport 53 counter dnat ip to $DNSIP:53
   }
   chain INPUT {
     type nat hook input priority 100; policy accept;

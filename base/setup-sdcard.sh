@@ -1,7 +1,7 @@
 #!/bin/bash
 apt-get update
 apt-get -y upgrade
-apt-get -y install docker.io docker-compose nftables
+apt-get -y install docker.io docker-compose nftables linux-modules-extra-raspi
 
 touch /etc/cloud/cloud-init.disabled
 
@@ -21,7 +21,7 @@ echo "nameserver 1.1.1.1" > /etc/resolv.conf
 # constrain journal size
 echo -e "[Journal]\n\nSystemMaxUse=50m\nSystemMaxFileSize=10M" > /etc/systemd/journald.conf 
 # mount logs as tmpfs
-echo -e "tmpfs\t/tmp\ttmpfs\tdefaults,noatime,nosuid,size=100m\t0\t0\ntmpfs\t/var/tmp\ttmpfs\tdefaults,noatime,nosuid,size=100m\t0\t0\ntmpfs\t/var/log\ttmpfs\tdefaults,noatime,nosuid,mode=0755,size=100m\t0\t0\ntmpfs\t/run\ttmpfs\tdefaults,noatime,nosuid,mode=0755,size=10m\t0\t0\ntmpfs\t/var/run\ttmpfs\tdefaults,noatime,nosuid,mode=0755,size=10m\t0\t0\n" >> /etc/fstab
+echo -e "tmpfs\t/tmp\ttmpfs\tdefaults,noatime,nosuid,size=100m\t0\t0\ntmpfs\t/var/tmp\ttmpfs\tdefaults,noatime,nosuid,size=512m\t0\t0\ntmpfs\t/var/log\ttmpfs\tdefaults,noatime,nosuid,mode=0755,size=100m\t0\t0\ntmpfs\t/run\ttmpfs\tdefaults,noatime,nosuid,mode=0755,size=10m\t0\t0\ntmpfs\t/var/run\ttmpfs\tdefaults,noatime,nosuid,mode=0755,size=10m\t0\t0\n" >> /etc/fstab
 
 # disable dhclient on the WANIF, since we will run our own dhcp
 echo network: {config: disabled} > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg

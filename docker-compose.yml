@@ -88,6 +88,7 @@ services:
       - ./configs/base/:/configs/base/
       - ./configs/ppp/:/etc/ppp/
   watchdog:
+    entrypoint: ["/bin/true"]
     container_name: superwatchdog
     build: watchdog
     network_mode: host
