@@ -14,7 +14,7 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 */
-import React, {useState} from "react";
+import React, {useState, useEffect} from "react";
 // react plugin used to create charts
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 import { hostapdAllStations, ipAddr } from "components/Helpers/Api.js";
@@ -37,6 +37,7 @@ import {
   Col,
   UncontrolledTooltip,
 } from "reactstrap";
+
 function Home() {
 
   const [ipInfo, setipInfo] = useState([]);
@@ -47,19 +48,21 @@ function Home() {
 
   }
 
-
-  ipAddr().then((data) => {
-    let r = []
-    for (let entry of data) {
-      for (let address of entry.addr_info) {
-        if (address.scope == "global") {
-          r.push( <tr> <td> <p className="mb-0">{entry.ifname}</p> </td> <td> {address.local} / {address.prefixlen} </td> </tr>)
+  useEffect( () => {
+    ipAddr().then((data) => {
+      let r = []
+      for (let entry of data) {
+        for (let address of entry.addr_info) {
+          if (address.scope == "global") {
+            r.push( <tr> <td> <p className="mb-0">{entry.ifname}</p> </td> <td> {address.local} / {address.prefixlen} </td> </tr>)
+          }
+          break
         }
-        break
       }
-    }
-    setipInfo(r)
-  })
+      setipInfo(r)
+    })
+  }, [])
+
 
   return (
     <>
