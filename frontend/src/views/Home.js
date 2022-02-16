@@ -54,7 +54,8 @@ function Home() {
       for (let entry of data) {
         for (let address of entry.addr_info) {
           if (address.scope == "global") {
-            r.push( <tr> <td> <p className="mb-0">{entry.ifname}</p> </td> <td> {address.local}/{address.prefixlen} </td> </tr>)
+            const generatedID = Math.random().toString(36).substr(2, 9);
+            r.push( <tr key={generatedID}><td>{entry.ifname}</td><td> {address.local}/{address.prefixlen} </td></tr>)
           }
           break
         }

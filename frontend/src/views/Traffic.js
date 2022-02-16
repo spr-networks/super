@@ -34,11 +34,11 @@ export default class Traffic extends Component {
 
     async processTrafficHistory(target, scale) {
       const devices = await getDevices().catch(error => {
-        this.context.reportError("API Failure get traffic: " + error.message)
+        this.context.reportError("API Failure get " + target + "traffic: " + error.message)
       })
 
       const arp = await getArp().catch(error => {
-        this.context.reportError("API Failure get traffic: " + error.message)
+        this.context.reportError("API Failure get arp information: " + error.message)
       })
 
 
@@ -56,6 +56,10 @@ export default class Traffic extends Component {
 
 
       let processData = (data_in, data_out)  => {
+
+        if (!data_in || !data_out) {
+          return
+        }
 
         let data = {
           labels: [
@@ -194,10 +198,10 @@ export default class Traffic extends Component {
       } else {
         //data for all time traffic
         const traffic_in = await getTraffic("incoming_traffic_"+target).catch(error => {
-          this.context.reportError("API Failure get traffic: " + error.message)
+          this.context.reportError("API Failure get " + target + " traffic: " + error.message)
         })
         const traffic_out = await getTraffic("outgoing_traffic_"+target).catch(error => {
-          this.context.reportError("API Failure get traffic: " + error.message)
+          this.context.reportError("API Failure get " + target + " traffic: " + error.message)
         })
         return processData(traffic_in, traffic_out)
       }
@@ -330,8 +334,8 @@ export default class Traffic extends Component {
               <Card>
                 <CardHeader>
                   <CardTitle tag="h4">Device WAN Traffic ⸺ {this.state.wan_scale} ⸺
-                    IN: {parseFloat(this.state.wan.totalIn/1024/1024/1024).toFixed(2) } GB
-                    OUT: {parseFloat(this.state.wan.totalOut/1024/1024/1024).toFixed(2) } GB
+                    IN: {parseFloat(this.state.wan ? this.state.wan.totalIn/1024/1024/1024 : 0).toFixed(2) } GB
+                    OUT: {parseFloat(this.state.wan ? this.state.wan.totalOut/1024/1024/1024 : 0).toFixed(2) } GB
                   </CardTitle>
                 </CardHeader>
                 <CardBody>
@@ -366,8 +370,8 @@ export default class Traffic extends Component {
               <Card>
                 <CardHeader>
                   <CardTitle tag="h4">Device LAN Traffic ⸺ {this.state.lan_scale} ⸺
-                    IN: {parseFloat(this.state.lan.totalIn/1024/1024/1024).toFixed(2) } GB
-                    OUT: {parseFloat(this.state.lan.totalOut/1024/1024/1024).toFixed(2) } GB
+                    IN: {parseFloat(this.state.lan ? this.state.lan.totalIn/1024/1024/1024 : 0).toFixed(2) } GB
+                    OUT: {parseFloat(this.state.lan ? this.state.lan.totalOut/1024/1024/1024 : 0).toFixed(2) } GB
                   </CardTitle>
                 </CardHeader>
                 <CardBody>

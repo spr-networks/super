@@ -24,6 +24,7 @@ import Footer from "components/Footer/Footer.js";
 import Sidebar from "components/Sidebar/Sidebar.js";
 //import FixedPlugin from "components/FixedPlugin/FixedPlugin.js";
 import NotificationAlert from "react-notification-alert";
+import { ConnectWebsocket } from "components/Helpers/Api.js";
 
 import routes from "routes.js";
 
@@ -31,6 +32,7 @@ var ps;
 
 const errorState = {
   reportError:  () => {},
+  reportSuccess:  () => {},
 };
 
 export const APIErrorContext = React.createContext(errorState);
@@ -42,6 +44,47 @@ function Admin(props) {
   const [sidebarMini, setSidebarMini] = React.useState(false);
   const mainPanel = React.useRef();
   const notificationAlert = React.useRef();
+  const [websock, setwebsock] = React.useState(null);
+
+
+
+  errorState.reportError = (message) => {
+    var options = {};
+    options = {
+      place: "tc",
+      message: (
+        <div>
+          <div>
+            {message}
+          </div>
+        </div>
+      ),
+      type: "danger",
+      icon: "now-ui-icons ui-1_bell-53",
+      autoDismiss: 7,
+    };
+
+    notificationAlert.current.notificationAlert(options);
+  }
+
+  errorState.reportSuccess = (message) => {
+    var options = {};
+    options = {
+      place: "tc",
+      message: (
+        <div>
+          <div>
+            {message}
+          </div>
+        </div>
+      ),
+      type: "success",
+      icon: "now-ui-icons ui-1_bell-53",
+      autoDismiss: 7,
+    };
+
+    notificationAlert.current.notificationAlert(options);
+  }
 
   React.useEffect(() => {
     if (navigator.platform.indexOf("Win") > -1) {
@@ -57,11 +100,43 @@ function Admin(props) {
       }
     };
   });
+
   React.useEffect(() => {
     document.documentElement.scrollTop = 0;
     document.scrollingElement.scrollTop = 0;
     mainPanel.current.scrollTop = 0;
   }, [location]);
+
+  React.useEffect(() => {
+    ConnectWebsocket((event) => {
+      if (event.data == "success") {
+        return
+      } else if (event.data == "Authentication failure") {
+        errorState.reportError("Websocket failed to authenticate")
+        return
+      }
+
+      let data = JSON.parse(event.data)
+      let innerData = {}
+      if (data.Data) {
+        innerData = JSON.parse(data.Data)
+      }
+      // Notify WiFi Authentication state
+      if (data["Type"] == "PSKAuthSuccess") {
+        errorState.reportSuccess("Authentication success for MAC " + innerData["MAC"])
+      } else if (data["Type"] == "PSKAuthFailure") {
+        let reasonString = ""
+        if (innerData.Reason == "noentry") {
+          reasonString = "Unknown device"
+        } else if (innerData.Reason == "mismatch") {
+          reasonString = "Wrong password"
+        }
+        errorState.reportError("Authentication failure for MAC " + innerData["MAC"] + ": " + reasonString)
+      }
+    })
+
+  }, []);
+
   const getRoutes = (routes) => {
     return routes.map((prop, key) => {
       if (prop.collapse) {
@@ -97,24 +172,7 @@ function Admin(props) {
 
 
 
-  errorState.reportError = (message) => {
-    var options = {};
-    options = {
-      place: "tc",
-      message: (
-        <div>
-          <div>
-            {message}
-          </div>
-        </div>
-      ),
-      type: "danger",
-      icon: "now-ui-icons ui-1_bell-53",
-      autoDismiss: 7,
-    };
 
-    notificationAlert.current.notificationAlert(options);
-  }
 
 
   return (

@@ -274,19 +274,23 @@ export function ipAddr() {
   return getAPIJson("/ip/addr")
 }
 
-export function ConnectWebsocket(username, password) {
+export function ConnectWebsocket(messageCallback) {
+
+  let userData  = JSON.parse(localStorage.getItem('user'));
+
   ws = new WebSocket("ws://" + API_HOST + "/ws")
 
   ws.addEventListener('open', (event) => {
-    ws.send(username + ":" + password)
+    ws.send(userData["username"] + ":" + userData["password"])
   })
+
   ws.addEventListener('message', (event) => {
-    console.log("WS> ")
-    console.log(event)
+    messageCallback(event)
   })
+
+  return ws
 }
 
 export function saveLogin(username, password) {
   localStorage.setItem('user', JSON.stringify({ "authdata": btoa(username+":"+password), "username": username, "password": password }))
-  ConnectWebsocket(username, password)
 }
