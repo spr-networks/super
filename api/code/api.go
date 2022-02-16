@@ -1107,7 +1107,7 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WSNotifyValue("ReportPSKAuthFailure", pskf)
+	WSNotifyValue("PSKAuthFailure", pskf)
 
 	if pskf.MAC == "" || (pskf.Type != "sae" && pskf.Type != "wpa") || (pskf.Reason != "noentry" && pskf.Reason != "mismatch") {
 		http.Error(w, "malformed data", 400)
