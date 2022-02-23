@@ -45,8 +45,20 @@ table ip accounting {
         size 65535
       }
 
+      set all_ip {
+        type ifname . ipv4_addr . ipv4_addr
+        counter
+        flags dynamic
+        timeout 1h
+        size 4096
+      }
+
       chain FORWARD {
         type filter hook forward priority -150 ; policy accept;
+
+        # Log all input ip pairs (input interface, src ip, dst ip)
+        add @all_ip { iifname . ip saddr . ip daddr }
+        iifname . ip saddr . ip daddr @all_ip
 
         ip daddr @local_lan jump count_in
         ip saddr @local_lan jump count_out

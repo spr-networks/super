@@ -1,12 +1,10 @@
 import React, { useContext, Component } from 'react'
 // react plugin used to create charts
-import { Line, Bar, Doughnut } from "react-chartjs-2";
+import { Bar } from "react-chartjs-2";
 import { getTraffic, getTrafficHistory, getArp, getDevices } from "components/Helpers/Api.js";
 import {APIErrorContext} from 'layouts/Admin.js';
 import { UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem } from 'reactstrap';
 
-
-// reactstrap components
 import {
   Badge,
   Button,
@@ -26,7 +24,10 @@ import {
 
 export default class Traffic extends Component {
 
-    state = {lan: {totalIn: 0, totalOut: 0}, wan : {totalIn: 0, totalOut: 0}, wan_scale: "All Time", lan_scale: "All Time"};
+    state = {lan: {totalIn: 0, totalOut: 0},
+            wan : {totalIn: 0, totalOut: 0},
+            wan_scale: "All Time",
+            lan_scale: "All Time"};
 
     static contextType = APIErrorContext;
     macToName = {}
@@ -136,8 +137,12 @@ export default class Traffic extends Component {
         return data
       }
 
+
+
       let do_time_series = scale != "All Time"
+
       if (do_time_series) {
+
         let traffic_series = await getTrafficHistory().catch(error => {
           this.context.reportError("API Failure get traffic history: " + error.message)
         })
@@ -198,19 +203,19 @@ export default class Traffic extends Component {
       } else {
         //data for all time traffic
         const traffic_in = await getTraffic("incoming_traffic_"+target).catch(error => {
-          this.context.reportError("API Failure get " + target + " traffic: " + error.message)
+          this.context.reportError("API Failure get traffic: " + error.message)
         })
         const traffic_out = await getTraffic("outgoing_traffic_"+target).catch(error => {
           this.context.reportError("API Failure get " + target + " traffic: " + error.message)
         })
         return processData(traffic_in, traffic_out)
       }
-
     }
 
     async componentDidMount() {
       let lan_data = await this.processTrafficHistory("lan", this.state.lan_scale)
       let wan_data = await this.processTrafficHistory("wan", this.state.wan_scale)
+
       this.setState({lan: lan_data, wan: wan_data})
     }
 
@@ -297,15 +302,14 @@ export default class Traffic extends Component {
 
 
     render() {
-
       let handleScaleMenu = (e) => {
         let choice = e.target.parentNode.getAttribute("value")
         let scale = e.target.value
 
+        this.state[choice+"_scale"] = scale
         this.processTrafficHistory(choice, scale).then( (result) => {
           let o = {}
-          o[choice + "_scale"] = scale
-          o[choice] = result
+          o[choice]= result
           this.setState(o)
         })
       }
@@ -383,6 +387,7 @@ export default class Traffic extends Component {
               </Card>
             </Col>
           </Row>
+
 
         </div>
       );

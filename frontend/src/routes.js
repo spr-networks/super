@@ -6,6 +6,7 @@ import Home from "views/Home.js";
 import Login from "views/pages/Login.js";
 import SignalStrength from "views/SignalStrength.js";
 import Traffic from "views/Traffic.js";
+import TrafficTimeSeries from "views/TrafficTimeSeries.js";
 import WirelessConfiguration from "views/WirelessConfiguration"
 import Zones from "views/Zones/Zones.js";
 
@@ -91,15 +92,22 @@ const routes = [
     views: [
       {
         path: "/traffic",
-        name: "IP Traffic",
-        mini: "IP",
+        name: "Bandwidth Summary",
+        mini: "SU",
         component: Traffic,
+        layout: "/admin",
+      },
+      {
+        path: "/timeseries",
+        name: "Bandwidth Timeseries",
+        mini: "TS",
+        component: TrafficTimeSeries,
         layout: "/admin",
       },
       {
         path: "/signal/strength",
         name: "Signal Strength",
-        mini: "S",
+        mini: "SS",
         component: SignalStrength,
         layout: "/admin",
       }

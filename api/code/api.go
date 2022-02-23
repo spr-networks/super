@@ -300,9 +300,9 @@ func collectBandwithStats() {
 
 	readings := make(map[string]*NetCount)
 
+	lan_in := getDeviceTrafficSet("incoming_traffic_lan")
 	lan_out := getDeviceTrafficSet("outgoing_traffic_lan")
 	wan_out := getDeviceTrafficSet("outgoing_traffic_wan")
-	lan_in := getDeviceTrafficSet("incoming_traffic_lan")
 	wan_in := getDeviceTrafficSet("incoming_traffic_wan")
 
 	for _, entry := range lan_out {
