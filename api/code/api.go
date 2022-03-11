@@ -1,6 +1,3 @@
-/*
-	proof of concept for Network API Service
-*/
 package main
 
 import (
@@ -13,6 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -39,8 +37,15 @@ type InfluxConfig struct {
 	Token string
 }
 
+type PluginConfig struct {
+	Name string
+	URI string
+	UnixPath string
+}
+
 type APIConfig struct {
 	InfluxDB InfluxConfig
+	Plugins	[]PluginConfig
 }
 
 var IFDB influxdb2.Client = nil
@@ -948,9 +953,6 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	defer DHCPmtx.Unlock()
 
 	//Handle networking tasks upon a DHCP
-
-	http.Error(w, "Not implemented", 400)
-
 	dhcp := DHCPUpdate{}
 	err := json.NewDecoder(r.Body).Decode(&dhcp)
 	if err != nil {
@@ -1504,6 +1506,31 @@ func logRequest(handler http.Handler) http.Handler {
 }
 
 
+func PluginProxy(config PluginConfig) (*httputil.ReverseProxy, error) {
+	return &httputil.ReverseProxy{
+				Director: func(req *http.Request) {
+					req.URL.Scheme = "http"
+					req.URL.Host = config.Name
+				},
+				Transport: &http.Transport {
+							Dial: func(network, addr string) (net.Conn, error) {
+								return net.Dial("unix", config.UnixPath)
+							},
+				},
+	}, nil
+}
+
+func ProxyRequestHandler(proxy *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
+  return func(w http.ResponseWriter, r *http.Request) {
+		rest := mux.Vars(r)["rest"]
+		if rest != "" {
+			r.URL.Path = "/" + rest
+		}
+    proxy.ServeHTTP(w, r)
+  }
+}
+
+
 func main() {
 
 	loadConfig()
@@ -1584,6 +1611,17 @@ func main() {
 	unixDhcpdListener, err := net.Listen("unix", UNIX_DHCPD_LISTENER)
 	if err != nil {
 		panic(err)
+	}
+
+	//Set up Plugin Proxies
+	for _, entry := range config.Plugins {
+		fmt.Println(entry);
+		proxy, err := PluginProxy(entry)
+		if err != nil {
+			panic(err)
+		}
+		external_router_authenticated.HandleFunc("/plugins/" + entry.URI + "/", ProxyRequestHandler(proxy) );
+		external_router_authenticated.HandleFunc("/plugins/" + entry.URI + "/" + "{rest:.*}", ProxyRequestHandler(proxy) );
 	}
 
 	wifidServer := http.Server{Handler: logRequest(unix_wifid_router)}
