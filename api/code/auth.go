@@ -21,7 +21,7 @@ import (
 )
 
 func loadOTP() int {
-	data, err := os.ReadFile("/state/api/webauthn_otp")
+	data, err := os.ReadFile(TEST_PREFIX + "/state/api/webauthn_otp")
 	if err == nil {
 		result, err := strconv.Atoi(string(data))
 		if err == nil {
@@ -32,7 +32,7 @@ func loadOTP() int {
 }
 
 func saveOTP(data int) {
-	os.WriteFile("/state/api/webauthn_otp", []byte(strconv.Itoa(data)), 0661)
+	os.WriteFile(TEST_PREFIX + "/state/api/webauthn_otp", []byte(strconv.Itoa(data)), 0661)
 }
 
 type User struct {
@@ -300,7 +300,7 @@ func (auth *authnconfig) authenticateToken(token string) bool {
 	if !exists {
 		//check api tokens
 		tokens := []string{}
-		data, err := os.ReadFile("/state/api/auth_tokens")
+		data, err := os.ReadFile(TEST_PREFIX + "/state/api/auth_tokens")
 		if err == nil {
 			json.Unmarshal(data, &tokens)
 		}
@@ -319,7 +319,7 @@ func (auth *authnconfig) authenticateToken(token string) bool {
 
 func (auth *authnconfig) authenticateUser(username string, password string) bool {
 	users := map[string]string{}
-	data, err := os.ReadFile("/state/api/auth_users")
+	data, err := os.ReadFile(TEST_PREFIX + "/state/api/auth_users")
 	if err == nil {
 		json.Unmarshal(data, &users)
 	}
