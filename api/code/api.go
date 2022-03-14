@@ -1191,6 +1191,10 @@ func PluginProxy(config PluginConfig) (*httputil.ReverseProxy, error) {
 				Director: func(req *http.Request) {
 					req.URL.Scheme = "http"
 					req.URL.Host = config.Name
+
+					//Empty headers from the request
+					//SECURITY benefit: API extensions do not receive credentials
+					req.Header = http.Header{}
 				},
 				Transport: &http.Transport {
 							Dial: func(network, addr string) (net.Conn, error) {
