@@ -1,7 +1,11 @@
 #!/bin/bash
 apt-get update
 apt-get -y upgrade
-apt-get -y install docker.io docker-compose nftables #linux-modules-extra-raspi
+apt-get -y install docker.io docker-compose nftables 
+
+if grep --quiet Raspberry /proc/cpuinfo; then
+  apt-get -y install linux-modules-extra-raspi
+fi
 
 touch /etc/cloud/cloud-init.disabled
 
