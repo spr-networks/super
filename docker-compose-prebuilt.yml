@@ -87,21 +87,21 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/ppp/:/etc/ppp/
-  watchdog:
-    entrypoint: ["/bin/true"]
-    container_name: superwatchdog
-    image: ghcr.io/spr-networks/super_watchdog
-    network_mode: host
-    depends_on:
-      - "base"
-      - "wifid"
-    logging:
-      driver: journald
-    volumes:
-      - ./configs/base/:/configs/base/
-      - ./configs/watchdog/:/configs/watchdog/
-    devices:
-      - "/dev/watchdog:/dev/watchdog"
+#  watchdog:
+#    entrypoint: ["/bin/true"]
+#    container_name: superwatchdog
+#    image: ghcr.io/spr-networks/super_watchdog
+#    network_mode: host
+#    depends_on:
+#      - "base"
+#      - "wifid"
+#    logging:
+#      driver: journald
+#    volumes:
+#      - ./configs/base/:/configs/base/
+#      - ./configs/watchdog/:/configs/watchdog/
+#    devices:
+#      - "/dev/watchdog:/dev/watchdog"
   wireguard:
     container_name: superwireguard
     image: ghcr.io/spr-networks/super_wireguard
