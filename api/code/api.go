@@ -298,8 +298,6 @@ func addZoneMember(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// hmm bu gsomewhere? why exit 1
-	//make new zone with client
 	zones = append(zones, ClientZone{Name: name, Clients: []Client{client}})
 	saveZones(zones)
 

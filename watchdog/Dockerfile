@@ -1,4 +1,4 @@
-FROM --platform=linux/arm64 ubuntu:21.04
+FROM ubuntu:21.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y watchdog netbase
