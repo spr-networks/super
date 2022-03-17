@@ -27,15 +27,17 @@ jobs:
       -
         name: Build and push frontend
         run: |
+          export DOCKER_DEFAULT_PLATFORM=linux/arm64
           docker buildx build frontend -t frontend --output=type=docker
           mkdir frontend/output
           docker cp $(docker create --rm frontend):/app/build frontend/output/build/
-          docker buildx build --platform linux/arm64 -f frontend/Dockerfile-helper frontend -t ghcr.io/spr-networks/super_frontend:latest --push 
+          docker buildx build -f frontend/Dockerfile-helper frontend -t ghcr.io/spr-networks/super_frontend:latest --push 
       -
         name: Build arm64 test containers
         run: |
           cp -R base/template_configs configs
           cp base/template_configs/wifi/psks.json configs/wifi/
+          export DOCKER_DEFAULT_PLATFORM=linux/arm64          
           ./build_docker_compose.sh
       -
         name: Push images
