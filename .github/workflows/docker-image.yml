@@ -27,10 +27,10 @@ jobs:
       -
         name: Build and push frontend
         run: |
-          export DOCKER_DEFAULT_PLATFORM=linux/arm64
           docker buildx build frontend -t frontend --output=type=docker
           mkdir frontend/output
           docker cp $(docker create --rm frontend):/app/build frontend/output/build/
+          export DOCKER_DEFAULT_PLATFORM=linux/arm64          
           docker buildx build -f frontend/Dockerfile-helper frontend -t ghcr.io/spr-networks/super_frontend:latest --push 
       -
         name: Build arm64 test containers
