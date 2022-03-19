@@ -1,5 +1,6 @@
 import { Component } from "react";
-import { zoneDescriptions, delPSK, delZone, addZone } from "components/Helpers/Api.js";
+import { zoneDescriptions, delPSK, delZone, addZone, updateDevice } from "components/Helpers/Api.js";
+import {APIErrorContext} from 'layouts/Admin.js';
 import {
   Button,
   ButtonGroup,
@@ -7,6 +8,7 @@ import {
   CardHeader,
   CardBody,
   CardTitle,
+  Input,
   Label,
   Table,
   Row,
@@ -20,6 +22,8 @@ import TagsInput from 'react-tagsinput';
 export default class Device extends Component {
 
   state = {
+    editing: false,
+    comment: '',
     tags: []
   }
 
@@ -47,36 +51,28 @@ export default class Device extends Component {
     ))
 
     this.setState({tags: device.Zones})
-    this.handleTags = this.handleTags.bind(this);
+    this.setState({comment: device.Comment})
   }
 
-
-  handleTags(tags) {
-      tags = [...new Set(tags)]
-      let device = this.props.device;
-      for (let tag of tags) {
-        if (device.Zones.indexOf(tag) == -1) {
-          //add new tag
-          addZone(tag, device.Mac, device.Comment)
-        }
-      }
-
-      for (let tag of device.Zones) {
-        if (tags.indexOf(tag) == -1) {
-          console.log("found tag to remove")
-          //remove this tag
-          delZone(tag, device.Mac, device.Comment)
-        }
-      }
-
-      this.props.notifyChange()
-
-      this.setState({tags: tags});
+  handleTags = (tags) => {
+    tags = [...new Set(tags)]
+    this.setState({editing: true})
+    this.setState({tags})
   }
+
+  handleComment = (e) => {
+    //const name = e.target.name
+    const comment = e.target.value
+    this.setState({comment})
+    let editing = (comment != this.props.device.Comment)
+    this.setState({editing})
+  }
+
+  static contextType = APIErrorContext;
 
   render() {
-    const device = this.props.device;
-    const generatedID = Math.random().toString(36).substr(2, 9);
+    const device = this.props.device
+    const generatedID = Math.random().toString(36).substr(2, 9)
 
     let wifi_type = "N/A"
     if (device.PskType == "sae") {
@@ -84,7 +80,6 @@ export default class Device extends Component {
     } else if (device.PskType == "wpa2") {
       wifi_type = "WPA2"
     }
-
 
     const deleteDevice = (e) => {
       if (wifi_type !== "N/A") {
@@ -103,13 +98,47 @@ export default class Device extends Component {
       this.props.notifyChange()
     }
 
-    const editDevice = (e) => {
+    const saveDevice = async () => {
+      let tags = this.state.tags
+      let tagsAdded = tags.filter(tag => !device.Zones.includes(tag))
+      let tagsRemoved = device.Zones.filter(tag => !tags.includes(tag))
+
+      // update tags (if we add POST /device/mac with Zones we can save them there)
+      for (let tag of tagsAdded) {
+        await addZone(tag, device.Mac, device.Comment)
+      }
+
+      for (let tag of tagsRemoved) {
+        await delZone(tag, device.Mac, device.Comment)
+      }
+
+      // update device
+      let _device = {}
+      _device.Mac = device.Mac
+      _device.PskType = device.PskType
+      _device.Comment = this.state.comment
+      _device.Zones = this.state.tags
+
+      try {
+        await updateDevice(_device)
+      } catch(error) {
+        this.context.reportError("[API] updateDevice error: " + error.message)
+      }
+
+      this.props.notifyChange() // will set editing false
+    }
+
+    const handleKeyPress = (e) => {
+      if (e.charCode == 13) {
+        this.setState({editing: false})
+        saveDevice()
+      }
     }
 
     return (
       <tr>
-        <td className="text-center"> {device.Mac } </td>
-        <td> {device.Comment } </td>
+        <td className="text-center"> {device.Mac} </td>
+        <td> <Input type="text" placeholder="Device name" name="comment" className={this.state.editing ? "border-info" : "border-light" } value={this.state.comment} onChange={this.handleComment} onKeyPress={handleKeyPress} /> </td>
         <td> { wifi_type } </td>
         <td>
           <TagsInput
@@ -121,21 +150,21 @@ export default class Device extends Component {
         </td>
         <td className="text-right">
           <Button
-            className="btn-icon"
+            className={"btn " + (this.state.editing ? "d-inline" : "d-none")}
             color="success"
             id={"tooltip" + generatedID}
             size="sm"
             type="button"
-            onClick={editDevice}
+            onClick={saveDevice}
           >
-            <i className="fa fa-edit" />
+            <i className="fa fa-edit" /> Save 
           </Button>{" "}
-          <UncontrolledTooltip
+          {/*<UncontrolledTooltip
             delay={0}
             target={"tooltip" + (generatedID)}
           >
            Edit
-           </UncontrolledTooltip>
+           </UncontrolledTooltip>*/}
           <Button
             className="btn-icon"
             color="danger"

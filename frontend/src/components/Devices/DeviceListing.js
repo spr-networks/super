@@ -78,7 +78,7 @@ export default class DeviceListing extends Component {
                   <thead className="text-primary">
                     <tr>
                       <th className="text-center">MAC</th>
-                      <th>Device Name</th>
+                      <th width="20%">Device Name</th>
                       <th>WiFi Auth</th>
                       <th>Zones</th>
                       <th className="text-right">Actions</th>
