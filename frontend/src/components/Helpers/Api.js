@@ -58,24 +58,29 @@ export function testLogin(username, password, callback) {
     //console.error('Error:', error);
     return callback(false)
   });
-
 }
 
-function getAPIJson(endpoint) {
+function reqAPIJson(method, url, data) {
+  let opts = {
+    method,
+    headers: {
+      'Authorization': authHeader(),
+      'X-Requested-With': 'react',
+      'Content-Type': 'application/json',
+    },
+  }
+  
+  if (data && method != 'GET') {
+    opts.body = JSON.stringify(data)
+  }
+
   return new Promise((resolve, reject) =>  {
-    fetch(API+endpoint, {
-      method: 'GET',
-      headers: {
-        'Authorization': authHeader(),
-        'X-Requested-With': 'react',
-        'Content-Type': 'application/json',
-      }
-    })
-    .then(function(response) {
-      if(!response.ok)
-      {
+    fetch(API + url, opts)
+    .then(response => {
+      if (!response.ok) {
         throw new Error(response.status)
       }
+
       return response.json()
     })
     .then(data => {
@@ -84,6 +89,10 @@ function getAPIJson(endpoint) {
       reject(reason)
     })
   })
+}
+
+function getAPIJson(endpoint) {
+  return reqAPIJson('GET', endpoint)
 }
 
 function getAPI(endpoint) {
@@ -97,10 +106,10 @@ function getAPI(endpoint) {
       }
     })
     .then(function(response) {
-      if(!response.ok)
-      {
+      if (!response.ok) {
         throw new Error(response.status)
       }
+
       return response.text()
     })
     .then(data => {
@@ -205,6 +214,15 @@ export function addZone(zone, mac, comment) {
 
 export function getDevices() {
   return getAPIJson("/devices")
+}
+
+export function updateDevice(mac, data) {
+  if (typeof mac == 'object') {
+    data = mac
+    mac = data.Mac
+  }
+
+  return reqAPIJson('POST', `/device/${mac}`, data)
 }
 
 export function getZones() {
