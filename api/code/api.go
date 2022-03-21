@@ -200,6 +200,41 @@ func getDevices(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(devices)
 }
 
+func updateDevice(w http.ResponseWriter, r *http.Request) {
+	Zonesmtx.Lock()
+	defer Zonesmtx.Unlock()
+
+	// = Mac
+	name := mux.Vars(r)["name"]
+	name = trimLower(name)
+
+	client := Client{}
+	err := json.NewDecoder(r.Body).Decode(&client)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	// TODO if we got new Zones - add user to them (client.Zones)
+	// this only updates Comment
+
+	zones := getZonesJson()
+	for z_idx, zone := range zones {
+		for c_idx, entry := range zone.Clients {
+			if equalMAC(entry.Mac, client.Mac) {
+				if entry.Comment != client.Comment {
+					zone.Clients[c_idx].Comment = client.Comment
+					zones[z_idx] = zone
+				}
+			}
+		}
+	}
+
+	saveZones(zones)
+
+	json.NewEncoder(w).Encode(true)
+}
+
 func pendingPSK(w http.ResponseWriter, r *http.Request) {
 	PSKmtx.Lock()
 	defer PSKmtx.Unlock()
@@ -324,7 +359,12 @@ func delZoneMember(w http.ResponseWriter, r *http.Request) {
 			for c_idx, entry := range zone.Clients {
 				if equalMAC(entry.Mac, client.Mac) {
 					zone.Clients = append(zone.Clients[:c_idx], zone.Clients[c_idx+1:]...)
-					zones[z_idx] = zone
+					// only keep zone if theres any Clients left
+					if len(zone.Clients) > 0 {
+						zones[z_idx] = zone
+					} else {
+						zones = append(zones[:z_idx], zones[z_idx+1:]...)
+					}
 					saveZones(zones)
 					refreshClientZones(client.Mac)
 					json.NewEncoder(w).Encode(true)
@@ -1262,6 +1302,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/zone/{name}", addZoneMember).Methods("PUT")
 	external_router_authenticated.HandleFunc("/zone/{name}", delZoneMember).Methods("DELETE")
 	external_router_authenticated.HandleFunc("/devices", getDevices).Methods("GET")
+	external_router_authenticated.HandleFunc("/device/{name}", updateDevice).Methods("POST")
 	external_router_authenticated.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 
 	//Assign a PSK
