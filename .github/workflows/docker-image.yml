@@ -30,7 +30,7 @@ jobs:
           docker buildx build frontend -t frontend --output=type=docker
           mkdir frontend/output
           docker cp $(docker create --rm frontend):/app/build frontend/output/build/
-          docker buildx build -f frontend/Dockerfile-helper frontend --platform linux/amd64,linud/arm64 -t ghcr.io/spr-networks/super_frontend:latest --push 
+          docker buildx build -f frontend/Dockerfile-helper frontend --platform linux/amd64,linux/arm64 -t ghcr.io/spr-networks/super_frontend:latest --push 
       -
         name: Build arm64 test containers
         run: |
