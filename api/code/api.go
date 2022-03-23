@@ -24,7 +24,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var TEST_PREFIX = "."
+var TEST_PREFIX = ""
 
 
 type InfluxConfig struct {
