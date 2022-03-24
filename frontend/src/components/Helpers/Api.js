@@ -3,12 +3,16 @@ let API_HOST = document.location.host;
 let ws;
 const NFT_VERSION = "0.9.7";
 
+
+const { REACT_APP_API } = process.env;
+
 try {
-  if (process && process.env.REACT_APP_API) {
-    API = process.env.REACT_APP_API
+  if (REACT_APP_API) {
+    API = REACT_APP_API
     API_HOST = API.split("//")[1]
   }
 } catch (e) {
+  alert(e)
 
 }
 

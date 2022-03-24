@@ -1,5 +1,7 @@
 // Scales for responsive SVG containers
-$ct-scales: ((1), (15/16), (8/9), (5/6), (4/5), (3/4), (2/3), (5/8), (1/1.618), (3/5), (9/16), (8/15), (1/2), (2/5), (3/8), (1/3), (1/4)) !default;
+@use "sass:math";
+
+$ct-scales: ((1), math.div(15, 16), math.div(8, 9), math.div(5, 6), (4*0.2), (3*0.25), math.div(2, 3), (5*0.125), math.div(1, 1.618), (3*0.2), math.div(9, 16), math.div(8, 15), (1*0.5), (2*0.2), (3*0.125), math.div(1, 3), (1*0.25)) !default;
 $ct-scales-names: (ct-square, ct-minor-second, ct-major-second, ct-minor-third, ct-major-third, ct-perfect-fourth, ct-perfect-fifth, ct-minor-sixth, ct-golden-section, ct-major-sixth, ct-minor-seventh, ct-major-seventh, ct-octave, ct-major-tenth, ct-major-eleventh, ct-major-twelfth, ct-double-octave) !default;
 
 // Class names to be used when generating CSS
@@ -24,7 +26,7 @@ $ct-class-start: ct-start !default;
 $ct-class-end: ct-end !default;
 
 // Container ratio
-$ct-container-ratio: (1/1.618) !default;
+$ct-container-ratio: math.div(1, 1.618) !default;
 
 // Text styles for labels
 $ct-text-color: rgba(0, 0, 0, 0.4) !default;

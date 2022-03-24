@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
-    "start": "react-scripts start",
+    "start": "GENERATE_SOURCEMAP=false react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
@@ -39,17 +39,16 @@
     "chroma-js": "^2.4.2",
     "classnames": "2.3.1",
     "moment": "^2.29.1",
-    "node-sass": "6.0.0",
     "perfect-scrollbar": "1.5.1",
     "prop-types": "15.7.2",
     "react": "17.0.2",
-    "react-bootstrap-sweetalert": "5.2.0",
+    "react-bootstrap-sweetalert": "^5.2.0",
     "react-bootstrap-wizard": "0.0.9",
     "react-chartjs-2": "3.0.3",
     "react-dom": "17.0.2",
     "react-notification-alert": "0.0.13",
     "react-router-dom": "5.2.0",
-    "react-scripts": "4.0.3",
+    "react-scripts": "5.0.0",
     "react-select": "4.3.1",
     "react-tagsinput": "3.19.0",
     "reactstrap": "8.9.0",
@@ -57,8 +56,9 @@
   },
   "resolutions": {
     "immer": "9.0.6",
-    "node-forge": "1.0.0",
-    "react-error-overlay": "6.0.9"
+    "node-forge": "1.3.0",
+    "glob-parent": "5.1.2",
+    "nth-check": "2.0.1"
   },
   "browserslist": [
     ">0.2%",
@@ -73,6 +73,7 @@
   },
   "devDependencies": {
     "gulp": "4.0.2",
-    "gulp-append-prepend": "1.0.9"
+    "gulp-append-prepend": "1.0.9",
+    "sass": "^1.49.9"
   }
 }
