@@ -258,7 +258,6 @@ export default class TrafficTimeSeries extends Component {
         });
 
         const tableBody = document.createElement('tbody');
-        console.log(tooltip.body)
         bodyLines.forEach((body, i) => {
           if (i != 0) {
           }

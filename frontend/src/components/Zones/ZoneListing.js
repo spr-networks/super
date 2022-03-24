@@ -40,15 +40,14 @@ export default class ZoneListing extends Component {
     const devices = this.props.devices;
 
     const zoneRows = []
-    if (zone.Members.length > 0) {
+    if (zone.Members && zone.Members.length > 0) {
       for (const v of zone.Members) {
-          console.log(v)
           const generatedID = Math.random().toString(36).substr(2, 9);
           //if the device was in the vmap, mark it as active
           v.ifname = "--"
           if (zone.vmap) {
             for (const entry of zone.vmap) {
-              if (entry.ifname && entry.ether_addr == v.Mac) {
+              if (entry.ifname && entry.ether_addr == v.MAC) {
                 v.ifname = entry.ifname
                 v.IP = entry.ipv4_addr || ((zone.ipMap && zone.ipMap[entry.ether_addr]) ? zone.ipMap[entry.ether_addr].IP : "--")
               }

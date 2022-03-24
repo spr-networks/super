@@ -136,7 +136,7 @@ export default class SignalStrength extends Component {
         let signals = []
         for (let mac in stations) {
           let station = stations[mac]
-          signals.push({Mac: mac, Signal: parseInt(station.signal), TX: parseInt(station.tx_rate_info), RX: parseInt(station.rx_rate_info)})
+          signals.push({MAC: mac, Signal: parseInt(station.signal), TX: parseInt(station.tx_rate_info), RX: parseInt(station.rx_rate_info)})
         }
         return processData(signals)
       }

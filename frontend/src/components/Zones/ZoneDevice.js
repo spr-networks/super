@@ -37,8 +37,6 @@ export default class ZoneDevice extends Component {
 
   render() {
     const device = this.props.device;
-    console.log("z device")
-    console.log(device)
 
     return (
         <tr>

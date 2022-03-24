@@ -975,6 +975,8 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 		newDevice := DeviceEntry{}
 		newDevice.MAC = dhcp.MAC
 		newDevice.RecentIP = dhcp.IP
+		newDevice.Zones = []string{}
+		newDevice.DeviceTags = []string{}
 		devices[newDevice.MAC] = newDevice
 	} else {
 		//update recent IP

@@ -53,7 +53,7 @@ export default class Dhcp extends Component {
 
         let ipMap = {}
         for (const e of arp) {
-          ipMap[e.Mac] = e
+          ipMap[e.MAC] = e
         }
 
 
@@ -61,17 +61,20 @@ export default class Dhcp extends Component {
           this.context.reportError("API Failure getDevices: " + error.message)
         })
 
+        console.log(devices)
+
         const generatedID = Math.random().toString(36).substr(2, 9);
-        let v = {Name: "Wireless DHCP Clients", Clients: []}
+        let v = {Name: "Wireless DHCP Clients", Members: []}
         v.vmap = vmap
         v.ipMap = ipMap
         for (const entry of vmap) {
-          let name = "--"
+          let name = "-nametbd-"
+          console.log(entry.ether_addr)
           let d = devices[entry.ether_addr]
           if (d) {
             name = d.Name
           }
-          v.Clients.push({"Name": name, "Mac": entry.ether_addr, "ifname": entry.ifname})
+          v.Members.push({"Name": name, "MAC": entry.ether_addr, "ifname": entry.ifname})
         }
         //divs.push( <Zone key={generatedID} zone={d[v]} notifyChange={notifyChange} /> )
         divs.push( <ZoneListing key={generatedID} zone={v} notifyChange={notifyChange} /> )

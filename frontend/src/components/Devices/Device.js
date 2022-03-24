@@ -42,6 +42,7 @@ export default class Device extends Component {
 
 
     let zones = []
+    console.log(device.Zones)
     device.Zones.forEach( (zone) => zones.push(
       <Button key={zone} color="default"> {zone} </Button>
     ))
