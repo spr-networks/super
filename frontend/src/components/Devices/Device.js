@@ -1,5 +1,5 @@
 import { Component } from "react";
-import { zoneDescriptions, deleteDevice, updateDeviceZones, updateDeviceName } from "components/Helpers/Api.js";
+import { zoneDescriptions, deleteDevice, updateDeviceZones, updateDeviceName, updateDeviceTags } from "components/Helpers/Api.js";
 import {APIErrorContext} from 'layouts/Admin.js';
 import {
   Button,
@@ -24,9 +24,9 @@ export default class Device extends Component {
   state = {
     editing: false,
     name: '',
-    zones: []
+    zones: [],
+    tags: []
   }
-
 
   async componentDidMount() {
 
@@ -35,23 +35,9 @@ export default class Device extends Component {
     }
 
     const device = this.props.device;
-    const generatedID = Math.random().toString(36).substr(2, 9);
 
-    let wifi_type = "N/A"
-    if (device.PskType == "sae") {
-      wifi_type = "WPA3"
-    } else if (device.PskType == "wpa2") {
-      wifi_type = "WPA2"
-    }
-
-    let zones = []
-    device.Zones.forEach( (zone) => zones.push(
-      <Button key={zone} color="default"> {zone} </Button>
-    ))
-
-    this.setState({zones: device.Zones, name: device.Name})
+    this.setState({zones: device.Zones, name: device.Name, tags: device.DeviceTags})
   }
-
 
   handleZones = (zones) => {
     zones = [...new Set(zones)]
@@ -62,6 +48,17 @@ export default class Device extends Component {
     }
 
     this.setState({zones})
+  }
+
+  handleTags = (tags) => {
+    tags = [...new Set(tags)]
+    try {
+      updateDeviceTags(this.props.device.MAC, tags)
+    } catch(error) {
+      this.context.reportError("[API] updateDevice error: " + error.message)
+    }
+
+    this.setState({tags})
   }
 
   handleName = (e) => {
@@ -78,13 +75,8 @@ export default class Device extends Component {
     const device = this.props.device
     const generatedID = Math.random().toString(36).substr(2, 9)
 
-    let wifi_type = "N/A"
-    if (device.PSKEntry.Type == "sae") {
-      wifi_type = "WPA3"
-    } else if (device.PSKEntry.Type == "wpa2") {
-      wifi_type = "WPA2"
-    }
-
+    let protocolAuth = {sae: 'WPA3', wpa2: 'WPA2'}
+    let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
 
     const removeDevice = (e) => {
       deleteDevice(device.MAC)
@@ -113,6 +105,7 @@ export default class Device extends Component {
     return (
       <tr>
         <td className="text-center"> {device.MAC} </td>
+        <td className="d-none d-md-table-cell"> { device.RecentIP } </td>
         <td>
           <Input type="text" placeholder="Device name" name="name"
             className={this.state.editing ? "border-info" : "border-light" }
@@ -126,6 +119,14 @@ export default class Device extends Component {
             inputProps={{placeholder:"Add zone"}}
             value={this.state.zones}
             onChange={this.handleZones}
+            tagProps={{className: 'react-tagsinput-tag' }}
+          />
+        </td>
+        <td>
+          <TagsInput
+            inputProps={{placeholder:"Add tag"}}
+            value={this.state.tags}
+            onChange={this.handleTags}
             tagProps={{className: 'react-tagsinput-tag' }}
           />
         </td>

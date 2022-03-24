@@ -222,7 +222,7 @@ export function updateDeviceZones(mac, zones) {
 }
 
 export function updateDeviceTags(mac, tags) {
-  return delsetDevice('PUT', mac, "", "", "", "", zones)
+  return delsetDevice('PUT', mac, "", "", "", null, tags)
 }
 
 
