@@ -214,15 +214,15 @@ export function setPSK(mac, psk, wpa_type, name) {
 }
 
 export function updateDeviceName(mac, name) {
-  delsetDevice('PUT', mac, "", "", name)
+  return delsetDevice('PUT', mac, "", "", name)
 }
 
 export function updateDeviceZones(mac, zones) {
-  delsetDevice('PUT', mac, "", "", "", zones)
+  return delsetDevice('PUT', mac, "", "", "", zones)
 }
 
 export function updateDeviceTags(mac, tags) {
-  delsetDevice('PUT', mac, "", "", "", "", zones)
+  return delsetDevice('PUT', mac, "", "", "", "", zones)
 }
 
 

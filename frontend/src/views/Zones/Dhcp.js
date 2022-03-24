@@ -61,15 +61,13 @@ export default class Dhcp extends Component {
           this.context.reportError("API Failure getDevices: " + error.message)
         })
 
-        console.log(devices)
 
         const generatedID = Math.random().toString(36).substr(2, 9);
         let v = {Name: "Wireless DHCP Clients", Members: []}
         v.vmap = vmap
         v.ipMap = ipMap
         for (const entry of vmap) {
-          let name = "-nametbd-"
-          console.log(entry.ether_addr)
+          let name = "--"
           let d = devices[entry.ether_addr]
           if (d) {
             name = d.Name

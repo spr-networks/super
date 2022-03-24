@@ -1,5 +1,6 @@
 import { Component } from "react";
-import { zoneDescriptions, deleteDevice, updateDeviceZones } from "components/Helpers/Api.js";
+import { zoneDescriptions, deleteDevice, updateDeviceZones, updateDeviceName } from "components/Helpers/Api.js";
+import {APIErrorContext} from 'layouts/Admin.js';
 import {
   Button,
   ButtonGroup,
@@ -7,6 +8,7 @@ import {
   CardHeader,
   CardBody,
   CardTitle,
+  Input,
   Label,
   Table,
   Row,
@@ -20,6 +22,8 @@ import TagsInput from 'react-tagsinput';
 export default class Device extends Component {
 
   state = {
+    editing: false,
+    name: '',
     zones: []
   }
 
@@ -40,32 +44,39 @@ export default class Device extends Component {
       wifi_type = "WPA2"
     }
 
-
     let zones = []
-    console.log(device.Zones)
     device.Zones.forEach( (zone) => zones.push(
       <Button key={zone} color="default"> {zone} </Button>
     ))
 
-    this.setState({zones: device.Zones})
-    this.handleZones = this.handleZones.bind(this);
+    this.setState({zones: device.Zones, name: device.Name})
   }
 
 
-  handleZones(zones) {
-      zones = [...new Set(zones)]
-      let device = this.props.device;
+  handleZones = (zones) => {
+    zones = [...new Set(zones)]
+    try {
+      updateDeviceZones(this.props.device.MAC, zones)
+    } catch(error) {
+      this.context.reportError("[API] updateDevice error: " + error.message)
+    }
 
-      updateDeviceZones(device.MAC, zones)
-
-      this.props.notifyChange()
-
-      this.setState({zones: zones});
+    this.setState({zones})
   }
+
+  handleName = (e) => {
+    //const name = e.target.name
+    const name = e.target.value
+    this.setState({name})
+    let editing = (name != this.props.device.Name)
+    this.setState({editing})
+  }
+
+  static contextType = APIErrorContext;
 
   render() {
-    const device = this.props.device;
-    const generatedID = Math.random().toString(36).substr(2, 9);
+    const device = this.props.device
+    const generatedID = Math.random().toString(36).substr(2, 9)
 
     let wifi_type = "N/A"
     if (device.PSKEntry.Type == "sae") {
@@ -80,13 +91,35 @@ export default class Device extends Component {
       this.props.notifyChange()
     }
 
-    const editDevice = (e) => {
+    const saveDevice = async () => {
+      if (this.state.name != "") {
+        try {
+          updateDeviceName(this.props.device.MAC, this.state.name)
+        } catch(error) {
+          this.context.reportError("[API] updateDevice error: " + error.message)
+        }
+
+        this.props.notifyChange() // will set editing false
+      }
+    }
+
+    const handleKeyPress = (e) => {
+      if (e.charCode == 13) {
+        this.setState({editing: false})
+        saveDevice()
+      }
     }
 
     return (
       <tr>
-        <td className="text-center"> {device.MAC } </td>
-        <td> {device.Name } </td>
+        <td className="text-center"> {device.MAC} </td>
+        <td>
+          <Input type="text" placeholder="Device name" name="name"
+            className={this.state.editing ? "border-info" : "border-light" }
+            value={this.state.name}
+            onChange={this.handleName}
+            onKeyPress={handleKeyPress} />
+        </td>
         <td> { wifi_type } </td>
         <td>
           <TagsInput
@@ -97,22 +130,6 @@ export default class Device extends Component {
           />
         </td>
         <td className="text-right">
-          <Button
-            className="btn-icon"
-            color="success"
-            id={"tooltip" + generatedID}
-            size="sm"
-            type="button"
-            onClick={editDevice}
-          >
-            <i className="fa fa-edit" />
-          </Button>{" "}
-          <UncontrolledTooltip
-            delay={0}
-            target={"tooltip" + (generatedID)}
-          >
-           Edit
-           </UncontrolledTooltip>
           <Button
             className="btn-icon"
             color="danger"
