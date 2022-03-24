@@ -140,23 +140,22 @@ func migrateZonesPsksV0() {
 			newZoneEntry.ZoneTags = []string{}
 
 			for _, client := range entry.Clients {
-				if client.Comment != "" {
-					//grab the comment and set the device name for later
-					val, exists := devices[client.Mac]
-					if !exists {
-						device := DeviceEntry{}
-						device.MAC = client.Mac
-						device.Name = client.Comment
-						device.DeviceTags = []string{}
-						device.Zones = []string{newZoneEntry.Name}
-						devices[client.Mac] = device
-					} else {
-						if val.Name == "" && client.Comment != "" {
-							val.Name = client.Comment
-							val.Zones = append(val.Zones, newZoneEntry.Name)
-							devices[client.Mac] = val
-						}
+				client.Mac = trimLower(client.Mac)
+
+				val, exists := devices[client.Mac]
+				if !exists {
+					device := DeviceEntry{}
+					device.MAC = client.Mac
+					device.Name = client.Comment
+					device.DeviceTags = []string{}
+					device.Zones = []string{newZoneEntry.Name}
+					devices[client.Mac] = device
+				} else {
+					if val.Name == "" && client.Comment != "" {
+						val.Name = client.Comment
 					}
+					val.Zones = append(val.Zones, newZoneEntry.Name)
+					devices[client.Mac] = val
 				}
 			}
 
@@ -216,6 +215,7 @@ func migrateZonesPsksV0() {
 			log.Fatal(err)
 		}
 
+		/*
 		err = os.Rename(DeprecatedZonesConfigPath, DeprecatedZonesConfigPath+".bak-upgrade")
 		if err != nil {
 			log.Fatal(err)
@@ -225,6 +225,7 @@ func migrateZonesPsksV0() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		*/
 
 	}
 
