@@ -421,7 +421,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			}
 		}
 
-		if val.DeviceTags != nil && !equalStringSlice(val.DeviceTags, dev.DeviceTags) {
+		if dev.DeviceTags != nil && !equalStringSlice(val.DeviceTags, dev.DeviceTags) {
 			val.DeviceTags = dev.DeviceTags
 		}
 
