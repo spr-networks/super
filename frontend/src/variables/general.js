@@ -129,12 +129,12 @@ const events = [
 // // // for vector map row in Dashboard view
 // #############################
 
-const us_flag = require("../assets/img/flags/US.png").default;
-const de_flag = require("../assets/img/flags/DE.png").default;
-const au_flag = require("../assets/img/flags/AU.png").default;
-const gb_flag = require("../assets/img/flags/GB.png").default;
-const ro_flag = require("../assets/img/flags/RO.png").default;
-const br_flag = require("../assets/img/flags/BR.png").default;
+const us_flag = require("../assets/img/flags/US.png");
+const de_flag = require("../assets/img/flags/DE.png");
+const au_flag = require("../assets/img/flags/AU.png");
+const gb_flag = require("../assets/img/flags/GB.png");
+const ro_flag = require("../assets/img/flags/RO.png");
+const br_flag = require("../assets/img/flags/BR.png");
 
 const table_data = [
   { flag: us_flag, country: "USA", count: "2.920", percentage: "53.23%" },
