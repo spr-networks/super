@@ -24,38 +24,211 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var TEST_PREFIX = "."
+var TEST_PREFIX = "../../"
+var DeprecatedZonesConfigPath = TEST_PREFIX + "/configs/zones/zones.json"
+var DeprecatedPSKConfigPath = TEST_PREFIX + "/configs/wifi/psks.json"
 
+var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
+var DevicesConfigFile = DevicesConfigPath + "devices.json"
+var ZonesConfigFile = DevicesConfigPath + "zones.json"
 
 type InfluxConfig struct {
-	URL string
-	Org string
+	URL    string
+	Org    string
 	Bucket string
-	Token string
+	Token  string
 }
 
 type PluginConfig struct {
-	Name string
-	URI string
+	Name     string
+	URI      string
 	UnixPath string
 }
 
 type APIConfig struct {
 	InfluxDB InfluxConfig
-	Plugins	[]PluginConfig
+	Plugins  []PluginConfig
 }
 
+type ZoneEntry struct {
+	Name     string
+	Disabled  bool
+	ZoneTags []string
+}
+
+type PSKRequestEntry struct {
+	Type    string
+	Mac 		string
+	Psk     string
+	Comment string
+}
+
+type PSKEntry struct {
+	Type    string
+	Psk     string
+}
+
+type DeviceEntry struct {
+	Name       string
+	MAC        string
+	WGPubKey   string
+	VLANMatch  string
+	RecentIP   string
+	PSKEntry   PSKEntry
+	Zones			 []string
+	DeviceTags []string
+}
+
+/* Deprecated */
+type Client struct {
+	Mac     string
+	Comment string
+}
+
+type DeprecatedClientZone struct {
+	Name    string
+	Clients []Client
+}
+
+type Device struct {
+	Mac     string
+	PskType string
+	Comment string
+	Zones   []string
+}
 
 var config = APIConfig{}
 
 func loadConfig() {
 	data, err := ioutil.ReadFile(TEST_PREFIX + "/state/api/config")
-	err = json.Unmarshal(data, &config)
-	if (err != nil) {
+	if err != nil {
 		fmt.Println(err)
+	} else {
+		err = json.Unmarshal(data, &config)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 
 	initTraffic(config)
+
+	migrateZonesPsksV0()
+}
+
+func migrateZonesPsksV0() {
+	//migrate old zone / psk files to the new format
+	saveUpdate := false
+	clientZones := []DeprecatedClientZone{}
+	psks := map[string] PSKRequestEntry{}
+
+	devices := map[string]DeviceEntry{}
+	newZones := []ZoneEntry{}
+
+	data, err := ioutil.ReadFile(DeprecatedZonesConfigPath)
+	if err == nil {
+
+		err = json.Unmarshal(data, &clientZones)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		saveUpdate = true
+
+		for _, entry := range clientZones {
+			newZoneEntry := ZoneEntry{}
+			newZoneEntry.Name = entry.Name
+			newZoneEntry.ZoneTags = []string{}
+
+			for _, client := range entry.Clients {
+				if client.Comment != "" {
+					//grab the comment and set the device name for later
+					val, exists := devices[client.Mac]
+					if !exists {
+						device := DeviceEntry{}
+						device.MAC = client.Mac
+						device.Name = client.Comment
+						device.DeviceTags = []string{}
+						device.Zones = []string{newZoneEntry.Name}
+						devices[client.Mac] = device
+					} else {
+						if val.Name == "" && client.Comment != "" {
+							val.Name = client.Comment
+							val.Zones = append(val.Zones, newZoneEntry.Name)
+							devices[client.Mac] = val
+						}
+					}
+				}
+			}
+
+			newZones = append(newZones, newZoneEntry)
+		}
+
+	}
+
+	data, err = ioutil.ReadFile(DeprecatedPSKConfigPath)
+	if err == nil {
+		err = json.Unmarshal(data, &psks)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		saveUpdate = true
+
+		for _, entry := range psks {
+
+			val, exists := devices[entry.Mac]
+			if !exists {
+				device := DeviceEntry{}
+				device.MAC = entry.Mac
+				device.Name = entry.Comment
+				device.PSKEntry = PSKEntry{Type: entry.Type, Psk: entry.Psk}
+				device.DeviceTags = []string{}
+				devices[entry.Mac] = device
+			} else {
+				val.PSKEntry = PSKEntry{Type: entry.Type, Psk: entry.Psk}
+				if val.Name == "" && entry.Comment != "" {
+					val.Name = entry.Comment
+				}
+				devices[entry.Mac] = val
+			}
+		}
+
+	}
+
+	if saveUpdate {
+		if _, err = os.Stat(DevicesConfigPath); os.IsNotExist(err) {
+			err := os.Mkdir(DevicesConfigPath, 0755)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		file, _ := json.MarshalIndent(devices, "", " ")
+		err = ioutil.WriteFile(DevicesConfigFile, file, 0600)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		file, _ = json.MarshalIndent(newZones, "", " ")
+		err = ioutil.WriteFile(ZonesConfigFile, file, 0600)
+		if err != nil {
+			log.Fatal(err)
+		}
+		/*
+
+		err = os.Rename(DeprecatedZonesConfigPath, DeprecatedZonesConfigPath+".bak-upgrade")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = os.Rename(DeprecatedPSKConfigPath, DeprecatedPSKConfigPath+".bak-upgrade")
+		if err != nil {
+			log.Fatal(err)
+		}
+		*/
+
+	}
+
 }
 
 var UNIX_WIFID_LISTENER = TEST_PREFIX + "/state/wifi/apisock"
@@ -68,7 +241,7 @@ func showNFMap(w http.ResponseWriter, r *http.Request) {
 	stdout, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("show NFMap failed to list",name,"->",err)
+		fmt.Println("show NFMap failed to list", name, "->", err)
 		http.Error(w, "Not found", 404)
 		return
 	}
@@ -91,46 +264,6 @@ func ipAddr(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(stdout))
 }
 
-type Client struct {
-	Mac     string
-	Comment string
-}
-
-type ClientZone struct {
-	Name    string
-	Clients []Client
-}
-
-func readZone(dir string, filename string) *ClientZone {
-	zone := new(ClientZone)
-	zone.Name = filename
-
-	data, err := ioutil.ReadFile(dir + filename)
-	if err != nil {
-		return zone
-	}
-
-	parts := strings.Split(string(data), "\n")
-	comment := ""
-	mac := ""
-	for _, entry := range parts {
-		entry = strings.TrimSpace(entry)
-		if entry == "" {
-			continue
-		}
-		if comment == "" {
-			comment = entry
-		} else {
-			mac = entry
-			zone.Clients = append(zone.Clients, Client{mac, comment})
-			comment = ""
-			mac = ""
-		}
-	}
-
-	return zone
-}
-
 func getStatus(w http.ResponseWriter, r *http.Request) {
 	reply := "Online"
 	WSNotifyString("StatusCalled", "test")
@@ -138,8 +271,297 @@ func getStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(reply)
 }
 
+
+
+var Devicesmtx sync.Mutex
+
+func saveDevicesJson(devices map[string]DeviceEntry) {
+	file, _ := json.MarshalIndent(devices, "", " ")
+	err := ioutil.WriteFile(DevicesConfigFile, file, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func getDevicesJson() map[string]DeviceEntry {
+	devices := map[string]DeviceEntry{}
+	data, err := ioutil.ReadFile(DevicesConfigFile)
+	if err != nil {
+		return nil
+	}
+	err = json.Unmarshal(data, &devices)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return devices
+}
+
+
+func getDevices(w http.ResponseWriter, r *http.Request) {
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+
+	devices := getDevicesJson()
+
+	//mask PSKs
+	for i, entry := range devices {
+		if entry.PSKEntry.Psk  != "" {
+			entry.PSKEntry.Psk = "**"
+			devices[i] = entry
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(devices)
+}
+
+
+func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
+	identity := mux.Vars(r)["identity"]
+	identity = trimLower(identity)
+
+	if identity == "" {
+		http.Error(w, "Invalid device identity", 400)
+		return
+	}
+
+	dev := DeviceEntry{}
+	err := json.NewDecoder(r.Body).Decode(&dev)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	updateDevice(w, r, dev, identity)
+}
+
+func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, identity string) {
+
+	if dev.PSKEntry.Type != "" {
+		if dev.PSKEntry.Type != "sae" && dev.PSKEntry.Type != "wpa2" {
+			http.Error(w, "psk too short", 400)
+			return
+		}
+	}
+
+	if len(dev.PSKEntry.Psk) > 0 && len(dev.PSKEntry.Psk) < 8 {
+		http.Error(w, "psk too short", 400)
+		return
+	}
+
+	//normalize zones and tags
+	dev.Zones = normalizeStringSlice(dev.Zones)
+	dev.DeviceTags = normalizeStringSlice(dev.DeviceTags)
+	dev.MAC = trimLower(dev.MAC)
+
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+	Zonesmtx.Lock()
+	defer Zonesmtx.Unlock()
+
+	devices := getDevicesJson()
+	zones := getZonesJson()
+
+	val, exists := devices[identity]
+
+	//always overwrite pending
+	if identity == "pending" {
+		val = DeviceEntry{}
+		exists = false
+	}
+
+	if r.Method == http.MethodDelete {
+		//delete a device
+		if exists {
+			delete(devices, identity)
+			saveDevicesJson(devices)
+			refreshDeviceZones(val)
+			return
+		}
+
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	pskGenerated := false
+	pskModified := false
+	refreshZones := false
+
+	if exists {
+		//updating an existing entry. Check what was requested
+
+		val.Name = dev.Name
+		val.WGPubKey = dev.WGPubKey
+		val.VLANMatch = dev.VLANMatch
+		val.RecentIP = dev.RecentIP
+
+		if dev.PSKEntry.Psk != "" {
+			//assign a new PSK
+			pskModified = true
+			val.PSKEntry.Psk = dev.PSKEntry.Psk
+		}
+
+		if dev.PSKEntry.Type != "" {
+			pskModified = true
+			val.PSKEntry.Type = dev.PSKEntry.Type
+
+			//when setting PSK type, but the device
+			// did not previously have a PSK set,
+			// generate a secure PSK
+
+			if val.PSKEntry.Psk == "" {
+				val.PSKEntry.Psk = genSecurePassword()
+				pskGenerated = true
+			}
+		}
+
+		if !equalStringSlice(val.DeviceTags, dev.DeviceTags) {
+			val.DeviceTags = dev.DeviceTags
+		}
+
+		if !equalStringSlice(val.Zones, dev.Zones) {
+			val.Zones = dev.Zones
+
+			saveZones := false
+
+			//create a new zone if it does not exist yet
+			for _, entry := range dev.Zones {
+				foundZone := false
+				for _, zone := range zones {
+					if zone.Name == entry {
+						foundZone = true
+						break
+					}
+				}
+
+				if !foundZone {
+					saveZones = true
+					newZone := ZoneEntry{}
+					newZone.Name = entry
+					newZone.ZoneTags = []string{}
+					zones = append(zones, newZone)
+				}
+			}
+
+			if saveZones {
+				saveZonesJson(zones)
+			}
+
+			refreshZones = true
+		}
+
+		devices[identity] = val
+		saveDevicesJson(devices)
+
+		if pskModified {
+			//psks updated -- update hostapd
+			doReloadPSKFiles()
+		}
+
+		if refreshZones {
+			refreshDeviceZones(val)
+		}
+
+		//mask the PSK if set and not generated
+		if val.PSKEntry.Psk != "" && pskGenerated == false {
+			val.PSKEntry.Psk = "**"
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(val)
+		return
+	}
+
+	//creating a new device entry
+
+	if strings.Contains(identity, ":") {
+		//looking at a MAC, set it if not set
+		if dev.MAC == "" {
+			dev.MAC = identity
+		}
+	}
+
+	//generate secure PSK if needed
+	if dev.PSKEntry.Type != "" {
+		pskModified = true
+		if dev.PSKEntry.Psk == "" {
+			dev.PSKEntry.Psk = genSecurePassword()
+			pskGenerated = true
+		}
+	}
+
+
+	if dev.DeviceTags == nil {
+		dev.DeviceTags = []string{}
+	}
+
+	if dev.Zones == nil {
+		dev.Zones = []string{}
+	}
+
+	if len(dev.Zones) != 0 {
+		//update verdict maps for the device
+		refreshZones = true
+	}
+
+	devices[identity] = dev
+	saveDevicesJson(devices)
+
+	if pskModified {
+		//psks updated -- update hostapd
+		doReloadPSKFiles()
+	}
+
+	if refreshZones {
+		refreshDeviceZones(val)
+	}
+
+	if pskGenerated == false {
+		dev.PSKEntry.Psk = "**"
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(dev)
+}
+
+
+
+
+
+func pendingPSK(w http.ResponseWriter, r *http.Request) {
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+
+	devices := getDevicesJson()
+	_, exists := devices["pending"]
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(exists)
+}
+
+
+func saveZonesJson(zones []ZoneEntry) {
+	file, _ := json.MarshalIndent(zones, "", " ")
+	err := ioutil.WriteFile(ZonesConfigFile, file, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func getZonesJson() []ZoneEntry {
+	zones := []ZoneEntry{}
+	data, err := ioutil.ReadFile(ZonesConfigFile)
+	if err != nil {
+		return nil
+	}
+	err = json.Unmarshal(data, &zones)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return zones
+}
+
 var Zonesmtx sync.Mutex
-var ZonesConfigPath = "/configs/zones/zones.json"
 
 func getZones(w http.ResponseWriter, r *http.Request) {
 	Zonesmtx.Lock()
@@ -149,201 +571,56 @@ func getZones(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(zones)
 }
 
-type Device struct {
-	Mac     string
-	PskType string
-	Comment string
-	Zones   []string
-}
-
-func getDevices(w http.ResponseWriter, r *http.Request) {
-	Zonesmtx.Lock()
-	defer Zonesmtx.Unlock()
-
-	PSKmtx.Lock()
-	defer PSKmtx.Unlock()
-
-	zones := getZonesJson()
-
-	psks := getPSKJson()
-
-	devices := map[string]Device{}
-
-	for _, zone := range zones {
-		for _, client := range zone.Clients {
-			mac := trimLower(client.Mac)
-			device, exists := devices[mac]
-			if exists {
-				device.Zones = append(device.Zones, zone.Name)
-				devices[mac] = device
-			} else {
-				pskType := ""
-				pskEntry, exists := psks[mac]
-				if exists {
-					pskType = pskEntry.Type
-				}
-				devices[mac] = Device{Mac: mac, Comment: client.Comment, Zones: []string{zone.Name}, PskType: pskType}
-			}
-		}
-	}
-
-	//find devices configured with psks without a zone
-	for _, psk := range psks {
-		mac := trimLower(psk.Mac)
-		_, exists := devices[mac]
-		if !exists {
-			devices[mac] = Device{Mac: mac, Comment: psk.Comment, Zones: []string{}, PskType: psk.Type}
-		}
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(devices)
-}
-
-func pendingPSK(w http.ResponseWriter, r *http.Request) {
-	PSKmtx.Lock()
-	defer PSKmtx.Unlock()
-
-	psks := getPSKJson()
-	_, exists := psks["pending"]
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(exists)
-}
-
-func saveZones(zones []ClientZone) {
-	file, _ := json.MarshalIndent(zones, "", " ")
-	err := ioutil.WriteFile(ZonesConfigPath, file, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func getZonesJson() []ClientZone {
-	//re-encode to enforce valid json
-	clientZones := []ClientZone{}
-	data, err := ioutil.ReadFile(ZonesConfigPath)
-	if err != nil {
-		return nil
-	}
-	err = json.Unmarshal(data, &clientZones)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return clientZones
-}
-
-func getZoneFiles() []ClientZone {
-	zones := []ClientZone{}
-	files, err := ioutil.ReadDir("/configs/zones")
-	if err == nil {
-		for _, f := range files {
-			name := f.Name()
-			if name[0] == '.' {
-				continue
-			}
-			if name == "groups" || name == "zones.json" {
-				continue
-			}
-
-			zones = append(zones, *readZone("/configs/zones/", f.Name()))
-		}
-	}
-
-	//tbd rename "groups" to "custom"
-	files, err = ioutil.ReadDir("/configs/zones/groups")
-	if err == nil {
-		for _, f := range files {
-			zones = append(zones, *readZone("/configs/zones/groups/", f.Name()))
-		}
-	}
-	return zones
-}
-
-func addZoneMember(w http.ResponseWriter, r *http.Request) {
-	Zonesmtx.Lock()
-	defer Zonesmtx.Unlock()
-
-	name := mux.Vars(r)["name"]
-	name = trimLower(name)
-
-	client := Client{}
-	err := json.NewDecoder(r.Body).Decode(&client)
+func updateZones(w http.ResponseWriter, r *http.Request) {
+	zone := ZoneEntry{}
+	err := json.NewDecoder(r.Body).Decode(&zone)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
 
+	zone.Name = trimLower(zone.Name)
+	if zone.Name == "" {
+		http.Error(w, "Invalid zone name", 400)
+		return
+	}
+
+	Zonesmtx.Lock()
+	defer Zonesmtx.Unlock()
 	zones := getZonesJson()
-	for z_idx, zone := range zones {
-		if zone.Name == name {
-			for c_idx, entry := range zone.Clients {
-				if equalMAC(entry.Mac, client.Mac) {
-					if entry.Comment != client.Comment {
-						zone.Clients[c_idx].Comment = client.Comment
-						zones[z_idx] = zone
-						saveZones(zones)
-					}
-					json.NewEncoder(w).Encode(true)
-					return
-				}
+
+	if r.Method == http.MethodDelete {
+		//[]ZoneEntry
+		for idx, entry := range zones {
+			if entry.Name == zone.Name {
+				zones := append(zones[:idx], zones[idx+1:]...)
+				saveZonesJson(zones)
+				return
 			}
-			//add new entry to zone
-			zone.Clients = append(zone.Clients, client)
-			zones[z_idx] = zone
-			saveZones(zones)
-			refreshClientZones(client.Mac)
-			json.NewEncoder(w).Encode(true)
+		}
+
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	//find the zone or update it
+	for idx, entry := range zones {
+		if entry.Name == zone.Name {
+			entry.Disabled = zone.Disabled
+			entry.ZoneTags = zone.ZoneTags
+			zones[idx]= entry
+			saveZonesJson(zones)
 			return
 		}
 	}
 
-	zones = append(zones, ClientZone{Name: name, Clients: []Client{client}})
-	saveZones(zones)
-
-	json.NewEncoder(w).Encode(true)
-}
-
-func delZoneMember(w http.ResponseWriter, r *http.Request) {
-	Zonesmtx.Lock()
-	defer Zonesmtx.Unlock()
-
-	name := mux.Vars(r)["name"]
-	name = trimLower(name)
-
-	client := Client{}
-	err := json.NewDecoder(r.Body).Decode(&client)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
+	if zone.ZoneTags == nil {
+		zone.ZoneTags = []string{}
 	}
 
-	zones := getZonesJson()
-	for z_idx, zone := range zones {
-		if zone.Name == name {
-			for c_idx, entry := range zone.Clients {
-				if equalMAC(entry.Mac, client.Mac) {
-					zone.Clients = append(zone.Clients[:c_idx], zone.Clients[c_idx+1:]...)
-					zones[z_idx] = zone
-					saveZones(zones)
-					refreshClientZones(client.Mac)
-					json.NewEncoder(w).Encode(true)
-					return
-				}
-			}
-		}
-	}
-
-	http.Error(w, "Not found", 404)
-	return
-}
-
-type DHCPUpdate struct {
-	IP     string
-	MAC    string
-	Name   string
-	Iface  string
-	Router string
+	//make a new zone
+	zones = append(zones, zone)
+	saveZonesJson(zones)
 }
 
 func trimLower(a string) string {
@@ -352,6 +629,31 @@ func trimLower(a string) string {
 
 func equalMAC(a string, b string) bool {
 	return trimLower(a) == trimLower(b)
+}
+
+func normalizeStringSlice(a []string) []string {
+	if len(a) == 0 {
+		return a
+	}
+	ret := []string{}
+	for _, entry := range a {
+		ret = append(ret, trimLower(entry))
+	}
+	return ret
+}
+
+func equalStringSlice(a []string, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := 0; i < len(a); i++ {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 var (
@@ -561,14 +863,26 @@ func addCustomVerdict(ZoneName string, IP string, MAC string, Iface string) {
 
 func populateVmapEntries(IP string, MAC string, Iface string) {
 	zones := getZonesJson()
+	zonesDisabled := map[string]bool{}
+
 	for _, zone := range zones {
-		if zone.Name == "isolated" {
+		zonesDisabled[zone.Name] = zone.Disabled
+	}
+
+	devices := getDevicesJson()
+	val, exists := devices[MAC]
+	if !exists {
+		return
+	}
+
+	for _, zone_name := range val.Zones {
+		//skip zones that are disabled
+		if zonesDisabled[zone_name] {
 			continue
 		}
-		for _, entry := range zone.Clients {
-			if equalMAC(entry.Mac, MAC) {
-				//client belongs to verdict map, add it
-				switch zone.Name {
+		switch zone_name {
+				case "isolated":
+					continue
 				case "dns":
 					addDNSVerdict(IP, MAC, Iface)
 				case "lan":
@@ -577,9 +891,7 @@ func populateVmapEntries(IP string, MAC string, Iface string) {
 					addInternetVerdict(IP, MAC, Iface)
 				default:
 					//custom group
-					addCustomVerdict(zone.Name, IP, MAC, Iface)
-				}
-			}
+					addCustomVerdict(zone_name, IP, MAC, Iface)
 		}
 	}
 
@@ -589,8 +901,8 @@ var LocalMappingsmtx sync.Mutex
 
 func updateLocalMappings(IP string, Name string) {
 
-  LocalMappingsmtx.Lock()
-  defer LocalMappingsmtx.Unlock()
+	LocalMappingsmtx.Lock()
+	defer LocalMappingsmtx.Unlock()
 
 	var localMappingsPath = TEST_PREFIX + "/state/dns/local_mappings"
 	data, err := ioutil.ReadFile(localMappingsPath)
@@ -626,9 +938,26 @@ func shouldFlushByInterface(Iface string) bool {
 	return matchInterface
 }
 
+
+
+type DHCPUpdate struct {
+	IP     string
+	MAC    string
+	Name   string
+	Iface  string
+	Router string
+}
+
 func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	DHCPmtx.Lock()
 	defer DHCPmtx.Unlock()
+
+	Zonesmtx.Lock()
+	defer Zonesmtx.Unlock()
+
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+
 
 	//Handle networking tasks upon a DHCP
 	dhcp := DHCPUpdate{}
@@ -657,13 +986,13 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	WSNotifyString("DHCPUpdateProcessed", "")
 }
 
-func refreshClientZones(MAC string) {
+func refreshDeviceZones(dev DeviceEntry) {
 	ifname := ""
 	ipv4 := ""
 	//check arp tables for the MAC to get the IP
-	arp_entry, err := GetArpEntryFromMAC(MAC)
+	arp_entry, err := GetArpEntryFromMAC(dev.MAC)
 	if err != nil {
-		fmt.Println("Arp entry not found, insufficient information to refresh", MAC)
+		fmt.Println("Arp entry not found, insufficient information to refresh", dev.MAC)
 		return
 	}
 
@@ -672,21 +1001,21 @@ func refreshClientZones(MAC string) {
 	//check dhcp vmap for the interface
 	entries := getNFTVerdictMap("dhcp_access")
 	for _, entry := range entries {
-		if equalMAC(entry.mac, MAC) {
+		if equalMAC(entry.mac, dev.MAC) {
 			ifname = entry.ifname
 		}
 	}
 
 	if ifname == "" {
-		fmt.Println("dhcp_access entry not found, insufficient information to refresh", MAC)
+		fmt.Println("dhcp_access entry not found, insufficient information to refresh", dev.MAC)
 		return
 	}
 
 	//remove from existing verdict maps
-	flushVmaps(ipv4, MAC, ifname, getVerdictMapNames(), shouldFlushByInterface(ifname))
+	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), shouldFlushByInterface(ifname))
 
 	//and re-add
-	populateVmapEntries(ipv4, MAC, ifname)
+	populateVmapEntries(ipv4, dev.MAC, ifname)
 }
 
 // from https://github.com/ItsJimi/go-arp/blob/master/arp.go
@@ -767,8 +1096,6 @@ func showARP(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(entries)
 }
 
-var PSKConfigPath = "/configs/wifi/psks.json"
-
 type PSKAuthFailure struct {
 	Type   string
 	MAC    string
@@ -777,8 +1104,8 @@ type PSKAuthFailure struct {
 }
 
 func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
-	PSKmtx.Lock()
-	defer PSKmtx.Unlock()
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
 
 	pskf := PSKAuthFailure{}
 	err := json.NewDecoder(r.Body).Decode(&pskf)
@@ -794,29 +1121,7 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	psks := getPSKJson()
-	pendingPSK, exists := psks["pending"]
-	if pskf.Reason == "noentry" && exists {
-		auth_type := pskf.Type
-		if auth_type == "wpa" {
-			auth_type = "wpa2"
-		}
-
-		if auth_type != pendingPSK.Type {
-			fmt.Println("WARNING: mismatch between pending type and client auth attempt", auth_type, pendingPSK.Type)
-		}
-
-		// take the pending PSK and assign it
-		psk := PSKEntry{Psk: pendingPSK.Psk, Type: auth_type, Mac: pskf.MAC, Comment: pendingPSK.Comment}
-		psks := getPSKJson()
-		psks[psk.Mac] = psk
-		savePSKs(psks)
-		doReloadPSKFiles()
-
-		delete(psks, "pending")
-
-		pskf.Status = "Installed pending PSK"
-	}
+	//no longer assign MAC on Auth Failure due to noentry
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pskf)
@@ -830,8 +1135,8 @@ type PSKAuthSuccess struct {
 }
 
 func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
-	PSKmtx.Lock()
-	defer PSKmtx.Unlock()
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
 
 	pska := PSKAuthSuccess{}
 	err := json.NewDecoder(r.Body).Decode(&pska)
@@ -851,23 +1156,25 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 
 	//check if there is a pending psk to assign. if the mac is not known, then it was the pending psk
 
-	psks := getPSKJson()
-	pendingPsk, exists := psks["pending"]
+	devices := getDevicesJson()
+	pendingPsk, exists := devices["pending"]
 	if exists {
 		var foundPSK = false
-		for k := range psks {
-			if k == pska.MAC {
+		for _, device := range devices {
+			if device.MAC == pska.MAC {
 				foundPSK = true
 				break
 			}
 		}
+
+		//psk not in known devices. Assign it and delete pending
 		if !foundPSK {
 			//assign MAC to pendingPSK
-			pendingPsk.Mac = pska.MAC
-			psks[pska.MAC] = pendingPsk
+			pendingPsk.MAC = pska.MAC
+			devices[pska.MAC] = pendingPsk
 			pska.Status = "Installed Pending PSK"
-			delete(psks, "pending")
-			savePSKs(psks)
+			delete(devices, "pending")
+			saveDevicesJson(devices)
 			doReloadPSKFiles()
 		}
 	}
@@ -876,73 +1183,6 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(pska)
 }
 
-type PSKEntry struct {
-	Type    string
-	Mac     string
-	Psk     string
-	Comment string
-}
-
-func loadPSKFiles() map[string]PSKEntry {
-	pskEntries := map[string]PSKEntry{}
-
-	data, err := ioutil.ReadFile("/configs/wifi/sae_passwords")
-	if err != nil {
-		return nil
-	}
-
-	parts := strings.Split(string(data), "\n")
-	for _, entry := range parts {
-		entry = strings.TrimSpace(entry)
-		if entry == "" {
-			continue
-		}
-		parts := strings.Split(entry, "|")
-		psk := parts[0]
-		mac := parts[1]
-		mac = strings.Split(mac, "=")[1]
-		pskEntries[mac] = PSKEntry{"sae", mac, psk, ""}
-	}
-
-	data, err = ioutil.ReadFile("/configs/wifi/wpa2pskfile")
-	if err != nil {
-		return nil
-	}
-
-	parts = strings.Split(string(data), "\n")
-	for _, entry := range parts {
-		entry = strings.TrimSpace(entry)
-		if entry == "" {
-			continue
-		}
-		parts := strings.Split(entry, " ")
-		mac := parts[0]
-		psk := parts[1]
-		pskEntries[mac] = PSKEntry{"wpa2", mac, psk, ""}
-	}
-
-	return pskEntries
-
-}
-
-func getPSKJson() map[string]PSKEntry {
-	//re-encode to enforce valid json
-	psks := map[string]PSKEntry{}
-	data, err := ioutil.ReadFile(PSKConfigPath)
-	if err != nil {
-		return nil
-	}
-	json.Unmarshal(data, &psks)
-	return psks
-}
-
-func savePSKs(psks map[string]PSKEntry) {
-	file, _ := json.MarshalIndent(psks, "", " ")
-	err := ioutil.WriteFile(PSKConfigPath, file, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
 
 func genSecurePassword() string {
 	pw := make([]byte, 16)
@@ -953,102 +1193,42 @@ func genSecurePassword() string {
 	return base64.RawURLEncoding.EncodeToString(pw)
 }
 
-var PSKmtx sync.Mutex
-
-func setPSK(w http.ResponseWriter, r *http.Request) {
-	PSKmtx.Lock()
-	defer PSKmtx.Unlock()
-
-	psk := PSKEntry{}
-	err := json.NewDecoder(r.Body).Decode(&psk)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	psks := getPSKJson()
-
-	if r.Method == http.MethodDelete {
-		//delete by MAC
-		delete(psks, psk.Mac)
-		savePSKs(psks)
-		doReloadPSKFiles()
-		return
-	}
-
-	//Ensure that psk has a Mac and a type
-	if psk.Type != "sae" && psk.Type != "wpa2" {
-		http.Error(w, "malformed data", 400)
-		return
-	}
-
-	if len(psk.Psk) > 0 && len(psk.Psk) < 8 {
-		http.Error(w, "psk too short", 400)
-		return
-	}
-
-	pskGenerated := false
-
-	//generate a PSK if one is not provided
-	if psk.Psk == "" {
-		psk.Psk = genSecurePassword()
-		pskGenerated = true
-	}
-
-	if psk.Mac == "" {
-		//assign a pending PSK for later
-		psks["pending"] = psk
-	} else {
-		psks[psk.Mac] = psk
-	}
-
-	savePSKs(psks)
-	doReloadPSKFiles()
-
-	if pskGenerated == false {
-		psk.Psk = "***"
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(psk)
-
-}
 
 func reloadPSKFiles(w http.ResponseWriter, r *http.Request) {
-	PSKmtx.Lock()
-	defer PSKmtx.Unlock()
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
 	doReloadPSKFiles()
 }
 
 func doReloadPSKFiles() {
 	//generate PSK files for hostapd
-	psks := getPSKJson()
+	devices := getDevicesJson()
 
 	wpa2 := ""
 	sae := ""
 
-	for keyval, entry := range psks {
+	for keyval, entry := range devices {
 		if keyval == "pending" {
 			//set wildcard password at front. hostapd uses a FILO for the sae keys
-			if entry.Type == "sae" {
-				sae = entry.Psk + "|mac=ff:ff:ff:ff:ff:ff" + "\n" + sae
-			} else if entry.Type == "wpa2" {
-				wpa2 = "00:00:00:00:00:00 " + entry.Psk + "\n" + wpa2
+			if entry.PSKEntry.Type == "sae" {
+				sae = entry.PSKEntry.Psk + "|mac=ff:ff:ff:ff:ff:ff" + "\n" + sae
+			} else if entry.PSKEntry.Type == "wpa2" {
+				wpa2 = "00:00:00:00:00:00 " + entry.PSKEntry.Psk + "\n" + wpa2
 			}
 		} else {
-			if entry.Type == "sae" {
-				sae += entry.Psk + "|mac=" + entry.Mac + "\n"
-			} else if entry.Type == "wpa2" {
-				wpa2 += entry.Mac + " " + entry.Psk + "\n"
+			if entry.PSKEntry.Type == "sae" {
+				sae += entry.PSKEntry.Psk + "|mac=" + entry.MAC + "\n"
+			} else if entry.PSKEntry.Type == "wpa2" {
+				wpa2 += entry.MAC + " " + entry.PSKEntry.Psk + "\n"
 			}
 		}
 	}
 
-	err := ioutil.WriteFile("/configs/wifi/sae_passwords", []byte(sae), 0644)
+	err := ioutil.WriteFile(TEST_PREFIX + "/configs/wifi/sae_passwords", []byte(sae), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = ioutil.WriteFile("/configs/wifi/wpa2pskfile", []byte(wpa2), 0644)
+	err = ioutil.WriteFile(TEST_PREFIX + "/configs/wifi/wpa2pskfile", []byte(wpa2), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -1183,35 +1363,33 @@ func logRequest(handler http.Handler) http.Handler {
 	})
 }
 
-
 func PluginProxy(config PluginConfig) (*httputil.ReverseProxy, error) {
 	return &httputil.ReverseProxy{
-				Director: func(req *http.Request) {
-					req.URL.Scheme = "http"
-					req.URL.Host = config.Name
+		Director: func(req *http.Request) {
+			req.URL.Scheme = "http"
+			req.URL.Host = config.Name
 
-					//Empty headers from the request
-					//SECURITY benefit: API extensions do not receive credentials
-					req.Header = http.Header{}
-				},
-				Transport: &http.Transport {
-							Dial: func(network, addr string) (net.Conn, error) {
-								return net.Dial("unix", config.UnixPath)
-							},
-				},
+			//Empty headers from the request
+			//SECURITY benefit: API extensions do not receive credentials
+			req.Header = http.Header{}
+		},
+		Transport: &http.Transport{
+			Dial: func(network, addr string) (net.Conn, error) {
+				return net.Dial("unix", config.UnixPath)
+			},
+		},
 	}, nil
 }
 
 func ProxyRequestHandler(proxy *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
-  return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		rest := mux.Vars(r)["rest"]
 		if rest != "" {
 			r.URL.Path = "/" + rest
 		}
-    proxy.ServeHTTP(w, r)
-  }
+		proxy.ServeHTTP(w, r)
+	}
 }
-
 
 func main() {
 
@@ -1257,18 +1435,18 @@ func main() {
 	//Misc
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
 
-	// Zone management
+	// Device management
 	external_router_authenticated.HandleFunc("/zones", getZones).Methods("GET")
-	external_router_authenticated.HandleFunc("/zone/{name}", addZoneMember).Methods("PUT")
-	external_router_authenticated.HandleFunc("/zone/{name}", delZoneMember).Methods("DELETE")
+	external_router_authenticated.HandleFunc("/zones", updateZones).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/devices", getDevices).Methods("GET")
+	external_router_authenticated.HandleFunc("/device/{identity}", handleUpdateDevice).Methods("PUT", "DELETE")
+
 	external_router_authenticated.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 
-	//Assign a PSK
-	external_router_authenticated.HandleFunc("/setPSK", setPSK).Methods("PUT", "DELETE")
 	//Force reload
 	external_router_authenticated.HandleFunc("/reloadPSKFiles", reloadPSKFiles).Methods("PUT")
-	//hostadp information
+
+	//hostapd information
 	external_router_authenticated.HandleFunc("/hostapd/status", hostapdStatus).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/all_stations", hostapdAllStations).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/config", hostapdConfiguration).Methods("GET")
@@ -1301,8 +1479,8 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		external_router_authenticated.HandleFunc("/plugins/" + entry.URI + "/", ProxyRequestHandler(proxy) );
-		external_router_authenticated.HandleFunc("/plugins/" + entry.URI + "/" + "{rest:.*}", ProxyRequestHandler(proxy) );
+		external_router_authenticated.HandleFunc("/plugins/"+entry.URI+"/", ProxyRequestHandler(proxy))
+		external_router_authenticated.HandleFunc("/plugins/"+entry.URI+"/"+"{rest:.*}", ProxyRequestHandler(proxy))
 	}
 
 	wifidServer := http.Server{Handler: logRequest(unix_wifid_router)}
