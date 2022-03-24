@@ -1093,7 +1093,7 @@ func GetArpEntryFromMAC(mac string) (ArpEntry, error) {
 	}
 
 	for _, entry := range entries {
-		if entry.Mac == mac {
+		if entry.MAC == mac {
 			return entry, nil
 		}
 	}
