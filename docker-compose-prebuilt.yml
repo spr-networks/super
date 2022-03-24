@@ -136,6 +136,7 @@ services:
       driver: journald
     volumes:
       - ./configs/base/:/configs/base/
+      - ./configs/devices/:/configs/devices/
       - ./configs/zones/:/configs/zones/
       - ./configs/wifi/:/configs/wifi/
       - ./configs/scripts/:/configs/scripts/

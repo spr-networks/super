@@ -96,7 +96,6 @@ func (auth *authnconfig) webSocket(w http.ResponseWriter, r *http.Request) {
 			WSMtx.Lock()
 			WSClients = append(WSClients, c)
 			WSMtx.Unlock()
-			fmt.Println("auth success")
 			return
 		}
 	} else {
@@ -106,7 +105,6 @@ func (auth *authnconfig) webSocket(w http.ResponseWriter, r *http.Request) {
 			WSMtx.Lock()
 			WSClients = append(WSClients, c)
 			WSMtx.Unlock()
-			fmt.Println("auth success")
 			return
 		}
 	}

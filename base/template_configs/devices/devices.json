@@ -1,0 +1,18 @@
+{
+ "11:22:33:44:55:66": {
+  "Name": "Example Device Entry",
+  "MAC": "11:22:33:44:55:66",
+  "WGPubKey": "",
+  "VLANMatch": "",
+  "RecentIP": "",
+  "PSKEntry": {
+   "Type": "sae",
+   "Psk": "secure passphrase"
+  },
+  "Zones": [
+   "dns",
+   "wan",
+  ],
+  "DeviceTags": []
+ }
+}

@@ -35,7 +35,6 @@ jobs:
         name: Build arm64 test containers
         run: |
           cp -R base/template_configs configs
-          cp base/template_configs/wifi/psks.json configs/wifi/
           export DOCKER_DEFAULT_PLATFORM=linux/arm64          
           ./build_docker_compose.sh
       -

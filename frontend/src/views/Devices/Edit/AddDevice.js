@@ -23,17 +23,17 @@ const Step1 = React.forwardRef((props, ref) => {
   const [mac, setmac] = React.useState(""); //default is set to wpa3 (sae)
   const [psk, setpsk] = React.useState("");
   const [wpa, setwpa] = React.useState("sae");
-  const [comment, setcomment] = React.useState("");
+  const [name, setname] = React.useState("");
 
   const [macState, setmacState] = React.useState("has-success");
   const [pskState, setpskState] = React.useState("has-success");
   const [wpaState, setwpaState] = React.useState("has-success");
-  const [commentState, setcommentState] = React.useState("");
+  const [nameState, setnameState] = React.useState("");
 
   const [macFocus, setmacFocus] = React.useState("");
   const [pskFocus, setpskFocus] = React.useState("");
   const [wpaFocus, setwpaFocus] = React.useState("");
-  const [commentFocus, setcommentFocus] = React.useState("");
+  const [nameFocus, setnameFocus] = React.useState("");
 
   let submitted = () => {
     return did_submit
@@ -53,11 +53,11 @@ const Step1 = React.forwardRef((props, ref) => {
       mac,
       psk,
       wpa,
-      comment,
+      name,
       macState,
       pskState,
       wpaState,
-      setcommentState,
+      setnameState,
       submitted,
       setsubmitted,
     },
@@ -122,7 +122,7 @@ const Step1 = React.forwardRef((props, ref) => {
       macState === "has-success" &&
       pskState === "has-success" &&
       wpaState === "has-success" &&
-      commentState == "has-success"
+      nameState == "has-success"
     ) {
       return true;
     } else {
@@ -135,8 +135,8 @@ const Step1 = React.forwardRef((props, ref) => {
       if (wpaState !== "has-success") {
         setwpaState("has-danger");
       }
-      if (commentState !== "has-success") {
-        setcommentState("has-danger");
+      if (nameState !== "has-success") {
+        setnameState("has-danger");
       }
       return false;
     }
@@ -152,8 +152,8 @@ const Step1 = React.forwardRef((props, ref) => {
 
             <Label> Device Name </Label>
             <InputGroup
-              className={classnames(commentState, {
-                "input-group-focus": commentFocus,
+              className={classnames(nameState, {
+                "input-group-focus": nameFocus,
               })}
             >
               <InputGroupAddon addonType="prepend">
@@ -161,22 +161,22 @@ const Step1 = React.forwardRef((props, ref) => {
                 </InputGroupText>
               </InputGroupAddon>
               <Input
-                name="comment"
+                name="name"
                 placeholder=""
                 type="text"
                 onChange={(e) => {
                   setsubmitted(false)
                   if (!verifyLength(e.target.value, 1)) {
-                    setcommentState("has-danger");
+                    setnameState("has-danger");
                   } else {
-                    setcommentState("has-success");
+                    setnameState("has-success");
                   }
-                  setcomment(e.target.value);
+                  setname(e.target.value);
                 }}
-                onFocus={(e) => setcommentFocus(true)}
-                onBlur={(e) => setcommentFocus(false)}
+                onFocus={(e) => setnameFocus(true)}
+                onBlur={(e) => setnameFocus(false)}
               />
-              {commentState === "has-danger" ? (
+              {nameState === "has-danger" ? (
                 <label className="error">Please set a device name</label>
               ) : null}
             </InputGroup>

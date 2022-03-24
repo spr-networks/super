@@ -112,21 +112,72 @@ function getAPI(endpoint) {
 }
 
 
-function delsetPSK(verb, mac, psk, wpa_type, comment) {
-  let data = {"Type": wpa_type}
-  if (mac != "") {
-    data["Mac"] = mac
+function delsetZone(verb, name, disabled, tags) {
+  let data = {}
+  if (name) {
+    data["Name"] = name
   }
-  if (psk != "") {
-    data["Psk"] = psk
+  if (disabled) {
+    data["Disabled"] = disabled
   }
-
-  if (comment != "") {
-    data["Comment"] = comment
+  if (tags) {
+    data["ZoneTags"] = tags
   }
 
   return new Promise((resolve, reject) =>  {
-    fetch(API + "/setPSK", {
+    fetch(API + "/zones", {
+      method: verb,
+      headers: {
+        'Authorization': authHeader(),
+        'X-Requested-With': 'react',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    })
+    .then(function(response) {
+      if(!response.ok)
+      {
+        throw new Error(response.status)
+      }
+      return response.json()
+    })
+    .then(data => {
+      resolve(data)
+    }).catch(reason => {
+      reject(reason)
+    })
+  })
+}
+
+function delsetDevice(verb, identity, psk, wpa_type, name, zones, tags) {
+  let data = {"PSKEntry": {}}
+
+  if (identity != "" && (identity.indexOf(":") != -1) ) {
+    data["Mac"] = identity
+  }
+
+  if (psk != "") {
+    data["PSKEntry"]["Psk"] = psk
+  }
+
+  if (wpa_type != "") {
+    data["PSKEntry"]["Type"] = wpa_type
+  }
+
+  if (name != "") {
+    data["Name"] = name
+  }
+
+  if (zones != null) {
+    data["Zones"] = zones
+  }
+
+  if (tags != null) {
+    data["DeviceTags"] = tags
+  }
+
+  return new Promise((resolve, reject) =>  {
+    fetch(API + "/device/" + identity, {
       method: verb,
       headers: {
         'Authorization': authHeader(),
@@ -155,53 +206,33 @@ function delsetPSK(verb, mac, psk, wpa_type, comment) {
   })
 }
 
-function delsetZone(verb, zone, mac, comment) {
-  let data = {}
-  if (mac != "") {
-    data["Mac"] = mac
+export function setPSK(mac, psk, wpa_type, name) {
+  if (mac == "") {
+    mac = "pending"
   }
-  if (comment != "") {
-    data["Comment"] = comment
-  }
-  return new Promise((resolve, reject) =>  {
-    fetch(API + "/zone/" + zone, {
-      method: verb,
-      headers: {
-        'Authorization': authHeader(),
-        'X-Requested-With': 'react',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
-    })
-    .then(function(response) {
-      if(!response.ok)
-      {
-        throw new Error(response.status)
-      }
-      return response.json()
-    })
-    .then(data => {
-      resolve(data)
-    }).catch(reason => {
-      reject(reason)
-    })
-  })
-}
-export function setPSK(mac, psk, wpa_type, comment) {
-    return delsetPSK('PUT', mac, psk, wpa_type, comment)
+  return delsetDevice('PUT', mac, psk, wpa_type, name)
 }
 
-export function delPSK(mac, psk, wpa_type, comment) {
-    return delsetPSK('DELETE', mac, psk, wpa_type, comment)
+export function updateDeviceName(mac, name) {
+  return delsetDevice('PUT', mac, "", "", name)
 }
 
-export function delZone(zone, mac, comment) {
-    return delsetZone('DELETE', zone, mac, comment)
+export function updateDeviceZones(mac, zones) {
+  return delsetDevice('PUT', mac, "", "", "", zones)
 }
 
-export function addZone(zone, mac, comment) {
-    return delsetZone('PUT', zone, mac, comment)
+export function updateDeviceTags(mac, tags) {
+  return delsetDevice('PUT', mac, "", "", "", null, tags)
 }
+
+
+export function deleteDevice(mac) {
+  return delsetDevice('DELETE', mac)
+}
+
+
+//export function updateZone(zone, disabled, tags)
+//export function deleteZone(zone)
 
 export function getDevices() {
   return getAPIJson("/devices")

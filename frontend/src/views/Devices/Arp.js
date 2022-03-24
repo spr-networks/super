@@ -1,7 +1,7 @@
 import React, { useContext } from 'react'
 import { Component } from "react";
 import ZoneListing from "components/Zones/ZoneListing.js"
-import { getArp, getDevices, getNFVerdictMap } from "components/Helpers/Api.js";
+import { getArp, getNFVerdictMap } from "components/Helpers/Api.js";
 import {APIErrorContext} from 'layouts/Admin.js';
 
 // reactstrap components
@@ -70,7 +70,7 @@ export default class Arp extends Component {
           divs.push(
             <tr key={generatedID}>
               <td className=""> { entry.IP} </td>
-              <td className=""> { entry.Mac == "00:00:00:00:00:00" ? "<incomplete>" : entry.Mac }</td>
+              <td className=""> { entry.MAC == "00:00:00:00:00:00" ? "<incomplete>" : entry.MAC }</td>
               <td className=""> { translateFlags(entry.Flags) } </td>
               <td className=""> { entry.Device } </td>
             </tr>

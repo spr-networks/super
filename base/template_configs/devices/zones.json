@@ -1,0 +1,17 @@
+[
+ {
+  "Name": "dns",
+  "Disabled": false,
+  "ZoneTags": []
+ },
+ {
+  "Name": "lan",
+  "Disabled": false,
+  "ZoneTags": []
+ },
+ {
+  "Name": "wan",
+  "Disabled": false,
+  "ZoneTags": []
+ }
+]

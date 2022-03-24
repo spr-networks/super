@@ -43,14 +43,14 @@ export default class SignalStrength extends Component {
 
       for (const a of arp) {
         //skip incomplete entries
-        if (a.Mac == "00:00:00:00:00:00") {
+        if (a.MAC == "00:00:00:00:00:00") {
           continue
         }
-        this.macToIP[a.Mac] = a.IP
+        this.macToIP[a.MAC] = a.IP
       }
 
       Object.keys(devices).forEach( (mac) => {
-        this.macToName[mac] = devices[mac].Comment
+        this.macToName[mac] = devices[mac].Name
       })
 
       let processData = (signals)  => {
@@ -100,7 +100,7 @@ export default class SignalStrength extends Component {
         let d_rx = []
         let d_colors = []
         for (const entry of signals) {
-          d_labels.push(entry.Mac)
+          d_labels.push(entry.MAC)
           d_signal.push(entry.Signal)
           d_tx.push(entry.TX)
           d_rx.push(entry.RX)
@@ -136,7 +136,7 @@ export default class SignalStrength extends Component {
         let signals = []
         for (let mac in stations) {
           let station = stations[mac]
-          signals.push({Mac: mac, Signal: parseInt(station.signal), TX: parseInt(station.tx_rate_info), RX: parseInt(station.rx_rate_info)})
+          signals.push({MAC: mac, Signal: parseInt(station.signal), TX: parseInt(station.tx_rate_info), RX: parseInt(station.rx_rate_info)})
         }
         return processData(signals)
       }

@@ -1,7 +1,7 @@
 import React, { useContext } from 'react'
 import { Component } from "react";
 import ZoneListing from "components/Zones/ZoneListing.js"
-import { getZones, getNFVerdictMap } from "components/Helpers/Api.js";
+import { getZones, getDevices, getNFVerdictMap } from "components/Helpers/Api.js";
 import {APIErrorContext} from 'layouts/Admin.js';
 
 // reactstrap components
@@ -42,6 +42,28 @@ export default class Zones extends Component {
           this.context.reportError("API Failure: " + error.message)
         })
 
+        const devices = await getDevices().catch(error => {
+          this.context.reportError("API Failure: " + error.message)
+        })
+
+        let members = {}
+
+        for (const zone of d) {
+          members[zone.Name] = []
+        }
+
+        for (let identity in devices) {
+          let device = devices[identity]
+          for (const entry of device.Zones) {
+            members[entry].push(device)
+          }
+        }
+
+        for (let zone of d) {
+          zone.Members = members[zone.Name]
+        }
+
+
         let divs = []
         if (d) {
           for (const v of d) {
@@ -54,7 +76,7 @@ export default class Zones extends Component {
               })
               const generatedID = Math.random().toString(36).substr(2, 9);
               v.vmap = vmap
-              divs.push( <ZoneListing key={generatedID} zone={v} notifyChange={notifyChange} /> )
+              divs.push( <ZoneListing key={generatedID} zone={v} devices={devices} notifyChange={notifyChange} /> )
            };
            setState({ zones: d, zoneRows: divs })
         }
