@@ -12,8 +12,6 @@ try {
     API_HOST = API.split("//")[1]
   }
 } catch (e) {
-  alert(e)
-
 }
 
 export const zoneDescriptions = {
