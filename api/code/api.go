@@ -73,7 +73,7 @@ type DeviceEntry struct {
 	Name       string
 	MAC        string
 	WGPubKey   string
-	VLANMatch  string
+	VLANTag  string
 	RecentIP   string
 	PSKEntry   PSKEntry
 	Zones      []string
@@ -393,8 +393,8 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			val.WGPubKey = dev.WGPubKey
 		}
 
-		if dev.VLANMatch != "" {
-			val.VLANMatch = dev.VLANMatch
+		if dev.VLANTag != "" {
+			val.VLANTag = dev.VLANTag
 		}
 
 		if dev.RecentIP != "" {
