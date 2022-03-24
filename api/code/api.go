@@ -183,6 +183,7 @@ func migrateZonesPsksV0() {
 				device.Name = entry.Comment
 				device.PSKEntry = PSKEntry{Type: entry.Type, Psk: entry.Psk}
 				device.DeviceTags = []string{}
+				device.Zones = []string{}
 				devices[entry.Mac] = device
 			} else {
 				val.PSKEntry = PSKEntry{Type: entry.Type, Psk: entry.Psk}
@@ -967,6 +968,22 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	devices := getDevicesJson()
+	val, exists := devices[dhcp.MAC]
+	if !exists {
+		//create a new device entry
+		newDevice := DeviceEntry{}
+		newDevice.MAC = dhcp.MAC
+		newDevice.RecentIP = dhcp.IP
+		devices[newDevice.MAC] = newDevice
+	} else {
+		//update recent IP
+		val.RecentIP = dhcp.IP
+		devices[dhcp.MAC] = val
+	}
+	saveDevicesJson(devices)
+
+
 	WSNotifyValue("DHCPUpdateRequest", dhcp)
 
 	//1. delete this ip, mac from any existing verdict maps
@@ -1024,7 +1041,7 @@ type ArpEntry struct {
 	IP     string
 	HWType string
 	Flags  string
-	Mac    string
+	MAC    string
 	Mask   string
 	Device string
 }
@@ -1059,7 +1076,7 @@ func GetArpEntries() ([]ArpEntry, error) {
 			IP:     parsedData[0],
 			HWType: parsedData[1],
 			Flags:  parsedData[2],
-			Mac:    parsedData[3],
+			MAC:    parsedData[3],
 			Mask:   parsedData[4],
 			Device: parsedData[5],
 		})
