@@ -1,5 +1,5 @@
 import { Component } from "react";
-import { zoneDescriptions, delPSK, delZone, addZone } from "components/Helpers/Api.js";
+import { zoneDescriptions, deleteDevice, updateDeviceZones } from "components/Helpers/Api.js";
 import {
   Button,
   ButtonGroup,
@@ -20,7 +20,7 @@ import TagsInput from 'react-tagsinput';
 export default class Device extends Component {
 
   state = {
-    tags: []
+    zones: []
   }
 
 
@@ -46,32 +46,20 @@ export default class Device extends Component {
       <Button key={zone} color="default"> {zone} </Button>
     ))
 
-    this.setState({tags: device.Zones})
-    this.handleTags = this.handleTags.bind(this);
+    this.setState({zones: device.Zones})
+    this.handleZones = this.handleZones.bind(this);
   }
 
 
-  handleTags(tags) {
-      tags = [...new Set(tags)]
+  handleZones(zones) {
+      zones = [...new Set(zones)]
       let device = this.props.device;
-      for (let tag of tags) {
-        if (device.Zones.indexOf(tag) == -1) {
-          //add new tag
-          addZone(tag, device.Mac, device.Comment)
-        }
-      }
 
-      for (let tag of device.Zones) {
-        if (tags.indexOf(tag) == -1) {
-          console.log("found tag to remove")
-          //remove this tag
-          delZone(tag, device.Mac, device.Comment)
-        }
-      }
+      updateDeviceZones(device.MAC, zones)
 
       this.props.notifyChange()
 
-      this.setState({tags: tags});
+      this.setState({zones: zones});
   }
 
   render() {
@@ -79,27 +67,15 @@ export default class Device extends Component {
     const generatedID = Math.random().toString(36).substr(2, 9);
 
     let wifi_type = "N/A"
-    if (device.PskType == "sae") {
+    if (device.PSKEntry.Type == "sae") {
       wifi_type = "WPA3"
-    } else if (device.PskType == "wpa2") {
+    } else if (device.PSKEntry.Type == "wpa2") {
       wifi_type = "WPA2"
     }
 
 
-    const deleteDevice = (e) => {
-      if (wifi_type !== "N/A") {
-        if (device.Mac === "") {
-          delPSK("pending")
-        }
-        else {
-          delPSK(device.Mac)
-        }
-      }
-      //make a call for each zone
-      for (let zone of device.Zones) {
-        delZone(zone, device.Mac)
-      }
-
+    const removeDevice = (e) => {
+      deleteDevice(device.MAC)
       this.props.notifyChange()
     }
 
@@ -108,14 +84,14 @@ export default class Device extends Component {
 
     return (
       <tr>
-        <td className="text-center"> {device.Mac } </td>
-        <td> {device.Comment } </td>
+        <td className="text-center"> {device.MAC } </td>
+        <td> {device.Name } </td>
         <td> { wifi_type } </td>
         <td>
           <TagsInput
             inputProps={{placeholder:"Add zone"}}
-            value={this.state.tags}
-            onChange={this.handleTags}
+            value={this.state.zones}
+            onChange={this.handleZones}
             tagProps={{className: 'react-tagsinput-tag' }}
           />
         </td>
@@ -142,7 +118,7 @@ export default class Device extends Component {
             id={"tooltip" + (generatedID+1)}
             size="sm"
             type="button"
-            onClick={deleteDevice}
+            onClick={removeDevice}
           >
             <i className="fa fa-times" />
           </Button>{" "}

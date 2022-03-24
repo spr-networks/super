@@ -1,4 +1,3 @@
-import { getZones } from "components/Helpers/Api.js";
 import { Component } from "react";
 import ZoneDevice from "components/Zones/ZoneDevice.js"
 import React, { useContext } from 'react'
@@ -38,11 +37,12 @@ export default class ZoneListing extends Component {
     }
 
     const zone = this.props.zone;
+    const devices = this.props.devices;
+
     const zoneRows = []
-
-    if (zone.Clients.length > 0) {
-      for (const v of zone.Clients) {
-
+    if (zone.Members.length > 0) {
+      for (const v of zone.Members) {
+          console.log(v)
           const generatedID = Math.random().toString(36).substr(2, 9);
           //if the device was in the vmap, mark it as active
           v.ifname = "--"

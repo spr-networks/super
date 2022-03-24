@@ -45,14 +45,14 @@ export default class Traffic extends Component {
 
       for (const a of arp) {
         //skip incomplete entries
-        if (a.Mac == "00:00:00:00:00:00") {
+        if (a.MAC == "00:00:00:00:00:00") {
           continue
         }
-        this.ipToMac[a.IP] = a.Mac
+        this.ipToMac[a.IP] = a.MAC
       }
 
       Object.keys(devices).forEach( (mac) => {
-        this.macToName[mac] = devices[mac].Comment
+        this.macToName[mac] = devices[mac].Name
       })
 
 

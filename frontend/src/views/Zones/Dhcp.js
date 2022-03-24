@@ -69,9 +69,9 @@ export default class Dhcp extends Component {
           let name = "--"
           let d = devices[entry.ether_addr]
           if (d) {
-            name = d.Comment
+            name = d.Name
           }
-          v.Clients.push({"Comment": name, "Mac": entry.ether_addr, "ifname": entry.ifname})
+          v.Clients.push({"Name": name, "Mac": entry.ether_addr, "ifname": entry.ifname})
         }
         //divs.push( <Zone key={generatedID} zone={d[v]} notifyChange={notifyChange} /> )
         divs.push( <ZoneListing key={generatedID} zone={v} notifyChange={notifyChange} /> )

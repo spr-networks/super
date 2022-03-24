@@ -40,7 +40,7 @@ const Step2 = React.forwardRef((props, ref) => {
       setPassphraseText(wifi.psk)
     }
     //now submit to the API
-    setPSK(wifi.mac, wifi.psk, wifi.wpa, wifi.comment).then((value) => {
+    setPSK(wifi.mac, wifi.psk, wifi.wpa, wifi.name).then((value) => {
       setsuccess(<Label> Waiting for connection... </Label>)
       if (psk_was_empty) {
         setPassphraseText(value.Psk)
