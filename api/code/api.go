@@ -24,7 +24,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var TEST_PREFIX = ""
+var TEST_PREFIX = "../../"
 var DeprecatedZonesConfigPath = TEST_PREFIX + "/configs/zones/zones.json"
 var DeprecatedPSKConfigPath = TEST_PREFIX + "/configs/wifi/psks.json"
 
@@ -389,10 +389,21 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	if exists {
 		//updating an existing entry. Check what was requested
 
-		val.Name = dev.Name
-		val.WGPubKey = dev.WGPubKey
-		val.VLANMatch = dev.VLANMatch
-		val.RecentIP = dev.RecentIP
+		if dev.Name != "" {
+			val.Name = dev.Name
+		}
+
+		if dev.WGPubKey != "" {
+			val.WGPubKey = dev.WGPubKey
+		}
+
+		if dev.VLANMatch != "" {
+			val.VLANMatch = dev.VLANMatch
+		}
+
+		if dev.RecentIP != "" {
+			val.RecentIP = dev.RecentIP
+		}
 
 		if dev.PSKEntry.Psk != "" {
 			//assign a new PSK
@@ -414,11 +425,11 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			}
 		}
 
-		if !equalStringSlice(val.DeviceTags, dev.DeviceTags) {
+		if val.DeviceTags != nil && !equalStringSlice(val.DeviceTags, dev.DeviceTags) {
 			val.DeviceTags = dev.DeviceTags
 		}
 
-		if !equalStringSlice(val.Zones, dev.Zones) {
+		if dev.Zones != nil && !equalStringSlice(val.Zones, dev.Zones) {
 			val.Zones = dev.Zones
 
 			saveZones := false
