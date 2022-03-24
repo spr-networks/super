@@ -28,7 +28,6 @@ var TEST_PREFIX = ""
 var DeprecatedZonesConfigPath = TEST_PREFIX + "/configs/zones/zones.json"
 var DeprecatedPSKConfigPath = TEST_PREFIX + "/configs/wifi/psks.json"
 
-
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
 var ZonesConfigFile = DevicesConfigPath + "zones.json"
@@ -57,13 +56,6 @@ type ZoneEntry struct {
 	ZoneTags []string
 }
 
-type PSKRequestEntry struct {
-	Type    string
-	Mac     string
-	Psk     string
-	Comment string
-}
-
 type PSKEntry struct {
 	Type string
 	Psk  string
@@ -73,7 +65,7 @@ type DeviceEntry struct {
 	Name       string
 	MAC        string
 	WGPubKey   string
-	VLANTag  string
+	VLANTag    string
 	RecentIP   string
 	PSKEntry   PSKEntry
 	Zones      []string
@@ -81,21 +73,22 @@ type DeviceEntry struct {
 }
 
 /* Deprecated */
-type Client struct {
+
+type DeprecatedPSKEntry struct {
+	Type    string
+	Mac     string
+	Psk     string
+	Comment string
+}
+
+type DeprecatedClient struct {
 	Mac     string
 	Comment string
 }
 
 type DeprecatedClientZone struct {
 	Name    string
-	Clients []Client
-}
-
-type Device struct {
-	Mac     string
-	PskType string
-	Comment string
-	Zones   []string
+	Clients []DeprecatedClient
 }
 
 var config = APIConfig{}
@@ -120,7 +113,7 @@ func migrateZonesPsksV0() {
 	//migrate old zone / psk files to the new format
 	saveUpdate := false
 	clientZones := []DeprecatedClientZone{}
-	psks := map[string]PSKRequestEntry{}
+	psks := map[string]DeprecatedPSKEntry{}
 
 	devices := map[string]DeviceEntry{}
 	newZones := []ZoneEntry{}
@@ -216,15 +209,15 @@ func migrateZonesPsksV0() {
 			log.Fatal(err)
 		}
 
-			err = os.Rename(DeprecatedZonesConfigPath, DeprecatedZonesConfigPath+".bak-upgrade")
-			if err != nil {
-				log.Fatal(err)
-			}
+		err = os.Rename(DeprecatedZonesConfigPath, DeprecatedZonesConfigPath+".bak-upgrade")
+		if err != nil {
+			log.Fatal(err)
+		}
 
-			err = os.Rename(DeprecatedPSKConfigPath, DeprecatedPSKConfigPath+".bak-upgrade")
-			if err != nil {
-				log.Fatal(err)
-			}
+		err = os.Rename(DeprecatedPSKConfigPath, DeprecatedPSKConfigPath+".bak-upgrade")
+		if err != nil {
+			log.Fatal(err)
+		}
 
 	}
 
