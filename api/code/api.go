@@ -24,9 +24,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var TEST_PREFIX = "../../"
+var TEST_PREFIX = ""
 var DeprecatedZonesConfigPath = TEST_PREFIX + "/configs/zones/zones.json"
 var DeprecatedPSKConfigPath = TEST_PREFIX + "/configs/wifi/psks.json"
+
 
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
@@ -215,7 +216,6 @@ func migrateZonesPsksV0() {
 			log.Fatal(err)
 		}
 
-		/*
 			err = os.Rename(DeprecatedZonesConfigPath, DeprecatedZonesConfigPath+".bak-upgrade")
 			if err != nil {
 				log.Fatal(err)
@@ -225,7 +225,6 @@ func migrateZonesPsksV0() {
 			if err != nil {
 				log.Fatal(err)
 			}
-		*/
 
 	}
 
