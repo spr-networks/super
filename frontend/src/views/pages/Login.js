@@ -158,7 +158,7 @@ function Login() {
         className="full-page-background"
         style={{
           backgroundImage: `url(${
-            require("assets/img/bg/bg.jpg").default
+            require("assets/img/bg/bg.jpg")
           })`,
         }}
       />
