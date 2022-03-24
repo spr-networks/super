@@ -52,20 +52,20 @@ type APIConfig struct {
 
 type ZoneEntry struct {
 	Name     string
-	Disabled  bool
+	Disabled bool
 	ZoneTags []string
 }
 
 type PSKRequestEntry struct {
 	Type    string
-	Mac 		string
+	Mac     string
 	Psk     string
 	Comment string
 }
 
 type PSKEntry struct {
-	Type    string
-	Psk     string
+	Type string
+	Psk  string
 }
 
 type DeviceEntry struct {
@@ -75,7 +75,7 @@ type DeviceEntry struct {
 	VLANMatch  string
 	RecentIP   string
 	PSKEntry   PSKEntry
-	Zones			 []string
+	Zones      []string
 	DeviceTags []string
 }
 
@@ -119,7 +119,7 @@ func migrateZonesPsksV0() {
 	//migrate old zone / psk files to the new format
 	saveUpdate := false
 	clientZones := []DeprecatedClientZone{}
-	psks := map[string] PSKRequestEntry{}
+	psks := map[string]PSKRequestEntry{}
 
 	devices := map[string]DeviceEntry{}
 	newZones := []ZoneEntry{}
@@ -216,15 +216,15 @@ func migrateZonesPsksV0() {
 		}
 
 		/*
-		err = os.Rename(DeprecatedZonesConfigPath, DeprecatedZonesConfigPath+".bak-upgrade")
-		if err != nil {
-			log.Fatal(err)
-		}
+			err = os.Rename(DeprecatedZonesConfigPath, DeprecatedZonesConfigPath+".bak-upgrade")
+			if err != nil {
+				log.Fatal(err)
+			}
 
-		err = os.Rename(DeprecatedPSKConfigPath, DeprecatedPSKConfigPath+".bak-upgrade")
-		if err != nil {
-			log.Fatal(err)
-		}
+			err = os.Rename(DeprecatedPSKConfigPath, DeprecatedPSKConfigPath+".bak-upgrade")
+			if err != nil {
+				log.Fatal(err)
+			}
 		*/
 
 	}
@@ -271,8 +271,6 @@ func getStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(reply)
 }
 
-
-
 var Devicesmtx sync.Mutex
 
 func saveDevicesJson(devices map[string]DeviceEntry) {
@@ -296,7 +294,6 @@ func getDevicesJson() map[string]DeviceEntry {
 	return devices
 }
 
-
 func getDevices(w http.ResponseWriter, r *http.Request) {
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
@@ -305,7 +302,7 @@ func getDevices(w http.ResponseWriter, r *http.Request) {
 
 	//mask PSKs
 	for i, entry := range devices {
-		if entry.PSKEntry.Psk  != "" {
+		if entry.PSKEntry.Psk != "" {
 			entry.PSKEntry.Psk = "**"
 			devices[i] = entry
 		}
@@ -314,7 +311,6 @@ func getDevices(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(devices)
 }
-
 
 func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 	identity := mux.Vars(r)["identity"]
@@ -501,7 +497,6 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		}
 	}
 
-
 	if dev.DeviceTags == nil {
 		dev.DeviceTags = []string{}
 	}
@@ -535,10 +530,6 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	json.NewEncoder(w).Encode(dev)
 }
 
-
-
-
-
 func pendingPSK(w http.ResponseWriter, r *http.Request) {
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
@@ -549,7 +540,6 @@ func pendingPSK(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(exists)
 }
-
 
 func saveZonesJson(zones []ZoneEntry) {
 	file, _ := json.MarshalIndent(zones, "", " ")
@@ -619,7 +609,7 @@ func updateZones(w http.ResponseWriter, r *http.Request) {
 		if entry.Name == zone.Name {
 			entry.Disabled = zone.Disabled
 			entry.ZoneTags = zone.ZoneTags
-			zones[idx]= entry
+			zones[idx] = entry
 			saveZonesJson(zones)
 			return
 		}
@@ -892,17 +882,17 @@ func populateVmapEntries(IP string, MAC string, Iface string) {
 			continue
 		}
 		switch zone_name {
-				case "isolated":
-					continue
-				case "dns":
-					addDNSVerdict(IP, MAC, Iface)
-				case "lan":
-					addLANVerdict(IP, MAC, Iface)
-				case "wan":
-					addInternetVerdict(IP, MAC, Iface)
-				default:
-					//custom group
-					addCustomVerdict(zone_name, IP, MAC, Iface)
+		case "isolated":
+			continue
+		case "dns":
+			addDNSVerdict(IP, MAC, Iface)
+		case "lan":
+			addLANVerdict(IP, MAC, Iface)
+		case "wan":
+			addInternetVerdict(IP, MAC, Iface)
+		default:
+			//custom group
+			addCustomVerdict(zone_name, IP, MAC, Iface)
 		}
 	}
 
@@ -949,8 +939,6 @@ func shouldFlushByInterface(Iface string) bool {
 	return matchInterface
 }
 
-
-
 type DHCPUpdate struct {
 	IP     string
 	MAC    string
@@ -968,7 +956,6 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
-
 
 	//Handle networking tasks upon a DHCP
 	dhcp := DHCPUpdate{}
@@ -994,7 +981,6 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 		devices[dhcp.MAC] = val
 	}
 	saveDevicesJson(devices)
-
 
 	WSNotifyValue("DHCPUpdateRequest", dhcp)
 
@@ -1212,7 +1198,6 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(pska)
 }
 
-
 func genSecurePassword() string {
 	pw := make([]byte, 16)
 	n, err := crand.Read(pw)
@@ -1221,7 +1206,6 @@ func genSecurePassword() string {
 	}
 	return base64.RawURLEncoding.EncodeToString(pw)
 }
-
 
 func reloadPSKFiles(w http.ResponseWriter, r *http.Request) {
 	Devicesmtx.Lock()
@@ -1253,11 +1237,11 @@ func doReloadPSKFiles() {
 		}
 	}
 
-	err := ioutil.WriteFile(TEST_PREFIX + "/configs/wifi/sae_passwords", []byte(sae), 0644)
+	err := ioutil.WriteFile(TEST_PREFIX+"/configs/wifi/sae_passwords", []byte(sae), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = ioutil.WriteFile(TEST_PREFIX + "/configs/wifi/wpa2pskfile", []byte(wpa2), 0644)
+	err = ioutil.WriteFile(TEST_PREFIX+"/configs/wifi/wpa2pskfile", []byte(wpa2), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
