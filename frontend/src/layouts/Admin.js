@@ -126,10 +126,11 @@ function Admin(props) {
         errorState.reportSuccess("Authentication success for MAC " + innerData["MAC"])
       } else if (data["Type"] == "PSKAuthFailure") {
         let reasonString = ""
+        let wpa_type = {"sae": "WPA3", "wpa2": "WPA2"}[innerData["Type"]]
         if (innerData.Reason == "noentry") {
-          reasonString = "Unknown device"
+          reasonString = "Unknown device with" + wpa_type
         } else if (innerData.Reason == "mismatch") {
-          reasonString = "Wrong password"
+          reasonString = "Wrong password with " + wpa_type
         }
         errorState.reportError("Authentication failure for MAC " + innerData["MAC"] + ": " + reasonString)
       }
