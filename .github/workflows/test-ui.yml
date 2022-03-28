@@ -36,29 +36,31 @@ jobs:
         working-directory: ./frontend
         run: yarn install
 
+      - name: test cypress location
+        run: ls -l /root/.cache/Cypress/*/Cypress/Cypress
+
       - name: Build
         working-directory: ./frontend
         run: yarn run build
 
-  #    - name: Run tests
-  #      working-directory: ./frontend
-  #      run: yarn run test
+#    - name: Run tests
+#      working-directory: ./frontend
+#      run: yarn run test
 
-  #    - name: Cypress Verify
-  #      working-directory: ./frontend
-  #      run: |
-  #        npx cypress verify
-  #        npx cypress info
+#    - name: Cypress Verify
+#      working-directory: ./frontend
+#      run: |
+#        npx cypress verify
+#        npx cypress info
 
       - name: Cypress test
         uses: cypress-io/github-action@v2
         with:
-          #install: false
           working-directory: ./frontend
           start: npx serve -s build
-  #    - name: Cypress run
-  #      uses: cypress-io/github-action@v2
-  #      working-directory: ./frontend
-  #      with:
-  #        build: yarn run build
-  #        start: npx serve -s build
+#    - name: Cypress run
+#      uses: cypress-io/github-action@v2
+#      working-directory: ./frontend
+#      with:
+#        build: yarn run build
+#        start: npx serve -s build
