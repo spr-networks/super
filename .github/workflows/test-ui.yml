@@ -32,15 +32,15 @@ jobs:
         working-directory: ./frontend
         run: yarn run build
 
-      - name: Run tests
-        working-directory: ./frontend
-        run: yarn run test
+#      - name: Run tests
+#        working-directory: ./frontend
+#        run: yarn run test
 
-      - name: Verify cypress
-        working-directory: ./frontend
-        run: |
-          npx cypress verify
-          npx cypress info
+#      - name: Cypress Verify
+#        working-directory: ./frontend
+#        run: |
+#          npx cypress verify
+#          npx cypress info
 
       - name: Cypress test
         uses: cypress-io/github-action@v2
