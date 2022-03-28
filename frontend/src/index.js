@@ -1,37 +1,20 @@
-/*!
+import React from 'react';
+import ReactDOM from 'react-dom';
 
-=========================================================
-* Paper Dashboard PRO React - v1.3.0
-=========================================================
+import App from './App';
+//import reportWebVitals from './reportWebVitals';
 
-* Product Page: https://www.creative-tim.com/product/paper-dashboard-pro-react
-* Copyright 2021 Creative Tim (https://www.creative-tim.com)
-
-* Coded by Creative Tim
-
-=========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-*/
-import React from "react";
-import ReactDOM from "react-dom";
-import { BrowserRouter, Route, Switch, Redirect } from "react-router-dom";
-
-import AuthLayout from "layouts/Auth.js";
-import AdminLayout from "layouts/Admin.js";
-
-import "bootstrap/dist/css/bootstrap.css";
-import "assets/scss/paper-dashboard.scss?v=1.3.0";
-import "perfect-scrollbar/css/perfect-scrollbar.css";
-
+/*
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+ * */
 ReactDOM.render(
-  <BrowserRouter>
-    <Switch>
-      <Route path="/auth" render={(props) => <AuthLayout {...props} />} />
-      <Route path="/admin" render={(props) => <AdminLayout {...props} />} />
-      <Redirect to="/auth/login" />
-    </Switch>
-  </BrowserRouter>,
-  document.getElementById("root")
+  <App />,
+  document.getElementById('root')
 );
+
+// If you want to start measuring performance in your app, pass a function
+// to log results (for example: reportWebVitals(console.log))
+// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+//reportWebVitals();
