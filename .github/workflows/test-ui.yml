@@ -10,55 +10,55 @@ jobs:
   cypress-run:
     runs-on: ubuntu-latest
     steps:
-		- name: Checkout
-			uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
-		- name: Use Node.js 17
-			uses: actions/setup-node@v2
-			with:
-				node-version: 17
+      - name: Use Node.js 17
+        uses: actions/setup-node@v2
+        with:
+          node-version: 17
 
-		- name: Cache node modules
-			uses: actions/cache@v2
-			with:
-				path: '**/node_modules'
-				key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+      - name: Cache node modules
+        uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
 
-		- name: Cache Cypress binary
-			uses: actions/cache@v1
-			with:
-				path: ~/.cache/Cypress
-				key: cypress-${{ runner.os }}-cypress-${{ hashFiles('**/package.json') }}
-				restore-keys: |
-					cypress-${{ runner.os }}-cypress-
+      - name: Cache Cypress binary
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-${{ runner.os }}-cypress-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            cypress-${{ runner.os }}-cypress-
 
-		- name: Install dependencies
-			working-directory: ./frontend
-			run: yarn install
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: yarn install
 
-		- name: Build
-			working-directory: ./frontend
-			run: yarn run build
+      - name: Build
+        working-directory: ./frontend
+        run: yarn run build
 
-#    - name: Run tests
-#      working-directory: ./frontend
-#      run: yarn run test
+  #    - name: Run tests
+  #      working-directory: ./frontend
+  #      run: yarn run test
 
-#    - name: Cypress Verify
-#      working-directory: ./frontend
-#      run: |
-#        npx cypress verify
-#        npx cypress info
+  #    - name: Cypress Verify
+  #      working-directory: ./frontend
+  #      run: |
+  #        npx cypress verify
+  #        npx cypress info
 
-		- name: Cypress test
-			uses: cypress-io/github-action@v2
-			with:
-				#install: false
-				working-directory: ./frontend
-				start: npx serve -s build
-#    - name: Cypress run
-#      uses: cypress-io/github-action@v2
-#      working-directory: ./frontend
-#      with:
-#        build: yarn run build
-#        start: npx serve -s build
+      - name: Cypress test
+        uses: cypress-io/github-action@v2
+        with:
+          #install: false
+          working-directory: ./frontend
+          start: npx serve -s build
+  #    - name: Cypress run
+  #      uses: cypress-io/github-action@v2
+  #      working-directory: ./frontend
+  #      with:
+  #        build: yarn run build
+  #        start: npx serve -s build
