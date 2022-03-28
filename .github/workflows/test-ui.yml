@@ -41,8 +41,8 @@ jobs:
         run: npx cypress verify
 
       - name: Cypress run
-        working-directory: ./frontend
         uses: cypress-io/github-action@v2
+        working-directory: ./frontend
         with:
+          build: yarn run build
           start: npx serve -s build
-#          build: npm run build
