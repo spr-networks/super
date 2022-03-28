@@ -2,7 +2,7 @@ import { createServer, Model } from "miragejs"
 
 // TODO alot of this can be parsed from OpenAPI definitions
 export default function MockAPI() {
-  return createServer({
+  let server = createServer({
     models: {
       devices: Model,
       zones: Model
@@ -230,4 +230,10 @@ export default function MockAPI() {
     }
   })
 
+  //console.log('mockapi:', typeof jest)
+  if (jest !== undefined) {
+    server.logging = false
+  }
+
+  return server
 }

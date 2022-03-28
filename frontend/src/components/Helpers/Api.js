@@ -52,7 +52,6 @@ export function testLogin(username, password, callback) {
   })
   .then(data => {
     if (data == "Online") {
-      console.log('Success:', data);
       return callback(true)
     }
     return callback(false)
