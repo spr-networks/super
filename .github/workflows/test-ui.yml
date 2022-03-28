@@ -17,12 +17,21 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: 17
+
       - name: Install dependencies
+        working-directory: ./frontend
         run: yarn install
-      - run: yarn run build
-      - run: yarn run test
+
+      - name: Build
+        working-directory: ./frontend
+        run: yarn run build
+
+      - name: Run tests
+        working-directory: ./frontend
+        run: yarn run test
 
 #      - name: Cypress run
+#        working-directory: ./frontend
 #        uses: cypress-io/github-action@v2
 #        with:
 #          build: npm run build
