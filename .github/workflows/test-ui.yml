@@ -18,6 +18,12 @@ jobs:
         with:
           node-version: 17
 
+		- name: Cache node modules
+			uses: actions/cache@v2
+			with:
+				path: '**/node_modules'
+				key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+
       - name: Install dependencies
         working-directory: ./frontend
         run: yarn install
@@ -30,9 +36,9 @@ jobs:
         working-directory: ./frontend
         run: yarn run test
 
-#      - name: Cypress run
-#        working-directory: ./frontend
-#        uses: cypress-io/github-action@v2
-#        with:
-#          build: npm run build
-#          start: npx serve -s build
+      - name: Cypress run
+        working-directory: ./frontend
+        uses: cypress-io/github-action@v2
+        with:
+          #build: npm run build
+          start: npx serve -s build
