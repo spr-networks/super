@@ -18,9 +18,9 @@ jobs:
         with:
           node-version: 17
       - name: Install dependencies
-        run: npm ci
-      - run: npm run build
-      - run: npm test
+        run: yarn install
+      - run: yarn run build
+      - run: yarn run test
 
 #      - name: Cypress run
 #        uses: cypress-io/github-action@v2
