@@ -1,4 +1,4 @@
-import { createServer, Model } from "miragejs"
+import { createServer, Model, Response } from "miragejs"
 
 // TODO alot of this can be parsed from OpenAPI definitions
 export default function MockAPI() {
@@ -10,7 +10,7 @@ export default function MockAPI() {
     seeds(server) {
       server.create('device', {
           "Name": "rpi4",
-          "MAC": "11:22:33:44:55:61",
+          "MAC": "11:22:33:44:55:66",
           "WGPubKey": "pubkey",
           "VLANTag": "vlantag",
           "RecentIP": "192.168.2.102",
@@ -24,7 +24,7 @@ export default function MockAPI() {
 
       server.create('device', {
           "Name": "rpi23",
-          "MAC": "11:22:33:44:55:61",
+          "MAC": "11:11:11:11:11:11",
           "WGPubKey": "pubkey",
           "VLANTag": "vlantag",
           "RecentIP": "192.168.2.103",
@@ -41,15 +41,33 @@ export default function MockAPI() {
       server.create('zone', { Name: "dns", disabled: false, ZoneTags: [] })
     },
     routes() {
+      // TODO hook for all
+      const authOK = (request) => {
+        try {
+          let [type, b64auth] = request.requestHeaders.Authorization.split(' ')
+          return (type == 'Basic' && atob(b64auth) == 'admin:admin')
+        } catch(err) {
+          return false
+        }
+      }
+
       this.get('/status', (schema, request) => {
-        return '"Online"'
+        return authOK(request) ? '"Online"' : '"Error"'
       })
 
-      this.get('/devices', (schema) => {
+      this.get('/devices', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, {error: "invalid auth"})
+        }
+
         return schema.devices.all().models
       })
 
       this.put('/device/:id', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, {error: "invalid auth"})
+        }
+
         let MAC = request.params.id
         let dev = schema.devices.findBy({MAC})
         let attrs = JSON.parse(request.requestBody)
@@ -64,10 +82,18 @@ export default function MockAPI() {
       })
 
       this.get('/zones', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, {error: "invalid auth"})
+        }
+
         return schema.zones.all().models
       })
 
       this.del('/device/:id', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, {error: "invalid auth"})
+        }
+
         let id = request.params.id
         return schema.devices.findBy({MAC: id}).destroy()
       })
@@ -97,6 +123,10 @@ export default function MockAPI() {
       })
 
       this.get('/ip/addr', (schema) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, {error: "invalid auth"})
+        }
+
         return [
           {
             "ifindex": 1,
@@ -230,10 +260,11 @@ export default function MockAPI() {
     }
   })
 
-  //console.log('mockapi:', typeof jest)
-  if (jest !== undefined) {
-    server.logging = false
-  }
+  try {
+    if (jest !== undefined) {
+      server.logging = false
+    }
+  } catch(err) {}
 
   return server
 }
