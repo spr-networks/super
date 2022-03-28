@@ -25,19 +25,17 @@ jobs:
           key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
 
       - name: Cache Cypress binary
-        uses: actions/cache@v1
+        uses: actions/cache@v2
         with:
           path: ~/.cache/Cypress
           key: cypress-${{ runner.os }}-cypress-${{ hashFiles('**/package.json') }}
-          restore-keys: |
-            cypress-${{ runner.os }}-cypress-
 
       - name: Install dependencies
         working-directory: ./frontend
         run: yarn install
 
       - name: test cypress location
-        run: ls -l /root/.cache/Cypress/*/Cypress/Cypress
+        run: ls -l ~/.cache/Cypress/*/Cypress/Cypress
 
       - name: Build
         working-directory: ./frontend
