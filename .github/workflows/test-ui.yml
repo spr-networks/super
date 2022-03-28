@@ -45,8 +45,8 @@ jobs:
       - name: Cypress test
         uses: cypress-io/github-action@v2
         with:
-          project: ./frontend
-          install: false
+          #install: false
+          working-directory: ./frontend
           start: npx serve -s build
 #      - name: Cypress run
 #        uses: cypress-io/github-action@v2
