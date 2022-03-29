@@ -33,30 +33,15 @@ export default class DNSOverrideList extends React.Component {
     super(props)
 
     this.state.list = props.list
-
-    //this.handleItemSwitch = this.handleItemSwitch.bind(this);
-    //this.deleteListItem = this.deleteListItem.bind(this);
   }
-
-  /*
-  async handleItemSwitch(item, value) {
-    item.Enabled = value
-    const list = this.state.list.map(_item => {
-      if (_item.URI == item.URI) {
-        _item.Enabled = item.Enabled
-      }
-
-      return _item
-    })
-
-    this.setState({list})
-    await updateDNSBlocklist(item)
-    this.props.notifyChange()
-  }
-  */
 
   async deleteListItem(item) {
-    await deleteDNSOverride(item)
+    try {
+      await deleteDNSOverride(item)
+    } catch(error) {
+      this.context.reportError("API Failure: " + error.message)
+    }
+
     this.props.notifyChange('config')
   }
 

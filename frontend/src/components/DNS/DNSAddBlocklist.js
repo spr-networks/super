@@ -1,5 +1,6 @@
 import React, { useContext } from 'react'
 import { updateDNSBlocklist } from "components/Helpers/Api.js"
+import { APIErrorContext } from 'layouts/Admin.js'
 //import Switch from "react-bootstrap-switch";
 
 // reactstrap components
@@ -19,7 +20,9 @@ import {
 } from "reactstrap";
 
 export default class DNSAddBlocklist extends React.Component {
+  static contextType = APIErrorContext;
   state = { URI: 'https://', Enabled: true };
+
   constructor(props) {
     super(props)
 
@@ -36,9 +39,13 @@ export default class DNSAddBlocklist extends React.Component {
     this.setState({Enabled})
   }
 
-  handleSubmit(event) {
+  async handleSubmit(event) {
     let blocklist = {URI: this.state.URI, Enabled: this.state.Enabled}
-    updateDNSBlocklist(blocklist)
+    try {
+      await updateDNSBlocklist(blocklist)
+    } catch(error) {
+      this.context.reportError("API Failure: " + error.message)
+    }
 
     this.props.notifyChange('blocklists')
 
@@ -46,8 +53,6 @@ export default class DNSAddBlocklist extends React.Component {
   }
 
   render() {
-    let formRef = React.createRef()
-
     return (
 			<Form onSubmit={this.handleSubmit}>
 				<Row>
