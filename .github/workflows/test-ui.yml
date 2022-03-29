@@ -22,28 +22,25 @@ jobs:
         uses: actions/cache@v2
         with:
           path: '**/node_modules'
-          key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
 
       - name: Cache Cypress binary
         uses: actions/cache@v2
         with:
           path: ~/.cache/Cypress
-          key: cypress-${{ runner.os }}-cypress-${{ hashFiles('**/package-lock.json') }}
+          key: cypress-${{ runner.os }}-cypress-${{ hashFiles('**/yarn.lock') }}
 
       - name: Install dependencies
         working-directory: ./frontend
-        run: npm ci
-
-      - name: Cypress location
-        run: ls -l ~/.cache/Cypress/*/Cypress/Cypress
+        run: yarn install --frozen-lockfile
 
       - name: Build
         working-directory: ./frontend
-        run: npm run build
+        run: yarn build
 
       - name: Run tests
         working-directory: ./frontend
-        run: npm run test
+        run: yarn test
 
 #      - name: Cypress test
 #        uses: cypress-io/github-action@v2
