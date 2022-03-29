@@ -46,7 +46,7 @@ export default function MockAPI() {
       server.create('dnsblocklist', {"URI": "https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt", "Enabled": false})
       server.create('dnsoverride', {
         "Type": "block",
-        "Domain": "example.com",
+        "Domain": "example.com.",
         "ResultIP": "1.2.3.4",
         "ClientIP": "192.168.2.102",
         "Expiration": 0
@@ -54,7 +54,7 @@ export default function MockAPI() {
 
       server.create('dnsoverride', {
         "Type": "block",
-        "Domain": "asdf.com",
+        "Domain": "asdf.com.",
         "ResultIP": "1.2.3.4",
         "ClientIP": "*",
         "Expiration": 0
@@ -62,7 +62,7 @@ export default function MockAPI() {
 
       server.create('dnsoverride', {
         "Type": "permit",
-        "Domain": "google.com",
+        "Domain": "google.com.",
         "ResultIP": "8.8.8.8",
         "ClientIP": "192.168.2.101",
         "Expiration": 123
@@ -287,6 +287,15 @@ export default function MockAPI() {
       })
 
       //DNS plugin
+      this.get('/plugins/dns/block/config', (schema, request) => {
+        return {
+          "BlockLists": schema.dnsblocklists.all().models,
+          "BlockDomains": schema.dnsoverrides.where({Type:'permit'}).models,
+          "PermitDomains": schema.dnsoverrides.where({Type:'block'}).models,
+          "ClientIPExclusions": null
+        }
+      })
+
       this.get('/plugins/dns/block/blocklists', (schema, request) => {
         return schema.dnsblocklists.all().models
       })
@@ -304,13 +313,13 @@ export default function MockAPI() {
 
       this.put('/plugins/dns/block/override', (schema, request) => {
         let attrs = JSON.parse(request.requestBody)
-        return schema.dnsblocklists.create(attrs)
+        return schema.dnsoverrides.create(attrs)
       })
 
       this.delete('/plugins/dns/block/override', (schema, request) => {
         let attrs = JSON.parse(request.requestBody)
         let Domain = attrs.Domain
-        return schema.dnsblocklists.findBy({Domain}).destroy()
+        return schema.dnsoverrides.findBy({Domain}).destroy()
       })
 
       this.get('/plugins/dns/block/dump_domains', (schema, request) => {

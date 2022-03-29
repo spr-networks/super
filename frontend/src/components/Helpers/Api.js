@@ -336,6 +336,10 @@ function delset(verb, url, data) {
   })
 }
 
+export function getDNSConfig() {
+  return getAPIJson(`/plugins/dns/block/config`)
+}
+
 export function getDNSBlocklists() {
   return getAPIJson(`/plugins/dns/block/blocklists`)
 }
@@ -350,6 +354,10 @@ export function deleteDNSBlocklist(data) {
 
 export function updateDNSOverride(data) {
   delset('PUT', `plugins/dns/block/override`, data)
+}
+
+export function deleteDNSOverride(data) {
+  delset('DELETE', `plugins/dns/block/override`, data)
 }
 
 export function ConnectWebsocket(messageCallback) {

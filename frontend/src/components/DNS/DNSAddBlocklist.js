@@ -18,7 +18,7 @@ import {
   Row
 } from "reactstrap";
 
-export default class DNSAddBlockList extends React.Component {
+export default class DNSAddBlocklist extends React.Component {
   state = { URI: 'https://', Enabled: true };
   constructor(props) {
     super(props)
@@ -40,7 +40,7 @@ export default class DNSAddBlockList extends React.Component {
     let blocklist = {URI: this.state.URI, Enabled: this.state.Enabled}
     updateDNSBlocklist(blocklist)
 
-    this.props.notifyChange('add')
+    this.props.notifyChange('blocklists')
 
     event.preventDefault()
   }
