@@ -1,0 +1,49 @@
+name: UI Test CI
+
+on:
+  push:
+    branches: [ main, test ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Use Node.js 17
+        uses: actions/setup-node@v2
+        with:
+          node-version: 17
+
+      - name: Cache node modules
+        uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Cache Cypress binary
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-${{ runner.os }}-cypress-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: yarn install --frozen-lockfile
+
+      - name: Build
+        working-directory: ./frontend
+        run: yarn build
+
+      - name: Run tests
+        working-directory: ./frontend
+        run: yarn test
+#  cypress-run: # job name
+#      - name: Cypress test
+#        uses: cypress-io/github-action@v2
+#        with:
+#          working-directory: ./frontend
+#          start: npx serve -s build

@@ -1,17 +1,18 @@
+const { REACT_APP_API } = process.env;
+const NFT_VERSION = "0.9.7";
 let API = document.location.origin;
 let API_HOST = document.location.host;
 let ws;
-const NFT_VERSION = "0.9.7";
 
-
-const { REACT_APP_API } = process.env;
-
-try {
-  if (REACT_APP_API) {
-    API = REACT_APP_API
-    API_HOST = API.split("//")[1]
+if (REACT_APP_API) {
+  try {
+    let url = new URL(REACT_APP_API)
+    API = url.toString()
+    API_HOST = API.host
+  } catch (e) {
+    // note -- since the MockAPI have mirage is dev dependency -- dont load it in prod
+    let MockAPI = import('./MockAPI').then(m => m.default())
   }
-} catch (e) {
 }
 
 export const zoneDescriptions = {
@@ -51,13 +52,12 @@ export function testLogin(username, password, callback) {
   })
   .then(data => {
     if (data == "Online") {
-      console.log('Success:', data);
       return callback(true)
     }
     return callback(false)
   })
   .catch((error) => {
-    //console.error('Error:', error);
+    console.error('Error:', error);
     return callback(false)
   });
 
