@@ -39,7 +39,7 @@ export default class DNSBlocklist extends React.Component {
   }
 
   /*async componentDidMount() {
-    this.setState({list: this.props.blocklists})
+    this.setState({list})
   }*/
 
   async handleItemSwitch(item, value) {
@@ -97,17 +97,9 @@ export default class DNSBlocklist extends React.Component {
                         onColor="info"
                         offColor="info"
                       />
-{/*
-                      <FormGroup check>
-                        <Label check>
-                          <Input type="checkbox" checked={item.Enabled} onChange={(e) => this.handleItemSwitch(item, !item.Enabled)} />
-                          <span className="form-check-sign" />
-                        </Label>
-                      </FormGroup>
-*/}
                     </td>
                     <td className="text-center">
-                      <Button className="btn-round" size="sm" color="primary" outline onClick={toggleStatusModal}><i className="fa fa-list" /> status</Button>
+                      {/*<Button className="btn-round" size="sm" color="primary" outline onClick={toggleStatusModal}><i className="fa fa-list" /> status</Button>*/}
                       <Button
                         className="btn-icon"
                         color="danger"
