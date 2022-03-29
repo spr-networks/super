@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  cypress-run:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -32,7 +32,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./frontend
-        run: yarn install --frozen-lockfile
+        run: yarn install #--frozen-lockfile
 
       - name: Build
         working-directory: ./frontend
@@ -42,6 +42,7 @@ jobs:
         working-directory: ./frontend
         run: yarn test
 
+#  cypress-run:
 #      - name: Cypress test
 #        uses: cypress-io/github-action@v2
 #        with:
