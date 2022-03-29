@@ -115,6 +115,15 @@ const routes = [
     ]
   },
   {
+    path: "/dns/block",
+    name: "DNS block",
+    icon: "nc-icon nc-world-2",
+    mini: "DB",
+    component: DNS,
+    layout: "/admin",
+  },
+  /*
+  {
     collapse: true,
     name: "DNS",
     icon: "nc-icon nc-world-2",
@@ -129,6 +138,7 @@ const routes = [
       },
     ]
   },
+  */
 
   {
     path: "/login",
