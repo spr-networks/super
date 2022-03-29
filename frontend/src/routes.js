@@ -9,6 +9,7 @@ import Traffic from "views/Traffic.js";
 import TrafficTimeSeries from "views/TrafficTimeSeries.js";
 import WirelessConfiguration from "views/WirelessConfiguration"
 import Zones from "views/Zones/Zones.js";
+import DNS from "views/DNS/DNS.js";
 
 const routes = [
   {
@@ -113,6 +114,22 @@ const routes = [
       }
     ]
   },
+  {
+    collapse: true,
+    name: "DNS",
+    icon: "nc-icon nc-world-2",
+    state: "dnsCollapse",
+    views: [
+      {
+        path: "/dns/block",
+        name: "DNS blocklists",
+        mini: "DB",
+        component: DNS,
+        layout: "/admin",
+      },
+    ]
+  },
+
   {
     path: "/login",
     component: Login,

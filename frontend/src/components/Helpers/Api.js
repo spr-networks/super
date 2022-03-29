@@ -10,7 +10,7 @@ if (REACT_APP_API) {
     API = url.toString()
     API_HOST = API.host
   } catch (e) {
-    // note -- since the MockAPI have mirage is dev dependency -- dont load it in prod
+    // REACT_APP_API=mock -- dont load in prod
     let MockAPI = import('./MockAPI').then(m => m.default())
   }
 }
@@ -76,7 +76,7 @@ function getAPIJson(endpoint) {
     .then(function(response) {
       if(!response.ok)
       {
-        throw new Error(response.status)
+        throw new Error(`${endpoint}: ` + response.status)
       }
       return response.json()
     })
@@ -112,7 +112,6 @@ function getAPI(endpoint) {
     })
   })
 }
-
 
 function delsetZone(verb, name, disabled, tags) {
   let data = {}
@@ -305,6 +304,52 @@ export function getTrafficHistory() {
 
 export function ipAddr() {
   return getAPIJson("/ip/addr")
+}
+
+function delset(verb, url, data) {
+  return new Promise((resolve, reject) =>  {
+    fetch(`${API}/${url}`, {
+      method: verb,
+      headers: {
+        'Authorization': authHeader(),
+        'X-Requested-With': 'react',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    })
+    .then(function(response) {
+      if (!response.ok) {
+        throw new Error(response.status)
+      }
+
+      if (verb == 'DELETE') {
+        return resolve(true)
+      }
+
+      return response.json()
+    })
+    .then(data => {
+      resolve(data)
+    }).catch(reason => {
+      reject(reason)
+    })
+  })
+}
+
+export function getDNSBlocklists() {
+  return getAPIJson(`/plugins/dns/block/blocklists`)
+}
+
+export function updateDNSBlocklist(data) {
+  delset('PUT', `plugins/dns/block/blocklists`, data)
+}
+
+export function deleteDNSBlocklist(data) {
+  delset('DELETE', `plugins/dns/block/blocklists`, data)
+}
+
+export function updateDNSOverride(data) {
+  delset('PUT', `plugins/dns/block/override`, data)
 }
 
 export function ConnectWebsocket(messageCallback) {

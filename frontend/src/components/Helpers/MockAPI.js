@@ -5,7 +5,9 @@ export default function MockAPI() {
   let server = createServer({
     models: {
       devices: Model,
-      zones: Model
+      zones: Model,
+      dnsblocklist: Model,
+      dnsoverride: Model,
     },
     seeds(server) {
       server.create('device', {
@@ -39,6 +41,32 @@ export default function MockAPI() {
       server.create('zone', { Name: "lan", disabled: false, ZoneTags: [] })
       server.create('zone', { Name: "wan", disabled: false, ZoneTags: [] })
       server.create('zone', { Name: "dns", disabled: false, ZoneTags: [] })
+
+      server.create('dnsblocklist', {"URI": "https://raw.githubusercontent.com/blocklistproject/Lists/master/ads.txt", "Enabled": true})
+      server.create('dnsblocklist', {"URI": "https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt", "Enabled": false})
+      server.create('dnsoverride', {
+        "Type": "block",
+        "Domain": "example.com",
+        "ResultIP": "1.2.3.4",
+        "ClientIP": "192.168.2.102",
+        "Expiration": 0
+      })
+
+      server.create('dnsoverride', {
+        "Type": "block",
+        "Domain": "asdf.com",
+        "ResultIP": "1.2.3.4",
+        "ClientIP": "*",
+        "Expiration": 0
+      })
+
+      server.create('dnsoverride', {
+        "Type": "permit",
+        "Domain": "google.com",
+        "ResultIP": "8.8.8.8",
+        "ClientIP": "192.168.2.101",
+        "Expiration": 123
+      })
     },
     routes() {
       // TODO hook for all
@@ -122,7 +150,7 @@ export default function MockAPI() {
         return {}
       })
 
-      this.get('/ip/addr', (schema) => {
+      this.get('/ip/addr', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, {error: "invalid auth"})
         }
@@ -256,6 +284,38 @@ export default function MockAPI() {
                   "wpa": "2"
                 }
         }
+      })
+
+      //DNS plugin
+      this.get('/plugins/dns/block/blocklists', (schema, request) => {
+        return schema.dnsblocklists.all().models
+      })
+
+      this.put('/plugins/dns/block/blocklists', (schema, request) => {
+        let attrs = JSON.parse(request.requestBody)
+        return schema.dnsblocklists.create(attrs)
+      })
+
+      this.delete('/plugins/dns/block/blocklists', (schema, request) => {
+        let attrs = JSON.parse(request.requestBody)
+        let URI = attrs.URI
+        return schema.dnsblocklists.findBy({URI}).destroy()
+      })
+
+      this.put('/plugins/dns/block/override', (schema, request) => {
+        let attrs = JSON.parse(request.requestBody)
+        return schema.dnsblocklists.create(attrs)
+      })
+
+      this.delete('/plugins/dns/block/override', (schema, request) => {
+        let attrs = JSON.parse(request.requestBody)
+        let Domain = attrs.Domain
+        return schema.dnsblocklists.findBy({Domain}).destroy()
+      })
+
+      this.get('/plugins/dns/block/dump_domains', (schema, request) => {
+        return ["_thums.ero-advertising.com.","0.fls.doubleclick.net.",
+          "0.r.msn.com.","0.start.bz.","0.up.qingdaonews.com."]
       })
     }
   })
