@@ -21,9 +21,9 @@ describe('API Login', () => {
 
 describe('API Device', () => {
 
-  test('fetches devices', async () => {
-    saveLogin('admin', 'admin')
+  saveLogin('admin', 'admin')
 
+  test('fetches devices', async () => {
     let devices = await getDevices()
     expect(devices.length).toBeGreaterThan(1)
 
