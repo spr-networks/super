@@ -41,8 +41,7 @@ jobs:
       - name: Run tests
         working-directory: ./frontend
         run: yarn test
-
-#  cypress-run:
+#  cypress-run: # job name
 #      - name: Cypress test
 #        uses: cypress-io/github-action@v2
 #        with:
