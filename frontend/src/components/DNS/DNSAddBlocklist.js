@@ -15,13 +15,14 @@ import {
   Label,
   Form,
   FormGroup,
+  FormText,
   Input,
   Row
 } from "reactstrap";
 
 export default class DNSAddBlocklist extends React.Component {
   static contextType = APIErrorContext;
-  state = { URI: 'https://', Enabled: true };
+  state = { URI: '', Enabled: true };
 
   constructor(props) {
     super(props)
@@ -59,7 +60,8 @@ export default class DNSAddBlocklist extends React.Component {
 					<Label for="URI" sm={2}>URI</Label>
 					<Col sm={10}>
 						<FormGroup>
-							<Input type="text" id="URI" placeholder="https://..." name="URI" value={this.state.URI} onChange={this.handleChange} />
+							<Input type="text" id="URI" placeholder="https://..." name="URI" value={this.state.URI} onChange={this.handleChange} autoFocus={true} />
+              <FormText tag="span"><a target="_blank" href="https://github.com/StevenBlack/hosts">See here</a> for examples of host files to use</FormText>
 						</FormGroup>
 					</Col>
 				</Row>

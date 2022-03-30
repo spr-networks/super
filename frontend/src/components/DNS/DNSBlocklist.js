@@ -1,6 +1,7 @@
-import React, { useContext } from 'react'
+import React, { useContext, useRef } from 'react'
 import { getDNSBlocklists, updateDNSBlocklist, deleteDNSBlocklist } from "components/Helpers/Api.js"
 import DNSAddBlocklist from "components/DNS/DNSAddBlocklist.js"
+import ModalForm from "components/ModalForm.js"
 import Switch from "react-bootstrap-switch";
 import { APIErrorContext } from 'layouts/Admin.js'
 
@@ -29,17 +30,18 @@ import {
 
 export default class DNSBlocklist extends React.Component {
   static contextType = APIErrorContext;
-  state = { list: [], modal: false };
+  state = { list: [] };
 
   constructor(props) {
     super(props)
 
     this.state.list = []
-    this.state.modal = false
 
     this.handleItemSwitch = this.handleItemSwitch.bind(this);
     this.deleteListItem = this.deleteListItem.bind(this);
     this.notifyChange = this.notifyChange.bind(this);
+
+		this.refAddBlocklistModal = React.createRef()
   }
 
   async componentDidMount() {
@@ -56,9 +58,8 @@ export default class DNSBlocklist extends React.Component {
   }
 
   async notifyChange(type) {
-    this.refreshBlocklists()
-    this.props.notifyChange(type)
-    this.setState({modal: false})
+    await this.refreshBlocklists()
+    //this.props.notifyChange(type)
   }
 
   async handleItemSwitch(item, value) {
@@ -93,46 +94,25 @@ export default class DNSBlocklist extends React.Component {
   }
 
   render() {
-    const title = this.props.title || 'DNS blocklists'
     const toggleStatusModal = () => alert('TODO: show modal with blocked domains')
 
-		const toggleBlocklistModal = (modal) => {
-			if (modal !== false) {
-				modal = !this.state.modal
-			}
-
-			this.setState({modal})
+		const notifyChangeBlocklist = async () => {
+			await this.notifyChange()
+			// close modal when added
+			this.refAddBlocklistModal.current.close()
 		}
 
     return (
       <>
-				<Modal fade={false} isOpen={this.state.modal} toggle={toggleBlocklistModal}>
-					<div className="modal-header">
-						<button
-							aria-label="Close"
-							className="close"
-							data-dismiss="modal"
-							type="button"
-							onClick={toggleBlocklistModal}
-							>
-							<i className="nc-icon nc-simple-remove" />
-						</button>
-						<h5 className="modal-title">Add DNS Blocklist</h5>
-					</div>
-					<div className="modal-body">
-						<DNSAddBlocklist notifyChange={this.notifyChange} />
-					</div>
-					<div className="modal-footer">
-					</div>
-				</Modal>
 
         <Card>
           <CardHeader>
-            <Button className="pull-right btn-round" color="primary" outline onClick={toggleBlocklistModal}>
-              <i className="fa fa-plus" /> add
-            </Button>
 
-            <CardTitle tag="h4">{title}</CardTitle>
+						<ModalForm title="Add DNS Blocklist" triggerText="add" triggerClass="pull-right" triggerIcon="fa fa-plus" refAddBlocklistModal={this.refAddBlocklistModal}>
+							<DNSAddBlocklist notifyChange={notifyChangeBlocklist} />
+						</ModalForm>
+
+            <CardTitle tag="h4">DNS Blocklists</CardTitle>
           </CardHeader>
           <CardBody>
             <Table responsive>

@@ -42,8 +42,6 @@ export default class DNS extends Component {
         await this.refreshConfig()
         return
       }
-
-			//await this.refreshBlocklists()
 		}
 
     const toggleBlockedModal = () => alert('TODO: show modal to add')
@@ -53,7 +51,7 @@ export default class DNS extends Component {
       <div className="content">
 				<Row>
           <Col md="12">
-            <DNSBlocklist key={generatedID} notifyChange={notifyChange} title="DNS blocklists" />
+            <DNSBlocklist />
           </Col>
         </Row>
 				<Row>
