@@ -9,7 +9,8 @@ import Traffic from "views/Traffic.js";
 import TrafficTimeSeries from "views/TrafficTimeSeries.js";
 import WirelessConfiguration from "views/WirelessConfiguration"
 import Zones from "views/Zones/Zones.js";
-import DNS from "views/DNS/DNS.js";
+import DNSBlock from "views/DNS/DNSBlock.js";
+import DNSLog from "views/DNS/DNSLog.js";
 
 const routes = [
   {
@@ -114,6 +115,7 @@ const routes = [
       }
     ]
   },
+  /*
   {
     path: "/dns/block",
     name: "DNS block",
@@ -122,7 +124,7 @@ const routes = [
     component: DNS,
     layout: "/admin",
   },
-  /*
+  */
   {
     collapse: true,
     name: "DNS",
@@ -133,12 +135,18 @@ const routes = [
         path: "/dns/block",
         name: "DNS blocklists",
         mini: "DB",
-        component: DNS,
+        component: DNSBlock,
+        layout: "/admin",
+      },
+      {
+        path: "/dns/log",
+        name: "DNS logs",
+        mini: "DL",
+        component: DNSLog,
         layout: "/admin",
       },
     ]
   },
-  */
 
   {
     path: "/login",
