@@ -121,6 +121,7 @@ export default class DNSLogList extends React.Component {
               />
 
             <CardTitle tag="h4">{this.props.title}</CardTitle>
+            <p className="text-muted">{this.props.description}</p>
           </CardHeader>
           <CardBody>
             <Table responsive>
