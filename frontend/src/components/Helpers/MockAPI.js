@@ -290,8 +290,8 @@ export default function MockAPI() {
       this.get('/plugins/dns/block/config', (schema, request) => {
         return {
           "BlockLists": schema.dnsblocklists.all().models,
-          "BlockDomains": schema.dnsoverrides.where({Type:'permit'}).models,
-          "PermitDomains": schema.dnsoverrides.where({Type:'block'}).models,
+          "BlockDomains": schema.dnsoverrides.where({Type:'block'}).models,
+          "PermitDomains": schema.dnsoverrides.where({Type:'permit'}).models,
           "ClientIPExclusions": null
         }
       })
