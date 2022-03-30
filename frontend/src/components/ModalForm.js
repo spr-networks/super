@@ -28,7 +28,7 @@ const ModalForm = (props) => {
 	return (
 		<>
 			<Button className={triggerClass} color="primary" outline onClick={toggleModal}>
-        {props.triggerIcon ? (<i className={triggerIcon} />) : null }
+        {props.triggerIcon ? (<i className={props.triggerIcon} />) : null }
         {props.triggerText || "Open Modal"}
 			</Button>
 			{show ? (
