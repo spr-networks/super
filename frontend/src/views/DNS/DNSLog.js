@@ -1,17 +1,17 @@
 import React, { Component, useContext } from "react"
-import { getDNSConfig, getDNSBlocklists, updateDNSBlocklist, deleteDNSBlocklist } from "components/Helpers/Api"
-import DNSBlocklist from "components/DNS/DNSBlocklist"
-import DNSOverrideList from "components/DNS/DNSOverrideList"
+import DNSLogList from "components/DNS/DNSLogList"
 import { APIErrorContext } from 'layouts/Admin'
+import { logAPI } from 'api/DNS'
 
 import {
   Row,
   Col,
+  Card, CardHeader, CardTitle, CardBody, CardFooter,
 } from "reactstrap";
 
 export default class DNSLog extends Component {
-  state = { config: "" };
-  static contextType = APIErrorContext;
+  state = { config: "", HostPrivacyIPList: [], DomainIgnoreList: [] }
+  static contextType = APIErrorContext
 
   constructor(props) {
     super(props)
@@ -22,24 +22,25 @@ export default class DNSLog extends Component {
   }
 
   async refreshConfig() {
-    /*
     try {
-      let config = await getDNSConfig()
+      let config = await logAPI.config()
 
-      this.setState({BlockDomains: config.BlockDomains})
-      this.setState({PermitDomains: config.PermitDomains})
+      this.setState({HostPrivacyIPList: config.HostPrivacyIPList})
+      this.setState({DomainIgnoreList: config.DomainIgnoreList})
     } catch (error) {
       this.context.reportError("API Failure: " + error.message)
     }
-    */
   }
+
+  // list ip | list domains
 
   render() {
     return (
       <div className="content">
 				<Row>
           <Col md="12">
-            <h1>TODO DNS log</h1>
+           <DNSLogList type="IP" title="Host Privacy IP List" />
+           <DNSLogList type="Domain" title="Domain Ignore List" />
           </Col>
         </Row>
       </div>

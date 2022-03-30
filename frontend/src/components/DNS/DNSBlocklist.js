@@ -2,29 +2,20 @@ import React, { useContext, useRef } from 'react'
 import { getDNSBlocklists, updateDNSBlocklist, deleteDNSBlocklist } from "components/Helpers/Api"
 import DNSAddBlocklist from "components/DNS/DNSAddBlocklist"
 import ModalForm from "components/ModalForm"
-import Switch from "react-bootstrap-switch";
+import Switch from "react-bootstrap-switch"
 import { APIErrorContext } from 'layouts/Admin'
 
-// reactstrap components
 import {
   Button,
-  ButtonGroup,
   Card,
   CardHeader,
   CardBody,
   CardTitle,
-  Dropdown,
-  DropdownToggle,
-  DropdownMenu,
-  DropdownItem,
-  Label,
-  FormGroup,
-  Input,
   Table,
   Row,
   Col,
   Modal,
-} from "reactstrap";
+} from "reactstrap"
 
 export default class DNSBlocklist extends React.Component {
   static contextType = APIErrorContext;

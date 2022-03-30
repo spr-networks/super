@@ -8,6 +8,8 @@ export default function MockAPI() {
       zones: Model,
       dnsblocklist: Model,
       dnsoverride: Model,
+      dnslogprivacylist: Model,
+      dnslogdomainignorelist: Model,
     },
     seeds(server) {
       server.create('device', {
@@ -67,6 +69,11 @@ export default function MockAPI() {
         "ClientIP": "192.168.2.101",
         "Expiration": 123
       })
+
+      server.create('dnslogprivacylist', '192.168.1.1')
+      server.create('dnslogprivacylist', '192.168.1.2')
+      server.create('dnslogdomainignorelist', 'example.com')
+      server.create('dnslogdomainignorelist', 'privatedomain.com')
     },
     routes() {
       // TODO hook for all
@@ -325,6 +332,21 @@ export default function MockAPI() {
       this.get('/plugins/dns/block/dump_domains', (schema, request) => {
         return ["_thums.ero-advertising.com.","0.fls.doubleclick.net.",
           "0.r.msn.com.","0.start.bz.","0.up.qingdaonews.com."]
+      })
+
+      this.get('/plugins/dns/log/config', (schema, request) => {
+        return {
+          "HostPrivacyIPList": schema.dnslogprivacylist.all().models,
+          "DomainIgnoreList": schema.dnslogdomainignorelist.all().models
+        }
+      })
+
+      this.get('/plugins/dns/log/host_privacy_list', (schema, request) => {
+        return schema.dnslogprivacylist.all().models
+      })
+
+      this.get('/plugins/dns/log/domain_ignores', (schema, request) => {
+        return schema.dnslogdomainignorelist.all().models
       })
     }
   })
