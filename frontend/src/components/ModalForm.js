@@ -18,9 +18,9 @@ const ModalForm = (props) => {
 			return
 		}
 
-		props.modalRef.current = {close: closeModal}
+		props.modalRef.current = closeModal//{close: closeModal}
 		
-		return () => { props.modalRef.current = null }
+		//return () => { console.log('**modal cleanup'); props.modalRef.current = null }
 	})
 
 	let triggerClass = `btn-round ${props.triggerClass}`

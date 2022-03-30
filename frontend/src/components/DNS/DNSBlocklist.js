@@ -99,7 +99,7 @@ export default class DNSBlocklist extends React.Component {
 		const notifyChangeBlocklist = async () => {
 			await this.notifyChange()
 			// close modal when added
-			this.refAddBlocklistModal.current.close()
+			this.refAddBlocklistModal.current()
 		}
 
     return (
@@ -108,7 +108,7 @@ export default class DNSBlocklist extends React.Component {
         <Card>
           <CardHeader>
 
-						<ModalForm title="Add DNS Blocklist" triggerText="add" triggerClass="pull-right" triggerIcon="fa fa-plus" refAddBlocklistModal={this.refAddBlocklistModal}>
+						<ModalForm title="Add DNS Blocklist" triggerText="add" triggerClass="pull-right" triggerIcon="fa fa-plus" modalRef={this.refAddBlocklistModal}>
 							<DNSAddBlocklist notifyChange={notifyChangeBlocklist} />
 						</ModalForm>
 

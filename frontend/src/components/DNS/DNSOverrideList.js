@@ -1,99 +1,93 @@
-import React, { useContext } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { updateDNSOverride, deleteDNSOverride } from "components/Helpers/Api.js"
+import ModalForm from "components/ModalForm.js"
+import DNSAddOverride from "components/DNS/DNSAddOverride.js"
 import Switch from "react-bootstrap-switch";
 import { APIErrorContext } from 'layouts/Admin.js'
 
 // reactstrap components
 import {
   Button,
-  ButtonGroup,
   Card,
   CardHeader,
   CardBody,
   CardTitle,
-  Dropdown,
-  DropdownToggle,
-  DropdownMenu,
-  DropdownItem,
-  Label,
-  FormGroup,
-  Input,
   Table,
-  Row,
-  Col,
-  UncontrolledDropdown,
-  UncontrolledTooltip,
 } from "reactstrap";
 
-export default class DNSOverrideList extends React.Component {
-  static contextType = APIErrorContext;
-  state = { list: [] };
+//export default class DNSOverrideList extends React.Component {
+const DNSOverrideList = (props) => {
+  const context = React.useContext(APIErrorContext)
 
-  constructor(props) {
-    super(props)
-
-    this.state.list = props.list
-  }
-
-  async deleteListItem(item) {
+  const deleteListItem = async (item) => {
     try {
       await deleteDNSOverride(item)
     } catch(error) {
-      this.context.reportError("API Failure: " + error.message)
+      context.reportError("API Failure: " + error.message)
     }
 
-    this.props.notifyChange('config')
+    props.notifyChange('config')
   }
 
-  render() {
-    const title = this.props.title || 'DNS Override'
+	let modalRef = React.useRef(null) //React.createRef()
 
-    return (
-      <Card>
-        <CardHeader>
-          <Button className="pull-right btn-round" color="primary" outline onClick={this.props.toggleModal}>
-            <i className="fa fa-plus" /> add
-          </Button>
+	const notifyChange = async () => {
+		await props.notifyChange('config')
+		// close modal when added
+		modalRef.current()
+	}
 
-          <CardTitle tag="h4">{title}</CardTitle>
-          <p className="card-category">Blocked & Permitted lists allow you to control domain name replies per Client IP. Read more <a href="#">here</a></p>
-        </CardHeader>
-        <CardBody>
-          <Table responsive>
-            <thead className="text-primary">
-              <tr>
-                <th>Domain</th>
-                <th>Result IP</th>
-                <th>Client IP</th>
-                <th className="text-center">Expiration</th>
-                <th className="text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {
-                this.state.list.map(item => (
-                  <tr key={item.Domain}>
-                    <td>{item.Domain}</td>
-                    <td>{item.ResultIP}</td>
-                    <td>{item.ClientIP}</td>
-                    <td className="text-center">{item.Expiration}</td>
-                    <td className="text-center">
-                      <Button
-                        className="btn-icon"
-                        color="danger"
-                        size="sm"
-                        type="button"
-                        onClick={(e) => this.deleteListItem(item)}>
-                        <i className="fa fa-times" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))
-              }
-            </tbody>
-          </Table>
-        </CardBody>
-      </Card>
-    )
-  }
+	let overrideType = props.title.includes('Permit') ? 'permit' : 'block'
+	let list = props.list
+
+	return (
+		<Card>
+			<CardHeader>
+
+				<ModalForm key="mf1" title="Add DNS Override" triggerText="add" triggerClass="pull-right" triggerIcon="fa fa-plus" modalRef={modalRef}>
+					<DNSAddOverride type={overrideType} notifyChange={notifyChange} />
+				</ModalForm>
+
+				<CardTitle tag="h4">{props.title || "DNS Override"}</CardTitle>
+				<p className="card-category">Blocked & Permitted lists allow you to control domain name replies per Client IP. Read more <a href="#">here</a></p>
+			</CardHeader>
+			<CardBody>
+				<Table responsive>
+					<thead className="text-primary">
+						<tr>
+							<th>Domain</th>
+							<th>Result IP</th>
+							<th>Client IP</th>
+							<th className="text-center">Expiration</th>
+							<th className="text-center">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{
+							list.map(item => (
+								<tr key={item.Domain}>
+									<td>{item.Domain}</td>
+									<td>{item.ResultIP}</td>
+									<td>{item.ClientIP}</td>
+									<td className="text-center">{item.Expiration}</td>
+									<td className="text-center">
+										<Button
+											className="btn-icon"
+											color="danger"
+											size="sm"
+											type="button"
+											onClick={(e) => deleteListItem(item)}>
+											<i className="fa fa-times" />
+										</Button>
+									</td>
+								</tr>
+							))
+						}
+					</tbody>
+				</Table>
+			</CardBody>
+		</Card>
+	)
 }
+
+export default DNSOverrideList
