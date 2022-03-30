@@ -1,7 +1,7 @@
 import React, { useContext } from 'react'
-import { updateDNSOverride } from "components/Helpers/Api"
 import { APIErrorContext } from 'layouts/Admin'
 //import Switch from "react-bootstrap-switch";
+import { blockAPI } from 'api/DNS'
 
 // reactstrap components
 import {
@@ -80,7 +80,7 @@ export default class DNSAddOverride extends React.Component {
       override.Domain += '.'
     }
 
-    updateDNSOverride(override)
+    blockAPI.putOverride(override)
       .then(res => {
         this.props.notifyChange('override')
       })

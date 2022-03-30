@@ -1,6 +1,6 @@
 import React, { useContext } from 'react'
-import { updateDNSBlocklist } from 'components/Helpers/Api'
 import { APIErrorContext } from 'layouts/Admin'
+import {blockAPI} from 'api/DNS'
 
 // reactstrap components
 import {
@@ -43,8 +43,9 @@ export default class DNSAddBlocklist extends React.Component {
     event.preventDefault()
 
     let blocklist = {URI: this.state.URI, Enabled: this.state.Enabled}
-    updateDNSBlocklist(blocklist)
+    blockAPI.putBlocklist(blocklist)
       .then(res => {
+        console.log('sweetput')
         this.props.notifyChange('blocklists')
       })
       .catch(error => {

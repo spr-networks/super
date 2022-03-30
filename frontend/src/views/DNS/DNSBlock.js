@@ -1,8 +1,8 @@
 import React, { Component, useContext } from "react"
-import { getDNSBlockConfig } from "components/Helpers/Api"
 import DNSBlocklist from "components/DNS/DNSBlocklist"
 import DNSOverrideList from "components/DNS/DNSOverrideList"
 import { APIErrorContext } from 'layouts/Admin'
+import { blockAPI } from 'api/DNS'
 
 import {
   Row,
@@ -25,7 +25,7 @@ export default class DNSBlock extends Component {
 
   async refreshConfig() {
     try {
-      let config = await getDNSBlockConfig()
+      let config = await blockAPI.config()
 
       this.setState({BlockDomains: config.BlockDomains})
       this.setState({PermitDomains: config.PermitDomains})

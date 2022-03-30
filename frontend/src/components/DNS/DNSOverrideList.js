@@ -1,9 +1,10 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { updateDNSOverride, deleteDNSOverride } from "components/Helpers/Api"
+import { deleteDNSOverride } from "components/Helpers/Api"
 import ModalForm from "components/ModalForm"
 import DNSAddOverride from "components/DNS/DNSAddOverride"
 import Switch from "react-bootstrap-switch"
 import { APIErrorContext } from 'layouts/Admin'
+import { blockAPI } from 'api/DNS'
 
 // reactstrap components
 import {
@@ -19,7 +20,7 @@ const DNSOverrideList = (props) => {
   const context = React.useContext(APIErrorContext)
 
   const deleteListItem = async (item) => {
-    deleteDNSOverride(item)
+    blockAPI.deleteOverride(item)
       .then(res => {
         props.notifyChange('config')
       })
