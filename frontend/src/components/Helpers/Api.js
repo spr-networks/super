@@ -7,7 +7,7 @@ let ws;
 if (REACT_APP_API) {
   try {
     let url = new URL(REACT_APP_API)
-    API = url.toString()
+    API = url.toString().replace(/\/$/, '')
     API_HOST = API.host
   } catch (e) {
     // REACT_APP_API=mock -- dont load in prod
@@ -34,7 +34,6 @@ export function authHeader() {
 }
 
 export function testLogin(username, password, callback) {
-
   fetch(API+'/status', {
     method: 'GET', // or 'PUT'
     headers: {
@@ -193,7 +192,7 @@ function delsetDevice(verb, identity, psk, wpa_type, name, zones, tags) {
         console.log("bad response")
         throw new Error(response.status)
       }
-      if (verb == "DELETE") {
+      if (verb == 'DELETE' || verb == 'PUT') {
         resolve(true)
       } else {
         return response.json()
@@ -322,7 +321,7 @@ function delset(verb, url, data) {
         throw new Error(response.status)
       }
 
-      if (verb == 'DELETE') {
+      if (verb == 'DELETE' || verb == 'PUT') {
         return resolve(true)
       }
 
@@ -345,19 +344,19 @@ export function getDNSBlocklists() {
 }
 
 export function updateDNSBlocklist(data) {
-  delset('PUT', `plugins/dns/block/blocklists`, data)
+  return delset('PUT', `plugins/dns/block/blocklists`, data)
 }
 
 export function deleteDNSBlocklist(data) {
-  delset('DELETE', `plugins/dns/block/blocklists`, data)
+  return delset('DELETE', `plugins/dns/block/blocklists`, data)
 }
 
 export function updateDNSOverride(data) {
-  delset('PUT', `plugins/dns/block/override`, data)
+  return delset('PUT', `plugins/dns/block/override`, data)
 }
 
 export function deleteDNSOverride(data) {
-  delset('DELETE', `plugins/dns/block/override`, data)
+  return delset('DELETE', `plugins/dns/block/override`, data)
 }
 
 export function ConnectWebsocket(messageCallback) {

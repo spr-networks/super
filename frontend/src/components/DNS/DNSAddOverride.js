@@ -61,9 +61,10 @@ export default class DNSAddOverride extends React.Component {
     return (Object.values(this.state.check).filter(v => v.length).length == 0)
   }
 
-  async handleSubmit(event) {
+  handleSubmit(event) {
+    event.preventDefault()
+
     if (!this.isValid()) {
-      event.preventDefault()
       return
     }
 
@@ -79,15 +80,13 @@ export default class DNSAddOverride extends React.Component {
       override.Domain += '.'
     }
 
-    try {
-      await updateDNSOverride(override)
-    } catch(error) {
-      this.context.reportError("API Failure: " + error.message)
-    }
-
-    this.props.notifyChange('override')
-
-    event.preventDefault()
+    updateDNSOverride(override)
+      .then(res => {
+        this.props.notifyChange('override')
+      })
+      .catch(error => {
+        this.context.reportError("API Failure: " + error.message)
+      })
   }
 
   render() {

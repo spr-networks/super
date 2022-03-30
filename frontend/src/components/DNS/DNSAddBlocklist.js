@@ -39,17 +39,17 @@ export default class DNSAddBlocklist extends React.Component {
     this.setState({Enabled})
   }
 
-  async handleSubmit(event) {
-    let blocklist = {URI: this.state.URI, Enabled: this.state.Enabled}
-    try {
-      await updateDNSBlocklist(blocklist)
-    } catch(error) {
-      this.context.reportError("API Failure: " + error.message)
-    }
-
-    this.props.notifyChange('blocklists')
-
+  handleSubmit(event) {
     event.preventDefault()
+
+    let blocklist = {URI: this.state.URI, Enabled: this.state.Enabled}
+    updateDNSBlocklist(blocklist)
+      .then(res => {
+        this.props.notifyChange('blocklists')
+      })
+      .catch(error => {
+        this.context.reportError("API Failure: " + error.message)
+      })
   }
 
   render() {

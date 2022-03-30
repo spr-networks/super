@@ -15,18 +15,17 @@ import {
   Table,
 } from "reactstrap";
 
-//export default class DNSOverrideList extends React.Component {
 const DNSOverrideList = (props) => {
   const context = React.useContext(APIErrorContext)
 
   const deleteListItem = async (item) => {
-    try {
-      await deleteDNSOverride(item)
-    } catch(error) {
-      context.reportError("API Failure: " + error.message)
-    }
-
-    props.notifyChange('config')
+    deleteDNSOverride(item)
+      .then(res => {
+        props.notifyChange('config')
+      })
+      .catch(error => {
+        context.reportError("API Failure: " + error.message)
+      })
   }
 
 	let modalRef = React.useRef(null) //React.createRef()
@@ -34,7 +33,7 @@ const DNSOverrideList = (props) => {
 	const notifyChange = async () => {
 		await props.notifyChange('config')
 		// close modal when added
-		modalRef.current()
+		//modalRef.current()
 	}
 
 	let overrideType = props.title.includes('Permit') ? 'permit' : 'block'

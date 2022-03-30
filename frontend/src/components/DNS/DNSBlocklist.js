@@ -24,8 +24,6 @@ import {
   Row,
   Col,
   Modal,
-  UncontrolledDropdown,
-  UncontrolledTooltip,
 } from "reactstrap";
 
 export default class DNSBlocklist extends React.Component {
@@ -62,7 +60,7 @@ export default class DNSBlocklist extends React.Component {
     //this.props.notifyChange(type)
   }
 
-  async handleItemSwitch(item, value) {
+  handleItemSwitch(item, value) {
     item.Enabled = value
     const list = this.state.list.map(_item => {
       if (_item.URI == item.URI) {
@@ -74,23 +72,23 @@ export default class DNSBlocklist extends React.Component {
 
     this.setState({list})
 
-    try {
-      await updateDNSBlocklist(item)
-    } catch(error) {
-      this.context.reportError("API Failure: " + error.message)
-    }
-
-    this.notifyChange('blocklists')
+    updateDNSBlocklist(item)
+      .then(res => {
+        this.notifyChange('blocklists')
+      })
+      .catch(error => {
+        this.context.reportError("API Failure: " + error.message)
+      })
   }
 
-  async deleteListItem(item) {
-    try {
-      await deleteDNSBlocklist(item)
-    } catch(error) {
-      this.context.reportError("API Failure: " + error.message)
-    }
-
-    this.notifyChange('blocklists')
+  deleteListItem(item) {
+    deleteDNSBlocklist(item)
+      .then(res => {
+        this.notifyChange('blocklists')
+      })
+      .catch(error => {
+        this.context.reportError("API Failure: " + error.message)
+      })
   }
 
   render() {
