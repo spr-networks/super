@@ -49,7 +49,7 @@ const DNSOverrideList = (props) => {
 				</ModalForm>
 
 				<CardTitle tag="h4">{props.title || "DNS Override"}</CardTitle>
-				<p className="card-category">Blocked & Permitted lists allow you to control domain name replies per Client IP. Read more <a href="#">here</a></p>
+				<p className="text-muted">Blocked & Permitted lists allow you to control domain name replies per Client IP</p>
 			</CardHeader>
 			<CardBody>
 				<Table responsive>
