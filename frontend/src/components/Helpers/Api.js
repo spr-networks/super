@@ -336,7 +336,7 @@ function delset(verb, url, data) {
   })
 }
 
-export function getDNSConfig() {
+export function getDNSBlockConfig() {
   return getAPIJson(`/plugins/dns/block/config`)
 }
 

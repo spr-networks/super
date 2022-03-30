@@ -1,6 +1,6 @@
 import React, { useContext } from 'react'
-import { updateDNSOverride } from "components/Helpers/Api.js"
-import { APIErrorContext } from 'layouts/Admin.js'
+import { updateDNSOverride } from "components/Helpers/Api"
+import { APIErrorContext } from 'layouts/Admin'
 //import Switch from "react-bootstrap-switch";
 
 // reactstrap components

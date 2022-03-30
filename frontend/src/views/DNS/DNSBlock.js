@@ -1,0 +1,64 @@
+import React, { Component, useContext } from "react"
+import { getDNSBlockConfig } from "components/Helpers/Api"
+import DNSBlocklist from "components/DNS/DNSBlocklist"
+import DNSOverrideList from "components/DNS/DNSOverrideList"
+import { APIErrorContext } from 'layouts/Admin'
+
+import {
+  Row,
+  Col,
+} from "reactstrap";
+
+export default class DNSBlock extends Component {
+  state = { config: "", PermitDomains: [], BlockDomains: [], blocklists: [] };
+  static contextType = APIErrorContext;
+
+  constructor(props) {
+    super(props)
+    this.state.BlockDomains = []
+    this.state.PermitDomains = []
+  }
+
+  async componentDidMount() {
+    await this.refreshConfig()
+  }
+
+  async refreshConfig() {
+    try {
+      let config = await getDNSBlockConfig()
+
+      this.setState({BlockDomains: config.BlockDomains})
+      this.setState({PermitDomains: config.PermitDomains})
+    } catch (error) {
+      this.context.reportError("API Failure: " + error.message)
+    }
+  }
+
+  render() {
+    const generatedID = Math.random().toString(36).substr(2, 9)
+
+    const notifyChange = async (type) => {
+      if (type == 'config') {
+        await this.refreshConfig()
+        return
+      }
+		}
+      
+    return (
+      <div className="content">
+				<Row>
+          <Col md="12">
+            <DNSBlocklist />
+          </Col>
+        </Row>
+				<Row>
+          <Col md="12">
+            <DNSOverrideList key={generatedID+1} list={this.state.BlockDomains} title="Override: Blocked domains" notifyChange={notifyChange} />
+            <DNSOverrideList key={generatedID+2} list={this.state.PermitDomains} title="Override: Permitted domains" notifyChange={notifyChange} />
+          </Col>
+        </Row>
+      </div>
+    );
+
+  }
+}

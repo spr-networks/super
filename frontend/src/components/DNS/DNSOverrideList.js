@@ -1,9 +1,9 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { updateDNSOverride, deleteDNSOverride } from "components/Helpers/Api.js"
-import ModalForm from "components/ModalForm.js"
-import DNSAddOverride from "components/DNS/DNSAddOverride.js"
-import Switch from "react-bootstrap-switch";
-import { APIErrorContext } from 'layouts/Admin.js'
+import { updateDNSOverride, deleteDNSOverride } from "components/Helpers/Api"
+import ModalForm from "components/ModalForm"
+import DNSAddOverride from "components/DNS/DNSAddOverride"
+import Switch from "react-bootstrap-switch"
+import { APIErrorContext } from 'layouts/Admin'
 
 // reactstrap components
 import {

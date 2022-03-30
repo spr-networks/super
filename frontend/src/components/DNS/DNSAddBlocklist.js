@@ -1,7 +1,6 @@
 import React, { useContext } from 'react'
-import { updateDNSBlocklist } from "components/Helpers/Api.js"
-import { APIErrorContext } from 'layouts/Admin.js'
-//import Switch from "react-bootstrap-switch";
+import { updateDNSBlocklist } from 'components/Helpers/Api'
+import { APIErrorContext } from 'layouts/Admin'
 
 // reactstrap components
 import {
@@ -75,13 +74,6 @@ export default class DNSAddBlocklist extends React.Component {
 								<span className="form-check-sign" />
 							</Label>
 						</FormGroup>
-						{/*<Switch
-							onColor="info"
-							offColor="info"
-							value={this.state.Enabled}
-							onChange={this.handleSwitchChange}
-							name="Enabled"
-						/>*/}
 					</Col>
 				</Row>
 
