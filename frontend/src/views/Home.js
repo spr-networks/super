@@ -89,6 +89,24 @@ function Home() {
               </CardBody>
               <CardFooter>
                 <hr />
+                {/*
+                <div className="button-container">
+                  <Row>
+                    <Col className="text-center" md="6">
+                      <h5>
+                        844.5 MB <br />
+                        <small className="text-success">Down</small>
+                      </h5>
+                    </Col>
+                    <Col className="text-center" md="6">
+                      <h5>
+                        19.2 MB <br />
+                        <small>Up</small>
+                      </h5>
+                    </Col>
+									</Row>
+                </div>
+                */}
                 <div className="stats">
                   <i className="fa fa-clock-o" />
                   Online
