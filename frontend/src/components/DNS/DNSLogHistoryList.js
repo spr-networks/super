@@ -1,10 +1,8 @@
 import React, { useContext, useRef } from "react"
 import { withRouter } from "react-router"
-import { useHistory } from "react-router-dom"
-import DNSAddLog from "components/DNS/DNSAddLog"
-import ModalForm from "components/ModalForm"
 import { APIErrorContext } from 'layouts/Admin'
 import ReactBSAlert from "react-bootstrap-sweetalert"
+import Select from "react-select";
 import { logAPI } from "api/DNS"
 import { deviceAPI } from "api/Device"
 
@@ -104,8 +102,8 @@ export class DNSLogHistoryList extends React.Component {
     this.setState({list})
   }
 
-  handleIPChange(event) {
-    let ip = event.target.value
+  handleIPChange(item) {
+    let ip = item.value
     if (!ip.match(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/)) {
       return
     }
@@ -148,6 +146,11 @@ export class DNSLogHistoryList extends React.Component {
       return (<span className={className}>{type}</span>)
     }
 
+    // TODO - put select in component + support multiple
+    let options = this.state.clients.map(c =>  {
+      return {label: c.Name || c.RecentIP, value: c.RecentIP}
+    })
+
     return (
       <>
           <ReactBSAlert
@@ -176,17 +179,7 @@ export class DNSLogHistoryList extends React.Component {
 
               <FormGroup>
                 <Label>Client</Label>
-                <Input type="select" onChange={this.handleIPChange} value={this.state.ip}>
-                  <option>Select Client</option>
-                  {
-                    this.state.clients.map(client => {
-                      let ip = client.RecentIP
-                      let selected = ip == this.state.ip
-                      return (<option key={ip} value={ip}>{client.Name} / {ip}</option>)
-                    })
-                  }
-
-                </Input>
+                <Select options={options} defaultValue={this.state.ip} onChange={this.handleIPChange} />
               </FormGroup>
 
             </Col>
