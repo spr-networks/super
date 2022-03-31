@@ -22,8 +22,9 @@ export class APIDNSLog extends API {
   hostPrivacyList = () => this.get('/host_privacy_list')
   putHostPrivacyList = (data) => this.put('/host_privacy_list', data)
   domainIgnores = () => this.get('/domain_ignores')
-  addDomainIgnores = (item) => this.put(`/domain_ignore/${item}`, {})
   //putDomainIgnores = (data) => this.put(`/domain_ignores`, data)
+  addDomainIgnores = (item) => this.put(`/domain_ignore/${item}`, {})
+  history = (ip) => this.get(`/history/${ip}`, {})
 }
 
 export const blockAPI = new APIDNSBlock()
