@@ -16,9 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-)
 
-import (
 	"github.com/duo-labs/webauthn/webauthn"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -352,12 +350,6 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 	val, exists := devices[identity]
 
-	//always overwrite pending
-	if identity == "pending" {
-		val = DeviceEntry{}
-		exists = false
-	}
-
 	if r.Method == http.MethodDelete {
 		//delete a device
 		if exists {
@@ -370,6 +362,13 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		http.Error(w, "Not found", 404)
 		return
 	}
+
+	//always overwrite pending
+	if identity == "pending" {
+		val = DeviceEntry{}
+		exists = false
+	}
+
 
 	pskGenerated := false
 	pskModified := false
@@ -1248,6 +1247,21 @@ func doReloadPSKFiles() {
 }
 
 //hostapd API
+/*
+func scanWiFi(w http.ResponseWriter, r *http.Request) {
+	// find unused wireless interface
+
+	out, err := RunHostapdCommand("interface")
+	// scan for wireless networks
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+
+	}
+
+	// return list of wireless networks with signal strength and channel widths available
+
+}
+*/
 
 func RunHostapdAllStations() (map[string]map[string]string, error) {
 	m := map[string]map[string]string{}
@@ -1455,6 +1469,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/hostapd/status", hostapdStatus).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/all_stations", hostapdAllStations).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/config", hostapdConfiguration).Methods("GET")
+//	external_router_authenticated.HandleFunc("/hostpad/scan", scanWiFi).Methods("GET")
 
 	//ip information
 	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")
