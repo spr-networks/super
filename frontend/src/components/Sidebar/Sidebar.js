@@ -108,7 +108,7 @@ function Sidebar(props) {
             {prop.icon !== undefined ? (
               <>
                 <i className={prop.icon} />
-                <p>{prop.name}</p>
+                <span className="sidebar-normal">{prop.name}</span>
               </>
             ) : (
               <>
