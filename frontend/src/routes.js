@@ -30,14 +30,14 @@ const routes = [
       {
         path: "/devices",
         name: "List",
-        mini: "L",
+        icon: "fa fa-laptop",
         component: Devices,
         layout: "/admin",
       },
       {
         path: "/add_device",
         name: "Add WiFi Device",
-        mini: "AW",
+        icon: "fa fa-plus-square",
         component: AddDevice,
         layout: "/admin",
       }
@@ -52,7 +52,7 @@ const routes = [
       {
         path: "/wireless",
         name: "Wireless",
-        mini: "W",
+        icon: "fa fa-wifi",
         component: WirelessConfiguration,
         layout: "/admin",
       }
@@ -67,21 +67,21 @@ const routes = [
       {
         path: "/dhcp",
         name: "DHCP Table",
-        mini: "D",
+        mini: "DHCP",
         component: Dhcp,
         layout: "/admin",
       },
       {
         path: "/arp",
         name: "ARP Table",
-        mini: "A",
+        mini: "ARP",
         component: Arp,
         layout: "/admin",
       },
       {
         path: "/zones",
         name: "Show Zones",
-        mini: "Z",
+        icon: "fa fa-tags",
         component: Zones,
         layout: "/admin",
       }
