@@ -124,7 +124,7 @@ export default class DNSLogList extends React.Component {
             <p className="text-muted">{this.props.description}</p>
           </CardHeader>
           <CardBody>
-            <Table responsive>
+            <Table responsive className={!list.length ? "d-none" : null}>
               <thead className="text-primary">
                 <tr>
                   <th style={{width: "100%"}}>{type}</th>
