@@ -1,18 +1,10 @@
 import { Component } from "react";
-import { zoneDescriptions, deleteDevice, updateDeviceZones, updateDeviceName, updateDeviceTags } from "components/Helpers/Api.js";
+import { zoneDescriptions } from "components/Helpers/Api.js";
 import {APIErrorContext} from 'layouts/Admin.js';
+import {deviceAPI} from "api/Device"
 import {
   Button,
-  ButtonGroup,
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
   Input,
-  Label,
-  Table,
-  Row,
-  Col,
   UncontrolledTooltip,
 } from "reactstrap";
 import Select from "react-select";
@@ -41,24 +33,18 @@ export default class Device extends Component {
 
   handleZones = (zones) => {
     zones = [...new Set(zones)]
-    try {
-      updateDeviceZones(this.props.device.MAC, zones)
-    } catch(error) {
-      this.context.reportError("[API] updateDevice error: " + error.message)
-    }
-
     this.setState({zones})
+
+    deviceAPI.updateZones(this.props.device.MAC, zones)
+      .catch(error => this.context.reportError("[API] updateDevice error: " + error.message))
   }
 
   handleTags = (tags) => {
     tags = [...new Set(tags)]
-    try {
-      updateDeviceTags(this.props.device.MAC, tags)
-    } catch(error) {
-      this.context.reportError("[API] updateDevice error: " + error.message)
-    }
-
     this.setState({tags})
+
+    deviceAPI.updateTags(this.props.device.MAC, tags)
+      .catch(error => this.context.reportError("[API] updateDevice error: " + error.message))
   }
 
   handleName = (e) => {
@@ -79,23 +65,18 @@ export default class Device extends Component {
     let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
 
     const removeDevice = (e) => {
-      if (device.MAC == "") {
-        deleteDevice("pending")
-      } else {
-        deleteDevice(device.MAC)
-      }
-      this.props.notifyChange()
+      let id = device.MAC || "pending"
+
+      deviceAPI.deleteDevice(id)
+        .then(this.props.notifyChange)
+        .catch(error => this.context.reportError("[API] deleteDevice error: " + error.message))
     }
 
     const saveDevice = async () => {
       if (this.state.name != "") {
-        try {
-          updateDeviceName(this.props.device.MAC, this.state.name)
-        } catch(error) {
-          this.context.reportError("[API] updateDevice error: " + error.message)
-        }
-
-        this.props.notifyChange() // will set editing false
+        deviceAPI.updateName(this.props.device.MAC, this.state.name)
+          .then(this.props.notifyChange)
+          .catch(error => this.context.reportError("[API] updateName error: " + error.message))
       }
     }
 
