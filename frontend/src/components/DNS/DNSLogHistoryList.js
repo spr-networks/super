@@ -26,15 +26,16 @@ import {
 
 export class DNSLogHistoryList extends React.Component {
   static contextType = APIErrorContext;
-  state = { ip: '', list: [], listAll: [], showAlert: false, alertText: '', filterText: '' }
+  state = { ip: '', list: [], listAll: [], clients: [], filterText: '',
+    showAlert: false, alertText: '' }
 
   constructor(props) {
     super(props)
 
-    this.state.list = []
+    //this.state.list = []
     this.state.ip = props.ip || ""
-    this.state.alertText = "sample Text here heah!"
-    this.state.clientIPs = []
+    this.state.alertText = ""
+    //this.state.clients = []
 
     this.handleIPChange = this.handleIPChange.bind(this)
     this.handleChange = this.handleChange.bind(this)
@@ -43,18 +44,19 @@ export class DNSLogHistoryList extends React.Component {
   }
 
   async componentDidMount() {
-    this.getClientIPs()
+    this.getClients()
     this.refreshList()
   }
 
-  async getClientIPs() {
+  async getClients() {
     try {
       let devices = await deviceAPI.list()
-      let clientIPs = Object.values(devices)
-        .map(d => d.RecentIP)
-        .filter(ip => ip.length)
+      let clients = Object.values(devices)
+        //.map(d => {d.Name, d.RecentIP})
+        .filter(d => d.RecentIP.length)
       
-      this.setState({clientIPs})
+      // todo show client name
+      this.setState({clients})
     } catch(error) {
       this.context.reportError(error.message)
     }
@@ -170,15 +172,17 @@ export class DNSLogHistoryList extends React.Component {
 
             <Row>
 
-            <Col md="2">
+            <Col md="3">
 
               <FormGroup>
-                <Label>Client IP</Label>
-                <Input type="select" onChange={this.handleIPChange} defaultValue={this.state.ip}>
+                <Label>Client</Label>
+                <Input type="select" onChange={this.handleIPChange} value={this.state.ip}>
                   <option>Select Client</option>
                   {
-                    this.state.clientIPs.map(ip => {
-                      return (<option key={ip}>{ip}</option>)
+                    this.state.clients.map(client => {
+                      let ip = client.RecentIP
+                      let selected = ip == this.state.ip
+                      return (<option key={ip} value={ip}>{client.Name} / {ip}</option>)
                     })
                   }
 
@@ -186,7 +190,7 @@ export class DNSLogHistoryList extends React.Component {
               </FormGroup>
 
             </Col>
-            <Col md="10">
+            <Col md="9">
               <FormGroup>
                   <Label>Search</Label>
                   <InputGroup>

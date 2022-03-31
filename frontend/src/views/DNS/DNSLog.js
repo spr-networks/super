@@ -12,8 +12,6 @@ export default class DNSLog extends Component {
   constructor(props) {
     super(props)
 
-    console.log('[LOG]', props)
-
     let ip = props.match.params.ip
     if (ip && ip != ':ip') {
       this.state.ip = ip
