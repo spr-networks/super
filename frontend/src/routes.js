@@ -8,9 +8,10 @@ import SignalStrength from "views/SignalStrength.js";
 import Traffic from "views/Traffic.js";
 import TrafficTimeSeries from "views/TrafficTimeSeries.js";
 import WirelessConfiguration from "views/WirelessConfiguration"
-import Zones from "views/Zones/Zones.js";
-import DNSBlock from "views/DNS/DNSBlock.js";
-import DNSLog from "views/DNS/DNSLog.js";
+import Zones from "views/Zones/Zones"
+import DNSBlock from "views/DNS/DNSBlock"
+import DNSLog from "views/DNS/DNSLog"
+import DNSLogEdit from "views/DNS/DNSLogEdit"
 
 const routes = [
   {
@@ -115,16 +116,6 @@ const routes = [
       }
     ]
   },
-  /*
-  {
-    path: "/dns/block",
-    name: "DNS block",
-    icon: "nc-icon nc-world-2",
-    mini: "DB",
-    component: DNS,
-    layout: "/admin",
-  },
-  */
   {
     collapse: true,
     name: "DNS",
@@ -132,17 +123,24 @@ const routes = [
     state: "dnsCollapse",
     views: [
       {
-        path: "/dns/block",
-        name: "DNS blocklists",
-        mini: "DB",
+        path: "/dnsBlock",
+        name: "Blocklists",
+        icon: "fa fa-exclamation-triangle",
         component: DNSBlock,
         layout: "/admin",
       },
       {
-        path: "/dns/log",
+        path: "/dnsLog/:ip",
         name: "DNS logs",
-        mini: "DL",
+        icon: "fa fa-th-list",
         component: DNSLog,
+        layout: "/admin",
+      },
+      {
+        path: "/dnsLogEdit",
+        name: "DNS Logs Settings",
+        icon: "fa fa-cogs",
+        component: DNSLogEdit,
         layout: "/admin",
       },
     ]
