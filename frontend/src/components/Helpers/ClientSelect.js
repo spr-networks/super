@@ -1,4 +1,5 @@
-port Select from "react-select"
+//TODO fetch clients
+import Select from "react-select"
 
 export default (props) => {
   let devices = props.devices
