@@ -1,28 +1,19 @@
-import { Component } from "react";
+import React, { Component } from "react"
 import ZoneDevice from "components/Zones/ZoneDevice"
 import { zoneDescriptions } from "components/Helpers/Api"
-import React, { useContext } from 'react'
 
-// reactstrap components
 import {
-  Button,
-  ButtonGroup,
   Card,
   CardHeader,
   CardBody,
   CardTitle,
   CardSubtitle,
-  Label,
-  FormGroup,
-  Input,
   Table,
   Row,
   Col,
-  UncontrolledTooltip,
-} from "reactstrap";
+} from "reactstrap"
 
 export default class ZoneListing extends Component {
-
 
   render() {
 
