@@ -1,4 +1,4 @@
-import React, { useContext, useRef } from "react"
+import React from "react"
 import { withRouter } from "react-router"
 import { APIErrorContext } from 'layouts/Admin'
 import ReactBSAlert from "react-bootstrap-sweetalert"
@@ -13,13 +13,13 @@ import {
   CardTitle,
   Label,
   Table,
-  Form,
   FormGroup,
   Input,
   InputGroup,
   InputGroupAddon,
   InputGroupText,
-  Row, Col
+  Row,
+  Col
 } from "reactstrap"
 
 export class DNSLogHistoryList extends React.Component {
@@ -164,41 +164,34 @@ export class DNSLogHistoryList extends React.Component {
     
     return (
       <>
-          <ReactBSAlert
-            type="custom"
-            show={this.state.showAlert}
-            onConfirm={this.closeAlert}
-            onCancel={this.closeAlert}
-            title="DNS query"
-            confirmBtnBsStyle="info"
-            cancelBtnBsStyle="danger"
-            openAnim={false}
-            closeOnClickOutside={true}
-            btnSize=""
-          >
-            <pre style={{"text-align":"left", "font-size": "0.65em"}}>{this.state.alertText}</pre>
-            </ReactBSAlert>
+        <ReactBSAlert
+          type="custom"
+          show={this.state.showAlert}
+          onConfirm={this.closeAlert}
+          onCancel={this.closeAlert}
+          title="DNS query"
+          confirmBtnBsStyle="info"
+          cancelBtnBsStyle="danger"
+          openAnim={false}
+          closeOnClickOutside={true}
+          btnSize=""
+        >
+          <pre style={{"text-align":"left", "font-size": "0.65em"}}>{this.state.alertText}</pre>
+          </ReactBSAlert>
 
         <Card>
           <CardHeader>
-
             <CardTitle tag="h4">{this.state.filterIPs.join(',')} DNS logs</CardTitle>
 
             <Row>
-
-            <Col md="4">
-
-              <FormGroup>
-                <Label>Client</Label>
-               
-                <ClientSelect isMulti={true} options={this.state.clients} defaultValue={this.state.selectedIPs} onChange={this.handleIPChange} />
-
-
-              </FormGroup>
-
-            </Col>
-            <Col md="8">
-              <FormGroup>
+              <Col md="4">
+                <FormGroup>
+                  <Label>Client</Label>
+                  <ClientSelect isMulti={true} options={this.state.clients} defaultValue={this.state.selectedIPs} onChange={this.handleIPChange} />
+                </FormGroup>
+              </Col>
+              <Col md="8">
+                <FormGroup>
                   <Label>Search</Label>
                   <InputGroup>
                   <Input type="text" name="filterText" placeholder="Filter domain..." value={this.state.filterText} onChange={this.handleChange} />
@@ -208,13 +201,9 @@ export class DNSLogHistoryList extends React.Component {
                     </InputGroupText>
                   </InputGroupAddon>
                   </InputGroup>
-                 
-            
-              </FormGroup>
+                </FormGroup>
               </Col>
             </Row>
-
-
           </CardHeader>
           <CardBody>
             <Table responsive>
