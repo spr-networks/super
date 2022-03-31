@@ -26,10 +26,10 @@ const apiURL = () => {
 
 //request helper
 class API {
-  baseURL=apiURL()+''
+  baseURL=''
 
   constructor(baseURL='') {
-    this.baseURL = apiURL() + baseURL
+    this.baseURL = apiURL() + baseURL.replace(/^\/+/, '')
   }
 
   request(method='GET', url, body) {
@@ -48,10 +48,14 @@ class API {
       opts.body = JSON.stringify(body)
     }
 
-    let baseURL = this.baseURL
-
     let promise = new Promise((resolve, reject) => {
-      let _url = `${baseURL}/${url}`
+      let baseURL = this.baseURL
+      // get rid of //
+      if (url[0] == '/' && baseURL.length && baseURL[baseURL.length-1] == '/') {
+        url = url.substr(1)
+      }
+      
+      let _url = `${baseURL}${url}`
       console.log('[API] fetch', _url)
       fetch(_url, opts)
         .then(response => {
@@ -90,3 +94,4 @@ class API {
 }
 
 export default API
+export const api = new API
