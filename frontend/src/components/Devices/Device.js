@@ -79,7 +79,11 @@ export default class Device extends Component {
     let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
 
     const removeDevice = (e) => {
-      deleteDevice(device.MAC)
+      if (device.MAC == "") {
+        deleteDevice("pending")
+      } else {
+        deleteDevice(device.MAC)
+      }
       this.props.notifyChange()
     }
 
