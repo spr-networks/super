@@ -7,16 +7,16 @@ export class APIDevice extends API {
 
   list = () => this.get('/devices')
   update = (data) => {
-    if (!data || !data.Mac) {
-      throw new Error('No Mac key specified')
+    if (!data || !data.MAC) {
+      throw new Error('No MAC key specified')
     }
-    return this.put(`/device/${data.Mac}`, data)
+    return this.put(`/device/${data.MAC}`, data)
   }
 
-  updateName = (Mac, Name) => this.update({Mac, Name})
-  updateZones = (Mac, Zones) => this.update({Mac, Zones})
-  updateTags = (Mac, DeviceTags) => this.update({Mac, DeviceTags})
-  delete = (Mac) => this.delete(`/device/${Mac}`, {Mac})
+  updateName = (MAC, Name) => this.update({MAC, Name})
+  updateZones = (MAC, Zones) => this.update({MAC, Zones})
+  updateTags = (MAC, DeviceTags) => this.update({MAC, DeviceTags})
+  deleteDevice = (MAC) => this.delete(`/device/${MAC}`, {MAC})
 }
 
 export const deviceAPI = new APIDevice()
