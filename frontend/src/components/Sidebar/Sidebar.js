@@ -107,7 +107,7 @@ function Sidebar(props) {
           <NavLink to={prop.layout + prop.path} activeClassName="">
             {prop.icon !== undefined ? (
               <>
-                <i className={prop.icon} />
+                <span className="sidebar-mini-icon"><i className={prop.icon} /></span>
                 <span className="sidebar-normal">{prop.name}</span>
               </>
             ) : (
