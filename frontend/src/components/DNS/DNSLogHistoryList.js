@@ -206,7 +206,7 @@ export class DNSLogHistoryList extends React.Component {
             </Row>
           </CardHeader>
           <CardBody>
-            <Table responsive>
+            <Table responsive className={!this.state.list.length ? "d-none" : null}>
               <thead className="text-primary">
                 <tr>
                   <th width="15%">Timestamp</th>

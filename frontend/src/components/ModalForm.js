@@ -1,5 +1,4 @@
-import React, { Component, useEffect, useState } from 'react';
-import DNSAddBlocklist from "components/DNS/DNSAddBlocklist.js"
+import React, { useEffect, useState } from 'react'
 
 import {
   Button,
@@ -56,4 +55,4 @@ const ModalForm = (props) => {
 	)
 }
 
-export default ModalForm;
+export default ModalForm
