@@ -130,7 +130,7 @@ const routes = [
         layout: "/admin",
       },
       {
-        path: "/dnsLog/:ip",
+        path: "/dnsLog/:ips",
         name: "DNS logs",
         icon: "fa fa-th-list",
         component: DNSLog,

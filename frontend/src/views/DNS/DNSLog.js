@@ -7,14 +7,14 @@ import {
 } from "reactstrap"
 
 export default class DNSLog extends Component {
-  state = { logs: [], ip: '' }
+  state = { logs: [], ips: [] }
 
   constructor(props) {
     super(props)
 
-    let ip = props.match.params.ip
-    if (ip && ip != ':ip') {
-      this.state.ip = ip
+    let ips = props.match.params.ips
+    if (ips && ips != ':ips') {
+      this.state.ips = ips.split(',')
     }
   }
 
@@ -26,7 +26,7 @@ export default class DNSLog extends Component {
       <div className="content">
 				<Row>
           <Col md="12">
-              <DNSLogHistoryList ip={this.state.ip} />
+              <DNSLogHistoryList ips={this.state.ips} />
           </Col>
         </Row>
       </div>

@@ -2,7 +2,7 @@ import React, { useContext, useRef } from "react"
 import { withRouter } from "react-router"
 import { APIErrorContext } from 'layouts/Admin'
 import ReactBSAlert from "react-bootstrap-sweetalert"
-import Select from "react-select";
+import ClientSelect from "components/Helpers/ClientSelect"
 import { logAPI } from "api/DNS"
 import { deviceAPI } from "api/Device"
 
@@ -24,16 +24,15 @@ import {
 
 export class DNSLogHistoryList extends React.Component {
   static contextType = APIErrorContext;
-  state = { ip: '', list: [], listAll: [], clients: [], filterText: '',
+  state = { list: [], listAll: [], 
+    clients: [], filterIPs: [], selectedIPs: [], filterText: '',
     showAlert: false, alertText: '' }
 
   constructor(props) {
     super(props)
 
-    //this.state.list = []
-    this.state.ip = props.ip || ""
+    this.state.filterIPs = props.ips || []
     this.state.alertText = ""
-    //this.state.clients = []
 
     this.handleIPChange = this.handleIPChange.bind(this)
     this.handleChange = this.handleChange.bind(this)
@@ -43,41 +42,54 @@ export class DNSLogHistoryList extends React.Component {
 
   async componentDidMount() {
     this.getClients()
-    this.refreshList()
+    this.refreshList(this.state.filterIPs)
   }
 
   async getClients() {
     try {
       let devices = await deviceAPI.list()
       let clients = Object.values(devices)
-        //.map(d => {d.Name, d.RecentIP})
         .filter(d => d.RecentIP.length)
+        .map(d => {return {label: d.Name, value: d.RecentIP}})
       
-      // todo show client name
+        clients.push({label:"testDev1", value: "1.2.3.4"})
+        clients.push({label:"rpi4", value: "11.23.32.234"})
+
+        let selectedIPs = []
+        for (let c of clients) {
+          if (this.state.filterIPs.includes(c.value)) {
+            selectedIPs.push(c)
+          }
+        }
+        this.setState({selectedIPs})
+
       this.setState({clients})
     } catch(error) {
       this.context.reportError(error.message)
     }
   }
  
-  async refreshList(ip) {
-    ip = ip || this.state.ip
-    if (!ip.length) {
+  async refreshList(ips) {
+    if (!ips.length) {
       return
     }
 
-    console.log('fetchin dns log list', ip)
+    console.log('[dnslog] fetchin dns log list', ips)
 
     let list = []
-    try {
-      list = await logAPI.history(ip)
-      list.reverse()
-    } catch (error) {
-      let msg = "API Failure: " + error.message
-      if (error.message == '404') {
-        msg = `No DNS query history for ${ip}`
+    for (let ip of ips) {
+      try {
+        let _list = await logAPI.history(ip)
+        _list.reverse()
+        list = list.concat(_list)
+      } catch (error) {
+        let msg = "API Failure: " + error.message
+        if (error.message == '404') {
+          msg = `No DNS query history for ${ip}`
+        }
+
+        this.context.reportError(msg)
       }
-      this.context.reportError(msg)
     }
 
     this.setState({list})
@@ -91,10 +103,14 @@ export class DNSLogHistoryList extends React.Component {
       list = list.filter(item => {
         let match = false
         
-        match = match || item.FirstName.includes(filterText)
-        match = match || item.FirstAnswer.includes(filterText)
-        match = match || item.Q.filter(r => r.Name.includes(filterText)).length
-
+        try {
+          match = match || item.FirstName.includes(filterText)
+          match = match || item.FirstAnswer.includes(filterText)
+          match = match || item.Q.filter(r => r.Name.includes(filterText)).length
+        } catch(err) {
+          match = false
+        }
+        
         return match
       })
     }
@@ -102,17 +118,17 @@ export class DNSLogHistoryList extends React.Component {
     this.setState({list})
   }
 
-  handleIPChange(item) {
-    let ip = item.value
-    if (!ip.match(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/)) {
-      return
+  handleIPChange(selectedIPs) {
+    this.setState({selectedIPs})
+
+    let ips = selectedIPs.map(item => item.value)
+
+    // update url to include ips
+    if (ips.length) {
+      this.props.history.push(ips.join(','))
     }
 
-    // update url to include ip
-    this.props.history.push(ip)
-
-    this.setState({ip})
-    this.refreshList(ip)
+    this.refreshList(ips)
   }
 
   handleChange(event) {
@@ -145,12 +161,7 @@ export class DNSLogHistoryList extends React.Component {
       let className = keys[type] || 'text-danger'
       return (<span className={className}>{type}</span>)
     }
-
-    // TODO - put select in component + support multiple
-    let options = this.state.clients.map(c =>  {
-      return {label: c.Name || c.RecentIP, value: c.RecentIP}
-    })
-
+    
     return (
       <>
           <ReactBSAlert
@@ -171,19 +182,22 @@ export class DNSLogHistoryList extends React.Component {
         <Card>
           <CardHeader>
 
-            <CardTitle tag="h4">{this.state.ip} DNS logs</CardTitle>
+            <CardTitle tag="h4">{this.state.filterIPs.join(',')} DNS logs</CardTitle>
 
             <Row>
 
-            <Col md="3">
+            <Col md="4">
 
               <FormGroup>
                 <Label>Client</Label>
-                <Select options={options} defaultValue={this.state.ip} onChange={this.handleIPChange} />
+               
+                <ClientSelect isMulti={true} options={this.state.clients} defaultValue={this.state.selectedIPs} onChange={this.handleIPChange} />
+
+
               </FormGroup>
 
             </Col>
-            <Col md="9">
+            <Col md="8">
               <FormGroup>
                   <Label>Search</Label>
                   <InputGroup>
