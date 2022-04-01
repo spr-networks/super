@@ -43,7 +43,7 @@ export default class DNSBlock extends Component {
         return
       }
 		}
-      
+
     return (
       <div className="content">
 				<Row>
@@ -53,8 +53,8 @@ export default class DNSBlock extends Component {
         </Row>
 				<Row>
           <Col md="12">
-            <DNSOverrideList key={generatedID+1} list={this.state.BlockDomains} title="Override: Blocked domains" notifyChange={notifyChange} />
-            <DNSOverrideList key={generatedID+2} list={this.state.PermitDomains} title="Override: Permitted domains" notifyChange={notifyChange} />
+            <DNSOverrideList key={generatedID+1} list={this.state.BlockDomains} title="Blocked Domain Override" notifyChange={notifyChange} />
+            <DNSOverrideList key={generatedID+2} list={this.state.PermitDomains} title="Allow Domain Override" notifyChange={notifyChange} />
           </Col>
         </Row>
       </div>

@@ -124,21 +124,21 @@ const routes = [
     views: [
       {
         path: "/dnsBlock",
-        name: "Blocklists",
-        icon: "fa fa-exclamation-triangle",
+        name: "Blocklists/Ad-Block",
+        icon: "fa fa-ban",
         component: DNSBlock,
         layout: "/admin",
       },
       {
         path: "/dnsLog/:ips",
-        name: "DNS logs",
+        name: "DNS Log",
         icon: "fa fa-th-list",
         component: DNSLog,
         layout: "/admin",
       },
       {
         path: "/dnsLogEdit",
-        name: "DNS Logs Settings",
+        name: "DNS Log Settings",
         icon: "fa fa-cogs",
         component: DNSLogEdit,
         layout: "/admin",

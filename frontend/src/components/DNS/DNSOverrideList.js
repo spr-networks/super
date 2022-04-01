@@ -41,19 +41,19 @@ const DNSOverrideList = (props) => {
 		<Card>
 			<CardHeader>
 
-				<ModalForm 
+				<ModalForm
 					key="mf1"
-					title="Add DNS Override" 
-					triggerText="add" 
-					triggerClass="pull-right" 
-					triggerIcon="fa fa-plus" 
+					title="Add DNS Override"
+					triggerText="add"
+					triggerClass="pull-right"
+					triggerIcon="fa fa-plus"
 					modalRef={modalRef}
 				>
 					<DNSAddOverride type={overrideType} notifyChange={notifyChange} />
 				</ModalForm>
 
 				<CardTitle tag="h4">{props.title || "DNS Override"}</CardTitle>
-				<p className="text-muted">Blocked &amp; Permitted lists allow you to control domain name replies per Client IP</p>
+				<p className="text-muted">Overrides allow you to set rules for DNS queries</p>
 			</CardHeader>
 			<CardBody>
 				<Table responsive>

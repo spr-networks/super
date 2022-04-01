@@ -23,7 +23,7 @@ import {
 
 export class DNSLogHistoryList extends React.Component {
   static contextType = APIErrorContext;
-  state = { list: [], listAll: [], 
+  state = { list: [], listAll: [],
     filterIPs: [], filterText: '',
     showAlert: false, alertText: '' }
 
@@ -42,7 +42,7 @@ export class DNSLogHistoryList extends React.Component {
   async componentDidMount() {
     this.refreshList(this.state.filterIPs)
   }
- 
+
   async refreshList(ips) {
     if (!ips.length) {
       return
@@ -72,11 +72,11 @@ export class DNSLogHistoryList extends React.Component {
 
   filterList(filterText) {
     let list = this.state.listAll
-    
+
     if (filterText.length) {
       list = list.filter(item => {
         let match = false
-        
+
         try {
           match = match || item.FirstName.includes(filterText)
           match = match || item.FirstAnswer.includes(filterText)
@@ -84,7 +84,7 @@ export class DNSLogHistoryList extends React.Component {
         } catch(err) {
           match = false
         }
-        
+
         return match
       })
     }
@@ -123,7 +123,7 @@ export class DNSLogHistoryList extends React.Component {
   }
 
   render() {
-    
+
     const prettyDate = (timestamp) => {
       return new Date(timestamp).toISOString().replace(/T|(\..*)/g, ' ').trim()
     }
@@ -139,7 +139,7 @@ export class DNSLogHistoryList extends React.Component {
       let className = keys[type] || 'text-danger'
       return (<span className={className}>{type}</span>)
     }
-    
+
     return (
       <>
         <ReactBSAlert
@@ -159,16 +159,16 @@ export class DNSLogHistoryList extends React.Component {
 
         <Card>
           <CardHeader>
-            <CardTitle tag="h4">{this.state.filterIPs.join(',')} DNS logs</CardTitle>
+            <CardTitle tag="h4">{this.state.filterIPs.join(',')} DNS Log</CardTitle>
 
             <Row>
               <Col md="4">
                 <FormGroup>
                   <Label>Client</Label>
-                  <ClientSelect 
+                  <ClientSelect
                     isMulti={true}
                     value={this.state.filterIPs}
-                    onChange={this.handleIPChange} 
+                    onChange={this.handleIPChange}
                   />
                 </FormGroup>
               </Col>
@@ -176,12 +176,12 @@ export class DNSLogHistoryList extends React.Component {
                 <FormGroup>
                   <Label>Search</Label>
                   <InputGroup>
-                  <Input 
-                    type="text" 
-                    name="filterText" 
-                    placeholder="Filter domain..." 
-                    value={this.state.filterText} 
-                    onChange={this.handleChange} 
+                  <Input
+                    type="text"
+                    name="filterText"
+                    placeholder="Filter domain..."
+                    value={this.state.filterText}
+                    onChange={this.handleChange}
                   />
                   <InputGroupAddon addonType="append">
                     <InputGroupText>
