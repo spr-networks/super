@@ -70,10 +70,10 @@ export default function MockAPI() {
         "Expiration": 123
       })
 
-      server.create('dnslogprivacylist', '192.168.1.1')
-      server.create('dnslogprivacylist', '192.168.1.2')
-      server.create('dnslogdomainignorelist', 'example.com')
-      server.create('dnslogdomainignorelist', 'privatedomain.com')
+      server.create('dnslogprivacylist', {ip: '192.168.1.1'})
+      server.create('dnslogprivacylist', {ip: '192.168.1.2'})
+      server.create('dnslogdomainignorelist', {domain: 'example.com'})
+      server.create('dnslogdomainignorelist', {domain: 'privatedomain.com'})
     },
     routes() {
       // TODO hook for all
@@ -342,23 +342,25 @@ export default function MockAPI() {
       })
 
       this.get('/plugins/dns/log/host_privacy_list', (schema, request) => {
-        console.log('>>', JSON.stringify(schema.dnslogprivacylists.all()))
-        return ['192.168.1.1', '192.168.1.2']
-        //return schema.dnslogprivacylists.all().models
+        //return ['192.168.1.1', '192.168.1.2']
+        return schema.dnslogprivacylists.all().models.map(d => d.ip)
       })
 
       this.get('/plugins/dns/log/domain_ignores', (schema, request) => {
-        return ["example.dev", "example.com"]
-        //return schema.dnslogdomainignorelists.all().models
+        //return ["example.dev", "example.com"]
+        return schema.dnslogdomainignorelists.all().models.map(d => d.domain)
       })
 
       this.get('/plugins/dns/log/history/:ip', (schema, request) => {
         let ip = request.params.ip//192.168.2.100
+        let revip = ip.split('').reverse().join('')
+        let day = 1+parseInt((Math.random()*28))
+        day = day.toString().padStart(2, '0')
         return [
           {
             "Q": [
               {
-                "Name": "102.2.168.192.in-addr.arpa.",
+                "Name": `${revip}.in-addr.arpa.`,
                 "Qtype": 12,
                 "Qclass": 1
               }
@@ -366,7 +368,7 @@ export default function MockAPI() {
             "A": [
               {
                 "Hdr": {
-                  "Name": "102.2.168.192.in-addr.arpa.",
+                  "Name": `${revip}.in-addr.arpa.`,
                   "Rrtype": 12,
                   "Class": 1,
                   "Ttl": 30,
@@ -376,11 +378,11 @@ export default function MockAPI() {
               }
             ],
             "Type": "NOERROR",
-            "FirstName": "102.2.168.192.in-addr.arpa.",
+            "FirstName": `${revip}.in-addr.arpa.`,
             "FirstAnswer": "rpi4.lan.",
             "Local": "[::]:53",
-            "Remote": "192.168.2.102:50862",
-            "Timestamp": "2022-04-01T08:05:34.983138386Z"
+            "Remote": `${ip}:50862`,
+            "Timestamp": `2022-03-${day}T08:05:34.983138386Z`
           },
           {
             "Q": [
@@ -395,24 +397,24 @@ export default function MockAPI() {
             "FirstName": "caldav.fe.apple-dns.net.",
             "FirstAnswer": "",
             "Local": "[::]:53",
-            "Remote": "192.168.2.102:50216",
-            "Timestamp": "2022-04-01T08:05:34.01579228Z"
+            "Remote": `${ip}:50216`,
+            "Timestamp": `2022-03-${day}T08:05:34.01579228Z`
           },
           {
             "Q": [
               {
-                "Name": "lb._dns-sd._udp.102.2.168.192.in-addr.arpa.",
+                "Name": `lb._dns-sd._udp.${revip}.in-addr.arpa.`,
                 "Qtype": 12,
                 "Qclass": 1
               }
             ],
             "A": [],
             "Type": "OTHERERROR",
-            "FirstName": "lb._dns-sd._udp.102.2.168.192.in-addr.arpa.",
+            "FirstName": `lb._dns-sd._udp.${revip}.in-addr.arpa.`,
             "FirstAnswer": "",
             "Local": "[::]:53",
-            "Remote": "192.168.2.102:64151",
-            "Timestamp": "2022-04-01T08:05:29.976935196Z"
+            "Remote": `${ip}:64151`,
+            "Timestamp": `2022-03-${day}T08:05:29.976935196Z`
           }
         ]
       })

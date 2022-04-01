@@ -51,9 +51,6 @@ export class DNSLogHistoryList extends React.Component {
       let clients = Object.values(devices)
         .filter(d => d.RecentIP.length)
         .map(d => {return {label: d.Name, value: d.RecentIP}})
-      
-        clients.push({label:"testDev1", value: "1.2.3.4"})
-        clients.push({label:"rpi4", value: "11.23.32.234"})
 
         let selectedIPs = []
         for (let c of clients) {
