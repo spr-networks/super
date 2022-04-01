@@ -23,7 +23,7 @@ export default class ClientSelect extends Component {
     try {
       devices = await deviceAPI.list()
     } catch(error) {
-      return this.context.reportError(error.message)
+      throw(error)
     }
 
     // devices => options

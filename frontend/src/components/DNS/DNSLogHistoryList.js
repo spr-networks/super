@@ -81,6 +81,7 @@ export class DNSLogHistoryList extends React.Component {
           match = match || item.FirstName.includes(filterText)
           match = match || item.FirstAnswer.includes(filterText)
           match = match || item.Q.filter(r => r.Name.includes(filterText)).length
+          match = match || item.Type.match(filterText.toUpperCase())
         } catch(err) {
           match = false
         }
@@ -101,6 +102,8 @@ export class DNSLogHistoryList extends React.Component {
     if (ips.length) {
       this.props.history.push(ips.join(','))
     }
+
+    this.setState({filterIPs: ips})
 
     this.refreshList(ips)
   }
@@ -140,6 +143,8 @@ export class DNSLogHistoryList extends React.Component {
       return (<span className={className}>{type}</span>)
     }
 
+    let hideClient = this.state.filterIPs.length <= 1
+
     return (
       <>
         <ReactBSAlert
@@ -159,7 +164,7 @@ export class DNSLogHistoryList extends React.Component {
 
         <Card>
           <CardHeader>
-            <CardTitle tag="h4">{this.state.filterIPs.join(',')} DNS Log</CardTitle>
+            <CardTitle tag="h4">{this.state.filterIPs.join(',')} DNS Log t</CardTitle>
 
             <Row>
               <Col md="4">
@@ -199,6 +204,7 @@ export class DNSLogHistoryList extends React.Component {
                 <tr>
                   <th width="15%">Timestamp</th>
                   <th width="15%">Type</th>
+                  <th className={hideClient ? "d-none" : null}>Client</th>
                   <th>Domain</th>
                   <th>Answer</th>
                 </tr>
@@ -210,7 +216,12 @@ export class DNSLogHistoryList extends React.Component {
                       <td style={{"whiteSpace": "nowrap"}}>
                         {prettyDate(item.Timestamp)}
                       </td>
-                      <td>{prettyType(item.Type)}</td>
+                      <td>
+                        {prettyType(item.Type)}
+                      </td>
+                      <td className={hideClient ? "d-none" : null}>
+                        {item.Remote.split(':')[0]}
+                      </td>
                       <td>{item.FirstName}</td>
                       <td>
                         <a target="#" onClick={e => this.triggerAlert(index)}>
