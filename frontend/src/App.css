@@ -3,3 +3,10 @@
 .sidebar-mini-icon > .fa {
   margin-left: 5px;
 }
+
+.card-stats .icon-big {
+	font-size: 5.0em;
+	margin-top: -20px;
+	min-height: 64px;
+}
+

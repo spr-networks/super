@@ -18,8 +18,8 @@ import React, {useState, useEffect} from "react";
 // react plugin used to create charts
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 import { hostapdAllStations, ipAddr } from "components/Helpers/Api.js";
-import WifiClients from "components/Dashboard/HostapdWidgets.js"
-import DNSMetrics from "components/Dashboard/DNSMetricsWidgets.js"
+import WifiClients, {WifiInfo} from "components/Dashboard/HostapdWidgets.js"
+import { DNSMetrics, DNSBlockMetrics } from "components/Dashboard/DNSMetricsWidgets.js"
 
 import {
   Badge,
@@ -65,24 +65,22 @@ function Home() {
     <>
       <div className="content">
         <Row>
-          <Col lg="4" md="6" sm="6">
+          <Col sm="4">
             <WifiClients />
           </Col>
-          <Col lg="4" md="6" sm="6">
+          <Col sm="4">
             <DNSMetrics />
+          </Col>
+          <Col sm="4">
+            <DNSBlockMetrics />
           </Col>
         </Row>
         <Row>
           <Col lg="8" md="6" sm="6">
-            <Card className="card-stats">
+            <Card>
               <CardBody>
                 <Row>
-                  <Col md="2" xs="5">
-                    <div className="icon-big text-center icon-warning">
-                      <i className="nc-icon nc-globe text-warning" />
-                    </div>
-                  </Col>
-                  <Col md="8" xs="7">
+                  <Col lg={{size: 8, offset: 2}} md="10">
                     <p className="card-category">Interfaces</p>
                     <CardTitle tag="h4"></CardTitle>
                     <CardBody>
@@ -105,6 +103,9 @@ function Home() {
               </CardBody>
             </Card>
           </Col>
+          {/*<Col sm="4">
+            <WifiInfo />
+          </Col>*/}
         </Row>
       </div>
     </>
