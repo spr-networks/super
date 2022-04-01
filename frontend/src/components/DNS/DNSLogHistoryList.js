@@ -1,10 +1,9 @@
-import React from "react"
-import { withRouter } from "react-router"
+import React from 'react'
+import { withRouter } from 'react-router'
 import { APIErrorContext } from 'layouts/Admin'
-import ReactBSAlert from "react-bootstrap-sweetalert"
-import ClientSelect from "components/Helpers/ClientSelect"
-import { logAPI } from "api/DNS"
-import { deviceAPI } from "api/Device"
+import ReactBSAlert from 'react-bootstrap-sweetalert'
+import ClientSelect from 'components/Helpers/ClientSelect'
+import { logAPI } from 'api/DNS'
 
 import {
   Card,
@@ -20,12 +19,12 @@ import {
   InputGroupText,
   Row,
   Col
-} from "reactstrap"
+} from 'reactstrap'
 
 export class DNSLogHistoryList extends React.Component {
   static contextType = APIErrorContext;
   state = { list: [], listAll: [], 
-    clients: [], filterIPs: [], selectedIPs: [], filterText: '',
+    filterIPs: [], filterText: '',
     showAlert: false, alertText: '' }
 
   constructor(props) {
@@ -41,29 +40,7 @@ export class DNSLogHistoryList extends React.Component {
   }
 
   async componentDidMount() {
-    this.getClients()
     this.refreshList(this.state.filterIPs)
-  }
-
-  async getClients() {
-    try {
-      let devices = await deviceAPI.list()
-      let clients = Object.values(devices)
-        .filter(d => d.RecentIP.length)
-        .map(d => {return {label: d.Name, value: d.RecentIP}})
-
-        let selectedIPs = []
-        for (let c of clients) {
-          if (this.state.filterIPs.includes(c.value)) {
-            selectedIPs.push(c)
-          }
-        }
-        this.setState({selectedIPs})
-
-      this.setState({clients})
-    } catch(error) {
-      this.context.reportError(error.message)
-    }
   }
  
   async refreshList(ips) {
@@ -147,6 +124,10 @@ export class DNSLogHistoryList extends React.Component {
 
   render() {
     
+    const prettyDate = (timestamp) => {
+      return new Date(timestamp).toISOString().replace(/T|(\..*)/g, ' ').trim()
+    }
+
     const prettyType = (type) => {
       let keys = {
         'NOERROR': 'text-success',
@@ -174,7 +155,7 @@ export class DNSLogHistoryList extends React.Component {
           btnSize=""
         >
           <pre style={{"text-align":"left", "font-size": "0.65em"}}>{this.state.alertText}</pre>
-          </ReactBSAlert>
+        </ReactBSAlert>
 
         <Card>
           <CardHeader>
@@ -184,14 +165,24 @@ export class DNSLogHistoryList extends React.Component {
               <Col md="4">
                 <FormGroup>
                   <Label>Client</Label>
-                  <ClientSelect isMulti={true} options={this.state.clients} defaultValue={this.state.selectedIPs} onChange={this.handleIPChange} />
+                  <ClientSelect 
+                    isMulti={true}
+                    value={this.state.filterIPs}
+                    onChange={this.handleIPChange} 
+                  />
                 </FormGroup>
               </Col>
               <Col md="8">
                 <FormGroup>
                   <Label>Search</Label>
                   <InputGroup>
-                  <Input type="text" name="filterText" placeholder="Filter domain..." value={this.state.filterText} onChange={this.handleChange} />
+                  <Input 
+                    type="text" 
+                    name="filterText" 
+                    placeholder="Filter domain..." 
+                    value={this.state.filterText} 
+                    onChange={this.handleChange} 
+                  />
                   <InputGroupAddon addonType="append">
                     <InputGroupText>
                       <i className="nc-icon nc-zoom-split" />
@@ -216,11 +207,15 @@ export class DNSLogHistoryList extends React.Component {
                 {
                   this.state.list.map((item, index) => (
                     <tr key={item.Timestamp}>
-                      <td style={{"whiteSpace": "nowrap"}}>{new Date(item.Timestamp).toISOString().replace(/T|(\..*)/g, ' ').trim()}</td>
+                      <td style={{"whiteSpace": "nowrap"}}>
+                        {prettyDate(item.Timestamp)}
+                      </td>
                       <td>{prettyType(item.Type)}</td>
                       <td>{item.FirstName}</td>
                       <td>
-                        <a target="#" onClick={e => this.triggerAlert(index)}>{item.FirstAnswer}</a>
+                        <a target="#" onClick={e => this.triggerAlert(index)}>
+                          {item.FirstAnswer}
+                        </a>
                       </td>
                     </tr>
                   ))

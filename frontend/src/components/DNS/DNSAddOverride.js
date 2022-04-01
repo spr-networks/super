@@ -1,28 +1,29 @@
-import React, { useContext } from 'react'
+import React from 'react'
 import { APIErrorContext } from 'layouts/Admin'
-//import Switch from "react-bootstrap-switch";
 import { blockAPI } from 'api/DNS'
+import ClientSelect from 'components/Helpers/ClientSelect'
 
-// reactstrap components
 import {
   Button,
-  Col,
-  Card,
-  CardFooter,
-  CardHeader,
-  CardBody,
-  CardTitle,
   Label,
   Form,
   FormGroup,
   FormText,
   Input,
-  Row
-} from "reactstrap";
+  Row,
+  Col
+} from 'reactstrap'
 
 export default class DNSAddOverride extends React.Component {
   static contextType = APIErrorContext;
-  state = { Type: '', Domain: '', ResultIP: '0.0.0.0', ClientIP: '*', Expiration: 0, check: {} };
+  state = {
+    Type: '', 
+    Domain: '', 
+    ResultIP: '0.0.0.0', 
+    ClientIP: '*', 
+    Expiration: 0,
+    check: {} 
+  }
 
   constructor(props) {
     super(props)
@@ -35,30 +36,45 @@ export default class DNSAddOverride extends React.Component {
     }
 
     this.handleChange = this.handleChange.bind(this)
+    this.handleClientChange = this.handleClientChange.bind(this)
+    this.validateField = this.validateField.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
   }
 
-  handleChange(event) {
-    let name = event.target.name
-    let value = event.target.value
-
+  validateField(name, value) {
     let check = {Domain: '', ResultIP: '', ClientIP: ''}
 
     if (name == 'Domain' && !value.length) {
       check.Domain = 'has-danger'
     }
 
-    if (name.match(/^(Result|Client)IP$/) && value != '*' && !value.match(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/)) {
+    if (name.match(/^(Result|Client)IP$/) && value != '*' 
+      && !value.match(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/)
+    ) {
       check[name] = 'has-danger'
     }
 
     this.setState({check})
-
-    this.setState({[name]: value})
   }
 
   isValid() {
     return (Object.values(this.state.check).filter(v => v.length).length == 0)
+  }
+
+  handleChange(event) {
+    let name = event.target.name
+    let value = event.target.value
+
+    this.validateField(name, value)
+
+    this.setState({[name]: value})
+  }
+
+  handleClientChange(newValue) {
+    let ClientIP = newValue ? newValue.value : ''
+    this.validateField('ClientIP', ClientIP)
+    
+    this.setState({ClientIP})
   }
 
   handleSubmit(event) {
@@ -90,13 +106,16 @@ export default class DNSAddOverride extends React.Component {
   }
 
   render() {
+
     return (
 			<Form onSubmit={this.handleSubmit}>
 				<Row>
-					<Label for="Domain" sm={2}>Domain</Label>
-					<Col sm={10}>
+					<Label for="Domain" sm={3}>Domain</Label>
+					<Col sm={9}>
 						<FormGroup className={this.state.check.Domain}>
-							<Input type="text" id="Domain" placeholder="" name="Domain" value={this.state.Domain} onChange={this.handleChange} autoFocus={true} />
+							<Input type="text" id="Domain" placeholder="" name="Domain" 
+                value={this.state.Domain} onChange={this.handleChange} autoFocus={true} 
+              />
               {this.state.check.Domain == 'has-danger' ? (
                 <Label className="error">Specify a domain name</Label>
               ) : null}
@@ -105,10 +124,12 @@ export default class DNSAddOverride extends React.Component {
 				</Row>
 
 				<Row>
-					<Label for="ResultIP" sm={2}>Result IP</Label>
-					<Col sm={10}>
+					<Label for="ResultIP" sm={3}>Result IP</Label>
+					<Col sm={9}>
 						<FormGroup className={this.state.check.ResultIP}>
-							<Input type="text" id="ResultIP" placeholder="0.0.0.0" name="ResultIP" value={this.state.ResultIP} onChange={this.handleChange} />
+							<Input type="text" id="ResultIP" placeholder="0.0.0.0" name="ResultIP" 
+                value={this.state.ResultIP} onChange={this.handleChange} 
+              />
               {this.state.check.ResultIP == 'has-danger' ? (
                 <Label className="error">Please enter a valid IP or *</Label>
               ) : (
@@ -119,25 +140,29 @@ export default class DNSAddOverride extends React.Component {
 				</Row>
 
 				<Row>
-					<Label for="ClientIP" sm={2}>Client IP</Label>
-					<Col sm={10}>
+					<Label for="ClientIP" sm={3}>Client IP</Label>
+					<Col sm={9}>
 						<FormGroup className={this.state.check.ClientIP}>
-							<Input type="text" id="ClientIP" placeholder="*" name="ClientIP" value={this.state.ClientIP} onChange={this.handleChange} />
+              <ClientSelect 
+                canAdd={true} 
+                value={this.state.ClientIP} 
+                onChange={this.handleClientChange} 
+              />
               {this.state.check.ClientIP == 'has-danger' ? (
                 <Label className="error">Please enter a valid IP or *</Label>
-              ) : (
-                <FormText tag="span">* for all clients</FormText>
-              )}
+              ) : (null)}
 						</FormGroup>
 					</Col>
 				</Row>
 
 
 				<Row>
-					<Label for="Expiration" sm={2}>Expiration</Label>
-					<Col sm={10}>
+					<Label for="Expiration" sm={3}>Expiration</Label>
+					<Col sm={9}>
 						<FormGroup>
-							<Input type="number" id="Expiration" placeholder="Expiration" name="Expiration" value={this.state.Expiration} onChange={this.handleChange} />
+							<Input type="number" id="Expiration" placeholder="Expiration" name="Expiration" 
+                value={this.state.Expiration} onChange={this.handleChange} 
+              />
               <FormText tag="span">If non zero has unix time for when the entry should disappear</FormText>
 						</FormGroup>
 					</Col>
@@ -145,7 +170,7 @@ export default class DNSAddOverride extends React.Component {
 
 
 				<Row>
-					<Col sm={{offset: 2, size: 10}}>
+					<Col sm={{offset: 3, size: 9}}>
 						<Button
 							className="btn-round"
 							color="primary"

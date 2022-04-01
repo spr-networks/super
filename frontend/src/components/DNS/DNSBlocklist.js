@@ -1,8 +1,8 @@
-import React, { useContext, useRef } from 'react'
-import { getDNSBlocklists, updateDNSBlocklist, deleteDNSBlocklist } from "components/Helpers/Api"
+import React from 'react'
+import { getDNSBlocklists, updateDNSBlocklist, deleteDNSBlocklist } from 'components/Helpers/Api'
 import DNSAddBlocklist from "components/DNS/DNSAddBlocklist"
-import ModalForm from "components/ModalForm"
-import Switch from "react-bootstrap-switch"
+import ModalForm from 'components/ModalForm'
+import Switch from 'react-bootstrap-switch'
 import { APIErrorContext } from 'layouts/Admin'
 
 import {
@@ -12,23 +12,20 @@ import {
   CardBody,
   CardTitle,
   Table,
-  Row,
-  Col,
-  Modal,
-} from "reactstrap"
+} from 'reactstrap'
 
 export default class DNSBlocklist extends React.Component {
-  static contextType = APIErrorContext;
-  state = { list: [] };
+  static contextType = APIErrorContext
+  state = { list: [] }
 
   constructor(props) {
     super(props)
 
     this.state.list = []
 
-    this.handleItemSwitch = this.handleItemSwitch.bind(this);
-    this.deleteListItem = this.deleteListItem.bind(this);
-    this.notifyChange = this.notifyChange.bind(this);
+    this.handleItemSwitch = this.handleItemSwitch.bind(this)
+    this.deleteListItem = this.deleteListItem.bind(this)
+    this.notifyChange = this.notifyChange.bind(this)
 
 		this.refAddBlocklistModal = React.createRef()
   }
@@ -48,7 +45,6 @@ export default class DNSBlocklist extends React.Component {
 
   async notifyChange(type) {
     await this.refreshBlocklists()
-    //this.props.notifyChange(type)
   }
 
   handleItemSwitch(item, value) {
@@ -83,7 +79,7 @@ export default class DNSBlocklist extends React.Component {
   }
 
   render() {
-    const toggleStatusModal = () => alert('TODO: show modal with blocked domains')
+    //const toggleStatusModal = () => alert('TODO: show modal with blocked domains')
 
 		const notifyChangeBlocklist = async () => {
 			await this.notifyChange()

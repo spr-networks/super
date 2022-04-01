@@ -1,12 +1,9 @@
-import React, { useContext, useEffect, useState } from 'react'
-import { deleteDNSOverride } from "components/Helpers/Api"
-import ModalForm from "components/ModalForm"
-import DNSAddOverride from "components/DNS/DNSAddOverride"
-import Switch from "react-bootstrap-switch"
+import React from 'react'
+import ModalForm from 'components/ModalForm'
+import DNSAddOverride from 'components/DNS/DNSAddOverride'
 import { APIErrorContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 
-// reactstrap components
 import {
   Button,
   Card,
@@ -14,7 +11,7 @@ import {
   CardBody,
   CardTitle,
   Table,
-} from "reactstrap";
+} from 'reactstrap'
 
 const DNSOverrideList = (props) => {
   const context = React.useContext(APIErrorContext)
@@ -44,18 +41,25 @@ const DNSOverrideList = (props) => {
 		<Card>
 			<CardHeader>
 
-				<ModalForm key="mf1" title="Add DNS Override" triggerText="add" triggerClass="pull-right" triggerIcon="fa fa-plus" modalRef={modalRef}>
+				<ModalForm 
+					key="mf1"
+					title="Add DNS Override" 
+					triggerText="add" 
+					triggerClass="pull-right" 
+					triggerIcon="fa fa-plus" 
+					modalRef={modalRef}
+				>
 					<DNSAddOverride type={overrideType} notifyChange={notifyChange} />
 				</ModalForm>
 
 				<CardTitle tag="h4">{props.title || "DNS Override"}</CardTitle>
-				<p className="text-muted">Blocked & Permitted lists allow you to control domain name replies per Client IP</p>
+				<p className="text-muted">Blocked &amp; Permitted lists allow you to control domain name replies per Client IP</p>
 			</CardHeader>
 			<CardBody>
 				<Table responsive>
 					<thead className="text-primary">
 						<tr>
-							<th>Domain</th>
+							<th width="25%">Domain</th>
 							<th>Result IP</th>
 							<th>Client IP</th>
 							<th className="text-center">Expiration</th>
