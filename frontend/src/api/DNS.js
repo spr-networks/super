@@ -11,6 +11,7 @@ export class APIDNSBlock extends API {
   deleteBlocklist = (data) => this.delete('/blocklists', data)
   putOverride = (data) => this.put('/override', data)
   deleteOverride = (data) => this.delete('/override', data)
+  metrics = () => this.get('/metrics')
 }
 
 export class APIDNSLog extends API {
