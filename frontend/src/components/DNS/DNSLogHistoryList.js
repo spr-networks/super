@@ -81,6 +81,7 @@ export class DNSLogHistoryList extends React.Component {
           match = match || item.FirstName.includes(filterText)
           match = match || item.FirstAnswer.includes(filterText)
           match = match || item.Q.filter(r => r.Name.includes(filterText)).length
+          match = match || item.Type.match(filterText.toUpperCase())
         } catch(err) {
           match = false
         }
