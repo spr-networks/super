@@ -20,6 +20,7 @@ const apiURL = () => {
     } catch (e) {
       // REACT_APP_API=mock -- dont load in prod
       let MockAPI = import('../components/Helpers/MockAPI').then(m => m.default())
+      return '/'
     }
   }
 }

@@ -336,17 +336,85 @@ export default function MockAPI() {
 
       this.get('/plugins/dns/log/config', (schema, request) => {
         return {
-          "HostPrivacyIPList": schema.dnslogprivacylist.all().models,
-          "DomainIgnoreList": schema.dnslogdomainignorelist.all().models
+          "HostPrivacyIPList": schema.dnslogprivacylists.all().models,
+          "DomainIgnoreList": schema.dnslogdomainignorelists.all().models
         }
       })
 
       this.get('/plugins/dns/log/host_privacy_list', (schema, request) => {
-        return schema.dnslogprivacylist.all().models
+        console.log('>>', JSON.stringify(schema.dnslogprivacylists.all()))
+        return ['192.168.1.1', '192.168.1.2']
+        //return schema.dnslogprivacylists.all().models
       })
 
       this.get('/plugins/dns/log/domain_ignores', (schema, request) => {
-        return schema.dnslogdomainignorelist.all().models
+        return ["example.dev", "example.com"]
+        //return schema.dnslogdomainignorelists.all().models
+      })
+
+      this.get('/plugins/dns/log/history/:ip', (schema, request) => {
+        let ip = request.params.ip//192.168.2.100
+        return [
+          {
+            "Q": [
+              {
+                "Name": "102.2.168.192.in-addr.arpa.",
+                "Qtype": 12,
+                "Qclass": 1
+              }
+            ],
+            "A": [
+              {
+                "Hdr": {
+                  "Name": "102.2.168.192.in-addr.arpa.",
+                  "Rrtype": 12,
+                  "Class": 1,
+                  "Ttl": 30,
+                  "Rdlength": 0
+                },
+                "Ptr": "rpi4.lan."
+              }
+            ],
+            "Type": "NOERROR",
+            "FirstName": "102.2.168.192.in-addr.arpa.",
+            "FirstAnswer": "rpi4.lan.",
+            "Local": "[::]:53",
+            "Remote": "192.168.2.102:50862",
+            "Timestamp": "2022-04-01T08:05:34.983138386Z"
+          },
+          {
+            "Q": [
+              {
+                "Name": "caldav.fe.apple-dns.net.",
+                "Qtype": 65,
+                "Qclass": 1
+              }
+            ],
+            "A": [],
+            "Type": "NODATA",
+            "FirstName": "caldav.fe.apple-dns.net.",
+            "FirstAnswer": "",
+            "Local": "[::]:53",
+            "Remote": "192.168.2.102:50216",
+            "Timestamp": "2022-04-01T08:05:34.01579228Z"
+          },
+          {
+            "Q": [
+              {
+                "Name": "lb._dns-sd._udp.102.2.168.192.in-addr.arpa.",
+                "Qtype": 12,
+                "Qclass": 1
+              }
+            ],
+            "A": [],
+            "Type": "OTHERERROR",
+            "FirstName": "lb._dns-sd._udp.102.2.168.192.in-addr.arpa.",
+            "FirstAnswer": "",
+            "Local": "[::]:53",
+            "Remote": "192.168.2.102:64151",
+            "Timestamp": "2022-04-01T08:05:29.976935196Z"
+          }
+        ]
       })
     }
   })
