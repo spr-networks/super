@@ -43,7 +43,7 @@ export default class DNSMetrics extends Component {
       <CardFooter>
         <hr />
         <div className="stats">
-          <i className="fa fa-ban text-danger" />
+          <i className="fa fa-ban" />
           {this.state.BlockedQueries} blocked
         </div>
       </CardFooter>
