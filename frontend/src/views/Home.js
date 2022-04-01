@@ -18,9 +18,9 @@ import React, {useState, useEffect} from "react";
 // react plugin used to create charts
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 import { hostapdAllStations, ipAddr } from "components/Helpers/Api.js";
-import WifiClientCount from "components/Dashboard/HostapdWidgets.js"
+import WifiClients from "components/Dashboard/HostapdWidgets.js"
+import DNSMetrics from "components/Dashboard/DNSMetricsWidgets.js"
 
-// reactstrap components
 import {
   Badge,
   Button,
@@ -29,14 +29,10 @@ import {
   CardBody,
   CardFooter,
   CardTitle,
-  Label,
-  FormGroup,
-  Input,
   Table,
   Row,
   Col,
-  UncontrolledTooltip,
-} from "reactstrap";
+} from 'reactstrap'
 
 function Home() {
 
@@ -70,49 +66,10 @@ function Home() {
       <div className="content">
         <Row>
           <Col lg="4" md="6" sm="6">
-            <Card className="card-stats">
-              <CardBody>
-                <Row>
-                  <Col md="4" xs="5">
-                    <div className="icon-big text-center icon-warning">
-                      <i className="nc-icon nc-vector text-danger" />
-                    </div>
-                  </Col>
-                  <Col md="8" xs="7">
-                    <div className="numbers">
-                      <p className="card-category">Active WiFi Clients</p>
-                      <WifiClientCount/>
-                      <p />
-                    </div>
-                  </Col>
-                </Row>
-              </CardBody>
-              <CardFooter>
-                <hr />
-                {/*
-                <div className="button-container">
-                  <Row>
-                    <Col className="text-center" md="6">
-                      <h5>
-                        844.5 MB <br />
-                        <small className="text-success">Down</small>
-                      </h5>
-                    </Col>
-                    <Col className="text-center" md="6">
-                      <h5>
-                        19.2 MB <br />
-                        <small>Up</small>
-                      </h5>
-                    </Col>
-									</Row>
-                </div>
-                */}
-                <div className="stats">
-                  <i className="fa fa-clock-o" />
-                  Online
-                </div>
-              </CardFooter>
-            </Card>
+            <WifiClients />
+          </Col>
+          <Col lg="4" md="6" sm="6">
+            <DNSMetrics />
           </Col>
         </Row>
         <Row>
@@ -151,7 +108,7 @@ function Home() {
         </Row>
       </div>
     </>
-  );
+  )
 }
 
-export default Home;
+export default Home

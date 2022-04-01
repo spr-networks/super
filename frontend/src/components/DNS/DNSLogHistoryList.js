@@ -164,7 +164,7 @@ export class DNSLogHistoryList extends React.Component {
 
         <Card>
           <CardHeader>
-            <CardTitle tag="h4">{this.state.filterIPs.join(',')} DNS Log t</CardTitle>
+            <CardTitle tag="h4">{this.state.filterIPs.join(',')} DNS Log</CardTitle>
 
             <Row>
               <Col md="4">
