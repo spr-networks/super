@@ -43,7 +43,7 @@ const DNSOverrideList = (props) => {
 
 				<ModalForm
 					key="mf1"
-					title="Add DNS Override"
+					title={"Add " + props.title}
 					triggerText="add"
 					triggerClass="pull-right"
 					triggerIcon="fa fa-plus"
