@@ -19,7 +19,7 @@ import React, {useState, useEffect} from "react";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 import { hostapdAllStations, ipAddr } from "components/Helpers/Api.js";
 import WifiClients, {WifiInfo} from "components/Dashboard/HostapdWidgets.js"
-import { DNSMetrics, DNSBlockMetrics } from "components/Dashboard/DNSMetricsWidgets.js"
+import { DNSMetrics, DNSBlockMetrics, DNSBlockPercent } from "components/Dashboard/DNSMetricsWidgets.js"
 
 import {
   Badge,
@@ -82,7 +82,7 @@ function Home() {
                 <Row>
                   <Col lg={{size: 8, offset: 2}} md="10">
                     <p className="card-category">Interfaces</p>
-                    <CardTitle tag="h4"></CardTitle>
+                    {/*<CardTitle tag="h4"></CardTitle>*/}
                     <CardBody>
                       <Table responsive>
                         <thead className="text-primary">
@@ -103,9 +103,9 @@ function Home() {
               </CardBody>
             </Card>
           </Col>
-          {/*<Col sm="4">
-            <WifiInfo />
-          </Col>*/}
+          <Col sm="4">
+            <DNSBlockPercent />
+          </Col>
         </Row>
       </div>
     </>
