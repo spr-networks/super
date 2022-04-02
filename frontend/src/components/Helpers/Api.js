@@ -295,6 +295,10 @@ export function hostapdConfiguration() {
   return getAPI("/hostapd/config")
 }
 
+export function hostapdStatus() {
+  return getAPIJson("/hostapd/status")
+}
+
 export function getTraffic(name) {
   return getAPIJson("/traffic/" + name)
 }
