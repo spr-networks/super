@@ -53,7 +53,7 @@ export class WifiInfo extends Component {
   render() {
     return (
       <StatsWidget
-        icon="fa fa-wifi text-warning"
+        icon="fa fa-wifi text-info"
         title="Wifi AP"
         text={this.state.ssid}
         textFooter={"Channel " + this.state.channel}
