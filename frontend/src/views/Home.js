@@ -14,13 +14,13 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 */
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect} from "react"
 // react plugin used to create charts
-import { Line, Bar, Doughnut } from "react-chartjs-2";
-import { hostapdAllStations, ipAddr } from "components/Helpers/Api.js";
+import { Line, Bar, Doughnut } from "react-chartjs-2"
+import { hostapdAllStations, ipAddr } from "components/Helpers/Api.js"
 import WifiClients, {WifiInfo} from "components/Dashboard/HostapdWidgets.js"
 import { DNSMetrics, DNSBlockMetrics, DNSBlockPercent } from "components/Dashboard/DNSMetricsWidgets.js"
-
+import { blockAPI } from "api/DNS"
 import {
   Badge,
   Button,
@@ -36,7 +36,8 @@ import {
 
 function Home() {
 
-  const [ipInfo, setipInfo] = useState([]);
+  const [ipInfo, setipInfo] = useState([])
+  const [plugins, setPlugins] = useState([])
 
   function hostapdcount() {
     hostapdAllStations(function(data) {
@@ -58,6 +59,11 @@ function Home() {
       }
       setipInfo(r)
     })
+
+    // check if dns plugin is active
+    blockAPI.config()
+      .then(res => setPlugins(plugins.concat('DNS')))
+      .catch(error => error)
   }, [])
 
 
@@ -102,9 +108,13 @@ function Home() {
             </Card>
           </Col>
           <Col sm="4">
-            <DNSMetrics />
-            <DNSBlockMetrics />
-            <DNSBlockPercent />
+            {plugins.includes('DNS') ? (
+            <>
+              <DNSMetrics />
+              <DNSBlockMetrics />
+              <DNSBlockPercent />
+            </>
+            ) : (null)}
           </Col>
         </Row>
       </div>
