@@ -11,7 +11,9 @@ if (REACT_APP_API) {
     API_HOST = API.host
   } catch (e) {
     // REACT_APP_API=mock -- dont load in prod
-    let MockAPI = import('./MockAPI').then(m => m.default())
+    if (REACT_APP_API == 'mock') {
+      let MockAPI = import('./MockAPI').then(m => m.default())
+    }
   }
 }
 
