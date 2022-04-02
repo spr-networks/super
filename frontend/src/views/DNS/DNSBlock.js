@@ -1,16 +1,17 @@
-import React, { Component, useContext } from "react"
+import React, { Component, useContext } from 'react'
 import DNSBlocklist from "components/DNS/DNSBlocklist"
 import DNSOverrideList from "components/DNS/DNSOverrideList"
 import { APIErrorContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
+import PluginDisabled from 'views/PluginDisabled'
 
 import {
   Row,
   Col,
-} from "reactstrap";
+} from "reactstrap"
 
 export default class DNSBlock extends Component {
-  state = { PermitDomains: [], BlockDomains: [] }
+  state = { enabled: true, PermitDomains: [], BlockDomains: [] }
   static contextType = APIErrorContext;
 
   constructor(props) {
@@ -30,7 +31,11 @@ export default class DNSBlock extends Component {
       this.setState({BlockDomains: config.BlockDomains})
       this.setState({PermitDomains: config.PermitDomains})
     } catch (error) {
-      this.context.reportError("API Failure: " + error.message)
+      if (error.message == '404') {
+        this.setState({enabled: false})
+      } else {
+        this.context.reportError("API Failure: " + error.message)
+      }
     }
   }
 
@@ -43,6 +48,10 @@ export default class DNSBlock extends Component {
         return
       }
 		}
+    
+    if (!this.state.enabled) {
+      return (<PluginDisabled plugin="dns" />)
+    }
 
     return (
       <div className="content">

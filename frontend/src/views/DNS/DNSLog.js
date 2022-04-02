@@ -1,5 +1,7 @@
 import React, { Component } from "react"
 import DNSLogHistoryList from "components/DNS/DNSLogHistoryList"
+import PluginDisabled from 'views/PluginDisabled'
+import { logAPI } from 'api/DNS'
 
 import {
   Row,
@@ -7,7 +9,7 @@ import {
 } from "reactstrap"
 
 export default class DNSLog extends Component {
-  state = { logs: [], ips: [] }
+  state = { enabled: true, logs: [], ips: [] }
 
   constructor(props) {
     super(props)
@@ -19,9 +21,16 @@ export default class DNSLog extends Component {
   }
 
   componentDidMount() {
+    logAPI.config()
+      .catch(error => this.setState({enabled: false}))  
   }
 
   render() {
+        
+    if (!this.state.enabled) {
+      return (<PluginDisabled plugin="dns" />)
+    }
+
     return (
       <div className="content">
 				<Row>
