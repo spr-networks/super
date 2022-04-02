@@ -66,7 +66,7 @@ const Step2 = React.forwardRef((props, ref) => {
     setPSK(wifi.mac, wifi.psk, wifi.wpa, wifi.name).then((value) => {
       setsuccess(<Label> Waiting for connection... </Label>)
       if (psk_was_empty) {
-        setPassphraseText(value.Psk)
+        setPassphraseText(value.PSKEntry.Psk)
       }
       //useInterval(f, 1000);
 
