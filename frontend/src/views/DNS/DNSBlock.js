@@ -10,7 +10,7 @@ import {
 } from "reactstrap";
 
 export default class DNSBlock extends Component {
-  state = { config: "", PermitDomains: [], BlockDomains: [], blocklists: [] };
+  state = { PermitDomains: [], BlockDomains: [] }
   static contextType = APIErrorContext;
 
   constructor(props) {
@@ -51,10 +51,20 @@ export default class DNSBlock extends Component {
             <DNSBlocklist />
           </Col>
         </Row>
-				<Row>
+        <Row>
           <Col md="12">
-            <DNSOverrideList key={generatedID+1} list={this.state.BlockDomains} title="Blocked Domain Override" notifyChange={notifyChange} />
-            <DNSOverrideList key={generatedID+2} list={this.state.PermitDomains} title="Allow Domain Override" notifyChange={notifyChange} />
+            <DNSOverrideList
+              key={generatedID+1}
+              list={this.state.BlockDomains}
+              title="Blocked Domain Override"
+              notifyChange={notifyChange}
+            />
+            <DNSOverrideList 
+              key={generatedID+2}
+              list={this.state.PermitDomains}
+              title="Allow Domain Override"
+              notifyChange={notifyChange}
+            />
           </Col>
         </Row>
       </div>

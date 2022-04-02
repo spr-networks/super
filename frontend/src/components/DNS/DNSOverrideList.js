@@ -34,7 +34,7 @@ const DNSOverrideList = (props) => {
 		//modalRef.current()
 	}
 
-	let overrideType = props.title.includes('Permit') ? 'permit' : 'block'
+	let overrideType = props.title.includes('Block') ? 'block' : 'permit'
 	let list = props.list
 
 	return (
