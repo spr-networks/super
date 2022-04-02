@@ -1,6 +1,6 @@
 
 import { Component } from 'react'
-import { hostapdAllStations } from 'components/Helpers/Api.js'
+import { hostapdAllStations, hostapdStatus } from 'components/Helpers/Api.js'
 import StatsWidget from './StatsWidget'
 
 export class WifiClientCount extends Component {
@@ -31,20 +31,23 @@ export default class WifiClients extends Component {
   render() {
     return (
       <StatsWidget
-        icon="fa fa-wifi"
+        icon="fa fa-laptop"
         title="Active WiFi Clients"
         text={this.state.numberOfWifiClients}
-        textFooterHide="Online"
-        iconFooterHide="fa fa-clock-o"
+        textFooter="Online"
+        iconFooter="fa fa-clock-o"
       />
     )
   }
 }
 
 export class WifiInfo extends Component {
-  state = { ssid: "TestLab", channel: 36 }
+  state = { ssid: "TestAP", channel: 1024 }
 
   async componentDidMount() {
+    let status = await hostapdStatus()
+    this.setState({ssid: status['ssid[0]']})
+    this.setState({channel: status['channel']})
    }
 
   render() {
@@ -53,7 +56,7 @@ export class WifiInfo extends Component {
         icon="fa fa-wifi text-warning"
         title="Wifi AP"
         text={this.state.ssid}
-        textFooter={"Channel: " + this.state.channel}
+        textFooter={"Channel " + this.state.channel}
         iconFooter="fa fa-wifi"
       />
     )

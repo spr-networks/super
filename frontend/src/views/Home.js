@@ -64,19 +64,17 @@ function Home() {
   return (
     <>
       <div className="content">
-        <Row>
-          <Col sm="4">
-            <WifiClients />
-          </Col>
-          <Col sm="4">
-            <DNSMetrics />
-          </Col>
-          <Col sm="4">
-            <DNSBlockMetrics />
-          </Col>
-        </Row>
-        <Row>
-          <Col lg="8" md="6" sm="6">
+            <Row>
+              <Col lg="8" md="6" sm="6">
+              <Row>
+              <Col sm="6">
+                <WifiInfo />
+              </Col>
+              <Col sm="6">
+                <WifiClients />
+              </Col>
+            </Row>
+
             <Card>
               <CardBody>
                 <Row>
@@ -104,6 +102,8 @@ function Home() {
             </Card>
           </Col>
           <Col sm="4">
+            <DNSMetrics />
+            <DNSBlockMetrics />
             <DNSBlockPercent />
           </Col>
         </Row>
