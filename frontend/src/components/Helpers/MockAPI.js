@@ -1,8 +1,14 @@
 import { createServer, Model, Response } from "miragejs"
 
+let server = null
+
 // TODO alot of this can be parsed from OpenAPI definitions
 export default function MockAPI() {
-  let server = createServer({
+  if (server) {
+    return server
+  }
+
+  server = createServer({
     models: {
       devices: Model,
       zones: Model,
