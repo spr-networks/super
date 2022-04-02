@@ -1,7 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { testLogin, saveLogin, getDevices, deleteDevice } from "../components/Helpers/Api.js";
-import { getDNSConfig } from "../components/Helpers/Api.js";
 
 describe('API Login', () => {
 
@@ -42,19 +41,6 @@ describe('API Device', () => {
     devices = await getDevices()
     let len2 = devices.length
     expect(len2).toBe(len1-1)
-  })
-
-})
-
-describe('API DNS Plugin', () => {
-
-  saveLogin('admin', 'admin')
-
-  test('fetches config', async () => {
-    let config = await getDNSConfig()
-    expect(config).toHaveProperty('BlockLists')
-    expect(config).toHaveProperty('BlockDomains')
-    expect(config).toHaveProperty('PermitDomains')
   })
 
 })
