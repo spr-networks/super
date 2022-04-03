@@ -2,7 +2,7 @@ name: UI Test CI
 
 on:
   push:
-    branches: [ main, test ]
+    branches: [ main, dev ]
   pull_request:
     branches: [ main ]
 
