@@ -4,7 +4,7 @@ import Toggle from 'components/Toggle'
 
 afterEach(cleanup)
 
-it('checkbox changes state and calls onChange', () => {
+it('changes state and calls onChange', () => {
   const onChange = jest.fn()
 
   const { baseElement, container } = render(<Toggle onChange={onChange} />)
