@@ -119,5 +119,5 @@ export default class DNSAddBlocklist extends React.Component {
 }
 
 DNSAddBlocklist.propTypes = {
-  notifyChange: PropTypes.function
+  notifyChange: PropTypes.func
 }

@@ -218,5 +218,5 @@ export default class DNSAddOverride extends React.Component {
 
 DNSAddOverride.propTypes = {
   type: PropTypes.string,
-  notifyChange: PropTypes.function
+  notifyChange: PropTypes.func
 }
