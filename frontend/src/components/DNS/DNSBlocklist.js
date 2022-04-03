@@ -1,6 +1,6 @@
 import React from 'react'
-import { getDNSBlocklists, updateDNSBlocklist, deleteDNSBlocklist } from 'components/Helpers/Api'
-import DNSAddBlocklist from "components/DNS/DNSAddBlocklist"
+import { blockAPI } from 'api/DNS'
+import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
 import ModalForm from 'components/ModalForm'
 import Switch from 'components/Switch'
 import { APIErrorContext } from 'layouts/Admin'
@@ -36,7 +36,7 @@ export default class DNSBlocklist extends React.Component {
 
   async refreshBlocklists() {
     try {
-      const list = await getDNSBlocklists()
+      const list = await blockAPI.blocklists()
       this.setState({list})
     } catch(error) {
       this.context.reportError("API Failure: " + error.message)
@@ -59,7 +59,7 @@ export default class DNSBlocklist extends React.Component {
 
     this.setState({list})
 
-    updateDNSBlocklist(item)
+    blockAPI.putBlocklist(item)
       .then(res => {
         this.notifyChange('blocklists')
       })
@@ -69,7 +69,7 @@ export default class DNSBlocklist extends React.Component {
   }
 
   deleteListItem(item) {
-    deleteDNSBlocklist(item)
+    blockAPI.deleteBlocklist(item)
       .then(res => {
         this.notifyChange('blocklists')
       })
@@ -79,9 +79,7 @@ export default class DNSBlocklist extends React.Component {
   }
 
   render() {
-    //const toggleStatusModal = () => alert('TODO: show modal with blocked domains')
-
-		const notifyChangeBlocklist = async () => {
+    const notifyChangeBlocklist = async () => {
 			await this.notifyChange()
 			// close modal when added
 			this.refAddBlocklistModal.current()
@@ -92,10 +90,15 @@ export default class DNSBlocklist extends React.Component {
 
         <Card>
           <CardHeader>
-
-						<ModalForm title="Add DNS Blocklist" triggerText="add" triggerClass="pull-right" triggerIcon="fa fa-plus" modalRef={this.refAddBlocklistModal}>
-							<DNSAddBlocklist notifyChange={notifyChangeBlocklist} />
-						</ModalForm>
+            <ModalForm
+              title="Add DNS Blocklist"
+              triggerText="add"
+              triggerClass="pull-right"
+              triggerIcon="fa fa-plus"
+              modalRef={this.refAddBlocklistModal}
+            >
+              <DNSAddBlocklist notifyChange={notifyChangeBlocklist} />
+            </ModalForm>
 
             <CardTitle tag="h4">DNS Blocklists</CardTitle>
           </CardHeader>
@@ -122,7 +125,6 @@ export default class DNSBlocklist extends React.Component {
                         />
                       </td>
                       <td className="text-center">
-                        {/*<Button className="btn-round" size="sm" color="primary" outline onClick={toggleStatusModal}><i className="fa fa-list" /> status</Button>*/}
                         <Button
                           className="btn-icon"
                           color="danger"

@@ -45,7 +45,6 @@ export default class DNSAddBlocklist extends React.Component {
     let blocklist = {URI: this.state.URI, Enabled: this.state.Enabled}
     blockAPI.putBlocklist(blocklist)
       .then(res => {
-        console.log('sweetput')
         this.props.notifyChange('blocklists')
       })
       .catch(error => {
