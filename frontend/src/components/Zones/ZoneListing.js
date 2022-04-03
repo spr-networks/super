@@ -1,6 +1,6 @@
-import React, { Component } from "react"
-import ZoneDevice from "components/Zones/ZoneDevice"
-import { zoneDescriptions } from "components/Helpers/Api"
+import React, { Component } from 'react'
+import ZoneDevice from 'components/Zones/ZoneDevice'
+import { zoneDescriptions } from 'api/Zone'
 
 import {
   Card,
