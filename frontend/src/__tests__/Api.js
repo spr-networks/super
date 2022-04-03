@@ -1,7 +1,11 @@
-import { testLogin, saveLogin, getDevices, deleteDevice } from "../components/Helpers/Api.js";
+import {
+  testLogin,
+  saveLogin,
+  getDevices,
+  deleteDevice
+} from '../components/Helpers/Api.js'
 
 describe('API Login', () => {
-
   test('fail login', () => {
     testLogin('admin', 'adminzz', (success) => {
       expect(success).not.toBeTruthy()
@@ -14,11 +18,9 @@ describe('API Login', () => {
       saveLogin('admin', 'admin')
     })
   })
-
 })
 
 describe('API Device', () => {
-
   saveLogin('admin', 'admin')
 
   test('fetches devices', async () => {
@@ -26,7 +28,9 @@ describe('API Device', () => {
     expect(devices.length).toBeGreaterThan(1)
 
     let dev = devices[0]
-    expect(dev.MAC).toEqual(expect.stringMatching(/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/))
+    expect(dev.MAC).toEqual(
+      expect.stringMatching(/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/)
+    )
   })
 
   test('deletes a device', async () => {
@@ -38,7 +42,6 @@ describe('API Device', () => {
 
     devices = await getDevices()
     let len2 = devices.length
-    expect(len2).toBe(len1-1)
+    expect(len2).toBe(len1 - 1)
   })
-
 })
