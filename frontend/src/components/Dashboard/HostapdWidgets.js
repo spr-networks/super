@@ -1,13 +1,13 @@
 
 import { Component } from 'react'
-import { hostapdAllStations, hostapdStatus } from 'components/Helpers/Api.js'
+import { wifiAPI } from 'api/Wifi'
 import StatsWidget from './StatsWidget'
 
 export class WifiClientCount extends Component {
   state = { numberOfClients: 0 }
 
   async componentDidMount() {
-    const stations = await hostapdAllStations();
+    const stations = await wifiAPI.allStations()
     this.setState({ numberOfWifiClients: Object.keys(stations).length })
   }
 
@@ -20,14 +20,7 @@ export class WifiClientCount extends Component {
   }
 }
 
-export default class WifiClients extends Component {
-  state = { numberOfClients: 0 }
-
-  async componentDidMount() {
-    const stations = await hostapdAllStations();
-    this.setState({ numberOfWifiClients: Object.keys(stations).length })
-  }
-
+export default class WifiClients extends WifiClientCount {
   render() {
     return (
       <StatsWidget
@@ -45,7 +38,7 @@ export class WifiInfo extends Component {
   state = { ssid: "TestAP", channel: 1024 }
 
   async componentDidMount() {
-    let status = await hostapdStatus()
+    let status = await wifiAPI.status()
     this.setState({ssid: status['ssid[0]']})
     this.setState({channel: status['channel']})
    }
