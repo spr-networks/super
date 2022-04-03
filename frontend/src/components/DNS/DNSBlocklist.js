@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { blockAPI } from 'api/DNS'
 import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
 import ModalForm from 'components/ModalForm'
@@ -87,7 +88,6 @@ export default class DNSBlocklist extends React.Component {
 
     return (
       <>
-
         <Card>
           <CardHeader>
             <ModalForm

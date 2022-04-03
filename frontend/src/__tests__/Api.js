@@ -1,5 +1,3 @@
-import React from 'react';
-import { render } from '@testing-library/react';
 import { testLogin, saveLogin, getDevices, deleteDevice } from "../components/Helpers/Api.js";
 
 describe('API Login', () => {
