@@ -5,6 +5,7 @@ export class APIWifi extends API {
     super('/hostapd')
   }
 
+  config = () => this.get('/config')
   allStations = () => this.get('/all_stations')
   status = () => this.get('/status')
 }
