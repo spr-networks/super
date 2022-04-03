@@ -1,4 +1,5 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import { APIErrorContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 
@@ -39,7 +40,7 @@ export default class DNSAddBlocklist extends React.Component {
     let blocklist = { URI: this.state.URI, Enabled: this.state.Enabled }
     blockAPI
       .putBlocklist(blocklist)
-      .then((res) => {
+      .then(() => {
         this.props.notifyChange('blocklists')
       })
       .catch((error) => {
@@ -115,4 +116,8 @@ export default class DNSAddBlocklist extends React.Component {
       </Form>
     )
   }
+}
+
+DNSAddBlocklist.propTypes = {
+  notifyChange: PropTypes.function
 }
