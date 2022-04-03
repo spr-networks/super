@@ -1,7 +1,5 @@
-import React, { useContext, useRef } from 'react'
+import React from 'react'
 import PropTypes from 'prop-types'
-import DNSAddLog from 'components/DNS/DNSAddLog'
-import ModalForm from 'components/ModalForm'
 import { APIErrorContext } from 'layouts/Admin'
 import ReactBSAlert from 'react-bootstrap-sweetalert'
 import { logAPI } from 'api/DNS'
