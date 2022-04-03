@@ -113,8 +113,14 @@ export default class DNSAddOverride extends React.Component {
 					<Label for="Domain" sm={3}>Domain</Label>
 					<Col sm={9}>
 						<FormGroup className={this.state.check.Domain}>
-							<Input type="text" id="Domain" placeholder="" name="Domain" 
-                value={this.state.Domain} onChange={this.handleChange} autoFocus={true} 
+              <Input
+                type="text"
+                id="Domain"
+                placeholder=""
+                name="Domain"
+                value={this.state.Domain}
+                onChange={this.handleChange}
+                autoFocus
               />
               {this.state.check.Domain == 'has-danger' ? (
                 <Label className="error">Specify a domain name</Label>
@@ -144,7 +150,7 @@ export default class DNSAddOverride extends React.Component {
 					<Col sm={9}>
 						<FormGroup className={this.state.check.ClientIP}>
               <ClientSelect 
-                canAdd={true} 
+                canAdd
                 value={this.state.ClientIP} 
                 onChange={this.handleClientChange} 
               />

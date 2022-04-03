@@ -1,27 +1,21 @@
-import React, { useContext } from 'react'
+import React from 'react'
 import { APIErrorContext } from 'layouts/Admin'
 import {blockAPI} from 'api/DNS'
 
-// reactstrap components
 import {
   Button,
   Col,
-  Card,
-  CardFooter,
-  CardHeader,
-  CardBody,
-  CardTitle,
   Label,
   Form,
   FormGroup,
   FormText,
   Input,
   Row
-} from "reactstrap";
+} from 'reactstrap'
 
 export default class DNSAddBlocklist extends React.Component {
-  static contextType = APIErrorContext;
-  state = { URI: '', Enabled: true };
+  static contextType = APIErrorContext
+  state = { URI: '', Enabled: true }
 
   constructor(props) {
     super(props)
@@ -59,8 +53,18 @@ export default class DNSAddBlocklist extends React.Component {
 					<Label for="URI" sm={2}>URI</Label>
 					<Col sm={10}>
 						<FormGroup>
-							<Input type="text" id="URI" placeholder="https://..." name="URI" value={this.state.URI} onChange={this.handleChange} autoFocus={true} />
-              <FormText tag="span"><a target="_blank" href="https://github.com/StevenBlack/hosts">See here</a> for examples of host files to use</FormText>
+              <Input
+                type="text"
+                id="URI"
+                placeholder="https://..."
+                name="URI"
+                value={this.state.URI}
+                onChange={this.handleChange}
+                autoFocus
+              />
+              <FormText tag="span">
+                <a target="_blank" href="https://github.com/StevenBlack/hosts">See here</a> for examples of host files to use
+              </FormText>
 						</FormGroup>
 					</Col>
 				</Row>
@@ -70,7 +74,11 @@ export default class DNSAddBlocklist extends React.Component {
 					<Col sm={10}>
 						<FormGroup check>
 							<Label check className="mb-2">
-								<Input type="checkbox" checked={this.state.Enabled} onChange={(e) => this.handleSwitchChange(this, !this.state.Enabled)} />
+                <Input
+                  type="checkbox"
+                  checked={this.state.Enabled}
+                  onChange={(e) => this.handleSwitchChange(this, !this.state.Enabled)}
+                />
 								<span className="form-check-sign" />
 							</Label>
 						</FormGroup>
