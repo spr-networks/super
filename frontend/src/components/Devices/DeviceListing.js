@@ -1,10 +1,8 @@
-
-import { getDevices } from "components/Helpers/Api.js";
+import { deviceAPI } from 'api/Device'
 import { Component } from "react";
 import Device from "components/Devices/Device.js"
 import {APIErrorContext} from 'layouts/Admin.js';
 import React, { useContext } from 'react'
-import ReactBSAlert from "react-bootstrap-sweetalert";
 
 // reactstrap components
 import {
@@ -34,7 +32,7 @@ export default class DeviceListing extends Component {
     }
 
     async function refreshDevices() {
-      const d = await getDevices().catch(error => {
+      const d = await deviceAPI.list().catch(error => {
         this.context.reportError("API Failure: " + error.message)
       })
 
@@ -47,7 +45,6 @@ export default class DeviceListing extends Component {
            });
 
         setState({ devices: d, deviceRows: divs })
-
       }
     }
 
