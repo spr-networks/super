@@ -1,11 +1,21 @@
 import { createServer, Model, Response } from "miragejs"
 
+let server = null
+
 // TODO alot of this can be parsed from OpenAPI definitions
 export default function MockAPI() {
-  let server = createServer({
+  if (server) {
+    return server
+  }
+
+  server = createServer({
     models: {
       devices: Model,
-      zones: Model
+      zones: Model,
+      dnsblocklist: Model,
+      dnsoverride: Model,
+      dnslogprivacylist: Model,
+      dnslogdomainignorelist: Model,
     },
     seeds(server) {
       server.create('device', {
@@ -39,6 +49,37 @@ export default function MockAPI() {
       server.create('zone', { Name: "lan", disabled: false, ZoneTags: [] })
       server.create('zone', { Name: "wan", disabled: false, ZoneTags: [] })
       server.create('zone', { Name: "dns", disabled: false, ZoneTags: [] })
+
+      server.create('dnsblocklist', {"URI": "https://raw.githubusercontent.com/blocklistproject/Lists/master/ads.txt", "Enabled": true})
+      server.create('dnsblocklist', {"URI": "https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt", "Enabled": false})
+      server.create('dnsoverride', {
+        "Type": "block",
+        "Domain": "example.com.",
+        "ResultIP": "1.2.3.4",
+        "ClientIP": "192.168.2.102",
+        "Expiration": 0
+      })
+
+      server.create('dnsoverride', {
+        "Type": "block",
+        "Domain": "asdf.com.",
+        "ResultIP": "1.2.3.4",
+        "ClientIP": "*",
+        "Expiration": 0
+      })
+
+      server.create('dnsoverride', {
+        "Type": "permit",
+        "Domain": "google.com.",
+        "ResultIP": "8.8.8.8",
+        "ClientIP": "192.168.2.101",
+        "Expiration": 123
+      })
+
+      server.create('dnslogprivacylist', {ip: '192.168.1.1'})
+      server.create('dnslogprivacylist', {ip: '192.168.1.2'})
+      server.create('dnslogdomainignorelist', {domain: 'example.com'})
+      server.create('dnslogdomainignorelist', {domain: 'privatedomain.com'})
     },
     routes() {
       // TODO hook for all
@@ -122,7 +163,7 @@ export default function MockAPI() {
         return {}
       })
 
-      this.get('/ip/addr', (schema) => {
+      this.get('/ip/addr', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, {error: "invalid auth"})
         }
@@ -256,6 +297,132 @@ export default function MockAPI() {
                   "wpa": "2"
                 }
         }
+      })
+
+      //DNS plugin
+      this.get('/plugins/dns/block/config', (schema, request) => {
+        return {
+          "BlockLists": schema.dnsblocklists.all().models,
+          "BlockDomains": schema.dnsoverrides.where({Type:'block'}).models,
+          "PermitDomains": schema.dnsoverrides.where({Type:'permit'}).models,
+          "ClientIPExclusions": null
+        }
+      })
+
+      this.get('/plugins/dns/block/blocklists', (schema, request) => {
+        return schema.dnsblocklists.all().models
+      })
+
+      this.put('/plugins/dns/block/blocklists', (schema, request) => {
+        let attrs = JSON.parse(request.requestBody)
+        return schema.dnsblocklists.create(attrs)
+      })
+
+      this.delete('/plugins/dns/block/blocklists', (schema, request) => {
+        let attrs = JSON.parse(request.requestBody)
+        let URI = attrs.URI
+        return schema.dnsblocklists.findBy({URI}).destroy()
+      })
+
+      this.put('/plugins/dns/block/override', (schema, request) => {
+        let attrs = JSON.parse(request.requestBody)
+        return schema.dnsoverrides.create(attrs)
+      })
+
+      this.delete('/plugins/dns/block/override', (schema, request) => {
+        let attrs = JSON.parse(request.requestBody)
+        let Domain = attrs.Domain
+        return schema.dnsoverrides.findBy({Domain}).destroy()
+      })
+
+      this.get('/plugins/dns/block/dump_domains', (schema, request) => {
+        return ["_thums.ero-advertising.com.","0.fls.doubleclick.net.",
+          "0.r.msn.com.","0.start.bz.","0.up.qingdaonews.com."]
+      })
+
+      this.get('/plugins/dns/log/config', (schema, request) => {
+        return {
+          "HostPrivacyIPList": schema.dnslogprivacylists.all().models,
+          "DomainIgnoreList": schema.dnslogdomainignorelists.all().models
+        }
+      })
+
+      this.get('/plugins/dns/log/host_privacy_list', (schema, request) => {
+        //return ['192.168.1.1', '192.168.1.2']
+        return schema.dnslogprivacylists.all().models.map(d => d.ip)
+      })
+
+      this.get('/plugins/dns/log/domain_ignores', (schema, request) => {
+        //return ["example.dev", "example.com"]
+        return schema.dnslogdomainignorelists.all().models.map(d => d.domain)
+      })
+
+      this.get('/plugins/dns/log/history/:ip', (schema, request) => {
+        let ip = request.params.ip//192.168.2.100
+        let revip = ip.split('').reverse().join('')
+        let day = 1+parseInt((Math.random()*28))
+        day = day.toString().padStart(2, '0')
+        return [
+          {
+            "Q": [
+              {
+                "Name": `${revip}.in-addr.arpa.`,
+                "Qtype": 12,
+                "Qclass": 1
+              }
+            ],
+            "A": [
+              {
+                "Hdr": {
+                  "Name": `${revip}.in-addr.arpa.`,
+                  "Rrtype": 12,
+                  "Class": 1,
+                  "Ttl": 30,
+                  "Rdlength": 0
+                },
+                "Ptr": "rpi4.lan."
+              }
+            ],
+            "Type": "NOERROR",
+            "FirstName": `${revip}.in-addr.arpa.`,
+            "FirstAnswer": "rpi4.lan.",
+            "Local": "[::]:53",
+            "Remote": `${ip}:50862`,
+            "Timestamp": `2022-03-${day}T08:05:34.983138386Z`
+          },
+          {
+            "Q": [
+              {
+                "Name": "caldav.fe.apple-dns.net.",
+                "Qtype": 65,
+                "Qclass": 1
+              }
+            ],
+            "A": [],
+            "Type": "NODATA",
+            "FirstName": "caldav.fe.apple-dns.net.",
+            "FirstAnswer": "",
+            "Local": "[::]:53",
+            "Remote": `${ip}:50216`,
+            "Timestamp": `2022-03-${day}T08:05:34.01579228Z`
+          },
+          {
+            "Q": [
+              {
+                "Name": `lb._dns-sd._udp.${revip}.in-addr.arpa.`,
+                "Qtype": 12,
+                "Qclass": 1
+              }
+            ],
+            "A": [],
+            "Type": "OTHERERROR",
+            "FirstName": `lb._dns-sd._udp.${revip}.in-addr.arpa.`,
+            "FirstAnswer": "",
+            "Local": "[::]:53",
+            "Remote": `${ip}:64151`,
+            "Timestamp": `2022-03-${day}T08:05:29.976935196Z`
+          }
+        ]
       })
     }
   })

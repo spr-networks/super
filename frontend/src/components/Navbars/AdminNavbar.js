@@ -137,6 +137,7 @@ function AdminNavbar(props) {
             navbar
             isOpen={collapseOpen}
           >
+            {/*
             <Form>
               <InputGroup className="no-border">
                 <Input defaultValue="" placeholder="Search..." type="text" />
@@ -147,19 +148,19 @@ function AdminNavbar(props) {
                 </InputGroupAddon>
               </InputGroup>
             </Form>
+            */}
             <Nav navbar>
               <NavItem>
                 <NavLink
-                  className="btn-magnify"
-                  href="#pablo"
-                  onClick={(e) => e.preventDefault()}
+                  className="btn btn-outline-default btn-sm"
+                  href="/"
+                  onClick={(e) => localStorage.removeItem('user')}
                 >
-                  <i className="nc-icon nc-layout-11" />
-                  <p>
-                    <span className="d-lg-none d-md-block">Stats</span>
-                  </p>
+                  <i className="nc-icon nc-button-power"></i>
+                  Log out
                 </NavLink>
               </NavItem>
+              {/*
               <UncontrolledDropdown className="btn-rotate" nav>
                 <DropdownToggle
                   aria-haspopup={true}
@@ -199,6 +200,8 @@ function AdminNavbar(props) {
                   </DropdownItem>
                 </DropdownMenu>
               </UncontrolledDropdown>
+              */}
+              {/*
               <NavItem>
                 <NavLink
                   className="btn-rotate"
@@ -211,6 +214,7 @@ function AdminNavbar(props) {
                   </p>
                 </NavLink>
               </NavItem>
+              */}
             </Nav>
           </Collapse>
         </Container>

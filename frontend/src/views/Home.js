@@ -14,13 +14,13 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 */
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect} from "react"
 // react plugin used to create charts
-import { Line, Bar, Doughnut } from "react-chartjs-2";
-import { hostapdAllStations, ipAddr } from "components/Helpers/Api.js";
-import WifiClientCount from "components/Dashboard/HostapdWidgets.js"
-
-// reactstrap components
+import { Line, Bar, Doughnut } from "react-chartjs-2"
+import { hostapdAllStations, ipAddr } from "components/Helpers/Api.js"
+import WifiClients, {WifiInfo} from "components/Dashboard/HostapdWidgets.js"
+import { DNSMetrics, DNSBlockMetrics, DNSBlockPercent } from "components/Dashboard/DNSMetricsWidgets.js"
+import { blockAPI } from "api/DNS"
 import {
   Badge,
   Button,
@@ -29,18 +29,15 @@ import {
   CardBody,
   CardFooter,
   CardTitle,
-  Label,
-  FormGroup,
-  Input,
   Table,
   Row,
   Col,
-  UncontrolledTooltip,
-} from "reactstrap";
+} from 'reactstrap'
 
 function Home() {
 
-  const [ipInfo, setipInfo] = useState([]);
+  const [ipInfo, setipInfo] = useState([])
+  const [plugins, setPlugins] = useState([])
 
   function hostapdcount() {
     hostapdAllStations(function(data) {
@@ -62,54 +59,34 @@ function Home() {
       }
       setipInfo(r)
     })
+
+    // check if dns plugin is active
+    blockAPI.config()
+      .then(res => setPlugins(plugins.concat('DNS')))
+      .catch(error => error)
   }, [])
 
 
   return (
     <>
       <div className="content">
-        <Row>
-          <Col lg="4" md="6" sm="6">
-            <Card className="card-stats">
+            <Row>
+              <Col lg="8" md="6" sm="6">
+              <Row>
+              <Col sm="6">
+                <WifiInfo />
+              </Col>
+              <Col sm="6">
+                <WifiClients />
+              </Col>
+            </Row>
+
+            <Card>
               <CardBody>
                 <Row>
-                  <Col md="4" xs="5">
-                    <div className="icon-big text-center icon-warning">
-                      <i className="nc-icon nc-vector text-danger" />
-                    </div>
-                  </Col>
-                  <Col md="8" xs="7">
-                    <div className="numbers">
-                      <p className="card-category">Active WiFi Clients</p>
-                      <WifiClientCount/>
-                      <p />
-                    </div>
-                  </Col>
-                </Row>
-              </CardBody>
-              <CardFooter>
-                <hr />
-                <div className="stats">
-                  <i className="fa fa-clock-o" />
-                  Online
-                </div>
-              </CardFooter>
-            </Card>
-          </Col>
-        </Row>
-        <Row>
-          <Col lg="8" md="6" sm="6">
-            <Card className="card-stats">
-              <CardBody>
-                <Row>
-                  <Col md="2" xs="5">
-                    <div className="icon-big text-center icon-warning">
-                      <i className="nc-icon nc-globe text-warning" />
-                    </div>
-                  </Col>
-                  <Col md="8" xs="7">
+                  <Col lg={{size: 8, offset: 2}} md="10">
                     <p className="card-category">Interfaces</p>
-                    <CardTitle tag="h4"></CardTitle>
+                    {/*<CardTitle tag="h4"></CardTitle>*/}
                     <CardBody>
                       <Table responsive>
                         <thead className="text-primary">
@@ -130,10 +107,19 @@ function Home() {
               </CardBody>
             </Card>
           </Col>
+          <Col sm="4">
+            {plugins.includes('DNS') ? (
+            <>
+              <DNSMetrics />
+              <DNSBlockMetrics />
+              <DNSBlockPercent />
+            </>
+            ) : (null)}
+          </Col>
         </Row>
       </div>
     </>
-  );
+  )
 }
 
-export default Home;
+export default Home

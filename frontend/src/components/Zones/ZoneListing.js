@@ -1,27 +1,19 @@
-import { Component } from "react";
-import ZoneDevice from "components/Zones/ZoneDevice.js"
-import React, { useContext } from 'react'
-import ReactBSAlert from "react-bootstrap-sweetalert";
+import React, { Component } from "react"
+import ZoneDevice from "components/Zones/ZoneDevice"
+import { zoneDescriptions } from "components/Helpers/Api"
 
-// reactstrap components
 import {
-  Button,
-  ButtonGroup,
   Card,
   CardHeader,
   CardBody,
   CardTitle,
-  Label,
-  FormGroup,
-  Input,
+  CardSubtitle,
   Table,
   Row,
   Col,
-  UncontrolledTooltip,
-} from "reactstrap";
+} from "reactstrap"
 
 export default class ZoneListing extends Component {
-
 
   render() {
 
@@ -64,6 +56,7 @@ export default class ZoneListing extends Component {
             <Card>
               <CardHeader>
                 <CardTitle tag="h4">{translateName(zone.Name)}</CardTitle>
+                <CardSubtitle className="text-muted">{zoneDescriptions[zone.Name] || ""}</CardSubtitle>
               </CardHeader>
               <CardBody>
                 <Table responsive>

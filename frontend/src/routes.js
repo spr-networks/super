@@ -8,7 +8,10 @@ import SignalStrength from "views/SignalStrength.js";
 import Traffic from "views/Traffic.js";
 import TrafficTimeSeries from "views/TrafficTimeSeries.js";
 import WirelessConfiguration from "views/WirelessConfiguration"
-import Zones from "views/Zones/Zones.js";
+import Zones from "views/Zones/Zones"
+import DNSBlock from "views/DNS/DNSBlock"
+import DNSLog from "views/DNS/DNSLog"
+import DNSLogEdit from "views/DNS/DNSLogEdit"
 
 const routes = [
   {
@@ -27,14 +30,14 @@ const routes = [
       {
         path: "/devices",
         name: "List",
-        mini: "L",
+        icon: "fa fa-laptop",
         component: Devices,
         layout: "/admin",
       },
       {
         path: "/add_device",
         name: "Add WiFi Device",
-        mini: "AW",
+        icon: "fa fa-plus-square",
         component: AddDevice,
         layout: "/admin",
       }
@@ -49,7 +52,7 @@ const routes = [
       {
         path: "/wireless",
         name: "Wireless",
-        mini: "W",
+        icon: "fa fa-wifi",
         component: WirelessConfiguration,
         layout: "/admin",
       }
@@ -64,21 +67,21 @@ const routes = [
       {
         path: "/dhcp",
         name: "DHCP Table",
-        mini: "D",
+        mini: "DHCP",
         component: Dhcp,
         layout: "/admin",
       },
       {
         path: "/arp",
         name: "ARP Table",
-        mini: "A",
+        mini: "ARP",
         component: Arp,
         layout: "/admin",
       },
       {
         path: "/zones",
         name: "Show Zones",
-        mini: "Z",
+        icon: "fa fa-tags",
         component: Zones,
         layout: "/admin",
       }
@@ -113,6 +116,36 @@ const routes = [
       }
     ]
   },
+  {
+    collapse: true,
+    name: "DNS",
+    icon: "nc-icon nc-world-2",
+    state: "dnsCollapse",
+    views: [
+      {
+        path: "/dnsBlock",
+        name: "Blocklists/Ad-Block",
+        icon: "fa fa-ban",
+        component: DNSBlock,
+        layout: "/admin",
+      },
+      {
+        path: "/dnsLog/:ips",
+        name: "DNS Log",
+        icon: "fa fa-th-list",
+        component: DNSLog,
+        layout: "/admin",
+      },
+      {
+        path: "/dnsLogEdit",
+        name: "DNS Log Settings",
+        icon: "fa fa-cogs",
+        component: DNSLogEdit,
+        layout: "/admin",
+      },
+    ]
+  },
+
   {
     path: "/login",
     component: Login,
