@@ -1,6 +1,5 @@
 import React, { useContext } from 'react'
 import { APIErrorContext } from 'layouts/Admin'
-//import Switch from "react-bootstrap-switch";
 import { blockAPI } from 'api/DNS'
 
 // reactstrap components

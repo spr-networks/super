@@ -2,7 +2,7 @@ import React from 'react'
 import { getDNSBlocklists, updateDNSBlocklist, deleteDNSBlocklist } from 'components/Helpers/Api'
 import DNSAddBlocklist from "components/DNS/DNSAddBlocklist"
 import ModalForm from 'components/ModalForm'
-import Switch from 'react-bootstrap-switch'
+import Switch from 'components/Switch'
 import { APIErrorContext } from 'layouts/Admin'
 
 import {
@@ -116,7 +116,6 @@ export default class DNSBlocklist extends React.Component {
                       <td className="text-center">
                         <Switch
                           onChange={(el, value) => this.handleItemSwitch(item, value)}
-                          name={item.URI}
                           value={item.Enabled}
                           onColor="info"
                           offColor="info"
