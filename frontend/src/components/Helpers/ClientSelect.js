@@ -1,9 +1,10 @@
 import { Component } from 'react'
+import PropTypes from 'prop-types'
 import Select from 'react-select'
 import CreatableSelect from 'react-select/creatable'
 import { deviceAPI } from 'api/Device'
 
-export default class ClientSelect extends Component {
+class ClientSelect extends Component {
   state = { options: [], value: null }
 
   constructor(props) {
@@ -14,7 +15,7 @@ export default class ClientSelect extends Component {
 
   handleChange(newValue, actionMeta) {
     //actionMeta == select-option|create-option|clear
-    this.setState({value: newValue})
+    this.setState({ value: newValue })
     this.props.onChange(newValue, actionMeta)
   }
 
@@ -22,25 +23,28 @@ export default class ClientSelect extends Component {
     let devices = []
     try {
       devices = await deviceAPI.list()
-    } catch(error) {
-      throw(error)
+    } catch (error) {
+      throw error
     }
 
     // devices => options
     let options = Object.values(devices)
-      .filter(d => d.RecentIP.length)
-      .map(d => {return {label: `${d.RecentIP} ${d.Name}`, value: d.RecentIP}})
+      .filter((d) => d.RecentIP.length)
+      .map((d) => {
+        return { label: `${d.RecentIP} ${d.Name}`, value: d.RecentIP }
+      })
 
     if (!this.props.isMulti) {
-      options = [{label: "All clients", value: "*"}].concat(options)
+      options = [{ label: 'All clients', value: '*' }].concat(options)
     }
 
-    this.setState({options})
+    this.setState({ options })
 
     // set default value
     if (this.props.value) {
-      let defaultValues = Array.isArray(this.props.value) ? 
-        this.props.value : [this.props.value]
+      let defaultValues = Array.isArray(this.props.value)
+        ? this.props.value
+        : [this.props.value]
 
       let value = []
       for (let o of options) {
@@ -49,9 +53,9 @@ export default class ClientSelect extends Component {
         }
       }
 
-      this.setState({value})
+      this.setState({ value })
     } else if (!this.props.isMulti) {
-      this.setState({value: {label: "All Clients", value: "*"}})
+      this.setState({ value: { label: 'All Clients', value: '*' } })
     }
   }
 
@@ -81,6 +85,13 @@ export default class ClientSelect extends Component {
         value={this.state.value}
       />
     )
-
   }
 }
+
+ClientSelect.propTypes = {
+  isMulti: PropTypes.bool,
+  value: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
+  onChange: PropTypes.func
+}
+
+export default ClientSelect
