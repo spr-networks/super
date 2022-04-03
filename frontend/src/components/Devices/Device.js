@@ -1,15 +1,13 @@
-import { Component } from "react";
-import { zoneDescriptions } from "components/Helpers/Api.js";
-import {APIErrorContext} from 'layouts/Admin.js';
-import {deviceAPI} from "api/Device"
+import { Component } from 'react'
+import {APIErrorContext} from 'layouts/Admin'
+import {deviceAPI} from 'api/Device'
 import {
   Button,
   Input,
   UncontrolledTooltip,
-} from "reactstrap";
-import Select from "react-select";
-import TagsInput from 'react-tagsinput';
-
+} from 'reactstrap'
+import Select from 'react-select'
+import TagsInput from 'react-tagsinput'
 
 export default class Device extends Component {
 
