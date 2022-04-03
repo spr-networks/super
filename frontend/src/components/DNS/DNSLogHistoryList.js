@@ -1,7 +1,8 @@
 import React from 'react'
 import { withRouter } from 'react-router'
-import { APIErrorContext } from 'layouts/Admin'
 import ReactBSAlert from 'react-bootstrap-sweetalert'
+
+import { APIErrorContext } from 'layouts/Admin'
 import ClientSelect from 'components/Helpers/ClientSelect'
 import { logAPI } from 'api/DNS'
 
@@ -22,7 +23,7 @@ import {
 } from 'reactstrap'
 
 export class DNSLogHistoryList extends React.Component {
-  static contextType = APIErrorContext;
+  static contextType = APIErrorContext
   state = { list: [], listAll: [],
     filterIPs: [], filterText: '',
     showAlert: false, alertText: '' }
@@ -45,29 +46,34 @@ export class DNSLogHistoryList extends React.Component {
 
   async refreshList(ips) {
     if (!ips.length) {
+      this.setState({list: [], listAll: []})
       return
     }
 
-    console.log('[dnslog] fetchin dns log list', ips)
-
-    let list = []
-    for (let ip of ips) {
+    Promise.allSettled(ips.map(async (ip) => {
       try {
-        let _list = await logAPI.history(ip)
-        _list.reverse()
-        list = list.concat(_list)
+        let list = await logAPI.history(ip)
+        return list
       } catch (error) {
-        let msg = "API Failure: " + error.message
-        if (error.message == '404') {
-          msg = `No DNS query history for ${ip}`
-        }
-
-        this.context.reportError(msg)
+        throw `${ip}`
       }
-    }
+    }))
+    .then(results => {
+      let rejected = results.filter(r => r.status == 'rejected').map(r => r.reason)
+      if (rejected.length) {
+        this.context.reportError('No DNS query history for ' + rejected.join(','))
+      }
 
-    this.setState({list})
-    this.setState({listAll: list})
+      let lists = results.filter(r => r.value && r.value.length)
+        .map(r => r.value)
+
+      // merge and sort lists desc
+      let list = [].concat.apply([], lists)
+      list.sort((a, b) => (new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime()))
+
+      this.setState({list})
+      this.setState({listAll: list})
+    })
   }
 
   filterList(filterText) {
