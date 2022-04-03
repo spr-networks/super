@@ -14,13 +14,17 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 */
-import React, {useState, useEffect} from "react"
+import React, { useState, useEffect } from 'react'
 // react plugin used to create charts
-import { Line, Bar, Doughnut } from "react-chartjs-2"
-import { hostapdAllStations, ipAddr } from "components/Helpers/Api.js"
-import WifiClients, {WifiInfo} from "components/Dashboard/HostapdWidgets.js"
-import { DNSMetrics, DNSBlockMetrics, DNSBlockPercent } from "components/Dashboard/DNSMetricsWidgets.js"
-import { blockAPI } from "api/DNS"
+import { Line, Bar, Doughnut } from 'react-chartjs-2'
+import { hostapdAllStations, ipAddr } from 'components/Helpers/Api.js'
+import WifiClients, { WifiInfo } from 'components/Dashboard/HostapdWidgets.js'
+import {
+  DNSMetrics,
+  DNSBlockMetrics,
+  DNSBlockPercent
+} from 'components/Dashboard/DNSMetricsWidgets.js'
+import { blockAPI } from 'api/DNS'
 import {
   Badge,
   Button,
@@ -31,28 +35,33 @@ import {
   CardTitle,
   Table,
   Row,
-  Col,
+  Col
 } from 'reactstrap'
 
 function Home() {
-
   const [ipInfo, setipInfo] = useState([])
   const [plugins, setPlugins] = useState([])
 
   function hostapdcount() {
-    hostapdAllStations(function(data) {
-    })
-
+    hostapdAllStations(function (data) {})
   }
 
-  useEffect( () => {
+  useEffect(() => {
     ipAddr().then((data) => {
       let r = []
       for (let entry of data) {
         for (let address of entry.addr_info) {
-          if (address.scope == "global") {
-            const generatedID = Math.random().toString(36).substr(2, 9);
-            r.push( <tr key={generatedID}><td>{entry.ifname}</td><td> {address.local}/{address.prefixlen} </td></tr>)
+          if (address.scope == 'global') {
+            const generatedID = Math.random().toString(36).substr(2, 9)
+            r.push(
+              <tr key={generatedID}>
+                <td>{entry.ifname}</td>
+                <td>
+                  {' '}
+                  {address.local}/{address.prefixlen}{' '}
+                </td>
+              </tr>
+            )
           }
           break
         }
@@ -61,18 +70,18 @@ function Home() {
     })
 
     // check if dns plugin is active
-    blockAPI.config()
-      .then(res => setPlugins(plugins.concat('DNS')))
-      .catch(error => error)
+    blockAPI
+      .config()
+      .then((res) => setPlugins(plugins.concat('DNS')))
+      .catch((error) => error)
   }, [])
-
 
   return (
     <>
       <div className="content">
+        <Row>
+          <Col md="8" sm="6">
             <Row>
-              <Col lg="8" md="6" sm="6">
-              <Row>
               <Col sm="6">
                 <WifiInfo />
               </Col>
@@ -84,7 +93,7 @@ function Home() {
             <Card>
               <CardBody>
                 <Row>
-                  <Col lg={{size: 8, offset: 2}} md="10">
+                  <Col lg={{ size: 8, offset: 2 }} md="10">
                     <p className="card-category">Interfaces</p>
                     {/*<CardTitle tag="h4"></CardTitle>*/}
                     <CardBody>
@@ -95,11 +104,8 @@ function Home() {
                             <th>IP Address</th>
                           </tr>
                         </thead>
-                        <tbody>
-                          {ipInfo}
-                        </tbody>
+                        <tbody>{ipInfo}</tbody>
                       </Table>
-
                     </CardBody>
                     <p />
                   </Col>
@@ -109,12 +115,12 @@ function Home() {
           </Col>
           <Col sm="4">
             {plugins.includes('DNS') ? (
-            <>
-              <DNSMetrics />
-              <DNSBlockMetrics />
-              <DNSBlockPercent />
-            </>
-            ) : (null)}
+              <>
+                <DNSMetrics />
+                <DNSBlockMetrics />
+                <DNSBlockPercent />
+              </>
+            ) : null}
           </Col>
         </Row>
       </div>
