@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardBody,
   CardTitle,
-  Table,
+  Table
 } from 'reactstrap'
 
 export default class DNSBlocklist extends React.Component {
@@ -28,7 +28,7 @@ export default class DNSBlocklist extends React.Component {
     this.deleteListItem = this.deleteListItem.bind(this)
     this.notifyChange = this.notifyChange.bind(this)
 
-		this.refAddBlocklistModal = React.createRef()
+    this.refAddBlocklistModal = React.createRef()
   }
 
   async componentDidMount() {
@@ -38,9 +38,9 @@ export default class DNSBlocklist extends React.Component {
   async refreshBlocklists() {
     try {
       const list = await blockAPI.blocklists()
-      this.setState({list})
-    } catch(error) {
-      this.context.reportError("API Failure: " + error.message)
+      this.setState({ list })
+    } catch (error) {
+      this.context.reportError('API Failure: ' + error.message)
     }
   }
 
@@ -50,7 +50,7 @@ export default class DNSBlocklist extends React.Component {
 
   handleItemSwitch(item, value) {
     item.Enabled = value
-    const list = this.state.list.map(_item => {
+    const list = this.state.list.map((_item) => {
       if (_item.URI == item.URI) {
         _item.Enabled = item.Enabled
       }
@@ -58,33 +58,35 @@ export default class DNSBlocklist extends React.Component {
       return _item
     })
 
-    this.setState({list})
+    this.setState({ list })
 
-    blockAPI.putBlocklist(item)
-      .then(res => {
+    blockAPI
+      .putBlocklist(item)
+      .then((res) => {
         this.notifyChange('blocklists')
       })
-      .catch(error => {
-        this.context.reportError("API Failure: " + error.message)
+      .catch((error) => {
+        this.context.reportError('API Failure: ' + error.message)
       })
   }
 
   deleteListItem(item) {
-    blockAPI.deleteBlocklist(item)
-      .then(res => {
+    blockAPI
+      .deleteBlocklist(item)
+      .then((res) => {
         this.notifyChange('blocklists')
       })
-      .catch(error => {
-        this.context.reportError("API Failure: " + error.message)
+      .catch((error) => {
+        this.context.reportError('API Failure: ' + error.message)
       })
   }
 
   render() {
     const notifyChangeBlocklist = async () => {
-			await this.notifyChange()
-			// close modal when added
-			this.refAddBlocklistModal.current()
-		}
+      await this.notifyChange()
+      // close modal when added
+      this.refAddBlocklistModal.current()
+    }
 
     return (
       <>
@@ -112,31 +114,32 @@ export default class DNSBlocklist extends React.Component {
                 </tr>
               </thead>
               <tbody>
-                {
-                  this.state.list.map(item => (
-                    <tr key={item.URI}>
-                      <td>{item.URI}</td>
-                      <td className="text-center">
-                        <Switch
-                          onChange={(el, value) => this.handleItemSwitch(item, value)}
-                          value={item.Enabled}
-                          onColor="info"
-                          offColor="info"
-                        />
-                      </td>
-                      <td className="text-center">
-                        <Button
-                          className="btn-icon"
-                          color="danger"
-                          size="sm"
-                          type="button"
-                          onClick={(e) => this.deleteListItem(item)}>
-                          <i className="fa fa-times" />
-                        </Button>
+                {this.state.list.map((item) => (
+                  <tr key={item.URI}>
+                    <td>{item.URI}</td>
+                    <td className="text-center">
+                      <Switch
+                        onChange={(el, value) =>
+                          this.handleItemSwitch(item, value)
+                        }
+                        value={item.Enabled}
+                        onColor="info"
+                        offColor="info"
+                      />
                     </td>
-                    </tr>
-                  ))
-                }
+                    <td className="text-center">
+                      <Button
+                        className="btn-icon"
+                        color="danger"
+                        size="sm"
+                        type="button"
+                        onClick={(e) => this.deleteListItem(item)}
+                      >
+                        <i className="fa fa-times" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </Table>
           </CardBody>
