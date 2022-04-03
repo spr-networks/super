@@ -3,7 +3,7 @@ import React from 'react'
 import { blockAPI } from 'api/DNS'
 import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
 import ModalForm from 'components/ModalForm'
-import Switch from 'components/Switch'
+import Toggle from 'components/Toggle'
 import { APIErrorContext } from 'layouts/Admin'
 
 import {
@@ -118,11 +118,11 @@ export default class DNSBlocklist extends React.Component {
                   <tr key={item.URI}>
                     <td>{item.URI}</td>
                     <td className="text-center">
-                      <Switch
+                      <Toggle
                         onChange={(el, value) =>
                           this.handleItemSwitch(item, value)
                         }
-                        value={item.Enabled}
+                        isChecked={item.Enabled}
                         onColor="info"
                         offColor="info"
                       />
