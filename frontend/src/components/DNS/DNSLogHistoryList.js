@@ -1,4 +1,5 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import { withRouter } from 'react-router'
 import ReactBSAlert from 'react-bootstrap-sweetalert'
 
@@ -24,15 +25,20 @@ import {
 
 export class DNSLogHistoryList extends React.Component {
   static contextType = APIErrorContext
-  state = { list: [], listAll: [],
-    filterIPs: [], filterText: '',
-    showAlert: false, alertText: '' }
+  state = {
+    list: [],
+    listAll: [],
+    filterIPs: [],
+    filterText: '',
+    showAlert: false,
+    alertText: ''
+  }
 
   constructor(props) {
     super(props)
 
     this.state.filterIPs = props.ips || []
-    this.state.alertText = ""
+    this.state.alertText = ''
 
     this.handleIPChange = this.handleIPChange.bind(this)
     this.handleChange = this.handleChange.bind(this)
@@ -46,33 +52,42 @@ export class DNSLogHistoryList extends React.Component {
 
   async refreshList(ips) {
     if (!ips.length) {
-      this.setState({list: [], listAll: []})
+      this.setState({ list: [], listAll: [] })
       return
     }
 
-    Promise.allSettled(ips.map(async (ip) => {
-      try {
-        let list = await logAPI.history(ip)
-        return list
-      } catch (error) {
-        throw `${ip}`
-      }
-    }))
-    .then(results => {
-      let rejected = results.filter(r => r.status == 'rejected').map(r => r.reason)
+    Promise.allSettled(
+      ips.map(async (ip) => {
+        try {
+          let list = await logAPI.history(ip)
+          return list
+        } catch (error) {
+          throw `${ip}`
+        }
+      })
+    ).then((results) => {
+      let rejected = results
+        .filter((r) => r.status == 'rejected')
+        .map((r) => r.reason)
       if (rejected.length) {
-        this.context.reportError('No DNS query history for ' + rejected.join(','))
+        this.context.reportError(
+          'No DNS query history for ' + rejected.join(',')
+        )
       }
 
-      let lists = results.filter(r => r.value && r.value.length)
-        .map(r => r.value)
+      let lists = results
+        .filter((r) => r.value && r.value.length)
+        .map((r) => r.value)
 
       // merge and sort lists desc
       let list = [].concat.apply([], lists)
-      list.sort((a, b) => (new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime()))
+      list.sort(
+        (a, b) =>
+          new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime()
+      )
 
-      this.setState({list})
-      this.setState({listAll: list})
+      this.setState({ list })
+      this.setState({ listAll: list })
     })
   }
 
@@ -80,15 +95,16 @@ export class DNSLogHistoryList extends React.Component {
     let list = this.state.listAll
 
     if (filterText.length) {
-      list = list.filter(item => {
+      list = list.filter((item) => {
         let match = false
 
         try {
           match = match || item.FirstName.includes(filterText)
           match = match || item.FirstAnswer.includes(filterText)
-          match = match || item.Q.filter(r => r.Name.includes(filterText)).length
+          match =
+            match || item.Q.filter((r) => r.Name.includes(filterText)).length
           match = match || item.Type.match(filterText.toUpperCase())
-        } catch(err) {
+        } catch (err) {
           match = false
         }
 
@@ -96,20 +112,20 @@ export class DNSLogHistoryList extends React.Component {
       })
     }
 
-    this.setState({list})
+    this.setState({ list })
   }
 
   handleIPChange(selectedIPs) {
-    this.setState({selectedIPs})
+    this.setState({ selectedIPs })
 
-    let ips = selectedIPs.map(item => item.value)
+    let ips = selectedIPs.map((item) => item.value)
 
     // update url to include ips
     if (ips.length) {
       this.props.history.push(ips.join(','))
     }
 
-    this.setState({filterIPs: ips})
+    this.setState({ filterIPs: ips })
 
     this.refreshList(ips)
   }
@@ -117,36 +133,40 @@ export class DNSLogHistoryList extends React.Component {
   handleChange(event) {
     let filterText = event.target.value
 
-    this.setState({filterText})
+    this.setState({ filterText })
 
     this.filterList(filterText)
   }
 
   triggerAlert(index) {
-    this.setState({alertText: JSON.stringify(this.state.list[index], null, "  ")})
-    this.setState({showAlert: true})
+    this.setState({
+      alertText: JSON.stringify(this.state.list[index], null, '  ')
+    })
+    this.setState({ showAlert: true })
   }
 
   closeAlert() {
-    this.setState({showAlert: false})
+    this.setState({ showAlert: false })
   }
 
   render() {
-
     const prettyDate = (timestamp) => {
-      return new Date(timestamp).toISOString().replace(/T|(\..*)/g, ' ').trim()
+      return new Date(timestamp)
+        .toISOString()
+        .replace(/T|(\..*)/g, ' ')
+        .trim()
     }
 
     const prettyType = (type) => {
       let keys = {
-        'NOERROR': 'text-success',
-        'NODATA': 'text-warning',
-        'OTHERERROR': 'text-danger',
-        'NXDOMAIN': 'text-danger'
+        NOERROR: 'text-success',
+        NODATA: 'text-warning',
+        OTHERERROR: 'text-danger',
+        NXDOMAIN: 'text-danger'
       }
 
       let className = keys[type] || 'text-danger'
-      return (<span className={className}>{type}</span>)
+      return <span className={className}>{type}</span>
     }
 
     let hideClient = this.state.filterIPs.length <= 1
@@ -165,12 +185,16 @@ export class DNSLogHistoryList extends React.Component {
           closeOnClickOutside={true}
           btnSize=""
         >
-          <pre style={{"text-align":"left", "font-size": "0.65em"}}>{this.state.alertText}</pre>
+          <pre style={{ 'text-align': 'left', 'font-size': '0.65em' }}>
+            {this.state.alertText}
+          </pre>
         </ReactBSAlert>
 
         <Card>
           <CardHeader>
-            <CardTitle tag="h4">{this.state.filterIPs.join(',')} DNS Log</CardTitle>
+            <CardTitle tag="h4">
+              {this.state.filterIPs.join(',')} DNS Log
+            </CardTitle>
 
             <Row>
               <Col md="4">
@@ -187,56 +211,55 @@ export class DNSLogHistoryList extends React.Component {
                 <FormGroup>
                   <Label>Search</Label>
                   <InputGroup>
-                  <Input
-                    type="text"
-                    name="filterText"
-                    placeholder="Filter domain..."
-                    value={this.state.filterText}
-                    onChange={this.handleChange}
-                  />
-                  <InputGroupAddon addonType="append">
-                    <InputGroupText>
-                      <i className="nc-icon nc-zoom-split" />
-                    </InputGroupText>
-                  </InputGroupAddon>
+                    <Input
+                      type="text"
+                      name="filterText"
+                      placeholder="Filter domain..."
+                      value={this.state.filterText}
+                      onChange={this.handleChange}
+                    />
+                    <InputGroupAddon addonType="append">
+                      <InputGroupText>
+                        <i className="nc-icon nc-zoom-split" />
+                      </InputGroupText>
+                    </InputGroupAddon>
                   </InputGroup>
                 </FormGroup>
               </Col>
             </Row>
           </CardHeader>
           <CardBody>
-            <Table responsive className={!this.state.list.length ? "d-none" : null}>
+            <Table
+              responsive
+              className={!this.state.list.length ? 'd-none' : null}
+            >
               <thead className="text-primary">
                 <tr>
                   <th width="15%">Timestamp</th>
                   <th width="15%">Type</th>
-                  <th className={hideClient ? "d-none" : null}>Client</th>
+                  <th className={hideClient ? 'd-none' : null}>Client</th>
                   <th>Domain</th>
                   <th>Answer</th>
                 </tr>
               </thead>
               <tbody>
-                {
-                  this.state.list.map((item, index) => (
-                    <tr key={item.Timestamp}>
-                      <td style={{"whiteSpace": "nowrap"}}>
-                        {prettyDate(item.Timestamp)}
-                      </td>
-                      <td>
-                        {prettyType(item.Type)}
-                      </td>
-                      <td className={hideClient ? "d-none" : null}>
-                        {item.Remote.split(':')[0]}
-                      </td>
-                      <td>{item.FirstName}</td>
-                      <td>
-                        <a target="#" onClick={e => this.triggerAlert(index)}>
-                          {item.FirstAnswer}
-                        </a>
-                      </td>
-                    </tr>
-                  ))
-                }
+                {this.state.list.map((item, index) => (
+                  <tr key={item.Timestamp}>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {prettyDate(item.Timestamp)}
+                    </td>
+                    <td>{prettyType(item.Type)}</td>
+                    <td className={hideClient ? 'd-none' : null}>
+                      {item.Remote.split(':')[0]}
+                    </td>
+                    <td>{item.FirstName}</td>
+                    <td>
+                      <a target="#" onClick={(e) => this.triggerAlert(index)}>
+                        {item.FirstAnswer}
+                      </a>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </Table>
           </CardBody>
@@ -247,4 +270,12 @@ export class DNSLogHistoryList extends React.Component {
 }
 
 const DNSLogHistoryListWithRouter = withRouter(DNSLogHistoryList)
+
+DNSLogHistoryListWithRouter.propTypes = {
+  ips: PropTypes.array,
+  history: PropTypes.shape({
+    push: PropTypes.func.isRequired
+  }).isRequired
+}
+
 export default DNSLogHistoryListWithRouter
