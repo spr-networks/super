@@ -1,4 +1,5 @@
-import React, { useContext } from 'react'
+import React from 'react'
+import PropTypes from 'prop-types'
 import { APIErrorContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 
@@ -17,11 +18,11 @@ import {
   FormText,
   Input,
   Row
-} from "reactstrap";
+} from 'reactstrap'
 
 export default class DNSAddLog extends React.Component {
-  static contextType = APIErrorContext;
-  state = { Type: '', Value: '' };
+  static contextType = APIErrorContext
+  state = { Type: '', Value: '' }
 
   constructor(props) {
     super(props)
@@ -36,7 +37,7 @@ export default class DNSAddLog extends React.Component {
     let name = event.target.name
     let value = event.target.value
 
-    this.setState({[name]: value})
+    this.setState({ [name]: value })
   }
 
   isValid() {
@@ -51,8 +52,8 @@ export default class DNSAddLog extends React.Component {
     }
 
     let override = {
-      Type:     this.state.Type,
-      Domain:   this.state.Domain,
+      Type: this.state.Type,
+      Domain: this.state.Domain,
       ResultIP: this.state.ResultIP,
       ClientIP: this.state.ClientIP,
       Expiration: this.state.Expiration
@@ -62,84 +63,129 @@ export default class DNSAddLog extends React.Component {
       override.Domain += '.'
     }
 
-    blockAPI.putOverride(override)
-      .then(res => {
+    blockAPI
+      .putOverride(override)
+      .then((res) => {
         this.props.notifyChange('override')
       })
-      .catch(error => {
-        this.context.reportError("API Failure: " + error.message)
+      .catch((error) => {
+        this.context.reportError('API Failure: ' + error.message)
       })
   }
 
   render() {
     return (
-			<Form onSubmit={this.handleSubmit}>
-				<Row>
-					<Label for="Domain" sm={2}>Domain</Label>
-					<Col sm={10}>
-						<FormGroup className={this.state.check.Domain}>
-							<Input type="text" id="Domain" placeholder="" name="Domain" value={this.state.Domain} onChange={this.handleChange} autoFocus={true} />
+      <Form onSubmit={this.handleSubmit}>
+        <Row>
+          <Label for="Domain" sm={2}>
+            Domain
+          </Label>
+          <Col sm={10}>
+            <FormGroup className={this.state.check.Domain}>
+              <Input
+                type="text"
+                id="Domain"
+                placeholder=""
+                name="Domain"
+                value={this.state.Domain}
+                onChange={this.handleChange}
+                autoFocus={true}
+              />
               {this.state.check.Domain == 'has-danger' ? (
                 <Label className="error">Specify a domain name</Label>
               ) : null}
-						</FormGroup>
-					</Col>
-				</Row>
+            </FormGroup>
+          </Col>
+        </Row>
 
-				<Row>
-					<Label for="ResultIP" sm={2}>Result IP</Label>
-					<Col sm={10}>
-						<FormGroup className={this.state.check.ResultIP}>
-							<Input type="text" id="ResultIP" placeholder="0.0.0.0" name="ResultIP" value={this.state.ResultIP} onChange={this.handleChange} />
+        <Row>
+          <Label for="ResultIP" sm={2}>
+            Result IP
+          </Label>
+          <Col sm={10}>
+            <FormGroup className={this.state.check.ResultIP}>
+              <Input
+                type="text"
+                id="ResultIP"
+                placeholder="0.0.0.0"
+                name="ResultIP"
+                value={this.state.ResultIP}
+                onChange={this.handleChange}
+              />
               {this.state.check.ResultIP == 'has-danger' ? (
                 <Label className="error">Please enter a valid IP or *</Label>
               ) : (
-                <FormText tag="span">IP address to return for domain name lookup</FormText>
+                <FormText tag="span">
+                  IP address to return for domain name lookup
+                </FormText>
               )}
-						</FormGroup>
-					</Col>
-				</Row>
+            </FormGroup>
+          </Col>
+        </Row>
 
-				<Row>
-					<Label for="ClientIP" sm={2}>Client IP</Label>
-					<Col sm={10}>
-						<FormGroup className={this.state.check.ClientIP}>
-							<Input type="text" id="ClientIP" placeholder="*" name="ClientIP" value={this.state.ClientIP} onChange={this.handleChange} />
+        <Row>
+          <Label for="ClientIP" sm={2}>
+            Client IP
+          </Label>
+          <Col sm={10}>
+            <FormGroup className={this.state.check.ClientIP}>
+              <Input
+                type="text"
+                id="ClientIP"
+                placeholder="*"
+                name="ClientIP"
+                value={this.state.ClientIP}
+                onChange={this.handleChange}
+              />
               {this.state.check.ClientIP == 'has-danger' ? (
                 <Label className="error">Please enter a valid IP or *</Label>
               ) : (
                 <FormText tag="span">* for all clients</FormText>
               )}
-						</FormGroup>
-					</Col>
-				</Row>
+            </FormGroup>
+          </Col>
+        </Row>
 
+        <Row>
+          <Label for="Expiration" sm={2}>
+            Expiration
+          </Label>
+          <Col sm={10}>
+            <FormGroup>
+              <Input
+                type="number"
+                id="Expiration"
+                placeholder="Expiration"
+                name="Expiration"
+                value={this.state.Expiration}
+                onChange={this.handleChange}
+              />
+              <FormText tag="span">
+                If non zero has unix time for when the entry should disappear
+              </FormText>
+            </FormGroup>
+          </Col>
+        </Row>
 
-				<Row>
-					<Label for="Expiration" sm={2}>Expiration</Label>
-					<Col sm={10}>
-						<FormGroup>
-							<Input type="number" id="Expiration" placeholder="Expiration" name="Expiration" value={this.state.Expiration} onChange={this.handleChange} />
-              <FormText tag="span">If non zero has unix time for when the entry should disappear</FormText>
-						</FormGroup>
-					</Col>
-				</Row>
-
-
-				<Row>
-					<Col sm={{offset: 2, size: 10}}>
-						<Button
-							className="btn-round"
-							color="primary"
-							size="md"
-							type="submit"
-							onClick={this.handleSubmit}
-						>
-						Save
-						</Button>
-					</Col>
-				</Row>
-			</Form>
+        <Row>
+          <Col sm={{ offset: 2, size: 10 }}>
+            <Button
+              className="btn-round"
+              color="primary"
+              size="md"
+              type="submit"
+              onClick={this.handleSubmit}
+            >
+              Save
+            </Button>
+          </Col>
+        </Row>
+      </Form>
     )
   }
+}
+
+DNSAddLog.propTypes = {
+  type: PropTypes.string,
+  notifyChange: PropTypes.func
 }
