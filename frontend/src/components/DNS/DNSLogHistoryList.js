@@ -7,6 +7,9 @@ import { APIErrorContext } from 'layouts/Admin'
 import ClientSelect from 'components/Helpers/ClientSelect'
 import { logAPI } from 'api/DNS'
 
+import 'react-date-range/dist/styles.css' // main style file
+import 'react-date-range/dist/theme/default.css' // theme css file
+
 import {
   Card,
   CardHeader,
@@ -30,6 +33,8 @@ export class DNSLogHistoryList extends React.Component {
     listAll: [],
     filterIPs: [],
     filterText: '',
+    filterDateStart: '',
+    filterDateEnd: '',
     showAlert: false,
     alertText: ''
   }
@@ -38,19 +43,21 @@ export class DNSLogHistoryList extends React.Component {
     super(props)
 
     this.state.filterIPs = props.ips || []
+    this.state.filterText = props.filterText || ''
     this.state.alertText = ''
 
-    this.handleIPChange = this.handleIPChange.bind(this)
+    this.handleChangeIP = this.handleChangeIP.bind(this)
     this.handleChange = this.handleChange.bind(this)
     this.triggerAlert = this.triggerAlert.bind(this)
     this.closeAlert = this.closeAlert.bind(this)
   }
 
   async componentDidMount() {
-    this.refreshList(this.state.filterIPs)
+    await this.refreshList(this.state.filterIPs, this.filterList)
   }
 
-  async refreshList(ips) {
+  // next function is to ensure the state.list is updated
+  async refreshList(ips, next) {
     if (!ips.length) {
       this.setState({ list: [], listAll: [] })
       return
@@ -86,15 +93,41 @@ export class DNSLogHistoryList extends React.Component {
           new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime()
       )
 
-      this.setState({ list })
       this.setState({ listAll: list })
+      this.setState({ list }, next)
     })
   }
 
-  filterList(filterText) {
+  filterList(filterText = null) {
+    if (!filterText) {
+      filterText = this.state.filterText
+    }
+
+    if (!filterText.length) {
+      return
+    }
+
     let list = this.state.listAll
 
-    if (filterText.length) {
+    let doFilter = false
+    doFilter = doFilter || filterText.length
+
+    let datematch = filterText.match(
+      /(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)-(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)/
+    )
+
+    let dateStart = null,
+      dateEnd = null
+
+    if (datematch) {
+      try {
+        let [filterDateStart, filterDateEnd] = datematch.slice(1, 3)
+        dateStart = new Date(filterDateStart).getTime()
+        dateEnd = new Date(filterDateEnd).getTime()
+      } catch (error) {}
+    }
+
+    if (doFilter) {
       list = list.filter((item) => {
         let match = false
 
@@ -108,6 +141,13 @@ export class DNSLogHistoryList extends React.Component {
           match = false
         }
 
+        if (dateStart && dateEnd) {
+          let d = new Date(item.Timestamp).getTime()
+          if (dateStart < d && d < dateEnd) {
+            match = true
+          }
+        }
+
         return match
       })
     }
@@ -115,14 +155,16 @@ export class DNSLogHistoryList extends React.Component {
     this.setState({ list })
   }
 
-  handleIPChange(selectedIPs) {
+  handleChangeIP(selectedIPs) {
     this.setState({ selectedIPs })
 
     let ips = selectedIPs.map((item) => item.value)
 
-    // update url to include ips
+    // update url to include ips & filterText
     if (ips.length) {
-      this.props.history.push(ips.join(','))
+      this.props.history.push(
+        `/admin/dnsLog/${ips.join(',')}/${this.state.filterText}`
+      )
     }
 
     this.setState({ filterIPs: ips })
@@ -131,11 +173,12 @@ export class DNSLogHistoryList extends React.Component {
   }
 
   handleChange(event) {
-    let filterText = event.target.value
+    let name = event.target.name
+    let value = event.target.value
 
-    this.setState({ filterText })
+    this.setState({ [name]: value })
 
-    this.filterList(filterText)
+    this.filterList(value)
   }
 
   triggerAlert(index) {
@@ -171,6 +214,12 @@ export class DNSLogHistoryList extends React.Component {
 
     let hideClient = this.state.filterIPs.length <= 1
 
+    const dateSelection = {
+      startDate: new Date(),
+      endDate: new Date(),
+      key: 'selection'
+    }
+
     return (
       <>
         <ReactBSAlert
@@ -203,7 +252,7 @@ export class DNSLogHistoryList extends React.Component {
                   <ClientSelect
                     isMulti={true}
                     value={this.state.filterIPs}
-                    onChange={this.handleIPChange}
+                    onChange={this.handleChangeIP}
                   />
                 </FormGroup>
               </Col>
@@ -226,6 +275,36 @@ export class DNSLogHistoryList extends React.Component {
                   </InputGroup>
                 </FormGroup>
               </Col>
+              {/*
+              <Col md="4">
+                <Row>
+                  <Col md="6">
+                    <FormGroup>
+                      <Label>From</Label>
+                      <Input
+                        type="date"
+                        name="filterDateStart"
+                        value={this.state.filterDateStart}
+                        onChange={this.handleChange}
+                        placeholder="Start"
+                      />
+                    </FormGroup>
+                  </Col>
+                  <Col md="6">
+                    <FormGroup>
+                      <Label>To</Label>
+                      <Input
+                        type="date"
+                        name="filterDateEnd"
+                        value={this.state.filterDateEnd}
+                        onChange={this.handleChange}
+                        placeholder="End"
+                      />
+                    </FormGroup>
+                  </Col>
+                </Row>
+              </Col>
+              */}
             </Row>
           </CardHeader>
           <CardBody>
@@ -273,9 +352,10 @@ const DNSLogHistoryListWithRouter = withRouter(DNSLogHistoryList)
 
 DNSLogHistoryListWithRouter.propTypes = {
   ips: PropTypes.array,
+  filterText: PropTypes.string,
   history: PropTypes.shape({
-    push: PropTypes.func.isRequired
-  }).isRequired
+    push: PropTypes.func
+  }) //.isRequired
 }
 
 export default DNSLogHistoryListWithRouter
