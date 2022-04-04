@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import PropTypes from 'prop-types'
 import { Chart as ChartJS } from 'chart.js/auto'
 import { Line, getDatasetAtEvent, getElementAtEvent } from 'react-chartjs-2'
@@ -14,28 +14,6 @@ import {
   Row,
   Col
 } from 'reactstrap'
-
-/* TODO
-    const printDatasetAtEvent = (dataset) => {
-      if (!dataset.length) return
-
-      const datasetIndex = dataset[0].datasetIndex
-
-      console.log('[click] dataset:', data.datasets[datasetIndex].label)
-    }
-
-    const chartRef = React.useRef(null)
-
-    const onClick = (e) => {
-      const { chart } = chartRef
-      if (!chart) {
-        console.log('[click] nochart')
-        return
-      }
-
-      printDatasetAtEvent(getDatasetAtEvent(chart, e))
-    }
-    */
 
 const TimeSeries = (props) => {
   const scales = [
@@ -89,14 +67,15 @@ const TimeSeries = (props) => {
     },
     elements: {
       point: {
+        pointStyle: 'circle',
         radius: 0,
-        hitRadius: 0,
-        hoverRadius: 0
+        hitRadius: 50,
+        hoverRadius: 2
       }
     },
     scales: {
       y: {
-        //stacked: true,
+        stacked: true,
         min: 0,
         max: 1,
         ticks: {
@@ -129,6 +108,33 @@ const TimeSeries = (props) => {
     }
   }
 
+  const chartRef = useRef(null)
+
+  const onClick = (event) => {
+    const { current } = chartRef
+    console.log('[click]', 'event:', event)
+
+    if (!current) {
+      console.log('[click] nochart')
+      return
+    }
+
+    event.nativeEvent = event.native
+    let elements = getElementAtEvent(current, event)
+    console.log('[click] elems:', elements)
+
+    if (elements.length) {
+      let { datasetIndex } = elements[0]
+
+      const dataset = props.data.datasets[datasetIndex]
+      const { label: ip } = dataset
+
+      props.handleClientClick(ip)
+    }
+  }
+
+  options.onClick = onClick
+
   return (
     <>
       <Card>
@@ -148,7 +154,7 @@ const TimeSeries = (props) => {
         </CardHeader>
         <CardBody>
           {props.data.datasets ? (
-            <Line data={props.data} options={options} />
+            <Line ref={chartRef} data={props.data} options={options} />
           ) : null}
         </CardBody>
       </Card>
@@ -160,7 +166,8 @@ TimeSeries.propTypes = {
   type: PropTypes.string,
   title: PropTypes.string,
   data: PropTypes.object,
-  handleTimeChange: PropTypes.func
+  handleTimeChange: PropTypes.func,
+  handleClientClick: PropTypes.func
 }
 
 export default TimeSeries

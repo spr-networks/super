@@ -1,4 +1,5 @@
 import React, { useContext, Component } from 'react'
+import { withRouter } from 'react-router'
 import { getTrafficHistory } from 'components/Helpers/Api.js'
 import { APIErrorContext } from 'layouts/Admin.js'
 //import 'chartjs-adapter-moment'
@@ -6,7 +7,7 @@ import chroma from 'chroma-js'
 
 import TimeSeries from 'components/Charts/TimeSeries'
 
-export default class TrafficTimeSeries extends Component {
+class TrafficTimeSeries extends Component {
   state = {
     WanIn_scale: 'All Time',
     LanIn_scale: 'All Time',
@@ -135,13 +136,6 @@ export default class TrafficTimeSeries extends Component {
     // setup datasets
     let datasets = []
 
-    /*
-    ipStats['192.168.3.100'] = ipStats['192.168.2.6'].map((v) => {
-      const { x, y, z } = v
-      return { x, y: y / 2, z: z / 2 }
-    })
-*/
-
     let colors = chroma
       //.scale('YlGnBu')
       .scale('Spectral')
@@ -151,7 +145,7 @@ export default class TrafficTimeSeries extends Component {
     let index = 0
     for (let ip in ipStats) {
       const c = colors[index++]
-      let data = ipStats[ip] //  drop_quarter_samples(ipStats[ip])
+      let data = drop_quarter_samples(ipStats[ip])
       datasets.push({
         label: ip,
         data_target: target,
@@ -189,6 +183,10 @@ export default class TrafficTimeSeries extends Component {
       })
     }
 
+    const handleClientClick = (ip) => {
+      this.props.history.push(`/admin/dnsLog/${ip}`)
+    }
+
     const prettyTitle = (type) => {
       return {
         WanIn: 'WAN in',
@@ -197,6 +195,7 @@ export default class TrafficTimeSeries extends Component {
         LanOut: 'LAN outgoing'
       }[type]
     }
+
     return (
       <div className="content">
         {['WanOut', 'WanIn' /*, 'LanOut', 'LanIn'*/].map((type) => {
@@ -206,6 +205,7 @@ export default class TrafficTimeSeries extends Component {
               title={prettyTitle(type)}
               data={this.state[type]}
               handleTimeChange={handleTimeChange}
+              handleClientClick={handleClientClick}
             />
           )
         })}
@@ -213,3 +213,7 @@ export default class TrafficTimeSeries extends Component {
     )
   }
 }
+
+const TrafficTimeSeriesWithRouter = withRouter(TrafficTimeSeries)
+
+export default TrafficTimeSeriesWithRouter
