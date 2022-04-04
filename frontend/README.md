@@ -5,6 +5,7 @@ The UI is built with [Paper Dashboard Pro React](https://www.creative-tim.com/pr
 **Build status**
 
 dev: ![action workflow](https://github.com/spr-networks/super/actions/workflows/test-ui.yml/badge.svg?branch=dev)
+
 main: ![action workflow](https://github.com/spr-networks/super/actions/workflows/test-ui.yml/badge.svg?branch=dev)
 
 ## Documentation
