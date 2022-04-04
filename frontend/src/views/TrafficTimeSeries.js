@@ -85,7 +85,7 @@ export default class TrafficTimeSeries extends Component {
       deltaSlices.push(delta)
     }
 
-    // set ipstats[ip]= [ { x, y, z }, ... ]
+    // set ipstats[ip] = [ { x, y, z }, ... ]
     let date = new Date()
     for (let idx = 0; idx < traffic_data.length; idx++) {
       date.setMinutes(date.getMinutes() - 1)
@@ -134,12 +134,24 @@ export default class TrafficTimeSeries extends Component {
 
     // setup datasets
     let datasets = []
-    let colors = chroma.scale('YlGnBu').mode('lch').colors(ips.length)
+
+    /*
+    ipStats['192.168.3.100'] = ipStats['192.168.2.6'].map((v) => {
+      const { x, y, z } = v
+      return { x, y: y / 2, z: z / 2 }
+    })
+*/
+
+    let colors = chroma
+      //.scale('YlGnBu')
+      .scale('Spectral')
+      .mode('lch')
+      .colors(Object.keys(ipStats).length)
 
     let index = 0
     for (let ip in ipStats) {
       const c = colors[index++]
-      let data = drop_quarter_samples(ipStats[ip])
+      let data = ipStats[ip] //  drop_quarter_samples(ipStats[ip])
       datasets.push({
         label: ip,
         data_target: target,
@@ -162,6 +174,7 @@ export default class TrafficTimeSeries extends Component {
 
     targets.map(async (target) => {
       let datasets = await this.buildTimeSeries(target)
+      //console.log('chart', target, datasets)
       this.setState({ [target]: { datasets } })
     })
   }

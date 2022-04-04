@@ -73,12 +73,16 @@ const TimeSeries = (props) => {
       szType = 'kB'
     }
 
-    sz = sz.toLocaleString()
+    sz = sz.toFixed(2).toLocaleString()
     return `${sz} ${szType}`
   }
 
   let options = {
     animation: { duration: 0 },
+
+    //responsive: true,
+    //maintainAspectRatio: false,
+
     interaction: {
       mode: 'index',
       intersect: false
@@ -92,7 +96,7 @@ const TimeSeries = (props) => {
     },
     scales: {
       y: {
-        stacked: true,
+        //stacked: true,
         min: 0,
         max: 1,
         ticks: {
@@ -124,8 +128,6 @@ const TimeSeries = (props) => {
       }
     }
   }
-
-  //prettyTitle
 
   return (
     <>
