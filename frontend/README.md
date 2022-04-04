@@ -2,7 +2,10 @@
 
 The UI is built with [Paper Dashboard Pro React](https://www.creative-tim.com/product/paper-dashboard-pro-react) from Creative Tim. It's a template that uses bootstrap 4 and react.
 
-![action workflow](https://github.com/spr-networks/super/actions/workflows/test-ui.yml/badge.svg?branch=test)
+**Build status**
+
+dev: ![action workflow](https://github.com/spr-networks/super/actions/workflows/test-ui.yml/badge.svg?branch=dev)
+main: ![action workflow](https://github.com/spr-networks/super/actions/workflows/test-ui.yml/badge.svg?branch=dev)
 
 ## Documentation
 The documentation for the Material Dashboard Pro is hosted at the Creative Tim Website [website](https://demos.creative-tim.com/paper-dashboard-pro-react/#/documentation/tutorial).
