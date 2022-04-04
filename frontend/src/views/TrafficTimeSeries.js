@@ -1,35 +1,10 @@
 import React, { useContext, Component } from 'react'
-// react plugin used to create charts
-import { Chart as ChartJS } from 'chart.js/auto'
-import {
-  Chart,
-  Line,
-  getDatasetAtEvent,
-  getElementAtEvent
-} from 'react-chartjs-2'
 import { getTrafficHistory } from 'components/Helpers/Api.js'
 import { APIErrorContext } from 'layouts/Admin.js'
-import {
-  UncontrolledDropdown,
-  DropdownToggle,
-  DropdownMenu,
-  DropdownItem
-} from 'reactstrap'
-//for 'timeseries'
-import 'chartjs-adapter-moment'
+//import 'chartjs-adapter-moment'
 import chroma from 'chroma-js'
 
 import TimeSeries from 'components/Charts/TimeSeries'
-
-import {
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  CardTitle,
-  Row,
-  Col
-} from 'reactstrap'
 
 export default class TrafficTimeSeries extends Component {
   state = {
