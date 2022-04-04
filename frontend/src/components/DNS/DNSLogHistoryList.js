@@ -7,9 +7,6 @@ import { APIErrorContext } from 'layouts/Admin'
 import ClientSelect from 'components/Helpers/ClientSelect'
 import { logAPI } from 'api/DNS'
 
-import 'react-date-range/dist/styles.css' // main style file
-import 'react-date-range/dist/theme/default.css' // theme css file
-
 import {
   Card,
   CardHeader,
