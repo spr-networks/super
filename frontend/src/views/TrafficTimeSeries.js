@@ -137,7 +137,6 @@ class TrafficTimeSeries extends Component {
     let datasets = []
 
     let colors = chroma
-      //.scale('YlGnBu')
       .scale('Spectral')
       .mode('lch')
       .colors(Object.keys(ipStats).length)
