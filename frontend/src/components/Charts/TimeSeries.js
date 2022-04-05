@@ -1,9 +1,34 @@
 import React, { useState, useRef } from 'react'
 import PropTypes from 'prop-types'
-import { Chart as ChartJS } from 'chart.js/auto'
+//import { Chart as ChartJS } from 'chart.js/auto'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  LogarithmicScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js'
 import { Line, getDatasetAtEvent, getElementAtEvent } from 'react-chartjs-2'
 import Select from 'react-select'
-import chroma from 'chroma-js'
+
+Tooltip.positioners.topLeft = (elements, eventPosition) => {
+  return { x: 80, y: 100 }
+}
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  LogarithmicScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+)
 
 import {
   Card,
@@ -40,31 +65,35 @@ const TimeSeries = (props) => {
     }
   }
 
-  const prettySize = (sz) => {
+  const prettySize = (sz, round = false) => {
     let szType = 'bytes'
 
-    if (sz > 1e6) {
+    if (sz >= 1e6) {
       sz /= 1e6
       szType = 'MB'
-    } else if (sz > 1e3) {
+    } else if (sz >= 1e3) {
       sz /= 1e3
       szType = 'kB'
     }
 
-    sz = sz.toFixed(2).toLocaleString()
+    sz = round ? Math.floor(sz) : sz.toFixed(2)
+    sz = sz.toLocaleString()
     return `${sz} ${szType}`
   }
 
   let options = {
     animation: { duration: 0 },
 
-    //responsive: true,
-    //maintainAspectRatio: false,
+    //maintainAspectRatio: true,
 
     interaction: {
       mode: 'index',
       intersect: false
     },
+    /*tooltips: {
+      mode: 'index',
+      axis: 'y'
+    },*/
     elements: {
       point: {
         pointStyle: 'circle',
@@ -75,19 +104,33 @@ const TimeSeries = (props) => {
     },
     scales: {
       y: {
+        display: true,
+        //stacked: true,
+        type: 'logarithmic',
+        ticks: {
+          callback: (value, index, ticks) => {
+            if (index % 9 == 0) {
+              return prettySize(value, true)
+            }
+          }
+        }
+      },
+      /*y: {
         stacked: true,
         min: 0,
         max: 1,
         ticks: {
           callback: (value) => (value * 100).toFixed(0) + '%'
         }
-      },
+      },*/
       x: {
         grid: {
           display: false,
           drawBorder: false
         },
+        //type: 'timeseries',
         type: 'timeseries',
+        distribution: 'linear',
         ticks: {
           callback: (value, index, labels) => (index % 5 === 0 ? value : '')
         }
@@ -96,6 +139,9 @@ const TimeSeries = (props) => {
     plugins: {
       legend: {},
       tooltip: {
+        intersect: false,
+        position: 'nearest', //'topLeft',
+        caretSize: 5,
         callbacks: {
           label: (context) => {
             let label = context.dataset.label || ''
@@ -112,24 +158,23 @@ const TimeSeries = (props) => {
 
   const onClick = (event) => {
     const { current } = chartRef
-    console.log('[click]', 'event:', event)
 
     if (!current) {
       console.log('[click] nochart')
       return
     }
 
-    event.nativeEvent = event.native
+    event.nativeEvent = event.native // TODO FIX
     let elements = getElementAtEvent(current, event)
-    console.log('[click] elems:', elements)
+    //console.log('[click] elems:', elements)
 
     if (elements.length) {
-      let { datasetIndex } = elements[0]
+      let { datasetIndex, index } = elements[0]
 
       const dataset = props.data.datasets[datasetIndex]
-      const { label: ip } = dataset
+      const { label: ip, data } = dataset
 
-      props.handleClientClick(ip)
+      props.handleClientClick(ip, data[index])
     }
   }
 

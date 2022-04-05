@@ -67,6 +67,7 @@ class TrafficTimeSeries extends Component {
 
     let ips = Object.keys(ipStats)
 
+    /*
     //calculate total changed per step in first pass
     let deltaSlices = []
     for (let idx = 0; idx < traffic_data.length; idx++) {
@@ -78,6 +79,7 @@ class TrafficTimeSeries extends Component {
           !traffic_data[idx + 1][ip]
         ) {
         } else {
+          // = this-next
           delta +=
             traffic_data[idx][ip][target] - traffic_data[idx + 1][ip][target]
         }
@@ -85,6 +87,7 @@ class TrafficTimeSeries extends Component {
 
       deltaSlices.push(delta)
     }
+    */
 
     // set ipstats[ip] = [ { x, y, z }, ... ]
     let date = new Date()
@@ -105,8 +108,11 @@ class TrafficTimeSeries extends Component {
         } else {
           // calculate the delta change between the most recent (idx) and
           // the measurement before (idx+1) convert to % of total change
-          z = traffic_data[idx][ip][target] - traffic_data[idx + 1][ip][target]
-          y = z / deltaSlices[idx]
+          let z = traffic_data[idx][ip][target]
+          //let diff =
+          //  traffic_data[idx][ip][target] - traffic_data[idx + 1][ip][target]
+          //y = diff / deltaSlices[idx]
+          y = z
           ipStats[ip].push({ x, y, z })
         }
       }
@@ -143,7 +149,9 @@ class TrafficTimeSeries extends Component {
 
     let index = 0
     for (let ip in ipStats) {
-      const c = colors[index++]
+      const c = chroma(colors[index++])
+        .alpha(0.85)
+        .css()
       let data = drop_quarter_samples(ipStats[ip])
       datasets.push({
         label: ip,
@@ -182,22 +190,26 @@ class TrafficTimeSeries extends Component {
       })
     }
 
-    const handleClientClick = (ip) => {
-      this.props.history.push(`/admin/dnsLog/${ip}`)
+    const handleClientClick = (ip, datapoint) => {
+      const { x: ts } = datapoint
+      let d = new Date(ts)
+      let filterText = d.toISOString()
+      filterText += '-' + new Date(d.getTime() + 60 * 1e3).toISOString()
+      this.props.history.push(`/admin/dnsLog/${ip}/${filterText}`)
     }
 
     const prettyTitle = (type) => {
       return {
-        WanIn: 'WAN in',
+        WanIn: 'WAN incoming',
         WanOut: 'WAN outgoing',
-        LanIn: 'LAN in',
+        LanIn: 'LAN incoming',
         LanOut: 'LAN outgoing'
       }[type]
     }
 
     return (
       <div className="content">
-        {['WanOut', 'WanIn' /*, 'LanOut', 'LanIn'*/].map((type) => {
+        {['WanIn', 'WanOut' /*, 'LanIn', 'LanOut',*/].map((type) => {
           return (
             <TimeSeries
               type={type}
