@@ -1,6 +1,7 @@
 import React, { useContext, Component } from 'react'
 import { withRouter } from 'react-router'
-import { getTrafficHistory } from 'components/Helpers/Api.js'
+import { trafficAPI } from 'api/Traffic'
+import { deviceAPI } from 'api/Device'
 import { APIErrorContext } from 'layouts/Admin.js'
 //import 'chartjs-adapter-moment'
 import chroma from 'chroma-js'
@@ -28,13 +29,13 @@ class TrafficTimeSeries extends Component {
     if (this.cached_traffic_data !== null) {
       traffic_data = this.cached_traffic_data
     } else {
-      traffic_data = this.cached_traffic_data = await getTrafficHistory().catch(
-        (error) => {
+      traffic_data = this.cached_traffic_data = await trafficAPI
+        .history()
+        .catch((error) => {
           this.context.reportError(
             'API Failure get traffic history: ' + error.message
           )
-        }
-      )
+        })
     }
 
     return traffic_data
@@ -173,9 +174,14 @@ class TrafficTimeSeries extends Component {
   componentDidMount() {
     let targets = ['WanOut', 'WanIn', 'LanOut', 'LanIn']
 
+    /*deviceAPI.list().then((devices) => {
+      let clients = Object.values(devices).map((d) => {
+        return { Name: d.Name, IP: d.RecentIP, MAC: d.MAC }
+      })
+    })*/
+
     targets.map(async (target) => {
       let datasets = await this.buildTimeSeries(target)
-      //console.log('chart', target, datasets)
       this.setState({ [target]: { datasets } })
     })
   }
