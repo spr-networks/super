@@ -1,8 +1,8 @@
-const { REACT_APP_API } = process.env;
-const NFT_VERSION = "0.9.7";
-let API = document.location.origin;
-let API_HOST = document.location.host;
-let ws;
+const { REACT_APP_API } = process.env
+const NFT_VERSION = '0.9.7'
+let API = document.location.origin
+let API_HOST = document.location.host
+let ws
 
 if (REACT_APP_API) {
   try {
@@ -12,332 +12,328 @@ if (REACT_APP_API) {
   } catch (e) {
     // REACT_APP_API=mock -- dont load in prod
     if (REACT_APP_API == 'mock') {
-      let MockAPI = import('./MockAPI').then(m => m.default())
+      let MockAPI = import('./MockAPI').then((m) => m.default())
     }
   }
 }
 
 export const zoneDescriptions = {
-  "dns" : "Outbound DNS Access",
-  "wan": "Outbound Internet Access",
-  "lan": "LAN access",
-  "isolated" : "No access. By default devices without a group are treated as isolated"
+  dns: 'Outbound DNS Access',
+  wan: 'Outbound Internet Access',
+  lan: 'LAN access',
+  isolated:
+    'No access. By default devices without a group are treated as isolated'
 }
 
 export function authHeader() {
-    // return authorization header with basic auth credentials
-    let user = JSON.parse(localStorage.getItem('user'));
+  // return authorization header with basic auth credentials
+  let user = JSON.parse(localStorage.getItem('user'))
 
-    if (user && user.authdata) {
-        return 'Basic ' + user.authdata;
-    } else {
-        return '';
-    }
+  if (user && user.authdata) {
+    return 'Basic ' + user.authdata
+  } else {
+    return ''
+  }
 }
 
 export function testLogin(username, password, callback) {
-  fetch(API+'/status', {
+  fetch(API + '/status', {
     method: 'GET', // or 'PUT'
     headers: {
-      'Authorization': 'Basic ' +  btoa(username+":"+password),
+      Authorization: 'Basic ' + btoa(username + ':' + password),
       'X-Requested-With': 'react',
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     }
   })
-  .then(function(response) {
-    if(!response.ok)
-    {
-      throw new Error(response.status)
-    }
-    return response.json()
-  })
-  .then(data => {
-    if (data == "Online") {
-      return callback(true)
-    }
-    return callback(false)
-  })
-  .catch((error) => {
-    console.error('Error:', error);
-    return callback(false)
-  });
-
-}
-
-function getAPIJson(endpoint) {
-  return new Promise((resolve, reject) =>  {
-    fetch(API+endpoint, {
-      method: 'GET',
-      headers: {
-        'Authorization': authHeader(),
-        'X-Requested-With': 'react',
-        'Content-Type': 'application/json',
-      }
-    })
-    .then(function(response) {
-      if(!response.ok)
-      {
-        throw new Error(`${endpoint}: ` + response.status)
+    .then(function (response) {
+      if (!response.ok) {
+        throw new Error(response.status)
       }
       return response.json()
     })
-    .then(data => {
-      resolve(data)
-    }).catch(reason => {
-      reject(reason)
+    .then((data) => {
+      if (data == 'Online') {
+        return callback(true)
+      }
+      return callback(false)
     })
+    .catch((error) => {
+      console.error('Error:', error)
+      return callback(false)
+    })
+}
+
+function getAPIJson(endpoint) {
+  return new Promise((resolve, reject) => {
+    fetch(API + endpoint, {
+      method: 'GET',
+      headers: {
+        Authorization: authHeader(),
+        'X-Requested-With': 'react',
+        'Content-Type': 'application/json'
+      }
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error(`${endpoint}: ` + response.status)
+        }
+        return response.json()
+      })
+      .then((data) => {
+        resolve(data)
+      })
+      .catch((reason) => {
+        reject(reason)
+      })
   })
 }
 
 function getAPI(endpoint) {
-  return new Promise((resolve, reject) =>  {
-    fetch(API+endpoint, {
+  return new Promise((resolve, reject) => {
+    fetch(API + endpoint, {
       method: 'GET',
       headers: {
-        'Authorization': authHeader(),
+        Authorization: authHeader(),
         'X-Requested-With': 'react',
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       }
     })
-    .then(function(response) {
-      if(!response.ok)
-      {
-        throw new Error(response.status)
-      }
-      return response.text()
-    })
-    .then(data => {
-      resolve(data)
-    }).catch(reason => {
-      reject(reason)
-    })
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error(response.status)
+        }
+        return response.text()
+      })
+      .then((data) => {
+        resolve(data)
+      })
+      .catch((reason) => {
+        reject(reason)
+      })
   })
 }
 
 function delsetZone(verb, name, disabled, tags) {
   let data = {}
   if (name) {
-    data["Name"] = name
+    data['Name'] = name
   }
   if (disabled) {
-    data["Disabled"] = disabled
+    data['Disabled'] = disabled
   }
   if (tags) {
-    data["ZoneTags"] = tags
+    data['ZoneTags'] = tags
   }
 
-  return new Promise((resolve, reject) =>  {
-    fetch(API + "/zones", {
+  return new Promise((resolve, reject) => {
+    fetch(API + '/zones', {
       method: verb,
       headers: {
-        'Authorization': authHeader(),
+        Authorization: authHeader(),
         'X-Requested-With': 'react',
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(data)
     })
-    .then(function(response) {
-      if(!response.ok)
-      {
-        throw new Error(response.status)
-      }
-      return response.json()
-    })
-    .then(data => {
-      resolve(data)
-    }).catch(reason => {
-      reject(reason)
-    })
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error(response.status)
+        }
+        return response.json()
+      })
+      .then((data) => {
+        resolve(data)
+      })
+      .catch((reason) => {
+        reject(reason)
+      })
   })
 }
 
 function delsetDevice(verb, identity, psk, wpa_type, name, zones, tags) {
-  let data = {"PSKEntry": {}}
+  let data = { PSKEntry: {} }
 
-  if (identity != "" && (identity.indexOf(":") != -1) ) {
-    data["Mac"] = identity
+  if (identity != '' && identity.indexOf(':') != -1) {
+    data['Mac'] = identity
   }
 
-  if (psk != "") {
-    data["PSKEntry"]["Psk"] = psk
+  if (psk != '') {
+    data['PSKEntry']['Psk'] = psk
   }
 
-  if (wpa_type != "") {
-    data["PSKEntry"]["Type"] = wpa_type
+  if (wpa_type != '') {
+    data['PSKEntry']['Type'] = wpa_type
   }
 
-  if (name != "") {
-    data["Name"] = name
+  if (name != '') {
+    data['Name'] = name
   }
 
   if (zones != null) {
-    data["Zones"] = zones
+    data['Zones'] = zones
   }
 
   if (tags != null) {
-    data["DeviceTags"] = tags
+    data['DeviceTags'] = tags
   }
 
-  return new Promise((resolve, reject) =>  {
-    fetch(API + "/device/" + identity, {
+  return new Promise((resolve, reject) => {
+    fetch(API + '/device/' + identity, {
       method: verb,
       headers: {
-        'Authorization': authHeader(),
+        Authorization: authHeader(),
         'X-Requested-With': 'react',
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(data)
     })
-    .then(function(response) {
-      if(!response.ok)
-      {
-        console.log("bad response")
-        throw new Error(response.status)
-      }
-      if (verb == 'DELETE' || verb == 'PUT') {
-        resolve(true)
-      } else {
-        return response.json()
-      }
-    })
-    .then(data => {
-      resolve(data)
-    }).catch(reason => {
-      reject(reason)
-    })
+      .then(function (response) {
+        if (!response.ok) {
+          console.log('bad response')
+          throw new Error(response.status)
+        }
+        if (verb == 'DELETE' || verb == 'PUT') {
+          resolve(true)
+        } else {
+          return response.json()
+        }
+      })
+      .then((data) => {
+        resolve(data)
+      })
+      .catch((reason) => {
+        reject(reason)
+      })
   })
 }
 
 export function setPSK(mac, psk, wpa_type, name) {
-  if (mac == "") {
-    mac = "pending"
+  if (mac == '') {
+    mac = 'pending'
   }
   return delsetDevice('PUT', mac, psk, wpa_type, name)
 }
 
 export function updateDeviceName(mac, name) {
-  return delsetDevice('PUT', mac, "", "", name)
+  return delsetDevice('PUT', mac, '', '', name)
 }
 
 export function updateDeviceZones(mac, zones) {
-  return delsetDevice('PUT', mac, "", "", "", zones)
+  return delsetDevice('PUT', mac, '', '', '', zones)
 }
 
 export function updateDeviceTags(mac, tags) {
-  return delsetDevice('PUT', mac, "", "", "", null, tags)
+  return delsetDevice('PUT', mac, '', '', '', null, tags)
 }
-
 
 export function deleteDevice(mac) {
   return delsetDevice('DELETE', mac)
 }
 
-
 //export function updateZone(zone, disabled, tags)
 //export function deleteZone(zone)
 
 export function getDevices() {
-  return getAPIJson("/devices")
+  return getAPIJson('/devices')
 }
 
 export function getZones() {
-  return getAPIJson("/zones")
+  return getAPIJson('/zones')
 }
 
 export function pendingPSK() {
-  return getAPIJson("/pendingPSK")
+  return getAPIJson('/pendingPSK')
 }
 
 export function getArp() {
-  return getAPIJson("/arp")
+  return getAPIJson('/arp')
 }
 
 export function getNFVerdictMap(zone) {
   function translate(n) {
-    if (n == "wan") {
-      return "internet_access"
-    } else if (n == "dns") {
-      return "dns_access"
-    } else if (n == "lan") {
-      return "lan_access"
-    } else if (n == "dhcp") {
-      return "dhcp_access"
+    if (n == 'wan') {
+      return 'internet_access'
+    } else if (n == 'dns') {
+      return 'dns_access'
+    } else if (n == 'lan') {
+      return 'lan_access'
+    } else if (n == 'dhcp') {
+      return 'dhcp_access'
     }
     //tbd handle _dst_access also
-    return n+"_mac_src_access"
+    return n + '_mac_src_access'
   }
 
-  return getAPIJson("/nfmap/" + translate(zone)).then(
-    (v) => {
-      let vmap = v.nftables[1].map
-      let results = []
-      if (vmap.elem && vmap.type) {
-        for (const device of vmap.elem) {
-          let info = {}
-          let i = 0
-          for (const t of vmap.type) {
-            info[t] = device[0].concat[i]
-            i += 1
-          }
-          results.push(info)
+  return getAPIJson('/nfmap/' + translate(zone)).then((v) => {
+    let vmap = v.nftables[1].map
+    let results = []
+    if (vmap.elem && vmap.type) {
+      for (const device of vmap.elem) {
+        let info = {}
+        let i = 0
+        for (const t of vmap.type) {
+          info[t] = device[0].concat[i]
+          i += 1
         }
+        results.push(info)
       }
-      return results
     }
-  )
+    return results
+  })
 }
 
 export function hostapdAllStations() {
-  return getAPIJson("/hostapd/all_stations")
+  return getAPIJson('/hostapd/all_stations')
 }
 
 export function hostapdConfiguration() {
-  return getAPI("/hostapd/config")
+  return getAPI('/hostapd/config')
 }
 
 export function hostapdStatus() {
-  return getAPIJson("/hostapd/status")
+  return getAPIJson('/hostapd/status')
 }
 
 export function getTraffic(name) {
-  return getAPIJson("/traffic/" + name)
+  return getAPIJson('/traffic/' + name)
 }
 
 export function getTrafficHistory() {
-  return getAPIJson("/traffic_history")
+  return getAPIJson('/traffic_history')
 }
 
 export function ipAddr() {
-  return getAPIJson("/ip/addr")
+  return getAPIJson('/ip/addr')
 }
 
 function delset(verb, url, data) {
-  return new Promise((resolve, reject) =>  {
+  return new Promise((resolve, reject) => {
     fetch(`${API}/${url}`, {
       method: verb,
       headers: {
-        'Authorization': authHeader(),
+        Authorization: authHeader(),
         'X-Requested-With': 'react',
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(data)
     })
-    .then(function(response) {
-      if (!response.ok) {
-        throw new Error(response.status)
-      }
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error(response.status)
+        }
 
-      if (verb == 'DELETE' || verb == 'PUT') {
-        return resolve(true)
-      }
+        if (verb == 'DELETE' || verb == 'PUT') {
+          return resolve(true)
+        }
 
-      return response.json()
-    })
-    .then(data => {
-      resolve(data)
-    }).catch(reason => {
-      reject(reason)
-    })
+        return response.json()
+      })
+      .then((data) => {
+        resolve(data)
+      })
+      .catch((reason) => {
+        reject(reason)
+      })
   })
 }
 
@@ -366,13 +362,12 @@ export function deleteDNSOverride(data) {
 }
 
 export function ConnectWebsocket(messageCallback) {
+  let userData = JSON.parse(localStorage.getItem('user'))
 
-  let userData  = JSON.parse(localStorage.getItem('user'));
-
-  ws = new WebSocket("ws://" + API_HOST + "/ws")
+  ws = new WebSocket('ws://' + API_HOST + '/ws')
 
   ws.addEventListener('open', (event) => {
-    ws.send(userData["username"] + ":" + userData["password"])
+    ws.send(userData['username'] + ':' + userData['password'])
   })
 
   ws.addEventListener('message', (event) => {
@@ -383,5 +378,12 @@ export function ConnectWebsocket(messageCallback) {
 }
 
 export function saveLogin(username, password) {
-  localStorage.setItem('user', JSON.stringify({ "authdata": btoa(username+":"+password), "username": username, "password": password }))
+  localStorage.setItem(
+    'user',
+    JSON.stringify({
+      authdata: btoa(username + ':' + password),
+      username: username,
+      password: password
+    })
+  )
 }
