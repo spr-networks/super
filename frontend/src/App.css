@@ -6,9 +6,19 @@ li ul li .sidebar-mini-icon > .fa {
   margin-left: 5px;
 }
 
+/* TODO smtg like this
+.sidebar-mini .sidebar-normal { text-align: center }
+*/
+
 .card-stats .icon-big {
 	font-size: 5.0em;
 	margin-top: -20px;
 	min-height: 64px;
 }
 
+.react-tagsinput .react-tagsinput-tag {
+	transition: all 300ms ease 0s;
+	transition: none !important;
+	border-color: #66615B;
+	background-color: #66615B;
+}
