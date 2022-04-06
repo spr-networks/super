@@ -1,15 +1,3 @@
-const authHeaders = () => {
-  //return 'Basic ' +  btoa(username+":"+password)
-  // return authorization header with basic auth credentials
-  let user = JSON.parse(localStorage.getItem('user'))
-
-  if (user && user.authdata) {
-    return 'Basic ' + user.authdata
-  } else {
-    return ''
-  }
-}
-
 const apiURL = () => {
   const { REACT_APP_API } = process.env
   if (REACT_APP_API) {
@@ -19,9 +7,7 @@ const apiURL = () => {
       return url.toString()
     } catch (e) {
       // REACT_APP_API=mock -- dont load in prod
-      let MockAPI = import('../api/MockAPI').then((m) =>
-        m.default()
-      )
+      let MockAPI = import('../api/MockAPI').then((m) => m.default())
       return '/'
     }
   }
@@ -30,14 +16,31 @@ const apiURL = () => {
 //request helper
 class API {
   baseURL = ''
+  authHeaders = ''
 
   constructor(baseURL = '') {
     this.baseURL = apiURL() + baseURL.replace(/^\/+/, '')
+    this.authHeaders = this.getAuthHeaders()
+  }
+
+  // reads from localStorage if no username provided
+  getAuthHeaders(username = null, password = null) {
+    if (username && password) {
+      return
+      'Basic ' + Buffer.from(username + ':' + password).toString('base64')
+    }
+
+    let user = JSON.parse(localStorage.getItem('user'))
+    if (user && user.authdata) {
+      return 'Basic ' + user.authdata
+    } else {
+      return ''
+    }
   }
 
   request(method = 'GET', url, body) {
     let headers = {
-      Authorization: authHeaders(),
+      Authorization: this.getAuthHeaders(),
       'X-Requested-With': 'react',
       'Content-Type': 'application/json'
     }
@@ -63,7 +66,8 @@ class API {
       }
 
       let _url = `${baseURL}${url}`
-      console.log('[API] fetch', _url)
+      console.log('[API] fetch', _url, 'Authorization:', this.authHeaders)
+
       fetch(_url, opts)
         .then((response) => {
           if (!response.ok) {
