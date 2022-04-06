@@ -41,23 +41,13 @@ const TimeSeries = (props) => {
   }
 
   const handleClientChange = (selectedIPs) => {
-    //this.setState({ selectedIPs })
     let ips = selectedIPs.map((item) => item.value)
     setFilterIPs(ips)
   }
 
   const handleClientClick = (ip, datapoint) => {
-    /*
-    const { x: ts } = datapoint
-    let d = new Date(ts)
-    let filterText = d.toISOString()
-    filterText += '-' + new Date(d.getTime() + 60 * 1e3).toISOString()
-    //this.props.history.push(`/admin/dnsLog/${ip}/${filterText}`)
-    */
-    console.log('updating client ip:', ip)
     setFilterIPs([ip])
     setView('table')
-    //props.handleClientClick(ip, datapoint)
   }
 
   return (

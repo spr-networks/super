@@ -1,5 +1,4 @@
 import React, { useContext, Component } from 'react'
-import { withRouter } from 'react-router'
 import { trafficAPI } from 'api/Traffic'
 import { deviceAPI } from 'api/Device'
 import { APIErrorContext } from 'layouts/Admin.js'
@@ -174,14 +173,6 @@ class TrafficTimeSeries extends Component {
       })
     }
 
-    const handleClientClick = (ip, datapoint) => {
-      const { x: ts } = datapoint
-      let d = new Date(ts)
-      let filterText = d.toISOString()
-      filterText += '-' + new Date(d.getTime() + 60 * 1e3).toISOString()
-      this.props.history.push(`/admin/dnsLog/${ip}/${filterText}`)
-    }
-
     const prettyTitle = (type) => {
       return {
         WanIn: 'WAN incoming',
@@ -200,7 +191,6 @@ class TrafficTimeSeries extends Component {
               title={prettyTitle(type)}
               data={this.state[type]}
               handleTimeChange={handleTimeChange}
-              handleClientClick={handleClientClick}
             />
           )
         })}
@@ -209,6 +199,4 @@ class TrafficTimeSeries extends Component {
   }
 }
 
-const TrafficTimeSeriesWithRouter = withRouter(TrafficTimeSeries)
-
-export default TrafficTimeSeriesWithRouter
+export default TrafficTimeSeries
