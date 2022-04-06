@@ -19,7 +19,21 @@ class ClientSelect extends Component {
     this.props.onChange(newValue, actionMeta)
   }
 
+  updateValue(newValue) {
+    let defaultValues = Array.isArray(newValue) ? newValue : [newValue]
+
+    let value = []
+    for (let o of this.state.options) {
+      if (defaultValues.includes(o.value)) {
+        value.push(o)
+      }
+    }
+
+    this.setState({ value })
+  }
+
   async componentDidMount() {
+    console.log('[clientsel] component mount')
     let devices = []
     try {
       devices = await deviceAPI.list()
@@ -42,20 +56,15 @@ class ClientSelect extends Component {
 
     // set default value
     if (this.props.value) {
-      let defaultValues = Array.isArray(this.props.value)
-        ? this.props.value
-        : [this.props.value]
-
-      let value = []
-      for (let o of options) {
-        if (defaultValues.includes(o.value)) {
-          value.push(o)
-        }
-      }
-
-      this.setState({ value })
+      this.updateValue(this.props.value)
     } else if (!this.props.isMulti) {
       this.setState({ value: { label: 'All Clients', value: '*' } })
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.value != this.props.value) {
+      this.updateValue(this.props.value)
     }
   }
 
