@@ -6,7 +6,7 @@ import { APIErrorContext } from 'layouts/Admin.js'
 //import 'chartjs-adapter-moment'
 import chroma from 'chroma-js'
 
-import TimeSeries from 'components/Charts/TimeSeries'
+import TimeSeries from 'components/Traffic/TimeSeries'
 
 class TrafficTimeSeries extends Component {
   state = {
@@ -67,28 +67,6 @@ class TrafficTimeSeries extends Component {
     }
 
     let ips = Object.keys(ipStats)
-
-    /*
-    //calculate total changed per step in first pass
-    let deltaSlices = []
-    for (let idx = 0; idx < traffic_data.length; idx++) {
-      let delta = 0
-      for (let ip of ips) {
-        if (
-          !traffic_data[idx][ip] ||
-          !traffic_data[idx + 1] ||
-          !traffic_data[idx + 1][ip]
-        ) {
-        } else {
-          // = this-next
-          delta +=
-            traffic_data[idx][ip][target] - traffic_data[idx + 1][ip][target]
-        }
-      }
-
-      deltaSlices.push(delta)
-    }
-    */
 
     // set ipstats[ip] = [ { x, y, z }, ... ]
     let date = new Date()
@@ -215,7 +193,7 @@ class TrafficTimeSeries extends Component {
 
     return (
       <div className="content">
-        {['WanIn', 'WanOut' /*, 'LanIn', 'LanOut',*/].map((type) => {
+        {['WanOut', 'WanIn' /*, 'LanIn', 'LanOut',*/].map((type) => {
           return (
             <TimeSeries
               type={type}
