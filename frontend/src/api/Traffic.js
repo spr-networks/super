@@ -1,4 +1,4 @@
-import API from './index'
+import API from './API'
 
 export class APITraffic extends API {
   constructor() {

@@ -1,4 +1,4 @@
-import API from './index'
+import API from './API'
 
 export class APIZone extends API {
   constructor() {
