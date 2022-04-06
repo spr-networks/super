@@ -1,6 +1,5 @@
 import React, { useContext, Component } from 'react'
-import { trafficAPI } from 'api/Traffic'
-import { deviceAPI } from 'api/Device'
+import { deviceAPI, trafficAPI } from 'api'
 import { APIErrorContext } from 'layouts/Admin.js'
 //import 'chartjs-adapter-moment'
 import chroma from 'chroma-js'
