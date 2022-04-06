@@ -1,9 +1,8 @@
-import {
-  testLogin,
-  saveLogin,
-  getDevices,
-  deleteDevice
-} from '../components/Helpers/Api.js'
+import { testLogin as testLoginOld } from '../components/Helpers/Api'
+import { saveLogin as saveLoginOld } from '../components/Helpers/Api'
+import { getDevices, deleteDevice } from '../components/Helpers/Api'
+
+import { api, testLogin, saveLogin } from 'api'
 
 describe('API Login', () => {
   test('fail login', () => {
