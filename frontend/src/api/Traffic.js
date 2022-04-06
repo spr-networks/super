@@ -5,12 +5,12 @@ export class APITraffic extends API {
     super('')
   }
 
-  traffic = (name) => {
+  traffic = (name = null) => {
     if (name) {
       return this.map(name)
     }
 
-    this.get('/iptraffic')
+    return this.get('/iptraffic')
   }
 
   map = (name) => this.get(`/traffic/${name}`)
