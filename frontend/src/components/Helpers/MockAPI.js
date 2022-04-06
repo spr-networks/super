@@ -391,6 +391,10 @@ export default function MockAPI() {
         }
       })
 
+      this.get('/plugins/dns/block/metrics', (schema, request) => {
+        return { TotalQueries: 65534, BlockedQueries: 4096 }
+      })
+
       this.get('/plugins/dns/block/blocklists', (schema, request) => {
         return schema.dnsblocklists.all().models
       })
