@@ -12,11 +12,31 @@ const TimeSeriesList = (props) => {
   // filter the list depending on the interface to match the type
   const filterType = (_list, type) => {
     return _list.filter((row) => {
-      if (type == 'WanIn' && row.Interface == 'wlan0') {
+      let regexLAN = /^192\.168\./
+      // src == lan && dst == lan
+      if (
+        type == 'LanIn' &&
+        row.Src.match(regexLAN) &&
+        row.Dst.match(regexLAN)
+      ) {
         return row
       }
 
-      if (type == 'WanOut' && row.Interface != 'wlan0') {
+      if (
+        type == 'LanOut' &&
+        row.Src.match(regexLAN) &&
+        row.Dst.match(regexLAN)
+      ) {
+        return row
+      }
+
+      //if (type == 'WanIn' && row.Interface == 'wlan0') {
+      if (type == 'WanIn' && row.Dst.match(regexLAN)) {
+        return row
+      }
+
+      //if (type == 'WanOut' && row.Interface != 'wlan0') {
+      if (type == 'WanOut' && row.Src.match(regexLAN)) {
         return row
       }
     })
@@ -47,7 +67,8 @@ const TimeSeriesList = (props) => {
   // filter by ip
   if (props.ips && props.ips.length) {
     let ips = props.ips
-    listFiltered = listFiltered.filter((row) => ips.includes(row.Src))
+    let field = props.type.match(/Out$/) ? 'Src' : 'Dst'
+    listFiltered = listFiltered.filter((row) => ips.includes(row[field]))
   }
 
   // filter by date

@@ -193,7 +193,7 @@ class TrafficTimeSeries extends Component {
 
     return (
       <div className="content">
-        {['WanOut', 'WanIn' /*, 'LanIn', 'LanOut',*/].map((type) => {
+        {['WanOut', 'WanIn', 'LanIn', 'LanOut'].map((type) => {
           return (
             <TimeSeries
               type={type}
