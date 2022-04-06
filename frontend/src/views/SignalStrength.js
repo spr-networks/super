@@ -160,7 +160,6 @@ export default class SignalStrength extends Component {
         }
       })
     }
-    console.log(data)
 
     return data
   }
