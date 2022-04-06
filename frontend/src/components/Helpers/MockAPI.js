@@ -240,15 +240,29 @@ export default function MockAPI() {
       })
 
       this.get('/iptraffic', (schema) => {
-        return [
-          {
-            Interface: 'wlan1',
-            Src: '192.168.2.101',
-            Dst: '192.168.2.102',
-            Packets: 1024,
-            Bytes: 4096
+        const rIP = () => `${r(255)}.${r(255)}.${r(255)}.${r(255)}`
+        const rInterface = () => rpick(['wlan0', 'wlan.4096', 'wlan.4097'])
+
+        let ips = schema.devices.all().models.map((dev) => dev.RecentIP)
+
+        let result = []
+        for (let x = 0; x < 1024; x++) {
+          let Interface = rInterface()
+          let Src = rpick(ips)
+          let Dst = ['wlan0'].includes(Interface) ? rpick(ips) : rIP()
+
+          let row = {
+            Interface,
+            Src,
+            Dst,
+            Packets: r(4096),
+            Bytes: r(1e6)
           }
-        ]
+
+          result.push(row)
+        }
+
+        return result
       })
 
       this.get('/traffic/incoming_traffic_wan', (schema) => {
