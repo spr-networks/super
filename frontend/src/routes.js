@@ -22,41 +22,26 @@ const routes = [
     layout: '/admin'
   },
   {
-    collapse: true,
     name: 'Devices',
-    icon: 'nc-icon nc-laptop',
-    state: 'devicesCollapse',
-    views: [
-      {
-        path: '/devices',
-        name: 'List',
-        icon: 'fa fa-laptop',
-        component: Devices,
-        layout: '/admin'
-      },
-      {
-        path: '/add_device',
-        name: 'Add WiFi Device',
-        icon: 'fa fa-plus-square',
-        component: AddDevice,
-        layout: '/admin'
-      }
-    ]
+    icon: 'fa fa-laptop',
+    path: '/devices',
+    component: Devices,
+    layout: '/admin'
   },
   {
-    collapse: true,
-    name: 'Wireless Settings',
-    icon: 'nc-icon nc-settings',
-    state: 'wirelessCollapse',
-    views: [
-      {
-        path: '/wireless',
-        name: 'Wireless',
-        icon: 'fa fa-wifi',
-        component: WirelessConfiguration,
-        layout: '/admin'
-      }
-    ]
+    layout: '/admin',
+    path: '/add_device',
+    redirect: true,
+    name: 'Add WiFi Device',
+    icon: 'fa fa-plus-square',
+    component: AddDevice
+  },
+  {
+    path: '/wireless',
+    name: 'Wifi',
+    icon: 'fa fa-wifi',
+    component: WirelessConfiguration,
+    layout: '/admin'
   },
   {
     collapse: true,
