@@ -6,6 +6,7 @@ import { Bar } from 'react-chartjs-2'
 import { deviceAPI, trafficAPI, wifiAPI } from 'api'
 import DateRange from 'components/DateRange'
 import { APIErrorContext } from 'layouts/Admin'
+import { prettySize } from 'utils'
 
 import {
   Card,
@@ -13,12 +14,11 @@ import {
   CardBody,
   CardFooter,
   CardTitle,
+  CardSubtitle,
+  List,
+  ListInlineItem,
   Row,
-  Col,
-  UncontrolledDropdown,
-  DropdownToggle,
-  DropdownMenu,
-  DropdownItem
+  Col
 } from 'reactstrap'
 
 export default class Traffic extends Component {
@@ -144,14 +144,14 @@ export default class Traffic extends Component {
       })
 
       let recent_reading = traffic_series[0]
-      let offset = 0
-      if (scale == '1 Hour') {
-        offset = 60 - 1
-      } else if (scale == '1 Day') {
-        offset = 60 * 24 - 1
-      } else if (scale == '15 Minutes') {
-        offset = 15 - 1
+
+      const scaleOffset = {
+        '1 Hour': 60 - 1,
+        '1 Day': 60 * 24 - 1,
+        '15 Minutes': 15 - 1
       }
+
+      let offset = scaleOffset[scale] || 0
 
       if (offset >= traffic_series.length) {
         offset = traffic_series.length - 1
@@ -228,9 +228,16 @@ export default class Traffic extends Component {
         legend: {
           display: false
         },
-
         tooltip: {
+          intersect: false,
+          position: 'nearest',
+          caretSize: 5,
           callbacks: {
+            label: (context) => {
+              let label = context.dataset.label || ''
+              let sz = `${context.raw.toFixed(2)} MB`
+              return `${label}: ${sz}`
+            },
             beforeBody: (TooltipItems, object) => {
               let ip = TooltipItems[0].label
               let label = ''
@@ -246,25 +253,6 @@ export default class Traffic extends Component {
               return label
             }
           }
-        },
-
-        tooltips: {
-          tooltipFillColor: 'rgba(0,0,0,0.5)',
-          tooltipFontFamily:
-            "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
-          tooltipFontSize: 14,
-          tooltipFontStyle: 'normal',
-          tooltipFontColor: '#fff',
-          tooltipTitleFontFamily:
-            "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
-          tooltipTitleFontSize: 14,
-          tooltipTitleFontStyle: 'bold',
-          tooltipTitleFontColor: '#fff',
-          tooltipYPadding: 6,
-          tooltipXPadding: 6,
-          tooltipCaretSize: 8,
-          tooltipCornerRadius: 6,
-          tooltipXOffset: 10
         }
       },
       scales: {
@@ -272,7 +260,6 @@ export default class Traffic extends Component {
           min: 0.01,
           type: 'logarithmic',
           ticks: {
-            /* callback: (a,b,c) => {}, */
             callback: function (value, index, values) {
               return value + 'MB'
             },
@@ -320,21 +307,17 @@ export default class Traffic extends Component {
               <CardHeader>
                 <Row>
                   <Col md="10">
-                    <CardTitle tag="h4">
-                      Device WAN Traffic ⸺ {this.state.wan_scale} ⸺ IN:{' '}
-                      {parseFloat(
-                        this.state.wan
-                          ? this.state.wan.totalIn / 1024 / 1024 / 1024
-                          : 0
-                      ).toFixed(2)}{' '}
-                      GB OUT:{' '}
-                      {parseFloat(
-                        this.state.wan
-                          ? this.state.wan.totalOut / 1024 / 1024 / 1024
-                          : 0
-                      ).toFixed(2)}{' '}
-                      GB
-                    </CardTitle>
+                    <CardTitle tag="h4">Device WAN Traffic</CardTitle>
+                    <CardSubtitle className="mb-2 text-muted" tag="h6">
+                      <List type="inline">
+                        <ListInlineItem>
+                          IN: {prettySize(this.state.wan.totalIn)}
+                        </ListInlineItem>
+                        <ListInlineItem>
+                          OUT: {prettySize(this.state.wan.totalOut)}
+                        </ListInlineItem>
+                      </List>
+                    </CardSubtitle>
                   </Col>
                   <Col md="2" className="pt-2">
                     <DateRange
@@ -360,21 +343,17 @@ export default class Traffic extends Component {
               <CardHeader>
                 <Row>
                   <Col md="10">
-                    <CardTitle tag="h4">
-                      Device LAN Traffic ⸺ {this.state.lan_scale} ⸺ IN:{' '}
-                      {parseFloat(
-                        this.state.lan
-                          ? this.state.lan.totalIn / 1024 / 1024 / 1024
-                          : 0
-                      ).toFixed(2)}{' '}
-                      GB OUT:{' '}
-                      {parseFloat(
-                        this.state.lan
-                          ? this.state.lan.totalOut / 1024 / 1024 / 1024
-                          : 0
-                      ).toFixed(2)}{' '}
-                      GB
-                    </CardTitle>
+                    <CardTitle tag="h4">Device LAN Traffic</CardTitle>
+                    <CardSubtitle className="mb-2 text-muted" tag="h6">
+                      <List type="inline">
+                        <ListInlineItem>
+                          IN: {prettySize(this.state.wan.totalIn)}
+                        </ListInlineItem>
+                        <ListInlineItem>
+                          OUT: {prettySize(this.state.wan.totalOut)}
+                        </ListInlineItem>
+                      </List>
+                    </CardSubtitle>
                   </Col>
                   <Col md="2" className="pt-2">
                     <DateRange
