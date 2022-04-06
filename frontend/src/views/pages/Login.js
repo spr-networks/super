@@ -14,11 +14,11 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 */
-import React from "react";
-import { useState } from "react";
-import { authHeader, saveLogin, testLogin } from "components/Helpers/Api.js";
-import NotificationAlert from "react-notification-alert";
-import { Redirect } from "react-router-dom";
+import React from 'react'
+import { useState } from 'react'
+import { authHeader, saveLogin, testLogin } from 'api'
+import NotificationAlert from 'react-notification-alert'
+import { Redirect } from 'react-router-dom'
 
 // reactstrap components
 import {
@@ -36,75 +36,67 @@ import {
   InputGroup,
   Container,
   Col,
-  Row,
-} from "reactstrap";
+  Row
+} from 'reactstrap'
 
 function Login() {
-
-
   React.useEffect(() => {
-    document.body.classList.toggle("login-page");
+    document.body.classList.toggle('login-page')
     return function cleanup() {
-      document.body.classList.toggle("login-page");
-    };
-  });
+      document.body.classList.toggle('login-page')
+    }
+  })
 
-  let formRef= React.createRef();
+  let formRef = React.createRef()
 
-
-  const notificationAlert = React.useRef();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [loggedIn, setLoggedin] = useState(false);
-
+  const notificationAlert = React.useRef()
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [loggedIn, setLoggedin] = useState(false)
 
   const notifyWrongLogin = () => {
-    var options = {};
+    var options = {}
     options = {
-      place: "tc",
+      place: 'tc',
       message: (
         <div>
-          <div>
-            Failed to sign in
-          </div>
+          <div>Failed to sign in</div>
         </div>
       ),
-      type: "danger",
-      icon: "now-ui-icons ui-1_bell-53",
-      autoDismiss: 7,
-    };
-    notificationAlert.current.notificationAlert(options);
-
+      type: 'danger',
+      icon: 'now-ui-icons ui-1_bell-53',
+      autoDismiss: 7
+    }
+    notificationAlert.current.notificationAlert(options)
   }
 
   const handleLogin = (e) => {
-    e.preventDefault();
+    e.preventDefault()
 
-    testLogin(username, password, function(success){
+    testLogin(username, password, function (success) {
       if (success) {
         saveLogin(username, password)
         setLoggedin(true)
       } else {
         //alert that the password was wrong
-        notifyWrongLogin();
+        notifyWrongLogin()
       }
     })
-
-  };
+  }
 
   const handleKeyPress = (target) => {
-    if(target.charCode==13){
+    if (target.charCode == 13) {
       handleLogin(target)
     }
   }
 
   if (loggedIn) {
-    return <Redirect to='/admin/home' />
+    return <Redirect to="/admin/home" />
   }
 
   return (
     <div className="login-page">
-    <NotificationAlert ref={notificationAlert} />
+      <NotificationAlert ref={notificationAlert} />
       <Container>
         <Row>
           <Col className="ml-auto mr-auto" lg="4" md="6">
@@ -122,7 +114,12 @@ function Login() {
                         <i className="nc-icon nc-single-02" />
                       </InputGroupText>
                     </InputGroupAddon>
-                    <Input placeholder="Username..." type="text" value={username} onChange={(e) => setUsername(e.target.value)}/>
+                    <Input
+                      placeholder="Username..."
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                    />
                   </InputGroup>
                   <InputGroup>
                     <InputGroupAddon addonType="prepend">
@@ -134,7 +131,9 @@ function Login() {
                       placeholder="Password"
                       type="password"
                       autoComplete="off"
-                      value={password} onChange={(e) => setPassword(e.target.value)} onKeyPress={handleKeyPress}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onKeyPress={handleKeyPress}
                     />
                   </InputGroup>
                 </CardBody>
@@ -157,13 +156,11 @@ function Login() {
       <div
         className="full-page-background"
         style={{
-          backgroundImage: `url(${
-            require("assets/img/bg/bg.jpg")
-          })`,
+          backgroundImage: `url(${require('assets/img/bg/bg.jpg')})`
         }}
       />
     </div>
-  );
+  )
 }
 
-export default Login;
+export default Login
