@@ -1,7 +1,9 @@
+import { withRouter } from 'react-router'
+import { Link } from 'react-router-dom'
 import { deviceAPI } from 'api/Device'
-import { Component } from "react";
-import Device from "components/Devices/Device.js"
-import {APIErrorContext} from 'layouts/Admin.js';
+import { Component } from 'react'
+import Device from 'components/Devices/Device.js'
+import { APIErrorContext } from 'layouts/Admin.js'
 import React, { useContext } from 'react'
 
 // reactstrap components
@@ -17,50 +19,59 @@ import {
   Input,
   Table,
   Row,
-  Col,
-  UncontrolledTooltip,
-} from "reactstrap";
+  Col
+} from 'reactstrap'
 
-export default class DeviceListing extends Component {
+class DeviceListing extends Component {
+  state = { devices: {}, deviceRows: [], editMode: true }
 
-  state = { devices : {}, deviceRows: [] };
+  static contextType = APIErrorContext
 
-  async componentDidMount() {
-
-    const setState = (v) => {
-      this.setState(v)
-    }
-
-    async function refreshDevices() {
-      const d = await deviceAPI.list().catch(error => {
-        this.context.reportError("API Failure: " + error.message)
-      })
-
-      if (d) {
-        let divs = []
-        Object.keys(d).forEach(function(v) {
-              const generatedID = Math.random().toString(36).substr(2, 9);
-
-              divs.push( <Device key={generatedID} device={d[v]} notifyChange={notifyChange} /> )
-           });
-
-        setState({ devices: d, deviceRows: divs })
-      }
-    }
-
-    const notifyChange = () => {
-      refreshDevices()
-    }
-
-    refreshDevices = refreshDevices.bind(this)
-    refreshDevices()
-
+  constructor(props) {
+    super(props)
+    this.state = { editMode: true }
+    this.refreshDevices = this.refreshDevices.bind(this)
+    this.handleClick = this.handleClick.bind(this)
   }
 
-  static contextType = APIErrorContext;
+  async refreshDevices() {
+    const d = await deviceAPI.list().catch((error) => {
+      this.context.reportError('API Failure: ' + error.message)
+    })
+
+    const notifyChange = () => {
+      this.refreshDevices()
+    }
+
+    if (d) {
+      let divs = []
+      Object.keys(d).forEach((v) => {
+        const generatedID = Math.random().toString(36).substr(2, 9)
+
+        divs.push(
+          <Device
+            editMode={this.state.editMode}
+            key={generatedID}
+            device={d[v]}
+            notifyChange={notifyChange}
+          />
+        )
+      })
+
+      this.setState({ devices: d, deviceRows: divs })
+    }
+  }
+
+  componentDidMount() {
+    this.refreshDevices()
+  }
+
+  handleClick(e) {
+    //console.log('[mode]', this.state.editMode, '->', !this.state.editMode)
+    this.setState({ editMode: !this.state.editMode })
+  }
 
   render() {
-
     return (
       <div>
         {this.state.alert}
@@ -68,7 +79,27 @@ export default class DeviceListing extends Component {
           <Col md="12">
             <Card>
               <CardHeader>
-                <CardTitle tag="h4">Configured Devices</CardTitle>
+                <Row>
+                  <Col md="8">
+                    <CardTitle tag="h4">Configured Devices</CardTitle>
+                  </Col>
+                  <Col md="4" className="text-right">
+                    {/*<Button
+                      className="btn-round"
+                      color="warning"
+                      outline
+                      onClick={this.handleClick}
+                    >
+                      <i className="fa fa-edit" /> Edit
+                    </Button>*/}
+                    <Link to="/admin/add_device">
+                      <Button className="btn-round" color="primary" outline>
+                        <i className="fa fa-plus" />
+                        Add
+                      </Button>
+                    </Link>
+                  </Col>
+                </Row>
               </CardHeader>
               <CardBody>
                 <Table responsive>
@@ -83,9 +114,7 @@ export default class DeviceListing extends Component {
                       <th className="text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    { this.state.deviceRows }
-                  </tbody>
+                  <tbody>{this.state.deviceRows}</tbody>
                 </Table>
               </CardBody>
             </Card>
@@ -95,3 +124,6 @@ export default class DeviceListing extends Component {
     )
   }
 }
+
+const DeviceListingWithRouter = withRouter(DeviceListing)
+export default DeviceListingWithRouter
