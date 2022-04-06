@@ -33,7 +33,6 @@ class ClientSelect extends Component {
   }
 
   async componentDidMount() {
-    console.log('[clientsel] component mount')
     let devices = []
     try {
       devices = await deviceAPI.list()
