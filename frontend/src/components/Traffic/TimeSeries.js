@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react'
 import PropTypes from 'prop-types'
 import Select from 'react-select'
 
-import ClientSelect from 'components/Helpers/ClientSelect'
+import ClientSelect from 'components/ClientSelect'
 import TimeSeriesChart from 'components/Traffic/TimeSeriesChart'
 import TimeSeriesList from 'components/Traffic/TimeSeriesList'
 

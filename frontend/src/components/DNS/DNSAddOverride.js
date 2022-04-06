@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { APIErrorContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
-import ClientSelect from 'components/Helpers/ClientSelect'
+import ClientSelect from 'components/ClientSelect'
 
 import {
   Button,

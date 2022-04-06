@@ -4,7 +4,7 @@ import { withRouter } from 'react-router'
 import ReactBSAlert from 'react-bootstrap-sweetalert'
 
 import { APIErrorContext } from 'layouts/Admin'
-import ClientSelect from 'components/Helpers/ClientSelect'
+import ClientSelect from 'components/ClientSelect'
 import { logAPI } from 'api/DNS'
 import { prettyDate } from 'utils'
 

@@ -1,6 +1,6 @@
 import React from 'react'
 import { cleanup, fireEvent, render } from '@testing-library/react'
-import ClientSelect from 'components/Helpers/ClientSelect'
+import ClientSelect from 'components/ClientSelect'
 
 afterEach(cleanup)
 
