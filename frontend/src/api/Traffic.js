@@ -5,6 +5,7 @@ export class APITraffic extends API {
     super('')
   }
 
+  traffic = () => this.get('/iptraffic')
   history = () => this.get('/traffic_history')
   map = (name) => this.get(`/traffic/${name}`)
 }
