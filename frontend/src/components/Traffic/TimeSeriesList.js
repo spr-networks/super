@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
-import { trafficAPI } from 'api/Traffic'
+import { trafficAPI } from 'api'
 import { prettyDate, prettySize } from 'utils'
 
 import { Table, Row, Col } from 'reactstrap'
