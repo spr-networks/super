@@ -1,6 +1,8 @@
 
 /* mini icons in sidebar */
-.sidebar-mini-icon > .fa {
+
+/* submenu icons */
+li ul li .sidebar-mini-icon > .fa {
   margin-left: 5px;
 }
 
