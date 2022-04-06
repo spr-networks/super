@@ -27,20 +27,24 @@ class API {
   getAuthHeaders(username = null, password = null) {
     if (username && password) {
       return
-      'Basic ' + Buffer.from(username + ':' + password).toString('base64')
+      'Basic ' + btoa(username + ':' + password)
     }
 
     let user = JSON.parse(localStorage.getItem('user'))
-    if (user && user.authdata) {
-      return 'Basic ' + user.authdata
-    } else {
-      return ''
-    }
+    return user && user.authdata ? 'Basic ' + user.authdata : ''
+  }
+
+  setAuthHeaders(username = '', password = '') {
+    this.authHeaders = 'Basic ' + btoa(username + ':' + password)
   }
 
   request(method = 'GET', url, body) {
+    if (!this.authHeaders) {
+      this.authHeaders = this.getAuthHeaders()
+    }
+
     let headers = {
-      Authorization: this.getAuthHeaders(),
+      Authorization: this.authHeaders,
       'X-Requested-With': 'react',
       'Content-Type': 'application/json'
     }
@@ -66,7 +70,7 @@ class API {
       }
 
       let _url = `${baseURL}${url}`
-      console.log('[API] fetch', _url, 'Authorization:', this.authHeaders)
+      //console.log('[API] fetch', _url, 'Authorization:', this.authHeaders)
 
       fetch(_url, opts)
         .then((response) => {
@@ -106,3 +110,24 @@ class API {
 
 export default API
 export const api = new API()
+
+export const testLogin = (username, password, callback) => {
+  api.setAuthHeaders(username, password)
+  api
+    .get('/status')
+    .then((data) => {
+      return callback(data == 'Online')
+    })
+    .catch((error) => callback(false, error))
+}
+
+export const saveLogin = (username, password) => {
+  localStorage.setItem(
+    'user',
+    JSON.stringify({
+      authdata: btoa(username + ':' + password),
+      username: username,
+      password: password
+    })
+  )
+}
