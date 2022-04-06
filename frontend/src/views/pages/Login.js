@@ -16,7 +16,7 @@
 */
 import React from 'react'
 import { useState } from 'react'
-import { authHeader, saveLogin, testLogin } from 'api'
+import { saveLogin, testLogin } from 'api'
 import NotificationAlert from 'react-notification-alert'
 import { Redirect } from 'react-router-dom'
 
