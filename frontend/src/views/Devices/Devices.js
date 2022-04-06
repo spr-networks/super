@@ -1,34 +1,14 @@
-import React from "react";
-import DeviceListing from "components/Devices/DeviceListing.js"
+import React from 'react'
+import DeviceListing from 'components/Devices/DeviceListing'
 
-// reactstrap components
-import {
-  Badge,
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  CardTitle,
-  Label,
-  FormGroup,
-  Input,
-  Table,
-  Row,
-  Col,
-  UncontrolledTooltip,
-} from "reactstrap";
-
-
-function Devices() {
-
+const Devices = (props) => {
   return (
     <>
       <div className="content">
         <DeviceListing />
       </div>
     </>
-  );
+  )
 }
 
-export default Devices;
+export default Devices
