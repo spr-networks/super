@@ -23,15 +23,13 @@ import {
 } from 'reactstrap'
 
 class DeviceListing extends Component {
-  state = { devices: {}, deviceRows: [], editMode: true }
+  state = { devices: {}, deviceRows: [] }
 
   static contextType = APIErrorContext
 
   constructor(props) {
     super(props)
-    this.state = { editMode: true }
     this.refreshDevices = this.refreshDevices.bind(this)
-    this.handleClick = this.handleClick.bind(this)
   }
 
   async refreshDevices() {
@@ -49,12 +47,7 @@ class DeviceListing extends Component {
         const generatedID = Math.random().toString(36).substr(2, 9)
 
         divs.push(
-          <Device
-            editMode={this.state.editMode}
-            key={generatedID}
-            device={d[v]}
-            notifyChange={notifyChange}
-          />
+          <Device key={generatedID} device={d[v]} notifyChange={notifyChange} />
         )
       })
 
@@ -64,11 +57,6 @@ class DeviceListing extends Component {
 
   componentDidMount() {
     this.refreshDevices()
-  }
-
-  handleClick(e) {
-    //console.log('[mode]', this.state.editMode, '->', !this.state.editMode)
-    this.setState({ editMode: !this.state.editMode })
   }
 
   render() {
@@ -84,14 +72,6 @@ class DeviceListing extends Component {
                     <CardTitle tag="h4">Configured Devices</CardTitle>
                   </Col>
                   <Col md="4" className="text-right">
-                    {/*<Button
-                      className="btn-round"
-                      color="warning"
-                      outline
-                      onClick={this.handleClick}
-                    >
-                      <i className="fa fa-edit" /> Edit
-                    </Button>*/}
                     <Link to="/admin/add_device">
                       <Button className="btn-round" color="primary" outline>
                         <i className="fa fa-plus" />
@@ -105,13 +85,17 @@ class DeviceListing extends Component {
                 <Table responsive>
                   <thead className="text-primary">
                     <tr>
-                      <th className="text-center">MAC</th>
-                      <th className="d-none d-md-table-cell">IP</th>
-                      <th>Name</th>
-                      <th>Auth</th>
-                      <th>Zones</th>
-                      <th>Tags</th>
-                      <th className="text-right">Actions</th>
+                      <th width="20%">Name</th>
+                      <th width="15%" className="text-center">
+                        IP/MAC
+                      </th>
+                      {/*<th className="d-none d-md-table-cell">IP</th>*/}
+                      <th width="7%">Auth</th>
+                      <th width="25%">Zones</th>
+                      <th width="25%">Tags</th>
+                      <th width="8%" className="text-right">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>{this.state.deviceRows}</tbody>

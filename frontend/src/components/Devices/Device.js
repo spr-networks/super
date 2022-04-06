@@ -1,8 +1,14 @@
 import { Component } from 'react'
 import { APIErrorContext } from 'layouts/Admin'
 import { deviceAPI } from 'api/Device'
-import { Button, Input, UncontrolledTooltip } from 'reactstrap'
-import Select from 'react-select'
+import {
+  Badge,
+  Button,
+  ButtonGroup,
+  Input,
+  UncontrolledTooltip
+} from 'reactstrap'
+import CreatableSelect from 'react-select/creatable'
 import TagsInput from 'react-tagsinput'
 
 export default class Device extends Component {
@@ -10,7 +16,14 @@ export default class Device extends Component {
     editing: false,
     name: '',
     zones: [],
-    tags: []
+    tags: [],
+    allTags: [
+      { label: 'private', value: 'private' },
+      { label: 'foo', value: 'foo' },
+      { label: 'dns', value: 'dns' },
+      { label: 'lan', value: 'lan' },
+      { label: 'wan', value: 'wan' }
+    ]
   }
 
   async componentDidMount() {
@@ -36,6 +49,10 @@ export default class Device extends Component {
       .catch((error) =>
         this.context.reportError('[API] updateDevice error: ' + error.message)
       )
+  }
+
+  handleChangeTags = (tags) => {
+    this.setState({ tags })
   }
 
   handleTags = (tags) => {
@@ -95,24 +112,48 @@ export default class Device extends Component {
       }
     }
 
-    if (!this.props.editMode) {
+    if (false) {
       return (
         <tr>
-          <td className="text-center"> {device.MAC} </td>
-          <td className="d-none d-md-table-cell"> {device.RecentIP} </td>
           <td>{this.state.name}</td>
+          <td className="text-center">
+            <div>{device.RecentIP}</div>
+            <div className="text-muted">
+              <small>{device.MAC}</small>
+            </div>
+          </td>
+          {/*<td className="d-none d-md-table-cell"> {device.RecentIP} </td>*/}
           <td>{wifi_type}</td>
-          <td>{this.state.zones}</td>
-          <td>{this.state.tags}</td>
-          <td>edit: {JSON.stringify(this.props.editMode)}</td>
+          <td>
+            {this.state.zones.map((zone) => (
+              <Badge color="default">{zone}</Badge>
+            ))}
+          </td>
+          <td>
+            {this.state.tags.map((tag) => (
+              <Badge color="default">{tag}</Badge>
+            ))}
+          </td>
+          <td className="text-right">
+            <Button className="btn-icon" color="warning" size="sm">
+              <i className="fa fa-edit" />
+            </Button>
+            <Button
+              className="btn-icon"
+              color="danger"
+              id={'tooltip' + (generatedID + 1)}
+              size="sm"
+              onClick={removeDevice}
+            >
+              <i className="fa fa-times" />
+            </Button>
+          </td>
         </tr>
       )
     }
 
     return (
       <tr>
-        <td className="text-center"> {device.MAC} </td>
-        <td className="d-none d-md-table-cell"> {device.RecentIP} </td>
         <td>
           <Input
             type="text"
@@ -122,10 +163,26 @@ export default class Device extends Component {
             value={this.state.name}
             onChange={this.handleName}
             onKeyPress={handleKeyPress}
+            size="10"
           />
         </td>
+        <td className="text-center">
+          <div>{device.RecentIP}</div>
+          <div className="text-muted">
+            <small>{device.MAC}</small>
+          </div>
+        </td>
+
         <td> {wifi_type} </td>
         <td>
+          {/*<CreatableSelect
+            isClearable
+            isMulti
+            onChange={this.handleChangeTags}
+            options={this.state.allTags}
+            placeholder="Zones"
+            defaultValue={this.state.allTags.slice(2, 5)}
+          />*/}
           <TagsInput
             inputProps={{ placeholder: 'Add zone' }}
             value={this.state.zones}
@@ -134,6 +191,14 @@ export default class Device extends Component {
           />
         </td>
         <td>
+          {/*<CreatableSelect
+            isClearable
+            isMulti
+            onChange={this.handleChangeTags}
+            options={this.state.allTags}
+            placeholder="Tags"
+            defaultValue={this.state.allTags[0]}
+          />*/}
           <TagsInput
             inputProps={{ placeholder: 'Add tag' }}
             value={this.state.tags}
@@ -147,11 +212,10 @@ export default class Device extends Component {
             color="danger"
             id={'tooltip' + (generatedID + 1)}
             size="sm"
-            type="button"
             onClick={removeDevice}
           >
             <i className="fa fa-times" />
-          </Button>{' '}
+          </Button>
           <UncontrolledTooltip delay={0} target={'tooltip' + (generatedID + 1)}>
             Delete
           </UncontrolledTooltip>
