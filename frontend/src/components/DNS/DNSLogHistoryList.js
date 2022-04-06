@@ -6,6 +6,7 @@ import ReactBSAlert from 'react-bootstrap-sweetalert'
 import { APIErrorContext } from 'layouts/Admin'
 import ClientSelect from 'components/Helpers/ClientSelect'
 import { logAPI } from 'api/DNS'
+import { prettyDate } from 'utils'
 
 import {
   Card,
@@ -190,13 +191,6 @@ export class DNSLogHistoryList extends React.Component {
   }
 
   render() {
-    const prettyDate = (timestamp) => {
-      return new Date(timestamp)
-        .toISOString()
-        .replace(/T|(\..*)/g, ' ')
-        .trim()
-    }
-
     const prettyType = (type) => {
       let keys = {
         NOERROR: 'text-success',
