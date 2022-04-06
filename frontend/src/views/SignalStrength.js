@@ -2,7 +2,8 @@ import React, { useContext, Component } from 'react'
 // react plugin used to create charts
 import { Chart as ChartJS } from 'chart.js/auto'
 import { Bar } from 'react-chartjs-2'
-import { hostapdAllStations, getArp, getDevices } from 'components/Helpers/Api'
+
+import { deviceAPI, wifiAPI } from 'api'
 import { APIErrorContext } from 'layouts/Admin'
 
 /*import {
@@ -41,7 +42,7 @@ export default class SignalStrength extends Component {
   }
 
   async fetchData() {
-    const stations = await hostapdAllStations().catch((error) => {
+    const stations = await wifiAPI.allStations().catch((error) => {
       this.context.reportError('API Failure get traffic: ' + error.message)
     })
 
@@ -61,7 +62,7 @@ export default class SignalStrength extends Component {
 
   async componentDidMount() {
     // this is for mac => ip lookup in tooltip
-    const arp = await getArp().catch((error) => {
+    const arp = await wifiAPI.arp().catch((error) => {
       this.context.reportError('API Failure get traffic: ' + error.message)
     })
 
@@ -75,7 +76,7 @@ export default class SignalStrength extends Component {
     }
 
     // get devices for mac => name lookup
-    const devices = await getDevices().catch((error) => {
+    const devices = await deviceAPI.list().catch((error) => {
       this.context.reportError('API Failure get traffic: ' + error.message)
     })
 

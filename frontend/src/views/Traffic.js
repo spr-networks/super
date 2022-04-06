@@ -2,12 +2,8 @@ import React, { useContext, Component } from 'react'
 // react plugin used to create charts
 import { Chart as ChartJS } from 'chart.js/auto'
 import { Bar } from 'react-chartjs-2'
-import {
-  getTraffic,
-  getTrafficHistory,
-  getArp,
-  getDevices
-} from 'components/Helpers/Api'
+
+import { deviceAPI, trafficAPI, wifiAPI } from 'api'
 import { APIErrorContext } from 'layouts/Admin'
 
 import {
@@ -37,13 +33,13 @@ export default class Traffic extends Component {
   ipToMac = {}
 
   async processTrafficHistory(target, scale) {
-    const devices = await getDevices().catch((error) => {
+    const devices = await deviceAPI.list().catch((error) => {
       this.context.reportError(
         'API Failure get ' + target + 'traffic: ' + error.message
       )
     })
 
-    const arp = await getArp().catch((error) => {
+    const arp = await wifiAPI.arp().catch((error) => {
       this.context.reportError(
         'API Failure get arp information: ' + error.message
       )
@@ -140,7 +136,7 @@ export default class Traffic extends Component {
     let do_time_series = scale != 'All Time'
 
     if (do_time_series) {
-      let traffic_series = await getTrafficHistory().catch((error) => {
+      let traffic_series = await trafficAPI.history().catch((error) => {
         this.context.reportError(
           'API Failure get traffic history: ' + error.message
         )
@@ -201,18 +197,18 @@ export default class Traffic extends Component {
       return processData(dataPointsIn, dataPointsOut)
     } else {
       //data for all time traffic
-      const traffic_in = await getTraffic('incoming_traffic_' + target).catch(
-        (error) => {
+      const traffic_in = await trafficAPI
+        .traffic('incoming_traffic_' + target)
+        .catch((error) => {
           this.context.reportError('API Failure get traffic: ' + error.message)
-        }
-      )
-      const traffic_out = await getTraffic('outgoing_traffic_' + target).catch(
-        (error) => {
+        })
+      const traffic_out = await trafficAPI
+        .traffic('outgoing_traffic_' + target)
+        .catch((error) => {
           this.context.reportError(
             'API Failure get ' + target + ' traffic: ' + error.message
           )
-        }
-      )
+        })
       return processData(traffic_in, traffic_out)
     }
   }

@@ -5,9 +5,16 @@ export class APITraffic extends API {
     super('')
   }
 
-  traffic = () => this.get('/iptraffic')
-  history = () => this.get('/traffic_history')
+  traffic = (name) => {
+    if (name) {
+      return this.map(name)
+    }
+
+    this.get('/iptraffic')
+  }
+
   map = (name) => this.get(`/traffic/${name}`)
+  history = () => this.get('/traffic_history')
 }
 
 export const trafficAPI = new APITraffic()
