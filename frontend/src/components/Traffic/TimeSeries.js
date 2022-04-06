@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import Select from 'react-select'
 
 import ClientSelect from 'components/ClientSelect'
+import DateRange from 'components/DateRange'
 import TimeSeriesChart from 'components/Traffic/TimeSeriesChart'
 import TimeSeriesList from 'components/Traffic/TimeSeriesList'
 
@@ -21,31 +22,23 @@ import {
 } from 'reactstrap'
 
 const TimeSeries = (props) => {
-  const scales = [
-    { value: 'All Time', label: 'All Time' },
-    { value: '1 Day', label: 'Last day' },
-    { value: '1 Hour', label: 'Last hour' },
-    { value: '15 Minutes', label: 'Last 15 minutes' }
-  ]
   const [filterIPs, setFilterIPs] = useState([])
   const [view, setView] = useState('chart')
-  const [scale, setScale] = useState('All Time')
-  const [offset, setOffset] = useState(0)
+  const [offset, setOffset] = useState('All Time')
 
-  const handleTimeChange = (newValue) => {
-    setScale(newValue.label)
+  const handleChangeTime = (newValue) => {
     setOffset(newValue.value)
-    if (props.handleTimeChange) {
-      props.handleTimeChange(newValue.value, props.type)
+    if (props.handleChangeTime) {
+      props.handleChangeTime(newValue.value, props.type)
     }
   }
 
-  const handleClientChange = (selectedIPs) => {
+  const handleChangeClient = (selectedIPs) => {
     let ips = selectedIPs.map((item) => item.value)
     setFilterIPs(ips)
   }
 
-  const handleClientClick = (ip, datapoint) => {
+  const handleClickClient = (ip, datapoint) => {
     setFilterIPs([ip])
     setView('table')
   }
@@ -63,16 +56,12 @@ const TimeSeries = (props) => {
                 <ClientSelect
                   isMulti
                   value={filterIPs}
-                  onChange={handleClientChange}
+                  onChange={handleChangeClient}
                 />
               </div>
             </Col>
             <Col md="2" className="pt-2">
-              <Select
-                onChange={handleTimeChange}
-                options={scales}
-                value={{ value: offset, label: scale }}
-              />
+              <DateRange onChange={handleChangeTime} />
             </Col>
             <Col md="2" className="text-right">
               <ButtonGroup>
@@ -110,7 +99,7 @@ const TimeSeries = (props) => {
               type={props.type}
               title={props.title}
               data={props.data}
-              handleClientClick={handleClientClick}
+              onClick={handleClickClient}
             />
           )}
         </CardBody>

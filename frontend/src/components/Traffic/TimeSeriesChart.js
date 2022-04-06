@@ -116,7 +116,7 @@ const TimeSeriesChart = (props) => {
       const dataset = props.data.datasets[datasetIndex]
       const { label: ip, data } = dataset
 
-      props.handleClientClick(ip, data[index])
+      props.onClick(ip, data[index])
     }
   }
 
@@ -136,7 +136,7 @@ TimeSeriesChart.propTypes = {
   title: PropTypes.string,
   data: PropTypes.object,
   handleTimeChange: PropTypes.func,
-  handleClientClick: PropTypes.func
+  onClick: PropTypes.func
 }
 
 export default TimeSeriesChart

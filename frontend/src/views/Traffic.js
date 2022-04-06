@@ -4,6 +4,7 @@ import { Chart as ChartJS } from 'chart.js/auto'
 import { Bar } from 'react-chartjs-2'
 
 import { deviceAPI, trafficAPI, wifiAPI } from 'api'
+import DateRange from 'components/DateRange'
 import { APIErrorContext } from 'layouts/Admin'
 
 import {
@@ -301,10 +302,8 @@ export default class Traffic extends Component {
   }
 
   render() {
-    let handleScaleMenu = (e) => {
-      let choice = e.target.parentNode.getAttribute('value')
-      let scale = e.target.value
-
+    const handleChangeTime = (newValue, choice) => {
+      let scale = newValue.value
       this.state[choice + '_scale'] = scale
       this.processTrafficHistory(choice, scale).then((result) => {
         let o = {}
@@ -316,48 +315,33 @@ export default class Traffic extends Component {
     return (
       <div className="content">
         <Row>
-          <Col md="10"></Col>
-          <Col md="2">
-            <UncontrolledDropdown group>
-              <DropdownToggle caret color="default">
-                {this.state.wan_scale}
-              </DropdownToggle>
-              <DropdownMenu value="wan">
-                <DropdownItem value="All Time" onClick={handleScaleMenu}>
-                  All time
-                </DropdownItem>
-                <DropdownItem value="1 Day" onClick={handleScaleMenu}>
-                  Last Day
-                </DropdownItem>
-                <DropdownItem value="1 Hour" onClick={handleScaleMenu}>
-                  Last Hour
-                </DropdownItem>
-                <DropdownItem value="15 Minutes" onClick={handleScaleMenu}>
-                  Last 15 Minutes
-                </DropdownItem>
-              </DropdownMenu>
-            </UncontrolledDropdown>
-          </Col>
-        </Row>
-        <Row>
           <Col md="12">
             <Card>
               <CardHeader>
-                <CardTitle tag="h4">
-                  Device WAN Traffic ⸺ {this.state.wan_scale} ⸺ IN:{' '}
-                  {parseFloat(
-                    this.state.wan
-                      ? this.state.wan.totalIn / 1024 / 1024 / 1024
-                      : 0
-                  ).toFixed(2)}{' '}
-                  GB OUT:{' '}
-                  {parseFloat(
-                    this.state.wan
-                      ? this.state.wan.totalOut / 1024 / 1024 / 1024
-                      : 0
-                  ).toFixed(2)}{' '}
-                  GB
-                </CardTitle>
+                <Row>
+                  <Col md="10">
+                    <CardTitle tag="h4">
+                      Device WAN Traffic ⸺ {this.state.wan_scale} ⸺ IN:{' '}
+                      {parseFloat(
+                        this.state.wan
+                          ? this.state.wan.totalIn / 1024 / 1024 / 1024
+                          : 0
+                      ).toFixed(2)}{' '}
+                      GB OUT:{' '}
+                      {parseFloat(
+                        this.state.wan
+                          ? this.state.wan.totalOut / 1024 / 1024 / 1024
+                          : 0
+                      ).toFixed(2)}{' '}
+                      GB
+                    </CardTitle>
+                  </Col>
+                  <Col md="2" className="pt-2">
+                    <DateRange
+                      onChange={(newValue) => handleChangeTime(newValue, 'wan')}
+                    />
+                  </Col>
+                </Row>
               </CardHeader>
               <CardBody>
                 {this.state.wan.datasets ? (
@@ -370,50 +354,34 @@ export default class Traffic extends Component {
             </Card>
           </Col>
         </Row>
-
-        <Row>
-          <Col md="10"></Col>
-          <Col md="2">
-            <UncontrolledDropdown group>
-              <DropdownToggle caret color="default">
-                {this.state.lan_scale}
-              </DropdownToggle>
-              <DropdownMenu value="lan">
-                <DropdownItem value="All Time" onClick={handleScaleMenu}>
-                  All time
-                </DropdownItem>
-                <DropdownItem value="1 Day" onClick={handleScaleMenu}>
-                  Last Day
-                </DropdownItem>
-                <DropdownItem value="1 Hour" onClick={handleScaleMenu}>
-                  Last Hour
-                </DropdownItem>
-                <DropdownItem value="15 Minutes" onClick={handleScaleMenu}>
-                  Last 15 Minutes
-                </DropdownItem>
-              </DropdownMenu>
-            </UncontrolledDropdown>
-          </Col>
-        </Row>
         <Row>
           <Col md="12">
             <Card>
               <CardHeader>
-                <CardTitle tag="h4">
-                  Device LAN Traffic ⸺ {this.state.lan_scale} ⸺ IN:{' '}
-                  {parseFloat(
-                    this.state.lan
-                      ? this.state.lan.totalIn / 1024 / 1024 / 1024
-                      : 0
-                  ).toFixed(2)}{' '}
-                  GB OUT:{' '}
-                  {parseFloat(
-                    this.state.lan
-                      ? this.state.lan.totalOut / 1024 / 1024 / 1024
-                      : 0
-                  ).toFixed(2)}{' '}
-                  GB
-                </CardTitle>
+                <Row>
+                  <Col md="10">
+                    <CardTitle tag="h4">
+                      Device LAN Traffic ⸺ {this.state.lan_scale} ⸺ IN:{' '}
+                      {parseFloat(
+                        this.state.lan
+                          ? this.state.lan.totalIn / 1024 / 1024 / 1024
+                          : 0
+                      ).toFixed(2)}{' '}
+                      GB OUT:{' '}
+                      {parseFloat(
+                        this.state.lan
+                          ? this.state.lan.totalOut / 1024 / 1024 / 1024
+                          : 0
+                      ).toFixed(2)}{' '}
+                      GB
+                    </CardTitle>
+                  </Col>
+                  <Col md="2" className="pt-2">
+                    <DateRange
+                      onChange={(newValue) => handleChangeTime(newValue, 'lan')}
+                    />
+                  </Col>
+                </Row>
               </CardHeader>
               <CardBody>
                 {this.state.lan && this.state.lan.datasets ? (
