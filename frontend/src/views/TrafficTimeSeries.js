@@ -18,6 +18,15 @@ class TrafficTimeSeries extends Component {
     chartModes: {}
   }
 
+  constructor(props) {
+    super(props)
+    let chartModes = {},
+      types = ['WanOut', 'WanIn', 'LanIn', 'LanOut']
+
+    types.map((type) => (chartModes[type] = 'data'))
+    this.state.chartModes = chartModes
+  }
+
   static contextType = APIErrorContext
 
   cached_traffic_data = null
@@ -110,8 +119,8 @@ class TrafficTimeSeries extends Component {
             let diff =
               traffic_data[idx][ip][target] - traffic_data[idx + 1][ip][target]
 
-            //z = diff
             z = traffic_data[idx][ip][target]
+            z = diff
             y = diff / deltaSlices[idx]
           } else {
             z = traffic_data[idx][ip][target]

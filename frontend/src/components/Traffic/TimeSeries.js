@@ -70,17 +70,17 @@ const TimeSeries = (props) => {
                 <ButtonGroup size="sm">
                   <Button
                     color="primary"
-                    onClick={(e) => handleChartMode('percent')}
-                    outline={chartMode !== 'percent'}
-                  >
-                    Percent
-                  </Button>
-                  <Button
-                    color="primary"
                     onClick={(e) => handleChartMode('data')}
                     outline={chartMode !== 'data'}
                   >
                     Data
+                  </Button>
+                  <Button
+                    color="primary"
+                    onClick={(e) => handleChartMode('percent')}
+                    outline={chartMode !== 'percent'}
+                  >
+                    Percent
                   </Button>
                 </ButtonGroup>
               </div>
