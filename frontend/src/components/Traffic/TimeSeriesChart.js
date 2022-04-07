@@ -12,6 +12,7 @@ import {
   Legend
 } from 'chart.js'
 import { Line, getDatasetAtEvent, getElementAtEvent } from 'react-chartjs-2'
+import 'chartjs-adapter-moment'
 
 import { prettySize } from 'utils'
 
@@ -70,7 +71,6 @@ const TimeSeriesChart = (props) => {
           display: false,
           drawBorder: false
         },
-        //type: 'timeseries',
         type: 'timeseries',
         distribution: 'linear',
         ticks: {
@@ -91,6 +91,19 @@ const TimeSeriesChart = (props) => {
 
             return `${label}: ${sz}`
           }
+        }
+      }
+    }
+  }
+
+  if (props.mode == 'percent') {
+    options.scales.y = {
+      stacked: true,
+      min: 0,
+      max: 1,
+      ticks: {
+        callback: function (value) {
+          return (value * 100).toFixed(0) + '%' // convert it to percentage
         }
       }
     }

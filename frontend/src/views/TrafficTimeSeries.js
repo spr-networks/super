@@ -1,7 +1,6 @@
 import React, { useContext, Component } from 'react'
 import { deviceAPI, trafficAPI } from 'api'
-import { APIErrorContext } from 'layouts/Admin.js'
-//import 'chartjs-adapter-moment'
+import { APIErrorContext } from 'layouts/Admin'
 import chroma from 'chroma-js'
 
 import TimeSeries from 'components/Traffic/TimeSeries'
@@ -15,7 +14,8 @@ class TrafficTimeSeries extends Component {
     WanIn: {},
     WanOut: {},
     LanIn: {},
-    LanOut: {}
+    LanOut: {},
+    chartModes: {}
   }
 
   static contextType = APIErrorContext
@@ -40,6 +40,7 @@ class TrafficTimeSeries extends Component {
   }
 
   async buildTimeSeries(target = '') {
+    let chartMode = this.state.chartModes['target'] || 'data'
     // data = [ {1 minute array of IP => stats, }, ...]
     let traffic_data = await this.fetchData()
 
@@ -66,6 +67,26 @@ class TrafficTimeSeries extends Component {
 
     let ips = Object.keys(ipStats)
 
+    //calculate total changed per step in first pass
+    let deltaSlices = []
+    for (let idx = 0; idx < traffic_data.length; idx++) {
+      let delta = 0
+      for (let ip of ips) {
+        if (
+          !traffic_data[idx][ip] ||
+          !traffic_data[idx + 1] ||
+          !traffic_data[idx + 1][ip]
+        ) {
+        } else {
+          // = this-next
+          delta +=
+            traffic_data[idx][ip][target] - traffic_data[idx + 1][ip][target]
+        }
+      }
+
+      deltaSlices.push(delta)
+    }
+
     // set ipstats[ip] = [ { x, y, z }, ... ]
     let date = new Date()
     for (let idx = 0; idx < traffic_data.length; idx++) {
@@ -85,11 +106,18 @@ class TrafficTimeSeries extends Component {
         } else {
           // calculate the delta change between the most recent (idx) and
           // the measurement before (idx+1) convert to % of total change
-          let z = traffic_data[idx][ip][target]
-          //let diff =
-          //  traffic_data[idx][ip][target] - traffic_data[idx + 1][ip][target]
-          //y = diff / deltaSlices[idx]
-          y = z
+          if (chartMode == 'percent') {
+            let diff =
+              traffic_data[idx][ip][target] - traffic_data[idx + 1][ip][target]
+
+            //z = diff
+            z = traffic_data[idx][ip][target]
+            y = diff / deltaSlices[idx]
+          } else {
+            z = traffic_data[idx][ip][target]
+            y = z
+          }
+
           ipStats[ip].push({ x, y, z })
         }
       }
@@ -163,13 +191,19 @@ class TrafficTimeSeries extends Component {
   }
 
   render() {
-    const handleTimeChange = (value, type) => {
+    const handleChangeTime = (value, type) => {
       this.setState({ [`${type}_scale`]: value })
 
       // rebuild selected time series
       this.buildTimeSeries(type).then((datasets) => {
         this.setState({ [type]: { datasets: datasets } })
       })
+    }
+
+    const handleChangeMode = (value, type) => {
+      let chartModes = this.state.chartModes
+      chartModes[type] = value
+      this.setState({ chartModes })
     }
 
     const prettyTitle = (type) => {
@@ -189,7 +223,9 @@ class TrafficTimeSeries extends Component {
               type={type}
               title={prettyTitle(type)}
               data={this.state[type]}
-              handleTimeChange={handleTimeChange}
+              chartMode={this.state.chartModes[type]}
+              handleChangeTime={handleChangeTime}
+              handleChangeMode={handleChangeMode}
             />
           )
         })}
