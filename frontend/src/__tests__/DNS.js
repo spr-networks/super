@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import DNSBlock from 'views/DNS/DNSBlock'
 //import DNSBlocklist from 'components/DNS/DNSBlocklist'
 //import DNSOverrideList from 'components/DNS/DNSOverrideList'
-import { saveLogin, getDNSBlockConfig } from '../components/Helpers/Api.js'
+import { saveLogin, blockAPI } from 'api'
 
 describe('DNS Block', () => {
   saveLogin('admin', 'admin')
@@ -26,7 +26,7 @@ describe('API DNS Plugin', () => {
   saveLogin('admin', 'admin')
 
   test('fetches config', async () => {
-    let config = await getDNSBlockConfig()
+    let config = await blockAPI.config()
     expect(config).toHaveProperty('BlockLists')
     expect(config).toHaveProperty('BlockDomains')
     expect(config).toHaveProperty('PermitDomains')
