@@ -4,7 +4,7 @@
   "description": "Supernetworks Secure Programmable Router",
   "main": "index.js",
   "private": true,
-  "licence": "MIT",
+  "license": "MIT",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "start": "GENERATE_SOURCEMAP=false react-scripts start",
