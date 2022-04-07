@@ -332,6 +332,12 @@ export default function MockAPI() {
         return '"testconfig"'
       })
 
+      this.get('/hostapd/status', (schema) => {
+        return {
+          'ssid[0]': 'TestAP',
+          channel: 36
+        }
+      })
       this.get('/hostapd/all_stations', (schema) => {
         return {
           '11:22:33:44:55:61': {
