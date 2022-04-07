@@ -11,7 +11,7 @@ const apiURL = () => {
       return '/'
     }
   }
-  return document.location.origin
+  return document.location.origin+"/"
 }
 
 //request helper
