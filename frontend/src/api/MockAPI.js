@@ -223,6 +223,29 @@ export default function MockAPI() {
             group: 'default',
             txqlen: 1000,
             link_type: 'ether',
+            address: '00:11:00:11:00:11',
+            broadcast: 'ff:ff:ff:ff:ff:ff',
+            addr_info: [
+              {
+                family: 'inet4',
+                local: '192.168.0.1',
+                prefixlen: 24,
+                scope: 'global',
+                valid_life_time: 4294967295,
+                preferred_life_time: 'preferred_life_time'
+              }
+            ]
+          },
+          {
+            ifindex: 2,
+            ifname: 'wlan0',
+            flags: ['BROADCAST'],
+            mtu: 0,
+            qdisc: 'string',
+            operstate: 'UP',
+            group: 'default',
+            txqlen: 1000,
+            link_type: 'ether',
             address: '11:22:33:44:55:66',
             broadcast: 'ff:ff:ff:ff:ff:ff',
             addr_info: [
