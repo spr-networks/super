@@ -191,19 +191,21 @@ class TrafficTimeSeries extends Component {
   }
 
   render() {
-    const handleChangeTime = (value, type) => {
-      this.setState({ [`${type}_scale`]: value })
-
-      // rebuild selected time series
+    const rebuildTimeSeries = (type) => {
       this.buildTimeSeries(type).then((datasets) => {
         this.setState({ [type]: { datasets: datasets } })
       })
     }
 
+    const handleChangeTime = (value, type) => {
+      this.setState({ [`${type}_scale`]: value })
+      rebuildTimeSeries(type)
+    }
+
     const handleChangeMode = (value, type) => {
       let chartModes = this.state.chartModes
       chartModes[type] = value
-      this.setState({ chartModes })
+      this.setState({ chartModes }, () => rebuildTimeSeries(type))
     }
 
     const prettyTitle = (type) => {
