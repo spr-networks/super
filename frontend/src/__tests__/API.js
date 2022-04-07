@@ -40,6 +40,15 @@ describe('API Login', () => {
       saveLogin('admin', 'admin')
     })
   })
+
+  test('save login', () => {
+    saveLogin('admin', 'admin')
+
+    let user = JSON.parse(localStorage.getItem('user'))
+    expect(user.username).toBe('admin')
+    expect(user.password).toBe('admin')
+    expect(user.authdata).toBe('YWRtaW46YWRtaW4=')
+  })
 })
 
 describe('API Device', () => {
