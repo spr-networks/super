@@ -10,7 +10,8 @@ const apiURL = () => {
       let MockAPI = import('../api/MockAPI').then((m) => m.default())
       return '/'
     }
-  return document.location.origin 
+  }
+  return document.location.origin
 }
 
 //request helper
