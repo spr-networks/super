@@ -10,7 +10,7 @@ const apiURL = () => {
       let MockAPI = import('../api/MockAPI').then((m) => m.default())
       return '/'
     }
-  }
+  return ''
 }
 
 //request helper
