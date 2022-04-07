@@ -241,7 +241,7 @@ export class DNSLogHistoryList extends React.Component {
                 <FormGroup>
                   <Label>Client</Label>
                   <ClientSelect
-                    isMulti={true}
+                    isMulti
                     value={this.state.filterIPs}
                     onChange={this.handleChangeIP}
                   />
