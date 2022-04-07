@@ -5,9 +5,9 @@ import DNSBlock from 'views/DNS/DNSBlock'
 //import DNSOverrideList from 'components/DNS/DNSOverrideList'
 import { saveLogin, blockAPI } from 'api'
 
-describe('DNS Block', () => {
-  saveLogin('admin', 'admin')
+beforeAll(() => saveLogin('admin', 'admin'))
 
+describe('DNS Block', () => {
   test('DNS block list', async () => {
     const { baseElement } = render(<DNSBlock />)
     expect(baseElement).toBeDefined()
@@ -23,8 +23,6 @@ describe('DNS Block', () => {
 })
 
 describe('API DNS Plugin', () => {
-  saveLogin('admin', 'admin')
-
   test('fetches config', async () => {
     let config = await blockAPI.config()
     expect(config).toHaveProperty('BlockLists')
