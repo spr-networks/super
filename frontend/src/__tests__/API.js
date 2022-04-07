@@ -1,4 +1,31 @@
+import API from 'api'
 import { api, deviceAPI, testLogin, saveLogin } from 'api'
+
+describe('API component', () => {
+  let _REACT_APP_API = null
+  // save the one that is already set
+  beforeEach(() => (_REACT_APP_API = process.env.REACT_APP_API))
+
+  test('default baseurl', () => {
+    delete process.env.REACT_APP_API
+    let _api = new API()
+    expect(_api.baseURL).toBe('http://localhost/')
+  })
+
+  test('mockAPI baseurl', () => {
+    let _api = new API()
+    expect(_api.baseURL).toBe('/')
+  })
+
+  test('custom baseurl', () => {
+    let url = 'http://127.0.0.1'
+    process.env.REACT_APP_API = url
+    let _api = new API()
+    expect(_api.baseURL).toBe(`${url}/`)
+  })
+
+  afterEach(() => (process.env.REACT_APP_API = _REACT_APP_API))
+})
 
 describe('API Login', () => {
   test('fail login', () => {
