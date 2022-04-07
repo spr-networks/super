@@ -49,7 +49,7 @@ class TrafficTimeSeries extends Component {
   }
 
   async buildTimeSeries(target = '') {
-    let chartMode = this.state.chartModes['target'] || 'data'
+    let chartMode = this.state.chartModes['target']
     // data = [ {1 minute array of IP => stats, }, ...]
     let traffic_data = await this.fetchData()
 

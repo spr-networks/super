@@ -107,6 +107,9 @@ const TimeSeriesChart = (props) => {
         }
       }
     }
+
+    delete options.scales.x.distribution
+    //options.maintainAspectRatio = true
   }
 
   const chartRef = useRef(null)
