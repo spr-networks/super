@@ -5,7 +5,7 @@ const apiURL = () => {
   if (REACT_APP_API) {
     try {
       let url = new URL(REACT_APP_API)
-      console.log('[API] using base:' + url)
+      //console.log('[API] using base:' + url)
       return url.toString()
     } catch (e) {
       // REACT_APP_API=mock -- dont load in prod
