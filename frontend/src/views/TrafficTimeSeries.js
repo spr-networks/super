@@ -49,7 +49,7 @@ class TrafficTimeSeries extends Component {
   }
 
   async buildTimeSeries(target = '') {
-    let chartMode = this.state.chartModes['target']
+    let chartMode = this.state.chartModes[target]
     // data = [ {1 minute array of IP => stats, }, ...]
     let traffic_data = await this.fetchData()
 
@@ -120,7 +120,7 @@ class TrafficTimeSeries extends Component {
               traffic_data[idx][ip][target] - traffic_data[idx + 1][ip][target]
 
             z = traffic_data[idx][ip][target]
-            z = diff
+            //z = diff
             y = diff / deltaSlices[idx]
           } else {
             z = traffic_data[idx][ip][target]
