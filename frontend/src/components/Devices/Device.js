@@ -41,6 +41,10 @@ export default class Device extends Component {
   }
 
   handleZones = (zones) => {
+    if (!this.props.device.MAC) {
+      return
+    }
+
     zones = [...new Set(zones)]
     this.setState({ zones })
 
@@ -56,6 +60,10 @@ export default class Device extends Component {
   }
 
   handleTags = (tags) => {
+    if (!this.props.device.MAC) {
+      return
+    }
+
     tags = [...new Set(tags)]
     this.setState({ tags })
 
@@ -95,14 +103,16 @@ export default class Device extends Component {
     }
 
     const saveDevice = async () => {
-      if (this.state.name != '') {
-        deviceAPI
-          .updateName(this.props.device.MAC, this.state.name)
-          .then(this.props.notifyChange)
-          .catch((error) =>
-            this.context.reportError('[API] updateName error: ' + error.message)
-          )
+      if (!this.props.device.MAC || !this.state.name) {
+        return
       }
+
+      deviceAPI
+        .updateName(this.props.device.MAC, this.state.name)
+        .then(this.props.notifyChange)
+        .catch((error) =>
+          this.context.reportError('[API] updateName error: ' + error.message)
+        )
     }
 
     const handleKeyPress = (e) => {
