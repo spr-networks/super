@@ -1,33 +1,14 @@
-/*!
-
-=========================================================
-* Paper Dashboard PRO React - v1.3.0
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/paper-dashboard-pro-react
-* Copyright 2021 Creative Tim (https://www.creative-tim.com)
-
-* Coded by Creative Tim
-
-=========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-*/
 import React, { useState, useEffect } from 'react'
-// react plugin used to create charts
-import { Line, Bar, Doughnut } from 'react-chartjs-2'
-import { hostapdAllStations, ipAddr } from 'components/Helpers/Api.js'
-import WifiClients, { WifiInfo } from 'components/Dashboard/HostapdWidgets.js'
+
+import { blockAPI, wifiAPI } from 'api'
+import WifiClients, { WifiInfo } from 'components/Dashboard/HostapdWidgets'
 import {
   DNSMetrics,
   DNSBlockMetrics,
   DNSBlockPercent
-} from 'components/Dashboard/DNSMetricsWidgets.js'
-import { blockAPI } from 'api/DNS'
+} from 'components/Dashboard/DNSMetricsWidgets'
+
 import {
-  Badge,
-  Button,
   Card,
   CardHeader,
   CardBody,
@@ -39,34 +20,24 @@ import {
 } from 'reactstrap'
 
 function Home() {
-  const [ipInfo, setipInfo] = useState([])
+  const [addrs, setAddrs] = useState([])
   const [plugins, setPlugins] = useState([])
 
-  function hostapdcount() {
-    hostapdAllStations(function (data) {})
-  }
-
   useEffect(() => {
-    ipAddr().then((data) => {
-      let r = []
+    wifiAPI.ipAddr().then((data) => {
+      let ifaddrs = []
       for (let entry of data) {
         for (let address of entry.addr_info) {
           if (address.scope == 'global') {
-            const generatedID = Math.random().toString(36).substr(2, 9)
-            r.push(
-              <tr key={generatedID}>
-                <td>{entry.ifname}</td>
-                <td>
-                  {' '}
-                  {address.local}/{address.prefixlen}{' '}
-                </td>
-              </tr>
-            )
+            address.ifname = entry.ifname
+            ifaddrs.push(address)
           }
+
           break
         }
       }
-      setipInfo(r)
+
+      setAddrs(ifaddrs)
     })
 
     // check if dns plugin is active
@@ -104,10 +75,18 @@ function Home() {
                             <th>IP Address</th>
                           </tr>
                         </thead>
-                        <tbody>{ipInfo}</tbody>
+                        <tbody>
+                          {addrs.map((address) => (
+                            <tr key={address.local}>
+                              <td>{address.ifname}</td>
+                              <td>
+                                {address.local}/{address.prefixlen}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
                       </Table>
                     </CardBody>
-                    <p />
                   </Col>
                 </Row>
               </CardBody>

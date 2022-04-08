@@ -223,6 +223,29 @@ export default function MockAPI() {
             group: 'default',
             txqlen: 1000,
             link_type: 'ether',
+            address: '00:11:00:11:00:11',
+            broadcast: 'ff:ff:ff:ff:ff:ff',
+            addr_info: [
+              {
+                family: 'inet4',
+                local: '192.168.0.1',
+                prefixlen: 24,
+                scope: 'global',
+                valid_life_time: 4294967295,
+                preferred_life_time: 'preferred_life_time'
+              }
+            ]
+          },
+          {
+            ifindex: 2,
+            ifname: 'wlan0',
+            flags: ['BROADCAST'],
+            mtu: 0,
+            qdisc: 'string',
+            operstate: 'UP',
+            group: 'default',
+            txqlen: 1000,
+            link_type: 'ether',
             address: '11:22:33:44:55:66',
             broadcast: 'ff:ff:ff:ff:ff:ff',
             addr_info: [
@@ -332,6 +355,12 @@ export default function MockAPI() {
         return '"testconfig"'
       })
 
+      this.get('/hostapd/status', (schema) => {
+        return {
+          'ssid[0]': 'TestAP',
+          channel: 36
+        }
+      })
       this.get('/hostapd/all_stations', (schema) => {
         return {
           '11:22:33:44:55:61': {
@@ -397,6 +426,10 @@ export default function MockAPI() {
 
       //DNS plugin
       this.get('/plugins/dns/block/config', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
         return {
           BlockLists: schema.dnsblocklists.all().models,
           BlockDomains: schema.dnsoverrides.where({ Type: 'block' }).models,
@@ -406,36 +439,64 @@ export default function MockAPI() {
       })
 
       this.get('/plugins/dns/block/metrics', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
         return { TotalQueries: 65534, BlockedQueries: 4096 }
       })
 
       this.get('/plugins/dns/block/blocklists', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
         return schema.dnsblocklists.all().models
       })
 
       this.put('/plugins/dns/block/blocklists', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
         let attrs = JSON.parse(request.requestBody)
         return schema.dnsblocklists.create(attrs)
       })
 
       this.delete('/plugins/dns/block/blocklists', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
         let attrs = JSON.parse(request.requestBody)
         let URI = attrs.URI
         return schema.dnsblocklists.findBy({ URI }).destroy()
       })
 
       this.put('/plugins/dns/block/override', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
         let attrs = JSON.parse(request.requestBody)
         return schema.dnsoverrides.create(attrs)
       })
 
       this.delete('/plugins/dns/block/override', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
         let attrs = JSON.parse(request.requestBody)
         let Domain = attrs.Domain
         return schema.dnsoverrides.findBy({ Domain }).destroy()
       })
 
       this.get('/plugins/dns/block/dump_domains', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
         return [
           '_thums.ero-advertising.com.',
           '0.fls.doubleclick.net.',
@@ -446,6 +507,10 @@ export default function MockAPI() {
       })
 
       this.get('/plugins/dns/log/config', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
         return {
           HostPrivacyIPList: schema.dnslogprivacylists.all().models,
           DomainIgnoreList: schema.dnslogdomainignorelists.all().models
@@ -453,16 +518,26 @@ export default function MockAPI() {
       })
 
       this.get('/plugins/dns/log/host_privacy_list', (schema, request) => {
-        //return ['192.168.1.1', '192.168.1.2']
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
         return schema.dnslogprivacylists.all().models.map((d) => d.ip)
       })
 
       this.get('/plugins/dns/log/domain_ignores', (schema, request) => {
-        //return ["example.dev", "example.com"]
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
         return schema.dnslogdomainignorelists.all().models.map((d) => d.domain)
       })
 
       this.get('/plugins/dns/log/history/:ip', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
         let types = ['NOERROR', 'NODATA', 'OTHERERROR', 'BLOCKED']
         let ip = request.params.ip //192.168.2.101
         let revip = ip.split('').reverse().join('')

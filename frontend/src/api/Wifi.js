@@ -9,6 +9,7 @@ export class APIWifi extends API {
   allStations = () => this.get('hostapd/all_stations')
   status = () => this.get('hostapd/status')
   arp = () => this.get('arp')
+  ipAddr = () => this.get('ip/addr')
 }
 
 export const wifiAPI = new APIWifi()
