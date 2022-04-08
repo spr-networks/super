@@ -17,6 +17,9 @@ export class APIDevice extends API {
   updateZones = (MAC, Zones) => this.update({ MAC, Zones })
   updateTags = (MAC, DeviceTags) => this.update({ MAC, DeviceTags })
   deleteDevice = (MAC) => this.delete(`/device/${MAC}`, { MAC })
+  setPSK = (MAC, Psk, Type, Name) =>
+    this.update({ MAC, Name, PSKEntry: { Psk, Type } })
+  pendingPSK = () => this.get('/pendingPSK')
 }
 
 export const deviceAPI = new APIDevice()
