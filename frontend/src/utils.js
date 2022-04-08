@@ -1,9 +1,6 @@
 // util functions
-export const prettyDate = (timestamp) => {
-  return new Date(timestamp)
-    .toISOString()
-    .replace(/T|(\..*)/g, ' ')
-    .trim()
+export const prettyDate = (timestamp, locales = null) => {
+  return new Date(timestamp).toLocaleString()
 }
 
 export const prettySize = (sz, round = false) => {
