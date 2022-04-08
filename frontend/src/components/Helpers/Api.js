@@ -192,7 +192,7 @@ function delsetDevice(verb, identity, psk, wpa_type, name, zones, tags) {
           console.log('bad response')
           throw new Error(response.status)
         }
-        if (verb == 'DELETE' || verb == 'PUT') {
+        if (verb == 'DELETE') {
           resolve(true)
         } else {
           return response.json()
