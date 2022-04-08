@@ -1,3 +1,5 @@
+import { ConnectWebsocket } from 'components/Helpers/Api'
+
 const apiURL = () => {
   const { REACT_APP_API } = process.env
   if (REACT_APP_API) {
@@ -11,7 +13,7 @@ const apiURL = () => {
       return '/'
     }
   }
-  return document.location.origin+"/"
+  return document.location.origin + '/'
 }
 
 //request helper
@@ -59,41 +61,35 @@ class API {
       opts.body = JSON.stringify(body)
     }
 
-    let promise = new Promise((resolve, reject) => {
-      let baseURL = this.baseURL
-      // get rid of //
-      if (
-        url[0] == '/' &&
-        baseURL.length &&
-        baseURL[baseURL.length - 1] == '/'
-      ) {
-        url = url.substr(1)
+    let baseURL = this.baseURL
+    // get rid of //
+    if (url[0] == '/' && baseURL.length && baseURL[baseURL.length - 1] == '/') {
+      url = url.substr(1)
+    }
+
+    // if forced to not return data
+    let skipReturnValue = method == 'DELETE'
+
+    let _url = `${baseURL}${url}`
+    //console.log('[API] fetch', _url, 'Authorization:', this.authHeaders)
+    //console.log(`[API] fetch method=`, method, 'skip=', skipReturnValue)
+
+    return fetch(_url, opts).then((response) => {
+      if (!response.ok) {
+        return Promise.reject(respose.status)
       }
 
-      let _url = `${baseURL}${url}`
-      //console.log('[API] fetch', _url, 'Authorization:', this.authHeaders)
+      const contentType = response.headers.get('Content-Type')
+      if (!contentType || skipReturnValue) {
+        return Promise.resolve(true)
+      }
 
-      fetch(_url, opts)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(response.status)
-          }
+      if (contentType.includes('application/json')) {
+        return response.json()
+      }
 
-          if (['PUT', 'DELETE'].includes(method)) {
-            return resolve(true)
-          }
-
-          return response.json()
-        })
-        .then((data) => {
-          resolve(data)
-        })
-        .catch((reason) => {
-          reject(reason)
-        })
+      return Promise.reject('unknown Content-Type')
     })
-
-    return promise
   }
 
   get(url) {
