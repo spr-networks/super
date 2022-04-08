@@ -58,7 +58,7 @@ const Step2 = React.forwardRef((props, ref) => {
       type = type.toUpperCase() //.replace(/SAE/, 'WPA3')
       //"WIFI:S:SSID;password,type,hidden
       //return `WIFI:S:${_ssid};P:${password};T:${type};H:${hidden}`
-      return `WIFI:S:${_ssid};P:${password};T:WPA;;`
+      return `WIFI:S:${_ssid};P:${password};T:WPA;false;`
     }
 
     let data = {
