@@ -20,6 +20,15 @@ export class APIDevice extends API {
   setPSK = (MAC, Psk, Type, Name) =>
     this.update({ MAC, Name, PSKEntry: { Psk, Type } })
   pendingPSK = () => this.get('/pendingPSK')
+
+  // TODO add this functionality to base api
+  _macPrefix = (mac) => mac.replace(/:/g, '').toUpperCase().substring(0, 6)
+  oui = (mac) => this.get(`/plugins/oui/${this._macPrefix(mac)}`)
+  ouis = (macs) => {
+    let prefixs = macs.map(this._macPrefix).join(',')
+
+    return this.get(`/plugins/oui/${prefixs}`)
+  }
 }
 
 export const deviceAPI = new APIDevice()
