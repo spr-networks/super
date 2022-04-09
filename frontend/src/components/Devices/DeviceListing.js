@@ -1,6 +1,6 @@
 import { withRouter } from 'react-router'
 import { Link } from 'react-router-dom'
-import { deviceAPI } from 'api/Device'
+import { deviceAPI } from 'api'
 import { Component } from 'react'
 import Device from 'components/Devices/Device.js'
 import { APIErrorContext } from 'layouts/Admin.js'
@@ -32,8 +32,31 @@ class DeviceListing extends Component {
     this.refreshDevices = this.refreshDevices.bind(this)
   }
 
+  // set device oui if avail, else fail gracefully
+  async setOUIs(devices) {
+    const macPrefix = (mac) =>
+      mac.replace(/:/g, '').toUpperCase().substring(0, 6)
+
+    let ouis = []
+    try {
+      ouis = await deviceAPI.ouis(Object.keys(devices))
+    } catch (err) {
+      return
+    }
+
+    for (let mac in devices) {
+      devices[mac].oui = ''
+
+      for (let oui of ouis) {
+        if (oui.prefix == macPrefix(mac)) {
+          devices[mac].oui = oui.provider
+        }
+      }
+    }
+  }
+
   async refreshDevices() {
-    const d = await deviceAPI.list().catch((error) => {
+    const devices = await deviceAPI.list().catch((error) => {
       this.context.reportError('API Failure: ' + error.message)
     })
 
@@ -41,18 +64,28 @@ class DeviceListing extends Component {
       this.refreshDevices()
     }
 
-    if (d) {
-      let divs = []
-      Object.keys(d).forEach((v) => {
-        const generatedID = Math.random().toString(36).substr(2, 9)
-
-        divs.push(
-          <Device key={generatedID} device={d[v]} notifyChange={notifyChange} />
-        )
-      })
-
-      this.setState({ devices: d, deviceRows: divs })
+    if (!devices) {
+      return
     }
+
+    await this.setOUIs(devices)
+
+    this.setState({ devices })
+
+    let divs = []
+    Object.keys(devices).forEach((v) => {
+      const generatedID = Math.random().toString(36).substr(2, 9)
+
+      divs.push(
+        <Device
+          key={generatedID}
+          device={devices[v]}
+          notifyChange={notifyChange}
+        />
+      )
+    })
+
+    this.setState({ deviceRows: divs })
   }
 
   componentDidMount() {
