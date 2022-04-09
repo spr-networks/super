@@ -1,6 +1,6 @@
-import React from "react";
-import classnames from "classnames";
-import Select from "react-select";
+import React, { useState } from 'react'
+import Select from 'react-select'
+import TagsInput from 'react-tagsinput'
 
 // reactstrap components
 import {
@@ -9,31 +9,28 @@ import {
   InputGroupAddon,
   InputGroupText,
   InputGroup,
+  FormGroup,
+  FormText,
   Row,
-  Col,
-} from "reactstrap";
-
+  Col
+} from 'reactstrap'
 
 let did_submit = false
 
 const Step1 = React.forwardRef((props, ref) => {
-  let prev_mac = ""
-  let prev_psk = ""
+  let prev_mac = ''
+  let prev_psk = ''
 
-  const [mac, setmac] = React.useState(""); //default is set to wpa3 (sae)
-  const [psk, setpsk] = React.useState("");
-  const [wpa, setwpa] = React.useState("sae");
-  const [name, setname] = React.useState("");
+  const [mac, setmac] = useState('')
+  const [psk, setpsk] = useState('')
+  const [wpa, setwpa] = useState('sae') //WPA3
+  const [name, setname] = useState('')
+  const [zones, setZones] = useState(['dns', 'wan'])
 
-  const [macState, setmacState] = React.useState("has-success");
-  const [pskState, setpskState] = React.useState("has-success");
-  const [wpaState, setwpaState] = React.useState("has-success");
-  const [nameState, setnameState] = React.useState("");
-
-  const [macFocus, setmacFocus] = React.useState("");
-  const [pskFocus, setpskFocus] = React.useState("");
-  const [wpaFocus, setwpaFocus] = React.useState("");
-  const [nameFocus, setnameFocus] = React.useState("");
+  const [macState, setmacState] = useState('has-success')
+  const [pskState, setpskState] = useState('has-success')
+  const [wpaState, setwpaState] = useState('has-success')
+  const [nameState, setnameState] = useState('')
 
   let submitted = () => {
     return did_submit
@@ -44,7 +41,7 @@ const Step1 = React.forwardRef((props, ref) => {
 
   React.useImperativeHandle(ref, () => ({
     isValidated: () => {
-      if(isValidated()) {
+      if (isValidated()) {
         return true
       }
       return false
@@ -54,135 +51,133 @@ const Step1 = React.forwardRef((props, ref) => {
       psk,
       wpa,
       name,
+      zones,
       macState,
       pskState,
       wpaState,
       setnameState,
       submitted,
-      setsubmitted,
-    },
-  }));
+      setsubmitted
+    }
+  }))
 
   // function that verifies if a string has a given length or not
   const verifyLength = (value, length) => {
     if (value.length >= length) {
-      return true;
+      return true
     }
-    return false;
-  };
+    return false
+  }
 
   const filterMAC = (value) => {
     //must be of the format 00:00:00:00:00:00
-    const hexChars = "0123456789abcdef"
-    let digits = ""
+    const hexChars = '0123456789abcdef'
+    let digits = ''
     for (let c of value) {
-        if (hexChars.indexOf(c) != -1) {
-          digits += c
-        }
+      if (hexChars.indexOf(c) != -1) {
+        digits += c
+      }
     }
-    let mac = ""
-    let i = 0;
-    for (i = 0; i < digits.length - 1 && i < (6*2); i+=2) {
+    let mac = ''
+    let i = 0
+    for (i = 0; i < digits.length - 1 && i < 6 * 2; i += 2) {
       mac += digits[i]
-      mac += digits[i+1]
-      mac += ":"
+      mac += digits[i + 1]
+      mac += ':'
     }
-    if (i < digits.length && (i < (6*2))) {
+    if (i < digits.length && i < 6 * 2) {
       mac += digits[i]
     }
-    if (mac[mac.length-1] == ":") {
+    if (mac[mac.length - 1] == ':') {
       mac = mac.slice(0, mac.length - 1)
     }
-    return mac;
-
+    return mac
   }
   const validateMAC = (value) => {
     //allow blank mac
-    if (value == "") {
-      return true;
+    if (value == '') {
+      return true
     }
     if (value.length == 17) {
-      return true;
+      return true
     }
-    return false;
-  };
+    return false
+  }
 
   const validatePassphrase = (value) => {
-    if (value == "") {
+    if (value == '') {
       return true
     } else if (value.length >= 8) {
       return true
     }
-    return false;
-  };
-
+    return false
+  }
 
   const isValidated = () => {
     if (
-      macState === "has-success" &&
-      pskState === "has-success" &&
-      wpaState === "has-success" &&
-      nameState == "has-success"
+      macState === 'has-success' &&
+      pskState === 'has-success' &&
+      wpaState === 'has-success' &&
+      nameState == 'has-success'
     ) {
-      return true;
+      return true
     } else {
-      if (macState !== "has-success") {
-        setmacState("has-danger");
+      if (macState !== 'has-success') {
+        setmacState('has-danger')
       }
-      if (pskState !== "has-success") {
-        setpskState("has-danger");
+      if (pskState !== 'has-success') {
+        setpskState('has-danger')
       }
-      if (wpaState !== "has-success") {
-        setwpaState("has-danger");
+      if (wpaState !== 'has-success') {
+        setwpaState('has-danger')
       }
-      if (nameState !== "has-success") {
-        setnameState("has-danger");
+      if (nameState !== 'has-success') {
+        setnameState('has-danger')
       }
-      return false;
+      return false
     }
-  };
+  }
+
+  const allZones = [
+    { label: 'dns', value: 'dns' },
+    { label: 'wan', value: 'wan' },
+    { label: 'lan', value: 'lan' }
+  ]
+
+  const handleChangeZones = (newValues) => {
+    setZones(newValues.map((o) => o.value))
+  }
 
   return (
     <>
       <h5 className="info-text">
         Add a new WiFi Device. Wired devices do not need to be added.
       </h5>
-      <Row className="justify-content-center">
-        <Col sm="3">
+      <Row>
+        <Col md={{ size: 10, offset: 1 }}>
+          <FormGroup className={nameState}>
+            <Input
+              name="name"
+              placeholder="Device Name"
+              type="text"
+              onChange={(e) => {
+                setsubmitted(false)
+                if (!verifyLength(e.target.value, 1)) {
+                  setnameState('has-danger')
+                } else {
+                  setnameState('has-success')
+                }
+                setname(e.target.value)
+              }}
+            />
+            {nameState === 'has-danger' ? (
+              <Label className="error">Please set a device name</Label>
+            ) : (
+              <Label className="info">Required</Label>
+            )}
+          </FormGroup>
 
-            <Label> Device Name </Label>
-            <InputGroup
-              className={classnames(nameState, {
-                "input-group-focus": nameFocus,
-              })}
-            >
-              <InputGroupAddon addonType="prepend">
-                <InputGroupText>
-                </InputGroupText>
-              </InputGroupAddon>
-              <Input
-                name="name"
-                placeholder=""
-                type="text"
-                onChange={(e) => {
-                  setsubmitted(false)
-                  if (!verifyLength(e.target.value, 1)) {
-                    setnameState("has-danger");
-                  } else {
-                    setnameState("has-success");
-                  }
-                  setname(e.target.value);
-                }}
-                onFocus={(e) => setnameFocus(true)}
-                onBlur={(e) => setnameFocus(false)}
-              />
-              {nameState === "has-danger" ? (
-                <label className="error">Please set a device name</label>
-              ) : null}
-            </InputGroup>
-
-
-            <Label>WiFi Authentication Type</Label>
+          <FormGroup>
             <Select
               autosize={false}
               className="react-select primary"
@@ -194,80 +189,86 @@ const Step1 = React.forwardRef((props, ref) => {
               }}
               options={[
                 {
-                  value: "sae",  label: "WPA3",
+                  value: 'sae',
+                  label: 'WPA3'
                 },
-                { value: "wpa2", label: "WPA2" },
+                { value: 'wpa2', label: 'WPA2' }
               ]}
               placeholder="WPA3"
             />
-          <Label>MAC Address (optional, will be assigned upon first connection when not set)</Label>
-          <InputGroup
-            className={classnames(macState, {
-              "input-group-focus": macFocus,
-            })}
-          >
-            <InputGroupAddon addonType="prepend">
-              <InputGroupText>
-              </InputGroupText>
-            </InputGroupAddon>
+            <Label className="info">
+              WPA3 is recommended but might not work on older devices
+            </Label>
+          </FormGroup>
+
+          <FormGroup className={macState}>
             <Input
               name="mac"
-              placeholder="00:00:00:00:00:00"
+              placeholder="MAC address"
               type="text"
               onChange={(e) => {
                 setsubmitted(false)
                 e.target.value = filterMAC(e.target.value)
                 if (!validateMAC(e.target.value)) {
-                  setmacState("has-danger");
+                  setmacState('has-danger')
                 } else {
-                  setmacState("has-success");
+                  setmacState('has-success')
                 }
-                setmac(e.target.value);
+                setmac(e.target.value)
               }}
-              onFocus={(e) => setmacFocus(true)}
-              onBlur={(e) => setmacFocus(false)}
             />
-            {macState === "has-danger" ? (
-              <label className="error">This field is required.</label>
-            ) : null}
-          </InputGroup>
-          <InputGroup
-            className={classnames(pskState, {
-              "input-group-focus": pskFocus,
-            })}
-          >
-            <Label> Passphrase (Leave Empty to Generate a Secure, Random PSK)</Label>
-            <InputGroupAddon addonType="prepend">
-              <InputGroupText>
-              </InputGroupText>
-            </InputGroupAddon>
+            {macState === 'has-danger' ? (
+              <Label className="error">Format: 00:00:00:00:00:00</Label>
+            ) : (
+              <Label className="info">
+                Leave empty to assign on first connection
+              </Label>
+            )}
+          </FormGroup>
+
+          <FormGroup className={pskState}>
             <Input
               name="psk"
-              placeholder=""
+              placeholder="Passphrase"
               type="password"
               onChange={(e) => {
                 setsubmitted(false)
                 if (!validatePassphrase(e.target.value)) {
-                  setpskState("has-danger");
+                  setpskState('has-danger')
                 } else {
-                  setpskState("has-success");
+                  setpskState('has-success')
                 }
-                setpsk(e.target.value);
+                setpsk(e.target.value)
               }}
-              onFocus={(e) => setpskFocus(true)}
-              onBlur={(e) => setpskFocus(false)}
             />
-            {pskState === "has-danger" ? (
-              <label className="error">Passphrase must be at least 8 characters long.</label>
-            ) : null}
-          </InputGroup>
+            {pskState === 'has-danger' ? (
+              <Label className="error">
+                Passphrase must be at least 8 characters long.
+              </Label>
+            ) : (
+              <Label className="info">
+                Leave empty to Generate a Secure &amp; random password
+              </Label>
+            )}
+          </FormGroup>
 
-
-
+          <FormGroup>
+            <Select
+              isMulti
+              options={allZones}
+              value={zones.map((v) => {
+                return { label: v, value: v }
+              })}
+              onChange={handleChangeZones}
+            />
+            <Label className="info">
+              Assign device to zones for network access
+            </Label>
+          </FormGroup>
         </Col>
       </Row>
     </>
-  );
-});
+  )
+})
 
-export default Step1;
+export default Step1
