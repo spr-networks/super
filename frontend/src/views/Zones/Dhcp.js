@@ -5,15 +5,11 @@ import ZoneListing from 'components/Zones/ZoneListing'
 import { APIErrorContext } from 'layouts/Admin'
 
 export default class Dhcp extends Component {
-  state = { zones: {}, zoneRows: [] }
+  state = { zones: [] }
 
   static contextType = APIErrorContext
 
   async componentDidMount() {
-    const setState = (v) => {
-      this.setState(v)
-    }
-
     async function refreshZones() {
       let divs = []
       const vmap = await nfmapAPI.getNFVerdictMap('dhcp').catch((error) => {
@@ -31,40 +27,52 @@ export default class Dhcp extends Component {
       })
 
       let ipMap = {}
-      for (const e of arp) {
-        ipMap[e.MAC] = e
+      for (const entry of arp) {
+        ipMap[entry.MAC] = entry
       }
 
       const devices = await deviceAPI.list().catch((error) => {
         this.context.reportError('API Failure getDevices: ' + error.message)
       })
 
-      const generatedID = Math.random().toString(36).substr(2, 9)
-      let v = { Name: 'Wireless DHCP Clients', Members: [] }
-      v.vmap = vmap
-      v.ipMap = ipMap
+      let zone = { Name: 'Connected Clients', Members: [] }
+      zone.vmap = vmap
+      zone.ipMap = ipMap
       for (const entry of vmap) {
-        let name = '--'
-        let d = devices[entry.ether_addr]
-        if (d) {
-          name = d.Name
+        let MAC = entry.ether_addr,
+          Name = '--',
+          ifname = entry.ifname
+
+        let device = devices[MAC]
+        if (device) {
+          Name = device.Name
+          device.online = true
         }
-        v.Members.push({
-          Name: name,
-          MAC: entry.ether_addr,
-          ifname: entry.ifname
+
+        zone.Members.push({ MAC, Name, ifname, online: true })
+      }
+
+      let zoneOffline = { Name: 'Devices not connected', Members: [] }
+      for (let device of Object.values(devices)) {
+        if (device.online === true) {
+          continue
+        }
+
+        zoneOffline.Members.push({
+          MAC: device.MAC,
+          Name: device.Name,
+          IP: device.RecentIP,
+          ifname: '',
+          online: false
         })
       }
 
-      divs.push(
-        <ZoneListing key={generatedID} zone={v} notifyChange={notifyChange} />
-      )
+      let zones = [zone]
+      if (zoneOffline.Members.length) {
+        zones.push(zoneOffline)
+      }
 
-      setState({ zoneRows: divs })
-    }
-
-    const notifyChange = () => {
-      refreshZones()
+      this.setState({ zones })
     }
 
     refreshZones = refreshZones.bind(this)
@@ -74,7 +82,11 @@ export default class Dhcp extends Component {
   render() {
     return (
       <>
-        <div className="content">{this.state.zoneRows}</div>
+        <div className="content">
+          {this.state.zones.map((zone) => (
+            <ZoneListing key={zone.Name} zone={zone} />
+          ))}
+        </div>
       </>
     )
   }

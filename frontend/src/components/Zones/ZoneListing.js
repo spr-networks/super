@@ -34,7 +34,7 @@ export default class ZoneListing extends Component {
       for (const v of zone.Members) {
         const generatedID = Math.random().toString(36).substr(2, 9)
         //if the device was in the vmap, mark it as active
-        v.ifname = '--'
+        v.ifname = ''
         if (zone.vmap) {
           for (const entry of zone.vmap) {
             if (entry.ifname && entry.ether_addr == v.MAC) {
