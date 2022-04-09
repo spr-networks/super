@@ -10,42 +10,44 @@ import {
   CardSubtitle,
   Table,
   Row,
-  Col,
-} from "reactstrap"
+  Col
+} from 'reactstrap'
 
 export default class ZoneListing extends Component {
-
   render() {
-
     function translateName(zoneName) {
-      if (zoneName === "dns") {
-        return "DNS"
-      } else if (zoneName === "lan") {
-        return "LAN"
-      } else if (zoneName == "wan") {
-        return "Internet (wan)"
+      if (zoneName === 'dns') {
+        return 'DNS'
+      } else if (zoneName === 'lan') {
+        return 'LAN'
+      } else if (zoneName == 'wan') {
+        return 'Internet (wan)'
       }
       return zoneName
     }
 
-    const zone = this.props.zone;
-    const devices = this.props.devices;
+    const zone = this.props.zone
+    const devices = this.props.devices
 
     const zoneRows = []
     if (zone.Members && zone.Members.length > 0) {
       for (const v of zone.Members) {
-          const generatedID = Math.random().toString(36).substr(2, 9);
-          //if the device was in the vmap, mark it as active
-          v.ifname = "--"
-          if (zone.vmap) {
-            for (const entry of zone.vmap) {
-              if (entry.ifname && entry.ether_addr == v.MAC) {
-                v.ifname = entry.ifname
-                v.IP = entry.ipv4_addr || ((zone.ipMap && zone.ipMap[entry.ether_addr]) ? zone.ipMap[entry.ether_addr].IP : "--")
-              }
+        const generatedID = Math.random().toString(36).substr(2, 9)
+        //if the device was in the vmap, mark it as active
+        v.ifname = '--'
+        if (zone.vmap) {
+          for (const entry of zone.vmap) {
+            if (entry.ifname && entry.ether_addr == v.MAC) {
+              v.ifname = entry.ifname
+              v.IP =
+                entry.ipv4_addr ||
+                (zone.ipMap && zone.ipMap[entry.ether_addr]
+                  ? zone.ipMap[entry.ether_addr].IP
+                  : '--')
             }
           }
-          zoneRows.push( <ZoneDevice key={generatedID} device={v} />)
+        }
+        zoneRows.push(<ZoneDevice key={generatedID} device={v} />)
       }
     }
 
@@ -56,7 +58,9 @@ export default class ZoneListing extends Component {
             <Card>
               <CardHeader>
                 <CardTitle tag="h4">{translateName(zone.Name)}</CardTitle>
-                <CardSubtitle className="text-muted">{zoneDescriptions[zone.Name] || ""}</CardSubtitle>
+                <CardSubtitle className="text-muted">
+                  {zoneDescriptions[zone.Name] || ''}
+                </CardSubtitle>
               </CardHeader>
               <CardBody>
                 <Table responsive>
@@ -68,9 +72,7 @@ export default class ZoneListing extends Component {
                       <th>Active Interface</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {zoneRows}
-                  </tbody>
+                  <tbody>{zoneRows}</tbody>
                 </Table>
               </CardBody>
             </Card>
