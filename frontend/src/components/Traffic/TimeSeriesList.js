@@ -100,7 +100,7 @@ const TimeSeriesList = (props) => {
       </thead>
       <tbody>
         {listFiltered.map((row) => (
-          <tr>
+          <tr key={row.Timestamp}>
             <td>{prettyDate(row.Timestamp)}</td>
             <td>{row.Interface}</td>
             <td>{row.Src}</td>
