@@ -86,6 +86,8 @@ class API {
 
       if (contentType.includes('application/json')) {
         return response.json()
+      } else if (contentType.includes('text/plain')) {
+        return response.text()
       }
 
       return Promise.reject('unknown Content-Type')
