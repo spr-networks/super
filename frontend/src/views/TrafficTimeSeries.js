@@ -7,6 +7,7 @@ import TimeSeries from 'components/Traffic/TimeSeries'
 
 class TrafficTimeSeries extends Component {
   state = {
+    clients: [],
     WanIn_scale: 'All Time',
     LanIn_scale: 'All Time',
     WanOut_scale: 'All Time',
@@ -153,6 +154,12 @@ class TrafficTimeSeries extends Component {
       return traffic_data
     }
 
+    const labelByIP = (ip) => {
+      let client = this.state.clients.filter((client) => client.IP == ip)
+      client = client ? client[0] : null
+      return client && client.Name ? client.Name : ip
+    }
+
     // setup datasets
     let datasets = []
 
@@ -167,8 +174,10 @@ class TrafficTimeSeries extends Component {
         .alpha(0.85)
         .css()
       let data = drop_quarter_samples(ipStats[ip])
+      let label = labelByIP(ip)
+
       datasets.push({
-        label: ip,
+        label,
         data_target: target,
         hidden: false,
         stepped: true,
@@ -187,11 +196,13 @@ class TrafficTimeSeries extends Component {
   componentDidMount() {
     let targets = ['WanOut', 'WanIn', 'LanOut', 'LanIn']
 
-    /*deviceAPI.list().then((devices) => {
+    deviceAPI.list().then((devices) => {
       let clients = Object.values(devices).map((d) => {
         return { Name: d.Name, IP: d.RecentIP, MAC: d.MAC }
       })
-    })*/
+
+      this.setState({ clients })
+    })
 
     targets.map(async (target) => {
       let datasets = await this.buildTimeSeries(target)

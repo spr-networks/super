@@ -84,6 +84,7 @@ const TimeSeriesChart = (props) => {
         intersect: false,
         position: 'nearest', //'topLeft',
         caretSize: 5,
+        itemSort: (a, b) => b.raw.z - a.raw.z,
         callbacks: {
           label: (context) => {
             let label = context.dataset.label || ''
