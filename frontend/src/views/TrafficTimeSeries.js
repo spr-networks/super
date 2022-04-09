@@ -231,6 +231,7 @@ class TrafficTimeSeries extends Component {
         {['WanOut', 'WanIn', 'LanIn', 'LanOut'].map((type) => {
           return (
             <TimeSeries
+              key={type}
               type={type}
               title={prettyTitle(type)}
               data={this.state[type]}
