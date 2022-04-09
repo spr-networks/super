@@ -2,6 +2,7 @@ import API from './API'
 
 export default API
 export { api, testLogin, saveLogin } from './API'
+export { ConnectWebsocket } from './WebSocket'
 export { deviceAPI } from './Device'
 export { zoneAPI } from './Zone'
 export { wifiAPI } from './Wifi'
