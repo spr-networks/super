@@ -21,7 +21,7 @@ export class APINfmap extends API {
   }
 
   getNFVerdictMap = (zone) => {
-    this.get('/' + this.translate(zone)).then((v) => {
+    return this.get('/' + this.translate(zone)).then((v) => {
       let vmap = v.nftables[1].map
       let results = []
       if (vmap.elem && vmap.type) {
