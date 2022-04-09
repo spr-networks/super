@@ -1,6 +1,4 @@
-import { ConnectWebsocket } from 'components/Helpers/Api'
-
-const apiURL = () => {
+export const apiURL = () => {
   const { REACT_APP_API } = process.env
   if (REACT_APP_API) {
     try {
