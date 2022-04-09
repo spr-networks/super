@@ -76,7 +76,7 @@ class API {
 
     return fetch(_url, opts).then((response) => {
       if (!response.ok) {
-        return Promise.reject(response.status)
+        return Promise.reject({ message: response.status })
       }
 
       const contentType = response.headers.get('Content-Type')
@@ -90,7 +90,7 @@ class API {
         return response.text()
       }
 
-      return Promise.reject('unknown Content-Type')
+      return Promise.reject({ message: 'unknown Content-Type' })
     })
   }
 
