@@ -605,6 +605,22 @@ export default function MockAPI() {
           }
         ]
       })
+
+      this.get('/plugins/wireguard/config', (schema, request) => {
+        return {
+          Interface: {
+            PrivateKey: 'gC0BnVD5c7kEuzQUZ9tPfguEltL+oO6oaJ5VKD26e2Y=',
+            Address: '192.168.3.4/24',
+            DNS: '1.1.1.1, 1.0.0.1'
+          },
+          Peer: {
+            PublicKey: '5vazmq54exf62jfXWE9YQ/m8kjcCZPtQBpLib2W+1H4=',
+            AllowedIPs: '0.0.0.0/0',
+            Endpoint: '192.168.3.1/24:51280',
+            PersistentKeepalive: 25
+          }
+        }
+      })
     }
   })
 
