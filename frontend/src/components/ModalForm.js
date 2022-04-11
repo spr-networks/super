@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 import { Button, Modal } from 'reactstrap'
 
@@ -10,14 +10,14 @@ const ModalForm = (props) => {
 
   // this allows us to close the modal using a ref to the modal
   useEffect(() => {
-    if (!props.modalRef) {
-      return
+    if (props.modalRef) {
+      props.modalRef.current = toggleModal
     }
 
-    props.modalRef.current = closeModal //{close: closeModal}
-
     return () => {
-      props.modalRef.current = null
+      if (props.modalRef) {
+        props.modalRef.current = null
+      }
     }
   })
 
