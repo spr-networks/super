@@ -19,7 +19,8 @@ export default function MockAPI() {
       dnsblocklist: Model,
       dnsoverride: Model,
       dnslogprivacylist: Model,
-      dnslogdomainignorelist: Model
+      dnslogdomainignorelist: Model,
+      wireguardpeer: Model
     },
     seeds(server) {
       server.create('device', {
@@ -106,6 +107,20 @@ export default function MockAPI() {
       server.create('dnslogprivacylist', { ip: '192.168.1.101' })
       server.create('dnslogdomainignorelist', { domain: 'example.com' })
       server.create('dnslogdomainignorelist', { domain: 'privatedomain.com' })
+
+      server.create('wireguardpeer', {
+        PublicKey: 'QX9cpyIY7mh1kuVSBnRHJyyqnJQ6iuHdwqSPviPwdT8=',
+        AllowedIPs: '192.168.3.2/32',
+        Endpoint: '192.168.2.1:51280',
+        PersistentKeepalive: 25
+      })
+
+      server.create('wireguardpeer', {
+        PublicKey: '2woVWXJcMcb/7Kh44bevC1eIQnbYBh9nDWyHc8LqWXY=',
+        AllowedIPs: '192.168.3.3/32',
+        Endpoint: '192.168.2.1:51280',
+        PersistentKeepalive: 25
+      })
     },
     routes() {
       // TODO hook for all
@@ -606,20 +621,78 @@ export default function MockAPI() {
         ]
       })
 
-      this.get('/plugins/wireguard/config', (schema, request) => {
+      this.get('/plugins/wireguard/peers', (schema, request) => {
+        return schema.wireguardpeers.all().models
+      })
+
+      this.put('/plugins/wireguard/peer', (schema, request) => {
+        // note prefer if the user generate the privkey & supply pubkey
+        let attrs = JSON.parse(request.requestBody)
+
+        const rKey = () => {
+          let key = ''
+          for (let i = 0; i < 32; i++) {
+            key += String.fromCharCode(r(255))
+          }
+
+          return btoa(key)
+        }
+
+        let PublicKey = attrs.PublicKey || rKey()
+        let PrivateKey = attrs.PublicKey ? '<PRIVATE KEY>' : rKey()
+
+        let AllowedIPs = '192.168.3.4/32'
+        if (attrs.AllowedIPs) {
+          AllowedIPs = attrs.AllowedIPs
+        } else {
+          // get next free ip
+          let ips = schema.wireguardpeers
+            .all()
+            .models.map((p) => p.AllowedIPs.replace(/\/.*/, ''))
+
+          for (let i = 4; i < 100; i++) {
+            let ip = `192.168.3.${i}`
+            if (!ips.includes(ip)) {
+              AllowedIPs = `${ip}/32`
+              break
+            }
+          }
+        }
+
+        let Address = AllowedIPs.replace(/\/32$/, '/24')
+
+        let peer = {
+          PublicKey,
+          AllowedIPs,
+          Endpoint: '192.168.2.1:51280',
+          PersistentKeepalive: 25
+        }
+
+        schema.wireguardpeers.create(peer)
+
+        //output
+
         return {
           Interface: {
-            PrivateKey: 'gC0BnVD5c7kEuzQUZ9tPfguEltL+oO6oaJ5VKD26e2Y=',
-            Address: '192.168.3.4/24',
+            PrivateKey,
+            Address,
             DNS: '1.1.1.1, 1.0.0.1'
           },
           Peer: {
             PublicKey: '5vazmq54exf62jfXWE9YQ/m8kjcCZPtQBpLib2W+1H4=',
             AllowedIPs: '0.0.0.0/0',
-            Endpoint: '192.168.3.1/24:51280',
+            Endpoint: '192.168.2.1:51280',
             PersistentKeepalive: 25
           }
         }
+      })
+
+      this.delete('/plugins/wireguard/peer', (schema, request) => {
+        //let id = request.params.id
+        let attrs = JSON.parse(request.requestBody)
+        let PublicKey = attrs.PublicKey
+
+        return schema.wireguardpeers.findBy({ PublicKey }).destroy()
       })
     }
   })

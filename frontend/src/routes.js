@@ -1,17 +1,18 @@
-import AddDevice from 'views/Devices/AddDevice.js'
-import Arp from 'views/Devices/Arp.js'
-import Devices from 'views/Devices/Devices.js'
-import Dhcp from 'views/Zones/Dhcp.js'
-import Home from 'views/Home.js'
-import Login from 'views/pages/Login.js'
-import SignalStrength from 'views/SignalStrength.js'
-import Traffic from 'views/Traffic.js'
-import TrafficTimeSeries from 'views/TrafficTimeSeries.js'
+import AddDevice from 'views/Devices/AddDevice'
+import Arp from 'views/Devices/Arp'
+import Devices from 'views/Devices/Devices'
+import Dhcp from 'views/Zones/Dhcp'
+import Home from 'views/Home'
+import Login from 'views/pages/Login'
+import SignalStrength from 'views/SignalStrength'
+import Traffic from 'views/Traffic'
+import TrafficTimeSeries from 'views/TrafficTimeSeries'
 import WirelessConfiguration from 'views/WirelessConfiguration'
 import Zones from 'views/Zones/Zones'
 import DNSBlock from 'views/DNS/DNSBlock'
 import DNSLog from 'views/DNS/DNSLog'
 import DNSLogEdit from 'views/DNS/DNSLogEdit'
+import Wireguard from 'views/Wireguard'
 
 const routes = [
   {
@@ -130,7 +131,13 @@ const routes = [
       }
     ]
   },
-
+  {
+    path: '/wireguard',
+    name: 'Wireguard',
+    icon: 'fa fa-link',
+    component: Wireguard,
+    layout: '/admin'
+  },
   {
     path: '/login',
     component: Login,

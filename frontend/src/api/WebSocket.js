@@ -1,11 +1,16 @@
 import { apiURL } from './API'
 
 export function ConnectWebsocket(messageCallback) {
-  let userData = JSON.parse(localStorage.getItem('user'))
+  let userData = JSON.parse(localStorage.getItem('user')),
+    ws = null
 
-  let host = new URL(apiURL()).host
-
-  let ws = new WebSocket(`ws://${host}/ws`)
+  try {
+    let host = new URL(apiURL()).host
+    ws = new WebSocket(`ws://${host}/ws`)
+  } catch (err) {
+    // mock error
+    return
+  }
 
   ws.addEventListener('open', (event) => {
     ws.send(userData['username'] + ':' + userData['password'])
