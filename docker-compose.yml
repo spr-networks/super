@@ -114,6 +114,7 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/wireguard/:/configs/wireguard/
+      - ./state/wireguard/:/state/api/
 # Use the prebuilt frontend
   frontend:   
     container_name: superfrontend
@@ -123,7 +124,7 @@ services:
     volumes:
     - ./frontend/:/frontend
 # Use below to build frontend from scratch instead
-#  frontend:   
+#  frontend:
 #    container_name: superfrontend
 #    network_mode: none
 #    build: frontend
@@ -148,12 +149,25 @@ services:
       - ./configs/devices/:/configs/devices/
       - ./configs/zones/:/configs/zones/
       - ./configs/wifi/:/configs/wifi/
+      - ./configs/wireguard/:/configs/wireguard/
       - ./configs/scripts/:/configs/scripts/
       - ./state/wifi/:/state/wifi/
       - ./state/dhcp/:/state/dhcp/
       - ./state/api/:/state/api/
       - ./state/dns/:/state/dns/
+      - ./state/wireguard/:/state/wireguard/
+      - ./state/plugin-oui/:/state/plugin-oui/
       - ./frontend/build:/ui/
+#  plugin-oui:
+#    container_name: super-plugin-oui
+#    build: plugin-oui
+#    network_mode: host
+#    logging:
+#      driver: journald
+#    depends_on:
+#      - "base"
+#    volumes:
+#      - ./state/plugin-oui/:/state/plugins/
 networks: 
   default:
     driver: none
