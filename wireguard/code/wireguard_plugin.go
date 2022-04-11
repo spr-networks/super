@@ -19,8 +19,6 @@ import (
 
 var UNIX_PLUGIN_LISTENER = "/state/api/wireguard_plugin"
 
-//var UNIX_PLUGIN_LISTENER = "./http.sock"
-
 var TEST_PREFIX = ""
 var WireguardConfigFile = TEST_PREFIX + "/configs/wireguard/wg0.conf"
 
@@ -380,6 +378,32 @@ func pluginGetStatus(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(data))
 }
 
+func pluginUp(w http.ResponseWriter, r *http.Request) {
+	cmd := exec.Command("wg-quick", "up", WireguardConfigFile)
+	_, err := cmd.Output()
+	if err != nil {
+		fmt.Println("wg-quick up failed", err)
+		http.Error(w, "Not found", 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(true)
+}
+
+func pluginDown(w http.ResponseWriter, r *http.Request) {
+	cmd := exec.Command("wg-quick", "down", WireguardConfigFile)
+	_, err := cmd.Output()
+	if err != nil {
+		fmt.Println("wg-quick down failed", err)
+		http.Error(w, "Not found", 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(true)
+}
+
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
@@ -395,6 +419,9 @@ func main() {
 	unix_plugin_router.HandleFunc("/status", pluginGetStatus).Methods("GET")
 	unix_plugin_router.HandleFunc("/peers", pluginGetPeers).Methods("GET")
 	unix_plugin_router.HandleFunc("/peer", pluginPeer).Methods("PUT", "DELETE")
+
+	unix_plugin_router.HandleFunc("/up", pluginUp).Methods("PUT")
+	unix_plugin_router.HandleFunc("/down", pluginDown).Methods("PUT")
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)
