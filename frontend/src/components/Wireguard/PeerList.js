@@ -12,7 +12,9 @@ import {
   CardHeader,
   CardBody,
   CardTitle,
-  Table
+  Table,
+  Row,
+  Col
 } from 'reactstrap'
 
 const PeerList = (props) => {
@@ -55,6 +57,10 @@ const PeerList = (props) => {
 
   const refModal = useRef(null)
 
+  const triggerModal = () => {
+    refModal.current()
+  }
+
   return (
     <>
       <Card>
@@ -72,49 +78,65 @@ const PeerList = (props) => {
           <CardTitle tag="h4">Wireguard peers</CardTitle>
         </CardHeader>
         <CardBody>
-          <Table responsive>
-            <thead className="text-primary">
-              <tr>
-                <th>AllowedIPs</th>
-                <th>Pubkey</th>
-                <th>Last active</th>
-                <th>Transfer</th>
-                <th className="text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {peers.map((peer) => (
-                <tr key={peer.AllowedIPs}>
-                  <td>{peer.AllowedIPs}</td>
-                  <td>{peer.PublicKey}</td>
-                  <td>
-                    {peer.LatestHandshake
-                      ? prettyDate(peer.LatestHandshake)
-                      : null}
-                  </td>
-                  <td>
-                    {peer.TransferRx ? (
-                      <>
-                        {prettySize(peer.TransferRx)} /{' '}
-                        {prettySize(peer.TransferTx)}
-                      </>
-                    ) : null}
-                  </td>
-                  <td className="text-center">
-                    <Button
-                      className="btn-icon"
-                      color="danger"
-                      size="sm"
-                      type="button"
-                      onClick={(e) => deleteListItem(peer)}
-                    >
-                      <i className="fa fa-times" />
-                    </Button>
-                  </td>
+          {peers.length ? (
+            <Table responsive>
+              <thead className="text-primary">
+                <tr>
+                  <th>AllowedIPs</th>
+                  <th>Pubkey</th>
+                  <th>Last active</th>
+                  <th>Transfer</th>
+                  <th className="text-center">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {peers.map((peer) => (
+                  <tr key={peer.AllowedIPs}>
+                    <td>{peer.AllowedIPs}</td>
+                    <td>{peer.PublicKey}</td>
+                    <td>
+                      {peer.LatestHandshake
+                        ? prettyDate(peer.LatestHandshake)
+                        : null}
+                    </td>
+                    <td>
+                      {peer.TransferRx ? (
+                        <>
+                          {prettySize(peer.TransferRx)} /{' '}
+                          {prettySize(peer.TransferTx)}
+                        </>
+                      ) : null}
+                    </td>
+                    <td className="text-center">
+                      <Button
+                        className="btn-icon"
+                        color="danger"
+                        size="sm"
+                        type="button"
+                        onClick={(e) => deleteListItem(peer)}
+                      >
+                        <i className="fa fa-times" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          ) : (
+            <Row>
+              <Col md={12} className="text-center">
+                <p>Wireguard is running but there is no peers configured yet</p>
+                <Button
+                  className="btn-wd btn-round"
+                  color="primary"
+                  onClick={triggerModal}
+                >
+                  <i className="fa fa-plus" />
+                  add a new peer
+                </Button>
+              </Col>
+            </Row>
+          )}
         </CardBody>
       </Card>
     </>
