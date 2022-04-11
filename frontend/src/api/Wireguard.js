@@ -10,6 +10,8 @@ export class APIWireguard extends API {
   status = () => this.get('status')
   putPeer = (data) => this.put('peer', data)
   deletePeer = (data) => this.delete('peer', data)
+  up = () => this.put('up')
+  down = () => this.put('down')
 }
 
 export const wireguardAPI = new APIWireguard()
