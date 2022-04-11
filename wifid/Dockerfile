@@ -1,8 +1,7 @@
 FROM ubuntu:21.04 as builder
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl clang
-RUN apt-get install -y pkg-config gcc llvm m4 emacs libpcap-dev libelf-dev make libnl-genl-3-dev libssl-dev
+RUN apt-get update && apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl clang \
+	pkg-config gcc llvm m4 emacs libpcap-dev libelf-dev make libnl-genl-3-dev libssl-dev
 RUN mkdir /code
 WORKDIR /code
 RUN git clone -b v1.2.0 --depth 1 https://github.com/xdp-project/xdp-tools.git
@@ -32,9 +31,7 @@ RUN make install
 
 FROM ubuntu:21.04
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
-RUN apt-get install -y libnl-genl-3-dev
+RUN apt-get update && apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl libnl-genl-3-dev
 COPY --from=builder /code/hostap/hostapd/hostapd /usr/local/bin/
 COPY --from=builder /code/hostap/hostapd/hostapd_cli /usr/local/bin/
 COPY --from=builder /hostap_dhcp_helper /

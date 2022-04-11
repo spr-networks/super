@@ -22,8 +22,7 @@ RUN --mount=type=tmpfs,target=/root/go/ (go build -o /coredhcpd ./cmds/coredhcp;
 
 FROM ubuntu:21.04
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
+RUN apt-get update && apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
 COPY --from=builder /coredhcpd /
 COPY --from=builder /coredhcp_client /
 COPY scripts /scripts

@@ -1,8 +1,6 @@
 FROM Ubuntu:21.04 as builder
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl clang
-RUN apt-get install -y libpcap-dev
+RUN apt-get update && apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl clang libpcap-dev
 RUN mkdir /code
 WORKDIR /code
 ARG TARGETARCH
@@ -16,8 +14,7 @@ COPY scripts /scripts/
 
 FROM ubuntu:21.04
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
+RUN apt-get update && apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
 RUN mkdir /data
 COPY --from=/flowgather /
 ENTRYPOINT ["/scripts/startup.sh"]
