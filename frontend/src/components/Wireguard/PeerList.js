@@ -8,6 +8,7 @@ import { prettyDate, prettySize } from 'utils'
 
 import {
   Button,
+  Label,
   Card,
   CardHeader,
   CardBody,
@@ -19,11 +20,19 @@ import {
 
 const PeerList = (props) => {
   const [peers, setPeers] = useState([])
+  const [config, setConfig] = useState({})
   const refreshPeers = () => {
+    // TODO add to and use this
     /*wireguardAPI.peers().then((list) => {
       setPeers(list)
     })*/
+
     wireguardAPI.status().then((status) => {
+      let publicKey = status.wg0.publicKey,
+        listenPort = status.wg0.listenPort
+
+      setConfig({ publicKey, listenPort })
+
       let list = []
       for (let publicKey in status.wg0.peers) {
         let p = status.wg0.peers[publicKey]
@@ -75,7 +84,7 @@ const PeerList = (props) => {
             <WireguardAddPeer notifyChange={refreshPeers} />
           </ModalForm>
 
-          <CardTitle tag="h4">Wireguard peers</CardTitle>
+          <CardTitle tag="h4">Peers</CardTitle>
         </CardHeader>
         <CardBody>
           {peers.length ? (
@@ -125,7 +134,14 @@ const PeerList = (props) => {
           ) : (
             <Row>
               <Col md={12} className="text-center">
-                <p>Wireguard is running but there is no peers configured yet</p>
+                {config.listenPort ? (
+                  <p>There are no peers configured yet</p>
+                ) : (
+                  <p>
+                    Wireguard is not running. See /configs/wireguard/wg0.conf
+                  </p>
+                )}
+
                 <Button
                   className="btn-wd btn-round"
                   color="primary"
