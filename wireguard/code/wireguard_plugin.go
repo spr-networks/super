@@ -37,6 +37,7 @@ type ClientPeer struct {
 	PublicKey           string
 	AllowedIPs          string
 	Endpoint            string
+	PresharedKey        string
 	PersistentKeepalive uint
 }
 
@@ -79,6 +80,18 @@ func genKeyPair() (KeyPair, error) {
 	keypair.PublicKey = strings.TrimSuffix(string(pubkey), "\n")
 
 	return keypair, nil
+}
+
+func genPresharedKey() (string, error) {
+	cmd := exec.Command("wg", "genpsk")
+	stdout, err := cmd.Output()
+	if err != nil {
+		fmt.Println("wg genpsk failed", err)
+		return "", err
+	}
+
+	PresharedKey := strings.TrimSuffix(string(stdout), "\n")
+	return PresharedKey, nil
 }
 
 func getPeers() ([]ClientPeer, error) {
@@ -223,8 +236,6 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("peer:", peer)
-
 	if r.Method == http.MethodDelete {
 		err = removePeer(peer)
 		if err != nil {
@@ -238,6 +249,7 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// this is whats returned
 	config := ClientConfig{}
 
 	if len(peer.PublicKey) == 0 {
@@ -290,20 +302,38 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 	// TODO verify pubkey
 
 	//add a new peer
-	//wg set wg0 peer <client_pubkey> allowed-ips 10.0.0.x/32
-	if len(config.Interface.Address) > 0 {
-		AllowedIPs := strings.Replace(config.Interface.Address, "/24", "/32", 1)
+	AllowedIPs := strings.Replace(config.Interface.Address, "/24", "/32", 1)
 
-		fmt.Println("running:", "wg", "set", "wg0", "peer", peer.PublicKey, "allowed-ips", AllowedIPs)
-
-		cmd := exec.Command("wg", "set", "wg0", "peer", peer.PublicKey, "allowed-ips", AllowedIPs)
-		_, err := cmd.Output()
-		if err != nil {
-			fmt.Println("wg set error:", err)
-			http.Error(w, err.Error(), 400)
-			return
-		}
+	PresharedKey, err := genPresharedKey()
+	if err != nil {
+		fmt.Println("genpsk fail:", err)
+		return
 	}
+
+	fmt.Println("running wg set")
+
+	cmd := exec.Command("wg", "set", "wg0", "peer", peer.PublicKey, "preshared-key", "/dev/stdin", "allowed-ips", AllowedIPs)
+
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		fmt.Println("wg set stdin pipe error:", err)
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	go func() {
+		defer stdin.Close()
+		io.WriteString(stdin, PresharedKey+"\n")
+	}()
+
+	_, err = cmd.Output()
+	if err != nil {
+		fmt.Println("wg set stdout error:", err)
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	// save config
 
 	err = saveConfig()
 	if err != nil {
@@ -323,15 +353,16 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 
 	config.Interface.DNS = "1.1.1.1, 1.0.0.1"
 
-	pubkey, err := getPublicKey()
+	PublicKey, err := getPublicKey()
 	if err != nil {
 		fmt.Println("failed to get server pubkey:", err)
 		http.Error(w, "Not found", 404)
 		return
 	}
 
-	config.Peer.PublicKey = pubkey
-	config.Peer.AllowedIPs = "0.0.0.0/0"
+	config.Peer.PublicKey = PublicKey
+	config.Peer.PresharedKey = PresharedKey
+	config.Peer.AllowedIPs = "0.0.0.0/0, ::/0"
 	config.Peer.Endpoint = endpoint
 	config.Peer.PersistentKeepalive = 25
 
