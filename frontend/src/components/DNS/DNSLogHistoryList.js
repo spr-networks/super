@@ -9,6 +9,7 @@ import { logAPI } from 'api/DNS'
 import { prettyDate } from 'utils'
 
 import {
+  Button,
   Card,
   CardHeader,
   CardBody,
@@ -190,6 +191,13 @@ export class DNSLogHistoryList extends React.Component {
     this.setState({ showAlert: false })
   }
 
+  deleteHistory() {
+    this.state.filterIPs.forEach((x) => {
+      logAPI.deleteHistory(x);
+    })
+    this.refreshList(this.state.filterIPs, this.filterList)
+  }
+
   render() {
     const prettyType = (type) => {
       let keys = {
@@ -235,6 +243,18 @@ export class DNSLogHistoryList extends React.Component {
             <CardTitle tag="h4">
               {this.state.filterIPs.join(',')} DNS Log
             </CardTitle>
+
+            <Row>
+              <Col md="4">
+                <Button
+                  color="danger"
+                  type="button"
+                  onClick={(e) => this.deleteHistory()}
+                >
+                  Delete History <i className="fa fa-times"></i>
+                </Button>
+              </Col>
+            </Row>
 
             <Row>
               <Col md="4">
@@ -314,7 +334,7 @@ export class DNSLogHistoryList extends React.Component {
               </thead>
               <tbody>
                 {this.state.list.map((item, index) => (
-                  <tr key={item.Timestamp}>
+                  <tr key={Math.random().toString(36).substr(2, 9)}>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       {prettyDate(item.Timestamp)}
                     </td>
