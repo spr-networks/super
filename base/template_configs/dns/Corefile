@@ -1,5 +1,5 @@
 . {
-  block
+  block enable_superapi
   rebinding_protection
 
   hosts /state/dns/local_mappings { 
@@ -12,9 +12,10 @@
     tls_servername cloudflare-dns.com
   }
 
-  #jsonlog {
-        #influxdb http://test:8086/ test DNS credentials==
-  #}
+  jsonlog {
+    enable_superapi
+    #influxdb http://test:8086/ test DNS credentials==
+  }
   log
   errors
   cache 30
