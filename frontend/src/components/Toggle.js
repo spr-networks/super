@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import './Toggle.css'
+import { cleanup } from '@testing-library/react'
 
 const Toggle = (props) => {
   const [isChecked, setIsChecked] = useState(props.isChecked || false)
@@ -11,6 +12,14 @@ const Toggle = (props) => {
       props.onChange(e, !isChecked)
     }
   }
+
+  useEffect(() => {
+    setIsChecked(props.isChecked ? true : false)
+
+    return () => {
+      setIsChecked(false)
+    }
+  }, [props.isChecked])
 
   return (
     <label className="switch">

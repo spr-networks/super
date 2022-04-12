@@ -694,6 +694,14 @@ export default function MockAPI() {
 
         return schema.wireguardpeers.findBy({ PublicKey }).destroy()
       })
+
+      this.put('/plugins/wireguard/up', (schema, request) => {
+        return true
+      })
+
+      this.put('/plugins/wireguard/down', (schema, request) => {
+        return true
+      })
     }
   })
 
