@@ -156,18 +156,18 @@ services:
       - ./state/api/:/state/api/
       - ./state/dns/:/state/dns/
       - ./state/wireguard/:/state/wireguard/
-      - ./state/plugin-oui/:/state/plugin-oui/
+      - ./state/plugin-lookup/:/state/plugin-lookup/
       - ./frontend/build:/ui/
-#  plugin-oui:
-#    container_name: super-plugin-oui
-#    build: plugin-oui
-#    network_mode: host
-#    logging:
-#      driver: journald
-#    depends_on:
-#      - "base"
-#    volumes:
-#      - ./state/plugin-oui/:/state/plugins/
+  plugin-lookup:
+    container_name: super-plugin-lookup
+    build: plugin-lookup
+    network_mode: host
+    logging:
+      driver: journald
+    depends_on:
+      - "base"
+    volumes:
+      - ./state/plugin-lookup/:/state/plugin-lookup/
 networks: 
   default:
     driver: none
