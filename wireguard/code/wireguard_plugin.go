@@ -94,6 +94,22 @@ func genPresharedKey() (string, error) {
 	return PresharedKey, nil
 }
 
+// get wireguard endpoint from the environment
+func getEndpoint() (string, error) {
+	network, ok := os.LookupEnv("LANIP")
+	if !ok {
+		return "", errors.New("LANIP not set")
+	}
+
+	port, ok := os.LookupEnv("WIREGUARD_PORT")
+	if !ok {
+		port = "51280"
+	}
+
+	endpoint := fmt.Sprintf("%s:%s", network, port)
+	return endpoint, nil
+}
+
 func getPeers() ([]ClientPeer, error) {
 	peers := []ClientPeer{}
 
@@ -167,22 +183,6 @@ func pluginGenKey(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(keypair)
-}
-
-// get wireguard endpoint from the environment
-func getEndpoint() (string, error) {
-	network, ok := os.LookupEnv("LANIP")
-	if !ok {
-		return "", errors.New("LANIP not set")
-	}
-
-	port, ok := os.LookupEnv("WIREGUARD_PORT")
-	if !ok {
-		port = "51280"
-	}
-
-	endpoint := fmt.Sprintf("%s:%s", network, port)
-	return endpoint, nil
 }
 
 // get wireguard endpoint from the environment
@@ -344,11 +344,16 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 
 	// return client config file
 
-	endpoint, err := getEndpoint()
-	if err != nil {
-		fmt.Println("failed to get endpoint address:", err)
-		http.Error(w, "Not found", 404)
-		return
+	// user can specify endpoint
+	if len(peer.Endpoint) == 0 {
+		endpoint, err := getEndpoint()
+		if err != nil {
+			fmt.Println("failed to get endpoint address:", err)
+			http.Error(w, "Not found", 404)
+			return
+		}
+
+		peer.Endpoint = endpoint
 	}
 
 	config.Interface.DNS = "1.1.1.1, 1.0.0.1"
@@ -363,7 +368,7 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 	config.Peer.PublicKey = PublicKey
 	config.Peer.PresharedKey = PresharedKey
 	config.Peer.AllowedIPs = "0.0.0.0/0, ::/0"
-	config.Peer.Endpoint = endpoint
+	config.Peer.Endpoint = peer.Endpoint
 	config.Peer.PersistentKeepalive = 25
 
 	w.Header().Set("Content-Type", "application/json")
