@@ -69,7 +69,14 @@ export default class WireguardAddPeer extends React.Component {
           AllowedIPs = ${data.Peer.AllowedIPs}
           Endpoint = ${data.Peer.Endpoint}
           PersistentKeepalive = ${data.Peer.PersistentKeepalive}
-        `.replace(/(  +)/g, '')
+          ${
+            data.Peer.PresharedKey
+              ? 'PresharedKey = ' + data.Peer.PresharedKey
+              : ''
+          }
+        `
+          .replace(/(  +)/g, '')
+          .trim()
       }
 
       let config = configFromJSON(this.state.config)
