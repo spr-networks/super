@@ -114,7 +114,7 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/wireguard/:/configs/wireguard/
-      - ./state/wireguard/:/state/api/
+      - ./state/wireguard/:/state/wireguard/
 # Use the prebuilt frontend
   frontend:   
     container_name: superfrontend
