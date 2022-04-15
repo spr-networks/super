@@ -28,10 +28,21 @@ li ul li .sidebar-mini-icon > .fa {
 	background-position: center center;
 	background-repeat: no-repeat;
 	opacity: 0.8;
-	width: 34px;
-	line-height:  30px;
 }
 .nc-wireguard:before {
 	content: '\ffff';
 	font-size: 1.2rem;
 }
+
+/* only display icon in mini-mode -- somewhat buggy */
+/*
+.sidebar-mini .sidebar .sidebar-normal {
+	line-height: 0px;
+	color: transparent;
+}
+
+.sidebar-mini .sidebar:hover .sidebar-normal {
+	line-height: 30px;
+	color: inherit;
+}
+*/
