@@ -135,7 +135,7 @@ const routes = [
   {
     path: '/wireguard',
     name: 'Wireguard',
-    icon: 'fa fa-link',
+    icon: 'nc-icon nc-wireguard',
     component: Wireguard,
     layout: '/admin'
   },
