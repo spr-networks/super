@@ -49,6 +49,7 @@ export class DNSLogHistoryList extends React.Component {
     this.handleChange = this.handleChange.bind(this)
     this.triggerAlert = this.triggerAlert.bind(this)
     this.closeAlert = this.closeAlert.bind(this)
+    this.deleteHistory = this.deleteHistory.bind(this)
   }
 
   async componentDidMount() {
@@ -191,10 +192,14 @@ export class DNSLogHistoryList extends React.Component {
     this.setState({ showAlert: false })
   }
 
-  deleteHistory() {
-    this.state.filterIPs.forEach((x) => {
-      logAPI.deleteHistory(x);
-    })
+  deleteHistory(e) {
+    let msg = `Delete history for ${this.state.filterIPs.join(', ')}?`
+    if (!confirm(msg) || !this.state.filterIPs.length) {
+      return
+    }
+
+    this.state.filterIPs.map(logAPI.deleteHistory)
+
     this.refreshList(this.state.filterIPs, this.filterList)
   }
 
@@ -246,18 +251,6 @@ export class DNSLogHistoryList extends React.Component {
 
             <Row>
               <Col md="4">
-                <Button
-                  color="danger"
-                  type="button"
-                  onClick={(e) => this.deleteHistory()}
-                >
-                  Delete History <i className="fa fa-times"></i>
-                </Button>
-              </Col>
-            </Row>
-
-            <Row>
-              <Col md="4">
                 <FormGroup>
                   <Label>Client</Label>
                   <ClientSelect
@@ -267,7 +260,7 @@ export class DNSLogHistoryList extends React.Component {
                   />
                 </FormGroup>
               </Col>
-              <Col md="8">
+              <Col md="6">
                 <FormGroup>
                   <Label>Search</Label>
                   <InputGroup>
@@ -284,6 +277,26 @@ export class DNSLogHistoryList extends React.Component {
                       </InputGroupText>
                     </InputGroupAddon>
                   </InputGroup>
+                </FormGroup>
+              </Col>
+
+              <Col md="2">
+                <FormGroup
+                  className={
+                    this.state.filterIPs.length && this.state.list.length
+                      ? ''
+                      : 'd-none'
+                  }
+                >
+                  <Label>Delete history</Label>
+                  <Button
+                    className="mt-0"
+                    color="danger"
+                    type="button"
+                    onClick={this.deleteHistory}
+                  >
+                    Delete <i className="fa fa-times"></i>
+                  </Button>
                 </FormGroup>
               </Col>
               {/*
