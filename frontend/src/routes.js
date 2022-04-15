@@ -134,7 +134,7 @@ const routes = [
   },
   {
     path: '/wireguard',
-    name: 'Wireguard',
+    name: 'VPN',
     icon: 'nc-icon nc-wireguard',
     component: Wireguard,
     layout: '/admin'
