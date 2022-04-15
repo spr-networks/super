@@ -22,3 +22,27 @@ li ul li .sidebar-mini-icon > .fa {
 	border-color: #66615B;
 	background-color: #66615B;
 }
+
+.nc-wireguard {
+	background-image: url(assets/img/icon-wg.svg);
+	background-position: center center;
+	background-repeat: no-repeat;
+	opacity: 0.8;
+}
+.nc-wireguard:before {
+	content: '\ffff';
+	font-size: 1.2rem;
+}
+
+/* only display icon in mini-mode -- somewhat buggy */
+/*
+.sidebar-mini .sidebar .sidebar-normal {
+	line-height: 0px;
+	color: transparent;
+}
+
+.sidebar-mini .sidebar:hover .sidebar-normal {
+	line-height: 30px;
+	color: inherit;
+}
+*/

@@ -81,7 +81,7 @@ const PeerList = (props) => {
             triggerIcon="fa fa-plus"
             modalRef={refModal}
           >
-            <WireguardAddPeer notifyChange={refreshPeers} />
+            <WireguardAddPeer config={config} notifyChange={refreshPeers} />
           </ModalForm>
 
           <CardTitle tag="h4">Peers</CardTitle>

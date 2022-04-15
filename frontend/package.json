@@ -39,7 +39,7 @@
     "chartjs-adapter-moment": "^1.0.0",
     "chroma-js": "^2.4.2",
     "classnames": "2.3.1",
-    "moment": "^2.29.1",
+    "moment": "^2.29.2",
     "perfect-scrollbar": "1.5.1",
     "prop-types": "15.7.2",
     "react": "17.0.2",

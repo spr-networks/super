@@ -13,6 +13,7 @@ import DNSBlock from 'views/DNS/DNSBlock'
 import DNSLog from 'views/DNS/DNSLog'
 import DNSLogEdit from 'views/DNS/DNSLogEdit'
 import Wireguard from 'views/Wireguard'
+import Logs from 'views/Logs'
 
 const routes = [
   {
@@ -133,9 +134,16 @@ const routes = [
   },
   {
     path: '/wireguard',
-    name: 'Wireguard',
-    icon: 'fa fa-link',
+    name: 'VPN',
+    icon: 'nc-icon nc-wireguard',
     component: Wireguard,
+    layout: '/admin'
+  },
+  {
+    path: '/logs/:containers',
+    name: 'Logs',
+    icon: 'fa fa-list-alt',
+    component: Logs,
     layout: '/admin'
   },
   {

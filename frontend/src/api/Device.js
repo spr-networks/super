@@ -22,12 +22,9 @@ export class APIDevice extends API {
   pendingPSK = () => this.get('/pendingPSK')
 
   // TODO add this functionality to base api
-  _macPrefix = (mac) => mac.replace(/:/g, '').toUpperCase().substring(0, 6)
-  oui = (mac) => this.get(`/plugins/oui/${this._macPrefix(mac)}`)
+  oui = (mac) => this.get(`/plugins/lookup/oui/${mac}`)
   ouis = (macs) => {
-    let prefixs = macs.map(this._macPrefix).join(',')
-
-    return this.get(`/plugins/oui/${prefixs}`)
+    return this.get(`/plugins/lookup/oui/${macs.join(',')}`)
   }
 }
 

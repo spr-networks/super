@@ -2,13 +2,16 @@ import React from 'react'
 // javascript plugin used to create scrollbars on windows
 import PerfectScrollbar from 'perfect-scrollbar'
 import { Route, Switch, useLocation } from 'react-router-dom'
+import NotificationAlert from 'react-notification-alert'
+import ReactBSAlert from 'react-bootstrap-sweetalert'
 
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Footer from 'components/Footer/Footer'
 import Sidebar from 'components/Sidebar/Sidebar'
 //import FixedPlugin from "components/FixedPlugin/FixedPlugin.js";
-import NotificationAlert from 'react-notification-alert'
 import { ConnectWebsocket } from 'api'
+
+import { Modal } from 'reactstrap'
 
 import routes from 'routes'
 
@@ -19,7 +22,12 @@ const errorState = {
   reportSuccess: () => {}
 }
 
+const modalState = {
+  modal: () => {}
+}
+
 export const APIErrorContext = React.createContext(errorState)
+export const ModalContext = React.createContext(modalState)
 
 function Admin(props) {
   const location = useLocation()
@@ -28,7 +36,14 @@ function Admin(props) {
   const [sidebarMini, setSidebarMini] = React.useState(false)
   const mainPanel = React.useRef()
   const notificationAlert = React.useRef()
+
+  const [showModal, setShowModal] = React.useState(false)
+  const [modalTitle, setModalTitle] = React.useState('')
+  const [modalBody, setModalBody] = React.useState('')
+
   const [websock, setwebsock] = React.useState(null)
+
+  const toggleModal = () => setShowModal(!showModal)
 
   errorState.reportError = (message) => {
     var options = {}
@@ -63,6 +78,19 @@ function Admin(props) {
 
     notificationAlert.current.notificationAlert(options)
   }
+
+  modalState.modal = (title, body) => {
+    if (!body) {
+      body = title
+      title = 'Message'
+    }
+    setModalTitle(title)
+    setModalBody(body)
+    setShowModal(true)
+  }
+  // TODO -- merge
+  modalState.reportError = modalState.modal
+  modalState.success = modalState.modal
 
   React.useEffect(() => {
     if (navigator.platform.indexOf('Win') > -1) {
@@ -140,12 +168,15 @@ function Admin(props) {
       }
     })
   }
+
   const handleActiveClick = (color) => {
     setActiveColor(color)
   }
+
   const handleBgClick = (color) => {
     setBackgroundColor(color)
   }
+
   const handleMiniClick = () => {
     if (document.body.classList.contains('sidebar-mini')) {
       setSidebarMini(false)
@@ -168,6 +199,29 @@ function Admin(props) {
         <APIErrorContext.Provider value={errorState}>
           <NotificationAlert ref={notificationAlert} />
         </APIErrorContext.Provider>
+        <ModalContext.Provider value={modalState}>
+          <Modal
+            fade={false}
+            isOpen={showModal}
+            toggle={toggleModal}
+            autoFocus={false}
+          >
+            <div className="modal-header">
+              <button
+                aria-label="Close"
+                className="close"
+                data-dismiss="modal"
+                type="button"
+                onClick={toggleModal}
+              >
+                <i className="nc-icon nc-simple-remove" />
+              </button>
+              <h5 className="modal-title">{modalTitle}</h5>
+            </div>
+            <div className="modal-body">{modalBody}</div>
+            <div className="modal-footer"></div>
+          </Modal>
+        </ModalContext.Provider>
         <Switch>{getRoutes(routes)}</Switch>
         {
           // we don't want the Footer to be rendered on full screen maps page

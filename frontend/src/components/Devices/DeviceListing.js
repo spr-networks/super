@@ -34,9 +34,6 @@ class DeviceListing extends Component {
 
   // set device oui if avail, else fail gracefully
   async setOUIs(devices) {
-    const macPrefix = (mac) =>
-      mac.replace(/:/g, '').toUpperCase().substring(0, 6)
-
     let ouis = []
     try {
       ouis = await deviceAPI.ouis(Object.keys(devices))
@@ -48,8 +45,8 @@ class DeviceListing extends Component {
       devices[mac].oui = ''
 
       for (let oui of ouis) {
-        if (oui.prefix == macPrefix(mac)) {
-          devices[mac].oui = oui.provider
+        if (oui.MAC == mac) {
+          devices[mac].oui = oui.Vendor
         }
       }
     }

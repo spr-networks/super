@@ -1,10 +1,12 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import QRCode from 'react-qr-code'
+import Select from 'react-select'
 
+import WireguardConfig from './WireguardConfig'
 import { APIErrorContext } from 'layouts/Admin'
 
 import { wireguardAPI } from 'api/Wireguard'
+import { wifiAPI } from 'api'
 
 import {
   Button,
@@ -19,12 +21,19 @@ import {
 
 export default class WireguardAddPeer extends React.Component {
   static contextType = APIErrorContext
-  state = { AllowedIPs: '', PublicKey: '', config: null }
+  state = {
+    AllowedIPs: '',
+    PublicKey: '',
+    Endpoint: '',
+    addrs: [],
+    config: null
+  }
 
   constructor(props) {
     super(props)
 
     this.handleChange = this.handleChange.bind(this)
+    this.handleChangeEndpoint = this.handleChangeEndpoint.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
   }
 
@@ -35,11 +44,16 @@ export default class WireguardAddPeer extends React.Component {
     this.setState({ [name]: value })
   }
 
+  handleChangeEndpoint(newValue, actionMeta) {
+    this.setState({ Endpoint: newValue ? newValue.value : '' })
+  }
+
   handleSubmit(event) {
     event.preventDefault()
     let peer = {
       AllowedIPs: this.state.AllowedIPs,
-      PublicKey: this.state.PublicKey
+      PublicKey: this.state.PublicKey,
+      Endpoint: this.state.Endpoint
     }
 
     wireguardAPI
@@ -56,87 +70,41 @@ export default class WireguardAddPeer extends React.Component {
       })
   }
 
-  render() {
-    if (this.state.config) {
-      const configFromJSON = (data) => {
-        return `[Interface]
-          PrivateKey = ${data.Interface.PrivateKey || '<PRIVATE KEY>'}
-          Address = ${data.Interface.Address}
-          DNS = ${data.Interface.DNS}
-          
-          [Peer]
-          PublicKey = ${data.Peer.PublicKey}
-          AllowedIPs = ${data.Peer.AllowedIPs}
-          Endpoint = ${data.Peer.Endpoint}
-          PersistentKeepalive = ${data.Peer.PersistentKeepalive}
-        `.replace(/(  +)/g, '')
-      }
+  componentDidMount() {
+    wifiAPI.ipAddr().then((data) => {
+      let addrs = []
+      for (let entry of data) {
+        for (let address of entry.addr_info) {
+          if (address.scope == 'global') {
+            address.ifname = entry.ifname
+            addrs.push(address)
+          }
 
-      let config = configFromJSON(this.state.config)
-
-      const copy = (data) => navigator.clipboard.writeText(data)
-      const saveFile = (data) => {
-        let filename = 'peer.conf',
-          type = 'conf'
-
-        let file = new Blob([data], { type: type })
-        if (window.navigator.msSaveOrOpenBlob) {
-          window.navigator.msSaveOrOpenBlob(file, filename) // IE10+
-        } else {
-          var a = document.createElement('a'),
-            url = URL.createObjectURL(file)
-          a.href = url
-          a.download = filename
-          document.body.appendChild(a)
-          a.click()
-          setTimeout(function () {
-            document.body.removeChild(a)
-            window.URL.revokeObjectURL(url)
-          }, 0)
+          break
         }
       }
+      // config.wg0.listenPort
+      //ip:port :51280
+      this.setState({ addrs })
+    })
+  }
 
-      return (
-        <>
-          <Row>
-            <Col md={12}>
-              <pre style={{ fontSize: '11px' }}>{config}</pre>
-
-              <Row>
-                <Col md={6}>
-                  <Button
-                    className="btn-block"
-                    color="primary"
-                    size="md"
-                    onClick={(e) => copy(config)}
-                    outline={true}
-                  >
-                    <i className="fa fa-clone" />
-                    Copy
-                  </Button>
-                </Col>
-                <Col md={6}>
-                  <Button
-                    className="btn-block"
-                    color="primary"
-                    size="md"
-                    onClick={(e) => saveFile(config)}
-                    outline={true}
-                  >
-                    <i className="fa fa-file" />
-                    Download
-                  </Button>
-                </Col>
-              </Row>
-              {/*this.state.PublicKey ? () : null*/}
-              <div className="text-center">
-                <QRCode value={config} />
-              </div>
-            </Col>
-          </Row>
-        </>
-      )
+  render() {
+    if (this.state.config) {
+      return <WireguardConfig config={this.state.config} />
     }
+
+    let endpoints = this.state.addrs.map((addr) => {
+      let listenPort = this.props.config.listenPort || 1024 //51280
+      return {
+        label: `${addr.local}:${listenPort}`,
+        value: `${addr.local}:${listenPort}`
+      }
+    })
+
+    let endpoint = this.state.Endpoint
+      ? { label: this.state.Endpoint, value: this.state.Endpoint }
+      : null
 
     return (
       <Form onSubmit={this.handleSubmit}>
@@ -177,6 +145,23 @@ export default class WireguardAddPeer extends React.Component {
               <FormText tag="span">
                 Leave empty to generate, else run wg pubkey &lt; peer.key
               </FormText>
+            </FormGroup>
+          </Col>
+        </Row>
+
+        <Row>
+          <Label for="Endpoint" sm={2}>
+            Endpoint
+          </Label>
+          <Col sm={10}>
+            <FormGroup>
+              <Select
+                isClearable
+                options={endpoints}
+                value={endpoint}
+                onChange={this.handleChangeEndpoint}
+              />
+              <FormText tag="span">Leave empty for default</FormText>
             </FormGroup>
           </Col>
         </Row>
