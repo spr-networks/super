@@ -50,7 +50,7 @@ function Sidebar(props) {
             key={key}
           >
             <a
-              href="#pablo"
+              href="#spr"
               data-toggle="collapse"
               aria-expanded={collapseStates[prop.state]}
               onClick={(e) => {
