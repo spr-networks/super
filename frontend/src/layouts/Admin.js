@@ -88,6 +88,9 @@ function Admin(props) {
     setModalBody(body)
     setShowModal(true)
   }
+  // TODO -- merge
+  modalState.reportError = modalState.modal
+  modalState.success = modalState.modal
 
   React.useEffect(() => {
     if (navigator.platform.indexOf('Win') > -1) {
