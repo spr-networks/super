@@ -5,6 +5,8 @@ import ReactBSAlert from 'react-bootstrap-sweetalert'
 
 import { APIErrorContext } from 'layouts/Admin'
 import ClientSelect from 'components/ClientSelect'
+import DNSAddOverride from './DNSAddOverride'
+import ModalForm from 'components/ModalForm'
 import { logAPI } from 'api/DNS'
 import { prettyDate } from 'utils'
 
@@ -35,7 +37,8 @@ export class DNSLogHistoryList extends React.Component {
     filterDateStart: '',
     filterDateEnd: '',
     showAlert: false,
-    alertText: ''
+    alertText: '',
+    selectedDomain: ''
   }
 
   constructor(props) {
@@ -44,6 +47,8 @@ export class DNSLogHistoryList extends React.Component {
     this.state.filterIPs = props.ips || []
     this.state.filterText = props.filterText || ''
     this.state.alertText = ''
+
+    this.modalRef = React.createRef(null)
 
     this.handleChangeIP = this.handleChangeIP.bind(this)
     this.handleChange = this.handleChange.bind(this)
@@ -224,6 +229,17 @@ export class DNSLogHistoryList extends React.Component {
       key: 'selection'
     }
 
+    const handleClickDomain = (e) => {
+      let selectedDomain = e.target.innerText
+      this.setState({ selectedDomain })
+      this.modalRef.current() // toggle modal
+      e.preventDefault()
+    }
+
+    const notifyChange = async () => {
+      this.modalRef.current()
+    }
+
     return (
       <>
         <ReactBSAlert
@@ -242,6 +258,19 @@ export class DNSLogHistoryList extends React.Component {
             {this.state.alertText}
           </pre>
         </ReactBSAlert>
+
+        <ModalForm
+          key="mf"
+          title="Block domain"
+          modalRef={this.modalRef}
+          hideButton={true}
+        >
+          <DNSAddOverride
+            type="block"
+            domain={this.state.selectedDomain}
+            notifyChange={notifyChange}
+          />
+        </ModalForm>
 
         <Card>
           <CardHeader>
@@ -355,7 +384,11 @@ export class DNSLogHistoryList extends React.Component {
                     <td className={hideClient ? 'd-none' : null}>
                       {item.Remote.split(':')[0]}
                     </td>
-                    <td>{item.FirstName}</td>
+                    <td>
+                      <a target="/admin/dnsBlock" onClick={handleClickDomain}>
+                        {item.FirstName}
+                      </a>
+                    </td>
                     <td>
                       <a target="#" onClick={(e) => this.triggerAlert(index)}>
                         {item.FirstAnswer}

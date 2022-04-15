@@ -30,6 +30,7 @@ export default class DNSAddOverride extends React.Component {
     super(props)
 
     this.state.Type = props.type
+    this.state.Domain = props.domain || ''
     this.state.check = {
       Domain: '',
       ResultIP: '',
@@ -218,5 +219,6 @@ export default class DNSAddOverride extends React.Component {
 
 DNSAddOverride.propTypes = {
   type: PropTypes.string,
+  domain: PropTypes.string,
   notifyChange: PropTypes.func
 }
