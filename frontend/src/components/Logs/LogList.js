@@ -1,19 +1,16 @@
-import React, { useState, useEffect } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { Link, useHistory } from 'react-router-dom'
 import Select from 'react-select'
 
 import { logsAPI } from 'api'
 import { prettyDate } from 'utils'
+import { APIErrorContext } from 'layouts/Admin'
 
 import {
   Card,
   CardHeader,
   CardBody,
-  CardFooter,
   CardTitle,
-  CardSubtitle,
-  List,
-  ListInlineItem,
   Table,
   Row,
   Col
@@ -25,6 +22,7 @@ const LogList = (props) => {
   const [containers, setContainers] = useState([])
   const [filterContainers, setFilterContainers] = useState([])
 
+  const contextType = useContext(APIErrorContext)
   let history = useHistory()
 
   const refreshList = (next) => {
@@ -47,7 +45,9 @@ const LogList = (props) => {
           next(logs)
         }
       })
-      .catch((err) => {})
+      .catch((err) => {
+        contextType.reportError('failed to fetch JSON logs')
+      })
   }
 
   useEffect(() => {
