@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import { trafficAPI, wifiAPI } from 'api'
+import IPInfo from 'components/IPInfo'
 import { prettyDate, prettySize } from 'utils'
 
 import { Table, Row, Col } from 'reactstrap'
@@ -116,37 +117,43 @@ const TimeSeriesList = (props) => {
   }
 
   return (
-    <Table responsive>
-      <thead className="text-primary">
-        <tr>
-          <th>Timestamp</th>
-          {showASN ? null : <th>Interface</th>}
-          <th>Src IP</th>
-          <th>Dst IP</th>
-          {showASN ? (
-            props.type == 'WanOut' ? (
-              <th>Dst ASN</th>
-            ) : (
-              <th>Src ASN</th>
-            )
-          ) : null}
-          <th>Size</th>
-        </tr>
-      </thead>
-      <tbody>
-        {listFiltered.map((row) => (
-          <tr key={row.Timestamp}>
-            <td>{prettyDate(row.Timestamp)}</td>
-            {showASN ? null : <td>{row.Interface}</td>}
-            <td>{row.Src}</td>
-            <td>{row.Dst}</td>
-            {showASN ? <td>{row.Asn}</td> : null}
-            {/*<td>{row.Packets}</td>*/}
-            <td>{prettySize(row.Bytes)}</td>
+    <>
+      <Table responsive>
+        <thead className="text-primary">
+          <tr>
+            <th>Timestamp</th>
+            {showASN ? null : <th>Interface</th>}
+            <th>Src IP</th>
+            <th>Dst IP</th>
+            {showASN ? (
+              props.type == 'WanOut' ? (
+                <th>Dst ASN</th>
+              ) : (
+                <th>Src ASN</th>
+              )
+            ) : null}
+            <th>Size</th>
           </tr>
-        ))}
-      </tbody>
-    </Table>
+        </thead>
+        <tbody>
+          {listFiltered.map((row) => (
+            <tr key={row.Timestamp}>
+              <td>{prettyDate(row.Timestamp)}</td>
+              {showASN ? null : <td>{row.Interface}</td>}
+              <td>
+                <IPInfo>{row.Src}</IPInfo>
+              </td>
+              <td>
+                <IPInfo>{row.Dst}</IPInfo>
+              </td>
+              {showASN ? <td>{row.Asn}</td> : null}
+              {/*<td>{row.Packets}</td>*/}
+              <td>{prettySize(row.Bytes)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </>
   )
 }
 
