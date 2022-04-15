@@ -268,6 +268,9 @@ export class DNSLogHistoryList extends React.Component {
           <DNSAddOverride
             type="block"
             domain={this.state.selectedDomain}
+            clientip={
+              this.state.filterIPs.length == 1 ? this.state.filterIPs[0] : '*'
+            }
             notifyChange={notifyChange}
           />
         </ModalForm>
