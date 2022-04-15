@@ -128,26 +128,30 @@ const LogList = (props) => {
         </Row>
       </CardHeader>
       <CardBody>
-        <Table responsive>
-          <thead>
-            <tr>
-              <th>Timestamp</th>
-              <th>Container</th>
-              <th>Message</th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.map((row, i) => (
-              <tr key={i + row.__REALTIME_TIMESTAMP}>
-                <td style={{ whiteSpace: 'nowrap' }}>
-                  {prettyDate(row.__REALTIME_TIMESTAMP / 1e3)}
-                </td>
-                <td>{row.CONTAINER_NAME}</td>
-                <td>{row.MESSAGE}</td>
+        {list.length ? (
+          <Table responsive>
+            <thead className="text-primary">
+              <tr>
+                <th>Timestamp</th>
+                <th>Container</th>
+                <th>Message</th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {list.map((row, i) => (
+                <tr key={i + row.__REALTIME_TIMESTAMP}>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    {prettyDate(row.__REALTIME_TIMESTAMP / 1e3)}
+                  </td>
+                  <td>{row.CONTAINER_NAME}</td>
+                  <td>{row.MESSAGE}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        ) : (
+          <p className="text-muted">Loading...</p>
+        )}
       </CardBody>
     </Card>
   )
