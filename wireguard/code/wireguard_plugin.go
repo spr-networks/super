@@ -193,7 +193,12 @@ func getNetworkIP() (string, error) {
 // get wireguard endpoint from the upstream interface
 func getEndpoint() (string, error) {
 
-	network := getNetworkIP()
+	network, err := getNetworkIP()
+
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
 
 	port, ok := os.LookupEnv("WIREGUARD_PORT")
 	if !ok {
@@ -378,7 +383,6 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 	config.Interface.DNS = "1.1.1.1, 1.0.0.1"
 
 	// Point DNS to CoreDNS
-
 	network, ok := os.LookupEnv("LANIP")
 	if ok {
 		config.Interface.DNS = network
