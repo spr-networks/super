@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardBody,
   CardTitle,
+  CardSubtitle,
   Table,
   Row,
   Col
@@ -128,7 +129,17 @@ const LogList = (props) => {
     <Card>
       <CardHeader>
         <CardTitle tag="h4">Logs</CardTitle>
-        <Row>
+        <CardSubtitle className="text-muted">
+          <Spinner text="Loading..." isVisible={!list.length} />
+          {list.length ? (
+            <span>
+              Logs from{' '}
+              {prettyDate(list[list.length - 1].__REALTIME_TIMESTAMP / 1e3)} to{' '}
+              {prettyDate(list[0].__REALTIME_TIMESTAMP / 1e3)}
+            </span>
+          ) : null}
+        </CardSubtitle>
+        <Row className="mt-2">
           <Col sm="10">
             <Select
               isMulti
@@ -171,9 +182,7 @@ const LogList = (props) => {
               ))}
             </tbody>
           </Table>
-        ) : (
-          <Spinner text="Loading..." isVisible />
-        )}
+        ) : null}
       </CardBody>
     </Card>
   )

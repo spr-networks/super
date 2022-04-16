@@ -13,12 +13,13 @@ import {
   CardHeader,
   CardBody,
   CardTitle,
+  CardSubtitle,
   Table
 } from 'reactstrap'
 
 export default class DNSBlocklist extends React.Component {
   static contextType = APIErrorContext
-  state = { list: [], pending: false }
+  state = { list: [], blockedDomains: 0, pending: false }
 
   constructor(props) {
     super(props)
@@ -34,6 +35,10 @@ export default class DNSBlocklist extends React.Component {
 
   async componentDidMount() {
     this.refreshBlocklists()
+
+    blockAPI.metrics().then((metrics) => {
+      this.setState({ blockedDomains: metrics.BlockedDomains })
+    })
   }
 
   async refreshBlocklists() {
@@ -127,11 +132,17 @@ export default class DNSBlocklist extends React.Component {
               </ModalForm>
             ) : null}
 
-            <CardTitle tag="h4" className="float-left">
-              DNS Blocklists
-            </CardTitle>
-
-            <Spinner text="Update running..." isVisible={this.state.pending} />
+            <CardTitle tag="h4">DNS Blocklists</CardTitle>
+            <CardSubtitle className="text-muted">
+              <span hidden={this.state.pending}>
+                {this.state.blockedDomains.toLocaleString()} blocked domains
+              </span>
+              <Spinner
+                className="float-left"
+                text="Update running..."
+                isVisible={this.state.pending}
+              />
+            </CardSubtitle>
           </CardHeader>
           <CardBody>
             {this.state.list.length ? (
