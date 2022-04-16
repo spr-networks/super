@@ -157,7 +157,15 @@ export default class DNSBlocklist extends React.Component {
                 <tbody>
                   {this.state.list.map((item) => (
                     <tr key={item.URI}>
-                      <td>{item.URI}</td>
+                      <td>
+                        <a
+                          href={item.URI}
+                          target="_blank"
+                          style={{ color: 'inherit' }}
+                        >
+                          {item.URI}
+                        </a>
+                      </td>
                       <td className="text-center">
                         <Toggle
                           onChange={(el, value) =>

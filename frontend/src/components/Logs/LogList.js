@@ -5,7 +5,6 @@ import Select from 'react-select'
 import { logsAPI } from 'api'
 import { prettyDate } from 'utils'
 import { APIErrorContext } from 'layouts/Admin'
-import Spinner from 'components/Spinner'
 
 import {
   Button,
@@ -14,6 +13,7 @@ import {
   CardBody,
   CardTitle,
   CardSubtitle,
+  Spinner,
   Table,
   Row,
   Col
@@ -130,7 +130,10 @@ const LogList = (props) => {
       <CardHeader>
         <CardTitle tag="h4">Logs</CardTitle>
         <CardSubtitle className="text-muted">
-          <Spinner text="Loading..." isVisible={!list.length} />
+          <Spinner size="sm" hidden={list.length} />
+          <span className="mt-4" hidden={list.length}>
+            Updating blocklists...
+          </span>
           {list.length ? (
             <span>
               Logs from{' '}
