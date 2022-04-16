@@ -178,7 +178,7 @@ export default class Device extends Component {
           />
 
           {device.oui !== undefined ? (
-            <Label className="info">{device.oui}</Label>
+            <Label className="info small pl-2">{device.oui}</Label>
           ) : null}
         </td>
         <td className="text-center">
