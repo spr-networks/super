@@ -131,8 +131,8 @@ const LogList = (props) => {
         <CardTitle tag="h4">Logs</CardTitle>
         <CardSubtitle className="text-muted">
           <Spinner size="sm" hidden={list.length} />
-          <span className="mt-4" hidden={list.length}>
-            Updating blocklists...
+          <span className="mt-4 ml-1" hidden={list.length}>
+            Loading...
           </span>
           {list.length ? (
             <span>

@@ -5,7 +5,6 @@ import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
 import ModalForm from 'components/ModalForm'
 import Toggle from 'components/Toggle'
 import { APIErrorContext } from 'layouts/Admin'
-import Spinner from 'components/Spinner'
 
 import {
   Button,
@@ -14,6 +13,7 @@ import {
   CardBody,
   CardTitle,
   CardSubtitle,
+  Spinner,
   Table
 } from 'reactstrap'
 
@@ -137,11 +137,10 @@ export default class DNSBlocklist extends React.Component {
               <span hidden={this.state.pending}>
                 {this.state.blockedDomains.toLocaleString()} blocked domains
               </span>
-              <Spinner
-                className="float-left"
-                text="Update running..."
-                isVisible={this.state.pending}
-              />
+              <Spinner size="sm" hidden={!this.state.pending} />
+              <span className="mt-4 ml-1" hidden={!this.state.pending}>
+                Update running...
+              </span>
             </CardSubtitle>
           </CardHeader>
           <CardBody>
