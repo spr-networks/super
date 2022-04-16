@@ -94,22 +94,6 @@ func genPresharedKey() (string, error) {
 	return PresharedKey, nil
 }
 
-// get wireguard endpoint from the environment
-func getEndpoint() (string, error) {
-	network, ok := os.LookupEnv("LANIP")
-	if !ok {
-		return "", errors.New("LANIP not set")
-	}
-
-	port, ok := os.LookupEnv("WIREGUARD_PORT")
-	if !ok {
-		port = "51280"
-	}
-
-	endpoint := fmt.Sprintf("%s:%s", network, port)
-	return endpoint, nil
-}
-
 func getPeers() ([]ClientPeer, error) {
 	peers := []ClientPeer{}
 
@@ -183,6 +167,46 @@ func pluginGenKey(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(keypair)
+}
+
+func getNetworkIP() (string, error) {
+        iname, ok := os.LookupEnv("WANIF")
+        if !ok {
+                return "", errors.New("WANIF not set")
+        }
+
+        ief, err := net.InterfaceByName(iname)
+        if err != nil {
+                return "", err
+        }
+        addrs, err := ief.Addrs();
+        if err != nil {
+                return "", err
+        }
+        if len(addrs) > 0 {
+                return addrs[0].(*net.IPNet).IP.String(), nil
+        } else {
+                return "", errors.New(fmt.Sprintf("interface %s don't have an ipv4 address\n", iname))
+        }
+}
+
+// get wireguard endpoint from the upstream interface
+func getEndpoint() (string, error) {
+
+	network, err := getNetworkIP()
+
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+
+	port, ok := os.LookupEnv("WIREGUARD_PORT")
+	if !ok {
+		port = "51280"
+	}
+
+	endpoint := fmt.Sprintf("%s:%s", network, port)
+	return endpoint, nil
 }
 
 // get wireguard endpoint from the environment
@@ -357,6 +381,12 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	config.Interface.DNS = "1.1.1.1, 1.0.0.1"
+
+	// Point DNS to CoreDNS
+	network, ok := os.LookupEnv("LANIP")
+	if ok {
+		config.Interface.DNS = network
+	}
 
 	PublicKey, err := getPublicKey()
 	if err != nil {
