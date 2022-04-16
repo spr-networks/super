@@ -17,7 +17,7 @@ import {
 
 export default class DNSBlocklist extends React.Component {
   static contextType = APIErrorContext
-  state = { list: [] }
+  state = { list: [], pending: false }
 
   constructor(props) {
     super(props)
@@ -36,15 +36,29 @@ export default class DNSBlocklist extends React.Component {
   }
 
   async refreshBlocklists() {
-    try {
-      const list = await blockAPI.blocklists()
-      this.setState({ list })
-    } catch (error) {
-      this.context.reportError('API Failure: ' + error.message)
-    }
+    let list = []
+    // pending requests
+    setTimeout(() => {
+      if (!list.length) {
+        this.setState({ list })
+        this.setState({ pending: true })
+      }
+    }, 2000)
+
+    blockAPI
+      .blocklists()
+      .then((blocklist) => {
+        list = blocklist
+        this.setState({ list })
+        this.setState({ pending: false })
+      })
+      .catch((error) => {
+        this.context.reportError('API Failure: ' + error.message)
+      })
   }
 
   async notifyChange(type) {
+    this.setState({ pending: false })
     await this.refreshBlocklists()
   }
 
@@ -58,7 +72,9 @@ export default class DNSBlocklist extends React.Component {
       return _item
     })
 
+    // only update the ui
     this.setState({ list })
+    this.setState({ pending: true })
 
     blockAPI
       .putBlocklist(item)
@@ -71,6 +87,12 @@ export default class DNSBlocklist extends React.Component {
   }
 
   deleteListItem(item) {
+    if (this.state.pending) {
+      return this.context.reportError('Wait for pending updates to finish')
+    }
+
+    this.setState({ pending: true })
+
     blockAPI
       .deleteBlocklist(item)
       .then((res) => {
@@ -92,56 +114,77 @@ export default class DNSBlocklist extends React.Component {
       <>
         <Card>
           <CardHeader>
-            <ModalForm
-              title="Add DNS Blocklist"
-              triggerText="add"
-              triggerClass="pull-right"
-              triggerIcon="fa fa-plus"
-              modalRef={this.refAddBlocklistModal}
-            >
-              <DNSAddBlocklist notifyChange={notifyChangeBlocklist} />
-            </ModalForm>
+            {!this.state.pending ? (
+              <ModalForm
+                title="Add DNS Blocklist"
+                triggerText="add"
+                triggerClass="pull-right"
+                triggerIcon="fa fa-plus"
+                modalRef={this.refAddBlocklistModal}
+              >
+                <DNSAddBlocklist notifyChange={notifyChangeBlocklist} />
+              </ModalForm>
+            ) : null}
 
-            <CardTitle tag="h4">DNS Blocklists</CardTitle>
+            <CardTitle tag="h4" className="float-left">
+              DNS Blocklists
+            </CardTitle>
+
+            {this.state.pending ? (
+              <div
+                className="float-left p-2 m-2 text-muted"
+                style={{ fontSize: '1.0rem' }}
+              >
+                <span
+                  class="spinner-border spinner-border-sm"
+                  role="status"
+                  aria-hidden="true"
+                ></span>{' '}
+                Update running...
+              </div>
+            ) : null}
           </CardHeader>
           <CardBody>
-            <Table responsive>
-              <thead className="text-primary">
-                <tr>
-                  <th>URI</th>
-                  <th className="text-center">Enabled</th>
-                  <th className="text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {this.state.list.map((item) => (
-                  <tr key={item.URI}>
-                    <td>{item.URI}</td>
-                    <td className="text-center">
-                      <Toggle
-                        onChange={(el, value) =>
-                          this.handleItemSwitch(item, value)
-                        }
-                        isChecked={item.Enabled}
-                        onColor="info"
-                        offColor="info"
-                      />
-                    </td>
-                    <td className="text-center">
-                      <Button
-                        className="btn-icon"
-                        color="danger"
-                        size="sm"
-                        type="button"
-                        onClick={(e) => this.deleteListItem(item)}
-                      >
-                        <i className="fa fa-times" />
-                      </Button>
-                    </td>
+            {this.state.list.length ? (
+              <Table responsive>
+                <thead className="text-primary">
+                  <tr>
+                    <th>URI</th>
+                    <th className="text-center">Enabled</th>
+                    <th className="text-center">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </Table>
+                </thead>
+                <tbody>
+                  {this.state.list.map((item) => (
+                    <tr key={item.URI}>
+                      <td>{item.URI}</td>
+                      <td className="text-center">
+                        <Toggle
+                          onChange={(el, value) =>
+                            this.handleItemSwitch(item, value)
+                          }
+                          isDisabled={this.state.pending}
+                          isChecked={item.Enabled}
+                          onColor="info"
+                          offColor="info"
+                        />
+                      </td>
+                      <td className="text-center">
+                        <Button
+                          className="btn-icon"
+                          color="danger"
+                          size="sm"
+                          type="button"
+                          onClick={(e) => this.deleteListItem(item)}
+                        >
+                          <i className="fa fa-times" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            ) : null}
           </CardBody>
         </Card>
       </>
