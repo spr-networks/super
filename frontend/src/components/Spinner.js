@@ -15,13 +15,10 @@ const Spinner = (props) => {
     }
   }, [props.isVisible])
 
-  let className = 'float-left p-2 m-2 text-muted'
-  if (!isVisible) {
-    className = `${className} d-none`
-  }
+  let className = props.className ? props.className : ''
 
   return (
-    <div className={className} style={{ fontSize: '1.0rem' }}>
+    <div className={className} hidden={!isVisible}>
       <span
         className="spinner-border spinner-border-sm"
         role="status"
@@ -32,6 +29,10 @@ const Spinner = (props) => {
   )
 }
 
-Spinner.propTypes = {}
+Spinner.propTypes = {
+  text: PropTypes.string,
+  isVisible: PropTypes.bool,
+  className: PropTypes.string
+}
 
 export default Spinner
