@@ -5,6 +5,7 @@ import Select from 'react-select'
 import { logsAPI } from 'api'
 import { prettyDate } from 'utils'
 import { APIErrorContext } from 'layouts/Admin'
+import Spinner from 'components/Spinner'
 
 import {
   Button,
@@ -171,7 +172,7 @@ const LogList = (props) => {
             </tbody>
           </Table>
         ) : (
-          <p className="text-muted">Loading...</p>
+          <Spinner text="Loading..." isVisible />
         )}
       </CardBody>
     </Card>
