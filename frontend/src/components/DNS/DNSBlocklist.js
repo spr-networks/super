@@ -44,7 +44,7 @@ export default class DNSBlocklist extends React.Component {
         this.setState({ list })
         this.setState({ pending: true })
       }
-    }, 2000)
+    }, 1500)
 
     blockAPI
       .blocklists()
