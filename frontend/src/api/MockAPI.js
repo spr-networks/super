@@ -110,6 +110,7 @@ export default function MockAPI() {
 
       server.create('wireguardpeer', {
         PublicKey: 'QX9cpyIY7mh1kuVSBnRHJyyqnJQ6iuHdwqSPviPwdT8=',
+        PresharedKey: 'YotzN+tIBiiY+q3FkjRM5nEHq0tXMX6c0tT7ls9516E=',
         AllowedIPs: '192.168.3.2/32',
         Endpoint: '192.168.2.1:51280',
         PersistentKeepalive: 25
@@ -117,6 +118,7 @@ export default function MockAPI() {
 
       server.create('wireguardpeer', {
         PublicKey: '2woVWXJcMcb/7Kh44bevC1eIQnbYBh9nDWyHc8LqWXY=',
+        PresharedKey: '1HyPMEAITlOYoHBLvmYQV2qeWgM3Y5CPLDAZiBEl8HI=',
         AllowedIPs: '192.168.3.3/32',
         Endpoint: '192.168.2.1:51280',
         PersistentKeepalive: 25
@@ -693,6 +695,25 @@ export default function MockAPI() {
         let PublicKey = attrs.PublicKey
 
         return schema.wireguardpeers.findBy({ PublicKey }).destroy()
+      })
+
+      this.get('/plugins/wireguard/status', (schema, request) => {
+        let status = {
+          wg0: {
+            publicKey: '5vazmq54exf62jfXWE9YQ/m8kjcCZPtQBpLib2W+1H4=',
+            listenPort: 51280,
+            peers: {}
+          }
+        }
+
+        for (let p of schema.wireguardpeers.all().models) {
+          status.wg0.peers[p.PublicKey] = {
+            presharedKey: p.PresharedKey,
+            allowedIps: [p.AllowedIPs]
+          }
+        }
+
+        return status
       })
 
       this.put('/plugins/wireguard/up', (schema, request) => {
