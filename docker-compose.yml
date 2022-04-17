@@ -5,7 +5,7 @@ services:
     build: base
     network_mode: host
     privileged: true
-    logging: 
+    logging:
       driver: journald
     volumes:
       - ./configs/base/:/configs/base/
@@ -16,7 +16,7 @@ services:
     privileged: true
     depends_on:
       - "base"
-    logging: 
+    logging:
       driver: journald
     volumes:
       - ./configs/base/:/configs/base/
@@ -31,7 +31,7 @@ services:
     privileged: true
     depends_on:
       - "base"
-    logging: 
+    logging:
       driver: journald
     entrypoint: /scripts/client.sh
     volumes:
@@ -41,7 +41,7 @@ services:
     build: dns
     network_mode: host
     privileged: true
-    logging: 
+    logging:
       driver: journald
     depends_on:
       - "base"
@@ -54,7 +54,7 @@ services:
     build: wifid
     network_mode: host
     privileged: true
-    logging: 
+    logging:
       driver: journald
     depends_on:
       - "dhcp"
@@ -71,7 +71,7 @@ services:
     privileged: true
     depends_on:
       - "base"
-    logging: 
+    logging:
       driver: journald
     volumes:
       - ./configs/base/:/configs/base/
@@ -116,7 +116,7 @@ services:
       - ./configs/wireguard/:/configs/wireguard/
       - ./state/wireguard/:/state/wireguard/
 # Use the prebuilt frontend
-  frontend:   
+  frontend:
     container_name: superfrontend
     network_mode: none
     image: ghcr.io/spr-networks/super_frontend
@@ -168,6 +168,6 @@ services:
       - "base"
     volumes:
       - ./state/plugin-lookup/:/state/plugin-lookup/
-networks: 
+networks:
   default:
     driver: none

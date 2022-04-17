@@ -11,12 +11,13 @@ import {
   FormGroup,
   FormText,
   Input,
+  Spinner,
   Row
 } from 'reactstrap'
 
 export default class DNSAddBlocklist extends React.Component {
   static contextType = APIErrorContext
-  state = { URI: '', Enabled: true }
+  state = { URI: '', Enabled: true, pending: false }
 
   constructor(props) {
     super(props)
@@ -38,17 +39,39 @@ export default class DNSAddBlocklist extends React.Component {
     event.preventDefault()
 
     let blocklist = { URI: this.state.URI, Enabled: this.state.Enabled }
+
+    this.setState({ pending: true })
+
     blockAPI
       .putBlocklist(blocklist)
       .then(() => {
+        this.setState({ pending: false })
         this.props.notifyChange('blocklists')
       })
       .catch((error) => {
         this.context.reportError('API Failure: ' + error.message)
       })
+
+    setTimeout(() => {
+      // can take some time - close modal
+      if (this.state.pending) {
+        this.props.notifyChange('blocklists')
+      }
+    }, 5000)
   }
 
   render() {
+    if (this.state.pending) {
+      return (
+        <div className="text-center text-muted">
+          <Spinner
+            style={{ fontSize: '2rem', width: '10rem', height: '10rem' }}
+          />
+          <p className="mt-4">Updating blocklists...</p>
+        </div>
+      )
+    }
+
     return (
       <Form onSubmit={this.handleSubmit}>
         <Row>

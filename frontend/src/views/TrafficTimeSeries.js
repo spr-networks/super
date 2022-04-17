@@ -120,12 +120,12 @@ class TrafficTimeSeries extends Component {
             let diff =
               traffic_data[idx][ip][target] - traffic_data[idx + 1][ip][target]
 
-            z = traffic_data[idx][ip][target]
-            //z = diff
+            z = diff
             y = diff / deltaSlices[idx]
           } else {
-            z = traffic_data[idx][ip][target]
-            y = z
+            //y = z = traffic_data[idx][ip][target]
+            y = z =
+              traffic_data[idx][ip][target] - traffic_data[idx + 1][ip][target]
           }
 
           ipStats[ip].push({ x, y, z })

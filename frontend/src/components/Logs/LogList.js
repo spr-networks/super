@@ -7,10 +7,13 @@ import { prettyDate } from 'utils'
 import { APIErrorContext } from 'layouts/Admin'
 
 import {
+  Button,
   Card,
   CardHeader,
   CardBody,
   CardTitle,
+  CardSubtitle,
+  Spinner,
   Table,
   Row,
   Col
@@ -58,7 +61,6 @@ const LogList = (props) => {
       setContainers(cs)
 
       if (props.containers && props.containers.length) {
-        console.log('>>filter:', props.containers)
         setFilterContainers(props.containers)
       } else {
         setFilterContainers(cs)
@@ -67,6 +69,12 @@ const LogList = (props) => {
   }, [])
 
   const filterList = (filter) => {
+    if (!filter) {
+      filter = {
+        containers: filterContainers
+      }
+    }
+
     let logs = listAll.filter((row) => {
       let match = true
       if (filter.containers) {
@@ -94,11 +102,11 @@ const LogList = (props) => {
       return
     }
 
+    history.push('/admin/logs/' + filterContainers.join(','))
+
     let opts = {
       containers: filterContainers
     }
-
-    history.push('/admin/logs/' + filterContainers.join(','))
 
     filterList(opts)
   }, [filterContainers])
@@ -111,12 +119,31 @@ const LogList = (props) => {
     return { label: c, value: c }
   })
 
+  const handleClickRefresh = () => {
+    refreshList((logs) => {
+      filterList()
+    })
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle tag="h4">Logs</CardTitle>
-        <Row>
-          <Col md="8">
+        <CardSubtitle className="text-muted">
+          <Spinner size="sm" hidden={list.length} />
+          <span className="mt-4 ml-1" hidden={list.length}>
+            Loading...
+          </span>
+          {list.length ? (
+            <span>
+              Logs from{' '}
+              {prettyDate(list[list.length - 1].__REALTIME_TIMESTAMP / 1e3)} to{' '}
+              {prettyDate(list[0].__REALTIME_TIMESTAMP / 1e3)}
+            </span>
+          ) : null}
+        </CardSubtitle>
+        <Row className="mt-2">
+          <Col sm="10">
             <Select
               isMulti
               isClearable
@@ -124,6 +151,15 @@ const LogList = (props) => {
               value={containersValues}
               onChange={handleChange}
             />
+          </Col>
+          <Col sm="2">
+            <Button
+              className="mt-0"
+              color="primary"
+              onClick={handleClickRefresh}
+            >
+              <i className="fa fa-refresh" />
+            </Button>
           </Col>
         </Row>
       </CardHeader>
@@ -149,9 +185,7 @@ const LogList = (props) => {
               ))}
             </tbody>
           </Table>
-        ) : (
-          <p className="text-muted">Loading...</p>
-        )}
+        ) : null}
       </CardBody>
     </Card>
   )

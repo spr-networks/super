@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
-import { trafficAPI } from 'api'
+import { trafficAPI, wifiAPI } from 'api'
+import IPInfo from 'components/IPInfo'
 import { prettyDate, prettySize } from 'utils'
 
 import { Table, Row, Col } from 'reactstrap'
 
 const TimeSeriesList = (props) => {
   const [list, setList] = useState([])
+  const [showASN, setShowASN] = useState(
+    props.type.match(/^Wan(In|Out)$/) ? true : false
+  )
 
   // filter the list depending on the interface to match the type
   const filterType = (_list, type) => {
@@ -42,6 +46,10 @@ const TimeSeriesList = (props) => {
     })
   }
 
+  /*useEffect(() => {
+    setShowASN(props.type.match(/^Wan(In|Out)$/) ? true : false)
+  }, [props.type])*/
+
   useEffect(() => {
     trafficAPI.traffic().then((data) => {
       data = filterType(data, props.type)
@@ -54,15 +62,36 @@ const TimeSeriesList = (props) => {
         return row
       })
 
-      setList(data)
+      if (showASN) {
+        let keyIP = props.type == 'WanOut' ? 'Dst' : 'Src'
+        let ips = data.map((row) => row[keyIP])
+        ips = Array.from(new Set(ips))
+        wifiAPI
+          .asn(ips)
+          .then((asns) => {
+            let ip2asn = {}
+            for (let asn of asns) {
+              ip2asn[asn.IP] = `${asn.Name}, ${asn.Country}`
+            }
+
+            data = data.map((row) => {
+              row.Asn = ip2asn[row[keyIP]]
+              return row
+            })
+
+            setList(data)
+          })
+          .catch((err) => {
+            setShowASN(false)
+            setList(data)
+          })
+      } else {
+        setList(data)
+      }
     })
   }, [])
 
   let listFiltered = list
-
-  // filter by type
-  if (props.type) {
-  }
 
   // filter by ip
   if (props.ips && props.ips.length) {
@@ -88,29 +117,43 @@ const TimeSeriesList = (props) => {
   }
 
   return (
-    <Table responsive>
-      <thead className="text-primary">
-        <tr>
-          <th>Timestamp</th>
-          <th>Interface</th>
-          <th>Src IP</th>
-          <th>Dst IP</th>
-          <th>Size</th>
-        </tr>
-      </thead>
-      <tbody>
-        {listFiltered.map((row) => (
-          <tr key={row.Timestamp}>
-            <td>{prettyDate(row.Timestamp)}</td>
-            <td>{row.Interface}</td>
-            <td>{row.Src}</td>
-            <td>{row.Dst}</td>
-            {/*<td>{row.Packets}</td>*/}
-            <td>{prettySize(row.Bytes)}</td>
+    <>
+      <Table responsive>
+        <thead className="text-primary">
+          <tr>
+            <th>Timestamp</th>
+            {showASN ? null : <th>Interface</th>}
+            <th>Src IP</th>
+            <th>Dst IP</th>
+            {showASN ? (
+              props.type == 'WanOut' ? (
+                <th>Dst ASN</th>
+              ) : (
+                <th>Src ASN</th>
+              )
+            ) : null}
+            <th>Size</th>
           </tr>
-        ))}
-      </tbody>
-    </Table>
+        </thead>
+        <tbody>
+          {listFiltered.map((row) => (
+            <tr key={row.Timestamp}>
+              <td>{prettyDate(row.Timestamp)}</td>
+              {showASN ? null : <td>{row.Interface}</td>}
+              <td>
+                <IPInfo>{row.Src}</IPInfo>
+              </td>
+              <td>
+                <IPInfo>{row.Dst}</IPInfo>
+              </td>
+              {showASN ? <td>{row.Asn}</td> : null}
+              {/*<td>{row.Packets}</td>*/}
+              <td>{prettySize(row.Bytes)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </>
   )
 }
 
