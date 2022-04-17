@@ -460,7 +460,11 @@ export default function MockAPI() {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
-        return { TotalQueries: 65534, BlockedQueries: 4096 }
+        return {
+          TotalQueries: 65534,
+          BlockedQueries: 4096,
+          BlockedDomains: 1024
+        }
       })
 
       this.get('/plugins/dns/block/blocklists', (schema, request) => {
