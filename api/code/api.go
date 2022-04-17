@@ -369,7 +369,6 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		exists = false
 	}
 
-
 	pskGenerated := false
 	pskModified := false
 	refreshZones := false
@@ -1343,6 +1342,23 @@ func hostapdConfiguration(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(data))
 }
 
+func logs(w http.ResponseWriter, r *http.Request) {
+	data, err := ioutil.ReadFile("/state/logs/latest.json")
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprint(w, string(data))
+}
+
+func plugins(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	//= []PluginConfig
+	json.NewEncoder(w).Encode(config.Plugins)
+}
+
 //set up SPA handler. From gorilla mux's documentation
 type spaHandler struct {
 	staticPath string
@@ -1469,10 +1485,16 @@ func main() {
 	external_router_authenticated.HandleFunc("/hostapd/status", hostapdStatus).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/all_stations", hostapdAllStations).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/config", hostapdConfiguration).Methods("GET")
-//	external_router_authenticated.HandleFunc("/hostpad/scan", scanWiFi).Methods("GET")
+	//	external_router_authenticated.HandleFunc("/hostpad/scan", scanWiFi).Methods("GET")
 
 	//ip information
 	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")
+
+	//logs
+	external_router_authenticated.HandleFunc("/logs", logs).Methods("GET")
+
+	//plugins
+	external_router_authenticated.HandleFunc("/plugins", plugins).Methods("GET")
 
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
