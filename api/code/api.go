@@ -10,7 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"net/http/httputil"
+	//"net/http/httputil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,6 +23,7 @@ import (
 )
 
 var TEST_PREFIX = ""
+var ApiConfigPath = TEST_PREFIX + "/state/api/config"
 var DeprecatedZonesConfigPath = TEST_PREFIX + "/configs/zones/zones.json"
 var DeprecatedPSKConfigPath = TEST_PREFIX + "/configs/wifi/psks.json"
 
@@ -41,6 +42,7 @@ type PluginConfig struct {
 	Name     string
 	URI      string
 	UnixPath string
+	Enabled  bool
 }
 
 type APIConfig struct {
@@ -92,7 +94,7 @@ type DeprecatedClientZone struct {
 var config = APIConfig{}
 
 func loadConfig() {
-	data, err := ioutil.ReadFile(TEST_PREFIX + "/state/api/config")
+	data, err := ioutil.ReadFile(ApiConfigPath)
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -105,6 +107,14 @@ func loadConfig() {
 	initTraffic(config)
 
 	migrateZonesPsksV0()
+}
+
+func saveConfig() {
+	file, _ := json.MarshalIndent(config, "", " ")
+	err := ioutil.WriteFile(ApiConfigPath, file, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func migrateZonesPsksV0() {
@@ -1342,7 +1352,7 @@ func hostapdConfiguration(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(data))
 }
 
-func logs(w http.ResponseWriter, r *http.Request) {
+func getLogs(w http.ResponseWriter, r *http.Request) {
 	// TODO params : --since "1 hour ago" --until "50 minutes ago"
 	// 2000 entries ~2mb of data
 	data, err := exec.Command("journalctl", "-u", "docker.service", "-r", "-n", "2000", "-o", "json").Output()
@@ -1354,12 +1364,6 @@ func logs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	logs := strings.Replace(strings.Trim(string(data), "\n"), "\n", ",", -1)
 	fmt.Fprintf(w, "[%s]", logs)
-}
-
-func plugins(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	//= []PluginConfig
-	json.NewEncoder(w).Encode(config.Plugins)
 }
 
 //set up SPA handler. From gorilla mux's documentation
@@ -1399,34 +1403,6 @@ func logRequest(handler http.Handler) http.Handler {
 		fmt.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
 		handler.ServeHTTP(w, r)
 	})
-}
-
-func PluginProxy(config PluginConfig) (*httputil.ReverseProxy, error) {
-	return &httputil.ReverseProxy{
-		Director: func(req *http.Request) {
-			req.URL.Scheme = "http"
-			req.URL.Host = config.Name
-
-			//Empty headers from the request
-			//SECURITY benefit: API extensions do not receive credentials
-			req.Header = http.Header{}
-		},
-		Transport: &http.Transport{
-			Dial: func(network, addr string) (net.Conn, error) {
-				return net.Dial("unix", config.UnixPath)
-			},
-		},
-	}, nil
-}
-
-func ProxyRequestHandler(proxy *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		rest := mux.Vars(r)["rest"]
-		if rest != "" {
-			r.URL.Path = "/" + rest
-		}
-		proxy.ServeHTTP(w, r)
-	}
 }
 
 func main() {
@@ -1494,10 +1470,11 @@ func main() {
 	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")
 
 	//logs
-	external_router_authenticated.HandleFunc("/logs", logs).Methods("GET")
+	external_router_authenticated.HandleFunc("/logs", getLogs).Methods("GET")
 
 	//plugins
-	external_router_authenticated.HandleFunc("/plugins", plugins).Methods("GET")
+	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
+	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins).Methods("PUT", "DELETE")
 
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
@@ -1518,15 +1495,7 @@ func main() {
 		panic(err)
 	}
 
-	//Set up Plugin Proxies
-	for _, entry := range config.Plugins {
-		proxy, err := PluginProxy(entry)
-		if err != nil {
-			panic(err)
-		}
-		external_router_authenticated.HandleFunc("/plugins/"+entry.URI+"/", ProxyRequestHandler(proxy))
-		external_router_authenticated.HandleFunc("/plugins/"+entry.URI+"/"+"{rest:.*}", ProxyRequestHandler(proxy))
-	}
+	PluginRoutes(external_router_authenticated)
 
 	wifidServer := http.Server{Handler: logRequest(unix_wifid_router)}
 	dhcpdServer := http.Server{Handler: logRequest(unix_dhcpd_router)}
