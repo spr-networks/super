@@ -14,6 +14,7 @@ import DNSLog from 'views/DNS/DNSLog'
 import DNSLogEdit from 'views/DNS/DNSLogEdit'
 import Wireguard from 'views/Wireguard'
 import Logs from 'views/Logs'
+import Plugins from 'views/Plugins'
 
 const routes = [
   {
@@ -144,6 +145,13 @@ const routes = [
     name: 'Logs',
     icon: 'fa fa-list-alt',
     component: Logs,
+    layout: '/admin'
+  },
+  {
+    path: '/plugins',
+    name: 'Plugins',
+    icon: 'fa fa-puzzle-piece',
+    component: Plugins,
     layout: '/admin'
   },
   {
