@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"bytes"
 )
 
 import (
@@ -127,36 +128,6 @@ func getPeers() ([]ClientPeer, error) {
 	return peers, nil
 }
 
-// return a new client ip that is not used
-func getNewPeerAddress() (string, error) {
-	peers, err := getPeers()
-	if err != nil {
-		return "", err
-	}
-
-	ips := map[string]bool{}
-
-	for _, entry := range peers {
-		ips[entry.AllowedIPs] = true
-	}
-
-	address := ""
-	for i := 2; i < 255; i++ {
-		ip := fmt.Sprintf("192.168.3.%d/32", i)
-		_, exists := ips[ip]
-		if !exists {
-			address = strings.Replace(ip, "/32", "/24", 1)
-			break
-		}
-	}
-
-	if len(address) == 0 {
-		return "", errors.New("could not find a new peer address")
-	}
-
-	return address, nil
-}
-
 func pluginGenKey(w http.ResponseWriter, r *http.Request) {
 	keypair, err := genKeyPair()
 	if err != nil {
@@ -251,6 +222,49 @@ func removePeer(peer ClientPeer) error {
 	return nil
 }
 
+type AbstractDHCPRequest struct {
+	Identifier string
+}
+
+var tinysubnets_plugin_path = "/state/dhcp/tinysubnets_plugin"
+
+type Record struct {
+	IP      net.IP
+	RouterIP	net.IP
+}
+
+func getNewPeerAddress(PublicKey string) (string, error) {
+	//call into the tinysubnets DHCP plugin
+	c := http.Client{}
+	c.Transport = &http.Transport{
+									Dial: func(network, addr string) (net.Conn, error) {
+													return net.Dial("unix", tinysubnets_plugin_path)
+									},
+	}
+
+	requestJson, _ := json.Marshal(AbstractDHCPRequest{Identifier: PublicKey})
+
+	req, err := http.NewRequest(http.MethodPut, "http://dhcp/DHCPRequest", bytes.NewBuffer(requestJson))
+	if err != nil {
+			return "", err
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println(err.Error())
+		return "", err
+	}
+
+	rec := Record{}
+	_ = json.NewDecoder(resp.Body).Decode(&rec)
+
+	if rec.IP.String() != "" {
+		return rec.IP.String(), nil
+	}
+
+	return "", errors.New("Failed to receive IP")
+
+}
 // return config for a client
 func pluginPeer(w http.ResponseWriter, r *http.Request) {
 	peer := ClientPeer{}
@@ -291,7 +305,7 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(peer.AllowedIPs) == 0 {
-		address, err := getNewPeerAddress()
+		address, err := getNewPeerAddress(peer.PublicKey)
 		if err != nil {
 			fmt.Println("error:", err)
 			http.Error(w, "Not found", 404)
@@ -300,14 +314,13 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 
 		config.Interface.Address = address
 	} else {
-		//TODO support /24 etc for supplied address
-		address := strings.Replace(peer.AllowedIPs, "/32", "", 1)
+		address := peer.AllowedIPs
 		ok := true
 
 		peers, _ := getPeers()
 
 		for _, p := range peers {
-			ip := strings.Replace(p.AllowedIPs, "/32", "", 1)
+			ip := p.AllowedIPs
 			if ip == address {
 				ok = false
 				break
@@ -326,15 +339,13 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 	// TODO verify pubkey
 
 	//add a new peer
-	AllowedIPs := strings.Replace(config.Interface.Address, "/24", "/32", 1)
+	AllowedIPs := config.Interface.Address
 
 	PresharedKey, err := genPresharedKey()
 	if err != nil {
 		fmt.Println("genpsk fail:", err)
 		return
 	}
-
-	fmt.Println("running wg set")
 
 	cmd := exec.Command("wg", "set", "wg0", "peer", peer.PublicKey, "preshared-key", "/dev/stdin", "allowed-ips", AllowedIPs)
 
@@ -358,7 +369,6 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// save config
-
 	err = saveConfig()
 	if err != nil {
 		fmt.Println("failed to save config:", err)
@@ -382,10 +392,10 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 
 	config.Interface.DNS = "1.1.1.1, 1.0.0.1"
 
-	// Point DNS to CoreDNS
-	network, ok := os.LookupEnv("LANIP")
+	// Point DNS to CoreDNS/DNSIP setting
+	dns, ok := os.LookupEnv("DNSIP")
 	if ok {
-		config.Interface.DNS = network
+		config.Interface.DNS = dns
 	}
 
 	PublicKey, err := getPublicKey()
@@ -397,6 +407,7 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 
 	config.Peer.PublicKey = PublicKey
 	config.Peer.PresharedKey = PresharedKey
+	//route * to wireguard
 	config.Peer.AllowedIPs = "0.0.0.0/0, ::/0"
 	config.Peer.Endpoint = peer.Endpoint
 	config.Peer.PersistentKeepalive = 25

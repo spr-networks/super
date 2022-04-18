@@ -109,12 +109,14 @@ services:
     privileged: true
     depends_on:
       - "base"
+      - "dhcp"
     logging:
       driver: journald
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/wireguard/:/configs/wireguard/
       - ./state/wireguard/:/state/wireguard/
+      - ./state/dhcp/:/state/dhcp/
 # Use the prebuilt frontend
   frontend:
     container_name: superfrontend
