@@ -160,6 +160,7 @@ services:
       - ./state/wireguard/:/state/wireguard/
       - ./state/plugin-lookup/:/state/plugin-lookup/
       - ./frontend/build:/ui/
+      - /var/log/journal:/var/log/journal:ro
   plugin-lookup:
     container_name: super-plugin-lookup
     build: plugin-lookup

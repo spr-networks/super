@@ -1343,14 +1343,17 @@ func hostapdConfiguration(w http.ResponseWriter, r *http.Request) {
 }
 
 func logs(w http.ResponseWriter, r *http.Request) {
-	data, err := ioutil.ReadFile("/state/logs/latest.json")
+	// TODO params : --since "1 hour ago" --until "50 minutes ago"
+	// 2000 entries ~2mb of data
+	data, err := exec.Command("journalctl", "-u", "docker.service", "-r", "-n", "2000", "-o", "json").Output()
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprint(w, string(data))
+	logs := strings.Replace(strings.Trim(string(data), "\n"), "\n", ",", -1)
+	fmt.Fprintf(w, "[%s]", logs)
 }
 
 func plugins(w http.ResponseWriter, r *http.Request) {
