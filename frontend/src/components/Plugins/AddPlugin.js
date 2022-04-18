@@ -87,7 +87,6 @@ const AddPlugin = (props) => {
               name="URI"
               value={URI}
               onChange={handleChange}
-              autoFocus
             />
             <FormText tag="span">
               Plugin will be @ "http://spr/plugins/{URI || 'URI-here'}/"
@@ -108,7 +107,6 @@ const AddPlugin = (props) => {
               name="UnixPath"
               value={UnixPath}
               onChange={handleChange}
-              autoFocus
             />
             <FormText tag="span">
               Use a unique name to identify your plugin
