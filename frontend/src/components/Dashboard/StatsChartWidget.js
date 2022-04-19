@@ -53,6 +53,7 @@ const StatsChartWidget = (props) => {
     )
   } else {
     let options = {
+      spanGaps: true,
       plugins: {
         title: {
           display: false
@@ -89,7 +90,7 @@ const StatsChartWidget = (props) => {
           type: 'logarithmic',
           ticks: {
             callback: (value, index, ticks) => {
-              if (index % 4 == 0) {
+              if (index % 9 == 0) {
                 return prettySize(value, true)
               }
             }
@@ -122,6 +123,9 @@ const StatsChartWidget = (props) => {
       return {
         label: labels[i],
         data,
+        //fill: true,
+        //backgroundColor: chroma(colors[i]).alpha(0.75).css(),
+        //borderColor: chroma(colors[i]).alpha(0.75).css(),
         backgroundColor: colors[i],
         borderColor: colors[i],
         borderWidth: 1
