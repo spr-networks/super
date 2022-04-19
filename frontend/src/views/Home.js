@@ -1,49 +1,29 @@
 import React, { useState, useEffect } from 'react'
 
-import { blockAPI, wifiAPI } from 'api'
-import WifiClients, { WifiInfo } from 'components/Dashboard/HostapdWidgets'
+import { blockAPI, pluginAPI } from 'api'
+import {
+  WifiClients,
+  Interfaces,
+  WifiInfo
+} from 'components/Dashboard/WifiWidgets'
 import {
   DNSMetrics,
   DNSBlockMetrics,
   DNSBlockPercent
 } from 'components/Dashboard/DNSMetricsWidgets'
 
-import {
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  CardTitle,
-  Table,
-  Row,
-  Col
-} from 'reactstrap'
+import { Row, Col } from 'reactstrap'
 
 function Home() {
-  const [addrs, setAddrs] = useState([])
-  const [plugins, setPlugins] = useState([])
+  const [pluginsEnabled, setPluginsEnabled] = useState([])
 
   useEffect(() => {
-    wifiAPI.ipAddr().then((data) => {
-      let ifaddrs = []
-      for (let entry of data) {
-        for (let address of entry.addr_info) {
-          if (address.scope == 'global') {
-            address.ifname = entry.ifname
-            ifaddrs.push(address)
-          }
-
-          break
-        }
-      }
-
-      setAddrs(ifaddrs)
-    })
-
-    // check if dns plugin is active
-    blockAPI
-      .config()
-      .then((res) => setPlugins(plugins.concat('DNS')))
+    // check if dns plugin is active -- TODO .Enabled + dns-block
+    pluginAPI
+      .list()
+      .then((plugins) =>
+        setPluginsEnabled(plugins.filter((p) => p.Enabled).map((p) => p.Name))
+      )
       .catch((error) => error)
   }, [])
 
@@ -60,40 +40,14 @@ function Home() {
                 <WifiClients />
               </Col>
             </Row>
-
-            <Card>
-              <CardBody>
-                <Row>
-                  <Col lg={{ size: 8, offset: 2 }} md="10">
-                    <p className="card-category">Interfaces</p>
-                    {/*<CardTitle tag="h4"></CardTitle>*/}
-                    <CardBody>
-                      <Table responsive>
-                        <thead className="text-primary">
-                          <tr>
-                            <th>Interface</th>
-                            <th>IP Address</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {addrs.map((address) => (
-                            <tr key={address.local}>
-                              <td>{address.ifname}</td>
-                              <td>
-                                {address.local}/{address.prefixlen}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </Table>
-                    </CardBody>
-                  </Col>
-                </Row>
-              </CardBody>
-            </Card>
+            <Row>
+              <Col sm="12">
+                <Interfaces />
+              </Col>
+            </Row>
           </Col>
           <Col sm="4">
-            {plugins.includes('DNS') ? (
+            {pluginsEnabled.includes('dns-block') ? (
               <>
                 <DNSMetrics />
                 <DNSBlockMetrics />

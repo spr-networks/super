@@ -52,6 +52,7 @@ export class DNSBlockPercent extends DNSMetrics {
     return (
       <StatsChartWidget
         title="Percent Blocked"
+        type="Doughnut"
         descriptionHide="Query block Performance"
         labels={['Blocked', 'Total']}
         data={data}
