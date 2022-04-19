@@ -18,7 +18,6 @@ function Home() {
   const [pluginsEnabled, setPluginsEnabled] = useState([])
 
   useEffect(() => {
-    // check if dns plugin is active -- TODO .Enabled + dns-block
     pluginAPI
       .list()
       .then((plugins) =>
