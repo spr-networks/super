@@ -20,6 +20,7 @@ export const TotalTraffic = (props) => {
           let h1 = Object.values(history[i])
             .map((t) => t[label])
             .reduce((prev, v) => prev + v, 0)
+
           let h2 = Object.values(history[i + 1])
             .map((t) => t[label])
             .reduce((prev, v) => prev + v, 0)
@@ -27,7 +28,7 @@ export const TotalTraffic = (props) => {
           let x = new Date(date)
           let y = h1 - h2
 
-          traffic[label].push({ x, y, z: y })
+          traffic[label].push({ x, y })
         })
       }
 
