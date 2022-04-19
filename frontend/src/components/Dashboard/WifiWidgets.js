@@ -81,14 +81,14 @@ export const Interfaces = (props) => {
 
       setAddrs(ifaddrs)
     })
-  })
+  }, [])
 
   return (
     <Card>
       <CardBody>
         <Row>
           <Col lg={{ size: 8, offset: 2 }} md="10">
-            <CardTitle tag="h7" className="text-muted">
+            <CardTitle tag="h4" className="text-muted">
               Interfaces
             </CardTitle>
             <CardBody>

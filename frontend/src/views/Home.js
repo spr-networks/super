@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
 
-import { blockAPI, pluginAPI } from 'api'
+import { pluginAPI } from 'api'
 import {
   WifiClients,
   Interfaces,
   WifiInfo
 } from 'components/Dashboard/WifiWidgets'
+import { TotalTraffic } from 'components/Dashboard/TrafficWidgets'
 import {
   DNSMetrics,
   DNSBlockMetrics,
@@ -37,6 +38,11 @@ function Home() {
               </Col>
               <Col sm="6">
                 <WifiClients />
+              </Col>
+            </Row>
+            <Row>
+              <Col sm="12">
+                <TotalTraffic />
               </Col>
             </Row>
             <Row>
