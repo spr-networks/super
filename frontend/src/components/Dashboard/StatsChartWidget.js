@@ -17,12 +17,18 @@ const StatsChartWidget = (props) => {
   let chart = ''
   if (props.type == 'Doughnut') {
     let options = {
+      /*layout: {
+        padding: {
+          bottom: 40
+        }
+      },*/
       plugins: {
         title: {
           display: true,
           text: text,
           position: 'bottom',
           color: '#66615c',
+          padding: { bottom: 40 },
           font: { weight: 400, size: 30 }
         },
         legend: { display: false }
@@ -38,18 +44,20 @@ const StatsChartWidget = (props) => {
           backgroundColor,
           borderWidth: 0,
           maintainAspectRatio: false,
-          radius: '80%',
+          radius: '70%',
           cutout: '90%'
         }
       ]
     }
 
     chart = (
-      <Doughnut
-        data={data}
-        options={options}
-        className="ct-chart ct-perfect-fourth"
-      />
+      <div style={{ maxHeight: '242px' }}>
+        <Doughnut
+          data={data}
+          options={options}
+          className="ct-chart ct-perfect-fourth"
+        />
+      </div>
     )
   } else {
     let options = {
@@ -137,7 +145,7 @@ const StatsChartWidget = (props) => {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pt-0∂">
         <CardTitle tag="h5" className="text-muted text-center">
           {props.title}
         </CardTitle>
@@ -145,9 +153,9 @@ const StatsChartWidget = (props) => {
           <p className="card-category">{props.description}</p>
         ) : null}
       </CardHeader>
-      <CardBody style={{ paddingTop: 0 }}>{chart}</CardBody>
+      <CardBody className="pt-0">{chart}</CardBody>
       {props.footerText ? (
-        <CardFooter style={{ paddingTop: 0 }}>
+        <CardFooter className="pt-0">
           <hr />
           <div className="stats">
             <i className={props.footerIcon} />

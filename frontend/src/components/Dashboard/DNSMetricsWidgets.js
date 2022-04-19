@@ -31,8 +31,6 @@ export class DNSBlockMetrics extends DNSMetrics {
         icon="fa fa-ban text-danger"
         title="Blocked DNS queries"
         text={this.state.BlockedQueries}
-        textFooterHide={this.state.BlockedQueries + ' blocked'}
-        iconFooterHide="fa fa-ban"
       />
     )
   }
