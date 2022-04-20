@@ -95,7 +95,7 @@ const WireguardConfig = (props) => {
 }
 
 WireguardConfig.propTypes = {
-  config: PropTypes.string
+  config: PropTypes.object
 }
 
 export default WireguardConfig

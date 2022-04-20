@@ -4,8 +4,8 @@ import Select from 'react-select'
 
 import WireguardConfig from './WireguardConfig'
 import { APIErrorContext } from 'layouts/Admin'
-
-import { wireguardAPI } from 'api/Wireguard'
+import ClientSelect from 'components/ClientSelect'
+import { deviceAPI, wireguardAPI } from 'api'
 import { wifiAPI } from 'api'
 
 import {
@@ -16,13 +16,18 @@ import {
   FormGroup,
   FormText,
   Input,
-  Row
+  InputGroup,
+  InputGroupAddon,
+  InputGroupText,
+  Row,
+  UncontrolledTooltip
 } from 'reactstrap'
 
 export default class WireguardAddPeer extends React.Component {
   static contextType = APIErrorContext
   state = {
     AllowedIPs: '',
+    PrivateKey: '',
     PublicKey: '',
     Endpoint: '',
     addrs: [],
@@ -33,7 +38,9 @@ export default class WireguardAddPeer extends React.Component {
     super(props)
 
     this.handleChange = this.handleChange.bind(this)
+    this.handleChangeClient = this.handleChangeClient.bind(this)
     this.handleChangeEndpoint = this.handleChangeEndpoint.bind(this)
+    this.handleClickGenerate = this.handleClickGenerate.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
   }
 
@@ -44,30 +51,84 @@ export default class WireguardAddPeer extends React.Component {
     this.setState({ [name]: value })
   }
 
+  handleChangeClient(newValue) {
+    let ClientIP = newValue ? newValue.value : ''
+    // TODO match device by ip
+    this.setState({ AllowedIPs: ClientIP })
+  }
+
   handleChangeEndpoint(newValue, actionMeta) {
     this.setState({ Endpoint: newValue ? newValue.value : '' })
   }
 
   handleSubmit(event) {
     event.preventDefault()
+
+    const addPeer = (peer) => {
+      return wireguardAPI
+        .putPeer(peer)
+        .then((config) => {
+          if (this.props.notifyChange) {
+            this.props.notifyChange('peers')
+          }
+
+          if (this.state.PrivateKey) {
+            config.Interface.PrivateKey = this.state.PrivateKey
+          }
+
+          this.setState({ config })
+        })
+        .catch((error) => {
+          this.context.reportError('API Failure: ' + error.message)
+        })
+    }
+
     let peer = {
-      AllowedIPs: this.state.AllowedIPs,
+      AllowedIPs: this.state.AllowedIPs + '/32',
       PublicKey: this.state.PublicKey,
       Endpoint: this.state.Endpoint
     }
 
-    wireguardAPI
-      .putPeer(peer)
-      .then((config) => {
-        if (this.props.notifyChange) {
-          this.props.notifyChange('peers')
-        }
+    if (!peer.PublicKey) {
+      return this.context.reportError('Need to provide a PublicKey')
+    }
 
-        this.setState({ config })
+    // update device wgpubkey if matching ip
+    deviceAPI
+      .list()
+      .then((devices) => {
+        // get selected device with matching IP
+        let device = Object.values(devices)
+          .filter((d) => d.RecentIP == this.state.AllowedIPs && d.MAC)
+          .pop()
+
+        // update device WGPubKey
+        if (device) {
+          deviceAPI
+            .update(device.MAC, { WGPubKey: peer.PublicKey })
+            .then((res) => {
+              addPeer(peer)
+            })
+            .catch((err) =>
+              this.context.reportError('deviceAPI.update Error: ' + err)
+            )
+        } else {
+          // will create a new device for the peer
+          addPeer(peer)
+        }
       })
-      .catch((error) => {
-        this.context.reportError('API Failure: ' + error.message)
+      .catch((err) => this.context.reportError('deviceAPI.list Error: ' + err))
+  }
+
+  handleClickGenerate(e) {
+    wireguardAPI
+      .genKey()
+      .then((keyPair) => {
+        this.setState(keyPair)
       })
+      .catch((err) =>
+        this.context.reportError('wireguardAPI.genKey Error: ' + err)
+      )
   }
 
   componentDidMount() {
@@ -110,11 +171,17 @@ export default class WireguardAddPeer extends React.Component {
       <Form onSubmit={this.handleSubmit}>
         <Row>
           <Label for="AllowedIPs" md={2}>
-            AllowedIPs
+            Client
           </Label>
           <Col md={10}>
             <FormGroup>
-              <Input
+              <ClientSelect
+                isCreatable
+                skipAll
+                value={this.state.AllowedIPs}
+                onChange={this.handleChangeClient}
+              />
+              {/*<Input
                 type="text"
                 id="AllowedIPs"
                 placeholder="192.168.3.2/32"
@@ -122,7 +189,7 @@ export default class WireguardAddPeer extends React.Component {
                 value={this.state.AllowedIPs}
                 onChange={this.handleChange}
                 autoFocus
-              />
+              />*/}
               <FormText tag="span">Leave empty to assign</FormText>
             </FormGroup>
           </Col>
@@ -133,15 +200,31 @@ export default class WireguardAddPeer extends React.Component {
           </Label>
           <Col sm={10}>
             <FormGroup>
-              <Input
-                type="text"
-                id="PublicKey"
-                placeholder="base64 pubkey"
-                name="PublicKey"
-                value={this.state.PublicKey}
-                onChange={this.handleChange}
-                autoFocus
-              />
+              <InputGroup size="md" style={{ zIndex: 0 }}>
+                <Input
+                  type="text"
+                  id="PublicKey"
+                  placeholder="base64 pubkey"
+                  name="PublicKey"
+                  value={this.state.PublicKey}
+                  onChange={this.handleChange}
+                  autoFocus
+                />
+                <InputGroupAddon addonType="append">
+                  <Button
+                    className="m-0 p-2 pl-3 pr-3"
+                    color="primary"
+                    id="tooltipGenerate"
+                    onClick={this.handleClickGenerate}
+                  >
+                    <i className="fa fa-refresh" />
+                  </Button>
+                  <UncontrolledTooltip delay={0} target="tooltipGenerate">
+                    Generate keypair
+                  </UncontrolledTooltip>
+                </InputGroupAddon>
+              </InputGroup>
+
               <FormText tag="span">
                 Leave empty to generate, else run wg pubkey &lt; peer.key
               </FormText>
