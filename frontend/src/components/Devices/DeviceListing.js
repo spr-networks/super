@@ -36,7 +36,9 @@ class DeviceListing extends Component {
   async setOUIs(devices) {
     let ouis = []
     try {
-      ouis = await deviceAPI.ouis(Object.keys(devices))
+      ouis = await deviceAPI.ouis(
+        Object.keys(devices).filter((id) => id.includes(':'))
+      )
     } catch (err) {
       return
     }

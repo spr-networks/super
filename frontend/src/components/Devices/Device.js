@@ -93,7 +93,7 @@ export default class Device extends Component {
     let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
 
     const removeDevice = (e) => {
-      let id = device.MAC || 'pending'
+      let id = device.MAC || device.WGPubKey || 'pending'
 
       deviceAPI
         .deleteDevice(id)
@@ -104,12 +104,17 @@ export default class Device extends Component {
     }
 
     const saveDevice = async () => {
-      if (!this.props.device.MAC || !this.state.name) {
+      console.log('ZZ saveDevice')
+      let id = device.MAC.length ? device.MAC : device.WGPubKey
+      if (!this.state.name) {
+        console.log('ZZ nuthin', id)
         return
       }
 
+      console.log('ZZ saveDevice:', id)
+
       deviceAPI
-        .updateName(this.props.device.MAC, this.state.name)
+        .updateName(id, this.state.name)
         .then(this.props.notifyChange)
         .catch((error) =>
           this.context.reportError('[API] updateName error: ' + error.message)
