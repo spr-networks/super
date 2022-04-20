@@ -271,7 +271,6 @@ type WireguardUpdate struct {
 }
 
 func updateWireguardAddress(update WireguardUpdate, doRemove bool) error {
-	fmt.Println(update)
 	//call into the API to update the WireGuard Info
 	c := http.Client{}
 	c.Transport = &http.Transport{
