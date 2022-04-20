@@ -79,7 +79,7 @@ func updatePlugins(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// validate
 		validName := regexp.MustCompile(`^[A-Za-z0-9\-]+$`).MatchString
-		validURI := regexp.MustCompile(`^[A-Za-z0-9\-]+$`).MatchString
+		validURI := regexp.MustCompile(`^[A-Za-z0-9\/\-]+$`).MatchString
 		validUnixPath := regexp.MustCompile(`^[A-Za-z0-9\/\-\._]+$`).MatchString
 
 		if !validName(plugin.Name) {
