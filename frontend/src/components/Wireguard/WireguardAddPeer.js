@@ -85,53 +85,59 @@ export default class WireguardAddPeer extends React.Component {
 
     // update device wgpubkey by matching ip
     const linkPubKeyToDevice = (peer) => {
-      deviceAPI
-        .list()
-        .then((devices) => {
-          let device = Object.values(devices)
-            .filter((d) => d.RecentIP == this.state.AllowedIPs && d.MAC)
-            .pop()
+      return new Promise((resolve, reject) => {
+        deviceAPI
+          .list()
+          .then((devices) => {
+            let device = Object.values(devices)
+              .filter((d) => d.RecentIP == this.state.AllowedIPs && d.MAC)
+              .pop()
 
-          // update device WGPubKey
-          if (device) {
-            deviceAPI
-              .update(device.MAC, { WGPubKey: peer.PublicKey })
-              .then((res) => {
-                addPeer(peer)
-              })
-              .catch((err) =>
-                this.context.reportError('deviceAPI.update Error: ' + err)
-              )
-          } else {
-            // will create a new device for the peer
-            addPeer(peer)
-          }
-        })
-        .catch((err) =>
-          this.context.reportError('deviceAPI.list Error: ' + err)
-        )
+            // update device WGPubKey
+            if (device) {
+              deviceAPI
+                .update(device.MAC, { WGPubKey: peer.PublicKey })
+                .then((res) => {
+                  resolve(peer)
+                })
+                .catch((err) => reject('deviceAPI.update Error: ' + err))
+            } else {
+              // will create a new device for the peer
+              resolve(peer)
+            }
+          })
+          .catch((err) => reject('deviceAPI.list Error: ' + err))
+      })
     }
 
     let peer = {
-      AllowedIPs: this.state.AllowedIPs ? `${this.state.AllowedIPs}/32` : '',
+      AllowedIPs: this.state.AllowedIPs,
       PublicKey: this.state.PublicKey,
       Endpoint: this.state.Endpoint
+    }
+
+    if (peer.AllowedIPs.length && !peer.AllowedIPs.includes('/')) {
+      peer.AllowedIPs = `${peer.AllowedIPs}/32`
     }
 
     if (!peer.PublicKey) {
       wireguardAPI
         .genKey()
         .then((keyPair) => {
-          this.setState(keyPair)
+          this.setState({ PrivateKey: keyPair.PrivateKey })
 
           peer.PublicKey = keyPair.PublicKey
           linkPubKeyToDevice(peer)
+            .then((res) => addPeer(peer))
+            .catch((err) => this.context.reportError(err))
         })
         .catch((err) =>
           this.context.reportError('wireguardAPI.genKey Error: ' + err)
         )
     } else {
       linkPubKeyToDevice(peer)
+        .then((res) => addPeer(peer))
+        .catch((err) => this.context.reportError(err))
     }
   }
 
