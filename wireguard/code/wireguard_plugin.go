@@ -195,8 +195,13 @@ func getPublicKey() (string, error) {
 }
 
 func saveConfig() error {
-	cmd := exec.Command("wg-quick", "save", WireguardConfigFile)
-	_, err := cmd.Output()
+	cmd := exec.Command("wg", "showconf", WireguardInterface)
+	data, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(WireguardConfigFile, data, 0600)
 	if err != nil {
 		return err
 	}
