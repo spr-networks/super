@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -898,7 +899,7 @@ func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
 			return
 		}
 
-		if WGPubKey != "" {
+		if WGPubKey == "" {
 			//For non wireguard updates -- add to ethernet access filter to prevent MAC spoofing
 			addVerdictMac(IP, MAC, Iface, "ethernet_filter", "return")
 		}
@@ -1125,15 +1126,45 @@ func wireguardUpdate(w http.ResponseWriter, r *http.Request) {
 	refreshWireguardDevice(val.MAC, wg.IP, wg.PublicKey, wg.Iface, wg.Name, r.Method == http.MethodPut)
 }
 
+
+func toTinyIP(IP string, delta uint32) (bool, net.IP)  {
+	//check for tiny-net range, to have matching priority with wifi
+	tinynet := os.Getenv("TINYNETSTART")
+	if tinynet != "" {
+		_, subnet, _ := net.ParseCIDR(tinynet + "/24")
+		net_ip := net.ParseIP(IP)
+		if subnet.Contains(net_ip) {
+			u := binary.BigEndian.Uint32(net_ip.To4()) - delta
+			ip := net.IPv4(byte(u>>24), byte(u>>16), byte(u>>8), byte(u))
+			return true, ip
+		}
+	}
+
+	return false, net.IP{}
+}
+
+
 func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface string, Name string, Create bool) {
 	//1. delete this ip from any existing verdict maps for the same wireguard interface
 	flushVmaps(IP, MAC, Iface, getVerdictMapNames(), false)
 
 	if Create {
-		//2. add entry to the appropriate verdict maps
+		//2.  Add route
+
+		is_tiny, newIP := toTinyIP(IP, 2)
+		if is_tiny {
+			IP = newIP.String() + "/30"
+		}
+
+		err := exec.Command("ip", "route", "add", IP, "dev", Iface).Run()
+		if err != nil {
+			fmt.Println("ip route add failed", IP, err)
+		}
+
+		//3. add entry to the appropriate verdict maps
 		populateVmapEntries(IP, MAC, Iface, PublicKey)
 
-		//3. update local mappings file for DNS
+		//4. update local mappings file for DNS
 		if Name != "" {
 			updateLocalMappings(IP, Name)
 		}
