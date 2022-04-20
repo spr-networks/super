@@ -314,7 +314,7 @@ func getDevices(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
-	identity := r.URL.Query()["id"][0]
+    identity := mux.Vars(r)["identity"]
 	if strings.Contains(identity, ":") {
 		//normalize MAC addresses
 		identity = trimLower(identity)
@@ -1611,7 +1611,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/zones", getZones).Methods("GET")
 	external_router_authenticated.HandleFunc("/zones", updateZones).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/devices", getDevices).Methods("GET")
-	external_router_authenticated.HandleFunc("/device", handleUpdateDevice).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/device/{identity:.*}", handleUpdateDevice).Methods("PUT", "DELETE")
 
 	external_router_authenticated.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 
