@@ -815,8 +815,8 @@ func updateAddr(Router string, Ifname string) {
 	}
 }
 
-func addVerdictMac(IP string, MAC string, Iface string, Table string) {
-	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ".", MAC, ":", "accept", "}").Run()
+func addVerdictMac(IP string, MAC string, Iface string, Table string, Verdict string) {
+	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ".", MAC, ":", Verdict, "}").Run()
 	if err != nil {
 		fmt.Println("addVerdictMac Failed", MAC, Iface, Table, err)
 		return
@@ -898,8 +898,10 @@ func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
 			return
 		}
 
-		//add to ethernet access filter to prevent MAC spoofing
-		addVerdictMac(IP, MAC, Iface, "ethernet_filter")
+		if WGPubKey != "" {
+			//For non wireguard updates -- add to ethernet access filter to prevent MAC spoofing
+			addVerdictMac(IP, MAC, Iface, "ethernet_filter", "return")
+		}
 	} else {
 		val, exists = devices[WGPubKey]
 		//wg pub key is unknown, exit
