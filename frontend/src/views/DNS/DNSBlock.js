@@ -62,13 +62,13 @@ export default class DNSBlock extends Component {
             <DNSOverrideList
               key={generatedID + 1}
               list={this.state.BlockDomains}
-              title="Blocked Domain Override"
+              title="Block Custom Domain"
               notifyChange={notifyChange}
             />
             <DNSOverrideList
               key={generatedID + 2}
               list={this.state.PermitDomains}
-              title="Allow Domain Override"
+              title="Allow Custom Domain"
               notifyChange={notifyChange}
             />
           </Col>

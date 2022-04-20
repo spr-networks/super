@@ -20,7 +20,7 @@ export default class DNSAddOverride extends React.Component {
   state = {
     Type: '',
     Domain: '',
-    ResultIP: '0.0.0.0',
+    ResultIP: '',
     ClientIP: '*',
     Expiration: 0,
     check: {}
@@ -145,7 +145,7 @@ export default class DNSAddOverride extends React.Component {
               <Input
                 type="text"
                 id="ResultIP"
-                placeholder="0.0.0.0"
+                placeholder=""
                 name="ResultIP"
                 value={this.state.ResultIP}
                 onChange={this.handleChange}
@@ -154,7 +154,7 @@ export default class DNSAddOverride extends React.Component {
                 <Label className="error">Please enter a valid IP or *</Label>
               ) : (
                 <FormText tag="span">
-                  IP address to return for domain name lookup
+                  Optionally, set a custom IP address to return for domain name lookup.
                 </FormText>
               )}
             </FormGroup>
