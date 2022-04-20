@@ -1,5 +1,10 @@
 # plugin-wireguard
 
+### Note:
+If using custom wireguard configurations with SPR groups, be sure to use "wg" as the prefix to the interface name,
+so that the API does not flush the devices from the groups.
+
+
 testing the setup:
 
 ```sh
@@ -27,3 +32,4 @@ curl -s --unix-socket $SOCK http://localhost/peer -X PUT --data "{\"PublicKey\":
 ```
 
 use the ui for .conf and qrcode
+

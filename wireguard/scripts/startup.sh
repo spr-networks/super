@@ -1,4 +1,5 @@
 #!/bin/bash
+set -a
 . /configs/base/config.sh
 
 WIREGUARD_CONFIG=/configs/wireguard/wg0.conf
@@ -24,7 +25,6 @@ if [ "$WIREGUARD_NETWORK" ]; then
   ip link set dev wg0 up
 fi
 
-# haxxy way to put the pubkey in env for go instead of parsing the conf
-export LANIP=$LANIP
+
 #export WIREGUARD_PORT=$WIREGUARD_PORT
 /wireguard_plugin

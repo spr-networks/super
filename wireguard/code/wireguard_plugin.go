@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,6 +21,7 @@ import (
 var UNIX_PLUGIN_LISTENER = "/state/wireguard/wireguard_plugin"
 
 var TEST_PREFIX = ""
+var WireguardInterface = "wg0"
 var WireguardConfigFile = TEST_PREFIX + "/configs/wireguard/wg0.conf"
 
 type KeyPair struct {
@@ -97,7 +99,7 @@ func genPresharedKey() (string, error) {
 func getPeers() ([]ClientPeer, error) {
 	peers := []ClientPeer{}
 
-	cmd := exec.Command("wg", "show", "wg0", "allowed-ips")
+	cmd := exec.Command("wg", "show", WireguardInterface, "allowed-ips")
 	data, err := cmd.Output()
 	if err != nil {
 		fmt.Println("wg show failed", err)
@@ -127,36 +129,6 @@ func getPeers() ([]ClientPeer, error) {
 	return peers, nil
 }
 
-// return a new client ip that is not used
-func getNewPeerAddress() (string, error) {
-	peers, err := getPeers()
-	if err != nil {
-		return "", err
-	}
-
-	ips := map[string]bool{}
-
-	for _, entry := range peers {
-		ips[entry.AllowedIPs] = true
-	}
-
-	address := ""
-	for i := 2; i < 255; i++ {
-		ip := fmt.Sprintf("192.168.3.%d/32", i)
-		_, exists := ips[ip]
-		if !exists {
-			address = strings.Replace(ip, "/32", "/24", 1)
-			break
-		}
-	}
-
-	if len(address) == 0 {
-		return "", errors.New("could not find a new peer address")
-	}
-
-	return address, nil
-}
-
 func pluginGenKey(w http.ResponseWriter, r *http.Request) {
 	keypair, err := genKeyPair()
 	if err != nil {
@@ -170,24 +142,24 @@ func pluginGenKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func getNetworkIP() (string, error) {
-        iname, ok := os.LookupEnv("WANIF")
-        if !ok {
-                return "", errors.New("WANIF not set")
-        }
+	iname, ok := os.LookupEnv("WANIF")
+	if !ok {
+		return "", errors.New("WANIF not set")
+	}
 
-        ief, err := net.InterfaceByName(iname)
-        if err != nil {
-                return "", err
-        }
-        addrs, err := ief.Addrs();
-        if err != nil {
-                return "", err
-        }
-        if len(addrs) > 0 {
-                return addrs[0].(*net.IPNet).IP.String(), nil
-        } else {
-                return "", errors.New(fmt.Sprintf("interface %s don't have an ipv4 address\n", iname))
-        }
+	ief, err := net.InterfaceByName(iname)
+	if err != nil {
+		return "", err
+	}
+	addrs, err := ief.Addrs()
+	if err != nil {
+		return "", err
+	}
+	if len(addrs) > 0 {
+		return addrs[0].(*net.IPNet).IP.String(), nil
+	} else {
+		return "", errors.New(fmt.Sprintf("interface %s don't have an ipv4 address\n", iname))
+	}
 }
 
 // get wireguard endpoint from the upstream interface
@@ -211,11 +183,7 @@ func getEndpoint() (string, error) {
 
 // get wireguard endpoint from the environment
 func getPublicKey() (string, error) {
-	/*pubkey, ok := os.LookupEnv("WIREGUARD_PUBKEY")
-	if !ok {
-		return "", errors.New("WIREGUARD_PUBKEY not set")
-	}*/
-	cmd := exec.Command("wg", "show", "wg0", "public-key")
+	cmd := exec.Command("wg", "show", WireguardInterface, "public-key")
 	stdout, err := cmd.Output()
 	if err != nil {
 		return "", err
@@ -237,7 +205,7 @@ func saveConfig() error {
 }
 
 func removePeer(peer ClientPeer) error {
-	cmd := exec.Command("wg", "set", "wg0", "peer", peer.PublicKey, "remove")
+	cmd := exec.Command("wg", "set", WireguardInterface, "peer", peer.PublicKey, "remove")
 	_, err := cmd.Output()
 	if err != nil {
 		return err
@@ -251,6 +219,96 @@ func removePeer(peer ClientPeer) error {
 	return nil
 }
 
+type AbstractDHCPRequest struct {
+	Identifier string
+}
+
+var tinysubnets_plugin_path = "/state/dhcp/tinysubnets_plugin"
+var api_path = "/state/wireguard/apisock"
+
+type Record struct {
+	IP       net.IP
+	RouterIP net.IP
+}
+
+func getNewPeerAddress(PublicKey string) (string, error) {
+	//call into the tinysubnets DHCP plugin
+	c := http.Client{}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", tinysubnets_plugin_path)
+		},
+	}
+
+	requestJson, _ := json.Marshal(AbstractDHCPRequest{Identifier: PublicKey})
+
+	req, err := http.NewRequest(http.MethodPut, "http://dhcp/DHCPRequest", bytes.NewBuffer(requestJson))
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println(err.Error())
+		return "", err
+	}
+
+	rec := Record{}
+	_ = json.NewDecoder(resp.Body).Decode(&rec)
+
+	if rec.IP.String() != "" {
+		return rec.IP.String(), nil
+	}
+
+	return "", errors.New("Failed to receive IP")
+}
+
+type WireguardUpdate struct {
+	IP        string
+	PublicKey string
+	Iface     string
+	Name      string
+}
+
+func updateWireguardAddress(update WireguardUpdate, doRemove bool) error {
+	fmt.Println(update)
+	//call into the API to update the WireGuard Info
+	c := http.Client{}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", api_path)
+		},
+	}
+
+	requestJson, _ := json.Marshal(update)
+
+	methodType := http.MethodPut
+	if doRemove {
+		methodType = http.MethodDelete
+	}
+
+	req, err := http.NewRequest(methodType, "http://api-wireguard/wireguardUpdate", bytes.NewBuffer(requestJson))
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
+
+	if resp.StatusCode == 200 {
+		return nil
+	}
+
+	fmt.Println("wireguard-api error", resp.Status)
+
+	return errors.New("Failed to update API: " + resp.Status)
+
+}
+
 // return config for a client
 func pluginPeer(w http.ResponseWriter, r *http.Request) {
 	peer := ClientPeer{}
@@ -261,12 +319,28 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodDelete {
+
+		peerIP := ""
+		//get the IP assigned to this public key
+		peers, _ := getPeers()
+		for _, p := range peers {
+			if p.PublicKey == peer.PublicKey {
+				peerIP = strings.Split(p.AllowedIPs, "/")[0]
+				break
+			}
+		}
+
 		err = removePeer(peer)
 		if err != nil {
 			fmt.Println("DELETE peer err:", err)
 			http.Error(w, err.Error(), 400)
 			return
 		}
+
+		//delete wireguard key
+		updateWireguardAddress(WireguardUpdate{IP: peerIP,
+			PublicKey: peer.PublicKey,
+			Iface:     WireguardInterface}, true)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(true)
@@ -291,7 +365,7 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(peer.AllowedIPs) == 0 {
-		address, err := getNewPeerAddress()
+		address, err := getNewPeerAddress(peer.PublicKey)
 		if err != nil {
 			fmt.Println("error:", err)
 			http.Error(w, "Not found", 404)
@@ -300,14 +374,13 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 
 		config.Interface.Address = address
 	} else {
-		//TODO support /24 etc for supplied address
-		address := strings.Replace(peer.AllowedIPs, "/32", "", 1)
+		address := peer.AllowedIPs
 		ok := true
 
 		peers, _ := getPeers()
 
 		for _, p := range peers {
-			ip := strings.Replace(p.AllowedIPs, "/32", "", 1)
+			ip := p.AllowedIPs
 			if ip == address {
 				ok = false
 				break
@@ -326,7 +399,7 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 	// TODO verify pubkey
 
 	//add a new peer
-	AllowedIPs := strings.Replace(config.Interface.Address, "/24", "/32", 1)
+	AllowedIPs := config.Interface.Address
 
 	PresharedKey, err := genPresharedKey()
 	if err != nil {
@@ -334,9 +407,7 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("running wg set")
-
-	cmd := exec.Command("wg", "set", "wg0", "peer", peer.PublicKey, "preshared-key", "/dev/stdin", "allowed-ips", AllowedIPs)
+	cmd := exec.Command("wg", "set", WireguardInterface, "peer", peer.PublicKey, "preshared-key", "/dev/stdin", "allowed-ips", AllowedIPs)
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -358,7 +429,6 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// save config
-
 	err = saveConfig()
 	if err != nil {
 		fmt.Println("failed to save config:", err)
@@ -382,10 +452,10 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 
 	config.Interface.DNS = "1.1.1.1, 1.0.0.1"
 
-	// Point DNS to CoreDNS
-	network, ok := os.LookupEnv("LANIP")
+	// Point DNS to CoreDNS/DNSIP setting
+	dns, ok := os.LookupEnv("DNSIP")
 	if ok {
-		config.Interface.DNS = network
+		config.Interface.DNS = dns
 	}
 
 	PublicKey, err := getPublicKey()
@@ -397,9 +467,16 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 
 	config.Peer.PublicKey = PublicKey
 	config.Peer.PresharedKey = PresharedKey
+	//route * to wireguard
 	config.Peer.AllowedIPs = "0.0.0.0/0, ::/0"
 	config.Peer.Endpoint = peer.Endpoint
 	config.Peer.PersistentKeepalive = 25
+
+	//inform the API
+
+	updateWireguardAddress(WireguardUpdate{IP: config.Interface.Address,
+		PublicKey: peer.PublicKey,
+		Iface:     WireguardInterface}, false)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(config)
@@ -477,6 +554,19 @@ func logRequest(handler http.Handler) http.Handler {
 	})
 }
 
+func informPeersToApi() {
+	//inform the API about each configured peer to keep verdict maps for zones
+	//up to date
+	peers, _ := getPeers()
+	for _, p := range peers {
+		IP := strings.Split(p.AllowedIPs, "/")[0]
+		updateWireguardAddress(WireguardUpdate{IP: IP,
+			PublicKey: p.PublicKey,
+			Iface:     WireguardInterface}, false)
+	}
+
+}
+
 func main() {
 	unix_plugin_router := mux.NewRouter().StrictSlash(true)
 
@@ -495,7 +585,11 @@ func main() {
 		panic(err)
 	}
 
+	informPeersToApi()
+
 	pluginServer := http.Server{Handler: logRequest(unix_plugin_router)}
 
 	pluginServer.Serve(unixPluginListener)
 }
+
+
