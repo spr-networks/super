@@ -478,7 +478,8 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 
 	//inform the API
 
-	updateWireguardAddress(WireguardUpdate{IP: config.Interface.Address,
+	IP := strings.Split(config.Interface.Address, "/")[0]
+	updateWireguardAddress(WireguardUpdate{IP: IP,
 		PublicKey: peer.PublicKey,
 		Iface:     WireguardInterface}, false)
 
@@ -595,5 +596,3 @@ func main() {
 
 	pluginServer.Serve(unixPluginListener)
 }
-
-
