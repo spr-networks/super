@@ -168,7 +168,7 @@ export default class DNSAddOverride extends React.Component {
           <Col sm={9}>
             <FormGroup className={this.state.check.ClientIP}>
               <ClientSelect
-                canAdd
+                isCreatable
                 value={this.state.ClientIP}
                 onChange={this.handleClientChange}
               />
