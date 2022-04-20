@@ -314,7 +314,7 @@ func getDevices(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
-    identity := mux.Vars(r)["identity"]
+	identity := mux.Vars(r)["identity"]
 	if strings.Contains(identity, ":") {
 		//normalize MAC addresses
 		identity = trimLower(identity)
@@ -1097,6 +1097,7 @@ func wireguardUpdate(w http.ResponseWriter, r *http.Request) {
 			newDevice.Zones = []string{}
 			newDevice.DeviceTags = []string{}
 			devices[newDevice.WGPubKey] = newDevice
+			val = newDevice
 		} else {
 			//update recent IP
 			val.RecentIP = wg.IP
@@ -1119,16 +1120,16 @@ func wireguardUpdate(w http.ResponseWriter, r *http.Request) {
 
 	saveDevicesJson(devices)
 
-	refreshWireguardDevice(wg.IP, wg.PublicKey, wg.Iface, wg.Name, r.Method == http.MethodPut)
+	refreshWireguardDevice(val.MAC, wg.IP, wg.PublicKey, wg.Iface, wg.Name, r.Method == http.MethodPut)
 }
 
-func refreshWireguardDevice(IP string, PublicKey string, Iface string, Name string, Create bool) {
+func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface string, Name string, Create bool) {
 	//1. delete this ip from any existing verdict maps for the same wireguard interface
-	flushVmaps(IP, "", Iface, getVerdictMapNames(), false)
+	flushVmaps(IP, MAC, Iface, getVerdictMapNames(), false)
 
 	if Create {
 		//2. add entry to the appropriate verdict maps
-		populateVmapEntries(IP, "", Iface, PublicKey)
+		populateVmapEntries(IP, MAC, Iface, PublicKey)
 
 		//3. update local mappings file for DNS
 		if Name != "" {
@@ -1152,11 +1153,9 @@ func lookupWGDevice(devices *map[string]DeviceEntry, WGPubKey string, IP string)
 }
 
 func refreshDeviceZones(dev DeviceEntry) {
-	if dev.MAC == "" && dev.WGPubKey != "" {
-		//wireguard device without a MAC, update
-		//tbd wg0 hardcoded here
-		refreshWireguardDevice(dev.RecentIP, dev.WGPubKey, "wg0", "", true)
-		return
+	if dev.WGPubKey != "" {
+		//refresh wg based on WGPubKey
+		refreshWireguardDevice(dev.MAC, dev.RecentIP, dev.WGPubKey, "wg0", "", true)
 	}
 
 	ifname := ""
