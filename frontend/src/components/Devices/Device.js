@@ -97,7 +97,7 @@ export default class Device extends Component {
 
       deviceAPI
         .deleteDevice(id)
-        .then(this.props.notifyChange)
+        .then((res) => this.props.notifyChange())
         .catch((error) =>
           this.context.reportError('[API] deleteDevice error: ' + error.message)
         )
