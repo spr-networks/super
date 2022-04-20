@@ -1151,12 +1151,13 @@ func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface strin
 	if Create {
 		//2.  Add route
 
+		routeIP := IP
 		is_tiny, newIP := toTinyIP(IP, 2)
 		if is_tiny {
-			IP = newIP.String() + "/30"
+			routeIP = newIP.String() + "/30"
 		}
 
-		err := exec.Command("ip", "route", "add", IP, "dev", Iface, "metric", "200").Run()
+		err := exec.Command("ip", "route", "add", routeIP, "dev", Iface, "metric", "200").Run()
 		if err != nil {
 			fmt.Println("ip route add failed", IP, err)
 		}
