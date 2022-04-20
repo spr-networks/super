@@ -1156,7 +1156,7 @@ func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface strin
 			IP = newIP.String() + "/30"
 		}
 
-		err := exec.Command("ip", "route", "add", IP, "dev", Iface).Run()
+		err := exec.Command("ip", "route", "add", IP, "dev", Iface, "metric", "200").Run()
 		if err != nil {
 			fmt.Println("ip route add failed", IP, err)
 		}
