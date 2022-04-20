@@ -9,7 +9,7 @@ export class APIDevice extends API {
   update = (id, data) => {
     if (data === undefined) {
       data = id
-      id = data.MAC
+      id = data.MAC || data.WGPubKey
     }
 
     if (!data || !id) {
@@ -30,7 +30,7 @@ export class APIDevice extends API {
   updateZones = (id, Zones) => this.update(id, { Zones })
   updateTags = (id, DeviceTags) => this.update(id, { DeviceTags })
   deleteDevice = (id) => {
-    this.delete(`/device/${encodeURIComponent(id)}`, {})
+    return this.delete(`/device/${encodeURIComponent(id)}`, {})
   }
   setPSK = (MAC, Psk, Type, Name) =>
     this.update({ MAC, Name, PSKEntry: { Psk, Type } })

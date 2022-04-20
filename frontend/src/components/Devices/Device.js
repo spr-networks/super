@@ -42,7 +42,7 @@ export default class Device extends Component {
   }
 
   handleZones = (zones) => {
-    if (!this.props.device.MAC) {
+    if (!this.props.device.MAC && !this.props.device.WGPubKey) {
       return
     }
 
@@ -50,7 +50,7 @@ export default class Device extends Component {
     this.setState({ zones })
 
     deviceAPI
-      .updateZones(this.props.device.MAC, zones)
+      .updateZones(this.props.device.MAC || this.props.device.WGPubKey, zones)
       .catch((error) =>
         this.context.reportError('[API] updateDevice error: ' + error.message)
       )
@@ -61,7 +61,7 @@ export default class Device extends Component {
   }
 
   handleTags = (tags) => {
-    if (!this.props.device.MAC) {
+    if (!this.props.device.MAC && !this.props.device.WGPubKey) {
       return
     }
 
@@ -69,7 +69,7 @@ export default class Device extends Component {
     this.setState({ tags })
 
     deviceAPI
-      .updateTags(this.props.device.MAC, tags)
+      .updateTags(this.props.device.MAC || this.props.device.WGPubKey, tags)
       .catch((error) =>
         this.context.reportError('[API] updateDevice error: ' + error.message)
       )
@@ -97,14 +97,14 @@ export default class Device extends Component {
 
       deviceAPI
         .deleteDevice(id)
-        .then((res) => this.props.notifyChange())
+        .then(this.props.notifyChange)
         .catch((error) =>
           this.context.reportError('[API] deleteDevice error: ' + error.message)
         )
     }
 
     const saveDevice = async () => {
-      let id = device.MAC.length ? device.MAC : device.WGPubKey
+      let id = device.MAC || device.WGPubKey
       if (!this.state.name) {
         return
       }

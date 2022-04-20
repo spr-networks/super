@@ -90,7 +90,7 @@ export default class WireguardAddPeer extends React.Component {
           .list()
           .then((devices) => {
             let device = Object.values(devices)
-              .filter((d) => d.RecentIP == this.state.AllowedIPs && d.MAC)
+              .filter((d) => this.state.AllowedIPs != "" && (d.RecentIP == this.state.AllowedIPs) && d.MAC)
               .pop()
 
             // update device WGPubKey
