@@ -104,14 +104,10 @@ export default class Device extends Component {
     }
 
     const saveDevice = async () => {
-      console.log('ZZ saveDevice')
       let id = device.MAC.length ? device.MAC : device.WGPubKey
       if (!this.state.name) {
-        console.log('ZZ nuthin', id)
         return
       }
-
-      console.log('ZZ saveDevice:', id)
 
       deviceAPI
         .updateName(id, this.state.name)

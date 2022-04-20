@@ -30,11 +30,7 @@ export class APIDevice extends API {
   updateZones = (id, Zones) => this.update(id, { Zones })
   updateTags = (id, DeviceTags) => this.update(id, { DeviceTags })
   deleteDevice = (id) => {
-    if (id.includes(':')) {
-      this.delete(`/device/${id}`, { MAC: id })
-    } else {
-      this.delete(`/device/${encodeURIComponent(id)}`, { WGPubKey: id })
-    }
+    this.delete(`/device/${encodeURIComponent(id)}`, {})
   }
   setPSK = (MAC, Psk, Type, Name) =>
     this.update({ MAC, Name, PSKEntry: { Psk, Type } })
