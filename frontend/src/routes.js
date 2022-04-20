@@ -14,6 +14,7 @@ import DNSLog from 'views/DNS/DNSLog'
 import DNSLogEdit from 'views/DNS/DNSLogEdit'
 import Wireguard from 'views/Wireguard'
 import Logs from 'views/Logs'
+import Plugins from 'views/Plugins'
 
 const routes = [
   {
@@ -46,33 +47,11 @@ const routes = [
     layout: '/admin'
   },
   {
-    collapse: true,
-    name: 'System',
-    icon: 'nc-icon nc-bullet-list-67',
-    state: 'systemCollapse',
-    views: [
-      {
-        path: '/dhcp',
-        name: 'DHCP Table',
-        mini: 'DHCP',
-        component: Dhcp,
-        layout: '/admin'
-      },
-      {
-        path: '/arp',
-        name: 'ARP Table',
-        mini: 'ARP',
-        component: Arp,
-        layout: '/admin'
-      },
-      {
-        path: '/zones',
-        name: 'Show Zones',
-        icon: 'fa fa-tags',
-        component: Zones,
-        layout: '/admin'
-      }
-    ]
+    path: '/wireguard',
+    name: 'VPN',
+    icon: 'nc-icon nc-wireguard',
+    component: Wireguard,
+    layout: '/admin'
   },
   {
     collapse: true,
@@ -83,21 +62,21 @@ const routes = [
       {
         path: '/traffic',
         name: 'Bandwidth Summary',
-        mini: 'SU',
+        icon: 'fa fa-line-chart',
         component: Traffic,
         layout: '/admin'
       },
       {
         path: '/timeseries',
         name: 'Bandwidth Timeseries',
-        mini: 'TS',
+        icon: 'fa fa-bar-chart',
         component: TrafficTimeSeries,
         layout: '/admin'
       },
       {
         path: '/signal/strength',
         name: 'Signal Strength',
-        mini: 'SS',
+        icon: 'fa fa-signal',
         component: SignalStrength,
         layout: '/admin'
       }
@@ -133,18 +112,47 @@ const routes = [
     ]
   },
   {
-    path: '/wireguard',
-    name: 'VPN',
-    icon: 'nc-icon nc-wireguard',
-    component: Wireguard,
-    layout: '/admin'
-  },
-  {
-    path: '/logs/:containers',
-    name: 'Logs',
-    icon: 'fa fa-list-alt',
-    component: Logs,
-    layout: '/admin'
+    collapse: true,
+    name: 'System',
+    icon: 'nc-icon nc-bullet-list-67',
+    state: 'systemCollapse',
+    views: [
+      {
+        path: '/dhcp',
+        name: 'DHCP Table',
+        mini: 'DHCP',
+        component: Dhcp,
+        layout: '/admin'
+      },
+      {
+        path: '/arp',
+        name: 'ARP Table',
+        mini: 'ARP',
+        component: Arp,
+        layout: '/admin'
+      },
+      {
+        path: '/zones',
+        name: 'Zones',
+        icon: 'fa fa-tags',
+        component: Zones,
+        layout: '/admin'
+      },
+      {
+        path: '/plugins',
+        name: 'Plugins',
+        icon: 'fa fa-puzzle-piece',
+        component: Plugins,
+        layout: '/admin'
+      },
+      {
+        path: '/logs/:containers',
+        name: 'Logs',
+        icon: 'fa fa-list-alt',
+        component: Logs,
+        layout: '/admin'
+      }
+    ]
   },
   {
     path: '/login',

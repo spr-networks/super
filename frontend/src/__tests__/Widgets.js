@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
-import WifiClientCount from 'components/Dashboard/HostapdWidgets'
+import { WifiClientCount } from 'components/Dashboard/WifiWidgets'
 
 describe('Widgets', () => {
   test('test num clients', async () => {
