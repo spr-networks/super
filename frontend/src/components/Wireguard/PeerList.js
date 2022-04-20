@@ -19,7 +19,7 @@ import {
 } from 'reactstrap'
 
 const PeerList = (props) => {
-  const [peers, setPeers] = useState([])
+  const [peers, setPeers] = useState(null)
   const [config, setConfig] = useState({})
   const refreshPeers = () => {
     // TODO add to and use this
@@ -107,7 +107,7 @@ const PeerList = (props) => {
           <CardTitle tag="h4">Peers</CardTitle>
         </CardHeader>
         <CardBody>
-          {peers.length ? (
+          {peers !== null && peers.length ? (
             <Table responsive>
               <thead className="text-primary">
                 <tr>
@@ -159,7 +159,8 @@ const PeerList = (props) => {
                 ))}
               </tbody>
             </Table>
-          ) : (
+          ) : null}
+          {peers !== null && peers.length === 0 ? (
             <Row>
               <Col md={12} className="text-center">
                 {config.listenPort ? (
@@ -180,7 +181,7 @@ const PeerList = (props) => {
                 </Button>
               </Col>
             </Row>
-          )}
+          ) : null}
         </CardBody>
       </Card>
     </>
