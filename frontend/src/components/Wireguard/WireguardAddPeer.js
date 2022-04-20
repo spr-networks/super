@@ -83,41 +83,56 @@ export default class WireguardAddPeer extends React.Component {
         })
     }
 
+    // update device wgpubkey by matching ip
+    const linkPubKeyToDevice = (peer) => {
+      deviceAPI
+        .list()
+        .then((devices) => {
+          let device = Object.values(devices)
+            .filter((d) => d.RecentIP == this.state.AllowedIPs && d.MAC)
+            .pop()
+
+          // update device WGPubKey
+          if (device) {
+            deviceAPI
+              .update(device.MAC, { WGPubKey: peer.PublicKey })
+              .then((res) => {
+                addPeer(peer)
+              })
+              .catch((err) =>
+                this.context.reportError('deviceAPI.update Error: ' + err)
+              )
+          } else {
+            // will create a new device for the peer
+            addPeer(peer)
+          }
+        })
+        .catch((err) =>
+          this.context.reportError('deviceAPI.list Error: ' + err)
+        )
+    }
+
     let peer = {
-      AllowedIPs: this.state.AllowedIPs + '/32',
+      AllowedIPs: this.state.AllowedIPs ? `${this.state.AllowedIPs}/32` : '',
       PublicKey: this.state.PublicKey,
       Endpoint: this.state.Endpoint
     }
 
     if (!peer.PublicKey) {
-      return this.context.reportError('Need to provide a PublicKey')
+      wireguardAPI
+        .genKey()
+        .then((keyPair) => {
+          this.setState(keyPair)
+
+          peer.PublicKey = keyPair.PublicKey
+          linkPubKeyToDevice(peer)
+        })
+        .catch((err) =>
+          this.context.reportError('wireguardAPI.genKey Error: ' + err)
+        )
+    } else {
+      linkPubKeyToDevice(peer)
     }
-
-    // update device wgpubkey if matching ip
-    deviceAPI
-      .list()
-      .then((devices) => {
-        // get selected device with matching IP
-        let device = Object.values(devices)
-          .filter((d) => d.RecentIP == this.state.AllowedIPs && d.MAC)
-          .pop()
-
-        // update device WGPubKey
-        if (device) {
-          deviceAPI
-            .update(device.MAC, { WGPubKey: peer.PublicKey })
-            .then((res) => {
-              addPeer(peer)
-            })
-            .catch((err) =>
-              this.context.reportError('deviceAPI.update Error: ' + err)
-            )
-        } else {
-          // will create a new device for the peer
-          addPeer(peer)
-        }
-      })
-      .catch((err) => this.context.reportError('deviceAPI.list Error: ' + err))
   }
 
   handleClickGenerate(e) {

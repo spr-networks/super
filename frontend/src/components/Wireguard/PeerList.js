@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 
-import { wireguardAPI } from 'api/Wireguard'
+import { wireguardAPI, deviceAPI } from 'api'
 import WireguardAddPeer from 'components/Wireguard/WireguardAddPeer'
 import ModalForm from 'components/ModalForm'
 import { prettyDate, prettySize } from 'utils'
@@ -49,7 +49,27 @@ const PeerList = (props) => {
         list.push(peer)
       }
 
-      setPeers(list)
+      deviceAPI
+        .list()
+        .then((devices) => {
+          list = list.map((peer) => {
+            let device = Object.values(devices)
+              .filter((d) => d.WGPubKey == peer.PublicKey)
+              .pop()
+
+            if (device) {
+              peer.device = device
+            }
+
+            return peer
+          })
+
+          setPeers(list)
+        })
+        .catch((err) => {
+          //context.reportError('deviceAPI.list Error: ' + err)
+          setPeers(list)
+        })
     })
   }
 
@@ -91,6 +111,7 @@ const PeerList = (props) => {
             <Table responsive>
               <thead className="text-primary">
                 <tr>
+                  <th>Device</th>
                   <th>AllowedIPs</th>
                   <th>Pubkey</th>
                   <th>Last active</th>
@@ -99,8 +120,9 @@ const PeerList = (props) => {
                 </tr>
               </thead>
               <tbody>
-                {peers.map((peer) => (
+                {peers.map((peer, i) => (
                   <tr key={peer.AllowedIPs}>
+                    <td>{peer.device ? peer.device.Name : `peer #${i + 1}`}</td>
                     <td>{peer.AllowedIPs}</td>
                     <td>{peer.PublicKey}</td>
                     <td>
@@ -111,8 +133,14 @@ const PeerList = (props) => {
                     <td>
                       {peer.TransferRx ? (
                         <>
-                          {prettySize(peer.TransferRx)} /{' '}
-                          {prettySize(peer.TransferTx)}
+                          <div>
+                            <i className="fa fa-arrow-circle-o-up text-muted" />{' '}
+                            {prettySize(peer.TransferTx)}
+                          </div>
+                          <div>
+                            <i className="fa fa-arrow-circle-o-down text-muted" />{' '}
+                            {prettySize(peer.TransferRx)}
+                          </div>
                         </>
                       ) : null}
                     </td>
