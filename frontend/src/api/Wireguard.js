@@ -8,6 +8,7 @@ export class APIWireguard extends API {
   //config = () => this.get('/config')
   peers = () => this.get('peers')
   status = () => this.get('status')
+  genKey = () => this.get('genkey')
   putPeer = (data) => this.put('peer', data)
   deletePeer = (data) => this.delete('peer', data)
   up = () => this.put('up')
