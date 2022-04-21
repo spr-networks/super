@@ -1411,12 +1411,16 @@ func doReloadPSKFiles() {
 			//set wildcard password at front. hostapd uses a FILO for the sae keys
 			if entry.PSKEntry.Type == "sae" {
 				sae = entry.PSKEntry.Psk + "|mac=ff:ff:ff:ff:ff:ff" + "\n" + sae
+				//apple downgrade workaround https://feedbackassistant.apple.com/feedback/9991042
+				wpa2 = "00:00:00:00:00:00 " + entry.PSKEntry.Psk + "\n" + wpa2
 			} else if entry.PSKEntry.Type == "wpa2" {
 				wpa2 = "00:00:00:00:00:00 " + entry.PSKEntry.Psk + "\n" + wpa2
 			}
 		} else {
 			if entry.PSKEntry.Type == "sae" {
 				sae += entry.PSKEntry.Psk + "|mac=" + entry.MAC + "\n"
+				//apple downgrade workaround https://feedbackassistant.apple.com/feedback/9991042
+				wpa2 += entry.MAC + " " + entry.PSKEntry.Psk + "\n"
 			} else if entry.PSKEntry.Type == "wpa2" {
 				wpa2 += entry.MAC + " " + entry.PSKEntry.Psk + "\n"
 			}
