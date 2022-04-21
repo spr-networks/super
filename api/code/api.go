@@ -762,9 +762,14 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 		for _, entry := range entries {
 
 			//do not flush wireguard entries from vmaps unless the incoming device is on the same interface
-			if strings.HasPrefix(Ifname, "wg") && Ifname != entry.ifname {
+			if strings.HasPrefix(Ifname, "wg"){
+				if Ifname != entry.ifname {
+					continue
+				}
+			} else if strings.HasPrefix(entry.ifname, "wg") {
 				continue
 			}
+
 
 			if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || (equalMAC(entry.mac, MAC) && (MAC != "")) {
 				if entry.mac != "" {
