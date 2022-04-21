@@ -19,7 +19,7 @@ export class APIDevice extends API {
     // check if the device id is MAC or wg base64
     if (id.includes(':')) {
       data.MAC = id
-    } else {
+    } else if (id != 'pending') {
       data.WGPubKey = id
     }
 
