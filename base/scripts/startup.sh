@@ -1,4 +1,5 @@
 #!/bin/bash
+set -a
 . /configs/base/config.sh
 
 sysctl net.ipv4.ip_forward=1 net.ipv6.conf.all.forwarding=1
@@ -15,7 +16,11 @@ else
   ip link set dev $VLANIF up
 fi
 
-. /configs/base/nft_rules.sh
+if [ "$NFT_OVERRIDE"]; then
+  . /configs/base/nft_rules.sh
+else
+  . /scripts/nft_rules.sh
+fi
 
 # traffic accounting
 . /scripts/accounting.sh
