@@ -235,21 +235,6 @@ var UNIX_WIFID_LISTENER = TEST_PREFIX + "/state/wifi/apisock"
 var UNIX_DHCPD_LISTENER = TEST_PREFIX + "/state/dhcp/apisock"
 var UNIX_WIREGUARD_LISTENER = TEST_PREFIX + "/state/wireguard/apisock"
 
-func showNFMap(w http.ResponseWriter, r *http.Request) {
-	name := mux.Vars(r)["name"]
-
-	cmd := exec.Command("nft", "-j", "list", "map", "inet", "filter", name)
-	stdout, err := cmd.Output()
-
-	if err != nil {
-		fmt.Println("show NFMap failed to list", name, "->", err)
-		http.Error(w, "Not found", 404)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, string(stdout))
-}
 
 func ipAddr(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("ip", "-j", "addr")
@@ -1452,102 +1437,6 @@ func doReloadPSKFiles() {
 
 }
 
-//hostapd API
-/*
-func scanWiFi(w http.ResponseWriter, r *http.Request) {
-	// find unused wireless interface
-
-	out, err := RunHostapdCommand("interface")
-	// scan for wireless networks
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-
-	}
-
-	// return list of wireless networks with signal strength and channel widths available
-
-}
-*/
-
-func RunHostapdAllStations() (map[string]map[string]string, error) {
-	m := map[string]map[string]string{}
-	out, err := RunHostapdCommand("all_sta")
-	if err != nil {
-		return nil, err
-	}
-
-	mac := ""
-	for _, line := range strings.Split(out, "\n") {
-		if strings.Contains(line, "=") {
-			pair := strings.Split(line, "=")
-			if mac != "" {
-				m[mac][pair[0]] = pair[1]
-			}
-		} else if strings.Contains(line, ":") {
-			mac = line
-			m[mac] = map[string]string{}
-		}
-
-	}
-
-	return m, nil
-}
-
-func RunHostapdStatus() (map[string]string, error) {
-	m := map[string]string{}
-
-	out, err := RunHostapdCommand("status")
-	if err != nil {
-		return nil, err
-	}
-
-	for _, line := range strings.Split(out, "\n") {
-		if strings.Contains(line, "=") {
-			pair := strings.Split(line, "=")
-			m[pair[0]] = pair[1]
-		}
-
-	}
-	return m, nil
-}
-
-func RunHostapdCommand(cmd string) (string, error) {
-
-	outb, err := exec.Command("hostapd_cli", "-p", "/state/wifi/control", "-s", "/state/wifi", cmd).Output()
-	if err != nil {
-		return "", fmt.Errorf("Failed to execute command %s", cmd)
-	}
-	return string(outb), nil
-}
-
-func hostapdStatus(w http.ResponseWriter, r *http.Request) {
-	status, err := RunHostapdStatus()
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(status)
-}
-
-func hostapdAllStations(w http.ResponseWriter, r *http.Request) {
-	stations, err := RunHostapdAllStations()
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stations)
-}
-
-func hostapdConfiguration(w http.ResponseWriter, r *http.Request) {
-	data, err := ioutil.ReadFile("/configs/wifi/hostapd.conf")
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-	fmt.Fprint(w, string(data))
-}
 
 func getLogs(w http.ResponseWriter, r *http.Request) {
 	// TODO params : --since "1 hour ago" --until "50 minutes ago"
@@ -1635,6 +1524,8 @@ func main() {
 
 	//nftable helpers
 	external_router_authenticated.HandleFunc("/nfmap/{name}", showNFMap).Methods("GET")
+	external_router_authenticated.HandleFunc("/nftables", listNFTables).Methods("GET")
+	external_router_authenticated.HandleFunc("/nftable/{family}/{name}", showNFTable).Methods("GET")
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
