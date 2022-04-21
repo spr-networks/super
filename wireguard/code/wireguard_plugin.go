@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -40,7 +41,10 @@ type ClientPeer struct {
 	AllowedIPs          string
 	Endpoint            string
 	PresharedKey        string
-	PersistentKeepalive uint
+	PersistentKeepalive uint64
+	LatestHandshake     uint64
+	TransferRx          uint64
+	TransferTx          uint64
 }
 
 type ClientConfig struct {
@@ -99,29 +103,36 @@ func genPresharedKey() (string, error) {
 func getPeers() ([]ClientPeer, error) {
 	peers := []ClientPeer{}
 
-	cmd := exec.Command("wg", "show", WireguardInterface, "allowed-ips")
+	cmd := exec.Command("wg", "show", WireguardInterface, "dump")
 	data, err := cmd.Output()
 	if err != nil {
 		fmt.Println("wg show failed", err)
 		return peers, err
 	}
 
-	endpoint, err := getEndpoint()
-	if err != nil {
-		return peers, err
-	}
-
-	for _, line := range strings.Split(string(data), "\n") {
-		pieces := strings.Split(line, "\t")
-		if len(pieces) < 2 {
+	for idx, line := range strings.Split(string(data), "\n") {
+		// interface config - TODO get listenPort from here
+		//private_key public_key listen_port fwmark
+		if idx == 0 {
 			continue
 		}
 
+		pieces := strings.Split(line, "\t")
+		// 4 for interface
+		if len(pieces) < 8 {
+			continue
+		}
+
+		//public_key preshared_key endpoint allowed_ips latest_handshake transfer_rx transfer_tx persistent_keepalive
 		peer := ClientPeer{}
 		peer.PublicKey = pieces[0]
-		peer.AllowedIPs = pieces[1]
-		peer.Endpoint = endpoint
-		peer.PersistentKeepalive = 25
+		peer.PresharedKey = pieces[1]
+		peer.Endpoint = pieces[2]
+		peer.AllowedIPs = pieces[3]
+		peer.LatestHandshake, _ = strconv.ParseUint(pieces[4], 10, 64)
+		peer.TransferRx, _ = strconv.ParseUint(pieces[5], 10, 64)
+		peer.TransferTx, _ = strconv.ParseUint(pieces[6], 10, 64)
+		peer.PersistentKeepalive, _ = strconv.ParseUint(pieces[7], 10, 64)
 
 		peers = append(peers, peer)
 	}
@@ -323,7 +334,6 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodDelete {
-
 		peerIP := ""
 		//get the IP assigned to this public key
 		peers, _ := getPeers()
