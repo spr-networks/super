@@ -136,7 +136,6 @@ function Admin(props) {
         let reasonString = ''
         if (innerData.Reason == 'noentry') {
           let wpa_type = { sae: 'WPA3', wpa: 'WPA2' }[innerData['Type']]
-          console.log(innerData)
           reasonString = 'Unknown device with ' + wpa_type
         } else if (innerData.Reason == 'mismatch') {
           reasonString = 'Wrong password with ' + wpa_type
