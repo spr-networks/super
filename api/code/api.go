@@ -893,17 +893,10 @@ func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
 	devices := getDevicesJson()
 	val, exists := devices[MAC]
 
-	if MAC != "" {
+	if MAC != "" && !exists {
 		//given a MAC that is not in the devices list. Exit
-		if !exists {
-			return
-		}
-
-		if WGPubKey == "" {
-			//For non wireguard updates -- add to ethernet access filter to prevent MAC spoofing
-			addVerdictMac(IP, MAC, Iface, "ethernet_filter", "return")
-		}
-	} else {
+		return
+	} else if WGPubKey != "" {
 		val, exists = devices[WGPubKey]
 		//wg pub key is unknown, exit
 		if !exists {
@@ -1043,6 +1036,10 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	updateArp(dhcp.Iface, dhcp.IP, dhcp.MAC)
 
 	//3. add entry to appropriate verdict maps
+
+	//add this MAC and IP to the ethernet filter
+	addVerdictMac(dhcp.IP, dhcp.MAC, Iface, "ethernet_filter", "return")
+
 	populateVmapEntries(dhcp.IP, dhcp.MAC, dhcp.Iface, "")
 
 	//4. update local mappings file for DNS
