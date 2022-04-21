@@ -892,9 +892,11 @@ func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
 	devices := getDevicesJson()
 	val, exists := devices[MAC]
 
-	if MAC != "" && !exists {
-		//given a MAC that is not in the devices list. Exit
-		return
+	if MAC != "" {
+		if !exists {
+			//given a MAC that is not in the devices list. Exit
+			return
+		}
 	} else if WGPubKey != "" {
 		val, exists = devices[WGPubKey]
 		//wg pub key is unknown, exit
