@@ -32,23 +32,9 @@ const PeerList = (props) => {
         listenPort = status.wg0.listenPort
 
       setConfig({ publicKey, listenPort })
+    })
 
-      let list = []
-      for (let publicKey in status.wg0.peers) {
-        let p = status.wg0.peers[publicKey]
-        let peer = {
-          PublicKey: publicKey,
-          AllowedIPs: p.allowedIps.join(','),
-          LatestHandshake: p.latestHandshake
-            ? new Date(p.latestHandshake * 1e3)
-            : 0,
-          TransferRx: p.transferRx || 0,
-          TransferTx: p.transferTx || 0
-        }
-
-        list.push(peer)
-      }
-
+    wireguardAPI.peers().then((list) => {
       deviceAPI
         .list()
         .then((devices) => {
@@ -127,7 +113,7 @@ const PeerList = (props) => {
                     <td>{peer.PublicKey}</td>
                     <td>
                       {peer.LatestHandshake
-                        ? prettyDate(peer.LatestHandshake)
+                        ? prettyDate(new Date(peer.LatestHandshake * 1e3))
                         : null}
                     </td>
                     <td>

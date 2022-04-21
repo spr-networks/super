@@ -16,11 +16,6 @@ class ClientSelect extends Component {
   handleChange(newValue, actionMeta) {
     //actionMeta == select-option|create-option|clear
     this.setState({ value: newValue })
-    if (actionMeta == 'create-option') {
-      this.setState({
-        options: this.state.options.concat({ label: newValue, value: newValue })
-      })
-    }
     this.props.onChange(newValue, actionMeta)
   }
 
