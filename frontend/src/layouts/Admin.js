@@ -134,9 +134,10 @@ function Admin(props) {
         )
       } else if (data['Type'] == 'PSKAuthFailure') {
         let reasonString = ''
-        let wpa_type = { sae: 'WPA3', wpa2: 'WPA2' }[innerData['Type']]
         if (innerData.Reason == 'noentry') {
-          reasonString = 'Unknown device with' + wpa_type
+          let wpa_type = { sae: 'WPA3', wpa: 'WPA2' }[innerData['Type']]
+          console.log(innerData)
+          reasonString = 'Unknown device with ' + wpa_type
         } else if (innerData.Reason == 'mismatch') {
           reasonString = 'Wrong password with ' + wpa_type
         }
