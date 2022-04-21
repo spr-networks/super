@@ -545,6 +545,8 @@ func pluginUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	informPeersToApi()
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(true)
 }
