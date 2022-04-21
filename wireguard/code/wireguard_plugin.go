@@ -545,8 +545,8 @@ func pluginUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := exec.Command("ip", "link", "set", "dev", WireguardInterface, "multicast", "on")
-	_ , err := cmd.Output()
+	cmd = exec.Command("ip", "link", "set", "dev", WireguardInterface, "multicast", "on")
+	_ , err = cmd.Output()
 	if err != nil {
 		fmt.Println("set multicast failed", err)
 		http.Error(w, "set mutlicast error", 400)
