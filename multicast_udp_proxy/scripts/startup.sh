@@ -2,9 +2,9 @@
 . /configs/base/config.sh
 ARG=""
 if [ -z $LANIF ]; then
-  ARG=$VLANSIF
+  ARG=$VLANSIF,wg0
 else
-  ARG=$LANIF,$VLANSIF
+  ARG=$LANIF,$VLANSIF,wg0
 fi
 
 /code/multicastproxy $ARG
