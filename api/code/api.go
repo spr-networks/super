@@ -1038,7 +1038,7 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	//3. add entry to appropriate verdict maps
 
 	//add this MAC and IP to the ethernet filter
-	addVerdictMac(dhcp.IP, dhcp.MAC, Iface, "ethernet_filter", "return")
+	addVerdictMac(dhcp.IP, dhcp.MAC, dhcp.Iface, "ethernet_filter", "return")
 
 	populateVmapEntries(dhcp.IP, dhcp.MAC, dhcp.Iface, "")
 
