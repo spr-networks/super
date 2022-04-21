@@ -537,19 +537,11 @@ func pluginGetStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func pluginUp(w http.ResponseWriter, r *http.Request) {
-	cmd := exec.Command("wg-quick", "up", WireguardConfigFile)
+	cmd := exec.Command("/scripts/up.sh")
 	_, err := cmd.Output()
 	if err != nil {
-		fmt.Println("wg-quick up failed", err)
-		http.Error(w, "wg-quick up error", 400)
-		return
-	}
-
-	cmd = exec.Command("ip", "link", "set", "dev", WireguardInterface, "multicast", "on")
-	_ , err = cmd.Output()
-	if err != nil {
-		fmt.Println("set multicast failed", err)
-		http.Error(w, "set mutlicast error", 400)
+		fmt.Println("wg up failed", err)
+		http.Error(w, "wg up error", 400)
 		return
 	}
 
@@ -558,11 +550,11 @@ func pluginUp(w http.ResponseWriter, r *http.Request) {
 }
 
 func pluginDown(w http.ResponseWriter, r *http.Request) {
-	cmd := exec.Command("wg-quick", "down", WireguardConfigFile)
+	cmd := exec.Command("/scripts/down.sh")
 	_, err := cmd.Output()
 	if err != nil {
-		fmt.Println("wg-quick down failed", err)
-		http.Error(w, "Not found", 400)
+		fmt.Println("wg down failed", err)
+		http.Error(w, "wg down error", 400)
 		return
 	}
 
