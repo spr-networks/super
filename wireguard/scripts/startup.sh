@@ -15,7 +15,6 @@ if [ $? -eq 0 ]; then
 	cat $WIREGUARD_CONFIG | sed "s/PrivateKey = privkey/PrivateKey = $ESCAPED_PUBKEY/g" | tee $WIREGUARD_CONFIG
 fi
 
-wg-quick up $WIREGUARD_CONFIG
-ip link set dev wg0 multicast on
+. /scripts/up.sh
 
 /wireguard_plugin
