@@ -116,7 +116,7 @@ const PeerList = (props) => {
                         ? prettyDate(new Date(peer.LatestHandshake * 1e3))
                         : null}
                     </td>
-                    <td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       {peer.TransferRx ? (
                         <>
                           <div>
