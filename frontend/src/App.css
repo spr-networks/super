@@ -46,3 +46,10 @@ li ul li .sidebar-mini-icon > .fa {
 	color: inherit;
 }
 */
+
+.modal label,
+.modal .form-group label {
+	font-size: .8571em;
+	margin-bottom: 5px;
+	color: #9a9a9a;
+}
