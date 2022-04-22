@@ -841,7 +841,7 @@ export default function MockAPI() {
       })
 
       // firewall
-      this.get('/firewall/config', (request, schema) => {
+      this.get('/firewall/config', (schema, request) => {
         return {
           ForwardingRules: schema.forwardrules.all().models,
           BlockSrc: schema.blocksrcs.all().models,
@@ -849,7 +849,7 @@ export default function MockAPI() {
         }
       })
 
-      this.put('/firewall/forward', (request, schema) => {
+      this.put('/firewall/forward', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
@@ -858,7 +858,16 @@ export default function MockAPI() {
         return schema.forwardrules.create(attrs)
       })
 
-      this.put('/firewall/blocksrc', (request, schema) => {
+      this.delete('/firewall/forward', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.forwardrules.where(attrs).destroy()
+      })
+
+      this.put('/firewall/blocksrc', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
@@ -868,11 +877,15 @@ export default function MockAPI() {
       })
 
       this.delete('/firewall/blocksrc', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
         let attrs = JSON.parse(request.requestBody)
-        return schema.blocksrcs.findBy(attrs).destroy()
+        return schema.blocksrcs.where(attrs).destroy()
       })
 
-      this.put('/firewall/blockdst', (request, schema) => {
+      this.put('/firewall/blockdst', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
@@ -882,8 +895,12 @@ export default function MockAPI() {
       })
 
       this.delete('/firewall/blockdst', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
         let attrs = JSON.parse(request.requestBody)
-        return schema.blockdsts.findBy(attrs).destroy()
+        return schema.blockdsts.where(attrs).destroy()
       })
     }
   })
