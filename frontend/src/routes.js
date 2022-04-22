@@ -57,7 +57,7 @@ const routes = [
   {
     path: '/firewall',
     name: 'Firewall',
-    icon: 'nc-icon nc-app',
+    icon: 'fa fa-unlock-alt',
     component: Firewall,
     layout: '/admin'
   },
