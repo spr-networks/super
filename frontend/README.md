@@ -14,9 +14,15 @@ The documentation for the Material Dashboard Pro is hosted at the Creative Tim W
 ## Running
 
 To test locally, you can point it to your SPR instance with the REACT_APP_API variable.
+
 Example:
 ```bash
 REACT_APP_API=http://192.168.2.1 yarn start
+```
+
+If you want to use the MockAPI (with only a frontend and no SPR system running):
+```bash
+REACT_APP_API=mock yarn start
 ```
 
 ## Licensing
