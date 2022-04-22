@@ -1527,6 +1527,12 @@ func main() {
 	external_router_authenticated.HandleFunc("/nftables", listNFTables).Methods("GET")
 	external_router_authenticated.HandleFunc("/nftable/{family}/{name}", showNFTable).Methods("GET")
 
+	// firewall
+	external_router_authenticated.HandleFunc("/firewall/config", getFirewallConfig).Methods("GET")
+	external_router_authenticated.HandleFunc("/firewall/forward", modifyForwardRules).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/blockSrc", blockIPSrc).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/blockDst", blockIPDst).Methods("PUT", "DELETE")
+
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
 	external_router_authenticated.HandleFunc("/traffic_history", getTrafficHistory).Methods("GET")
@@ -1575,6 +1581,8 @@ func main() {
 	// Wireguard actions
 	unix_wireguard_router.HandleFunc("/wireguardUpdate", wireguardUpdate).Methods("PUT", "DELETE")
 
+
+
 	os.Remove(UNIX_WIFID_LISTENER)
 	unixWifidListener, err := net.Listen("unix", UNIX_WIFID_LISTENER)
 	if err != nil {
@@ -1603,10 +1611,13 @@ func main() {
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
+	//initialize user firewall rules
+	initUserFirewallRules()
 	//start the websocket handler
 	WSRunNotify()
 	// collect traffic accounting statistics
 	trafficTimer()
+
 
 	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public))))
 

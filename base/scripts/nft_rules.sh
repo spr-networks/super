@@ -127,9 +127,6 @@ table inet filter {
     # Forward to wireless LAN
     oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access
 
-    # forward wg0
-    #iifname wg0 counter accept
-
     jump CUSTOM_GROUPS
 
     # Fallthrough to log + drop
@@ -172,8 +169,24 @@ table inet filter {
 
 
 table inet nat {
+
+  map udpforward {
+    type inet_service : ipv4_addr
+    elements = {
+    }
+  }
+
+  map tcpforward {
+    type inet_service : ipv4_addr
+    elements = {
+    }
+  }
+
   chain PREROUTING {
     type nat hook prerouting priority -100; policy accept;
+
+    dnat ip to udp dport map @udpforward
+    dnat ip to tcp dport map @tcpforward
 
     jump FORWARDING_RULES
 
