@@ -25,8 +25,6 @@ describe('DNS Block', () => {
   test('DNS block list', async () => {
     // make sure we have all the tables in the document
     expect(screen.getByText('DNS Blocklists')).toBeInTheDocument()
-    expect(screen.getByText('Blocked Domain Override')).toBeInTheDocument()
-    expect(screen.getByText('Allow Domain Override')).toBeInTheDocument()
 
     // wait for data to be populated
     await waitFor(() =>
