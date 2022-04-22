@@ -31,7 +31,7 @@ const PluginList = (props) => {
         setList(plugins)
       })
       .catch((err) => {
-        contextType.reportError('failed to fetch JSON logs')
+        contextType.reportError('failed to fetch plugins')
       })
   }
 
