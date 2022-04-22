@@ -20,7 +20,11 @@ export default function MockAPI() {
       dnsoverride: Model,
       dnslogprivacylist: Model,
       dnslogdomainignorelist: Model,
-      wireguardpeer: Model
+      wireguardpeer: Model,
+      plugin: Model,
+      forwardrule: Model,
+      blocksrc: Model,
+      blockdst: Model
     },
     seeds(server) {
       server.create('device', {
@@ -70,6 +74,60 @@ export default function MockAPI() {
       server.create('zone', { Name: 'lan', disabled: false, ZoneTags: [] })
       server.create('zone', { Name: 'wan', disabled: false, ZoneTags: [] })
       server.create('zone', { Name: 'dns', disabled: false, ZoneTags: [] })
+
+      server.create('plugin', {
+        Name: 'dns-block',
+        URI: 'dns/block',
+        UnixPath: '/state/dns/dns_block_plugin',
+        Enabled: true
+      })
+      server.create('plugin', {
+        Name: 'dns-log',
+        URI: 'dns/log',
+        UnixPath: '/state/dns/dns_log_plugin',
+        Enabled: true
+      })
+      server.create('plugin', {
+        Name: 'wireguard',
+        URI: 'wireguard',
+        UnixPath: '/state/wireguard/wireguard_plugin',
+        Enabled: true
+      })
+      server.create('plugin', {
+        Name: 'lookup',
+        URI: 'lookup',
+        UnixPath: '/state/plugin-lookup/lookup_plugin',
+        Enabled: true
+      })
+
+      server.create('forwardrule', {
+        SIface: 'wlan0',
+        Protocol: 'tcp',
+        SrcIP: '10.10.10.10',
+        SrcPort: 22,
+        DstIP: '192.168.2.101',
+        DstPort: 22
+      })
+      server.create('forwardrule', {
+        SIface: 'wlan0',
+        Protocol: 'tcp',
+        SrcIP: '',
+        SrcPort: 80,
+        DstIP: '192.168.2.101',
+        DstPort: 80
+      })
+
+      server.create('blocksrc', {
+        IP: '192.168.1.102',
+        Port: 80,
+        Protocol: 'tcp'
+      })
+
+      server.create('blockdst', {
+        IP: '23.23.23.23',
+        Port: 22,
+        Protocol: 'tcp'
+      })
 
       server.create('dnsblocklist', {
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/ads.txt',
@@ -441,6 +499,41 @@ export default function MockAPI() {
         }
       })
 
+      // plugins
+      this.get('/plugins', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        return schema.plugins.all().models
+      })
+
+      this.put('/plugins/:name', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        let plugin = schema.plugins.findBy({ Name: attrs.Name })
+        if (plugin) {
+          plugin.update(attrs)
+        } else {
+          schema.plugins.create(attrs)
+        }
+
+        return schema.plugins.all().models
+      })
+
+      this.delete('/plugins/:name', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let Name = request.params.name
+        schema.plugins.findBy({ Name }).destroy()
+        return schema.plugins.all().models
+      })
+
       //DNS plugin
       this.get('/plugins/dns/block/config', (schema, request) => {
         if (!authOK(request)) {
@@ -726,6 +819,71 @@ export default function MockAPI() {
 
       this.put('/plugins/wireguard/down', (schema, request) => {
         return true
+      })
+
+      // nftables
+      this.get('/nftables', (schema, request) => {
+        return {
+          nftables: [
+            {
+              metainfo: {
+                version: '0.9.8',
+                release_name: 'E.D.S.',
+                json_schema_version: 1
+              }
+            },
+            { table: { family: 'inet', name: 'filter', handle: 18 } },
+            { table: { family: 'inet', name: 'nat', handle: 19 } },
+            { table: { family: 'inet', name: 'mangle', handle: 20 } },
+            { table: { family: 'ip', name: 'accounting', handle: 22 } }
+          ]
+        }
+      })
+
+      // firewall
+      this.get('/firewall/config', (request, schema) => {
+        return {
+          ForwardingRules: schema.forwardrules.all().models,
+          BlockSrc: schema.blocksrcs.all().models,
+          BlockDst: schema.blockdsts.all().models
+        }
+      })
+
+      this.put('/firewall/forward', (request, schema) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.forwardrules.create(attrs)
+      })
+
+      this.put('/firewall/blocksrc', (request, schema) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.blocksrcs.create(attrs)
+      })
+
+      this.delete('/firewall/blocksrc', (schema, request) => {
+        let attrs = JSON.parse(request.requestBody)
+        return schema.blocksrcs.findBy(attrs).destroy()
+      })
+
+      this.put('/firewall/blockdst', (request, schema) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.blockdsts.create(attrs)
+      })
+
+      this.delete('/firewall/blockdst', (schema, request) => {
+        let attrs = JSON.parse(request.requestBody)
+        return schema.blockdsts.findBy(attrs).destroy()
       })
     }
   })

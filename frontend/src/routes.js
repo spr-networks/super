@@ -13,6 +13,7 @@ import DNSBlock from 'views/DNS/DNSBlock'
 import DNSLog from 'views/DNS/DNSLog'
 import DNSLogEdit from 'views/DNS/DNSLogEdit'
 import Wireguard from 'views/Wireguard'
+import Firewall from 'views/Firewall'
 import Logs from 'views/Logs'
 import Plugins from 'views/Plugins'
 
@@ -51,6 +52,13 @@ const routes = [
     name: 'VPN',
     icon: 'nc-icon nc-wireguard',
     component: Wireguard,
+    layout: '/admin'
+  },
+  {
+    path: '/firewall',
+    name: 'Firewall',
+    icon: 'nc-icon nc-app',
+    component: Firewall,
     layout: '/admin'
   },
   {
