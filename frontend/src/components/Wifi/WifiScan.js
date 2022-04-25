@@ -23,6 +23,7 @@ const WifiScan = (props) => {
   const [iface, setIface] = useState(null)
   const [devs, setDevs] = useState({})
   const [list, setlist] = useState([])
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     wifiAPI.iwDev().then((devs) => {
@@ -31,29 +32,27 @@ const WifiScan = (props) => {
   }, [])
 
   const scan = (_iface) => {
+    setLoading(true)
     wifiAPI.iwScan(_iface).then((scanList) => {
       setlist(scanList)
+      setLoading(false)
     })
   }
 
   const onChange = (opt) => {
     let { value } = opt
-
-    scan(value)
+    setIface(value)
   }
 
   let devsScan = []
   for (let phy in devs) {
     for (let iface in devs[phy]) {
-      if (!devs[phy][iface].type.includes('AP')) {
-        devsScan.push(iface)
-      }
+      let type = devs[phy][iface].type
+      let label = `${iface} ${type}`
+
+      devsScan.push({ value: iface, disabled: type.includes('AP'), label })
     }
   }
-
-  devsScan = devsScan.map((value) => {
-    return { label: value, value }
-  })
 
   return (
     <>
@@ -62,6 +61,7 @@ const WifiScan = (props) => {
           <Select
             options={devsScan}
             defaultValue={devsScan[0]}
+            isOptionDisabled={(option) => option.disabled}
             onChange={onChange}
           />
         </Col>
@@ -130,8 +130,8 @@ const WifiScan = (props) => {
         </Row>
       ) : null}
       <div>
-        <Spinner size="sm" hidden={iface && list.length} />
-        <span className="mt-4 ml-1" hidden={iface && list.length}>
+        <Spinner size="sm" hidden={!loading} />
+        <span className="mt-4 ml-1" hidden={!loading}>
           Loading...
         </span>
       </div>
