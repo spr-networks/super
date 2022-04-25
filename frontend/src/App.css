@@ -59,3 +59,10 @@ li ul li .sidebar-mini-icon > .fa {
 	color: #fff;
 	background-color: #6c757d;
 }
+
+@media (min-width: 576px) {
+/* only align text right if large enough device */
+.sm-text-right {
+	text-align: right;
+}
+}

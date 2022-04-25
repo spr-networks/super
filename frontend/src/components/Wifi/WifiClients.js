@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 
 import { wifiAPI, deviceAPI } from 'api'
 import { APIErrorContext } from 'layouts/Admin'
+import { prettySignal } from 'utils'
 
 import {
   Card,

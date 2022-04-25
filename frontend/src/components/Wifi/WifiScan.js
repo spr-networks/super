@@ -23,7 +23,7 @@ import {
 const WifiScan = (props) => {
   const [iface, setIface] = useState(null)
   const [devs, setDevs] = useState({})
-  const [list, setlist] = useState([])
+  const [list, setList] = useState([])
   const [loading, setLoading] = useState(false)
   const [showAlert, setShowAlert] = useState(false)
   const [scanDetail, setScanDetail] = useState({})
@@ -37,7 +37,7 @@ const WifiScan = (props) => {
   const scan = (_iface) => {
     setLoading(true)
     wifiAPI.iwScan(_iface).then((scanList) => {
-      setlist(scanList)
+      setList(scanList)
       setLoading(false)
     })
   }
@@ -96,7 +96,7 @@ const WifiScan = (props) => {
         </dl>
       </ReactBSAlert>
       <Row>
-        <Col md="9">
+        <Col md={{ offset: 3, size: 4 }} xs={{ size: 8 }}>
           <Select
             options={devsScan}
             defaultValue={devsScan[0]}
@@ -104,11 +104,11 @@ const WifiScan = (props) => {
             onChange={onChange}
           />
         </Col>
-        <Col md="3">
+        <Col xs="4" md="2">
           <Button
             color="primary"
             size="md"
-            className="btn-wd mt-0"
+            className="mt-0"
             onClick={(e) => scan(iface)}
           >
             <i className="fa fa-wifi" /> Scan
@@ -125,7 +125,7 @@ const WifiScan = (props) => {
                   <th className="text-center">channel</th>
                   <th className="text-center">freq</th>
                   <th className="text-center">signal</th>
-                  <th>info</th>
+                  <th className="d-none d-sm-table-cell">info</th>
                   <th>auth</th>
                 </tr>
               </thead>
@@ -149,7 +149,7 @@ const WifiScan = (props) => {
                     <td className="text-center">
                       {prettySignal(row.signal_dbm)}
                     </td>
-                    <td>
+                    <td className="d-none d-sm-table-cell">
                       {row.model ? (
                         <div>
                           <Label>Model</Label> {row.model} / {row.model_number}

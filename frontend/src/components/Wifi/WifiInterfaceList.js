@@ -55,7 +55,7 @@ const WifiInterface = (props) => {
         {Object.keys(dict).map((label) => (
           <>
             <>
-              <dt className="col-sm-3 text-right">{label}</dt>
+              <dt className="col-sm-3 sm-text-right">{label}</dt>
               <dd className="col-sm-9">
                 {typeof dict[label] == 'object' ? (
                   <>{dList(dict[label], 'inline')}</>
@@ -76,7 +76,7 @@ const WifiInterface = (props) => {
       <hr />
 
       <Row>
-        <Col lg="4" md="5" sm="4" xs="6">
+        <Col lg="4" md="5" sm="4" xs="12">
           <div className="nav-tabs-navigation verical-navs p-0">
             <div className="nav-tabs-wrapper">
               <Nav className="flex-column nav-stacked" role="tablist" tabs>
@@ -99,7 +99,7 @@ const WifiInterface = (props) => {
             </div>
           </div>
         </Col>
-        <Col lg="8" md="7" sm="8" xs="6">
+        <Col lg="8" md="7" sm="8" xs="12">
           <TabContent activeTab={tabs}>
             {tabList.map((tab) =>
               iw[tab] || tab == 'other' ? (
@@ -136,7 +136,7 @@ const WifiInterface = (props) => {
                             .filter((k) => !tabList.includes(k) && k != 'bands')
                             .map((k) => (
                               <>
-                                <dt className="col-sm-3 text-right">{k}</dt>
+                                <dt className="col-sm-3 sm-text-right">{k}</dt>
                                 <dd className="col-sm-9">{iw[k]}</dd>
                               </>
                             ))}
