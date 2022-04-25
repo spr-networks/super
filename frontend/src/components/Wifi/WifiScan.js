@@ -169,7 +169,7 @@ const WifiScan = (props) => {
           </Col>
         </Row>
       ) : null}
-      <div>
+      <div className="text-center">
         <Spinner size="sm" hidden={!loading} />
         <span className="mt-4 ml-1" hidden={!loading}>
           Loading...
