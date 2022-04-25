@@ -250,6 +250,24 @@ func ipAddr(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(stdout))
 }
 
+func iwCommand(w http.ResponseWriter, r *http.Request) {
+	command := mux.Vars(r)["command"]
+	// TODO split on / or ' ' to run more commands - if so exec iw directly
+
+	// support iw dev, iw list for now
+	cmd := exec.Command("jc", "iw", command)
+	stdout, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println("iw command failed", err)
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, string(stdout))
+}
+
 func getStatus(w http.ResponseWriter, r *http.Request) {
 	reply := "Online"
 	WSNotifyString("StatusCalled", "test")
@@ -1557,6 +1575,9 @@ func main() {
 
 	//ip information
 	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")
+
+	//iw list
+	external_router_authenticated.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")
 
 	//logs
 	external_router_authenticated.HandleFunc("/logs", getLogs).Methods("GET")
