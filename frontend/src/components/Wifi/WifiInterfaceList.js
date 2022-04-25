@@ -4,6 +4,7 @@ import { wifiAPI } from 'api'
 
 import {
   Badge,
+  Button,
   Card,
   CardHeader,
   CardBody,
@@ -107,6 +108,15 @@ const WifiInterface = (props) => {
                     <>
                       {Object.keys(iw[tab]).map((iface) => (
                         <>
+                          {!iw[tab][iface].type.includes('AP') ? (
+                            <Button
+                              className="pull-right mt-0"
+                              size="md"
+                              color="primary"
+                            >
+                              <i className="fa fa-wifi" /> scan
+                            </Button>
+                          ) : null}
                           <h5>
                             {iface}
                             <small className="text-muted ml-2">

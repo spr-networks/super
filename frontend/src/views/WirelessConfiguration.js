@@ -4,6 +4,7 @@ import { wifiAPI } from 'api'
 import { APIErrorContext } from 'layouts/Admin'
 import WifiClients from 'components/Wifi/WifiClients'
 import WifiInterfaceList from 'components/Wifi/WifiInterfaceList'
+import WifiScan from 'components/Wifi/WifiScan'
 
 import {
   Card,
@@ -41,7 +42,7 @@ export default class WirelessConfiguration extends Component {
   }
 
   render() {
-    let tabList = ['Clients', 'Interfaces', 'Hostapd']
+    let tabList = ['Clients', 'Interfaces', 'Scan', 'Hostapd']
 
     return (
       <div className="content">
@@ -75,6 +76,9 @@ export default class WirelessConfiguration extends Component {
                 <TabPane tabId="Interfaces">
                   <WifiInterfaceList />
                 </TabPane>
+                <TabPane tabId="Scan">
+                  <WifiScan />
+                </TabPane>
 
                 <TabPane tabId="Hostapd">
                   <pre>{this.state.configText}</pre>
@@ -83,31 +87,6 @@ export default class WirelessConfiguration extends Component {
             </Card>
           </Col>
         </Row>
-
-        {/*
-        <Row>
-          <Col>
-            <WifiClients />
-          </Col>
-        </Row>
-        <Row>
-          <Col>
-            <WifiInterfaceList />
-          </Col>
-        </Row>
-        <Row>
-          <Col>
-            <Card>
-              <CardHeader>
-                <CardTitle tag="h4">Hostapd Configuration</CardTitle>
-              </CardHeader>
-              <CardBody>
-                <pre>{this.state.configText}</pre>
-              </CardBody>
-            </Card>
-          </Col>
-        </Row>
-        */}
       </div>
     )
   }
