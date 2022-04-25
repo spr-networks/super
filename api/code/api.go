@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -252,20 +254,63 @@ func ipAddr(w http.ResponseWriter, r *http.Request) {
 
 func iwCommand(w http.ResponseWriter, r *http.Request) {
 	command := mux.Vars(r)["command"]
-	// TODO split on / or ' ' to run more commands - if so exec iw directly
 
-	// support iw dev, iw list for now
-	cmd := exec.Command("jc", "iw", command)
-	stdout, err := cmd.Output()
-
-	if err != nil {
-		fmt.Println("iw command failed", err)
-		http.Error(w, "Not found", 404)
+/*
+allowed commands for now:
+iw/list, iw/dev iw/dev/wlan0-9/scan
+*/
+	validCommand := regexp.MustCompile(`^(list|dev)/?([a-z0-9\.]+\/scan)?$`).MatchString
+	if !validCommand(command) {
+		fmt.Println("invalid iw command")
+		http.Error(w, "Invalid command", 400)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, string(stdout))
+	args := strings.Split(command, "/")
+	cmd := exec.Command("iw", args...)
+	data, err := cmd.Output()
+	if err != nil {
+		fmt.Println("iw command error:", err)
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	// use json parsers if available (iw_list, iw_dev, iw-scan)
+	if command == "list" || command == "dev" || strings.HasSuffix(command, "scan") {
+			parser := "--iw_" + command // bug: jc dont allow - when using local parsers
+			if strings.HasSuffix(command, "scan") {
+				parser = "--iw-scan"
+			}
+
+			cmd = exec.Command("jc", parser)
+
+			stdin, err := cmd.StdinPipe()
+			if err != nil {
+				fmt.Println("iwCommand stdin pipe error:", err)
+				http.Error(w, err.Error(), 400)
+				return
+			}
+
+			go func() {
+				defer stdin.Close()
+				io.WriteString(stdin, string(data))
+			}()
+
+			stdout, err := cmd.Output()
+			if err != nil {
+				fmt.Println("iwCommand stdout error:", err)
+				http.Error(w, err.Error(), 400)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintf(w, string(stdout))
+
+			return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprintf(w, string(data))
 }
 
 func getStatus(w http.ResponseWriter, r *http.Request) {
