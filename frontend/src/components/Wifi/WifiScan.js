@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Select from 'react-select'
+import ReactBSAlert from 'react-bootstrap-sweetalert'
 
 import { wifiAPI } from 'api'
 import { prettySignal } from 'utils'
@@ -24,6 +25,8 @@ const WifiScan = (props) => {
   const [devs, setDevs] = useState({})
   const [list, setlist] = useState([])
   const [loading, setLoading] = useState(false)
+  const [showAlert, setShowAlert] = useState(false)
+  const [scanDetail, setScanDetail] = useState({})
 
   useEffect(() => {
     wifiAPI.iwDev().then((devs) => {
@@ -44,6 +47,13 @@ const WifiScan = (props) => {
     setIface(value)
   }
 
+  const closeAlert = () => setShowAlert(false)
+
+  const showScanItem = (item) => {
+    setScanDetail(item)
+    setShowAlert(true)
+  }
+
   let devsScan = []
   for (let phy in devs) {
     for (let iface in devs[phy]) {
@@ -56,6 +66,35 @@ const WifiScan = (props) => {
 
   return (
     <>
+      <ReactBSAlert
+        type="custom"
+        show={showAlert}
+        onConfirm={closeAlert}
+        onCancel={closeAlert}
+        title="Wifi Scan"
+        confirmBtnBsStyle="info"
+        cancelBtnBsStyle="danger"
+        openAnim={false}
+        closeOnClickOutside={true}
+        btnSize=""
+      >
+        <dl className="row" style={{ fontSize: '0.70rem' }}>
+          {Object.keys(scanDetail).map((label) => (
+            <>
+              <dt className="col-sm-6 text-right">
+                {label.replace(/_/g, ' ')}
+              </dt>
+              {Array.isArray(scanDetail[label]) ? (
+                <dd className="col-sm-6 text-left">
+                  {scanDetail[label].join(', ')}
+                </dd>
+              ) : (
+                <dd className="col-sm-6 text-left">{scanDetail[label]}</dd>
+              )}
+            </>
+          ))}
+        </dl>
+      </ReactBSAlert>
       <Row>
         <Col md="9">
           <Select
@@ -93,7 +132,11 @@ const WifiScan = (props) => {
               <tbody>
                 {list.map((row) => (
                   <tr>
-                    <td className="text-center">
+                    <td
+                      className="text-center"
+                      onClick={(e) => showScanItem(row)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <div>{row.ssid}</div>
                       <div className="text-muted">
                         <small>{row.bssid}</small>
@@ -107,9 +150,6 @@ const WifiScan = (props) => {
                       {prettySignal(row.signal_dbm)}
                     </td>
                     <td>
-                      {/*<div>
-                        <Label>Manufacturer</Label> {row.manufacturer}
-                      </div>*/}
                       {row.model ? (
                         <div>
                           <Label>Model</Label> {row.model} / {row.model_number}
