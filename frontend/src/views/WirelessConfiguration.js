@@ -2,6 +2,8 @@ import React, { Component } from 'react'
 
 import { wifiAPI } from 'api'
 import { APIErrorContext } from 'layouts/Admin'
+import WifiClients from 'components/Wifi/WifiClients'
+import WifiInterfaceList from 'components/Wifi/WifiInterfaceList'
 
 import {
   Card,
@@ -9,14 +11,23 @@ import {
   CardBody,
   CardFooter,
   CardTitle,
+  Nav,
+  NavItem,
+  NavLink,
+  TabContent,
+  TabPane,
   Row,
   Col
 } from 'reactstrap'
 
 export default class WirelessConfiguration extends Component {
-  state = { configText: '' }
+  state = { configText: '', tab: 'Interfaces' }
 
   static contextType = APIErrorContext
+
+  constructor(props) {
+    super(props)
+  }
 
   async componentDidMount() {
     wifiAPI
@@ -30,13 +41,65 @@ export default class WirelessConfiguration extends Component {
   }
 
   render() {
+    let tabList = ['Clients', 'Interfaces', 'Hostapd']
+
     return (
       <div className="content">
         <Row>
           <Col>
             <Card>
+              <div className="nav-tabs-navigation mb-0">
+                <div className="nav-tabs-wrapper pt-2">
+                  <Nav tabs>
+                    {tabList.map((tab) => (
+                      <NavItem>
+                        <NavLink
+                          data-toggle="tab"
+                          href={`#${tab}`}
+                          role="tab"
+                          className={this.state.tab === tab ? 'active' : ''}
+                          onClick={() => this.setState({ tab })}
+                        >
+                          {tab}
+                        </NavLink>
+                      </NavItem>
+                    ))}
+                  </Nav>
+                </div>
+              </div>
+
+              <TabContent activeTab={this.state.tab} className="p-4">
+                <TabPane tabId="Clients">
+                  <WifiClients />
+                </TabPane>
+                <TabPane tabId="Interfaces">
+                  <WifiInterfaceList />
+                </TabPane>
+
+                <TabPane tabId="Hostapd">
+                  <pre>{this.state.configText}</pre>
+                </TabPane>
+              </TabContent>
+            </Card>
+          </Col>
+        </Row>
+
+        {/*
+        <Row>
+          <Col>
+            <WifiClients />
+          </Col>
+        </Row>
+        <Row>
+          <Col>
+            <WifiInterfaceList />
+          </Col>
+        </Row>
+        <Row>
+          <Col>
+            <Card>
               <CardHeader>
-                <h3>Hostapd Configuration:</h3>
+                <CardTitle tag="h4">Hostapd Configuration</CardTitle>
               </CardHeader>
               <CardBody>
                 <pre>{this.state.configText}</pre>
@@ -44,6 +107,7 @@ export default class WirelessConfiguration extends Component {
             </Card>
           </Col>
         </Row>
+        */}
       </div>
     )
   }
