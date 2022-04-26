@@ -38,18 +38,17 @@ const WifiInterface = (props) => {
   ]
 
   const dList = (dict, type = 'row') => {
-    if (type == 'inline') {
+    if (Object.keys(dict) && type == 'inline') {
       return (
         <>
           {Object.keys(dict).map((label) => (
-            <span className="mr-2">
+            <span key={Math.random().toString(36).substr(2, 9)} className="mr-2">
               <Label>{label}</Label> {dict[label]}
             </span>
           ))}
         </>
       )
     }
-
     return (
       <dl className="row">
         {Object.keys(dict).map((label) => (
@@ -82,7 +81,7 @@ const WifiInterface = (props) => {
               <Nav className="flex-column nav-stacked" role="tablist" tabs>
                 {tabList.map((tab) =>
                   iw[tab] || tab == 'other' ? (
-                    <NavItem>
+                    <NavItem key={Math.random().toString(36).substr(2, 9)}>
                       <NavLink
                         data-toggle="tab"
                         href="#"
@@ -103,13 +102,14 @@ const WifiInterface = (props) => {
           <TabContent activeTab={tabs}>
             {tabList.map((tab) =>
               iw[tab] || tab == 'other' ? (
-                <TabPane tabId={tab}>
+                <TabPane key={Math.random().toString(36).substr(2, 9)}  tabId={tab}>
                   {tab == 'devices' ? (
                     <>
                       {Object.keys(iw[tab]).map((iface) => (
                         <>
                           {!iw[tab][iface].type.includes('AP') ? (
                             <Button
+                              key={Math.random().toString(36).substr(2, 9)}
                               className="pull-right mt-0"
                               size="md"
                               color="primary"
@@ -167,7 +167,7 @@ const WifiInterface = (props) => {
                           ))}
                         </>
                       ) : null}
-                      {tab.includes('support') ? (
+                      {tab.includes('support') && iw['supported_interface_modes'] ? (
                         <>
                           <h5 className="text-muted">
                             {tab.replace(/_/g, ' ')}
@@ -181,7 +181,7 @@ const WifiInterface = (props) => {
                               <h5 className="text-muted mt-2">
                                 software interface modes
                               </h5>
-                              {iw['software_interface_modes'].map((c) => (
+                              {iw['supported_interface_modes'].map((c) => (
                                 <Badge color="secondary">{c}</Badge>
                               ))}
                             </>
@@ -232,7 +232,7 @@ const WifiInterfaceList = (props) => {
           {iws.length ? (
             <div className="container">
               {iws.map((iw) => (
-                <Row>
+                <Row key={Math.random().toString(36).substr(2, 9)}>
                   <Col key={iw.wiphy}>
                     <WifiInterface iw={iw} />
                   </Col>

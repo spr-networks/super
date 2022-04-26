@@ -101,7 +101,7 @@ export default class WifiClients extends Component {
               </thead>
               <tbody>
                 {this.state.clients.map((row) => (
-                  <tr>
+                  <tr >
                     <td>{row.Name}</td>
                     <td>{row.MAC}</td>
                     <td>{row.RecentIP}</td>

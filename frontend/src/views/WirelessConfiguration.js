@@ -43,6 +43,7 @@ export default class WirelessConfiguration extends Component {
 
   render() {
     let tabList = ['Clients', 'Interfaces', 'Scan', 'Hostapd']
+    let testid = Math.random().toString(36).substr(2, 9)
 
     return (
       <div className="content">
@@ -53,7 +54,7 @@ export default class WirelessConfiguration extends Component {
                 <div className="nav-tabs-wrapper pt-2">
                   <Nav tabs>
                     {tabList.map((tab) => (
-                      <NavItem>
+                      <NavItem key={Math.random().toString(36).substr(2, 9)}>
                         <NavLink
                           data-toggle="tab"
                           href={`#${tab}`}
