@@ -165,98 +165,113 @@ const Step1 = React.forwardRef((props, ref) => {
       </h5>
       <Row>
         <Col md={{ size: 10, offset: 1 }}>
-          <FormGroup className={nameState}>
-            <Input
-              name="name"
-              placeholder="Device Name"
-              type="text"
-              autoFocus
-              onChange={onChangeInput}
-              onBlur={onChangeInput}
-            />
-            {nameState === 'has-danger' ? (
-              <Label className="error">Please set a device name</Label>
-            ) : (
-              <Label className="info">Required</Label>
-            )}
-          </FormGroup>
+          <Row>
+            <Col md="9">
+              <FormGroup className={nameState}>
+                <Label for="name">
+                  Device Name{' '}
+                  {nameState === 'has-danger' ? (
+                    <span className="error">cannot be empty</span>
+                  ) : (
+                    <small>required</small>
+                  )}
+                </Label>
+                <Input
+                  name="name"
+                  placeholder="Device Name"
+                  type="text"
+                  autoFocus
+                  onChange={onChangeInput}
+                  onBlur={onChangeInput}
+                />
+              </FormGroup>
+            </Col>
+            <Col md="3">
+              <FormGroup>
+                <Label for="name">Auth</Label>
+                <Select
+                  autosize={false}
+                  className="react-select primary"
+                  classNamePrefix="react-select"
+                  name={wpa}
+                  onChange={(value) => {
+                    setsubmitted(false)
+                    setwpa(value.value)
+                  }}
+                  options={[
+                    {
+                      value: 'sae',
+                      label: 'WPA3'
+                    },
+                    { value: 'wpa2', label: 'WPA2' }
+                  ]}
+                  placeholder="WPA3"
+                />
+              </FormGroup>
+            </Col>
+          </Row>
+          <Row>
+            <Col md="6">
+              <FormGroup className={macState}>
+                <Label for="mac">
+                  MAC Address{' '}
+                  {macState === 'has-danger' ? (
+                    <span className="error">Format: 00:00:00:00:00:00</span>
+                  ) : (
+                    <small>optional</small>
+                  )}
+                </Label>
+                <Input
+                  name="mac"
+                  placeholder=""
+                  type="text"
+                  onChange={(e) => {
+                    setsubmitted(false)
+                    e.target.value = filterMAC(e.target.value)
+                    if (!validateMAC(e.target.value)) {
+                      setmacState('has-danger')
+                    } else {
+                      setmacState('has-success')
+                    }
+                    setmac(e.target.value)
+                  }}
+                />
+              </FormGroup>
+            </Col>
+            <Col md="6">
+              <FormGroup className={pskState}>
+                <Label for="psk">
+                  Passphrase{' '}
+                  {pskState === 'has-danger' ? (
+                    <span className="error">
+                      must be at least 8 characters long
+                    </span>
+                  ) : (
+                    <small>optional</small>
+                  )}
+                </Label>
+                <Input
+                  name="psk"
+                  placeholder=""
+                  type="password"
+                  onChange={(e) => {
+                    setsubmitted(false)
+                    if (!validatePassphrase(e.target.value)) {
+                      setpskState('has-danger')
+                    } else {
+                      setpskState('has-success')
+                    }
+                    setpsk(e.target.value)
+                  }}
+                />
+              </FormGroup>
+            </Col>
+          </Row>
 
           <FormGroup>
-            <Select
-              autosize={false}
-              className="react-select primary"
-              classNamePrefix="react-select"
-              name={wpa}
-              onChange={(value) => {
-                setsubmitted(false)
-                setwpa(value.value)
-              }}
-              options={[
-                {
-                  value: 'sae',
-                  label: 'WPA3'
-                },
-                { value: 'wpa2', label: 'WPA2' }
-              ]}
-              placeholder="WPA3"
-            />
-            <Label className="info">
-              WPA3 is recommended but might not work on older devices
+            <Label for="groups">
+              Groups <small>optional</small>
             </Label>
-          </FormGroup>
-
-          <FormGroup className={macState}>
-            <Input
-              name="mac"
-              placeholder="MAC address"
-              type="text"
-              onChange={(e) => {
-                setsubmitted(false)
-                e.target.value = filterMAC(e.target.value)
-                if (!validateMAC(e.target.value)) {
-                  setmacState('has-danger')
-                } else {
-                  setmacState('has-success')
-                }
-                setmac(e.target.value)
-              }}
-            />
-            {macState === 'has-danger' ? (
-              <Label className="error">Format: 00:00:00:00:00:00</Label>
-            ) : (
-              <Label className="info">
-                Leave empty to assign on first connection
-              </Label>
-            )}
-          </FormGroup>
-
-          <FormGroup className={pskState}>
-            <Input
-              name="psk"
-              placeholder="Passphrase"
-              type="password"
-              onChange={(e) => {
-                setsubmitted(false)
-                if (!validatePassphrase(e.target.value)) {
-                  setpskState('has-danger')
-                } else {
-                  setpskState('has-success')
-                }
-                setpsk(e.target.value)
-              }}
-            />
-            {pskState === 'has-danger' ? (
-              <Label className="error">
-                Passphrase must be at least 8 characters long.
-              </Label>
-            ) : (
-              <Label className="info">
-                Leave empty to Generate a Secure &amp; random password
-              </Label>
-            )}
-          </FormGroup>
-
-          <FormGroup>
             <Select
               isMulti
               options={allZones}
@@ -266,7 +281,7 @@ const Step1 = React.forwardRef((props, ref) => {
               onChange={handleChangeZones}
             />
             <Label className="info">
-              Assign device to zones for network access
+              Assign device to groups for network access
             </Label>
           </FormGroup>
         </Col>
