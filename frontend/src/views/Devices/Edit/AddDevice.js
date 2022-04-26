@@ -216,7 +216,7 @@ const Step1 = React.forwardRef((props, ref) => {
                 <Label for="mac">
                   MAC Address{' '}
                   {macState === 'has-danger' ? (
-                    <span className="error">Format: 00:00:00:00:00:00</span>
+                    <span className="error">format: 00:00:00:00:00:00</span>
                   ) : (
                     <small>optional</small>
                   )}
