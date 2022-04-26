@@ -148,6 +148,16 @@ const Step1 = React.forwardRef((props, ref) => {
     setZones(newValues.map((o) => o.value))
   }
 
+  const onChangeInput = (e) => {
+    setsubmitted(false)
+    if (!verifyLength(e.target.value, 1)) {
+      setnameState('has-danger')
+    } else {
+      setnameState('has-success')
+    }
+    setname(e.target.value)
+  }
+
   return (
     <>
       <h5 className="info-text">
@@ -160,15 +170,9 @@ const Step1 = React.forwardRef((props, ref) => {
               name="name"
               placeholder="Device Name"
               type="text"
-              onChange={(e) => {
-                setsubmitted(false)
-                if (!verifyLength(e.target.value, 1)) {
-                  setnameState('has-danger')
-                } else {
-                  setnameState('has-success')
-                }
-                setname(e.target.value)
-              }}
+              autoFocus
+              onChange={onChangeInput}
+              onBlur={onChangeInput}
             />
             {nameState === 'has-danger' ? (
               <Label className="error">Please set a device name</Label>
