@@ -9,6 +9,7 @@ import (
   "io/ioutil"
   "encoding/json"
   "strconv"
+  "log"
 )
 
 import (
@@ -71,8 +72,8 @@ func applyForwarding(forwarding []ForwardingRule) error {
   for _, f := range forwarding {
 
     cmd := exec.Command("nft", "add", "element", "ip", "nat", f.Protocol + "fwd",
-        "{", f.SIface, ".", f.SrcIP, ".", strconv.Itoa(f.SrcPort), ":",
-            f.DstIP, ".", strconv.Itoa(f.DstPort), "}" )
+        "{", f.SIface, ".", f.SrcIP, ".", strconv.Itoa(int(f.SrcPort)), ":",
+            f.DstIP, ".", strconv.Itoa(int(f.DstPort)), "}" )
     _, err := cmd.Output()
 
 
@@ -175,7 +176,7 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 		return
   }
 
-  if br.Protocol != "tcp" && br.Protocol != "udp" {
+  if fwd.Protocol != "tcp" && fwd.Protocol != "udp" {
     http.Error(w, "Invalid protocol", 400)
     return
   }
@@ -217,16 +218,9 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
   saveFirewallRulesLocked()
 }
 
-/*
-type BlockRule struct {
-  IP string
-  Port uint
-  Protocol string
-}
-*/
 func blockIPSrc(w http.ResponseWriter, r *http.Request) {
   FWmtx.Lock()
-  defer FWmtx.Unlock
+  defer FWmtx.Unlock()
 
   br := BlockRule{}
 	err := json.NewDecoder(r.Body).Decode(&br)
@@ -255,7 +249,7 @@ func blockIPSrc(w http.ResponseWriter, r *http.Request) {
   if r.Method == http.MethodDelete {
     for i := range gFirewallConfig.BlockSrc {
       a := gFirewallConfig.BlockSrc[i]
-      if fwd == a {
+      if br == a {
         gFirewallConfig.BlockSrc = append(gFirewallConfig.BlockSrc[:i], gFirewallConfig.BlockSrc[i+1:]...)
         return
       }
@@ -264,13 +258,13 @@ func blockIPSrc(w http.ResponseWriter, r *http.Request) {
 		return
   }
 
-  gFirewallConfig.BlockSrc = append(gFirewallConfig.BlockSrc, fwd)
+  gFirewallConfig.BlockSrc = append(gFirewallConfig.BlockSrc, br)
   saveFirewallRulesLocked()
 }
 
 func blockIPDst(w http.ResponseWriter, r *http.Request) {
   FWmtx.Lock()
-  defer FWmtx.Unlock
+  defer FWmtx.Unlock()
 
   br := BlockRule{}
 	err := json.NewDecoder(r.Body).Decode(&br)
@@ -299,7 +293,7 @@ func blockIPDst(w http.ResponseWriter, r *http.Request) {
   if r.Method == http.MethodDelete {
     for i := range gFirewallConfig.BlockDst {
       a := gFirewallConfig.BlockDst[i]
-      if fwd == a {
+      if br == a {
         gFirewallConfig.BlockDst = append(gFirewallConfig.BlockDst[:i], gFirewallConfig.BlockDst[i+1:]...)
         return
       }
@@ -308,6 +302,6 @@ func blockIPDst(w http.ResponseWriter, r *http.Request) {
 		return
   }
 
-  gFirewallConfig.BlockDst = append(gFirewallConfig.BlockDst, fwd)
+  gFirewallConfig.BlockDst = append(gFirewallConfig.BlockDst, br)
   saveFirewallRulesLocked()
 }
