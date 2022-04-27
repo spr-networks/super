@@ -22,7 +22,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var TEST_PREFIX = ""
+var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 var ApiConfigPath = TEST_PREFIX + "/state/api/config"
 var DeprecatedZonesConfigPath = TEST_PREFIX + "/configs/zones/zones.json"
 var DeprecatedPSKConfigPath = TEST_PREFIX + "/configs/wifi/psks.json"
@@ -1617,7 +1617,6 @@ func main() {
 	WSRunNotify()
 	// collect traffic accounting statistics
 	trafficTimer()
-
 
 	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public))))
 

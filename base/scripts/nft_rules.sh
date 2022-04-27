@@ -21,8 +21,8 @@ LANIFMACSPOOF=""
 if [ "$LANIF" ]; then
     LANIFDHCP="iifname $LANIF udp dport 67 counter accept"
     DOCKERLAN="iif $DOCKERIF oifname $LANIF ip saddr $DOCKERNET counter accept"
-    LANIFFORWARD="oifname $LANIF ip saddr . iifname . ether saddr vmap @lan_access"
-    WGLANIFFORWARD="oifname wg0 ip saddr . iifname . ether saddr vmap @lan_access"
+    LANIFFORWARD="counter oifname $LANIF ip saddr . iifname . ether saddr vmap @lan_access"
+    WGLANIFFORWARD="counter oifname wg0 ip saddr . iifname . ether saddr vmap @lan_access"
     LANIFMACSPOOF="iifname eq $LANIF jump DROP_MAC_SPOOF"
 fi
 
@@ -53,6 +53,7 @@ table inet filter {
   chain INPUT {
     type filter hook input priority 0; policy drop;
 
+    #jump USERDEF_INPUT
     # Input rules
     iif lo counter accept
     counter jump F_EST_RELATED
@@ -80,30 +81,35 @@ table inet filter {
     $LANIFDHCP
 
     # Authorized wireless stations & MACs. They do not have an ip address yet
-    udp dport 67 iifname . ether saddr vmap @dhcp_access
+    counter udp dport 67 iifname . ether saddr vmap @dhcp_access
 
     # Prevent MAC Spoofing from LANIF, VLANSIF
     $LANIFMACSPOOF
-    iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF
+    counter iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF
 
     # DNS Allow rules
     # Docker can DNS
     iif $DOCKERIF ip saddr $DOCKERNET udp dport 53 counter accept
 
     # Dynamic verdict map for dns access
-    udp dport 53  ip saddr . iifname vmap @dns_access
+    counter udp dport 53  ip saddr . iifname vmap @dns_access
 
     # Fall through to log + drop
     counter jump DROPLOGINP
   }
 
+  #chain USERDEF_INPUT{
+  #}
+
   chain FORWARD {
     type filter hook forward priority 0; policy drop;
+
+    #jump USERDEF_FORWARD
 
     counter jump F_EST_RELATED
 
     # Allow DNAT for port forwarding
-    ct status dnat accept
+    counter ct status dnat accept
 
     iif $DOCKERIF oifname $WANIF ip saddr $DOCKERNET counter accept
     # allow docker containers to speak to LAN also
@@ -116,7 +122,7 @@ table inet filter {
     tcp flags syn tcp option maxseg size set rt mtu
 
     # Forward to WAN
-    oifname $WANIF ip saddr . iifname vmap @internet_access
+    counter oifname $WANIF ip saddr . iifname vmap @internet_access
 
     # Forward to wired LAN
     $LANIFFORWARD
@@ -125,7 +131,7 @@ table inet filter {
     $WGLANIFFORWARD
 
     # Forward to wireless LAN
-    oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access
+    counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access
 
     jump CUSTOM_GROUPS
 
@@ -133,6 +139,8 @@ table inet filter {
     counter jump DROPLOGFWD
   }
 
+  #chain USERDEF_FORWARD {
+  #}
 
   chain CUSTOM_GROUPS {
 
@@ -159,9 +167,9 @@ table inet filter {
   }
 
   chain DROP_MAC_SPOOF {
-  	ip saddr . iifname . ether saddr vmap @ethernet_filter
-	  counter log prefix "DRP:MAC "
-    counter drop
+  	counter ip saddr . iifname . ether saddr vmap @ethernet_filter
+	log prefix "DRP:MAC "
+        counter drop
   }
 
 }
@@ -170,14 +178,14 @@ table inet filter {
 
 table inet nat {
 
-  map udpforward {
-    type inet_service : ipv4_addr
+  map udpfwd {
+    type ifname . ipv4_addr . inet_service : ipv4_addr . inet_service
     elements = {
     }
   }
 
-  map tcpforward {
-    type inet_service : ipv4_addr
+  map tcpfwd {
+    type ifname . ipv4_addr . inet_service : ipv4_addr . inet_service
     elements = {
     }
   }
@@ -185,19 +193,18 @@ table inet nat {
   chain PREROUTING {
     type nat hook prerouting priority -100; policy accept;
 
-    dnat ip to udp dport map @udpforward
-    dnat ip to tcp dport map @tcpforward
+    #jump USERDEF_PREROUTING
 
-    jump FORWARDING_RULES
+    counter dnat to iifname . ip saddr . udp dport map @udpfwd
+    counter dnat to iifname . ip saddr . tcp dport map @tcpfwd
 
     # Reroute external DNS to our own server
     udp dport 53 counter dnat ip to $DNSIP:53
     tcp dport 53 counter dnat ip to $DNSIP:53
   }
 
-  chain FORWARDING_RULES {
-    # example-> iifname $WANIF tcp dport 2456 dnat ip to 192.168.2.142
-  }
+  #chain USERDEF_PREROUTING {
+  #}
 
 
   chain INPUT {
@@ -208,9 +215,17 @@ table inet nat {
   }
   chain POSTROUTING {
     type nat hook postrouting priority 100; policy accept;
+
+    #jump USERDEF_POSTROUTING
+
     # Masquerade upstream traffic
     oifname $WANIF counter masquerade
   }
+
+  #chain USERDEF_POSTROUTING {
+  #}
+
+
 }
 
 table inet mangle {
