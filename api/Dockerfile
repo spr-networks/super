@@ -17,7 +17,11 @@ RUN --mount=type=tmpfs,target=/root/go/ (go build -ldflags "-s -w" -o /api)
 FROM ubuntu:21.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl hostapd systemd jq
+RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl hostapd systemd jq jc iw
 COPY scripts /scripts/
+# iw list json parser
+RUN mkdir -p /root/.local/share/jc/jcparsers
+COPY scripts/iw_*.py /root/.local/share/jc/jcparsers
+
 COPY --from=builder /api /
 ENTRYPOINT ["/scripts/startup.sh"]

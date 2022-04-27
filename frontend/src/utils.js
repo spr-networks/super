@@ -18,3 +18,18 @@ export const prettySize = (sz, round = false) => {
   sz = sz.toLocaleString()
   return `${sz} ${szType}`
 }
+
+export const prettySignal = (signal) => {
+  let className = 'text-muted'
+  if (signal >= -50) {
+    className = 'text-success font-weight-bold'
+  } else if (signal >= -60) {
+    className = 'text-success'
+  } else if (signal >= -70) {
+    className = 'text-warning'
+  } else {
+    className = 'text-danger'
+  }
+
+  return <span className={className}>{signal}</span>
+}
