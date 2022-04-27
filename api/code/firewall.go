@@ -4,6 +4,10 @@ import (
   "net/http"
   "os/exec"
   "fmt"
+  "sync"
+  "io/ioutil"
+  "encoding/json"
+  "strconv"
 )
 
 import (
@@ -18,7 +22,7 @@ type ForwardingRule struct {
   SrcIP string
   SrcPort int
   DstIP string
-  DstPort string
+  DstPort int
 }
 
 type BlockRule struct {
@@ -36,45 +40,53 @@ type FirewallConfig struct {
 var FirewallConfigFile = "/config/base/firewall.json"
 var gFirewallConfig = FirewallConfig{}
 
-func loadFirewall() {
+func loadFirewallRules() error {
   FWmtx.Lock()
   defer FWmtx.Unlock()
   data, err := ioutil.ReadFile(FirewallConfigFile)
 	if err != nil {
-		fmt.Println("failed to read firewall config file:", err)
+		return err
 	} else {
-    err = json.NewDecoder(data).Decode(&gFirewallConfig)
+    err := json.Unmarshal(data, &gFirewallConfig)
   	if err != nil {
-  		http.Error(w, err.Error(), 400)
+  		return err
     }
   }
+  return nil
 }
 
-func applyForwarding(forwarding []ForwardingRule) {
-  //flush chain
-  cmd := exec.Command("nft", "flush", "chain", "inet", "nat", "FORWARDING_RULES")
-	_, err := cmd.Output()
+func applyForwarding(forwarding []ForwardingRule) error {
 
-  //inet_service : ipv4_addr
-  // dnat ip to tcp dport map @mymap
-  
-  for f := range forwarding {
-    //iifname $WANIF tcp dport 2456 dnat ip to 192.168.2.142
-    //if SrcIP is null assume port forwarding from $WANIF
-    "iifname", f.SIface, f.Protocol, "dport", s.DstPort, "dnat", "ip", "to", s.DstIP
+  //need to flush the fwd rules here
+
+  for _, f := range forwarding {
+
+
+    cmd := exec.Command("nft", "add", "element", "ip", "nat", f.Protocol + "fwd",
+        "{", f.SIface, ".", f.SrcIP, ".", strconv.Itoa(f.SrcPort), ":",
+            f.DstIP, ".", strconv.Itoa(f.DstPort), "}" )
+    _, err := cmd.Output()
+
+
+    if err != nil {
+      fmt.Println("failed to add element", err)
+      return err
+    }
 
   }
 
-  type ForwardingRule struct {
-    Protocol string
-    SrcIP string
-    SrcPort int
-    DstIP string
-    DstPort string
-  }
+  return nil
 }
 
-func applyFirewall() {
+func applyBlockSrc([] BlockRule) {
+
+}
+
+func applyBlockDst([] BlockRule) {
+
+}
+
+func applyFirewallRules() {
   FWmtx.Lock()
   defer FWmtx.Unlock()
 
@@ -86,8 +98,8 @@ func applyFirewall() {
 
 }
 func initUserFirewallRules() {
-  loadFirewall()
-  applyFirewall()
+  loadFirewallRules()
+  applyFirewallRules()
 }
 
 func showNFMap(w http.ResponseWriter, r *http.Request) {
