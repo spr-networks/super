@@ -3,6 +3,7 @@ module api
 go 1.17
 
 require (
+	github.com/MonkeyBuisness/golang-iwlist v0.0.0-20190208105021-719e9e53bbf0
 	github.com/duo-labs/webauthn v0.0.0-20211221191814-a22482edaa3b
 	github.com/duo-labs/webauthn.io v0.0.0-20200929144140-c031a3e0f95d
 	github.com/gorilla/handlers v1.5.1
