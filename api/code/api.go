@@ -12,7 +12,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"regexp"
 	"os"
 	"os/exec"
 	"path/filepath"
