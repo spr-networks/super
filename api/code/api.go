@@ -12,6 +12,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"regexp"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,6 +23,7 @@ import (
 	"github.com/duo-labs/webauthn/webauthn"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/MonkeyBuisness/golang-iwlist"
 )
 
 var TEST_PREFIX = ""
@@ -1552,6 +1554,650 @@ func logRequest(handler http.Handler) http.Handler {
 		fmt.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
 		handler.ServeHTTP(w, r)
 	})
+}
+
+func extractSsid(out string) string {
+	r := regexp.MustCompile(`SSID: (.+)`)
+	m := r.FindStringSubmatch(out)
+	if len(m) < 2 {
+		fmt.Println("no SSID found")
+		return ""
+	}
+	fmt.Println("SSID found:", string(m[1]))
+
+	return m[1]
+}
+
+func extractBssid(out string) string {
+	r := regexp.MustCompile(`(?m)^Connected to ([0-9a-fA-F:]{17})`)
+	m := r.FindStringSubmatch(out)
+	if len(m) < 2 {
+		fmt.Println("no bssid found")
+		return ""
+	}
+	fmt.Println("AP:", string(m[1]))
+	return m[1]
+}
+
+func extractMode(out string) string {
+	r := regexp.MustCompile(`Mode:(\w+)`)
+	m := r.FindStringSubmatch(out)
+	if len(m) < 2 {
+		fmt.Println("no mode found")
+		return ""
+	}
+	fmt.Println("Mode found:", string(m[1]))
+
+	return m[1]
+}
+
+func extractModes(out string) []string {
+	var phyModes []string
+	matches := regexp.MustCompile(`\* (.*)`).FindAllStringSubmatch(out, -1)
+
+	for _, m := range matches {
+		phyModes = append(phyModes, m[1])
+	}
+
+	return phyModes
+}
+
+func extractFreq(out string) string {
+	r := regexp.MustCompile(`freq: (.+)`)
+	m := r.FindStringSubmatch(out)
+	if len(m) < 2 {
+		fmt.Println("no freq found")
+		return ""
+	}
+	fmt.Println("freq found:", string(m[1]))
+
+	return m[1]
+}
+
+func extractFreqs(out string) []string {
+	var Freqs []string
+	matches := regexp.MustCompile(`(?m)(Channel .*)`).FindAllStringSubmatch(out, -1)
+
+	for _, m := range matches {
+		Freqs = append(Freqs, m[1])
+	}
+
+	return Freqs
+}
+
+func extractChan(out string) string {
+	r := regexp.MustCompile(`channel (.*)`)
+	m := r.FindStringSubmatch(out)
+	if len(m) < 2 {
+		fmt.Println("no chan found")
+		return ""
+	}
+	fmt.Println("chan found:", string(m[1]))
+
+	return m[1]
+}
+
+func extractRate(out string) string {
+	r := regexp.MustCompile(`Bit Rate=(\d*)`)
+	m := r.FindStringSubmatch(out)
+	if len(m) < 2 {
+		fmt.Println("no rate found")
+		return ""
+	}
+	fmt.Println("rate found:", string(m[1]))
+
+	return m[1]
+}
+
+func extractTxPower(out string) string {
+	r := regexp.MustCompile(`txpower (.*)`)
+	m := r.FindStringSubmatch(out)
+	if len(m) < 2 {
+		fmt.Println("no txpower found")
+		return ""
+	}
+	fmt.Println("txpower found:", string(m[1]))
+
+	return m[1]
+}
+
+func extractPower(out string) string {
+	r := regexp.MustCompile(`Power save: (.*)`)
+	m := r.FindStringSubmatch(out)
+	if len(m) < 2 {
+		fmt.Println("no power state found")
+		return ""
+	}
+	fmt.Println("power state found:", string(m[1]))
+
+	return m[1]
+}
+
+func extractLinkQuality(out string) string {
+	r := regexp.MustCompile(`Link Quality=(\d+\/\d+)`)
+	m := r.FindStringSubmatch(out)
+	if len(m) < 2 {
+		fmt.Println("no link quality found")
+		return ""
+	}
+	fmt.Println("link quality found:", string(m[1]))
+
+	return m[1]
+}
+
+func extractSignalLevel(out string) string {
+	r := regexp.MustCompile(`Signal level=(.*)`)
+	m := r.FindStringSubmatch(out)
+	if len(m) < 2 {
+		fmt.Println("no signal level found")
+		return ""
+	}
+	fmt.Println("signal level found:", string(m[1]))
+
+	return m[1]
+}
+
+func getSsid(iface string) []byte {
+
+	type JsonSsid struct {
+		SSID string
+	}
+
+	fmt.Println("getSsid()")
+	iwlistcmd := exec.Command("iw","dev", iface, "link")
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when getting the interface %s  information.", iface)
+	} else {
+		ssid := extractSsid(string(iwlistcmdout))
+		fmt.Println(ssid)
+
+		jsonssid := JsonSsid{
+			SSID:	ssid,
+		}
+
+		jsn, err := json.Marshal(jsonssid)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+
+		return jsn
+	}
+	return nil
+}
+
+func setSsid(iface string, name string) bool {
+
+	rv := true
+
+	fmt.Println("setSsid()")
+	iwlistcmd := exec.Command("iwconfig", iface, "essid", name)
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when setting SSID")
+		rv = false
+	} else {
+		fmt.Println(string(iwlistcmdout))
+	}
+
+	return rv
+}
+
+func getBssid(iface string) []byte {
+
+	type JsonBssid struct {
+		BSSID string
+	}
+
+	fmt.Println("getBssid()")
+	iwlistcmd := exec.Command("iw","dev", iface, "link")
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when getting the interface %s  information.", iface)
+	} else {
+		bssid := extractBssid(string(iwlistcmdout))
+
+		jsonbssid := JsonBssid{
+			BSSID:	bssid,
+		}
+
+		jsn, err := json.Marshal(jsonbssid)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+
+		return jsn
+	}
+	return nil
+}
+
+func getMode(iface string) []byte {
+
+	type JsonMode struct {
+		Mode string
+	}
+
+	fmt.Println("getMode()")
+	iwlistcmd := exec.Command("iwconfig", iface)
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when getting the interface %s information.", iface)
+	} else {
+		mode := extractMode(string(iwlistcmdout))
+		fmt.Println(mode)
+
+		jsonmode := JsonMode{
+			Mode:	mode,
+		}
+
+		jsn, err := json.Marshal(jsonmode)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+
+		return jsn
+	}
+	return nil
+}
+
+func setMode(iface string, mode string) bool {
+
+	rv := true
+
+	fmt.Println("setMode()")
+	iwlistcmd := exec.Command("iwconfig", iface, "mode", mode)
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when setting mode")
+		rv = false
+	} else {
+		fmt.Println(string(iwlistcmdout))
+	}
+
+	return rv
+}
+
+func listModes(phy string) []byte {
+
+	type JsonMode struct {
+		Modes []string
+	}
+
+	fmt.Println("listModes()")
+	iwlistcmd := exec.Command("bash", "-c", "iw phy phy0 info | grep 'Supported interface modes' -A 10 ")
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when getting the phy %s information.", phy)
+	} else {
+		fmt.Println(string(iwlistcmdout))
+		mode := extractModes(string(iwlistcmdout))
+		fmt.Println(mode)
+
+		jsonmode := JsonMode{
+			Modes:	mode,
+		}
+
+		jsn, err := json.Marshal(jsonmode)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+
+		return jsn
+
+	}
+	return nil
+}
+
+func getFreq(iface string) []byte {
+
+	type JsonFreq struct {
+		Freq string
+	}
+
+	fmt.Println("getFreq()")
+	iwlistcmd := exec.Command("iw","dev", iface, "link")
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when getting the interface %s  information.", iface)
+	} else {
+		freq := extractFreq(string(iwlistcmdout))
+		fmt.Println(freq)
+
+		jsonfreq := JsonFreq{
+			Freq:	freq,
+		}
+
+		jsn, err := json.Marshal(jsonfreq)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+
+		return jsn
+	}
+	return nil
+}
+
+func setFreq(iface string, freq string) bool {
+
+	rv := true
+
+	fmt.Println("setFreq()")
+	iwlistcmd := exec.Command("iw", "dev", iface, "set", "freq", freq)
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when setting freq")
+		rv = false
+	} else {
+		fmt.Println(string(iwlistcmdout))
+	}
+
+	return rv
+}
+
+func listFreqs(iface string) []byte {
+
+	type JsonFreq struct {
+		Freqs []string
+	}
+
+	fmt.Println("listFreqs()")
+	iwlistcmd := exec.Command("iwlist", iface, "freq")
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when getting the iface %s information.", iface)
+	} else {
+		fmt.Println(string(iwlistcmdout))
+		freq := extractFreqs(string(iwlistcmdout))
+
+		jsonfreq := JsonFreq{
+			Freqs:	freq,
+		}
+
+		jsn, err := json.Marshal(jsonfreq)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+
+		return jsn
+
+	}
+	return nil
+}
+
+func getChannel(iface string) []byte {
+
+	type JsonChan struct {
+		Chan string
+	}
+
+	fmt.Println("getChan()")
+	iwlistcmd := exec.Command("iw","dev", iface, "info")
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when getting the interface %s  information.", iface)
+	} else {
+		chann := extractChan(string(iwlistcmdout))
+
+		jsonchann := JsonChan{
+			Chan:	chann,
+		}
+
+		jsn, err := json.Marshal(jsonchann)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+
+		return jsn
+	}
+	return nil
+}
+
+func setChannel(iface string, channel string) bool {
+
+	rv := true
+
+	fmt.Println("setChannel()")
+	iwlistcmd := exec.Command("iw", "dev", iface, "set", "channel", channel)
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when setting channel")
+		rv = false
+	} else {
+		fmt.Println(string(iwlistcmdout))
+	}
+
+	return rv
+}
+
+func getRate(iface string) []byte {
+
+	type JsonRate struct {
+		Rate string
+	}
+
+	fmt.Println("getRate()")
+	iwlistcmd := exec.Command("iwconfig", iface)
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when getting the interface %s  information.", iface)
+	} else {
+		rate := extractRate(string(iwlistcmdout))
+		fmt.Println(rate)
+
+		jsonrate := JsonRate{
+			Rate:	rate,
+		}
+
+		jsn, err := json.Marshal(jsonrate)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+
+		return jsn
+	}
+	return nil
+}
+
+func setRate(iface string, rate string) bool {
+
+	rv := true
+
+	fmt.Println("setRate()")
+	iwlistcmd := exec.Command("iwconfig", iface, "rate", rate)
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when setting rate")
+		rv = false
+	} else {
+		fmt.Println(string(iwlistcmdout))
+	}
+
+	return rv
+}
+
+func getTxPower(iface string) []byte {
+
+	type JsonTxPower struct {
+		TxPower string
+	}
+
+	fmt.Println("getTxPower()")
+	iwlistcmd := exec.Command("iw", "dev", iface, "info")
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when getting the interface %s  information.", iface)
+	} else {
+		txpower := extractTxPower(string(iwlistcmdout))
+		fmt.Println(txpower)
+
+		jsontxpower := JsonTxPower{
+			TxPower:	txpower,
+		}
+
+		jsn, err := json.Marshal(jsontxpower)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+
+		return jsn
+	}
+	return nil
+}
+
+func setTxPower(iface string, txpower string) bool {
+
+	rv := true
+
+	fmt.Println("setTxPower()")
+	iwlistcmd := exec.Command("iwconfig", iface, "txpower", txpower)
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when setting txpower")
+		rv = false
+	} else {
+		fmt.Println(string(iwlistcmdout))
+	}
+
+	return rv
+}
+
+func getPowerSave(iface string) []byte {
+
+	type JsonPower struct {
+		Power string
+	}
+
+	fmt.Println("getPower()")
+	iwlistcmd := exec.Command("iw", "dev", iface, "get", "power_save")
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when getting the interface %s  information.", iface)
+	} else {
+		power := extractPower(string(iwlistcmdout))
+		fmt.Println(power)
+
+		jsonpower := JsonPower{
+			Power:	power,
+		}
+
+		jsn, err := json.Marshal(jsonpower)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+
+		return jsn
+	}
+	return nil
+}
+
+func setPowerSave(iface string, power string) bool {
+
+	rv := true
+
+	fmt.Println("setPower()")
+	iwlistcmd := exec.Command("iw", "dev", iface, "set", "power_save", power)
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when setting powersave")
+		rv = false
+	} else {
+		fmt.Println(string(iwlistcmdout))
+	}
+
+	return rv
+}
+
+func getLinkQuality(iface string) []byte {
+
+	type JsonLQ struct {
+		LinkQuality string
+	}
+
+	fmt.Println("getLinkQuality()")
+	iwlistcmd := exec.Command("iwconfig", iface)
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when getting the interface %s  information.", iface)
+	} else {
+		lq := extractLinkQuality(string(iwlistcmdout))
+		fmt.Println(lq)
+
+		jsonlq := JsonLQ{
+			LinkQuality:	lq,
+		}
+
+		jsn, err := json.Marshal(jsonlq)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+
+		return jsn
+	}
+	return nil
+}
+
+func getSignalLevel(iface string) []byte {
+
+	type JsonSignal struct {
+		SignalLevel string
+	}
+
+	fmt.Println("getSignalLevel()")
+	iwlistcmd := exec.Command("iwconfig", iface)
+	iwlistcmdout, err := iwlistcmd.Output()
+	if err != nil {
+		fmt.Println(err, "Error when getting the interface %s  information.", iface)
+	} else {
+		signal := extractSignalLevel(string(iwlistcmdout))
+		fmt.Println(signal)
+
+		jsonsignal := JsonSignal{
+			SignalLevel:	signal,
+		}
+
+		jsn, err := json.Marshal(jsonsignal)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+
+		return jsn
+	}
+	return nil
+}
+
+func getIwScan(iface string) []byte {
+        fmt.Println("iwlist scan:")
+
+        cells, err := wlist.Scan(iface)
+        if err != nil {
+                panic(err)
+        } else {
+		fmt.Println(cells)
+		jsn, err := json.Marshal(cells)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+
+		return jsn
+	}
+	return nil
+}
+
+func getIfaces() string {
+    wiface := ""
+    l, err := net.Interfaces()
+    if err != nil {
+        panic(err)
+
+    }
+    for _, f := range l {
+	if f.Name[0] == 'w' {
+	   wiface = f.Name
+           fmt.Printf("%s is wireless\n", wiface)
+	   break
+	}
+    }
+    return wiface
 }
 
 func main() {
