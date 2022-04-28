@@ -65,9 +65,40 @@ func loadFirewallRules() error {
   return nil
 }
 
+func deleteSrcBlock(br BlockRule) error {
+  return nil
+}
+
+func deleteDstBlock(br BlockRule) error {
+  return nil
+}
+
+func deleteForwarding(f ForwardingRule) error {
+  var cmd *exec.Cmd
+  if f.SrcPort == "any" {
+    cmd = exec.Command("nft", "delete", "element", "inet", "nat", f.Protocol + "anyfwd",
+        "{", f.SrcIP, ":",
+            f.DstIP, "}" )
+
+  } else {
+    cmd = exec.Command("nft", "delete", "element", "inet", "nat", f.Protocol + "fwd",
+        "{", f.SrcIP, ".", f.SrcPort, ":",
+            f.DstIP, ".", f.DstPort, "}" )
+  }
+  _, err := cmd.Output()
+
+  if err != nil {
+    fmt.Println("failed to delete element", err)
+    fmt.Println(cmd)
+  }
+
+  return err
+
+}
+
 func applyForwarding(forwarding []ForwardingRule) error {
 
-  //need to flush the fwd rules here
+  //need to flush the fwd rules here ?
 
   for _, f := range forwarding {
     var cmd *exec.Cmd
@@ -202,7 +233,7 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
     if err != nil {
       http.Error(w, "Invalid DstPort", 400)
       return
-    }    
+    }
   }
 
   _, _, err = net.ParseCIDR(fwd.SrcIP)
@@ -225,6 +256,8 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
       a := gFirewallConfig.ForwardingRules[i]
       if fwd == a {
         gFirewallConfig.ForwardingRules = append(gFirewallConfig.ForwardingRules[:i], gFirewallConfig.ForwardingRules[i+1:]...)
+        saveFirewallRulesLocked()
+        deleteForwarding(a)
         return
       }
     }
@@ -270,6 +303,8 @@ func blockIPSrc(w http.ResponseWriter, r *http.Request) {
       a := gFirewallConfig.BlockSrc[i]
       if br == a {
         gFirewallConfig.BlockSrc = append(gFirewallConfig.BlockSrc[:i], gFirewallConfig.BlockSrc[i+1:]...)
+        saveFirewallRulesLocked()
+        deleteSrcBlock(a)
         return
       }
     }
@@ -317,6 +352,8 @@ func blockIPDst(w http.ResponseWriter, r *http.Request) {
         gFirewallConfig.BlockDst = append(gFirewallConfig.BlockDst[:i], gFirewallConfig.BlockDst[i+1:]...)
         return
       }
+      saveFirewallRulesLocked()
+      deleteDstBlock(a)
     }
     http.Error(w, "Not found", 404)
 		return
