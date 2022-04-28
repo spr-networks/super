@@ -85,6 +85,7 @@ func applyForwarding(forwarding []ForwardingRule) error {
 
     if err != nil {
       fmt.Println("failed to add element", err)
+      fmt.Println(cmd)
       return err
     }
 
@@ -191,15 +192,17 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 
   re := regexp.MustCompile("^[0-9\\-]*$")
 
-  if (fwd.SrcPort != "any" && !re.MatchString(fwd.SrcPort)) {
+  if fwd.SrcPort != "any" && !re.MatchString(fwd.SrcPort) {
     http.Error(w, "Invalid SrcPort", 400)
     return
   }
 
-  _, err = strconv.Atoi(fwd.DstPort)
-  if err != nil {
-    http.Error(w, "Invalid DstPort", 400)
-    return
+  if fwd.DstPort != "any" {
+    _, err = strconv.Atoi(fwd.DstPort)
+    if err != nil {
+      http.Error(w, "Invalid DstPort", 400)
+      return
+    }    
   }
 
   _, _, err = net.ParseCIDR(fwd.SrcIP)
