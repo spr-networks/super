@@ -4,7 +4,7 @@ export default API
 export { api, testLogin, saveLogin } from './API'
 export { ConnectWebsocket } from './WebSocket'
 export { deviceAPI } from './Device'
-export { zoneAPI } from './Zone'
+export { groupAPI } from './Group'
 export { wifiAPI } from './Wifi'
 export { trafficAPI } from './Traffic'
 export { blockAPI, logAPI } from './DNS'

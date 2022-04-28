@@ -73,11 +73,9 @@ class DeviceListing extends Component {
 
     let divs = []
     Object.keys(devices).forEach((v) => {
-      const generatedID = Math.random().toString(36).substr(2, 9)
-
       divs.push(
         <Device
-          key={generatedID}
+          key={devices[v].Name}
           device={devices[v]}
           notifyChange={notifyChange}
         />
@@ -123,7 +121,7 @@ class DeviceListing extends Component {
                       </th>
                       {/*<th className="d-none d-md-table-cell">IP</th>*/}
                       <th width="7%">Auth</th>
-                      <th width="25%">Zones</th>
+                      <th width="25%">Groups</th>
                       <th width="25%">Tags</th>
                       <th width="8%" className="text-right">
                         Actions

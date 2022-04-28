@@ -63,7 +63,7 @@ const Step2 = React.forwardRef((props, ref) => {
     let data = {
       MAC: wifi.mac || 'pending',
       Name: wifi.name,
-      Zones: wifi.zones,
+      Zones: wifi.groups,
       PSKEntry: {
         Psk: wifi.psk,
         Type: wifi.wpa

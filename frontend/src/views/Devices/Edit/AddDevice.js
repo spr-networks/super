@@ -25,7 +25,7 @@ const Step1 = React.forwardRef((props, ref) => {
   const [psk, setpsk] = useState('')
   const [wpa, setwpa] = useState('sae') //WPA3
   const [name, setname] = useState('')
-  const [zones, setZones] = useState(['dns', 'wan'])
+  const [groups, setGroups] = useState(['dns', 'wan'])
 
   const [macState, setmacState] = useState('has-success')
   const [pskState, setpskState] = useState('has-success')
@@ -51,7 +51,7 @@ const Step1 = React.forwardRef((props, ref) => {
       psk,
       wpa,
       name,
-      zones,
+      groups,
       macState,
       pskState,
       wpaState,
@@ -138,14 +138,14 @@ const Step1 = React.forwardRef((props, ref) => {
     }
   }
 
-  const allZones = [
+  const allGroups = [
     { label: 'dns', value: 'dns' },
     { label: 'wan', value: 'wan' },
     { label: 'lan', value: 'lan' }
   ]
 
-  const handleChangeZones = (newValues) => {
-    setZones(newValues.map((o) => o.value))
+  const handleChangeGroups = (newValues) => {
+    setGroups(newValues.map((o) => o.value))
   }
 
   const onChangeInput = (e) => {
@@ -274,11 +274,11 @@ const Step1 = React.forwardRef((props, ref) => {
             </Label>
             <Select
               isMulti
-              options={allZones}
-              value={zones.map((v) => {
+              options={allGroups}
+              value={groups.map((v) => {
                 return { label: v, value: v }
               })}
-              onChange={handleChangeZones}
+              onChange={handleChangeGroups}
             />
             <Label className="info">
               Assign device to groups for network access

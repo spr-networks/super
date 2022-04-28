@@ -16,41 +16,37 @@ export default class Device extends Component {
   state = {
     editing: false,
     name: '',
-    zones: [],
-    tags: [],
-    allTags: [
+    groups: [],
+    tags: []
+    /*allTags: [
       { label: 'private', value: 'private' },
       { label: 'foo', value: 'foo' },
       { label: 'dns', value: 'dns' },
       { label: 'lan', value: 'lan' },
       { label: 'wan', value: 'wan' }
-    ]
+    ]*/
   }
 
   async componentDidMount() {
-    const setState = (v) => {
-      this.setState(v)
-    }
-
     const device = this.props.device
 
     this.setState({
-      zones: device.Zones,
+      groups: device.Zones,
       name: device.Name,
       tags: device.DeviceTags
     })
   }
 
-  handleZones = (zones) => {
+  handleGroups = (groups) => {
     if (!this.props.device.MAC && !this.props.device.WGPubKey) {
       return
     }
 
-    zones = [...new Set(zones)]
-    this.setState({ zones })
+    groups = [...new Set(groups)]
+    this.setState({ groups })
 
     deviceAPI
-      .updateZones(this.props.device.MAC || this.props.device.WGPubKey, zones)
+      .updateGroups(this.props.device.MAC || this.props.device.WGPubKey, groups)
       .catch((error) =>
         this.context.reportError('[API] updateDevice error: ' + error.message)
       )
@@ -137,8 +133,8 @@ export default class Device extends Component {
           {/*<td className="d-none d-md-table-cell"> {device.RecentIP} </td>*/}
           <td>{wifi_type}</td>
           <td>
-            {this.state.zones.map((zone) => (
-              <Badge color="default">{zone}</Badge>
+            {this.state.groups.map((group) => (
+              <Badge color="default">{group}</Badge>
             ))}
           </td>
           <td>
@@ -196,13 +192,13 @@ export default class Device extends Component {
             isMulti
             onChange={this.handleChangeTags}
             options={this.state.allTags}
-            placeholder="Zones"
+            placeholder="Groups"
             defaultValue={this.state.allTags.slice(2, 5)}
           />*/}
           <TagsInput
-            inputProps={{ placeholder: 'Add zone' }}
-            value={this.state.zones}
-            onChange={this.handleZones}
+            inputProps={{ placeholder: 'Add group' }}
+            value={this.state.groups}
+            onChange={this.handleGroups}
             tagProps={{ className: 'react-tagsinput-tag' }}
           />
         </td>

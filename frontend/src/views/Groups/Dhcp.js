@@ -1,21 +1,20 @@
 import React, { Component } from 'react'
 
 import { wifiAPI, deviceAPI, nfmapAPI } from 'api'
-import ZoneListing from 'components/Zones/ZoneListing'
+import GroupListing from 'components/Groups/GroupListing'
 import { APIErrorContext } from 'layouts/Admin'
 
 export default class Dhcp extends Component {
-  state = { zones: [] }
+  state = { groups: [] }
 
   static contextType = APIErrorContext
 
   async componentDidMount() {
-    async function refreshZones() {
+    const refreshList = async () => {
       let divs = []
       const vmap = await nfmapAPI.getNFVerdictMap('dhcp').catch((error) => {
-        if (error.message == 404) {
-          //no clients in map yet
-        } else {
+        //404 = no clients in map yet
+        if (error.message !== 404) {
           this.context.reportError(
             'API Failure for: ' + v.Name + ' ' + error.message
           )
@@ -35,9 +34,9 @@ export default class Dhcp extends Component {
         this.context.reportError('API Failure getDevices: ' + error.message)
       })
 
-      let zone = { Name: 'Connected Clients', Members: [] }
-      zone.vmap = vmap
-      zone.ipMap = ipMap
+      let group = { Name: 'Connected Clients', Members: [] }
+      group.vmap = vmap
+      group.ipMap = ipMap
       for (const entry of vmap) {
         let MAC = entry.ether_addr,
           Name = '--',
@@ -49,16 +48,16 @@ export default class Dhcp extends Component {
           device.online = true
         }
 
-        zone.Members.push({ MAC, Name, ifname, online: true })
+        group.Members.push({ MAC, Name, ifname, online: true })
       }
 
-      let zoneOffline = { Name: 'Devices not connected', Members: [] }
+      let groupOffline = { Name: 'Devices not connected', Members: [] }
       for (let device of Object.values(devices)) {
         if (device.online === true) {
           continue
         }
 
-        zoneOffline.Members.push({
+        groupOffline.Members.push({
           MAC: device.MAC,
           Name: device.Name,
           IP: device.RecentIP,
@@ -67,24 +66,23 @@ export default class Dhcp extends Component {
         })
       }
 
-      let zones = [zone]
-      if (zoneOffline.Members.length) {
-        zones.push(zoneOffline)
+      let groups = [group]
+      if (groupOffline.Members.length) {
+        groups.push(groupOffline)
       }
 
-      this.setState({ zones })
+      this.setState({ groups })
     }
 
-    refreshZones = refreshZones.bind(this)
-    refreshZones()
+    refreshList()
   }
 
   render() {
     return (
       <>
         <div className="content">
-          {this.state.zones.map((zone) => (
-            <ZoneListing key={zone.Name} zone={zone} />
+          {this.state.groups.map((group) => (
+            <GroupListing key={group.Name} group={group} />
           ))}
         </div>
       </>

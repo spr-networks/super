@@ -1,14 +1,14 @@
 import AddDevice from 'views/Devices/AddDevice'
 import Arp from 'views/Devices/Arp'
 import Devices from 'views/Devices/Devices'
-import Dhcp from 'views/Zones/Dhcp'
+import Dhcp from 'views/Groups/Dhcp'
 import Home from 'views/Home'
 import Login from 'views/pages/Login'
 import SignalStrength from 'views/SignalStrength'
 import Traffic from 'views/Traffic'
 import TrafficTimeSeries from 'views/TrafficTimeSeries'
 import WirelessConfiguration from 'views/WirelessConfiguration'
-import Zones from 'views/Zones/Zones'
+import Groups from 'views/Groups/Groups'
 import DNSBlock from 'views/DNS/DNSBlock'
 import DNSLog from 'views/DNS/DNSLog'
 import DNSLogEdit from 'views/DNS/DNSLogEdit'
@@ -140,10 +140,10 @@ const routes = [
         layout: '/admin'
       },
       {
-        path: '/zones',
-        name: 'Zones',
+        path: '/groups',
+        name: 'Groups',
         icon: 'fa fa-tags',
-        component: Zones,
+        component: Groups,
         layout: '/admin'
       },
       {

@@ -1,10 +1,6 @@
 import { Component } from 'react'
 
-export default class ZoneDevice extends Component {
-  state = {
-    zones: []
-  }
-
+export default class GroupDevice extends Component {
   render() {
     const device = this.props.device
 

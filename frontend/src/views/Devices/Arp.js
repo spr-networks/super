@@ -1,7 +1,6 @@
 import React, { Component } from 'react'
 
 import { wifiAPI } from 'api'
-import ZoneListing from 'components/Zones/ZoneListing'
 import { APIErrorContext } from 'layouts/Admin'
 
 import {

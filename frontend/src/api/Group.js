@@ -1,6 +1,6 @@
 import API from './API'
 
-export class APIZone extends API {
+export class APIGroup extends API {
   constructor() {
     super('')
   }
@@ -8,7 +8,7 @@ export class APIZone extends API {
   list = () => this.get('/zones')
 }
 
-export const zoneDescriptions = {
+export const groupDescriptions = {
   dns: 'Outbound DNS Access',
   wan: 'Outbound Internet Access',
   lan: 'LAN access',
@@ -16,4 +16,4 @@ export const zoneDescriptions = {
     'No access. By default devices without a group are treated as isolated'
 }
 
-export const zoneAPI = new APIZone()
+export const groupAPI = new APIGroup()

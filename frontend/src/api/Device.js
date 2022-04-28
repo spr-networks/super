@@ -27,7 +27,7 @@ export class APIDevice extends API {
   }
 
   updateName = (id, Name) => this.update(id, { Name })
-  updateZones = (id, Zones) => this.update(id, { Zones })
+  updateGroups = (id, Zones) => this.update(id, { Zones })
   updateTags = (id, DeviceTags) => this.update(id, { DeviceTags })
   deleteDevice = (id) => {
     return this.delete(`/device/${encodeURIComponent(id)}`, {})
