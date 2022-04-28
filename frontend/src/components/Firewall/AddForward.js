@@ -24,9 +24,9 @@ export default class AddForward extends React.Component {
     SIface: 'wlan1',
     Protocol: 'tcp',
     SrcIP: '',
-    SrcPort: 0,
+    SrcPort: '0',
     DstIP: '',
-    DstPort: 0
+    DstPort: '0'
   }
 
   constructor(props) {
@@ -113,7 +113,7 @@ export default class AddForward extends React.Component {
             <FormGroup>
               <Label for="SrcPort">Source Port</Label>
               <Input
-                type="number"
+                type="text"
                 id="SrcPort"
                 placeholder="Port .. range"
                 name="SrcPort"
@@ -149,7 +149,7 @@ export default class AddForward extends React.Component {
             <FormGroup>
               <Label for="DstPort">Dest Port</Label>
               <Input
-                type="number"
+                type="text"
                 id="DstPort"
                 placeholder="Port .. range"
                 name="DstPort"
@@ -163,27 +163,6 @@ export default class AddForward extends React.Component {
         <hr />
 
         <Row className="mt-4">
-          <Label for="SIface" md="2">
-            Interface
-          </Label>
-          <Col md={4}>
-            <FormGroup>
-              <Select
-                value={SIface}
-                options={SIfaces}
-                onChange={(o) => this.handleChangeSelect('SIface', o)}
-              />
-              {/*<Input
-                type="text"
-                id="AllowedIPs"
-                placeholder="192.168.3.2/32"
-                name="AllowedIPs"
-                value={this.state.AllowedIPs}
-                onChange={this.handleChange}
-                autoFocus
-              />*/}
-            </FormGroup>
-          </Col>
 
           <Label for="Protocol" md="2">
             Protocol

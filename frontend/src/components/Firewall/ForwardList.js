@@ -78,13 +78,12 @@ const ForwardList = (props) => {
             <AddForward notifyChange={notifyChange} />
           </ModalForm>
 
-          <CardTitle tag="h4">ForwardList</CardTitle>
+          <CardTitle tag="h4">Forwarding</CardTitle>
         </CardHeader>
         <CardBody>
           <Table responsive>
             <thead className="text-primary">
               <tr>
-                <th>Interface</th>
                 <th>Protocol</th>
                 <th width="15%" className="text-right">
                   Source
@@ -98,7 +97,6 @@ const ForwardList = (props) => {
             <tbody>
               {list.map((row) => (
                 <tr>
-                  <td>{row.SIface}</td>
                   <td>{row.Protocol}</td>
                   <td className="text-right">
                     {row.SrcIP}:{row.SrcPort}

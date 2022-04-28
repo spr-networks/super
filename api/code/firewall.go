@@ -209,7 +209,7 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 
   gFirewallConfig.ForwardingRules = append(gFirewallConfig.ForwardingRules, fwd)
   saveFirewallRulesLocked()
-  applyForwarding()
+  applyFirewallRulesLocked()
 }
 
 func blockIPSrc(w http.ResponseWriter, r *http.Request) {
@@ -254,6 +254,7 @@ func blockIPSrc(w http.ResponseWriter, r *http.Request) {
 
   gFirewallConfig.BlockSrc = append(gFirewallConfig.BlockSrc, br)
   saveFirewallRulesLocked()
+  applyFirewallRulesLocked()  
 }
 
 func blockIPDst(w http.ResponseWriter, r *http.Request) {
@@ -298,4 +299,5 @@ func blockIPDst(w http.ResponseWriter, r *http.Request) {
 
   gFirewallConfig.BlockDst = append(gFirewallConfig.BlockDst, br)
   saveFirewallRulesLocked()
+  applyFirewallRulesLocked()
 }

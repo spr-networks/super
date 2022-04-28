@@ -168,8 +168,8 @@ table inet filter {
 
   chain DROP_MAC_SPOOF {
   	counter ip saddr . iifname . ether saddr vmap @ethernet_filter
-	log prefix "DRP:MAC "
-        counter drop
+    log prefix "DRP:MAC "
+    counter drop
   }
 
 }
@@ -179,15 +179,12 @@ table inet filter {
 table inet nat {
 
   map udpfwd {
-    type ifname . ipv4_addr . inet_service : ipv4_addr . inet_service
-    elements = {
+    type ipv4_addr . inet_service : ipv4_addr . inet_service
     }
   }
 
   map tcpfwd {
-    type ifname . ipv4_addr . inet_service : ipv4_addr . inet_service
-    elements = {
-    }
+    type ipv4_addr . inet_service : ipv4_addr . inet_service
   }
 
   chain PREROUTING {
@@ -195,8 +192,8 @@ table inet nat {
 
     #jump USERDEF_PREROUTING
 
-    counter dnat to iifname . ip saddr . udp dport map @udpfwd
-    counter dnat to iifname . ip saddr . tcp dport map @tcpfwd
+    counter dnat ip addr . port to ip daddr . udp dport map @udpfwd
+    counter dnat ip addr . port to ip daddr . tcp dport map @tcpfwd
 
     # Reroute external DNS to our own server
     udp dport 53 counter dnat ip to $DNSIP:53
