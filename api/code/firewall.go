@@ -9,6 +9,8 @@ import (
   "io/ioutil"
   "encoding/json"
   "log"
+  "regexp"
+  "strconv"
 )
 
 import (
@@ -68,10 +70,17 @@ func applyForwarding(forwarding []ForwardingRule) error {
   //need to flush the fwd rules here
 
   for _, f := range forwarding {
+    var cmd *exec.Cmd
+    if f.SrcPort == "any" {
+      cmd = exec.Command("nft", "add", "element", "inet", "nat", f.Protocol + "anyfwd",
+          "{", f.SrcIP, ":",
+              f.DstIP, "}" )
 
-    cmd := exec.Command("nft", "add", "element", "ip", "nat", f.Protocol + "fwd",
-        "{", f.SrcIP, ".", f.SrcPort, ":",
-            f.DstIP, ".", f.DstPort, "}" )
+    } else {
+      cmd = exec.Command("nft", "add", "element", "inet", "nat", f.Protocol + "fwd",
+          "{", f.SrcIP, ".", f.SrcPort, ":",
+              f.DstIP, ".", f.DstPort, "}" )
+    }
     _, err := cmd.Output()
 
     if err != nil {
@@ -180,6 +189,19 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
     return
   }
 
+  re := regexp.MustCompile("^[0-9\\-]*$")
+
+  if (fwd.SrcPort != "all" && !re.MatchString(fwd.SrcPort)) {
+    http.Error(w, "Invalid SrcPort", 400)
+    return
+  }
+
+  _, err = strconv.Atoi(fwd.DstPort)
+  if err != nil {
+    http.Error(w, "Invalid DstPort", 400)
+    return
+  }
+
   _, _, err = net.ParseCIDR(fwd.SrcIP)
   if err != nil {
     ip := net.ParseIP(fwd.DstIP)
@@ -254,7 +276,7 @@ func blockIPSrc(w http.ResponseWriter, r *http.Request) {
 
   gFirewallConfig.BlockSrc = append(gFirewallConfig.BlockSrc, br)
   saveFirewallRulesLocked()
-  applyFirewallRulesLocked()  
+  applyFirewallRulesLocked()
 }
 
 func blockIPDst(w http.ResponseWriter, r *http.Request) {
