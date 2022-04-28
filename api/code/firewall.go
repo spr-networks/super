@@ -37,7 +37,7 @@ type FirewallConfig struct {
   BlockDst  []BlockRule
 }
 
-var FirewallConfigFile = TEST_PREFIX + "/config/base/firewall.json"
+var FirewallConfigFile = TEST_PREFIX + "/configs/base/firewall.json"
 var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []BlockRule{}}
 
 func saveFirewallRulesLocked() {
@@ -73,7 +73,6 @@ func applyForwarding(forwarding []ForwardingRule) error {
         "{", f.SrcIP, ".", f.SrcPort, ":",
             f.DstIP, ".", f.DstPort, "}" )
     _, err := cmd.Output()
-
 
     if err != nil {
       fmt.Println("failed to add element", err)
@@ -181,8 +180,11 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 
   _, _, err = net.ParseCIDR(fwd.SrcIP)
   if err != nil {
-    http.Error(w, "Invalid SrcIP CIDR", 400)
-    return
+    ip := net.ParseIP(fwd.DstIP)
+    if ip == nil {
+      http.Error(w, "Invalid SrcIP", 400)
+      return
+    }
   }
 
   ip := net.ParseIP(fwd.DstIP)
