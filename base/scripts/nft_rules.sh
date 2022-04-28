@@ -178,33 +178,33 @@ table inet filter {
 
 table inet nat {
 
-  map udpportfwd {
-    type ipv4_addr . inet_service : ipv4_addr . inet_service
+  map udpfwd {
+    type ipv4_addr . inet_service : ipv4_addr . inet_service;
+    flags interval;
   }
 
-  map tcpportfwd {
-    type ipv4_addr . inet_service : ipv4_addr . inet_service
-    flags interval
+  map tcpfwd {
+    type ipv4_addr . inet_service : ipv4_addr . inet_service;
+    flags interval;
   }
 
   map udpanyfwd {
-    type ipv4_addr : ipv4_addr
+    type ipv4_addr : ipv4_addr;
   }
 
   map tcpanyfwd {
-    type ipv4_addr : ipv4_addr
-    flags interval
+    type ipv4_addr : ipv4_addr;
   }
 
   chain PREROUTING {
     type nat hook prerouting priority -100; policy accept;
 
     #jump USERDEF_PREROUTING
-
     counter dnat ip addr . port to ip daddr . udp dport map @udpfwd
     counter dnat ip addr . port to ip daddr . tcp dport map @tcpfwd
-    counter dnat ip addr to ip daddr map @udpanyfwd
-    counter dnat ip addr to ip daddr map @tcpanyfwd
+
+    counter ip protocol udp dnat to ip daddr map @udpanyfwd
+    counter ip protocol tcp dnat to ip daddr map @tcpanyfwd
 
     # Reroute external DNS to our own server
     udp dport 53 counter dnat ip to $DNSIP:53
