@@ -65,7 +65,7 @@ table inet filter {
     iifname $WANIF udp dport {67, 1900, 5353} counter jump DROPLOGINP
 
     # drop ssh, iperf from upstream
-    iifname $WANIF tcp dport {22, 5201, 80} counter jump DROPLOGINP
+    #iifname $WANIF tcp dport {22, 5201, 80} counter jump DROPLOGINP
 
     # Allow ssh, iperf3 from LAN
     tcp dport {22, 5201, 80} counter accept
@@ -204,7 +204,7 @@ table inet nat {
     type nat hook prerouting priority -100; policy accept;
 
     # Block rules
-    counter ip saddr . ip daddr . iifname  vmap @block
+    counter ip saddr . ip daddr . ip protocol  vmap @block
 
     #jump USERDEF_PREROUTING
 
