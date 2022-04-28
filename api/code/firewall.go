@@ -8,7 +8,6 @@ import (
   "sync"
   "io/ioutil"
   "encoding/json"
-  "strconv"
   "log"
 )
 
@@ -19,12 +18,11 @@ import (
 var FWmtx sync.Mutex
 
 type ForwardingRule struct {
-  SIface string
   Protocol string
-  SrcIP string
-  SrcPort uint
-  DstIP string
-  DstPort uint
+  SrcIP    string
+  SrcPort  string
+  DstIP    string
+  DstPort  string
 }
 
 type BlockRule struct {
@@ -72,8 +70,8 @@ func applyForwarding(forwarding []ForwardingRule) error {
   for _, f := range forwarding {
 
     cmd := exec.Command("nft", "add", "element", "ip", "nat", f.Protocol + "fwd",
-        "{", f.SIface, ".", f.SrcIP, ".", strconv.Itoa(int(f.SrcPort)), ":",
-            f.DstIP, ".", strconv.Itoa(int(f.DstPort)), "}" )
+        "{", f.SrcIP, ".", f.SrcPort, ":",
+            f.DstIP, ".", f.DstPort, "}" )
     _, err := cmd.Output()
 
 
@@ -178,15 +176,6 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 
   if fwd.Protocol != "tcp" && fwd.Protocol != "udp" {
     http.Error(w, "Invalid protocol", 400)
-    return
-  }
-
-  if fwd.SIface == "" {
-    fwd.SIface = "*"
-  }
-
-  if fwd.SrcPort > 65535 || fwd.DstPort > 65535 {
-    http.Error(w, "Invalid port", 400)
     return
   }
 
