@@ -24,9 +24,9 @@ export default class AddForward extends React.Component {
     SIface: 'wlan1',
     Protocol: 'tcp',
     SrcIP: '',
-    SrcPort: 0,
+    SrcPort: 'any',
     DstIP: '',
-    DstPort: 0
+    DstPort: 'any'
   }
 
   constructor(props) {
@@ -89,8 +89,7 @@ export default class AddForward extends React.Component {
     let Protocol = selOpt(this.state.Protocol)
 
     let SrcIPs = [
-      { label: '1.1.1.1', value: '1.1.1.1' },
-      { label: '1.1.1.2', value: '1.1.1.2' }
+      { label: '0.0.0.0/0 (Any IP)', value: '0.0.0.0/0' },
     ]
 
     let SrcIP = selOpt(this.state.SrcIP)
@@ -100,7 +99,7 @@ export default class AddForward extends React.Component {
         <Row>
           <Col md={8}>
             <FormGroup>
-              <Label for="SrcIP">Source IP address</Label>
+              <Label for="SrcIP">Source IP Address (accepts IP or CIDR)</Label>
               <CreatableSelect
                 name="SrcIP"
                 value={SrcIP}
@@ -111,9 +110,9 @@ export default class AddForward extends React.Component {
           </Col>
           <Col md={4}>
             <FormGroup>
-              <Label for="SrcPort">Source Port</Label>
+              <Label for="SrcPort">Incoming Port</Label>
               <Input
-                type="number"
+                type="text"
                 id="SrcPort"
                 placeholder="Port .. range"
                 name="SrcPort"
@@ -134,7 +133,7 @@ export default class AddForward extends React.Component {
         <Row>
           <Col md={8}>
             <FormGroup>
-              <Label for="DstIP">Destination IP address</Label>
+              <Label for="DstIP">Rewrite IP address</Label>
               <ClientSelect
                 isCreatable
                 skipAll
@@ -149,7 +148,7 @@ export default class AddForward extends React.Component {
             <FormGroup>
               <Label for="DstPort">Dest Port</Label>
               <Input
-                type="number"
+                type="text"
                 id="DstPort"
                 placeholder="Port .. range"
                 name="DstPort"
@@ -163,27 +162,6 @@ export default class AddForward extends React.Component {
         <hr />
 
         <Row className="mt-4">
-          <Label for="SIface" md="2">
-            Interface
-          </Label>
-          <Col md={4}>
-            <FormGroup>
-              <Select
-                value={SIface}
-                options={SIfaces}
-                onChange={(o) => this.handleChangeSelect('SIface', o)}
-              />
-              {/*<Input
-                type="text"
-                id="AllowedIPs"
-                placeholder="192.168.3.2/32"
-                name="AllowedIPs"
-                value={this.state.AllowedIPs}
-                onChange={this.handleChange}
-                autoFocus
-              />*/}
-            </FormGroup>
-          </Col>
 
           <Label for="Protocol" md="2">
             Protocol

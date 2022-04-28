@@ -5,16 +5,14 @@ export class APIFirewall extends API {
     super('/firewall/')
   }
 
-  config = () => this.get('config')
+  config = () => {return this.get('config')}
 
   addForward = (data) => this.put('forward', data)
   deleteForward = (data) => this.delete('forward', data)
 
-  addBlockSrc = (data) => this.put('blocksrc', data)
-  deleteBlockSrc = (data) => this.delete('blocksrc', data)
+  addBlock = (data) => this.put('block', data)
+  deleteBlock = (data) => this.delete('block', data)
 
-  addBlockDst = (data) => this.put('blockdst', data)
-  deleteBlockDst = (data) => this.delete('blockdst', data)
 }
 
 export const firewallAPI = new APIFirewall()

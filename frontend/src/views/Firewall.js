@@ -19,6 +19,7 @@ export default class Firewall extends Component {
 
   componentDidMount() {
     this.fetchConfig()
+    console.log(this.state.config.BlockRules)
   }
 
   render() {
@@ -33,15 +34,8 @@ export default class Firewall extends Component {
         <Row>
           <Col md="12">
             <BlockList
-              type="Src"
-              title="IP Block Source"
-              list={this.state.config.BlockSrc}
-              notifyChange={this.fetchConfig}
-            />
-            <BlockList
-              type="Dst"
-              title="IP Block Destination "
-              list={this.state.config.BlockDst}
+              title="Block IP Source or Destination"
+              list={this.state.config.BlockRules}
               notifyChange={this.fetchConfig}
             />
           </Col>

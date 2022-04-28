@@ -24,7 +24,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var TEST_PREFIX = ""
+var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 var ApiConfigPath = TEST_PREFIX + "/state/api/config"
 var DeprecatedZonesConfigPath = TEST_PREFIX + "/configs/zones/zones.json"
 var DeprecatedPSKConfigPath = TEST_PREFIX + "/configs/wifi/psks.json"
@@ -1590,6 +1590,11 @@ func main() {
 	external_router_authenticated.HandleFunc("/nftables", listNFTables).Methods("GET")
 	external_router_authenticated.HandleFunc("/nftable/{family}/{name}", showNFTable).Methods("GET")
 
+	// firewall
+	external_router_authenticated.HandleFunc("/firewall/config", getFirewallConfig).Methods("GET")
+	external_router_authenticated.HandleFunc("/firewall/forward", modifyForwardRules).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/block", blockIP).Methods("PUT", "DELETE")
+
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
 	external_router_authenticated.HandleFunc("/traffic_history", getTrafficHistory).Methods("GET")
@@ -1641,6 +1646,8 @@ func main() {
 	// Wireguard actions
 	unix_wireguard_router.HandleFunc("/wireguardUpdate", wireguardUpdate).Methods("PUT", "DELETE")
 
+
+
 	os.Remove(UNIX_WIFID_LISTENER)
 	unixWifidListener, err := net.Listen("unix", UNIX_WIFID_LISTENER)
 	if err != nil {
@@ -1669,6 +1676,8 @@ func main() {
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
+	//initialize user firewall rules
+	initUserFirewallRules()
 	//start the websocket handler
 	WSRunNotify()
 	// collect traffic accounting statistics
