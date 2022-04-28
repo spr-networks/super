@@ -92,9 +92,7 @@ func applyBlockDst([] BlockRule) {
 
 }
 
-func applyFirewallRules() {
-  FWmtx.Lock()
-  defer FWmtx.Unlock()
+func applyFirewallRulesLocked() {
 
   applyForwarding(gFirewallConfig.ForwardingRules)
 
@@ -105,7 +103,11 @@ func applyFirewallRules() {
 
 func initUserFirewallRules() {
   loadFirewallRules()
-  applyFirewallRules()
+
+  FWmtx.Lock()
+  defer FWmtx.Unlock()
+
+  applyFirewallRulesLocked()
 }
 
 func showNFMap(w http.ResponseWriter, r *http.Request) {
@@ -207,6 +209,7 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 
   gFirewallConfig.ForwardingRules = append(gFirewallConfig.ForwardingRules, fwd)
   saveFirewallRulesLocked()
+  applyForwarding()
 }
 
 func blockIPSrc(w http.ResponseWriter, r *http.Request) {
