@@ -34,13 +34,13 @@ export default class Firewall extends Component {
           <Col md="12">
             <BlockList
               type="Src"
-              title="IP Block Source"
+              title="Block Incoming IP Source"
               list={this.state.config.BlockSrc}
               notifyChange={this.fetchConfig}
             />
             <BlockList
               type="Dst"
-              title="IP Block Destination "
+              title="Block Outgoing IP Destination "
               list={this.state.config.BlockDst}
               notifyChange={this.fetchConfig}
             />

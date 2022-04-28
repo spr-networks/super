@@ -28,19 +28,18 @@ type ForwardingRule struct {
 }
 
 type BlockRule struct {
-  IP string
-  Port int
+  DstIP string
+  SrcIP string
   Protocol string
 }
 
 type FirewallConfig struct {
   ForwardingRules []ForwardingRule
-  BlockSrc  []BlockRule
-  BlockDst  []BlockRule
+  BlockRules  []BlockRule
 }
 
 var FirewallConfigFile = TEST_PREFIX + "/configs/base/firewall.json"
-var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []BlockRule{}}
+var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}}
 
 func saveFirewallRulesLocked() {
   file, _ := json.MarshalIndent(gFirewallConfig, "", " ")
@@ -65,11 +64,7 @@ func loadFirewallRules() error {
   return nil
 }
 
-func deleteSrcBlock(br BlockRule) error {
-  return nil
-}
-
-func deleteDstBlock(br BlockRule) error {
+func deleteBlock(br BlockRule) error {
   return nil
 }
 
@@ -125,11 +120,7 @@ func applyForwarding(forwarding []ForwardingRule) error {
   return nil
 }
 
-func applyBlockSrc([] BlockRule) {
-
-}
-
-func applyBlockDst([] BlockRule) {
+func applyBlocking([] BlockRule) {
 
 }
 
@@ -137,9 +128,7 @@ func applyFirewallRulesLocked() {
 
   applyForwarding(gFirewallConfig.ForwardingRules)
 
-  applyBlockSrc(gFirewallConfig.BlockSrc)
-
-  applyBlockDst(gFirewallConfig.BlockDst)
+  applyBlocking(gFirewallConfig.BlockRules)
 }
 
 func initUserFirewallRules() {
@@ -205,6 +194,20 @@ func getFirewallConfig(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(gFirewallConfig)
 }
 
+func CIDRorIP(IP string) error {
+  _, _, err := net.ParseCIDR(IP)
+  if err != nil {
+    ip := net.ParseIP(IP)
+    if ip == nil {
+      return err
+    } else {
+      return nil
+    }
+  }
+  return err
+}
+
+
 func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
   FWmtx.Lock()
   defer FWmtx.Unlock()
@@ -236,13 +239,9 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
     }
   }
 
-  _, _, err = net.ParseCIDR(fwd.SrcIP)
-  if err != nil {
-    ip := net.ParseIP(fwd.DstIP)
-    if ip == nil {
-      http.Error(w, "Invalid SrcIP", 400)
-      return
-    }
+  if CIDRorIP(fwd.SrcIP) != nil {
+    http.Error(w, "Invalid SrcIP", 400)
+    return
   }
 
   ip := net.ParseIP(fwd.DstIP)
@@ -270,7 +269,7 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
   applyFirewallRulesLocked()
 }
 
-func blockIPSrc(w http.ResponseWriter, r *http.Request) {
+func blockIP(w http.ResponseWriter, r *http.Request) {
   FWmtx.Lock()
   defer FWmtx.Unlock()
 
@@ -286,25 +285,23 @@ func blockIPSrc(w http.ResponseWriter, r *http.Request) {
 		return
   }
 
-  if br.Port > 65535 {
-    http.Error(w, "Invalid port", 400)
+  if CIDRorIP(br.SrcIP) != nil {
+    http.Error(w, "Invalid SrcIP", 400)
     return
   }
 
-  _, _, err = net.ParseCIDR(br.IP)
-  if err != nil {
-    http.Error(w, "Invalid IP CIDR", 400)
+  if CIDRorIP(br.SrcIP) != nil {
+    http.Error(w, "Invalid DstIP", 400)
     return
   }
-
 
   if r.Method == http.MethodDelete {
-    for i := range gFirewallConfig.BlockSrc {
-      a := gFirewallConfig.BlockSrc[i]
+    for i := range gFirewallConfig.BlockRules {
+      a := gFirewallConfig.BlockRules[i]
       if br == a {
-        gFirewallConfig.BlockSrc = append(gFirewallConfig.BlockSrc[:i], gFirewallConfig.BlockSrc[i+1:]...)
+        gFirewallConfig.BlockRules = append(gFirewallConfig.BlockRules[:i], gFirewallConfig.BlockRules[i+1:]...)
         saveFirewallRulesLocked()
-        deleteSrcBlock(a)
+        deleteBlock(a)
         return
       }
     }
@@ -312,54 +309,7 @@ func blockIPSrc(w http.ResponseWriter, r *http.Request) {
 		return
   }
 
-  gFirewallConfig.BlockSrc = append(gFirewallConfig.BlockSrc, br)
-  saveFirewallRulesLocked()
-  applyFirewallRulesLocked()
-}
-
-func blockIPDst(w http.ResponseWriter, r *http.Request) {
-  FWmtx.Lock()
-  defer FWmtx.Unlock()
-
-  br := BlockRule{}
-	err := json.NewDecoder(r.Body).Decode(&br)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-  }
-
-  if br.Protocol != "tcp" && br.Protocol != "udp" {
-    http.Error(w, err.Error(), 400)
-		return
-  }
-
-  if br.Port > 65535 {
-    http.Error(w, "Invalid port", 400)
-    return
-  }
-
-  _, _, err = net.ParseCIDR(br.IP)
-  if err != nil {
-    http.Error(w, "Invalid IP CIDR", 400)
-    return
-  }
-
-
-  if r.Method == http.MethodDelete {
-    for i := range gFirewallConfig.BlockDst {
-      a := gFirewallConfig.BlockDst[i]
-      if br == a {
-        gFirewallConfig.BlockDst = append(gFirewallConfig.BlockDst[:i], gFirewallConfig.BlockDst[i+1:]...)
-        return
-      }
-      saveFirewallRulesLocked()
-      deleteDstBlock(a)
-    }
-    http.Error(w, "Not found", 404)
-		return
-  }
-
-  gFirewallConfig.BlockDst = append(gFirewallConfig.BlockDst, br)
+  gFirewallConfig.BlockRules = append(gFirewallConfig.BlockRules, br)
   saveFirewallRulesLocked()
   applyFirewallRulesLocked()
 }

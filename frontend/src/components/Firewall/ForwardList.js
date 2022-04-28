@@ -69,7 +69,7 @@ const ForwardList = (props) => {
       <Card>
         <CardHeader>
           <ModalForm
-            title="Add Forward Rule"
+            title="Add Rewrite/Forwarding Rule"
             triggerText="add"
             triggerClass="pull-right"
             triggerIcon="fa fa-plus"
@@ -78,7 +78,7 @@ const ForwardList = (props) => {
             <AddForward notifyChange={notifyChange} />
           </ModalForm>
 
-          <CardTitle tag="h4">Forwarding</CardTitle>
+          <CardTitle tag="h4">Traffic Forwarding</CardTitle>
         </CardHeader>
         <CardBody>
           <Table responsive>
@@ -86,7 +86,7 @@ const ForwardList = (props) => {
               <tr>
                 <th>Protocol</th>
                 <th width="15%" className="text-right">
-                  Source
+                  Original Destination
                 </th>
                 <th width="5%"></th>
                 <th width="35%">Destination</th>

@@ -196,10 +196,19 @@ table inet nat {
     type ipv4_addr : ipv4_addr;
   }
 
+  map block {
+    type ipv4_addr . ipv4_addr . inet_proto : verdict
+  }
+
   chain PREROUTING {
     type nat hook prerouting priority -100; policy accept;
 
+    # Block rules
+    counter ip saddr . ip daddr . iifname  vmap @block
+
     #jump USERDEF_PREROUTING
+
+    # Forwarding dnat maps
     counter dnat ip addr . port to ip daddr . udp dport map @udpfwd
     counter dnat ip addr . port to ip daddr . tcp dport map @tcpfwd
 

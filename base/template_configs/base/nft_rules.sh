@@ -52,6 +52,9 @@ table inet filter {
     type ipv4_addr . ifname . ether_addr: verdict;
   }
 
+  map router_access {
+    type ipv4_addr : verdict;
+  }
 
   chain INPUT {
     type filter hook input priority 0; policy drop;
@@ -65,6 +68,8 @@ table inet filter {
 
     # drop dhcp requests, multicast ports from upstream
     iifname $WANIF udp dport {67, 1900, 5353} counter jump DROPLOGINP
+
+    #iifname $WANIF ip addr vmap @router_access
 
     # drop ssh, iperf from upstream
     iifname $WANIF tcp dport {22, 5201, 80} counter jump DROPLOGINP

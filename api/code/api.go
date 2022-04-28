@@ -1593,8 +1593,7 @@ func main() {
 	// firewall
 	external_router_authenticated.HandleFunc("/firewall/config", getFirewallConfig).Methods("GET")
 	external_router_authenticated.HandleFunc("/firewall/forward", modifyForwardRules).Methods("PUT", "DELETE")
-	external_router_authenticated.HandleFunc("/firewall/blockSrc", blockIPSrc).Methods("PUT", "DELETE")
-	external_router_authenticated.HandleFunc("/firewall/blockDst", blockIPDst).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/block", blockIP).Methods("PUT", "DELETE")
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
