@@ -337,6 +337,148 @@ export default function MockAPI() {
         ]
       })
 
+      this.get('/iw/list', (schema) => {
+        return [
+          {
+            wiphy: 'phy1',
+            wiphy_index: 1,
+            max_scan_ssids: 4,
+            max_scan_ies_length: '2243 bytes',
+            max_sched_scan_ssids: 0,
+            max_match_sets: 0,
+            retry_short_limit: 7,
+            retry_long_limit: 4,
+            coverage_class: '0 (up to 0m)',
+            device_supports: ['RSN-IBSS', 'AP-side u-APSD', 'T-DLS'],
+            supported_ciphers: ['WEP40 (00-0f-ac:1)'],
+            bands: [
+              {
+                band: 'Band 1',
+                capabilities: ['0x1ff'],
+                bitrates: ['1.0 Mbps (short preamble supported)']
+              }
+            ],
+            supported_interface_modes: ['IBSS', 'managed'],
+            supported_commands: ['new_interface', 'set_interface'],
+            software_interface_modes: ['AP/VLAN', 'monitor'],
+            valid_interface_combinations: [
+              '#{ IBSS } <= 1, #{ managed, AP, mesh point, P2P-client, P2P-GO } <= 2,',
+              'total <= 2, #channels <= 1, STA/AP BI must match'
+            ],
+            ht_capability_overrides: [
+              'MCS: ff ff ff ff ff ff ff ff ff ff',
+              'maximum A-MSDU length'
+            ],
+            supported_tx_frame_types: [
+              'IBSS: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0',
+              'managed: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0'
+            ],
+            supported_rx_frame_types: [
+              'IBSS: 0x40 0xb0 0xc0 0xd0',
+              'managed: 0x40 0xb0 0xd0'
+            ],
+            supported_extended_features: [
+              '[ VHT_IBSS ]: VHT-IBSS',
+              '[ RRM ]: RRM'
+            ]
+          }
+        ]
+      })
+
+      this.get('/iw/dev', (schema) => {
+        return {
+          phy0: {
+            wlan0: {
+              ifindex: '3',
+              wdev: '0x1',
+              addr: '11:11:11:11:11:11',
+              ssid: 'ssid_sample_1',
+              type: 'managed',
+              channel: '11 (2462 MHz), width: 20 MHz, center1: 2462 MHz',
+              txpower: '16.00 dBm',
+              multicast_txq: {
+                qsz_byt: 0,
+                qsz_pkt: 0,
+                flows: 0,
+                drops: 0,
+                marks: 0,
+                overlmt: 0,
+                hashcol: 0,
+                tx_bytes: 0,
+                tx_packets: 0
+              }
+            }
+          }
+        }
+      })
+      this.get('/iw/dev/:iface/scan', (schema, request) => {
+        let iface = request.params.iface
+
+        return [
+          {
+            bssid: '33:33:33:33:33:33',
+            interface: iface,
+            freq: 2412,
+            capability: 'ESS Privacy ShortSlotTime RadioMeasure (0x1411)',
+            ssid: 'ssid_AABBCC',
+            supported_rates: [1, 2, 5.5, 11, 18, 24, 36, 54],
+            erp: '<no flags>',
+            'erp_d4.0': '<no flags>',
+            rsn: 'Version: 1',
+            group_cipher: 'CCMP',
+            pairwise_ciphers: 'CCMP',
+            authentication_suites: 'PSK',
+            capabilities: '0x72 0x08 0x01 0x00 0x00',
+            extended_supported_rates: [6, 9, 12, 48],
+            station_count: 1,
+            channel_utilisation: '87/255',
+            available_admission_capacity: 0,
+            ht_rx_mcs_rate_indexes_supported: '0-23',
+            primary_channel: 1,
+            secondary_channel_offset: 'no secondary',
+            rifs: 1,
+            ht_protection: 'no',
+            non_gf_present: 1,
+            obss_non_gf_present: 0,
+            dual_beacon: 0,
+            dual_cts_protection: 0,
+            stbc_beacon: 0,
+            l_sig_txop_prot: 0,
+            pco_active: 0,
+            pco_phase: 0,
+            wps: 'Version: 1.0',
+            wi_fi_protected_setup_state: '2 (Configured)',
+            response_type: '3 (AP)',
+            uuid: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+            manufacturer: 'ABC',
+            model: 'ABCDEF',
+            model_number: 123456,
+            serial_number: 1,
+            primary_device_type: '1-00112233-2',
+            device_name: 'ABCdev',
+            config_methods: 'Display',
+            rf_bands: '0x3',
+            version2: 2,
+            wmm: 'Parameter version 1',
+            be: 'CW 15-1023, AIFSN 3',
+            bk: 'CW 15-1023, AIFSN 7',
+            vi: 'CW 7-15, AIFSN 2, TXOP 3008 usec',
+            vo: 'CW 3-7, AIFSN 2, TXOP 1504 usec',
+            nonoperating_channel_max_measurement_duration: 0,
+            measurement_pilot_capability: 0,
+            tsf_usec: 31442397148,
+            sta_channel_width_mhz: 20,
+            beacon_interval_tus: 100,
+            signal_dbm: -67,
+            last_seen_ms: 0,
+            selected_rates: [1, 2, 5.5, 11],
+            ds_parameter_set_channel: 1,
+            max_amsdu_length_bytes: 7935,
+            minimum_rx_ampdu_time_spacing_usec: 4
+          }
+        ]
+      })
+
       this.get('/iptraffic', (schema) => {
         const rIP = () => `${r(255)}.${r(255)}.${r(255)}.${r(255)}`
         const rInterface = () => rpick(['wlan0', 'wlan.4096', 'wlan.4097'])
