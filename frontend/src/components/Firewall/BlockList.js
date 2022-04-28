@@ -19,8 +19,8 @@ import {
 
 const BlockList = (props) => {
   let list = props.list || []
-  let type = props.type || 'none'
-  let title = props.title || `BlockList: ${type}`
+  let title = props.title || `BlockList:`
+  console.log("bl got", list)
 
   let refModal = useRef(null)
 
@@ -29,11 +29,7 @@ const BlockList = (props) => {
       props.notifyChange('block')
     }
 
-    if (type.toLowerCase() == 'src') {
-      firewallAPI.deleteBlockSrc(item).then(done)
-    } else {
-      firewallAPI.deleteBlockDst(item).then(done)
-    }
+    firewallAPI.deleteBlock(item).then(done)
   }
 
   const notifyChange = (t) => {
@@ -46,13 +42,13 @@ const BlockList = (props) => {
       <Card>
         <CardHeader>
           <ModalForm
-            title={`Add IP ${type} Block`}
+            title={`Add IP Block`}
             triggerText="add"
             triggerClass="pull-right"
             triggerIcon="fa fa-plus"
             modalRef={refModal}
           >
-            <AddBlock type={type} notifyChange={notifyChange} />
+            <AddBlock notifyChange={notifyChange} />
           </ModalForm>
 
           <CardTitle tag="h4">{title}</CardTitle>
@@ -62,8 +58,8 @@ const BlockList = (props) => {
             <thead className="text-primary">
               <tr>
                 <th>Protocol</th>
-                <th>IP</th>
-                <th>Port</th>
+                <th>Source</th>
+                <th>Destination</th>
                 <th width="5%" className="text-center">
                   Actions
                 </th>
@@ -73,8 +69,8 @@ const BlockList = (props) => {
               {list.map((row) => (
                 <tr>
                   <td>{row.Protocol}</td>
-                  <td>{row.IP}</td>
-                  <td>{row.Port}</td>
+                  <td>{row.SrcIP}</td>
+                  <td>{row.DstIP}</td>
                   <td className="text-center">
                     <Button
                       className="btn-icon"
@@ -97,7 +93,6 @@ const BlockList = (props) => {
 }
 
 BlockList.propTypes = {
-  type: PropTypes.string.isRequired,
   notifyChange: PropTypes.func.isRequired
 }
 

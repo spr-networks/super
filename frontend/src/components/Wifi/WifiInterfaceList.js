@@ -172,7 +172,7 @@ const WifiInterface = (props) => {
                           <h5 className="text-muted">
                             {tab.replace(/_/g, ' ')}
                           </h5>
-                          {iw[tab].map((c) => (
+                          {iw[tab] && iw[tab].map((c) => (
                             <Badge color="secondary">{c}</Badge>
                           ))}
 
@@ -181,7 +181,7 @@ const WifiInterface = (props) => {
                               <h5 className="text-muted mt-2">
                                 software interface modes (can always be added)
                               </h5>
-                              {iw['software_interface_modes'].map((c) => (
+                              {iw['supported_interface_modes'].map((c) => (
                                 <Badge color="secondary">{c}</Badge>
                               ))}
                               <h5 className="text-muted mt-2">

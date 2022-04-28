@@ -20,8 +20,8 @@ import {
 export default class AddBlock extends React.Component {
   static contextType = APIErrorContext
   state = {
-    IP: '',
-    Port: 0,
+    SrcIP: '',
+    DstIP: '',
     Protocol: 'tcp'
   }
 
@@ -49,8 +49,8 @@ export default class AddBlock extends React.Component {
     event.preventDefault()
 
     let block = {
-      IP: this.state.IP,
-      Port: this.state.Port,
+      SrcIP: this.state.SrcIP,
+      DstIP: this.state.DstIP,
       Protocol: this.state.Protocol
     }
 
@@ -60,11 +60,7 @@ export default class AddBlock extends React.Component {
       }
     }
 
-    if (this.props.type.toLowerCase() == 'src') {
-      firewallAPI.addBlockSrc(block).then(done)
-    } else {
-      firewallAPI.addBlockDst(block).then(done)
-    }
+    firewallAPI.addBlock(block).then(done)
   }
 
   componentDidMount() {}
@@ -81,11 +77,12 @@ export default class AddBlock extends React.Component {
     let Protocol = selOpt(this.state.Protocol)
 
     let IPs = [
-      { label: '1.1.1.1', value: '1.1.1.1' },
-      { label: '1.1.1.2', value: '1.1.1.2' }
+      { label: '0.0.0.0/0', value: '0.0.0.0/0' },
+      { label: '1.2.3.4', value: '1.2.3.4' }
     ]
 
-    let IP = selOpt(this.state.IP)
+    let SrcIP = selOpt(this.state.SrcIP)
+    let DstIP = selOpt(this.state.DstIP)
 
     return (
       <Form onSubmit={this.handleSubmit}>
@@ -102,27 +99,21 @@ export default class AddBlock extends React.Component {
           </Col>
           <Col md={6}>
             <FormGroup>
-              <Label for="SrcIP">IP address</Label>
+              <Label for="SrcIP">Src address</Label>
               <CreatableSelect
                 name="SrcIP"
-                value={IP}
+                value={SrcIP}
                 options={IPs}
-                onChange={(o) => this.handleChangeSelect('IP', o)}
+                onChange={(o) => this.handleChangeSelect('SrcIP', o)}
               />
-            </FormGroup>
-          </Col>
-          <Col md={3}>
-            <FormGroup>
-              <Label for="Port">Port</Label>
-              <Input
-                type="number"
-                id="Port"
-                placeholder="Port .. range"
-                name="Port"
-                value={this.state.Port}
-                onChange={this.handleChange}
+              <Label for="SrcIP">Dst address</Label>
+              <CreatableSelect
+                name="DstIP"
+                value={DstIP}
+                options={IPs}
+                onChange={(o) => this.handleChangeSelect('DstIP', o)}
               />
-              {/*<FormText tag="span">Port</FormText>*/}
+
             </FormGroup>
           </Col>
         </Row>

@@ -86,7 +86,7 @@ const ForwardList = (props) => {
               <tr>
                 <th>Protocol</th>
                 <th width="15%" className="text-right">
-                  Original Destination
+                  Source
                 </th>
                 <th width="5%"></th>
                 <th width="35%">Destination</th>
