@@ -65,7 +65,17 @@ func loadFirewallRules() error {
 }
 
 func deleteBlock(br BlockRule) error {
-  return nil
+  cmd := exec.Command("nft", "add", "element", "inet", "nat", "block", "{",
+          br.SrcIP, ".", br.DstIP, ".", br.Protocol, ":", "drop", "}")
+
+  _, err := cmd.Output()
+
+  if err != nil {
+    fmt.Println("failed to delete element", err)
+    fmt.Println(cmd)
+  }
+
+  return err
 }
 
 func deleteForwarding(f ForwardingRule) error {
@@ -112,7 +122,6 @@ func applyForwarding(forwarding []ForwardingRule) error {
     if err != nil {
       fmt.Println("failed to add element", err)
       fmt.Println(cmd)
-      return err
     }
 
   }
@@ -120,8 +129,20 @@ func applyForwarding(forwarding []ForwardingRule) error {
   return nil
 }
 
-func applyBlocking([] BlockRule) {
+func applyBlocking(blockRules [] BlockRule) error {
+  for _, br := range blockRules {
+      cmd := exec.Command("nft", "add", "element", "inet", "nat", "block", "{",
+              br.SrcIP, ".", br.DstIP, ".", br.Protocol, ":", "drop", "}")
 
+      _, err := cmd.Output()
+
+      if err != nil {
+        fmt.Println("failed to add element", err)
+        fmt.Println(cmd)
+      }
+  }
+
+  return nil
 }
 
 func applyFirewallRulesLocked() {
