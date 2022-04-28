@@ -191,7 +191,7 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 
   re := regexp.MustCompile("^[0-9\\-]*$")
 
-  if (fwd.SrcPort != "all" && !re.MatchString(fwd.SrcPort)) {
+  if (fwd.SrcPort != "any" && !re.MatchString(fwd.SrcPort)) {
     http.Error(w, "Invalid SrcPort", 400)
     return
   }
