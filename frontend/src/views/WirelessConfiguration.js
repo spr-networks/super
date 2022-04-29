@@ -22,7 +22,7 @@ import {
 } from 'reactstrap'
 
 export default class WirelessConfiguration extends Component {
-  state = { configText: '', tab: 'Interfaces' }
+  state = { config: '', tab: 'Interfaces' }
 
   static contextType = APIErrorContext
 
@@ -33,8 +33,8 @@ export default class WirelessConfiguration extends Component {
   async componentDidMount() {
     wifiAPI
       .config()
-      .then((data) => {
-        this.setState({ configText: data })
+      .then((config) => {
+        this.setState({ config })
       })
       .catch((err) => {
         this.context.reportError('API Failure get traffic: ' + err.message)
@@ -82,7 +82,18 @@ export default class WirelessConfiguration extends Component {
                 </TabPane>
 
                 <TabPane tabId="Hostapd">
-                  <pre>{this.state.configText}</pre>
+                  <dl className="row">
+                    {Object.keys(this.state.config).map((label) => (
+                      <>
+                        <>
+                          <dt className="col-sm-3 sm-text-right">{label}</dt>
+                          <dd className="col-sm-9">
+                            <>{this.state.config[label]}</>
+                          </dd>
+                        </>
+                      </>
+                    ))}
+                  </dl>
                 </TabPane>
               </TabContent>
             </Card>
