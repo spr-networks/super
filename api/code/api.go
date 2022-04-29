@@ -29,8 +29,6 @@ var ApiConfigPath = TEST_PREFIX + "/state/api/config"
 
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
-
-//var GroupsConfigFile = DevicesConfigPath + "zones.json"
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
 
 type InfluxConfig struct {
@@ -88,8 +86,6 @@ func loadConfig() {
 	}
 
 	initTraffic(config)
-
-	migrateZonesPsksV0()
 }
 
 func saveConfig() {
