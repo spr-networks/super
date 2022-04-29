@@ -101,14 +101,6 @@ class DeviceListing extends Component {
                   <Col md="8">
                     <CardTitle tag="h4">Configured Devices</CardTitle>
                   </Col>
-                  <Col md="4" className="text-right">
-                    <Link to="/admin/add_device">
-                      <Button className="btn-round" color="primary" outline>
-                        <i className="fa fa-plus" />
-                        Add
-                      </Button>
-                    </Link>
-                  </Col>
                 </Row>
               </CardHeader>
               <CardBody>
@@ -130,6 +122,12 @@ class DeviceListing extends Component {
                   </thead>
                   <tbody>{this.state.deviceRows}</tbody>
                 </Table>
+                <Link to="/admin/add_device">
+                  <Button className="btn-round" color="primary" outline>
+                    <i className="fa fa-plus" />
+                    Add Device
+                  </Button>
+                </Link>
               </CardBody>
             </Card>
           </Col>
