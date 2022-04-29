@@ -31,7 +31,7 @@ export default class Device extends Component {
     const device = this.props.device
 
     this.setState({
-      groups: device.Zones,
+      groups: device.Groups,
       name: device.Name,
       tags: device.DeviceTags
     })

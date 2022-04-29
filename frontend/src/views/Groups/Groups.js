@@ -28,7 +28,7 @@ export default class Groups extends Component {
 
       for (let MAC in devices) {
         let device = devices[MAC]
-        for (const entry of device.Zones) {
+        for (const entry of device.Groups) {
           members[entry].push(device)
         }
       }

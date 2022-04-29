@@ -53,38 +53,42 @@ const BlockList = (props) => {
           <CardTitle tag="h4">{title}</CardTitle>
         </CardHeader>
         <CardBody>
-          <Table>
-            <thead className="text-primary">
-              <tr>
-                <th>Protocol</th>
-                <th>Source</th>
-                <th>Destination</th>
-                <th width="5%" className="text-center">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((row) => (
+          {list.length ? (
+            <Table>
+              <thead className="text-primary">
                 <tr>
-                  <td>{row.Protocol}</td>
-                  <td>{row.SrcIP}</td>
-                  <td>{row.DstIP}</td>
-                  <td className="text-center">
-                    <Button
-                      className="btn-icon"
-                      color="danger"
-                      size="sm"
-                      type="button"
-                      onClick={(e) => deleteListItem(row)}
-                    >
-                      <i className="fa fa-times" />
-                    </Button>
-                  </td>
+                  <th>Protocol</th>
+                  <th>Source</th>
+                  <th>Destination</th>
+                  <th width="5%" className="text-center">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {list.map((row) => (
+                  <tr>
+                    <td>{row.Protocol}</td>
+                    <td>{row.SrcIP}</td>
+                    <td>{row.DstIP}</td>
+                    <td className="text-center">
+                      <Button
+                        className="btn-icon"
+                        color="danger"
+                        size="sm"
+                        type="button"
+                        onClick={(e) => deleteListItem(row)}
+                      >
+                        <i className="fa fa-times" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          ) : (
+            <p>There are no block rules configured yet</p>
+          )}
         </CardBody>
       </Card>
     </>

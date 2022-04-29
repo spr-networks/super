@@ -20,8 +20,8 @@ export class APINfmap extends API {
     return n + '_mac_src_access'
   }
 
-  getNFVerdictMap = (zone) => {
-    return this.get('/' + this.translate(zone)).then((v) => {
+  getNFVerdictMap = (group) => {
+    return this.get('/' + this.translate(group)).then((v) => {
       let vmap = v.nftables[1].map
       let results = []
       if (vmap.elem && vmap.type) {

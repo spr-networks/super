@@ -5,7 +5,7 @@ export class APIGroup extends API {
     super('')
   }
 
-  list = () => this.get('/zones')
+  list = () => this.get('/groups')
 }
 
 export const groupDescriptions = {

@@ -81,55 +81,59 @@ const ForwardList = (props) => {
           <CardTitle tag="h4">Traffic Forwarding</CardTitle>
         </CardHeader>
         <CardBody>
-          <Table responsive>
-            <thead className="text-primary">
-              <tr>
-                <th>Protocol</th>
-                <th width="15%" className="text-right">
-                  Source
-                </th>
-                <th width="5%"></th>
-                <th width="35%">Destination</th>
-
-                <th className="text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((row) => (
+          {list.length ? (
+            <Table responsive>
+              <thead className="text-primary">
                 <tr>
-                  <td>{row.Protocol}</td>
-                  <td className="text-right">
-                    {row.SrcIP}:{row.SrcPort}
-                  </td>
-                  <td className="text-center">
-                    <i className="fa fa-long-arrow-right" />
-                  </td>
-                  <td>
-                    {row.deviceDst ? (
-                      <>
-                        {row.deviceDst.Name}:{row.DstPort}
-                      </>
-                    ) : (
-                      <>
-                        {row.DstIP}:{row.DstPort}
-                      </>
-                    )}
-                  </td>
-                  <td className="text-center">
-                    <Button
-                      className="btn-icon"
-                      color="danger"
-                      size="sm"
-                      type="button"
-                      onClick={(e) => deleteListItem(row)}
-                    >
-                      <i className="fa fa-times" />
-                    </Button>
-                  </td>
+                  <th>Protocol</th>
+                  <th width="15%" className="text-right">
+                    Source
+                  </th>
+                  <th width="5%"></th>
+                  <th width="35%">Destination</th>
+
+                  <th className="text-center">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {list.map((row) => (
+                  <tr>
+                    <td>{row.Protocol}</td>
+                    <td className="text-right">
+                      {row.SrcIP}:{row.SrcPort}
+                    </td>
+                    <td className="text-center">
+                      <i className="fa fa-long-arrow-right" />
+                    </td>
+                    <td>
+                      {row.deviceDst ? (
+                        <>
+                          {row.deviceDst.Name}:{row.DstPort}
+                        </>
+                      ) : (
+                        <>
+                          {row.DstIP}:{row.DstPort}
+                        </>
+                      )}
+                    </td>
+                    <td className="text-center">
+                      <Button
+                        className="btn-icon"
+                        color="danger"
+                        size="sm"
+                        type="button"
+                        onClick={(e) => deleteListItem(row)}
+                      >
+                        <i className="fa fa-times" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          ) : (
+            <p>There are no forward rules configured yet</p>
+          )}
         </CardBody>
       </Card>
     </>
