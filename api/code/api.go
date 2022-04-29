@@ -114,6 +114,27 @@ func ipAddr(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(stdout))
 }
 
+
+func ipLinkUpDown(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	state := mux.Vars(r)["state"]
+
+	if state != "up" && state != "down" {
+		http.Error(w, "state must be `up` or `down`", 400)
+		return
+	}
+
+	cmd := exec.Command("ip", "link", "set", "dev", iface, state)
+	_, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println("ip link failed", err)
+		http.Error(w, "ip link failed", 400)
+		return
+	}
+
+}
+
 func iwCommand(w http.ResponseWriter, r *http.Request) {
 	command := mux.Vars(r)["command"]
 
@@ -1483,6 +1504,7 @@ func main() {
 
 	//ip information
 	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")
+	external_router_authenticated.HandleFunc("/ip/link/{interface}/{state}", ipLinkUpDown).Methods("PUT")
 
 	//iw list
 	external_router_authenticated.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")

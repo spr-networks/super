@@ -19,23 +19,6 @@ type HostapdConfigEntry struct {
 	Vht_oper_centr_freq_seg0_idx int
 }
 
-//hostapd API
-/*
-func scanWiFi(w http.ResponseWriter, r *http.Request) {
-	// find unused wireless interface
-
-	out, err := RunHostapdCommand("interface")
-	// scan for wireless networks
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-
-	}
-
-	// return list of wireless networks with signal strength and channel widths available
-
-}
-*/
-
 func RunHostapdAllStations() (map[string]map[string]string, error) {
 	m := map[string]map[string]string{}
 	out, err := RunHostapdCommand("all_sta")
