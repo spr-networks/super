@@ -7,7 +7,7 @@ export class APIWifi extends API {
   }
 
   config = () => this.get('hostapd/config')
-  updateConfig = (config) => this.put('hostapd/config')
+  updateConfig = (config) => this.put('hostapd/config', config)
   allStations = () => this.get('hostapd/all_stations')
   status = () => this.get('hostapd/status')
   arp = () => this.get('arp')
