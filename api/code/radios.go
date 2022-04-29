@@ -16,6 +16,7 @@ var HostapdConf = "/configs/wifi/hostapd.conf"
 type HostapdConfigEntry struct {
 	Ssid    string
 	Channel int
+	Vht_oper_centr_freq_seg0_idx int
 }
 
 //hostapd API
