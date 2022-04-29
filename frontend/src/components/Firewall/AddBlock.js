@@ -143,6 +143,5 @@ export default class AddBlock extends React.Component {
 }
 
 AddBlock.propTypes = {
-  type: PropTypes.string.isRequired,
   notifyChange: PropTypes.func
 }

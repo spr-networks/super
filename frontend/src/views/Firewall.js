@@ -19,7 +19,6 @@ export default class Firewall extends Component {
 
   componentDidMount() {
     this.fetchConfig()
-    console.log(this.state.config.BlockRules)
   }
 
   render() {

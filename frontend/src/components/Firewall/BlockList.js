@@ -20,7 +20,6 @@ import {
 const BlockList = (props) => {
   let list = props.list || []
   let title = props.title || `BlockList:`
-  console.log("bl got", list)
 
   let refModal = useRef(null)
 

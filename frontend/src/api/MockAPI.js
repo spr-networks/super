@@ -23,8 +23,7 @@ export default function MockAPI() {
       wireguardpeer: Model,
       plugin: Model,
       forwardrule: Model,
-      blocksrc: Model,
-      blockdst: Model
+      blockrule: Model
     },
     seeds(server) {
       server.create('device', {
@@ -109,24 +108,23 @@ export default function MockAPI() {
         DstPort: 22
       })
       server.create('forwardrule', {
-        SIface: 'wlan0',
         Protocol: 'tcp',
-        SrcIP: '',
+        SrcIP: '0.0.0.0/0',
         SrcPort: 80,
         DstIP: '192.168.2.101',
         DstPort: 80
       })
 
-      server.create('blocksrc', {
-        IP: '192.168.1.102',
-        Port: 80,
+
+      server.create('blockrule', {
+        SrcIP: '0.0.0.0/0',
+        DstIP: '192.168.1.102',
         Protocol: 'tcp'
       })
-
-      server.create('blockdst', {
-        IP: '23.23.23.23',
-        Port: 22,
-        Protocol: 'tcp'
+      server.create('blockrule', {
+        SrcIP: '1.2.3.4',
+        DstIP: '0.0.0.0/0',
+        Protocol: 'udp'
       })
 
       server.create('dnsblocklist', {
@@ -340,47 +338,464 @@ export default function MockAPI() {
       this.get('/iw/list', (schema) => {
         return [
           {
-            wiphy: 'phy1',
-            wiphy_index: 1,
-            max_scan_ssids: 4,
-            max_scan_ies_length: '2243 bytes',
-            max_sched_scan_ssids: 0,
-            max_match_sets: 0,
-            retry_short_limit: 7,
-            retry_long_limit: 4,
-            coverage_class: '0 (up to 0m)',
-            device_supports: ['RSN-IBSS', 'AP-side u-APSD', 'T-DLS'],
-            supported_ciphers: ['WEP40 (00-0f-ac:1)'],
-            bands: [
-              {
-                band: 'Band 1',
-                capabilities: ['0x1ff'],
-                bitrates: ['1.0 Mbps (short preamble supported)']
-              }
-            ],
-            supported_interface_modes: ['IBSS', 'managed'],
-            supported_commands: ['new_interface', 'set_interface'],
-            software_interface_modes: ['AP/VLAN', 'monitor'],
-            valid_interface_combinations: [
-              '#{ IBSS } <= 1, #{ managed, AP, mesh point, P2P-client, P2P-GO } <= 2,',
-              'total <= 2, #channels <= 1, STA/AP BI must match'
-            ],
-            ht_capability_overrides: [
-              'MCS: ff ff ff ff ff ff ff ff ff ff',
-              'maximum A-MSDU length'
-            ],
-            supported_tx_frame_types: [
-              'IBSS: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0',
-              'managed: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0'
-            ],
-            supported_rx_frame_types: [
-              'IBSS: 0x40 0xb0 0xc0 0xd0',
-              'managed: 0x40 0xb0 0xd0'
-            ],
-            supported_extended_features: [
-              '[ VHT_IBSS ]: VHT-IBSS',
-              '[ RRM ]: RRM'
-            ]
+              "wiphy": "phy0",
+              "wiphy_index": 0,
+              "max_scan_ssids": 4,
+              "max_scan_ies_length": "2243 bytes",
+              "max_sched_scan_ssids": 0,
+              "max_match_sets": 0,
+              "retry_short_limit": 7,
+              "retry_long_limit": 4,
+              "coverage_class": "0 (up to 0m)",
+              "device_supports": [
+                  "RSN-IBSS",
+                  "AP-side u-APSD",
+                  "T-DLS"
+              ],
+              "supported_ciphers": [
+                  "WEP40 (00-0f-ac:1)",
+                  "WEP104 (00-0f-ac:5)",
+                  "TKIP (00-0f-ac:2)",
+                  "CCMP-128 (00-0f-ac:4)",
+                  "CCMP-256 (00-0f-ac:10)",
+                  "GCMP-128 (00-0f-ac:8)",
+                  "GCMP-256 (00-0f-ac:9)",
+                  "CMAC (00-0f-ac:6)",
+                  "CMAC-256 (00-0f-ac:13)",
+                  "GMAC-128 (00-0f-ac:11)",
+                  "GMAC-256 (00-0f-ac:12)",
+                  "Available Antennas: TX 0x3 RX 0x3",
+                  "Configured Antennas: TX 0x3 RX 0x3"
+              ],
+              "bands": [
+                  {
+                      "band": "Band 1",
+                      "capabilities": [
+                          "0x1ff",
+                          "RX LDPC",
+                          "HT20/HT40",
+                          "SM Power Save disabled",
+                          "RX Greenfield",
+                          "RX HT20 SGI",
+                          "RX HT40 SGI",
+                          "TX STBC",
+                          "RX STBC 1-stream",
+                          "Max AMSDU length: 3839 bytes",
+                          "No DSSS/CCK HT40",
+                          "Maximum RX AMPDU length 65535 bytes (exponent: 0x003)",
+                          "Minimum RX AMPDU time spacing: No restriction (0x00)",
+                          "HT TX/RX MCS rate indexes supported: 0-15"
+                      ],
+                      "bitrates": [
+                          "1.0 Mbps (short preamble supported)",
+                          "2.0 Mbps (short preamble supported)",
+                          "5.5 Mbps (short preamble supported)",
+                          "11.0 Mbps (short preamble supported)",
+                          "6.0 Mbps",
+                          "9.0 Mbps",
+                          "12.0 Mbps",
+                          "18.0 Mbps",
+                          "24.0 Mbps",
+                          "36.0 Mbps",
+                          "48.0 Mbps",
+                          "54.0 Mbps"
+                      ]
+                  },
+                  {
+                      "band": "Band 2",
+                      "frequencies": [
+                          "5180 MHz [36] (18.0 dBm)",
+                          "5200 MHz [40] (18.0 dBm)",
+                          "5220 MHz [44] (18.0 dBm)",
+                          "5240 MHz [48] (18.0 dBm)",
+                          "5260 MHz [52] (18.0 dBm) (radar detection)",
+                          "5280 MHz [56] (18.0 dBm) (radar detection)",
+                          "5300 MHz [60] (18.0 dBm) (radar detection)",
+                          "5320 MHz [64] (18.0 dBm) (radar detection)",
+                          "5500 MHz [100] (18.0 dBm) (radar detection)",
+                          "5520 MHz [104] (18.0 dBm) (radar detection)",
+                          "5540 MHz [108] (18.0 dBm) (radar detection)",
+                          "5560 MHz [112] (18.0 dBm) (radar detection)",
+                          "5580 MHz [116] (18.0 dBm) (radar detection)",
+                          "5600 MHz [120] (18.0 dBm) (radar detection)",
+                          "5620 MHz [124] (18.0 dBm) (radar detection)",
+                          "5640 MHz [128] (18.0 dBm) (radar detection)",
+                          "5660 MHz [132] (18.0 dBm) (radar detection)",
+                          "5680 MHz [136] (18.0 dBm) (radar detection)",
+                          "5700 MHz [140] (18.0 dBm) (radar detection)",
+                          "5720 MHz [144] (18.0 dBm) (radar detection)",
+                          "5745 MHz [149] (18.0 dBm)",
+                          "5765 MHz [153] (18.0 dBm)",
+                          "5785 MHz [157] (18.0 dBm)",
+                          "5805 MHz [161] (18.0 dBm)",
+                          "5825 MHz [165] (18.0 dBm)",
+                          "5845 MHz [169] (18.0 dBm) (no IR)",
+                          "5865 MHz [173] (18.0 dBm) (no IR)"
+                      ],
+                      "capabilities": [
+                          "0x1ff",
+                          "RX LDPC",
+                          "HT20/HT40",
+                          "SM Power Save disabled",
+                          "RX Greenfield",
+                          "RX HT20 SGI",
+                          "RX HT40 SGI",
+                          "TX STBC",
+                          "RX STBC 1-stream",
+                          "Max AMSDU length: 3839 bytes",
+                          "No DSSS/CCK HT40",
+                          "Maximum RX AMPDU length 65535 bytes (exponent: 0x003)",
+                          "Minimum RX AMPDU time spacing: No restriction (0x00)",
+                          "HT TX/RX MCS rate indexes supported: 0-15"
+                      ],
+                      "vht_capabilities": [
+                          "Max MPDU length: 3895",
+                          "Supported Channel Width: neither 160 nor 80+80",
+                          "RX LDPC",
+                          "short GI (80 MHz)",
+                          "TX STBC",
+                          "RX antenna pattern consistency",
+                          "TX antenna pattern consistency"
+                      ],
+                      "vht_rx_mcs_set": [
+                          "1 streams: MCS 0-9",
+                          "2 streams: MCS 0-9",
+                          "3 streams: not supported",
+                          "4 streams: not supported",
+                          "5 streams: not supported",
+                          "6 streams: not supported",
+                          "7 streams: not supported",
+                          "8 streams: not supported",
+                          "VHT RX highest supported: 0 Mbps"
+                      ],
+                      "vht_tx_mcs_set": [
+                          "1 streams: MCS 0-9",
+                          "2 streams: MCS 0-9",
+                          "3 streams: not supported",
+                          "4 streams: not supported",
+                          "5 streams: not supported",
+                          "6 streams: not supported",
+                          "7 streams: not supported",
+                          "8 streams: not supported",
+                          "VHT TX highest supported: 0 Mbps"
+                      ],
+                      "bitrates": [
+                          "6.0 Mbps",
+                          "9.0 Mbps",
+                          "12.0 Mbps",
+                          "18.0 Mbps",
+                          "24.0 Mbps",
+                          "36.0 Mbps",
+                          "48.0 Mbps",
+                          "54.0 Mbps"
+                      ]
+                  }
+              ],
+              "supported_interface_modes": [
+                  "IBSS",
+                  "managed",
+                  "AP",
+                  "AP/VLAN",
+                  "monitor",
+                  "mesh point",
+                  "P2P-client",
+                  "P2P-GO"
+              ],
+              "supported_commands": [
+                  "new_interface",
+                  "set_interface",
+                  "new_key",
+                  "start_ap",
+                  "new_station",
+                  "new_mpath",
+                  "set_mesh_config",
+                  "set_bss",
+                  "authenticate",
+                  "associate",
+                  "deauthenticate",
+                  "disassociate",
+                  "join_ibss",
+                  "join_mesh",
+                  "remain_on_channel",
+                  "set_tx_bitrate_mask",
+                  "frame",
+                  "frame_wait_cancel",
+                  "set_wiphy_netns",
+                  "set_channel",
+                  "tdls_mgmt",
+                  "tdls_oper",
+                  "probe_client",
+                  "set_noack_map",
+                  "register_beacons",
+                  "start_p2p_device",
+                  "set_mcast_rate",
+                  "connect",
+                  "disconnect",
+                  "channel_switch",
+                  "set_qos_map",
+                  "set_multicast_to_unicast"
+              ],
+              "software_interface_modes": [
+                  "AP/VLAN",
+                  "monitor"
+              ],
+              "valid_interface_combinations": [
+                  "#{ IBSS } <= 1, #{ managed, AP, mesh point, P2P-client, P2P-GO } <= 2,",
+                  "total <= 2, #channels <= 1, STA/AP BI must match"
+              ],
+              "ht_capability_overrides": [
+                  "MCS: ff ff ff ff ff ff ff ff ff ff",
+                  "maximum A-MSDU length",
+                  "supported channel width",
+                  "short GI for 40 MHz",
+                  "max A-MPDU length exponent",
+                  "min MPDU start spacing",
+                  "Device supports TX status socket option.",
+                  "Device supports HT-IBSS.",
+                  "Device supports SAE with AUTHENTICATE command",
+                  "Device supports low priority scan.",
+                  "Device supports scan flush.",
+                  "Device supports AP scan.",
+                  "Device supports per-vif TX power setting",
+                  "Driver supports full state transitions for AP/GO clients",
+                  "Driver supports a userspace MPM",
+                  "Device supports active monitor (which will ACK incoming frames)",
+                  "Device supports configuring vdev MAC-addr on create.",
+                  "max # scan plans: 1",
+                  "max scan plan interval: -1",
+                  "max scan plan iterations: 0"
+              ],
+              "supported_tx_frame_types": [
+                  "IBSS: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0",
+                  "managed: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0",
+                  "AP: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0",
+                  "AP/VLAN: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0",
+                  "mesh point: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0",
+                  "P2P-client: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0",
+                  "P2P-GO: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0",
+                  "P2P-device: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0"
+              ],
+              "supported_rx_frame_types": [
+                  "IBSS: 0x40 0xb0 0xc0 0xd0",
+                  "managed: 0x40 0xb0 0xd0",
+                  "AP: 0x00 0x20 0x40 0xa0 0xb0 0xc0 0xd0",
+                  "AP/VLAN: 0x00 0x20 0x40 0xa0 0xb0 0xc0 0xd0",
+                  "mesh point: 0xb0 0xc0 0xd0",
+                  "P2P-client: 0x40 0xd0",
+                  "P2P-GO: 0x00 0x20 0x40 0xa0 0xb0 0xc0 0xd0",
+                  "P2P-device: 0x40 0xd0"
+              ],
+              "supported_extended_features": [
+                  "[ VHT_IBSS ]: VHT-IBSS",
+                  "[ RRM ]: RRM",
+                  "[ FILS_STA ]: STA FILS (Fast Initial Link Setup)",
+                  "[ CQM_RSSI_LIST ]: multiple CQM_RSSI_THOLD records",
+                  "[ CONTROL_PORT_OVER_NL80211 ]: control port over nl80211",
+                  "[ TXQS ]: FQ-CoDel-enabled intermediate TXQs",
+                  "[ AIRTIME_FAIRNESS ]: airtime fairness scheduling",
+                  "[ AQL ]: Airtime Queue Limits (AQL)",
+                  "[ SCAN_RANDOM_SN ]: use random sequence numbers in scans",
+                  "[ SCAN_MIN_PREQ_CONTENT ]: use probe request with only rate IEs in scans",
+                  "[ CONTROL_PORT_NO_PREAUTH ]: disable pre-auth over nl80211 control port support",
+                  "[ DEL_IBSS_STA ]: deletion of IBSS station support",
+                  "[ SCAN_FREQ_KHZ ]: scan on kHz frequency support",
+                  "[ CONTROL_PORT_OVER_NL80211_TX_STATUS ]: tx status for nl80211 control port support"
+              ]
+          },
+          {
+              "wiphy": "phy1",
+              "wiphy_index": 1,
+              "max_scan_ssids": 10,
+              "max_scan_ies_length": "2048 bytes",
+              "max_sched_scan_ssids": 16,
+              "max_match_sets": 16,
+              "retry_short_limit": 7,
+              "retry_long_limit": 4,
+              "coverage_class": "0 (up to 0m)",
+              "device_supports": [
+                  "roaming",
+                  "T-DLS"
+              ],
+              "supported_ciphers": [
+                  "WEP40 (00-0f-ac:1)",
+                  "WEP104 (00-0f-ac:5)",
+                  "TKIP (00-0f-ac:2)",
+                  "CCMP-128 (00-0f-ac:4)",
+                  "CMAC (00-0f-ac:6)",
+                  "Available Antennas: TX 0 RX 0"
+              ],
+              "bands": [
+                  {
+                      "band": "Band 1",
+                      "capabilities": [
+                          "0x1062",
+                          "HT20/HT40",
+                          "Static SM Power Save",
+                          "RX HT20 SGI",
+                          "RX HT40 SGI",
+                          "No RX STBC",
+                          "Max AMSDU length: 3839 bytes",
+                          "DSSS/CCK HT40",
+                          "Maximum RX AMPDU length 65535 bytes (exponent: 0x003)",
+                          "Minimum RX AMPDU time spacing: 16 usec (0x07)",
+                          "HT TX/RX MCS rate indexes supported: 0-7"
+                      ],
+                      "bitrates": [
+                          "1.0 Mbps",
+                          "2.0 Mbps (short preamble supported)",
+                          "5.5 Mbps (short preamble supported)",
+                          "11.0 Mbps (short preamble supported)",
+                          "6.0 Mbps",
+                          "9.0 Mbps",
+                          "12.0 Mbps",
+                          "18.0 Mbps",
+                          "24.0 Mbps",
+                          "36.0 Mbps",
+                          "48.0 Mbps",
+                          "54.0 Mbps"
+                      ]
+                  },
+                  {
+                      "band": "Band 2",
+                      "frequencies": [
+                          "5170 MHz [34] (disabled)",
+                          "5180 MHz [36] (20.0 dBm)",
+                          "5190 MHz [38] (disabled)",
+                          "5200 MHz [40] (20.0 dBm)",
+                          "5210 MHz [42] (disabled)",
+                          "5220 MHz [44] (20.0 dBm)",
+                          "5230 MHz [46] (disabled)",
+                          "5240 MHz [48] (20.0 dBm)",
+                          "5260 MHz [52] (20.0 dBm) (no IR, radar detection)",
+                          "5280 MHz [56] (20.0 dBm) (no IR, radar detection)",
+                          "5300 MHz [60] (20.0 dBm) (no IR, radar detection)",
+                          "5320 MHz [64] (20.0 dBm) (no IR, radar detection)",
+                          "5500 MHz [100] (20.0 dBm) (no IR, radar detection)",
+                          "5520 MHz [104] (20.0 dBm) (no IR, radar detection)",
+                          "5540 MHz [108] (20.0 dBm) (no IR, radar detection)",
+                          "5560 MHz [112] (20.0 dBm) (no IR, radar detection)",
+                          "5580 MHz [116] (20.0 dBm) (no IR, radar detection)",
+                          "5600 MHz [120] (20.0 dBm) (no IR, radar detection)",
+                          "5620 MHz [124] (20.0 dBm) (no IR, radar detection)",
+                          "5640 MHz [128] (20.0 dBm) (no IR, radar detection)",
+                          "5660 MHz [132] (20.0 dBm) (no IR, radar detection)",
+                          "5680 MHz [136] (20.0 dBm) (no IR, radar detection)",
+                          "5700 MHz [140] (20.0 dBm) (no IR, radar detection)",
+                          "5720 MHz [144] (20.0 dBm) (no IR, radar detection)",
+                          "5745 MHz [149] (20.0 dBm)",
+                          "5765 MHz [153] (20.0 dBm)",
+                          "5785 MHz [157] (20.0 dBm)",
+                          "5805 MHz [161] (20.0 dBm)",
+                          "5825 MHz [165] (20.0 dBm)"
+                      ],
+                      "capabilities": [
+                          "0x1062",
+                          "HT20/HT40",
+                          "Static SM Power Save",
+                          "RX HT20 SGI",
+                          "RX HT40 SGI",
+                          "No RX STBC",
+                          "Max AMSDU length: 3839 bytes",
+                          "DSSS/CCK HT40",
+                          "Maximum RX AMPDU length 65535 bytes (exponent: 0x003)",
+                          "Minimum RX AMPDU time spacing: 16 usec (0x07)",
+                          "HT TX/RX MCS rate indexes supported: 0-7"
+                      ],
+                      "vht_capabilities": [
+                          "Max MPDU length: 3895",
+                          "Supported Channel Width: neither 160 nor 80+80",
+                          "short GI (80 MHz)",
+                          "SU Beamformee"
+                      ],
+                      "vht_rx_mcs_set": [
+                          "1 streams: MCS 0-9",
+                          "2 streams: not supported",
+                          "3 streams: not supported",
+                          "4 streams: not supported",
+                          "5 streams: not supported",
+                          "6 streams: not supported",
+                          "7 streams: not supported",
+                          "8 streams: not supported",
+                          "VHT RX highest supported: 0 Mbps"
+                      ],
+                      "vht_tx_mcs_set": [
+                          "1 streams: MCS 0-9",
+                          "2 streams: not supported",
+                          "3 streams: not supported",
+                          "4 streams: not supported",
+                          "5 streams: not supported",
+                          "6 streams: not supported",
+                          "7 streams: not supported",
+                          "8 streams: not supported",
+                          "VHT TX highest supported: 0 Mbps"
+                      ],
+                      "bitrates": [
+                          "6.0 Mbps",
+                          "9.0 Mbps",
+                          "12.0 Mbps",
+                          "18.0 Mbps",
+                          "24.0 Mbps",
+                          "36.0 Mbps",
+                          "48.0 Mbps",
+                          "54.0 Mbps"
+                      ]
+                  }
+              ],
+              "supported_interface_modes": [
+                  "IBSS",
+                  "managed",
+                  "AP",
+                  "P2P-client",
+                  "P2P-GO",
+                  "P2P-device"
+              ],
+              "supported_commands": [
+                  "new_interface",
+                  "set_interface",
+                  "new_key",
+                  "start_ap",
+                  "join_ibss",
+                  "set_pmksa",
+                  "del_pmksa",
+                  "flush_pmksa",
+                  "remain_on_channel",
+                  "frame",
+                  "set_wiphy_netns",
+                  "set_channel",
+                  "tdls_oper",
+                  "start_sched_scan",
+                  "start_p2p_device",
+                  "connect",
+                  "disconnect",
+                  "crit_protocol_start",
+                  "crit_protocol_stop",
+                  "update_connect_params"
+              ],
+              "valid_interface_combinations": [
+                  "#{ managed } <= 1, #{ P2P-device } <= 1, #{ P2P-client, P2P-GO } <= 1,",
+                  "total <= 3, #channels <= 2",
+                  "#{ managed } <= 1, #{ AP } <= 1, #{ P2P-client } <= 1, #{ P2P-device } <= 1,",
+                  "total <= 4, #channels <= 1",
+                  "Device supports scan flush.",
+                  "Device supports randomizing MAC-addr in sched scans.",
+                  "max # scan plans: 1",
+                  "max scan plan interval: 508",
+                  "max scan plan iterations: 0"
+              ],
+              "supported_tx_frame_types": [
+                  "managed: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0",
+                  "AP: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0",
+                  "P2P-client: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0",
+                  "P2P-GO: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0",
+                  "P2P-device: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0"
+              ],
+              "supported_rx_frame_types": [
+                  "managed: 0x40 0xd0",
+                  "AP: 0x00 0x20 0x40 0xa0 0xb0 0xc0 0xd0",
+                  "P2P-client: 0x40 0xd0",
+                  "P2P-GO: 0x00 0x20 0x40 0xa0 0xb0 0xc0 0xd0",
+                  "P2P-device: 0x40 0xd0"
+              ]
           }
         ]
       })
@@ -388,29 +803,49 @@ export default function MockAPI() {
       this.get('/iw/dev', (schema) => {
         return {
           phy0: {
-            wlan0: {
-              ifindex: '3',
-              wdev: '0x1',
-              addr: '11:11:11:11:11:11',
-              ssid: 'ssid_sample_1',
-              type: 'managed',
-              channel: '11 (2462 MHz), width: 20 MHz, center1: 2462 MHz',
-              txpower: '16.00 dBm',
-              multicast_txq: {
-                qsz_byt: 0,
-                qsz_pkt: 0,
-                flows: 0,
-                drops: 0,
-                marks: 0,
-                overlmt: 0,
-                hashcol: 0,
-                tx_bytes: 0,
-                tx_packets: 0
+            "wlan1.4103": {
+                "ifindex": "62",
+                "wdev": "0x9",
+                "addr": "44:a5:6e:63:c5:f2",
+                "type": "AP/VLAN",
+                "channel": "36 (5180 MHz), width: 80 MHz, center1: 5210 MHz",
+                "txpower": "18.00 dBm"
+            },
+            "wlan1": {
+                "ifindex": "4",
+                "wdev": "0x1",
+                "addr": "44:a5:6e:63:c5:f2",
+                "ssid": "Ziggy",
+                "type": "AP",
+                "channel": "36 (5180 MHz), width: 80 MHz, center1: 5210 MHz",
+                "txpower": "18.00 dBm",
+                "multicast_txq": {
+                    "qsz_byt": 0,
+                    "qsz_pkt": 0,
+                    "flows": 0,
+                    "drops": 0,
+                    "marks": 0,
+                    "overlmt": 0,
+                    "hashcol": 0,
+                    "tx_bytes": 0,
+                    "tx_packets": 0
+                }
+            },
+          },
+          "phy1": {
+              "wlan0": {
+                  "ifindex": "3",
+                  "wdev": "0x100000001",
+                  "addr": "e4:5f:01:3c:4b:77",
+                  "type": "managed",
+                  "channel": "36 (5180 MHz), width: 20 MHz, center1: 5180 MHz",
+                  "txpower": "31.00 dBm"
               }
-            }
           }
+
         }
       })
+
       this.get('/iw/dev/:iface/scan', (schema, request) => {
         let iface = request.params.iface
 
@@ -986,8 +1421,7 @@ export default function MockAPI() {
       this.get('/firewall/config', (schema, request) => {
         return {
           ForwardingRules: schema.forwardrules.all().models,
-          BlockSrc: schema.blocksrcs.all().models,
-          BlockDst: schema.blockdsts.all().models
+          BlockRules: schema.blockrules.all().models,
         }
       })
 
@@ -1009,41 +1443,24 @@ export default function MockAPI() {
         return schema.forwardrules.where(attrs).destroy()
       })
 
-      this.put('/firewall/blocksrc', (schema, request) => {
+      this.put('/firewall/block', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
         let attrs = JSON.parse(request.requestBody)
-        return schema.blocksrcs.create(attrs)
+        return schema.blockrules.create(attrs)
       })
 
-      this.delete('/firewall/blocksrc', (schema, request) => {
+      this.delete('/firewall/block', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
         let attrs = JSON.parse(request.requestBody)
-        return schema.blocksrcs.where(attrs).destroy()
+        return schema.blockrules.where(attrs).destroy()
       })
 
-      this.put('/firewall/blockdst', (schema, request) => {
-        if (!authOK(request)) {
-          return new Response(401, {}, { error: 'invalid auth' })
-        }
-
-        let attrs = JSON.parse(request.requestBody)
-        return schema.blockdsts.create(attrs)
-      })
-
-      this.delete('/firewall/blockdst', (schema, request) => {
-        if (!authOK(request)) {
-          return new Response(401, {}, { error: 'invalid auth' })
-        }
-
-        let attrs = JSON.parse(request.requestBody)
-        return schema.blockdsts.where(attrs).destroy()
-      })
     }
   })
 
