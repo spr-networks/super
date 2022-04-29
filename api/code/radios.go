@@ -168,7 +168,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if newConf.Vht_oper_centr_freq_seg0_idx > 0 {
-		conf["vht_oper_centr_freq_seg0_idx"] = newConf.Channel
+		conf["vht_oper_centr_freq_seg0_idx"] = newConf.Vht_oper_centr_freq_seg0_idx
 	}
 
 	// write new conf
