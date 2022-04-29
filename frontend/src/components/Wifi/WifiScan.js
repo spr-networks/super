@@ -36,10 +36,15 @@ const WifiScan = (props) => {
 
   const scan = (_iface) => {
     setLoading(true)
-    wifiAPI.iwScan(_iface).then((scanList) => {
-      setList(scanList)
-      setLoading(false)
-    })
+
+    //set interface up
+    wifiAPI.ipLinkState(_iface,"up").then(
+      //then scan
+      wifiAPI.iwScan(_iface).then((scanList) => {
+        setList(scanList)
+        setLoading(false)
+      })
+    )
   }
 
   const onChange = (opt) => {

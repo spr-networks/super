@@ -12,6 +12,7 @@ export class APIWifi extends API {
   status = () => this.get('hostapd/status')
   arp = () => this.get('arp')
   ipAddr = () => this.get('ip/addr')
+  ipLinkState = (iface, state) => this.put(`ip/link/${iface}/${state}`)
   iwDev = () => this.get('iw/dev')
   iwList = () => this.get('iw/list')
   iwScan = (iface) => this.get(`iw/dev/${iface}/scan`)
