@@ -101,33 +101,50 @@ class DeviceListing extends Component {
                   <Col md="8">
                     <CardTitle tag="h4">Configured Devices</CardTitle>
                   </Col>
+                  <Col md="4" className="text-right">
+                    <Link to="/admin/add_device">
+                      <Button className="btn-round" color="primary" outline>
+                        <i className="fa fa-plus" />
+                        Add
+                      </Button>
+                    </Link>
+                  </Col>
                 </Row>
               </CardHeader>
               <CardBody>
-                <Table responsive>
-                  <thead className="text-primary">
-                    <tr>
-                      <th width="20%">Name</th>
-                      <th width="15%" className="text-center">
-                        IP/MAC
-                      </th>
-                      {/*<th className="d-none d-md-table-cell">IP</th>*/}
-                      <th width="7%">Auth</th>
-                      <th width="25%">Groups</th>
-                      <th width="25%">Tags</th>
-                      <th width="8%" className="text-right">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>{this.state.deviceRows}</tbody>
-                </Table>
-                <Link to="/admin/add_device">
-                  <Button className="btn-round" color="primary" outline>
-                    <i className="fa fa-plus" />
-                    Add Device
-                  </Button>
-                </Link>
+                {this.state.deviceRows.length ? (
+                  <Table responsive>
+                    <thead className="text-primary">
+                      <tr>
+                        <th width="20%">Name</th>
+                        <th width="15%" className="text-center">
+                          IP/MAC
+                        </th>
+                        <th width="7%">Auth</th>
+                        <th width="25%">Groups</th>
+                        <th width="25%">Tags</th>
+                        <th width="8%" className="text-right">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>{this.state.deviceRows}</tbody>
+                  </Table>
+                ) : (
+                  <p className="text-center">
+                    There are no devices configured yet
+                  </p>
+                )}
+                <Row>
+                  <Col md={12} className="text-center">
+                    <Link to="/admin/add_device">
+                      <Button className="btn-wd btn-round" color="primary">
+                        <i className="fa fa-plus" />
+                        Add Device
+                      </Button>
+                    </Link>
+                  </Col>
+                </Row>
               </CardBody>
             </Card>
           </Col>
