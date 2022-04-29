@@ -33,3 +33,5 @@ export const prettySignal = (signal) => {
 
   return <span className={className}>{signal}</span>
 }
+
+export const ucFirst = (t) => t[0].toUpperCase() + t.substr(1)

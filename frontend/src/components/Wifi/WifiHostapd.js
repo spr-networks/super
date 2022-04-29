@@ -1,24 +1,9 @@
 import { useEffect, useState } from 'react'
 
 import { wifiAPI } from 'api'
+import { ucFirst } from 'utils'
 
-import {
-  Badge,
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
-  CardSubtitle,
-  Label,
-  Nav,
-  NavItem,
-  NavLink,
-  TabContent,
-  TabPane,
-  Row,
-  Col
-} from 'reactstrap'
+import { Input, Row, Col } from 'reactstrap'
 
 const WifiHostapd = (props) => {
   const [config, setConfig] = useState({})
@@ -29,20 +14,36 @@ const WifiHostapd = (props) => {
     })
   }, [])
 
+  const handleChange = (e) => {
+    let name = e.target.name,
+      value = e.target.value
+
+    let configNew = config
+    configNew[name] = value
+    console.log(name, '=>', value, configNew)
+    setConfig(configNew)
+
+    name = ucFirst(name)
+    /*let config = {}
+    config[name] = value
+
+    wifiAPI.updateConfig(config).then((config) => {
+      setConfig(config)
+    })*/
+  }
+
+  const canEdit = ['ssid', 'channel']
+
   return (
     <>
       <Row>
         <Col>
-          <dl className="row">
-            {Object.keys(config).map((label) => (
-              <>
-                <dt className="col-sm-3 sm-text-right">{label}</dt>
-                <dd className="col-sm-9">
-                  <>{config[label]}</>
-                </dd>
-              </>
-            ))}
-          </dl>
+          {Object.keys(config).map((label) => (
+            <dl className="row" key={label}>
+              <dt className="col-sm-3 sm-text-right">{label}</dt>
+              <dd className="col-sm-9">{config[label]}</dd>
+            </dl>
+          ))}
         </Col>
       </Row>
     </>
