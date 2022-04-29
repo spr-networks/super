@@ -64,6 +64,21 @@ const WifiHostapd = (props) => {
   }
 
   return (
+    <dl className="row">
+      {Object.keys(config).map((label) => (
+        <>
+          <>
+            <dt className="col-sm-3 sm-text-right">{label}</dt>
+            <dd className="col-sm-9">
+              <>{config[label]}</>
+            </dd>
+          </>
+        </>
+      ))}
+    </dl>
+  )
+
+  return (
     <Form onSubmit={handleSubmit}>
       <Row>
         <Col>
