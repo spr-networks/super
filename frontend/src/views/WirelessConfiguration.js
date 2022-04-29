@@ -5,6 +5,7 @@ import { APIErrorContext } from 'layouts/Admin'
 import WifiClients from 'components/Wifi/WifiClients'
 import WifiInterfaceList from 'components/Wifi/WifiInterfaceList'
 import WifiScan from 'components/Wifi/WifiScan'
+import WifiHostapd from 'components/Wifi/WifiHostapd'
 
 import {
   Card,
@@ -80,20 +81,8 @@ export default class WirelessConfiguration extends Component {
                 <TabPane tabId="Scan">
                   <WifiScan />
                 </TabPane>
-
                 <TabPane tabId="Hostapd">
-                  <dl className="row">
-                    {Object.keys(this.state.config).map((label) => (
-                      <>
-                        <>
-                          <dt className="col-sm-3 sm-text-right">{label}</dt>
-                          <dd className="col-sm-9">
-                            <>{this.state.config[label]}</>
-                          </dd>
-                        </>
-                      </>
-                    ))}
-                  </dl>
+                  <WifiHostapd />
                 </TabPane>
               </TabContent>
             </Card>

@@ -992,7 +992,36 @@ export default function MockAPI() {
       })
 
       this.get('/hostapd/config', (schema) => {
-        return '"testconfig"'
+        return {
+          ap_isolate: 1,
+          auth_algs: 1,
+          channel: 36,
+          country_code: 'US',
+          ctrl_interface: '/state/wifi/control',
+          ht_capab:
+            '[LDPC][HT40+][HT40-][GF][SHORT-GI-20][SHORT-GI-40][TX-STBC][RX-STBC1]',
+          hw_mode: 'a',
+          ieee80211ac: 1,
+          ieee80211d: 1,
+          ieee80211n: 1,
+          ieee80211w: 1,
+          interface: 'wlan1',
+          multicast_to_unicast: 1,
+          per_sta_vif: 1,
+          preamble: 1,
+          rsn_pairwise: 'CCMP',
+          sae_psk_file: '/configs/wifi/sae_passwords',
+          ssid: 'TestLab',
+          vht_capab:
+            '[RXLDPC][SHORT-GI-80][TX-STBC-2BY1][RX-STBC-1][MAX-A-MPDU-LEN-EXP3][RX-ANTENNA-PATTERN][TX-ANTENNA-PATTERN]',
+          vht_oper_centr_freq_seg0_idx: 42,
+          vht_oper_chwidth: 1,
+          wmm_enabled: 1,
+          wpa: 2,
+          wpa_disable_eapol_key_retries: 1,
+          wpa_key_mgmt: 'WPA-PSK WPA-PSK-SHA256 SAE',
+          wpa_psk_file: '/configs/wifi/wpa2pskfile'
+        }
       })
 
       this.get('/hostapd/status', (schema) => {
