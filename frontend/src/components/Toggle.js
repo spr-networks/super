@@ -30,8 +30,10 @@ const Toggle = (props) => {
     }
   }, [props.isDisabled])
 
+  let style = props.isDisabled ? { opacity: 0.65 } : {}
+
   return (
-    <label className="switch">
+    <label className="switch" style={style}>
       <input
         type="checkbox"
         checked={isChecked}
