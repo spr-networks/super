@@ -3,8 +3,8 @@ package main
 import (
 	crand "crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -29,6 +29,7 @@ var ApiConfigPath = TEST_PREFIX + "/state/api/config"
 
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
+
 //var GroupsConfigFile = DevicesConfigPath + "zones.json"
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
 
@@ -52,8 +53,8 @@ type APIConfig struct {
 }
 
 type GroupEntry struct {
-	Name     string
-	Disabled bool
+	Name      string
+	Disabled  bool
 	GroupTags []string
 }
 
@@ -103,7 +104,6 @@ var UNIX_WIFID_LISTENER = TEST_PREFIX + "/state/wifi/apisock"
 var UNIX_DHCPD_LISTENER = TEST_PREFIX + "/state/dhcp/apisock"
 var UNIX_WIREGUARD_LISTENER = TEST_PREFIX + "/state/wireguard/apisock"
 
-
 func ipAddr(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("ip", "-j", "addr")
 	stdout, err := cmd.Output()
@@ -121,10 +121,10 @@ func ipAddr(w http.ResponseWriter, r *http.Request) {
 func iwCommand(w http.ResponseWriter, r *http.Request) {
 	command := mux.Vars(r)["command"]
 
-/*
-allowed commands for now:
-iw/list, iw/dev iw/dev/wlan0-9/scan
-*/
+	/*
+	   allowed commands for now:
+	   iw/list, iw/dev iw/dev/wlan0-9/scan
+	*/
 	validCommand := regexp.MustCompile(`^(list|dev)/?([a-z0-9\.]+\/scan)?$`).MatchString
 	if !validCommand(command) {
 		fmt.Println("invalid iw command")
@@ -143,36 +143,36 @@ iw/list, iw/dev iw/dev/wlan0-9/scan
 
 	// use json parsers if available (iw_list, iw_dev, iw-scan)
 	if command == "list" || command == "dev" || strings.HasSuffix(command, "scan") {
-			parser := "--iw_" + command // bug: jc dont allow - when using local parsers
-			if strings.HasSuffix(command, "scan") {
-				parser = "--iw-scan"
-			}
+		parser := "--iw_" + command // bug: jc dont allow - when using local parsers
+		if strings.HasSuffix(command, "scan") {
+			parser = "--iw-scan"
+		}
 
-			cmd = exec.Command("jc", parser)
+		cmd = exec.Command("jc", parser)
 
-			stdin, err := cmd.StdinPipe()
-			if err != nil {
-				fmt.Println("iwCommand stdin pipe error:", err)
-				http.Error(w, err.Error(), 400)
-				return
-			}
-
-			go func() {
-				defer stdin.Close()
-				io.WriteString(stdin, string(data))
-			}()
-
-			stdout, err := cmd.Output()
-			if err != nil {
-				fmt.Println("iwCommand stdout error:", err)
-				http.Error(w, err.Error(), 400)
-				return
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintf(w, string(stdout))
-
+		stdin, err := cmd.StdinPipe()
+		if err != nil {
+			fmt.Println("iwCommand stdin pipe error:", err)
+			http.Error(w, err.Error(), 400)
 			return
+		}
+
+		go func() {
+			defer stdin.Close()
+			io.WriteString(stdin, string(data))
+		}()
+
+		stdout, err := cmd.Output()
+		if err != nil {
+			fmt.Println("iwCommand stdout error:", err)
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, string(stdout))
+
+		return
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
@@ -676,14 +676,13 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 		for _, entry := range entries {
 
 			//do not flush wireguard entries from vmaps unless the incoming device is on the same interface
-			if strings.HasPrefix(Ifname, "wg"){
+			if strings.HasPrefix(Ifname, "wg") {
 				if Ifname != entry.ifname {
 					continue
 				}
 			} else if strings.HasPrefix(entry.ifname, "wg") {
 				continue
 			}
-
 
 			if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || (equalMAC(entry.mac, MAC) && (MAC != "")) {
 				if entry.mac != "" {
@@ -1043,8 +1042,7 @@ func wireguardUpdate(w http.ResponseWriter, r *http.Request) {
 	refreshWireguardDevice(val.MAC, wg.IP, wg.PublicKey, wg.Iface, wg.Name, r.Method == http.MethodPut)
 }
 
-
-func toTinyIP(IP string, delta uint32) (bool, net.IP)  {
+func toTinyIP(IP string, delta uint32) (bool, net.IP) {
 	//check for tiny-net range, to have matching priority with wifi
 	tinynet := os.Getenv("TINYNETSTART")
 	if tinynet != "" {
@@ -1059,7 +1057,6 @@ func toTinyIP(IP string, delta uint32) (bool, net.IP)  {
 
 	return false, net.IP{}
 }
-
 
 func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface string, Name string, Create bool) {
 	//1. delete this ip from any existing verdict maps for the same wireguard interface
@@ -1366,7 +1363,6 @@ func doReloadPSKFiles() {
 
 }
 
-
 func getLogs(w http.ResponseWriter, r *http.Request) {
 	// TODO params : --since "1 hour ago" --until "50 minutes ago"
 	// 2000 entries ~2mb of data
@@ -1511,8 +1507,6 @@ func main() {
 
 	// Wireguard actions
 	unix_wireguard_router.HandleFunc("/wireguardUpdate", wireguardUpdate).Methods("PUT", "DELETE")
-
-
 
 	os.Remove(UNIX_WIFID_LISTENER)
 	unixWifidListener, err := net.Listen("unix", UNIX_WIFID_LISTENER)

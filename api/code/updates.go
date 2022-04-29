@@ -21,7 +21,7 @@ type DeprecatedDeviceEntry struct {
 	VLANTag    string
 	RecentIP   string
 	PSKEntry   PSKEntry
-	Zones     []string
+	Zones      []string
 	DeviceTags []string
 }
 
