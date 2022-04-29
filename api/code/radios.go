@@ -180,7 +180,12 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO reload hostapd - NOTE will kick the client
+	_, err = RunHostapdCommand("reload")
+	if err != nil {
+		log.Fatal(err)
+		http.Error(w, err.Error(), 400)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conf)
