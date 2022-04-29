@@ -167,6 +167,10 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		conf["channel"] = newConf.Channel
 	}
 
+	if newConf.Vht_oper_centr_freq_seg0_idx > 0 {
+		conf["vht_oper_centr_freq_seg0_idx"] = newConf.Channel
+	}
+
 	// write new conf
 	data := ""
 	for key, value := range conf {
