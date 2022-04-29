@@ -11,6 +11,7 @@ import (
   "log"
   "regexp"
   "strconv"
+  "os"
 )
 
 import (
@@ -161,10 +162,10 @@ func initUserFirewallRules() {
   applyFirewallRulesLocked()
 
   //TBD expose upstream_tcp_port_drop nfmap to UI for toggling
-  enable_upstream := os.getenv("UPSTREAM_SERVICES_ENABLE")
-  if enable_upstream {
+  enable_upstream := os.Getenv("UPSTREAM_SERVICES_ENABLE")
+  if enable_upstream != "" {
     cmd := exec.Command("nft", "flush", "map", "inet", "filter", "upstream_tcp_port_drop")
-  	stdout, err := cmd.Output()
+  	_, err := cmd.Output()
 
   	if err != nil {
   		fmt.Println("Failed to disable", err)
