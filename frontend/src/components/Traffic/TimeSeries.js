@@ -100,7 +100,7 @@ const TimeSeries = (props) => {
                 <Button
                   size="sm"
                   color="primary"
-                  outline={view == 'chart'}
+                  outline={view !== 'chart'}
                   onClick={(e) => setView('chart')}
                 >
                   <i className="fa fa-bar-chart" />
@@ -108,7 +108,7 @@ const TimeSeries = (props) => {
                 <Button
                   size="sm"
                   color="primary"
-                  outline={view == 'table'}
+                  outline={view !== 'table'}
                   onClick={(e) => setView('table')}
                 >
                   <i className="fa fa-table" />

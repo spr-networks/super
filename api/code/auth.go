@@ -300,7 +300,7 @@ func (auth *authnconfig) authenticateToken(token string) bool {
 	if !exists {
 		//check api tokens
 		tokens := []string{}
-		data, err := os.ReadFile(TEST_PREFIX + "/state/api/auth_tokens")
+		data, err := os.ReadFile(TEST_PREFIX + "/configs/base/auth_tokens.json")
 		if err == nil {
 			json.Unmarshal(data, &tokens)
 		}
@@ -319,7 +319,7 @@ func (auth *authnconfig) authenticateToken(token string) bool {
 
 func (auth *authnconfig) authenticateUser(username string, password string) bool {
 	users := map[string]string{}
-	data, err := os.ReadFile(TEST_PREFIX + "/state/api/auth_users")
+	data, err := os.ReadFile(TEST_PREFIX + "/configs/base/auth_users.json")
 	if err == nil {
 		json.Unmarshal(data, &users)
 	}

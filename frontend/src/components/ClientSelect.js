@@ -47,7 +47,7 @@ class ClientSelect extends Component {
         return { label: `${d.RecentIP} ${d.Name}`, value: d.RecentIP }
       })
 
-    if (!this.props.isMulti) {
+    if (!this.props.isMulti && !this.props.skipAll) {
       options = [{ label: 'All clients', value: '*' }].concat(options)
     }
 
@@ -56,7 +56,7 @@ class ClientSelect extends Component {
     // set default value
     if (this.props.value) {
       this.updateValue(this.props.value)
-    } else if (!this.props.isMulti) {
+    } else if (!this.props.isMulti && !this.props.skipAll) {
       this.setState({ value: { label: 'All Clients', value: '*' } })
     }
   }
@@ -69,9 +69,10 @@ class ClientSelect extends Component {
 
   render() {
     let isMulti = this.props.isMulti !== undefined ? this.props.isMulti : false
-    let canAdd = this.props.canAdd !== undefined ? this.props.canAdd : false
+    let isCreatable =
+      this.props.isCreatable !== undefined ? this.props.isCreatable : false
 
-    if (canAdd) {
+    if (isCreatable) {
       return (
         <CreatableSelect
           isClearable
@@ -98,6 +99,7 @@ class ClientSelect extends Component {
 
 ClientSelect.propTypes = {
   isMulti: PropTypes.bool,
+  isCreatable: PropTypes.bool,
   value: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
   onChange: PropTypes.func
 }

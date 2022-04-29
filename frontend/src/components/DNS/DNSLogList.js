@@ -63,7 +63,7 @@ export default class DNSLogList extends React.Component {
     list.push(item)
     this.setState({ list })
     if (this.state.type == 'Domain') {
-      logAPI.addDomainIgnores(item)
+      logAPI.putDomainIgnore(item)
     } else {
       logAPI.putHostPrivacyList(list)
     }
@@ -71,18 +71,20 @@ export default class DNSLogList extends React.Component {
 
   deleteListItem(item) {
     if (this.state.type == 'Domain') {
-      return alert(`TODO: delete ${item}`)
-    }
-
-    let list = this.state.list.filter((_item) => _item != item)
-    logAPI
-      .putHostPrivacyList(list)
-      .then((res) => {
+      logAPI.deleteDomainIgnore(item).then((list) => {
         this.setState({ list })
       })
-      .catch((error) => {
-        this.context.reportError('API Failure: ' + error.message)
-      })
+    } else {
+      let list = this.state.list.filter((_item) => _item != item)
+      logAPI
+        .putHostPrivacyList(list)
+        .then((res) => {
+          this.setState({ list })
+        })
+        .catch((error) => {
+          this.context.reportError('API Failure: ' + error.message)
+        })
+    }
   }
 
   render() {

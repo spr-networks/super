@@ -1,6 +1,4 @@
-import { ConnectWebsocket } from 'components/Helpers/Api'
-
-const apiURL = () => {
+export const apiURL = () => {
   const { REACT_APP_API } = process.env
   if (REACT_APP_API) {
     try {
@@ -76,7 +74,7 @@ class API {
 
     return fetch(_url, opts).then((response) => {
       if (!response.ok) {
-        return Promise.reject(respose.status)
+        return Promise.reject({ message: response.status })
       }
 
       const contentType = response.headers.get('Content-Type')
@@ -86,9 +84,11 @@ class API {
 
       if (contentType.includes('application/json')) {
         return response.json()
+      } else if (contentType.includes('text/plain')) {
+        return response.text()
       }
 
-      return Promise.reject('unknown Content-Type')
+      return Promise.reject({ message: 'unknown Content-Type' })
     })
   }
 

@@ -5,10 +5,13 @@ import ReactBSAlert from 'react-bootstrap-sweetalert'
 
 import { APIErrorContext } from 'layouts/Admin'
 import ClientSelect from 'components/ClientSelect'
+import DNSAddOverride from './DNSAddOverride'
+import ModalForm from 'components/ModalForm'
 import { logAPI } from 'api/DNS'
 import { prettyDate } from 'utils'
 
 import {
+  Button,
   Card,
   CardHeader,
   CardBody,
@@ -34,7 +37,8 @@ export class DNSLogHistoryList extends React.Component {
     filterDateStart: '',
     filterDateEnd: '',
     showAlert: false,
-    alertText: ''
+    alertText: '',
+    selectedDomain: ''
   }
 
   constructor(props) {
@@ -44,10 +48,13 @@ export class DNSLogHistoryList extends React.Component {
     this.state.filterText = props.filterText || ''
     this.state.alertText = ''
 
+    this.modalRef = React.createRef(null)
+
     this.handleChangeIP = this.handleChangeIP.bind(this)
     this.handleChange = this.handleChange.bind(this)
     this.triggerAlert = this.triggerAlert.bind(this)
     this.closeAlert = this.closeAlert.bind(this)
+    this.deleteHistory = this.deleteHistory.bind(this)
   }
 
   async componentDidMount() {
@@ -190,6 +197,17 @@ export class DNSLogHistoryList extends React.Component {
     this.setState({ showAlert: false })
   }
 
+  deleteHistory(e) {
+    let msg = `Delete history for ${this.state.filterIPs.join(', ')}?`
+    if (!confirm(msg) || !this.state.filterIPs.length) {
+      return
+    }
+
+    this.state.filterIPs.map(logAPI.deleteHistory)
+
+    this.refreshList(this.state.filterIPs, this.filterList)
+  }
+
   render() {
     const prettyType = (type) => {
       let keys = {
@@ -211,6 +229,17 @@ export class DNSLogHistoryList extends React.Component {
       key: 'selection'
     }
 
+    const handleClickDomain = (e) => {
+      let selectedDomain = e.target.innerText
+      this.setState({ selectedDomain })
+      this.modalRef.current() // toggle modal
+      e.preventDefault()
+    }
+
+    const notifyChange = async () => {
+      this.modalRef.current()
+    }
+
     return (
       <>
         <ReactBSAlert
@@ -230,6 +259,22 @@ export class DNSLogHistoryList extends React.Component {
           </pre>
         </ReactBSAlert>
 
+        <ModalForm
+          key="mf"
+          title="Block domain"
+          modalRef={this.modalRef}
+          hideButton={true}
+        >
+          <DNSAddOverride
+            type="block"
+            domain={this.state.selectedDomain}
+            clientip={
+              this.state.filterIPs.length == 1 ? this.state.filterIPs[0] : '*'
+            }
+            notifyChange={notifyChange}
+          />
+        </ModalForm>
+
         <Card>
           <CardHeader>
             <CardTitle tag="h4">
@@ -247,7 +292,7 @@ export class DNSLogHistoryList extends React.Component {
                   />
                 </FormGroup>
               </Col>
-              <Col md="8">
+              <Col md="6">
                 <FormGroup>
                   <Label>Search</Label>
                   <InputGroup>
@@ -264,6 +309,26 @@ export class DNSLogHistoryList extends React.Component {
                       </InputGroupText>
                     </InputGroupAddon>
                   </InputGroup>
+                </FormGroup>
+              </Col>
+
+              <Col md="2">
+                <FormGroup
+                  className={
+                    this.state.filterIPs.length && this.state.list.length
+                      ? ''
+                      : 'd-none'
+                  }
+                >
+                  <Label>Delete history</Label>
+                  <Button
+                    className="mt-0"
+                    color="danger"
+                    type="button"
+                    onClick={this.deleteHistory}
+                  >
+                    Delete <i className="fa fa-times"></i>
+                  </Button>
                 </FormGroup>
               </Col>
               {/*
@@ -314,7 +379,7 @@ export class DNSLogHistoryList extends React.Component {
               </thead>
               <tbody>
                 {this.state.list.map((item, index) => (
-                  <tr key={item.Timestamp}>
+                  <tr key={Math.random().toString(36).substr(2, 9)}>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       {prettyDate(item.Timestamp)}
                     </td>
@@ -322,7 +387,11 @@ export class DNSLogHistoryList extends React.Component {
                     <td className={hideClient ? 'd-none' : null}>
                       {item.Remote.split(':')[0]}
                     </td>
-                    <td>{item.FirstName}</td>
+                    <td>
+                      <a target="/admin/dnsBlock" onClick={handleClickDomain}>
+                        {item.FirstName}
+                      </a>
+                    </td>
                     <td>
                       <a target="#" onClick={(e) => this.triggerAlert(index)}>
                         {item.FirstAnswer}

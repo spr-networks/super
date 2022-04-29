@@ -3,17 +3,19 @@ package main
 import (
 	crand "crypto/rand"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
-	"net/http/httputil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -22,13 +24,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var TEST_PREFIX = ""
-var DeprecatedZonesConfigPath = TEST_PREFIX + "/configs/zones/zones.json"
-var DeprecatedPSKConfigPath = TEST_PREFIX + "/configs/wifi/psks.json"
+var TEST_PREFIX = os.Getenv("TEST_PREFIX")
+var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
 
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
-var ZonesConfigFile = DevicesConfigPath + "zones.json"
+var GroupsConfigFile = DevicesConfigPath + "groups.json"
 
 type InfluxConfig struct {
 	URL    string
@@ -41,6 +42,7 @@ type PluginConfig struct {
 	Name     string
 	URI      string
 	UnixPath string
+	Enabled  bool
 }
 
 type APIConfig struct {
@@ -48,10 +50,10 @@ type APIConfig struct {
 	Plugins  []PluginConfig
 }
 
-type ZoneEntry struct {
-	Name     string
-	Disabled bool
-	ZoneTags []string
+type GroupEntry struct {
+	Name      string
+	Disabled  bool
+	GroupTags []string
 }
 
 type PSKEntry struct {
@@ -66,33 +68,14 @@ type DeviceEntry struct {
 	VLANTag    string
 	RecentIP   string
 	PSKEntry   PSKEntry
-	Zones      []string
+	Groups     []string
 	DeviceTags []string
-}
-
-/* Deprecated */
-
-type DeprecatedPSKEntry struct {
-	Type    string
-	Mac     string
-	Psk     string
-	Comment string
-}
-
-type DeprecatedClient struct {
-	Mac     string
-	Comment string
-}
-
-type DeprecatedClientZone struct {
-	Name    string
-	Clients []DeprecatedClient
 }
 
 var config = APIConfig{}
 
 func loadConfig() {
-	data, err := ioutil.ReadFile(TEST_PREFIX + "/state/api/config")
+	data, err := ioutil.ReadFile(ApiConfigPath)
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -103,142 +86,19 @@ func loadConfig() {
 	}
 
 	initTraffic(config)
-
-	migrateZonesPsksV0()
 }
 
-func migrateZonesPsksV0() {
-	//migrate old zone / psk files to the new format
-	saveUpdate := false
-	clientZones := []DeprecatedClientZone{}
-	psks := map[string]DeprecatedPSKEntry{}
-
-	devices := map[string]DeviceEntry{}
-	newZones := []ZoneEntry{}
-
-	data, err := ioutil.ReadFile(DeprecatedZonesConfigPath)
-	if err == nil {
-
-		err = json.Unmarshal(data, &clientZones)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		saveUpdate = true
-
-		for _, entry := range clientZones {
-			newZoneEntry := ZoneEntry{}
-			newZoneEntry.Name = entry.Name
-			newZoneEntry.ZoneTags = []string{}
-
-			for _, client := range entry.Clients {
-				client.Mac = trimLower(client.Mac)
-
-				val, exists := devices[client.Mac]
-				if !exists {
-					device := DeviceEntry{}
-					device.MAC = client.Mac
-					device.Name = client.Comment
-					device.DeviceTags = []string{}
-					device.Zones = []string{newZoneEntry.Name}
-					devices[client.Mac] = device
-				} else {
-					if val.Name == "" && client.Comment != "" {
-						val.Name = client.Comment
-					}
-					val.Zones = append(val.Zones, newZoneEntry.Name)
-					devices[client.Mac] = val
-				}
-			}
-
-			newZones = append(newZones, newZoneEntry)
-		}
-
+func saveConfig() {
+	file, _ := json.MarshalIndent(config, "", " ")
+	err := ioutil.WriteFile(ApiConfigPath, file, 0600)
+	if err != nil {
+		log.Fatal(err)
 	}
-
-	data, err = ioutil.ReadFile(DeprecatedPSKConfigPath)
-	if err == nil {
-		err = json.Unmarshal(data, &psks)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		saveUpdate = true
-
-		for _, entry := range psks {
-
-			val, exists := devices[entry.Mac]
-			if !exists {
-				device := DeviceEntry{}
-				device.MAC = entry.Mac
-				device.Name = entry.Comment
-				device.PSKEntry = PSKEntry{Type: entry.Type, Psk: entry.Psk}
-				device.DeviceTags = []string{}
-				device.Zones = []string{}
-				devices[entry.Mac] = device
-			} else {
-				val.PSKEntry = PSKEntry{Type: entry.Type, Psk: entry.Psk}
-				if val.Name == "" && entry.Comment != "" {
-					val.Name = entry.Comment
-				}
-				devices[entry.Mac] = val
-			}
-		}
-
-	}
-
-	if saveUpdate {
-		if _, err = os.Stat(DevicesConfigPath); os.IsNotExist(err) {
-			err := os.Mkdir(DevicesConfigPath, 0755)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		file, _ := json.MarshalIndent(devices, "", " ")
-		err = ioutil.WriteFile(DevicesConfigFile, file, 0600)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		file, _ = json.MarshalIndent(newZones, "", " ")
-		err = ioutil.WriteFile(ZonesConfigFile, file, 0600)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		err = os.Rename(DeprecatedZonesConfigPath, DeprecatedZonesConfigPath+".bak-upgrade")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		err = os.Rename(DeprecatedPSKConfigPath, DeprecatedPSKConfigPath+".bak-upgrade")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-	}
-
 }
 
 var UNIX_WIFID_LISTENER = TEST_PREFIX + "/state/wifi/apisock"
 var UNIX_DHCPD_LISTENER = TEST_PREFIX + "/state/dhcp/apisock"
-
-func showNFMap(w http.ResponseWriter, r *http.Request) {
-	name := mux.Vars(r)["name"]
-
-	cmd := exec.Command("nft", "-j", "list", "map", "inet", "filter", name)
-	stdout, err := cmd.Output()
-
-	if err != nil {
-		fmt.Println("show NFMap failed to list", name, "->", err)
-		http.Error(w, "Not found", 404)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, string(stdout))
-}
+var UNIX_WIREGUARD_LISTENER = TEST_PREFIX + "/state/wireguard/apisock"
 
 func ipAddr(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("ip", "-j", "addr")
@@ -252,6 +112,88 @@ func ipAddr(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, string(stdout))
+}
+
+
+func ipLinkUpDown(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	state := mux.Vars(r)["state"]
+
+	if state != "up" && state != "down" {
+		http.Error(w, "state must be `up` or `down`", 400)
+		return
+	}
+
+	cmd := exec.Command("ip", "link", "set", "dev", iface, state)
+	_, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println("ip link failed", err)
+		http.Error(w, "ip link failed", 400)
+		return
+	}
+
+}
+
+func iwCommand(w http.ResponseWriter, r *http.Request) {
+	command := mux.Vars(r)["command"]
+
+	/*
+	   allowed commands for now:
+	   iw/list, iw/dev iw/dev/wlan0-9/scan
+	*/
+	validCommand := regexp.MustCompile(`^(list|dev)/?([a-z0-9\.]+\/scan)?$`).MatchString
+	if !validCommand(command) {
+		fmt.Println("invalid iw command")
+		http.Error(w, "Invalid command", 400)
+		return
+	}
+
+	args := strings.Split(command, "/")
+	cmd := exec.Command("iw", args...)
+	data, err := cmd.Output()
+	if err != nil {
+		fmt.Println("iw command error:", err)
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	// use json parsers if available (iw_list, iw_dev, iw-scan)
+	if command == "list" || command == "dev" || strings.HasSuffix(command, "scan") {
+		parser := "--iw_" + command // bug: jc dont allow - when using local parsers
+		if strings.HasSuffix(command, "scan") {
+			parser = "--iw-scan"
+		}
+
+		cmd = exec.Command("jc", parser)
+
+		stdin, err := cmd.StdinPipe()
+		if err != nil {
+			fmt.Println("iwCommand stdin pipe error:", err)
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		go func() {
+			defer stdin.Close()
+			io.WriteString(stdin, string(data))
+		}()
+
+		stdout, err := cmd.Output()
+		if err != nil {
+			fmt.Println("iwCommand stdout error:", err)
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, string(stdout))
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprintf(w, string(data))
 }
 
 func getStatus(w http.ResponseWriter, r *http.Request) {
@@ -304,7 +246,10 @@ func getDevices(w http.ResponseWriter, r *http.Request) {
 
 func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 	identity := mux.Vars(r)["identity"]
-	identity = trimLower(identity)
+	if strings.Contains(identity, ":") {
+		//normalize MAC addresses
+		identity = trimLower(identity)
+	}
 
 	if identity == "" {
 		http.Error(w, "Invalid device identity", 400)
@@ -325,7 +270,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 	if dev.PSKEntry.Type != "" {
 		if dev.PSKEntry.Type != "sae" && dev.PSKEntry.Type != "wpa2" {
-			http.Error(w, "psk too short", 400)
+			http.Error(w, "invalid PSK Type", 400)
 			return
 		}
 	}
@@ -335,18 +280,18 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		return
 	}
 
-	//normalize zones and tags
-	dev.Zones = normalizeStringSlice(dev.Zones)
+	//normalize groups and tags
+	dev.Groups = normalizeStringSlice(dev.Groups)
 	dev.DeviceTags = normalizeStringSlice(dev.DeviceTags)
 	dev.MAC = trimLower(dev.MAC)
 
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
-	Zonesmtx.Lock()
-	defer Zonesmtx.Unlock()
+	Groupsmtx.Lock()
+	defer Groupsmtx.Unlock()
 
 	devices := getDevicesJson()
-	zones := getZonesJson()
+	groups := getGroupsJson()
 
 	val, exists := devices[identity]
 
@@ -355,7 +300,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		if exists {
 			delete(devices, identity)
 			saveDevicesJson(devices)
-			refreshDeviceZones(val)
+			refreshDeviceGroups(val)
 			return
 		}
 
@@ -369,10 +314,9 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		exists = false
 	}
 
-
 	pskGenerated := false
 	pskModified := false
-	refreshZones := false
+	refreshGroups := false
 
 	if exists {
 		//updating an existing entry. Check what was requested
@@ -417,35 +361,35 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			val.DeviceTags = dev.DeviceTags
 		}
 
-		if dev.Zones != nil && !equalStringSlice(val.Zones, dev.Zones) {
-			val.Zones = dev.Zones
+		if dev.Groups != nil && !equalStringSlice(val.Groups, dev.Groups) {
+			val.Groups = dev.Groups
 
-			saveZones := false
+			saveGroups := false
 
 			//create a new zone if it does not exist yet
-			for _, entry := range dev.Zones {
-				foundZone := false
-				for _, zone := range zones {
-					if zone.Name == entry {
-						foundZone = true
+			for _, entry := range dev.Groups {
+				foundGroup := false
+				for _, group := range groups {
+					if group.Name == entry {
+						foundGroup = true
 						break
 					}
 				}
 
-				if !foundZone {
-					saveZones = true
-					newZone := ZoneEntry{}
-					newZone.Name = entry
-					newZone.ZoneTags = []string{}
-					zones = append(zones, newZone)
+				if !foundGroup {
+					saveGroups = true
+					newGroup := GroupEntry{}
+					newGroup.Name = entry
+					newGroup.GroupTags = []string{}
+					groups = append(groups, newGroup)
 				}
 			}
 
-			if saveZones {
-				saveZonesJson(zones)
+			if saveGroups {
+				saveGroupsJson(groups)
 			}
 
-			refreshZones = true
+			refreshGroups = true
 		}
 
 		devices[identity] = val
@@ -456,8 +400,8 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			doReloadPSKFiles()
 		}
 
-		if refreshZones {
-			refreshDeviceZones(val)
+		if refreshGroups {
+			refreshDeviceGroups(val)
 		}
 
 		//mask the PSK if set and not generated
@@ -492,13 +436,13 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		dev.DeviceTags = []string{}
 	}
 
-	if dev.Zones == nil {
-		dev.Zones = []string{}
+	if dev.Groups == nil {
+		dev.Groups = []string{}
 	}
 
-	if len(dev.Zones) != 0 {
+	if len(dev.Groups) != 0 {
 		//update verdict maps for the device
-		refreshZones = true
+		refreshGroups = true
 	}
 
 	devices[identity] = dev
@@ -509,8 +453,8 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		doReloadPSKFiles()
 	}
 
-	if refreshZones {
-		refreshDeviceZones(val)
+	if refreshGroups {
+		refreshDeviceGroups(val)
 	}
 
 	if pskGenerated == false {
@@ -532,61 +476,61 @@ func pendingPSK(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(exists)
 }
 
-func saveZonesJson(zones []ZoneEntry) {
-	file, _ := json.MarshalIndent(zones, "", " ")
-	err := ioutil.WriteFile(ZonesConfigFile, file, 0600)
+func saveGroupsJson(groups []GroupEntry) {
+	file, _ := json.MarshalIndent(groups, "", " ")
+	err := ioutil.WriteFile(GroupsConfigFile, file, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func getZonesJson() []ZoneEntry {
-	zones := []ZoneEntry{}
-	data, err := ioutil.ReadFile(ZonesConfigFile)
+func getGroupsJson() []GroupEntry {
+	groups := []GroupEntry{}
+	data, err := ioutil.ReadFile(GroupsConfigFile)
 	if err != nil {
 		return nil
 	}
-	err = json.Unmarshal(data, &zones)
+	err = json.Unmarshal(data, &groups)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return zones
+	return groups
 }
 
-var Zonesmtx sync.Mutex
+var Groupsmtx sync.Mutex
 
-func getZones(w http.ResponseWriter, r *http.Request) {
-	Zonesmtx.Lock()
-	defer Zonesmtx.Unlock()
-	zones := getZonesJson()
+func getGroups(w http.ResponseWriter, r *http.Request) {
+	Groupsmtx.Lock()
+	defer Groupsmtx.Unlock()
+	groups := getGroupsJson()
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(zones)
+	json.NewEncoder(w).Encode(groups)
 }
 
-func updateZones(w http.ResponseWriter, r *http.Request) {
-	zone := ZoneEntry{}
-	err := json.NewDecoder(r.Body).Decode(&zone)
+func updateGroups(w http.ResponseWriter, r *http.Request) {
+	group := GroupEntry{}
+	err := json.NewDecoder(r.Body).Decode(&group)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
 
-	zone.Name = trimLower(zone.Name)
-	if zone.Name == "" {
-		http.Error(w, "Invalid zone name", 400)
+	group.Name = trimLower(group.Name)
+	if group.Name == "" {
+		http.Error(w, "Invalid group name", 400)
 		return
 	}
 
-	Zonesmtx.Lock()
-	defer Zonesmtx.Unlock()
-	zones := getZonesJson()
+	Groupsmtx.Lock()
+	defer Groupsmtx.Unlock()
+	groups := getGroupsJson()
 
 	if r.Method == http.MethodDelete {
-		//[]ZoneEntry
-		for idx, entry := range zones {
-			if entry.Name == zone.Name {
-				zones := append(zones[:idx], zones[idx+1:]...)
-				saveZonesJson(zones)
+		//[]GroupEntry
+		for idx, entry := range groups {
+			if entry.Name == group.Name {
+				groups := append(groups[:idx], groups[idx+1:]...)
+				saveGroupsJson(groups)
 				return
 			}
 		}
@@ -596,23 +540,23 @@ func updateZones(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//find the zone or update it
-	for idx, entry := range zones {
-		if entry.Name == zone.Name {
-			entry.Disabled = zone.Disabled
-			entry.ZoneTags = zone.ZoneTags
-			zones[idx] = entry
-			saveZonesJson(zones)
+	for idx, entry := range groups {
+		if entry.Name == group.Name {
+			entry.Disabled = group.Disabled
+			entry.GroupTags = group.GroupTags
+			groups[idx] = entry
+			saveGroupsJson(groups)
 			return
 		}
 	}
 
-	if zone.ZoneTags == nil {
-		zone.ZoneTags = []string{}
+	if group.GroupTags == nil {
+		group.GroupTags = []string{}
 	}
 
-	//make a new zone
-	zones = append(zones, zone)
-	saveZonesJson(zones)
+	//make a new group
+	groups = append(groups, group)
+	saveGroupsJson(groups)
 }
 
 func trimLower(a string) string {
@@ -649,14 +593,14 @@ func equalStringSlice(a []string, b []string) bool {
 }
 
 var (
-	builtin_maps  = []string{"internet_access", "dns_access", "lan_access"}
+	builtin_maps  = []string{"internet_access", "dns_access", "lan_access", "ethernet_filter"}
 	default_zones = []string{"isolated", "lan", "wan", "dns"}
 )
 
 func getVerdictMapNames() []string {
 	//get custom maps from zones
 	custom_maps := []string{}
-	zones := getZonesJson()
+	zones := getGroupsJson()
 	for _, z := range zones {
 		skip := false
 		for _, y := range default_zones {
@@ -666,7 +610,7 @@ func getVerdictMapNames() []string {
 			}
 		}
 		if skip == false {
-			custom_maps = append(custom_maps, z.Name+"_mac_src_access")
+			custom_maps = append(custom_maps, z.Name+"_src_access")
 			custom_maps = append(custom_maps, z.Name+"_dst_access")
 		}
 	}
@@ -733,7 +677,7 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 
 func getMapVerdict(name string) string {
 	//custom map filtering for destinations is split between two tables.
-	// the mac_src_access table is the second half, and _dst_access is the first half
+	// the src_access table is the second half, and _dst_access is the first half
 	// The first half uses a continue verdict to transfer into the second verdict map
 	if strings.Contains(name, "_dst_access") {
 		return "continue"
@@ -742,10 +686,21 @@ func getMapVerdict(name string) string {
 }
 
 func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, matchInterface bool) {
+
 	for _, name := range vmap_names {
 		entries := getNFTVerdictMap(name)
 		verdict := getMapVerdict(name)
 		for _, entry := range entries {
+
+			//do not flush wireguard entries from vmaps unless the incoming device is on the same interface
+			if strings.HasPrefix(Ifname, "wg") {
+				if Ifname != entry.ifname {
+					continue
+				}
+			} else if strings.HasPrefix(entry.ifname, "wg") {
+				continue
+			}
+
 			if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || (equalMAC(entry.mac, MAC) && (MAC != "")) {
 				if entry.mac != "" {
 					err := exec.Command("nft", "delete", "element", "inet", "filter", name, "{", entry.ipv4, ".", entry.ifname, ".", entry.mac, ":", verdict, "}").Run()
@@ -795,35 +750,43 @@ func updateAddr(Router string, Ifname string) {
 	}
 }
 
-func addVerdict(IP string, MAC string, Iface string, Table string) {
-	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ".", MAC, ":", "accept", "}").Run()
+func addVerdictMac(IP string, MAC string, Iface string, Table string, Verdict string) {
+	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ".", MAC, ":", Verdict, "}").Run()
 	if err != nil {
-		fmt.Println("addVerdict Failed", MAC, Iface, Table, err)
+		fmt.Println("addVerdictMac Failed", MAC, Iface, Table, err)
 		return
 	}
 }
 
-func addDNSVerdict(IP string, MAC string, Iface string) {
-	addVerdict(IP, MAC, Iface, "dns_access")
+func addVerdict(IP string, Iface string, Table string) {
+	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ":", "accept", "}").Run()
+	if err != nil {
+		fmt.Println("addVerdict Failed", Iface, Table, err)
+		return
+	}
 }
 
-func addLANVerdict(IP string, MAC string, Iface string) {
-	addVerdict(IP, MAC, Iface, "lan_access")
+func addDNSVerdict(IP string, Iface string) {
+	addVerdict(IP, Iface, "dns_access")
 }
 
-func addInternetVerdict(IP string, MAC string, Iface string) {
-	addVerdict(IP, MAC, Iface, "internet_access")
+func addLANVerdict(IP string, Iface string) {
+	addVerdict(IP, Iface, "lan_access")
 }
 
-func addCustomVerdict(ZoneName string, IP string, MAC string, Iface string) {
+func addInternetVerdict(IP string, Iface string) {
+	addVerdict(IP, Iface, "internet_access")
+}
+
+func addCustomVerdict(ZoneName string, IP string, Iface string) {
 	//create verdict maps if they do not exist
 	err := exec.Command("nft", "list", "map", "inet", "filter", ZoneName+"_dst_access").Run()
 	if err != nil {
 		//two verdict maps are used for establishing custom groups.
 		// the {name}_dst_access map allows Inet packets to a certain IP/interface pair
-		//the {name}_mac_src_access part allows Inet packets from a IP/IFace/MAC set
+		//the {name}_src_access part allows Inet packets from a IP/IFace set
 
-		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_mac_src_access", "{", "type", "ipv4_addr", ".", "ifname", ".", "ether_addr", ":", "verdict", ";", "}").Run()
+		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_src_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "}").Run()
 		if err != nil {
 			fmt.Println("addCustomVerdict Failed", err)
 			return
@@ -833,7 +796,7 @@ func addCustomVerdict(ZoneName string, IP string, MAC string, Iface string) {
 			fmt.Println("addCustomVerdict Failed", err)
 			return
 		}
-		err = exec.Command("nft", "insert", "rule", "inet", "filter", "FORWARD", "ip", "daddr", ".", "oifname", "vmap", "@"+ZoneName+"_dst_access", "ip", "saddr", ".", "iifname", ".", "ether", "saddr", "vmap", "@"+ZoneName+"_mac_src_access").Run()
+		err = exec.Command("nft", "insert", "rule", "inet", "filter", "CUSTOM_GROUPS", "ip", "daddr", ".", "oifname", "vmap", "@"+ZoneName+"_dst_access", "ip", "saddr", ".", "iifname", "vmap", "@"+ZoneName+"_src_access").Run()
 		if err != nil {
 			fmt.Println("addCustomVerdict Failed", err)
 			return
@@ -846,15 +809,15 @@ func addCustomVerdict(ZoneName string, IP string, MAC string, Iface string) {
 		return
 	}
 
-	err = exec.Command("nft", "add", "element", "inet", "filter", ZoneName+"_mac_src_access", "{", IP, ".", Iface, ".", MAC, ":", "accept", "}").Run()
+	err = exec.Command("nft", "add", "element", "inet", "filter", ZoneName+"_src_access", "{", IP, ".", Iface, ":", "accept", "}").Run()
 	if err != nil {
 		fmt.Println("addCustomVerdict Failed", err)
 		return
 	}
 }
 
-func populateVmapEntries(IP string, MAC string, Iface string) {
-	zones := getZonesJson()
+func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
+	zones := getGroupsJson()
 	zonesDisabled := map[string]bool{}
 
 	for _, zone := range zones {
@@ -863,11 +826,21 @@ func populateVmapEntries(IP string, MAC string, Iface string) {
 
 	devices := getDevicesJson()
 	val, exists := devices[MAC]
-	if !exists {
-		return
+
+	if MAC != "" {
+		if !exists {
+			//given a MAC that is not in the devices list. Exit
+			return
+		}
+	} else if WGPubKey != "" {
+		val, exists = devices[WGPubKey]
+		//wg pub key is unknown, exit
+		if !exists {
+			return
+		}
 	}
 
-	for _, zone_name := range val.Zones {
+	for _, zone_name := range val.Groups {
 		//skip zones that are disabled
 		if zonesDisabled[zone_name] {
 			continue
@@ -876,14 +849,14 @@ func populateVmapEntries(IP string, MAC string, Iface string) {
 		case "isolated":
 			continue
 		case "dns":
-			addDNSVerdict(IP, MAC, Iface)
+			addDNSVerdict(IP, Iface)
 		case "lan":
-			addLANVerdict(IP, MAC, Iface)
+			addLANVerdict(IP, Iface)
 		case "wan":
-			addInternetVerdict(IP, MAC, Iface)
+			addInternetVerdict(IP, Iface)
 		default:
 			//custom group
-			addCustomVerdict(zone_name, IP, MAC, Iface)
+			addCustomVerdict(zone_name, IP, Iface)
 		}
 	}
 
@@ -942,8 +915,8 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	DHCPmtx.Lock()
 	defer DHCPmtx.Unlock()
 
-	Zonesmtx.Lock()
-	defer Zonesmtx.Unlock()
+	Groupsmtx.Lock()
+	defer Groupsmtx.Unlock()
 
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
@@ -958,12 +931,27 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 
 	devices := getDevicesJson()
 	val, exists := devices[dhcp.MAC]
+
+	if !exists {
+		//wireguard integration: smoothly handle a wireguard only device gaining a MAC for the first time
+		val, exists = lookupWGDevice(&devices, "", dhcp.IP)
+		if exists && val.MAC == "" && val.WGPubKey != "" {
+			//If an entry has no MAC assigned and does have a WG Pub Key
+			//assign a MAC and delete wg pubkey indexing. WIll be MAC indexed below
+			val.MAC = dhcp.MAC
+			delete(devices, val.WGPubKey)
+		} else {
+			//did not find a suitable entry
+			exists = false
+		}
+	}
+
 	if !exists {
 		//create a new device entry
 		newDevice := DeviceEntry{}
 		newDevice.MAC = dhcp.MAC
 		newDevice.RecentIP = dhcp.IP
-		newDevice.Zones = []string{}
+		newDevice.Groups = []string{}
 		newDevice.DeviceTags = []string{}
 		devices[newDevice.MAC] = newDevice
 	} else {
@@ -984,7 +972,11 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	updateArp(dhcp.Iface, dhcp.IP, dhcp.MAC)
 
 	//3. add entry to appropriate verdict maps
-	populateVmapEntries(dhcp.IP, dhcp.MAC, dhcp.Iface)
+
+	//add this MAC and IP to the ethernet filter
+	addVerdictMac(dhcp.IP, dhcp.MAC, dhcp.Iface, "ethernet_filter", "return")
+
+	populateVmapEntries(dhcp.IP, dhcp.MAC, dhcp.Iface, "")
 
 	//4. update local mappings file for DNS
 	updateLocalMappings(dhcp.IP, dhcp.Name)
@@ -992,7 +984,145 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	WSNotifyString("DHCPUpdateProcessed", "")
 }
 
-func refreshDeviceZones(dev DeviceEntry) {
+type WireguardUpdate struct {
+	IP        string
+	PublicKey string
+	Iface     string
+	Name      string
+}
+
+func wireguardUpdate(w http.ResponseWriter, r *http.Request) {
+	Groupsmtx.Lock()
+	defer Groupsmtx.Unlock()
+
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+
+	wg := WireguardUpdate{}
+	err := json.NewDecoder(r.Body).Decode(&wg)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	devices := getDevicesJson()
+	val, exists := lookupWGDevice(&devices, wg.PublicKey, wg.IP)
+
+	if r.Method == http.MethodDelete {
+		//delete a device's public key
+		if exists {
+			if val.MAC == "" {
+				//if no MAC is assigned, delete altogether
+				delete(devices, val.WGPubKey)
+			} else {
+				//otherwise update the WGPubKey to be empty
+				val.WGPubKey = ""
+				devices[val.MAC] = val
+			}
+			//falls through to save
+		} else {
+			http.Error(w, "Not found", 404)
+			return
+		}
+	} else {
+		if !exists {
+			//create a new device entry
+			newDevice := DeviceEntry{}
+			newDevice.RecentIP = wg.IP
+			newDevice.WGPubKey = wg.PublicKey
+			newDevice.Groups = []string{}
+			newDevice.DeviceTags = []string{}
+			devices[newDevice.WGPubKey] = newDevice
+			val = newDevice
+		} else {
+			//update recent IP
+			val.RecentIP = wg.IP
+			//override WGPubKey
+			if val.WGPubKey != wg.PublicKey {
+				val.WGPubKey = wg.PublicKey
+			}
+
+			if val.MAC != "" {
+				//key by MAC address when available
+				devices[val.MAC] = val
+				//remove WGPubKey
+				delete(devices, val.WGPubKey)
+			} else {
+				//key by WGPubKey
+				devices[val.WGPubKey] = val
+			}
+		}
+	}
+
+	saveDevicesJson(devices)
+
+	refreshWireguardDevice(val.MAC, wg.IP, wg.PublicKey, wg.Iface, wg.Name, r.Method == http.MethodPut)
+}
+
+func toTinyIP(IP string, delta uint32) (bool, net.IP) {
+	//check for tiny-net range, to have matching priority with wifi
+	tinynet := os.Getenv("TINYNETSTART")
+	if tinynet != "" {
+		_, subnet, _ := net.ParseCIDR(tinynet + "/24")
+		net_ip := net.ParseIP(IP)
+		if subnet.Contains(net_ip) {
+			u := binary.BigEndian.Uint32(net_ip.To4()) - delta
+			ip := net.IPv4(byte(u>>24), byte(u>>16), byte(u>>8), byte(u))
+			return true, ip
+		}
+	}
+
+	return false, net.IP{}
+}
+
+func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface string, Name string, Create bool) {
+	//1. delete this ip from any existing verdict maps for the same wireguard interface
+	flushVmaps(IP, MAC, Iface, getVerdictMapNames(), false)
+
+	if Create {
+		//2.  Add route
+
+		routeIP := IP
+		is_tiny, newIP := toTinyIP(IP, 2)
+		if is_tiny {
+			routeIP = newIP.String() + "/30"
+		}
+
+		err := exec.Command("ip", "route", "add", routeIP, "dev", Iface, "metric", "200").Run()
+		if err != nil {
+			fmt.Println("ip route add failed", IP, err)
+		}
+
+		//3. add entry to the appropriate verdict maps
+		populateVmapEntries(IP, MAC, Iface, PublicKey)
+
+		//4. update local mappings file for DNS
+		if Name != "" {
+			updateLocalMappings(IP, Name)
+		}
+	}
+}
+
+func lookupWGDevice(devices *map[string]DeviceEntry, WGPubKey string, IP string) (DeviceEntry, bool) {
+	//match first WGPubKey, then first RecentIP
+	for _, device := range *devices {
+		if WGPubKey != "" && device.WGPubKey == WGPubKey {
+			return device, true
+		}
+
+		if IP != "" && device.RecentIP == IP {
+			return device, true
+		}
+	}
+	return DeviceEntry{}, false
+}
+
+func refreshDeviceGroups(dev DeviceEntry) {
+	if dev.WGPubKey != "" {
+		//refresh wg based on WGPubKey
+		refreshWireguardDevice(dev.MAC, dev.RecentIP, dev.WGPubKey, "wg0", "", true)
+	}
+
 	ifname := ""
 	ipv4 := ""
 	//check arp tables for the MAC to get the IP
@@ -1021,7 +1151,7 @@ func refreshDeviceZones(dev DeviceEntry) {
 	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), shouldFlushByInterface(ifname))
 
 	//and re-add
-	populateVmapEntries(ipv4, dev.MAC, ifname)
+	populateVmapEntries(ipv4, dev.MAC, ifname, "")
 }
 
 // from https://github.com/ItsJimi/go-arp/blob/master/arp.go
@@ -1216,12 +1346,16 @@ func doReloadPSKFiles() {
 			//set wildcard password at front. hostapd uses a FILO for the sae keys
 			if entry.PSKEntry.Type == "sae" {
 				sae = entry.PSKEntry.Psk + "|mac=ff:ff:ff:ff:ff:ff" + "\n" + sae
+				//apple downgrade workaround https://feedbackassistant.apple.com/feedback/9991042
+				wpa2 = "00:00:00:00:00:00 " + entry.PSKEntry.Psk + "\n" + wpa2
 			} else if entry.PSKEntry.Type == "wpa2" {
 				wpa2 = "00:00:00:00:00:00 " + entry.PSKEntry.Psk + "\n" + wpa2
 			}
 		} else {
 			if entry.PSKEntry.Type == "sae" {
 				sae += entry.PSKEntry.Psk + "|mac=" + entry.MAC + "\n"
+				//apple downgrade workaround https://feedbackassistant.apple.com/feedback/9991042
+				wpa2 += entry.MAC + " " + entry.PSKEntry.Psk + "\n"
 			} else if entry.PSKEntry.Type == "wpa2" {
 				wpa2 += entry.MAC + " " + entry.PSKEntry.Psk + "\n"
 			}
@@ -1246,101 +1380,18 @@ func doReloadPSKFiles() {
 
 }
 
-//hostapd API
-/*
-func scanWiFi(w http.ResponseWriter, r *http.Request) {
-	// find unused wireless interface
-
-	out, err := RunHostapdCommand("interface")
-	// scan for wireless networks
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-
-	}
-
-	// return list of wireless networks with signal strength and channel widths available
-
-}
-*/
-
-func RunHostapdAllStations() (map[string]map[string]string, error) {
-	m := map[string]map[string]string{}
-	out, err := RunHostapdCommand("all_sta")
-	if err != nil {
-		return nil, err
-	}
-
-	mac := ""
-	for _, line := range strings.Split(out, "\n") {
-		if strings.Contains(line, "=") {
-			pair := strings.Split(line, "=")
-			if mac != "" {
-				m[mac][pair[0]] = pair[1]
-			}
-		} else if strings.Contains(line, ":") {
-			mac = line
-			m[mac] = map[string]string{}
-		}
-
-	}
-
-	return m, nil
-}
-
-func RunHostapdStatus() (map[string]string, error) {
-	m := map[string]string{}
-
-	out, err := RunHostapdCommand("status")
-	if err != nil {
-		return nil, err
-	}
-
-	for _, line := range strings.Split(out, "\n") {
-		if strings.Contains(line, "=") {
-			pair := strings.Split(line, "=")
-			m[pair[0]] = pair[1]
-		}
-
-	}
-	return m, nil
-}
-
-func RunHostapdCommand(cmd string) (string, error) {
-
-	outb, err := exec.Command("hostapd_cli", "-p", "/state/wifi/control", "-s", "/state/wifi", cmd).Output()
-	if err != nil {
-		return "", fmt.Errorf("Failed to execute command %s", cmd)
-	}
-	return string(outb), nil
-}
-
-func hostapdStatus(w http.ResponseWriter, r *http.Request) {
-	status, err := RunHostapdStatus()
+func getLogs(w http.ResponseWriter, r *http.Request) {
+	// TODO params : --since "1 hour ago" --until "50 minutes ago"
+	// 2000 entries ~2mb of data
+	data, err := exec.Command("journalctl", "-u", "docker.service", "-r", "-n", "2000", "-o", "json").Output()
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(status)
-}
-
-func hostapdAllStations(w http.ResponseWriter, r *http.Request) {
-	stations, err := RunHostapdAllStations()
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stations)
-}
-
-func hostapdConfiguration(w http.ResponseWriter, r *http.Request) {
-	data, err := ioutil.ReadFile("/configs/wifi/hostapd.conf")
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-	fmt.Fprint(w, string(data))
+	logs := strings.Replace(strings.Trim(string(data), "\n"), "\n", ",", -1)
+	fmt.Fprintf(w, "[%s]", logs)
 }
 
 //set up SPA handler. From gorilla mux's documentation
@@ -1382,34 +1433,6 @@ func logRequest(handler http.Handler) http.Handler {
 	})
 }
 
-func PluginProxy(config PluginConfig) (*httputil.ReverseProxy, error) {
-	return &httputil.ReverseProxy{
-		Director: func(req *http.Request) {
-			req.URL.Scheme = "http"
-			req.URL.Host = config.Name
-
-			//Empty headers from the request
-			//SECURITY benefit: API extensions do not receive credentials
-			req.Header = http.Header{}
-		},
-		Transport: &http.Transport{
-			Dial: func(network, addr string) (net.Conn, error) {
-				return net.Dial("unix", config.UnixPath)
-			},
-		},
-	}, nil
-}
-
-func ProxyRequestHandler(proxy *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		rest := mux.Vars(r)["rest"]
-		if rest != "" {
-			r.URL.Path = "/" + rest
-		}
-		proxy.ServeHTTP(w, r)
-	}
-}
-
 func main() {
 
 	loadConfig()
@@ -1428,6 +1451,7 @@ func main() {
 
 	unix_dhcpd_router := mux.NewRouter().StrictSlash(true)
 	unix_wifid_router := mux.NewRouter().StrictSlash(true)
+	unix_wireguard_router := mux.NewRouter().StrictSlash(true)
 	external_router_authenticated := mux.NewRouter().StrictSlash(true)
 	external_router_public := mux.NewRouter()
 
@@ -1442,6 +1466,13 @@ func main() {
 
 	//nftable helpers
 	external_router_authenticated.HandleFunc("/nfmap/{name}", showNFMap).Methods("GET")
+	external_router_authenticated.HandleFunc("/nftables", listNFTables).Methods("GET")
+	external_router_authenticated.HandleFunc("/nftable/{family}/{name}", showNFTable).Methods("GET")
+
+	// firewall
+	external_router_authenticated.HandleFunc("/firewall/config", getFirewallConfig).Methods("GET")
+	external_router_authenticated.HandleFunc("/firewall/forward", modifyForwardRules).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/block", blockIP).Methods("PUT", "DELETE")
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
@@ -1455,10 +1486,10 @@ func main() {
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
 
 	// Device management
-	external_router_authenticated.HandleFunc("/zones", getZones).Methods("GET")
-	external_router_authenticated.HandleFunc("/zones", updateZones).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")
+	external_router_authenticated.HandleFunc("/groups", updateGroups).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/devices", getDevices).Methods("GET")
-	external_router_authenticated.HandleFunc("/device/{identity}", handleUpdateDevice).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/device/{identity:.*}", handleUpdateDevice).Methods("PUT", "DELETE")
 
 	external_router_authenticated.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 
@@ -1468,11 +1499,22 @@ func main() {
 	//hostapd information
 	external_router_authenticated.HandleFunc("/hostapd/status", hostapdStatus).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/all_stations", hostapdAllStations).Methods("GET")
-	external_router_authenticated.HandleFunc("/hostapd/config", hostapdConfiguration).Methods("GET")
-//	external_router_authenticated.HandleFunc("/hostpad/scan", scanWiFi).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/config", hostapdConfig).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/config", hostapdUpdateConfig).Methods("PUT")
 
 	//ip information
 	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")
+	external_router_authenticated.HandleFunc("/ip/link/{interface}/{state}", ipLinkUpDown).Methods("PUT")
+
+	//iw list
+	external_router_authenticated.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")
+
+	//logs
+	external_router_authenticated.HandleFunc("/logs", getLogs).Methods("GET")
+
+	//plugins
+	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
+	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins).Methods("PUT", "DELETE")
 
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
@@ -1480,6 +1522,9 @@ func main() {
 
 	// DHCP actions
 	unix_dhcpd_router.HandleFunc("/dhcpUpdate", dhcpUpdate).Methods("PUT")
+
+	// Wireguard actions
+	unix_wireguard_router.HandleFunc("/wireguardUpdate", wireguardUpdate).Methods("PUT", "DELETE")
 
 	os.Remove(UNIX_WIFID_LISTENER)
 	unixWifidListener, err := net.Listen("unix", UNIX_WIFID_LISTENER)
@@ -1493,23 +1538,24 @@ func main() {
 		panic(err)
 	}
 
-	//Set up Plugin Proxies
-	for _, entry := range config.Plugins {
-		proxy, err := PluginProxy(entry)
-		if err != nil {
-			panic(err)
-		}
-		external_router_authenticated.HandleFunc("/plugins/"+entry.URI+"/", ProxyRequestHandler(proxy))
-		external_router_authenticated.HandleFunc("/plugins/"+entry.URI+"/"+"{rest:.*}", ProxyRequestHandler(proxy))
+	os.Remove(UNIX_WIREGUARD_LISTENER)
+	unixWireguardListener, err := net.Listen("unix", UNIX_WIREGUARD_LISTENER)
+	if err != nil {
+		panic(err)
 	}
+
+	PluginRoutes(external_router_authenticated)
 
 	wifidServer := http.Server{Handler: logRequest(unix_wifid_router)}
 	dhcpdServer := http.Server{Handler: logRequest(unix_dhcpd_router)}
+	wireguardServer := http.Server{Handler: logRequest(unix_wireguard_router)}
 
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
+	//initialize user firewall rules
+	initUserFirewallRules()
 	//start the websocket handler
 	WSRunNotify()
 	// collect traffic accounting statistics
@@ -1519,5 +1565,7 @@ func main() {
 
 	go wifidServer.Serve(unixWifidListener)
 
-	dhcpdServer.Serve(unixDhcpdListener)
+	go dhcpdServer.Serve(unixDhcpdListener)
+
+	wireguardServer.Serve(unixWireguardListener)
 }

@@ -1,6 +1,6 @@
 import { withRouter } from 'react-router'
 import { Link } from 'react-router-dom'
-import { deviceAPI } from 'api/Device'
+import { deviceAPI } from 'api'
 import { Component } from 'react'
 import Device from 'components/Devices/Device.js'
 import { APIErrorContext } from 'layouts/Admin.js'
@@ -32,8 +32,30 @@ class DeviceListing extends Component {
     this.refreshDevices = this.refreshDevices.bind(this)
   }
 
+  // set device oui if avail, else fail gracefully
+  async setOUIs(devices) {
+    let ouis = []
+    try {
+      ouis = await deviceAPI.ouis(
+        Object.keys(devices).filter((id) => id.includes(':'))
+      )
+    } catch (err) {
+      return
+    }
+
+    for (let mac in devices) {
+      devices[mac].oui = ''
+
+      for (let oui of ouis) {
+        if (oui.MAC == mac) {
+          devices[mac].oui = oui.Vendor
+        }
+      }
+    }
+  }
+
   async refreshDevices() {
-    const d = await deviceAPI.list().catch((error) => {
+    const devices = await deviceAPI.list().catch((error) => {
       this.context.reportError('API Failure: ' + error.message)
     })
 
@@ -41,18 +63,26 @@ class DeviceListing extends Component {
       this.refreshDevices()
     }
 
-    if (d) {
-      let divs = []
-      Object.keys(d).forEach((v) => {
-        const generatedID = Math.random().toString(36).substr(2, 9)
-
-        divs.push(
-          <Device key={generatedID} device={d[v]} notifyChange={notifyChange} />
-        )
-      })
-
-      this.setState({ devices: d, deviceRows: divs })
+    if (!devices) {
+      return
     }
+
+    await this.setOUIs(devices)
+
+    this.setState({ devices })
+
+    let divs = []
+    Object.keys(devices).forEach((v) => {
+      divs.push(
+        <Device
+          key={devices[v].Name}
+          device={devices[v]}
+          notifyChange={notifyChange}
+        />
+      )
+    })
+
+    this.setState({ deviceRows: divs })
   }
 
   componentDidMount() {
@@ -82,24 +112,39 @@ class DeviceListing extends Component {
                 </Row>
               </CardHeader>
               <CardBody>
-                <Table responsive>
-                  <thead className="text-primary">
-                    <tr>
-                      <th width="20%">Name</th>
-                      <th width="15%" className="text-center">
-                        IP/MAC
-                      </th>
-                      {/*<th className="d-none d-md-table-cell">IP</th>*/}
-                      <th width="7%">Auth</th>
-                      <th width="25%">Zones</th>
-                      <th width="25%">Tags</th>
-                      <th width="8%" className="text-right">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>{this.state.deviceRows}</tbody>
-                </Table>
+                {this.state.deviceRows.length ? (
+                  <Table responsive>
+                    <thead className="text-primary">
+                      <tr>
+                        <th width="20%">Name</th>
+                        <th width="15%" className="text-center">
+                          IP/MAC
+                        </th>
+                        <th width="7%">Auth</th>
+                        <th width="25%">Groups</th>
+                        <th width="25%">Tags</th>
+                        <th width="8%" className="text-right">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>{this.state.deviceRows}</tbody>
+                  </Table>
+                ) : (
+                  <p className="text-center">
+                    There are no devices configured yet
+                  </p>
+                )}
+                <Row>
+                  <Col md={12} className="text-center">
+                    <Link to="/admin/add_device">
+                      <Button className="btn-wd btn-round" color="primary">
+                        <i className="fa fa-plus" />
+                        Add Device
+                      </Button>
+                    </Link>
+                  </Col>
+                </Row>
               </CardBody>
             </Card>
           </Col>

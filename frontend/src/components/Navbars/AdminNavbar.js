@@ -1,86 +1,61 @@
-/*!
-
-=========================================================
-* Paper Dashboard PRO React - v1.3.0
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/paper-dashboard-pro-react
-* Copyright 2021 Creative Tim (https://www.creative-tim.com)
-
-* Coded by Creative Tim
-
-=========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-*/
-import React from "react";
-import classnames from "classnames";
-import { useLocation } from "react-router-dom";
+import React from 'react'
+import classnames from 'classnames'
+import { useLocation } from 'react-router-dom'
 import {
   Button,
   Collapse,
-  DropdownToggle,
-  DropdownMenu,
-  DropdownItem,
-  UncontrolledDropdown,
-  Form,
-  Input,
-  InputGroupAddon,
-  InputGroupText,
-  InputGroup,
   NavbarBrand,
   Navbar,
   NavItem,
   NavLink,
   Nav,
-  Container,
-} from "reactstrap";
+  Container
+} from 'reactstrap'
 
 function AdminNavbar(props) {
-  const [collapseOpen, setCollapseOpen] = React.useState(false);
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const [color, setColor] = React.useState("navbar-transparent");
-  const location = useLocation();
+  const [collapseOpen, setCollapseOpen] = React.useState(false)
+  const [sidebarOpen, setSidebarOpen] = React.useState(false)
+  const [color, setColor] = React.useState('navbar-transparent')
+  const location = useLocation()
   React.useEffect(() => {
-    window.addEventListener("resize", updateColor);
-  });
+    window.addEventListener('resize', updateColor)
+  })
   React.useEffect(() => {
     if (
       window.outerWidth < 993 &&
-      document.documentElement.className.indexOf("nav-open") !== -1
+      document.documentElement.className.indexOf('nav-open') !== -1
     ) {
-      document.documentElement.classList.toggle("nav-open");
+      document.documentElement.classList.toggle('nav-open')
     }
-  }, [location]);
+  }, [location])
   // function that adds color white/transparent to the navbar on resize (this is for the collapse)
   const updateColor = () => {
     if (window.innerWidth < 993 && collapseOpen) {
-      setColor("bg-white");
+      setColor('bg-white')
     } else {
-      setColor("navbar-transparent");
+      setColor('navbar-transparent')
     }
-  };
+  }
   // this function opens and closes the sidebar on small devices
   const toggleSidebar = () => {
-    document.documentElement.classList.toggle("nav-open");
-    setSidebarOpen(!sidebarOpen);
-  };
+    document.documentElement.classList.toggle('nav-open')
+    setSidebarOpen(!sidebarOpen)
+  }
   // this function opens and closes the collapse on small devices
   // it also adds navbar-transparent class to the navbar when closed
   // ad bg-white when opened
   const toggleCollapse = () => {
     if (!collapseOpen) {
-      setColor("bg-white");
+      setColor('bg-white')
     } else {
-      setColor("navbar-transparent");
+      setColor('navbar-transparent')
     }
-    setCollapseOpen(!collapseOpen);
-  };
+    setCollapseOpen(!collapseOpen)
+  }
   return (
     <>
       <Navbar
-        className={classnames("navbar-absolute fixed-top", color)}
+        className={classnames('navbar-absolute fixed-top', color)}
         expand="lg"
       >
         <Container fluid>
@@ -97,8 +72,8 @@ function AdminNavbar(props) {
               </Button>
             </div>
             <div
-              className={classnames("navbar-toggle", {
-                toggled: sidebarOpen,
+              className={classnames('navbar-toggle', {
+                toggled: sidebarOpen
               })}
             >
               <button
@@ -111,10 +86,8 @@ function AdminNavbar(props) {
                 <span className="navbar-toggler-bar bar3" />
               </button>
             </div>
-            <NavbarBrand href="#pablo" onClick={(e) => e.preventDefault()}>
-              <span className="d-none d-md-block">
-                SPR Admin
-              </span>
+            <NavbarBrand href="#spr" onClick={(e) => e.preventDefault()}>
+              <span className="d-none d-md-block">SPR Admin</span>
               <span className="d-block d-md-none">SPR Admin</span>
             </NavbarBrand>
           </div>
@@ -220,7 +193,7 @@ function AdminNavbar(props) {
         </Container>
       </Navbar>
     </>
-  );
+  )
 }
 
-export default AdminNavbar;
+export default AdminNavbar

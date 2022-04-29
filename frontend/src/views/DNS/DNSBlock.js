@@ -1,18 +1,15 @@
 import React, { Component, useContext } from 'react'
-import DNSBlocklist from "components/DNS/DNSBlocklist"
-import DNSOverrideList from "components/DNS/DNSOverrideList"
+import DNSBlocklist from 'components/DNS/DNSBlocklist'
+import DNSOverrideList from 'components/DNS/DNSOverrideList'
 import { APIErrorContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 import PluginDisabled from 'views/PluginDisabled'
 
-import {
-  Row,
-  Col,
-} from "reactstrap"
+import { Row, Col } from 'reactstrap'
 
 export default class DNSBlock extends Component {
   state = { enabled: true, PermitDomains: [], BlockDomains: [] }
-  static contextType = APIErrorContext;
+  static contextType = APIErrorContext
 
   constructor(props) {
     super(props)
@@ -28,13 +25,13 @@ export default class DNSBlock extends Component {
     try {
       let config = await blockAPI.config()
 
-      this.setState({BlockDomains: config.BlockDomains})
-      this.setState({PermitDomains: config.PermitDomains})
+      this.setState({ BlockDomains: config.BlockDomains })
+      this.setState({ PermitDomains: config.PermitDomains })
     } catch (error) {
-      if (error.message == '404') {
-        this.setState({enabled: false})
+      if ([404, 502].includes(error.message)) {
+        this.setState({ enabled: false })
       } else {
-        this.context.reportError("API Failure: " + error.message)
+        this.context.reportError('API Failure: ' + error.message)
       }
     }
   }
@@ -47,15 +44,15 @@ export default class DNSBlock extends Component {
         await this.refreshConfig()
         return
       }
-		}
-    
+    }
+
     if (!this.state.enabled) {
-      return (<PluginDisabled plugin="dns" />)
+      return <PluginDisabled plugin="dns" />
     }
 
     return (
       <div className="content">
-				<Row>
+        <Row>
           <Col md="12">
             <DNSBlocklist />
           </Col>
@@ -63,21 +60,20 @@ export default class DNSBlock extends Component {
         <Row>
           <Col md="12">
             <DNSOverrideList
-              key={generatedID+1}
+              key={generatedID + 1}
               list={this.state.BlockDomains}
-              title="Blocked Domain Override"
+              title="Block Custom Domain"
               notifyChange={notifyChange}
             />
-            <DNSOverrideList 
-              key={generatedID+2}
+            <DNSOverrideList
+              key={generatedID + 2}
               list={this.state.PermitDomains}
-              title="Allow Domain Override"
+              title="Allow Custom Domain"
               notifyChange={notifyChange}
             />
           </Col>
         </Row>
       </div>
-    );
-
+    )
   }
 }

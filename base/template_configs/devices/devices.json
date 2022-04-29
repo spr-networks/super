@@ -9,9 +9,9 @@
    "Type": "sae",
    "Psk": "secure passphrase"
   },
-  "Zones": [
+  "Groups": [
    "dns",
-   "wan",
+   "wan"
   ],
   "DeviceTags": []
  }

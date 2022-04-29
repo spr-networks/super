@@ -1,9 +1,11 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import './Toggle.css'
+import { cleanup } from '@testing-library/react'
 
 const Toggle = (props) => {
   const [isChecked, setIsChecked] = useState(props.isChecked || false)
+  const [isDisabled, setIsDisabled] = useState(props.isDisabled || false)
 
   const handleChange = (e) => {
     setIsChecked(!isChecked)
@@ -12,9 +14,30 @@ const Toggle = (props) => {
     }
   }
 
+  useEffect(() => {
+    setIsChecked(props.isChecked ? true : false)
+
+    return () => {
+      setIsChecked(false)
+    }
+  }, [props.isChecked])
+
+  useEffect(() => {
+    setIsDisabled(props.isDisabled ? true : false)
+
+    return () => {
+      setIsDisabled(false)
+    }
+  }, [props.isDisabled])
+
   return (
     <label className="switch">
-      <input type="checkbox" checked={isChecked} onChange={handleChange} />
+      <input
+        type="checkbox"
+        checked={isChecked}
+        disabled={isDisabled}
+        onChange={handleChange}
+      />
       <div className="slider"></div>
     </label>
   )
@@ -22,6 +45,7 @@ const Toggle = (props) => {
 
 Toggle.propTypes = {
   isChecked: PropTypes.bool,
+  isDisabled: PropTypes.bool,
   onChange: PropTypes.func
 }
 

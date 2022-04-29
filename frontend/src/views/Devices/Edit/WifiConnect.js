@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useHistory } from 'react-router-dom'
+import { Link, useHistory } from 'react-router-dom'
 import QRCode from 'react-qr-code'
 
 import { Button, Row, Col, Label } from 'reactstrap'
@@ -10,10 +10,10 @@ const Step2 = React.forwardRef((props, ref) => {
   let history = useHistory()
 
   const [passphraseText, setPassphraseText] = useState('')
-  const [success, setSuccess] = useState(<Label> Pending... </Label>)
-  const [done, setDone] = useState(false)
+  const [success, setSuccess] = useState(false)
   const [ssid, setSsid] = useState('')
   const [connectQR, setConnectQR] = useState('')
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     // fetch ap name
@@ -22,21 +22,20 @@ const Step2 = React.forwardRef((props, ref) => {
       .then((status) => {
         setSsid(status['ssid[0]'])
       })
-      .catch((error) => {})
-  })
+      .catch((error) => {
+        setError(error.message)
+      })
+  }, [])
 
   let checkPendingStatus = () => {
     deviceAPI
       .pendingPSK()
-      .then((value) => {
-        if (value == false) {
-          setSuccess(<Button color="success">Success</Button>)
-          setDone(true)
-        }
+      .then((gotPending) => {
+        setSuccess(gotPending === false)
       })
       .catch((error) => {
-        console.log('error')
-        console.log(error)
+        console.log('error:', error)
+        setError(error.message)
       })
   }
 
@@ -64,6 +63,7 @@ const Step2 = React.forwardRef((props, ref) => {
     let data = {
       MAC: wifi.mac || 'pending',
       Name: wifi.name,
+      Groups: wifi.groups,
       PSKEntry: {
         Psk: wifi.psk,
         Type: wifi.wpa
@@ -74,7 +74,6 @@ const Step2 = React.forwardRef((props, ref) => {
     deviceAPI
       .update(data)
       .then((value) => {
-        setSuccess(<Label> Waiting for connection... </Label>)
         if (psk_was_empty) {
           data.PSKEntry.Psk = value.PSKEntry.Psk
           setPassphraseText(value.PSKEntry.Psk)
@@ -87,8 +86,7 @@ const Step2 = React.forwardRef((props, ref) => {
         }
       })
       .catch((error) => {
-        console.log('error')
-        console.log(error)
+        setError(error.message)
       })
   }
 
@@ -101,19 +99,31 @@ const Step2 = React.forwardRef((props, ref) => {
 
   const isValidated = () => {
     //wait for a device to have connected (?)
-    if (done) {
+    if (success) {
       history.push('/admin/devices')
     }
-    return done
+    return success
   }
 
   return (
     <>
       {ssid ? <h5 className="info-text">SSID: {ssid}</h5> : null}
       <h5 className="info-text">Passphrase: {passphraseText}</h5>
-      <Row className="justify-content-center">
-        <Col lg="1">
-          <Row>{success}</Row>
+      <Row>
+        <Col md="12" className="text-center">
+          {success ? (
+            <Link to="/admin/devices">
+              <Button color="success">Success</Button>
+            </Link>
+          ) : (
+            <>
+              {error ? (
+                <Label className="text-danger">Error: {error}</Label>
+              ) : (
+                <Label>Waiting for connection...</Label>
+              )}
+            </>
+          )}
         </Col>
       </Row>
       {connectQR ? (

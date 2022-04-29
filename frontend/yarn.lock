@@ -9420,11 +9420,6 @@ react-bootstrap-sweetalert@^5.2.0:
   resolved "https://registry.npmjs.org/react-bootstrap-sweetalert/-/react-bootstrap-sweetalert-5.2.0.tgz"
   integrity sha512-7eaKHgDcYfoRUxiYPZuHjygeLa3yDycGWB+Xwr+PWo6h0HDixwfgGXqWBmDYXI4ZQ453BcY77iBWBZhRbnH/6g==
 
-react-bootstrap-switch@^15.5.3:
-  version "15.5.3"
-  resolved "https://registry.npmjs.org/react-bootstrap-switch/-/react-bootstrap-switch-15.5.3.tgz"
-  integrity sha1-lyh3kdTsDRiS0UJULn5SSAArElE=
-
 react-bootstrap-wizard@0.0.9:
   version "0.0.9"
   resolved "https://registry.npmjs.org/react-bootstrap-wizard/-/react-bootstrap-wizard-0.0.9.tgz"

@@ -11,9 +11,11 @@ if [ '!' -d "configs/" ]; then
 fi
 
 # gen configs
-./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
-./configs/scripts/gen_hostapd.sh > configs/wifi/hostapd.conf
-./configs/scripts/gen_watchdog.sh  > configs/watchdog/watchdog.conf
+if [ ! -f configs/dhcp/coredhcp.yml ]; then
+  ./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
+  ./configs/scripts/gen_hostapd.sh > configs/wifi/hostapd.conf
+  ./configs/scripts/gen_watchdog.sh  > configs/watchdog/watchdog.conf
+fi
 
 # make sure state directories and files exist
 mkdir -p state/api/

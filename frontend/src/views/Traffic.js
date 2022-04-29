@@ -217,8 +217,12 @@ export default class Traffic extends Component {
   async componentDidMount() {
     let lan_data = await this.processTrafficHistory('lan', this.state.lan_scale)
     let wan_data = await this.processTrafficHistory('wan', this.state.wan_scale)
-
-    this.setState({ lan: lan_data, wan: wan_data })
+    if (lan_data) {
+      this.setState({ lan: lan_data })
+    }
+    if (wan_data) {
+      this.setState({ wan: wan_data })
+    }
   }
 
   templateData = {

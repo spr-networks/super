@@ -31,8 +31,6 @@ export class DNSBlockMetrics extends DNSMetrics {
         icon="fa fa-ban text-danger"
         title="Blocked DNS queries"
         text={this.state.BlockedQueries}
-        textFooterHide={this.state.BlockedQueries + ' blocked'}
-        iconFooterHide="fa fa-ban"
       />
     )
   }
@@ -52,6 +50,7 @@ export class DNSBlockPercent extends DNSMetrics {
     return (
       <StatsChartWidget
         title="Percent Blocked"
+        type="Doughnut"
         descriptionHide="Query block Performance"
         labels={['Blocked', 'Total']}
         data={data}

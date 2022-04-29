@@ -1,7 +1,10 @@
 #!/bin/sh
+
+#comment below to DISABLE ssh, API from the Upstream Interface
+UPSTREAM_SERVICES_ENABLE=1
+
 SSID_NAME=TestLab
 SSID_INTERFACE=wlan1
-
 #PPPIF=eth0
 #WANIF=ppp0
 #PPP_VLANID=201
@@ -24,6 +27,3 @@ DOCKERNET=172.17.0.0/16
 DOCKERIF=docker0
 
 WIREGUARD_PORT=51280
-#WIREGUARD_NETWORK=192.168.3.1/24
-
-

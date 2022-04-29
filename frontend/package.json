@@ -11,6 +11,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "cypress": "cypress run",
+    "lint": "npx run prettier --write src",
     "eject": "react-scripts eject",
     "install:clean": "rm -rf node_modules/ && rm -rf package-lock.json && npm install && npm start",
     "compile-sass": "node-sass src/assets/scss/paper-dashboard.scss src/assets/css/paper-dashboard.css",
@@ -19,21 +20,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/creativetimofficial/ct-paper-dashboard-pro-react.git"
+    "url": "git+https://github.com/spr-networks/super.git"
   },
   "keywords": [
     "react",
-    "admin",
-    "reactjs",
-    "bootstrap",
-    "bootstrap4",
-    "reactstrap"
+    "admin"
   ],
-  "author": "Creative Tim <hello@creative-tim.com> (https://www.creative-tim.com)",
+  "author": "SPR (https://www.supernetworks.org/)",
   "bugs": {
-    "url": "https://github.com/creativetimofficial/ct-paper-dashboard-pro-react/issues"
+    "url": "https://github.com/spr-networks/super/issues"
   },
-  "homepage": "https://www.supernetworks.org/#/",
+  "homepage": "https://www.supernetworks.org/",
   "dependencies": {
     "@babel/polyfill": "^7.12.1",
     "@testing-library/jest-dom": "^5.16.3",
@@ -48,7 +45,6 @@
     "prop-types": "15.7.2",
     "react": "17.0.2",
     "react-bootstrap-sweetalert": "^5.2.0",
-    "react-bootstrap-switch": "^15.5.3",
     "react-bootstrap-wizard": "0.0.9",
     "react-chartjs-2": "^4.0.1",
     "react-dom": "17.0.2",

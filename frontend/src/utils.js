@@ -6,11 +6,11 @@ export const prettyDate = (timestamp, locales = null) => {
 export const prettySize = (sz, round = false) => {
   let szType = 'bytes'
 
-  if (sz >= 1e6) {
-    sz /= 1e6
+  if (sz >= 1024 * 1e3) {
+    sz /= 1024 * 1e3
     szType = 'MB'
-  } else if (sz >= 1e3) {
-    sz /= 1e3
+  } else if (sz >= 1024) {
+    sz /= 1024
     szType = 'kB'
   }
 
@@ -18,3 +18,20 @@ export const prettySize = (sz, round = false) => {
   sz = sz.toLocaleString()
   return `${sz} ${szType}`
 }
+
+export const prettySignal = (signal) => {
+  let className = 'text-muted'
+  if (signal >= -50) {
+    className = 'text-success font-weight-bold'
+  } else if (signal >= -60) {
+    className = 'text-success'
+  } else if (signal >= -70) {
+    className = 'text-warning'
+  } else {
+    className = 'text-danger'
+  }
+
+  return <span className={className}>{signal}</span>
+}
+
+export const ucFirst = (t) => t[0].toUpperCase() + t.substr(1)

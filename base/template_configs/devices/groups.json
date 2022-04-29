@@ -2,16 +2,16 @@
  {
   "Name": "dns",
   "Disabled": false,
-  "ZoneTags": []
+  "GroupTags": []
  },
  {
   "Name": "lan",
   "Disabled": false,
-  "ZoneTags": []
+  "GroupTags": []
  },
  {
   "Name": "wan",
   "Disabled": false,
-  "ZoneTags": []
+  "GroupTags": []
  }
 ]
