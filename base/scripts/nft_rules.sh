@@ -50,11 +50,36 @@ table inet filter {
     type ipv4_addr . ifname: verdict;
   }
 
+  map upstream_tcp_port_drop {
+    type inet_service : verdict;
+    elements = {
+      80: drop,
+      22: drop,
+      5201: drop
+    }
+  }
+
+  map lan_tcp_port_accept {
+    type inet_service : verdict;
+    elements = {
+      80: accept,
+      22: accept,
+      5201: accept
+    }
+  }
+
+  map lan_udp_accept {
+    type inet_service : verdict;
+    elements = {
+      1900: accept,
+      5353: accept
+    }
+  }
+
   chain INPUT {
     type filter hook input priority 0; policy drop;
 
     #jump USERDEF_INPUT
-    # Input rules
     iif lo counter accept
     counter jump F_EST_RELATED
 
@@ -65,16 +90,7 @@ table inet filter {
     iifname $WANIF udp dport {67, 1900, 5353} counter jump DROPLOGINP
 
     # drop ssh, iperf from upstream
-    #iifname $WANIF tcp dport {22, 5201, 80} counter jump DROPLOGINP
-
-    # Allow ssh, iperf3 from LAN
-    tcp dport {22, 5201, 80} counter accept
-
-    # Allow multicast
-    udp dport {1900, 5353} counter accept
-
-    # wireguard
-    #iifname wg0 udp dport 53 counter accept
+    counter iifname $WANIF tcp dport vmap @upstream_tcp_port_drop
 
     # DHCP Allow rules
     # Wired lan
@@ -93,6 +109,12 @@ table inet filter {
 
     # Dynamic verdict map for dns access
     counter udp dport 53  ip saddr . iifname vmap @dns_access
+
+    # Allow ssh, iperf3 from non WAN interfaces (see upstream_tcp_port_drop)
+    counter tcp dport vmap @lan_tcp_port_accept
+
+    # Allow udp for multicast proxy
+    counter udp dport vmap @lan_udp_accept
 
     # Fall through to log + drop
     counter jump DROPLOGINP
