@@ -1,13 +1,23 @@
 package main
 
 import (
-  "strings"
-  "net/http"
-  "fmt"
-  "os/exec"
-  "encoding/json"
-  "io/ioutil"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os/exec"
+	"strconv"
+	"strings"
 )
+
+var HostapdConf = "/configs/wifi/hostapd.conf"
+
+type HostapdConfigEntry struct {
+	Ssid    string
+	Channel int
+}
+
 //hostapd API
 /*
 func scanWiFi(w http.ResponseWriter, r *http.Request) {
@@ -96,11 +106,82 @@ func hostapdAllStations(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(stations)
 }
 
-func hostapdConfiguration(w http.ResponseWriter, r *http.Request) {
-	data, err := ioutil.ReadFile("/configs/wifi/hostapd.conf")
+func getHostapdJson() (map[string]interface{}, error) {
+	data, err := ioutil.ReadFile(HostapdConf)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	conf := map[string]interface{}{}
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, "#") || !strings.Contains(line, "=") {
+			continue
+		}
+
+		pieces := strings.Split(line, "=")
+		key := pieces[0]
+		//value := pieces[1]
+		value, err := strconv.ParseUint(pieces[1], 10, 64)
+		if err != nil {
+			conf[key] = pieces[1]
+		} else {
+			conf[key] = value
+		}
+	}
+
+	return conf, nil
+}
+
+func hostapdConfig(w http.ResponseWriter, r *http.Request) {
+	conf, err := getHostapdJson()
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-	fmt.Fprint(w, string(data))
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(conf)
+}
+
+func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
+	conf, err := getHostapdJson()
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	newConf := HostapdConfigEntry{}
+	err = json.NewDecoder(r.Body).Decode(&newConf)
+
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if len(newConf.Ssid) > 0 {
+		conf["ssid"] = newConf.Ssid
+	}
+
+	if newConf.Channel > 0 {
+		conf["channel"] = newConf.Channel
+	}
+
+	// write new conf
+	data := ""
+	for key, value := range conf {
+		data += fmt.Sprint(key, "=", value, "\n")
+	}
+
+	err = ioutil.WriteFile(HostapdConf, []byte(data), 0664)
+	if err != nil {
+		log.Fatal(err)
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	// TODO reload hostapd - NOTE will kick the client
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(conf)
 }

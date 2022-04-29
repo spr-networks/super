@@ -1478,8 +1478,8 @@ func main() {
 	//hostapd information
 	external_router_authenticated.HandleFunc("/hostapd/status", hostapdStatus).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/all_stations", hostapdAllStations).Methods("GET")
-	external_router_authenticated.HandleFunc("/hostapd/config", hostapdConfiguration).Methods("GET")
-	//	external_router_authenticated.HandleFunc("/hostpad/scan", scanWiFi).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/config", hostapdConfig).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/config", hostapdUpdateConfig).Methods("PUT")
 
 	//ip information
 	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")
