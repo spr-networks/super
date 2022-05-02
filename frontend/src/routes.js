@@ -16,6 +16,7 @@ import Wireguard from 'views/Wireguard'
 import Firewall from 'views/Firewall'
 import Logs from 'views/Logs'
 import Plugins from 'views/Plugins'
+import AuthSettings from 'views/AuthSettings'
 
 const routes = [
   {
@@ -158,6 +159,13 @@ const routes = [
         name: 'Logs',
         icon: 'fa fa-list-alt',
         component: Logs,
+        layout: '/admin'
+      },
+      {
+        path: '/auth/',
+        name: 'Auth',
+        icon: 'fa fa-user',
+        component: AuthSettings,
         layout: '/admin'
       }
     ]
