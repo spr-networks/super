@@ -1449,12 +1449,13 @@ func main() {
 	w, err := webauthn.New(&webauthn.Config{
 		RPDisplayName: "SPR",
 		RPID:          "localhost",
-		RPOrigin:      "http://localhost", // The origin URL for WebAuthn requests
+		RPOrigin:      "http://localhost:3000", // The origin URL for WebAuthn requests
 	})
 
 	if err != nil {
 		log.Fatal("failed to create WebAuthn from config:", err)
 	}
+
 	auth.webAuthn = w
 
 	unix_dhcpd_router := mux.NewRouter().StrictSlash(true)
@@ -1575,7 +1576,7 @@ func main() {
 	sslPort, runSSL := os.LookupEnv("API_SSL_PORT")
 
 	if runSSL {
-		listenPort, err := strconv.ParseUint(sslPort, 10, 64)
+		listenPort, err := strconv.Atoi(sslPort)
 		if err != nil {
 			listenPort = 443
 		}
