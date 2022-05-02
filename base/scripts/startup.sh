@@ -16,7 +16,7 @@ else
   ip link set dev $VLANIF up
 fi
 
-if [ "$NFT_OVERRIDE"]; then
+if [ "$NFT_OVERRIDE" ]; then
   . /configs/base/nft_rules.sh
 else
   . /scripts/nft_rules.sh
