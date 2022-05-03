@@ -1,6 +1,4 @@
 import React from 'react'
-// javascript plugin used to create scrollbars on windows
-import PerfectScrollbar from 'perfect-scrollbar'
 import { Route, Switch, useLocation } from 'react-router-dom'
 import NotificationAlert from 'react-notification-alert'
 import ReactBSAlert from 'react-bootstrap-sweetalert'
@@ -14,8 +12,6 @@ import { ConnectWebsocket } from 'api'
 import { Modal } from 'reactstrap'
 
 import routes from 'routes'
-
-var ps
 
 const errorState = {
   reportError: () => {},
@@ -91,21 +87,6 @@ function Admin(props) {
   // TODO -- merge
   modalState.reportError = modalState.modal
   modalState.success = modalState.modal
-
-  React.useEffect(() => {
-    if (navigator.platform.indexOf('Win') > -1) {
-      document.documentElement.className += ' perfect-scrollbar-on'
-      document.documentElement.classList.remove('perfect-scrollbar-off')
-      ps = new PerfectScrollbar(mainPanel.current)
-    }
-    return function cleanup() {
-      if (navigator.platform.indexOf('Win') > -1) {
-        ps.destroy()
-        document.documentElement.className += ' perfect-scrollbar-off'
-        document.documentElement.classList.remove('perfect-scrollbar-on')
-      }
-    }
-  })
 
   React.useEffect(() => {
     document.documentElement.scrollTop = 0
