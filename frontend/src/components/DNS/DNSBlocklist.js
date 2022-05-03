@@ -1,4 +1,5 @@
 import React from 'react'
+import { faPlus } from '@fortawesome/free-solid-svg-icons'
 
 import { blockAPI } from 'api/DNS'
 import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
@@ -125,7 +126,7 @@ export default class DNSBlocklist extends React.Component {
                 title="Add DNS Blocklist"
                 triggerText="add"
                 triggerClass="pull-right"
-                triggerIcon="fa fa-plus"
+                triggerIcon={faPlus}
                 modalRef={this.refAddBlocklistModal}
               >
                 <DNSAddBlocklist notifyChange={notifyChangeBlocklist} />

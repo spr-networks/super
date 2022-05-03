@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { faPlus } from '@fortawesome/free-solid-svg-icons'
 
 import { wireguardAPI, deviceAPI } from 'api'
 import WireguardAddPeer from 'components/Wireguard/WireguardAddPeer'
@@ -84,7 +85,7 @@ const PeerList = (props) => {
             title="Add Wireguard peer"
             triggerText="add"
             triggerClass="pull-right"
-            triggerIcon="fa fa-plus"
+            triggerIcon={faPlus}
             modalRef={refModal}
           >
             <WireguardAddPeer config={config} notifyChange={refreshPeers} />

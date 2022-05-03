@@ -1,5 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { faPlus } from '@fortawesome/free-solid-svg-icons'
+
 import ModalForm from 'components/ModalForm'
 import DNSAddOverride from 'components/DNS/DNSAddOverride'
 import { APIErrorContext } from 'layouts/Admin'
@@ -49,7 +51,7 @@ const DNSOverrideList = (props) => {
           title={'Add ' + props.title}
           triggerText="add"
           triggerClass="pull-right"
-          triggerIcon="fa fa-plus"
+          triggerIcon={faPlus}
           modalRef={modalRef}
         >
           <DNSAddOverride type={overrideType} notifyChange={notifyChange} />

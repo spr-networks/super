@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { faPlus } from '@fortawesome/free-solid-svg-icons'
 
 import { firewallAPI, deviceAPI } from 'api'
 import ModalForm from 'components/ModalForm'
@@ -72,7 +73,7 @@ const ForwardList = (props) => {
             title="Add Rewrite/Forwarding Rule"
             triggerText="add"
             triggerClass="pull-right"
-            triggerIcon="fa fa-plus"
+            triggerIcon={faPlus}
             modalRef={refModal}
           >
             <AddForward notifyChange={notifyChange} />

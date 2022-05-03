@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import PropTypes from 'prop-types'
+import { faPlus } from '@fortawesome/free-solid-svg-icons'
 
 import { firewallAPI } from 'api'
 import ModalForm from 'components/ModalForm'
@@ -44,7 +45,7 @@ const BlockList = (props) => {
             title={`Add IP Block`}
             triggerText="add"
             triggerClass="pull-right"
-            triggerIcon="fa fa-plus"
+            triggerIcon={faPlus}
             modalRef={refModal}
           >
             <AddBlock notifyChange={notifyChange} />

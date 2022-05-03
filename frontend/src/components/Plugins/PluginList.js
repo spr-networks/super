@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
-import { faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import {
   View,
@@ -71,7 +71,7 @@ const PluginList = (props) => {
             title="Add a new Plugin"
             triggerText="Add a plugin"
             triggerClass="pull-right"
-            triggerIcon="fa fa-plus"
+            triggerIcon={faPlus}
             modalRef={refModal}
           >
             <AddPlugin notifyChange={notifyChange} />
