@@ -1,6 +1,9 @@
 import { Component, useEffect, useState } from 'react'
 import { wifiAPI } from 'api/Wifi'
 import StatsWidget from './StatsWidget'
+import { faLaptop, faWifi } from '@fortawesome/free-solid-svg-icons'
+
+import { Divider, Box, Stack, Icon, Text } from 'native-base'
 
 import {
   Card,
@@ -30,7 +33,8 @@ export class WifiClients extends WifiClientCount {
   render() {
     return (
       <StatsWidget
-        icon="fa fa-laptop"
+        icon={faLaptop}
+        iconColor="light.600"
         title="Active WiFi Clients"
         text={this.state.numberOfWifiClients}
         textFooter="Online"
@@ -52,7 +56,8 @@ export class WifiInfo extends Component {
   render() {
     return (
       <StatsWidget
-        icon="fa fa-wifi text-info"
+        icon={faWifi}
+        iconColor="info.400"
         title="Wifi AP"
         text={this.state.ssid}
         textFooter={'Channel ' + this.state.channel}
@@ -84,37 +89,26 @@ export const Interfaces = (props) => {
   }, [])
 
   return (
-    <Card>
-      <CardBody>
-        <Row>
-          <Col lg={{ size: 8, offset: 2 }} md="10">
-            <CardTitle tag="h4" className="text-muted">
-              Interfaces
-            </CardTitle>
-            <CardBody>
-              <Table responsive>
-                <thead className="text-primary">
-                  <tr>
-                    <th>Interface</th>
-                    <th>IP Address</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {addrs.map((address) => (
-                    <tr key={address.local}>
-                      <td>{address.ifname}</td>
-                      <td>
-                        {address.local}/{address.prefixlen}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </CardBody>
-          </Col>
-        </Row>
-      </CardBody>
-    </Card>
+    <Box bg="white" borderRadius="10" mb="4" p="5">
+      <Text fontSize="lg" textAlign="center">
+        Interfaces
+      </Text>
+
+      <Divider _light={{ bg: 'muted.200' }} my="2" />
+
+      <Box px="10">
+        {addrs.map((address) => (
+          <Stack key={address.local} direction="row" space="2" pb="2">
+            <Text flex="1" textAlign="right" bold>
+              {address.ifname}
+            </Text>
+            <Text flex="1">
+              {address.local}/{address.prefixlen}
+            </Text>
+          </Stack>
+        ))}
+      </Box>
+    </Box>
   )
 }
 

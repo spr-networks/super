@@ -5,6 +5,8 @@ import chroma from 'chroma-js'
 
 import { prettySize } from 'utils'
 
+import { Divider, Box, HStack, Icon, Text } from 'native-base'
+
 import { Card, CardHeader, CardBody, CardFooter, CardTitle } from 'reactstrap'
 
 ChartJS.register(ArcElement, Tooltip, Legend, Title)
@@ -144,26 +146,20 @@ const StatsChartWidget = (props) => {
   }
 
   return (
-    <Card>
-      <CardHeader className="pt-0∂">
-        <CardTitle tag="h5" className="text-muted text-center">
-          {props.title}
-        </CardTitle>
-        {props.description ? (
-          <p className="card-category">{props.description}</p>
-        ) : null}
-      </CardHeader>
-      <CardBody className="pt-0">{chart}</CardBody>
+    <Box bg="white" borderRadius="10" mb="4" p="5">
+      <Text fontSize="lg" textAlign="center">
+        {props.title}
+      </Text>
+      {props.description ? <Text>{props.description}</Text> : null}
+      <Box>{chart}</Box>
       {props.footerText ? (
-        <CardFooter className="pt-0">
-          <hr />
-          <div className="stats">
-            <i className={props.footerIcon} />
-            {props.footerText}
-          </div>
-        </CardFooter>
+        <Box p="2">
+          <Divider _light={{ bg: 'muted.200' }} my="2" />
+          {/*<i className={props.footerIcon} />*/}
+          <Text>{props.footerText}</Text>
+        </Box>
       ) : null}
-    </Card>
+    </Box>
   )
 }
 

@@ -1,46 +1,43 @@
 import { Component } from 'react'
 
-import {
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  CardTitle,
-  Row,
-  Col,
-} from 'reactstrap'
+import { Divider, Box, HStack, Icon, Text } from 'native-base'
+
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 
 export default class StatsWidget extends Component {
   render() {
     return (
-      <Card className="card-stats">
-      <CardBody>
-        <Row>
-          <Col md="4" xs="5">
-            <div className="icon-big text-center">
-              <i className={"text-info " + this.props.icon} />
-            </div>
-          </Col>
-          <Col md="8" xs="7">
-            <div className="numbers">
-              <p className="card-category">{this.props.title}</p>
-              <CardTitle tag="p">
-                {this.props.text}
-              </CardTitle>
-            </div>
-          </Col>
-        </Row>
-      </CardBody>
-      {this.props.textFooter ? (
-      <CardFooter>
-        <hr />
-        <div className="stats">
-          <i className={this.props.iconFooter} />
-          {this.props.textFooter}
-        </div>
-      </CardFooter>
-      ) : (null)}
-    </Card>
-  )
+      <Box bg="white" borderRadius="10" mb="4">
+        <Box p="5">
+          <HStack justifyContent="space-between">
+            <Box justifyContent="space-between">
+              <Icon
+                as={FontAwesomeIcon}
+                size="20"
+                color={this.props.iconColor || 'warmGray.50'}
+                icon={this.props.icon}
+              />
+            </Box>
+            <Box justifyContent="space-between" py="1">
+              <Text textAlign="right" fontSize="lg">
+                {this.props.title}
+              </Text>
+              <Text textAlign="right">{this.props.text}</Text>
+            </Box>
+          </HStack>
+        </Box>
+        {this.props.textFooter ? (
+          <Box>
+            <Divider _light={{ bg: 'muted.200' }} />
+            <HStack p="2">
+              <Text color="warmGray.400" mr="1">
+                <i className={this.props.iconFooter} />
+              </Text>
+              <Text>{this.props.textFooter}</Text>
+            </HStack>
+          </Box>
+        ) : null}
+      </Box>
+    )
   }
 }

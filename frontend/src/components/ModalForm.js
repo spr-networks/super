@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
-
-import { Button, Modal } from 'reactstrap'
+import { Box, Button, IconButton, Modal } from 'native-base'
+//import { Button, Modal } from 'reactstrap'
 
 const ModalForm = (props) => {
   const [show, setShow] = useState(false)
@@ -22,41 +22,43 @@ const ModalForm = (props) => {
   })
 
   let triggerClass = `btn-round ${props.triggerClass}`
-
+  //className={triggerClass}
   return (
     <>
       {props.triggerText ? (
         <Button
-          className={triggerClass}
-          color="primary"
-          outline
-          onClick={toggleModal}
+          size="md"
+          variant="outline"
+          colorScheme="primary"
+          color="dark.400"
+          rounded="full"
+          leftIcon={
+            props.triggerIcon ? <i className={props.triggerIcon} /> : null
+          }
+          onPress={toggleModal}
         >
-          {props.triggerIcon ? <i className={props.triggerIcon} /> : null}
           {props.triggerText || 'Open Modal'}
         </Button>
       ) : null}
+
+      {/* **TODO** fix the icon here ----
+      <Icon as={Feather} name="plus" size="sm" color="warmGray.50" />
+              <IconButton
+          borderRadius="sm"
+          variant="solid"
+          icon={<i className={props.triggerIcon} />}
+          onPress={toggleModal}
+        />
+ */}
+
       {show ? (
-        <Modal
-          fade={false}
-          isOpen={show}
-          toggle={toggleModal}
-          autoFocus={false}
-        >
-          <div className="modal-header">
-            <button
-              aria-label="Close"
-              className="close"
-              data-dismiss="modal"
-              type="button"
-              onClick={toggleModal}
-            >
-              <i className="nc-icon nc-simple-remove" />
-            </button>
-            <h5 className="modal-title">{props.title || 'Title'}</h5>
-          </div>
-          <div className="modal-body">{props.children}</div>
-          <div className="modal-footer"></div>
+        <Modal isOpen={show} onClose={toggleModal} _fade={{}}>
+          <Modal.Content maxWidth="440px">
+            <Modal.CloseButton />
+            <Modal.Header>{props.title || 'Title'}</Modal.Header>
+            <Modal.Body>{props.children}</Modal.Body>
+            <Modal.Footer />
+          </Modal.Content>
         </Modal>
       ) : null}
     </>
