@@ -304,6 +304,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			delete(devices, identity)
 			saveDevicesJson(devices)
 			refreshDeviceGroups(val)
+			doReloadPSKFiles()
 			return
 		}
 
