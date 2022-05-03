@@ -50,8 +50,8 @@ function Login() {
   let formRef = React.createRef()
 
   const notificationAlert = React.useRef()
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
+  const [username, setUsername] = useState('admin')
+  const [password, setPassword] = useState('admin')
   const [loggedIn, setLoggedin] = useState(false)
 
   const notifyWrongLogin = () => {
