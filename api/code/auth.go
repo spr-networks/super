@@ -7,6 +7,9 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -20,8 +23,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
+var AuthUsersFile = TEST_PREFIX + "/configs/base/auth_users.json"
+var AuthTokensFile = TEST_PREFIX + "/configs/base/auth_tokens.json"
+var AuthOtpFile = TEST_PREFIX + "/state/api/webauthn_otp"
+var AuthWebAuthnFile = TEST_PREFIX + "/state/api/webauthn.json"
+
 func loadOTP() int {
-	data, err := os.ReadFile(TEST_PREFIX + "/state/api/webauthn_otp")
+	data, err := os.ReadFile(AuthOtpFile)
 	if err == nil {
 		result, err := strconv.Atoi(string(data))
 		if err == nil {
@@ -32,7 +40,46 @@ func loadOTP() int {
 }
 
 func saveOTP(data int) {
-	os.WriteFile(TEST_PREFIX + "/state/api/webauthn_otp", []byte(strconv.Itoa(data)), 0661)
+	os.WriteFile(AuthOtpFile, []byte(strconv.Itoa(data)), 0661)
+}
+
+func (auth *authnconfig) saveWebauthn(user *User, credential *webauthn.Credential) {
+	fmt.Println("saving. user=", user, "credential=", credential)
+
+	userWebauthn := map[string]webauthn.Credential{}
+
+	userWebauthn[user.username] = *credential
+
+	file, _ := json.MarshalIndent(userWebauthn, "", " ")
+	err := ioutil.WriteFile(AuthWebAuthnFile, file, 0660)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (auth *authnconfig) getCredentials(user User) (webauthn.Credential, error) {
+	userWebauthn := map[string]webauthn.Credential{}
+
+	// load saved pubkeys/credentials
+	credential := webauthn.Credential{}
+	data, err := os.ReadFile(AuthWebAuthnFile)
+	if err != nil {
+		log.Println(err)
+		return credential, err
+	}
+
+	err = json.Unmarshal(data, &userWebauthn)
+	if err != nil {
+		log.Println(err)
+		return credential, err
+	}
+
+	credential, exists := userWebauthn[user.username]
+	if !exists {
+		return credential, errors.New("user pubkey not set")
+	}
+
+	return credential, nil
 }
 
 type User struct {
@@ -119,7 +166,7 @@ func (auth *authnconfig) BeginRegistration(w http.ResponseWriter, r *http.Reques
 	}
 
 	//invalidate the OTP code immediately
-	saveOTP(0)
+	//saveOTP(0)
 
 	otp, err := strconv.Atoi(otpStr[0])
 	if err != nil || otp != webAuthnOTP {
@@ -146,6 +193,7 @@ func (auth *authnconfig) BeginRegistration(w http.ResponseWriter, r *http.Reques
 	if auth.sessionMap == nil {
 		auth.sessionMap = map[string]*webauthn.SessionData{}
 	}
+
 	if auth.regMap == nil {
 		auth.regMap = map[string]*User{}
 	}
@@ -211,13 +259,40 @@ func (auth *authnconfig) FinishRegistration(w http.ResponseWriter, r *http.Reque
 	if auth.userMap == nil {
 		auth.userMap = map[string]*User{}
 	}
+
 	auth.userMap[user.username] = user
+
+	auth.saveWebauthn(user, credential)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode("success")
 }
 
 func (auth *authnconfig) BeginLogin(w http.ResponseWriter, r *http.Request) {
+	//  init webauthn with prev registrations of pubkeys for users
+	if auth.userMap == nil {
+		auth.userMap = map[string]*User{}
+	}
+
+	if auth.regMap == nil {
+		auth.regMap = map[string]*User{}
+	}
+
+	// only admin for now
+	user := &User{}
+	user.id = 0
+	user.username = "admin"
+
+	credential, err := auth.getCredentials(*user)
+	if err == nil {
+		fmt.Println("loading saved credentials for", user.username)
+		user.AddCredential(credential)
+	}
+
+	auth.userMap[user.username] = user
+
+	// get query
+
 	vals := r.URL.Query()
 	usernames, ok := vals["username"]
 	if !ok {
@@ -300,7 +375,7 @@ func (auth *authnconfig) authenticateToken(token string) bool {
 	if !exists {
 		//check api tokens
 		tokens := []string{}
-		data, err := os.ReadFile(TEST_PREFIX + "/configs/base/auth_tokens.json")
+		data, err := os.ReadFile(AuthTokensFile)
 		if err == nil {
 			json.Unmarshal(data, &tokens)
 		}
@@ -319,7 +394,7 @@ func (auth *authnconfig) authenticateToken(token string) bool {
 
 func (auth *authnconfig) authenticateUser(username string, password string) bool {
 	users := map[string]string{}
-	data, err := os.ReadFile(TEST_PREFIX + "/configs/base/auth_users.json")
+	data, err := os.ReadFile(AuthUsersFile)
 	if err == nil {
 		json.Unmarshal(data, &users)
 	}
@@ -340,27 +415,26 @@ func (auth *authnconfig) authenticateUser(username string, password string) bool
 func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router) http.HandlerFunc {
 	webauth_router := mux.NewRouter().StrictSlash(true)
 
+	// TODO behind auth
 	webauth_router.HandleFunc("/register/", auth.BeginRegistration).Methods("GET", "OPTIONS")
 	webauth_router.HandleFunc("/register/", auth.FinishRegistration).Methods("POST", "OPTIONS")
+	//authenticatedNext.HandleFunc("/register/", auth.BeginRegistration).Methods("GET", "OPTIONS")
+	//authenticatedNext.HandleFunc("/register/", auth.FinishRegistration).Methods("POST", "OPTIONS")
+
 	webauth_router.HandleFunc("/login/", auth.BeginLogin).Methods("GET", "OPTIONS")
 	webauth_router.HandleFunc("/login/", auth.FinishLogin).Methods("POST", "OPTIONS")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var matchInfo mux.RouteMatch
 
-		/*
-		// disable webauth code for now
-		//first match webuath
+		//webuath endpoints
 		if webauth_router.Match(r, &matchInfo) {
 			webauth_router.ServeHTTP(w, r)
 			return
 		}
-		*/
 
-		//next match api
-
+		//api token
 		token := auth.ExtractRequestToken(r)
-
 		if token != "" {
 			if auth.authenticateToken(token) {
 				authenticatedNext.ServeHTTP(w, r)
@@ -368,8 +442,7 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 			}
 		}
 
-		//check basic auth next
-		//https://www.alexedwards.net/blog/basic-authentication-in-go
+		//basic auth
 		username, password, ok := r.BasicAuth()
 		if ok {
 			if auth.authenticateUser(username, password) {

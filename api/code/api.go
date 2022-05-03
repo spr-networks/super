@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -30,6 +31,9 @@ var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
+
+var ApiTlsCert = "/configs/base/www-api.crt"
+var ApiTlsKey = "/configs/base/www-api.key"
 
 type InfluxConfig struct {
 	URL    string
@@ -113,7 +117,6 @@ func ipAddr(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, string(stdout))
 }
-
 
 func ipLinkUpDown(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
@@ -1395,6 +1398,11 @@ func getLogs(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "[%s]", logs)
 }
 
+func getCert(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+	http.ServeFile(w, r, ApiTlsCert)
+}
+
 //set up SPA handler. From gorilla mux's documentation
 type spaHandler struct {
 	staticPath string
@@ -1442,12 +1450,13 @@ func main() {
 	w, err := webauthn.New(&webauthn.Config{
 		RPDisplayName: "SPR",
 		RPID:          "localhost",
-		RPOrigin:      "http://localhost", // The origin URL for WebAuthn requests
+		RPOrigin:      "http://localhost:3000", // The origin URL for WebAuthn requests
 	})
 
 	if err != nil {
 		log.Fatal("failed to create WebAuthn from config:", err)
 	}
+
 	auth.webAuthn = w
 
 	unix_dhcpd_router := mux.NewRouter().StrictSlash(true)
@@ -1461,6 +1470,9 @@ func main() {
 
 	//public websocket with internal authentication
 	external_router_public.HandleFunc("/ws", auth.webSocket).Methods("GET")
+
+	//download cert from http
+	external_router_public.HandleFunc("/cert", getCert).Methods("GET")
 
 	spa := spaHandler{staticPath: "/ui", indexPath: "index.html"}
 	external_router_public.PathPrefix("/").Handler(spa)
@@ -1486,7 +1498,7 @@ func main() {
 	//Misc
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
 
-	// Device management
+	//device management
 	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")
 	external_router_authenticated.HandleFunc("/groups", updateGroups).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/devices", getDevices).Methods("GET")
@@ -1494,7 +1506,7 @@ func main() {
 
 	external_router_authenticated.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 
-	//Force reload
+	//force reload
 	external_router_authenticated.HandleFunc("/reloadPSKFiles", reloadPSKFiles).Methods("PUT")
 
 	//hostapd information
@@ -1561,6 +1573,19 @@ func main() {
 	WSRunNotify()
 	// collect traffic accounting statistics
 	trafficTimer()
+
+	sslPort, runSSL := os.LookupEnv("API_SSL_PORT")
+
+	if runSSL {
+		listenPort, err := strconv.Atoi(sslPort)
+		if err != nil {
+			listenPort = 443
+		}
+
+		listenAddr := fmt.Sprint("0.0.0.0:", listenPort)
+
+		go http.ListenAndServeTLS(listenAddr, ApiTlsCert, ApiTlsKey, logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public))))
+	}
 
 	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public))))
 

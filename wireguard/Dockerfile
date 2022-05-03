@@ -1,7 +1,7 @@
 FROM ubuntu:21.04 as builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl
+RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl
 RUN mkdir /code
 WORKDIR /code
 ARG TARGETARCH
@@ -15,7 +15,7 @@ RUN --mount=type=tmpfs,target=/root/go/ (go build -ldflags "-s -w" -o /wireguard
 FROM ubuntu:21.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano wireguard-tools
+RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano wireguard-tools
 COPY scripts /scripts/
 COPY --from=builder /wireguard_plugin /
 ENTRYPOINT ["/scripts/startup.sh"]

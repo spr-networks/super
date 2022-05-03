@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { wifiAPI } from 'api'
+import Toggle from 'components/Toggle'
 
 import {
   Badge,
@@ -21,7 +22,6 @@ import {
 } from 'reactstrap'
 
 const WifiInterface = (props) => {
-  //const [iw, setIw] = useState({})
   const [showMore, setShowMore] = useState(false)
   const [tabs, setTabs] = useState('devices')
   const iw = props.iw
@@ -36,6 +36,10 @@ const WifiInterface = (props) => {
     'bands',
     'other'
   ]
+
+  const toggleIfaceState = (iface, state) => {
+    wifiAPI.ipLinkState(iface, state ? 'up' : 'down').then((res) => {})
+  }
 
   const dList = (dict, type = 'row') => {
     if (Object.keys(dict) && type == 'inline') {
@@ -107,15 +111,19 @@ const WifiInterface = (props) => {
                     <>
                       {Object.keys(iw[tab]).map((iface) => (
                         <>
-                          {/*!iw[tab][iface].type.includes('AP') ? (
-                            <Button
-                              className="pull-right mt-0"
-                              size="md"
-                              color="primary"
-                            >
-                              <i className="fa fa-wifi" /> scan
-                            </Button>
-                          ) : null*/}
+                          <div className="pull-right">
+                            <Toggle
+                              onChange={(el, value) => {
+                                toggleIfaceState(iface, value)
+                              }}
+                              isDisabled={
+                                !iw[tab][iface].type.includes('managed')
+                              }
+                              isChecked={iw[tab][iface].channel !== undefined}
+                              onColor="info"
+                              offColor="danger"
+                            />
+                          </div>
                           <h5>
                             {iface}
                             <small className="text-muted ml-2">
@@ -172,9 +180,10 @@ const WifiInterface = (props) => {
                           <h5 className="text-muted">
                             {tab.replace(/_/g, ' ')}
                           </h5>
-                          {iw[tab] && iw[tab].map((c) => (
-                            <Badge color="secondary">{c}</Badge>
-                          ))}
+                          {iw[tab] &&
+                            iw[tab].map((c) => (
+                              <Badge color="secondary">{c}</Badge>
+                            ))}
 
                           {tab == 'supported_interface_modes' ? (
                             <>
