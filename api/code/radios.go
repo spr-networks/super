@@ -61,6 +61,84 @@ func RunHostapdStatus() (map[string]string, error) {
 	return m, nil
 }
 
+type ChannelParameters struct  {
+	Mode string
+	Channel int
+	Bandwidth int
+	HT_Enable bool
+	VHT_Enable bool
+}
+
+func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled bool) error {
+	freq1 := 0
+	freq2 := 0
+	//freq3 := 0 //for 80+80, not supported right now
+
+	cmd := ""
+
+	if mode == "b" || mode == "g"  {
+		//2.4ghz
+		freq1 = 2407 + channel * 5
+	} else if mode == "a" {
+		//5 ghz
+		freq1 = 5000 + channel * 5
+	}
+
+	switch bw {
+	case 20:
+		//freq1 was all needed
+	case 40:
+		//center is 10 mhz above freq1 center
+		freq2 = 5000 + (channel+2) * 5
+	case 80:
+		//center is 30 mhz above freq1 center
+		freq2 = 5000 + (channel+6) * 5
+	case 160:
+		freq2 = 5000 + (channel+14) * 5
+	}
+
+	//chan_switch 1 5180 sec_channel_offset=1 center_freq1=5210 bandwidth=80 vht
+
+	if (bw == 20) {
+		cmd = fmt.Sprintf("chan_switch 1 %d bandwidth=20", freq1)
+	} else if (bw == 40 || bw == 80 || bw == 160) {
+		cmd = fmt.Sprintf("chan_switch 1 %d sec_channel_offset=1 center_freq1=%d bandwidth=%d", freq1, freq2, bw)
+	} else if (bw == 8080) {
+		//80 + 80 unsupported for now
+		// center_freq1, center_freq2
+		return fmt.Errorf("80+80 not supported")
+	}
+
+	if ht_enabled {
+		cmd += " ht"
+	}
+
+	if vht_enabled {
+		cmd += " vht"
+	}
+
+	_, err := RunHostapdCommand(cmd)
+	return err
+}
+
+func hostapdChannelSwitch(w http.ResponseWriter, r *http.Request) {
+
+	channelParams := ChannelParameters{}
+	err := json.NewDecoder(r.Body).Decode(&channelParams)
+
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	err = ChanSwitch(channelParams.Mode, channelParams.Channel, channelParams.Bandwidth, channelParams.HT_Enable, channelParams.VHT_Enable)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+}
+
+
 func RunHostapdCommand(cmd string) (string, error) {
 
 	outb, err := exec.Command("hostapd_cli", "-p", "/state/wifi/control", "-s", "/state/wifi", cmd).Output()
