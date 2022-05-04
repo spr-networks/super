@@ -325,6 +325,7 @@ export default class Traffic extends Component {
                   </Col>
                   <Col md="2" className="pt-2">
                     <DateRange
+                      defaultValue={this.state.wan_scale}
                       onChange={(newValue) => handleChangeTime(newValue, 'wan')}
                     />
                   </Col>
@@ -361,6 +362,7 @@ export default class Traffic extends Component {
                   </Col>
                   <Col md="2" className="pt-2">
                     <DateRange
+                      defaultValue={this.state.lan_scale}
                       onChange={(newValue) => handleChangeTime(newValue, 'lan')}
                     />
                   </Col>

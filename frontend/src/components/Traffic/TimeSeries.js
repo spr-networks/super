@@ -33,10 +33,10 @@ const TimeSeries = (props) => {
   const [offset, setOffset] = useState('All Time')
   const [chartMode, setChartMode] = useState(props.chartMode || 'data')
 
-  const handleChangeTime = (newValue) => {
-    setOffset(newValue.value)
+  const handleChangeTime = (value) => {
+    setOffset(value)
     if (props.handleChangeTime) {
-      props.handleChangeTime(newValue.value, props.type)
+      props.handleChangeTime(value, props.type)
     }
   }
 
@@ -69,22 +69,20 @@ const TimeSeries = (props) => {
         <Heading>{props.title || props.type}</Heading>
         <HStack marginLeft="auto" space={4}>
           {view == 'chart' ? (
-            <Box>
-              <Button.Group size="sm" isAttached colorScheme="primary">
-                <Button
-                  onPress={(e) => handleChartMode('data')}
-                  variant={chartMode !== 'data' ? 'outline' : 'solid'}
-                >
-                  Data
-                </Button>
-                <Button
-                  onPress={(e) => handleChartMode('percent')}
-                  variant={chartMode !== 'percent' ? 'outline' : 'solid'}
-                >
-                  Percent
-                </Button>
-              </Button.Group>
-            </Box>
+            <Button.Group size="sm" isAttached colorScheme="primary">
+              <Button
+                onPress={(e) => handleChartMode('data')}
+                variant={chartMode !== 'data' ? 'outline' : 'solid'}
+              >
+                Data
+              </Button>
+              <Button
+                onPress={(e) => handleChartMode('percent')}
+                variant={chartMode !== 'percent' ? 'outline' : 'solid'}
+              >
+                Percent
+              </Button>
+            </Button.Group>
           ) : (
             <Box w="300">
               <ClientSelect
@@ -94,9 +92,9 @@ const TimeSeries = (props) => {
               />
             </Box>
           )}
-          <Box w="200">
-            <DateRange onChange={handleChangeTime} />
-          </Box>
+          <Button.Group size="sm">
+            <DateRange defaultValue={offset} onChange={handleChangeTime} />
+          </Button.Group>
 
           <Button.Group size="sm" isAttached colorScheme="primary">
             <IconButton

@@ -176,7 +176,7 @@ const AdminNavbar = (props) => {
           </Text>
           <HStack marginLeft="auto" space="4">
             <Link
-              p={2}
+              p={4}
               isExternal
               href="https://www.supernetworks.org/pages/docs/intro"
               _text={{
@@ -186,7 +186,7 @@ const AdminNavbar = (props) => {
               Docs
             </Link>
             <Link
-              p={2}
+              p={4}
               fontSize="md"
               isExternal
               href="https://www.supernetworks.org/pages/docs/api/0"

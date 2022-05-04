@@ -226,20 +226,6 @@ export default class SignalStrength extends Component {
 
     return (
       <div className="content">
-        {/*<Row>
-          <Col md={{ size: 2, offset: 10 }}>
-            <UncontrolledDropdown group>
-              <DropdownToggle caret color="default">
-                {this.state.signal_scale}
-              </DropdownToggle>
-              <DropdownMenu value="signals">
-                <DropdownItem value="All Time" onClick={handleScaleMenu}>
-                  All time
-                </DropdownItem>
-              </DropdownMenu>
-            </UncontrolledDropdown>
-          </Col>
-        </Row>*/}
         <Row>
           <Col md="12">
             <Card>
