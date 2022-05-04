@@ -1,32 +1,54 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { NavLink, useHistory } from 'react-router-dom'
-import { Nav, Collapse as CollapseOld } from 'reactstrap'
+import React, { useContext, useEffect, useRef, useState } from 'react'
+import { useHistory } from 'react-router-dom'
 import { Animated } from 'react-native'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
+import { AppContext } from 'layouts/Admin'
 
 import {
-  View,
-  Divider,
   Box,
-  Heading,
   Icon,
-  IconButton,
   Link,
   Pressable,
   ScrollView,
-  Stack,
   HStack,
-  VStack,
   Text,
   Collapse
 } from 'native-base'
 
+const Sidebar = (props) => {
+  let isMobile = false
+  let setIsOpenSidebar = () => {}
+
+  let sidebarItems = props.routes || []
+
+  return (
+    <ScrollView overflowY="overlay">
+      <Box
+        py="5"
+        w={isMobile ? '100%' : '64'}
+        flex="1"
+        borderRightWidth={isMobile ? '0' : '1'}
+        _light={{
+          borderColor: 'coolGray.200',
+          bg: 'coolGray.100'
+        }}
+        _dark={{ borderColor: 'coolGray.800', bg: 'blueGray.900' }}
+      >
+        <SidebarItem
+          sidebarItems={sidebarItems}
+          level={0}
+          isMobile={isMobile}
+          setIsOpenSidebar={setIsOpenSidebar}
+        />
+      </Box>
+    </ScrollView>
+  )
+}
+
 const SidebarItem = (props) => {
   const { sidebarItems, level, isMobile, setIsOpenSidebar } = props
-  /*const { activeSidebarItem, setActiveSidebarItem } =
-    useContext(AppContext)*/
-  const [activeSidebarItem, setActiveSidebarItem] = useState(null)
+  const { activeSidebarItem, setActiveSidebarItem } = useContext(AppContext)
 
   /*
   const getCollapseInitialState = (routes) => {
@@ -102,7 +124,6 @@ const SidebarItem = (props) => {
             _dark={{
               bg: item.path === activeSidebarItem ? 'cyan.700' : 'transparent'
             }}
-            bg={item.path === activeSidebarItem ? 'cyan.100' : undefined}
           >
             <Link>
               <Box pl="8" px="4" py="2">
@@ -276,36 +297,6 @@ const RotatingView = (props) => {
     >
       {children}
     </Animated.View>
-  )
-}
-
-const Sidebar = (props) => {
-  let isMobile = false
-  let setIsOpenSidebar = () => {}
-
-  let sidebarItems = props.routes || []
-
-  return (
-    <ScrollView overflowY="overlay">
-      <Box
-        py="5"
-        w={isMobile ? '100%' : '64'}
-        flex="1"
-        borderRightWidth={isMobile ? '0' : '1'}
-        _light={{
-          borderColor: 'coolGray.200',
-          bg: 'coolGray.100'
-        }}
-        _dark={{ borderColor: 'coolGray.800', bg: 'blueGray.900' }}
-      >
-        <SidebarItem
-          sidebarItems={sidebarItems}
-          level={0}
-          isMobile={isMobile}
-          setIsOpenSidebar={setIsOpenSidebar}
-        />
-      </Box>
-    </ScrollView>
   )
 }
 

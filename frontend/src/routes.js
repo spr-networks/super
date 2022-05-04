@@ -21,6 +21,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import {
   faBan,
   faBarChart,
+  faCircleNodes,
   faCogs,
   faEthernet,
   faHome,
@@ -66,7 +67,7 @@ const routes = [
   {
     path: '/wireguard',
     name: 'VPN',
-    icon: 'nc-icon nc-wireguard',
+    icon: faCircleNodes,
     component: Wireguard,
     layout: '/admin'
   },

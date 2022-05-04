@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { createContext, useEffect, useState } from 'react'
 import { Route, Switch, useLocation } from 'react-router-dom'
 import NotificationAlert from 'react-notification-alert'
 import ReactBSAlert from 'react-bootstrap-sweetalert'
@@ -37,6 +37,13 @@ const errorState = {
 const modalState = {
   modal: () => {}
 }
+
+export const AppContext = createContext({
+  activeSidebarItem: 'admin/home',
+  setActiveSidebarItem: (sidebarItem) => {},
+  isNavbarOpen: false,
+  setIsNavbarOpen: (isNavbarOpen) => {}
+})
 
 export const APIErrorContext = React.createContext(errorState)
 export const ModalContext = React.createContext(modalState)
@@ -104,13 +111,13 @@ function Admin(props) {
   modalState.reportError = modalState.modal
   modalState.success = modalState.modal
 
-  React.useEffect(() => {
+  useEffect(() => {
     document.documentElement.scrollTop = 0
     document.scrollingElement.scrollTop = 0
     mainPanel.current.scrollTop = 0
   }, [location])
 
-  React.useEffect(() => {
+  useEffect(() => {
     ConnectWebsocket((event) => {
       if (event.data == 'success') {
         return
@@ -166,14 +173,6 @@ function Admin(props) {
     })
   }
 
-  const handleActiveClick = (color) => {
-    setActiveColor(color)
-  }
-
-  const handleBgClick = (color) => {
-    setBackgroundColor(color)
-  }
-
   const handleMiniClick = () => {
     if (document.body.classList.contains('sidebar-mini')) {
       setSidebarMini(false)
@@ -182,31 +181,43 @@ function Admin(props) {
     }
     document.body.classList.toggle('sidebar-mini')
   }
+
+  const [activeSidebarItem, setActiveSidebarItem] = useState('')
+  const [isNavbarOpen, setIsNavbarOpen] = useState(false)
+
   return (
-    <Box
-      w="100%"
-      h={{ base: '100%', md: '100vh' }}
-      _light={{ bg: 'coolGray.100' }}
-      _dark={{ bg: 'blueGray.900' }}
-      alignItems="center"
-      nativeID={useColorModeValue('coolGray.100', 'blueGray.900')}
+    <AppContext.Provider
+      value={{
+        activeSidebarItem,
+        setActiveSidebarItem,
+        setIsNavbarOpen,
+        isNavbarOpen
+      }}
     >
-      <ScrollView w="100%" nativeID="scrollview-id">
-        <Box h="100%" w="100%">
-          <Box
-            display={{ base: 'none', lg: 'flex' }}
-            w="100%"
-            position="sticky"
-            top="0"
-            zIndex={99}
-            _light={{ bg: 'coolGray.100' }}
-            _dark={{ bg: 'blueGray.900:alpha.50' }}
-            // @ts-ignore
-            style={{ backdropFilter: 'blur(10px)' }}
-          >
-            <AdminNavbar />
-          </Box>
-          {/*<Box
+      <Box
+        w="100%"
+        h={{ base: '100%', md: '100vh' }}
+        _light={{ bg: 'coolGray.100' }}
+        _dark={{ bg: 'blueGray.900' }}
+        alignItems="center"
+        nativeID={useColorModeValue('coolGray.100', 'blueGray.900')}
+      >
+        <ScrollView w="100%" nativeID="scrollview-id">
+          <Box h="100%" w="100%">
+            <Box
+              display={{ base: 'none', lg: 'flex' }}
+              w="100%"
+              position="sticky"
+              top="0"
+              zIndex={99}
+              _light={{ bg: 'coolGray.100' }}
+              _dark={{ bg: 'blueGray.900:alpha.50' }}
+              // @ts-ignore
+              style={{ backdropFilter: 'blur(10px)' }}
+            >
+              <AdminNavbar />
+            </Box>
+            {/*<Box
           display={{ base: "flex", lg: "none" }}
           position="sticky"
           top="0"
@@ -220,64 +231,67 @@ function Admin(props) {
             setIsOpenSidebar={setIsOpenSidebar}
           />
         </Box>*/}
-          <HStack>
-            <Box
-              position="sticky"
-              top="16"
-              h="calc(100vh - 64px)"
-              display={{ base: 'none', lg: 'flex' }}
-            >
-              <Sidebar routes={routes} />
-            </Box>
-            {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
-            <Box
-              h="calc(100% - 64px)"
-              flex="1"
-              p="4"
-              safeAreaTop
-              ref={mainPanel}
-            >
-              {/*<SubMainContent props={props} />*/}
-              {/*<AdminNavbar {...props} handleMiniClick={handleMiniClick} />*/}
-              <APIErrorContext.Provider value={errorState}>
-                <NotificationAlert ref={notificationAlert} />
-              </APIErrorContext.Provider>
-              <ModalContext.Provider value={modalState}>
-                <Modal
-                  fade={false}
-                  isOpen={showModal}
-                  toggle={toggleModal}
-                  autoFocus={false}
-                >
-                  <div className="modal-header">
-                    <button
-                      aria-label="Close"
-                      className="close"
-                      data-dismiss="modal"
-                      type="button"
-                      onClick={toggleModal}
-                    >
-                      <i className="nc-icon nc-simple-remove" />
-                    </button>
-                    <h5 className="modal-title">{modalTitle}</h5>
-                  </div>
-                  <div className="modal-body">{modalBody}</div>
-                  <div className="modal-footer"></div>
-                </Modal>
-              </ModalContext.Provider>
-
-              <Box flex="1">
-                <Switch>{getRoutes(routes)}</Switch>
+            <HStack>
+              <Box
+                position="sticky"
+                top="16"
+                h="calc(100vh - 64px)"
+                display={{ base: 'none', lg: 'flex' }}
+              >
+                <Sidebar routes={routes} />
               </Box>
-              {props.location.pathname.indexOf('full-screen-map') !==
-              -1 ? null : (
-                <Footer fluid />
-              )}
-            </Box>
-          </HStack>
-        </Box>
-      </ScrollView>
-    </Box>
+              {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
+              <Box
+                h="calc(100% - 64px)"
+                flex="1"
+                p="4"
+                safeAreaTop
+                ref={mainPanel}
+              >
+                {/*<SubMainContent props={props} />*/}
+                {/*<AdminNavbar {...props} handleMiniClick={handleMiniClick} />*/}
+
+                <APIErrorContext.Provider value={errorState}>
+                  <NotificationAlert ref={notificationAlert} />
+                </APIErrorContext.Provider>
+
+                <ModalContext.Provider value={modalState}>
+                  <Modal
+                    fade={false}
+                    isOpen={showModal}
+                    toggle={toggleModal}
+                    autoFocus={false}
+                  >
+                    <div className="modal-header">
+                      <button
+                        aria-label="Close"
+                        className="close"
+                        data-dismiss="modal"
+                        type="button"
+                        onClick={toggleModal}
+                      >
+                        <i className="nc-icon nc-simple-remove" />
+                      </button>
+                      <h5 className="modal-title">{modalTitle}</h5>
+                    </div>
+                    <div className="modal-body">{modalBody}</div>
+                    <div className="modal-footer"></div>
+                  </Modal>
+                </ModalContext.Provider>
+
+                <Box flex="1">
+                  <Switch>{getRoutes(routes)}</Switch>
+                </Box>
+                {props.location.pathname.indexOf('full-screen-map') !==
+                -1 ? null : (
+                  <Footer fluid />
+                )}
+              </Box>
+            </HStack>
+          </Box>
+        </ScrollView>
+      </Box>
+    </AppContext.Provider>
   )
 }
 

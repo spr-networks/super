@@ -1,43 +1,22 @@
-/*!
-
-=========================================================
-* Paper Dashboard PRO React - v1.3.0
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/paper-dashboard-pro-react
-* Copyright 2021 Creative Tim (https://www.creative-tim.com)
-
-* Coded by Creative Tim
-
-=========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-*/
 import React from 'react'
 import { useState } from 'react'
 import { saveLogin, testLogin } from 'api'
 import NotificationAlert from 'react-notification-alert'
 import { Redirect } from 'react-router-dom'
 
-// reactstrap components
 import {
+  Box,
   Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  Label,
-  FormGroup,
-  Form,
+  Center,
+  Text,
+  View,
+  Heading,
+  HStack,
+  VStack,
+  FormControl,
   Input,
-  InputGroupAddon,
-  InputGroupText,
-  InputGroup,
-  Container,
-  Col,
-  Row
-} from 'reactstrap'
+  useColorModeValue
+} from 'native-base'
 
 function Login() {
   React.useEffect(() => {
@@ -53,41 +32,18 @@ function Login() {
   const [username, setUsername] = useState('admin')
   const [password, setPassword] = useState('admin')
   const [loggedIn, setLoggedin] = useState(false)
+  const [errors, setErrors] = React.useState({})
 
-  const notifyWrongLogin = () => {
-    var options = {}
-    options = {
-      place: 'tc',
-      message: (
-        <div>
-          <div>Failed to sign in</div>
-        </div>
-      ),
-      type: 'danger',
-      icon: 'now-ui-icons ui-1_bell-53',
-      autoDismiss: 7
-    }
-    notificationAlert.current.notificationAlert(options)
-  }
-
-  const handleLogin = (e) => {
-    e.preventDefault()
-
+  const handleLogin = () => {
     testLogin(username, password, function (success) {
       if (success) {
         saveLogin(username, password)
         setLoggedin(true)
+        setErrors({})
       } else {
-        //alert that the password was wrong
-        notifyWrongLogin()
+        setErrors({ login: true })
       }
     })
-  }
-
-  const handleKeyPress = (target) => {
-    if (target.charCode == 13) {
-      handleLogin(target)
-    }
   }
 
   if (loggedIn) {
@@ -95,71 +51,68 @@ function Login() {
   }
 
   return (
-    <div className="login-page">
-      <NotificationAlert ref={notificationAlert} />
-      <Container>
-        <Row>
-          <Col className="ml-auto mr-auto" lg="4" md="6">
-            <Form ref={formRef} action="" className="form" method="">
-              <Card className="card-login">
-                <CardHeader>
-                  <CardHeader>
-                    <h3 className="header text-center">Login</h3>
-                  </CardHeader>
-                </CardHeader>
-                <CardBody>
-                  <InputGroup>
-                    <InputGroupAddon addonType="prepend">
-                      <InputGroupText>
-                        <i className="nc-icon nc-single-02" />
-                      </InputGroupText>
-                    </InputGroupAddon>
-                    <Input
-                      placeholder="Username..."
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                    />
-                  </InputGroup>
-                  <InputGroup>
-                    <InputGroupAddon addonType="prepend">
-                      <InputGroupText>
-                        <i className="nc-icon nc-key-25" />
-                      </InputGroupText>
-                    </InputGroupAddon>
-                    <Input
-                      placeholder="Password"
-                      type="password"
-                      autoComplete="off"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                    />
-                  </InputGroup>
-                </CardBody>
-                <CardFooter>
-                  <Button
-                    block
-                    className="btn-round mb-3"
-                    color="warning"
-                    href="#pablo"
-                    onClick={handleLogin}
-                  >
-                    Login
-                  </Button>
-                </CardFooter>
-              </Card>
-            </Form>
-          </Col>
-        </Row>
-      </Container>
-      <div
+    <>
+      <Center w="100%">
+        <Box
+          safeArea
+          p="8"
+          w="90%"
+          maxW="360"
+          bg={useColorModeValue('white', 'blueGray.900')}
+          rounded="10"
+          shadow="2"
+        >
+          <Heading
+            size="lg"
+            fontWeight="600"
+            color="coolGray.800"
+            _dark={{
+              color: 'warmGray.50'
+            }}
+          >
+            Login
+          </Heading>
+          <VStack space={3} mt="5">
+            <FormControl>
+              <FormControl.Label>Username</FormControl.Label>
+              <Input
+                type="text"
+                value={username}
+                onChangeText={(value) => setUsername(value)}
+              />
+            </FormControl>
+            <FormControl isInvalid={'login' in errors}>
+              <FormControl.Label>Password</FormControl.Label>
+              <Input
+                type="password"
+                value={password}
+                onChangeText={(value) => setPassword(value)}
+                onSubmitEditing={handleLogin}
+              />
+              {'login' in errors ? (
+                <FormControl.ErrorMessage
+                  _text={{
+                    fontSize: 'xs'
+                  }}
+                >
+                  Invalid Password
+                </FormControl.ErrorMessage>
+              ) : null}
+            </FormControl>
+            <Button mt="2" colorScheme="primary" onPress={handleLogin}>
+              Login
+            </Button>
+          </VStack>
+        </Box>
+      </Center>
+      {/*<div
         className="full-page-background"
         style={{
           backgroundImage: `url(${require('assets/img/bg/bg.jpg')})`
         }}
       />
-    </div>
+    */}
+    </>
   )
 }
 

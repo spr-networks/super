@@ -23,7 +23,7 @@ export class WifiClients extends WifiClientCount {
     return (
       <StatsWidget
         icon={faLaptop}
-        iconColor="light.600"
+        iconColor="light.400"
         title="Active WiFi Clients"
         text={this.state.numberOfWifiClients}
         textFooter="Online"
