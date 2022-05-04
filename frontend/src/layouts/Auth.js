@@ -1,14 +1,12 @@
 import React from 'react'
 import { Route, Switch } from 'react-router-dom'
 
-//import AuthNavbar from "components/Navbars/AuthNavbar.js";
 import Footer from 'components/Footer/Footer'
-
 import routes from 'routes'
 
-function Pages() {
-  const fullPages = React.useRef()
+import { View, Box, useColorModeValue } from 'native-base'
 
+function Pages() {
   const getRoutes = (routes) => {
     return routes.map((prop, key) => {
       if (prop.collapse) {
@@ -29,13 +27,23 @@ function Pages() {
   }
   return (
     <>
-      {/*<AuthNavbar />*/}
-      <div className="wrapper wrapper-full-page" ref={fullPages}>
-        <div className="full-page section-image">
-          <Switch>{getRoutes(routes)}</Switch>
-          <Footer fluid />
-        </div>
-      </div>
+      <Box
+        w="100%"
+        h={{ base: '100%', md: '100vh' }}
+        _light={{ bg: 'coolGray.100' }}
+        _dark={{ bg: 'blueGray.900' }}
+        p={20}
+        alignItems="center"
+        nativeID={useColorModeValue(
+          'nativebase-body-light',
+          'nativebase-body-dark'
+        )}
+      >
+        <Switch>{getRoutes(routes)}</Switch>
+        <Box>
+          <Footer direction="row" />
+        </Box>
+      </Box>
     </>
   )
 }

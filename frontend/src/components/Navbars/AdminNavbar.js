@@ -1,6 +1,20 @@
-import React from 'react'
-import classnames from 'classnames'
-import { useLocation } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { useHistory } from 'react-router-dom'
+
+import {
+  Button,
+  Box,
+  Flex,
+  HStack,
+  IconButton,
+  Text,
+  MoonIcon,
+  SunIcon,
+  useColorMode,
+  useColorModeValue
+} from 'native-base'
+
+/*
 import {
   Button,
   Collapse,
@@ -12,7 +26,7 @@ import {
   Container
 } from 'reactstrap'
 
-function AdminNavbar(props) {
+function AdminNavbarOld(props) {
   const [collapseOpen, setCollapseOpen] = React.useState(false)
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
   const [color, setColor] = React.useState('navbar-transparent')
@@ -110,18 +124,6 @@ function AdminNavbar(props) {
             navbar
             isOpen={collapseOpen}
           >
-            {/*
-            <Form>
-              <InputGroup className="no-border">
-                <Input defaultValue="" placeholder="Search..." type="text" />
-                <InputGroupAddon addonType="append">
-                  <InputGroupText>
-                    <i className="nc-icon nc-zoom-split" />
-                  </InputGroupText>
-                </InputGroupAddon>
-              </InputGroup>
-            </Form>
-            */}
             <Nav navbar>
               <NavItem>
                 <NavLink
@@ -133,65 +135,69 @@ function AdminNavbar(props) {
                   Log out
                 </NavLink>
               </NavItem>
-              {/*
-              <UncontrolledDropdown className="btn-rotate" nav>
-                <DropdownToggle
-                  aria-haspopup={true}
-                  caret
-                  color="default"
-                  data-toggle="dropdown"
-                  id="navbarDropdownMenuLink"
-                  nav
-                >
-                  <i className="nc-icon nc-bell-55" />
-                  <p>
-                    <span className="d-lg-none d-md-block">Some Actions</span>
-                  </p>
-                </DropdownToggle>
-                <DropdownMenu
-                  persist
-                  aria-labelledby="navbarDropdownMenuLink"
-                  right
-                >
-                  <DropdownItem
-                    href="#pablo"
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    Action
-                  </DropdownItem>
-                  <DropdownItem
-                    href="#pablo"
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    Another action
-                  </DropdownItem>
-                  <DropdownItem
-                    href="#pablo"
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    Something else here
-                  </DropdownItem>
-                </DropdownMenu>
-              </UncontrolledDropdown>
-              */}
-              {/*
-              <NavItem>
-                <NavLink
-                  className="btn-rotate"
-                  href="#pablo"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <i className="nc-icon nc-settings-gear-65" />
-                  <p>
-                    <span className="d-lg-none d-md-block">Account</span>
-                  </p>
-                </NavLink>
-              </NavItem>
-              */}
             </Nav>
           </Collapse>
         </Container>
       </Navbar>
+    </>
+  )
+}
+*/
+
+const AdminNavbar = (props) => {
+  const { colorMode, toggleColorMode } = useColorMode()
+
+  useEffect(() => {
+    if (colorMode === 'light')
+      document
+        .getElementsByTagName('html')[0]
+        .setAttribute('data-theme', 'light')
+    else
+      document
+        .getElementsByTagName('html')[0]
+        .setAttribute('data-theme', 'dark')
+  }, [colorMode])
+
+  const history = useHistory()
+  const logout = () => {
+    localStorage.removeItem('user')
+    history.push('/')
+  }
+
+  return (
+    <>
+      <HStack
+        w="100%"
+        borderBottomWidth="1"
+        _light={{ borderColor: 'coolGray.200' }}
+        _dark={{ borderColor: 'coolGray.800' }}
+        px="6"
+        h="16"
+        justifyContent="space-between"
+      >
+        <HStack space="4" w="100%" alignItems="center">
+          <Text fontSize="lg">SPR</Text>
+          <HStack marginLeft="auto" space="4">
+            <IconButton
+              p="0"
+              onPress={() => {
+                toggleColorMode()
+                const date = new Date()
+              }}
+              variant="unstyled"
+              _icon={{
+                size: '6',
+                _light: { color: 'coolGray.600' },
+                _dark: { color: 'coolGray.300' }
+              }}
+              icon={useColorModeValue(<MoonIcon />, <SunIcon />)}
+            />
+            <Button variant="unstyled" onPress={logout}>
+              Log out
+            </Button>
+          </HStack>
+        </HStack>
+      </HStack>
     </>
   )
 }

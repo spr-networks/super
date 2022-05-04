@@ -33,6 +33,8 @@ const ModalForm = (props) => {
           colorScheme="primary"
           color="dark.400"
           rounded="full"
+          borderWidth={2}
+          borderColor="cyan.200"
           leftIcon={
             props.triggerIcon ? (
               <Icon as={FontAwesomeIcon} icon={props.triggerIcon} />

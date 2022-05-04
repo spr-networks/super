@@ -3,18 +3,7 @@ import { wifiAPI } from 'api/Wifi'
 import StatsWidget from './StatsWidget'
 import { faLaptop, faWifi } from '@fortawesome/free-solid-svg-icons'
 
-import { Divider, Box, Stack, Icon, Text } from 'native-base'
-
-import {
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  CardTitle,
-  Table,
-  Row,
-  Col
-} from 'reactstrap'
+import { Divider, Box, Stack, Icon, Text, useColorModeValue } from 'native-base'
 
 export class WifiClientCount extends Component {
   state = { numberOfClients: 0 }
@@ -89,7 +78,12 @@ export const Interfaces = (props) => {
   }, [])
 
   return (
-    <Box bg="white" borderRadius="10" mb="4" p="5">
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      borderRadius="10"
+      mb="4"
+      p="5"
+    >
       <Text fontSize="lg" textAlign="center">
         Interfaces
       </Text>

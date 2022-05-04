@@ -4,7 +4,7 @@ import { View } from 'native-base'
 
 const Plugins = (props) => {
   return (
-    <View mt="20" p="4">
+    <View>
       <PluginList />
     </View>
   )

@@ -11,7 +11,8 @@ import {
   IconButton,
   Stack,
   VStack,
-  Text
+  Text,
+  useColorModeValue
 } from 'native-base'
 
 import { pluginAPI } from 'api'
@@ -61,7 +62,12 @@ const PluginList = (props) => {
   }
 
   return (
-    <Box bg="white" rounded="md" width="100%" p="4">
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      rounded="md"
+      width="100%"
+      p="4"
+    >
       <Stack direction="row" alignItems="stretch" mb="4">
         <Heading sz="sm" flex="1">
           Plugins

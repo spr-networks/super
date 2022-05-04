@@ -43,7 +43,7 @@ function Home() {
   })
 
   return (
-    <View style={{ padding: 10, marginTop: 80, flexDirection }}>
+    <View style={{ flexDirection }}>
       <VStack flex="2" p="2">
         <Stack direction={{ base: 'column', md: 'row' }}>
           <Box flex="auto" pr="2">

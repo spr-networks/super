@@ -9,6 +9,22 @@ import Sidebar from 'components/Sidebar/Sidebar'
 //import FixedPlugin from "components/FixedPlugin/FixedPlugin.js";
 import { ConnectWebsocket } from 'api'
 
+import {
+  View,
+  Divider,
+  Box,
+  Center,
+  Heading,
+  Icon,
+  IconButton,
+  ScrollView,
+  HStack,
+  Stack,
+  VStack,
+  Text,
+  useColorModeValue
+} from 'native-base'
+
 import { Modal } from 'reactstrap'
 
 import routes from 'routes'
@@ -166,52 +182,102 @@ function Admin(props) {
     }
     document.body.classList.toggle('sidebar-mini')
   }
-
   return (
-    <div className="wrapper">
-      <Sidebar
-        {...props}
-        routes={routes}
-        bgColor={backgroundColor}
-        activeColor={activeColor}
-      />
-      <div className="main-panel" ref={mainPanel}>
-        <AdminNavbar {...props} handleMiniClick={handleMiniClick} />
-        <APIErrorContext.Provider value={errorState}>
-          <NotificationAlert ref={notificationAlert} />
-        </APIErrorContext.Provider>
-        <ModalContext.Provider value={modalState}>
-          <Modal
-            fade={false}
-            isOpen={showModal}
-            toggle={toggleModal}
-            autoFocus={false}
+    <Box
+      w="100%"
+      h={{ base: '100%', md: '100vh' }}
+      _light={{ bg: 'coolGray.100' }}
+      _dark={{ bg: 'blueGray.900' }}
+      alignItems="center"
+      nativeID={useColorModeValue('coolGray.100', 'blueGray.900')}
+    >
+      <ScrollView w="100%" nativeID="scrollview-id">
+        <Box h="100%" w="100%">
+          <Box
+            display={{ base: 'none', lg: 'flex' }}
+            w="100%"
+            position="sticky"
+            top="0"
+            zIndex={99}
+            _light={{ bg: 'coolGray.100' }}
+            _dark={{ bg: 'blueGray.900:alpha.50' }}
+            // @ts-ignore
+            style={{ backdropFilter: 'blur(10px)' }}
           >
-            <div className="modal-header">
-              <button
-                aria-label="Close"
-                className="close"
-                data-dismiss="modal"
-                type="button"
-                onClick={toggleModal}
-              >
-                <i className="nc-icon nc-simple-remove" />
-              </button>
-              <h5 className="modal-title">{modalTitle}</h5>
-            </div>
-            <div className="modal-body">{modalBody}</div>
-            <div className="modal-footer"></div>
-          </Modal>
-        </ModalContext.Provider>
-        <Switch>{getRoutes(routes)}</Switch>
-        {
-          // we don't want the Footer to be rendered on full screen maps page
-          props.location.pathname.indexOf('full-screen-map') !== -1 ? null : (
-            <Footer fluid />
-          )
-        }
-      </div>
-    </div>
+            <AdminNavbar />
+          </Box>
+          {/*<Box
+          display={{ base: "flex", lg: "none" }}
+          position="sticky"
+          top="0"
+          zIndex={99}
+          _light={{ bg: "light.200" }}
+          _dark={{ bg: "dark.200" }}
+          w="100%"
+        >
+          <MobileNavbar
+            isOpenSidebar={isOpenSidebar}
+            setIsOpenSidebar={setIsOpenSidebar}
+          />
+        </Box>*/}
+          <HStack>
+            <Box
+              position="sticky"
+              top="16"
+              h="calc(100vh - 64px)"
+              display={{ base: 'none', lg: 'flex' }}
+            >
+              <Sidebar routes={routes} />
+            </Box>
+            {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
+            <Box
+              h="calc(100% - 64px)"
+              flex="1"
+              p="4"
+              safeAreaTop
+              ref={mainPanel}
+            >
+              {/*<SubMainContent props={props} />*/}
+              {/*<AdminNavbar {...props} handleMiniClick={handleMiniClick} />*/}
+              <APIErrorContext.Provider value={errorState}>
+                <NotificationAlert ref={notificationAlert} />
+              </APIErrorContext.Provider>
+              <ModalContext.Provider value={modalState}>
+                <Modal
+                  fade={false}
+                  isOpen={showModal}
+                  toggle={toggleModal}
+                  autoFocus={false}
+                >
+                  <div className="modal-header">
+                    <button
+                      aria-label="Close"
+                      className="close"
+                      data-dismiss="modal"
+                      type="button"
+                      onClick={toggleModal}
+                    >
+                      <i className="nc-icon nc-simple-remove" />
+                    </button>
+                    <h5 className="modal-title">{modalTitle}</h5>
+                  </div>
+                  <div className="modal-body">{modalBody}</div>
+                  <div className="modal-footer"></div>
+                </Modal>
+              </ModalContext.Provider>
+
+              <Box flex="1">
+                <Switch>{getRoutes(routes)}</Switch>
+              </Box>
+              {props.location.pathname.indexOf('full-screen-map') !==
+              -1 ? null : (
+                <Footer fluid />
+              )}
+            </Box>
+          </HStack>
+        </Box>
+      </ScrollView>
+    </Box>
   )
 }
 

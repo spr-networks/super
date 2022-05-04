@@ -5,9 +5,14 @@ import chroma from 'chroma-js'
 
 import { prettySize } from 'utils'
 
-import { Divider, Box, HStack, Icon, Text } from 'native-base'
-
-import { Card, CardHeader, CardBody, CardFooter, CardTitle } from 'reactstrap'
+import {
+  Divider,
+  Box,
+  HStack,
+  Icon,
+  Text,
+  useColorModeValue
+} from 'native-base'
 
 ChartJS.register(ArcElement, Tooltip, Legend, Title)
 
@@ -146,7 +151,13 @@ const StatsChartWidget = (props) => {
   }
 
   return (
-    <Box bg="white" borderRadius="10" mb="4" p="5">
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      borderRadius="10"
+      mb="4"
+      p="5"
+      shadow={1}
+    >
       <Text fontSize="lg" textAlign="center">
         {props.title}
       </Text>
