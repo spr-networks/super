@@ -79,6 +79,10 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 	if mode == "b" || mode == "g"  {
 		//2.4ghz
 		freq1 = 2407 + channel * 5
+		if channel == 14 {
+			//channel 14 goes higher
+			freq1 += 7
+		}
 	} else if mode == "a" {
 		//5 ghz
 		freq1 = 5000 + channel * 5
@@ -117,7 +121,7 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 		cmd += " vht"
 	}
 
-	_, err := RunHostapdCommand(cmd)
+	_, err := RunHostapdCommandArray(strings.Split(cmd, " "))
 	return err
 }
 
@@ -138,6 +142,17 @@ func hostapdChannelSwitch(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+
+func RunHostapdCommandArray(cmd []string) (string, error) {
+
+	args := append([]string{"-p", "/state/wifi/control", "-s", "/state/wifi"}, cmd...)
+
+	outb, err := exec.Command("hostapd_cli", args...).Output()
+	if err != nil {
+		return "", fmt.Errorf("Failed to execute command %s", cmd)
+	}
+	return string(outb), nil
+}
 
 func RunHostapdCommand(cmd string) (string, error) {
 
