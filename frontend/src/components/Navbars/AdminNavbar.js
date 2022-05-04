@@ -1,12 +1,15 @@
 import React, { useEffect } from 'react'
 import { useHistory } from 'react-router-dom'
-
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { faPowerOff } from '@fortawesome/free-solid-svg-icons'
 import {
   Button,
   Box,
   Flex,
   HStack,
+  Icon,
   IconButton,
+  Link,
   Text,
   MoonIcon,
   SunIcon,
@@ -15,17 +18,6 @@ import {
 } from 'native-base'
 
 /*
-import {
-  Button,
-  Collapse,
-  NavbarBrand,
-  Navbar,
-  NavItem,
-  NavLink,
-  Nav,
-  Container
-} from 'reactstrap'
-
 function AdminNavbarOld(props) {
   const [collapseOpen, setCollapseOpen] = React.useState(false)
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
@@ -175,9 +167,35 @@ const AdminNavbar = (props) => {
         h="16"
         justifyContent="space-between"
       >
-        <HStack space="4" w="100%" alignItems="center">
-          <Text fontSize="lg">SPR</Text>
+        <HStack w="100%" alignItems="center">
+          <Text fontSize="lg" bold>
+            SPR
+          </Text>
+          <Text fontSize="md" color="muted.600" pl="1">
+            v1.4
+          </Text>
           <HStack marginLeft="auto" space="4">
+            <Link
+              p={2}
+              isExternal
+              href="https://www.supernetworks.org/pages/docs/intro"
+              _text={{
+                textDecorationLine: 'none'
+              }}
+            >
+              Docs
+            </Link>
+            <Link
+              p={2}
+              fontSize="md"
+              isExternal
+              href="https://www.supernetworks.org/pages/docs/api/0"
+              _text={{
+                textDecorationLine: 'none'
+              }}
+            >
+              API
+            </Link>
             <IconButton
               p="0"
               onPress={() => {
@@ -192,7 +210,11 @@ const AdminNavbar = (props) => {
               }}
               icon={useColorModeValue(<MoonIcon />, <SunIcon />)}
             />
-            <Button variant="unstyled" onPress={logout}>
+            <Button
+              variant="outline"
+              leftIcon={<Icon as={FontAwesomeIcon} icon={faPowerOff} />}
+              onPress={logout}
+            >
               Log out
             </Button>
           </HStack>
