@@ -13,6 +13,7 @@ const ModalConfirm = (props) => {
   const handlePress = () => {
     handleSubmit(value)
     setShowAlert(false)
+    setValue('')
   }
 
   return (

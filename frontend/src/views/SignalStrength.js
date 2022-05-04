@@ -4,24 +4,9 @@ import { Chart as ChartJS } from 'chart.js/auto'
 import { Bar } from 'react-chartjs-2'
 
 import { deviceAPI, wifiAPI } from 'api'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 
-/*import {
-  UncontrolledDropdown,
-  DropdownToggle,
-  DropdownMenu,
-  DropdownItem
-} from 'reactstrap'*/
-
-import {
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  CardTitle,
-  Row,
-  Col
-} from 'reactstrap'
+import { Box, Heading } from 'native-base'
 
 export default class SignalStrength extends Component {
   state = {
@@ -31,7 +16,7 @@ export default class SignalStrength extends Component {
     signal_scale: 'All Time'
   }
 
-  static contextType = APIErrorContext
+  static contextType = AlertContext
   macToName = {}
   macToIP = {}
 
@@ -43,7 +28,7 @@ export default class SignalStrength extends Component {
 
   async fetchData() {
     const stations = await wifiAPI.allStations().catch((error) => {
-      this.context.reportError('API Failure get traffic: ' + error.message)
+      this.context.error('API Failure get traffic: ' + error.message)
     })
 
     let signals = []
@@ -63,7 +48,7 @@ export default class SignalStrength extends Component {
   async componentDidMount() {
     // this is for mac => ip lookup in tooltip
     const arp = await wifiAPI.arp().catch((error) => {
-      this.context.reportError('API Failure get traffic: ' + error.message)
+      this.context.error('API Failure get traffic: ' + error.message)
     })
 
     for (const a of arp) {
@@ -77,7 +62,7 @@ export default class SignalStrength extends Component {
 
     // get devices for mac => name lookup
     const devices = await deviceAPI.list().catch((error) => {
-      this.context.reportError('API Failure get traffic: ' + error.message)
+      this.context.error('API Failure get traffic: ' + error.message)
     })
 
     Object.keys(devices).forEach((mac) => {
@@ -225,36 +210,38 @@ export default class SignalStrength extends Component {
     })
 
     return (
-      <div className="content">
-        <Row>
-          <Col md="12">
-            <Card>
-              <CardHeader>
-                <CardTitle tag="h4">Device Signal Strength (RSSI)</CardTitle>
-              </CardHeader>
-              <CardBody>
-                {this.state.signals_rssi.datasets ? (
-                  <Bar data={this.state.signals_rssi} options={options_rssi} />
-                ) : null}
-              </CardBody>
-            </Card>
-          </Col>
-        </Row>
-        <Row>
-          <Col md="12">
-            <Card>
-              <CardHeader>
-                <CardTitle tag="h4">Device RX/TX Rate</CardTitle>
-              </CardHeader>
-              <CardBody>
-                {this.state.signals_rxtx.datasets ? (
-                  <Bar data={this.state.signals_rxtx} options={options_rxtx} />
-                ) : null}
-              </CardBody>
-            </Card>
-          </Col>
-        </Row>
-      </div>
+      <>
+        <Box
+          rounded="md"
+          _light={{ bg: 'warmGray.50' }}
+          _dark={{ bg: 'blueGray.800' }}
+          width="100%"
+          p="4"
+          mb="4"
+        >
+          <Heading>Device Signal Strength (RSSI)</Heading>
+          <Box>
+            {this.state.signals_rssi.datasets ? (
+              <Bar data={this.state.signals_rssi} options={options_rssi} />
+            ) : null}
+          </Box>
+        </Box>
+        <Box
+          rounded="md"
+          _light={{ bg: 'warmGray.50' }}
+          _dark={{ bg: 'blueGray.800' }}
+          width="100%"
+          p="4"
+          mb="4"
+        >
+          <Heading>Device RX/TX Rate</Heading>
+          <Box>
+            {this.state.signals_rxtx.datasets ? (
+              <Bar data={this.state.signals_rxtx} options={options_rxtx} />
+            ) : null}
+          </Box>
+        </Box>
+      </>
     )
   }
 }

@@ -5,21 +5,18 @@ import { Bar } from 'react-chartjs-2'
 
 import { deviceAPI, trafficAPI, wifiAPI } from 'api'
 import DateRange from 'components/DateRange'
-import { APIErrorContext, AlertContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 import { prettySize } from 'utils'
 
 import {
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  CardTitle,
-  CardSubtitle,
-  List,
-  ListInlineItem,
-  Row,
-  Col
-} from 'reactstrap'
+  Box,
+  Button,
+  Heading,
+  HStack,
+  VStack,
+  Text,
+  useColorModeValue
+} from 'native-base'
 
 export default class Traffic extends Component {
   state = {
@@ -298,83 +295,68 @@ export default class Traffic extends Component {
       })
     }
 
+    //TODO bg={useColorModeValue('warmGray.50', 'blueGray.800')}
     return (
-      <div className="content">
-        <Row>
-          <Col md="12">
-            <Card>
-              <CardHeader>
-                <Row>
-                  <Col md="10">
-                    <CardTitle tag="h4">Device WAN Traffic</CardTitle>
-                    <CardSubtitle className="mb-2 text-muted" tag="h6">
-                      <List type="inline">
-                        <ListInlineItem>
-                          IN: {prettySize(this.state.wan.totalIn)}
-                        </ListInlineItem>
-                        <ListInlineItem>
-                          OUT: {prettySize(this.state.wan.totalOut)}
-                        </ListInlineItem>
-                      </List>
-                    </CardSubtitle>
-                  </Col>
-                  <Col md="2" className="pt-2">
-                    <DateRange
-                      defaultValue={this.state.wan_scale}
-                      onChange={(newValue) => handleChangeTime(newValue, 'wan')}
-                    />
-                  </Col>
-                </Row>
-              </CardHeader>
-              <CardBody>
-                {this.state.wan.datasets ? (
-                  <Bar
-                    data={this.state.wan}
-                    options={this.templateData.options}
-                  />
-                ) : null}
-              </CardBody>
-            </Card>
-          </Col>
-        </Row>
-        <Row>
-          <Col md="12">
-            <Card>
-              <CardHeader>
-                <Row>
-                  <Col md="10">
-                    <CardTitle tag="h4">Device LAN Traffic</CardTitle>
-                    <CardSubtitle className="mb-2 text-muted" tag="h6">
-                      <List type="inline">
-                        <ListInlineItem>
-                          IN: {prettySize(this.state.wan.totalIn)}
-                        </ListInlineItem>
-                        <ListInlineItem>
-                          OUT: {prettySize(this.state.wan.totalOut)}
-                        </ListInlineItem>
-                      </List>
-                    </CardSubtitle>
-                  </Col>
-                  <Col md="2" className="pt-2">
-                    <DateRange
-                      defaultValue={this.state.lan_scale}
-                      onChange={(newValue) => handleChangeTime(newValue, 'lan')}
-                    />
-                  </Col>
-                </Row>
-              </CardHeader>
-              <CardBody>
-                {this.state.lan && this.state.lan.datasets ? (
-                  <Bar
-                    data={this.state.lan}
-                    options={this.templateData.options}
-                  />
-                ) : null}
-              </CardBody>
-            </Card>
-          </Col>
-        </Row>
-      </div>
+      <>
+        <Box
+          rounded="md"
+          _light={{ bg: 'warmGray.50' }}
+          _dark={{ bg: 'blueGray.800' }}
+          width="100%"
+          p="4"
+          mb="4"
+        >
+          <HStack alignItems="center">
+            <VStack>
+              <Heading>Device WAN Traffic</Heading>
+              <Text color="muted.500">
+                IN: {prettySize(this.state.wan.totalIn)}, OUT:{' '}
+                {prettySize(this.state.wan.totalOut)}
+              </Text>
+            </VStack>
+            <Button.Group size="sm" marginLeft="auto">
+              <DateRange
+                defaultValue={this.state.wan_scale}
+                onChange={(newValue) => handleChangeTime(newValue, 'wan')}
+              />
+            </Button.Group>
+          </HStack>
+          <Box>
+            {this.state.wan.datasets ? (
+              <Bar data={this.state.wan} options={this.templateData.options} />
+            ) : null}
+          </Box>
+        </Box>
+        <Box
+          rounded="md"
+          _light={{ bg: 'warmGray.50' }}
+          _dark={{ bg: 'blueGray.800' }}
+          width="100%"
+          p="4"
+          mb="4"
+        >
+          <HStack alignItems="center">
+            <VStack>
+              <Heading>Device LAN Traffic</Heading>
+              <Text color="muted.500">
+                IN: {prettySize(this.state.lan.totalIn)}, OUT:{' '}
+                {prettySize(this.state.lan.totalOut)}
+              </Text>
+            </VStack>
+            <Button.Group size="sm" marginLeft="auto">
+              <DateRange
+                defaultValue={this.state.wan_scale}
+                onChange={(newValue) => handleChangeTime(newValue, 'lan')}
+              />
+            </Button.Group>
+          </HStack>
+          <Box>
+            {this.state.lan && this.state.lan.datasets ? (
+              <Bar data={this.state.lan} options={this.templateData.options} />
+            ) : null}
+          </Box>
+        </Box>
+      </>
     )
   }
 }

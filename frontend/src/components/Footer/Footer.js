@@ -8,7 +8,7 @@ function Footer(props) {
   const direction = 'row' //props.direction ||
 
   return (
-    <Stack direction={direction} space="2" w="100%" mt="10">
+    <Stack direction={direction} space="2" w="100%" mt="20">
       <Link isExternal href="https://www.supernetworks.org/">
         Supernetworks
       </Link>
