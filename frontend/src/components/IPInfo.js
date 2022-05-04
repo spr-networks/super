@@ -2,10 +2,10 @@ import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import { wifiAPI } from 'api'
-import { ModalContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 
 const IPInfo = (props) => {
-  const contextType = useContext(ModalContext)
+  const contextType = useContext(AlertContext)
 
   const handleClick = (e) => {
     let ip = e.target.innerText
@@ -14,7 +14,7 @@ const IPInfo = (props) => {
       .then((asn) => {
         //const handleClickBlock = () => alert('*TODO* block')
 
-        contextType.modal(
+        contextType.alert(
           'IP ASN information',
           <>
             <div>

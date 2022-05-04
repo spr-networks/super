@@ -113,7 +113,7 @@ const WifiInterface = (props) => {
                         <>
                           <div className="pull-right">
                             <Toggle
-                              onChange={(el, value) => {
+                              onChange={(value) => {
                                 toggleIfaceState(iface, value)
                               }}
                               isDisabled={

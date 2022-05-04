@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box, Button, Icon, Modal } from 'native-base'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { faPlus } from '@fortawesome/free-solid-svg-icons'
 //import { Button, Modal } from 'reactstrap'
 
 const ModalForm = (props) => {
@@ -22,8 +23,6 @@ const ModalForm = (props) => {
     }
   })
 
-  let triggerClass = `btn-round ${props.triggerClass}`
-
   return (
     <>
       {props.triggerText ? (
@@ -31,14 +30,11 @@ const ModalForm = (props) => {
           size="md"
           variant="outline"
           colorScheme="primary"
-          color="dark.400"
           rounded="full"
-          borderWidth={2}
-          borderColor="cyan.200"
+          borderWidth={1}
+          borderColor="info.400"
           leftIcon={
-            props.triggerIcon ? (
-              <Icon as={FontAwesomeIcon} icon={props.triggerIcon} />
-            ) : null
+            <Icon as={FontAwesomeIcon} icon={props.triggerIcon || faPlus} />
           }
           onPress={toggleModal}
         >

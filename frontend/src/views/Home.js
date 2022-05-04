@@ -1,14 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useContext, useState, useEffect } from 'react'
 import { View, StyleSheet } from 'react-native'
-import {
-  Box,
-  Row,
-  Column,
-  Stack,
-  VStack,
-  HStack,
-  useBreakpointValue
-} from 'native-base'
+
+import { Box, Stack, VStack, useBreakpointValue } from 'native-base'
 
 import { pluginAPI } from 'api'
 import {
@@ -22,8 +15,6 @@ import {
   DNSBlockMetrics,
   DNSBlockPercent
 } from 'components/Dashboard/DNSMetricsWidgets'
-
-//import { Row, Col } from 'reactstrap'
 
 function Home() {
   const [pluginsEnabled, setPluginsEnabled] = useState([])

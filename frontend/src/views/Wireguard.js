@@ -44,7 +44,7 @@ export default class Wireguard extends Component {
     this.getStatus()
   }
 
-  handleChange(el, value) {
+  handleChange(value) {
     let fn = value ? wireguardAPI.up : wireguardAPI.down
     fn()
       .then((res) => {

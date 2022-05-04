@@ -10,7 +10,9 @@ import {
   Icon,
   IconButton,
   Stack,
+  HStack,
   VStack,
+  Switch,
   Text,
   useColorModeValue
 } from 'native-base'
@@ -68,22 +70,18 @@ const PluginList = (props) => {
       width="100%"
       p="4"
     >
-      <Stack direction="row" alignItems="stretch" mb="4">
-        <Heading sz="sm" flex="1">
-          Plugins
-        </Heading>
-        <Box>
+      <HStack alignItems="stretch" mb="4">
+        <Heading sz="sm">Plugins</Heading>
+        <Box marginLeft="auto">
           <ModalForm
             title="Add a new Plugin"
             triggerText="Add a plugin"
-            triggerClass="pull-right"
-            triggerIcon={faPlus}
             modalRef={refModal}
           >
             <AddPlugin notifyChange={notifyChange} />
           </ModalForm>
         </Box>
-      </Stack>
+      </HStack>
 
       {list.length ? (
         <>
@@ -125,19 +123,18 @@ const PluginList = (props) => {
                     <Box flex="1">{row.Name}</Box>
                     <Box flex="1">{row.URI}</Box>
                     <Box flex="2">{row.UnixPath}</Box>
-                    <Box flex="1" mt="-2">
-                      <Toggle
-                        isChecked={row.Enabled}
-                        onChange={(e, value) => handleChange(row, value)}
+                    <Box flex="1">
+                      <Switch
+                        defaultIsChecked={row.Enabled}
+                        onValueChange={() => handleChange(row, !row.Enabled)}
                       />
                     </Box>
                     <Box w="50" justifySelf="right">
                       <IconButton
                         size="sm"
-                        rounded="full"
-                        variant="solid"
+                        mt="-1"
+                        variant="ghost"
                         colorScheme="secondary"
-                        color="muted.100"
                         icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
                         onPress={(e) => deleteListItem(row)}
                       />

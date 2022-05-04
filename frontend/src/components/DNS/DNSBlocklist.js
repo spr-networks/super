@@ -168,7 +168,7 @@ export default class DNSBlocklist extends React.Component {
                       </td>
                       <td className="text-center">
                         <Toggle
-                          onChange={(el, value) =>
+                          onChange={(value) =>
                             this.handleItemSwitch(item, value)
                           }
                           isDisabled={this.state.pending}

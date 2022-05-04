@@ -1,41 +1,78 @@
 import React, { createContext, useEffect, useState } from 'react'
 import { Route, Switch, useLocation } from 'react-router-dom'
 import NotificationAlert from 'react-notification-alert'
-import ReactBSAlert from 'react-bootstrap-sweetalert'
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Footer from 'components/Footer/Footer'
 import Sidebar from 'components/Sidebar/Sidebar'
 //import FixedPlugin from "components/FixedPlugin/FixedPlugin.js";
 import { ConnectWebsocket } from 'api'
-
+import { ucFirst } from 'utils'
 import {
+  Alert,
   View,
+  Collapse,
   Divider,
   Box,
   Center,
+  Slide,
   Heading,
   Icon,
   IconButton,
+  CheckIcon,
+  CloseIcon,
   ScrollView,
   HStack,
   Stack,
   VStack,
   Text,
-  useColorModeValue
+  useColorModeValue,
+  useToast
 } from 'native-base'
 
-import { Modal } from 'reactstrap'
-
 import routes from 'routes'
+import {
+  faCheckCircle,
+  faCircleExclamation,
+  faCircleXmark,
+  faXmark
+} from '@fortawesome/free-solid-svg-icons'
 
 const errorState = {
   reportError: () => {},
   reportSuccess: () => {}
 }
 
-const modalState = {
-  modal: () => {}
+const CustomAlert = (props) => {
+  const { alertType, alertTitle, alertBody, toggleAlert } = props
+
+  return (
+    <Alert w="100%" variant="left-accent" status={alertType}>
+      <VStack space={2} flexShrink={1} w="100%">
+        <HStack flexShrink={1} space={2} justifyContent="space-between">
+          <HStack space={2} flexShrink={1}>
+            <Alert.Icon mt="1" />
+            <Text fontSize="md" color="coolGray.800">
+              {alertTitle} {alertBody}
+            </Text>
+          </HStack>
+          <IconButton
+            variant="unstyled"
+            _focus={{
+              borderWidth: 0
+            }}
+            icon={<CloseIcon size="3" color="coolGray.600" />}
+            onPress={toggleAlert}
+          />
+        </HStack>
+      </VStack>
+    </Alert>
+  )
+}
+
+const alertState = {
+  alert: () => {}
 }
 
 export const AppContext = createContext({
@@ -46,7 +83,7 @@ export const AppContext = createContext({
 })
 
 export const APIErrorContext = React.createContext(errorState)
-export const ModalContext = React.createContext(modalState)
+export const AlertContext = React.createContext(alertState)
 
 function Admin(props) {
   const location = useLocation()
@@ -56,13 +93,7 @@ function Admin(props) {
   const mainPanel = React.useRef()
   const notificationAlert = React.useRef()
 
-  const [showModal, setShowModal] = React.useState(false)
-  const [modalTitle, setModalTitle] = React.useState('')
-  const [modalBody, setModalBody] = React.useState('')
-
   const [websock, setwebsock] = React.useState(null)
-
-  const toggleModal = () => setShowModal(!showModal)
 
   errorState.reportError = (message) => {
     var options = {}
@@ -98,24 +129,39 @@ function Admin(props) {
     notificationAlert.current.notificationAlert(options)
   }
 
-  modalState.modal = (title, body) => {
+  const [showAlert, setShowAlert] = React.useState(false)
+  const [alertType, setAlertType] = React.useState('info')
+  const [alertTitle, setAlertTitle] = React.useState('')
+  const [alertBody, setAlertBody] = React.useState('')
+  const toggleAlert = () => setShowAlert(!showAlert)
+
+  alertState.alert = (type = 'info', title, body = null) => {
+    setAlertType(type)
+
     if (!body) {
       body = title
-      title = 'Message'
+      title = ucFirst(type)
     }
-    setModalTitle(title)
-    setModalBody(body)
-    setShowModal(true)
+
+    setAlertTitle(title)
+    setAlertBody(body)
+    setShowAlert(true)
+    setTimeout((_) => setShowAlert(false), 5e3)
   }
-  // TODO -- merge
-  modalState.reportError = modalState.modal
-  modalState.success = modalState.modal
+
+  alertState.success = (title, body) => alertState.alert('success', title, body)
+  alertState.info = (title, body) => alertState.alert('info', title, body)
+  alertState.warning = (title, body) => alertState.alert('warning', title, body)
+  alertState.danger = (title, body) => alertState.alert('danger', title, body)
+  alertState.error = (title, body) => alertState.alert('error', title, body)
 
   useEffect(() => {
     document.documentElement.scrollTop = 0
     document.scrollingElement.scrollTop = 0
     mainPanel.current.scrollTop = 0
   }, [location])
+
+  const toast = useToast()
 
   useEffect(() => {
     ConnectWebsocket((event) => {
@@ -173,6 +219,7 @@ function Admin(props) {
     })
   }
 
+  //TODO
   const handleMiniClick = () => {
     if (document.body.classList.contains('sidebar-mini')) {
       setSidebarMini(false)
@@ -249,35 +296,73 @@ function Admin(props) {
                 ref={mainPanel}
               >
                 {/*<SubMainContent props={props} />*/}
-                {/*<AdminNavbar {...props} handleMiniClick={handleMiniClick} />*/}
 
                 <APIErrorContext.Provider value={errorState}>
                   <NotificationAlert ref={notificationAlert} />
                 </APIErrorContext.Provider>
 
-                <ModalContext.Provider value={modalState}>
-                  <Modal
-                    fade={false}
-                    isOpen={showModal}
-                    toggle={toggleModal}
-                    autoFocus={false}
-                  >
-                    <div className="modal-header">
-                      <button
-                        aria-label="Close"
-                        className="close"
-                        data-dismiss="modal"
-                        type="button"
-                        onClick={toggleModal}
-                      >
-                        <i className="nc-icon nc-simple-remove" />
-                      </button>
-                      <h5 className="modal-title">{modalTitle}</h5>
-                    </div>
-                    <div className="modal-body">{modalBody}</div>
-                    <div className="modal-footer"></div>
-                  </Modal>
-                </ModalContext.Provider>
+                <AlertContext.Provider value={alertState}>
+                  <Slide in={showAlert} placement="top">
+                    <Box
+                      maxWidth="360"
+                      top="16"
+                      position="sticky"
+                      alignItems="center"
+                      justifyContent="center"
+                      alignSelf="center"
+                    >
+                      {/*toast.show({render: ({ id }) => { return (<h2>custom toast!</h2>) })*/}
+                      <CustomAlert
+                        alertTitle={alertTitle}
+                        alertBody={alertBody}
+                        alertType={alertType}
+                        toggleAlert={toggleAlert}
+                      />
+                    </Box>
+                  </Slide>
+
+                  {/*
+                  <Slide in={showAlert} placement="top">
+                    <Box
+                      w="100%"
+                      position="absolute"
+                      p="4"
+                      borderRadius="xs"
+                      bg={alertType + '.200'}
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <HStack space={2}>
+                        <Icon
+                          as={FontAwesomeIcon}
+                          icon={
+                            alertType == 'error'
+                              ? faCircleXmark
+                              : alertType == 'success'
+                              ? faCheckCircle
+                              : faCircleExclamation
+                          }
+                          size="sm"
+                          color={alertType + '.600'}
+                          _dark={{
+                            color: alertType + '.700'
+                          }}
+                        />
+                        <Text
+                          color={alertType + '.600'}
+                          textAlign="center"
+                          _dark={{
+                            color: alertType + '.700'
+                          }}
+                          fontWeight="medium"
+                        >
+                          <Text bold>{alertTitle}</Text> {alertBody}
+                        </Text>
+                      </HStack>
+                    </Box>
+                  </Slide>
+                  */}
+                </AlertContext.Provider>
 
                 <Box flex="1">
                   <Switch>{getRoutes(routes)}</Switch>
