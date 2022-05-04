@@ -5,7 +5,7 @@ import { Bar } from 'react-chartjs-2'
 
 import { deviceAPI, trafficAPI, wifiAPI } from 'api'
 import DateRange from 'components/DateRange'
-import { APIErrorContext } from 'layouts/Admin'
+import { APIErrorContext, AlertContext } from 'layouts/Admin'
 import { prettySize } from 'utils'
 
 import {
@@ -29,21 +29,19 @@ export default class Traffic extends Component {
     lan_scale: 'All Time'
   }
 
-  static contextType = APIErrorContext
+  static contextType = AlertContext
   macToName = {}
   ipToMac = {}
 
   async processTrafficHistory(target, scale) {
     const devices = await deviceAPI.list().catch((error) => {
-      this.context.reportError(
+      this.context.error(
         'API Failure get ' + target + 'traffic: ' + error.message
       )
     })
 
     const arp = await wifiAPI.arp().catch((error) => {
-      this.context.reportError(
-        'API Failure get arp information: ' + error.message
-      )
+      this.context.error('API Failure get arp information: ' + error.message)
     })
 
     for (const a of arp) {
@@ -138,9 +136,7 @@ export default class Traffic extends Component {
 
     if (do_time_series) {
       let traffic_series = await trafficAPI.history().catch((error) => {
-        this.context.reportError(
-          'API Failure get traffic history: ' + error.message
-        )
+        this.context.error('API Failure get traffic history: ' + error.message)
       })
 
       let recent_reading = traffic_series[0]
@@ -201,12 +197,12 @@ export default class Traffic extends Component {
       const traffic_in = await trafficAPI
         .traffic('incoming_traffic_' + target)
         .catch((error) => {
-          this.context.reportError('API Failure get traffic: ' + error.message)
+          this.context.error('API Failure get traffic: ' + error.message)
         })
       const traffic_out = await trafficAPI
         .traffic('outgoing_traffic_' + target)
         .catch((error) => {
-          this.context.reportError(
+          this.context.error(
             'API Failure get ' + target + ' traffic: ' + error.message
           )
         })
@@ -293,8 +289,7 @@ export default class Traffic extends Component {
   }
 
   render() {
-    const handleChangeTime = (newValue, choice) => {
-      let scale = newValue.value
+    const handleChangeTime = (scale, choice) => {
       this.state[choice + '_scale'] = scale
       this.processTrafficHistory(choice, scale).then((result) => {
         let o = {}

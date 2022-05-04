@@ -238,7 +238,7 @@ class TrafficTimeSeries extends Component {
     }
 
     return (
-      <div className="content">
+      <>
         {['WanOut', 'WanIn', 'LanIn', 'LanOut'].map((type) => {
           return (
             <TimeSeries
@@ -252,7 +252,7 @@ class TrafficTimeSeries extends Component {
             />
           )
         })}
-      </div>
+      </>
     )
   }
 }

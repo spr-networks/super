@@ -37,6 +37,7 @@ const DateRange = (props) => {
       <Menu.OptionGroup defaultValue={defaultValue} title="Select Date Range">
         {scales.map((scale) => (
           <Menu.ItemOption
+            key={scale.value}
             value={scale.value}
             onPress={(e) => handleChange(scale.value)}
           >
