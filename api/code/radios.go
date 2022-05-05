@@ -9,6 +9,9 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"regexp"
+	"io"
+	"github.com/gorilla/mux"
 )
 
 var HostapdConf = "/configs/wifi/hostapd.conf"
@@ -75,9 +78,10 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 	//freq3 := 0 //for 80+80, not supported right now
 
 	cmd := ""
-
+	base := 5000
 	if mode == "b" || mode == "g"  {
 		//2.4ghz
+		base = 2407
 		freq1 = 2407 + channel * 5
 		if channel == 14 {
 			//channel 14 goes higher
@@ -85,7 +89,7 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 		}
 	} else if mode == "a" {
 		//5 ghz
-		freq1 = 5000 + channel * 5
+		freq1 = base + channel * 5
 	}
 
 	switch bw {
@@ -93,12 +97,12 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 		//freq1 was all needed
 	case 40:
 		//center is 10 mhz above freq1 center
-		freq2 = 5000 + (channel+2) * 5
+		freq2 = base + (channel+2) * 5
 	case 80:
 		//center is 30 mhz above freq1 center
-		freq2 = 5000 + (channel+6) * 5
+		freq2 = base + (channel+6) * 5
 	case 160:
-		freq2 = 5000 + (channel+14) * 5
+		freq2 = base + (channel+14) * 5
 	}
 
 	//chan_switch 1 5180 sec_channel_offset=1 center_freq1=5210 bandwidth=80 vht
@@ -270,4 +274,65 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conf)
+}
+
+func iwCommand(w http.ResponseWriter, r *http.Request) {
+	command := mux.Vars(r)["command"]
+
+	/*
+	   allowed commands for now:
+	   iw/list, iw/dev iw/dev/wlan0-9/scan
+	*/
+	validCommand := regexp.MustCompile(`^(list|dev)/?([a-z0-9\.]+\/scan)?$`).MatchString
+	if !validCommand(command) {
+		fmt.Println("invalid iw command")
+		http.Error(w, "Invalid command", 400)
+		return
+	}
+
+	args := strings.Split(command, "/")
+	cmd := exec.Command("iw", args...)
+	data, err := cmd.Output()
+	if err != nil {
+		fmt.Println("iw command error:", err)
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	// use json parsers if available (iw_list, iw_dev, iw-scan)
+	if command == "list" || command == "dev" || strings.HasSuffix(command, "scan") {
+		parser := "--iw_" + command // bug: jc dont allow - when using local parsers
+		if strings.HasSuffix(command, "scan") {
+			parser = "--iw-scan"
+		}
+
+		cmd = exec.Command("jc", parser)
+
+		stdin, err := cmd.StdinPipe()
+		if err != nil {
+			fmt.Println("iwCommand stdin pipe error:", err)
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		go func() {
+			defer stdin.Close()
+			io.WriteString(stdin, string(data))
+		}()
+
+		stdout, err := cmd.Output()
+		if err != nil {
+			fmt.Println("iwCommand stdout error:", err)
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, string(stdout))
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprintf(w, string(data))
 }
