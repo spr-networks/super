@@ -58,6 +58,12 @@ const routes = [
     layout: '/admin'
   },
   {
+    layout: '/admin',
+    path: '/add_device',
+    redirect: true,
+    component: AddDevice
+  },
+  {
     path: '/wireless',
     name: 'Wifi',
     icon: faWifi,

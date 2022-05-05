@@ -2,13 +2,14 @@ import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
-import { faTimes } from '@fortawesome/free-solid-svg-icons'
+import { faPlus, faTimes } from '@fortawesome/free-solid-svg-icons'
 
 import { logAPI } from 'api/DNS'
 import ModalConfirm from 'components/ModalConfirm'
 
 import {
   Box,
+  Button,
   Divider,
   Heading,
   HStack,
@@ -94,9 +95,22 @@ const DNSLogList = ({ title, description, ...props }) => {
         </VStack>
 
         <ModalConfirm
-          marginLeft="auto"
           type={type}
           handleSubmit={handleSubmit}
+          trigger={(triggerProps) => {
+            return (
+              <Button
+                marginLeft="auto"
+                variant="solid"
+                colorScheme="primary"
+                rounded="full"
+                leftIcon={<Icon as={FontAwesomeIcon} icon={faPlus} />}
+                {...triggerProps}
+              >
+                {'Add ' + type}
+              </Button>
+            )
+          }}
         />
       </HStack>
 

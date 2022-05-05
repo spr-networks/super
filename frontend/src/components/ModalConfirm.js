@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { faPlus } from '@fortawesome/free-solid-svg-icons'
@@ -6,32 +6,59 @@ import { Button, FormControl, Icon, Input, Modal } from 'native-base'
 
 const ModalConfirm = (props) => {
   const [value, setValue] = useState('')
-  const [showAlert, setShowAlert] = useState(false)
+  const [isOpen, setIsOpen] = useState(props.isOpen || false)
 
-  const { type, handleSubmit } = props
+  const { trigger, type, handleSubmit } = props
+  const triggerRef = useRef(null)
+
+  useEffect(() => {
+    setIsOpen(props.isOpen ? true : false)
+
+    return () => {
+      setIsOpen(false)
+    }
+  }, [props.isOpen])
 
   const handlePress = () => {
     handleSubmit(value)
-    setShowAlert(false)
+    setIsOpen(false)
     setValue('')
   }
 
-  return (
-    <>
+  const handleOpen = () => setIsOpen(true)
+
+  let triggerProps = {}
+
+  const updateTrigger = () => {
+    return trigger(
+      {
+        ...triggerProps,
+        ref: triggerRef,
+        onPress: handleOpen
+      },
+      { open: isOpen }
+    )
+    /*return (
       <Button
         variant="solid"
         colorScheme="primary"
         rounded="full"
         leftIcon={<Icon as={FontAwesomeIcon} icon={faPlus} />}
-        onPress={() => setShowAlert(true)}
+        onPress={() => setIsOpen(true)}
         {...props}
       >
         {'Add ' + type}
       </Button>
+    )*/
+  }
+
+  return (
+    <>
+      {trigger ? updateTrigger() : null}
 
       <Modal
-        isOpen={showAlert}
-        onClose={() => setShowAlert(false)}
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
         animationPreset="slide"
       >
         <Modal.Content maxWidth="250px">
