@@ -5,7 +5,7 @@ import { APIErrorContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 import PluginDisabled from 'views/PluginDisabled'
 
-import { Row, Col } from 'reactstrap'
+import { View, VStack } from 'native-base'
 
 export default class DNSBlock extends Component {
   state = { enabled: true, PermitDomains: [], BlockDomains: [] }
@@ -51,29 +51,24 @@ export default class DNSBlock extends Component {
     }
 
     return (
-      <div className="content">
-        <Row>
-          <Col md="12">
-            <DNSBlocklist />
-          </Col>
-        </Row>
-        <Row>
-          <Col md="12">
-            <DNSOverrideList
-              key={generatedID + 1}
-              list={this.state.BlockDomains}
-              title="Block Custom Domain"
-              notifyChange={notifyChange}
-            />
-            <DNSOverrideList
-              key={generatedID + 2}
-              list={this.state.PermitDomains}
-              title="Allow Custom Domain"
-              notifyChange={notifyChange}
-            />
-          </Col>
-        </Row>
-      </div>
+      <View>
+        <VStack>
+          <DNSBlocklist />
+
+          <DNSOverrideList
+            key={generatedID + 1}
+            list={this.state.BlockDomains}
+            title="Block Custom Domain"
+            notifyChange={notifyChange}
+          />
+          <DNSOverrideList
+            key={generatedID + 2}
+            list={this.state.PermitDomains}
+            title="Allow Custom Domain"
+            notifyChange={notifyChange}
+          />
+        </VStack>
+      </View>
     )
   }
 }

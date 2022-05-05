@@ -252,7 +252,7 @@ function Admin(props) {
         <ScrollView w="100%" nativeID="scrollview-id">
           <Box h="100%" w="100%">
             <Box
-              display={{ base: 'none', lg: 'flex' }}
+              display={{ base: 'flex', lg: 'flex' }}
               w="100%"
               position="sticky"
               top="0"

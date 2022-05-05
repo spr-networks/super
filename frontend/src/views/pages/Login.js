@@ -51,7 +51,7 @@ function Login() {
   }
 
   return (
-    <>
+    <View>
       <Center w="100%">
         <Box
           safeArea
@@ -112,7 +112,7 @@ function Login() {
         }}
       />
     */}
-    </>
+    </View>
   )
 }
 

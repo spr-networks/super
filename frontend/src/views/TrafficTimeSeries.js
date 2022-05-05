@@ -1,4 +1,7 @@
 import React, { useContext, Component } from 'react'
+
+import { View, VStack } from 'native-base'
+
 import { deviceAPI, trafficAPI } from 'api'
 import { APIErrorContext } from 'layouts/Admin'
 import chroma from 'chroma-js'
@@ -238,21 +241,23 @@ class TrafficTimeSeries extends Component {
     }
 
     return (
-      <>
-        {['WanOut', 'WanIn', 'LanIn', 'LanOut'].map((type) => {
-          return (
-            <TimeSeries
-              key={type}
-              type={type}
-              title={prettyTitle(type)}
-              data={this.state[type]}
-              chartMode={this.state.chartModes[type]}
-              handleChangeTime={handleChangeTime}
-              handleChangeMode={handleChangeMode}
-            />
-          )
-        })}
-      </>
+      <View>
+        <VStack>
+          {['WanOut', 'WanIn', 'LanIn', 'LanOut'].map((type) => {
+            return (
+              <TimeSeries
+                key={type}
+                type={type}
+                title={prettyTitle(type)}
+                data={this.state[type]}
+                chartMode={this.state.chartModes[type]}
+                handleChangeTime={handleChangeTime}
+                handleChangeMode={handleChangeMode}
+              />
+            )
+          })}
+        </VStack>
+      </View>
     )
   }
 }

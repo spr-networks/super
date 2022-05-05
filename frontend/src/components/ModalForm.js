@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import PropTypes from 'prop-types'
 import { Box, Button, Icon, Modal } from 'native-base'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { faPlus } from '@fortawesome/free-solid-svg-icons'
@@ -54,6 +55,13 @@ const ModalForm = (props) => {
       ) : null}
     </>
   )
+}
+
+ModalForm.propTypes = {
+  title: PropTypes.string,
+  triggerIcon: PropTypes.element,
+  triggerText: PropTypes.string,
+  modalRef: PropTypes.any
 }
 
 export default ModalForm

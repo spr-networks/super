@@ -6,7 +6,7 @@ import { Bar } from 'react-chartjs-2'
 import { deviceAPI, wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 
-import { Box, Heading } from 'native-base'
+import { Box, Heading, View } from 'native-base'
 
 export default class SignalStrength extends Component {
   state = {
@@ -210,7 +210,7 @@ export default class SignalStrength extends Component {
     })
 
     return (
-      <>
+      <View>
         <Box
           rounded="md"
           _light={{ bg: 'warmGray.50' }}
@@ -241,7 +241,7 @@ export default class SignalStrength extends Component {
             ) : null}
           </Box>
         </Box>
-      </>
+      </View>
     )
   }
 }

@@ -1,13 +1,12 @@
 import React, { useContext, Component } from 'react'
+import { View } from 'native-base'
 
-import { APIErrorContext } from 'layouts/Admin'
 import LogList from 'components/Logs/LogList'
 
 import { Row, Col } from 'reactstrap'
 
 export default class Logs extends Component {
   state = { containers: [] }
-  static contextType = APIErrorContext
 
   constructor(props) {
     super(props)
@@ -20,13 +19,9 @@ export default class Logs extends Component {
 
   render() {
     return (
-      <div className="content">
-        <Row>
-          <Col md="12">
-            <LogList containers={this.state.containers} />
-          </Col>
-        </Row>
-      </div>
+      <View>
+        <LogList containers={this.state.containers} />
+      </View>
     )
   }
 }

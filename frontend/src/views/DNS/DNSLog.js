@@ -3,7 +3,7 @@ import DNSLogHistoryList from 'components/DNS/DNSLogHistoryList'
 import PluginDisabled from 'views/PluginDisabled'
 import { logAPI } from 'api/DNS'
 
-import { Row, Col } from 'reactstrap'
+import { View } from 'native-base'
 
 export default class DNSLog extends Component {
   state = { enabled: true, logs: [], ips: [], filterText: '' }
@@ -31,16 +31,12 @@ export default class DNSLog extends Component {
     }
 
     return (
-      <div className="content">
-        <Row>
-          <Col md="12">
-            <DNSLogHistoryList
-              ips={this.state.ips}
-              filterText={this.state.filterText}
-            />
-          </Col>
-        </Row>
-      </div>
+      <View>
+        <DNSLogHistoryList
+          ips={this.state.ips}
+          filterText={this.state.filterText}
+        />
+      </View>
     )
   }
 }

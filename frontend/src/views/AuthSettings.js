@@ -1,22 +1,9 @@
 import React, { useContext, Component } from 'react'
 
+import { Box, Button, Heading, HStack, Text, View, VStack } from 'native-base'
+
 import { APIErrorContext } from 'layouts/Admin'
 import { api } from 'api'
-
-import {
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  CardTitle,
-  Label,
-  FormGroup,
-  Input,
-  Table,
-  Row,
-  Col
-} from 'reactstrap'
 
 let ApiBaseUrl = api.baseURL
 let TOKEN = ''
@@ -169,7 +156,7 @@ export default class AuthSettings extends Component {
   }
 
   render() {
-    const handleClickRegister = (e) => {
+    const handleClickRegister = () => {
       register()
         .then((status) => {
           this.setState({ status })
@@ -179,7 +166,7 @@ export default class AuthSettings extends Component {
         })
     }
 
-    const handleClickLogin = (e) => {
+    const handleClickLogin = () => {
       login()
         .then((status) => {
           this.setState({ status })
@@ -189,46 +176,41 @@ export default class AuthSettings extends Component {
         })
     }
     return (
-      <div className="content">
-        <Row>
-          <Col md="12">
-            <Card>
-              <CardHeader>
-                <CardTitle tag="h4">
-                  Webauthn{' '}
-                  <small
-                    className={
-                      this.state.status.startsWith('success')
-                        ? 'text-success'
-                        : 'text-muted'
-                    }
-                  >
-                    {' '}
-                    {this.state.status}
-                  </small>
-                </CardTitle>
-              </CardHeader>
-              <CardBody>
-                <Button
-                  className="btn-wd"
-                  color="primary"
-                  onClick={handleClickRegister}
-                >
-                  Register Webauthn device
-                </Button>
+      <View>
+        <Box
+          _light={{ bg: 'warmGray.50' }}
+          _dark={{ bg: 'blueGray.800' }}
+          rounded="md"
+          width="100%"
+          p="4"
+        >
+          <HStack space="1" mb="2">
+            <Heading>Webauthn</Heading>
 
-                <Button
-                  className="btn-wd"
-                  color="secondary"
-                  onClick={handleClickLogin}
-                >
-                  Verify Webauthn device
-                </Button>
-              </CardBody>
-            </Card>
-          </Col>
-        </Row>
-      </div>
+            <Text
+              marginLeft="auto"
+              pt="2"
+              color={
+                this.state.status.startsWith('success')
+                  ? 'success.500'
+                  : 'muted.500'
+              }
+            >
+              {this.state.status}
+            </Text>
+          </HStack>
+
+          <Button.Group size="md">
+            <Button colorScheme="primary" onPress={handleClickRegister}>
+              Register Webauthn device
+            </Button>
+
+            <Button colorScheme="secondary" onPress={handleClickLogin}>
+              Verify Webauthn device
+            </Button>
+          </Button.Group>
+        </Box>
+      </View>
     )
   }
 }

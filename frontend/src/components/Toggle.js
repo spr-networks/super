@@ -10,7 +10,6 @@ const Toggle = (props) => {
   const [isDisabled, setIsDisabled] = useState(props.isDisabled || false)
 
   const handleChange = (e) => {
-    console.log('CHANGE!')
     setIsChecked(!isChecked)
     if (props.onChange) {
       props.onChange(e, !isChecked)
@@ -38,7 +37,7 @@ const Toggle = (props) => {
   return (
     <Switch
       defaultIsChecked={isChecked}
-      onTrackColor={props.isDisabled ? 'info.200' : 'info.500'}
+      onTrackColor={isDisabled ? 'info.200' : 'info.500'}
       onValueChange={handleChange}
     />
   )

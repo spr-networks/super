@@ -15,7 +15,8 @@ import {
   HStack,
   VStack,
   Text,
-  useColorModeValue
+  useColorModeValue,
+  View
 } from 'native-base'
 
 export default class Traffic extends Component {
@@ -297,7 +298,7 @@ export default class Traffic extends Component {
 
     //TODO bg={useColorModeValue('warmGray.50', 'blueGray.800')}
     return (
-      <>
+      <View>
         <Box
           rounded="md"
           _light={{ bg: 'warmGray.50' }}
@@ -356,7 +357,7 @@ export default class Traffic extends Component {
             ) : null}
           </Box>
         </Box>
-      </>
+      </View>
     )
   }
 }

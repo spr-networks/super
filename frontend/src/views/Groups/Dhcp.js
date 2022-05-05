@@ -1,13 +1,14 @@
 import React, { Component } from 'react'
+import { View, VStack } from 'native-base'
 
 import { wifiAPI, deviceAPI, nfmapAPI } from 'api'
 import GroupListing from 'components/Groups/GroupListing'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 
 export default class Dhcp extends Component {
   state = { groups: [] }
 
-  static contextType = APIErrorContext
+  static contextType = AlertContext
 
   async componentDidMount() {
     const refreshList = async () => {
@@ -15,14 +16,12 @@ export default class Dhcp extends Component {
       const vmap = await nfmapAPI.getNFVerdictMap('dhcp').catch((error) => {
         //404 = no clients in map yet
         if (error.message !== 404) {
-          this.context.reportError(
-            'API Failure for: ' + v.Name + ' ' + error.message
-          )
+          this.context.error('API Failure for: ' + v.Name + ' ' + error.message)
         }
       })
 
       const arp = await wifiAPI.arp().catch((error) => {
-        this.context.reportError('API Failure:' + error.message)
+        this.context.error('API Failure:' + error.message)
       })
 
       let ipMap = {}
@@ -31,7 +30,7 @@ export default class Dhcp extends Component {
       }
 
       const devices = await deviceAPI.list().catch((error) => {
-        this.context.reportError('API Failure getDevices: ' + error.message)
+        this.context.error('API Failure getDevices: ' + error.message)
       })
 
       let group = { Name: 'Connected Clients', Members: [] }
@@ -79,13 +78,13 @@ export default class Dhcp extends Component {
 
   render() {
     return (
-      <>
-        <div className="content">
+      <View>
+        <VStack>
           {this.state.groups.map((group) => (
             <GroupListing key={group.Name} group={group} />
           ))}
-        </div>
-      </>
+        </VStack>
+      </View>
     )
   }
 }
