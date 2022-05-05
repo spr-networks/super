@@ -6,6 +6,7 @@ import {
   Button,
   Box,
   Flex,
+  HamburgerIcon,
   HStack,
   Icon,
   IconButton,
@@ -137,6 +138,7 @@ function AdminNavbarOld(props) {
 */
 
 const AdminNavbar = (props) => {
+  const { isOpenSidebar, setIsOpenSidebar } = props
   const { colorMode, toggleColorMode } = useColorMode()
 
   useEffect(() => {
@@ -167,13 +169,21 @@ const AdminNavbar = (props) => {
         h="16"
         justifyContent="space-between"
       >
-        <HStack w="100%" alignItems="center">
+        <HStack w="100%" alignItems="center" space="1">
+          <IconButton
+            icon={<HamburgerIcon />}
+            _icon={{ color: useColorModeValue('coolGray.600', 'coolGray.300') }}
+            onPress={() => setIsOpenSidebar(!isOpenSidebar)}
+          />
+
           <Text fontSize="lg" bold>
             SPR
           </Text>
-          <Text fontSize="md" color="muted.600" pl="1">
+
+          <Text fontSize="md" color="muted.600">
             v1.4
           </Text>
+
           <HStack marginLeft="auto" space="4">
             <Link
               p={4}
@@ -182,6 +192,7 @@ const AdminNavbar = (props) => {
               _text={{
                 textDecorationLine: 'none'
               }}
+              display={{ base: 'none', lg: 'flex' }}
             >
               Docs
             </Link>
@@ -193,6 +204,7 @@ const AdminNavbar = (props) => {
               _text={{
                 textDecorationLine: 'none'
               }}
+              display={{ base: 'none', lg: 'flex' }}
             >
               API
             </Link>

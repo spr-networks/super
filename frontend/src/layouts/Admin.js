@@ -36,6 +36,7 @@ import {
   faCheckCircle,
   faCircleExclamation,
   faCircleXmark,
+  faHeartPulse,
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -219,17 +220,8 @@ function Admin(props) {
     })
   }
 
-  //TODO
-  const handleMiniClick = () => {
-    if (document.body.classList.contains('sidebar-mini')) {
-      setSidebarMini(false)
-    } else {
-      setSidebarMini(true)
-    }
-    document.body.classList.toggle('sidebar-mini')
-  }
-
   const [activeSidebarItem, setActiveSidebarItem] = useState('')
+  const [isOpenSidebar, setIsOpenSidebar] = useState(false)
   const [isNavbarOpen, setIsNavbarOpen] = useState(false)
 
   return (
@@ -252,7 +244,7 @@ function Admin(props) {
         <ScrollView w="100%" nativeID="scrollview-id">
           <Box h="100%" w="100%">
             <Box
-              display={{ base: 'flex', lg: 'flex' }}
+              display={{ base: 'none', md: 'flex' }}
               w="100%"
               position="sticky"
               top="0"
@@ -262,31 +254,64 @@ function Admin(props) {
               // @ts-ignore
               style={{ backdropFilter: 'blur(10px)' }}
             >
-              <AdminNavbar />
+              <AdminNavbar
+                isMobile={false}
+                isOpenSidebar={isOpenSidebar}
+                setIsOpenSidebar={setIsOpenSidebar}
+              />
             </Box>
-            {/*<Box
-          display={{ base: "flex", lg: "none" }}
-          position="sticky"
-          top="0"
-          zIndex={99}
-          _light={{ bg: "light.200" }}
-          _dark={{ bg: "dark.200" }}
-          w="100%"
-        >
-          <MobileNavbar
-            isOpenSidebar={isOpenSidebar}
-            setIsOpenSidebar={setIsOpenSidebar}
-          />
-        </Box>*/}
+            <Box
+              display={{ base: 'flex', md: 'none' }}
+              w="100%"
+              position="sticky"
+              top="0"
+              zIndex={99}
+              _light={{ bg: 'coolGray.100' }}
+              _dark={{ bg: 'blueGray.900:alpha.50' }}
+              // @ts-ignore
+              style={{ backdropFilter: 'blur(10px)' }}
+            >
+              <AdminNavbar
+                isMobile={true}
+                isOpenSidebar={isOpenSidebar}
+                setIsOpenSidebar={setIsOpenSidebar}
+              />
+            </Box>
+
             <HStack>
               <Box
                 position="sticky"
                 top="16"
                 h="calc(100vh - 64px)"
-                display={{ base: 'none', lg: 'flex' }}
+                display={{ base: 'none', md: 'flex' }}
               >
-                <Sidebar routes={routes} />
+                <Sidebar
+                  isMobile={false}
+                  isMini={isOpenSidebar}
+                  isOpenSidebar={true}
+                  setIsOpenSidebar={setIsOpenSidebar}
+                  routes={routes}
+                />
               </Box>
+              {isOpenSidebar ? (
+                <Box
+                  position="fixed"
+                  top="16"
+                  h="calc(100vh - 64px)"
+                  w="100%"
+                  zIndex={99}
+                  display={{ base: 'flex', md: 'none' }}
+                >
+                  <Sidebar
+                    isMobile={true}
+                    isMini={false}
+                    isOpenSidebar={isOpenSidebar}
+                    setIsOpenSidebar={setIsOpenSidebar}
+                    routes={routes}
+                  />
+                </Box>
+              ) : null}
+
               {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
               <Box
                 h="calc(100% - 64px)"

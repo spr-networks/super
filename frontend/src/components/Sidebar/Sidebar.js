@@ -17,16 +17,14 @@ import {
 } from 'native-base'
 
 const Sidebar = (props) => {
-  let isMobile = false
-  let setIsOpenSidebar = () => {}
-
-  let sidebarItems = props.routes || []
+  const { isMobile, isMini, isOpenSidebar, setIsOpenSidebar } = props
+  const sidebarItems = props.routes || []
 
   return (
     <ScrollView overflowY="overlay">
       <Box
         py="5"
-        w={isMobile ? '100%' : '64'}
+        w={isMini ? '20' : '100%'} // 64
         flex="1"
         borderRightWidth={isMobile ? '0' : '1'}
         _light={{
@@ -39,6 +37,7 @@ const Sidebar = (props) => {
           sidebarItems={sidebarItems}
           level={0}
           isMobile={isMobile}
+          isMini={isMini}
           setIsOpenSidebar={setIsOpenSidebar}
         />
       </Box>
@@ -47,7 +46,7 @@ const Sidebar = (props) => {
 }
 
 const SidebarItem = (props) => {
-  const { sidebarItems, level, isMobile, setIsOpenSidebar } = props
+  const { sidebarItems, level, isMobile, isMini, setIsOpenSidebar } = props
   const { activeSidebarItem, setActiveSidebarItem } = useContext(AppContext)
 
   /*
@@ -135,14 +134,16 @@ const SidebarItem = (props) => {
                   {item.icon && typeof item.icon !== 'string' ? (
                     <Icon as={FontAwesomeIcon} icon={item.icon} />
                   ) : null}
-                  <Text
-                    fontWeight="300"
-                    fontSize="sm"
-                    _dark={{ color: 'coolGray.200' }}
-                    _light={{ color: 'blueGray.900' }}
-                  >
-                    {item.name}
-                  </Text>
+                  {isMini ? null : (
+                    <Text
+                      fontWeight="300"
+                      fontSize="sm"
+                      _dark={{ color: 'coolGray.200' }}
+                      _light={{ color: 'blueGray.900' }}
+                    >
+                      {item.name}
+                    </Text>
+                  )}
                   {item.status && <SidebarBadge status={item.status} />}
                 </HStack>
               </Box>
@@ -151,6 +152,7 @@ const SidebarItem = (props) => {
         ) : (
           <CollapsibleSidebarItem
             isMobile={isMobile}
+            isMini={isMini}
             title={item.name}
             icon={item.icon}
             level={level}
@@ -162,6 +164,7 @@ const SidebarItem = (props) => {
               level={level + 1}
               setIsOpenSidebar={setIsOpenSidebar}
               isMobile={isMobile}
+              isMini={isMini}
             />
           </CollapsibleSidebarItem>
         )}
@@ -178,6 +181,7 @@ export const CollapsibleSidebarItem = (props) => {
     collapsed,
     icon,
     isMobile,
+    isMini,
     setIsOpenSidebar
   } = props
   const [isCollapsed, setIsCollapsed] = useState(collapsed)
@@ -205,12 +209,13 @@ export const CollapsibleSidebarItem = (props) => {
               flexShrink="1"
               _text={{
                 fontWeight: '600', // '300',
+                textTransform: 'uppercase',
                 fontSize: 'sm',
                 _dark: { color: 'coolGray.50' },
                 _light: { color: 'blueGray.900' }
               }}
             >
-              {title}
+              {isMini ? title.substr(0, 1) : title}
             </Box>
             <RotatingView isCollapsed={isCollapsed}>
               <Icon
