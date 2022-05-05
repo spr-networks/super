@@ -125,6 +125,7 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 		cmd += " vht"
 	}
 
+	fmt.Println(cmd)
 	_, err := RunHostapdCommandArray(strings.Split(cmd, " "))
 	return err
 }
