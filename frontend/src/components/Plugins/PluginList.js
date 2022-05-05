@@ -6,12 +6,14 @@ import {
   View,
   Divider,
   Box,
+  FlatList,
   Heading,
   Icon,
   IconButton,
   Stack,
   HStack,
   VStack,
+  Spacer,
   Switch,
   Text,
   useColorModeValue
@@ -70,9 +72,12 @@ const PluginList = (props) => {
       width="100%"
       p="4"
     >
-      <HStack alignItems="stretch" mb="4">
-        <Heading sz="sm">Plugins</Heading>
-        <Box marginLeft="auto">
+      <HStack justifyContent="space-between">
+        <Heading fontSize="xl" pb="3" alignSelf="center">
+          Plugins
+        </Heading>
+
+        <Box alignSelf="center">
           <ModalForm
             title="Add a new Plugin"
             triggerText="Add a plugin"
@@ -83,57 +88,48 @@ const PluginList = (props) => {
         </Box>
       </HStack>
 
-      {list.length ? (
-        <VStack space="4" w="100%" divider={<Divider />}>
-          <HStack alignItems="stretch">
-            <Text flex="1" bold color="emerald.400">
-              Name
-            </Text>
-            <Text flex="1" bold color="emerald.400">
-              URI
-            </Text>
-            <Text flex="2" bold color="emerald.400">
-              UnixPath
-            </Text>
-            <Text flex="1" bold color="emerald.400">
-              Active
-            </Text>
-            <Text
-              bold
-              w="50"
-              justifySelf="right"
-              textAlign="right"
-              color="emerald.400"
-            >
-              Delete
-            </Text>
-          </HStack>
+      <FlatList
+        data={list}
+        renderItem={({ item }) => (
+          <Box
+            borderBottomWidth="1"
+            _dark={{
+              borderColor: 'muted.600'
+            }}
+            borderColor="muted.200"
+            py="2"
+          >
+            <HStack space={3} justifyContent="space-between">
+              <VStack minW="20%">
+                <Text bold>{item.Name}</Text>
+                <Text>{item.URI}</Text>
+              </VStack>
 
-          {list.map((row, index) => (
-            <HStack key={index} space="4" alignItems="stretch">
-              <Box flex="1">{row.Name}</Box>
-              <Box flex="1">{row.URI}</Box>
-              <Box flex="2">{row.UnixPath}</Box>
-              <Box flex="1">
+              <Text alignSelf="center" isTruncated>
+                {item.UnixPath}
+              </Text>
+              <Spacer />
+              <Box w="100" alignItems="center" alignSelf="center">
                 <Switch
-                  defaultIsChecked={row.Enabled}
-                  onValueChange={() => handleChange(row, !row.Enabled)}
+                  size="lg"
+                  defaultIsChecked={item.Enabled}
+                  onValueChange={() => handleChange(item, !item.Enabled)}
                 />
               </Box>
-              <Box w="50" justifySelf="right">
-                <IconButton
-                  size="sm"
-                  mt="-1"
-                  variant="ghost"
-                  colorScheme="secondary"
-                  icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
-                  onPress={(e) => deleteListItem(row)}
-                />
-              </Box>
+
+              <IconButton
+                alignSelf="center"
+                size="sm"
+                variant="ghost"
+                colorScheme="secondary"
+                icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
+                onPress={() => deleteListItem(item)}
+              />
             </HStack>
-          ))}
-        </VStack>
-      ) : null}
+          </Box>
+        )}
+        keyExtractor={(item) => item.Name}
+      />
     </Box>
   )
 }
