@@ -14,7 +14,7 @@ with protections against MAC cloaking/spoofing and fine grained access controls.
 
 ## UI Demo Page
 
-https://demo.supernetworks.org/auth/login
+https://demo.supernetworks.org/
 
 ## Documentation 
 
