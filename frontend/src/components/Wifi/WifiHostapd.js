@@ -73,8 +73,7 @@ const WifiHostapd = (props) => {
       Vht_oper_chwidth: wifiParameters.Vht_oper_chwidth,
       He_oper_chwidth: wifiParameters.He_oper_chwidth,
     }
-    console.log(wifiParameters)
-    console.log(data)
+
     wifiAPI.updateConfig(data).then((config) => {
       setConfig(sortConf(config))
     })
