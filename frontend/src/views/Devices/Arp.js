@@ -1,121 +1,144 @@
-import React, { Component } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 
 import { wifiAPI } from 'api'
 import { APIErrorContext } from 'layouts/Admin'
 
 import {
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  CardTitle,
-  Label,
-  FormGroup,
-  Input,
-  Table,
-  Row,
-  Col
-} from 'reactstrap'
+  View,
+  Divider,
+  Box,
+  FlatList,
+  Heading,
+  Icon,
+  IconButton,
+  Stack,
+  HStack,
+  VStack,
+  Spacer,
+  Switch,
+  Text,
+  useBreakpointValue,
+  useColorModeValue
+} from 'native-base'
 
-export default class Arp extends Component {
-  state = { arpRows: [] }
+const Arp = (props) => {
+  const [list, setList] = useState()
 
-  static contextType = APIErrorContext
+  const context = useContext(APIErrorContext)
 
-  async componentDidMount() {
-    const setState = (v) => {
-      this.setState(v)
+  let translateFlags = (number) => {
+    number = parseInt(number, 16)
+    let translation = ''
+    if ((number & 0x2) == 0x2) {
+      translation += ' C'
     }
 
-    let translateFlags = (number) => {
-      number = parseInt(number, 16)
-      let translation = ''
-      if ((number & 0x2) == 0x2) {
-        translation += ' C'
-      }
-
-      if ((number & 0x4) == 4) {
-        translation += ' PERM'
-      }
-
-      translation += ' (' + number + ')'
-
-      return translation
+    if ((number & 0x4) == 4) {
+      translation += ' PERM'
     }
 
-    async function refreshArp() {
-      let divs = []
+    translation += ' (' + number + ')'
 
-      let arp = await wifiAPI.arp().catch((error) => {
-        this.context.reportError('API Failure: ' + error.message)
-      })
-
-      arp = arp.sort((a, b) => {
-        const num1 = Number(
-          a.IP.split('.')
-            .map((num) => `000${num}`.slice(-3))
-            .join('')
-        )
-        const num2 = Number(
-          b.IP.split('.')
-            .map((num) => `000${num}`.slice(-3))
-            .join('')
-        )
-        return num1 - num2
-      })
-
-      for (const entry of arp) {
-        const generatedID = Math.random().toString(36).substr(2, 9)
-
-        divs.push(
-          <tr key={generatedID}>
-            <td className=""> {entry.IP} </td>
-            <td className="">
-              {' '}
-              {entry.MAC == '00:00:00:00:00:00' ? '<incomplete>' : entry.MAC}
-            </td>
-            <td className=""> {translateFlags(entry.Flags)} </td>
-            <td className=""> {entry.Device} </td>
-          </tr>
-        )
-      }
-      setState({ arpRows: divs })
-    }
-
-    const notifyChange = () => {
-      refreshArp()
-    }
-
-    refreshArp = refreshArp.bind(this)
-    refreshArp()
+    return translation
   }
 
-  render() {
-    return (
-      <div className="content">
-        <Row>
-          <Col md="12">
-            <Card>
-              <CardHeader>
-                <CardTitle tag="h4">ARP Table</CardTitle>
-              </CardHeader>
-              <CardBody>
-                <Table responsive>
-                  <thead className="text-primary">
-                    <tr>
-                      <th>IP Address</th>
-                      <th>MAC Address</th>
-                      <th>Flags</th>
-                      <th>Interface</th>
-                    </tr>
-                  </thead>
-                  <tbody>{this.state.arpRows}</tbody>
-                </Table>
-              </CardBody>
-            </Card>
-          </Col>
-        </Row>
-      </div>
-    )
+  const refreshList = async () => {
+    let divs = []
+
+    let arp = await wifiAPI.arp().catch((error) => {
+      this.context.reportError('API Failure: ' + error.message)
+    })
+
+    arp = arp.sort((a, b) => {
+      const num1 = Number(
+        a.IP.split('.')
+          .map((num) => `000${num}`.slice(-3))
+          .join('')
+      )
+      const num2 = Number(
+        b.IP.split('.')
+          .map((num) => `000${num}`.slice(-3))
+          .join('')
+      )
+      return num1 - num2
+    })
+
+    /*
+    for (const entry of arp) {
+
+      divs.push(
+        <tr key={generatedID}>
+          <td className=""> {entry.IP} </td>
+          <td className="">
+            {' '}
+            {entry.MAC == '00:00:00:00:00:00' ? '<incomplete>' : entry.MAC}
+          </td>
+          <td className=""> {translateFlags(entry.Flags)} </td>
+          <td className=""> {entry.Device} </td>
+        </tr>
+      )
+    }
+    */
+    setList(arp)
   }
+
+  useEffect(() => {
+    refreshList()
+  }, [])
+
+  const flexDirection = useBreakpointValue({
+    base: 'column',
+    lg: 'row'
+  })
+
+  return (
+    <View>
+      <Box
+        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+        rounded="md"
+        width="100%"
+        p="4"
+      >
+        <Heading>ARP Table</Heading>
+
+        <FlatList
+          data={list}
+          renderItem={({ item }) => (
+            <Box
+              borderBottomWidth="1"
+              _dark={{
+                borderColor: 'muted.600'
+              }}
+              borderColor="muted.200"
+              py="2"
+            >
+              <HStack space={3} justifyContent="space-between">
+                <Stack
+                  minW="40%"
+                  style={{ flexDirection }}
+                  space={3}
+                  justifyContent="space-between"
+                >
+                  <Text bold>{item.IP}</Text>
+                  <Text color="muted.500">{item.MAC}</Text>
+                </Stack>
+                <Stack
+                  minW="40%"
+                  style={{ flexDirection }}
+                  space={3}
+                  justifyContent="space-between"
+                >
+                  <Text fontSize="xs">Flags: {translateFlags(item.Flags)}</Text>
+                  <Text>{item.Device}</Text>
+                </Stack>
+              </HStack>
+            </Box>
+          )}
+          keyExtractor={(item) => item.IP}
+        />
+      </Box>
+    </View>
+  )
 }
+
+export default Arp

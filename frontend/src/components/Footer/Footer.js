@@ -5,15 +5,14 @@ import PropTypes from 'prop-types'
 import { Box, Stack, Link, Text } from 'native-base'
 
 function Footer(props) {
-  const direction = 'row' //props.direction ||
-
   return (
     <Stack
-      direction={direction}
+      direction="row"
       space="2"
       w="100%"
       mt="20"
       display={{ base: 'none', md: 'flex' }}
+      justifyContent="center"
     >
       <Link isExternal href="https://www.supernetworks.org/">
         Supernetworks

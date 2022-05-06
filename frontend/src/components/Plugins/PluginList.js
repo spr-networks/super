@@ -20,14 +20,13 @@ import {
 } from 'native-base'
 
 import { pluginAPI } from 'api'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 import ModalForm from 'components/ModalForm'
-import Toggle from 'components/Toggle'
 import AddPlugin from 'components/Plugins/AddPlugin'
 
 const PluginList = (props) => {
   const [list, setList] = useState([])
-  const contextType = useContext(APIErrorContext)
+  const contextType = useContext(AlertContext)
 
   const refreshList = (next) => {
     pluginAPI
@@ -36,7 +35,7 @@ const PluginList = (props) => {
         setList(plugins)
       })
       .catch((err) => {
-        contextType.reportError('failed to fetch plugins')
+        contextType.error('failed to fetch plugins')
       })
   }
 
