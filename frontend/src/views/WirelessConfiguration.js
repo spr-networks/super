@@ -36,10 +36,10 @@ const WirelessConfiguration = (props) => {
     wifiAPI
       .config()
       .then((config) => {
-        this.setState({ config })
+        setConfig(config)
       })
       .catch((err) => {
-        this.context.error('API Failure get traffic: ' + err.message)
+        context.error('API Failure get traffic: ' + err.message)
       })
   }, [])
 

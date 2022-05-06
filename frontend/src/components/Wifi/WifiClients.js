@@ -5,15 +5,23 @@ import { APIErrorContext } from 'layouts/Admin'
 import { prettySignal } from 'utils'
 
 import {
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
-  CardSubtitle,
-  Table,
-  Row,
-  Col
-} from 'reactstrap'
+  View,
+  Divider,
+  Box,
+  FlatList,
+  Heading,
+  Icon,
+  IconButton,
+  Stack,
+  HStack,
+  VStack,
+  Spacer,
+  Switch,
+  Text,
+  useColorModeValue
+} from 'native-base'
+
+import { Table, Row, Col } from 'reactstrap'
 
 export default class WifiClients extends Component {
   state = { clients: [] }
@@ -77,18 +85,44 @@ export default class WifiClients extends Component {
 
   render() {
     return (
+      <FlatList
+        data={this.state.clients}
+        renderItem={({ item }) => (
+          <Box
+            borderBottomWidth="1"
+            _dark={{
+              borderColor: 'muted.600'
+            }}
+            borderColor="muted.200"
+            py="2"
+          >
+            <HStack space={3} justifyContent="space-between">
+              <Text bold alignSelf="center" fontSize="lg" minW="20%">
+                {item.Name}
+              </Text>
+              <VStack>
+                <Text bold>{item.RecentIP}</Text>
+                <Text color="muted.500">{item.MAC}</Text>
+              </VStack>
+
+              <VStack w="20%">
+                <Text fontSize="xs" marginLeft="auto">
+                  <Text color="muted.400">Signal</Text>{' '}
+                  {prettySignal(item.Signal)}
+                </Text>
+                <Text marginLeft="auto">{item.Auth}</Text>
+              </VStack>
+            </HStack>
+          </Box>
+        )}
+        keyExtractor={(item) => item.Name}
+      />
+    )
+
+    return (
       <>
         <Row>
           <Col md="12">
-            {/*
-            <Card>
-              <CardHeader>
-                <CardTitle tag="h4">Wifi Clients</CardTitle>
-                <CardSubtitle className="text-muted">
-                  Clients connected to AP
-                </CardSubtitle>
-              </CardHeader>
-              <CardBody>*/}
             <Table responsive>
               <thead className="text-primary">
                 <tr>
@@ -101,7 +135,7 @@ export default class WifiClients extends Component {
               </thead>
               <tbody>
                 {this.state.clients.map((row) => (
-                  <tr >
+                  <tr>
                     <td>{row.Name}</td>
                     <td>{row.MAC}</td>
                     <td>{row.RecentIP}</td>
@@ -111,8 +145,6 @@ export default class WifiClients extends Component {
                 ))}
               </tbody>
             </Table>
-            {/*</CardBody>
-            </Card>*/}
           </Col>
         </Row>
       </>
