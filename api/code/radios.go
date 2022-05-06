@@ -164,7 +164,13 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 	}
 
 	fmt.Println(cmd)
-	_, err := RunHostapdCommandArray(strings.Split(cmd, " "))
+
+	result, err := RunHostapdCommandArray(strings.Split(cmd, " "))
+
+	if !strings.Contains(result, "OK") && err == nil {
+		err = fmt.Errorf("Failed to run chan_switch", result)
+	}
+
 	return calculated, err
 }
 
