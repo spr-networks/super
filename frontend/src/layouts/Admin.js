@@ -235,7 +235,7 @@ function Admin(props) {
     >
       <Box
         w="100%"
-        h={{ base: '100%', md: '100vh' }}
+        h={{ base: '100%', md: '100vh' }} // md: '100vh'
         _light={{ bg: 'coolGray.100' }}
         _dark={{ bg: 'blueGray.900' }}
         alignItems="center"
@@ -313,13 +313,9 @@ function Admin(props) {
               ) : null}
 
               {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
-              <Box
-                h="calc(100% - 64px)"
-                flex="1"
-                p="4"
-                safeAreaTop
-                ref={mainPanel}
-              >
+              {/*h="calc(100% - 64px)"
+               minH="calc(100vh - 64px)"*/}
+              <Box flex="1" p="4" safeAreaTop ref={mainPanel}>
                 {/*<SubMainContent props={props} />*/}
 
                 <APIErrorContext.Provider value={errorState}>
