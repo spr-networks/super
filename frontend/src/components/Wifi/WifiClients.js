@@ -56,19 +56,23 @@ export default class WifiClients extends Component {
       this.context.reportError('API Failure getDevices: ' + error.message)
     })
 
-    let clients = Object.values(devices).filter((device) =>
-      Object.keys(stations).includes(device.MAC)
-    )
+    if (devices && stations) {
+      let clients = Object.values(devices).filter((device) =>
+        Object.keys(stations).includes(device.MAC)
+      )
 
-    clients = clients.map((client) => {
-      let station = stations[client.MAC]
-      client.Auth = this.akmSuiteAuth(station.AKMSuiteSelector)
-      client.Signal = station.signal
+      clients = clients.map((client) => {
+        let station = stations[client.MAC]
+        client.Auth = this.akmSuiteAuth(station.AKMSuiteSelector)
+        client.Signal = station.signal
 
-      return client
-    })
+        return client
+      })
 
-    this.setState({ clients })
+      this.setState({ clients })
+
+    }
+
   }
 
   async componentDidMount() {

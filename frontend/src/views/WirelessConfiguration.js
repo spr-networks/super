@@ -43,7 +43,7 @@ export default class WirelessConfiguration extends Component {
   }
 
   render() {
-    let tabList = ['Clients', 'Interfaces', 'Scan', 'Hostapd']
+    let tabList = ['Clients', 'Interfaces', 'Scan', 'Settings']
     let testid = Math.random().toString(36).substr(2, 9)
 
     return (
@@ -81,8 +81,8 @@ export default class WirelessConfiguration extends Component {
                 <TabPane tabId="Scan">
                   <WifiScan />
                 </TabPane>
-                <TabPane tabId="Hostapd">
-                  <WifiHostapd />
+                <TabPane tabId="Settings">
+                  <WifiHostapd config={this.state.config}/>
                 </TabPane>
               </TabContent>
             </Card>

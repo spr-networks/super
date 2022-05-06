@@ -139,10 +139,19 @@ def parse(data, raw=False, quiet=False):
                 continue
 
             if line.strip().startswith('Band '):
-                if 'bands' not in section:
+               new_band = line.strip().strip(':')
+               if 'bands' not in section:
                     section['bands'] = []
-                section['bands'].append({ 'band': line.strip().strip(':') })
-                continue
+                    section['bands'].append({ 'band': new_band })
+                    continue
+               else:
+                    #new band, make any pending assignments
+                    section['bands'][-1][subsection_key[1]] = subsection
+                    subsection = []
+                    subsection_key = None
+
+                    if section['bands'][-1]['band'] != new_band:
+                      section['bands'].append({ 'band': new_band})
 
             lists = [
                 'Supported Ciphers',
@@ -170,14 +179,12 @@ def parse(data, raw=False, quiet=False):
             if any(name in line for name in lists):
                 if subsection and len(subsection):
                     if isinstance(subsection_key, list):
-                        # append to last band
                         section[subsection_key[0]][-1][subsection_key[1]] = subsection
                     else:
                         section[subsection_key] = subsection
 
                     subsection_key = None
                     subsection = None
-
                 subsection = []
 
                 # Capabilities: 0x1ff
