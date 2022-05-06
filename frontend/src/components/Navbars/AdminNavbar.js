@@ -165,7 +165,7 @@ const AdminNavbar = (props) => {
         borderBottomWidth="1"
         _light={{ borderColor: 'coolGray.200' }}
         _dark={{ borderColor: 'coolGray.800' }}
-        px="6"
+        px="5"
         h="16"
         justifyContent="space-between"
       >
