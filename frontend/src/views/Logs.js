@@ -3,8 +3,6 @@ import { View } from 'native-base'
 
 import LogList from 'components/Logs/LogList'
 
-import { Row, Col } from 'reactstrap'
-
 export default class Logs extends Component {
   state = { containers: [] }
 

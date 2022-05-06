@@ -43,8 +43,6 @@ const Arp = (props) => {
   }
 
   const refreshList = async () => {
-    let divs = []
-
     let arp = await wifiAPI.arp().catch((error) => {
       this.context.reportError('API Failure: ' + error.message)
     })
@@ -63,22 +61,6 @@ const Arp = (props) => {
       return num1 - num2
     })
 
-    /*
-    for (const entry of arp) {
-
-      divs.push(
-        <tr key={generatedID}>
-          <td className=""> {entry.IP} </td>
-          <td className="">
-            {' '}
-            {entry.MAC == '00:00:00:00:00:00' ? '<incomplete>' : entry.MAC}
-          </td>
-          <td className=""> {translateFlags(entry.Flags)} </td>
-          <td className=""> {entry.Device} </td>
-        </tr>
-      )
-    }
-    */
     setList(arp)
   }
 
