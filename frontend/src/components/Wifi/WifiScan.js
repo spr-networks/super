@@ -27,10 +27,12 @@ const WifiScan = (props) => {
   const [loading, setLoading] = useState(false)
   const [showAlert, setShowAlert] = useState(false)
   const [scanDetail, setScanDetail] = useState({})
+  const [loadedDevs, setLoadedDevs] = useState(false)
 
   useEffect(() => {
     wifiAPI.iwDev().then((devs) => {
       setDevs(devs)
+      setLoadedDevs(true)
     })
   }, [])
 
@@ -60,12 +62,16 @@ const WifiScan = (props) => {
   }
 
   let devsScan = []
+  let defaultDev = null
   for (let phy in devs) {
     for (let iface in devs[phy]) {
       let type = devs[phy][iface].type
       let label = `${iface} ${type}`
 
       devsScan.push({ value: iface, disabled: type.includes('AP'), label })
+      if (!type.includes('AP')) {
+        defaultDev = devsScan[devsScan.length - 1]
+      }
     }
   }
 
@@ -102,12 +108,14 @@ const WifiScan = (props) => {
       </ReactBSAlert>
       <Row>
         <Col md={{ offset: 3, size: 4 }} xs={{ size: 8 }}>
+        { loadedDevs ?
           <Select
             options={devsScan}
-            defaultValue={devsScan[0]}
+            defaultValue={defaultDev}
             isOptionDisabled={(option) => option.disabled}
             onChange={onChange}
-          />
+          /> : null
+        }
         </Col>
         <Col xs="4" md="2">
           <Button

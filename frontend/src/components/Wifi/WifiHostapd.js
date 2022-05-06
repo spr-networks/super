@@ -14,9 +14,11 @@ import {
   Col
 } from 'reactstrap'
 
+import WifiChannelParameters from 'components/Wifi/WifiChannelParameters'
+
 const WifiHostapd = (props) => {
   const [config, setConfig] = useState({})
-  const canEdit = ['ssid', 'channel']
+  const canEdit = ['ssid']
 
   const sortConf = (conf) => {
     // put the ones we can change at the top
@@ -63,22 +65,25 @@ const WifiHostapd = (props) => {
     })
   }
 
-  return (
-    <dl className="row">
-      {Object.keys(config).map((label) => (
-        <>
-          <>
-            <dt className="col-sm-3 sm-text-right">{label}</dt>
-            <dd className="col-sm-9">
-              <>{config[label]}</>
-            </dd>
-          </>
-        </>
-      ))}
-    </dl>
-  )
+  const updateChannels = (wifiParameters) => {
+    let data = {
+      Channel: wifiParameters.Channel,
+      Vht_oper_centr_freq_seg0_idx: wifiParameters.Vht_oper_centr_freq_seg0_idx,
+      He_oper_centr_freq_seg0_idx: wifiParameters.He_oper_centr_freq_seg0_idx,
+      Vht_oper_chwidth: wifiParameters.Vht_oper_chwidth,
+      He_oper_chwidth: wifiParameters.He_oper_chwidth,
+    }
+    console.log(wifiParameters)
+    console.log(data)
+    wifiAPI.updateConfig(data).then((config) => {
+      setConfig(sortConf(config))
+    })
+
+  }
 
   return (
+    <>
+    <WifiChannelParameters config={props.config} notifyChange={updateChannels}/>
     <Form onSubmit={handleSubmit}>
       <Row>
         <Col>
@@ -124,6 +129,7 @@ const WifiHostapd = (props) => {
         </Col>
       </Row>
     </Form>
+    </>
   )
 }
 
