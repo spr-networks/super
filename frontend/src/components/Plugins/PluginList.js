@@ -3,8 +3,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import {
-  View,
-  Divider,
   Box,
   FlatList,
   Heading,
@@ -110,7 +108,6 @@ const PluginList = (props) => {
               <Spacer />
               <Box w="100" alignItems="center" alignSelf="center">
                 <Switch
-                  size="lg"
                   defaultIsChecked={item.Enabled}
                   onValueChange={() => handleChange(item, !item.Enabled)}
                 />

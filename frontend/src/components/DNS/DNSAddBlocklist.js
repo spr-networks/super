@@ -1,22 +1,23 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 
 import {
+  Box,
   Button,
-  Col,
-  Label,
-  Form,
-  FormGroup,
-  FormText,
+  Checkbox,
+  FormControl,
   Input,
+  Link,
+  Stack,
+  HStack,
   Spinner,
-  Row
-} from 'reactstrap'
+  Text
+} from 'native-base'
 
 export default class DNSAddBlocklist extends React.Component {
-  static contextType = APIErrorContext
+  static contextType = AlertContext
   state = { URI: '', Enabled: true, pending: false }
 
   constructor(props) {
@@ -27,17 +28,15 @@ export default class DNSAddBlocklist extends React.Component {
     this.handleSubmit = this.handleSubmit.bind(this)
   }
 
-  handleChange(event) {
-    this.setState({ URI: event.target.value })
+  handleChange(value) {
+    this.setState({ URI: value })
   }
 
   handleSwitchChange(el, Enabled) {
     this.setState({ Enabled })
   }
 
-  handleSubmit(event) {
-    event.preventDefault()
-
+  handleSubmit() {
     let blocklist = { URI: this.state.URI, Enabled: this.state.Enabled }
 
     this.setState({ pending: true })
@@ -49,7 +48,7 @@ export default class DNSAddBlocklist extends React.Component {
         this.props.notifyChange('blocklists')
       })
       .catch((error) => {
-        this.context.reportError('API Failure: ' + error.message)
+        this.context.error('API Failure: ' + error.message)
       })
 
     setTimeout(() => {
@@ -63,80 +62,63 @@ export default class DNSAddBlocklist extends React.Component {
   render() {
     if (this.state.pending) {
       return (
-        <div className="text-center text-muted">
-          <Spinner
-            style={{ fontSize: '2rem', width: '10rem', height: '10rem' }}
-          />
-          <p className="mt-4">Updating blocklists...</p>
-        </div>
+        <HStack space={1}>
+          <Spinner accessibilityLabel="Loading posts" />
+          <Text>Updating blocklists...</Text>
+        </HStack>
       )
     }
 
     return (
-      <Form onSubmit={this.handleSubmit}>
-        <Row>
-          <Label for="URI" sm={2}>
-            URI
-          </Label>
-          <Col sm={10}>
-            <FormGroup>
-              <Input
-                type="text"
-                id="URI"
-                placeholder="https://..."
-                name="URI"
-                value={this.state.URI}
-                onChange={this.handleChange}
-                autoFocus
-              />
-              <FormText tag="span">
-                <a
-                  target="_blank"
-                  href="https://github.com/StevenBlack/hosts"
-                  rel="noreferrer"
-                >
-                  See here
-                </a>{' '}
-                for examples of host files to use
-              </FormText>
-            </FormGroup>
-          </Col>
-        </Row>
+      <Box>
+        <Stack space={2}>
+          <FormControl.Label>URI</FormControl.Label>
 
-        <Row>
-          <Label for="Enabled" sm={2}>
+          <Stack space={2}>
+            <Input
+              type="text"
+              placeholder="https://..."
+              name="URI"
+              value={this.state.URI}
+              onSubmitEditing={this.handleSubmit}
+              onChangeText={this.handleChange}
+              autoFocus
+            />
+            <HStack space={1}>
+              <Link
+                color="muted.500"
+                isExternal
+                href="https://github.com/StevenBlack/hosts"
+              >
+                See here
+              </Link>
+              <Text color="muted.500">for examples of host files to use</Text>
+            </HStack>
+          </Stack>
+
+          {/*<FormControl.Label>Enabled</FormControl.Label>*/}
+          <Checkbox
+            accessibilityLabel="Enabled"
+            colorScheme="green"
+            value={this.state.Enabled}
+            isChecked={this.state.Enabled}
+            onChange={(enabled) =>
+              this.handleSwitchChange(this, !this.state.Enabled)
+            }
+          >
             Enabled
-          </Label>
-          <Col sm={10}>
-            <FormGroup check>
-              <Label check className="mb-2">
-                <Input
-                  type="checkbox"
-                  checked={this.state.Enabled}
-                  onChange={(e) =>
-                    this.handleSwitchChange(this, !this.state.Enabled)
-                  }
-                />
-                <span className="form-check-sign" />
-              </Label>
-            </FormGroup>
-          </Col>
-        </Row>
+          </Checkbox>
 
-        <Row>
-          <Col sm={{ offset: 2, size: 10 }}>
-            <Button
-              className="btn-round"
-              color="primary"
-              size="md"
-              type="submit"
-              onClick={this.handleSubmit}
-            >
-              Save
-            </Button>
-          </Col>
-        </Row>
-      </Form>
+          <Button
+            mt={2}
+            variant="solid"
+            colorScheme="primary"
+            onPress={this.handleSubmit}
+          >
+            Save
+          </Button>
+        </Stack>
+      </Box>
     )
   }
 }

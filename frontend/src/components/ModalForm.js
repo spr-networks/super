@@ -27,20 +27,22 @@ const ModalForm = (props) => {
   return (
     <>
       {props.triggerText ? (
-        <Button
-          size="md"
-          variant="outline"
-          colorScheme="primary"
-          rounded="full"
-          borderWidth={1}
-          borderColor="info.400"
-          leftIcon={
-            <Icon as={FontAwesomeIcon} icon={props.triggerIcon || faPlus} />
-          }
-          onPress={toggleModal}
-        >
-          {props.triggerText || 'Open Modal'}
-        </Button>
+        <Box>
+          <Button
+            size="md"
+            variant="outline"
+            colorScheme="primary"
+            rounded="full"
+            borderWidth={1}
+            borderColor="info.400"
+            leftIcon={
+              <Icon as={FontAwesomeIcon} icon={props.triggerIcon || faPlus} />
+            }
+            onPress={toggleModal}
+          >
+            {props.triggerText || 'Open Modal'}
+          </Button>
+        </Box>
       ) : null}
 
       {show ? (

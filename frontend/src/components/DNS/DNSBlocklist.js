@@ -1,25 +1,31 @@
 import React from 'react'
-import { faPlus } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import { blockAPI } from 'api/DNS'
 import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
 import ModalForm from 'components/ModalForm'
-import Toggle from 'components/Toggle'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 
 import {
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
-  CardSubtitle,
+  Box,
+  FlatList,
+  Heading,
+  Icon,
+  IconButton,
+  Stack,
+  HStack,
+  VStack,
+  Skeleton,
+  Spacer,
   Spinner,
-  Table
-} from 'reactstrap'
+  Switch,
+  Text,
+  useColorModeValue
+} from 'native-base'
 
 export default class DNSBlocklist extends React.Component {
-  static contextType = APIErrorContext
+  static contextType = AlertContext
   state = { list: [], blockedDomains: 0, pending: false }
 
   constructor(props) {
@@ -36,6 +42,8 @@ export default class DNSBlocklist extends React.Component {
 
   async componentDidMount() {
     this.refreshBlocklists()
+
+    this.setState({ pending: true })
 
     blockAPI.metrics().then((metrics) => {
       this.setState({ blockedDomains: metrics.BlockedDomains })
@@ -60,7 +68,7 @@ export default class DNSBlocklist extends React.Component {
         this.setState({ pending: false })
       })
       .catch((error) => {
-        this.context.reportError('API Failure: ' + error.message)
+        this.context.error('API Failure: ' + error.message)
       })
   }
 
@@ -89,13 +97,13 @@ export default class DNSBlocklist extends React.Component {
         this.notifyChange('blocklists')
       })
       .catch((error) => {
-        this.context.reportError('API Failure: ' + error.message)
+        this.context.error('API Failure: ' + error.message)
       })
   }
 
   deleteListItem(item) {
     if (this.state.pending) {
-      return this.context.reportError('Wait for pending updates to finish')
+      return this.context.error('Wait for pending updates to finish')
     }
 
     this.setState({ pending: true })
@@ -106,7 +114,7 @@ export default class DNSBlocklist extends React.Component {
         this.notifyChange('blocklists')
       })
       .catch((error) => {
-        this.context.reportError('API Failure: ' + error.message)
+        this.context.error('API Failure: ' + error.message)
       })
   }
 
@@ -118,9 +126,31 @@ export default class DNSBlocklist extends React.Component {
     }
 
     return (
-      <>
-        <Card>
-          <CardHeader>
+      <Box
+        _light={{ bg: 'warmGray.50' }}
+        _dark={{ bg: 'blueGray.800' }}
+        rounded="md"
+        width="100%"
+        p="4"
+        mb="4"
+      >
+        <HStack justifyContent="space-between">
+          <VStack>
+            <Heading fontSize="xl">DNS Blocklists</Heading>
+
+            {!this.state.pending ? (
+              <Text color="muted.500">
+                {this.state.blockedDomains.toLocaleString()} blocked domains
+              </Text>
+            ) : (
+              <HStack space={1}>
+                <Spinner accessibilityLabel="Loading posts" />
+                <Text color="muted.500">Update running...</Text>
+              </HStack>
+            )}
+          </VStack>
+
+          <Box alignSelf="center">
             {!this.state.pending ? (
               <ModalForm
                 title="Add DNS Blocklist"
@@ -132,70 +162,53 @@ export default class DNSBlocklist extends React.Component {
                 <DNSAddBlocklist notifyChange={notifyChangeBlocklist} />
               </ModalForm>
             ) : null}
+          </Box>
+        </HStack>
 
-            <CardTitle tag="h4">DNS Blocklists</CardTitle>
-            <CardSubtitle className="text-muted">
-              <span hidden={this.state.pending}>
-                {this.state.blockedDomains.toLocaleString()} blocked domains
-              </span>
-              <Spinner size="sm" hidden={!this.state.pending} />
-              <span className="mt-4 ml-1" hidden={!this.state.pending}>
-                Update running...
-              </span>
-            </CardSubtitle>
-          </CardHeader>
-          <CardBody>
-            {this.state.list.length ? (
-              <Table responsive>
-                <thead className="text-primary">
-                  <tr>
-                    <th>URI</th>
-                    <th className="text-center">Enabled</th>
-                    <th className="text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {this.state.list.map((item) => (
-                    <tr key={item.URI}>
-                      <td>
-                        <a
-                          href={item.URI}
-                          target="_blank"
-                          style={{ color: 'inherit' }}
-                        >
-                          {item.URI}
-                        </a>
-                      </td>
-                      <td className="text-center">
-                        <Toggle
-                          onChange={(value) =>
-                            this.handleItemSwitch(item, value)
-                          }
-                          isDisabled={this.state.pending}
-                          isChecked={item.Enabled}
-                          onColor="info"
-                          offColor="info"
-                        />
-                      </td>
-                      <td className="text-center">
-                        <Button
-                          className="btn-icon"
-                          color="danger"
-                          size="sm"
-                          type="button"
-                          onClick={(e) => this.deleteListItem(item)}
-                        >
-                          <i className="fa fa-times" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            ) : null}
-          </CardBody>
-        </Card>
-      </>
+        <FlatList
+          data={this.state.list}
+          renderItem={({ item }) => (
+            <Box
+              borderBottomWidth="1"
+              _dark={{
+                borderColor: 'muted.600'
+              }}
+              borderColor="muted.200"
+              py="2"
+            >
+              <HStack
+                space={3}
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Text minW="50%" isTruncated>
+                  {item.URI}
+                </Text>
+
+                <Box>
+                  <Switch
+                    isDisabled={this.state.pending}
+                    defaultIsChecked={item.Enabled}
+                    onValueChange={() =>
+                      this.handleItemSwitch(item, !item.Enabled)
+                    }
+                  />
+                </Box>
+
+                <IconButton
+                  alignSelf="center"
+                  size="sm"
+                  variant="ghost"
+                  colorScheme="secondary"
+                  icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
+                  onPress={() => this.deleteListItem(item)}
+                />
+              </HStack>
+            </Box>
+          )}
+          keyExtractor={(item) => item.URI}
+        />
+      </Box>
     )
   }
 }

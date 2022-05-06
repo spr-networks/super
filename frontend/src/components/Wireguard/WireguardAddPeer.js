@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import CreatableSelect from 'react-select/creatable'
 
 import WireguardConfig from './WireguardConfig'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 import ClientSelect from 'components/ClientSelect'
 import { deviceAPI, wireguardAPI } from 'api'
 import { wifiAPI } from 'api'
@@ -24,7 +24,7 @@ import {
 } from 'reactstrap'
 
 export default class WireguardAddPeer extends React.Component {
-  static contextType = APIErrorContext
+  static contextType = AlertContext
   state = {
     AllowedIPs: '',
     PrivateKey: '',
@@ -79,7 +79,7 @@ export default class WireguardAddPeer extends React.Component {
           this.setState({ config })
         })
         .catch((error) => {
-          this.context.reportError('API Failure: ' + error.message)
+          this.context.error('API Failure: ' + error.message)
         })
     }
 
@@ -134,15 +134,13 @@ export default class WireguardAddPeer extends React.Component {
           peer.PublicKey = keyPair.PublicKey
           linkPubKeyToDevice(peer)
             .then((res) => addPeer(peer))
-            .catch((err) => this.context.reportError(err))
+            .catch((err) => this.context.error(err))
         })
-        .catch((err) =>
-          this.context.reportError('wireguardAPI.genKey Error: ' + err)
-        )
+        .catch((err) => this.context.error('wireguardAPI.genKey Error: ' + err))
     } else {
       linkPubKeyToDevice(peer)
         .then((res) => addPeer(peer))
-        .catch((err) => this.context.reportError(err))
+        .catch((err) => this.context.error(err))
     }
   }
 
@@ -152,9 +150,7 @@ export default class WireguardAddPeer extends React.Component {
       .then((keyPair) => {
         this.setState(keyPair)
       })
-      .catch((err) =>
-        this.context.reportError('wireguardAPI.genKey Error: ' + err)
-      )
+      .catch((err) => this.context.error('wireguardAPI.genKey Error: ' + err))
   }
 
   componentDidMount() {

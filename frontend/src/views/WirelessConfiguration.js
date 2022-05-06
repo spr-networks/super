@@ -11,21 +11,6 @@ import { Animated, Dimensions, Pressable, StatusBar } from 'react-native'
 import { TabView, SceneMap } from 'react-native-tab-view'
 import { Box, View, useColorModeValue } from 'native-base'
 
-import {
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  CardTitle,
-  Nav,
-  NavItem,
-  NavLink,
-  TabContent,
-  TabPane,
-  Row,
-  Col
-} from 'reactstrap'
-
 const WirelessConfiguration = (props) => {
   const [config, setConfig] = useState({})
   const [index, setIndex] = useState(0)
@@ -135,53 +120,6 @@ const WirelessConfiguration = (props) => {
         marginTop: StatusBar.currentHeight
       }}
     />
-  )
-
-  let tabList = ['Clients', 'Interfaces', 'Scan', 'Hostapd']
-
-  return (
-    <div className="content">
-      <Row>
-        <Col>
-          <Card>
-            <div className="nav-tabs-navigation mb-0">
-              <div className="nav-tabs-wrapper pt-2">
-                <Nav tabs>
-                  {tabList.map((tab) => (
-                    <NavItem key={Math.random().toString(36).substr(2, 9)}>
-                      <NavLink
-                        data-toggle="tab"
-                        href={`#${tab}`}
-                        role="tab"
-                        className={this.state.tab === tab ? 'active' : ''}
-                        onClick={() => this.setState({ tab })}
-                      >
-                        {tab}
-                      </NavLink>
-                    </NavItem>
-                  ))}
-                </Nav>
-              </div>
-            </div>
-
-            <TabContent activeTab={this.state.tab} className="p-4">
-              <TabPane tabId="Clients">
-                <WifiClients />
-              </TabPane>
-              <TabPane tabId="Interfaces">
-                <WifiInterfaceList />
-              </TabPane>
-              <TabPane tabId="Scan">
-                <WifiScan />
-              </TabPane>
-              <TabPane tabId="Hostapd">
-                <WifiHostapd />
-              </TabPane>
-            </TabContent>
-          </Card>
-        </Col>
-      </Row>
-    </div>
   )
 }
 

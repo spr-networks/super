@@ -1,22 +1,35 @@
-import React from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 import ClientSelect from 'components/ClientSelect'
 
 import {
+  Box,
   Button,
+  Checkbox,
+  FormControl,
+  Input,
+  Link,
+  Stack,
+  HStack,
+  Spinner,
+  Text
+} from 'native-base'
+
+import {
+  //Button,
   Label,
   Form,
   FormGroup,
   FormText,
-  Input,
+  //Input,
   Row,
   Col
 } from 'reactstrap'
 
 export default class DNSAddOverride extends React.Component {
-  static contextType = APIErrorContext
+  static contextType = AlertContext
   state = {
     Type: '',
     Domain: '',
@@ -85,7 +98,7 @@ export default class DNSAddOverride extends React.Component {
   handleSubmit(event) {
     event.preventDefault()
 
-    if (!this.isValid()) {
+    if (!isValid()) {
       return
     }
 
@@ -107,7 +120,7 @@ export default class DNSAddOverride extends React.Component {
         this.props.notifyChange('override')
       })
       .catch((error) => {
-        this.context.reportError('API Failure: ' + error.message)
+        this.context.error('API Failure: ' + error.message)
       })
   }
 
@@ -154,7 +167,8 @@ export default class DNSAddOverride extends React.Component {
                 <Label className="error">Please enter a valid IP or *</Label>
               ) : (
                 <FormText tag="span">
-                  Optionally, set a custom IP address to return for domain name lookup.
+                  Optionally, set a custom IP address to return for domain name
+                  lookup.
                 </FormText>
               )}
             </FormGroup>

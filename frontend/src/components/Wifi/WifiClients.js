@@ -1,7 +1,7 @@
-import React, { Component } from 'react'
+import { useContext, useEffect, useState } from 'react'
 
 import { wifiAPI, deviceAPI } from 'api'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 import { prettySignal } from 'utils'
 
 import {
@@ -21,15 +21,12 @@ import {
   useColorModeValue
 } from 'native-base'
 
-import { Table, Row, Col } from 'reactstrap'
+const WifiClients = (props) => {
+  const [clients, setClients] = useState([])
+  const context = useContext(AlertContext)
 
-export default class WifiClients extends Component {
-  state = { clients: [] }
-
-  static contextType = APIErrorContext
-
-  akmSuiteAuth = (suite) => {
-    let suites = {
+  const akmSuiteAuth = (suite) => {
+    const suites = {
       '00-0f-ac-1': '802.1x',
       '00-0f-ac-2': 'WPA-PSK',
       '00-0f-ac-3': 'FT-802.1x',
@@ -55,13 +52,13 @@ export default class WifiClients extends Component {
     return suites[suite] || 'unknown'
   }
 
-  refreshClients = async () => {
+  const refreshClients = async () => {
     const stations = await wifiAPI.allStations().catch((error) => {
-      this.context.reportError('API Failure:' + error.message)
+      context.error('API Failure:' + error.message)
     })
 
     const devices = await deviceAPI.list().catch((error) => {
-      this.context.reportError('API Failure getDevices: ' + error.message)
+      context.error('API Failure getDevices: ' + error.message)
     })
 
     let clients = Object.values(devices).filter((device) =>
@@ -70,23 +67,28 @@ export default class WifiClients extends Component {
 
     clients = clients.map((client) => {
       let station = stations[client.MAC]
-      client.Auth = this.akmSuiteAuth(station.AKMSuiteSelector)
+      client.Auth = akmSuiteAuth(station.AKMSuiteSelector)
       client.Signal = station.signal
 
       return client
     })
 
-    this.setState({ clients })
+    setClients(clients)
   }
 
-  async componentDidMount() {
-    this.refreshClients()
-  }
+  useEffect(() => {
+    refreshClients()
+  }, [])
 
-  render() {
-    return (
+  return (
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      rounded="md"
+      width="100%"
+      p="4"
+    >
       <FlatList
-        data={this.state.clients}
+        data={clients}
         renderItem={({ item }) => (
           <Box
             borderBottomWidth="1"
@@ -96,58 +98,41 @@ export default class WifiClients extends Component {
             borderColor="muted.200"
             py="2"
           >
-            <HStack space={3} justifyContent="space-between">
-              <Text bold alignSelf="center" fontSize="lg" minW="20%">
+            <HStack space={2} justifyContent="space-between">
+              <Text flex="1" bold alignSelf="center">
                 {item.Name}
               </Text>
-              <VStack>
+
+              <Stack
+                flex="2"
+                direction={{ base: 'column', md: 'row' }}
+                space={2}
+                alignItems="center"
+              >
                 <Text bold>{item.RecentIP}</Text>
                 <Text color="muted.500">{item.MAC}</Text>
-              </VStack>
+              </Stack>
 
-              <VStack w="20%">
-                <Text fontSize="xs" marginLeft="auto">
-                  <Text color="muted.400">Signal</Text>{' '}
+              <Stack
+                direction={{ base: 'column', md: 'row' }}
+                space={2}
+                alignSelf="center"
+                marginLeft="auto"
+                flex={1}
+              >
+                <HStack space={1} alignItems="center">
+                  <Text color="muted.400">Signal</Text>
                   {prettySignal(item.Signal)}
-                </Text>
-                <Text marginLeft="auto">{item.Auth}</Text>
-              </VStack>
+                </HStack>
+                <Text whiteSpace="nowrap">{item.Auth}</Text>
+              </Stack>
             </HStack>
           </Box>
         )}
         keyExtractor={(item) => item.Name}
       />
-    )
-
-    return (
-      <>
-        <Row>
-          <Col md="12">
-            <Table responsive>
-              <thead className="text-primary">
-                <tr>
-                  <th>Device</th>
-                  <th>MAC Address</th>
-                  <th>IP Address</th>
-                  <th>Auth</th>
-                  <th>Signal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {this.state.clients.map((row) => (
-                  <tr>
-                    <td>{row.Name}</td>
-                    <td>{row.MAC}</td>
-                    <td>{row.RecentIP}</td>
-                    <td>{row.Auth}</td>
-                    <td>{prettySignal(row.Signal)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </Col>
-        </Row>
-      </>
-    )
-  }
+    </Box>
+  )
 }
+
+export default WifiClients
