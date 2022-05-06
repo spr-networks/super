@@ -20,6 +20,9 @@ type HostapdConfigEntry struct {
 	Ssid    string
 	Channel int
 	Vht_oper_centr_freq_seg0_idx int
+	He_oper_centr_freq_seg0_idx int
+	Vht_oper_chwidth int
+	He_oper_chwidth int
 }
 
 func RunHostapdAllStations() (map[string]map[string]string, error) {
@@ -70,12 +73,22 @@ type ChannelParameters struct  {
 	Bandwidth int
 	HT_Enable bool
 	VHT_Enable bool
+	HE_Enable bool
 }
 
-func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled bool) error {
+type CalculatedParameters struct {
+	Vht_oper_centr_freq_seg0_idx int
+	He_oper_centr_freq_seg0_idx int
+	Vht_oper_chwidth int
+	He_oper_chwidth int
+}
+
+func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled bool, he_enabled bool) (CalculatedParameters, error) {
 	freq1 := 0
 	freq2 := 0
 	//freq3 := 0 //for 80+80, not supported right now
+
+	calculated := CalculatedParameters{-1, -1, 0, 0}
 
 	cmd := ""
 	base := 5000
@@ -92,18 +105,43 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 		freq1 = base + channel * 5
 	}
 
+	center_channel := 0
+
 	switch bw {
 	case 20:
 		//freq1 was all needed
 	case 40:
 		//center is 10 mhz above freq1 center
-		freq2 = base + (channel+2) * 5
+		center_channel = channel + 2
 	case 80:
 		//center is 30 mhz above freq1 center
-		freq2 = base + (channel+6) * 5
+		center_channel = channel + 6
+		if vht_enabled {
+			calculated.Vht_oper_chwidth = 1
+		}
+		if he_enabled {
+			calculated.He_oper_chwidth = 1
+		}
 	case 160:
-		freq2 = base + (channel+14) * 5
+		center_channel = channel + 14
+		if vht_enabled {
+			calculated.Vht_oper_chwidth = 2
+		}
+		if he_enabled {
+			calculated.He_oper_chwidth = 2
+		}
 	}
+
+	if center_channel != 0 {
+		freq2 = base + center_channel * 5
+		if vht_enabled {
+			calculated.Vht_oper_centr_freq_seg0_idx = center_channel
+		}
+		if he_enabled {
+			calculated.He_oper_centr_freq_seg0_idx = center_channel
+		}
+	}
+
 
 	//chan_switch 1 5180 sec_channel_offset=1 center_freq1=5210 bandwidth=80 vht
 
@@ -114,7 +152,7 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 	} else if (bw == 8080) {
 		//80 + 80 unsupported for now
 		// center_freq1, center_freq2
-		return fmt.Errorf("80+80 not supported")
+		return CalculatedParameters{}, fmt.Errorf("80+80 not supported")
 	}
 
 	if ht_enabled {
@@ -127,7 +165,7 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 
 	fmt.Println(cmd)
 	_, err := RunHostapdCommandArray(strings.Split(cmd, " "))
-	return err
+	return calculated, err
 }
 
 func hostapdChannelSwitch(w http.ResponseWriter, r *http.Request) {
@@ -140,11 +178,15 @@ func hostapdChannelSwitch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = ChanSwitch(channelParams.Mode, channelParams.Channel, channelParams.Bandwidth, channelParams.HT_Enable, channelParams.VHT_Enable)
+	calculated, err := ChanSwitch(channelParams.Mode, channelParams.Channel, channelParams.Bandwidth, channelParams.HT_Enable, channelParams.VHT_Enable, channelParams.HE_Enable)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(calculated)
+
 }
 
 
@@ -251,6 +293,18 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	if newConf.Vht_oper_centr_freq_seg0_idx > 0 {
 		conf["vht_oper_centr_freq_seg0_idx"] = newConf.Vht_oper_centr_freq_seg0_idx
+	}
+
+	if newConf.He_oper_centr_freq_seg0_idx > 0 {
+		conf["he_oper_centr_freq_seg0_idx"] = newConf.He_oper_centr_freq_seg0_idx
+	}
+
+	if newConf.Vht_oper_chwidth >= 0 {
+		conf["vht_oper_chwidth"] = newConf.Vht_oper_chwidth
+	}
+
+	if newConf.He_oper_chwidth >= 0 {
+		conf["he_oper_chwidth"] = newConf.He_oper_chwidth
 	}
 
 	// write new conf
