@@ -4,18 +4,13 @@ import { wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 
 import {
+  Badge,
   View,
-  Divider,
   Box,
   FlatList,
   Heading,
-  Icon,
-  IconButton,
   Stack,
   HStack,
-  VStack,
-  Spacer,
-  Switch,
   Text,
   useBreakpointValue,
   useColorModeValue
@@ -111,7 +106,9 @@ const Arp = (props) => {
                   justifyContent="space-between"
                 >
                   <Text fontSize="xs">Flags: {translateFlags(item.Flags)}</Text>
-                  <Text>{item.Device}</Text>
+                  <Box marginLeft="auto">
+                    <Badge variant="outline">{item.Device}</Badge>
+                  </Box>
                 </Stack>
               </HStack>
             </Box>
