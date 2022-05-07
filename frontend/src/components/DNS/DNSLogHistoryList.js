@@ -2,11 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { withRouter } from 'react-router'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
-import {
-  faMagnifyingGlass,
-  faTimes,
-  faTrash
-} from '@fortawesome/free-solid-svg-icons'
+import { faMagnifyingGlass, faTrash } from '@fortawesome/free-solid-svg-icons'
 
 import { AlertContext } from 'layouts/Admin'
 import ClientSelect from 'components/ClientSelect'
