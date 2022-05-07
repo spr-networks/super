@@ -24,6 +24,7 @@ import {
   faCircleNodes,
   faCogs,
   faEthernet,
+  faFireAlt,
   faHome,
   faLaptop,
   faLineChart,
@@ -80,7 +81,7 @@ const routes = [
   {
     path: '/firewall',
     name: 'Firewall',
-    icon: faUnlockAlt,
+    icon: faFireAlt,
     component: Firewall,
     layout: '/admin'
   },
