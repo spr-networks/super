@@ -5,7 +5,7 @@ import { deviceAPI } from 'api/Device'
 import ModalConfirm from 'components/ModalConfirm'
 
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
-import { faPen, faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faPen, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import {
   Badge,
@@ -24,9 +24,6 @@ import {
   Text,
   useColorModeValue
 } from 'native-base'
-
-import CreatableSelect from 'react-select/creatable'
-import TagsInput from 'react-tagsinput'
 
 class Device extends Component {
   state = {

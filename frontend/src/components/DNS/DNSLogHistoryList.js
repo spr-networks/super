@@ -12,6 +12,7 @@ import { logAPI } from 'api/DNS'
 import { prettyDate } from 'utils'
 
 import {
+  Badge,
   Box,
   Button,
   FlatList,
@@ -209,9 +210,7 @@ export class DNSLogHistoryList extends React.Component {
         NXDOMAIN: 'danger'
       }
 
-      let color = keys[type] || 'danger'
-
-      return `${color}.500`
+      return keys[type] || 'danger'
     }
 
     let hideClient = this.state.filterIPs.length <= 1
@@ -345,17 +344,15 @@ export class DNSLogHistoryList extends React.Component {
                 justifyContent="space-between"
                 alignItems="center"
                 borderLeftWidth={2}
-                borderLeftColor={colorByType(item.Type)}
+                borderLeftColor={colorByType(item.Type) + '.500'}
                 py="2"
                 pl="2"
               >
-                <Text
-                  display={{ base: 'none', md: 'flex' }}
-                  flex="1"
-                  color={colorByType(item.Type)}
-                >
-                  {item.Type}
-                </Text>
+                <Box display={{ base: 'none', md: 'flex' }} w="20">
+                  <Badge variant="outline" colorScheme={colorByType(item.Type)}>
+                    {item.Type}
+                  </Badge>
+                </Box>
 
                 {hideClient ? null : (
                   <Text flex="1">{item.Remote.split(':')[0]}</Text>
