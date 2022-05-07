@@ -2,26 +2,10 @@ import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import { trafficAPI, wifiAPI } from 'api'
-import IPInfo from 'components/IPInfo'
 import { prettyDate, prettySize } from 'utils'
 
-import {
-  Badge,
-  Box,
-  FlatList,
-  Heading,
-  Icon,
-  IconButton,
-  Stack,
-  HStack,
-  VStack,
-  Spacer,
-  Switch,
-  Text,
-  useColorModeValue
-} from 'native-base'
+import { Badge, Box, FlatList, Icon, Stack, HStack, Text } from 'native-base'
 
-import { Table } from 'reactstrap'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
 

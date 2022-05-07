@@ -12,8 +12,6 @@ const IPInfo = (props) => {
     wifiAPI
       .asn(ip)
       .then((asn) => {
-        //const handleClickBlock = () => alert('*TODO* block')
-
         contextType.alert(
           'IP ASN information',
           <>
@@ -35,7 +33,7 @@ const IPInfo = (props) => {
         )
       })
       .catch((err) => {
-        contextType.modal('IP info', `click ip: ${ip}`)
+        contextType.error('IP info', `No ASN info for IP address: ${ip}`)
       })
   }
   return (
