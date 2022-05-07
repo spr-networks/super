@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
-import Select from 'react-select'
-import TagsInput from 'react-tagsinput'
+import React, { useContext, useState } from 'react'
+import { AlertContext } from 'layouts/Admin'
 
 import {
+  Box,
   Button,
   Checkbox,
   FormControl,
@@ -14,51 +14,16 @@ import {
   Text
 } from 'native-base'
 
-let did_submit = false
+const AddDevice = (props) => {
+  const context = useContext(AlertContext)
 
-const Step1 = React.forwardRef((props, ref) => {
   const [mac, setMac] = useState('')
-  const [psk, setPsk] = useState('')
-  const [wpa, setWpa] = useState('sae')
   const [name, setName] = useState('')
   const [groups, setGroups] = useState(['dns', 'wan'])
+  const [wpa, setWpa] = useState('sae')
+  const [psk, setPsk] = useState('')
 
   const [errors, setErrors] = useState({})
-
-  let submitted = () => {
-    return did_submit
-  }
-  let setSubmitted = (v) => {
-    did_submit = v
-  }
-
-  React.useImperativeHandle(ref, () => ({
-    isValidated: () => {
-      if (isValidated()) {
-        return true
-      }
-      return false
-    },
-    state: {
-      mac,
-      psk,
-      wpa,
-      name,
-      groups,
-      errors,
-
-      submitted,
-      setSubmitted
-    }
-  }))
-
-  // function that verifies if a string has a given length or not
-  const verifyLength = (value, length) => {
-    if (value.length >= length) {
-      return true
-    }
-    return false
-  }
 
   const filterMAC = (value) => {
     //must be of the format 00:00:00:00:00:00
@@ -100,15 +65,11 @@ const Step1 = React.forwardRef((props, ref) => {
     return false
   }
 
-  const isValidated = () => Object.keys(errors).length == 0
-
   const allGroups = ['wan', 'dns', 'lan']
 
   const handleChange = (name, value) => {
-    setSubmitted(false)
-
     if (name == 'name') {
-      if (!verifyLength(value, 1)) {
+      if (value.length < 1) {
         return setErrors({ ...errors, name: 'invalid name' })
       }
 
@@ -129,10 +90,32 @@ const Step1 = React.forwardRef((props, ref) => {
         return setErrors({ ...errors, psk: 'invalid passphrase' })
       }
 
+      setPsk(value)
+    }
+
+    if (name == 'wpa') {
       setWpa(value)
     }
 
     setErrors({})
+  }
+
+  const handleSubmit = () => {
+    if (Object.keys(errors).length) {
+      return context.error('Invalid fields: ' + Object.keys(errors).join(','))
+    }
+
+    let data = {
+      MAC: mac || 'pending',
+      Name: name,
+      Groups: groups,
+      PSKEntry: {
+        Psk: psk,
+        Type: wpa
+      }
+    }
+
+    context.success('add', JSON.stringify(data, null, '  '))
   }
 
   return (
@@ -145,13 +128,13 @@ const Step1 = React.forwardRef((props, ref) => {
       <FormControl isRequired isInvalid={'name' in errors}>
         <FormControl.Label>Device Name</FormControl.Label>
         <Input
-          type="text"
+          size="md"
           autoFocus
           onChangeText={(value) => handleChange('name', value)}
           onBlur={() => handleChange('name', name)}
         />
         {'name' in errors ? (
-          <FormControl.ErrorMessage>cannot be empty</FormControl.ErrorMessage>
+          <FormControl.ErrorMessage>Cannot be empty</FormControl.ErrorMessage>
         ) : (
           <FormControl.HelperText>
             A unique name for the device
@@ -159,82 +142,94 @@ const Step1 = React.forwardRef((props, ref) => {
         )}
       </FormControl>
 
-      <FormControl>
-        <FormControl.Label>Auth</FormControl.Label>
-        <Radio.Group
-          name="Auth"
-          defaultValue={'sae'}
-          accessibilityLabel="Auth"
-          onChange={(value) => handleChange('wpa', value)}
-        >
-          <HStack space={2}>
-            <Radio size="sm" value="sae">
-              WPA3
-            </Radio>
-            <Radio size="sm" value="wpa2">
-              WPA2
-            </Radio>
-          </HStack>
-        </Radio.Group>
-      </FormControl>
+      <Stack direction={{ base: 'column', md: 'row' }} space={4}>
+        <FormControl flex="1" isInvalid={'mac' in errors}>
+          <FormControl.Label>MAC Address</FormControl.Label>
+          <Input
+            variant="underlined"
+            onChangeText={(value) => handleChange('mac', value)}
+          />
+          {'mac' in errors ? (
+            <FormControl.ErrorMessage>
+              format: 00:00:00:00:00:00
+            </FormControl.ErrorMessage>
+          ) : (
+            <FormControl.HelperText>
+              Optional. Will be assigned on connect if empty
+            </FormControl.HelperText>
+          )}
+        </FormControl>
 
-      <FormControl isInvalid={'mac' in errors}>
-        <FormControl.Label>MAC Address</FormControl.Label>
-        <Input
-          name="mac"
-          type="text"
-          onChangeText={(value) => handleChange('mac', value)}
-        />
-        {'mac' in errors ? (
-          <FormControl.ErrorMessage>
-            format: 00:00:00:00:00:00
-          </FormControl.ErrorMessage>
-        ) : (
+        <FormControl flex="1">
+          <FormControl.Label>Auth</FormControl.Label>
+          <Radio.Group
+            name="Auth"
+            defaultValue={'sae'}
+            accessibilityLabel="Auth"
+            onChange={(value) => handleChange('wpa', value)}
+          >
+            <HStack py="1" space={2}>
+              <Radio size="sm" value="sae">
+                WPA3
+              </Radio>
+              <Radio size="sm" value="wpa2">
+                WPA2
+              </Radio>
+            </HStack>
+          </Radio.Group>
+          <FormControl.HelperText>WPA3 is recommended</FormControl.HelperText>
+        </FormControl>
+      </Stack>
+
+      <Stack direction={{ base: 'column', md: 'row' }} space={4}>
+        <FormControl flex="1" isInvalid={'psk' in errors}>
+          <FormControl.Label>Passphrase</FormControl.Label>
+          <Input
+            variant="underlined"
+            type="password"
+            onChangeText={(value) => handleChange('psk', value)}
+          />
+          {'psk' in errors ? (
+            <FormControl.ErrorMessage>
+              must be at least 8 characters long
+            </FormControl.ErrorMessage>
+          ) : (
+            <FormControl.HelperText>
+              Optional. If empty a random password will be generated
+            </FormControl.HelperText>
+          )}
+        </FormControl>
+
+        <FormControl flex="1">
+          <FormControl.Label>Groups</FormControl.Label>
+          <Checkbox.Group
+            defaultValue={groups}
+            accessibilityLabel="Set Device Groups"
+            onChange={(values) => setGroups(values)}
+            py="1"
+          >
+            <HStack w="100%" justifyContent="space-between">
+              {allGroups.map((group) => (
+                <Box flex="1">
+                  <Checkbox value={group} colorScheme="primary">
+                    {group}
+                  </Checkbox>
+                </Box>
+              ))}
+            </HStack>
+          </Checkbox.Group>
+
           <FormControl.HelperText>
-            Optional. Will be assigned on connect if empty
+            Assign device to groups for network access
           </FormControl.HelperText>
-        )}
-      </FormControl>
+        </FormControl>
+      </Stack>
 
-      <FormControl isInvalid={'psk' in errors}>
-        <FormControl.Label>Passphrase</FormControl.Label>
-        <Input
-          name="psk"
-          type="password"
-          onChangeText={(value) => handleChange('psk', value)}
-        />
-        {'psk' in errors ? (
-          <FormControl.ErrorMessage>
-            must be at least 8 characters long
-          </FormControl.ErrorMessage>
-        ) : (
-          <FormControl.HelperText>
-            Optional. If empty a random password will be generated
-          </FormControl.HelperText>
-        )}
-      </FormControl>
-
-      <FormControl>
-        <FormControl.Label>Groups</FormControl.Label>
-        <Checkbox.Group
-          defaultValue={groups}
-          direction="row"
-          accessibilityLabel="Set Device Groups"
-          onChange={(values) => setGroups(values)}
-        >
-          {allGroups.map((group) => (
-            <Checkbox value={group} colorScheme="primary">
-              {group}
-            </Checkbox>
-          ))}
-        </Checkbox.Group>
-
-        <FormControl.HelperText>
-          Assign device to groups for network access
-        </FormControl.HelperText>
-      </FormControl>
+      <Button mt="8" color="primary" size="md" onPress={handleSubmit}>
+        Save
+      </Button>
     </Stack>
   )
-})
+}
 
-export default Step1
+export default AddDevice

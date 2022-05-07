@@ -17,7 +17,6 @@ import Firewall from 'views/Firewall'
 import Logs from 'views/Logs'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import {
   faBan,
   faBarChart,
