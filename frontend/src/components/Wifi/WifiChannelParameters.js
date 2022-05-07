@@ -66,7 +66,7 @@ export default class WifiChannelParameters extends React.Component {
     event.preventDefault()
 
     let wifiParameters = {
-      Interface: this.state.Iface,
+      //Interface: this.state.Iface,
       Channel: parseInt(this.state.Channel.value),
       Mode: this.state.Mode.value,
       Bandwidth: parseInt(this.state.Bandwidth.value),
@@ -78,10 +78,13 @@ export default class WifiChannelParameters extends React.Component {
     const done = (res) => {
       if (this.props.notifyChange) {
         this.props.notifyChange({...wifiParameters, ...res})
+        this.context.reportSuccess("Set Channel Parameters")
       }
     }
 
-    wifiAPI.setChannel(wifiParameters).then(done)
+    wifiAPI.setChannel(wifiParameters).then(done, (e) => {
+       this.context.reportError('API Failure: '  + e.message)
+    })
   }
 
   enumerateChannelOptions() {
