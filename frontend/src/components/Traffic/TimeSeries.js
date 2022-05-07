@@ -63,9 +63,14 @@ const TimeSeries = (props) => {
       width="100%"
       p="4"
     >
-      <HStack space="2" justifyContent="space-between">
+      <Stack
+        direction={{ base: 'column', md: 'row' }}
+        space="2"
+        justifyContent="space-between"
+      >
         <Heading>{props.title || props.type}</Heading>
-        <HStack marginLeft="auto" space={4}>
+
+        <Stack direction={{ base: 'column', md: 'row' }} space={2}>
           {view == 'chart' ? (
             <Button.Group size="sm" isAttached colorScheme="primary">
               <Button
@@ -106,8 +111,8 @@ const TimeSeries = (props) => {
               onPress={(e) => setView('table')}
             />
           </Button.Group>
-        </HStack>
-      </HStack>
+        </Stack>
+      </Stack>
 
       <Box>
         {view == 'table' ? (

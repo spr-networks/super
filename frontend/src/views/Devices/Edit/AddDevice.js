@@ -2,40 +2,33 @@ import React, { useState } from 'react'
 import Select from 'react-select'
 import TagsInput from 'react-tagsinput'
 
-// reactstrap components
 import {
-  Label,
+  Button,
+  Checkbox,
+  FormControl,
+  Heading,
+  HStack,
   Input,
-  InputGroupAddon,
-  InputGroupText,
-  InputGroup,
-  FormGroup,
-  FormText,
-  Row,
-  Col
-} from 'reactstrap'
+  Radio,
+  Stack,
+  Text
+} from 'native-base'
 
 let did_submit = false
 
 const Step1 = React.forwardRef((props, ref) => {
-  let prev_mac = ''
-  let prev_psk = ''
-
-  const [mac, setmac] = useState('')
-  const [psk, setpsk] = useState('')
-  const [wpa, setwpa] = useState('sae') //WPA3
-  const [name, setname] = useState('')
+  const [mac, setMac] = useState('')
+  const [psk, setPsk] = useState('')
+  const [wpa, setWpa] = useState('sae')
+  const [name, setName] = useState('')
   const [groups, setGroups] = useState(['dns', 'wan'])
 
-  const [macState, setmacState] = useState('has-success')
-  const [pskState, setpskState] = useState('has-success')
-  const [wpaState, setwpaState] = useState('has-success')
-  const [nameState, setnameState] = useState('')
+  const [errors, setErrors] = useState({})
 
   let submitted = () => {
     return did_submit
   }
-  let setsubmitted = (v) => {
+  let setSubmitted = (v) => {
     did_submit = v
   }
 
@@ -52,12 +45,10 @@ const Step1 = React.forwardRef((props, ref) => {
       wpa,
       name,
       groups,
-      macState,
-      pskState,
-      wpaState,
-      setnameState,
+      errors,
+
       submitted,
-      setsubmitted
+      setSubmitted
     }
   }))
 
@@ -94,199 +85,155 @@ const Step1 = React.forwardRef((props, ref) => {
     return mac
   }
   const validateMAC = (value) => {
-    //allow blank mac
-    if (value == '') {
+    if (value == '' || value.length == 17) {
       return true
     }
-    if (value.length == 17) {
-      return true
-    }
+
     return false
   }
 
   const validatePassphrase = (value) => {
-    if (value == '') {
-      return true
-    } else if (value.length >= 8) {
+    if (value == '' || value.length >= 8) {
       return true
     }
+
     return false
   }
 
-  const isValidated = () => {
-    if (
-      macState === 'has-success' &&
-      pskState === 'has-success' &&
-      wpaState === 'has-success' &&
-      nameState == 'has-success'
-    ) {
-      return true
-    } else {
-      if (macState !== 'has-success') {
-        setmacState('has-danger')
+  const isValidated = () => Object.keys(errors).length == 0
+
+  const allGroups = ['wan', 'dns', 'lan']
+
+  const handleChange = (name, value) => {
+    setSubmitted(false)
+
+    if (name == 'name') {
+      if (!verifyLength(value, 1)) {
+        return setErrors({ ...errors, name: 'invalid name' })
       }
-      if (pskState !== 'has-success') {
-        setpskState('has-danger')
-      }
-      if (wpaState !== 'has-success') {
-        setwpaState('has-danger')
-      }
-      if (nameState !== 'has-success') {
-        setnameState('has-danger')
-      }
-      return false
+
+      setName(value)
     }
-  }
 
-  const allGroups = [
-    { label: 'dns', value: 'dns' },
-    { label: 'wan', value: 'wan' },
-    { label: 'lan', value: 'lan' }
-  ]
+    if (name == 'mac') {
+      value = filterMAC(value)
+      if (!validateMAC(value)) {
+        return setErrors({ ...errors, mac: 'invalid MAC address' })
+      }
 
-  const handleChangeGroups = (newValues) => {
-    setGroups(newValues.map((o) => o.value))
-  }
-
-  const onChangeInput = (e) => {
-    setsubmitted(false)
-    if (!verifyLength(e.target.value, 1)) {
-      setnameState('has-danger')
-    } else {
-      setnameState('has-success')
+      setMac(value)
     }
-    setname(e.target.value)
+
+    if (name == 'psk') {
+      if (!validatePassphrase(value)) {
+        return setErrors({ ...errors, psk: 'invalid passphrase' })
+      }
+
+      setWpa(value)
+    }
+
+    setErrors({})
   }
 
   return (
-    <>
-      <h5 className="info-text">
-        Add a new WiFi Device. Wired devices do not need to be added.
-      </h5>
-      <Row>
-        <Col md={{ size: 10, offset: 1 }}>
-          <Row>
-            <Col md="9">
-              <FormGroup className={nameState}>
-                <Label for="name">
-                  Device Name{' '}
-                  {nameState === 'has-danger' ? (
-                    <span className="error">cannot be empty</span>
-                  ) : (
-                    <small>required</small>
-                  )}
-                </Label>
-                <Input
-                  name="name"
-                  placeholder="Device Name"
-                  type="text"
-                  autoFocus
-                  onChange={onChangeInput}
-                  onBlur={onChangeInput}
-                />
-              </FormGroup>
-            </Col>
-            <Col md="3">
-              <FormGroup>
-                <Label for="name">Auth</Label>
-                <Select
-                  autosize={false}
-                  className="react-select primary"
-                  classNamePrefix="react-select"
-                  name={wpa}
-                  onChange={(value) => {
-                    setsubmitted(false)
-                    setwpa(value.value)
-                  }}
-                  options={[
-                    {
-                      value: 'sae',
-                      label: 'WPA3'
-                    },
-                    { value: 'wpa2', label: 'WPA2' }
-                  ]}
-                  placeholder="WPA3"
-                />
-              </FormGroup>
-            </Col>
-          </Row>
-          <Row>
-            <Col md="6">
-              <FormGroup className={macState}>
-                <Label for="mac">
-                  MAC Address{' '}
-                  {macState === 'has-danger' ? (
-                    <span className="error">format: 00:00:00:00:00:00</span>
-                  ) : (
-                    <small>optional</small>
-                  )}
-                </Label>
-                <Input
-                  name="mac"
-                  placeholder=""
-                  type="text"
-                  onChange={(e) => {
-                    setsubmitted(false)
-                    e.target.value = filterMAC(e.target.value)
-                    if (!validateMAC(e.target.value)) {
-                      setmacState('has-danger')
-                    } else {
-                      setmacState('has-success')
-                    }
-                    setmac(e.target.value)
-                  }}
-                />
-              </FormGroup>
-            </Col>
-            <Col md="6">
-              <FormGroup className={pskState}>
-                <Label for="psk">
-                  Passphrase{' '}
-                  {pskState === 'has-danger' ? (
-                    <span className="error">
-                      must be at least 8 characters long
-                    </span>
-                  ) : (
-                    <small>optional</small>
-                  )}
-                </Label>
-                <Input
-                  name="psk"
-                  placeholder=""
-                  type="password"
-                  onChange={(e) => {
-                    setsubmitted(false)
-                    if (!validatePassphrase(e.target.value)) {
-                      setpskState('has-danger')
-                    } else {
-                      setpskState('has-success')
-                    }
-                    setpsk(e.target.value)
-                  }}
-                />
-              </FormGroup>
-            </Col>
-          </Row>
+    <Stack space={4}>
+      <Heading fontSize="lg">Add a new WiFi Device</Heading>
+      <Text color="muted.500" fontSize="xs" mt="-3">
+        Wired devices do not need to be added
+      </Text>
 
-          <FormGroup>
-            <Label for="groups">
-              Groups <small>optional</small>
-            </Label>
-            <Select
-              isMulti
-              options={allGroups}
-              value={groups.map((v) => {
-                return { label: v, value: v }
-              })}
-              onChange={handleChangeGroups}
-            />
-            <Label className="info">
-              Assign device to groups for network access
-            </Label>
-          </FormGroup>
-        </Col>
-      </Row>
-    </>
+      <FormControl isRequired isInvalid={'name' in errors}>
+        <FormControl.Label>Device Name</FormControl.Label>
+        <Input
+          type="text"
+          autoFocus
+          onChangeText={(value) => handleChange('name', value)}
+          onBlur={() => handleChange('name', name)}
+        />
+        {'name' in errors ? (
+          <FormControl.ErrorMessage>cannot be empty</FormControl.ErrorMessage>
+        ) : (
+          <FormControl.HelperText>
+            A unique name for the device
+          </FormControl.HelperText>
+        )}
+      </FormControl>
+
+      <FormControl>
+        <FormControl.Label>Auth</FormControl.Label>
+        <Radio.Group
+          name="Auth"
+          defaultValue={'sae'}
+          accessibilityLabel="Auth"
+          onChange={(value) => handleChange('wpa', value)}
+        >
+          <HStack space={2}>
+            <Radio size="sm" value="sae">
+              WPA3
+            </Radio>
+            <Radio size="sm" value="wpa2">
+              WPA2
+            </Radio>
+          </HStack>
+        </Radio.Group>
+      </FormControl>
+
+      <FormControl isInvalid={'mac' in errors}>
+        <FormControl.Label>MAC Address</FormControl.Label>
+        <Input
+          name="mac"
+          type="text"
+          onChangeText={(value) => handleChange('mac', value)}
+        />
+        {'mac' in errors ? (
+          <FormControl.ErrorMessage>
+            format: 00:00:00:00:00:00
+          </FormControl.ErrorMessage>
+        ) : (
+          <FormControl.HelperText>
+            Optional. Will be assigned on connect if empty
+          </FormControl.HelperText>
+        )}
+      </FormControl>
+
+      <FormControl isInvalid={'psk' in errors}>
+        <FormControl.Label>Passphrase</FormControl.Label>
+        <Input
+          name="psk"
+          type="password"
+          onChangeText={(value) => handleChange('psk', value)}
+        />
+        {'psk' in errors ? (
+          <FormControl.ErrorMessage>
+            must be at least 8 characters long
+          </FormControl.ErrorMessage>
+        ) : (
+          <FormControl.HelperText>
+            Optional. If empty a random password will be generated
+          </FormControl.HelperText>
+        )}
+      </FormControl>
+
+      <FormControl>
+        <FormControl.Label>Groups</FormControl.Label>
+        <Checkbox.Group
+          defaultValue={groups}
+          direction="row"
+          accessibilityLabel="Set Device Groups"
+          onChange={(values) => setGroups(values)}
+        >
+          {allGroups.map((group) => (
+            <Checkbox value={group} colorScheme="primary">
+              {group}
+            </Checkbox>
+          ))}
+        </Checkbox.Group>
+
+        <FormControl.HelperText>
+          Assign device to groups for network access
+        </FormControl.HelperText>
+      </FormControl>
+    </Stack>
   )
 })
 

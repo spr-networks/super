@@ -5,7 +5,7 @@ import QRCode from 'react-qr-code'
 import { Button, Row, Col, Label } from 'reactstrap'
 import { deviceAPI, wifiAPI } from 'api'
 
-const Step2 = React.forwardRef((props, ref) => {
+const WifiConnect = React.forwardRef((props, ref) => {
   let wifi = props.wizardData['WiFi Configuration']
   let history = useHistory()
 
@@ -138,4 +138,4 @@ const Step2 = React.forwardRef((props, ref) => {
   )
 })
 
-export default Step2
+export default WifiConnect

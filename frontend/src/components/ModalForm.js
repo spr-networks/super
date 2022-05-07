@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import { Box, Button, Icon, Modal } from 'native-base'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { faPlus } from '@fortawesome/free-solid-svg-icons'
-//import { Button, Modal } from 'reactstrap'
 
 const ModalForm = (props) => {
   const [show, setShow] = useState(false)

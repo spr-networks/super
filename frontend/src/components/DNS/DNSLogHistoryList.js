@@ -64,11 +64,12 @@ export class DNSLogHistoryList extends React.Component {
       return
     }
 
+    // TODO pagination
+
     Promise.allSettled(
       ips.map(async (ip) => {
         try {
           let list = await logAPI.history(ip)
-          list = list.slice(0, 20)
           return list
         } catch (error) {
           throw `${ip}`

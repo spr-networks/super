@@ -1,5 +1,4 @@
 import React from 'react'
-import { Container, Row } from 'reactstrap'
 import PropTypes from 'prop-types'
 
 import { Box, Stack, Link, Text } from 'native-base'

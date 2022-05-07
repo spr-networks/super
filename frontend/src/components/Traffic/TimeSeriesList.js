@@ -5,7 +5,25 @@ import { trafficAPI, wifiAPI } from 'api'
 import IPInfo from 'components/IPInfo'
 import { prettyDate, prettySize } from 'utils'
 
-import { Table, Row, Col } from 'reactstrap'
+import {
+  Badge,
+  Box,
+  FlatList,
+  Heading,
+  Icon,
+  IconButton,
+  Stack,
+  HStack,
+  VStack,
+  Spacer,
+  Switch,
+  Text,
+  useColorModeValue
+} from 'native-base'
+
+import { Table } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
 
 const TimeSeriesList = (props) => {
   const [list, setList] = useState([])
@@ -117,43 +135,65 @@ const TimeSeriesList = (props) => {
   }
 
   return (
-    <>
-      <Table responsive>
-        <thead className="text-primary">
-          <tr>
-            <th>Timestamp</th>
-            {showASN ? null : <th>Interface</th>}
-            <th>Src IP</th>
-            <th>Dst IP</th>
-            {showASN ? (
-              props.type == 'WanOut' ? (
-                <th>Dst ASN</th>
-              ) : (
-                <th>Src ASN</th>
-              )
-            ) : null}
-            <th>Size</th>
-          </tr>
-        </thead>
-        <tbody>
-          {listFiltered.map((row) => (
-            <tr key={row.Timestamp}>
-              <td>{prettyDate(row.Timestamp)}</td>
-              {showASN ? null : <td>{row.Interface}</td>}
-              <td>
-                <IPInfo>{row.Src}</IPInfo>
-              </td>
-              <td>
-                <IPInfo>{row.Dst}</IPInfo>
-              </td>
-              {showASN ? <td>{row.Asn}</td> : null}
-              {/*<td>{row.Packets}</td>*/}
-              <td>{prettySize(row.Bytes)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-    </>
+    <FlatList
+      data={listFiltered}
+      renderItem={({ item }) => (
+        <Box
+          borderBottomWidth="1"
+          _dark={{
+            borderColor: 'muted.600'
+          }}
+          borderColor="muted.200"
+          py="2"
+        >
+          <HStack
+            direction={{ base: 'column', md: 'row' }}
+            space={2}
+            justifyContent="space-between"
+          >
+            <Stack
+              direction={{ base: 'column', md: 'row' }}
+              flex="2"
+              space={2}
+              justifyContent="space-between"
+            >
+              <HStack flex="1" space={2} justifyContent="space-between">
+                <Text flex="1">{item.Src}</Text>
+                <Icon
+                  flex="1"
+                  color="muted.200"
+                  size="xs"
+                  as={FontAwesomeIcon}
+                  icon={faArrowRight}
+                />
+                <Text flex="1">{item.Dst}</Text>
+              </HStack>
+              {showASN ? (
+                <Text flex="1" color="muted.600" isTruncated>
+                  {item.Asn}
+                </Text>
+              ) : null}
+            </Stack>
+
+            <Stack
+              direction="row"
+              marginLeft="auto"
+              space={2}
+              flex={2 / 3}
+              justifyContent="space-between"
+            >
+              <Badge variant="outline" color="muted.500">
+                {prettySize(item.Bytes)}
+              </Badge>
+              <Text fontSize="xs" alignSelf="flex-start">
+                {prettyDate(item.Timestamp)}
+              </Text>
+            </Stack>
+          </HStack>
+        </Box>
+      )}
+      keyExtractor={(item) => item.Timestamp}
+    />
   )
 }
 

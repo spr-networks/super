@@ -3,16 +3,7 @@ import React, { useContext, useState } from 'react'
 import { pluginAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 
-import {
-  Button,
-  Col,
-  Label,
-  Form,
-  FormGroup,
-  FormText,
-  Input,
-  Row
-} from 'reactstrap'
+import { Button, FormControl, Input, Stack } from 'native-base'
 
 const AddPlugin = (props) => {
   const contextType = useContext(AlertContext)
@@ -21,10 +12,7 @@ const AddPlugin = (props) => {
   const [URI, setURI] = useState('')
   const [UnixPath, setUnixPath] = useState('')
 
-  const handleChange = (e) => {
-    let name = e.target.name,
-      value = e.target.value
-
+  const handleChange = (name, value) => {
     if (name == 'Name') {
       setName(value)
     }
@@ -52,82 +40,61 @@ const AddPlugin = (props) => {
   }
 
   return (
-    <Form onSubmit={handleSubmit}>
-      <Row>
-        <Label for="Name" md={2}>
-          Name
-        </Label>
-        <Col md={10}>
-          <FormGroup>
-            <Input
-              type="text"
-              id="Name"
-              placeholder="Plugin name"
-              name="Name"
-              value={Name}
-              onChange={handleChange}
-              autoFocus
-            />
-            <FormText tag="span">
-              Use a unique name to identify your plugin
-            </FormText>
-          </FormGroup>
-        </Col>
-      </Row>
-      <Row>
-        <Label for="URI" md={2}>
-          URI
-        </Label>
-        <Col md={10}>
-          <FormGroup>
-            <Input
-              type="text"
-              id="URI"
-              placeholder="Plugin URI"
-              name="URI"
-              value={URI}
-              onChange={handleChange}
-            />
-            <FormText tag="span">
-              Plugin will be @ "http://spr/plugins/{URI || 'URI-here'}/"
-            </FormText>
-          </FormGroup>
-        </Col>
-      </Row>
-      <Row>
-        <Label for="UnixPath" md={2}>
-          Unix Path
-        </Label>
-        <Col md={10}>
-          <FormGroup>
-            <Input
-              type="text"
-              id="UnixPath"
-              placeholder="Plugin pathname for unix socket"
-              name="UnixPath"
-              value={UnixPath}
-              onChange={handleChange}
-            />
-            <FormText tag="span">
-              Use a unique name to identify your plugin
-            </FormText>
-          </FormGroup>
-        </Col>
-      </Row>
-      <Row>
-        <Col sm={{ offset: 2, size: 10 }}>
-          <Button
-            className="btn-round"
-            color="primary"
-            size="md"
-            type="submit"
-            onClick={handleSubmit}
-          >
-            Save
-          </Button>
-        </Col>
-      </Row>
-    </Form>
+    <Stack space={4}>
+      <FormControl>
+        <FormControl.Label>Name</FormControl.Label>
+
+        <Input
+          type="text"
+          variant="underlined"
+          name="Name"
+          value={Name}
+          onChangeText={(value) => handleChange('Name', value)}
+          autoFocus
+        />
+
+        <FormControl.HelperText>
+          Use a unique name to identify your plugin
+        </FormControl.HelperText>
+      </FormControl>
+      <FormControl>
+        <FormControl.Label>URI</FormControl.Label>
+
+        <Input
+          type="text"
+          variant="underlined"
+          name="URI"
+          value={URI}
+          onChangeText={(value) => handleChange('URI', value)}
+          autoFocus
+        />
+
+        <FormControl.HelperText>
+          {'Plugin will be @ "http://spr/plugins/' + (URI || 'URI') + '"'}
+        </FormControl.HelperText>
+      </FormControl>
+
+      <FormControl>
+        <FormControl.Label>UNIX Path</FormControl.Label>
+
+        <Input
+          type="text"
+          variant="underlined"
+          name="UnixPath"
+          value={UnixPath}
+          onChangeText={(value) => handleChange('UnixPath', value)}
+          autoFocus
+        />
+
+        <FormControl.HelperText>
+          Plugin pathname for unix socket
+        </FormControl.HelperText>
+      </FormControl>
+
+      <Button color="primary" size="md" onPress={handleSubmit}>
+        Save
+      </Button>
+    </Stack>
   )
 }
 
