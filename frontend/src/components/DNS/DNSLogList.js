@@ -90,7 +90,7 @@ const DNSLogList = ({ title, description, ...props }) => {
     >
       <HStack alignItems="center">
         <VStack>
-          <Heading>{title}</Heading>
+          <Heading fontSize="xl">{title}</Heading>
           <Text color="muted.500">{description}</Text>
         </VStack>
 
@@ -99,14 +99,7 @@ const DNSLogList = ({ title, description, ...props }) => {
           handleSubmit={handleSubmit}
           trigger={(triggerProps) => {
             return (
-              <Button
-                marginLeft="auto"
-                variant="solid"
-                colorScheme="primary"
-                rounded="full"
-                leftIcon={<Icon as={FontAwesomeIcon} icon={faPlus} />}
-                {...triggerProps}
-              >
+              <Button {...triggerProps} marginLeft="auto">
                 {'Add ' + type}
               </Button>
             )

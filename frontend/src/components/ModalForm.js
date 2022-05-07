@@ -29,11 +29,10 @@ const ModalForm = (props) => {
       {props.triggerText ? (
         <Box>
           <Button
-            size="md"
+            size="sm"
             variant="outline"
             colorScheme="primary"
             rounded="full"
-            borderWidth={1}
             borderColor="info.400"
             leftIcon={
               <Icon as={FontAwesomeIcon} icon={props.triggerIcon || faPlus} />

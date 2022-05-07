@@ -4,36 +4,14 @@ import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 import ClientSelect from 'components/ClientSelect'
 
-import {
-  Box,
-  Button,
-  Checkbox,
-  FormControl,
-  Input,
-  Link,
-  Stack,
-  HStack,
-  Spinner,
-  Text
-} from 'native-base'
-
-import {
-  //Button,
-  Label,
-  Form,
-  FormGroup,
-  FormText,
-  //Input,
-  Row,
-  Col
-} from 'reactstrap'
+import { Button, FormControl, Input, VStack } from 'native-base'
 
 export default class DNSAddOverride extends React.Component {
   static contextType = AlertContext
   state = {
     Type: '',
     Domain: '',
-    ResultIP: '',
+    ResultIP: '0.0.0.0',
     ClientIP: '*',
     Expiration: 0,
     check: {}
@@ -75,16 +53,8 @@ export default class DNSAddOverride extends React.Component {
     this.setState({ check })
   }
 
-  isValid() {
-    return Object.values(this.state.check).filter((v) => v.length).length == 0
-  }
-
-  handleChange(event) {
-    let name = event.target.name
-    let value = event.target.value
-
+  handleChange(name, value) {
     this.validateField(name, value)
-
     this.setState({ [name]: value })
   }
 
@@ -95,8 +65,10 @@ export default class DNSAddOverride extends React.Component {
     this.setState({ ClientIP })
   }
 
-  handleSubmit(event) {
-    event.preventDefault()
+  handleSubmit() {
+    const isValid = () => {
+      return Object.values(this.state.check).filter((v) => v.length).length == 0
+    }
 
     if (!isValid()) {
       return
@@ -126,108 +98,91 @@ export default class DNSAddOverride extends React.Component {
 
   render() {
     return (
-      <Form onSubmit={this.handleSubmit}>
-        <Row>
-          <Label for="Domain" sm={3}>
-            Domain
-          </Label>
-          <Col sm={9}>
-            <FormGroup className={this.state.check.Domain}>
-              <Input
-                type="text"
-                id="Domain"
-                placeholder=""
-                name="Domain"
-                value={this.state.Domain}
-                onChange={this.handleChange}
-                autoFocus
-              />
-              {this.state.check.Domain == 'has-danger' ? (
-                <Label className="error">Specify a domain name</Label>
-              ) : null}
-            </FormGroup>
-          </Col>
-        </Row>
+      <VStack space={2}>
+        <FormControl
+          isRequired
+          isInvalid={this.state.check.Domain == 'has-danger'}
+        >
+          <FormControl.Label>Domain</FormControl.Label>
 
-        <Row>
-          <Label for="ResultIP" sm={3}>
-            Result IP
-          </Label>
-          <Col sm={9}>
-            <FormGroup className={this.state.check.ResultIP}>
-              <Input
-                type="text"
-                id="ResultIP"
-                placeholder=""
-                name="ResultIP"
-                value={this.state.ResultIP}
-                onChange={this.handleChange}
-              />
-              {this.state.check.ResultIP == 'has-danger' ? (
-                <Label className="error">Please enter a valid IP or *</Label>
-              ) : (
-                <FormText tag="span">
-                  Optionally, set a custom IP address to return for domain name
-                  lookup.
-                </FormText>
-              )}
-            </FormGroup>
-          </Col>
-        </Row>
+          <Input
+            type="text"
+            name="Domain"
+            value={this.state.Domain}
+            onChangeText={(value) => this.handleChange('Domain', value)}
+            autoFocus
+          />
+          {this.state.check.Domain == 'has-danger' ? (
+            <FormControl.ErrorMessage>
+              Specify a domain name
+            </FormControl.ErrorMessage>
+          ) : null}
+        </FormControl>
 
-        <Row>
-          <Label for="ClientIP" sm={3}>
-            Client IP
-          </Label>
-          <Col sm={9}>
-            <FormGroup className={this.state.check.ClientIP}>
-              <ClientSelect
-                isCreatable
-                value={this.state.ClientIP}
-                onChange={this.handleClientChange}
-              />
-              {this.state.check.ClientIP == 'has-danger' ? (
-                <Label className="error">Please enter a valid IP or *</Label>
-              ) : null}
-            </FormGroup>
-          </Col>
-        </Row>
+        <FormControl isInvalid={this.state.check.ResultIP == 'has-danger'}>
+          <FormControl.Label>Result IP</FormControl.Label>
 
-        <Row>
-          <Label for="Expiration" sm={3}>
-            Expiration
-          </Label>
-          <Col sm={9}>
-            <FormGroup>
-              <Input
-                type="number"
-                id="Expiration"
-                placeholder="Expiration"
-                name="Expiration"
-                value={this.state.Expiration}
-                onChange={this.handleChange}
-              />
-              <FormText tag="span">
-                If non zero has unix time for when the entry should disappear
-              </FormText>
-            </FormGroup>
-          </Col>
-        </Row>
+          <Input
+            type="text"
+            name="ResultIP"
+            value={this.state.ResultIP}
+            onChangeText={(value) => this.handleChange('ResultIP', value)}
+          />
 
-        <Row>
-          <Col sm={{ offset: 3, size: 9 }}>
-            <Button
-              className="btn-round"
-              color="primary"
-              size="md"
-              type="submit"
-              onClick={this.handleSubmit}
-            >
-              Save
-            </Button>
-          </Col>
-        </Row>
-      </Form>
+          {this.state.check.ResultIP == 'has-danger' ? (
+            <FormControl.ErrorMessage>
+              Please enter a valid IP or *
+            </FormControl.ErrorMessage>
+          ) : (
+            <FormControl.HelperText>
+              Optionally, set a custom IP address to return for domain name
+              lookup.
+            </FormControl.HelperText>
+          )}
+        </FormControl>
+
+        <FormControl isInvalid={this.state.check.ClientIP == 'has-danger'}>
+          <FormControl.Label>Client IP</FormControl.Label>
+
+          <ClientSelect
+            isCreatable
+            value={this.state.ClientIP}
+            onChange={this.handleClientChange}
+          />
+
+          <FormControl.HelperText>
+            {this.state.check.ClientIP == 'has-danger' ? (
+              <FormControl.ErrorMessage>
+                Please enter a valid IP or *
+              </FormControl.ErrorMessage>
+            ) : null}
+          </FormControl.HelperText>
+        </FormControl>
+
+        <FormControl>
+          <FormControl.Label>Expiration</FormControl.Label>
+
+          <Input
+            type="number"
+            name="Expiration"
+            value={this.state.Expiration}
+            onChangeText={(value) => this.handleChange('Expiration', value)}
+          />
+
+          <FormControl.HelperText>
+            If non zero has unix time for when the entry should disappear
+          </FormControl.HelperText>
+        </FormControl>
+
+        <Button
+          mt={2}
+          variant="solid"
+          colorScheme="primary"
+          onPress={this.handleSubmit}
+        >
+          Save
+        </Button>
+      </VStack>
     )
   }
 }

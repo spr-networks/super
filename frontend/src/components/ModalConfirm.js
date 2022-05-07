@@ -27,7 +27,14 @@ const ModalConfirm = (props) => {
 
   const handleOpen = () => setIsOpen(true)
 
-  let triggerProps = {}
+  let triggerProps = {
+    size: 'sm',
+    variant: 'outline',
+    colorScheme: 'primary',
+    borderColor: 'info.400',
+    rounded: 'full',
+    leftIcon: <Icon as={FontAwesomeIcon} icon={faPlus} />
+  }
 
   const updateTrigger = () => {
     return trigger(

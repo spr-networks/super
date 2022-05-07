@@ -325,7 +325,7 @@ function Admin(props) {
                 <AlertContext.Provider value={alertState}>
                   <Slide in={showAlert} placement="top">
                     <Box
-                      maxWidth="360"
+                      maxWidth="90%"
                       top="16"
                       position="sticky"
                       alignItems="center"
