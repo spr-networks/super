@@ -1,4 +1,5 @@
 import AddDevice from 'views/Devices/AddDevice'
+import ConnectDevice from 'views/Devices/ConnectDevice'
 import Arp from 'views/Devices/Arp'
 import Devices from 'views/Devices/Devices'
 import Dhcp from 'views/Groups/Dhcp'
@@ -62,6 +63,12 @@ const routes = [
     path: '/add_device',
     redirect: true,
     component: AddDevice
+  },
+  {
+    layout: '/admin',
+    path: '/connect_device',
+    redirect: true,
+    component: ConnectDevice
   },
   {
     path: '/wireless',

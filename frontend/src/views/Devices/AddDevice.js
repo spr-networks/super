@@ -2,9 +2,7 @@ import React from 'react'
 
 import { Box, View, useColorModeValue } from 'native-base'
 
-// wizard steps
-import AddDevice from './Edit/AddDevice'
-import ConnectDevice from './Edit/WifiConnect'
+import AddDevice from 'components/Devices/AddDevice'
 
 function Wizard() {
   return (

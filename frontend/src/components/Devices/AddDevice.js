@@ -1,5 +1,9 @@
 import React, { useContext, useState } from 'react'
+import QRCode from 'react-qr-code'
+
+import { deviceAPI, wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
+import WifiConnect from 'views/Devices/ConnectDevice'
 
 import {
   Box,
@@ -22,6 +26,9 @@ const AddDevice = (props) => {
   const [groups, setGroups] = useState(['dns', 'wan'])
   const [wpa, setWpa] = useState('sae')
   const [psk, setPsk] = useState('')
+  const [device, setDevice] = useState({})
+
+  const [submitted, setSubmitted] = useState(false)
 
   const [errors, setErrors] = useState({})
 
@@ -115,7 +122,24 @@ const AddDevice = (props) => {
       }
     }
 
-    context.success('add', JSON.stringify(data, null, '  '))
+    //now submit to the API
+    deviceAPI
+      .update(data)
+      .then((device) => {
+        if (!psk.length) {
+          setPsk(device.PSKEntry.Psk)
+        }
+
+        setDevice(device)
+        setSubmitted(true)
+      })
+      .catch((error) => {
+        context.error(error.message)
+      })
+  }
+
+  if (submitted) {
+    return <WifiConnect device={device} goBack={() => setSubmitted(false)} />
   }
 
   return (
@@ -130,8 +154,10 @@ const AddDevice = (props) => {
         <Input
           size="md"
           autoFocus
+          value={name}
           onChangeText={(value) => handleChange('name', value)}
           onBlur={() => handleChange('name', name)}
+          onSubmitEditing={handleSubmit}
         />
         {'name' in errors ? (
           <FormControl.ErrorMessage>Cannot be empty</FormControl.ErrorMessage>
@@ -181,7 +207,11 @@ const AddDevice = (props) => {
         </FormControl>
       </Stack>
 
-      <Stack direction={{ base: 'column', md: 'row' }} space={4}>
+      <Stack
+        direction={{ base: 'column', md: 'row' }}
+        space={4}
+        alignItems="center"
+      >
         <FormControl flex="1" isInvalid={'psk' in errors}>
           <FormControl.Label>Passphrase</FormControl.Label>
           <Input
@@ -225,7 +255,7 @@ const AddDevice = (props) => {
         </FormControl>
       </Stack>
 
-      <Button mt="8" color="primary" size="md" onPress={handleSubmit}>
+      <Button mt="4" color="primary" size="md" onPress={handleSubmit}>
         Save
       </Button>
     </Stack>
