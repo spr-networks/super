@@ -155,10 +155,8 @@ export class DNSLogHistoryList extends React.Component {
     this.setState({ list })
   }
 
-  handleChangeIP(selectedIPs) {
-    this.setState({ selectedIPs })
-
-    let ips = selectedIPs.map((item) => item.value)
+  handleChangeIP(ips) {
+    console.log('ip change:', ips)
 
     // update url to include ips & filterText
     if (ips.length) {
@@ -266,7 +264,7 @@ export class DNSLogHistoryList extends React.Component {
             <FormControl flex="2">
               <FormControl.Label>Client</FormControl.Label>
               <ClientSelect
-                isMulti
+                isMultiple
                 value={this.state.filterIPs}
                 onChange={this.handleChangeIP}
               />

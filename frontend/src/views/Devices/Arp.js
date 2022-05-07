@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 
 import { wifiAPI } from 'api'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 
 import {
   View,
@@ -24,7 +24,7 @@ import {
 const Arp = (props) => {
   const [list, setList] = useState()
 
-  const context = useContext(APIErrorContext)
+  const context = useContext(AlertContext)
 
   let translateFlags = (number) => {
     number = parseInt(number, 16)
@@ -44,7 +44,7 @@ const Arp = (props) => {
 
   const refreshList = async () => {
     let arp = await wifiAPI.arp().catch((error) => {
-      this.context.reportError('API Failure: ' + error.message)
+      this.context.error('API Failure: ' + error.message)
     })
 
     arp = arp.sort((a, b) => {

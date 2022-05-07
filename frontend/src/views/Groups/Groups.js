@@ -46,7 +46,7 @@ export default class Groups extends Component {
             .catch((error) => {
               //404 = no clients in map yet
               if (error.message !== 404) {
-                this.context.reportError(
+                this.context.error(
                   'API Failure for: ' + v.Name + ' ' + error.message
                 )
               }

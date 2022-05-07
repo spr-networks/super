@@ -30,7 +30,6 @@ export default class DNSAddOverride extends React.Component {
     }
 
     this.handleChange = this.handleChange.bind(this)
-    this.handleClientChange = this.handleClientChange.bind(this)
     this.validateField = this.validateField.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
   }
@@ -56,13 +55,6 @@ export default class DNSAddOverride extends React.Component {
   handleChange(name, value) {
     this.validateField(name, value)
     this.setState({ [name]: value })
-  }
-
-  handleClientChange(newValue) {
-    let ClientIP = newValue ? newValue.value : ''
-    this.validateField('ClientIP', ClientIP)
-
-    this.setState({ ClientIP })
   }
 
   handleSubmit() {
@@ -145,9 +137,8 @@ export default class DNSAddOverride extends React.Component {
           <FormControl.Label>Client IP</FormControl.Label>
 
           <ClientSelect
-            isCreatable
             value={this.state.ClientIP}
-            onChange={this.handleClientChange}
+            onChange={(value) => this.handleChange('ClientIP', value)}
           />
 
           <FormControl.HelperText>

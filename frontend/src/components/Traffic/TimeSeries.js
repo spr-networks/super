@@ -5,7 +5,6 @@ import ClientSelect from 'components/ClientSelect'
 import DateRange from 'components/DateRange'
 import TimeSeriesChart from 'components/Traffic/TimeSeriesChart'
 import TimeSeriesList from 'components/Traffic/TimeSeriesList'
-import Toggle from 'components/Toggle'
 
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import {
@@ -48,8 +47,7 @@ const TimeSeries = (props) => {
     }
   }
 
-  const handleChangeClient = (selectedIPs) => {
-    let ips = selectedIPs.map((item) => item.value)
+  const handleChangeClient = (ips) => {
     setFilterIPs(ips)
   }
 
@@ -86,7 +84,7 @@ const TimeSeries = (props) => {
           ) : (
             <Box w="300">
               <ClientSelect
-                isMulti
+                isMultiple
                 value={filterIPs}
                 onChange={handleChangeClient}
               />

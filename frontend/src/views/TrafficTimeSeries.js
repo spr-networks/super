@@ -3,7 +3,7 @@ import React, { useContext, Component } from 'react'
 import { View, VStack } from 'native-base'
 
 import { deviceAPI, trafficAPI } from 'api'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 import chroma from 'chroma-js'
 
 import TimeSeries from 'components/Traffic/TimeSeries'
@@ -31,7 +31,7 @@ class TrafficTimeSeries extends Component {
     this.state.chartModes = chartModes
   }
 
-  static contextType = APIErrorContext
+  static contextType = AlertContext
 
   cached_traffic_data = null
 
@@ -43,7 +43,7 @@ class TrafficTimeSeries extends Component {
       traffic_data = this.cached_traffic_data = await trafficAPI
         .history()
         .catch((error) => {
-          this.context.reportError(
+          this.context.error(
             'API Failure get traffic history: ' + error.message
           )
         })

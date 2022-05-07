@@ -1,7 +1,7 @@
 import React, { useContext, useState } from 'react'
 
 import { pluginAPI } from 'api'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 
 import {
   Button,
@@ -15,7 +15,7 @@ import {
 } from 'reactstrap'
 
 const AddPlugin = (props) => {
-  const contextType = useContext(APIErrorContext)
+  const contextType = useContext(AlertContext)
 
   const [Name, setName] = useState('')
   const [URI, setURI] = useState('')
@@ -48,7 +48,7 @@ const AddPlugin = (props) => {
           props.notifyChange('plugin')
         }
       })
-      .catch((err) => contextType.reportError(`API Error: ${err}`))
+      .catch((err) => contextType.error(`API Error: ${err}`))
   }
 
   return (

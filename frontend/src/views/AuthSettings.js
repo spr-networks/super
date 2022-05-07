@@ -2,7 +2,6 @@ import React, { useContext, Component } from 'react'
 
 import { Box, Button, Heading, HStack, Text, View, VStack } from 'native-base'
 
-import { APIErrorContext } from 'layouts/Admin'
 import { api } from 'api'
 
 let ApiBaseUrl = api.baseURL
@@ -148,7 +147,6 @@ const login = (e) => {
 
 export default class AuthSettings extends Component {
   state = { status: 'not configured' }
-  static contextType = APIErrorContext
 
   constructor(props) {
     super(props)

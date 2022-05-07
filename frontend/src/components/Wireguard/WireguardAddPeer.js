@@ -52,7 +52,7 @@ export default class WireguardAddPeer extends React.Component {
   }
 
   handleChangeClient(newValue) {
-    let ClientIP = newValue ? newValue.value : ''
+    let ClientIP = newValue
     // TODO match device by ip
     this.setState({ AllowedIPs: ClientIP })
   }
@@ -198,8 +198,6 @@ export default class WireguardAddPeer extends React.Component {
           <Col md={10}>
             <FormGroup>
               <ClientSelect
-                isCreatable
-                skipAll
                 value={this.state.AllowedIPs}
                 onChange={this.handleChangeClient}
               />

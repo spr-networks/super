@@ -4,7 +4,7 @@ import Select from 'react-select'
 
 import { logsAPI } from 'api'
 import { prettyDate } from 'utils'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 
 import {
   Button,
@@ -25,7 +25,7 @@ const LogList = (props) => {
   const [containers, setContainers] = useState([])
   const [filterContainers, setFilterContainers] = useState([])
 
-  const contextType = useContext(APIErrorContext)
+  const contextType = useContext(AlertContext)
   let history = useHistory()
 
   const refreshList = (next) => {
@@ -49,7 +49,7 @@ const LogList = (props) => {
         }
       })
       .catch((err) => {
-        contextType.reportError('failed to fetch JSON logs')
+        contextType.error('failed to fetch JSON logs')
       })
   }
 

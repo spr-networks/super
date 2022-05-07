@@ -1,7 +1,7 @@
 import React, { Component, useContext } from 'react'
 import DNSBlocklist from 'components/DNS/DNSBlocklist'
 import DNSOverrideList from 'components/DNS/DNSOverrideList'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 import PluginDisabled from 'views/PluginDisabled'
 
@@ -9,7 +9,7 @@ import { View, VStack } from 'native-base'
 
 export default class DNSBlock extends Component {
   state = { enabled: true, PermitDomains: [], BlockDomains: [] }
-  static contextType = APIErrorContext
+  static contextType = AlertContext
 
   constructor(props) {
     super(props)
@@ -31,7 +31,7 @@ export default class DNSBlock extends Component {
       if ([404, 502].includes(error.message)) {
         this.setState({ enabled: false })
       } else {
-        this.context.reportError('API Failure: ' + error.message)
+        this.context.error('API Failure: ' + error.message)
       }
     }
   }

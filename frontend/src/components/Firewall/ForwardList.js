@@ -49,7 +49,7 @@ const ForwardList = (props) => {
           setList(flist)
         })
         .catch((err) => {
-          //context.reportError('deviceAPI.list Error: ' + err)
+          //context.error('deviceAPI.list Error: ' + err)
           setList(flist)
         })
     })
@@ -87,7 +87,7 @@ const ForwardList = (props) => {
         </VStack>
         <ModalForm
           title="Add Rewrite/Forwarding Rule"
-          triggerText="add"
+          triggerText="Add Forward"
           triggerIcon={faPlus}
           modalRef={refModal}
         >

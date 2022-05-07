@@ -1,24 +1,23 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import Select from 'react-select'
-import CreatableSelect from 'react-select/creatable'
-import { APIErrorContext } from 'layouts/Admin'
 import { firewallAPI } from 'api'
 
 import {
+  Box,
   Button,
-  Col,
-  Label,
-  Form,
-  FormGroup,
-  FormText,
+  Checkbox,
+  FormControl,
   Input,
-  Row
-} from 'reactstrap'
+  Link,
+  Radio,
+  Stack,
+  HStack,
+  Spinner,
+  Text
+} from 'native-base'
 
 export default class AddBlock extends React.Component {
-  static contextType = APIErrorContext
   state = {
     SrcIP: '',
     DstIP: '',
@@ -29,20 +28,12 @@ export default class AddBlock extends React.Component {
     super(props)
 
     this.handleChange = this.handleChange.bind(this)
-    this.handleChangeSelect = this.handleChangeSelect.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
   }
 
-  handleChange(event) {
+  handleChange(name, value) {
     //TODO verify IP && port
-    console.log('change:', event)
-    let name = event.target.name,
-      value = event.target.value
     this.setState({ [name]: value })
-  }
-
-  handleChangeSelect(name, opt) {
-    this.setState({ [name]: opt.value })
   }
 
   handleSubmit(event) {
@@ -66,78 +57,51 @@ export default class AddBlock extends React.Component {
   componentDidMount() {}
 
   render() {
-    let selOpt = (value) => {
-      return { label: value, value }
-    }
-
-    let Protocols = ['tcp', 'udp'].map((p) => {
-      return { label: p, value: p }
-    })
-
-    let Protocol = selOpt(this.state.Protocol)
-
-    let IPs = [
-      { label: '0.0.0.0/0', value: '0.0.0.0/0' },
-      { label: '1.2.3.4', value: '1.2.3.4' }
-    ]
-
-    let SrcIP = selOpt(this.state.SrcIP)
-    let DstIP = selOpt(this.state.DstIP)
-
     return (
-      <Form onSubmit={this.handleSubmit}>
-        <Row>
-          <Col md={3}>
-            <FormGroup>
-              <Label for="Protocol">Protocol</Label>
-              <Select
-                options={Protocols}
-                value={Protocol}
-                onChange={(o) => this.handleChangeSelect('Protocol', o)}
-              />
-            </FormGroup>
-          </Col>
-          <Col md={6}>
-            <FormGroup>
-              <Label for="SrcIP">Src address</Label>
-              <CreatableSelect
-                name="SrcIP"
-                value={SrcIP}
-                options={IPs}
-                onChange={(o) => this.handleChangeSelect('SrcIP', o)}
-              />
-              <Label for="SrcIP">Dst address</Label>
-              <CreatableSelect
-                name="DstIP"
-                value={DstIP}
-                options={IPs}
-                onChange={(o) => this.handleChangeSelect('DstIP', o)}
-              />
-
-            </FormGroup>
-          </Col>
-        </Row>
-
-        {/*<Row>
-          <Col md="12" className="text-center text-muted">
-            <i className="fa fa-long-arrow-down fa-3x" />
-          </Col>
-        </Row>*/}
-
-        <Row className="mt-4">
-          <Col sm={{ offset: 0, size: 12 }} className="text-center">
-            <Button
-              className="btn-wd"
-              color="primary"
+      <Stack space={4}>
+        <HStack space={4}>
+          <FormControl flex="1" isRequired>
+            <FormControl.Label>Source address</FormControl.Label>
+            <Input
               size="md"
-              type="submit"
-              onClick={this.handleSubmit}
-            >
-              Save
-            </Button>
-          </Col>
-        </Row>
-      </Form>
+              variant="underlined"
+              value={this.state.SrcIP}
+              onChangeText={(value) => this.handleChange('SrcIP', value)}
+            />
+            <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
+          </FormControl>
+          <FormControl flex="1" isRequired>
+            <FormControl.Label>Destination address</FormControl.Label>
+            <Input
+              size="md"
+              variant="underlined"
+              value={this.state.DstIP}
+              onChangeText={(value) => this.handleChange('DstIP', value)}
+            />
+            <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
+          </FormControl>
+        </HStack>
+
+        <FormControl>
+          <FormControl.Label>Protocol</FormControl.Label>
+
+          <Radio.Group
+            name="Protocol"
+            defaultValue={this.state.Protocol}
+            accessibilityLabel="Protocol"
+            onChange={(value) => this.handleChange('Protocol', value)}
+          >
+            <HStack space={2}>
+              <Radio value="tcp">tcp</Radio>
+              <Radio value="udp">udp</Radio>
+            </HStack>
+          </Radio.Group>
+        </FormControl>
+
+        <Button color="primary" size="md" onPress={this.handleSubmit}>
+          Save
+        </Button>
+      </Stack>
     )
   }
 }

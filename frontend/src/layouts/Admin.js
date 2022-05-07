@@ -169,7 +169,7 @@ function Admin(props) {
       if (event.data == 'success') {
         return
       } else if (event.data == 'Authentication failure') {
-        errorState.reportError('Websocket failed to authenticate')
+        alertState.error('Websocket failed to authenticate')
         return
       }
 
@@ -180,9 +180,7 @@ function Admin(props) {
       }
       // Notify WiFi Authentication state
       if (data['Type'] == 'PSKAuthSuccess') {
-        errorState.reportSuccess(
-          'Authentication success for MAC ' + innerData['MAC']
-        )
+        alertState.success('Authentication success for MAC ' + innerData['MAC'])
       } else if (data['Type'] == 'PSKAuthFailure') {
         let reasonString = ''
         if (innerData.Reason == 'noentry') {
@@ -191,7 +189,7 @@ function Admin(props) {
         } else if (innerData.Reason == 'mismatch') {
           reasonString = 'Wrong password with ' + wpa_type
         }
-        errorState.reportError(
+        alertState.error(
           'Authentication failure for MAC ' +
             innerData['MAC'] +
             ': ' +
