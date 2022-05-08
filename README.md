@@ -16,14 +16,21 @@ with protections against MAC cloaking/spoofing and fine grained access controls.
 
 https://demo.supernetworks.org/
 
-## Documentation 
+## Updating 
+#### Building from scratch
+docker-compose pull
+./build.sh
+docker-compose up -d
 
-You can find the documentation at https://www.supernetworks.org/pages/docs/intro/
+#### Using prebuilt containers
+docker-compose -f docker-compose-prebuilt.yml pull
+docker-compose -f docker-compose-prebuilt.yml up -d
 
 ## Useful Links
 
 Join the Discord chat https://discord.gg/WeNKMVTR
-API https://www.supernetworks.org/pages/api/0
+API Docs https://www.supernetworks.org/pages/api/0
+Documentation Home: https://www.supernetworks.org/pages/docs/intro/
 Raspberry Pi 4 Setup https://www.supernetworks.org/pages/docs/pi4b
 General Setup Guide https://www.supernetworks.org/pages/docs/setup_run_spr
 
