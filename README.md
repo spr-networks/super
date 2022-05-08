@@ -18,13 +18,17 @@ https://demo.supernetworks.org/
 
 ## Updating 
 #### Building from scratch
+```bash
 docker-compose pull
 ./build.sh
 docker-compose up -d
+```
 
 #### Using prebuilt containers
+```bash
 docker-compose -f docker-compose-prebuilt.yml pull
 docker-compose -f docker-compose-prebuilt.yml up -d
+```
 
 ## Useful Links
 
