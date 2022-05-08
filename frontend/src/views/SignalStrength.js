@@ -219,7 +219,7 @@ export default class SignalStrength extends Component {
           p="4"
           mb="4"
         >
-          <Heading>Device Signal Strength (RSSI)</Heading>
+          <Heading fontSize="lg">Device Signal Strength (RSSI)</Heading>
           <Box>
             {this.state.signals_rssi.datasets ? (
               <Bar data={this.state.signals_rssi} options={options_rssi} />
@@ -234,7 +234,7 @@ export default class SignalStrength extends Component {
           p="4"
           mb="4"
         >
-          <Heading>Device RX/TX Rate</Heading>
+          <Heading fontSize="lg">Device RX/TX Rate</Heading>
           <Box>
             {this.state.signals_rxtx.datasets ? (
               <Bar data={this.state.signals_rxtx} options={options_rxtx} />

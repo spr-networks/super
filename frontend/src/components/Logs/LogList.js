@@ -1,6 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Link, useHistory } from 'react-router-dom'
-import Select from 'react-select'
+import { useHistory } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { faRefresh } from '@fortawesome/free-solid-svg-icons'
 
