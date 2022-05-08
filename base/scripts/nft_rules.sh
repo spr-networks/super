@@ -21,8 +21,8 @@ LANIFMACSPOOF=""
 if [ "$LANIF" ]; then
     LANIFDHCP="iifname $LANIF udp dport 67 counter accept"
     DOCKERLAN="iif $DOCKERIF oifname $LANIF ip saddr $DOCKERNET counter accept"
-    LANIFFORWARD="counter oifname $LANIF ip saddr . iifname . ether saddr vmap @lan_access"
-    WGLANIFFORWARD="counter oifname wg0 ip saddr . iifname . ether saddr vmap @lan_access"
+    LANIFFORWARD="counter oifname $LANIF ip saddr . iifname vmap @lan_access"
+    WGLANIFFORWARD="counter oifname wg0 ip saddr . iifname vmap @lan_access"
     LANIFMACSPOOF="iifname eq $LANIF jump DROP_MAC_SPOOF"
 fi
 
