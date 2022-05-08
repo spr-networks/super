@@ -91,7 +91,7 @@ const PeerList = (props) => {
       p="4"
     >
       <HStack justifyContent="space-between">
-        <Heading fontSize="xl" pb="3" alignSelf="center">
+        <Heading fontSize="lg" pb="3" alignSelf="center">
           Peers
         </Heading>
 

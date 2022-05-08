@@ -76,7 +76,7 @@ const Arp = (props) => {
         width="100%"
         p="4"
       >
-        <Heading>ARP Table</Heading>
+        <Heading fontSize="lg">ARP Table</Heading>
 
         <FlatList
           data={list}

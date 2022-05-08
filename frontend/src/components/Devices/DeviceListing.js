@@ -85,7 +85,7 @@ const DeviceListing = (props) => {
           p="4"
         >
           <HStack mb="4">
-            <Heading fontSize="lg">Configured Devices</Heading>
+            <Heading fontSize="xl">Configured Devices</Heading>
 
             <Button
               marginLeft="auto"

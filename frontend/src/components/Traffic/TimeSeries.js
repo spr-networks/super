@@ -68,7 +68,7 @@ const TimeSeries = (props) => {
         space="2"
         justifyContent="space-between"
       >
-        <Heading>{props.title || props.type}</Heading>
+        <Heading fontSize="xl">{props.title || props.type}</Heading>
 
         <Stack direction={{ base: 'column', md: 'row' }} space={2}>
           {view == 'chart' ? (

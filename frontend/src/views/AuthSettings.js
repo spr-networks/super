@@ -183,7 +183,7 @@ export default class AuthSettings extends Component {
           p="4"
         >
           <HStack space="1" mb="2">
-            <Heading>Webauthn</Heading>
+            <Heading fontSize="lg">Webauthn</Heading>
 
             <Text
               marginLeft="auto"

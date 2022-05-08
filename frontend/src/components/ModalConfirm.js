@@ -79,7 +79,7 @@ const ModalConfirm = (props) => {
               <Input
                 name={type}
                 value={value}
-                variant="outline"
+                variant="underlined"
                 placeholder={
                   'Enter ' + (type == 'IP' ? 'IP address' : type) + '...'
                 }
