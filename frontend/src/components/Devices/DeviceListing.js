@@ -11,6 +11,7 @@ import {
   Button,
   Box,
   Divider,
+  Fab,
   Heading,
   Icon,
   IconButton,
@@ -72,35 +73,38 @@ const DeviceListing = (props) => {
   }
 
   return (
-    <Box
-      _light={{ bg: 'warmGray.50' }}
-      _dark={{ bg: 'blueGray.800' }}
-      rounded="md"
-      width="100%"
-      p="4"
-    >
-      <HStack mb="4">
-        <Heading fontSize="lg">Configured Devices</Heading>
+    <>
+      <Box
+        _light={{ bg: 'warmGray.50' }}
+        _dark={{ bg: 'blueGray.800' }}
+        rounded="md"
+        width="100%"
+        p="4"
+        pb="20"
+      >
+        <HStack mb="4">
+          <Heading fontSize="lg">Configured Devices</Heading>
 
-        <Button
-          marginLeft="auto"
-          size="md"
-          variant="outline"
-          colorScheme="primary"
-          rounded="full"
-          borderWidth={1}
-          borderColor="info.400"
-          leftIcon={<Icon as={FontAwesomeIcon} icon={faPlus} />}
-          onPress={handleRedirect}
-        >
-          Add Device
-        </Button>
-      </HStack>
+          <Button
+            marginLeft="auto"
+            size="md"
+            variant="outline"
+            colorScheme="primary"
+            rounded="full"
+            borderWidth={1}
+            borderColor="info.400"
+            leftIcon={<Icon as={FontAwesomeIcon} icon={faPlus} />}
+            onPress={handleRedirect}
+          >
+            Add Device
+          </Button>
+        </HStack>
 
-      {devices !== null ? (
-        <>
-          {devices.length ? (
-            <VStack space="4" w="100%" divider={<Divider />}>
+        {devices !== null ? (
+          <>
+            {devices.length ? (
+              <VStack space="4" w="100%" divider={<Divider />}>
+                {/*
               <HStack w="100%" alignItems="stretch">
                 <Text flex={1.5} bold color="emerald.400">
                   Name
@@ -119,20 +123,22 @@ const DeviceListing = (props) => {
                   Delete
                 </Text>
               </HStack>
-              {devices.map((device) => (
-                <Device
-                  key={device.Name}
-                  device={device}
-                  notifyChange={refreshDevices}
-                />
-              ))}
-            </VStack>
-          ) : (
-            <Text color="muted.500">There are no devices configured yet</Text>
-          )}
-        </>
-      ) : null}
-      <Box mt="4">
+              */}
+                {devices.map((device) => (
+                  <Device
+                    key={device.Name}
+                    device={device}
+                    notifyChange={refreshDevices}
+                  />
+                ))}
+              </VStack>
+            ) : (
+              <Text color="muted.500">There are no devices configured yet</Text>
+            )}
+          </>
+        ) : null}
+
+        {/*<Box mt="4">
         <Button
           size="md"
           variant="outline"
@@ -144,8 +150,20 @@ const DeviceListing = (props) => {
         >
           Add Device
         </Button>
+      </Box>*/}
       </Box>
-    </Box>
+
+      <Fab
+        renderInPortal={false}
+        placement="bottom-right"
+        shadow={2}
+        size="sm"
+        icon={
+          <Icon color="white" as={FontAwesomeIcon} icon={faPlus} size="sm" />
+        }
+        onPress={handleRedirect}
+      />
+    </>
   )
 }
 

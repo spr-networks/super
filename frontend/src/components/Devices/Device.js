@@ -155,53 +155,62 @@ class Device extends Component {
     }
 
     return (
-      <HStack w="100%" key={device.MAC} alignItems="stretch">
-        <Box flex={1.5} pr="2">
-          <Input
-            size="lg"
-            type="text"
-            variant="underlined"
-            value={this.state.name}
-            onChangeText={(value) => this.handleName(value)}
-            onSubmitEditing={handleSubmit}
-          />
-          {device.oui !== undefined ? (
-            <Text color="muted.500">{device.oui}</Text>
-          ) : null}
-        </Box>
-        <Box flex="1">
-          <VStack>
-            <Text>{device.RecentIP}</Text>
-            <Text fontSize="sm" color="muted.500">
-              {device.MAC}
+      <>
+        <Stack
+          direction="row"
+          space={2}
+          w="100%"
+          key={device.MAC}
+          justifyContent="space-between"
+          alignItems="center"
+        >
+          <Stack
+            direction={{ base: 'column', md: 'row' }}
+            space={4}
+            justifyContent="space-between"
+            minW="90%"
+          >
+            <VStack flex={1}>
+              <Input
+                size="lg"
+                type="text"
+                variant="underlined"
+                value={this.state.name}
+                onChangeText={(value) => this.handleName(value)}
+                onSubmitEditing={handleSubmit}
+              />
+              {device.oui !== undefined ? (
+                <Text color="muted.500">{device.oui}</Text>
+              ) : null}
+            </VStack>
+
+            <Stack
+              direction={{ base: 'row', md: 'column' }}
+              space={2}
+              alignSelf="center"
+              alignItems="center"
+            >
+              <Text bold>{device.RecentIP}</Text>
+              <Text fontSize="xs" color="muted.500">
+                {device.MAC}
+              </Text>
+            </Stack>
+
+            <Text display={{ base: 'none', md: 'flex' }} alignSelf="center">
+              {wifi_type}
             </Text>
-          </VStack>
-        </Box>
 
-        <Box flex="1" textAlign="center">
-          {wifi_type}
-        </Box>
+            <HStack
+              flex={2}
+              space={1}
+              alignSelf="flex-start"
+              alignItems="center"
+            >
+              {this.state.groups.map((group) => (
+                <Badge variant="solid">{group}</Badge>
+              ))}
 
-        <Box flex="2">
-          <HStack space="1">
-            {/*
-                     <Button.Group isAttached size="xs" space="0">
-                <Button variant="solid" colorScheme="primary" pr="0">
-                  {group}
-                </Button>
-                <IconButton
-                  variant="solid"
-                  colorScheme="primary"
-                  icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
-                  onPress={() => removeGroup(group)}
-                />
-              </Button.Group>
-              */}
-            {this.state.groups.map((group) => (
-              <Badge variant="solid">{group}</Badge>
-            ))}
-
-            {/*              <Button.Group isAttached size="xs" space="0">
+              {/*              <Button.Group isAttached size="xs" space="0">
                 <Button variant="solid" colorScheme="secondary" pr="0">
                   {tag}
                 </Button>
@@ -213,79 +222,81 @@ class Device extends Component {
                 />
               </Button.Group>*/}
 
-            {this.state.tags.map((tag) => (
-              <Badge variant="outline">{tag}</Badge>
-            ))}
+              {this.state.tags.map((tag) => (
+                <Badge variant="outline">{tag}</Badge>
+              ))}
 
-            <Menu
-              trigger={(triggerProps) => {
-                return (
-                  <IconButton
-                    size="xs"
-                    variant="ghost"
-                    icon={<Icon as={FontAwesomeIcon} icon={faPen} />}
-                    {...triggerProps}
-                  />
-                )
-              }}
-            >
-              <Menu.OptionGroup
-                title="Groups"
-                type="checkbox"
-                defaultValue={this.state.groups}
-                onChange={handleChangeGroups}
+              <Menu
+                trigger={(triggerProps) => {
+                  return (
+                    <IconButton
+                      size="xs"
+                      variant="ghost"
+                      icon={<Icon as={FontAwesomeIcon} icon={faPen} />}
+                      {...triggerProps}
+                    />
+                  )
+                }}
               >
-                <Menu.ItemOption value="wan">wan</Menu.ItemOption>
-                <Menu.ItemOption value="dns">dns</Menu.ItemOption>
-                <Menu.ItemOption value="lan">lan</Menu.ItemOption>
-                <Menu.ItemOption
-                  onPress={() => {
-                    this.setState({ showModal: true, modalType: 'Group' })
-                  }}
+                <Menu.OptionGroup
+                  title="Groups"
+                  type="checkbox"
+                  defaultValue={this.state.groups}
+                  onChange={handleChangeGroups}
                 >
-                  New Group...
-                </Menu.ItemOption>
-              </Menu.OptionGroup>
-              <Menu.OptionGroup
-                title="Tags"
-                type="checkbox"
-                defaultValue={this.state.tags}
-                onChange={handleChangeTags}
-              >
-                {this.state.tags.map((tag) => (
-                  <Menu.ItemOption value={tag}>{tag}</Menu.ItemOption>
-                ))}
-                <Menu.ItemOption
-                  onPress={() => {
-                    this.setState({ showModal: true, modalType: 'Tag' })
-                  }}
+                  <Menu.ItemOption value="wan">wan</Menu.ItemOption>
+                  <Menu.ItemOption value="dns">dns</Menu.ItemOption>
+                  <Menu.ItemOption value="lan">lan</Menu.ItemOption>
+                  <Menu.ItemOption
+                    onPress={() => {
+                      this.setState({ showModal: true, modalType: 'Group' })
+                    }}
+                  >
+                    New Group...
+                  </Menu.ItemOption>
+                </Menu.OptionGroup>
+                <Menu.OptionGroup
+                  title="Tags"
+                  type="checkbox"
+                  defaultValue={this.state.tags}
+                  onChange={handleChangeTags}
                 >
-                  New Tag...
-                </Menu.ItemOption>
-              </Menu.OptionGroup>
-            </Menu>
-          </HStack>
-        </Box>
+                  {this.state.tags.map((tag) => (
+                    <Menu.ItemOption value={tag}>{tag}</Menu.ItemOption>
+                  ))}
+                  <Menu.ItemOption
+                    onPress={() => {
+                      this.setState({ showModal: true, modalType: 'Tag' })
+                    }}
+                  >
+                    New Tag...
+                  </Menu.ItemOption>
+                </Menu.OptionGroup>
+              </Menu>
+            </HStack>
+          </Stack>
 
-        <Box w="50" justifySelf="right">
-          {/*<Button className="btn-icon" color="warning" size="sm">
+          <Box w="50" marginLeft="auto" justifyContent="center">
+            {/*<Button className="btn-icon" color="warning" size="sm">
             <i className="fa fa-edit" />
           </Button>*/}
-          <Button.Group size="sm">
-            <IconButton
-              variant="ghost"
-              colorScheme="secondary"
-              icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
-              onPress={removeDevice}
-            />
-          </Button.Group>
-        </Box>
+            <Button.Group size="sm">
+              <IconButton
+                variant="ghost"
+                colorScheme="secondary"
+                icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
+                onPress={removeDevice}
+              />
+            </Button.Group>
+          </Box>
+        </Stack>
+
         <ModalConfirm
           type={this.state.modalType}
           handleSubmit={handleSubmitNew}
           isOpen={this.state.showModal}
         />
-      </HStack>
+      </>
     )
 
     /*<CreatableSelect
