@@ -3,16 +3,7 @@ import { useEffect, useState } from 'react'
 import { wifiAPI } from 'api'
 import { ucFirst } from 'utils'
 
-import {
-  Button,
-  Form,
-  FormGroup,
-  FormText,
-  Label,
-  Input,
-  Row,
-  Col
-} from 'reactstrap'
+import { Box, HStack, Text, VStack, useColorModeValue } from 'native-base'
 
 const WifiHostapd = (props) => {
   const [config, setConfig] = useState({})
@@ -64,67 +55,32 @@ const WifiHostapd = (props) => {
   }
 
   return (
-    <dl className="row">
-      {Object.keys(config).map((label) => (
-        <>
-          <>
-            <dt className="col-sm-3 sm-text-right">{label}</dt>
-            <dd className="col-sm-9">
-              <>{config[label]}</>
-            </dd>
-          </>
-        </>
-      ))}
-    </dl>
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      rounded="md"
+      width="100%"
+      p="4"
+    >
+      <VStack space={2}>
+        {Object.keys(config).map((label) => (
+          <HStack space={4} justifyContent="center">
+            <Text bold w="1/4" textAlign="right">
+              {label}
+            </Text>
+            <Text w="1/4">{config[label]}</Text>
+          </HStack>
+        ))}
+      </VStack>
+    </Box>
   )
 
-  return (
-    <Form onSubmit={handleSubmit}>
-      <Row>
-        <Col>
-          {Object.keys(config).map((label) => (
-            <Row key={label}>
-              <Label sm="3" className="sm-text-right">
-                {label}
-              </Label>
-              <Col sm="9">
-                <FormGroup className="row" key={label}>
-                  <Input
-                    autoFocus
-                    type="text"
-                    disabled={!canEdit.includes(label)}
-                    className="col-sm-9"
-                    name={label}
-                    value={config[label]}
-                    onChange={handleChange}
-                  />
-                </FormGroup>
-              </Col>
-            </Row>
-          ))}
-        </Col>
-      </Row>
-
-      <p className="text-center text-muted mt-4">
+  /*
+      <Text>
         <em>NOTE:</em> Editing hostapd.conf requires restarting the Wifi &amp;
         your connection will be dropped
-      </p>
+      </Text>
 
-      <Row className="mt-4">
-        <Col sm={{ offset: 0, size: 12 }} className="text-center">
-          <Button
-            className="btn-wd"
-            color="primary"
-            size="md"
-            type="submit"
-            onClick={handleSubmit}
-          >
-            Save
-          </Button>
-        </Col>
-      </Row>
-    </Form>
-  )
+*/
 }
 
 export default WifiHostapd

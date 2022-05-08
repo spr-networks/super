@@ -80,7 +80,7 @@ const DeviceListing = (props) => {
       p="4"
     >
       <HStack mb="4">
-        <Heading>Configured Devices</Heading>
+        <Heading fontSize="lg">Configured Devices</Heading>
 
         <Button
           marginLeft="auto"
@@ -93,7 +93,7 @@ const DeviceListing = (props) => {
           leftIcon={<Icon as={FontAwesomeIcon} icon={faPlus} />}
           onPress={handleRedirect}
         >
-          Add
+          Add Device
         </Button>
       </HStack>
 

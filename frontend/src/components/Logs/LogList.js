@@ -1,23 +1,31 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Link, useHistory } from 'react-router-dom'
 import Select from 'react-select'
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { faRefresh } from '@fortawesome/free-solid-svg-icons'
 
 import { logsAPI } from 'api'
+import InputSelect from 'components/InputSelect'
 import { prettyDate } from 'utils'
 import { AlertContext } from 'layouts/Admin'
 
 import {
+  Badge,
+  Box,
   Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
-  CardSubtitle,
+  FlatList,
+  Heading,
+  Icon,
+  IconButton,
+  Stack,
+  HStack,
+  VStack,
+  ScrollView,
+  Spacer,
   Spinner,
-  Table,
-  Row,
-  Col
-} from 'reactstrap'
+  Text,
+  useColorModeValue
+} from 'native-base'
 
 const LogList = (props) => {
   const [list, setList] = useState([])
@@ -33,6 +41,7 @@ const LogList = (props) => {
       .latest()
       .then((logs) => {
         // make sure message is a string
+        logs = logs.slice(0, 100) //TODO
         logs = logs.map((row) => {
           if (Array.isArray(row.MESSAGE)) {
             row.MESSAGE = row.MESSAGE.map((c) => String.fromCharCode(c))
@@ -93,8 +102,8 @@ const LogList = (props) => {
     }
   }
 
-  const handleChange = (newValues, action) => {
-    setFilterContainers(newValues.map((o) => o.value))
+  const handleChange = (newValues) => {
+    setFilterContainers(newValues)
   }
 
   useEffect(() => {
@@ -115,9 +124,7 @@ const LogList = (props) => {
     return { label: c, value: c }
   })
 
-  let containersValues = filterContainers.map((c) => {
-    return { label: c, value: c }
-  })
+  let containersValues = filterContainers.map((c) => c)
 
   const handleClickRefresh = () => {
     refreshList((logs) => {
@@ -125,69 +132,90 @@ const LogList = (props) => {
     })
   }
 
+  const prettyLine = (line) => {
+    let p = line.split(' ')
+    return (
+      <HStack space={1}>
+        <Text color="muted.500">{p[0]}</Text>
+        <Text>{p.slice(1).join(' ')}</Text>
+      </HStack>
+    )
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle tag="h4">Logs</CardTitle>
-        <CardSubtitle className="text-muted">
-          <Spinner size="sm" hidden={list.length} />
-          <span className="mt-4 ml-1" hidden={list.length}>
-            Loading...
-          </span>
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      rounded="md"
+      width="100%"
+      p="4"
+    >
+      <Stack
+        direction={{ base: 'column', md: 'row' }}
+        space={2}
+        justifyContent="space-between"
+      >
+        <VStack space={1}>
+          <Heading fontSize="lg">Logs</Heading>
           {list.length ? (
-            <span>
-              Logs from{' '}
-              {prettyDate(list[list.length - 1].__REALTIME_TIMESTAMP / 1e3)} to{' '}
-              {prettyDate(list[0].__REALTIME_TIMESTAMP / 1e3)}
-            </span>
+            <Text color="muted.500" fontSize="xs">{`Logs from ${prettyDate(
+              list[list.length - 1].__REALTIME_TIMESTAMP / 1e3
+            )} to ${prettyDate(list[0].__REALTIME_TIMESTAMP / 1e3)}`}</Text>
+          ) : (
+            <Spinner accessibilityLabel="Loading logs" />
+          )}
+        </VStack>
+
+        <HStack flex="2" space={1}>
+          {list ? (
+            <Box flex="2">
+              <InputSelect
+                isMultiple
+                options={containersOptions}
+                value={containersValues}
+                onChange={handleChange}
+              />
+            </Box>
           ) : null}
-        </CardSubtitle>
-        <Row className="mt-2">
-          <Col sm="10">
-            <Select
-              isMulti
-              isClearable
-              options={containersOptions}
-              value={containersValues}
-              onChange={handleChange}
-            />
-          </Col>
-          <Col sm="2">
-            <Button
-              className="mt-0"
-              color="primary"
-              onClick={handleClickRefresh}
+          <Button
+            colorScheme="primary"
+            marginLeft="auto"
+            alignSelf="center"
+            leftIcon={<Icon as={FontAwesomeIcon} icon={faRefresh} />}
+            onPress={handleClickRefresh}
+          ></Button>
+        </HStack>
+      </Stack>
+
+      <FlatList
+        data={list}
+        renderItem={({ item }) => (
+          <Box
+            borderBottomWidth="1"
+            _dark={{
+              borderColor: 'muted.600'
+            }}
+            borderColor="muted.200"
+            py="2"
+          >
+            <HStack
+              w="100%"
+              space={3}
+              alignItems="center"
+              justifyContent="stretch"
             >
-              <i className="fa fa-refresh" />
-            </Button>
-          </Col>
-        </Row>
-      </CardHeader>
-      <CardBody>
-        {list.length ? (
-          <Table responsive>
-            <thead className="text-primary">
-              <tr>
-                <th>Timestamp</th>
-                <th>Container</th>
-                <th>Message</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((row, i) => (
-                <tr key={i + row.__REALTIME_TIMESTAMP}>
-                  <td style={{ whiteSpace: 'nowrap' }}>
-                    {prettyDate(row.__REALTIME_TIMESTAMP / 1e3)}
-                  </td>
-                  <td>{row.CONTAINER_NAME}</td>
-                  <td>{row.MESSAGE}</td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        ) : null}
-      </CardBody>
-    </Card>
+              <Badge variant="outline" colorScheme="primary">
+                {item.CONTAINER_NAME}
+              </Badge>
+              <Text isTruncated>{item.MESSAGE}</Text>
+              <Text fontSize="xs" marginLeft="auto" whiteSpace="nowrap">
+                {prettyDate(item.__REALTIME_TIMESTAMP / 1e3)}
+              </Text>
+            </HStack>
+          </Box>
+        )}
+        keyExtractor={(item) => item.__REALTIME_TIMESTAMP}
+      />
+    </Box>
   )
 }
 

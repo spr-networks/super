@@ -70,6 +70,7 @@ export class DNSLogHistoryList extends React.Component {
       ips.map(async (ip) => {
         try {
           let list = await logAPI.history(ip)
+          list = list.slice(0, 100) // TODO
           return list
         } catch (error) {
           throw `${ip}`
