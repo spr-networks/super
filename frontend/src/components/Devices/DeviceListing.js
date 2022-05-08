@@ -18,8 +18,10 @@ import {
   Stack,
   HStack,
   VStack,
+  ScrollView,
   Switch,
   Text,
+  View,
   useColorModeValue
 } from 'native-base'
 
@@ -73,38 +75,38 @@ const DeviceListing = (props) => {
   }
 
   return (
-    <>
-      <Box
-        _light={{ bg: 'warmGray.50' }}
-        _dark={{ bg: 'blueGray.800' }}
-        rounded="md"
-        width="100%"
-        p="4"
-        pb="20"
-      >
-        <HStack mb="4">
-          <Heading fontSize="lg">Configured Devices</Heading>
+    <View>
+      <ScrollView h="calc(100vh - 96px)">
+        <Box
+          _light={{ bg: 'warmGray.50' }}
+          _dark={{ bg: 'blueGray.800' }}
+          rounded="md"
+          w="100%"
+          p="4"
+        >
+          <HStack mb="4">
+            <Heading fontSize="lg">Configured Devices</Heading>
 
-          <Button
-            marginLeft="auto"
-            size="md"
-            variant="outline"
-            colorScheme="primary"
-            rounded="full"
-            borderWidth={1}
-            borderColor="info.400"
-            leftIcon={<Icon as={FontAwesomeIcon} icon={faPlus} />}
-            onPress={handleRedirect}
-          >
-            Add Device
-          </Button>
-        </HStack>
+            <Button
+              marginLeft="auto"
+              size="md"
+              variant="outline"
+              colorScheme="primary"
+              rounded="full"
+              borderWidth={1}
+              borderColor="info.400"
+              leftIcon={<Icon as={FontAwesomeIcon} icon={faPlus} />}
+              onPress={handleRedirect}
+            >
+              Add Device
+            </Button>
+          </HStack>
 
-        {devices !== null ? (
-          <>
-            {devices.length ? (
-              <VStack space="4" w="100%" divider={<Divider />}>
-                {/*
+          {devices !== null ? (
+            <>
+              {devices.length ? (
+                <VStack space="4" w="100%" divider={<Divider />}>
+                  {/*
               <HStack w="100%" alignItems="stretch">
                 <Text flex={1.5} bold color="emerald.400">
                   Name
@@ -124,22 +126,23 @@ const DeviceListing = (props) => {
                 </Text>
               </HStack>
               */}
-                {devices.map((device) => (
-                  <Device
-                    key={device.Name}
-                    device={device}
-                    notifyChange={refreshDevices}
-                  />
-                ))}
-              </VStack>
-            ) : (
-              <Text color="muted.500">There are no devices configured yet</Text>
-            )}
-          </>
-        ) : null}
+                  {devices.map((device) => (
+                    <Device
+                      key={device.Name}
+                      device={device}
+                      notifyChange={refreshDevices}
+                    />
+                  ))}
+                </VStack>
+              ) : (
+                <Text color="muted.500">
+                  There are no devices configured yet
+                </Text>
+              )}
+            </>
+          ) : null}
 
-        {/*<Box mt="4">
-        <Button
+          {/*<Button
           size="md"
           variant="outline"
           colorScheme="primary"
@@ -149,13 +152,12 @@ const DeviceListing = (props) => {
           onPress={handleRedirect}
         >
           Add Device
-        </Button>
-      </Box>*/}
-      </Box>
+        </Button>*/}
+        </Box>
+      </ScrollView>
 
       <Fab
         renderInPortal={false}
-        placement="bottom-right"
         shadow={2}
         size="sm"
         icon={
@@ -163,7 +165,7 @@ const DeviceListing = (props) => {
         }
         onPress={handleRedirect}
       />
-    </>
+    </View>
   )
 }
 
