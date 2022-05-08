@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import CreatableSelect from 'react-select/creatable'
+import InputSelect from 'components/InputSelect'
 
 import WireguardConfig from './WireguardConfig'
 import { AlertContext } from 'layouts/Admin'
@@ -9,19 +9,18 @@ import { deviceAPI, wireguardAPI } from 'api'
 import { wifiAPI } from 'api'
 
 import {
+  Box,
   Button,
-  Col,
-  Label,
-  Form,
-  FormGroup,
-  FormText,
+  Checkbox,
+  FormControl,
   Input,
-  InputGroup,
-  InputGroupAddon,
-  InputGroupText,
-  Row,
-  UncontrolledTooltip
-} from 'reactstrap'
+  Link,
+  Stack,
+  HStack,
+  Spinner,
+  Text,
+  VStack
+} from 'native-base'
 
 export default class WireguardAddPeer extends React.Component {
   static contextType = AlertContext
@@ -44,10 +43,8 @@ export default class WireguardAddPeer extends React.Component {
     this.handleSubmit = this.handleSubmit.bind(this)
   }
 
-  handleChange(event) {
+  handleChange(name, value) {
     //TODO verify IP && pubkey
-    let name = event.target.name,
-      value = event.target.value
     this.setState({ [name]: value })
   }
 
@@ -57,13 +54,11 @@ export default class WireguardAddPeer extends React.Component {
     this.setState({ AllowedIPs: ClientIP })
   }
 
-  handleChangeEndpoint(newValue, actionMeta) {
-    this.setState({ Endpoint: newValue ? newValue.value : '' })
+  handleChangeEndpoint(newValue) {
+    this.setState({ Endpoint: newValue })
   }
 
-  handleSubmit(event) {
-    event.preventDefault()
-
+  handleSubmit() {
     const addPeer = (peer) => {
       return wireguardAPI
         .putPeer(peer)
@@ -144,7 +139,8 @@ export default class WireguardAddPeer extends React.Component {
     }
   }
 
-  handleClickGenerate(e) {
+  handleClickGenerate() {
+    console.log('*GENERATE*')
     wireguardAPI
       .genKey()
       .then((keyPair) => {
@@ -185,23 +181,16 @@ export default class WireguardAddPeer extends React.Component {
       }
     })
 
-    let endpoint = this.state.Endpoint
-      ? { label: this.state.Endpoint, value: this.state.Endpoint }
-      : null
-
     return (
-      <Form onSubmit={this.handleSubmit}>
-        <Row>
-          <Label for="AllowedIPs" md={2}>
-            Client
-          </Label>
-          <Col md={10}>
-            <FormGroup>
-              <ClientSelect
-                value={this.state.AllowedIPs}
-                onChange={this.handleChangeClient}
-              />
-              {/*<Input
+      <VStack space={4}>
+        <FormControl>
+          <FormControl.Label>Client</FormControl.Label>
+
+          <ClientSelect
+            value={this.state.AllowedIPs}
+            onChange={this.handleChangeClient}
+          />
+          {/*<Input
                 type="text"
                 id="AllowedIPs"
                 placeholder="192.168.3.2/32"
@@ -210,79 +199,52 @@ export default class WireguardAddPeer extends React.Component {
                 onChange={this.handleChange}
                 autoFocus
               />*/}
-              <FormText tag="span">Leave empty to assign</FormText>
-            </FormGroup>
-          </Col>
-        </Row>
-        <Row>
-          <Label for="PublicKey" sm={2}>
-            PublicKey
-          </Label>
-          <Col sm={10}>
-            <FormGroup>
-              <InputGroup size="md" style={{ zIndex: 0 }}>
-                <Input
-                  type="text"
-                  id="PublicKey"
-                  placeholder="base64 pubkey"
-                  name="PublicKey"
-                  value={this.state.PublicKey}
-                  onChange={this.handleChange}
-                  autoFocus
-                />
-                <InputGroupAddon addonType="append">
-                  <Button
-                    className="m-0 p-2 pl-3 pr-3"
-                    color="primary"
-                    id="tooltipGenerate"
-                    onClick={this.handleClickGenerate}
-                  >
-                    <i className="fa fa-refresh" />
-                  </Button>
-                  <UncontrolledTooltip delay={0} target="tooltipGenerate">
-                    Generate keypair
-                  </UncontrolledTooltip>
-                </InputGroupAddon>
-              </InputGroup>
+          <FormControl.HelperText>Leave empty to assign</FormControl.HelperText>
+        </FormControl>
+        <FormControl>
+          <FormControl.Label>PublicKey</FormControl.Label>
 
-              <FormText tag="span">
-                Leave empty to generate, else run wg pubkey &lt; peer.key
-              </FormText>
-            </FormGroup>
-          </Col>
-        </Row>
+          <Input
+            variant="underlined"
+            placeholder="base64 pubkey"
+            value={this.state.PublicKey}
+            onChangeText={(value) => this.handleChange('PublicKey', value)}
+            autoFocus
+          />
+          {/*
+            InputRightElement={
+              <Button
+                rounded="none"
+                h="full"
+                onPress={this.handleClickGenerate}
+              >
+                Generate
+              </Button>
+            }
+*/}
 
-        <Row>
-          <Label for="Endpoint" sm={2}>
-            Endpoint
-          </Label>
-          <Col sm={10}>
-            <FormGroup>
-              <CreatableSelect
-                isClearable
-                options={endpoints}
-                value={endpoint}
-                onChange={this.handleChangeEndpoint}
-              />
-              <FormText tag="span">Leave empty for default</FormText>
-            </FormGroup>
-          </Col>
-        </Row>
+          <FormControl.HelperText>
+            Leave empty to generate, else run wg pubkey &lt; peer.key
+          </FormControl.HelperText>
+        </FormControl>
 
-        <Row>
-          <Col sm={{ offset: 2, size: 10 }}>
-            <Button
-              className="btn-round"
-              color="primary"
-              size="md"
-              type="submit"
-              onClick={this.handleSubmit}
-            >
-              Save
-            </Button>
-          </Col>
-        </Row>
-      </Form>
+        <FormControl>
+          <FormControl.Label>Endpoint</FormControl.Label>
+
+          <InputSelect
+            options={endpoints}
+            value={this.state.endpoint}
+            onChange={this.handleChangeEndpoint}
+          />
+          <FormControl.HelperText>
+            Leave empty for default
+          </FormControl.HelperText>
+        </FormControl>
+
+        <Button colorScheme="primary" onPress={this.handleSubmit}>
+          Save
+        </Button>
+      </VStack>
     )
   }
 }

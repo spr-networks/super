@@ -120,10 +120,20 @@ const PeerList = (props) => {
               borderColor="muted.200"
               py="2"
             >
-              <HStack space={2} justifyContent="space-between">
-                <Text bold>{item.device ? item.device.Name : `peer`}</Text>
-                <Text>{item.AllowedIPs}</Text>
-                <Text display={{ base: 'none', lg: 'flex' }}>
+              <HStack
+                space={2}
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Text flex="1" bold>
+                  {item.device ? item.device.Name : `peer`}
+                </Text>
+                <Text flex="1">{item.AllowedIPs}</Text>
+                <Text
+                  display={{ base: 'none', lg: 'flex' }}
+                  fontSize="xs"
+                  isTruncated
+                >
                   {item.PublicKey}
                 </Text>
                 <Text>
