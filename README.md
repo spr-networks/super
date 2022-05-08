@@ -32,9 +32,9 @@ docker-compose -f docker-compose-prebuilt.yml up -d
 
 ## Useful Links
 
-Join the Discord chat https://discord.gg/WeNKMVTR
-API Docs https://www.supernetworks.org/pages/api/0
-Documentation Home: https://www.supernetworks.org/pages/docs/intro/
-Raspberry Pi 4 Setup https://www.supernetworks.org/pages/docs/pi4b
-General Setup Guide https://www.supernetworks.org/pages/docs/setup_run_spr
+* Join the Discord chat https://discord.gg/WeNKMVTR
+* API Docs https://www.supernetworks.org/pages/api/0
+* Documentation Home: https://www.supernetworks.org/pages/docs/intro/
+* Raspberry Pi 4 Setup https://www.supernetworks.org/pages/docs/pi4b
+* General Setup Guide https://www.supernetworks.org/pages/docs/setup_run_spr
 
