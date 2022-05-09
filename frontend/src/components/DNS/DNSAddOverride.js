@@ -127,8 +127,7 @@ export default class DNSAddOverride extends React.Component {
             </FormControl.ErrorMessage>
           ) : (
             <FormControl.HelperText>
-              Optionally, set a custom IP address to return for domain name
-              lookup.
+              Optional. Set a custom IP address to return for domain name lookup
             </FormControl.HelperText>
           )}
         </FormControl>
@@ -141,12 +140,13 @@ export default class DNSAddOverride extends React.Component {
             onChange={(value) => this.handleChange('ClientIP', value)}
           />
 
+          {this.state.check.ClientIP == 'has-danger' ? (
+            <FormControl.ErrorMessage>
+              Please enter a valid IP or *
+            </FormControl.ErrorMessage>
+          ) : null}
           <FormControl.HelperText>
-            {this.state.check.ClientIP == 'has-danger' ? (
-              <FormControl.ErrorMessage>
-                Please enter a valid IP or *
-              </FormControl.ErrorMessage>
-            ) : null}
+            Optional. Set a Client IP this rule is applied to
           </FormControl.HelperText>
         </FormControl>
 

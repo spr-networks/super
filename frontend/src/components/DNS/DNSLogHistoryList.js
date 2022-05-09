@@ -74,12 +74,13 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
         {hideClient ? null : <Text flex="1">{item.Remote.split(':')[0]}</Text>}
 
         <Stack space={1} flex="3">
-          <HStack space={1} alignItems="center">
+          <HStack space={2} alignItems="center">
             <Text bold isTruncated>
               {item.FirstName}
             </Text>
             <Tooltip label="Add Domain Override" openDelay={300}>
               <IconButton
+                variant="ghost"
                 size="xs"
                 p="0"
                 icon={
@@ -91,6 +92,7 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
             <Tooltip label="Add Domain Block" openDelay={300}>
               <IconButton
                 display={{ base: item.Type == 'BLOCKED' ? 'none' : 'flex' }}
+                variant="ghost"
                 size="xs"
                 p="0"
                 icon={
@@ -126,6 +128,8 @@ const DNSLogHistoryList = (props) => {
   const [filterText, setFilterText] = useState(props.filterText || '')
   const [selectedDomain, setSelectedDomain] = useState('')
   const [selectedType, setSelectedType] = useState('')
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
 
   const modalRef = React.createRef(null)
 
@@ -164,60 +168,64 @@ const DNSLogHistoryList = (props) => {
           new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime()
       )
 
-      let perPage = 100,
-        page = 1,
-        offset = (page - 1) * perPage
-
-      list = list.slice(offset, offset + perPage)
-
       setList(list)
     })
   }
 
   const filterList = () => {
-    let doFilter = false
-    doFilter = doFilter || filterText.length
-    if (!doFilter) {
-      return list
-    }
+    setTotal(list.length)
 
-    let datematch = filterText.match(
-      /(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)-(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)/
-    )
+    let doFilter = filterText.length,
+      listFiltered = []
 
-    let dateStart = null,
-      dateEnd = null
+    if (doFilter) {
+      let datematch = filterText.match(
+        /(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)-(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)/
+      )
 
-    if (datematch) {
-      try {
-        let [filterDateStart, filterDateEnd] = datematch.slice(1, 3)
-        dateStart = new Date(filterDateStart).getTime()
-        dateEnd = new Date(filterDateEnd).getTime()
-      } catch (error) {}
-    }
+      let dateStart = null,
+        dateEnd = null
 
-    return list.filter((item) => {
-      let match = false
-
-      try {
-        match = match || item.FirstName.includes(filterText)
-        match = match || item.FirstAnswer.includes(filterText)
-        match =
-          match || item.Q.filter((r) => r.Name.includes(filterText)).length
-        match = match || item.Type.match(filterText.toUpperCase())
-      } catch (err) {
-        match = false
+      if (datematch) {
+        try {
+          let [filterDateStart, filterDateEnd] = datematch.slice(1, 3)
+          dateStart = new Date(filterDateStart).getTime()
+          dateEnd = new Date(filterDateEnd).getTime()
+        } catch (error) {}
       }
 
-      if (dateStart && dateEnd) {
-        let d = new Date(item.Timestamp).getTime()
-        if (dateStart < d && d < dateEnd) {
-          match = true
+      listFiltered = list.filter((item) => {
+        let match = false
+
+        try {
+          match = match || item.FirstName.includes(filterText)
+          match = match || item.FirstAnswer.includes(filterText)
+          match =
+            match || item.Q.filter((r) => r.Name.includes(filterText)).length
+          match = match || item.Type.match(filterText.toUpperCase())
+        } catch (err) {
+          match = false
         }
-      }
 
-      return match
-    })
+        if (dateStart && dateEnd) {
+          let d = new Date(item.Timestamp).getTime()
+          if (dateStart < d && d < dateEnd) {
+            match = true
+          }
+        }
+
+        return match
+      })
+    } else {
+      listFiltered = list
+    }
+
+    let perPage = 20,
+      offset = (page - 1) * perPage
+
+    listFiltered = listFiltered.slice(offset, offset + perPage)
+
+    return listFiltered
   }
 
   const handleChangeIp = (ip) => {
@@ -226,6 +234,7 @@ const DNSLogHistoryList = (props) => {
 
   const handleChange = (value) => {
     setFilterText(value)
+    setPage(1)
   }
 
   const triggerAlert = (item) => {
@@ -239,8 +248,8 @@ const DNSLogHistoryList = (props) => {
   }
 
   const deleteHistory = async () => {
-    let msg = `Delete history for ${filterIps.join(', ')}?`
-    if (!confirm(msg) || !filterIps.length) {
+    //let confirmMsg = `Delete history for ${filterIps.join(', ')}?`
+    if (!filterIps.length) {
       return
     }
 
@@ -254,7 +263,6 @@ const DNSLogHistoryList = (props) => {
   }, [])
 
   useEffect(() => {
-    console.log('props ips:', props.ips)
     setFilterIps(props.ips)
   }, [props.ips])
 
@@ -279,13 +287,8 @@ const DNSLogHistoryList = (props) => {
   }
 
   useEffect(() => {
-    console.log('** list update')
     setListFiltered(filterList())
-  }, [list])
-
-  useEffect(() => {
-    setListFiltered(filterList())
-  }, [filterText])
+  }, [list, filterText, page])
 
   return (
     <Box
@@ -313,7 +316,10 @@ const DNSLogHistoryList = (props) => {
       </ModalForm>
 
       <VStack space={2} mb="12">
-        <Heading fontSize="lg">{filterIps.join(',')} DNS Log</Heading>
+        <HStack space={2}>
+          <Heading fontSize="lg">{filterIps.join(',')} DNS Log</Heading>
+          <Text color="muted.500">{total} records</Text>
+        </HStack>
 
         <Stack space={2} direction={{ base: 'column', md: 'row' }}>
           <FormControl flex="2">
@@ -387,6 +393,20 @@ const DNSLogHistoryList = (props) => {
         )}
         keyExtractor={(item) => item.Timestamp}
       />
+
+      <HStack width="100%" space={2}>
+        <Button
+          flex="1"
+          variant="ghost"
+          isDisabled={page <= 1}
+          onPress={() => setPage(page > 1 ? page - 1 : 1)}
+        >
+          &larr; Previous
+        </Button>
+        <Button flex="1" variant="ghost" onPress={() => setPage(page + 1)}>
+          Next &rarr;
+        </Button>
+      </HStack>
     </Box>
   )
 }
