@@ -106,8 +106,8 @@ const SidebarItem = (props) => {
               _light: {
                 bg:
                   item.path === activeSidebarItem
-                    ? 'cyan.200:alpha.80'
-                    : 'blueGray.200'
+                    ? 'blueGray.200:alpha.60'
+                    : 'blueGray.200:alpha.60'
               },
               _dark: {
                 bg:
@@ -116,9 +116,7 @@ const SidebarItem = (props) => {
             }}
             _light={{
               bg:
-                item.path === activeSidebarItem
-                  ? 'cyan.200:alpha.60'
-                  : 'transparent'
+                item.path === activeSidebarItem ? 'blueGray.200' : 'transparent'
             }}
             _dark={{
               bg: item.path === activeSidebarItem ? 'cyan.700' : 'transparent'

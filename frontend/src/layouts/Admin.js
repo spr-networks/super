@@ -239,10 +239,16 @@ const AdminLayout = (props) => {
               {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
               {/*h="calc(100% - 64px)"
                minH="calc(100vh - 64px)"*/}
-              <Box flex="1" p="4" safeAreaTop ref={mainPanel}>
+              <Box
+                flex="1"
+                p="4"
+                safeAreaTop
+                ref={mainPanel}
+                minH="calc(100vh - 64px)"
+              >
                 <Outlet />
 
-                <Footer justifyContent="flex-start" />
+                <Footer marginTop="auto" />
               </Box>
             </HStack>
           </Box>

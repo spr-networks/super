@@ -56,6 +56,7 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
       >
         <HStack w="100%" alignItems="center" space="1">
           <IconButton
+            variant="unstyled"
             icon={<HamburgerIcon />}
             _icon={{ color: useColorModeValue('coolGray.600', 'coolGray.300') }}
             onPress={() => setIsOpenSidebar(!isOpenSidebar)}

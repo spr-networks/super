@@ -22,8 +22,13 @@ const AuthLayout = () => {
         'nativebase-body-dark'
       )}
     >
-      <View w="100vw" h="100vh">
-        <Image source={imgBackground} height="100vh" resizeMode="cover" />
+      <View w="100vw" h="100vh" bg="black">
+        <Image
+          source={imgBackground}
+          opacity={0.4}
+          height="100vh"
+          resizeMode="cover"
+        />
         <View marginTop="-90vh">
           <Outlet />
           <Footer

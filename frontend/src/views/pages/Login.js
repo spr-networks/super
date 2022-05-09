@@ -2,6 +2,8 @@ import React from 'react'
 import { useState } from 'react'
 import { saveLogin, testLogin } from 'api'
 import { useNavigate } from 'react-router-dom'
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { faKey, faUser } from '@fortawesome/free-solid-svg-icons'
 
 import {
   Box,
@@ -11,6 +13,7 @@ import {
   View,
   Heading,
   HStack,
+  Icon,
   VStack,
   FormControl,
   Input,
@@ -42,7 +45,8 @@ const Login = (props) => {
     <View w="100%" alignItems="center">
       <Box
         safeArea
-        p={8}
+        px={4}
+        py={8}
         w="90%"
         maxW={360}
         bg={useColorModeValue('white', 'blueGray.900')}
@@ -51,28 +55,51 @@ const Login = (props) => {
       >
         <Heading
           size="lg"
-          fontWeight="600"
+          fontWeight="300"
           color="coolGray.800"
           _dark={{
             color: 'warmGray.50'
           }}
+          alignSelf="center"
         >
           Login
         </Heading>
-        <VStack space={3} mt="5">
+        <VStack space={4} mt={12}>
           <FormControl>
-            <FormControl.Label>Username</FormControl.Label>
+            {/*<FormControl.Label>Username</FormControl.Label>*/}
             <Input
               type="text"
               value={username}
+              variant="outline"
+              size="md"
+              InputLeftElement={
+                <Icon
+                  as={<Icon as={FontAwesomeIcon} icon={faUser} />}
+                  size={4}
+                  mx="2"
+                  color="muted.500"
+                />
+              }
+              placeholder="Username..."
               onChangeText={(value) => setUsername(value)}
             />
           </FormControl>
           <FormControl isInvalid={'login' in errors}>
-            <FormControl.Label>Password</FormControl.Label>
+            {/*<FormControl.Label>Password</FormControl.Label>*/}
             <Input
               type="password"
               value={password}
+              variant="outline"
+              size="md"
+              InputLeftElement={
+                <Icon
+                  as={<Icon as={FontAwesomeIcon} icon={faKey} />}
+                  size={4}
+                  mx="2"
+                  color="muted.500"
+                />
+              }
+              placeholder="Password"
               onChangeText={(value) => setPassword(value)}
               onSubmitEditing={handleLogin}
             />
@@ -86,7 +113,13 @@ const Login = (props) => {
               </FormControl.ErrorMessage>
             ) : null}
           </FormControl>
-          <Button mt="2" colorScheme="primary" onPress={handleLogin}>
+          <Button
+            mt={8}
+            rounded="full"
+            colorScheme="yellow"
+            bg="#fbc658"
+            onPress={handleLogin}
+          >
             Login
           </Button>
         </VStack>
