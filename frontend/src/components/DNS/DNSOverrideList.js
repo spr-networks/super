@@ -65,7 +65,9 @@ const DNSOverrideList = (props) => {
           <thead className="text-primary">
             <tr>
               <th width="25%">Domain</th>
+              {overrideType == 'permit' ?
               <th>Result IP</th>
+              : null }
               <th>Client IP</th>
               <th className="text-center">Expiration</th>
               <th className="text-center">Actions</th>
@@ -75,7 +77,9 @@ const DNSOverrideList = (props) => {
             {list.map((item) => (
               <tr key={item.Domain}>
                 <td>{item.Domain}</td>
+                {overrideType == 'permit' ?
                 <td>{item.ResultIP}</td>
+                : null }
                 <td>{item.ClientIP}</td>
                 <td className="text-center">{item.Expiration}</td>
                 <td className="text-center">
