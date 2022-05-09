@@ -84,7 +84,7 @@ const WifiInterface = (props) => {
 
       <Divider mt="2" />
 
-      <Stack direction="row" space={4}>
+      <Stack direction={{ base: 'column', md: 'row' }} space={4}>
         <VStack borderRightWidth={1} borderRightColor="muted.200">
           {tabList.map((tab) =>
             iw[tab] || tab == 'other' ? (
@@ -166,7 +166,7 @@ const WifiInterface = (props) => {
                     {tab.includes('support') &&
                     iw['supported_interface_modes'] ? (
                       <VStack space={4}>
-                        <Heading fontSize="sm" color="muted.500">
+                        <Heading fontSize="md" color="muted.500">
                           {tab.replace(/_/g, ' ')}
                         </Heading>
                         <Stack
@@ -177,13 +177,21 @@ const WifiInterface = (props) => {
                         >
                           {iw[tab] &&
                             iw[tab].map((c) => (
-                              <Badge
-                                variant="outline"
-                                colorScheme="primary"
-                                mb="2"
-                              >
-                                {c}
-                              </Badge>
+                              <>
+                                {tab.match(/extended/) ? (
+                                  <Text mb="2" isTruncated>
+                                    {c}
+                                  </Text>
+                                ) : (
+                                  <Badge
+                                    variant="outline"
+                                    colorScheme="primary"
+                                    mb="2"
+                                  >
+                                    {c}
+                                  </Badge>
+                                )}
+                              </>
                             ))}
                         </Stack>
 
@@ -193,7 +201,7 @@ const WifiInterface = (props) => {
                               software interface modes (can always be added)
                             </Heading>
 
-                            <HStack space={1}>
+                            <HStack space={1} flexWrap="wrap">
                               {iw['supported_interface_modes'].map((c) => (
                                 <Badge variant="outline" colorScheme="primary">
                                   {c}
