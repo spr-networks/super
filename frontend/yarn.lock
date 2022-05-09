@@ -11903,6 +11903,11 @@ time-stamp@^1.0.0:
   resolved "https://registry.npmjs.org/time-stamp/-/time-stamp-1.1.0.tgz"
   integrity sha1-dkpaEa9QVhkhsTPztE5hhofg9cM=
 
+timeago.js@^4.0.2:
+  version "4.0.2"
+  resolved "https://registry.yarnpkg.com/timeago.js/-/timeago.js-4.0.2.tgz#724e8c8833e3490676c7bb0a75f5daf20e558028"
+  integrity sha512-a7wPxPdVlQL7lqvitHGGRsofhdwtkoSXPGATFuSOA2i1ZNQEPLrGnj68vOp2sOJTCFAQVXPeNMX/GctBaO9L2w==
+
 timsort@^0.3.0:
   version "0.3.0"
   resolved "https://registry.npmjs.org/timsort/-/timsort-0.3.0.tgz"

@@ -131,7 +131,7 @@ const routes = [
         layout: 'admin'
       },
       {
-        path: 'dnsLog/:ips/:text?',
+        path: 'dnsLog/:ips/:text',
         name: 'DNS Log',
         icon: faThList,
         component: DNSLog,

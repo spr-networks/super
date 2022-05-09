@@ -100,7 +100,8 @@ const InputSelect = (props) => {
     />
   )
 
-  const isDisabled = isMultiple
+  const isDisabled =
+    props.isDisabled !== undefined ? props.isDisabled : isMultiple
 
   return (
     <>
@@ -119,6 +120,7 @@ const InputSelect = (props) => {
 export default React.memo(InputSelect)
 
 InputSelect.propTypes = {
+  isDisabled: PropTypes.bool,
   isMultiple: PropTypes.bool,
   title: PropTypes.string,
   options: PropTypes.array,
