@@ -25,6 +25,8 @@ export default function App() {
     <NativeBaseProvider>
       <Router>
         <Routes>
+          <Route path="/" element={<Navigate to="/auth/login" />} />
+
           <Route path="/auth" element={<AuthLayout />}>
             {routesAuth.map((r) => (
               <Route path={r.path} element={<r.element />} />
@@ -36,8 +38,6 @@ export default function App() {
               <Route key={r.path} path={r.path} element={<r.element />} />
             ))}
           </Route>
-
-          <Route path="*" render={<Navigate to="/auth/login" />}></Route>
         </Routes>
       </Router>
     </NativeBaseProvider>
