@@ -43,7 +43,7 @@ const WifiInterface = (props) => {
       return (
         <>
           {Object.keys(dict).map((label) => (
-            <HStack space={2} key={label}>
+            <HStack space={2}>
               <Text bold>{label}</Text>
               <Text>{dict[label]}</Text>
             </HStack>
@@ -103,7 +103,7 @@ const WifiInterface = (props) => {
         <Box p="2">
           {tabList.map((tab) =>
             iw[tab] || tab == 'other' ? (
-              <VStack key={tab} display={activeTab == tab ? 'flex' : 'none'}>
+              <VStack display={activeTab == tab ? 'flex' : 'none'}>
                 {tab == 'devices' ? (
                   <>
                     {Object.keys(iw[tab]).map((iface) => (
@@ -245,9 +245,7 @@ const WifiInterfaceList = (props) => {
         {iws.length ? (
           <>
             {iws.map((iw) => (
-              <Box key={iw.wiphy}>
-                <WifiInterface iw={iw} />
-              </Box>
+              <WifiInterface iw={iw} />
             ))}
           </>
         ) : null}

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import PropTypes from 'prop-types'
-import { useHistory } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { faPowerOff } from '@fortawesome/free-solid-svg-icons'
 import {
@@ -33,10 +33,10 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
         .setAttribute('data-theme', 'dark')
   }, [colorMode])*/
 
-  const history = useHistory()
+  const navigate = useNavigate()
   const logout = () => {
     localStorage.removeItem('user')
-    history.push('/')
+    navigate('/')
   }
 
   return (

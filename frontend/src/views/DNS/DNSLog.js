@@ -1,42 +1,41 @@
-import React, { Component } from 'react'
+import React, { Component, useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
+
 import DNSLogHistoryList from 'components/DNS/DNSLogHistoryList'
 import PluginDisabled from 'views/PluginDisabled'
 import { logAPI } from 'api/DNS'
 
 import { View } from 'native-base'
 
-export default class DNSLog extends Component {
-  state = { enabled: true, logs: [], ips: [], filterText: '' }
+const DNSLog = (props) => {
+  const [isEnabled, setIsEnabled] = useState(true)
+  const [filterText, setFilterText] = useState('')
+  const [ips, setIps] = useState([])
 
-  constructor(props) {
-    super(props)
+  const params = useParams()
 
-    let { ips, text } = props.match.params
+  useEffect(() => {
+    let { ips, text } = params
     if (ips && ips != ':ips') {
-      this.state.ips = ips.split(',')
+      setIps(ips.split(','))
     }
 
     if (text && text != ':text') {
-      this.state.filterText = text
-    }
-  }
-
-  componentDidMount() {
-    logAPI.config().catch((error) => this.setState({ enabled: false }))
-  }
-
-  render() {
-    if (!this.state.enabled) {
-      return <PluginDisabled plugin="dns" />
+      setFilterText(text)
     }
 
-    return (
-      <View>
-        <DNSLogHistoryList
-          ips={this.state.ips}
-          filterText={this.state.filterText}
-        />
-      </View>
-    )
+    logAPI.config().catch((error) => setIsEnabled(false))
+  }, [])
+
+  if (!isEnabled) {
+    return <PluginDisabled plugin="dns" />
   }
+
+  return (
+    <View>
+      <DNSLogHistoryList ips={ips} filterText={filterText} />
+    </View>
+  )
 }
+
+export default DNSLog

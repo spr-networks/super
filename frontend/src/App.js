@@ -4,8 +4,8 @@ import { NativeBaseProvider } from 'native-base'
 import {
   BrowserRouter as Router,
   Route,
-  Switch,
-  Redirect
+  Routes,
+  Navigate
 } from 'react-router-dom'
 // TODO react-router-native for native
 /*export {
@@ -14,8 +14,9 @@ import {
   Route,
   Link
 } from 'react-router-native'*/
-import AuthLayout from 'layouts/Auth.js'
-import AdminLayout from 'layouts/Admin.js'
+import AuthLayout from 'layouts/Auth'
+import AdminLayout from 'layouts/Admin'
+import { routesAuth, routesAdmin } from 'routes'
 
 import './App.css'
 
@@ -23,11 +24,21 @@ export default function App() {
   return (
     <NativeBaseProvider>
       <Router>
-        <Switch>
-          <Route path="/auth" render={(props) => <AuthLayout {...props} />} />
-          <Route path="/admin" render={(props) => <AdminLayout {...props} />} />
-          <Redirect to="/auth/login" />
-        </Switch>
+        <Routes>
+          <Route path="/auth" element={<AuthLayout />}>
+            {routesAuth.map((r) => (
+              <Route path={r.path} element={<r.element />} />
+            ))}
+          </Route>
+
+          <Route path="/admin" element={<AdminLayout />}>
+            {routesAdmin.map((r) => (
+              <Route key={r.path} path={r.path} element={<r.element />} />
+            ))}
+          </Route>
+
+          <Route path="*" render={<Navigate to="/auth/login" />}></Route>
+        </Routes>
       </Router>
     </NativeBaseProvider>
   )

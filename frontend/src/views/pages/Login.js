@@ -1,8 +1,7 @@
 import React from 'react'
 import { useState } from 'react'
 import { saveLogin, testLogin } from 'api'
-import NotificationAlert from 'react-notification-alert'
-import { Redirect } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
 import {
   Box,
@@ -18,17 +17,9 @@ import {
   useColorModeValue
 } from 'native-base'
 
-function Login() {
-  React.useEffect(() => {
-    document.body.classList.toggle('login-page')
-    return function cleanup() {
-      document.body.classList.toggle('login-page')
-    }
-  })
+const Login = (props) => {
+  const navigate = useNavigate()
 
-  let formRef = React.createRef()
-
-  const notificationAlert = React.useRef()
   const [username, setUsername] = useState('admin')
   const [password, setPassword] = useState('admin')
   const [loggedIn, setLoggedin] = useState(false)
@@ -40,14 +31,11 @@ function Login() {
         saveLogin(username, password)
         setLoggedin(true)
         setErrors({})
+        navigate('/admin/home')
       } else {
         setErrors({ login: true })
       }
     })
-  }
-
-  if (loggedIn) {
-    return <Redirect to="/admin/home" />
   }
 
   return (
@@ -105,13 +93,6 @@ function Login() {
           </VStack>
         </Box>
       </Center>
-      {/*<div
-        className="full-page-background"
-        style={{
-          backgroundImage: `url(${require('assets/img/bg/bg.jpg')})`
-        }}
-      />
-    */}
     </View>
   )
 }

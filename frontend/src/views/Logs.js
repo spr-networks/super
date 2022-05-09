@@ -1,25 +1,25 @@
-import React, { useContext, Component } from 'react'
+import { useContext, useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { View } from 'native-base'
 
 import LogList from 'components/Logs/LogList'
 
-export default class Logs extends Component {
-  state = { containers: [] }
+const Logs = (props) => {
+  const [containers, setContainers] = useState([])
+  const params = useParams()
 
-  constructor(props) {
-    super(props)
-
-    let { containers } = props.match.params
+  useEffect(() => {
+    let { containers } = params
     if (containers && containers != ':containers') {
-      this.state.containers = containers.split(',')
+      setContainers(containers.split(','))
     }
-  }
+  }, [])
 
-  render() {
-    return (
-      <View>
-        <LogList containers={this.state.containers} />
-      </View>
-    )
-  }
+  return (
+    <View>
+      <LogList containers={containers} />
+    </View>
+  )
 }
+
+export default Logs

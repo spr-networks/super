@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { useHistory } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { faRefresh } from '@fortawesome/free-solid-svg-icons'
 
@@ -33,7 +33,7 @@ const LogList = (props) => {
   const [filterContainers, setFilterContainers] = useState([])
 
   const contextType = useContext(AlertContext)
-  let history = useHistory()
+  let navigate = useNavigate()
 
   const refreshList = (next) => {
     logsAPI
@@ -110,7 +110,7 @@ const LogList = (props) => {
       return
     }
 
-    history.push('/admin/logs/' + filterContainers.join(','))
+    navigate('/admin/logs/' + filterContainers.join(','))
 
     let opts = {
       containers: filterContainers

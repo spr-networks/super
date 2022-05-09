@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react'
 import { deviceAPI } from 'api'
-import { useHistory } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import Device from 'components/Devices/Device'
 import { AlertContext } from 'layouts/Admin'
 
@@ -27,7 +27,7 @@ import {
 
 const DeviceListing = (props) => {
   const [devices, setDevices] = useState(null)
-  const history = useHistory()
+  const navigate = useNavigate()
   const context = AlertContext
 
   // set device oui if avail, else fail gracefully
@@ -71,7 +71,7 @@ const DeviceListing = (props) => {
   }, [])
 
   const handleRedirect = () => {
-    history.push('/admin/add_device')
+    navigate('/admin/add_device')
   }
 
   return (

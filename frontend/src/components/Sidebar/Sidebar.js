@@ -1,9 +1,9 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { useHistory } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Animated } from 'react-native'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
-import { AppContext } from 'layouts/Admin'
+import { AppContext } from 'AppContext'
 
 import {
   Box,
@@ -89,7 +89,7 @@ const SidebarItem = (props) => {
 
   return sidebarItems.map((item, index) => {
     if (item.redirect === true) return null
-    const history = useHistory()
+    const navigate = useNavigate()
 
     return (
       <Box key={index} w="100%">
@@ -97,7 +97,7 @@ const SidebarItem = (props) => {
           <Pressable
             onPress={() => {
               setActiveSidebarItem(item.path)
-              history.push(item.layout + item.path)
+              navigate(`/${item.layout}/${item.path}`)
               if (isMobile) {
                 setIsOpenSidebar(false)
               }

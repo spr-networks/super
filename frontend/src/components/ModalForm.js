@@ -59,7 +59,7 @@ const ModalForm = (props) => {
 
 ModalForm.propTypes = {
   title: PropTypes.string,
-  triggerIcon: PropTypes.element,
+  triggerIcon: PropTypes.object,
   triggerText: PropTypes.string,
   modalRef: PropTypes.any
 }

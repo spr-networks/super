@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { useHistory } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import QRCode from 'react-qr-code'
 
 import { deviceAPI, wifiAPI } from 'api'
@@ -12,7 +12,7 @@ import { Button, HStack, Icon, Stack, Text, View } from 'native-base'
 const WifiConnect = (props) => {
   const context = useContext(AlertContext)
   const { device } = props
-  const history = useHistory()
+  const navigate = useNavigate()
 
   const [success, setSuccess] = useState(false)
   const [ssid, setSsid] = useState('')
@@ -91,7 +91,7 @@ const WifiConnect = (props) => {
             variant="solid"
             colorScheme="success"
             bg="green.500"
-            onPress={() => history.push('/admin/devices')}
+            onPress={() => navigate('/admin/devices')}
           >
             Success
           </Button>

@@ -1,30 +1,11 @@
 import React from 'react'
-import { Route, Switch } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 
 import Footer from 'components/Footer/Footer'
-import routes from 'routes'
 
 import { View, Box, useColorModeValue } from 'native-base'
 
-function Pages() {
-  const getRoutes = (routes) => {
-    return routes.map((prop, key) => {
-      if (prop.collapse) {
-        return getRoutes(prop.views)
-      }
-      if (prop.layout === '/auth') {
-        return (
-          <Route
-            path={prop.layout + prop.path}
-            component={prop.component}
-            key={key}
-          />
-        )
-      } else {
-        return null
-      }
-    })
-  }
+const AuthLayout = () => {
   return (
     <>
       <Box
@@ -39,8 +20,8 @@ function Pages() {
           'nativebase-body-dark'
         )}
       >
-        <Switch>{getRoutes(routes)}</Switch>
         <Box>
+          <Outlet />
           <Footer direction="row" />
         </Box>
       </Box>
@@ -48,4 +29,4 @@ function Pages() {
   )
 }
 
-export default Pages
+export default AuthLayout

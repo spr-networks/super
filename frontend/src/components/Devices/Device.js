@@ -207,7 +207,9 @@ class Device extends Component {
               alignItems="center"
             >
               {this.state.groups.map((group) => (
-                <Badge variant="solid">{group}</Badge>
+                <Badge key={group} variant="solid">
+                  {group}
+                </Badge>
               ))}
 
               {/*              <Button.Group isAttached size="xs" space="0">
@@ -223,7 +225,9 @@ class Device extends Component {
               </Button.Group>*/}
 
               {this.state.tags.map((tag) => (
-                <Badge variant="outline">{tag}</Badge>
+                <Badge key={tag} variant="outline">
+                  {tag}
+                </Badge>
               ))}
 
               <Menu
@@ -244,10 +248,17 @@ class Device extends Component {
                   defaultValue={this.state.groups}
                   onChange={handleChangeGroups}
                 >
-                  <Menu.ItemOption value="wan">wan</Menu.ItemOption>
-                  <Menu.ItemOption value="dns">dns</Menu.ItemOption>
-                  <Menu.ItemOption value="lan">lan</Menu.ItemOption>
+                  <Menu.ItemOption key="wan" value="wan">
+                    wan
+                  </Menu.ItemOption>
+                  <Menu.ItemOption key="dns" value="dns">
+                    dns
+                  </Menu.ItemOption>
+                  <Menu.ItemOption key="lan" value="lan">
+                    lan
+                  </Menu.ItemOption>
                   <Menu.ItemOption
+                    key="newGroup"
                     onPress={() => {
                       this.setState({ showModal: true, modalType: 'Group' })
                     }}
@@ -262,9 +273,12 @@ class Device extends Component {
                   onChange={handleChangeTags}
                 >
                   {this.state.tags.map((tag) => (
-                    <Menu.ItemOption value={tag}>{tag}</Menu.ItemOption>
+                    <Menu.ItemOption key={tag} value={tag}>
+                      {tag}
+                    </Menu.ItemOption>
                   ))}
                   <Menu.ItemOption
+                    key="newTag"
                     onPress={() => {
                       this.setState({ showModal: true, modalType: 'Tag' })
                     }}

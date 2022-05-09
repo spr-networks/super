@@ -20,6 +20,8 @@ import {
 } from 'native-base'
 
 export default class Traffic extends Component {
+  static contextType = AlertContext
+
   state = {
     lan: { totalIn: 0, totalOut: 0 },
     wan: { totalIn: 0, totalOut: 0 },
@@ -27,7 +29,6 @@ export default class Traffic extends Component {
     lan_scale: 'All Time'
   }
 
-  static contextType = AlertContext
   macToName = {}
   ipToMac = {}
 

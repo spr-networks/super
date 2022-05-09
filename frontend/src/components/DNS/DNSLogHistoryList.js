@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { withRouter } from 'react-router'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { faMagnifyingGlass, faTrash } from '@fortawesome/free-solid-svg-icons'
 
@@ -26,6 +26,17 @@ import {
   Text,
   ScrollView
 } from 'native-base'
+
+function withRouter(Component) {
+  function ComponentWithRouterProp(props) {
+    let location = useLocation()
+    let navigate = useNavigate()
+    let params = useParams()
+    return <Component {...props} router={{ location, navigate, params }} />
+  }
+
+  return ComponentWithRouterProp
+}
 
 export class DNSLogHistoryList extends React.Component {
   static contextType = AlertContext
