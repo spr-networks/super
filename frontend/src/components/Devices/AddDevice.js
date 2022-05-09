@@ -126,7 +126,9 @@ const AddDevice = (props) => {
     deviceAPI
       .update(data)
       .then((device) => {
-        if (!psk.length) {
+        if (psk.length) {
+          device.PSKEntry.Psk = psk
+        } else {
           setPsk(device.PSKEntry.Psk)
         }
 

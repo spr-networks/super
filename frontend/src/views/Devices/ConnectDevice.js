@@ -87,8 +87,10 @@ const WifiConnect = (props) => {
 
         {success ? (
           <Button
+            w="40%"
             variant="solid"
             colorScheme="success"
+            bg="green.500"
             onPress={() => history.push('/admin/devices')}
           >
             Success
