@@ -1,31 +1,35 @@
 import React from 'react'
 import { Outlet } from 'react-router-dom'
+import { StyleSheet } from 'react-native'
 
 import Footer from 'components/Footer/Footer'
 
-import { View, Box, useColorModeValue } from 'native-base'
+import { View, Box, Image, useColorModeValue } from 'native-base'
+
+const imgBackground = require('../assets/img/bg/bg.jpg')
 
 const AuthLayout = () => {
   return (
-    <>
-      <Box
-        w="100%"
-        h={{ base: '100%', md: '100vh' }}
-        _light={{ bg: 'coolGray.100' }}
-        _dark={{ bg: 'blueGray.900' }}
-        p={20}
-        alignItems="center"
-        nativeID={useColorModeValue(
-          'nativebase-body-light',
-          'nativebase-body-dark'
-        )}
-      >
-        <Box>
+    <Box
+      w="100%"
+      h={{ base: '100vh', md: '100vh' }}
+      _light={{ bg: 'warmGray.200' }}
+      _dark={{ bg: 'blueGray.900' }}
+      alignItems="center"
+      justifyContent="center"
+      nativeID={useColorModeValue(
+        'nativebase-body-light',
+        'nativebase-body-dark'
+      )}
+    >
+      <View w="100vw" h="100vh">
+        <Image source={imgBackground} height="100vh" resizeMode="cover" />
+        <View marginTop="-90vh">
           <Outlet />
-          <Footer direction="row" />
-        </Box>
-      </Box>
-    </>
+          <Footer color="light.200" position="fixed" bottom={2} right={2} />
+        </View>
+      </View>
+    </Box>
   )
 }
 

@@ -103,15 +103,15 @@ const SidebarItem = (props) => {
               }
             }}
             _hover={{
-              _dark: {
-                bg:
-                  item.path === activeSidebarItem ? 'cyan.600' : 'blueGray.800'
-              },
               _light: {
                 bg:
                   item.path === activeSidebarItem
                     ? 'cyan.200:alpha.80'
                     : 'blueGray.200'
+              },
+              _dark: {
+                bg:
+                  item.path === activeSidebarItem ? 'cyan.600' : 'blueGray.800'
               }
             }}
             _light={{

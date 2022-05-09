@@ -104,7 +104,7 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
               icon={useColorModeValue(<MoonIcon />, <SunIcon />)}
             />
             <Button
-              variant="outline"
+              variant="ghost"
               leftIcon={<Icon as={FontAwesomeIcon} icon={faPowerOff} />}
               onPress={logout}
             >

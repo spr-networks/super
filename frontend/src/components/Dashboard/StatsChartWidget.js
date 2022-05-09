@@ -35,8 +35,8 @@ const StatsChartWidget = (props) => {
           text: text,
           position: 'bottom',
           color: '#66615c',
-          padding: { bottom: 40 },
-          font: { weight: 400, size: 30 }
+          padding: { bottom: 20 },
+          font: { weight: 300, size: 24 }
         },
         legend: { display: false }
       }
@@ -156,13 +156,19 @@ const StatsChartWidget = (props) => {
       borderRadius="10"
       mb="4"
       p="5"
-      shadow={1}
+      shadow={4}
     >
-      <Text fontSize="lg" textAlign="center">
+      <Text
+        fontSize="lg"
+        fontWeight={300}
+        _light={{ color: 'muted.800' }}
+        _dark={{ color: 'muted.400' }}
+        textAlign="center"
+      >
         {props.title}
       </Text>
       {props.description ? <Text>{props.description}</Text> : null}
-      <Box>{chart}</Box>
+      <Box minH={280}>{chart}</Box>
       {props.footerText ? (
         <Box p="2">
           <Divider _light={{ bg: 'muted.200' }} my="2" />

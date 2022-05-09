@@ -1,6 +1,7 @@
 import {
   Divider,
   Box,
+  Heading,
   HStack,
   Icon,
   Text,
@@ -15,11 +16,12 @@ const StatsWidget = (props) => {
       bg={useColorModeValue('warmGray.50', 'blueGray.800')}
       borderRadius="10"
       mb="4"
-      shadow={1}
+      shadow={4}
+      flex="1"
     >
-      <Box p="5">
+      <Box px="4" py="2">
         <HStack justifyContent="space-between">
-          <Box justifyContent="space-between">
+          <Box justifyContent="space-between" p="2">
             <Icon
               as={FontAwesomeIcon}
               size="20"
@@ -27,11 +29,24 @@ const StatsWidget = (props) => {
               icon={props.icon}
             />
           </Box>
-          <Box justifyContent="space-between" py="1">
-            <Text textAlign="right" fontSize="lg">
+          <Box justifyContent="center">
+            <Text
+              textAlign="right"
+              fontSize="sm"
+              fontWeight={300}
+              _light={{ color: 'muted.600' }}
+              _dark={{ color: 'muted.400' }}
+            >
               {props.title}
             </Text>
-            <Text textAlign="right">{props.text}</Text>
+            <Text
+              textAlign="right"
+              fontSize="xl"
+              _light={{ color: 'muted.800' }}
+              _dark={{ color: 'muted.400' }}
+            >
+              {props.text}
+            </Text>
           </Box>
         </HStack>
       </Box>
@@ -42,7 +57,9 @@ const StatsWidget = (props) => {
             <Text color="warmGray.400" mr="1">
               <i className={props.iconFooter} />
             </Text>
-            <Text>{props.textFooter}</Text>
+            <Text color="muted.500" fontSize="sm" fontWeight={300}>
+              {props.textFooter}
+            </Text>
           </HStack>
         </Box>
       ) : null}

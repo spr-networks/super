@@ -36,13 +36,13 @@ function Home() {
   return (
     <View style={{ flexDirection }}>
       <VStack flex="2" p="2">
-        <Stack direction={{ base: 'column', md: 'row' }}>
-          <Box flex="auto" pr="2">
-            <WifiInfo />
-          </Box>
-          <Box flex="auto" pl="2">
-            <WifiClients />
-          </Box>
+        <Stack
+          direction={{ base: 'column', md: 'row' }}
+          justifyContent="stretch"
+          space={4}
+        >
+          <WifiInfo />
+          <WifiClients />
         </Stack>
         <VStack>
           <TotalTraffic />

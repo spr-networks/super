@@ -43,7 +43,7 @@ export class DNSBlockMetrics extends DNSMetrics {
 export class DNSBlockPercent extends DNSMetrics {
   render() {
     if (!this.state.TotalQueries) {
-      return <div></div>
+      return <></>
     }
 
     let data = [this.state.BlockedQueries, this.state.TotalQueries]

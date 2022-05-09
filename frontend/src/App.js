@@ -25,15 +25,15 @@ export default function App() {
     <NativeBaseProvider>
       <Router>
         <Routes>
-          <Route path="/" element={<Navigate to="/auth/login" />} />
+          <Route key="index" path="/" element={<Navigate to="/auth/login" />} />
 
-          <Route path="/auth" element={<AuthLayout />}>
+          <Route key="auth" path="/auth" element={<AuthLayout />}>
             {routesAuth.map((r) => (
               <Route path={r.path} element={<r.element />} />
             ))}
           </Route>
 
-          <Route path="/admin" element={<AdminLayout />}>
+          <Route key="admin" path="/admin" element={<AdminLayout />}>
             {routesAdmin.map((r) => (
               <Route key={r.path} path={r.path} element={<r.element />} />
             ))}

@@ -158,7 +158,7 @@ const AdminLayout = (props) => {
       <Box
         w="100%"
         h={{ base: '100%', md: '100vh' }} // md: '100vh'
-        _light={{ bg: 'coolGray.100' }}
+        _light={{ bg: '#f4f3ef' }} // warmGray.200
         _dark={{ bg: 'blueGray.900' }}
         alignItems="center"
         nativeID={useColorModeValue('coolGray.100', 'blueGray.900')}
@@ -205,6 +205,8 @@ const AdminLayout = (props) => {
                 position="sticky"
                 top="16"
                 h="calc(100vh - 64px)"
+                _light={{ bg: 'coolGray.100' }}
+                _dark={{ bg: 'blueGray.900:alpha.50' }}
                 display={{ base: 'none', md: 'flex' }}
               >
                 <Sidebar
@@ -238,28 +240,36 @@ const AdminLayout = (props) => {
               {/*h="calc(100% - 64px)"
                minH="calc(100vh - 64px)"*/}
               <Box flex="1" p="4" safeAreaTop ref={mainPanel}>
-                <AlertContext.Provider value={alertState}>
-                  <Slide in={showAlert} placement="top">
-                    <Box
-                      maxWidth="90%"
-                      top="16"
-                      position="sticky"
-                      alignItems="center"
-                      justifyContent="center"
-                      alignSelf="center"
-                    >
-                      <AppAlert
-                        title={alert.title}
-                        body={alert.body}
-                        type={alert.type}
-                        toggle={toggleAlert}
-                      />
-                    </Box>
-                  </Slide>
+                <Outlet />
 
-                  {/*toast.show({render: ({ id }) => { return (<h2>custom toast!</h2>) })*/}
+                <Footer fluid />
+              </Box>
+            </HStack>
+          </Box>
+        </ScrollView>
+      </Box>
+      <AlertContext.Provider value={alertState}>
+        <Slide in={showAlert} placement="top">
+          <Box
+            maxWidth="90%"
+            top="16"
+            position="sticky"
+            alignItems="center"
+            justifyContent="center"
+            alignSelf="center"
+          >
+            <AppAlert
+              title={alert.title}
+              body={alert.body}
+              type={alert.type}
+              toggle={toggleAlert}
+            />
+          </Box>
+        </Slide>
 
-                  {/*
+        {/*toast.show({render: ({ id }) => { return (<h2>custom toast!</h2>) })*/}
+
+        {/*
                   <Slide in={showAlert} placement="top">
                     <Box
                       w="100%"
@@ -300,16 +310,7 @@ const AdminLayout = (props) => {
                     </Box>
                   </Slide>
                   */}
-                </AlertContext.Provider>
-
-                <Outlet />
-
-                <Footer fluid />
-              </Box>
-            </HStack>
-          </Box>
-        </ScrollView>
-      </Box>
+      </AlertContext.Provider>
     </AppContext.Provider>
   )
 }
