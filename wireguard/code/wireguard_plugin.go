@@ -413,7 +413,7 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 	// TODO verify pubkey
 
 	//add a new peer with multicast support
-	AllowedIPs := config.Interface.Address + ",224.0.0.0/24"
+	AllowedIPs := config.Interface.Address + ",224.0.0.0/4"
 
 	PresharedKey, err := genPresharedKey()
 	if err != nil {
