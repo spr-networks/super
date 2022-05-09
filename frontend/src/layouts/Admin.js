@@ -242,7 +242,7 @@ const AdminLayout = (props) => {
               <Box flex="1" p="4" safeAreaTop ref={mainPanel}>
                 <Outlet />
 
-                <Footer fluid />
+                <Footer justifyContent="flex-start" />
               </Box>
             </HStack>
           </Box>

@@ -26,7 +26,13 @@ const AuthLayout = () => {
         <Image source={imgBackground} height="100vh" resizeMode="cover" />
         <View marginTop="-90vh">
           <Outlet />
-          <Footer color="light.200" position="fixed" bottom={2} right={2} />
+          <Footer
+            color="light.200"
+            position="fixed"
+            bottom={2}
+            right={2}
+            justifyContent="center"
+          />
         </View>
       </View>
     </Box>

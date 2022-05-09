@@ -1,5 +1,5 @@
 import { Component } from 'react'
-import { faBan, faGlobe } from '@fortawesome/free-solid-svg-icons'
+import { faBan, faEarthAmericas } from '@fortawesome/free-solid-svg-icons'
 
 import { blockAPI } from 'api/DNS'
 import StatsWidget from './StatsWidget'
@@ -16,12 +16,10 @@ export class DNSMetrics extends Component {
   render() {
     return (
       <StatsWidget
-        icon={faGlobe}
-        iconColor="success.400"
+        icon={faEarthAmericas}
+        iconColor="green.400"
         title="Total DNS queries"
         text={this.state.TotalQueries}
-        textFooterHide={this.state.BlockedQueries + ' blocked'}
-        iconFooterHide="fa fa-ban"
       />
     )
   }

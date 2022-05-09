@@ -2,7 +2,10 @@ import React, { useEffect } from 'react'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
-import { faPowerOff } from '@fortawesome/free-solid-svg-icons'
+import {
+  faArrowRightFromBracket,
+  faPowerOff
+} from '@fortawesome/free-solid-svg-icons'
 import {
   Button,
   Box,
@@ -15,6 +18,7 @@ import {
   Text,
   MoonIcon,
   SunIcon,
+  Tooltip,
   useColorMode,
   useColorModeValue
 } from 'native-base'
@@ -89,27 +93,40 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
             >
               API
             </Link>
-            <IconButton
-              p="0"
-              onPress={() => {
-                toggleColorMode()
-                const date = new Date()
-              }}
-              variant="unstyled"
-              _icon={{
-                size: '6',
-                _light: { color: 'coolGray.600' },
-                _dark: { color: 'coolGray.300' }
-              }}
-              icon={useColorModeValue(<MoonIcon />, <SunIcon />)}
-            />
-            <Button
-              variant="ghost"
-              leftIcon={<Icon as={FontAwesomeIcon} icon={faPowerOff} />}
-              onPress={logout}
-            >
-              Log out
-            </Button>
+            <Tooltip label="Toggle Theme">
+              <IconButton
+                p="0"
+                onPress={() => {
+                  toggleColorMode()
+                  const date = new Date()
+                }}
+                variant="unstyled"
+                _icon={{
+                  size: 5,
+                  _light: { color: 'coolGray.600' },
+                  _dark: { color: 'coolGray.300' }
+                }}
+                icon={useColorModeValue(<MoonIcon />, <SunIcon />)}
+              />
+            </Tooltip>
+            <Tooltip label="Logout">
+              <IconButton
+                variant="unstyled"
+                _icon={{
+                  size: 5,
+                  _light: { color: 'coolGray.600' },
+                  _dark: { color: 'coolGray.300' }
+                }}
+                _text={{
+                  _light: { color: 'coolGray.600' },
+                  _dark: { color: 'coolGray.300' }
+                }}
+                icon={
+                  <Icon as={FontAwesomeIcon} icon={faArrowRightFromBracket} />
+                }
+                onPress={logout}
+              />
+            </Tooltip>
           </HStack>
         </HStack>
       </HStack>

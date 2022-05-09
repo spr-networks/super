@@ -5,11 +5,13 @@ import { Box, Stack, Link, Text } from 'native-base'
 
 function Footer(props) {
   let color = props.color || 'muted.600'
-  let _text = {
-    color,
-    textDecoration: 'none',
-    style: styles.text
-  }
+  let _text = props.color
+    ? {
+        color,
+        textDecoration: 'none',
+        style: styles.text
+      }
+    : {}
 
   return (
     <Stack
@@ -17,7 +19,6 @@ function Footer(props) {
       space={2}
       mt={10}
       display={{ base: 'none', md: 'flex' }}
-      justifyContent="center"
       {...props}
     >
       <Link _text={_text} isExternal href="https://www.supernetworks.org/">
@@ -45,7 +46,7 @@ function Footer(props) {
         Github
       </Link>
 
-      <Text color={color} style={styles.text} w={100} marginLeft="none">
+      <Text color={color} style={_text.style} w={100} marginLeft="none">
         &copy; {1900 + new Date().getYear()} SPR
       </Text>
     </Stack>

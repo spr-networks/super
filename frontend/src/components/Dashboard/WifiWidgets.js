@@ -1,7 +1,7 @@
 import { Component, useEffect, useState } from 'react'
 import { wifiAPI } from 'api/Wifi'
 import StatsWidget from './StatsWidget'
-import { faLaptop, faWifi } from '@fortawesome/free-solid-svg-icons'
+import { faClock, faLaptop, faWifi } from '@fortawesome/free-solid-svg-icons'
 
 import { Divider, Box, Stack, Icon, Text, useColorModeValue } from 'native-base'
 
@@ -23,11 +23,11 @@ export class WifiClients extends WifiClientCount {
     return (
       <StatsWidget
         icon={faLaptop}
-        iconColor="light.400"
+        iconColor="blueGray.400"
         title="Active WiFi Clients"
         text={this.state.numberOfWifiClients}
         textFooter="Online"
-        iconFooter="fa fa-clock-o"
+        iconFooter={faClock}
       />
     )
   }
@@ -50,7 +50,7 @@ export class WifiInfo extends Component {
         title="Wifi AP"
         text={this.state.ssid}
         textFooter={'Channel ' + this.state.channel}
-        iconFooter="fa fa-wifi"
+        iconFooter={faWifi}
       />
     )
   }
@@ -81,8 +81,9 @@ export const Interfaces = (props) => {
     <Box
       bg={useColorModeValue('warmGray.50', 'blueGray.800')}
       borderRadius="10"
-      mb="4"
-      p="5"
+      mb={4}
+      p={5}
+      shadow={4}
     >
       <Text fontSize="lg" textAlign="center">
         Interfaces
