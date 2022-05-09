@@ -56,7 +56,7 @@ const StatsWidget = (props) => {
         <Box>
           <Divider _light={{ bg: 'muted.200' }} />
           <HStack space={2} px={4} py={2} alignContent="center">
-            <Icon as={FontAwesomeIcon} icon={iconFooter} color="warmGray.400" />
+            <Icon as={FontAwesomeIcon} icon={iconFooter} color="warmGray.500" />
             <Text color="muted.500" fontSize="xs" fontWeight={300}>
               {textFooter}
             </Text>

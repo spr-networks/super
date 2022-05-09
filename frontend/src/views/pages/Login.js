@@ -118,6 +118,9 @@ const Login = (props) => {
             rounded="full"
             colorScheme="yellow"
             bg="#fbc658"
+            _hover={{
+              bg: '#fab526'
+            }}
             onPress={handleLogin}
           >
             Login
