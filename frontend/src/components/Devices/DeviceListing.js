@@ -28,7 +28,7 @@ import {
 const DeviceListing = (props) => {
   const [devices, setDevices] = useState(null)
   const navigate = useNavigate()
-  const context = AlertContext
+  const context = useContext(AlertContext)
 
   // set device oui if avail, else fail gracefully
   const setOUIs = async (devices) => {

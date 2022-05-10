@@ -63,6 +63,28 @@ const AppAlert = (props) => {
   )
 }
 
+function desktopNotification(msg) {
+  if (!('Notification' in window)) {
+    return
+  }
+
+  if (Notification.permission === 'denied') {
+    return
+  }
+
+  if (Notification.permission === 'granted') {
+    var notification = new Notification(msg)
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then(function (permission) {
+      if (permission === 'granted') {
+        var notification = new Notification(msg)
+      }
+    })
+  }
+
+  return
+}
+
 const alertState = {
   alert: () => {}
 }
@@ -83,6 +105,10 @@ const AdminLayout = (props) => {
     if (!body) {
       body = title
       title = ucFirst(type)
+    }
+
+    if (['error', 'success'].includes(type)) {
+      desktopNotification(`${title}, ${body}`)
     }
 
     setAlert({ type, title, body })
