@@ -20,6 +20,7 @@ import {
   VStack,
   Text,
   useColorModeValue,
+  useToken,
   useToast
 } from 'native-base'
 
@@ -158,8 +159,10 @@ const AdminLayout = (props) => {
       <Box
         w="100%"
         h={{ base: '100%', md: '100vh' }} // md: '100vh'
-        _light={{ bg: '#f4f3ef' }} // warmGray.200
-        _dark={{ bg: 'blueGray.900' }}
+        bg={useColorModeValue(
+          'backgroundContentLight',
+          'backgroundContentDark'
+        )}
         alignItems="center"
         nativeID={useColorModeValue('coolGray.100', 'blueGray.900')}
       >
@@ -171,8 +174,6 @@ const AdminLayout = (props) => {
               position="sticky"
               top="0"
               zIndex={99}
-              _light={{ bg: 'coolGray.100' }}
-              _dark={{ bg: 'blueGray.900:alpha.50' }}
               // @ts-ignore
               style={{ backdropFilter: 'blur(10px)' }}
             >
@@ -188,8 +189,6 @@ const AdminLayout = (props) => {
               position="sticky"
               top="0"
               zIndex={99}
-              _light={{ bg: 'coolGray.100' }}
-              _dark={{ bg: 'blueGray.900:alpha.50' }}
               // @ts-ignore
               style={{ backdropFilter: 'blur(10px)' }}
             >

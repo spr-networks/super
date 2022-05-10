@@ -17,12 +17,13 @@ import {
 import AuthLayout from 'layouts/Auth'
 import AdminLayout from 'layouts/Admin'
 import { routesAuth, routesAdmin } from 'routes'
+import { theme } from 'Theme'
 
 import './App.css'
 
 export default function App() {
   return (
-    <NativeBaseProvider>
+    <NativeBaseProvider theme={theme}>
       <Router>
         <Routes>
           <Route key="index" path="/" element={<Navigate to="/auth/login" />} />

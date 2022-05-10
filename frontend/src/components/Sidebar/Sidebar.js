@@ -13,7 +13,8 @@ import {
   ScrollView,
   HStack,
   Text,
-  Collapse
+  Collapse,
+  useColorModeValue
 } from 'native-base'
 
 const Sidebar = (props) => {
@@ -28,10 +29,10 @@ const Sidebar = (props) => {
         flex="1"
         borderRightWidth={isMobile ? '0' : '1'}
         _light={{
-          borderColor: 'coolGray.200',
-          bg: 'coolGray.100'
+          bg: 'sidebarBackgroundLight',
+          borderColor: 'sidebarBorderColorLight'
         }}
-        _dark={{ borderColor: 'coolGray.800', bg: 'blueGray.900' }}
+        _dark={{ bg: 'sidebarBackgroundDark', borderColor: 'borderColorDark' }}
       >
         <SidebarItem
           sidebarItems={sidebarItems}
@@ -106,20 +107,27 @@ const SidebarItem = (props) => {
               _light: {
                 bg:
                   item.path === activeSidebarItem
-                    ? 'blueGray.200:alpha.60'
-                    : 'blueGray.200:alpha.60'
+                    ? 'activeSidebarItemHoverBackgroundLight'
+                    : 'inactiveSidebarItemHoverBackgroundLight'
               },
               _dark: {
                 bg:
-                  item.path === activeSidebarItem ? 'cyan.600' : 'blueGray.800'
+                  item.path === activeSidebarItem
+                    ? 'activeSidebarItemHoverBackgroundDark'
+                    : 'inactiveSidebarItemHoverBackgroundDark'
               }
             }}
             _light={{
               bg:
-                item.path === activeSidebarItem ? 'blueGray.200' : 'transparent'
+                item.path === activeSidebarItem
+                  ? 'activeSidebarItemBackgroundLight'
+                  : 'transparent'
             }}
             _dark={{
-              bg: item.path === activeSidebarItem ? 'cyan.700' : 'transparent'
+              bg:
+                item.path === activeSidebarItem
+                  ? 'activeSidebarItemBackgroundDark'
+                  : 'transparent'
             }}
           >
             <Link>
@@ -130,14 +138,23 @@ const SidebarItem = (props) => {
                   pl={level > 1 ? level + 14 + 'px' : '0px'}
                 >
                   {item.icon && typeof item.icon !== 'string' ? (
-                    <Icon as={FontAwesomeIcon} icon={item.icon} />
+                    <Icon
+                      as={FontAwesomeIcon}
+                      color={useColorModeValue(
+                        'sidebarItemIconLight',
+                        'sidebarItemIconDark'
+                      )}
+                      icon={item.icon}
+                    />
                   ) : null}
                   {isMini ? null : (
                     <Text
                       fontWeight="300"
                       fontSize="sm"
-                      _dark={{ color: 'coolGray.200' }}
-                      _light={{ color: 'blueGray.900' }}
+                      color={useColorModeValue(
+                        'sidebarItemTextLight',
+                        'sidebarItemTextDark'
+                      )}
                     >
                       {item.name}
                     </Text>
@@ -209,8 +226,10 @@ export const CollapsibleSidebarItem = (props) => {
                 fontWeight: '600', // '300',
                 textTransform: 'uppercase',
                 fontSize: 'sm',
-                _dark: { color: 'coolGray.50' },
-                _light: { color: 'blueGray.900' }
+                color: useColorModeValue(
+                  'sidebarItemHeadingTextLight',
+                  'sidebarItemHeadingTextDark'
+                )
               }}
             >
               {isMini ? title.substr(0, 1) : title}

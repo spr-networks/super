@@ -20,7 +20,8 @@ import {
   SunIcon,
   Tooltip,
   useColorMode,
-  useColorModeValue
+  useColorModeValue,
+  useToken
 } from 'native-base'
 
 const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
@@ -47,18 +48,26 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
     <>
       <HStack
         w="100%"
-        borderBottomWidth="1"
-        _light={{ borderColor: 'coolGray.200' }}
-        _dark={{ borderColor: 'coolGray.800' }}
-        px="5"
-        h="16"
+        borderBottomWidth={1}
+        bg={useColorModeValue('navbarBackgroundLight', 'navbarBackgroundDark')}
+        borderColor={useColorModeValue(
+          'navbarBorderColorLight',
+          'navbarBorderColorDark'
+        )}
+        px={5}
+        h={16}
         justifyContent="space-between"
       >
-        <HStack w="100%" alignItems="center" space="1">
+        <HStack w="100%" alignItems="center" space={1}>
           <IconButton
             variant="unstyled"
             icon={<HamburgerIcon />}
-            _icon={{ color: useColorModeValue('coolGray.600', 'coolGray.300') }}
+            _icon={{
+              color: useColorModeValue(
+                'navbarTextColorLight',
+                'navbarTextColorDark'
+              )
+            }}
             onPress={() => setIsOpenSidebar(!isOpenSidebar)}
           />
 
@@ -76,7 +85,11 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
               isExternal
               href="https://www.supernetworks.org/pages/docs/intro"
               _text={{
-                textDecorationLine: 'none'
+                textDecorationLine: 'none',
+                color: useColorModeValue(
+                  'navbarTextColorLight',
+                  'navbarTextColorDark'
+                )
               }}
               display={{ base: 'none', lg: 'flex' }}
             >
@@ -88,7 +101,11 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
               isExternal
               href="https://www.supernetworks.org/pages/docs/api/0"
               _text={{
-                textDecorationLine: 'none'
+                textDecorationLine: 'none',
+                color: useColorModeValue(
+                  'navbarTextColorLight',
+                  'navbarTextColorDark'
+                )
               }}
               display={{ base: 'none', lg: 'flex' }}
             >
@@ -104,8 +121,10 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
                 variant="unstyled"
                 _icon={{
                   size: 5,
-                  _light: { color: 'coolGray.600' },
-                  _dark: { color: 'coolGray.300' }
+                  color: useColorModeValue(
+                    'navbarTextColorLight',
+                    'navbarTextColorDark'
+                  )
                 }}
                 icon={useColorModeValue(<MoonIcon />, <SunIcon />)}
               />
@@ -115,12 +134,16 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
                 variant="unstyled"
                 _icon={{
                   size: 5,
-                  _light: { color: 'coolGray.600' },
-                  _dark: { color: 'coolGray.300' }
+                  color: useColorModeValue(
+                    'navbarTextColorLight',
+                    'navbarTextColorDark'
+                  )
                 }}
                 _text={{
-                  _light: { color: 'coolGray.600' },
-                  _dark: { color: 'coolGray.300' }
+                  color: useColorModeValue(
+                    'navbarTextColorLight',
+                    'navbarTextColorDark'
+                  )
                 }}
                 icon={
                   <Icon as={FontAwesomeIcon} icon={faArrowRightFromBracket} />
