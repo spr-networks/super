@@ -19,7 +19,7 @@ import AdminLayout from 'layouts/Admin'
 import { routesAuth, routesAdmin } from 'routes'
 import { theme } from 'Theme'
 
-import './App.css'
+//import './App.css'
 
 export default function App() {
   return (
