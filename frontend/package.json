@@ -80,8 +80,6 @@
   },
   "devDependencies": {
     "cypress": "^9.5.2",
-    "gulp": "4.0.2",
-    "gulp-append-prepend": "1.0.9",
     "miragejs": "^0.1.43",
     "sass": "^1.49.9",
     "serve": "^13.0.2"
