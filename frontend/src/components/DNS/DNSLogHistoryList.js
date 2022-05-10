@@ -318,7 +318,9 @@ const DNSLogHistoryList = (props) => {
       <VStack space={2} mb="12">
         <HStack space={2}>
           <Heading fontSize="lg">{filterIps.join(',')} DNS Log</Heading>
-          <Text color="muted.500">{total} records</Text>
+          {filterIps.length ? (
+            <Text color="muted.500">{total} records</Text>
+          ) : null}
         </HStack>
 
         <Stack space={2} direction={{ base: 'column', md: 'row' }}>
@@ -394,19 +396,21 @@ const DNSLogHistoryList = (props) => {
         keyExtractor={(item) => item.Timestamp}
       />
 
-      <HStack width="100%" space={2}>
-        <Button
-          flex="1"
-          variant="ghost"
-          isDisabled={page <= 1}
-          onPress={() => setPage(page > 1 ? page - 1 : 1)}
-        >
-          &larr; Previous
-        </Button>
-        <Button flex="1" variant="ghost" onPress={() => setPage(page + 1)}>
-          Next &rarr;
-        </Button>
-      </HStack>
+      {total > 20 ? (
+        <HStack width="100%" space={2}>
+          <Button
+            flex="1"
+            variant="ghost"
+            isDisabled={page <= 1}
+            onPress={() => setPage(page > 1 ? page - 1 : 1)}
+          >
+            &larr; Previous
+          </Button>
+          <Button flex="1" variant="ghost" onPress={() => setPage(page + 1)}>
+            Next &rarr;
+          </Button>
+        </HStack>
+      ) : null}
     </Box>
   )
 }

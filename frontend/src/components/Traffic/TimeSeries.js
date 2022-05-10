@@ -70,9 +70,13 @@ const TimeSeries = (props) => {
       >
         <Heading fontSize="xl">{props.title || props.type}</Heading>
 
-        <Stack direction={{ base: 'column', md: 'row' }} space={2}>
+        <Stack
+          direction={{ base: 'column', md: 'row' }}
+          space={2}
+          alignItems="center"
+        >
           {view == 'chart' ? (
-            <Button.Group size="sm" isAttached colorScheme="primary">
+            <Button.Group size="xs" isAttached colorScheme="primary">
               <Button
                 onPress={(e) => handleChartMode('data')}
                 variant={chartMode !== 'data' ? 'outline' : 'solid'}
@@ -96,7 +100,11 @@ const TimeSeries = (props) => {
             </Box>
           )}
           <Button.Group size="sm">
-            <DateRange defaultValue={offset} onChange={handleChangeTime} />
+            <DateRange
+              colorScheme="primary"
+              defaultValue={offset}
+              onChange={handleChangeTime}
+            />
           </Button.Group>
 
           <Button.Group size="sm" isAttached colorScheme="primary">

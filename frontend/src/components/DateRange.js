@@ -13,6 +13,7 @@ const DateRange = (props) => {
 
   let defaultValue = props.defaultValue || scales[0].value
   let title = scales.filter((s) => s.value == defaultValue)[0].label
+  let colorScheme = props.colorScheme || 'muted'
 
   const trigger = (triggerProps) => {
     return (
@@ -20,6 +21,7 @@ const DateRange = (props) => {
         variant="ghost"
         leftIcon={<Icon as={FontAwesomeIcon} icon={faCalendar} />}
         {...triggerProps}
+        colorScheme={colorScheme}
       >
         {title}
       </Button>

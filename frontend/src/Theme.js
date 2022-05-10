@@ -17,6 +17,12 @@ export const theme = extendTheme({
     borderColorLight: '#dfe3e6',
     borderColorLightTest: colors.red[500],
 
+    // custom buttons
+
+    buttonBackgroundLight: colors.cyan[600],
+    buttonOutlineBackgroundLight: colors.cyan[50],
+    buttonBorderColorLight: colors.cyan[600],
+
     // navbar
 
     navbarBackgroundLight: colors.white, // colors.coolGray[100],
@@ -45,7 +51,7 @@ export const theme = extendTheme({
     activeSidebarItemHoverBackgroundLight: colors.blueGray[200], //.alpha[60],'//colors.cyan[200],
     activeSidebarItemHoverBackgroundDark: colors.cyan[600],
 
-    inactiveSidebarItemHoverBackgroundLight: colors.blueGray[200],
+    inactiveSidebarItemHoverBackgroundLight: colors.coolGray[100],
     inactiveSidebarItemHoverBackgroundDark: colors.blueGray[800],
 
     // other
