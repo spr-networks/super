@@ -34,8 +34,8 @@ export const theme = extendTheme({
     sidebarBorderColorDark: colors.coolGray[800],
 
     sidebarItemHeadingTextLight: colors.blueGray[900],
-    sidebarItemHeadingTextDark: colors.coolGray[200], //coolGray.50
-    sidebarItemTextDark: colors.coolGray[200],
+    sidebarItemHeadingTextDark: colors.coolGray[300], //coolGray.50
+    sidebarItemTextDark: colors.coolGray[300],
     sidebarItemTextLight: '#11181c',
     sidebarItemIconLight: colors.coolGray[600], //colors.blueGray[800],
     sidebarItemIconDark: colors.coolGray[400], //coolGray.50
