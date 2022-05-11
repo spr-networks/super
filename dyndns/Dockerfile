@@ -13,14 +13,13 @@ WORKDIR godns/cmd/godns
 RUN go mod download
 RUN go build
 WORKDIR /code/
-COPY code/* code/
+COPY code/* .
 RUN go build
 
 FROM ubuntu:21.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends ca-certificates nftables iproute2 netcat inetutils-ping net-tools nano
-COPY scripts /scripts/
 COPY --from=builder /code/godns/cmd/godns/godns /
 COPY --from=builder /code/dyndns_plugin /
 ENTRYPOINT ["/dyndns_plugin"]

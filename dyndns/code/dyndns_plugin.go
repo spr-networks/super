@@ -45,33 +45,34 @@ type GodyndnsConfig struct {
 
 func runGoDyndns() {
 	cmd := exec.Command("/godns", "-c", GoDyndnsConfigFile)
-	_, err := cmd.Output()
+	stdout, err := cmd.Output()
 	if err != nil {
 		fmt.Println("godns failed to run", err)
 	}
+	fmt.Println("out",string(stdout))
 }
 
 func validateConfig(config GodyndnsConfig) error {
 
-	validCommand := regexp.MustCompile(`^[:\-=@a-z0-9.]+$`).MatchString
+	validCommand := regexp.MustCompile(`^[:\-=@A-Za-z0-9.]+$`).MatchString
 	if !validCommand(config.Provider) {
 		return fmt.Errorf("invalid provider")
 	}
 
-	if !validCommand(config.Email) {
+	if config.Email != "" && !validCommand(config.Email) {
 		return fmt.Errorf("invalid email")
 	}
 
 
-	if !validCommand(config.IpUrl) {
+	if config.IpUrl != "" && !validCommand(config.IpUrl) {
 		return fmt.Errorf("invalid IpUrl")
 	}
 
-	if !validCommand(config.Ipv6Url) {
+	if config.Ipv6Url != "" && !validCommand(config.Ipv6Url) {
 		return fmt.Errorf("invalid Ipv6Url")
 	}
 
-	if !validCommand(config.IpType) {
+	if config.IpType != "" && !validCommand(config.IpType) {
 		return fmt.Errorf("invalid IpType")
 	}
 
@@ -79,16 +80,16 @@ func validateConfig(config GodyndnsConfig) error {
 		return fmt.Errorf("Socks5Proxy not supported")
 	}
 
-	if !validCommand(config.Resolver) {
+	if config.Resolver != "" && !validCommand(config.Resolver) {
 		return fmt.Errorf("invalid resolver")
 	}
 
 	for _, entry := range config.Domains {
-		if !validCommand(entry.DomainName){
+		if entry.DomainName != "" && !validCommand(entry.DomainName){
 			return fmt.Errorf("invalid domain name: " + entry.DomainName)
 		}
 		for _, subdomain := range entry.SubDomains {
-			if !validCommand(subdomain){
+			if subdomain != "" && !validCommand(subdomain){
 				return fmt.Errorf("invalid subdomain: " + subdomain)
 			}
 		}
@@ -107,7 +108,7 @@ func setConfiguration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-
+	fmt.Println(config)
 	err = validateConfig(config)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
@@ -196,3 +197,6 @@ func main() {
 
 	pluginServer.Serve(unixPluginListener)
 }
+
+
+
