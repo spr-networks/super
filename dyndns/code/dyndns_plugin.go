@@ -190,7 +190,6 @@ func logRequest(handler http.Handler) http.Handler {
 
 func startIntervalTimer() {
 	runTimer := func() {
-		// is it worth reading the configuration file for the interval?
 		ticker := time.NewTicker(getInterval())
 		for {
 			select {
