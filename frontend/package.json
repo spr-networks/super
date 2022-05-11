@@ -10,7 +10,7 @@
     "start": "GENERATE_SOURCEMAP=false react-scripts start",
     "android": "react-native run-android",
     "ios": "react-native run-ios",
-    "web": "react-native start",
+    "native-start": "react-native start",
     "build": "react-scripts build",
     "test": "jest",
     "cypress": "cypress run",
@@ -63,24 +63,9 @@
     "source-map-explorer": "^2.5.2",
     "timeago.js": "^4.0.2"
   },
-  "optionalDependencies": {
-    "@babel/core": "7.14.2",
-    "typescript": "4.2.4"
-  },
   "devDependencies": {
     "cypress": "^9.5.2",
     "serve": "^13.0.2"
-  },
-  "jest": {
-    "preset": "react-native",
-    "transformIgnorePatterns": [
-      "node_modules/(?!(@react-native|react-native|react-native-vector-icons)/)"
-    ]
-  },
-  "babel": {
-    "presets": [
-      "@babel/preset-react"
-    ]
   },
   "browserslist": {
     "production": [
