@@ -8,8 +8,6 @@ import { AlertContext } from 'layouts/Admin'
 export default class Groups extends Component {
   state = { groups: [] }
 
-  static contextType = AlertContext
-
   async componentDidMount() {
     const refreshGroups = async () => {
       let groups
@@ -74,3 +72,5 @@ export default class Groups extends Component {
     )
   }
 }
+
+Groups.contextType = AlertContext

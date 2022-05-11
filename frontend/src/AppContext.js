@@ -6,3 +6,10 @@ export const AppContext = createContext({
   isNavbarOpen: false,
   setIsNavbarOpen: (isNavbarOpen) => {}
 })
+
+export const alertState = {
+  alert: () => {}
+}
+
+// TODO Toast
+export const AlertContext = createContext(alertState)

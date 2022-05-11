@@ -42,8 +42,6 @@ class Device extends Component {
     ]*/
   }
 
-  static contextType = AlertContext
-
   async componentDidMount() {
     const device = this.props.device
 
@@ -159,10 +157,16 @@ class Device extends Component {
         <Stack
           direction="row"
           space={2}
+          py={2}
           w="100%"
           key={device.MAC}
           justifyContent="space-between"
           alignItems="center"
+          borderBottomWidth={1}
+          borderColor="muted.200"
+          _dark={{
+            borderColor: 'muted.600'
+          }}
         >
           <Stack
             direction={{ base: 'column', md: 'row' }}
@@ -390,5 +394,7 @@ class Device extends Component {
 Device.propTypes = {
   device: PropTypes.object.isRequired
 }
+
+Device.contextType = AlertContext
 
 export default Device

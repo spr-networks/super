@@ -31,8 +31,6 @@ class TrafficTimeSeries extends Component {
     this.state.chartModes = chartModes
   }
 
-  static contextType = AlertContext
-
   cached_traffic_data = null
 
   async fetchData() {
@@ -261,5 +259,7 @@ class TrafficTimeSeries extends Component {
     )
   }
 }
+
+TrafficTimeSeries.contextType = AlertContext
 
 export default TrafficTimeSeries

@@ -189,12 +189,9 @@ const LogList = (props) => {
         data={list}
         renderItem={({ item }) => (
           <Box
-            borderBottomWidth="1"
-            _dark={{
-              borderColor: 'muted.600'
-            }}
-            borderColor="muted.200"
-            py="2"
+            borderBottomWidth={1}
+            borderColor={useColorModeValue('muted.200', 'muted.600')}
+            py={2}
           >
             <HStack
               w="100%"

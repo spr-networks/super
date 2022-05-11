@@ -25,7 +25,6 @@ import {
 } from 'native-base'
 
 export default class DNSBlocklist extends React.Component {
-  static contextType = AlertContext
   state = { list: [], blockedDomains: 0, pending: false }
 
   constructor(props) {
@@ -212,3 +211,5 @@ export default class DNSBlocklist extends React.Component {
     )
   }
 }
+
+DNSBlocklist.contextType = AlertContext

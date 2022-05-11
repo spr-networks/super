@@ -1,7 +1,7 @@
 import React, { createContext, useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 
-import { AppContext } from 'AppContext'
+import { AppContext, AlertContext, alertState } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Footer from 'components/Footer/Footer'
 import Sidebar from 'components/Sidebar/Sidebar'
@@ -84,13 +84,6 @@ function desktopNotification(msg) {
 
   return
 }
-
-const alertState = {
-  alert: () => {}
-}
-
-// TODO Toast
-export const AlertContext = createContext(alertState)
 
 const AdminLayout = (props) => {
   const mainPanel = React.useRef()
@@ -347,3 +340,4 @@ const AdminLayout = (props) => {
 }
 
 export default AdminLayout
+export { AlertContext }

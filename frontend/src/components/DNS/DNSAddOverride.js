@@ -7,7 +7,6 @@ import ClientSelect from 'components/ClientSelect'
 import { Button, FormControl, Input, VStack } from 'native-base'
 
 export default class DNSAddOverride extends React.Component {
-  static contextType = AlertContext
   state = {
     Type: '',
     Domain: '',
@@ -184,3 +183,5 @@ DNSAddOverride.propTypes = {
   clientip: PropTypes.string,
   notifyChange: PropTypes.func
 }
+
+DNSAddOverride.contextType = AlertContext

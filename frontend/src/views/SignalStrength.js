@@ -16,7 +16,6 @@ export default class SignalStrength extends Component {
     signal_scale: 'All Time'
   }
 
-  static contextType = AlertContext
   macToName = {}
   macToIP = {}
 
@@ -245,3 +244,5 @@ export default class SignalStrength extends Component {
     )
   }
 }
+
+SignalStrength.contextType = AlertContext

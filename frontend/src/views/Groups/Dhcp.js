@@ -8,8 +8,6 @@ import { AlertContext } from 'layouts/Admin'
 export default class Dhcp extends Component {
   state = { groups: [] }
 
-  static contextType = AlertContext
-
   async componentDidMount() {
     const refreshList = async () => {
       let divs = []
@@ -88,3 +86,5 @@ export default class Dhcp extends Component {
     )
   }
 }
+
+Dhcp.contextType = AlertContext

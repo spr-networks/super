@@ -9,7 +9,6 @@ import { View, VStack } from 'native-base'
 
 export default class DNSBlock extends Component {
   state = { enabled: true, PermitDomains: [], BlockDomains: [] }
-  static contextType = AlertContext
 
   constructor(props) {
     super(props)
@@ -72,3 +71,5 @@ export default class DNSBlock extends Component {
     )
   }
 }
+
+DNSBlock.contextType = AlertContext

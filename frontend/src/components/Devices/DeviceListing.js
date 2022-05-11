@@ -5,25 +5,27 @@ import Device from 'components/Devices/Device'
 import { AlertContext } from 'layouts/Admin'
 
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
-import { faPlus } from '@fortawesome/free-solid-svg-icons'
+import { faEllipsis, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons'
 
 import {
   Button,
   Box,
   Divider,
   Fab,
+  FlatList,
   Heading,
   Icon,
   IconButton,
   Stack,
   HStack,
   VStack,
+  Pressable,
   ScrollView,
-  Switch,
   Text,
   View,
   useColorModeValue
 } from 'native-base'
+//import { SwipeListView } from 'react-native-swipe-list-view'
 
 const DeviceListing = (props) => {
   const [devices, setDevices] = useState(null)
@@ -74,15 +76,85 @@ const DeviceListing = (props) => {
     navigate('/admin/add_device')
   }
 
+  /*
+  const closeRow = (rowMap, rowKey) => {
+    if (rowMap[rowKey]) {
+      rowMap[rowKey].closeRow()
+    }
+  }
+
+  const deleteRow = (rowMap, rowKey) => {
+    console.log('delete row:', rowKey)
+    //closeRow(rowMap, rowKey)
+    //const newData = [...devices]
+    //const prevIndex = devices.findIndex((item) => item.key === rowKey)
+    //newData.splice(prevIndex, 1)
+    //setDevices(newData)
+  }
+
+  const onRowDidOpen = (rowKey) => console.log('row opened', rowKey)
+  */
+  const renderItem = ({ item }) => (
+    <Device device={item} notifyChange={refreshDevices} />
+  )
+
+  /*
+  const renderHiddenItem = (data, rowMap) => (
+    <HStack flex="1" pl="2">
+      <Pressable
+        w="70"
+        ml="auto"
+        cursor="pointer"
+        bg="coolGray.200"
+        justifyContent="center"
+        onPress={() => closeRow(rowMap, data.item.key)}
+        _pressed={{
+          opacity: 0.5
+        }}
+      >
+        <VStack alignItems="center" space={2}>
+          <Icon
+            as={<Icon as={FontAwesomeIcon} icon={faEllipsis} />}
+            size="xs"
+            color="coolGray.800"
+          />
+          <Text fontSize="xs" fontWeight="medium" color="coolGray.800">
+            More
+          </Text>
+        </VStack>
+      </Pressable>
+      <Pressable
+        w="70"
+        cursor="pointer"
+        bg="red.500"
+        justifyContent="center"
+        onPress={() => deleteRow(rowMap, data.item.key)}
+        _pressed={{
+          opacity: 0.5
+        }}
+      >
+        <VStack alignItems="center" space={2}>
+          <Icon
+            as={<Icon as={FontAwesomeIcon} icon={faTimes} />}
+            color="white"
+            size="xs"
+          />
+          <Text color="white" fontSize="xs" fontWeight="medium">
+            Delete
+          </Text>
+        </VStack>
+      </Pressable>
+    </HStack>
+  )*/
+
   return (
     <View>
       <ScrollView h="calc(100vh - 96px)">
         <Box
-          _light={{ bg: 'warmGray.50' }}
-          _dark={{ bg: 'blueGray.800' }}
+          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
           rounded="md"
           w="100%"
-          p="4"
+          p={4}
         >
           <HStack mb="4">
             <Heading fontSize="xl">Configured Devices</Heading>
@@ -104,36 +176,23 @@ const DeviceListing = (props) => {
 
           {devices !== null ? (
             <>
-              {devices.length ? (
-                <VStack space="4" w="100%" divider={<Divider />}>
-                  {/*
-              <HStack w="100%" alignItems="stretch">
-                <Text flex={1.5} bold color="emerald.400">
-                  Name
-                </Text>
-                <Text flex="1" bold color="emerald.400">
-                  IP/MAC
-                </Text>
-                <Text flex="1" bold color="emerald.400" textAlign="center">
-                  Auth
-                </Text>
-                <Text flex="2" bold color="emerald.400">
-                  Groups &amp; Tags
-                </Text>
+              {/*<SwipeListView
+                data={devices}
+                renderItem={renderItem}
+                renderHiddenItem={renderHiddenItem}
+                rightOpenValue={-130}
+                previewRowKey={'0'}
+                previewOpenValue={-40}
+                previewOpenDelay={3000}
+                onRowDidOpen={onRowDidOpen}
+              />*/}
 
-                <Text w="50" bold color="emerald.400" justifySelf="right">
-                  Delete
-                </Text>
-              </HStack>
-              */}
-                  {devices.map((device) => (
-                    <Device
-                      key={device.Name}
-                      device={device}
-                      notifyChange={refreshDevices}
-                    />
-                  ))}
-                </VStack>
+              {devices.length ? (
+                <FlatList
+                  data={devices}
+                  renderItem={renderItem}
+                  keyExtractor={(item) => item.Name}
+                />
               ) : (
                 <Text color="muted.500">
                   There are no devices configured yet
@@ -141,18 +200,6 @@ const DeviceListing = (props) => {
               )}
             </>
           ) : null}
-
-          {/*<Button
-          size="md"
-          variant="outline"
-          colorScheme="primary"
-          rounded="full"
-          borderColor="info.400"
-          leftIcon={<Icon as={FontAwesomeIcon} icon={faPlus} />}
-          onPress={handleRedirect}
-        >
-          Add Device
-        </Button>*/}
         </Box>
       </ScrollView>
 

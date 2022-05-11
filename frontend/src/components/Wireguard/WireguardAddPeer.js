@@ -23,7 +23,6 @@ import {
 } from 'native-base'
 
 export default class WireguardAddPeer extends React.Component {
-  static contextType = AlertContext
   state = {
     AllowedIPs: '',
     PrivateKey: '',
@@ -252,3 +251,5 @@ export default class WireguardAddPeer extends React.Component {
 WireguardAddPeer.propTypes = {
   notifyChange: PropTypes.func
 }
+
+WireguardAddPeer.contextType = AlertContext

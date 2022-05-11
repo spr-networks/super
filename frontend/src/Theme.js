@@ -10,6 +10,9 @@ export const theme = extendTheme({
     backgroundContentLight: '#f4f3ef', // warmGray.200
     backgroundContentDark: colors.blueGray[900],
 
+    backgroundCardLight: colors.warmGray[50],
+    backgroundCardDark: colors.blueGray[500],
+
     primaryTextDark: colors.cyan[200],
     primaryTextLight: colors.cyan[700],
 
