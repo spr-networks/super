@@ -23,6 +23,12 @@
    "URI": "wireguard",
    "UnixPath": "/state/wireguard/wireguard_plugin",
    "Enabled": true
+  },
+  {
+   "Name": "dyndns",
+   "URI": "dyndns",
+   "UnixPath": "/state/dyndns/dyndna_plugin",
+   "Enabled": true
   }
  ]
 }

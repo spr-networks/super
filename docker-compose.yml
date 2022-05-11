@@ -171,6 +171,18 @@ services:
       - "base"
     volumes:
       - ./state/plugin-lookup/:/state/plugin-lookup/
+  dyndns:
+    container_name: superdyndns
+    build: dyndns
+    network_mode: bridge
+    logging:
+      driver: journald
+    depends_on:
+      - "base"
+    volumes:
+      - ./state/dyndns/:/state/dyndns
+      - ./configs/dyndns/:/configs/dyndns
 networks:
   default:
     driver: none
+    

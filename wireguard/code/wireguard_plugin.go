@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 import (
@@ -24,6 +25,8 @@ var UNIX_PLUGIN_LISTENER = "/state/wireguard/wireguard_plugin"
 var TEST_PREFIX = ""
 var WireguardInterface = "wg0"
 var WireguardConfigFile = TEST_PREFIX + "/configs/wireguard/wg0.conf"
+
+var Configmtx sync.Mutex
 
 type KeyPair struct {
 	PrivateKey string
@@ -326,6 +329,9 @@ func updateWireguardAddress(update WireguardUpdate, doRemove bool) error {
 
 // return config for a client
 func pluginPeer(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
 	peer := ClientPeer{}
 	err := json.NewDecoder(r.Body).Decode(&peer)
 	if err != nil {
@@ -499,6 +505,9 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 
 // get already configured clients
 func pluginGetPeers(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
 	peers, err := getPeers()
 	if err != nil {
 		fmt.Println("error:", err)
@@ -511,6 +520,8 @@ func pluginGetPeers(w http.ResponseWriter, r *http.Request) {
 }
 
 func pluginGetConfig(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
 	data, err := ioutil.ReadFile(WireguardConfigFile)
 	if err != nil {
 		fmt.Println("failed to read config file:", err)
@@ -524,6 +535,9 @@ func pluginGetConfig(w http.ResponseWriter, r *http.Request) {
 
 // TODO parse output from wg show wg0 dump && strip PrivateKey
 func pluginGetStatus(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
 	cmd := exec.Command("/scripts/wg-json")
 	data, err := cmd.Output()
 	if err != nil {
@@ -537,6 +551,9 @@ func pluginGetStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func pluginUp(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
 	cmd := exec.Command("/scripts/up.sh")
 	_, err := cmd.Output()
 	if err != nil {
@@ -552,6 +569,9 @@ func pluginUp(w http.ResponseWriter, r *http.Request) {
 }
 
 func pluginDown(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
 	cmd := exec.Command("/scripts/down.sh")
 	_, err := cmd.Output()
 	if err != nil {
