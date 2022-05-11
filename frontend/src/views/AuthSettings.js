@@ -176,18 +176,18 @@ export default class AuthSettings extends Component {
     return (
       <View>
         <Box
-          _light={{ bg: 'warmGray.50' }}
-          _dark={{ bg: 'blueGray.800' }}
+          _light={{ bg: 'backgroundCardLight' }}
+          _dark={{ bg: 'backgroundCardDark' }}
           rounded="md"
           width="100%"
-          p="4"
+          p={4}
         >
           <HStack space="1" mb="2">
             <Heading fontSize="lg">Webauthn</Heading>
 
             <Text
               marginLeft="auto"
-              pt="2"
+              pt={2}
               color={
                 this.state.status.startsWith('success')
                   ? 'success.500'

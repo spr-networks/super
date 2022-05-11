@@ -24,7 +24,7 @@ const Sidebar = (props) => {
   return (
     <ScrollView overflowY="overlay">
       <Box
-        py="5"
+        py={5}
         w={isMini ? '20' : '100%'} // 64
         flex="1"
         borderRightWidth={isMobile ? '0' : '1'}
@@ -131,7 +131,7 @@ const SidebarItem = (props) => {
             }}
           >
             <Link>
-              <Box pl="8" px="4" py="2">
+              <Box px="8" py="2">
                 <HStack
                   space="3"
                   alignItems="center"
@@ -213,9 +213,8 @@ export const CollapsibleSidebarItem = (props) => {
           <HStack
             justifyContent="space-between"
             alignItems="center"
-            pl="8"
-            px="4"
-            py="2.5"
+            px={8}
+            py={2.5}
           >
             {/*icon && typeof icon !== 'string' ? (
               <Icon as={FontAwesomeIcon} icon={icon} />

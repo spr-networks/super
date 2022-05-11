@@ -223,8 +223,6 @@ const AdminLayout = (props) => {
                 position="sticky"
                 top="16"
                 h="calc(100vh - 64px)"
-                _light={{ bg: 'coolGray.100' }}
-                _dark={{ bg: 'blueGray.900:alpha.50' }}
                 display={{ base: 'none', md: 'flex' }}
               >
                 <Sidebar

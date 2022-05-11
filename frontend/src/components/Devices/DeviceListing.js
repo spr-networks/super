@@ -25,7 +25,7 @@ import {
   View,
   useColorModeValue
 } from 'native-base'
-//import { SwipeListView } from 'react-native-swipe-list-view'
+import { SwipeListView } from 'components/SwipeListView'
 
 const DeviceListing = (props) => {
   const [devices, setDevices] = useState(null)
@@ -76,7 +76,6 @@ const DeviceListing = (props) => {
     navigate('/admin/add_device')
   }
 
-  /*
   const closeRow = (rowMap, rowKey) => {
     if (rowMap[rowKey]) {
       rowMap[rowKey].closeRow()
@@ -84,21 +83,32 @@ const DeviceListing = (props) => {
   }
 
   const deleteRow = (rowMap, rowKey) => {
-    console.log('delete row:', rowKey)
-    //closeRow(rowMap, rowKey)
-    //const newData = [...devices]
-    //const prevIndex = devices.findIndex((item) => item.key === rowKey)
-    //newData.splice(prevIndex, 1)
-    //setDevices(newData)
+    console.log('delete', rowKey, '. map:', rowMap)
+    closeRow(rowMap, rowKey)
+    const newData = [...devices]
+    const prevIndex = devices.findIndex((item) => item.MAC === rowKey)
+    newData.splice(prevIndex, 1)
+    setDevices(newData)
   }
 
   const onRowDidOpen = (rowKey) => console.log('row opened', rowKey)
-  */
+
   const renderItem = ({ item }) => (
-    <Device device={item} notifyChange={refreshDevices} />
+    <Box
+      flex="1"
+      _light={{ bg: 'backgroundCardLight' }}
+      _dark={{ bg: 'backgroundCardDark' }}
+    >
+      <Pressable
+        onPress={() => {
+          console.log('**press**')
+        }}
+      >
+        <Device device={item} notifyChange={refreshDevices} />
+      </Pressable>
+    </Box>
   )
 
-  /*
   const renderHiddenItem = (data, rowMap) => (
     <HStack flex="1" pl="2">
       <Pressable
@@ -107,7 +117,7 @@ const DeviceListing = (props) => {
         cursor="pointer"
         bg="coolGray.200"
         justifyContent="center"
-        onPress={() => closeRow(rowMap, data.item.key)}
+        onPress={() => closeRow(rowMap, data.item.MAC)}
         _pressed={{
           opacity: 0.5
         }}
@@ -128,7 +138,7 @@ const DeviceListing = (props) => {
         cursor="pointer"
         bg="red.500"
         justifyContent="center"
-        onPress={() => deleteRow(rowMap, data.item.key)}
+        onPress={() => deleteRow(rowMap, data.item.MAC)}
         _pressed={{
           opacity: 0.5
         }}
@@ -145,7 +155,7 @@ const DeviceListing = (props) => {
         </VStack>
       </Pressable>
     </HStack>
-  )*/
+  )
 
   return (
     <View>
@@ -175,18 +185,13 @@ const DeviceListing = (props) => {
           </HStack>
 
           {devices !== null ? (
-            <>
+            <Box safeArea>
               {/*<SwipeListView
                 data={devices}
                 renderItem={renderItem}
                 renderHiddenItem={renderHiddenItem}
-                rightOpenValue={-130}
-                previewRowKey={'0'}
-                previewOpenValue={-40}
-                previewOpenDelay={3000}
-                onRowDidOpen={onRowDidOpen}
+                rightOpenValue={-140}
               />*/}
-
               {devices.length ? (
                 <FlatList
                   data={devices}
@@ -198,7 +203,7 @@ const DeviceListing = (props) => {
                   There are no devices configured yet
                 </Text>
               )}
-            </>
+            </Box>
           ) : null}
         </Box>
       </ScrollView>

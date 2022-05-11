@@ -11,7 +11,7 @@ export const theme = extendTheme({
     backgroundContentDark: colors.blueGray[900],
 
     backgroundCardLight: colors.warmGray[50],
-    backgroundCardDark: colors.blueGray[500],
+    backgroundCardDark: colors.blueGray[800],
 
     primaryTextDark: colors.cyan[200],
     primaryTextLight: colors.cyan[700],
@@ -37,8 +37,8 @@ export const theme = extendTheme({
 
     // sidebar
 
-    sidebarBackgroundLight: colors.white, //colors.coolGray[100],
-    sidebarBackgroundDark: colors.blueGray[900], //'#24292f',
+    sidebarBackgroundLight: colors.coolGray[50], // colors.white
+    sidebarBackgroundDark: colors.blueGray[900], // + .alpha:50
     sidebarBorderColorLight: colors.coolGray[100],
     sidebarBorderColorDark: colors.coolGray[800],
 
