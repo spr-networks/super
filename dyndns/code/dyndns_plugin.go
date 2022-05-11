@@ -2,16 +2,13 @@ package main
 
 import (
 	"encoding/json"
-//	"errors"
+	"regexp"
 	"fmt"
-//	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
-//	"strconv"
-//	"strings"
 	"time"
 	"sync"
 )
@@ -54,6 +51,52 @@ func runGoDyndns() {
 	}
 }
 
+func validateConfig(config GodyndnsConfig) error {
+
+	validCommand := regexp.MustCompile(`^[:\-=@a-z0-9.]+$`).MatchString
+	if !validCommand(config.Provider) {
+		return fmt.Errorf("invalid provider")
+	}
+
+	if !validCommand(config.Email) {
+		return fmt.Errorf("invalid email")
+	}
+
+
+	if !validCommand(config.IpUrl) {
+		return fmt.Errorf("invalid IpUrl")
+	}
+
+	if !validCommand(config.Ipv6Url) {
+		return fmt.Errorf("invalid Ipv6Url")
+	}
+
+	if !validCommand(config.IpType) {
+		return fmt.Errorf("invalid IpType")
+	}
+
+	if config.Socks5Proxy != "" {
+		return fmt.Errorf("Socks5Proxy not supported")
+	}
+
+	if !validCommand(config.Resolver) {
+		return fmt.Errorf("invalid resolver")
+	}
+
+	for _, entry := range config.Domains {
+		if !validCommand(entry.DomainName){
+			return fmt.Errorf("invalid domain name: " + entry.DomainName)
+		}
+		for _, subdomain := range entry.SubDomains {
+			if !validCommand(subdomain){
+				return fmt.Errorf("invalid subdomain: " + subdomain)
+			}
+		}
+	}
+
+	return nil
+}
+
 func setConfiguration(w http.ResponseWriter, r *http.Request) {
 	Configmtx.Lock()
 	defer Configmtx.Unlock()
@@ -63,6 +106,11 @@ func setConfiguration(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
+	}
+
+	err = validateConfig(config)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
 	}
 
 	//we use godns in run once mode
