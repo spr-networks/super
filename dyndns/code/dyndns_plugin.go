@@ -25,7 +25,7 @@ var UNIX_PLUGIN_LISTENER = "/state/dyndns/dynds_plugin"
 
 var Configmtx sync.Mutex
 var TEST_PREFIX = ""
-var GoDyndnsConfigFile = TEST_PREFIX + "/configs/dyndns/godyndns.conf"
+var GoDyndnsConfigFile = TEST_PREFIX + "/configs/dyndns/godyndns.json"
 
 type GodyndnsDomain struct {
 	DomainName	string `json:"domain_name"`
