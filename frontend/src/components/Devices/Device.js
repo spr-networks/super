@@ -204,19 +204,14 @@ class Device extends Component {
               {wifi_type}
             </Text>
 
-            <HStack
-              flex={2}
-              space={1}
-              alignSelf="flex-start"
-              alignItems="center"
-            >
+            <HStack flex={2} space={1} alignSelf="center" alignItems="center">
               {this.state.groups.map((group) => (
                 <Badge key={group} variant="solid">
                   {group}
                 </Badge>
               ))}
 
-              {/*              <Button.Group isAttached size="xs" space="0">
+              {/*<Button.Group isAttached size="xs" space="0">
                 <Button variant="solid" colorScheme="secondary" pr="0">
                   {tag}
                 </Button>
