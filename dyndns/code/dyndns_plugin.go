@@ -17,7 +17,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-
 var UNIX_PLUGIN_LISTENER = "/state/dyndns/dynds_plugin"
 
 var Configmtx sync.Mutex
@@ -139,6 +138,9 @@ func refreshDyndns(w http.ResponseWriter, r *http.Request) {
 
 
 func getConfiguration(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
 	data, err := ioutil.ReadFile(GoDyndnsConfigFile)
 	if err != nil {
 		fmt.Println("failed to read config file:", err)
@@ -150,6 +152,34 @@ func getConfiguration(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(string(data))
 }
 
+func loadConfig() GodyndnsConfig {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
+	config := GodyndnsConfig{}
+
+	data, err := ioutil.ReadFile(GoDyndnsConfigFile)
+	if err != nil {
+		return config
+	}
+
+
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return config
+}
+
+func getInterval() time.Duration {
+	config := loadConfig()
+	if config.Interval == 0 {
+		return 300 * time.Second
+	} else {
+		return time.Duration(config.Interval) * time.Second
+	}
+}
 
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -161,7 +191,7 @@ func logRequest(handler http.Handler) http.Handler {
 func startIntervalTimer() {
 	runTimer := func() {
 		// is it worth reading the configuration file for the interval?
-		ticker := time.NewTicker(5 * time.Minute)
+		ticker := time.NewTicker(getInterval())
 		for {
 			select {
 			case <-ticker.C:
@@ -197,6 +227,3 @@ func main() {
 
 	pluginServer.Serve(unixPluginListener)
 }
-
-
-
