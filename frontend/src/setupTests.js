@@ -1,6 +1,6 @@
 // fix ReferenceError: regeneratorRuntime is not defined
 import '@babel/polyfill'
-import '@testing-library/jest-dom/extend-expect'
+//import '@testing-library/jest-dom/extend-expect'
 import createServer from './api/MockAPI'
 
 process.env.REACT_APP_API="skip"
