@@ -47,6 +47,7 @@
     "chroma-js": "^2.4.2",
     "classnames": "2.3.1",
     "jest": "^28.1.0",
+    "metro-react-native-babel-preset": "^0.70.3",
     "moment": "^2.29.2",
     "native-base": "^3.4.4",
     "prop-types": "15.7.2",
@@ -56,6 +57,7 @@
     "react-native": "^0.68.2",
     "react-native-safe-area-context": "^4.2.5",
     "react-native-svg": "^12.3.0",
+    "react-native-swipe-list-view": "^3.2.9",
     "react-native-tab-view": "^3.1.1",
     "react-native-web": "^0.17.7",
     "react-qr-code": "^2.0.5",
@@ -70,18 +72,12 @@
     "glob-parent": "5.1.2",
     "nth-check": "2.0.1"
   },
-  "browserslist": [
-    ">0.2%",
-    "not dead",
-    "not ie <= 11",
-    "not op_mini all"
-  ],
   "optionalDependencies": {
     "@babel/core": "7.14.2",
-    "jquery": "3.6.0",
     "typescript": "4.2.4"
   },
   "devDependencies": {
+    "@babel/preset-react": "^7.16.7",
     "cypress": "^9.5.2",
     "miragejs": "^0.1.43",
     "sass": "^1.49.9",
@@ -91,6 +87,18 @@
     "preset": "react-native",
     "transformIgnorePatterns": [
       "node_modules/(?!(@react-native|react-native|react-native-vector-icons)/)"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
     ]
   }
 }
