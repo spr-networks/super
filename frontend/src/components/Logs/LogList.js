@@ -102,13 +102,15 @@ const LogList = (props) => {
   }
 
   const handleChange = (newValues) => {
-    setFilterContainers(newValues)
+    setFilterContainers(newValues.filter((v) => v.length))
   }
 
   useEffect(() => {
     if (!filterContainers.length) {
       return
     }
+
+    console.log('nav:', filterContainers)
 
     navigate('/admin/logs/' + filterContainers.join(','))
 
@@ -190,7 +192,8 @@ const LogList = (props) => {
         renderItem={({ item }) => (
           <Box
             borderBottomWidth={1}
-            borderColor={useColorModeValue('muted.200', 'muted.600')}
+            borderColor="muted.200"
+            _dark={{ borderColor: 'muted.600' }}
             py={2}
           >
             <HStack

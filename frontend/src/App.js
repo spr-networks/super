@@ -30,7 +30,7 @@ export default function App() {
 
           <Route key="auth" path="/auth" element={<AuthLayout />}>
             {routesAuth.map((r) => (
-              <Route path={r.path} element={<r.element />} />
+              <Route key={r.path} path={r.path} element={<r.element />} />
             ))}
           </Route>
 
