@@ -13,12 +13,14 @@ import Groups from 'views/Groups/Groups'
 import DNSBlock from 'views/DNS/DNSBlock'
 import DNSLog from 'views/DNS/DNSLog'
 import DNSLogEdit from 'views/DNS/DNSLogEdit'
+import DynDns from 'views/DNS/DynDns'
 import Wireguard from 'views/Wireguard'
 import Firewall from 'views/Firewall'
 import Logs from 'views/Logs'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
 import {
+  faArrowCircleUp,
   faBan,
   faBarChart,
   faCircleNodes,
@@ -142,6 +144,13 @@ const routes = [
         name: 'DNS Log Settings',
         icon: faCogs,
         component: DNSLogEdit,
+        layout: 'admin'
+      },
+      {
+        path: 'dyndns',
+        name: 'Dynamic DNS',
+        icon: faArrowCircleUp,
+        component: DynDns,
         layout: 'admin'
       }
     ]
