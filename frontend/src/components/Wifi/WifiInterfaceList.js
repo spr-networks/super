@@ -75,6 +75,7 @@ const WifiInterface = (props) => {
 
   return (
     <Box
+      key={iw.wiphy}
       bg={useColorModeValue('warmGray.50', 'blueGray.800')}
       rounded="md"
       width="100%"
