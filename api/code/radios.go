@@ -76,14 +76,14 @@ type ChannelParameters struct  {
 	HE_Enable bool
 }
 
-type CalculatedParameters struct {
+type CalculatedChannelParameters struct {
 	Vht_oper_centr_freq_seg0_idx int
 	He_oper_centr_freq_seg0_idx int
 	Vht_oper_chwidth int
 	He_oper_chwidth int
 }
 
-func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled bool, he_enabled bool) (CalculatedParameters, error) {
+func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled bool, he_enabled bool) (CalculatedChannelParameters, error) {
 	freq1 := 0
 	freq2 := 0
 	//freq3 := 0 //for 80+80, not supported right now
