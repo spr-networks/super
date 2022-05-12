@@ -52,8 +52,10 @@ const AuthTokenList = (props) => {
   const handleSubmit = (expire) => {
     console.log('new token:', expire)
     authAPI
-      .putToken(expire)
-      .then((res) => {})
+      .putToken(parseInt(expire))
+      .then((token) => {
+        setTokens(tokens.concat(token))
+      })
       .catch((err) => context.error(err))
   }
 
