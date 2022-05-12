@@ -138,18 +138,10 @@ func refreshDyndns(w http.ResponseWriter, r *http.Request) {
 
 
 func getConfiguration(w http.ResponseWriter, r *http.Request) {
-	Configmtx.Lock()
-	defer Configmtx.Unlock()
-
-	data, err := ioutil.ReadFile(GoDyndnsConfigFile)
-	if err != nil {
-		fmt.Println("failed to read config file:", err)
-		http.Error(w, "Not found", 404)
-		return
-	}
+	config := loadConfig()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(string(data))
+	json.NewEncoder(w).Encode(config)
 }
 
 func loadConfig() GodyndnsConfig {
