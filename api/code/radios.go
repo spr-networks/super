@@ -88,7 +88,7 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 	freq2 := 0
 	//freq3 := 0 //for 80+80, not supported right now
 
-	calculated := CalculatedParameters{-1, -1, 0, 0}
+	calculated := CalculatedChannelParameters{-1, -1, 0, 0}
 
 	cmd := ""
 	base := 5000
@@ -152,7 +152,7 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 	} else if (bw == 8080) {
 		//80 + 80 unsupported for now
 		// center_freq1, center_freq2
-		return CalculatedParameters{}, fmt.Errorf("80+80 not supported")
+		return CalculatedChannelParameters{}, fmt.Errorf("80+80 not supported")
 	}
 
 	if ht_enabled {
