@@ -102,7 +102,7 @@ func saveConfig() {
 
 var UNIX_WIFID_LISTENER = TEST_PREFIX + "/state/wifi/apisock"
 var UNIX_DHCPD_LISTENER = TEST_PREFIX + "/state/dhcp/apisock"
-var UNIX_WIREGUARD_LISTENER = TEST_PREFIX + "/state/wireguard/apisock"
+var UNIX_WIREGUARD_LISTENER = TEST_PREFIX + "/state/plugins/wireguard/apisock"
 
 func ipAddr(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("ip", "-j", "addr")
