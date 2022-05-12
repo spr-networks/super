@@ -17,7 +17,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var UNIX_PLUGIN_LISTENER = "/state/dyndns/dynds_plugin"
+var UNIX_PLUGIN_LISTENER = "/state/plugins/dyndns/dynds_plugin"
 
 var Configmtx sync.Mutex
 var TEST_PREFIX = ""

@@ -20,7 +20,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var UNIX_PLUGIN_LISTENER = "/state/wireguard/wireguard_plugin"
+var UNIX_PLUGIN_LISTENER = "/state/plugins/wireguard/wireguard_plugin"
 
 var TEST_PREFIX = ""
 var WireguardInterface = "wg0"
