@@ -15,6 +15,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 import (
 	"github.com/duo-labs/webauthn.io/session"
@@ -104,6 +105,11 @@ type authnconfig struct {
 
 	//token to username mapping
 	authMap map[string]*User
+}
+
+type Token struct {
+	Token  string
+	Expire int64
 }
 
 func genBearerToken() string {
@@ -374,16 +380,18 @@ func (auth *authnconfig) authenticateToken(token string) bool {
 
 	if !exists {
 		//check api tokens
-		tokens := []string{}
+		tokens := []Token{}
 		data, err := os.ReadFile(AuthTokensFile)
 		if err == nil {
 			json.Unmarshal(data, &tokens)
 		}
 
-		for _, s := range tokens {
-			if subtle.ConstantTimeCompare([]byte(token), []byte(s)) == 1 {
-				exists = true
-				break
+		for _, t := range tokens {
+			if subtle.ConstantTimeCompare([]byte(token), []byte(t.Token)) == 1 {
+				if t.Expire == 0 || t.Expire > time.Now().Unix() {
+					exists = true
+					break
+				}
 			}
 		}
 
@@ -459,4 +467,88 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	})
+}
+
+func getAuthTokens(w http.ResponseWriter, r *http.Request) {
+	tokens := []Token{}
+	data, err := os.ReadFile(AuthTokensFile)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	err = json.Unmarshal(data, &tokens)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tokens)
+}
+
+func updateAuthTokens(w http.ResponseWriter, r *http.Request) {
+	tokens := []Token{}
+	data, err := os.ReadFile(AuthTokensFile)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	err = json.Unmarshal(data, &tokens)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	token := Token{}
+	err = json.NewDecoder(r.Body).Decode(&token)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		found := false
+		for idx, entry := range tokens {
+			if entry.Token == token.Token {
+				tokens = append(tokens[:idx], tokens[idx+1:]...)
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			http.Error(w, "Not found", 404)
+			return
+		}
+	} else {
+		found := false
+		// no updating of tokens for now
+		// TODO .Name for token desc
+		/*
+			for idx, entry := range tokens {
+				if entry.Token == token.Token {
+					found = true
+					tokens[idx] = token
+					break
+				}
+			}
+		*/
+
+		if !found {
+			token.Token = genBearerToken()
+			tokens = append(tokens, token)
+		}
+	}
+
+	file, _ := json.MarshalIndent(tokens, "", " ")
+	err = ioutil.WriteFile(AuthTokensFile, file, 0660)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(token)
 }
