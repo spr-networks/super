@@ -19,6 +19,10 @@ const ModalConfirm = (props) => {
     }
   }, [props.isOpen])
 
+  useEffect(() => {
+    setValue(props.defaultValue)
+  }, [props.defaultValue])
+
   const handlePress = () => {
     handleSubmit(value)
     setIsOpen(false)
@@ -104,6 +108,7 @@ const ModalConfirm = (props) => {
 
 ModalConfirm.propTypes = {
   type: PropTypes.string.isRequired,
+  defaultValue: PropTypes.any,
   handleSubmit: PropTypes.func.isRequired
 }
 
