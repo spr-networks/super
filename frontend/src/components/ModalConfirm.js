@@ -5,7 +5,7 @@ import { faPlus } from '@fortawesome/free-solid-svg-icons'
 import { Button, FormControl, Icon, Input, Modal } from 'native-base'
 
 const ModalConfirm = (props) => {
-  const [value, setValue] = useState('')
+  const [value, setValue] = useState(props.defaultValue || '')
   const [isOpen, setIsOpen] = useState(props.isOpen || false)
 
   const { trigger, type, handleSubmit } = props
@@ -26,7 +26,7 @@ const ModalConfirm = (props) => {
   const handlePress = () => {
     handleSubmit(value)
     setIsOpen(false)
-    setValue('')
+    setValue(props.defaultValue || '')
   }
 
   const handleOpen = () => setIsOpen(true)
