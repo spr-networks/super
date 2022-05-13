@@ -67,5 +67,3 @@ export const theme = extendTheme({
     initialColorMode: 'light'
   }
 })
-
-console.log('theme:', theme)

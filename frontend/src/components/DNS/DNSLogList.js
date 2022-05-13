@@ -96,7 +96,7 @@ const DNSLogList = ({ title, description, ...props }) => {
 
         <ModalConfirm
           type={type}
-          handleSubmit={handleSubmit}
+          onSubmit={handleSubmit}
           trigger={(triggerProps) => {
             return (
               <Button {...triggerProps} marginLeft="auto">

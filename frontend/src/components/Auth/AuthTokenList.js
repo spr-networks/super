@@ -73,7 +73,7 @@ const AuthTokenList = (props) => {
           <ModalConfirm
             type="Expire"
             defaultValue="0"
-            handleSubmit={handleSubmit}
+            onSubmit={handleSubmit}
             trigger={(triggerProps) => {
               return (
                 <Button {...triggerProps} marginLeft="auto">

@@ -5,11 +5,28 @@ import { faPlus } from '@fortawesome/free-solid-svg-icons'
 import { Button, FormControl, Icon, Input, Modal } from 'native-base'
 
 const ModalConfirm = (props) => {
-  const [value, setValue] = useState(props.defaultValue || '')
+  const defaultValue = props.defaultValue || ''
+
+  const [value, setValue] = useState(defaultValue)
   const [isOpen, setIsOpen] = useState(props.isOpen || false)
 
-  const { trigger, type, handleSubmit } = props
+  const { trigger, type, onSubmit } = props
   const triggerRef = useRef(null)
+
+  const handleOpen = () => setIsOpen(true)
+  const handleClose = () => {
+    setIsOpen(false)
+    setValue(defaultValue)
+
+    if (props.onClose) {
+      props.onClose()
+    }
+  }
+
+  const handlePress = () => {
+    onSubmit(value)
+    handleClose()
+  }
 
   useEffect(() => {
     setIsOpen(props.isOpen ? true : false)
@@ -19,17 +36,26 @@ const ModalConfirm = (props) => {
     }
   }, [props.isOpen])
 
+  /*
   useEffect(() => {
-    setValue(props.defaultValue)
+    if (props.modalRef) {
+      props.modalRef.current = toggleModal
+    }
+
+    return () => {
+      if (props.modalRef) {
+        props.modalRef.current = null
+      }
+    }
+  })*/
+
+  useEffect(() => {
+    setValue(defaultValue)
+
+    return () => {
+      setValue('')
+    }
   }, [props.defaultValue])
-
-  const handlePress = () => {
-    handleSubmit(value)
-    setIsOpen(false)
-    setValue(props.defaultValue || '')
-  }
-
-  const handleOpen = () => setIsOpen(true)
 
   let triggerProps = {
     size: 'sm',
@@ -67,11 +93,7 @@ const ModalConfirm = (props) => {
     <>
       {trigger ? updateTrigger() : null}
 
-      <Modal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        animationPreset="slide"
-      >
+      <Modal isOpen={isOpen} onClose={handleClose} animationPreset="slide">
         <Modal.Content maxWidth="250px">
           <Modal.CloseButton />
           <Modal.Header>{`Add ${type}`}</Modal.Header>
@@ -109,7 +131,8 @@ const ModalConfirm = (props) => {
 ModalConfirm.propTypes = {
   type: PropTypes.string.isRequired,
   defaultValue: PropTypes.any,
-  handleSubmit: PropTypes.func.isRequired
+  onSubmit: PropTypes.func.isRequired,
+  onClose: PropTypes.func
 }
 
 export default ModalConfirm

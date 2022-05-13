@@ -152,6 +152,8 @@ class Device extends Component {
       }
     }
 
+    const defaultGroups = ['wan', 'dns', 'lan']
+
     return (
       <>
         <Stack
@@ -247,15 +249,13 @@ class Device extends Component {
                   defaultValue={this.state.groups}
                   onChange={handleChangeGroups}
                 >
-                  <Menu.ItemOption key="wan" value="wan">
-                    wan
-                  </Menu.ItemOption>
-                  <Menu.ItemOption key="dns" value="dns">
-                    dns
-                  </Menu.ItemOption>
-                  <Menu.ItemOption key="lan" value="lan">
-                    lan
-                  </Menu.ItemOption>
+                  {[...new Set(defaultGroups.concat(this.state.groups))].map(
+                    (group) => (
+                      <Menu.ItemOption key={group} value={group}>
+                        {group}
+                      </Menu.ItemOption>
+                    )
+                  )}
                   <Menu.ItemOption
                     key="newGroup"
                     onPress={() => {
@@ -306,7 +306,8 @@ class Device extends Component {
 
         <ModalConfirm
           type={this.state.modalType}
-          handleSubmit={handleSubmitNew}
+          onSubmit={handleSubmitNew}
+          onClose={() => this.setState({ showModal: false })}
           isOpen={this.state.showModal}
         />
       </>
