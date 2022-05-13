@@ -115,7 +115,7 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/wireguard/:/configs/wireguard/
-      - ./state/wireguard/:/state/wireguard/
+      - ./state/plugins/wireguard/:/state/plugins/wireguard/
       - ./state/dhcp/:/state/dhcp/
   frontend:
     container_name: superfrontend
@@ -146,10 +146,9 @@ services:
       - ./configs/scripts/:/configs/scripts/
       - ./state/wifi/:/state/wifi/
       - ./state/dhcp/:/state/dhcp/
-      - ./state/api/:/state/api/
       - ./state/dns/:/state/dns/
-      - ./state/wireguard/:/state/wireguard/
-      - ./state/plugin-lookup/:/state/plugin-lookup/
+      - ./state/api/:/state/api/
+      - ./state/plugins/:/state/plugins/
       - ./frontend/build:/ui/
       - /var/log/journal:/var/log/journal:ro
   plugin-lookup:
@@ -161,7 +160,7 @@ services:
     depends_on:
       - "base"
     volumes:
-      - ./state/plugin-lookup/:/state/plugin-lookup/
+      - ./state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
   dyndns:
     container_name: superdyndns
     image: ghcr.io/spr-networks/super_dyndns
@@ -171,7 +170,7 @@ services:
     depends_on:
       - "base"
     volumes:
-      - ./state/dyndns/:/state/dyndns
+      - ./state/plugins/dyndns/:/state/plugins/dyndns
       - ./configs/dyndns/:/configs/dyndns
 networks:
   default:
