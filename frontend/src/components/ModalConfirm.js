@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { faPlus } from '@fortawesome/free-solid-svg-icons'
-import { Button, FormControl, Icon, Input, Modal } from 'native-base'
+import { Button, FormControl, Icon, Input, Modal, Select } from 'native-base'
 
 const ModalConfirm = (props) => {
   const defaultValue = props.defaultValue || ''
@@ -89,6 +89,38 @@ const ModalConfirm = (props) => {
     )*/
   }
 
+  const handleChange = (value) => {
+    setValue(value)
+  }
+
+  const renderItem = () => {
+    if (props.options) {
+      return (
+        <Select
+          selectedValue={value}
+          onValueChange={handleChange}
+          accessibilityLabel={`Choose ${type}`}
+        >
+          {props.options.map((val) => (
+            <Select.Item label={val} value={val} />
+          ))}
+        </Select>
+      )
+    }
+
+    return (
+      <Input
+        name={type}
+        value={value}
+        variant="underlined"
+        placeholder={'Enter ' + (type == 'IP' ? 'IP address' : type) + '...'}
+        autoFocus
+        onChangeText={handleChange}
+        onSubmitEditing={handlePress}
+      />
+    )
+  }
+
   return (
     <>
       {trigger ? updateTrigger() : null}
@@ -102,19 +134,7 @@ const ModalConfirm = (props) => {
               {/*<FormControl.Label>
               {type == 'IP' ? 'IP address' : type}
               </FormControl.Label>*/}
-              <Input
-                name={type}
-                value={value}
-                variant="underlined"
-                placeholder={
-                  'Enter ' + (type == 'IP' ? 'IP address' : type) + '...'
-                }
-                autoFocus
-                onChangeText={(value) => {
-                  setValue(value)
-                }}
-                onSubmitEditing={handlePress}
-              />
+              {renderItem()}
             </FormControl>
           </Modal.Body>
           <Modal.Footer>

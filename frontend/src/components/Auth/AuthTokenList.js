@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { format as timeAgo } from 'timeago.js'
 
 import {
   Box,
@@ -49,8 +50,19 @@ const AuthTokenList = (props) => {
 
   const handleAddToken = () => {}
 
-  const handleSubmit = (expire) => {
-    console.log('new token:', expire)
+  const handleSubmit = (exp) => {
+    let expires = {
+      Never: 0,
+      '30 days': 30 * 24 * 3600,
+      '90 days': 90 * 24 * 3600,
+      '1 year': 365 * 24 * 3600
+    }
+
+    expires.Never = 20
+
+    let ts = parseInt(new Date().getTime() / 1e3)
+    let expire = exp ? ts + expires[exp] : 0
+
     authAPI
       .putToken(parseInt(expire))
       .then((token) => {
@@ -72,7 +84,8 @@ const AuthTokenList = (props) => {
 
           <ModalConfirm
             type="Expire"
-            defaultValue="0"
+            options={['Never', '30 days', '90 days', '1 year']}
+            defaultValue="Never"
             onSubmit={handleSubmit}
             trigger={(triggerProps) => {
               return (
@@ -101,7 +114,11 @@ const AuthTokenList = (props) => {
                 <Text flex={1}>{item.Token}</Text>
                 <HStack flex={1} space={1}>
                   <Text color="muted.500">Expire</Text>
-                  <Text>{item.Expire}</Text>
+                  <Text>
+                    {item.Expire
+                      ? timeAgo(new Date(item.Expire * 1e3))
+                      : 'Never'}
+                  </Text>
                 </HStack>
 
                 <IconButton
