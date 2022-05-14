@@ -38,7 +38,6 @@
     "@fortawesome/react-native-fontawesome": "^0.2.7",
     "@testing-library/jest-dom": "^5.16.3",
     "@testing-library/react": "^12.1.4",
-    "babel-jest": "^28.1.0",
     "chart.js": "^3.7.1",
     "chartjs-adapter-moment": "^1.0.0",
     "chroma-js": "^2.4.2",
@@ -66,6 +65,7 @@
   "devDependencies": {
     "@babel/core": "^7.17.10",
     "@babel/preset-env": "^7.17.10",
+    "babel-jest": "^28.1.0",
     "babel-loader": "^8.2.5",
     "css-loader": "^6.7.1",
     "cypress": "^9.5.2",
@@ -87,5 +87,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "jest": {
+    "preset": "react-native"
   }
 }
