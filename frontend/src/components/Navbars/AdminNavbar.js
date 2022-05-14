@@ -96,7 +96,7 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
               p={4}
               fontSize="md"
               isExternal
-              href="https://www.supernetworks.org/pages/docs/api/0"
+              href="https://www.supernetworks.org/pages/api/0"
               _text={{
                 textDecorationLine: 'none',
                 color: useColorModeValue(
