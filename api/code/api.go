@@ -1567,7 +1567,7 @@ func main() {
 	dhcpdServer := http.Server{Handler: logRequest(unix_dhcpd_router)}
 	wireguardServer := http.Server{Handler: logRequest(unix_wireguard_router)}
 
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "SPR-Bearer"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
