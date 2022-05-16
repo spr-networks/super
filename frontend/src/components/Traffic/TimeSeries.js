@@ -5,26 +5,26 @@ import ClientSelect from 'components/ClientSelect'
 import DateRange from 'components/DateRange'
 import TimeSeriesChart from 'components/Traffic/TimeSeriesChart'
 import TimeSeriesList from 'components/Traffic/TimeSeriesList'
-import Toggle from 'components/Toggle'
-// this one show either a chart or table
+
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import {
+  faChartColumn,
+  faTable,
+  faTableCellsLarge
+} from '@fortawesome/free-solid-svg-icons'
 
 import {
   Button,
-  ButtonGroup,
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  CardTitle,
-  FormGroup,
-  Input,
-  InputGroup,
-  InputGroupAddon,
-  InputGroupText,
-  Label,
-  Row,
-  Col
-} from 'reactstrap'
+  Box,
+  Heading,
+  Icon,
+  IconButton,
+  Stack,
+  HStack,
+  VStack,
+  Text,
+  useColorModeValue
+} from 'native-base'
 
 const TimeSeries = (props) => {
   const [filterIPs, setFilterIPs] = useState([])
@@ -32,10 +32,10 @@ const TimeSeries = (props) => {
   const [offset, setOffset] = useState('All Time')
   const [chartMode, setChartMode] = useState(props.chartMode || 'data')
 
-  const handleChangeTime = (newValue) => {
-    setOffset(newValue.value)
+  const handleChangeTime = (value) => {
+    setOffset(value)
     if (props.handleChangeTime) {
-      props.handleChangeTime(newValue.value, props.type)
+      props.handleChangeTime(value, props.type)
     }
   }
 
@@ -47,8 +47,7 @@ const TimeSeries = (props) => {
     }
   }
 
-  const handleChangeClient = (selectedIPs) => {
-    let ips = selectedIPs.map((item) => item.value)
+  const handleChangeClient = (ips) => {
     setFilterIPs(ips)
   }
 
@@ -58,86 +57,87 @@ const TimeSeries = (props) => {
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <Row>
-            <Col md="4">
-              <CardTitle tag="h4">{props.title || props.type}</CardTitle>
-            </Col>
-            <Col md="4">
-              <div className={view == 'table' ? 'd-none' : 'text-right'}>
-                <ButtonGroup size="sm">
-                  <Button
-                    color="primary"
-                    onClick={(e) => handleChartMode('data')}
-                    outline={chartMode !== 'data'}
-                  >
-                    Data
-                  </Button>
-                  <Button
-                    color="primary"
-                    onClick={(e) => handleChartMode('percent')}
-                    outline={chartMode !== 'percent'}
-                  >
-                    Percent
-                  </Button>
-                </ButtonGroup>
-              </div>
-              <div className={view == 'chart' ? 'd-none' : 'pt-2'}>
-                <ClientSelect
-                  isMulti
-                  value={filterIPs}
-                  onChange={handleChangeClient}
-                />
-              </div>
-            </Col>
-            <Col md="2" className="pt-2">
-              <DateRange onChange={handleChangeTime} />
-            </Col>
-            <Col md="2" className="text-right">
-              <ButtonGroup>
-                <Button
-                  size="sm"
-                  color="primary"
-                  outline={view !== 'chart'}
-                  onClick={(e) => setView('chart')}
-                >
-                  <i className="fa fa-bar-chart" />
-                </Button>
-                <Button
-                  size="sm"
-                  color="primary"
-                  outline={view !== 'table'}
-                  onClick={(e) => setView('table')}
-                >
-                  <i className="fa fa-table" />
-                </Button>
-              </ButtonGroup>
-            </Col>
-          </Row>
-        </CardHeader>
-        <CardBody>
-          {view == 'table' ? (
-            <>
-              <TimeSeriesList
-                type={props.type}
-                offset={offset}
-                ips={filterIPs}
-              />
-            </>
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      rounded="md"
+      width="100%"
+      p="4"
+    >
+      <Stack
+        direction={{ base: 'column', md: 'row' }}
+        space="2"
+        justifyContent="space-between"
+      >
+        <Heading fontSize="xl">{props.title || props.type}</Heading>
+
+        <Stack
+          direction={{ base: 'column', md: 'row' }}
+          space={2}
+          alignItems="center"
+        >
+          {view == 'chart' ? (
+            <Button.Group size="xs" isAttached colorScheme="primary">
+              <Button
+                onPress={(e) => handleChartMode('data')}
+                variant={chartMode !== 'data' ? 'outline' : 'solid'}
+              >
+                Data
+              </Button>
+              <Button
+                onPress={(e) => handleChartMode('percent')}
+                variant={chartMode !== 'percent' ? 'outline' : 'solid'}
+              >
+                Percent
+              </Button>
+            </Button.Group>
           ) : (
-            <TimeSeriesChart
-              type={props.type}
-              title={props.title}
-              data={props.data}
-              mode={chartMode}
-              onClick={handleClickClient}
-            />
+            <Box w="300">
+              <ClientSelect
+                isMultiple
+                value={filterIPs}
+                onChange={handleChangeClient}
+              />
+            </Box>
           )}
-        </CardBody>
-      </Card>
-    </>
+          <Button.Group size="sm">
+            <DateRange
+              colorScheme="primary"
+              defaultValue={offset}
+              onChange={handleChangeTime}
+            />
+          </Button.Group>
+
+          <Button.Group size="sm" isAttached colorScheme="primary">
+            <IconButton
+              variant={view !== 'chart' ? 'outline' : 'solid'}
+              icon={<Icon as={FontAwesomeIcon} icon={faChartColumn} />}
+              onPress={(e) => setView('chart')}
+            />
+            <IconButton
+              variant={view !== 'table' ? 'outline' : 'solid'}
+              icon={<Icon as={FontAwesomeIcon} icon={faTableCellsLarge} />}
+              onPress={(e) => setView('table')}
+            />
+          </Button.Group>
+        </Stack>
+      </Stack>
+
+      <Box>
+        {view == 'table' ? (
+          <>
+            <TimeSeriesList type={props.type} offset={offset} ips={filterIPs} />
+          </>
+        ) : (
+          <TimeSeriesChart
+            type={props.type}
+            title={props.title}
+            data={props.data}
+            mode={chartMode}
+            onClick={handleClickClient}
+          />
+        )}
+      </Box>
+    </Box>
   )
 }
 

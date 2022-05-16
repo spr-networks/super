@@ -1,20 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import {
+  faArrowRightLong,
+  faPlus,
+  faXmark
+} from '@fortawesome/free-solid-svg-icons'
 
 import { firewallAPI, deviceAPI } from 'api'
 import ModalForm from 'components/ModalForm'
 import AddForward from './AddForward'
 
 import {
-  Button,
-  Label,
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
-  Table,
-  Row,
-  Col
-} from 'reactstrap'
+  Badge,
+  Box,
+  FlatList,
+  Heading,
+  Icon,
+  IconButton,
+  Stack,
+  HStack,
+  VStack,
+  Text,
+  useColorModeValue
+} from 'native-base'
 
 const ForwardList = (props) => {
   const [list, setList] = useState([])
@@ -41,7 +49,7 @@ const ForwardList = (props) => {
           setList(flist)
         })
         .catch((err) => {
-          //context.reportError('deviceAPI.list Error: ' + err)
+          //context.error('deviceAPI.list Error: ' + err)
           setList(flist)
         })
     })
@@ -65,78 +73,86 @@ const ForwardList = (props) => {
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <ModalForm
-            title="Add Rewrite/Forwarding Rule"
-            triggerText="add"
-            triggerClass="pull-right"
-            triggerIcon="fa fa-plus"
-            modalRef={refModal}
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      rounded="md"
+      width="100%"
+      p="4"
+      mb="4"
+    >
+      <HStack justifyContent="space-between" alignContent="center">
+        <VStack>
+          <Heading fontSize="xl">Traffic Forwarding</Heading>
+          <Text color="muted.500">Set rules for DNS queries</Text>
+        </VStack>
+        <ModalForm
+          title="Add Rewrite/Forwarding Rule"
+          triggerText="Add Forward"
+          triggerIcon={faPlus}
+          modalRef={refModal}
+        >
+          <AddForward notifyChange={notifyChange} />
+        </ModalForm>
+      </HStack>
+
+      <FlatList
+        data={list}
+        renderItem={({ item }) => (
+          <Box
+            borderBottomWidth="1"
+            _dark={{
+              borderColor: 'muted.600'
+            }}
+            borderColor="muted.200"
+            py="2"
           >
-            <AddForward notifyChange={notifyChange} />
-          </ModalForm>
+            <HStack
+              space={3}
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              <Badge variant="outline">{item.Protocol}</Badge>
 
-          <CardTitle tag="h4">Traffic Forwarding</CardTitle>
-        </CardHeader>
-        <CardBody>
-          {list.length ? (
-            <Table responsive>
-              <thead className="text-primary">
-                <tr>
-                  <th>Protocol</th>
-                  <th width="15%" className="text-right">
-                    Source
-                  </th>
-                  <th width="5%"></th>
-                  <th width="35%">Destination</th>
+              <HStack space={1}>
+                <Text bold>
+                  {item.deviceSrc ? item.deviceSrc.Name : item.SrcIP}
+                </Text>
+                <Text color="muted.500">:</Text>
+                <Text>{item.SrcPort}</Text>
+              </HStack>
 
-                  <th className="text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.map((row) => (
-                  <tr>
-                    <td>{row.Protocol}</td>
-                    <td className="text-right">
-                      {row.SrcIP}:{row.SrcPort}
-                    </td>
-                    <td className="text-center">
-                      <i className="fa fa-long-arrow-right" />
-                    </td>
-                    <td>
-                      {row.deviceDst ? (
-                        <>
-                          {row.deviceDst.Name}:{row.DstPort}
-                        </>
-                      ) : (
-                        <>
-                          {row.DstIP}:{row.DstPort}
-                        </>
-                      )}
-                    </td>
-                    <td className="text-center">
-                      <Button
-                        className="btn-icon"
-                        color="danger"
-                        size="sm"
-                        type="button"
-                        onClick={(e) => deleteListItem(row)}
-                      >
-                        <i className="fa fa-times" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          ) : (
-            <p>There are no forward rules configured yet</p>
-          )}
-        </CardBody>
-      </Card>
-    </>
+              <Icon
+                color="muted.400"
+                as={FontAwesomeIcon}
+                icon={faArrowRightLong}
+              />
+
+              <HStack space={1}>
+                <Text bold>
+                  {item.deviceDst ? item.deviceDst.Name : item.DstIP}
+                </Text>
+                <Text color="muted.500">:</Text>
+                <Text>{item.DstPort}</Text>
+              </HStack>
+
+              <IconButton
+                alignSelf="center"
+                size="sm"
+                variant="ghost"
+                colorScheme="secondary"
+                icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
+                onPress={() => deleteListItem(item)}
+              />
+            </HStack>
+          </Box>
+        )}
+        keyExtractor={(item) => `${item.Protocol}${item.DstIP}:${item.DstPort}`}
+      />
+
+      {!list.length ? (
+        <Text>There are no forward rules configured yet</Text>
+      ) : null}
+    </Box>
   )
 }
 

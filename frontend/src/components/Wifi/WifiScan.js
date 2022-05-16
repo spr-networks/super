@@ -1,33 +1,35 @@
-import { useEffect, useState } from 'react'
-import Select from 'react-select'
-import ReactBSAlert from 'react-bootstrap-sweetalert'
+import { useContext, useEffect, useState } from 'react'
 
 import { wifiAPI } from 'api'
+import { AlertContext } from 'layouts/Admin'
+import InputSelect from 'components/InputSelect'
 import { prettySignal } from 'utils'
 
 import {
   Badge,
+  Box,
   Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
-  CardSubtitle,
-  Label,
+  FlatList,
+  Heading,
+  Icon,
+  IconButton,
+  Stack,
+  HStack,
+  VStack,
+  ScrollView,
+  Spacer,
   Spinner,
-  Table,
-  Row,
-  Col
-} from 'reactstrap'
+  Text,
+  useColorModeValue
+} from 'native-base'
 
 const WifiScan = (props) => {
-  const [iface, setIface] = useState(null)
+  const context = useContext(AlertContext)
+
+  const [iface, setIface] = useState('')
   const [devs, setDevs] = useState({})
   const [list, setList] = useState([])
   const [loading, setLoading] = useState(false)
-  const [showAlert, setShowAlert] = useState(false)
-  const [scanDetail, setScanDetail] = useState({})
-  const [loadedDevs, setLoadedDevs] = useState(false)
 
   useEffect(() => {
     wifiAPI.iwDev().then((devs) => {
@@ -40,7 +42,7 @@ const WifiScan = (props) => {
     setLoading(true)
 
     //set interface up
-    wifiAPI.ipLinkState(_iface,"up").then(
+    wifiAPI.ipLinkState(_iface, 'up').then(
       //then scan
       wifiAPI.iwScan(_iface).then((scanList) => {
         setList(scanList)
@@ -49,16 +51,18 @@ const WifiScan = (props) => {
     )
   }
 
-  const onChange = (opt) => {
-    let { value } = opt
+  const onChange = (value) => {
     setIface(value)
   }
 
-  const closeAlert = () => setShowAlert(false)
-
-  const showScanItem = (item) => {
-    setScanDetail(item)
-    setShowAlert(true)
+  const triggerAlert = (item) => {
+    context.alert(
+      'info',
+      'Scan',
+      <ScrollView w="100%" h="400">
+        <Text fontSize="xs">{JSON.stringify(item, null, '  ')}</Text>
+      </ScrollView>
+    )
   }
 
   let devsScan = []
@@ -75,120 +79,129 @@ const WifiScan = (props) => {
     }
   }
 
+  devsScan = devsScan.filter((dev) => !dev.disabled)
+  if (devsScan.length && !iface) {
+    console.log('OK', devsScan[0].value)
+    setIface(devsScan[0].value)
+  }
+
   return (
-    <>
-      <ReactBSAlert
-        type="custom"
-        show={showAlert}
-        onConfirm={closeAlert}
-        onCancel={closeAlert}
-        title="Wifi Scan"
-        confirmBtnBsStyle="info"
-        cancelBtnBsStyle="danger"
-        openAnim={false}
-        closeOnClickOutside={true}
-        btnSize=""
-      >
-        <dl className="row" style={{ fontSize: '0.70rem' }}>
-          {Object.keys(scanDetail).map((label) => (
-            <>
-              <dt className="col-sm-6 text-right">
-                {label.replace(/_/g, ' ')}
-              </dt>
-              {Array.isArray(scanDetail[label]) ? (
-                <dd className="col-sm-6 text-left">
-                  {scanDetail[label].join(', ')}
-                </dd>
-              ) : (
-                <dd className="col-sm-6 text-left">{scanDetail[label]}</dd>
-              )}
-            </>
-          ))}
-        </dl>
-      </ReactBSAlert>
-      <Row>
-        <Col md={{ offset: 3, size: 4 }} xs={{ size: 8 }}>
-        { loadedDevs ?
-          <Select
-            options={devsScan}
-            defaultValue={defaultDev}
-            isOptionDisabled={(option) => option.disabled}
-            onChange={onChange}
-          /> : null
-        }
-        </Col>
-        <Col xs="4" md="2">
-          <Button
-            color="primary"
-            size="md"
-            className="mt-0"
-            onClick={(e) => scan(iface)}
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      rounded="md"
+      width="100%"
+      p="4"
+    >
+      <HStack space={2}>
+        <Box flex="2">
+          {/*isOptionDisabled={(option) => option.disabled}*/}
+          <InputSelect options={devsScan} onChange={onChange} />
+        </Box>
+
+        <Button colorScheme="primary" onPress={() => scan(iface)}>
+          Scan
+        </Button>
+      </HStack>
+
+      <FlatList
+        data={list}
+        renderItem={({ item }) => (
+          <Box
+            borderBottomWidth="1"
+            _dark={{
+              borderColor: 'muted.600'
+            }}
+            borderColor="muted.200"
+            py="2"
           >
-            <i className="fa fa-wifi" /> Scan
-          </Button>
-        </Col>
-      </Row>
-      {list.length ? (
-        <Row>
-          <Col>
-            <Table responsive>
-              <thead className="text-primary">
-                <tr>
-                  <th className="text-center">SSID/bssid</th>
-                  <th className="text-center">channel</th>
-                  <th className="text-center">freq</th>
-                  <th className="text-center">signal</th>
-                  <th className="d-none d-sm-table-cell">info</th>
-                  <th>auth</th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.map((row) => (
-                  <tr>
-                    <td
-                      className="text-center"
-                      onClick={(e) => showScanItem(row)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <div>{row.ssid}</div>
-                      <div className="text-muted">
-                        <small>{row.bssid}</small>
-                      </div>
-                    </td>
-                    <td className="text-center">{row.primary_channel}</td>
-                    <td className="text-center">
-                      {Number(row.freq / 1e3).toFixed(2)} GHz
-                    </td>
-                    <td className="text-center">
-                      {prettySignal(row.signal_dbm)}
-                    </td>
-                    <td className="d-none d-sm-table-cell">
-                      {row.model ? (
-                        <div>
-                          <Label>Model</Label> {row.model} / {row.model_number}
-                        </div>
-                      ) : null}
-                      {row.device_name ? (
-                        <div>
-                          <Label>Device Name</Label> {row.device_name}
-                        </div>
-                      ) : null}
-                    </td>
-                    <td>{row.authentication_suites}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </Col>
-        </Row>
+            <HStack
+              w="100%"
+              space={1}
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <VStack flex="2" space={2}>
+                <Text bold onPress={(e) => triggerAlert(item)}>
+                  {item.ssid}
+                </Text>
+
+                <Text color="muted.500" fontSize="sm">
+                  {item.bssid}
+                </Text>
+              </VStack>
+
+              <VStack flex="1" space={2} alignItems="flex-end">
+                <HStack space={1} alignItems="center">
+                  <Text color="muted.400" fontSize="xs">
+                    Channel
+                  </Text>
+                  <Text>{item.primary_channel}</Text>
+                </HStack>
+                <HStack space={1} alignItems="center">
+                  <Text
+                    display={{ base: 'none', md: 'flex' }}
+                    color="muted.400"
+                    fontSize="xs"
+                  >
+                    Freq
+                  </Text>
+                  <Text>{Number(item.freq / 1e3).toFixed(2)} GHz</Text>
+                </HStack>
+              </VStack>
+
+              <VStack flex="1" space={2} alignItems="flex-end">
+                <HStack space={1} alignItems="center">
+                  <Text color="muted.400" fontSize="xs">
+                    Signal
+                  </Text>
+                  <Text>{prettySignal(item.signal_dbm)}</Text>
+                </HStack>
+                <HStack space={1}>
+                  <Text color="muted.400" fontSize="xs">
+                    Auth
+                  </Text>
+                  <Text>{item.authentication_suites || '-'}</Text>
+                </HStack>
+              </VStack>
+
+              <VStack
+                display={{ base: 'none', md: 'flex' }}
+                flex="1"
+                space={2}
+                alignItems="flex-end"
+              >
+                {item.model ? (
+                  <HStack space={1} alignItems="center">
+                    <Text color="muted.400" fontSize="xs">
+                      Model
+                    </Text>
+                    <Text>
+                      {item.model} / {item.model_number}
+                    </Text>
+                  </HStack>
+                ) : null}
+                {item.device_name ? (
+                  <HStack space={1} alignItems="center">
+                    <Text color="muted.400" fontSize="xs">
+                      Device Name
+                    </Text>
+                    <Text>{item.device_name}</Text>
+                  </HStack>
+                ) : null}
+              </VStack>
+            </HStack>
+          </Box>
+        )}
+        keyExtractor={(item) => item.bssid}
+      />
+
+      {loading ? (
+        <HStack space={1}>
+          <Spinner accessibilityLabel="Loading logs" />
+          <Text>Loading...</Text>
+        </HStack>
       ) : null}
-      <div className="text-center">
-        <Spinner size="sm" hidden={!loading} />
-        <span className="mt-4 ml-1" hidden={!loading}>
-          Loading...
-        </span>
-      </div>
-    </>
+    </Box>
   )
 }
 

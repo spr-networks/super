@@ -3,6 +3,8 @@ import PropTypes from 'prop-types'
 import './Toggle.css'
 import { cleanup } from '@testing-library/react'
 
+import { Switch } from 'native-base'
+
 const Toggle = (props) => {
   const [isChecked, setIsChecked] = useState(props.isChecked || false)
   const [isDisabled, setIsDisabled] = useState(props.isDisabled || false)
@@ -31,6 +33,14 @@ const Toggle = (props) => {
   }, [props.isDisabled])
 
   let style = props.isDisabled ? { opacity: 0.65 } : {}
+
+  return (
+    <Switch
+      defaultIsChecked={isChecked}
+      onTrackColor={isDisabled ? 'info.200' : 'info.500'}
+      onValueChange={handleChange}
+    />
+  )
 
   return (
     <label className="switch" style={style}>

@@ -1,6 +1,9 @@
 import React, { useContext, Component } from 'react'
+
+import { View, VStack } from 'native-base'
+
 import { deviceAPI, trafficAPI } from 'api'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 import chroma from 'chroma-js'
 
 import TimeSeries from 'components/Traffic/TimeSeries'
@@ -28,8 +31,6 @@ class TrafficTimeSeries extends Component {
     this.state.chartModes = chartModes
   }
 
-  static contextType = APIErrorContext
-
   cached_traffic_data = null
 
   async fetchData() {
@@ -40,7 +41,7 @@ class TrafficTimeSeries extends Component {
       traffic_data = this.cached_traffic_data = await trafficAPI
         .history()
         .catch((error) => {
-          this.context.reportError(
+          this.context.error(
             'API Failure get traffic history: ' + error.message
           )
         })
@@ -238,23 +239,27 @@ class TrafficTimeSeries extends Component {
     }
 
     return (
-      <div className="content">
-        {['WanOut', 'WanIn', 'LanIn', 'LanOut'].map((type) => {
-          return (
-            <TimeSeries
-              key={type}
-              type={type}
-              title={prettyTitle(type)}
-              data={this.state[type]}
-              chartMode={this.state.chartModes[type]}
-              handleChangeTime={handleChangeTime}
-              handleChangeMode={handleChangeMode}
-            />
-          )
-        })}
-      </div>
+      <View>
+        <VStack>
+          {['WanOut', 'WanIn', 'LanIn', 'LanOut'].map((type) => {
+            return (
+              <TimeSeries
+                key={type}
+                type={type}
+                title={prettyTitle(type)}
+                data={this.state[type]}
+                chartMode={this.state.chartModes[type]}
+                handleChangeTime={handleChangeTime}
+                handleChangeMode={handleChangeMode}
+              />
+            )
+          })}
+        </VStack>
+      </View>
     )
   }
 }
+
+TrafficTimeSeries.contextType = AlertContext
 
 export default TrafficTimeSeries

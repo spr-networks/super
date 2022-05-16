@@ -3,16 +3,7 @@ import { useEffect, useState } from 'react'
 import { wifiAPI } from 'api'
 import { ucFirst } from 'utils'
 
-import {
-  Button,
-  Form,
-  FormGroup,
-  FormText,
-  Label,
-  Input,
-  Row,
-  Col
-} from 'reactstrap'
+import { Box, HStack, Text, VStack, useColorModeValue } from 'native-base'
 
 import WifiChannelParameters from 'components/Wifi/WifiChannelParameters'
 
@@ -65,6 +56,28 @@ const WifiHostapd = (props) => {
     })
   }
 
+
+  return (
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      rounded="md"
+      width="100%"
+      p="4"
+    >
+      <VStack space={2}>
+        {Object.keys(config).map((label) => (
+          <HStack space={4} justifyContent="center">
+            <Text bold w="1/4" textAlign="right">
+              {label}
+            </Text>
+            <Text w="1/4">{config[label]}</Text>
+          </HStack>
+        ))}
+      </VStack>
+    </Box>
+  )
+
+/*
   const updateChannels = (wifiParameters) => {
     let data = {
       Channel: wifiParameters.Channel,
@@ -130,6 +143,7 @@ const WifiHostapd = (props) => {
     </Form>
     </>
   )
+*/
 }
 
 export default WifiHostapd

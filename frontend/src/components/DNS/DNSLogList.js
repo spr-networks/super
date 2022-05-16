@@ -1,167 +1,154 @@
-import React from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import { APIErrorContext } from 'layouts/Admin'
-import ReactBSAlert from 'react-bootstrap-sweetalert'
+import { AlertContext } from 'layouts/Admin'
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { faPlus, faTimes } from '@fortawesome/free-solid-svg-icons'
+
 import { logAPI } from 'api/DNS'
+import ModalConfirm from 'components/ModalConfirm'
 
 import {
+  Box,
   Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
-  Table
-} from 'reactstrap'
+  Divider,
+  Heading,
+  HStack,
+  Icon,
+  IconButton,
+  Input,
+  VStack,
+  Text,
+  useColorModeValue
+} from 'native-base'
 
-export default class DNSLogList extends React.Component {
-  static contextType = APIErrorContext
-  state = { type: '', list: [], showAlert: false }
+const DNSLogList = ({ title, description, ...props }) => {
+  const context = useContext(AlertContext)
+  const [type, setType] = useState(props.type)
+  const [list, setList] = useState([])
 
-  constructor(props) {
-    super(props)
+  const refModal = React.createRef()
 
-    this.deleteListItem = this.deleteListItem.bind(this)
-    this.addListItem = this.addListItem.bind(this)
-    this.triggerAlert = this.triggerAlert.bind(this)
+  useEffect(() => {
+    refreshBlocklists()
+  }, [])
 
-    this.state.list = []
-    this.state.type = props.type
-
-    this.refModal = React.createRef()
-  }
-
-  async componentDidMount() {
-    this.refreshBlocklists()
-  }
-
-  async refreshBlocklists() {
-    console.log('fetchin dns log list', this.state.type)
+  const refreshBlocklists = async () => {
     try {
       let list = []
-      if (this.state.type == 'Domain') {
+      if (type == 'Domain') {
         list = await logAPI.domainIgnores()
       } else {
         list = await logAPI.hostPrivacyList()
       }
 
-      this.setState({ list })
+      setList(list)
     } catch (error) {
-      this.context.reportError('API Failure: ' + error.message)
+      context.error('API Failure: ' + error.message)
     }
   }
 
-  triggerAlert(show) {
-    if (show === false) {
-      return this.setState({ showAlert: false })
-    }
+  const addListItem = (item) => {
+    setList(list.concat(item))
 
-    this.setState({ showAlert: true })
-  }
-
-  addListItem(item) {
-    let list = this.state.list
-    list.push(item)
-    this.setState({ list })
-    if (this.state.type == 'Domain') {
+    if (type == 'Domain') {
       logAPI.putDomainIgnore(item)
     } else {
       logAPI.putHostPrivacyList(list)
     }
   }
 
-  deleteListItem(item) {
-    if (this.state.type == 'Domain') {
-      logAPI.deleteDomainIgnore(item).then((list) => {
-        this.setState({ list })
+  const deleteListItem = (item) => {
+    if (type == 'Domain') {
+      logAPI.deleteDomainIgnore(item).then((res) => {
+        let listNew = list.filter((_item) => _item != item)
+        setList(listNew)
       })
     } else {
-      let list = this.state.list.filter((_item) => _item != item)
+      let listNew = list.filter((_item) => _item != item)
       logAPI
-        .putHostPrivacyList(list)
+        .putHostPrivacyList(listNew)
         .then((res) => {
-          this.setState({ list })
+          setList(listNew)
         })
         .catch((error) => {
-          this.context.reportError('API Failure: ' + error.message)
+          context.error('API Failure: ' + error.message)
         })
     }
   }
 
-  render() {
-    let type = this.state.type
-    let list = this.state.list
-
-    const hideAlert = () => this.triggerAlert(false)
-    const inputConfirmAlert = (value) => {
-      this.addListItem(value)
-      hideAlert()
-    }
-
-    return (
-      <>
-        <Card>
-          <CardHeader>
-            <Button
-              className="btn-round pull-right"
-              color="primary"
-              outline
-              onClick={this.triggerAlert}
-            >
-              <i className="fa fa-plus" /> add
-            </Button>
-
-            <ReactBSAlert
-              show={this.state.showAlert}
-              input
-              showCancel
-              title={`Add ${type}`}
-              onConfirm={(e) => inputConfirmAlert(e)}
-              onCancel={() => hideAlert()}
-              confirmBtnBsStyle="info"
-              cancelBtnBsStyle="danger"
-              openAnim={false}
-              btnSize=""
-            />
-
-            <CardTitle tag="h4">{this.props.title}</CardTitle>
-            <p className="text-muted">{this.props.description}</p>
-          </CardHeader>
-          <CardBody>
-            <Table responsive className={!list.length ? 'd-none' : null}>
-              <thead className="text-primary">
-                <tr>
-                  <th style={{ width: '100%' }}>{type}</th>
-                  <th className="text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.map((item) => (
-                  <tr key={item}>
-                    <td>{item}</td>
-                    <td className="text-center">
-                      <Button
-                        className="btn-icon"
-                        color="danger"
-                        size="sm"
-                        type="button"
-                        onClick={(e) => this.deleteListItem(item)}
-                      >
-                        <i className="fa fa-times" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </CardBody>
-        </Card>
-      </>
-    )
+  const handleSubmit = (value) => {
+    addListItem(value)
   }
+
+  return (
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      rounded="md"
+      width="100%"
+      p="4"
+      mb="4"
+    >
+      <HStack alignItems="center">
+        <VStack>
+          <Heading fontSize="xl">{title}</Heading>
+          <Text color="muted.500">{description}</Text>
+        </VStack>
+
+        <ModalConfirm
+          type={type}
+          onSubmit={handleSubmit}
+          trigger={(triggerProps) => {
+            return (
+              <Button {...triggerProps} marginLeft="auto">
+                {'Add ' + type}
+              </Button>
+            )
+          }}
+        />
+      </HStack>
+
+      {list.length ? (
+        <>
+          <HStack py="4">
+            <Text color="primary.400" bold>
+              {type}
+            </Text>
+            <Text color="primary.400" bold marginLeft="auto">
+              Actions
+            </Text>
+          </HStack>
+          <Divider />
+
+          {list.map((item) => (
+            <HStack
+              key={item}
+              py="4"
+              borderBottomWidth={1}
+              _light={{ borderBottomColor: 'muted.200' }}
+              _dark={{ borderBottomColor: 'muted.600' }}
+            >
+              <Text>{item}</Text>
+
+              <IconButton
+                variant="ghost"
+                colorScheme="secondary"
+                icon={<Icon as={FontAwesomeIcon} icon={faTimes} />}
+                size="sm"
+                onPress={() => deleteListItem(item)}
+                marginLeft="auto"
+              />
+            </HStack>
+          ))}
+        </>
+      ) : null}
+    </Box>
+  )
 }
 
 DNSLogList.propTypes = {
-  type: PropTypes.string,
+  type: PropTypes.string.isRequired,
   title: PropTypes.string,
   description: PropTypes.string
 }
+
+export default DNSLogList

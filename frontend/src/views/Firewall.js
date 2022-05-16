@@ -1,10 +1,9 @@
 import React, { Component } from 'react'
+import { View, VStack } from 'native-base'
 
 import { firewallAPI } from 'api'
 import ForwardList from 'components/Firewall/ForwardList'
 import BlockList from 'components/Firewall/BlockList'
-
-import { Row, Col } from 'reactstrap'
 
 export default class Firewall extends Component {
   state = { config: {} }
@@ -23,23 +22,17 @@ export default class Firewall extends Component {
 
   render() {
     return (
-      <div className="content">
-        <Row>
-          <Col md="12">
-            <ForwardList />
-          </Col>
-        </Row>
+      <View>
+        <VStack>
+          <ForwardList />
 
-        <Row>
-          <Col md="12">
-            <BlockList
-              title="Block IP Source or Destination"
-              list={this.state.config.BlockRules}
-              notifyChange={this.fetchConfig}
-            />
-          </Col>
-        </Row>
-      </div>
+          <BlockList
+            title="Block IP Source or Destination"
+            list={this.state.config.BlockRules}
+            notifyChange={this.fetchConfig}
+          />
+        </VStack>
+      </View>
     )
   }
 }

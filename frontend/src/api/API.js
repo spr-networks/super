@@ -1,17 +1,40 @@
+import createServer from 'api/MockAPI'
+
 export const apiURL = () => {
   const { REACT_APP_API } = process.env
+
+  // jest
+  if (typeof document === 'undefined') {
+    return 'http://localhost/'
+  }
+
+  if (REACT_APP_API == 'mock') {
+    createServer()
+    return '/'
+  }
+
   if (REACT_APP_API) {
     try {
       let url = new URL(REACT_APP_API)
-      //console.log('[API] using base:' + url)
       return url.toString()
     } catch (e) {
-      // REACT_APP_API=mock -- dont load in prod
-      let MockAPI = import('../api/MockAPI').then((m) => m.default())
-      return '/'
+      throw e
     }
   }
+
   return document.location.origin + '/'
+}
+
+if (typeof localStorage === 'undefined') {
+  global.localStorage = {
+    data: {},
+    getItem: function (key) {
+      return this.data[key] || null
+    },
+    setItem: function (key, value) {
+      this.data[key] = value
+    }
+  }
 }
 
 //request helper

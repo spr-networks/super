@@ -1486,6 +1486,33 @@ export default function MockAPI() {
         let attrs = JSON.parse(request.requestBody)
         return schema.blockrules.where(attrs).destroy()
       })
+
+      //Dyndns plugin
+      this.get('/plugins/dyndns/config', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        return {
+          provider: 'Cloudflare',
+          email: '',
+          password: '',
+          login_token: 'Tokenish',
+          domains: [
+            {
+              domain_name: 'supernetworks.org',
+              sub_domains: ['dyndns']
+            }
+          ],
+          ip_url: 'https://ip4.seeip.org',
+          ipv6_url: '',
+          ip_type: 'IPv4',
+          interval: 300,
+          socks5: '',
+          resolver: '8.8.8.8',
+          run_once: true
+        }
+      })
     }
   })
 

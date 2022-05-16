@@ -1,39 +1,39 @@
-import { withRouter } from 'react-router'
-import { Link } from 'react-router-dom'
+import { useContext, useEffect, useState } from 'react'
 import { deviceAPI } from 'api'
-import { Component } from 'react'
-import Device from 'components/Devices/Device.js'
-import { APIErrorContext } from 'layouts/Admin.js'
-import React, { useContext } from 'react'
+import { useNavigate } from 'react-router-dom'
+import Device from 'components/Devices/Device'
+import { AlertContext } from 'layouts/Admin'
 
-// reactstrap components
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { faEllipsis, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons'
+
 import {
   Button,
-  ButtonGroup,
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
-  Label,
-  FormGroup,
-  Input,
-  Table,
-  Row,
-  Col
-} from 'reactstrap'
+  Box,
+  Divider,
+  Fab,
+  FlatList,
+  Heading,
+  Icon,
+  IconButton,
+  Stack,
+  HStack,
+  VStack,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+  useColorModeValue
+} from 'native-base'
+import { SwipeListView } from 'components/SwipeListView'
 
-class DeviceListing extends Component {
-  state = { devices: {}, deviceRows: [] }
-
-  static contextType = APIErrorContext
-
-  constructor(props) {
-    super(props)
-    this.refreshDevices = this.refreshDevices.bind(this)
-  }
+const DeviceListing = (props) => {
+  const [devices, setDevices] = useState(null)
+  const navigate = useNavigate()
+  const context = useContext(AlertContext)
 
   // set device oui if avail, else fail gracefully
-  async setOUIs(devices) {
+  const setOUIs = async (devices) => {
     let ouis = []
     try {
       ouis = await deviceAPI.ouis(
@@ -54,105 +54,171 @@ class DeviceListing extends Component {
     }
   }
 
-  async refreshDevices() {
+  const refreshDevices = async () => {
     const devices = await deviceAPI.list().catch((error) => {
-      this.context.reportError('API Failure: ' + error.message)
+      context.error('API Failure: ' + error.message)
     })
-
-    const notifyChange = () => {
-      this.refreshDevices()
-    }
 
     if (!devices) {
       return
     }
 
-    await this.setOUIs(devices)
+    await setOUIs(devices)
 
-    this.setState({ devices })
-
-    let divs = []
-    Object.keys(devices).forEach((v) => {
-      divs.push(
-        <Device
-          key={devices[v].Name}
-          device={devices[v]}
-          notifyChange={notifyChange}
-        />
-      )
-    })
-
-    this.setState({ deviceRows: divs })
+    setDevices(Object.values(devices))
   }
 
-  componentDidMount() {
-    this.refreshDevices()
+  useEffect(() => {
+    refreshDevices()
+  }, [])
+
+  const handleRedirect = () => {
+    navigate('/admin/add_device')
   }
 
-  render() {
-    return (
-      <div>
-        {this.state.alert}
-        <Row>
-          <Col md="12">
-            <Card>
-              <CardHeader>
-                <Row>
-                  <Col md="8">
-                    <CardTitle tag="h4">Configured Devices</CardTitle>
-                  </Col>
-                  <Col md="4" className="text-right">
-                    <Link to="/admin/add_device">
-                      <Button className="btn-round" color="primary" outline>
-                        <i className="fa fa-plus" />
-                        Add
-                      </Button>
-                    </Link>
-                  </Col>
-                </Row>
-              </CardHeader>
-              <CardBody>
-                {this.state.deviceRows.length ? (
-                  <Table responsive>
-                    <thead className="text-primary">
-                      <tr>
-                        <th width="20%">Name</th>
-                        <th width="15%" className="text-center">
-                          IP/MAC
-                        </th>
-                        <th width="7%">Auth</th>
-                        <th width="25%">Groups</th>
-                        <th width="25%">Tags</th>
-                        <th width="8%" className="text-right">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>{this.state.deviceRows}</tbody>
-                  </Table>
-                ) : (
-                  <p className="text-center">
-                    There are no devices configured yet
-                  </p>
-                )}
-                <Row>
-                  <Col md={12} className="text-center">
-                    <Link to="/admin/add_device">
-                      <Button className="btn-wd btn-round" color="primary">
-                        <i className="fa fa-plus" />
-                        Add Device
-                      </Button>
-                    </Link>
-                  </Col>
-                </Row>
-              </CardBody>
-            </Card>
-          </Col>
-        </Row>
-      </div>
-    )
+  const closeRow = (rowMap, rowKey) => {
+    if (rowMap[rowKey]) {
+      rowMap[rowKey].closeRow()
+    }
   }
+
+  const deleteRow = (rowMap, rowKey) => {
+    console.log('delete', rowKey, '. map:', rowMap)
+    closeRow(rowMap, rowKey)
+    const newData = [...devices]
+    const prevIndex = devices.findIndex((item) => item.MAC === rowKey)
+    newData.splice(prevIndex, 1)
+    setDevices(newData)
+  }
+
+  const onRowDidOpen = (rowKey) => console.log('row opened', rowKey)
+
+  const renderItem = ({ item }) => (
+    <Box
+      flex="1"
+      _light={{ bg: 'backgroundCardLight' }}
+      _dark={{ bg: 'backgroundCardDark' }}
+    >
+      <Pressable
+        onPress={() => {
+          console.log('**press**')
+        }}
+      >
+        <Device device={item} notifyChange={refreshDevices} />
+      </Pressable>
+    </Box>
+  )
+
+  const renderHiddenItem = (data, rowMap) => (
+    <HStack flex="1" pl="2">
+      <Pressable
+        w="70"
+        ml="auto"
+        cursor="pointer"
+        bg="coolGray.200"
+        justifyContent="center"
+        onPress={() => closeRow(rowMap, data.item.MAC)}
+        _pressed={{
+          opacity: 0.5
+        }}
+      >
+        <VStack alignItems="center" space={2}>
+          <Icon
+            as={<Icon as={FontAwesomeIcon} icon={faEllipsis} />}
+            size="xs"
+            color="coolGray.800"
+          />
+          <Text fontSize="xs" fontWeight="medium" color="coolGray.800">
+            More
+          </Text>
+        </VStack>
+      </Pressable>
+      <Pressable
+        w="70"
+        cursor="pointer"
+        bg="red.500"
+        justifyContent="center"
+        onPress={() => deleteRow(rowMap, data.item.MAC)}
+        _pressed={{
+          opacity: 0.5
+        }}
+      >
+        <VStack alignItems="center" space={2}>
+          <Icon
+            as={<Icon as={FontAwesomeIcon} icon={faTimes} />}
+            color="white"
+            size="xs"
+          />
+          <Text color="white" fontSize="xs" fontWeight="medium">
+            Delete
+          </Text>
+        </VStack>
+      </Pressable>
+    </HStack>
+  )
+
+  return (
+    <View>
+      <ScrollView h="calc(100vh - 96px)">
+        <Box
+          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+          rounded="md"
+          w="100%"
+          p={4}
+        >
+          <HStack mb="4">
+            <Heading fontSize="xl">Configured Devices</Heading>
+
+            <Button
+              marginLeft="auto"
+              size="md"
+              variant="outline"
+              colorScheme="primary"
+              rounded="full"
+              borderWidth={1}
+              borderColor="info.400"
+              leftIcon={<Icon as={FontAwesomeIcon} icon={faPlus} />}
+              onPress={handleRedirect}
+            >
+              Add Device
+            </Button>
+          </HStack>
+
+          {devices !== null ? (
+            <Box safeArea>
+              {/*<SwipeListView
+                data={devices}
+                renderItem={renderItem}
+                renderHiddenItem={renderHiddenItem}
+                rightOpenValue={-140}
+              />*/}
+              {devices.length ? (
+                <FlatList
+                  data={devices}
+                  renderItem={renderItem}
+                  keyExtractor={(item) => item.Name}
+                />
+              ) : (
+                <Text color="muted.500">
+                  There are no devices configured yet
+                </Text>
+              )}
+            </Box>
+          ) : null}
+        </Box>
+      </ScrollView>
+
+      <Fab
+        renderInPortal={false}
+        shadow={2}
+        size="sm"
+        icon={
+          <Icon color="white" as={FontAwesomeIcon} icon={faPlus} size="sm" />
+        }
+        onPress={handleRedirect}
+      />
+    </View>
+  )
 }
 
-const DeviceListingWithRouter = withRouter(DeviceListing)
-export default DeviceListingWithRouter
+export default DeviceListing

@@ -1,27 +1,32 @@
-import React, { Component } from 'react'
+import { useContext, useEffect, useState } from 'react'
 
 import { wifiAPI, deviceAPI } from 'api'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 import { prettySignal } from 'utils'
 
 import {
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
-  CardSubtitle,
-  Table,
-  Row,
-  Col
-} from 'reactstrap'
+  View,
+  Divider,
+  Box,
+  FlatList,
+  Heading,
+  Icon,
+  IconButton,
+  Stack,
+  HStack,
+  VStack,
+  Spacer,
+  Switch,
+  Text,
+  useColorModeValue
+} from 'native-base'
 
-export default class WifiClients extends Component {
-  state = { clients: [] }
+const WifiClients = (props) => {
+  const [clients, setClients] = useState([])
+  const context = useContext(AlertContext)
 
-  static contextType = APIErrorContext
-
-  akmSuiteAuth = (suite) => {
-    let suites = {
+  const akmSuiteAuth = (suite) => {
+    const suites = {
       '00-0f-ac-1': '802.1x',
       '00-0f-ac-2': 'WPA-PSK',
       '00-0f-ac-3': 'FT-802.1x',
@@ -47,13 +52,13 @@ export default class WifiClients extends Component {
     return suites[suite] || 'unknown'
   }
 
-  refreshClients = async () => {
+  const refreshClients = async () => {
     const stations = await wifiAPI.allStations().catch((error) => {
-      this.context.reportError('API Failure:' + error.message)
+      context.error('API Failure:' + error.message)
     })
 
     const devices = await deviceAPI.list().catch((error) => {
-      this.context.reportError('API Failure getDevices: ' + error.message)
+      context.error('API Failure getDevices: ' + error.message)
     })
 
     if (devices && stations) {
@@ -61,65 +66,74 @@ export default class WifiClients extends Component {
         Object.keys(stations).includes(device.MAC)
       )
 
-      clients = clients.map((client) => {
-        let station = stations[client.MAC]
-        client.Auth = this.akmSuiteAuth(station.AKMSuiteSelector)
-        client.Signal = station.signal
+    clients = clients.map((client) => {
+      let station = stations[client.MAC]
+      client.Auth = akmSuiteAuth(station.AKMSuiteSelector)
+      client.Signal = station.signal
 
-        return client
+      return client
       })
 
-      this.setState({ clients })
-
-    }
-
+    setClients(clients)
   }
 
-  async componentDidMount() {
-    this.refreshClients()
-  }
+  useEffect(() => {
+    refreshClients()
+  }, [])
 
-  render() {
-    return (
-      <>
-        <Row>
-          <Col md="12">
-            {/*
-            <Card>
-              <CardHeader>
-                <CardTitle tag="h4">Wifi Clients</CardTitle>
-                <CardSubtitle className="text-muted">
-                  Clients connected to AP
-                </CardSubtitle>
-              </CardHeader>
-              <CardBody>*/}
-            <Table responsive>
-              <thead className="text-primary">
-                <tr>
-                  <th>Device</th>
-                  <th>MAC Address</th>
-                  <th>IP Address</th>
-                  <th>Auth</th>
-                  <th>Signal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {this.state.clients.map((row) => (
-                  <tr >
-                    <td>{row.Name}</td>
-                    <td>{row.MAC}</td>
-                    <td>{row.RecentIP}</td>
-                    <td>{row.Auth}</td>
-                    <td>{prettySignal(row.Signal)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-            {/*</CardBody>
-            </Card>*/}
-          </Col>
-        </Row>
-      </>
-    )
-  }
+  return (
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      rounded="md"
+      width="100%"
+      p="4"
+    >
+      <FlatList
+        data={clients}
+        renderItem={({ item }) => (
+          <Box
+            borderBottomWidth="1"
+            _dark={{
+              borderColor: 'muted.600'
+            }}
+            borderColor="muted.200"
+            py="2"
+          >
+            <HStack space={2} justifyContent="space-between">
+              <Text flex="1" bold alignSelf="center">
+                {item.Name}
+              </Text>
+
+              <Stack
+                flex="2"
+                direction={{ base: 'column', md: 'row' }}
+                space={2}
+                alignItems="center"
+              >
+                <Text bold>{item.RecentIP}</Text>
+                <Text color="muted.500">{item.MAC}</Text>
+              </Stack>
+
+              <Stack
+                direction={{ base: 'column', md: 'row' }}
+                space={2}
+                alignSelf="center"
+                marginLeft="auto"
+                flex={1}
+              >
+                <HStack space={1} alignItems="center">
+                  <Text color="muted.400">Signal</Text>
+                  {prettySignal(item.Signal)}
+                </HStack>
+                <Text whiteSpace="nowrap">{item.Auth}</Text>
+              </Stack>
+            </HStack>
+          </Box>
+        )}
+        keyExtractor={(item) => item.Name}
+      />
+    </Box>
+  )
 }
+
+export default WifiClients

@@ -2,49 +2,52 @@ import React, { Component } from 'react'
 
 import { wireguardAPI } from 'api/Wireguard'
 import PeerList from 'components/Wireguard/PeerList'
-import Toggle from 'components/Toggle'
 
 import {
-  Button,
-  Label,
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
-  Table,
-  Row,
-  Col
-} from 'reactstrap'
+  Box,
+  Heading,
+  HStack,
+  Switch,
+  Text,
+  View,
+  useColorModeValue
+} from 'native-base'
 
 export default class Wireguard extends Component {
-  state = { isUp: false, config: {} }
+  state = { isUp: true, config: {} }
   constructor(props) {
     super(props)
     this.config = {}
-    this.isUp = false
+    this.isUp = true
 
     this.handleChange = this.handleChange.bind(this)
   }
 
   getStatus() {
-    wireguardAPI.status().then((status) => {
-      let publicKey = status.wg0.publicKey,
-        listenPort = status.wg0.listenPort
+    wireguardAPI
+      .status()
+      .then((status) => {
+        let publicKey = status.wg0.publicKey,
+          listenPort = status.wg0.listenPort
 
-      if (listenPort) {
-        this.setState({ isUp: true })
-      }
+        if (!listenPort) {
+          this.setState({ isUp: false })
+        }
 
-      let config = { publicKey, listenPort }
-      this.setState({ config })
-    })
+        let config = { publicKey, listenPort }
+        this.setState({ config })
+      })
+      .catch((err) => {
+        this.setState({ isUp: false })
+      })
   }
 
   componentDidMount() {
     this.getStatus()
   }
 
-  handleChange(el, value) {
+  handleChange() {
+    let value = !this.state.isUp
     let fn = value ? wireguardAPI.up : wireguardAPI.down
     fn()
       .then((res) => {
@@ -60,33 +63,40 @@ export default class Wireguard extends Component {
 
   render() {
     return (
-      <div className="content">
-        <Card>
-          <CardHeader>
-            <div className="pull-right">
-              <Toggle
-                isChecked={this.state.isUp}
-                onChange={this.handleChange}
-              />
-            </div>
-            <CardTitle tag="h4">Wireguard</CardTitle>
-          </CardHeader>
-          <CardBody>
+      <View>
+        <Box
+          rounded="md"
+          _light={{ bg: 'warmGray.50' }}
+          _dark={{ bg: 'blueGray.800' }}
+          width="100%"
+          p="4"
+          mb="4"
+        >
+          <HStack alignItems="center" mb="4">
+            <Heading fontSize="xl">Wireguard</Heading>
+
+            <Switch
+              marginLeft="auto"
+              defaultIsChecked={this.state.isUp}
+              onValueChange={this.handleChange}
+            />
+          </HStack>
+          <Box>
             {this.state.config.listenPort ? (
-              <>
-                <p>
-                  Wireguard is listening on port {this.state.config.listenPort}{' '}
-                  with PublicKey: <em>{this.state.config.publicKey}</em>
-                </p>
-              </>
+              <Text>
+                Wireguard is listening on port {this.state.config.listenPort}{' '}
+                with PublicKey: <em>{this.state.config.publicKey}</em>
+              </Text>
             ) : (
-              <p>Wireguard is not running. See /configs/wireguard/wg0.conf</p>
+              <Text>
+                Wireguard is not running. See /configs/wireguard/wg0.conf
+              </Text>
             )}
-          </CardBody>
-        </Card>
+          </Box>
+        </Box>
 
         <PeerList />
-      </div>
+      </View>
     )
   }
 }

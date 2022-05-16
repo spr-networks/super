@@ -1,30 +1,27 @@
 import { useEffect, useState } from 'react'
 
 import { wifiAPI } from 'api'
-import Toggle from 'components/Toggle'
 
 import {
   Badge,
+  Box,
   Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
-  CardSubtitle,
-  Label,
-  Nav,
-  NavItem,
-  NavLink,
-  TabContent,
-  TabPane,
-  Row,
-  Col
-} from 'reactstrap'
+  Divider,
+  FlatList,
+  Flex,
+  Heading,
+  Icon,
+  IconButton,
+  Stack,
+  HStack,
+  VStack,
+  Text,
+  useColorModeValue
+} from 'native-base'
 
 const WifiInterface = (props) => {
-  const [showMore, setShowMore] = useState(false)
-  const [tabs, setTabs] = useState('devices')
-  const iw = props.iw
+  const [activeTab, setActiveTab] = useState('devices')
+  const { iw } = props
 
   let tabList = [
     'devices',
@@ -37,179 +34,200 @@ const WifiInterface = (props) => {
     'other'
   ]
 
-  const toggleIfaceState = (iface, state) => {
+  /*const toggleIfaceState = (iface, state) => {
     wifiAPI.ipLinkState(iface, state ? 'up' : 'down').then((res) => {})
-  }
+  }*/
 
   const dList = (dict, type = 'row') => {
     if (Object.keys(dict) && type == 'inline') {
       return (
         <>
           {Object.keys(dict).map((label) => (
-            <span key={label} className="mr-2">
-              <Label>{label}</Label> {dict[label]}
-            </span>
+            <HStack space={2}>
+              <Text bold>{label}</Text>
+              <Text>{dict[label]}</Text>
+            </HStack>
           ))}
         </>
       )
     }
     return (
-      <dl className="row">
+      <VStack space={1} justifyContent="center">
         {Object.keys(dict).map((label) => (
           <>
-            <>
-              <dt className="col-sm-3 sm-text-right">{label}</dt>
-              <dd className="col-sm-9">
+            <HStack space={2}>
+              <Text w="1/6" bold>
+                {label}
+              </Text>
+              <VStack flex="2" space={2} justifyContent="center">
                 {typeof dict[label] == 'object' ? (
-                  <>{dList(dict[label], 'inline')}</>
+                  <Text>{dList(dict[label], 'inline')}</Text>
                 ) : (
-                  <>{dict[label]}</>
+                  <Text>{dict[label]}</Text>
                 )}
-              </dd>
-            </>
+              </VStack>
+            </HStack>
           </>
         ))}
-      </dl>
+      </VStack>
     )
   }
 
   return (
-    <>
-      <h4 className="m-0">{iw.wiphy}</h4>
-      <hr />
+    <Box
+      key={iw.wiphy}
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      rounded="md"
+      width="100%"
+      p="4"
+    >
+      <Heading fontSize="lg">{iw.wiphy}</Heading>
 
-      <Row>
-        <Col lg="4" md="5" sm="4" xs="12">
-          <div className="nav-tabs-navigation verical-navs p-0">
-            <div className="nav-tabs-wrapper">
-              <Nav className="flex-column nav-stacked" role="tablist" tabs>
-                {tabList.map((tab) =>
-                  iw[tab] || tab == 'other' ? (
-                    <NavItem key={tab}>
-                      <NavLink
-                        data-toggle="tab"
-                        href="#"
-                        role="tab"
-                        className={tabs === tab ? 'active' : ''}
-                        onClick={() => setTabs(tab)}
-                      >
-                        {tab.replace(/_/g, ' ').replace('supported ', '')}
-                      </NavLink>
-                    </NavItem>
-                  ) : null
-                )}
-              </Nav>
-            </div>
-          </div>
-        </Col>
-        <Col lg="8" md="7" sm="8" xs="12">
-          <TabContent activeTab={tabs}>
-            {tabList.map((tab) =>
-              iw[tab] || tab == 'other' ? (
-                <TabPane key={tab} tabId={tab}>
-                  {tab == 'devices' ? (
-                    <>
-                      {Object.keys(iw[tab]).map((iface) => (
-                        <>
-                          <div className="pull-right">
-                            <Toggle
-                              onChange={(el, value) => {
-                                toggleIfaceState(iface, value)
-                              }}
-                              isDisabled={
-                                !iw[tab][iface].type.includes('managed')
-                              }
-                              isChecked={iw[tab][iface].channel !== undefined}
-                              onColor="info"
-                              offColor="danger"
-                            />
-                          </div>
-                          <h5>
-                            {iface}
-                            <small className="text-muted ml-2">
-                              {iw[tab][iface].type}
-                            </small>
-                          </h5>
-                          {dList(iw[tab][iface])}
-                          <hr />
-                        </>
-                      ))}
-                    </>
-                  ) : (
-                    <>
-                      {tab == 'other' ? (
-                        <dl className="row">
-                          {Object.keys(iw)
-                            .filter((k) => !tabList.includes(k) && k != 'bands')
-                            .map((k) => (
-                              <>
-                                <dt className="col-sm-3 sm-text-right">{k}</dt>
-                                <dd className="col-sm-9">{iw[k]}</dd>
-                              </>
-                            ))}
-                        </dl>
-                      ) : null}
-                      {tab == 'bands' ? (
-                        <>
-                          {iw.bands.map((band) => (
-                            <>
-                              <h5 className="text-muted">{band.band}</h5>
+      <Divider mt="2" />
 
-                              {Object.keys(band)
-                                .filter((l) => l !== 'band')
-                                .map((label) => (
-                                  <dl className="row">
-                                    <dt className="col-sm-3 text-right">
-                                      {label}
-                                    </dt>
-                                    <dd className="col-sm-9">
-                                      {band[label].map((v) => (
-                                        <div>{v}</div>
-                                      ))}
-                                    </dd>
-                                  </dl>
-                                ))}
-                              <hr />
-                            </>
+      <Stack direction={{ base: 'column', md: 'row' }} space={4}>
+        <VStack borderRightWidth={1} borderRightColor="muted.200">
+          {tabList.map((tab) =>
+            iw[tab] || tab == 'other' ? (
+              <Button
+                variant="ghost"
+                rounded={false}
+                colorScheme={activeTab === tab ? 'primary' : 'muted.500'}
+                onPress={() => setActiveTab(tab)}
+              >
+                {tab.replace(/_/g, ' ').replace('supported ', '')}
+              </Button>
+            ) : null
+          )}
+        </VStack>
+
+        <Box p="2">
+          {tabList.map((tab) =>
+            iw[tab] || tab == 'other' ? (
+              <VStack display={activeTab == tab ? 'flex' : 'none'}>
+                {tab == 'devices' ? (
+                  <>
+                    {Object.keys(iw[tab]).map((iface) => (
+                      <VStack space={4}>
+                        <HStack space={1} alignItems="center">
+                          <Heading fontSize="lg">{iface}</Heading>
+                          <Text fontSize="sm" color="muted.500">
+                            {iw[tab][iface].type}
+                          </Text>
+                        </HStack>
+                        {dList(iw[tab][iface])}
+                        <Divider my="4" />
+                      </VStack>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    {tab == 'other' ? (
+                      <VStack space={2}>
+                        {Object.keys(iw)
+                          .filter((k) => !tabList.includes(k) && k != 'bands')
+                          .map((k) => (
+                            <HStack space={2}>
+                              <Text bold>{k}</Text>
+                              <Text>{iw[k]}</Text>
+                            </HStack>
                           ))}
-                        </>
-                      ) : null}
-                      {tab.includes('support') &&
-                      iw['supported_interface_modes'] ? (
-                        <>
-                          <h5 className="text-muted">
-                            {tab.replace(/_/g, ' ')}
-                          </h5>
+                      </VStack>
+                    ) : null}
+                    {tab == 'bands' ? (
+                      <>
+                        {iw.bands.map((band) => (
+                          <VStack
+                            space={2}
+                            borderBottomWidth={1}
+                            borderBottomColor="muted.200"
+                            pb="4"
+                            mb="4"
+                          >
+                            <Heading fontSize="sm" color="muted.500">
+                              {band.band}
+                            </Heading>
+
+                            {Object.keys(band)
+                              .filter((l) => l !== 'band')
+                              .map((label) => (
+                                <HStack space={2}>
+                                  <Text bold>{label}</Text>
+                                  <Box flex={2}>
+                                    {band[label].map((v) => (
+                                      <Text>{v}</Text>
+                                    ))}
+                                  </Box>
+                                </HStack>
+                              ))}
+                          </VStack>
+                        ))}
+                      </>
+                    ) : null}
+                    {tab.includes('support') &&
+                    iw['supported_interface_modes'] ? (
+                      <VStack space={4}>
+                        <Heading fontSize="md" color="muted.500">
+                          {tab.replace(/_/g, ' ')}
+                        </Heading>
+                        <Stack
+                          maxW="64vw"
+                          space={2}
+                          direction="row"
+                          flexWrap="wrap"
+                        >
                           {iw[tab] &&
                             iw[tab].map((c) => (
-                              <Badge color="secondary">{c}</Badge>
+                              <>
+                                {tab.match(/extended/) ? (
+                                  <Text mb="2" isTruncated>
+                                    {c}
+                                  </Text>
+                                ) : (
+                                  <Badge
+                                    variant="outline"
+                                    colorScheme="primary"
+                                    mb="2"
+                                  >
+                                    {c}
+                                  </Badge>
+                                )}
+                              </>
                             ))}
+                        </Stack>
 
-                          {tab == 'supported_interface_modes' ? (
-                            <>
-                              <h5 className="text-muted mt-2">
-                                software interface modes (can always be added)
-                              </h5>
+                        {tab == 'supported_interface_modes' ? (
+                          <>
+                            <Heading fontSize="sm">
+                              software interface modes (can always be added)
+                            </Heading>
+
+                            <HStack space={1} flexWrap="wrap">
                               {iw['supported_interface_modes'].map((c) => (
-                                <Badge color="secondary">{c}</Badge>
+                                <Badge variant="outline" colorScheme="primary">
+                                  {c}
+                                </Badge>
                               ))}
-                              <h5 className="text-muted mt-2">
-                                valid interface combinations
-                              </h5>
-                              <em>{iw['valid_interface_combinations']}</em>
-                            </>
-                          ) : null}
-                        </>
-                      ) : null}
-                    </>
-                  )}
-                </TabPane>
-              ) : null
-            )}
-          </TabContent>
-        </Col>
-      </Row>
-    </>
+                            </HStack>
+
+                            <Heading fontSize="sm" color="muted.500">
+                              valid interface combinations
+                            </Heading>
+                            <Text italic>
+                              {iw['valid_interface_combinations']}
+                            </Text>
+                          </>
+                        ) : null}
+                      </VStack>
+                    ) : null}
+                  </>
+                )}
+              </VStack>
+            ) : null
+          )}
+        </Box>
+      </Stack>
+    </Box>
   )
 }
 
@@ -232,31 +250,15 @@ const WifiInterfaceList = (props) => {
 
   return (
     <>
-      <Row>
-        <Col>
-          {/*<Card>
-            <CardHeader>
-              <CardTitle tag="h4">Wifi Interfaces</CardTitle>
-              <CardSubtitle className="text-muted">
-                Connected physical Wifi interfaces
-              </CardSubtitle>
-            </CardHeader>
-            <CardBody>*/}
-          {iws.length ? (
-            <div className="container">
-              {iws.map((iw) => (
-                <Row key={iw.wiphy}>
-                  <Col key={iw.wiphy}>
-                    <WifiInterface iw={iw} />
-                  </Col>
-                </Row>
-              ))}
-            </div>
-          ) : null}
-          {/*</CardBody>
-          </Card>*/}
-        </Col>
-      </Row>
+      <Stack>
+        {iws.length ? (
+          <>
+            {iws.map((iw) => (
+              <WifiInterface iw={iw} />
+            ))}
+          </>
+        ) : null}
+      </Stack>
     </>
   )
 }

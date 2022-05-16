@@ -1,65 +1,70 @@
-/*!
-
-=========================================================
-* Paper Dashboard PRO React - v1.3.0
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/paper-dashboard-pro-react
-* Copyright 2021 Creative Tim (https://www.creative-tim.com)
-
-* Coded by Creative Tim
-
-=========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-*/
-/*eslint-disable*/
-import React from "react";
-import { Container, Row } from "reactstrap";
-// used for making the prop types of this component
-import PropTypes from "prop-types";
+import React from 'react'
+import PropTypes from 'prop-types'
+import { StyleSheet } from 'react-native'
+import { Box, Stack, Link, Text } from 'native-base'
 
 function Footer(props) {
+  let color = props.color || 'muted.600'
+  let _text = props.color
+    ? {
+        color,
+        textDecoration: 'none',
+        style: styles.text
+      }
+    : {}
+
   return (
-    <footer className={"footer" + (props.default ? " footer-default" : "")}>
-      <Container fluid={props.fluid ? true : false}>
-        <Row>
-          <nav className="footer-nav">
-            <ul>
-              <li>
-                <a href="https://www.supernetworks.org/">Supernetworks</a>
-              </li>
-              <li>
-                <a href="https://www.supernetworks.org/pages/blog">Blog</a>
-              </li>
-              <li>
-                <a href="https://www.supernetworks.org/pages/docs/intro" target="_blank">
-                  Documentation
-                </a>
-              </li>
-              <li>
-                <a href="https://github.com/spr-networks/super" target="_blank">
-                  Github
-                </a>
-              </li>
-            </ul>
-          </nav>
-          <div className="credits ml-auto">
-            <span className="copyright">
-              &copy; {1900 + new Date().getYear()}, made with{" "}
-              Paper Pro Dashboard React by Creative Tim
-            </span>
-          </div>
-        </Row>
-      </Container>
-    </footer>
-  );
+    <Stack
+      direction="row"
+      space={2}
+      mt={10}
+      display={{ base: 'none', md: 'flex' }}
+      {...props}
+    >
+      <Link _text={_text} isExternal href="https://www.supernetworks.org/">
+        Supernetworks
+      </Link>
+      <Link
+        _text={_text}
+        isExternal
+        href="https://www.supernetworks.org/pages/blog"
+      >
+        Blog
+      </Link>
+      <Link
+        _text={_text}
+        isExternal
+        href="https://www.supernetworks.org/pages/docs/intro"
+      >
+        Documentation
+      </Link>
+      <Link
+        _text={_text}
+        isExternal
+        href="https://github.com/spr-networks/super"
+      >
+        Github
+      </Link>
+
+      <Text color={color} style={_text.style} w={100} marginLeft="none">
+        &copy; {1900 + new Date().getYear()} SPR
+      </Text>
+    </Stack>
+  )
 }
 
 Footer.propTypes = {
+  color: PropTypes.string,
   default: PropTypes.bool,
-  fluid: PropTypes.bool,
-};
+  fluid: PropTypes.bool
+}
 
-export default Footer;
+export default Footer
+
+const styles = StyleSheet.create({
+  text: {
+    fontWeight: 200,
+    textDecoration: 'none',
+    textShadow: '1px 1px 0px #222'
+  }
+})

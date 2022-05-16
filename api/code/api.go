@@ -100,7 +100,7 @@ func saveConfig() {
 
 var UNIX_WIFID_LISTENER = TEST_PREFIX + "/state/wifi/apisock"
 var UNIX_DHCPD_LISTENER = TEST_PREFIX + "/state/dhcp/apisock"
-var UNIX_WIREGUARD_LISTENER = TEST_PREFIX + "/state/wireguard/apisock"
+var UNIX_WIREGUARD_LISTENER = TEST_PREFIX + "/state/plugins/wireguard/apisock"
 
 func ipAddr(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("ip", "-j", "addr")
@@ -1468,6 +1468,10 @@ func main() {
 	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
 	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins).Methods("PUT", "DELETE")
 
+	// tokens api
+	external_router_authenticated.HandleFunc("/tokens", getAuthTokens).Methods("GET")
+	external_router_authenticated.HandleFunc("/tokens", updateAuthTokens).Methods("PUT", "DELETE")
+
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
 	unix_wifid_router.HandleFunc("/reportPSKAuthSuccess", reportPSKAuthSuccess).Methods("PUT")
@@ -1502,7 +1506,7 @@ func main() {
 	dhcpdServer := http.Server{Handler: logRequest(unix_dhcpd_router)}
 	wireguardServer := http.Server{Handler: logRequest(unix_wireguard_router)}
 
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "SPR-Bearer"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
