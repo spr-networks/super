@@ -5,7 +5,7 @@ export const apiURL = () => {
 
   // jest
   if (typeof document === 'undefined') {
-    return '/'
+    return 'http://localhost/'
   }
 
   if (REACT_APP_API == 'mock') {
