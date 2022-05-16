@@ -2,16 +2,26 @@ import React from 'react'
 
 import PropTypes from 'prop-types'
 
-import Select from 'react-select'
-import CreatableSelect from 'react-select/creatable'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'AppContext'
 import { wifiAPI } from 'api'
 
-import { Button, Col, Label, Form, FormGroup, Input, Row } from 'native-base'
+import {
+  Box,
+  Button,
+  FlatList,
+  FormControl,
+  Heading,
+  Icon,
+  IconButton,
+  Stack,
+  HStack,
+  VStack,
+  Select,
+  Text
+} from 'native-base'
+import { findByDisplayValue } from '@testing-library/react'
 
-export default class WifiChannelParameters extends React.Component {
-  static contextType = APIErrorContext
-
+class WifiChannelParameters extends React.Component {
   Bandwidth5 = [
     { label: '20 MHz', value: 20 },
     { label: '40 MHz', value: 40 },
@@ -19,6 +29,7 @@ export default class WifiChannelParameters extends React.Component {
     { label: '160 MHz', disabled: true, value: 160 },
     { label: '80+80 MHz', disabled: true, value: 8080 }
   ]
+
   Bandwidth24 = [
     { label: '20 MHz', value: 20 },
     { label: '40 MHz', value: 40 }
@@ -26,9 +37,9 @@ export default class WifiChannelParameters extends React.Component {
 
   state = {
     Iface: '',
-    Channel: {},
-    Bandwidth: {},
-    Mode: { label: '5 GHz', value: 'a' },
+    Channel: 0,
+    Bandwidth: 0,
+    Mode: 'a',
     HT_Enable: true,
     VHT_Enable: true,
     HE_Enable: true,
@@ -40,47 +51,43 @@ export default class WifiChannelParameters extends React.Component {
 
   constructor(props) {
     super(props)
-    this.handleChange = this.handleChange.bind(this)
+
     this.handleChangeSelect = this.handleChangeSelect.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
   }
 
-  handleChange(event) {
-    let name = event.target.name,
-      value = event.target.value
+  handleChangeSelect(name, value) {
+    if (name == 'Mode') {
+      this.setState({ Bandwidth: 0, Channel: 0 })
+    }
+
+    if (['Bandwidth', 'Channel'].includes(value)) {
+      value = parseInt(value)
+    }
+
     this.setState({ [name]: value })
   }
 
-  handleChangeSelect(name, opt) {
-    if (name == 'Mode') {
-      this.state.Channel = {}
-      this.state.Bandwidth = {}
-    }
-    this.setState({ [name]: opt })
-  }
-
-  handleSubmit(event) {
-    event.preventDefault()
-
+  handleSubmit() {
     let wifiParameters = {
       //Interface: this.state.Iface,
-      Channel: parseInt(this.state.Channel.value),
-      Mode: this.state.Mode.value,
-      Bandwidth: parseInt(this.state.Bandwidth.value),
+      Channel: parseInt(this.state.Channel),
+      Mode: this.state.Mode,
+      Bandwidth: parseInt(this.state.Bandwidth),
       HT_Enable: this.state.HT_Enable,
-      VHT_Enable: this.state.Mode.value == 'a' ? this.state.VHT_Enable : false,
+      VHT_Enable: this.state.Mode == 'a' ? this.state.VHT_Enable : false,
       HE_Enable: this.state.HE_Enable
     }
 
     const done = (res) => {
       if (this.props.notifyChange) {
         this.props.notifyChange({ ...wifiParameters, ...res })
-        this.context.reportSuccess('Set Channel Parameters')
+        this.context.success('Set Channel Parameters')
       }
     }
 
     wifiAPI.setChannel(wifiParameters).then(done, (e) => {
-      this.context.reportError('API Failure: ' + e.message)
+      this.context.error('API Failure: ' + e.message)
     })
   }
 
@@ -88,9 +95,9 @@ export default class WifiChannelParameters extends React.Component {
     let validChannels = []
 
     let expectedFreq = ''
-    if (this.state.Mode.value == 'a') {
+    if (this.state.Mode == 'a') {
       expectedFreq = '5'
-    } else if (this.state.Mode.value == 'g') {
+    } else if (this.state.Mode == 'g') {
       expectedFreq = '2'
     }
 
@@ -158,16 +165,15 @@ export default class WifiChannelParameters extends React.Component {
             //get bandwidth and cahnnel
             if (cur_device.channel) {
               let parts = cur_device.channel.split(',')
-              let channel = parts[0].split(' ')[0]
-              let bw = parts[1].split(' ')[2]
-              this.setState({ Channel: { label: channel, value: channel } })
-              this.setState({ Bandwidth: { label: bw + ' MHz', value: bw } })
+              let channel = parseInt(parts[0].split(' ')[0])
+              let bw = parseInt(parts[1].split(' ')[2])
+              this.setState({ Bandwidth: bw, Channel: channel })
 
               let start_freq = parts[0].split(' ')[1].substring(1)[0]
               if (start_freq == '2') {
-                this.setState({ Mode: { label: '2.4 GHz', value: 'g' } })
+                this.setState({ Mode: 'g' })
               } else if (start_freq == '5') {
-                this.setState({ Mode: { label: '5 GHz', value: 'a' } })
+                this.setState({ Mode: 'a' })
               }
             }
           }
@@ -181,11 +187,6 @@ export default class WifiChannelParameters extends React.Component {
   }
 
   render() {
-    const onSelectWifiInterface = (opt) => {
-      let { value } = opt
-      this.setState({ Iface: opt.value })
-    }
-
     let Modes = [
       { label: '5 GHz', value: 'a' },
       { label: '2.4 GHz', value: 'g' }
@@ -205,90 +206,114 @@ export default class WifiChannelParameters extends React.Component {
       }
     }
 
-    let Bandwidths
-    if (this.state.Mode.value == 'a') {
-      Bandwidths = this.Bandwidth5
-    } else if (this.state.Mode.value == 'g') {
-      Bandwidths = this.Bandwidth24
-    }
+    let Bandwidths = this.state.Mode == 'a' ? this.Bandwidth5 : this.Bandwidth24
 
     return (
-      <Form onSubmit={this.handleSubmit}>
-        <Card className="wifi-parameters">
-          <CardBody>
-            <Row>
-              <Col>
-                <div className="numbers text-center">
-                  <CardTitle tag="p">Channel Selection</CardTitle>
-                </div>
-              </Col>
-            </Row>
-            <Row>
-              <Col md={3}>
-                <Label>WiFi Interface</Label>
+      <>
+        <Box
+          _light={{ bg: 'warmGray.50' }}
+          _dark={{ bg: 'blueGray.800' }}
+          rounded="md"
+          width="100%"
+          p="4"
+        >
+          <VStack space={2}>
+            <Heading sz="lg">Channel Selection</Heading>
+
+            <HStack space={2}>
+              <FormControl flex={1}>
+                <FormControl.Label>WiFi Interface</FormControl.Label>
                 {this.state.loadedDevs ? (
                   <Select
-                    options={devsScan}
-                    defaultValue={defaultDev}
-                    isOptionDisabled={(option) => option.disabled}
-                    onChange={onSelectWifiInterface}
-                  />
+                    selectedValue={defaultDev}
+                    onValueChange={(value) =>
+                      this.handleChangeSelect('Iface', value)
+                    }
+                    accessibilityLabel="Wifi Interface"
+                  >
+                    {devsScan.map((dev) => (
+                      <Select.Item label={dev.label} value={dev.value} />
+                    ))}
+                  </Select>
                 ) : null}
-              </Col>
-              <Col md={3}>
-                <FormGroup>
-                  <Label for="Mode">Frequency Band</Label>
-                  <Select
-                    options={Modes}
-                    value={this.state.Mode}
-                    onChange={(o) => this.handleChangeSelect('Mode', o)}
-                  />
-                </FormGroup>
-              </Col>
-              <Col md={3}>
-                <FormGroup>
-                  <Label for="Bandwidth">Bandwidth</Label>
-                  <Select
-                    options={Bandwidths}
-                    value={this.state.Bandwidth}
-                    isOptionDisabled={(option) => option.disabled}
-                    onChange={(o) => this.handleChangeSelect('Bandwidth', o)}
-                  />
-                </FormGroup>
-              </Col>
-              <Col md={3}>
-                <FormGroup>
-                  <Label for="Channel">Channel</Label>
-                  <Select
-                    options={this.enumerateChannelOptions()}
-                    value={this.state.Channel}
-                    isOptionDisabled={(option) => option.disabled}
-                    onChange={(o) => this.handleChangeSelect('Channel', o)}
-                  />
-                </FormGroup>
-              </Col>
-            </Row>
+              </FormControl>
 
-            <Row className="mt-4">
-              <Col sm={{ offset: 0, size: 12 }} className="text-center">
-                <Button
-                  className="btn-wd"
-                  color="primary"
-                  size="md"
-                  type="submit"
-                  onClick={this.handleSubmit}
+              <FormControl flex={1}>
+                <FormControl.Label>Frequency Band</FormControl.Label>
+                <Select
+                  selectedValue={this.state.Mode}
+                  onValueChange={(value) =>
+                    this.handleChangeSelect('Mode', value)
+                  }
                 >
-                  Save
-                </Button>
-              </Col>
-            </Row>
-          </CardBody>
-        </Card>
-      </Form>
+                  {Modes.map((item) => (
+                    <Select.Item
+                      label={item.label}
+                      value={item.value}
+                      isDisabled={item.disabled}
+                    />
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl flex={1}>
+                <FormControl.Label>Bandwidth</FormControl.Label>
+                <Select
+                  selectedValue={this.state.Bandwidth}
+                  onValueChange={(value) =>
+                    this.handleChangeSelect('Bandwidth', value)
+                  }
+                >
+                  {Bandwidths.map((item) => (
+                    <Select.Item
+                      label={item.label}
+                      value={item.value}
+                      isDisabled={item.disabled}
+                    />
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl flex={1}>
+                <FormControl.Label for="Channel">Channel</FormControl.Label>
+                <Select
+                  selectedValue={this.state.Channel}
+                  onValueChange={(value) =>
+                    this.handleChangeSelect('Channel', value)
+                  }
+                >
+                  {this.enumerateChannelOptions().map((item) => (
+                    <Select.Item
+                      label={item.label}
+                      value={item.value}
+                      isDisabled={item.disabled}
+                    />
+                  ))}
+                </Select>
+              </FormControl>
+            </HStack>
+
+            <VStack space={2}>
+              <Button
+                colorScheme="primary"
+                size="md"
+                type="submit"
+                onPress={this.handleSubmit}
+              >
+                Save
+              </Button>
+            </VStack>
+          </VStack>
+        </Box>
+      </>
     )
   }
 }
 
+WifiChannelParameters.contextType = AlertContext
+
 WifiChannelParameters.propTypes = {
   notifyChange: PropTypes.func
 }
+
+export default WifiChannelParameters

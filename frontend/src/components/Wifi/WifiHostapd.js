@@ -3,7 +3,14 @@ import { useEffect, useState } from 'react'
 import { wifiAPI } from 'api'
 import { ucFirst } from 'utils'
 
-import { Box, HStack, Text, VStack, useColorModeValue } from 'native-base'
+import {
+  Box,
+  Divider,
+  HStack,
+  Text,
+  VStack,
+  useColorModeValue
+} from 'native-base'
 
 import WifiChannelParameters from 'components/Wifi/WifiChannelParameters'
 
@@ -71,25 +78,28 @@ const WifiHostapd = (props) => {
   }
 
   return (
-    <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      rounded="md"
-      width="100%"
-      p="4"
-    >
-      <VStack space={2}>
-        <WifiChannelParameters config={config} notifyChange={updateChannels} />
+    <>
+      <WifiChannelParameters config={config} notifyChange={updateChannels} />
 
-        {/*Object.keys(config).map((label) => (
-          <HStack space={4} justifyContent="center">
-            <Text bold w="1/4" textAlign="right">
-              {label}
-            </Text>
-            <Text w="1/4">{config[label]}</Text>
-          </HStack>
-        ))*/}
-      </VStack>
-    </Box>
+      <Box
+        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+        rounded="md"
+        width="100%"
+        p={4}
+        mt={4}
+      >
+        <VStack space={2}>
+          {Object.keys(config).map((label) => (
+            <HStack space={4} justifyContent="center">
+              <Text bold w="1/4" textAlign="right">
+                {label}
+              </Text>
+              <Text w="1/4">{config[label]}</Text>
+            </HStack>
+          ))}
+        </VStack>
+      </Box>
+    </>
   )
 
   /*

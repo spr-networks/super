@@ -34,7 +34,7 @@ const WifiScan = (props) => {
   useEffect(() => {
     wifiAPI.iwDev().then((devs) => {
       setDevs(devs)
-      setLoadedDevs(true)
+      //setLoadedDevs(true)
     })
   }, [])
 
