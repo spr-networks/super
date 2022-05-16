@@ -8,18 +8,12 @@ import { wifiAPI } from 'api'
 import {
   Box,
   Button,
-  FlatList,
   FormControl,
   Heading,
-  Icon,
-  IconButton,
-  Stack,
   HStack,
   VStack,
-  Select,
-  Text
+  Select
 } from 'native-base'
-import { findByDisplayValue } from '@testing-library/react'
 
 class WifiChannelParameters extends React.Component {
   Bandwidth5 = [
@@ -71,9 +65,9 @@ class WifiChannelParameters extends React.Component {
   handleSubmit() {
     let wifiParameters = {
       //Interface: this.state.Iface,
-      Channel: parseInt(this.state.Channel),
+      Channel: this.state.Channel,
       Mode: this.state.Mode,
-      Bandwidth: parseInt(this.state.Bandwidth),
+      Bandwidth: this.state.Bandwidth,
       HT_Enable: this.state.HT_Enable,
       VHT_Enable: this.state.Mode == 'a' ? this.state.VHT_Enable : false,
       HE_Enable: this.state.HE_Enable
