@@ -195,7 +195,7 @@ class WifiChannelParameters extends React.Component {
 
         devsScan.push({ value: iface, disabled: !type.includes('AP'), label })
         if (iface == this.props.config.interface) {
-          defaultDev = devsScan[devsScan.length - 1]
+          defaultDev = devsScan[devsScan.length - 1].value
         }
       }
     }
