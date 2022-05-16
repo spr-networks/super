@@ -31,10 +31,11 @@ function bufferEncode(value) {
 
 const register = (e) => {
   let username = 'admin'
-  let otp = 1024
 
   return new Promise((resolve, reject) => {
-    fetch(`${ApiBaseUrl}register/?otp=${otp}&username=${username}`)
+    fetch(`${ApiBaseUrl}webauthn/register?username=${username}`, {
+      headers: { Authorization: api.getAuthHeaders() }
+    })
       .then((res) => res.json())
       .then((credentialCreationOptions) => {
         console.log('creds', credentialCreationOptions)
@@ -47,6 +48,7 @@ const register = (e) => {
         credentialCreationOptions.publicKey.user.id = bufferDecode(
           credentialCreationOptions.publicKey.user.id
         )
+
         if (credentialCreationOptions.publicKey.excludeCredentials) {
           for (
             var i = 0;
@@ -81,10 +83,15 @@ const register = (e) => {
           }
         })
 
-        fetch(`${ApiBaseUrl}register/?otp=${otp}&username=${username}`, {
+        fetch(`${ApiBaseUrl}webauthn/register?username=${username}`, {
           method: 'POST',
           body,
-          headers: { Authorization: `Bearer ${TOKEN}` }
+          headers: {
+            Authorization: api.getAuthHeaders(),
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'react',
+            'SPR-Bearer': TOKEN
+          }
         })
           .then((res) => res.json())
           .then(resolve)
@@ -100,12 +107,14 @@ const register = (e) => {
 const login = (e) => {
   let username = 'admin'
   return new Promise((resolve, reject) => {
-    fetch(`${ApiBaseUrl}login/?username=${username}`, {
-      headers: { Authorization: 'Bearer ' + TOKEN }
+    fetch(`${ApiBaseUrl}login?username=${username}`, {
+      headers: { Authorization: api.getAuthHeaders() }
     })
       .then((res) => res.json())
       .then((credentialRequestOptions) => {
         TOKEN = credentialRequestOptions.publicKey.extensions['SPR-Bearer']
+
+        console.log('login TOKEN=', TOKEN)
 
         credentialRequestOptions.publicKey.challenge = bufferDecode(
           credentialRequestOptions.publicKey.challenge
@@ -142,7 +151,7 @@ const login = (e) => {
           }
         })
 
-        fetch(`${ApiBaseUrl}login/?username=${username}`, {
+        fetch(`${ApiBaseUrl}login?username=${username}`, {
           method: 'POST',
           body,
           headers: { Authorization: `Bearer ${TOKEN}` }

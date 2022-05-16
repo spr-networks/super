@@ -6,7 +6,7 @@ import Footer from 'components/Footer/Footer'
 
 import { View, Box, Image, useColorModeValue } from 'native-base'
 
-const imgBackground = require('../assets/img/bg/bg.jpg')
+//const imgBackground = require('../assets/img/bg/bg.jpg')
 
 const AuthLayout = () => {
   return (
@@ -24,7 +24,7 @@ const AuthLayout = () => {
     >
       <View w="100vw" h="100vh" bg="black">
         <Image
-          source={imgBackground}
+          source="/bg.jpg"
           opacity={0.4}
           height="100vh"
           resizeMode="cover"

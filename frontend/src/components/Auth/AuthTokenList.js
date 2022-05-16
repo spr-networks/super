@@ -71,6 +71,10 @@ const AuthTokenList = (props) => {
       .catch((err) => context.error(err))
   }
 
+  const tokenExpired = (expire) => {
+    return expire < parseInt(new Date().getTime() / 1e3)
+  }
+
   return (
     <View mt={4}>
       <Box
@@ -114,7 +118,9 @@ const AuthTokenList = (props) => {
                 <Text flex={1}>{item.Token}</Text>
                 <HStack flex={1} space={1}>
                   <Text color="muted.500">Expire</Text>
-                  <Text>
+                  <Text
+                    color={tokenExpired(item.Expire) ? 'red.500' : 'muted.900'}
+                  >
                     {item.Expire
                       ? timeAgo(new Date(item.Expire * 1e3))
                       : 'Never'}
