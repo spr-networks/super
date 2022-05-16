@@ -73,7 +73,7 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
           </Text>
 
           <Text fontSize="md" color="muted.600">
-            v1.4
+            v1.0-alpha
           </Text>
 
           <HStack marginLeft="auto" space="4">
