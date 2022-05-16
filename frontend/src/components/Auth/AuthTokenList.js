@@ -72,7 +72,7 @@ const AuthTokenList = (props) => {
   }
 
   const tokenExpired = (expire) => {
-    return expire < parseInt(new Date().getTime() / 1e3)
+    return expire > 0 && expire < parseInt(new Date().getTime() / 1e3)
   }
 
   return (
@@ -119,7 +119,9 @@ const AuthTokenList = (props) => {
                 <HStack flex={1} space={1}>
                   <Text color="muted.500">Expire</Text>
                   <Text
-                    color={tokenExpired(item.Expire) ? 'red.500' : 'muted.900'}
+                    color={
+                      tokenExpired(item.Expire) ? 'warning.400' : 'muted.500'
+                    }
                   >
                     {item.Expire
                       ? timeAgo(new Date(item.Expire * 1e3))
