@@ -43,7 +43,7 @@ const WirelessConfiguration = (props) => {
     },
     {
       key: 'fourth',
-      title: 'Hostapd'
+      title: 'Radio Settings'
     }
   ])
 

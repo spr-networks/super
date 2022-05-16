@@ -55,7 +55,7 @@ class WifiChannelParameters extends React.Component {
       this.setState({ Bandwidth: 0, Channel: 0 })
     }
 
-    if (['Bandwidth', 'Channel'].includes(value)) {
+    if (['Bandwidth', 'Channel'].includes(name)) {
       value = parseInt(value)
     }
 
@@ -195,12 +195,12 @@ class WifiChannelParameters extends React.Component {
         let label = `${iface} ${type}`
 
         //skip VLAN entries
-        if (type.includes(' AP/VLAN')) {
+        if (type.includes('AP/VLAN')) {
           continue
         }
 
         //skip managed
-        if (type.includes(' managed')) {
+        if (type.includes('managed')) {
           continue
         }
 
