@@ -212,7 +212,7 @@ class WifiChannelParameters extends React.Component {
           p="4"
         >
           <VStack space={2}>
-            <Heading sz="lg">Channel Selection</Heading>
+            <Heading size="lg">Channel Selection</Heading>
 
             <HStack space={2}>
               <FormControl flex={1}>
@@ -287,16 +287,15 @@ class WifiChannelParameters extends React.Component {
               </FormControl>
             </HStack>
 
-            <VStack space={2}>
-              <Button
-                colorScheme="primary"
-                size="md"
-                type="submit"
-                onPress={this.handleSubmit}
-              >
-                Save
-              </Button>
-            </VStack>
+            <Button
+              colorScheme="primary"
+              size="md"
+              type="submit"
+              onPress={this.handleSubmit}
+              mt={4}
+            >
+              Save
+            </Button>
           </VStack>
         </Box>
       </>
