@@ -157,29 +157,31 @@ func (auth *authnconfig) BeginRegistration(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	webAuthnOTP := loadOTP()
-	if webAuthnOTP == 0 {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, "Use CLI to Generate OTP code to register a new device", http.StatusBadRequest)
-		return
-	}
+	/*
+		webAuthnOTP := loadOTP()
+		if webAuthnOTP == 0 {
+			w.Header().Set("Content-Type", "application/json")
+			http.Error(w, "Use CLI to Generate OTP code to register a new device", http.StatusBadRequest)
+			return
+		}
 
-	otpStr, ok := vals["otp"]
-	if !ok {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, "Missing OTP Code", http.StatusBadRequest)
-		return
-	}
+		otpStr, ok := vals["otp"]
+		if !ok {
+			w.Header().Set("Content-Type", "application/json")
+			http.Error(w, "Missing OTP Code", http.StatusBadRequest)
+			return
+		}
 
-	//invalidate the OTP code immediately
-	//saveOTP(0)
+		//invalidate the OTP code immediately
+		//saveOTP(0)
 
-	otp, err := strconv.Atoi(otpStr[0])
-	if err != nil || otp != webAuthnOTP {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, "Wrong OTP Code", http.StatusBadRequest)
-		return
-	}
+		otp, err := strconv.Atoi(otpStr[0])
+		if err != nil || otp != webAuthnOTP {
+			w.Header().Set("Content-Type", "application/json")
+			http.Error(w, "Wrong OTP Code", http.StatusBadRequest)
+			return
+		}
+	*/
 
 	username := usernames[0]
 
@@ -192,6 +194,7 @@ func (auth *authnconfig) BeginRegistration(w http.ResponseWriter, r *http.Reques
 
 	registerOptions := func(credCreationOpts *protocol.PublicKeyCredentialCreationOptions) {
 		credCreationOpts.Extensions = protocol.AuthenticationExtensions{"SPR-Bearer": token}
+		//credCreationOpts.CredentialExcludeList = user.CredentialExcludeList()
 	}
 
 	options, sessionData, err := auth.webAuthn.BeginRegistration(user, registerOptions)
@@ -241,17 +244,28 @@ func (auth *authnconfig) ExtractSessionData(r *http.Request) (*webauthn.SessionD
 }
 
 func (auth *authnconfig) FinishRegistration(w http.ResponseWriter, r *http.Request) {
-	sessionData, user := auth.ExtractSessionData(r)
+	//auth header is populated since we're behind auth here - pass bearer token in header
+	//sessionData, user := auth.ExtractSessionData(r)
+	bearerToken := r.Header.Get("SPR-Bearer")
+	if bearerToken == "" {
+		http.Error(w, "missing SPR bearer token", 400)
+		return
+	}
 
-	if sessionData == nil {
+	sessionData, exists := auth.sessionMap[bearerToken]
+	if !exists {
 		http.Error(w, "no registration in progress", 400)
 		return
 	}
 
-	if user == nil {
+	user, exists := auth.regMap[bearerToken]
+	if !exists {
 		http.Error(w, "user is missing", 400)
 		return
 	}
+
+	fmt.Println("finish sess", sessionData)
+	fmt.Println("finish reg:", user)
 
 	credential, err := auth.webAuthn.FinishRegistration(user, *sessionData, r)
 
@@ -423,19 +437,17 @@ func (auth *authnconfig) authenticateUser(username string, password string) bool
 func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router) http.HandlerFunc {
 	webauth_router := mux.NewRouter().StrictSlash(true)
 
-	// TODO behind auth
-	webauth_router.HandleFunc("/register/", auth.BeginRegistration).Methods("GET", "OPTIONS")
-	webauth_router.HandleFunc("/register/", auth.FinishRegistration).Methods("POST", "OPTIONS")
-	//authenticatedNext.HandleFunc("/register/", auth.BeginRegistration).Methods("GET", "OPTIONS")
-	//authenticatedNext.HandleFunc("/register/", auth.FinishRegistration).Methods("POST", "OPTIONS")
+	// webauthn register is behind auth
+	authenticatedNext.HandleFunc("/webauthn/register", auth.BeginRegistration).Methods("GET", "OPTIONS")
+	authenticatedNext.HandleFunc("/webauthn/register", auth.FinishRegistration).Methods("POST", "OPTIONS")
 
-	webauth_router.HandleFunc("/login/", auth.BeginLogin).Methods("GET", "OPTIONS")
-	webauth_router.HandleFunc("/login/", auth.FinishLogin).Methods("POST", "OPTIONS")
+	webauth_router.HandleFunc("/login", auth.BeginLogin).Methods("GET", "OPTIONS")
+	webauth_router.HandleFunc("/login", auth.FinishLogin).Methods("POST", "OPTIONS")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var matchInfo mux.RouteMatch
 
-		//webuath endpoints
+		//webuathn endpoints
 		if webauth_router.Match(r, &matchInfo) {
 			webauth_router.ServeHTTP(w, r)
 			return
