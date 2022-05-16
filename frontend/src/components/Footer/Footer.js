@@ -8,7 +8,7 @@ function Footer(props) {
   let _text = props.color
     ? {
         color,
-        textDecoration: 'none',
+        textDecorationStyle: 'none',
         style: styles.text
       }
     : {}
@@ -64,7 +64,7 @@ export default Footer
 const styles = StyleSheet.create({
   text: {
     fontWeight: 200,
-    textDecoration: 'none',
+    textDecorationStyle: 'none',
     textShadow: '1px 1px 0px #222'
   }
 })
