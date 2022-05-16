@@ -58,13 +58,11 @@ const StatsChartWidget = (props) => {
     }
 
     chart = (
-      <div style={{ maxHeight: '242px' }}>
         <Doughnut
           data={data}
           options={options}
           className="ct-chart ct-perfect-fourth"
         />
-      </div>
     )
   } else {
     let options = {
