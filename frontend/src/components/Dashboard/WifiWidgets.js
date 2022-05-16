@@ -1,4 +1,4 @@
-import { Component, useEffect, useState } from 'react'
+import React, { Component, useEffect, useState } from 'react'
 import { wifiAPI } from 'api/Wifi'
 import StatsWidget from './StatsWidget'
 import { faClock, faLaptop, faWifi } from '@fortawesome/free-solid-svg-icons'
@@ -14,7 +14,7 @@ export class WifiClientCount extends Component {
   }
 
   render() {
-    return <div>{this.state.numberOfWifiClients}</div>
+    return <>{this.state.numberOfWifiClients}</>
   }
 }
 
