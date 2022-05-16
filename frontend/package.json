@@ -51,6 +51,7 @@
     "react-chartjs-2": "^4.0.1",
     "react-dom": "17.0.2",
     "react-native": "^0.68.2",
+    "react-native-pager-view": "^5.4.15",
     "react-native-safe-area-context": "^4.2.5",
     "react-native-svg": "^12.3.0",
     "react-native-swipe-list-view": "^3.2.9",
@@ -70,6 +71,7 @@
     "css-loader": "^6.7.1",
     "cypress": "^9.5.2",
     "html-webpack-plugin": "^5.5.0",
+    "react-test-renderer": "17.0.2",
     "serve": "^13.0.2",
     "style-loader": "^3.3.1",
     "webpack": "^5.72.1",
@@ -89,6 +91,13 @@
     ]
   },
   "jest": {
-    "preset": "react-native"
+    "preset": "react-native",
+    "moduleDirectories": [
+      "src",
+      "node_modules"
+    ],
+    "transformIgnorePatterns": [
+      "/node_modules/(?!(@react-native|react-native|@fortawesome)/).*/"
+    ]
   }
 }
