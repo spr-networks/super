@@ -212,7 +212,7 @@ class WifiChannelParameters extends React.Component {
           p="4"
         >
           <VStack space={2}>
-            <Heading size="lg">Channel Selection</Heading>
+            <Heading fontSize="lg">Channel Selection</Heading>
 
             <HStack space={2}>
               <FormControl flex={1}>
