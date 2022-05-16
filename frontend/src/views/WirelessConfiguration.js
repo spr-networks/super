@@ -13,7 +13,7 @@ import { Box, View, useColorModeValue } from 'native-base'
 
 const WirelessConfiguration = (props) => {
   const [config, setConfig] = useState({})
-  const [index, setIndex] = useState(0)
+  const [index, setIndex] = useState(1)
 
   const context = useContext(AlertContext)
 
