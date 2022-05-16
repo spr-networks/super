@@ -1,21 +1,45 @@
 import React from 'react'
-import { BrowserRouter, Route, Switch, Redirect } from 'react-router-dom'
+import { NativeBaseProvider } from 'native-base'
 
-import AuthLayout from 'layouts/Auth.js'
-import AdminLayout from 'layouts/Admin.js'
-
-import 'bootstrap/dist/css/bootstrap.css'
-import './assets/scss/paper-dashboard.scss'
-import './App.css'
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  Navigate
+} from 'react-router-dom'
+// TODO react-router-native for native
+/*export {
+  NativeRouter as Router,
+  Switch,
+  Route,
+  Link
+} from 'react-router-native'*/
+import AuthLayout from 'layouts/Auth'
+import AdminLayout from 'layouts/Admin'
+import { routesAuth, routesAdmin } from 'routes'
+import { theme } from 'Theme'
+//import './App.css'
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Switch>
-        <Route path="/auth" render={(props) => <AuthLayout {...props} />} />
-        <Route path="/admin" render={(props) => <AdminLayout {...props} />} />
-        <Redirect to="/auth/login" />
-      </Switch>
-    </BrowserRouter>
+    <NativeBaseProvider theme={theme}>
+      <Router>
+        <Routes>
+          <Route key="index" path="/" element={<Navigate to="/auth/login" />} />
+
+          <Route key="auth" path="/auth" element={<AuthLayout />}>
+            {routesAuth.map((r) => (
+              <Route key={r.path} path={r.path} element={<r.element />} />
+            ))}
+          </Route>
+
+          <Route key="admin" path="/admin" element={<AdminLayout />}>
+            {routesAdmin.map((r) => (
+              <Route key={r.path} path={r.path} element={<r.element />} />
+            ))}
+          </Route>
+        </Routes>
+      </Router>
+    </NativeBaseProvider>
   )
 }

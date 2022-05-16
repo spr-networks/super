@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -15,7 +14,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -102,7 +100,7 @@ func saveConfig() {
 
 var UNIX_WIFID_LISTENER = TEST_PREFIX + "/state/wifi/apisock"
 var UNIX_DHCPD_LISTENER = TEST_PREFIX + "/state/dhcp/apisock"
-var UNIX_WIREGUARD_LISTENER = TEST_PREFIX + "/state/wireguard/apisock"
+var UNIX_WIREGUARD_LISTENER = TEST_PREFIX + "/state/plugins/wireguard/apisock"
 
 func ipAddr(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("ip", "-j", "addr")
@@ -138,66 +136,6 @@ func ipLinkUpDown(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func iwCommand(w http.ResponseWriter, r *http.Request) {
-	command := mux.Vars(r)["command"]
-
-	/*
-	   allowed commands for now:
-	   iw/list, iw/dev iw/dev/wlan0-9/scan
-	*/
-	validCommand := regexp.MustCompile(`^(list|dev)/?([a-z0-9\.]+\/scan)?$`).MatchString
-	if !validCommand(command) {
-		fmt.Println("invalid iw command")
-		http.Error(w, "Invalid command", 400)
-		return
-	}
-
-	args := strings.Split(command, "/")
-	cmd := exec.Command("iw", args...)
-	data, err := cmd.Output()
-	if err != nil {
-		fmt.Println("iw command error:", err)
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	// use json parsers if available (iw_list, iw_dev, iw-scan)
-	if command == "list" || command == "dev" || strings.HasSuffix(command, "scan") {
-		parser := "--iw_" + command // bug: jc dont allow - when using local parsers
-		if strings.HasSuffix(command, "scan") {
-			parser = "--iw-scan"
-		}
-
-		cmd = exec.Command("jc", parser)
-
-		stdin, err := cmd.StdinPipe()
-		if err != nil {
-			fmt.Println("iwCommand stdin pipe error:", err)
-			http.Error(w, err.Error(), 400)
-			return
-		}
-
-		go func() {
-			defer stdin.Close()
-			io.WriteString(stdin, string(data))
-		}()
-
-		stdout, err := cmd.Output()
-		if err != nil {
-			fmt.Println("iwCommand stdout error:", err)
-			http.Error(w, err.Error(), 400)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, string(stdout))
-
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/plain")
-	fmt.Fprintf(w, string(data))
-}
 
 func getStatus(w http.ResponseWriter, r *http.Request) {
 	reply := "Online"
@@ -1514,6 +1452,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/hostapd/all_stations", hostapdAllStations).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/config", hostapdConfig).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/config", hostapdUpdateConfig).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/setChannel", hostapdChannelSwitch).Methods("PUT")
 
 	//ip information
 	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")
@@ -1528,6 +1467,10 @@ func main() {
 	//plugins
 	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
 	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins).Methods("PUT", "DELETE")
+
+	// tokens api
+	external_router_authenticated.HandleFunc("/tokens", getAuthTokens).Methods("GET")
+	external_router_authenticated.HandleFunc("/tokens", updateAuthTokens).Methods("PUT", "DELETE")
 
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
@@ -1563,7 +1506,7 @@ func main() {
 	dhcpdServer := http.Server{Handler: logRequest(unix_dhcpd_router)}
 	wireguardServer := http.Server{Handler: logRequest(unix_wireguard_router)}
 
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "SPR-Bearer"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 

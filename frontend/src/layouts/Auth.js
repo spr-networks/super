@@ -1,43 +1,47 @@
 import React from 'react'
-import { Route, Switch } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
+import { StyleSheet } from 'react-native'
 
-//import AuthNavbar from "components/Navbars/AuthNavbar.js";
 import Footer from 'components/Footer/Footer'
 
-import routes from 'routes'
+import { View, Box, Image, useColorModeValue } from 'native-base'
 
-function Pages() {
-  const fullPages = React.useRef()
+//const imgBackground = require('../assets/img/bg/bg.jpg')
 
-  const getRoutes = (routes) => {
-    return routes.map((prop, key) => {
-      if (prop.collapse) {
-        return getRoutes(prop.views)
-      }
-      if (prop.layout === '/auth') {
-        return (
-          <Route
-            path={prop.layout + prop.path}
-            component={prop.component}
-            key={key}
-          />
-        )
-      } else {
-        return null
-      }
-    })
-  }
+const AuthLayout = () => {
   return (
-    <>
-      {/*<AuthNavbar />*/}
-      <div className="wrapper wrapper-full-page" ref={fullPages}>
-        <div className="full-page section-image">
-          <Switch>{getRoutes(routes)}</Switch>
-          <Footer fluid />
-        </div>
-      </div>
-    </>
+    <Box
+      w="100%"
+      h={{ base: '100vh', md: '100vh' }}
+      _light={{ bg: 'warmGray.200' }}
+      _dark={{ bg: 'blueGray.900' }}
+      alignItems="center"
+      justifyContent="center"
+      nativeID={useColorModeValue(
+        'nativebase-body-light',
+        'nativebase-body-dark'
+      )}
+    >
+      <View w="100vw" h="100vh" bg="black">
+        <Image
+          source="/bg.jpg"
+          opacity={0.4}
+          height="100vh"
+          resizeMode="cover"
+        />
+        <View marginTop="-90vh">
+          <Outlet />
+          <Footer
+            color="light.200"
+            position="fixed"
+            bottom={2}
+            right={2}
+            justifyContent="center"
+          />
+        </View>
+      </View>
+    </Box>
   )
 }
 
-export default Pages
+export default AuthLayout

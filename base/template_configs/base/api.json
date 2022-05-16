@@ -19,11 +19,22 @@
    "Enabled": true
   },
   {
+   "Name": "plugin-lookup",
+   "URI": "lookup",
+   "UnixPath": "/state/plugins/plugin-lookup/lookup_plugin",
+   "Enabled": true
+ },
+  {
    "Name": "wireguard",
    "URI": "wireguard",
-   "UnixPath": "/state/wireguard/wireguard_plugin",
+   "UnixPath": "/state/plugins/wireguard/wireguard_plugin",
+   "Enabled": true
+  },
+  {
+   "Name": "dyndns",
+   "URI": "dyndns",
+   "UnixPath": "/state/plugins/dyndns/dyndns_plugin",
    "Enabled": true
   }
  ]
 }
-

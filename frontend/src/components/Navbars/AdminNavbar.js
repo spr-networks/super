@@ -1,199 +1,164 @@
-import React from 'react'
-import classnames from 'classnames'
-import { useLocation } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import PropTypes from 'prop-types'
+import { useNavigate } from 'react-router-dom'
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { faArrowRightFromBracket } from '@fortawesome/free-solid-svg-icons'
 import {
   Button,
-  Collapse,
-  NavbarBrand,
-  Navbar,
-  NavItem,
-  NavLink,
-  Nav,
-  Container
-} from 'reactstrap'
+  Box,
+  Flex,
+  HamburgerIcon,
+  HStack,
+  Icon,
+  IconButton,
+  Link,
+  Text,
+  MoonIcon,
+  SunIcon,
+  Tooltip,
+  useColorMode,
+  useColorModeValue,
+  useToken
+} from 'native-base'
 
-function AdminNavbar(props) {
-  const [collapseOpen, setCollapseOpen] = React.useState(false)
-  const [sidebarOpen, setSidebarOpen] = React.useState(false)
-  const [color, setColor] = React.useState('navbar-transparent')
-  const location = useLocation()
-  React.useEffect(() => {
-    window.addEventListener('resize', updateColor)
-  })
-  React.useEffect(() => {
-    if (
-      window.outerWidth < 993 &&
-      document.documentElement.className.indexOf('nav-open') !== -1
-    ) {
-      document.documentElement.classList.toggle('nav-open')
-    }
-  }, [location])
-  // function that adds color white/transparent to the navbar on resize (this is for the collapse)
-  const updateColor = () => {
-    if (window.innerWidth < 993 && collapseOpen) {
-      setColor('bg-white')
-    } else {
-      setColor('navbar-transparent')
-    }
+const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
+  const { colorMode, toggleColorMode } = useColorMode()
+
+  /*useEffect(() => {
+    if (colorMode === 'light')
+      document
+        .getElementsByTagName('html')[0]
+        .setAttribute('data-theme', 'light')
+    else
+      document
+        .getElementsByTagName('html')[0]
+        .setAttribute('data-theme', 'dark')
+  }, [colorMode])*/
+
+  const navigate = useNavigate()
+  const logout = () => {
+    localStorage.removeItem('user')
+    navigate('/')
   }
-  // this function opens and closes the sidebar on small devices
-  const toggleSidebar = () => {
-    document.documentElement.classList.toggle('nav-open')
-    setSidebarOpen(!sidebarOpen)
-  }
-  // this function opens and closes the collapse on small devices
-  // it also adds navbar-transparent class to the navbar when closed
-  // ad bg-white when opened
-  const toggleCollapse = () => {
-    if (!collapseOpen) {
-      setColor('bg-white')
-    } else {
-      setColor('navbar-transparent')
-    }
-    setCollapseOpen(!collapseOpen)
-  }
+
   return (
     <>
-      <Navbar
-        className={classnames('navbar-absolute fixed-top', color)}
-        expand="lg"
+      <HStack
+        w="100%"
+        borderBottomWidth={1}
+        bg={useColorModeValue('navbarBackgroundLight', 'navbarBackgroundDark')}
+        borderColor={useColorModeValue(
+          'navbarBorderColorLight',
+          'navbarBorderColorDark'
+        )}
+        px={5}
+        h={16}
+        justifyContent="space-between"
       >
-        <Container fluid>
-          <div className="navbar-wrapper">
-            <div className="navbar-minimize">
-              <Button
-                className="btn-icon btn-round"
-                color="default"
-                id="minimizeSidebar"
-                onClick={props.handleMiniClick}
-              >
-                <i className="nc-icon nc-minimal-right text-center visible-on-sidebar-mini" />
-                <i className="nc-icon nc-minimal-left text-center visible-on-sidebar-regular" />
-              </Button>
-            </div>
-            <div
-              className={classnames('navbar-toggle', {
-                toggled: sidebarOpen
-              })}
+        <HStack w="100%" alignItems="center" space={1}>
+          <IconButton
+            variant="unstyled"
+            icon={<HamburgerIcon />}
+            _icon={{
+              color: useColorModeValue(
+                'navbarTextColorLight',
+                'navbarTextColorDark'
+              )
+            }}
+            onPress={() => setIsOpenSidebar(!isOpenSidebar)}
+          />
+
+          <Text fontSize="lg" bold>
+            SPR
+          </Text>
+
+          <Text fontSize="md" color="muted.600">
+            v1.4
+          </Text>
+
+          <HStack marginLeft="auto" space="4">
+            <Link
+              p={4}
+              isExternal
+              href="https://www.supernetworks.org/pages/docs/intro"
+              _text={{
+                textDecorationLine: 'none',
+                color: useColorModeValue(
+                  'navbarTextColorLight',
+                  'navbarTextColorDark'
+                )
+              }}
+              display={{ base: 'none', lg: 'flex' }}
             >
-              <button
-                className="navbar-toggler"
-                type="button"
-                onClick={toggleSidebar}
-              >
-                <span className="navbar-toggler-bar bar1" />
-                <span className="navbar-toggler-bar bar2" />
-                <span className="navbar-toggler-bar bar3" />
-              </button>
-            </div>
-            <NavbarBrand href="#spr" onClick={(e) => e.preventDefault()}>
-              <span className="d-none d-md-block">SPR Admin</span>
-              <span className="d-block d-md-none">SPR Admin</span>
-            </NavbarBrand>
-          </div>
-          <button
-            aria-controls="navigation-index"
-            aria-expanded={collapseOpen}
-            aria-label="Toggle navigation"
-            className="navbar-toggler"
-            // data-target="#navigation"
-            data-toggle="collapse"
-            type="button"
-            onClick={toggleCollapse}
-          >
-            <span className="navbar-toggler-bar navbar-kebab" />
-            <span className="navbar-toggler-bar navbar-kebab" />
-            <span className="navbar-toggler-bar navbar-kebab" />
-          </button>
-          <Collapse
-            className="justify-content-end"
-            navbar
-            isOpen={collapseOpen}
-          >
-            {/*
-            <Form>
-              <InputGroup className="no-border">
-                <Input defaultValue="" placeholder="Search..." type="text" />
-                <InputGroupAddon addonType="append">
-                  <InputGroupText>
-                    <i className="nc-icon nc-zoom-split" />
-                  </InputGroupText>
-                </InputGroupAddon>
-              </InputGroup>
-            </Form>
-            */}
-            <Nav navbar>
-              <NavItem>
-                <NavLink
-                  className="btn btn-outline-default btn-sm"
-                  href="/"
-                  onClick={(e) => localStorage.removeItem('user')}
-                >
-                  <i className="nc-icon nc-button-power"></i>
-                  Log out
-                </NavLink>
-              </NavItem>
-              {/*
-              <UncontrolledDropdown className="btn-rotate" nav>
-                <DropdownToggle
-                  aria-haspopup={true}
-                  caret
-                  color="default"
-                  data-toggle="dropdown"
-                  id="navbarDropdownMenuLink"
-                  nav
-                >
-                  <i className="nc-icon nc-bell-55" />
-                  <p>
-                    <span className="d-lg-none d-md-block">Some Actions</span>
-                  </p>
-                </DropdownToggle>
-                <DropdownMenu
-                  persist
-                  aria-labelledby="navbarDropdownMenuLink"
-                  right
-                >
-                  <DropdownItem
-                    href="#pablo"
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    Action
-                  </DropdownItem>
-                  <DropdownItem
-                    href="#pablo"
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    Another action
-                  </DropdownItem>
-                  <DropdownItem
-                    href="#pablo"
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    Something else here
-                  </DropdownItem>
-                </DropdownMenu>
-              </UncontrolledDropdown>
-              */}
-              {/*
-              <NavItem>
-                <NavLink
-                  className="btn-rotate"
-                  href="#pablo"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <i className="nc-icon nc-settings-gear-65" />
-                  <p>
-                    <span className="d-lg-none d-md-block">Account</span>
-                  </p>
-                </NavLink>
-              </NavItem>
-              */}
-            </Nav>
-          </Collapse>
-        </Container>
-      </Navbar>
+              Docs
+            </Link>
+            <Link
+              p={4}
+              fontSize="md"
+              isExternal
+              href="https://www.supernetworks.org/pages/api/0"
+              _text={{
+                textDecorationLine: 'none',
+                color: useColorModeValue(
+                  'navbarTextColorLight',
+                  'navbarTextColorDark'
+                )
+              }}
+              display={{ base: 'none', lg: 'flex' }}
+            >
+              API
+            </Link>
+            <Tooltip label="Toggle Theme">
+              <IconButton
+                p="0"
+                onPress={() => {
+                  toggleColorMode()
+                  const date = new Date()
+                }}
+                variant="unstyled"
+                _icon={{
+                  size: 5,
+                  color: useColorModeValue(
+                    'navbarTextColorLight',
+                    'navbarTextColorDark'
+                  )
+                }}
+                icon={useColorModeValue(<MoonIcon />, <SunIcon />)}
+              />
+            </Tooltip>
+            <Tooltip label="Logout">
+              <IconButton
+                variant="unstyled"
+                _icon={{
+                  size: 5,
+                  color: useColorModeValue(
+                    'navbarTextColorLight',
+                    'navbarTextColorDark'
+                  )
+                }}
+                _text={{
+                  color: useColorModeValue(
+                    'navbarTextColorLight',
+                    'navbarTextColorDark'
+                  )
+                }}
+                icon={
+                  <Icon as={FontAwesomeIcon} icon={faArrowRightFromBracket} />
+                }
+                onPress={logout}
+              />
+            </Tooltip>
+          </HStack>
+        </HStack>
+      </HStack>
     </>
   )
+}
+
+AdminNavbar.propTypes = {
+  isOpenSidebar: PropTypes.bool,
+  setIsOpenSidebar: PropTypes.func,
+  isMobile: PropTypes.bool
 }
 
 export default AdminNavbar

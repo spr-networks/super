@@ -1,21 +1,32 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
+
 import ModalForm from 'components/ModalForm'
 import DNSAddOverride from 'components/DNS/DNSAddOverride'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 
 import {
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
-  Table
-} from 'reactstrap'
+  Box,
+  FlatList,
+  Heading,
+  Icon,
+  IconButton,
+  Stack,
+  HStack,
+  VStack,
+  Skeleton,
+  Spacer,
+  Spinner,
+  Switch,
+  Text,
+  useColorModeValue
+} from 'native-base'
 
 const DNSOverrideList = (props) => {
-  const context = React.useContext(APIErrorContext)
+  const context = React.useContext(AlertContext)
 
   const deleteListItem = async (item) => {
     blockAPI
@@ -24,7 +35,7 @@ const DNSOverrideList = (props) => {
         props.notifyChange('config')
       })
       .catch((error) => {
-        context.reportError('API Failure: ' + error.message)
+        context.error('API Failure: ' + error.message)
       })
   }
 
@@ -42,59 +53,82 @@ const DNSOverrideList = (props) => {
   let list = props.list
 
   return (
-    <Card>
-      <CardHeader>
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      rounded="md"
+      width="100%"
+      p="4"
+      mb="4"
+    >
+      <HStack justifyContent="space-between" alignContent="center">
+        <VStack>
+          <Heading fontSize="xl">{props.title || 'DNS Override'}</Heading>
+          <Text color="muted.500">Set rules for DNS queries</Text>
+        </VStack>
+
         <ModalForm
-          key="mf1"
           title={'Add ' + props.title}
           triggerText="add"
-          triggerClass="pull-right"
-          triggerIcon="fa fa-plus"
+          triggerIcon={faPlus}
           modalRef={modalRef}
         >
           <DNSAddOverride type={overrideType} notifyChange={notifyChange} />
         </ModalForm>
+      </HStack>
 
-        <CardTitle tag="h4">{props.title || 'DNS Override'}</CardTitle>
-        <p className="text-muted">
-          Overrides allow you to set rules for DNS queries
-        </p>
-      </CardHeader>
-      <CardBody>
-        <Table responsive>
-          <thead className="text-primary">
-            <tr>
-              <th width="25%">Domain</th>
-              <th>Result IP</th>
-              <th>Client IP</th>
-              <th className="text-center">Expiration</th>
-              <th className="text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.map((item) => (
-              <tr key={item.Domain}>
-                <td>{item.Domain}</td>
-                <td>{item.ResultIP}</td>
-                <td>{item.ClientIP}</td>
-                <td className="text-center">{item.Expiration}</td>
-                <td className="text-center">
-                  <Button
-                    className="btn-icon"
-                    color="danger"
-                    size="sm"
-                    type="button"
-                    onClick={(e) => deleteListItem(item)}
-                  >
-                    <i className="fa fa-times" />
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </CardBody>
-    </Card>
+      <FlatList
+        data={list}
+        renderItem={({ item }) => (
+          <Box
+            borderBottomWidth="1"
+            _dark={{
+              borderColor: 'muted.600'
+            }}
+            borderColor="muted.200"
+            py="2"
+          >
+            <HStack space={3} justifyContent="space-evenly" alignItems="center">
+              <HStack flex="1" space={2}>
+                <Stack space={2} direction={{ base: 'column', md: 'row' }}>
+                  <Text bold>{item.Domain}</Text>
+                  <HStack space={2}>
+                    <Text color="muted.500">=</Text>
+                    <Text>{item.ResultIP}</Text>
+                  </HStack>
+                </Stack>
+              </HStack>
+
+              <Stack
+                flex="1"
+                space={2}
+                direction={{ base: 'column', md: 'row' }}
+                justifyContent="space-between"
+              >
+                <HStack space={1}>
+                  <Text color="muted.500">Client:</Text>
+                  <Text>{item.ClientIP}</Text>
+                </HStack>
+
+                <HStack space={1}>
+                  <Text color="muted.500">Expiration:</Text>
+                  <Text>{item.Expiration}</Text>
+                </HStack>
+              </Stack>
+
+              <IconButton
+                alignSelf="center"
+                size="sm"
+                variant="ghost"
+                colorScheme="secondary"
+                icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
+                onPress={() => deleteListItem(item)}
+              />
+            </HStack>
+          </Box>
+        )}
+        keyExtractor={(item) => item.Domain}
+      />
+    </Box>
   )
 }
 

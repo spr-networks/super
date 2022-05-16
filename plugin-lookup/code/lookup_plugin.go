@@ -19,7 +19,7 @@ import (
 
 var TEST_PREFIX = ""
 
-var UNIX_PLUGIN_LISTENER = "/state/plugin-lookup/lookup_plugin"
+var UNIX_PLUGIN_LISTENER = "/state/plugins/plugin-lookup/lookup_plugin"
 //var UNIX_PLUGIN_LISTENER = "./http.sock"
 
 var ASN_FILENAME = "../data/ip2asn-v4.tsv"

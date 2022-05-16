@@ -1,4 +1,5 @@
 import AddDevice from 'views/Devices/AddDevice'
+import ConnectDevice from 'views/Devices/ConnectDevice'
 import Arp from 'views/Devices/Arp'
 import Devices from 'views/Devices/Devices'
 import Dhcp from 'views/Groups/Dhcp'
@@ -12,169 +13,223 @@ import Groups from 'views/Groups/Groups'
 import DNSBlock from 'views/DNS/DNSBlock'
 import DNSLog from 'views/DNS/DNSLog'
 import DNSLogEdit from 'views/DNS/DNSLogEdit'
+import DynDns from 'views/DNS/DynDns'
 import Wireguard from 'views/Wireguard'
 import Firewall from 'views/Firewall'
 import Logs from 'views/Logs'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
+import {
+  faArrowCircleUp,
+  faBan,
+  faBarChart,
+  faCircleNodes,
+  faCogs,
+  faEthernet,
+  faFireAlt,
+  faHome,
+  faLaptop,
+  faLineChart,
+  faListAlt,
+  faNetworkWired,
+  faPuzzlePiece,
+  faSignal,
+  faTags,
+  faThList,
+  faUnlockAlt,
+  faUser,
+  faWifi
+} from '@fortawesome/free-solid-svg-icons'
+/*TODO WireguardIcon: {
+icon: (5) [576, 512, Array(3), 'f012', 'M544 0c-17.67 0-32 14.33-32 31.1V480C512 497.7 526…-14.33 32-31.1V223.1C320 206.3 305.7 192 288 192z']
+iconName: "signal"
+prefix: "fas"}*/
 
 const routes = [
   {
-    path: '/home',
+    path: 'home',
     name: 'Home',
-    icon: 'nc-icon nc-planet',
+    icon: faHome,
     component: Home,
-    layout: '/admin'
+    layout: 'admin'
   },
   {
     name: 'Devices',
-    icon: 'fa fa-laptop',
-    path: '/devices',
+    icon: faLaptop,
+    path: 'devices',
     component: Devices,
-    layout: '/admin'
+    layout: 'admin'
   },
   {
-    layout: '/admin',
-    path: '/add_device',
+    layout: 'admin',
+    path: 'add_device',
     redirect: true,
-    name: 'Add WiFi Device',
-    icon: 'fa fa-plus-square',
     component: AddDevice
   },
   {
-    path: '/wireless',
+    layout: 'admin',
+    path: 'connect_device',
+    redirect: true,
+    component: ConnectDevice
+  },
+  {
+    path: 'wireless',
     name: 'Wifi',
-    icon: 'fa fa-wifi',
+    icon: faWifi,
     component: WirelessConfiguration,
-    layout: '/admin'
+    layout: 'admin'
   },
   {
-    path: '/wireguard',
+    path: 'wireguard',
     name: 'VPN',
-    icon: 'nc-icon nc-wireguard',
+    icon: faCircleNodes,
     component: Wireguard,
-    layout: '/admin'
+    layout: 'admin'
   },
   {
-    path: '/firewall',
+    path: 'firewall',
     name: 'Firewall',
-    icon: 'fa fa-unlock-alt',
+    icon: faFireAlt,
     component: Firewall,
-    layout: '/admin'
+    layout: 'admin'
   },
   {
-    collapse: true,
     name: 'Traffic',
-    icon: 'nc-icon nc-chart-bar-32',
+    icon: faLineChart,
     state: 'trafficCollapse',
     views: [
       {
-        path: '/traffic',
+        path: 'traffic',
         name: 'Bandwidth Summary',
-        icon: 'fa fa-line-chart',
+        icon: faLineChart,
         component: Traffic,
-        layout: '/admin'
+        layout: 'admin'
       },
       {
-        path: '/timeseries',
+        path: 'timeseries',
         name: 'Bandwidth Timeseries',
-        icon: 'fa fa-bar-chart',
+        icon: faBarChart,
         component: TrafficTimeSeries,
-        layout: '/admin'
+        layout: 'admin'
       },
       {
-        path: '/signal/strength',
+        path: 'signal/strength',
         name: 'Signal Strength',
-        icon: 'fa fa-signal',
+        icon: faSignal,
         component: SignalStrength,
-        layout: '/admin'
+        layout: 'admin'
       }
     ]
   },
   {
-    collapse: true,
     name: 'DNS',
-    icon: 'nc-icon nc-world-2',
     state: 'dnsCollapse',
     views: [
       {
-        path: '/dnsBlock',
+        path: 'dnsBlock',
         name: 'Blocklists/Ad-Block',
-        icon: 'fa fa-ban',
+        icon: faBan,
         component: DNSBlock,
-        layout: '/admin'
+        layout: 'admin'
       },
       {
-        path: '/dnsLog/:ips/:text?',
+        path: 'dnsLog/:ips/:text',
         name: 'DNS Log',
-        icon: 'fa fa-th-list',
+        icon: faThList,
         component: DNSLog,
-        layout: '/admin'
+        layout: 'admin'
       },
       {
-        path: '/dnsLogEdit',
+        path: 'dnsLogEdit',
         name: 'DNS Log Settings',
-        icon: 'fa fa-cogs',
+        icon: faCogs,
         component: DNSLogEdit,
-        layout: '/admin'
+        layout: 'admin'
+      },
+      {
+        path: 'dyndns',
+        name: 'Dynamic DNS',
+        icon: faArrowCircleUp,
+        component: DynDns,
+        layout: 'admin'
       }
     ]
   },
   {
-    collapse: true,
     name: 'System',
-    icon: 'nc-icon nc-bullet-list-67',
     state: 'systemCollapse',
     views: [
       {
-        path: '/dhcp',
+        path: 'dhcp',
         name: 'DHCP Table',
-        mini: 'DHCP',
+        icon: faNetworkWired,
         component: Dhcp,
-        layout: '/admin'
+        layout: 'admin'
       },
       {
-        path: '/arp',
+        path: 'arp',
         name: 'ARP Table',
-        mini: 'ARP',
+        icon: faEthernet,
         component: Arp,
-        layout: '/admin'
+        layout: 'admin'
       },
       {
-        path: '/groups',
+        path: 'groups',
         name: 'Groups',
-        icon: 'fa fa-tags',
+        icon: faTags,
         component: Groups,
-        layout: '/admin'
+        layout: 'admin'
       },
       {
-        path: '/plugins',
+        path: 'plugins',
         name: 'Plugins',
-        icon: 'fa fa-puzzle-piece',
+        icon: faPuzzlePiece,
         component: Plugins,
-        layout: '/admin'
+        layout: 'admin'
       },
       {
-        path: '/logs/:containers',
+        path: 'logs/:containers',
         name: 'Logs',
-        icon: 'fa fa-list-alt',
+        icon: faListAlt,
         component: Logs,
-        layout: '/admin'
+        layout: 'admin'
       },
       {
-        path: '/auth/',
+        path: 'auth/',
         name: 'Auth',
-        icon: 'fa fa-user',
+        icon: faUser,
         component: AuthSettings,
-        layout: '/admin'
+        layout: 'admin'
       }
     ]
   },
   {
-    path: '/login',
+    path: 'login',
     component: Login,
-    layout: '/auth'
+    layout: 'auth'
   }
 ]
+
+const getRoutes = (routes, layout = 'admin') => {
+  return routes
+    .map((prop, key) => {
+      if (prop.views) {
+        return getRoutes(prop.views, layout)
+      }
+
+      if (prop.layout && prop.layout.includes(layout)) {
+        return { path: prop.path, element: prop.component }
+      } else {
+        return null
+      }
+    })
+    .filter((r) => r)
+    .flat()
+}
+
+const routesAuth = getRoutes(routes, 'auth')
+const routesAdmin = getRoutes(routes, 'admin')
+
+export { routes, routesAuth, routesAdmin }
 
 export default routes

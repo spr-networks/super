@@ -3,20 +3,13 @@ import { useEffect, useState } from 'react'
 import { wifiAPI } from 'api'
 import { ucFirst } from 'utils'
 
-import {
-  Button,
-  Form,
-  FormGroup,
-  FormText,
-  Label,
-  Input,
-  Row,
-  Col
-} from 'reactstrap'
+import { Box, HStack, Text, VStack, useColorModeValue } from 'native-base'
+
+import WifiChannelParameters from 'components/Wifi/WifiChannelParameters'
 
 const WifiHostapd = (props) => {
   const [config, setConfig] = useState({})
-  const canEdit = ['ssid', 'channel']
+  const canEdit = ['ssid']
 
   const sortConf = (conf) => {
     // put the ones we can change at the top
@@ -63,22 +56,45 @@ const WifiHostapd = (props) => {
     })
   }
 
-  return (
-    <dl className="row">
-      {Object.keys(config).map((label) => (
-        <>
-          <>
-            <dt className="col-sm-3 sm-text-right">{label}</dt>
-            <dd className="col-sm-9">
-              <>{config[label]}</>
-            </dd>
-          </>
-        </>
-      ))}
-    </dl>
-  )
+  const updateChannels = (wifiParameters) => {
+    let data = {
+      Channel: wifiParameters.Channel,
+      Vht_oper_centr_freq_seg0_idx: wifiParameters.Vht_oper_centr_freq_seg0_idx,
+      He_oper_centr_freq_seg0_idx: wifiParameters.He_oper_centr_freq_seg0_idx,
+      Vht_oper_chwidth: wifiParameters.Vht_oper_chwidth,
+      He_oper_chwidth: wifiParameters.He_oper_chwidth
+    }
+
+    wifiAPI.updateConfig(data).then((config) => {
+      setConfig(sortConf(config))
+    })
+  }
 
   return (
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      rounded="md"
+      width="100%"
+      p="4"
+    >
+      <VStack space={2}>
+        <WifiChannelParameters config={config} notifyChange={updateChannels} />
+
+        {/*Object.keys(config).map((label) => (
+          <HStack space={4} justifyContent="center">
+            <Text bold w="1/4" textAlign="right">
+              {label}
+            </Text>
+            <Text w="1/4">{config[label]}</Text>
+          </HStack>
+        ))*/}
+      </VStack>
+    </Box>
+  )
+
+  /*
+  return (
+    <>
     <Form onSubmit={handleSubmit}>
       <Row>
         <Col>
@@ -124,7 +140,9 @@ const WifiHostapd = (props) => {
         </Col>
       </Row>
     </Form>
+    </>
   )
+*/
 }
 
 export default WifiHostapd
