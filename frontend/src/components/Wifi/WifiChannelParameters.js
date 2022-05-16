@@ -101,7 +101,7 @@ class WifiChannelParameters extends React.Component {
           //if the band does not match the current mode, skip it
           if (band.frequencies && band.frequencies[0][0] == expectedFreq) {
             for (let freq of band.frequencies) {
-              let channelNumber = freq.split(' ')[2].slice(1, -1)
+              let channelNumber = parseInt(freq.split(' ')[2].slice(1, -1))
               let channelLabel = channelNumber
               let is_disabled = false
               if (freq.includes('disabled')) {
@@ -161,6 +161,7 @@ class WifiChannelParameters extends React.Component {
               let parts = cur_device.channel.split(',')
               let channel = parseInt(parts[0].split(' ')[0])
               let bw = parseInt(parts[1].split(' ')[2])
+
               this.setState({ Bandwidth: bw, Channel: channel })
 
               let start_freq = parts[0].split(' ')[1].substring(1)[0]
@@ -192,6 +193,16 @@ class WifiChannelParameters extends React.Component {
       for (let iface in this.state.devs[phy]) {
         let type = this.state.devs[phy][iface].type
         let label = `${iface} ${type}`
+
+        //skip VLAN entries
+        if (type.includes(' AP/VLAN')) {
+          continue
+        }
+
+        //skip managed
+        if (type.includes(' managed')) {
+          continue
+        }
 
         devsScan.push({ value: iface, disabled: !type.includes('AP'), label })
         if (iface == this.props.config.interface) {
