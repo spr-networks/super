@@ -1093,6 +1093,15 @@ export default function MockAPI() {
         }
       })
 
+      this.put('/hostapd/setChannel', (schema) => {
+        return {
+          "Vht_oper_centr_freq_seg0_idx": 42,
+          "He_oper_centr_freq_seg0_idx": 42,
+          "Vht_oper_chwidth": 1,
+          "He_oper_chwidth": 1
+        }
+      })
+
       // plugins
       this.get('/plugins', (schema, request) => {
         if (!authOK(request)) {

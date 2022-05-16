@@ -9,6 +9,7 @@ hw_mode=a
 ieee80211d=1
 ieee80211n=1
 ieee80211ac=1
+ieee80211h=1
 #for mixed mode need w=1
 ieee80211w=1
 wmm_enabled=1

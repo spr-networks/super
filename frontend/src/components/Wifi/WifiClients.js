@@ -61,9 +61,10 @@ const WifiClients = (props) => {
       context.error('API Failure getDevices: ' + error.message)
     })
 
-    let clients = Object.values(devices).filter((device) =>
-      Object.keys(stations).includes(device.MAC)
-    )
+    if (devices && stations) {
+      let clients = Object.values(devices).filter((device) =>
+        Object.keys(stations).includes(device.MAC)
+      )
 
     clients = clients.map((client) => {
       let station = stations[client.MAC]
@@ -71,7 +72,7 @@ const WifiClients = (props) => {
       client.Signal = station.signal
 
       return client
-    })
+      })
 
     setClients(clients)
   }

@@ -34,6 +34,7 @@ const WifiScan = (props) => {
   useEffect(() => {
     wifiAPI.iwDev().then((devs) => {
       setDevs(devs)
+      setLoadedDevs(true)
     })
   }, [])
 
@@ -65,12 +66,16 @@ const WifiScan = (props) => {
   }
 
   let devsScan = []
+  let defaultDev = null
   for (let phy in devs) {
     for (let iface in devs[phy]) {
       let type = devs[phy][iface].type
       let label = `${iface} ${type}`
 
       devsScan.push({ value: iface, disabled: type.includes('AP'), label })
+      if (!type.includes('AP')) {
+        defaultDev = devsScan[devsScan.length - 1]
+      }
     }
   }
 
