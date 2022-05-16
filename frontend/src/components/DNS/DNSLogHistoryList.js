@@ -334,24 +334,28 @@ const DNSLogHistoryList = (props) => {
           </FormControl>
 
           <FormControl flex="2">
-            <FormControl.Label>Search</FormControl.Label>
+            {filterIps.length && list.length ? (
+              <>
+                <FormControl.Label>Search</FormControl.Label>
 
-            <Input
-              type="text"
-              name="filterText"
-              size="lg"
-              placeholder="Filter domain..."
-              value={filterText}
-              onChangeText={handleChange}
-              InputRightElement={
-                <Icon
-                  as={FontAwesomeIcon}
-                  icon={faMagnifyingGlass}
-                  color="muted.400"
-                  mr={2}
+                <Input
+                  type="text"
+                  name="filterText"
+                  size="lg"
+                  placeholder="Filter domain..."
+                  value={filterText}
+                  onChangeText={handleChange}
+                  InputRightElement={
+                    <Icon
+                      as={FontAwesomeIcon}
+                      icon={faMagnifyingGlass}
+                      color="muted.400"
+                      mr={2}
+                    />
+                  }
                 />
-              }
-            />
+              </>
+            ) : null}
           </FormControl>
 
           <FormControl flex="1">
