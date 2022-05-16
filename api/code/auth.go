@@ -45,7 +45,7 @@ func saveOTP(data int) {
 }
 
 func (auth *authnconfig) saveWebauthn(user *User, credential *webauthn.Credential) {
-	fmt.Println("saving. user=", user, "credential=", credential)
+	//fmt.Println("saving. user=", user, "credential=", credential)
 
 	userWebauthn := map[string]webauthn.Credential{}
 
@@ -263,9 +263,6 @@ func (auth *authnconfig) FinishRegistration(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "user is missing", 400)
 		return
 	}
-
-	fmt.Println("finish sess", sessionData)
-	fmt.Println("finish reg:", user)
 
 	credential, err := auth.webAuthn.FinishRegistration(user, *sessionData, r)
 
