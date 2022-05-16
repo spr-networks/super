@@ -78,16 +78,16 @@ const TimeSeries = (props) => {
           {view == 'chart' ? (
             <Button.Group size="xs" isAttached colorScheme="primary">
               <Button
-                onPress={(e) => handleChartMode('data')}
-                variant={chartMode !== 'data' ? 'outline' : 'solid'}
-              >
-                Data
-              </Button>
-              <Button
                 onPress={(e) => handleChartMode('percent')}
                 variant={chartMode !== 'percent' ? 'outline' : 'solid'}
               >
                 Percent
+              </Button>
+              <Button
+                onPress={(e) => handleChartMode('data')}
+                variant={chartMode !== 'data' ? 'outline' : 'solid'}
+              >
+                Data
               </Button>
             </Button.Group>
           ) : (

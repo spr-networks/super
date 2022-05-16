@@ -27,7 +27,7 @@ class TrafficTimeSeries extends Component {
     let chartModes = {},
       types = ['WanOut', 'WanIn', 'LanIn', 'LanOut']
 
-    types.map((type) => (chartModes[type] = 'data'))
+    types.map((type) => (chartModes[type] = 'percent'))
     this.state.chartModes = chartModes
   }
 
