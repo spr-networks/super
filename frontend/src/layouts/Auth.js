@@ -24,7 +24,7 @@ const AuthLayout = () => {
     >
       <View w="100vw" h="100vh" bg="black">
         <Image
-          source="/bg.jpg"
+          source={require('assets/img/bg/bg.jpg')}
           opacity={0.4}
           height="100vh"
           resizeMode="cover"
