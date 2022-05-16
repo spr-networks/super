@@ -16,6 +16,7 @@ import { saveLogin, blockAPI } from 'api'
 beforeAll(() => saveLogin('admin', 'admin'))
 
 describe('DNS Block', () => {
+  /*
   let container = null,
     getByText = null
 
@@ -33,8 +34,20 @@ describe('DNS Block', () => {
 
     getByText = container.getByText
   })
+  */
 
   test('DNS block list', async () => {
+    const inset = {
+      frame: { x: 0, y: 0, width: 0, height: 0 },
+      insets: { top: 0, left: 0, right: 0, bottom: 0 }
+    }
+
+    const container = render(
+      <NativeBaseProvider initialWindowMetrics={inset}>
+        <DNSBlock />
+      </NativeBaseProvider>
+    )
+
     expect(container).toBeDefined()
     /*
     // make sure we have all the tables in the document
