@@ -264,7 +264,7 @@ export default class DynDns extends Component {
               </Link>
             </HStack>
 
-            {this.state.config.provider != '' ? (
+            {this.state.config.provider != undefined ? (
               <VStack space={8}>
                 <Stack
                   space={2}
