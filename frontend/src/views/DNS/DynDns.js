@@ -94,28 +94,7 @@ export default class DynDns extends Component {
         this.setState({ config })
       })
       .catch((err) => {
-        //this.setState({ isUp: false })
-        let config = {
-          provider: 'Cloudflare',
-          email: '',
-          password: '',
-          login_token: 'Tokenish',
-          domains: [
-            {
-              domain_name: 'supernetworks.org',
-              sub_domains: ['dyndns']
-            }
-          ],
-          ip_url: 'https://ip4.seeip.org',
-          ipv6_url: '',
-          ip_type: 'IPv4',
-          interval: 300,
-          socks5: '',
-          resolver: '8.8.8.8',
-          run_once: true
-        }
-
-        this.setState({ config })
+        this.setState({ isUp: false })
       })
   }
 
