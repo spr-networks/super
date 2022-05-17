@@ -73,13 +73,7 @@ const Login = (props) => {
               variant="outline"
               size="md"
               InputLeftElement={
-                <Icon
-                  icon={faUser}
-                  size="4"
-                  mx="2"
-                  style={{ marginLeft: '8px' }}
-                  color="muted.500"
-                />
+                <Icon icon={faUser} size={4} ml={2} color="muted.400" />
               }
               placeholder="Username..."
               onChangeText={(value) => setUsername(value)}
@@ -93,13 +87,7 @@ const Login = (props) => {
               variant="outline"
               size="md"
               InputLeftElement={
-                <Icon
-                  icon={faKey}
-                  size="4"
-                  mx="2"
-                  style={{ marginLeft: '8px' }}
-                  color="muted.500"
-                />
+                <Icon icon={faKey} size={4} ml={2} color="muted.400" />
               }
               placeholder="Password"
               onChangeText={(value) => setPassword(value)}
