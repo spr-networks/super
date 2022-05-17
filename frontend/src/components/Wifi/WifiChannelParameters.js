@@ -301,6 +301,8 @@ class WifiChannelParameters extends React.Component {
             <Button
               colorScheme="primary"
               size="md"
+              width="50%"
+              alignSelf="center"
               type="submit"
               onPress={this.handleSubmit}
               mt={4}

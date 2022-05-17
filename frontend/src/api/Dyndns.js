@@ -6,7 +6,7 @@ export class APIDynDns extends API {
   }
 
   config = () => this.get('config')
-  setConfig = (data) => this.setConfig('config', data)
+  setConfig = (data) => this.put('config', data)
   refresh = () => this.get('refresh')
 }
 
