@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faArrowRightLong,
   faPlus,

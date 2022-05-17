@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faPlus } from '@fortawesome/free-solid-svg-icons'
 import { Button, FormControl, Icon, Input, Modal, Select } from 'native-base'
 

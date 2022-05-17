@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faBan,
   faPen,

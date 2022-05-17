@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types'
 import { Button, Icon, Menu } from 'native-base'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faCalendar } from '@fortawesome/free-solid-svg-icons'
 
 const DateRange = (props) => {

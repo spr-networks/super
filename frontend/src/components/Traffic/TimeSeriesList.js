@@ -6,7 +6,7 @@ import { prettyDate, prettySize } from 'utils'
 
 import { Badge, Box, FlatList, Icon, Stack, HStack, Text } from 'native-base'
 
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
 
 const TimeSeriesList = (props) => {

@@ -1,5 +1,5 @@
 import React from 'react'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import { blockAPI } from 'api/DNS'

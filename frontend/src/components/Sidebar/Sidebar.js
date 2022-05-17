@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Animated } from 'react-native'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import { AppContext } from 'AppContext'
 

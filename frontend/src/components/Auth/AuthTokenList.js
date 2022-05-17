@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from 'react'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { format as timeAgo } from 'timeago.js'
 

@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import QRCode from 'react-qr-code'
 
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faClone, faFile } from '@fortawesome/free-solid-svg-icons'
 
 import { Box, Button, Icon, HStack, ScrollView, VStack } from 'native-base'

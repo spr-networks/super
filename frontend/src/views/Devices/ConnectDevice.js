@@ -4,7 +4,7 @@ import QRCode from 'react-qr-code'
 
 import { deviceAPI, wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 
 import { Button, HStack, Icon, Stack, Text, View } from 'native-base'

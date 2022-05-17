@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 
 import { deviceAPI } from 'api/Device'
 
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faCaretDown, faCaretUp } from '@fortawesome/free-solid-svg-icons'
 
 import { Button, IconButton, Icon, Input, Menu } from 'native-base'

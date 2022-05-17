@@ -8,7 +8,7 @@ import {
   useColorModeValue
 } from 'native-base'
 
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 
 const StatsWidget = (props) => {
   const { title, text, textFooter, icon, iconColor, iconFooter } = props

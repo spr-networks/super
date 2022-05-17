@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faPlus, faTimes } from '@fortawesome/free-solid-svg-icons'
 
 import { logAPI } from 'api/DNS'

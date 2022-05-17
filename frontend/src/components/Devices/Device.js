@@ -4,7 +4,7 @@ import { AlertContext } from 'layouts/Admin'
 import { deviceAPI } from 'api/Device'
 import ModalConfirm from 'components/ModalConfirm'
 
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faPen, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import {

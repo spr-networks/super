@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { Box, Button, Icon, Modal } from 'native-base'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faPlus } from '@fortawesome/free-solid-svg-icons'
 
 const ModalForm = (props) => {

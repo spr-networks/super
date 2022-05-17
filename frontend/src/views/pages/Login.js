@@ -2,7 +2,7 @@ import React from 'react'
 import { useState } from 'react'
 import { saveLogin, testLogin } from 'api'
 import { useNavigate } from 'react-router-dom'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faKey, faUser } from '@fortawesome/free-solid-svg-icons'
 
 import {

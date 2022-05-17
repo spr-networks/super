@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import Device from 'components/Devices/Device'
 import { AlertContext } from 'layouts/Admin'
 
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faEllipsis, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons'
 
 import {

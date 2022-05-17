@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import ModalForm from 'components/ModalForm'

@@ -6,7 +6,7 @@ import DateRange from 'components/DateRange'
 import TimeSeriesChart from 'components/Traffic/TimeSeriesChart'
 import TimeSeriesList from 'components/Traffic/TimeSeriesList'
 
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faChartColumn,
   faTable,

@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import { SafeAreaView, SectionList, TextInput } from "react-native";
 import { dyndnsAPI } from 'api/Dyndns'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faXmark, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { AlertContext } from 'AppContext'
 
