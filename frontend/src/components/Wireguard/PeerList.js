@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faPlus,
   faArrowCircleDown,
@@ -13,19 +13,12 @@ import ModalForm from 'components/ModalForm'
 import { prettyDate, prettySize } from 'utils'
 
 import {
-  View,
-  Divider,
   Box,
   Button,
   FlatList,
   Heading,
-  Icon,
   IconButton,
-  Stack,
   HStack,
-  VStack,
-  Spacer,
-  Switch,
   Text,
   useColorModeValue
 } from 'native-base'
@@ -145,11 +138,11 @@ const PeerList = (props) => {
                   {item.TransferRx ? (
                     <HStack space={1}>
                       <HStack space={1}>
-                        <Icon as={FontAwesomeIcon} icon={faArrowCircleUp} />
+                        <Icon icon={faArrowCircleUp} />
                         <Text>{prettySize(item.TransferTx)}</Text>
                       </HStack>
                       <HStack space={1}>
-                        <Icon as={FontAwesomeIcon} icon={faArrowCircleDown} />
+                        <Icon icon={faArrowCircleDown} />
                         <Text>{prettySize(item.TransferRx)}</Text>
                       </HStack>
                     </HStack>
@@ -161,7 +154,7 @@ const PeerList = (props) => {
                   size="sm"
                   variant="ghost"
                   colorScheme="secondary"
-                  icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
+                  icon={<Icon icon={faXmark} />}
                   onPress={() => deleteListItem(item)}
                 />
               </HStack>
@@ -186,7 +179,7 @@ const PeerList = (props) => {
             colorScheme="primary"
             rounded="full"
             borderColor="info.400"
-            leftIcon={<Icon as={FontAwesomeIcon} icon={faPlus} />}
+            leftIcon={<Icon icon={faPlus} />}
             onPress={triggerModal}
           >
             add a new peer

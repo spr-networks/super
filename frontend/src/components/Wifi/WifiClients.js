@@ -5,18 +5,10 @@ import { AlertContext } from 'layouts/Admin'
 import { prettySignal } from 'utils'
 
 import {
-  View,
-  Divider,
   Box,
   FlatList,
-  Heading,
-  Icon,
-  IconButton,
   Stack,
   HStack,
-  VStack,
-  Spacer,
-  Switch,
   Text,
   useColorModeValue
 } from 'native-base'

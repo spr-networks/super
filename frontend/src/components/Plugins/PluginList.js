@@ -1,14 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import {
   Box,
   FlatList,
   Heading,
-  Icon,
   IconButton,
-  Stack,
   HStack,
   VStack,
   Spacer,
@@ -118,7 +116,7 @@ const PluginList = (props) => {
                 size="sm"
                 variant="ghost"
                 colorScheme="secondary"
-                icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
+                icon={<Icon icon={faXmark} />}
                 onPress={() => deleteListItem(item)}
               />
             </HStack>

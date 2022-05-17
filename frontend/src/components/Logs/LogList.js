@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faRefresh } from '@fortawesome/free-solid-svg-icons'
 
 import { logsAPI } from 'api'
@@ -14,7 +14,6 @@ import {
   Button,
   FlatList,
   Heading,
-  Icon,
   IconButton,
   Stack,
   HStack,
@@ -181,7 +180,7 @@ const LogList = (props) => {
             colorScheme="primary"
             marginLeft="auto"
             alignSelf="center"
-            leftIcon={<Icon as={FontAwesomeIcon} icon={faRefresh} />}
+            leftIcon={<Icon icon={faRefresh} />}
             onPress={handleClickRefresh}
           ></Button>
         </HStack>

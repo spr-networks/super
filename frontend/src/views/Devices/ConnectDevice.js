@@ -4,10 +4,10 @@ import QRCode from 'react-qr-code'
 
 import { deviceAPI, wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 
-import { Button, HStack, Icon, Stack, Text, View } from 'native-base'
+import { Button, HStack, Stack, Text, View } from 'native-base'
 
 const WifiConnect = (props) => {
   const context = useContext(AlertContext)
@@ -113,7 +113,7 @@ const WifiConnect = (props) => {
           w="1/3"
           variant="ghost"
           colorScheme="muted.800"
-          leftIcon={<Icon as={FontAwesomeIcon} icon={faArrowLeft} />}
+          leftIcon={<Icon icon={faArrowLeft} />}
           onPress={goBack}
         >
           Back

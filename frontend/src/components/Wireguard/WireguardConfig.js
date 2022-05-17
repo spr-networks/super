@@ -2,10 +2,10 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import QRCode from 'react-qr-code'
 
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import Icon from 'FontAwesomeUtils'
 import { faClone, faFile } from '@fortawesome/free-solid-svg-icons'
 
-import { Box, Button, Icon, HStack, ScrollView, VStack } from 'native-base'
+import { Box, Button, HStack, ScrollView, VStack } from 'native-base'
 
 const WireguardConfig = (props) => {
   if (!props.config) {
@@ -75,7 +75,7 @@ const WireguardConfig = (props) => {
           variant="outline"
           colorScheme="primary"
           size="sm"
-          leftIcon={<Icon as={FontAwesomeIcon} icon={faClone} />}
+          leftIcon={<Icon icon={faClone} />}
           onPress={() => copy(config)}
         >
           Copy
@@ -86,7 +86,7 @@ const WireguardConfig = (props) => {
           variant="outline"
           colorScheme="primary"
           size="sm"
-          leftIcon={<Icon as={FontAwesomeIcon} icon={faFile} />}
+          leftIcon={<Icon icon={faFile} />}
           onPress={() => saveFile(config)}
         >
           Download

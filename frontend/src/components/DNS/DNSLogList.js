@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faPlus, faTimes } from '@fortawesome/free-solid-svg-icons'
 
 import { logAPI } from 'api/DNS'
@@ -13,9 +13,7 @@ import {
   Divider,
   Heading,
   HStack,
-  Icon,
   IconButton,
-  Input,
   VStack,
   Text,
   useColorModeValue
@@ -132,7 +130,7 @@ const DNSLogList = ({ title, description, ...props }) => {
               <IconButton
                 variant="ghost"
                 colorScheme="secondary"
-                icon={<Icon as={FontAwesomeIcon} icon={faTimes} />}
+                icon={<Icon icon={faTimes} />}
                 size="sm"
                 onPress={() => deleteListItem(item)}
                 marginLeft="auto"

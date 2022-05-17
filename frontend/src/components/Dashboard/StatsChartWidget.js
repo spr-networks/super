@@ -5,14 +5,7 @@ import chroma from 'chroma-js'
 
 import { prettySize } from 'utils'
 
-import {
-  Divider,
-  Box,
-  HStack,
-  Icon,
-  Text,
-  useColorModeValue
-} from 'native-base'
+import { Divider, Box, Text, useColorModeValue } from 'native-base'
 
 ChartJS.register(ArcElement, Tooltip, Legend, Title)
 
@@ -58,11 +51,11 @@ const StatsChartWidget = (props) => {
     }
 
     chart = (
-        <Doughnut
-          data={data}
-          options={options}
-          className="ct-chart ct-perfect-fourth"
-        />
+      <Doughnut
+        data={data}
+        options={options}
+        className="ct-chart ct-perfect-fourth"
+      />
     )
   } else {
     let options = {

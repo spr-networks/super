@@ -1,13 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Animated } from 'react-native'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import Icon from 'FontAwesomeUtils'
 import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import { AppContext } from 'AppContext'
 
 import {
   Box,
-  Icon,
   Link,
   Pressable,
   ScrollView,
@@ -139,7 +138,6 @@ const SidebarItem = (props) => {
                 >
                   {item.icon && typeof item.icon !== 'string' ? (
                     <Icon
-                      as={FontAwesomeIcon}
                       color={useColorModeValue(
                         'sidebarItemIconLight',
                         'sidebarItemIconDark'
@@ -217,7 +215,7 @@ export const CollapsibleSidebarItem = (props) => {
             py={2.5}
           >
             {/*icon && typeof icon !== 'string' ? (
-              <Icon as={FontAwesomeIcon} icon={icon} />
+              <Icon icon={icon} />
             ) : null*/}
             <Box
               flexShrink="1"
@@ -234,12 +232,7 @@ export const CollapsibleSidebarItem = (props) => {
               {isMini ? title.substr(0, 1) : title}
             </Box>
             <RotatingView isCollapsed={isCollapsed}>
-              <Icon
-                as={FontAwesomeIcon}
-                icon={faCaretDown}
-                size="2"
-                color="coolGray.400"
-              />
+              <Icon icon={faCaretDown} size="2" color="coolGray.400" />
             </RotatingView>
           </HStack>
         </Pressable>

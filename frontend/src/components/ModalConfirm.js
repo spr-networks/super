@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faPlus } from '@fortawesome/free-solid-svg-icons'
-import { Button, FormControl, Icon, Input, Modal, Select } from 'native-base'
+import { Button, FormControl, Input, Modal, Select } from 'native-base'
 
 const ModalConfirm = (props) => {
   const defaultValue = props.defaultValue || ''
@@ -63,7 +63,7 @@ const ModalConfirm = (props) => {
     colorScheme: 'primary',
     borderColor: 'info.400',
     rounded: 'full',
-    leftIcon: <Icon as={FontAwesomeIcon} icon={faPlus} />
+    leftIcon: <Icon icon={faPlus} />
   }
 
   const updateTrigger = () => {
@@ -80,7 +80,7 @@ const ModalConfirm = (props) => {
         variant="solid"
         colorScheme="primary"
         rounded="full"
-        leftIcon={<Icon as={FontAwesomeIcon} icon={faPlus} />}
+        leftIcon={<Icon icon={faPlus} />}
         onPress={() => setIsOpen(true)}
         {...props}
       >

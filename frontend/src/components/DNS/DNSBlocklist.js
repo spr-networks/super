@@ -1,5 +1,5 @@
 import React from 'react'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import Icon from 'FontAwesomeUtils'
 import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import { blockAPI } from 'api/DNS'
@@ -11,7 +11,6 @@ import {
   Box,
   FlatList,
   Heading,
-  Icon,
   IconButton,
   Stack,
   HStack,
@@ -199,7 +198,7 @@ export default class DNSBlocklist extends React.Component {
                   size="sm"
                   variant="ghost"
                   colorScheme="secondary"
-                  icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
+                  icon={<Icon icon={faXmark} />}
                   onPress={() => this.deleteListItem(item)}
                 />
               </HStack>

@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
-import { SafeAreaView, SectionList, TextInput } from "react-native";
+import { SafeAreaView, SectionList, TextInput } from 'react-native'
 import { dyndnsAPI } from 'api/Dyndns'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faXmark, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { AlertContext } from 'AppContext'
 
@@ -10,7 +10,6 @@ import {
   Button,
   Heading,
   HStack,
-  Icon,
   IconButton,
   Input,
   Link,
@@ -20,7 +19,6 @@ import {
   VStack,
   useColorModeValue
 } from 'native-base'
-
 
 export default class DynDns extends Component {
   state = { isUp: true, config: {} }
@@ -41,7 +39,6 @@ export default class DynDns extends Component {
   }
 
   getConfig() {
-
     dyndnsAPI
       .config()
       .then((config) => {
@@ -64,13 +61,11 @@ export default class DynDns extends Component {
     dyndnsAPI.setConfig(this.state.config).then(done, (e) => {
       this.context.error('API Failure: ' + e.message)
     })
-
   }
 
   handleChange() {
     let value = !this.state.isUp
   }
-
 
   deleteDomain(orig) {
     let new_config = this.state.config
@@ -83,7 +78,7 @@ export default class DynDns extends Component {
       }
     }
     new_config.domains = new_domains
-    this.setState({config: new_config})
+    this.setState({ config: new_config })
   }
 
   addDomain(new_domain) {
@@ -93,8 +88,11 @@ export default class DynDns extends Component {
         return
       }
     }
-    new_config.domains.push({domain_name : new_domain, sub_domains: ["Subdomain"]})
-    this.setState({config: new_config})
+    new_config.domains.push({
+      domain_name: new_domain,
+      sub_domains: ['Subdomain']
+    })
+    this.setState({ config: new_config })
   }
 
   updateDomain(orig, new_domain) {
@@ -102,13 +100,16 @@ export default class DynDns extends Component {
     let new_domains = []
     for (let domain of new_config.domains) {
       if (orig == domain.domain_name) {
-        new_domains.push({domain_name: new_domain, sub_domains: domain.sub_domains})
+        new_domains.push({
+          domain_name: new_domain,
+          sub_domains: domain.sub_domains
+        })
       } else {
         new_domains.push(domain)
       }
     }
     new_config.domains = new_domains
-    this.setState({config: new_config})
+    this.setState({ config: new_config })
   }
 
   deleteSubdomain(domainTarget, subdomainTarget) {
@@ -117,7 +118,7 @@ export default class DynDns extends Component {
     for (let domain of new_config.domains) {
       if (domainTarget == domain.domain_name) {
         let new_sub_domains = domain.sub_domains
-        const index = new_sub_domains.indexOf(subdomainTarget);
+        const index = new_sub_domains.indexOf(subdomainTarget)
         if (index > -1) {
           new_sub_domains.splice(index, 1)
         }
@@ -127,7 +128,7 @@ export default class DynDns extends Component {
       }
     }
     new_config.domains = new_domains
-    this.setState({config: new_config})
+    this.setState({ config: new_config })
   }
 
   addSubdomain(section, entry) {
@@ -139,7 +140,7 @@ export default class DynDns extends Component {
           continue
         } else {
           domain.sub_domains.push(entry)
-          this.setState({config: new_config})
+          this.setState({ config: new_config })
           return
         }
       }
@@ -152,7 +153,7 @@ export default class DynDns extends Component {
     for (let domain of new_config.domains) {
       if (domainTarget == domain.domain_name) {
         let new_sub_domains = domain.sub_domains
-        const index = new_sub_domains.indexOf(origSub);
+        const index = new_sub_domains.indexOf(origSub)
         if (index > -1) {
           new_sub_domains[index] = newSub
         }
@@ -162,35 +163,38 @@ export default class DynDns extends Component {
       }
     }
     new_config.domains = new_domains
-    this.setState({config: new_config})
+    this.setState({ config: new_config })
   }
 
   render() {
     const Subdomain = ({ entry, section }) => (
       <HStack space={4} justifyContent="center">
-        <TextInput w="1/4" textAlign="center"
+        <TextInput
+          w="1/4"
+          textAlign="center"
           defaultValue={entry}
           //onChangeText={(d) => this.updateSubdomain(section, entry, d)}/>
-          onBlur={(e) => this.updateSubdomain(section, entry, e.nativeEvent.text)}
-          />
+          onBlur={(e) =>
+            this.updateSubdomain(section, entry, e.nativeEvent.text)
+          }
+        />
         <Button.Group size="sm">
           <IconButton
             variant="ghost"
             colorScheme="secondary"
-            icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
+            icon={<Icon icon={faXmark} />}
             onPress={() => this.deleteSubdomain(section, entry)}
           />
         </Button.Group>
       </HStack>
-    );
+    )
 
     let domainData = []
     if (this.state.config.domains) {
       this.state.config.domains.forEach((entry) => {
-        domainData.push({domain: entry.domain_name, data: entry.sub_domains})
+        domainData.push({ domain: entry.domain_name, data: entry.sub_domains })
       })
     }
-
 
     return (
       <View>
@@ -216,7 +220,7 @@ export default class DynDns extends Component {
               Powered by godns. Click here to see the Documentation on Github.
             </Link>
 
-            {this.state.config.provider != "" ? (
+            {this.state.config.provider != '' ? (
               <Box
                 /*bg={useColorModeValue('warmGray.50', 'blueGray.800')}*/
                 rounded="md"
@@ -224,57 +228,66 @@ export default class DynDns extends Component {
                 p="4"
               >
                 <VStack space={2}>
-                  {Object.keys(this.state.config).filter(label => !["run_once", "domains", "socks5"].includes(label)).map((label) => (
-                    <HStack space={4} justifyContent="left">
-                      <Text bold w="1/4" textAlign="right">
-                        {label}
-                      </Text>
-                      <Input w="1/4" value={this.state.config[label]} />
-                    </HStack>
-                  ))}
-
+                  {Object.keys(this.state.config)
+                    .filter(
+                      (label) =>
+                        !['run_once', 'domains', 'socks5'].includes(label)
+                    )
+                    .map((label) => (
+                      <HStack space={4} justifyContent="left">
+                        <Text bold w="1/4" textAlign="right">
+                          {label}
+                        </Text>
+                        <Input w="1/4" value={this.state.config[label]} />
+                      </HStack>
+                    ))}
 
                   <VStack space={2}>
                     <HStack>
-                    <Text bold w="1/4" textAlign="right">Domains</Text>
-                    <Button.Group size="sm">
-                      <IconButton
-                        variant="ghost"
-                        colorScheme="primary"
-                        icon={<Icon as={FontAwesomeIcon} icon={faPlus} />}
-                        onPress={() => this.addDomain("NewDomain.com")}
-                      />
-                    </Button.Group>
+                      <Text bold w="1/4" textAlign="right">
+                        Domains
+                      </Text>
+                      <Button.Group size="sm">
+                        <IconButton
+                          variant="ghost"
+                          colorScheme="primary"
+                          icon={<Icon icon={faPlus} />}
+                          onPress={() => this.addDomain('NewDomain.com')}
+                        />
+                      </Button.Group>
                     </HStack>
 
                     <SafeAreaView>
                       <SectionList
                         sections={domainData}
                         keyExtractor={(item, index) => item}
-                        renderItem={({ item, index, section }) => <Subdomain entry={item} section={section.domain} />}
-                        SectionSeparatorComponent={() => (
-                            <br/>
+                        renderItem={({ item, index, section }) => (
+                          <Subdomain entry={item} section={section.domain} />
                         )}
+                        SectionSeparatorComponent={() => <br />}
                         renderSectionHeader={({ section: { domain } }) => (
                           <HStack space={4} justifyContent="center">
                             <TextInput
                               key={domain}
-                              style={{fontWeight:'bold'}}
+                              style={{ fontWeight: 'bold' }}
                               w="1/4"
                               defaultValue={domain}
                               textAlign="center"
-                              onChangeText={(d) => this.updateDomain(domain, d)}/>
+                              onChangeText={(d) => this.updateDomain(domain, d)}
+                            />
                             <Button.Group size="sm">
                               <IconButton
                                 variant="ghost"
                                 colorScheme="primary"
-                                icon={<Icon as={FontAwesomeIcon} icon={faPlus} />}
-                                onPress={() => this.addSubdomain(domain, "NewSubdomain")}
+                                icon={<Icon icon={faPlus} />}
+                                onPress={() =>
+                                  this.addSubdomain(domain, 'NewSubdomain')
+                                }
                               />
                               <IconButton
                                 variant="ghost"
                                 colorScheme="secondary"
-                                icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
+                                icon={<Icon icon={faXmark} />}
                                 onPress={() => this.deleteDomain(domain)}
                               />
                             </Button.Group>
@@ -282,7 +295,6 @@ export default class DynDns extends Component {
                         )}
                       />
                     </SafeAreaView>
-
                   </VStack>
 
                   <Button
@@ -296,7 +308,6 @@ export default class DynDns extends Component {
                   >
                     Save
                   </Button>
-
                 </VStack>
               </Box>
             ) : (
@@ -305,9 +316,7 @@ export default class DynDns extends Component {
               </Text>
             )}
           </Box>
-
         </Box>
-
       </View>
     )
   }

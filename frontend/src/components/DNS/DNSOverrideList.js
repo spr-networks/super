@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import ModalForm from 'components/ModalForm'
@@ -12,15 +12,10 @@ import {
   Box,
   FlatList,
   Heading,
-  Icon,
   IconButton,
   Stack,
   HStack,
   VStack,
-  Skeleton,
-  Spacer,
-  Spinner,
-  Switch,
   Text,
   useColorModeValue
 } from 'native-base'
@@ -120,7 +115,7 @@ const DNSOverrideList = (props) => {
                 size="sm"
                 variant="ghost"
                 colorScheme="secondary"
-                icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
+                icon={<Icon icon={faXmark} />}
                 onPress={() => deleteListItem(item)}
               />
             </HStack>

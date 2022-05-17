@@ -10,7 +10,6 @@ import {
   FlatList,
   Flex,
   Heading,
-  Icon,
   IconButton,
   Stack,
   HStack,

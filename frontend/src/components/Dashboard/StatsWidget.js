@@ -1,14 +1,6 @@
-import {
-  Divider,
-  Box,
-  Heading,
-  HStack,
-  Icon,
-  Text,
-  useColorModeValue
-} from 'native-base'
+import { Divider, Box, HStack, Text, useColorModeValue } from 'native-base'
 
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 
 const StatsWidget = (props) => {
   const { title, text, textFooter, icon, iconColor, iconFooter } = props
@@ -24,12 +16,7 @@ const StatsWidget = (props) => {
       <Box px={4} py={4}>
         <HStack justifyContent="space-between">
           <Box justifyContent="space-between" p="2">
-            <Icon
-              as={FontAwesomeIcon}
-              size={16}
-              color={iconColor || 'warmGray.50'}
-              icon={icon}
-            />
+            <Icon size={16} color={iconColor || 'warmGray.50'} icon={icon} />
           </Box>
           <Box justifyContent="center">
             <Text
@@ -56,7 +43,7 @@ const StatsWidget = (props) => {
         <Box>
           <Divider _light={{ bg: 'muted.200' }} />
           <HStack space={2} px={4} py={2} alignContent="center">
-            <Icon as={FontAwesomeIcon} icon={iconFooter} color="warmGray.500" />
+            <Icon icon={iconFooter} color="warmGray.500" />
             <Text color="muted.500" fontSize="xs" fontWeight={300}>
               {textFooter}
             </Text>

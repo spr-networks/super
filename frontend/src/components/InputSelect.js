@@ -87,12 +87,7 @@ const InputSelect = (props) => {
             w="12"
             h="full"
             onPress={() => setIsOpen(!isOpen)}
-            icon={
-              <Icon
-                as={FontAwesomeIcon}
-                icon={isOpen ? faCaretUp : faCaretDown}
-              />
-            }
+            icon={<Icon icon={isOpen ? faCaretUp : faCaretDown} />}
             {...triggerProps}
           />
         )

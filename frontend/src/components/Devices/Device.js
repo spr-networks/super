@@ -4,16 +4,13 @@ import { AlertContext } from 'layouts/Admin'
 import { deviceAPI } from 'api/Device'
 import ModalConfirm from 'components/ModalConfirm'
 
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import Icon from 'FontAwesomeUtils'
 import { faPen, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import {
   Badge,
   Button,
   Box,
-  Divider,
-  Heading,
-  Icon,
   IconButton,
   Input,
   Menu,
@@ -220,7 +217,7 @@ class Device extends Component {
                 <IconButton
                   variant="solid"
                   colorScheme="secondary"
-                  icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
+                  icon={<Icon icon={faXmark} />}
                   onPress={() => removeTag(tag)}
                 />
               </Button.Group>*/}
@@ -237,7 +234,7 @@ class Device extends Component {
                     <IconButton
                       size="xs"
                       variant="ghost"
-                      icon={<Icon as={FontAwesomeIcon} icon={faPen} />}
+                      icon={<Icon icon={faPen} />}
                       {...triggerProps}
                     />
                   )
@@ -297,7 +294,7 @@ class Device extends Component {
               <IconButton
                 variant="ghost"
                 colorScheme="secondary"
-                icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
+                icon={<Icon icon={faXmark} />}
                 onPress={removeDevice}
               />
             </Button.Group>

@@ -4,9 +4,9 @@ import PropTypes from 'prop-types'
 import { trafficAPI, wifiAPI } from 'api'
 import { prettyDate, prettySize } from 'utils'
 
-import { Badge, Box, FlatList, Icon, Stack, HStack, Text } from 'native-base'
+import { Badge, Box, FlatList, Stack, HStack, Text } from 'native-base'
 
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
 
 const TimeSeriesList = (props) => {
@@ -143,13 +143,9 @@ const TimeSeriesList = (props) => {
             >
               <HStack flex="1" space={2} justifyContent="space-between">
                 <Text flex="1">{item.Src}</Text>
-                <Icon
-                  flex="1"
-                  color="muted.200"
-                  size="xs"
-                  as={FontAwesomeIcon}
-                  icon={faArrowRight}
-                />
+                <Box flex="1" justifyContent="center">
+                  <Icon color="muted.200" icon={faArrowRight} size="xs" />
+                </Box>
                 <Text flex="1">{item.Dst}</Text>
               </HStack>
               {showASN ? (

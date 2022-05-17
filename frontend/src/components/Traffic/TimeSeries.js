@@ -6,7 +6,7 @@ import DateRange from 'components/DateRange'
 import TimeSeriesChart from 'components/Traffic/TimeSeriesChart'
 import TimeSeriesList from 'components/Traffic/TimeSeriesList'
 
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faChartColumn,
   faTable,
@@ -17,7 +17,6 @@ import {
   Button,
   Box,
   Heading,
-  Icon,
   IconButton,
   Stack,
   HStack,
@@ -110,12 +109,12 @@ const TimeSeries = (props) => {
           <Button.Group size="sm" isAttached colorScheme="primary">
             <IconButton
               variant={view !== 'chart' ? 'outline' : 'solid'}
-              icon={<Icon as={FontAwesomeIcon} icon={faChartColumn} />}
+              icon={<Icon icon={faChartColumn} />}
               onPress={(e) => setView('chart')}
             />
             <IconButton
               variant={view !== 'table' ? 'outline' : 'solid'}
-              icon={<Icon as={FontAwesomeIcon} icon={faTableCellsLarge} />}
+              icon={<Icon icon={faTableCellsLarge} />}
               onPress={(e) => setView('table')}
             />
           </Button.Group>

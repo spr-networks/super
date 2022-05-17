@@ -11,7 +11,6 @@ import {
   Button,
   FlatList,
   Heading,
-  Icon,
   IconButton,
   Stack,
   HStack,

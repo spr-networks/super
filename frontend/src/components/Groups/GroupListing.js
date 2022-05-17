@@ -1,4 +1,4 @@
-import React, { Component } from 'react'
+import React from 'react'
 import PropTypes from 'prop-types'
 import { groupDescriptions } from 'api/Group'
 
@@ -7,13 +7,8 @@ import {
   Box,
   FlatList,
   Heading,
-  Icon,
-  IconButton,
   Stack,
   HStack,
-  VStack,
-  Spacer,
-  Switch,
   Text,
   useColorModeValue
 } from 'native-base'

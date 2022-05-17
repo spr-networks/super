@@ -1,4 +1,3 @@
-import { TimeScale } from 'chart.js'
 import API from './API'
 
 export class APIWifi extends API {

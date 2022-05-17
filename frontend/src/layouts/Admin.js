@@ -304,7 +304,6 @@ const AdminLayout = (props) => {
                     >
                       <HStack space={2}>
                         <Icon
-                          as={FontAwesomeIcon}
                           icon={
                             alertType == 'error'
                               ? faCircleXmark

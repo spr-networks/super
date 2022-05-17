@@ -50,9 +50,7 @@ const WifiHostapd = (props) => {
     setConfig(configNew)
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-
+  const handleSubmit = () => {
     let data = {
       Ssid: config.ssid,
       Channel: parseInt(config.channel)

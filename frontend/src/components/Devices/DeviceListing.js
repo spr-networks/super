@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import Device from 'components/Devices/Device'
 import { AlertContext } from 'layouts/Admin'
 
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faEllipsis, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons'
 
 import {
@@ -14,7 +14,6 @@ import {
   Fab,
   FlatList,
   Heading,
-  Icon,
   IconButton,
   Stack,
   HStack,
@@ -123,11 +122,7 @@ const DeviceListing = (props) => {
         }}
       >
         <VStack alignItems="center" space={2}>
-          <Icon
-            as={<Icon as={FontAwesomeIcon} icon={faEllipsis} />}
-            size="xs"
-            color="coolGray.800"
-          />
+          <Icon icon={faEllipsis} color="coolGray.800" />
           <Text fontSize="xs" fontWeight="medium" color="coolGray.800">
             More
           </Text>
@@ -144,11 +139,7 @@ const DeviceListing = (props) => {
         }}
       >
         <VStack alignItems="center" space={2}>
-          <Icon
-            as={<Icon as={FontAwesomeIcon} icon={faTimes} />}
-            color="white"
-            size="xs"
-          />
+          <Icon icon={faTimes} color="white" />
           <Text color="white" fontSize="xs" fontWeight="medium">
             Delete
           </Text>
@@ -177,7 +168,7 @@ const DeviceListing = (props) => {
               rounded="full"
               borderWidth={1}
               borderColor="info.400"
-              leftIcon={<Icon as={FontAwesomeIcon} icon={faPlus} />}
+              leftIcon={<Icon icon={faPlus} />}
               onPress={handleRedirect}
             >
               Add Device
@@ -212,9 +203,7 @@ const DeviceListing = (props) => {
         renderInPortal={false}
         shadow={2}
         size="sm"
-        icon={
-          <Icon color="white" as={FontAwesomeIcon} icon={faPlus} size="sm" />
-        }
+        icon={<Icon color="white" icon={faPlus} />}
         onPress={handleRedirect}
       />
     </View>

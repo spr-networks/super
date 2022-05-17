@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from 'react'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { format as timeAgo } from 'timeago.js'
 
@@ -8,11 +8,9 @@ import {
   Button,
   Heading,
   HStack,
-  Icon,
   IconButton,
   Text,
   View,
-  Fab,
   FlatList,
   useColorModeValue
 } from 'native-base'
@@ -134,7 +132,7 @@ const AuthTokenList = (props) => {
                   size="sm"
                   variant="ghost"
                   colorScheme="secondary"
-                  icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
+                  icon={<Icon icon={faXmark} />}
                   onPress={() => deleteListItem(item)}
                 />
               </HStack>

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faArrowRightFromBracket } from '@fortawesome/free-solid-svg-icons'
 import {
   Button,
@@ -9,7 +9,6 @@ import {
   Flex,
   HamburgerIcon,
   HStack,
-  Icon,
   IconButton,
   Link,
   Text,
@@ -142,9 +141,7 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
                     'navbarTextColorDark'
                   )
                 }}
-                icon={
-                  <Icon as={FontAwesomeIcon} icon={faArrowRightFromBracket} />
-                }
+                icon={<Icon icon={faArrowRightFromBracket} />}
                 onPress={logout}
               />
             </Tooltip>

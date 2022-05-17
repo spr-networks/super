@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import Icon from 'FontAwesomeUtils'
 import {
   faBan,
   faPen,
@@ -24,7 +24,6 @@ import {
   FlatList,
   FormControl,
   Heading,
-  Icon,
   IconButton,
   Input,
   Stack,
@@ -83,9 +82,7 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
                 variant="ghost"
                 size="xs"
                 p="0"
-                icon={
-                  <Icon as={FontAwesomeIcon} icon={faPen} color="muted.400" />
-                }
+                icon={<Icon icon={faPen} color="muted.400" />}
                 onPress={() => handleClickDomain('permit', item.FirstName)}
               ></IconButton>
             </Tooltip>
@@ -95,9 +92,7 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
                 variant="ghost"
                 size="xs"
                 p="0"
-                icon={
-                  <Icon as={FontAwesomeIcon} icon={faBan} color="danger.800" />
-                }
+                icon={<Icon icon={faBan} color="danger.800" />}
                 onPress={() => handleClickDomain('block', item.FirstName)}
               ></IconButton>
             </Tooltip>
@@ -346,12 +341,7 @@ const DNSLogHistoryList = (props) => {
                   value={filterText}
                   onChangeText={handleChange}
                   InputRightElement={
-                    <Icon
-                      as={FontAwesomeIcon}
-                      icon={faMagnifyingGlass}
-                      color="muted.400"
-                      mr={2}
-                    />
+                    <Icon icon={faMagnifyingGlass} color="muted.400" mr={2} />
                   }
                 />
               </>
@@ -366,7 +356,7 @@ const DNSLogHistoryList = (props) => {
                   size="md"
                   variant="subtle"
                   colorScheme="danger"
-                  leftIcon={<Icon as={FontAwesomeIcon} icon={faTrash} />}
+                  leftIcon={<Icon icon={faTrash} />}
                   onPress={deleteHistory}
                 >
                   Delete

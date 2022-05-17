@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types'
-import { Button, Icon, Menu } from 'native-base'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import { Button, Menu } from 'native-base'
+import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faCalendar } from '@fortawesome/free-solid-svg-icons'
 
 const DateRange = (props) => {
@@ -19,7 +19,7 @@ const DateRange = (props) => {
     return (
       <Button
         variant="ghost"
-        leftIcon={<Icon as={FontAwesomeIcon} icon={faCalendar} />}
+        leftIcon={<Icon icon={faCalendar} />}
         {...triggerProps}
         colorScheme={colorScheme}
       >

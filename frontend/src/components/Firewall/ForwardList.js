@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faArrowRightLong,
   faPlus,
@@ -15,7 +15,6 @@ import {
   Box,
   FlatList,
   Heading,
-  Icon,
   IconButton,
   Stack,
   HStack,
@@ -121,11 +120,7 @@ const ForwardList = (props) => {
                 <Text>{item.SrcPort}</Text>
               </HStack>
 
-              <Icon
-                color="muted.400"
-                as={FontAwesomeIcon}
-                icon={faArrowRightLong}
-              />
+              <Icon color="muted.400" icon={faArrowRightLong} />
 
               <HStack space={1}>
                 <Text bold>
@@ -140,7 +135,7 @@ const ForwardList = (props) => {
                 size="sm"
                 variant="ghost"
                 colorScheme="secondary"
-                icon={<Icon as={FontAwesomeIcon} icon={faXmark} />}
+                icon={<Icon icon={faXmark} />}
                 onPress={() => deleteListItem(item)}
               />
             </HStack>

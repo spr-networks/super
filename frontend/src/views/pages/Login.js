@@ -4,6 +4,7 @@ import { saveLogin, testLogin } from 'api'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faKey, faUser } from '@fortawesome/free-solid-svg-icons'
+import Icon from 'FontAwesomeUtils'
 
 import {
   Box,
@@ -13,7 +14,6 @@ import {
   View,
   Heading,
   HStack,
-  Icon,
   VStack,
   FormControl,
   Input,
@@ -74,9 +74,10 @@ const Login = (props) => {
               size="md"
               InputLeftElement={
                 <Icon
-                  as={<Icon as={FontAwesomeIcon} icon={faUser} />}
-                  size={4}
+                  icon={faUser}
+                  size="4"
                   mx="2"
+                  style={{ marginLeft: '8px' }}
                   color="muted.500"
                 />
               }
@@ -93,9 +94,10 @@ const Login = (props) => {
               size="md"
               InputLeftElement={
                 <Icon
-                  as={<Icon as={FontAwesomeIcon} icon={faKey} />}
-                  size={4}
+                  icon={faKey}
+                  size="4"
                   mx="2"
+                  style={{ marginLeft: '8px' }}
                   color="muted.500"
                 />
               }
