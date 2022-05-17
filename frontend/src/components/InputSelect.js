@@ -3,10 +3,10 @@ import PropTypes from 'prop-types'
 
 import { deviceAPI } from 'api/Device'
 
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
+import Icon from 'FontAwesomeUtils'
 import { faCaretDown, faCaretUp } from '@fortawesome/free-solid-svg-icons'
 
-import { Button, IconButton, Icon, Input, Menu } from 'native-base'
+import { IconButton, Input, Menu } from 'native-base'
 
 const SelectMenu = (props) => {
   const { value, onChange, isMultiple, trigger } = props
