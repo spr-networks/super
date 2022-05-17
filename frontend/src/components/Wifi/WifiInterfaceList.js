@@ -92,7 +92,10 @@ const WifiInterface = (props) => {
               <Button
                 variant="ghost"
                 rounded={false}
-                colorScheme={activeTab === tab ? 'primary' : 'muted.500'}
+                colorScheme="primary"
+                _text={{
+                  color: activeTab === tab ? 'primary.600' : 'muted.500'
+                }}
                 onPress={() => setActiveTab(tab)}
               >
                 {tab.replace(/_/g, ' ').replace('supported ', '')}
