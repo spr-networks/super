@@ -46,7 +46,7 @@ const WifiChannelParameters = (props) => {
   ]
 
   useEffect(() => {
-    //const iface = props.config.interface
+    let iface = props.config.interface
     setIface(props.config.interface)
 
     wifiAPI.iwDev().then((devs) => {
@@ -102,7 +102,7 @@ const WifiChannelParameters = (props) => {
         setDevicesLoaded(true)
       })
     })
-  }, [])
+  }, [props.config])
 
   useEffect(() => {
     setBandwidth(0)
