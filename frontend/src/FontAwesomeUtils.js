@@ -1,3 +1,4 @@
+import React from 'react'
 import PropTypes from 'prop-types'
 import { FontAwesomeIcon as FontAwesomeIconNative } from '@fortawesome/react-native-fontawesome'
 import { FontAwesomeIcon as FontAwesomeIconReact } from '@fortawesome/react-fontawesome'

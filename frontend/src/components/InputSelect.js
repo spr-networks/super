@@ -55,13 +55,17 @@ const SelectMenu = (props) => {
 const InputSelect = (props) => {
   const { onChange, isMultiple } = props
   const [isOpen, setIsOpen] = useState(false)
-  const [value, setValue] = useState('')
+  const [value, setValue] = useState(props.value || '')
 
   let title = props.title,
     list = props.options
 
   useEffect(() => {
     setValue(props.value)
+
+    return () => {
+      setValue('')
+    }
   }, [props.value])
 
   const handleChange = (newValue) => {
@@ -104,7 +108,7 @@ const InputSelect = (props) => {
         size="md"
         variant="underlined"
         isDisabled={isDisabled}
-        value={value}
+        defaultValue={value}
         onChangeText={handleChange}
         InputRightElement={elem}
       />

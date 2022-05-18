@@ -16,7 +16,6 @@ const DNSLog = (props) => {
 
   useEffect(() => {
     let { ips, text } = params
-    console.log('zz:', params)
     if (ips && ips != ':ips') {
       setIps(ips.split(','))
     }
