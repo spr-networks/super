@@ -1,8 +1,6 @@
 import React from 'react'
 import {
   render,
-  screen,
-  fireEvent,
   waitFor,
   waitForElementToBeRemoved
 } from '@testing-library/react-native'
@@ -16,11 +14,10 @@ import { saveLogin, blockAPI } from 'api'
 beforeAll(() => saveLogin('admin', 'admin'))
 
 describe('DNS Block', () => {
-  /*
   let container = null,
     getByText = null
 
-  beforeEach(() => {
+  /*beforeEach(() => {
     const inset = {
       frame: { x: 0, y: 0, width: 0, height: 0 },
       insets: { top: 0, left: 0, right: 0, bottom: 0 }
@@ -33,36 +30,36 @@ describe('DNS Block', () => {
     )
 
     getByText = container.getByText
-  })
-  */
+    expect(getByText('DNS Blocklists')).toBeInTheDocument()
+  })*/
 
   test('DNS block list', async () => {
-    expect(1).toBe(1)
-    /*
     const inset = {
       frame: { x: 0, y: 0, width: 0, height: 0 },
       insets: { top: 0, left: 0, right: 0, bottom: 0 }
     }
 
-    const container = render(
+    const { container, getByText } = render(
       <NativeBaseProvider initialWindowMetrics={inset}>
         <DNSBlock />
       </NativeBaseProvider>
     )
 
     expect(container).toBeDefined()
-    */
 
-    /*
+    const title = await getByText('DNS Blocklists')
     // make sure we have all the tables in the document
-    expect(getByText('DNS Blocklists')).toBeInTheDocument()
+    expect(title).toBeTruthy()
 
     // wait for data to be populated
-    await waitFor(() => expect(getByText('example.com.')).toBeInTheDocument())
+    /*await waitFor(async () => {
+      const example = await getByText('example.com.')
+      expect(example).toBeTruthy()
 
-    // find override content
-    expect(getByText('192.168.2.102')).toBeInTheDocument()
-    */
+      // find override content
+      //const ip = await getByText('192.168.2.102')
+      //expect(ip).toBeTruthy()
+    })*/
   })
 
   /*
