@@ -35,7 +35,7 @@ const Subdomain = ({ entry, domain, updateSubdomain, deleteSubdomain }) => (
         size="md"
         variant="outline"
         defaultValue={entry}
-        onChangeText={(d) => this.updateSubdomain(section, entry, d)}
+        onChangeText={(value) => updateSubdomain(domain, entry, value)}
       />
       <InputRightAddon
         children={
@@ -57,15 +57,6 @@ const Subdomain = ({ entry, domain, updateSubdomain, deleteSubdomain }) => (
         }
       />
     </InputGroup>
-
-    {/*<Button.Group size="sm">
-      <IconButton
-        variant="ghost"
-        colorScheme="secondary"
-        icon={<Icon icon={faXmark} />}
-        onPress={() => deleteSubdomain(domain, entry)}
-      />
-    </Button.Group>*/}
   </HStack>
 )
 
@@ -116,49 +107,43 @@ export default class DynDns extends Component {
     let value = !this.state.isUp
   }
 
-  deleteDomain(orig) {
-    let new_config = this.state.config
-    let new_domains = []
-    for (let domain of new_config.domains) {
-      if (orig == domain.domain_name) {
-        continue
-      } else {
-        new_domains.push(domain)
-      }
-    }
-    new_config.domains = new_domains
-    this.setState({ config: new_config })
+  deleteDomain(name) {
+    let config = this.state.config
+    let domains = config.domains || []
+
+    config.domains = domains.filter((d) => d.domain_name !== name)
+
+    this.setState({ config })
   }
 
-  addDomain(new_domain) {
-    let new_config = this.state.config
-    for (let domain of new_config.domains) {
-      if (new_domain == domain.domain_name) {
-        return
-      }
+  addDomain(name) {
+    let config = this.state.config,
+      domains = config.domains || []
+
+    if (domains.map((d) => d.domain_name).includes(name)) {
+      return
     }
-    new_config.domains.push({
-      domain_name: new_domain,
+
+    domains.push({
+      domain_name: name,
       sub_domains: ['subdomain']
     })
-    this.setState({ config: new_config })
+
+    config.domains = domains
+
+    this.setState({ config })
   }
 
-  updateDomain(orig, new_domain) {
-    let new_config = this.state.config
-    let new_domains = []
-    for (let domain of new_config.domains) {
-      if (orig == domain.domain_name) {
-        new_domains.push({
-          domain_name: new_domain,
-          sub_domains: domain.sub_domains
-        })
-      } else {
-        new_domains.push(domain)
+  updateDomain(name, new_domain) {
+    let config = this.state.config
+
+    for (let domain of config.domains) {
+      if (name == domain.domain_name) {
+        domain.domain_name = new_domain
       }
     }
-    new_config.domains = new_domains
-    this.setState({ config: new_config })
+
+    this.setState({ config })
   }
 
   deleteSubdomain(domainTarget, subdomainTarget) {
@@ -197,22 +182,26 @@ export default class DynDns extends Component {
   }
 
   updateSubdomain(domainTarget, origSub, newSub) {
-    let new_config = this.state.config
-    let new_domains = []
-    for (let domain of new_config.domains) {
+    let config = this.state.config,
+      domains = []
+
+    for (let domain of config.domains) {
       if (domainTarget == domain.domain_name) {
-        let new_sub_domains = domain.sub_domains
-        const index = new_sub_domains.indexOf(origSub)
+        let subdomains = domain.sub_domains
+        const index = subdomains.indexOf(origSub)
         if (index > -1) {
-          new_sub_domains[index] = newSub
+          subdomains[index] = newSub
         }
-        new_domains.push(domain)
+
+        domains.push(domain)
       } else {
-        new_domains.push(domain)
+        domains.push(domain)
       }
     }
-    new_config.domains = new_domains
-    this.setState({ config: new_config })
+
+    config.domains = domains
+
+    this.setState({ config })
   }
 
   render() {
