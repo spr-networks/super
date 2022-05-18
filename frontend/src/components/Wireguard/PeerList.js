@@ -118,22 +118,23 @@ const PeerList = (props) => {
                 justifyContent="space-between"
                 alignItems="center"
               >
-                <Text flex="1" bold>
+                <Text flex={1} bold>
                   {item.device ? item.device.Name : `peer`}
                 </Text>
-                <Text flex="1">{item.AllowedIPs}</Text>
+                <Text flex={1}>{item.AllowedIPs}</Text>
                 <Text
+                  flex={1}
                   display={{ base: 'none', lg: 'flex' }}
                   fontSize="xs"
                   isTruncated
                 >
                   {item.PublicKey}
                 </Text>
-                <Text>
-                  {item.LatestHandshake
-                    ? prettyDate(new Date(item.LatestHandshake * 1e3))
-                    : null}
-                </Text>
+                {item.LatestHandshake ? (
+                  <Text flex={1}>
+                    {prettyDate(new Date(item.LatestHandshake * 1e3))}
+                  </Text>
+                ) : null}
                 <Text>
                   {item.TransferRx ? (
                     <HStack space={1}>
