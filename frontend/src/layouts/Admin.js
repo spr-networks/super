@@ -5,7 +5,7 @@ import { AppContext, AlertContext, alertState } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Footer from 'components/Footer/Footer'
 import Sidebar from 'components/Sidebar/Sidebar'
-import { ConnectWebsocket } from 'api'
+import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
 import { ucFirst } from 'utils'
 
 import {
@@ -126,38 +126,18 @@ const AdminLayout = (props) => {
   const toast = useToast()
 
   useEffect(() => {
-    ConnectWebsocket((event) => {
+    connectWebsocket((event) => {
       if (event.data == 'success') {
         return
       } else if (event.data == 'Authentication failure') {
         return alertState.error('Websocket failed to authenticate')
       }
 
-      let data = JSON.parse(event.data)
-      let innerData = {}
-      if (data.Data) {
-        innerData = JSON.parse(data.Data)
-      }
-
-      // Notify WiFi Authentication state
-      if (data.Type == 'PSKAuthSuccess') {
-        alertState.success('Authentication success for MAC ' + innerData.MAC)
-      } else if (data.Type == 'PSKAuthFailure') {
-        let reasonString = ''
-        let wpaType = { sae: 'WPA3', wpa: 'WPA2' }[innerData.Type]
-
-        if (innerData.Reason == 'noentry') {
-          reasonString = 'Unknown device with ' + wpaType
-        } else if (innerData.Reason == 'mismatch') {
-          reasonString = 'Wrong password with ' + wpaType
-        }
-
-        alertState.error(
-          'Authentication failure for MAC ' +
-            innerData.MAC +
-            ': ' +
-            reasonString
-        )
+      const res = parseLogMessage(JSON.parse(event.data))
+      if (res) {
+        let { type, message } = res
+        console.log('MSG:', type, message)
+        alertState[type](message)
       }
     })
   }, [])
