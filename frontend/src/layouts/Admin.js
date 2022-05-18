@@ -136,7 +136,6 @@ const AdminLayout = (props) => {
       const res = parseLogMessage(JSON.parse(event.data))
       if (res) {
         let { type, message } = res
-        console.log('MSG:', type, message)
         alertState[type](message)
       }
     })
