@@ -88,7 +88,7 @@ const WifiHostapd = (props) => {
       >
         <VStack space={2}>
           {Object.keys(config).map((label) => (
-            <HStack space={4} justifyContent="center">
+            <HStack key={label} space={4} justifyContent="center">
               <Text bold w="1/4" textAlign="right">
                 {label}
               </Text>

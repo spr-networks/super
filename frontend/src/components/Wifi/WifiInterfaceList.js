@@ -11,9 +11,11 @@ import {
   Flex,
   Heading,
   IconButton,
+  ScrollView,
   Stack,
   HStack,
   VStack,
+  SectionList,
   Text,
   useColorModeValue
 } from 'native-base'
@@ -40,33 +42,34 @@ const WifiInterface = (props) => {
   const dList = (dict, type = 'row') => {
     if (Object.keys(dict) && type == 'inline') {
       return (
-        <>
-          {Object.keys(dict).map((label) => (
+        <FlatList
+          data={Object.keys(dict)}
+          keyExtractor={(item) => item}
+          renderItem={({ item }) => (
             <HStack space={2}>
-              <Text bold>{label}</Text>
-              <Text>{dict[label]}</Text>
+              <Text bold>{item}</Text>
+              <Text>{dict[item]}</Text>
             </HStack>
-          ))}
-        </>
+          )}
+        />
       )
     }
+
     return (
       <VStack space={1} justifyContent="center">
         {Object.keys(dict).map((label) => (
-          <>
-            <HStack space={2}>
-              <Text w="1/6" bold>
-                {label}
-              </Text>
-              <VStack flex="2" space={2} justifyContent="center">
-                {typeof dict[label] == 'object' ? (
-                  <Text>{dList(dict[label], 'inline')}</Text>
-                ) : (
-                  <Text>{dict[label]}</Text>
-                )}
-              </VStack>
-            </HStack>
-          </>
+          <HStack key={label} space={2}>
+            <Text w="1/4" bold>
+              {label}
+            </Text>
+            <VStack flex={2} space={2} justifyContent="center">
+              {typeof dict[label] == 'object' ? (
+                <Box>{dList(dict[label], 'inline')}</Box>
+              ) : (
+                <Text>{dict[label]}</Text>
+              )}
+            </VStack>
+          </HStack>
         ))}
       </VStack>
     )
@@ -78,17 +81,23 @@ const WifiInterface = (props) => {
       bg={useColorModeValue('warmGray.50', 'blueGray.800')}
       rounded="md"
       width="100%"
-      p="4"
+      p={4}
     >
       <Heading fontSize="lg">{iw.wiphy}</Heading>
 
-      <Divider mt="2" />
-
-      <Stack direction={{ base: 'column', md: 'row' }} space={4}>
+      <Stack
+        direction={{ base: 'column', md: 'row' }}
+        space={2}
+        my={2}
+        rounded="md"
+        borderWidth={1}
+        borderColor="muted.200"
+      >
         <VStack borderRightWidth={1} borderRightColor="muted.200">
           {tabList.map((tab) =>
             iw[tab] || tab == 'other' ? (
               <Button
+                key={tab}
                 variant="ghost"
                 rounded={false}
                 colorScheme="primary"
@@ -103,14 +112,14 @@ const WifiInterface = (props) => {
           )}
         </VStack>
 
-        <Box p="2">
+        <ScrollView h="50vh" p={2}>
           {tabList.map((tab) =>
             iw[tab] || tab == 'other' ? (
-              <VStack display={activeTab == tab ? 'flex' : 'none'}>
+              <VStack key={tab} display={activeTab == tab ? 'flex' : 'none'}>
                 {tab == 'devices' ? (
                   <>
                     {Object.keys(iw[tab]).map((iface) => (
-                      <VStack space={4}>
+                      <VStack key={iface} space={4}>
                         <HStack space={1} alignItems="center">
                           <Heading fontSize="lg">{iface}</Heading>
                           <Text fontSize="sm" color="muted.500">
@@ -118,87 +127,96 @@ const WifiInterface = (props) => {
                           </Text>
                         </HStack>
                         {dList(iw[tab][iface])}
-                        <Divider my="4" />
+                        <Divider my={4} />
                       </VStack>
                     ))}
+
+                    {/*<SectionList
+                      sections={[
+                        { title: 'abc1', data: [0, 11] },
+                        { title: 'abc2', data: [23] }
+                      ]}
+                      keyExtractor={(item, index) => index}
+                      renderSectionHeader={({ section: { title } }) => (
+                        <Text bold>{JSON.stringify(title)}</Text>
+                      )}
+                      renderItem={(item) => <Text>{JSON.stringify(item)}</Text>}
+                    />*/}
                   </>
                 ) : (
                   <>
                     {tab == 'other' ? (
-                      <VStack space={2}>
-                        {Object.keys(iw)
-                          .filter((k) => !tabList.includes(k) && k != 'bands')
-                          .map((k) => (
-                            <HStack space={2}>
-                              <Text bold>{k}</Text>
-                              <Text>{iw[k]}</Text>
-                            </HStack>
-                          ))}
-                      </VStack>
-                    ) : null}
-                    {tab == 'bands' ? (
                       <>
-                        {iw.bands.map((band) => (
-                          <VStack
-                            space={2}
-                            borderBottomWidth={1}
-                            borderBottomColor="muted.200"
-                            pb="4"
-                            mb="4"
-                          >
-                            <Heading fontSize="sm" color="muted.500">
-                              {band.band}
-                            </Heading>
-
-                            {Object.keys(band)
-                              .filter((l) => l !== 'band')
-                              .map((label) => (
-                                <HStack space={2}>
-                                  <Text bold>{label}</Text>
-                                  <Box flex={2}>
-                                    {band[label].map((v) => (
-                                      <Text>{v}</Text>
-                                    ))}
-                                  </Box>
-                                </HStack>
-                              ))}
-                          </VStack>
-                        ))}
+                        <FlatList
+                          data={Object.keys(iw).filter(
+                            (k) => !tabList.includes(k)
+                          )}
+                          renderItem={({ item }) => (
+                            <VStack maxW="64vw" flexWrap="wrap" mb={2}>
+                              <Text bold>{item}</Text>
+                              <Text>{iw[item]}</Text>
+                            </VStack>
+                          )}
+                          keyExtractor={(item) => item}
+                        />
                       </>
                     ) : null}
+
+                    {tab == 'bands' ? (
+                      <SectionList
+                        sections={iw.bands.map((band) => {
+                          return {
+                            title: band.band,
+                            data: Object.keys(band)
+                              .filter((k) => k !== 'band')
+                              .map((label) => {
+                                return { label, value: band[label] }
+                              })
+                          }
+                        })}
+                        keyExtractor={(item, index) => item.label}
+                        renderSectionHeader={({ section: { title } }) => (
+                          <Heading fontSize="md">{title}</Heading>
+                        )}
+                        renderSectionFooter={() => <Divider my={2} />}
+                        renderItem={({ item }) => (
+                          <VStack py={2}>
+                            <Text bold>{item.label}</Text>
+                            <VStack>
+                              {item.value.map((v, index) => (
+                                <Text key={index}>{v}</Text>
+                              ))}
+                            </VStack>
+                          </VStack>
+                        )}
+                      />
+                    ) : null}
+
                     {tab.includes('support') &&
                     iw['supported_interface_modes'] ? (
                       <VStack space={4}>
                         <Heading fontSize="md" color="muted.500">
                           {tab.replace(/_/g, ' ')}
                         </Heading>
-                        <Stack
-                          maxW="64vw"
-                          space={2}
-                          direction="row"
-                          flexWrap="wrap"
-                        >
+                        <HStack maxW="64vw" space={2} flexWrap="wrap">
                           {iw[tab] &&
                             iw[tab].map((c) => (
-                              <>
+                              <Box key={c} mb={2}>
                                 {tab.match(/extended/) ? (
-                                  <Text mb="2" isTruncated>
-                                    {c}
-                                  </Text>
+                                  <Text isTruncated>{c}</Text>
                                 ) : (
                                   <Badge
                                     variant="outline"
                                     colorScheme="primary"
-                                    mb="2"
                                   >
                                     {c}
                                   </Badge>
                                 )}
-                              </>
+                              </Box>
                             ))}
-                        </Stack>
+                        </HStack>
 
-                        {tab == 'supported_interface_modes' ? (
+                        {/*tab == 'supported_interface_modes' ? (
                           <>
                             <Heading fontSize="sm">
                               software interface modes (can always be added)
@@ -219,7 +237,7 @@ const WifiInterface = (props) => {
                               {iw['valid_interface_combinations']}
                             </Text>
                           </>
-                        ) : null}
+                              ) : null*/}
                       </VStack>
                     ) : null}
                   </>
@@ -227,7 +245,7 @@ const WifiInterface = (props) => {
               </VStack>
             ) : null
           )}
-        </Box>
+        </ScrollView>
       </Stack>
     </Box>
   )
@@ -252,15 +270,15 @@ const WifiInterfaceList = (props) => {
 
   return (
     <>
-      <Stack>
+      <VStack>
         {iws.length ? (
           <>
             {iws.map((iw) => (
-              <WifiInterface iw={iw} />
+              <WifiInterface key={iw.wiphy} iw={iw} />
             ))}
           </>
         ) : null}
-      </Stack>
+      </VStack>
     </>
   )
 }

@@ -1,5 +1,4 @@
-import React from 'react'
-
+import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import { AlertContext } from 'AppContext'
@@ -12,11 +11,23 @@ import {
   Heading,
   HStack,
   VStack,
+  Stack,
   Select
 } from 'native-base'
 
-class WifiChannelParameters extends React.Component {
-  Bandwidth5 = [
+const WifiChannelParameters = (props) => {
+  const context = useContext(AlertContext)
+
+  const [iface, setIface] = useState('')
+  const [channel, setChannel] = useState(0)
+  const [bandwidth, setBandwidth] = useState(0)
+  const [mode, setMode] = useState('a')
+  const [devices, setDevices] = useState([])
+  const [iws, setIws] = useState([])
+  const [devicesLoaded, setDevicesLoaded] = useState(false)
+  const [errors, setErrors] = useState({})
+
+  const bandwidth5 = [
     { label: '20 MHz', value: 20 },
     { label: '40 MHz', value: 40 },
     { label: '80 MHz', value: 80 },
@@ -24,106 +35,123 @@ class WifiChannelParameters extends React.Component {
     { label: '80+80 MHz', disabled: true, value: 8080 }
   ]
 
-  Bandwidth24 = [
+  const bandwidth24 = [
     { label: '20 MHz', value: 20 },
     { label: '40 MHz', value: 40 }
   ]
 
-  state = {
-    Iface: '',
-    Channel: 0,
-    Bandwidth: 0,
-    Mode: 'a',
-    HT_Enable: true,
-    VHT_Enable: true,
-    HE_Enable: true,
+  let modes = [
+    { label: '5 GHz', value: 'a' },
+    { label: '2.4 GHz', value: 'g' }
+  ]
 
-    devs: [],
-    iws: [],
-    loadedDevs: false
-  }
+  useEffect(() => {
+    //const iface = props.config.interface
+    setIface(props.config.interface)
 
-  constructor(props) {
-    super(props)
+    wifiAPI.iwDev().then((devs) => {
+      setDevices(devs)
 
-    this.handleChangeSelect = this.handleChangeSelect.bind(this)
-    this.handleSubmit = this.handleSubmit.bind(this)
-  }
+      wifiAPI.iwList().then((iws) => {
+        iws = iws.map((iw) => {
+          iw.devices = devs[iw.wiphy]
+          return iw
+        })
 
-  handleChangeSelect(name, value) {
-    if (name == 'Mode') {
-      this.setState({ Bandwidth: 0, Channel: 0 })
-    }
+        setIws(iws)
 
-    if (['Bandwidth', 'Channel'].includes(name)) {
-      value = parseInt(value)
-    }
+        //set bw and channels
+        for (let iw of iws) {
+          if (iw.devices[iface]) {
+            let cur_device = iw.devices[iface]
+            if (!cur_device) continue
 
-    this.setState({ [name]: value })
-  }
-
-  handleSubmit() {
-    let wifiParameters = {
-      //Interface: this.state.Iface,
-      Channel: this.state.Channel,
-      Mode: this.state.Mode,
-      Bandwidth: this.state.Bandwidth,
-      HT_Enable: this.state.HT_Enable,
-      VHT_Enable: this.state.Mode == 'a' ? this.state.VHT_Enable : false,
-      HE_Enable: this.state.HE_Enable
-    }
-
-    const done = (res) => {
-      if (this.props.notifyChange) {
-        this.props.notifyChange({ ...wifiParameters, ...res })
-        this.context.success('Set Channel Parameters')
-      }
-    }
-
-    wifiAPI.setChannel(wifiParameters).then(done, (e) => {
-      this.context.error('API Failure: ' + e.message)
-    })
-  }
-
-  enumerateChannelOptions() {
-    let validChannels = []
-
-    let expectedFreq = ''
-    if (this.state.Mode == 'a') {
-      expectedFreq = '5'
-    } else if (this.state.Mode == 'g') {
-      expectedFreq = '2'
-    }
-
-    for (let iw of this.state.iws) {
-      if (iw.devices[this.props.config.interface]) {
-        for (let band of iw.bands) {
-          //if the band does not match the current mode, skip it
-          if (band.frequencies && band.frequencies[0][0] == expectedFreq) {
-            for (let freq of band.frequencies) {
-              let channelNumber = parseInt(freq.split(' ')[2].slice(1, -1))
-              let channelLabel = channelNumber
-              let is_disabled = false
-              if (freq.includes('disabled')) {
-                is_disabled = true
-                channelLabel += ' disabled'
-              } else if (freq.includes('no IR')) {
-                is_disabled = true
-                channelLabel += ' No Initial Radiation (No-IR)'
-              } else if (freq.includes('radar')) {
-                channelLabel += ' DFS'
-                if (this.props.config.ieee80211h !== 1) {
-                  is_disabled = true
+            //enable 160 MHz if supported by the card
+            for (let band of iw.bands) {
+              if (band.vht_capabilities) {
+                for (let capability of band.vht_capabilities) {
+                  if (capability.includes('160 MHz')) {
+                    let index160 = bandwidth5.findIndex(
+                      (item) => item.label == '160 MHz'
+                    )
+                    bandwidth5[index160].disabled = false
+                  }
                 }
               }
-              validChannels.push({
-                value: channelNumber,
-                label: channelLabel,
-                toolTip: freq,
-                disabled: is_disabled
-              })
+            }
+
+            //get bandwidth and channel
+            if (cur_device.channel) {
+              let parts = cur_device.channel.split(',')
+              let channel = parseInt(parts[0].split(' ')[0])
+              let bandwidth = parseInt(parts[1].split(' ')[2])
+
+              setBandwidth(bandwidth)
+              setChannel(channel)
+
+              let start_freq = parts[0].split(' ')[1].substring(1)[0]
+              if (start_freq == '2') {
+                setMode('g')
+              } else if (start_freq == '5') {
+                setMode('a')
+              }
             }
           }
+        }
+
+        setDevicesLoaded(true)
+      })
+    })
+  }, [])
+
+  useEffect(() => {
+    setBandwidth(0)
+    setChannel(0)
+  }, [mode])
+
+  useEffect(() => {
+    setErrors({})
+  }, [bandwidth, channel])
+
+  const enumerateChannelOptions = () => {
+    //const iface = props.config.interface
+    let validChannels = []
+
+    let expectedFreq = mode == 'a' ? '5' : '2'
+    for (let iw of iws) {
+      if (!iw.devices[iface]) {
+        continue
+      }
+
+      for (let band of iw.bands) {
+        //if the band does not match the current mode, skip it
+        if (!band.frequencies || band.frequencies[0][0] != expectedFreq) {
+          continue
+        }
+
+        for (let freq of band.frequencies) {
+          let channelNumber = parseInt(freq.split(' ')[2].slice(1, -1))
+          let channelLabel = channelNumber
+          let isDisabled = false
+          if (freq.includes('disabled')) {
+            isDisabled = true
+            channelLabel += ' disabled'
+          } else if (freq.includes('no IR')) {
+            isDisabled = true
+            channelLabel += ' No Initial Radiation (No-IR)'
+          } else if (freq.includes('radar')) {
+            channelLabel += ' DFS'
+            if (props.config.ieee80211h !== 1) {
+              isDisabled = true
+            }
+          }
+
+          validChannels.push({
+            value: channelNumber,
+            label: channelLabel,
+            toolTip: freq,
+            disabled: isDisabled
+          })
         }
       }
     }
@@ -131,192 +159,195 @@ class WifiChannelParameters extends React.Component {
     return validChannels
   }
 
-  async componentDidMount() {
-    wifiAPI.iwDev().then((devs) => {
-      wifiAPI.iwList().then((iws) => {
-        iws = iws.map((iw) => {
-          iw.devices = devs[iw.wiphy]
-          return iw
-        })
+  const isValid = () => {
+    if (!bandwidth) {
+      setErrors({ bandwidth: true })
+      return false
+    }
 
-        for (let iw of iws) {
-          if (iw.devices[this.props.config.interface]) {
-            let cur_device = iw.devices[this.props.config.interface]
-            if (!cur_device) continue
+    if (!channel) {
+      setErrors({ channel: true })
+      return false
+    }
 
-            //Enable 160 MHz if supported by the card
-
-            for (let band of iw.bands) {
-              if (band.vht_capabilities) {
-                for (let capability of band.vht_capabilities) {
-                  if (capability.includes('160 MHz')) {
-                    this.Bandwidth5[3].disabled = false
-                  }
-                }
-              }
-            }
-
-            //get bandwidth and cahnnel
-            if (cur_device.channel) {
-              let parts = cur_device.channel.split(',')
-              let channel = parseInt(parts[0].split(' ')[0])
-              let bw = parseInt(parts[1].split(' ')[2])
-
-              this.setState({ Bandwidth: bw, Channel: channel })
-
-              let start_freq = parts[0].split(' ')[1].substring(1)[0]
-              if (start_freq == '2') {
-                this.setState({ Mode: 'g' })
-              } else if (start_freq == '5') {
-                this.setState({ Mode: 'a' })
-              }
-            }
-          }
-        }
-
-        this.setState({ devs })
-        this.setState({ iws })
-        this.setState({ loadedDevs: true })
-      })
-    })
+    return true
   }
 
-  render() {
-    let Modes = [
-      { label: '5 GHz', value: 'a' },
-      { label: '2.4 GHz', value: 'g' }
-    ]
+  const handleSubmit = () => {
+    if (!isValid()) {
+      return
+    }
 
-    let devsScan = []
-    let defaultDev = null
-    for (let phy in this.state.devs) {
-      for (let iface in this.state.devs[phy]) {
-        let type = this.state.devs[phy][iface].type
-        let label = `${iface} ${type}`
+    let wifiParameters = {
+      //Interface: iface,
+      Channel: channel,
+      Mode: mode,
+      Bandwidth: bandwidth,
+      HT_Enable: true,
+      VHT_Enable: mode == 'a' ? true : false,
+      HE_Enable: true
+    }
 
-        //skip VLAN entries
-        if (type.includes('AP/VLAN')) {
-          continue
-        }
-
-        //skip managed
-        if (type.includes('managed')) {
-          continue
-        }
-
-        devsScan.push({ value: iface, disabled: !type.includes('AP'), label })
-        if (iface == this.props.config.interface) {
-          defaultDev = devsScan[devsScan.length - 1].value
-        }
+    const done = (res) => {
+      if (props.notifyChange) {
+        props.notifyChange({ ...wifiParameters, ...res })
+        context.success('Set Channel Parameters')
       }
     }
 
-    let Bandwidths = this.state.Mode == 'a' ? this.Bandwidth5 : this.Bandwidth24
-
-    return (
-      <>
-        <Box
-          _light={{ bg: 'warmGray.50' }}
-          _dark={{ bg: 'blueGray.800' }}
-          rounded="md"
-          width="100%"
-          p="4"
-        >
-          <VStack space={2}>
-            <Heading fontSize="lg">Channel Selection</Heading>
-
-            <HStack space={2}>
-              <FormControl flex={1}>
-                <FormControl.Label>WiFi Interface</FormControl.Label>
-                {this.state.loadedDevs ? (
-                  <Select
-                    selectedValue={defaultDev}
-                    onValueChange={(value) =>
-                      this.handleChangeSelect('Iface', value)
-                    }
-                    accessibilityLabel="Wifi Interface"
-                  >
-                    {devsScan.map((dev) => (
-                      <Select.Item label={dev.label} value={dev.value} />
-                    ))}
-                  </Select>
-                ) : null}
-              </FormControl>
-
-              <FormControl flex={1}>
-                <FormControl.Label>Frequency Band</FormControl.Label>
-                <Select
-                  selectedValue={this.state.Mode}
-                  onValueChange={(value) =>
-                    this.handleChangeSelect('Mode', value)
-                  }
-                >
-                  {Modes.map((item) => (
-                    <Select.Item
-                      label={item.label}
-                      value={item.value}
-                      isDisabled={item.disabled}
-                    />
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl flex={1}>
-                <FormControl.Label>Bandwidth</FormControl.Label>
-                <Select
-                  selectedValue={this.state.Bandwidth}
-                  onValueChange={(value) =>
-                    this.handleChangeSelect('Bandwidth', value)
-                  }
-                >
-                  {Bandwidths.map((item) => (
-                    <Select.Item
-                      label={item.label}
-                      value={item.value}
-                      isDisabled={item.disabled}
-                    />
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl flex={1}>
-                <FormControl.Label for="Channel">Channel</FormControl.Label>
-                <Select
-                  selectedValue={this.state.Channel}
-                  onValueChange={(value) =>
-                    this.handleChangeSelect('Channel', value)
-                  }
-                >
-                  {this.enumerateChannelOptions().map((item) => (
-                    <Select.Item
-                      label={item.label}
-                      value={item.value}
-                      isDisabled={item.disabled}
-                    />
-                  ))}
-                </Select>
-              </FormControl>
-            </HStack>
-
-            <Button
-              colorScheme="primary"
-              size="md"
-              width="50%"
-              alignSelf="center"
-              type="submit"
-              onPress={this.handleSubmit}
-              mt={4}
-            >
-              Save
-            </Button>
-          </VStack>
-        </Box>
-      </>
-    )
+    wifiAPI
+      .setChannel(wifiParameters)
+      .then(done)
+      .catch((e) => {
+        context.error('API Failure: ' + e.message)
+      })
   }
-}
 
-WifiChannelParameters.contextType = AlertContext
+  let devsScan = []
+  let selectedDevice = null
+
+  for (let phy in devices) {
+    for (let iface in devices[phy]) {
+      let type = devices[phy][iface].type,
+        label = `${iface} ${type}`
+
+      //skip VLAN & managed entries
+      if (type.includes('AP/VLAN') || type.includes('managed')) {
+        continue
+      }
+
+      devsScan.push({ label, value: iface, disabled: !type.includes('AP') })
+
+      if (iface == props.config.interface) {
+        selectedDevice = devsScan[devsScan.length - 1].value
+      }
+    }
+  }
+
+  let bandwidths = mode == 'a' ? bandwidth5 : bandwidth24
+
+  return (
+    <>
+      <Box
+        _light={{ bg: 'warmGray.50' }}
+        _dark={{ bg: 'blueGray.800' }}
+        rounded="md"
+        width="100%"
+        p="4"
+      >
+        <VStack space={2}>
+          <Heading fontSize="lg">Channel Selection</Heading>
+
+          <Stack direction={{ base: 'column', md: 'row' }} space={2}>
+            <FormControl flex={1}>
+              <FormControl.Label>WiFi Interface</FormControl.Label>
+              {devicesLoaded ? (
+                <Select
+                  selectedValue={selectedDevice}
+                  onValueChange={(value) => setIface(value)}
+                  accessibilityLabel="Wifi Interface"
+                >
+                  {devsScan.map((dev) => (
+                    <Select.Item
+                      key={dev.label}
+                      label={dev.label}
+                      value={dev.value}
+                    />
+                  ))}
+                </Select>
+              ) : null}
+            </FormControl>
+
+            <FormControl flex={1}>
+              <FormControl.Label>Frequency Band</FormControl.Label>
+              <Select
+                selectedValue={mode}
+                onValueChange={(value) => setMode(value)}
+              >
+                {modes.map((item) => (
+                  <Select.Item
+                    key={item.label}
+                    label={item.label}
+                    value={item.value}
+                    isDisabled={item.disabled}
+                  />
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl flex={1} isInvalid={'bandwidth' in errors}>
+              <FormControl.Label>Bandwidth</FormControl.Label>
+              <Select
+                selectedValue={bandwidth}
+                onValueChange={(value) => {
+                  setBandwidth(parseInt(value))
+                }}
+              >
+                <Select.Item label="" value={0} />
+                {bandwidths.map((item) => (
+                  <Select.Item
+                    key={item.label}
+                    label={item.label}
+                    value={item.value}
+                    isDisabled={item.disabled}
+                  />
+                ))}
+              </Select>
+              {'bandwidth' in errors ? (
+                <FormControl.ErrorMessage
+                  _text={{
+                    fontSize: 'xs'
+                  }}
+                >
+                  Invalid Bandwidth
+                </FormControl.ErrorMessage>
+              ) : null}
+            </FormControl>
+
+            <FormControl flex={1} isInvalid={'channel' in errors}>
+              <FormControl.Label for="Channel">Channel</FormControl.Label>
+              <Select
+                selectedValue={channel}
+                onValueChange={(value) => setChannel(parseInt(value))}
+              >
+                <Select.Item label="" value={0} />
+                {enumerateChannelOptions().map((item) => (
+                  <Select.Item
+                    key={item.label}
+                    label={item.label}
+                    value={item.value}
+                    isDisabled={item.disabled}
+                  />
+                ))}
+              </Select>
+              {'channel' in errors ? (
+                <FormControl.ErrorMessage
+                  _text={{
+                    fontSize: 'xs'
+                  }}
+                >
+                  Invalid Channel
+                </FormControl.ErrorMessage>
+              ) : null}
+            </FormControl>
+          </Stack>
+
+          <Button
+            colorScheme="primary"
+            size="md"
+            width="50%"
+            alignSelf="center"
+            type="submit"
+            onPress={handleSubmit}
+            mt={4}
+          >
+            Save
+          </Button>
+        </VStack>
+      </Box>
+    </>
+  )
+}
 
 WifiChannelParameters.propTypes = {
   notifyChange: PropTypes.func

@@ -80,7 +80,6 @@ const WifiScan = (props) => {
 
   devsScan = devsScan.filter((dev) => !dev.disabled)
   if (devsScan.length && !iface) {
-    console.log('OK', devsScan[0].value)
     setIface(devsScan[0].value)
   }
 
