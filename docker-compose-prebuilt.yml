@@ -159,6 +159,7 @@ services:
       driver: journald
     depends_on:
       - "base"
+      - "dns"
     volumes:
       - ./state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
   dyndns:
@@ -169,6 +170,7 @@ services:
       driver: journald
     depends_on:
       - "base"
+      - "dns"      
     volumes:
       - ./state/plugins/dyndns/:/state/plugins/dyndns
       - ./configs/dyndns/:/configs/dyndns

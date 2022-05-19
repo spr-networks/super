@@ -13,19 +13,6 @@ iptables-legacy -t nat --delete-chain
 
 nft flush ruleset
 
-LANIFDHCP=""
-DOCKERLAN=""
-LANIFFORWARD=""
-WGLANIFFORWARD=""
-LANIFMACSPOOF=""
-if [ "$LANIF" ]; then
-    LANIFDHCP="iifname $LANIF udp dport 67 counter accept"
-    DOCKERLAN="iif $DOCKERIF oifname $LANIF ip saddr $DOCKERNET counter accept"
-    LANIFFORWARD="counter oifname $LANIF ip saddr . iifname . ether saddr vmap @lan_access"
-    WGLANIFFORWARD="counter oifname wg0 ip saddr . iifname . ether saddr vmap @lan_access"
-    LANIFMACSPOOF="iifname eq $LANIF jump DROP_MAC_SPOOF"
-fi
-
 nft -f - << EOF
 
 table inet filter {
@@ -84,28 +71,29 @@ table inet filter {
     counter jump F_EST_RELATED
 
     # Allow wireguard from only WANIF interface to prevent loops
-    iifname $WANIF udp dport $WIREGUARD_PORT counter accept
+    $(if [ "$WANIF" ]; then echo "iifname $WANIF udp dport $WIREGUARD_PORT counter accept"; fi)
 
     # drop dhcp requests, multicast ports from upstream
-    iifname $WANIF udp dport {67, 1900, 5353} counter jump DROPLOGINP
+    $(if [ "$WANIF" ]; then echo "iifname $WANIF udp dport {67, 1900, 5353} counter jump DROPLOGINP"; fi)
 
     # drop ssh, iperf from upstream
-    counter iifname $WANIF tcp dport vmap @upstream_tcp_port_drop
+    $(if [ "$WANIF" ]; then echo "counter iifname $WANIF tcp dport vmap @upstream_tcp_port_drop"; fi)
 
     # DHCP Allow rules
     # Wired lan
-    $LANIFDHCP
+    $(if [ "$LANIF" ]; then echo "iifname $LANIF udp dport 67 counter accept"; fi)
 
     # Authorized wireless stations & MACs. They do not have an ip address yet
     counter udp dport 67 iifname . ether saddr vmap @dhcp_access
 
     # Prevent MAC Spoofing from LANIF, VLANSIF
-    $LANIFMACSPOOF
-    counter iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF
+    $(if [ "$LANIF" ]; then echo "iifname eq $LANIF jump DROP_MAC_SPOOF"; fi)
+
+    $(if [ "$VLANSIF" ]; then echo "counter iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF"; fi)
 
     # DNS Allow rules
     # Docker can DNS
-    iif $DOCKERIF ip saddr $DOCKERNET udp dport 53 counter accept
+    $(if [ "$DOCKERIF" ]; then echo "iif $DOCKERIF ip saddr $DOCKERNET udp dport 53 counter accept"; fi)
 
     # Dynamic verdict map for dns access
     counter udp dport 53  ip saddr . iifname vmap @dns_access
@@ -133,27 +121,29 @@ table inet filter {
     # Allow DNAT for port forwarding
     counter ct status dnat accept
 
-    iif $DOCKERIF oifname $WANIF ip saddr $DOCKERNET counter accept
+    # allow docker containers to communicate upstream
+    $(if [ "$WANIF" ] && [ "$DOCKERIF" ]; then echo "iif $DOCKERIF oifname $WANIF ip saddr $DOCKERNET counter accept"; fi)
     # allow docker containers to speak to LAN also
-    $DOCKERLAN
+    $(if [ "$LANIF" ] && [ "$DOCKERIF" ]; then echo "iif $DOCKERIF oifname $LANIF ip saddr $DOCKERNET counter accept"; fi)
 
-    $LANIFMACSPOOF
-    iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF
+    # Verify MAC addresses for LANIF/VLANSIF
+    $(if [ "$LANIF" ]; then echo "iifname eq $LANIF jump DROP_MAC_SPOOF"; fi)
+    $(if [ "$VLANSIF" ]; then echo "  iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF"; fi)
 
     # MSS clamping to handle upstream MTU limitations
     tcp flags syn tcp option maxseg size set rt mtu
 
     # Forward to WAN
-    counter oifname $WANIF ip saddr . iifname vmap @internet_access
+    $(if [ "$WANIF" ]; then echo "counter oifname $WANIF ip saddr . iifname vmap @internet_access"; fi)
 
     # Forward to wired LAN
-    $LANIFFORWARD
+    $(if [ "$LANIF" ]; then echo "counter oifname $LANIF ip saddr . iifname . ether saddr vmap @lan_access"; fi)
 
     #forward LAN to wg -> Tbd test me
-    $WGLANIFFORWARD
+    $(if [ "$LANIF" ]; then echo "counter oifname wg0 ip saddr . iifname . ether saddr vmap @lan_access"; fi)
 
     # Forward to wireless LAN
-    counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access
+    $(if [ "$VLANSIF" ]; then echo "counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access"; fi)
 
     jump CUSTOM_GROUPS
 

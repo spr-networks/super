@@ -3,8 +3,11 @@ services:
   base:
     container_name: superbase
     build: base
-    network_mode: host
     privileged: true
+    ports:
+      - "53"
+      - "51280"
+      - "8000:80"
     logging:
       driver: journald
     volumes:
@@ -12,8 +15,7 @@ services:
   dhcp:
     container_name: superdhcp
     build: dhcp
-    network_mode: host
-    privileged: true
+    network_mode: service:base
     depends_on:
       - "base"
     logging:
@@ -25,22 +27,20 @@ services:
       - ./state/dhcp/:/state/dhcp/
       - /sys/fs/bpf:/sys/fs/bpf
   dhcp_client:
+    entrypoint: ["echo", "Disabled for Cloud"]
     container_name: superdhcp_client
     build: dhcp
-    network_mode: host
-    privileged: true
+    network_mode: service:base
     depends_on:
       - "base"
     logging:
       driver: journald
-    entrypoint: /scripts/client.sh
     volumes:
       - ./configs/base/:/configs/base/
   dns:
     container_name: superdns
     build: dns
-    network_mode: host
-    privileged: true
+    network_mode: service:base
     logging:
       driver: journald
     depends_on:
@@ -50,10 +50,10 @@ services:
       - ./configs/dns/:/configs/dns/
       - ./state/dns/:/state/dns/
   wifid:
+    entrypoint: ["echo", "Disabled for Cloud"]
     container_name: superwifid
     build: wifid
-    network_mode: host
-    privileged: true
+    network_mode: service:base
     logging:
       driver: journald
     depends_on:
@@ -67,8 +67,7 @@ services:
   multicast_udp_proxy:
     container_name: super_multicast_udp_proxy
     build: multicast_udp_proxy
-    network_mode: host
-    privileged: true
+    network_mode: service:base
     depends_on:
       - "base"
     logging:
@@ -78,8 +77,7 @@ services:
   ppp:
     container_name: superppp
     build: ppp
-    network_mode: host
-    privileged: true
+    network_mode: service:base
     depends_on:
       - "base"
     logging:
@@ -105,8 +103,9 @@ services:
   wireguard:
     container_name: superwireguard
     build: wireguard
-    network_mode: host
-    privileged: true
+    network_mode: service:base
+    cap_add:
+      - NET_ADMIN
     depends_on:
       - "base"
       - "dhcp"
@@ -120,8 +119,8 @@ services:
 # Use the prebuilt frontend
   frontend:
     container_name: superfrontend
-    network_mode: none
     image: ghcr.io/spr-networks/super_frontend
+    network_mode: none
     entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
     volumes:
     - ./frontend/:/frontend
@@ -136,8 +135,9 @@ services:
   api:
     container_name: superapi
     build: api
-    network_mode: host
-    privileged: true
+    network_mode: service:base
+    cap_add:
+      - NET_ADMIN
     restart: always
     depends_on:
       - "base"
@@ -163,7 +163,7 @@ services:
   plugin-lookup:
     container_name: super-plugin-lookup
     build: plugin-lookup
-    network_mode: host
+    network_mode: service:base
     logging:
       driver: journald
     depends_on:
@@ -174,15 +174,14 @@ services:
   dyndns:
     container_name: superdyndns
     build: dyndns
-    network_mode: bridge
+    network_mode: service:base
     logging:
       driver: journald
     depends_on:
       - "base"
-      - "dns"      
     volumes:
       - ./state/plugins/dyndns/:/state/plugins/dyndns
       - ./configs/dyndns/:/configs/dyndns
-networks:
-  default:
-    driver: none
+#networks:
+#  default:
+#    driver: none
