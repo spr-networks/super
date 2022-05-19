@@ -186,7 +186,8 @@ func getDevices(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
-	identity := mux.Vars(r)["identity"]
+	identity := r.URL.Query().Get("identity")
+
 	if strings.Contains(identity, ":") {
 		//normalize MAC addresses
 		identity = trimLower(identity)
@@ -197,6 +198,7 @@ func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+
 	dev := DeviceEntry{}
 	err := json.NewDecoder(r.Body).Decode(&dev)
 	if err != nil {
@@ -204,21 +206,25 @@ func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updateDevice(w, r, dev, identity)
+	errorMsg, code := updateDevice(w, r, dev, identity)
+
+	if code != 200 {
+		http.Error(w, errorMsg, code)
+		return
+	}
+
 }
 
-func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, identity string) {
+func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, identity string) (string, int) {
 
 	if dev.PSKEntry.Type != "" {
 		if dev.PSKEntry.Type != "sae" && dev.PSKEntry.Type != "wpa2" {
-			http.Error(w, "invalid PSK Type", 400)
-			return
+			return "invalid PSK Type", 400
 		}
 	}
 
 	if len(dev.PSKEntry.Psk) > 0 && len(dev.PSKEntry.Psk) < 8 {
-		http.Error(w, "psk too short", 400)
-		return
+		return "psk too short", 400
 	}
 
 	//normalize groups and tags
@@ -235,16 +241,6 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	groups := getGroupsJson()
 
 	val, exists := devices[identity]
-	if !exists {
-		// if no MAC is assigned, check if WGPubKey works
-		// to work around StrictSlash interfering with base64
-		if dev.MAC == "" && dev.WGPubKey != "" {
-			val, exists = devices[dev.WGPubKey]
-			if exists {
-				identity = dev.WGPubKey
-			}
-		}
-	}
 
 	if r.Method == http.MethodDelete {
 		//delete a device
@@ -253,11 +249,10 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			saveDevicesJson(devices)
 			refreshDeviceGroups(val)
 			doReloadPSKFiles()
-			return
+			return "", 200
 		}
 
-		http.Error(w, "Not found", 404)
-		return
+		return "Not found", 404
 	}
 
 	//always overwrite pending
@@ -363,7 +358,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(val)
-		return
+		return "", 200
 	}
 
 	//creating a new device entry
@@ -415,6 +410,8 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(dev)
+
+	return "", 200
 }
 
 func pendingPSK(w http.ResponseWriter, r *http.Request) {
@@ -1327,7 +1324,7 @@ func doReloadPSKFiles() {
 	cmd := exec.Command("hostapd_cli", "-p", "/state/wifi/control", "-s", "/state/wifi/", "reload_wpa_psk")
 	err = cmd.Run()
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 
 }
@@ -1450,7 +1447,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")
 	external_router_authenticated.HandleFunc("/groups", updateGroups).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/devices", getDevices).Methods("GET")
-	external_router_authenticated.HandleFunc("/device/{identity:.*}", handleUpdateDevice).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/device", handleUpdateDevice).Methods("PUT", "DELETE")
 
 	external_router_authenticated.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 

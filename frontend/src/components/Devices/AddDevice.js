@@ -175,6 +175,7 @@ const AddDevice = (props) => {
           <FormControl.Label>MAC Address</FormControl.Label>
           <Input
             variant="underlined"
+            autoComplete="off"
             onChangeText={(value) => handleChange('mac', value)}
           />
           {'mac' in errors ? (
@@ -219,6 +220,8 @@ const AddDevice = (props) => {
           <Input
             variant="underlined"
             type="password"
+            autoComplete="off"
+            autoCorrect="off"
             onChangeText={(value) => handleChange('psk', value)}
           />
           {'psk' in errors ? (

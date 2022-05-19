@@ -110,6 +110,7 @@ services:
     depends_on:
       - "base"
       - "dhcp"
+      - "api"
     logging:
       driver: journald
     volumes:
