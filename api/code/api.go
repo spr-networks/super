@@ -235,6 +235,16 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	groups := getGroupsJson()
 
 	val, exists := devices[identity]
+	if !exists {
+		// if no MAC is assigned, check if WGPubKey works
+		// to work around StrictSlash interfering with base64
+		if dev.MAC == "" && dev.WGPubKey != "" {
+			val, exists = devices[dev.WGPubKey]
+			if exists {
+				identity = dev.WGPubKey
+			}
+		}
+	}
 
 	if r.Method == http.MethodDelete {
 		//delete a device

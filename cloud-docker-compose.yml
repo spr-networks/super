@@ -5,8 +5,8 @@ services:
     build: base
     privileged: true
     ports:
-      - "53"
-      - "51280"
+      - "5353:53"
+      - "51280:51280/udp"
       - "8000:80"
     logging:
       driver: journald
@@ -105,7 +105,8 @@ services:
     build: wireguard
     network_mode: service:base
     cap_add:
-      - NET_ADMIN
+      - net_admin
+      - sys_module
     depends_on:
       - "base"
       - "dhcp"
@@ -137,7 +138,7 @@ services:
     build: api
     network_mode: service:base
     cap_add:
-      - NET_ADMIN
+      - net_admin
     restart: always
     depends_on:
       - "base"

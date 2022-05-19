@@ -220,7 +220,7 @@ export default class DynDns extends Component {
               Powered by godns. Click here to see the Documentation on Github.
             </Link>
 
-            {this.state.config.provider != '' ? (
+            {this.state.config != {} ? (
               <Box
                 /*bg={useColorModeValue('warmGray.50', 'blueGray.800')}*/
                 rounded="md"

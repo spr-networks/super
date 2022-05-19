@@ -30,7 +30,7 @@ export class APIDevice extends API {
   updateGroups = (id, Groups) => this.update(id, { Groups })
   updateTags = (id, DeviceTags) => this.update(id, { DeviceTags })
   deleteDevice = (id) => {
-    return this.delete(`/device/${encodeURIComponent(id)}`, {})
+    return this.delete(`/device/${encodeURIComponent(id)}`, {WGPubKey: id})
   }
   setPSK = (MAC, Psk, Type, Name) =>
     this.update({ MAC, Name, PSKEntry: { Psk, Type } })
