@@ -4,7 +4,9 @@ export const AppContext = createContext({
   activeSidebarItem: 'admin/home',
   setActiveSidebarItem: (sidebarItem) => {},
   isNavbarOpen: false,
-  setIsNavbarOpen: (isNavbarOpen) => {}
+  setIsNavbarOpen: (isNavbarOpen) => {},
+  isCloudMode: false,
+  setIsCloudMode: (value) => {}
 })
 
 export const alertState = {

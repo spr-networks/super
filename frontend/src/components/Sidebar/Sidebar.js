@@ -87,9 +87,19 @@ const SidebarItem = (props) => {
   }
 */
 
+  const { isCloudMode } = useContext(AppContext)
+
+  const navigate = useNavigate()
+
   return sidebarItems.map((item, index) => {
-    if (item.redirect === true) return null
-    const navigate = useNavigate()
+    if (item.redirect) {
+      return null
+    }
+
+    // menu items hidden in cloud version
+    if (item.cloud === false && isCloudMode) {
+      return null
+    }
 
     return (
       <Box key={index} w="100%">
