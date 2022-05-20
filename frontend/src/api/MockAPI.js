@@ -1487,6 +1487,12 @@ export default function MockAPI() {
         return schema.blockrules.where(attrs).destroy()
       })
 
+      this.put('/plugins/dyndns/config', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+      })
+
       //Dyndns plugin
       this.get('/plugins/dyndns/config', (schema, request) => {
         if (!authOK(request)) {
