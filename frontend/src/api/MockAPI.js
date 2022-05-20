@@ -1514,7 +1514,8 @@ export default function MockAPI() {
 
         let attrs = JSON.parse(request.requestBody)
         attrs.Token = 'TOKEN' + parseInt(Math.random() * 4096)
-        return schema.tokens.create(attrs)
+        schema.tokens.create(attrs)
+        return attrs
       })
 
       this.delete('/tokens', (schema, request) => {
