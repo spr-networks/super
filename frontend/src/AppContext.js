@@ -5,8 +5,8 @@ export const AppContext = createContext({
   setActiveSidebarItem: (sidebarItem) => {},
   isNavbarOpen: false,
   setIsNavbarOpen: (isNavbarOpen) => {},
-  isCloudMode: false,
-  setIsCloudMode: (value) => {}
+  isWifiDisabled: false,
+  setIsWifiDisabled: (value) => {}
 })
 
 export const alertState = {

@@ -163,7 +163,7 @@ const AdminLayout = (props) => {
   const [activeSidebarItem, setActiveSidebarItem] = useState('')
   const [isOpenSidebar, setIsOpenSidebar] = useState(false)
   const [isNavbarOpen, setIsNavbarOpen] = useState(false)
-  const [isCloudMode, setIsCloudMode] = useState(false)
+  const [isWifiDisabled, setIsWifiDisabled] = useState(false)
 
   return (
     <AppContext.Provider
@@ -172,8 +172,8 @@ const AdminLayout = (props) => {
         setActiveSidebarItem,
         setIsNavbarOpen,
         isNavbarOpen,
-        isCloudMode,
-        setIsCloudMode
+        isWifiDisabled,
+        setIsWifiDisabled
       }}
     >
       <Box

@@ -32,10 +32,10 @@ const Home = (props) => {
     wifiAPI
       .config()
       .then((res) => {
-        context.setIsCloudMode(false)
+        context.setIsWifiDisabled(false)
       })
       .catch((err) => {
-        context.setIsCloudMode(true)
+        context.setIsWifiDisabled(true)
       })
   }, [])
 

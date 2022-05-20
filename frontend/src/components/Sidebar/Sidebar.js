@@ -87,7 +87,7 @@ const SidebarItem = (props) => {
   }
 */
 
-  const { isCloudMode } = useContext(AppContext)
+  const { isWifiDisabled } = useContext(AppContext)
 
   const navigate = useNavigate()
 
@@ -96,8 +96,8 @@ const SidebarItem = (props) => {
       return null
     }
 
-    // menu items hidden in cloud version
-    if (item.cloud === false && isCloudMode) {
+    // menu items hidden when wifi mode is disabled
+    if (item.wifi === true && isWifiDisabled) {
       return null
     }
 
