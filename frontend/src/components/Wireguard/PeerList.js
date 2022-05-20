@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
+import { Icon } from 'FontAwesomeUtils'
 import {
   faPlus,
   faArrowCircleDown,
@@ -15,11 +15,14 @@ import { prettyDate, prettySize } from 'utils'
 import {
   Box,
   Button,
+  Fab,
   FlatList,
   Heading,
   IconButton,
   HStack,
+  ScrollView,
   Text,
+  View,
   useColorModeValue
 } from 'native-base'
 
@@ -77,116 +80,128 @@ const PeerList = (props) => {
   }
 
   return (
-    <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      rounded="md"
-      width="100%"
-      p="4"
-    >
-      <HStack justifyContent="space-between">
-        <Heading fontSize="lg" pb="3" alignSelf="center">
-          Peers
-        </Heading>
+    <View>
+      <ScrollView h="calc(100vh - 260px)">
+        <Box
+          bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+          rounded="md"
+          width="100%"
+          p="4"
+        >
+          <HStack justifyContent="space-between">
+            <Heading fontSize="lg" pb="3" alignSelf="center">
+              Peers
+            </Heading>
 
-        <Box alignSelf="center">
-          <ModalForm
-            title="Add Wireguard peer"
-            triggerText="add"
-            triggerClass="pull-right"
-            triggerIcon={faPlus}
-            modalRef={refModal}
-          >
-            <WireguardAddPeer config={config} notifyChange={refreshPeers} />
-          </ModalForm>
-        </Box>
-      </HStack>
-
-      {peers !== null && peers.length ? (
-        <FlatList
-          data={peers}
-          renderItem={({ item }) => (
-            <Box
-              borderBottomWidth="1"
-              _dark={{
-                borderColor: 'muted.600'
-              }}
-              borderColor="muted.200"
-              py="2"
-            >
-              <HStack
-                space={2}
-                justifyContent="space-between"
-                alignItems="center"
+            <Box alignSelf="center">
+              <ModalForm
+                title="Add Wireguard peer"
+                triggerText="add"
+                triggerClass="pull-right"
+                triggerIcon={faPlus}
+                modalRef={refModal}
               >
-                <Text flex="1" bold>
-                  {item.device ? item.device.Name : `peer`}
-                </Text>
-                <Text flex="1">{item.AllowedIPs}</Text>
-                <Text
-                  display={{ base: 'none', lg: 'flex' }}
-                  fontSize="xs"
-                  isTruncated
-                >
-                  {item.PublicKey}
-                </Text>
-                <Text>
-                  {item.LatestHandshake
-                    ? prettyDate(new Date(item.LatestHandshake * 1e3))
-                    : null}
-                </Text>
-                <Text>
-                  {item.TransferRx ? (
-                    <HStack space={1}>
-                      <HStack space={1}>
-                        <Icon icon={faArrowCircleUp} />
-                        <Text>{prettySize(item.TransferTx)}</Text>
-                      </HStack>
-                      <HStack space={1}>
-                        <Icon icon={faArrowCircleDown} />
-                        <Text>{prettySize(item.TransferRx)}</Text>
-                      </HStack>
-                    </HStack>
-                  ) : null}
-                </Text>
-
-                <IconButton
-                  alignSelf="center"
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="secondary"
-                  icon={<Icon icon={faXmark} />}
-                  onPress={() => deleteListItem(item)}
-                />
-              </HStack>
+                <WireguardAddPeer config={config} notifyChange={refreshPeers} />
+              </ModalForm>
             </Box>
-          )}
-          keyExtractor={(item) => item.Name}
-        />
-      ) : null}
-      {peers !== null && peers.length === 0 ? (
-        <>
-          {config.listenPort ? (
-            <Text py="4">There are no peers configured yet</Text>
-          ) : (
-            <Text py="4">
-              Wireguard is not running. See /configs/wireguard/wg0.conf
-            </Text>
-          )}
+          </HStack>
 
-          <Button
-            size="md"
-            variant="outline"
-            colorScheme="primary"
-            rounded="full"
-            borderColor="info.400"
-            leftIcon={<Icon icon={faPlus} />}
-            onPress={triggerModal}
-          >
-            add a new peer
-          </Button>
-        </>
-      ) : null}
-    </Box>
+          {peers !== null && peers.length ? (
+            <FlatList
+              data={peers}
+              renderItem={({ item }) => (
+                <Box
+                  borderBottomWidth="1"
+                  _dark={{
+                    borderColor: 'muted.600'
+                  }}
+                  borderColor="muted.200"
+                  py="2"
+                >
+                  <HStack
+                    space={2}
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
+                    <Text flex="1" bold>
+                      {item.device ? item.device.Name : `peer`}
+                    </Text>
+                    <Text flex="1">{item.AllowedIPs}</Text>
+                    <Text
+                      display={{ base: 'none', lg: 'flex' }}
+                      fontSize="xs"
+                      isTruncated
+                    >
+                      {item.PublicKey}
+                    </Text>
+                    <Text>
+                      {item.LatestHandshake
+                        ? prettyDate(new Date(item.LatestHandshake * 1e3))
+                        : null}
+                    </Text>
+                    <Text>
+                      {item.TransferRx ? (
+                        <HStack space={1}>
+                          <HStack space={1}>
+                            <Icon icon={faArrowCircleUp} />
+                            <Text>{prettySize(item.TransferTx)}</Text>
+                          </HStack>
+                          <HStack space={1}>
+                            <Icon icon={faArrowCircleDown} />
+                            <Text>{prettySize(item.TransferRx)}</Text>
+                          </HStack>
+                        </HStack>
+                      ) : null}
+                    </Text>
+
+                    <IconButton
+                      alignSelf="center"
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="secondary"
+                      icon={<Icon icon={faXmark} />}
+                      onPress={() => deleteListItem(item)}
+                    />
+                  </HStack>
+                </Box>
+              )}
+              keyExtractor={(item) => item.Name}
+            />
+          ) : null}
+          {peers !== null && peers.length === 0 ? (
+            <>
+              {config.listenPort ? (
+                <Text py="4">There are no peers configured yet</Text>
+              ) : (
+                <Text py="4">
+                  Wireguard is not running. See /configs/wireguard/wg0.conf
+                </Text>
+              )}
+
+              <Button
+                size="md"
+                variant="outline"
+                colorScheme="primary"
+                rounded="full"
+                borderColor="info.400"
+                leftIcon={<Icon icon={faPlus} />}
+                onPress={triggerModal}
+              >
+                add a new peer
+              </Button>
+            </>
+          ) : null}
+        </Box>
+      </ScrollView>
+
+      <Fab
+        renderInPortal={false}
+        shadow={2}
+        size="sm"
+        icon={<Icon color="white" icon={faPlus} />}
+        onPress={triggerModal}
+      />
+    </View>
   )
 }
 

@@ -104,16 +104,22 @@ export default class WireguardAddPeer extends React.Component {
                 .catch((err) => reject('deviceAPI.update Error: ' + err))
             } else {
               // will create a new device for the peer
-              deviceAPI.updateGroups(peer.PublicKey, this.state.groups)
-              .catch((error) =>
-                this.context.error('[API] updateDevice error: ' + error.message)
-              )
+              deviceAPI
+                .updateGroups(peer.PublicKey, this.state.groups)
+                .catch((error) =>
+                  this.context.error(
+                    '[API] updateDevice error: ' + error.message
+                  )
+                )
 
               if (this.state.deviceName != '') {
-                deviceAPI.updateName(peer.PublicKey, this.state.deviceName)
-                .catch((error) =>
-                  this.context.error('[API] updateDevice error: ' + error.message)
-                )
+                deviceAPI
+                  .updateName(peer.PublicKey, this.state.deviceName)
+                  .catch((error) =>
+                    this.context.error(
+                      '[API] updateDevice error: ' + error.message
+                    )
+                  )
               }
 
               resolve(peer)
@@ -193,7 +199,6 @@ export default class WireguardAddPeer extends React.Component {
       }
     })
 
-
     const allGroups = ['wan', 'dns', 'lan']
 
     let newPeer = this.state.AllowedIPs == ''
@@ -259,50 +264,46 @@ export default class WireguardAddPeer extends React.Component {
         </FormControl>
 
         {newPeer ? (
+          <VStack>
+            <FormControl flex="1">
+              <FormControl.Label>Device Name</FormControl.Label>
+              <Input
+                size="md"
+                variant="underlined"
+                value={this.state.deviceName}
+                onChangeText={(value) => this.handleChange('deviceName', value)}
+              />
 
-        <VStack>
+              <FormControl.HelperText>
+                Assign device name
+              </FormControl.HelperText>
+            </FormControl>
 
-          <FormControl flex="1">
-            <FormControl.Label>Device Name</FormControl.Label>
-            <Input
-              size="md"
-              value={this.state.deviceName}
-              onChangeText={(value) => this.handleChange('deviceName', value)}
-            />
+            <FormControl flex="1">
+              <FormControl.Label>Groups</FormControl.Label>
+              <Checkbox.Group
+                defaultValue={this.state.groups}
+                accessibilityLabel="Set Device Groups"
+                onChange={(values) => this.handleChange('groups', values)}
+                py="1"
+              >
+                <HStack w="100%" justifyContent="space-between">
+                  {allGroups.map((group) => (
+                    <Box flex="1">
+                      <Checkbox value={group} colorScheme="primary">
+                        {group}
+                      </Checkbox>
+                    </Box>
+                  ))}
+                </HStack>
+              </Checkbox.Group>
 
-            <FormControl.HelperText>
-              Assign device name
-            </FormControl.HelperText>
-          </FormControl>
-
-          <FormControl flex="1">
-            <FormControl.Label>Groups</FormControl.Label>
-            <Checkbox.Group
-              defaultValue={this.state.groups}
-              accessibilityLabel="Set Device Groups"
-              onChange={(values) => this.handleChange("groups", values)}
-              py="1"
-            >
-              <HStack w="100%" justifyContent="space-between">
-                {allGroups.map((group) => (
-                  <Box flex="1">
-                    <Checkbox value={group} colorScheme="primary">
-                      {group}
-                    </Checkbox>
-                  </Box>
-                ))}
-              </HStack>
-            </Checkbox.Group>
-
-            <FormControl.HelperText>
-              Assign device to groups for network access
-            </FormControl.HelperText>
-          </FormControl>
-
-        </VStack>
-      )  : null
-      }
-
+              <FormControl.HelperText>
+                Assign device to groups for network access
+              </FormControl.HelperText>
+            </FormControl>
+          </VStack>
+        ) : null}
 
         <Button colorScheme="primary" onPress={this.handleSubmit}>
           Save
