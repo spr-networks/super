@@ -81,8 +81,8 @@ const ForwardList = (props) => {
     >
       <HStack justifyContent="space-between" alignContent="center">
         <VStack>
-          <Heading fontSize="xl">Traffic Forwarding</Heading>
-          <Text color="muted.500">Set rules for DNS queries</Text>
+          <Heading fontSize="xl">Incoming Traffic Forwarding</Heading>
+          <Text color="muted.500">Set rules for DNAT forwarding of incoming traffic</Text>
         </VStack>
         <ModalForm
           title="Add Rewrite/Forwarding Rule"
