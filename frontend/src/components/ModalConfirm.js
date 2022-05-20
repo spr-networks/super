@@ -102,7 +102,7 @@ const ModalConfirm = (props) => {
           accessibilityLabel={`Choose ${type}`}
         >
           {props.options.map((val) => (
-            <Select.Item label={val} value={val} />
+            <Select.Item key={val} label={val} value={val} />
           ))}
         </Select>
       )

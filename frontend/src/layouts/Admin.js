@@ -93,6 +93,10 @@ const AdminLayout = (props) => {
   const toggleAlert = () => setShowAlert(!showAlert)
 
   alertState.alert = (type = 'info', title, body = null) => {
+    if (typeof title !== 'string') {
+      title = JSON.stringify(title)
+    }
+
     if (!body) {
       body = title
       title = ucFirst(type)
