@@ -165,7 +165,7 @@ const PeerList = (props) => {
                   </HStack>
                 </Box>
               )}
-              keyExtractor={(item) => item.Name}
+              keyExtractor={(item, index) => `${item.Name}${index}`}
             />
           ) : null}
           {peers !== null && peers.length === 0 ? (
