@@ -47,14 +47,16 @@ const Home = (props) => {
   return (
     <View style={{ flexDirection }}>
       <VStack flex="2" p="2">
-        <Stack
-          direction={{ base: 'column', md: 'row' }}
-          justifyContent="stretch"
-          space={4}
-        >
-          <WifiInfo />
-          <WifiClients />
-        </Stack>
+        {context.setIsWifiDisabled ? null : (
+          <Stack
+            direction={{ base: 'column', md: 'row' }}
+            justifyContent="stretch"
+            space={4}
+          >
+            <WifiInfo />
+            <WifiClients />
+          </Stack>
+        )}
         <VStack>
           <TotalTraffic />
           <Interfaces />

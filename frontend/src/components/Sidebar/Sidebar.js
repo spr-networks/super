@@ -107,7 +107,14 @@ const SidebarItem = (props) => {
           <Pressable
             onPress={() => {
               setActiveSidebarItem(item.path)
-              navigate(`/${item.layout}/${item.path}`)
+
+              let url = `/${item.layout}/${item.path}`
+              if (item.name == 'Devices' && isWifiDisabled) {
+                url = `/${item.layout}/wireguard`
+                setActiveSidebarItem('wireguard')
+              }
+
+              navigate(url)
               if (isMobile) {
                 setIsOpenSidebar(false)
               }
