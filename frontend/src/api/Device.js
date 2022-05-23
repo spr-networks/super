@@ -39,7 +39,7 @@ export class APIDevice extends API {
   // TODO add this functionality to base api
   oui = (mac) => this.get(`/plugins/lookup/oui/${mac}`)
   ouis = (macs) => {
-    return this.get(`/plugins/lookup/oui/${macs.join(',')}`)
+    return this.get(`/plugins/lookup/ouis/${macs.join(',')}`)
   }
 }
 
