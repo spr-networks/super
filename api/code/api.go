@@ -144,6 +144,25 @@ func getStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(reply)
 }
 
+func getFeatures(w http.ResponseWriter, r *http.Request) {
+	reply := []string{"dns"}
+	//check which features are enabled
+	if os.Getenv("SSID_INTERFACE") != "" {
+		reply = append(reply, "wifi")
+	}
+
+	if os.Getenv("PPPIF") != "" {
+		reply = append(reply, "ppp")
+	}
+
+	if os.Getenv("WIREGUARD_PORT") != "" {
+		reply = append(reply, "wireguard")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(reply)
+}
+
 var Devicesmtx sync.Mutex
 
 func saveDevicesJson(devices map[string]DeviceEntry) {
@@ -1442,6 +1461,7 @@ func main() {
 
 	//Misc
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
 
 	//device management
 	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")
