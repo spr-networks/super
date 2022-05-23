@@ -29,4 +29,4 @@ BUILDARGS=""
 if [ -f .github_creds ]; then
   BUILDARGS="--build-arg GITHUB_CREDS=`cat .github_creds`"
 fi
-docker-compose build --profile=src ${BUILDARGS} $@
+docker-compose --profile=src build ${BUILDARGS} $@
