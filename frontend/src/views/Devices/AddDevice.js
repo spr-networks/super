@@ -3,8 +3,10 @@ import React from 'react'
 import { Box, View, useColorModeValue } from 'native-base'
 
 import AddDevice from 'components/Devices/AddDevice'
+import WireguardAddPeer from 'components/Wireguard/WireguardAddPeer'
 
 function Wizard() {
+
   return (
     <View>
       <Box

@@ -16,12 +16,15 @@ export class APIWifi extends API {
   iwDev = () => this.get('iw/dev')
   iwList = () => this.get('iw/list')
   iwScan = (iface) => this.get(`iw/dev/${iface}/scan`)
-  asn = (ips) => {
+  asn = (ip) => {
+    return this.get(`/plugins/lookup/asn/${ip}`)
+  }
+  asns = (ips) => {
     if (typeof ips === 'string') {
-      ips = [ips]
+      ips = ips.split(',')
     }
 
-    return this.get(`/plugins/lookup/asn/${ips.join(',')}`)
+    return this.get(`/plugins/lookup/asns/${ips.join(',')}`)
   }
 }
 

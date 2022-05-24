@@ -23,7 +23,8 @@ export default function MockAPI() {
       wireguardpeer: Model,
       plugin: Model,
       forwardrule: Model,
-      blockrule: Model
+      blockrule: Model,
+      token: Model
     },
     seeds(server) {
       server.create('device', {
@@ -177,6 +178,16 @@ export default function MockAPI() {
         AllowedIPs: '192.168.3.3/32',
         Endpoint: '192.168.2.1:51280',
         PersistentKeepalive: 25
+      })
+
+      server.create('token', {
+        Token: 'QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQQo=',
+        Expire: 0
+      })
+
+      server.create('token', {
+        Token: 'QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQgo=',
+        Expire: 0
       })
     },
     routes() {
@@ -1095,10 +1106,10 @@ export default function MockAPI() {
 
       this.put('/hostapd/setChannel', (schema) => {
         return {
-          "Vht_oper_centr_freq_seg0_idx": 42,
-          "He_oper_centr_freq_seg0_idx": 42,
-          "Vht_oper_chwidth": 1,
-          "He_oper_chwidth": 1
+          Vht_oper_centr_freq_seg0_idx: 42,
+          He_oper_centr_freq_seg0_idx: 42,
+          Vht_oper_chwidth: 1,
+          He_oper_chwidth: 1
         }
       })
 
@@ -1487,10 +1498,33 @@ export default function MockAPI() {
         return schema.blockrules.where(attrs).destroy()
       })
 
-      this.put('/plugins/dyndns/config', (schema, request) => {
+      // tokens
+      this.get('/tokens', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
+
+        return schema.tokens.all().models
+      })
+
+      this.put('/tokens', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        attrs.Token = 'TOKEN' + parseInt(Math.random() * 4096)
+        schema.tokens.create(attrs)
+        return attrs
+      })
+
+      this.delete('/tokens', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.tokens.where(attrs).destroy()
       })
 
       //Dyndns plugin

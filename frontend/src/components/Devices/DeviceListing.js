@@ -3,7 +3,7 @@ import { deviceAPI } from 'api'
 import { useNavigate } from 'react-router-dom'
 import Device from 'components/Devices/Device'
 import { AlertContext } from 'layouts/Admin'
-
+import { AppContext } from 'AppContext'
 import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faEllipsis, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons'
 
@@ -30,6 +30,7 @@ const DeviceListing = (props) => {
   const [devices, setDevices] = useState(null)
   const navigate = useNavigate()
   const context = useContext(AlertContext)
+  const appContext = useContext(AppContext)
 
   // set device oui if avail, else fail gracefully
   const setOUIs = async (devices) => {
@@ -72,7 +73,11 @@ const DeviceListing = (props) => {
   }, [])
 
   const handleRedirect = () => {
-    navigate('/admin/add_device')
+    if (appContext.isWifiDisabled) {
+      navigate('/admin/wireguard')
+    } else {
+      navigate('/admin/add_device')
+    }
   }
 
   const closeRow = (rowMap, rowKey) => {
@@ -82,15 +87,12 @@ const DeviceListing = (props) => {
   }
 
   const deleteRow = (rowMap, rowKey) => {
-    console.log('delete', rowKey, '. map:', rowMap)
     closeRow(rowMap, rowKey)
     const newData = [...devices]
     const prevIndex = devices.findIndex((item) => item.MAC === rowKey)
     newData.splice(prevIndex, 1)
     setDevices(newData)
   }
-
-  const onRowDidOpen = (rowKey) => console.log('row opened', rowKey)
 
   const renderItem = ({ item }) => (
     <Box

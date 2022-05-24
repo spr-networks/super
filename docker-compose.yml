@@ -1,7 +1,9 @@
 version: '3.4'
 services:
-  base:
-    container_name: superbase
+
+
+  base-src:
+    container_name: superbase-src
     build: base
     network_mode: host
     privileged: true
@@ -9,9 +11,73 @@ services:
       driver: journald
     volumes:
       - ./configs/base/:/configs/base/
-  dhcp:
-    container_name: superdhcp
+    profiles:
+      - src
+  base:
+    container_name: superbase-prebuilt
+    image: ghcr.io/spr-networks/super_base
+    network_mode: host
+    privileged: true
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+    profiles:
+      - prebuilt
+  base-virtsrc:
+    container_name: superbase-virtsrc
+    build: base
+    privileged: true
+    ports:
+      - "5353:53"
+      - "51280:51280/udp"
+      - "8000:80"
+      - "4443:443"
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+    profiles:
+      - virtsrc
+  base-virt:
+    container_name: superbase-virt
+    image: ghcr.io/spr-networks/super_base
+    privileged: true
+    ports:
+      - "5353:53"
+      - "51280:51280/udp"
+      - "8000:80"
+      - "4443:443"  
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+    profiles:
+      - virt
+
+
+
+
+  dhcp-src:
+    container_name: superdhcp-src
     build: dhcp
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base-src"
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/dhcp/:/configs/dhcp/
+      - ./configs/zones/:/configs/zones/
+      - ./state/dhcp/:/state/dhcp/
+      - /sys/fs/bpf:/sys/fs/bpf
+    profiles:
+      - src
+  dhcp:
+    container_name: superdhcp-prebuilt
+    image: ghcr.io/spr-networks/super_dhcp
     network_mode: host
     privileged: true
     depends_on:
@@ -24,9 +90,60 @@ services:
       - ./configs/zones/:/configs/zones/
       - ./state/dhcp/:/state/dhcp/
       - /sys/fs/bpf:/sys/fs/bpf
-  dhcp_client:
-    container_name: superdhcp_client
+    profiles:
+      - prebuilt
+  dhcp-virtsrc:
+    container_name: superdhcp-virtsrc
     build: dhcp
+    network_mode: service:base-virtsrc
+    depends_on:
+      - "base-virtsrc"
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/dhcp/:/configs/dhcp/
+      - ./configs/zones/:/configs/zones/
+      - ./state/dhcp/:/state/dhcp/
+      - /sys/fs/bpf:/sys/fs/bpf
+    profiles:
+      - virtsrc
+  dhcp-virt:
+    container_name: superdhcp-virt
+    image: ghcr.io/spr-networks/super_dhcp
+    network_mode: service:base-virt
+    depends_on:
+      - "base-virt"
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/dhcp/:/configs/dhcp/
+      - ./configs/zones/:/configs/zones/
+      - ./state/dhcp/:/state/dhcp/
+      - /sys/fs/bpf:/sys/fs/bpf
+    profiles:
+      - virt
+
+
+
+  dhcp_client-src:
+    container_name: superdhcp_client-src
+    build: dhcp
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base-src"
+    logging:
+      driver: journald
+    entrypoint: /scripts/client.sh
+    volumes:
+      - ./configs/base/:/configs/base/
+    profiles:
+      - src
+  dhcp_client:
+    container_name: superdhcp_client-prebuilt
+    image: ghcr.io/spr-networks/super_dhcp_client
     network_mode: host
     privileged: true
     depends_on:
@@ -36,9 +153,28 @@ services:
     entrypoint: /scripts/client.sh
     volumes:
       - ./configs/base/:/configs/base/
-  dns:
-    container_name: superdns
+    profiles:
+      - prebuilt
+
+
+  dns-src:
+    container_name: superdns-src
     build: dns
+    network_mode: host
+    privileged: true
+    logging:
+      driver: journald
+    depends_on:
+      - "base-src"
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/dns/:/configs/dns/
+      - ./state/dns/:/state/dns/
+    profiles:
+      - src
+  dns:
+    container_name: superdns-prebuilt
+    image: ghcr.io/spr-networks/super_dns
     network_mode: host
     privileged: true
     logging:
@@ -49,9 +185,60 @@ services:
       - ./configs/base/:/configs/base/
       - ./configs/dns/:/configs/dns/
       - ./state/dns/:/state/dns/
-  wifid:
-    container_name: superwifid
+    profiles:
+      - prebuilt
+  dns-virtsrc:
+    container_name: superdns-virtsrc
+    build: dns
+    network_mode: service:base-virtsrc
+    logging:
+      driver: journald
+    depends_on:
+      - "base-virtsrc"
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/dns/:/configs/dns/
+      - ./state/dns/:/state/dns/
+    profiles:
+      - virtsrc
+  dns-virt:
+    container_name: superdns-virt
+    image: ghcr.io/spr-networks/super_dns
+    network_mode: service:base-virt
+    logging:
+      driver: journald
+    depends_on:
+      - "base-virt"
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/dns/:/configs/dns/
+      - ./state/dns/:/state/dns/
+    profiles:
+      - virt
+
+
+
+
+  wifid-src:
+    container_name: superwifid-src
     build: wifid
+    network_mode: host
+    privileged: true
+    logging:
+      driver: journald
+    depends_on:
+      - "dhcp-src"
+      - "dns-src"
+      - "multicast_udp_proxy-src"
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/wifi/:/configs/wifi/
+      - ./state/wifi/:/state/wifi/
+    profiles:
+      - src
+  wifid:
+    container_name: superwifid-prebuilt
+    image: ghcr.io/spr-networks/super_wifid
     network_mode: host
     privileged: true
     logging:
@@ -64,9 +251,28 @@ services:
       - ./configs/base/:/configs/base/
       - ./configs/wifi/:/configs/wifi/
       - ./state/wifi/:/state/wifi/
-  multicast_udp_proxy:
-    container_name: super_multicast_udp_proxy
+    profiles:
+      - prebuilt
+
+
+
+
+  multicast_udp_proxy-src:
+    container_name: super_multicast_udp_proxy-src
     build: multicast_udp_proxy
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base-src"
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+    profiles:
+      - src
+  multicast_udp_proxy:
+    container_name: super_multicast_udp_proxy-prebuilt
+    image: ghcr.io/spr-networks/super_multicast_udp_proxy
     network_mode: host
     privileged: true
     depends_on:
@@ -75,18 +281,68 @@ services:
       driver: journald
     volumes:
       - ./configs/base/:/configs/base/
-  ppp:
-    container_name: superppp
+    profiles:
+      - prebuilt
+  multicast_udp_proxy-virtsrc:
+    container_name: super_multicast_udp_proxy-virtsrc
+    build: multicast_udp_proxy
+    network_mode: service:base-virtsrc
+    depends_on:
+      - "base-virtsrc"
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+    profiles:
+      - virtsrc
+  multicast_udp_proxy-virt:
+    container_name: super_multicast_udp_proxy-virt
+    image: ghcr.io/spr-networks/super_multicast_udp_proxy
+    network_mode: service:base-virt
+    depends_on:
+      - "base-virt"
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+    profiles:
+      - virt
+
+
+
+
+  ppp-src:
+    container_name: superppp-src
     build: ppp
     network_mode: host
     privileged: true
     depends_on:
-      - "base"
+      - "base-src"
     logging:
       driver: journald
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/ppp/:/etc/ppp/
+    profiles:
+      - src
+  ppp:
+    container_name: superppp-prebuilt
+    image: ghcr.io/spr-networks/super_ppp
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base"
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/ppp/:/etc/ppp
+    profiles:
+      - prebuilt
+
+
+
+
 #  watchdog:
 #    entrypoint: ["/bin/true"]
 #    container_name: superwatchdog
@@ -102,14 +358,19 @@ services:
 #      - ./configs/watchdog/:/configs/watchdog/
 #    devices:
 #      - "/dev/watchdog:/dev/watchdog"
-  wireguard:
-    container_name: superwireguard
+
+
+
+
+  wireguard-src:
+    container_name: superwireguard-src
     build: wireguard
     network_mode: host
     privileged: true
     depends_on:
-      - "base"
-      - "dhcp"
+      - "base-src"
+      - "dhcp-src"
+      - "api-src"
     logging:
       driver: journald
     volumes:
@@ -117,25 +378,125 @@ services:
       - ./configs/wireguard/:/configs/wireguard/
       - ./state/plugins/wireguard/:/state/plugins/wireguard/
       - ./state/dhcp/:/state/dhcp/
-# Use the prebuilt frontend
+    profiles:
+      - src
+  wireguard:
+    container_name: superwireguard-prebuilt
+    image: ghcr.io/spr-networks/super_wireguard
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base"
+      - "dhcp"
+      - "api"
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/wireguard/:/configs/wireguard/
+      - ./state/plugins/wireguard/:/state/plugins/wireguard/
+      - ./state/dhcp/:/state/dhcp/
+    profiles:
+      - prebuilt
+  wireguard-virtsrc:
+    container_name: superwireguard-virtsrc
+    build: wireguard
+    network_mode: service:base-virtsrc
+    cap_add:
+      - net_admin
+      - sys_module
+    depends_on:
+      - "base-virtsrc"
+      - "dhcp-virtsrc"
+      - "api-virtsrc"
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/wireguard/:/configs/wireguard/
+      - ./state/plugins/wireguard/:/state/plugins/wireguard/
+      - ./state/dhcp/:/state/dhcp/
+    profiles:
+      - "virtsrc"
+  wireguard-virt:
+    container_name: superwireguard-virt
+    image: ghcr.io/spr-networks/super_wireguard
+    network_mode: service:base-virt
+    cap_add:
+      - net_admin
+      - sys_module
+    depends_on:
+      - "base-virt"
+      - "dhcp-virt"
+      - "api-virt"
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/wireguard/:/configs/wireguard/
+      - ./state/plugins/wireguard/:/state/plugins/wireguard/
+      - ./state/dhcp/:/state/dhcp/
+    profiles:
+      - "virt"
+
+
   frontend:
-    container_name: superfrontend
+    container_name: superfrontend-prebuilt
     network_mode: none
     image: ghcr.io/spr-networks/super_frontend
     entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
     volumes:
-    - ./frontend/:/frontend
-# Use below to build frontend from scratch instead
+      - ./frontend/:/frontend
+    profiles:
+      - prebuilt
+      - src
+      - virtsrc
+      - virt
 #  frontend:
-#    container_name: superfrontend
+#    container_name: superfrontend-src
 #    network_mode: none
 #    build: frontend
 #    entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
 #    volumes:
-#    - ./frontend/:/frontend
-  api:
-    container_name: superapi
+#      - ./frontend/:/frontend
+#    profiles:
+#      - src
+
+
+
+
+  api-src:
+    container_name: superapi-src
     build: api
+    network_mode: host
+    privileged: true
+    restart: always
+    depends_on:
+      - "base-src"
+      - "wifid-src"
+      - "dhcp-src"
+      - "frontend"
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/devices/:/configs/devices/
+      - ./configs/zones/:/configs/zones/
+      - ./configs/wifi/:/configs/wifi/
+      - ./configs/wireguard/:/configs/wireguard/
+      - ./configs/scripts/:/configs/scripts/
+      - ./state/wifi/:/state/wifi/
+      - ./state/dhcp/:/state/dhcp/
+      - ./state/dns/:/state/dns/
+      - ./state/api/:/state/api/
+      - ./state/plugins/:/state/plugins/
+      - ./frontend/build:/ui/
+      - /var/log/journal:/var/log/journal:ro
+    profiles:
+      - src
+  api:
+    container_name: superapi-prebuilt
+    image: ghcr.io/spr-networks/super_api
     network_mode: host
     privileged: true
     restart: always
@@ -160,27 +521,177 @@ services:
       - ./state/plugins/:/state/plugins/
       - ./frontend/build:/ui/
       - /var/log/journal:/var/log/journal:ro
-  plugin-lookup:
-    container_name: super-plugin-lookup
+    profiles:
+      - prebuilt
+  api-virtsrc:
+    container_name: superapi-virtsrc
+    build: api
+    network_mode: service:base-virtsrc
+    cap_add:
+      - net_admin
+    restart: always
+    depends_on:
+      - "base-virtsrc"
+      - "dhcp-virtsrc"
+      - "frontend"
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/devices/:/configs/devices/
+      - ./configs/zones/:/configs/zones/
+      - ./configs/wifi/:/configs/wifi/
+      - ./configs/wireguard/:/configs/wireguard/
+      - ./configs/scripts/:/configs/scripts/
+      - ./state/wifi/:/state/wifi/
+      - ./state/dhcp/:/state/dhcp/
+      - ./state/dns/:/state/dns/
+      - ./state/api/:/state/api/
+      - ./state/plugins/:/state/plugins/
+      - ./frontend/build:/ui/
+      - /var/log/journal:/var/log/journal:ro
+    profiles:
+      - virtsrc
+  api-virt:
+    container_name: superapi-virt
+    image: ghcr.io/spr-networks/super_api
+    network_mode: service:base-virt
+    cap_add:
+      - net_admin
+    restart: always
+    depends_on:
+      - "base-virt"
+      - "dhcp-virt"
+      - "frontend"
+    logging:
+      driver: journald
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/devices/:/configs/devices/
+      - ./configs/zones/:/configs/zones/
+      - ./configs/wifi/:/configs/wifi/
+      - ./configs/wireguard/:/configs/wireguard/
+      - ./configs/scripts/:/configs/scripts/
+      - ./state/wifi/:/state/wifi/
+      - ./state/dhcp/:/state/dhcp/
+      - ./state/dns/:/state/dns/
+      - ./state/api/:/state/api/
+      - ./state/plugins/:/state/plugins/
+      - ./frontend/build:/ui/
+      - /var/log/journal:/var/log/journal:ro
+    profiles:
+      - virt
+
+
+
+
+  plugin-lookup-src:
+    container_name: super-plugin-lookup-src
     build: plugin-lookup
     network_mode: host
     logging:
       driver: journald
     depends_on:
-      - "base"
+      - "base-src"
+      - "dns-src"
     volumes:
       - ./state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
+    profiles:
+      - src
+  plugin-lookup:
+    container_name: super-plugin-lookup-prebuilt
+    image: ghcr.io/spr-networks/super_plugin-lookup
+    network_mode: host
+    logging:
+      driver: journald
+    depends_on:
+      - "base"
+      - "dns"
+    volumes:
+      - ./state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
+    profiles:
+      - prebuilt-disabled
+  plugin-lookup-virtsrc:
+    container_name: super-plugin-lookup-virtsrc
+    build: plugin-lookup
+    network_mode: service:base-virtsrc
+    logging:
+      driver: journald
+    depends_on:
+      - "base-virtsrc"
+      - "dns-virtsrc"
+    volumes:
+      - ./state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
+    profiles:
+      - "virtsrc-disabled"
+  plugin-lookup-virt:
+    container_name: super-plugin-lookup-virt
+    image: ghcr.io/spr-networks/super_plugin-lookup
+    network_mode: service:base-virt
+    logging:
+      driver: journald
+    depends_on:
+      - "base-virt"
+      - "dns-virt"
+    volumes:
+      - ./state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
+    profiles:
+      - "virt-disabled"
+
+
+
+
   dyndns:
-    container_name: superdyndns
+    container_name: superdyndns-src
     build: dyndns
     network_mode: bridge
     logging:
       driver: journald
     depends_on:
-      - "base"
+      - "base-src"
+      - "dns-src"
     volumes:
       - ./state/plugins/dyndns/:/state/plugins/dyndns
       - ./configs/dyndns/:/configs/dyndns
-networks:
-  default:
-    driver: none
+    profiles:
+      - src
+  dyndns:
+    container_name: superdyndns-prebuilt
+    image: ghcr.io/spr-networks/super_dyndns
+    network_mode: bridge
+    logging:
+      driver: journald
+    depends_on:
+      - "base"
+      - "dns"
+    volumes:
+      - ./state/plugins/dyndns/:/state/plugins/dyndns
+      - ./configs/dyndns/:/configs/dyndns
+    profiles:
+      - prebuilt-disabled
+  dyndns-virtsrc:
+    container_name: superdyndns-virtsrc
+    build: dyndns
+    network_mode: bridge
+    logging:
+      driver: journald
+    depends_on:
+      - "base-virtsrc"
+    volumes:
+      - ./state/plugins/dyndns/:/state/plugins/dyndns
+      - ./configs/dyndns/:/configs/dyndns
+    profiles:
+      - "virtsrc-disabled"
+  dyndns-virt:
+    container_name: superdyndns-virt
+    image: ghcr.io/spr-networks/super_dyndns
+    network_mode: bridge
+    logging:
+      driver: journald
+    depends_on:
+      - "base-virt"
+    volumes:
+      - ./state/plugins/dyndns/:/state/plugins/dyndns
+      - ./configs/dyndns/:/configs/dyndns
+    profiles:
+      - "virt-disabled"

@@ -69,7 +69,7 @@ const TimeSeriesList = (props) => {
         let ips = data.map((row) => row[keyIP])
         ips = Array.from(new Set(ips))
         wifiAPI
-          .asn(ips)
+          .asns(ips)
           .then((asns) => {
             let ip2asn = {}
             for (let asn of asns) {

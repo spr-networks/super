@@ -87,9 +87,19 @@ const SidebarItem = (props) => {
   }
 */
 
+  const { isWifiDisabled } = useContext(AppContext)
+
+  const navigate = useNavigate()
+
   return sidebarItems.map((item, index) => {
-    if (item.redirect === true) return null
-    const navigate = useNavigate()
+    if (item.redirect) {
+      return null
+    }
+
+    // menu items hidden when wifi mode is disabled
+    if (item.wifi === true && isWifiDisabled) {
+      return null
+    }
 
     return (
       <Box key={index} w="100%">
@@ -97,7 +107,10 @@ const SidebarItem = (props) => {
           <Pressable
             onPress={() => {
               setActiveSidebarItem(item.path)
-              navigate(`/${item.layout}/${item.path}`)
+
+              let url = `/${item.layout}/${item.path}`
+
+              navigate(url)
               if (isMobile) {
                 setIsOpenSidebar(false)
               }

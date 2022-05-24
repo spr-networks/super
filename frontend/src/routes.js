@@ -76,6 +76,7 @@ const routes = [
     path: 'wireless',
     name: 'Wifi',
     icon: faWifi,
+    wifi: true,
     component: WirelessConfiguration,
     layout: 'admin'
   },

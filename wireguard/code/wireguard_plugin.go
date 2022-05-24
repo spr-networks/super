@@ -243,7 +243,7 @@ type AbstractDHCPRequest struct {
 }
 
 var tinysubnets_plugin_path = "/state/dhcp/tinysubnets_plugin"
-var api_path = "/state/wireguard/apisock"
+var api_path = "/state/plugins/wireguard/apisock"
 
 type Record struct {
 	IP       net.IP

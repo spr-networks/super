@@ -126,6 +126,10 @@ class API {
   delete(url, data) {
     return this.request('DELETE', url, data)
   }
+
+  features(url) {
+    return this.get('/features')
+  }
 }
 
 export default API

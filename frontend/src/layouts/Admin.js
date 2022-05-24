@@ -88,13 +88,15 @@ function desktopNotification(msg) {
 const AdminLayout = (props) => {
   const mainPanel = React.useRef()
 
-  const [websock, setwebsock] = useState(null)
-
   const [showAlert, setShowAlert] = useState(false)
   const [alert, setAlert] = useState({})
   const toggleAlert = () => setShowAlert(!showAlert)
 
   alertState.alert = (type = 'info', title, body = null) => {
+    if (typeof title !== 'string') {
+      title = JSON.stringify(title)
+    }
+
     if (!body) {
       body = title
       title = ucFirst(type)
@@ -144,6 +146,7 @@ const AdminLayout = (props) => {
   const [activeSidebarItem, setActiveSidebarItem] = useState('')
   const [isOpenSidebar, setIsOpenSidebar] = useState(false)
   const [isNavbarOpen, setIsNavbarOpen] = useState(false)
+  const [isWifiDisabled, setIsWifiDisabled] = useState(false)
 
   return (
     <AppContext.Provider
@@ -151,7 +154,9 @@ const AdminLayout = (props) => {
         activeSidebarItem,
         setActiveSidebarItem,
         setIsNavbarOpen,
-        isNavbarOpen
+        isNavbarOpen,
+        isWifiDisabled,
+        setIsWifiDisabled
       }}
     >
       <Box

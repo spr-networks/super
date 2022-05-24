@@ -1,9 +1,8 @@
 import React, { useContext, useState, useEffect } from 'react'
 import { View, StyleSheet } from 'react-native'
-
 import { Box, Stack, VStack, useBreakpointValue } from 'native-base'
-
-import { pluginAPI } from 'api'
+import { AppContext } from 'AppContext'
+import { pluginAPI, wifiAPI, api } from 'api'
 import {
   WifiClients,
   Interfaces,
@@ -16,8 +15,9 @@ import {
   DNSBlockPercent
 } from 'components/Dashboard/DNSMetricsWidgets'
 
-function Home() {
+const Home = (props) => {
   const [pluginsEnabled, setPluginsEnabled] = useState([])
+  const context = useContext(AppContext)
 
   useEffect(() => {
     pluginAPI
@@ -26,6 +26,19 @@ function Home() {
         setPluginsEnabled(plugins.filter((p) => p.Enabled).map((p) => p.Name))
       )
       .catch((error) => error)
+
+    api
+      .features()
+      .then((res) => {
+        if (res.includes("wifi")) {
+          context.setIsWifiDisabled(false)
+        } else {
+          context.setIsWifiDisabled(true)
+        }
+      })
+      .catch((err) => {
+        context.setIsWifiDisabled(true)
+      })
   }, [])
 
   const flexDirection = useBreakpointValue({
@@ -36,14 +49,16 @@ function Home() {
   return (
     <View style={{ flexDirection }}>
       <VStack flex="2" p="2">
-        <Stack
-          direction={{ base: 'column', md: 'row' }}
-          justifyContent="stretch"
-          space={4}
-        >
-          <WifiInfo />
-          <WifiClients />
-        </Stack>
+        {context.setIsWifiDisabled ? null : (
+          <Stack
+            direction={{ base: 'column', md: 'row' }}
+            justifyContent="stretch"
+            space={4}
+          >
+            <WifiInfo />
+            <WifiClients />
+          </Stack>
+        )}
         <VStack>
           <TotalTraffic />
           <Interfaces />
@@ -63,24 +78,3 @@ function Home() {
 }
 
 export default Home
-
-/*
-      <Box flex="auto" bg="#fff" alignItems="center" justifyContent="center">
-      </Box>   
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 50,
-    padding: 50
-  }
-})
-*/
-const styles = StyleSheet.create({
-  container: {
-    alignSelf: 'stretch',
-    padding: 10,
-    marginTop: 90
-  }
-})
