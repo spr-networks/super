@@ -56,21 +56,6 @@ services:
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
-  wireguard:
-    container_name: superwireguard-virt
-    image: ghcr.io/spr-networks/super_wireguard
-    network_mode: host
-    privileged: true
-    depends_on:
-      - "base"
-      - "dhcp"
-      - "api"
-    logging: *default-logging
-    volumes:
-      - ./configs/base/:/configs/base/
-      - ./configs/wireguard/:/configs/wireguard/
-      - ./state/plugins/wireguard/:/state/plugins/wireguard/
-      - ./state/dhcp/:/state/dhcp/
   wireguard-virt:
     container_name: superwireguard-virt
     image: ghcr.io/spr-networks/super_wireguard
