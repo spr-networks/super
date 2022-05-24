@@ -40,8 +40,9 @@ table inet filter {
   map upstream_tcp_port_drop {
     type inet_service : verdict;
     elements = {
-      80: drop,
       22: drop,
+      80: drop,
+      443: drop,
       5201: drop
     }
   }
@@ -49,8 +50,9 @@ table inet filter {
   map lan_tcp_port_accept {
     type inet_service : verdict;
     elements = {
-      80: accept,
       22: accept,
+      80: accept,
+      443: accept,
       5201: accept
     }
   }

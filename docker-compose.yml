@@ -32,6 +32,7 @@ services:
       - "5353:53"
       - "51280:51280/udp"
       - "8000:80"
+      - "4443:443"
     logging:
       driver: journald
     volumes:
