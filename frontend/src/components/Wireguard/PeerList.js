@@ -143,11 +143,11 @@ const PeerList = (props) => {
                       {item.TransferRx ? (
                         <HStack space={1}>
                           <HStack space={1}>
-                            <Icon icon={faArrowCircleUp} />
+                            <Icon color="muted.500" icon={faArrowCircleUp} />
                             <Text>{prettySize(item.TransferTx)}</Text>
                           </HStack>
                           <HStack space={1}>
-                            <Icon icon={faArrowCircleDown} />
+                            <Icon color="muted.500" icon={faArrowCircleDown} />
                             <Text>{prettySize(item.TransferRx)}</Text>
                           </HStack>
                         </HStack>
