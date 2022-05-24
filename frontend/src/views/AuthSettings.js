@@ -13,7 +13,7 @@ export default class AuthSettings extends Component {
   render() {
     return (
       <View>
-        <WebAuthn />
+        {/*<WebAuthn />*/}
         <AuthTokenList />
       </View>
     )
