@@ -126,10 +126,10 @@ services:
   frontend:
     container_name: superfrontend-prebuilt
     network_mode: none
-    image: ghcr.io/spr-networks/super_frontend
-    entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
-#    build: frontend
-#    entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
+    build: frontend
+    entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
+#    image: ghcr.io/spr-networks/super_frontend
+#    entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]    
     volumes:
       - ./frontend/:/frontend
   api:
