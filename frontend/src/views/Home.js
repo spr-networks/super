@@ -8,6 +8,10 @@ import {
   Interfaces,
   WifiInfo
 } from 'components/Dashboard/WifiWidgets'
+import {
+  WireguardPeers,
+  WireguardPeersActive
+} from 'components/Dashboard/WireguardWidgets'
 import { TotalTraffic } from 'components/Dashboard/TrafficWidgets'
 import {
   DNSMetrics,
@@ -48,23 +52,30 @@ const Home = (props) => {
 
   return (
     <View style={{ flexDirection }}>
-      <VStack flex="2" p="2">
-        {context.setIsWifiDisabled ? null : (
-          <Stack
-            direction={{ base: 'column', md: 'row' }}
-            justifyContent="stretch"
-            space={4}
-          >
-            <WifiInfo />
-            <WifiClients />
-          </Stack>
-        )}
+      <VStack flex={2} p={2}>
+        <Stack
+          direction={{ base: 'column', md: 'row' }}
+          justifyContent="stretch"
+          space={4}
+        >
+          {context.isWifiDisabled ? (
+            <>
+              <WireguardPeers />
+              <WireguardPeersActive />
+            </>
+          ) : (
+            <>
+              <WifiInfo />
+              <WifiClients />
+            </>
+          )}
+        </Stack>
         <VStack>
           <TotalTraffic />
           <Interfaces />
         </VStack>
       </VStack>
-      <VStack flex="1" p="2">
+      <VStack flex={1} p={2}>
         {pluginsEnabled.includes('dns-block') ? (
           <VStack>
             <DNSMetrics />
@@ -72,6 +83,7 @@ const Home = (props) => {
             <DNSBlockPercent />
           </VStack>
         ) : null}
+        {context.isWifiDisabled ? null : <WireguardPeersActive />}
       </VStack>
     </View>
   )
