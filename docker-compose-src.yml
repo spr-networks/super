@@ -1,4 +1,9 @@
 version: '3.4'
+
+x-logging:
+  &default-logging
+  driver: journald
+
 services:
   base:
     container_name: superbase
@@ -6,7 +11,7 @@ services:
     network_mode: host
     privileged: true
     logging:
-      driver: journald
+      driver: default-logging
     volumes:
       - ./configs/base/:/configs/base/
   dhcp:
@@ -17,7 +22,7 @@ services:
     depends_on:
       - "base"
     logging:
-      driver: journald
+      driver: default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/dhcp/:/configs/dhcp/
@@ -32,7 +37,7 @@ services:
     depends_on:
       - "base"
     logging:
-      driver: journald
+      driver: default-logging
     entrypoint: /scripts/client.sh
     volumes:
       - ./configs/base/:/configs/base/
@@ -42,7 +47,7 @@ services:
     network_mode: host
     privileged: true
     logging:
-      driver: journald
+      driver: default-logging
     depends_on:
       - "base"
     volumes:
@@ -55,7 +60,7 @@ services:
     network_mode: host
     privileged: true
     logging:
-      driver: journald
+      driver: default-logging
     depends_on:
       - "dhcp"
       - "dns"
@@ -70,7 +75,7 @@ services:
     network_mode: host
     privileged: true
     logging:
-      driver: journald
+      driver: default-logging
     depends_on:
       - "dhcp"
       - "dns"
@@ -87,7 +92,7 @@ services:
     depends_on:
       - "base"
     logging:
-      driver: journald
+      driver: default-logging
     volumes:
       - ./configs/base/:/configs/base/
   ppp:
@@ -98,7 +103,7 @@ services:
     depends_on:
       - "base"
     logging:
-      driver: journald
+      driver: default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/ppp/:/etc/ppp/
@@ -112,7 +117,7 @@ services:
       - "dhcp"
       - "api"
     logging:
-      driver: journald
+      driver: default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/wireguard/:/configs/wireguard/
@@ -139,7 +144,7 @@ services:
       - "dhcp"
       - "frontend"
     logging:
-      driver: journald
+      driver: default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/devices/:/configs/devices/
@@ -159,7 +164,7 @@ services:
     build: plugin-lookup
     network_mode: host
     logging:
-      driver: journald
+      driver: default-logging
     depends_on:
       - "base"
       - "dns"
@@ -170,7 +175,7 @@ services:
     build: dyndns
     network_mode: bridge
     logging:
-      driver: journald
+      driver: default-logging
     depends_on:
       - "base"
       - "dns"

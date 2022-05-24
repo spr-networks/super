@@ -1,4 +1,15 @@
 version: '3.4'
+
+x-logging:
+  &default-logging
+  driver: journald
+# For MacOS:
+#  options:
+#    max-size: '12m'
+#    max-file: '5'
+#  driver: json-file
+
+
 services:
   base-virt:
     container_name: superbase-virt
@@ -9,8 +20,7 @@ services:
       - "51280:51280/udp"
       - "8000:80"
       - "4443:443"
-    logging:
-      driver: journald
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
   dhcp-virt:
@@ -19,8 +29,7 @@ services:
     network_mode: service:base-virt
     depends_on:
       - "base-virt"
-    logging:
-      driver: journald
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/dhcp/:/configs/dhcp/
@@ -31,8 +40,7 @@ services:
     container_name: superdns-virt
     build: dns
     network_mode: service:base-virt
-    logging:
-      driver: journald
+    logging: *default-logging
     depends_on:
       - "base-virt"
     volumes:
@@ -45,8 +53,7 @@ services:
     network_mode: service:base-virt
     depends_on:
       - "base-virt"
-    logging:
-      driver: journald
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
   wireguard-virt:
@@ -60,8 +67,7 @@ services:
       - "base-virt"
       - "dhcp-virt"
       - "api-virt"
-    logging:
-      driver: journald
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/wireguard/:/configs/wireguard/
@@ -70,10 +76,10 @@ services:
   frontend:
     container_name: superfrontend-prebuilt
     network_mode: none
-    image: ghcr.io/spr-networks/super_frontend
-    entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
-#    build: frontend
-#    entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
+#    image: ghcr.io/spr-networks/super_frontend
+#    entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
+    build: frontend
+    entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
     volumes:
       - ./frontend/:/frontend
   api-virt:
@@ -87,8 +93,7 @@ services:
       - "base-virt"
       - "dhcp-virt"
       - "frontend"
-    logging:
-      driver: journald
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/devices/:/configs/devices/
@@ -107,8 +112,7 @@ services:
     container_name: super-plugin-lookup-virt
     build: plugin-lookup
     network_mode: service:base-virt
-    logging:
-      driver: journald
+    logging: *default-logging
     depends_on:
       - "base-virt"
       - "dns-virt"
@@ -118,8 +122,7 @@ services:
     container_name: superdyndns-virt
     build: dyndns
     network_mode: bridge
-    logging:
-      driver: journald
+    logging: *default-logging
     depends_on:
       - "base-virt"
     volumes:
