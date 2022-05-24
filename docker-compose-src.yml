@@ -115,7 +115,7 @@ services:
       - ./state/plugins/wireguard/:/state/plugins/wireguard/
       - ./state/dhcp/:/state/dhcp/
   frontend:
-    container_name: superfrontend-prebuilt
+    container_name: superfrontend
     network_mode: none
     build: frontend
     entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
