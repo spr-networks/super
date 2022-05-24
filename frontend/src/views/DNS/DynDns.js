@@ -1,24 +1,64 @@
 import React, { Component } from 'react'
-import { SafeAreaView, SectionList, TextInput } from 'react-native'
 import { dyndnsAPI } from 'api/Dyndns'
 import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faXmark, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { AlertContext } from 'AppContext'
+import { ucFirst } from 'utils'
 
 import {
   Box,
   Button,
+  Divider,
+  FlatList,
+  FormControl,
   Heading,
   HStack,
   IconButton,
   Input,
   Link,
+  Stack,
   Switch,
+  SectionList,
   Text,
   View,
   VStack,
-  useColorModeValue
+  useColorModeValue,
+  InputGroup,
+  InputRightAddon
 } from 'native-base'
+
+const Subdomain = ({ entry, domain, updateSubdomain, deleteSubdomain }) => (
+  <HStack space={2} my={2}>
+    <InputGroup width="100%">
+      <Input
+        flex={1}
+        size="md"
+        variant="outline"
+        defaultValue={entry}
+        onChangeText={(value) => updateSubdomain(domain, entry, value)}
+      />
+      <InputRightAddon
+        children={
+          <Text fontSize="xs" color="muted.500">
+            .{domain}
+          </Text>
+        }
+      />
+      <InputRightAddon
+        children={
+          <Button.Group size="sm">
+            <IconButton
+              variant="ghost"
+              colorScheme="secondary"
+              icon={<Icon icon={faXmark} />}
+              onPress={() => deleteSubdomain(domain, entry)}
+            />
+          </Button.Group>
+        }
+      />
+    </InputGroup>
+  </HStack>
+)
 
 export default class DynDns extends Component {
   state = { isUp: true, config: {} }
@@ -67,49 +107,43 @@ export default class DynDns extends Component {
     let value = !this.state.isUp
   }
 
-  deleteDomain(orig) {
-    let new_config = this.state.config
-    let new_domains = []
-    for (let domain of new_config.domains) {
-      if (orig == domain.domain_name) {
-        continue
-      } else {
-        new_domains.push(domain)
-      }
-    }
-    new_config.domains = new_domains
-    this.setState({ config: new_config })
+  deleteDomain(name) {
+    let config = this.state.config
+    let domains = config.domains || []
+
+    config.domains = domains.filter((d) => d.domain_name !== name)
+
+    this.setState({ config })
   }
 
-  addDomain(new_domain) {
-    let new_config = this.state.config
-    for (let domain of new_config.domains) {
-      if (new_domain == domain.domain_name) {
-        return
-      }
+  addDomain(name) {
+    let config = this.state.config,
+      domains = config.domains || []
+
+    if (domains.map((d) => d.domain_name).includes(name)) {
+      return
     }
-    new_config.domains.push({
-      domain_name: new_domain,
-      sub_domains: ['Subdomain']
+
+    domains.push({
+      domain_name: name,
+      sub_domains: ['subdomain']
     })
-    this.setState({ config: new_config })
+
+    config.domains = domains
+
+    this.setState({ config })
   }
 
-  updateDomain(orig, new_domain) {
-    let new_config = this.state.config
-    let new_domains = []
-    for (let domain of new_config.domains) {
-      if (orig == domain.domain_name) {
-        new_domains.push({
-          domain_name: new_domain,
-          sub_domains: domain.sub_domains
-        })
-      } else {
-        new_domains.push(domain)
+  updateDomain(name, new_domain) {
+    let config = this.state.config
+
+    for (let domain of config.domains) {
+      if (name == domain.domain_name) {
+        domain.domain_name = new_domain
       }
     }
-    new_config.domains = new_domains
-    this.setState({ config: new_config })
+
+    this.setState({ config })
   }
 
   deleteSubdomain(domainTarget, subdomainTarget) {
@@ -148,52 +182,42 @@ export default class DynDns extends Component {
   }
 
   updateSubdomain(domainTarget, origSub, newSub) {
-    let new_config = this.state.config
-    let new_domains = []
-    for (let domain of new_config.domains) {
+    let config = this.state.config,
+      domains = []
+
+    for (let domain of config.domains) {
       if (domainTarget == domain.domain_name) {
-        let new_sub_domains = domain.sub_domains
-        const index = new_sub_domains.indexOf(origSub)
+        let subdomains = domain.sub_domains
+        const index = subdomains.indexOf(origSub)
         if (index > -1) {
-          new_sub_domains[index] = newSub
+          subdomains[index] = newSub
         }
-        new_domains.push(domain)
+
+        domains.push(domain)
       } else {
-        new_domains.push(domain)
+        domains.push(domain)
       }
     }
-    new_config.domains = new_domains
-    this.setState({ config: new_config })
+
+    config.domains = domains
+
+    this.setState({ config })
   }
 
   render() {
-    const Subdomain = ({ entry, section }) => (
-      <HStack space={4} justifyContent="center">
-        <TextInput
-          w="1/4"
-          textAlign="center"
-          defaultValue={entry}
-          //onChangeText={(d) => this.updateSubdomain(section, entry, d)}/>
-          onBlur={(e) =>
-            this.updateSubdomain(section, entry, e.nativeEvent.text)
-          }
-        />
-        <Button.Group size="sm">
-          <IconButton
-            variant="ghost"
-            colorScheme="secondary"
-            icon={<Icon icon={faXmark} />}
-            onPress={() => this.deleteSubdomain(section, entry)}
-          />
-        </Button.Group>
-      </HStack>
-    )
-
     let domainData = []
     if (this.state.config.domains) {
       this.state.config.domains.forEach((entry) => {
         domainData.push({ domain: entry.domain_name, data: entry.sub_domains })
       })
+    }
+
+    const niceLabel = (label) => ucFirst(label.replace(/_/g, ' '))
+
+    const handleChange = (name, value) => {
+      let config = this.state.config
+      config[name] = value
+      this.setState({ config })
     }
 
     return (
@@ -203,76 +227,103 @@ export default class DynDns extends Component {
           _light={{ bg: 'warmGray.50' }}
           _dark={{ bg: 'blueGray.800' }}
           width="100%"
-          p="4"
-          mb="4"
+          p={4}
+          mb={4}
         >
-          <HStack alignItems="center" mb="4">
-            <Heading fontSize="xl">Dynamic DNS</Heading>
+          <VStack space={4}>
+            <HStack alignItems="center">
+              <Heading fontSize="xl">Dynamic DNS</Heading>
 
-            <Switch
-              marginLeft="auto"
-              defaultIsChecked={this.state.isUp}
-              onValueChange={this.handleChange}
-            />
-          </HStack>
-          <Box>
-            <Link href="https://github.com/TimothyYe/godns#configuration-file-format">
-              Powered by godns. Click here to see the Documentation on Github.
-            </Link>
+              <Switch
+                marginLeft="auto"
+                defaultIsChecked={this.state.isUp}
+                onValueChange={this.handleChange}
+              />
+            </HStack>
 
-            {this.state.config != {} ? (
-              <Box
-                /*bg={useColorModeValue('warmGray.50', 'blueGray.800')}*/
-                rounded="md"
-                width="100%"
-                p="4"
+            <HStack space={1} mt="-3">
+              <Text color="muted.500" fontSize="xs">
+                Powered by godns.
+              </Text>
+              <Link
+                _text={{ color: 'muted.500', fontSize: 'xs' }}
+                href="https://github.com/TimothyYe/godns#configuration-file-format"
               >
-                <VStack space={2}>
-                  {Object.keys(this.state.config)
-                    .filter(
-                      (label) =>
-                        !['run_once', 'domains', 'socks5'].includes(label)
-                    )
-                    .map((label) => (
-                      <HStack space={4} justifyContent="left">
-                        <Text bold w="1/4" textAlign="right">
-                          {label}
-                        </Text>
-                        <Input w="1/4" value={this.state.config[label]} />
-                      </HStack>
-                    ))}
+                Read the documentation
+              </Link>
+            </HStack>
 
-                  <VStack space={2}>
-                    <HStack>
-                      <Text bold w="1/4" textAlign="right">
+            {this.state.config.provider != undefined ? (
+              <VStack space={8}>
+                <Stack
+                  space={2}
+                  width={['100%', '100%', '5/6']}
+                  direction={{ base: 'column', md: 'row' }}
+                >
+                  <VStack space={4} minW="1/2">
+                    {Object.keys(this.state.config)
+                      .filter(
+                        (label) =>
+                          !['run_once', 'domains', 'socks5'].includes(label)
+                      )
+                      .map((label) => (
+                        <HStack space={4} justifyItems="center">
+                          <FormControl.Label
+                            flex={1}
+                            fontSize="xs"
+                            justifyContent="right"
+                          >
+                            {niceLabel(label)}
+                          </FormControl.Label>
+                          <Input
+                            flex={2}
+                            size="md"
+                            variant="underlined"
+                            value={this.state.config[label]}
+                            onChangeText={(value) => handleChange(label, value)}
+                          />
+                        </HStack>
+                      ))}
+                  </VStack>
+
+                  <VStack space={4} minW="1/2">
+                    <HStack space={4}>
+                      <FormControl.Label flex={1} justifyContent="right">
                         Domains
-                      </Text>
-                      <Button.Group size="sm">
-                        <IconButton
-                          variant="ghost"
+                      </FormControl.Label>
+
+                      <Button.Group flex={2} size="xs" justifyContent="right">
+                        <Button
+                          variant="outline"
                           colorScheme="primary"
-                          icon={<Icon icon={faPlus} />}
-                          onPress={() => this.addDomain('NewDomain.com')}
-                        />
+                          leftIcon={<Icon icon={faPlus} />}
+                          onPress={() => this.addDomain('domain.tld')}
+                        >
+                          Add domain
+                        </Button>
                       </Button.Group>
                     </HStack>
 
-                    <SafeAreaView>
+                    <Stack
+                      direction={{ base: 'column', md: 'row' }}
+                      justifyContent="stretch"
+                    >
+                      <Box
+                        display={{ base: 'none', md: 'flex' }}
+                        flex={1}
+                      ></Box>
                       <SectionList
                         sections={domainData}
-                        keyExtractor={(item, index) => item}
-                        renderItem={({ item, index, section }) => (
-                          <Subdomain entry={item} section={section.domain} />
+                        renderSectionFooter={({ section }) => (
+                          <Divider my={2} />
                         )}
-                        SectionSeparatorComponent={() => <br />}
                         renderSectionHeader={({ section: { domain } }) => (
-                          <HStack space={4} justifyContent="center">
-                            <TextInput
-                              key={domain}
-                              style={{ fontWeight: 'bold' }}
-                              w="1/4"
+                          <HStack space={2} my={2}>
+                            <Input
+                              flex={1}
+                              size="md"
+                              variant="underlined"
                               defaultValue={domain}
-                              textAlign="center"
                               onChangeText={(d) => this.updateDomain(domain, d)}
                             />
                             <Button.Group size="sm">
@@ -281,7 +332,7 @@ export default class DynDns extends Component {
                                 colorScheme="primary"
                                 icon={<Icon icon={faPlus} />}
                                 onPress={() =>
-                                  this.addSubdomain(domain, 'NewSubdomain')
+                                  this.addSubdomain(domain, 'subdomain')
                                 }
                               />
                               <IconButton
@@ -293,29 +344,36 @@ export default class DynDns extends Component {
                             </Button.Group>
                           </HStack>
                         )}
+                        renderItem={({ item, section }) => (
+                          <Subdomain
+                            entry={item}
+                            domain={section.domain}
+                            updateSubdomain={this.updateSubdomain}
+                            deleteSubdomain={this.deleteSubdomain}
+                          />
+                        )}
+                        keyExtractor={(item, index) =>
+                          `${item.provider}-${index}`
+                        }
                       />
-                    </SafeAreaView>
+                    </Stack>
                   </VStack>
+                </Stack>
 
-                  <Button
-                    colorScheme="primary"
-                    size="md"
-                    type="submit"
-                    alignSelf="center"
-                    width="50%"
-                    onPress={this.handleSubmit}
-                    mt={4}
-                  >
-                    Save
-                  </Button>
-                </VStack>
-              </Box>
+                <Button
+                  colorScheme="primary"
+                  size="md"
+                  w="1/3"
+                  alignSelf="center"
+                  onPress={this.handleSubmit}
+                >
+                  Save
+                </Button>
+              </VStack>
             ) : (
-              <Text>
-                DynDNS Plugin is not running. See /configs/wireguard/wg0.conf
-              </Text>
+              <Text>DynDNS Plugin is not running</Text>
             )}
-          </Box>
+          </VStack>
         </Box>
       </View>
     )

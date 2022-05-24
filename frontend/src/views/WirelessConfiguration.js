@@ -79,11 +79,12 @@ const WirelessConfiguration = (props) => {
               : useColorModeValue('coolGray.200', 'gray.400')
           return (
             <Box
+              key={route.title}
               borderBottomWidth="3"
               borderColor={borderColor}
               flex={1}
               alignItems="center"
-              p="3"
+              p={3}
               cursor="pointer"
             >
               <Pressable

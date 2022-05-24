@@ -8,7 +8,6 @@ function Footer(props) {
   let _text = props.color
     ? {
         color,
-        textDecorationStyle: 'none',
         style: styles.text
       }
     : {}

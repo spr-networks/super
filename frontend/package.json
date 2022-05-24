@@ -79,7 +79,8 @@
     "style-loader": "^3.3.1",
     "webpack": "^5.72.1",
     "webpack-cli": "^4.9.2",
-    "webpack-dev-server": "^4.9.0"
+    "webpack-dev-server": "^4.9.0",
+    "xmlhttprequest": "^1.8.0"
   },
   "optionalDependencies": {
     "@babel/plugin-syntax-flow": "^7.14.5",
@@ -106,6 +107,7 @@
       "src",
       "node_modules"
     ],
+    "setupFilesAfterEnv": [ "./src/setupTests.js" ],
     "transformIgnorePatterns": [
       "/node_modules/(?!(@react-native|react-native|@fortawesome)/).*/"
     ],

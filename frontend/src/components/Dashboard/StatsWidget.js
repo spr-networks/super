@@ -1,3 +1,4 @@
+import React from 'react'
 import { Divider, Box, HStack, Text, useColorModeValue } from 'native-base'
 
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'

@@ -30,6 +30,7 @@ export default class DNSBlocklist extends React.Component {
     super(props)
 
     this.state.list = []
+    this.state.pending = true
 
     this.handleItemSwitch = this.handleItemSwitch.bind(this)
     this.deleteListItem = this.deleteListItem.bind(this)
@@ -38,25 +39,30 @@ export default class DNSBlocklist extends React.Component {
     this.refAddBlocklistModal = React.createRef()
   }
 
-  async componentDidMount() {
+  componentDidMount() {
     this.refreshBlocklists()
+    this.refreshMetrics()
 
-    this.setState({ pending: true })
+    // pending requests
+    this.timer = setTimeout(() => {
+      if (this.state && !this.state.list.length) {
+        this.setState({ list: [], pending: true })
+      }
+    }, 1500)
+  }
 
+  componentWillUnmount() {
+    clearTimeout(this.timer)
+  }
+
+  refreshMetrics() {
     blockAPI.metrics().then((metrics) => {
       this.setState({ blockedDomains: metrics.BlockedDomains })
     })
   }
 
-  async refreshBlocklists() {
+  refreshBlocklists() {
     let list = []
-    // pending requests
-    setTimeout(() => {
-      if (!list.length) {
-        this.setState({ list })
-        this.setState({ pending: true })
-      }
-    }, 1500)
 
     blockAPI
       .blocklists()
@@ -70,9 +76,9 @@ export default class DNSBlocklist extends React.Component {
       })
   }
 
-  async notifyChange(type) {
+  notifyChange(type) {
     this.setState({ pending: false })
-    await this.refreshBlocklists()
+    this.refreshBlocklists()
   }
 
   handleItemSwitch(item, value) {
@@ -86,8 +92,7 @@ export default class DNSBlocklist extends React.Component {
     })
 
     // only update the ui
-    this.setState({ list })
-    this.setState({ pending: true })
+    this.setState({ list, pending: true })
 
     blockAPI
       .putBlocklist(item)
