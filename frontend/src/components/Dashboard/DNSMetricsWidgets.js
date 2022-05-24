@@ -1,4 +1,6 @@
-import { Component, useEffect } from 'react'
+import { Component } from 'react'
+import { faBan, faEarthAmericas } from '@fortawesome/free-solid-svg-icons'
+
 import { blockAPI } from 'api/DNS'
 import StatsWidget from './StatsWidget'
 import StatsChartWidget from './StatsChartWidget'
@@ -14,11 +16,10 @@ export class DNSMetrics extends Component {
   render() {
     return (
       <StatsWidget
-        icon="fa fa-globe text-success"
+        icon={faEarthAmericas}
+        iconColor="green.400"
         title="Total DNS queries"
         text={this.state.TotalQueries}
-        textFooterHide={this.state.BlockedQueries + ' blocked'}
-        iconFooterHide="fa fa-ban"
       />
     )
   }
@@ -28,7 +29,8 @@ export class DNSBlockMetrics extends DNSMetrics {
   render() {
     return (
       <StatsWidget
-        icon="fa fa-ban text-danger"
+        icon={faBan}
+        iconColor="danger.400"
         title="Blocked DNS queries"
         text={this.state.BlockedQueries}
       />
@@ -39,7 +41,7 @@ export class DNSBlockMetrics extends DNSMetrics {
 export class DNSBlockPercent extends DNSMetrics {
   render() {
     if (!this.state.TotalQueries) {
-      return <div></div>
+      return <></>
     }
 
     let data = [this.state.BlockedQueries, this.state.TotalQueries]
@@ -56,8 +58,6 @@ export class DNSBlockPercent extends DNSMetrics {
         data={data}
         text={`${percent}%`}
         colors={['#ef8157', '#f4f3ef']}
-        footerIconSkip="fa fa-ban text-danger"
-        footerTextSkip={this.state.BlockedQueries + ' blocked'}
       />
     )
   }

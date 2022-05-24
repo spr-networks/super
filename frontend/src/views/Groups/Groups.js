@@ -1,13 +1,12 @@
 import React, { Component } from 'react'
+import { View, VStack } from 'native-base'
 
 import { groupAPI, deviceAPI, nfmapAPI } from 'api'
 import GroupListing from 'components/Groups/GroupListing'
-import { APIErrorContext } from 'layouts/Admin'
+import { AlertContext } from 'layouts/Admin'
 
 export default class Groups extends Component {
-  state = { groups: {}, rows: [] }
-
-  static contextType = APIErrorContext
+  state = { groups: [] }
 
   async componentDidMount() {
     const refreshGroups = async () => {
@@ -18,7 +17,7 @@ export default class Groups extends Component {
         groups = await groupAPI.list()
         devices = await deviceAPI.list()
       } catch (error) {
-        this.context.reportError('API Failure: ' + error.message)
+        this.context.error('API Failure: ' + error.message)
       }
 
       let members = {}
@@ -37,7 +36,6 @@ export default class Groups extends Component {
         group.Members = members[group.Name]
       }
 
-      let rows = []
       if (groups) {
         // get vmap for each group and show list
         for (const group of groups) {
@@ -46,17 +44,16 @@ export default class Groups extends Component {
             .catch((error) => {
               //404 = no clients in map yet
               if (error.message !== 404) {
-                this.context.reportError(
+                this.context.error(
                   'API Failure for: ' + v.Name + ' ' + error.message
                 )
               }
             })
 
           group.vmap = vmap
-          rows.push(<GroupListing key={group.Name} group={group} />)
         }
 
-        this.setState({ groups, rows })
+        this.setState({ groups })
       }
     }
 
@@ -65,9 +62,15 @@ export default class Groups extends Component {
 
   render() {
     return (
-      <>
-        <div className="content">{this.state.rows}</div>
-      </>
+      <View>
+        <VStack space={4}>
+          {this.state.groups.map((group) => (
+            <GroupListing key={group.Name} group={group} />
+          ))}
+        </VStack>
+      </View>
     )
   }
 }
+
+Groups.contextType = AlertContext

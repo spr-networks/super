@@ -1,11 +1,17 @@
-import React, { useState, useEffect } from 'react'
-
-import { pluginAPI } from 'api'
+import React, { useContext, useState, useEffect } from 'react'
+import { View, StyleSheet } from 'react-native'
+import { Box, Stack, VStack, useBreakpointValue } from 'native-base'
+import { AppContext } from 'AppContext'
+import { pluginAPI, wifiAPI, api } from 'api'
 import {
   WifiClients,
   Interfaces,
   WifiInfo
 } from 'components/Dashboard/WifiWidgets'
+import {
+  WireguardPeers,
+  WireguardPeersActive
+} from 'components/Dashboard/WireguardWidgets'
 import { TotalTraffic } from 'components/Dashboard/TrafficWidgets'
 import {
   DNSMetrics,
@@ -13,10 +19,9 @@ import {
   DNSBlockPercent
 } from 'components/Dashboard/DNSMetricsWidgets'
 
-import { Row, Col } from 'reactstrap'
-
-function Home() {
+const Home = (props) => {
   const [pluginsEnabled, setPluginsEnabled] = useState([])
+  const context = useContext(AppContext)
 
   useEffect(() => {
     pluginAPI
@@ -25,44 +30,62 @@ function Home() {
         setPluginsEnabled(plugins.filter((p) => p.Enabled).map((p) => p.Name))
       )
       .catch((error) => error)
+
+    api
+      .features()
+      .then((res) => {
+        if (res.includes("wifi")) {
+          context.setIsWifiDisabled(false)
+        } else {
+          context.setIsWifiDisabled(true)
+        }
+      })
+      .catch((err) => {
+        context.setIsWifiDisabled(true)
+      })
   }, [])
 
+  const flexDirection = useBreakpointValue({
+    base: 'column',
+    lg: 'row'
+  })
+
   return (
-    <>
-      <div className="content">
-        <Row>
-          <Col md="8" sm="6">
-            <Row>
-              <Col sm="6">
-                <WifiInfo />
-              </Col>
-              <Col sm="6">
-                <WifiClients />
-              </Col>
-            </Row>
-            <Row>
-              <Col sm="12">
-                <TotalTraffic />
-              </Col>
-            </Row>
-            <Row>
-              <Col sm="12">
-                <Interfaces />
-              </Col>
-            </Row>
-          </Col>
-          <Col sm="4">
-            {pluginsEnabled.includes('dns-block') ? (
-              <>
-                <DNSMetrics />
-                <DNSBlockMetrics />
-                <DNSBlockPercent />
-              </>
-            ) : null}
-          </Col>
-        </Row>
-      </div>
-    </>
+    <View style={{ flexDirection }}>
+      <VStack flex={2} p={2}>
+        <Stack
+          direction={{ base: 'column', md: 'row' }}
+          justifyContent="stretch"
+          space={4}
+        >
+          {context.isWifiDisabled ? (
+            <>
+              <WireguardPeers />
+              <WireguardPeersActive />
+            </>
+          ) : (
+            <>
+              <WifiInfo />
+              <WifiClients />
+            </>
+          )}
+        </Stack>
+        <VStack>
+          <TotalTraffic />
+          <Interfaces />
+        </VStack>
+      </VStack>
+      <VStack flex={1} p={2}>
+        {pluginsEnabled.includes('dns-block') ? (
+          <VStack>
+            <DNSMetrics />
+            <DNSBlockMetrics />
+            <DNSBlockPercent />
+          </VStack>
+        ) : null}
+        {context.isWifiDisabled ? null : <WireguardPeersActive />}
+      </VStack>
+    </View>
   )
 }
 

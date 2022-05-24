@@ -1,29 +1,27 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import Select from 'react-select'
-import CreatableSelect from 'react-select/creatable'
 
-import { APIErrorContext } from 'layouts/Admin'
 import ClientSelect from 'components/ClientSelect'
 import { firewallAPI } from 'api'
 
 import {
+  Box,
   Button,
-  Col,
-  Label,
-  Form,
-  FormGroup,
-  FormText,
+  Checkbox,
+  FormControl,
   Input,
-  Row
-} from 'reactstrap'
+  Link,
+  Radio,
+  Stack,
+  HStack,
+  Spinner,
+  Text
+} from 'native-base'
 
 export default class AddForward extends React.Component {
-  static contextType = APIErrorContext
   state = {
-    SIface: 'wlan1',
     Protocol: 'tcp',
-    SrcIP: '',
+    SrcIP: '0.0.0.0/0',
     SrcPort: 'any',
     DstIP: '',
     DstPort: 'any'
@@ -33,26 +31,16 @@ export default class AddForward extends React.Component {
     super(props)
 
     this.handleChange = this.handleChange.bind(this)
-    this.handleChangeSelect = this.handleChangeSelect.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
   }
 
-  handleChange(event) {
+  handleChange(name, value) {
     //TODO verify IP && port
-    let name = event.target.name,
-      value = event.target.value
     this.setState({ [name]: value })
   }
 
-  handleChangeSelect(name, opt) {
-    this.setState({ [name]: opt.value })
-  }
-
-  handleSubmit(event) {
-    event.preventDefault()
-
+  handleSubmit() {
     let rule = {
-      SIface: this.state.SIface,
       Protocol: this.state.Protocol,
       SrcIP: this.state.SrcIP,
       SrcPort: this.state.SrcPort,
@@ -61,7 +49,6 @@ export default class AddForward extends React.Component {
     }
 
     firewallAPI.addForward(rule).then((res) => {
-      console.log('submitted')
       if (this.props.notifyChange) {
         this.props.notifyChange('forward')
       }
@@ -75,122 +62,76 @@ export default class AddForward extends React.Component {
       return { label: value, value }
     }
 
-    let SIfaces = [
-      { label: 'wlan0', value: 'wlan0' },
-      { label: 'wlan1', value: 'wlan1' }
-    ]
-
-    let SIface = selOpt(this.state.SIface)
-
     let Protocols = ['tcp', 'udp'].map((p) => {
       return { label: p, value: p }
     })
 
-    let Protocol = selOpt(this.state.Protocol)
-
-    let SrcIPs = [
-      { label: '0.0.0.0/0 (Any IP)', value: '0.0.0.0/0' },
-    ]
-
-    let SrcIP = selOpt(this.state.SrcIP)
-
     return (
-      <Form onSubmit={this.handleSubmit}>
-        <Row>
-          <Col md={8}>
-            <FormGroup>
-              <Label for="SrcIP">Source IP Address (accepts IP or CIDR)</Label>
-              <CreatableSelect
-                name="SrcIP"
-                value={SrcIP}
-                options={SrcIPs}
-                onChange={(o) => this.handleChangeSelect('SrcIP', o)}
-              />
-            </FormGroup>
-          </Col>
-          <Col md={4}>
-            <FormGroup>
-              <Label for="SrcPort">Incoming Port</Label>
-              <Input
-                type="text"
-                id="SrcPort"
-                placeholder="Port .. range"
-                name="SrcPort"
-                value={this.state.SrcPort}
-                onChange={this.handleChange}
-              />
-              {/*<FormText tag="span">Port</FormText>*/}
-            </FormGroup>
-          </Col>
-        </Row>
-
-        {/*<Row>
-          <Col md="12" className="text-center text-muted">
-            <i className="fa fa-long-arrow-down fa-3x" />
-          </Col>
-        </Row>*/}
-
-        <Row>
-          <Col md={8}>
-            <FormGroup>
-              <Label for="DstIP">Rewrite IP address</Label>
-              <ClientSelect
-                isCreatable
-                skipAll
-                name="DstIP"
-                value={this.state.DstIP}
-                onChange={(o) => this.handleChangeSelect('DstIP', o)}
-              />
-              {/*<FormText tag="span">IP address</FormText>*/}
-            </FormGroup>
-          </Col>
-          <Col md={4}>
-            <FormGroup>
-              <Label for="DstPort">Dest Port</Label>
-              <Input
-                type="text"
-                id="DstPort"
-                placeholder="Port .. range"
-                name="DstPort"
-                value={this.state.DstPort}
-                onChange={this.handleChange}
-              />
-            </FormGroup>
-          </Col>
-        </Row>
-
-        <hr />
-
-        <Row className="mt-4">
-
-          <Label for="Protocol" md="2">
-            Protocol
-          </Label>
-          <Col md={4}>
-            <FormGroup>
-              <Select
-                options={Protocols}
-                value={Protocol}
-                onChange={(o) => this.handleChangeSelect('Protocol', o)}
-              />
-            </FormGroup>
-          </Col>
-        </Row>
-
-        <Row className="mt-4">
-          <Col sm={{ offset: 0, size: 12 }} className="text-center">
-            <Button
-              className="btn-wd"
-              color="primary"
+      <Stack space={4}>
+        <HStack space={4}>
+          <FormControl flex="2">
+            <FormControl.Label>Source IP Address</FormControl.Label>
+            <Input
               size="md"
-              type="submit"
-              onClick={this.handleSubmit}
-            >
-              Save
-            </Button>
-          </Col>
-        </Row>
-      </Form>
+              variant="underlined"
+              name="SrcIP"
+              value={this.state.SrcIP}
+              onChangeText={(value) => this.handleChange('SrcIP', value)}
+            />
+            <FormControl.HelperText>Accepts IP or CIDR</FormControl.HelperText>
+          </FormControl>
+          <FormControl flex="1">
+            <FormControl.Label>Incoming Port</FormControl.Label>
+            <Input
+              size="md"
+              variant="underlined"
+              name="SrcPort"
+              value={this.state.SrcPort}
+              onChangeText={(value) => this.handleChange('SrcPort', value)}
+            />
+          </FormControl>
+        </HStack>
+        <HStack space={2}>
+          <FormControl flex="2">
+            <FormControl.Label>Rewrite IP address</FormControl.Label>
+            <ClientSelect
+              name="DstIP"
+              value={this.state.DstIP}
+              onChange={(value) => this.handleChange('DstIP', value)}
+            />
+          </FormControl>
+          <FormControl flex="1">
+            <FormControl.Label for="DstPort">Dest Port</FormControl.Label>
+            <Input
+              size="md"
+              variant="underlined"
+              name="DstPort"
+              value={this.state.DstPort}
+              onChangeText={(value) => this.handleChange('DstPort', value)}
+            />
+          </FormControl>
+        </HStack>
+
+        <FormControl>
+          <FormControl.Label>Protocol</FormControl.Label>
+
+          <Radio.Group
+            name="Protocol"
+            defaultValue={this.state.Protocol}
+            accessibilityLabel="Protocol"
+            onChange={(value) => this.handleChange('Protocol', value)}
+          >
+            <HStack space={2}>
+              <Radio value="tcp">tcp</Radio>
+              <Radio value="udp">udp</Radio>
+            </HStack>
+          </Radio.Group>
+        </FormControl>
+
+        <Button color="primary" size="md" onPress={this.handleSubmit}>
+          Save
+        </Button>
+      </Stack>
     )
   }
 }

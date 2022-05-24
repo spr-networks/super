@@ -7,11 +7,15 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 import (
 	"github.com/duo-labs/webauthn.io/session"
@@ -20,8 +24,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
+var AuthUsersFile = TEST_PREFIX + "/configs/base/auth_users.json"
+var AuthTokensFile = TEST_PREFIX + "/configs/base/auth_tokens.json"
+var AuthOtpFile = TEST_PREFIX + "/state/api/webauthn_otp"
+var AuthWebAuthnFile = TEST_PREFIX + "/state/api/webauthn.json"
+
 func loadOTP() int {
-	data, err := os.ReadFile(TEST_PREFIX + "/state/api/webauthn_otp")
+	data, err := os.ReadFile(AuthOtpFile)
 	if err == nil {
 		result, err := strconv.Atoi(string(data))
 		if err == nil {
@@ -32,7 +41,46 @@ func loadOTP() int {
 }
 
 func saveOTP(data int) {
-	os.WriteFile(TEST_PREFIX + "/state/api/webauthn_otp", []byte(strconv.Itoa(data)), 0661)
+	os.WriteFile(AuthOtpFile, []byte(strconv.Itoa(data)), 0661)
+}
+
+func (auth *authnconfig) saveWebauthn(user *User, credential *webauthn.Credential) {
+	//fmt.Println("saving. user=", user, "credential=", credential)
+
+	userWebauthn := map[string]webauthn.Credential{}
+
+	userWebauthn[user.username] = *credential
+
+	file, _ := json.MarshalIndent(userWebauthn, "", " ")
+	err := ioutil.WriteFile(AuthWebAuthnFile, file, 0660)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (auth *authnconfig) getCredentials(user User) (webauthn.Credential, error) {
+	userWebauthn := map[string]webauthn.Credential{}
+
+	// load saved pubkeys/credentials
+	credential := webauthn.Credential{}
+	data, err := os.ReadFile(AuthWebAuthnFile)
+	if err != nil {
+		log.Println(err)
+		return credential, err
+	}
+
+	err = json.Unmarshal(data, &userWebauthn)
+	if err != nil {
+		log.Println(err)
+		return credential, err
+	}
+
+	credential, exists := userWebauthn[user.username]
+	if !exists {
+		return credential, errors.New("user pubkey not set")
+	}
+
+	return credential, nil
 }
 
 type User struct {
@@ -57,6 +105,11 @@ type authnconfig struct {
 
 	//token to username mapping
 	authMap map[string]*User
+}
+
+type Token struct {
+	Token  string
+	Expire int64
 }
 
 func genBearerToken() string {
@@ -104,29 +157,31 @@ func (auth *authnconfig) BeginRegistration(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	webAuthnOTP := loadOTP()
-	if webAuthnOTP == 0 {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, "Use CLI to Generate OTP code to register a new device", http.StatusBadRequest)
-		return
-	}
+	/*
+		webAuthnOTP := loadOTP()
+		if webAuthnOTP == 0 {
+			w.Header().Set("Content-Type", "application/json")
+			http.Error(w, "Use CLI to Generate OTP code to register a new device", http.StatusBadRequest)
+			return
+		}
 
-	otpStr, ok := vals["otp"]
-	if !ok {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, "Missing OTP Code", http.StatusBadRequest)
-		return
-	}
+		otpStr, ok := vals["otp"]
+		if !ok {
+			w.Header().Set("Content-Type", "application/json")
+			http.Error(w, "Missing OTP Code", http.StatusBadRequest)
+			return
+		}
 
-	//invalidate the OTP code immediately
-	saveOTP(0)
+		//invalidate the OTP code immediately
+		//saveOTP(0)
 
-	otp, err := strconv.Atoi(otpStr[0])
-	if err != nil || otp != webAuthnOTP {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, "Wrong OTP Code", http.StatusBadRequest)
-		return
-	}
+		otp, err := strconv.Atoi(otpStr[0])
+		if err != nil || otp != webAuthnOTP {
+			w.Header().Set("Content-Type", "application/json")
+			http.Error(w, "Wrong OTP Code", http.StatusBadRequest)
+			return
+		}
+	*/
 
 	username := usernames[0]
 
@@ -139,6 +194,7 @@ func (auth *authnconfig) BeginRegistration(w http.ResponseWriter, r *http.Reques
 
 	registerOptions := func(credCreationOpts *protocol.PublicKeyCredentialCreationOptions) {
 		credCreationOpts.Extensions = protocol.AuthenticationExtensions{"SPR-Bearer": token}
+		//credCreationOpts.CredentialExcludeList = user.CredentialExcludeList()
 	}
 
 	options, sessionData, err := auth.webAuthn.BeginRegistration(user, registerOptions)
@@ -146,6 +202,7 @@ func (auth *authnconfig) BeginRegistration(w http.ResponseWriter, r *http.Reques
 	if auth.sessionMap == nil {
 		auth.sessionMap = map[string]*webauthn.SessionData{}
 	}
+
 	if auth.regMap == nil {
 		auth.regMap = map[string]*User{}
 	}
@@ -187,14 +244,22 @@ func (auth *authnconfig) ExtractSessionData(r *http.Request) (*webauthn.SessionD
 }
 
 func (auth *authnconfig) FinishRegistration(w http.ResponseWriter, r *http.Request) {
-	sessionData, user := auth.ExtractSessionData(r)
+	//auth header is populated since we're behind auth here - pass bearer token in header
+	//sessionData, user := auth.ExtractSessionData(r)
+	bearerToken := r.Header.Get("SPR-Bearer")
+	if bearerToken == "" {
+		http.Error(w, "missing SPR bearer token", 400)
+		return
+	}
 
-	if sessionData == nil {
+	sessionData, exists := auth.sessionMap[bearerToken]
+	if !exists {
 		http.Error(w, "no registration in progress", 400)
 		return
 	}
 
-	if user == nil {
+	user, exists := auth.regMap[bearerToken]
+	if !exists {
 		http.Error(w, "user is missing", 400)
 		return
 	}
@@ -211,13 +276,40 @@ func (auth *authnconfig) FinishRegistration(w http.ResponseWriter, r *http.Reque
 	if auth.userMap == nil {
 		auth.userMap = map[string]*User{}
 	}
+
 	auth.userMap[user.username] = user
+
+	auth.saveWebauthn(user, credential)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode("success")
 }
 
 func (auth *authnconfig) BeginLogin(w http.ResponseWriter, r *http.Request) {
+	//  init webauthn with prev registrations of pubkeys for users
+	if auth.userMap == nil {
+		auth.userMap = map[string]*User{}
+	}
+
+	if auth.regMap == nil {
+		auth.regMap = map[string]*User{}
+	}
+
+	// only admin for now
+	user := &User{}
+	user.id = 0
+	user.username = "admin"
+
+	credential, err := auth.getCredentials(*user)
+	if err == nil {
+		fmt.Println("loading saved credentials for", user.username)
+		user.AddCredential(credential)
+	}
+
+	auth.userMap[user.username] = user
+
+	// get query
+
 	vals := r.URL.Query()
 	usernames, ok := vals["username"]
 	if !ok {
@@ -299,16 +391,18 @@ func (auth *authnconfig) authenticateToken(token string) bool {
 
 	if !exists {
 		//check api tokens
-		tokens := []string{}
-		data, err := os.ReadFile(TEST_PREFIX + "/configs/base/auth_tokens.json")
+		tokens := []Token{}
+		data, err := os.ReadFile(AuthTokensFile)
 		if err == nil {
 			json.Unmarshal(data, &tokens)
 		}
 
-		for _, s := range tokens {
-			if subtle.ConstantTimeCompare([]byte(token), []byte(s)) == 1 {
-				exists = true
-				break
+		for _, t := range tokens {
+			if subtle.ConstantTimeCompare([]byte(token), []byte(t.Token)) == 1 {
+				if t.Expire == 0 || t.Expire > time.Now().Unix() {
+					exists = true
+					break
+				}
 			}
 		}
 
@@ -319,7 +413,7 @@ func (auth *authnconfig) authenticateToken(token string) bool {
 
 func (auth *authnconfig) authenticateUser(username string, password string) bool {
 	users := map[string]string{}
-	data, err := os.ReadFile(TEST_PREFIX + "/configs/base/auth_users.json")
+	data, err := os.ReadFile(AuthUsersFile)
 	if err == nil {
 		json.Unmarshal(data, &users)
 	}
@@ -340,27 +434,24 @@ func (auth *authnconfig) authenticateUser(username string, password string) bool
 func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router) http.HandlerFunc {
 	webauth_router := mux.NewRouter().StrictSlash(true)
 
-	webauth_router.HandleFunc("/register/", auth.BeginRegistration).Methods("GET", "OPTIONS")
-	webauth_router.HandleFunc("/register/", auth.FinishRegistration).Methods("POST", "OPTIONS")
-	webauth_router.HandleFunc("/login/", auth.BeginLogin).Methods("GET", "OPTIONS")
-	webauth_router.HandleFunc("/login/", auth.FinishLogin).Methods("POST", "OPTIONS")
+	// webauthn register is behind auth
+	//authenticatedNext.HandleFunc("/webauthn/register", auth.BeginRegistration).Methods("GET", "OPTIONS")
+	//authenticatedNext.HandleFunc("/webauthn/register", auth.FinishRegistration).Methods("POST", "OPTIONS")
+
+	//webauth_router.HandleFunc("/login", auth.BeginLogin).Methods("GET", "OPTIONS")
+	//webauth_router.HandleFunc("/login", auth.FinishLogin).Methods("POST", "OPTIONS")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var matchInfo mux.RouteMatch
 
-		/*
-		// disable webauth code for now
-		//first match webuath
+		//webuathn endpoints
 		if webauth_router.Match(r, &matchInfo) {
 			webauth_router.ServeHTTP(w, r)
 			return
 		}
-		*/
 
-		//next match api
-
+		//api token
 		token := auth.ExtractRequestToken(r)
-
 		if token != "" {
 			if auth.authenticateToken(token) {
 				authenticatedNext.ServeHTTP(w, r)
@@ -368,8 +459,7 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 			}
 		}
 
-		//check basic auth next
-		//https://www.alexedwards.net/blog/basic-authentication-in-go
+		//basic auth
 		username, password, ok := r.BasicAuth()
 		if ok {
 			if auth.authenticateUser(username, password) {
@@ -386,4 +476,88 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	})
+}
+
+func getAuthTokens(w http.ResponseWriter, r *http.Request) {
+	tokens := []Token{}
+	data, err := os.ReadFile(AuthTokensFile)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	err = json.Unmarshal(data, &tokens)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tokens)
+}
+
+func updateAuthTokens(w http.ResponseWriter, r *http.Request) {
+	tokens := []Token{}
+	data, err := os.ReadFile(AuthTokensFile)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	err = json.Unmarshal(data, &tokens)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	token := Token{}
+	err = json.NewDecoder(r.Body).Decode(&token)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		found := false
+		for idx, entry := range tokens {
+			if entry.Token == token.Token {
+				tokens = append(tokens[:idx], tokens[idx+1:]...)
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			http.Error(w, "Not found", 404)
+			return
+		}
+	} else {
+		found := false
+		// no updating of tokens for now
+		// TODO .Name for token desc
+		/*
+			for idx, entry := range tokens {
+				if entry.Token == token.Token {
+					found = true
+					tokens[idx] = token
+					break
+				}
+			}
+		*/
+
+		if !found {
+			token.Token = genBearerToken()
+			tokens = append(tokens, token)
+		}
+	}
+
+	file, _ := json.MarshalIndent(tokens, "", " ")
+	err = ioutil.WriteFile(AuthTokensFile, file, 0660)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(token)
 }

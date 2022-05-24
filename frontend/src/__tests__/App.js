@@ -1,15 +1,10 @@
+import 'react-native'
 import React from 'react'
-import { render, screen } from '@testing-library/react'
 import App from '../App'
 
-describe('App', () => {
-  test('renders without crashing', () => {
-    const { baseElement } = render(<App />)
-    expect(baseElement).toBeDefined()
-  })
+// Note: test renderer must be required after react-native.
+import renderer from 'react-test-renderer'
 
-  it('renders login form', () => {
-    render(<App />)
-    expect(screen.getByPlaceholderText('Password')).toBeInTheDocument()
-  })
+it('renders correctly', () => {
+  renderer.create(<App />)
 })

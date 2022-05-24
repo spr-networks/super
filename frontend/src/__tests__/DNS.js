@@ -1,12 +1,10 @@
 import React from 'react'
 import {
   render,
-  screen,
-  fireEvent,
   waitFor,
   waitForElementToBeRemoved
-} from '@testing-library/react'
-import { within } from '@testing-library/dom'
+} from '@testing-library/react-native'
+import { NativeBaseProvider } from 'native-base'
 
 import DNSBlock from 'views/DNS/DNSBlock'
 //import DNSBlocklist from 'components/DNS/DNSBlocklist'
@@ -16,29 +14,59 @@ import { saveLogin, blockAPI } from 'api'
 beforeAll(() => saveLogin('admin', 'admin'))
 
 describe('DNS Block', () => {
-  let container = null
+  let container = null,
+    getByText = null
 
-  beforeEach(() => {
-    container = render(<DNSBlock />)
-  })
+  /*beforeEach(() => {
+    const inset = {
+      frame: { x: 0, y: 0, width: 0, height: 0 },
+      insets: { top: 0, left: 0, right: 0, bottom: 0 }
+    }
 
-  test('DNS block list', async () => {
-    // make sure we have all the tables in the document
-    expect(screen.getByText('DNS Blocklists')).toBeInTheDocument()
-
-    // wait for data to be populated
-    await waitFor(() =>
-      expect(screen.getByText('example.com.')).toBeInTheDocument()
+    container = render(
+      <NativeBaseProvider initialWindowMetrics={inset}>
+        <DNSBlock />
+      </NativeBaseProvider>
     )
 
-    // find override content
-    expect(screen.getByText('192.168.2.102')).toBeInTheDocument()
+    getByText = container.getByText
+    expect(getByText('DNS Blocklists')).toBeInTheDocument()
+  })*/
+
+  test('DNS block list', async () => {
+    const inset = {
+      frame: { x: 0, y: 0, width: 0, height: 0 },
+      insets: { top: 0, left: 0, right: 0, bottom: 0 }
+    }
+
+    const { container, getByText } = render(
+      <NativeBaseProvider initialWindowMetrics={inset}>
+        <DNSBlock />
+      </NativeBaseProvider>
+    )
+
+    expect(container).toBeDefined()
+
+    const title = await getByText('DNS Blocklists')
+    // make sure we have all the tables in the document
+    expect(title).toBeTruthy()
+
+    // wait for data to be populated
+    /*await waitFor(async () => {
+      const example = await getByText('example.com.')
+      expect(example).toBeTruthy()
+
+      // find override content
+      //const ip = await getByText('192.168.2.102')
+      //expect(ip).toBeTruthy()
+    })*/
   })
 
+  /*
   test('remove blocklist item', async () => {
     // wait fo async data
     await waitFor(() =>
-      expect(screen.getByText('example.com.')).toBeInTheDocument()
+      expect(getByText('example.com.')).toBeInTheDocument()
     )
 
     let tables = screen.getAllByRole('table'),
@@ -54,8 +82,10 @@ describe('DNS Block', () => {
 
     await waitForElementToBeRemoved(lastRow)
   })
+  */
 })
 
+/*
 describe('API DNS Plugin', () => {
   test('fetches config', async () => {
     let config = await blockAPI.config()
@@ -64,3 +94,4 @@ describe('API DNS Plugin', () => {
     expect(config).toHaveProperty('PermitDomains')
   })
 })
+*/

@@ -1,0 +1,130 @@
+version: '3.4'
+
+x-logging:
+  &default-logging
+  driver: journald
+# For MacOS:
+#  options:
+#    max-size: '12m'
+#    max-file: '5'
+#  driver: json-file
+
+
+services:
+  base-virt:
+    container_name: superbase-virt
+    build: base
+    privileged: true
+    ports:
+      - "5353:53"
+      - "51280:51280/udp"
+      - "8000:80"
+      - "4443:443"
+    logging: *default-logging
+    volumes:
+      - ./configs/base/:/configs/base/
+  dhcp-virt:
+    container_name: superdhcp-virt
+    build: dhcp
+    network_mode: service:base-virt
+    depends_on:
+      - "base-virt"
+    logging: *default-logging
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/dhcp/:/configs/dhcp/
+      - ./configs/zones/:/configs/zones/
+      - ./state/dhcp/:/state/dhcp/
+      - /sys/fs/bpf:/sys/fs/bpf
+  dns-virt:
+    container_name: superdns-virt
+    build: dns
+    network_mode: service:base-virt
+    logging: *default-logging
+    depends_on:
+      - "base-virt"
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/dns/:/configs/dns/
+      - ./state/dns/:/state/dns/
+  multicast_udp_proxy-virt:
+    container_name: super_multicast_udp_proxy-virt
+    build: multicast_udp_proxy
+    network_mode: service:base-virt
+    depends_on:
+      - "base-virt"
+    logging: *default-logging
+    volumes:
+      - ./configs/base/:/configs/base/
+  wireguard-virt:
+    container_name: superwireguard-virt
+    build: wireguard
+    network_mode: service:base-virt
+    cap_add:
+      - net_admin
+      - sys_module
+    depends_on:
+      - "base-virt"
+      - "dhcp-virt"
+      - "api-virt"
+    logging: *default-logging
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/wireguard/:/configs/wireguard/
+      - ./state/plugins/wireguard/:/state/plugins/wireguard/
+      - ./state/dhcp/:/state/dhcp/
+  frontend:
+    container_name: superfrontend
+    network_mode: none
+#    image: ghcr.io/spr-networks/super_frontend
+#    entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
+    build: frontend
+    entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
+    volumes:
+      - ./frontend/:/frontend
+  api-virt:
+    container_name: superapi-virt
+    build: api
+    network_mode: service:base-virt
+    cap_add:
+      - net_admin
+    restart: always
+    depends_on:
+      - "base-virt"
+      - "dhcp-virt"
+      - "frontend"
+    logging: *default-logging
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/devices/:/configs/devices/
+      - ./configs/zones/:/configs/zones/
+      - ./configs/wifi/:/configs/wifi/
+      - ./configs/wireguard/:/configs/wireguard/
+      - ./configs/scripts/:/configs/scripts/
+      - ./state/wifi/:/state/wifi/
+      - ./state/dhcp/:/state/dhcp/
+      - ./state/dns/:/state/dns/
+      - ./state/api/:/state/api/
+      - ./state/plugins/:/state/plugins/
+      - ./frontend/build:/ui/
+      - /var/log/journal:/var/log/journal:ro
+  plugin-lookup-virt:
+    container_name: super-plugin-lookup-virt
+    build: plugin-lookup
+    network_mode: service:base-virt
+    logging: *default-logging
+    depends_on:
+      - "base-virt"
+      - "dns-virt"
+    volumes:
+      - ./state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
+  dyndns-virt:
+    container_name: superdyndns-virt
+    build: dyndns
+    network_mode: bridge
+    logging: *default-logging
+    depends_on:
+      - "base-virt"
+    volumes:
+      - ./state/plugins/dyndns/:/state/plugins/dyndns
+      - ./configs/dyndns/:/configs/dyndns

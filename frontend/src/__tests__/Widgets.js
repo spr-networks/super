@@ -1,11 +1,25 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
-import { WifiClientCount } from 'components/Dashboard/WifiWidgets'
+import { NativeBaseProvider } from 'native-base'
+import { render, fireEvent, waitFor } from '@testing-library/react-native'
+
+import { WifiClients } from 'components/Dashboard/WifiWidgets'
 
 describe('Widgets', () => {
   test('test num clients', async () => {
-    const { baseElement } = render(<WifiClientCount />)
-    expect(baseElement).toBeDefined()
-    await waitFor(() => expect(screen.getByText(/2/)).toBeInTheDocument())
+    const inset = {
+      frame: { x: 0, y: 0, width: 0, height: 0 },
+      insets: { top: 0, left: 0, right: 0, bottom: 0 }
+    }
+
+    const component = (
+      <NativeBaseProvider initialWindowMetrics={inset}>
+        <WifiClients />
+      </NativeBaseProvider>
+    )
+
+    const { container, getByText } = render(component)
+    expect(container).toBeDefined()
+    const header = await getByText('Active WiFi Clients')
+    expect(header).toBeTruthy()
   })
 })

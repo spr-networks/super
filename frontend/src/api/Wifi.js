@@ -1,4 +1,3 @@
-import { TimeScale } from 'chart.js'
 import API from './API'
 
 export class APIWifi extends API {
@@ -8,6 +7,7 @@ export class APIWifi extends API {
 
   config = () => this.get('hostapd/config')
   updateConfig = (config) => this.put('hostapd/config', config)
+  setChannel = (params) => this.put('hostapd/setChannel', params)
   allStations = () => this.get('hostapd/all_stations')
   status = () => this.get('hostapd/status')
   arp = () => this.get('arp')
@@ -16,12 +16,15 @@ export class APIWifi extends API {
   iwDev = () => this.get('iw/dev')
   iwList = () => this.get('iw/list')
   iwScan = (iface) => this.get(`iw/dev/${iface}/scan`)
-  asn = (ips) => {
+  asn = (ip) => {
+    return this.get(`/plugins/lookup/asn/${ip}`)
+  }
+  asns = (ips) => {
     if (typeof ips === 'string') {
-      ips = [ips]
+      ips = ips.split(',')
     }
 
-    return this.get(`/plugins/lookup/asn/${ips.join(',')}`)
+    return this.get(`/plugins/lookup/asns/${ips.join(',')}`)
   }
 }
 

@@ -19,7 +19,7 @@ import (
 
 var TEST_PREFIX = ""
 
-var UNIX_PLUGIN_LISTENER = "/state/plugin-lookup/lookup_plugin"
+var UNIX_PLUGIN_LISTENER = "/state/plugins/plugin-lookup/lookup_plugin"
 //var UNIX_PLUGIN_LISTENER = "./http.sock"
 
 var ASN_FILENAME = "../data/ip2asn-v4.tsv"
@@ -75,7 +75,22 @@ func lookupASN(ipAddress string) (ASNEntry, error) {
 	return asn, nil
 }
 
+// get single asn as json object
 func pluginGetASN(w http.ResponseWriter, r *http.Request) {
+	ip := mux.Vars(r)["ip"]
+	result, err := lookupASN(ip)
+
+	if err != nil {
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+// get asns as json array
+func pluginGetASNs(w http.ResponseWriter, r *http.Request) {
 	ips := mux.Vars(r)["ip"]
 
 	result := []ASNEntry{}
@@ -89,16 +104,30 @@ func pluginGetASN(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-
-	// return object instead of array if only one ip
-	if !strings.Contains(ips, ",") && len(result) == 1 {
-		json.NewEncoder(w).Encode(result[0])
-	} else {
-		json.NewEncoder(w).Encode(result)
-	}
+	json.NewEncoder(w).Encode(result)
 }
 
+// get single oui as json object
 func pluginGetOUI(w http.ResponseWriter, r *http.Request) {
+	mac := mux.Vars(r)["mac"]
+
+	vendor, err := mOUI.VendorLookup(mac)
+	if err != nil {
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	result := OUIEntry{
+		MAC:    mac,
+		Vendor: vendor,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+// get ouis as json array
+func pluginGetOUIs(w http.ResponseWriter, r *http.Request) {
 	macs := mux.Vars(r)["mac"]
 
 	result := []OUIEntry{}
@@ -117,13 +146,7 @@ func pluginGetOUI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-
-	// return object instead of array if only one ip
-	if !strings.Contains(macs, ",") && len(result) == 1 {
-		json.NewEncoder(w).Encode(result[0])
-	} else {
-		json.NewEncoder(w).Encode(result)
-	}
+	json.NewEncoder(w).Encode(result)
 }
 
 func logRequest(handler http.Handler) http.Handler {
@@ -143,7 +166,9 @@ func main() {
 	unix_plugin_router := mux.NewRouter().StrictSlash(true)
 
 	unix_plugin_router.HandleFunc("/asn/{ip}", pluginGetASN).Methods("GET")
+	unix_plugin_router.HandleFunc("/asns/{ip}", pluginGetASNs).Methods("GET")
 	unix_plugin_router.HandleFunc("/oui/{mac}", pluginGetOUI).Methods("GET")
+	unix_plugin_router.HandleFunc("/ouis/{mac}", pluginGetOUIs).Methods("GET")
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)

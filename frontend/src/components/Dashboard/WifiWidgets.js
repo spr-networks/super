@@ -1,17 +1,9 @@
-import { Component, useEffect, useState } from 'react'
+import React, { Component, useEffect, useState } from 'react'
 import { wifiAPI } from 'api/Wifi'
 import StatsWidget from './StatsWidget'
+import { faClock, faLaptop, faWifi } from '@fortawesome/free-solid-svg-icons'
 
-import {
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  CardTitle,
-  Table,
-  Row,
-  Col
-} from 'reactstrap'
+import { Divider, Box, Stack, Icon, Text, useColorModeValue } from 'native-base'
 
 export class WifiClientCount extends Component {
   state = { numberOfClients: 0 }
@@ -22,7 +14,7 @@ export class WifiClientCount extends Component {
   }
 
   render() {
-    return <div>{this.state.numberOfWifiClients}</div>
+    return <>{this.state.numberOfWifiClients}</>
   }
 }
 
@@ -30,11 +22,12 @@ export class WifiClients extends WifiClientCount {
   render() {
     return (
       <StatsWidget
-        icon="fa fa-laptop"
+        icon={faLaptop}
+        iconColor="blueGray.400"
         title="Active WiFi Clients"
         text={this.state.numberOfWifiClients}
         textFooter="Online"
-        iconFooter="fa fa-clock-o"
+        iconFooter={faClock}
       />
     )
   }
@@ -52,11 +45,12 @@ export class WifiInfo extends Component {
   render() {
     return (
       <StatsWidget
-        icon="fa fa-wifi text-info"
+        icon={faWifi}
+        iconColor="info.400"
         title="Wifi AP"
         text={this.state.ssid}
         textFooter={'Channel ' + this.state.channel}
-        iconFooter="fa fa-wifi"
+        iconFooter={faWifi}
       />
     )
   }
@@ -84,37 +78,32 @@ export const Interfaces = (props) => {
   }, [])
 
   return (
-    <Card>
-      <CardBody>
-        <Row>
-          <Col lg={{ size: 8, offset: 2 }} md="10">
-            <CardTitle tag="h4" className="text-muted">
-              Interfaces
-            </CardTitle>
-            <CardBody>
-              <Table responsive>
-                <thead className="text-primary">
-                  <tr>
-                    <th>Interface</th>
-                    <th>IP Address</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {addrs.map((address) => (
-                    <tr key={address.local}>
-                      <td>{address.ifname}</td>
-                      <td>
-                        {address.local}/{address.prefixlen}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </CardBody>
-          </Col>
-        </Row>
-      </CardBody>
-    </Card>
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      borderRadius="10"
+      mb={4}
+      p={5}
+      shadow={4}
+    >
+      <Text fontSize="lg" textAlign="center">
+        Interfaces
+      </Text>
+
+      <Divider _light={{ bg: 'muted.200' }} my="2" />
+
+      <Box px="10">
+        {addrs.map((address) => (
+          <Stack key={address.local} direction="row" space="2" pb="2">
+            <Text flex="1" textAlign="right" bold>
+              {address.ifname}
+            </Text>
+            <Text flex="1">
+              {address.local}/{address.prefixlen}
+            </Text>
+          </Stack>
+        ))}
+      </Box>
+    </Box>
   )
 }
 

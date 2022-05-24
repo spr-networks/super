@@ -38,7 +38,7 @@ export const TotalTraffic = (props) => {
 
   return (
     <StatsChartWidget
-      title="WanIn &amp; WanOut Traffic"
+      title="Outbound Traffic"
       type="Line"
       labels={labels}
       data={data}

@@ -1,5 +1,16 @@
 import API from 'api'
 import { api, deviceAPI, testLogin, saveLogin } from 'api'
+/*import createServer from './api/MockAPI'
+
+let server
+
+beforeEach(() => {
+  server = createServer()
+})
+
+afterEach(() => {
+  server.shutdown()
+})*/
 
 describe('API component', () => {
   let _REACT_APP_API = null
@@ -10,18 +21,6 @@ describe('API component', () => {
     delete process.env.REACT_APP_API
     let _api = new API()
     expect(_api.baseURL).toBe('http://localhost/')
-  })
-
-  test('mockAPI baseurl', () => {
-    let _api = new API()
-    expect(_api.baseURL).toBe('/')
-  })
-
-  test('custom baseurl', () => {
-    let url = 'http://127.0.0.1'
-    process.env.REACT_APP_API = url
-    let _api = new API()
-    expect(_api.baseURL).toBe(`${url}/`)
   })
 
   afterEach(() => (process.env.REACT_APP_API = _REACT_APP_API))
@@ -51,6 +50,7 @@ describe('API Login', () => {
   })
 })
 
+/*
 describe('API Device', () => {
   saveLogin('admin', 'admin')
 
@@ -76,3 +76,4 @@ describe('API Device', () => {
     expect(len2).toBe(len1 - 1)
   })
 })
+*/

@@ -1,46 +1,58 @@
-import { Component } from 'react'
+import React from 'react'
+import { Divider, Box, HStack, Text, useColorModeValue } from 'native-base'
 
-import {
-  Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  CardTitle,
-  Row,
-  Col,
-} from 'reactstrap'
+import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 
-export default class StatsWidget extends Component {
-  render() {
-    return (
-      <Card className="card-stats">
-      <CardBody>
-        <Row>
-          <Col md="4" xs="5">
-            <div className="icon-big text-center">
-              <i className={"text-info " + this.props.icon} />
-            </div>
-          </Col>
-          <Col md="8" xs="7">
-            <div className="numbers">
-              <p className="card-category">{this.props.title}</p>
-              <CardTitle tag="p">
-                {this.props.text}
-              </CardTitle>
-            </div>
-          </Col>
-        </Row>
-      </CardBody>
-      {this.props.textFooter ? (
-      <CardFooter>
-        <hr />
-        <div className="stats">
-          <i className={this.props.iconFooter} />
-          {this.props.textFooter}
-        </div>
-      </CardFooter>
-      ) : (null)}
-    </Card>
+const StatsWidget = (props) => {
+  const { title, text, textFooter, icon, iconColor, iconFooter } = props
+
+  return (
+    <Box
+      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+      borderRadius={10}
+      mb={4}
+      shadow={4}
+      flex={1}
+    >
+      <Box px={4} py={4}>
+        <HStack justifyContent="space-between">
+          <Box justifyContent="space-between" p="2">
+            <Icon size={16} color={iconColor || 'warmGray.50'} icon={icon} />
+          </Box>
+          <Box justifyContent="center">
+            <Text
+              textAlign="right"
+              fontSize="sm"
+              fontWeight={300}
+              _light={{ color: 'muted.600' }}
+              _dark={{ color: 'muted.400' }}
+            >
+              {title}
+            </Text>
+            <Text
+              textAlign="right"
+              fontSize="xl"
+              _light={{ color: 'muted.800' }}
+              _dark={{ color: 'muted.400' }}
+            >
+              {text}
+            </Text>
+          </Box>
+        </HStack>
+      </Box>
+      {textFooter ? (
+        <Box>
+          <Divider _light={{ bg: 'muted.200' }} />
+          <HStack space={2} px={4} py={2} alignContent="center">
+            <Icon icon={iconFooter} color="warmGray.500" />
+            <Text color="muted.500" fontSize="xs" fontWeight={300}>
+              {textFooter}
+            </Text>
+          </HStack>
+        </Box>
+      ) : null}
+    </Box>
   )
-  }
 }
+
+export default StatsWidget
