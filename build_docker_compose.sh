@@ -25,6 +25,9 @@ mkdir -p state/wifi/
 mkdir -p state/wifi/sta_mac_iface_map/
 touch state/dns/local_mappings state/dhcp/leases.txt
 
+#pull the prebuilt frontend
+docker pull ghcr.io/spr-networks/super_frontend:latest
+
 BUILDARGS=""
 if [ -f .github_creds ]; then
   BUILDARGS="--build-arg GITHUB_CREDS=`cat .github_creds`"
