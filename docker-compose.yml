@@ -641,7 +641,7 @@ services:
 
 
 
-  dyndns:
+  dyndns-src:
     container_name: superdyndns-src
     build: dyndns
     network_mode: bridge
