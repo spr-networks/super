@@ -3,10 +3,10 @@
 export DOCKER_BUILDKIT=1 # or configure in daemon.json
 export COMPOSE_DOCKER_CLI_BUILD=1
 
-# Generate scripts based on the configuration
 if [ '!' -d "configs/" ]; then
-  echo Configs not initialized. See documentation. 
-  echo Copy base/template_configs to ./configs and set up wifi passwords as well as config.sh
+  echo Configs not initialized
+  echo Copy base/template_configs to ./configs and set up base/config/config.sh and base/config/auth_users.json
+  echo See the guide for help: https://www.supernetworks.org/pages/docs/setup_run_spr
   exit 1
 fi
 
