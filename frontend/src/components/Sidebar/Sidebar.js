@@ -109,10 +109,6 @@ const SidebarItem = (props) => {
               setActiveSidebarItem(item.path)
 
               let url = `/${item.layout}/${item.path}`
-              if (item.name == 'Devices' && isWifiDisabled) {
-                url = `/${item.layout}/wireguard`
-                setActiveSidebarItem('wireguard')
-              }
 
               navigate(url)
               if (isMobile) {

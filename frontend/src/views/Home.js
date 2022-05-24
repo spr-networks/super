@@ -1,10 +1,8 @@
 import React, { useContext, useState, useEffect } from 'react'
 import { View, StyleSheet } from 'react-native'
-
 import { Box, Stack, VStack, useBreakpointValue } from 'native-base'
-
 import { AppContext } from 'AppContext'
-import { pluginAPI, wifiAPI } from 'api'
+import { pluginAPI, wifiAPI, api } from 'api'
 import {
   WifiClients,
   Interfaces,
@@ -29,10 +27,14 @@ const Home = (props) => {
       )
       .catch((error) => error)
 
-    wifiAPI
-      .config()
+    api
+      .features()
       .then((res) => {
-        context.setIsWifiDisabled(false)
+        if (res.includes("wifi")) {
+          context.setIsWifiDisabled(false)
+        } else {
+          context.setIsWifiDisabled(true)
+        }
       })
       .catch((err) => {
         context.setIsWifiDisabled(true)
