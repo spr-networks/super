@@ -1,10 +1,10 @@
 #!/bin/bash
 CERT_NAME="www-api"
 CN="spr"
-CERT_KEY_FILENAME="/configs/base/${CERT_NAME}.key"
-CERT_CSR_FILENAME="/configs/base/${CERT_NAME}.csr"
-CERT_CRT_FILENAME="/configs/base/${CERT_NAME}.crt"
-CERT_SELF_SIGNED="/configs/base/self-signed-cert.ext"
+CERT_KEY_FILENAME="./configs/base/${CERT_NAME}.key"
+CERT_CSR_FILENAME="./configs/base/${CERT_NAME}.csr"
+CERT_CRT_FILENAME="./configs/base/${CERT_NAME}.crt"
+CERT_SELF_SIGNED="./configs/base/self-signed-cert.ext"
 
 echo "subjectAltName = @alt_names\n[alt_names]\nDNS.1 = ${CN}\nDNS.2 = https-server" > $CERT_SELF_SIGNED
 
