@@ -139,10 +139,10 @@ table inet filter {
     $(if [ "$WANIF" ]; then echo "counter oifname $WANIF ip saddr . iifname vmap @internet_access"; fi)
 
     # Forward to wired LAN
-    $(if [ "$LANIF" ]; then echo "counter oifname $LANIF ip saddr . iifname . ether saddr vmap @lan_access"; fi)
+    $(if [ "$LANIF" ]; then echo "counter oifname $LANIF ip saddr . iifname vmap @lan_access"; fi)
 
     #forward LAN to wg -> Tbd test me
-    $(if [ "$LANIF" ]; then echo "counter oifname wg0 ip saddr . iifname . ether saddr vmap @lan_access"; fi)
+    $(if [ "$LANIF" ]; then echo "counter oifname wg0 ip saddr . iifname vmap @lan_access"; fi)
 
     # Forward to wireless LAN
     $(if [ "$VLANSIF" ]; then echo "counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access"; fi)
