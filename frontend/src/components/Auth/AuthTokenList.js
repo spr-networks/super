@@ -31,7 +31,7 @@ const AuthTokenList = (props) => {
       .then((tokens) => {
         setTokens(tokens)
       })
-      .catch((err) => context.error(''+err))
+      .catch((err) => context.error('' + err))
   }, [])
 
   const deleteListItem = (row) => {
@@ -43,7 +43,7 @@ const AuthTokenList = (props) => {
         newData.splice(prevIndex, 1)
         setTokens(newData)
       })
-      .catch((err) => context.error(''+err))
+      .catch((err) => context.error('' + err))
   }
 
   const handleAddToken = () => {}
@@ -66,7 +66,7 @@ const AuthTokenList = (props) => {
       .then((token) => {
         setTokens(tokens.concat(token))
       })
-      .catch((err) => context.error(''+err))
+      .catch((err) => context.error('' + err))
   }
 
   const tokenExpired = (expire) => {
@@ -140,6 +140,9 @@ const AuthTokenList = (props) => {
           )}
           keyExtractor={(item) => item.Token}
         />
+        {tokens !== null && tokens.length === 0 ? (
+          <Text py={4}>There are no API tokens added yet</Text>
+        ) : null}
       </Box>
     </View>
   )
