@@ -56,19 +56,8 @@ services:
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
-  ppp:
-    container_name: superppp-prebuilt
-    image: ghcr.io/spr-networks/super_ppp
-    network_mode: host
-    privileged: true
-    depends_on:
-      - "base"
-    logging: *default-logging
-    volumes:
-      - ./configs/base/:/configs/base/
-      - ./configs/ppp/:/etc/ppp
   wireguard:
-    container_name: superwireguard-prebuilt
+    container_name: superwireguard-virt
     image: ghcr.io/spr-networks/super_wireguard
     network_mode: host
     privileged: true
@@ -100,7 +89,7 @@ services:
       - ./state/plugins/wireguard/:/state/plugins/wireguard/
       - ./state/dhcp/:/state/dhcp/
   frontend:
-    container_name: superfrontend-prebuilt
+    container_name: superfrontend
     network_mode: none
     image: ghcr.io/spr-networks/super_frontend
     entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]

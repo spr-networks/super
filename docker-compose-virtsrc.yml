@@ -74,7 +74,7 @@ services:
       - ./state/plugins/wireguard/:/state/plugins/wireguard/
       - ./state/dhcp/:/state/dhcp/
   frontend:
-    container_name: superfrontend-prebuilt
+    container_name: superfrontend
     network_mode: none
 #    image: ghcr.io/spr-networks/super_frontend
 #    entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
