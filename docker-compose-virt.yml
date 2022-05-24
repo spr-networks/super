@@ -1,4 +1,15 @@
 version: '3.4'
+
+x-logging:
+  &default-logging
+  driver: journald
+# For MacOS:
+#  options:
+#    max-size: '12m'
+#    max-file: '5'
+#  driver: json-file
+
+
 services:
   base-virt:
     container_name: superbase-virt
@@ -9,8 +20,7 @@ services:
       - "51280:51280/udp"
       - "8000:80"
       - "4443:443"
-    logging:
-      driver: journald
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
   dhcp-virt:
@@ -19,8 +29,7 @@ services:
     network_mode: service:base-virt
     depends_on:
       - "base-virt"
-    logging:
-      driver: journald
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/dhcp/:/configs/dhcp/
@@ -31,8 +40,7 @@ services:
     container_name: superdns-virt
     image: ghcr.io/spr-networks/super_dns
     network_mode: service:base-virt
-    logging:
-      driver: journald
+    logging: *default-logging
     depends_on:
       - "base-virt"
     volumes:
@@ -45,8 +53,7 @@ services:
     network_mode: service:base-virt
     depends_on:
       - "base-virt"
-    logging:
-      driver: journald
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
   ppp:
@@ -56,8 +63,7 @@ services:
     privileged: true
     depends_on:
       - "base"
-    logging:
-      driver: journald
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/ppp/:/etc/ppp
@@ -70,8 +76,7 @@ services:
       - "base"
       - "dhcp"
       - "api"
-    logging:
-      driver: journald
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/wireguard/:/configs/wireguard/
@@ -88,8 +93,7 @@ services:
       - "base-virt"
       - "dhcp-virt"
       - "api-virt"
-    logging:
-      driver: journald
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/wireguard/:/configs/wireguard/
@@ -115,8 +119,7 @@ services:
       - "base-virt"
       - "dhcp-virt"
       - "frontend"
-    logging:
-      driver: journald
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/devices/:/configs/devices/
@@ -135,8 +138,7 @@ services:
     container_name: super-plugin-lookup-virt
     image: ghcr.io/spr-networks/super_plugin-lookup
     network_mode: service:base-virt
-    logging:
-      driver: journald
+    logging: *default-logging
     depends_on:
       - "base-virt"
       - "dns-virt"
@@ -146,8 +148,7 @@ services:
     container_name: superdyndns-virt
     image: ghcr.io/spr-networks/super_dyndns
     network_mode: bridge
-    logging:
-      driver: journald
+    logging: *default-logging
     depends_on:
       - "base-virt"
     volumes:
