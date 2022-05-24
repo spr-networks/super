@@ -435,11 +435,11 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 	webauth_router := mux.NewRouter().StrictSlash(true)
 
 	// webauthn register is behind auth
-	authenticatedNext.HandleFunc("/webauthn/register", auth.BeginRegistration).Methods("GET", "OPTIONS")
-	authenticatedNext.HandleFunc("/webauthn/register", auth.FinishRegistration).Methods("POST", "OPTIONS")
+	//authenticatedNext.HandleFunc("/webauthn/register", auth.BeginRegistration).Methods("GET", "OPTIONS")
+	//authenticatedNext.HandleFunc("/webauthn/register", auth.FinishRegistration).Methods("POST", "OPTIONS")
 
-	webauth_router.HandleFunc("/login", auth.BeginLogin).Methods("GET", "OPTIONS")
-	webauth_router.HandleFunc("/login", auth.FinishLogin).Methods("POST", "OPTIONS")
+	//webauth_router.HandleFunc("/login", auth.BeginLogin).Methods("GET", "OPTIONS")
+	//webauth_router.HandleFunc("/login", auth.FinishLogin).Methods("POST", "OPTIONS")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var matchInfo mux.RouteMatch
