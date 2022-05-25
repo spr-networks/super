@@ -40,4 +40,4 @@ docker buildx bake \
   --set "*.cache-from=type=local,src=/tmp/.buildx-cache" \
   --set "*.cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max" \
   --set "*.platform=linux/amd64,linux/arm64" \
-  ${BUILDARGS} $@
+  -f docker-compose-src.yml ${BUILDARGS} $@
