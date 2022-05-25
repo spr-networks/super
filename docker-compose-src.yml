@@ -64,20 +64,6 @@ services:
       - ./configs/base/:/configs/base/
       - ./configs/wifi/:/configs/wifi/
       - ./state/wifi/:/state/wifi/
-  wifid:
-    container_name: superwifid
-    build: wifid
-    network_mode: host
-    privileged: true
-    logging: *default-logging
-    depends_on:
-      - "dhcp"
-      - "dns"
-      - "multicast_udp_proxy"
-    volumes:
-      - ./configs/base/:/configs/base/
-      - ./configs/wifi/:/configs/wifi/
-      - ./state/wifi/:/state/wifi/
   multicast_udp_proxy:
     container_name: super_multicast_udp_proxy
     build: multicast_udp_proxy
@@ -120,7 +106,7 @@ services:
     build: frontend
     entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
 #    image: ghcr.io/spr-networks/super_frontend
-#    entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]    
+#    entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
     volumes:
       - ./frontend/:/frontend
   api:
