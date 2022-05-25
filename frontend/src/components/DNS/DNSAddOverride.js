@@ -156,7 +156,7 @@ export default class DNSAddOverride extends React.Component {
             type="number"
             name="Expiration"
             value={this.state.Expiration}
-            onChangeText={(value) => this.handleChange('Expiration', value)}
+            onChangeText={(value) => this.handleChange('Expiration', parseInt(value))}
           />
 
           <FormControl.HelperText>
