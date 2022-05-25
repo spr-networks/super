@@ -67,7 +67,7 @@ func loadFirewallRules() error {
 }
 
 func deleteBlock(br BlockRule) error {
-	cmd := exec.Command("nft", "add", "element", "inet", "nat", "block", "{",
+	cmd := exec.Command("nft", "delete", "element", "inet", "nat", "block", "{",
 		br.SrcIP, ".", br.DstIP, ".", br.Protocol, ":", "drop", "}")
 
 	_, err := cmd.Output()
