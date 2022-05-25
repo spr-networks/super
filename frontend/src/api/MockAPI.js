@@ -800,6 +800,10 @@ export default function MockAPI() {
         ]
       })
 
+      this.get('/features', () => {
+        return ["dns","wifi","ppp","wireguard"]
+      })
+
       this.get('/iw/dev', (schema) => {
         return {
           phy0: {
@@ -1041,6 +1045,7 @@ export default function MockAPI() {
           channel: 36
         }
       })
+
       this.get('/hostapd/all_stations', (schema) => {
         return {
           '11:22:33:44:55:61': {
