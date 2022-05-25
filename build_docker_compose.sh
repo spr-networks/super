@@ -25,11 +25,19 @@ mkdir -p state/wifi/
 mkdir -p state/wifi/sta_mac_iface_map/
 touch state/dns/local_mappings state/dhcp/leases.txt
 
-#pull the prebuilt frontend
+# pull the prebuilt frontend
 docker pull ghcr.io/spr-networks/super_frontend:latest
 
 BUILDARGS=""
 if [ -f .github_creds ]; then
-  BUILDARGS="--build-arg GITHUB_CREDS=`cat .github_creds`"
+  BUILDARGS="--set target.args.GITHUB_CREDS=`cat .github_creds`"
 fi
-docker-compose -f docker-compose-src.yml build ${BUILDARGS} $@
+
+# create a new buildx builder so we can cross-compile
+docker buildx create --use
+
+docker buildx bake \
+  --set "*.cache-from=type=local,src=/tmp/.buildx-cache" \
+  --set "*.cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max" \
+  --set "*.platform=linux/amd64,linux/arm64" \
+  ${BUILDARGS} $@
