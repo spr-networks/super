@@ -1351,7 +1351,8 @@ func doReloadPSKFiles() {
 func getLogs(w http.ResponseWriter, r *http.Request) {
 	// TODO params : --since "1 hour ago" --until "50 minutes ago"
 	// 2000 entries ~2mb of data
-	data, err := exec.Command("journalctl", "-u", "docker.service", "-r", "-n", "2000", "-o", "json").Output()
+	//data, err := exec.Command("journalctl", "-u", "docker.service", "-r", "-n", "2000", "-o", "json").Output()
+	data, err := exec.Command("journalctl", "-r", "-n", "2000", "-o", "json").Output()
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
