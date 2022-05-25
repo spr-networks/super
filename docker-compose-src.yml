@@ -1,0 +1,158 @@
+version: '3.4'
+
+x-logging:
+  &default-logging
+  driver: journald
+
+services:
+  base:
+    container_name: superbase
+    build: base
+    network_mode: host
+    privileged: true
+    logging: *default-logging
+    volumes:
+      - ./configs/base/:/configs/base/
+  dhcp:
+    container_name: superdhcp
+    build: dhcp
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base"
+    logging: *default-logging
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/dhcp/:/configs/dhcp/
+      - ./configs/zones/:/configs/zones/
+      - ./state/dhcp/:/state/dhcp/
+      - /sys/fs/bpf:/sys/fs/bpf
+  dhcp_client:
+    container_name: superdhcp_client
+    build: dhcp
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base"
+    logging: *default-logging
+    entrypoint: /scripts/client.sh
+    volumes:
+      - ./configs/base/:/configs/base/
+  dns:
+    container_name: superdns
+    build: dns
+    network_mode: host
+    privileged: true
+    logging: *default-logging
+    depends_on:
+      - "base"
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/dns/:/configs/dns/
+      - ./state/dns/:/state/dns/
+  wifid:
+    container_name: superwifid
+    build: wifid
+    network_mode: host
+    privileged: true
+    logging: *default-logging
+    depends_on:
+      - "dhcp"
+      - "dns"
+      - "multicast_udp_proxy"
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/wifi/:/configs/wifi/
+      - ./state/wifi/:/state/wifi/
+  multicast_udp_proxy:
+    container_name: super_multicast_udp_proxy
+    build: multicast_udp_proxy
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base"
+    logging: *default-logging
+    volumes:
+      - ./configs/base/:/configs/base/
+  ppp:
+    container_name: superppp
+    build: ppp
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base"
+    logging: *default-logging
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/ppp/:/etc/ppp/
+  wireguard:
+    container_name: superwireguard
+    build: wireguard
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base"
+      - "dhcp"
+      - "api"
+    logging: *default-logging
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/wireguard/:/configs/wireguard/
+      - ./state/plugins/wireguard/:/state/plugins/wireguard/
+      - ./state/dhcp/:/state/dhcp/
+  frontend:
+    container_name: superfrontend
+    network_mode: none
+    build: frontend
+    entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
+#    image: ghcr.io/spr-networks/super_frontend
+#    entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
+    volumes:
+      - ./frontend/:/frontend
+  api:
+    container_name: superapi
+    build: api
+    network_mode: host
+    privileged: true
+    restart: always
+    depends_on:
+      - "base"
+      - "wifid"
+      - "dhcp"
+      - "frontend"
+    logging: *default-logging
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/devices/:/configs/devices/
+      - ./configs/zones/:/configs/zones/
+      - ./configs/wifi/:/configs/wifi/
+      - ./configs/wireguard/:/configs/wireguard/
+      - ./configs/scripts/:/configs/scripts/
+      - ./state/wifi/:/state/wifi/
+      - ./state/dhcp/:/state/dhcp/
+      - ./state/dns/:/state/dns/
+      - ./state/api/:/state/api/
+      - ./state/plugins/:/state/plugins/
+      - ./frontend/build:/ui/
+      - /var/log/journal:/var/log/journal:ro
+  plugin-lookup:
+    container_name: super-plugin-lookup
+    build: plugin-lookup
+    network_mode: host
+    logging: *default-logging
+    depends_on:
+      - "base"
+      - "dns"
+    volumes:
+      - ./state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
+  dyndns:
+    container_name: superdyndns
+    build: dyndns
+    network_mode: bridge
+    logging: *default-logging
+    depends_on:
+      - "base"
+      - "dns"
+    volumes:
+      - ./state/plugins/dyndns/:/state/plugins/dyndns
+      - ./configs/dyndns/:/configs/dyndns

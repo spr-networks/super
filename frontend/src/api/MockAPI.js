@@ -23,7 +23,8 @@ export default function MockAPI() {
       wireguardpeer: Model,
       plugin: Model,
       forwardrule: Model,
-      blockrule: Model
+      blockrule: Model,
+      token: Model
     },
     seeds(server) {
       server.create('device', {
@@ -177,6 +178,16 @@ export default function MockAPI() {
         AllowedIPs: '192.168.3.3/32',
         Endpoint: '192.168.2.1:51280',
         PersistentKeepalive: 25
+      })
+
+      server.create('token', {
+        Token: 'QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQQo=',
+        Expire: 0
+      })
+
+      server.create('token', {
+        Token: 'QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQgo=',
+        Expire: 0
       })
     },
     routes() {
@@ -789,6 +800,10 @@ export default function MockAPI() {
         ]
       })
 
+      this.get('/features', () => {
+        return ["dns","wifi","ppp","wireguard"]
+      })
+
       this.get('/iw/dev', (schema) => {
         return {
           phy0: {
@@ -1030,6 +1045,7 @@ export default function MockAPI() {
           channel: 36
         }
       })
+
       this.get('/hostapd/all_stations', (schema) => {
         return {
           '11:22:33:44:55:61': {
@@ -1090,6 +1106,15 @@ export default function MockAPI() {
             vlan_id: '4247',
             wpa: '2'
           }
+        }
+      })
+
+      this.put('/hostapd/setChannel', (schema) => {
+        return {
+          Vht_oper_centr_freq_seg0_idx: 42,
+          He_oper_centr_freq_seg0_idx: 42,
+          Vht_oper_chwidth: 1,
+          He_oper_chwidth: 1
         }
       })
 
@@ -1476,6 +1501,62 @@ export default function MockAPI() {
 
         let attrs = JSON.parse(request.requestBody)
         return schema.blockrules.where(attrs).destroy()
+      })
+
+      // tokens
+      this.get('/tokens', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        return schema.tokens.all().models
+      })
+
+      this.put('/tokens', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        attrs.Token = 'TOKEN' + parseInt(Math.random() * 4096)
+        schema.tokens.create(attrs)
+        return attrs
+      })
+
+      this.delete('/tokens', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.tokens.where(attrs).destroy()
+      })
+
+      //Dyndns plugin
+      this.get('/plugins/dyndns/config', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        return {
+          provider: 'Cloudflare',
+          email: '',
+          password: '',
+          login_token: 'Tokenish',
+          domains: [
+            {
+              domain_name: 'supernetworks.org',
+              sub_domains: ['dyndns']
+            }
+          ],
+          ip_url: 'https://ip4.seeip.org',
+          ipv6_url: '',
+          ip_type: 'IPv4',
+          interval: 300,
+          socks5: '',
+          resolver: '8.8.8.8',
+          run_once: true
+        }
       })
     }
   })

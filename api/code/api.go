@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -15,7 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -30,6 +29,9 @@ var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
+
+var ApiTlsCert = "/configs/base/www-api.crt"
+var ApiTlsKey = "/configs/base/www-api.key"
 
 type InfluxConfig struct {
 	URL    string
@@ -98,7 +100,7 @@ func saveConfig() {
 
 var UNIX_WIFID_LISTENER = TEST_PREFIX + "/state/wifi/apisock"
 var UNIX_DHCPD_LISTENER = TEST_PREFIX + "/state/dhcp/apisock"
-var UNIX_WIREGUARD_LISTENER = TEST_PREFIX + "/state/wireguard/apisock"
+var UNIX_WIREGUARD_LISTENER = TEST_PREFIX + "/state/plugins/wireguard/apisock"
 
 func ipAddr(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("ip", "-j", "addr")
@@ -113,7 +115,6 @@ func ipAddr(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, string(stdout))
 }
-
 
 func ipLinkUpDown(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
@@ -135,70 +136,29 @@ func ipLinkUpDown(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func iwCommand(w http.ResponseWriter, r *http.Request) {
-	command := mux.Vars(r)["command"]
-
-	/*
-	   allowed commands for now:
-	   iw/list, iw/dev iw/dev/wlan0-9/scan
-	*/
-	validCommand := regexp.MustCompile(`^(list|dev)/?([a-z0-9\.]+\/scan)?$`).MatchString
-	if !validCommand(command) {
-		fmt.Println("invalid iw command")
-		http.Error(w, "Invalid command", 400)
-		return
-	}
-
-	args := strings.Split(command, "/")
-	cmd := exec.Command("iw", args...)
-	data, err := cmd.Output()
-	if err != nil {
-		fmt.Println("iw command error:", err)
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	// use json parsers if available (iw_list, iw_dev, iw-scan)
-	if command == "list" || command == "dev" || strings.HasSuffix(command, "scan") {
-		parser := "--iw_" + command // bug: jc dont allow - when using local parsers
-		if strings.HasSuffix(command, "scan") {
-			parser = "--iw-scan"
-		}
-
-		cmd = exec.Command("jc", parser)
-
-		stdin, err := cmd.StdinPipe()
-		if err != nil {
-			fmt.Println("iwCommand stdin pipe error:", err)
-			http.Error(w, err.Error(), 400)
-			return
-		}
-
-		go func() {
-			defer stdin.Close()
-			io.WriteString(stdin, string(data))
-		}()
-
-		stdout, err := cmd.Output()
-		if err != nil {
-			fmt.Println("iwCommand stdout error:", err)
-			http.Error(w, err.Error(), 400)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, string(stdout))
-
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/plain")
-	fmt.Fprintf(w, string(data))
-}
 
 func getStatus(w http.ResponseWriter, r *http.Request) {
 	reply := "Online"
 	WSNotifyString("StatusCalled", "test")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(reply)
+}
+
+func getFeatures(w http.ResponseWriter, r *http.Request) {
+	reply := []string{"dns"}
+	//check which features are enabled
+	if os.Getenv("SSID_INTERFACE") != "" {
+		reply = append(reply, "wifi")
+	}
+
+	if os.Getenv("PPPIF") != "" {
+		reply = append(reply, "ppp")
+	}
+
+	if os.Getenv("WIREGUARD_PORT") != "" {
+		reply = append(reply, "wireguard")
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
 }
@@ -245,7 +205,8 @@ func getDevices(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
-	identity := mux.Vars(r)["identity"]
+	identity := r.URL.Query().Get("identity")
+
 	if strings.Contains(identity, ":") {
 		//normalize MAC addresses
 		identity = trimLower(identity)
@@ -256,6 +217,7 @@ func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+
 	dev := DeviceEntry{}
 	err := json.NewDecoder(r.Body).Decode(&dev)
 	if err != nil {
@@ -263,21 +225,25 @@ func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updateDevice(w, r, dev, identity)
+	errorMsg, code := updateDevice(w, r, dev, identity)
+
+	if code != 200 {
+		http.Error(w, errorMsg, code)
+		return
+	}
+
 }
 
-func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, identity string) {
+func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, identity string) (string, int) {
 
 	if dev.PSKEntry.Type != "" {
 		if dev.PSKEntry.Type != "sae" && dev.PSKEntry.Type != "wpa2" {
-			http.Error(w, "invalid PSK Type", 400)
-			return
+			return "invalid PSK Type", 400
 		}
 	}
 
 	if len(dev.PSKEntry.Psk) > 0 && len(dev.PSKEntry.Psk) < 8 {
-		http.Error(w, "psk too short", 400)
-		return
+		return "psk too short", 400
 	}
 
 	//normalize groups and tags
@@ -302,11 +268,10 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			saveDevicesJson(devices)
 			refreshDeviceGroups(val)
 			doReloadPSKFiles()
-			return
+			return "", 200
 		}
 
-		http.Error(w, "Not found", 404)
-		return
+		return "Not found", 404
 	}
 
 	//always overwrite pending
@@ -412,7 +377,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(val)
-		return
+		return "", 200
 	}
 
 	//creating a new device entry
@@ -464,6 +429,8 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(dev)
+
+	return "", 200
 }
 
 func pendingPSK(w http.ResponseWriter, r *http.Request) {
@@ -1376,7 +1343,7 @@ func doReloadPSKFiles() {
 	cmd := exec.Command("hostapd_cli", "-p", "/state/wifi/control", "-s", "/state/wifi/", "reload_wpa_psk")
 	err = cmd.Run()
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 
 }
@@ -1393,6 +1360,11 @@ func getLogs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	logs := strings.Replace(strings.Trim(string(data), "\n"), "\n", ",", -1)
 	fmt.Fprintf(w, "[%s]", logs)
+}
+
+func getCert(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+	http.ServeFile(w, r, ApiTlsCert)
 }
 
 //set up SPA handler. From gorilla mux's documentation
@@ -1442,12 +1414,13 @@ func main() {
 	w, err := webauthn.New(&webauthn.Config{
 		RPDisplayName: "SPR",
 		RPID:          "localhost",
-		RPOrigin:      "http://localhost", // The origin URL for WebAuthn requests
+		RPOrigin:      "http://localhost:3000", // The origin URL for WebAuthn requests
 	})
 
 	if err != nil {
 		log.Fatal("failed to create WebAuthn from config:", err)
 	}
+
 	auth.webAuthn = w
 
 	unix_dhcpd_router := mux.NewRouter().StrictSlash(true)
@@ -1461,6 +1434,9 @@ func main() {
 
 	//public websocket with internal authentication
 	external_router_public.HandleFunc("/ws", auth.webSocket).Methods("GET")
+
+	//download cert from http
+	external_router_public.HandleFunc("/cert", getCert).Methods("GET")
 
 	spa := spaHandler{staticPath: "/ui", indexPath: "index.html"}
 	external_router_public.PathPrefix("/").Handler(spa)
@@ -1485,16 +1461,17 @@ func main() {
 
 	//Misc
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
 
-	// Device management
+	//device management
 	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")
 	external_router_authenticated.HandleFunc("/groups", updateGroups).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/devices", getDevices).Methods("GET")
-	external_router_authenticated.HandleFunc("/device/{identity:.*}", handleUpdateDevice).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/device", handleUpdateDevice).Methods("PUT", "DELETE")
 
 	external_router_authenticated.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 
-	//Force reload
+	//force reload
 	external_router_authenticated.HandleFunc("/reloadPSKFiles", reloadPSKFiles).Methods("PUT")
 
 	//hostapd information
@@ -1502,6 +1479,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/hostapd/all_stations", hostapdAllStations).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/config", hostapdConfig).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/config", hostapdUpdateConfig).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/setChannel", hostapdChannelSwitch).Methods("PUT")
 
 	//ip information
 	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")
@@ -1516,6 +1494,10 @@ func main() {
 	//plugins
 	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
 	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins).Methods("PUT", "DELETE")
+
+	// tokens api
+	external_router_authenticated.HandleFunc("/tokens", getAuthTokens).Methods("GET")
+	external_router_authenticated.HandleFunc("/tokens", updateAuthTokens).Methods("PUT", "DELETE")
 
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
@@ -1551,7 +1533,7 @@ func main() {
 	dhcpdServer := http.Server{Handler: logRequest(unix_dhcpd_router)}
 	wireguardServer := http.Server{Handler: logRequest(unix_wireguard_router)}
 
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "SPR-Bearer"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
@@ -1561,6 +1543,19 @@ func main() {
 	WSRunNotify()
 	// collect traffic accounting statistics
 	trafficTimer()
+
+	sslPort, runSSL := os.LookupEnv("API_SSL_PORT")
+
+	if runSSL {
+		listenPort, err := strconv.Atoi(sslPort)
+		if err != nil {
+			listenPort = 443
+		}
+
+		listenAddr := fmt.Sprint("0.0.0.0:", listenPort)
+
+		go http.ListenAndServeTLS(listenAddr, ApiTlsCert, ApiTlsKey, logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public))))
+	}
 
 	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public))))
 

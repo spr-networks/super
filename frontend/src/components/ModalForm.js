@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
-
-import { Button, Modal } from 'reactstrap'
+import PropTypes from 'prop-types'
+import { Box, Button, Modal } from 'native-base'
+import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
+import { faPlus } from '@fortawesome/free-solid-svg-icons'
 
 const ModalForm = (props) => {
   const [show, setShow] = useState(false)
@@ -21,46 +23,43 @@ const ModalForm = (props) => {
     }
   })
 
-  let triggerClass = `btn-round ${props.triggerClass}`
-
   return (
     <>
       {props.triggerText ? (
-        <Button
-          className={triggerClass}
-          color="primary"
-          outline
-          onClick={toggleModal}
-        >
-          {props.triggerIcon ? <i className={props.triggerIcon} /> : null}
-          {props.triggerText || 'Open Modal'}
-        </Button>
+        <Box>
+          <Button
+            size="sm"
+            variant="outline"
+            colorScheme="primary"
+            rounded="full"
+            borderColor="info.400"
+            leftIcon={<Icon icon={props.triggerIcon || faPlus} />}
+            onPress={toggleModal}
+          >
+            {props.triggerText || 'Open Modal'}
+          </Button>
+        </Box>
       ) : null}
+
       {show ? (
-        <Modal
-          fade={false}
-          isOpen={show}
-          toggle={toggleModal}
-          autoFocus={false}
-        >
-          <div className="modal-header">
-            <button
-              aria-label="Close"
-              className="close"
-              data-dismiss="modal"
-              type="button"
-              onClick={toggleModal}
-            >
-              <i className="nc-icon nc-simple-remove" />
-            </button>
-            <h5 className="modal-title">{props.title || 'Title'}</h5>
-          </div>
-          <div className="modal-body">{props.children}</div>
-          <div className="modal-footer"></div>
+        <Modal isOpen={show} onClose={toggleModal} animationPreset="slide">
+          <Modal.Content maxWidth="440px">
+            <Modal.CloseButton />
+            <Modal.Header>{props.title || 'Title'}</Modal.Header>
+            <Modal.Body>{props.children}</Modal.Body>
+            {/*<Modal.Footer />*/}
+          </Modal.Content>
         </Modal>
       ) : null}
     </>
   )
+}
+
+ModalForm.propTypes = {
+  title: PropTypes.string,
+  triggerIcon: PropTypes.object,
+  triggerText: PropTypes.string,
+  modalRef: PropTypes.any
 }
 
 export default ModalForm

@@ -2,7 +2,10 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import QRCode from 'react-qr-code'
 
-import { Button, Col, Row } from 'reactstrap'
+import Icon from 'FontAwesomeUtils'
+import { faClone, faFile } from '@fortawesome/free-solid-svg-icons'
+
+import { Box, Button, HStack, ScrollView, VStack } from 'native-base'
 
 const WireguardConfig = (props) => {
   if (!props.config) {
@@ -54,43 +57,46 @@ const WireguardConfig = (props) => {
   }
 
   return (
-    <>
-      <Row>
-        <Col md={12}>
-          <pre style={{ fontSize: '11px' }}>{config}</pre>
+    <VStack space={4}>
+      <ScrollView
+        fontSize="xs"
+        style={{ whiteSpace: 'pre-wrap' }}
+        borderWidth={1}
+        borderColor="muted.200"
+        h="10vh"
+        p="2"
+      >
+        {config}
+      </ScrollView>
 
-          <Row>
-            <Col md={6}>
-              <Button
-                className="btn-block"
-                color="primary"
-                size="md"
-                onClick={(e) => copy(config)}
-                outline={true}
-              >
-                <i className="fa fa-clone" />
-                Copy
-              </Button>
-            </Col>
-            <Col md={6}>
-              <Button
-                className="btn-block"
-                color="primary"
-                size="md"
-                onClick={(e) => saveFile(config)}
-                outline={true}
-              >
-                <i className="fa fa-file" />
-                Download
-              </Button>
-            </Col>
-          </Row>
-          <div className="text-center">
-            <QRCode value={config} />
-          </div>
-        </Col>
-      </Row>
-    </>
+      <HStack space={2} justifyContent="stretch">
+        <Button
+          flex="1"
+          variant="outline"
+          colorScheme="primary"
+          size="sm"
+          leftIcon={<Icon icon={faClone} />}
+          onPress={() => copy(config)}
+        >
+          Copy
+        </Button>
+
+        <Button
+          flex="1"
+          variant="outline"
+          colorScheme="primary"
+          size="sm"
+          leftIcon={<Icon icon={faFile} />}
+          onPress={() => saveFile(config)}
+        >
+          Download
+        </Button>
+      </HStack>
+
+      <Box alignItems="center">
+        <QRCode value={config} />
+      </Box>
+    </VStack>
   )
 }
 

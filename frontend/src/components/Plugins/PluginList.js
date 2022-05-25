@@ -1,28 +1,28 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Link, useHistory } from 'react-router-dom'
-import Select from 'react-select'
-
-import { pluginAPI } from 'api'
-import { APIErrorContext } from 'layouts/Admin'
-import ModalForm from 'components/ModalForm'
-import Toggle from 'components/Toggle'
-import AddPlugin from 'components/Plugins/AddPlugin'
+import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
+import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import {
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
-  CardSubtitle,
-  Table,
-  Row,
-  Col
-} from 'reactstrap'
+  Box,
+  FlatList,
+  Heading,
+  IconButton,
+  HStack,
+  VStack,
+  Spacer,
+  Switch,
+  Text,
+  useColorModeValue
+} from 'native-base'
+
+import { pluginAPI } from 'api'
+import { AlertContext } from 'layouts/Admin'
+import ModalForm from 'components/ModalForm'
+import AddPlugin from 'components/Plugins/AddPlugin'
 
 const PluginList = (props) => {
   const [list, setList] = useState([])
-  const contextType = useContext(APIErrorContext)
+  const contextType = useContext(AlertContext)
 
   const refreshList = (next) => {
     pluginAPI
@@ -31,7 +31,7 @@ const PluginList = (props) => {
         setList(plugins)
       })
       .catch((err) => {
-        contextType.reportError('failed to fetch plugins')
+        contextType.error('failed to fetch plugins')
       })
   }
 
@@ -61,61 +61,70 @@ const PluginList = (props) => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <ModalForm
-          title="Add a new Plugin"
-          triggerText="add"
-          triggerClass="pull-right"
-          triggerIcon="fa fa-plus"
-          modalRef={refModal}
-        >
-          <AddPlugin notifyChange={notifyChange} />
-        </ModalForm>
-        <CardTitle tag="h4">Plugins</CardTitle>
-      </CardHeader>
-      <CardBody>
-        {list.length ? (
-          <Table responsive>
-            <thead className="text-primary">
-              <tr>
-                <th>Name</th>
-                <th>URI</th>
-                <th>UnixPath</th>
-                <th>Active</th>
-                <th>Delete</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((row, i) => (
-                <tr key={i}>
-                  <td>{row.Name}</td>
-                  <td>{row.URI}</td>
-                  <td>{row.UnixPath}</td>
-                  <td>
-                    <Toggle
-                      isChecked={row.Enabled}
-                      onChange={(e, value) => handleChange(row, value)}
-                    />
-                  </td>
-                  <td>
-                    <Button
-                      className="btn-icon"
-                      color="danger"
-                      size="sm"
-                      type="button"
-                      onClick={(e) => deleteListItem(row)}
-                    >
-                      <i className="fa fa-times" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        ) : null}
-      </CardBody>
-    </Card>
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      rounded="md"
+      width="100%"
+      p="4"
+    >
+      <HStack justifyContent="space-between">
+        <Heading fontSize="xl" pb="3" alignSelf="center">
+          Plugins
+        </Heading>
+
+        <Box alignSelf="center">
+          <ModalForm
+            title="Add a new Plugin"
+            triggerText="Add a plugin"
+            modalRef={refModal}
+          >
+            <AddPlugin notifyChange={notifyChange} />
+          </ModalForm>
+        </Box>
+      </HStack>
+
+      <FlatList
+        data={list}
+        renderItem={({ item }) => (
+          <Box
+            borderBottomWidth="1"
+            _dark={{
+              borderColor: 'muted.600'
+            }}
+            borderColor="muted.200"
+            py="2"
+          >
+            <HStack space={3} justifyContent="space-between">
+              <VStack minW="20%">
+                <Text bold>{item.Name}</Text>
+                <Text>{item.URI}</Text>
+              </VStack>
+
+              <Text alignSelf="center" isTruncated>
+                {item.UnixPath}
+              </Text>
+              <Spacer />
+              <Box w="100" alignItems="center" alignSelf="center">
+                <Switch
+                  defaultIsChecked={item.Enabled}
+                  onValueChange={() => handleChange(item, !item.Enabled)}
+                />
+              </Box>
+
+              <IconButton
+                alignSelf="center"
+                size="sm"
+                variant="ghost"
+                colorScheme="secondary"
+                icon={<Icon icon={faXmark} />}
+                onPress={() => deleteListItem(item)}
+              />
+            </HStack>
+          </Box>
+        )}
+        keyExtractor={(item) => item.Name}
+      />
+    </Box>
   )
 }
 

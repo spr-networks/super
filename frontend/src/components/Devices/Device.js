@@ -1,23 +1,35 @@
 import { Component } from 'react'
-import { APIErrorContext } from 'layouts/Admin'
+import PropTypes from 'prop-types'
+import { AlertContext } from 'layouts/Admin'
 import { deviceAPI } from 'api/Device'
+import ModalConfirm from 'components/ModalConfirm'
+
+import Icon from 'FontAwesomeUtils'
+import { faPen, faXmark } from '@fortawesome/free-solid-svg-icons'
+
 import {
   Badge,
   Button,
-  ButtonGroup,
-  Label,
+  Box,
+  IconButton,
   Input,
-  UncontrolledTooltip
-} from 'reactstrap'
-import CreatableSelect from 'react-select/creatable'
-import TagsInput from 'react-tagsinput'
+  Menu,
+  Stack,
+  HStack,
+  VStack,
+  Switch,
+  Text,
+  useColorModeValue
+} from 'native-base'
 
-export default class Device extends Component {
+class Device extends Component {
   state = {
     editing: false,
     name: '',
     groups: [],
-    tags: []
+    tags: [],
+    showModal: false,
+    modalType: ''
     /*allTags: [
       { label: 'private', value: 'private' },
       { label: 'foo', value: 'foo' },
@@ -42,18 +54,15 @@ export default class Device extends Component {
       return
     }
 
+    groups = groups.filter((v) => typeof v === 'string')
     groups = [...new Set(groups)]
     this.setState({ groups })
 
     deviceAPI
       .updateGroups(this.props.device.MAC || this.props.device.WGPubKey, groups)
       .catch((error) =>
-        this.context.reportError('[API] updateDevice error: ' + error.message)
+        this.context.error('[API] updateDevice error: ' + error.message)
       )
-  }
-
-  handleChangeTags = (tags) => {
-    this.setState({ tags })
   }
 
   handleTags = (tags) => {
@@ -61,29 +70,25 @@ export default class Device extends Component {
       return
     }
 
+    tags = tags.filter((v) => typeof v === 'string')
     tags = [...new Set(tags)]
     this.setState({ tags })
 
     deviceAPI
       .updateTags(this.props.device.MAC || this.props.device.WGPubKey, tags)
       .catch((error) =>
-        this.context.reportError('[API] updateDevice error: ' + error.message)
+        this.context.error('[API] updateDevice error: ' + error.message)
       )
   }
 
-  handleName = (e) => {
-    //const name = e.target.name
-    const name = e.target.value
+  handleName = (name) => {
     this.setState({ name })
     let editing = name != this.props.device.Name
     this.setState({ editing })
   }
 
-  static contextType = APIErrorContext
-
   render() {
     const device = this.props.device
-    const generatedID = Math.random().toString(36).substr(2, 9)
 
     let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
     let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
@@ -95,7 +100,7 @@ export default class Device extends Component {
         .deleteDevice(id)
         .then(this.props.notifyChange)
         .catch((error) =>
-          this.context.reportError('[API] deleteDevice error: ' + error.message)
+          this.context.error('[API] deleteDevice error: ' + error.message)
         )
     }
 
@@ -109,57 +114,212 @@ export default class Device extends Component {
         .updateName(id, this.state.name)
         .then(this.props.notifyChange)
         .catch((error) =>
-          this.context.reportError('[API] updateName error: ' + error.message)
+          this.context.error('[API] updateName error: ' + error.message)
         )
     }
 
-    const handleKeyPress = (e) => {
-      if (e.charCode == 13) {
-        this.setState({ editing: false })
-        saveDevice()
+    const removeGroup = (value) => {
+      let groups = this.state.groups.filter((group) => group != value)
+      return this.handleGroups(groups)
+    }
+
+    const removeTag = (value) => {
+      let tags = this.state.tags.filter((tag) => tag != value)
+      return this.handleTags(tags)
+    }
+
+    const handleChangeGroups = (groups) => {
+      return this.handleGroups(groups)
+    }
+
+    const handleChangeTags = (tags) => {
+      return this.handleTags(tags)
+    }
+
+    const handleSubmit = () => {
+      this.setState({ editing: false })
+      saveDevice()
+    }
+
+    const handleSubmitNew = (value) => {
+      if (this.state.modalType.match(/Group/i)) {
+        this.handleGroups(this.state.groups.concat(value))
+      } else {
+        this.handleTags(this.state.tags.concat(value))
       }
     }
 
-    if (false) {
-      return (
-        <tr>
-          <td>{this.state.name}</td>
-          <td className="text-center">
-            <div>{device.RecentIP}</div>
-            <div className="text-muted">
-              <small>{device.MAC}</small>
-            </div>
-          </td>
-          {/*<td className="d-none d-md-table-cell"> {device.RecentIP} </td>*/}
-          <td>{wifi_type}</td>
-          <td>
-            {this.state.groups.map((group) => (
-              <Badge color="default">{group}</Badge>
-            ))}
-          </td>
-          <td>
-            {this.state.tags.map((tag) => (
-              <Badge color="default">{tag}</Badge>
-            ))}
-          </td>
-          <td className="text-right">
-            <Button className="btn-icon" color="warning" size="sm">
-              <i className="fa fa-edit" />
-            </Button>
-            <Button
-              className="btn-icon"
-              color="danger"
-              id={'tooltip' + (generatedID + 1)}
-              size="sm"
-              onClick={removeDevice}
-            >
-              <i className="fa fa-times" />
-            </Button>
-          </td>
-        </tr>
-      )
-    }
+    const defaultGroups = ['wan', 'dns', 'lan']
 
+    return (
+      <>
+        <Stack
+          direction="row"
+          space={2}
+          py={2}
+          w="100%"
+          key={device.MAC}
+          justifyContent="space-between"
+          alignItems="center"
+          borderBottomWidth={1}
+          borderColor="muted.200"
+          _dark={{
+            borderColor: 'muted.600'
+          }}
+        >
+          <Stack
+            direction={{ base: 'column', md: 'row' }}
+            space={4}
+            justifyContent="space-between"
+            minW="90%"
+          >
+            <VStack flex={1}>
+              <Input
+                size="lg"
+                type="text"
+                variant="underlined"
+                value={this.state.name}
+                onChangeText={(value) => this.handleName(value)}
+                onSubmitEditing={handleSubmit}
+              />
+              {device.oui !== undefined ? (
+                <Text color="muted.500">{device.oui}</Text>
+              ) : null}
+            </VStack>
+
+            <Stack
+              direction={{ base: 'row', md: 'column' }}
+              space={2}
+              alignSelf="center"
+              alignItems="center"
+            >
+              <Text bold>{device.RecentIP}</Text>
+              <Text fontSize="xs" color="muted.500">
+                {device.MAC}
+              </Text>
+            </Stack>
+
+            <Text display={{ base: 'none', md: 'flex' }} alignSelf="center">
+              {wifi_type}
+            </Text>
+
+            <HStack flex={2} space={1} alignSelf="center" alignItems="center">
+              {this.state.groups.map((group) => (
+                <Badge key={group} variant="solid">
+                  {group}
+                </Badge>
+              ))}
+
+              {/*<Button.Group isAttached size="xs" space="0">
+                <Button variant="solid" colorScheme="secondary" pr="0">
+                  {tag}
+                </Button>
+                <IconButton
+                  variant="solid"
+                  colorScheme="secondary"
+                  icon={<Icon icon={faXmark} />}
+                  onPress={() => removeTag(tag)}
+                />
+              </Button.Group>*/}
+
+              {this.state.tags.map((tag) => (
+                <Badge key={tag} variant="outline">
+                  {tag}
+                </Badge>
+              ))}
+
+              <Menu
+                trigger={(triggerProps) => {
+                  return (
+                    <IconButton
+                      size="xs"
+                      variant="ghost"
+                      icon={<Icon icon={faPen} />}
+                      {...triggerProps}
+                    />
+                  )
+                }}
+              >
+                <Menu.OptionGroup
+                  title="Groups"
+                  type="checkbox"
+                  defaultValue={this.state.groups}
+                  onChange={handleChangeGroups}
+                >
+                  {[...new Set(defaultGroups.concat(this.state.groups))].map(
+                    (group) => (
+                      <Menu.ItemOption key={group} value={group}>
+                        {group}
+                      </Menu.ItemOption>
+                    )
+                  )}
+                  <Menu.ItemOption
+                    key="newGroup"
+                    onPress={() => {
+                      this.setState({ showModal: true, modalType: 'Group' })
+                    }}
+                  >
+                    New Group...
+                  </Menu.ItemOption>
+                </Menu.OptionGroup>
+                <Menu.OptionGroup
+                  title="Tags"
+                  type="checkbox"
+                  defaultValue={this.state.tags}
+                  onChange={handleChangeTags}
+                >
+                  {this.state.tags.map((tag) => (
+                    <Menu.ItemOption key={tag} value={tag}>
+                      {tag}
+                    </Menu.ItemOption>
+                  ))}
+                  <Menu.ItemOption
+                    key="newTag"
+                    onPress={() => {
+                      this.setState({ showModal: true, modalType: 'Tag' })
+                    }}
+                  >
+                    New Tag...
+                  </Menu.ItemOption>
+                </Menu.OptionGroup>
+              </Menu>
+            </HStack>
+          </Stack>
+
+          <Box w="50" marginLeft="auto" justifyContent="center">
+            {/*<Button className="btn-icon" color="warning" size="sm">
+            <i className="fa fa-edit" />
+          </Button>*/}
+            <Button.Group size="sm">
+              <IconButton
+                variant="ghost"
+                colorScheme="secondary"
+                icon={<Icon icon={faXmark} />}
+                onPress={removeDevice}
+              />
+            </Button.Group>
+          </Box>
+        </Stack>
+
+        <ModalConfirm
+          type={this.state.modalType}
+          onSubmit={handleSubmitNew}
+          onClose={() => this.setState({ showModal: false })}
+          isOpen={this.state.showModal}
+        />
+      </>
+    )
+
+    /*<CreatableSelect
+            isClearable
+            isMulti
+            onChange={this.handleChangeTags}
+            options={this.state.allTags}
+            placeholder="Groups"
+            defaultValue={this.state.allTags.slice(2, 5)}
+          />*/
+
+    /*
     return (
       <tr>
         <td>
@@ -187,14 +347,7 @@ export default class Device extends Component {
 
         <td> {wifi_type} </td>
         <td>
-          {/*<CreatableSelect
-            isClearable
-            isMulti
-            onChange={this.handleChangeTags}
-            options={this.state.allTags}
-            placeholder="Groups"
-            defaultValue={this.state.allTags.slice(2, 5)}
-          />*/}
+
           <TagsInput
             inputProps={{ placeholder: 'Add group' }}
             value={this.state.groups}
@@ -203,14 +356,7 @@ export default class Device extends Component {
           />
         </td>
         <td>
-          {/*<CreatableSelect
-            isClearable
-            isMulti
-            onChange={this.handleChangeTags}
-            options={this.state.allTags}
-            placeholder="Tags"
-            defaultValue={this.state.allTags[0]}
-          />*/}
+
           <TagsInput
             inputProps={{ placeholder: 'Add tag' }}
             value={this.state.tags}
@@ -234,5 +380,14 @@ export default class Device extends Component {
         </td>
       </tr>
     )
+    */
   }
 }
+
+Device.propTypes = {
+  device: PropTypes.object.isRequired
+}
+
+Device.contextType = AlertContext
+
+export default Device

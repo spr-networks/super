@@ -1,3 +1,5 @@
+import { Text } from 'native-base'
+
 // util functions
 export const prettyDate = (timestamp, locales = null) => {
   return new Date(timestamp).toLocaleString()
@@ -20,18 +22,18 @@ export const prettySize = (sz, round = false) => {
 }
 
 export const prettySignal = (signal) => {
-  let className = 'text-muted'
+  let className = 'muted.500'
   if (signal >= -50) {
-    className = 'text-success font-weight-bold'
+    className = 'success.500 bold'
   } else if (signal >= -60) {
-    className = 'text-success'
+    className = 'success.500'
   } else if (signal >= -70) {
-    className = 'text-warning'
+    className = 'warning.500'
   } else {
-    className = 'text-danger'
+    className = 'danger.500'
   }
 
-  return <span className={className}>{signal}</span>
+  return <Text color={className}>{signal}</Text>
 }
 
 export const ucFirst = (t) => t[0].toUpperCase() + t.substr(1)

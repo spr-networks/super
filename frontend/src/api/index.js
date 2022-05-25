@@ -2,7 +2,7 @@ import API from './API'
 
 export default API
 export { api, testLogin, saveLogin } from './API'
-export { ConnectWebsocket } from './WebSocket'
+export { connectWebsocket } from './WebSocket'
 export { deviceAPI } from './Device'
 export { groupAPI } from './Group'
 export { wifiAPI } from './Wifi'
@@ -13,3 +13,4 @@ export { wireguardAPI } from './Wireguard'
 export { logsAPI } from './Logs'
 export { pluginAPI } from './Plugin'
 export { firewallAPI } from './Firewall'
+export { authAPI } from './Auth'

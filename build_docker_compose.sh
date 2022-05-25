@@ -3,10 +3,10 @@
 export DOCKER_BUILDKIT=1 # or configure in daemon.json
 export COMPOSE_DOCKER_CLI_BUILD=1
 
-# Generate scripts based on the configuration
 if [ '!' -d "configs/" ]; then
-  echo Configs not initialized. See documentation. 
-  echo Copy base/template_configs to ./configs and set up wifi passwords as well as config.sh
+  echo Configs not initialized
+  echo Copy base/template_configs to ./configs and set up base/config/config.sh and base/config/auth_users.json
+  echo See the guide for help: https://www.supernetworks.org/pages/docs/setup_run_spr
   exit 1
 fi
 
@@ -36,8 +36,10 @@ fi
 # create a new buildx builder so we can cross-compile
 docker buildx create --use
 
-docker buildx bake \
-  --set "*.cache-from=type=local,src=/tmp/.buildx-cache" \
-  --set "*.cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max" \
-  --set "*.platform=linux/amd64,linux/arm64" \
-  ${BUILDARGS} $@
+for DC in docker-compose.yml docker-compose-src.yml; do
+  docker buildx bake -f ${DC} \
+    --set "*.cache-from=type=local,src=/tmp/.buildx-cache" \
+    --set "*.cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max" \
+    --set "*.platform=linux/amd64,linux/arm64" \
+    ${BUILDARGS} $@
+done

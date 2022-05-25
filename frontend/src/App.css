@@ -10,6 +10,10 @@ li ul li .sidebar-mini-icon > .fa {
 .sidebar-mini .sidebar-normal { text-align: center }
 */
 
+.card-stats {
+	width: 100%;
+}
+
 .card-stats .icon-big {
 	font-size: 5.0em;
 	margin-top: -20px;

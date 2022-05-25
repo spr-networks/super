@@ -1,237 +1,324 @@
-import React from 'react'
-// javascript plugin used to create scrollbars on windows
-import PerfectScrollbar from 'perfect-scrollbar'
-import { Route, Switch, useLocation } from 'react-router-dom'
-import NotificationAlert from 'react-notification-alert'
-import ReactBSAlert from 'react-bootstrap-sweetalert'
+import React, { createContext, useEffect, useState } from 'react'
+import { Outlet } from 'react-router-dom'
 
+import { AppContext, AlertContext, alertState } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Footer from 'components/Footer/Footer'
 import Sidebar from 'components/Sidebar/Sidebar'
-//import FixedPlugin from "components/FixedPlugin/FixedPlugin.js";
-import { ConnectWebsocket } from 'api'
+import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
+import { ucFirst } from 'utils'
 
-import { Modal } from 'reactstrap'
+import {
+  Alert,
+  Box,
+  Slide,
+  IconButton,
+  CloseIcon,
+  ScrollView,
+  HStack,
+  Stack,
+  VStack,
+  Text,
+  useColorModeValue,
+  useToken,
+  useToast
+} from 'native-base'
 
 import routes from 'routes'
 
-var ps
+const AppAlert = (props) => {
+  const { type, title, body, toggle } = props
 
-const errorState = {
-  reportError: () => {},
-  reportSuccess: () => {}
+  return (
+    <Alert w="100%" variant="left-accent" status={type}>
+      <VStack space={2} flexShrink={1} w="100%">
+        <HStack
+          flexShrink={1}
+          space={2}
+          justifyContent="space-between"
+          alignItems="center"
+        >
+          <HStack space={2} flexShrink={1}>
+            <Alert.Icon mt="1" />
+            <HStack space={2}>
+              <Text fontSize="md" color="coolGray.800" bold>
+                {title}
+              </Text>
+              <Text fontSize="md" color="coolGray.800">
+                {body}
+              </Text>
+            </HStack>
+          </HStack>
+          <IconButton
+            variant="unstyled"
+            _focus={{
+              borderWidth: 0
+            }}
+            icon={<CloseIcon size="3" color="coolGray.600" />}
+            onPress={toggle}
+          />
+        </HStack>
+      </VStack>
+    </Alert>
+  )
 }
 
-const modalState = {
-  modal: () => {}
+function desktopNotification(msg) {
+  if (!('Notification' in window)) {
+    return
+  }
+
+  if (Notification.permission === 'denied') {
+    return
+  }
+
+  if (Notification.permission === 'granted') {
+    var notification = new Notification(msg)
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then(function (permission) {
+      if (permission === 'granted') {
+        var notification = new Notification(msg)
+      }
+    })
+  }
+
+  return
 }
 
-export const APIErrorContext = React.createContext(errorState)
-export const ModalContext = React.createContext(modalState)
-
-function Admin(props) {
-  const location = useLocation()
-  const [backgroundColor, setBackgroundColor] = React.useState('black')
-  const [activeColor, setActiveColor] = React.useState('info')
-  const [sidebarMini, setSidebarMini] = React.useState(false)
+const AdminLayout = (props) => {
   const mainPanel = React.useRef()
-  const notificationAlert = React.useRef()
 
-  const [showModal, setShowModal] = React.useState(false)
-  const [modalTitle, setModalTitle] = React.useState('')
-  const [modalBody, setModalBody] = React.useState('')
+  const [showAlert, setShowAlert] = useState(false)
+  const [alert, setAlert] = useState({})
+  const toggleAlert = () => setShowAlert(!showAlert)
 
-  const [websock, setwebsock] = React.useState(null)
-
-  const toggleModal = () => setShowModal(!showModal)
-
-  errorState.reportError = (message) => {
-    var options = {}
-    options = {
-      place: 'tc',
-      message: (
-        <div>
-          <div>{message}</div>
-        </div>
-      ),
-      type: 'danger',
-      icon: 'now-ui-icons ui-1_bell-53',
-      autoDismiss: 7
+  alertState.alert = (type = 'info', title, body = null) => {
+    if (typeof title !== 'string') {
+      title = JSON.stringify(title)
     }
 
-    notificationAlert.current.notificationAlert(options)
-  }
-
-  errorState.reportSuccess = (message) => {
-    var options = {}
-    options = {
-      place: 'tc',
-      message: (
-        <div>
-          <div>{message}</div>
-        </div>
-      ),
-      type: 'success',
-      icon: 'now-ui-icons ui-1_bell-53',
-      autoDismiss: 7
-    }
-
-    notificationAlert.current.notificationAlert(options)
-  }
-
-  modalState.modal = (title, body) => {
     if (!body) {
       body = title
-      title = 'Message'
+      title = ucFirst(type)
     }
-    setModalTitle(title)
-    setModalBody(body)
-    setShowModal(true)
+
+    if (['error', 'success'].includes(type)) {
+      desktopNotification(`${title}, ${body}`)
+    }
+
+    setAlert({ type, title, body })
+    setShowAlert(true)
+    setTimeout((_) => setShowAlert(false), 5e3)
   }
-  // TODO -- merge
-  modalState.reportError = modalState.modal
-  modalState.success = modalState.modal
 
-  React.useEffect(() => {
-    if (navigator.platform.indexOf('Win') > -1) {
-      document.documentElement.className += ' perfect-scrollbar-on'
-      document.documentElement.classList.remove('perfect-scrollbar-off')
-      ps = new PerfectScrollbar(mainPanel.current)
-    }
-    return function cleanup() {
-      if (navigator.platform.indexOf('Win') > -1) {
-        ps.destroy()
-        document.documentElement.className += ' perfect-scrollbar-off'
-        document.documentElement.classList.remove('perfect-scrollbar-on')
-      }
-    }
-  })
+  alertState.success = (title, body) => alertState.alert('success', title, body)
+  alertState.info = (title, body) => alertState.alert('info', title, body)
+  alertState.warning = (title, body) => alertState.alert('warning', title, body)
+  alertState.danger = (title, body) => alertState.alert('danger', title, body)
+  alertState.error = (title, body) => alertState.alert('error', title, body)
 
-  React.useEffect(() => {
+  /*
+  location = useLocation()
+  useEffect(() => {
     document.documentElement.scrollTop = 0
     document.scrollingElement.scrollTop = 0
     mainPanel.current.scrollTop = 0
-  }, [location])
+  }, [location])*/
 
-  React.useEffect(() => {
-    ConnectWebsocket((event) => {
+  const toast = useToast()
+
+  useEffect(() => {
+    connectWebsocket((event) => {
       if (event.data == 'success') {
         return
       } else if (event.data == 'Authentication failure') {
-        errorState.reportError('Websocket failed to authenticate')
-        return
+        return alertState.error('Websocket failed to authenticate')
       }
 
-      let data = JSON.parse(event.data)
-      let innerData = {}
-      if (data.Data) {
-        innerData = JSON.parse(data.Data)
-      }
-      // Notify WiFi Authentication state
-      if (data['Type'] == 'PSKAuthSuccess') {
-        errorState.reportSuccess(
-          'Authentication success for MAC ' + innerData['MAC']
-        )
-      } else if (data['Type'] == 'PSKAuthFailure') {
-        let reasonString = ''
-        if (innerData.Reason == 'noentry') {
-          let wpa_type = { sae: 'WPA3', wpa: 'WPA2' }[innerData['Type']]
-          reasonString = 'Unknown device with ' + wpa_type
-        } else if (innerData.Reason == 'mismatch') {
-          reasonString = 'Wrong password with ' + wpa_type
-        }
-        errorState.reportError(
-          'Authentication failure for MAC ' +
-            innerData['MAC'] +
-            ': ' +
-            reasonString
-        )
+      const res = parseLogMessage(JSON.parse(event.data))
+      if (res) {
+        let { type, message } = res
+        alertState[type](message)
       }
     })
   }, [])
 
-  const getRoutes = (routes) => {
-    return routes.map((prop, key) => {
-      if (prop.collapse) {
-        return getRoutes(prop.views)
-      }
-      if (prop.layout === '/admin') {
-        return (
-          <Route
-            path={prop.layout + prop.path}
-            component={prop.component}
-            key={key}
-          />
-        )
-      } else {
-        return null
-      }
-    })
-  }
-
-  const handleActiveClick = (color) => {
-    setActiveColor(color)
-  }
-
-  const handleBgClick = (color) => {
-    setBackgroundColor(color)
-  }
-
-  const handleMiniClick = () => {
-    if (document.body.classList.contains('sidebar-mini')) {
-      setSidebarMini(false)
-    } else {
-      setSidebarMini(true)
-    }
-    document.body.classList.toggle('sidebar-mini')
-  }
+  const [activeSidebarItem, setActiveSidebarItem] = useState('')
+  const [isOpenSidebar, setIsOpenSidebar] = useState(false)
+  const [isNavbarOpen, setIsNavbarOpen] = useState(false)
+  const [isWifiDisabled, setIsWifiDisabled] = useState(false)
 
   return (
-    <div className="wrapper">
-      <Sidebar
-        {...props}
-        routes={routes}
-        bgColor={backgroundColor}
-        activeColor={activeColor}
-      />
-      <div className="main-panel" ref={mainPanel}>
-        <AdminNavbar {...props} handleMiniClick={handleMiniClick} />
-        <APIErrorContext.Provider value={errorState}>
-          <NotificationAlert ref={notificationAlert} />
-        </APIErrorContext.Provider>
-        <ModalContext.Provider value={modalState}>
-          <Modal
-            fade={false}
-            isOpen={showModal}
-            toggle={toggleModal}
-            autoFocus={false}
-          >
-            <div className="modal-header">
-              <button
-                aria-label="Close"
-                className="close"
-                data-dismiss="modal"
-                type="button"
-                onClick={toggleModal}
+    <AppContext.Provider
+      value={{
+        activeSidebarItem,
+        setActiveSidebarItem,
+        setIsNavbarOpen,
+        isNavbarOpen,
+        isWifiDisabled,
+        setIsWifiDisabled
+      }}
+    >
+      <Box
+        w="100%"
+        h={{ base: '100%', md: '100vh' }} // md: '100vh'
+        bg={useColorModeValue(
+          'backgroundContentLight',
+          'backgroundContentDark'
+        )}
+        alignItems="center"
+        nativeID={useColorModeValue('coolGray.100', 'blueGray.900')}
+      >
+        <ScrollView w="100%" nativeID="scrollview-id">
+          <Box h="100%" w="100%">
+            <Box
+              display={{ base: 'none', md: 'flex' }}
+              w="100%"
+              position="sticky"
+              top="0"
+              zIndex={99}
+              // @ts-ignore
+              style={{ backdropFilter: 'blur(10px)' }}
+            >
+              <AdminNavbar
+                isMobile={false}
+                isOpenSidebar={isOpenSidebar}
+                setIsOpenSidebar={setIsOpenSidebar}
+              />
+            </Box>
+            <Box
+              display={{ base: 'flex', md: 'none' }}
+              w="100%"
+              position="sticky"
+              top="0"
+              zIndex={99}
+              // @ts-ignore
+              style={{ backdropFilter: 'blur(10px)' }}
+            >
+              <AdminNavbar
+                isMobile={true}
+                isOpenSidebar={isOpenSidebar}
+                setIsOpenSidebar={setIsOpenSidebar}
+              />
+            </Box>
+
+            <HStack>
+              <Box
+                position="sticky"
+                top="16"
+                h="calc(100vh - 64px)"
+                display={{ base: 'none', md: 'flex' }}
               >
-                <i className="nc-icon nc-simple-remove" />
-              </button>
-              <h5 className="modal-title">{modalTitle}</h5>
-            </div>
-            <div className="modal-body">{modalBody}</div>
-            <div className="modal-footer"></div>
-          </Modal>
-        </ModalContext.Provider>
-        <Switch>{getRoutes(routes)}</Switch>
-        {
-          // we don't want the Footer to be rendered on full screen maps page
-          props.location.pathname.indexOf('full-screen-map') !== -1 ? null : (
-            <Footer fluid />
-          )
-        }
-      </div>
-    </div>
+                <Sidebar
+                  isMobile={false}
+                  isMini={isOpenSidebar}
+                  isOpenSidebar={true}
+                  setIsOpenSidebar={setIsOpenSidebar}
+                  routes={routes}
+                />
+              </Box>
+              {isOpenSidebar ? (
+                <Box
+                  position="fixed"
+                  top="16"
+                  h="calc(100vh - 64px)"
+                  w="100%"
+                  zIndex={99}
+                  display={{ base: 'flex', md: 'none' }}
+                >
+                  <Sidebar
+                    isMobile={true}
+                    isMini={false}
+                    isOpenSidebar={isOpenSidebar}
+                    setIsOpenSidebar={setIsOpenSidebar}
+                    routes={routes}
+                  />
+                </Box>
+              ) : null}
+
+              {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
+              {/*h="calc(100% - 64px)"
+               minH="calc(100vh - 64px)"*/}
+              <Box
+                flex="1"
+                p="4"
+                safeAreaTop
+                ref={mainPanel}
+                minH="calc(100vh - 64px)"
+              >
+                <Outlet />
+
+                <Footer marginTop="auto" />
+              </Box>
+            </HStack>
+          </Box>
+        </ScrollView>
+      </Box>
+      <AlertContext.Provider value={alertState}>
+        <Slide in={showAlert} placement="top">
+          <Box
+            maxWidth="90%"
+            top="16"
+            position="sticky"
+            alignItems="center"
+            justifyContent="center"
+            alignSelf="center"
+          >
+            <AppAlert
+              title={alert.title}
+              body={alert.body}
+              type={alert.type}
+              toggle={toggleAlert}
+            />
+          </Box>
+        </Slide>
+
+        {/*toast.show({render: ({ id }) => { return (<h2>custom toast!</h2>) })*/}
+
+        {/*
+                  <Slide in={showAlert} placement="top">
+                    <Box
+                      w="100%"
+                      position="absolute"
+                      p="4"
+                      borderRadius="xs"
+                      bg={alertType + '.200'}
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <HStack space={2}>
+                        <Icon
+                          icon={
+                            alertType == 'error'
+                              ? faCircleXmark
+                              : alertType == 'success'
+                              ? faCheckCircle
+                              : faCircleExclamation
+                          }
+                          size="sm"
+                          color={alertType + '.600'}
+                          _dark={{
+                            color: alertType + '.700'
+                          }}
+                        />
+                        <Text
+                          color={alertType + '.600'}
+                          textAlign="center"
+                          _dark={{
+                            color: alertType + '.700'
+                          }}
+                          fontWeight="medium"
+                        >
+                          <Text bold>{alertTitle}</Text> {alertBody}
+                        </Text>
+                      </HStack>
+                    </Box>
+                  </Slide>
+                  */}
+      </AlertContext.Provider>
+    </AppContext.Provider>
   )
 }
 
-export default Admin
+export default AdminLayout
+export { AlertContext }

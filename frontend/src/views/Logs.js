@@ -1,32 +1,25 @@
-import React, { useContext, Component } from 'react'
+import { useContext, useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
+import { View } from 'native-base'
 
-import { APIErrorContext } from 'layouts/Admin'
 import LogList from 'components/Logs/LogList'
 
-import { Row, Col } from 'reactstrap'
+const Logs = (props) => {
+  const [containers, setContainers] = useState([])
+  const params = useParams()
 
-export default class Logs extends Component {
-  state = { containers: [] }
-  static contextType = APIErrorContext
-
-  constructor(props) {
-    super(props)
-
-    let { containers } = props.match.params
+  useEffect(() => {
+    let { containers } = params
     if (containers && containers != ':containers') {
-      this.state.containers = containers.split(',')
+      setContainers(containers.split(','))
     }
-  }
+  }, [])
 
-  render() {
-    return (
-      <div className="content">
-        <Row>
-          <Col md="12">
-            <LogList containers={this.state.containers} />
-          </Col>
-        </Row>
-      </div>
-    )
-  }
+  return (
+    <View>
+      <LogList containers={containers} />
+    </View>
+  )
 }
+
+export default Logs

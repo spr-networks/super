@@ -1,21 +1,24 @@
 import { useRef } from 'react'
 import PropTypes from 'prop-types'
+import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
+import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import { firewallAPI } from 'api'
 import ModalForm from 'components/ModalForm'
 import AddBlock from './AddBlock'
 
 import {
-  Button,
-  Label,
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
-  Table,
-  Row,
-  Col
-} from 'reactstrap'
+  Badge,
+  Box,
+  FlatList,
+  Heading,
+  IconButton,
+  Stack,
+  HStack,
+  VStack,
+  Text,
+  useColorModeValue
+} from 'native-base'
 
 const BlockList = (props) => {
   let list = props.list || []
@@ -37,61 +40,66 @@ const BlockList = (props) => {
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <ModalForm
-            title={`Add IP Block`}
-            triggerText="add"
-            triggerClass="pull-right"
-            triggerIcon="fa fa-plus"
-            modalRef={refModal}
-          >
-            <AddBlock notifyChange={notifyChange} />
-          </ModalForm>
+    <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      rounded="md"
+      width="100%"
+      p="4"
+      mb="4"
+    >
+      <HStack justifyContent="space-between" alignContent="center">
+        <VStack>
+          <Heading fontSize="xl">{title}</Heading>
+        </VStack>
+        <ModalForm
+          title={`Add IP Block`}
+          triggerText="Add IP Block"
+          triggerIcon={faPlus}
+          modalRef={refModal}
+        >
+          <AddBlock notifyChange={notifyChange} />
+        </ModalForm>
+      </HStack>
 
-          <CardTitle tag="h4">{title}</CardTitle>
-        </CardHeader>
-        <CardBody>
-          {list.length ? (
-            <Table>
-              <thead className="text-primary">
-                <tr>
-                  <th>Protocol</th>
-                  <th>Source</th>
-                  <th>Destination</th>
-                  <th width="5%" className="text-center">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.map((row) => (
-                  <tr>
-                    <td>{row.Protocol}</td>
-                    <td>{row.SrcIP}</td>
-                    <td>{row.DstIP}</td>
-                    <td className="text-center">
-                      <Button
-                        className="btn-icon"
-                        color="danger"
-                        size="sm"
-                        type="button"
-                        onClick={(e) => deleteListItem(row)}
-                      >
-                        <i className="fa fa-times" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          ) : (
-            <p>There are no block rules configured yet</p>
-          )}
-        </CardBody>
-      </Card>
-    </>
+      <FlatList
+        data={list}
+        renderItem={({ item }) => (
+          <Box
+            borderBottomWidth="1"
+            _dark={{
+              borderColor: 'muted.600'
+            }}
+            borderColor="muted.200"
+            py="2"
+          >
+            <HStack
+              space={3}
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              <Badge variant="outline">{item.Protocol}</Badge>
+
+              <Text>{item.SrcIP}</Text>
+              <Text>{item.DstIP}</Text>
+
+              <IconButton
+                alignSelf="center"
+                size="sm"
+                variant="ghost"
+                colorScheme="secondary"
+                icon={<Icon icon={faXmark} />}
+                onPress={() => deleteListItem(item)}
+              />
+            </HStack>
+          </Box>
+        )}
+        keyExtractor={(item) => `${item.Protocol}${item.SrcIP}${item.DstIP}`}
+      />
+
+      {!list.length ? (
+        <Text>There are no block rules configured yet</Text>
+      ) : null}
+    </Box>
   )
 }
 

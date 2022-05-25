@@ -60,7 +60,7 @@ jobs:
       -
         name: Push images
         env: 
-          CONTAINERS: api base dhcp dhcp_client dns multicast_udp_proxy ppp wifid wireguard plugin-lookup
+          CONTAINERS: api base dhcp dhcp_client dns multicast_udp_proxy ppp wifid wireguard plugin-lookup dyndns
         run: |
           for C in $CONTAINERS; do
             docker tag super_${C} ghcr.io/spr-networks/super_${C}:latest
