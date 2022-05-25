@@ -106,6 +106,8 @@ const LogList = (props) => {
       return match ? row : null
     })
 
+    setTotal(listFiltered.length)
+
     let perPage = 20,
       offset = (page - 1) * perPage
 
@@ -162,9 +164,12 @@ const LogList = (props) => {
         <VStack space={1}>
           <Heading fontSize="lg">Logs</Heading>
           {list.length ? (
-            <Text color="muted.500" fontSize="xs">{`Logs from ${prettyDate(
+            <Text color="muted.500" fontSize="xs">
+              {`${(page - 1) * 20} - ${Math.min(page * 20, total)}  / ${total}`}
+              {/*`Logs from ${prettyDate(
               list[list.length - 1].__REALTIME_TIMESTAMP / 1e3
-            )} to ${prettyDate(list[0].__REALTIME_TIMESTAMP / 1e3)}`}</Text>
+            )} to ${prettyDate(list[0].__REALTIME_TIMESTAMP / 1e3)}`*/}
+            </Text>
           ) : (
             <Spinner accessibilityLabel="Loading logs" />
           )}
