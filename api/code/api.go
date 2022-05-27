@@ -1494,7 +1494,7 @@ func main() {
 
 	//plugins
 	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
-	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated)).Methods("PUT", "DELETE")
 
 	// tokens api
 	external_router_authenticated.HandleFunc("/tokens", getAuthTokens).Methods("GET")

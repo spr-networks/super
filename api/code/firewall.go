@@ -273,7 +273,7 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	re := regexp.MustCompile("^[0-9\\-]*$")
+	re := regexp.MustCompile("^([0-9].*-[0-9].*|[0-9]*)$")
 
 	if fwd.SrcPort != "any" && !re.MatchString(fwd.SrcPort) {
 		http.Error(w, "Invalid SrcPort", 400)
@@ -330,7 +330,7 @@ func blockIP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if br.Protocol != "tcp" && br.Protocol != "udp" {
-		http.Error(w, err.Error(), 400)
+		http.Error(w, "Invalid protocol", 400)
 		return
 	}
 
