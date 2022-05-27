@@ -104,12 +104,13 @@ const Flow = (props) => {
   return (
     <SectionList
       px={2}
-      py={2}
       w={360}
       sections={sections}
       keyExtractor={(item, index) => index}
       renderSectionHeader={({ section: { title } }) => (
-        <Text bold>{title}</Text>
+        <Text mt={4} bold>
+          {title}
+        </Text>
       )}
       renderItem={({ item, section: { title, type } }) => (
         <Box py={4}>
@@ -214,8 +215,8 @@ const FlowList = (props) => {
             <Box
               w={320}
               mx="auto"
-              mt={-65}
-              mb={65}
+              mt={-50}
+              mb={50}
               style={{ positon: 'relative', zIndex: -1 }}
               alignItems="center"
             >
