@@ -31,7 +31,7 @@ import {
 } from 'native-base'
 import { isMetaProperty, isTemplateSpan } from 'typescript'
 
-const FlowCard = ({ icon, title, description, size, edit }) => {
+const FlowCard = ({ icon, title, description, size, edit, ...props }) => {
   size = size || 'md'
 
   const trigger = (triggerProps) => (
@@ -64,6 +64,7 @@ const FlowCard = ({ icon, title, description, size, edit }) => {
       rounded="md"
       minW={340}
       maxWidth="100%"
+      {...props}
     >
       <HStack justifyContent="stretch" alignItems="center" space={4}>
         <Box
@@ -225,5 +226,40 @@ const ActionCardBlock = ({ item, edit, ...props }) => (
   />
 )
 
-export { FlowCard, Token, TriggerCardDate, ActionCardBlock }
+const Cards = {
+  trigger: [
+    {
+      title: 'Date',
+      color: 'violet.300',
+      icon: faClock,
+      props: {
+        days: PropTypes.array,
+        from: PropTypes.string,
+        to: PropTypes.string
+      }
+    }
+  ],
+  action: [
+    {
+      title: 'Block TCP',
+      color: 'red.400',
+      icon: faBan,
+      props: {
+        SrcIP: PropTypes.string,
+        DstIP: PropTypes.string
+      }
+    },
+    {
+      title: 'Block UDP',
+      color: 'warning.400',
+      icon: faBan,
+      props: {
+        SrcIP: PropTypes.string,
+        DstIP: PropTypes.string
+      }
+    }
+  ]
+}
+
+export { FlowCard, Token, TriggerCardDate, ActionCardBlock, Cards }
 export default FlowCard
