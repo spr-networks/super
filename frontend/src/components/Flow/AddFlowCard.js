@@ -25,7 +25,7 @@ import { Pressable } from 'react-native'
 // TODO we should just list available flow cards for cardType here
 
 //type = trigger or action
-const AddFlowCard = ({ cardType, ...props }) => {
+const AddFlowCard = ({ cardType, onSubmit, ...props }) => {
   const [type, setType] = useState('')
   const [errors, setErrors] = useState({})
 
@@ -33,19 +33,17 @@ const AddFlowCard = ({ cardType, ...props }) => {
     //TODO validate
   }, [type])
 
-  const handleSubmit = () => {
-    //validate
+  const handleSelect = (item) => {
+    onSubmit(item)
   }
 
-  const handleSelect = (item) => {
-    console.log('TODO add:', item.title)
-  }
+  const data = Cards[cardType]
 
   return (
     <VStack space={2}>
       <Text bold>Cards</Text>
       <FlatList
-        data={Cards[cardType]}
+        data={data}
         keyExtractor={(item) => item.title}
         px={2}
         renderItem={({ item }) => (
@@ -78,7 +76,8 @@ const AddFlowCard = ({ cardType, ...props }) => {
 }
 
 AddFlowCard.propTypes = {
-  cardType: PropTypes.string.isRequired
+  cardType: PropTypes.string.isRequired,
+  onSubmit: PropTypes.func.isRequired
 }
 
 export default AddFlowCard

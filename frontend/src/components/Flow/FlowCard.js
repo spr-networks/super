@@ -6,6 +6,7 @@ import {
   faArrowRight,
   faArrowRightLong,
   faBan,
+  faBroadcastTower,
   faCircleInfo,
   faCirclePlus,
   faClock,
@@ -43,13 +44,12 @@ const FlowCard = ({ icon, title, description, size, edit, ...props }) => {
     ></IconButton>
   )
 
+  const onDelete = props.onDelete || function () {}
+
   const moreMenu = (
     <Menu w="190" closeOnSelect={true} trigger={trigger}>
-      <Menu.Item>Edit</Menu.Item>
-      <Menu.Item
-        _text={{ color: 'danger.600' }}
-        onPress={() => console.log('delete card')}
-      >
+      {/*<Menu.Item>Edit</Menu.Item>*/}
+      <Menu.Item _text={{ color: 'danger.600' }} onPress={onDelete}>
         Delete
       </Menu.Item>
     </Menu>
@@ -152,25 +152,25 @@ const Token = ({ value: defaultValue, label, onChange, ...props }) => {
 const TriggerCardDate = ({ item, edit, ...props }) => {
   return (
     <FlowCard
-      title="Date"
+      title={item.title}
       description={
         edit ? (
           <HStack space={1} justifyContent="space-around" alignItems="center">
             <Token
-              value={item.days.join(',')}
+              value={item.props.days.join(',')}
               onChange={(value) => {
                 item.days = value.split(',')
               }}
             />
             <Token
-              value={item.from}
+              value={item.props.from}
               onChange={(value) => {
                 item.from = value
               }}
             />
             <Text>-</Text>
             <Token
-              value={item.to}
+              value={item.props.to}
               onChange={(value) => {
                 item.to = value
               }}
@@ -179,9 +179,9 @@ const TriggerCardDate = ({ item, edit, ...props }) => {
         ) : (
           <HStack space={1}>
             <Text>Weekdays</Text>
-            <Text>{item.from}</Text>
+            <Text>{item.props.from}</Text>
             <Text>-</Text>
-            <Text>{item.to}</Text>
+            <Text>{item.props.to}</Text>
           </HStack>
         )
       }
@@ -237,6 +237,14 @@ const Cards = {
         from: PropTypes.string,
         to: PropTypes.string
       }
+    },
+    {
+      title: 'Incoming GET',
+      color: 'red.400',
+      icon: faBroadcastTower,
+      props: {
+        variable: PropTypes.string
+      }
     }
   ],
   action: [
@@ -245,6 +253,7 @@ const Cards = {
       color: 'red.400',
       icon: faBan,
       props: {
+        Protocol: 'TCP',
         SrcIP: PropTypes.string,
         DstIP: PropTypes.string
       }
@@ -254,6 +263,7 @@ const Cards = {
       color: 'warning.400',
       icon: faBan,
       props: {
+        Protocol: 'UDP',
         SrcIP: PropTypes.string,
         DstIP: PropTypes.string
       }
