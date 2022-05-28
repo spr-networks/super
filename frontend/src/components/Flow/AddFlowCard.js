@@ -52,7 +52,7 @@ const AddFlowCard = ({ cardType, onSubmit, ...props }) => {
               title={item.title}
               description={
                 <HStack space={1}>
-                  {Object.keys(item.props).map((value) => (
+                  {/*Object.keys(item.props).map((value) => (
                     <Badge
                       key={value}
                       variant="outline"
@@ -61,6 +61,17 @@ const AddFlowCard = ({ cardType, onSubmit, ...props }) => {
                       size="sm"
                     >
                       {value}
+                    </Badge>
+                  ))*/}
+                  {item.props.map((p) => (
+                    <Badge
+                      key={p.name}
+                      variant="outline"
+                      colorScheme="primary"
+                      rounded="md"
+                      size="sm"
+                    >
+                      {p.value || p.name}
                     </Badge>
                   ))}
                 </HStack>

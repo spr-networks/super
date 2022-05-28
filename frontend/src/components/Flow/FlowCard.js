@@ -232,19 +232,18 @@ const Cards = {
       title: 'Date',
       color: 'violet.300',
       icon: faClock,
-      props: {
-        days: PropTypes.array,
-        from: PropTypes.string,
-        to: PropTypes.string
-      }
+      props: [
+        { name: 'days', type: PropTypes.array },
+        { name: 'from', type: PropTypes.string },
+        { name: 'to', type: PropTypes.string }
+      ]
     },
     {
       title: 'Incoming GET',
+      description: 'Trigger this card by sending a GET request',
       color: 'red.400',
       icon: faBroadcastTower,
-      props: {
-        variable: PropTypes.string
-      }
+      props: [{ name: 'event', type: PropTypes.string }]
     }
   ],
   action: [
@@ -252,21 +251,21 @@ const Cards = {
       title: 'Block TCP',
       color: 'red.400',
       icon: faBan,
-      props: {
-        Protocol: 'TCP',
-        SrcIP: PropTypes.string,
-        DstIP: PropTypes.string
-      }
+      props: [
+        { name: 'Protocol', value: 'TCP', type: PropTypes.string },
+        { name: 'SrcIP', type: PropTypes.string },
+        { name: 'DstIP', type: PropTypes.string }
+      ]
     },
     {
       title: 'Block UDP',
       color: 'warning.400',
       icon: faBan,
-      props: {
-        Protocol: 'UDP',
-        SrcIP: PropTypes.string,
-        DstIP: PropTypes.string
-      }
+      props: [
+        { name: 'Protocol', value: 'UDP', type: PropTypes.string },
+        { name: 'SrcIP', type: PropTypes.string },
+        { name: 'DstIP', type: PropTypes.string }
+      ]
     }
   ]
 }

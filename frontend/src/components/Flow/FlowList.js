@@ -141,13 +141,8 @@ const Flow = (props) => {
               title={item.title}
               description={
                 <HStack space={2}>
-                  {Object.keys(item.props).map((k) => (
-                    <Token
-                      value={k}
-                      onChange={(value) => {
-                        item.props[k] = value
-                      }}
-                    />
+                  {item.props.map((p) => (
+                    <Token key={p.name} value={p.name} />
                   ))}
                 </HStack>
               }
