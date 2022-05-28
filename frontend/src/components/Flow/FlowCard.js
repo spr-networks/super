@@ -28,11 +28,12 @@ import {
   Menu,
   Popover,
   Text,
+  Tooltip,
   useColorModeValue
 } from 'native-base'
 import { isMetaProperty, isTemplateSpan } from 'typescript'
 
-const FlowCard = ({ icon, title, description, size, edit, ...props }) => {
+const FlowCard = ({ icon, title, body, description, size, edit, ...props }) => {
   size = size || 'md'
 
   const trigger = (triggerProps) => (
@@ -81,9 +82,22 @@ const FlowCard = ({ icon, title, description, size, edit, ...props }) => {
             <Text color="muted.400" fontSize="sm">
               {title}
             </Text>
-            {/*<Icon icon={faCircleInfo} size="xs" color="muted.200" />*/}
+            {description ? (
+              <Tooltip
+                label={description}
+                bg="muted.800"
+                _text={{ color: 'muted.200' }}
+              >
+                <IconButton
+                  variant="unstyled"
+                  icon={
+                    <Icon icon={faCircleInfo} size="xs" color="muted.200" />
+                  }
+                />
+              </Tooltip>
+            ) : null}
           </HStack>
-          <Text>{description}</Text>
+          <Text>{body}</Text>
         </VStack>
         {edit ? moreMenu : null}
       </HStack>
@@ -93,11 +107,12 @@ const FlowCard = ({ icon, title, description, size, edit, ...props }) => {
 
 FlowCard.propTypes = {
   title: PropTypes.string.isRequired,
-  description: PropTypes.oneOfType([
+  body: PropTypes.oneOfType([
     PropTypes.string.isRequired,
     PropTypes.element.isRequired
   ]),
   icon: PropTypes.element.isRequired,
+  description: PropTypes.string,
   size: PropTypes.string,
   edit: PropTypes.bool
 }
@@ -153,7 +168,7 @@ const TriggerCardDate = ({ item, edit, ...props }) => {
   return (
     <FlowCard
       title={item.title}
-      description={
+      body={
         edit ? (
           <HStack space={1} justifyContent="space-around" alignItems="center">
             <Token
@@ -200,7 +215,7 @@ const TriggerCardDate = ({ item, edit, ...props }) => {
 const ActionCardBlock = ({ item, edit, ...props }) => (
   <FlowCard
     title={`Block ${item.Protocol.toUpperCase()}`}
-    description={
+    body={
       edit ? (
         <HStack space={1}>
           <Token label="Source" value={item.SrcIP} />
@@ -230,6 +245,7 @@ const Cards = {
   trigger: [
     {
       title: 'Date',
+      description: 'Trigger on selected date and time',
       color: 'violet.300',
       icon: faClock,
       props: [
@@ -249,20 +265,32 @@ const Cards = {
   action: [
     {
       title: 'Block TCP',
+      description: 'Block TCP for specified source and destination',
       color: 'red.400',
       icon: faBan,
       props: [
-        { name: 'Protocol', value: 'TCP', type: PropTypes.string },
+        {
+          name: 'Protocol',
+          value: 'TCP',
+          hidden: true,
+          type: PropTypes.string
+        },
         { name: 'SrcIP', type: PropTypes.string },
         { name: 'DstIP', type: PropTypes.string }
       ]
     },
     {
       title: 'Block UDP',
+      description: 'Block UDP for specified source and destination',
       color: 'warning.400',
       icon: faBan,
       props: [
-        { name: 'Protocol', value: 'UDP', type: PropTypes.string },
+        {
+          name: 'Protocol',
+          value: 'UDP',
+          hidden: true,
+          type: PropTypes.string
+        },
         { name: 'SrcIP', type: PropTypes.string },
         { name: 'DstIP', type: PropTypes.string }
       ]

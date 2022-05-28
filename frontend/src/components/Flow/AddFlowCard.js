@@ -50,19 +50,8 @@ const AddFlowCard = ({ cardType, onSubmit, ...props }) => {
           <Pressable onPress={() => handleSelect(item)}>
             <FlowCard
               title={item.title}
-              description={
+              body={
                 <HStack space={1}>
-                  {/*Object.keys(item.props).map((value) => (
-                    <Badge
-                      key={value}
-                      variant="outline"
-                      colorScheme="primary"
-                      rounded="md"
-                      size="sm"
-                    >
-                      {value}
-                    </Badge>
-                  ))*/}
                   {item.props.map((p) => (
                     <Badge
                       key={p.name}
@@ -76,6 +65,7 @@ const AddFlowCard = ({ cardType, onSubmit, ...props }) => {
                   ))}
                 </HStack>
               }
+              description={item.description}
               icon={<Icon icon={item.icon} color={item.color} size="8x" />}
               my={2}
             />

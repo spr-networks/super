@@ -139,13 +139,16 @@ const Flow = (props) => {
             <FlowCard
               edit={true}
               title={item.title}
-              description={
+              body={
                 <HStack space={2}>
-                  {item.props.map((p) => (
-                    <Token key={p.name} value={p.name} />
-                  ))}
+                  {item.props
+                    .filter((p) => !p.hidden)
+                    .map((p) => (
+                      <Token key={p.name} value={p.name} />
+                    ))}
                 </HStack>
               }
+              description={item.description}
               onDelete={() => handleDelete(item)}
               icon={<Icon icon={item.icon} color={item.color} size="12x" />}
             />
