@@ -11,6 +11,8 @@ import {
   faClock,
   faEllipsis,
   faPlus,
+  faTag,
+  faTags,
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -18,66 +20,29 @@ import { firewallAPI } from 'api'
 import ModalForm from 'components/ModalForm'
 //import AddBlock from './AddBlock'
 import { AlertContext } from 'AppContext'
-import FlowCard from './FlowCard'
+import { FlowCard, TriggerCardDate, ActionCardBlock } from './FlowCard'
+import AddFlowCard from './AddFlowCard'
 
 import {
   Badge,
   Box,
   Button,
   FlatList,
+  FormControl,
   SectionList,
   Heading,
   IconButton,
-  Image,
+  Input,
   Stack,
   HStack,
   VStack,
   Menu,
   Pressable,
   Text,
-  View,
+  Popover,
   useColorModeValue,
   Divider
 } from 'native-base'
-
-const TriggerCardDate = ({ item, ...props }) => (
-  <FlowCard
-    title="Date"
-    description={
-      <Text>
-        Weekdays {item.from} - {item.to}
-      </Text>
-    }
-    icon={
-      <Icon
-        icon={faClock}
-        color="violet.300"
-        size={props.size == 'xs' ? '8x' : '12x'}
-      />
-    }
-    {...props}
-  />
-)
-
-const ActionCardBlock = ({ item, ...props }) => (
-  <FlowCard
-    title={`Block ${item.Protocol.toUpperCase()}`}
-    description={
-      <HStack space={1}>
-        Source <Text bold>{item.SrcIP}</Text> Dest
-        <Text bold>{item.DstIP}</Text>
-      </HStack>
-    }
-    icon={
-      <Icon
-        icon={faBan}
-        color="red.400"
-        size={props.size == 'xs' ? '8x' : '12x'}
-      />
-    }
-    {...props}
-  />
-)
 
 // Add/Edit flow
 const Flow = (props) => {
@@ -98,7 +63,8 @@ const Flow = (props) => {
   ]
 
   const addCard = (type) => {
-    context.alert(`TODO: Add ${type}`)
+    //context.alert(`TODO: Add ${type}`)
+    props.addCard(type)
   }
 
   return (
@@ -115,19 +81,20 @@ const Flow = (props) => {
       renderItem={({ item, section: { title, type } }) => (
         <Box py={4}>
           {type == 'triggers' ? (
-            <TriggerCardDate item={item} />
+            <TriggerCardDate item={item} edit={true} />
           ) : (
-            <ActionCardBlock item={item} />
+            <ActionCardBlock item={item} edit={true} />
           )}
         </Box>
       )}
       renderSectionFooter={({ section: { title, type } }) => (
         <Button
-          variant="subtle"
+          _variant="subtle"
+          variant="ghost"
           colorScheme="muted"
           rounded="md"
           leftIcon={<Icon icon={faCirclePlus} color="muted.500" />}
-          onPress={() => addCard(type)}
+          onPress={() => addCard(type.replace(/s$/, ''))}
         >
           Add card
         </Button>
@@ -138,12 +105,13 @@ const Flow = (props) => {
 
 const FlowList = (props) => {
   const context = useContext(AlertContext)
+  const [cardType, setCardType] = useState('trigger')
   //=trigger/actions
   let trigger = {
     type: 'Date',
     from: '10:00',
     to: '18:00',
-    days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+    days: ['mon', 'tue', 'wed', 'thu', 'fri']
   }
 
   let action = { Protocol: 'tcp', SrcIP: '1.2.3.4', DstIP: '1.2.3.4' }
@@ -166,6 +134,12 @@ const FlowList = (props) => {
     props.notifyChange('block')
   }
 
+  // NOTE addCard is selecting a card from already created ones
+  const addCard = (type) => {
+    setCardType(type)
+    refModal.current()
+  }
+
   return (
     <Box
       bg={useColorModeValue('warmGray.50', 'blueGray.800')}
@@ -179,12 +153,12 @@ const FlowList = (props) => {
           <Heading fontSize="xl">Flows</Heading>
         </VStack>
         <ModalForm
-          title={`Add Flow`}
+          title={`Add ${cardType} to flow`}
           triggerText="Add Flow"
           triggerIcon={faPlus}
           modalRef={refModal}
         >
-          <Text>TODO</Text>
+          <AddFlowCard cardType={cardType} />
         </ModalForm>
       </HStack>
 
@@ -220,7 +194,6 @@ const FlowList = (props) => {
               style={{ positon: 'relative', zIndex: -1 }}
               alignItems="center"
             >
-              {/*<Divider />*/}
               <Icon icon={faArrowRightLong} color="muted.200" size="10x" />
             </Box>
           </Box>
@@ -232,7 +205,7 @@ const FlowList = (props) => {
 
       <Heading size="sm">Add flow</Heading>
 
-      <Flow trigger={trigger} action={action} />
+      <Flow trigger={trigger} action={action} addCard={addCard} />
 
       {!flows.length ? <Text>There are no flows configured yet</Text> : null}
     </Box>

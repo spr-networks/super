@@ -1,13 +1,37 @@
-import React from 'react'
+import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import { Icon } from 'FontAwesomeUtils'
-import { faEllipsis } from '@fortawesome/free-solid-svg-icons'
+import {
+  faAddressCard,
+  faArrowRight,
+  faArrowRightLong,
+  faBan,
+  faCircleInfo,
+  faCirclePlus,
+  faClock,
+  faEllipsis,
+  faPlus,
+  faTag,
+  faTags,
+  faXmark
+} from '@fortawesome/free-solid-svg-icons'
 
-import { Box, IconButton, HStack, VStack, Menu, Text } from 'native-base'
+import {
+  Box,
+  Button,
+  IconButton,
+  FormControl,
+  Input,
+  HStack,
+  VStack,
+  Menu,
+  Popover,
+  Text,
+  useColorModeValue
+} from 'native-base'
+import { isMetaProperty, isTemplateSpan } from 'typescript'
 
-// TODO sz=sm/xs/
-
-const FlowCard = ({ icon, title, description, size }) => {
+const FlowCard = ({ icon, title, description, size, edit }) => {
   size = size || 'md'
 
   const trigger = (triggerProps) => (
@@ -33,7 +57,7 @@ const FlowCard = ({ icon, title, description, size }) => {
 
   return (
     <Box
-      bg="muted.50"
+      bg={useColorModeValue('muted.50', 'blueGray.700')}
       p={size == 'xs' ? 2 : 4}
       borderRadius={5}
       shadow={5}
@@ -60,7 +84,7 @@ const FlowCard = ({ icon, title, description, size }) => {
           </HStack>
           <Text>{description}</Text>
         </VStack>
-        {moreMenu}
+        {edit ? moreMenu : null}
       </HStack>
     </Box>
   )
@@ -73,7 +97,133 @@ FlowCard.propTypes = {
     PropTypes.element.isRequired
   ]),
   icon: PropTypes.element.isRequired,
-  size: PropTypes.string
+  size: PropTypes.string,
+  edit: PropTypes.bool
 }
 
+// token is like variables but for cards
+// TODO use proptypes to describe the cards
+const Token = ({ value: defaultValue, label, onChange, ...props }) => {
+  const [value, setValue] = useState(defaultValue)
+
+  const trigger = (triggerProps) => (
+    <Button
+      variant="outline"
+      colorScheme="light"
+      rounded="md"
+      size="sm"
+      p={1}
+      lineHeight={14}
+      textAlign="center"
+      {...triggerProps}
+    >
+      {value}
+    </Button>
+  )
+
+  return (
+    <>
+      {label ? <Text mr={1}>{label}</Text> : null}
+      <Popover trigger={trigger}>
+        <Popover.Content>
+          <Popover.Body>
+            <HStack space={1}>
+              <FormControl flex={1}>
+                <Input
+                  variant="outlined"
+                  defaultValue={value}
+                  onChangeText={(value) => setValue(value)}
+                />
+              </FormControl>
+              <IconButton
+                ml="auto"
+                colorScheme="light"
+                icon={<Icon icon={faTag} />}
+              />
+            </HStack>
+          </Popover.Body>
+        </Popover.Content>
+      </Popover>
+    </>
+  )
+}
+
+const TriggerCardDate = ({ item, edit, ...props }) => {
+  return (
+    <FlowCard
+      title="Date"
+      description={
+        edit ? (
+          <HStack space={1} justifyContent="space-around" alignItems="center">
+            <Token
+              value={item.days.join(',')}
+              onChange={(value) => {
+                item.days = value.split(',')
+              }}
+            />
+            <Token
+              value={item.from}
+              onChange={(value) => {
+                item.from = value
+              }}
+            />
+            <Text>-</Text>
+            <Token
+              value={item.to}
+              onChange={(value) => {
+                item.to = value
+              }}
+            />
+          </HStack>
+        ) : (
+          <HStack space={1}>
+            <Text>Weekdays</Text>
+            <Text>{item.from}</Text>
+            <Text>-</Text>
+            <Text>{item.to}</Text>
+          </HStack>
+        )
+      }
+      icon={
+        <Icon
+          icon={faClock}
+          color="violet.300"
+          size={props.size == 'xs' ? '8x' : '12x'}
+        />
+      }
+      {...props}
+    />
+  )
+}
+
+const ActionCardBlock = ({ item, edit, ...props }) => (
+  <FlowCard
+    title={`Block ${item.Protocol.toUpperCase()}`}
+    description={
+      edit ? (
+        <HStack space={1}>
+          <Token label="Source" value={item.SrcIP} />
+          <Token label="Dest" value={item.DstIP} />
+        </HStack>
+      ) : (
+        <HStack space={1}>
+          <Text>Source</Text>
+          <Text bold>{item.SrcIP}</Text>
+          <Text>Dest</Text>
+          <Text bold>{item.DstIP}</Text>
+        </HStack>
+      )
+    }
+    icon={
+      <Icon
+        icon={faBan}
+        color="red.400"
+        size={props.size == 'xs' ? '8x' : '12x'}
+      />
+    }
+    {...props}
+  />
+)
+
+export { FlowCard, Token, TriggerCardDate, ActionCardBlock }
 export default FlowCard
