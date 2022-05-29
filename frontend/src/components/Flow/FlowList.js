@@ -20,7 +20,7 @@ import { firewallAPI } from 'api'
 import ModalForm from 'components/ModalForm'
 //import AddBlock from './AddBlock'
 import { AlertContext } from 'AppContext'
-import { FlowCard, Token, TriggerCardDate, ActionCardBlock } from './FlowCard'
+import { FlowCard, Cards } from './FlowCard'
 import AddFlowCard from './AddFlowCard'
 
 import {
@@ -43,131 +43,118 @@ import {
   useColorModeValue,
   Divider
 } from 'native-base'
-import { setSyntheticTrailingComments } from 'typescript'
+
+const CardList = ({ title, cards: defaultCards, cardType, ...props }) => {
+  const [cards, setCards] = useState(defaultCards)
+  let refModal = useRef(null)
+
+  useEffect(() => {
+    if (props.onChange) {
+      props.onChange(cards)
+    }
+  }, [cards])
+
+  const addCard = (type) => {
+    refModal.current()
+  }
+
+  const handleAddCard = (item) => {
+    if (cards.filter((card) => card.title === item.title).length) {
+      return
+    }
+
+    refModal.current()
+    setCards(cards.concat(item))
+  }
+
+  const onChange = (item) => {
+    setCards(cards.map((card) => (card.title == item.title ? item : card)))
+  }
+
+  const onDelete = (item) => {
+    setCards(cards.filter((card) => card.title !== item.title))
+  }
+
+  return (
+    <VStack maxW={340} space={2}>
+      <Text bold>{title}</Text>
+
+      <ModalForm title={`Add ${cardType} to flow`} modalRef={refModal}>
+        <AddFlowCard cardType={cardType} onSubmit={handleAddCard} />
+      </ModalForm>
+
+      <FlatList
+        data={cards}
+        keyExtractor={(item, index) => index}
+        renderItem={({ item, index }) => (
+          <Box py={4}>
+            <FlowCard
+              edit={true}
+              card={item}
+              onChange={onChange}
+              onDelete={onDelete}
+            />
+          </Box>
+        )}
+      />
+
+      <Button
+        _variant="subtle"
+        variant="ghost"
+        colorScheme="muted"
+        rounded="md"
+        leftIcon={<Icon icon={faCirclePlus} color="muted.500" />}
+        onPress={() => addCard(cardType)}
+        disabled={cards.length}
+      >
+        Add card
+      </Button>
+    </VStack>
+  )
+}
 
 // Add/Edit flow
 const Flow = (props) => {
   const context = useContext(AlertContext)
-  const [cardType, setCardType] = useState('trigger')
-  const [sections, setSections] = useState([
-    {
-      title: 'When...',
-      type: 'triggers',
-      data: []
-    },
-    {
-      title: 'Then...',
-      type: 'actions',
-      data: []
-    }
-  ])
   const [triggers, setTriggers] = useState([])
   const [actions, setActions] = useState([])
 
-  let { trigger, action } = props
+  const onSubmit = () => {
+    let data = []
 
-  useEffect(() => {}, [])
+    data.push(
+      triggers.map((card) => {
+        return { type: card.title, ...card.values }
+      })
+    )
 
-  useEffect(() => {
-    setSections([
-      {
-        title: 'When...',
-        type: 'triggers',
-        data: triggers
-      },
-      {
-        title: 'Then...',
-        type: 'actions',
-        data: actions
-      }
-    ])
-  }, [triggers, actions])
+    data.push(
+      actions.map((card) => {
+        return { type: card.title, ...card.values }
+      })
+    )
 
-  let refModal = useRef(null)
-
-  // NOTE addCard is selecting a card from already created ones
-  const addCard = (type) => {
-    setCardType(type)
-    refModal.current()
-  }
-
-  // TODO refactor to use list instead of trigger or action checks
-  // TODO dynamic vars? see if possible:
-  // - Date have 0 vars at start, add a var - choose "day", "hour" etc.
-
-  const handleAddCard = (card) => {
-    // TODO verify not added / same conditions
-    refModal.current()
-    if (cardType == 'trigger') {
-      setTriggers(triggers.concat(card))
-    } else {
-      setActions(actions.concat(card))
-    }
-  }
-
-  const handleDelete = (item) => {
-    if (cardType == 'trigger') {
-      setTriggers(triggers.filter((card) => card.title !== item.title))
-    } else {
-      setActions(actions.filter((card) => card.title !== item.title))
-    }
+    console.log('save this:', data)
   }
 
   return (
-    <>
-      <ModalForm
-        title={`Add ${cardType} to flow`}
-        triggerText="Add Flow"
-        triggerIcon={faPlus}
-        modalRef={refModal}
-      >
-        <AddFlowCard cardType={cardType} onSubmit={handleAddCard} />
-      </ModalForm>
-
-      <SectionList
-        px={2}
-        w={360}
-        sections={sections}
-        keyExtractor={(item, index) => index}
-        renderSectionHeader={({ section: { title } }) => (
-          <Text mt={4} bold>
-            {title}
-          </Text>
-        )}
-        renderItem={({ item, section: { title, type } }) => (
-          <Box py={4}>
-            <FlowCard
-              edit={true}
-              title={item.title}
-              body={
-                <HStack space={2}>
-                  {item.props
-                    .filter((p) => !p.hidden)
-                    .map((p) => (
-                      <Token key={p.name} value={p.name} />
-                    ))}
-                </HStack>
-              }
-              description={item.description}
-              onDelete={() => handleDelete(item)}
-              icon={<Icon icon={item.icon} color={item.color} size="12x" />}
-            />
-          </Box>
-        )}
-        renderSectionFooter={({ section: { title, type } }) => (
-          <Button
-            _variant="subtle"
-            variant="ghost"
-            colorScheme="muted"
-            rounded="md"
-            leftIcon={<Icon icon={faCirclePlus} color="muted.500" />}
-            onPress={() => addCard(type.replace(/s$/, ''))}
-          >
-            Add card
-          </Button>
-        )}
+    <VStack>
+      <CardList
+        title="When..."
+        cards={triggers}
+        onChange={setTriggers}
+        cardType="trigger"
       />
-    </>
+      <CardList
+        title="Then..."
+        cards={actions}
+        onChange={setActions}
+        cardType="action"
+      />
+      <Button variant="solid" colorScheme="primary" mt={4} onPress={onSubmit}>
+        Save
+      </Button>
+    </VStack>
   )
 }
 
@@ -175,18 +162,39 @@ const FlowList = (props) => {
   const context = useContext(AlertContext)
 
   //=trigger/actions
+  /*
   let trigger = {
     title: 'Date',
     icon: faClock,
     color: 'violet.300',
-    props: {
+    params: {
       from: '10:00',
       to: '18:00',
       days: ['mon', 'tue', 'wed', 'thu', 'fri']
     }
   }
 
-  let action = { Protocol: 'tcp', SrcIP: '1.2.3.4', DstIP: '1.2.3.4' }
+  let action = {
+    title: 'Block TCP',
+    Protocol: 'tcp',
+    SrcIP: '1.2.3.4',
+    DstIP: '1.2.3.4'
+  }*/
+
+  // TODO render a card from values
+
+  let values = {
+    days: 'mon,tue',
+    from: '10:23',
+    to: '23:32'
+  }
+
+  let action = Object.assign({}, Cards.action[0])
+  let trigger = Object.assign({}, Cards.trigger[0])
+
+  trigger.params[0].value = 'mon,tue'
+  trigger.params[1].value = '10:00'
+  trigger.params[2].value = '14:00'
 
   let flows = [{ trigger, action }]
 
@@ -225,8 +233,8 @@ const FlowList = (props) => {
             py={10}
           >
             <HStack space={3} justifyContent="space-around" alignItems="center">
-              <TriggerCardDate size="xs" item={item.trigger} />
-              <ActionCardBlock size="xs" item={item.action} />
+              <FlowCard size="xs" card={item.trigger} />
+              <FlowCard size="xs" card={item.action} />
             </HStack>
             <Box
               w={320}

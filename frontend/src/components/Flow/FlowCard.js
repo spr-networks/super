@@ -2,22 +2,16 @@ import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import { Icon } from 'FontAwesomeUtils'
 import {
-  faAddressCard,
-  faArrowRight,
-  faArrowRightLong,
   faBan,
   faBroadcastTower,
   faCircleInfo,
-  faCirclePlus,
   faClock,
   faEllipsis,
-  faPlus,
-  faTag,
-  faTags,
-  faXmark
+  faTag
 } from '@fortawesome/free-solid-svg-icons'
 
 import {
+  Badge,
   Box,
   Button,
   IconButton,
@@ -31,10 +25,54 @@ import {
   Tooltip,
   useColorModeValue
 } from 'native-base'
-import { isMetaProperty, isTemplateSpan } from 'typescript'
 
-const FlowCard = ({ icon, title, body, description, size, edit, ...props }) => {
+const FlowCard = ({ card, size, edit, ...props }) => {
   size = size || 'md'
+  let { title, description } = card
+  let icon = (
+    <Icon
+      icon={card.icon}
+      color={card.color}
+      size={size == 'xs' ? '8x' : '12x'}
+    />
+  )
+
+  let body = (
+    <HStack space={1}>
+      {card.params.map((p) => (
+        <Badge
+          key={p.name}
+          variant="outline"
+          colorScheme="primary"
+          rounded="md"
+          size="sm"
+        >
+          {p.value || p.name}
+        </Badge>
+      ))}
+    </HStack>
+  )
+
+  if (edit) {
+    if (card.values === undefined) {
+      card.values = {}
+    }
+
+    body = (
+      <HStack space={2}>
+        {card.params
+          .filter((p) => !p.hidden)
+          .map((p) => (
+            <Token
+              key={p.name}
+              value={card.values ? card.values[p.name] || p.name : p.name}
+              format={p.format}
+              onChange={(value) => onChange(p.name, value)}
+            />
+          ))}
+      </HStack>
+    )
+  }
 
   const trigger = (triggerProps) => (
     <IconButton
@@ -45,10 +83,22 @@ const FlowCard = ({ icon, title, body, description, size, edit, ...props }) => {
     ></IconButton>
   )
 
-  const onDelete = props.onDelete || function () {}
+  const onChange = (name, value) => {
+    card.values[name] = value
+
+    if (props.onChange) {
+      props.onChange(card)
+    }
+  }
+
+  const onDelete = () => {
+    if (props.onDelete) {
+      props.onDelete(card)
+    }
+  }
 
   const moreMenu = (
-    <Menu w="190" closeOnSelect={true} trigger={trigger}>
+    <Menu w="190" p={0} closeOnSelect={true} trigger={trigger}>
       {/*<Menu.Item>Edit</Menu.Item>*/}
       <Menu.Item _text={{ color: 'danger.600' }} onPress={onDelete}>
         Delete
@@ -105,22 +155,11 @@ const FlowCard = ({ icon, title, body, description, size, edit, ...props }) => {
   )
 }
 
-FlowCard.propTypes = {
-  title: PropTypes.string.isRequired,
-  body: PropTypes.oneOfType([
-    PropTypes.string.isRequired,
-    PropTypes.element.isRequired
-  ]),
-  icon: PropTypes.element.isRequired,
-  description: PropTypes.string,
-  size: PropTypes.string,
-  edit: PropTypes.bool
-}
-
 // token is like variables but for cards
 // TODO use proptypes to describe the cards
-const Token = ({ value: defaultValue, label, onChange, ...props }) => {
+const Token = ({ value: defaultValue, format, label, onChange, ...props }) => {
   const [value, setValue] = useState(defaultValue)
+  const [isOpen, setIsOpen] = useState(false)
 
   const trigger = (triggerProps) => (
     <Button
@@ -132,15 +171,33 @@ const Token = ({ value: defaultValue, label, onChange, ...props }) => {
       lineHeight={14}
       textAlign="center"
       {...triggerProps}
+      onPress={() => setIsOpen(!isOpen)}
     >
       {value}
     </Button>
   )
 
+  const onChangeText = (value) => {
+    //only update if correct format
+    if (format !== undefined && !value.match(format)) {
+      return
+    }
+
+    setValue(value)
+    if (onChange) {
+      onChange(value)
+    }
+  }
+
   return (
     <>
       {label ? <Text mr={1}>{label}</Text> : null}
-      <Popover trigger={trigger}>
+      <Popover
+        position="auto"
+        trigger={trigger}
+        isOpen={isOpen}
+        onClose={() => setIsOpen(!isOpen)}
+      >
         <Popover.Content>
           <Popover.Body>
             <HStack space={1}>
@@ -148,7 +205,8 @@ const Token = ({ value: defaultValue, label, onChange, ...props }) => {
                 <Input
                   variant="outlined"
                   defaultValue={value}
-                  onChangeText={(value) => setValue(value)}
+                  onChangeText={onChangeText}
+                  onSubmitEditing={() => setIsOpen(false)}
                 />
               </FormControl>
               <IconButton
@@ -164,83 +222,6 @@ const Token = ({ value: defaultValue, label, onChange, ...props }) => {
   )
 }
 
-const TriggerCardDate = ({ item, edit, ...props }) => {
-  return (
-    <FlowCard
-      title={item.title}
-      body={
-        edit ? (
-          <HStack space={1} justifyContent="space-around" alignItems="center">
-            <Token
-              value={item.props.days.join(',')}
-              onChange={(value) => {
-                item.days = value.split(',')
-              }}
-            />
-            <Token
-              value={item.props.from}
-              onChange={(value) => {
-                item.from = value
-              }}
-            />
-            <Text>-</Text>
-            <Token
-              value={item.props.to}
-              onChange={(value) => {
-                item.to = value
-              }}
-            />
-          </HStack>
-        ) : (
-          <HStack space={1}>
-            <Text>Weekdays</Text>
-            <Text>{item.props.from}</Text>
-            <Text>-</Text>
-            <Text>{item.props.to}</Text>
-          </HStack>
-        )
-      }
-      icon={
-        <Icon
-          icon={faClock}
-          color="violet.300"
-          size={props.size == 'xs' ? '8x' : '12x'}
-        />
-      }
-      {...props}
-    />
-  )
-}
-
-const ActionCardBlock = ({ item, edit, ...props }) => (
-  <FlowCard
-    title={`Block ${item.Protocol.toUpperCase()}`}
-    body={
-      edit ? (
-        <HStack space={1}>
-          <Token label="Source" value={item.SrcIP} />
-          <Token label="Dest" value={item.DstIP} />
-        </HStack>
-      ) : (
-        <HStack space={1}>
-          <Text>Source</Text>
-          <Text bold>{item.SrcIP}</Text>
-          <Text>Dest</Text>
-          <Text bold>{item.DstIP}</Text>
-        </HStack>
-      )
-    }
-    icon={
-      <Icon
-        icon={faBan}
-        color="red.400"
-        size={props.size == 'xs' ? '8x' : '12x'}
-      />
-    }
-    {...props}
-  />
-)
-
 const Cards = {
   trigger: [
     {
@@ -248,18 +229,23 @@ const Cards = {
       description: 'Trigger on selected date and time',
       color: 'violet.300',
       icon: faClock,
-      props: [
+      params: [
         { name: 'days', type: PropTypes.array },
-        { name: 'from', type: PropTypes.string },
-        { name: 'to', type: PropTypes.string }
-      ]
+        { name: 'from', type: PropTypes.string, format: /^\d{2}:\d{2}$/ },
+        { name: 'to', type: PropTypes.string, format: /^\d{2}:\d{2}$/ }
+      ],
+      values: {
+        days: 'mon,tue,wed',
+        from: '10:00',
+        to: '11:00'
+      }
     },
     {
       title: 'Incoming GET',
       description: 'Trigger this card by sending a GET request',
       color: 'red.400',
       icon: faBroadcastTower,
-      props: [{ name: 'event', type: PropTypes.string }]
+      params: [{ name: 'event', type: PropTypes.string }]
     }
   ],
   action: [
@@ -268,35 +254,52 @@ const Cards = {
       description: 'Block TCP for specified source and destination',
       color: 'red.400',
       icon: faBan,
-      props: [
+      params: [
         {
           name: 'Protocol',
-          value: 'TCP',
           hidden: true,
           type: PropTypes.string
         },
         { name: 'SrcIP', type: PropTypes.string },
         { name: 'DstIP', type: PropTypes.string }
-      ]
+      ],
+      values: {
+        Protocol: 'TCP'
+      }
     },
     {
       title: 'Block UDP',
       description: 'Block UDP for specified source and destination',
       color: 'warning.400',
       icon: faBan,
-      props: [
+      params: [
         {
           name: 'Protocol',
-          value: 'UDP',
           hidden: true,
           type: PropTypes.string
         },
         { name: 'SrcIP', type: PropTypes.string },
         { name: 'DstIP', type: PropTypes.string }
-      ]
+      ],
+      values: {
+        Protocol: 'UDP'
+      }
     }
   ]
 }
 
-export { FlowCard, Token, TriggerCardDate, ActionCardBlock, Cards }
+FlowCard.propTypes = {
+  card: PropTypes.object.isRequired,
+  size: PropTypes.string,
+  edit: PropTypes.bool,
+  onChange: PropTypes.func
+}
+
+Token.propTypes = {
+  value: PropTypes.any,
+  format: PropTypes.instanceOf(RegExp),
+  onChange: PropTypes.func
+}
+
+export { FlowCard, Token, Cards }
 export default FlowCard
