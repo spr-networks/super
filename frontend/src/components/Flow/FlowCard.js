@@ -39,17 +39,19 @@ const FlowCard = ({ card, size, edit, ...props }) => {
 
   let body = (
     <HStack space={1}>
-      {card.params.map((p) => (
-        <Badge
-          key={p.name}
-          variant="outline"
-          colorScheme="primary"
-          rounded="md"
-          size="sm"
-        >
-          {p.value || p.name}
-        </Badge>
-      ))}
+      {card.params
+        .filter((p) => !p.hidden)
+        .map((p) => (
+          <Badge
+            key={p.name}
+            variant="outline"
+            colorScheme="primary"
+            rounded="md"
+            size="sm"
+          >
+            {(card.values && card.values[p.name]) || p.name}
+          </Badge>
+        ))}
     </HStack>
   )
 
@@ -108,12 +110,13 @@ const FlowCard = ({ card, size, edit, ...props }) => {
 
   return (
     <Box
-      bg={useColorModeValue('muted.50', 'blueGray.700')}
+      bg={useColorModeValue('white', 'blueGray.700')}
       p={size == 'xs' ? 2 : 4}
       borderRadius={5}
       shadow={5}
       rounded="md"
-      minW={340}
+      minW={320}
+      mr={2}
       maxWidth="100%"
       {...props}
     >
@@ -264,7 +267,9 @@ const Cards = {
         { name: 'DstIP', type: PropTypes.string }
       ],
       values: {
-        Protocol: 'TCP'
+        Protocol: 'TCP',
+        SrcIP: '0.0.0.0',
+        DstIP: '0.0.0.0'
       }
     },
     {
@@ -282,10 +287,22 @@ const Cards = {
         { name: 'DstIP', type: PropTypes.string }
       ],
       values: {
-        Protocol: 'UDP'
+        Protocol: 'UDP',
+        SrcIP: '0.0.0.0',
+        DstIP: '0.0.0.0'
       }
     }
   ]
+}
+
+const NewCard = ({ title, cardType, values, ...props }) => {
+  let card = Cards[cardType].find((card) => card.title == title)
+  if (!card) {
+    return
+  }
+
+  card.values = Object.assign(card.values || {}, values)
+  return card
 }
 
 FlowCard.propTypes = {
@@ -301,5 +318,5 @@ Token.propTypes = {
   onChange: PropTypes.func
 }
 
-export { FlowCard, Token, Cards }
+export { FlowCard, NewCard, Token, Cards }
 export default FlowCard

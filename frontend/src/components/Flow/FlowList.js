@@ -20,7 +20,7 @@ import { firewallAPI } from 'api'
 import ModalForm from 'components/ModalForm'
 //import AddBlock from './AddBlock'
 import { AlertContext } from 'AppContext'
-import { FlowCard, Cards } from './FlowCard'
+import { FlowCard, Cards, NewCard } from './FlowCard'
 import AddFlowCard from './AddFlowCard'
 
 import {
@@ -76,7 +76,7 @@ const CardList = ({ title, cards: defaultCards, cardType, ...props }) => {
   }
 
   return (
-    <VStack maxW={340} space={2}>
+    <VStack space={2}>
       <Text bold>{title}</Text>
 
       <ModalForm title={`Add ${cardType} to flow`} modalRef={refModal}>
@@ -116,6 +116,7 @@ const CardList = ({ title, cards: defaultCards, cardType, ...props }) => {
 // Add/Edit flow
 const Flow = (props) => {
   const context = useContext(AlertContext)
+  // NOTE we have multiple but only support one atm.
   const [triggers, setTriggers] = useState([])
   const [actions, setActions] = useState([])
 
@@ -138,7 +139,7 @@ const Flow = (props) => {
   }
 
   return (
-    <VStack>
+    <VStack maxW={350}>
       <CardList
         title="When..."
         cards={triggers}
@@ -161,40 +162,17 @@ const Flow = (props) => {
 const FlowList = (props) => {
   const context = useContext(AlertContext)
 
-  //=trigger/actions
-  /*
-  let trigger = {
+  let trigger = NewCard({
     title: 'Date',
-    icon: faClock,
-    color: 'violet.300',
-    params: {
-      from: '10:00',
-      to: '18:00',
-      days: ['mon', 'tue', 'wed', 'thu', 'fri']
-    }
-  }
+    cardType: 'trigger',
+    values: { days: 'mon,tue', from: '09:00', to: '16:00' }
+  })
 
-  let action = {
+  let action = NewCard({
     title: 'Block TCP',
-    Protocol: 'tcp',
-    SrcIP: '1.2.3.4',
-    DstIP: '1.2.3.4'
-  }*/
-
-  // TODO render a card from values
-
-  let values = {
-    days: 'mon,tue',
-    from: '10:23',
-    to: '23:32'
-  }
-
-  let action = Object.assign({}, Cards.action[0])
-  let trigger = Object.assign({}, Cards.trigger[0])
-
-  trigger.params[0].value = 'mon,tue'
-  trigger.params[1].value = '10:00'
-  trigger.params[2].value = '14:00'
+    cardType: 'action',
+    values: { SrcIP: '192.168.2.23', DstIP: '23.23.23.23' }
+  })
 
   let flows = [{ trigger, action }]
 
@@ -213,12 +191,16 @@ const FlowList = (props) => {
       </HStack>
 
       <HStack space={3} justifyContent="space-around" alignItems="center">
-        <Text w={360} bold textAlign="center" color="muted.700">
-          When...
-        </Text>
-        <Text w={360} bold textAlign="center" color="muted.700">
-          Then...
-        </Text>
+        <VStack w={360}>
+          <Text bold textAlign="center" color="muted.700">
+            When...
+          </Text>
+        </VStack>
+        <VStack w={360}>
+          <Text bold textAlign="center" color="muted.700">
+            Then...
+          </Text>
+        </VStack>
       </HStack>
 
       <FlatList
@@ -261,11 +243,5 @@ const FlowList = (props) => {
     </Box>
   )
 }
-
-/*
-FlowList.propTypes = {
-  notifyChange: PropTypes.func.isRequired
-}
-*/
 
 export default FlowList
