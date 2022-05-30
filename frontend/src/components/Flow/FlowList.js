@@ -22,6 +22,7 @@ import {
   useColorModeValue,
   Divider
 } from 'native-base'
+import { connectWebsocket } from 'api'
 
 const FlowCardList = ({
   title,

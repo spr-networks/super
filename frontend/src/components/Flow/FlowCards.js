@@ -7,7 +7,7 @@ import {
   faTag
 } from '@fortawesome/free-solid-svg-icons'
 
-let triggers = [
+const triggers = [
   {
     title: 'Date',
     cardType: 'trigger',
@@ -49,7 +49,7 @@ let triggers = [
   }
 ]
 
-let actions = [
+const actions = [
   {
     title: 'Block TCP',
     cardType: 'action',
