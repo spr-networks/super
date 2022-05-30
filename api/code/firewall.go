@@ -339,7 +339,7 @@ func blockIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if CIDRorIP(br.SrcIP) != nil {
+	if CIDRorIP(br.DstIP) != nil {
 		http.Error(w, "Invalid DstIP", 400)
 		return
 	}
