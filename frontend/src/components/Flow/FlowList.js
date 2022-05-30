@@ -1,50 +1,35 @@
 import { useContext, useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { Icon } from 'FontAwesomeUtils'
-import {
-  faAddressCard,
-  faArrowRight,
-  faArrowRightLong,
-  faBan,
-  faCircleInfo,
-  faCirclePlus,
-  faClock,
-  faEllipsis,
-  faPlus,
-  faTag,
-  faTags,
-  faXmark
-} from '@fortawesome/free-solid-svg-icons'
-
-import { firewallAPI } from 'api'
+import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import ModalForm from 'components/ModalForm'
 //import AddBlock from './AddBlock'
 import { AlertContext } from 'AppContext'
-import { FlowCard, Cards, NewCard } from './FlowCard'
+import { FlowCard, NewCard } from './FlowCard'
 import AddFlowCard from './AddFlowCard'
 
 import {
-  Badge,
   Box,
   Button,
   FlatList,
   FormControl,
-  SectionList,
   Heading,
-  IconButton,
   Input,
   Stack,
   HStack,
   VStack,
-  Menu,
-  Pressable,
   Text,
-  Popover,
   useColorModeValue,
   Divider
 } from 'native-base'
 
-const CardList = ({ title, cards: defaultCards, cardType, edit, ...props }) => {
+const FlowCardList = ({
+  title,
+  cards: defaultCards,
+  cardType,
+  edit,
+  ...props
+}) => {
   const [cards, setCards] = useState(defaultCards)
   let refModal = useRef(null)
 
@@ -59,7 +44,11 @@ const CardList = ({ title, cards: defaultCards, cardType, edit, ...props }) => {
   }
 
   const handleAddCard = (item) => {
-    if (cards.filter((card) => card.title === item.title).length) {
+    // one trigger, multiple actions
+    if (
+      cardType == 'trigger' &&
+      cards.filter((card) => card.title === item.title).length
+    ) {
       return
     }
 
@@ -71,13 +60,17 @@ const CardList = ({ title, cards: defaultCards, cardType, edit, ...props }) => {
     setCards(cards.map((card) => (card.title == item.title ? item : card)))
   }
 
-  const onDelete = (item) => {
-    setCards(cards.filter((card) => card.title !== item.title))
+  const deleteCard = (index) => {
+    let newCards = [...cards]
+    newCards.splice(index, 1)
+    setCards(newCards)
   }
 
   return (
-    <VStack space={2}>
-      <Text bold>{title}</Text>
+    <VStack space={1}>
+      <Text bold fontSize="sm">
+        {title}
+      </Text>
 
       <FlatList
         data={cards}
@@ -88,7 +81,7 @@ const CardList = ({ title, cards: defaultCards, cardType, edit, ...props }) => {
             edit={edit}
             card={item}
             onChange={onChange}
-            onDelete={onDelete}
+            onDelete={() => deleteCard(index)}
             mb={2}
           />
         )}
@@ -111,7 +104,7 @@ const CardList = ({ title, cards: defaultCards, cardType, edit, ...props }) => {
             rounded="md"
             leftIcon={<Icon icon={faCirclePlus} color="muted.500" />}
             onPress={() => addCard(cardType)}
-            disabled={cards.length}
+            disabled={cardType == 'trigger' && cards.length}
             key={'add' + cardType}
           >
             Add card
@@ -123,72 +116,107 @@ const CardList = ({ title, cards: defaultCards, cardType, edit, ...props }) => {
 }
 
 // Add/Edit flow
-const Flow = ({ edit, ...props }) => {
+const Flow = ({ title, edit, ...props }) => {
   const context = useContext(AlertContext)
   // NOTE we have multiple but only support one atm.
-  const [triggers, setTriggers] = useState(props.actions || [])
-  const [actions, setActions] = useState(props.triggers || [])
+  const [triggers, setTriggers] = useState(props.triggers || [])
+  const [actions, setActions] = useState(props.actions || [])
 
   const onSubmit = () => {
     let data = []
 
     data.push(
       triggers.map((card) => {
-        return { type: card.title, ...card.values }
+        return { title: card.title, values: card.values }
       })
     )
 
     data.push(
       actions.map((card) => {
-        return { type: card.title, ...card.values }
+        return { title: card.title, values: card.values }
       })
     )
 
-    console.log('save this:', data)
+    if (props.onSubmit) {
+      props.onSubmit({ triggers, actions })
+    }
   }
 
   return (
-    <Stack direction={edit ? 'column' : 'row'} maxW={350}>
-      <CardList
-        title="When..."
-        cards={triggers}
-        onChange={setTriggers}
-        cardType="trigger"
-        edit={edit}
-      />
-      <CardList
-        title="Then..."
-        cards={actions}
-        onChange={setActions}
-        cardType="action"
-        edit={edit}
-      />
+    <VStack maxW={360}>
+      {title ? <Text bold>{title}</Text> : null}
+      <Stack direction={edit ? 'column' : 'column'} space={4}>
+        <FlowCardList
+          title="When..."
+          cards={triggers}
+          onChange={setTriggers}
+          cardType="trigger"
+          edit={edit}
+        />
+        <FlowCardList
+          title="Then..."
+          cards={actions}
+          onChange={setActions}
+          cardType="action"
+          edit={edit}
+        />
 
-      {edit ? (
-        <Button variant="solid" colorScheme="primary" mt={4} onPress={onSubmit}>
-          Save
-        </Button>
-      ) : null}
-    </Stack>
+        {edit ? (
+          <Button
+            variant="solid"
+            colorScheme="primary"
+            mt={4}
+            onPress={onSubmit}
+          >
+            Save
+          </Button>
+        ) : null}
+      </Stack>
+    </VStack>
   )
 }
 
 const FlowList = (props) => {
   const context = useContext(AlertContext)
+  const [flows, setFlows] = useState([])
 
-  let trigger = NewCard({
-    title: 'Date',
-    cardType: 'trigger',
-    values: { days: 'mon,tue', from: '09:23', to: '16:23' }
-  })
+  useEffect(() => {
+    let trigger = NewCard({
+      title: 'Date',
+      cardType: 'trigger',
+      values: { days: 'mon,tue', from: '09:23', to: '16:23' }
+    })
 
-  let action = NewCard({
-    title: 'Block TCP',
-    cardType: 'action',
-    values: { SrcIP: '192.168.2.23', DstIP: '23.23.23.23' }
-  })
+    let action = NewCard({
+      title: 'Block TCP',
+      cardType: 'action',
+      values: { SrcIP: '192.168.2.23', DstIP: '23.23.23.23' }
+    })
 
-  let flows = [{ triggers: [trigger], actions: [action] }]
+    setFlows([
+      {
+        title: 'Block 23.23.23.23 on weekdays',
+        triggers: [trigger],
+        actions: [action]
+      }
+    ])
+  }, [])
+
+  const onSubmit = (data) => {
+    // NewCard .cardType
+    console.log('cool:', data)
+    let triggers = data.triggers.map((card) =>
+      NewCard({ cardType: 'trigger', ...card })
+    )
+
+    let actions = data.actions.map((card) =>
+      NewCard({ cardType: 'action', ...card })
+    )
+
+    let flow = { title: 'Flow#new', triggers, actions }
+
+    setFlows(flows.concat(flow))
+  }
 
   return (
     <Box
@@ -215,19 +243,36 @@ const FlowList = (props) => {
             borderColor="muted.200"
             py={10}
           >
-            <Flow triggers={item.triggers} actions={item.actions} />
+            <Flow
+              title={item.title}
+              triggers={item.triggers}
+              actions={item.actions}
+            />
           </Box>
         )}
+        listKey="flow"
         keyExtractor={(item, index) => index}
       />
 
       <Divider my={4} color="violet.400" />
 
-      <Heading size="sm">Add flow</Heading>
+      <VStack space={4} maxW={350}>
+        <Heading size="sm">Add flow</Heading>
 
-      <Flow edit={true} />
+        <FormControl>
+          <FormControl.Label>Name</FormControl.Label>
+          <Input
+            variant="underlined"
+            defaultValue="Flow#1"
+            onChangeText={() => {}}
+          />
+          <FormControl.HelperText>
+            Use a unique name to identify this flow
+          </FormControl.HelperText>
+        </FormControl>
 
-      {!flows.length ? <Text>There are no flows configured yet</Text> : null}
+        <Flow edit={true} onSubmit={onSubmit} />
+      </VStack>
     </Box>
   )
 }

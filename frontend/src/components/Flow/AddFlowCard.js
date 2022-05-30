@@ -3,7 +3,8 @@ import PropTypes from 'prop-types'
 import { Icon } from 'FontAwesomeUtils'
 import { faClock, faEllipsis } from '@fortawesome/free-solid-svg-icons'
 
-import { FlowCard, Cards } from './FlowCard'
+import { FlowCard } from './FlowCard'
+import { getCards } from './FlowCards'
 
 import {
   Badge,
@@ -26,24 +27,17 @@ import { Pressable } from 'react-native'
 
 //type = trigger or action
 const AddFlowCard = ({ cardType, onSubmit, ...props }) => {
-  const [type, setType] = useState('')
-  const [errors, setErrors] = useState({})
-
-  useEffect(() => {
-    //TODO validate
-  }, [type])
-
   const handleSelect = (item) => {
     onSubmit(item)
   }
 
-  const data = Cards[cardType]
+  const cards = getCards(cardType)
 
   return (
     <VStack space={2}>
       <Text bold>Select a Card</Text>
       <FlatList
-        data={data}
+        data={cards}
         keyExtractor={(item) => item.title}
         px={2}
         renderItem={({ item }) => (

@@ -26,6 +26,8 @@ import {
   useColorModeValue
 } from 'native-base'
 
+import { getCard } from './FlowCards'
+
 const FlowCard = ({ card, size, edit, ...props }) => {
   size = size || 'md'
   let { title, description } = card
@@ -47,7 +49,8 @@ const FlowCard = ({ card, size, edit, ...props }) => {
             variant="outline"
             colorScheme="primary"
             rounded="md"
-            size="sm"
+            size="xs"
+            py={0}
           >
             {(card.values && card.values[p.name]) || p.name}
           </Badge>
@@ -232,92 +235,8 @@ const Token = ({
   )
 }
 
-const Cards = {
-  trigger: [
-    {
-      title: 'Date',
-      description: 'Trigger on selected date and time',
-      color: 'violet.300',
-      icon: faClock,
-      params: [
-        {
-          name: 'days',
-          type: PropTypes.array,
-          description: 'mon, tue. weekdays, weekend'
-        },
-        {
-          name: 'from',
-          type: PropTypes.string,
-          format: /^\d{2}:\d{2}$/,
-          description: '11:23'
-        },
-        {
-          name: 'to',
-          type: PropTypes.string,
-          format: /^\d{2}:\d{2}$/,
-          description: '23:23'
-        }
-      ],
-      values: {
-        days: 'mon,tue,wed',
-        from: '10:00',
-        to: '11:00'
-      }
-    },
-    {
-      title: 'Incoming GET',
-      description: 'Trigger this card by sending a GET request',
-      color: 'red.400',
-      icon: faBroadcastTower,
-      params: [{ name: 'event', type: PropTypes.string }]
-    }
-  ],
-  action: [
-    {
-      title: 'Block TCP',
-      description: 'Block TCP for specified source and destination',
-      color: 'red.400',
-      icon: faBan,
-      params: [
-        {
-          name: 'Protocol',
-          hidden: true,
-          type: PropTypes.string
-        },
-        { name: 'SrcIP', type: PropTypes.string },
-        { name: 'DstIP', type: PropTypes.string }
-      ],
-      values: {
-        Protocol: 'TCP',
-        SrcIP: '0.0.0.0',
-        DstIP: '0.0.0.0'
-      }
-    },
-    {
-      title: 'Block UDP',
-      description: 'Block UDP for specified source and destination',
-      color: 'warning.400',
-      icon: faBan,
-      params: [
-        {
-          name: 'Protocol',
-          hidden: true,
-          type: PropTypes.string
-        },
-        { name: 'SrcIP', type: PropTypes.string },
-        { name: 'DstIP', type: PropTypes.string }
-      ],
-      values: {
-        Protocol: 'UDP',
-        SrcIP: '0.0.0.0',
-        DstIP: '0.0.0.0'
-      }
-    }
-  ]
-}
-
 const NewCard = ({ title, cardType, values, ...props }) => {
-  let card = Cards[cardType].find((card) => card.title == title)
+  let card = getCard(title)
   if (!card) {
     return
   }
@@ -341,5 +260,5 @@ Token.propTypes = {
   onChange: PropTypes.func
 }
 
-export { FlowCard, NewCard, Token, Cards }
+export { FlowCard, NewCard, Token }
 export default FlowCard
