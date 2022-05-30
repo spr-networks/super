@@ -44,7 +44,7 @@ import {
   Divider
 } from 'native-base'
 
-const CardList = ({ title, cards: defaultCards, cardType, ...props }) => {
+const CardList = ({ title, cards: defaultCards, cardType, edit, ...props }) => {
   const [cards, setCards] = useState(defaultCards)
   let refModal = useRef(null)
 
@@ -79,46 +79,55 @@ const CardList = ({ title, cards: defaultCards, cardType, ...props }) => {
     <VStack space={2}>
       <Text bold>{title}</Text>
 
-      <ModalForm title={`Add ${cardType} to flow`} modalRef={refModal}>
-        <AddFlowCard cardType={cardType} onSubmit={handleAddCard} />
-      </ModalForm>
-
       <FlatList
         data={cards}
+        listKey={`list${cardType}`}
         keyExtractor={(item, index) => index}
         renderItem={({ item, index }) => (
-          <Box py={4}>
-            <FlowCard
-              edit={true}
-              card={item}
-              onChange={onChange}
-              onDelete={onDelete}
-            />
-          </Box>
+          <FlowCard
+            edit={edit}
+            card={item}
+            onChange={onChange}
+            onDelete={onDelete}
+            mb={2}
+          />
         )}
       />
 
-      <Button
-        _variant="subtle"
-        variant="ghost"
-        colorScheme="muted"
-        rounded="md"
-        leftIcon={<Icon icon={faCirclePlus} color="muted.500" />}
-        onPress={() => addCard(cardType)}
-        disabled={cards.length}
-      >
-        Add card
-      </Button>
+      {edit ? (
+        <>
+          <ModalForm
+            key={`form${cardType}`}
+            title={`Add ${cardType} to flow`}
+            modalRef={refModal}
+          >
+            <AddFlowCard cardType={cardType} onSubmit={handleAddCard} />
+          </ModalForm>
+
+          <Button
+            _variant="subtle"
+            variant="ghost"
+            colorScheme="muted"
+            rounded="md"
+            leftIcon={<Icon icon={faCirclePlus} color="muted.500" />}
+            onPress={() => addCard(cardType)}
+            disabled={cards.length}
+            key={'add' + cardType}
+          >
+            Add card
+          </Button>
+        </>
+      ) : null}
     </VStack>
   )
 }
 
 // Add/Edit flow
-const Flow = (props) => {
+const Flow = ({ edit, ...props }) => {
   const context = useContext(AlertContext)
   // NOTE we have multiple but only support one atm.
-  const [triggers, setTriggers] = useState([])
-  const [actions, setActions] = useState([])
+  const [triggers, setTriggers] = useState(props.actions || [])
+  const [actions, setActions] = useState(props.triggers || [])
 
   const onSubmit = () => {
     let data = []
@@ -139,23 +148,28 @@ const Flow = (props) => {
   }
 
   return (
-    <VStack maxW={350}>
+    <Stack direction={edit ? 'column' : 'row'} maxW={350}>
       <CardList
         title="When..."
         cards={triggers}
         onChange={setTriggers}
         cardType="trigger"
+        edit={edit}
       />
       <CardList
         title="Then..."
         cards={actions}
         onChange={setActions}
         cardType="action"
+        edit={edit}
       />
-      <Button variant="solid" colorScheme="primary" mt={4} onPress={onSubmit}>
-        Save
-      </Button>
-    </VStack>
+
+      {edit ? (
+        <Button variant="solid" colorScheme="primary" mt={4} onPress={onSubmit}>
+          Save
+        </Button>
+      ) : null}
+    </Stack>
   )
 }
 
@@ -165,7 +179,7 @@ const FlowList = (props) => {
   let trigger = NewCard({
     title: 'Date',
     cardType: 'trigger',
-    values: { days: 'mon,tue', from: '09:00', to: '16:00' }
+    values: { days: 'mon,tue', from: '09:23', to: '16:23' }
   })
 
   let action = NewCard({
@@ -174,7 +188,7 @@ const FlowList = (props) => {
     values: { SrcIP: '192.168.2.23', DstIP: '23.23.23.23' }
   })
 
-  let flows = [{ trigger, action }]
+  let flows = [{ triggers: [trigger], actions: [action] }]
 
   return (
     <Box
@@ -190,19 +204,6 @@ const FlowList = (props) => {
         </VStack>
       </HStack>
 
-      <HStack space={3} justifyContent="space-around" alignItems="center">
-        <VStack w={360}>
-          <Text bold textAlign="center" color="muted.700">
-            When...
-          </Text>
-        </VStack>
-        <VStack w={360}>
-          <Text bold textAlign="center" color="muted.700">
-            Then...
-          </Text>
-        </VStack>
-      </HStack>
-
       <FlatList
         data={flows}
         renderItem={({ item }) => (
@@ -214,20 +215,7 @@ const FlowList = (props) => {
             borderColor="muted.200"
             py={10}
           >
-            <HStack space={3} justifyContent="space-around" alignItems="center">
-              <FlowCard size="xs" card={item.trigger} />
-              <FlowCard size="xs" card={item.action} />
-            </HStack>
-            <Box
-              w={320}
-              mx="auto"
-              mt={-50}
-              mb={50}
-              style={{ positon: 'relative', zIndex: -1 }}
-              alignItems="center"
-            >
-              <Icon icon={faArrowRightLong} color="muted.200" size="10x" />
-            </Box>
+            <Flow triggers={item.triggers} actions={item.actions} />
           </Box>
         )}
         keyExtractor={(item, index) => index}
@@ -237,7 +225,7 @@ const FlowList = (props) => {
 
       <Heading size="sm">Add flow</Heading>
 
-      <Flow trigger={trigger} action={action} />
+      <Flow edit={true} />
 
       {!flows.length ? <Text>There are no flows configured yet</Text> : null}
     </Box>

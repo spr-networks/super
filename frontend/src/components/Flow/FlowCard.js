@@ -68,6 +68,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
             <Token
               key={p.name}
               value={card.values ? card.values[p.name] || p.name : p.name}
+              description={p.description}
               format={p.format}
               onChange={(value) => onChange(p.name, value)}
             />
@@ -160,7 +161,13 @@ const FlowCard = ({ card, size, edit, ...props }) => {
 
 // token is like variables but for cards
 // TODO use proptypes to describe the cards
-const Token = ({ value: defaultValue, format, label, onChange, ...props }) => {
+const Token = ({
+  value: defaultValue,
+  format,
+  description,
+  onChange,
+  ...props
+}) => {
   const [value, setValue] = useState(defaultValue)
   const [isOpen, setIsOpen] = useState(false)
 
@@ -194,7 +201,6 @@ const Token = ({ value: defaultValue, format, label, onChange, ...props }) => {
 
   return (
     <>
-      {label ? <Text mr={1}>{label}</Text> : null}
       <Popover
         position="auto"
         trigger={trigger}
@@ -211,12 +217,13 @@ const Token = ({ value: defaultValue, format, label, onChange, ...props }) => {
                   onChangeText={onChangeText}
                   onSubmitEditing={() => setIsOpen(false)}
                 />
+                <FormControl.HelperText>{description}</FormControl.HelperText>
               </FormControl>
-              <IconButton
+              {/*<IconButton
                 ml="auto"
                 colorScheme="light"
                 icon={<Icon icon={faTag} />}
-              />
+              />*/}
             </HStack>
           </Popover.Body>
         </Popover.Content>
@@ -233,9 +240,23 @@ const Cards = {
       color: 'violet.300',
       icon: faClock,
       params: [
-        { name: 'days', type: PropTypes.array },
-        { name: 'from', type: PropTypes.string, format: /^\d{2}:\d{2}$/ },
-        { name: 'to', type: PropTypes.string, format: /^\d{2}:\d{2}$/ }
+        {
+          name: 'days',
+          type: PropTypes.array,
+          description: 'mon, tue. weekdays, weekend'
+        },
+        {
+          name: 'from',
+          type: PropTypes.string,
+          format: /^\d{2}:\d{2}$/,
+          description: '11:23'
+        },
+        {
+          name: 'to',
+          type: PropTypes.string,
+          format: /^\d{2}:\d{2}$/,
+          description: '23:23'
+        }
       ],
       values: {
         days: 'mon,tue,wed',
@@ -301,8 +322,10 @@ const NewCard = ({ title, cardType, values, ...props }) => {
     return
   }
 
-  card.values = Object.assign(card.values || {}, values)
-  return card
+  let newCard = JSON.parse(JSON.stringify(card))
+
+  newCard.values = Object.assign(newCard.values || {}, values)
+  return newCard
 }
 
 FlowCard.propTypes = {

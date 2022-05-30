@@ -41,7 +41,7 @@ const AddFlowCard = ({ cardType, onSubmit, ...props }) => {
 
   return (
     <VStack space={2}>
-      <Text bold>Cards</Text>
+      <Text bold>Select a Card</Text>
       <FlatList
         data={data}
         keyExtractor={(item) => item.title}
