@@ -241,6 +241,7 @@ const Token = ({
 
 const NewCard = ({ title, cardType, values, ...props }) => {
   let card = getCard(cardType, title)
+  if (!card) {
     return
   }
 

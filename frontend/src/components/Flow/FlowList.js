@@ -205,7 +205,7 @@ const FlowList = (props) => {
 
   const onSubmit = (data) => {
     // NewCard .cardType
-    console.log('cool:', data)
+    console.log('gluehere:', data)
     let triggers = data.triggers.map((card) =>
       NewCard({ cardType: 'trigger', ...card })
     )
