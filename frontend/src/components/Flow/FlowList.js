@@ -3,10 +3,10 @@ import PropTypes from 'prop-types'
 import { Icon } from 'FontAwesomeUtils'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import ModalForm from 'components/ModalForm'
-//import AddBlock from './AddBlock'
 import { AlertContext } from 'AppContext'
 import { FlowCard, NewCard } from './FlowCard'
 import AddFlowCard from './AddFlowCard'
+import { pfwAPI } from 'api/Pfw'
 
 import {
   Box,
@@ -22,7 +22,6 @@ import {
   useColorModeValue,
   Divider
 } from 'native-base'
-import { connectWebsocket } from 'api'
 
 const FlowCardList = ({
   title,
@@ -215,6 +214,81 @@ const FlowList = (props) => {
     )
 
     let flow = { title: 'Flow#new', triggers, actions }
+
+    // TODO if the action is block
+    if (false == 'Block') {
+      let block = {
+        Client: 'TODO', //ClientIdentifier
+        DstIP: '1.1.1.1',
+        DstPort: 2323,
+        Protocol: 'tcp',
+        CronExpr: 'TODO',
+        Condition: 'TODO'
+      }
+
+      pfwAPI
+        .addBlock(block)
+        .then((res) => {})
+        .catch((err) => {
+          context.error(err)
+        })
+    }
+
+    if (false == 'Forward') {
+      let forward = {
+        Client: 'TODO',
+        DstIP: '1.1.1.1',
+        SrcPort: 2323,
+        Protocol: 'tcp',
+        CronExpr: 'TODO',
+        Condition: 'TODO',
+
+        NewDstIP: '2.2.2.2',
+        DstPort: 2323
+      }
+
+      pfwAPI
+        .addForward(forward)
+        .then((res) => {})
+        .catch((err) => {
+          context.error(err)
+        })
+    }
+
+    /*
+
+type ClientIdentifier struct {
+	Identity  string
+	Group     string
+	SrcIP     string
+}
+
+/block
+
+type BlockRule struct {
+	Client 		ClientIdentifier
+	DstIP     string
+	DstPort   string
+	Protocol  string
+	CronExpr  string
+	Condition string
+}
+
+/forward
+
+type ForwardingRule struct {
+	Client		ClientIdentifier
+	DstIP     string
+	SrcPort   string
+	Protocol  string
+	CronExpr  string
+	Condition string
+
+	NewDstIP string
+	DstPort  string
+}
+
+*/
 
     setFlows(flows.concat(flow))
   }
