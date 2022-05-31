@@ -29,10 +29,6 @@ import {
 import { getCard } from './FlowCards'
 
 const FlowCard = ({ card, size, edit, ...props }) => {
-  // tmpfix
-  if (!card) {
-    return <></>
-  }
   size = size || 'md'
   let { title, description } = card
   let icon = (

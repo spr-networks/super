@@ -41,6 +41,7 @@ const triggers = [
   },
   {
     title: 'Incoming GET',
+    hidden: true,
     cardType: 'trigger',
     description: 'Trigger this card by sending a GET request',
     color: 'red.400',
@@ -115,7 +116,8 @@ const actions = [
 ]
 
 const getCards = (cardType) => {
-  return cardType == 'trigger' ? triggers : actions
+  let cards = cardType == 'trigger' ? triggers : actions
+  return cards.filter((card) => card.hidden !== true)
 }
 
 const getCard = (cardType, title) => {

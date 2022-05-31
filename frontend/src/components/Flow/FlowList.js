@@ -181,6 +181,8 @@ const FlowList = (props) => {
   const context = useContext(AlertContext)
   const [flows, setFlows] = useState([])
 
+  // for testing
+  /*
   useEffect(() => {
     let trigger = NewCard({
       title: 'Date',
@@ -202,6 +204,7 @@ const FlowList = (props) => {
       }
     ])
   }, [])
+  */
 
   const toCron = (days, from, to) => {
     /*
@@ -234,6 +237,13 @@ const FlowList = (props) => {
       sun: 7
     }
 
+    // default abbreviations
+    if (days == 'weekdays') {
+      days = 'mon,tue,wed,thu,fri'
+    } else if (days == 'weekend') {
+      days = 'sat,sun'
+    }
+
     dow = days
       .split(',')
       .map((d) => cronDays[d])
@@ -257,18 +267,31 @@ const FlowList = (props) => {
   }
 
   const onSubmit = (data) => {
-    // NewCard .cardType
-    // NOTE we only have one trigger for now
-    console.log('gluehere:', data)
+    // NOTE we only have one trigger + one action for now
+    // TODO support multiple actions later
+    console.log('save:', data)
     let triggers = data.triggers.map((card) => NewCard({ ...card }))
     let actions = data.actions.map((card) => NewCard({ ...card }))
 
+    // TODO add when api is ok
     let flow = { title: 'Flow#new', triggers, actions }
+    setFlows(flows.concat(flow))
 
-    const triggerToApi = (trigger) => {}
-
-    // NOTE only support Block for now
+    // NOTE only support Date+Block for now
     const flowToApi = (trigger, action) => {
+      // we use trigger for cronExpression && condition
+      // TODO fallback for default cron
+
+      if (trigger.title != 'Date') {
+        return console.error('NOT IMPLEMENTED:', trigger)
+      }
+
+      let CronExpr = 'TODO'
+      if (trigger.title == 'Date') {
+        let { days, from, to } = trigger.values
+        CronExpr = toCron(days, from, to)
+      }
+
       let values = action.values
       let Client = { Group: '', Identity: '', SrcIP: '' }
       let cli = values.Client
@@ -285,15 +308,6 @@ const FlowList = (props) => {
         Client.Identity = cli
       }
 
-      // NOTE Date specific
-      let CronExpr = 'TODO'
-      if (trigger.title == 'Date') {
-        let { days, from, to } = trigger.values
-        CronExpr = toCron(days, from, to)
-      } else {
-        return console.error('NOT IMPLEMENTED:', trigger)
-      }
-
       let block = {
         Client,
         DstIP: values.DstIP,
@@ -306,9 +320,12 @@ const FlowList = (props) => {
       return block
     }
 
+    let trigger = triggers[0],
+      action = actions[0]
+
     // TODO if the action is block
-    if (true) {
-      let block = flowToApi(triggers[0], actions[0])
+    if (action.title.match(/Block (TCP|UDP)/)) {
+      let block = flowToApi(trigger, action)
 
       return console.log('block this:', block)
 
@@ -320,7 +337,8 @@ const FlowList = (props) => {
         })
     }
 
-    if (false == 'Forward') {
+    //TODO
+    if (action.title.match(/Forward (TCP|UDP)/)) {
       let forward = {
         Client: 'TODO',
         DstIP: '1.1.1.1',
@@ -340,8 +358,6 @@ const FlowList = (props) => {
           context.error(err)
         })
     }
-
-    setFlows(flows.concat(flow))
   }
 
   return (
