@@ -56,7 +56,10 @@ const FlowCard = ({ card, size, edit, ...props }) => {
             size="xs"
             py={0}
           >
-            {(card.values && card.values[p.name]) || p.name}
+            {/*card.values && card.values[p.name] !== undefined
+              ? card.values[p.name]
+              : p.name*/}
+            {p.name}
           </Badge>
         ))}
     </HStack>
@@ -74,7 +77,11 @@ const FlowCard = ({ card, size, edit, ...props }) => {
           .map((p) => (
             <Token
               key={p.name}
-              value={card.values ? card.values[p.name] || p.name : p.name}
+              value={
+                card.values && card.values[p.name] !== undefined
+                  ? card.values[p.name]
+                  : p.name
+              }
               description={p.description}
               format={p.format}
               onChange={(value) => onChange(p.name, value)}
@@ -175,8 +182,12 @@ const Token = ({
   onChange,
   ...props
 }) => {
-  const [value, setValue] = useState(defaultValue)
+  const [value, setValue] = useState('' + defaultValue)
   const [isOpen, setIsOpen] = useState(false)
+
+  // TODO autocomplete/button for selecting values
+  // this can be:
+  // groups, clients, ports
 
   const trigger = (triggerProps) => (
     <Button

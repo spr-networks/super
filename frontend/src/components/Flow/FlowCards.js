@@ -62,14 +62,23 @@ const actions = [
         hidden: true,
         type: PropTypes.string
       },
-      /*NOTE Group, Identity or SrcIP*/
-      { name: 'SrcIP', type: PropTypes.string },
-      { name: 'DstIP', type: PropTypes.string }
+      {
+        name: 'Client',
+        type: PropTypes.string,
+        description: 'IP/CIDR or Group'
+      },
+      { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      {
+        name: 'DstPort',
+        type: PropTypes.number,
+        description: 'Dest port, use 0 for all'
+      }
     ],
     values: {
-      Protocol: 'TCP',
-      SrcIP: '0.0.0.0',
-      DstIP: '0.0.0.0'
+      Protocol: 'tcp',
+      Client: '0.0.0.0',
+      DstIP: '0.0.0.0',
+      DstPort: 0
     }
   },
   {
@@ -84,13 +93,23 @@ const actions = [
         hidden: true,
         type: PropTypes.string
       },
-      { name: 'SrcIP', type: PropTypes.string },
-      { name: 'DstIP', type: PropTypes.string }
+      {
+        name: 'Client',
+        type: PropTypes.string,
+        description: 'IP/CIDR or Group'
+      },
+      { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      {
+        name: 'DstPort',
+        type: PropTypes.number,
+        description: 'Dest port, use 0 for all'
+      }
     ],
     values: {
-      Protocol: 'UDP',
-      SrcIP: '0.0.0.0',
-      DstIP: '0.0.0.0'
+      Protocol: 'udp',
+      Client: '0.0.0.0',
+      DstIP: '0.0.0.0',
+      DstPort: 0
     }
   }
 ]

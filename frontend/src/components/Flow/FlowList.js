@@ -104,7 +104,8 @@ const FlowCardList = ({
             rounded="md"
             leftIcon={<Icon icon={faCirclePlus} color="muted.500" />}
             onPress={() => addCard(cardType)}
-            disabled={cardType == 'trigger' && cards.length}
+            __disabled={cardType == 'trigger' && cards.length}
+            disabled={cards.length}
             key={'add' + cardType}
           >
             Add card
@@ -202,29 +203,114 @@ const FlowList = (props) => {
     ])
   }, [])
 
+  const toCron = (days, from, to) => {
+    /*
+*    *    *    *    *    *
+┬    ┬    ┬    ┬    ┬    ┬
+│    │    │    │    │    |
+│    │    │    │    │    └ day of week (0 - 7, 1L - 7L) (0 or 7 is Sun)
+│    │    │    │    └───── month (1 - 12)
+│    │    │    └────────── day of month (1 - 31, L)
+│    │    └─────────────── hour (0 - 23)
+│    └──────────────────── minute (0 - 59)
+└───────────────────────── second (0 - 59, optional)
+    */
+
+    let minute = '0',
+      hour = '*',
+      dom = '*',
+      month = '*',
+      dow = '*'
+
+    //1. days
+    let cronDays = {
+      sun: 0,
+      mon: 1,
+      tue: 2,
+      wed: 3,
+      thu: 4,
+      fri: 5,
+      sat: 6,
+      sun: 7
+    }
+
+    dow = days
+      .split(',')
+      .map((d) => cronDays[d])
+      .filter((n) => typeof n === 'number')
+      .join(',')
+
+    //2. time
+    let [fromH, fromM] = from.split(':')
+    let [toH, toM] = to.split(':')
+
+    hour = `${fromH}-${toH}`
+    minute = `${fromM}-${toM}`
+
+    // simplify
+    if (minute == '00-00') {
+      minute = '0'
+    }
+
+    let str = `0 ${minute} ${hour} ${dom} ${month} ${dow}`
+    return str
+  }
+
   const onSubmit = (data) => {
     // NewCard .cardType
+    // NOTE we only have one trigger for now
     console.log('gluehere:', data)
-    let triggers = data.triggers.map((card) =>
-      NewCard({ cardType: 'trigger', ...card })
-    )
-
-    let actions = data.actions.map((card) =>
-      NewCard({ cardType: 'action', ...card })
-    )
+    let triggers = data.triggers.map((card) => NewCard({ ...card }))
+    let actions = data.actions.map((card) => NewCard({ ...card }))
 
     let flow = { title: 'Flow#new', triggers, actions }
 
-    // TODO if the action is block
-    if (false == 'Block') {
+    const triggerToApi = (trigger) => {}
+
+    // NOTE only support Block for now
+    const flowToApi = (trigger, action) => {
+      let values = action.values
+      let Client = { Group: '', Identity: '', SrcIP: '' }
+      let cli = values.Client
+
+      // TODO: fetch groups
+      let groups = ['lan', 'wan', 'dns']
+
+      // TODO better check here
+      if (cli.split('.').length == 4) {
+        Client.SrcIP = cli
+      } else if (groups.includes(cli)) {
+        Client.Group = cli
+      } else {
+        Client.Identity = cli
+      }
+
+      // NOTE Date specific
+      let CronExpr = 'TODO'
+      if (trigger.title == 'Date') {
+        let { days, from, to } = trigger.values
+        CronExpr = toCron(days, from, to)
+      } else {
+        return console.error('NOT IMPLEMENTED:', trigger)
+      }
+
       let block = {
-        Client: 'TODO', //ClientIdentifier
-        DstIP: '1.1.1.1',
-        DstPort: 2323,
-        Protocol: 'tcp',
-        CronExpr: 'TODO',
+        Client,
+        DstIP: values.DstIP,
+        DstPort: values.DstPort,
+        Protocol: values.Protocol,
+        CronExpr,
         Condition: 'TODO'
       }
+
+      return block
+    }
+
+    // TODO if the action is block
+    if (true) {
+      let block = flowToApi(triggers[0], actions[0])
+
+      return console.log('block this:', block)
 
       pfwAPI
         .addBlock(block)
@@ -254,41 +340,6 @@ const FlowList = (props) => {
           context.error(err)
         })
     }
-
-    /*
-
-type ClientIdentifier struct {
-	Identity  string
-	Group     string
-	SrcIP     string
-}
-
-/block
-
-type BlockRule struct {
-	Client 		ClientIdentifier
-	DstIP     string
-	DstPort   string
-	Protocol  string
-	CronExpr  string
-	Condition string
-}
-
-/forward
-
-type ForwardingRule struct {
-	Client		ClientIdentifier
-	DstIP     string
-	SrcPort   string
-	Protocol  string
-	CronExpr  string
-	Condition string
-
-	NewDstIP string
-	DstPort  string
-}
-
-*/
 
     setFlows(flows.concat(flow))
   }
