@@ -93,7 +93,10 @@ const WifiInterface = (props) => {
         borderWidth={1}
         borderColor={useColorModeValue('muted.200', 'muted.700')}
       >
-        <VStack borderRightWidth={1} borderRightColor={useColorModeValue('muted.200', 'muted.700')}>
+        <VStack
+          borderRightWidth={1}
+          borderRightColor={useColorModeValue('muted.200', 'muted.700')}
+        >
           {tabList.map((tab) =>
             iw[tab] || tab == 'other' ? (
               <Button
@@ -270,7 +273,7 @@ const WifiInterfaceList = (props) => {
 
   return (
     <>
-      <VStack>
+      <VStack space={4}>
         {iws.length ? (
           <>
             {iws.map((iw) => (
