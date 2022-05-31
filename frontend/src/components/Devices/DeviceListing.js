@@ -189,7 +189,7 @@ const DeviceListing = (props) => {
                 <FlatList
                   data={devices}
                   renderItem={renderItem}
-                  keyExtractor={(item) => item.Name}
+                  keyExtractor={(item, index) => item.Name + index}
                 />
               ) : (
                 <Text color="muted.500">
