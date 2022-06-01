@@ -40,17 +40,18 @@ const FlowCard = ({ card, size, edit, noValues, ...props }) => {
   )
 
   let body = (
-    <HStack space={1}>
+    <HStack space={1} flexWrap="wrap">
       {card.params
         .filter((p) => !p.hidden)
         .map((p) => (
           <Badge
             key={p.name}
             variant="outline"
-            colorScheme="primary"
+            borderColor={useColorModeValue('muted.200', 'muted.600')}
             rounded="md"
             size="xs"
             py={0}
+            px={1}
           >
             {noValues === true
               ? p.name
@@ -68,12 +69,13 @@ const FlowCard = ({ card, size, edit, noValues, ...props }) => {
     }
 
     body = (
-      <HStack space={2}>
+      <HStack space={2} flexWrap="wrap" maxW="210px">
         {card.params
           .filter((p) => !p.hidden)
           .map((p) => (
             <Token
               key={p.name}
+              label={p.name}
               value={
                 card.values && card.values[p.name] !== undefined
                   ? card.values[p.name]
@@ -81,6 +83,7 @@ const FlowCard = ({ card, size, edit, noValues, ...props }) => {
               }
               description={p.description}
               format={p.format}
+              size={Object.keys(card.values).length >= 5 ? 'xs' : 'sm'}
               onChange={(value) => onChange(p.name, value)}
             />
           ))}
@@ -172,6 +175,7 @@ const FlowCard = ({ card, size, edit, noValues, ...props }) => {
 // token is like variables but for cards
 // TODO use proptypes to describe the cards
 const Token = ({
+  label,
   value: defaultValue,
   format,
   description,
@@ -185,25 +189,35 @@ const Token = ({
   // this can be:
   // groups, clients, ports
 
+  let size = props.size || 'sm'
+
   const trigger = (triggerProps) => (
-    <Button
-      variant="outline"
-      colorScheme="light"
-      rounded="md"
-      size="sm"
-      p={1}
-      lineHeight={14}
-      textAlign="center"
-      {...triggerProps}
-      onPress={() => setIsOpen(!isOpen)}
-    >
-      {value}
-    </Button>
+    <Tooltip label={label} bg="muted.800" _text={{ color: 'muted.200' }}>
+      <Button
+        variant="outline"
+        colorScheme="light"
+        borderColor={useColorModeValue('muted.200', 'muted.600')}
+        _text={{ color: useColorModeValue('muted.600', 'muted.200') }}
+        rounded="md"
+        size={size}
+        p={1}
+        lineHeight={14}
+        textAlign="center"
+        {...triggerProps}
+        onPress={() => setIsOpen(!isOpen)}
+      >
+        {value}
+      </Button>
+    </Tooltip>
   )
 
   const onChangeText = (value) => {
     //only update if correct format
     if (format !== undefined && !value.match(format)) {
+      return
+    }
+
+    if (!value.length) {
       return
     }
 
@@ -225,6 +239,7 @@ const Token = ({
           <Popover.Body>
             <HStack space={1}>
               <FormControl flex={1}>
+                <FormControl.Label>{label}</FormControl.Label>
                 <Input
                   variant="outlined"
                   defaultValue={value}

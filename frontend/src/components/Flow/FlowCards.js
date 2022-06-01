@@ -2,6 +2,7 @@ import PropTypes from 'prop-types'
 import {
   faBan,
   faBroadcastTower,
+  faCircleArrowRight,
   faClock,
   faEllipsis,
   faTag
@@ -110,6 +111,85 @@ const actions = [
       Protocol: 'udp',
       Client: '0.0.0.0',
       DstIP: '0.0.0.0',
+      DstPort: 0
+    }
+  },
+  {
+    title: 'Forward TCP',
+    cardType: 'action',
+    description: 'Forward TCP for specified source to destination',
+    color: 'emerald.600',
+    icon: faCircleArrowRight,
+    params: [
+      {
+        name: 'Protocol',
+        hidden: true,
+        type: PropTypes.string
+      },
+      {
+        name: 'Client',
+        type: PropTypes.string,
+        description: 'IP/CIDR or Group'
+      },
+      {
+        name: 'SrcPort',
+        type: PropTypes.number,
+        description: 'Source port, use 0 for all'
+      },
+      { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      { name: 'NewDstIP', type: PropTypes.string, description: 'IP/CIDR' },
+
+      {
+        name: 'DstPort',
+        type: PropTypes.number,
+        description: 'Dest port, use 0 for all'
+      }
+    ],
+    values: {
+      Protocol: 'tcp',
+      Client: '0.0.0.0',
+      SrcPort: 0,
+      DstIP: '0.0.0.0',
+      NewDstIP: '0.0.0.0',
+      DstPort: 0
+    }
+  },
+  {
+    title: 'Forward UDP',
+    cardType: 'action',
+    description: 'Forward UDP for specified source to destination',
+    color: 'emerald.400',
+    icon: faCircleArrowRight,
+    params: [
+      {
+        name: 'Protocol',
+        hidden: true,
+        type: PropTypes.string
+      },
+      {
+        name: 'Client',
+        type: PropTypes.string,
+        description: 'IP/CIDR or Group'
+      },
+      {
+        name: 'SrcPort',
+        type: PropTypes.number,
+        description: 'Source port, use 0 for all'
+      },
+      { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      { name: 'NewDstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      {
+        name: 'DstPort',
+        type: PropTypes.number,
+        description: 'Dest port, use 0 for all'
+      }
+    ],
+    values: {
+      Protocol: 'udp',
+      Client: '0.0.0.0',
+      SrcPort: 0,
+      DstIP: '0.0.0.0',
+      NewDstIP: '0.0.0.0',
       DstPort: 0
     }
   }

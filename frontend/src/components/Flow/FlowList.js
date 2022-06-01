@@ -421,14 +421,11 @@ const saveFlow = (flow) => {
   if (action.title.match(/Block (TCP|UDP)/)) {
     let block = flowToApi(trigger, action)
 
-    return console.log('block this:', block)
+    return new Promise((resolve, reject) => {
+      resolve(block)
+    })
 
-    pfwAPI
-      .addBlock(block)
-      .then((res) => {})
-      .catch((err) => {
-        context.error(err)
-      })
+    return pfwAPI.addBlock(block)
   }
 
   //TODO
@@ -445,12 +442,11 @@ const saveFlow = (flow) => {
       DstPort: 2323
     }
 
-    pfwAPI
-      .addForward(forward)
-      .then((res) => {})
-      .catch((err) => {
-        context.error(err)
-      })
+    return new Promise((resolve, reject) => {
+      resolve(forward)
+    })
+
+    return pfwAPI.addForward(forward)
   }
 }
 
@@ -496,21 +492,19 @@ const FlowList = (props) => {
   }, [])
 
   const onSubmit = (data) => {
-    // TODO detect if its an update or new/duplicated entry
     // NOTE we only have one trigger + one action for now
-    // TODO support multiple actions later
-    console.log('save:', data)
-
-    if (!data.triggers.length || !data.triggers.length) {
-      context.error('missing elements')
-      return
+    if (!data.triggers.length) {
+      return context.error('missing trigger')
     }
 
-    let title = data.title || 'NewFlowX'
+    if (!data.actions.length) {
+      return context.error('missing actions')
+    }
+
+    let title = data.title || 'NewFlow#1'
     let triggers = data.triggers.map((card) => NewCard({ ...card }))
     let actions = data.actions.map((card) => NewCard({ ...card }))
 
-    // TODO add when api is ok
     let flow = { title, triggers, actions }
     if (data.index !== undefined) {
       flow.index = data.index
@@ -518,18 +512,22 @@ const FlowList = (props) => {
 
     // send flow to api
     saveFlow(flow)
+      .then((res) => {
+        // update ui
+        if (flow.index !== undefined) {
+          let newFlows = flows
+          newFlows[flow.index] = flow
+          setFlows(newFlows)
+        } else {
+          setFlows(flows.concat(flow))
+        }
 
-    // update ui
-    if (flow.index !== undefined) {
-      let newFlows = flows
-      newFlows[flow.index] = flow
-      setFlows(newFlows)
-    } else {
-      setFlows(flows.concat(flow))
-    }
-
-    // empty new/edit flow when adding/modifying flows
-    resetFlow()
+        // empty new/edit flow when adding/modifying flows
+        resetFlow()
+      })
+      .catch((err) => {
+        context.error(err)
+      })
   }
 
   const onEdit = (item, index) => {
