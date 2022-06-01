@@ -55,7 +55,8 @@ const actions = [
   {
     title: 'Block TCP',
     cardType: 'action',
-    description: 'Block TCP for specified source and destination',
+    description:
+      'Block TCP from source address or group to destination address',
     color: 'red.400',
     icon: faBan,
     params: [
@@ -86,7 +87,8 @@ const actions = [
   {
     title: 'Block UDP',
     cardType: 'action',
-    description: 'Block UDP for specified source and destination',
+    description:
+      'Block UDP from source address or group to destination address',
     color: 'warning.400',
     icon: faBan,
     params: [
@@ -117,7 +119,8 @@ const actions = [
   {
     title: 'Forward TCP',
     cardType: 'action',
-    description: 'Forward TCP for specified source to destination',
+    description:
+      'Forward TCP for specified source to destination address and port',
     color: 'emerald.600',
     icon: faCircleArrowRight,
     params: [
@@ -157,7 +160,8 @@ const actions = [
   {
     title: 'Forward UDP',
     cardType: 'action',
-    description: 'Forward UDP for specified source to destination',
+    description:
+      'Forward UDP for specified source to destination address and port',
     color: 'emerald.400',
     icon: faCircleArrowRight,
     params: [

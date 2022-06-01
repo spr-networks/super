@@ -40,27 +40,31 @@ const FlowCard = ({ card, size, edit, noValues, ...props }) => {
   )
 
   let body = (
-    <HStack space={1} flexWrap="wrap">
-      {card.params
-        .filter((p) => !p.hidden)
-        .map((p) => (
-          <Badge
-            key={p.name}
-            variant="outline"
-            borderColor={useColorModeValue('muted.200', 'muted.600')}
-            rounded="md"
-            size="xs"
-            py={0}
-            px={1}
-          >
-            {noValues === true
-              ? p.name
-              : card.values && card.values[p.name] !== undefined
-              ? card.values[p.name]
-              : p.name}
-          </Badge>
-        ))}
-    </HStack>
+    <VStack space={2}>
+      <Text noOfLines={2} w="2/3" fontSize="sm" color="muted.700">
+        {description}
+      </Text>
+      <HStack space={1} flexWrap="wrap">
+        {card.params
+          .filter((p) => !p.hidden)
+          .map((p) => (
+            <Badge
+              key={p.name}
+              variant="outline"
+              bg={'muted.50'}
+              borderColor={useColorModeValue('muted.200', 'muted.600')}
+              rounded="md"
+              size="xs"
+              py={0}
+              px={1}
+            >
+              {card.values && card.values[p.name] !== undefined
+                ? card.values[p.name]
+                : p.name}
+            </Badge>
+          ))}
+      </HStack>
+    </VStack>
   )
 
   if (edit) {
@@ -149,7 +153,7 @@ const FlowCard = ({ card, size, edit, noValues, ...props }) => {
             <Text color="muted.400" fontSize="sm">
               {title}
             </Text>
-            {description ? (
+            {edit && description ? (
               <Tooltip
                 label={description}
                 bg="muted.800"
@@ -164,7 +168,7 @@ const FlowCard = ({ card, size, edit, noValues, ...props }) => {
               </Tooltip>
             ) : null}
           </HStack>
-          <Text>{body}</Text>
+          {body}
         </VStack>
         {edit ? moreMenu : null}
       </HStack>
