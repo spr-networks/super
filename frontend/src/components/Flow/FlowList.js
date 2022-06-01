@@ -446,10 +446,9 @@ const FlowList = (props) => {
       __bg={useColorModeValue('warmGray.50', 'blueGray.800')}
       rounded="md"
       justifyContent="stretch"
-      space={4}
-      p={4}
+      space={flows.length ? 4 : 0}
     >
-      <Box flex={1}>
+      <Box flex={1} display={{ base: flows.length ? 'flex' : 'none' }}>
         <HStack justifyContent="space-between" alignContent="center">
           <VStack>
             <Heading fontSize="xl">Flows</Heading>

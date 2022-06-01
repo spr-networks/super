@@ -43,9 +43,9 @@ const toCron = (days, from, to) => {
 
   // default abbreviations
   if (days == 'weekdays') {
-    days = 'mon,tue,wed,thu,fri'
+    days = 'mon,tue,wed,thu,fri' //= 1-5
   } else if (days == 'weekend') {
-    days = 'sat,sun'
+    days = 'sat,sun' //= 6-7
   }
 
   dow = days
@@ -66,7 +66,12 @@ const toCron = (days, from, to) => {
     minute = '0'
   }
 
-  let str = `0 ${minute} ${hour} ${dom} ${month} ${dow}`
+  //NOTE will need to have :00 for minutes if hours diff >= 1h
+  if (fromH != toH) {
+    minute = '*'
+  }
+
+  let str = `${minute} ${hour} ${dom} ${month} ${dow}`
   return str
 }
 
@@ -121,7 +126,7 @@ const triggers = [
     onSubmit: function () {
       let { days, from, to } = this.values
       let CronExpr = toCron(days, from, to)
-      return { CronExpr, Condition: 'TODO' }
+      return { CronExpr, Condition: '' }
     }
   },
   {
@@ -204,7 +209,7 @@ const actions = [
     },
     //NOTE same as TCP
     onSubmit: function () {
-      return { Client: parseClient(values.Client), ...this.values }
+      return { Client: parseClient(this.values.Client), ...this.values }
     }
   },
   {

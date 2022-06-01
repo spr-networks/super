@@ -41,7 +41,12 @@ const FlowCard = ({ card, size, edit, noValues, ...props }) => {
 
   let body = (
     <VStack space={2}>
-      <Text noOfLines={2} w="2/3" fontSize="sm" color="muted.700">
+      <Text
+        noOfLines={2}
+        w="2/3"
+        fontSize="sm"
+        color={useColorModeValue('muted.700', 'muted.200')}
+      >
         {description}
       </Text>
       <HStack space={1} flexWrap="wrap">
@@ -51,7 +56,7 @@ const FlowCard = ({ card, size, edit, noValues, ...props }) => {
             <Badge
               key={p.name}
               variant="outline"
-              bg={'muted.50'}
+              bg={useColorModeValue('muted.50', 'muted.700')}
               borderColor={useColorModeValue('muted.200', 'muted.600')}
               rounded="md"
               size="xs"
