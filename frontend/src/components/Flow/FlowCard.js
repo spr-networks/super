@@ -252,9 +252,9 @@ const NewCard = ({ title, cardType, values, ...props }) => {
     return
   }
 
-  let newCard = JSON.parse(JSON.stringify(card))
-
+  let newCard = Object.assign({}, card)
   newCard.values = Object.assign(newCard.values || {}, values)
+
   return newCard
 }
 

@@ -176,7 +176,8 @@ const Flow = ({ flow, edit, ...props }) => {
 
     const moreMenu = (
       <Menu
-        w="190"
+        flex={1}
+        w={190}
         closeOnSelect={true}
         trigger={triggerBtn}
         alignSelf="center"
@@ -205,14 +206,16 @@ const Flow = ({ flow, edit, ...props }) => {
         <VStack flex={1} space={2}>
           <Text bold>{title}</Text>
 
-          <HStack space={4}>
+          <HStack space={4} justifyContent="start">
             <HStack space={1} alignItems="center">
               <Icon icon={trigger.icon} color={trigger.color} />
               <Text isTruncated>{Object.values(trigger.values).join(' ')}</Text>
             </HStack>
             <HStack space={2} alignItems="center">
               <Icon icon={action.icon} color={action.color} />
-              <Text isTruncated>{Object.values(action.values).join(' ')}</Text>
+              <Text isTruncated>
+                {Object.values(action.values).slice(0, 3).join(' ')}
+              </Text>
             </HStack>
           </HStack>
         </VStack>
@@ -242,8 +245,6 @@ const Flow = ({ flow, edit, ...props }) => {
         newFlow.index = flow.index
       }
 
-      console.log('>', newFlow)
-
       props.onSubmit(newFlow)
     }
   }
@@ -262,6 +263,7 @@ const Flow = ({ flow, edit, ...props }) => {
           variant="underlined"
           value={title}
           onChangeText={(value) => setTitle(value)}
+          onSubmitEditing={onSubmit}
         />
         <FormControl.HelperText>
           Use a unique name to identify this flow
@@ -308,39 +310,7 @@ const Flow = ({ flow, edit, ...props }) => {
   )
 }
 
-const FlowList = (props) => {
-  const context = useContext(AlertContext)
-  const [flows, setFlows] = useState([])
-  const [flow, setFlow] = useState({
-    title: 'NewFlow',
-    triggers: [],
-    actions: []
-  }) //new/edit flow
-
-  // for testing
-
-  useEffect(() => {
-    let trigger = NewCard({
-      title: 'Date',
-      cardType: 'trigger',
-      values: { days: 'mon,tue', from: '09:23', to: '16:23' }
-    })
-
-    let action = NewCard({
-      title: 'Block TCP',
-      cardType: 'action',
-      values: { SrcIP: '192.168.2.23', DstIP: '23.23.23.23' }
-    })
-
-    setFlows([
-      {
-        title: 'Block 23.23.23.23 on weekdays',
-        triggers: [trigger],
-        actions: [action]
-      }
-    ])
-  }, [])
-
+const saveFlow = (flow) => {
   const toCron = (days, from, to) => {
     /*
 *    *    *    *    *    *
@@ -401,128 +371,168 @@ const FlowList = (props) => {
     return str
   }
 
+  // NOTE only support Date+Block for now
+  const flowToApi = (trigger, action) => {
+    // we use trigger for cronExpression && condition
+    // TODO fallback for default cron
+
+    if (trigger.title != 'Date') {
+      return console.error('NOT IMPLEMENTED:', trigger)
+    }
+
+    let CronExpr = 'TODO'
+    if (trigger.title == 'Date') {
+      let { days, from, to } = trigger.values
+      CronExpr = toCron(days, from, to)
+    }
+
+    let values = action.values
+    let Client = { Group: '', Identity: '', SrcIP: '' }
+    let cli = values.Client
+
+    // TODO: fetch groups
+    let groups = ['lan', 'wan', 'dns']
+
+    // TODO better check here
+    if (cli.split('.').length == 4) {
+      Client.SrcIP = cli
+    } else if (groups.includes(cli)) {
+      Client.Group = cli
+    } else {
+      Client.Identity = cli
+    }
+
+    let block = {
+      Client,
+      DstIP: values.DstIP,
+      DstPort: values.DstPort,
+      Protocol: values.Protocol,
+      CronExpr,
+      Condition: 'TODO'
+    }
+
+    return block
+  }
+
+  let trigger = flow.triggers[0],
+    action = flow.actions[0]
+
+  // TODO if the action is block
+  if (action.title.match(/Block (TCP|UDP)/)) {
+    let block = flowToApi(trigger, action)
+
+    return console.log('block this:', block)
+
+    pfwAPI
+      .addBlock(block)
+      .then((res) => {})
+      .catch((err) => {
+        context.error(err)
+      })
+  }
+
+  //TODO
+  if (action.title.match(/Forward (TCP|UDP)/)) {
+    let forward = {
+      Client: 'TODO',
+      DstIP: '1.1.1.1',
+      SrcPort: 2323,
+      Protocol: 'tcp',
+      CronExpr: 'TODO',
+      Condition: 'TODO',
+
+      NewDstIP: '2.2.2.2',
+      DstPort: 2323
+    }
+
+    pfwAPI
+      .addForward(forward)
+      .then((res) => {})
+      .catch((err) => {
+        context.error(err)
+      })
+  }
+}
+
+const FlowList = (props) => {
+  const context = useContext(AlertContext)
+  const [flows, setFlows] = useState([])
+  const [flow, setFlow] = useState({
+    title: 'NewFlow',
+    triggers: [],
+    actions: []
+  })
+
+  // empty new/edit flow when adding/modifying flows
+  const resetFlow = () => {
+    setFlow({
+      title: 'NewFlow',
+      triggers: [],
+      actions: []
+    })
+  }
+
+  // for testing
+  useEffect(() => {
+    let trigger = NewCard({
+      title: 'Date',
+      cardType: 'trigger',
+      values: { days: 'weekdays', from: '09:23', to: '16:23' }
+    })
+
+    let action = NewCard({
+      title: 'Block TCP',
+      cardType: 'action',
+      values: { SrcIP: '192.168.2.23', DstIP: '23.23.23.23', DstPort: 80 }
+    })
+
+    setFlows([
+      {
+        title: 'Block 23 on weekdays',
+        triggers: [trigger],
+        actions: [action]
+      }
+    ])
+  }, [])
+
   const onSubmit = (data) => {
     // TODO detect if its an update or new/duplicated entry
     // NOTE we only have one trigger + one action for now
     // TODO support multiple actions later
     console.log('save:', data)
+
+    if (!data.triggers.length || !data.triggers.length) {
+      context.error('missing elements')
+      return
+    }
+
     let title = data.title || 'NewFlowX'
     let triggers = data.triggers.map((card) => NewCard({ ...card }))
     let actions = data.actions.map((card) => NewCard({ ...card }))
 
     // TODO add when api is ok
     let flow = { title, triggers, actions }
-
-    // update
     if (data.index !== undefined) {
+      flow.index = data.index
+    }
+
+    // send flow to api
+    saveFlow(flow)
+
+    // update ui
+    if (flow.index !== undefined) {
       let newFlows = flows
-      newFlows[data.index] = flow
+      newFlows[flow.index] = flow
       setFlows(newFlows)
     } else {
       setFlows(flows.concat(flow))
     }
 
     // empty new/edit flow when adding/modifying flows
-    setFlow({
-      title: 'NewFlow',
-      triggers: [],
-      actions: []
-    })
-
-    // NOTE only support Date+Block for now
-    const flowToApi = (trigger, action) => {
-      // we use trigger for cronExpression && condition
-      // TODO fallback for default cron
-
-      if (trigger.title != 'Date') {
-        return console.error('NOT IMPLEMENTED:', trigger)
-      }
-
-      let CronExpr = 'TODO'
-      if (trigger.title == 'Date') {
-        let { days, from, to } = trigger.values
-        CronExpr = toCron(days, from, to)
-      }
-
-      let values = action.values
-      let Client = { Group: '', Identity: '', SrcIP: '' }
-      let cli = values.Client
-
-      // TODO: fetch groups
-      let groups = ['lan', 'wan', 'dns']
-
-      // TODO better check here
-      if (cli.split('.').length == 4) {
-        Client.SrcIP = cli
-      } else if (groups.includes(cli)) {
-        Client.Group = cli
-      } else {
-        Client.Identity = cli
-      }
-
-      let block = {
-        Client,
-        DstIP: values.DstIP,
-        DstPort: values.DstPort,
-        Protocol: values.Protocol,
-        CronExpr,
-        Condition: 'TODO'
-      }
-
-      return block
-    }
-
-    let trigger = triggers[0],
-      action = actions[0]
-
-    // TODO if the action is block
-    if (action.title.match(/Block (TCP|UDP)/)) {
-      let block = flowToApi(trigger, action)
-
-      return console.log('block this:', block)
-
-      pfwAPI
-        .addBlock(block)
-        .then((res) => {})
-        .catch((err) => {
-          context.error(err)
-        })
-    }
-
-    //TODO
-    if (action.title.match(/Forward (TCP|UDP)/)) {
-      let forward = {
-        Client: 'TODO',
-        DstIP: '1.1.1.1',
-        SrcPort: 2323,
-        Protocol: 'tcp',
-        CronExpr: 'TODO',
-        Condition: 'TODO',
-
-        NewDstIP: '2.2.2.2',
-        DstPort: 2323
-      }
-
-      pfwAPI
-        .addForward(forward)
-        .then((res) => {})
-        .catch((err) => {
-          context.error(err)
-        })
-    }
-  }
-
-  const onReset = () => {
-    // empty new/edit flow when adding/modifying flows
-    setFlow({
-      title: 'NewFlow',
-      triggers: [],
-      actions: []
-    })
+    resetFlow()
   }
 
   const onEdit = (item, index) => {
-    console.log('edit:', index)
     setFlow({ index, ...item })
   }
 
@@ -573,7 +583,7 @@ const FlowList = (props) => {
                 edit={false}
                 onDelete={() => onDelete(item, index)}
                 onDuplicate={onDuplicate}
-                onEdit={(item) => onEdit(item, index)}
+                onEdit={() => onEdit(item, index)}
                 flow={item}
               />
             </Box>
@@ -595,7 +605,7 @@ const FlowList = (props) => {
       >
         <Heading size="sm">Add &amp; Edit flow</Heading>
 
-        <Flow edit={true} flow={flow} onSubmit={onSubmit} onReset={onReset} />
+        <Flow edit={true} flow={flow} onSubmit={onSubmit} onReset={resetFlow} />
       </VStack>
     </Stack>
   )
