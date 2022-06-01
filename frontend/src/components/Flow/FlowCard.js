@@ -28,7 +28,7 @@ import {
 
 import { getCard } from './FlowCards'
 
-const FlowCard = ({ card, size, edit, ...props }) => {
+const FlowCard = ({ card, size, edit, noValues, ...props }) => {
   size = size || 'md'
   let { title, description } = card
   let icon = (
@@ -52,10 +52,11 @@ const FlowCard = ({ card, size, edit, ...props }) => {
             size="xs"
             py={0}
           >
-            {/*card.values && card.values[p.name] !== undefined
+            {noValues === true
+              ? p.name
+              : card.values && card.values[p.name] !== undefined
               ? card.values[p.name]
-              : p.name*/}
-            {p.name}
+              : p.name}
           </Badge>
         ))}
     </HStack>
@@ -111,7 +112,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
   }
 
   const moreMenu = (
-    <Menu w="190" p={0} closeOnSelect={true} trigger={trigger}>
+    <Menu w={190} p={0} closeOnSelect={true} trigger={trigger}>
       {/*<Menu.Item>Edit</Menu.Item>*/}
       <Menu.Item _text={{ color: 'danger.600' }} onPress={onDelete}>
         Delete
@@ -126,9 +127,8 @@ const FlowCard = ({ card, size, edit, ...props }) => {
       borderRadius={5}
       shadow={5}
       rounded="md"
-      minW={320}
+      minW={350}
       mr={2}
-      maxWidth="100%"
       {...props}
     >
       <HStack justifyContent="stretch" alignItems="center" space={4}>
@@ -267,7 +267,7 @@ FlowCard.propTypes = {
 
 Token.propTypes = {
   value: PropTypes.any,
-  format: PropTypes.instanceOf(RegExp),
+  format: PropTypes.any, //instanceOf(RegExp),
   onChange: PropTypes.func
 }
 

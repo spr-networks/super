@@ -1,7 +1,12 @@
 import { useContext, useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { Icon } from 'FontAwesomeUtils'
-import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
+import {
+  faCirclePlus,
+  faCheck,
+  faEllipsis,
+  faXmark
+} from '@fortawesome/free-solid-svg-icons'
 import ModalForm from 'components/ModalForm'
 import { AlertContext } from 'AppContext'
 import { FlowCard, NewCard } from './FlowCard'
@@ -15,6 +20,8 @@ import {
   FormControl,
   Heading,
   Input,
+  IconButton,
+  Menu,
   Stack,
   HStack,
   VStack,
@@ -38,6 +45,10 @@ const FlowCardList = ({
       props.onChange(cards)
     }
   }, [cards])
+
+  useEffect(() => {
+    setCards(defaultCards)
+  }, [defaultCards])
 
   const addCard = (type) => {
     refModal.current()
@@ -117,11 +128,98 @@ const FlowCardList = ({
 }
 
 // Add/Edit flow
-const Flow = ({ title, edit, ...props }) => {
+const Flow = ({ flow, edit, ...props }) => {
   const context = useContext(AlertContext)
   // NOTE we have multiple but only support one atm.
-  const [triggers, setTriggers] = useState(props.triggers || [])
-  const [actions, setActions] = useState(props.actions || [])
+  const [title, setTitle] = useState(flow.title)
+  const [triggers, setTriggers] = useState(flow.triggers)
+  const [actions, setActions] = useState(flow.actions)
+
+  useEffect(() => {
+    if (!flow || !flow.triggers || !flow.actions) {
+      return
+    }
+
+    setTitle(flow.title)
+    setTriggers(flow.triggers)
+    setActions(flow.actions)
+  }, [flow])
+
+  //mini
+  if (!edit) {
+    const triggerBtn = (triggerProps) => (
+      <IconButton
+        variant="unstyled"
+        ml="auto"
+        icon={<Icon icon={faEllipsis} color="muted.600" />}
+        {...triggerProps}
+      ></IconButton>
+    )
+
+    const onEdit = () => {
+      if (props.onEdit) {
+        props.onEdit(flow)
+      }
+    }
+
+    const onDelete = () => {
+      if (props.onDelete) {
+        props.onDelete(flow)
+      }
+    }
+
+    const onDuplicate = () => {
+      if (props.onDuplicate) {
+        props.onDuplicate(flow)
+      }
+    }
+
+    const moreMenu = (
+      <Menu
+        w="190"
+        closeOnSelect={true}
+        trigger={triggerBtn}
+        alignSelf="center"
+      >
+        <Menu.Item onPress={onEdit}>Edit</Menu.Item>
+        <Menu.Item onPress={onDuplicate}>Duplicate</Menu.Item>
+        <Menu.Item _text={{ color: 'danger.600' }} onPress={onDelete}>
+          Delete
+        </Menu.Item>
+      </Menu>
+    )
+
+    // TODO mini component
+
+    let trigger = triggers[0],
+      action = actions[0]
+
+    return (
+      <HStack
+        __bg={useColorModeValue('white', 'blueGray.700')}
+        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+        p={4}
+        space={4}
+        rounded="lg"
+      >
+        <VStack flex={1} space={2}>
+          <Text bold>{title}</Text>
+
+          <HStack space={4}>
+            <HStack space={1} alignItems="center">
+              <Icon icon={trigger.icon} color={trigger.color} />
+              <Text isTruncated>{Object.values(trigger.values).join(' ')}</Text>
+            </HStack>
+            <HStack space={2} alignItems="center">
+              <Icon icon={action.icon} color={action.color} />
+              <Text isTruncated>{Object.values(action.values).join(' ')}</Text>
+            </HStack>
+          </HStack>
+        </VStack>
+        {moreMenu}
+      </HStack>
+    )
+  }
 
   const onSubmit = () => {
     let data = []
@@ -139,14 +237,37 @@ const Flow = ({ title, edit, ...props }) => {
     )
 
     if (props.onSubmit) {
-      props.onSubmit({ triggers, actions })
+      let newFlow = { title, triggers, actions }
+      if (flow.index !== undefined) {
+        newFlow.index = flow.index
+      }
+
+      console.log('>', newFlow)
+
+      props.onSubmit(newFlow)
+    }
+  }
+
+  const onReset = () => {
+    if (props.onReset) {
+      props.onReset()
     }
   }
 
   return (
-    <VStack maxW={360}>
-      {title ? <Text bold>{title}</Text> : null}
-      <Stack direction={edit ? 'column' : 'column'} space={4}>
+    <VStack maxW={380} space={2}>
+      <FormControl>
+        <FormControl.Label>Name</FormControl.Label>
+        <Input
+          variant="underlined"
+          value={title}
+          onChangeText={(value) => setTitle(value)}
+        />
+        <FormControl.HelperText>
+          Use a unique name to identify this flow
+        </FormControl.HelperText>
+      </FormControl>
+      <Stack direction={edit ? 'column' : 'row'} space={4}>
         <FlowCardList
           title="When..."
           cards={triggers}
@@ -163,14 +284,24 @@ const Flow = ({ title, edit, ...props }) => {
         />
 
         {edit ? (
-          <Button
-            variant="solid"
-            colorScheme="primary"
-            mt={4}
-            onPress={onSubmit}
-          >
-            Save
-          </Button>
+          <VStack mt={4} space={2}>
+            <Button
+              variant="solid"
+              colorScheme="primary"
+              leftIcon={<Icon icon={faCheck} />}
+              onPress={onSubmit}
+            >
+              Save
+            </Button>
+            <Button
+              variant="ghost"
+              colorScheme="secondary"
+              leftIcon={<Icon icon={faXmark} />}
+              onPress={onReset}
+            >
+              Reset
+            </Button>
+          </VStack>
         ) : null}
       </Stack>
     </VStack>
@@ -180,9 +311,14 @@ const Flow = ({ title, edit, ...props }) => {
 const FlowList = (props) => {
   const context = useContext(AlertContext)
   const [flows, setFlows] = useState([])
+  const [flow, setFlow] = useState({
+    title: 'NewFlow',
+    triggers: [],
+    actions: []
+  }) //new/edit flow
 
   // for testing
-  /*
+
   useEffect(() => {
     let trigger = NewCard({
       title: 'Date',
@@ -204,7 +340,6 @@ const FlowList = (props) => {
       }
     ])
   }, [])
-  */
 
   const toCron = (days, from, to) => {
     /*
@@ -267,15 +402,32 @@ const FlowList = (props) => {
   }
 
   const onSubmit = (data) => {
+    // TODO detect if its an update or new/duplicated entry
     // NOTE we only have one trigger + one action for now
     // TODO support multiple actions later
     console.log('save:', data)
+    let title = data.title || 'NewFlowX'
     let triggers = data.triggers.map((card) => NewCard({ ...card }))
     let actions = data.actions.map((card) => NewCard({ ...card }))
 
     // TODO add when api is ok
-    let flow = { title: 'Flow#new', triggers, actions }
-    setFlows(flows.concat(flow))
+    let flow = { title, triggers, actions }
+
+    // update
+    if (data.index !== undefined) {
+      let newFlows = flows
+      newFlows[data.index] = flow
+      setFlows(newFlows)
+    } else {
+      setFlows(flows.concat(flow))
+    }
+
+    // empty new/edit flow when adding/modifying flows
+    setFlow({
+      title: 'NewFlow',
+      triggers: [],
+      actions: []
+    })
 
     // NOTE only support Date+Block for now
     const flowToApi = (trigger, action) => {
@@ -360,62 +512,92 @@ const FlowList = (props) => {
     }
   }
 
+  const onReset = () => {
+    // empty new/edit flow when adding/modifying flows
+    setFlow({
+      title: 'NewFlow',
+      triggers: [],
+      actions: []
+    })
+  }
+
+  const onEdit = (item, index) => {
+    console.log('edit:', index)
+    setFlow({ index, ...item })
+  }
+
+  const onDelete = (item, index) => {
+    let newFlow = flow
+    flow.splice(index, 1)
+    setFlow(newFlow)
+  }
+
+  const onDuplicate = (item) => {
+    //TODO add with title #2 + add to edit mode
+    let newFlow = Object.assign({}, item)
+    newFlow.title += '#copy'
+    newFlow.index = flows.length
+    setFlow(newFlow)
+
+    let newFlows = flows.concat(newFlow)
+    setFlows(newFlows)
+  }
+
   return (
-    <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+    <Stack
+      direction={{ base: 'column', md: 'row' }}
+      __bg={useColorModeValue('warmGray.50', 'blueGray.800')}
       rounded="md"
-      width="100%"
+      justifyContent="stretch"
+      space={4}
       p={4}
-      mb={4}
     >
-      <HStack justifyContent="space-between" alignContent="center">
-        <VStack>
-          <Heading fontSize="xl">Flows</Heading>
-        </VStack>
-      </HStack>
+      <Box flex={1}>
+        <HStack justifyContent="space-between" alignContent="center">
+          <VStack>
+            <Heading fontSize="xl">Flows</Heading>
+          </VStack>
+        </HStack>
 
-      <FlatList
-        data={flows}
-        renderItem={({ item }) => (
-          <Box
-            borderBottomWidth={1}
-            _dark={{
-              borderColor: 'muted.600'
-            }}
-            borderColor="muted.200"
-            py={10}
-          >
-            <Flow
-              title={item.title}
-              triggers={item.triggers}
-              actions={item.actions}
-            />
-          </Box>
-        )}
-        listKey="flow"
-        keyExtractor={(item, index) => index}
-      />
+        <FlatList
+          data={flows}
+          renderItem={({ item, index }) => (
+            <Box
+              _dark={{
+                borderColor: 'muted.600'
+              }}
+              borderColor="muted.200"
+              py={2}
+            >
+              <Flow
+                edit={false}
+                onDelete={() => onDelete(item, index)}
+                onDuplicate={onDuplicate}
+                onEdit={(item) => onEdit(item, index)}
+                flow={item}
+              />
+            </Box>
+          )}
+          listKey="flow"
+          keyExtractor={(item, index) => index}
+        />
+      </Box>
 
-      <Divider my={4} color="violet.400" />
+      <VStack
+        flex={2}
+        __bg={useColorModeValue('white', 'blueGray.700')}
+        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+        rounded="lg"
+        space={4}
+        maxW={390}
+        mr={{ base: 0, lg: 8 }}
+        p={4}
+      >
+        <Heading size="sm">Add &amp; Edit flow</Heading>
 
-      <VStack space={4} maxW={350}>
-        <Heading size="sm">Add flow</Heading>
-
-        <FormControl>
-          <FormControl.Label>Name</FormControl.Label>
-          <Input
-            variant="underlined"
-            defaultValue="Flow#1"
-            onChangeText={() => {}}
-          />
-          <FormControl.HelperText>
-            Use a unique name to identify this flow
-          </FormControl.HelperText>
-        </FormControl>
-
-        <Flow edit={true} onSubmit={onSubmit} />
+        <Flow edit={true} flow={flow} onSubmit={onSubmit} onReset={onReset} />
       </VStack>
-    </Box>
+    </Stack>
   )
 }
 
