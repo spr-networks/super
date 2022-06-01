@@ -10,6 +10,7 @@ import {
 import ModalForm from 'components/ModalForm'
 import { AlertContext } from 'AppContext'
 import { FlowCard, NewCard } from './FlowCard'
+import { toCron } from './FlowCards'
 import AddFlowCard from './AddFlowCard'
 import { pfwAPI } from 'api/Pfw'
 
@@ -311,142 +312,29 @@ const Flow = ({ flow, edit, ...props }) => {
 }
 
 const saveFlow = (flow) => {
-  const toCron = (days, from, to) => {
-    /*
-*    *    *    *    *    *
-┬    ┬    ┬    ┬    ┬    ┬
-│    │    │    │    │    |
-│    │    │    │    │    └ day of week (0 - 7, 1L - 7L) (0 or 7 is Sun)
-│    │    │    │    └───── month (1 - 12)
-│    │    │    └────────── day of month (1 - 31, L)
-│    │    └─────────────── hour (0 - 23)
-│    └──────────────────── minute (0 - 59)
-└───────────────────────── second (0 - 59, optional)
-    */
-
-    let minute = '0',
-      hour = '*',
-      dom = '*',
-      month = '*',
-      dow = '*'
-
-    //1. days
-    let cronDays = {
-      sun: 0,
-      mon: 1,
-      tue: 2,
-      wed: 3,
-      thu: 4,
-      fri: 5,
-      sat: 6,
-      sun: 7
-    }
-
-    // default abbreviations
-    if (days == 'weekdays') {
-      days = 'mon,tue,wed,thu,fri'
-    } else if (days == 'weekend') {
-      days = 'sat,sun'
-    }
-
-    dow = days
-      .split(',')
-      .map((d) => cronDays[d])
-      .filter((n) => typeof n === 'number')
-      .join(',')
-
-    //2. time
-    let [fromH, fromM] = from.split(':')
-    let [toH, toM] = to.split(':')
-
-    hour = `${fromH}-${toH}`
-    minute = `${fromM}-${toM}`
-
-    // simplify
-    if (minute == '00-00') {
-      minute = '0'
-    }
-
-    let str = `0 ${minute} ${hour} ${dom} ${month} ${dow}`
-    return str
-  }
-
   // NOTE only support Date+Block for now
-  const flowToApi = (trigger, action) => {
-    // we use trigger for cronExpression && condition
-    // TODO fallback for default cron
-
-    if (trigger.title != 'Date') {
-      return console.error('NOT IMPLEMENTED:', trigger)
-    }
-
-    let CronExpr = 'TODO'
-    if (trigger.title == 'Date') {
-      let { days, from, to } = trigger.values
-      CronExpr = toCron(days, from, to)
-    }
-
-    let values = action.values
-    let Client = { Group: '', Identity: '', SrcIP: '' }
-    let cli = values.Client
-
-    // TODO: fetch groups
-    let groups = ['lan', 'wan', 'dns']
-
-    // TODO better check here
-    if (cli.split('.').length == 4) {
-      Client.SrcIP = cli
-    } else if (groups.includes(cli)) {
-      Client.Group = cli
-    } else {
-      Client.Identity = cli
-    }
-
-    let block = {
-      Client,
-      DstIP: values.DstIP,
-      DstPort: values.DstPort,
-      Protocol: values.Protocol,
-      CronExpr,
-      Condition: 'TODO'
-    }
-
-    return block
-  }
 
   let trigger = flow.triggers[0],
     action = flow.actions[0]
 
-  // TODO if the action is block
-  if (action.title.match(/Block (TCP|UDP)/)) {
-    let block = flowToApi(trigger, action)
+  // NOTE trigger onSubmit will set CronExpr+Condition (not implemented yet)
+  let data = trigger.onSubmit()
+  data = { ...data, ...action.onSubmit() }
 
+  if (action.title.match(/Block (TCP|UDP)/)) {
     return new Promise((resolve, reject) => {
-      resolve(block)
+      resolve(data)
     })
 
-    return pfwAPI.addBlock(block)
+    return pfwAPI.addBlock(data)
   }
 
-  //TODO
   if (action.title.match(/Forward (TCP|UDP)/)) {
-    let forward = {
-      Client: 'TODO',
-      DstIP: '1.1.1.1',
-      SrcPort: 2323,
-      Protocol: 'tcp',
-      CronExpr: 'TODO',
-      Condition: 'TODO',
-
-      NewDstIP: '2.2.2.2',
-      DstPort: 2323
-    }
-
     return new Promise((resolve, reject) => {
-      resolve(forward)
+      resolve(data)
     })
 
-    return pfwAPI.addForward(forward)
+    return pfwAPI.addForward(data)
   }
 }
 
@@ -513,6 +401,7 @@ const FlowList = (props) => {
     // send flow to api
     saveFlow(flow)
       .then((res) => {
+        console.log('API:', res)
         // update ui
         if (flow.index !== undefined) {
           let newFlows = flows

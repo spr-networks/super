@@ -8,6 +8,85 @@ import {
   faTag
 } from '@fortawesome/free-solid-svg-icons'
 
+// helper functions - TODO move to FlowUtils
+
+const toCron = (days, from, to) => {
+  /*
+*    *    *    *    *    *
+┬    ┬    ┬    ┬    ┬    ┬
+│    │    │    │    │    |
+│    │    │    │    │    └ day of week (0 - 7, 1L - 7L) (0 or 7 is Sun)
+│    │    │    │    └───── month (1 - 12)
+│    │    │    └────────── day of month (1 - 31, L)
+│    │    └─────────────── hour (0 - 23)
+│    └──────────────────── minute (0 - 59)
+└───────────────────────── second (0 - 59, optional)
+  */
+
+  let minute = '0',
+    hour = '*',
+    dom = '*',
+    month = '*',
+    dow = '*'
+
+  //1. days
+  let cronDays = {
+    sun: 0,
+    mon: 1,
+    tue: 2,
+    wed: 3,
+    thu: 4,
+    fri: 5,
+    sat: 6,
+    sun: 7
+  }
+
+  // default abbreviations
+  if (days == 'weekdays') {
+    days = 'mon,tue,wed,thu,fri'
+  } else if (days == 'weekend') {
+    days = 'sat,sun'
+  }
+
+  dow = days
+    .split(',')
+    .map((d) => cronDays[d])
+    .filter((n) => typeof n === 'number')
+    .join(',')
+
+  //2. time
+  let [fromH, fromM] = from.split(':')
+  let [toH, toM] = to.split(':')
+
+  hour = `${fromH}-${toH}`
+  minute = `${fromM}-${toM}`
+
+  // simplify
+  if (minute == '00-00') {
+    minute = '0'
+  }
+
+  let str = `0 ${minute} ${hour} ${dom} ${month} ${dow}`
+  return str
+}
+
+const parseClient = (cli) => {
+  let Client = { Group: '', Identity: '', SrcIP: '' }
+
+  // TODO better check here, fetch groups
+  let groups = ['lan', 'wan', 'dns']
+
+  if (cli.split('.').length == 4) {
+    Client.SrcIP = cli
+  } else if (groups.includes(cli)) {
+    Client.Group = cli
+  } else {
+    Client.Identity = cli
+  }
+
+  return Client
+}
+
 const triggers = [
   {
     title: 'Date',
@@ -38,6 +117,11 @@ const triggers = [
       days: 'mon,tue,wed',
       from: '10:00',
       to: '11:00'
+    },
+    onSubmit: function () {
+      let { days, from, to } = this.values
+      let CronExpr = toCron(days, from, to)
+      return { CronExpr, Condition: 'TODO' }
     }
   },
   {
@@ -82,6 +166,9 @@ const actions = [
       Client: '0.0.0.0',
       DstIP: '0.0.0.0',
       DstPort: 0
+    },
+    onSubmit: function () {
+      return { ...this.values, Client: parseClient(this.values.Client) }
     }
   },
   {
@@ -114,6 +201,10 @@ const actions = [
       Client: '0.0.0.0',
       DstIP: '0.0.0.0',
       DstPort: 0
+    },
+    //NOTE same as TCP
+    onSubmit: function () {
+      return { Client: parseClient(values.Client), ...this.values }
     }
   },
   {
@@ -155,6 +246,9 @@ const actions = [
       DstIP: '0.0.0.0',
       NewDstIP: '0.0.0.0',
       DstPort: 0
+    },
+    onSubmit: function () {
+      return { ...this.values, Client: parseClient(this.values.Client) }
     }
   },
   {
@@ -195,6 +289,9 @@ const actions = [
       DstIP: '0.0.0.0',
       NewDstIP: '0.0.0.0',
       DstPort: 0
+    },
+    onSubmit: function () {
+      return { ...this.values, Client: parseClient(this.values.Client) }
     }
   }
 ]
@@ -211,5 +308,4 @@ const getCard = (cardType, title) => {
 const FlowCards = [...triggers, ...actions]
 
 export default FlowCards
-
-export { FlowCards, getCards, getCard }
+export { FlowCards, getCards, getCard, toCron }
