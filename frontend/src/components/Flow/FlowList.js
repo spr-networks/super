@@ -2,6 +2,7 @@ import { useContext, useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { Icon } from 'FontAwesomeUtils'
 import {
+  faBan,
   faCirclePlus,
   faCheck,
   faEllipsis,
@@ -196,6 +197,11 @@ const Flow = ({ flow, edit, ...props }) => {
     let trigger = triggers[0],
       action = actions[0]
 
+
+    if (!trigger || !action) {
+      return <></>
+    }
+
     return (
       <HStack
         __bg={useColorModeValue('white', 'blueGray.700')}
@@ -322,9 +328,11 @@ const saveFlow = (flow) => {
   data = { ...data, ...action.onSubmit() }
 
   if (action.title.match(/Block (TCP|UDP)/)) {
+    /*
     return new Promise((resolve, reject) => {
       resolve(data)
     })
+    */
 
     return pfwAPI.addBlock(data)
   }
@@ -358,6 +366,8 @@ const FlowList = (props) => {
 
   // for testing
   useEffect(() => {
+
+    /*
     let trigger = NewCard({
       title: 'Date',
       cardType: 'trigger',
@@ -377,6 +387,36 @@ const FlowList = (props) => {
         actions: [action]
       }
     ])
+
+    */
+
+    pfwAPI.config().then((result) => {
+      let flows = []
+      for (let br of result.BlockRules) {
+        let trigger = NewCard({
+          title: 'Date',
+          cardType: 'trigger',
+          values: { days: 'weekdays', from: '9:00', to: '16:00' }
+        })
+
+        let action = NewCard({
+          title: 'Block ' + br.Protocol.toUpperCase(),
+          cardType: 'action',
+          values: { SrcIP: br.Client.SrcIP, DstIP: br.DstIP, DstPort: br.DstPort}
+        })
+
+        flows.push({
+          title: br.RuleName,
+          triggers: [trigger],
+          actions: [action]
+        })
+      }
+
+
+      setFlows(flows)
+      //setFlows()
+    })
+
   }, [])
 
   const onSubmit = (data) => {
@@ -435,6 +475,7 @@ const FlowList = (props) => {
     newFlow.title += '#copy'
     newFlow.index = flows.length
     setFlow(newFlow)
+    saveFlow(newFlow)
 
     let newFlows = flows.concat(newFlow)
     setFlows(newFlows)

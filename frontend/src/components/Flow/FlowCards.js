@@ -162,7 +162,7 @@ const actions = [
       { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
       {
         name: 'DstPort',
-        type: PropTypes.number,
+        type: PropTypes.string,
         description: 'Dest port, use 0 for all'
       }
     ],
@@ -170,7 +170,7 @@ const actions = [
       Protocol: 'tcp',
       Client: '0.0.0.0',
       DstIP: '0.0.0.0',
-      DstPort: 0
+      DstPort: '0'
     },
     onSubmit: function () {
       return { ...this.values, Client: parseClient(this.values.Client) }
@@ -197,7 +197,7 @@ const actions = [
       { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
       {
         name: 'DstPort',
-        type: PropTypes.number,
+        type: PropTypes.string,
         description: 'Dest port, use 0 for all'
       }
     ],
@@ -205,7 +205,7 @@ const actions = [
       Protocol: 'udp',
       Client: '0.0.0.0',
       DstIP: '0.0.0.0',
-      DstPort: 0
+      DstPort: '0'
     },
     //NOTE same as TCP
     onSubmit: function () {
@@ -232,7 +232,7 @@ const actions = [
       },
       {
         name: 'SrcPort',
-        type: PropTypes.number,
+        type: PropTypes.string,
         description: 'Source port, use 0 for all'
       },
       { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
@@ -240,17 +240,17 @@ const actions = [
 
       {
         name: 'DstPort',
-        type: PropTypes.number,
+        type: PropTypes.string,
         description: 'Dest port, use 0 for all'
       }
     ],
     values: {
       Protocol: 'tcp',
       Client: '0.0.0.0',
-      SrcPort: 0,
+      SrcPort: '0',
       DstIP: '0.0.0.0',
       NewDstIP: '0.0.0.0',
-      DstPort: 0
+      DstPort: '0'
     },
     onSubmit: function () {
       return { ...this.values, Client: parseClient(this.values.Client) }
@@ -276,24 +276,24 @@ const actions = [
       },
       {
         name: 'SrcPort',
-        type: PropTypes.number,
+        type: PropTypes.string,
         description: 'Source port, use 0 for all'
       },
       { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
       { name: 'NewDstIP', type: PropTypes.string, description: 'IP/CIDR' },
       {
         name: 'DstPort',
-        type: PropTypes.number,
+        type: PropTypes.string,
         description: 'Dest port, use 0 for all'
       }
     ],
     values: {
       Protocol: 'udp',
       Client: '0.0.0.0',
-      SrcPort: 0,
+      SrcPort: '0',
       DstIP: '0.0.0.0',
       NewDstIP: '0.0.0.0',
-      DstPort: 0
+      DstPort: '0'
     },
     onSubmit: function () {
       return { ...this.values, Client: parseClient(this.values.Client) }
