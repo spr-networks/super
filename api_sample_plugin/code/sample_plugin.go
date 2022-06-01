@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var UNIX_PLUGIN_LISTENER = "/state/api/sample_plugin"
+var UNIX_PLUGIN_LISTENER = "/state/plugins/sample_plugin/socket"
 
 
 func pluginTest(w http.ResponseWriter, r *http.Request) {
