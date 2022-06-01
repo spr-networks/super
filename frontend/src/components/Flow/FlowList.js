@@ -116,7 +116,7 @@ const FlowCardList = ({
             leftIcon={<Icon icon={faCirclePlus} color="muted.500" />}
             onPress={() => addCard(cardType)}
             __disabled={cardType == 'trigger' && cards.length}
-            disabled={cards.length}
+            display={{ base: cards.length ? 'none' : 'flex' }}
             key={'add' + cardType}
           >
             Add card
