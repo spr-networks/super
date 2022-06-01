@@ -535,9 +535,9 @@ const FlowList = (props) => {
   }
 
   const onDelete = (item, index) => {
-    let newFlow = flow
-    flow.splice(index, 1)
-    setFlow(newFlow)
+    let newFlows = [...flows]
+    newFlows.splice(index, 1)
+    setFlows(newFlows)
   }
 
   const onDuplicate = (item) => {
