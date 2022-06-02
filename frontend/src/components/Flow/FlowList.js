@@ -197,7 +197,6 @@ const Flow = ({ flow, edit, ...props }) => {
     let trigger = triggers[0],
       action = actions[0]
 
-
     if (!trigger || !action) {
       return <></>
     }
@@ -327,13 +326,11 @@ const saveFlow = (flow) => {
   let data = trigger.onSubmit()
   data = { ...data, ...action.onSubmit() }
 
-  if (action.title.match(/Block (TCP|UDP)/)) {
-    /*
-    return new Promise((resolve, reject) => {
-      resolve(data)
-    })
-    */
+  /*return new Promise((resolve, reject) => {
+    resolve(data)
+  })*/
 
+  if (action.title.match(/Block (TCP|UDP)/)) {
     return pfwAPI.addBlock(data)
   }
 
@@ -366,7 +363,6 @@ const FlowList = (props) => {
 
   // for testing
   useEffect(() => {
-
     /*
     let trigger = NewCard({
       title: 'Date',
@@ -390,33 +386,38 @@ const FlowList = (props) => {
 
     */
 
-    pfwAPI.config().then((result) => {
-      let flows = []
-      for (let br of result.BlockRules) {
-        let trigger = NewCard({
-          title: 'Date',
-          cardType: 'trigger',
-          values: { days: 'weekdays', from: '9:00', to: '16:00' }
-        })
+    pfwAPI
+      .config()
+      .then((result) => {
+        let flows = []
+        for (let br of result.BlockRules) {
+          let trigger = NewCard({
+            title: 'Date',
+            cardType: 'trigger',
+            values: { days: 'weekdays', from: '9:00', to: '16:00' }
+          })
 
-        let action = NewCard({
-          title: 'Block ' + br.Protocol.toUpperCase(),
-          cardType: 'action',
-          values: { SrcIP: br.Client.SrcIP, DstIP: br.DstIP, DstPort: br.DstPort}
-        })
+          let action = NewCard({
+            title: 'Block ' + br.Protocol.toUpperCase(),
+            cardType: 'action',
+            values: {
+              SrcIP: br.Client.SrcIP,
+              DstIP: br.DstIP,
+              DstPort: br.DstPort
+            }
+          })
 
-        flows.push({
-          title: br.RuleName,
-          triggers: [trigger],
-          actions: [action]
-        })
-      }
+          flows.push({
+            title: br.RuleName,
+            triggers: [trigger],
+            actions: [action]
+          })
+        }
 
-
-      setFlows(flows)
-      //setFlows()
-    })
-
+        setFlows(flows)
+        //setFlows()
+      })
+      .catch((err) => {})
   }, [])
 
   const onSubmit = (data) => {
