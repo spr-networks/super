@@ -24,7 +24,9 @@ export default function MockAPI() {
       plugin: Model,
       forwardrule: Model,
       blockrule: Model,
-      token: Model
+      token: Model,
+      pfwBlock: Model,
+      pfwForward: Model
     },
     seeds(server) {
       server.create('device', {
@@ -801,7 +803,7 @@ export default function MockAPI() {
       })
 
       this.get('/features', () => {
-        return ["dns","wifi","ppp","wireguard"]
+        return ['dns', 'wifi', 'ppp', 'wireguard']
       })
 
       this.get('/iw/dev', (schema) => {
@@ -1557,6 +1559,61 @@ export default function MockAPI() {
           resolver: '8.8.8.8',
           run_once: true
         }
+      })
+
+      //pfw
+      this.get('/plugins/pfw/config', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        return {
+          ForwardingRules: schema.pfwForwards.all().models,
+          BlockRules: schema.pfwBlocks.all().models,
+          Variables: {}
+        }
+      })
+
+      this.put('/plugins/pfw/block', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        schema.pfwBlocks.create(attrs)
+
+        return attrs
+      })
+
+      this.delete('/plugins/pfw/block', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+
+        return schema.pfwBlocks.where(attrs).destroy()
+      })
+
+      this.put('/plugins/pfw/forward', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        schema.pfwForwards.create(attrs)
+
+        return attrs
+      })
+
+      this.delete('/plugins/pfw/forward', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+
+        return schema.pfwForwards.where(attrs).destroy()
       })
     }
   })
