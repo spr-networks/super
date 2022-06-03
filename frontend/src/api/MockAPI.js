@@ -183,11 +183,13 @@ export default function MockAPI() {
       })
 
       server.create('token', {
+        Name: 'TokenTest',
         Token: 'QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQQo=',
         Expire: 0
       })
 
       server.create('token', {
+        Name: 'TokenTest2',
         Token: 'QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQgo=',
         Expire: 0
       })
