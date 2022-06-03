@@ -2,6 +2,11 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { FontAwesomeIcon as FontAwesomeIconNative } from '@fortawesome/react-native-fontawesome'
 import { FontAwesomeIcon as FontAwesomeIconReact } from '@fortawesome/react-fontawesome'
+import {
+  solid,
+  regular,
+  brands
+} from '@fortawesome/fontawesome-svg-core/import.macro'
 import { Platform, StyleSheet } from 'react-native'
 import { Icon as IconNb, useToken } from 'native-base'
 export * from '@fortawesome/react-native-fontawesome'
@@ -36,6 +41,10 @@ export default function Icon({ color, icon, size, style, ...props }) {
       style,
       { color: useToken('colors', color), width: size, height: size }
     ])
+
+    /*if (typeof icon === 'string') {
+      return <FontAwesomeIconReact icon={solid('coffee')} style={webStyles} />
+    }*/
 
     return <FontAwesomeIconReact icon={icon} style={webStyles} />
   }
