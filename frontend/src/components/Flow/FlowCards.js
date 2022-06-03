@@ -29,15 +29,16 @@ const daysToNum = (days) => {
     wed: 3,
     thu: 4,
     fri: 5,
-    sat: 6,
-    sun: 7
+    sat: 6
   }
 
   // default abbreviations
   if (days == 'weekdays') {
     days = 'mon,tue,wed,thu,fri' //= 1-5
-  } else if (days == 'weekend') {
+  } else if (days.startsWith('weekend')) {
     days = 'sat,sun' //= 6-7
+  } else if (days == 'every day') {
+    days = 'mon,tue,wed,thu,fri,sat,sun'
   }
 
   let dow = days
@@ -141,9 +142,11 @@ const triggers = [
     onSubmit: function () {
       let { days, from, to } = this.values
       //let CronExpr = toCron(days, from, to)
-      let Days = daysToNum(days).map((d) => (d ? 1 : 0)),
+      let Days = new Array(7).fill(0),
         Start = from,
         End = to
+
+      daysToNum(days).map((idx) => (Days[idx] = 1))
 
       return { Time: { Days, Start, End }, Condition: '' }
     }
