@@ -333,13 +333,15 @@ const saveFlow = (flow) => {
     resolve(data)
   })*/
 
+  console.log('save flow')
+
   let isUpdate = flow.index !== undefined
 
   if (action.title.match(/Block (TCP|UDP)/)) {
     data.RuleName = flow.title
 
     if (isUpdate) {
-      pfwAPI.updateBlock(data, flow.index)
+      return pfwAPI.updateBlock(data, flow.index)
     }
 
     return pfwAPI.addBlock(data)
@@ -349,7 +351,7 @@ const saveFlow = (flow) => {
     data.RuleName = flow.title
 
     if (isUpdate) {
-      pfwAPI.updateForward(data, flow.index)
+      return pfwAPI.updateForward(data, flow.index)
     }
 
     return pfwAPI.addForward(data)
@@ -436,11 +438,9 @@ const FlowList = (props) => {
       flow.index = data.index
     }
 
-    console.log('save:', flow)
     // send flow to api
     saveFlow(flow)
       .then((res) => {
-        console.log('API:', res)
         // update ui
         if (flow.index !== undefined) {
           let newFlows = flows
@@ -459,7 +459,6 @@ const FlowList = (props) => {
   }
 
   const onEdit = (item, index) => {
-    console.log('EDIT:', item)
     setFlow({ index, ...item })
   }
 
