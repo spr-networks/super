@@ -18,7 +18,7 @@ import {
 import { getCard } from './FlowCards'
 import Token from './Token'
 
-const FlowCard = ({ card, size, edit, noValues, ...props }) => {
+const FlowCard = ({ card, size, edit, ...props }) => {
   size = size || 'md'
   let { title, description } = card
   let icon = (
@@ -190,11 +190,5 @@ FlowCard.propTypes = {
   onChange: PropTypes.func
 }
 
-Token.propTypes = {
-  value: PropTypes.any,
-  format: PropTypes.any, //instanceOf(RegExp),
-  onChange: PropTypes.func
-}
-
-export { FlowCard, NewCard, Token }
+export { FlowCard, NewCard }
 export default FlowCard

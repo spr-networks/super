@@ -42,7 +42,7 @@ const AddFlowCard = ({ cardType, onSubmit, ...props }) => {
         px={2}
         renderItem={({ item }) => (
           <Pressable onPress={() => handleSelect(item)}>
-            <FlowCard noValues={true} card={item} my={2} />
+            <FlowCard edit={false} card={item} my={2} />
           </Pressable>
         )}
       />

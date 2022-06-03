@@ -9,11 +9,19 @@ import { faCaretDown, faCaretUp } from '@fortawesome/free-solid-svg-icons'
 import { IconButton, Input, Menu } from 'native-base'
 
 const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
-  const [list, setList] = useState([])
+  const [groups, setGroups] = useState([])
 
   useEffect(() => {
-    setList(props.list)
-  }, [props.list])
+    setGroups([{ title: props.title || 'Select', options: props.options }])
+  }, [props.options])
+
+  useEffect(() => {
+    if (!props.groups) {
+      return
+    }
+
+    setGroups(props.groups)
+  }, [props.groups])
 
   const type = isMultiple ? 'checkbox' : 'radio'
   const title = props.title || ''
@@ -34,18 +42,25 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
 
   return (
     <Menu w="190" closeOnSelect={closeOnSelect} trigger={trigger}>
-      <Menu.OptionGroup
-        defaultValue={defaultValue}
-        type={type}
-        title={title}
-        onChange={handleChange}
-      >
-        {list.map((item) => (
-          <Menu.ItemOption key={item.value} value={item.value}>
-            {item.label}
-          </Menu.ItemOption>
-        ))}
-      </Menu.OptionGroup>
+      {groups.map((group) => (
+        <Menu.OptionGroup
+          key={group.title}
+          defaultValue={defaultValue}
+          type={type}
+          title={group.title}
+          onChange={handleChange}
+        >
+          {group.options &&
+            group.options.map((item) => (
+              <Menu.ItemOption
+                key={group.title + item.value}
+                value={item.value}
+              >
+                {item.label}
+              </Menu.ItemOption>
+            ))}
+        </Menu.OptionGroup>
+      ))}
     </Menu>
   )
 }
@@ -55,8 +70,7 @@ const InputSelect = (props) => {
   const [isOpen, setIsOpen] = useState(false)
   const [value, setValue] = useState(props.value || '')
 
-  let title = props.title,
-    list = props.options
+  let title = props.title
 
   useEffect(() => {
     setValue(props.value)
@@ -66,35 +80,51 @@ const InputSelect = (props) => {
     }
   }, [props.value])
 
-  const handleChange = (newValue) => {
+  const handleChangeText = (newValue) => {
     setValue(newValue)
 
-    if (onChange) {
-      onChange(isMultiple ? newValue.split(',') : newValue)
+    if (props.onChangeText) {
+      props.onChangeText(isMultiple ? newValue.split(',') : newValue)
     }
   }
 
+  const handleChange = (newValue) => {
+    setValue(newValue)
+
+    let values = isMultiple ? newValue.split(',') : newValue
+
+    if (onChange) {
+      onChange(values)
+    }
+  }
+
+  let trigger = (triggerProps) => {
+    return (
+      <IconButton
+        size="xs"
+        rounded="none"
+        w="12"
+        h="full"
+        onPress={() => setIsOpen(!isOpen)}
+        icon={<Icon icon={isOpen ? faCaretUp : faCaretDown} />}
+        {...triggerProps}
+      />
+    )
+  }
+
+  if (props.trigger) {
+    trigger = props.trigger
+  }
+
+  let menuProps = { title, isMultiple, trigger }
+  if (props.groups) {
+    menuProps.groups = props.groups
+  } else {
+    menuProps.options = props.options
+  }
+
   const elem = (
-    <SelectMenu
-      onChange={handleChange}
-      list={list}
-      value={value}
-      isMultiple={isMultiple}
-      title={title}
-      trigger={(triggerProps) => {
-        return (
-          <IconButton
-            size="xs"
-            rounded="none"
-            w="12"
-            h="full"
-            onPress={() => setIsOpen(!isOpen)}
-            icon={<Icon icon={isOpen ? faCaretUp : faCaretDown} />}
-            {...triggerProps}
-          />
-        )
-      }}
-    />
+    <SelectMenu onChange={handleChange} value={value} {...menuProps} />
   )
 
   const isDisabled =
@@ -107,7 +137,7 @@ const InputSelect = (props) => {
         variant="underlined"
         isDisabled={isDisabled}
         defaultValue={value}
-        onChangeText={handleChange}
+        onChangeText={handleChangeText}
         InputRightElement={elem}
       />
     </>

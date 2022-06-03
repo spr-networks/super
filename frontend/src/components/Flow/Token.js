@@ -14,6 +14,39 @@ import {
 
 import TimeSelect from '../TimeSelect'
 import InputSelect from 'components/InputSelect'
+import ClientSelect from 'components/ClientSelect'
+import { groupAPI, deviceAPI } from 'api'
+
+// helper functions
+const niceDateToArray = (value) => {
+  if (value == 'weekdays') {
+    value = 'mon,tue,wed,thu,fri'
+  } else if (value == 'weekend') {
+    value = 'sat,sun'
+  } else if (value == 'every day') {
+    value = 'mon,tue,wed,thu,fri,sat,sun'
+  }
+
+  return value.split(',')
+}
+
+const dateArrayToStr = (days) => {
+  let sorted = [...days]
+  sorted.sort()
+  sorted = sorted.join(',')
+
+  if (sorted == 'fri,mon,thu,tue,wed') {
+    days = 'weekdays'
+  } else if (sorted == 'sat,sun') {
+    days = 'weekend'
+  } else if (sorted == 'fri,mon,sat,sun,thu,tue,wed') {
+    days = 'every day'
+  } else {
+    days = days.join(',')
+  }
+
+  return days
+}
 
 // token is like variables but for cards
 const Token = ({
@@ -27,11 +60,25 @@ const Token = ({
   const [value, setValue] = useState('' + defaultValue)
   const [isOpen, setIsOpen] = useState(false)
 
-  // TODO autocomplete/button for selecting values
-  // this can be:
-  // groups, clients, ports
+  let size = props.size || 'xs'
 
-  let size = props.size || 'sm'
+  const tokenProps = {
+    colorScheme: 'light',
+    textAlign: 'center',
+    rounded: 'md',
+    variant: 'outline',
+    bg: useColorModeValue('muted.50', 'muted.700'),
+    borderColor: useColorModeValue('muted.200', 'muted.600'),
+    _text: {
+      color: useColorModeValue('muted.600', 'muted.200')
+    },
+    size,
+    py: 0,
+    px: 1
+  }
+
+  // TODO autocomplete for selecting values:
+  // groups, clients, ports
 
   const onChangeText = (value) => {
     //only update if correct format
@@ -49,7 +96,8 @@ const Token = ({
     }
   }
 
-  if (label == 'days') {
+  // dropdown menu with select multiple
+  if (['days'].includes(label)) {
     let days = [
       'Monday',
       'Tuesday',
@@ -65,55 +113,20 @@ const Token = ({
     })
 
     const handleChange = (days) => {
-      let sorted = [...days]
-      sorted.sort()
-      sorted = sorted.join(',')
-
-      if (sorted == 'fri,mon,thu,tue,wed') {
-        days = 'weekdays'
-      } else if (sorted == 'sat,sun') {
-        days = 'weekend'
-      } else if (sorted == 'fri,mon,sat,sun,thu,tue,wed') {
-        days = 'every day'
-      } else {
-        days = days.join(',')
-      }
-
-      onChangeText(days)
+      onChangeText(dateArrayToStr(days))
     }
 
     // skip popover & use the menu directly
     // triggers differ slightly
     const trigger = (triggerProps) => (
       <Tooltip label={label} bg="muted.800" _text={{ color: 'muted.200' }}>
-        <Button
-          variant="outline"
-          colorScheme="light"
-          borderColor={useColorModeValue('muted.200', 'muted.600')}
-          _text={{ color: useColorModeValue('muted.600', 'muted.200') }}
-          rounded="md"
-          size={size}
-          p={1}
-          lineHeight={14}
-          textAlign="center"
-          {...triggerProps}
-        >
+        <Button {...tokenProps} {...triggerProps}>
           {value}
         </Button>
       </Tooltip>
     )
 
-    let defaultValue = value
-
-    if (value == 'weekdays') {
-      defaultValue = 'mon,tue,wed,thu,fri'
-    } else if (value == 'weekend') {
-      defaultValue = 'sat,sun'
-    } else if (value == 'every day') {
-      defaultValue = 'mon,tue,wed,thu,fri,sat,sun'
-    }
-
-    defaultValue = defaultValue.split(',')
+    let defaultValue = niceDateToArray(value)
 
     return (
       <Menu w="190" closeOnSelect={false} trigger={trigger}>
@@ -145,21 +158,50 @@ const Token = ({
   // time picker
   if (['from', 'to'].includes(label)) {
     inputElement = <TimeSelect value={value} onChange={onChangeText} />
-  } else if (false) {
+  } else if (label == 'Client') {
+    let [clients, setClients] = useState([])
+
+    const getGroups = async () => {
+      let groups = await groupAPI.groups()
+      groups = groups.map((value) => {
+        return { label: value, value }
+      })
+      setClients(groups)
+    }
+
+    getGroups()
+
+    const onSelect = (value) => {
+      onChangeText(value)
+      setIsOpen(false)
+    }
+
+    inputElement = (
+      <InputSelect
+        options={clients}
+        value={value}
+        onChangeText={onChangeText}
+        onChange={onSelect}
+      />
+    )
+
+    //TODO close on select
+    inputElement = (
+      <ClientSelect
+        showGroups
+        value={value}
+        onChange={(value) => {
+          onChangeText(value)
+          setIsOpen(false)
+        }}
+      />
+    )
   }
 
   const trigger = (triggerProps) => (
     <Tooltip label={label} bg="muted.800" _text={{ color: 'muted.200' }}>
       <Button
-        variant="outline"
-        colorScheme="light"
-        borderColor={useColorModeValue('muted.200', 'muted.600')}
-        _text={{ color: useColorModeValue('muted.600', 'muted.200') }}
-        rounded="md"
-        size={size}
-        p={1}
-        lineHeight={14}
-        textAlign="center"
+        {...tokenProps}
         {...triggerProps}
         onPress={() => setIsOpen(!isOpen)}
       >
@@ -197,10 +239,10 @@ const Token = ({
   )
 }
 
-Token.PropTypes = {
+Token.propTypes = {
   label: PropTypes.string,
   value: PropTypes.any,
-  format: PropTypes.any,
+  format: PropTypes.any, //instanceOf(RegExp),
   description: PropTypes.string,
   onChange: PropTypes.func
 }
