@@ -164,16 +164,6 @@ const Token = ({
   } else if (label == 'Client') {
     let [clients, setClients] = useState([])
 
-    const getGroups = async () => {
-      let groups = await groupAPI.groups()
-      groups = groups.map((value) => {
-        return { label: value, value }
-      })
-      setClients(groups)
-    }
-
-    getGroups()
-
     const onSelect = (value) => {
       onChangeText(value)
       setIsOpen(false)

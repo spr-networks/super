@@ -522,13 +522,14 @@ const FlowList = (props) => {
   const onDuplicate = (item) => {
     //TODO add with title #2 + add to edit mode
     let newFlow = Object.assign({}, item)
+    delete newFlow.index
     newFlow.title += '#copy'
-    newFlow.index = flows.length
-    setFlow(newFlow)
-    saveFlow(newFlow)
-
-    let newFlows = flows.concat(newFlow)
-    setFlows(newFlows)
+    saveFlow(newFlow).then((res) => {
+      newFlow.index = flows.length
+      setFlow(newFlow)
+      let newFlows = flows.concat(newFlow)
+      setFlows(newFlows)
+    })
   }
 
   return (
