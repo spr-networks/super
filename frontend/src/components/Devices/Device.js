@@ -154,7 +154,21 @@ class Device extends Component {
       icon = faMobileScreen
     }
 
-    let iconColor = 'pink.400'
+    let colors = [
+      'violet',
+      'pink',
+      'tertiary',
+      'rose',
+      'fuchsia',
+      'purple',
+      'cyan',
+      'teal',
+      'emerald'
+    ]
+
+    let idx = (device.Name.charCodeAt(0) || 0) % colors.length
+    let color = colors[idx]
+    let iconColor = `${color}.400`
 
     return (
       <>
@@ -179,7 +193,7 @@ class Device extends Component {
             alignItems="center"
             minW="90%"
           >
-            <Box bg="white" p={4} rounded="full">
+            <Box bg="white" _dark={{ bg: 'blueGray.700' }} p={4} rounded="full">
               <Icon icon={icon} color={iconColor} size="8" />
             </Box>
             <VStack flex={1}>
