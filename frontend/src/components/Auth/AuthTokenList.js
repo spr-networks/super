@@ -113,6 +113,7 @@ const AuthTokenList = (props) => {
                 alignItems="center"
                 justifyContent="stretch"
               >
+                <Text flex={1}>{item.Name}</Text>
                 <Text flex={1}>{item.Token}</Text>
                 <HStack flex={1} space={1}>
                   <Text color="muted.500">Expire</Text>
