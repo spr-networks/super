@@ -8,9 +8,7 @@ import { faCaretDown, faCaretUp } from '@fortawesome/free-solid-svg-icons'
 
 import { IconButton, Input, Menu } from 'native-base'
 
-const SelectMenu = (props) => {
-  const { value, onChange, isMultiple, trigger } = props
-
+const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
   const [list, setList] = useState([])
 
   useEffect(() => {
@@ -117,6 +115,8 @@ const InputSelect = (props) => {
 }
 
 export default React.memo(InputSelect)
+
+export { InputSelect, SelectMenu }
 
 InputSelect.propTypes = {
   isDisabled: PropTypes.bool,

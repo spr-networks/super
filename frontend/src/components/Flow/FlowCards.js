@@ -10,6 +10,45 @@ import {
 
 // helper functions - TODO move to FlowUtils
 
+const numToDays = (num) => {
+  let cronDays = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+
+  return num
+    .map((n, i) => (n ? cronDays[i] : null))
+    .filter((d) => d)
+    .join(',')
+}
+
+// returns array of days in numeric format
+const daysToNum = (days) => {
+  //1. days
+  let cronDays = {
+    sun: 0,
+    mon: 1,
+    tue: 2,
+    wed: 3,
+    thu: 4,
+    fri: 5,
+    sat: 6
+  }
+
+  // default abbreviations
+  if (days == 'weekdays') {
+    days = 'mon,tue,wed,thu,fri' //= 1-5
+  } else if (days.startsWith('weekend')) {
+    days = 'sat,sun' //= 6-7
+  } else if (days == 'every day') {
+    days = 'mon,tue,wed,thu,fri,sat,sun'
+  }
+
+  let dow = days
+    .split(',')
+    .map((d) => cronDays[d])
+    .filter((n) => typeof n === 'number')
+
+  return dow
+}
+
 const toCron = (days, from, to) => {
   /*
 *    *    *    *    *    *
@@ -29,30 +68,7 @@ const toCron = (days, from, to) => {
     month = '*',
     dow = '*'
 
-  //1. days
-  let cronDays = {
-    sun: 0,
-    mon: 1,
-    tue: 2,
-    wed: 3,
-    thu: 4,
-    fri: 5,
-    sat: 6,
-    sun: 7
-  }
-
-  // default abbreviations
-  if (days == 'weekdays') {
-    days = 'mon,tue,wed,thu,fri' //= 1-5
-  } else if (days == 'weekend') {
-    days = 'sat,sun' //= 6-7
-  }
-
-  dow = days
-    .split(',')
-    .map((d) => cronDays[d])
-    .filter((n) => typeof n === 'number')
-    .join(',')
+  dow = daysToNum(days).join(',')
 
   //2. time
   let [fromH, fromM] = from.split(':')
@@ -125,8 +141,14 @@ const triggers = [
     },
     onSubmit: function () {
       let { days, from, to } = this.values
-      let CronExpr = toCron(days, from, to)
-      return { CronExpr, Condition: '' }
+      //let CronExpr = toCron(days, from, to)
+      let Days = new Array(7).fill(0),
+        Start = from,
+        End = to
+
+      daysToNum(days).map((idx) => (Days[idx] = 1))
+
+      return { Time: { Days, Start, End }, Condition: '' }
     }
   },
   {
@@ -209,7 +231,7 @@ const actions = [
     },
     //NOTE same as TCP
     onSubmit: function () {
-      return { Client: parseClient(this.values.Client), ...this.values }
+      return { ...this.values, Client: parseClient(this.values.Client) }
     }
   },
   {
@@ -313,4 +335,4 @@ const getCard = (cardType, title) => {
 const FlowCards = [...triggers, ...actions]
 
 export default FlowCards
-export { FlowCards, getCards, getCard, toCron }
+export { FlowCards, getCards, getCard, toCron, numToDays }

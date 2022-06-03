@@ -11,7 +11,7 @@ import {
 import ModalForm from 'components/ModalForm'
 import { AlertContext } from 'AppContext'
 import { FlowCard, NewCard } from './FlowCard'
-import { toCron } from './FlowCards'
+import { numToDays, toCron } from './FlowCards'
 import AddFlowCard from './AddFlowCard'
 import { pfwAPI } from 'api/Pfw'
 
@@ -327,14 +327,20 @@ const saveFlow = (flow) => {
   data = { ...data, ...action.onSubmit() }
 
   /*return new Promise((resolve, reject) => {
+    console.log('save this:', data)
+
     resolve(data)
   })*/
 
   if (action.title.match(/Block (TCP|UDP)/)) {
+    data.RuleName = flow.title
+
     return pfwAPI.addBlock(data)
   }
 
   if (action.title.match(/Forward (TCP|UDP)/)) {
+    data.RuleName = flow.title
+
     return new Promise((resolve, reject) => {
       resolve(data)
     })
@@ -391,10 +397,14 @@ const FlowList = (props) => {
       .then((result) => {
         let flows = []
         for (let br of result.BlockRules) {
+          let days = numToDays(br.Time.Days),
+            from = br.Time.Start,
+            to = br.Time.End
+
           let trigger = NewCard({
             title: 'Date',
             cardType: 'trigger',
-            values: { days: 'weekdays', from: '9:00', to: '16:00' }
+            values: { days, from, to }
           })
 
           let action = NewCard({
@@ -405,6 +415,12 @@ const FlowList = (props) => {
               DstIP: br.DstIP,
               DstPort: br.DstPort
             }
+          })
+
+          console.log('NEW:', {
+            title: br.RuleName,
+            triggers: [trigger],
+            actions: [action]
           })
 
           flows.push({
@@ -464,10 +480,45 @@ const FlowList = (props) => {
     setFlow({ index, ...item })
   }
 
-  const onDelete = (item, index) => {
-    let newFlows = [...flows]
-    newFlows.splice(index, 1)
-    setFlows(newFlows)
+  const onDelete = (flow, index) => {
+    // update ui
+    const done = () => {
+      let newFlows = [...flows]
+      newFlows.splice(flow, 1)
+      setFlows(newFlows)
+    }
+
+    const deleteBlock = (rule) => {
+      pfwAPI
+        .deleteBlock(rule)
+        .then(done)
+        .catch((err) => context.error(err))
+    }
+
+    const deleteForward = (rule) => {
+      pfwAPI
+        .deleteForward(rule)
+        .then(done)
+        .catch((err) => context.error(err))
+    }
+
+    let actionTitle = flow.actions[0].title
+
+    if (actionTitle.match(/(Block|Forward) (TCP|UDP)/)) {
+      pfwAPI.config().then((result) => {
+        let ruleType = actionTitle.startsWith('Block')
+          ? 'BlockRules'
+          : 'ForwardingRules'
+
+        for (let rule of result[ruleType]) {
+          if (rule.RuleName == flow.title) {
+            return ruleType == 'BlockRules'
+              ? deleteBlock(rule)
+              : deleteForward(rule)
+          }
+        }
+      })
+    }
   }
 
   const onDuplicate = (item) => {

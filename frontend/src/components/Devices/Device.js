@@ -5,7 +5,7 @@ import { deviceAPI } from 'api/Device'
 import ModalConfirm from 'components/ModalConfirm'
 
 import Icon from 'FontAwesomeUtils'
-import { faPen, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faLaptop, faPen, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import {
   Badge,
@@ -171,8 +171,10 @@ class Device extends Component {
             direction={{ base: 'column', md: 'row' }}
             space={4}
             justifyContent="space-between"
+            alignItems="center"
             minW="90%"
           >
+            <Icon icon={faLaptop} color="violet.400" size="12" />
             <VStack flex={1}>
               <Input
                 size="lg"
