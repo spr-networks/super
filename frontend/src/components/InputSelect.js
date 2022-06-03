@@ -98,6 +98,12 @@ const InputSelect = (props) => {
     }
   }
 
+  const onSubmitEditing = () => {
+    if (props.onSubmitEditing) {
+      props.onSubmitEditing()
+    }
+  }
+
   let trigger = (triggerProps) => {
     return (
       <IconButton
@@ -136,8 +142,9 @@ const InputSelect = (props) => {
         size="md"
         variant="underlined"
         isDisabled={isDisabled}
-        defaultValue={value}
+        value={value}
         onChangeText={handleChangeText}
+        onSubmitEditing={onSubmitEditing}
         InputRightElement={elem}
       />
     </>

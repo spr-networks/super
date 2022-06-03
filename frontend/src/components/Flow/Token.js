@@ -86,10 +86,6 @@ const Token = ({
       return
     }
 
-    if (!value.length) {
-      return
-    }
-
     setValue(value)
     if (onChange) {
       onChange(value)
@@ -187,6 +183,30 @@ const Token = ({
           onChangeText(value)
           setIsOpen(false)
         }}
+      />
+    )
+  } else if (['DstPort', 'SrcPort'].includes(label)) {
+    let options = [
+      { label: 'http', value: '80' },
+      { label: 'https', value: '443' },
+      { label: 'ssh', value: '22' },
+      { label: 'telnet', value: '23' },
+      { label: '3000', value: '3000' },
+      { label: '8080', value: '8080' }
+    ]
+
+    const onSelect = (value) => {
+      onChangeText(value)
+      setIsOpen(false)
+    }
+
+    inputElement = (
+      <InputSelect
+        options={options}
+        value={value}
+        onChange={onSelect}
+        onChangeText={onChangeText}
+        onSubmitEditing={() => setIsOpen(false)}
       />
     )
   }
