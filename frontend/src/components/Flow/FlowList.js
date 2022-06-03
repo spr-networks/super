@@ -374,31 +374,8 @@ const FlowList = (props) => {
     })
   }
 
-  // for testing
+  // load flows
   useEffect(() => {
-    /*
-    let trigger = NewCard({
-      title: 'Date',
-      cardType: 'trigger',
-      values: { days: 'weekdays', from: '09:23', to: '16:23' }
-    })
-
-    let action = NewCard({
-      title: 'Block TCP',
-      cardType: 'action',
-      values: { SrcIP: '192.168.2.23', DstIP: '23.23.23.23', DstPort: 80 }
-    })
-
-    setFlows([
-      {
-        title: 'Block 23 on weekdays',
-        triggers: [trigger],
-        actions: [action]
-      }
-    ])
-
-    */
-
     pfwAPI
       .config()
       .then((result) => {
@@ -427,7 +404,7 @@ const FlowList = (props) => {
 
           flows.push({
             title: br.RuleName,
-            index,
+            index: parseInt(index),
             triggers: [trigger],
             actions: [action]
           })
@@ -459,6 +436,7 @@ const FlowList = (props) => {
       flow.index = data.index
     }
 
+    console.log('save:', flow)
     // send flow to api
     saveFlow(flow)
       .then((res) => {
@@ -481,6 +459,7 @@ const FlowList = (props) => {
   }
 
   const onEdit = (item, index) => {
+    console.log('EDIT:', item)
     setFlow({ index, ...item })
   }
 
@@ -489,6 +468,10 @@ const FlowList = (props) => {
     const done = () => {
       let newFlows = [...flows]
       newFlows.splice(flow, 1)
+      for (let index = 0; index < newFlows.length; index++) {
+        newFlows[index].index = index
+      }
+
       setFlows(newFlows)
     }
 
@@ -514,8 +497,8 @@ const FlowList = (props) => {
         : 'ForwardingRules'
 
       return ruleType == 'BlockRules'
-        ? deleteBlock(flow.index)
-        : deleteForward(flow.index)
+        ? deleteBlock(index)
+        : deleteForward(index)
     }
   }
 
