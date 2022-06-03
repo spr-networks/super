@@ -241,11 +241,11 @@ const AddDevice = (props) => {
             defaultValue={groups}
             accessibilityLabel="Set Device Groups"
             onChange={(values) => setGroups(values)}
-            py="1"
+            py={1}
           >
             <HStack w="100%" justifyContent="space-between">
               {allGroups.map((group) => (
-                <Box flex="1">
+                <Box key={group} flex={1}>
                   <Checkbox value={group} colorScheme="primary">
                     {group}
                   </Checkbox>

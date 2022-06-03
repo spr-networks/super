@@ -5,7 +5,12 @@ import { deviceAPI } from 'api/Device'
 import ModalConfirm from 'components/ModalConfirm'
 
 import Icon from 'FontAwesomeUtils'
-import { faLaptop, faPen, faXmark } from '@fortawesome/free-solid-svg-icons'
+import {
+  faLaptop,
+  faMobileScreen,
+  faPen,
+  faXmark
+} from '@fortawesome/free-solid-svg-icons'
 
 import {
   Badge,
@@ -30,13 +35,6 @@ class Device extends Component {
     tags: [],
     showModal: false,
     modalType: ''
-    /*allTags: [
-      { label: 'private', value: 'private' },
-      { label: 'foo', value: 'foo' },
-      { label: 'dns', value: 'dns' },
-      { label: 'lan', value: 'lan' },
-      { label: 'wan', value: 'wan' }
-    ]*/
   }
 
   async componentDidMount() {
@@ -151,6 +149,13 @@ class Device extends Component {
 
     const defaultGroups = ['wan', 'dns', 'lan']
 
+    let icon = faLaptop
+    if (this.state.name.match(/iphone|mobile|android/i)) {
+      icon = faMobileScreen
+    }
+
+    let iconColor = 'pink.400'
+
     return (
       <>
         <Stack
@@ -174,7 +179,9 @@ class Device extends Component {
             alignItems="center"
             minW="90%"
           >
-            <Icon icon={faLaptop} color="violet.400" size="12" />
+            <Box bg="white" p={4} rounded="full">
+              <Icon icon={icon} color={iconColor} size="8" />
+            </Box>
             <VStack flex={1}>
               <Input
                 size="lg"
