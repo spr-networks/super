@@ -10,25 +10,17 @@ import {
 
 // helper functions - TODO move to FlowUtils
 
-const toCron = (days, from, to) => {
-  /*
-*    *    *    *    *    *
-┬    ┬    ┬    ┬    ┬    ┬
-│    │    │    │    │    |
-│    │    │    │    │    └ day of week (0 - 7, 1L - 7L) (0 or 7 is Sun)
-│    │    │    │    └───── month (1 - 12)
-│    │    │    └────────── day of month (1 - 31, L)
-│    │    └─────────────── hour (0 - 23)
-│    └──────────────────── minute (0 - 59)
-└───────────────────────── second (0 - 59, optional)
-  */
+const numToDays = (num) => {
+  let cronDays = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
-  let minute = '0',
-    hour = '*',
-    dom = '*',
-    month = '*',
-    dow = '*'
+  return num
+    .map((n, i) => (n ? cronDays[i] : null))
+    .filter((d) => d)
+    .join(',')
+}
 
+// returns array of days in numeric format
+const daysToNum = (days) => {
   //1. days
   let cronDays = {
     sun: 0,
@@ -48,11 +40,34 @@ const toCron = (days, from, to) => {
     days = 'sat,sun' //= 6-7
   }
 
-  dow = days
+  let dow = days
     .split(',')
     .map((d) => cronDays[d])
     .filter((n) => typeof n === 'number')
-    .join(',')
+
+  return dow
+}
+
+const toCron = (days, from, to) => {
+  /*
+*    *    *    *    *    *
+┬    ┬    ┬    ┬    ┬    ┬
+│    │    │    │    │    |
+│    │    │    │    │    └ day of week (0 - 7, 1L - 7L) (0 or 7 is Sun)
+│    │    │    │    └───── month (1 - 12)
+│    │    │    └────────── day of month (1 - 31, L)
+│    │    └─────────────── hour (0 - 23)
+│    └──────────────────── minute (0 - 59)
+└───────────────────────── second (0 - 59, optional)
+  */
+
+  let minute = '0',
+    hour = '*',
+    dom = '*',
+    month = '*',
+    dow = '*'
+
+  dow = daysToNum(days).join(',')
 
   //2. time
   let [fromH, fromM] = from.split(':')
@@ -125,8 +140,12 @@ const triggers = [
     },
     onSubmit: function () {
       let { days, from, to } = this.values
-      let CronExpr = toCron(days, from, to)
-      return { CronExpr, Condition: '' }
+      //let CronExpr = toCron(days, from, to)
+      let Days = daysToNum(days).map((d) => (d ? 1 : 0)),
+        Start = from,
+        End = to
+
+      return { Time: { Days, Start, End }, Condition: '' }
     }
   },
   {
@@ -209,7 +228,7 @@ const actions = [
     },
     //NOTE same as TCP
     onSubmit: function () {
-      return { Client: parseClient(this.values.Client), ...this.values }
+      return { ...this.values, Client: parseClient(this.values.Client) }
     }
   },
   {
@@ -313,4 +332,4 @@ const getCard = (cardType, title) => {
 const FlowCards = [...triggers, ...actions]
 
 export default FlowCards
-export { FlowCards, getCards, getCard, toCron }
+export { FlowCards, getCards, getCard, toCron, numToDays }

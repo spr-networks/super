@@ -182,7 +182,6 @@ const FlowCard = ({ card, size, edit, noValues, ...props }) => {
 }
 
 // token is like variables but for cards
-// TODO use proptypes to describe the cards
 const Token = ({
   label,
   value: defaultValue,
