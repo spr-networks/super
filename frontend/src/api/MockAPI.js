@@ -1587,14 +1587,26 @@ export default function MockAPI() {
         return attrs
       })
 
-      this.delete('/plugins/pfw/block', (schema, request) => {
+      this.put('/plugins/pfw/block/:index', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
-        let attrs = JSON.parse(request.requestBody)
+        let index = request.params.index
 
-        return schema.pfwBlocks.where(attrs).destroy()
+        let attrs = JSON.parse(request.requestBody)
+        schema.pfwBlocks.find(index).update(attrs)
+
+        return attrs
+      })
+
+      this.delete('/plugins/pfw/block/:index', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let index = request.params.index
+        return schema.pfwBlocks.find(index).destroy()
       })
 
       this.put('/plugins/pfw/forward', (schema, request) => {
@@ -1608,14 +1620,25 @@ export default function MockAPI() {
         return attrs
       })
 
-      this.delete('/plugins/pfw/forward', (schema, request) => {
+      this.put('/plugins/pfw/forward/:index', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
+        let index = request.params.index
         let attrs = JSON.parse(request.requestBody)
+        schema.pfwForwards.find(index).update(attrs)
 
-        return schema.pfwForwards.where(attrs).destroy()
+        return attrs
+      })
+
+      this.delete('/plugins/pfw/forward/:index', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let index = request.params.index
+        return schema.pfwForwards.find(index).destroy()
       })
     }
   })

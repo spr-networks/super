@@ -191,6 +191,7 @@ const Token = ({
     )
   }
 
+  //NOTE treat empty value as *
   const trigger = (triggerProps) => (
     <Tooltip label={label} bg="muted.800" _text={{ color: 'muted.200' }}>
       <Button
@@ -198,7 +199,7 @@ const Token = ({
         {...triggerProps}
         onPress={() => setIsOpen(!isOpen)}
       >
-        {value}
+        {value == '' ? '*' : value}
       </Button>
     </Tooltip>
   )
