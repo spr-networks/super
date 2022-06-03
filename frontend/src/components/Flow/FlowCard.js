@@ -54,7 +54,9 @@ const FlowCard = ({ card, size, edit, ...props }) => {
               px={1}
             >
               {card.values && card.values[p.name] !== undefined
-                ? card.values[p.name] || '*'
+                ? card.values[p.name] == ''
+                  ? '*'
+                  : card.values[p.name]
                 : p.name}
             </Badge>
           ))}
