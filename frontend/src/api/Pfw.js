@@ -10,10 +10,12 @@ export class APIPfw extends API {
   }
 
   addForward = (data) => this.put('forward', data)
-  deleteForward = (data) => this.delete('forward', data)
+  updateForward = (data, index) => this.put(`forward/${index}`, data)
+  deleteForward = (index) => this.delete(`forward/${index}`, {})
 
   addBlock = (data) => this.put('block', data)
-  deleteBlock = (data) => this.delete('block', data)
+  updateBlock = (data, index) => this.put(`block/${index}`, data)
+  deleteBlock = (index) => this.delete(`block/${index}`, {})
 
   getVariable = (name) => this.get(`variable/${name}`)
   addVariable = (name, value) => this.put(`variable/${name}`, value)

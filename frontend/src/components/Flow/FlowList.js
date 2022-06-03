@@ -247,6 +247,7 @@ const Flow = ({ flow, edit, ...props }) => {
 
     if (props.onSubmit) {
       let newFlow = { title, triggers, actions }
+      // update
       if (flow.index !== undefined) {
         newFlow.index = flow.index
       }
@@ -332,8 +333,14 @@ const saveFlow = (flow) => {
     resolve(data)
   })*/
 
+  let isUpdate = flow.index !== undefined
+
   if (action.title.match(/Block (TCP|UDP)/)) {
     data.RuleName = flow.title
+
+    if (isUpdate) {
+      pfwAPI.updateBlock(data, flow.index)
+    }
 
     return pfwAPI.addBlock(data)
   }
@@ -341,9 +348,9 @@ const saveFlow = (flow) => {
   if (action.title.match(/Forward (TCP|UDP)/)) {
     data.RuleName = flow.title
 
-    return new Promise((resolve, reject) => {
-      resolve(data)
-    })
+    if (isUpdate) {
+      pfwAPI.updateForward(data, flow.index)
+    }
 
     return pfwAPI.addForward(data)
   }
@@ -396,7 +403,8 @@ const FlowList = (props) => {
       .config()
       .then((result) => {
         let flows = []
-        for (let br of result.BlockRules) {
+        for (let index in result.BlockRules) {
+          let br = result.BlockRules[index]
           let days = numToDays(br.Time.Days),
             from = br.Time.Start,
             to = br.Time.End
@@ -419,6 +427,7 @@ const FlowList = (props) => {
 
           flows.push({
             title: br.RuleName,
+            index,
             triggers: [trigger],
             actions: [action]
           })
@@ -445,6 +454,7 @@ const FlowList = (props) => {
     let actions = data.actions.map((card) => NewCard({ ...card }))
 
     let flow = { title, triggers, actions }
+    // update
     if (data.index !== undefined) {
       flow.index = data.index
     }
@@ -482,16 +492,16 @@ const FlowList = (props) => {
       setFlows(newFlows)
     }
 
-    const deleteBlock = (rule) => {
+    const deleteBlock = (index) => {
       pfwAPI
-        .deleteBlock(rule)
+        .deleteBlock(index)
         .then(done)
         .catch((err) => context.error(err))
     }
 
-    const deleteForward = (rule) => {
+    const deleteForward = (index) => {
       pfwAPI
-        .deleteForward(rule)
+        .deleteForward(index)
         .then(done)
         .catch((err) => context.error(err))
     }
@@ -499,20 +509,13 @@ const FlowList = (props) => {
     let actionTitle = flow.actions[0].title
 
     if (actionTitle.match(/(Block|Forward) (TCP|UDP)/)) {
-      pfwAPI.config().then((result) => {
-        let ruleType = actionTitle.startsWith('Block')
-          ? 'BlockRules'
-          : 'ForwardingRules'
+      let ruleType = actionTitle.startsWith('Block')
+        ? 'BlockRules'
+        : 'ForwardingRules'
 
-        //NOTE delete will be @ index
-        for (let rule of result[ruleType]) {
-          if (rule.RuleName == flow.title) {
-            return ruleType == 'BlockRules'
-              ? deleteBlock(rule)
-              : deleteForward(rule)
-          }
-        }
-      })
+      return ruleType == 'BlockRules'
+        ? deleteBlock(flow.index)
+        : deleteForward(flow.index)
     }
   }
 

@@ -157,7 +157,10 @@ const Token = ({
 
   // time picker
   if (['from', 'to'].includes(label)) {
-    inputElement = <TimeSelect value={value} onChange={onChangeText} />
+    const onSelect = (value) => {
+      onChangeText(value)
+    }
+    inputElement = <TimeSelect value={value} onChange={onSelect} />
   } else if (label == 'Client') {
     let [clients, setClients] = useState([])
 
