@@ -317,21 +317,13 @@ const Flow = ({ flow, edit, ...props }) => {
   )
 }
 
-const saveFlow = (flow) => {
+const saveFlow =  async (flow) => {
   // NOTE only support Date+Block for now
 
   let trigger = flow.triggers[0],
     action = flow.actions[0]
 
-  // NOTE trigger onSubmit will set CronExpr+Condition (not implemented yet)
-  let data = trigger.onSubmit()
-  data = { ...data, ...action.onSubmit() }
-
-  /*return new Promise((resolve, reject) => {
-    console.log('save this:', data)
-
-    resolve(data)
-  })*/
+  let data = { ...await trigger.onSubmit(), ...await action.onSubmit() }
 
   console.log('save flow')
 

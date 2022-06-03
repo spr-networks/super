@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import PropTypes from 'prop-types'
 import {
   faBan,
@@ -7,6 +8,8 @@ import {
   faEllipsis,
   faTag
 } from '@fortawesome/free-solid-svg-icons'
+
+import { groupAPI } from 'api'
 
 // helper functions - TODO move to FlowUtils
 
@@ -91,11 +94,11 @@ const toCron = (days, from, to) => {
   return str
 }
 
-const parseClient = (cli) => {
+const parseClient = async (cli) => {
   let Client = { Group: '', Identity: '', SrcIP: '' }
 
-  // TODO better check here, fetch groups
-  let groups = ['lan', 'wan', 'dns']
+  let groupMap = await groupAPI.list()
+  let groups = groupMap.map(x => x.Name)//['lan', 'wan', 'dns']
 
   if (cli.split('.').length == 4) {
     Client.SrcIP = cli
@@ -139,7 +142,7 @@ const triggers = [
       from: '10:00',
       to: '11:00'
     },
-    onSubmit: function () {
+    onSubmit: async function () {
       let { days, from, to } = this.values
       //let CronExpr = toCron(days, from, to)
       let Days = new Array(7).fill(0),
@@ -194,8 +197,11 @@ const actions = [
       DstIP: '0.0.0.0',
       DstPort: ''
     },
-    onSubmit: function () {
-      return { ...this.values, Client: parseClient(this.values.Client) }
+    onSubmit:  async function () {
+      let xx = await parseClient(this.values.Client)
+      console.log("xx")
+      console.log(xx)
+      return { ...this.values, Client: xx }
     }
   },
   {
@@ -230,8 +236,8 @@ const actions = [
       DstPort: ''
     },
     //NOTE same as TCP
-    onSubmit: function () {
-      return { ...this.values, Client: parseClient(this.values.Client) }
+    onSubmit: async function () {
+      return { ...this.values, Client: await parseClient(this.values.Client) }
     }
   },
   {
@@ -274,8 +280,8 @@ const actions = [
       NewDstIP: '0.0.0.0',
       DstPort: ''
     },
-    onSubmit: function () {
-      return { ...this.values, Client: parseClient(this.values.Client) }
+    onSubmit: async function () {
+      return { ...this.values, Client: await parseClient(this.values.Client) }
     }
   },
   {
@@ -317,8 +323,8 @@ const actions = [
       NewDstIP: '0.0.0.0',
       DstPort: ''
     },
-    onSubmit: function () {
-      return { ...this.values, Client: parseClient(this.values.Client) }
+    onSubmit: async function () {
+      return { ...this.values, Client: await parseClient(this.values.Client) }
     }
   }
 ]
