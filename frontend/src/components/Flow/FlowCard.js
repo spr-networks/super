@@ -264,17 +264,7 @@ const Token = ({
       onChangeText(days)
     }
 
-    /*inputElement = (
-      <InputSelect
-        isMultiple
-        options={days}
-        value={value}
-        onChange={handleChange}
-      />
-    )*/
-
     // skip popover & use the menu directly
-
     // triggers differ slightly
     const trigger = (triggerProps) => (
       <Tooltip label={label} bg="muted.800" _text={{ color: 'muted.200' }}>
@@ -323,17 +313,6 @@ const Token = ({
         </Menu.OptionGroup>
       </Menu>
     )
-
-    /*return (
-      <SelectMenu
-        onChange={handleChange}
-        list={days}
-        value={value}
-        isMultiple
-        title="Select days"
-        trigger={trigger}
-      />
-    )*/
   }
 
   const trigger = (triggerProps) => (
@@ -391,8 +370,8 @@ const NewCard = ({ title, cardType, values, ...props }) => {
     return
   }
 
-  let newCard = Object.assign({}, card)
-  newCard.values = Object.assign(newCard.values || {}, values)
+  let newCard = { ...card }
+  newCard.values = { ...newCard.values, ...values }
 
   return newCard
 }

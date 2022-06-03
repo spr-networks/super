@@ -417,12 +417,6 @@ const FlowList = (props) => {
             }
           })
 
-          console.log('NEW:', {
-            title: br.RuleName,
-            triggers: [trigger],
-            actions: [action]
-          })
-
           flows.push({
             title: br.RuleName,
             triggers: [trigger],
@@ -510,6 +504,7 @@ const FlowList = (props) => {
           ? 'BlockRules'
           : 'ForwardingRules'
 
+        //NOTE delete will be @ index
         for (let rule of result[ruleType]) {
           if (rule.RuleName == flow.title) {
             return ruleType == 'BlockRules'
