@@ -185,14 +185,14 @@ const actions = [
       {
         name: 'DstPort',
         type: PropTypes.string,
-        description: 'Dest port, use 0 for all'
+        description: 'Dest port, range of ports, or empty for all'
       }
     ],
     values: {
       Protocol: 'tcp',
       Client: '0.0.0.0',
       DstIP: '0.0.0.0',
-      DstPort: '0'
+      DstPort: ''
     },
     onSubmit: function () {
       return { ...this.values, Client: parseClient(this.values.Client) }
@@ -220,14 +220,14 @@ const actions = [
       {
         name: 'DstPort',
         type: PropTypes.string,
-        description: 'Dest port, use 0 for all'
+        description: 'Dest port, range of ports, or empty for all'
       }
     ],
     values: {
       Protocol: 'udp',
       Client: '0.0.0.0',
       DstIP: '0.0.0.0',
-      DstPort: '0'
+      DstPort: ''
     },
     //NOTE same as TCP
     onSubmit: function () {
@@ -263,7 +263,7 @@ const actions = [
       {
         name: 'DstPort',
         type: PropTypes.string,
-        description: 'Dest port, use 0 for all'
+        description: 'Dest port, range of ports, or empty for all'
       }
     ],
     values: {
@@ -272,7 +272,7 @@ const actions = [
       SrcPort: '0',
       DstIP: '0.0.0.0',
       NewDstIP: '0.0.0.0',
-      DstPort: '0'
+      DstPort: ''
     },
     onSubmit: function () {
       return { ...this.values, Client: parseClient(this.values.Client) }
@@ -306,7 +306,7 @@ const actions = [
       {
         name: 'DstPort',
         type: PropTypes.string,
-        description: 'Dest port, use 0 for all'
+        description: 'Dest port, range of ports, or empty for all'
       }
     ],
     values: {
@@ -315,7 +315,7 @@ const actions = [
       SrcPort: '0',
       DstIP: '0.0.0.0',
       NewDstIP: '0.0.0.0',
-      DstPort: '0'
+      DstPort: ''
     },
     onSubmit: function () {
       return { ...this.values, Client: parseClient(this.values.Client) }
