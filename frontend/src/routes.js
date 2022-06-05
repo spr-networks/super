@@ -111,7 +111,7 @@ const routes = [
       {
         path: 'timeseries',
         name: 'Bandwidth Timeseries',
-        icon: faBarChart,
+        icon: faChartColumn,
         component: TrafficTimeSeries,
         layout: 'admin'
       },
@@ -125,7 +125,7 @@ const routes = [
       {
         path: 'trafficlist',
         name: 'Traffic',
-        icon: faChartColumn,
+        icon: faBarChart,
         component: TrafficList,
         layout: 'admin'
       }

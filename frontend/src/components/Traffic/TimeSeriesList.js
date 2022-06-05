@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
+import { format as timeAgo } from 'timeago.js'
 
 import { trafficAPI, wifiAPI } from 'api'
 import { prettyDate, prettySize } from 'utils'
@@ -37,70 +38,79 @@ const TimeSeriesList = (props) => {
       }
 
       //if (type == 'WanIn' && row.Interface == 'wlan0') {
-      if (type == 'WanIn' && row.Dst.match(regexLAN)) {
+      if (
+        type == 'WanIn' &&
+        row.Dst.match(regexLAN) &&
+        !row.Src.match(regexLAN)
+      ) {
         return row
       }
 
       //if (type == 'WanOut' && row.Interface != 'wlan0') {
-      if (type == 'WanOut' && row.Src.match(regexLAN)) {
+      if (
+        type == 'WanOut' &&
+        row.Src.match(regexLAN) &&
+        !row.Dst.match(regexLAN)
+      ) {
         return row
       }
     })
   }
 
   const refreshList = () => {
-    trafficAPI.traffic().then((data) => {
-      data = filterType(data, props.type)
-      // the data we fetch is from now and sorted desc - 1 minute for each row
-      let date = new Date()
-      date.setSeconds(0)
-      data = data.map((row) => {
-        date.setMinutes(date.getMinutes() - 1)
-        row.Timestamp = new Date(date)
-        return row
-      })
+    //trafficAPI.traffic().then((data) => {
+    let data = props.data
+    data = filterType(data, props.type)
+    // the data we fetch is from now and sorted desc - 1 minute for each row
+    /*let date = new Date()
+    date.setSeconds(0)
+    data = data.map((row) => {
+      date.setMinutes(date.getMinutes() - 1)
+      row.Timestamp = new Date(date)
+      return row
+    })*/
 
-      if (showASN) {
-        let keyIP = props.type == 'WanOut' ? 'Dst' : 'Src'
-        let ips = data.map((row) => row[keyIP])
-        ips = Array.from(new Set(ips))
-        wifiAPI
-          .asns(ips)
-          .then((asns) => {
-            let ip2asn = {}
-            for (let asn of asns) {
-              if (!asn.Name.length) {
-                continue
-              }
+    if (showASN) {
+      let keyIP = props.type == 'WanOut' ? 'Dst' : 'Src'
+      let ips = data.map((row) => row[keyIP])
+      ips = Array.from(new Set(ips))
+      if (!ips.length) {
+        return
+      }
 
-              ip2asn[asn.IP] = `${asn.Name}, ${asn.Country}`
+      wifiAPI
+        .asns(ips)
+        .then((asns) => {
+          let ip2asn = {}
+          for (let asn of asns) {
+            if (!asn.Name.length) {
+              continue
             }
 
-            data = data.map((row) => {
-              row.Asn = ip2asn[row[keyIP]]
-              return row
-            })
+            ip2asn[asn.IP] = `${asn.Name}, ${asn.Country}`
+          }
 
-            setList(data)
+          data = data.map((row) => {
+            row.Asn = ip2asn[row[keyIP]]
+            return row
           })
-          .catch((err) => {
-            setShowASN(false)
-            setList(data)
-          })
-      } else {
-        setList(data)
-      }
-    })
+
+          setList(data)
+        })
+        .catch((err) => {
+          setShowASN(false)
+          setList(data)
+        })
+    } else {
+      setList(data)
+    }
+    //})
   }
 
   useEffect(() => {
     //setShowASN(props.type.match(/^Wan(In|Out)$/) ? true : false)
     refreshList()
-  }, [props.type])
-
-  useEffect(() => {
-    refreshList()
-  }, [])
+  }, [props.data, props.type])
 
   let listFiltered = list
 
@@ -112,6 +122,7 @@ const TimeSeriesList = (props) => {
   }
 
   // filter by date
+  /*
   if (props.offset) {
     const scaleOffset = {
       '1 Hour': 60 - 1,
@@ -125,7 +136,7 @@ const TimeSeriesList = (props) => {
     listFiltered = offset
       ? listFiltered.filter((row) => row.Timestamp > d)
       : listFiltered
-  }
+  }*/
 
   return (
     <FlatList
@@ -175,15 +186,19 @@ const TimeSeriesList = (props) => {
                 {prettySize(item.Bytes)}
               </Badge>
               <Text fontSize="xs" alignSelf="flex-start">
-                {prettyDate(item.Timestamp)}
+                {timeAgo(item.Timestamp)}
               </Text>
             </Stack>
           </HStack>
         </Box>
       )}
-      keyExtractor={(item) => item.Timestamp}
+      keyExtractor={(item, index) => item.Src + item.Dst + item.Bytes}
     />
   )
+}
+
+TimeSeriesList.PropTypes = {
+  type: PropTypes.string.isRequired
 }
 
 export default TimeSeriesList

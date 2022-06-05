@@ -255,6 +255,9 @@ const DNSLogHistoryList = (props) => {
 
   useEffect(() => {
     refreshList()
+
+    const interval = setInterval(refreshList, 5 * 1e3)
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
