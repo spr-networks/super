@@ -68,7 +68,7 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
 const InputSelect = (props) => {
   const { onChange, isMultiple } = props
   const [isOpen, setIsOpen] = useState(false)
-  const [value, setValue] = useState(props.value || '')
+  const [value, setValue] = useState(props.value)
 
   let title = props.title
 
