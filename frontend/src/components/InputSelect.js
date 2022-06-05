@@ -142,6 +142,7 @@ const InputSelect = (props) => {
         size="md"
         variant="underlined"
         isDisabled={isDisabled}
+        placeholder={title || ''}
         value={value}
         onChangeText={handleChangeText}
         onSubmitEditing={onSubmitEditing}
