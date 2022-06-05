@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"reflect"
 
 	"github.com/duo-labs/webauthn/webauthn"
 	"github.com/gorilla/handlers"
@@ -28,6 +29,8 @@ var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
 
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
+var DevicesPublicConfigFile = DevicesConfigPath + "devices-public.json"
+
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
 
 var ApiTlsCert = "/configs/base/www-api.crt"
@@ -86,6 +89,9 @@ func loadConfig() {
 			fmt.Println(err)
 		}
 	}
+
+	//loading this will make sure devices-public.json is made
+	getDevicesJson()
 
 	initTraffic(config)
 }
@@ -165,12 +171,37 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 
 var Devicesmtx sync.Mutex
 
+func convertDevicesPublic(devices map[string]DeviceEntry) map[string]DeviceEntry {
+	// do not pass PSK key material
+	scrubbed_devices := devices
+	for i, entry := range scrubbed_devices {
+		if entry.PSKEntry.Psk != "" {
+			entry.PSKEntry.Psk = "**"
+			scrubbed_devices[i] = entry
+		}
+	}
+	return scrubbed_devices
+}
+
+func savePublicDevicesJson(scrubbed_devices map[string]DeviceEntry) {
+	file, _ := json.MarshalIndent(scrubbed_devices, "", " ")
+	err := ioutil.WriteFile(DevicesPublicConfigFile, file, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func saveDevicesJson(devices map[string]DeviceEntry) {
 	file, _ := json.MarshalIndent(devices, "", " ")
 	err := ioutil.WriteFile(DevicesConfigFile, file, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	scrubbed_devices := convertDevicesPublic(devices)
+	savePublicDevicesJson(scrubbed_devices)
+
+
 }
 
 func getDevicesJson() map[string]DeviceEntry {
@@ -183,6 +214,28 @@ func getDevicesJson() map[string]DeviceEntry {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+
+	scrubbed_devices := convertDevicesPublic(devices)
+
+	// load the public file. if it does not match, remake it.
+	data, err = ioutil.ReadFile(DevicesPublicConfigFile)
+	if err != nil {
+		// file was not made yet
+		savePublicDevicesJson(scrubbed_devices)
+	} else {
+		public_devices := map[string]DeviceEntry{}
+		err = json.Unmarshal(data, &public_devices)
+		if err != nil {
+			//data was invalid
+			savePublicDevicesJson(scrubbed_devices)
+		} else if !reflect.DeepEqual(public_devices, scrubbed_devices) {
+			//an update was since made
+			savePublicDevicesJson(scrubbed_devices)
+		}
+	}
+
+
 	return devices
 }
 
