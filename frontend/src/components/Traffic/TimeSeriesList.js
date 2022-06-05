@@ -4,6 +4,7 @@ import { format as timeAgo } from 'timeago.js'
 
 import { trafficAPI, wifiAPI } from 'api'
 import { prettyDate, prettySize } from 'utils'
+import { BrandIcons } from 'FontAwesomeUtils'
 
 import { Badge, Box, FlatList, Stack, HStack, Text } from 'native-base'
 
@@ -91,7 +92,11 @@ const TimeSeriesList = (props) => {
           }
 
           data = data.map((row) => {
-            row.Asn = ip2asn[row[keyIP]]
+            let asn = ip2asn[row[keyIP]]
+            if (asn) {
+              row.Asn = asn
+            }
+
             return row
           })
 
@@ -138,6 +143,42 @@ const TimeSeriesList = (props) => {
       : listFiltered
   }*/
 
+  const asnIcon = (asn) => {
+    let [asnName] = asn.split(',')
+    const asnToIcon = {
+      'AKAMAI-ASN1': <BrandIcons.Akamai />,
+      'AMAZON-02': <BrandIcons.AmazonAWS />,
+      'AMAZON-AES': <BrandIcons.AmazonAWS />,
+      'APPLE-AUSTIN': <BrandIcons.Apple />,
+      'APPLE-ENGINEERING': <BrandIcons.Apple />,
+      AUTOMATTIC: <BrandIcons.Automattic />,
+      BLIZZARD: <BrandIcons.BattleNet />,
+      CLOUDFLARENET: <BrandIcons.Cloudflare />,
+      'DIGITALOCEAN-ASN': <BrandIcons.DigitalOcean />,
+      EDGECAST: <BrandIcons.Edgecast />,
+      FACEBOOK: <BrandIcons.Facebook />,
+      FASTLY: <BrandIcons.Fastly />,
+      GITHUB: <BrandIcons.Github />,
+      GOOGLE: <BrandIcons.Google />,
+      'HETZNER-AS': <BrandIcons.Hetzner />,
+      NETFLIX: <BrandIcons.Netflix />,
+      OVH: <BrandIcons.OVH />,
+      WIKIMEDIA: <BrandIcons.Wikipedia />,
+      'MICROSOFT-CORP-MSN-AS-BLOCK': <BrandIcons.MicrosoftAzure />,
+      'AKAMAI-AS': <BrandIcons.Akamai />,
+      'ALIBABA-CN-NET Hangzhou Alibaba Advertising Co.': (
+        <BrandIcons.AlibabaCloud />
+      ),
+      'TAOBAO Zhejiang Taobao Network Co.': <BrandIcons.Taobao />
+    }
+
+    if (asnToIcon[asnName]) {
+      return <>{asnToIcon[asnName]}</>
+    }
+
+    return <></>
+  }
+
   return (
     <FlatList
       data={listFiltered}
@@ -169,9 +210,12 @@ const TimeSeriesList = (props) => {
                 <Text flex="1">{item.Dst}</Text>
               </HStack>
               {showASN ? (
-                <Text flex="1" color="muted.600" isTruncated>
-                  {item.Asn}
-                </Text>
+                <HStack space={1} flex="1">
+                  {asnIcon(item.Asn)}
+                  <Text color="muted.600" isTruncated>
+                    {item.Asn}
+                  </Text>
+                </HStack>
               ) : null}
             </Stack>
 
@@ -197,7 +241,7 @@ const TimeSeriesList = (props) => {
   )
 }
 
-TimeSeriesList.PropTypes = {
+TimeSeriesList.propTypes = {
   type: PropTypes.string.isRequired
 }
 
