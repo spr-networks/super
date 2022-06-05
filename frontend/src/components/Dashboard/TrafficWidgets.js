@@ -7,33 +7,45 @@ export const TotalTraffic = (props) => {
   let labels = ['WanIn', 'WanOut']
 
   useEffect(() => {
-    trafficAPI.history().then((history) => {
-      let traffic = {}
+    const fetchData = () => {
+      trafficAPI.history().then((history) => {
+        let traffic = {}
 
-      labels.map((label) => (traffic[label] = []))
+        labels.map((label) => (traffic[label] = []))
 
-      let date = new Date()
-      for (let i = 0; i < history.length - 2; i++) {
-        date.setMinutes(date.getMinutes() - 1)
+        let date = new Date()
+        for (let i = 0; i < history.length - 2; i++) {
+          date.setMinutes(date.getMinutes() - 1)
 
-        labels.map((label) => {
-          let h1 = Object.values(history[i])
-            .map((t) => t[label])
-            .reduce((prev, v) => prev + v, 0)
+          if (i >= 59) break
 
-          let h2 = Object.values(history[i + 1])
-            .map((t) => t[label])
-            .reduce((prev, v) => prev + v, 0)
+          labels.map((label) => {
+            let h1 = Object.values(history[i])
+              .map((t) => t[label])
+              .reduce((prev, v) => prev + v, 0)
 
-          let x = new Date(date)
-          let y = h1 - h2
+            let h2 = Object.values(history[i + 1])
+              .map((t) => t[label])
+              .reduce((prev, v) => prev + v, 0)
 
-          traffic[label].push({ x, y })
-        })
-      }
+            let x = new Date(date)
+            let y = h1 - h2
 
-      setData(Object.values(traffic))
-    })
+            traffic[label].push({ x, y })
+          })
+        }
+
+        setData(Object.values(traffic))
+      })
+    }
+
+    fetchData()
+
+    const interval = setInterval(fetchData, 60 * 1e3)
+
+    return () => {
+      clearInterval(interval)
+    }
   }, [])
 
   return (
