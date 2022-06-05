@@ -48,11 +48,7 @@ const TimeSeriesList = (props) => {
     })
   }
 
-  /*useEffect(() => {
-    setShowASN(props.type.match(/^Wan(In|Out)$/) ? true : false)
-  }, [props.type])*/
-
-  useEffect(() => {
+  const refreshList = () => {
     trafficAPI.traffic().then((data) => {
       data = filterType(data, props.type)
       // the data we fetch is from now and sorted desc - 1 minute for each row
@@ -73,6 +69,10 @@ const TimeSeriesList = (props) => {
           .then((asns) => {
             let ip2asn = {}
             for (let asn of asns) {
+              if (!asn.Name.length) {
+                continue
+              }
+
               ip2asn[asn.IP] = `${asn.Name}, ${asn.Country}`
             }
 
@@ -91,6 +91,15 @@ const TimeSeriesList = (props) => {
         setList(data)
       }
     })
+  }
+
+  useEffect(() => {
+    //setShowASN(props.type.match(/^Wan(In|Out)$/) ? true : false)
+    refreshList()
+  }, [props.type])
+
+  useEffect(() => {
+    refreshList()
   }, [])
 
   let listFiltered = list

@@ -5,9 +5,10 @@ import Devices from 'views/Devices/Devices'
 import Dhcp from 'views/Groups/Dhcp'
 import Home from 'views/Home'
 import Login from 'views/pages/Login'
-import SignalStrength from 'views/SignalStrength'
-import Traffic from 'views/Traffic'
-import TrafficTimeSeries from 'views/TrafficTimeSeries'
+import SignalStrength from 'views/Traffic/SignalStrength'
+import Traffic from 'views/Traffic/Traffic'
+import TrafficTimeSeries from 'views/Traffic/TrafficTimeSeries'
+import TrafficList from 'views/Traffic/TrafficList'
 import WirelessConfiguration from 'views/WirelessConfiguration'
 import Groups from 'views/Groups/Groups'
 import DNSBlock from 'views/DNS/DNSBlock'
@@ -23,6 +24,7 @@ import {
   faArrowCircleUp,
   faBan,
   faBarChart,
+  faChartColumn,
   faCircleNodes,
   faCogs,
   faEthernet,
@@ -118,6 +120,13 @@ const routes = [
         name: 'Signal Strength',
         icon: faSignal,
         component: SignalStrength,
+        layout: 'admin'
+      },
+      {
+        path: 'trafficlist',
+        name: 'Traffic',
+        icon: faChartColumn,
+        component: TrafficList,
         layout: 'admin'
       }
     ]
