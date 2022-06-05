@@ -47,6 +47,7 @@ services:
       - ./configs/base/:/configs/base/
       - ./configs/dns/:/configs/dns/
       - ./state/dns/:/state/dns/
+      - ./state/devices-public.json:/state/devices-public.json:ro
   multicast_udp_proxy-virt:
     container_name: super_multicast_udp_proxy-virt
     image: ghcr.io/spr-networks/super_multicast_udp_proxy
@@ -106,6 +107,7 @@ services:
       - ./state/dns/:/state/dns/
       - ./state/api/:/state/api/
       - ./state/plugins/:/state/plugins/
+      - ./state/devices-public.json:/state/devices-public.json      
       - ./frontend/build:/ui/
       - /var/log/journal:/var/log/journal:ro
   plugin-lookup-virt:
