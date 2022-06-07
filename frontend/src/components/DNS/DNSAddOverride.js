@@ -101,6 +101,7 @@ export default class DNSAddOverride extends React.Component {
             name="Domain"
             value={this.state.Domain}
             onChangeText={(value) => this.handleChange('Domain', value)}
+            onSubmitEditing={this.handleSubmit}
             autoFocus
           />
           {this.state.check.Domain == 'has-danger' ? (
@@ -156,7 +157,9 @@ export default class DNSAddOverride extends React.Component {
             type="number"
             name="Expiration"
             value={this.state.Expiration}
-            onChangeText={(value) => this.handleChange('Expiration', parseInt(value))}
+            onChangeText={(value) =>
+              this.handleChange('Expiration', parseInt(value))
+            }
           />
 
           <FormControl.HelperText>

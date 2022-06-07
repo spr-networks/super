@@ -41,7 +41,7 @@ const DNSOverrideList = (props) => {
       await props.notifyChange('config')
     }
     // close modal when added
-    //modalRef.current()
+    modalRef.current()
   }
 
   let overrideType = props.title.includes('Block') ? 'block' : 'permit'
@@ -52,8 +52,8 @@ const DNSOverrideList = (props) => {
       bg={useColorModeValue('warmGray.50', 'blueGray.800')}
       rounded="md"
       width="100%"
-      p="4"
-      mb="4"
+      p={4}
+      mb={4}
     >
       <HStack justifyContent="space-between" alignContent="center">
         <VStack>
@@ -75,15 +75,15 @@ const DNSOverrideList = (props) => {
         data={list}
         renderItem={({ item }) => (
           <Box
-            borderBottomWidth="1"
+            borderBottomWidth={1}
             _dark={{
               borderColor: 'muted.600'
             }}
             borderColor="muted.200"
-            py="2"
+            py={2}
           >
             <HStack space={3} justifyContent="space-evenly" alignItems="center">
-              <HStack flex="1" space={2}>
+              <HStack flex={1} space={2}>
                 <Stack space={2} direction={{ base: 'column', md: 'row' }}>
                   <Text bold>{item.Domain}</Text>
                   <HStack space={2}>
@@ -94,7 +94,7 @@ const DNSOverrideList = (props) => {
               </HStack>
 
               <Stack
-                flex="1"
+                flex={1}
                 space={2}
                 direction={{ base: 'column', md: 'row' }}
                 justifyContent="space-between"
@@ -129,7 +129,7 @@ const DNSOverrideList = (props) => {
 
 DNSOverrideList.propTypes = {
   title: PropTypes.string.isRequired,
-  list: PropTypes.array.isRequired,
+  list: PropTypes.array,
   notifyChange: PropTypes.func
 }
 
