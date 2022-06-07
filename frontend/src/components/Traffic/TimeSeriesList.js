@@ -161,6 +161,7 @@ const TimeSeriesList = (props) => {
       GITHUB: <BrandIcons.Github />,
       GOOGLE: <BrandIcons.Google />,
       'HETZNER-AS': <BrandIcons.Hetzner />,
+      'LINODE-AP Linode': <BrandIcons.Linode />,
       NETFLIX: <BrandIcons.Netflix />,
       OVH: <BrandIcons.OVH />,
       WIKIMEDIA: <BrandIcons.Wikipedia />,
