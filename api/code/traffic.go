@@ -30,6 +30,8 @@ type IPTrafficElement struct {
 	Dst     		string
 	Packets 		uint64
 	Bytes   		uint64
+	Timeout   		uint64
+	Expires   		uint64
 }
 
 
@@ -64,6 +66,10 @@ func parseIPTrafficElements(elements []interface{}) []IPTrafficElement {
 				if ok {
 					val, ok := ele["val"].(map[string]interface{})
 					if ok {
+
+						timeout, ok := ele["timeout"].(float64)
+						expires, ok := ele["expires"].(float64)
+
 						concat, ok :=  val["concat"].([]interface{})
 						if ok && len(concat) == 3 {
 							ifname, _ := concat[0].(string)
@@ -75,7 +81,9 @@ func parseIPTrafficElements(elements []interface{}) []IPTrafficElement {
 									Src: src_ip,
 									Dst: dst_ip,
 									Bytes:   uint64(counter["bytes"].(float64)),
-									Packets: uint64(counter["packets"].(float64))})
+									Packets: uint64(counter["packets"].(float64)),
+									Timeout: uint64(timeout),
+									Expires: uint64(expires)})
 						}
 					}
 				}
