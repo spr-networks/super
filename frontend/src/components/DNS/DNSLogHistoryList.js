@@ -307,7 +307,7 @@ const DNSLogHistoryList = (props) => {
       refreshList()
     })
 
-    /*const interval = setInterval(() => {
+    const interval = setInterval(() => {
       if (!list.length) {
         return
       }
@@ -315,7 +315,7 @@ const DNSLogHistoryList = (props) => {
       refreshList()
     }, 5 * 1e3)
 
-    return () => clearInterval(interval)*/
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
@@ -448,7 +448,7 @@ const DNSLogHistoryList = (props) => {
             triggerAlert={triggerAlert}
           />
         )}
-        keyExtractor={(item) => item.Timestamp}
+        keyExtractor={(item) => item.Timestamp + item.Remote}
       />
 
       {total > 20 ? (
