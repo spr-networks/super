@@ -29,7 +29,7 @@ var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
 
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
-var DevicesPublicConfigFile = TEST_PREFIX + "/state/devices-public.json"
+var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
 
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
 

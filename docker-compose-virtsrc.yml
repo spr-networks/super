@@ -47,7 +47,7 @@ services:
       - ./configs/base/:/configs/base/
       - ./configs/dns/:/configs/dns/
       - ./state/dns/:/state/dns/
-      - ./state/devices-public.json:/state/devices-public.json:ro
+      - ./state/public/:/state/public/:ro
   multicast_udp_proxy-virt:
     container_name: super_multicast_udp_proxy-virt
     build: multicast_udp_proxy
@@ -107,7 +107,7 @@ services:
       - ./state/dns/:/state/dns/
       - ./state/api/:/state/api/
       - ./state/plugins/:/state/plugins/
-      - ./state/devices-public.json:/state/devices-public.json
+      - ./state/public/:/state/public/
       - ./frontend/build:/ui/
       - /var/log/journal:/var/log/journal:ro
   plugin-lookup-virt:
