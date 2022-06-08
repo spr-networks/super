@@ -17,6 +17,14 @@ export class APIPfw extends API {
   updateBlock = (data, index) => this.put(`block/${index}`, data)
   deleteBlock = (index) => this.delete(`block/${index}`, {})
 
+  addGroups = (data) => this.put('group', data)
+  updateGroups = (data, index) => this.put(`group/${index}`, data)
+  deleteGroups = (index) => this.delete(`group/${index}`, {})
+
+  addTags = (data) => this.put('tag', data)
+  updateTags = (data, index) => this.put(`tag/${index}`, data)
+  deleteTags = (index) => this.delete(`tag/${index}`, {})
+
   getVariable = (name) => this.get(`variable/${name}`)
   addVariable = (name, value) => this.put(`variable/${name}`, value)
   deleteVariable = (name) => this.delete(`variable/${name}`)

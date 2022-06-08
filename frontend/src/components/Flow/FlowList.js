@@ -192,6 +192,21 @@ const Flow = ({ flow, edit, ...props }) => {
       </Menu>
     )
 
+    const flowObjParse = (x) => {
+      if (typeof x == "object") {
+        if (x.Identity != null && x.Identity != "")
+          return x.Identity
+
+        if (x.Group != null && x.Group != "")
+          return x.Group
+
+        if (x.SrcIP != null && x.SrcIP != "")
+          return x.SrcIP
+
+        return JSON.stringify(x)
+      }
+      return x
+    }
     // TODO mini component
 
     let trigger = triggers[0],
@@ -220,7 +235,7 @@ const Flow = ({ flow, edit, ...props }) => {
             <HStack space={2} alignItems="center">
               <Icon icon={action.icon} color={action.color} />
               <Text isTruncated>
-                {Object.values(action.values).slice(0, 3).join(' ')}
+                {Object.values(action.values).map((x) => flowObjParse(x)).join(' ')}
               </Text>
             </HStack>
           </HStack>
@@ -348,6 +363,136 @@ const saveFlow =  async (flow) => {
 
     return pfwAPI.addForward(data)
   }
+
+  if (action.title.match(/Set Device Groups/)) {
+    data.RuleName = flow.title
+
+    if (isUpdate) {
+      return pfwAPI.updateGroups(data, flow.index)
+    }
+
+    return pfwAPI.addGroups(data)
+  }
+
+  if (action.title.match(/Set Device Tags/)) {
+    data.RuleName = flow.title
+
+    if (isUpdate) {
+      return pfwAPI.updateTags(data, flow.index)
+    }
+
+    return pfwAPI.addTags(data)
+  }
+
+}
+
+const convertTrigger = (rule) => {
+  let days = numToDays(rule.Time.Days),
+    from = rule.Time.Start,
+    to = rule.Time.End
+
+  let trigger
+
+  if (from != '') {
+    trigger = NewCard({
+      title: 'Date',
+      cardType: 'trigger',
+      values: { days, from, to }
+    })
+  } else {
+    trigger = NewCard({
+      title: 'Always',
+      cardType: 'trigger',
+      values: { }
+    })
+  }
+
+  return trigger
+}
+
+const convertBlockRuleCard = (rule, index) => {
+  let trigger = convertTrigger(rule)
+
+  let action = NewCard({
+    title: 'Block ' + rule.Protocol.toUpperCase(),
+    cardType: 'action',
+    values: {
+      Protocol: rule.Protocol,
+      Client: rule.Client,
+      DstIP: rule.DstIP,
+      DstPort: rule.DstPort
+    }
+  })
+
+  return {
+    title: rule.RuleName,
+    index: parseInt(index),
+    triggers: [trigger],
+    actions: [action]
+  }
+}
+
+const convertForwardingRuleCard = (rule, index) => {
+  let trigger = convertTrigger(rule)
+  let action = NewCard({
+    title: 'Forward ' + rule.Protocol.toUpperCase(),
+    cardType: 'action',
+    values: {
+      Protocol: rule.Protocol,
+      Client: rule.Client,
+      OriginalDstIP: rule.OriginalDstIP,
+      OriginalDstPort: rule.OriginalDstPort,
+      DstIP: rule.DstIP,
+      DstPort: rule.DstPort
+    }
+  })
+
+  return {
+    title: rule.RuleName,
+    index: parseInt(index),
+    triggers: [trigger],
+    actions: [action]
+  }
+}
+
+const convertGroupRuleCard = (rule, index) => {
+  let trigger = convertTrigger(rule)
+
+  let action = NewCard({
+    title: 'Set Device Groups',
+    cardType: 'action',
+    values: {
+      Client: rule.Client,
+      Groups: rule.Groups
+    }
+  })
+
+  return {
+    title: rule.RuleName,
+    index: parseInt(index),
+    triggers: [trigger],
+    actions: [action]
+  }
+}
+
+const convertTagRuleCard = (rule, index) => {
+  let trigger = convertTrigger(rule)
+
+  let action = NewCard({
+    title: 'Set Device Tags',
+    cardType: 'action',
+    values: {
+      Client: rule.Client,
+      Tags: rule.Tags
+    }
+  })
+
+  return {
+    title: rule.RuleName,
+    index: parseInt(index),
+    triggers: [trigger],
+    actions: [action]
+  }
 }
 
 const FlowList = (props) => {
@@ -373,41 +518,14 @@ const FlowList = (props) => {
     pfwAPI
       .config()
       .then((result) => {
-        let flows = []
-        for (let index in result.BlockRules) {
-          let br = result.BlockRules[index]
-          let days = numToDays(br.Time.Days),
-            from = br.Time.Start,
-            to = br.Time.End
-
-          let trigger = NewCard({
-            title: 'Date',
-            cardType: 'trigger',
-            values: { days, from, to }
-          })
-
-          let action = NewCard({
-            title: 'Block ' + br.Protocol.toUpperCase(),
-            cardType: 'action',
-            values: {
-              SrcIP: br.Client.SrcIP,
-              DstIP: br.DstIP,
-              DstPort: br.DstPort
-            }
-          })
-
-          flows.push({
-            title: br.RuleName,
-            index: parseInt(index),
-            triggers: [trigger],
-            actions: [action]
-          })
-        }
+        let flows = [...result.BlockRules.map((x) => convertBlockRuleCard(x)),
+                     ...result.ForwardingRules.map((x) => convertForwardingRuleCard(x)),
+                     ...result.GroupRules.map((x) => convertGroupRuleCard(x)),
+                     ...result.TagRules.map((x) => convertTagRuleCard(x))]
 
         setFlows(flows)
-        //setFlows()
       })
-      .catch((err) => {})
+      .catch((err) => {alert(err)})
   }, [])
 
   const onSubmit = (data) => {
@@ -480,6 +598,20 @@ const FlowList = (props) => {
         .catch((err) => context.error(err))
     }
 
+    const deleteGroups = (index) => {
+      pfwAPI
+        .deleteGroups(index)
+        .then(done)
+        .catch((err) => context.error(err))
+    }
+
+    const deleteTags = (index) => {
+      pfwAPI
+        .deleteTags(index)
+        .then(done)
+        .catch((err) => context.error(err))
+    }
+
     let actionTitle = flow.actions[0].title
 
     if (actionTitle.match(/(Block|Forward) (TCP|UDP)/)) {
@@ -491,6 +623,15 @@ const FlowList = (props) => {
         ? deleteBlock(index)
         : deleteForward(index)
     }
+
+    if (actionTitle.match(/Set Device Groups/)) {
+      return deleteGroups(idnex)
+    }
+
+    if (actionTitle.match(/Set Device Tags/)) {
+      return deleteTags(idnex)
+    }
+
   }
 
   const onDuplicate = (item) => {

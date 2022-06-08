@@ -6,6 +6,7 @@ import {
   faCircleArrowRight,
   faClock,
   faEllipsis,
+  faObjectGroup,
   faTag
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -113,6 +114,22 @@ const parseClient = async (cli) => {
 
 const triggers = [
   {
+    title: 'Always',
+    cardType: 'trigger',
+    description: '',
+    color: 'green.300',
+    icon: faEllipsis,
+    params: [
+    ],
+    values: {
+    },
+    onSubmit: async function () {
+      let { days, from, to } = this.values
+
+      return { Time: { Days: [], Start: '', End: '' }, Condition: '' }
+    }
+  },
+  {
     title: 'Date',
     cardType: 'trigger',
     description: 'Trigger on selected date and time',
@@ -194,7 +211,7 @@ const actions = [
     values: {
       Protocol: 'tcp',
       Client: '0.0.0.0',
-      DstIP: '0.0.0.0',
+      DstIP: '',
       DstPort: ''
     },
     onSubmit:  async function () {
@@ -232,7 +249,7 @@ const actions = [
     values: {
       Protocol: 'udp',
       Client: '0.0.0.0',
-      DstIP: '0.0.0.0',
+      DstIP: '',
       DstPort: ''
     },
     //NOTE same as TCP
@@ -258,27 +275,26 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
+      { name: 'OriginalDstIP', type: PropTypes.string, description: 'IP/CIDR' },
       {
-        name: 'SrcPort',
+        name: 'OriginalDstPort',
         type: PropTypes.string,
-        description: 'Source port, use 0 for all'
+        description: 'Original Destination port, range of ports, or empty for all'
       },
       { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
-      { name: 'NewDstIP', type: PropTypes.string, description: 'IP/CIDR' },
-
       {
         name: 'DstPort',
         type: PropTypes.string,
-        description: 'Dest port, range of ports, or empty for all'
+        description: 'New Destination port, range of ports, or empty for all'
       }
     ],
     values: {
       Protocol: 'tcp',
       Client: '0.0.0.0',
-      SrcPort: '0',
+      DstPort: '',
       DstIP: '0.0.0.0',
-      NewDstIP: '0.0.0.0',
-      DstPort: ''
+      OriginalDstIP: '0.0.0.0',
+      OriginalDstPort: ''
     },
     onSubmit: async function () {
       return { ...this.values, Client: await parseClient(this.values.Client) }
@@ -298,35 +314,91 @@ const actions = [
         type: PropTypes.string
       },
       {
+        name: 'Protocol',
+        hidden: true,
+        type: PropTypes.string
+      },
+      {
         name: 'Client',
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
+      { name: 'OriginalDstIP', type: PropTypes.string, description: 'IP/CIDR' },
       {
-        name: 'SrcPort',
+        name: 'OriginalDstPort',
         type: PropTypes.string,
-        description: 'Source port, use 0 for all'
+        description: 'Original Destination port, range of ports, or empty for all'
       },
       { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
-      { name: 'NewDstIP', type: PropTypes.string, description: 'IP/CIDR' },
       {
         name: 'DstPort',
         type: PropTypes.string,
-        description: 'Dest port, range of ports, or empty for all'
+        description: 'New Destination port, range of ports, or empty for all'
       }
     ],
     values: {
       Protocol: 'udp',
       Client: '0.0.0.0',
-      SrcPort: '0',
       DstIP: '0.0.0.0',
-      NewDstIP: '0.0.0.0',
-      DstPort: ''
+      OriginalDstIP: '',
+      OriginalDstPort: '',
+      DstPort: '',
     },
     onSubmit: async function () {
       return { ...this.values, Client: await parseClient(this.values.Client) }
     }
-  }
+  },
+  {
+    title: 'Set Device Groups',
+    cardType: 'action',
+    description:
+      'A device joins a group only when conditions are met',
+    color: 'emerald.400',
+    icon: faObjectGroup,
+    params: [
+      {
+        name: 'Client',
+        type: PropTypes.string
+      },
+      {
+        name: 'Groups',
+        type: PropTypes.array,
+        description: 'Groups'
+      },
+    ],
+    values: {
+      Groups: []
+    },
+    onSubmit: async function () {
+      return { ...this.values, Client: await parseClient(this.values.Client) }
+    }
+  },
+  {
+    title: 'Set Device Tags',
+    cardType: 'action',
+    description:
+      'Assign device tags when conditions are met',
+    color: 'emerald.400',
+    icon: faObjectGroup,
+    params: [
+      {
+        name: 'Client',
+        type: PropTypes.string
+      },
+      {
+        name: 'Tags',
+        type: PropTypes.array,
+        description: 'Tags'
+      },
+    ],
+    values: {
+      Tags: []
+    },
+    onSubmit: async function () {
+      return { ...this.values, Client: await parseClient(this.values.Client) }
+    }
+  },
+
 ]
 
 const getCards = (cardType) => {

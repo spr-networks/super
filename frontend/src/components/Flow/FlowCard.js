@@ -18,6 +18,22 @@ import {
 import { getCard } from './FlowCards'
 import Token from './Token'
 
+const flowObjParse = (x) => {
+  if (typeof x == "object") {
+    if (x.Identity != null && x.Identity != "")
+      return x.Identity
+
+    if (x.Group != null && x.Group != "")
+      return x.Group
+
+    if (x.SrcIP != null && x.SrcIP != "")
+      return x.SrcIP
+
+    return JSON.stringify(x)
+  }
+  return x
+}
+
 const FlowCard = ({ card, size, edit, ...props }) => {
   size = size || 'md'
   let { title, description } = card
@@ -79,7 +95,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
               label={p.name}
               value={
                 card.values && card.values[p.name] !== undefined
-                  ? card.values[p.name]
+                  ? (p.name == 'Client' ? flowObjParse(card.values[p.name]) : card.values[p.name] )
                   : p.name
               }
               description={p.description}
