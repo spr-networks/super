@@ -193,15 +193,12 @@ const Flow = ({ flow, edit, ...props }) => {
     )
 
     const flowObjParse = (x) => {
-      if (typeof x == "object") {
-        if (x.Identity != null && x.Identity != "")
-          return x.Identity
+      if (typeof x == 'object') {
+        if (x.Identity != null && x.Identity != '') return x.Identity
 
-        if (x.Group != null && x.Group != "")
-          return x.Group
+        if (x.Group != null && x.Group != '') return x.Group
 
-        if (x.SrcIP != null && x.SrcIP != "")
-          return x.SrcIP
+        if (x.SrcIP != null && x.SrcIP != '') return x.SrcIP
 
         return JSON.stringify(x)
       }
@@ -235,7 +232,9 @@ const Flow = ({ flow, edit, ...props }) => {
             <HStack space={2} alignItems="center">
               <Icon icon={action.icon} color={action.color} />
               <Text isTruncated>
-                {Object.values(action.values).map((x) => flowObjParse(x)).join(' ')}
+                {Object.values(action.values)
+                  .map((x) => flowObjParse(x))
+                  .join(' ')}
               </Text>
             </HStack>
           </HStack>
@@ -332,13 +331,13 @@ const Flow = ({ flow, edit, ...props }) => {
   )
 }
 
-const saveFlow =  async (flow) => {
+const saveFlow = async (flow) => {
   // NOTE only support Date+Block for now
 
   let trigger = flow.triggers[0],
     action = flow.actions[0]
 
-  let data = { ...await trigger.onSubmit(), ...await action.onSubmit() }
+  let data = { ...(await trigger.onSubmit()), ...(await action.onSubmit()) }
 
   console.log('save flow')
 
@@ -383,7 +382,6 @@ const saveFlow =  async (flow) => {
 
     return pfwAPI.addTags(data)
   }
-
 }
 
 const convertTrigger = (rule) => {
@@ -403,7 +401,7 @@ const convertTrigger = (rule) => {
     trigger = NewCard({
       title: 'Always',
       cardType: 'trigger',
-      values: { }
+      values: {}
     })
   }
 
@@ -518,14 +516,18 @@ const FlowList = (props) => {
     pfwAPI
       .config()
       .then((result) => {
-        let flows = [...result.BlockRules.map((x) => convertBlockRuleCard(x)),
-                     ...result.ForwardingRules.map((x) => convertForwardingRuleCard(x)),
-                     ...result.GroupRules.map((x) => convertGroupRuleCard(x)),
-                     ...result.TagRules.map((x) => convertTagRuleCard(x))]
+        let flows = [
+          ...result.BlockRules.map((x) => convertBlockRuleCard(x)),
+          ...result.ForwardingRules.map((x) => convertForwardingRuleCard(x)),
+          ...result.GroupRules.map((x) => convertGroupRuleCard(x)),
+          ...result.TagRules.map((x) => convertTagRuleCard(x))
+        ]
 
         setFlows(flows)
       })
-      .catch((err) => {alert(err)})
+      .catch((err) => {
+        context.error(err)
+      })
   }, [])
 
   const onSubmit = (data) => {
@@ -625,13 +627,12 @@ const FlowList = (props) => {
     }
 
     if (actionTitle.match(/Set Device Groups/)) {
-      return deleteGroups(idnex)
+      return deleteGroups(index)
     }
 
     if (actionTitle.match(/Set Device Tags/)) {
-      return deleteTags(idnex)
+      return deleteTags(index)
     }
-
   }
 
   const onDuplicate = (item) => {

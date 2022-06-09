@@ -7,7 +7,9 @@ import {
   faClock,
   faEllipsis,
   faObjectGroup,
-  faTag
+  faRepeat,
+  faTag,
+  faTags
 } from '@fortawesome/free-solid-svg-icons'
 
 import { groupAPI } from 'api'
@@ -99,7 +101,7 @@ const parseClient = async (cli) => {
   let Client = { Group: '', Identity: '', SrcIP: '' }
 
   let groupMap = await groupAPI.list()
-  let groups = groupMap.map(x => x.Name)//['lan', 'wan', 'dns']
+  let groups = groupMap.map((x) => x.Name) //['lan', 'wan', 'dns']
 
   if (cli.split('.').length == 4) {
     Client.SrcIP = cli
@@ -116,13 +118,11 @@ const triggers = [
   {
     title: 'Always',
     cardType: 'trigger',
-    description: '',
-    color: 'green.300',
-    icon: faEllipsis,
-    params: [
-    ],
-    values: {
-    },
+    description: 'Always run the selected trigger',
+    color: 'violet.300',
+    icon: faRepeat,
+    params: [],
+    values: {},
     onSubmit: async function () {
       let { days, from, to } = this.values
 
@@ -214,9 +214,9 @@ const actions = [
       DstIP: '',
       DstPort: ''
     },
-    onSubmit:  async function () {
+    onSubmit: async function () {
       let xx = await parseClient(this.values.Client)
-      console.log("xx")
+      console.log('xx')
       console.log(xx)
       return { ...this.values, Client: xx }
     }
@@ -279,7 +279,8 @@ const actions = [
       {
         name: 'OriginalDstPort',
         type: PropTypes.string,
-        description: 'Original Destination port, range of ports, or empty for all'
+        description:
+          'Original Destination port, range of ports, or empty for all'
       },
       { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
       {
@@ -327,7 +328,8 @@ const actions = [
       {
         name: 'OriginalDstPort',
         type: PropTypes.string,
-        description: 'Original Destination port, range of ports, or empty for all'
+        description:
+          'Original Destination port, range of ports, or empty for all'
       },
       { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
       {
@@ -342,7 +344,7 @@ const actions = [
       DstIP: '0.0.0.0',
       OriginalDstIP: '',
       OriginalDstPort: '',
-      DstPort: '',
+      DstPort: ''
     },
     onSubmit: async function () {
       return { ...this.values, Client: await parseClient(this.values.Client) }
@@ -351,9 +353,8 @@ const actions = [
   {
     title: 'Set Device Groups',
     cardType: 'action',
-    description:
-      'A device joins a group only when conditions are met',
-    color: 'emerald.400',
+    description: 'A device joins a group only when conditions are met',
+    color: 'cyan.500',
     icon: faObjectGroup,
     params: [
       {
@@ -364,7 +365,7 @@ const actions = [
         name: 'Groups',
         type: PropTypes.array,
         description: 'Groups'
-      },
+      }
     ],
     values: {
       Groups: []
@@ -376,10 +377,9 @@ const actions = [
   {
     title: 'Set Device Tags',
     cardType: 'action',
-    description:
-      'Assign device tags when conditions are met',
-    color: 'emerald.400',
-    icon: faObjectGroup,
+    description: 'Assign device tags when conditions are met',
+    color: 'cyan.500',
+    icon: faTags,
     params: [
       {
         name: 'Client',
@@ -389,7 +389,7 @@ const actions = [
         name: 'Tags',
         type: PropTypes.array,
         description: 'Tags'
-      },
+      }
     ],
     values: {
       Tags: []
@@ -397,8 +397,7 @@ const actions = [
     onSubmit: async function () {
       return { ...this.values, Client: await parseClient(this.values.Client) }
     }
-  },
-
+  }
 ]
 
 const getCards = (cardType) => {
