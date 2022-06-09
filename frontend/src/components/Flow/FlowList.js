@@ -191,11 +191,13 @@ const Flow = ({ flow, edit, ...props }) => {
         trigger={triggerBtn}
         alignSelf="center"
       >
-        <Menu.Item onPress={onEdit}>Edit</Menu.Item>
-        <Menu.Item onPress={onDuplicate}>Duplicate</Menu.Item>
         <Menu.Item onPress={onDisable}>
           {flow.disabled ? 'Enable' : 'Disable'}
         </Menu.Item>
+        <Divider mt="3" w="100%" />
+        <Menu.Item onPress={onEdit}>Edit</Menu.Item>
+        <Menu.Item onPress={onDuplicate}>Duplicate</Menu.Item>
+
         <Menu.Item _text={{ color: 'danger.600' }} onPress={onDelete}>
           Delete
         </Menu.Item>
