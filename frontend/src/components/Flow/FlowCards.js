@@ -101,9 +101,12 @@ const toCron = (days, from, to) => {
 const parseClient = async (cli) => {
   let Client = { Group: '', Identity: '', SrcIP: '' }
 
-  let groupMap = await groupAPI.list()
-  let groups = groupMap.map((x) => x.Name) //['lan', 'wan', 'dns']
+  // if Client is from api we already have an object
+  if (typeof cli === 'object') {
+    return cli
+  }
 
+  let groups = await deviceAPI.groups()
   if (cli.split('.').length == 4) {
     Client.SrcIP = cli
   } else if (groups.includes(cli)) {
@@ -128,7 +131,7 @@ const triggers = [
     icon: faRepeat,
     params: [],
     values: {},
-    preSubmit: async function () {
+    preSubmit: function () {
       return { Time: { Days: [], Start: '', End: '' }, Condition: '' }
     }
   },
@@ -162,7 +165,7 @@ const triggers = [
       from: '10:00',
       to: '11:00'
     },
-    preSubmit: async function () {
+    preSubmit: function () {
       let { days, from, to } = this.values
       //let CronExpr = toCron(days, from, to)
       let Days = new Array(7).fill(0),
@@ -218,10 +221,9 @@ const actions = [
       DstPort: ''
     },
     preSubmit: async function () {
-      let xx = await parseClient(this.values.Client)
-      console.log('xx')
-      console.log(xx)
-      return { ...this.values, Client: xx }
+      let Client = await parseClient(this.values.Client)
+
+      return { ...this.values, Client }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
@@ -407,6 +409,7 @@ const actions = [
       }
     ],
     values: {
+      Client: '',
       Groups: []
     },
     getOptions: function () {
@@ -415,10 +418,12 @@ const actions = [
       })
     },
     preSubmit: async function () {
-      return { ...this.values, Client: await parseClient(this.values.Client) }
+      let Client = await parseClient(this.values.Client)
+      return { ...this.values, Client }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
+      console.log('submit:', data, flow)
 
       if (isUpdate) {
         return pfwAPI.updateGroups(data, flow.index)
@@ -445,6 +450,7 @@ const actions = [
       }
     ],
     values: {
+      Client: '',
       Tags: []
     },
     getOptions: function () {
