@@ -11,6 +11,7 @@ import TrafficTimeSeries from 'views/Traffic/TrafficTimeSeries'
 import TrafficList from 'views/Traffic/TrafficList'
 import WirelessConfiguration from 'views/WirelessConfiguration'
 import Groups from 'views/Groups/Groups'
+import Tags from 'views/Tags'
 import DNSBlock from 'views/DNS/DNSBlock'
 import DNSLog from 'views/DNS/DNSLog'
 import DNSLogEdit from 'views/DNS/DNSLogEdit'
@@ -34,6 +35,7 @@ import {
   faLineChart,
   faListAlt,
   faNetworkWired,
+  faObjectGroup,
   faPuzzlePiece,
   faSignal,
   faTags,
@@ -186,8 +188,15 @@ const routes = [
       {
         path: 'groups',
         name: 'Groups',
-        icon: faTags,
+        icon: faObjectGroup,
         component: Groups,
+        layout: 'admin'
+      },
+      {
+        path: 'tags',
+        name: 'Tags',
+        icon: faTags,
+        component: Tags,
         layout: 'admin'
       },
       {
