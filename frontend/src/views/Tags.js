@@ -51,12 +51,7 @@ const Tags = (props) => {
           return { name, data }
         })
 
-        console.log(tags)
         setTags(tags)
-        /*setTags([
-          { name: 'abc1', data: [0, 11] },
-          { name: 'abc2', data: [23] }
-        ])*/
       })
       .catch((error) => {
         context.error('API Failure: ' + error.message)
