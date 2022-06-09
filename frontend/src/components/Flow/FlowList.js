@@ -231,9 +231,7 @@ const Flow = ({ flow, edit, ...props }) => {
         rounded="lg"
       >
         <VStack flex={1} space={2}>
-          <Text bold>
-            {title} = {flow.actions[0].title}:{flow.index}
-          </Text>
+          <Text bold>{title}</Text>
 
           <HStack space={4} justifyContent="start">
             <HStack space={1} alignItems="center">
