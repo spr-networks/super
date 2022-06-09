@@ -7,6 +7,7 @@ import ModalForm from 'components/ModalForm'
 import DNSAddOverride from 'components/DNS/DNSAddOverride'
 import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
+import { format as timeAgo } from 'timeago.js'
 
 import {
   Box,
@@ -106,7 +107,11 @@ const DNSOverrideList = (props) => {
 
                 <HStack space={1}>
                   <Text color="muted.500">Expiration:</Text>
-                  <Text>{item.Expiration}</Text>
+                  <Text>
+                    {item.Expiration
+                      ? timeAgo(new Date(item.Expiration * 1e3))
+                      : 'Never'}
+                  </Text>
                 </HStack>
               </Stack>
 

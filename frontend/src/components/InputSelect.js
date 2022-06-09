@@ -143,7 +143,7 @@ const InputSelect = (props) => {
         variant="underlined"
         isDisabled={isDisabled}
         placeholder={title || ''}
-        defaultValue={value}
+        value={value}
         onChangeText={handleChangeText}
         onSubmitEditing={onSubmitEditing}
         InputRightElement={elem}
@@ -152,7 +152,7 @@ const InputSelect = (props) => {
   )
 }
 
-export default React.memo(InputSelect)
+export default InputSelect //React.memo(InputSelect)
 
 export { InputSelect, SelectMenu }
 

@@ -133,11 +133,18 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
         <HStack space={2} ml="auto">
           <Tooltip label="Add Domain Block" openDelay={300}>
             <IconButton
-              display={{ base: 'none', md: 'flex' }}
-              disabled={item.Type == 'BLOCKED'}
+              display={{
+                base: 'none',
+                md: 'flex'
+              }}
               variant="unstyled"
               icon={<Icon icon={faBan} color="danger.800" />}
-              onPress={() => handleClickDomain('block', item.FirstName)}
+              onPress={() =>
+                handleClickDomain(
+                  item.Type === 'BLOCKED' ? 'permit' : 'block',
+                  item.FirstName
+                )
+              }
             ></IconButton>
           </Tooltip>
 
