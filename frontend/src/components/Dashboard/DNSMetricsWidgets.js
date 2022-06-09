@@ -22,7 +22,7 @@ export const DNSMetrics = (props) => {
 
     fetchMetrics()
 
-    const interval = setInterval(fetchMetrics, 10 * 1e3)
+    const interval = setInterval(fetchMetrics, 30 * 1e3)
 
     return () => clearInterval(interval)
   }, [])
