@@ -2,22 +2,19 @@ import React, { useContext, useEffect, useState } from 'react'
 import {
   Box,
   Divider,
-  FlatList,
   Heading,
   HStack,
   View,
   SectionList,
   Text,
-  VStack,
-  useColorModeValue
+  VStack
 } from 'native-base'
 
-import { groupAPI, deviceAPI, nfmapAPI } from 'api'
-import GroupListing from 'components/Groups/GroupListing'
+import { deviceAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import Device from 'components/Devices/Device'
 
-const DeviceItem = ({ device, ...props }) => {
+/*const DeviceItem = ({ device, ...props }) => {
   return (
     <HStack space={2}>
       <Text bold>{device.Name}</Text>
@@ -25,7 +22,7 @@ const DeviceItem = ({ device, ...props }) => {
       <Text>{device.MAC}</Text>
     </HStack>
   )
-}
+}*/
 
 const Tags = (props) => {
   const context = useContext(AlertContext)
