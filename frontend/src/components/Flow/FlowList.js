@@ -193,7 +193,9 @@ const Flow = ({ flow, edit, ...props }) => {
     )
 
     const flowObjParse = (x) => {
-      if (typeof x == 'object') {
+      if (Array.isArray(x)) {
+        return x.join(',')
+      } else if (typeof x == 'object') {
         if (x.Identity != null && x.Identity != '') return x.Identity
 
         if (x.Group != null && x.Group != '') return x.Group
