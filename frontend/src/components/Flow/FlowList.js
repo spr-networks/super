@@ -178,6 +178,9 @@ const Flow = ({ flow, edit, ...props }) => {
 
     const onDisable = () => {
       // flip flow.disable
+      if (props.onDisable) {
+        props.onDisable(flow)
+      }
     }
 
     const moreMenu = (
@@ -231,7 +234,14 @@ const Flow = ({ flow, edit, ...props }) => {
         rounded="lg"
       >
         <VStack flex={1} space={2}>
-          <Text bold>{title}</Text>
+          <HStack space={2}>
+            <Text bold>{title}</Text>
+            {flow.disabled ? (
+              <Text fontSize="xs" color="muted.500">
+                Disabled
+              </Text>
+            ) : null}
+          </HStack>
 
           <HStack space={4} justifyContent="start">
             <HStack space={1} alignItems="center">
@@ -351,6 +361,8 @@ const saveFlow = async (flow) => {
     ...trigger.preSubmit(),
     ...(await action.preSubmit())
   }
+
+  data.disabled = flow.disabled
 
   console.log('flow. save:', data)
 
@@ -621,6 +633,13 @@ const FlowList = (props) => {
     })
   }
 
+  const toggleDisable = (item) => {
+    item.disabled = !item.disabled
+    saveFlow(item).then((res) => {
+      fetchFlows()
+    })
+  }
+
   return (
     <Stack
       direction={{ base: 'column', md: 'row' }}
@@ -650,6 +669,7 @@ const FlowList = (props) => {
                 edit={false}
                 onDelete={() => onDelete(item, index)}
                 onDuplicate={onDuplicate}
+                onDisable={toggleDisable}
                 onEdit={() => onEdit(item, index)}
                 flow={item}
               />

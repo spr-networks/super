@@ -215,6 +215,7 @@ const Token = ({
     )
   }
 
+  // TODO have different default values. example: Client
   const displayValue = (value) => {
     if (Array.isArray(value)) {
       return value.join(',')
