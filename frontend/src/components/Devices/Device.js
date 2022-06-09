@@ -170,6 +170,8 @@ class Device extends Component {
     let color = colors[idx]
     let iconColor = `${color}.400`
 
+    let edit = this.props.edit !== undefined ? this.props.edit : true
+
     return (
       <>
         <Stack
@@ -180,11 +182,6 @@ class Device extends Component {
           key={device.MAC}
           justifyContent="space-between"
           alignItems="center"
-          borderBottomWidth={1}
-          borderColor="muted.200"
-          _dark={{
-            borderColor: 'muted.600'
-          }}
         >
           <Stack
             direction={{ base: 'column', md: 'row' }}
@@ -194,17 +191,21 @@ class Device extends Component {
             minW="90%"
           >
             <Box bg="white" _dark={{ bg: 'blueGray.700' }} p={4} rounded="full">
-              <Icon icon={icon} color={iconColor} size="8" />
+              <Icon icon={icon} color={iconColor} size={7} />
             </Box>
             <VStack flex={1}>
-              <Input
-                size="lg"
-                type="text"
-                variant="underlined"
-                value={this.state.name}
-                onChangeText={(value) => this.handleName(value)}
-                onSubmitEditing={handleSubmit}
-              />
+              {edit ? (
+                <Input
+                  size="lg"
+                  type="text"
+                  variant="underlined"
+                  value={this.state.name}
+                  onChangeText={(value) => this.handleName(value)}
+                  onSubmitEditing={handleSubmit}
+                />
+              ) : (
+                <Text bold>{device.Name}</Text>
+              )}
               {device.oui !== undefined ? (
                 <Text color="muted.500">{device.oui}</Text>
               ) : null}
@@ -255,6 +256,7 @@ class Device extends Component {
                 trigger={(triggerProps) => {
                   return (
                     <IconButton
+                      display={{ base: edit ? 'flex' : 'none' }}
                       size="xs"
                       variant="ghost"
                       icon={<Icon icon={faPen} />}
@@ -309,7 +311,12 @@ class Device extends Component {
             </HStack>
           </Stack>
 
-          <Box w="50" marginLeft="auto" justifyContent="center">
+          <Box
+            display={{ base: edit ? 'flex' : 'none' }}
+            w="50"
+            marginLeft="auto"
+            justifyContent="center"
+          >
             {/*<Button className="btn-icon" color="warning" size="sm">
             <i className="fa fa-edit" />
           </Button>*/}

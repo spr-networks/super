@@ -98,7 +98,10 @@ const DeviceListing = (props) => {
     <Box
       flex="1"
       _light={{ bg: 'backgroundCardLight' }}
-      _dark={{ bg: 'backgroundCardDark' }}
+      _dark={{ bg: 'backgroundCardDark', borderColor: 'muted.700' }}
+      borderBottomWidth={1}
+      borderColor="muted.200"
+      py={2}
     >
       <Pressable
         onPress={() => {
