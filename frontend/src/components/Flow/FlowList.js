@@ -176,6 +176,13 @@ const Flow = ({ flow, edit, ...props }) => {
       }
     }
 
+    const onDisable = () => {
+      // flip flow.disable
+      if (props.onDisable) {
+        props.onDisable(flow)
+      }
+    }
+
     const moreMenu = (
       <Menu
         flex={1}
@@ -184,8 +191,13 @@ const Flow = ({ flow, edit, ...props }) => {
         trigger={triggerBtn}
         alignSelf="center"
       >
+        <Menu.Item onPress={onDisable}>
+          {flow.disabled ? 'Enable' : 'Disable'}
+        </Menu.Item>
+        <Divider mt="3" w="100%" />
         <Menu.Item onPress={onEdit}>Edit</Menu.Item>
         <Menu.Item onPress={onDuplicate}>Duplicate</Menu.Item>
+
         <Menu.Item _text={{ color: 'danger.600' }} onPress={onDelete}>
           Delete
         </Menu.Item>
@@ -224,7 +236,14 @@ const Flow = ({ flow, edit, ...props }) => {
         rounded="lg"
       >
         <VStack flex={1} space={2}>
-          <Text bold>{title}</Text>
+          <HStack space={2}>
+            <Text bold>{title}</Text>
+            {flow.disabled ? (
+              <Text fontSize="xs" color="muted.500">
+                Disabled
+              </Text>
+            ) : null}
+          </HStack>
 
           <HStack space={4} justifyContent="start">
             <HStack space={1} alignItems="center">
@@ -337,11 +356,15 @@ const saveFlow = async (flow) => {
   let trigger = flow.triggers[0],
     action = flow.actions[0]
 
+  console.log('savethis:', flow)
+
   let data = {
     RuleName: flow.title,
-    ...(await trigger.preSubmit()),
+    ...trigger.preSubmit(),
     ...(await action.preSubmit())
   }
+
+  data.disabled = flow.disabled
 
   console.log('flow. save:', data)
 
@@ -394,7 +417,8 @@ const convertBlockRuleCard = (rule, index) => {
     title: rule.RuleName,
     index: parseInt(index),
     triggers: [trigger],
-    actions: [action]
+    actions: [action],
+    disabled: rule.Disabled
   }
 }
 
@@ -417,7 +441,8 @@ const convertForwardingRuleCard = (rule, index) => {
     title: rule.RuleName,
     index: parseInt(index),
     triggers: [trigger],
-    actions: [action]
+    actions: [action],
+    disabled: rule.Disabled
   }
 }
 
@@ -437,7 +462,8 @@ const convertGroupRuleCard = (rule, index) => {
     title: rule.RuleName,
     index: parseInt(index),
     triggers: [trigger],
-    actions: [action]
+    actions: [action],
+    disabled: rule.Disabled
   }
 }
 
@@ -457,7 +483,8 @@ const convertTagRuleCard = (rule, index) => {
     title: rule.RuleName,
     index: parseInt(index),
     triggers: [trigger],
-    actions: [action]
+    actions: [action],
+    disabled: rule.Disabled
   }
 }
 
@@ -479,16 +506,17 @@ const FlowList = (props) => {
     })
   }
 
-  // load flows
-  useEffect(() => {
+  const fetchFlows = () => {
     pfwAPI
       .config()
       .then((result) => {
         let flows = [
-          ...result.BlockRules.map((x) => convertBlockRuleCard(x)),
-          ...result.ForwardingRules.map((x) => convertForwardingRuleCard(x)),
-          ...result.GroupRules.map((x) => convertGroupRuleCard(x)),
-          ...result.TagRules.map((x) => convertTagRuleCard(x))
+          ...result.BlockRules.map((x, i) => convertBlockRuleCard(x, i)),
+          ...result.ForwardingRules.map((x, i) =>
+            convertForwardingRuleCard(x, i)
+          ),
+          ...result.GroupRules.map((x, i) => convertGroupRuleCard(x, i)),
+          ...result.TagRules.map((x, i) => convertTagRuleCard(x, i))
         ]
 
         setFlows(flows)
@@ -496,6 +524,11 @@ const FlowList = (props) => {
       .catch((err) => {
         context.error(err)
       })
+  }
+
+  // load flows
+  useEffect(() => {
+    fetchFlows()
   }, [])
 
   const onSubmit = (data) => {
@@ -522,13 +555,7 @@ const FlowList = (props) => {
     saveFlow(flow)
       .then((res) => {
         // update ui
-        if (flow.index !== undefined) {
-          let newFlows = flows
-          newFlows[flow.index] = flow
-          setFlows(newFlows)
-        } else {
-          setFlows(flows.concat(flow))
-        }
+        fetchFlows()
 
         // empty new/edit flow when adding/modifying flows
         resetFlow()
@@ -542,16 +569,11 @@ const FlowList = (props) => {
     setFlow({ index, ...item })
   }
 
-  const onDelete = (flow, index) => {
+  const onDelete = (flow, _index) => {
+    let index = flow.index
     // update ui
     const done = () => {
-      let newFlows = [...flows]
-      newFlows.splice(flow, 1)
-      for (let index = 0; index < newFlows.length; index++) {
-        newFlows[index].index = index
-      }
-
-      setFlows(newFlows)
+      fetchFlows()
     }
 
     const deleteBlock = (index) => {
@@ -609,10 +631,14 @@ const FlowList = (props) => {
     delete newFlow.index
     newFlow.title += '#copy'
     saveFlow(newFlow).then((res) => {
-      newFlow.index = flows.length
-      setFlow(newFlow)
-      let newFlows = flows.concat(newFlow)
-      setFlows(newFlows)
+      fetchFlows()
+    })
+  }
+
+  const toggleDisable = (item) => {
+    item.disabled = !item.disabled
+    saveFlow(item).then((res) => {
+      fetchFlows()
     })
   }
 
@@ -645,6 +671,7 @@ const FlowList = (props) => {
                 edit={false}
                 onDelete={() => onDelete(item, index)}
                 onDuplicate={onDuplicate}
+                onDisable={toggleDisable}
                 onEdit={() => onEdit(item, index)}
                 flow={item}
               />
