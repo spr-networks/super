@@ -21,6 +21,7 @@ export default class DNSAddOverride extends React.Component {
 
     this.state.Type = props.type
     this.state.Domain = props.domain || ''
+    this.state.ResultIP = props.ResultIP || ''
     this.state.ClientIP = props.clientip || '*'
     this.state.check = {
       Domain: '',
