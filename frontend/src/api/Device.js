@@ -36,6 +36,16 @@ export class APIDevice extends API {
     this.update({ MAC, Name, PSKEntry: { Psk, Type } })
   pendingPSK = () => this.get('/pendingPSK')
 
+  groups = () => this.get('/groups').then((res) => res.map((g) => g.Name))
+  tags = () =>
+    this.get('/devices').then((res) => [
+      ...new Set(
+        Object.values(res)
+          .map((device) => device.DeviceTags)
+          .flat()
+      )
+    ])
+
   // TODO add this functionality to base api
   oui = (mac) => this.get(`/plugins/lookup/oui/${mac}`)
   ouis = (macs) => {
