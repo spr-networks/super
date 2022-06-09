@@ -19,15 +19,12 @@ import { getCard } from './FlowCards'
 import Token from './Token'
 
 const flowObjParse = (x) => {
-  if (typeof x == "object") {
-    if (x.Identity != null && x.Identity != "")
-      return x.Identity
+  if (typeof x == 'object') {
+    if (x.Identity != null && x.Identity != '') return x.Identity
 
-    if (x.Group != null && x.Group != "")
-      return x.Group
+    if (x.Group != null && x.Group != '') return x.Group
 
-    if (x.SrcIP != null && x.SrcIP != "")
-      return x.SrcIP
+    if (x.SrcIP != null && x.SrcIP != '') return x.SrcIP
 
     return JSON.stringify(x)
   }
@@ -44,6 +41,21 @@ const FlowCard = ({ card, size, edit, ...props }) => {
       size={size == 'xs' ? '8x' : '12x'}
     />
   )
+
+  const displayValueOrParam = (values, name) => {
+    if (!values || values[name] === undefined) {
+      return name
+    }
+    if (values[name] == '') {
+      return '*'
+    }
+
+    if (Array.isArray(values[name])) {
+      return values[name].join(',')
+    }
+
+    return values[name]
+  }
 
   let body = (
     <VStack space={2}>
@@ -69,11 +81,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
               py={0}
               px={1}
             >
-              {card.values && card.values[p.name] !== undefined
-                ? card.values[p.name] == ''
-                  ? '*'
-                  : card.values[p.name]
-                : p.name}
+              {displayValueOrParam(card.values, p.name)}
             </Badge>
           ))}
       </HStack>
@@ -85,6 +93,15 @@ const FlowCard = ({ card, size, edit, ...props }) => {
       card.values = {}
     }
 
+    // autocomplete with dynamic options
+    const [options, setOptions] = useState([])
+
+    useEffect(() => {
+      if (card.getOptions) {
+        card.getOptions().then(setOptions)
+      }
+    }, [])
+
     body = (
       <HStack space={2} flexWrap="wrap" maxW="210px">
         {card.params
@@ -95,9 +112,12 @@ const FlowCard = ({ card, size, edit, ...props }) => {
               label={p.name}
               value={
                 card.values && card.values[p.name] !== undefined
-                  ? (p.name == 'Client' ? flowObjParse(card.values[p.name]) : card.values[p.name] )
+                  ? p.name == 'Client'
+                    ? flowObjParse(card.values[p.name])
+                    : card.values[p.name]
                   : p.name
               }
+              options={options}
               description={p.description}
               format={p.format}
               size={Object.keys(card.values).length >= 5 ? 'xs' : 'sm'}

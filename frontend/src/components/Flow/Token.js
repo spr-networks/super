@@ -142,6 +142,10 @@ const Token = ({
     )
   }
 
+  const toOption = (value) => {
+    return { label: value, value }
+  }
+
   let inputElement = (
     <Input
       variant="outlined"
@@ -158,23 +162,6 @@ const Token = ({
     }
     inputElement = <TimeSelect value={value} onChange={onSelect} />
   } else if (label == 'Client') {
-    let [clients, setClients] = useState([])
-
-    const onSelect = (value) => {
-      onChangeText(value)
-      setIsOpen(false)
-    }
-
-    inputElement = (
-      <InputSelect
-        options={clients}
-        value={value}
-        onChangeText={onChangeText}
-        onChange={onSelect}
-      />
-    )
-
-    //TODO close on select
     inputElement = (
       <ClientSelect
         showGroups
@@ -209,6 +196,35 @@ const Token = ({
         onSubmitEditing={() => setIsOpen(false)}
       />
     )
+  } else if (['Tags', 'Groups'].includes(label)) {
+    // TODO props.options && isMultiple= value == array
+    const onSelect = (values) => {
+      onChangeText(values)
+      //setIsOpen(false)
+    }
+
+    inputElement = (
+      <InputSelect
+        isMultiple
+        options={props.options}
+        value={value}
+        onChange={onSelect}
+        onChangeText={onChangeText}
+        onSubmitEditing={() => setIsOpen(false)}
+      />
+    )
+  }
+
+  const displayValue = (value) => {
+    if (Array.isArray(value)) {
+      return value.join(',')
+    }
+
+    if (value == '') {
+      return '*'
+    }
+
+    return value
   }
 
   //NOTE treat empty value as *
@@ -219,7 +235,7 @@ const Token = ({
         {...triggerProps}
         onPress={() => setIsOpen(!isOpen)}
       >
-        {value == '' ? '*' : value}
+        {displayValue(value)}
       </Button>
     </Tooltip>
   )

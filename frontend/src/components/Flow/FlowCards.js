@@ -12,7 +12,7 @@ import {
   faTags
 } from '@fortawesome/free-solid-svg-icons'
 
-import { groupAPI } from 'api'
+import { deviceAPI, groupAPI } from 'api'
 import { pfwAPI } from 'api/Pfw'
 
 // helper functions - TODO move to FlowUtils
@@ -113,6 +113,10 @@ const parseClient = async (cli) => {
   }
 
   return Client
+}
+
+const toOption = (value) => {
+  return { label: value, value }
 }
 
 const triggers = [
@@ -405,6 +409,11 @@ const actions = [
     values: {
       Groups: []
     },
+    getOptions: function () {
+      return new Promise((resolve, reject) => {
+        deviceAPI.groups().then((groups) => resolve(groups.map(toOption)))
+      })
+    },
     preSubmit: async function () {
       return { ...this.values, Client: await parseClient(this.values.Client) }
     },
@@ -437,6 +446,13 @@ const actions = [
     ],
     values: {
       Tags: []
+    },
+    getOptions: function () {
+      return new Promise((resolve, reject) => {
+        deviceAPI.tags().then((tags) => {
+          resolve(tags.map(toOption))
+        })
+      })
     },
     preSubmit: async function () {
       return { ...this.values, Client: await parseClient(this.values.Client) }
