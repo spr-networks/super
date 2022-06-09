@@ -1,17 +1,20 @@
 import React from 'react'
 import Icon from 'FontAwesomeUtils'
-import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faPen, faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import { blockAPI } from 'api/DNS'
 import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
 import ModalForm from 'components/ModalForm'
 import { AlertContext } from 'layouts/Admin'
+import ModalConfirm from 'components/ModalConfirm'
 
 import {
+  Badge,
   Box,
   FlatList,
   Heading,
   IconButton,
+  Menu,
   Stack,
   HStack,
   VStack,
@@ -24,7 +27,12 @@ import {
 } from 'native-base'
 
 export default class DNSBlocklist extends React.Component {
-  state = { list: [], blockedDomains: 0, pending: false }
+  state = { list: [],
+            blockedDomains: 0,
+            pending: false,
+            tags: [],
+            showModal: false,
+            modalType: '' }
 
   constructor(props) {
     super(props)
@@ -121,12 +129,44 @@ export default class DNSBlocklist extends React.Component {
       })
   }
 
+  handleTags = (tags) => {
+    tags = tags.filter((v) => typeof v === 'string')
+    tags = [...new Set(tags)]
+    this.setState({ tags })
+
+      //tbd
+    /*
+    deviceAPI
+      .updateTags(this.props.device.MAC || this.props.device.WGPubKey, tags)
+      .catch((error) =>
+        this.context.error('[API] updateDevice error: ' + error.message)
+      )
+      */
+  }
+
   render() {
     const notifyChangeBlocklist = async () => {
       await this.notifyChange()
       // close modal when added
       this.refAddBlocklistModal.current()
     }
+
+    const removeTag = (value) => {
+      let tags = this.state.tags.filter((tag) => tag != value)
+      return this.handleTags(tags)
+    }
+
+    const handleChangeTags = (tags) => {
+      return this.handleTags(tags)
+    }
+
+    const handleSubmitNew = (value) => {
+      this.handleTags(this.state.tags.concat(value))
+    }
+
+    const defaultTags = this.props.tags || []
+
+    let edit = true //this.props.edit !== undefined ? this.props.edit : true
 
     return (
       <Box
@@ -198,6 +238,50 @@ export default class DNSBlocklist extends React.Component {
                   />
                 </Box>
 
+                {item.Tags ? item.Tags.map((entry) => (
+                  <Badge key={item.URI + entry} variant="outline">
+                    {entry}
+                  </Badge>
+                )): null}
+
+                <Menu
+                  trigger={(triggerProps) => {
+                    return (
+                      <IconButton
+                        display={{ base: edit ? 'flex' : 'none' }}
+                        size="xs"
+                        variant="ghost"
+                        icon={<Icon icon={faPen} />}
+                        {...triggerProps}
+                      />
+                    )
+                  }}
+                >
+                  <Menu.OptionGroup
+                    title="Tags"
+                    type="checkbox"
+                    defaultValue={this.state.tags}
+                    onChange={handleChangeTags}
+                  >
+                    {[...new Set(defaultTags.concat(this.state.tags))].map(
+                      (tag) => (
+                        <Menu.ItemOption key={tag} value={tag}>
+                          {tag}
+                        </Menu.ItemOption>
+                      )
+                    )}
+                    <Menu.ItemOption
+                      key="newTag"
+                      onPress={() => {
+                        this.setState({ showModal: true, modalType: 'Tag' })
+                      }}
+                    >
+                      New Tag...
+                    </Menu.ItemOption>
+                  </Menu.OptionGroup>
+                </Menu>
+
+
                 <IconButton
                   alignSelf="center"
                   size="sm"
@@ -207,10 +291,21 @@ export default class DNSBlocklist extends React.Component {
                   onPress={() => this.deleteListItem(item)}
                 />
               </HStack>
+
             </Box>
+
+
           )}
           keyExtractor={(item) => item.URI}
         />
+
+        <ModalConfirm
+          type={this.state.modalType}
+          onSubmit={handleSubmitNew}
+          onClose={() => this.setState({ showModal: false })}
+          isOpen={this.state.showModal}
+        />
+
       </Box>
     )
   }
