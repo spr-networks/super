@@ -13,6 +13,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 
 import { groupAPI } from 'api'
+import { pfwAPI } from 'api/Pfw'
 
 // helper functions - TODO move to FlowUtils
 
@@ -123,9 +124,7 @@ const triggers = [
     icon: faRepeat,
     params: [],
     values: {},
-    onSubmit: async function () {
-      let { days, from, to } = this.values
-
+    preSubmit: async function () {
       return { Time: { Days: [], Start: '', End: '' }, Condition: '' }
     }
   },
@@ -159,7 +158,7 @@ const triggers = [
       from: '10:00',
       to: '11:00'
     },
-    onSubmit: async function () {
+    preSubmit: async function () {
       let { days, from, to } = this.values
       //let CronExpr = toCron(days, from, to)
       let Days = new Array(7).fill(0),
@@ -214,11 +213,20 @@ const actions = [
       DstIP: '',
       DstPort: ''
     },
-    onSubmit: async function () {
+    preSubmit: async function () {
       let xx = await parseClient(this.values.Client)
       console.log('xx')
       console.log(xx)
       return { ...this.values, Client: xx }
+    },
+    submit: function (data, flow) {
+      let isUpdate = flow.index !== undefined
+
+      if (isUpdate) {
+        return pfwAPI.updateBlock(data, flow.index)
+      }
+
+      return pfwAPI.addBlock(data)
     }
   },
   {
@@ -253,8 +261,17 @@ const actions = [
       DstPort: ''
     },
     //NOTE same as TCP
-    onSubmit: async function () {
+    preSubmit: async function () {
       return { ...this.values, Client: await parseClient(this.values.Client) }
+    },
+    submit: function (data, flow) {
+      let isUpdate = flow.index !== undefined
+
+      if (isUpdate) {
+        return pfwAPI.updateBlock(data, flow.index)
+      }
+
+      return pfwAPI.addBlock(data)
     }
   },
   {
@@ -297,8 +314,17 @@ const actions = [
       OriginalDstIP: '0.0.0.0',
       OriginalDstPort: ''
     },
-    onSubmit: async function () {
+    preSubmit: async function () {
       return { ...this.values, Client: await parseClient(this.values.Client) }
+    },
+    submit: function (data, flow) {
+      let isUpdate = flow.index !== undefined
+
+      if (isUpdate) {
+        return pfwAPI.updateForward(data, flow.index)
+      }
+
+      return pfwAPI.addForward(data)
     }
   },
   {
@@ -346,8 +372,17 @@ const actions = [
       OriginalDstPort: '',
       DstPort: ''
     },
-    onSubmit: async function () {
+    preSubmit: async function () {
       return { ...this.values, Client: await parseClient(this.values.Client) }
+    },
+    submit: function (data, flow) {
+      let isUpdate = flow.index !== undefined
+
+      if (isUpdate) {
+        return pfwAPI.updateForward(data, flow.index)
+      }
+
+      return pfwAPI.addForward(data)
     }
   },
   {
@@ -370,8 +405,17 @@ const actions = [
     values: {
       Groups: []
     },
-    onSubmit: async function () {
+    preSubmit: async function () {
       return { ...this.values, Client: await parseClient(this.values.Client) }
+    },
+    submit: function (data, flow) {
+      let isUpdate = flow.index !== undefined
+
+      if (isUpdate) {
+        return pfwAPI.updateGroups(data, flow.index)
+      }
+
+      return pfwAPI.addGroups(data)
     }
   },
   {
@@ -394,8 +438,17 @@ const actions = [
     values: {
       Tags: []
     },
-    onSubmit: async function () {
+    preSubmit: async function () {
       return { ...this.values, Client: await parseClient(this.values.Client) }
+    },
+    submit: function (data, flow) {
+      let isUpdate = flow.index !== undefined
+
+      if (isUpdate) {
+        return pfwAPI.updateTags(data, flow.index)
+      }
+
+      return pfwAPI.addTags(data)
     }
   }
 ]

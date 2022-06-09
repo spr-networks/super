@@ -332,56 +332,22 @@ const Flow = ({ flow, edit, ...props }) => {
 }
 
 const saveFlow = async (flow) => {
-  // NOTE only support Date+Block for now
-
   let trigger = flow.triggers[0],
     action = flow.actions[0]
 
-  let data = { ...(await trigger.onSubmit()), ...(await action.onSubmit()) }
-
-  console.log('save flow')
-
-  let isUpdate = flow.index !== undefined
-
-  if (action.title.match(/Block (TCP|UDP)/)) {
-    data.RuleName = flow.title
-
-    if (isUpdate) {
-      return pfwAPI.updateBlock(data, flow.index)
-    }
-
-    return pfwAPI.addBlock(data)
+  let data = {
+    RuleName: flow.title,
+    ...(await trigger.preSubmit()),
+    ...(await action.preSubmit())
   }
 
-  if (action.title.match(/Forward (TCP|UDP)/)) {
-    data.RuleName = flow.title
+  console.log('flow. save:', data)
 
-    if (isUpdate) {
-      return pfwAPI.updateForward(data, flow.index)
-    }
-
-    return pfwAPI.addForward(data)
+  if (!action.submit) {
+    console.error('missing submit action for', action)
   }
 
-  if (action.title.match(/Set Device Groups/)) {
-    data.RuleName = flow.title
-
-    if (isUpdate) {
-      return pfwAPI.updateGroups(data, flow.index)
-    }
-
-    return pfwAPI.addGroups(data)
-  }
-
-  if (action.title.match(/Set Device Tags/)) {
-    data.RuleName = flow.title
-
-    if (isUpdate) {
-      return pfwAPI.updateTags(data, flow.index)
-    }
-
-    return pfwAPI.addTags(data)
-  }
+  return action.submit(data, flow)
 }
 
 const convertTrigger = (rule) => {
