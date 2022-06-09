@@ -13,7 +13,7 @@ import {
   useColorModeValue
 } from 'native-base'
 
-const GroupListing = (props) => {
+const GroupListing = ({ group, ...props }) => {
   const translateName = (name) => {
     if (name === 'dns') {
       return 'DNS'
@@ -25,7 +25,6 @@ const GroupListing = (props) => {
     return name
   }
 
-  const group = props.group
   const list = []
   if (group.Members && group.Members.length > 0) {
     for (const dev of group.Members) {
