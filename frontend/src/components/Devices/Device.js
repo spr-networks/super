@@ -147,7 +147,8 @@ class Device extends Component {
       }
     }
 
-    const defaultGroups = ['wan', 'dns', 'lan']
+    const defaultGroups = this.props.groups || ['wan', 'dns', 'lan']
+    const defaultTags = this.props.tags || []
 
     let icon = faLaptop
     if (this.state.name.match(/iphone|mobile|android/i)) {
@@ -293,11 +294,13 @@ class Device extends Component {
                   defaultValue={this.state.tags}
                   onChange={handleChangeTags}
                 >
-                  {this.state.tags.map((tag) => (
-                    <Menu.ItemOption key={tag} value={tag}>
-                      {tag}
-                    </Menu.ItemOption>
-                  ))}
+                  {[...new Set(defaultTags.concat(this.state.tags))].map(
+                    (tag) => (
+                      <Menu.ItemOption key={tag} value={tag}>
+                        {tag}
+                      </Menu.ItemOption>
+                    )
+                  )}
                   <Menu.ItemOption
                     key="newTag"
                     onPress={() => {
@@ -415,7 +418,9 @@ class Device extends Component {
 }
 
 Device.propTypes = {
-  device: PropTypes.object.isRequired
+  device: PropTypes.object.isRequired,
+  groups: PropTypes.array,
+  tags: PropTypes.array
 }
 
 Device.contextType = AlertContext

@@ -27,10 +27,13 @@ import {
 import { SwipeListView } from 'components/SwipeListView'
 
 const DeviceListing = (props) => {
-  const [devices, setDevices] = useState(null)
-  const navigate = useNavigate()
   const context = useContext(AlertContext)
   const appContext = useContext(AppContext)
+
+  const [devices, setDevices] = useState(null)
+  const navigate = useNavigate()
+  const [groups, setGroups] = useState(['wan', 'dns', 'lan'])
+  const [tags, setTags] = useState([])
 
   // set device oui if avail, else fail gracefully
   const setOUIs = async (devices) => {
@@ -66,6 +69,22 @@ const DeviceListing = (props) => {
     await setOUIs(devices)
 
     setDevices(Object.values(devices))
+
+    setGroups([
+      ...new Set(
+        Object.values(devices)
+          .map((device) => device.Groups)
+          .flat()
+      )
+    ])
+
+    setTags([
+      ...new Set(
+        Object.values(devices)
+          .map((device) => device.DeviceTags)
+          .flat()
+      )
+    ])
   }
 
   useEffect(() => {
@@ -108,7 +127,12 @@ const DeviceListing = (props) => {
           console.log('**press**')
         }}
       >
-        <Device device={item} notifyChange={refreshDevices} />
+        <Device
+          device={item}
+          groups={groups}
+          tags={tags}
+          notifyChange={refreshDevices}
+        />
       </Pressable>
     </Box>
   )
