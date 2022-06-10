@@ -244,11 +244,14 @@ export default class DNSBlocklist extends React.Component {
                   />
                 </Box>
 
-                {item.Tags ? item.Tags.map((entry) => (
-                  <Badge key={item.URI + entry} variant="outline">
-                    {entry}
-                  </Badge>
-                )): null}
+                <HStack flex={2} space={1} alignSelf="center" alignItems="center">
+
+                  {item.Tags ? item.Tags.map((entry) => (
+                    <Badge key={item.URI + entry} variant="outline">
+                      {entry}
+                    </Badge>
+                  )): null}
+                </HStack>
 
                 <Menu
                   trigger={(triggerProps) => {
