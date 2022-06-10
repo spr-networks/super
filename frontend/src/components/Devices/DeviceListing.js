@@ -129,6 +129,7 @@ const DeviceListing = (props) => {
       >
         <Device
           device={item}
+          edit={true}
           groups={groups}
           tags={tags}
           notifyChange={refreshDevices}
