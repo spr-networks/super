@@ -5,7 +5,12 @@ import Device from 'components/Devices/Device'
 import { AlertContext } from 'layouts/Admin'
 import { AppContext } from 'AppContext'
 import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faEllipsis, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons'
+import {
+  faCirclePlus,
+  faEllipsis,
+  faPlus,
+  faTimes
+} from '@fortawesome/free-solid-svg-icons'
 
 import {
   Button,
@@ -115,12 +120,11 @@ const DeviceListing = (props) => {
 
   const renderItem = ({ item }) => (
     <Box
-      flex="1"
-      _light={{ bg: 'backgroundCardLight' }}
+      flex={1}
+      _light={{ bg: 'backgroundCardLight', borderColor: 'coolGray.200' }}
       _dark={{ bg: 'backgroundCardDark', borderColor: 'muted.700' }}
       borderBottomWidth={1}
-      borderColor="muted.200"
-      py={2}
+      p={4}
     >
       <Pressable
         onPress={() => {
@@ -181,30 +185,27 @@ const DeviceListing = (props) => {
   return (
     <View>
       <ScrollView h="calc(100vh - 96px)">
+        <HStack mb={4} alignItems="center">
+          <Heading fontSize="xl">Configured Devices</Heading>
+
+          <Button
+            marginLeft="auto"
+            size="md"
+            variant="ghost"
+            colorScheme="blueGray"
+            _rounded="lg"
+            leftIcon={<Icon icon={faCirclePlus} />}
+            onPress={handleRedirect}
+          >
+            Add Device
+          </Button>
+        </HStack>
+
         <Box
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
           rounded="md"
           w="100%"
-          p={4}
         >
-          <HStack mb="4">
-            <Heading fontSize="xl">Configured Devices</Heading>
-
-            <Button
-              marginLeft="auto"
-              size="md"
-              variant="outline"
-              colorScheme="primary"
-              rounded="full"
-              borderWidth={1}
-              borderColor="info.400"
-              leftIcon={<Icon icon={faPlus} />}
-              onPress={handleRedirect}
-            >
-              Add Device
-            </Button>
-          </HStack>
-
           {devices !== null ? (
             <Box safeArea>
               {/*<SwipeListView

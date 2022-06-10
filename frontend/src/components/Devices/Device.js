@@ -7,11 +7,15 @@ import ModalConfirm from 'components/ModalConfirm'
 import Icon from 'FontAwesomeUtils'
 import {
   faEllipsis,
+  faEllipsisV,
   faLaptop,
   faMobileScreen,
-  faPen,
+  faObjectGroup,
   faTrash,
-  faXmark
+  faEarth,
+  faCircleNodes,
+  faNetworkWired,
+  faTag
 } from '@fortawesome/free-solid-svg-icons'
 
 import {
@@ -29,12 +33,69 @@ import {
   useColorModeValue
 } from 'native-base'
 
+const GroupItem = ({ name }) => {
+  let groupIcons = {
+    wan: faCircleNodes,
+    dns: faEarth,
+    lan: faNetworkWired
+  }
+
+  let groupColors = {
+    dns: useColorModeValue('muted.500', 'blueGray.700'), //'orange.400',
+    lan: useColorModeValue('muted.400', 'blueGray.600'), //'violet.600',
+    wan: useColorModeValue('muted.500', 'blueGray.700') //'cyan.500'
+  }
+
+  let icon = groupIcons[name] || faObjectGroup
+  let bg = groupColors[name] || 'muted.600'
+
+  return (
+    <Button
+      key={name}
+      variant="solid"
+      colorScheme="muted"
+      bg={bg}
+      leftIcon={<Icon icon={icon} size={3} />}
+      rounded="sm"
+      size="sm"
+      py={1}
+      px={2}
+    >
+      {name}
+    </Button>
+  )
+}
+
+const TagItem = ({ name }) => {
+  let tagIcons = {
+    wan: faCircleNodes,
+    dns: faEarth,
+    lan: faNetworkWired
+  }
+
+  let icon = faTag
+  return (
+    <Button
+      key={name}
+      variant="outline"
+      colorScheme={useColorModeValue('muted', 'blueGray')}
+      leftIcon={<Icon icon={icon} size={3} />}
+      rounded="sm"
+      size="sm"
+      py={1}
+      px={2}
+    >
+      {name}
+    </Button>
+  )
+}
+
 const Device = ({ device, edit, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(device.Name)
-  const [groups, setGroups] = useState(device.Groups)
-  const [tags, setTags] = useState(device.DeviceTags)
+  const [groups, setGroups] = useState(device.Groups.sort())
+  const [tags, setTags] = useState(device.DeviceTags.sort())
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState('')
 
@@ -205,7 +266,7 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
   return (
     <>
       <Stack
-        direction="row"
+        direction={{ base: 'column-reverse', md: 'row' }}
         space={2}
         py={2}
         w="100%"
@@ -216,19 +277,28 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
         <Stack
           direction={{ base: 'column', md: 'row' }}
           space={4}
+          py={4}
+          flex={1}
           justifyContent="space-between"
           alignItems="center"
-          minW="90%"
         >
-          <Box bg="white" _dark={{ bg: 'blueGray.700' }} p={4} rounded="full">
+          <Box
+            display={{ base: 'none', md: 'flex' }}
+            bg="white"
+            _dark={{ bg: 'blueGray.700' }}
+            p={4}
+            rounded="full"
+          >
             <Icon icon={icon} color={iconColor} size={7} />
           </Box>
-          <VStack flex={1}>
+
+          <VStack w={{ base: '100%', md: '20%' }} px={2}>
             {edit ? (
               <Input
                 size="lg"
                 type="text"
                 variant="underlined"
+                w="100%"
                 value={name}
                 onChangeText={(value) => handleName(value)}
                 onSubmitEditing={handleSubmit}
@@ -242,10 +312,10 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
           </VStack>
 
           <Stack
+            w={{ base: '100%', md: '12%' }}
             direction={{ base: 'row', md: 'column' }}
-            space={2}
-            alignSelf="center"
-            alignItems="center"
+            space={1}
+            justifyContent={{ base: 'space-around', md: 'center' }}
           >
             <Text bold>{device.RecentIP}</Text>
             <Text fontSize="xs" color="muted.500">
@@ -253,100 +323,33 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
             </Text>
           </Stack>
 
-          <Text display={{ base: 'none', md: 'flex' }} alignSelf="center">
+          <Text
+            w={{ base: '100%', md: '8%' }}
+            display={{ base: 'none', md: 'flex' }}
+            justifyContent="center"
+          >
             {wifi_type}
           </Text>
 
-          <HStack flex={2} space={1} alignSelf="center" alignItems="center">
+          <HStack
+            w={{ base: '100%', md: '40%' }}
+            space={2}
+            alignSelf="center"
+            alignItems="center"
+            justifyContent={{ base: 'center', md: 'flex-start' }}
+            flexWrap="wrap"
+          >
             {groups.map((group) => (
-              <Badge key={group} variant="solid">
-                {group}
-              </Badge>
+              <GroupItem key={group} name={group} />
             ))}
 
             {tags.map((tag) => (
-              <Badge key={tag} variant="outline">
-                {tag}
-              </Badge>
+              <TagItem key={tag} name={tag} />
             ))}
-
-            {/*<Menu
-              trigger={(triggerProps) => {
-                return (
-                  <IconButton
-                    display={{ base: edit ? 'flex' : 'none' }}
-                    size="xs"
-                    variant="ghost"
-                    icon={<Icon icon={faPen} />}
-                    {...triggerProps}
-                  />
-                )
-              }}
-            >
-              <Menu.OptionGroup
-                title="Groups"
-                type="checkbox"
-                defaultValue={groups}
-                onChange={handleGroups}
-              >
-                {[...new Set(defaultGroups.concat(groups))].map((group) => (
-                  <Menu.ItemOption key={group} value={group}>
-                    {group}
-                  </Menu.ItemOption>
-                ))}
-                <Menu.ItemOption
-                  key="newGroup"
-                  onPress={() => {
-                    setModalType('Group')
-                    setShowModal(true)
-                  }}
-                >
-                  New Group...
-                </Menu.ItemOption>
-              </Menu.OptionGroup>
-              <Menu.OptionGroup
-                title="Tags"
-                type="checkbox"
-                defaultValue={tags}
-                onChange={handleTags}
-              >
-                {[...new Set(defaultTags.concat(tags))].map((tag) => (
-                  <Menu.ItemOption key={tag} value={tag}>
-                    {tag}
-                  </Menu.ItemOption>
-                ))}
-                <Menu.ItemOption
-                  key="newTag"
-                  onPress={() => {
-                    setModalType('Tag')
-                    setShowModal(true)
-                  }}
-                >
-                  New Tag...
-                </Menu.ItemOption>
-              </Menu.OptionGroup>
-                </Menu>*/}
           </HStack>
         </Stack>
-
-        <Box
-          display={{ base: edit ? 'flex' : 'none' }}
-          w="50"
-          marginLeft="auto"
-          justifyContent="center"
-        >
-          {/*<Button.Group size="sm">
-            <IconButton
-              variant="ghost"
-              colorScheme="secondary"
-              icon={<Icon icon={faXmark} />}
-              onPress={removeDevice}
-            />
-            </Button.Group>*/}
-          {moreMenu}
-        </Box>
+        {edit ? moreMenu : null}
       </Stack>
-
       <ModalConfirm
         type={modalType}
         onSubmit={handleSubmitNew}
