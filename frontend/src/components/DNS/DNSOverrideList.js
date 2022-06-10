@@ -83,12 +83,22 @@ const DNSOverrideList = (props) => {
             borderColor="muted.200"
             py={2}
           >
-            <HStack space={3} justifyContent="space-evenly" alignItems="center">
+            <Stack
+              direction={{ base: 'column' }}
+              space={3}
+              justifyContent="space-evenly"
+              alignItems="center"
+            >
               <HStack flex={1} space={2}>
                 <Stack space={2} direction={{ base: 'column', md: 'row' }}>
                   <Text bold>{item.Domain}</Text>
                   <HStack space={2}>
-                    <Text color="muted.500">=</Text>
+                    <Text
+                      display={{ base: 'none', md: 'flex' }}
+                      color="muted.500"
+                    >
+                      =
+                    </Text>
                     <Text>{item.ResultIP}</Text>
                   </HStack>
                 </Stack>
@@ -123,7 +133,7 @@ const DNSOverrideList = (props) => {
                 icon={<Icon icon={faXmark} />}
                 onPress={() => deleteListItem(item)}
               />
-            </HStack>
+            </Stack>
           </Box>
         )}
         keyExtractor={(item) => item.Domain}
