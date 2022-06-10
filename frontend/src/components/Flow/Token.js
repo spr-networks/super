@@ -62,6 +62,7 @@ const Token = ({
       if (['Tags', 'Groups'].includes(label)) {
         return `Select ${label}`
       }
+
       return '*'
     }
 

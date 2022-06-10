@@ -18,6 +18,7 @@ import DNSLogEdit from 'views/DNS/DNSLogEdit'
 import DynDns from 'views/DNS/DynDns'
 import Wireguard from 'views/Wireguard'
 import Firewall from 'views/Firewall'
+import PFW from 'views/Pfw'
 import Logs from 'views/Logs'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
@@ -29,6 +30,7 @@ import {
   faCircleNodes,
   faCogs,
   faEthernet,
+  faFire,
   faFireAlt,
   faHome,
   faLaptop,
@@ -96,6 +98,13 @@ const routes = [
     name: 'Firewall',
     icon: faFireAlt,
     component: Firewall,
+    layout: 'admin'
+  },
+  {
+    path: 'pfw',
+    name: 'PFW',
+    icon: faFire,
+    component: PFW,
     layout: 'admin'
   },
   {

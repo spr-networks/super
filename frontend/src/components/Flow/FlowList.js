@@ -31,7 +31,7 @@ import {
   useColorModeValue,
   Divider
 } from 'native-base'
-import { dateArrayToStr, niceDateToArray } from './Utils'
+import { dateArrayToStr } from './Utils'
 
 const FlowCardList = ({
   title,
@@ -178,7 +178,6 @@ const Flow = ({ flow, edit, ...props }) => {
     }
 
     const onDisable = () => {
-      // flip flow.disable
       if (props.onDisable) {
         props.onDisable(flow)
       }
@@ -205,21 +204,6 @@ const Flow = ({ flow, edit, ...props }) => {
       </Menu>
     )
 
-    const flowObjParse = (x) => {
-      if (Array.isArray(x)) {
-        return x.join(',')
-      } else if (typeof x == 'object') {
-        if (x.Identity != null && x.Identity != '') return x.Identity
-
-        if (x.Group != null && x.Group != '') return x.Group
-
-        if (x.SrcIP != null && x.SrcIP != '') return x.SrcIP
-
-        return JSON.stringify(x)
-      }
-
-      return x
-    }
     // TODO mini component
 
     let trigger = triggers[0],
@@ -231,18 +215,18 @@ const Flow = ({ flow, edit, ...props }) => {
 
     const displayValue = (value, label) => {
       if (label == 'Client') {
-        value = flowObjParse(value)
+        return value.Identity || value.Group || value.SrcIP
       }
 
       if (Array.isArray(value)) {
-        return <Text key={label}>{value.join(',')}</Text>
+        return value.join(',')
       }
 
       if (label == 'days') {
-        return <Text key={label}>{dateArrayToStr(value.split(','))}</Text>
+        return dateArrayToStr(value.split(','))
       }
 
-      return <Text key={label}>{value}</Text>
+      return value
     }
 
     return (
@@ -267,17 +251,19 @@ const Flow = ({ flow, edit, ...props }) => {
             <HStack space={1} alignItems="center">
               <Icon icon={trigger.icon} color={trigger.color} />
               <HStack space={2}>
-                {Object.keys(trigger.values).map((name) =>
-                  displayValue(trigger.values[name], name)
-                )}
+                {Object.keys(trigger.values).map((key) => (
+                  <Text key={key}>
+                    {displayValue(trigger.values[key], key)}
+                  </Text>
+                ))}
               </HStack>
             </HStack>
             <HStack space={2} alignItems="center">
               <Icon icon={action.icon} color={action.color} />
               <HStack space={2}>
-                {Object.keys(action.values).map((name) =>
-                  displayValue(action.values[name], name)
-                )}
+                {Object.keys(action.values).map((key) => (
+                  <Text key={key}>{displayValue(action.values[key], key)}</Text>
+                ))}
               </HStack>
             </HStack>
           </HStack>
@@ -642,14 +628,9 @@ const FlowList = (props) => {
       return ruleType == 'BlockRules'
         ? deleteBlock(index)
         : deleteForward(index)
-    }
-
-    if (actionTitle.match(/Set Device Groups/)) {
-      return deleteGroups(index)
-    }
-
-    if (actionTitle.match(/Set Device Tags/)) {
-      return deleteTags(index)
+    } else if (actionTitle.match(/Set Device (Groups|Tags)/)) {
+      let ruleType = actionTitle.endsWith('Groups') ? 'Groups' : 'Tags'
+      return ruleType == 'Groups' ? deleteGroups(index) : deleteTags(index)
     }
   }
 

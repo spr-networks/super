@@ -4,7 +4,6 @@ import { View, VStack } from 'native-base'
 import { firewallAPI } from 'api'
 import ForwardList from 'components/Firewall/ForwardList'
 import BlockList from 'components/Firewall/BlockList'
-import FlowList from 'components/Flow/FlowList'
 
 export default class Firewall extends Component {
   state = { config: {} }
@@ -32,8 +31,6 @@ export default class Firewall extends Component {
             list={this.state.config.BlockRules}
             notifyChange={this.fetchConfig}
           />
-
-          <FlowList />
         </VStack>
       </View>
     )
