@@ -46,6 +46,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     if (!values || values[name] === undefined) {
       return name
     }
+
     if (values[name] == '') {
       return '*'
     }
@@ -94,11 +95,19 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     }
 
     // autocomplete with dynamic options
-    const [options, setOptions] = useState([])
+    const [options, setOptions] = useState({})
 
     useEffect(() => {
       if (card.getOptions) {
-        card.getOptions().then(setOptions)
+        card.params.map(async ({ name }) => {
+          let opts = await card.getOptions(name)
+
+          if (!opts || !opts.length) {
+            return
+          }
+
+          setOptions({ ...options, [name]: opts })
+        })
       }
     }, [])
 
@@ -117,7 +126,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
                     : card.values[p.name]
                   : p.name
               }
-              options={options}
+              options={options[p.name]}
               description={p.description}
               format={p.format}
               size={Object.keys(card.values).length >= 5 ? 'xs' : 'sm'}

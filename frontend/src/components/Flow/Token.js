@@ -15,38 +15,8 @@ import {
 import TimeSelect from '../TimeSelect'
 import InputSelect from 'components/InputSelect'
 import ClientSelect from 'components/ClientSelect'
-import { groupAPI, deviceAPI } from 'api'
 
-// helper functions
-const niceDateToArray = (value) => {
-  if (value == 'weekdays') {
-    value = 'mon,tue,wed,thu,fri'
-  } else if (value == 'weekend') {
-    value = 'sat,sun'
-  } else if (value == 'every day') {
-    value = 'mon,tue,wed,thu,fri,sat,sun'
-  }
-
-  return value.split(',')
-}
-
-const dateArrayToStr = (days) => {
-  let sorted = [...days]
-  sorted.sort()
-  sorted = sorted.join(',')
-
-  if (sorted == 'fri,mon,thu,tue,wed') {
-    days = 'weekdays'
-  } else if (sorted == 'sat,sun') {
-    days = 'weekend'
-  } else if (sorted == 'fri,mon,sat,sun,thu,tue,wed') {
-    days = 'every day'
-  } else {
-    days = days.join(',')
-  }
-
-  return days
-}
+import { niceDateToArray, dateArrayToStr } from './Utils'
 
 // token is like variables but for cards
 const Token = ({
@@ -61,6 +31,7 @@ const Token = ({
   const [isOpen, setIsOpen] = useState(false)
 
   let size = props.size || 'xs'
+  let options = props.options || [] // for autocomplete
 
   const tokenProps = {
     colorScheme: 'light',
@@ -75,6 +46,26 @@ const Token = ({
     size,
     py: 0,
     px: 1
+  }
+
+  // TODO have different default values. example: Client
+  const displayValue = (value, label) => {
+    if (label == 'days') {
+      return dateArrayToStr(value)
+    }
+
+    if (Array.isArray(value)) {
+      return value.join(',')
+    }
+
+    if (value == '') {
+      if (['Tags', 'Groups'].includes(label)) {
+        return `Select ${label}`
+      }
+      return '*'
+    }
+
+    return value
   }
 
   // TODO autocomplete for selecting values:
@@ -93,23 +84,19 @@ const Token = ({
   }
 
   // dropdown menu with select multiple
+  // TODO if param is PropType.array
   if (['days'].includes(label)) {
-    let days = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday'
-    ]
+    let defaultValue = label == 'days' ? niceDateToArray(value) : value
+    let title = `Select ${label}`
+    let isMultiple = true
+    let inputType = isMultiple ? 'checkbox' : 'radio'
 
-    days = days.map((label) => {
-      return { label, value: label.slice(0, 3).toLowerCase() }
-    })
-
-    const handleChange = (days) => {
-      onChangeText(dateArrayToStr(days))
+    const handleChange = (values) => {
+      if (label == 'days') {
+        onChangeText(dateArrayToStr(values))
+      } else {
+        onChangeText(values)
+      }
     }
 
     // skip popover & use the menu directly
@@ -117,22 +104,20 @@ const Token = ({
     const trigger = (triggerProps) => (
       <Tooltip label={label} bg="muted.800" _text={{ color: 'muted.200' }}>
         <Button {...tokenProps} {...triggerProps}>
-          {value}
+          {displayValue(value, label)}
         </Button>
       </Tooltip>
     )
 
-    let defaultValue = niceDateToArray(value)
-
     return (
-      <Menu w="190" closeOnSelect={false} trigger={trigger}>
+      <Menu w="190" closeOnSelect={!isMultiple} trigger={trigger}>
         <Menu.OptionGroup
           defaultValue={defaultValue}
-          type="checkbox"
-          title="Select Date"
+          type={inputType}
+          title={title}
           onChange={handleChange}
         >
-          {days.map((item) => (
+          {options.map((item) => (
             <Menu.ItemOption key={item.value} value={item.value}>
               {item.label}
             </Menu.ItemOption>
@@ -140,10 +125,6 @@ const Token = ({
         </Menu.OptionGroup>
       </Menu>
     )
-  }
-
-  const toOption = (value) => {
-    return { label: value, value }
   }
 
   let inputElement = (
@@ -159,7 +140,11 @@ const Token = ({
   if (['from', 'to'].includes(label)) {
     const onSelect = (value) => {
       onChangeText(value)
+      if (isOpen) {
+        //setIsOpen(false) // TODO FIX initial trigger
+      }
     }
+
     inputElement = <TimeSelect value={value} onChange={onSelect} />
   } else if (label == 'Client') {
     inputElement = (
@@ -172,16 +157,7 @@ const Token = ({
         }}
       />
     )
-  } else if (['DstPort', 'SrcPort'].includes(label)) {
-    let options = [
-      { label: 'http', value: '80' },
-      { label: 'https', value: '443' },
-      { label: 'ssh', value: '22' },
-      { label: 'telnet', value: '23' },
-      { label: '3000', value: '3000' },
-      { label: '8080', value: '8080' }
-    ]
-
+  } /* else if (['DstPort', 'SrcPort'].includes(label)) {
     const onSelect = (value) => {
       onChangeText(value)
       setIsOpen(false)
@@ -196,16 +172,21 @@ const Token = ({
         onSubmitEditing={() => setIsOpen(false)}
       />
     )
-  } else if (['Tags', 'Groups'].includes(label)) {
+  }*/ else if (['DstPort', 'SrcPort', 'Tags', 'Groups'].includes(label)) {
+    // TODO menu
     // TODO props.options && isMultiple= value == array
     const onSelect = (values) => {
       onChangeText(values)
-      //setIsOpen(false)
+      setIsOpen(false)
     }
+
+    let isDisabled = false
+    let isMultiple = ['Tags', 'Groups'].includes(label)
 
     inputElement = (
       <InputSelect
-        isMultiple
+        isDisabled={isDisabled}
+        isMultiple={isMultiple}
         options={props.options}
         value={value}
         onChange={onSelect}
@@ -213,19 +194,6 @@ const Token = ({
         onSubmitEditing={() => setIsOpen(false)}
       />
     )
-  }
-
-  // TODO have different default values. example: Client
-  const displayValue = (value) => {
-    if (Array.isArray(value)) {
-      return value.join(',')
-    }
-
-    if (value == '') {
-      return '*'
-    }
-
-    return value
   }
 
   //NOTE treat empty value as *

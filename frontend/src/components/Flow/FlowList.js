@@ -31,6 +31,7 @@ import {
   useColorModeValue,
   Divider
 } from 'native-base'
+import { dateArrayToStr, niceDateToArray } from './Utils'
 
 const FlowCardList = ({
   title,
@@ -216,6 +217,7 @@ const Flow = ({ flow, edit, ...props }) => {
 
         return JSON.stringify(x)
       }
+
       return x
     }
     // TODO mini component
@@ -225,6 +227,22 @@ const Flow = ({ flow, edit, ...props }) => {
 
     if (!trigger || !action) {
       return <></>
+    }
+
+    const displayValue = (value, label) => {
+      if (label == 'Client') {
+        value = flowObjParse(value)
+      }
+
+      if (Array.isArray(value)) {
+        return <Text key={label}>{value.join(',')}</Text>
+      }
+
+      if (label == 'days') {
+        return <Text key={label}>{dateArrayToStr(value.split(','))}</Text>
+      }
+
+      return <Text key={label}>{value}</Text>
     }
 
     return (
@@ -248,15 +266,19 @@ const Flow = ({ flow, edit, ...props }) => {
           <HStack space={4} justifyContent="start">
             <HStack space={1} alignItems="center">
               <Icon icon={trigger.icon} color={trigger.color} />
-              <Text isTruncated>{Object.values(trigger.values).join(' ')}</Text>
+              <HStack space={2}>
+                {Object.keys(trigger.values).map((name) =>
+                  displayValue(trigger.values[name], name)
+                )}
+              </HStack>
             </HStack>
             <HStack space={2} alignItems="center">
               <Icon icon={action.icon} color={action.color} />
-              <Text isTruncated>
-                {Object.values(action.values)
-                  .map((x) => flowObjParse(x))
-                  .join(' ')}
-              </Text>
+              <HStack space={2}>
+                {Object.keys(action.values).map((name) =>
+                  displayValue(action.values[name], name)
+                )}
+              </HStack>
             </HStack>
           </HStack>
         </VStack>
@@ -356,17 +378,23 @@ const saveFlow = async (flow) => {
   let trigger = flow.triggers[0],
     action = flow.actions[0]
 
-  console.log('savethis:', flow)
+  console.log('flow. save:', flow)
 
-  let data = {
-    RuleName: flow.title,
-    ...trigger.preSubmit(),
-    ...(await action.preSubmit())
+  let data = {}
+
+  try {
+    data = {
+      RuleName: flow.title,
+      ...trigger.preSubmit(),
+      ...(await action.preSubmit())
+    }
+  } catch (err) {
+    context.error(err)
   }
 
   data.disabled = flow.disabled
 
-  console.log('flow. save:', data)
+  console.log('flow. put:', data)
 
   if (!action.submit) {
     console.error('missing submit action for', action)

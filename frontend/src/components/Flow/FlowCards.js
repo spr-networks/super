@@ -12,115 +12,9 @@ import {
   faTags
 } from '@fortawesome/free-solid-svg-icons'
 
-import { deviceAPI, groupAPI } from 'api'
+import { deviceAPI } from 'api'
 import { pfwAPI } from 'api/Pfw'
-
-// helper functions - TODO move to FlowUtils
-
-const numToDays = (num) => {
-  let cronDays = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
-
-  return num
-    .map((n, i) => (n ? cronDays[i] : null))
-    .filter((d) => d)
-    .join(',')
-}
-
-// returns array of days in numeric format
-const daysToNum = (days) => {
-  //1. days
-  let cronDays = {
-    sun: 0,
-    mon: 1,
-    tue: 2,
-    wed: 3,
-    thu: 4,
-    fri: 5,
-    sat: 6
-  }
-
-  // default abbreviations
-  if (days == 'weekdays') {
-    days = 'mon,tue,wed,thu,fri' //= 1-5
-  } else if (days.startsWith('weekend')) {
-    days = 'sat,sun' //= 6-7
-  } else if (days == 'every day') {
-    days = 'mon,tue,wed,thu,fri,sat,sun'
-  }
-
-  let dow = days
-    .split(',')
-    .map((d) => cronDays[d])
-    .filter((n) => typeof n === 'number')
-
-  return dow
-}
-
-const toCron = (days, from, to) => {
-  /*
-*    *    *    *    *    *
-┬    ┬    ┬    ┬    ┬    ┬
-│    │    │    │    │    |
-│    │    │    │    │    └ day of week (0 - 7, 1L - 7L) (0 or 7 is Sun)
-│    │    │    │    └───── month (1 - 12)
-│    │    │    └────────── day of month (1 - 31, L)
-│    │    └─────────────── hour (0 - 23)
-│    └──────────────────── minute (0 - 59)
-└───────────────────────── second (0 - 59, optional)
-  */
-
-  let minute = '0',
-    hour = '*',
-    dom = '*',
-    month = '*',
-    dow = '*'
-
-  dow = daysToNum(days).join(',')
-
-  //2. time
-  let [fromH, fromM] = from.split(':')
-  let [toH, toM] = to.split(':')
-
-  hour = `${fromH}-${toH}`
-  minute = `${fromM}-${toM}`
-
-  // simplify
-  if (minute == '00-00') {
-    minute = '0'
-  }
-
-  //NOTE will need to have :00 for minutes if hours diff >= 1h
-  if (fromH != toH) {
-    minute = '*'
-  }
-
-  let str = `${minute} ${hour} ${dom} ${month} ${dow}`
-  return str
-}
-
-const parseClient = async (cli) => {
-  let Client = { Group: '', Identity: '', SrcIP: '' }
-
-  // if Client is from api we already have an object
-  if (typeof cli === 'object') {
-    return cli
-  }
-
-  let groups = await deviceAPI.groups()
-  if (cli.split('.').length == 4) {
-    Client.SrcIP = cli
-  } else if (groups.includes(cli)) {
-    Client.Group = cli
-  } else {
-    Client.Identity = cli
-  }
-
-  return Client
-}
-
-const toOption = (value) => {
-  return { label: value, value }
-}
+import { numToDays, daysToNum, toCron, parseClient, toOption } from './Utils'
 
 const triggers = [
   {
@@ -164,6 +58,25 @@ const triggers = [
       days: 'mon,tue,wed',
       from: '10:00',
       to: '11:00'
+    },
+    getOptions: function (name = 'days') {
+      if (name == 'days') {
+        let days = [
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+          'Sunday'
+        ]
+
+        return days.map((label) => {
+          return { label, value: label.slice(0, 3).toLowerCase() }
+        })
+      }
+
+      //NOTE from,to use TimeSelect component
     },
     preSubmit: function () {
       let { days, from, to } = this.values
@@ -220,6 +133,20 @@ const actions = [
       DstIP: '',
       DstPort: ''
     },
+    getOptions: function (name = 'DstPort') {
+      if (name == 'DstPort') {
+        return [
+          { label: 'http', value: '80' },
+          { label: 'https', value: '443' },
+          { label: 'ssh', value: '22' },
+          { label: 'telnet', value: '23' },
+          { label: '3000', value: '3000' },
+          { label: '8080', value: '8080' }
+        ]
+      }
+
+      return []
+    },
     preSubmit: async function () {
       let Client = await parseClient(this.values.Client)
 
@@ -265,6 +192,20 @@ const actions = [
       Client: '0.0.0.0',
       DstIP: '',
       DstPort: ''
+    },
+    getOptions: function (name = 'DstPort') {
+      if (name == 'DstPort') {
+        return [
+          { label: 'http', value: '80' },
+          { label: 'https', value: '443' },
+          { label: 'ssh', value: '22' },
+          { label: 'telnet', value: '23' },
+          { label: '3000', value: '3000' },
+          { label: '8080', value: '8080' }
+        ]
+      }
+
+      return []
     },
     //NOTE same as TCP
     preSubmit: async function () {
@@ -319,6 +260,20 @@ const actions = [
       DstIP: '0.0.0.0',
       OriginalDstIP: '0.0.0.0',
       OriginalDstPort: ''
+    },
+    getOptions: function (name = 'DstPort') {
+      if (['DstPort', 'OriginalDstPort'].includes(name)) {
+        return [
+          { label: 'http', value: '80' },
+          { label: 'https', value: '443' },
+          { label: 'ssh', value: '22' },
+          { label: 'telnet', value: '23' },
+          { label: '3000', value: '3000' },
+          { label: '8080', value: '8080' }
+        ]
+      }
+
+      return []
     },
     preSubmit: async function () {
       return { ...this.values, Client: await parseClient(this.values.Client) }
@@ -378,6 +333,20 @@ const actions = [
       OriginalDstPort: '',
       DstPort: ''
     },
+    getOptions: function (name = 'DstPort') {
+      if (['DstPort', 'OriginalDstPort'].includes(name)) {
+        return [
+          { label: 'http', value: '80' },
+          { label: 'https', value: '443' },
+          { label: 'ssh', value: '22' },
+          { label: 'telnet', value: '23' },
+          { label: '3000', value: '3000' },
+          { label: '8080', value: '8080' }
+        ]
+      }
+
+      return []
+    },
     preSubmit: async function () {
       return { ...this.values, Client: await parseClient(this.values.Client) }
     },
@@ -412,7 +381,7 @@ const actions = [
       Client: '',
       Groups: []
     },
-    getOptions: function () {
+    getOptions: function (value = 'Groups') {
       return new Promise((resolve, reject) => {
         deviceAPI.groups().then((groups) => resolve(groups.map(toOption)))
       })
@@ -453,7 +422,7 @@ const actions = [
       Client: '',
       Tags: []
     },
-    getOptions: function () {
+    getOptions: function (value = 'Tags') {
       return new Promise((resolve, reject) => {
         deviceAPI.tags().then((tags) => {
           resolve(tags.map(toOption))
@@ -461,7 +430,14 @@ const actions = [
       })
     },
     preSubmit: async function () {
-      return { ...this.values, Client: await parseClient(this.values.Client) }
+      let Client = ''
+      try {
+        Client = await parseClient(this.values.Client)
+      } catch (err) {
+        console.log('parse fail:', err)
+      }
+
+      return { ...this.values, Client }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
