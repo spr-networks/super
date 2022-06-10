@@ -89,9 +89,9 @@ const Tags = (props) => {
           keyExtractor={(item, index) => `${index}`}
         />
 
-        {/*tags.map((tag) => (
-          <Text>{tag}</Text>
-        ))*/}
+        {!tags.length ? (
+          <Text>No tags configured for devices or services</Text>
+        ) : null}
       </VStack>
     </View>
   )
