@@ -6,9 +6,11 @@ import ModalConfirm from 'components/ModalConfirm'
 
 import Icon from 'FontAwesomeUtils'
 import {
+  faEllipsis,
   faLaptop,
   faMobileScreen,
   faPen,
+  faTrash,
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -76,7 +78,7 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
   let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
 
-  const removeDevice = (e) => {
+  const removeDevice = () => {
     let id = device.MAC || device.WGPubKey || 'pending'
 
     deviceAPI
@@ -135,6 +137,70 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
   let idx = (device.Name.charCodeAt(0) || 0) % colors.length
   let color = colors[idx]
   let iconColor = `${color}.400`
+
+  const trigger = (triggerProps) => (
+    <IconButton
+      variant="unstyled"
+      ml="auto"
+      icon={<Icon icon={faEllipsis} color="muted.600" />}
+      {...triggerProps}
+    ></IconButton>
+  )
+
+  const moreMenu = (
+    <Menu w={190} closeOnSelect={true} trigger={trigger}>
+      <Menu.OptionGroup
+        title="Groups"
+        type="checkbox"
+        defaultValue={groups}
+        onChange={handleGroups}
+      >
+        {[...new Set(defaultGroups.concat(groups))].map((group) => (
+          <Menu.ItemOption key={group} value={group}>
+            {group}
+          </Menu.ItemOption>
+        ))}
+        <Menu.ItemOption
+          key="newGroup"
+          onPress={() => {
+            setModalType('Group')
+            setShowModal(true)
+          }}
+        >
+          New Group...
+        </Menu.ItemOption>
+      </Menu.OptionGroup>
+      <Menu.OptionGroup
+        title="Tags"
+        type="checkbox"
+        defaultValue={tags}
+        onChange={handleTags}
+      >
+        {[...new Set(defaultTags.concat(tags))].map((tag) => (
+          <Menu.ItemOption key={tag} value={tag}>
+            {tag}
+          </Menu.ItemOption>
+        ))}
+        <Menu.ItemOption
+          key="newTag"
+          onPress={() => {
+            setModalType('Tag')
+            setShowModal(true)
+          }}
+        >
+          New Tag...
+        </Menu.ItemOption>
+      </Menu.OptionGroup>
+      <Menu.Group title="Actions">
+        <Menu.Item onPress={removeDevice}>
+          <HStack space={2} alignItems="center">
+            <Icon icon={faTrash} color="danger.700" />
+            <Text color="danger.700">Delete</Text>
+          </HStack>
+        </Menu.Item>
+      </Menu.Group>
+    </Menu>
+  )
 
   return (
     <>
@@ -204,7 +270,7 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
               </Badge>
             ))}
 
-            <Menu
+            {/*<Menu
               trigger={(triggerProps) => {
                 return (
                   <IconButton
@@ -259,7 +325,7 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
                   New Tag...
                 </Menu.ItemOption>
               </Menu.OptionGroup>
-            </Menu>
+                </Menu>*/}
           </HStack>
         </Stack>
 
@@ -269,14 +335,15 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
           marginLeft="auto"
           justifyContent="center"
         >
-          <Button.Group size="sm">
+          {/*<Button.Group size="sm">
             <IconButton
               variant="ghost"
               colorScheme="secondary"
               icon={<Icon icon={faXmark} />}
               onPress={removeDevice}
             />
-          </Button.Group>
+            </Button.Group>*/}
+          {moreMenu}
         </Box>
       </Stack>
 
