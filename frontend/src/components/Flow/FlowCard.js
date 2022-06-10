@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { Icon } from 'FontAwesomeUtils'
-import { faCircleInfo, faEllipsis } from '@fortawesome/free-solid-svg-icons'
+import {
+  faEllipsis,
+  faCircleInfo,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons'
 
 import {
   Badge,
@@ -164,7 +168,10 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     <Menu w={190} p={0} closeOnSelect={true} trigger={trigger}>
       {/*<Menu.Item>Edit</Menu.Item>*/}
       <Menu.Item _text={{ color: 'danger.600' }} onPress={onDelete}>
-        Delete
+        <HStack space={2} alignItems="center">
+          <Icon icon={faTrash} color="danger.700" />
+          <Text color="danger.700">Delete</Text>
+        </HStack>
       </Menu.Item>
     </Menu>
   )
