@@ -2,10 +2,10 @@ import { useContext, useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { Icon } from 'FontAwesomeUtils'
 import {
-  faBan,
+  faEllipsis,
   faCirclePlus,
   faCheck,
-  faEllipsis,
+  faTrash,
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
 import ModalForm from 'components/ModalForm'
@@ -198,8 +198,11 @@ const Flow = ({ flow, edit, ...props }) => {
         <Menu.Item onPress={onEdit}>Edit</Menu.Item>
         <Menu.Item onPress={onDuplicate}>Duplicate</Menu.Item>
 
-        <Menu.Item _text={{ color: 'danger.600' }} onPress={onDelete}>
-          Delete
+        <Menu.Item onPress={onDelete}>
+          <HStack space={2} alignItems="center">
+            <Icon icon={faTrash} color="danger.700" />
+            <Text color="danger.700">Delete</Text>
+          </HStack>
         </Menu.Item>
       </Menu>
     )
