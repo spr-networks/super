@@ -173,12 +173,12 @@ var Devicesmtx sync.Mutex
 
 func convertDevicesPublic(devices map[string]DeviceEntry) map[string]DeviceEntry {
 	// do not pass PSK key material
-	scrubbed_devices := devices
+	scrubbed_devices := make(map[string]DeviceEntry)
 	for i, entry := range scrubbed_devices {
 		if entry.PSKEntry.Psk != "" {
 			entry.PSKEntry.Psk = "**"
-			scrubbed_devices[i] = entry
 		}
+		scrubbed_devices[i] = entry
 	}
 	return scrubbed_devices
 }
