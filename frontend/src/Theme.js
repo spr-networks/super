@@ -25,6 +25,8 @@ export const theme = extendTheme({
 
     backgroundCardLight: colors.warmGray[50],
     backgroundCardDark: colors.blueGray[800],
+    borderColorCardLight: colors.warmGray[100],
+    borderColorCardDark: colors.blueGray[700],
 
     primaryTextDark: colors.cyan[200],
     primaryTextLight: colors.cyan[700],
