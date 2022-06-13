@@ -14,10 +14,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
-	"reflect"
 
 	"github.com/duo-labs/webauthn/webauthn"
 	"github.com/gorilla/handlers"
@@ -142,7 +142,6 @@ func ipLinkUpDown(w http.ResponseWriter, r *http.Request) {
 
 }
 
-
 func getStatus(w http.ResponseWriter, r *http.Request) {
 	reply := "Online"
 	WSNotifyString("StatusCalled", "test")
@@ -167,6 +166,34 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
+}
+
+// system info: uptime, docker ps etc.
+func getInfo(w http.ResponseWriter, r *http.Request) {
+	//TODO curl -s --unix-socket /var/run/docker.sock http://localhost/v1.41/containers/json
+	DockerContainersFile := "/state/api/docker-containers.json"
+
+	name := mux.Vars(r)["name"]
+
+	var data []byte
+	var err error
+
+	if name == "uptime" {
+		data, err = exec.Command("jc", "-p", "uptime").Output()
+	} else if name == "docker" {
+		data, err = ioutil.ReadFile(DockerContainersFile)
+	} else {
+		http.Error(w, "Invalid info", 404)
+		return
+	}
+
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, string(data))
 }
 
 var Devicesmtx sync.Mutex
@@ -201,7 +228,6 @@ func saveDevicesJson(devices map[string]DeviceEntry) {
 	scrubbed_devices := convertDevicesPublic(devices)
 	savePublicDevicesJson(scrubbed_devices)
 
-
 }
 
 func getDevicesJson() map[string]DeviceEntry {
@@ -214,7 +240,6 @@ func getDevicesJson() map[string]DeviceEntry {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 
 	scrubbed_devices := convertDevicesPublic(devices)
 
@@ -234,7 +259,6 @@ func getDevicesJson() map[string]DeviceEntry {
 			savePublicDevicesJson(scrubbed_devices)
 		}
 	}
-
 
 	return devices
 }
@@ -269,7 +293,6 @@ func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid device identity", 400)
 		return
 	}
-
 
 	dev := DeviceEntry{}
 	err := json.NewDecoder(r.Body).Decode(&dev)
@@ -1516,6 +1539,7 @@ func main() {
 	//Misc
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
 
 	//device management
 	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")
