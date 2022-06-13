@@ -137,6 +137,7 @@ services:
       - ./state/public/:/state/public/
       - ./frontend/build:/ui/
       - /var/log/journal:/var/log/journal:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
   plugin-lookup:
     container_name: super-plugin-lookup
     build: plugin-lookup

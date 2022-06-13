@@ -170,8 +170,7 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 
 // system info: uptime, docker ps etc.
 func getInfo(w http.ResponseWriter, r *http.Request) {
-	//TODO curl -s --unix-socket /var/run/docker.sock http://localhost/v1.41/containers/json
-	DockerContainersFile := "/state/api/docker-containers.json"
+	DockerSocketPath := "/var/run/docker.sock"
 
 	name := mux.Vars(r)["name"]
 
@@ -181,7 +180,29 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 	if name == "uptime" {
 		data, err = exec.Command("jc", "-p", "uptime").Output()
 	} else if name == "docker" {
-		data, err = ioutil.ReadFile(DockerContainersFile)
+		c := http.Client{}
+		c.Transport = &http.Transport{
+			Dial: func(network, addr string) (net.Conn, error) {
+				return net.Dial("unix", DockerSocketPath)
+			},
+		}
+
+		req, err := http.NewRequest(http.MethodGet, "http://localhost/v1.41/containers/json?all=1", nil)
+		if err != nil {
+			http.Error(w, err.Error(), 404)
+			return
+		}
+
+		resp, err := c.Do(req)
+		if err != nil {
+			http.Error(w, err.Error(), 404)
+			return
+		}
+
+		defer resp.Body.Close()
+		data, err = ioutil.ReadAll(resp.Body)
+	} else if name == "ss" {
+		data, err = exec.Command("jc", "-p", "ss", "-4", "-n").Output()
 	} else {
 		http.Error(w, "Invalid info", 404)
 		return
