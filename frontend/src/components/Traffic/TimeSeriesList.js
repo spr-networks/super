@@ -91,6 +91,10 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
   }*/
 
   const asnIcon = (asn) => {
+    if (!asn) {
+      return <></>
+    }
+
     let [asnName] = asn.split(',')
     const asnToIcon = {
       AKAMAI: <BrandIcons.Akamai />,
@@ -154,7 +158,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
             borderColor: 'muted.600'
           }}
           borderColor="muted.200"
-          py={2}
+          py={{ base: 4, md: 2 }}
         >
           <HStack
             direction={{ base: 'column', md: 'row' }}
@@ -179,20 +183,20 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
                   ) : null}
                   <Text>{item.Src}</Text>
                 </Pressable>
-                <Box flex={1} justifyContent="center">
+                <Box alignText="center">
                   <Icon color="muted.200" icon={faArrowRight} size="xs" />
                 </Box>
                 <Pressable flex={1} onPress={onPressIp}>
                   {['WanIn', 'LanOut', 'LanIn'].includes(type) ? (
                     <Text bold>{item.deviceDst && item.deviceDst.Name}</Text>
                   ) : null}
-                  <Text>{item.Dst}</Text>
+                  <Text textAlign="right">{item.Dst}</Text>
                 </Pressable>
               </HStack>
               {showASN ? (
                 <HStack flex={1} space={2} alignItems="center">
                   {asnIcon(item.Asn)}
-                  <Text color="muted.600" isTruncated>
+                  <Text color="muted.500" isTruncated>
                     {item.Asn}
                   </Text>
                 </HStack>
@@ -201,7 +205,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
 
             <Stack
               direction="row"
-              marginLeft="auto"
+              marginLeft={{ base: '0', md: 'auto' }}
               space={2}
               flex={2 / 3}
               justifyContent="space-between"
