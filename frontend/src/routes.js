@@ -22,6 +22,8 @@ import PFW from 'views/Pfw'
 import Logs from 'views/Logs'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
+import SystemInfo from 'views/SystemInfo'
+
 import {
   faArrowCircleUp,
   faBan,
@@ -44,6 +46,7 @@ import {
   faThList,
   faUnlockAlt,
   faUser,
+  faWaveSquare,
   faWifi
 } from '@fortawesome/free-solid-svg-icons'
 /*TODO WireguardIcon: {
@@ -227,6 +230,13 @@ const routes = [
         name: 'Auth',
         icon: faUser,
         component: AuthSettings,
+        layout: 'admin'
+      },
+      {
+        path: 'info',
+        name: 'System Info',
+        icon: faWaveSquare,
+        component: SystemInfo,
         layout: 'admin'
       }
     ]
