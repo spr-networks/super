@@ -1465,6 +1465,46 @@ func getCert(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, ApiTlsCert)
 }
 
+func speedTest(w http.ResponseWriter, r *http.Request) {
+	startParam := mux.Vars(r)["start"]
+	endParam := mux.Vars(r)["end"]
+
+	start, err := strconv.ParseUint(startParam, 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	end, err := strconv.ParseUint(endParam, 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if end <= start {
+		http.Error(w, "Invalid range", 400)
+		return
+	}
+
+	size := end - start
+	maxSize := 25 * 1024 * 1024 // 25MB
+	if size >= uint64(maxSize) {
+		http.Error(w, "Invalid size, max 25MB", 400)
+		return
+	}
+
+	sz := strconv.Itoa(int(size))
+
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Set("Content-Length", sz)
+
+		for i := 0; i < int(size); i++ {
+			fmt.Fprintf(w, "%c", byte(0x30+(i%10)))
+		}
+	}
+}
+
 //set up SPA handler. From gorilla mux's documentation
 type spaHandler struct {
 	staticPath string
@@ -1597,6 +1637,8 @@ func main() {
 	// tokens api
 	external_router_authenticated.HandleFunc("/tokens", getAuthTokens).Methods("GET")
 	external_router_authenticated.HandleFunc("/tokens", updateAuthTokens).Methods("PUT", "DELETE")
+
+	external_router_authenticated.HandleFunc("/speedtest/{start:[0-9]+}-{end:[0-9]+}", speedTest).Methods("GET", "POST")
 
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
