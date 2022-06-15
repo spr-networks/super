@@ -39,16 +39,11 @@ const SpeedTest = (props) => {
   const [percentUp, setPercentUp] = useState(0)
   const [isRunning, setIsRunning] = useState(false)
 
-  let avg = {}
   let start = 0
 
-  function testRunning(updown, ev) {
+  function onProgress(updown, ev) {
     const now = Date.now()
 
-    let percent = 0.0
-    avg[updown] = 0
-    let eta = 0
-    let mbit = 0
     let total = ev.total
 
     if (updown === 'upload') {
@@ -56,11 +51,12 @@ const SpeedTest = (props) => {
     }
 
     if (ev.lengthComputable && total) {
-      let diff = (now - start) / 1000
-      let Bps = ev.loaded / diff
-      mbit = (Bps / 1024 / 1024) * 8
-      percent = (ev.loaded / total) * 100.0
-      eta = (total - ev.loaded) / Bps
+      let diff = (now - start) / 1000,
+        Bps = ev.loaded / diff
+
+      let mbit = (Bps / 1024 / 1024) * 8
+      let percent = (ev.loaded / total) * 100.0
+      //let eta = (total - ev.loaded) / Bps
 
       setSpeedDown(mbit.toFixed(2))
       setPercentDown(percent)
@@ -70,11 +66,6 @@ const SpeedTest = (props) => {
       percent = 100 - percent
       //TODO
     }
-
-    //document.querySelector ('#eta').innerHTML = dec (eta, decimals) + ' sec';
-
-    console.log('progress:', percent, '==', avg[updown])
-    console.log('result:', avg[updown] + ' Mbit/s')
   }
 
   const startTest = () => {
@@ -94,7 +85,7 @@ const SpeedTest = (props) => {
 
     req.onprogress = (progEv) => {
       console.log('prog:', progEv)
-      testRunning('download', progEv)
+      onProgress('download', progEv)
     }
 
     req.onreadystatechange = (reqEv) => {
@@ -151,7 +142,7 @@ const SpeedTest = (props) => {
             value={percentDown}
           />
         </HStack>
-        <HStack space={4} mx="4" alignItems="center">
+        {/*<HStack space={4} mx="4" alignItems="center">
           <Icon icon={faCircleArrowUp} color="muted.500" />
           <Text color="muted.500" w="10%">
             Upload
@@ -163,7 +154,7 @@ const SpeedTest = (props) => {
             colorScheme="violet"
             value={percentDown}
           />
-        </HStack>
+        </HStack>*/}
       </VStack>
     </View>
   )
