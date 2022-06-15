@@ -65,6 +65,16 @@ table inet filter {
     }
   }
 
+  map fwd_block {
+    type ipv4_addr . ipv4_addr . inet_proto . inet_service : verdict;
+    flags interval
+  }
+
+  chain PFWDROPLOG {
+    counter log prefix "DRP:PFW "
+    counter drop
+  }
+
   chain INPUT {
     type filter hook input priority 0; policy drop;
 
@@ -135,6 +145,10 @@ table inet filter {
     # MSS clamping to handle upstream MTU limitations
     tcp flags syn tcp option maxseg size set rt mtu
 
+    # Block rules
+    counter ip saddr . ip daddr . ip protocol . tcp dport vmap @fwd_block
+    counter ip saddr . ip daddr . ip protocol . udp dport vmap @fwd_block
+
     # Forward to WAN
     $(if [ "$WANIF" ]; then echo "counter oifname $WANIF ip saddr . iifname vmap @internet_access"; fi)
 
@@ -192,26 +206,56 @@ table inet filter {
 
 table inet nat {
 
+  map dnat_tcp_ipmap {
+    type ipv4_addr . ipv4_addr . inet_service : ipv4_addr;
+    flags interval;
+  }
+
+  map dnat_tcp_portmap {
+    type ipv4_addr . ipv4_addr . inet_service : inet_service;
+    flags interval;
+  }
+
+  map dnat_tcp_anymap {
+    type ipv4_addr . ipv4_addr : ipv4_addr;
+    flags interval;
+  }
+
+  map dnat_udp_ipmap {
+    type ipv4_addr . ipv4_addr . inet_service : ipv4_addr;
+    flags interval;
+  }
+
+  map dnat_udp_portmap {
+    type ipv4_addr . ipv4_addr . inet_service : inet_service;
+    flags interval;
+  }
+
+  map dnat_udp_anymap {
+    type ipv4_addr . ipv4_addr : ipv4_addr;
+    flags interval;
+  }
+
+
   map udpfwd {
     type ipv4_addr . inet_service : ipv4_addr . inet_service;
     flags interval;
   }
-
   map tcpfwd {
     type ipv4_addr . inet_service : ipv4_addr . inet_service;
     flags interval;
   }
-
   map udpanyfwd {
     type ipv4_addr : ipv4_addr;
   }
-
   map tcpanyfwd {
     type ipv4_addr : ipv4_addr;
   }
 
+
   map block {
     type ipv4_addr . ipv4_addr . inet_proto : verdict
+    flags interval;
   }
 
   chain PREROUTING {
@@ -223,11 +267,25 @@ table inet nat {
     #jump USERDEF_PREROUTING
 
     # Forwarding dnat maps
-    counter dnat ip addr . port to ip daddr . udp dport map @udpfwd
-    counter dnat ip addr . port to ip daddr . tcp dport map @tcpfwd
 
-    counter ip protocol udp dnat to ip daddr map @udpanyfwd
-    counter ip protocol tcp dnat to ip daddr map @tcpanyfwd
+    # Port Forwarding from Upstream
+    $(if [ "$WANIF" ]; then echo "counter iifname $WANIF dnat ip addr . port to ip daddr . udp dport map @udpfwd"; fi)
+    $(if [ "$WANIF" ]; then echo "counter iifname $WANIF dnat ip addr . port to ip daddr . tcp dport map @tcpfwd"; fi)
+    $(if [ "$WANIF" ]; then echo "counter iifname $WANIF ip protocol udp dnat to ip daddr map @udpanyfwd"; fi)
+    $(if [ "$WANIF" ]; then echo "counter iifname $WANIF ip protocol tcp dnat to ip daddr map @tcpanyfwd"; fi)
+
+    counter ip protocol tcp \
+         dnat ip saddr . ip daddr . tcp dport map @dnat_tcp_ipmap : \
+              ip saddr . ip daddr . tcp dport map @dnat_tcp_portmap
+
+    counter ip protocol tcp dnat ip saddr . ip daddr map @dnat_tcp_anymap
+
+    counter ip protocol udp \
+         dnat ip saddr . ip daddr . udp dport map @dnat_udp_ipmap : \
+              ip saddr . ip daddr . udp dport map @dnat_udp_portmap
+
+    counter ip protocol udp dnat ip saddr . ip daddr map @dnat_udp_anymap
+
 
     # Reroute external DNS to our own server
     udp dport 53 counter dnat ip to $DNSIP:53
@@ -250,7 +308,8 @@ table inet nat {
     #jump USERDEF_POSTROUTING
 
     # Masquerade upstream traffic
-    oifname $WANIF counter masquerade
+
+    $(if [ "$WANIF" ]; then echo "oifname $WANIF counter masquerade"; fi)
   }
 
   #chain USERDEF_POSTROUTING {

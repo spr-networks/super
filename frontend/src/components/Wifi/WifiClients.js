@@ -72,6 +72,14 @@ const WifiClients = (props) => {
 
   useEffect(() => {
     refreshClients()
+
+    const interval = setInterval(() => {
+      if (clients.length) {
+        refreshClients()
+      }
+    }, 10 * 1e3)
+
+    return () => clearInterval(interval)
   }, [])
 
   return (

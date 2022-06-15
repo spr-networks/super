@@ -4,6 +4,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import Icon from 'FontAwesomeUtils'
 import {
   faBan,
+  faEllipsis,
+  faEllipsisV,
   faPen,
   faMagnifyingGlass,
   faTrash
@@ -13,6 +15,7 @@ import { AlertContext } from 'layouts/Admin'
 import ClientSelect from 'components/ClientSelect'
 import DNSAddOverride from './DNSAddOverride'
 import ModalForm from 'components/ModalForm'
+import { deviceAPI } from 'api'
 import { logAPI } from 'api/DNS'
 import { prettyDate } from 'utils'
 import { format as timeAgo } from 'timeago.js'
@@ -26,6 +29,7 @@ import {
   Heading,
   IconButton,
   Input,
+  Menu,
   Stack,
   Spinner,
   HStack,
@@ -47,22 +51,45 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
     return keys[type] || 'danger'
   }
 
+  const trigger = (triggerProps) => (
+    <IconButton
+      variant="unstyled"
+      _ml="auto"
+      icon={<Icon icon={faEllipsis} color="muted.600" />}
+      {...triggerProps}
+    ></IconButton>
+  )
+
+  const moreMenu = (
+    <Menu w={190} p={0} closeOnSelect={true} trigger={trigger}>
+      <Menu.Item onPress={() => handleClickDomain('permit', item.FirstName)}>
+        Add Domain Override
+      </Menu.Item>
+      <Menu.Item
+        _text={{ color: 'danger.600' }}
+        onPress={() => handleClickDomain('block', item.FirstName)}
+      >
+        Block Domain
+      </Menu.Item>
+    </Menu>
+  )
+
   return (
     <Box
-      borderBottomWidth="1"
+      borderBottomWidth={1}
       _dark={{
         borderColor: 'muted.600'
       }}
       borderColor="muted.200"
     >
       <HStack
-        space={1}
+        space={{ base: 2, md: 8 }}
         justifyContent="space-between"
         alignItems="center"
         borderLeftWidth={2}
         borderLeftColor={colorByType(item.Type) + '.500'}
-        py="2"
-        pl="2"
+        py={2}
+        pl={2}
       >
         <Box display={{ base: 'none', md: 'flex' }} w="20">
           <Badge variant="outline" colorScheme={colorByType(item.Type)}>
@@ -70,44 +97,59 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
           </Badge>
         </Box>
 
-        {hideClient ? null : <Text flex="1">{item.Remote.split(':')[0]}</Text>}
-
-        <Stack space={1} flex="3">
-          <HStack space={2} alignItems="center">
-            <Text bold isTruncated>
-              {item.FirstName}
+        {hideClient ? null : (
+          <Stack flex={1} space={1} justifyItems="center">
+            <Text bold>{item.device.Name}</Text>
+            <Text flex={1} display={{ base: 'none', md: 'flex' }}>
+              {item.Remote.split(':')[0]}
             </Text>
-            <Tooltip label="Add Domain Override" openDelay={300}>
-              <IconButton
-                variant="ghost"
-                size="xs"
-                p="0"
-                icon={<Icon icon={faPen} color="muted.400" />}
-                onPress={() => handleClickDomain('permit', item.FirstName)}
-              ></IconButton>
-            </Tooltip>
-            <Tooltip label="Add Domain Block" openDelay={300}>
-              <IconButton
-                display={{ base: item.Type == 'BLOCKED' ? 'none' : 'flex' }}
-                variant="ghost"
-                size="xs"
-                p="0"
-                icon={<Icon icon={faBan} color="danger.800" />}
-                onPress={() => handleClickDomain('block', item.FirstName)}
-              ></IconButton>
-            </Tooltip>
-          </HStack>
+          </Stack>
+        )}
+
+        <Stack flex={3} space={1}>
+          <Text bold isTruncated>
+            {item.FirstName}
+          </Text>
 
           <Text color="muted.500" onPress={() => triggerAlert(item)}>
             {item.FirstAnswer || '0.0.0.0'}
           </Text>
         </Stack>
 
-        <Text fontSize="xs" alignSelf="flex-start">
+        <Text ml="auto" fontSize="xs" display={{ base: 'none', md: 'flex' }}>
           <Tooltip label={prettyDate(item.Timestamp)}>
             {timeAgo(new Date(item.Timestamp))}
           </Tooltip>
         </Text>
+
+        {/*<Tooltip label="Add Domain Override" openDelay={300}>
+            <IconButton
+              variant="ghost"
+              icon={<Icon icon={faPen} color="muted.400" />}
+              onPress={() => handleClickDomain('permit', item.FirstName)}
+            ></IconButton>
+          </Tooltip>*/}
+
+        <HStack space={2} ml="auto">
+          <Tooltip label="Add Domain Block" openDelay={300}>
+            <IconButton
+              display={{
+                base: 'none',
+                md: 'flex'
+              }}
+              variant="unstyled"
+              icon={<Icon icon={faBan} color="danger.800" />}
+              onPress={() =>
+                handleClickDomain(
+                  item.Type === 'BLOCKED' ? 'permit' : 'block',
+                  item.FirstName
+                )
+              }
+            ></IconButton>
+          </Tooltip>
+
+          {moreMenu}
+        </HStack>
       </HStack>
     </Box>
   )
@@ -126,7 +168,15 @@ const DNSLogHistoryList = (props) => {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
 
+  const [devices, setDevices] = useState({})
+
   const modalRef = React.createRef(null)
+
+  const deviceByIp = (ip) => {
+    return Object.values(devices).find((device) => device.RecentIP == ip) || {}
+  }
+
+  const deviceNameByIp = (ip) => deviceByIp(ip).Name
 
   const refreshList = async () => {
     if (!filterIps.length) {
@@ -162,6 +212,11 @@ const DNSLogHistoryList = (props) => {
         (a, b) =>
           new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime()
       )
+
+      list = list.map((item) => {
+        item.device = deviceByIp(item.Remote.split(':')[0])
+        return item
+      })
 
       setList(list)
     })
@@ -254,7 +309,20 @@ const DNSLogHistoryList = (props) => {
   }
 
   useEffect(() => {
-    refreshList()
+    deviceAPI.list().then((devices) => {
+      setDevices(devices)
+      refreshList()
+    })
+
+    const interval = setInterval(() => {
+      if (!list.length) {
+        return
+      }
+
+      refreshList()
+    }, 5 * 1e3)
+
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
@@ -319,7 +387,7 @@ const DNSLogHistoryList = (props) => {
         </HStack>
 
         <Stack space={2} direction={{ base: 'column', md: 'row' }}>
-          <FormControl flex="2">
+          <FormControl flex="2" maxW={{ base: '100%', md: '1/3' }}>
             <FormControl.Label>Client</FormControl.Label>
             <ClientSelect
               isDisabled
@@ -328,41 +396,47 @@ const DNSLogHistoryList = (props) => {
             />
           </FormControl>
 
-          <FormControl flex="2">
-            {filterIps.length && list.length ? (
-              <>
-                <FormControl.Label>Search</FormControl.Label>
+          <FormControl
+            flex="2"
+            display={{
+              base: filterIps.length && list.length ? 'flex' : 'none'
+            }}
+          >
+            <>
+              <FormControl.Label>Search</FormControl.Label>
 
-                <Input
-                  type="text"
-                  name="filterText"
-                  size="lg"
-                  placeholder="Filter domain..."
-                  value={filterText}
-                  onChangeText={handleChange}
-                  InputRightElement={
-                    <Icon icon={faMagnifyingGlass} color="muted.400" mr={2} />
-                  }
-                />
-              </>
-            ) : null}
+              <Input
+                type="text"
+                name="filterText"
+                size="lg"
+                placeholder="Filter domain..."
+                value={filterText}
+                onChangeText={handleChange}
+                InputRightElement={
+                  <Icon icon={faMagnifyingGlass} color="muted.400" mr={2} />
+                }
+              />
+            </>
           </FormControl>
 
-          <FormControl flex="1">
-            {filterIps.length && list.length ? (
-              <>
-                <FormControl.Label>Delete history</FormControl.Label>
-                <Button
-                  size="md"
-                  variant="subtle"
-                  colorScheme="danger"
-                  leftIcon={<Icon icon={faTrash} />}
-                  onPress={deleteHistory}
-                >
-                  Delete
-                </Button>
-              </>
-            ) : null}
+          <FormControl
+            flex="1"
+            display={{
+              base: filterIps.length && list.length ? 'flex' : 'none'
+            }}
+          >
+            <>
+              <FormControl.Label>Delete history</FormControl.Label>
+              <Button
+                size="md"
+                variant="subtle"
+                colorScheme="danger"
+                leftIcon={<Icon icon={faTrash} />}
+                onPress={deleteHistory}
+              >
+                Delete
+              </Button>
+            </>
           </FormControl>
         </Stack>
 
@@ -387,7 +461,7 @@ const DNSLogHistoryList = (props) => {
             triggerAlert={triggerAlert}
           />
         )}
-        keyExtractor={(item) => item.Timestamp}
+        keyExtractor={(item) => item.Timestamp + item.Remote}
       />
 
       {total > 20 ? (

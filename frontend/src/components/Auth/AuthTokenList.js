@@ -20,10 +20,18 @@ import { AlertContext } from 'AppContext'
 import ModalConfirm from 'components/ModalConfirm'
 
 const AuthTokenList = (props) => {
+  const context = useContext(AlertContext)
   const [status, setStatus] = useState('not configured')
   const [tokens, setTokens] = useState([])
 
-  const context = useContext(AlertContext)
+  const expires = {
+    Never: 0,
+    '1 hour': 3600,
+    '1 day': 24 * 3600,
+    '30 days': 30 * 24 * 3600,
+    '90 days': 90 * 24 * 3600,
+    '1 year': 365 * 24 * 3600
+  }
 
   useEffect(() => {
     authAPI
@@ -49,17 +57,12 @@ const AuthTokenList = (props) => {
   const handleAddToken = () => {}
 
   const handleSubmit = (exp) => {
-    let expires = {
-      Never: 0,
-      '30 days': 30 * 24 * 3600,
-      '90 days': 90 * 24 * 3600,
-      '1 year': 365 * 24 * 3600
+    if (!Object.keys(expires).includes(exp)) {
+      exp = '30 days'
     }
 
-    expires.Never = 20
-
     let ts = parseInt(new Date().getTime() / 1e3)
-    let expire = exp ? ts + expires[exp] : 0
+    let expire = exp == 'Never' ? 0 : ts + expires[exp]
 
     authAPI
       .putToken(parseInt(expire))
@@ -72,6 +75,8 @@ const AuthTokenList = (props) => {
   const tokenExpired = (expire) => {
     return expire > 0 && expire < parseInt(new Date().getTime() / 1e3)
   }
+
+  let options = Object.keys(expires)
 
   return (
     <View mt={4}>
@@ -86,7 +91,7 @@ const AuthTokenList = (props) => {
 
           <ModalConfirm
             type="Expire"
-            options={['Never', '30 days', '90 days', '1 year']}
+            options={options}
             defaultValue="Never"
             onSubmit={handleSubmit}
             trigger={(triggerProps) => {

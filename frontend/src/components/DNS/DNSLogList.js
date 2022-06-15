@@ -11,6 +11,7 @@ import {
   Box,
   Button,
   Divider,
+  FlatList,
   Heading,
   HStack,
   IconButton,
@@ -46,12 +47,13 @@ const DNSLogList = ({ title, description, ...props }) => {
   }
 
   const addListItem = (item) => {
-    setList(list.concat(item))
+    let newList = [...new Set([...list, item])]
+    setList(newList)
 
     if (type == 'Domain') {
-      logAPI.putDomainIgnore(item)
+      logAPI.putDomainIgnore(newList)
     } else {
-      logAPI.putHostPrivacyList(list)
+      logAPI.putHostPrivacyList(newList)
     }
   }
 
@@ -105,40 +107,29 @@ const DNSLogList = ({ title, description, ...props }) => {
         />
       </HStack>
 
-      {list.length ? (
-        <>
-          <HStack py="4">
-            <Text color="primary.400" bold>
-              {type}
-            </Text>
-            <Text color="primary.400" bold marginLeft="auto">
-              Actions
-            </Text>
+      <FlatList
+        data={list}
+        keyExtractor={(item, index) => index}
+        renderItem={({ item }) => (
+          <HStack
+            py={4}
+            borderBottomWidth={1}
+            _light={{ borderBottomColor: 'muted.200' }}
+            _dark={{ borderBottomColor: 'muted.600' }}
+          >
+            <Text>{item}</Text>
+
+            <IconButton
+              variant="ghost"
+              colorScheme="secondary"
+              icon={<Icon icon={faTimes} />}
+              size="sm"
+              onPress={() => deleteListItem(item)}
+              marginLeft="auto"
+            />
           </HStack>
-          <Divider />
-
-          {list.map((item) => (
-            <HStack
-              key={item}
-              py="4"
-              borderBottomWidth={1}
-              _light={{ borderBottomColor: 'muted.200' }}
-              _dark={{ borderBottomColor: 'muted.600' }}
-            >
-              <Text>{item}</Text>
-
-              <IconButton
-                variant="ghost"
-                colorScheme="secondary"
-                icon={<Icon icon={faTimes} />}
-                size="sm"
-                onPress={() => deleteListItem(item)}
-                marginLeft="auto"
-              />
-            </HStack>
-          ))}
-        </>
-      ) : null}
+        )}
+      />
     </Box>
   )
 }

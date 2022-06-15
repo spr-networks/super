@@ -5,39 +5,50 @@ import Devices from 'views/Devices/Devices'
 import Dhcp from 'views/Groups/Dhcp'
 import Home from 'views/Home'
 import Login from 'views/pages/Login'
-import SignalStrength from 'views/SignalStrength'
-import Traffic from 'views/Traffic'
-import TrafficTimeSeries from 'views/TrafficTimeSeries'
+import SignalStrength from 'views/Traffic/SignalStrength'
+import Traffic from 'views/Traffic/Traffic'
+import TrafficTimeSeries from 'views/Traffic/TrafficTimeSeries'
+import TrafficList from 'views/Traffic/TrafficList'
 import WirelessConfiguration from 'views/WirelessConfiguration'
 import Groups from 'views/Groups/Groups'
+import Tags from 'views/Tags'
 import DNSBlock from 'views/DNS/DNSBlock'
 import DNSLog from 'views/DNS/DNSLog'
 import DNSLogEdit from 'views/DNS/DNSLogEdit'
 import DynDns from 'views/DNS/DynDns'
 import Wireguard from 'views/Wireguard'
 import Firewall from 'views/Firewall'
+import PFW from 'views/Pfw'
 import Logs from 'views/Logs'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
+import SystemInfo from 'views/SystemInfo'
+import SpeedTest from 'views/SpeedTest'
+
 import {
   faArrowCircleUp,
   faBan,
   faBarChart,
+  faChartColumn,
   faCircleNodes,
   faCogs,
   faEthernet,
+  faFire,
   faFireAlt,
+  faGauge,
   faHome,
   faLaptop,
   faLineChart,
   faListAlt,
   faNetworkWired,
+  faObjectGroup,
   faPuzzlePiece,
   faSignal,
   faTags,
   faThList,
   faUnlockAlt,
   faUser,
+  faWaveSquare,
   faWifi
 } from '@fortawesome/free-solid-svg-icons'
 /*TODO WireguardIcon: {
@@ -95,6 +106,13 @@ const routes = [
     layout: 'admin'
   },
   {
+    path: 'pfw',
+    name: 'PFW',
+    icon: faFire,
+    component: PFW,
+    layout: 'admin'
+  },
+  {
     name: 'Traffic',
     icon: faLineChart,
     state: 'trafficCollapse',
@@ -109,7 +127,7 @@ const routes = [
       {
         path: 'timeseries',
         name: 'Bandwidth Timeseries',
-        icon: faBarChart,
+        icon: faChartColumn,
         component: TrafficTimeSeries,
         layout: 'admin'
       },
@@ -118,6 +136,13 @@ const routes = [
         name: 'Signal Strength',
         icon: faSignal,
         component: SignalStrength,
+        layout: 'admin'
+      },
+      {
+        path: 'trafficlist',
+        name: 'Traffic',
+        icon: faBarChart,
+        component: TrafficList,
         layout: 'admin'
       }
     ]
@@ -177,8 +202,15 @@ const routes = [
       {
         path: 'groups',
         name: 'Groups',
-        icon: faTags,
+        icon: faObjectGroup,
         component: Groups,
+        layout: 'admin'
+      },
+      {
+        path: 'tags',
+        name: 'Tags',
+        icon: faTags,
+        component: Tags,
         layout: 'admin'
       },
       {
@@ -200,6 +232,20 @@ const routes = [
         name: 'Auth',
         icon: faUser,
         component: AuthSettings,
+        layout: 'admin'
+      },
+      {
+        path: 'info',
+        name: 'System Info',
+        icon: faWaveSquare,
+        component: SystemInfo,
+        layout: 'admin'
+      },
+      {
+        path: 'speedtest',
+        name: 'Speed Test',
+        icon: faGauge,
+        component: SpeedTest,
         layout: 'admin'
       }
     ]

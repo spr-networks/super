@@ -7,6 +7,7 @@ import ModalForm from 'components/ModalForm'
 import DNSAddOverride from 'components/DNS/DNSAddOverride'
 import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
+import { format as timeAgo } from 'timeago.js'
 
 import {
   Box,
@@ -41,7 +42,7 @@ const DNSOverrideList = (props) => {
       await props.notifyChange('config')
     }
     // close modal when added
-    //modalRef.current()
+    modalRef.current()
   }
 
   let overrideType = props.title.includes('Block') ? 'block' : 'permit'
@@ -52,8 +53,8 @@ const DNSOverrideList = (props) => {
       bg={useColorModeValue('warmGray.50', 'blueGray.800')}
       rounded="md"
       width="100%"
-      p="4"
-      mb="4"
+      p={4}
+      mb={4}
     >
       <HStack justifyContent="space-between" alignContent="center">
         <VStack>
@@ -75,26 +76,36 @@ const DNSOverrideList = (props) => {
         data={list}
         renderItem={({ item }) => (
           <Box
-            borderBottomWidth="1"
+            borderBottomWidth={1}
             _dark={{
               borderColor: 'muted.600'
             }}
             borderColor="muted.200"
-            py="2"
+            py={2}
           >
-            <HStack space={3} justifyContent="space-evenly" alignItems="center">
-              <HStack flex="1" space={2}>
+            <Stack
+              direction={{ base: 'column' }}
+              space={3}
+              justifyContent="space-evenly"
+              alignItems="center"
+            >
+              <HStack flex={1} space={2}>
                 <Stack space={2} direction={{ base: 'column', md: 'row' }}>
                   <Text bold>{item.Domain}</Text>
                   <HStack space={2}>
-                    <Text color="muted.500">=</Text>
+                    <Text
+                      display={{ base: 'none', md: 'flex' }}
+                      color="muted.500"
+                    >
+                      =
+                    </Text>
                     <Text>{item.ResultIP}</Text>
                   </HStack>
                 </Stack>
               </HStack>
 
               <Stack
-                flex="1"
+                flex={1}
                 space={2}
                 direction={{ base: 'column', md: 'row' }}
                 justifyContent="space-between"
@@ -106,7 +117,11 @@ const DNSOverrideList = (props) => {
 
                 <HStack space={1}>
                   <Text color="muted.500">Expiration:</Text>
-                  <Text>{item.Expiration}</Text>
+                  <Text>
+                    {item.Expiration
+                      ? timeAgo(new Date(item.Expiration * 1e3))
+                      : 'Never'}
+                  </Text>
                 </HStack>
               </Stack>
 
@@ -118,7 +133,7 @@ const DNSOverrideList = (props) => {
                 icon={<Icon icon={faXmark} />}
                 onPress={() => deleteListItem(item)}
               />
-            </HStack>
+            </Stack>
           </Box>
         )}
         keyExtractor={(item) => item.Domain}
@@ -129,7 +144,7 @@ const DNSOverrideList = (props) => {
 
 DNSOverrideList.propTypes = {
   title: PropTypes.string.isRequired,
-  list: PropTypes.array.isRequired,
+  list: PropTypes.array,
   notifyChange: PropTypes.func
 }
 

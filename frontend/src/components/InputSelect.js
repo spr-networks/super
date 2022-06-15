@@ -8,14 +8,20 @@ import { faCaretDown, faCaretUp } from '@fortawesome/free-solid-svg-icons'
 
 import { IconButton, Input, Menu } from 'native-base'
 
-const SelectMenu = (props) => {
-  const { value, onChange, isMultiple, trigger } = props
-
-  const [list, setList] = useState([])
+const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
+  const [groups, setGroups] = useState([])
 
   useEffect(() => {
-    setList(props.list)
-  }, [props.list])
+    setGroups([{ title: props.title || 'Select', options: props.options }])
+  }, [props.options])
+
+  useEffect(() => {
+    if (!props.groups) {
+      return
+    }
+
+    setGroups(props.groups)
+  }, [props.groups])
 
   const type = isMultiple ? 'checkbox' : 'radio'
   const title = props.title || ''
@@ -35,19 +41,26 @@ const SelectMenu = (props) => {
   let closeOnSelect = !isMultiple
 
   return (
-    <Menu w="190" closeOnSelect={closeOnSelect} trigger={trigger}>
-      <Menu.OptionGroup
-        defaultValue={defaultValue}
-        type={type}
-        title={title}
-        onChange={handleChange}
-      >
-        {list.map((item) => (
-          <Menu.ItemOption key={item.value} value={item.value}>
-            {item.label}
-          </Menu.ItemOption>
-        ))}
-      </Menu.OptionGroup>
+    <Menu w="190" maxH="90vh" closeOnSelect={closeOnSelect} trigger={trigger}>
+      {groups.map((group) => (
+        <Menu.OptionGroup
+          key={group.title}
+          defaultValue={defaultValue}
+          type={type}
+          title={group.title}
+          onChange={handleChange}
+        >
+          {group.options &&
+            group.options.map((item) => (
+              <Menu.ItemOption
+                key={group.title + item.value}
+                value={item.value}
+              >
+                {item.label}
+              </Menu.ItemOption>
+            ))}
+        </Menu.OptionGroup>
+      ))}
     </Menu>
   )
 }
@@ -55,10 +68,9 @@ const SelectMenu = (props) => {
 const InputSelect = (props) => {
   const { onChange, isMultiple } = props
   const [isOpen, setIsOpen] = useState(false)
-  const [value, setValue] = useState(props.value || '')
+  const [value, setValue] = useState(props.value)
 
-  let title = props.title,
-    list = props.options
+  let title = props.title
 
   useEffect(() => {
     setValue(props.value)
@@ -68,35 +80,57 @@ const InputSelect = (props) => {
     }
   }, [props.value])
 
-  const handleChange = (newValue) => {
+  const handleChangeText = (newValue) => {
     setValue(newValue)
 
-    if (onChange) {
-      onChange(isMultiple ? newValue.split(',') : newValue)
+    if (props.onChangeText) {
+      props.onChangeText(isMultiple ? newValue.split(',') : newValue)
     }
   }
 
+  const handleChange = (newValue) => {
+    setValue(newValue)
+
+    let values = isMultiple ? newValue.split(',') : newValue
+
+    if (onChange) {
+      onChange(values)
+    }
+  }
+
+  const onSubmitEditing = () => {
+    if (props.onSubmitEditing) {
+      props.onSubmitEditing()
+    }
+  }
+
+  let trigger = (triggerProps) => {
+    return (
+      <IconButton
+        size="xs"
+        rounded="none"
+        w="12"
+        h="full"
+        onPress={() => setIsOpen(!isOpen)}
+        icon={<Icon icon={isOpen ? faCaretUp : faCaretDown} />}
+        {...triggerProps}
+      />
+    )
+  }
+
+  if (props.trigger) {
+    trigger = props.trigger
+  }
+
+  let menuProps = { title, isMultiple, trigger }
+  if (props.groups) {
+    menuProps.groups = props.groups
+  } else {
+    menuProps.options = props.options
+  }
+
   const elem = (
-    <SelectMenu
-      onChange={handleChange}
-      list={list}
-      value={value}
-      isMultiple={isMultiple}
-      title={title}
-      trigger={(triggerProps) => {
-        return (
-          <IconButton
-            size="xs"
-            rounded="none"
-            w="12"
-            h="full"
-            onPress={() => setIsOpen(!isOpen)}
-            icon={<Icon icon={isOpen ? faCaretUp : faCaretDown} />}
-            {...triggerProps}
-          />
-        )
-      }}
-    />
+    <SelectMenu onChange={handleChange} value={value} {...menuProps} />
   )
 
   const isDisabled =
@@ -108,15 +142,19 @@ const InputSelect = (props) => {
         size="md"
         variant="underlined"
         isDisabled={isDisabled}
-        defaultValue={value}
-        onChangeText={handleChange}
+        placeholder={title || ''}
+        value={value}
+        onChangeText={handleChangeText}
+        onSubmitEditing={onSubmitEditing}
         InputRightElement={elem}
       />
     </>
   )
 }
 
-export default React.memo(InputSelect)
+export default InputSelect //React.memo(InputSelect)
+
+export { InputSelect, SelectMenu }
 
 InputSelect.propTypes = {
   isDisabled: PropTypes.bool,

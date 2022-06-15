@@ -5,7 +5,12 @@ import Device from 'components/Devices/Device'
 import { AlertContext } from 'layouts/Admin'
 import { AppContext } from 'AppContext'
 import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faEllipsis, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons'
+import {
+  faCirclePlus,
+  faEllipsis,
+  faPlus,
+  faTimes
+} from '@fortawesome/free-solid-svg-icons'
 
 import {
   Button,
@@ -27,10 +32,13 @@ import {
 import { SwipeListView } from 'components/SwipeListView'
 
 const DeviceListing = (props) => {
-  const [devices, setDevices] = useState(null)
-  const navigate = useNavigate()
   const context = useContext(AlertContext)
   const appContext = useContext(AppContext)
+
+  const [devices, setDevices] = useState(null)
+  const navigate = useNavigate()
+  const [groups, setGroups] = useState(['wan', 'dns', 'lan'])
+  const [tags, setTags] = useState([])
 
   // set device oui if avail, else fail gracefully
   const setOUIs = async (devices) => {
@@ -66,6 +74,22 @@ const DeviceListing = (props) => {
     await setOUIs(devices)
 
     setDevices(Object.values(devices))
+
+    setGroups([
+      ...new Set(
+        Object.values(devices)
+          .map((device) => device.Groups)
+          .flat()
+      )
+    ])
+
+    setTags([
+      ...new Set(
+        Object.values(devices)
+          .map((device) => device.DeviceTags)
+          .flat()
+      )
+    ])
   }
 
   useEffect(() => {
@@ -96,16 +120,24 @@ const DeviceListing = (props) => {
 
   const renderItem = ({ item }) => (
     <Box
-      flex="1"
-      _light={{ bg: 'backgroundCardLight' }}
-      _dark={{ bg: 'backgroundCardDark' }}
+      flex={1}
+      _light={{ bg: 'backgroundCardLight', borderColor: 'coolGray.200' }}
+      _dark={{ bg: 'backgroundCardDark', borderColor: 'muted.700' }}
+      borderBottomWidth={1}
+      p={4}
     >
       <Pressable
         onPress={() => {
           console.log('**press**')
         }}
       >
-        <Device device={item} notifyChange={refreshDevices} />
+        <Device
+          device={item}
+          edit={true}
+          groups={groups}
+          tags={tags}
+          notifyChange={refreshDevices}
+        />
       </Pressable>
     </Box>
   )
@@ -153,30 +185,27 @@ const DeviceListing = (props) => {
   return (
     <View>
       <ScrollView h="calc(100vh - 96px)">
+        <HStack mb={4} alignItems="center">
+          <Heading fontSize="xl">Configured Devices</Heading>
+
+          <Button
+            marginLeft="auto"
+            size="md"
+            variant="ghost"
+            colorScheme="blueGray"
+            _rounded="lg"
+            leftIcon={<Icon icon={faCirclePlus} />}
+            onPress={handleRedirect}
+          >
+            Add Device
+          </Button>
+        </HStack>
+
         <Box
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
           rounded="md"
           w="100%"
-          p={4}
         >
-          <HStack mb="4">
-            <Heading fontSize="xl">Configured Devices</Heading>
-
-            <Button
-              marginLeft="auto"
-              size="md"
-              variant="outline"
-              colorScheme="primary"
-              rounded="full"
-              borderWidth={1}
-              borderColor="info.400"
-              leftIcon={<Icon icon={faPlus} />}
-              onPress={handleRedirect}
-            >
-              Add Device
-            </Button>
-          </HStack>
-
           {devices !== null ? (
             <Box safeArea>
               {/*<SwipeListView
@@ -189,7 +218,7 @@ const DeviceListing = (props) => {
                 <FlatList
                   data={devices}
                   renderItem={renderItem}
-                  keyExtractor={(item) => item.Name}
+                  keyExtractor={(item, index) => item.Name + index}
                 />
               ) : (
                 <Text color="muted.500">

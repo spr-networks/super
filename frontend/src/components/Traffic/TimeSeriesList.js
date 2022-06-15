@@ -1,108 +1,80 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
+import { format as timeAgo } from 'timeago.js'
 
 import { trafficAPI, wifiAPI } from 'api'
 import { prettyDate, prettySize } from 'utils'
+import { BrandIcons } from 'FontAwesomeUtils'
 
-import { Badge, Box, FlatList, Stack, HStack, Text } from 'native-base'
+import {
+  Badge,
+  Box,
+  FlatList,
+  Stack,
+  HStack,
+  Pressable,
+  Text
+} from 'native-base'
 
 import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
 
-const TimeSeriesList = (props) => {
+const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
+  const regexLAN = /^192\.168\./
+
   const [list, setList] = useState([])
   const [showASN, setShowASN] = useState(
-    props.type.match(/^Wan(In|Out)$/) ? true : false
+    type.match(/^Wan(In|Out)$/) ? true : false
   )
 
-  // filter the list depending on the interface to match the type
-  const filterType = (_list, type) => {
-    return _list.filter((row) => {
-      let regexLAN = /^192\.168\./
-      // src == lan && dst == lan
-      if (
-        type == 'LanIn' &&
-        row.Src.match(regexLAN) &&
-        row.Dst.match(regexLAN)
-      ) {
-        return row
+  const refreshList = () => {
+    if (showASN) {
+      let keyIP = type == 'WanOut' ? 'Dst' : 'Src'
+      let ips = data.map((row) => row[keyIP])
+      ips = Array.from(new Set(ips))
+      if (!ips.length) {
+        return
       }
 
-      if (
-        type == 'LanOut' &&
-        row.Src.match(regexLAN) &&
-        row.Dst.match(regexLAN)
-      ) {
-        return row
-      }
-
-      //if (type == 'WanIn' && row.Interface == 'wlan0') {
-      if (type == 'WanIn' && row.Dst.match(regexLAN)) {
-        return row
-      }
-
-      //if (type == 'WanOut' && row.Interface != 'wlan0') {
-      if (type == 'WanOut' && row.Src.match(regexLAN)) {
-        return row
-      }
-    })
-  }
-
-  /*useEffect(() => {
-    setShowASN(props.type.match(/^Wan(In|Out)$/) ? true : false)
-  }, [props.type])*/
-
-  useEffect(() => {
-    trafficAPI.traffic().then((data) => {
-      data = filterType(data, props.type)
-      // the data we fetch is from now and sorted desc - 1 minute for each row
-      let date = new Date()
-      date.setSeconds(0)
-      data = data.map((row) => {
-        date.setMinutes(date.getMinutes() - 1)
-        row.Timestamp = new Date(date)
-        return row
-      })
-
-      if (showASN) {
-        let keyIP = props.type == 'WanOut' ? 'Dst' : 'Src'
-        let ips = data.map((row) => row[keyIP])
-        ips = Array.from(new Set(ips))
-        wifiAPI
-          .asns(ips)
-          .then((asns) => {
-            let ip2asn = {}
-            for (let asn of asns) {
-              ip2asn[asn.IP] = `${asn.Name}, ${asn.Country}`
+      wifiAPI
+        .asns(ips)
+        .then((asns) => {
+          let ip2asn = {}
+          for (let asn of asns) {
+            if (!asn.Name.length) {
+              continue
             }
 
-            data = data.map((row) => {
-              row.Asn = ip2asn[row[keyIP]]
+            ip2asn[asn.IP] = `${asn.Name}, ${asn.Country}`
+          }
+
+          setList(
+            data.map((row) => {
+              let asn = ip2asn[row[keyIP]]
+              if (asn) {
+                row.Asn = asn
+              }
+
               return row
             })
-
-            setList(data)
-          })
-          .catch((err) => {
-            setShowASN(false)
-            setList(data)
-          })
-      } else {
-        setList(data)
-      }
-    })
-  }, [])
-
-  let listFiltered = list
-
-  // filter by ip
-  if (props.ips && props.ips.length) {
-    let ips = props.ips
-    let field = props.type.match(/Out$/) ? 'Src' : 'Dst'
-    listFiltered = listFiltered.filter((row) => ips.includes(row[field]))
+          )
+        })
+        .catch((err) => {
+          setShowASN(false)
+          setList(data)
+        })
+    } else {
+      setList(data)
+    }
   }
 
+  useEffect(() => {
+    //setShowASN(type.match(/^Wan(In|Out)$/) ? true : false)
+    refreshList()
+  }, [data, type])
+
   // filter by date
+  /*
   if (props.offset) {
     const scaleOffset = {
       '1 Hour': 60 - 1,
@@ -116,19 +88,77 @@ const TimeSeriesList = (props) => {
     listFiltered = offset
       ? listFiltered.filter((row) => row.Timestamp > d)
       : listFiltered
+  }*/
+
+  const asnIcon = (asn) => {
+    if (!asn) {
+      return <></>
+    }
+
+    let [asnName] = asn.split(',')
+    const asnToIcon = {
+      AKAMAI: <BrandIcons.Akamai />,
+      AMAZON: <BrandIcons.AmazonAWS />,
+      APPLE: <BrandIcons.Apple />,
+      AUTOMATTIC: <BrandIcons.Automattic />,
+      BLIZZARD: <BrandIcons.BattleNet />,
+      CLOUDFLARENET: <BrandIcons.Cloudflare />,
+      DIGITALOCEAN: <BrandIcons.DigitalOcean />,
+      EDGECAST: <BrandIcons.Edgecast />,
+      FACEBOOK: <BrandIcons.Facebook />,
+      FASTLY: <BrandIcons.Fastly />,
+      GITHUB: <BrandIcons.Github />,
+      GOOGLE: <BrandIcons.Google />,
+      HETZNER: <BrandIcons.Hetzner />,
+      HUAWEI: <BrandIcons.Huawei />,
+      LINODE: <BrandIcons.Linode />,
+      NETFLIX: <BrandIcons.Netflix />,
+      OVH: <BrandIcons.OVH />,
+      WIKIMEDIA: <BrandIcons.Wikipedia />,
+      MICROSOFT: <BrandIcons.MicrosoftAzure />,
+      ALIBABA: <BrandIcons.AlibabaCloud />,
+      TAOBAO: <BrandIcons.Taobao />,
+      TWITTER: <BrandIcons.Twitter />,
+      STACKPATH: <BrandIcons.StackPath />
+    }
+
+    for (let r in asnToIcon) {
+      if (asnName.match(new RegExp(`${r}`))) {
+        return (
+          <Box p={1} _dark={{ bg: 'muted.100', rounded: 'full' }}>
+            {asnToIcon[r]}
+          </Box>
+        )
+      }
+    }
+
+    return <></>
+  }
+
+  const onPressIp = (e) => {
+    let ip = e.target.innerText
+
+    // TODO handle this and show popover info with actions
+    if (!ip.match(regexLAN)) {
+      return
+    }
+
+    if (setFilterIps) {
+      setFilterIps([ip])
+    }
   }
 
   return (
     <FlatList
-      data={listFiltered}
+      data={list}
       renderItem={({ item }) => (
         <Box
-          borderBottomWidth="1"
+          borderBottomWidth={1}
           _dark={{
             borderColor: 'muted.600'
           }}
           borderColor="muted.200"
-          py="2"
+          py={{ base: 4, md: 2 }}
         >
           <HStack
             direction={{ base: 'column', md: 'row' }}
@@ -137,44 +167,69 @@ const TimeSeriesList = (props) => {
           >
             <Stack
               direction={{ base: 'column', md: 'row' }}
-              flex="2"
+              flex={2}
               space={2}
               justifyContent="space-between"
             >
-              <HStack flex="1" space={2} justifyContent="space-between">
-                <Text flex="1">{item.Src}</Text>
-                <Box flex="1" justifyContent="center">
+              <HStack
+                flex={1}
+                space={2}
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Pressable flex={1} onPress={onPressIp}>
+                  {['WanOut', 'LanOut', 'LanIn'].includes(type) ? (
+                    <Text bold>{item.deviceSrc && item.deviceSrc.Name}</Text>
+                  ) : null}
+                  <Text>{item.Src}</Text>
+                </Pressable>
+                <Box alignText="center">
                   <Icon color="muted.200" icon={faArrowRight} size="xs" />
                 </Box>
-                <Text flex="1">{item.Dst}</Text>
+                <Pressable flex={1} onPress={onPressIp}>
+                  {['WanIn', 'LanOut', 'LanIn'].includes(type) ? (
+                    <Text bold>{item.deviceDst && item.deviceDst.Name}</Text>
+                  ) : null}
+                  <Text textAlign="right">{item.Dst}</Text>
+                </Pressable>
               </HStack>
               {showASN ? (
-                <Text flex="1" color="muted.600" isTruncated>
-                  {item.Asn}
-                </Text>
+                <HStack flex={1} space={2} alignItems="center">
+                  {asnIcon(item.Asn)}
+                  <Text color="muted.500" isTruncated>
+                    {item.Asn}
+                  </Text>
+                </HStack>
               ) : null}
             </Stack>
 
             <Stack
               direction="row"
-              marginLeft="auto"
+              marginLeft={{ base: '0', md: 'auto' }}
               space={2}
               flex={2 / 3}
               justifyContent="space-between"
             >
-              <Badge variant="outline" color="muted.500">
+              <Badge alignSelf="center" variant="outline" color="muted.500">
                 {prettySize(item.Bytes)}
               </Badge>
               <Text fontSize="xs" alignSelf="flex-start">
-                {prettyDate(item.Timestamp)}
+                {timeAgo(item.Timestamp)}
               </Text>
             </Stack>
           </HStack>
         </Box>
       )}
-      keyExtractor={(item) => item.Timestamp}
+      keyExtractor={(item) => item.Src + item.Dst + item.Bytes}
     />
   )
+}
+
+TimeSeriesList.propTypes = {
+  data: PropTypes.array,
+  filterIps: PropTypes.array,
+  setFilterIps: PropTypes.func,
+  type: PropTypes.string.isRequired
 }
 
 export default TimeSeriesList

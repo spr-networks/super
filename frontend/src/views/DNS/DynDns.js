@@ -267,7 +267,7 @@ export default class DynDns extends Component {
                           !['run_once', 'domains', 'socks5'].includes(label)
                       )
                       .map((label) => (
-                        <HStack space={4} justifyItems="center">
+                        <HStack key={label} space={4} justifyItems="center">
                           <FormControl.Label
                             flex={1}
                             fontSize="xs"

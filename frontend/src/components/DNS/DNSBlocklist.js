@@ -1,17 +1,20 @@
 import React from 'react'
 import Icon from 'FontAwesomeUtils'
-import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faPen, faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import { blockAPI } from 'api/DNS'
 import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
 import ModalForm from 'components/ModalForm'
 import { AlertContext } from 'layouts/Admin'
+import ModalConfirm from 'components/ModalConfirm'
 
 import {
+  Badge,
   Box,
   FlatList,
   Heading,
   IconButton,
+  Menu,
   Stack,
   HStack,
   VStack,
@@ -24,7 +27,12 @@ import {
 } from 'native-base'
 
 export default class DNSBlocklist extends React.Component {
-  state = { list: [], blockedDomains: 0, pending: false }
+  state = { list: [],
+            blockedDomains: 0,
+            pending: false,
+            showModal: false,
+            modalType: '',
+            pendingItem : {} }
 
   constructor(props) {
     super(props)
@@ -121,12 +129,50 @@ export default class DNSBlocklist extends React.Component {
       })
   }
 
+  handleTags = (item, tags) => {
+    if (tags != null) {
+      tags = tags.filter((v) => typeof v === 'string')
+      tags = [...new Set(tags)]
+    }
+
+    item.Tags = tags
+
+    blockAPI
+      .putBlocklist(item)
+      .then((res) => {
+        this.notifyChange('blocklists')
+
+      })
+      .catch((error) => {
+        this.context.error('API Failure: ' + error.message)
+      })
+
+  }
+
   render() {
     const notifyChangeBlocklist = async () => {
       await this.notifyChange()
       // close modal when added
       this.refAddBlocklistModal.current()
     }
+
+    const handleChangeTags = (item, tags) => {
+      return this.handleTags(item, tags)
+    }
+
+    const handleSubmitNew = (item, value) => {
+      let tags = []
+      if (item.Tags) {
+        tags = item.Tags.concat(value)
+      } else {
+        tags = [value]
+      }
+      this.handleTags(item, tags)
+    }
+
+    const defaultTags = this.props.tags || []
+
+    let edit = true //this.props.edit !== undefined ? this.props.edit : true
 
     return (
       <Box
@@ -147,7 +193,7 @@ export default class DNSBlocklist extends React.Component {
               </Text>
             ) : (
               <HStack space={1}>
-                <Spinner accessibilityLabel="Loading posts" />
+                <Spinner accessibilityLabel="Loading lists" />
                 <Text color="muted.500">Update running...</Text>
               </HStack>
             )}
@@ -198,6 +244,53 @@ export default class DNSBlocklist extends React.Component {
                   />
                 </Box>
 
+                <HStack flex={2} space={1} alignSelf="center" alignItems="center">
+
+                  {item.Tags ? item.Tags.map((entry) => (
+                    <Badge key={item.URI + entry} variant="outline">
+                      {entry}
+                    </Badge>
+                  )): null}
+                </HStack>
+
+                <Menu
+                  trigger={(triggerProps) => {
+                    return (
+                      <IconButton
+                        display={{ base: edit ? 'flex' : 'none' }}
+                        size="xs"
+                        variant="ghost"
+                        icon={<Icon icon={faPen} />}
+                        {...triggerProps}
+                      />
+                    )
+                  }}
+                >
+                  <Menu.OptionGroup
+                    title="Tags"
+                    type="checkbox"
+                    defaultValue={item.Tags ? item.Tags : []}
+                    onChange={(value) => handleChangeTags(item, value) }
+                  >
+                    {[...new Set(defaultTags.concat(item.Tags ? item.Tags : []))].map(
+                      (tag) => (
+                        <Menu.ItemOption key={tag} value={tag}>
+                          {tag}
+                        </Menu.ItemOption>
+                      )
+                    )}
+                    <Menu.ItemOption
+                      key="newTag"
+                      onPress={() => {
+                        this.setState({ showModal: true, modalType: 'Tag', pendingItem: item })
+                      }}
+                    >
+                      New Tag...
+                    </Menu.ItemOption>
+                  </Menu.OptionGroup>
+                </Menu>
+
+
                 <IconButton
                   alignSelf="center"
                   size="sm"
@@ -207,10 +300,21 @@ export default class DNSBlocklist extends React.Component {
                   onPress={() => this.deleteListItem(item)}
                 />
               </HStack>
+
             </Box>
+
+
           )}
           keyExtractor={(item) => item.URI}
         />
+
+        <ModalConfirm
+          type={this.state.modalType}
+          onSubmit={(v) => handleSubmitNew(this.state.pendingItem, v)}
+          onClose={() => this.setState({ showModal: false })}
+          isOpen={this.state.showModal}
+        />
+
       </Box>
     )
   }

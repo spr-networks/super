@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -28,6 +29,8 @@ var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
 
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
+var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
+
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
 
 var ApiTlsCert = "/configs/base/www-api.crt"
@@ -87,6 +90,9 @@ func loadConfig() {
 		}
 	}
 
+	//loading this will make sure devices-public.json is made
+	getDevicesJson()
+
 	initTraffic(config)
 }
 
@@ -136,7 +142,6 @@ func ipLinkUpDown(w http.ResponseWriter, r *http.Request) {
 
 }
 
-
 func getStatus(w http.ResponseWriter, r *http.Request) {
 	reply := "Online"
 	WSNotifyString("StatusCalled", "test")
@@ -163,7 +168,76 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(reply)
 }
 
+// system info: uptime, docker ps etc.
+func getInfo(w http.ResponseWriter, r *http.Request) {
+	DockerSocketPath := "/var/run/docker.sock"
+
+	name := mux.Vars(r)["name"]
+
+	var data []byte
+	var err error
+
+	if name == "uptime" {
+		data, err = exec.Command("jc", "-p", "uptime").Output()
+	} else if name == "docker" {
+		c := http.Client{}
+		c.Transport = &http.Transport{
+			Dial: func(network, addr string) (net.Conn, error) {
+				return net.Dial("unix", DockerSocketPath)
+			},
+		}
+
+		req, err := http.NewRequest(http.MethodGet, "http://localhost/v1.41/containers/json?all=1", nil)
+		if err != nil {
+			http.Error(w, err.Error(), 404)
+			return
+		}
+
+		resp, err := c.Do(req)
+		if err != nil {
+			http.Error(w, err.Error(), 404)
+			return
+		}
+
+		defer resp.Body.Close()
+		data, err = ioutil.ReadAll(resp.Body)
+	} else if name == "ss" {
+		data, err = exec.Command("jc", "-p", "ss", "-4", "-n").Output()
+	} else {
+		http.Error(w, "Invalid info", 404)
+		return
+	}
+
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, string(data))
+}
+
 var Devicesmtx sync.Mutex
+
+func convertDevicesPublic(devices map[string]DeviceEntry) map[string]DeviceEntry {
+	// do not pass PSK key material
+	scrubbed_devices := make(map[string]DeviceEntry)
+	for i, entry := range scrubbed_devices {
+		if entry.PSKEntry.Psk != "" {
+			entry.PSKEntry.Psk = "**"
+		}
+		scrubbed_devices[i] = entry
+	}
+	return scrubbed_devices
+}
+
+func savePublicDevicesJson(scrubbed_devices map[string]DeviceEntry) {
+	file, _ := json.MarshalIndent(scrubbed_devices, "", " ")
+	err := ioutil.WriteFile(DevicesPublicConfigFile, file, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 
 func saveDevicesJson(devices map[string]DeviceEntry) {
 	file, _ := json.MarshalIndent(devices, "", " ")
@@ -171,6 +245,10 @@ func saveDevicesJson(devices map[string]DeviceEntry) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	scrubbed_devices := convertDevicesPublic(devices)
+	savePublicDevicesJson(scrubbed_devices)
+
 }
 
 func getDevicesJson() map[string]DeviceEntry {
@@ -183,6 +261,26 @@ func getDevicesJson() map[string]DeviceEntry {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	scrubbed_devices := convertDevicesPublic(devices)
+
+	// load the public file. if it does not match, remake it.
+	data, err = ioutil.ReadFile(DevicesPublicConfigFile)
+	if err != nil {
+		// file was not made yet
+		savePublicDevicesJson(scrubbed_devices)
+	} else {
+		public_devices := map[string]DeviceEntry{}
+		err = json.Unmarshal(data, &public_devices)
+		if err != nil {
+			//data was invalid
+			savePublicDevicesJson(scrubbed_devices)
+		} else if !reflect.DeepEqual(public_devices, scrubbed_devices) {
+			//an update was since made
+			savePublicDevicesJson(scrubbed_devices)
+		}
+	}
+
 	return devices
 }
 
@@ -216,7 +314,6 @@ func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid device identity", 400)
 		return
 	}
-
 
 	dev := DeviceEntry{}
 	err := json.NewDecoder(r.Body).Decode(&dev)
@@ -1368,6 +1465,46 @@ func getCert(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, ApiTlsCert)
 }
 
+func speedTest(w http.ResponseWriter, r *http.Request) {
+	startParam := mux.Vars(r)["start"]
+	endParam := mux.Vars(r)["end"]
+
+	start, err := strconv.ParseUint(startParam, 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	end, err := strconv.ParseUint(endParam, 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if end <= start {
+		http.Error(w, "Invalid range", 400)
+		return
+	}
+
+	size := end - start
+	maxSize := 25 * 1024 * 1024 // 25MB
+	if size >= uint64(maxSize) {
+		http.Error(w, "Invalid size, max 25MB", 400)
+		return
+	}
+
+	sz := strconv.Itoa(int(size))
+
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Set("Content-Length", sz)
+
+		for i := 0; i < int(size); i++ {
+			fmt.Fprintf(w, "%c", byte(0x30+(i%10)))
+		}
+	}
+}
+
 //set up SPA handler. From gorilla mux's documentation
 type spaHandler struct {
 	staticPath string
@@ -1463,6 +1600,7 @@ func main() {
 	//Misc
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
 
 	//device management
 	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")
@@ -1499,6 +1637,8 @@ func main() {
 	// tokens api
 	external_router_authenticated.HandleFunc("/tokens", getAuthTokens).Methods("GET")
 	external_router_authenticated.HandleFunc("/tokens", updateAuthTokens).Methods("PUT", "DELETE")
+
+	external_router_authenticated.HandleFunc("/speedtest/{start:[0-9]+}-{end:[0-9]+}", speedTest).Methods("GET", "POST")
 
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")

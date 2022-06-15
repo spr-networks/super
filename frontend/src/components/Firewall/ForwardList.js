@@ -81,7 +81,7 @@ const ForwardList = (props) => {
     >
       <HStack justifyContent="space-between" alignContent="center">
         <VStack>
-          <Heading fontSize="xl">Incoming Traffic Forwarding</Heading>
+          <Heading fontSize="xl">Port Forwarding</Heading>
           <Text color="muted.500">Set rules for DNAT forwarding of incoming traffic</Text>
         </VStack>
         <ModalForm

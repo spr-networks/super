@@ -1,11 +1,20 @@
 import { useEffect, useState } from 'react'
 
+import Icon from 'FontAwesomeUtils'
+import {
+  faCircleCheck,
+  faCircleExclamation,
+  faCircleXmark,
+  faX
+} from '@fortawesome/free-solid-svg-icons'
+
 import { wifiAPI } from 'api'
 
 import {
   Badge,
   Box,
   Button,
+  Checkbox,
   Divider,
   FlatList,
   Flex,
@@ -32,7 +41,8 @@ const WifiInterface = (props) => {
     'supported_extended_features',
     'device_supports',
     'bands',
-    'other'
+    'other',
+    'SPR compability'
   ]
 
   /*const toggleIfaceState = (iface, state) => {
@@ -91,11 +101,14 @@ const WifiInterface = (props) => {
         my={2}
         rounded="md"
         borderWidth={1}
-        borderColor="muted.200"
+        borderColor={useColorModeValue('muted.200', 'muted.700')}
       >
-        <VStack borderRightWidth={1} borderRightColor="muted.200">
+        <VStack
+          borderRightWidth={1}
+          borderRightColor={useColorModeValue('muted.200', 'muted.700')}
+        >
           {tabList.map((tab) =>
-            iw[tab] || tab == 'other' ? (
+            iw[tab] || ['other', 'SPR compability'].includes(tab) ? (
               <Button
                 key={tab}
                 variant="ghost"
@@ -114,7 +127,7 @@ const WifiInterface = (props) => {
 
         <ScrollView h="50vh" p={2}>
           {tabList.map((tab) =>
-            iw[tab] || tab == 'other' ? (
+            iw[tab] || ['other', 'SPR compability'].includes(tab) ? (
               <VStack key={tab} display={activeTab == tab ? 'flex' : 'none'}>
                 {tab == 'devices' ? (
                   <>
@@ -240,6 +253,76 @@ const WifiInterface = (props) => {
                               ) : null*/}
                       </VStack>
                     ) : null}
+
+                    {tab == 'SPR compability' ? (
+                      <VStack space={2}>
+                        <Text bold>SPR compability for {iw.wiphy}</Text>
+
+                        <HStack space={4} alignItems="center">
+                          <Icon
+                            color={
+                              iw.bands.length > 1
+                                ? 'success.600'
+                                : 'warning.600'
+                            }
+                            icon={
+                              iw.bands.length > 1
+                                ? faCircleCheck
+                                : faCircleExclamation
+                            }
+                            size={4}
+                          />
+                          <Text w={20}>5GHz</Text>
+                          <Text color="muted.500" fontSize="sm">
+                            Recommended for maximum speed
+                          </Text>
+                        </HStack>
+                        <HStack space={4} alignItems="center">
+                          <Icon
+                            icon={
+                              iw.supported_ciphers.includes(
+                                'GCMP-128 (00-0f-ac:8)'
+                              )
+                                ? faCircleCheck
+                                : faCircleExclamation
+                            }
+                            color={
+                              iw.supported_ciphers.includes(
+                                'GCMP-128 (00-0f-ac:8)'
+                              )
+                                ? 'success.600'
+                                : 'warning.600'
+                            }
+                            size={4}
+                          />
+
+                          <Text w={20}>WPA3/SAE</Text>
+                          <Text color="muted.500" fontSize="sm">
+                            Recommended for better security
+                          </Text>
+                        </HStack>
+                        <HStack space={4} alignItems="center">
+                          <Icon
+                            icon={
+                              iw.supported_interface_modes.includes('AP/VLAN')
+                                ? faCircleCheck
+                                : faCircleXmark
+                            }
+                            color={
+                              iw.supported_interface_modes.includes('AP/VLAN')
+                                ? 'success.600'
+                                : 'error.600'
+                            }
+                            size={4}
+                          />
+
+                          <Text w={20}>AP/VLAN</Text>
+                          <Text color="muted.500" fontSize="sm">
+                            Required to create virtual interfaces
+                          </Text>
+                        </HStack>
+                      </VStack>
+                    ) : null}
                   </>
                 )}
               </VStack>
@@ -270,7 +353,7 @@ const WifiInterfaceList = (props) => {
 
   return (
     <>
-      <VStack>
+      <VStack space={4}>
         {iws.length ? (
           <>
             {iws.map((iw) => (

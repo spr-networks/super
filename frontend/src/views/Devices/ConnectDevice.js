@@ -66,60 +66,60 @@ const WifiConnect = (props) => {
   }
 
   return (
-    <View>
-      <Stack space={4} alignItems="center">
-        <HStack space={1}>
-          <Text fontSize="lg" color="muted.500">
-            SSID
-          </Text>
-          <Text bold fontSize="lg">
-            {ssid}
-          </Text>
-        </HStack>
-        <HStack space={1}>
-          <Text fontSize="md" color="muted.500">
-            Password
-          </Text>
-          <Text bold fontSize="md">
-            {device.PSKEntry.Psk}
-          </Text>
-        </HStack>
+    <Stack space={4} alignItems="center">
+      <HStack space={1}>
+        <Text fontSize="lg" color="muted.500">
+          SSID
+        </Text>
+        <Text bold fontSize="lg">
+          {ssid}
+        </Text>
+      </HStack>
+      <HStack space={1}>
+        <Text fontSize="md" color="muted.500">
+          Password
+        </Text>
+        <Text bold fontSize="md">
+          {device.PSKEntry.Psk}
+        </Text>
+      </HStack>
 
-        {success ? (
-          <Button
-            w="40%"
-            variant="solid"
-            colorScheme="success"
-            bg="green.500"
-            onPress={() => navigate('/admin/devices')}
-          >
-            Success
-          </Button>
-        ) : (
-          <>
-            {error ? (
-              <Text color="danger.500">Error: {error}</Text>
-            ) : (
-              <Button variant="subtle" colorScheme="muted.100">
-                Waiting for connection...
-              </Button>
-            )}
-          </>
-        )}
-
-        {connectQR ? <QRCode value={connectQR} /> : null}
-
+      {success ? (
         <Button
-          w="1/3"
-          variant="ghost"
-          colorScheme="muted.800"
-          leftIcon={<Icon icon={faArrowLeft} />}
-          onPress={goBack}
+          w="40%"
+          variant="solid"
+          colorScheme="success"
+          bg="green.500"
+          onPress={() => navigate('/admin/devices')}
         >
-          Back
+          Success
         </Button>
-      </Stack>
-    </View>
+      ) : (
+        <>
+          {error ? (
+            <Text key="err" color="danger.500">
+              Error: {error}
+            </Text>
+          ) : (
+            <Button key="wait" variant="subtle" colorScheme="muted.100">
+              Waiting for connection...
+            </Button>
+          )}
+        </>
+      )}
+
+      {connectQR ? <QRCode value={connectQR} /> : null}
+
+      <Button
+        w="1/3"
+        variant="ghost"
+        colorScheme="muted.800"
+        leftIcon={<Icon icon={faArrowLeft} />}
+        onPress={goBack}
+      >
+        Back
+      </Button>
+    </Stack>
   )
 }
 
