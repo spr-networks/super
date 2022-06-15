@@ -110,7 +110,8 @@ const routes = [
     name: 'PFW',
     icon: faFire,
     component: PFW,
-    layout: 'admin'
+    layout: 'admin',
+    plus: true
   },
   {
     name: 'Traffic',

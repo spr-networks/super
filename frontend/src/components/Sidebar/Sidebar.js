@@ -87,7 +87,7 @@ const SidebarItem = (props) => {
   }
 */
 
-  const { isWifiDisabled } = useContext(AppContext)
+  const { isWifiDisabled, isPlusDisabled } = useContext(AppContext)
 
   const navigate = useNavigate()
 
@@ -98,6 +98,11 @@ const SidebarItem = (props) => {
 
     // menu items hidden when wifi mode is disabled
     if (item.wifi === true && isWifiDisabled) {
+      return null
+    }
+
+    // menu items hidden when plus mode is disabled
+    if (item.plus === true && isPlusDisabled) {
       return null
     }
 

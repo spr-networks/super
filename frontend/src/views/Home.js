@@ -2,7 +2,8 @@ import React, { useContext, useState, useEffect } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { Box, Stack, VStack, useBreakpointValue } from 'native-base'
 import { AppContext } from 'AppContext'
-import { pluginAPI, wifiAPI, api } from 'api'
+import { pluginAPI, pfwAPI, wifiAPI, api } from 'api'
+
 import {
   WifiClients,
   Interfaces,
@@ -31,6 +32,7 @@ const Home = (props) => {
       )
       .catch((error) => error)
 
+
     api
       .features()
       .then((res) => {
@@ -43,6 +45,13 @@ const Home = (props) => {
       .catch((err) => {
         context.setIsWifiDisabled(true)
       })
+
+    pfwAPI.config().then((res) => {
+      context.setIsPlusDisabled(false)
+    }).catch((err) => {
+      context.setIsPlusDisabled(true)
+    })
+
   }, [])
 
   const flexDirection = useBreakpointValue({
