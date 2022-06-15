@@ -28,16 +28,17 @@ import {
   useColorModeValue
 } from 'native-base'
 
-import { API, api } from 'api'
+import { apiURL } from 'api/API'
+import { api } from 'api'
 import { AlertContext } from 'AppContext'
 
 const SpeedTest = (props) => {
   const context = useContext(AlertContext)
-  const [speedDown, setSpeedDown] = useState(0)
-  const [speedUp, setSpeedUp] = useState(0)
-  const [percentDown, setPercentDown] = useState(0)
-  const [percentUp, setPercentUp] = useState(0)
   const [isRunning, setIsRunning] = useState(false)
+  const [speedDown, setSpeedDown] = useState(0)
+  const [percentDown, setPercentDown] = useState(0)
+  const [speedUp, setSpeedUp] = useState(0)
+  const [percentUp, setPercentUp] = useState(0)
 
   let start = 0
 
@@ -63,7 +64,7 @@ const SpeedTest = (props) => {
     }
 
     if (updown === 'upload') {
-      percent = 100 - percent
+      let percent = 100 - percent
       //TODO
     }
   }
@@ -77,14 +78,15 @@ const SpeedTest = (props) => {
     setIsRunning(!isRunning)
     let authHeaders = api.getAuthHeaders()
     let [_start, _end] = [0, 4 * 1024 * 1024] //16mb
-    let url = `//spr/speedtest/${_start}-${_end}`
+    let apiUrl = apiURL()
+    let url = `${apiUrl}/speedtest/${_start}-${_end}`
 
     // TODO NOTE will not work in native
     let req = new XMLHttpRequest()
     start = Date.now()
 
     req.onprogress = (progEv) => {
-      console.log('prog:', progEv)
+      //console.log('prog:', progEv)
       onProgress('download', progEv)
     }
 
