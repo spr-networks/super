@@ -387,7 +387,7 @@ const DNSLogHistoryList = (props) => {
         </HStack>
 
         <Stack space={2} direction={{ base: 'column', md: 'row' }}>
-          <FormControl flex="2">
+          <FormControl flex="2" maxW={{ base: '100%', md: '1/3' }}>
             <FormControl.Label>Client</FormControl.Label>
             <ClientSelect
               isDisabled
@@ -396,41 +396,47 @@ const DNSLogHistoryList = (props) => {
             />
           </FormControl>
 
-          <FormControl flex="2">
-            {filterIps.length && list.length ? (
-              <>
-                <FormControl.Label>Search</FormControl.Label>
+          <FormControl
+            flex="2"
+            display={{
+              base: filterIps.length && list.length ? 'flex' : 'none'
+            }}
+          >
+            <>
+              <FormControl.Label>Search</FormControl.Label>
 
-                <Input
-                  type="text"
-                  name="filterText"
-                  size="lg"
-                  placeholder="Filter domain..."
-                  value={filterText}
-                  onChangeText={handleChange}
-                  InputRightElement={
-                    <Icon icon={faMagnifyingGlass} color="muted.400" mr={2} />
-                  }
-                />
-              </>
-            ) : null}
+              <Input
+                type="text"
+                name="filterText"
+                size="lg"
+                placeholder="Filter domain..."
+                value={filterText}
+                onChangeText={handleChange}
+                InputRightElement={
+                  <Icon icon={faMagnifyingGlass} color="muted.400" mr={2} />
+                }
+              />
+            </>
           </FormControl>
 
-          <FormControl flex="1">
-            {filterIps.length && list.length ? (
-              <>
-                <FormControl.Label>Delete history</FormControl.Label>
-                <Button
-                  size="md"
-                  variant="subtle"
-                  colorScheme="danger"
-                  leftIcon={<Icon icon={faTrash} />}
-                  onPress={deleteHistory}
-                >
-                  Delete
-                </Button>
-              </>
-            ) : null}
+          <FormControl
+            flex="1"
+            display={{
+              base: filterIps.length && list.length ? 'flex' : 'none'
+            }}
+          >
+            <>
+              <FormControl.Label>Delete history</FormControl.Label>
+              <Button
+                size="md"
+                variant="subtle"
+                colorScheme="danger"
+                leftIcon={<Icon icon={faTrash} />}
+                onPress={deleteHistory}
+              >
+                Delete
+              </Button>
+            </>
           </FormControl>
         </Stack>
 
