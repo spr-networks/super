@@ -23,6 +23,7 @@ import Logs from 'views/Logs'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
 import SystemInfo from 'views/SystemInfo'
+import SpeedTest from 'views/SpeedTest'
 
 import {
   faArrowCircleUp,
@@ -34,6 +35,7 @@ import {
   faEthernet,
   faFire,
   faFireAlt,
+  faGauge,
   faHome,
   faLaptop,
   faLineChart,
@@ -237,6 +239,13 @@ const routes = [
         name: 'System Info',
         icon: faWaveSquare,
         component: SystemInfo,
+        layout: 'admin'
+      },
+      {
+        path: 'speedtest',
+        name: 'Speed Test',
+        icon: faGauge,
+        component: SpeedTest,
         layout: 'admin'
       }
     ]
