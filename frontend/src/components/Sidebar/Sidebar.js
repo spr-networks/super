@@ -47,6 +47,7 @@ const Sidebar = (props) => {
 
 const SidebarItem = (props) => {
   const { sidebarItems, level, isMobile, isMini, setIsOpenSidebar } = props
+  const { isWifiDisabled, isPlusDisabled } = useContext(AppContext)
   const { activeSidebarItem, setActiveSidebarItem } = useContext(AppContext)
 
   /*
@@ -87,27 +88,27 @@ const SidebarItem = (props) => {
   }
 */
 
-  const { isWifiDisabled, isPlusDisabled } = useContext(AppContext)
-
   const navigate = useNavigate()
 
   return sidebarItems.map((item, index) => {
-    if (item.redirect) {
+    let display = { base: 'flex' }
+    if (item.redirect || (item.layout !== 'admin' && !item.views)) {
+      display.base = 'none'
       return null
     }
 
     // menu items hidden when wifi mode is disabled
     if (item.wifi === true && isWifiDisabled) {
-      return null
+      display.base = 'none'
     }
 
     // menu items hidden when plus mode is disabled
     if (item.plus === true && isPlusDisabled) {
-      return null
+      display.base = 'none'
     }
 
     return (
-      <Box key={index} w="100%">
+      <Box key={index} w="100%" display={display}>
         {item.views === undefined ? (
           <Pressable
             onPress={() => {
