@@ -45,7 +45,7 @@ const SpeedTest = (props) => {
   let postData = null
 
   function onProgress(updown, ev) {
-    console.log(updown, ev)
+    //console.log(updown, ev)
     const now = Date.now()
 
     let total = ev.total //updown === 'upload' ? postData.size : ev.total
@@ -67,7 +67,6 @@ const SpeedTest = (props) => {
       }
 
       if (percentUp < 100) {
-        console.log('setting', mbit, percent)
         setPercentUp(percent)
       }
     } else {
