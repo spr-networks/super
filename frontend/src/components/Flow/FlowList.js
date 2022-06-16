@@ -191,19 +191,21 @@ const Flow = ({ flow, edit, ...props }) => {
         trigger={triggerBtn}
         alignSelf="center"
       >
-        <Menu.Item onPress={onDisable}>
-          {flow.disabled ? 'Enable' : 'Disable'}
-        </Menu.Item>
-        <Divider mt="3" w="100%" />
-        <Menu.Item onPress={onEdit}>Edit</Menu.Item>
-        <Menu.Item onPress={onDuplicate}>Duplicate</Menu.Item>
+        <Menu.Group title="Actions">
+          <Menu.Item onPress={onDisable}>
+            {flow.disabled ? 'Enable' : 'Disable'}
+          </Menu.Item>
+          {/*<Divider mt="3" w="100%" />*/}
+          <Menu.Item onPress={onEdit}>Edit</Menu.Item>
+          <Menu.Item onPress={onDuplicate}>Duplicate</Menu.Item>
 
-        <Menu.Item onPress={onDelete}>
-          <HStack space={2} alignItems="center">
-            <Icon icon={faTrash} color="danger.700" />
-            <Text color="danger.700">Delete</Text>
-          </HStack>
-        </Menu.Item>
+          <Menu.Item onPress={onDelete}>
+            <HStack space={2} alignItems="center">
+              <Icon icon={faTrash} color="danger.700" />
+              <Text color="danger.700">Delete</Text>
+            </HStack>
+          </Menu.Item>
+        </Menu.Group>
       </Menu>
     )
 
@@ -241,7 +243,7 @@ const Flow = ({ flow, edit, ...props }) => {
         rounded="lg"
       >
         <VStack flex={1} space={2}>
-          <HStack space={2}>
+          <HStack space={2} alignItems="flex-end">
             <Text bold>{title}</Text>
             {flow.disabled ? (
               <Text fontSize="xs" color="muted.500">
