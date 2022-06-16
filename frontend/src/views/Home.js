@@ -32,11 +32,10 @@ const Home = (props) => {
       )
       .catch((error) => error)
 
-
     api
       .features()
       .then((res) => {
-        if (res.includes("wifi")) {
+        if (res.includes('wifi')) {
           context.setIsWifiDisabled(false)
         } else {
           context.setIsWifiDisabled(true)
@@ -46,12 +45,14 @@ const Home = (props) => {
         context.setIsWifiDisabled(true)
       })
 
-    pfwAPI.config().then((res) => {
-      context.setIsPlusDisabled(false)
-    }).catch((err) => {
-      context.setIsPlusDisabled(true)
-    })
-
+    pfwAPI
+      .config()
+      .then((res) => {
+        context.setIsPlusDisabled(false)
+      })
+      .catch((err) => {
+        context.setIsPlusDisabled(true)
+      })
   }, [])
 
   const flexDirection = useBreakpointValue({
