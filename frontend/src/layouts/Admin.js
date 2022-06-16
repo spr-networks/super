@@ -145,7 +145,6 @@ const AdminLayout = (props) => {
   }, [])
 
   let path = location.pathname.replace(/^\/admin\//, '')
-
   const [activeSidebarItem, setActiveSidebarItem] = useState(path)
   const [isOpenSidebar, setIsOpenSidebar] = useState(false)
   const [isNavbarOpen, setIsNavbarOpen] = useState(false)
