@@ -6,7 +6,9 @@ export const AppContext = createContext({
   isNavbarOpen: false,
   setIsNavbarOpen: (isNavbarOpen) => {},
   isWifiDisabled: false,
-  setIsWifiDisabled: (value) => {}
+  isPlusDisabled: true,
+  setIsWifiDisabled: (value) => {},
+  setIsPlusDisabled: (value) => {}
 })
 
 export const alertState = {

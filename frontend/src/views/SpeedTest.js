@@ -77,7 +77,7 @@ const SpeedTest = (props) => {
 
     setIsRunning(!isRunning)
     let authHeaders = api.getAuthHeaders()
-    let [_start, _end] = [0, 4 * 1024 * 1024] //16mb
+    let [_start, _end] = [0, 16 * 1024 * 1024] //16mb
     let apiUrl = apiURL()
     let url = `${apiUrl}/speedtest/${_start}-${_end}`
 

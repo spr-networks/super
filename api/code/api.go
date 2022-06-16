@@ -164,6 +164,8 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 		reply = append(reply, "wireguard")
 	}
 
+
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
 }
@@ -1499,9 +1501,13 @@ func speedTest(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.Header().Set("Content-Length", sz)
 
+		v := make([]byte, int(size))
+
 		for i := 0; i < int(size); i++ {
-			fmt.Fprintf(w, "%c", byte(0x30+(i%10)))
+			v[i] = byte(0x30 + i%10)
 		}
+
+		w.Write(v)
 	}
 }
 
