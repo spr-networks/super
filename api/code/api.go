@@ -164,8 +164,6 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 		reply = append(reply, "wireguard")
 	}
 
-
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
 }
@@ -1508,6 +1506,21 @@ func speedTest(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Write(v)
+	} else if r.Method == http.MethodPut {
+		r.Body = http.MaxBytesReader(w, r.Body, int64(maxSize))
+
+		// check if request body is not too large
+		_, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("ok"))
+	} else {
+		http.Error(w, "Invalid method", 400)
+		return
 	}
 }
 
@@ -1644,7 +1657,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/tokens", getAuthTokens).Methods("GET")
 	external_router_authenticated.HandleFunc("/tokens", updateAuthTokens).Methods("PUT", "DELETE")
 
-	external_router_authenticated.HandleFunc("/speedtest/{start:[0-9]+}-{end:[0-9]+}", speedTest).Methods("GET", "POST")
+	external_router_authenticated.HandleFunc("/speedtest/{start:[0-9]+}-{end:[0-9]+}", speedTest).Methods("GET", "PUT", "OPTIONS")
 
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
