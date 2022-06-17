@@ -66,17 +66,13 @@ const SpeedTest = (props) => {
         setSpeedUp(mbit)
       }
 
-      if (percentUp < 100) {
-        setPercentUp(percent)
-      }
+      setPercentUp(percent)
     } else {
       if (ev.loaded < ev.total) {
         setSpeedDown(mbit)
       }
 
-      if (percentDown < 100) {
-        setPercentDown(percent)
-      }
+      setPercentDown(percent)
     }
   }
 
@@ -102,7 +98,7 @@ const SpeedTest = (props) => {
       }
 
       req.upload.onloadend = (reqEv) => {
-        console.log('req.upload.done')
+        //console.log('req.upload.done')
         setIsRunning(false)
       }
     } else {
@@ -158,14 +154,14 @@ const SpeedTest = (props) => {
   }
 
   const startTest = () => {
-    if (isRunning) {
+    if (isRunning && req) {
       return req.abort()
     }
 
     setSpeedDown(0.0)
-    setPercentDown(0)
+    setPercentDown(0.0)
     setSpeedUp(0.0)
-    setPercentUp(0)
+    setPercentUp(0.0)
 
     setIsRunning(true)
 
@@ -181,6 +177,10 @@ const SpeedTest = (props) => {
   return (
     <View>
       <Heading size="md">Speed Test</Heading>
+      <Text color="muted.500">
+        This test measure http request time to spr. Use iperf3 for more exact
+        results.
+      </Text>
 
       <VStack space={4} my={4} p={4} bg="white" rounded="md">
         <HStack space={1} justifyContent="flex-start">
@@ -192,7 +192,7 @@ const SpeedTest = (props) => {
           />
         </HStack>
         <HStack space={4} mx="4" alignItems="center">
-          <VStack space={1} w="20%">
+          <VStack space={1} w={{ base: '50%', md: '20%' }}>
             <HStack space={2} alignItems="center">
               <Text fontSize="32" color="muted.500">
                 {speedDown.toFixed(2)}
@@ -208,7 +208,7 @@ const SpeedTest = (props) => {
             </HStack>
           </VStack>
           <Progress
-            w="70%"
+            w={{ base: '50%', md: '70%' }}
             size="md"
             rounded="md"
             colorScheme="emerald"
@@ -216,7 +216,7 @@ const SpeedTest = (props) => {
           />
         </HStack>
         <HStack space={4} mx="4" alignItems="center">
-          <VStack space={1} w="20%">
+          <VStack space={1} w={{ base: '50%', md: '20%' }}>
             <HStack space={2} alignItems="center">
               <Text fontSize="32" color="muted.500" textAlign="right">
                 {speedUp.toFixed(2)}
@@ -232,7 +232,7 @@ const SpeedTest = (props) => {
           </VStack>
 
           <Progress
-            w="70%"
+            w={{ base: '50%', md: '70%' }}
             size="md"
             rounded="md"
             colorScheme="violet"
