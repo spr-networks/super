@@ -1,7 +1,7 @@
 import { createContext } from 'react'
 
 export const AppContext = createContext({
-  activeSidebarItem: 'admin/home',
+  activeSidebarItem: 'home',
   setActiveSidebarItem: (sidebarItem) => {},
   isNavbarOpen: false,
   setIsNavbarOpen: (isNavbarOpen) => {},

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faPlus } from '@fortawesome/free-solid-svg-icons'

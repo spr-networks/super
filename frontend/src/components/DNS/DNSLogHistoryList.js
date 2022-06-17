@@ -456,7 +456,7 @@ const DNSLogHistoryList = (props) => {
         renderItem={({ item, index }) => (
           <ListItem
             item={item}
-            hidenClient={hideClient}
+            hideClient={hideClient}
             handleClickDomain={handleClickDomain}
             triggerAlert={triggerAlert}
           />

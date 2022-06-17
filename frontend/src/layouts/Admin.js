@@ -1,5 +1,5 @@
 import React, { createContext, useEffect, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 
 import { AppContext, AlertContext, alertState } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
@@ -24,7 +24,7 @@ import {
   useToast
 } from 'native-base'
 
-import routes from 'routes'
+import { routes } from 'routes'
 
 const AppAlert = (props) => {
   const { type, title, body, toggle } = props
@@ -87,6 +87,7 @@ function desktopNotification(msg) {
 
 const AdminLayout = (props) => {
   const mainPanel = React.useRef()
+  const location = useLocation()
 
   const [showAlert, setShowAlert] = useState(false)
   const [alert, setAlert] = useState({})
@@ -143,7 +144,8 @@ const AdminLayout = (props) => {
     })
   }, [])
 
-  const [activeSidebarItem, setActiveSidebarItem] = useState('')
+  let path = location.pathname.replace(/^\/admin\//, '')
+  const [activeSidebarItem, setActiveSidebarItem] = useState(path)
   const [isOpenSidebar, setIsOpenSidebar] = useState(false)
   const [isNavbarOpen, setIsNavbarOpen] = useState(false)
   const [isWifiDisabled, setIsWifiDisabled] = useState(false)

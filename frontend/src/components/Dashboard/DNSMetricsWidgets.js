@@ -8,9 +8,15 @@ import StatsChartWidget from './StatsChartWidget'
 export const DNSMetrics = (props) => {
   const [totalQueries, setTotalQueries] = useState(0)
   const [blockedQueries, setBlockedQueries] = useState(0)
+  const [isMounted, setIsMounted] = useState(false)
 
-  useEffect(async () => {
+  useEffect(() => {
+    setIsMounted(true)
     const fetchMetrics = () => {
+      if (!isMounted) {
+        return
+      }
+
       blockAPI
         .metrics()
         .then((metrics) => {
@@ -21,11 +27,13 @@ export const DNSMetrics = (props) => {
     }
 
     fetchMetrics()
-
     const interval = setInterval(fetchMetrics, 30 * 1e3)
 
-    return () => clearInterval(interval)
-  }, [])
+    return () => {
+      clearInterval(interval)
+      setIsMounted(false)
+    }
+  })
 
   return (
     <StatsWidget
@@ -40,9 +48,15 @@ export const DNSMetrics = (props) => {
 export const DNSBlockMetrics = (props) => {
   const [totalQueries, setTotalQueries] = useState(0)
   const [blockedQueries, setBlockedQueries] = useState(0)
+  const [isMounted, setIsMounted] = useState(false)
 
-  useEffect(async () => {
+  useEffect(() => {
+    setIsMounted(true)
     const fetchMetrics = () => {
+      if (!isMounted) {
+        return
+      }
+
       blockAPI
         .metrics()
         .then((metrics) => {
@@ -54,10 +68,13 @@ export const DNSBlockMetrics = (props) => {
 
     fetchMetrics()
 
-    const interval = setInterval(fetchMetrics, 10 * 1e3)
+    const interval = setInterval(fetchMetrics, 30 * 1e3)
 
-    return () => clearInterval(interval)
-  }, [])
+    return () => {
+      clearInterval(interval)
+      setIsMounted(false)
+    }
+  })
 
   return (
     <StatsWidget

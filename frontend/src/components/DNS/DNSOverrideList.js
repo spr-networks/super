@@ -84,7 +84,7 @@ const DNSOverrideList = (props) => {
             py={2}
           >
             <Stack
-              direction={{ base: 'column' }}
+              direction={{ base: 'column', md: 'row' }}
               space={3}
               justifyContent="space-evenly"
               alignItems="center"

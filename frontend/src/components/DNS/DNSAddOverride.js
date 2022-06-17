@@ -44,6 +44,7 @@ export default class DNSAddOverride extends React.Component {
     if (
       name.match(/^(Result|Client)IP$/) &&
       value != '*' &&
+      value.length &&
       !value.match(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/)
     ) {
       check[name] = 'has-danger'
@@ -124,7 +125,7 @@ export default class DNSAddOverride extends React.Component {
 
           {this.state.check.ResultIP == 'has-danger' ? (
             <FormControl.ErrorMessage>
-              Please enter a valid IP or *
+              Please enter a valid IP or leave empty
             </FormControl.ErrorMessage>
           ) : (
             <FormControl.HelperText>
