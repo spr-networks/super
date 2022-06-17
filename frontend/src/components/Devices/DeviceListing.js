@@ -186,7 +186,7 @@ const DeviceListing = (props) => {
     <View>
       <ScrollView h="calc(100vh - 96px)">
         <HStack mb={4} alignItems="center">
-          <Heading fontSize="xl">Configured Devices</Heading>
+          <Heading fontSize="md">Configured Devices</Heading>
 
           <Button
             marginLeft="auto"

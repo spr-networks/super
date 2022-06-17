@@ -80,29 +80,30 @@ const AuthTokenList = (props) => {
 
   return (
     <View mt={4}>
+      <HStack space={1} alignItems="center">
+        <Heading fontSize="md">API Tokens</Heading>
+
+        <ModalConfirm
+          type="Expire"
+          options={options}
+          defaultValue="Never"
+          onSubmit={handleSubmit}
+          trigger={(triggerProps) => {
+            return (
+              <Button {...triggerProps} marginLeft="auto">
+                {'Add Token'}
+              </Button>
+            )
+          }}
+        />
+      </HStack>
       <Box
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
         rounded="md"
         width="100%"
         p={4}
+        my={4}
       >
-        <HStack space="1" mb="2">
-          <Heading fontSize="lg">API Tokens</Heading>
-
-          <ModalConfirm
-            type="Expire"
-            options={options}
-            defaultValue="Never"
-            onSubmit={handleSubmit}
-            trigger={(triggerProps) => {
-              return (
-                <Button {...triggerProps} marginLeft="auto">
-                  {'Add Token'}
-                </Button>
-              )
-            }}
-          />
-        </HStack>
         <FlatList
           data={tokens}
           renderItem={({ item }) => (

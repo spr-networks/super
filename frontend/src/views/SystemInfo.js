@@ -102,10 +102,10 @@ const renderDockerContainer = ({ item, navigate, showModal }) => {
           </HStack>
         </Menu.Item>
       </Menu.Group>
+      {/*
       <Menu.Group title="Actions">
         <Menu.Item onPress={onRestart}>Restart</Menu.Item>
       </Menu.Group>
-      {/*<Divider mt="3" w="100%" />
        */}
     </Menu>
   )
@@ -130,6 +130,7 @@ const renderDockerContainer = ({ item, navigate, showModal }) => {
         {item.State}
       </Badge>
       <Text
+        display={{ base: 'none', md: 'flex' }}
         minW="200px"
         ml="auto"
         textAlign="right"
@@ -239,7 +240,7 @@ const SystemInfo = (props) => {
         }
       />
       <Modal isOpen={isOpen} onClose={onClose} animationPreset="slide">
-        <Modal.Content maxWidth="90vw">
+        <Modal.Content maxWidth={{ base: '100vw', md: '90vw' }}>
           <Modal.CloseButton />
           <Modal.Header>{modalTitle}</Modal.Header>
           <Modal.Body>{modalBody}</Modal.Body>

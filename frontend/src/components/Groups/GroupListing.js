@@ -70,7 +70,7 @@ const GroupListing = ({ group, ...props }) => {
   return (
     <VStack space={2}>
       <HStack space={1} alignItems="center" justifyContent="space-between">
-        <Heading fontSize="xl">{translateName(group.Name)}</Heading>
+        <Heading fontSize="md">{translateName(group.Name)}</Heading>
         <Text color="muted.500">{groupDescriptions[group.Name] || ''}</Text>
       </HStack>
 

@@ -27,12 +27,14 @@ import {
 } from 'native-base'
 
 export default class DNSBlocklist extends React.Component {
-  state = { list: [],
-            blockedDomains: 0,
-            pending: false,
-            showModal: false,
-            modalType: '',
-            pendingItem : {} }
+  state = {
+    list: [],
+    blockedDomains: 0,
+    pending: false,
+    showModal: false,
+    modalType: '',
+    pendingItem: {}
+  }
 
   constructor(props) {
     super(props)
@@ -141,12 +143,10 @@ export default class DNSBlocklist extends React.Component {
       .putBlocklist(item)
       .then((res) => {
         this.notifyChange('blocklists')
-
       })
       .catch((error) => {
         this.context.error('API Failure: ' + error.message)
       })
-
   }
 
   render() {
@@ -185,7 +185,7 @@ export default class DNSBlocklist extends React.Component {
       >
         <HStack justifyContent="space-between">
           <VStack>
-            <Heading fontSize="xl">DNS Blocklists</Heading>
+            <Heading fontSize="md">DNS Blocklists</Heading>
 
             {!this.state.pending ? (
               <Text color="muted.500">
@@ -244,13 +244,19 @@ export default class DNSBlocklist extends React.Component {
                   />
                 </Box>
 
-                <HStack flex={2} space={1} alignSelf="center" alignItems="center">
-
-                  {item.Tags ? item.Tags.map((entry) => (
-                    <Badge key={item.URI + entry} variant="outline">
-                      {entry}
-                    </Badge>
-                  )): null}
+                <HStack
+                  flex={2}
+                  space={1}
+                  alignSelf="center"
+                  alignItems="center"
+                >
+                  {item.Tags
+                    ? item.Tags.map((entry) => (
+                        <Badge key={item.URI + entry} variant="outline">
+                          {entry}
+                        </Badge>
+                      ))
+                    : null}
                 </HStack>
 
                 <Menu
@@ -270,26 +276,29 @@ export default class DNSBlocklist extends React.Component {
                     title="Tags"
                     type="checkbox"
                     defaultValue={item.Tags ? item.Tags : []}
-                    onChange={(value) => handleChangeTags(item, value) }
+                    onChange={(value) => handleChangeTags(item, value)}
                   >
-                    {[...new Set(defaultTags.concat(item.Tags ? item.Tags : []))].map(
-                      (tag) => (
-                        <Menu.ItemOption key={tag} value={tag}>
-                          {tag}
-                        </Menu.ItemOption>
-                      )
-                    )}
+                    {[
+                      ...new Set(defaultTags.concat(item.Tags ? item.Tags : []))
+                    ].map((tag) => (
+                      <Menu.ItemOption key={tag} value={tag}>
+                        {tag}
+                      </Menu.ItemOption>
+                    ))}
                     <Menu.ItemOption
                       key="newTag"
                       onPress={() => {
-                        this.setState({ showModal: true, modalType: 'Tag', pendingItem: item })
+                        this.setState({
+                          showModal: true,
+                          modalType: 'Tag',
+                          pendingItem: item
+                        })
                       }}
                     >
                       New Tag...
                     </Menu.ItemOption>
                   </Menu.OptionGroup>
                 </Menu>
-
 
                 <IconButton
                   alignSelf="center"
@@ -300,10 +309,7 @@ export default class DNSBlocklist extends React.Component {
                   onPress={() => this.deleteListItem(item)}
                 />
               </HStack>
-
             </Box>
-
-
           )}
           keyExtractor={(item) => item.URI}
         />
@@ -314,7 +320,6 @@ export default class DNSBlocklist extends React.Component {
           onClose={() => this.setState({ showModal: false })}
           isOpen={this.state.showModal}
         />
-
       </Box>
     )
   }

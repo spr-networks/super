@@ -90,7 +90,7 @@ const DNSLogList = ({ title, description, ...props }) => {
     >
       <HStack alignItems="center">
         <VStack>
-          <Heading fontSize="xl">{title}</Heading>
+          <Heading fontSize="md">{title}</Heading>
           <Text color="muted.500">{description}</Text>
         </VStack>
 

@@ -240,7 +240,7 @@ class TrafficTimeSeries extends Component {
 
     return (
       <View>
-        <VStack>
+        <VStack space={4}>
           {['WanOut', 'WanIn', 'LanIn', 'LanOut'].map((type) => {
             return (
               <TimeSeries

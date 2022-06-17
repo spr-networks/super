@@ -72,8 +72,8 @@ export default class Wireguard extends Component {
           p="4"
           mb="4"
         >
-          <HStack alignItems="center" mb="4">
-            <Heading fontSize="xl">Wireguard</Heading>
+          <HStack alignItems="center" mb={4}>
+            <Heading fontSize="md">Wireguard</Heading>
 
             <Switch
               marginLeft="auto"

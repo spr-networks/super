@@ -58,7 +58,7 @@ const DNSOverrideList = (props) => {
     >
       <HStack justifyContent="space-between" alignContent="center">
         <VStack>
-          <Heading fontSize="xl">{props.title || 'DNS Override'}</Heading>
+          <Heading fontSize="md">{props.title || 'DNS Override'}</Heading>
           <Text color="muted.500">Set rules for DNS queries</Text>
         </VStack>
 

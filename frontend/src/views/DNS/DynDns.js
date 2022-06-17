@@ -232,7 +232,7 @@ export default class DynDns extends Component {
         >
           <VStack space={4}>
             <HStack alignItems="center">
-              <Heading fontSize="xl">Dynamic DNS</Heading>
+              <Heading fontSize="md">Dynamic DNS</Heading>
 
               <Switch
                 marginLeft="auto"
