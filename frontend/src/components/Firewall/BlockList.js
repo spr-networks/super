@@ -48,8 +48,10 @@ const BlockList = (props) => {
       mb="4"
     >
       <HStack justifyContent="space-between" alignContent="center">
-        <VStack>
-          <Heading fontSize="xl">{title}</Heading>
+        <VStack maxW="60%">
+          <Heading fontSize="lg" isTruncated>
+            {title}
+          </Heading>
         </VStack>
         <ModalForm
           title={`Add IP Block`}

@@ -80,9 +80,11 @@ const ForwardList = (props) => {
       mb="4"
     >
       <HStack justifyContent="space-between" alignContent="center">
-        <VStack>
-          <Heading fontSize="xl">Port Forwarding</Heading>
-          <Text color="muted.500">Set rules for DNAT forwarding of incoming traffic</Text>
+        <VStack maxW="60%">
+          <Heading fontSize="lg">Port Forwarding</Heading>
+          <Text color="muted.500" isTruncated>
+            Set rules for DNAT forwarding of incoming traffic
+          </Text>
         </VStack>
         <ModalForm
           title="Add Rewrite/Forwarding Rule"
