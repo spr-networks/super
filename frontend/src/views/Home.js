@@ -32,6 +32,7 @@ const Home = (props) => {
       )
       .catch((error) => error)
 
+
     api
       .features()
       .then((res) => {

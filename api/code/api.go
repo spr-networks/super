@@ -164,6 +164,8 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 		reply = append(reply, "wireguard")
 	}
 
+
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
 }
@@ -222,11 +224,12 @@ var Devicesmtx sync.Mutex
 func convertDevicesPublic(devices map[string]DeviceEntry) map[string]DeviceEntry {
 	// do not pass PSK key material
 	scrubbed_devices := make(map[string]DeviceEntry)
-	for i, entry := range scrubbed_devices {
-		if entry.PSKEntry.Psk != "" {
-			entry.PSKEntry.Psk = "**"
+	for i, entry := range devices {
+		new_entry := entry
+		if new_entry.PSKEntry.Psk != "" {
+			new_entry.PSKEntry.Psk = "**"
 		}
-		scrubbed_devices[i] = entry
+		scrubbed_devices[i] = new_entry
 	}
 	return scrubbed_devices
 }

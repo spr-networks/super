@@ -107,6 +107,11 @@ const SidebarItem = (props) => {
       display.base = 'none'
     }
 
+    // menu items hidden when plus mode is disabled
+    if (item.plus === true && isPlusDisabled) {
+      return null
+    }
+
     return (
       <Box key={index} w="100%" display={display}>
         {item.views === undefined ? (
