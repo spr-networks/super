@@ -88,6 +88,10 @@ table inet filter {
     # drop dhcp requests, multicast ports from upstream
     $(if [ "$WANIF" ]; then echo "iifname $WANIF udp dport {67, 1900, 5353} counter jump DROPLOGINP"; fi)
 
+    # Drop input from the site to site interfaces.
+
+    counter iifname "site*" jump DROPLOGINP
+
     # drop ssh, iperf from upstream
     $(if [ "$WANIF" ]; then echo "counter iifname $WANIF tcp dport vmap @upstream_tcp_port_drop"; fi)
 
@@ -123,11 +127,6 @@ table inet filter {
   #chain USERDEF_INPUT{
   #}
 
-  map site_forward {
-    type ipv4_addr . ipv4_addr : verdict;
-    flags interval;
-  }
-
   chain FORWARD {
     type filter hook forward priority 0; policy drop;
 
@@ -154,6 +153,9 @@ table inet filter {
     counter ip saddr . ip daddr . ip protocol . tcp dport vmap @fwd_block
     counter ip saddr . ip daddr . ip protocol . udp dport vmap @fwd_block
 
+    # Forward to Site VPN if client has internet access
+    counter oifname "site*" ip saddr . iifname vmap @internet_access
+
     # Forward to WAN
     $(if [ "$WANIF" ]; then echo "counter oifname $WANIF ip saddr . iifname vmap @internet_access"; fi)
 
@@ -167,9 +169,6 @@ table inet filter {
     $(if [ "$VLANSIF" ]; then echo "counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access"; fi)
 
     jump CUSTOM_GROUPS
-
-    # Site forwarding
-    oifname "site*" ip saddr . ip daddr vmap @site_forward
 
     # Fallthrough to log + drop
     counter jump DROPLOGFWD
@@ -320,7 +319,7 @@ table inet nat {
     $(if [ "$WANIF" ]; then echo "oifname $WANIF counter masquerade"; fi)
 
     # Masquerade site-to-site VPN
-    oifname "site*" counter masquerade
+    counter oifname "site*" masquerade
   }
 
   #chain USERDEF_POSTROUTING {
