@@ -5,7 +5,7 @@ import QRCode from 'react-qr-code'
 import Icon from 'FontAwesomeUtils'
 import { faClone, faFile } from '@fortawesome/free-solid-svg-icons'
 
-import { Box, Button, HStack, ScrollView, VStack } from 'native-base'
+import { Box, Button, HStack, ScrollView, Text, VStack } from 'native-base'
 
 const WireguardConfig = (props) => {
   if (!props.config) {
@@ -64,14 +64,14 @@ const WireguardConfig = (props) => {
         borderWidth={1}
         borderColor="muted.200"
         h="10vh"
-        p="2"
+        p={2}
       >
-        {config}
+        <Text fontSize="xs">{config}</Text>
       </ScrollView>
 
       <HStack space={2} justifyContent="stretch">
         <Button
-          flex="1"
+          flex={1}
           variant="outline"
           colorScheme="primary"
           size="sm"
@@ -82,7 +82,7 @@ const WireguardConfig = (props) => {
         </Button>
 
         <Button
-          flex="1"
+          flex={1}
           variant="outline"
           colorScheme="primary"
           size="sm"
