@@ -51,7 +51,7 @@ const DNSOverrideList = (props) => {
   return (
     <>
       <HStack justifyContent="space-between" alignItems="center" mb={4}>
-        <Stack direction={{ base: 'column', md: 'row' }} space={2}>
+        <Stack direction={{ base: 'column', md: 'row' }} space={1}>
           <Heading fontSize="md">{props.title || 'DNS Override'}</Heading>
           <Text color="muted.500">Set rules for DNS queries</Text>
         </Stack>
@@ -87,7 +87,7 @@ const DNSOverrideList = (props) => {
               py={2}
             >
               <Stack
-                direction={{ base: 'column', md: 'row' }}
+                direction={{ base: 'row' }}
                 space={3}
                 justifyContent="space-evenly"
                 alignItems="center"

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faPlus } from '@fortawesome/free-solid-svg-icons'
+import { faCirclePlus, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { Button, FormControl, Input, Modal, Select } from 'native-base'
 
 const ModalConfirm = (props) => {
@@ -59,11 +59,11 @@ const ModalConfirm = (props) => {
 
   let triggerProps = {
     size: 'sm',
-    variant: 'outline',
-    colorScheme: 'primary',
-    borderColor: 'info.400',
+    variant: 'ghost', //'outline',
+    colorScheme: 'blueGray',
+    //borderColor: 'info.400',
     rounded: 'full',
-    leftIcon: <Icon icon={faPlus} />
+    leftIcon: <Icon icon={faCirclePlus} />
   }
 
   const updateTrigger = () => {

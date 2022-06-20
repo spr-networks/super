@@ -68,7 +68,7 @@ const PluginList = (props) => {
         <Box alignSelf="center">
           <ModalForm
             title="Add a new Plugin"
-            triggerText="Add a plugin"
+            triggerText="Add Plugin"
             modalRef={refModal}
           >
             <AddPlugin notifyChange={notifyChange} />
