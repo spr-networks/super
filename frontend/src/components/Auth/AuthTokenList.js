@@ -120,19 +120,6 @@ const AuthTokenList = (props) => {
         p={4}
         my={4}
       >
-        {tokens.length ? (
-          <VStack space={2}>
-            <Text alignSelf={'center'}>No tokens added</Text>
-            <Button
-              variant="subtle"
-              colorScheme="muted"
-              leftIcon={<Icon icon={faCirclePlus} />}
-              onPress={() => setIsModalOpen(true)}
-            >
-              Add token
-            </Button>
-          </VStack>
-        ) : null}
         <FlatList
           data={tokens}
           renderItem={({ item }) => (
@@ -178,9 +165,22 @@ const AuthTokenList = (props) => {
           )}
           keyExtractor={(item) => item.Token}
         />
-        {tokens !== null && tokens.length === 0 ? (
-          <Text py={4}>There are no API tokens added yet</Text>
-        ) : null}
+
+        <VStack>
+          {tokens !== null && tokens.length === 0 ? (
+            <Text alignSelf="center">There are no API tokens added yet</Text>
+          ) : null}
+          <Button
+            display={{ base: 'flex', md: tokens.length ? 'none' : 'flex' }}
+            variant="subtle"
+            colorScheme="muted"
+            leftIcon={<Icon icon={faCirclePlus} />}
+            onPress={() => setIsModalOpen(true)}
+            mt={4}
+          >
+            Add token
+          </Button>
+        </VStack>
       </Box>
     </View>
   )
