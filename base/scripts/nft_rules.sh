@@ -123,6 +123,11 @@ table inet filter {
   #chain USERDEF_INPUT{
   #}
 
+  map site_forward {
+    type ipv4_addr . ipv4_addr : verdict;
+    flags interval;
+  }
+
   chain FORWARD {
     type filter hook forward priority 0; policy drop;
 
@@ -155,13 +160,16 @@ table inet filter {
     # Forward to wired LAN
     $(if [ "$LANIF" ]; then echo "counter oifname $LANIF ip saddr . iifname vmap @lan_access"; fi)
 
-    #forward LAN to wg -> Tbd test me
+    #forward LAN to wg
     $(if [ "$LANIF" ]; then echo "counter oifname wg0 ip saddr . iifname vmap @lan_access"; fi)
 
     # Forward to wireless LAN
     $(if [ "$VLANSIF" ]; then echo "counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access"; fi)
 
     jump CUSTOM_GROUPS
+
+    # Site forwarding
+    oifname "site*" ip saddr . ip daddr vmap @site_forward
 
     # Fallthrough to log + drop
     counter jump DROPLOGFWD
@@ -310,6 +318,9 @@ table inet nat {
     # Masquerade upstream traffic
 
     $(if [ "$WANIF" ]; then echo "oifname $WANIF counter masquerade"; fi)
+
+    # Masquerade site-to-site VPN
+    oifname "site*" counter masquerade
   }
 
   #chain USERDEF_POSTROUTING {
@@ -319,6 +330,17 @@ table inet nat {
 }
 
 table inet mangle {
+
+  map site_forward_mangle {
+    type ipv4_addr . ipv4_addr : verdict;
+    flags interval;
+  }
+
+  chain PREROUTING {
+    type filter hook prerouting priority -150; policy accept;
+    counter ip saddr . ip daddr vmap @site_forward_mangle
+  }
+
   chain PREROUTING {
     type filter hook prerouting priority -150; policy accept;
   }
