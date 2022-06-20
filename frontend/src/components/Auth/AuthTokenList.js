@@ -90,8 +90,13 @@ const AuthTokenList = (props) => {
           onSubmit={handleSubmit}
           trigger={(triggerProps) => {
             return (
-              <Button {...triggerProps} marginLeft="auto">
-                {'Add Token'}
+              <Button
+                {...triggerProps}
+                marginLeft="auto"
+                variant="ghost"
+                colorScheme="blueGray"
+              >
+                Add Token
               </Button>
             )
           }}
