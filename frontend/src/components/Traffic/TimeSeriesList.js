@@ -36,6 +36,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
         return
       }
 
+      //TODO cache
       wifiAPI
         .asns(ips)
         .then((asns) => {

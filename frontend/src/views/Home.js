@@ -31,29 +31,6 @@ const Home = (props) => {
         setPluginsEnabled(plugins.filter((p) => p.Enabled).map((p) => p.Name))
       )
       .catch((error) => error)
-
-
-    api
-      .features()
-      .then((res) => {
-        if (res.includes('wifi')) {
-          context.setIsWifiDisabled(false)
-        } else {
-          context.setIsWifiDisabled(true)
-        }
-      })
-      .catch((err) => {
-        context.setIsWifiDisabled(true)
-      })
-
-    pfwAPI
-      .config()
-      .then((res) => {
-        context.setIsPlusDisabled(false)
-      })
-      .catch((err) => {
-        context.setIsPlusDisabled(true)
-      })
   }, [])
 
   const flexDirection = useBreakpointValue({
