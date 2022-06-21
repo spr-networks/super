@@ -17,6 +17,10 @@ export class APIPfw extends API {
   updateBlock = (data, index) => this.put(`block/${index}`, data)
   deleteBlock = (index) => this.delete(`block/${index}`, {})
 
+  addSiteVPN = (data) => this.put('sitevpns', data)
+  updateSiteVPN = (data, index) => this.put(`sitevpns/${index}`, data)
+  deleteSiteVPN = (index) => this.delete(`sitevpns/${index}`, {})
+
   addGroups = (data) => this.put('group', data)
   updateGroups = (data, index) => this.put(`group/${index}`, data)
   deleteGroups = (index) => this.delete(`group/${index}`, {})
