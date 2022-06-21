@@ -173,7 +173,7 @@ const Token = ({
         onSubmitEditing={() => setIsOpen(false)}
       />
     )
-  }*/ else if (['DstPort', 'SrcPort', 'Tags', 'Groups'].includes(label)) {
+  }*/ else if (['DstPort', 'SrcPort', 'Tags', 'Groups', 'DstInterface'].includes(label)) {
     // TODO menu
     // TODO props.options && isMultiple= value == array
     const onSelect = (values) => {
@@ -183,7 +183,6 @@ const Token = ({
 
     let isDisabled = false
     let isMultiple = ['Tags', 'Groups'].includes(label)
-
     inputElement = (
       <InputSelect
         isDisabled={isDisabled}

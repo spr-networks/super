@@ -6,6 +6,7 @@ import {
   faCircleArrowRight,
   faClock,
   faEllipsis,
+  faForward,
   faObjectGroup,
   faRepeat,
   faTag,
@@ -346,6 +347,59 @@ const actions = [
       }
 
       return []
+    },
+    preSubmit: async function () {
+      return { ...this.values, Client: await parseClient(this.values.Client) }
+    },
+    submit: function (data, flow) {
+      let isUpdate = flow.index !== undefined
+
+      if (isUpdate) {
+        return pfwAPI.updateForward(data, flow.index)
+      }
+
+      return pfwAPI.addForward(data)
+    }
+  },
+  {
+    title: 'Forward to Site VPN Gateway',
+    cardType: 'action',
+    description:
+      'Forward traffic over a Site VPN',
+    color: 'purple.600',
+    icon: faForward,
+    params: [
+      {
+        name: 'Client',
+        type: PropTypes.string,
+        description: 'IP/CIDR or Group'
+      },
+      { name: 'OriginalDstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      {
+        name: 'DstInterface',
+        type: PropTypes.string,
+        description: 'Destination site (ex: site0)'
+      },
+    ],
+    values: {
+      Client: '0.0.0.0',
+      OriginalDstIP: '0.0.0.0',
+      DstInterface: ''
+    },
+    getOptions: function (name = 'DstInterface') {
+      if (name == 'DstInterface') {
+
+        return new Promise((resolve, reject) => {
+          //deviceAPI.groups().then((groups) => resolve(groups.map(toOption)))
+          pfwAPI.config().then((config) => {
+            let s = []
+            for (let i = 0; i < config.SiteVPNs.length; i++) {
+              s.push({label: "site" + i, value: "site" + i})
+            }
+            resolve(s)
+          })
+        })
+      }
     },
     preSubmit: async function () {
       return { ...this.values, Client: await parseClient(this.values.Client) }
