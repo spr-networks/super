@@ -27,12 +27,14 @@ import {
 } from 'native-base'
 
 export default class DNSBlocklist extends React.Component {
-  state = { list: [],
-            blockedDomains: 0,
-            pending: false,
-            showModal: false,
-            modalType: '',
-            pendingItem : {} }
+  state = {
+    list: [],
+    blockedDomains: 0,
+    pending: false,
+    showModal: false,
+    modalType: '',
+    pendingItem: {}
+  }
 
   constructor(props) {
     super(props)
@@ -141,12 +143,10 @@ export default class DNSBlocklist extends React.Component {
       .putBlocklist(item)
       .then((res) => {
         this.notifyChange('blocklists')
-
       })
       .catch((error) => {
         this.context.error('API Failure: ' + error.message)
       })
-
   }
 
   render() {
@@ -175,17 +175,10 @@ export default class DNSBlocklist extends React.Component {
     let edit = true //this.props.edit !== undefined ? this.props.edit : true
 
     return (
-      <Box
-        _light={{ bg: 'warmGray.50' }}
-        _dark={{ bg: 'blueGray.800' }}
-        rounded="md"
-        width="100%"
-        p="4"
-        mb="4"
-      >
-        <HStack justifyContent="space-between">
-          <VStack>
-            <Heading fontSize="xl">DNS Blocklists</Heading>
+      <>
+        <HStack justifyContent="space-between" alignItems="center" mb={4}>
+          <Stack direction={{ base: 'column', md: 'row' }} space={2}>
+            <Heading fontSize="md">DNS Blocklists</Heading>
 
             {!this.state.pending ? (
               <Text color="muted.500">
@@ -197,125 +190,138 @@ export default class DNSBlocklist extends React.Component {
                 <Text color="muted.500">Update running...</Text>
               </HStack>
             )}
-          </VStack>
+          </Stack>
 
-          <Box alignSelf="center">
-            {!this.state.pending ? (
-              <ModalForm
-                title="Add DNS Blocklist"
-                triggerText="add"
-                triggerClass="pull-right"
-                triggerIcon={faPlus}
-                modalRef={this.refAddBlocklistModal}
-              >
-                <DNSAddBlocklist notifyChange={notifyChangeBlocklist} />
-              </ModalForm>
-            ) : null}
-          </Box>
+          {!this.state.pending ? (
+            <ModalForm
+              title="Add DNS Blocklist"
+              triggerText="Add List"
+              triggerClass="pull-right"
+              modalRef={this.refAddBlocklistModal}
+            >
+              <DNSAddBlocklist notifyChange={notifyChangeBlocklist} />
+            </ModalForm>
+          ) : null}
         </HStack>
 
-        <FlatList
-          data={this.state.list}
-          renderItem={({ item }) => (
-            <Box
-              borderBottomWidth="1"
-              _dark={{
-                borderColor: 'muted.600'
-              }}
-              borderColor="muted.200"
-              py="2"
-            >
-              <HStack
-                space={3}
-                justifyContent="space-between"
-                alignItems="center"
+        <Box
+          _light={{ bg: 'warmGray.50' }}
+          _dark={{ bg: 'blueGray.800' }}
+          rounded="md"
+          width="100%"
+          p="4"
+          mb="4"
+        >
+          <FlatList
+            data={this.state.list}
+            renderItem={({ item }) => (
+              <Box
+                borderBottomWidth="1"
+                _dark={{
+                  borderColor: 'muted.600'
+                }}
+                borderColor="muted.200"
+                py="2"
               >
-                <Text minW="50%" isTruncated>
-                  {item.URI}
-                </Text>
-
-                <Box>
-                  <Switch
-                    isDisabled={this.state.pending}
-                    defaultIsChecked={item.Enabled}
-                    onValueChange={() =>
-                      this.handleItemSwitch(item, !item.Enabled)
-                    }
-                  />
-                </Box>
-
-                <HStack flex={2} space={1} alignSelf="center" alignItems="center">
-
-                  {item.Tags ? item.Tags.map((entry) => (
-                    <Badge key={item.URI + entry} variant="outline">
-                      {entry}
-                    </Badge>
-                  )): null}
-                </HStack>
-
-                <Menu
-                  trigger={(triggerProps) => {
-                    return (
-                      <IconButton
-                        display={{ base: edit ? 'flex' : 'none' }}
-                        size="xs"
-                        variant="ghost"
-                        icon={<Icon icon={faPen} />}
-                        {...triggerProps}
-                      />
-                    )
-                  }}
+                <HStack
+                  space={3}
+                  justifyContent="space-between"
+                  alignItems="center"
                 >
-                  <Menu.OptionGroup
-                    title="Tags"
-                    type="checkbox"
-                    defaultValue={item.Tags ? item.Tags : []}
-                    onChange={(value) => handleChangeTags(item, value) }
+                  <Text minW="50%" isTruncated>
+                    {item.URI}
+                  </Text>
+
+                  <Box>
+                    <Switch
+                      isDisabled={this.state.pending}
+                      defaultIsChecked={item.Enabled}
+                      onValueChange={() =>
+                        this.handleItemSwitch(item, !item.Enabled)
+                      }
+                    />
+                  </Box>
+
+                  <HStack
+                    flex={2}
+                    space={1}
+                    alignSelf="center"
+                    alignItems="center"
                   >
-                    {[...new Set(defaultTags.concat(item.Tags ? item.Tags : []))].map(
-                      (tag) => (
+                    {item.Tags
+                      ? item.Tags.map((entry) => (
+                          <Badge key={item.URI + entry} variant="outline">
+                            {entry}
+                          </Badge>
+                        ))
+                      : null}
+                  </HStack>
+
+                  <Menu
+                    trigger={(triggerProps) => {
+                      return (
+                        <IconButton
+                          display={{ base: edit ? 'flex' : 'none' }}
+                          size="xs"
+                          variant="ghost"
+                          icon={<Icon icon={faPen} />}
+                          {...triggerProps}
+                        />
+                      )
+                    }}
+                  >
+                    <Menu.OptionGroup
+                      title="Tags"
+                      type="checkbox"
+                      defaultValue={item.Tags ? item.Tags : []}
+                      onChange={(value) => handleChangeTags(item, value)}
+                    >
+                      {[
+                        ...new Set(
+                          defaultTags.concat(item.Tags ? item.Tags : [])
+                        )
+                      ].map((tag) => (
                         <Menu.ItemOption key={tag} value={tag}>
                           {tag}
                         </Menu.ItemOption>
-                      )
-                    )}
-                    <Menu.ItemOption
-                      key="newTag"
-                      onPress={() => {
-                        this.setState({ showModal: true, modalType: 'Tag', pendingItem: item })
-                      }}
-                    >
-                      New Tag...
-                    </Menu.ItemOption>
-                  </Menu.OptionGroup>
-                </Menu>
+                      ))}
+                      <Menu.ItemOption
+                        key="newTag"
+                        onPress={() => {
+                          this.setState({
+                            showModal: true,
+                            modalType: 'Tag',
+                            pendingItem: item
+                          })
+                        }}
+                      >
+                        New Tag...
+                      </Menu.ItemOption>
+                    </Menu.OptionGroup>
+                  </Menu>
 
+                  <IconButton
+                    alignSelf="center"
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="secondary"
+                    icon={<Icon icon={faXmark} />}
+                    onPress={() => this.deleteListItem(item)}
+                  />
+                </HStack>
+              </Box>
+            )}
+            keyExtractor={(item) => item.URI}
+          />
 
-                <IconButton
-                  alignSelf="center"
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="secondary"
-                  icon={<Icon icon={faXmark} />}
-                  onPress={() => this.deleteListItem(item)}
-                />
-              </HStack>
-
-            </Box>
-
-
-          )}
-          keyExtractor={(item) => item.URI}
-        />
-
-        <ModalConfirm
-          type={this.state.modalType}
-          onSubmit={(v) => handleSubmitNew(this.state.pendingItem, v)}
-          onClose={() => this.setState({ showModal: false })}
-          isOpen={this.state.showModal}
-        />
-
-      </Box>
+          <ModalConfirm
+            type={this.state.modalType}
+            onSubmit={(v) => handleSubmitNew(this.state.pendingItem, v)}
+            onClose={() => this.setState({ showModal: false })}
+            isOpen={this.state.showModal}
+          />
+        </Box>
+      </>
     )
   }
 }

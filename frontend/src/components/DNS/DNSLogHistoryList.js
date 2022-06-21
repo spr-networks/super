@@ -354,132 +354,134 @@ const DNSLogHistoryList = (props) => {
   }, [list, filterText, page])
 
   return (
-    <Box
-      _light={{ bg: 'warmGray.50' }}
-      _dark={{ bg: 'blueGray.800' }}
-      rounded="md"
-      width="100%"
-      p="4"
-    >
-      <ModalForm
-        title={
-          'Add ' +
-          (selectedType == 'block' ? 'block' : 'override') +
-          ' for Domain'
-        }
-        modalRef={modalRef}
-        hideButton={true}
+    <>
+      <HStack space={2}>
+        <Heading fontSize="md">{filterIps.join(',')} DNS Log</Heading>
+        {filterIps.length ? (
+          <Text color="muted.500">{total} records</Text>
+        ) : null}
+      </HStack>
+      <Box
+        _light={{ bg: 'warmGray.50' }}
+        _dark={{ bg: 'blueGray.800' }}
+        rounded="md"
+        width="100%"
+        p={4}
+        my={4}
       >
-        <DNSAddOverride
-          type={selectedType}
-          domain={selectedDomain}
-          clientip={filterIps.length == 1 ? filterIps[0] : '*'}
-          notifyChange={notifyChange}
-        />
-      </ModalForm>
+        <ModalForm
+          title={
+            'Add ' +
+            (selectedType == 'block' ? 'block' : 'override') +
+            ' for Domain'
+          }
+          modalRef={modalRef}
+          hideButton={true}
+        >
+          <DNSAddOverride
+            type={selectedType}
+            domain={selectedDomain}
+            clientip={filterIps.length == 1 ? filterIps[0] : '*'}
+            notifyChange={notifyChange}
+          />
+        </ModalForm>
 
-      <VStack space={2} mb="12">
-        <HStack space={2}>
-          <Heading fontSize="lg">{filterIps.join(',')} DNS Log</Heading>
-          {filterIps.length ? (
-            <Text color="muted.500">{total} records</Text>
-          ) : null}
-        </HStack>
-
-        <Stack space={2} direction={{ base: 'column', md: 'row' }}>
-          <FormControl flex="2" maxW={{ base: '100%', md: '1/3' }}>
-            <FormControl.Label>Client</FormControl.Label>
-            <ClientSelect
-              isDisabled
-              value={filterIps ? filterIps[0] : null}
-              onChange={handleChangeIp}
-            />
-          </FormControl>
-
-          <FormControl
-            flex="2"
-            display={{
-              base: filterIps.length && list.length ? 'flex' : 'none'
-            }}
-          >
-            <>
-              <FormControl.Label>Search</FormControl.Label>
-
-              <Input
-                type="text"
-                name="filterText"
-                size="lg"
-                placeholder="Filter domain..."
-                value={filterText}
-                onChangeText={handleChange}
-                InputRightElement={
-                  <Icon icon={faMagnifyingGlass} color="muted.400" mr={2} />
-                }
+        <VStack space={2} mb="12">
+          <Stack space={2} direction={{ base: 'column', md: 'row' }}>
+            <FormControl flex="2" maxW={{ base: '100%', md: '1/3' }}>
+              <FormControl.Label>Client</FormControl.Label>
+              <ClientSelect
+                isDisabled
+                value={filterIps ? filterIps[0] : null}
+                onChange={handleChangeIp}
               />
-            </>
-          </FormControl>
+            </FormControl>
 
-          <FormControl
-            flex="1"
-            display={{
-              base: filterIps.length && list.length ? 'flex' : 'none'
-            }}
-          >
-            <>
-              <FormControl.Label>Delete history</FormControl.Label>
-              <Button
-                size="md"
-                variant="subtle"
-                colorScheme="danger"
-                leftIcon={<Icon icon={faTrash} />}
-                onPress={deleteHistory}
-              >
-                Delete
-              </Button>
-            </>
-          </FormControl>
-        </Stack>
+            <FormControl
+              flex="2"
+              display={{
+                base: filterIps.length && list.length ? 'flex' : 'none'
+              }}
+            >
+              <>
+                <FormControl.Label>Search</FormControl.Label>
 
-        {filterIps.length && !list.length ? (
-          <HStack space={1}>
-            <Spinner
-              alignSelf="flex-start"
-              accessibilityLabel="Loading DNS logs..."
+                <Input
+                  type="text"
+                  name="filterText"
+                  size="lg"
+                  placeholder="Filter domain..."
+                  value={filterText}
+                  onChangeText={handleChange}
+                  InputRightElement={
+                    <Icon icon={faMagnifyingGlass} color="muted.400" mr={2} />
+                  }
+                />
+              </>
+            </FormControl>
+
+            <FormControl
+              flex="1"
+              display={{
+                base: filterIps.length && list.length ? 'flex' : 'none'
+              }}
+            >
+              <>
+                <FormControl.Label>Delete history</FormControl.Label>
+                <Button
+                  size="md"
+                  variant="subtle"
+                  colorScheme="danger"
+                  leftIcon={<Icon icon={faTrash} />}
+                  onPress={deleteHistory}
+                >
+                  Delete
+                </Button>
+              </>
+            </FormControl>
+          </Stack>
+
+          {filterIps.length && !list.length ? (
+            <HStack space={1}>
+              <Spinner
+                alignSelf="flex-start"
+                accessibilityLabel="Loading DNS logs..."
+              />
+              <Text color="muted.500">Loading DNS logs...</Text>
+            </HStack>
+          ) : null}
+        </VStack>
+
+        <FlatList
+          data={listFiltered}
+          renderItem={({ item, index }) => (
+            <ListItem
+              item={item}
+              hideClient={hideClient}
+              handleClickDomain={handleClickDomain}
+              triggerAlert={triggerAlert}
             />
-            <Text color="muted.500">Loading DNS logs...</Text>
+          )}
+          keyExtractor={(item) => item.Timestamp + item.Remote}
+        />
+
+        {total > 20 ? (
+          <HStack width="100%" space={2}>
+            <Button
+              flex="1"
+              variant="ghost"
+              isDisabled={page <= 1}
+              onPress={() => setPage(page > 1 ? page - 1 : 1)}
+            >
+              &larr; Previous
+            </Button>
+            <Button flex="1" variant="ghost" onPress={() => setPage(page + 1)}>
+              Next &rarr;
+            </Button>
           </HStack>
         ) : null}
-      </VStack>
-
-      <FlatList
-        data={listFiltered}
-        renderItem={({ item, index }) => (
-          <ListItem
-            item={item}
-            hideClient={hideClient}
-            handleClickDomain={handleClickDomain}
-            triggerAlert={triggerAlert}
-          />
-        )}
-        keyExtractor={(item) => item.Timestamp + item.Remote}
-      />
-
-      {total > 20 ? (
-        <HStack width="100%" space={2}>
-          <Button
-            flex="1"
-            variant="ghost"
-            isDisabled={page <= 1}
-            onPress={() => setPage(page > 1 ? page - 1 : 1)}
-          >
-            &larr; Previous
-          </Button>
-          <Button flex="1" variant="ghost" onPress={() => setPage(page + 1)}>
-            Next &rarr;
-          </Button>
-        </HStack>
-      ) : null}
-    </Box>
+      </Box>
+    </>
   )
 }
 

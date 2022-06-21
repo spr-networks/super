@@ -308,7 +308,7 @@ export default class Traffic extends Component {
         >
           <HStack alignItems="center">
             <VStack>
-              <Heading fontSize="lg">Device WAN Traffic</Heading>
+              <Heading fontSize="md">Device WAN Traffic</Heading>
               <Text color="muted.500">
                 IN: {prettySize(this.state.wan.totalIn)}, OUT:{' '}
                 {prettySize(this.state.wan.totalOut)}
@@ -337,7 +337,7 @@ export default class Traffic extends Component {
         >
           <HStack alignItems="center">
             <VStack>
-              <Heading fontSize="lg">Device LAN Traffic</Heading>
+              <Heading fontSize="md">Device LAN Traffic</Heading>
               <Text color="muted.500">
                 IN: {prettySize(this.state.lan.totalIn)}, OUT:{' '}
                 {prettySize(this.state.lan.totalOut)}

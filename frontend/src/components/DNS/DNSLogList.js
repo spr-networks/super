@@ -2,7 +2,11 @@ import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faPlus, faTimes } from '@fortawesome/free-solid-svg-icons'
+import {
+  faCirclePlus,
+  faPlus,
+  faTimes
+} from '@fortawesome/free-solid-svg-icons'
 
 import { logAPI } from 'api/DNS'
 import ModalConfirm from 'components/ModalConfirm'
@@ -24,8 +28,7 @@ const DNSLogList = ({ title, description, ...props }) => {
   const context = useContext(AlertContext)
   const [type, setType] = useState(props.type)
   const [list, setList] = useState([])
-
-  const refModal = React.createRef()
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   useEffect(() => {
     refreshBlocklists()
@@ -77,60 +80,79 @@ const DNSLogList = ({ title, description, ...props }) => {
   }
 
   const handleSubmit = (value) => {
+    setIsModalOpen(false)
     addListItem(value)
   }
 
+  const triggerAdd = (triggerProps) => {
+    return (
+      <Button {...triggerProps} marginLeft="auto">
+        {'Add ' + type}
+      </Button>
+    )
+  }
+
   return (
-    <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      rounded="md"
-      width="100%"
-      p="4"
-      mb="4"
-    >
-      <HStack alignItems="center">
+    <>
+      <HStack alignItems="center" mb={4}>
         <VStack>
-          <Heading fontSize="xl">{title}</Heading>
+          <Heading fontSize="md">{title}</Heading>
           <Text color="muted.500">{description}</Text>
         </VStack>
 
         <ModalConfirm
           type={type}
           onSubmit={handleSubmit}
-          trigger={(triggerProps) => {
-            return (
-              <Button {...triggerProps} marginLeft="auto">
-                {'Add ' + type}
-              </Button>
-            )
-          }}
+          trigger={triggerAdd}
+          isOpen={isModalOpen}
         />
       </HStack>
 
-      <FlatList
-        data={list}
-        keyExtractor={(item, index) => index}
-        renderItem={({ item }) => (
-          <HStack
-            py={4}
-            borderBottomWidth={1}
-            _light={{ borderBottomColor: 'muted.200' }}
-            _dark={{ borderBottomColor: 'muted.600' }}
-          >
-            <Text>{item}</Text>
+      <Box
+        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+        rounded="md"
+        width="100%"
+        p={4}
+        mb={4}
+      >
+        {!list.length ? (
+          <VStack space={2}>
+            <Text alignSelf={'center'}>List is empty</Text>
+            <Button
+              variant="subtle"
+              colorScheme="muted"
+              leftIcon={<Icon icon={faCirclePlus} />}
+              onPress={() => setIsModalOpen(true)}
+            >
+              {`Add ${title.replace(/ List$/, '')}`}
+            </Button>
+          </VStack>
+        ) : null}
+        <FlatList
+          data={list}
+          keyExtractor={(item, index) => index}
+          renderItem={({ item }) => (
+            <HStack
+              py={4}
+              borderBottomWidth={1}
+              _light={{ borderBottomColor: 'muted.200' }}
+              _dark={{ borderBottomColor: 'muted.600' }}
+            >
+              <Text>{item}</Text>
 
-            <IconButton
-              variant="ghost"
-              colorScheme="secondary"
-              icon={<Icon icon={faTimes} />}
-              size="sm"
-              onPress={() => deleteListItem(item)}
-              marginLeft="auto"
-            />
-          </HStack>
-        )}
-      />
-    </Box>
+              <IconButton
+                variant="ghost"
+                colorScheme="secondary"
+                icon={<Icon icon={faTimes} />}
+                size="sm"
+                onPress={() => deleteListItem(item)}
+                marginLeft="auto"
+              />
+            </HStack>
+          )}
+        />
+      </Box>
+    </>
   )
 }
 

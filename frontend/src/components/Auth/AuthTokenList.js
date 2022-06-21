@@ -1,6 +1,10 @@
-import { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
+import {
+  faCirclePlus,
+  faPlus,
+  faXmark
+} from '@fortawesome/free-solid-svg-icons'
 import { format as timeAgo } from 'timeago.js'
 
 import {
@@ -11,6 +15,7 @@ import {
   IconButton,
   Text,
   View,
+  VStack,
   FlatList,
   useColorModeValue
 } from 'native-base'
@@ -23,6 +28,7 @@ const AuthTokenList = (props) => {
   const context = useContext(AlertContext)
   const [status, setStatus] = useState('not configured')
   const [tokens, setTokens] = useState([])
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const expires = {
     Never: 0,
@@ -57,6 +63,8 @@ const AuthTokenList = (props) => {
   const handleAddToken = () => {}
 
   const handleSubmit = (exp) => {
+    setIsModalOpen(false)
+
     if (!Object.keys(expires).includes(exp)) {
       exp = '30 days'
     }
@@ -78,31 +86,40 @@ const AuthTokenList = (props) => {
 
   let options = Object.keys(expires)
 
+  const triggerAdd = (triggerProps) => {
+    return (
+      <Button
+        {...triggerProps}
+        marginLeft="auto"
+        variant="ghost"
+        colorScheme="blueGray"
+      >
+        Add Token
+      </Button>
+    )
+  }
+
   return (
     <View mt={4}>
+      <HStack space={1} alignItems="center">
+        <Heading fontSize="md">API Tokens</Heading>
+
+        <ModalConfirm
+          type="Expire"
+          options={options}
+          defaultValue="Never"
+          onSubmit={handleSubmit}
+          trigger={triggerAdd}
+          isOpen={isModalOpen}
+        />
+      </HStack>
       <Box
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
         rounded="md"
         width="100%"
         p={4}
+        my={4}
       >
-        <HStack space="1" mb="2">
-          <Heading fontSize="lg">API Tokens</Heading>
-
-          <ModalConfirm
-            type="Expire"
-            options={options}
-            defaultValue="Never"
-            onSubmit={handleSubmit}
-            trigger={(triggerProps) => {
-              return (
-                <Button {...triggerProps} marginLeft="auto">
-                  {'Add Token'}
-                </Button>
-              )
-            }}
-          />
-        </HStack>
         <FlatList
           data={tokens}
           renderItem={({ item }) => (
@@ -116,11 +133,13 @@ const AuthTokenList = (props) => {
                 w="100%"
                 space={3}
                 alignItems="center"
-                justifyContent="stretch"
+                __justifyContent="stretch"
               >
                 <Text flex={1}>{item.Name}</Text>
-                <Text flex={1}>{item.Token}</Text>
-                <HStack flex={1} space={1}>
+                <Text flex={1} w="3/6">
+                  {item.Token}
+                </Text>
+                <HStack w="2/6" space={1} justifyContent="flex-end">
                   <Text color="muted.500">Expire</Text>
                   <Text
                     color={
@@ -146,9 +165,22 @@ const AuthTokenList = (props) => {
           )}
           keyExtractor={(item) => item.Token}
         />
-        {tokens !== null && tokens.length === 0 ? (
-          <Text py={4}>There are no API tokens added yet</Text>
-        ) : null}
+
+        <VStack>
+          {tokens !== null && tokens.length === 0 ? (
+            <Text alignSelf="center">There are no API tokens added yet</Text>
+          ) : null}
+          <Button
+            display={{ base: 'flex', md: tokens.length ? 'none' : 'flex' }}
+            variant="subtle"
+            colorScheme="muted"
+            leftIcon={<Icon icon={faCirclePlus} />}
+            onPress={() => setIsModalOpen(true)}
+            mt={4}
+          >
+            Add token
+          </Button>
+        </VStack>
       </Box>
     </View>
   )

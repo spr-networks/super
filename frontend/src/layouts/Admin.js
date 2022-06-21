@@ -270,7 +270,7 @@ const AdminLayout = (props) => {
                minH="calc(100vh - 64px)"*/}
               <Box
                 flex={1}
-                p={{ base: 0, md: 4 }}
+                p={{ base: 4, md: 4 }}
                 safeAreaTop
                 ref={mainPanel}
                 minH="calc(100vh - 64px)"

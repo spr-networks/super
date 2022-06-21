@@ -45,7 +45,7 @@ const TimeSeries = (props) => {
         space="2"
         justifyContent="space-between"
       >
-        <Heading fontSize="xl">{props.title || props.type}</Heading>
+        <Heading fontSize="md">{props.title || props.type}</Heading>
 
         <Stack
           direction={{ base: 'column', md: 'row' }}

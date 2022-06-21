@@ -681,7 +681,7 @@ const FlowList = (props) => {
       <Box flex={1} display={{ base: 'flex' }}>
         <HStack justifyContent="space-between" alignContent="center">
           <VStack space={2}>
-            <Heading fontSize="xl">Flows</Heading>
+            <Heading fontSize="md">Flows</Heading>
             {!flows.length ? <Text>No flows configured</Text> : null}
           </VStack>
         </HStack>

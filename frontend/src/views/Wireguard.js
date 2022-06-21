@@ -68,23 +68,23 @@ export default class Wireguard extends Component {
 
     return (
       <View>
+        <HStack alignItems="center" mb={4}>
+          <Heading fontSize="md">Wireguard</Heading>
+
+          <Switch
+            marginLeft="auto"
+            defaultIsChecked={this.state.isUp}
+            onValueChange={this.handleChange}
+          />
+        </HStack>
         <Box
           rounded="md"
           _light={{ bg: 'warmGray.50' }}
           _dark={{ bg: 'blueGray.800' }}
           width="100%"
-          p="4"
-          mb="4"
+          p={4}
+          mb={4}
         >
-          <HStack alignItems="center" mb="4">
-            <Heading fontSize="xl">Wireguard</Heading>
-
-            <Switch
-              marginLeft="auto"
-              defaultIsChecked={this.state.isUp}
-              onValueChange={this.handleChange}
-            />
-          </HStack>
           <Box>
             {this.state.config.listenPort ? (
               <Text>

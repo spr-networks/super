@@ -61,70 +61,70 @@ const PluginList = (props) => {
   }
 
   return (
-    <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      rounded="md"
-      width="100%"
-      p="4"
-    >
-      <HStack justifyContent="space-between">
-        <Heading fontSize="xl" pb="3" alignSelf="center">
-          Plugins
-        </Heading>
+    <>
+      <HStack justifyContent="space-between" alignItems="center">
+        <Heading fontSize="md">Plugins</Heading>
 
         <Box alignSelf="center">
           <ModalForm
             title="Add a new Plugin"
-            triggerText="Add a plugin"
+            triggerText="Add Plugin"
             modalRef={refModal}
           >
             <AddPlugin notifyChange={notifyChange} />
           </ModalForm>
         </Box>
       </HStack>
+      <Box
+        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+        rounded="md"
+        width="100%"
+        p={4}
+        my={4}
+      >
+        <FlatList
+          data={list}
+          renderItem={({ item }) => (
+            <Box
+              borderBottomWidth="1"
+              _dark={{
+                borderColor: 'muted.600'
+              }}
+              borderColor="muted.200"
+              py="2"
+            >
+              <HStack space={3} justifyContent="space-between">
+                <VStack minW="20%">
+                  <Text bold>{item.Name}</Text>
+                  <Text>{item.URI}</Text>
+                </VStack>
 
-      <FlatList
-        data={list}
-        renderItem={({ item }) => (
-          <Box
-            borderBottomWidth="1"
-            _dark={{
-              borderColor: 'muted.600'
-            }}
-            borderColor="muted.200"
-            py="2"
-          >
-            <HStack space={3} justifyContent="space-between">
-              <VStack minW="20%">
-                <Text bold>{item.Name}</Text>
-                <Text>{item.URI}</Text>
-              </VStack>
+                <Text alignSelf="center" isTruncated>
+                  {item.UnixPath}
+                </Text>
+                <Spacer />
+                <Box w="100" alignItems="center" alignSelf="center">
+                  <Switch
+                    defaultIsChecked={item.Enabled}
+                    onValueChange={() => handleChange(item, !item.Enabled)}
+                  />
+                </Box>
 
-              <Text alignSelf="center" isTruncated>
-                {item.UnixPath}
-              </Text>
-              <Spacer />
-              <Box w="100" alignItems="center" alignSelf="center">
-                <Switch
-                  defaultIsChecked={item.Enabled}
-                  onValueChange={() => handleChange(item, !item.Enabled)}
+                <IconButton
+                  alignSelf="center"
+                  size="sm"
+                  variant="ghost"
+                  colorScheme="secondary"
+                  icon={<Icon icon={faXmark} />}
+                  onPress={() => deleteListItem(item)}
                 />
-              </Box>
-
-              <IconButton
-                alignSelf="center"
-                size="sm"
-                variant="ghost"
-                colorScheme="secondary"
-                icon={<Icon icon={faXmark} />}
-                onPress={() => deleteListItem(item)}
-              />
-            </HStack>
-          </Box>
-        )}
-        keyExtractor={(item) => item.Name}
-      />
-    </Box>
+              </HStack>
+            </Box>
+          )}
+          keyExtractor={(item) => item.Name}
+        />
+      </Box>
+    </>
   )
 }
 

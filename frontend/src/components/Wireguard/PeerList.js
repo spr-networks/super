@@ -4,7 +4,8 @@ import {
   faPlus,
   faArrowCircleDown,
   faArrowCircleUp,
-  faXmark
+  faXmark,
+  faCirclePlus
 } from '@fortawesome/free-solid-svg-icons'
 
 import { wireguardAPI, deviceAPI } from 'api'
@@ -23,6 +24,7 @@ import {
   ScrollView,
   Text,
   View,
+  VStack,
   useColorModeValue
 } from 'native-base'
 
@@ -82,30 +84,28 @@ const PeerList = (props) => {
   return (
     <View>
       <ScrollView h="calc(100vh - 260px)">
+        <HStack justifyContent="space-between" mb={4}>
+          <Heading fontSize="lg" pb="3" alignSelf="center">
+            Peers
+          </Heading>
+
+          <Box alignSelf="center">
+            <ModalForm
+              title="Add Wireguard peer"
+              triggerText="Add Peer"
+              triggerClass="pull-right"
+              modalRef={refModal}
+            >
+              <WireguardAddPeer config={config} notifyChange={refreshPeers} />
+            </ModalForm>
+          </Box>
+        </HStack>
         <Box
           bg={useColorModeValue('warmGray.50', 'blueGray.800')}
           rounded="md"
           width="100%"
-          p="4"
+          p={4}
         >
-          <HStack justifyContent="space-between">
-            <Heading fontSize="lg" pb="3" alignSelf="center">
-              Peers
-            </Heading>
-
-            <Box alignSelf="center">
-              <ModalForm
-                title="Add Wireguard peer"
-                triggerText="add"
-                triggerClass="pull-right"
-                triggerIcon={faPlus}
-                modalRef={refModal}
-              >
-                <WireguardAddPeer config={config} notifyChange={refreshPeers} />
-              </ModalForm>
-            </Box>
-          </HStack>
-
           {peers !== null && peers.length ? (
             <FlatList
               data={peers}
@@ -168,29 +168,36 @@ const PeerList = (props) => {
               keyExtractor={(item, index) => `${item.Name}${index}`}
             />
           ) : null}
-          {peers !== null && peers.length === 0 ? (
-            <>
-              {config.listenPort ? (
-                <Text py="4">There are no peers configured yet</Text>
-              ) : (
-                <Text py="4">
-                  Wireguard is not running. See /configs/wireguard/wg0.conf
-                </Text>
-              )}
 
-              <Button
-                size="md"
-                variant="outline"
-                colorScheme="primary"
-                rounded="full"
-                borderColor="info.400"
-                leftIcon={<Icon icon={faPlus} />}
-                onPress={triggerModal}
-              >
-                add a new peer
-              </Button>
-            </>
-          ) : null}
+          <VStack>
+            {peers !== null && peers.length === 0 ? (
+              <>
+                {config.listenPort ? (
+                  <Text alignSelf="center">
+                    There are no peers configured yet
+                  </Text>
+                ) : (
+                  <Text alignSelf="center">
+                    Wireguard is not running. See /configs/wireguard/wg0.conf
+                  </Text>
+                )}
+              </>
+            ) : null}
+
+            <Button
+              display={{
+                base: 'flex',
+                md: peers !== null && peers.length === 0 ? 'flex' : 'none'
+              }}
+              variant="subtle"
+              colorScheme="muted"
+              leftIcon={<Icon icon={faCirclePlus} />}
+              onPress={triggerModal}
+              mt={4}
+            >
+              Add Peer
+            </Button>
+          </VStack>
         </Box>
       </ScrollView>
 
