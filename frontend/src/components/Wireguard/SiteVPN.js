@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Icon } from 'FontAwesomeUtils'
 import {
+  faCirclePlus,
   faPlus,
-  faArrowCircleDown,
-  faArrowCircleUp,
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -23,6 +22,7 @@ import {
   ScrollView,
   Text,
   View,
+  VStack,
   useColorModeValue
 } from 'native-base'
 
@@ -36,9 +36,9 @@ const SiteVPN = (props) => {
       for (let i = 0; i < config.SiteVPNs.length; i++) {
         let extension = {
           Index: i,
-          Interface: "site" + i
+          Interface: 'site' + i
         }
-        let new_obj = {...extension, ...config.SiteVPNs[i]}
+        let new_obj = { ...extension, ...config.SiteVPNs[i] }
         s.push(new_obj)
       }
 
@@ -51,11 +51,10 @@ const SiteVPN = (props) => {
   }, [])
 
   const deleteListItem = (site) => {
-
     pfwAPI
       .deleteSiteVPN(site.Index)
       .then(refreshSites)
-      .catch((err) => { })
+      .catch((err) => {})
   }
 
   const refModal = useRef(null)
@@ -66,31 +65,30 @@ const SiteVPN = (props) => {
 
   return (
     <View>
-      <ScrollView>
+      <ScrollView mt={4}>
+        <HStack justifyContent="space-between" space={1} alignItems="center">
+          <Heading fontSize="md" alignSelf="center">
+            Site-To-Site VPNs
+          </Heading>
+
+          <Box alignSelf="center">
+            <ModalForm
+              title="Add Site VPN"
+              triggerText="Add Site"
+              triggerClass="pull-right"
+              modalRef={refModal}
+            >
+              <WireguardAddSite notifyChange={refreshSites} />
+            </ModalForm>
+          </Box>
+        </HStack>
         <Box
           bg={useColorModeValue('warmGray.50', 'blueGray.800')}
           rounded="md"
           width="100%"
-          p="4"
+          p={4}
+          my={4}
         >
-          <HStack justifyContent="space-between">
-            <Heading fontSize="lg" pb="3" alignSelf="center">
-              Site-To-Site VPNs
-            </Heading>
-
-            <Box alignSelf="center">
-              <ModalForm
-                title="Add Site VPN"
-                triggerText="add"
-                triggerClass="pull-right"
-                triggerIcon={faPlus}
-                modalRef={refModal}
-              >
-                <WireguardAddSite notifyChange={refreshSites} />
-              </ModalForm>
-            </Box>
-          </HStack>
-
           {sites !== null && sites.length ? (
             <FlatList
               data={sites}
@@ -143,22 +141,27 @@ const SiteVPN = (props) => {
             />
           ) : null}
 
-          {sites !== null && sites.length === 0 ? (
-            <>
-              <Text py="4">There are no site VPNs configured yet</Text>
-              <Button
-                size="md"
-                variant="outline"
-                colorScheme="primary"
-                rounded="full"
-                borderColor="info.400"
-                leftIcon={<Icon icon={faPlus} />}
-                onPress={triggerModal}
-              >
-                add a new peer
-              </Button>
-            </>
-          ) : null}
+          <VStack>
+            {sites !== null && sites.length === 0 ? (
+              <Text alignSelf="center">
+                There are no site VPNs configured yet
+              </Text>
+            ) : null}
+
+            <Button
+              display={{
+                base: 'flex',
+                md: 'flex'
+              }}
+              variant={useColorModeValue('subtle', 'solid')}
+              colorScheme="muted"
+              leftIcon={<Icon icon={faCirclePlus} />}
+              onPress={triggerModal}
+              mt={4}
+            >
+              Add a Site
+            </Button>
+          </VStack>
         </Box>
       </ScrollView>
     </View>

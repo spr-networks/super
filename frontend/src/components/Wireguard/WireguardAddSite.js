@@ -32,7 +32,6 @@ export default class WireguardAddSite extends React.Component {
     PublicKey: ''
   }
 
-
   constructor(props) {
     super(props)
 
@@ -48,21 +47,21 @@ export default class WireguardAddSite extends React.Component {
 
   handleSubmit() {
     pfwAPI
-    .addSiteVPN({
-      Address: this.state.Address,
-      PeerPublicKey: this.state.PeerPublicKey,
-      PrivateKey: this.state.PrivateKey,
-      PresharedKey: this.state.PresharedKey,
-      Endpoint: this.state.Endpoint
-    }).then((ret) => {
+      .addSiteVPN({
+        Address: this.state.Address,
+        PeerPublicKey: this.state.PeerPublicKey,
+        PrivateKey: this.state.PrivateKey,
+        PresharedKey: this.state.PresharedKey,
+        Endpoint: this.state.Endpoint
+      })
+      .then((ret) => {
         if (this.props.notifyChange) {
           this.props.notifyChange('sites')
         }
-    })
-    .catch((error) => {
-      this.context.error("API Failure: " + error.message)
-    })
-
+      })
+      .catch((error) => {
+        this.context.error('API Failure: ' + error.message)
+      })
   }
 
   handleClickGenerate() {
@@ -74,11 +73,9 @@ export default class WireguardAddSite extends React.Component {
       .catch((err) => this.context.error('wireguardAPI.genKey Error: ' + err))
   }
 
-  componentDidMount() {
-  }
+  componentDidMount() {}
 
   render() {
-
     return (
       <VStack space={4}>
         <FormControl>
@@ -95,7 +92,6 @@ export default class WireguardAddSite extends React.Component {
             The remote wireguard VPN address and port, "1.2.3.4:51820"
           </FormControl.HelperText>
         </FormControl>
-
 
         <FormControl>
           <FormControl.Label>Remote Peer's PublicKey</FormControl.Label>
@@ -154,27 +150,29 @@ export default class WireguardAddSite extends React.Component {
               value={this.state.PrivateKey}
               onChangeText={(value) => this.handleChange('PrivateKey', value)}
               autoFocus
+              flex={1}
             />
 
-              <Button
-                rounded="none"
-                h="full"
-                onPress={this.handleClickGenerate}
-              >
-                Generate
-              </Button>
-
+            <Button
+              rounded="none"
+              h="full"
+              variant="solid"
+              colorScheme="muted"
+              onPress={this.handleClickGenerate}
+            >
+              Generate
+            </Button>
           </HStack>
           <FormControl.HelperText>
             Local Site's Private Key
           </FormControl.HelperText>
 
           <FormControl.Label>Public Key:</FormControl.Label>
-          <FormControl.HelperText> {this.state.PublicKey} </FormControl.HelperText>
-
+          <FormControl.HelperText>
+            {' '}
+            {this.state.PublicKey}{' '}
+          </FormControl.HelperText>
         </FormControl>
-
-
 
         <Button colorScheme="primary" onPress={this.handleSubmit}>
           Save

@@ -83,7 +83,8 @@ const PeerList = (props) => {
 
   return (
     <View>
-      <ScrollView h="calc(100vh - 260px)">
+      {/*<ScrollView h="calc(100vh - 260px)">*/}
+      <ScrollView>
         <HStack justifyContent="space-between" mb={4}>
           <Heading fontSize="lg" pb="3" alignSelf="center">
             Peers
@@ -200,14 +201,14 @@ const PeerList = (props) => {
           </VStack>
         </Box>
       </ScrollView>
-
-      <Fab
+      {/*<Fab
         renderInPortal={false}
         shadow={2}
         size="sm"
         icon={<Icon color="white" icon={faPlus} />}
         onPress={triggerModal}
       />
+      */}
     </View>
   )
 }

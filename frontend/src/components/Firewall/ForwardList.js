@@ -157,7 +157,7 @@ const ForwardList = (props) => {
           ) : null}
           <Button
             display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
-            variant="subtle"
+            variant={useColorModeValue('subtle', 'solid')}
             colorScheme="muted"
             leftIcon={<Icon icon={faCirclePlus} />}
             onPress={() => refModal.current()}
