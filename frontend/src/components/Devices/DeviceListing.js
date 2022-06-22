@@ -29,7 +29,7 @@ import {
   View,
   useColorModeValue
 } from 'native-base'
-import { SwipeListView } from 'components/SwipeListView'
+//import { SwipeListView } from 'components/SwipeListView'
 
 const DeviceListing = (props) => {
   const context = useContext(AlertContext)
@@ -40,56 +40,39 @@ const DeviceListing = (props) => {
   const [groups, setGroups] = useState(['wan', 'dns', 'lan'])
   const [tags, setTags] = useState([])
 
-  // set device oui if avail, else fail gracefully
-  const setOUIs = async (devices) => {
-    let ouis = []
-    try {
-      ouis = await deviceAPI.ouis(
-        Object.keys(devices).filter((id) => id.includes(':'))
-      )
-    } catch (err) {
-      return
-    }
-
-    for (let mac in devices) {
-      devices[mac].oui = ''
-
-      for (let oui of ouis) {
-        if (oui.MAC == mac) {
-          devices[mac].oui = oui.Vendor
+  const refreshDevices = () => {
+    deviceAPI
+      .list()
+      .then((devices) => {
+        if (!devices) {
+          return
         }
-      }
-    }
-  }
 
-  const refreshDevices = async () => {
-    const devices = await deviceAPI.list().catch((error) => {
-      context.error('API Failure: ' + error.message)
-    })
+        let macs = Object.keys(devices).filter((id) => id.includes(':'))
 
-    if (!devices) {
-      return
-    }
+        devices = Object.values(devices)
+        setDevices(devices)
 
-    await setOUIs(devices)
+        // set device oui if avail
+        deviceAPI
+          .ouis(macs)
+          .then((ouis) => {
+            let devs = devices.map((d) => {
+              let oui = ouis.find((o) => o.MAC == d.MAC)
+              d.oui = oui ? oui.Vendor : ''
+              return d
+            })
 
-    setDevices(Object.values(devices))
+            setDevices(devs)
+          })
+          .catch((err) => {})
 
-    setGroups([
-      ...new Set(
-        Object.values(devices)
-          .map((device) => device.Groups)
-          .flat()
-      )
-    ])
-
-    setTags([
-      ...new Set(
-        Object.values(devices)
-          .map((device) => device.DeviceTags)
-          .flat()
-      )
-    ])
+        setGroups([...new Set(devices.map((device) => device.Groups).flat())])
+        setTags([...new Set(devices.map((device) => device.DeviceTags).flat())])
+      })
+      .catch((err) => {
+        context.error('API Failure: ' + err.message)
+      })
   }
 
   useEffect(() => {
@@ -104,6 +87,17 @@ const DeviceListing = (props) => {
     }
   }
 
+  const renderItem = ({ item }) => (
+    <Device
+      device={item}
+      edit={true}
+      groups={groups}
+      tags={tags}
+      notifyChange={refreshDevices}
+    />
+  )
+
+  /*
   const closeRow = (rowMap, rowKey) => {
     if (rowMap[rowKey]) {
       rowMap[rowKey].closeRow()
@@ -117,30 +111,6 @@ const DeviceListing = (props) => {
     newData.splice(prevIndex, 1)
     setDevices(newData)
   }
-
-  const renderItem = ({ item }) => (
-    <Box
-      flex={1}
-      _light={{ bg: 'backgroundCardLight', borderColor: 'coolGray.200' }}
-      _dark={{ bg: 'backgroundCardDark', borderColor: 'muted.700' }}
-      borderBottomWidth={1}
-      p={4}
-    >
-      <Pressable
-        onPress={() => {
-          console.log('**press**')
-        }}
-      >
-        <Device
-          device={item}
-          edit={true}
-          groups={groups}
-          tags={tags}
-          notifyChange={refreshDevices}
-        />
-      </Pressable>
-    </Box>
-  )
 
   const renderHiddenItem = (data, rowMap) => (
     <HStack flex="1" pl="2">
@@ -181,6 +151,7 @@ const DeviceListing = (props) => {
       </Pressable>
     </HStack>
   )
+  */
 
   return (
     <View>
@@ -204,7 +175,6 @@ const DeviceListing = (props) => {
         <Box
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
           rounded="md"
-          w="100%"
         >
           {devices !== null ? (
             <Box safeArea>
@@ -214,17 +184,17 @@ const DeviceListing = (props) => {
                 renderHiddenItem={renderHiddenItem}
                 rightOpenValue={-140}
               />*/}
-              {devices.length ? (
-                <FlatList
-                  data={devices}
-                  renderItem={renderItem}
-                  keyExtractor={(item, index) => item.Name + index}
-                />
-              ) : (
-                <Text color="muted.500">
+
+              <FlatList
+                data={devices}
+                renderItem={renderItem}
+                keyExtractor={(item, index) => item.Name + index}
+              />
+              {devices !== null && !devices.length ? (
+                <Text color="muted.500" p={4}>
                   There are no devices configured yet
                 </Text>
-              )}
+              ) : null}
             </Box>
           ) : null}
         </Box>
