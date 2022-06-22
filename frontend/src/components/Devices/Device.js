@@ -33,7 +33,7 @@ import {
   useColorModeValue
 } from 'native-base'
 
-const GroupItem = ({ name }) => {
+const GroupItem = React.memo(({ name }) => {
   let groupIcons = {
     wan: faCircleNodes,
     dns: faEarth,
@@ -64,9 +64,9 @@ const GroupItem = ({ name }) => {
       {name}
     </Button>
   )
-}
+})
 
-const TagItem = ({ name }) => {
+const TagItem = React.memo(({ name }) => {
   let tagIcons = {
     wan: faCircleNodes,
     dns: faEarth,
@@ -88,7 +88,7 @@ const TagItem = ({ name }) => {
       {name}
     </Button>
   )
-}
+})
 
 const Device = ({ device, edit, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
@@ -268,11 +268,14 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
       <Stack
         direction={{ base: 'column-reverse', md: 'row' }}
         space={2}
-        py={2}
+        p={4}
         w="100%"
         key={device.MAC}
         justifyContent="space-between"
         alignItems="center"
+        _light={{ borderColor: 'coolGray.200' }}
+        _dark={{ borderColor: 'muted.700' }}
+        borderBottomWidth={1}
       >
         <Stack
           direction={{ base: 'column', md: 'row' }}
@@ -306,9 +309,10 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
             ) : (
               <Text bold>{device.Name}</Text>
             )}
-            {device.oui !== undefined ? (
-              <Text color="muted.500">{device.oui}</Text>
-            ) : null}
+
+            <Text color="muted.500">
+              {device.oui !== undefined ? device.oui : ' '}
+            </Text>
           </VStack>
 
           <Stack
@@ -322,7 +326,6 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
               {device.MAC}
             </Text>
           </Stack>
-
           <Text
             w={{ base: '100%', md: '8%' }}
             display={{ base: 'none', md: 'flex' }}
@@ -330,7 +333,6 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
           >
             {wifi_type}
           </Text>
-
           <HStack
             w={{ base: '100%', md: '40%' }}
             space={2}

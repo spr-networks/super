@@ -24,6 +24,13 @@ else
   . /scripts/nft_rules.sh
 fi
 
+ret=$?
+if [ $ret -neq 0 ]; then
+  echo "Failed to load firewall rules, shutting down upstream interface"
+  ip link set dev $WANIF down
+  exit 1
+fi
+
 # traffic accounting
 . /scripts/accounting.sh
 

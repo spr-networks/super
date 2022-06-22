@@ -1,7 +1,9 @@
-import React, { Component } from 'react'
+import React, { useContext, Component } from 'react'
 
 import { wireguardAPI } from 'api/Wireguard'
 import PeerList from 'components/Wireguard/PeerList'
+import SiteVPN from 'components/Wireguard/SiteVPN'
+import { AppContext } from 'AppContext'
 
 import {
   Box,
@@ -15,6 +17,7 @@ import {
 
 export default class Wireguard extends Component {
   state = { isUp: true, config: {} }
+
   constructor(props) {
     super(props)
     this.config = {}
@@ -62,6 +65,7 @@ export default class Wireguard extends Component {
   }
 
   render() {
+
     return (
       <View>
         <HStack alignItems="center" mb={4}>
@@ -96,7 +100,14 @@ export default class Wireguard extends Component {
         </Box>
 
         <PeerList />
+
+        {!this.context.isPlusDisabled ?
+          //PLUS feature
+          <SiteVPN />
+        : null }
       </View>
     )
   }
 }
+
+Wireguard.contextType = AppContext

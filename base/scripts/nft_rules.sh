@@ -88,6 +88,10 @@ table inet filter {
     # drop dhcp requests, multicast ports from upstream
     $(if [ "$WANIF" ]; then echo "iifname $WANIF udp dport {67, 1900, 5353} counter jump DROPLOGINP"; fi)
 
+    # Drop input from the site to site interfaces.
+
+    counter iifname "site*" jump DROPLOGINP
+
     # drop ssh, iperf from upstream
     $(if [ "$WANIF" ]; then echo "counter iifname $WANIF tcp dport vmap @upstream_tcp_port_drop"; fi)
 
@@ -149,13 +153,16 @@ table inet filter {
     counter ip saddr . ip daddr . ip protocol . tcp dport vmap @fwd_block
     counter ip saddr . ip daddr . ip protocol . udp dport vmap @fwd_block
 
+    # Forward to Site VPN if client has internet access
+    counter oifname "site*" ip saddr . iifname vmap @internet_access
+
     # Forward to WAN
     $(if [ "$WANIF" ]; then echo "counter oifname $WANIF ip saddr . iifname vmap @internet_access"; fi)
 
     # Forward to wired LAN
     $(if [ "$LANIF" ]; then echo "counter oifname $LANIF ip saddr . iifname vmap @lan_access"; fi)
 
-    #forward LAN to wg -> Tbd test me
+    #forward LAN to wg
     $(if [ "$LANIF" ]; then echo "counter oifname wg0 ip saddr . iifname vmap @lan_access"; fi)
 
     # Forward to wireless LAN
@@ -310,6 +317,9 @@ table inet nat {
     # Masquerade upstream traffic
 
     $(if [ "$WANIF" ]; then echo "oifname $WANIF counter masquerade"; fi)
+
+    # Masquerade site-to-site VPN
+    counter oifname "site*" masquerade
   }
 
   #chain USERDEF_POSTROUTING {
@@ -319,6 +329,17 @@ table inet nat {
 }
 
 table inet mangle {
+
+  map site_forward_mangle {
+    type ipv4_addr . ipv4_addr : verdict;
+    flags interval;
+  }
+
+  chain PREROUTING {
+    type filter hook prerouting priority -150; policy accept;
+    counter ip saddr . ip daddr vmap @site_forward_mangle
+  }
+
   chain PREROUTING {
     type filter hook prerouting priority -150; policy accept;
   }

@@ -6,6 +6,7 @@ import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Footer from 'components/Footer/Footer'
 import Sidebar from 'components/Sidebar/Sidebar'
 import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
+import { api, pfwAPI } from 'api'
 import { ucFirst } from 'utils'
 
 import {
@@ -128,7 +129,37 @@ const AdminLayout = (props) => {
 
   const toast = useToast()
 
+  let path = location.pathname.replace(/^\/admin\//, '')
+  const [activeSidebarItem, setActiveSidebarItem] = useState(path)
+  const [isOpenSidebar, setIsOpenSidebar] = useState(false)
+  const [isNavbarOpen, setIsNavbarOpen] = useState(false)
+  const [isWifiDisabled, setIsWifiDisabled] = useState(false)
+  const [isPlusDisabled, setIsPlusDisabled] = useState(true)
+
   useEffect(() => {
+    api
+      .features()
+      .then((res) => {
+        if (res.includes('wifi')) {
+          setIsWifiDisabled(false)
+        } else {
+          setIsWifiDisabled(true)
+        }
+      })
+      .catch((err) => {
+        setIsWifiDisabled(true)
+      })
+
+    // TODO use features
+    pfwAPI
+      .config()
+      .then((res) => {
+        setIsPlusDisabled(false)
+      })
+      .catch((err) => {
+        setIsPlusDisabled(true)
+      })
+
     connectWebsocket((event) => {
       if (event.data == 'success') {
         return
@@ -143,13 +174,6 @@ const AdminLayout = (props) => {
       }
     })
   }, [])
-
-  let path = location.pathname.replace(/^\/admin\//, '')
-  const [activeSidebarItem, setActiveSidebarItem] = useState(path)
-  const [isOpenSidebar, setIsOpenSidebar] = useState(false)
-  const [isNavbarOpen, setIsNavbarOpen] = useState(false)
-  const [isWifiDisabled, setIsWifiDisabled] = useState(false)
-  const [isPlusDisabled, setIsPlusDisabled] = useState(true)
 
   return (
     <AppContext.Provider

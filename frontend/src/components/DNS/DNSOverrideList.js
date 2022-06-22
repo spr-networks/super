@@ -72,7 +72,7 @@ const DNSOverrideList = (props) => {
         p={4}
         mb={4}
       >
-        {!list.length ? (
+        {!list || !list.length ? (
           <Text>{`No ${props.title.split(' ')[0]} rules configured`}</Text>
         ) : null}
         <FlatList

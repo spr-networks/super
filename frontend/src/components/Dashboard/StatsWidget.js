@@ -3,16 +3,23 @@ import { Divider, Box, HStack, Text, useColorModeValue } from 'native-base'
 
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 
-const StatsWidget = (props) => {
-  const { title, text, textFooter, icon, iconColor, iconFooter } = props
+const StatsWidget = ({
+  title,
+  text,
+  textFooter,
+  icon,
+  iconColor,
+  iconFooter,
 
+  ...props
+}) => {
   return (
     <Box
       bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
       borderRadius={10}
       mb={4}
       shadow={4}
-      flex={1}
+      {...props}
     >
       <Box px={4} py={4}>
         <HStack justifyContent="space-between">

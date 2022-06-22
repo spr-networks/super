@@ -11,7 +11,8 @@ import {
   useBreakpointValue,
   useColorModeValue,
   SectionList,
-  createIcon
+  createIcon,
+  ScrollView
 } from 'native-base'
 
 import { AlertContext } from 'layouts/Admin'
@@ -19,7 +20,7 @@ import TimeSeriesList from 'components/Traffic/TimeSeriesList'
 import ClientSelect from 'components/ClientSelect'
 import DateRange from 'components/DateRange'
 
-import { deviceAPI, trafficAPI } from 'api'
+import { deviceAPI, trafficAPI, wifiAPI } from 'api'
 
 const TrafficList = (props) => {
   const context = useContext(AlertContext)
@@ -31,6 +32,10 @@ const TrafficList = (props) => {
   const [filterIps, setFilterIps] = useState([])
   const [offset, setOffset] = useState('All Time')
   const [devices, setDevices] = useState({})
+  const [asns, setAsns] = useState({})
+  const [showASN, setShowASN] = useState(
+    type.match(/^Wan(In|Out)$/) ? true : false
+  )
 
   // filter the list by type and ip
   const filterList = (data) => {
@@ -41,52 +46,57 @@ const TrafficList = (props) => {
     }
 
     // by type
-    return data.filter((row) => {
-      // src == lan && dst == lan
+    return data
+      .filter((row) => {
+        // src == lan && dst == lan
 
-      //TODO diff between LanIn|Out on interface
-      if (
-        type == 'LanIn' &&
-        row.Src.match(regexLAN) &&
-        row.Dst.match(regexLAN)
-      ) {
-        return row
-      }
+        //TODO diff between LanIn|Out on interface
+        if (
+          type == 'LanIn' &&
+          row.Src.match(regexLAN) &&
+          row.Dst.match(regexLAN)
+        ) {
+          return row
+        }
 
-      if (
-        type == 'LanOut' &&
-        row.Src.match(regexLAN) &&
-        row.Dst.match(regexLAN)
-      ) {
-        return row
-      }
+        if (
+          type == 'LanOut' &&
+          row.Src.match(regexLAN) &&
+          row.Dst.match(regexLAN)
+        ) {
+          return row
+        }
 
-      //if (type == 'WanIn' && row.Interface == 'wlan0') {
-      if (
-        type == 'WanIn' &&
-        row.Dst.match(regexLAN) &&
-        !row.Src.match(regexLAN)
-      ) {
-        return row
-      }
+        //if (type == 'WanIn' && row.Interface == 'wlan0') {
+        if (
+          type == 'WanIn' &&
+          row.Dst.match(regexLAN) &&
+          !row.Src.match(regexLAN)
+        ) {
+          return row
+        }
 
-      //if (type == 'WanOut' && row.Interface != 'wlan0') {
-      if (
-        type == 'WanOut' &&
-        row.Src.match(regexLAN) &&
-        !row.Dst.match(regexLAN)
-      ) {
+        //if (type == 'WanOut' && row.Interface != 'wlan0') {
+        if (
+          type == 'WanOut' &&
+          row.Src.match(regexLAN) &&
+          !row.Dst.match(regexLAN)
+        ) {
+          return row
+        }
+      })
+      .map((row) => {
+        row.Asn = asns[row[type == 'WanOut' ? 'Dst' : 'Src']] || ''
         return row
-      }
-    })
+      })
   }
 
   const refreshList = () => {
+    //console.log('refreshList')
     trafficAPI
       .traffic()
-      .then(async (data) => {
+      .then((data) => {
         // TODO merge list with previous & set expire=timeout if  theres a change in packets/bytes
-
         if (list.length) {
           data = data.map((row) => {
             let idx = list.findIndex(
@@ -110,38 +120,70 @@ const TrafficList = (props) => {
             let msAgo = (row.Timeout - row.Expires) * 1e3
             row.Timestamp = new Date(new Date().getTime() - msAgo)
 
-            // device to Src/Dst
-            /*let dir = type.replace(/^(Wan|Lan)/, '')
-            let ip = dir == 'Out' ? row.Src : row.Dst
-            let key = `device` + (dir == 'Out' ? 'Src' : 'Dst')
-            row[key] = Object.values(devices).find(
-              (device) => device.RecentIP == ip
-            )*/
-
             return row
           })
         )
       })
-      .catch((err) => context.error(err))
+      .catch((err) => reject(err))
+  }
+
+  const refreshAsns = () => {
+    //console.log('refreshAsns')
+    if (!type.match(/^Wan(In|Out)$/) || !list.length) {
+      return
+    }
+
+    let keyIP = type == 'WanOut' ? 'Dst' : 'Src'
+    let ips = list.map((row) => row[keyIP])
+    ips = Array.from(new Set(ips))
+    if (!ips.length) {
+      return
+    }
+
+    let ipsasn = ips.filter((ip) => !Object.keys(asns).includes(ip))
+
+    if (!ipsasn.length) {
+      // set asns to trigger list update
+      return
+    }
+
+    wifiAPI
+      .asns(ipsasn)
+      .then((newAsns) => {
+        let _asns = { ...asns }
+        for (let asn of newAsns) {
+          _asns[asn.IP] = asn.Name.length ? `${asn.Name}, ${asn.Country}` : ''
+        }
+
+        setAsns(_asns)
+      })
+      .catch((err) => {
+        console.log('asn error:', err)
+      })
   }
 
   useEffect(() => {
+    //console.log('eall')
+
     if (!list.length) {
       return
     }
 
+    refreshAsns()
+
     setListFiltered(filterList(list))
-  }, [devices, list, type])
+  }, [devices, list, type, asns])
 
   useEffect(() => {
-    //deviceAPI.list().then((devices) => {
-    //setDevices(devices)
     refreshList()
-    //})
 
-    const interval = setInterval(refreshList, 5 * 1e3)
+    const interval = setInterval(refreshList, 10 * 1e3)
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    setListFiltered(filterList(list))
+  }, [asns])
 
   const flexDirection = useBreakpointValue({
     base: 'column',
@@ -204,13 +246,15 @@ const TrafficList = (props) => {
         p={4}
         mb={4}
       >
-        <TimeSeriesList
-          type={type}
-          data={listFiltered}
-          offset={offset}
-          filterIps={filterIps}
-          setFilterIps={setFilterIps}
-        />
+        <ScrollView h="calc(100vh - 96px - 160px)">
+          <TimeSeriesList
+            type={type}
+            data={listFiltered}
+            offset={offset}
+            filterIps={filterIps}
+            setFilterIps={setFilterIps}
+          />
+        </ScrollView>
       </Box>
     </>
   )

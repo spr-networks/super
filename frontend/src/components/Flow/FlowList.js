@@ -443,18 +443,33 @@ const convertBlockRuleCard = (rule, index) => {
 
 const convertForwardingRuleCard = (rule, index) => {
   let trigger = convertTrigger(rule)
-  let action = NewCard({
-    title: 'Forward ' + rule.Protocol.toUpperCase(),
-    cardType: 'action',
-    values: {
-      Protocol: rule.Protocol,
-      Client: rule.Client,
-      OriginalDstIP: rule.OriginalDstIP,
-      OriginalDstPort: rule.OriginalDstPort,
-      DstIP: rule.DstIP,
-      DstPort: rule.DstPort
-    }
-  })
+
+  let action
+
+  if (rule.Protocol != "") {
+    action = NewCard({
+      title: 'Forward ' + rule.Protocol.toUpperCase(),
+      cardType: 'action',
+      values: {
+        Protocol: rule.Protocol,
+        Client: rule.Client,
+        OriginalDstIP: rule.OriginalDstIP,
+        OriginalDstPort: rule.OriginalDstPort,
+        DstIP: rule.DstIP,
+        DstPort: rule.DstPort
+      }
+    })
+  } else if (rule.DstInterface != ""){
+    action = NewCard({
+      title: "Forward to Site VPN Gateway",
+      cardType: 'action',
+      values: {
+        Client: rule.Client,
+        OriginalDstIP: rule.OriginalDstIP,
+        DstInterface: rule.DstInterface
+      }
+    })
+  }
 
   return {
     title: rule.RuleName,
@@ -625,7 +640,7 @@ const FlowList = (props) => {
 
     let actionTitle = flow.actions[0].title
 
-    if (actionTitle.match(/(Block|Forward) (TCP|UDP)/)) {
+    if (actionTitle.match(/(Block|Forward) (TCP|UDP)/) || actionTitle.match(/Forward to Site VPN Gateway/)) {
       let ruleType = actionTitle.startsWith('Block')
         ? 'BlockRules'
         : 'ForwardingRules'

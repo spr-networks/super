@@ -200,14 +200,14 @@ const PeerList = (props) => {
           </VStack>
         </Box>
       </ScrollView>
-
-      <Fab
+      {/*<Fab
         renderInPortal={false}
         shadow={2}
         size="sm"
         icon={<Icon color="white" icon={faPlus} />}
         onPress={triggerModal}
       />
+      */}
     </View>
   )
 }

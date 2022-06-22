@@ -109,7 +109,6 @@ const FlowCard = ({ card, size, edit, ...props }) => {
           if (!opts || !opts.length) {
             return
           }
-
           setOptions({ ...options, [name]: opts })
         })
       }

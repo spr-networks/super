@@ -21,6 +21,7 @@ const WireguardPeers = (props) => {
 
   return (
     <StatsWidget
+      {...props}
       icon={faCircleNodes}
       iconColor="info.400"
       title="VPN Peers"
@@ -44,6 +45,7 @@ const WireguardPeersActive = (props) => {
 
   return (
     <StatsWidget
+      {...props}
       icon={faCircleNodes}
       iconColor="blueGray.400"
       title="Active VPN Connections"

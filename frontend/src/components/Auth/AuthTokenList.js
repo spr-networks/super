@@ -172,7 +172,7 @@ const AuthTokenList = (props) => {
           ) : null}
           <Button
             display={{ base: 'flex', md: tokens.length ? 'none' : 'flex' }}
-            variant="subtle"
+            variant={useColorModeValue('subtle', 'solid')}
             colorScheme="muted"
             leftIcon={<Icon icon={faCirclePlus} />}
             onPress={() => setIsModalOpen(true)}
