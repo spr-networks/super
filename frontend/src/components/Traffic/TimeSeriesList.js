@@ -27,51 +27,9 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
     type.match(/^Wan(In|Out)$/) ? true : false
   )
 
-  const refreshList = () => {
-    if (showASN) {
-      let keyIP = type == 'WanOut' ? 'Dst' : 'Src'
-      let ips = data.map((row) => row[keyIP])
-      ips = Array.from(new Set(ips))
-      if (!ips.length) {
-        return
-      }
-
-      //TODO cache
-      wifiAPI
-        .asns(ips)
-        .then((asns) => {
-          let ip2asn = {}
-          for (let asn of asns) {
-            if (!asn.Name.length) {
-              continue
-            }
-
-            ip2asn[asn.IP] = `${asn.Name}, ${asn.Country}`
-          }
-
-          setList(
-            data.map((row) => {
-              let asn = ip2asn[row[keyIP]]
-              if (asn) {
-                row.Asn = asn
-              }
-
-              return row
-            })
-          )
-        })
-        .catch((err) => {
-          setShowASN(false)
-          setList(data)
-        })
-    } else {
-      setList(data)
-    }
-  }
-
   useEffect(() => {
-    //setShowASN(type.match(/^Wan(In|Out)$/) ? true : false)
-    refreshList()
+    setShowASN(type.match(/^Wan(In|Out)$/) ? true : false)
+    setList(data)
   }, [data, type])
 
   // filter by date
@@ -91,7 +49,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
       : listFiltered
   }*/
 
-  const asnIcon = (asn) => {
+  const AsnIcon = React.memo(({ asn }) => {
     if (!asn) {
       return <></>
     }
@@ -134,7 +92,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
     }
 
     return <></>
-  }
+  })
 
   const onPressIp = (e) => {
     let ip = e.target.innerText
@@ -196,7 +154,8 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
               </HStack>
               {showASN ? (
                 <HStack flex={1} space={2} alignItems="center">
-                  {asnIcon(item.Asn)}
+                  {/*TODO also src depending on type*/}
+                  <AsnIcon asn={item.Asn} />
                   <Text color="muted.500" isTruncated>
                     {item.Asn}
                   </Text>
