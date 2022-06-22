@@ -13,11 +13,10 @@ export const TotalTraffic = (props) => {
 
         labels.map((label) => (traffic[label] = []))
 
-        let date = new Date()
-        for (let i = 0; i < history.length - 2; i++) {
-          date.setMinutes(date.getMinutes() - 1)
-
-          if (i >= 59) break
+        let start = new Date(),
+          step = 20
+        for (let i = 0; i < history.length - 2; i += step) {
+          if (i >= 20 * step) break
 
           labels.map((label) => {
             let h1 = Object.values(history[i])
@@ -28,7 +27,8 @@ export const TotalTraffic = (props) => {
               .map((t) => t[label])
               .reduce((prev, v) => prev + v, 0)
 
-            let x = new Date(date)
+            let x = new Date(start)
+            x.setMinutes(start.getMinutes() - i)
             let y = h1 - h2
 
             traffic[label].push({ x, y })

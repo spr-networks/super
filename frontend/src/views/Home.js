@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect } from 'react'
 import { View, StyleSheet } from 'react-native'
-import { Box, Stack, VStack, useBreakpointValue } from 'native-base'
+import { Box, Stack, HStack, VStack, useBreakpointValue } from 'native-base'
 import { AppContext } from 'AppContext'
 import { pluginAPI, pfwAPI, wifiAPI, api } from 'api'
 
@@ -43,18 +43,18 @@ const Home = (props) => {
       <VStack flex={2} p={2}>
         <Stack
           direction={{ base: 'column', md: 'row' }}
-          justifyContent="stretch"
+          justifyContent="space-between"
           space={4}
         >
           {context.isWifiDisabled ? (
             <>
-              <WireguardPeers />
-              <WireguardPeersActive />
+              <WireguardPeers flex={1} />
+              <WireguardPeersActive flex={1} />
             </>
           ) : (
             <>
-              <WifiInfo />
-              <WifiClients />
+              <WifiInfo flex={1} />
+              <WifiClients flex={1} />
             </>
           )}
         </Stack>
@@ -65,11 +65,11 @@ const Home = (props) => {
       </VStack>
       <VStack flex={1} p={2}>
         {pluginsEnabled.includes('dns-block') ? (
-          <VStack>
+          <>
             <DNSMetrics />
             <DNSBlockMetrics />
             <DNSBlockPercent />
-          </VStack>
+          </>
         ) : null}
         {context.isWifiDisabled ? null : <WireguardPeersActive />}
       </VStack>

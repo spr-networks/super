@@ -22,6 +22,7 @@ export class WifiClients extends WifiClientCount {
   render() {
     return (
       <StatsWidget
+        {...this.props}
         icon={faLaptop}
         iconColor="blueGray.400"
         title="Active WiFi Clients"
@@ -45,6 +46,7 @@ export class WifiInfo extends Component {
   render() {
     return (
       <StatsWidget
+        {...this.props}
         icon={faWifi}
         iconColor="info.400"
         title="Wifi AP"
