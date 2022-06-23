@@ -446,7 +446,7 @@ const convertForwardingRuleCard = (rule, index) => {
 
   let action
 
-  if (rule.Protocol != "") {
+  if (rule.Protocol != '') {
     action = NewCard({
       title: 'Forward ' + rule.Protocol.toUpperCase(),
       cardType: 'action',
@@ -459,9 +459,9 @@ const convertForwardingRuleCard = (rule, index) => {
         DstPort: rule.DstPort
       }
     })
-  } else if (rule.DstInterface != ""){
+  } else if (rule.DstInterface != '') {
     action = NewCard({
-      title: "Forward to Site VPN Gateway",
+      title: 'Forward to Site VPN',
       cardType: 'action',
       values: {
         Client: rule.Client,
@@ -640,7 +640,10 @@ const FlowList = (props) => {
 
     let actionTitle = flow.actions[0].title
 
-    if (actionTitle.match(/(Block|Forward) (TCP|UDP)/) || actionTitle.match(/Forward to Site VPN Gateway/)) {
+    if (
+      actionTitle.match(/(Block|Forward) (TCP|UDP)/) ||
+      actionTitle.match(/Forward to Site VPN/)
+    ) {
       let ruleType = actionTitle.startsWith('Block')
         ? 'BlockRules'
         : 'ForwardingRules'
