@@ -362,10 +362,9 @@ const actions = [
     }
   },
   {
-    title: 'Forward to Site VPN Gateway',
+    title: 'Forward to Site VPN',
     cardType: 'action',
-    description:
-      'Forward traffic over a Site VPN',
+    description: 'Forward traffic over a Site VPN Gateway',
     color: 'purple.600',
     icon: faForward,
     params: [
@@ -379,7 +378,7 @@ const actions = [
         name: 'DstInterface',
         type: PropTypes.string,
         description: 'Destination site (ex: site0)'
-      },
+      }
     ],
     values: {
       Client: '0.0.0.0',
@@ -388,13 +387,12 @@ const actions = [
     },
     getOptions: function (name = 'DstInterface') {
       if (name == 'DstInterface') {
-
         return new Promise((resolve, reject) => {
           //deviceAPI.groups().then((groups) => resolve(groups.map(toOption)))
           pfwAPI.config().then((config) => {
             let s = []
             for (let i = 0; i < config.SiteVPNs.length; i++) {
-              s.push({label: "site" + i, value: "site" + i})
+              s.push({ label: 'site' + i, value: 'site' + i })
             }
             resolve(s)
           })
