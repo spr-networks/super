@@ -15,6 +15,12 @@ export const TotalTraffic = (props) => {
 
         let start = new Date(),
           step = 20
+
+        // last hour if not enough traffic - reboots
+        if (history.length < 1e3) {
+          step = 3
+        }
+
         for (let i = 0; i < history.length - 2; i += step) {
           if (i >= 20 * step) break
 
