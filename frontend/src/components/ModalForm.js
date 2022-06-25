@@ -43,7 +43,11 @@ const ModalForm = (props) => {
 
       {show ? (
         <Modal isOpen={show} onClose={toggleModal} animationPreset="slide">
-          <Modal.Content maxWidth="440px">
+          <Modal.Content
+            width={{ base: '100vw' }}
+            maxW={{ base: '100%', md: '440px' }}
+            rounded={{ base: 'none', md: 'md' }}
+          >
             <Modal.CloseButton />
             <Modal.Header>{props.title || 'Title'}</Modal.Header>
             <Modal.Body>{props.children}</Modal.Body>

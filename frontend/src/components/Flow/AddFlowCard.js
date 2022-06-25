@@ -39,7 +39,6 @@ const AddFlowCard = ({ cardType, onSubmit, ...props }) => {
       <FlatList
         data={cards}
         keyExtractor={(item) => item.title}
-        px={2}
         renderItem={({ item }) => (
           <Pressable onPress={() => handleSelect(item)}>
             <FlowCard edit={false} card={item} my={2} />

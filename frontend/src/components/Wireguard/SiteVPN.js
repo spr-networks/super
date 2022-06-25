@@ -154,7 +154,7 @@ const SiteVPN = (props) => {
                 md: 'flex'
               }}
               variant={useColorModeValue('subtle', 'solid')}
-              colorScheme="muted"
+              colorScheme={useColorModeValue('muted', 'muted')}
               leftIcon={<Icon icon={faCirclePlus} />}
               onPress={triggerModal}
               mt={4}

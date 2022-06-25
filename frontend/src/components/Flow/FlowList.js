@@ -715,12 +715,10 @@ const FlowList = (props) => {
       </Box>
 
       <VStack
-        flex={2}
-        __bg={useColorModeValue('white', 'blueGray.700')}
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
         rounded="lg"
         space={4}
-        maxW={390}
+        w={{ base: '92vw', md: '390px' }}
         mr={{ base: 0, lg: 8 }}
         p={4}
       >

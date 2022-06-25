@@ -83,7 +83,8 @@ const PeerList = (props) => {
 
   return (
     <View>
-      <ScrollView h="calc(100vh - 260px)">
+      {/*<ScrollView h="calc(100vh - 260px)">*/}
+      <ScrollView>
         <HStack justifyContent="space-between" mb={4}>
           <Heading fontSize="lg" pb="3" alignSelf="center">
             Peers
@@ -189,8 +190,8 @@ const PeerList = (props) => {
                 base: 'flex',
                 md: peers !== null && peers.length === 0 ? 'flex' : 'none'
               }}
-              variant="subtle"
-              colorScheme="muted"
+              variant={useColorModeValue('subtle', 'solid')}
+              colorScheme={useColorModeValue('muted', 'muted')}
               leftIcon={<Icon icon={faCirclePlus} />}
               onPress={triggerModal}
               mt={4}
