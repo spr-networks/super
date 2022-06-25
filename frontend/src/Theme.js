@@ -4,14 +4,16 @@ const { colors } = nbTheme
 
 export const theme = extendTheme({
   colors: {
+    primary: { ...colors.violet /*, 600: '#8578E6'*/ },
+    secondary: colors.orange,
     /*primary: {
       50: '#E3F2F9',
       100: '#C5E4F3',
       200: '#A2D4EC',
       300: '#7AC1E4',
       400: '#47A9DA',
-      500: colors.violet[500], //'#0088CC',
-      600: colors.violet[600], //'#007AB8',
+      500: '#0088CC',
+      600: '#007AB8',
       700: '#006BA1',
       800: '#005885',
       900: '#003F5E'
@@ -65,9 +67,9 @@ export const theme = extendTheme({
     sidebarItemIconDark: colors.coolGray[400], //coolGray.50
 
     activeSidebarItemBackgroundLight: colors.coolGray[200], //colors.cyan[200],
-    activeSidebarItemBackgroundDark: colors.cyan[700],
+    activeSidebarItemBackgroundDark: colors.coolGray[700], //colors.cyan[700],
     activeSidebarItemHoverBackgroundLight: colors.blueGray[200], //.alpha[60],'//colors.cyan[200],
-    activeSidebarItemHoverBackgroundDark: colors.cyan[600],
+    activeSidebarItemHoverBackgroundDark: colors.coolGray[600],
 
     inactiveSidebarItemHoverBackgroundLight: colors.coolGray[100],
     inactiveSidebarItemHoverBackgroundDark: colors.blueGray[800],
