@@ -2,7 +2,11 @@ import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faPlus, faTimes } from '@fortawesome/free-solid-svg-icons'
+import {
+  faCirclePlus,
+  faPlus,
+  faTimes
+} from '@fortawesome/free-solid-svg-icons'
 
 import { logAPI } from 'api/DNS'
 import ModalConfirm from 'components/ModalConfirm'
@@ -11,6 +15,7 @@ import {
   Box,
   Button,
   Divider,
+  FlatList,
   Heading,
   HStack,
   IconButton,
@@ -23,8 +28,7 @@ const DNSLogList = ({ title, description, ...props }) => {
   const context = useContext(AlertContext)
   const [type, setType] = useState(props.type)
   const [list, setList] = useState([])
-
-  const refModal = React.createRef()
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   useEffect(() => {
     refreshBlocklists()
@@ -46,12 +50,13 @@ const DNSLogList = ({ title, description, ...props }) => {
   }
 
   const addListItem = (item) => {
-    setList(list.concat(item))
+    let newList = [...new Set([...list, item])]
+    setList(newList)
 
     if (type == 'Domain') {
-      logAPI.putDomainIgnore(item)
+      logAPI.putDomainIgnore(newList)
     } else {
-      logAPI.putHostPrivacyList(list)
+      logAPI.putHostPrivacyList(newList)
     }
   }
 
@@ -75,52 +80,60 @@ const DNSLogList = ({ title, description, ...props }) => {
   }
 
   const handleSubmit = (value) => {
+    setIsModalOpen(false)
     addListItem(value)
   }
 
+  const triggerAdd = (triggerProps) => {
+    return (
+      <Button {...triggerProps} marginLeft="auto">
+        {'Add ' + type}
+      </Button>
+    )
+  }
+
   return (
-    <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      rounded="md"
-      width="100%"
-      p="4"
-      mb="4"
-    >
-      <HStack alignItems="center">
+    <>
+      <HStack alignItems="center" mb={4}>
         <VStack>
-          <Heading fontSize="xl">{title}</Heading>
+          <Heading fontSize="md">{title}</Heading>
           <Text color="muted.500">{description}</Text>
         </VStack>
 
         <ModalConfirm
           type={type}
           onSubmit={handleSubmit}
-          trigger={(triggerProps) => {
-            return (
-              <Button {...triggerProps} marginLeft="auto">
-                {'Add ' + type}
-              </Button>
-            )
-          }}
+          trigger={triggerAdd}
+          isOpen={isModalOpen}
         />
       </HStack>
 
-      {list.length ? (
-        <>
-          <HStack py="4">
-            <Text color="primary.400" bold>
-              {type}
-            </Text>
-            <Text color="primary.400" bold marginLeft="auto">
-              Actions
-            </Text>
-          </HStack>
-          <Divider />
-
-          {list.map((item) => (
+      <Box
+        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+        rounded="md"
+        width="100%"
+        p={4}
+        mb={4}
+      >
+        {!list.length ? (
+          <VStack space={2}>
+            <Text alignSelf={'center'}>List is empty</Text>
+            <Button
+              variant="subtle"
+              colorScheme="muted"
+              leftIcon={<Icon icon={faCirclePlus} />}
+              onPress={() => setIsModalOpen(true)}
+            >
+              {`Add ${title.replace(/ List$/, '')}`}
+            </Button>
+          </VStack>
+        ) : null}
+        <FlatList
+          data={list}
+          keyExtractor={(item, index) => index}
+          renderItem={({ item }) => (
             <HStack
-              key={item}
-              py="4"
+              py={4}
               borderBottomWidth={1}
               _light={{ borderBottomColor: 'muted.200' }}
               _dark={{ borderBottomColor: 'muted.600' }}
@@ -136,10 +149,10 @@ const DNSLogList = ({ title, description, ...props }) => {
                 marginLeft="auto"
               />
             </HStack>
-          ))}
-        </>
-      ) : null}
-    </Box>
+          )}
+        />
+      </Box>
+    </>
   )
 }
 

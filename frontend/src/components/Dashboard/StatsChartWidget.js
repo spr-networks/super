@@ -110,11 +110,13 @@ const StatsChartWidget = (props) => {
       elements: {
         point: {
           pointStyle: 'circle',
-          radius: 0,
+          radius: 1,
           hitRadius: 50,
           hoverRadius: 2
         }
-      }
+      },
+      tension: 0.4,
+      fill: true
     }
 
     let dataopts = { datasets: [] }
@@ -123,7 +125,14 @@ const StatsChartWidget = (props) => {
       datas = [datas]
     }
 
-    let colors = chroma.scale('Spectral').mode('lch').colors(labels.length)
+    //    let colors = chroma.scale('Spectral').mode('lch').colors(labels.length)
+    let colors = useColorModeValue(
+      chroma
+        .scale('BuPu')
+        .mode('lch')
+        .colors(labels.length + 1),
+      ['#cc0000', '#00cccc', '#cc00cc']
+    )
 
     dataopts.datasets = datas.map((data, i) => {
       return {
@@ -132,9 +141,14 @@ const StatsChartWidget = (props) => {
         //fill: true,
         //backgroundColor: chroma(colors[i]).alpha(0.75).css(),
         //borderColor: chroma(colors[i]).alpha(0.75).css(),
-        backgroundColor: colors[i],
-        borderColor: colors[i],
-        borderWidth: 1
+        backgroundColor: chroma(colors[i + 1])
+          .alpha(0.2)
+          .css(),
+        borderColor: colors[i + 1],
+        borderWidth: 1,
+        pointBorderColor: chroma(colors[i + 1])
+          .alpha(0.4)
+          .css()
       }
     })
 

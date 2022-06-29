@@ -128,7 +128,7 @@ def parse(data, raw=False, quiet=False):
                 kv_section = kv_keys = None
                 continue
 
-            if line.strip().find(' '):
+            if line.strip().find(' ') and iface in section:
                 split_line = line.strip().split(' ')
                 section[iface][split_line[0]] = ' '.join(split_line[1:])
 

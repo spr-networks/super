@@ -4,6 +4,7 @@ import { wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import InputSelect from 'components/InputSelect'
 import { prettySignal } from 'utils'
+import Icon from 'FontAwesomeUtils'
 
 import {
   Badge,
@@ -21,6 +22,7 @@ import {
   Text,
   useColorModeValue
 } from 'native-base'
+import { faWifi } from '@fortawesome/free-solid-svg-icons'
 
 const WifiScan = (props) => {
   const context = useContext(AlertContext)
@@ -88,7 +90,7 @@ const WifiScan = (props) => {
       bg={useColorModeValue('warmGray.50', 'blueGray.800')}
       rounded="md"
       width="100%"
-      p="4"
+      p={4}
     >
       <HStack space={2}>
         <Box flex="2">
@@ -96,7 +98,11 @@ const WifiScan = (props) => {
           <InputSelect options={devsScan} onChange={onChange} />
         </Box>
 
-        <Button colorScheme="primary" onPress={() => scan(iface)}>
+        <Button
+          colorScheme="primary"
+          leftIcon={<Icon icon={faWifi} />}
+          onPress={() => scan(iface)}
+        >
           Scan
         </Button>
       </HStack>

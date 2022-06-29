@@ -1,12 +1,14 @@
 import { createContext } from 'react'
 
 export const AppContext = createContext({
-  activeSidebarItem: 'admin/home',
+  activeSidebarItem: 'home',
   setActiveSidebarItem: (sidebarItem) => {},
   isNavbarOpen: false,
   setIsNavbarOpen: (isNavbarOpen) => {},
   isWifiDisabled: false,
-  setIsWifiDisabled: (value) => {}
+  isPlusDisabled: true,
+  setIsWifiDisabled: (value) => {},
+  setIsPlusDisabled: (value) => {}
 })
 
 export const alertState = {

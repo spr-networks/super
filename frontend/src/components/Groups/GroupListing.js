@@ -10,10 +10,11 @@ import {
   Stack,
   HStack,
   Text,
+  VStack,
   useColorModeValue
 } from 'native-base'
 
-const GroupListing = (props) => {
+const GroupListing = ({ group, ...props }) => {
   const translateName = (name) => {
     if (name === 'dns') {
       return 'DNS'
@@ -25,7 +26,6 @@ const GroupListing = (props) => {
     return name
   }
 
-  const group = props.group
   const list = []
   if (group.Members && group.Members.length > 0) {
     for (const dev of group.Members) {
@@ -68,61 +68,60 @@ const GroupListing = (props) => {
   }
 
   return (
-    <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      rounded="md"
-      width="100%"
-      p="4"
-    >
-      <HStack justifyContent="space-between">
-        <Heading fontSize="xl" pb="3" alignSelf="center">
-          {translateName(group.Name)}
-        </Heading>
+    <VStack space={2}>
+      <HStack space={1} alignItems="center" justifyContent="space-between">
+        <Heading fontSize="md">{translateName(group.Name)}</Heading>
         <Text color="muted.500">{groupDescriptions[group.Name] || ''}</Text>
       </HStack>
 
-      <FlatList
-        data={list}
-        renderItem={({ item }) => (
-          <Box
-            borderBottomWidth="1"
-            _dark={{
-              borderColor: 'muted.600'
-            }}
-            borderColor="muted.200"
-            py={2}
-          >
-            <HStack
-              space={2}
-              alignItems="center"
-              justifyContent="space-between"
+      <Box
+        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+        rounded="md"
+        p={4}
+      >
+        <FlatList
+          data={list}
+          renderItem={({ item }) => (
+            <Box
+              borderBottomWidth={1}
+              _dark={{
+                borderColor: 'muted.600'
+              }}
+              borderColor="muted.200"
+              py={2}
             >
-              <Text w="1/4" bold>
-                {item.Name}
-              </Text>
-
-              <Stack
-                direction={{ base: 'column', md: 'row' }}
-                w="1/2"
-                space={1}
+              <HStack
+                space={2}
+                alignItems="center"
                 justifyContent="space-between"
               >
-                <Text>{item.IP}</Text>
-                <Text color="muted.500" fontSize="sm">
-                  {item.MAC}
+                <Text w="1/4" bold>
+                  {item.Name}
                 </Text>
-              </Stack>
-              <Box marginLeft="auto">
-                {item.ifname ? (
-                  <Badge variant="outline">{item.ifname}</Badge>
-                ) : null}
-              </Box>
-            </HStack>
-          </Box>
-        )}
-        keyExtractor={(item) => item.Name}
-      />
-    </Box>
+
+                <Stack
+                  direction={{ base: 'column', md: 'row' }}
+                  w="1/2"
+                  space={1}
+                  justifyContent="space-between"
+                >
+                  <Text>{item.IP}</Text>
+                  <Text color="muted.500" fontSize="sm">
+                    {item.MAC}
+                  </Text>
+                </Stack>
+                <Box marginLeft="auto">
+                  {item.ifname ? (
+                    <Badge variant="outline">{item.ifname}</Badge>
+                  ) : null}
+                </Box>
+              </HStack>
+            </Box>
+          )}
+          keyExtractor={(item) => item.Name}
+        />
+      </Box>
+    </VStack>
   )
 }
 

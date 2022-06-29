@@ -27,9 +27,11 @@ import {
 
 const LogList = (props) => {
   const [list, setList] = useState([])
-  const [listAll, setListAll] = useState([])
+  const [listFiltered, setListFiltered] = useState([])
   const [containers, setContainers] = useState([])
   const [filterContainers, setFilterContainers] = useState([])
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
 
   const contextType = useContext(AlertContext)
   let navigate = useNavigate()
@@ -39,7 +41,6 @@ const LogList = (props) => {
       .latest()
       .then((logs) => {
         // make sure message is a string
-        logs = logs.slice(0, 100) //TODO
         logs = logs.map((row) => {
           if (Array.isArray(row.MESSAGE)) {
             row.MESSAGE = row.MESSAGE.map((c) => String.fromCharCode(c))
@@ -49,11 +50,6 @@ const LogList = (props) => {
         })
 
         setList(logs)
-        setListAll(logs)
-
-        if (next) {
-          next(logs)
-        }
       })
       .catch((err) => {
         contextType.error('failed to fetch JSON logs')
@@ -61,19 +57,29 @@ const LogList = (props) => {
   }
 
   useEffect(() => {
-    refreshList((logs) => {
-      // get containers from logs
-      let cnames = logs.map((row) => row.CONTAINER_NAME).filter((n) => n)
-      let cs = Array.from(new Set(cnames))
-      setContainers(cs)
-
-      if (props.containers && props.containers.length) {
-        setFilterContainers(props.containers)
-      } else {
-        setFilterContainers(cs)
-      }
-    })
+    refreshList()
   }, [])
+
+  useEffect(() => {
+    // total for pagination
+    setTotal(list.length)
+
+    // get containers from logs
+    let cnames = list
+      .map((row) =>
+        row._TRANSPORT == 'kernel' ? 'kernel' : row.CONTAINER_NAME
+      )
+      .filter((n) => n)
+
+    let cs = Array.from(new Set(cnames))
+    setContainers(cs)
+
+    if (props.containers && props.containers.length) {
+      setFilterContainers(props.containers)
+    } else {
+      setFilterContainers(cs)
+    }
+  }, [list])
 
   const filterList = (filter) => {
     if (!filter) {
@@ -82,10 +88,15 @@ const LogList = (props) => {
       }
     }
 
-    let logs = listAll.filter((row) => {
+    let listFiltered = list.filter((row) => {
       let match = true
       if (filter.containers) {
-        if (row.CONTAINER_NAME === undefined) {
+        if (
+          row._TRANSPORT == 'kernel' &&
+          filter.containers.includes('kernel')
+        ) {
+          match = true
+        } else if (row.CONTAINER_NAME === undefined) {
           match = false
         } else {
           match = filter.containers.includes(row.CONTAINER_NAME)
@@ -95,30 +106,28 @@ const LogList = (props) => {
       return match ? row : null
     })
 
-    if (logs) {
-      setList(logs)
-    }
+    setTotal(listFiltered.length)
+
+    let perPage = 20,
+      offset = (page - 1) * perPage
+
+    listFiltered = listFiltered.slice(offset, offset + perPage)
+
+    return listFiltered
   }
 
   const handleChange = (newValues) => {
     setFilterContainers(newValues.filter((v) => v.length))
+    setPage(1)
   }
 
   useEffect(() => {
-    if (!filterContainers.length) {
-      return
+    if (filterContainers.length) {
+      navigate('/admin/logs/' + filterContainers.join(','))
     }
 
-    console.log('nav:', filterContainers)
-
-    navigate('/admin/logs/' + filterContainers.join(','))
-
-    let opts = {
-      containers: filterContainers
-    }
-
-    filterList(opts)
-  }, [filterContainers])
+    setListFiltered(filterList())
+  }, [filterContainers, page])
 
   const containersOptions = containers.map((c) => {
     return { label: c, value: c }
@@ -127,9 +136,7 @@ const LogList = (props) => {
   let containersValues = filterContainers.map((c) => c)
 
   const handleClickRefresh = () => {
-    refreshList((logs) => {
-      filterList()
-    })
+    setListFiltered(filterList())
   }
 
   const prettyLine = (line) => {
@@ -157,9 +164,12 @@ const LogList = (props) => {
         <VStack space={1}>
           <Heading fontSize="lg">Logs</Heading>
           {list.length ? (
-            <Text color="muted.500" fontSize="xs">{`Logs from ${prettyDate(
+            <Text color="muted.500" fontSize="xs">
+              {`${(page - 1) * 20} - ${Math.min(page * 20, total)}  / ${total}`}
+              {/*`Logs from ${prettyDate(
               list[list.length - 1].__REALTIME_TIMESTAMP / 1e3
-            )} to ${prettyDate(list[0].__REALTIME_TIMESTAMP / 1e3)}`}</Text>
+            )} to ${prettyDate(list[0].__REALTIME_TIMESTAMP / 1e3)}`*/}
+            </Text>
           ) : (
             <Spinner accessibilityLabel="Loading logs" />
           )}
@@ -187,7 +197,7 @@ const LogList = (props) => {
       </Stack>
 
       <FlatList
-        data={list}
+        data={listFiltered}
         renderItem={({ item }) => (
           <Box
             borderBottomWidth={1}
@@ -202,7 +212,7 @@ const LogList = (props) => {
               justifyContent="stretch"
             >
               <Badge variant="outline" colorScheme="primary">
-                {item.CONTAINER_NAME}
+                {item.CONTAINER_NAME || item._TRANSPORT}
               </Badge>
               <Text isTruncated>{item.MESSAGE}</Text>
               <Text fontSize="xs" marginLeft="auto" whiteSpace="nowrap">
@@ -213,6 +223,22 @@ const LogList = (props) => {
         )}
         keyExtractor={(item) => item.__REALTIME_TIMESTAMP}
       />
+
+      {total > 20 ? (
+        <HStack width="100%" space={2}>
+          <Button
+            flex="1"
+            variant="ghost"
+            isDisabled={page <= 1}
+            onPress={() => setPage(page > 1 ? page - 1 : 1)}
+          >
+            &larr; Previous
+          </Button>
+          <Button flex="1" variant="ghost" onPress={() => setPage(page + 1)}>
+            Next &rarr;
+          </Button>
+        </HStack>
+      ) : null}
     </Box>
   )
 }

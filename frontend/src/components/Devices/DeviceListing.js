@@ -5,7 +5,12 @@ import Device from 'components/Devices/Device'
 import { AlertContext } from 'layouts/Admin'
 import { AppContext } from 'AppContext'
 import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faEllipsis, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons'
+import {
+  faCirclePlus,
+  faEllipsis,
+  faPlus,
+  faTimes
+} from '@fortawesome/free-solid-svg-icons'
 
 import {
   Button,
@@ -24,48 +29,50 @@ import {
   View,
   useColorModeValue
 } from 'native-base'
-import { SwipeListView } from 'components/SwipeListView'
+//import { SwipeListView } from 'components/SwipeListView'
 
 const DeviceListing = (props) => {
-  const [devices, setDevices] = useState(null)
-  const navigate = useNavigate()
   const context = useContext(AlertContext)
   const appContext = useContext(AppContext)
 
-  // set device oui if avail, else fail gracefully
-  const setOUIs = async (devices) => {
-    let ouis = []
-    try {
-      ouis = await deviceAPI.ouis(
-        Object.keys(devices).filter((id) => id.includes(':'))
-      )
-    } catch (err) {
-      return
-    }
+  const [devices, setDevices] = useState(null)
+  const navigate = useNavigate()
+  const [groups, setGroups] = useState(['wan', 'dns', 'lan'])
+  const [tags, setTags] = useState([])
 
-    for (let mac in devices) {
-      devices[mac].oui = ''
-
-      for (let oui of ouis) {
-        if (oui.MAC == mac) {
-          devices[mac].oui = oui.Vendor
+  const refreshDevices = () => {
+    deviceAPI
+      .list()
+      .then((devices) => {
+        if (!devices) {
+          return
         }
-      }
-    }
-  }
 
-  const refreshDevices = async () => {
-    const devices = await deviceAPI.list().catch((error) => {
-      context.error('API Failure: ' + error.message)
-    })
+        let macs = Object.keys(devices).filter((id) => id.includes(':'))
 
-    if (!devices) {
-      return
-    }
+        devices = Object.values(devices)
+        setDevices(devices)
 
-    await setOUIs(devices)
+        // set device oui if avail
+        deviceAPI
+          .ouis(macs)
+          .then((ouis) => {
+            let devs = devices.map((d) => {
+              let oui = ouis.find((o) => o.MAC == d.MAC)
+              d.oui = oui ? oui.Vendor : ''
+              return d
+            })
 
-    setDevices(Object.values(devices))
+            setDevices(devs)
+          })
+          .catch((err) => {})
+
+        setGroups([...new Set(devices.map((device) => device.Groups).flat())])
+        setTags([...new Set(devices.map((device) => device.DeviceTags).flat())])
+      })
+      .catch((err) => {
+        context.error('API Failure: ' + err.message)
+      })
   }
 
   useEffect(() => {
@@ -80,6 +87,17 @@ const DeviceListing = (props) => {
     }
   }
 
+  const renderItem = ({ item }) => (
+    <Device
+      device={item}
+      edit={true}
+      groups={groups}
+      tags={tags}
+      notifyChange={refreshDevices}
+    />
+  )
+
+  /*
   const closeRow = (rowMap, rowKey) => {
     if (rowMap[rowKey]) {
       rowMap[rowKey].closeRow()
@@ -93,22 +111,6 @@ const DeviceListing = (props) => {
     newData.splice(prevIndex, 1)
     setDevices(newData)
   }
-
-  const renderItem = ({ item }) => (
-    <Box
-      flex="1"
-      _light={{ bg: 'backgroundCardLight' }}
-      _dark={{ bg: 'backgroundCardDark' }}
-    >
-      <Pressable
-        onPress={() => {
-          console.log('**press**')
-        }}
-      >
-        <Device device={item} notifyChange={refreshDevices} />
-      </Pressable>
-    </Box>
-  )
 
   const renderHiddenItem = (data, rowMap) => (
     <HStack flex="1" pl="2">
@@ -149,34 +151,31 @@ const DeviceListing = (props) => {
       </Pressable>
     </HStack>
   )
+  */
 
   return (
     <View>
       <ScrollView h="calc(100vh - 96px)">
+        <HStack mb={4} alignItems="center">
+          <Heading fontSize="md">Configured Devices</Heading>
+
+          <Button
+            marginLeft="auto"
+            size="md"
+            variant="ghost"
+            colorScheme="blueGray"
+            _rounded="lg"
+            leftIcon={<Icon icon={faCirclePlus} />}
+            onPress={handleRedirect}
+          >
+            Add Device
+          </Button>
+        </HStack>
+
         <Box
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
           rounded="md"
-          w="100%"
-          p={4}
         >
-          <HStack mb="4">
-            <Heading fontSize="xl">Configured Devices</Heading>
-
-            <Button
-              marginLeft="auto"
-              size="md"
-              variant="outline"
-              colorScheme="primary"
-              rounded="full"
-              borderWidth={1}
-              borderColor="info.400"
-              leftIcon={<Icon icon={faPlus} />}
-              onPress={handleRedirect}
-            >
-              Add Device
-            </Button>
-          </HStack>
-
           {devices !== null ? (
             <Box safeArea>
               {/*<SwipeListView
@@ -185,17 +184,17 @@ const DeviceListing = (props) => {
                 renderHiddenItem={renderHiddenItem}
                 rightOpenValue={-140}
               />*/}
-              {devices.length ? (
-                <FlatList
-                  data={devices}
-                  renderItem={renderItem}
-                  keyExtractor={(item) => item.Name}
-                />
-              ) : (
-                <Text color="muted.500">
+
+              <FlatList
+                data={devices}
+                renderItem={renderItem}
+                keyExtractor={(item, index) => item.Name + index}
+              />
+              {devices !== null && !devices.length ? (
+                <Text color="muted.500" p={4}>
                   There are no devices configured yet
                 </Text>
-              )}
+              ) : null}
             </Box>
           ) : null}
         </Box>

@@ -279,7 +279,7 @@ export default class WireguardAddPeer extends React.Component {
               </FormControl.HelperText>
             </FormControl>
 
-            <FormControl flex="1">
+            <FormControl flex={1}>
               <FormControl.Label>Groups</FormControl.Label>
               <Checkbox.Group
                 defaultValue={this.state.groups}
@@ -289,7 +289,7 @@ export default class WireguardAddPeer extends React.Component {
               >
                 <HStack w="100%" justifyContent="space-between">
                   {allGroups.map((group) => (
-                    <Box flex="1">
+                    <Box key={group} flex={1}>
                       <Checkbox value={group} colorScheme="primary">
                         {group}
                       </Checkbox>

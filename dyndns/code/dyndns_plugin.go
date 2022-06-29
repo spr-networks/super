@@ -53,7 +53,7 @@ func runGoDyndns() {
 
 func validateConfig(config GodyndnsConfig) error {
 
-	validCommand := regexp.MustCompile(`^[:\-=@A-Za-z0-9.]+$`).MatchString
+	validCommand := regexp.MustCompile(`^[:/\-=@A-Za-z0-9.]+$`).MatchString
 	if !validCommand(config.Provider) {
 		return fmt.Errorf("invalid provider")
 	}

@@ -21,6 +21,7 @@ export default class DNSAddOverride extends React.Component {
 
     this.state.Type = props.type
     this.state.Domain = props.domain || ''
+    this.state.ResultIP = props.ResultIP || ''
     this.state.ClientIP = props.clientip || '*'
     this.state.check = {
       Domain: '',
@@ -43,6 +44,7 @@ export default class DNSAddOverride extends React.Component {
     if (
       name.match(/^(Result|Client)IP$/) &&
       value != '*' &&
+      value.length &&
       !value.match(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/)
     ) {
       check[name] = 'has-danger'
@@ -101,6 +103,7 @@ export default class DNSAddOverride extends React.Component {
             name="Domain"
             value={this.state.Domain}
             onChangeText={(value) => this.handleChange('Domain', value)}
+            onSubmitEditing={this.handleSubmit}
             autoFocus
           />
           {this.state.check.Domain == 'has-danger' ? (
@@ -122,7 +125,7 @@ export default class DNSAddOverride extends React.Component {
 
           {this.state.check.ResultIP == 'has-danger' ? (
             <FormControl.ErrorMessage>
-              Please enter a valid IP or *
+              Please enter a valid IP or leave empty
             </FormControl.ErrorMessage>
           ) : (
             <FormControl.HelperText>
@@ -156,7 +159,9 @@ export default class DNSAddOverride extends React.Component {
             type="number"
             name="Expiration"
             value={this.state.Expiration}
-            onChangeText={(value) => this.handleChange('Expiration', parseInt(value))}
+            onChangeText={(value) =>
+              this.handleChange('Expiration', parseInt(value))
+            }
           />
 
           <FormControl.HelperText>

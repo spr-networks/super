@@ -1,11 +1,12 @@
 import React, { createContext, useEffect, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 
 import { AppContext, AlertContext, alertState } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Footer from 'components/Footer/Footer'
 import Sidebar from 'components/Sidebar/Sidebar'
 import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
+import { api, pfwAPI } from 'api'
 import { ucFirst } from 'utils'
 
 import {
@@ -24,7 +25,7 @@ import {
   useToast
 } from 'native-base'
 
-import routes from 'routes'
+import { routes } from 'routes'
 
 const AppAlert = (props) => {
   const { type, title, body, toggle } = props
@@ -87,6 +88,7 @@ function desktopNotification(msg) {
 
 const AdminLayout = (props) => {
   const mainPanel = React.useRef()
+  const location = useLocation()
 
   const [showAlert, setShowAlert] = useState(false)
   const [alert, setAlert] = useState({})
@@ -127,7 +129,37 @@ const AdminLayout = (props) => {
 
   const toast = useToast()
 
+  let path = location.pathname.replace(/^\/admin\//, '')
+  const [activeSidebarItem, setActiveSidebarItem] = useState(path)
+  const [isOpenSidebar, setIsOpenSidebar] = useState(false)
+  const [isNavbarOpen, setIsNavbarOpen] = useState(false)
+  const [isWifiDisabled, setIsWifiDisabled] = useState(false)
+  const [isPlusDisabled, setIsPlusDisabled] = useState(true)
+
   useEffect(() => {
+    api
+      .features()
+      .then((res) => {
+        if (res.includes('wifi')) {
+          setIsWifiDisabled(false)
+        } else {
+          setIsWifiDisabled(true)
+        }
+      })
+      .catch((err) => {
+        setIsWifiDisabled(true)
+      })
+
+    // TODO use features
+    pfwAPI
+      .config()
+      .then((res) => {
+        setIsPlusDisabled(false)
+      })
+      .catch((err) => {
+        setIsPlusDisabled(true)
+      })
+
     connectWebsocket((event) => {
       if (event.data == 'success') {
         return
@@ -143,11 +175,6 @@ const AdminLayout = (props) => {
     })
   }, [])
 
-  const [activeSidebarItem, setActiveSidebarItem] = useState('')
-  const [isOpenSidebar, setIsOpenSidebar] = useState(false)
-  const [isNavbarOpen, setIsNavbarOpen] = useState(false)
-  const [isWifiDisabled, setIsWifiDisabled] = useState(false)
-
   return (
     <AppContext.Provider
       value={{
@@ -156,7 +183,9 @@ const AdminLayout = (props) => {
         setIsNavbarOpen,
         isNavbarOpen,
         isWifiDisabled,
-        setIsWifiDisabled
+        isPlusDisabled,
+        setIsWifiDisabled,
+        setIsPlusDisabled
       }}
     >
       <Box
@@ -240,8 +269,8 @@ const AdminLayout = (props) => {
               {/*h="calc(100% - 64px)"
                minH="calc(100vh - 64px)"*/}
               <Box
-                flex="1"
-                p="4"
+                flex={1}
+                p={{ base: 4, md: 4 }}
                 safeAreaTop
                 ref={mainPanel}
                 minH="calc(100vh - 64px)"

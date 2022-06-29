@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { Box, Button, Modal } from 'native-base'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faPlus } from '@fortawesome/free-solid-svg-icons'
+import { faCirclePlus, faPlus } from '@fortawesome/free-solid-svg-icons'
 
 const ModalForm = (props) => {
   const [show, setShow] = useState(false)
@@ -29,11 +29,11 @@ const ModalForm = (props) => {
         <Box>
           <Button
             size="sm"
-            variant="outline"
-            colorScheme="primary"
+            variant="ghost"
+            colorScheme="blueGray"
             rounded="full"
             borderColor="info.400"
-            leftIcon={<Icon icon={props.triggerIcon || faPlus} />}
+            leftIcon={<Icon icon={props.triggerIcon || faCirclePlus} />}
             onPress={toggleModal}
           >
             {props.triggerText || 'Open Modal'}
@@ -43,7 +43,11 @@ const ModalForm = (props) => {
 
       {show ? (
         <Modal isOpen={show} onClose={toggleModal} animationPreset="slide">
-          <Modal.Content maxWidth="440px">
+          <Modal.Content
+            width={{ base: '100vw' }}
+            maxW={{ base: '100%', md: '440px' }}
+            rounded={{ base: 'none', md: 'md' }}
+          >
             <Modal.CloseButton />
             <Modal.Header>{props.title || 'Title'}</Modal.Header>
             <Modal.Body>{props.children}</Modal.Body>

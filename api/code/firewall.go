@@ -67,7 +67,7 @@ func loadFirewallRules() error {
 }
 
 func deleteBlock(br BlockRule) error {
-	cmd := exec.Command("nft", "add", "element", "inet", "nat", "block", "{",
+	cmd := exec.Command("nft", "delete", "element", "inet", "nat", "block", "{",
 		br.SrcIP, ".", br.DstIP, ".", br.Protocol, ":", "drop", "}")
 
 	_, err := cmd.Output()
@@ -273,7 +273,7 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	re := regexp.MustCompile("^[0-9\\-]*$")
+	re := regexp.MustCompile("^([0-9].*-[0-9].*|[0-9]*)$")
 
 	if fwd.SrcPort != "any" && !re.MatchString(fwd.SrcPort) {
 		http.Error(w, "Invalid SrcPort", 400)
@@ -330,7 +330,7 @@ func blockIP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if br.Protocol != "tcp" && br.Protocol != "udp" {
-		http.Error(w, err.Error(), 400)
+		http.Error(w, "Invalid protocol", 400)
 		return
 	}
 
@@ -339,7 +339,7 @@ func blockIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if CIDRorIP(br.SrcIP) != nil {
+	if CIDRorIP(br.DstIP) != nil {
 		http.Error(w, "Invalid DstIP", 400)
 		return
 	}

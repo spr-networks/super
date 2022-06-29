@@ -108,6 +108,7 @@ type authnconfig struct {
 }
 
 type Token struct {
+	Name   string
 	Token  string
 	Expire int64
 }
@@ -499,15 +500,9 @@ func getAuthTokens(w http.ResponseWriter, r *http.Request) {
 func updateAuthTokens(w http.ResponseWriter, r *http.Request) {
 	tokens := []Token{}
 	data, err := os.ReadFile(AuthTokensFile)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
 
-	err = json.Unmarshal(data, &tokens)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
+	if err == nil {
+		_ = json.Unmarshal(data, &tokens)
 	}
 
 	token := Token{}

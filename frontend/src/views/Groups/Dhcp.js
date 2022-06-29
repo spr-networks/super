@@ -77,7 +77,7 @@ export default class Dhcp extends Component {
   render() {
     return (
       <View>
-        <VStack>
+        <VStack space={4}>
           {this.state.groups.map((group) => (
             <GroupListing key={group.Name} group={group} />
           ))}

@@ -1,11 +1,22 @@
-import { Component } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
 import { deviceAPI } from 'api/Device'
 import ModalConfirm from 'components/ModalConfirm'
 
 import Icon from 'FontAwesomeUtils'
-import { faPen, faXmark } from '@fortawesome/free-solid-svg-icons'
+import {
+  faEllipsis,
+  faEllipsisV,
+  faLaptop,
+  faMobileScreen,
+  faObjectGroup,
+  faTrash,
+  faEarth,
+  faCircleNodes,
+  faNetworkWired,
+  faTag
+} from '@fortawesome/free-solid-svg-icons'
 
 import {
   Badge,
@@ -22,372 +33,340 @@ import {
   useColorModeValue
 } from 'native-base'
 
-class Device extends Component {
-  state = {
-    editing: false,
-    name: '',
-    groups: [],
-    tags: [],
-    showModal: false,
-    modalType: ''
-    /*allTags: [
-      { label: 'private', value: 'private' },
-      { label: 'foo', value: 'foo' },
-      { label: 'dns', value: 'dns' },
-      { label: 'lan', value: 'lan' },
-      { label: 'wan', value: 'wan' }
-    ]*/
+const GroupItem = React.memo(({ name }) => {
+  let groupIcons = {
+    wan: faCircleNodes,
+    dns: faEarth,
+    lan: faNetworkWired
   }
 
-  async componentDidMount() {
-    const device = this.props.device
-
-    this.setState({
-      groups: device.Groups,
-      name: device.Name,
-      tags: device.DeviceTags
-    })
+  let groupColors = {
+    dns: useColorModeValue('muted.500', 'blueGray.700'), //'orange.400',
+    lan: useColorModeValue('muted.400', 'blueGray.600'), //'violet.600',
+    wan: useColorModeValue('muted.500', 'blueGray.700') //'cyan.500'
   }
 
-  handleGroups = (groups) => {
-    if (!this.props.device.MAC && !this.props.device.WGPubKey) {
+  let icon = groupIcons[name] || faObjectGroup
+  let bg = groupColors[name] || 'muted.600'
+
+  return (
+    <Button
+      key={name}
+      variant="solid"
+      colorScheme="muted"
+      bg={bg}
+      leftIcon={<Icon icon={icon} size={3} />}
+      rounded="sm"
+      size="sm"
+      py={1}
+      px={2}
+    >
+      {name}
+    </Button>
+  )
+})
+
+const TagItem = React.memo(({ name }) => {
+  let tagIcons = {
+    wan: faCircleNodes,
+    dns: faEarth,
+    lan: faNetworkWired
+  }
+
+  let icon = faTag
+  return (
+    <Button
+      key={name}
+      variant="outline"
+      colorScheme={useColorModeValue('muted', 'blueGray')}
+      leftIcon={<Icon icon={icon} size={3} />}
+      rounded="sm"
+      size="sm"
+      py={1}
+      px={2}
+    >
+      {name}
+    </Button>
+  )
+})
+
+const Device = ({ device, edit, notifyChange, ...props }) => {
+  const context = useContext(AlertContext)
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState(device.Name)
+  const [groups, setGroups] = useState(device.Groups.sort())
+  const [tags, setTags] = useState(device.DeviceTags.sort())
+  const [showModal, setShowModal] = useState(false)
+  const [modalType, setModalType] = useState('')
+
+  // for adding
+  const defaultGroups = props.groups || ['wan', 'dns', 'lan']
+  const defaultTags = props.tags || []
+
+  const handleGroups = (groups) => {
+    if (!device.MAC && !device.WGPubKey) {
       return
     }
 
-    groups = groups.filter((v) => typeof v === 'string')
-    groups = [...new Set(groups)]
-    this.setState({ groups })
+    setGroups([...new Set(groups.filter((v) => typeof v === 'string'))])
 
     deviceAPI
-      .updateGroups(this.props.device.MAC || this.props.device.WGPubKey, groups)
+      .updateGroups(device.MAC || device.WGPubKey, groups)
       .catch((error) =>
         this.context.error('[API] updateDevice error: ' + error.message)
       )
   }
 
-  handleTags = (tags) => {
-    if (!this.props.device.MAC && !this.props.device.WGPubKey) {
+  const handleTags = (tags) => {
+    if (!device.MAC && !device.WGPubKey) {
       return
     }
 
-    tags = tags.filter((v) => typeof v === 'string')
-    tags = [...new Set(tags)]
-    this.setState({ tags })
+    setTags([...new Set(tags.filter((v) => typeof v === 'string'))])
 
     deviceAPI
-      .updateTags(this.props.device.MAC || this.props.device.WGPubKey, tags)
+      .updateTags(device.MAC || device.WGPubKey, tags)
       .catch((error) =>
-        this.context.error('[API] updateDevice error: ' + error.message)
+        context.error('[API] updateDevice error: ' + error.message)
       )
   }
 
-  handleName = (name) => {
-    this.setState({ name })
-    let editing = name != this.props.device.Name
-    this.setState({ editing })
+  const handleName = (name) => {
+    setName(name)
+    setEditing(name != device.Name)
   }
 
-  render() {
-    const device = this.props.device
+  let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
+  let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
 
-    let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
-    let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
+  const removeDevice = () => {
+    let id = device.MAC || device.WGPubKey || 'pending'
 
-    const removeDevice = (e) => {
-      let id = device.MAC || device.WGPubKey || 'pending'
+    deviceAPI
+      .deleteDevice(id)
+      .then(notifyChange)
+      .catch((error) =>
+        context.error('[API] deleteDevice error: ' + error.message)
+      )
+  }
 
-      deviceAPI
-        .deleteDevice(id)
-        .then(this.props.notifyChange)
-        .catch((error) =>
-          this.context.error('[API] deleteDevice error: ' + error.message)
-        )
+  const saveDevice = async () => {
+    let id = device.MAC || device.WGPubKey
+    if (!name) {
+      return
     }
 
-    const saveDevice = async () => {
-      let id = device.MAC || device.WGPubKey
-      if (!this.state.name) {
-        return
-      }
+    deviceAPI
+      .updateName(id, name)
+      .then(notifyChange)
+      .catch((error) =>
+        context.error('[API] updateName error: ' + error.message)
+      )
+  }
 
-      deviceAPI
-        .updateName(id, this.state.name)
-        .then(this.props.notifyChange)
-        .catch((error) =>
-          this.context.error('[API] updateName error: ' + error.message)
-        )
+  const handleSubmit = () => {
+    setEditing(false)
+    saveDevice()
+  }
+
+  const handleSubmitNew = (value) => {
+    if (modalType.match(/Group/i)) {
+      handleGroups(groups.concat(value))
+    } else {
+      handleTags(tags.concat(value))
     }
+  }
 
-    const removeGroup = (value) => {
-      let groups = this.state.groups.filter((group) => group != value)
-      return this.handleGroups(groups)
-    }
+  // TODO
+  let icon = faLaptop
+  if (name.match(/iphone|mobile|android/i)) {
+    icon = faMobileScreen
+  }
 
-    const removeTag = (value) => {
-      let tags = this.state.tags.filter((tag) => tag != value)
-      return this.handleTags(tags)
-    }
+  let colors = [
+    'violet',
+    'pink',
+    'tertiary',
+    'rose',
+    'fuchsia',
+    'purple',
+    'cyan',
+    'teal',
+    'emerald'
+  ]
 
-    const handleChangeGroups = (groups) => {
-      return this.handleGroups(groups)
-    }
+  let idx = (device.Name.charCodeAt(0) || 0) % colors.length
+  let color = colors[idx]
+  let iconColor = `${color}.400`
 
-    const handleChangeTags = (tags) => {
-      return this.handleTags(tags)
-    }
+  const trigger = (triggerProps) => (
+    <IconButton
+      variant="unstyled"
+      ml="auto"
+      icon={<Icon icon={faEllipsis} color="muted.600" />}
+      {...triggerProps}
+    ></IconButton>
+  )
 
-    const handleSubmit = () => {
-      this.setState({ editing: false })
-      saveDevice()
-    }
-
-    const handleSubmitNew = (value) => {
-      if (this.state.modalType.match(/Group/i)) {
-        this.handleGroups(this.state.groups.concat(value))
-      } else {
-        this.handleTags(this.state.tags.concat(value))
-      }
-    }
-
-    const defaultGroups = ['wan', 'dns', 'lan']
-
-    return (
-      <>
-        <Stack
-          direction="row"
-          space={2}
-          py={2}
-          w="100%"
-          key={device.MAC}
-          justifyContent="space-between"
-          alignItems="center"
-          borderBottomWidth={1}
-          borderColor="muted.200"
-          _dark={{
-            borderColor: 'muted.600'
+  const moreMenu = (
+    <Menu w={190} closeOnSelect={true} trigger={trigger}>
+      <Menu.OptionGroup
+        title="Groups"
+        type="checkbox"
+        defaultValue={groups}
+        onChange={handleGroups}
+      >
+        {[...new Set(defaultGroups.concat(groups))].map((group) => (
+          <Menu.ItemOption key={group} value={group}>
+            {group}
+          </Menu.ItemOption>
+        ))}
+        <Menu.ItemOption
+          key="newGroup"
+          onPress={() => {
+            setModalType('Group')
+            setShowModal(true)
           }}
         >
-          <Stack
-            direction={{ base: 'column', md: 'row' }}
-            space={4}
-            justifyContent="space-between"
-            minW="90%"
+          New Group...
+        </Menu.ItemOption>
+      </Menu.OptionGroup>
+      <Menu.OptionGroup
+        title="Tags"
+        type="checkbox"
+        defaultValue={tags}
+        onChange={handleTags}
+      >
+        {[...new Set(defaultTags.concat(tags))].map((tag) => (
+          <Menu.ItemOption key={tag} value={tag}>
+            {tag}
+          </Menu.ItemOption>
+        ))}
+        <Menu.ItemOption
+          key="newTag"
+          onPress={() => {
+            setModalType('Tag')
+            setShowModal(true)
+          }}
+        >
+          New Tag...
+        </Menu.ItemOption>
+      </Menu.OptionGroup>
+      <Menu.Group title="Actions">
+        <Menu.Item onPress={removeDevice}>
+          <HStack space={2} alignItems="center">
+            <Icon icon={faTrash} color="danger.700" />
+            <Text color="danger.700">Delete</Text>
+          </HStack>
+        </Menu.Item>
+      </Menu.Group>
+    </Menu>
+  )
+
+  return (
+    <>
+      <Stack
+        direction={{ base: 'column-reverse', md: 'row' }}
+        space={2}
+        p={4}
+        w="100%"
+        key={device.MAC}
+        justifyContent="space-between"
+        alignItems="center"
+        _light={{ borderColor: 'coolGray.200' }}
+        _dark={{ borderColor: 'muted.700' }}
+        borderBottomWidth={1}
+      >
+        <Stack
+          direction={{ base: 'column', md: 'row' }}
+          space={4}
+          py={4}
+          flex={1}
+          justifyContent="space-between"
+          alignItems="center"
+        >
+          <Box
+            display={{ base: 'none', md: 'flex' }}
+            bg="white"
+            _dark={{ bg: 'blueGray.700' }}
+            p={4}
+            rounded="full"
           >
-            <VStack flex={1}>
+            <Icon icon={icon} color={iconColor} size={7} />
+          </Box>
+
+          <VStack w={{ base: '100%', md: '20%' }} px={2}>
+            {edit ? (
               <Input
                 size="lg"
                 type="text"
                 variant="underlined"
-                value={this.state.name}
-                onChangeText={(value) => this.handleName(value)}
+                w="100%"
+                value={name}
+                onChangeText={(value) => handleName(value)}
                 onSubmitEditing={handleSubmit}
               />
-              {device.oui !== undefined ? (
-                <Text color="muted.500">{device.oui}</Text>
-              ) : null}
-            </VStack>
+            ) : (
+              <Text bold>{device.Name}</Text>
+            )}
 
-            <Stack
-              direction={{ base: 'row', md: 'column' }}
-              space={2}
-              alignSelf="center"
-              alignItems="center"
-            >
-              <Text bold>{device.RecentIP}</Text>
-              <Text fontSize="xs" color="muted.500">
-                {device.MAC}
-              </Text>
-            </Stack>
-
-            <Text display={{ base: 'none', md: 'flex' }} alignSelf="center">
-              {wifi_type}
+            <Text color="muted.500">
+              {device.oui !== undefined ? device.oui : ' '}
             </Text>
+          </VStack>
 
-            <HStack flex={2} space={1} alignSelf="center" alignItems="center">
-              {this.state.groups.map((group) => (
-                <Badge key={group} variant="solid">
-                  {group}
-                </Badge>
-              ))}
-
-              {/*<Button.Group isAttached size="xs" space="0">
-                <Button variant="solid" colorScheme="secondary" pr="0">
-                  {tag}
-                </Button>
-                <IconButton
-                  variant="solid"
-                  colorScheme="secondary"
-                  icon={<Icon icon={faXmark} />}
-                  onPress={() => removeTag(tag)}
-                />
-              </Button.Group>*/}
-
-              {this.state.tags.map((tag) => (
-                <Badge key={tag} variant="outline">
-                  {tag}
-                </Badge>
-              ))}
-
-              <Menu
-                trigger={(triggerProps) => {
-                  return (
-                    <IconButton
-                      size="xs"
-                      variant="ghost"
-                      icon={<Icon icon={faPen} />}
-                      {...triggerProps}
-                    />
-                  )
-                }}
-              >
-                <Menu.OptionGroup
-                  title="Groups"
-                  type="checkbox"
-                  defaultValue={this.state.groups}
-                  onChange={handleChangeGroups}
-                >
-                  {[...new Set(defaultGroups.concat(this.state.groups))].map(
-                    (group) => (
-                      <Menu.ItemOption key={group} value={group}>
-                        {group}
-                      </Menu.ItemOption>
-                    )
-                  )}
-                  <Menu.ItemOption
-                    key="newGroup"
-                    onPress={() => {
-                      this.setState({ showModal: true, modalType: 'Group' })
-                    }}
-                  >
-                    New Group...
-                  </Menu.ItemOption>
-                </Menu.OptionGroup>
-                <Menu.OptionGroup
-                  title="Tags"
-                  type="checkbox"
-                  defaultValue={this.state.tags}
-                  onChange={handleChangeTags}
-                >
-                  {this.state.tags.map((tag) => (
-                    <Menu.ItemOption key={tag} value={tag}>
-                      {tag}
-                    </Menu.ItemOption>
-                  ))}
-                  <Menu.ItemOption
-                    key="newTag"
-                    onPress={() => {
-                      this.setState({ showModal: true, modalType: 'Tag' })
-                    }}
-                  >
-                    New Tag...
-                  </Menu.ItemOption>
-                </Menu.OptionGroup>
-              </Menu>
-            </HStack>
-          </Stack>
-
-          <Box w="50" marginLeft="auto" justifyContent="center">
-            {/*<Button className="btn-icon" color="warning" size="sm">
-            <i className="fa fa-edit" />
-          </Button>*/}
-            <Button.Group size="sm">
-              <IconButton
-                variant="ghost"
-                colorScheme="secondary"
-                icon={<Icon icon={faXmark} />}
-                onPress={removeDevice}
-              />
-            </Button.Group>
-          </Box>
-        </Stack>
-
-        <ModalConfirm
-          type={this.state.modalType}
-          onSubmit={handleSubmitNew}
-          onClose={() => this.setState({ showModal: false })}
-          isOpen={this.state.showModal}
-        />
-      </>
-    )
-
-    /*<CreatableSelect
-            isClearable
-            isMulti
-            onChange={this.handleChangeTags}
-            options={this.state.allTags}
-            placeholder="Groups"
-            defaultValue={this.state.allTags.slice(2, 5)}
-          />*/
-
-    /*
-    return (
-      <tr>
-        <td>
-          <Input
-            type="text"
-            placeholder="Device name"
-            name="name"
-            className={this.state.editing ? 'border-info' : 'border-light'}
-            value={this.state.name}
-            onChange={this.handleName}
-            onKeyPress={handleKeyPress}
-            size="10"
-          />
-
-          {device.oui !== undefined ? (
-            <Label className="info small pl-2">{device.oui}</Label>
-          ) : null}
-        </td>
-        <td className="text-center">
-          <div>{device.RecentIP}</div>
-          <div className="text-muted">
-            <small>{device.MAC}</small>
-          </div>
-        </td>
-
-        <td> {wifi_type} </td>
-        <td>
-
-          <TagsInput
-            inputProps={{ placeholder: 'Add group' }}
-            value={this.state.groups}
-            onChange={this.handleGroups}
-            tagProps={{ className: 'react-tagsinput-tag' }}
-          />
-        </td>
-        <td>
-
-          <TagsInput
-            inputProps={{ placeholder: 'Add tag' }}
-            value={this.state.tags}
-            onChange={this.handleTags}
-            tagProps={{ className: 'react-tagsinput-tag' }}
-          />
-        </td>
-        <td className="text-right">
-          <Button
-            className="btn-icon"
-            color="danger"
-            id={'tooltip' + (generatedID + 1)}
-            size="sm"
-            onClick={removeDevice}
+          <Stack
+            w={{ base: '100%', md: '12%' }}
+            direction={{ base: 'row', md: 'column' }}
+            space={1}
+            justifyContent={{ base: 'space-around', md: 'center' }}
           >
-            <i className="fa fa-times" />
-          </Button>
-          <UncontrolledTooltip delay={0} target={'tooltip' + (generatedID + 1)}>
-            Delete
-          </UncontrolledTooltip>
-        </td>
-      </tr>
-    )
-    */
-  }
+            <Text bold>{device.RecentIP}</Text>
+            <Text fontSize="xs" color="muted.500">
+              {device.MAC}
+            </Text>
+          </Stack>
+          <Text
+            w={{ base: '100%', md: '8%' }}
+            display={{ base: 'none', md: 'flex' }}
+            justifyContent="center"
+          >
+            {wifi_type}
+          </Text>
+          <HStack
+            w={{ base: '100%', md: '40%' }}
+            space={2}
+            alignSelf="center"
+            alignItems="center"
+            justifyContent={{ base: 'center', md: 'flex-start' }}
+            flexWrap="wrap"
+          >
+            {groups.map((group) => (
+              <GroupItem key={group} name={group} />
+            ))}
+
+            {tags.map((tag) => (
+              <TagItem key={tag} name={tag} />
+            ))}
+          </HStack>
+        </Stack>
+        {edit ? moreMenu : null}
+      </Stack>
+      <ModalConfirm
+        type={modalType}
+        onSubmit={handleSubmitNew}
+        onClose={() => setShowModal(false)}
+        isOpen={showModal}
+      />
+    </>
+  )
 }
 
 Device.propTypes = {
-  device: PropTypes.object.isRequired
+  device: PropTypes.object.isRequired,
+  edit: PropTypes.bool,
+  groups: PropTypes.array,
+  tags: PropTypes.array
 }
-
-Device.contextType = AlertContext
 
 export default Device

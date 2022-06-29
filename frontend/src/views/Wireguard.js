@@ -1,7 +1,9 @@
-import React, { Component } from 'react'
+import React, { useContext, Component } from 'react'
 
 import { wireguardAPI } from 'api/Wireguard'
 import PeerList from 'components/Wireguard/PeerList'
+import SiteVPN from 'components/Wireguard/SiteVPN'
+import { AppContext } from 'AppContext'
 
 import {
   Box,
@@ -15,6 +17,7 @@ import {
 
 export default class Wireguard extends Component {
   state = { isUp: true, config: {} }
+
   constructor(props) {
     super(props)
     this.config = {}
@@ -62,25 +65,26 @@ export default class Wireguard extends Component {
   }
 
   render() {
+
     return (
       <View>
+        <HStack alignItems="center" mb={4}>
+          <Heading fontSize="md">Wireguard</Heading>
+
+          <Switch
+            marginLeft="auto"
+            defaultIsChecked={this.state.isUp}
+            onValueChange={this.handleChange}
+          />
+        </HStack>
         <Box
           rounded="md"
           _light={{ bg: 'warmGray.50' }}
           _dark={{ bg: 'blueGray.800' }}
           width="100%"
-          p="4"
-          mb="4"
+          p={4}
+          mb={4}
         >
-          <HStack alignItems="center" mb="4">
-            <Heading fontSize="xl">Wireguard</Heading>
-
-            <Switch
-              marginLeft="auto"
-              defaultIsChecked={this.state.isUp}
-              onValueChange={this.handleChange}
-            />
-          </HStack>
           <Box>
             {this.state.config.listenPort ? (
               <Text>
@@ -96,7 +100,14 @@ export default class Wireguard extends Component {
         </Box>
 
         <PeerList />
+
+        {!this.context.isPlusDisabled ?
+          //PLUS feature
+          <SiteVPN />
+        : null }
       </View>
     )
   }
 }
+
+Wireguard.contextType = AppContext
