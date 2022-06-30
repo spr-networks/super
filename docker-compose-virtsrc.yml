@@ -57,6 +57,7 @@ services:
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
+      - ./state/public/:/state/public/:ro      
   wireguard-virt:
     container_name: superwireguard-virt
     build: wireguard

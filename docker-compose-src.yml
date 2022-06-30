@@ -75,6 +75,7 @@ services:
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
+      - ./state/public/:/state/public/:ro      
   ppp:
     container_name: superppp
     build: ppp

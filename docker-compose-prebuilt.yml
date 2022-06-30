@@ -10,8 +10,7 @@ services:
     image: ghcr.io/spr-networks/super_base
     network_mode: host
     privileged: true
-    logging:
-      driver: *default-logging
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
   dhcp:
@@ -21,8 +20,7 @@ services:
     privileged: true
     depends_on:
       - "base"
-    logging:
-      driver: *default-logging
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/dhcp/:/configs/dhcp/
@@ -36,8 +34,7 @@ services:
     privileged: true
     depends_on:
       - "base"
-    logging:
-      driver: *default-logging
+    logging: *default-logging
     entrypoint: /scripts/client.sh
     volumes:
       - ./configs/base/:/configs/base/
@@ -46,8 +43,7 @@ services:
     image: ghcr.io/spr-networks/super_dns
     network_mode: host
     privileged: true
-    logging:
-      driver: *default-logging
+    logging: *default-logging
     depends_on:
       - "base"
     volumes:
@@ -60,8 +56,7 @@ services:
     image: ghcr.io/spr-networks/super_wifid
     network_mode: host
     privileged: true
-    logging:
-      driver: *default-logging
+    logging: *default-logging
     depends_on:
       - "dhcp"
       - "dns"
@@ -77,10 +72,10 @@ services:
     privileged: true
     depends_on:
       - "base"
-    logging:
-      driver: *default-logging
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
+      - ./state/public/:/state/public/:ro
   ppp:
     container_name: superppp
     image: ghcr.io/spr-networks/super_ppp
@@ -88,8 +83,7 @@ services:
     privileged: true
     depends_on:
       - "base"
-    logging:
-      driver: *default-logging
+    logging:  *default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/ppp/:/etc/ppp
@@ -102,8 +96,7 @@ services:
       - "base"
       - "dhcp"
       - "api"
-    logging:
-      driver: *default-logging
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/wireguard/:/configs/wireguard/
@@ -129,8 +122,7 @@ services:
       - "wifid"
       - "dhcp"
       - "frontend"
-    logging:
-      driver: *default-logging
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/devices/:/configs/devices/
@@ -151,8 +143,7 @@ services:
     container_name: super-plugin-lookup
     image: ghcr.io/spr-networks/super_plugin-lookup
     network_mode: host
-    logging:
-      driver: *default-logging
+    logging: *default-logging
     depends_on:
       - "base"
       - "dns"
@@ -162,8 +153,7 @@ services:
     container_name: superdyndns
     image: ghcr.io/spr-networks/super_dyndns
     network_mode: bridge
-    logging:
-      driver: *default-logging
+    logging: *default-logging
     depends_on:
       - "base"
       - "dns"
