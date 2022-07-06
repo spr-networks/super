@@ -5,6 +5,7 @@ import Devices from 'views/Devices/Devices'
 import Dhcp from 'views/Groups/Dhcp'
 import Home from 'views/Home'
 import Login from 'views/pages/Login'
+import Setup from 'views/pages/Setup'
 import SignalStrength from 'views/Traffic/SignalStrength'
 import Traffic from 'views/Traffic/Traffic'
 import TrafficTimeSeries from 'views/Traffic/TrafficTimeSeries'
@@ -254,6 +255,11 @@ const routes = [
   {
     path: 'login',
     component: Login,
+    layout: 'auth'
+  },
+  {
+    path: 'setup',
+    component: Setup,
     layout: 'auth'
   }
 ]
