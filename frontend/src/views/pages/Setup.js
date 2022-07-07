@@ -4,6 +4,7 @@ import { api } from 'api'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
+  faCircleExclamation,
   faEthernet,
   faInfoCircle,
   faKey,
@@ -47,7 +48,8 @@ const Setup = (props) => {
     api
       .get('/setup')
       .then((res) => {})
-      .catch((err) => {
+      .catch(async (err) => {
+        let msg = await err.response.text() // setup already done
         setIsDone(true)
       })
   }, [])
@@ -58,7 +60,30 @@ const Setup = (props) => {
     }
   }, [password])
 
+  useEffect(() => {
+    if ('ssid' in errors && ssid.length) {
+      setErrors({})
+    }
+  }, [ssid])
+
   const handlePress = () => {
+    if (
+      !ssid.match(
+        /^[^!#;+\]\/"\t][^+\]\/"\t]{0,30}[^ +\]\/"\t]$|^[^ !#;+\]\/"\t]$[ \t]+$/
+      )
+    ) {
+      setErrors({ ...errors, ssid: 'SSID need to be at least 2 characters' })
+      return
+    }
+
+    if (password.length < 5) {
+      setErrors({
+        ...errors,
+        login: 'Password needs to be at least 5 characters'
+      })
+      return
+    }
+
     const data = {
       InterfaceUplink: interfaceUplink,
       SSID: ssid,
@@ -67,18 +92,16 @@ const Setup = (props) => {
       AdminPassword: password
     }
 
-    if (password.length < 5) {
-      setErrors({ login: 'Password needs to be at least 5 characters' })
-      return
-    }
-
     api
       .put('/setup', data)
       .then((res) => {
+        //res.status==='done'
         setIsDone(true)
       })
-      .catch((err) => {
-        setIsDone(true)
+      .catch(async (err) => {
+        let msg = await err.response.text()
+        setErrors({ ...errors, submit: msg })
+        //setIsDone(true)
       })
   }
 
@@ -111,7 +134,7 @@ const Setup = (props) => {
               <HStack alignSelf="center" alignItems="center" space={2}>
                 <Icon icon={faInfoCircle} color="muted.500" />
                 <Text alignSelf="center" color="muted.900">
-                  SPR is already configured
+                  SPR is configured!
                 </Text>
               </HStack>
 
@@ -137,8 +160,17 @@ const Setup = (props) => {
                 <Input
                   value={ssid}
                   placeholder="Name of your Wireless Network"
-                  onValueChange={(value) => setSsid(value)}
+                  onChangeText={(value) => setSsid(value)}
                 />
+                {'ssid' in errors ? (
+                  <FormControl.ErrorMessage
+                    _text={{
+                      fontSize: 'xs'
+                    }}
+                  >
+                    {errors.ssid}
+                  </FormControl.ErrorMessage>
+                ) : null}
               </FormControl>
               <FormControl isInvalid={'country' in errors}>
                 <FormControl.Label>Wifi Country Code</FormControl.Label>
@@ -211,6 +243,12 @@ const Setup = (props) => {
               >
                 Save
               </Button>
+              {'submit' in errors ? (
+                <HStack space={2} alignSelf="center" alignItems="center">
+                  <Icon icon={faCircleExclamation} color="error.700" />
+                  <Text color="error.700">{errors.submit}</Text>
+                </HStack>
+              ) : null}
             </>
           )}
         </VStack>
