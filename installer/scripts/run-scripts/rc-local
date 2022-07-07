@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [ -f /home/spr/.spr-setup-done ]; then
+  /home/spr/run.sh
+else
+  /home/spr/setup.sh
+  /home/spr/run.sh
+fi
