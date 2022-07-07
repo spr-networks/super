@@ -28,7 +28,9 @@ const Setup = (props) => {
   const interfaces = ['eth0', 'wlan0', 'wlan1']
 
   const [password, setPassword] = useState('')
+  const [countryWifi, setCountryWifi] = useState('US')
   const [interfaceWifi, setInterfaceWifi] = useState('wlan1')
+  const [ssidWifi, setSsidWifi] = useState('SPRLab')
   const [interfaceUplink, setInterfaceUplink] = useState('eth0')
   const [errors, setErrors] = React.useState({})
 
@@ -46,7 +48,7 @@ const Setup = (props) => {
     }
 
     if (password.length < 5) {
-      setErrors({ login: 'Password need to be at least 5 characters' })
+      setErrors({ login: 'Password needs to be at least 5 characters' })
       return
     }
 
@@ -78,7 +80,7 @@ const Setup = (props) => {
           Setup
         </Heading>
         <VStack space={4} mt={12}>
-          <FormControl isInvalid={'ssid' in errors}>
+          <FormControl isInvalid={'interface' in errors}>
             <FormControl.Label>Wifi Interface</FormControl.Label>
             <Select
               selectedValue={interfaceWifi}
@@ -98,6 +100,39 @@ const Setup = (props) => {
               <Select.Item label="eth0" value="eth0" />
               <Select.Item label="wlan0" value="wlan0" />
               <Select.Item label="wlan1" value="wlan1" isDisabled />
+            </Select>
+          </FormControl>
+          <FormControl isInvalid={'ssid' in errors}>
+            <FormControl.Label>SSID</FormControl.Label>
+            <Input
+              value={ssidWifi}
+              variant="outline"
+              size="md"
+              InputLeftElement={
+                <Icon size={4} ml={2} color="muted.400" />
+              }
+              placeholder="Password"
+              onChangeText={(value) => setSsidWifi(value)}
+              onSubmitEditing={handlePress}
+            />
+            {'ssid' in errors ? (
+              <FormControl.ErrorMessage
+                _text={{
+                  fontSize: 'xs'
+                }}
+              >
+                {errors.ssid}
+              </FormControl.ErrorMessage>
+            ) : null}
+          </FormControl>
+          <FormControl isInvalid={'country' in errors}>
+            <FormControl.Label>Wifi Country Code</FormControl.Label>
+            <Select
+              selectedValue={countryWifi}
+              onValueChange={(value) => setCountryWifi(value)}
+            >
+              <Select.Item label="US" value="US"  />
+              <Select.Item label="SE" value="SE"  />
             </Select>
           </FormControl>
           <FormControl isInvalid={'login' in errors}>
