@@ -1537,7 +1537,7 @@ type SetupConfig struct {
 	InterfaceUplink string
 }
 
-// initial setup only if .spr-setup-done
+// initial setup only available if there is no .spr-setup-done
 func setup(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -1556,7 +1556,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method != http.MethodPut {
-		// TODO could list interfaces available for: uplink, wifi
+		// TODO could list interfaces available for uplink and wifi
 		fmt.Fprintf(w, "{\"status\": \"ok\"}")
 		return
 	}
