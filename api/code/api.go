@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -32,6 +33,9 @@ var DevicesConfigFile = DevicesConfigPath + "devices.json"
 var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
 
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
+
+var SetupEnvFile = TEST_PREFIX + "/.sprenv"
+var SetupDoneFile = TEST_PREFIX + "/.spr-setup-done"
 
 var ApiTlsCert = "/configs/base/www-api.crt"
 var ApiTlsKey = "/configs/base/www-api.key"
@@ -163,8 +167,6 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 	if os.Getenv("WIREGUARD_PORT") != "" {
 		reply = append(reply, "wireguard")
 	}
-
-
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
@@ -1527,6 +1529,92 @@ func speedTest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type SetupConfig struct {
+	SSID            string
+	CountryCode     string
+	AdminPassword   string
+	InterfaceSSID   string
+	InterfaceUplink string
+}
+
+// initial setup only if .spr-setup-done
+func setup(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// file to check if we should allow to run setup
+	_, err := os.Stat(SetupDoneFile)
+	if err == nil || !os.IsNotExist(err) {
+		http.Error(w, "setup already done", 400)
+		return
+	}
+
+	//_, err = os.Stat(SetupEnvFile)
+	_, err = os.Stat(AuthUsersFile)
+	if err == nil || !os.IsNotExist(err) {
+		http.Error(w, "setup already done", 400)
+		return
+	}
+
+	if r.Method != http.MethodPut {
+		// TODO could list interfaces available for: uplink, wifi
+		fmt.Fprintf(w, "{\"status\": \"ok\"}")
+		return
+	}
+
+	// setup is not done
+	conf := SetupConfig{}
+	err = json.NewDecoder(r.Body).Decode(&conf)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	validInterface := regexp.MustCompile(`^(eth|wlan)[0-9]$`).MatchString
+	validCountry := regexp.MustCompile(`^[A-Z]{2}$`).MatchString // EN,SE
+	//SSID: up to 32 alphanumeric, case-sensitive, characters
+	//Invalid characters: +, ], /, ", TAB, and trailing spaces
+	//The first character cannot be !, #, or ; character
+	validSSID := regexp.MustCompile(`^[^!#;+\]\/"\t][^+\]\/"\t]{0,30}[^ +\]\/"\t]$|^[^ !#;+\]\/"\t]$[ \t]+$`).MatchString
+
+	if !validInterface(conf.InterfaceSSID) {
+		http.Error(w, "Invalid SSID interface", 400)
+		return
+	}
+
+	if !validInterface(conf.InterfaceUplink) {
+		http.Error(w, "Invalid Uplink interface", 400)
+		return
+	}
+
+	if !validSSID(conf.SSID) {
+		http.Error(w, "Invalid SSID", 400)
+		return
+	}
+
+	// TODO country => channels
+	if !validCountry(conf.CountryCode) {
+		http.Error(w, "Invalid Country Code", 400)
+		return
+	}
+
+	if conf.AdminPassword == "" {
+		http.Error(w, "Password cannot be empty", 400)
+		return
+	}
+
+	envrc := fmt.Sprintf("SSID_INTERFACE=%q\nSSID_NAME=%q\n"+
+		"WANIF=%q\nCOMPOSE_FILE=docker-compose-prebuilt.yml\n"+
+		"COUNTRY_CODE=%q\n"+
+		"ADMIN_USER=admin\nADMIN_PASSWORD=%q\n",
+		conf.InterfaceSSID, conf.SSID,
+		conf.InterfaceUplink,
+		conf.AdminPassword)
+
+	ioutil.WriteFile(SetupEnvFile, []byte(envrc), 0644)
+	fmt.Fprintf(w, "{\"status\": \"done\"}")
+	// TODO force restart of api/spr
+}
+
 //set up SPA handler. From gorilla mux's documentation
 type spaHandler struct {
 	staticPath string
@@ -1594,6 +1682,9 @@ func main() {
 
 	//public websocket with internal authentication
 	external_router_public.HandleFunc("/ws", auth.webSocket).Methods("GET")
+
+	// intial setup
+	external_router_public.HandleFunc("/setup", setup).Methods("GET", "PUT")
 
 	//download cert from http
 	external_router_public.HandleFunc("/cert", getCert).Methods("GET")
