@@ -36,6 +36,7 @@ const Setup = (props) => {
   const interfaces = ['eth0', 'wlan0', 'wlan1']
 
   const [password, setPassword] = useState('')
+  const [ssid, setSsid] = useState('SprLabs')
   const [interfaceWifi, setInterfaceWifi] = useState('wlan1')
   const [interfaceUplink, setInterfaceUplink] = useState('eth0')
   const [errors, setErrors] = React.useState({})
@@ -60,6 +61,7 @@ const Setup = (props) => {
     //TODO country+channel
     const data = {
       InterfaceUplink: interfaceUplink,
+      SSID: ssid,
       InterfaceSSID: interfaceWifi,
       AdminPassword: password
     }
@@ -130,6 +132,14 @@ const Setup = (props) => {
           ) : (
             <>
               <FormControl isInvalid={'ssid' in errors}>
+                <FormControl.Label>Wifi Name (SSID)</FormControl.Label>
+                <Input
+                  value={ssid}
+                  placeholder="Name of your Wireless Network"
+                  onValueChange={(value) => setSsid(value)}
+                />
+              </FormControl>
+              <FormControl isInvalid={'wifi' in errors}>
                 <FormControl.Label>Wifi Interface</FormControl.Label>
                 <Select
                   selectedValue={interfaceWifi}
@@ -141,7 +151,9 @@ const Setup = (props) => {
                 </Select>
               </FormControl>
               <FormControl isInvalid={'uplink' in errors}>
-                <FormControl.Label>Uplink Interface</FormControl.Label>
+                <FormControl.Label>
+                  Uplink Interface (Internet)
+                </FormControl.Label>
                 <Select
                   selectedValue={interfaceUplink}
                   onValueChange={(value) => setInterfaceUplink(value)}
