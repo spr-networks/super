@@ -35,10 +35,11 @@ const Setup = (props) => {
   //NOTE could have > 2 wlan here
   const interfaces = ['eth0', 'wlan0', 'wlan1']
 
-  const [password, setPassword] = useState('')
-  const [ssid, setSsid] = useState('SprLabs')
+  const [ssid, setSsid] = useState('SPRLab')
+  const [countryWifi, setCountryWifi] = useState('US')
   const [interfaceWifi, setInterfaceWifi] = useState('wlan1')
   const [interfaceUplink, setInterfaceUplink] = useState('eth0')
+  const [password, setPassword] = useState('')
   const [errors, setErrors] = React.useState({})
   const [isDone, setIsDone] = useState(false)
 
@@ -58,16 +59,16 @@ const Setup = (props) => {
   }, [password])
 
   const handlePress = () => {
-    //TODO country+channel
     const data = {
       InterfaceUplink: interfaceUplink,
       SSID: ssid,
+      CountryCode: countryWifi,
       InterfaceSSID: interfaceWifi,
       AdminPassword: password
     }
 
     if (password.length < 5) {
-      setErrors({ login: 'Password need to be at least 5 characters' })
+      setErrors({ login: 'Password needs to be at least 5 characters' })
       return
     }
 
@@ -139,6 +140,17 @@ const Setup = (props) => {
                   onValueChange={(value) => setSsid(value)}
                 />
               </FormControl>
+              <FormControl isInvalid={'country' in errors}>
+                <FormControl.Label>Wifi Country Code</FormControl.Label>
+                <Select
+                  selectedValue={countryWifi}
+                  onValueChange={(value) => setCountryWifi(value)}
+                >
+                  <Select.Item label="US" value="US" />
+                  <Select.Item label="SE" value="SE" />
+                </Select>
+              </FormControl>
+
               <FormControl isInvalid={'wifi' in errors}>
                 <FormControl.Label>Wifi Interface</FormControl.Label>
                 <Select
