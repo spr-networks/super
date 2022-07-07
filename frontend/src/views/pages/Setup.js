@@ -88,7 +88,7 @@ const Setup = (props) => {
       InterfaceUplink: interfaceUplink,
       SSID: ssid,
       CountryCode: countryWifi,
-      InterfaceSSID: interfaceWifi,
+      InterfaceAP: interfaceWifi,
       AdminPassword: password
     }
 

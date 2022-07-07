@@ -1533,7 +1533,7 @@ type SetupConfig struct {
 	SSID            string
 	CountryCode     string
 	AdminPassword   string
-	InterfaceSSID   string
+	InterfaceAP   string
 	InterfaceUplink string
 }
 
@@ -1569,19 +1569,18 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	validInterface := regexp.MustCompile(`^(eth|wlan)[0-9]$`).MatchString
 	validCountry := regexp.MustCompile(`^[A-Z]{2}$`).MatchString // EN,SE
 	//SSID: up to 32 alphanumeric, case-sensitive, characters
 	//Invalid characters: +, ], /, ", TAB, and trailing spaces
 	//The first character cannot be !, #, or ; character
 	validSSID := regexp.MustCompile(`^[^!#;+\]\/"\t][^+\]\/"\t]{0,30}[^ +\]\/"\t]$|^[^ !#;+\]\/"\t]$[ \t]+$`).MatchString
 
-	if !validInterface(conf.InterfaceSSID) {
-		http.Error(w, "Invalid SSID interface", 400)
+	if conf.InterfaceAP == "" {
+		http.Error(w, "Invalid AP interface", 400)
 		return
 	}
 
-	if !validInterface(conf.InterfaceUplink) {
+	if conf.InterfaceUplink == "" {
 		http.Error(w, "Invalid Uplink interface", 400)
 		return
 	}
@@ -1606,7 +1605,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		"WANIF=%q\nCOMPOSE_FILE=docker-compose-prebuilt.yml\n"+
 		"COUNTRY_CODE=%q\n"+
 		"ADMIN_USER=admin\nADMIN_PASSWORD=%q\n",
-		conf.InterfaceSSID, conf.SSID,
+		conf.InterfaceAP, conf.SSID,
 		conf.InterfaceUplink,
 		conf.AdminPassword)
 
