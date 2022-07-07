@@ -1,9 +1,14 @@
-import React, { useEffect } from 'react'
+import React, { useContext, useEffect } from 'react'
 import { useState } from 'react'
-import { saveLogin, testLogin } from 'api'
+import { api } from 'api'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faEthernet, faKey, faUser } from '@fortawesome/free-solid-svg-icons'
+import {
+  faEthernet,
+  faInfoCircle,
+  faKey,
+  faUser
+} from '@fortawesome/free-solid-svg-icons'
 import Icon from 'FontAwesomeUtils'
 
 import {
@@ -12,6 +17,7 @@ import {
   Center,
   Text,
   View,
+  Link,
   Heading,
   HStack,
   VStack,
@@ -20,8 +26,10 @@ import {
   Select,
   useColorModeValue
 } from 'native-base'
+import { AlertContext } from 'AppContext'
 
 const Setup = (props) => {
+  const context = useContext(AlertContext)
   const navigate = useNavigate()
 
   //NOTE could have > 2 wlan here
@@ -31,6 +39,16 @@ const Setup = (props) => {
   const [interfaceWifi, setInterfaceWifi] = useState('wlan1')
   const [interfaceUplink, setInterfaceUplink] = useState('eth0')
   const [errors, setErrors] = React.useState({})
+  const [isDone, setIsDone] = useState(false)
+
+  useEffect(() => {
+    api
+      .get('/setup')
+      .then((res) => {})
+      .catch((err) => {
+        setIsDone(true)
+      })
+  }, [])
 
   useEffect(() => {
     if ('login' in errors && password.length) {
@@ -39,10 +57,11 @@ const Setup = (props) => {
   }, [password])
 
   const handlePress = () => {
+    //TODO country+channel
     const data = {
-      password,
-      interfaceWifi,
-      interfaceUplink
+      InterfaceUplink: interfaceUplink,
+      InterfaceSSID: interfaceWifi,
+      AdminPassword: password
     }
 
     if (password.length < 5) {
@@ -50,8 +69,14 @@ const Setup = (props) => {
       return
     }
 
-    console.log('TODO*todo:post to API /setup:', data)
-    //TODO country+channel
+    api
+      .put('/setup', data)
+      .then((res) => {
+        setIsDone(true)
+      })
+      .catch((err) => {
+        setIsDone(true)
+      })
   }
 
   return (
@@ -78,64 +103,92 @@ const Setup = (props) => {
           Setup
         </Heading>
         <VStack space={4} mt={12}>
-          <FormControl isInvalid={'ssid' in errors}>
-            <FormControl.Label>Wifi Interface</FormControl.Label>
-            <Select
-              selectedValue={interfaceWifi}
-              onValueChange={(value) => setInterfaceWifi(value)}
-            >
-              <Select.Item label="eth0" value="eth0" isDisabled />
-              <Select.Item label="wlan0" value="wlan0" isDisabled />
-              <Select.Item label="wlan1" value="wlan1" />
-            </Select>
-          </FormControl>
-          <FormControl isInvalid={'uplink' in errors}>
-            <FormControl.Label>Uplink Interface</FormControl.Label>
-            <Select
-              selectedValue={interfaceUplink}
-              onValueChange={(value) => setInterfaceUplink(value)}
-            >
-              <Select.Item label="eth0" value="eth0" />
-              <Select.Item label="wlan0" value="wlan0" />
-              <Select.Item label="wlan1" value="wlan1" isDisabled />
-            </Select>
-          </FormControl>
-          <FormControl isInvalid={'login' in errors}>
-            <FormControl.Label>Admin Password</FormControl.Label>
-            <Input
-              type="password"
-              value={password}
-              variant="outline"
-              size="md"
-              InputLeftElement={
-                <Icon icon={faKey} size={4} ml={2} color="muted.400" />
-              }
-              placeholder="Password"
-              onChangeText={(value) => setPassword(value)}
-              onSubmitEditing={handlePress}
-            />
-            {'login' in errors ? (
-              <FormControl.ErrorMessage
-                _text={{
-                  fontSize: 'xs'
+          {isDone ? (
+            <>
+              <HStack alignSelf="center" alignItems="center" space={2}>
+                <Icon icon={faInfoCircle} color="muted.500" />
+                <Text alignSelf="center" color="muted.900">
+                  SPR is already configured
+                </Text>
+              </HStack>
+
+              <Button
+                mt={8}
+                alignSelf="center"
+                rounded="full"
+                colorScheme="yellow"
+                bg="#fbc658"
+                _hover={{
+                  bg: '#fab526'
                 }}
+                px={8}
+                href="/auth/login"
               >
-                {errors.login}
-              </FormControl.ErrorMessage>
-            ) : null}
-          </FormControl>
-          <Button
-            mt={8}
-            rounded="full"
-            colorScheme="yellow"
-            bg="#fbc658"
-            _hover={{
-              bg: '#fab526'
-            }}
-            onPress={handlePress}
-          >
-            Save
-          </Button>
+                Click here to login
+              </Button>
+            </>
+          ) : (
+            <>
+              <FormControl isInvalid={'ssid' in errors}>
+                <FormControl.Label>Wifi Interface</FormControl.Label>
+                <Select
+                  selectedValue={interfaceWifi}
+                  onValueChange={(value) => setInterfaceWifi(value)}
+                >
+                  <Select.Item label="eth0" value="eth0" isDisabled />
+                  <Select.Item label="wlan0" value="wlan0" isDisabled />
+                  <Select.Item label="wlan1" value="wlan1" />
+                </Select>
+              </FormControl>
+              <FormControl isInvalid={'uplink' in errors}>
+                <FormControl.Label>Uplink Interface</FormControl.Label>
+                <Select
+                  selectedValue={interfaceUplink}
+                  onValueChange={(value) => setInterfaceUplink(value)}
+                >
+                  <Select.Item label="eth0" value="eth0" />
+                  <Select.Item label="wlan0" value="wlan0" />
+                  <Select.Item label="wlan1" value="wlan1" isDisabled />
+                </Select>
+              </FormControl>
+              <FormControl isInvalid={'login' in errors}>
+                <FormControl.Label>Admin Password</FormControl.Label>
+                <Input
+                  type="password"
+                  value={password}
+                  variant="outline"
+                  size="md"
+                  InputLeftElement={
+                    <Icon icon={faKey} size={4} ml={2} color="muted.400" />
+                  }
+                  placeholder="Password"
+                  onChangeText={(value) => setPassword(value)}
+                  onSubmitEditing={handlePress}
+                />
+                {'login' in errors ? (
+                  <FormControl.ErrorMessage
+                    _text={{
+                      fontSize: 'xs'
+                    }}
+                  >
+                    {errors.login}
+                  </FormControl.ErrorMessage>
+                ) : null}
+              </FormControl>
+              <Button
+                mt={8}
+                rounded="full"
+                colorScheme="yellow"
+                bg="#fbc658"
+                _hover={{
+                  bg: '#fab526'
+                }}
+                onPress={handlePress}
+              >
+                Save
+              </Button>
+            </>
+          )}
         </VStack>
       </Box>
     </View>
