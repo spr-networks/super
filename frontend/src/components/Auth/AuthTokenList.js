@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faCirclePlus,
+  faCopy,
   faPlus,
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
@@ -24,6 +25,7 @@ import { authAPI } from 'api'
 import { AlertContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import AddAuthToken from 'components/Auth/AddAuthToken'
+import { Pressable } from 'react-native'
 
 const AuthTokenList = (props) => {
   const context = useContext(AlertContext)
@@ -74,7 +76,6 @@ const AuthTokenList = (props) => {
     refreshList()
   }
 
-
   const triggerAdd = (triggerProps) => {
     return (
       <Button
@@ -87,6 +88,8 @@ const AuthTokenList = (props) => {
       </Button>
     )
   }
+
+  const copy = (data) => navigator.clipboard.writeText(data)
 
   return (
     <View mt={4}>
@@ -102,7 +105,6 @@ const AuthTokenList = (props) => {
             <AddAuthToken notifyChange={notifyChange} />
           </ModalForm>
         </Box>
-
       </HStack>
       <Box
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
@@ -127,9 +129,23 @@ const AuthTokenList = (props) => {
                 __justifyContent="stretch"
               >
                 <Text flex={1}>{item.Name}</Text>
-                <Text flex={1} w="3/6">
-                  {item.Token}
-                </Text>
+                <HStack
+                  flex={1}
+                  minW={{ base: '2/6', md: '3/6' }}
+                  alignItems="center"
+                  justifyItems="flex-end"
+                >
+                  <Text isTruncated>{item.Token}</Text>
+                  <IconButton
+                    variant="unstyled"
+                    display={{
+                      base: window && window.navigator ? 'flex' : 'none'
+                    }}
+                    icon={<Icon size="4" icon={faCopy} color="muted.500" />}
+                    onPress={() => copy(item.Token)}
+                  />
+                </HStack>
+
                 <HStack w="2/6" space={1} justifyContent="flex-end">
                   <Text color="muted.500">Expire</Text>
                   <Text

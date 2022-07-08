@@ -9,7 +9,7 @@ const AddAuthToken = (props) => {
   const context = useContext(AlertContext)
 
   const [Name, setName] = useState('')
-  const [Expiration, setExpiration] = useState('')
+  const [Expiration, setExpiration] = useState('Never')
 
   const expires = {
     Never: 0,
@@ -61,6 +61,7 @@ const AddAuthToken = (props) => {
           name="Name"
           value={Name}
           onChangeText={(value) => handleChange('Name', value)}
+          onSubmitEditing={handleSubmit}
           autoFocus
         />
 
@@ -81,7 +82,6 @@ const AddAuthToken = (props) => {
             <Select.Item key={val} label={val} value={val} />
           ))}
         </Select>
-
       </FormControl>
 
       <Button color="primary" size="md" onPress={handleSubmit}>
