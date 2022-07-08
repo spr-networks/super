@@ -34,8 +34,9 @@ var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
 
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
 
-var SetupEnvFile = TEST_PREFIX + "/.sprenv"
 var SetupDoneFile = TEST_PREFIX + "/.spr-setup-done"
+var RestartFile = TEST_PREFIX + "/state/api/.spr-restart"
+var ConfigFile = TEST_PREFIX + "/configs/base/config.sh"
 
 var ApiTlsCert = "/configs/base/www-api.crt"
 var ApiTlsKey = "/configs/base/www-api.key"
@@ -1533,7 +1534,7 @@ type SetupConfig struct {
 	SSID            string
 	CountryCode     string
 	AdminPassword   string
-	InterfaceAP   string
+	InterfaceAP     string
 	InterfaceUplink string
 }
 
@@ -1601,17 +1602,57 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	envrc := fmt.Sprintf("SSID_INTERFACE=%q\nSSID_NAME=%q\n"+
-		"WANIF=%q\nCOMPOSE_FILE=docker-compose-prebuilt.yml\n"+
-		"COUNTRY_CODE=%q\n"+
-		"ADMIN_USER=admin\nADMIN_PASSWORD=%q\n",
-		conf.InterfaceAP, conf.SSID,
-		conf.InterfaceUplink,
-		conf.AdminPassword)
+	/*
+		envrc := fmt.Sprintf("SSID_INTERFACE=%q\nSSID_NAME=%q\n"+
+			"WANIF=%q\nCOMPOSE_FILE=docker-compose-prebuilt.yml\n"+
+			"COUNTRY_CODE=%q\n"+
+			"ADMIN_USER=admin\nADMIN_PASSWORD=%q\n",
+			conf.InterfaceAP, conf.SSID,
+			conf.InterfaceUplink,
+			conf.AdminPassword)
 
-	ioutil.WriteFile(SetupEnvFile, []byte(envrc), 0644)
-	fmt.Fprintf(w, "{\"status\": \"done\"}")
+		err = ioutil.WriteFile(SetupEnvFile, []byte(envrc), 0644)
+	*/
+
+	// write to auth_users.json
+	users := fmt.Sprintf("{%q: %q}", "admin", conf.AdminPassword)
+	err = ioutil.WriteFile(AuthUsersFile, []byte(users), 0644)
+	if err != nil {
+		http.Error(w, "Failed to write user auth file", 400)
+		panic(err)
+	}
+
+	//write to config.sh
+	data, err := ioutil.ReadFile(ConfigFile)
+	if err != nil {
+		// we can use default template config here but better to copy it before in bash
+		http.Error(w, "Missing default config.sh", 400)
+		return
+	}
+
+	configData := string(data)
+	matchSSID := regexp.MustCompile(`(SSID_NAME)=(.*)`)
+	matchInterfaceAP := regexp.MustCompile(`(SSID_INTERFACE)=(.*)`)
+	matchInterfaceUplink := regexp.MustCompile(`(WANIF)=(.*)`)
+
+	configData = matchSSID.ReplaceAllString(configData, "$1="+conf.SSID)
+	configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+conf.InterfaceAP)
+	configData = matchInterfaceUplink.ReplaceAllString(configData, "$1="+conf.InterfaceUplink)
+
+	err = ioutil.WriteFile(ConfigFile, []byte(configData), 0755)
+	if err != nil {
+		http.Error(w, "Failed to write config to "+ConfigFile, 400)
+		panic(err)
+	}
+
 	// TODO force restart of api/spr
+	err = ioutil.WriteFile(RestartFile, []byte(""), 0644)
+	if err != nil {
+		http.Error(w, "Failed to write restart file "+RestartFile, 400)
+		panic(err)
+	}
+
+	fmt.Fprintf(w, "{\"status\": \"done\"}")
 }
 
 //set up SPA handler. From gorilla mux's documentation
