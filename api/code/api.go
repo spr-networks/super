@@ -206,6 +206,14 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 
 		defer resp.Body.Close()
 		data, err = ioutil.ReadAll(resp.Body)
+	} else if name == "hostname" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		data = []byte(fmt.Sprintf("%q", hostname))
 	} else if name == "ss" {
 		data, err = exec.Command("jc", "-p", "ss", "-4", "-n").Output()
 	} else {
