@@ -194,12 +194,12 @@ export default class Traffic extends Component {
       const traffic_in = await trafficAPI
         .traffic('incoming_traffic_' + target)
         .catch((error) => {
-          this.context.error('API Failure get traffic: ' + error.message)
+          console.error('API Failure get traffic: ' + error.message)
         })
       const traffic_out = await trafficAPI
         .traffic('outgoing_traffic_' + target)
         .catch((error) => {
-          this.context.error(
+          console.error(
             'API Failure get ' + target + ' traffic: ' + error.message
           )
         })
