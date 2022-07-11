@@ -182,7 +182,14 @@ const SpeedTest = (props) => {
         results.
       </Text>
 
-      <VStack space={4} my={4} p={4} bg="white" rounded="md">
+      <VStack
+        space={4}
+        my={4}
+        px={4}
+        py={8}
+        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+        rounded="md"
+      >
         <HStack space={1} justifyContent="flex-start">
           <IconButton
             onPress={startTest}
