@@ -65,11 +65,11 @@ const Home = (props) => {
       </VStack>
       <VStack flex={1} p={2}>
         {pluginsEnabled.includes('dns-block') ? (
-          <>
+          <VStack>
             <DNSMetrics />
             <DNSBlockMetrics />
             <DNSBlockPercent />
-          </>
+          </VStack>
         ) : null}
         {context.isWifiDisabled ? null : <WireguardPeersActive />}
       </VStack>
