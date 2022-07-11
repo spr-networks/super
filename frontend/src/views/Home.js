@@ -40,7 +40,7 @@ const Home = (props) => {
 
   return (
     <View style={{ flexDirection }}>
-      <VStack flex={2} p={2}>
+      <VStack flex={{ base: 'none', md: 2 }} p={2}>
         <Stack
           direction={{ base: 'column', md: 'row' }}
           justifyContent="space-between"

@@ -96,7 +96,7 @@ const StatsChartWidget = (props) => {
           type: 'logarithmic',
           ticks: {
             callback: (value, index, ticks) => {
-              if (index % 9 == 0) {
+              if ((index + 1) % 10 == 0) {
                 return prettySize(value, true)
               }
             }
@@ -173,7 +173,7 @@ const StatsChartWidget = (props) => {
         {props.title}
       </Text>
       {props.description ? <Text>{props.description}</Text> : null}
-      <Box minH={280}>{chart}</Box>
+      <Box minH={{ base: 100, md: 280 }}>{chart}</Box>
       {props.footerText ? (
         <Box p="2">
           <Divider _light={{ bg: 'muted.200' }} my="2" />
