@@ -12,7 +12,7 @@ const AuthLayout = () => {
   return (
     <Box
       w="100%"
-      __h={{ base: '100vh', md: '100vh' }}
+      h={{ base: '100vh', md: '100vh' }}
       _light={{ bg: 'warmGray.200' }}
       _dark={{ bg: 'blueGray.900' }}
       alignItems="center"
@@ -22,20 +22,11 @@ const AuthLayout = () => {
         'nativebase-body-dark'
       )}
     >
-      <Outlet />
-      {/*<Footer
-        color="light.200"
-        position="fixed"
-        bottom={2}
-        right={2}
-        justifyContent="center"
-      />*/}
-      {/*<View w="100vw" h="100vh" bg="black">
+      <View w="100vw" h="100vh" bg="black">
         <Image
           source="/bg.jpg"
-          alt="spr background"
           opacity={0.4}
-          __height="100vh"
+          height="100vh"
           resizeMode="cover"
         />
         <View marginTop="-90vh">
@@ -48,7 +39,7 @@ const AuthLayout = () => {
             justifyContent="center"
           />
         </View>
-      </View>*/}
+      </View>
     </Box>
   )
 }
