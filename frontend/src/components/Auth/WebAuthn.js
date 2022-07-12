@@ -12,18 +12,19 @@ import {
 } from 'native-base'
 
 import { api } from 'api'
+import { Base64 } from 'utils'
 
 let ApiBaseUrl = api.baseURL
 let TOKEN = ''
 
 // Base64 to ArrayBuffer
 function bufferDecode(value) {
-  return Uint8Array.from(atob(value), (c) => c.charCodeAt(0))
+  return Uint8Array.from(Base64.atob(value), (c) => c.charCodeAt(0))
 }
 
 // ArrayBuffer to URLBase64
 function bufferEncode(value) {
-  return btoa(String.fromCharCode.apply(null, new Uint8Array(value)))
+  return Base64.btoa(String.fromCharCode.apply(null, new Uint8Array(value)))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '')
