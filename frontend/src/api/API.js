@@ -1,7 +1,13 @@
 import createServer from 'api/MockAPI'
+import { Base64 } from 'utils'
+import { Platform } from 'react-native'
 
 export const apiURL = () => {
   const { REACT_APP_API } = process.env
+
+  if (Platform.OS == 'ios') {
+    return 'http://192.168.2.1/'
+  }
 
   // jest
   if (typeof document === 'undefined') {
@@ -51,7 +57,7 @@ class API {
   getAuthHeaders(username = null, password = null) {
     if (username && password) {
       return
-      'Basic ' + btoa(username + ':' + password)
+      'Basic ' + Base64.btoa(username + ':' + password)
     }
 
     let user = JSON.parse(localStorage.getItem('user'))
@@ -59,7 +65,7 @@ class API {
   }
 
   setAuthHeaders(username = '', password = '') {
-    this.authHeaders = 'Basic ' + btoa(username + ':' + password)
+    this.authHeaders = 'Basic ' + Base64.btoa(username + ':' + password)
   }
 
   request(method = 'GET', url, body) {
@@ -142,14 +148,16 @@ export const testLogin = (username, password, callback) => {
     .then((data) => {
       return callback(data == 'Online')
     })
-    .catch((error) => callback(false, error))
+    .catch((error) => {
+      callback(false, error)
+    })
 }
 
 export const saveLogin = (username, password) => {
   localStorage.setItem(
     'user',
     JSON.stringify({
-      authdata: btoa(username + ':' + password),
+      authdata: Base64.btoa(username + ':' + password),
       username: username,
       password: password
     })
