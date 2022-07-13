@@ -7,6 +7,8 @@ fi
 
 umount boot 2>/dev/null
 umount fs 2>/dev/null
+umount /mnt/boot/firmware
+umount /mnt/fs
 
 IMG="./data/spr.img"
 LOOP=$(losetup -j $IMG | cut -d: -f1)
