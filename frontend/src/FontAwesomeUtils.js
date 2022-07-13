@@ -21,7 +21,17 @@ const FontAwesomeIcon = FontAwesomeIconNative
 
 export default function Icon({ color, icon, size, style, ...props }) {
   // behave like native-base
-  size = size == 'xs' ? 3 : size
+  if (!parseInt(size)) {
+    let szs = {
+      xs: 3,
+      md: 4,
+      lg: 5,
+      xl: 6
+    }
+
+    size = szs[size] || 4
+  }
+
   size = size ? parseInt(size) * 4 : 16
   size = `${size}px`
 

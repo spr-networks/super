@@ -219,7 +219,7 @@ const AdminLayout = (props) => {
             position={{ base: 'absolute', md: 'sticky' }}
             w="100%"
             zIndex={99}
-            style={{ backdropFilter: 'blur(10px)' }}
+            _style={{ backdropFilter: 'blur(10px)' }}
           >
             <AdminNavbar
               isMobile={false}
@@ -231,9 +231,9 @@ const AdminLayout = (props) => {
           <Box
             display={{ base: 'flex', md: 'none' }}
             w="100%"
-            position={{ base: 'absolute', md: 'sticky' }}
+            position={{ base: 'relative', md: 'sticky' }}
             zIndex={99}
-            style={{ backdropFilter: 'blur(10px)' }}
+            _style={{ backdropFilter: 'blur(10px)' }}
           >
             <AdminNavbar
               isMobile={true}
@@ -247,7 +247,7 @@ const AdminLayout = (props) => {
             <Box
               display={{ base: 'none', md: 'flex' }}
               position={{ base: 'absolute', md: 'sticky' }}
-              top="16"
+              top={16}
               h={heightContent}
             >
               <Sidebar
@@ -286,7 +286,6 @@ const AdminLayout = (props) => {
               py={{ base: 0, md: 4 }}
               safeAreaTop
               ref={mainPanel}
-              _minH="calc(100vh - 64px)"
               h={heightContent}
             >
               <Outlet />
@@ -299,8 +298,8 @@ const AdminLayout = (props) => {
         <Slide in={showAlert} placement="top">
           <Box
             maxWidth="90%"
-            top="16"
-            position={{ base: 'fixed', md: 'sticky' }}
+            top={16}
+            position={{ base: 'static', md: 'sticky' }}
             alignItems="center"
             justifyContent="center"
             alignSelf="center"

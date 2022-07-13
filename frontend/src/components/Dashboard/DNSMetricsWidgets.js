@@ -90,10 +90,14 @@ export const DNSBlockPercent = (props) => {
   const [totalQueries, setTotalQueries] = useState(0)
   const [blockedQueries, setBlockedQueries] = useState(0)
 
-  useEffect(async () => {
-    const metrics = await blockAPI.metrics()
-    setTotalQueries(metrics.TotalQueries)
-    setBlockedQueries(metrics.BlockedQueries)
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      const metrics = await blockAPI.metrics()
+      setTotalQueries(metrics.TotalQueries)
+      setBlockedQueries(metrics.BlockedQueries)
+    }
+
+    fetchMetrics()
   }, [])
 
   if (!totalQueries || !blockedQueries) {
