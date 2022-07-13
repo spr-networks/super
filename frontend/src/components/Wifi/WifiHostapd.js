@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 import { wifiAPI } from 'api'
 import { ucFirst } from 'utils'

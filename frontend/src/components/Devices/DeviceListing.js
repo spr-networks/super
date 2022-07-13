@@ -1,4 +1,5 @@
-import { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
+import { Dimensions } from 'react-native'
 import { deviceAPI } from 'api'
 import { useNavigate } from 'react-router-dom'
 import Device from 'components/Devices/Device'
@@ -153,9 +154,11 @@ const DeviceListing = (props) => {
   )
   */
 
+  let h = Dimensions.get('window').height - 100
+
   return (
-    <View>
-      <ScrollView h="calc(100vh - 96px)">
+    <View safeArea>
+      <ScrollView h={h}>
         <HStack mb={4} alignItems="center">
           <Heading fontSize="md">Configured Devices</Heading>
 

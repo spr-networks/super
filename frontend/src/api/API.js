@@ -5,9 +5,9 @@ import { Platform } from 'react-native'
 export const apiURL = () => {
   const { REACT_APP_API } = process.env
 
-  /*if (Platform.OS == 'ios') {
+  if (Platform.OS == 'ios') {
     return 'http://192.168.2.1/'
-  }*/
+  }
 
   // jest
   if (typeof document === 'undefined') {
@@ -109,6 +109,11 @@ class API {
       const contentType = response.headers.get('Content-Type')
       if (!contentType || skipReturnValue) {
         return Promise.resolve(true)
+      }
+
+      // weird behaviour from react-native
+      if (contentType.includes('text/html')) {
+        return response.json()
       }
 
       if (contentType.includes('application/json')) {

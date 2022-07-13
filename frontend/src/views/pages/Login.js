@@ -1,5 +1,4 @@
-import React from 'react'
-import { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { saveLogin, testLogin } from 'api'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from 'FontAwesomeUtils'
@@ -70,6 +69,7 @@ const Login = (props) => {
             <Input
               type="text"
               value={username}
+              autoCapitalize="none"
               variant="outline"
               size="md"
               InputLeftElement={

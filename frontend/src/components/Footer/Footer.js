@@ -45,7 +45,7 @@ function Footer(props) {
         Github
       </Link>
 
-      <Text color={color} style={_text.style} w={100} marginLeft="none">
+      <Text color={color} style={_text.style} w={100} marginLeft={0}>
         &copy; {1900 + new Date().getYear()} SPR
       </Text>
     </Stack>

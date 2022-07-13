@@ -2,7 +2,10 @@ import React, { useEffect } from 'react'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
 import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faArrowRightFromBracket } from '@fortawesome/free-solid-svg-icons'
+import {
+  faArrowRightFromBracket,
+  faCircle
+} from '@fortawesome/free-solid-svg-icons'
 import {
   Button,
   Box,
@@ -107,6 +110,21 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
             >
               API
             </Link>
+            <IconButton
+              p="0"
+              onPress={() => {
+                navigate('/admin/wireless')
+              }}
+              variant="unstyled"
+              _icon={{
+                size: 5,
+                color: useColorModeValue(
+                  'navbarTextColorLight',
+                  'navbarTextColorDark'
+                )
+              }}
+              icon={<Icon icon={faCircle} />}
+            />
             <Tooltip label="Toggle Theme">
               <IconButton
                 p="0"

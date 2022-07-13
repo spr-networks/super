@@ -4,9 +4,7 @@ import { prettySize } from 'utils'
 import { Text } from 'native-base'
 
 const TimeSeriesChart = (props) => {
-  return (
-    <Text>TODO</Text>
-  )
+  return <></>
 }
 
 TimeSeriesChart.propTypes = {

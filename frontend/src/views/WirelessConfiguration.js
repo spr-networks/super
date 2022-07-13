@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 
 import { wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'

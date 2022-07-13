@@ -1,11 +1,10 @@
+import React from 'react'
 import PropTypes from 'prop-types'
 import { prettySize } from 'utils'
 import { Divider, Box, Text, useColorModeValue } from 'native-base'
 
 const StatsChartWidget = (props) => {
-	return (
-		<Text>TODO</Text>
-	)
+  return <></>
 }
 
 StatsChartWidget.propTypes = {

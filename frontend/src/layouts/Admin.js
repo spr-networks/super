@@ -1,5 +1,16 @@
 import React, { createContext, useEffect, useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Platform } from 'react-native'
+import {
+  Outlet as OutletWeb,
+  useLocation as useLocationWeb
+} from 'react-router-dom'
+import {
+  Outlet as OutletNative,
+  useLocation as useLocationNative
+} from 'react-router-native'
+
+const Outlet = Platform.OS == 'web' ? OutletWeb : OutletNative
+const useLocation = Platform.OS == 'web' ? useLocationWeb : useLocationNative
 
 import { AppContext, AlertContext, alertState } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
@@ -197,90 +208,87 @@ const AdminLayout = (props) => {
         )}
         alignItems="center"
         nativeID={useColorModeValue('coolGray.100', 'blueGray.900')}
+        safeAreaTop
       >
         <ScrollView w="100%" nativeID="scrollview-id">
-          <Box h="100%" w="100%">
-            <Box
-              display={{ base: 'none', md: 'flex' }}
-              w="100%"
-              position="sticky"
-              top="0"
-              zIndex={99}
-              // @ts-ignore
-              style={{ backdropFilter: 'blur(10px)' }}
-            >
-              <AdminNavbar
-                isMobile={false}
-                isOpenSidebar={isOpenSidebar}
-                setIsOpenSidebar={setIsOpenSidebar}
-              />
-            </Box>
-            <Box
-              display={{ base: 'flex', md: 'none' }}
-              w="100%"
-              position="sticky"
-              top="0"
-              zIndex={99}
-              // @ts-ignore
-              style={{ backdropFilter: 'blur(10px)' }}
-            >
-              <AdminNavbar
-                isMobile={true}
-                isOpenSidebar={isOpenSidebar}
-                setIsOpenSidebar={setIsOpenSidebar}
-              />
-            </Box>
+          <Box
+            display={{ base: 'none', md: 'flex' }}
+            w="100%"
+            position="sticky"
+            top="0"
+            zIndex={99}
+            style={{ backdropFilter: 'blur(10px)' }}
+          >
+            <AdminNavbar
+              isMobile={false}
+              isOpenSidebar={isOpenSidebar}
+              setIsOpenSidebar={setIsOpenSidebar}
+            />
+          </Box>
+          <Box
+            display={{ base: 'flex', md: 'none' }}
+            w="100%"
+            position="sticky"
+            top="0"
+            zIndex={99}
+            // @ts-ignore
+            style={{ backdropFilter: 'blur(10px)' }}
+          >
+            <AdminNavbar
+              isMobile={true}
+              isOpenSidebar={isOpenSidebar}
+              setIsOpenSidebar={setIsOpenSidebar}
+            />
+          </Box>
 
-            <HStack>
+          <HStack>
+            <Box
+              position="sticky"
+              top="16"
+              h="calc(100vh - 64px)"
+              display={{ base: 'none', md: 'flex' }}
+            >
+              <Sidebar
+                isMobile={false}
+                isMini={isOpenSidebar}
+                isOpenSidebar={true}
+                setIsOpenSidebar={setIsOpenSidebar}
+                routes={routes}
+              />
+            </Box>
+            {isOpenSidebar ? (
               <Box
-                position="sticky"
+                position="absolute"
                 top="16"
                 h="calc(100vh - 64px)"
-                display={{ base: 'none', md: 'flex' }}
+                w="100%"
+                zIndex={99}
+                display={{ base: 'flex', md: 'none' }}
               >
                 <Sidebar
-                  isMobile={false}
-                  isMini={isOpenSidebar}
-                  isOpenSidebar={true}
+                  isMobile={true}
+                  isMini={false}
+                  isOpenSidebar={isOpenSidebar}
                   setIsOpenSidebar={setIsOpenSidebar}
                   routes={routes}
                 />
               </Box>
-              {isOpenSidebar ? (
-                <Box
-                  position="fixed"
-                  top="16"
-                  h="calc(100vh - 64px)"
-                  w="100%"
-                  zIndex={99}
-                  display={{ base: 'flex', md: 'none' }}
-                >
-                  <Sidebar
-                    isMobile={true}
-                    isMini={false}
-                    isOpenSidebar={isOpenSidebar}
-                    setIsOpenSidebar={setIsOpenSidebar}
-                    routes={routes}
-                  />
-                </Box>
-              ) : null}
+            ) : null}
 
-              {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
-              {/*h="calc(100% - 64px)"
+            {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
+            {/*h="calc(100% - 64px)"
                minH="calc(100vh - 64px)"*/}
-              <Box
-                flex={1}
-                p={{ base: 4, md: 4 }}
-                safeAreaTop
-                ref={mainPanel}
-                minH="calc(100vh - 64px)"
-              >
-                <Outlet />
-
-                <Footer marginTop="auto" />
-              </Box>
-            </HStack>
-          </Box>
+            <Box
+              flex={1}
+              p={{ base: 4, md: 4 }}
+              safeAreaTop
+              ref={mainPanel}
+              minH="calc(100vh - 64px)"
+            >
+              <Outlet />
+              <Footer marginTop="auto" />
+            </Box>
+          </HStack>
         </ScrollView>
       </Box>
       <AlertContext.Provider value={alertState}>
