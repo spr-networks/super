@@ -216,9 +216,8 @@ const AdminLayout = (props) => {
           {/*desktop*/}
           <Box
             display={{ base: 'none', md: 'flex' }}
+            position={{ base: 'absolute', md: 'sticky' }}
             w="100%"
-            position="sticky"
-            top="0"
             zIndex={99}
             style={{ backdropFilter: 'blur(10px)' }}
           >
@@ -232,7 +231,7 @@ const AdminLayout = (props) => {
           <Box
             display={{ base: 'flex', md: 'none' }}
             w="100%"
-            _position={{ base: 'absolute', md: 'sticky' }}
+            position={{ base: 'absolute', md: 'sticky' }}
             zIndex={99}
             style={{ backdropFilter: 'blur(10px)' }}
           >
@@ -246,10 +245,10 @@ const AdminLayout = (props) => {
           <HStack h={heightContent}>
             {/*desktop*/}
             <Box
-              position="sticky"
+              display={{ base: 'none', md: 'flex' }}
+              position={{ base: 'absolute', md: 'sticky' }}
               top="16"
               h={heightContent}
-              display={{ base: 'none', md: 'flex' }}
             >
               <Sidebar
                 isMobile={false}
@@ -301,7 +300,7 @@ const AdminLayout = (props) => {
           <Box
             maxWidth="90%"
             top="16"
-            position="sticky"
+            position={{ base: 'fixed', md: 'sticky' }}
             alignItems="center"
             justifyContent="center"
             alignSelf="center"

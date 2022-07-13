@@ -39,6 +39,9 @@ if (typeof localStorage === 'undefined') {
     },
     setItem: function (key, value) {
       this.data[key] = value
+    },
+    removeItem: function (key) {
+      delete this.data[key]
     }
   }
 }

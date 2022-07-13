@@ -12,7 +12,7 @@ const AuthLayout = () => {
   return (
     <Box
       w="100%"
-      __h={{ base: '100vh', md: '100vh' }}
+      h="100%"
       _light={{ bg: 'warmGray.200' }}
       _dark={{ bg: 'blueGray.900' }}
       alignItems="center"
