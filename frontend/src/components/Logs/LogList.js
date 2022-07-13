@@ -209,15 +209,20 @@ const LogList = (props) => {
               w="100%"
               space={3}
               alignItems="center"
-              justifyContent="stretch"
+              justifyContent={{ base: 'space-evenly', md: 'stretch' }}
             >
-              <Badge variant="outline" colorScheme="primary">
-                {item.CONTAINER_NAME || item._TRANSPORT}
-              </Badge>
-              <Text isTruncated>{item.MESSAGE}</Text>
-              <Text fontSize="xs" marginLeft="auto" whiteSpace="nowrap">
-                {prettyDate(item.__REALTIME_TIMESTAMP / 1e3)}
+              <Text flex="2" flexWrap>
+                {item.MESSAGE}
               </Text>
+              <VStack space={2}>
+                <Text fontSize="xs" marginLeft="auto" whiteSpace="nowrap">
+                  {prettyDate(item.__REALTIME_TIMESTAMP / 1e3)}
+                </Text>
+
+                <Badge variant="outline" colorScheme="primary" ml="auto">
+                  {item.CONTAINER_NAME || item._TRANSPORT}
+                </Badge>
+              </VStack>
             </HStack>
           </Box>
         )}
