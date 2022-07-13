@@ -11,8 +11,7 @@ import { Platform, StyleSheet } from 'react-native'
 import { Icon as IconNb, useToken } from 'native-base'
 export * from '@fortawesome/react-native-fontawesome'
 
-const FontAwesomeIcon =
-  Platform.OS === 'web' && false ? FontAwesomeIconReact : FontAwesomeIconNative
+const FontAwesomeIcon = FontAwesomeIconNative
 
 /*FaIcon.propTypes = {
   icon: PropTypes.object,
@@ -21,35 +20,45 @@ const FontAwesomeIcon =
 }*/
 
 export default function Icon({ color, icon, size, style, ...props }) {
-  if (Platform.OS === 'web') {
-    // behave like native-base
-    size = size == 'xs' ? 3 : size
-    size = size ? parseInt(size) * 4 : 16
-    size = `${size}px`
+  // behave like native-base
+  size = size == 'xs' ? 3 : size
+  size = size ? parseInt(size) * 4 : 16
+  size = `${size}px`
 
-    style = style || {}
+  style = style || {}
 
-    if (props.mr) {
-      style.marginRight = props.mr * 4
-    }
+  if (props.mr) {
+    style.marginRight = props.mr * 4
+  }
 
-    if (props.ml) {
-      style.marginLeft = props.ml * 4
-    }
+  if (props.ml) {
+    style.marginLeft = props.ml * 4
+  }
 
-    const webStyles = StyleSheet.flatten([
-      style,
-      { color: useToken('colors', color), width: size, height: size }
-    ])
+  const webStyles = StyleSheet.flatten([
+    style,
+    { color: useToken('colors', color), width: size, height: size }
+  ])
 
-    /*if (typeof icon === 'string') {
+  /*if (typeof icon === 'string') {
       return <FontAwesomeIconReact icon={solid('coffee')} style={webStyles} />
     }*/
 
+  if (Platform.OS === 'web') {
     return <FontAwesomeIconReact icon={icon} style={webStyles} />
   }
 
-  return <IconNb as={FontAwesomeIcon} icon={icon} color={color} {...props} />
+  return <FontAwesomeIconNative icon={icon} size={size} style={webStyles} />
+
+  /*return (
+    <IconNb
+      as={FontAwesomeIcon}
+      icon={icon}
+      size={size}
+      color={color}
+      {...props}
+    />
+  )*/
 }
 
 //Brand icons
