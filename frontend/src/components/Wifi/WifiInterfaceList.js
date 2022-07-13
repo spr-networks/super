@@ -165,7 +165,7 @@ const WifiInterface = (props) => {
                             (k) => !tabList.includes(k)
                           )}
                           renderItem={({ item }) => (
-                            <VStack maxW="64vw" flexWrap="wrap" mb={2}>
+                            <VStack maxW="64%" flexWrap="wrap" mb={2}>
                               <Text bold>{item}</Text>
                               <Text>{iw[item]}</Text>
                             </VStack>

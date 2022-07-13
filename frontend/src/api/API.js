@@ -149,7 +149,7 @@ export const api = new API()
 export const testLogin = (username, password, callback) => {
   api.setAuthHeaders(username, password)
   api
-    .get('/status')
+    .get('/status?json=1')
     .then((data) => {
       return callback(data == 'Online')
     })

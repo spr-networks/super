@@ -1,5 +1,5 @@
 import React, { createContext, useEffect, useState } from 'react'
-import { Platform } from 'react-native'
+import { Platform, Dimensions } from 'react-native'
 import {
   Outlet as OutletWeb,
   useLocation as useLocationWeb
@@ -186,6 +186,8 @@ const AdminLayout = (props) => {
     })
   }, [])
 
+  let heightContent = Dimensions.get('window').height - 64 //calc(100vh-64px)
+
   return (
     <AppContext.Provider
       value={{
@@ -210,7 +212,8 @@ const AdminLayout = (props) => {
         nativeID={useColorModeValue('coolGray.100', 'blueGray.900')}
         safeAreaTop
       >
-        <ScrollView w="100%" nativeID="scrollview-id">
+        <ScrollView w="100%" h="100%" nativeID="scrollview-id">
+          {/*desktop*/}
           <Box
             display={{ base: 'none', md: 'flex' }}
             w="100%"
@@ -225,13 +228,12 @@ const AdminLayout = (props) => {
               setIsOpenSidebar={setIsOpenSidebar}
             />
           </Box>
+          {/*mobile*/}
           <Box
             display={{ base: 'flex', md: 'none' }}
             w="100%"
-            position="sticky"
-            top="0"
+            _position={{ base: 'absolute', md: 'sticky' }}
             zIndex={99}
-            // @ts-ignore
             style={{ backdropFilter: 'blur(10px)' }}
           >
             <AdminNavbar
@@ -241,11 +243,12 @@ const AdminLayout = (props) => {
             />
           </Box>
 
-          <HStack>
+          <HStack h={heightContent}>
+            {/*desktop*/}
             <Box
               position="sticky"
               top="16"
-              h="calc(100vh - 64px)"
+              h={heightContent}
               display={{ base: 'none', md: 'flex' }}
             >
               <Sidebar
@@ -256,11 +259,11 @@ const AdminLayout = (props) => {
                 routes={routes}
               />
             </Box>
+            {/*mobile*/}
             {isOpenSidebar ? (
               <Box
                 position="absolute"
-                top="16"
-                h="calc(100vh - 64px)"
+                h={heightContent}
                 w="100%"
                 zIndex={99}
                 display={{ base: 'flex', md: 'none' }}
@@ -278,16 +281,18 @@ const AdminLayout = (props) => {
             {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
             {/*h="calc(100% - 64px)"
                minH="calc(100vh - 64px)"*/}
-            <Box
+            <ScrollView
               flex={1}
-              p={{ base: 4, md: 4 }}
+              px={4}
+              py={{ base: 0, md: 4 }}
               safeAreaTop
               ref={mainPanel}
-              minH="calc(100vh - 64px)"
+              _minH="calc(100vh - 64px)"
+              h={heightContent}
             >
               <Outlet />
-              <Footer marginTop="auto" />
-            </Box>
+              <Footer mt="auto" />
+            </ScrollView>
           </HStack>
         </ScrollView>
       </Box>

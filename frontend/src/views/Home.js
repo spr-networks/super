@@ -58,6 +58,7 @@ const Home = (props) => {
             </>
           )}
         </Stack>
+
         <VStack>
           <TotalTraffic />
           <Interfaces />

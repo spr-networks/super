@@ -154,7 +154,7 @@ const DeviceListing = (props) => {
   )
   */
 
-  let h = Dimensions.get('window').height - 100
+  let h = Dimensions.get('window').height - 130
 
   return (
     <View safeArea>

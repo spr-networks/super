@@ -150,38 +150,36 @@ const SidebarItem = (props) => {
                   : 'transparent'
             }}
           >
-            <Link>
-              <Box px="8" py="2">
-                <HStack
-                  space="3"
-                  alignItems="center"
-                  pl={level > 1 ? level + 14 + 'px' : '0px'}
-                >
-                  {item.icon && typeof item.icon !== 'string' ? (
-                    <Icon
-                      color={useColorModeValue(
-                        'sidebarItemIconLight',
-                        'sidebarItemIconDark'
-                      )}
-                      icon={item.icon}
-                    />
-                  ) : null}
-                  {isMini ? null : (
-                    <Text
-                      fontWeight="300"
-                      fontSize="sm"
-                      color={useColorModeValue(
-                        'sidebarItemTextLight',
-                        'sidebarItemTextDark'
-                      )}
-                    >
-                      {item.name}
-                    </Text>
-                  )}
-                  {item.status && <SidebarBadge status={item.status} />}
-                </HStack>
-              </Box>
-            </Link>
+            <Box px="8" py="2">
+              <HStack
+                space="3"
+                alignItems="center"
+                pl={level > 1 ? level + 14 + 'px' : '0px'}
+              >
+                {item.icon && typeof item.icon !== 'string' ? (
+                  <Icon
+                    color={useColorModeValue(
+                      'sidebarItemIconLight',
+                      'sidebarItemIconDark'
+                    )}
+                    icon={item.icon}
+                  />
+                ) : null}
+                {isMini ? null : (
+                  <Text
+                    fontWeight="300"
+                    fontSize="sm"
+                    color={useColorModeValue(
+                      'sidebarItemTextLight',
+                      'sidebarItemTextDark'
+                    )}
+                  >
+                    {item.name}
+                  </Text>
+                )}
+                {item.status && <SidebarBadge status={item.status} />}
+              </HStack>
+            </Box>
           </Pressable>
         ) : (
           <CollapsibleSidebarItem

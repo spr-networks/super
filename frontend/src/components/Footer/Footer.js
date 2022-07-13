@@ -16,7 +16,7 @@ function Footer(props) {
     <Stack
       direction="row"
       space={2}
-      mt={10}
+      pt={4}
       display={{ base: 'none', md: 'flex' }}
       {...props}
     >
