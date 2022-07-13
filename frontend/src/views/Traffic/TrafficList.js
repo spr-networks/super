@@ -246,7 +246,7 @@ const TrafficList = (props) => {
         p={4}
         mb={4}
       >
-        <ScrollView h="calc(100vh - 96px - 160px)">
+        <ScrollView h="100%">
           <TimeSeriesList
             type={type}
             data={listFiltered}

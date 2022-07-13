@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
 import { format as timeAgo } from 'timeago.js'
 
@@ -50,7 +51,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
   }*/
 
   const AsnIcon = React.memo(({ asn }) => {
-    if (!asn) {
+    if (!asn || Platform.OS !== 'web') {
       return <></>
     }
 
@@ -98,7 +99,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
     let ip = e.target.innerText
 
     // TODO handle this and show popover info with actions
-    if (!ip.match(regexLAN)) {
+    if (!ip || !ip.match(regexLAN)) {
       return
     }
 

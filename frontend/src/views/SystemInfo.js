@@ -249,7 +249,7 @@ const SystemInfo = (props) => {
         }
       />
       <Modal isOpen={isOpen} onClose={onClose} animationPreset="slide">
-        <Modal.Content maxWidth={{ base: '100vw', md: '90vw' }}>
+        <Modal.Content maxWidth={{ base: '100%', md: '90vw' }}>
           <Modal.CloseButton />
           <Modal.Header>{modalTitle}</Modal.Header>
           <Modal.Body>{modalBody}</Modal.Body>
