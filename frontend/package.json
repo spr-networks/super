@@ -12,7 +12,7 @@
     "ios": "react-native run-ios",
     "native-start": "react-native start",
     "build": "react-scripts build",
-    "test": "jest",
+    "test": "jest --forceExit",
     "cypress": "cypress run",
     "lint": "npx run prettier --write src",
     "eject": "react-scripts eject",
