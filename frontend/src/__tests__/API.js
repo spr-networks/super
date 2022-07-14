@@ -1,6 +1,6 @@
 import API from 'api'
 import { api, deviceAPI, testLogin, saveLogin } from 'api'
-/*import createServer from './api/MockAPI'
+import createServer from 'api/MockAPI'
 
 let server
 
@@ -10,7 +10,7 @@ beforeEach(() => {
 
 afterEach(() => {
   server.shutdown()
-})*/
+})
 
 describe('API component', () => {
   let _REACT_APP_API = null
