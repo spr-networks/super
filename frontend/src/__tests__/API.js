@@ -20,7 +20,7 @@ describe('API component', () => {
   test('default baseurl', () => {
     delete process.env.REACT_APP_API
     let _api = new API()
-    expect(_api.baseURL).toBe('http://localhost/')
+    expect(_api.baseURL).toBe('')
   })
 
   afterEach(() => (process.env.REACT_APP_API = _REACT_APP_API))

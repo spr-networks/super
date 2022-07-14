@@ -20,11 +20,6 @@ export const getApiURL = () => {
     return '/'
   }
 
-  /*// jest
-  if (typeof document === 'undefined') {
-    return 'http://localhost/'
-  }*/
-
   if (Platform.OS == 'ios') {
     return 'http://192.168.2.1/'
   }
@@ -37,6 +32,11 @@ export const getApiURL = () => {
       throw e
     }
   }
+
+  /*/ jest
+  if (typeof document === 'undefined') {
+    return 'http://localhost/'
+  }*/
 
   return document.location.origin + '/'
 }
