@@ -1,55 +1,55 @@
 {
   "images" : [
     {
-      "filename" : "sprlogo-8.png",
+      "filename" : "logo-8.png",
       "idiom" : "iphone",
       "scale" : "2x",
       "size" : "20x20"
     },
     {
-      "filename" : "sprlogo-7.png",
+      "filename" : "logo-7.png",
       "idiom" : "iphone",
       "scale" : "3x",
       "size" : "20x20"
     },
     {
-      "filename" : "sprlogo-6.png",
+      "filename" : "logo-6.png",
       "idiom" : "iphone",
       "scale" : "2x",
       "size" : "29x29"
     },
     {
-      "filename" : "sprlogo-5.png",
+      "filename" : "logo-5.png",
       "idiom" : "iphone",
       "scale" : "3x",
       "size" : "29x29"
     },
     {
-      "filename" : "sprlogo-4.png",
+      "filename" : "logo-4.png",
       "idiom" : "iphone",
       "scale" : "2x",
       "size" : "40x40"
     },
     {
-      "filename" : "sprlogo-3.png",
+      "filename" : "logo-3.png",
       "idiom" : "iphone",
       "scale" : "3x",
       "size" : "40x40"
     },
     {
-      "filename" : "sprlogo-2.png",
+      "filename" : "logo-2.png",
       "idiom" : "iphone",
       "scale" : "2x",
       "size" : "60x60"
     },
     {
-      "filename" : "sprlogo-1.png",
+      "filename" : "logo-1.png",
       "idiom" : "iphone",
       "scale" : "3x",
       "size" : "60x60"
     },
     {
-      "filename" : "sprlogo.png",
+      "filename" : "logo.png",
       "idiom" : "ios-marketing",
       "scale" : "1x",
       "size" : "1024x1024"
