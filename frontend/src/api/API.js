@@ -6,7 +6,7 @@ export const apiURL = () => {
   const { REACT_APP_API } = process.env
 
   if (Platform.OS == 'ios') {
-    return 'http://192.168.2.1/'
+    //return 'http://192.168.2.1/'
   }
 
   // jest
