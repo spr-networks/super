@@ -91,6 +91,13 @@ export default class DNSAddBlocklist extends React.Component {
               >
                 See here
               </Link>
+              <Link
+                color="muted.500"
+                isExternal
+                href="https://github.com/blocklistproject/Lists"
+              >
+                and here
+              </Link>
               <Text color="muted.500">for examples of host files to use</Text>
             </HStack>
           </Stack>

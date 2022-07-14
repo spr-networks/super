@@ -40,6 +40,17 @@ export default class DNSBlocklist extends React.Component {
     super(props)
 
     this.state.list = []
+    this.recommendedListDefault = [{URI: "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"},
+                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/ads.txt"},
+                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/facebook.txt"},
+                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/twitter.txt"},
+                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/malware.txt"},
+                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/porn.txt"},
+                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/tracking.txt"},
+                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt"},
+                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/everything.txt"},
+                                ]
+    this.state.recommendedList = []
     this.state.pending = true
 
     this.handleItemSwitch = this.handleItemSwitch.bind(this)
@@ -78,8 +89,25 @@ export default class DNSBlocklist extends React.Component {
       .blocklists()
       .then((blocklist) => {
         list = blocklist
+
+        let recommendedList = []
+        for (let item of this.recommendedListDefault) {
+          let exists = false
+          for (let existing of list) {
+            if (existing.URI == item.URI) {
+              exists = true
+              break
+            }
+          }
+
+          if (!exists) {
+            recommendedList.push(item)
+          }
+        }
+
         this.setState({ list })
         this.setState({ pending: false })
+        this.setState({recommendedList})
       })
       .catch((error) => {
         this.context.error('API Failure: ' + error.message)
@@ -214,6 +242,108 @@ export default class DNSBlocklist extends React.Component {
         >
           <FlatList
             data={this.state.list}
+            renderItem={({ item }) => (
+              <Box
+                borderBottomWidth="1"
+                _dark={{
+                  borderColor: 'muted.600'
+                }}
+                borderColor="muted.200"
+                py="2"
+              >
+                <HStack
+                  space={3}
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <Text minW="50%" isTruncated>
+                    {item.URI}
+                  </Text>
+
+                  <Box>
+                    <Switch
+                      isDisabled={this.state.pending}
+                      defaultIsChecked={item.Enabled}
+                      onValueChange={() =>
+                        this.handleItemSwitch(item, !item.Enabled)
+                      }
+                    />
+                  </Box>
+
+                  <HStack
+                    flex={2}
+                    space={1}
+                    alignSelf="center"
+                    alignItems="center"
+                  >
+                    {item.Tags
+                      ? item.Tags.map((entry) => (
+                          <Badge key={item.URI + entry} variant="outline">
+                            {entry}
+                          </Badge>
+                        ))
+                      : null}
+                  </HStack>
+
+                  <Menu
+                    trigger={(triggerProps) => {
+                      return (
+                        <IconButton
+                          display={{ base: edit ? 'flex' : 'none' }}
+                          size="xs"
+                          variant="ghost"
+                          icon={<Icon icon={faPen} />}
+                          {...triggerProps}
+                        />
+                      )
+                    }}
+                  >
+                    <Menu.OptionGroup
+                      title="Tags"
+                      type="checkbox"
+                      defaultValue={item.Tags ? item.Tags : []}
+                      onChange={(value) => handleChangeTags(item, value)}
+                    >
+                      {[
+                        ...new Set(
+                          defaultTags.concat(item.Tags ? item.Tags : [])
+                        )
+                      ].map((tag) => (
+                        <Menu.ItemOption key={tag} value={tag}>
+                          {tag}
+                        </Menu.ItemOption>
+                      ))}
+                      <Menu.ItemOption
+                        key="newTag"
+                        onPress={() => {
+                          this.setState({
+                            showModal: true,
+                            modalType: 'Tag',
+                            pendingItem: item
+                          })
+                        }}
+                      >
+                        New Tag...
+                      </Menu.ItemOption>
+                    </Menu.OptionGroup>
+                  </Menu>
+
+                  <IconButton
+                    alignSelf="center"
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="secondary"
+                    icon={<Icon icon={faXmark} />}
+                    onPress={() => this.deleteListItem(item)}
+                  />
+                </HStack>
+              </Box>
+            )}
+            keyExtractor={(item) => item.URI}
+          />
+
+          <FlatList
+            data={this.state.recommendedList}
             renderItem={({ item }) => (
               <Box
                 borderBottomWidth="1"
