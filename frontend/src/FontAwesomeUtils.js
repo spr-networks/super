@@ -33,7 +33,7 @@ export default function Icon({ color, icon, size, style, ...props }) {
   }
 
   size = size ? parseInt(size) * 4 : 16
-  size = `${size}px`
+  size = parseInt(size)
 
   style = style || {}
 

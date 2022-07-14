@@ -1,7 +1,8 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Platform } from 'react-native'
-import { useNavigate as useNavigateWeb } from 'react-router-dom'
-import { useNavigate as useNavigateNative } from 'react-router-native'
+import { useNavigate } from 'react-router-dom'
+/*import { useNavigate as useNavigateWeb } from 'react-router-dom'
+import { useNavigate as useNavigateNative } from 'react-router-native'*/
 import { Animated } from 'react-native'
 import Icon from 'FontAwesomeUtils'
 import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
@@ -90,7 +91,8 @@ const SidebarItem = (props) => {
   }
 */
 
-  const navigate = Platform.OS == 'web' ? useNavigateWeb() : useNavigateNative()
+  //const navigate = Platform.OS == 'web' ? useNavigateWeb() : useNavigateNative()
+  const navigate = useNavigate()
 
   return sidebarItems.map((item, index) => {
     let display = { base: 'flex' }

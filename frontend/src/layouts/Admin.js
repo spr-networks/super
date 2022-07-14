@@ -1,5 +1,7 @@
 import React, { createContext, useEffect, useState } from 'react'
 import { Platform, Dimensions } from 'react-native'
+import { Outlet, useLocation } from 'react-router-dom'
+/*
 import {
   Outlet as OutletWeb,
   useLocation as useLocationWeb
@@ -11,7 +13,7 @@ import {
 
 const Outlet = Platform.OS == 'web' ? OutletWeb : OutletNative
 const useLocation = Platform.OS == 'web' ? useLocationWeb : useLocationNative
-
+*/
 import { AppContext, AlertContext, alertState } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Footer from 'components/Footer/Footer'
