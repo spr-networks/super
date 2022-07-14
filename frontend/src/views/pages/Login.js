@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { saveLogin, testLogin } from 'api'
+import { Platform } from 'react-native'
+import { saveLogin, testLogin, getApiURL, setApiURL } from 'api'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faKey, faUser } from '@fortawesome/free-solid-svg-icons'
+import { faKey, faServer, faUser } from '@fortawesome/free-solid-svg-icons'
 import Icon from 'FontAwesomeUtils'
 
 import {
@@ -22,12 +23,24 @@ import {
 const Login = (props) => {
   const navigate = useNavigate()
 
+  const [hostname, setHostname] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loggedIn, setLoggedin] = useState(false)
   const [errors, setErrors] = React.useState({})
 
+  useEffect(() => {
+    let hostname = getApiURL()
+      .replace(/^https?:\/\//, '')
+      .replace(/\/.*/, '')
+    setHostname(hostname)
+  }, [])
+
   const handleLogin = () => {
+    if (Platform.OS !== 'web') {
+      setApiURL(`http://${hostname}`)
+    }
+
     testLogin(username, password, function (success) {
       if (success) {
         saveLogin(username, password)
@@ -64,6 +77,22 @@ const Login = (props) => {
           Login
         </Heading>
         <VStack space={4} mt={12}>
+          <FormControl
+            display={{ base: Platform.OS === 'web' ? 'none' : 'flex' }}
+          >
+            <Input
+              type="text"
+              value={hostname}
+              autoCapitalize="none"
+              variant="outline"
+              size="md"
+              InputLeftElement={
+                <Icon icon={faServer} size={4} ml={2} color="muted.400" />
+              }
+              placeholder="Hostname..."
+              onChangeText={(value) => setHostname(value)}
+            />
+          </FormControl>
           <FormControl>
             {/*<FormControl.Label>Username</FormControl.Label>*/}
             <Input

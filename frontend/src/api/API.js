@@ -2,21 +2,31 @@ import createServer from 'api/MockAPI'
 import { Base64 } from 'utils'
 import { Platform } from 'react-native'
 
-export const apiURL = () => {
+let gApiURL = null
+
+export const setApiURL = (url) => {
+  gApiURL = url
+}
+
+export const getApiURL = () => {
+  if (gApiURL !== null) {
+    return gApiURL
+  }
+
   const { REACT_APP_API } = process.env
-
-  if (Platform.OS == 'ios') {
-    //return 'http://192.168.2.1/'
-  }
-
-  // jest
-  if (typeof document === 'undefined') {
-    return 'http://localhost/'
-  }
 
   if (REACT_APP_API == 'mock') {
     createServer()
     return '/'
+  }
+
+  /*// jest
+  if (typeof document === 'undefined') {
+    return 'http://localhost/'
+  }*/
+
+  if (Platform.OS == 'ios') {
+    return 'http://192.168.2.1/'
   }
 
   if (REACT_APP_API) {
@@ -51,8 +61,12 @@ class API {
   baseURL = ''
   authHeaders = ''
 
+  getApiURL() {
+    return getApiURL()
+  }
+
   constructor(baseURL = '') {
-    this.baseURL = apiURL() + baseURL.replace(/^\/+/, '')
+    this.baseURL = baseURL.replace(/^\/+/, '')
     this.authHeaders = this.getAuthHeaders()
   }
 
@@ -91,7 +105,7 @@ class API {
       opts.body = JSON.stringify(body)
     }
 
-    let baseURL = this.baseURL
+    let baseURL = this.getApiURL() + this.baseURL
     // get rid of //
     if (url[0] == '/' && baseURL.length && baseURL[baseURL.length - 1] == '/') {
       url = url.substr(1)
@@ -101,7 +115,7 @@ class API {
     let skipReturnValue = method == 'DELETE'
 
     let _url = `${baseURL}${url}`
-    //console.log('[API] fetch', _url, 'Authorization:', this.authHeaders)
+    //console.log('[API] fetch', _url)
     //console.log(`[API] fetch method=`, method, 'skip=', skipReturnValue)
 
     return fetch(_url, opts).then((response) => {
@@ -152,7 +166,7 @@ export const api = new API()
 export const testLogin = (username, password, callback) => {
   api.setAuthHeaders(username, password)
   api
-    .get('/status?json=1')
+    .get('/status?' + Math.random()) // NOTE react native can cache text/html
     .then((data) => {
       return callback(data == 'Online')
     })

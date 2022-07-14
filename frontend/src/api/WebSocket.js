@@ -1,11 +1,11 @@
-import { apiURL } from './API'
+import { getApiURL } from './API'
 
 function connectWebsocket(messageCallback) {
   let userData = JSON.parse(localStorage.getItem('user')),
     ws = null
 
   try {
-    let host = new URL(apiURL()).host
+    let host = new URL(getApiURL()).host
     ws = new WebSocket(`ws://${host}/ws`)
   } catch (err) {
     // mock error

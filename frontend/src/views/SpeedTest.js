@@ -28,7 +28,7 @@ import {
   useColorModeValue
 } from 'native-base'
 
-import { apiURL } from 'api/API'
+import { getApiURL } from 'api/API'
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
 
@@ -88,7 +88,7 @@ const SpeedTest = (props) => {
     req = new XMLHttpRequest()
     start = Date.now()
 
-    let apiUrl = apiURL()
+    let apiUrl = getApiURL()
     let url = `${apiUrl}speedtest/${_start}-${_end}`
 
     // compability
@@ -131,7 +131,7 @@ const SpeedTest = (props) => {
     req = new XMLHttpRequest()
     start = Date.now()
 
-    let apiUrl = apiURL()
+    let apiUrl = getApiURL()
     let url = `${apiUrl}speedtest/${_start}-${_end}`
 
     req.onprogress = (progEv) => {
