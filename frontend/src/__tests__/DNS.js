@@ -45,11 +45,11 @@ describe('DNS Block', () => {
       </NativeBaseProvider>
     )
 
-    expect(container).toBeDefined()
+    //expect(container).toBeDefined()
 
-    const title = await getByText('DNS Blocklists')
-    // make sure we have all the tables in the document
-    expect(title).toBeTruthy()
+    await waitFor(() => {
+      expect(getByText('DNS Blocklists')).toBeTruthy()
+    })
 
     // wait for data to be populated
     /*await waitFor(async () => {
