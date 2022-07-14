@@ -46,7 +46,11 @@ export default class Wireguard extends Component {
   }
 
   componentDidMount() {
-    this.getStatus()
+    const fetchStatus = async () => {
+      await this.getStatus()
+    }
+
+    fetchStatus()
   }
 
   handleChange() {

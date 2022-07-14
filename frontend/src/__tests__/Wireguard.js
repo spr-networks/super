@@ -20,7 +20,9 @@ describe('Wireguard', () => {
       </NativeBaseProvider>
     )
 
-    expect(container).toBeDefined()
+    await waitFor(() => {
+      expect(container).toBeDefined()
+    })
 
     const title = await getByText('Wireguard')
     // make sure we have all the tables in the document
