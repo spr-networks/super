@@ -1,6 +1,11 @@
 import 'react-native'
 import React from 'react'
-import { cleanup, render, fireEvent } from '@testing-library/react-native'
+import {
+  cleanup,
+  render,
+  fireEvent,
+  waitFor
+} from '@testing-library/react-native'
 import { NativeBaseProvider } from 'native-base'
 
 import ClientSelect from 'components/ClientSelect'
