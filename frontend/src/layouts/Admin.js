@@ -288,7 +288,7 @@ const AdminLayout = (props) => {
                minH="calc(100vh - 64px)"*/}
             <ScrollView
               flex={1}
-              px={4}
+              px={{ base: 4, md: 4 }}
               py={{ base: 4, md: 4 }}
               safeAreaTop
               ref={mainPanel}

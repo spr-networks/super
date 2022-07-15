@@ -25,7 +25,7 @@ export const prettySize = (sz, round = false) => {
 export const prettySignal = (signal) => {
   let className = 'muted.500'
   if (signal >= -50) {
-    className = 'success.500 bold'
+    className = 'success.600'
   } else if (signal >= -60) {
     className = 'success.500'
   } else if (signal >= -70) {

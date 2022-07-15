@@ -718,7 +718,7 @@ const FlowList = (props) => {
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
         rounded="lg"
         space={4}
-        w={{ base: '92vw', md: '390px' }}
+        w={{ base: '100%', md: '390px' }}
         mr={{ base: 0, lg: 8 }}
         p={4}
       >
