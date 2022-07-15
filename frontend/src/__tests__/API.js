@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import API from 'api'
 import { api, deviceAPI, testLogin, saveLogin } from 'api'
 import createServer from 'api/MockAPI'
@@ -40,10 +41,11 @@ describe('API Login', () => {
     })
   })
 
-  test('save login', () => {
-    saveLogin('admin', 'admin')
+  test('save login', async () => {
+    await saveLogin('admin', 'admin')
 
-    let user = JSON.parse(localStorage.getItem('user'))
+    let login = await AsyncStorage.getItem('user')
+    let user = JSON.parse(login)
     expect(user.username).toBe('admin')
     expect(user.password).toBe('admin')
     expect(user.authdata).toBe('YWRtaW46YWRtaW4=')

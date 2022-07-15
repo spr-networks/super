@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
 import PropTypes from 'prop-types'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useNavigate } from 'react-router-dom'
 import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faArrowRightFromBracket } from '@fortawesome/free-solid-svg-icons'
@@ -35,8 +36,8 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
   }, [colorMode])*/
 
   const navigate = useNavigate()
-  const logout = () => {
-    localStorage.removeItem('user')
+  const logout = async () => {
+    await AsyncStorage.removeItem('user')
     navigate('/')
   }
 
