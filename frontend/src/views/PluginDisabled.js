@@ -1,5 +1,5 @@
 import React, { useContext, Component } from 'react'
-import { View, Heading, Link, Text, VStack } from 'native-base'
+import { Box, View, Heading, Link, Text, VStack } from 'native-base'
 
 export default class PluginDisabled extends Component {
   render() {
