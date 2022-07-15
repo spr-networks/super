@@ -91,9 +91,9 @@ export const Interfaces = (props) => {
   return (
     <Box
       bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      borderRadius="10"
-      mb={4}
-      p={5}
+      borderRadius={10}
+      mb={0}
+      p={4}
       shadow={4}
     >
       <Text fontSize="lg" textAlign="center">

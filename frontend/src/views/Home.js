@@ -44,7 +44,7 @@ const Home = (props) => {
         <Stack
           direction={{ base: 'column', md: 'row' }}
           justifyContent="space-between"
-          space={4}
+          space={{ base: 0, md: 4 }}
         >
           {context.isWifiDisabled ? (
             <>

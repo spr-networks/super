@@ -297,6 +297,7 @@ const AdminLayout = (props) => {
               <Outlet />
               <Footer mt="auto" />
             </ScrollView>
+            {/*<Box flex="1" w="100%" minH="100%"></Box>*/}
           </HStack>
         </ScrollView>
       </Box>
