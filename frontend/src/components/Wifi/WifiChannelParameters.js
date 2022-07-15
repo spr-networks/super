@@ -232,14 +232,17 @@ const WifiChannelParameters = (props) => {
         _light={{ bg: 'warmGray.50' }}
         _dark={{ bg: 'blueGray.800' }}
         rounded="md"
-        width="100%"
-        p="4"
+        p={4}
       >
         <VStack space={2}>
           <Heading fontSize="lg">Channel Selection</Heading>
 
-          <Stack direction={{ base: 'column', md: 'row' }} space={2}>
-            <FormControl flex={1}>
+          <Stack
+            direction={{ base: 'column', md: 'row' }}
+            space={2}
+            maxW={{ base: '100%', md: 260 }}
+          >
+            <FormControl>
               <FormControl.Label>WiFi Interface</FormControl.Label>
               {devicesLoaded ? (
                 <Select
@@ -258,7 +261,7 @@ const WifiChannelParameters = (props) => {
               ) : null}
             </FormControl>
 
-            <FormControl flex={1}>
+            <FormControl>
               <FormControl.Label>Frequency Band</FormControl.Label>
               <Select
                 selectedValue={mode}
@@ -275,7 +278,7 @@ const WifiChannelParameters = (props) => {
               </Select>
             </FormControl>
 
-            <FormControl flex={1} isInvalid={'bandwidth' in errors}>
+            <FormControl isInvalid={'bandwidth' in errors}>
               <FormControl.Label>Bandwidth</FormControl.Label>
               <Select
                 selectedValue={bandwidth}
@@ -304,7 +307,7 @@ const WifiChannelParameters = (props) => {
               ) : null}
             </FormControl>
 
-            <FormControl flex={1} isInvalid={'channel' in errors}>
+            <FormControl isInvalid={'channel' in errors}>
               <FormControl.Label for="Channel">Channel</FormControl.Label>
               <Select
                 selectedValue={channel}
