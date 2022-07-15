@@ -216,13 +216,14 @@ const TrafficList = (props) => {
               setType(type)
             }}
           >
-            <HStack alignItems="center" space={4}>
+            <HStack alignItems="center" space={2}>
               {types.map((type) => (
                 <Radio
                   key={type}
                   value={type}
                   colorScheme="primary"
                   size="sm"
+                  _text={{ fontSize: 'xs' }}
                   my={1}
                 >
                   {type.replace(/(In|Out)/, ' $1')}
