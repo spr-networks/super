@@ -37,6 +37,7 @@
     "@fortawesome/free-solid-svg-icons": "^6.1.1",
     "@fortawesome/react-fontawesome": "^0.1.18",
     "@fortawesome/react-native-fontawesome": "^0.2.7",
+    "@react-native-async-storage/async-storage": "^1.17.7",
     "@testing-library/jest-dom": "^5.16.3",
     "@testing-library/react": "^12.1.4",
     "chart.js": "^3.7.1",
