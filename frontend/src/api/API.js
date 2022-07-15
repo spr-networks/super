@@ -1,6 +1,7 @@
 import createServer from 'api/MockAPI'
 import { Base64 } from 'utils'
 import { Platform } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 let gApiURL = null
 
@@ -37,28 +38,10 @@ export const getApiURL = () => {
     }
   }
 
-  /*/ jest
-  if (typeof document === 'undefined') {
-    return 'http://localhost/'
-  }*/
-
   return document.location.origin + '/'
 }
 
-if (typeof localStorage === 'undefined') {
-  global.localStorage = {
-    data: {},
-    getItem: function (key) {
-      return this.data[key] || null
-    },
-    setItem: function (key, value) {
-      this.data[key] = value
-    },
-    removeItem: function (key) {
-      delete this.data[key]
-    }
-  }
-}
+let gAuthHeaders = null
 
 //request helper
 class API {
@@ -71,27 +54,33 @@ class API {
 
   constructor(baseURL = '') {
     this.baseURL = baseURL.replace(/^\/+/, '')
-    this.authHeaders = this.getAuthHeaders()
+    this.getAuthHeaders()
   }
 
-  // reads from localStorage if no username provided
-  getAuthHeaders(username = null, password = null) {
+  // reads from Async/localStorage if no username provided
+  async getAuthHeaders(username = null, password = null) {
     if (username && password) {
       return
       'Basic ' + Base64.btoa(username + ':' + password)
     }
 
-    let user = JSON.parse(localStorage.getItem('user'))
-    return user && user.authdata ? 'Basic ' + user.authdata : ''
+    if (gAuthHeaders) {
+      return gAuthHeaders
+    }
+
+    let login = await AsyncStorage.getItem('user')
+    let user = JSON.parse(login)
+    //this.authHeaders =
+    return user && user.authdata ? 'Basic ' + user.authdata : null
   }
 
   setAuthHeaders(username = '', password = '') {
     this.authHeaders = 'Basic ' + Base64.btoa(username + ':' + password)
   }
 
-  request(method = 'GET', url, body) {
+  async request(method = 'GET', url, body) {
     if (!this.authHeaders) {
-      this.authHeaders = this.getAuthHeaders()
+      this.authHeaders = await this.getAuthHeaders()
     }
 
     let headers = {
@@ -173,7 +162,7 @@ export const api = new API()
 export const testLogin = (username, password, callback) => {
   api.setAuthHeaders(username, password)
   api
-    .get('/status?' + Math.random()) // NOTE react native can cache text/html
+    .get('/status?json=' + Math.random())
     .then((data) => {
       return callback(data == 'Online')
     })
@@ -183,7 +172,9 @@ export const testLogin = (username, password, callback) => {
 }
 
 export const saveLogin = (username, password) => {
-  localStorage.setItem(
+  gAuthHeaders = 'Basic ' + Base64.btoa(username + ':' + password)
+
+  return AsyncStorage.setItem(
     'user',
     JSON.stringify({
       authdata: Base64.btoa(username + ':' + password),

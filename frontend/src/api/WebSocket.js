@@ -1,7 +1,9 @@
 import { getApiURL } from './API'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
-function connectWebsocket(messageCallback) {
-  let userData = JSON.parse(localStorage.getItem('user')),
+async function connectWebsocket(messageCallback) {
+  let login = await AsyncStorage.getItem('user')
+  let userData = JSON.parse(login),
     ws = null
 
   try {

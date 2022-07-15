@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Platform } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { saveLogin, testLogin, getApiURL, setApiURL } from 'api'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from 'FontAwesomeUtils'
@@ -29,21 +30,10 @@ const Login = (props) => {
   const [loggedIn, setLoggedin] = useState(false)
   const [errors, setErrors] = React.useState({})
 
-  useEffect(() => {
-    let hostname = getApiURL()
-      .replace(/^https?:\/\//, '')
-      .replace(/\/.*/, '')
-    setHostname(hostname)
-  }, [])
-
-  const handleLogin = () => {
-    if (Platform.OS !== 'web') {
-      setApiURL(`http://${hostname}/`)
-    }
-
-    testLogin(username, password, function (success) {
+  const doLogin = (username, password) => {
+    testLogin(username, password, async (success) => {
       if (success) {
-        saveLogin(username, password)
+        await saveLogin(username, password)
         setLoggedin(true)
         setErrors({})
         navigate('/admin/home')
@@ -52,6 +42,30 @@ const Login = (props) => {
       }
     })
   }
+
+  const handleLogin = () => {
+    if (Platform.OS !== 'web') {
+      setApiURL(`http://${hostname}/`)
+    }
+
+    doLogin(username, password)
+  }
+
+  useEffect(() => {
+    let hostname = getApiURL()
+      .replace(/^https?:\/\//, '')
+      .replace(/\/.*/, '')
+    setHostname(hostname)
+
+    AsyncStorage.getItem('user').then((login) => {
+      login = JSON.parse(login)
+      if (login) {
+        setUsername(login.username)
+        setPassword(login.password)
+        doLogin(login.username, login.password)
+      }
+    })
+  }, [])
 
   return (
     <View w="100%" alignItems="center">
