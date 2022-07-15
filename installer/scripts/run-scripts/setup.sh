@@ -22,6 +22,7 @@ touch /home/spr/.spr-setup-done
 #rm -rf /containers
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
+apt-get -y --fix-broken install
 apt-get -y dist-upgrade
 apt-get -y install docker.io docker-compose nftables linux-modules-extra-raspi
 
@@ -38,7 +39,6 @@ done
 rm -f /containers
 
 mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
-touch /lib/udev/rules.d/80-net-setup-link.rules
-chattr +i /lib/udev/rules.d/80-net-setup-link.rules
+ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules
 
 reboot
