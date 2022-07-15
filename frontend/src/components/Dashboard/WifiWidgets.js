@@ -8,9 +8,13 @@ import { Divider, Box, Stack, Icon, Text, useColorModeValue } from 'native-base'
 export class WifiClientCount extends Component {
   state = { numberOfClients: 0 }
 
-  async componentDidMount() {
-    const stations = await wifiAPI.allStations()
-    this.setState({ numberOfWifiClients: Object.keys(stations).length })
+  componentDidMount() {
+    wifiAPI
+      .allStations()
+      .then((stations) => {
+        this.setState({ numberOfWifiClients: Object.keys(stations).length })
+      })
+      .catch((err) => {})
   }
 
   render() {
@@ -34,28 +38,33 @@ export class WifiClients extends WifiClientCount {
   }
 }
 
-export class WifiInfo extends Component {
-  state = { ssid: '', channel: 0 }
+export const WifiInfo = (props) => {
+  const [ssid, setSsid] = useState('')
+  const [channel, setChannel] = useState(0)
 
-  async componentDidMount() {
-    let status = await wifiAPI.status()
-    this.setState({ ssid: status['ssid[0]'] })
-    this.setState({ channel: status['channel'] })
-  }
+  useEffect(() => {
+    wifiAPI
+      .status()
+      .then((status) => {
+        setSsid(status['ssid[0]'])
+        setChannel(status['channel'])
+      })
+      .catch((err) => {
+        alert('err:' + err)
+      })
+  }, [])
 
-  render() {
-    return (
-      <StatsWidget
-        {...this.props}
-        icon={faWifi}
-        iconColor="info.400"
-        title="Wifi AP"
-        text={this.state.ssid}
-        textFooter={'Channel ' + this.state.channel}
-        iconFooter={faWifi}
-      />
-    )
-  }
+  return (
+    <StatsWidget
+      {...props}
+      icon={faWifi}
+      iconColor="info.400"
+      title="Wifi AP"
+      text={ssid}
+      textFooter={'Channel ' + channel}
+      iconFooter={faWifi}
+    />
+  )
 }
 
 export const Interfaces = (props) => {

@@ -38,7 +38,7 @@ const Login = (props) => {
 
   const handleLogin = () => {
     if (Platform.OS !== 'web') {
-      setApiURL(`http://${hostname}`)
+      setApiURL(`http://${hostname}/`)
     }
 
     testLogin(username, password, function (success) {

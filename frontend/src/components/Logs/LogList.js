@@ -211,10 +211,10 @@ const LogList = (props) => {
               alignItems="center"
               justifyContent={{ base: 'space-evenly', md: 'stretch' }}
             >
-              <Text flex="2" flexWrap>
+              <Text flex={2} flexWrap="wrap">
                 {item.MESSAGE}
               </Text>
-              <VStack space={2}>
+              <VStack space={2} alignSelf="flex-start">
                 <Text fontSize="xs" marginLeft="auto" whiteSpace="nowrap">
                   {prettyDate(item.__REALTIME_TIMESTAMP / 1e3)}
                 </Text>

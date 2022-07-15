@@ -206,22 +206,26 @@ const AdminLayout = (props) => {
       <Box
         w="100%"
         h={{ base: '100%', md: '100vh' }} // md: '100vh'
-        bg={useColorModeValue(
-          'backgroundContentLight',
-          'backgroundContentDark'
-        )}
         alignItems="center"
         nativeID={useColorModeValue('coolGray.100', 'blueGray.900')}
         safeAreaTop
       >
-        <ScrollView w="100%" h="100%" nativeID="scrollview-id">
+        <ScrollView
+          w="100%"
+          h="100%"
+          nativeID="scrollview-id"
+          bg={useColorModeValue(
+            'backgroundContentLight',
+            'backgroundContentDark'
+          )}
+        >
           {/*desktop*/}
           <Box
             display={{ base: 'none', md: 'flex' }}
             position={{ base: 'absolute', md: 'sticky' }}
             w="100%"
             zIndex={99}
-            _style={{ backdropFilter: 'blur(10px)' }}
+            style={{ backdropFilter: 'blur(10px)' }}
           >
             <AdminNavbar
               isMobile={false}
