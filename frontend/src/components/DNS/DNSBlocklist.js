@@ -88,7 +88,9 @@ export default class DNSBlocklist extends React.Component {
     blockAPI
       .blocklists()
       .then((blocklist) => {
-        list = blocklist
+        if (blocklist != null) {
+          list = blocklist
+        }
 
         let recommendedList = []
         for (let item of this.recommendedListDefault) {
