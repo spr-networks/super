@@ -64,16 +64,9 @@ export default class DNSBlocklist extends React.Component {
     this.refreshBlocklists()
     this.refreshMetrics()
 
-    // pending requests
-    this.timer = setTimeout(() => {
-      if (this.state && !this.state.list.length) {
-        this.setState({ list: [], pending: true })
-      }
-    }, 1500)
   }
 
   componentWillUnmount() {
-    clearTimeout(this.timer)
   }
 
   refreshMetrics() {
