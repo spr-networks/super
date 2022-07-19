@@ -205,108 +205,101 @@ const AdminLayout = (props) => {
     >
       <Box
         w="100%"
-        h={{ base: '100%', md: '100vh' }} // md: '100vh'
-        alignItems="center"
-        nativeID={useColorModeValue('coolGray.100', 'blueGray.900')}
+        h="100%" // md: '100vh'
+        __alignItems="center"
+        nativeID="content-id"
         safeAreaTop
+        bg={useColorModeValue(
+          'backgroundContentLight',
+          'backgroundContentDark'
+        )}
       >
-        <ScrollView
+        {/*desktop*/}
+        <Box
+          display={{ base: 'none', md: 'flex' }}
+          position={{ base: 'absolute', md: 'static' }}
           w="100%"
-          h="100%"
-          nativeID="scrollview-id"
-          bg={useColorModeValue(
-            'backgroundContentLight',
-            'backgroundContentDark'
-          )}
+          zIndex={99}
+          style={{ backdropFilter: 'blur(10px)' }}
         >
+          <AdminNavbar
+            isMobile={false}
+            isOpenSidebar={isOpenSidebar}
+            setIsOpenSidebar={setIsOpenSidebar}
+          />
+        </Box>
+        {/*mobile*/}
+        <Box
+          display={{ base: 'flex', md: 'none' }}
+          w="100%"
+          position={{ base: 'relative', md: 'static' }}
+          zIndex={99}
+          _style={{ backdropFilter: 'blur(10px)' }}
+        >
+          <AdminNavbar
+            isMobile={true}
+            isOpenSidebar={isOpenSidebar}
+            setIsOpenSidebar={setIsOpenSidebar}
+          />
+        </Box>
+
+        <HStack h={heightContent}>
           {/*desktop*/}
           <Box
             display={{ base: 'none', md: 'flex' }}
-            position={{ base: 'absolute', md: 'sticky' }}
-            w="100%"
-            zIndex={99}
-            style={{ backdropFilter: 'blur(10px)' }}
+            position={{ base: 'absolute', md: 'static' }}
+            h={heightContent}
           >
-            <AdminNavbar
+            <Sidebar
               isMobile={false}
-              isOpenSidebar={isOpenSidebar}
+              isMini={isOpenSidebar}
+              isOpenSidebar={true}
               setIsOpenSidebar={setIsOpenSidebar}
+              routes={routes}
             />
           </Box>
           {/*mobile*/}
-          <Box
-            display={{ base: 'flex', md: 'none' }}
-            w="100%"
-            position={{ base: 'relative', md: 'sticky' }}
-            zIndex={99}
-            _style={{ backdropFilter: 'blur(10px)' }}
-          >
-            <AdminNavbar
-              isMobile={true}
-              isOpenSidebar={isOpenSidebar}
-              setIsOpenSidebar={setIsOpenSidebar}
-            />
-          </Box>
-
-          <HStack h={heightContent}>
-            {/*desktop*/}
+          {isOpenSidebar ? (
             <Box
-              display={{ base: 'none', md: 'flex' }}
-              position={{ base: 'absolute', md: 'sticky' }}
-              top={16}
+              position="absolute"
               h={heightContent}
+              w="100%"
+              zIndex={99}
+              display={{ base: 'flex', md: 'none' }}
             >
               <Sidebar
-                isMobile={false}
-                isMini={isOpenSidebar}
-                isOpenSidebar={true}
+                isMobile={true}
+                isMini={false}
+                isOpenSidebar={isOpenSidebar}
                 setIsOpenSidebar={setIsOpenSidebar}
                 routes={routes}
               />
             </Box>
-            {/*mobile*/}
-            {isOpenSidebar ? (
-              <Box
-                position="absolute"
-                h={heightContent}
-                w="100%"
-                zIndex={99}
-                display={{ base: 'flex', md: 'none' }}
-              >
-                <Sidebar
-                  isMobile={true}
-                  isMini={false}
-                  isOpenSidebar={isOpenSidebar}
-                  setIsOpenSidebar={setIsOpenSidebar}
-                  routes={routes}
-                />
-              </Box>
-            ) : null}
+          ) : null}
 
-            {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
-            {/*h="calc(100% - 64px)"
+          {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
+          {/*h="calc(100% - 64px)"
                minH="calc(100vh - 64px)"*/}
-            <ScrollView
-              flex={1}
-              px={{ base: 4, md: 4 }}
-              py={{ base: 4, md: 4 }}
-              safeAreaTop
-              ref={mainPanel}
-              h={heightContent}
-            >
-              <Outlet />
-              <Footer mt="auto" />
-            </ScrollView>
-            {/*<Box flex="1" w="100%" minH="100%"></Box>*/}
-          </HStack>
-        </ScrollView>
+          <ScrollView
+            flex={1}
+            px={{ base: 4, md: 4 }}
+            py={{ base: 4, md: 4 }}
+            safeAreaTop
+            ref={mainPanel}
+            h={heightContent}
+          >
+            <Outlet />
+            <Footer mt="auto" />
+          </ScrollView>
+          {/*<Box flex="1" w="100%" minH="100%"></Box>*/}
+        </HStack>
       </Box>
       <AlertContext.Provider value={alertState}>
         <Slide in={showAlert} placement="top">
           <Box
             maxWidth="90%"
             top={16}
-            position={{ base: 'static', md: 'sticky' }}
+            position={{ base: 'static', md: 'static' }}
             alignItems="center"
             justifyContent="center"
             alignSelf="center"
