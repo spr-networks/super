@@ -182,7 +182,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
       borderRadius={5}
       shadow={5}
       rounded="md"
-      minW={350}
+      minW={320}
       mr={2}
       {...props}
     >

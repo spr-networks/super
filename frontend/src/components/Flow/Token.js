@@ -173,7 +173,9 @@ const Token = ({
         onSubmitEditing={() => setIsOpen(false)}
       />
     )
-  }*/ else if (['DstPort', 'SrcPort', 'Tags', 'Groups', 'DstInterface'].includes(label)) {
+  }*/ else if (
+    ['DstPort', 'SrcPort', 'Tags', 'Groups', 'DstInterface'].includes(label)
+  ) {
     // TODO menu
     // TODO props.options && isMultiple= value == array
     const onSelect = (values) => {
@@ -217,7 +219,7 @@ const Token = ({
         isOpen={isOpen}
         onClose={() => setIsOpen(!isOpen)}
       >
-        <Popover.Content>
+        <Popover.Content minW={180}>
           <Popover.Body>
             <HStack space={1}>
               <FormControl flex={1}>

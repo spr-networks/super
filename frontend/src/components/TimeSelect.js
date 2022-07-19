@@ -27,7 +27,7 @@ const TimeSelect = ({ value, onChange, ...props }) => {
   return (
     <HStack space={1} justifyContent="center">
       <Select
-        maxW={20}
+        w={20}
         selectedValue={hour}
         onValueChange={setHour}
         accessibilityLabel={`Choose hour`}
@@ -38,7 +38,7 @@ const TimeSelect = ({ value, onChange, ...props }) => {
       </Select>
       <Text>:</Text>
       <Select
-        maxW={20}
+        w={20}
         selectedValue={minute}
         onValueChange={setMinute}
         accessibilityLabel={`Choose minute`}
