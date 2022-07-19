@@ -7,6 +7,7 @@ global.self = global
 global.XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest
 
 jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage)
+jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter')
 
 // NOTE not used anymore
 global.localStorage = {
