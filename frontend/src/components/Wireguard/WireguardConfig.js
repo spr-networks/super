@@ -1,4 +1,6 @@
 import React from 'react'
+import { Platform } from 'react-native'
+import Clipboard from '@react-native-clipboard/clipboard'
 import PropTypes from 'prop-types'
 import QRCode from 'react-qr-code'
 
@@ -34,7 +36,15 @@ const WireguardConfig = (props) => {
 
   let config = configFromJSON(props.config)
 
-  const copy = (data) => navigator.clipboard.writeText(data)
+  //const copy = (data) => navigator.clipboard.writeText(data)
+  const copy = (data) => {
+    if (Platform.OS == 'web') {
+      navigator.clipboard.writeText(data)
+    } else {
+      Clipboard.setString(data)
+    }
+  }
+
   const saveFile = (data) => {
     let filename = 'peer.conf',
       type = 'conf'
@@ -69,7 +79,7 @@ const WireguardConfig = (props) => {
         <Text fontSize="xs">{config}</Text>
       </ScrollView>
 
-      <HStack space={2} justifyContent="stretch">
+      <HStack space={2} justifyContent="space-between">
         <Button
           flex={1}
           variant="outline"

@@ -25,7 +25,7 @@ export const getApiURL = () => {
     return '/'
   }
 
-  if (Platform.OS == 'ios') {
+  if (Platform.OS == 'ios' || Platform.OS == 'macos') {
     return 'http://192.168.2.1/'
   }
 

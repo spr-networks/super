@@ -310,7 +310,7 @@ export default class DynDns extends Component {
 
                     <Stack
                       direction={{ base: 'column', md: 'row' }}
-                      justifyContent={{ base: 'flex-start', md: 'stretch' }}
+                      justifyContent="flex-start"
                     >
                       <Box
                         display={{ base: 'none', md: 'flex' }}

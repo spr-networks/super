@@ -1,4 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+import { Platform } from 'react-native'
+import Clipboard from '@react-native-clipboard/clipboard'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faCirclePlus,
@@ -25,7 +27,6 @@ import { authAPI } from 'api'
 import { AlertContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import AddAuthToken from 'components/Auth/AddAuthToken'
-import { Pressable } from 'react-native'
 
 const AuthTokenList = (props) => {
   const context = useContext(AlertContext)
@@ -89,7 +90,13 @@ const AuthTokenList = (props) => {
     )
   }
 
-  const copy = (data) => navigator.clipboard.writeText(data)
+  const copy = (data) => {
+    if (Platform.OS == 'web') {
+      navigator.clipboard.writeText(data)
+    } else {
+      Clipboard.setString(data)
+    }
+  }
 
   return (
     <View mt={4}>
@@ -138,9 +145,6 @@ const AuthTokenList = (props) => {
                   <Text isTruncated>{item.Token}</Text>
                   <IconButton
                     variant="unstyled"
-                    display={{
-                      base: window && window.navigator ? 'flex' : 'none'
-                    }}
                     icon={<Icon size="4" icon={faCopy} color="muted.500" />}
                     onPress={() => copy(item.Token)}
                   />

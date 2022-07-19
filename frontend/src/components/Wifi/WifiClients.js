@@ -126,7 +126,7 @@ const WifiClients = (props) => {
                   <Text color="muted.400">Signal</Text>
                   {prettySignal(item.Signal)}
                 </HStack>
-                <Text whiteSpace="nowrap">{item.Auth}</Text>
+                <Text flexWrap="nowrap">{item.Auth}</Text>
               </Stack>
             </HStack>
           </Box>
