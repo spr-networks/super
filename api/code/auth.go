@@ -473,10 +473,14 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 			return
 		}
 
-		//last try public route
-		if publicNext.Match(r, &matchInfo) {
-			publicNext.ServeHTTP(w, r)
-			return
+		if authenticatedNext.Match(r, &matchInfo) || setupMode.Match(r, &matchInfo) {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		} else {
+			//last try public route
+			if publicNext.Match(r, &matchInfo) {
+				publicNext.ServeHTTP(w, r)
+				return
+			}
 		}
 
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
