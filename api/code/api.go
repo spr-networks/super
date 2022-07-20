@@ -1745,6 +1745,7 @@ func main() {
 	external_router_setup.HandleFunc("/hostapd/config", hostapdConfig).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/config", hostapdUpdateConfig).Methods("PUT")
 	external_router_setup.HandleFunc("/hostapd/setChannel", hostapdChannelSwitch).Methods("PUT")
+	external_router_setup.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")
 
 
 	//download cert from http
