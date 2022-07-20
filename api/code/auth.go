@@ -432,7 +432,7 @@ func (auth *authnconfig) authenticateUser(username string, password string) bool
 	return false
 }
 
-func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router) http.HandlerFunc {
+func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMode *mux.Router) http.HandlerFunc {
 	webauth_router := mux.NewRouter().StrictSlash(true)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -465,6 +465,12 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 				authenticatedNext.ServeHTTP(w, r)
 				return
 			}
+		}
+
+		//check setup routes
+		if isSetupMode() && setupMode.Match(r, &matchInfo) {
+			setupMode.ServeHTTP(w, r)
+			return
 		}
 
 		//last try public route

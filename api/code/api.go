@@ -1546,22 +1546,28 @@ type SetupConfig struct {
 	InterfaceUplink string
 }
 
-// initial setup only available if there is no .spr-setup-done
-func setup(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
+func isSetupMode() bool {
 	// file to check if we should allow to run setup
 	_, err := os.Stat(SetupDoneFile)
 	if err == nil || !os.IsNotExist(err) {
-		http.Error(w, "setup already done", 400)
-		return
+		return false
 	}
 
 	//_, err = os.Stat(SetupEnvFile)
 	_, err = os.Stat(AuthUsersFile)
 	if err == nil || !os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+}
+
+// initial setup only available if there is no .spr-setup-done
+func setup(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if !isSetupMode() {
 		http.Error(w, "setup already done", 400)
-		return
 	}
 
 	if r.Method != http.MethodPut {
@@ -1572,7 +1578,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 
 	// setup is not done
 	conf := SetupConfig{}
-	err = json.NewDecoder(r.Body).Decode(&conf)
+	err := json.NewDecoder(r.Body).Decode(&conf)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -1724,15 +1730,22 @@ func main() {
 	unix_wireguard_router := mux.NewRouter().StrictSlash(true)
 	external_router_authenticated := mux.NewRouter().StrictSlash(true)
 	external_router_public := mux.NewRouter()
+	external_router_setup := mux.NewRouter().StrictSlash(true)
 
 	external_router_public.Use(setSecurityHeaders)
 	external_router_authenticated.Use(setSecurityHeaders)
+	external_router_setup.Use(setSecurityHeaders)
 
 	//public websocket with internal authentication
 	external_router_public.HandleFunc("/ws", auth.webSocket).Methods("GET")
 
 	// intial setup
 	external_router_public.HandleFunc("/setup", setup).Methods("GET", "PUT")
+	external_router_setup.HandleFunc("/ip/addr", ipAddr).Methods("GET")
+	external_router_setup.HandleFunc("/hostapd/config", hostapdConfig).Methods("GET")
+	external_router_setup.HandleFunc("/hostapd/config", hostapdUpdateConfig).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/setChannel", hostapdChannelSwitch).Methods("PUT")
+
 
 	//download cert from http
 	external_router_public.HandleFunc("/cert", getCert).Methods("GET")
@@ -1856,10 +1869,10 @@ func main() {
 
 		listenAddr := fmt.Sprint("0.0.0.0:", listenPort)
 
-		go http.ListenAndServeTLS(listenAddr, ApiTlsCert, ApiTlsKey, logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public))))
+		go http.ListenAndServeTLS(listenAddr, ApiTlsCert, ApiTlsKey, logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
 	}
 
-	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public))))
+	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
 
 	go wifidServer.Serve(unixWifidListener)
 
