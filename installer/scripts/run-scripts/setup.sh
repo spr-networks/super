@@ -8,9 +8,6 @@ ip link set $WANIF up
 dhclient $WANIF
 dpkg-reconfigure openssh-server
 
-echo {\"${ADMIN_USER}\" : \"${ADMIN_PASSWORD}\"} > /home/spr/super/configs/base/auth_users.json
-
-
 # Resize to full disk
 ROOTPART=$(df | grep " /$" | awk '{print $1}')
 PART=$(echo $ROOTPART | grep -o -E "[^0-9]+")
@@ -28,7 +25,6 @@ apt-get -y install docker.io docker-compose nftables linux-modules-extra-raspi
 
 # disable iptables for  docker
 echo -ne "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
-
 
 cd /containers
 for x in `ls *.tar`
