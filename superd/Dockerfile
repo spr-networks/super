@@ -10,5 +10,4 @@ RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-${TARGETARCH}.ta
 ENV PATH="/usr/local/go/bin:$PATH"
 COPY code/ /code/
 WORKDIR /code/
-RUN --mount=type=tmpfs,target=/root/go/ (go build -ldflags "-s -w" -o /superd)
-
+RUN go build -ldflags "-s -w" -o /superd
