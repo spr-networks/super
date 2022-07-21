@@ -6,6 +6,6 @@ if [ ! -f "./superd/superd"]; then
   DOCKER_BUILDKIT=1 docker build . -t superd
   docker cp $(docker create --rm superd):/superd ./superd
   cd ..
-done
+fi
 
 ./superd/superd &
