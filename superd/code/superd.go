@@ -15,7 +15,7 @@ import (
 
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 
-func restartServices() {
+func restartServices(target string) {
 
   composeFile := "docker-compose-prebuilt.yml"
   envCompose := os.Getenv("COMPOSE_FILE")
@@ -23,16 +23,25 @@ func restartServices() {
     composeFile = envCompose
   }
 
-  _, err := exec.Command("docker-compose", "-f", composeFile, "restart").Output()
-  if err != nil {
-    fmt.Println("docker-compose restart", composeFile, "failed", err)
+  if target != "" {
+    _, err := exec.Command("docker-compose", "-f", composeFile, "restart", target).Output()
+    if err != nil {
+      fmt.Println("docker-compose restart", composeFile, "failed", err)
+    }
+  } else {
+    _, err := exec.Command("docker-compose", "-f", composeFile, "restart").Output()
+    if err != nil {
+      fmt.Println("docker-compose restart", composeFile, "failed", err)
+    }
   }
 
 }
 
 func restart(w http.ResponseWriter, r *http.Request) {
+  target := r.URL.Query().Get("service")
+
   //run restart
-  go restartServices()
+  go restartServices(target)
 
 }
 
