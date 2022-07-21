@@ -1,7 +1,14 @@
 import API from './API'
 
 export default API
-export { api, testLogin, saveLogin, getApiURL, setApiURL } from './API'
+export {
+  api,
+  testLogin,
+  saveLogin,
+  getApiURL,
+  setApiURL,
+  getApiHostname
+} from './API'
 export { connectWebsocket } from './WebSocket'
 export { deviceAPI } from './Device'
 export { groupAPI } from './Group'
