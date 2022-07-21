@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { api } from 'api'
+import { api, wifiAPI } from 'api'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
@@ -32,6 +32,8 @@ const Setup = (props) => {
   const context = useContext(AlertContext)
   const navigate = useNavigate()
   const [config, setConfig] = useState({})
+  const [wifiInterfaces, setWifiInterfaces] = useState([])
+  const [uplinkInterfaces, setUplinkInterfaces] = useState([])
 
   //NOTE could have > 2 wlan here
   const interfaces = ['eth0', 'wlan0', 'wlan1']
@@ -66,6 +68,56 @@ const Setup = (props) => {
       setErrors({})
     }
   }, [ssid])
+
+  useEffect(() => {
+    wifiAPI.config().then((conf) => {
+      setConfig((conf))
+    })
+
+    wifiAPI.ipAddr().then((ipAddr) => {
+      wifiAPI.iwDev().then((iwDev) => {
+        let wifiInterfaces = []
+        for (let dev of Object.values(iwDev)){
+          wifiInterfaces.push(...Object.keys(dev))
+        }
+        wifiInterfaces.sort()
+        setWifiInterfaces(wifiInterfaces)
+
+        let uplinkInterfaces = []
+        for (let entry of ipAddr) {
+          if (entry.link_type == "ether") {
+            if (entry.ifname.startsWith('docker')) {
+              continue
+            }
+            if (entry.ifname.startsWith('veth')) {
+              continue
+            }
+            uplinkInterfaces.push(entry.ifname)
+          }
+        }
+
+        setUplinkInterfaces(uplinkInterfaces)
+      })
+    })
+  }, [])
+
+
+  const genWifiInterfaces = () => {
+    let ret = []
+    for (let wif of wifiInterfaces) {
+      ret.push(<Select.Item label={wif} value={wif} />,)
+    }
+    return ret
+  }
+
+  const genUplinkInterfaces = () => {
+    let ret = []
+    for (let wif of uplinkInterfaces) {
+      ret.push(<Select.Item label={wif} value={wif} />,)
+    }
+    return ret
+  }
+
 
   const genCountries = () => {
     let s = []
@@ -197,11 +249,10 @@ const Setup = (props) => {
                   selectedValue={interfaceWifi}
                   onValueChange={(value) => setInterfaceWifi(value)}
                 >
-                  <Select.Item label="eth0" value="eth0" isDisabled />
-                  <Select.Item label="wlan0" value="wlan0" isDisabled />
-                  <Select.Item label="wlan1" value="wlan1" />
+                  {genWifiInterfaces()}
                 </Select>
               </FormControl>
+
               <FormControl isInvalid={'uplink' in errors}>
                 <FormControl.Label>
                   Uplink Interface (Internet)
@@ -210,9 +261,7 @@ const Setup = (props) => {
                   selectedValue={interfaceUplink}
                   onValueChange={(value) => setInterfaceUplink(value)}
                 >
-                  <Select.Item label="eth0" value="eth0" />
-                  <Select.Item label="wlan0" value="wlan0" />
-                  <Select.Item label="wlan1" value="wlan1" isDisabled />
+                  {genUplinkInterfaces()}
                 </Select>
               </FormControl>
               <FormControl isInvalid={'login' in errors}>
