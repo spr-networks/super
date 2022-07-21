@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { saveLogin, testLogin, getApiURL, setApiURL } from 'api'
+import { saveLogin, testLogin, getApiURL, setApiURL, getApiHostname } from 'api'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faKey, faServer, faUser } from '@fortawesome/free-solid-svg-icons'
@@ -52,9 +52,7 @@ const Login = (props) => {
   }
 
   useEffect(() => {
-    let hostname = getApiURL()
-      .replace(/^https?:\/\//, '')
-      .replace(/\/.*/, '')
+    let hostname = getApiHostname()
     setHostname(hostname)
 
     AsyncStorage.getItem('user').then((login) => {

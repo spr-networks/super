@@ -1,6 +1,7 @@
 import React, { createContext, useEffect, useState } from 'react'
 import { Platform, Dimensions } from 'react-native'
 import { Outlet, useLocation } from 'react-router-dom'
+import Notifications from 'Notifications'
 /*
 import {
   Outlet as OutletWeb,
@@ -44,7 +45,12 @@ const AppAlert = (props) => {
   const { type, title, body, toggle } = props
 
   return (
-    <Alert w="100%" variant="left-accent" status={type}>
+    <Alert
+      w="100%"
+      variant="outline-light"
+      status={type}
+      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+    >
       <VStack space={2} flexShrink={1} w="100%">
         <HStack
           flexShrink={1}
@@ -53,15 +59,15 @@ const AppAlert = (props) => {
           alignItems="center"
         >
           <HStack space={2} flexShrink={1}>
-            <Alert.Icon mt="1" />
-            <HStack space={2}>
+            <Alert.Icon mt={1} />
+            <VStack space={2}>
               <Text fontSize="md" color="coolGray.800" bold>
                 {title}
               </Text>
               <Text fontSize="md" color="coolGray.800">
                 {body}
               </Text>
-            </HStack>
+            </VStack>
           </HStack>
           <IconButton
             variant="unstyled"
@@ -75,28 +81,6 @@ const AppAlert = (props) => {
       </VStack>
     </Alert>
   )
-}
-
-function desktopNotification(msg) {
-  if (!('Notification' in window)) {
-    return
-  }
-
-  if (Notification.permission === 'denied') {
-    return
-  }
-
-  if (Notification.permission === 'granted') {
-    var notification = new Notification(msg)
-  } else if (Notification.permission !== 'denied') {
-    Notification.requestPermission().then(function (permission) {
-      if (permission === 'granted') {
-        var notification = new Notification(msg)
-      }
-    })
-  }
-
-  return
 }
 
 const AdminLayout = (props) => {
@@ -117,8 +101,8 @@ const AdminLayout = (props) => {
       title = ucFirst(type)
     }
 
-    if (['error', 'success'].includes(type)) {
-      desktopNotification(`${title}, ${body}`)
+    if (['error', 'success'].includes(type) && Platform.OS == 'web') {
+      Notifications.notification(title, body)
     }
 
     setAlert({ type, title, body })
@@ -174,6 +158,7 @@ const AdminLayout = (props) => {
       })
 
     connectWebsocket((event) => {
+      console.log('[webSocket]', event.data)
       if (event.data == 'success') {
         return
       } else if (event.data == 'Authentication failure') {
@@ -182,10 +167,19 @@ const AdminLayout = (props) => {
 
       const res = parseLogMessage(JSON.parse(event.data))
       if (res) {
-        let { type, message } = res
-        alertState[type](message)
+        console.log('[LOG]', JSON.stringify(res))
+        let { type, title, body } = res
+
+        if (Platform.OS == 'ios') {
+          let category = 'userAction'
+          Notifications.notification(title, body, category)
+        } else {
+          alertState[type](title, body)
+        }
       }
     })
+
+    Notifications.init()
   }, [])
 
   let heightContent = Dimensions.get('window').height - 64 //calc(100vh-64px)
