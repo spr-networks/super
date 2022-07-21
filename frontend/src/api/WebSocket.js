@@ -1,4 +1,4 @@
-import { getApiURL } from './API'
+import { getApiHostname } from './API'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 async function connectWebsocket(messageCallback) {
@@ -7,10 +7,11 @@ async function connectWebsocket(messageCallback) {
     ws = null
 
   try {
-    let host = new URL(getApiURL()).host
+    let host = getApiHostname()
     ws = new WebSocket(`ws://${host}/ws`)
   } catch (err) {
     // mock error
+    console.error('[webSocket]', 'failed to connect to', getApiHostname())
     return
   }
 
@@ -25,39 +26,50 @@ async function connectWebsocket(messageCallback) {
   return ws
 }
 
-const parseLogMessage = (data) => {
+const parseLogMessage = (msg) => {
+  const msgType = msg.Type
+  let data = null
+  try {
+    if (msg.Data) {
+      data = JSON.parse(msg.Data)
+    }
+  } catch (e) {
+    // data is a raw string
+    data = msg.Data
+  }
+
+  let title = msgType,
+    type = 'info',
+    body = typeof data === 'string' ? data : JSON.stringify(data)
+
   const skipTypes = ['DHCPUpdateProcessed', 'DHCPUpdateRequest']
-  if (skipTypes.includes(data.Type)) {
+  if (skipTypes.includes(msgType)) {
     return null
   }
 
-  let _data = data.Data ? JSON.parse(data.Data) : {}
-
-  if (data.Type == 'PSKAuthSuccess') {
-    return {
-      type: 'success',
-      message: `Authentication success for MAC ${_data.MAC}`
-    }
-  } else if (data.Type == 'PSKAuthFailure') {
+  if (msgType == 'PSKAuthSuccess') {
+    msgType = 'success'
+    body = `Authentication success for MAC ${data.MAC}`
+  } else if (msgType == 'PSKAuthFailure') {
     let wpaTypes = { sae: 'WPA3', wpa: 'WPA2' },
-      wpaType = wpaTypes[_data.Type] || _data.Type,
+      wpaType = wpaTypes[data.Type] || data.Type,
       reasonString = 'unknown'
 
-    if (_data.Reason == 'noentry') {
+    if (data.Reason == 'noentry') {
       reasonString = `Unknown device with ${wpaType}`
-    } else if (_data.Reason == 'mismatch') {
+    } else if (data.Reason == 'mismatch') {
       reasonString = `Wrong password with ${wpaType}`
     }
 
-    return {
-      type: 'error',
-      message: `Authentication failure for MAC ${_data.MAC}: ${reasonString}`
-    }
+    body = `Authentication failure for MAC ${data.MAC}: ${reasonString}`
+  } else if (msgType == 'StatusCalled') {
+    body = `Status called with result: ${data}`
   }
 
   return {
-    type: 'info',
-    message: JSON.stringify(_data)
+    type,
+    title,
+    body
   }
 }
 
