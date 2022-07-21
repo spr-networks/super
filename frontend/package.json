@@ -39,6 +39,7 @@
     "@fortawesome/react-native-fontawesome": "^0.2.7",
     "@react-native-async-storage/async-storage": "^1.17.7",
     "@react-native-clipboard/clipboard": "^1.10.0",
+    "@react-native-community/push-notification-ios": "^1.10.1",
     "@testing-library/jest-dom": "^5.16.3",
     "@testing-library/react": "^12.1.4",
     "chart.js": "^3.7.1",
@@ -114,7 +115,7 @@
       "./src/setupTests.js"
     ],
     "transformIgnorePatterns": [
-      "/node_modules/(?!(@react-native|react-native|@fortawesome)/).*/"
+      "/node_modules/(?!(@react-native|react-native|@fortawesome|@react-native-community/push-notification-ios)/).*/"
     ]
   }
 }
