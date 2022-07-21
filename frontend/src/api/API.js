@@ -41,6 +41,12 @@ export const getApiURL = () => {
   return document.location.origin + '/'
 }
 
+export const getApiHostname = () => {
+  return getApiURL()
+    .replace(/^https?:\/\//, '')
+    .replace(/\/.*/, '')
+}
+
 let gAuthHeaders = null
 
 //request helper
