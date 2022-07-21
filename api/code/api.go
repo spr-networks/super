@@ -34,8 +34,6 @@ var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
 
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
 
-var SetupDoneFile = TEST_PREFIX + "/.spr-setup-done"
-var RestartFile = TEST_PREFIX + "/state/api/.spr-restart"
 var ConfigFile = TEST_PREFIX + "/configs/base/config.sh"
 
 var ApiTlsCert = "/configs/base/www-api.crt"
@@ -1547,14 +1545,7 @@ type SetupConfig struct {
 }
 
 func isSetupMode() bool {
-	// file to check if we should allow to run setup
-	_, err := os.Stat(SetupDoneFile)
-	if err == nil || !os.IsNotExist(err) {
-		return false
-	}
-
-	//_, err = os.Stat(SetupEnvFile)
-	_, err = os.Stat(AuthUsersFile)
+	_, err := os.Stat(AuthUsersFile)
 	if err == nil || !os.IsNotExist(err) {
 		return false
 	}
@@ -1659,14 +1650,33 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	// TODO force restart of api/spr
-	err = ioutil.WriteFile(RestartFile, []byte(""), 0644)
-	if err != nil {
-		http.Error(w, "Failed to write restart file "+RestartFile, 400)
-		panic(err)
-	}
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
+	callRestart()
+}
+
+func callRestart() {
+	var superdSocketPath = TEST_PREFIX + "/state/plugins/superd/socket"
+
+	c := http.Client{}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", superdSocketPath)
+		},
+	}
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/restart", nil)
+	if err != nil {
+		return
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
 }
 
 //set up SPA handler. From gorilla mux's documentation
