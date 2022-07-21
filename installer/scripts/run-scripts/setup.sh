@@ -32,7 +32,7 @@ do
   docker import --change "ENTRYPOINT $(cat $x.entry)" $x $(echo ghcr.io/spr-networks/$x | rev | cut -c 5- | rev)
 done
 
-rm -f /containers
+#rm -f /containers
 
 mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
 ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules

@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# proc hack , make fake cpuinfo
-mkdir /proc/
-
 # do not use systemd-resolvd, we will use our own container later
 systemctl disable systemd-resolved
 rm -f /etc/resolv.conf
@@ -45,9 +42,6 @@ fi
 
 mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
 touch /lib/udev/rules.d/80-net-setup-link.rules
-chattr +i /lib/udev/rules.d/80-net-setup-link.rules
-
-
 
 # cleanup
 #apt-get autoremove -y && apt-get clean
