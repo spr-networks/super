@@ -1652,10 +1652,10 @@ func setup(w http.ResponseWriter, r *http.Request) {
 
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
-	callRestart()
+	callRestart("")
 }
 
-func callRestart() {
+func callRestart(target string) {
 	var superdSocketPath = TEST_PREFIX + "/state/plugins/superd/socket"
 
 	c := http.Client{}
@@ -1665,7 +1665,11 @@ func callRestart() {
 		},
 	}
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/restart", nil)
+	append := ""
+	if target != "" {
+		append += "?service="+target
+	}
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/restart" + append, nil)
 	if err != nil {
 		return
 	}

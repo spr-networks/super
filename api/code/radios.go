@@ -289,8 +289,13 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	needRestart := false
+
 	if len(newConf.Ssid) > 0 {
+		/* mac80211 state sometimes require a restart when changing ssid name --
+		  attempting to do a set just creates a secondary name */
 		conf["ssid"] = newConf.Ssid
+		needRestart = true
 	}
 
 	if newConf.Channel > 0 {
@@ -326,12 +331,17 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = RunHostapdCommand("reload")
-	if err != nil {
-		log.Fatal(err)
-		http.Error(w, err.Error(), 400)
-		return
+	if !needRestart {
+		_, err = RunHostapdCommand("reload")
+		if err != nil {
+			log.Fatal(err)
+			http.Error(w, err.Error(), 400)
+			return
+		}
+	} else {
+		callRestart("wifid")
 	}
+
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conf)
