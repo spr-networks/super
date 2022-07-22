@@ -43,6 +43,9 @@ fi
 mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
 touch /lib/udev/rules.d/80-net-setup-link.rules
 
+# update sshd config to allow password login
+sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config
+
 # cleanup
 #apt-get autoremove -y && apt-get clean
 #rm -rf \
