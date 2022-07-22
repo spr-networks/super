@@ -289,6 +289,13 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newInput := map[string]interface{}{}
+	err = json.NewDecoder(r.Body).Decode(&newInput)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
 	needRestart := false
 
 	if len(newConf.Ssid) > 0 {
@@ -302,19 +309,19 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		conf["channel"] = newConf.Channel
 	}
 
-	if newConf.Vht_oper_centr_freq_seg0_idx > 0 {
+	if _, ok := newInput["vht_oper_centr_freq_seg0_idx"]; ok {
 		conf["vht_oper_centr_freq_seg0_idx"] = newConf.Vht_oper_centr_freq_seg0_idx
 	}
 
-	if newConf.He_oper_centr_freq_seg0_idx > 0 {
+	if _, ok := newInput["he_oper_centr_freq_seg0_idx"]; ok {
 		conf["he_oper_centr_freq_seg0_idx"] = newConf.He_oper_centr_freq_seg0_idx
 	}
 
-	if newConf.Vht_oper_chwidth >= 0 {
+	if _, ok := newInput["vht_oper_chwidth"]; ok {
 		conf["vht_oper_chwidth"] = newConf.Vht_oper_chwidth
 	}
 
-	if newConf.He_oper_chwidth >= 0 {
+	if _, ok := newInput["he_oper_chwidth"]; ok {
 		conf["he_oper_chwidth"] = newConf.He_oper_chwidth
 	}
 
