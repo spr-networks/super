@@ -114,10 +114,10 @@ const WirelessConfiguration = (props) => {
     )
   }
 
-  let h = Dimensions.get('window').height - 0
+  let h = Dimensions.get('window').height
 
   return (
-    <View h={h}>
+    <View minH={h}>
       <TabView
         navigationState={{
           index,

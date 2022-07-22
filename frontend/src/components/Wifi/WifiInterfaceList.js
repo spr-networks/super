@@ -125,7 +125,7 @@ const WifiInterface = (props) => {
           )}
         </VStack>
 
-        <ScrollView h="50%" p={2}>
+        <Box h="100%" p={2}>
           {tabList.map((tab) =>
             iw[tab] || ['other', 'SPR compability'].includes(tab) ? (
               <VStack key={tab} display={activeTab == tab ? 'flex' : 'none'}>
@@ -328,7 +328,7 @@ const WifiInterface = (props) => {
               </VStack>
             ) : null
           )}
-        </ScrollView>
+        </Box>
       </Stack>
     </Box>
   )
