@@ -342,30 +342,37 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	if _, ok := newInput["country_code"]; ok {
 		conf["country_code"] = newConf.Country_code
+		needRestart = true
 	}
 
 	if _, ok := newInput["vht_capab"]; ok {
 		conf["vht_capab"] = newConf.Vht_capab
+		needRestart = true
 	}
 
 	if _, ok := newInput["ht_capab"]; ok {
 		conf["ht_capab"] = newConf.Ht_capab
+		needRestart = true
 	}
 
 	if _, ok := newInput["ieee80211ax"]; ok {
 		conf["ieee80211ax"] = newConf.Ieee80211ax
+		needRestart = true
 	}
 
 	if _, ok := newInput["he_su_beamformer"]; ok {
 		conf["he_su_beamformer"] = newConf.He_su_beamformer
+		needRestart = true
 	}
 
 	if _, ok := newInput["he_su_beamformee"]; ok {
 		conf["he_su_beamformee"] = newConf.He_su_beamformee
+		needRestart = true
 	}
 
 	if _, ok := newInput["he_mu_beamformer"]; ok {
 		conf["he_mu_beamformer"] = newConf.He_mu_beamformer
+		needRestart = true		
 	}
 
 	// write new conf
