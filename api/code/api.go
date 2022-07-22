@@ -1650,7 +1650,6 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
 	callRestart("")
 }
@@ -1667,9 +1666,9 @@ func callRestart(target string) {
 
 	append := ""
 	if target != "" {
-		append += "?service="+target
+		append += "?service=" + target
 	}
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/restart" + append, nil)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/restart"+append, nil)
 	if err != nil {
 		return
 	}
@@ -1760,7 +1759,6 @@ func main() {
 	external_router_setup.HandleFunc("/hostapd/config", hostapdUpdateConfig).Methods("PUT")
 	external_router_setup.HandleFunc("/hostapd/setChannel", hostapdChannelSwitch).Methods("PUT")
 	external_router_setup.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")
-
 
 	//download cert from http
 	external_router_public.HandleFunc("/cert", getCert).Methods("GET")

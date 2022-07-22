@@ -1,28 +1,29 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/mux"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
-	"regexp"
-	"io"
-	"github.com/gorilla/mux"
 )
 
 var HostapdConf = "/configs/wifi/hostapd.conf"
 
 type HostapdConfigEntry struct {
-	Ssid    string
-	Channel int
+	Ssid                         string
+	Channel                      int
 	Vht_oper_centr_freq_seg0_idx int
-	He_oper_centr_freq_seg0_idx int
-	Vht_oper_chwidth int
-	He_oper_chwidth int
+	He_oper_centr_freq_seg0_idx  int
+	Vht_oper_chwidth             int
+	He_oper_chwidth              int
 }
 
 func RunHostapdAllStations() (map[string]map[string]string, error) {
@@ -67,20 +68,20 @@ func RunHostapdStatus() (map[string]string, error) {
 	return m, nil
 }
 
-type ChannelParameters struct  {
-	Mode string
-	Channel int
-	Bandwidth int
-	HT_Enable bool
+type ChannelParameters struct {
+	Mode       string
+	Channel    int
+	Bandwidth  int
+	HT_Enable  bool
 	VHT_Enable bool
-	HE_Enable bool
+	HE_Enable  bool
 }
 
 type CalculatedChannelParameters struct {
 	Vht_oper_centr_freq_seg0_idx int
-	He_oper_centr_freq_seg0_idx int
-	Vht_oper_chwidth int
-	He_oper_chwidth int
+	He_oper_centr_freq_seg0_idx  int
+	Vht_oper_chwidth             int
+	He_oper_chwidth              int
 }
 
 func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled bool, he_enabled bool) (CalculatedChannelParameters, error) {
@@ -92,17 +93,17 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 
 	cmd := ""
 	base := 5000
-	if mode == "b" || mode == "g"  {
+	if mode == "b" || mode == "g" {
 		//2.4ghz
 		base = 2407
-		freq1 = 2407 + channel * 5
+		freq1 = 2407 + channel*5
 		if channel == 14 {
 			//channel 14 goes higher
 			freq1 += 7
 		}
 	} else if mode == "a" {
 		//5 ghz
-		freq1 = base + channel * 5
+		freq1 = base + channel*5
 	}
 
 	center_channel := 0
@@ -133,7 +134,7 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 	}
 
 	if center_channel != 0 {
-		freq2 = base + center_channel * 5
+		freq2 = base + center_channel*5
 		if vht_enabled {
 			calculated.Vht_oper_centr_freq_seg0_idx = center_channel
 		}
@@ -142,14 +143,13 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 		}
 	}
 
-
 	//chan_switch 1 5180 sec_channel_offset=1 center_freq1=5210 bandwidth=80 vht
 
-	if (bw == 20) {
+	if bw == 20 {
 		cmd = fmt.Sprintf("chan_switch 1 %d bandwidth=20", freq1)
-	} else if (bw == 40 || bw == 80 || bw == 160) {
+	} else if bw == 40 || bw == 80 || bw == 160 {
 		cmd = fmt.Sprintf("chan_switch 1 %d sec_channel_offset=1 center_freq1=%d bandwidth=%d", freq1, freq2, bw)
-	} else if (bw == 8080) {
+	} else if bw == 8080 {
 		//80 + 80 unsupported for now
 		// center_freq1, center_freq2
 		return CalculatedChannelParameters{}, fmt.Errorf("80+80 not supported")
@@ -194,7 +194,6 @@ func hostapdChannelSwitch(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(calculated)
 
 }
-
 
 func RunHostapdCommandArray(cmd []string) (string, error) {
 
@@ -281,7 +280,15 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Error reading body: %v", err)
+		http.Error(w, "can't read body", http.StatusBadRequest)
+		return
+	}
+
 	newConf := HostapdConfigEntry{}
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 	err = json.NewDecoder(r.Body).Decode(&newConf)
 
 	if err != nil {
@@ -290,6 +297,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newInput := map[string]interface{}{}
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 	err = json.NewDecoder(r.Body).Decode(&newInput)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
@@ -300,7 +308,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	if len(newConf.Ssid) > 0 {
 		/* mac80211 state sometimes require a restart when changing ssid name --
-		  attempting to do a set just creates a secondary name */
+		attempting to do a set just creates a secondary name */
 		conf["ssid"] = newConf.Ssid
 		needRestart = true
 	}
@@ -348,7 +356,6 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	} else {
 		callRestart("wifid")
 	}
-
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conf)
