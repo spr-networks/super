@@ -18,6 +18,13 @@ import (
 var HostapdConf = "/configs/wifi/hostapd.conf"
 
 type HostapdConfigEntry struct {
+	Country_code                 string
+	Vht_capab                    string
+	Ht_capab                     string
+	Ieee80211ax                  int
+	He_su_beamformer             int
+	He_su_beamformee             int
+	He_mu_beamformer             int
 	Ssid                         string
 	Channel                      int
 	Vht_oper_centr_freq_seg0_idx int
@@ -331,6 +338,34 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	if _, ok := newInput["he_oper_chwidth"]; ok {
 		conf["he_oper_chwidth"] = newConf.He_oper_chwidth
+	}
+
+	if _, ok := newInput["country_code"]; ok {
+		conf["country_code"] = newConf.Country_code
+	}
+
+	if _, ok := newInput["vht_capab"]; ok {
+		conf["vht_capab"] = newConf.Vht_capab
+	}
+
+	if _, ok := newInput["ht_capab"]; ok {
+		conf["ht_capab"] = newConf.Ht_capab
+	}
+
+	if _, ok := newInput["ieee80211ax"]; ok {
+		conf["ieee80211ax"] = newConf.Ieee80211ax
+	}
+
+	if _, ok := newInput["he_su_beamformer"]; ok {
+		conf["he_su_beamformer"] = newConf.He_su_beamformer
+	}
+
+	if _, ok := newInput["he_su_beamformee"]; ok {
+		conf["he_su_beamformee"] = newConf.He_su_beamformee
+	}
+
+	if _, ok := newInput["he_mu_beamformer"]; ok {
+		conf["he_mu_beamformer"] = newConf.He_mu_beamformer
 	}
 
 	// write new conf
