@@ -114,11 +114,7 @@ class API {
     let skipReturnValue = method == 'DELETE'
 
     let _url = `${baseURL}${url}`
-    /*if (!_url.includes('?')) {
-      _url += '?' + new Date().getTime() // cache problem with app
-    }*/
-    console.log('[API] fetch', _url)
-    //console.log(`[API] fetch method=`, method, 'skip=', skipReturnValue)
+    //console.log('[API] fetch', _url)
 
     return fetch(_url, opts).then((response) => {
       if (!response.ok) {

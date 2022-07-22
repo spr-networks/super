@@ -48,7 +48,7 @@ const parseLogMessage = (msg) => {
   }
 
   if (msgType == 'PSKAuthSuccess') {
-    msgType = 'success'
+    type = 'success'
     body = `Authentication success for MAC ${data.MAC}`
   } else if (msgType == 'PSKAuthFailure') {
     let wpaTypes = { sae: 'WPA3', wpa: 'WPA2' },
