@@ -1637,9 +1637,9 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	configData := string(data)
-	matchSSID := regexp.MustCompile(`(^SSID_NAME)=(.*)`)
-	matchInterfaceAP := regexp.MustCompile(`(^SSID_INTERFACE)=(.*)`)
-	matchInterfaceUplink := regexp.MustCompile(`(^WANIF)=(.*)`)
+	matchSSID := regexp.MustCompile(`^(SSID_NAME)=(.*)`)
+	matchInterfaceAP := regexp.MustCompile(`^(SSID_INTERFACE)=(.*)`)
+	matchInterfaceUplink := regexp.MustCompile(`^(WANIF)=(.*)`)
 
 	configData = matchSSID.ReplaceAllString(configData, "$1="+conf.SSID)
 	configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+conf.InterfaceAP)
@@ -1661,8 +1661,8 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	configData = string(data)
-	matchSSID = regexp.MustCompile(`(^ssid)=(.*)`)
-	matchInterfaceAP = regexp.MustCompile(`(^interface)=(.*)`)
+	matchSSID = regexp.MustCompile(`^(ssid)=(.*)`)
+	matchInterfaceAP = regexp.MustCompile(`^(interface)=(.*)`)
 
 	configData = matchSSID.ReplaceAllString(configData, "$1="+conf.SSID)
 	configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+conf.InterfaceAP)
