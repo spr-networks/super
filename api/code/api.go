@@ -1663,9 +1663,11 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	configData = string(data)
 	matchSSID = regexp.MustCompile(`(?m)^(ssid)=(.*)`)
 	matchInterfaceAP = regexp.MustCompile(`(?m)^(interface)=(.*)`)
+	matchCountry := regexp.MustCompile(`(?m)^(country_code)=(.*)`)
 
 	configData = matchSSID.ReplaceAllString(configData, "$1="+conf.SSID)
 	configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+conf.InterfaceAP)
+	configData = matchCountry.ReplaceAllString(configData, "$1="+conf.CountryCode)
 
 	err = ioutil.WriteFile(HostapdConfigFile, []byte(configData), 0755)
 	if err != nil {
