@@ -35,6 +35,7 @@ var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
 
 var ConfigFile = TEST_PREFIX + "/configs/base/config.sh"
+var HostapdConfigFile = TEST_PREFIX + "/configs/wifi/hostapd.conf"
 
 var ApiTlsCert = "/configs/base/www-api.crt"
 var ApiTlsKey = "/configs/base/www-api.key"
@@ -1647,6 +1648,28 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	err = ioutil.WriteFile(ConfigFile, []byte(configData), 0755)
 	if err != nil {
 		http.Error(w, "Failed to write config to "+ConfigFile, 400)
+		panic(err)
+	}
+
+
+	//write to hostapd.conf
+	data, err = ioutil.ReadFile(HostapdConfigFile)
+	if err != nil {
+		// we can use default template config here but better to copy it before in bash
+		http.Error(w, "Missing default config.sh", 400)
+		return
+	}
+
+	configData = string(data)
+	matchSSID = regexp.MustCompile(`(ssid)=(.*)`)
+	matchInterfaceAP = regexp.MustCompile(`(interface)=(.*)`)
+
+	configData = matchSSID.ReplaceAllString(configData, "$1="+conf.SSID)
+	configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+conf.InterfaceAP)
+
+	err = ioutil.WriteFile(HostapdConfigFile, []byte(configData), 0755)
+	if err != nil {
+		http.Error(w, "Failed to write config to "+HostapdConfigFile, 400)
 		panic(err)
 	}
 
