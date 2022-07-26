@@ -1,0 +1,59 @@
+package main
+
+import (
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/asaskevich/EventBus"
+)
+
+func calculator(a int, b int) {
+	fmt.Printf(">> %d\n", a + b)
+}
+
+func ipConnect(action string, json string) {
+	fmt.Printf(">> %v == %v\n", action, json)
+}
+
+func main() {
+	log.Println("server")
+
+	serverBus := EventBus.NewServer("localhost:2020", "/_server_bus_", EventBus.New())
+	serverBus.Start()
+
+
+	/*fn := func(a int) {
+		fmt.Printf("fna=%v\n", a)
+		if a != 10 {
+			log.Fatal("FAIL arg")
+		}
+	}*/
+
+	log.Println("client")
+
+	//clientBus := EventBus.NewClient("localhost:2025", "/_client_bus_", EventBus.New())
+	clientBus := EventBus.NewClient("localhost:2020", "/_client_bus_", EventBus.New())
+	//clientBus := EventBus.NewClient("localhost:2020", "/_server_bus_", EventBus.New())
+	clientBus.Start()
+
+	log.Println("subs")
+	//clientBus.Subscribe("topic", fn, "localhost:2010", "/_server_bus_")
+	//clientBus.Subscribe("topic", fn, "localhost:2020", "/_server_bus_")
+	//clientBus.Subscribe("main:calculator", calculator, "localhost:2010", "/_server_bus_")
+	clientBus.Subscribe("main:calculator", calculator, ":2020", "/_server_bus_")
+	//clientBus.Subscribe("main:calculator", calculator, "localhost:2025", "/_server_bus_")
+	clientBus.Subscribe("ip:connect", ipConnect, ":2020", "/_server_bus_")
+
+
+	for {
+		serverBus.EventBus().Publish("main:calculator", 10, 20)
+
+		fmt.Println("sleeping...")
+		time.Sleep(10 * time.Second)
+	}
+
+
+	clientBus.Stop()
+	serverBus.Stop()
+}
