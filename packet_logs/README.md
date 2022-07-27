@@ -4,6 +4,9 @@
 eventbus used is:
 git clone https://github.com/asaskevich/EventBus.git
 
+forked for unix socket support
+TODO move fork to spr-networks repo
+
 packed to support unix sockets
 
 # setup
