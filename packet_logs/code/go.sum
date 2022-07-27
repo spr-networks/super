@@ -1,2 +1,2 @@
-github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef h1:2JGTg6JapxP9/R33ZaagQtAM4EkkSYnIAlOG5EI8gkM=
-github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef/go.mod h1:JS7hed4L1fj0hXcyEejnW57/7LCetXggd+vwrRnYeII=
+github.com/lts-po/EventBus v0.0.0-20220727110333-e27363017538 h1:YTnE6wJ0Y8HTNTTWgJVPbe2d/aLnDN6N+YE5SlSkQC0=
+github.com/lts-po/EventBus v0.0.0-20220727110333-e27363017538/go.mod h1:xTon0Hp4o0W0qdu9HEX69rM3pUO9mxvw73VsOR6KzR0=

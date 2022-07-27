@@ -1,4 +1,11 @@
 
+# code
+
+eventbus used is:
+git clone https://github.com/asaskevich/EventBus.git
+
+packed to support unix sockets
+
 # setup
 
 ## add log prefix + group to netfilter rules

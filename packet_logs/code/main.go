@@ -12,7 +12,8 @@ import (
 	"strings"
 	//"time"
 
-	"github.com/asaskevich/EventBus"
+	"github.com/lts-po/EventBus"
+	//"main/EventBus"
 )
 
 //var pipeFile = "/var/log/ulog/ulogd.json"
@@ -43,7 +44,13 @@ func main() {
 
 	log.Println("connecting eventbus")
 
-	server := EventBus.NewServer("localhost:2020", "/_server_bus_", EventBus.New())
+        serverEventListener := "/state/plugins/packet_logs/server.sock"
+        clientEventListener := "/state/plugins/packet_logs/client.sock"
+
+	os.Remove(serverEventListener)
+
+	//server := EventBus.NewServer("localhost:2020", "/_server_bus_", EventBus.New())
+	server := EventBus.NewServer(serverEventListener, "/_server_bus_", EventBus.New())
 	server.Start()
 
 	log.Println("open ulogd named pipe for reading")
@@ -88,7 +95,8 @@ func main() {
         	registeredPrefix := regexp.MustCompile(`^(ip|drp|lan|wan):(in|out|inp|fwd)$`).MatchString
 
 		// need this check to not crash if client is disconnected when we publish
-		rpcClient, _ := rpc.DialHTTPPath("tcp", ":2025", "/_client_bus_")
+		//rpcClient, _ := rpc.DialHTTPPath("tcp", ":2025", "/_client_bus_")
+		rpcClient, _ := rpc.DialHTTPPath("unix", clientEventListener, "/_client_bus_")
 		if (rpcClient != nil) {
 			if registeredPrefix(prefix) {
 				topic := fmt.Sprintf("nft:%s", prefix)
