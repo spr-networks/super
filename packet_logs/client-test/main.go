@@ -92,8 +92,6 @@ func main() {
 
 	log.Printf("settings: %v\n", NotificationSettings[0].Conditions["prefix"])
 
-	return
-
 	os.Remove(ClientEventSock)
 
 	rpcClient, err := rpc.DialHTTPPath("unix", ServerEventSock, ServerEventPath)
