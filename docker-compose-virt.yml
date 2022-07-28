@@ -1,5 +1,9 @@
 version: '3.4'
 
+x-labels:
+  &default-labels
+  org.supernetworks.ci: ${CI:-false}
+
 x-logging:
   &default-logging
   driver: journald
@@ -21,6 +25,7 @@ services:
       - "51280:51280/udp"
       - "8000:80"
       - "4443:443"
+    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -31,6 +36,7 @@ services:
     network_mode: service:base-virt
     depends_on:
       - "base-virt"
+    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -43,6 +49,7 @@ services:
     image: ghcr.io/spr-networks/super_dns
     build: dns
     network_mode: service:base-virt
+    labels: *default-labels
     logging: *default-logging
     depends_on:
       - "base-virt"
@@ -58,6 +65,7 @@ services:
     network_mode: service:base-virt
     depends_on:
       - "base-virt"
+    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -74,6 +82,7 @@ services:
       - "base-virt"
       - "dhcp-virt"
       - "api-virt"
+    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -100,6 +109,7 @@ services:
       - "base-virt"
       - "dhcp-virt"
       - "frontend"
+    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -121,6 +131,7 @@ services:
     image: ghcr.io/spr-networks/super_plugin-lookup
     build: plugin-lookup
     network_mode: service:base-virt
+    labels: *default-labels
     logging: *default-logging
     depends_on:
       - "base-virt"
@@ -132,6 +143,7 @@ services:
     image: ghcr.io/spr-networks/super_dyndns
     build: dyndns
     network_mode: bridge
+    labels: *default-labels
     logging: *default-logging
     depends_on:
       - "base-virt"

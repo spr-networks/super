@@ -10,6 +10,32 @@ if [ '!' -d "configs/" ]; then
   exit 1
 fi
 
+# remove prebuilt images
+FOUND_PREBUILT_IMAGE=false
+for SERVICE in $(docker-compose config --service); do
+  # keep the prebuilt frontend image
+  if [ "$SERVICE" = "frontend" ]; then
+    continue
+  fi
+
+  IS_PREBUILT=$(docker inspect \
+    --format '{{ index .Config.Labels "org.supernetworks.ci" }}' \
+    "ghcr.io/spr-networks/super_${SERVICE}" \
+    2>/dev/null || echo "false" \
+  )
+  if [ "$IS_PREBUILT" = "true" ]; then
+    echo "Removing prebuilt image ${IMAGE}"
+    docker image rm "$IMAGE"
+    FOUND_PREBUILT_IMAGE=true
+  fi
+done
+
+if [ "$FOUND_PREBUILT_IMAGE" = "true" ]; then
+    echo "Pruning dangling container images"
+    docker image prune
+fi
+
+
 # gen configs
 if [ ! -f configs/dhcp/coredhcp.yml ]; then
   ./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
