@@ -193,7 +193,6 @@ const TrafficList = (props) => {
   let types = ['WanOut', 'WanIn', 'LanIn', 'LanOut']
 
   const handleChangeClient = (ip) => {
-    console.log('[upup]', ip)
     setFilterIps([ip])
   }
 
