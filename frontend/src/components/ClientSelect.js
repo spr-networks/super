@@ -63,7 +63,8 @@ const ClientSelect = (props) => {
 ClientSelect.propTypes = {
   isMultiple: PropTypes.bool,
   value: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
-  onChange: PropTypes.func
+  onChange: PropTypes.func,
+  onSubmitEditing: PropTypes.func
 }
 
 export default ClientSelect

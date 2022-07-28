@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { HStack, Select, Text } from 'native-base'
 
@@ -27,7 +27,7 @@ const TimeSelect = ({ value, onChange, ...props }) => {
   return (
     <HStack space={1} justifyContent="center">
       <Select
-        maxW={20}
+        w={20}
         selectedValue={hour}
         onValueChange={setHour}
         accessibilityLabel={`Choose hour`}
@@ -38,7 +38,7 @@ const TimeSelect = ({ value, onChange, ...props }) => {
       </Select>
       <Text>:</Text>
       <Select
-        maxW={20}
+        w={20}
         selectedValue={minute}
         onValueChange={setMinute}
         accessibilityLabel={`Choose minute`}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import StatsChartWidget from './StatsChartWidget'
 import { trafficAPI } from 'api'
 

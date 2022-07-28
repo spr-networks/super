@@ -10,6 +10,11 @@ ieee80211d=1
 ieee80211n=1
 ieee80211ac=1
 ieee80211h=1
+#wifi 6
+ieee80211ax=0
+he_su_beamformer=0
+he_su_beamformee=0
+he_mu_beamformer=0
 #for mixed mode need w=1
 ieee80211w=1
 wmm_enabled=1

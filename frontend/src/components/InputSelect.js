@@ -41,7 +41,7 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
   let closeOnSelect = !isMultiple
 
   return (
-    <Menu w="190" maxH="90vh" closeOnSelect={closeOnSelect} trigger={trigger}>
+    <Menu w="190" maxH={360} closeOnSelect={closeOnSelect} trigger={trigger}>
       {groups.map((group) => (
         <Menu.OptionGroup
           key={group.title}
@@ -98,9 +98,10 @@ const InputSelect = (props) => {
     }
   }
 
-  const onSubmitEditing = () => {
+  const onSubmitEditing = (event) => {
     if (props.onSubmitEditing) {
-      props.onSubmitEditing()
+      let value = event.target.value
+      props.onSubmitEditing(value)
     }
   }
 

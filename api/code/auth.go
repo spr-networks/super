@@ -432,17 +432,15 @@ func (auth *authnconfig) authenticateUser(username string, password string) bool
 	return false
 }
 
-func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router) http.HandlerFunc {
+func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMode *mux.Router) http.HandlerFunc {
 	webauth_router := mux.NewRouter().StrictSlash(true)
 
-	// webauthn register is behind auth
-	//authenticatedNext.HandleFunc("/webauthn/register", auth.BeginRegistration).Methods("GET", "OPTIONS")
-	//authenticatedNext.HandleFunc("/webauthn/register", auth.FinishRegistration).Methods("POST", "OPTIONS")
-
-	//webauth_router.HandleFunc("/login", auth.BeginLogin).Methods("GET", "OPTIONS")
-	//webauth_router.HandleFunc("/login", auth.FinishLogin).Methods("POST", "OPTIONS")
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		//Authenticated endpoints should not be cached.
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
+
 		var matchInfo mux.RouteMatch
 
 		//webuathn endpoints
@@ -469,10 +467,21 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 			}
 		}
 
-		//last try public route
-		if publicNext.Match(r, &matchInfo) {
-			publicNext.ServeHTTP(w, r)
+		//check setup routes
+		if isSetupMode() && setupMode.Match(r, &matchInfo) {
+			setupMode.ServeHTTP(w, r)
 			return
+		}
+
+		if authenticatedNext.Match(r, &matchInfo) || setupMode.Match(r, &matchInfo) {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		} else {
+			//last try public route
+			if publicNext.Match(r, &matchInfo) {
+				publicNext.ServeHTTP(w, r)
+				return
+			}
 		}
 
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)

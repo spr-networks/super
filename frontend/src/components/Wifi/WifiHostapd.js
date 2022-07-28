@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 import { wifiAPI } from 'api'
 import { ucFirst } from 'utils'
@@ -7,6 +7,7 @@ import {
   Box,
   Divider,
   HStack,
+  Input,
   Text,
   VStack,
   useColorModeValue
@@ -16,13 +17,18 @@ import WifiChannelParameters from 'components/Wifi/WifiChannelParameters'
 
 const WifiHostapd = (props) => {
   const [config, setConfig] = useState({})
-  const canEdit = ['ssid']
+  const canEditString = ['ssid', 'country_code', 'vht_capab', 'ht_capab']
+  const canEditInt = ['ieee80211ax', 'he_su_beamformer', 'he_su_beamformee', 'he_mu_beamformer']
+  const canEdit = canEditInt.concat(canEditString)
 
   const sortConf = (conf) => {
     // put the ones we can change at the top
     return Object.keys(conf)
       .sort((a, b) => {
         if (canEdit.includes(a)) {
+          if (canEdit.includes(b)) {
+            return a > b ? 1 : a < b ? -1 : 0
+          }
           return -1
         }
 
@@ -40,11 +46,15 @@ const WifiHostapd = (props) => {
     })
   }, [])
 
-  const handleChange = (e) => {
-    let name = e.target.name,
-      value = e.target.value
-
+  const handleChange = (name, value) => {
     let configNew = { ...config }
+    if (canEditInt.includes(name)) {
+      if (isNaN(parseFloat(value))) {
+        return
+      }
+      //cast to a number
+      value = parseInt(value)
+    }
     configNew[name] = value
 
     setConfig(configNew)
@@ -92,9 +102,26 @@ const WifiHostapd = (props) => {
               <Text bold w="1/4" textAlign="right">
                 {label}
               </Text>
-              <Text w="1/4">{config[label]}</Text>
+
+              {canEdit.includes(label) ? (
+                <Input
+                  size="lg"
+                  type="text"
+                  variant="underlined"
+                  w="1/4"
+                  value={config[label]}
+                  onChangeText={(value) => handleChange(label, value)}
+                  onSubmitEditing={handleSubmit}
+                />)
+                :
+                (
+                  <Text w="1/4">{config[label]}</Text>
+                )
+              }
+
             </HStack>
           ))}
+
         </VStack>
       </Box>
     </>

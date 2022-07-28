@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 
 import { wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
@@ -7,13 +7,19 @@ import WifiInterfaceList from 'components/Wifi/WifiInterfaceList'
 import WifiScan from 'components/Wifi/WifiScan'
 import WifiHostapd from 'components/Wifi/WifiHostapd'
 
-import { Animated, Dimensions, Pressable, StatusBar } from 'react-native'
+import {
+  Animated,
+  Dimensions,
+  Platform,
+  Pressable,
+  StatusBar
+} from 'react-native'
 import { TabView, SceneMap } from 'react-native-tab-view'
-import { Box, View, useColorModeValue } from 'native-base'
+import { Box, View, Text, useColorModeValue } from 'native-base'
 
 const WirelessConfiguration = (props) => {
   const [config, setConfig] = useState({})
-  const [index, setIndex] = useState(1)
+  const [index, setIndex] = useState(0) //1)
 
   const context = useContext(AlertContext)
 
@@ -43,12 +49,13 @@ const WirelessConfiguration = (props) => {
     },
     {
       key: 'fourth',
-      title: 'Radio Settings'
+      title: Platform.OS === 'web' ? 'Radio Settings' : 'Settings'
     }
   ])
 
   const initialLayout = {
-    width: Dimensions.get('window').width
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height
   }
 
   const renderScene = SceneMap({
@@ -107,20 +114,21 @@ const WirelessConfiguration = (props) => {
     )
   }
 
+  let h = Dimensions.get('window').height
+
   return (
-    <TabView
-      navigationState={{
-        index,
-        routes
-      }}
-      renderScene={renderScene}
-      renderTabBar={renderTabBar}
-      onIndexChange={setIndex}
-      initialLayout={initialLayout}
-      style={{
-        marginTop: StatusBar.currentHeight
-      }}
-    />
+    <View minH={h}>
+      <TabView
+        navigationState={{
+          index,
+          routes
+        }}
+        renderScene={renderScene}
+        renderTabBar={renderTabBar}
+        onIndexChange={setIndex}
+        initialLayout={initialLayout}
+      />
+    </View>
   )
 }
 

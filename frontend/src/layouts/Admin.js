@@ -1,6 +1,20 @@
 import React, { createContext, useEffect, useState } from 'react'
+import { Platform, Dimensions } from 'react-native'
 import { Outlet, useLocation } from 'react-router-dom'
+import Notifications from 'Notifications'
+/*
+import {
+  Outlet as OutletWeb,
+  useLocation as useLocationWeb
+} from 'react-router-dom'
+import {
+  Outlet as OutletNative,
+  useLocation as useLocationNative
+} from 'react-router-native'
 
+const Outlet = Platform.OS == 'web' ? OutletWeb : OutletNative
+const useLocation = Platform.OS == 'web' ? useLocationWeb : useLocationNative
+*/
 import { AppContext, AlertContext, alertState } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Footer from 'components/Footer/Footer'
@@ -31,7 +45,12 @@ const AppAlert = (props) => {
   const { type, title, body, toggle } = props
 
   return (
-    <Alert w="100%" variant="left-accent" status={type}>
+    <Alert
+      w="100%"
+      variant="outline-light"
+      status={type}
+      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+    >
       <VStack space={2} flexShrink={1} w="100%">
         <HStack
           flexShrink={1}
@@ -40,15 +59,15 @@ const AppAlert = (props) => {
           alignItems="center"
         >
           <HStack space={2} flexShrink={1}>
-            <Alert.Icon mt="1" />
-            <HStack space={2}>
+            <Alert.Icon mt={1} />
+            <VStack space={2}>
               <Text fontSize="md" color="coolGray.800" bold>
                 {title}
               </Text>
               <Text fontSize="md" color="coolGray.800">
                 {body}
               </Text>
-            </HStack>
+            </VStack>
           </HStack>
           <IconButton
             variant="unstyled"
@@ -62,28 +81,6 @@ const AppAlert = (props) => {
       </VStack>
     </Alert>
   )
-}
-
-function desktopNotification(msg) {
-  if (!('Notification' in window)) {
-    return
-  }
-
-  if (Notification.permission === 'denied') {
-    return
-  }
-
-  if (Notification.permission === 'granted') {
-    var notification = new Notification(msg)
-  } else if (Notification.permission !== 'denied') {
-    Notification.requestPermission().then(function (permission) {
-      if (permission === 'granted') {
-        var notification = new Notification(msg)
-      }
-    })
-  }
-
-  return
 }
 
 const AdminLayout = (props) => {
@@ -104,8 +101,8 @@ const AdminLayout = (props) => {
       title = ucFirst(type)
     }
 
-    if (['error', 'success'].includes(type)) {
-      desktopNotification(`${title}, ${body}`)
+    if (['error', 'success'].includes(type) && Platform.OS == 'web') {
+      Notifications.notification(title, body)
     }
 
     setAlert({ type, title, body })
@@ -161,6 +158,7 @@ const AdminLayout = (props) => {
       })
 
     connectWebsocket((event) => {
+      console.log('[webSocket]', event.data)
       if (event.data == 'success') {
         return
       } else if (event.data == 'Authentication failure') {
@@ -169,11 +167,22 @@ const AdminLayout = (props) => {
 
       const res = parseLogMessage(JSON.parse(event.data))
       if (res) {
-        let { type, message } = res
-        alertState[type](message)
+        console.log('[LOG]', JSON.stringify(res))
+        let { type, title, body } = res
+
+        if (Platform.OS == 'ios') {
+          let category = 'userAction'
+          Notifications.notification(title, body, category)
+        } else {
+          alertState[type](title, body)
+        }
       }
     })
+
+    Notifications.init()
   }, [])
+
+  let heightContent = Dimensions.get('window').height - 64 //calc(100vh-64px)
 
   return (
     <AppContext.Provider
@@ -190,105 +199,101 @@ const AdminLayout = (props) => {
     >
       <Box
         w="100%"
-        h={{ base: '100%', md: '100vh' }} // md: '100vh'
+        h="100%" // md: '100vh'
+        __alignItems="center"
+        nativeID="content-id"
+        safeAreaTop
         bg={useColorModeValue(
           'backgroundContentLight',
           'backgroundContentDark'
         )}
-        alignItems="center"
-        nativeID={useColorModeValue('coolGray.100', 'blueGray.900')}
       >
-        <ScrollView w="100%" nativeID="scrollview-id">
-          <Box h="100%" w="100%">
-            <Box
-              display={{ base: 'none', md: 'flex' }}
-              w="100%"
-              position="sticky"
-              top="0"
-              zIndex={99}
-              // @ts-ignore
-              style={{ backdropFilter: 'blur(10px)' }}
-            >
-              <AdminNavbar
-                isMobile={false}
-                isOpenSidebar={isOpenSidebar}
-                setIsOpenSidebar={setIsOpenSidebar}
-              />
-            </Box>
-            <Box
-              display={{ base: 'flex', md: 'none' }}
-              w="100%"
-              position="sticky"
-              top="0"
-              zIndex={99}
-              // @ts-ignore
-              style={{ backdropFilter: 'blur(10px)' }}
-            >
-              <AdminNavbar
-                isMobile={true}
-                isOpenSidebar={isOpenSidebar}
-                setIsOpenSidebar={setIsOpenSidebar}
-              />
-            </Box>
+        {/*desktop*/}
+        <Box
+          display={{ base: 'none', md: 'flex' }}
+          position={{ base: 'absolute', md: 'static' }}
+          w="100%"
+          zIndex={99}
+          style={{ backdropFilter: 'blur(10px)' }}
+        >
+          <AdminNavbar
+            isMobile={false}
+            isOpenSidebar={isOpenSidebar}
+            setIsOpenSidebar={setIsOpenSidebar}
+          />
+        </Box>
+        {/*mobile*/}
+        <Box
+          display={{ base: 'flex', md: 'none' }}
+          w="100%"
+          position={{ base: 'relative', md: 'static' }}
+          zIndex={99}
+          _style={{ backdropFilter: 'blur(10px)' }}
+        >
+          <AdminNavbar
+            isMobile={true}
+            isOpenSidebar={isOpenSidebar}
+            setIsOpenSidebar={setIsOpenSidebar}
+          />
+        </Box>
 
-            <HStack>
-              <Box
-                position="sticky"
-                top="16"
-                h="calc(100vh - 64px)"
-                display={{ base: 'none', md: 'flex' }}
-              >
-                <Sidebar
-                  isMobile={false}
-                  isMini={isOpenSidebar}
-                  isOpenSidebar={true}
-                  setIsOpenSidebar={setIsOpenSidebar}
-                  routes={routes}
-                />
-              </Box>
-              {isOpenSidebar ? (
-                <Box
-                  position="fixed"
-                  top="16"
-                  h="calc(100vh - 64px)"
-                  w="100%"
-                  zIndex={99}
-                  display={{ base: 'flex', md: 'none' }}
-                >
-                  <Sidebar
-                    isMobile={true}
-                    isMini={false}
-                    isOpenSidebar={isOpenSidebar}
-                    setIsOpenSidebar={setIsOpenSidebar}
-                    routes={routes}
-                  />
-                </Box>
-              ) : null}
-
-              {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
-              {/*h="calc(100% - 64px)"
-               minH="calc(100vh - 64px)"*/}
-              <Box
-                flex={1}
-                p={{ base: 4, md: 4 }}
-                safeAreaTop
-                ref={mainPanel}
-                minH="calc(100vh - 64px)"
-              >
-                <Outlet />
-
-                <Footer marginTop="auto" />
-              </Box>
-            </HStack>
+        <HStack h={heightContent}>
+          {/*desktop*/}
+          <Box
+            display={{ base: 'none', md: 'flex' }}
+            position={{ base: 'absolute', md: 'static' }}
+            h={heightContent}
+          >
+            <Sidebar
+              isMobile={false}
+              isMini={isOpenSidebar}
+              isOpenSidebar={true}
+              setIsOpenSidebar={setIsOpenSidebar}
+              routes={routes}
+            />
           </Box>
-        </ScrollView>
+          {/*mobile*/}
+          {isOpenSidebar ? (
+            <Box
+              position="absolute"
+              h={heightContent}
+              w="100%"
+              zIndex={99}
+              display={{ base: 'flex', md: 'none' }}
+            >
+              <Sidebar
+                isMobile={true}
+                isMini={false}
+                isOpenSidebar={isOpenSidebar}
+                setIsOpenSidebar={setIsOpenSidebar}
+                routes={routes}
+              />
+            </Box>
+          ) : null}
+
+          {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
+          {/*h="calc(100% - 64px)"
+               minH="calc(100vh - 64px)"*/}
+          <ScrollView
+            flex={1}
+            px={{ base: 4, md: 4 }}
+            py={{ base: 4, md: 4 }}
+            safeAreaTop
+            ref={mainPanel}
+            h={heightContent}
+          >
+            <Outlet />
+            <Footer mt="auto" />
+          </ScrollView>
+          {/*<Box flex="1" w="100%" minH="100%"></Box>*/}
+        </HStack>
       </Box>
       <AlertContext.Provider value={alertState}>
         <Slide in={showAlert} placement="top">
           <Box
             maxWidth="90%"
-            top="16"
-            position="sticky"
+            top={16}
+            position={{ base: 'static', md: 'static' }}
             alignItems="center"
             justifyContent="center"
             alignSelf="center"

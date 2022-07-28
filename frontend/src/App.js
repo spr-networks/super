@@ -2,18 +2,11 @@ import React from 'react'
 import { NativeBaseProvider } from 'native-base'
 
 import {
-  BrowserRouter as Router,
+  NativeRouter as Router,
   Route,
   Routes,
-  Navigate
-} from 'react-router-dom'
-// TODO react-router-native for native
-/*export {
-  NativeRouter as Router,
-  Switch,
-  Route,
-  Link
-} from 'react-router-native'*/
+	Navigate
+} from 'react-router-native'
 import AuthLayout from 'layouts/Auth'
 import AdminLayout from 'layouts/Admin'
 import { routesAuth, routesAdmin } from 'routes'

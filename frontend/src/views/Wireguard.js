@@ -46,7 +46,11 @@ export default class Wireguard extends Component {
   }
 
   componentDidMount() {
-    this.getStatus()
+    const fetchStatus = async () => {
+      await this.getStatus()
+    }
+
+    fetchStatus()
   }
 
   handleChange() {
@@ -65,7 +69,6 @@ export default class Wireguard extends Component {
   }
 
   render() {
-
     return (
       <View>
         <HStack alignItems="center" mb={4}>
@@ -89,7 +92,8 @@ export default class Wireguard extends Component {
             {this.state.config.listenPort ? (
               <Text>
                 Wireguard is listening on port {this.state.config.listenPort}{' '}
-                with PublicKey: <em>{this.state.config.publicKey}</em>
+                with PublicKey:{' '}
+                <Text italic>{this.state.config.publicKey}</Text>
               </Text>
             ) : (
               <Text>
@@ -101,10 +105,10 @@ export default class Wireguard extends Component {
 
         <PeerList />
 
-        {!this.context.isPlusDisabled ?
+        {!this.context.isPlusDisabled ? (
           //PLUS feature
           <SiteVPN />
-        : null }
+        ) : null}
       </View>
     )
   }

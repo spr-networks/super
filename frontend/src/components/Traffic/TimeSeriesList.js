@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
 import { format as timeAgo } from 'timeago.js'
 
@@ -50,7 +51,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
   }*/
 
   const AsnIcon = React.memo(({ asn }) => {
-    if (!asn) {
+    if (!asn || Platform.OS !== 'web') {
       return <></>
     }
 
@@ -84,7 +85,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
     for (let r in asnToIcon) {
       if (asnName.match(new RegExp(`${r}`))) {
         return (
-          <Box p={1} _dark={{ bg: 'muted.100', rounded: 'full' }}>
+          <Box p={1} _dark={{ bg: 'muted.100', rounded: 'full' }} mr={2}>
             {asnToIcon[r]}
           </Box>
         )
@@ -98,7 +99,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
     let ip = e.target.innerText
 
     // TODO handle this and show popover info with actions
-    if (!ip.match(regexLAN)) {
+    if (!ip || !ip.match(regexLAN)) {
       return
     }
 
@@ -136,24 +137,24 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
                 justifyContent="space-between"
                 alignItems="center"
               >
+                {/*['WanOut', 'LanOut', 'LanIn'].includes(type) ? (
+                  <Text bold>{item.deviceSrc && item.deviceSrc.Name}</Text>
+                ) : null*/}
                 <Pressable flex={1} onPress={onPressIp}>
-                  {['WanOut', 'LanOut', 'LanIn'].includes(type) ? (
-                    <Text bold>{item.deviceSrc && item.deviceSrc.Name}</Text>
-                  ) : null}
                   <Text>{item.Src}</Text>
                 </Pressable>
                 <Box alignText="center">
                   <Icon color="muted.200" icon={faArrowRight} size="xs" />
                 </Box>
+                {/*['WanIn', 'LanOut', 'LanIn'].includes(type) ? (
+                  <Text bold>{item.deviceDst && item.deviceDst.Name}</Text>
+                ) : null*/}
                 <Pressable flex={1} onPress={onPressIp}>
-                  {['WanIn', 'LanOut', 'LanIn'].includes(type) ? (
-                    <Text bold>{item.deviceDst && item.deviceDst.Name}</Text>
-                  ) : null}
                   <Text textAlign="right">{item.Dst}</Text>
                 </Pressable>
               </HStack>
               {showASN ? (
-                <HStack flex={1} space={2} alignItems="center">
+                <HStack flex={1} alignItems="center">
                   {/*TODO also src depending on type*/}
                   <AsnIcon asn={item.Asn} />
                   <Text color="muted.500" isTruncated>

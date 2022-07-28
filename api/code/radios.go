@@ -1,28 +1,36 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/mux"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
-	"regexp"
-	"io"
-	"github.com/gorilla/mux"
 )
 
 var HostapdConf = "/configs/wifi/hostapd.conf"
 
 type HostapdConfigEntry struct {
-	Ssid    string
-	Channel int
+	Country_code                 string
+	Vht_capab                    string
+	Ht_capab                     string
+	Ieee80211ax                  int
+	He_su_beamformer             int
+	He_su_beamformee             int
+	He_mu_beamformer             int
+	Ssid                         string
+	Channel                      int
 	Vht_oper_centr_freq_seg0_idx int
-	He_oper_centr_freq_seg0_idx int
-	Vht_oper_chwidth int
-	He_oper_chwidth int
+	He_oper_centr_freq_seg0_idx  int
+	Vht_oper_chwidth             int
+	He_oper_chwidth              int
 }
 
 func RunHostapdAllStations() (map[string]map[string]string, error) {
@@ -67,20 +75,20 @@ func RunHostapdStatus() (map[string]string, error) {
 	return m, nil
 }
 
-type ChannelParameters struct  {
-	Mode string
-	Channel int
-	Bandwidth int
-	HT_Enable bool
+type ChannelParameters struct {
+	Mode       string
+	Channel    int
+	Bandwidth  int
+	HT_Enable  bool
 	VHT_Enable bool
-	HE_Enable bool
+	HE_Enable  bool
 }
 
 type CalculatedChannelParameters struct {
 	Vht_oper_centr_freq_seg0_idx int
-	He_oper_centr_freq_seg0_idx int
-	Vht_oper_chwidth int
-	He_oper_chwidth int
+	He_oper_centr_freq_seg0_idx  int
+	Vht_oper_chwidth             int
+	He_oper_chwidth              int
 }
 
 func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled bool, he_enabled bool) (CalculatedChannelParameters, error) {
@@ -92,17 +100,17 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 
 	cmd := ""
 	base := 5000
-	if mode == "b" || mode == "g"  {
+	if mode == "b" || mode == "g" {
 		//2.4ghz
 		base = 2407
-		freq1 = 2407 + channel * 5
+		freq1 = 2407 + channel*5
 		if channel == 14 {
 			//channel 14 goes higher
 			freq1 += 7
 		}
 	} else if mode == "a" {
 		//5 ghz
-		freq1 = base + channel * 5
+		freq1 = base + channel*5
 	}
 
 	center_channel := 0
@@ -133,7 +141,7 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 	}
 
 	if center_channel != 0 {
-		freq2 = base + center_channel * 5
+		freq2 = base + center_channel*5
 		if vht_enabled {
 			calculated.Vht_oper_centr_freq_seg0_idx = center_channel
 		}
@@ -142,14 +150,13 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 		}
 	}
 
-
 	//chan_switch 1 5180 sec_channel_offset=1 center_freq1=5210 bandwidth=80 vht
 
-	if (bw == 20) {
+	if bw == 20 {
 		cmd = fmt.Sprintf("chan_switch 1 %d bandwidth=20", freq1)
-	} else if (bw == 40 || bw == 80 || bw == 160) {
+	} else if bw == 40 || bw == 80 || bw == 160 {
 		cmd = fmt.Sprintf("chan_switch 1 %d sec_channel_offset=1 center_freq1=%d bandwidth=%d", freq1, freq2, bw)
-	} else if (bw == 8080) {
+	} else if bw == 8080 {
 		//80 + 80 unsupported for now
 		// center_freq1, center_freq2
 		return CalculatedChannelParameters{}, fmt.Errorf("80+80 not supported")
@@ -194,7 +201,6 @@ func hostapdChannelSwitch(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(calculated)
 
 }
-
 
 func RunHostapdCommandArray(cmd []string) (string, error) {
 
@@ -281,7 +287,15 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Error reading body: %v", err)
+		http.Error(w, "can't read body", http.StatusBadRequest)
+		return
+	}
+
 	newConf := HostapdConfigEntry{}
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 	err = json.NewDecoder(r.Body).Decode(&newConf)
 
 	if err != nil {
@@ -289,28 +303,76 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newInput := map[string]interface{}{}
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+	err = json.NewDecoder(r.Body).Decode(&newInput)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	needRestart := false
+
 	if len(newConf.Ssid) > 0 {
+		/* mac80211 state sometimes require a restart when changing ssid name --
+		attempting to do a set just creates a secondary name */
 		conf["ssid"] = newConf.Ssid
+		needRestart = true
 	}
 
 	if newConf.Channel > 0 {
 		conf["channel"] = newConf.Channel
 	}
 
-	if newConf.Vht_oper_centr_freq_seg0_idx > 0 {
+	if _, ok := newInput["vht_oper_centr_freq_seg0_idx"]; ok {
 		conf["vht_oper_centr_freq_seg0_idx"] = newConf.Vht_oper_centr_freq_seg0_idx
 	}
 
-	if newConf.He_oper_centr_freq_seg0_idx > 0 {
+	if _, ok := newInput["he_oper_centr_freq_seg0_idx"]; ok {
 		conf["he_oper_centr_freq_seg0_idx"] = newConf.He_oper_centr_freq_seg0_idx
 	}
 
-	if newConf.Vht_oper_chwidth >= 0 {
+	if _, ok := newInput["vht_oper_chwidth"]; ok {
 		conf["vht_oper_chwidth"] = newConf.Vht_oper_chwidth
 	}
 
-	if newConf.He_oper_chwidth >= 0 {
+	if _, ok := newInput["he_oper_chwidth"]; ok {
 		conf["he_oper_chwidth"] = newConf.He_oper_chwidth
+	}
+
+	if _, ok := newInput["country_code"]; ok {
+		conf["country_code"] = newConf.Country_code
+		needRestart = true
+	}
+
+	if _, ok := newInput["vht_capab"]; ok {
+		conf["vht_capab"] = newConf.Vht_capab
+		needRestart = true
+	}
+
+	if _, ok := newInput["ht_capab"]; ok {
+		conf["ht_capab"] = newConf.Ht_capab
+		needRestart = true
+	}
+
+	if _, ok := newInput["ieee80211ax"]; ok {
+		conf["ieee80211ax"] = newConf.Ieee80211ax
+		needRestart = true
+	}
+
+	if _, ok := newInput["he_su_beamformer"]; ok {
+		conf["he_su_beamformer"] = newConf.He_su_beamformer
+		needRestart = true
+	}
+
+	if _, ok := newInput["he_su_beamformee"]; ok {
+		conf["he_su_beamformee"] = newConf.He_su_beamformee
+		needRestart = true
+	}
+
+	if _, ok := newInput["he_mu_beamformer"]; ok {
+		conf["he_mu_beamformer"] = newConf.He_mu_beamformer
+		needRestart = true		
 	}
 
 	// write new conf
@@ -326,11 +388,15 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = RunHostapdCommand("reload")
-	if err != nil {
-		log.Fatal(err)
-		http.Error(w, err.Error(), 400)
-		return
+	if !needRestart {
+		_, err = RunHostapdCommand("reload")
+		if err != nil {
+			log.Fatal(err)
+			http.Error(w, err.Error(), 400)
+			return
+		}
+	} else {
+		callRestart("wifid")
 	}
 
 	w.Header().Set("Content-Type", "application/json")

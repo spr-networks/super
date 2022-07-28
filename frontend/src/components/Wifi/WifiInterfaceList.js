@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 import Icon from 'FontAwesomeUtils'
 import {
@@ -125,7 +125,7 @@ const WifiInterface = (props) => {
           )}
         </VStack>
 
-        <ScrollView h="50vh" p={2}>
+        <Box h="100%" p={2}>
           {tabList.map((tab) =>
             iw[tab] || ['other', 'SPR compability'].includes(tab) ? (
               <VStack key={tab} display={activeTab == tab ? 'flex' : 'none'}>
@@ -165,7 +165,7 @@ const WifiInterface = (props) => {
                             (k) => !tabList.includes(k)
                           )}
                           renderItem={({ item }) => (
-                            <VStack maxW="64vw" flexWrap="wrap" mb={2}>
+                            <VStack maxW="64%" flexWrap="wrap" mb={2}>
                               <Text bold>{item}</Text>
                               <Text>{iw[item]}</Text>
                             </VStack>
@@ -211,7 +211,7 @@ const WifiInterface = (props) => {
                         <Heading fontSize="md" color="muted.500">
                           {tab.replace(/_/g, ' ')}
                         </Heading>
-                        <HStack maxW="64vw" space={2} flexWrap="wrap">
+                        <HStack maxW="64%" space={2} flexWrap="wrap">
                           {iw[tab] &&
                             iw[tab].map((c) => (
                               <Box key={c} mb={2}>
@@ -328,7 +328,7 @@ const WifiInterface = (props) => {
               </VStack>
             ) : null
           )}
-        </ScrollView>
+        </Box>
       </Stack>
     </Box>
   )

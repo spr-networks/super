@@ -271,7 +271,7 @@ export default class DynDns extends Component {
                           <FormControl.Label
                             flex={1}
                             fontSize="xs"
-                            justifyContent="right"
+                            justifyContent="flex-end"
                           >
                             {niceLabel(label)}
                           </FormControl.Label>
@@ -288,11 +288,15 @@ export default class DynDns extends Component {
 
                   <VStack space={4} minW="1/2">
                     <HStack space={4}>
-                      <FormControl.Label flex={1} justifyContent="right">
+                      <FormControl.Label flex={1} justifyContent="flex-end">
                         Domains
                       </FormControl.Label>
 
-                      <Button.Group flex={2} size="xs" justifyContent="right">
+                      <Button.Group
+                        flex={2}
+                        size="xs"
+                        justifyContent="flex-end"
+                      >
                         <Button
                           variant="outline"
                           colorScheme="primary"
@@ -306,7 +310,7 @@ export default class DynDns extends Component {
 
                     <Stack
                       direction={{ base: 'column', md: 'row' }}
-                      justifyContent="stretch"
+                      justifyContent="flex-start"
                     >
                       <Box
                         display={{ base: 'none', md: 'flex' }}

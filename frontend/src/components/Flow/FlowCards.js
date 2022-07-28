@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import React, { useEffect } from 'react'
 import PropTypes from 'prop-types'
 import {
   faBan,
@@ -391,7 +391,11 @@ const actions = [
           //deviceAPI.groups().then((groups) => resolve(groups.map(toOption)))
           pfwAPI.config().then((config) => {
             let s = []
-            for (let i = 0; i < config.SiteVPNs.length; i++) {
+            for (
+              let i = 0;
+              config.SiteVPNs != null && i < config.SiteVPNs.length;
+              i++
+            ) {
               s.push({ label: 'site' + i, value: 'site' + i })
             }
             resolve(s)

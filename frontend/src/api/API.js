@@ -1,16 +1,32 @@
 import createServer from 'api/MockAPI'
+import { Base64 } from 'utils'
+import { Platform } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
-export const apiURL = () => {
-  const { REACT_APP_API } = process.env
+let gApiURL = null
 
-  // jest
-  if (typeof document === 'undefined') {
-    return 'http://localhost/'
+export const setApiURL = (url) => {
+  if (!url.endsWith('/')) {
+    url += '/'
   }
+
+  gApiURL = url
+}
+
+export const getApiURL = () => {
+  if (gApiURL !== null) {
+    return gApiURL
+  }
+
+  const { REACT_APP_API } = process.env
 
   if (REACT_APP_API == 'mock') {
     createServer()
     return '/'
+  }
+
+  if (Platform.OS == 'ios' || Platform.OS == 'macos') {
+    return 'http://192.168.2.1/'
   }
 
   if (REACT_APP_API) {
@@ -25,46 +41,52 @@ export const apiURL = () => {
   return document.location.origin + '/'
 }
 
-if (typeof localStorage === 'undefined') {
-  global.localStorage = {
-    data: {},
-    getItem: function (key) {
-      return this.data[key] || null
-    },
-    setItem: function (key, value) {
-      this.data[key] = value
-    }
-  }
+export const getApiHostname = () => {
+  return getApiURL()
+    .replace(/^https?:\/\//, '')
+    .replace(/\/.*/, '')
 }
+
+let gAuthHeaders = null
 
 //request helper
 class API {
   baseURL = ''
   authHeaders = ''
 
-  constructor(baseURL = '') {
-    this.baseURL = apiURL() + baseURL.replace(/^\/+/, '')
-    this.authHeaders = this.getAuthHeaders()
+  getApiURL() {
+    return getApiURL()
   }
 
-  // reads from localStorage if no username provided
-  getAuthHeaders(username = null, password = null) {
+  constructor(baseURL = '') {
+    this.baseURL = baseURL.replace(/^\/+/, '')
+    this.getAuthHeaders()
+  }
+
+  // reads from Async/localStorage if no username provided
+  async getAuthHeaders(username = null, password = null) {
     if (username && password) {
       return
-      'Basic ' + btoa(username + ':' + password)
+      'Basic ' + Base64.btoa(username + ':' + password)
     }
 
-    let user = JSON.parse(localStorage.getItem('user'))
-    return user && user.authdata ? 'Basic ' + user.authdata : ''
+    if (gAuthHeaders) {
+      return gAuthHeaders
+    }
+
+    let login = await AsyncStorage.getItem('user')
+    let user = JSON.parse(login)
+    //this.authHeaders =
+    return user && user.authdata ? 'Basic ' + user.authdata : null
   }
 
   setAuthHeaders(username = '', password = '') {
-    this.authHeaders = 'Basic ' + btoa(username + ':' + password)
+    this.authHeaders = 'Basic ' + Base64.btoa(username + ':' + password)
   }
 
-  request(method = 'GET', url, body) {
+  async request(method = 'GET', url, body) {
     if (!this.authHeaders) {
-      this.authHeaders = this.getAuthHeaders()
+      this.authHeaders = await this.getAuthHeaders()
     }
 
     let headers = {
@@ -82,7 +104,7 @@ class API {
       opts.body = JSON.stringify(body)
     }
 
-    let baseURL = this.baseURL
+    let baseURL = this.getApiURL() + this.baseURL
     // get rid of //
     if (url[0] == '/' && baseURL.length && baseURL[baseURL.length - 1] == '/') {
       url = url.substr(1)
@@ -92,17 +114,21 @@ class API {
     let skipReturnValue = method == 'DELETE'
 
     let _url = `${baseURL}${url}`
-    //console.log('[API] fetch', _url, 'Authorization:', this.authHeaders)
-    //console.log(`[API] fetch method=`, method, 'skip=', skipReturnValue)
+    //console.log('[API] fetch', _url)
 
     return fetch(_url, opts).then((response) => {
       if (!response.ok) {
-        return Promise.reject({ message: response.status })
+        return Promise.reject({ message: response.status, response })
       }
 
       const contentType = response.headers.get('Content-Type')
       if (!contentType || skipReturnValue) {
         return Promise.resolve(true)
+      }
+
+      // weird behaviour from react-native
+      if (contentType.includes('text/html')) {
+        return response.json()
       }
 
       if (contentType.includes('application/json')) {
@@ -138,18 +164,22 @@ export const api = new API()
 export const testLogin = (username, password, callback) => {
   api.setAuthHeaders(username, password)
   api
-    .get('/status')
+    .get('/status?json=' + Math.random())
     .then((data) => {
       return callback(data == 'Online')
     })
-    .catch((error) => callback(false, error))
+    .catch((error) => {
+      callback(false, error)
+    })
 }
 
 export const saveLogin = (username, password) => {
-  localStorage.setItem(
+  gAuthHeaders = 'Basic ' + Base64.btoa(username + ':' + password)
+
+  return AsyncStorage.setItem(
     'user',
     JSON.stringify({
-      authdata: btoa(username + ':' + password),
+      authdata: Base64.btoa(username + ':' + password),
       username: username,
       password: password
     })

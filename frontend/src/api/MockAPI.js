@@ -1,5 +1,5 @@
 import { createServer, Model, Response } from 'miragejs'
-
+import { Base64 } from 'utils'
 let server = null
 
 // helper function for random and random value in array
@@ -1357,7 +1357,7 @@ export default function MockAPI() {
             key += String.fromCharCode(r(255))
           }
 
-          return btoa(key)
+          return Base64.btoa(key)
         }
 
         let PublicKey = attrs.PublicKey || rKey()
@@ -1570,9 +1570,50 @@ export default function MockAPI() {
         }
 
         return {
-          ForwardingRules: schema.pfwForwards.all().models,
-          BlockRules: schema.pfwBlocks.all().models,
-          Variables: {}
+          ForwardingRules: [],
+          BlockRules: [
+            {
+              RuleName: 'Always block',
+              Client: { Identity: '', Group: '', SrcIP: '0.0.0.0', Tag: '' },
+              Time: {
+                CronExpr: '',
+                Start: '',
+                End: '',
+                Days: [0, 0, 0, 0, 0, 0, 0]
+              },
+              Expiration: 0,
+              Condition: '',
+              Disabled: false,
+              Protocol: 'tcp',
+              DstIP: '213.24.76.23',
+              DstPort: '0-65535'
+            }
+          ],
+          TagRules: [
+            {
+              RuleName: 'Set focus mode, midnight - 6pm',
+              Client: {
+                Identity: '',
+                Group: '',
+                SrcIP: '192.168.2.14',
+                Tag: ''
+              },
+              Time: {
+                CronExpr: '',
+                Start: '00:00',
+                End: '18:00',
+                Days: [0, 1, 1, 1, 1, 1, 0]
+              },
+              Expiration: 0,
+              Condition: '',
+              Disabled: false,
+              Tags: ['focus']
+            }
+          ],
+          GroupRules: [],
+          Variables: {},
+          SiteVPNs: [],
+          APIToken: '*masked*'
         }
       })
 

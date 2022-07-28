@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from 'FontAwesomeUtils'
 import {
@@ -150,6 +150,7 @@ const SystemInfo = (props) => {
 
   const [containers, setContainers] = useState([])
   const [uptime, setUptime] = useState({})
+  const [hostname, setHostname] = useState('')
 
   useEffect(() => {
     const fetchInfo = () => {
@@ -161,6 +162,11 @@ const SystemInfo = (props) => {
       api
         .get('/info/docker')
         .then(setContainers)
+        .catch((err) => context.error(err))
+
+      api
+        .get('/info/hostname')
+        .then(setHostname)
         .catch((err) => context.error(err))
     }
 
@@ -186,7 +192,10 @@ const SystemInfo = (props) => {
 
   return (
     <VStack space={4}>
-      <Heading size="md">System Info</Heading>
+      <HStack space={2} alignItems="flex-end">
+        <Heading size="md">System Info</Heading>
+        <Text fontSize="xs">{hostname}</Text>
+      </HStack>
       <Stack direction={{ base: 'column', md: 'row' }} space={4}>
         <FlatList
           flex={1}
@@ -240,7 +249,7 @@ const SystemInfo = (props) => {
         }
       />
       <Modal isOpen={isOpen} onClose={onClose} animationPreset="slide">
-        <Modal.Content maxWidth={{ base: '100vw', md: '90vw' }}>
+        <Modal.Content maxWidth={{ base: '100%', md: '90vw' }}>
           <Modal.CloseButton />
           <Modal.Header>{modalTitle}</Modal.Header>
           <Modal.Body>{modalBody}</Modal.Body>

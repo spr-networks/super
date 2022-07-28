@@ -1,9 +1,10 @@
-import React from 'react'
-import { useState } from 'react'
-import { saveLogin, testLogin } from 'api'
+import React, { useEffect, useState } from 'react'
+import { Platform } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { saveLogin, testLogin, getApiURL, setApiURL, getApiHostname } from 'api'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faKey, faUser } from '@fortawesome/free-solid-svg-icons'
+import { faKey, faServer, faUser } from '@fortawesome/free-solid-svg-icons'
 import Icon from 'FontAwesomeUtils'
 
 import {
@@ -23,15 +24,16 @@ import {
 const Login = (props) => {
   const navigate = useNavigate()
 
+  const [hostname, setHostname] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loggedIn, setLoggedin] = useState(false)
   const [errors, setErrors] = React.useState({})
 
-  const handleLogin = () => {
-    testLogin(username, password, function (success) {
+  const doLogin = (username, password) => {
+    testLogin(username, password, async (success) => {
       if (success) {
-        saveLogin(username, password)
+        await saveLogin(username, password)
         setLoggedin(true)
         setErrors({})
         navigate('/admin/home')
@@ -40,6 +42,28 @@ const Login = (props) => {
       }
     })
   }
+
+  const handleLogin = () => {
+    if (Platform.OS !== 'web') {
+      setApiURL(`http://${hostname}/`)
+    }
+
+    doLogin(username, password)
+  }
+
+  useEffect(() => {
+    let hostname = getApiHostname()
+    setHostname(hostname)
+
+    AsyncStorage.getItem('user').then((login) => {
+      login = JSON.parse(login)
+      if (login) {
+        setUsername(login.username)
+        setPassword(login.password)
+        doLogin(login.username, login.password)
+      }
+    })
+  }, [])
 
   return (
     <View w="100%" alignItems="center">
@@ -65,11 +89,28 @@ const Login = (props) => {
           Login
         </Heading>
         <VStack space={4} mt={12}>
+          <FormControl
+            display={{ base: Platform.OS === 'web' ? 'none' : 'flex' }}
+          >
+            <Input
+              type="text"
+              value={hostname}
+              autoCapitalize="none"
+              variant="outline"
+              size="md"
+              InputLeftElement={
+                <Icon icon={faServer} size={4} ml={2} color="muted.400" />
+              }
+              placeholder="Hostname..."
+              onChangeText={(value) => setHostname(value)}
+            />
+          </FormControl>
           <FormControl>
             {/*<FormControl.Label>Username</FormControl.Label>*/}
             <Input
               type="text"
               value={username}
+              autoCapitalize="none"
               variant="outline"
               size="md"
               InputLeftElement={

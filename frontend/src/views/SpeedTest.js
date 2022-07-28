@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from 'FontAwesomeUtils'
 import {
@@ -28,7 +28,7 @@ import {
   useColorModeValue
 } from 'native-base'
 
-import { apiURL } from 'api/API'
+import { getApiURL } from 'api/API'
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
 
@@ -88,7 +88,7 @@ const SpeedTest = (props) => {
     req = new XMLHttpRequest()
     start = Date.now()
 
-    let apiUrl = apiURL()
+    let apiUrl = getApiURL()
     let url = `${apiUrl}speedtest/${_start}-${_end}`
 
     // compability
@@ -131,7 +131,7 @@ const SpeedTest = (props) => {
     req = new XMLHttpRequest()
     start = Date.now()
 
-    let apiUrl = apiURL()
+    let apiUrl = getApiURL()
     let url = `${apiUrl}speedtest/${_start}-${_end}`
 
     req.onprogress = (progEv) => {
@@ -182,7 +182,14 @@ const SpeedTest = (props) => {
         results.
       </Text>
 
-      <VStack space={4} my={4} p={4} bg="white" rounded="md">
+      <VStack
+        space={4}
+        my={4}
+        px={4}
+        py={8}
+        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+        rounded="md"
+      >
         <HStack space={1} justifyContent="flex-start">
           <IconButton
             onPress={startTest}

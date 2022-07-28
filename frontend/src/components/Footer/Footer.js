@@ -16,7 +16,7 @@ function Footer(props) {
     <Stack
       direction="row"
       space={2}
-      mt={10}
+      pt={4}
       display={{ base: 'none', md: 'flex' }}
       {...props}
     >
@@ -45,7 +45,7 @@ function Footer(props) {
         Github
       </Link>
 
-      <Text color={color} style={_text.style} w={100} marginLeft="none">
+      <Text color={color} style={_text.style} w={100} marginLeft={0}>
         &copy; {1900 + new Date().getYear()} SPR
       </Text>
     </Stack>

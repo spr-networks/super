@@ -95,9 +95,11 @@ const DNSLogList = ({ title, description, ...props }) => {
   return (
     <>
       <HStack alignItems="center" mb={4}>
-        <VStack>
+        <VStack maxW="60%">
           <Heading fontSize="md">{title}</Heading>
-          <Text color="muted.500">{description}</Text>
+          <Text color="muted.500" isTruncated>
+            {description}
+          </Text>
         </VStack>
 
         <ModalConfirm

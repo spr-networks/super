@@ -1,7 +1,10 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
+import { Platform } from 'react-native'
+import Clipboard from '@react-native-clipboard/clipboard'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faCirclePlus,
+  faCopy,
   faPlus,
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
@@ -22,7 +25,8 @@ import {
 
 import { authAPI } from 'api'
 import { AlertContext } from 'AppContext'
-import ModalConfirm from 'components/ModalConfirm'
+import ModalForm from 'components/ModalForm'
+import AddAuthToken from 'components/Auth/AddAuthToken'
 
 const AuthTokenList = (props) => {
   const context = useContext(AlertContext)
@@ -30,14 +34,7 @@ const AuthTokenList = (props) => {
   const [tokens, setTokens] = useState([])
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const expires = {
-    Never: 0,
-    '1 hour': 3600,
-    '1 day': 24 * 3600,
-    '30 days': 30 * 24 * 3600,
-    '90 days': 90 * 24 * 3600,
-    '1 year': 365 * 24 * 3600
-  }
+  const refModal = useRef(null)
 
   useEffect(() => {
     authAPI
@@ -62,29 +59,23 @@ const AuthTokenList = (props) => {
 
   const handleAddToken = () => {}
 
-  const handleSubmit = (exp) => {
-    setIsModalOpen(false)
-
-    if (!Object.keys(expires).includes(exp)) {
-      exp = '30 days'
-    }
-
-    let ts = parseInt(new Date().getTime() / 1e3)
-    let expire = exp == 'Never' ? 0 : ts + expires[exp]
-
-    authAPI
-      .putToken(parseInt(expire))
-      .then((token) => {
-        setTokens(tokens.concat(token))
-      })
-      .catch((err) => context.error('' + err))
-  }
-
   const tokenExpired = (expire) => {
     return expire > 0 && expire < parseInt(new Date().getTime() / 1e3)
   }
 
-  let options = Object.keys(expires)
+  const refreshList = (next) => {
+    authAPI
+      .tokens()
+      .then((tokens) => {
+        setTokens(tokens)
+      })
+      .catch((err) => context.error('failed to fetch tokens'))
+  }
+
+  const notifyChange = () => {
+    refModal.current()
+    refreshList()
+  }
 
   const triggerAdd = (triggerProps) => {
     return (
@@ -99,19 +90,28 @@ const AuthTokenList = (props) => {
     )
   }
 
+  const copy = (data) => {
+    if (Platform.OS == 'web') {
+      navigator.clipboard.writeText(data)
+    } else {
+      Clipboard.setString(data)
+    }
+  }
+
   return (
     <View mt={4}>
       <HStack space={1} alignItems="center">
         <Heading fontSize="md">API Tokens</Heading>
 
-        <ModalConfirm
-          type="Expire"
-          options={options}
-          defaultValue="Never"
-          onSubmit={handleSubmit}
-          trigger={triggerAdd}
-          isOpen={isModalOpen}
-        />
+        <Box alignSelf="center">
+          <ModalForm
+            title="Create new Auth Token"
+            triggerText="Add Auth Token"
+            modalRef={refModal}
+          >
+            <AddAuthToken notifyChange={notifyChange} />
+          </ModalForm>
+        </Box>
       </HStack>
       <Box
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
@@ -136,9 +136,20 @@ const AuthTokenList = (props) => {
                 __justifyContent="stretch"
               >
                 <Text flex={1}>{item.Name}</Text>
-                <Text flex={1} w="3/6">
-                  {item.Token}
-                </Text>
+                <HStack
+                  flex={1}
+                  minW={{ base: '2/6', md: '3/6' }}
+                  alignItems="center"
+                  justifyItems="flex-end"
+                >
+                  <Text isTruncated>{item.Token}</Text>
+                  <IconButton
+                    variant="unstyled"
+                    icon={<Icon size="4" icon={faCopy} color="muted.500" />}
+                    onPress={() => copy(item.Token)}
+                  />
+                </HStack>
+
                 <HStack w="2/6" space={1} justifyContent="flex-end">
                   <Text color="muted.500">Expire</Text>
                   <Text

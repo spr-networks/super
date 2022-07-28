@@ -153,8 +153,7 @@ const LogList = (props) => {
     <Box
       bg={useColorModeValue('warmGray.50', 'blueGray.800')}
       rounded="md"
-      width="100%"
-      p="4"
+      p={4}
     >
       <Stack
         direction={{ base: 'column', md: 'row' }}
@@ -209,15 +208,20 @@ const LogList = (props) => {
               w="100%"
               space={3}
               alignItems="center"
-              justifyContent="stretch"
+              justifyContent={{ base: 'space-evenly' }}
             >
-              <Badge variant="outline" colorScheme="primary">
-                {item.CONTAINER_NAME || item._TRANSPORT}
-              </Badge>
-              <Text isTruncated>{item.MESSAGE}</Text>
-              <Text fontSize="xs" marginLeft="auto" whiteSpace="nowrap">
-                {prettyDate(item.__REALTIME_TIMESTAMP / 1e3)}
+              <Text flex={2} flexWrap="wrap">
+                {item.MESSAGE}
               </Text>
+              <VStack space={2} alignSelf="flex-start">
+                <Text fontSize="xs" marginLeft="auto" whiteSpace="nowrap">
+                  {prettyDate(item.__REALTIME_TIMESTAMP / 1e3)}
+                </Text>
+
+                <Badge variant="outline" colorScheme="primary" ml="auto">
+                  {item.CONTAINER_NAME || item._TRANSPORT}
+                </Badge>
+              </VStack>
             </HStack>
           </Box>
         )}

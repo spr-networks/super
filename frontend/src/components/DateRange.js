@@ -1,3 +1,4 @@
+import React from 'react'
 import PropTypes from 'prop-types'
 import { Button, Menu } from 'native-base'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'

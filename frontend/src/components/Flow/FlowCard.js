@@ -182,11 +182,11 @@ const FlowCard = ({ card, size, edit, ...props }) => {
       borderRadius={5}
       shadow={5}
       rounded="md"
-      minW={350}
+      minW={320}
       mr={2}
       {...props}
     >
-      <HStack justifyContent="stretch" alignItems="center" space={4}>
+      <HStack justifyContent="space-between" alignItems="center" space={4}>
         <Box
           height={size == 'xs' ? 30 : 50}
           rounded="full"

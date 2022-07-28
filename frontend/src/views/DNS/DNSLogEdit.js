@@ -22,12 +22,12 @@ export default class DNSLogEdit extends Component {
           <DNSLogList
             type="IP"
             title="Host Privacy IP List"
-            description="List of Client IPs to exclude from logging"
+            description="Client IPs to exclude from logs"
           />
           <DNSLogList
             type="Domain"
             title="Domain Ignore List"
-            description="List of domains to exclude from logging"
+            description="Domains to exclude from logs"
           />
         </VStack>
       </View>

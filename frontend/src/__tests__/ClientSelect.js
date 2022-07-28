@@ -1,13 +1,18 @@
 import 'react-native'
 import React from 'react'
-import { cleanup, render, fireEvent } from '@testing-library/react-native'
+import {
+  cleanup,
+  render,
+  fireEvent,
+  waitFor
+} from '@testing-library/react-native'
 import { NativeBaseProvider } from 'native-base'
 
 import ClientSelect from 'components/ClientSelect'
 
 afterEach(cleanup)
 
-it('renders single client select', () => {
+it('renders single client select', async () => {
   const onChange = jest.fn()
 
   const inset = {
@@ -21,7 +26,9 @@ it('renders single client select', () => {
     </NativeBaseProvider>
   )
 
-  expect(container).toBeDefined()
+  await waitFor(() => {
+    expect(container).toBeDefined()
+  })
 
   expect(onChange).toHaveBeenCalledTimes(0)
 })

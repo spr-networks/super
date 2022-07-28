@@ -1,5 +1,8 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+import { Platform } from 'react-native'
 import { useNavigate } from 'react-router-dom'
+/*import { useNavigate as useNavigateWeb } from 'react-router-dom'
+import { useNavigate as useNavigateNative } from 'react-router-native'*/
 import { Animated } from 'react-native'
 import Icon from 'FontAwesomeUtils'
 import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
@@ -88,6 +91,7 @@ const SidebarItem = (props) => {
   }
 */
 
+  //const navigate = Platform.OS == 'web' ? useNavigateWeb() : useNavigateNative()
   const navigate = useNavigate()
 
   return sidebarItems.map((item, index) => {
@@ -105,11 +109,6 @@ const SidebarItem = (props) => {
     // menu items hidden when plus mode is disabled
     if (item.plus === true && isPlusDisabled) {
       display.base = 'none'
-    }
-
-    // menu items hidden when plus mode is disabled
-    if (item.plus === true && isPlusDisabled) {
-      return null
     }
 
     return (
@@ -153,38 +152,36 @@ const SidebarItem = (props) => {
                   : 'transparent'
             }}
           >
-            <Link>
-              <Box px="8" py="2">
-                <HStack
-                  space="3"
-                  alignItems="center"
-                  pl={level > 1 ? level + 14 + 'px' : '0px'}
-                >
-                  {item.icon && typeof item.icon !== 'string' ? (
-                    <Icon
-                      color={useColorModeValue(
-                        'sidebarItemIconLight',
-                        'sidebarItemIconDark'
-                      )}
-                      icon={item.icon}
-                    />
-                  ) : null}
-                  {isMini ? null : (
-                    <Text
-                      fontWeight="300"
-                      fontSize="sm"
-                      color={useColorModeValue(
-                        'sidebarItemTextLight',
-                        'sidebarItemTextDark'
-                      )}
-                    >
-                      {item.name}
-                    </Text>
-                  )}
-                  {item.status && <SidebarBadge status={item.status} />}
-                </HStack>
-              </Box>
-            </Link>
+            <Box px="8" py="2">
+              <HStack
+                space="3"
+                alignItems="center"
+                pl={level > 1 ? level + 14 + 'px' : '0px'}
+              >
+                {item.icon && typeof item.icon !== 'string' ? (
+                  <Icon
+                    color={useColorModeValue(
+                      'sidebarItemIconLight',
+                      'sidebarItemIconDark'
+                    )}
+                    icon={item.icon}
+                  />
+                ) : null}
+                {isMini ? null : (
+                  <Text
+                    fontWeight="300"
+                    fontSize="sm"
+                    color={useColorModeValue(
+                      'sidebarItemTextLight',
+                      'sidebarItemTextDark'
+                    )}
+                  >
+                    {item.name}
+                  </Text>
+                )}
+                {item.status && <SidebarBadge status={item.status} />}
+              </HStack>
+            </Box>
           </Pressable>
         ) : (
           <CollapsibleSidebarItem

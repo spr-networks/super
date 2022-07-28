@@ -40,11 +40,11 @@ const Home = (props) => {
 
   return (
     <View style={{ flexDirection }}>
-      <VStack flex={2} p={2}>
+      <VStack flex={{ base: 0, md: 2 }} p={2}>
         <Stack
           direction={{ base: 'column', md: 'row' }}
           justifyContent="space-between"
-          space={4}
+          space={{ base: 0, md: 4 }}
         >
           {context.isWifiDisabled ? (
             <>
@@ -58,6 +58,7 @@ const Home = (props) => {
             </>
           )}
         </Stack>
+
         <VStack>
           <TotalTraffic />
           <Interfaces />
@@ -65,11 +66,11 @@ const Home = (props) => {
       </VStack>
       <VStack flex={1} p={2}>
         {pluginsEnabled.includes('dns-block') ? (
-          <>
+          <VStack>
             <DNSMetrics />
             <DNSBlockMetrics />
             <DNSBlockPercent />
-          </>
+          </VStack>
         ) : null}
         {context.isWifiDisabled ? null : <WireguardPeersActive />}
       </VStack>

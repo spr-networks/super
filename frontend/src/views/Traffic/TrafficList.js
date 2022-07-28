@@ -172,7 +172,7 @@ const TrafficList = (props) => {
     refreshAsns()
 
     setListFiltered(filterList(list))
-  }, [devices, list, type, asns])
+  }, [devices, list, type, filterIps, asns])
 
   useEffect(() => {
     refreshList()
@@ -192,8 +192,8 @@ const TrafficList = (props) => {
 
   let types = ['WanOut', 'WanIn', 'LanIn', 'LanOut']
 
-  const handleChangeClient = (ips) => {
-    setFilterIps(ips)
+  const handleChangeClient = (ip) => {
+    setFilterIps([ip])
   }
 
   return (
@@ -216,13 +216,14 @@ const TrafficList = (props) => {
               setType(type)
             }}
           >
-            <HStack alignItems="center" space={4}>
+            <HStack alignItems="center" space={2}>
               {types.map((type) => (
                 <Radio
                   key={type}
                   value={type}
                   colorScheme="primary"
                   size="sm"
+                  _text={{ fontSize: 'xs' }}
                   my={1}
                 >
                   {type.replace(/(In|Out)/, ' $1')}
@@ -232,9 +233,9 @@ const TrafficList = (props) => {
           </Radio.Group>
           <Box flex={1}>
             <ClientSelect
-              isMultiple
               value={filterIps}
               onChange={handleChangeClient}
+              onSubmitEditing={handleChangeClient}
             />
           </Box>
         </Stack>
@@ -246,7 +247,7 @@ const TrafficList = (props) => {
         p={4}
         mb={4}
       >
-        <ScrollView h="calc(100vh - 96px - 160px)">
+        <ScrollView h="100%">
           <TimeSeriesList
             type={type}
             data={listFiltered}

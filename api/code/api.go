@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -32,6 +33,9 @@ var DevicesConfigFile = DevicesConfigPath + "devices.json"
 var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
 
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
+
+var ConfigFile = TEST_PREFIX + "/configs/base/config.sh"
+var HostapdConfigFile = TEST_PREFIX + "/configs/wifi/hostapd.conf"
 
 var ApiTlsCert = "/configs/base/www-api.crt"
 var ApiTlsKey = "/configs/base/www-api.key"
@@ -164,8 +168,6 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 		reply = append(reply, "wireguard")
 	}
 
-
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
 }
@@ -203,6 +205,14 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 
 		defer resp.Body.Close()
 		data, err = ioutil.ReadAll(resp.Body)
+	} else if name == "hostname" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		data = []byte(fmt.Sprintf("%q", hostname))
 	} else if name == "ss" {
 		data, err = exec.Command("jc", "-p", "ss", "-4", "-n").Output()
 	} else {
@@ -1527,6 +1537,176 @@ func speedTest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type SetupConfig struct {
+	SSID            string
+	CountryCode     string
+	AdminPassword   string
+	InterfaceAP     string
+	InterfaceUplink string
+}
+
+func isSetupMode() bool {
+	_, err := os.Stat(AuthUsersFile)
+	if err == nil || !os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+}
+
+// initial setup only available if there is no .spr-setup-done
+func setup(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if !isSetupMode() {
+		http.Error(w, "setup already done", 400)
+	}
+
+	if r.Method != http.MethodPut {
+		// TODO could list interfaces available for uplink and wifi
+		fmt.Fprintf(w, "{\"status\": \"ok\"}")
+		return
+	}
+
+	// setup is not done
+	conf := SetupConfig{}
+	err := json.NewDecoder(r.Body).Decode(&conf)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	validCountry := regexp.MustCompile(`^[A-Z]{2}$`).MatchString // EN,SE
+	//SSID: up to 32 alphanumeric, case-sensitive, characters
+	//Invalid characters: +, ], /, ", TAB, and trailing spaces
+	//The first character cannot be !, #, or ; character
+	validSSID := regexp.MustCompile(`^[^!#;+\]\/"\t][^+\]\/"\t]{0,30}[^ +\]\/"\t]$|^[^ !#;+\]\/"\t]$[ \t]+$`).MatchString
+
+	if conf.InterfaceAP == "" {
+		http.Error(w, "Invalid AP interface", 400)
+		return
+	}
+
+	if conf.InterfaceUplink == "" {
+		http.Error(w, "Invalid Uplink interface", 400)
+		return
+	}
+
+	if !validSSID(conf.SSID) {
+		http.Error(w, "Invalid SSID", 400)
+		return
+	}
+
+	// TODO country => channels
+	if !validCountry(conf.CountryCode) {
+		http.Error(w, "Invalid Country Code", 400)
+		return
+	}
+
+	if conf.AdminPassword == "" {
+		http.Error(w, "Password cannot be empty", 400)
+		return
+	}
+
+	/*
+		envrc := fmt.Sprintf("SSID_INTERFACE=%q\nSSID_NAME=%q\n"+
+			"WANIF=%q\nCOMPOSE_FILE=docker-compose-prebuilt.yml\n"+
+			"COUNTRY_CODE=%q\n"+
+			"ADMIN_USER=admin\nADMIN_PASSWORD=%q\n",
+			conf.InterfaceAP, conf.SSID,
+			conf.InterfaceUplink,
+			conf.AdminPassword)
+
+		err = ioutil.WriteFile(SetupEnvFile, []byte(envrc), 0644)
+	*/
+
+	// write to auth_users.json
+	users := fmt.Sprintf("{%q: %q}", "admin", conf.AdminPassword)
+	err = ioutil.WriteFile(AuthUsersFile, []byte(users), 0644)
+	if err != nil {
+		http.Error(w, "Failed to write user auth file", 400)
+		panic(err)
+	}
+
+	//write to config.sh
+	data, err := ioutil.ReadFile(ConfigFile)
+	if err != nil {
+		// we can use default template config here but better to copy it before in bash
+		http.Error(w, "Missing default config.sh", 400)
+		return
+	}
+
+	configData := string(data)
+	matchSSID := regexp.MustCompile(`(?m)^(SSID_NAME)=(.*)`)
+	matchInterfaceAP := regexp.MustCompile(`(?m)^(SSID_INTERFACE)=(.*)`)
+	matchInterfaceUplink := regexp.MustCompile(`(?m)^(WANIF)=(.*)`)
+
+	configData = matchSSID.ReplaceAllString(configData, "$1="+conf.SSID)
+	configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+conf.InterfaceAP)
+	configData = matchInterfaceUplink.ReplaceAllString(configData, "$1="+conf.InterfaceUplink)
+
+	err = ioutil.WriteFile(ConfigFile, []byte(configData), 0755)
+	if err != nil {
+		http.Error(w, "Failed to write config to "+ConfigFile, 400)
+		panic(err)
+	}
+
+
+	//write to hostapd.conf
+	data, err = ioutil.ReadFile(HostapdConfigFile)
+	if err != nil {
+		// we can use default template config here but better to copy it before in bash
+		http.Error(w, "Missing default config.sh", 400)
+		return
+	}
+
+	configData = string(data)
+	matchSSID = regexp.MustCompile(`(?m)^(ssid)=(.*)`)
+	matchInterfaceAP = regexp.MustCompile(`(?m)^(interface)=(.*)`)
+	matchCountry := regexp.MustCompile(`(?m)^(country_code)=(.*)`)
+
+	configData = matchSSID.ReplaceAllString(configData, "$1="+conf.SSID)
+	configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+conf.InterfaceAP)
+	configData = matchCountry.ReplaceAllString(configData, "$1="+conf.CountryCode)
+
+	err = ioutil.WriteFile(HostapdConfigFile, []byte(configData), 0755)
+	if err != nil {
+		http.Error(w, "Failed to write config to "+HostapdConfigFile, 400)
+		panic(err)
+	}
+
+	fmt.Fprintf(w, "{\"status\": \"done\"}")
+	callRestart("")
+}
+
+func callRestart(target string) {
+	var superdSocketPath = TEST_PREFIX + "/state/plugins/superd/socket"
+
+	c := http.Client{}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", superdSocketPath)
+		},
+	}
+
+	append := ""
+	if target != "" {
+		append += "?service=" + target
+	}
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/restart"+append, nil)
+	if err != nil {
+		return
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+}
+
 //set up SPA handler. From gorilla mux's documentation
 type spaHandler struct {
 	staticPath string
@@ -1588,12 +1768,22 @@ func main() {
 	unix_wireguard_router := mux.NewRouter().StrictSlash(true)
 	external_router_authenticated := mux.NewRouter().StrictSlash(true)
 	external_router_public := mux.NewRouter()
+	external_router_setup := mux.NewRouter().StrictSlash(true)
 
 	external_router_public.Use(setSecurityHeaders)
 	external_router_authenticated.Use(setSecurityHeaders)
+	external_router_setup.Use(setSecurityHeaders)
 
 	//public websocket with internal authentication
 	external_router_public.HandleFunc("/ws", auth.webSocket).Methods("GET")
+
+	// intial setup
+	external_router_public.HandleFunc("/setup", setup).Methods("GET", "PUT")
+	external_router_setup.HandleFunc("/ip/addr", ipAddr).Methods("GET")
+	external_router_setup.HandleFunc("/hostapd/config", hostapdConfig).Methods("GET")
+	external_router_setup.HandleFunc("/hostapd/config", hostapdUpdateConfig).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/setChannel", hostapdChannelSwitch).Methods("PUT")
+	external_router_setup.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")
 
 	//download cert from http
 	external_router_public.HandleFunc("/cert", getCert).Methods("GET")
@@ -1717,10 +1907,10 @@ func main() {
 
 		listenAddr := fmt.Sprint("0.0.0.0:", listenPort)
 
-		go http.ListenAndServeTLS(listenAddr, ApiTlsCert, ApiTlsKey, logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public))))
+		go http.ListenAndServeTLS(listenAddr, ApiTlsCert, ApiTlsKey, logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
 	}
 
-	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public))))
+	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
 
 	go wifidServer.Serve(unixWifidListener)
 
