@@ -9,6 +9,11 @@ TODO move fork to spr-networks repo
 
 packed to support unix sockets
 
+# logs
+
+lan:
+wan:
+
 # setup
 
 ## add log prefix + group to netfilter rules
@@ -26,7 +31,18 @@ nft rules *need* a group set to work, replace these:
 
 to have group 1 (marks it as deny):
 
-    counter log prefix "DRP:INP " group 1
+    counter log prefix "drop:input " group 1
+
+```sh
+POS=$(sudo nft -a list ruleset | grep 'log prefix "DRP:MAC "'|sed 's/.*# handle //g')
+sudo nft replace rule inet filter DROP_MAC_SPOOF handle $POS log prefix \"drop:mac \" group 0
+
+POS=$(sudo nft -a list ruleset | grep -i 'log prefix "DRP:FWD "'|sed 's/.*# handle //g')
+sudo nft replace rule inet filter DROPLOGFWD handle $POS log prefix \"drop:forward \" group 0
+
+POS=$(sudo nft -a list ruleset | grep -i 'log prefix "DRP:INP "'|sed 's/.*# handle //g')
+sudo nft replace rule inet filter DROPLOGINP handle $POS log prefix \"drop:input \" group 0
+```
 
 add rules to log all outgoing traffic with group 0:
 

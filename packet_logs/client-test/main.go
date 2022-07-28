@@ -27,27 +27,35 @@ var ClientEventSock = "/state/plugins/packet_logs/client.sock"
 var ServerEventPath = "/_server_bus_"
 var ClientEventPath = "/_client_bus_"
 
-func ipIn(json string) {
-	fmt.Printf("[<<] %v", json)
+func lanIn(json string) {
+	fmt.Printf("[lan <<] %v", json)
 }
 
-func ipOut(json string) {
-	fmt.Printf("[>>] %v", json)
+func lanOut(json string) {
+	fmt.Printf("[lan >>] %v", json)
+}
+
+func wanIn(json string) {
+	fmt.Printf("[wan <<] %v", json)
+}
+
+func wanOut(json string) {
+	fmt.Printf("[wan >>] %v", json)
+}
+
+func dropInput(json string) {
+	fmt.Printf("[drop input] %v\n", json)
+}
+
+func dropForward(json string) {
+	fmt.Printf("[drop forward] %v\n", json)
 }
 
 func ipConnect(json string) {
 	fmt.Printf("[ip] %v", json)
 }
 
-func ipDrop(json string) {
-	fmt.Printf("[drop] %v\n", json)
-}
-
-func lanIn(json string) {
-	fmt.Printf("[lan] %v\n", json)
-}
-
-/* wrap parts of this logic in a package so we can have:
+/* TODO wrap parts of this logic in a package so we can have:
 
 sprEvent.Subscribe("nft:ip", ipConnect)
 sprEvent.Publish("nft:ip", "{ json ... }")
@@ -107,11 +115,13 @@ func main() {
 	client.Start()
 
 	log.Println("subscribe")
-	client.Subscribe("nft:ip", ipConnect, ServerEventSock, ServerEventPath)
-	client.Subscribe("nft:ip:in", ipIn, ServerEventSock, ServerEventPath)
-	client.Subscribe("nft:ip:out", ipOut, ServerEventSock, ServerEventPath)
-	client.Subscribe("nft:drp:inp", ipDrop, ServerEventSock, ServerEventPath)
+	//client.Subscribe("nft:ip", ipConnect, ServerEventSock, ServerEventPath)
 	client.Subscribe("nft:lan:in", lanIn, ServerEventSock, ServerEventPath)
+	client.Subscribe("nft:lan:out", lanOut, ServerEventSock, ServerEventPath)
+	client.Subscribe("nft:wan:in", wanIn, ServerEventSock, ServerEventPath)
+	client.Subscribe("nft:wan:out", wanOut, ServerEventSock, ServerEventPath)
+	client.Subscribe("nft:drop:input", dropInput, ServerEventSock, ServerEventPath)
+	client.Subscribe("nft:drop:forward", dropForward, ServerEventSock, ServerEventPath)
 
 	for {
 		//fmt.Println("sleeping...")
