@@ -12,7 +12,7 @@ import (
 	"strings"
 	//"time"
 
-	"github.com/lts-po/EventBus"
+	"github.com/spr-networks/EventBus"
 	//"main/EventBus"
 )
 
