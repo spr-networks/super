@@ -172,7 +172,7 @@ const TrafficList = (props) => {
     refreshAsns()
 
     setListFiltered(filterList(list))
-  }, [devices, list, type, asns])
+  }, [devices, list, type, filterIps, asns])
 
   useEffect(() => {
     refreshList()
@@ -192,8 +192,9 @@ const TrafficList = (props) => {
 
   let types = ['WanOut', 'WanIn', 'LanIn', 'LanOut']
 
-  const handleChangeClient = (ips) => {
-    setFilterIps(ips)
+  const handleChangeClient = (ip) => {
+    console.log('[upup]', ip)
+    setFilterIps([ip])
   }
 
   return (
@@ -233,9 +234,9 @@ const TrafficList = (props) => {
           </Radio.Group>
           <Box flex={1}>
             <ClientSelect
-              isMultiple
               value={filterIps}
               onChange={handleChangeClient}
+              onSubmitEditing={handleChangeClient}
             />
           </Box>
         </Stack>
