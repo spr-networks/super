@@ -1,4 +1,4 @@
-FROM ubuntu:21.04 as builder
+FROM ubuntu:22.04 as builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y git curl
@@ -11,7 +11,7 @@ WORKDIR /code
 COPY code/ /code/
 RUN --mount=type=tmpfs,target=/root/go/ (go build -ldflags "-s -w" -o /lookup_plugin /code/lookup_plugin.go)
 
-FROM ubuntu:21.04
+FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y curl

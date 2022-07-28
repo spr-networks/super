@@ -1,4 +1,4 @@
-FROM ubuntu:21.04 as builder
+FROM ubuntu:22.04 as builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl clang
@@ -32,7 +32,7 @@ RUN --mount=type=tmpfs,target=/root/go/ go generate && \
    go mod tidy && \
    go build -o /coredns
 
-FROM ubuntu:21.04
+FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates
