@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -182,7 +183,22 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	if name == "uptime" {
-		data, err = exec.Command("jc", "-p", "uptime").Output()
+		cmd := exec.Command("uptime")
+		output, err := cmd.Output()
+
+		cmd = exec.Command("jc", "--uptime")
+		stdin, err := cmd.StdinPipe()
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		go func() {
+			defer stdin.Close()
+			io.WriteString(stdin, string(output))
+		}()
+
+		data, err = cmd.Output()
 	} else if name == "docker" {
 		c := http.Client{}
 		c.Transport = &http.Transport{
@@ -1650,7 +1666,6 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to write config to "+ConfigFile, 400)
 		panic(err)
 	}
-
 
 	//write to hostapd.conf
 	data, err = ioutil.ReadFile(HostapdConfigFile)
