@@ -95,19 +95,19 @@ func loadNotificationConfig() {
 func main() {
 	log.Println("server")
 
-	
 	loadNotificationConfig()
 
 	log.Printf("settings: %v\n", NotificationSettings[0].Conditions["prefix"])
 
+	// if file exitst - could be another client connected
 	os.Remove(ClientEventSock)
+	defer os.Remove(ClientEventSock)
 
 	rpcClient, err := rpc.DialHTTPPath("unix", ServerEventSock, ServerEventPath)
 	if (rpcClient == nil) {
 		log.Fatal(err)
 		return
 	}
-
 
 	log.Println("client")
 
@@ -123,11 +123,29 @@ func main() {
 	client.Subscribe("nft:drop:input", dropInput, ServerEventSock, ServerEventPath)
 	client.Subscribe("nft:drop:forward", dropForward, ServerEventSock, ServerEventPath)
 
-	for {
+	/*
+	simplify the logic here to:
+	sprbus = SprBus.NewClient()
+	sprbus.Subscribe("nft:lan:in", lanIn)
+	*/
+
+	for i := 0; i < 5; i++{
+	//for {
 		//fmt.Println("sleeping...")
-		time.Sleep(10 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 
+/*
+	log.Println("unsub.")
+	err = client.EventBus().Unsubscribe("nft:lan:in", lanIn)
+	log.Println("unsub. ret", err)
+	err = client.EventBus().Unsubscribe("nft:lan:out", lanOut)
+	err = client.EventBus().Unsubscribe("nft:wan:in", wanIn)
+	err = client.EventBus().Unsubscribe("nft:wan:out", wanOut)
+	err = client.EventBus().Unsubscribe("nft:drop:input", dropInput)
+	err = client.EventBus().Unsubscribe("nft:drop:forward", dropForward)
+	log.Println("unsub. ret", err)
+*/
 
 	//defer networkBus.Stop()
 	defer client.Stop()
