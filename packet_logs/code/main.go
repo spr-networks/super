@@ -5,18 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/rpc"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
-	//"time"
 
-	"github.com/spr-networks/EventBus"
+	//"github.com/spr-networks/EventBus"
 	//"main/EventBus"
 )
 
-//var pipeFile = "/var/log/ulog/ulogd.json"
 var pipeFile = "/state/plugins/packet_logs/ulogd.json"
 
 type nftEntry struct {
@@ -42,22 +39,13 @@ func main() {
 	log.Println("starting ulogd2...")
 	go startUlogd()
 
-	log.Println("connecting eventbus")
-
-	serverEventListener := "/state/plugins/packet_logs/server.sock"
-	clientEventListener := "/state/plugins/packet_logs/client.sock"
-
-	os.Remove(serverEventListener)
-
-	//server := EventBus.NewServer("localhost:2020", "/_server_bus_", EventBus.New())
-	server := EventBus.NewServer(serverEventListener, "/_server_bus_", EventBus.New())
-	server.Start()
-
 	log.Println("open ulogd named pipe for reading")
 	file, err := os.OpenFile(pipeFile, os.O_RDONLY, os.ModeNamedPipe)
 	if err != nil {
 		log.Fatal("open error:", err)
 	}
+
+	server := SprBus()
 
 	reader := bufio.NewReader(file)
 
@@ -94,18 +82,16 @@ func main() {
 
 		registeredPrefix := regexp.MustCompile(`^(lan|wan|drop):(in|out|forward|input|mac|pfw)$`).MatchString
 
-		// need this check to not crash if client is disconnected when we publish
-		//rpcClient, _ := rpc.DialHTTPPath("tcp", ":2025", "/_client_bus_")
-		rpcClient, _ := rpc.DialHTTPPath("unix", clientEventListener, "/_client_bus_")
-		if rpcClient != nil {
-			if registeredPrefix(prefix) {
-				topic := fmt.Sprintf("nft:%s", prefix)
-				//fmt.Printf("[pub] %s\n", topic)
-				server.EventBus().Publish(topic, string(line))
-			} else {
-				topic := fmt.Sprintf("nft:ip") // todo use prefix
-				server.EventBus().Publish(topic, string(line))
-			}
+		topic := fmt.Sprintf("nft:%s", prefix)
+
+		if registeredPrefix(prefix) {
+			//fmt.Printf("%% publish. #subscribers: %d, hasClients= %v\n", len(server.Subscribers(topic)), hasClients)
+			//log.Printf("subscribers: %v == %v\n", topic, server)
+
+			server.Publish(topic, string(line))
+		} else {
+			topic = fmt.Sprintf("nft:ip")
+			server.Publish(topic, string(line))
 		}
 	}
 

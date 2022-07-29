@@ -1,2 +1,4 @@
 github.com/spr-networks/EventBus v0.0.0-20220727110333-e27363017538 h1:GQ6xNtEMgs1lm+3vWcB8thBy6rhVfbni44XBx8j6CTU=
 github.com/spr-networks/EventBus v0.0.0-20220727110333-e27363017538/go.mod h1:UcqEt3Zj6DVdiUIhjsKPamicUysv0lF2lECMcfD2N1g=
+github.com/spr-networks/EventBus v0.0.0-20220729123230-71461328017a h1:W89Z2sv4D9HHLH4GO9p/EohrjCjDYUZfqyhF6C/A8i0=
+github.com/spr-networks/EventBus v0.0.0-20220729123230-71461328017a/go.mod h1:UcqEt3Zj6DVdiUIhjsKPamicUysv0lF2lECMcfD2N1g=
