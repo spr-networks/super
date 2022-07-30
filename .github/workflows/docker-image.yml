@@ -35,14 +35,9 @@ jobs:
         name: Build arm64 test containers
         run: |
           cp -R base/template_configs configs
-          export DOCKER_DEFAULT_PLATFORM=linux/arm64          
+          export DOCKER_DEFAULT_PLATFORM=linux/arm64
           ./build_docker_compose.sh
       -
         name: Push images
-        env: 
-          CONTAINERS: api base dhcp dhcp_client dns multicast_udp_proxy ppp wifid wireguard plugin-lookup dyndns
         run: |
-          for C in $CONTAINERS; do
-            docker tag super_${C} ghcr.io/spr-networks/super_${C}:latest
-            docker push ghcr.io/spr-networks/super_${C}:latest
-          done
+          docker-compose push
