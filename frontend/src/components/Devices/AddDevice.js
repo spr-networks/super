@@ -76,11 +76,11 @@ const AddDevice = (props) => {
 
   const handleChange = (name, value) => {
     if (name == 'name') {
+      setName(value)
+
       if (value.length < 1) {
         return setErrors({ ...errors, name: 'invalid name' })
       }
-
-      setName(value)
     }
 
     if (name == 'mac') {

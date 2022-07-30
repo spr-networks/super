@@ -48,7 +48,7 @@
     "jest": "^28.1.0",
     "metro-react-native-babel-preset": "^0.70.3",
     "miragejs": "^0.1.43",
-    "moment": "^2.29.2",
+    "moment": "^2.29.4",
     "native-base": "^3.4.4",
     "prop-types": "15.7.2",
     "react": "17.0.2",
