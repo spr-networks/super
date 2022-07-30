@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
 )
 
 import (
@@ -157,6 +158,7 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 	} else if chdir_count == 1 {
 		os.Chdir("../")
 	}
+
 }
 
 func logRequest(handler http.Handler) http.Handler {
