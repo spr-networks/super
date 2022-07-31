@@ -98,9 +98,10 @@ const InputSelect = (props) => {
     }
   }
 
-  const onSubmitEditing = () => {
+  const onSubmitEditing = (event) => {
     if (props.onSubmitEditing) {
-      props.onSubmitEditing()
+      let value = event.target.value
+      props.onSubmitEditing(value)
     }
   }
 

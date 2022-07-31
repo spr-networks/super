@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react'
 import {
   Box,
+  Button,
   HStack,
   Radio,
   Stack,
@@ -24,7 +25,7 @@ import { deviceAPI, trafficAPI, wifiAPI } from 'api'
 
 const TrafficList = (props) => {
   const context = useContext(AlertContext)
-  const regexLAN = /^192\.168\./
+  const regexLAN = /^192\.168\./ //TODO dont rely on this
 
   const [list, setList] = useState([])
   const [listFiltered, setListFiltered] = useState([])
@@ -33,9 +34,8 @@ const TrafficList = (props) => {
   const [offset, setOffset] = useState('All Time')
   const [devices, setDevices] = useState({})
   const [asns, setAsns] = useState({})
-  const [showASN, setShowASN] = useState(
-    type.match(/^Wan(In|Out)$/) ? true : false
-  )
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
 
   // filter the list by type and ip
   const filterList = (data) => {
@@ -45,8 +45,10 @@ const TrafficList = (props) => {
       data = data.filter((row) => filterIps.includes(row[field]))
     }
 
+    setTotal(data.length)
+
     // by type
-    return data
+    let listFiltered = data
       .filter((row) => {
         // src == lan && dst == lan
 
@@ -89,6 +91,13 @@ const TrafficList = (props) => {
         row.Asn = asns[row[type == 'WanOut' ? 'Dst' : 'Src']] || ''
         return row
       })
+
+    let perPage = 20,
+      offset = (page - 1) * perPage
+
+    listFiltered = listFiltered.slice(offset, offset + perPage)
+
+    return listFiltered
   }
 
   const refreshList = () => {
@@ -172,7 +181,7 @@ const TrafficList = (props) => {
     refreshAsns()
 
     setListFiltered(filterList(list))
-  }, [devices, list, type, asns])
+  }, [devices, list, type, filterIps, asns])
 
   useEffect(() => {
     refreshList()
@@ -183,7 +192,7 @@ const TrafficList = (props) => {
 
   useEffect(() => {
     setListFiltered(filterList(list))
-  }, [asns])
+  }, [asns, page])
 
   const flexDirection = useBreakpointValue({
     base: 'column',
@@ -192,8 +201,8 @@ const TrafficList = (props) => {
 
   let types = ['WanOut', 'WanIn', 'LanIn', 'LanOut']
 
-  const handleChangeClient = (ips) => {
-    setFilterIps(ips)
+  const handleChangeClient = (ip) => {
+    setFilterIps([ip])
   }
 
   return (
@@ -233,9 +242,9 @@ const TrafficList = (props) => {
           </Radio.Group>
           <Box flex={1}>
             <ClientSelect
-              isMultiple
               value={filterIps}
               onChange={handleChangeClient}
+              onSubmitEditing={handleChangeClient}
             />
           </Box>
         </Stack>
@@ -255,6 +264,25 @@ const TrafficList = (props) => {
             filterIps={filterIps}
             setFilterIps={setFilterIps}
           />
+          {total > 20 ? (
+            <HStack width="100%" space={2}>
+              <Button
+                flex="1"
+                variant="ghost"
+                isDisabled={page <= 1}
+                onPress={() => setPage(page > 1 ? page - 1 : 1)}
+              >
+                &larr; Previous
+              </Button>
+              <Button
+                flex="1"
+                variant="ghost"
+                onPress={() => setPage(page + 1)}
+              >
+                Next &rarr;
+              </Button>
+            </HStack>
+          ) : null}
         </ScrollView>
       </Box>
     </>
