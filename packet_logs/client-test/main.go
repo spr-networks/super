@@ -78,6 +78,10 @@ var NotificationSettings = []SettingEntry{}
 
 // return true if we should send a notification
 func checkNotificationTraffic(logEntry netfilterEntry) bool {
+	if logEntry.SrcPort == nil || logEntry.DestPort == nil {
+		return false
+	}
+
 	// add nft prefix + remove extra whitespace from logs
 	prefix := strings.TrimSpace(fmt.Sprintf("nft:%v", *logEntry.OobPrefix))
 
