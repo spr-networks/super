@@ -128,6 +128,8 @@ __BUGS__
 * reconnecting -- receive +1 events for each connection
 __BUGS__
 
+need to fix the reconnect-bug, restarting api results in 2msgs etc.
+
 # issues
 
 the eventbus is a bit wonky with +1 connections
