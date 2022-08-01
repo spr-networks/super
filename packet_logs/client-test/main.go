@@ -5,6 +5,13 @@ and prints out log message depending on log prefix from netfilter
 
 code will be moved to api / websocket for sending out notifications
 depending on settings
+
+ TODO wrap parts of this logic in a package so we can have:
+
+sprEvent.Subscribe("nft:ip", ipConnect)
+sprEvent.Publish("nft:ip", "{ json ... }")
+
+can use a third arg being default, if specifed is sent to a client
 */
 
 import (
@@ -13,6 +20,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"time"
 	"net/rpc"
 
@@ -27,52 +35,16 @@ var ClientEventSock = "/state/plugins/packet_logs/client.sock"
 var ServerEventPath = "/_server_bus_"
 var ClientEventPath = "/_client_bus_"
 
-func lanIn(json string) {
-	fmt.Printf("[lan <<] %v", json)
-}
-
-func lanOut(json string) {
-	fmt.Printf("[lan >>] %v", json)
-}
-
-func wanIn(json string) {
-	fmt.Printf("[wan <<] %v", json)
-}
-
-func wanOut(json string) {
-	fmt.Printf("[wan >>] %v", json)
-}
-
-func dropInput(json string) {
-	fmt.Printf("[drop input] %v\n", json)
-}
-
-func dropForward(json string) {
-	fmt.Printf("[drop forward] %v\n", json)
-}
-
-func ipConnect(json string) {
-	fmt.Printf("[ip] %v", json)
-}
-
-/* TODO wrap parts of this logic in a package so we can have:
-
-sprEvent.Subscribe("nft:ip", ipConnect)
-sprEvent.Publish("nft:ip", "{ json ... }")
-
-can use a third arg being default, if specifed is sent to a client
-*/
-
 //notification_settings.json is array of this:
 type SettingEntry struct {
-	Conditions map[string]string	`json:"conditions"`
-	SendNotification bool		`json:"notification"`
+	Conditions map[string]interface{}	`json:"conditions"`
+	SendNotification bool			`json:"notification"`
 	// could have templates: notificationTitle, notificationBody with ${dest_ip}
 }
 /* example:
 [
 	{
-		conditions: { "prefix": "nft:ip:out", "src_ip": "192.168.2.11", "dest_ip": "8.8.8.8" },
+		conditions: { "prefix": "nft:wan:out", "src_ip": "192.168.2.18", "dest_ip": "8.8.8.8" },
 		notification: true
 	}
 ]
@@ -80,6 +52,74 @@ type SettingEntry struct {
 
 var NotificationSettings = []SettingEntry{}
 
+func lanIn(data string) {
+	fmt.Printf("[lan <<] %v", data)
+}
+
+func lanOut(data string) {
+	fmt.Printf("[lan >>] %v", data)
+}
+
+func checkNotificationTraffic(rawEntry map[string]interface{}) bool {
+	// add nft prefix + remove extra whitespace from logs
+	prefix := strings.TrimSpace(fmt.Sprintf("nft:%v", rawEntry["oob.prefix"]))
+
+	for idx, setting := range NotificationSettings {
+		if setting.SendNotification != true {
+			continue
+		}
+
+		shouldNotify := true
+		for key, value := range setting.Conditions {
+			valueEntry := fmt.Sprintf("%v", rawEntry[key])
+			if key == "prefix" { 
+				valueEntry = prefix
+			}
+
+			// TODO sprintf for string vs. int
+			if valueEntry != fmt.Sprintf("%v", value) {
+				shouldNotify = false
+				break
+			}
+		}
+
+		if shouldNotify {
+			return true
+		}
+	}
+
+	return false
+}
+
+func wanTraffic(data string) {
+	// use json layout for matching
+	var rawEntry map[string]interface{}
+	if err := json.Unmarshal([]byte(data), &rawEntry); err != nil {
+		  log.Fatal(err)
+	}
+
+	fmt.Printf("## %s\n", rawEntry["timestamp"])
+
+	shouldNotify := checkNotificationTraffic(rawEntry)
+	if shouldNotify {
+		fmt.Printf("!! Send Notification\n")
+		// send notification
+	}
+}
+
+func dropInput(data string) {
+	fmt.Printf("[drop input] %v\n", data)
+}
+
+func dropForward(data string) {
+	fmt.Printf("[drop forward] %v\n", data)
+}
+
+func ipConnect(data string) {
+	fmt.Printf("[ip] %v", data)
+}
+
+// NOTE reload on update
 func loadNotificationConfig() {
         data, err := ioutil.ReadFile(NotificationSettingsFile)
         if err != nil {
@@ -115,13 +155,14 @@ func main() {
 	client.Start()
 
 	log.Println("subscribe")
-	//client.Subscribe("nft:ip", ipConnect, ServerEventSock, ServerEventPath)
 	client.Subscribe("nft:lan:in", lanIn, ServerEventSock, ServerEventPath)
 	client.Subscribe("nft:lan:out", lanOut, ServerEventSock, ServerEventPath)
-	client.Subscribe("nft:wan:in", wanIn, ServerEventSock, ServerEventPath)
-	client.Subscribe("nft:wan:out", wanOut, ServerEventSock, ServerEventPath)
-	client.Subscribe("nft:drop:input", dropInput, ServerEventSock, ServerEventPath)
-	client.Subscribe("nft:drop:forward", dropForward, ServerEventSock, ServerEventPath)
+
+	client.Subscribe("nft:drop:input", wanTraffic, ServerEventSock, ServerEventPath)
+	client.Subscribe("nft:drop:forward", wanTraffic, ServerEventSock, ServerEventPath)
+
+	client.Subscribe("nft:wan:in", wanTraffic, ServerEventSock, ServerEventPath)
+	client.Subscribe("nft:wan:out", wanTraffic, ServerEventSock, ServerEventPath)
 
 	/*
 	simplify the logic here to:
@@ -129,7 +170,7 @@ func main() {
 	sprbus.Subscribe("nft:lan:in", lanIn)
 	*/
 
-	for i := 0; i < 5; i++{
+	for i := 0; i < 20; i++{
 	//for {
 		//fmt.Println("sleeping...")
 		time.Sleep(1 * time.Second)
