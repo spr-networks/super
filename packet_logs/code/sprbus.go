@@ -6,7 +6,7 @@ TODO NewClient + Subscribe so we can just import and use this as a package
 */
 
 import (
-	//"fmt"
+	"fmt"
 	"os"
 	"net/rpc"
 
@@ -46,6 +46,8 @@ func (sprbus *SprServer) Publish(topic string, message string) bool {
 
 	numClients := 0
 
+	fmt.Println("## subs.", len(subscribers))
+
 	// need this check to not crash if client is disconnected when we publish
 	for _, sub := range subscribers {
 		//fmt.Printf(">> sub #%d == %s %s\n", idx, sub.ClientAddr, sub.ClientPath)
@@ -53,8 +55,8 @@ func (sprbus *SprServer) Publish(topic string, message string) bool {
 		// remove subscribe if we cant connect to it
 		rpcClient, err := rpc.DialHTTPPath("unix", sub.ClientAddr, sub.ClientPath)
 		if err != nil {
-			//ret := sprbus.server.RemoveSubscriber(sub)
-			//fmt.Println("sub removed:", ret)
+			ret := sprbus.server.RemoveSubscriber(sub)
+			fmt.Println("sub removed:", ret)
 
 			//handler := server.rpcCallback
 			//sprbus.server.EventBus().removeHandler(topic, idx)//server.EventBus().findHandlerIdx(_topic, handler))
