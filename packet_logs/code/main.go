@@ -58,8 +58,6 @@ func main() {
 			continue
 		}
 
-		//fmt.Println(">> " + string(line))
-
 		var logEntry netfilterEntry
 		if err := json.Unmarshal(line, &logEntry); err != nil {
 			log.Fatal(err)
