@@ -16,6 +16,16 @@ can use a third arg being default, if specifed is sent to a client
 TODO api for adding/remove etc. + documentation
 
 GET PUT DELETE /notifications
+
+Condition == netfilterEntry
+
+oob.prefix
+timestamp
+dest_ip
+dest_port
+src_ip
+src_port
+
 */
 
 import (
@@ -41,15 +51,25 @@ var ClientEventPath = "/_client_bus_"
 
 //notification_settings.json is array of this:
 type SettingEntry struct {
-	Conditions map[string]interface{}	`json:"conditions"`
-	SendNotification bool			`json:"notification"`
+	//Conditions map[string]interface{}	`json:"Conditions"`
+	Conditions ConditionEntry 		`json:"Conditions"`
+	SendNotification bool			`json:"Notification"`
 	// could have templates: notificationTitle, notificationBody with ${dest_ip}
+}
+
+// golang syntax, else match netfilter json
+type ConditionEntry struct {
+	Prefix string 	`json:"Prefix"`
+	DestIp string 	`json:"DestIp"`
+	DestPort int	`json:"DestPort"`
+	SrcIp string 	`json:"SrcIp"`
+	SrcPort int	`json:"SrcPort"`
 }
 /* example:
 [
 	{
-		conditions: { "prefix": "nft:wan:out", "src_ip": "192.168.2.18", "dest_ip": "8.8.8.8" },
-		notification: true
+		Conditions: { "Prefix": "nft:wan:out", "SrcIp": "192.168.2.18", "DestIp": "8.8.8.8" },
+		Notification: true
 	}
 ]
 */
@@ -57,27 +77,39 @@ type SettingEntry struct {
 var NotificationSettings = []SettingEntry{}
 
 // return true if we should send a notification
-func checkNotificationTraffic(rawEntry map[string]interface{}) bool {
+func checkNotificationTraffic(logEntry netfilterEntry) bool {
 	// add nft prefix + remove extra whitespace from logs
-	prefix := strings.TrimSpace(fmt.Sprintf("nft:%v", rawEntry["oob.prefix"]))
+	prefix := strings.TrimSpace(fmt.Sprintf("nft:%v", *logEntry.OobPrefix))
+
+	//fmt.Printf("%%%% prefix=%v\n", prefix)
 
 	for _, setting := range NotificationSettings {
-		if setting.SendNotification != true {
+		/*if setting.SendNotification != true {
 			continue
-		}
+		}*/
 
 		shouldNotify := true
-		for key, value := range setting.Conditions {
-			valueEntry := fmt.Sprintf("%v", rawEntry[key])
-			if key == "prefix" { 
-				valueEntry = prefix
-			}
 
-			// TODO sprintf for string vs. int
-			if valueEntry != fmt.Sprintf("%v", value) {
-				shouldNotify = false
-				break
-			}
+		cond := setting.Conditions
+
+		if cond.Prefix != "" && cond.Prefix != prefix {
+			shouldNotify = false
+		}
+
+		if cond.SrcIp != "" && cond.SrcIp != *logEntry.SrcIp {
+			shouldNotify = false
+		}
+
+		if cond.DestIp != "" && cond.DestIp != *logEntry.DestIp {
+			shouldNotify = false
+		}
+
+		if cond.SrcPort != 0 && cond.SrcPort != *logEntry.SrcPort {
+			shouldNotify = false
+		}
+
+		if cond.DestPort != 0 && cond.DestPort != *logEntry.DestPort {
+			shouldNotify = false
 		}
 
 		if shouldNotify {
@@ -90,18 +122,24 @@ func checkNotificationTraffic(rawEntry map[string]interface{}) bool {
 
 func logTraffic(data string) {
 	// use json layout for matching
-	var rawEntry map[string]interface{}
-	if err := json.Unmarshal([]byte(data), &rawEntry); err != nil {
+	// TODO netfilterEntry and use same for Condition key
+	//var logEntry map[string]interface{}
+	var logEntry netfilterEntry
+	if err := json.Unmarshal([]byte(data), &logEntry); err != nil {
 		  log.Fatal(err)
 	}
 
-	fmt.Printf("## %s\n", rawEntry["timestamp"])
+	fmt.Printf("## %v\n", *logEntry.Timestamp)
 
-	shouldNotify := checkNotificationTraffic(rawEntry)
+	shouldNotify := checkNotificationTraffic(logEntry)
 	if shouldNotify {
 		fmt.Printf("!! Send Notification\n")
 		// send notification
 	}
+
+	/*if *logEntry.OobPrefix == "drop:input " {
+		fmt.Printf("[LOG=%v] %v\n", shouldNotify, data)
+	}*/
 }
 
 // NOTE reload on update
