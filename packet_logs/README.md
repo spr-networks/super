@@ -120,3 +120,23 @@ settings for when to notify:
 * log = true/false
 
 when event is received check against setting if we should forward to websocket
+
+two bugs that need fixing:
+
+__BUGS__
+* calling .publish after disconnect crash
+* reconnecting -- receive +1 events for each connection
+__BUGS__
+
+# issues
+
+the eventbus is a bit wonky with +1 connections
+cleanup of handlers / subscribers might result in this error:
+
+panic: runtime error: invalid memory address or nil pointer dereference 
+        panic: runtime error: invalid memory address or nil pointer dereference
+[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x2dc7bc]
+
+
+call .Publish on a disconnected client
+Try to resolve this by connecting to verify client is alive but fail sometimes
