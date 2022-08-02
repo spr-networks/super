@@ -10,6 +10,14 @@ still some bugs, see issues.
 
 # setup
 
+## flow
+
+* ulogd get syslog msgs from /dev/log with netfilter log prefix + group and packet info
+* ulogd logfile is read by code/main.go
+* if prefix is matched, forward to eventbus
+* api/client code is connected to eventbus listening for ntf: -prefixed messages
+	* send to WebSocket if user specified to notify for this (filtered by log Prefix, DestIp, etc.)
+
 ## prefixes
 
 lan:in
