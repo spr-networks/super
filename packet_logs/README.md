@@ -24,7 +24,7 @@ drop:forward
 ## add log prefix + group to netfilter rules
 
 NOTE: this is not added yet
-see `update-netfilter-rules.sh` for script
+see `scripts/update-netfilter-rules.sh` for script
 
 nft rules *need* a group set to work, replace these:
 
