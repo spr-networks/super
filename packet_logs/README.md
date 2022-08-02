@@ -35,13 +35,13 @@ to have group 1 (marks it as deny):
 
 ```sh
 POS=$(sudo nft -a list ruleset | grep 'log prefix "DRP:MAC "'|sed 's/.*# handle //g')
-sudo nft replace rule inet filter DROP_MAC_SPOOF handle $POS log prefix \"drop:mac \" group 0
+sudo nft replace rule inet filter DROP_MAC_SPOOF handle $POS log prefix \"drop:mac \" group 1
 
 POS=$(sudo nft -a list ruleset | grep -i 'log prefix "DRP:FWD "'|sed 's/.*# handle //g')
-sudo nft replace rule inet filter DROPLOGFWD handle $POS log prefix \"drop:forward \" group 0
+sudo nft replace rule inet filter DROPLOGFWD handle $POS log prefix \"drop:forward \" group 1
 
 POS=$(sudo nft -a list ruleset | grep -i 'log prefix "DRP:INP "'|sed 's/.*# handle //g')
-sudo nft replace rule inet filter DROPLOGINP handle $POS log prefix \"drop:input \" group 0
+sudo nft replace rule inet filter DROPLOGINP handle $POS log prefix \"drop:input \" group 1
 ```
 
 add rules to log all outgoing traffic with group 0:
@@ -129,6 +129,8 @@ __BUGS__
 __BUGS__
 
 need to fix the reconnect-bug, restarting api results in 2msgs etc.
+
+TODO need a way to handle if packet_logs container is restarted - client in api dropped?
 
 # issues
 
