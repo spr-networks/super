@@ -64,6 +64,8 @@ const parseLogMessage = (msg) => {
     body = `Authentication failure for MAC ${data.MAC}: ${reasonString}`
   } else if (msgType == 'StatusCalled') {
     body = `Status called with result: ${data}`
+  } else if (msgType == 'nft') {
+    body = `Action: ${data.action}, Src: ${data.src_ip}, Dest: ${data.dest_ip}, Prefix: ${data['oob.prefix']}`
   }
 
   return {
