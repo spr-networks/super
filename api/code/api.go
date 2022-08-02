@@ -1867,6 +1867,11 @@ func main() {
 
 	external_router_authenticated.HandleFunc("/speedtest/{start:[0-9]+}-{end:[0-9]+}", speedTest).Methods("GET", "PUT", "OPTIONS")
 
+	// notifications
+	external_router_authenticated.HandleFunc("/notifications", getNotificationSettings).Methods("GET")
+	external_router_authenticated.HandleFunc("/notifications", modifyNotificationSettings).Methods("DELETE", "PUT")
+	external_router_authenticated.HandleFunc("/notifications/{index:[0-9]+}", modifyNotificationSettings).Methods("DELETE", "PUT")
+
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
 	unix_wifid_router.HandleFunc("/reportPSKAuthSuccess", reportPSKAuthSuccess).Methods("PUT")
@@ -1911,6 +1916,8 @@ func main() {
 	WSRunNotify()
 	// collect traffic accounting statistics
 	trafficTimer()
+	// start the event handler
+	NotificationsRunEventListener()
 
 	sslPort, runSSL := os.LookupEnv("API_SSL_PORT")
 
