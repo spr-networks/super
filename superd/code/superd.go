@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
 )
 
 import (
@@ -21,19 +20,19 @@ var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
 
 func getDefaultCompose() string {
-  composeFile := "docker-compose-prebuilt.yml"
+	composeFile := "docker-compose-prebuilt.yml"
 	envCompose := os.Getenv("COMPOSE_FILE")
 	if envCompose != "" {
 		composeFile = envCompose
 	}
-  return composeFile
+	return composeFile
 }
 
 func composeCommand(composeFile string, target string, command string, optional string) {
 
-  if composeFile == "" {
-    composeFile = getDefaultCompose()
-  }
+	if composeFile == "" {
+		composeFile = getDefaultCompose()
+	}
 
 	if target != "" {
 		if optional != "" {
@@ -57,19 +56,19 @@ func composeCommand(composeFile string, target string, command string, optional 
 
 func update(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
-  compose := r.URL.Query().Get("compose_file")
+	compose := r.URL.Query().Get("compose_file")
 	go composeCommand(compose, target, "pull", "")
 }
 
 func start(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
-  compose := r.URL.Query().Get("compose_file")
+	compose := r.URL.Query().Get("compose_file")
 	go composeCommand(compose, target, "up", "-d")
 }
 
 func restart(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
-  compose := r.URL.Query().Get("compose_file")
+	compose := r.URL.Query().Get("compose_file")
 
 	//run restart
 	go composeCommand(compose, target, "restart", "")
