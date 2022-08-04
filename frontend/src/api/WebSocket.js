@@ -65,7 +65,8 @@ const parseLogMessage = (msg) => {
   } else if (msgType == 'StatusCalled') {
     body = `Status called with result: ${data}`
   } else if (msgType == 'nft') {
-    body = `Action: ${data.action}, Src: ${data.src_ip}, Dest: ${data.dest_ip}, Prefix: ${data['oob.prefix']}`
+    title = `Netfilter ${data['oob.prefix']} ${data.action}`
+    body = `${data.src_ip} => ${data.dest_ip}`
   }
 
   return {
