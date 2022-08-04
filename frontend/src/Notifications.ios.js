@@ -16,6 +16,7 @@ const init = () => {
     }
   )
 
+  PushNotificationIOS.removeAllPendingNotificationRequests()
   // we should do this to get rid of the red badge
   //PushNotificationIOS.removeAllPendingNotificationRequests()
   PushNotificationIOS.removeAllDeliveredNotifications()
@@ -65,10 +66,11 @@ const notification = (title, body, category = 'test') => {
     title,
     //subtitle: title,
     body,
-    badge: 1,
+    badge: 0, // counter on home screen
     category,
     threadId: 'thread-id'
   }
+
   PushNotificationIOS.addNotificationRequest(req)
 }
 
