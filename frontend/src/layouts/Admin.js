@@ -182,7 +182,8 @@ const AdminLayout = (props) => {
     Notifications.init()
   }, [])
 
-  let heightContent = Dimensions.get('window').height - 64 //calc(100vh-64px)
+  let navbarHeight = 64
+  let heightContent = Dimensions.get('window').height - navbarHeight
 
   return (
     <AppContext.Provider
@@ -280,7 +281,7 @@ const AdminLayout = (props) => {
             py={{ base: 4, md: 4 }}
             safeAreaTop
             ref={mainPanel}
-            h={heightContent}
+            h={{ base: heightContent - navbarHeight, md: heightContent }}
           >
             <Outlet />
             <Footer mt="auto" />
