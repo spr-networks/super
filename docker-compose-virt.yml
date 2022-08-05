@@ -1,5 +1,9 @@
 version: '3.4'
 
+x-labels:
+  &default-labels
+  org.supernetworks.ci: ${CI:-false}
+
 x-logging:
   &default-logging
   driver: journald
@@ -14,21 +18,25 @@ services:
   base-virt:
     container_name: superbase-virt
     image: ghcr.io/spr-networks/super_base
+    build: base
     privileged: true
     ports:
       - "5353:53"
       - "51280:51280/udp"
       - "8000:80"
       - "4443:443"
+    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
   dhcp-virt:
     container_name: superdhcp-virt
     image: ghcr.io/spr-networks/super_dhcp
+    build: dhcp
     network_mode: service:base-virt
     depends_on:
       - "base-virt"
+    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -39,7 +47,9 @@ services:
   dns-virt:
     container_name: superdns-virt
     image: ghcr.io/spr-networks/super_dns
+    build: dns
     network_mode: service:base-virt
+    labels: *default-labels
     logging: *default-logging
     depends_on:
       - "base-virt"
@@ -51,9 +61,11 @@ services:
   multicast_udp_proxy-virt:
     container_name: super_multicast_udp_proxy-virt
     image: ghcr.io/spr-networks/super_multicast_udp_proxy
+    build: multicast_udp_proxy
     network_mode: service:base-virt
     depends_on:
       - "base-virt"
+    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -61,6 +73,7 @@ services:
   wireguard-virt:
     container_name: superwireguard-virt
     image: ghcr.io/spr-networks/super_wireguard
+    build: wireguard
     network_mode: service:base-virt
     cap_add:
       - net_admin
@@ -69,6 +82,7 @@ services:
       - "base-virt"
       - "dhcp-virt"
       - "api-virt"
+    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -77,16 +91,16 @@ services:
       - ./state/dhcp/:/state/dhcp/
   frontend:
     container_name: superfrontend
-    network_mode: none
     image: ghcr.io/spr-networks/super_frontend
     entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
-#    build: frontend
-#    entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
+    build: frontend
+    network_mode: none
     volumes:
       - ./frontend/:/frontend
   api-virt:
     container_name: superapi-virt
     image: ghcr.io/spr-networks/super_api
+    build: api
     network_mode: service:base-virt
     cap_add:
       - net_admin
@@ -95,6 +109,7 @@ services:
       - "base-virt"
       - "dhcp-virt"
       - "frontend"
+    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -114,7 +129,9 @@ services:
   plugin-lookup-virt:
     container_name: super-plugin-lookup-virt
     image: ghcr.io/spr-networks/super_plugin-lookup
+    build: plugin-lookup
     network_mode: service:base-virt
+    labels: *default-labels
     logging: *default-logging
     depends_on:
       - "base-virt"
@@ -124,7 +141,9 @@ services:
   dyndns-virt:
     container_name: superdyndns-virt
     image: ghcr.io/spr-networks/super_dyndns
+    build: dyndns
     network_mode: bridge
+    labels: *default-labels
     logging: *default-logging
     depends_on:
       - "base-virt"
