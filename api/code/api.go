@@ -41,6 +41,8 @@ var HostapdConfigFile = TEST_PREFIX + "/configs/wifi/hostapd.conf"
 var ApiTlsCert = "/configs/base/www-api.crt"
 var ApiTlsKey = "/configs/base/www-api.key"
 
+var SuperdSocketPath = TEST_PREFIX + "/state/plugins/superd/socket"
+
 type InfluxConfig struct {
 	URL    string
 	Org    string
@@ -56,8 +58,9 @@ type PluginConfig struct {
 }
 
 type APIConfig struct {
-	InfluxDB InfluxConfig
-	Plugins  []PluginConfig
+	InfluxDB  InfluxConfig
+	Plugins   []PluginConfig
+	PlusToken string
 }
 
 type GroupEntry struct {
@@ -1691,16 +1694,14 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
-	callRestart("")
+	callSuperdRestart("")
 }
 
-func callRestart(target string) {
-	var superdSocketPath = TEST_PREFIX + "/state/plugins/superd/socket"
-
+func callSuperdRestart(target string) {
 	c := http.Client{}
 	c.Transport = &http.Transport{
 		Dial: func(network, addr string) (net.Conn, error) {
-			return net.Dial("unix", superdSocketPath)
+			return net.Dial("unix", SuperdSocketPath)
 		},
 	}
 
@@ -1860,6 +1861,7 @@ func main() {
 	//plugins
 	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
 	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated)).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/plusToken", plusToken).Methods("GET", "PUT")
 
 	// tokens api
 	external_router_authenticated.HandleFunc("/tokens", getAuthTokens).Methods("GET")

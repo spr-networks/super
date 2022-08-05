@@ -372,7 +372,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	if _, ok := newInput["he_mu_beamformer"]; ok {
 		conf["he_mu_beamformer"] = newConf.He_mu_beamformer
-		needRestart = true		
+		needRestart = true
 	}
 
 	// write new conf
@@ -396,7 +396,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		callRestart("wifid")
+		callSuperdRestart("wifid")
 	}
 
 	w.Header().Set("Content-Type", "application/json")
