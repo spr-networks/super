@@ -241,6 +241,7 @@ func notificationEventListener() {
 
 	client.Subscribe("nft:drop:input", logTraffic, ServerEventSock, ServerEventPath)
 	client.Subscribe("nft:drop:forward", logTraffic, ServerEventSock, ServerEventPath)
+	client.Subscribe("nft:drop:pfw", logTraffic, ServerEventSock, ServerEventPath)
 
 	client.Subscribe("nft:wan:in", logTraffic, ServerEventSock, ServerEventPath)
 	client.Subscribe("nft:wan:out", logTraffic, ServerEventSock, ServerEventPath)
