@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
 )
 
 import (
@@ -18,13 +17,21 @@ import (
 )
 
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
-var PlusAddons = "plus_addons"
+var PlusAddons = "plugins/plus"
 
-func composeCommand(target string, command string, optional string) {
+func getDefaultCompose() string {
 	composeFile := "docker-compose-prebuilt.yml"
 	envCompose := os.Getenv("COMPOSE_FILE")
 	if envCompose != "" {
 		composeFile = envCompose
+	}
+	return composeFile
+}
+
+func composeCommand(composeFile string, target string, command string, optional string) {
+
+	if composeFile == "" {
+		composeFile = getDefaultCompose()
 	}
 
 	if target != "" {
@@ -49,19 +56,22 @@ func composeCommand(target string, command string, optional string) {
 
 func update(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
-	go composeCommand(target, "pull", "")
+	compose := r.URL.Query().Get("compose_file")
+	go composeCommand(compose, target, "pull", "")
 }
 
 func start(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
-	go composeCommand(target, "up", "-d")
+	compose := r.URL.Query().Get("compose_file")
+	go composeCommand(compose, target, "up", "-d")
 }
 
 func restart(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
+	compose := r.URL.Query().Get("compose_file")
 
 	//run restart
-	go composeCommand(target, "restart", "")
+	go composeCommand(compose, target, "restart", "")
 }
 
 func ghcr_auth(w http.ResponseWriter, r *http.Request) {

@@ -20,7 +20,7 @@ import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Footer from 'components/Footer/Footer'
 import Sidebar from 'components/Sidebar/Sidebar'
 import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
-import { api, pfwAPI } from 'api'
+import { api, pfwAPI, wifiAPI } from 'api'
 import { ucFirst } from 'utils'
 
 import {
@@ -156,6 +156,16 @@ const AdminLayout = (props) => {
       .catch((err) => {
         setIsPlusDisabled(true)
       })
+
+    if (isWifiDisabled == false) {
+      wifiAPI
+        .status()
+        .then((res) => {
+
+        }).catch((err) => {
+          alertState.error("hostapd failed to start-- check wifid service logs")
+        })
+    }
 
     connectWebsocket((event) => {
       console.log('[webSocket]', event.data)

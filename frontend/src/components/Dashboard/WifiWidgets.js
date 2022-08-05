@@ -50,7 +50,6 @@ export const WifiInfo = (props) => {
         setChannel(status['channel'])
       })
       .catch((err) => {
-        alert('err:' + err)
       })
   }, [])
 

@@ -2,15 +2,22 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"os/exec"
 	"regexp"
+	"strings"
 )
 
 import (
 	"github.com/gorilla/mux"
 )
+
+var PlusUser = "lts-super-plus"
+var PlusGitURL = "@github.com/spr-networks/pfw_extension"
 
 func PluginProxy(config PluginConfig) (*httputil.ReverseProxy, error) {
 	return &httputil.ReverseProxy{
@@ -134,4 +141,183 @@ func PluginRoutes(external_router_authenticated *mux.Router) {
 		external_router_authenticated.HandleFunc("/plugins/"+entry.URI+"/", PluginRequestHandler(proxy))
 		external_router_authenticated.HandleFunc("/plugins/"+entry.URI+"/"+"{rest:.*}", PluginRequestHandler(proxy))
 	}
+
+	//log into GHCR for PLUS
+	ghcrSuperdLogin()
+}
+
+// PLUS feature support
+
+func validPlusToken(token string) bool {
+	cmd := exec.Command("git", "ls-remote", "https://"+PlusUser+":"+token+"@"+PlusGitURL)
+	stdout, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println("git ls-remote failed", err)
+		return false
+	}
+
+	if strings.Contains(string(stdout), "HEAD") {
+		return true
+	}
+
+	return false
+}
+
+func plusToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+		if config.PlusToken == "" {
+			http.Error(w, "PLUS Token not set", 404)
+			return
+		}
+		//write the PLUS Token
+		json.NewEncoder(w).Encode(config.PlusToken)
+		return
+	}
+
+	//PUT
+	token := ""
+	err := json.NewDecoder(r.Body).Decode(&token)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if validPlusToken(token) {
+		config.PlusToken = token
+		saveConfig()
+	}
+
+	http.Error(w, "Invalid token", 400)
+	return
+}
+
+func getSuperdClient() http.Client {
+	c := http.Client{}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", SuperdSocketPath)
+		},
+	}
+	return c
+}
+
+func ghcrSuperdLogin() bool {
+	if config.PlusToken == "" {
+		return false
+	}
+
+	append := "?username=" + PlusUser + "&secret=" + config.PlusToken
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/ghcr_auth"+append, nil)
+	if err != nil {
+		return false
+	}
+
+	c := getSuperdClient()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println("superd request failed", err)
+		return false
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("ghcr login failed", resp.StatusCode)
+		return false
+	}
+
+	return true
+}
+
+func downloadPlus() bool {
+	if config.PlusToken == "" {
+		return false
+	}
+
+	//in the future, the list of extensions can be pulled /queried dynamically
+
+	extensions := []string{"https://" + PlusUser + ":" + config.PlusToken + "@" + PlusGitURL}
+
+	for _, ext := range extensions {
+		req, err := http.NewRequest(http.MethodGet, "http://localhost/update_git?git_url="+ext, nil)
+		if err != nil {
+			return false
+		}
+
+		c := getSuperdClient()
+
+		resp, err := c.Do(req)
+		if err != nil {
+			fmt.Println("superd request failed", err)
+			return false
+		}
+
+		defer resp.Body.Close()
+		_, err = ioutil.ReadAll(resp.Body)
+
+		if resp.StatusCode != http.StatusOK {
+			fmt.Println("failed to download extension: "+ext, resp.StatusCode)
+			return false
+		}
+	}
+
+	return true
+}
+
+func startPFWExtension() bool {
+	//in the future, the list of extensions can be pulled /queried dynamically
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/start?compose_file=plugins/plus/pfw_extension/docker-compose.yml", nil)
+	if err != nil {
+		return false
+	}
+
+	c := getSuperdClient()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println("superd request failed", err)
+		return false
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("failed to start pfw extension", resp.StatusCode)
+		return false
+	}
+
+	return true
+}
+
+func updatePFWExtension() bool {
+	//in the future, the list of extensions can be pulled /queried dynamically
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/update?compose_file=plugins/plus/pfw_extension/docker-compose.yml", nil)
+	if err != nil {
+		return false
+	}
+
+	c := getSuperdClient()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println("superd request failed", err)
+		return false
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("failed to update pfw extension", resp.StatusCode)
+		return false
+	}
+
+	return true
 }

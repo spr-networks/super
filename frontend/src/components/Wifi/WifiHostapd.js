@@ -16,6 +16,7 @@ import {
 import WifiChannelParameters from 'components/Wifi/WifiChannelParameters'
 
 const WifiHostapd = (props) => {
+  const [updated, setUpdated] = useState(false)
   const [config, setConfig] = useState({})
   const canEditString = ['ssid', 'country_code', 'vht_capab', 'ht_capab']
   const canEditInt = ['ieee80211ax', 'he_su_beamformer', 'he_su_beamformee', 'he_mu_beamformer']
@@ -47,6 +48,7 @@ const WifiHostapd = (props) => {
   }, [])
 
   const handleChange = (name, value) => {
+    setUpdated(true)
     let configNew = { ...config }
     if (canEditInt.includes(name)) {
       if (isNaN(parseFloat(value))) {
@@ -61,6 +63,10 @@ const WifiHostapd = (props) => {
   }
 
   const handleSubmit = () => {
+    if (updated == false) {
+      return
+    }
+    setUpdated(false)
     let data = {
       Ssid: config.ssid,
       Channel: parseInt(config.channel)
@@ -112,6 +118,7 @@ const WifiHostapd = (props) => {
                   value={config[label]}
                   onChangeText={(value) => handleChange(label, value)}
                   onSubmitEditing={handleSubmit}
+                  onMouseLeave={handleSubmit}
                 />)
                 :
                 (

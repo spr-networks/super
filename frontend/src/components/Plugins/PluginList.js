@@ -7,6 +7,8 @@ import {
   FlatList,
   Heading,
   IconButton,
+  Input,
+  Link,
   HStack,
   VStack,
   Spacer,
@@ -16,13 +18,16 @@ import {
 } from 'native-base'
 
 import { pluginAPI } from 'api'
-import { AlertContext } from 'layouts/Admin'
+import { AppContext, alertState } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import AddPlugin from 'components/Plugins/AddPlugin'
 
 const PluginList = (props) => {
   const [list, setList] = useState([])
-  const contextType = useContext(AlertContext)
+  const [token, setToken] = useState("")
+  const [updated, setUpdated] = useState(false)
+
+  const contextType = useContext(AppContext)
 
   const refreshList = (next) => {
     pluginAPI
@@ -31,7 +36,12 @@ const PluginList = (props) => {
         setList(plugins)
       })
       .catch((err) => {
-        contextType.error('failed to fetch plugins')
+        alertState.error('failed to fetch plugins')
+      })
+
+    pluginAPI
+      .getPlusToken((token) => {
+        setToken(token)
       })
   }
 
@@ -58,6 +68,22 @@ const PluginList = (props) => {
   const notifyChange = (type) => {
     refModal.current()
     refreshList()
+  }
+
+  const handleToken = (value) => {
+    setToken(value)
+    setUpdated(true)
+  }
+
+  const handleTokenSubmit = () => {
+    if (updated) {
+      setUpdated(false)
+      pluginAPI.setPlusToken(token).then((res) => {
+        alertState.success("PLUS enabled")
+      }).catch((err) => {
+        alertState.error("Failed to install PLUS token: " + err.message)
+      })
+    }
   }
 
   return (
@@ -124,6 +150,26 @@ const PluginList = (props) => {
           keyExtractor={(item) => item.Name}
         />
       </Box>
+      { contextType.isPlusDisabled ?
+      <Box>
+        <HStack justifyContent="space-between" alignItems="center">
+          <VStack>
+            <Text bold>Enable PLUS</Text>
+            <Link _text="text" isExternal href="https://www.supernetworks.org/">Learn about PLUS Mode</Link>
+            <Input
+              size="lg"
+              type="text"
+              variant="underlined"
+              placeholder="Token"
+              onChangeText={(value) => handleToken(value)}
+              onSubmitEditing={handleTokenSubmit}
+              onMouseLeave={handleTokenSubmit}
+            />
+          </VStack>
+        </HStack>
+      </Box>
+        : null
+      }
     </>
   )
 }
