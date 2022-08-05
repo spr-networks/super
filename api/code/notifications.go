@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
+	"net/rpc"
 	"os"
 	"strconv"
 	"strings"
 	"time"
-	"net/http"
-	"net/rpc"
 
-	"github.com/spr-networks/EventBus"
 	"github.com/gorilla/mux"
+	"github.com/spr-networks/EventBus"
 )
 
 var NotificationSettingsFile = "/configs/base/notifications.json"
@@ -26,18 +26,20 @@ var ClientEventPath = "/_client_bus_"
 //notifications.json is array of this:
 type NotificationSetting struct {
 	//Conditions map[string]interface{}	`json:"Conditions"`
-	Conditions ConditionEntry 		`json:"Conditions"`
-	SendNotification bool			`json:"Notification"`
+	Conditions       ConditionEntry `json:"Conditions"`
+	SendNotification bool           `json:"Notification"`
 	// could have templates: notificationTitle, notificationBody with ${dest_ip}
 }
 
 type ConditionEntry struct {
-	Prefix string 	`json:"Prefix"`
-	DestIp string 	`json:"DestIp"`
-	DestPort int	`json:"DestPort"`
-	SrcIp string 	`json:"SrcIp"`
-	SrcPort int	`json:"SrcPort"`
+	Prefix   string `json:"Prefix"`
+	Protocol string `json:"Protocol"`
+	DestIp   string `json:"DestIp"`
+	DestPort int    `json:"DestPort"`
+	SrcIp    string `json:"SrcIp"`
+	SrcPort  int    `json:"SrcPort"`
 }
+
 /* example:
 [
 	{
@@ -51,15 +53,15 @@ var gNotificationConfig = []NotificationSetting{}
 
 // NOTE reload on update
 func loadNotificationConfig() {
-        data, err := ioutil.ReadFile(NotificationSettingsFile)
-        if err != nil {
-                fmt.Println(err)
-        } else {
-                err = json.Unmarshal(data, &gNotificationConfig)
-                if err != nil {
-                        fmt.Println(err)
-                }
-        }
+	data, err := ioutil.ReadFile(NotificationSettingsFile)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		err = json.Unmarshal(data, &gNotificationConfig)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
 }
 
 func saveNotificationConfig() {
@@ -80,46 +82,46 @@ func getNotificationSettings(w http.ResponseWriter, r *http.Request) {
 func modifyNotificationSettings(w http.ResponseWriter, r *http.Request) {
 	loadNotificationConfig()
 
-        //Nmtx.Lock()
-        //defer Nmtx.Unlock()
+	//Nmtx.Lock()
+	//defer Nmtx.Unlock()
 
-        vars := mux.Vars(r)
-        indexStr, index_ok := vars["index"]
-        index := 0
+	vars := mux.Vars(r)
+	indexStr, index_ok := vars["index"]
+	index := 0
 
-        if index_ok {
-                val, err := strconv.Atoi(indexStr)
-                if err != nil {
-                        http.Error(w, "invalid index", 400)
-                        return
-                }
+	if index_ok {
+		val, err := strconv.Atoi(indexStr)
+		if err != nil {
+			http.Error(w, "invalid index", 400)
+			return
+		}
 
-                index = val
-                if index < 0 || index >= len(gNotificationConfig) {
-                        http.Error(w, "invalid index", 400)
-                        return
-                }
-        }
+		index = val
+		if index < 0 || index >= len(gNotificationConfig) {
+			http.Error(w, "invalid index", 400)
+			return
+		}
+	}
 
-        setting := NotificationSetting{}
-        if r.Method == http.MethodPut {
-                err := json.NewDecoder(r.Body).Decode(&setting)
-                if err != nil {
-                        http.Error(w, err.Error(), 400)
-                        return
-                }
+	setting := NotificationSetting{}
+	if r.Method == http.MethodPut {
+		err := json.NewDecoder(r.Body).Decode(&setting)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
 
 		// validate
-        }
+	}
 
 	// delete, update, append
-        if r.Method == http.MethodDelete {
+	if r.Method == http.MethodDelete {
 		gNotificationConfig = append(gNotificationConfig[:index], gNotificationConfig[index+1:]...)
-        } else if index_ok {
-              	gNotificationConfig[index] = setting
-        } else {
-                gNotificationConfig = append(gNotificationConfig, setting)
-        }
+	} else if index_ok {
+		gNotificationConfig[index] = setting
+	} else {
+		gNotificationConfig = append(gNotificationConfig, setting)
+	}
 
 	saveNotificationConfig()
 
@@ -151,6 +153,15 @@ func checkNotificationTraffic(logEntry netfilterEntry) bool {
 			shouldNotify = false
 		}
 
+		// 6 = tcp, 17 = udp
+		if cond.Protocol == "tcp" && *logEntry.IpProtocol != 6 {
+			shouldNotify = false
+		}
+
+		if cond.Protocol == "udp" && *logEntry.IpProtocol != 17 {
+			shouldNotify = false
+		}
+
 		if cond.SrcIp != "" && cond.SrcIp != *logEntry.SrcIp {
 			shouldNotify = false
 		}
@@ -178,7 +189,7 @@ func checkNotificationTraffic(logEntry netfilterEntry) bool {
 func logTraffic(data string) {
 	var logEntry netfilterEntry
 	if err := json.Unmarshal([]byte(data), &logEntry); err != nil {
-		  log.Fatal(err)
+		log.Fatal(err)
 	}
 
 	fmt.Printf("## %v\n", *logEntry.Timestamp)
@@ -214,7 +225,7 @@ func notificationEventListener() {
 	defer os.Remove(ClientEventSock)
 
 	rpcClient, err := rpc.DialHTTPPath("unix", ServerEventSock, ServerEventPath)
-	if (rpcClient == nil) {
+	if rpcClient == nil {
 		log.Fatal(err)
 		return
 	}
@@ -235,26 +246,26 @@ func notificationEventListener() {
 	client.Subscribe("nft:wan:out", logTraffic, ServerEventSock, ServerEventPath)
 
 	/*
-	simplify the logic here to:
-	sprbus = SprBus.NewClient()
-	sprbus.Subscribe("nft:lan:in", lanIn)
+		simplify the logic here to:
+		sprbus = SprBus.NewClient()
+		sprbus.Subscribe("nft:lan:in", lanIn)
 	*/
 
 	for {
 		time.Sleep(1 * time.Second)
 	}
 
-/*
-	log.Println("unsub.")
-	err = client.EventBus().Unsubscribe("nft:lan:in", lanIn)
-	log.Println("unsub. ret", err)
-	err = client.EventBus().Unsubscribe("nft:lan:out", lanOut)
-	err = client.EventBus().Unsubscribe("nft:wan:in", wanIn)
-	err = client.EventBus().Unsubscribe("nft:wan:out", wanOut)
-	err = client.EventBus().Unsubscribe("nft:drop:input", dropInput)
-	err = client.EventBus().Unsubscribe("nft:drop:forward", dropForward)
-	log.Println("unsub. ret", err)
-*/
+	/*
+		log.Println("unsub.")
+		err = client.EventBus().Unsubscribe("nft:lan:in", lanIn)
+		log.Println("unsub. ret", err)
+		err = client.EventBus().Unsubscribe("nft:lan:out", lanOut)
+		err = client.EventBus().Unsubscribe("nft:wan:in", wanIn)
+		err = client.EventBus().Unsubscribe("nft:wan:out", wanOut)
+		err = client.EventBus().Unsubscribe("nft:drop:input", dropInput)
+		err = client.EventBus().Unsubscribe("nft:drop:forward", dropForward)
+		log.Println("unsub. ret", err)
+	*/
 
 	defer client.Stop()
 }
