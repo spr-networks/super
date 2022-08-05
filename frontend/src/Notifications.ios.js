@@ -78,6 +78,8 @@ const onLocalNotification = (notification) => {
   const isClicked = notification.getData().userInteraction === 1
   const actionId = notification.getActionIdentifier()
 
+  //TODO call onCloseConfirm here
+
   console.log(
     'Local Notification Received',
     `Alert title:  ${notification.getTitle()},

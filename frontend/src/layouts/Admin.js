@@ -20,12 +20,14 @@ import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Footer from 'components/Footer/Footer'
 import Sidebar from 'components/Sidebar/Sidebar'
 import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
-import { api, pfwAPI, wifiAPI } from 'api'
+import { api, pfwAPI, wifiAPI, firewallAPI } from 'api'
 import { ucFirst } from 'utils'
 
 import {
   Alert,
+  AlertDialog,
   Box,
+  Button,
   Slide,
   IconButton,
   CloseIcon,
@@ -41,8 +43,58 @@ import {
 
 import { routes } from 'routes'
 
+const ConfirmTrafficAlert = (props) => {
+  const { type, title, body, showAlert, onClose } = props
+
+  const onPressDeny = () => onClose('deny')
+  const onPressAllow = () => onClose('allow')
+  const onPressClose = () => onClose('cancel')
+
+  const cancelRef = React.useRef(null)
+
+  return (
+    <AlertDialog
+      leastDestructiveRef={cancelRef}
+      isOpen={showAlert}
+      onClose={onPressClose}
+    >
+      <AlertDialog.Content>
+        <AlertDialog.CloseButton />
+        <AlertDialog.Header>{title}</AlertDialog.Header>
+        <AlertDialog.Body>{body}</AlertDialog.Body>
+        <AlertDialog.Footer>
+          <Button.Group space={2}>
+            <Button
+              variant="unstyled"
+              colorScheme="coolGray"
+              onPress={onPressClose}
+              ref={cancelRef}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              colorScheme="danger"
+              onPress={onPressDeny}
+            >
+              Deny
+            </Button>
+            <Button
+              variant="outline"
+              colorScheme="success"
+              onPress={onPressAllow}
+            >
+              Allow
+            </Button>
+          </Button.Group>
+        </AlertDialog.Footer>
+      </AlertDialog.Content>
+    </AlertDialog>
+  )
+}
+
 const AppAlert = (props) => {
-  const { type, title, body, toggle } = props
+  const { type, title, body, showAlert, toggle } = props
 
   return (
     <Alert
@@ -88,7 +140,9 @@ const AdminLayout = (props) => {
   const location = useLocation()
 
   const [showAlert, setShowAlert] = useState(false)
+  const [showConfirmAlert, setShowConfirmAlert] = useState(false)
   const [alert, setAlert] = useState({})
+  const [confirmAlert, setConfirmAlert] = useState({})
   const toggleAlert = () => setShowAlert(!showAlert)
 
   alertState.alert = (type = 'info', title, body = null) => {
@@ -101,12 +155,15 @@ const AdminLayout = (props) => {
       title = ucFirst(type)
     }
 
+    // web desktop notification
     if (['error', 'success'].includes(type) && Platform.OS == 'web') {
       Notifications.notification(title, body)
     }
 
     setAlert({ type, title, body })
     setShowAlert(true)
+
+    // auto hide if not a confirm dialog
     setTimeout((_) => setShowAlert(false), 5e3)
   }
 
@@ -115,6 +172,16 @@ const AdminLayout = (props) => {
   alertState.warning = (title, body) => alertState.alert('warning', title, body)
   alertState.danger = (title, body) => alertState.alert('danger', title, body)
   alertState.error = (title, body) => alertState.alert('error', title, body)
+  alertState.confirm = (title, body, onClose) => {
+    // TODO cant change if a confirm is showing an we get another one
+    if (showConfirmAlert) {
+      console.log('TODO confirm on confirm, need a queue here')
+      return
+    }
+
+    setConfirmAlert({ type: 'confirm', title, body, onClose })
+    setShowConfirmAlert(true)
+  }
 
   /*
   location = useLocation()
@@ -160,10 +227,9 @@ const AdminLayout = (props) => {
     if (isWifiDisabled == false) {
       wifiAPI
         .status()
-        .then((res) => {
-
-        }).catch((err) => {
-          alertState.error("hostapd failed to start-- check wifid service logs")
+        .then((res) => {})
+        .catch((err) => {
+          alertState.error('hostapd failed to start-- check wifid service logs')
         })
     }
 
@@ -178,13 +244,47 @@ const AdminLayout = (props) => {
       const res = parseLogMessage(JSON.parse(event.data))
       if (res) {
         console.log('[LOG]', JSON.stringify(res))
-        let { type, title, body } = res
+        let { type, title, body, data } = res
+
+        // NOTE use the same for ios notifications
+        const onCloseConfirm = (action) => {
+          //action == allow, deny, cancel
+          setShowConfirmAlert(false)
+          console.log('AlertConfirm action:', action, 'data:', data)
+
+          //depending on action here:
+          //if packet allowed & should deny in future
+          //if packet denied & should allow in future
+          if (data.action == 'allowed' && action == 'deny') {
+            // 6 = tcp, 17 = udp
+            let ipProtocol = data['ip.protocol']
+            if (![6, 17].includes(ipProtocol)) {
+              return
+            }
+
+            let block = {
+              SrcIP: data.src_ip,
+              DstIP: data.dest_ip,
+              Protocol: ipProtocol == 6 ? 'tcp' : 'udp'
+            }
+
+            // NOTE the block is ip only, no port
+            firewallAPI.addBlock(block).then((res) => {
+              console.log('++ block added')
+            })
+          } else if (data.action == 'blocked' && action == 'allow') {
+          }
+        }
 
         if (Platform.OS == 'ios') {
           let category = 'userAction'
           Notifications.notification(title, body, category)
         } else {
-          alertState[type](title, body)
+          if (type == 'confirm') {
+            alertState.confirm(title, body, onCloseConfirm)
+          } else {
+            alertState[type](title, body)
+          }
         }
       }
     })
@@ -317,6 +417,13 @@ const AdminLayout = (props) => {
             />
           </Box>
         </Slide>
+        <ConfirmTrafficAlert
+          title={confirmAlert.title}
+          body={confirmAlert.body}
+          type={confirmAlert.type}
+          showAlert={showConfirmAlert}
+          onClose={confirmAlert.onClose}
+        />
 
         {/*toast.show({render: ({ id }) => { return (<h2>custom toast!</h2>) })*/}
 

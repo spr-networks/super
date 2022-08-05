@@ -65,14 +65,17 @@ const parseLogMessage = (msg) => {
   } else if (msgType == 'StatusCalled') {
     body = `Status called with result: ${data}`
   } else if (msgType == 'nft') {
+    // data.action ==  allowed || blocked
+    type = 'confirm'
     title = `Netfilter ${data['oob.prefix']} ${data.action}`
-    body = `${data.src_ip} => ${data.dest_ip}`
+    body = `${data.src_ip} => ${data.dest_ip}:${data.dest_port}`
   }
 
   return {
     type,
     title,
-    body
+    body,
+    data
   }
 }
 
