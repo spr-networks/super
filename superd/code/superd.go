@@ -122,7 +122,7 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := os.Stat(PlusAddons); os.IsNotExist(err) {
-		err := os.Mkdir(PlusAddons, 0755)
+		err := os.MkdirAll(PlusAddons, 0755)
 		if err != nil {
 			http.Error(w, "Could not create addons", 500)
 			return
@@ -164,9 +164,9 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(string(out))
 
 	if chdir_count == 2 {
-		os.Chdir("../../")
+		os.Chdir("../../../")
 	} else if chdir_count == 1 {
-		os.Chdir("../")
+		os.Chdir("../../")
 	}
 
 }
