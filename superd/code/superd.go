@@ -20,7 +20,7 @@ var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
 
 func getDefaultCompose() string {
-	composeFile := "docker-compose-prebuilt.yml"
+	composeFile := "docker-compose.yml"
 	envCompose := os.Getenv("COMPOSE_FILE")
 	if envCompose != "" {
 		composeFile = envCompose
