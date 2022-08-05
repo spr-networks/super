@@ -149,6 +149,11 @@ func PluginRoutes(external_router_authenticated *mux.Router) {
 // PLUS feature support
 
 func validPlusToken(token string) bool {
+	validToken := regexp.MustCompile(`^[A-za-z0-9_]{40}$`).MatchString
+	if !validToken(token) {
+		return false
+	}
+
 	cmd := exec.Command("git", "ls-remote", "https://"+PlusUser+":"+token+"@"+PlusGitURL)
 	stdout, err := cmd.Output()
 
