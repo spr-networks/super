@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"errors"
 )
 
 import (
@@ -17,7 +18,10 @@ import (
 )
 
 var PlusUser = "lts-super-plus"
-var PlusGitURL = "@github.com/spr-networks/pfw_extension"
+var PfwGitURL = "github.com/spr-networks/pfw_extension"
+
+
+var gPlusExtensionDefaults = []PluginConfig{{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml"}}
 
 func PluginProxy(config PluginConfig) (*httputil.ReverseProxy, error) {
 	return &httputil.ReverseProxy{
@@ -47,10 +51,32 @@ func PluginRequestHandler(proxy *httputil.ReverseProxy) func(http.ResponseWriter
 	}
 }
 
+func PlusEnabled() bool {
+	return config.PlusToken != ""
+}
+
 func getPlugins(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	//= []PluginConfig
-	json.NewEncoder(w).Encode(config.Plugins)
+	ret := config.Plugins
+
+	if PlusEnabled() {
+		for _, defaultPlusPlugin := range gPlusExtensionDefaults {
+			exists := false
+			for _, entry := range config.Plugins {
+				if entry.Plus == true && entry.UnixPath == defaultPlusPlugin.UnixPath {
+					exists = true
+					break
+				}
+			}
+
+			if !exists {
+				ret = append(ret, defaultPlusPlugin)
+			}
+		}
+
+	}
+
+	json.NewEncoder(w).Encode(ret)
 }
 
 func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) {
@@ -151,14 +177,16 @@ func PluginRoutes(external_router_authenticated *mux.Router) {
 func validPlusToken(token string) bool {
 	validToken := regexp.MustCompile(`^[A-za-z0-9_]{40}$`).MatchString
 	if !validToken(token) {
+		fmt.Println("invalid token format")
 		return false
 	}
 
-	cmd := exec.Command("git", "ls-remote", "https://"+PlusUser+":"+token+"@"+PlusGitURL)
+	cmd := exec.Command("git", "ls-remote", "https://"+PlusUser+":"+token+"@"+PfwGitURL)
 	stdout, err := cmd.Output()
 
 	if err != nil {
 		fmt.Println("git ls-remote failed", err)
+		fmt.Println(cmd)
 		return false
 	}
 
@@ -166,17 +194,13 @@ func validPlusToken(token string) bool {
 		return true
 	}
 
+	fmt.Println("ls-remote failed to get expected result")
 	return false
 }
 
 func plusToken(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		w.Header().Set("Content-Type", "application/json")
-		if config.PlusToken == "" {
-			http.Error(w, "PLUS Token not set", 404)
-			return
-		}
-		//write the PLUS Token
 		json.NewEncoder(w).Encode(config.PlusToken)
 		return
 	}
@@ -191,7 +215,15 @@ func plusToken(w http.ResponseWriter, r *http.Request) {
 
 	if validPlusToken(token) {
 		config.PlusToken = token
-		saveConfig()
+		err := installPlus()
+		if err == nil {
+			saveConfig()
+			fmt.Println("[+] Installed token")
+			return
+		} else {
+			config.PlusToken = ""
+			fmt.Println("[-] Installation failure")
+		}
 	}
 
 	http.Error(w, "Invalid token", 400)
@@ -239,45 +271,35 @@ func ghcrSuperdLogin() bool {
 	return true
 }
 
-func downloadPlus() bool {
-	if config.PlusToken == "" {
+func downloadPlusExtension(gitURL string) bool {
+	ext := "https://" + PlusUser + ":" + config.PlusToken + "@" + gitURL
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/update_git?git_url=" + ext, nil)
+	if err != nil {
 		return false
 	}
 
-	//in the future, the list of extensions can be pulled /queried dynamically
+	c := getSuperdClient()
 
-	extensions := []string{"https://" + PlusUser + ":" + config.PlusToken + "@" + PlusGitURL}
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println("superd request failed", err)
+		return false
+	}
 
-	for _, ext := range extensions {
-		req, err := http.NewRequest(http.MethodGet, "http://localhost/update_git?git_url="+ext, nil)
-		if err != nil {
-			return false
-		}
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
 
-		c := getSuperdClient()
-
-		resp, err := c.Do(req)
-		if err != nil {
-			fmt.Println("superd request failed", err)
-			return false
-		}
-
-		defer resp.Body.Close()
-		_, err = ioutil.ReadAll(resp.Body)
-
-		if resp.StatusCode != http.StatusOK {
-			fmt.Println("failed to download extension: "+ext, resp.StatusCode)
-			return false
-		}
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("failed to download extension: "+ext, resp.StatusCode)
+		return false
 	}
 
 	return true
 }
 
-func startPFWExtension() bool {
-	//in the future, the list of extensions can be pulled /queried dynamically
-
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/start?compose_file=plugins/plus/pfw_extension/docker-compose.yml", nil)
+func startPlusExtension(composeFilePath string) bool {
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/start?compose_file=" + composeFilePath, nil)
 	if err != nil {
 		return false
 	}
@@ -301,9 +323,8 @@ func startPFWExtension() bool {
 	return true
 }
 
-func updatePFWExtension() bool {
-	//in the future, the list of extensions can be pulled /queried dynamically
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/update?compose_file=plugins/plus/pfw_extension/docker-compose.yml", nil)
+func updatePlusExtension(composeFilePath string) bool {
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/update?compose_file=" + composeFilePath, nil)
 	if err != nil {
 		return false
 	}
@@ -325,4 +346,36 @@ func updatePFWExtension() bool {
 	}
 
 	return true
+}
+
+func startPlusServices() error {
+	/*
+		For now, the only plugin is PFW. This is hardcoded.
+		In the future, a list of PLUS extensions can be dynamically configured
+	*/
+	for _, entry := range config.Plugins {
+		if entry.Plus == true && entry.Enabled == true {
+			if !updatePlusExtension(entry.ComposeFilePath) {
+				return errors.New("Could not update PLUS Extension at " + entry.ComposeFilePath)
+			}
+			if !startPlusExtension(entry.ComposeFilePath) {
+				return errors.New("Could not start PLUS Extension at " + entry.ComposeFilePath)
+			}
+		}
+	}
+	return nil
+}
+
+func installPlus() error {
+	if !downloadPlusExtension(PfwGitURL) {
+		return errors.New("failed to download PfwGit")
+	}
+
+	if !ghcrSuperdLogin() {
+		//do not automatically fail, a source build could still work
+		fmt.Println("failed to log into ghcr")
+	}
+
+
+	return startPlusServices()
 }

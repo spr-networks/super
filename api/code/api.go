@@ -55,6 +55,9 @@ type PluginConfig struct {
 	URI      string
 	UnixPath string
 	Enabled  bool
+	Plus	bool
+	GitURL	 string
+	ComposeFilePath string
 }
 
 type APIConfig struct {
