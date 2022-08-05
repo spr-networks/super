@@ -1,19 +1,19 @@
 package main
 
 import (
-  "encoding/json"
-  "time"
-  "os/exec"
-  "fmt"
-  "log"
-  "net/http"
-  "sync"
-  "io/ioutil"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os/exec"
+	"sync"
+	"time"
 )
 
 import (
-  "github.com/gorilla/mux"
-  "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/gorilla/mux"
+	"github.com/influxdata/influxdb-client-go/v2"
 )
 
 var IFDB influxdb2.Client = nil
@@ -25,15 +25,14 @@ type TrafficElement struct {
 }
 
 type IPTrafficElement struct {
-	Interface   string
-	Src     		string
-	Dst     		string
-	Packets 		uint64
-	Bytes   		uint64
-	Timeout   		uint64
-	Expires   		uint64
+	Interface string
+	Src       string
+	Dst       string
+	Packets   uint64
+	Bytes     uint64
+	Timeout   uint64
+	Expires   uint64
 }
-
 
 func parseTrafficElements(elements []interface{}) []TrafficElement {
 	traffic := []TrafficElement{}
@@ -70,7 +69,7 @@ func parseIPTrafficElements(elements []interface{}) []IPTrafficElement {
 						timeout, ok := ele["timeout"].(float64)
 						expires, ok := ele["expires"].(float64)
 
-						concat, ok :=  val["concat"].([]interface{})
+						concat, ok := val["concat"].([]interface{})
 						if ok && len(concat) == 3 {
 							ifname, _ := concat[0].(string)
 							src_ip, _ := concat[1].(string)
@@ -78,8 +77,8 @@ func parseIPTrafficElements(elements []interface{}) []IPTrafficElement {
 
 							traffic = append(traffic,
 								IPTrafficElement{Interface: ifname,
-									Src: src_ip,
-									Dst: dst_ip,
+									Src:     src_ip,
+									Dst:     dst_ip,
 									Bytes:   uint64(counter["bytes"].(float64)),
 									Packets: uint64(counter["packets"].(float64)),
 									Timeout: uint64(timeout),
@@ -98,7 +97,7 @@ func getDeviceTrafficSet(setName string) []TrafficElement {
 	stdout, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("getDeviceTrafficSet failed to list ip accounting",setName,"->",err)
+		fmt.Println("getDeviceTrafficSet failed to list ip accounting", setName, "->", err)
 		return nil
 	}
 
@@ -190,7 +189,6 @@ func getIPTraffic(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
 }
-
 
 type NetCount struct {
 	LanIn  uint64
@@ -341,7 +339,7 @@ func getTrafficHistory(w http.ResponseWriter, r *http.Request) {
 }
 
 func initTraffic(config APIConfig) {
-  if config.InfluxDB.URL != "" && config.InfluxDB.Token != "" {
+	if config.InfluxDB.URL != "" && config.InfluxDB.Token != "" {
 		IFDB = influxdb2.NewClient(config.InfluxDB.URL, config.InfluxDB.Token)
 	}
 }

@@ -20,7 +20,7 @@ import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Footer from 'components/Footer/Footer'
 import Sidebar from 'components/Sidebar/Sidebar'
 import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
-import { api, pfwAPI } from 'api'
+import { api, pfwAPI, wifiAPI } from 'api'
 import { ucFirst } from 'utils'
 
 import {
@@ -157,6 +157,16 @@ const AdminLayout = (props) => {
         setIsPlusDisabled(true)
       })
 
+    if (isWifiDisabled == false) {
+      wifiAPI
+        .status()
+        .then((res) => {
+
+        }).catch((err) => {
+          alertState.error("hostapd failed to start-- check wifid service logs")
+        })
+    }
+
     connectWebsocket((event) => {
       console.log('[webSocket]', event.data)
       if (event.data == 'success') {
@@ -182,7 +192,8 @@ const AdminLayout = (props) => {
     Notifications.init()
   }, [])
 
-  let heightContent = Dimensions.get('window').height - 64 //calc(100vh-64px)
+  let navbarHeight = 64
+  let heightContent = Dimensions.get('window').height - navbarHeight
 
   return (
     <AppContext.Provider
@@ -280,7 +291,7 @@ const AdminLayout = (props) => {
             py={{ base: 4, md: 4 }}
             safeAreaTop
             ref={mainPanel}
-            h={heightContent}
+            h={{ base: heightContent - navbarHeight, md: heightContent }}
           >
             <Outlet />
             <Footer mt="auto" />

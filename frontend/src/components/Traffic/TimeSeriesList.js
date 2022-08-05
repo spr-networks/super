@@ -21,7 +21,7 @@ import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
 
 const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
-  const regexLAN = /^192\.168\./
+  const regexLAN = /^192\.168\./ //TODO dont rely on this
 
   const [list, setList] = useState([])
   const [showASN, setShowASN] = useState(
