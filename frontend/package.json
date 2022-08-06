@@ -7,6 +7,7 @@
   "license": "MIT",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
+    "dev": "REACT_APP_API=http://192.168.2.1 GENERATE_SOURCEMAP=false react-scripts start",
     "start": "GENERATE_SOURCEMAP=false react-scripts start",
     "android": "react-native run-android",
     "ios": "react-native run-ios",
