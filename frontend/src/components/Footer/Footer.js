@@ -16,8 +16,9 @@ function Footer(props) {
     <Stack
       direction="row"
       space={2}
-      pt={4}
+      py={4}
       display={{ base: 'none', md: 'flex' }}
+      justifyContent="right"
       {...props}
     >
       <Link _text={_text} isExternal href="https://www.supernetworks.org/">
