@@ -20,7 +20,7 @@ import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Footer from 'components/Footer/Footer'
 import Sidebar from 'components/Sidebar/Sidebar'
 import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
-import { api, pfwAPI, wifiAPI, firewallAPI } from 'api'
+import { api, pfwAPI, wifiAPI } from 'api'
 import { ucFirst } from 'utils'
 
 import {
@@ -263,16 +263,20 @@ const AdminLayout = (props) => {
             }
 
             let block = {
-              SrcIP: data.src_ip,
+              RuleName: `Block ${data.timestamp}`,
+              Condition: '',
+              Protocol: ipProtocol == 6 ? 'tcp' : 'udp',
+              Client: { SrcIP: data.src_ip },
               DstIP: data.dest_ip,
-              Protocol: ipProtocol == 6 ? 'tcp' : 'udp'
+              DstPort: data.dest_port.toString(),
+              Time: { Days: [], Start: '', End: '' }
             }
 
-            // NOTE the block is ip only, no port
-            firewallAPI.addBlock(block).then((res) => {
-              console.log('++ block added')
+            pfwAPI.addBlock(block).then((res) => {
+              //console.log('++ block added')
             })
           } else if (data.action == 'blocked' && action == 'allow') {
+            // remove a block if prefix == drop:pfw
           }
         }
 
