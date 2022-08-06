@@ -297,7 +297,11 @@ const AdminLayout = (props) => {
   }, [])
 
   let navbarHeight = 64
-  let heightContent = Dimensions.get('window').height - navbarHeight
+  let heightContent = Dimensions.get('window').height
+  if (Platform.OS == 'ios') {
+    // statusbar
+    heightContent = Dimensions.get('window').height - navbarHeight - 64
+  }
 
   return (
     <AppContext.Provider
@@ -371,7 +375,7 @@ const AdminLayout = (props) => {
           {isOpenSidebar ? (
             <Box
               position="absolute"
-              h={heightContent}
+              h={{ base: heightContent, md: heightContent }}
               w="100%"
               zIndex={99}
               display={{ base: 'flex', md: 'none' }}
@@ -395,7 +399,7 @@ const AdminLayout = (props) => {
             py={{ base: 4, md: 4 }}
             safeAreaTop
             ref={mainPanel}
-            h={{ base: heightContent - navbarHeight, md: heightContent }}
+            h={{ base: heightContent, md: heightContent }}
           >
             <Outlet />
             <Footer mt="auto" />

@@ -1,5 +1,9 @@
 version: '3.4'
 
+x-labels:
+  &default-labels
+  org.supernetworks.ci: ${CI:-false}
+
 x-logging:
   &default-logging
   driver: journald
@@ -8,18 +12,22 @@ services:
   base:
     container_name: superbase
     image: ghcr.io/spr-networks/super_base
+    build: base
     network_mode: host
     privileged: true
+    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
   dhcp:
     container_name: superdhcp
     image: ghcr.io/spr-networks/super_dhcp
+    build: dhcp
     network_mode: host
     privileged: true
     depends_on:
       - "base"
+    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -30,10 +38,12 @@ services:
   dhcp_client:
     container_name: superdhcp_client
     image: ghcr.io/spr-networks/super_dhcp_client
+    build: dhcp
     network_mode: host
     privileged: true
     depends_on:
       - "base"
+    labels: *default-labels
     logging: *default-logging
     entrypoint: /scripts/client.sh
     volumes:
@@ -41,8 +51,10 @@ services:
   dns:
     container_name: superdns
     image: ghcr.io/spr-networks/super_dns
+    build: dns
     network_mode: host
     privileged: true
+    labels: *default-labels
     logging: *default-logging
     depends_on:
       - "base"
@@ -54,8 +66,10 @@ services:
   wifid:
     container_name: superwifid
     image: ghcr.io/spr-networks/super_wifid
+    build: wifid
     network_mode: host
     privileged: true
+    labels: *default-labels
     logging: *default-logging
     depends_on:
       - "dhcp"
@@ -68,10 +82,12 @@ services:
   multicast_udp_proxy:
     container_name: super_multicast_udp_proxy
     image: ghcr.io/spr-networks/super_multicast_udp_proxy
+    build: multicast_udp_proxy
     network_mode: host
     privileged: true
     depends_on:
       - "base"
+    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -79,23 +95,27 @@ services:
   ppp:
     container_name: superppp
     image: ghcr.io/spr-networks/super_ppp
+    build: ppp
     network_mode: host
     privileged: true
     depends_on:
       - "base"
-    logging:  *default-logging
+    labels: *default-labels
+    logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
-      - ./configs/ppp/:/etc/ppp
+      - ./configs/ppp/:/etc/ppp/
   wireguard:
     container_name: superwireguard
     image: ghcr.io/spr-networks/super_wireguard
+    build: wireguard
     network_mode: host
     privileged: true
     depends_on:
       - "base"
       - "dhcp"
       - "api"
+    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -104,16 +124,16 @@ services:
       - ./state/dhcp/:/state/dhcp/
   frontend:
     container_name: superfrontend
-    network_mode: none
     image: ghcr.io/spr-networks/super_frontend
     entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
-#    build: frontend
-#    entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
+    build: frontend
+    network_mode: none
     volumes:
       - ./frontend/:/frontend
   api:
     container_name: superapi
     image: ghcr.io/spr-networks/super_api
+    build: api
     network_mode: host
     privileged: true
     restart: always
@@ -122,6 +142,7 @@ services:
       - "wifid"
       - "dhcp"
       - "frontend"
+    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -142,7 +163,9 @@ services:
   plugin-lookup:
     container_name: super-plugin-lookup
     image: ghcr.io/spr-networks/super_plugin-lookup
+    build: plugin-lookup
     network_mode: host
+    labels: *default-labels
     logging: *default-logging
     depends_on:
       - "base"
@@ -152,7 +175,9 @@ services:
   dyndns:
     container_name: superdyndns
     image: ghcr.io/spr-networks/super_dyndns
+    build: dyndns
     network_mode: bridge
+    labels: *default-labels
     logging: *default-logging
     depends_on:
       - "base"
@@ -160,3 +185,36 @@ services:
     volumes:
       - ./state/plugins/dyndns/:/state/plugins/dyndns
       - ./configs/dyndns/:/configs/dyndns
+  pfw:
+    container_name: superpfw
+    build: pfw
+    network_mode: host
+    logging: *default-logging
+    depends_on:
+      - "base"
+      - "api"
+    volumes:
+      - ./state/plugins/pfw/:/state/plugins/pfw
+      - ./configs/base/:/configs/base/
+      - ./configs/pfw/:/configs/pfw/
+  packet_logs:
+    container_name: superpacket_logs
+    build: packet_logs
+    network_mode: host
+    privileged: true
+    restart: always
+    logging: *default-logging
+    volumes:
+      - ./state/plugins/packet_logs/:/state/plugins/packet_logs
+      - ./configs/base/:/configs/base/
+      - /dev/log:/dev/log
+#  speedtest:
+#    container_name: superspeedtest
+#    build: speedtest
+#    network_mode: host
+#    logging: *default-logging
+#    depends_on:
+#      - "base"
+#      - "api"
+#    volumes:
+#      - ./state/plugins/speedtest/:/state/plugins/speedtest
