@@ -291,7 +291,7 @@ const AdminLayout = (props) => {
           <ScrollView
             flex={1}
             px={{ base: 0, md: 4 }}
-            py={{ base: 4, md: 4 }}
+            py={{ base: 0, md: 4 }}
             ref={mainPanel}
             h={heightContent}
           >
