@@ -64,6 +64,13 @@ const PluginList = (props) => {
   const handleChange = (plugin, value) => {
     plugin.Enabled = value
     pluginAPI.update(plugin).then(setList)
+    if (plugin.Plus == true) {
+      if (value == false) {
+        pluginAPI.stopPlusExtension(plugin.Name)
+      } else {
+        pluginAPI.startPlusExtension(plugin.Name)
+      }
+    }
   }
 
   const deleteListItem = (row) => {

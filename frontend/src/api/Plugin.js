@@ -11,6 +11,8 @@ export class APIPlugin extends API {
   remove = (data) => this.delete(`/plugins/${data.Name}`, data)
   getPlusToken = () => this.get('/plusToken')
   setPlusToken = (data) => this.put('/plusToken', data)
+  stopPlusExtension = (name) => this.get(`/stopPlusExtension?name=${name}`)
+  startPlusExtension = (name) => this.get(`/startPlusExtension?name=${name}`)
 }
 
 export const pluginAPI = new APIPlugin()
