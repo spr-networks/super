@@ -1,3 +1,13 @@
+/*
+ The superd service allows the API to manage container state with docker.
+
+ It can:
+ 	- restart services
+	- download predefined Plus containers
+
+ It is highly privileged. Access to this container is the same as access to the host
+
+*/
 package main
 
 import (
@@ -20,12 +30,17 @@ var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
 
 func getDefaultCompose() string {
-	composeFile := "docker-compose.yml"
 	envCompose := os.Getenv("COMPOSE_FILE")
 	if envCompose != "" {
-		composeFile = envCompose
+		return envCompose
 	}
-	return composeFile
+	// when no SSID is set in configs/base/config.sh,
+	// assume virtual SPR is running
+	ssid_configured = os.GetEnv("SSID_NAME")
+	if ssid_configured == "" {
+		return "docker-compose-virt.yml"
+	}
+	return "docker-compose.yml"
 }
 
 func composeCommand(composeFile string, target string, command string, optional string) {
@@ -179,6 +194,11 @@ func logRequest(handler http.Handler) http.Handler {
 }
 
 func main() {
+	err := os.Chdir("/super")
+	if err != nil {
+		fmt.Println("[-] Could not chdir to super directory")
+		return
+	}
 
 	os.MkdirAll(UNIX_PLUGIN_LISTENER, 0755)
 

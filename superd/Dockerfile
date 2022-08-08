@@ -1,4 +1,4 @@
-FROM ubuntu:21.04 as builder
+FROM ubuntu:22.04 as builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl
@@ -11,3 +11,12 @@ ENV PATH="/usr/local/go/bin:$PATH"
 COPY code/ /code/
 WORKDIR /code/
 RUN go build -ldflags "-s -w" -o /superd
+
+FROM ubuntu:22.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano
+RUN apt-get install -y --no-install-recommends docker.io docker-compose
+COPY --from=builder /superd /
+COPY scripts /scripts
+ENTRYPOINT ["/scripts/startup.sh"]

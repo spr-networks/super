@@ -19,6 +19,18 @@ services:
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
+  superd:
+    container_name: superd
+    image: ghcr.io/spr-networks/super_superd
+    build: superd
+    network_mode: host
+    privileged: true
+    labels: *default-labels
+    logging: *default-logging
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./configs/base/:/configs/base/
+      - ./:/super/
   dhcp:
     container_name: superdhcp
     image: ghcr.io/spr-networks/super_dhcp
@@ -142,6 +154,7 @@ services:
       - "wifid"
       - "dhcp"
       - "frontend"
+      - "superd"
     labels: *default-labels
     logging: *default-logging
     volumes:
