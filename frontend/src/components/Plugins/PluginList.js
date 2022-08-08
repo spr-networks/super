@@ -223,14 +223,9 @@ const PluginList = (props) => {
                     {item.UnixPath}
                   </Text>
                   <Spacer />
-                  <IconButton
-                    alignSelf="center"
-                    size="lg"
-                    variant=""
-                    colorScheme="secondary"
-                    icon={<Icon icon={faPlus} />}
-                    onPress={() => installPlugin(item)}
-                  />
+                  <Text alignSelf="center" isTruncated>
+                    Compose Path: {item.ComposeFilePath}
+                  </Text>
                   <Spacer />
                   <Box w="100" alignItems="center" alignSelf="center">
                     <Switch
