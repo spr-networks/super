@@ -351,7 +351,7 @@ func updatePlusExtension(composeFilePath string) bool {
 }
 
 func stopPlusExt(w http.ResponseWriter, r *http.Request) {
-	name := mux.Vars(r)["name"]
+	name := r.URL.Query().Get("name")
 
 	for _, entry := range config.Plugins {
 		if entry.Plus == true && entry.Name == name {
@@ -368,7 +368,7 @@ func stopPlusExt(w http.ResponseWriter, r *http.Request) {
 }
 
 func startPlusExt(w http.ResponseWriter, r *http.Request) {
-	name := mux.Vars(r)["name"]
+	name := r.URL.Query().Get("name")
 
 	for _, entry := range config.Plugins {
 		if entry.Plus == true && entry.Name == name {
