@@ -18,7 +18,7 @@ function Footer(props) {
       space={2}
       py={4}
       display={{ base: 'none', md: 'flex' }}
-      justifyContent="right"
+      justifyContent="flex-end"
       {...props}
     >
       <Link _text={_text} isExternal href="https://www.supernetworks.org/">
