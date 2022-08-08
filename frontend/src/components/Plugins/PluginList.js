@@ -75,17 +75,6 @@ const PluginList = (props) => {
       .catch((err) => {})
   }
 
-  const installPlugin = (entry) => {
-    /*
-    pluginAPI
-      .remove(row)
-      .then((res) => {
-        refreshList()
-      })
-      .catch((err) => {})
-      */
-  }
-
   const refModal = useRef(null)
 
   const notifyChange = (type) => {

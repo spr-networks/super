@@ -29,6 +29,8 @@ import (
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
 
+var ComposeAllowList = {"docker-compose.yml", "docker-compose-virt.yml", "plugins/plus/pfw_extension/docker-compose.yml"}
+
 func getDefaultCompose() string {
 	envCompose := os.Getenv("COMPOSE_FILE")
 	if envCompose != "" {
@@ -47,6 +49,19 @@ func composeCommand(composeFile string, target string, command string, optional 
 
 	if composeFile == "" {
 		composeFile = getDefaultCompose()
+	}
+
+	composeAllowed := false
+	for _, entry := range ComposeAllowList {
+		if entry == composeFile {
+			composeAllowed = true
+			break
+		}
+	}
+
+	if composeAllowed == false {
+		fmt.Println("Compose file path is not whitelisted")
+		return
 	}
 
 	if target != "" {

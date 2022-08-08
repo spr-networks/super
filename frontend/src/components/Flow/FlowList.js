@@ -252,7 +252,7 @@ const Flow = ({ flow, edit, ...props }) => {
             ) : null}
           </HStack>
 
-          <HStack space={4} justifyContent="start">
+          <HStack space={4} justifyContent="flex-start">
             <HStack space={1} alignItems="center">
               <Icon icon={trigger.icon} color={trigger.color} />
               <HStack space={2}>

@@ -19,7 +19,6 @@ Design:
 Limitations
 - No IPv6 support
 - Currently has no concept of IGMP. This means that the router could be waking up wifi devices
-
 */
 package main
 
@@ -33,9 +32,43 @@ import (
 	"golang.org/x/net/ipv4"
 	"golang.org/x/sys/unix"
 	"strings"
+	"io/ioutil"
+	"encoding/json"
 )
 
 var debug = false
+
+var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
+
+type DeviceEntry struct {
+	Name       string
+	MAC        string
+	WGPubKey   string
+	VLANTag    string
+	RecentIP   string
+	PSKEntry   PSKEntry
+	Groups     []string
+	DeviceTags []string
+}
+
+func APIDevices() (map[string]DeviceEntry, error) {
+	devs := map[string]DeviceEntry{}
+
+	data, err := ioutil.ReadFile(DevicesPublicConfigFile)
+	if err == nil {
+		err = json.Unmarshal(data, &devs)
+		if err != nil {
+			fmt.Println(err)
+			return nil, err
+		}
+	} else {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	return devs, nil
+}
+
 
 func NewIPv4UDPConn(addr *net.UDPAddr) (*net.UDPConn, error) {
 	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, unix.IPPROTO_UDP)
