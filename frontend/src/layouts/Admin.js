@@ -263,7 +263,7 @@ const AdminLayout = (props) => {
           //console.log('++ block added')
         })
       } else if (data.action == 'blocked' && action == 'allow') {
-        // remove a block if prefix == drop:pfw
+        // TODO remove block if data['oob.prefix'].startsWith('drop:pfw')
       }
     }
 
