@@ -229,11 +229,45 @@ const AdminLayout = (props) => {
         .status()
         .then((res) => {})
         .catch((err) => {
-          alertState.error('hostapd failed to start-- check wifid service logs')
+          alertState.error('hostapd failed to start - check wifid service logs')
         })
     }
 
-    connectWebsocket((event) => {
+    // callback for notifications, web & ios
+    // action = allow,deny,cancel, data = nft data
+    const confirmTrafficAction = (action, data) => {
+      //action == allow, deny, cancel
+      console.log('## confirm action:', action, 'data:', data)
+
+      //depending on action here:
+      //if packet allowed & should deny in future
+      //if packet denied & should allow in future
+      if (data.action == 'allowed' && action == 'deny') {
+        // 6 = tcp, 17 = udp
+        let ipProtocol = data['ip.protocol']
+        if (![6, 17].includes(ipProtocol)) {
+          return
+        }
+
+        let block = {
+          RuleName: `Block ${data.timestamp}`,
+          Condition: '',
+          Protocol: ipProtocol == 6 ? 'tcp' : 'udp',
+          Client: { SrcIP: data.src_ip },
+          DstIP: data.dest_ip,
+          DstPort: data.dest_port.toString(),
+          Time: { Days: [], Start: '', End: '' }
+        }
+
+        pfwAPI.addBlock(block).then((res) => {
+          //console.log('++ block added')
+        })
+      } else if (data.action == 'blocked' && action == 'allow') {
+        // remove a block if prefix == drop:pfw
+      }
+    }
+
+    const handleWebSocketEvent = (event) => {
       console.log('[webSocket]', event.data)
       if (event.data == 'success') {
         return
@@ -243,57 +277,47 @@ const AdminLayout = (props) => {
 
       const res = parseLogMessage(JSON.parse(event.data))
       if (res) {
-        console.log('[LOG]', JSON.stringify(res))
+        console.log('[NOTIFICATION]', JSON.stringify(res))
         let { type, title, body, data } = res
 
-        // NOTE use the same for ios notifications
-        const onCloseConfirm = (action) => {
-          //action == allow, deny, cancel
-          setShowConfirmAlert(false)
-          console.log('AlertConfirm action:', action, 'data:', data)
-
-          //depending on action here:
-          //if packet allowed & should deny in future
-          //if packet denied & should allow in future
-          if (data.action == 'allowed' && action == 'deny') {
-            // 6 = tcp, 17 = udp
-            let ipProtocol = data['ip.protocol']
-            if (![6, 17].includes(ipProtocol)) {
-              return
-            }
-
-            let block = {
-              RuleName: `Block ${data.timestamp}`,
-              Condition: '',
-              Protocol: ipProtocol == 6 ? 'tcp' : 'udp',
-              Client: { SrcIP: data.src_ip },
-              DstIP: data.dest_ip,
-              DstPort: data.dest_port.toString(),
-              Time: { Days: [], Start: '', End: '' }
-            }
-
-            pfwAPI.addBlock(block).then((res) => {
-              //console.log('++ block added')
-            })
-          } else if (data.action == 'blocked' && action == 'allow') {
-            // remove a block if prefix == drop:pfw
-          }
-        }
-
         if (Platform.OS == 'ios') {
-          let category = 'userAction'
-          Notifications.notification(title, body, category)
+          // for now we have default = only msg & confirm = userAction
+          //Notifications.notification(title, body, category)
+          if (type == 'confirm') {
+            Notifications.confirm(title, body, data)
+          } else {
+            Notifications.notification(title, body)
+          }
         } else {
           if (type == 'confirm') {
-            alertState.confirm(title, body, onCloseConfirm)
+            alertState.confirm(title, body, (action) => {
+              setShowConfirmAlert(false)
+
+              confirmTrafficAction(action, data)
+            })
           } else {
             alertState[type](title, body)
           }
         }
       }
-    })
+    }
 
-    Notifications.init()
+    connectWebsocket(handleWebSocketEvent)
+
+    let notificationArgs = {}
+    if (Platform.OS == 'ios') {
+      //for ios we get an event - no callback
+      //this function is called when user clicks a local notification
+      notificationArgs.onLocalNotification = (notification) => {
+        const userInfo = notification.getData() //=userInfo
+        const isClicked = userInfo.userInteraction === 1
+        const action = notification.getActionIdentifier() // open, allow, deny
+        const { data } = userInfo
+        confirmTrafficAction(action, data)
+      }
+    }
+
+    Notifications.init(notificationArgs)
   }, [])
 
   let navbarHeight = 64

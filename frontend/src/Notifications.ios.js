@@ -1,6 +1,6 @@
 import PushNotificationIOS from '@react-native-community/push-notification-ios'
 
-const init = () => {
+const init = ({ onLocalNotification, ...props }) => {
   // init notifications
   PushNotificationIOS.requestPermissions({
     alert: true,
@@ -52,33 +52,26 @@ const init = () => {
   ])
 
   //const type = 'notification' //remove
-  const type = 'localNotification'
-  //PushNotificationIOS.addEventListener('notification', onRemoteNotification)
-  PushNotificationIOS.addEventListener(type, onLocalNotification)
-  return () => {
-    PushNotificationIOS.removeEventListener(type)
+  //NOTE useEffect
+
+  if (onLocalNotification) {
+    const type = 'localNotification'
+    //PushNotificationIOS.addEventList  ener('notification', onRemoteNotification)
+    PushNotificationIOS.addEventListener(type, onLocalNotification)
+    return () => {
+      PushNotificationIOS.removeEventListener(type)
+    }
   }
 }
 
-const notification = (title, body, category = 'test') => {
-  let req = {
-    id: new Date().toString(),
-    title,
-    //subtitle: title,
-    body,
-    badge: 0, // counter on home screen
-    category,
-    threadId: 'thread-id'
-  }
-
-  PushNotificationIOS.addNotificationRequest(req)
-}
-
+// notification reply
 const onLocalNotification = (notification) => {
-  const isClicked = notification.getData().userInteraction === 1
-  const actionId = notification.getActionIdentifier()
+  const data = notification.getData()
+  const isClicked = data.userInteraction === 1
+  const actionId = notification.getActionIdentifier() // allow, deny
 
   //TODO call onCloseConfirm here
+  //{"actionIdentifier": "allow", "type": "confirm", "userInteraction": 1}
 
   console.log(
     'Local Notification Received',
@@ -89,15 +82,11 @@ const onLocalNotification = (notification) => {
     Action Id:  ${actionId},
     User Text:  ${notification.getUserText()},
     Notification is clicked: ${String(isClicked)}.`,
-    [
-      {
-        text: 'Dismiss',
-        onPress: null
-      }
-    ]
+    notification.getData()
   )
 }
 
+// notification reply
 const onRemoteNotification = (notification) => {
   const actionIdentifier = notification.getActionIdentifier()
 
@@ -114,7 +103,52 @@ const onRemoteNotification = (notification) => {
   }
 }
 
+const notification = (title, body, category = null, userInfo = {}) => {
+  // use id here to link with a callback ?
+
+  let req = {
+    id: new Date().toString(),
+    title,
+    //subtitle: title,
+    body,
+    badge: 0, // counter on home screen
+    threadId: 'thread-id',
+    userInfo
+  }
+
+  if (category) {
+    req.category = category
+  }
+
+  console.log('notification with userinfo : ', userInfo)
+
+  PushNotificationIOS.addNotificationRequest(req)
+
+  return req.id
+}
+
+const confirm = (title, body, data = null) => {
+  /*// setup eventhandler when we wait for it, remove when done
+  PushNotificationIOS.addEventListener('localNotification', (notification) => {
+    const data = notification.getData()
+    //const isClicked = data.userInteraction === 1
+    const action = notification.getActionIdentifier() // allow, deny
+    //com.apple.UNNotificationDefaultActionIdentifier = default open
+
+    console.log('#notification:', data)
+    console.log('#calling onCloseConfirm ***** ****\n\n')
+    PushNotificationIOS.removeEventListener('localNotification', this)
+    onCloseConfirm(action)
+  })*/
+
+  // trigger notification
+  let userInfo = { data }
+  let id = notification(title, body, 'userAction', userInfo)
+  console.log('!! notification id=', id)
+}
+
 export default {
   init,
-  notification
+  notification,
+  confirm
 }
