@@ -96,6 +96,12 @@ func start(w http.ResponseWriter, r *http.Request) {
 	go composeCommand(compose, target, "up", "-d")
 }
 
+func stop(w http.ResponseWriter, r *http.Request) {
+	target := r.URL.Query().Get("service")
+	compose := r.URL.Query().Get("compose_file")
+	go composeCommand(compose, target, "stop", "")
+}
+
 func restart(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
@@ -221,6 +227,7 @@ func main() {
 	unix_plugin_router.HandleFunc("/restart", restart).Methods("GET")
 	unix_plugin_router.HandleFunc("/start", start).Methods("GET")
 	unix_plugin_router.HandleFunc("/update", update).Methods("GET")
+	unix_plugin_router.HandleFunc("/stop", stop).Methods("GET")
 
 	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("GET")
 	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("GET")
