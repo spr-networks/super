@@ -123,7 +123,7 @@ const renderDockerContainer = ({ item, navigate, showModal }) => {
     >
       <Text flex={1}>{containerName}</Text>
 
-      <Text flex={1} color="muted.500">
+      <Text flex={1} color="muted.500" isTruncated>
         {item.Image}
       </Text>
       <Badge ml="auto" colorScheme={stateColor(item.State)} variant="outline">

@@ -92,7 +92,7 @@ const TrafficList = (props) => {
         return row
       })
 
-    let perPage = 20,
+    let perPage = 13,
       offset = (page - 1) * perPage
 
     listFiltered = listFiltered.slice(offset, offset + perPage)
@@ -212,7 +212,6 @@ const TrafficList = (props) => {
         rounded={{ base: 'none', md: 'md' }}
         width="100%"
         p={4}
-        mb={4}
       >
         <Stack direction={flexDirection} space={2}>
           <Radio.Group
@@ -251,10 +250,8 @@ const TrafficList = (props) => {
       </Box>
       <Box
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        rounded={{ base: 'none', md: 'md' }}
         width="100%"
         p={4}
-        mb={4}
       >
         <ScrollView h="100%">
           <TimeSeriesList
@@ -268,7 +265,7 @@ const TrafficList = (props) => {
             <HStack width="100%" space={2}>
               <Button
                 flex="1"
-                variant="ghost"
+                variant="unstyled"
                 isDisabled={page <= 1}
                 onPress={() => setPage(page > 1 ? page - 1 : 1)}
               >
@@ -276,7 +273,7 @@ const TrafficList = (props) => {
               </Button>
               <Button
                 flex="1"
-                variant="ghost"
+                variant="unstyled"
                 onPress={() => setPage(page + 1)}
               >
                 Next &rarr;

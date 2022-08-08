@@ -298,6 +298,10 @@ const AdminLayout = (props) => {
 
   let navbarHeight = 64
   let heightContent = Dimensions.get('window').height - navbarHeight
+  if (Platform.OS == 'ios') {
+    // statusbar
+    heightContent = Dimensions.get('window').height - navbarHeight - 64
+  }
 
   return (
     <AppContext.Provider
@@ -371,7 +375,7 @@ const AdminLayout = (props) => {
           {isOpenSidebar ? (
             <Box
               position="absolute"
-              h={heightContent}
+              h={{ base: heightContent, md: heightContent }}
               w="100%"
               zIndex={99}
               display={{ base: 'flex', md: 'none' }}
@@ -391,16 +395,15 @@ const AdminLayout = (props) => {
                minH="calc(100vh - 64px)"*/}
           <ScrollView
             flex={1}
-            px={{ base: 4, md: 4 }}
-            py={{ base: 4, md: 4 }}
-            safeAreaTop
+            px={{ base: 0, md: 4 }}
+            py={{ base: 0, md: 4 }}
             ref={mainPanel}
-            h={{ base: heightContent - navbarHeight, md: heightContent }}
+            h={heightContent}
           >
             <Outlet />
-            <Footer mt="auto" />
+            {/*NOTE footer should not be visible - outside of the view and show when scroll to bottom to use the most space*/}
+            <Footer />
           </ScrollView>
-          {/*<Box flex="1" w="100%" minH="100%"></Box>*/}
         </HStack>
       </Box>
       <AlertContext.Provider value={alertState}>
@@ -408,7 +411,7 @@ const AdminLayout = (props) => {
           <Box
             maxWidth="90%"
             top={16}
-            position={{ base: 'static', md: 'static' }}
+            position="static"
             alignItems="center"
             justifyContent="center"
             alignSelf="center"
