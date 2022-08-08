@@ -38,7 +38,14 @@ import (
 
 var debug = false
 
+var TEST_PREFIX = os.Getenv("TEST_PREFIX")
+
 var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
+
+type PSKEntry struct {
+	Type string
+	Psk  string
+}
 
 type DeviceEntry struct {
 	Name       string
