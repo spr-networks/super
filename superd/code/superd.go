@@ -29,7 +29,7 @@ import (
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
 
-var ComposeAllowList = {"docker-compose.yml", "docker-compose-virt.yml", "plugins/plus/pfw_extension/docker-compose.yml"}
+var ComposeAllowList = []string{"docker-compose.yml", "docker-compose-virt.yml", "plugins/plus/pfw_extension/docker-compose.yml"}
 
 func getDefaultCompose() string {
 	envCompose := os.Getenv("COMPOSE_FILE")
@@ -38,7 +38,7 @@ func getDefaultCompose() string {
 	}
 	// when no SSID is set in configs/base/config.sh,
 	// assume virtual SPR is running
-	ssid_configured = os.GetEnv("SSID_NAME")
+	ssid_configured := os.Getenv("SSID_NAME")
 	if ssid_configured == "" {
 		return "docker-compose-virt.yml"
 	}
