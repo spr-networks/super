@@ -214,12 +214,35 @@ func logRequest(handler http.Handler) http.Handler {
 	})
 }
 
+func getHostSuperDir() string {
+
+	f := "'{{index .Config.Labels \"com.docker.compose.project.working_dir\"}}'"
+
+	cmd := exec.Command("docker", "inspect", "--format="+f, "superd")
+	stdout, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println("[-]", err)
+		return ""
+	}
+	return string(stdout)
+}
+
 func main() {
 	err := os.Chdir("/super")
 	if err != nil {
 		fmt.Println("[-] Could not chdir to super directory")
 		return
 	}
+
+	hostSuperDir := getHostSuperDir()
+
+	if hostSuperDir == "" {
+		fmt.Println("[-] Failed to locate super install")
+		return
+	}
+
+	os.Setenv("SUPERDIR", hostSuperDir)
 
 	os.MkdirAll(UNIX_PLUGIN_LISTENER, 0755)
 
