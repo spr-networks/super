@@ -25,7 +25,7 @@ else
 fi
 
 ret=$?
-if [ $ret -neq 0 ]; then
+if [ $ret -ne 0 ]; then
   echo "Failed to load firewall rules, shutting down upstream interface"
   ip link set dev $WANIF down
   exit 1
