@@ -1,7 +1,5 @@
 #!/bin/bash
 rm -rf ./frontend/build
-if [ -z LOCALUI ]; then
-  docker cp $(docker create --rm frontend):/app/build ./frontend/build
-else
-  docker cp $(docker create --rm ghcr.io/spr-networks/super_frontend):/build ./frontend/build
-fi
+docker cp \
+  $(docker create --rm ghcr.io/spr-networks/super_frontend dummy):/app/build \
+  ./frontend/build
