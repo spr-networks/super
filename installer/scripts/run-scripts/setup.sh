@@ -16,7 +16,6 @@ growpart $PART $PARTNUM
 resize2fs $ROOTPART
 
 touch /home/spr/.spr-setup-done
-#rm -rf /containers
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get -y --fix-broken install
@@ -29,7 +28,7 @@ echo -ne "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
 cd /containers
 for x in `ls *.tar`
 do
-  docker import --change "ENTRYPOINT $(cat $x.entry)" $x $(echo ghcr.io/spr-networks/$x | rev | cut -c 5- | rev)
+  docker load -i $x
 done
 
 #rm -f /containers
