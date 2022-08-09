@@ -225,7 +225,7 @@ func getHostSuperDir() string {
 		fmt.Println("[-]", err)
 		return ""
 	}
-	return string(stdout)
+	return string(stdout) + "/"
 }
 
 func main() {
