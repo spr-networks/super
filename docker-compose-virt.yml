@@ -33,7 +33,7 @@ services:
   superd-virt:
     container_name: superd-virt
     image: ghcr.io/spr-networks/super_superd
-    build: superd
+    build:
       context: superd
       labels: *default-labels
     network_mode: host
