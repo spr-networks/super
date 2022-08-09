@@ -141,9 +141,9 @@ func checkNotificationTraffic(logEntry netfilterEntry) bool {
 	//fmt.Printf("%%%% prefix=%v\n", prefix)
 
 	for _, setting := range gNotificationConfig {
-		/*if setting.SendNotification != true {
+		if setting.SendNotification != true {
 			continue
-		}*/
+		}
 
 		shouldNotify := true
 
