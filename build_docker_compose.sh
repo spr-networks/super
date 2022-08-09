@@ -12,7 +12,7 @@ fi
 
 # remove prebuilt images
 FOUND_PREBUILT_IMAGE=false
-for SERVICE in $(docker-compose config --service); do
+for SERVICE in $(docker-compose config --services); do
   # keep the prebuilt frontend image
   if [ "$SERVICE" = "frontend" ]; then
     continue
