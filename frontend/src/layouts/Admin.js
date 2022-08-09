@@ -280,6 +280,11 @@ const AdminLayout = (props) => {
         console.log('[NOTIFICATION]', JSON.stringify(res))
         let { type, title, body, data } = res
 
+        // confirm notifications use pfw
+        if (isPlusDisabled && type == 'confirm') {
+          type = 'info'
+        }
+
         if (Platform.OS == 'ios') {
           // for now we have default = only msg & confirm = userAction
           //Notifications.notification(title, body, category)
