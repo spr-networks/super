@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -10,7 +11,6 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
-	"errors"
 )
 
 import (
@@ -19,7 +19,6 @@ import (
 
 var PlusUser = "lts-super-plus"
 var PfwGitURL = "github.com/spr-networks/pfw_extension"
-
 
 var gPlusExtensionDefaults = []PluginConfig{{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml"}}
 
@@ -170,6 +169,9 @@ func PluginRoutes(external_router_authenticated *mux.Router) {
 
 	//log into GHCR for PLUS
 	ghcrSuperdLogin()
+
+	//start PLUS features
+	startPlusServices()
 }
 
 // PLUS feature support
@@ -274,7 +276,7 @@ func ghcrSuperdLogin() bool {
 func downloadPlusExtension(gitURL string) bool {
 	ext := "https://" + PlusUser + ":" + config.PlusToken + "@" + gitURL
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/update_git?git_url=" + ext, nil)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/update_git?git_url="+ext, nil)
 	if err != nil {
 		return false
 	}
@@ -299,7 +301,7 @@ func downloadPlusExtension(gitURL string) bool {
 }
 
 func startPlusExtension(composeFilePath string) bool {
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/start?compose_file=" + composeFilePath, nil)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/start?compose_file="+composeFilePath, nil)
 	if err != nil {
 		return false
 	}
@@ -324,7 +326,7 @@ func startPlusExtension(composeFilePath string) bool {
 }
 
 func updatePlusExtension(composeFilePath string) bool {
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/update?compose_file=" + composeFilePath, nil)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/update?compose_file="+composeFilePath, nil)
 	if err != nil {
 		return false
 	}
@@ -348,14 +350,69 @@ func updatePlusExtension(composeFilePath string) bool {
 	return true
 }
 
-func startPlusServices() error {
-	/*
-		For now, the only plugin is PFW. This is hardcoded.
-		In the future, a list of PLUS extensions can be dynamically configured
-	*/
+func stopPlusExt(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get("name")
+
 	for _, entry := range config.Plugins {
-		if entry.Plus == true && entry.Enabled == true {
-			if !updatePlusExtension(entry.ComposeFilePath) {
+		if entry.Plus == true && entry.Name == name {
+			if !stopPlusExtension(entry.ComposeFilePath) {
+				http.Error(w, "Failed to stop service", 400)
+				return
+			}
+			return
+		}
+	}
+
+	http.Error(w, "Plus extension not found: " + name, 404)
+
+}
+
+func startPlusExt(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get("name")
+
+	for _, entry := range config.Plugins {
+		if entry.Plus == true && entry.Name == name {
+			if !startPlusExtension(entry.ComposeFilePath) {
+				http.Error(w, "Failed to start service", 400)
+				return
+			}
+			return
+		}
+	}
+
+	http.Error(w, "Plus extension not found: " + name, 404)
+
+}
+
+func stopPlusExtension(composeFilePath string) bool {
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/stop?compose_file="+composeFilePath, nil)
+	if err != nil {
+		return false
+	}
+
+	c := getSuperdClient()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println("superd request failed", err)
+		return false
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("failed to stop pfw extension", resp.StatusCode)
+		return false
+	}
+
+	return true
+}
+
+func stopPlusServices() error {
+	for _, entry := range config.Plugins {
+		if entry.Plus == true {
+			if !stopPlusExtension(entry.ComposeFilePath) {
 				return errors.New("Could not update PLUS Extension at " + entry.ComposeFilePath)
 			}
 			if !startPlusExtension(entry.ComposeFilePath) {
@@ -376,6 +433,23 @@ func installPlus() error {
 		fmt.Println("failed to log into ghcr")
 	}
 
-
 	return startPlusServices()
+}
+
+func startPlusServices() error {
+	/*
+		For now, the only plugin is PFW. This is hardcoded.
+		In the future, a list of PLUS extensions can be dynamically configured
+	*/
+	for _, entry := range config.Plugins {
+		if entry.Plus == true && entry.Enabled == true {
+			if !updatePlusExtension(entry.ComposeFilePath) {
+				return errors.New("Could not update PLUS Extension at " + entry.ComposeFilePath)
+			}
+			if !startPlusExtension(entry.ComposeFilePath) {
+				return errors.New("Could not start PLUS Extension at " + entry.ComposeFilePath)
+			}
+		}
+	}
+	return nil
 }

@@ -92,7 +92,7 @@ const TrafficList = (props) => {
         return row
       })
 
-    let perPage = 13,
+    let perPage = 20,
       offset = (page - 1) * perPage
 
     listFiltered = listFiltered.slice(offset, offset + perPage)

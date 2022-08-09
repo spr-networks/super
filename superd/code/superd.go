@@ -1,3 +1,13 @@
+/*
+ The superd service allows the API to manage container state with docker.
+
+ It can:
+ 	- restart services
+	- download predefined Plus containers
+
+ It is highly privileged. Access to this container is the same as access to the host
+
+*/
 package main
 
 import (
@@ -19,19 +29,39 @@ import (
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
 
+var ComposeAllowList = []string{"docker-compose.yml", "docker-compose-virt.yml", "plugins/plus/pfw_extension/docker-compose.yml"}
+
 func getDefaultCompose() string {
-	composeFile := "docker-compose.yml"
 	envCompose := os.Getenv("COMPOSE_FILE")
 	if envCompose != "" {
-		composeFile = envCompose
+		return envCompose
 	}
-	return composeFile
+	// when no SSID is set in configs/base/config.sh,
+	// assume virtual SPR is running
+	ssid_configured := os.Getenv("SSID_NAME")
+	if ssid_configured == "" {
+		return "docker-compose-virt.yml"
+	}
+	return "docker-compose.yml"
 }
 
 func composeCommand(composeFile string, target string, command string, optional string) {
 
 	if composeFile == "" {
 		composeFile = getDefaultCompose()
+	}
+
+	composeAllowed := false
+	for _, entry := range ComposeAllowList {
+		if entry == composeFile {
+			composeAllowed = true
+			break
+		}
+	}
+
+	if composeAllowed == false {
+		fmt.Println("Compose file path is not whitelisted")
+		return
 	}
 
 	if target != "" {
@@ -64,6 +94,12 @@ func start(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
 	go composeCommand(compose, target, "up", "-d")
+}
+
+func stop(w http.ResponseWriter, r *http.Request) {
+	target := r.URL.Query().Get("service")
+	compose := r.URL.Query().Get("compose_file")
+	go composeCommand(compose, target, "stop", "")
 }
 
 func restart(w http.ResponseWriter, r *http.Request) {
@@ -179,6 +215,11 @@ func logRequest(handler http.Handler) http.Handler {
 }
 
 func main() {
+	err := os.Chdir("/super")
+	if err != nil {
+		fmt.Println("[-] Could not chdir to super directory")
+		return
+	}
 
 	os.MkdirAll(UNIX_PLUGIN_LISTENER, 0755)
 
@@ -186,6 +227,7 @@ func main() {
 	unix_plugin_router.HandleFunc("/restart", restart).Methods("GET")
 	unix_plugin_router.HandleFunc("/start", start).Methods("GET")
 	unix_plugin_router.HandleFunc("/update", update).Methods("GET")
+	unix_plugin_router.HandleFunc("/stop", stop).Methods("GET")
 
 	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("GET")
 	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("GET")

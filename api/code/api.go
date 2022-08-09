@@ -51,12 +51,12 @@ type InfluxConfig struct {
 }
 
 type PluginConfig struct {
-	Name     string
-	URI      string
-	UnixPath string
-	Enabled  bool
-	Plus	bool
-	GitURL	 string
+	Name            string
+	URI             string
+	UnixPath        string
+	Enabled         bool
+	Plus            bool
+	GitURL          string
 	ComposeFilePath string
 }
 
@@ -1865,6 +1865,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
 	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated)).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/plusToken", plusToken).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/stopPlusExtension", stopPlusExt).Methods("GET")
+	external_router_authenticated.HandleFunc("/startPlusExtension", startPlusExt).Methods("GET")
 
 	// tokens api
 	external_router_authenticated.HandleFunc("/tokens", getAuthTokens).Methods("GET")

@@ -29,6 +29,18 @@ services:
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
+  superd-virt:
+    container_name: superd-virt
+    image: ghcr.io/spr-networks/super_superd
+    build: superd
+    network_mode: host
+    privileged: true
+    labels: *default-labels
+    logging: *default-logging
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./configs/base/:/configs/base/
+      - ./:/super/
   dhcp-virt:
     container_name: superdhcp-virt
     image: ghcr.io/spr-networks/super_dhcp
@@ -69,7 +81,7 @@ services:
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
-      - ./state/public/:/state/public/:ro      
+      - ./state/public/:/state/public/:ro
   wireguard-virt:
     container_name: superwireguard-virt
     image: ghcr.io/spr-networks/super_wireguard
@@ -109,6 +121,7 @@ services:
       - "base-virt"
       - "dhcp-virt"
       - "frontend"
+      - "superd-virt"
     labels: *default-labels
     logging: *default-logging
     volumes:
