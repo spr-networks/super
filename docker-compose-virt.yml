@@ -18,7 +18,8 @@ services:
   base-virt:
     container_name: superbase-virt
     image: ghcr.io/spr-networks/super_base
-    build: base
+    build:
+      context: base
       labels: *default-labels
     privileged: true
     ports:
@@ -33,6 +34,7 @@ services:
     container_name: superd-virt
     image: ghcr.io/spr-networks/super_superd
     build: superd
+      context: superd
       labels: *default-labels
     network_mode: host
     privileged: true
@@ -44,7 +46,8 @@ services:
   dhcp-virt:
     container_name: superdhcp-virt
     image: ghcr.io/spr-networks/super_dhcp
-    build: dhcp
+    build:
+      context: dhcp
       labels: *default-labels
     network_mode: service:base-virt
     depends_on:
@@ -59,7 +62,8 @@ services:
   dns-virt:
     container_name: superdns-virt
     image: ghcr.io/spr-networks/super_dns
-    build: dns
+    build:
+      context: dns
       labels: *default-labels
     network_mode: service:base-virt
     logging: *default-logging
@@ -73,7 +77,8 @@ services:
   multicast_udp_proxy-virt:
     container_name: super_multicast_udp_proxy-virt
     image: ghcr.io/spr-networks/super_multicast_udp_proxy
-    build: multicast_udp_proxy
+    build:
+      context: multicast_udp_proxy
       labels: *default-labels
     network_mode: service:base-virt
     depends_on:
@@ -85,7 +90,8 @@ services:
   wireguard-virt:
     container_name: superwireguard-virt
     image: ghcr.io/spr-networks/super_wireguard
-    build: wireguard
+    build:
+      context: wireguard
       labels: *default-labels
     network_mode: service:base-virt
     cap_add:
@@ -105,7 +111,8 @@ services:
     container_name: superfrontend
     image: ghcr.io/spr-networks/super_frontend
     entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
-    build: frontend
+    build:
+      context: frontend
       labels: *default-labels
     network_mode: none
     volumes:
@@ -113,7 +120,8 @@ services:
   api-virt:
     container_name: superapi-virt
     image: ghcr.io/spr-networks/super_api
-    build: api
+    build:
+      context: api
       labels: *default-labels
     network_mode: service:base-virt
     cap_add:
@@ -143,7 +151,8 @@ services:
   plugin-lookup-virt:
     container_name: super-plugin-lookup-virt
     image: ghcr.io/spr-networks/super_plugin-lookup
-    build: plugin-lookup
+    build:
+      context: plugin-lookup
       labels: *default-labels
     network_mode: service:base-virt
     logging: *default-logging
@@ -155,7 +164,8 @@ services:
   dyndns-virt:
     container_name: superdyndns-virt
     image: ghcr.io/spr-networks/super_dyndns
-    build: dyndns
+    build:
+      context: dyndns
       labels: *default-labels
     network_mode: bridge
     logging: *default-logging

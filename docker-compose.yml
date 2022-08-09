@@ -12,7 +12,8 @@ services:
   base:
     container_name: superbase
     image: ghcr.io/spr-networks/super_base
-    build: base
+    build:
+      context: base
       labels: *default-labels
     network_mode: host
     privileged: true
@@ -22,7 +23,8 @@ services:
   superd:
     container_name: superd
     image: ghcr.io/spr-networks/super_superd
-    build: superd
+    build:
+      context: superd
       labels: *default-labels
     network_mode: host
     privileged: true
@@ -34,7 +36,8 @@ services:
   dhcp:
     container_name: superdhcp
     image: ghcr.io/spr-networks/super_dhcp
-    build: dhcp
+    build:
+      context: dhcp
       labels: *default-labels
     network_mode: host
     privileged: true
@@ -50,7 +53,8 @@ services:
   dhcp_client:
     container_name: superdhcp_client
     image: ghcr.io/spr-networks/super_dhcp_client
-    build: dhcp
+    build:
+      context: dhcp
       labels: *default-labels
     network_mode: host
     privileged: true
@@ -63,7 +67,8 @@ services:
   dns:
     container_name: superdns
     image: ghcr.io/spr-networks/super_dns
-    build: dns
+    build:
+      context: dns
       labels: *default-labels
     network_mode: host
     privileged: true
@@ -78,7 +83,8 @@ services:
   wifid:
     container_name: superwifid
     image: ghcr.io/spr-networks/super_wifid
-    build: wifid
+    build:
+      context: wifid
       labels: *default-labels
     network_mode: host
     privileged: true
@@ -94,7 +100,8 @@ services:
   multicast_udp_proxy:
     container_name: super_multicast_udp_proxy
     image: ghcr.io/spr-networks/super_multicast_udp_proxy
-    build: multicast_udp_proxy
+    build:
+      context: multicast_udp_proxy
       labels: *default-labels
     network_mode: host
     privileged: true
@@ -107,7 +114,8 @@ services:
   ppp:
     container_name: superppp
     image: ghcr.io/spr-networks/super_ppp
-    build: ppp
+    build:
+      context: ppp
       labels: *default-labels
     network_mode: host
     privileged: true
@@ -120,7 +128,8 @@ services:
   wireguard:
     container_name: superwireguard
     image: ghcr.io/spr-networks/super_wireguard
-    build: wireguard
+    build:
+      context: wireguard
       labels: *default-labels
     network_mode: host
     privileged: true
@@ -138,7 +147,8 @@ services:
     container_name: superfrontend
     image: ghcr.io/spr-networks/super_frontend
     entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
-    build: frontend
+    build:
+      context: frontend
       labels: *default-labels
     network_mode: none
     volumes:
@@ -146,7 +156,8 @@ services:
   api:
     container_name: superapi
     image: ghcr.io/spr-networks/super_api
-    build: api
+    build:
+      context: api
       labels: *default-labels
     network_mode: host
     privileged: true
@@ -177,7 +188,8 @@ services:
   plugin-lookup:
     container_name: super-plugin-lookup
     image: ghcr.io/spr-networks/super_plugin-lookup
-    build: plugin-lookup
+    build:
+      context: plugin-lookup
       labels: *default-labels
     network_mode: host
     logging: *default-logging
@@ -189,7 +201,8 @@ services:
   dyndns:
     container_name: superdyndns
     image: ghcr.io/spr-networks/super_dyndns
-    build: dyndns
+    build:
+      context: dyndns
       labels: *default-labels
     network_mode: bridge
     logging: *default-logging
