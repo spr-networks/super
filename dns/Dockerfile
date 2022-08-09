@@ -29,7 +29,7 @@ RUN --mount=type=tmpfs,target=/root/go/ go generate && \
    sed -i 's/metadata:metadata/metadata:metadata\njsonlog:github.com\/spr-networks\/coredns-jsonlog/g' plugin.cfg && \
    sed -i 's/etcd:etcd/etcd:etcd\nblock:github.com\/spr-networks\/coredns-block\nrebinding_protection:github.com\/spr-networks\/coredns-rebinding_protection/g' plugin.cfg && \
    go generate && \
-   go mod tidy && \
+   go mod tidy -compat=1.17 && \
    go build -o /coredns
 
 FROM ubuntu:22.04
