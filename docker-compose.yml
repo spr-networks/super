@@ -12,20 +12,22 @@ services:
   base:
     container_name: superbase
     image: ghcr.io/spr-networks/super_base
-    build: base
+    build:
+      context: base
+      labels: *default-labels
     network_mode: host
     privileged: true
-    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
   superd:
     container_name: superd
     image: ghcr.io/spr-networks/super_superd
-    build: superd
+    build:
+      context: superd
+      labels: *default-labels
     network_mode: host
     privileged: true
-    labels: *default-labels
     logging: *default-logging
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -34,12 +36,13 @@ services:
   dhcp:
     container_name: superdhcp
     image: ghcr.io/spr-networks/super_dhcp
-    build: dhcp
+    build:
+      context: dhcp
+      labels: *default-labels
     network_mode: host
     privileged: true
     depends_on:
       - "base"
-    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -50,12 +53,13 @@ services:
   dhcp_client:
     container_name: superdhcp_client
     image: ghcr.io/spr-networks/super_dhcp_client
-    build: dhcp
+    build:
+      context: dhcp
+      labels: *default-labels
     network_mode: host
     privileged: true
     depends_on:
       - "base"
-    labels: *default-labels
     logging: *default-logging
     entrypoint: /scripts/client.sh
     volumes:
@@ -63,10 +67,11 @@ services:
   dns:
     container_name: superdns
     image: ghcr.io/spr-networks/super_dns
-    build: dns
+    build:
+      context: dns
+      labels: *default-labels
     network_mode: host
     privileged: true
-    labels: *default-labels
     logging: *default-logging
     depends_on:
       - "base"
@@ -78,10 +83,11 @@ services:
   wifid:
     container_name: superwifid
     image: ghcr.io/spr-networks/super_wifid
-    build: wifid
+    build:
+      context: wifid
+      labels: *default-labels
     network_mode: host
     privileged: true
-    labels: *default-labels
     logging: *default-logging
     depends_on:
       - "dhcp"
@@ -94,12 +100,13 @@ services:
   multicast_udp_proxy:
     container_name: super_multicast_udp_proxy
     image: ghcr.io/spr-networks/super_multicast_udp_proxy
-    build: multicast_udp_proxy
+    build:
+      context: multicast_udp_proxy
+      labels: *default-labels
     network_mode: host
     privileged: true
     depends_on:
       - "base"
-    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -107,12 +114,13 @@ services:
   ppp:
     container_name: superppp
     image: ghcr.io/spr-networks/super_ppp
-    build: ppp
+    build:
+      context: ppp
+      labels: *default-labels
     network_mode: host
     privileged: true
     depends_on:
       - "base"
-    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -120,14 +128,15 @@ services:
   wireguard:
     container_name: superwireguard
     image: ghcr.io/spr-networks/super_wireguard
-    build: wireguard
+    build:
+      context: wireguard
+      labels: *default-labels
     network_mode: host
     privileged: true
     depends_on:
       - "base"
       - "dhcp"
       - "api"
-    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -138,14 +147,18 @@ services:
     container_name: superfrontend
     image: ghcr.io/spr-networks/super_frontend
     entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
-    build: frontend
+    build:
+      context: frontend
+      labels: *default-labels
     network_mode: none
     volumes:
       - ./frontend/:/frontend
   api:
     container_name: superapi
     image: ghcr.io/spr-networks/super_api
-    build: api
+    build:
+      context: api
+      labels: *default-labels
     network_mode: host
     privileged: true
     restart: always
@@ -155,7 +168,6 @@ services:
       - "dhcp"
       - "frontend"
       - "superd"
-    labels: *default-labels
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -176,9 +188,10 @@ services:
   plugin-lookup:
     container_name: super-plugin-lookup
     image: ghcr.io/spr-networks/super_plugin-lookup
-    build: plugin-lookup
+    build:
+      context: plugin-lookup
+      labels: *default-labels
     network_mode: host
-    labels: *default-labels
     logging: *default-logging
     depends_on:
       - "base"
@@ -188,9 +201,10 @@ services:
   dyndns:
     container_name: superdyndns
     image: ghcr.io/spr-networks/super_dyndns
-    build: dyndns
+    build:
+      context: dyndns
+      labels: *default-labels
     network_mode: bridge
-    labels: *default-labels
     logging: *default-logging
     depends_on:
       - "base"
