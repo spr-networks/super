@@ -33,7 +33,7 @@ done
 
 if [ "$FOUND_PREBUILT_IMAGE" = "true" ]; then
     echo "Pruning dangling container images"
-    docker image prune -y
+    docker image prune -f
 fi
 
 
