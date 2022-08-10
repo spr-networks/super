@@ -9,11 +9,15 @@ RUN curl -O https://dl.google.com/go/go1.17.linux-${TARGETARCH}.tar.gz
 RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 ENV CC=clang
-RUN go mod init multicastproxy
-RUN go get golang.org/x/net/ipv4@latest
-RUN go get github.com/vishvananda/netlink@latest
+ARG USE_TMPFS=true
+RUN --mount=type=tmpfs,target=/tmpfs \
+    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
+    go mod init multicastproxy && \
+    go get golang.org/x/net/ipv4@latest && \
+    go get github.com/vishvananda/netlink@latest
 COPY code/multicastproxy.go /code/
-RUN go build -ldflags="-s -w" multicastproxy.go
+RUN --mount=type=tmpfs,target=/tmpfs \
+    go build -ldflags="-s -w" multicastproxy.go
 
 FROM  ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive

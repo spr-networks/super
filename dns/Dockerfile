@@ -21,8 +21,10 @@ ARG CACHEBUST=1
 RUN git clone https://github.com/coredns/coredns.git --depth 1
 WORKDIR /code/coredns/
 
-# Using BUILDKIT, build inside of a ramfs
-RUN --mount=type=tmpfs,target=/root/go/ go generate && \
+ARG USE_TMPFS=true
+RUN --mount=type=tmpfs,target=/tmpfs \
+   [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
+   go generate && \
    go get github.com/spr-networks/coredns-jsonlog && \
    go get github.com/spr-networks/coredns-block && \
    go get github.com/spr-networks/coredns-rebinding_protection && \
