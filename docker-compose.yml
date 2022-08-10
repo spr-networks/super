@@ -146,7 +146,7 @@ services:
   frontend:
     container_name: superfrontend
     image: ghcr.io/spr-networks/super_frontend
-    entrypoint: ["cp", "-RT", "/build/", "/frontend/build"]
+    entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
     build:
       context: frontend
       labels: *default-labels
