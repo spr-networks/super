@@ -77,9 +77,16 @@ func composeCommand(composeFile string, target string, command string, optional 
 			}
 		}
 	} else {
-		_, err := exec.Command("docker-compose", "-f", composeFile, command).Output()
-		if err != nil {
-			fmt.Println("docker-compose", composeFile, command, "failed", err)
+		if optional != "" {
+			_, err := exec.Command("docker-compose", "-f", composeFile, command, optional).Output()
+			if err != nil {
+				fmt.Println("docker-compose", composeFile, command, optional, "failed", err)
+			}
+		} else {
+			_, err := exec.Command("docker-compose", "-f", composeFile, command).Output()
+			if err != nil {
+				fmt.Println("docker-compose", composeFile, command, "failed", err)
+			}
 		}
 	}
 }
@@ -166,7 +173,6 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-
 	err := os.Chdir(PlusAddons)
 	if err != nil {
 		http.Error(w, "Could not find addons directory", 500)
@@ -199,7 +205,6 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(string(out))
 	os.Chdir("/super")
 
-
 }
 
 func logRequest(handler http.Handler) http.Handler {
@@ -220,7 +225,7 @@ func getHostSuperDir() string {
 		fmt.Println("[-]", err)
 		return ""
 	}
-	return string(stdout) + "/"
+	return strings.Trim(string(stdout), "'\n") + "/"
 }
 
 func main() {
