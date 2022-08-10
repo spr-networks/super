@@ -9,11 +9,6 @@ fi
 # remove prebuilt images
 FOUND_PREBUILT_IMAGE=false
 for SERVICE in $(docker-compose config --services); do
-  # keep the prebuilt frontend image
-  if [ "$SERVICE" = "frontend" ]; then
-    continue
-  fi
-
   IS_PREBUILT=$(docker inspect \
     --format '{{ index .Config.Labels "org.supernetworks.ci" }}' \
     "ghcr.io/spr-networks/super_${SERVICE}" \
@@ -47,9 +42,6 @@ mkdir -p state/dns/
 mkdir -p state/wifi/
 mkdir -p state/wifi/sta_mac_iface_map/
 touch state/dns/local_mappings state/dhcp/leases.txt
-
-#pull the prebuilt frontend
-docker pull ghcr.io/spr-networks/super_frontend:latest
 
 BUILDARGS=""
 if [ -f .github_creds ]; then
