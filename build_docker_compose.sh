@@ -24,6 +24,7 @@ for SERVICE in $(docker-compose config --service); do
     2>/dev/null || echo "false" \
   )
   if [ "$IS_PREBUILT" = "true" ]; then
+    IMAGE="ghcr.io/spr-networks/super_${SERVICE}"
     echo "Removing prebuilt image ${IMAGE}"
     docker image rm "$IMAGE"
     FOUND_PREBUILT_IMAGE=true
@@ -32,7 +33,7 @@ done
 
 if [ "$FOUND_PREBUILT_IMAGE" = "true" ]; then
     echo "Pruning dangling container images"
-    docker image prune
+    docker image prune -y
 fi
 
 
