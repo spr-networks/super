@@ -61,8 +61,9 @@ sudo nft replace rule inet filter DROPLOGINP handle $POS log prefix \"drop:input
 add rules to log all outgoing traffic with group 0:
 
 ```sh
-POS=$(sudo nft -a list ruleset | grep '@internet_access'|sed 's/.*# handle //g')
-sudo nft add rule inet filter FORWARD position $POS counter oifname \"eth0\" log prefix \"ip:out \" group 0
+POS=$(sudo nft -a list ruleset | grep '@internet_access'|head -1|sed 's/.*# handle //g')
+sudo nft insert rule inet filter FORWARD position $POS counter oifname \"eth0\" log prefix \"wan:out \" group 0
+
 POS=$(sudo nft -a list ruleset | grep 'jump F_EST_RELATED'|tail -1|sed 's/.*# handle //g')
 sudo nft add rule inet filter INPUT position $POS log prefix \"lan:in \" group 0
 ```
@@ -105,6 +106,16 @@ we use ulogd groups to categorize the packet:
 * group 1 == deny
 
 ulogd sets "action" to allowed or blocked depending on the group.
+
+## log pcap files
+* modifiy Dockerfile to add ulogd2-pcap
+* enable pcap in ulogd.conf, see comments
+
+```sh
+mknod /state/plugins/packet_logs/ulogd.pcap p
+docker-compose up -d packet_logs
+tail -f /state/plugins/packet_logs/ulogd.pcap | tcpdump -r - -qtnp
+```
 
 ## json format
 
