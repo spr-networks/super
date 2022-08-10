@@ -26,7 +26,7 @@ for SERVICE in $(docker-compose config --service); do
   if [ "$IS_PREBUILT" = "true" ]; then
     IMAGE="ghcr.io/spr-networks/super_${SERVICE}"
     echo "Removing prebuilt image ${IMAGE}"
-    docker image rm "$IMAGE"
+    docker image rm -f "$IMAGE"
     FOUND_PREBUILT_IMAGE=true
   fi
 done
