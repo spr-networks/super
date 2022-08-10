@@ -113,7 +113,40 @@ see code/types.go for golang struct of ulogd json format. also used in api/code/
 example packet:
 
 ```json
-{"timestamp": "2022-07-25T15:01:58.947620+0200", "dvc": "spr", "raw.pktlen": 64, "raw.pktcount": 1, "oob.prefix": "DRP:INP ", "oob.time.sec": 1658754118, "oob.time.usec": 947620, "oob.mark": 0, "oob.ifindex_in": 3, "oob.hook": 1, "raw.mac_len": 14, "oob.family": 10, "oob.protocol": 34525, "action": "blocked", "raw.type": 1, "raw.mac.addrlen": 6, "ip.protocol": 58, "ip6.payloadlen": 24, "ip6.priority": 0, "ip6.flowlabel": 0, "ip6.hoplimit": 255, "ip6.nexthdr": 58, "icmpv6.type": 134, "icmpv6.code": 0, "icmpv6.csum": 57001, "oob.in": "wlan0", "oob.out": "", "src_ip": "fe80::dad7:75ff:fef2:f959", "dest_ip": "ff02::1", "mac.saddr.str": "d8:d7:75:f2:f9:59", "mac.daddr.str": "33:33:00:00:00:01", "mac.str": "33:33:00:00:00:01:d8:d7:75:f2:f9:59:86:dd"}
+{
+  "timestamp": "2022-07-25T15:01:58.947620+0200",
+  "dvc": "spr",
+  "raw.pktlen": 64,
+  "raw.pktcount": 1,
+  "oob.prefix": "drop:input ",
+  "oob.time.sec": 1658754118,
+  "oob.time.usec": 947620,
+  "oob.mark": 0,
+  "oob.ifindex_in": 3,
+  "oob.hook": 1,
+  "raw.mac_len": 14,
+  "oob.family": 10,
+  "oob.protocol": 34525,
+  "action": "blocked",
+  "raw.type": 1,
+  "raw.mac.addrlen": 6,
+  "ip.protocol": 58,
+  "ip6.payloadlen": 24,
+  "ip6.priority": 0,
+  "ip6.flowlabel": 0,
+  "ip6.hoplimit": 255,
+  "ip6.nexthdr": 58,
+  "icmpv6.type": 134,
+  "icmpv6.code": 0,
+  "icmpv6.csum": 57001,
+  "oob.in": "wlan0",
+  "oob.out": "",
+  "src_ip": "feff::ffff:ffff:ffff:ffff",
+  "dest_ip": "ff02::1",
+  "mac.saddr.str": "33:33:33:33:33:33",
+  "mac.daddr.str": "33:33:33:33:33:33",
+  "mac.str": "33:33:33:33:33:33:33:33:33:33:33:33:33:33"
+}
 ```
 
 # Api code
