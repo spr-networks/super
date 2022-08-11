@@ -8,7 +8,5 @@ cd data
 CONTAINERS=$(docker images "ghcr.io/spr-networks/*:latest" | awk '{print $1}' | grep -v REPOSITORY)
 for x in $CONTAINERS
 do
-  export CONTAINER=$(docker run --platform=aarch64 -d ${x} bash)
-  docker export $CONTAINER > containers/$(basename $x).tar
-  docker inspect -f '{{json .Config.Entrypoint}}' $x > containers/$(basename $x).tar.entry
+  docker save $x -o containers/$(basename $x).tar
 done
