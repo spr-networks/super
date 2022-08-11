@@ -3,25 +3,21 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/rpc"
-	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/spr-networks/EventBus"
+	"github.com/spr-networks/sprbus"
 )
 
 var NotificationSettingsFile = "/configs/base/notifications.json"
-
 var ServerEventSock = "/state/plugins/packet_logs/server.sock"
-var ClientEventSock = "/state/plugins/packet_logs/client.sock"
-var ServerEventPath = "/_server_bus_"
-var ClientEventPath = "/_client_bus_"
 
 //notifications.json is array of this:
 type NotificationSetting struct {
@@ -186,23 +182,18 @@ func checkNotificationTraffic(logEntry netfilterEntry) bool {
 	return false
 }
 
-func logTraffic(data string) {
+func logTraffic(topic string,data string) {
 	var logEntry netfilterEntry
 	if err := json.Unmarshal([]byte(data), &logEntry); err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("## %v\n", *logEntry.Timestamp)
+	//fmt.Printf("## Notification: %v @ %v\n", topic, *logEntry.Timestamp)
 
 	shouldNotify := checkNotificationTraffic(logEntry)
 
-	/*if strings.TrimSpace(fmt.Sprintf("%v", *logEntry.OobPrefix)) == "drop:input" {
-		fmt.Printf("!! Sending Notification to WebSocket : drop:input\n")
-		shouldNotify = true
-	}*/
-
 	if shouldNotify {
-		fmt.Printf("!! Sending Notification to WebSocket\n")
+		fmt.Printf("!! Sending Notification to WebSocket: %v\n", topic)
 		WSNotifyValue("nft", logEntry)
 	}
 }
@@ -221,54 +212,60 @@ func notificationEventListener() {
 	//WSNotifyString("nft:event:init", `{"status": "init"}`)
 
 	// if file exitst - could be another client connected
-	os.Remove(ClientEventSock)
-	defer os.Remove(ClientEventSock)
-
-	rpcClient, err := rpc.DialHTTPPath("unix", ServerEventSock, ServerEventPath)
-	if rpcClient == nil {
-		log.Fatal(err)
-		return
-	}
 
 	log.Println("client")
 
-	client := EventBus.NewClient(ClientEventSock, ClientEventPath, EventBus.New())
-	client.Start()
+	client, err := sprbus.NewClient(ServerEventSock)
+	defer client.Close()
 
-	log.Println("subscribe")
-	client.Subscribe("nft:lan:in", logTraffic, ServerEventSock, ServerEventPath)
-	client.Subscribe("nft:lan:out", logTraffic, ServerEventSock, ServerEventPath)
-
-	client.Subscribe("nft:drop:input", logTraffic, ServerEventSock, ServerEventPath)
-	client.Subscribe("nft:drop:forward", logTraffic, ServerEventSock, ServerEventPath)
-	client.Subscribe("nft:drop:pfw", logTraffic, ServerEventSock, ServerEventPath)
-
-	client.Subscribe("nft:wan:in", logTraffic, ServerEventSock, ServerEventPath)
-	client.Subscribe("nft:wan:out", logTraffic, ServerEventSock, ServerEventPath)
-
-	/*
-		simplify the logic here to:
-		sprbus = SprBus.NewClient()
-		sprbus.Subscribe("nft:lan:in", lanIn)
-	*/
-
-	for {
-		time.Sleep(1 * time.Second)
+	if err != nil {
+		log.Fatal("err", err)
 	}
 
-	/*
-		log.Println("unsub.")
-		err = client.EventBus().Unsubscribe("nft:lan:in", lanIn)
-		log.Println("unsub. ret", err)
-		err = client.EventBus().Unsubscribe("nft:lan:out", lanOut)
-		err = client.EventBus().Unsubscribe("nft:wan:in", wanIn)
-		err = client.EventBus().Unsubscribe("nft:wan:out", wanOut)
-		err = client.EventBus().Unsubscribe("nft:drop:input", dropInput)
-		err = client.EventBus().Unsubscribe("nft:drop:forward", dropForward)
-		log.Println("unsub. ret", err)
-	*/
+	log.Println("subscribing to nft: prefix")
+	var wg sync.WaitGroup
 
-	defer client.Stop()
+	// subscribe to all nft: rules
+	// rules = lan:in, lan:out, wan:in, wan:out, drop:input, drop:forward, drop:pfw
+	stream, err := client.SubscribeTopic("nft:")
+	if nil != err {
+		log.Fatal(err)
+	}
+
+	go func() {
+		wg.Add(1)
+
+		for {
+			reply, err := stream.Recv()
+			if io.EOF == err {
+				break
+			}
+
+			if nil != err {
+				log.Fatal("ERRRRRR ", err) // Cancelled desc
+				wg.Done()
+				return
+			}
+
+			topic := reply.GetTopic()
+			value := reply.GetValue()
+
+			// wildcard sub - value is topic+value
+			index := strings.Index(value, "{")
+			if index <= 0 {
+				continue
+			}
+
+			topic = value[0:index-1]
+			value = value[index:len(value)]
+
+			logTraffic(topic, value)
+		}
+	}()
+
+	time.Sleep(time.Second)
+
+	wg.Wait()
 }
 
 type netfilterEntry struct {
