@@ -1,4 +1,7 @@
 #!/bin/bash
+cd ..
+docker-compose pull
+cd installer
 cp ./data/spr.clean.img ./data/spr.img
 ./scripts/resize.sh
 ./scripts/containers.sh
