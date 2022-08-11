@@ -680,9 +680,10 @@ const FlowList = (props) => {
       __bg={useColorModeValue('warmGray.50', 'blueGray.800')}
       rounded="md"
       space={4}
+      py={{ base: 0, md: 4 }}
     >
       <Box flex={1} display={{ base: 'flex' }}>
-        <HStack justifyContent="space-between" alignContent="center">
+        <HStack justifyContent="space-between" alignContent="center" px={4}>
           <VStack space={2}>
             <Heading fontSize="md">Flows</Heading>
             {!flows.length ? <Text>No flows configured</Text> : null}
@@ -716,7 +717,7 @@ const FlowList = (props) => {
 
       <VStack
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        rounded="lg"
+        _rounded={{ md: 'md' }}
         space={4}
         w={{ base: '100%', md: '390px' }}
         mr={{ base: 0, lg: 8 }}

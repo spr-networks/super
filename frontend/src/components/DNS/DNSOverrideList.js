@@ -50,7 +50,7 @@ const DNSOverrideList = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" mb={4}>
+      <HStack justifyContent="space-between" alignItems="center" p={4}>
         <Stack direction={{ base: 'column', md: 'row' }} space={1}>
           <Heading fontSize="md">{props.title || 'DNS Override'}</Heading>
           <Text color="muted.500">Set rules for DNS queries</Text>
@@ -67,7 +67,7 @@ const DNSOverrideList = (props) => {
 
       <Box
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        rounded="md"
+        _rounded={{ md: 'md' }}
         width="100%"
         p={4}
         mb={4}
