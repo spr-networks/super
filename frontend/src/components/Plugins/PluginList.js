@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faCircleInfo,
@@ -35,6 +36,8 @@ const PluginList = (props) => {
   const [updated, setUpdated] = useState(false)
 
   const contextType = useContext(AppContext)
+
+  const navigate = useNavigate()
 
   const setList = (plugins) => {
     _setList(plugins.filter((x) => x.Plus == false))
@@ -99,6 +102,7 @@ const PluginList = (props) => {
   }
 
   const handleTokenSubmit = () => {
+    navigate('/admin/plugins')
     if (updated) {
       setUpdated(false)
       pluginAPI
@@ -115,7 +119,7 @@ const PluginList = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center">
+      <HStack p={4} justifyContent="space-between" alignItems="center">
         <Heading fontSize="md">Plugins</Heading>
 
         <Box alignSelf="center">
@@ -132,7 +136,7 @@ const PluginList = (props) => {
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
         width="100%"
         p={4}
-        my={4}
+        mb={4}
       >
         <FlatList
           data={list}
@@ -179,12 +183,14 @@ const PluginList = (props) => {
 
       {activeToken !== '' ? (
         <>
-          <Heading fontSize="md">PLUS</Heading>
+          <Heading fontSize="md" p={4}>
+            PLUS
+          </Heading>
           <Box
             bg={useColorModeValue('warmGray.50', 'blueGray.800')}
             width="100%"
             p={4}
-            my={4}
+            mb={4}
           >
             <FlatList
               data={plusList}
@@ -237,7 +243,7 @@ const PluginList = (props) => {
         <></>
       )}
 
-      <HStack justifyContent="space-between" alignItems="center">
+      <HStack p={4} justifyContent="space-between" alignItems="center">
         <Heading fontSize="md">
           {activeToken == '' ? 'Enable PLUS' : 'Reset PLUS Token'}
         </Heading>
@@ -253,7 +259,7 @@ const PluginList = (props) => {
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
         width="100%"
         p={4}
-        my={4}
+        mb={4}
       >
         <Input
           size="lg"
