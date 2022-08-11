@@ -37,6 +37,8 @@ const TrafficList = (props) => {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
 
+  const perPage = 13
+
   // filter the list by type and ip
   const filterList = (data) => {
     // filter by ip
@@ -92,8 +94,7 @@ const TrafficList = (props) => {
         return row
       })
 
-    let perPage = 20,
-      offset = (page - 1) * perPage
+    let offset = (page - 1) * perPage
 
     listFiltered = listFiltered.slice(offset, offset + perPage)
 
@@ -209,9 +210,9 @@ const TrafficList = (props) => {
     <>
       <Box
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        rounded={{ base: 'none', md: 'md' }}
         width="100%"
         p={4}
+        pb={0}
       >
         <Stack direction={flexDirection} space={2}>
           <Radio.Group
@@ -251,7 +252,8 @@ const TrafficList = (props) => {
       <Box
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
         width="100%"
-        p={4}
+        px={4}
+        py={2}
       >
         <ScrollView h="100%">
           <TimeSeriesList
@@ -261,7 +263,7 @@ const TrafficList = (props) => {
             filterIps={filterIps}
             setFilterIps={setFilterIps}
           />
-          {total > 20 ? (
+          {total > perPage ? (
             <HStack width="100%" space={2}>
               <Button
                 flex="1"

@@ -100,7 +100,7 @@ const AuthTokenList = (props) => {
 
   return (
     <View mt={4}>
-      <HStack space={1} alignItems="center">
+      <HStack justifyContent="space-between" alignItems="center" p={4}>
         <Heading fontSize="md">API Tokens</Heading>
 
         <Box alignSelf="center">
@@ -115,10 +115,10 @@ const AuthTokenList = (props) => {
       </HStack>
       <Box
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        rounded="md"
+        _rounded={{ md: 'md' }}
         width="100%"
         p={4}
-        my={4}
+        mb={4}
       >
         <FlatList
           data={tokens}

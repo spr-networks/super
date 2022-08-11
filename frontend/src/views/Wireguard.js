@@ -71,7 +71,7 @@ export default class Wireguard extends Component {
   render() {
     return (
       <View>
-        <HStack alignItems="center" mb={4}>
+        <HStack alignItems="center" p={4}>
           <Heading fontSize="md">Wireguard</Heading>
 
           <Switch
@@ -81,9 +81,9 @@ export default class Wireguard extends Component {
           />
         </HStack>
         <Box
-          rounded="md"
           _light={{ bg: 'warmGray.50' }}
           _dark={{ bg: 'blueGray.800' }}
+          _rounded={{ md: 'md' }}
           width="100%"
           p={4}
           mb={4}
