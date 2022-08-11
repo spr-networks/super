@@ -6,7 +6,8 @@ rm -f /etc/resolv.conf
 echo nameserver 1.1.1.1 > /etc/resolv.conf
 
 apt-get update
-apt-get -y install --download-only docker.io docker-compose nftables linux-modules-extra-raspi
+apt-get -y install --download-only linux-modules-extra-raspi
+apt-get -y install docker.io docker-compose nftables
 
 useradd -m -s /bin/bash ubuntu
 echo "ubuntu:ubuntu" | chpasswd

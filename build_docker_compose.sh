@@ -24,15 +24,16 @@ for SERVICE in $(docker-compose config --service); do
     2>/dev/null || echo "false" \
   )
   if [ "$IS_PREBUILT" = "true" ]; then
+    IMAGE="ghcr.io/spr-networks/super_${SERVICE}"
     echo "Removing prebuilt image ${IMAGE}"
-    docker image rm "$IMAGE"
+    docker image rm -f "$IMAGE"
     FOUND_PREBUILT_IMAGE=true
   fi
 done
 
 if [ "$FOUND_PREBUILT_IMAGE" = "true" ]; then
     echo "Pruning dangling container images"
-    docker image prune
+    docker image prune -f
 fi
 
 
@@ -59,3 +60,12 @@ if [ -f .github_creds ]; then
   BUILDARGS="--build-arg GITHUB_CREDS=`cat .github_creds`"
 fi
 docker-compose build ${BUILDARGS} $@
+
+ret=$?
+
+if [ "$ret" -ne "0" ]; then
+  echo "Tip: if the build failed to resovle domain names," 
+  echo "consider running ./base/docker_nftables_setup.sh"
+  echo "since iptables has been disabled for docker in the"
+  echo "SPR installer"
+fi

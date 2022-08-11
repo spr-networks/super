@@ -1,6 +1,6 @@
 #!/bin/bash
 IMG="./data/spr.img"
-qemu-img resize $IMG 8G
+qemu-img resize $IMG 10G
 growpart $IMG 2
 
 if [ ! -f $IMG ]; then

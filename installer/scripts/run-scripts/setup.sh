@@ -15,13 +15,11 @@ PARTNUM=$(echo $ROOTPART | grep -o -E "[0-9]+")
 growpart $PART $PARTNUM
 resize2fs $ROOTPART
 
-touch /home/spr/.spr-setup-done
-#rm -rf /containers
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get -y --fix-broken install
-apt-get -y dist-upgrade
-apt-get -y install docker.io docker-compose nftables linux-modules-extra-raspi
+dpkg --configure -a
+apt-get -y install linux-modules-extra-raspi
 
 # disable iptables for  docker
 echo -ne "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
@@ -29,12 +27,13 @@ echo -ne "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
 cd /containers
 for x in `ls *.tar`
 do
-  docker import --change "ENTRYPOINT $(cat $x.entry)" $x $(echo ghcr.io/spr-networks/$x | rev | cut -c 5- | rev)
+  docker load -i $x
 done
 
 #rm -f /containers
 
 mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
 ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules
+touch /home/spr/.spr-setup-done
 
 reboot
