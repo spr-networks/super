@@ -170,26 +170,3 @@ settings for when to notify:
 * log = true/false
 
 when event is received check against setting if we should forward to websocket
-
-# Issues
-
-two bugs that need fixing:
-
-* calling .publish after disconnect crash
-* reconnecting -- receive +1 events for each connection
-
-need to fix the reconnect-bug, restarting api results in 2msgs etc.
-
-TODO need a way to handle if packet_logs container is restarted - client in api dropped?
-
-the eventbus is a bit wonky with +1 connections
-cleanup of handlers / subscribers might result in this error:
-
-```
-panic: runtime error: invalid memory address or nil pointer dereference 
-        panic: runtime error: invalid memory address or nil pointer dereference
-[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x2dc7bc]
-```
-
-call .Publish on a disconnected client
-Try to resolve this by connecting to verify client is alive but fail sometimes
