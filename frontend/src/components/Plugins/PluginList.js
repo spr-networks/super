@@ -213,9 +213,10 @@ const PluginList = (props) => {
                       {item.UnixPath}
                     </Text>
                     <Spacer />
-                    <Text alignSelf="center" isTruncated>
-                      Compose Path: {item.ComposeFilePath}
-                    </Text>
+                    <HStack alignSelf="center" space={1}>
+                      <Text color="muted.500">Compose Path</Text>
+                      <Text isTruncated>{item.ComposeFilePath}</Text>
+                    </HStack>
                     <Spacer />
                     <Box w="100" alignItems="center" alignSelf="center">
                       <Switch
