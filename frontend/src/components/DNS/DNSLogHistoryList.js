@@ -366,40 +366,40 @@ const DNSLogHistoryList = (props) => {
 
   return (
     <>
-      <HStack space={2}>
+      <ModalForm
+        title={
+          'Add ' +
+          (selectedType == 'block' ? 'block' : 'override') +
+          ' for Domain'
+        }
+        modalRef={modalRef}
+        hideButton={true}
+      >
+        <DNSAddOverride
+          type={selectedType}
+          domain={selectedDomain}
+          clientip={filterIps.length == 1 ? filterIps[0] : '*'}
+          notifyChange={notifyChange}
+        />
+      </ModalForm>
+
+      <HStack space={2} p={4}>
         <Heading fontSize="md">{filterIps.join(',')} DNS Log</Heading>
         {filterIps.length ? (
           <Text color="muted.500">{total} records</Text>
         ) : null}
       </HStack>
+
       <Box
         _light={{ bg: 'warmGray.50' }}
         _dark={{ bg: 'blueGray.800' }}
-        rounded="md"
+        _rounded={{ md: 'md' }}
         width="100%"
         p={4}
-        my={4}
       >
-        <ModalForm
-          title={
-            'Add ' +
-            (selectedType == 'block' ? 'block' : 'override') +
-            ' for Domain'
-          }
-          modalRef={modalRef}
-          hideButton={true}
-        >
-          <DNSAddOverride
-            type={selectedType}
-            domain={selectedDomain}
-            clientip={filterIps.length == 1 ? filterIps[0] : '*'}
-            notifyChange={notifyChange}
-          />
-        </ModalForm>
-
-        <VStack space={2} mb="12">
+        <VStack space={2} mb={4}>
           <Stack space={2} direction={{ base: 'column', md: 'row' }}>
-            <FormControl flex="2" maxW={{ base: '100%', md: '1/3' }}>
+            <FormControl flex={2} maxW={{ base: '100%', md: '1/3' }}>
               <FormControl.Label>Client</FormControl.Label>
               <ClientSelect
                 isDisabled
@@ -409,7 +409,7 @@ const DNSLogHistoryList = (props) => {
             </FormControl>
 
             <FormControl
-              flex="2"
+              flex={2}
               display={{
                 base: filterIps.length && list.length ? 'flex' : 'none'
               }}
@@ -432,7 +432,7 @@ const DNSLogHistoryList = (props) => {
             </FormControl>
 
             <FormControl
-              flex="1"
+              flex={{ base: 2, md: 1 }}
               display={{
                 base: filterIps.length && list.length ? 'flex' : 'none'
               }}
