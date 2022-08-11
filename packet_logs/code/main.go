@@ -10,9 +10,10 @@ import (
 	"regexp"
 	"strings"
 
-	//"github.com/spr-networks/EventBus"
-	//"main/EventBus"
+	"github.com/spr-networks/sprbus"
 )
+
+var ServerEventSock = "/state/plugins/packet_logs/server.sock"
 
 var pipeFile = "/state/plugins/packet_logs/ulogd.json"
 
@@ -35,17 +36,33 @@ func startUlogd() {
 	}
 }
 
+func sprServer() {
+        _, err := sprbus.NewServer(ServerEventSock)
+        if err != nil {
+                log.Fatal(err)
+        }
+}
+
 func main() {
 	log.Println("starting ulogd2...")
 	go startUlogd()
+
+	go sprServer()
+
+	client, err := sprbus.NewClient(ServerEventSock)
+	defer client.Close()
+
+	if err != nil {
+		log.Fatal("err", err)
+	}
+
+	fmt.Println("sprbus client connected")
 
 	log.Println("open ulogd named pipe for reading")
 	file, err := os.OpenFile(pipeFile, os.O_RDONLY, os.ModeNamedPipe)
 	if err != nil {
 		log.Fatal("open error:", err)
 	}
-
-	server := SprBus()
 
 	reader := bufio.NewReader(file)
 
@@ -86,12 +103,10 @@ func main() {
 			//fmt.Printf("%% publish. #subscribers: %d, hasClients= %v\n", len(server.Subscribers(topic)), hasClients)
 			//log.Printf("subscribers: %v == %v\n", topic, server)
 
-			server.Publish(topic, string(line))
+			client.Publish(topic, string(line))
 		} else {
 			topic = fmt.Sprintf("nft:ip")
-			server.Publish(topic, string(line))
+			client.Publish(topic, string(line))
 		}
 	}
-
-	defer server.Stop()
 }
