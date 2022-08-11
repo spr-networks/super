@@ -168,6 +168,7 @@ services:
       - "dhcp"
       - "frontend"
       - "superd"
+      - "packet_logs"
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -212,3 +213,18 @@ services:
     volumes:
       - ./state/plugins/dyndns/:/state/plugins/dyndns
       - ./configs/dyndns/:/configs/dyndns
+  packet_logs:
+    container_name: superpacket_logs
+    image: ghcr.io/spr-networks/super_packet_logs
+    build:
+      context: packet_logs
+      labels: *default-labels
+    network_mode: host
+    privileged: true
+    restart: always
+    logging: *default-logging
+    volumes:
+      - ./state/plugins/packet_logs/:/state/plugins/packet_logs
+      - ./configs/base/:/configs/base/
+      - /dev/log:/dev/log
+
