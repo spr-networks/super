@@ -24,13 +24,22 @@ apt-get -y install linux-modules-extra-raspi
 # disable iptables for  docker
 echo -ne "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
 
+#try docker-compose pull, else, load the offline containers
+
+cd /home/spr/super/
+docker-compose -f $COMPOSE_FILE pull
+ret=$?
+
+if [ "$ret" -ne "0" ]; then
 cd /containers
-for x in `ls *.tar`
-do
-  docker load -i $x
-done
+  for x in `ls *.tar`
+  do
+    docker load -i $x
+  done
+fi
 
 #rm -f /containers
+
 
 mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
 ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules
