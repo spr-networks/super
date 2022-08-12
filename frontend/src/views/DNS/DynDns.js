@@ -222,26 +222,10 @@ export default class DynDns extends Component {
 
     return (
       <View>
-        <Box
-          rounded="md"
-          _light={{ bg: 'warmGray.50' }}
-          _dark={{ bg: 'blueGray.800' }}
-          width="100%"
-          p={4}
-          mb={4}
-        >
-          <VStack space={4}>
-            <HStack alignItems="center">
-              <Heading fontSize="md">Dynamic DNS</Heading>
-
-              <Switch
-                marginLeft="auto"
-                defaultIsChecked={this.state.isUp}
-                onValueChange={this.handleChange}
-              />
-            </HStack>
-
-            <HStack space={1} mt="-3">
+        <HStack alignItems="center" p={4}>
+          <VStack space={1}>
+            <Heading fontSize="md">Dynamic DNS</Heading>
+            <HStack space={1}>
               <Text color="muted.500" fontSize="xs">
                 Powered by godns.
               </Text>
@@ -252,7 +236,24 @@ export default class DynDns extends Component {
                 Read the documentation
               </Link>
             </HStack>
+          </VStack>
 
+          <Switch
+            marginLeft="auto"
+            defaultIsChecked={this.state.isUp}
+            onValueChange={this.handleChange}
+          />
+        </HStack>
+
+        <Box
+          rounded="md"
+          _light={{ bg: 'warmGray.50' }}
+          _dark={{ bg: 'blueGray.800' }}
+          width="100%"
+          p={4}
+          mb={4}
+        >
+          <VStack space={4}>
             {this.state.config.provider != undefined ? (
               <VStack space={8}>
                 <Stack

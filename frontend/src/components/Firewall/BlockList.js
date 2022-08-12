@@ -46,7 +46,7 @@ const BlockList = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" mb={4}>
+      <HStack justifyContent="space-between" alignItems="center" p={4}>
         <VStack maxW="60%">
           <Heading fontSize="md" isTruncated>
             {title}
@@ -63,7 +63,7 @@ const BlockList = (props) => {
 
       <Box
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        rounded="md"
+        _rounded={{ md: 'md' }}
         width="100%"
         p={4}
         mb={4}

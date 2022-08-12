@@ -158,14 +158,16 @@ const DeviceListing = (props) => {
   let h = Dimensions.get('window').height - padding
 
   return (
-    <View safeArea>
+    <View>
       <ScrollView h={h}>
-        <HStack mb={4} alignItems="center">
-          <Heading fontSize="md">Configured Devices</Heading>
+        <HStack justifyContent="space-between" p={4}>
+          <Heading fontSize="md" alignSelf="center">
+            Configured Devices
+          </Heading>
 
           <Button
             marginLeft="auto"
-            size="md"
+            size="sm"
             variant="ghost"
             colorScheme="blueGray"
             _rounded="lg"
@@ -178,7 +180,6 @@ const DeviceListing = (props) => {
 
         <Box
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-          rounded="md"
         >
           {devices !== null ? (
             <Box safeArea>

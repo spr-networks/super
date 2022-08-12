@@ -75,9 +75,9 @@ const ForwardList = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" mb={4}>
+      <HStack justifyContent="space-between" alignItems="center" p={4}>
         <VStack maxW="60%">
-          <Heading fontSize="lg">Port Forwarding</Heading>
+          <Heading fontSize="md">Port Forwarding</Heading>
           <Text color="muted.500" isTruncated>
             Set rules for DNAT forwarding of incoming traffic
           </Text>
@@ -92,7 +92,7 @@ const ForwardList = (props) => {
       </HStack>
       <Box
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        rounded="md"
+        _rounded={{ md: 'md' }}
         width="100%"
         p={4}
         mb={4}

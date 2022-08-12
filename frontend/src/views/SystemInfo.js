@@ -191,16 +191,16 @@ const SystemInfo = (props) => {
   }
 
   return (
-    <VStack space={4}>
-      <HStack space={2} alignItems="flex-end">
-        <Heading size="md">System Info</Heading>
+    <>
+      <HStack space={2} alignItems="flex-end" p={4}>
+        <Heading fontSize="md">System Info</Heading>
         <Text fontSize="xs">{hostname}</Text>
       </HStack>
-      <Stack direction={{ base: 'column', md: 'row' }} space={4}>
+      <Stack direction={{ base: 'column', md: 'row' }} space={4} mb={4}>
         <FlatList
           flex={1}
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-          rounded="md"
+          _rounded="md"
           data={['time', 'uptime', 'users']}
           keyExtractor={(item, index) => index}
           renderItem={({ item }) => (
@@ -220,7 +220,7 @@ const SystemInfo = (props) => {
         <FlatList
           flex={1}
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-          rounded="md"
+          _rounded="md"
           data={['load_1m', 'load_5m', 'load_15m']}
           keyExtractor={(item, index) => index}
           renderItem={({ item }) => (
@@ -238,10 +238,13 @@ const SystemInfo = (props) => {
           )}
         />
       </Stack>
-      <Heading size="md">Docker Containers</Heading>
+
+      <Heading fontSize="md" p={4}>
+        Docker Containers
+      </Heading>
       <FlatList
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        rounded="md"
+        _rounded="md"
         data={containers}
         keyExtractor={(item, index) => item.Id}
         renderItem={({ item }) =>
@@ -256,7 +259,7 @@ const SystemInfo = (props) => {
           {/*<Modal.Footer />*/}
         </Modal.Content>
       </Modal>
-    </VStack>
+    </>
   )
 }
 
