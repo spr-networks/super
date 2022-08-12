@@ -10,11 +10,13 @@ RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-${TARGETARCH}.ta
 ENV PATH="/usr/local/go/bin:$PATH"
 RUN git clone https://github.com/TimothyYe/godns.git
 WORKDIR godns/cmd/godns
-RUN go mod download
-RUN go build
+ARG USE_TMPFS=true
+RUN --mount=type=tmpfs,target=/tmpfs \
+    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
+    go mod download && go build
 WORKDIR /code/
 COPY code/* .
-RUN go build
+RUN --mount=type=tmpfs,target=/tmpfs go build
 
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
