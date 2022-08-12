@@ -108,7 +108,7 @@ const LogList = (props) => {
 
     setTotal(listFiltered.length)
 
-    let perPage = 20,
+    let perPage = 9,
       offset = (page - 1) * perPage
 
     listFiltered = listFiltered.slice(offset, offset + perPage)
@@ -150,11 +150,7 @@ const LogList = (props) => {
   }
 
   return (
-    <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      rounded="md"
-      p={4}
-    >
+    <Box bg={useColorModeValue('warmGray.50', 'blueGray.800')} p={4}>
       <Stack
         direction={{ base: 'column', md: 'row' }}
         space={2}

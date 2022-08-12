@@ -119,6 +119,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
           }}
           borderColor="muted.200"
           py={{ base: 4, md: 2 }}
+          h={{ md: 12 }}
         >
           <HStack
             direction={{ base: 'column', md: 'row' }}

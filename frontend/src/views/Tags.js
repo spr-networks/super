@@ -62,13 +62,15 @@ const Tags = (props) => {
   return (
     <View>
       <VStack space={4}>
-        <Heading size="md">Tags</Heading>
+        <Heading size="md" px={4}>
+          Tags
+        </Heading>
 
         <SectionList
           sections={tags}
           _renderSectionFooter={({ section }) => <Divider my={2} />}
           renderSectionHeader={({ section: { name } }) => (
-            <Box p={2} mt={4}>
+            <Box p={4}>
               <Text bold>{name}</Text>
             </Box>
           )}

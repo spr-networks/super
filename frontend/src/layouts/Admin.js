@@ -424,14 +424,14 @@ const AdminLayout = (props) => {
                minH="calc(100vh - 64px)"*/}
           <ScrollView
             flex={1}
-            px={{ base: 0, md: 4 }}
-            py={{ base: 0, md: 4 }}
+            px={{ base: 0, md: 0 }}
+            py={{ base: 0, md: 0 }}
             ref={mainPanel}
             h={heightContent}
           >
             <Outlet />
             {/*NOTE footer should not be visible - outside of the view and show when scroll to bottom to use the most space*/}
-            <Footer />
+            {/*<Footer />*/}
           </ScrollView>
         </HStack>
       </Box>

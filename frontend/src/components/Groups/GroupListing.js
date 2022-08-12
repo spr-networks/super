@@ -73,13 +73,17 @@ const GroupListing = ({ group, ...props }) => {
         space={1}
         alignItems="center"
         justifyContent="space-between"
-        px="4"
+        p={4}
       >
         <Heading fontSize="md">{translateName(group.Name)}</Heading>
         <Text color="muted.500">{groupDescriptions[group.Name] || ''}</Text>
       </HStack>
 
-      <Box bg={useColorModeValue('warmGray.50', 'blueGray.800')} p={4}>
+      <Box
+        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+        _rounded={{ md: 'md' }}
+        p={4}
+      >
         <FlatList
           data={list}
           renderItem={({ item }) => (

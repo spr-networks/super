@@ -94,7 +94,7 @@ const DNSLogList = ({ title, description, ...props }) => {
 
   return (
     <>
-      <HStack alignItems="center" mb={4}>
+      <HStack alignItems="center" p={4}>
         <VStack maxW="60%">
           <Heading fontSize="md">{title}</Heading>
           <Text color="muted.500" isTruncated>
@@ -112,7 +112,7 @@ const DNSLogList = ({ title, description, ...props }) => {
 
       <Box
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        rounded="md"
+        rounded={{ md: 'md' }}
         width="100%"
         p={4}
         mb={4}
