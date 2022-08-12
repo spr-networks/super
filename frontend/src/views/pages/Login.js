@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faKey, faServer, faUser } from '@fortawesome/free-solid-svg-icons'
 import Icon from 'FontAwesomeUtils'
+import { api } from 'api'
 
 import {
   Box,
@@ -54,6 +55,16 @@ const Login = (props) => {
   useEffect(() => {
     let hostname = getApiHostname()
     setHostname(hostname)
+
+    api
+      .get('/setup')
+      .then((res) => {
+        //set up is not done yet, redirect
+        navigate('/auth/setup')
+      })
+      .catch(async (err) => {
+        let msg = await err.response.text() // setup already done
+      })
 
     AsyncStorage.getItem('user').then((login) => {
       login = JSON.parse(login)

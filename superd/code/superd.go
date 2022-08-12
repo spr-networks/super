@@ -77,16 +77,9 @@ func composeCommand(composeFile string, target string, command string, optional 
 			}
 		}
 	} else {
-		if optional != "" {
-			_, err := exec.Command("docker-compose", "-f", composeFile, command, optional).Output()
-			if err != nil {
-				fmt.Println("docker-compose", composeFile, command, optional, "failed", err)
-			}
-		} else {
-			_, err := exec.Command("docker-compose", "-f", composeFile, command).Output()
-			if err != nil {
-				fmt.Println("docker-compose", composeFile, command, "failed", err)
-			}
+		_, err := exec.Command("docker-compose", "-f", composeFile, command).Output()
+		if err != nil {
+			fmt.Println("docker-compose", composeFile, command, "failed", err)
 		}
 	}
 }
@@ -94,13 +87,13 @@ func composeCommand(composeFile string, target string, command string, optional 
 func update(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
-	go composeCommand(compose, target, "pull", "")
+	composeCommand(compose, target, "pull", "")
 }
 
 func start(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
-	go composeCommand(compose, target, "up", "-d")
+	composeCommand(compose, target, "up", "-d")
 }
 
 func stop(w http.ResponseWriter, r *http.Request) {
@@ -164,7 +157,6 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	os.Chdir("/super")
 	if _, err := os.Stat(PlusAddons); os.IsNotExist(err) {
 		err := os.MkdirAll(PlusAddons, 0755)
 		if err != nil {
@@ -173,10 +165,13 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	chdir_count := 0
+
 	err := os.Chdir(PlusAddons)
-	if err != nil {
+	if err == nil {
+		chdir_count += 1
+	} else {
 		http.Error(w, "Could not find addons directory", 500)
-		os.Chdir("/super")
 		return
 	}
 
@@ -186,8 +181,8 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 
 	if strings.Contains(string(out), "fatal") {
 		if !strings.Contains(string(out), "already exists") {
+			os.Chdir("../")
 			http.Error(w, "Could not clone repository", 400)
-			os.Chdir("/super")
 			return
 		}
 	}
@@ -195,15 +190,20 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 	basename := filepath.Base(git_url)
 	err = os.Chdir(basename)
 
-	if err != nil {
-		http.Error(w, "Could not clone repository", 400)
-		os.Chdir("/super")
-		return
+	if err == nil {
+		chdir_count += 1
+	} else {
+
 	}
 
 	out, _ = exec.Command("git", "pull").CombinedOutput()
 	fmt.Println(string(out))
-	os.Chdir("/super")
+
+	if chdir_count == 2 {
+		os.Chdir("../../../")
+	} else if chdir_count == 1 {
+		os.Chdir("../../")
+	}
 
 }
 
@@ -225,7 +225,7 @@ func getHostSuperDir() string {
 		fmt.Println("[-]", err)
 		return ""
 	}
-	return strings.Trim(string(stdout), "'\n") + "/"
+	return string(stdout) + "/"
 }
 
 func main() {

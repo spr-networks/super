@@ -17,9 +17,11 @@ jobs:
         run: ./installer/qemu-setup-linux.sh
       -
         name: Download the image
-        run: cd ./installer && ./download-img.sh
+        working-directory: ./installer
+        run: ./download-img.sh
       - name: Build install image
-        run: cd ./installer/ && ./run-docker-image-build.sh
+        working-directory: ./installer
+        run: ./run-docker-image-build.sh
       - name: Compress image
         run: xz ./installer/data/spr.img
       - name: Create Release

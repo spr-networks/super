@@ -372,6 +372,11 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 
 	for _, entry := range config.Plugins {
 		if entry.Plus == true && entry.Name == name {
+
+			if !updatePlusExtension(entry.ComposeFilePath) {
+				fmt.Println("[-] Failed to update pfw")
+			}
+
 			if !startPlusExtension(entry.ComposeFilePath) {
 				http.Error(w, "Failed to start service", 400)
 				return
