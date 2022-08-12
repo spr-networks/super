@@ -94,13 +94,13 @@ func composeCommand(composeFile string, target string, command string, optional 
 func update(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
-	go composeCommand(compose, target, "pull", "")
+	composeCommand(compose, target, "pull", "")
 }
 
 func start(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
-	go composeCommand(compose, target, "up", "-d")
+	composeCommand(compose, target, "up", "-d")
 }
 
 func stop(w http.ResponseWriter, r *http.Request) {
