@@ -2420,6 +2420,13 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
 }
 
+func setCacheBusterHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		next.ServeHTTP(w, r)
+	})
+}
+
 func setSecurityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Frame-Options", "DENY")
@@ -2478,7 +2485,7 @@ func main() {
 	external_router_setup := mux.NewRouter().StrictSlash(true)
 
 	external_router_public.Use(setSecurityHeaders)
-	external_router_authenticated.Use(setSecurityHeaders)
+	external_router_authenticated.Use(setSecurityHeaders, setCacheBusterHeaders)
 	external_router_setup.Use(setSecurityHeaders)
 
 	//public websocket with internal authentication
