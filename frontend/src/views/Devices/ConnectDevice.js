@@ -7,7 +7,7 @@ import { AlertContext } from 'layouts/Admin'
 import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 
-import { Button, HStack, Stack, Text, View } from 'native-base'
+import { Box, Button, HStack, Stack, Text, View } from 'native-base'
 
 const WifiConnect = (props) => {
   const context = useContext(AlertContext)
@@ -108,7 +108,11 @@ const WifiConnect = (props) => {
         </>
       )}
 
-      {connectQR ? <QRCode value={connectQR} /> : null}
+      {connectQR ? (
+        <Box bg="white" p={4}>
+          <QRCode value={connectQR} />
+        </Box>
+      ) : null}
 
       <Button
         w="1/3"
