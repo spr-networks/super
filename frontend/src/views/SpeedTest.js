@@ -76,13 +76,13 @@ const SpeedTest = (props) => {
     }
   }
 
-  const startTestUpload = () => {
+  const startTestUpload = async () => {
     if (isRunning) {
       return req.abort()
     }
 
     setIsRunning(true)
-    let authHeaders = api.getAuthHeaders()
+    let authHeaders = await api.getAuthHeaders()
     let [_start, _end] = [0, 4 * 1024 * 1024] //16mb
 
     req = new XMLHttpRequest()
@@ -123,8 +123,8 @@ const SpeedTest = (props) => {
     req.send(postData) // send the data we received
   }
 
-  const startTestDownload = () => {
-    let authHeaders = api.getAuthHeaders()
+  const startTestDownload = async () => {
+    let authHeaders = await api.getAuthHeaders()
     let [_start, _end] = [0, 16 * 1024 * 1024] //16mb
 
     // TODO NOTE will not work in native
@@ -176,15 +176,16 @@ const SpeedTest = (props) => {
 
   return (
     <View>
-      <Heading size="md">Speed Test</Heading>
-      <Text color="muted.500">
-        This test measure http request time to spr. Use iperf3 for more exact
-        results.
-      </Text>
+      <VStack space={2} p={4}>
+        <Heading size="md">Speed Test</Heading>
+        <Text color="muted.500">
+          This test measure http request time to spr. Use iperf3 for more exact
+          results.
+        </Text>
+      </VStack>
 
       <VStack
         space={4}
-        my={4}
         px={4}
         py={8}
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}

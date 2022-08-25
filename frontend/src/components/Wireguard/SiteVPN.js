@@ -66,7 +66,12 @@ const SiteVPN = (props) => {
   return (
     <View>
       <ScrollView mt={4}>
-        <HStack justifyContent="space-between" space={1} alignItems="center">
+        <HStack
+          p={4}
+          justifyContent="space-between"
+          space={1}
+          alignItems="center"
+        >
           <Heading fontSize="md" alignSelf="center">
             Site-To-Site VPNs
           </Heading>
@@ -84,10 +89,10 @@ const SiteVPN = (props) => {
         </HStack>
         <Box
           bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-          rounded="md"
+          _rounded={{ md: 'md' }}
           width="100%"
           p={4}
-          my={4}
+          mb={4}
         >
           {sites !== null && sites.length ? (
             <FlatList

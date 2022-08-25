@@ -70,14 +70,16 @@ const Arp = (props) => {
 
   return (
     <View>
-      <Heading fontSize="md">ARP Table</Heading>
+      <Heading fontSize="md" p={4}>
+        ARP Table
+      </Heading>
 
       <Box
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        rounded="md"
+        _rounded={{ md: 'md' }}
         width="100%"
         p={4}
-        my={4}
+        mb={4}
       >
         <FlatList
           data={list}

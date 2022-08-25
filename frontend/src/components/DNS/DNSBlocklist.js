@@ -40,16 +40,35 @@ export default class DNSBlocklist extends React.Component {
     super(props)
 
     this.state.list = []
-    this.recommendedListDefault = [{URI: "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"},
-                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/ads.txt"},
-                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/facebook.txt"},
-                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/twitter.txt"},
-                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/malware.txt"},
-                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/porn.txt"},
-                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/tracking.txt"},
-                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt"},
-                                  {URI: "https://raw.githubusercontent.com/blocklistproject/Lists/master/everything.txt"},
-                                ]
+    this.recommendedListDefault = [
+      {
+        URI: 'https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts'
+      },
+      {
+        URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/ads.txt'
+      },
+      {
+        URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/facebook.txt'
+      },
+      {
+        URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/twitter.txt'
+      },
+      {
+        URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/malware.txt'
+      },
+      {
+        URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/porn.txt'
+      },
+      {
+        URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/tracking.txt'
+      },
+      {
+        URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt'
+      },
+      {
+        URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/everything.txt'
+      }
+    ]
     this.state.recommendedList = []
     this.state.pending = true
 
@@ -63,11 +82,9 @@ export default class DNSBlocklist extends React.Component {
   componentDidMount() {
     this.refreshBlocklists()
     this.refreshMetrics()
-
   }
 
-  componentWillUnmount() {
-  }
+  componentWillUnmount() {}
 
   refreshMetrics() {
     blockAPI.metrics().then((metrics) => {
@@ -102,7 +119,7 @@ export default class DNSBlocklist extends React.Component {
 
         this.setState({ list })
         this.setState({ pending: false })
-        this.setState({recommendedList})
+        this.setState({ recommendedList })
       })
       .catch((error) => {
         this.context.error('API Failure: ' + error.message)
@@ -199,7 +216,7 @@ export default class DNSBlocklist extends React.Component {
 
     return (
       <>
-        <HStack justifyContent="space-between" alignItems="center" mb={4}>
+        <HStack justifyContent="space-between" alignItems="center" p={4}>
           <Stack direction={{ base: 'column', md: 'row' }} space={2}>
             <Heading fontSize="md">DNS Blocklists</Heading>
 
@@ -230,10 +247,10 @@ export default class DNSBlocklist extends React.Component {
         <Box
           _light={{ bg: 'warmGray.50' }}
           _dark={{ bg: 'blueGray.800' }}
-          rounded="md"
+          rounded={{ md: 'md' }}
           width="100%"
-          p="4"
-          mb="4"
+          p={4}
+          mb={4}
         >
           <FlatList
             data={this.state.list}

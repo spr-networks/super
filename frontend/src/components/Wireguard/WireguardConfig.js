@@ -103,7 +103,7 @@ const WireguardConfig = (props) => {
         </Button>
       </HStack>
 
-      <Box alignItems="center">
+      <Box bg="white" p={4} alignSelf="center">
         <QRCode value={config} />
       </Box>
     </VStack>

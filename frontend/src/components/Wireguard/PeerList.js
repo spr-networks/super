@@ -85,8 +85,8 @@ const PeerList = (props) => {
     <View>
       {/*<ScrollView h="calc(100vh - 260px)">*/}
       <ScrollView>
-        <HStack justifyContent="space-between" mb={4}>
-          <Heading fontSize="lg" pb="3" alignSelf="center">
+        <HStack justifyContent="space-between" p={4}>
+          <Heading fontSize="md" alignSelf="center">
             Peers
           </Heading>
 
@@ -103,7 +103,7 @@ const PeerList = (props) => {
         </HStack>
         <Box
           bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-          rounded="md"
+          _rounded={{ md: 'md' }}
           width="100%"
           p={4}
         >
