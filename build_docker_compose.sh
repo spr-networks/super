@@ -1,7 +1,4 @@
-#!/bin/bash -eu
-
-export DOCKER_BUILDKIT=1 # or configure in daemon.json
-export COMPOSE_DOCKER_CLI_BUILD=1
+#!/bin/bash
 
 if [ '!' -d "configs/" ]; then
   echo Configs not initialized
@@ -12,12 +9,7 @@ fi
 
 # remove prebuilt images
 FOUND_PREBUILT_IMAGE=false
-for SERVICE in $(docker-compose config --service); do
-  # keep the prebuilt frontend image
-  if [ "$SERVICE" = "frontend" ]; then
-    continue
-  fi
-
+for SERVICE in $(docker-compose config --services); do
   IS_PREBUILT=$(docker inspect \
     --format '{{ index .Config.Labels "org.supernetworks.ci" }}' \
     "ghcr.io/spr-networks/super_${SERVICE}" \
@@ -52,14 +44,48 @@ mkdir -p state/wifi/
 mkdir -p state/wifi/sta_mac_iface_map/
 touch state/dns/local_mappings state/dhcp/leases.txt
 
-#pull the prebuilt frontend
-docker pull ghcr.io/spr-networks/super_frontend:latest
-
 BUILDARGS=""
 if [ -f .github_creds ]; then
-  BUILDARGS="--build-arg GITHUB_CREDS=`cat .github_creds`"
+  BUILDARGS="--set *.args.GITHUB_CREDS=`cat .github_creds`"
 fi
-docker-compose build ${BUILDARGS} $@
+
+docker --help | grep buildx
+missing_buildx=$?
+
+if [ "$missing_buildx" -eq "1" ];
+then
+  export DOCKER_BUILDKIT=1
+  export COMPOSE_DOCKER_CLI_BUILD=1
+  docker-compose build ${BUILDARGS} $@
+else
+  # We use docker buildx so we can build multi-platform images. Unfortunately,
+  # a limitation is that multi-platform images cannot be loaded from the builder
+  # into Docker.
+  docker buildx create --name super-builder --driver docker-container \
+    2>/dev/null || true
+
+  # Look for any images that would be built multi-platform
+  IS_MULTIPLATFORM=$(
+    docker buildx bake \
+      --builder super-builder \
+      --file docker-compose.yml \
+      ${BUILDARGS} "$@" \
+      --print --progress none \
+    | jq 'any(.target[].platforms//[]|map(split(",";"")[])|unique; length >= 2)'
+  )
+
+  # If this is a single-platform build, then by default load it into Docker
+  echo Is this a multi-platform build? ${IS_MULTIPLATFORM}
+  if [ "$IS_MULTIPLATFORM" = "false" ]; then
+    BUILDARGS="$BUILDARGS --load"
+  fi
+
+  docker buildx bake \
+    --builder super-builder \
+    --file docker-compose.yml \
+    ${BUILDARGS} "$@"
+fi
+
 
 ret=$?
 
