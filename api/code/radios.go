@@ -426,11 +426,19 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, ok := newInput["vht_oper_centr_freq_seg0_idx"]; ok {
-		conf["vht_oper_centr_freq_seg0_idx"] = newConf.Vht_oper_centr_freq_seg0_idx
+		if newConf.Vht_oper_centr_freq_seg0_idx == -1 {
+			delete(conf, "vht_oper_centr_freq_seg0_idx")
+		} else {
+			conf["vht_oper_centr_freq_seg0_idx"] = newConf.Vht_oper_centr_freq_seg0_idx
+		}
 	}
 
 	if _, ok := newInput["he_oper_centr_freq_seg0_idx"]; ok {
-		conf["he_oper_centr_freq_seg0_idx"] = newConf.He_oper_centr_freq_seg0_idx
+		if newConf.He_oper_centr_freq_seg0_idx == -1 {
+			delete(conf, "he_oper_centr_freq_seg0_idx")
+		} else {
+			conf["he_oper_centr_freq_seg0_idx"] = newConf.He_oper_centr_freq_seg0_idx
+		}
 	}
 
 	if _, ok := newInput["vht_oper_chwidth"]; ok {
