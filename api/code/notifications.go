@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/gopacket/layers"
 	"github.com/gorilla/mux"
 	"github.com/spr-networks/sprbus"
 )
@@ -30,16 +31,28 @@ type NotificationSetting struct {
 type ConditionEntry struct {
 	Prefix   string `json:"Prefix"`
 	Protocol string `json:"Protocol"`
-	DestIp   string `json:"DestIp"`
-	DestPort int    `json:"DestPort"`
-	SrcIp    string `json:"SrcIp"`
+	DstIP    string `json:"DstIP"`
+	DstPort  int    `json:"DstPort"`
+	SrcIP    string `json:"SrcIP"`
 	SrcPort  int    `json:"SrcPort"`
+}
+
+//new format for notifications
+type PacketInfo struct {
+	//Ethernet  *PacketEthernet `json:"Ethernet,omitempty"`
+	TCP       *layers.TCP  `json:"TCP,omitempty"`
+	UDP       *layers.UDP  `json:"UDP,omitempty"`
+	IP        *layers.IPv4 `json:"IP,omitempty"`
+	DNS       *layers.DNS  `json:"DNS,omitempty"`
+	Prefix    string       `json:"Prefix"`
+	Action    string       `json:"Action"`
+	Timestamp time.Time    `json:"Timestamp"`
 }
 
 /* example:
 [
 	{
-		Conditions: { "Prefix": "nft:wan:out", "SrcIp": "192.168.2.18", "DestIp": "8.8.8.8" },
+		Conditions: { "Prefix": "nft:wan:out", "SrcIP": "192.168.2.18", "DstIP": "8.8.8.8" },
 		Notification: true
 	}
 ]
@@ -126,15 +139,13 @@ func modifyNotificationSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 // return true if we should send a notification
-func checkNotificationTraffic(logEntry netfilterEntry) bool {
-	if logEntry.SrcPort == nil || logEntry.DestPort == nil {
+func checkNotificationTraffic(logEntry PacketInfo) bool {
+	if logEntry.Prefix == "" {
 		return false
 	}
 
 	// add nft prefix + remove extra whitespace from logs
-	prefix := strings.TrimSpace(fmt.Sprintf("nft:%v", *logEntry.OobPrefix))
-
-	//fmt.Printf("%%%% prefix=%v\n", prefix)
+	prefix := strings.TrimSpace(fmt.Sprintf("nft:%v", logEntry.Prefix))
 
 	for _, setting := range gNotificationConfig {
 		if setting.SendNotification != true {
@@ -149,29 +160,48 @@ func checkNotificationTraffic(logEntry netfilterEntry) bool {
 			shouldNotify = false
 		}
 
-		// 6 = tcp, 17 = udp
-		if cond.Protocol == "tcp" && *logEntry.IpProtocol != 6 {
+		if cond.Protocol == "tcp" && logEntry.TCP == nil {
 			shouldNotify = false
 		}
 
-		if cond.Protocol == "udp" && *logEntry.IpProtocol != 17 {
+		if cond.Protocol == "udp" && logEntry.UDP == nil {
 			shouldNotify = false
 		}
 
-		if cond.SrcIp != "" && cond.SrcIp != *logEntry.SrcIp {
+		if cond.SrcIP != "" && cond.SrcIP != fmt.Sprintf("%v", logEntry.IP.SrcIP) {
 			shouldNotify = false
 		}
 
-		if cond.DestIp != "" && cond.DestIp != *logEntry.DestIp {
+		if cond.DstIP != "" && cond.DstIP != fmt.Sprintf("%v", logEntry.IP.DstIP) {
 			shouldNotify = false
 		}
 
-		if cond.SrcPort != 0 && cond.SrcPort != *logEntry.SrcPort {
-			shouldNotify = false
+		if cond.SrcPort != 0 {
+			if cond.Protocol == "tcp" && logEntry.TCP == nil {
+				shouldNotify = false
+			} else if cond.Protocol == "tcp" && int(logEntry.TCP.SrcPort) != cond.SrcPort {
+				shouldNotify = false
+			}
+
+			if cond.Protocol == "udp" && logEntry.UDP == nil {
+				shouldNotify = false
+			} else if cond.Protocol == "udp" && int(logEntry.UDP.SrcPort) != cond.SrcPort {
+				shouldNotify = false
+			}
 		}
 
-		if cond.DestPort != 0 && cond.DestPort != *logEntry.DestPort {
-			shouldNotify = false
+		if cond.DstPort != 0 {
+			if cond.Protocol == "tcp" && logEntry.TCP == nil {
+				shouldNotify = false
+			} else if cond.Protocol == "tcp" && int(logEntry.TCP.DstPort) != cond.DstPort {
+				shouldNotify = false
+			}
+
+			if cond.Protocol == "udp" && logEntry.UDP == nil {
+				shouldNotify = false
+			} else if cond.Protocol == "udp" && int(logEntry.UDP.DstPort) != cond.DstPort {
+				shouldNotify = false
+			}
 		}
 
 		if shouldNotify {
@@ -182,18 +212,18 @@ func checkNotificationTraffic(logEntry netfilterEntry) bool {
 	return false
 }
 
-func logTraffic(topic string,data string) {
-	var logEntry netfilterEntry
+func logTraffic(topic string, data string) {
+	var logEntry PacketInfo
 	if err := json.Unmarshal([]byte(data), &logEntry); err != nil {
 		log.Fatal(err)
 	}
 
-	//fmt.Printf("## Notification: %v @ %v\n", topic, *logEntry.Timestamp)
+	//fmt.Printf("## Notification: %v @ %v\n", topic, logEntry.Timestamp)
 
 	shouldNotify := checkNotificationTraffic(logEntry)
 
 	if shouldNotify {
-		fmt.Printf("!! Sending Notification to WebSocket: %v\n", topic)
+		fmt.Printf("Sending Notification to WebSocket: %v\n", topic)
 		WSNotifyValue("nft", logEntry)
 	}
 }
@@ -256,7 +286,7 @@ func notificationEventListener() {
 				continue
 			}
 
-			topic = value[0:index-1]
+			topic = value[0 : index-1]
 			value = value[index:len(value)]
 
 			logTraffic(topic, value)
