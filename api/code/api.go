@@ -1433,7 +1433,6 @@ func reloadPSKFiles(w http.ResponseWriter, r *http.Request) {
 	doReloadPSKFiles()
 }
 
-
 func getLogs(w http.ResponseWriter, r *http.Request) {
 	// TODO params : --since "1 hour ago" --until "50 minutes ago"
 	// 2000 entries ~2mb of data
@@ -1558,10 +1557,12 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	//The first character cannot be !, #, or ; character
 	validSSID := regexp.MustCompile(`^[^!#;+\]\/"\t][^+\]\/"\t]{0,30}[^ +\]\/"\t]$|^[^ !#;+\]\/"\t]$[ \t]+$`).MatchString
 
-	if conf.InterfaceAP == "" {
+	if conf.InterfaceAP == ""  || !validInterface(conf.InterfaceAP) {
 		http.Error(w, "Invalid AP interface", 400)
 		return
 	}
+
+	hostapd_path := getHostapdConfigPath(conf.InterfaceAP)
 
 	if conf.InterfaceUplink == "" {
 		http.Error(w, "Invalid Uplink interface", 400)
@@ -1628,10 +1629,10 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//write to hostapd.conf
-	data, err = ioutil.ReadFile(HostapdConfigFile)
+	data, err = ioutil.ReadFile(hostapd_path)
 	if err != nil {
 		// we can use default template config here but better to copy it before in bash
-		http.Error(w, "Missing default config.sh", 400)
+		http.Error(w, "Missing default hostapd config", 400)
 		return
 	}
 
@@ -1644,9 +1645,9 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+conf.InterfaceAP)
 	configData = matchCountry.ReplaceAllString(configData, "$1="+conf.CountryCode)
 
-	err = ioutil.WriteFile(HostapdConfigFile, []byte(configData), 0755)
+	err = ioutil.WriteFile(hostapd_path, []byte(configData), 0755)
 	if err != nil {
-		http.Error(w, "Failed to write config to "+HostapdConfigFile, 400)
+		http.Error(w, "Failed to write config to " + hostapd_path, 400)
 		panic(err)
 	}
 
@@ -1753,9 +1754,9 @@ func main() {
 	// intial setup
 	external_router_public.HandleFunc("/setup", setup).Methods("GET", "PUT")
 	external_router_setup.HandleFunc("/ip/addr", ipAddr).Methods("GET")
-	external_router_setup.HandleFunc("/hostapd/config", hostapdConfig).Methods("GET")
-	external_router_setup.HandleFunc("/hostapd/config", hostapdUpdateConfig).Methods("PUT")
-	external_router_setup.HandleFunc("/hostapd/setChannel", hostapdChannelSwitch).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
+	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdUpdateConfig).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
 	external_router_setup.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")
 
 	//download cert from http
@@ -1799,11 +1800,11 @@ func main() {
 	external_router_authenticated.HandleFunc("/reloadPSKFiles", reloadPSKFiles).Methods("PUT")
 
 	//hostapd information
-	external_router_authenticated.HandleFunc("/hostapd/status", hostapdStatus).Methods("GET")
-	external_router_authenticated.HandleFunc("/hostapd/all_stations", hostapdAllStations).Methods("GET")
-	external_router_authenticated.HandleFunc("/hostapd/config", hostapdConfig).Methods("GET")
-	external_router_authenticated.HandleFunc("/hostapd/config", hostapdUpdateConfig).Methods("PUT")
-	external_router_authenticated.HandleFunc("/hostapd/setChannel", hostapdChannelSwitch).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/status", hostapdStatus).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd{interface:}/all_stations", hostapdAllStations).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/config", hostapdUpdateConfig).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
 
 	//ip information
 	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")

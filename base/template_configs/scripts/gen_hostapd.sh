@@ -1,7 +1,8 @@
 . configs/base/config.sh
 
+IFACE=$1
 cat << END
-ctrl_interface=/state/wifi/control
+ctrl_interface=/state/wifi/control_${IFACE}
 country_code=US
 interface=$SSID_INTERFACE
 ssid=$SSID_NAME
