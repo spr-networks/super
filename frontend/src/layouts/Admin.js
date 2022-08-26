@@ -277,10 +277,10 @@ const AdminLayout = (props) => {
 
       const res = parseLogMessage(JSON.parse(event.data))
       if (res) {
-        console.log('[NOTIFICATION]', JSON.stringify(res))
+        //console.log('[NOTIFICATION]', JSON.stringify(res))
         let { type, title, body, data } = res
 
-        console.log('plus disabled:', isPlusDisabled)
+        //console.log('plus disabled:', isPlusDisabled)
 
         // confirm notifications use pfw
         if (isPlusDisabled && type == 'confirm') {
