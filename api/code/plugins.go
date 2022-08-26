@@ -273,6 +273,61 @@ func ghcrSuperdLogin() bool {
 	return true
 }
 
+func generatePFWAPIToken() {
+	//install API token for PLUS
+	var pfwConfigFile = TEST_PREFIX + "/configs/pfw/rules.json"
+	var pfwConfigDir = TEST_PREFIX + "/configs/pfw/"
+	value := genBearerToken()
+	pfw_token := Token{"PLUS-API-Token", value, 0}
+
+	Tokensmtx.Lock()
+	defer Tokensmtx.Unlock()
+
+	tokens := []Token{}
+	data, err := os.ReadFile(AuthTokensFile)
+
+	foundToken := false
+	if err == nil {
+		_ = json.Unmarshal(data, &tokens)
+		for _, token := range(tokens) {
+			if token.Name == pfw_token {
+				//re-use the PFW token
+				value = token.Token
+				//re-use existing token
+				foundToken = true
+				break
+			}
+		}
+	}
+
+	if !foundToken {
+		//add the generated token and save it to the token file
+		tokens = append(tokens, token)
+		file, _ := json.MarshalIndent(tokens, "", " ")
+		err = ioutil.WriteFile(AuthTokensFile, file, 0660)
+		if err != nil {
+			fmt.Println("failed to write tokens file", err)
+		}
+	}
+
+	//now save the rules.json with this token
+	type FirewallConfig struct {
+		APIToken        string
+	}
+
+	pfw_config := FirewallConfig{value}
+	file, _ := json.MarshalIndent(pfw_config, "", " ")
+	err = ioutil.WriteFile(AuthTokensFile, file, 0660)
+	if err != nil {
+		fmt.Println("failed to write pfw configuration", err)
+	}
+
+}
+
+
+
+}
+
 func downloadPlusExtension(gitURL string) bool {
 	ext := "https://" + PlusUser + ":" + config.PlusToken + "@" + gitURL
 
@@ -296,6 +351,8 @@ func downloadPlusExtension(gitURL string) bool {
 		fmt.Println("failed to download extension: "+ext, resp.StatusCode)
 		return false
 	}
+
+	generatePFWAPIToken()
 
 	return true
 }

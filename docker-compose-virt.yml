@@ -140,6 +140,7 @@ services:
       - ./configs/wifi/:/configs/wifi/
       - ./configs/wireguard/:/configs/wireguard/
       - ./configs/scripts/:/configs/scripts/
+      - ./configs/pfw/:/configs/pfw/
       - ./state/wifi/:/state/wifi/
       - ./state/dhcp/:/state/dhcp/
       - ./state/dns/:/state/dns/
