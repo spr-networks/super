@@ -28,6 +28,7 @@ var AuthUsersFile = TEST_PREFIX + "/configs/base/auth_users.json"
 var AuthTokensFile = TEST_PREFIX + "/configs/base/auth_tokens.json"
 var AuthOtpFile = TEST_PREFIX + "/state/api/webauthn_otp"
 var AuthWebAuthnFile = TEST_PREFIX + "/state/api/webauthn.json"
+var Tokensmtx sync.Mutex
 
 func loadOTP() int {
 	data, err := os.ReadFile(AuthOtpFile)
@@ -391,9 +392,12 @@ func (auth *authnconfig) authenticateToken(token string) bool {
 	_, exists := auth.authMap[token]
 
 	if !exists {
+
+		Tokensmtx.Lock()
 		//check api tokens
 		tokens := []Token{}
 		data, err := os.ReadFile(AuthTokensFile)
+		Tokensmtx.Unlock()
 		if err == nil {
 			json.Unmarshal(data, &tokens)
 		}
@@ -490,7 +494,9 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 
 func getAuthTokens(w http.ResponseWriter, r *http.Request) {
 	tokens := []Token{}
+	Tokensmtx.Lock()
 	data, err := os.ReadFile(AuthTokensFile)
+	Tokensmtx.Unlock()
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -508,6 +514,8 @@ func getAuthTokens(w http.ResponseWriter, r *http.Request) {
 
 func updateAuthTokens(w http.ResponseWriter, r *http.Request) {
 	tokens := []Token{}
+	Tokensmtx.Lock()
+	defer Tokensmtx.Unlock()
 	data, err := os.ReadFile(AuthTokensFile)
 
 	if err == nil {
