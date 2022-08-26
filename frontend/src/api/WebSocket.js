@@ -65,10 +65,16 @@ const parseLogMessage = (msg) => {
   } else if (msgType == 'StatusCalled') {
     body = `Status called with result: ${data}`
   } else if (msgType == 'nft') {
-    // data.action ==  allowed || blocked
+    // data.Action ==  allowed || blocked
     type = 'confirm'
-    title = `Netfilter ${data['oob.prefix']} ${data.action}`
-    body = `${data.src_ip} => ${data.dest_ip}:${data.dest_port}`
+
+    if (data.Action == 'blocked') {
+      type = 'warning'
+    }
+
+    title = `Netfilter ${data['Prefix']} ${data.Action}`
+    let protocol = data.TCP !== undefined ? 'TCP' : 'UDP'
+    body = `${data.IP.SrcIP} => ${data.IP.DstIP}:${data[protocol].DstPort}`
   }
 
   return {

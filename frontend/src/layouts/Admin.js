@@ -242,20 +242,20 @@ const AdminLayout = (props) => {
       //depending on action here:
       //if packet allowed & should deny in future
       //if packet denied & should allow in future
-      if (data.action == 'allowed' && action == 'deny') {
-        // 6 = tcp, 17 = udp
-        let ipProtocol = data['ip.protocol']
-        if (![6, 17].includes(ipProtocol)) {
+      if (data.Action == 'allowed' && action == 'deny') {
+        if (!data.TCP && !data.UDP) {
           return
         }
 
+        let Protocol = data.TCP !== undefined ? 'tcp' : 'udp'
+
         let block = {
-          RuleName: `Block ${data.timestamp}`,
+          RuleName: `Block ${data.Timestamp}`,
           Condition: '',
-          Protocol: ipProtocol == 6 ? 'tcp' : 'udp',
-          Client: { SrcIP: data.src_ip },
-          DstIP: data.dest_ip,
-          DstPort: data.dest_port.toString(),
+          Protocol,
+          Client: { SrcIP: data.IP.SrcIP },
+          DstIP: data.IP.DstIP,
+          DstPort: data[Protocol.toUpperCase()].DstPort.toString(),
           Time: { Days: [], Start: '', End: '' }
         }
 
@@ -279,6 +279,8 @@ const AdminLayout = (props) => {
       if (res) {
         console.log('[NOTIFICATION]', JSON.stringify(res))
         let { type, title, body, data } = res
+
+        console.log('plus disabled:', isPlusDisabled)
 
         // confirm notifications use pfw
         if (isPlusDisabled && type == 'confirm') {

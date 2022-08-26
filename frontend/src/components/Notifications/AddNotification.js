@@ -15,10 +15,10 @@ const AddNotifcation = ({ onSubmit, ...props }) => {
   const [Prefix, setPrefix] = useState('wan:out')
   const [Protocol, setProtocol] = useState('tcp')
 
-  const [DestIp, setDestIp] = useState('')
-  const [DestPort, setDestPort] = useState('')
+  const [DstIP, setDstIP] = useState('')
+  const [DstPort, setDstPort] = useState('')
 
-  const [SrcIp, setSrcIp] = useState('')
+  const [SrcIP, setSrcIP] = useState('')
   const [SrcPort, setSrcPort] = useState('')
 
   const [Notification, setNotification] = useState(true)
@@ -28,9 +28,9 @@ const AddNotifcation = ({ onSubmit, ...props }) => {
       Conditions: {
         Prefix,
         Protocol,
-        DestIp,
-        DestPort: Number(DestPort),
-        SrcIp,
+        DstIP,
+        DstPort: Number(DstPort),
+        SrcIP,
         SrcPort: Number(SrcPort)
       },
       Notification
@@ -92,10 +92,10 @@ const AddNotifcation = ({ onSubmit, ...props }) => {
           <Input
             type="text"
             variant="underlined"
-            name="DestIp"
-            value={DestIp}
+            name="DstIP"
+            value={DstIP}
             placeholder="1.1.1.1"
-            onChangeText={(value) => setDestIp(value)}
+            onChangeText={(value) => setDstIP(value)}
             autoFocus
           />
         </FormControl>
@@ -104,9 +104,9 @@ const AddNotifcation = ({ onSubmit, ...props }) => {
           <Input
             type="text"
             variant="underlined"
-            name="DestPort"
-            value={DestPort}
-            onChangeText={(value) => setDestPort(value)}
+            name="DstPort"
+            value={DstPort}
+            onChangeText={(value) => setDstPort(value)}
             autoFocus
           />
         </FormControl>
@@ -117,10 +117,10 @@ const AddNotifcation = ({ onSubmit, ...props }) => {
           <Input
             type="text"
             variant="underlined"
-            name="SrcIp"
-            value={SrcIp}
+            name="SrcIP"
+            value={SrcIP}
             placeholder="192.168.2.X"
-            onChangeText={(value) => setSrcIp(value)}
+            onChangeText={(value) => setSrcIP(value)}
             autoFocus
           />
         </FormControl>
