@@ -5,6 +5,7 @@ import { ucFirst } from 'utils'
 
 import {
   Box,
+  Button,
   Divider,
   HStack,
   Input,
@@ -15,7 +16,67 @@ import {
 
 import WifiChannelParameters from 'components/Wifi/WifiChannelParameters'
 
+const default5Ghz = {
+          ap_isolate: 1,
+          auth_algs: 1,
+          channel: 36,
+          country_code: 'US',
+          ctrl_interface: '/state/wifi/control_wlan',
+          ht_capab: '[LDPC][HT40+][HT40-][GF][SHORT-GI-20][SHORT-GI-40][TX-STBC][RX-STBC1]',
+          hw_mode: 'a',
+          ieee80211ac: 1,
+          ieee80211d: 1,
+          ieee80211n: 1,
+          ieee80211w: 1,
+          interface: 'wlan',
+          multicast_to_unicast: 1,
+          per_sta_vif: 1,
+          preamble: 1,
+          rsn_pairwise: 'CCMP',
+          sae_psk_file: '/configs/wifi/sae_passwords',
+          ssid: 'TestLab',
+          vht_capab: '[RXLDPC][SHORT-GI-80][TX-STBC-2BY1][RX-STBC-1][MAX-A-MPDU-LEN-EXP3][RX-ANTENNA-PATTERN][TX-ANTENNA-PATTERN]',
+          vht_oper_centr_freq_seg0_idx: 42,
+          vht_oper_chwidth: 1,
+          wmm_enabled: 1,
+          wpa: 2,
+          wpa_disable_eapol_key_retries: 1,
+          wpa_key_mgmt: 'WPA-PSK WPA-PSK-SHA256 SAE',
+          wpa_psk_file: '/configs/wifi/wpa2pskfile'
+}
+
+const default2Ghz = {
+          ap_isolate: 1,
+          auth_algs: 1,
+          channel: 36,
+          country_code: 'US',
+          ctrl_interface: '/state/wifi/control_wlan',
+          ht_capab: '[LDPC][HT40+][HT40-][GF][SHORT-GI-20][SHORT-GI-40][TX-STBC][RX-STBC1]',
+          hw_mode: 'a',
+          ieee80211ac: 1,
+          ieee80211d: 1,
+          ieee80211n: 1,
+          ieee80211w: 1,
+          interface: 'wlan',
+          multicast_to_unicast: 1,
+          per_sta_vif: 1,
+          preamble: 1,
+          rsn_pairwise: 'CCMP',
+          sae_psk_file: '/configs/wifi/sae_passwords',
+          ssid: 'TestLab',
+          vht_capab: '[RXLDPC][SHORT-GI-80][TX-STBC-2BY1][RX-STBC-1][MAX-A-MPDU-LEN-EXP3][RX-ANTENNA-PATTERN][TX-ANTENNA-PATTERN]',
+          vht_oper_centr_freq_seg0_idx: 42,
+          vht_oper_chwidth: 1,
+          wmm_enabled: 1,
+          wpa: 2,
+          wpa_disable_eapol_key_retries: 1,
+          wpa_key_mgmt: 'WPA-PSK WPA-PSK-SHA256 SAE',
+          wpa_psk_file: '/configs/wifi/wpa2pskfile'
+}
+
+
 const WifiHostapd = (props) => {
+  const [iface, setIface] = useState('wlan1')
   const [updated, setUpdated] = useState(false)
   const [config, setConfig] = useState({})
   const canEditString = ['ssid', 'country_code', 'vht_capab', 'ht_capab']
@@ -42,10 +103,14 @@ const WifiHostapd = (props) => {
   }
 
   useEffect(() => {
-    wifiAPI.config().then((conf) => {
+    wifiAPI.config(iface).then((conf) => {
       setConfig(sortConf(conf))
+    }).catch(err => {
+      //configuration not found. How to handle?
+      setConfig({})
     })
-  }, [])
+
+  }, [iface])
 
   const handleChange = (name, value) => {
     setUpdated(true)
@@ -72,9 +137,16 @@ const WifiHostapd = (props) => {
       Channel: parseInt(config.channel)
     }
 
-    wifiAPI.updateConfig(data).then((config) => {
+    wifiAPI.updateConfig(iface, data).then((config) => {
       setConfig(sortConf(config))
     })
+  }
+
+  const generateHostAPConfiguration = () => {
+    let newConfig = Object.assign({}, default5Ghz)
+    newConfig.interface = iface
+    newConfig.ctrl_interface = "/state/wifi/control_" + iface
+    setConfig(newConfig)
   }
 
   const updateChannels = (wifiParameters) => {
@@ -86,14 +158,14 @@ const WifiHostapd = (props) => {
       He_oper_chwidth: wifiParameters.He_oper_chwidth
     }
 
-    wifiAPI.updateConfig(data).then((config) => {
+    wifiAPI.updateConfig(iface, data).then((config) => {
       setConfig(sortConf(config))
     })
   }
 
   return (
     <>
-      <WifiChannelParameters config={config} notifyChange={updateChannels} />
+      <WifiChannelParameters  iface={iface} setIface={setIface} config={config} notifyChange={updateChannels} />
 
       <Box
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
@@ -103,32 +175,44 @@ const WifiHostapd = (props) => {
         mt={4}
       >
         <VStack space={2}>
-          {Object.keys(config).map((label) => (
-            <HStack key={label} space={4} justifyContent="center">
-              <Text bold w="1/4" textAlign="right">
-                {label}
-              </Text>
+          {config.interface == undefined ? (
+            <Button
+              colorScheme="primary"
+              size="md"
+              width="50%"
+              alignSelf="center"
+              type="submit"
+              mt={4}
+              onPress={generateHostAPConfiguration}
+            >
+              Generate HostAP Configuration
+            </Button>
+          ) :  (Object.keys(config).map((label) => (
+              <HStack key={label} space={4} justifyContent="center">
+                <Text bold w="1/4" textAlign="right">
+                  {label}
+                </Text>
 
-              {canEdit.includes(label) ? (
-                <Input
-                  size="lg"
-                  type="text"
-                  variant="underlined"
-                  w="1/4"
-                  value={config[label]}
-                  onChangeText={(value) => handleChange(label, value)}
-                  onSubmitEditing={handleSubmit}
-                  onMouseLeave={handleSubmit}
-                />)
-                :
-                (
-                  <Text w="1/4">{config[label]}</Text>
-                )
-              }
+                {canEdit.includes(label) ? (
+                  <Input
+                    size="lg"
+                    type="text"
+                    variant="underlined"
+                    w="1/4"
+                    value={config[label]}
+                    onChangeText={(value) => handleChange(label, value)}
+                    onSubmitEditing={handleSubmit}
+                    onMouseLeave={handleSubmit}
+                  />)
+                  :
+                  (
+                    <Text w="1/4">{config[label]}</Text>
+                  )
+                }
 
-            </HStack>
-          ))}
-
+              </HStack>
+            ))
+          )}
         </VStack>
       </Box>
     </>

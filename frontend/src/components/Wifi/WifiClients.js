@@ -14,6 +14,8 @@ import {
 } from 'native-base'
 
 const WifiClients = (props) => {
+  const [iface, setIface] = useState('wlan1')
+
   const [clients, setClients] = useState([])
   const context = useContext(AlertContext)
 
@@ -45,7 +47,7 @@ const WifiClients = (props) => {
   }
 
   const refreshClients = async () => {
-    const stations = await wifiAPI.allStations().catch((error) => {
+    const stations = await wifiAPI.allStations(iface).catch((error) => {
       context.error('API Failure:' + error.message)
     })
 

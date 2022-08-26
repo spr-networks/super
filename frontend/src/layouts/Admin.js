@@ -158,12 +158,20 @@ const AdminLayout = (props) => {
       })
 
     if (isWifiDisabled == false) {
-      wifiAPI
-        .status()
-        .then((res) => {})
-        .catch((err) => {
-          alertState.error('hostapd failed to start-- check wifid service logs')
-        })
+      //get list of devices, and check... TBD
+
+      wifiAPI.defaultInterface().then((iface) => {
+        wifiAPI
+          .status(iface)
+          .then((res) => {})
+          .catch((err) => {
+            alertState.error('hostapd failed to start-- check wifid service logs')
+          })
+      }).catch((err) => {
+        alertState.error('could not find a default wireless interface-- check wifid service logs')
+      })
+
+
     }
 
     connectWebsocket((event) => {

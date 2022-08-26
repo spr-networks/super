@@ -21,15 +21,20 @@ const WifiConnect = (props) => {
 
   useEffect(() => {
     // fetch ap name
-    wifiAPI
-      .status()
-      .then((status) => {
-        setSsid(status['ssid[0]'])
-      })
-      .catch((error) => {
-        setError(error.message)
-      })
-  }, [])
+    wifiAPI.defaultInterface().then((iface) => {
+      wifiAPI
+        .status(iface)
+        .then((status) => {
+          setSsid(status['ssid[0]'])
+        })
+        .catch((err) => {
+          setError(error.message)
+        })
+    }).catch((err) => {
+      alertState.error('could not find a default wireless interface-- check wifid service logs')
+    })
+  })
+
 
   // set qrcode
   const generateQRCode = (_ssid, password, type, hidden = false) => {
