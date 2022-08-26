@@ -1,51 +1,56 @@
 package main
 
+// sample daemon to behave like ulogd, publish notifcations to sprbus
+// NOTE only log group = 0 (= allow) for now, change NetfilterGroup to 1 for deny
+
 import (
-	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/florianl/go-nflog/v2"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"log"
 	"os"
-	"os/exec"
-	"regexp"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/spr-networks/sprbus"
 )
 
 var ServerEventSock = "/state/plugins/packet_logs/server.sock"
 
-var pipeFile = "/state/plugins/packet_logs/ulogd.json"
-
-type nftEntry struct {
-	//Timestamp 	time.Time	`json:"timestamp"`
-	//TODO cannot parse "+0200\"" as
-	Timestamp    string `json:"timestamp"`
-	Action       string `json:"action"`
-	InterfaceIn  string `json:"oob.in"`
-	InterfaceOut string `json:"oob.out"`
-}
-
-// runs in a thread
-func startUlogd() {
-	cmd := exec.Command("ulogd", "-c", "/etc/ulogd.conf")
-
-	err := cmd.Run()
+func sprServer() {
+	fmt.Println("starting sprbus...")
+	_, err := sprbus.NewServer(ServerEventSock)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func sprServer() {
-        _, err := sprbus.NewServer(ServerEventSock)
-        if err != nil {
-                log.Fatal(err)
-        }
+// this is to get strings for mac addrs instead of raw
+type PacketEthernet struct {
+	SrcMAC string
+	DstMAC string
 }
 
+//new format
+type PacketInfo struct {
+	//Ethernet  *PacketEthernet `json:"Ethernet,omitempty"`
+	TCP       *layers.TCP  `json:"TCP,omitempty"`
+	UDP       *layers.UDP  `json:"UDP,omitempty"`
+	IP        *layers.IPv4 `json:"IP,omitempty"`
+	DNS       *layers.DNS  `json:"DNS,omitempty"`
+	Prefix    string       `json:"Prefix"`
+	Action    string       `json:"Action"`
+	Timestamp time.Time    `json:"Timestamp"`
+}
+
+var wg sync.WaitGroup
+
 func main() {
-	log.Println("starting ulogd2...")
-	go startUlogd()
+	wg.Add(1)
 
 	go sprServer()
 
@@ -58,55 +63,107 @@ func main() {
 
 	fmt.Println("sprbus client connected")
 
-	log.Println("open ulogd named pipe for reading")
-	file, err := os.OpenFile(pipeFile, os.O_RDONLY, os.ModeNamedPipe)
-	if err != nil {
-		log.Fatal("open error:", err)
+	wg.Add(2)
+
+	// one thread for each netfilter group
+	go logGroup(client, 0)
+	go logGroup(client, 1)
+
+	wg.Wait()
+
+	fmt.Printf("exit\n")
+}
+
+func logGroup(client *sprbus.Client, NetfilterGroup int) {
+	config := nflog.Config{
+		Group:    uint16(NetfilterGroup),
+		Copymode: nflog.CopyPacket,
 	}
 
-	reader := bufio.NewReader(file)
+	nf, err := nflog.Open(&config)
+	if err != nil {
+		log.Fatal("could not open nflog socket:", err)
+		return
+	}
+	defer nf.Close()
 
-	log.Println("entering main loop")
+	//ctx, cancel := context.WithTimeout(context.Background(), 60*60*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	for {
-		line, err := reader.ReadBytes('\n')
+	hook := func(attrs nflog.Attribute) int {
+		//var eth layers.Ethernet
+		var ip4 layers.IPv4
+		var tcp layers.TCP
+		var udp layers.UDP
+		var dns layers.DNS
+
+		result := PacketInfo{Prefix: *attrs.Prefix, Timestamp: *attrs.Timestamp}
+		result.Action = "allowed"
+		if NetfilterGroup == 1 {
+			result.Action = "blocked"
+		}
+
+		// DecodingLayerParser takes about 10% of the time as NewPacket to decode packet data, but only for known packet stacks.
+		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeIPv4, &ip4, &tcp, &udp, &dns)
+		decoded := []gopacket.LayerType{}
+		packetData := *attrs.Payload
+		if err := parser.DecodeLayers(packetData, &decoded); err != nil {
+			fmt.Fprintf(os.Stderr, "packet parse error: %v\n", err)
+			return 0
+		}
+
+		// iterate to see what layer we have
+		for _, layerType := range decoded {
+			switch layerType {
+			/*case layers.LayerTypeEthernet:
+			var ethd PacketEthernet
+			ethd.SrcMAC = fmt.Sprintf("%v", eth.SrcMAC)
+			ethd.DstMAC = fmt.Sprintf("%v", eth.DstMAC)
+			result.Ethernet = &ethd
+			*/
+			case layers.LayerTypeIPv4:
+				result.IP = &ip4
+			case layers.LayerTypeTCP:
+				result.TCP = &tcp
+			case layers.LayerTypeUDP:
+				result.UDP = &udp
+			case layers.LayerTypeDNS:
+				result.DNS = &dns
+			}
+		}
+
+		data, err := json.Marshal(result)
 		if err != nil {
-			log.Println("read error:", err)
-			continue
+			fmt.Fprintf(os.Stderr, "json error:", err)
+			return 0
 		}
 
-		var logEntry netfilterEntry
-		if err := json.Unmarshal(line, &logEntry); err != nil {
-			log.Fatal(err)
-		}
+		//send to sprbus
 
-		fmt.Printf("## [%v] %v == %v\n", *logEntry.OobPrefix, *logEntry.Timestamp, *logEntry.Action)
-		if logEntry.SrcIp != nil && logEntry.DestIp != nil && logEntry.SrcPort != nil && logEntry.DestPort != nil {
-			fmt.Printf("## %v:%v -> %v:%v\n", *logEntry.SrcIp, *logEntry.SrcPort, *logEntry.DestIp, *logEntry.DestPort)
-		}
-
-		//action := ""
-		/*if logEntry.Action != nil {
-			action = *logEntry.Action
-		}*/
-
-		prefix := ""
-		if logEntry.OobPrefix != nil {
-			prefix = strings.TrimSpace(strings.ToLower(*logEntry.OobPrefix))
-		}
-
-		registeredPrefix := regexp.MustCompile(`^(lan|wan|drop):(in|out|forward|input|mac|pfw)$`).MatchString
-
+		//registeredPrefix := regexp.MustCompile(`^(lan|wan|drop):(in|out|forward|input|mac|pfw)$`).MatchString
+		prefix := strings.TrimSpace(strings.ToLower(result.Prefix))
 		topic := fmt.Sprintf("nft:%s", prefix)
 
-		if registeredPrefix(prefix) {
-			//fmt.Printf("%% publish. #subscribers: %d, hasClients= %v\n", len(server.Subscribers(topic)), hasClients)
-			//log.Printf("subscribers: %v == %v\n", topic, server)
+		fmt.Printf("##pub: %v\n", topic)
 
-			client.Publish(topic, string(line))
-		} else {
-			topic = fmt.Sprintf("nft:ip")
-			client.Publish(topic, string(line))
-		}
+		client.Publish(topic, string(data))
+
+		return 0
 	}
+
+	errFunc := func(e error) int {
+		fmt.Fprintf(os.Stderr, "hook error: %v", e)
+		return 0
+	}
+
+	// Register function to listen on nflog group
+	err = nf.RegisterWithErrorFunc(ctx, hook, errFunc)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to register hook function: %v", err)
+		return
+	}
+
+	// Block till the context expires
+	<-ctx.Done()
 }
