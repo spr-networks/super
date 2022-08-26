@@ -36,7 +36,6 @@ var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
 
 var ConfigFile = TEST_PREFIX + "/configs/base/config.sh"
-var HostapdConfigFile = TEST_PREFIX + "/configs/wifi/hostapd.conf"
 
 var ApiTlsCert = "/configs/base/www-api.crt"
 var ApiTlsKey = "/configs/base/www-api.key"
@@ -1434,51 +1433,6 @@ func reloadPSKFiles(w http.ResponseWriter, r *http.Request) {
 	doReloadPSKFiles()
 }
 
-func doReloadPSKFiles() {
-	//generate PSK files for hostapd
-	devices := getDevicesJson()
-
-	wpa2 := ""
-	sae := ""
-
-	for keyval, entry := range devices {
-		if keyval == "pending" {
-			//set wildcard password at front. hostapd uses a FILO for the sae keys
-			if entry.PSKEntry.Type == "sae" {
-				sae = entry.PSKEntry.Psk + "|mac=ff:ff:ff:ff:ff:ff" + "\n" + sae
-				//apple downgrade workaround https://feedbackassistant.apple.com/feedback/9991042
-				wpa2 = "00:00:00:00:00:00 " + entry.PSKEntry.Psk + "\n" + wpa2
-			} else if entry.PSKEntry.Type == "wpa2" {
-				wpa2 = "00:00:00:00:00:00 " + entry.PSKEntry.Psk + "\n" + wpa2
-			}
-		} else {
-			if entry.PSKEntry.Type == "sae" {
-				sae += entry.PSKEntry.Psk + "|mac=" + entry.MAC + "\n"
-				//apple downgrade workaround https://feedbackassistant.apple.com/feedback/9991042
-				wpa2 += entry.MAC + " " + entry.PSKEntry.Psk + "\n"
-			} else if entry.PSKEntry.Type == "wpa2" {
-				wpa2 += entry.MAC + " " + entry.PSKEntry.Psk + "\n"
-			}
-		}
-	}
-
-	err := ioutil.WriteFile(TEST_PREFIX+"/configs/wifi/sae_passwords", []byte(sae), 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = ioutil.WriteFile(TEST_PREFIX+"/configs/wifi/wpa2pskfile", []byte(wpa2), 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	//reload the hostapd passwords
-	cmd := exec.Command("hostapd_cli", "-p", "/state/wifi/control", "-s", "/state/wifi/", "reload_wpa_psk")
-	err = cmd.Run()
-	if err != nil {
-		fmt.Println(err)
-	}
-
-}
 
 func getLogs(w http.ResponseWriter, r *http.Request) {
 	// TODO params : --since "1 hour ago" --until "50 minutes ago"
