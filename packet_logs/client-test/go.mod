@@ -6,6 +6,7 @@ require github.com/spr-networks/sprbus v0.0.0-20220811094515-092f7af34fb2
 
 require (
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/google/gopacket v1.1.19 // indirect
 	github.com/moby/moby v20.10.17+incompatible // indirect
 	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
 	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 // indirect

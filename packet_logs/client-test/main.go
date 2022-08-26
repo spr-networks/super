@@ -3,28 +3,13 @@ package main
 this is a test client that subscribe to events from ulogd
 and prints out log message depending on log prefix from netfilter
 
-code will be moved to api / websocket for sending out notifications
-depending on settings
+this example will get logs from eventbus and match udp/dns packets
+with lookups matching specified regexp.
 
-TODO wrap parts of this logic in a package so we can have:
-
-sprEvent.Subscribe("nft:ip", ipConnect)
-sprEvent.Publish("nft:ip", "{ json ... }")
+see for layer info:
+https://pkg.go.dev/github.com/google/gopacket/layers#DNS
 
 can use a third arg being default, if specifed is sent to a client
-
-TODO api for adding/remove etc. + documentation
-
-GET PUT DELETE /notifications
-
-Condition == netfilterEntry
-
-oob.prefix
-timestamp
-dest_ip
-dest_port
-src_ip
-src_port
 
 */
 
@@ -32,135 +17,80 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/google/gopacket/layers"
 	"github.com/spr-networks/sprbus"
 )
 
-var NotificationSettingsFile = "/configs/base/notifications.json"
 var ServerEventSock = "/state/plugins/packet_logs/server.sock"
+
 var wg sync.WaitGroup
 
-//notification_settings.json is array of this:
-type SettingEntry struct {
-	//Conditions map[string]interface{}	`json:"Conditions"`
-	Conditions ConditionEntry 		`json:"Conditions"`
-	SendNotification bool			`json:"Notification"`
-	// could have templates: notificationTitle, notificationBody with ${dest_ip}
+//new format for notifications
+type PacketInfo struct {
+	//Ethernet  *PacketEthernet `json:"Ethernet,omitempty"`
+	TCP       *layers.TCP  `json:"TCP,omitempty"`
+	UDP       *layers.UDP  `json:"UDP,omitempty"`
+	IP        *layers.IPv4 `json:"IP,omitempty"`
+	DNS       *layers.DNS  `json:"DNS,omitempty"`
+	Prefix    string       `json:"Prefix"`
+	Action    string       `json:"Action"`
+	Timestamp time.Time    `json:"Timestamp"`
 }
 
-// golang syntax, else match netfilter json
 type ConditionEntry struct {
-	Prefix string 	`json:"Prefix"`
-	DestIp string 	`json:"DestIp"`
-	DestPort int	`json:"DestPort"`
-	SrcIp string 	`json:"SrcIp"`
-	SrcPort int	`json:"SrcPort"`
-}
-/* example:
-[
-	{
-		Conditions: { "Prefix": "nft:wan:out", "SrcIp": "192.168.2.18", "DestIp": "8.8.8.8" },
-		Notification: true
-	}
-]
-*/
-
-var NotificationSettings = []SettingEntry{}
-
-// return true if we should send a notification
-func checkNotificationTraffic(logEntry netfilterEntry) bool {
-	if logEntry.SrcPort == nil || logEntry.DestPort == nil {
-		return false
-	}
-
-	// add nft prefix + remove extra whitespace from logs
-	prefix := strings.TrimSpace(fmt.Sprintf("nft:%v", *logEntry.OobPrefix))
-
-	//fmt.Printf("%%%% prefix=%v\n", prefix)
-
-	for _, setting := range NotificationSettings {
-		/*if setting.SendNotification != true {
-			continue
-		}*/
-
-		shouldNotify := true
-
-		cond := setting.Conditions
-
-		if cond.Prefix != "" && cond.Prefix != prefix {
-			shouldNotify = false
-		}
-
-		if cond.SrcIp != "" && cond.SrcIp != *logEntry.SrcIp {
-			shouldNotify = false
-		}
-
-		if cond.DestIp != "" && cond.DestIp != *logEntry.DestIp {
-			shouldNotify = false
-		}
-
-		if cond.SrcPort != 0 && cond.SrcPort != *logEntry.SrcPort {
-			shouldNotify = false
-		}
-
-		if cond.DestPort != 0 && cond.DestPort != *logEntry.DestPort {
-			shouldNotify = false
-		}
-
-		if shouldNotify {
-			return true
-		}
-	}
-
-	return false
+        Prefix   string `json:"Prefix"`
+        Protocol string `json:"Protocol"`
+        DstIP    string `json:"DstIP"`
+        DstPort  int    `json:"DstPort"`
+        SrcIP    string `json:"SrcIP"`
+        SrcPort  int    `json:"SrcPort"`
+        //DomainNames     []string `json:"DomainNames"`
 }
 
 func logTraffic(topic string, data string) {
-	fmt.Printf("## topic: %v data: %v\n", topic, data)
-	// use json layout for matching
-	// TODO netfilterEntry and use same for Condition key
 	//var logEntry map[string]interface{}
-	var logEntry netfilterEntry
+	var logEntry PacketInfo
 	if err := json.Unmarshal([]byte(data), &logEntry); err != nil {
 		  log.Fatal(err)
 	}
 
-	fmt.Printf("## Notification: %v @ %v\n", topic, *logEntry.Timestamp)
+	fmt.Printf("## traffic: %v @ %v\n", topic, logEntry.Timestamp)
 
-	shouldNotify := checkNotificationTraffic(logEntry)
-	if shouldNotify {
-		fmt.Printf("!! Send Notification\n")
-		// send notification
+	jsondata := `{"Prefix": "test", "DomainNames": ["abctest1234.com"] }`
+	var cond ConditionEntry
+	if err := json.Unmarshal([]byte(jsondata), &cond); err != nil {
+		  log.Fatal(err)
 	}
 
-	/*if *logEntry.OobPrefix == "drop:input " {
-		fmt.Printf("[LOG=%v] %v\n", shouldNotify, data)
-	}*/
-}
+	if logEntry.UDP != nil && logEntry.DNS != nil && len(logEntry.DNS.Questions) > 0 {
+		//fmt.Printf("## DNS:\n%v\n", logEntry.DNS)
 
-// NOTE reload on update
-func loadNotificationConfig() {
-        data, err := ioutil.ReadFile(NotificationSettingsFile)
-        if err != nil {
-                fmt.Println(err)
-        } else {
-                err = json.Unmarshal(data, &NotificationSettings)
-                if err != nil {
-                        fmt.Println(err)
-                }
-        }
+		//dump all A *.org domain lookups
+		r, _ := regexp.Compile("([a-z]+).org")
+		matchDomainName := r.MatchString(fmt.Sprintf("%s", logEntry.DNS.Questions[0].Name))
+
+		//log everything
+		//fmt.Printf(">> %s:%s . match=%v\n", logEntry.DNS.Questions[0].Type, logEntry.DNS.Questions[0].Name, matchDomainName)
+
+		// only Type A for now
+		DNSType := "A"
+
+		if fmt.Sprintf("%s", logEntry.DNS.Questions[0].Type) == DNSType && matchDomainName {
+			fmt.Printf(">> type: %s\tname: \"%s\"\n", 
+				logEntry.DNS.Questions[0].Type,
+				logEntry.DNS.Questions[0].Name)
+			//fmt.Printf("%v\n", data)
+		}
+	}
 }
 
 func main() {
-	loadNotificationConfig()
-
-	log.Printf("notification settings: %v conditions loaded\n", len(NotificationSettings))
-
 	client, err := sprbus.NewClient(ServerEventSock)
 	defer client.Close()
 
@@ -170,7 +100,7 @@ func main() {
 
 	fmt.Println("client connected:", client)
 
-	stream, err := client.SubscribeTopic("nft:")
+	stream, err := client.SubscribeTopic("nft:lan:out:") // NOTE need to end with :
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -203,5 +133,5 @@ func main() {
 		}
 	}()
 
-	time.Sleep(5*time.Second)
+	time.Sleep(60*time.Second)
 }
