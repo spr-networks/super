@@ -363,7 +363,7 @@ func stopPlusExt(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Error(w, "Plus extension not found: " + name, 404)
+	http.Error(w, "Plus extension not found: "+name, 404)
 
 }
 
@@ -385,7 +385,7 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Error(w, "Plus extension not found: " + name, 404)
+	http.Error(w, "Plus extension not found: "+name, 404)
 
 }
 
