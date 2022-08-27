@@ -1557,7 +1557,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	//The first character cannot be !, #, or ; character
 	validSSID := regexp.MustCompile(`^[^!#;+\]\/"\t][^+\]\/"\t]{0,30}[^ +\]\/"\t]$|^[^ !#;+\]\/"\t]$[ \t]+$`).MatchString
 
-	if conf.InterfaceAP == ""  || !validInterface(conf.InterfaceAP) {
+	if conf.InterfaceAP == "" || !validInterface(conf.InterfaceAP) {
 		http.Error(w, "Invalid AP interface", 400)
 		return
 	}
@@ -1647,7 +1647,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 
 	err = ioutil.WriteFile(hostapd_path, []byte(configData), 0755)
 	if err != nil {
-		http.Error(w, "Failed to write config to " + hostapd_path, 400)
+		http.Error(w, "Failed to write config to "+hostapd_path, 400)
 		panic(err)
 	}
 

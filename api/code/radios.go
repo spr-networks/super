@@ -17,7 +17,6 @@ import (
 
 //var HostapdConfigFile = TEST_PREFIX + "/configs/wifi/hostapd.conf"
 
-
 var validInterface = regexp.MustCompile(`^[a-z0-9\.]+$`).MatchString
 
 func getHostapdPath(iface string) string {
@@ -34,6 +33,7 @@ func getHostapdPath(iface string) string {
 func getAP_Ifaces() []string {
 	ret := []string{}
 }
+
 /*
 
 TBD
@@ -80,7 +80,7 @@ func doReloadPSKFiles() {
 
 	for _, iface := range getAP_Ifaces() {
 		//reload the hostapd passwords
-		cmd := exec.Command("hostapd_cli", "-p", "/state/wifi/control_" + iface, "-s", "/state/wifi/", "reload_wpa_psk")
+		cmd := exec.Command("hostapd_cli", "-p", "/state/wifi/control_"+iface, "-s", "/state/wifi/", "reload_wpa_psk")
 		err = cmd.Run()
 		if err != nil {
 			fmt.Println(err)

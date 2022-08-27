@@ -289,7 +289,7 @@ func generatePFWAPIToken() {
 	foundToken := false
 	if err == nil {
 		_ = json.Unmarshal(data, &tokens)
-		for _, token := range(tokens) {
+		for _, token := range tokens {
 			if token.Name == pfw_token {
 				//re-use the PFW token
 				value = token.Token
@@ -312,7 +312,7 @@ func generatePFWAPIToken() {
 
 	//now save the rules.json with this token
 	type FirewallConfig struct {
-		APIToken        string
+		APIToken string
 	}
 
 	pfw_config := FirewallConfig{value}
@@ -321,10 +321,6 @@ func generatePFWAPIToken() {
 	if err != nil {
 		fmt.Println("failed to write pfw configuration", err)
 	}
-
-}
-
-
 
 }
 
