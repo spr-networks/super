@@ -48,11 +48,11 @@ const default5Ghz = {
 const default2Ghz = {
           ap_isolate: 1,
           auth_algs: 1,
-          channel: 36,
+          channel: 1,
           country_code: 'US',
           ctrl_interface: '/state/wifi/control_wlan',
           ht_capab: '[LDPC][HT40+][HT40-][GF][SHORT-GI-20][SHORT-GI-40][TX-STBC][RX-STBC1]',
-          hw_mode: 'a',
+          hw_mode: 'g',
           ieee80211ac: 1,
           ieee80211d: 1,
           ieee80211n: 1,
@@ -64,9 +64,6 @@ const default2Ghz = {
           rsn_pairwise: 'CCMP',
           sae_psk_file: '/configs/wifi/sae_passwords',
           ssid: 'TestLab',
-          vht_capab: '[RXLDPC][SHORT-GI-80][TX-STBC-2BY1][RX-STBC-1][MAX-A-MPDU-LEN-EXP3][RX-ANTENNA-PATTERN][TX-ANTENNA-PATTERN]',
-          vht_oper_centr_freq_seg0_idx: 42,
-          vht_oper_chwidth: 1,
           wmm_enabled: 1,
           wpa: 2,
           wpa_disable_eapol_key_retries: 1,
@@ -79,7 +76,7 @@ const WifiHostapd = (props) => {
   const [iface, setIface] = useState('wlan1')
   const [updated, setUpdated] = useState(false)
   const [config, setConfig] = useState({})
-  const canEditString = ['ssid', 'country_code', 'vht_capab', 'ht_capab']
+  const canEditString = ['ssid', 'country_code', 'vht_capab', 'ht_capab', 'hw_mode']
   const canEditInt = ['ieee80211ax', 'he_su_beamformer', 'he_su_beamformee', 'he_mu_beamformer']
   const canEdit = canEditInt.concat(canEditString)
 
@@ -152,10 +149,20 @@ const WifiHostapd = (props) => {
   const updateChannels = (wifiParameters) => {
     let data = {
       Channel: wifiParameters.Channel,
+      Hw_mode: wifiParameters.Mode,
       Vht_oper_centr_freq_seg0_idx: wifiParameters.Vht_oper_centr_freq_seg0_idx,
       He_oper_centr_freq_seg0_idx: wifiParameters.He_oper_centr_freq_seg0_idx,
       Vht_oper_chwidth: wifiParameters.Vht_oper_chwidth,
       He_oper_chwidth: wifiParameters.He_oper_chwidth
+    }
+
+    if (wifiParameters.Mode == 'b' || wifiParameters.Mode == 'g') {
+      //empty out VHT capabilities for b/g mode
+      data.Vht_capab = ""
+    } else if (wifiParameters.Mode == 'a') {
+      //hack for mediatek.... TBD need to calculate these instead
+      //re-enable VHT capab
+      data.Vht_capab = default5Ghz.vht_capab
     }
 
     wifiAPI.updateConfig(iface, data).then((config) => {
