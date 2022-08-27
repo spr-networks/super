@@ -1801,7 +1801,7 @@ func main() {
 
 	//hostapd information
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/status", hostapdStatus).Methods("GET")
-	external_router_authenticated.HandleFunc("/hostapd{interface:}/all_stations", hostapdAllStations).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/all_stations", hostapdAllStations).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/config", hostapdUpdateConfig).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
