@@ -107,6 +107,7 @@ type HostapdConfigEntry struct {
 	Country_code                 string
 	Vht_capab                    string
 	Ht_capab                     string
+	Hw_mode											 string
 	Ieee80211ax                  int
 	He_su_beamformer             int
 	He_su_beamformee             int
@@ -453,6 +454,10 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		} else {
 			conf["he_oper_centr_freq_seg0_idx"] = newConf.He_oper_centr_freq_seg0_idx
 		}
+	}
+
+	if _, ok := newInput["Hw_mode"]; ok {
+		conf["hw_mode"] = newConf.Hw_mode
 	}
 
 	if _, ok := newInput["Vht_oper_chwidth"]; ok {
