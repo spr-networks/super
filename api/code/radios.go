@@ -439,7 +439,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		conf["channel"] = newConf.Channel
 	}
 
-	if _, ok := newInput["vht_oper_centr_freq_seg0_idx"]; ok {
+	if _, ok := newInput["Vht_oper_centr_freq_seg0_idx"]; ok {
 		if newConf.Vht_oper_centr_freq_seg0_idx == -1 {
 			delete(conf, "vht_oper_centr_freq_seg0_idx")
 		} else {
@@ -447,7 +447,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if _, ok := newInput["he_oper_centr_freq_seg0_idx"]; ok {
+	if _, ok := newInput["He_oper_centr_freq_seg0_idx"]; ok {
 		if newConf.He_oper_centr_freq_seg0_idx == -1 {
 			delete(conf, "he_oper_centr_freq_seg0_idx")
 		} else {
@@ -455,45 +455,45 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if _, ok := newInput["vht_oper_chwidth"]; ok {
+	if _, ok := newInput["Vht_oper_chwidth"]; ok {
 		conf["vht_oper_chwidth"] = newConf.Vht_oper_chwidth
 	}
 
-	if _, ok := newInput["he_oper_chwidth"]; ok {
+	if _, ok := newInput["He_oper_chwidth"]; ok {
 		conf["he_oper_chwidth"] = newConf.He_oper_chwidth
 	}
 
-	if _, ok := newInput["country_code"]; ok {
+	if _, ok := newInput["Country_code"]; ok {
 		conf["country_code"] = newConf.Country_code
 		needRestart = true
 	}
 
-	if _, ok := newInput["vht_capab"]; ok {
+	if _, ok := newInput["Vht_capab"]; ok {
 		conf["vht_capab"] = newConf.Vht_capab
 		needRestart = true
 	}
 
-	if _, ok := newInput["ht_capab"]; ok {
+	if _, ok := newInput["Ht_capab"]; ok {
 		conf["ht_capab"] = newConf.Ht_capab
 		needRestart = true
 	}
 
-	if _, ok := newInput["ieee80211ax"]; ok {
+	if _, ok := newInput["Ieee80211ax"]; ok {
 		conf["ieee80211ax"] = newConf.Ieee80211ax
 		needRestart = true
 	}
 
-	if _, ok := newInput["he_su_beamformer"]; ok {
+	if _, ok := newInput["He_su_beamformer"]; ok {
 		conf["he_su_beamformer"] = newConf.He_su_beamformer
 		needRestart = true
 	}
 
-	if _, ok := newInput["he_su_beamformee"]; ok {
+	if _, ok := newInput["He_su_beamformee"]; ok {
 		conf["he_su_beamformee"] = newConf.He_su_beamformee
 		needRestart = true
 	}
 
-	if _, ok := newInput["he_mu_beamformer"]; ok {
+	if _, ok := newInput["He_mu_beamformer"]; ok {
 		conf["he_mu_beamformer"] = newConf.He_mu_beamformer
 		needRestart = true
 	}
