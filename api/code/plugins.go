@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -276,7 +277,6 @@ func ghcrSuperdLogin() bool {
 func generatePFWAPIToken() {
 	//install API token for PLUS
 	var pfwConfigFile = TEST_PREFIX + "/configs/pfw/rules.json"
-	var pfwConfigDir = TEST_PREFIX + "/configs/pfw/"
 	value := genBearerToken()
 	pfw_token := Token{"PLUS-API-Token", value, 0}
 
@@ -290,9 +290,10 @@ func generatePFWAPIToken() {
 	if err == nil {
 		_ = json.Unmarshal(data, &tokens)
 		for _, token := range tokens {
-			if token.Name == pfw_token {
+			if token.Name == pfw_token.Name {
 				//re-use the PFW token
 				value = token.Token
+				pfw_token.Token = value
 				//re-use existing token
 				foundToken = true
 				break
@@ -302,7 +303,7 @@ func generatePFWAPIToken() {
 
 	if !foundToken {
 		//add the generated token and save it to the token file
-		tokens = append(tokens, token)
+		tokens = append(tokens, pfw_token)
 		file, _ := json.MarshalIndent(tokens, "", " ")
 		err = ioutil.WriteFile(AuthTokensFile, file, 0660)
 		if err != nil {
@@ -317,7 +318,7 @@ func generatePFWAPIToken() {
 
 	pfw_config := FirewallConfig{value}
 	file, _ := json.MarshalIndent(pfw_config, "", " ")
-	err = ioutil.WriteFile(AuthTokensFile, file, 0660)
+	err = ioutil.WriteFile(pfwConfigFile, file, 0660)
 	if err != nil {
 		fmt.Println("failed to write pfw configuration", err)
 	}

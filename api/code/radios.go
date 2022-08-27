@@ -19,7 +19,7 @@ import (
 
 var validInterface = regexp.MustCompile(`^[a-z0-9\.]+$`).MatchString
 
-func getHostapdPath(iface string) string {
+func getHostapdConfigPath(iface string) string {
 	if !validInterface(iface) {
 		return ""
 	}
@@ -32,6 +32,20 @@ func getHostapdPath(iface string) string {
 */
 func getAP_Ifaces() []string {
 	ret := []string{}
+
+	files, err := ioutil.ReadDir(TEST_PREFIX + "/state/wifi")
+	if err == nil {
+		fmt.Println("failed to list /state/wifi for control files")
+		return ret
+	}
+	for _, f := range files {
+		if strings.HasPrefix(f.Name(), "control_") {
+			pieces := strings.Split(f.Name(), "_")
+			ret = append(ret, pieces[1])
+		}
+	}
+
+	return ret
 }
 
 /*
@@ -129,10 +143,10 @@ func RunHostapdAllStations(iface string) (map[string]map[string]string, error) {
 	return m, nil
 }
 
-func RunHostapdStatus() (map[string]string, error) {
+func RunHostapdStatus(iface string) (map[string]string, error) {
 	m := map[string]string{}
 
-	out, err := RunHostapdCommand("status")
+	out, err := RunHostapdCommand(iface, "status")
 	if err != nil {
 		return nil, err
 	}
@@ -498,7 +512,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !needRestart {
-		_, err = RunHostapdCommand("reload")
+		_, err = RunHostapdCommand(iface, "reload")
 		if err != nil {
 			log.Fatal(err)
 			http.Error(w, err.Error(), 400)
