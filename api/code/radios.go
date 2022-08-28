@@ -665,7 +665,18 @@ func configureInterface(interfaceType string, name string) error {
 		_ = json.Unmarshal(data, &config)
 	}
 
-	config = append(config, newEntry)
+	foundEntry := false
+	for i, _ := range config {
+		if config[i].Name == name {
+			config[i] = newEntry
+			foundEntry = true
+			break
+		}
+	}
+
+	if !foundEntry {
+		config = append(config, newEntry)
+	}
 
 	file, _ := json.MarshalIndent(config, "", " ")
 	err = ioutil.WriteFile(gAPIInterfacesPath, file, 0660)
@@ -695,6 +706,7 @@ func toggleInterface(name string, enabled bool) error {
 			foundEntry = true
 			madeChange = enabled != config[i].Enabled
 			config[i].Enabled = enabled
+			break
 		}
 	}
 
@@ -794,5 +806,5 @@ func getInterfacesConfiguration(w http.ResponseWriter, r *http.Request) {
 
 func initRadios() {
 	// If an install does not have interfaces.json yet,
-	// migrate it along with templates. 
+	// migrate it along with templates.
 }
