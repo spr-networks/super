@@ -1529,7 +1529,7 @@ func isSetupMode() bool {
 	return true
 }
 
-// initial setup only available if there is no .spr-setup-done
+// initial setup only available if there is no user/pass configured
 func setup(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -1562,7 +1562,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hostapd_path := getHostapdConfigPath(conf.InterfaceAP)
+	hostapd_path := getHostapdConfigPath("template")
 
 	if conf.InterfaceUplink == "" {
 		http.Error(w, "Invalid Uplink interface", 400)
@@ -1628,7 +1628,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	//write to hostapd.conf
+	//generate and write to hostapd_iface.conf
 	data, err = ioutil.ReadFile(hostapd_path)
 	if err != nil {
 		// we can use default template config here but better to copy it before in bash
@@ -1650,6 +1650,9 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to write config to "+hostapd_path, 400)
 		panic(err)
 	}
+
+	configureInterface("AP", conf.InterfaceAP)
+	configureInterface("Uplink", conf.InterfaceUplink)
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
 	callSuperdRestart("")
@@ -1805,6 +1808,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/config", hostapdUpdateConfig).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/enable", hostapdEnableInterface).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/disable", hostapdDisableInterface).Methods("PUT")
 
 	//ip information
 	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -9,13 +10,13 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
-
-//var HostapdConfigFile = TEST_PREFIX + "/configs/wifi/hostapd.conf"
 
 var validInterface = regexp.MustCompile(`^[a-z0-9\.]+$`).MatchString
 
@@ -47,13 +48,6 @@ func getAP_Ifaces() []string {
 
 	return ret
 }
-
-/*
-
-TBD
-external_router_authenticated.HandleFunc("/hostapd/{interface:.*}/status", hostapdStatus).Methods("GET")
-
-*/
 
 func doReloadPSKFiles() {
 	//generate PSK files for hostapd
@@ -590,4 +584,160 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain")
 	fmt.Fprintf(w, string(data))
+}
+
+var Interfacesmtx sync.Mutex
+
+type InterfacesConfig struct {
+	Name    string
+	Type    string
+	Enabled bool
+}
+
+var gAPIInterfacesPath = TEST_PREFIX + "/configs/base/interfaces.json"
+
+/*
+ Simple upgrade path to using templates
+*/
+//go:embed hostapd_template.conf
+var hostap_template string
+
+func createHostAPTemplate() {
+	err := ioutil.WriteFile(getHostapdConfigPath("template"), []byte(hostap_template), 0644)
+	if err != nil {
+		fmt.Println("Error creating hostap template")
+		return
+	}
+}
+
+func configureInterface(interfaceType string, name string) error {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	if interfaceType != "AP" && interfaceType != "Uplink" {
+		//generate a hostap config if it is not there yet (?)
+		return fmt.Errorf("Unknown interface type " + interfaceType)
+	}
+
+	if interfaceType == "AP" {
+		//ensure that a hostapd configuration exists for this interface.
+		path := getHostapdConfigPath(name)
+		_, err := os.Stat(path)
+		if os.IsNotExist(err) {
+
+			//copy the template over
+			input, err := ioutil.ReadFile(getHostapdConfigPath("template"))
+			if err != nil {
+				fmt.Println("missing template configuration")
+				createHostAPTemplate()
+				input, err = ioutil.ReadFile(getHostapdConfigPath("template"))
+				if err != nil {
+					fmt.Println("failed to create tempalte")
+					return err
+				}
+			}
+
+			err = ioutil.WriteFile(path, input, 0644)
+			if err != nil {
+				fmt.Println("Error creating", path)
+				return err
+			}
+
+		}
+
+	}
+
+	newEntry := InterfacesConfig{name, interfaceType, true}
+
+	//read the old configuration
+	data, err := os.ReadFile(gAPIInterfacesPath)
+	config := []InterfacesConfig{}
+	if err == nil {
+		_ = json.Unmarshal(data, &config)
+	}
+
+	config = append(config, newEntry)
+
+	file, _ := json.MarshalIndent(config, "", " ")
+	err = ioutil.WriteFile(gAPIInterfacesPath, file, 0660)
+	if err != nil {
+		fmt.Println("failed to write interfaces configuration file", err)
+		return err
+	}
+
+	return nil
+}
+
+func toggleInterface(name string, enabled bool) error {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	//read the old configuration
+	data, err := os.ReadFile(gAPIInterfacesPath)
+	config := []InterfacesConfig{}
+	if err == nil {
+		_ = json.Unmarshal(data, &config)
+	}
+
+	foundEntry := false
+	madeChange := false
+	for i, _ := range config {
+		if config[i].Name == name {
+			foundEntry = true
+			madeChange = enabled != config[i].Enabled
+			config[i].Enabled = enabled
+		}
+	}
+
+	if !foundEntry {
+		return fmt.Errorf("interface not found")
+	}
+
+	if madeChange {
+		file, _ := json.MarshalIndent(config, "", " ")
+		err = ioutil.WriteFile(gAPIInterfacesPath, file, 0660)
+		if err != nil {
+			fmt.Println("failed to write interfaces configuration file", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func hostapdEnableInterface(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	if !validInterface(iface) {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	//make a call to configure the interface,
+	// which ensures that a hostapd configuration is created
+	err := configureInterface("AP", iface)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	err = toggleInterface(iface, true)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+}
+func hostapdDisableInterface(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	if !validInterface(iface) {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	err := toggleInterface(iface, false)
+
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
 }
