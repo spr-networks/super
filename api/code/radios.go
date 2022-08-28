@@ -34,8 +34,8 @@ func getAP_Ifaces() []string {
 	ret := []string{}
 
 	files, err := ioutil.ReadDir(TEST_PREFIX + "/state/wifi")
-	if err == nil {
-		fmt.Println("failed to list /state/wifi for control files")
+	if err != nil {
+		fmt.Println("failed to list /state/wifi for control files", err)
 		return ret
 	}
 	for _, f := range files {
