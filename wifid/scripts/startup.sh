@@ -1,6 +1,8 @@
 #!/bin/bash
 rm /state/wifi/sta_mac_iface_map/*
 
+IFACES=$(curl --unix-socket /state/wifi/apisock http://localhost/intefaces)
+
 for IFACE in $IFACES
 do
   hostapd -B /configs/wifi/hostapd_${IFACE}.conf
