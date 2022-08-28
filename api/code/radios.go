@@ -725,6 +725,9 @@ func hostapdEnableInterface(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+
+	//restart hostap container
+	callSuperdRestart("wifid")
 }
 func hostapdDisableInterface(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
@@ -740,4 +743,42 @@ func hostapdDisableInterface(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//restart hostap container
+	callSuperdRestart("wifid")
+}
+
+func getEnabledAPInterfaces(w http.ResponseWriter, r *http.Request) {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	//read the old configuration
+	data, err := os.ReadFile(gAPIInterfacesPath)
+	config := []InterfacesConfig{}
+	if err == nil {
+		_ = json.Unmarshal(data, &config)
+	}
+
+	outputString := ""
+	for _, entry := range config {
+		if entry.Enabled == true {
+			outputString += entry.Name + " "
+		}
+	}
+
+	w.Write([]byte(outputString))
+}
+
+func getInterfacesConfiguration(w http.ResponseWriter, r *http.Request) {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	//read the old configuration
+	data, err := os.ReadFile(gAPIInterfacesPath)
+	config := []InterfacesConfig{}
+	if err == nil {
+		_ = json.Unmarshal(data, &config)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(config)
 }
