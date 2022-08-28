@@ -312,11 +312,17 @@ func generatePFWAPIToken() {
 	}
 
 	//now save the rules.json with this token
-	type FirewallConfig struct {
-		APIToken string
+	pfw_config := make(map[string]interface{})
+
+	data, err = os.ReadFile(AuthTokensFile)
+	if err == nil {
+		//read existing configuration
+		_ = json.Unmarshal(data, &pfw_config)
 	}
 
-	pfw_config := FirewallConfig{value}
+	//set the API token
+	pfw_config["APIToken"] = value
+
 	file, _ := json.MarshalIndent(pfw_config, "", " ")
 	err = ioutil.WriteFile(pfwConfigFile, file, 0660)
 	if err != nil {

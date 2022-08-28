@@ -107,7 +107,7 @@ type HostapdConfigEntry struct {
 	Country_code                 string
 	Vht_capab                    string
 	Ht_capab                     string
-	Hw_mode											 string
+	Hw_mode                      string
 	Ieee80211ax                  int
 	He_su_beamformer             int
 	He_su_beamformee             int
