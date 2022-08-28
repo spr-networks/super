@@ -637,6 +637,15 @@ func configureInterface(interfaceType string, name string) error {
 				}
 			}
 
+			configData := string(input)
+			matchSSID := regexp.MustCompile(`(?m)^(ssid)=(.*)`)
+			matchInterfaceAP := regexp.MustCompile(`(?m)^(interface)=(.*)`)
+			matchControl := regexp.MustCompile(`(?m)^(ctrl_interface)=(.*)`)
+
+			configData = matchSSID.ReplaceAllString(configData, "$1="+"SPR_"+name)
+			configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+name)
+			configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+name)
+
 			err = ioutil.WriteFile(path, input, 0644)
 			if err != nil {
 				fmt.Println("Error creating", path)
