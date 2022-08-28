@@ -1876,6 +1876,8 @@ func main() {
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
+	//initialize hostap  related items
+	initRadios()
 	//initialize user firewall rules
 	initUserFirewallRules()
 	//start the websocket handler

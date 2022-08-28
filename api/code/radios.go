@@ -646,7 +646,7 @@ func configureInterface(interfaceType string, name string) error {
 			configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+name)
 			configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+name)
 
-			err = ioutil.WriteFile(path, input, 0644)
+			err = ioutil.WriteFile(path, []byte(configData), 0644)
 			if err != nil {
 				fmt.Println("Error creating", path)
 				return err
@@ -790,4 +790,9 @@ func getInterfacesConfiguration(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(config)
+}
+
+func initRadios() {
+	// If an install does not have interfaces.json yet,
+	// migrate it along with templates. 
 }
