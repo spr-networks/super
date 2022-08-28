@@ -90,8 +90,8 @@ services:
     privileged: true
     logging: *default-logging
     depends_on:
+      - "api"
       - "dhcp"
-      - "dns"
       - "multicast_udp_proxy"
     volumes:
       - ./configs/base/:/configs/base/
@@ -164,8 +164,6 @@ services:
     restart: always
     depends_on:
       - "base"
-      - "wifid"
-      - "dhcp"
       - "frontend"
       - "superd"
     logging: *default-logging
