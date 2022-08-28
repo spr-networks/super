@@ -32,10 +32,6 @@ fi
 # gen configs
 if [ ! -f configs/dhcp/coredhcp.yml ]; then
   ./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
-  for((i=0;i<10;i++))
-  do
-    ./configs/scripts/gen_hostapd.sh wlan${i} > configs/wifi/hostapd_wlan${i}.conf
-  done
   ./configs/scripts/gen_watchdog.sh  > configs/watchdog/watchdog.conf
 fi
 
