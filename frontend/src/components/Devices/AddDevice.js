@@ -1,5 +1,4 @@
 import React, { useContext, useState } from 'react'
-import QRCode from 'react-qr-code'
 
 import { deviceAPI, wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
