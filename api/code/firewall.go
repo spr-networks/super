@@ -171,7 +171,7 @@ func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
 	}
 
 	for _, entry := range interfacesConfig {
-		if entry.Enabled == true {
+		if entry.Enabled == true && entry.Type == "AP" {
 			//#    $(if [ "$VLANSIF" ]; then echo "counter iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF"; fi)
 			cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "WIPHY_MACSPOOF_CHECK",
 				"counter", "iifname", "eq", entry.Name+".*", "jump", "DROP_MAC_SPOOF")
