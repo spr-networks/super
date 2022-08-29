@@ -17,10 +17,12 @@ import {
   Text
 } from 'native-base'
 
-export default class AddBlock extends React.Component {
+
+export default class AddForwardBlock extends React.Component {
   state = {
     SrcIP: '',
     DstIP: '',
+    DstPort: '',
     Protocol: 'tcp'
   }
 
@@ -42,16 +44,17 @@ export default class AddBlock extends React.Component {
     let block = {
       SrcIP: this.state.SrcIP,
       DstIP: this.state.DstIP,
+      DstPort: this.state.DstPort,
       Protocol: this.state.Protocol
     }
 
     const done = (res) => {
       if (this.props.notifyChange) {
-        this.props.notifyChange('block')
+        this.props.notifyChange('forward_block')
       }
     }
 
-    firewallAPI.addBlock(block).then(done)
+    firewallAPI.addForwardBlock(block).then(done)
   }
 
   componentDidMount() {}
@@ -80,11 +83,23 @@ export default class AddBlock extends React.Component {
             />
             <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
           </FormControl>
+
         </HStack>
+
+        <FormControl flex="1">
+          <FormControl.Label>DestinationPort</FormControl.Label>
+          <Input
+            size="md"
+            variant="underlined"
+            value={this.state.DstPort}
+            onChangeText={(value) => this.handleChange('DstPort', value)}
+          />
+          <FormControl.HelperText>Optional port or port range (leave empty for all ports)</FormControl.HelperText>
+        </FormControl>
+
 
         <FormControl>
           <FormControl.Label>Protocol</FormControl.Label>
-
           <Radio.Group
             name="Protocol"
             defaultValue={this.state.Protocol}
@@ -106,6 +121,6 @@ export default class AddBlock extends React.Component {
   }
 }
 
-AddBlock.propTypes = {
+AddForwardBlock.propTypes = {
   notifyChange: PropTypes.func
 }

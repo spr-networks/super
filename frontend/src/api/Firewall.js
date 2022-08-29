@@ -13,6 +13,9 @@ export class APIFirewall extends API {
   addBlock = (data) => this.put('block', data)
   deleteBlock = (data) => this.delete('block', data)
 
+  addForwardBlock = (data) => this.put('block_forward', data)
+  deleteForwardBlock = (data) => this.delete('block_forward', data)
+
 }
 
 export const firewallAPI = new APIFirewall()
