@@ -169,6 +169,24 @@ const WifiHostapd = (props) => {
     )
   }
 
+  const resetInterfaceConfig = () => {
+    wifiAPI.resetInterfaceConfig(iface)
+    .then(
+      wifiAPI.config(iface).then((conf) => {
+        setConfig(sortConf(conf))
+      }).catch(err => {
+        //configuration not found. How to handle?
+        setConfig({})
+      })
+    )
+  }
+
+  const restartWifi = () => {
+    wifiAPI.restartWifi()
+    .then(
+
+    )
+  }
 
   const updateChannels = (wifiParameters) => {
     let data = {
@@ -211,6 +229,31 @@ const WifiHostapd = (props) => {
           Disable HostAP Configuration
         </Button>
       ) : null}
+
+      <Button
+        colorScheme="primary"
+        size="md"
+        width="50%"
+        alignSelf="center"
+        type="submit"
+        mt={4}
+        onPress={resetInterfaceConfig}
+      >
+        Reset HostAP Configuration to Defaults
+      </Button>
+
+
+      <Button
+        colorScheme="primary"
+        size="md"
+        width="50%"
+        alignSelf="center"
+        type="submit"
+        mt={4}
+        onPress={restartWifi}
+      >
+        Restart All Wifi Devices
+      </Button>
 
       <Box
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
