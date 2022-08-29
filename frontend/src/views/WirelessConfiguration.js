@@ -1,6 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
 
-import { wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import WifiClients from 'components/Wifi/WifiClients'
 import WifiInterfaceList from 'components/Wifi/WifiInterfaceList'
@@ -18,21 +17,9 @@ import { TabView, SceneMap } from 'react-native-tab-view'
 import { Box, View, Text, useColorModeValue } from 'native-base'
 
 const WirelessConfiguration = (props) => {
-  const [config, setConfig] = useState({})
   const [index, setIndex] = useState(0) //1)
 
   const context = useContext(AlertContext)
-
-  useEffect(() => {
-    wifiAPI
-      .config()
-      .then((config) => {
-        setConfig(config)
-      })
-      .catch((err) => {
-        context.error('API Failure get traffic: ' + err.message)
-      })
-  }, [])
 
   const [routes] = useState([
     {

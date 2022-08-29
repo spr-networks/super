@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -273,6 +274,63 @@ func ghcrSuperdLogin() bool {
 	return true
 }
 
+func generatePFWAPIToken() {
+	//install API token for PLUS
+	var pfwConfigFile = TEST_PREFIX + "/configs/pfw/rules.json"
+	value := genBearerToken()
+	pfw_token := Token{"PLUS-API-Token", value, 0}
+
+	Tokensmtx.Lock()
+	defer Tokensmtx.Unlock()
+
+	tokens := []Token{}
+	data, err := os.ReadFile(AuthTokensFile)
+
+	foundToken := false
+	if err == nil {
+		_ = json.Unmarshal(data, &tokens)
+		for _, token := range tokens {
+			if token.Name == pfw_token.Name {
+				//re-use the PFW token
+				value = token.Token
+				pfw_token.Token = value
+				//re-use existing token
+				foundToken = true
+				break
+			}
+		}
+	}
+
+	if !foundToken {
+		//add the generated token and save it to the token file
+		tokens = append(tokens, pfw_token)
+		file, _ := json.MarshalIndent(tokens, "", " ")
+		err = ioutil.WriteFile(AuthTokensFile, file, 0660)
+		if err != nil {
+			fmt.Println("failed to write tokens file", err)
+		}
+	}
+
+	//now save the rules.json with this token
+	pfw_config := make(map[string]interface{})
+
+	data, err = os.ReadFile(AuthTokensFile)
+	if err == nil {
+		//read existing configuration
+		_ = json.Unmarshal(data, &pfw_config)
+	}
+
+	//set the API token
+	pfw_config["APIToken"] = value
+
+	file, _ := json.MarshalIndent(pfw_config, "", " ")
+	err = ioutil.WriteFile(pfwConfigFile, file, 0660)
+	if err != nil {
+		fmt.Println("failed to write pfw configuration", err)
+	}
+
+}
+
 func downloadPlusExtension(gitURL string) bool {
 	ext := "https://" + PlusUser + ":" + config.PlusToken + "@" + gitURL
 
@@ -296,6 +354,8 @@ func downloadPlusExtension(gitURL string) bool {
 		fmt.Println("failed to download extension: "+ext, resp.StatusCode)
 		return false
 	}
+
+	generatePFWAPIToken()
 
 	return true
 }
@@ -363,7 +423,7 @@ func stopPlusExt(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Error(w, "Plus extension not found: " + name, 404)
+	http.Error(w, "Plus extension not found: "+name, 404)
 
 }
 
@@ -385,7 +445,7 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Error(w, "Plus extension not found: " + name, 404)
+	http.Error(w, "Plus extension not found: "+name, 404)
 
 }
 

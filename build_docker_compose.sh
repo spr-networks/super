@@ -32,7 +32,6 @@ fi
 # gen configs
 if [ ! -f configs/dhcp/coredhcp.yml ]; then
   ./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
-  ./configs/scripts/gen_hostapd.sh > configs/wifi/hostapd.conf
   ./configs/scripts/gen_watchdog.sh  > configs/watchdog/watchdog.conf
 fi
 
@@ -89,7 +88,7 @@ fi
 ret=$?
 
 if [ "$ret" -ne "0" ]; then
-  echo "Tip: if the build failed to resovle domain names,"
+  echo "Tip: if the build failed to resolve domain names,"
   echo "consider running ./base/docker_nftables_setup.sh"
   echo "since iptables has been disabled for docker in the"
   echo "SPR installer"

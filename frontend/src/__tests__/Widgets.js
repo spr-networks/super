@@ -13,7 +13,7 @@ describe('Widgets', () => {
 
     const component = (
       <NativeBaseProvider initialWindowMetrics={inset}>
-        <WifiClients />
+        <WifiClients iface="wlan0"/>
       </NativeBaseProvider>
     )
 

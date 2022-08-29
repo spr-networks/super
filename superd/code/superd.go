@@ -38,8 +38,8 @@ func getDefaultCompose() string {
 	}
 	// when no SSID is set in configs/base/config.sh,
 	// assume virtual SPR is running
-	ssid_configured := os.Getenv("SSID_NAME")
-	if ssid_configured == "" {
+	virtual_spr := os.Getenv("VIRTUAL_SPR")
+	if virtual_spr != "" {
 		return "docker-compose-virt.yml"
 	}
 	return "docker-compose.yml"
@@ -69,11 +69,11 @@ func composeCommand(composeFile string, target string, command string, optional 
 			_, err := exec.Command("docker-compose", "-f", composeFile, command, optional, target).Output()
 			if err != nil {
 				fmt.Println("docker-compose "+command, composeFile, optional, target, "failed", err)
-			} else {
-				_, err := exec.Command("docker-compose", "-f", composeFile, command, target).Output()
-				if err != nil {
-					fmt.Println("docker-compose"+command, composeFile, "failed", err)
-				}
+			}
+		} else {
+			_, err := exec.Command("docker-compose", "-f", composeFile, command, target).Output()
+			if err != nil {
+				fmt.Println("docker-compose"+command, composeFile, "failed", err)
 			}
 		}
 	} else {

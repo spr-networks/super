@@ -17,8 +17,6 @@ import {
 
 const WifiChannelParameters = (props) => {
   const context = useContext(AlertContext)
-
-  const [iface, setIface] = useState('')
   const [channel, setChannel] = useState(0)
   const [bandwidth, setBandwidth] = useState(0)
   const [mode, setMode] = useState('a')
@@ -26,6 +24,7 @@ const WifiChannelParameters = (props) => {
   const [iws, setIws] = useState([])
   const [devicesLoaded, setDevicesLoaded] = useState(false)
   const [errors, setErrors] = useState({})
+
 
   const bandwidth5 = [
     { label: '20 MHz', value: 20 },
@@ -46,8 +45,8 @@ const WifiChannelParameters = (props) => {
   ]
 
   useEffect(() => {
-    let iface = props.config.interface
-    setIface(props.config.interface)
+    let iface = props.iface
+    //props.config.interface should match TBD
 
     wifiAPI.iwDev().then((devs) => {
       setDevices(devs)
@@ -119,7 +118,7 @@ const WifiChannelParameters = (props) => {
 
     let expectedFreq = mode == 'a' ? '5' : '2'
     for (let iw of iws) {
-      if (!iw.devices[iface]) {
+      if (!iw.devices[props.iface]) {
         continue
       }
 
@@ -196,7 +195,7 @@ const WifiChannelParameters = (props) => {
     }
 
     wifiAPI
-      .setChannel(wifiParameters)
+      .setChannel(props.iface, wifiParameters)
       .then(done)
       .catch((e) => {
         context.error('API Failure: ' + e.message)
@@ -212,16 +211,24 @@ const WifiChannelParameters = (props) => {
         label = `${iface} ${type}`
 
       //skip VLAN & managed entries
-      if (type.includes('AP/VLAN') || type.includes('managed')) {
+      if (type.includes('AP/VLAN')) {
         continue
       }
 
+      /*
+         || type.includes('managed')
+         */
+
       devsScan.push({ label, value: iface, disabled: !type.includes('AP') })
 
-      if (iface == props.config.interface) {
+      if (iface == props.iface) {
         selectedDevice = devsScan[devsScan.length - 1].value
       }
     }
+  }
+
+  const goSetIface = (iface) => {
+    props.setIface(iface)
   }
 
   let bandwidths = mode == 'a' ? bandwidth5 : bandwidth24
@@ -235,6 +242,26 @@ const WifiChannelParameters = (props) => {
         p={4}
       >
         <VStack space={2}>
+
+          <FormControl>
+            <FormControl.Label>WiFi Interface</FormControl.Label>
+            {devicesLoaded ? (
+              <Select
+                selectedValue={selectedDevice}
+                onValueChange={(value) => goSetIface(value)}
+                accessibilityLabel="Wifi Interface"
+              >
+                {devsScan.map((dev) => (
+                  <Select.Item
+                    key={dev.label}
+                    label={dev.label}
+                    value={dev.value}
+                  />
+                ))}
+              </Select>
+            ) : null}
+          </FormControl>
+
           <Heading fontSize="lg">Channel Selection</Heading>
 
           <Stack
@@ -242,24 +269,6 @@ const WifiChannelParameters = (props) => {
             space={2}
             maxW={{ base: '100%', md: 260 }}
           >
-            <FormControl>
-              <FormControl.Label>WiFi Interface</FormControl.Label>
-              {devicesLoaded ? (
-                <Select
-                  selectedValue={selectedDevice}
-                  onValueChange={(value) => setIface(value)}
-                  accessibilityLabel="Wifi Interface"
-                >
-                  {devsScan.map((dev) => (
-                    <Select.Item
-                      key={dev.label}
-                      label={dev.label}
-                      value={dev.value}
-                    />
-                  ))}
-                </Select>
-              ) : null}
-            </FormControl>
 
             <FormControl>
               <FormControl.Label>Frequency Band</FormControl.Label>

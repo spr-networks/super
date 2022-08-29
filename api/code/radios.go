@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -9,18 +10,98 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
 
-var HostapdConf = "/configs/wifi/hostapd.conf"
+var validInterface = regexp.MustCompile(`^[a-z0-9\.]+$`).MatchString
+
+func getHostapdConfigPath(iface string) string {
+	if !validInterface(iface) {
+		return ""
+	}
+
+	return TEST_PREFIX + "/configs/wifi/hostapd_" + iface + ".conf"
+}
+
+/*
+	Generate a list of link devices in AP mode
+*/
+func getAP_Ifaces() []string {
+	ret := []string{}
+
+	files, err := ioutil.ReadDir(TEST_PREFIX + "/state/wifi")
+	if err != nil {
+		fmt.Println("failed to list /state/wifi for control files", err)
+		return ret
+	}
+	for _, f := range files {
+		if strings.HasPrefix(f.Name(), "control_") {
+			pieces := strings.Split(f.Name(), "_")
+			ret = append(ret, pieces[1])
+		}
+	}
+
+	return ret
+}
+
+func doReloadPSKFiles() {
+	//generate PSK files for hostapd
+	devices := getDevicesJson()
+
+	wpa2 := ""
+	sae := ""
+
+	for keyval, entry := range devices {
+		if keyval == "pending" {
+			//set wildcard password at front. hostapd uses a FILO for the sae keys
+			if entry.PSKEntry.Type == "sae" {
+				sae = entry.PSKEntry.Psk + "|mac=ff:ff:ff:ff:ff:ff" + "\n" + sae
+				//apple downgrade workaround https://feedbackassistant.apple.com/feedback/9991042
+				wpa2 = "00:00:00:00:00:00 " + entry.PSKEntry.Psk + "\n" + wpa2
+			} else if entry.PSKEntry.Type == "wpa2" {
+				wpa2 = "00:00:00:00:00:00 " + entry.PSKEntry.Psk + "\n" + wpa2
+			}
+		} else {
+			if entry.PSKEntry.Type == "sae" {
+				sae += entry.PSKEntry.Psk + "|mac=" + entry.MAC + "\n"
+				//apple downgrade workaround https://feedbackassistant.apple.com/feedback/9991042
+				wpa2 += entry.MAC + " " + entry.PSKEntry.Psk + "\n"
+			} else if entry.PSKEntry.Type == "wpa2" {
+				wpa2 += entry.MAC + " " + entry.PSKEntry.Psk + "\n"
+			}
+		}
+	}
+
+	err := ioutil.WriteFile(TEST_PREFIX+"/configs/wifi/sae_passwords", []byte(sae), 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = ioutil.WriteFile(TEST_PREFIX+"/configs/wifi/wpa2pskfile", []byte(wpa2), 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, iface := range getAP_Ifaces() {
+		//reload the hostapd passwords
+		cmd := exec.Command("hostapd_cli", "-p", "/state/wifi/control_"+iface, "-s", "/state/wifi/", "reload_wpa_psk")
+		err = cmd.Run()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
+}
 
 type HostapdConfigEntry struct {
 	Country_code                 string
 	Vht_capab                    string
 	Ht_capab                     string
+	Hw_mode                      string
 	Ieee80211ax                  int
 	He_su_beamformer             int
 	He_su_beamformee             int
@@ -33,9 +114,9 @@ type HostapdConfigEntry struct {
 	He_oper_chwidth              int
 }
 
-func RunHostapdAllStations() (map[string]map[string]string, error) {
+func RunHostapdAllStations(iface string) (map[string]map[string]string, error) {
 	m := map[string]map[string]string{}
-	out, err := RunHostapdCommand("all_sta")
+	out, err := RunHostapdCommand(iface, "all_sta")
 	if err != nil {
 		return nil, err
 	}
@@ -57,10 +138,10 @@ func RunHostapdAllStations() (map[string]map[string]string, error) {
 	return m, nil
 }
 
-func RunHostapdStatus() (map[string]string, error) {
+func RunHostapdStatus(iface string) (map[string]string, error) {
 	m := map[string]string{}
 
-	out, err := RunHostapdCommand("status")
+	out, err := RunHostapdCommand(iface, "status")
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +172,7 @@ type CalculatedChannelParameters struct {
 	He_oper_chwidth              int
 }
 
-func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled bool, he_enabled bool) (CalculatedChannelParameters, error) {
+func ChanSwitch(iface string, mode string, channel int, bw int, ht_enabled bool, vht_enabled bool, he_enabled bool) (CalculatedChannelParameters, error) {
 	freq1 := 0
 	freq2 := 0
 	//freq3 := 0 //for 80+80, not supported right now
@@ -170,9 +251,9 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 		cmd += " vht"
 	}
 
-	fmt.Println(cmd)
+	fmt.Println("chan_switch command:", cmd)
 
-	result, err := RunHostapdCommandArray(strings.Split(cmd, " "))
+	result, err := RunHostapdCommandArray(iface, strings.Split(cmd, " "))
 
 	if !strings.Contains(result, "OK") && err == nil {
 		err = fmt.Errorf("Failed to run chan_switch", result)
@@ -182,6 +263,11 @@ func ChanSwitch(mode string, channel int, bw int, ht_enabled bool, vht_enabled b
 }
 
 func hostapdChannelSwitch(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	if !validInterface(iface) {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
 
 	channelParams := ChannelParameters{}
 	err := json.NewDecoder(r.Body).Decode(&channelParams)
@@ -191,7 +277,7 @@ func hostapdChannelSwitch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	calculated, err := ChanSwitch(channelParams.Mode, channelParams.Channel, channelParams.Bandwidth, channelParams.HT_Enable, channelParams.VHT_Enable, channelParams.HE_Enable)
+	calculated, err := ChanSwitch(iface, channelParams.Mode, channelParams.Channel, channelParams.Bandwidth, channelParams.HT_Enable, channelParams.VHT_Enable, channelParams.HE_Enable)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -202,9 +288,9 @@ func hostapdChannelSwitch(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func RunHostapdCommandArray(cmd []string) (string, error) {
+func RunHostapdCommandArray(iface string, cmd []string) (string, error) {
 
-	args := append([]string{"-p", "/state/wifi/control", "-s", "/state/wifi"}, cmd...)
+	args := append([]string{"-p", "/state/wifi/control_" + iface, "-s", "/state/wifi"}, cmd...)
 
 	outb, err := exec.Command("hostapd_cli", args...).Output()
 	if err != nil {
@@ -213,9 +299,9 @@ func RunHostapdCommandArray(cmd []string) (string, error) {
 	return string(outb), nil
 }
 
-func RunHostapdCommand(cmd string) (string, error) {
+func RunHostapdCommand(iface string, cmd string) (string, error) {
 
-	outb, err := exec.Command("hostapd_cli", "-p", "/state/wifi/control", "-s", "/state/wifi", cmd).Output()
+	outb, err := exec.Command("hostapd_cli", "-p", "/state/wifi/control_"+iface, "-s", "/state/wifi", cmd).Output()
 	if err != nil {
 		return "", fmt.Errorf("Failed to execute command %s", cmd)
 	}
@@ -223,7 +309,13 @@ func RunHostapdCommand(cmd string) (string, error) {
 }
 
 func hostapdStatus(w http.ResponseWriter, r *http.Request) {
-	status, err := RunHostapdStatus()
+	iface := mux.Vars(r)["interface"]
+	if !validInterface(iface) {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	status, err := RunHostapdStatus(iface)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -233,7 +325,13 @@ func hostapdStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func hostapdAllStations(w http.ResponseWriter, r *http.Request) {
-	stations, err := RunHostapdAllStations()
+	iface := mux.Vars(r)["interface"]
+	if !validInterface(iface) {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	stations, err := RunHostapdAllStations(iface)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -242,8 +340,8 @@ func hostapdAllStations(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(stations)
 }
 
-func getHostapdJson() (map[string]interface{}, error) {
-	data, err := ioutil.ReadFile(HostapdConf)
+func getHostapdJson(iface string) (map[string]interface{}, error) {
+	data, err := ioutil.ReadFile(getHostapdConfigPath(iface))
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -270,7 +368,13 @@ func getHostapdJson() (map[string]interface{}, error) {
 }
 
 func hostapdConfig(w http.ResponseWriter, r *http.Request) {
-	conf, err := getHostapdJson()
+	iface := mux.Vars(r)["interface"]
+	if !validInterface(iface) {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	conf, err := getHostapdJson(iface)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -281,7 +385,13 @@ func hostapdConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
-	conf, err := getHostapdJson()
+	iface := mux.Vars(r)["interface"]
+	if !validInterface(iface) {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	conf, err := getHostapdJson(iface)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -324,53 +434,65 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		conf["channel"] = newConf.Channel
 	}
 
-	if _, ok := newInput["vht_oper_centr_freq_seg0_idx"]; ok {
-		conf["vht_oper_centr_freq_seg0_idx"] = newConf.Vht_oper_centr_freq_seg0_idx
+	if _, ok := newInput["Vht_oper_centr_freq_seg0_idx"]; ok {
+		if newConf.Vht_oper_centr_freq_seg0_idx == -1 {
+			delete(conf, "vht_oper_centr_freq_seg0_idx")
+		} else {
+			conf["vht_oper_centr_freq_seg0_idx"] = newConf.Vht_oper_centr_freq_seg0_idx
+		}
 	}
 
-	if _, ok := newInput["he_oper_centr_freq_seg0_idx"]; ok {
-		conf["he_oper_centr_freq_seg0_idx"] = newConf.He_oper_centr_freq_seg0_idx
+	if _, ok := newInput["He_oper_centr_freq_seg0_idx"]; ok {
+		if newConf.He_oper_centr_freq_seg0_idx == -1 {
+			delete(conf, "he_oper_centr_freq_seg0_idx")
+		} else {
+			conf["he_oper_centr_freq_seg0_idx"] = newConf.He_oper_centr_freq_seg0_idx
+		}
 	}
 
-	if _, ok := newInput["vht_oper_chwidth"]; ok {
+	if _, ok := newInput["Hw_mode"]; ok {
+		conf["hw_mode"] = newConf.Hw_mode
+	}
+
+	if _, ok := newInput["Vht_oper_chwidth"]; ok {
 		conf["vht_oper_chwidth"] = newConf.Vht_oper_chwidth
 	}
 
-	if _, ok := newInput["he_oper_chwidth"]; ok {
+	if _, ok := newInput["He_oper_chwidth"]; ok {
 		conf["he_oper_chwidth"] = newConf.He_oper_chwidth
 	}
 
-	if _, ok := newInput["country_code"]; ok {
+	if _, ok := newInput["Country_code"]; ok {
 		conf["country_code"] = newConf.Country_code
 		needRestart = true
 	}
 
-	if _, ok := newInput["vht_capab"]; ok {
+	if _, ok := newInput["Vht_capab"]; ok {
 		conf["vht_capab"] = newConf.Vht_capab
 		needRestart = true
 	}
 
-	if _, ok := newInput["ht_capab"]; ok {
+	if _, ok := newInput["Ht_capab"]; ok {
 		conf["ht_capab"] = newConf.Ht_capab
 		needRestart = true
 	}
 
-	if _, ok := newInput["ieee80211ax"]; ok {
+	if _, ok := newInput["Ieee80211ax"]; ok {
 		conf["ieee80211ax"] = newConf.Ieee80211ax
 		needRestart = true
 	}
 
-	if _, ok := newInput["he_su_beamformer"]; ok {
+	if _, ok := newInput["He_su_beamformer"]; ok {
 		conf["he_su_beamformer"] = newConf.He_su_beamformer
 		needRestart = true
 	}
 
-	if _, ok := newInput["he_su_beamformee"]; ok {
+	if _, ok := newInput["He_su_beamformee"]; ok {
 		conf["he_su_beamformee"] = newConf.He_su_beamformee
 		needRestart = true
 	}
 
-	if _, ok := newInput["he_mu_beamformer"]; ok {
+	if _, ok := newInput["He_mu_beamformer"]; ok {
 		conf["he_mu_beamformer"] = newConf.He_mu_beamformer
 		needRestart = true
 	}
@@ -381,7 +503,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		data += fmt.Sprint(key, "=", value, "\n")
 	}
 
-	err = ioutil.WriteFile(HostapdConf, []byte(data), 0664)
+	err = ioutil.WriteFile(getHostapdConfigPath(iface), []byte(data), 0664)
 	if err != nil {
 		log.Fatal(err)
 		http.Error(w, err.Error(), 400)
@@ -389,7 +511,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !needRestart {
-		_, err = RunHostapdCommand("reload")
+		_, err = RunHostapdCommand(iface, "reload")
 		if err != nil {
 			log.Fatal(err)
 			http.Error(w, err.Error(), 400)
@@ -462,4 +584,292 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain")
 	fmt.Fprintf(w, string(data))
+}
+
+var Interfacesmtx sync.Mutex
+
+type InterfaceConfig struct {
+	Name    string
+	Type    string
+	Enabled bool
+}
+
+var gAPIInterfacesPath = TEST_PREFIX + "/configs/base/interfaces.json"
+var gAPIInterfacesPublicPath = TEST_PREFIX + "/state/public/interfaces.json"
+
+/*
+ Simple upgrade path to using templates
+*/
+//go:embed hostapd_template.conf
+var hostap_template string
+
+func createHostAPTemplate() {
+	err := ioutil.WriteFile(getHostapdConfigPath("template"), []byte(hostap_template), 0644)
+	if err != nil {
+		fmt.Println("Error creating hostap template")
+		return
+	}
+}
+
+func loadInterfacesConfigLocked() []InterfaceConfig {
+	//read the old configuration
+	data, err := os.ReadFile(gAPIInterfacesPath)
+	config := []InterfaceConfig{}
+	if err == nil {
+		_ = json.Unmarshal(data, &config)
+	}
+	return config
+}
+
+func copyInterfacesConfigToPublic() {
+	Interfacesmtx.Lock()
+	config := loadInterfacesConfigLocked()
+	file, _ := json.MarshalIndent(config, "", " ")
+	ioutil.WriteFile(gAPIInterfacesPublicPath, file, 0660)
+	Interfacesmtx.Unlock()
+}
+
+func writeInterfacesConfigLocked(config []InterfaceConfig) error {
+	file, err := json.MarshalIndent(config, "", " ")
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(gAPIInterfacesPath, file, 0660)
+	if err != nil {
+		return err
+	}
+	//write a copy to the public
+	return ioutil.WriteFile(gAPIInterfacesPublicPath, file, 0660)
+}
+
+func configureInterface(interfaceType string, name string) error {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	if interfaceType != "AP" && interfaceType != "Uplink" {
+		//generate a hostap config if it is not there yet (?)
+		return fmt.Errorf("Unknown interface type " + interfaceType)
+	}
+
+	if interfaceType == "AP" {
+		//ensure that a hostapd configuration exists for this interface.
+		path := getHostapdConfigPath(name)
+		_, err := os.Stat(path)
+		if os.IsNotExist(err) {
+
+			//copy the template over
+			input, err := ioutil.ReadFile(getHostapdConfigPath("template"))
+			if err != nil {
+				fmt.Println("missing template configuration")
+				createHostAPTemplate()
+				input, err = ioutil.ReadFile(getHostapdConfigPath("template"))
+				if err != nil {
+					fmt.Println("failed to create tempalte")
+					return err
+				}
+			}
+
+			configData := string(input)
+			matchSSID := regexp.MustCompile(`(?m)^(ssid)=(.*)`)
+			matchInterfaceAP := regexp.MustCompile(`(?m)^(interface)=(.*)`)
+			matchControl := regexp.MustCompile(`(?m)^(ctrl_interface)=(.*)`)
+
+			configData = matchSSID.ReplaceAllString(configData, "$1="+"SPR_"+name)
+			configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+name)
+			configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+name)
+
+			err = ioutil.WriteFile(path, []byte(configData), 0644)
+			if err != nil {
+				fmt.Println("Error creating", path)
+				return err
+			}
+
+		}
+
+	}
+
+	newEntry := InterfaceConfig{name, interfaceType, true}
+
+	config := loadInterfacesConfigLocked()
+
+	foundEntry := false
+	for i, _ := range config {
+		if config[i].Name == name {
+			config[i] = newEntry
+			foundEntry = true
+			break
+		}
+	}
+
+	if !foundEntry {
+		config = append(config, newEntry)
+	}
+
+	err := writeInterfacesConfigLocked(config)
+	if err != nil {
+		fmt.Println("failed to write interfaces configuration file", err)
+		return err
+	}
+
+	return nil
+}
+
+func toggleInterface(name string, enabled bool) error {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	//read the old configuration
+	config := loadInterfacesConfigLocked()
+
+	foundEntry := false
+	madeChange := false
+	for i, _ := range config {
+		if config[i].Name == name {
+			foundEntry = true
+			madeChange = enabled != config[i].Enabled
+			config[i].Enabled = enabled
+			break
+		}
+	}
+
+	if !foundEntry {
+		return fmt.Errorf("interface not found")
+	}
+
+	if madeChange {
+		return writeInterfacesConfigLocked(config)
+	}
+
+	return nil
+}
+
+func hostapdEnableInterface(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	if !validInterface(iface) {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	//make a call to configure the interface,
+	// which ensures that a hostapd configuration is created
+	err := configureInterface("AP", iface)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	err = toggleInterface(iface, true)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	//restart hostap container
+	callSuperdRestart("wifid")
+}
+func hostapdDisableInterface(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	if !validInterface(iface) {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	err := toggleInterface(iface, false)
+
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	//restart hostap container
+	callSuperdRestart("wifid")
+}
+
+func getEnabledAPInterfaces(w http.ResponseWriter, r *http.Request) {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	//read the old configuration
+	config := loadInterfacesConfigLocked()
+
+	outputString := ""
+	for _, entry := range config {
+		if entry.Enabled == true && entry.Type == "AP" {
+			outputString += entry.Name + " "
+		}
+	}
+
+	w.Write([]byte(outputString))
+}
+
+func getInterfacesConfiguration(w http.ResponseWriter, r *http.Request) {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	config := loadInterfacesConfigLocked()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(config)
+}
+
+/*
+ This provides for a smooth transition to multi AP. It can be removed
+ at some point.
+*/
+func multi_ap_migration() {
+	old_path := TEST_PREFIX + "/configs/wifi/hostapd.conf"
+	_, err := os.Stat(old_path)
+	if err == nil {
+		//if this file exists, then we need to migrate hostapd.conf into
+		// hostapd_{interface}.conf
+
+		//read the original file and replace ctrl_interface
+		input, err := ioutil.ReadFile(old_path)
+		if err != nil {
+			fmt.Println("[-] failed to read hostapd.conf file for migration")
+			return
+		}
+
+		name := os.Getenv("SSID_INTERFACE")
+		if name == "" {
+			fmt.Println("[-] Missing SSID_INTERFACE for migration")
+			return
+		}
+
+		configData := string(input)
+		matchControl := regexp.MustCompile(`(?m)^(ctrl_interface)=(.*)`)
+		configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+name)
+		path := getHostapdConfigPath(name)
+		err = ioutil.WriteFile(path, []byte(configData), 0644)
+		if err != nil {
+			fmt.Println("Error creating", path)
+			return
+		}
+
+		err = os.Rename(old_path, old_path+".bak")
+		if err != nil {
+			fmt.Println("[-] Failed to rename hostapd.conf")
+			return
+		}
+
+		//configure interfaces
+		configureInterface("AP", name)
+		upstream_interface := os.Getenv("WANIF")
+		if upstream_interface == "" {
+			fmt.Println("did not have upstream interface to configure")
+			return
+		}
+
+		configureInterface("Uplink", upstream_interface)
+	}
+
+}
+
+func initRadios() {
+	// If an install does not have interfaces.json yet,
+	// migrate it along with templates.
+
+	multi_ap_migration()
+
+	copyInterfacesConfigToPublic()
 }

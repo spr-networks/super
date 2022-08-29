@@ -1,5 +1,21 @@
 #!/bin/bash
 rm /state/wifi/sta_mac_iface_map/*
-(sleep 5 && hostapd_cli -B -p /state/wifi/control -a /scripts/action.sh) &
-hostapd /configs/wifi/hostapd.conf
 
+IFACES=$(curl --unix-socket /state/wifi/apisock http://localhost/interfaces)
+
+for IFACE in $IFACES
+do
+  hostapd -B /configs/wifi/hostapd_${IFACE}.conf
+done
+
+sleep 5
+
+for IFACE in $IFACES
+do
+  hostapd_cli -B -p /state/wifi/control_${IFACE} -a /scripts/action.sh
+done
+
+while true
+do
+  sleep 100000
+done

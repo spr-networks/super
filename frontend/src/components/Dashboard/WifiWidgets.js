@@ -10,7 +10,7 @@ export class WifiClientCount extends Component {
 
   componentDidMount() {
     wifiAPI
-      .allStations()
+      .allStations(this.props.iface)
       .then((stations) => {
         this.setState({ numberOfWifiClients: Object.keys(stations).length })
       })
@@ -44,7 +44,7 @@ export const WifiInfo = (props) => {
 
   useEffect(() => {
     wifiAPI
-      .status()
+      .status(props.iface)
       .then((status) => {
         setSsid(status['ssid[0]'])
         setChannel(status['channel'])
@@ -53,12 +53,13 @@ export const WifiInfo = (props) => {
       })
   }, [])
 
+  let title = "AP " + props.iface
   return (
     <StatsWidget
       {...props}
       icon={faWifi}
       iconColor="info.400"
-      title="Wifi AP"
+      title={title}
       text={ssid}
       textFooter={'Channel ' + channel}
       iconFooter={faWifi}
