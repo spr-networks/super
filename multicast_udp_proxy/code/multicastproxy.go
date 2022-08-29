@@ -41,6 +41,7 @@ var debug = false
 var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 
 var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
+var InterfacesPublicConfigFile = TEST_PREFIX + "/state/public/interfaces.json"
 
 type PSKEntry struct {
 	Type string
@@ -74,6 +75,23 @@ func APIDevices() (map[string]DeviceEntry, error) {
 	}
 
 	return devs, nil
+}
+
+
+type InterfaceConfig struct {
+	Name    string
+	Type    string
+	Enabled bool
+}
+
+
+func APIInterfaces() ([]InterfaceConfig, error) {
+	data, err := os.ReadFile(InterfacesPublicConfigFile)
+	config := []InterfaceConfig{}
+	if err == nil {
+		err = json.Unmarshal(data, &config)
+	}
+	return config, err
 }
 
 
@@ -280,11 +298,27 @@ func main() {
 	ifaceNames := strings.Split(os.Args[1],",")
 
 	relayableInterface := func(ifaceName string) bool {
-		for _, target := range ifaceNames {
-			if strings.Contains(ifaceName, target) {
-				return true
+		interfaces, err := APIInterfaces()
+		if err != nil {
+			for _, target := range interfaces {
+				match_name := target.Name
+				if target.Type == "AP" {
+					match_name += "."
+				}
+				if strings.Contains(ifaceName, match_name) {
+					return true
+				}
 			}
+		} else {
+			fmt.Println("[-] Multicast proxy failed to read interfaces", err)
 		}
+
+		//workaround for now for wireguard
+		// until it is in interfaces
+		if strings.Contains(ifaceName, "wg0") {
+			return true
+		}
+
 		return false
 	}
 
