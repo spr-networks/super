@@ -11,7 +11,10 @@ RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-${TARGETARCH}.ta
 ENV PATH="/usr/local/go/bin:$PATH"
 ENV CC=clang
 COPY code/ /code/
-RUN --mount=type=tmpfs,target=/root/go/ go mod tidy && go build -ldflags="-s -w" -o /flowgather
+ARG USE_TMPFS=true
+RUN --mount=type=tmpfs,target=/tmpfs \
+    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
+    go mod tidy && go build -ldflags="-s -w" -o /flowgather
 COPY scripts /scripts/
 
 FROM ubuntu:22.04

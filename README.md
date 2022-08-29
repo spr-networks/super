@@ -19,15 +19,17 @@ https://demo.supernetworks.org/
 ## Updating 
 #### Building from scratch
 ```bash
-docker-compose pull
-./build.sh
+./build_docker_compose.sh
 docker-compose up -d
 ```
 
+For performance and to minimize wear on SD cards, the build uses a memory-backed filesystem. On memory-limited devices, this can cause build failures if memory is exhausted. In this case, you can provide the build argument `--set "*.args.USE_TMPFS=false"`.
+
+
 #### Using prebuilt containers
 ```bash
-docker-compose -f docker-compose-prebuilt.yml pull
-docker-compose -f docker-compose-prebuilt.yml up -d
+docker-compose pull
+docker-compose up -d
 ```
 
 ## Useful Links
@@ -37,4 +39,3 @@ docker-compose -f docker-compose-prebuilt.yml up -d
 * Documentation Home: https://www.supernetworks.org/pages/docs/intro/
 * Raspberry Pi 4 Setup https://www.supernetworks.org/pages/docs/pi4b
 * General Setup Guide https://www.supernetworks.org/pages/docs/setup_run_spr
-

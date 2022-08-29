@@ -10,7 +10,10 @@ RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-${TARGETARCH}.ta
 ENV PATH="/usr/local/go/bin:$PATH"
 COPY code/ /code/
 
-RUN --mount=type=tmpfs,target=/root/go/ (go build -ldflags "-s -w" -o /wireguard_plugin /code/wireguard_plugin.go)
+ARG USE_TMPFS=true
+RUN --mount=type=tmpfs,target=/tmpfs \
+    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
+    go build -ldflags "-s -w" -o /wireguard_plugin /code/wireguard_plugin.go
 
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive

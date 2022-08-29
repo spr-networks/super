@@ -1,10 +1,6 @@
-name: Docker Image ARM64 CI
+name: Docker Image CI
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+on: [ push, pull_request ]
 
 jobs:
 
@@ -25,12 +21,9 @@ jobs:
         name: Authenticate to ghcr
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       -
-        name: Build arm64 test containers
+        name: Build and push containers
         run: |
           cp -R base/template_configs configs
-          export DOCKER_DEFAULT_PLATFORM=linux/arm64
-          ./build_docker_compose.sh
-      -
-        name: Push images
-        run: |
-          docker-compose push
+          ./build_docker_compose.sh \
+            --set "*.platform=linux/amd64,linux/arm64" \
+            `[ "${{ github.event_name }}" = "push" -a "${{ github.ref_name }}" = "main" ] && echo "--push"`

@@ -9,7 +9,10 @@ ENV PATH="/usr/local/go/bin:$PATH"
 RUN mkdir /code
 WORKDIR /code
 COPY code/ /code/
-RUN --mount=type=tmpfs,target=/root/go/ (go build -ldflags "-s -w" -o /lookup_plugin /code/lookup_plugin.go)
+ARG USE_TMPFS=true
+RUN --mount=type=tmpfs,target=/tmpfs \
+    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
+    go build -ldflags "-s -w" -o /lookup_plugin /code/lookup_plugin.go
 
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive

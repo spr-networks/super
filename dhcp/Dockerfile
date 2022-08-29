@@ -15,15 +15,17 @@ ENV CC=clang
 ARG CACHEBUST=1
 RUN git clone https://github.com/spr-networks/coredhcp
 WORKDIR /code/coredhcp
-
-# Using BUILDKIT, build inside of a ramfs
-RUN --mount=type=tmpfs,target=/root/go/ (go build -o /coredhcpd ./cmds/coredhcp; go build -o /coredhcp_client ./cmds/exdhcp/dhclient/)
+ARG USE_TMPFS=true
+RUN --mount=type=tmpfs,target=/tmpfs \
+    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
+    go build -o /coredhcpd ./cmds/coredhcp && \
+    go build -o /coredhcp_client ./cmds/exdhcp/dhclient/
 
 
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl dhclient
+RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl isc-dhcp-client
 COPY --from=builder /coredhcpd /
 COPY --from=builder /coredhcp_client /
 COPY scripts /scripts
