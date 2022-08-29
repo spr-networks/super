@@ -290,21 +290,28 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool)
 }
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Println("need a comma separated list of substrings for relayable interfaces")
-		return
-	}
-	
+
 	relayableInterface := func(ifaceName string) bool {
-		interfaces, err := APIInterfaces()
-		if err != nil {
+
+		//support comma separated list of interfaces to match on
+		if len(os.Args) == 2 {
+			ifaceNames := strings.Split(os.Args[1],",")
 			for _, target := range interfaces {
-				match_name := target.Name
-				if target.Type == "AP" {
-					match_name += "."
-				}
-				if strings.Contains(ifaceName, match_name) {
+				if strings.Contains(ifaceName, target) {
 					return true
+				}
+			}
+		} else {
+			interfaces, err := APIInterfaces()
+			if err != nil {
+				for _, target := range interfaces {
+					match_name := target.Name
+					if target.Type == "AP" {
+						match_name += "."
+					}
+					if strings.Contains(ifaceName, match_name) {
+						return true
+					}
 				}
 			}
 		} else {
