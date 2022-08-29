@@ -588,7 +588,7 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 
 var Interfacesmtx sync.Mutex
 
-type InterfacesConfig struct {
+type InterfaceConfig struct {
 	Name    string
 	Type    string
 	Enabled bool
@@ -656,14 +656,9 @@ func configureInterface(interfaceType string, name string) error {
 
 	}
 
-	newEntry := InterfacesConfig{name, interfaceType, true}
+	newEntry := InterfaceConfig{name, interfaceType, true}
 
-	//read the old configuration
-	data, err := os.ReadFile(gAPIInterfacesPath)
-	config := []InterfacesConfig{}
-	if err == nil {
-		_ = json.Unmarshal(data, &config)
-	}
+	config := loadInterfacesConfigLocked()
 
 	foundEntry := false
 	for i, _ := range config {
@@ -679,7 +674,7 @@ func configureInterface(interfaceType string, name string) error {
 	}
 
 	file, _ := json.MarshalIndent(config, "", " ")
-	err = ioutil.WriteFile(gAPIInterfacesPath, file, 0660)
+	err := ioutil.WriteFile(gAPIInterfacesPath, file, 0660)
 	if err != nil {
 		fmt.Println("failed to write interfaces configuration file", err)
 		return err
@@ -693,11 +688,7 @@ func toggleInterface(name string, enabled bool) error {
 	defer Interfacesmtx.Unlock()
 
 	//read the old configuration
-	data, err := os.ReadFile(gAPIInterfacesPath)
-	config := []InterfacesConfig{}
-	if err == nil {
-		_ = json.Unmarshal(data, &config)
-	}
+	config := loadInterfacesConfigLocked()
 
 	foundEntry := false
 	madeChange := false
@@ -716,7 +707,7 @@ func toggleInterface(name string, enabled bool) error {
 
 	if madeChange {
 		file, _ := json.MarshalIndent(config, "", " ")
-		err = ioutil.WriteFile(gAPIInterfacesPath, file, 0660)
+		err := ioutil.WriteFile(gAPIInterfacesPath, file, 0660)
 		if err != nil {
 			fmt.Println("failed to write interfaces configuration file", err)
 			return err
@@ -773,11 +764,7 @@ func getEnabledAPInterfaces(w http.ResponseWriter, r *http.Request) {
 	defer Interfacesmtx.Unlock()
 
 	//read the old configuration
-	data, err := os.ReadFile(gAPIInterfacesPath)
-	config := []InterfacesConfig{}
-	if err == nil {
-		_ = json.Unmarshal(data, &config)
-	}
+	config := loadInterfacesConfigLocked()
 
 	outputString := ""
 	for _, entry := range config {
@@ -789,16 +776,21 @@ func getEnabledAPInterfaces(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(outputString))
 }
 
+func loadInterfacesConfigLocked() []InterfaceConfig {
+	//read the old configuration
+	data, err := os.ReadFile(gAPIInterfacesPath)
+	config := []InterfaceConfig{}
+	if err == nil {
+		_ = json.Unmarshal(data, &config)
+	}
+	return config
+}
+
 func getInterfacesConfiguration(w http.ResponseWriter, r *http.Request) {
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
 
-	//read the old configuration
-	data, err := os.ReadFile(gAPIInterfacesPath)
-	config := []InterfacesConfig{}
-	if err == nil {
-		_ = json.Unmarshal(data, &config)
-	}
+	config := loadInterfacesConfigLocked()
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(config)

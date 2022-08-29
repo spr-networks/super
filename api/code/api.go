@@ -784,40 +784,6 @@ func getMapVerdict(name string) string {
 	return "accept"
 }
 
-func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, matchInterface bool) {
-
-	for _, name := range vmap_names {
-		entries := getNFTVerdictMap(name)
-		verdict := getMapVerdict(name)
-		for _, entry := range entries {
-
-			//do not flush wireguard entries from vmaps unless the incoming device is on the same interface
-			if strings.HasPrefix(Ifname, "wg") {
-				if Ifname != entry.ifname {
-					continue
-				}
-			} else if strings.HasPrefix(entry.ifname, "wg") {
-				continue
-			}
-
-			if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || (equalMAC(entry.mac, MAC) && (MAC != "")) {
-				if entry.mac != "" {
-					err := exec.Command("nft", "delete", "element", "inet", "filter", name, "{", entry.ipv4, ".", entry.ifname, ".", entry.mac, ":", verdict, "}").Run()
-					if err != nil {
-						fmt.Println("nft delete failed", err)
-					}
-				} else {
-					err := exec.Command("nft", "delete", "element", "inet", "filter", name, "{", entry.ipv4, ".", entry.ifname, ":", verdict, "}").Run()
-					if err != nil {
-						fmt.Println("nft delete failed", err)
-						return
-					}
-				}
-			}
-		}
-	}
-}
-
 func searchVmapsByMac(MAC string, VMaps []string) (error, string, string) {
 	//Search verdict maps and return the ipv4 and interface name
 	for _, name := range VMaps {
@@ -845,72 +811,6 @@ func updateAddr(Router string, Ifname string) {
 	err := exec.Command("ip", "addr", "add", Router+"/30", "dev", Ifname).Run()
 	if err != nil {
 		fmt.Println("update addr failed", Router, Ifname, err)
-		return
-	}
-}
-
-func addVerdictMac(IP string, MAC string, Iface string, Table string, Verdict string) {
-	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ".", MAC, ":", Verdict, "}").Run()
-	if err != nil {
-		fmt.Println("addVerdictMac Failed", MAC, Iface, Table, err)
-		return
-	}
-}
-
-func addVerdict(IP string, Iface string, Table string) {
-	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ":", "accept", "}").Run()
-	if err != nil {
-		fmt.Println("addVerdict Failed", Iface, Table, err)
-		return
-	}
-}
-
-func addDNSVerdict(IP string, Iface string) {
-	addVerdict(IP, Iface, "dns_access")
-}
-
-func addLANVerdict(IP string, Iface string) {
-	addVerdict(IP, Iface, "lan_access")
-}
-
-func addInternetVerdict(IP string, Iface string) {
-	addVerdict(IP, Iface, "internet_access")
-}
-
-func addCustomVerdict(ZoneName string, IP string, Iface string) {
-	//create verdict maps if they do not exist
-	err := exec.Command("nft", "list", "map", "inet", "filter", ZoneName+"_dst_access").Run()
-	if err != nil {
-		//two verdict maps are used for establishing custom groups.
-		// the {name}_dst_access map allows Inet packets to a certain IP/interface pair
-		//the {name}_src_access part allows Inet packets from a IP/IFace set
-
-		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_src_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "}").Run()
-		if err != nil {
-			fmt.Println("addCustomVerdict Failed", err)
-			return
-		}
-		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_dst_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "}").Run()
-		if err != nil {
-			fmt.Println("addCustomVerdict Failed", err)
-			return
-		}
-		err = exec.Command("nft", "insert", "rule", "inet", "filter", "CUSTOM_GROUPS", "ip", "daddr", ".", "oifname", "vmap", "@"+ZoneName+"_dst_access", "ip", "saddr", ".", "iifname", "vmap", "@"+ZoneName+"_src_access").Run()
-		if err != nil {
-			fmt.Println("addCustomVerdict Failed", err)
-			return
-		}
-	}
-
-	err = exec.Command("nft", "add", "element", "inet", "filter", ZoneName+"_dst_access", "{", IP, ".", Iface, ":", "continue", "}").Run()
-	if err != nil {
-		fmt.Println("addCustomVerdict Failed", err)
-		return
-	}
-
-	err = exec.Command("nft", "add", "element", "inet", "filter", ZoneName+"_src_access", "{", IP, ".", Iface, ":", "accept", "}").Run()
-	if err != nil {
-		fmt.Println("addCustomVerdict Failed", err)
 		return
 	}
 }
