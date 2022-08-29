@@ -172,15 +172,25 @@ func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
 
 	for _, entry := range interfacesConfig {
 		if entry.Enabled == true {
-			cmd = exec.Command("nft", "add", "chain", "inet", "filter", "WIPHY_FORWARD_LAN")
+			//#    $(if [ "$VLANSIF" ]; then echo "counter iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF"; fi)
+			cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "WIPHY_MACSPOOF_CHECK",
+				"counter", "iifname", "eq", entry.Name+".*", "jump", "DROP_MAC_SPOOF")
 			_, err = cmd.Output()
 			if err != nil {
-				fmt.Println("failed to insert chain", err)
+				fmt.Println("failed to insert rule", cmd, err)
+			}
+
+			// $(if [ "$VLANSIF" ]; then echo "counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access"; fi)
+
+			cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "WIPHY_FORWARD_LAN",
+				"counter", "oifname", entry.Name+".*", "ip", "saddr", ".", "iifname", "vmap", "@lan_access")
+			_, err = cmd.Output()
+			if err != nil {
+				fmt.Println("failed to insert rule", cmd, err)
 			}
 
 		}
 	}
-	//#    $(if [ "$VLANSIF" ]; then echo "counter iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF"; fi)
 
 }
 

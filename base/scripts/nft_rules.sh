@@ -102,10 +102,10 @@ table inet filter {
     # Authorized wireless stations & MACs. They do not have an ip address yet
     counter udp dport 67 iifname . ether saddr vmap @dhcp_access
 
-    # Prevent MAC Spoofing from LANIF, VLANSIF
+    # Prevent MAC Spoofing from LANIF, wired interfaces
     $(if [ "$LANIF" ]; then echo "iifname eq $LANIF jump DROP_MAC_SPOOF"; fi)
 
-    $(if [ "$VLANSIF" ]; then echo "counter iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF"; fi)
+    jump WIPHY_MACSPOOF_CHECK
 
     # DNS Allow rules
     # Docker can DNS
@@ -127,6 +127,10 @@ table inet filter {
   #chain USERDEF_INPUT{
   #}
 
+  #    $(if [ "$VLANSIF" ]; then echo "counter iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF"; fi)
+  chain WIPHY_MACSPOOF_CHECK {
+  }
+
   chain FORWARD {
     type filter hook forward priority 0; policy drop;
 
@@ -142,9 +146,9 @@ table inet filter {
     # allow docker containers to speak to LAN also
     $(if [ "$LANIF" ] && [ "$DOCKERIF" ]; then echo "iif $DOCKERIF oifname $LANIF ip saddr $DOCKERNET counter accept"; fi)
 
-    # Verify MAC addresses for LANIF/VLANSIF
+    # Verify MAC addresses for LANIF/WIPHYs
     $(if [ "$LANIF" ]; then echo "iifname eq $LANIF jump DROP_MAC_SPOOF"; fi)
-    $(if [ "$VLANSIF" ]; then echo "  iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF"; fi)
+    jump WIPHY_MACSPOOF_CHECK
 
     # MSS clamping to handle upstream MTU limitations
     tcp flags syn tcp option maxseg size set rt mtu
@@ -162,16 +166,19 @@ table inet filter {
     # Forward to wired LAN
     $(if [ "$LANIF" ]; then echo "counter oifname $LANIF ip saddr . iifname vmap @lan_access"; fi)
 
-    #forward LAN to wg
-    $(if [ "$LANIF" ]; then echo "counter oifname wg0 ip saddr . iifname vmap @lan_access"; fi)
+    # Forward @lan_access to wg
+    counter oifname wg0 ip saddr . iifname vmap @lan_access
 
     # Forward to wireless LAN
-    $(if [ "$VLANSIF" ]; then echo "counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access"; fi)
-
+    jump WIPHY_FORWARD_LAN
     jump CUSTOM_GROUPS
 
     # Fallthrough to log + drop
     counter jump DROPLOGFWD
+  }
+
+  #    $(if [ "$VLANSIF" ]; then echo "counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access"; fi)
+  chain WIPHY_FORWARD_LAN {
   }
 
   #chain USERDEF_FORWARD {
