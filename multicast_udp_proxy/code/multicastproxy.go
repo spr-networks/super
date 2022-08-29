@@ -256,6 +256,11 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool)
 			woob = &ipv4.ControlMessage{IfIndex: idx, Src: peer.(*net.UDPAddr).IP}
 			// set dest as saddr (multicast)
 			if _, err = l4.WriteTo(buffer[0:n], woob, saddr); err != nil {
+
+				//NOTE: this will warn often about `required key not available`
+				//when sending to wireguard devices without the key
+				//or an unconfigured wireguard interface.
+				//TBD: parse that error code and suppress it 
 				fmt.Println("failed to write", err)
 				return
 			}
