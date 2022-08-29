@@ -69,11 +69,11 @@ func composeCommand(composeFile string, target string, command string, optional 
 			_, err := exec.Command("docker-compose", "-f", composeFile, command, optional, target).Output()
 			if err != nil {
 				fmt.Println("docker-compose "+command, composeFile, optional, target, "failed", err)
-			} else {
-				_, err := exec.Command("docker-compose", "-f", composeFile, command, target).Output()
-				if err != nil {
-					fmt.Println("docker-compose"+command, composeFile, "failed", err)
-				}
+			}
+		} else {
+			_, err := exec.Command("docker-compose", "-f", composeFile, command, target).Output()
+			if err != nil {
+				fmt.Println("docker-compose"+command, composeFile, "failed", err)
 			}
 		}
 	} else {
