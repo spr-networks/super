@@ -1562,8 +1562,6 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hostapd_path := getHostapdConfigPath("template")
-
 	if conf.InterfaceUplink == "" {
 		http.Error(w, "Invalid Uplink interface", 400)
 		return
@@ -1629,7 +1627,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//generate and write to hostapd_iface.conf
-	data, err = ioutil.ReadFile(hostapd_path)
+	data, err = ioutil.ReadFile(getHostapdConfigPath("template"))
 	if err != nil {
 		// we can use default template config here but better to copy it before in bash
 		http.Error(w, "Missing default hostapd config", 400)
@@ -1647,6 +1645,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	configData = matchCountry.ReplaceAllString(configData, "$1="+conf.CountryCode)
 	configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+conf.InterfaceAP)
 
+	hostapd_path := getHostapdConfigPath(conf.InterfaceAP)
 	err = ioutil.WriteFile(hostapd_path, []byte(configData), 0755)
 	if err != nil {
 		http.Error(w, "Failed to write config to "+hostapd_path, 400)
