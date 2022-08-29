@@ -294,7 +294,7 @@ func main() {
 		//support comma separated list of interfaces to match on
 		if len(os.Args) == 2 {
 			ifaceNames := strings.Split(os.Args[1], ",")
-			for _, target := range interfaces {
+			for _, target := range ifaceNames {
 				if strings.Contains(ifaceName, target) {
 					return true
 				}
