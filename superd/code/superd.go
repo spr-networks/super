@@ -38,8 +38,8 @@ func getDefaultCompose() string {
 	}
 	// when no SSID is set in configs/base/config.sh,
 	// assume virtual SPR is running
-	ssid_configured := os.Getenv("SSID_NAME")
-	if ssid_configured == "" {
+	virtual_spr := os.Getenv("VIRTUAL_SPR")
+	if virtual_spr != "" {
 		return "docker-compose-virt.yml"
 	}
 	return "docker-compose.yml"

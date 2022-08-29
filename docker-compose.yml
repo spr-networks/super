@@ -107,6 +107,7 @@ services:
     privileged: true
     depends_on:
       - "base"
+      - "api"
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
