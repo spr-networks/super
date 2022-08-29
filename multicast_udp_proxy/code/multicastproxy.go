@@ -301,7 +301,7 @@ func main() {
 			}
 		} else {
 			interfaces, err := APIInterfaces()
-			if err != nil {
+			if err == nil {
 				for _, target := range interfaces {
 					match_name := target.Name
 					if target.Type == "AP" {
