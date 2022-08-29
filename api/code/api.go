@@ -1673,6 +1673,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/firewall/config", getFirewallConfig).Methods("GET")
 	external_router_authenticated.HandleFunc("/firewall/forward", modifyForwardRules).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/block", blockIP).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/block_forward", blockForwardingIP).Methods("PUT", "DELETE")
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
