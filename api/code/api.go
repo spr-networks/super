@@ -162,7 +162,7 @@ func getStatus(w http.ResponseWriter, r *http.Request) {
 func getFeatures(w http.ResponseWriter, r *http.Request) {
 	reply := []string{"dns"}
 	//check which features are enabled
-	if os.Getenv("SSID_INTERFACE") != "" {
+	if os.Getenv("VIRTUAL_SPR") == "" {
 		reply = append(reply, "wifi")
 	}
 
@@ -895,10 +895,21 @@ var DHCPmtx sync.Mutex
 
 func shouldFlushByInterface(Iface string) bool {
 	matchInterface := false
-	vlansif := os.Getenv("VLANSIF")
-	if len(vlansif) > 0 && strings.Contains(Iface, vlansif) {
-		matchInterface = true
+
+	Interfacesmtx.Lock()
+	//read the old configuration
+	config := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
+
+	for _, entry := range config {
+		if entry.Enabled && entry.Type == "AP" {
+			if strings.Contains(Iface, entry.Name+".") {
+				matchInterface = true
+				break
+			}
+		}
 	}
+
 	return matchInterface
 }
 
@@ -1483,18 +1494,6 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/*
-		envrc := fmt.Sprintf("SSID_INTERFACE=%q\nSSID_NAME=%q\n"+
-			"WANIF=%q\nCOMPOSE_FILE=docker-compose-prebuilt.yml\n"+
-			"COUNTRY_CODE=%q\n"+
-			"ADMIN_USER=admin\nADMIN_PASSWORD=%q\n",
-			conf.InterfaceAP, conf.SSID,
-			conf.InterfaceUplink,
-			conf.AdminPassword)
-
-		err = ioutil.WriteFile(SetupEnvFile, []byte(envrc), 0644)
-	*/
-
 	// write to auth_users.json
 	users := fmt.Sprintf("{%q: %q}", "admin", conf.AdminPassword)
 	err = ioutil.WriteFile(AuthUsersFile, []byte(users), 0644)
@@ -1512,12 +1511,8 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	configData := string(data)
-	matchSSID := regexp.MustCompile(`(?m)^(SSID_NAME)=(.*)`)
-	matchInterfaceAP := regexp.MustCompile(`(?m)^(SSID_INTERFACE)=(.*)`)
 	matchInterfaceUplink := regexp.MustCompile(`(?m)^(WANIF)=(.*)`)
 
-	configData = matchSSID.ReplaceAllString(configData, "$1="+conf.SSID)
-	configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+conf.InterfaceAP)
 	configData = matchInterfaceUplink.ReplaceAllString(configData, "$1="+conf.InterfaceUplink)
 
 	err = ioutil.WriteFile(ConfigFile, []byte(configData), 0755)
@@ -1535,8 +1530,8 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	configData = string(data)
-	matchSSID = regexp.MustCompile(`(?m)^(ssid)=(.*)`)
-	matchInterfaceAP = regexp.MustCompile(`(?m)^(interface)=(.*)`)
+	matchSSID := regexp.MustCompile(`(?m)^(ssid)=(.*)`)
+	matchInterfaceAP := regexp.MustCompile(`(?m)^(interface)=(.*)`)
 	matchCountry := regexp.MustCompile(`(?m)^(country_code)=(.*)`)
 	matchControl := regexp.MustCompile(`(?m)^(ctrl_interface)=(.*)`)
 

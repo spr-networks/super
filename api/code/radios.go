@@ -595,6 +595,7 @@ type InterfaceConfig struct {
 }
 
 var gAPIInterfacesPath = TEST_PREFIX + "/configs/base/interfaces.json"
+var gAPIInterfacesPublicPath = TEST_PREFIX + "/state/public/interfaces.json"
 
 /*
  Simple upgrade path to using templates
@@ -608,6 +609,37 @@ func createHostAPTemplate() {
 		fmt.Println("Error creating hostap template")
 		return
 	}
+}
+
+func loadInterfacesConfigLocked() []InterfaceConfig {
+	//read the old configuration
+	data, err := os.ReadFile(gAPIInterfacesPath)
+	config := []InterfaceConfig{}
+	if err == nil {
+		_ = json.Unmarshal(data, &config)
+	}
+	return config
+}
+
+func copyInterfacesConfigToPublic() {
+	Interfacesmtx.Lock()
+	config := loadInterfacesConfigLocked()
+	file, _ := json.MarshalIndent(config, "", " ")
+	ioutil.WriteFile(gAPIInterfacesPublicPath, file, 0660)
+	Interfacesmtx.Unlock()
+}
+
+func writeInterfacesConfigLocked(config []InterfaceConfig) error {
+	file, err := json.MarshalIndent(config, "", " ")
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(gAPIInterfacesPath, file, 0660)
+	if err != nil {
+		return err
+	}
+	//write a copy to the public
+	return ioutil.WriteFile(gAPIInterfacesPublicPath, file, 0660)
 }
 
 func configureInterface(interfaceType string, name string) error {
@@ -673,8 +705,7 @@ func configureInterface(interfaceType string, name string) error {
 		config = append(config, newEntry)
 	}
 
-	file, _ := json.MarshalIndent(config, "", " ")
-	err := ioutil.WriteFile(gAPIInterfacesPath, file, 0660)
+	err := writeInterfacesConfigLocked(config)
 	if err != nil {
 		fmt.Println("failed to write interfaces configuration file", err)
 		return err
@@ -706,12 +737,7 @@ func toggleInterface(name string, enabled bool) error {
 	}
 
 	if madeChange {
-		file, _ := json.MarshalIndent(config, "", " ")
-		err := ioutil.WriteFile(gAPIInterfacesPath, file, 0660)
-		if err != nil {
-			fmt.Println("failed to write interfaces configuration file", err)
-			return err
-		}
+		return writeInterfacesConfigLocked(config)
 	}
 
 	return nil
@@ -768,22 +794,12 @@ func getEnabledAPInterfaces(w http.ResponseWriter, r *http.Request) {
 
 	outputString := ""
 	for _, entry := range config {
-		if entry.Enabled == true {
+		if entry.Enabled == true && entry.Type == "AP" {
 			outputString += entry.Name + " "
 		}
 	}
 
 	w.Write([]byte(outputString))
-}
-
-func loadInterfacesConfigLocked() []InterfaceConfig {
-	//read the old configuration
-	data, err := os.ReadFile(gAPIInterfacesPath)
-	config := []InterfaceConfig{}
-	if err == nil {
-		_ = json.Unmarshal(data, &config)
-	}
-	return config
 }
 
 func getInterfacesConfiguration(w http.ResponseWriter, r *http.Request) {
@@ -854,4 +870,6 @@ func initRadios() {
 	// migrate it along with templates.
 
 	multi_ap_migration()
+
+	copyInterfacesConfigToPublic()
 }
