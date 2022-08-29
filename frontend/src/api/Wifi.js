@@ -18,7 +18,7 @@ export class APIWifi extends API {
   iwScan = (iface) => this.get(`iw/dev/${iface}/scan`)
   enableInterface = (iface) => this.put(`hostapd/${iface}/enable`)
   disableInterface = (iface) => this.put(`hostapd/${iface}/disable`)
-  resetInterfaceConfig = (iface) => this.put(`hostapd/${iface}/reset`)
+  resetInterfaceConfig = (iface) => this.put(`hostapd/${iface}/resetConfiguration`)
   restartWifi = () => this.put(`hostapd/restart`)
   interfacesConfiguration = () => this.get(`interfacesConfiguration`)
   interfaces = (typeFilter) => {
