@@ -855,6 +855,7 @@ func hostapdResetInterface(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	callSuperdRestart("wifid")
 }
 
 func restartWifi(w http.ResponseWriter, r *http.Request) {
