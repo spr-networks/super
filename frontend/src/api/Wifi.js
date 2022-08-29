@@ -16,6 +16,9 @@ export class APIWifi extends API {
   iwDev = () => this.get('iw/dev')
   iwList = () => this.get('iw/list')
   iwScan = (iface) => this.get(`iw/dev/${iface}/scan`)
+  enableInterface = (iface) => this.put(`hostapd/${iface}/enable`)
+  disableInterface = (iface) => this.put(`hostapd/${iface}/disable`)
+  interfacesConfiguration = () => this.get(`interfacesConfiguration`)
   interfaces = (typeFilter) => {
     //look up the interfaces from iw/dev
     return wifiAPI.iwDev().then((devs) => {

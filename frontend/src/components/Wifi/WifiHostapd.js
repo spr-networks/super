@@ -142,11 +142,33 @@ const WifiHostapd = (props) => {
   }
 
   const generateHostAPConfiguration = () => {
-    let newConfig = Object.assign({}, default5Ghz)
-    newConfig.interface = iface
-    newConfig.ctrl_interface = "/state/wifi/control_" + iface
-    setConfig(newConfig)
+    //call hostapd
+    wifiAPI.enableInterface(iface)
+    .then(
+      wifiAPI.config(iface).then((conf) => {
+        setConfig(sortConf(conf))
+      }).catch(err => {
+        //configuration not found. How to handle?
+        setConfig({})
+      })
+    )
+    .catch(
+      setConfig({})
+    )
   }
+
+  const disableInterface = () => {
+    //call hostapd
+    wifiAPI.disableInterface(iface)
+    .then(
+      //TBD: alert?
+      setConfig({})
+    )
+    .catch(
+      setConfig({})
+    )
+  }
+
 
   const updateChannels = (wifiParameters) => {
     let data = {
@@ -175,6 +197,20 @@ const WifiHostapd = (props) => {
   return (
     <>
       <WifiChannelParameters  iface={iface} setIface={setIface} config={config} notifyChange={updateChannels} />
+
+      {config.interface !== undefined ? (
+        <Button
+          colorScheme="primary"
+          size="md"
+          width="50%"
+          alignSelf="center"
+          type="submit"
+          mt={4}
+          onPress={disableInterface}
+        >
+          Disable HostAP Configuration
+        </Button>
+      ) : null}
 
       <Box
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
@@ -222,6 +258,7 @@ const WifiHostapd = (props) => {
               </HStack>
             ))
           )}
+
         </VStack>
       </Box>
     </>
