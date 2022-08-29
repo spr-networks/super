@@ -843,6 +843,16 @@ func multi_ap_migration() {
 			fmt.Println("[-] Failed to rename hostapd.conf")
 			return
 		}
+
+		//configure interfaces
+		configureInterface("AP", name)
+		upstream_interface := os.Getenv("WANIF")
+		if upstream_interface == "" {
+			fmt.Println("did not have upstream interface to configure")
+			return
+		}
+
+		configureInterface("Uplink", upstream_interface)
 	}
 
 }
