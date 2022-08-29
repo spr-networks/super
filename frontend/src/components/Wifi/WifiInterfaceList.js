@@ -125,7 +125,7 @@ const WifiInterface = (props) => {
           )}
         </VStack>
 
-        <Box h="100%" p={2}>
+        <Box h="100%" p={2} w="2/3">
           {tabList.map((tab) =>
             iw[tab] || ['other', 'SPR compability'].includes(tab) ? (
               <VStack key={tab} display={activeTab == tab ? 'flex' : 'none'}>
