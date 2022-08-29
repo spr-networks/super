@@ -38,13 +38,14 @@ type PacketEthernet struct {
 //new format
 type PacketInfo struct {
 	//Ethernet  *PacketEthernet `json:"Ethernet,omitempty"`
-	TCP       *layers.TCP  `json:"TCP,omitempty"`
-	UDP       *layers.UDP  `json:"UDP,omitempty"`
-	IP        *layers.IPv4 `json:"IP,omitempty"`
-	DNS       *layers.DNS  `json:"DNS,omitempty"`
-	Prefix    string       `json:"Prefix"`
-	Action    string       `json:"Action"`
-	Timestamp time.Time    `json:"Timestamp"`
+	TCP       *layers.TCP    `json:"TCP,omitempty"`
+	UDP       *layers.UDP    `json:"UDP,omitempty"`
+	IP        *layers.IPv4   `json:"IP,omitempty"`
+	DNS       *layers.DNS    `json:"DNS,omitempty"`
+	DHCP      *layers.DHCPv4 `json:"DHCP,omitempty"`
+	Prefix    string         `json:"Prefix"`
+	Action    string         `json:"Action"`
+	Timestamp time.Time      `json:"Timestamp"`
 }
 
 var wg sync.WaitGroup
@@ -97,6 +98,7 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 		var tcp layers.TCP
 		var udp layers.UDP
 		var dns layers.DNS
+		var dhcp layers.DHCPv4
 
 		result := PacketInfo{Prefix: *attrs.Prefix, Timestamp: *attrs.Timestamp}
 		result.Action = "allowed"
@@ -105,7 +107,7 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 		}
 
 		// DecodingLayerParser takes about 10% of the time as NewPacket to decode packet data, but only for known packet stacks.
-		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeIPv4, &ip4, &tcp, &udp, &dns)
+		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeIPv4, &ip4, &tcp, &udp, &dns, &dhcp)
 		decoded := []gopacket.LayerType{}
 		packetData := *attrs.Payload
 		if err := parser.DecodeLayers(packetData, &decoded); err != nil {
@@ -130,6 +132,8 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 				result.UDP = &udp
 			case layers.LayerTypeDNS:
 				result.DNS = &dns
+			case layers.LayerTypeDHCPv4:
+				result.DHCP = &dhcp
 			}
 		}
 
@@ -145,6 +149,7 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 		prefix := strings.TrimSpace(strings.ToLower(result.Prefix))
 		topic := fmt.Sprintf("nft:%s", prefix)
 
+		//fmt.Printf("##pub: %v\n%v\n", topic, string(data))
 		fmt.Printf("##pub: %v\n", topic)
 
 		client.Publish(topic, string(data))
