@@ -88,7 +88,7 @@ fi
 ret=$?
 
 if [ "$ret" -ne "0" ]; then
-  echo "Tip: if the build failed to resovle domain names,"
+  echo "Tip: if the build failed to resolve domain names,"
   echo "consider running ./base/docker_nftables_setup.sh"
   echo "since iptables has been disabled for docker in the"
   echo "SPR installer"
