@@ -294,9 +294,7 @@ func main() {
 		fmt.Println("need a comma separated list of substrings for relayable interfaces")
 		return
 	}
-
-	ifaceNames := strings.Split(os.Args[1],",")
-
+	
 	relayableInterface := func(ifaceName string) bool {
 		interfaces, err := APIInterfaces()
 		if err != nil {
