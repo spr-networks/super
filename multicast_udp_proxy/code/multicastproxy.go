@@ -28,12 +28,12 @@ import (
 	"net"
 	"os"
 
+	"encoding/json"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/sys/unix"
-	"strings"
 	"io/ioutil"
-	"encoding/json"
+	"strings"
 )
 
 var debug = false
@@ -77,13 +77,11 @@ func APIDevices() (map[string]DeviceEntry, error) {
 	return devs, nil
 }
 
-
 type InterfaceConfig struct {
 	Name    string
 	Type    string
 	Enabled bool
 }
-
 
 func APIInterfaces() ([]InterfaceConfig, error) {
 	data, err := os.ReadFile(InterfacesPublicConfigFile)
@@ -93,7 +91,6 @@ func APIInterfaces() ([]InterfaceConfig, error) {
 	}
 	return config, err
 }
-
 
 func NewIPv4UDPConn(addr *net.UDPAddr) (*net.UDPConn, error) {
 	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, unix.IPPROTO_UDP)
@@ -155,7 +152,8 @@ func listenNewInterfaceUp(callback func(string)) {
 	for {
 		select {
 		case msg := <-lnkupdate:
-			{		if msg.Change == unix.IFF_UP {
+			{
+				if msg.Change == unix.IFF_UP {
 					if debug {
 						fmt.Println("link up", msg.Attrs().Name)
 					}
@@ -242,7 +240,7 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool)
 
 		if iface, err := net.InterfaceByIndex(oob.IfIndex); err != nil || !relayableInterface(iface.Name) {
 			if err != nil {
-				fmt.Println("got err for interface index", oob.IfIndex, err);
+				fmt.Println("got err for interface index", oob.IfIndex, err)
 			} else {
 				if debug {
 					fmt.Println("dropping from interface not specified for relay", iface.Name)
@@ -295,7 +293,7 @@ func main() {
 
 		//support comma separated list of interfaces to match on
 		if len(os.Args) == 2 {
-			ifaceNames := strings.Split(os.Args[1],",")
+			ifaceNames := strings.Split(os.Args[1], ",")
 			for _, target := range interfaces {
 				if strings.Contains(ifaceName, target) {
 					return true
@@ -313,11 +311,10 @@ func main() {
 						return true
 					}
 				}
+			} else {
+				fmt.Println("[-] Multicast proxy failed to read interfaces", err)
 			}
-		} else {
-			fmt.Println("[-] Multicast proxy failed to read interfaces", err)
 		}
-
 		//workaround for now for wireguard
 		// until it is in interfaces
 		if strings.Contains(ifaceName, "wg0") {
