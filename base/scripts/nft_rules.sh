@@ -77,16 +77,16 @@ table inet filter {
     type ipv4_addr : verdict;
   }
 
-  # goto does NOT return. packets will be dropped if
+  # packets will be dropped if
   # the restrict_upstream_private_addresses does not see them
   # in the upstream_private_rfc1918_allowed vmap
   map drop_private_rfc1918 {
     type ipv4_addr  : verdict;
     flags interval
     elements = {
-      10.0.0.0/8 : goto restrict_upstream_private_addresses,
-      172.16.0.0/12 : goto restrict_upstream_private_addresses,
-      192.168.0.0/16 : goto restrict_upstream_private_addresses
+      10.0.0.0/8     : jump restrict_upstream_private_addresses,
+      172.16.0.0/12  : jump restrict_upstream_private_addresses,
+      192.168.0.0/16 : jump restrict_upstream_private_addresses
     }
   }
 
@@ -205,6 +205,8 @@ table inet filter {
 
   chain restrict_upstream_private_addresses {
     counter ip saddr vmap @upstream_private_rfc1918_allowed
+    log prefix "DRP:PRIVATE "
+    counter drop
   }
 
   #    $(if [ "$VLANSIF" ]; then echo "counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access"; fi)
