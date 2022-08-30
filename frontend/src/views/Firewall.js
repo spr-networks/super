@@ -35,7 +35,7 @@ export default class Firewall extends Component {
           />
 
           <ForwardBlockList
-            title="Outbound Traffic Block"
+            title="Forwarding Traffic Block"
             list={this.state.config.ForwardingBlockRules}
             notifyChange={this.fetchConfig}
           />

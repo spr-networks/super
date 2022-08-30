@@ -6,16 +6,19 @@ import ClientSelect from 'components/ClientSelect'
 import { firewallAPI } from 'api'
 
 import {
+  Badge,
   Box,
   Button,
   Checkbox,
   FormControl,
+  Heading,
+  HStack,
   Input,
   Link,
   Radio,
   Stack,
-  HStack,
   Spinner,
+  Switch,
   Text
 } from 'native-base'
 
@@ -47,7 +50,7 @@ class AddServicePortImpl extends React.Component {
 
     firewallAPI.addServicePort(rule).then((res) => {
       if (this.props.notifyChange) {
-        this.props.notifyChange('forward')
+        this.props.notifyChange('service_port')
       }
     }).catch(err => {
       this.props.alertContext.errorResponse('Firewall API Failure', '', err)
@@ -65,67 +68,51 @@ class AddServicePortImpl extends React.Component {
       return { label: p, value: p }
     })
 
+    const toggleUpstream = (value) => {
+      this.state.UpstreamEnabled = value
+
+      let rule = {
+        Protocol: this.state.Protocol,
+        Port: this.state.Port,
+        UpstreamEnabled: this.state.UpstreamEnabled
+      }
+
+      firewallAPI.addServicePort(rule).then(result => {
+        if (this.props.notifyChange) {
+          this.props.notifyChange('service_port')
+        }
+      }).catch(err => {
+        this.props.alertContext.errorResponse("Firewall API: ", '', err)
+      })
+    }
+
     return (
       <Stack space={4}>
         <HStack space={4}>
-          <FormControl flex="2">
-            <FormControl.Label>Source IP Address</FormControl.Label>
-            <Input
-              size="md"
-              variant="underlined"
-              name="SrcIP"
-              value={this.state.SrcIP}
-              onChangeText={(value) => this.handleChange('SrcIP', value)}
-            />
-            <FormControl.HelperText>Accepts IP or CIDR</FormControl.HelperText>
-          </FormControl>
-          <FormControl flex="1">
-            <FormControl.Label>Incoming Port</FormControl.Label>
-            <Input
-              size="md"
-              variant="underlined"
-              name="SrcPort"
-              value={this.state.SrcPort}
-              onChangeText={(value) => this.handleChange('SrcPort', value)}
-            />
-          </FormControl>
+          <Heading fontSize="sm">Protocol</Heading>
+          <Heading fontSize="sm">Port</Heading>
+          <Heading fontSize="sm">Upstream Enabled</Heading>
         </HStack>
-        <HStack space={2}>
-          <FormControl flex="2">
-            <FormControl.Label>Destination IP address</FormControl.Label>
-            <ClientSelect
-              name="DstIP"
-              value={this.state.DstIP}
-              onChange={(value) => this.handleChange('DstIP', value)}
-            />
-          </FormControl>
+
+        <HStack space={4}>
+          <Badge variant="outline">{this.state.Protocol}</Badge>
           <FormControl flex="1">
-            <FormControl.Label for="DstPort">Dest Port</FormControl.Label>
+            <FormControl.Label for="DstPort">Port</FormControl.Label>
             <Input
               size="md"
               variant="underlined"
               name="DstPort"
-              value={this.state.DstPort}
-              onChangeText={(value) => this.handleChange('DstPort', value)}
+              value={this.state.Port}
+              onChangeText={(value) => this.handleChange('Port', value)}
             />
           </FormControl>
+          <Box w="100" alignItems="center" alignSelf="center">
+            <Switch
+              defaultIsChecked={this.state.UpstreamEnabled}
+              onValueChange={() => toggleUpstream(!this.state.UpstreamEnabled)}
+            />
+          </Box>
         </HStack>
-
-        <FormControl>
-          <FormControl.Label>Protocol</FormControl.Label>
-
-          <Radio.Group
-            name="Protocol"
-            defaultValue={this.state.Protocol}
-            accessibilityLabel="Protocol"
-            onChange={(value) => this.handleChange('Protocol', value)}
-          >
-            <HStack space={2}>
-              <Radio value="tcp">tcp</Radio>
-              <Radio value="udp">udp</Radio>
-            </HStack>
-          </Radio.Group>
-        </FormControl>
 
         <Button color="primary" size="md" onPress={this.handleSubmit}>
           Save
