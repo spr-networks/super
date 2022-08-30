@@ -75,6 +75,65 @@ func saveFirewallRulesLocked() {
 	}
 }
 
+func getPortsFromPortVerdictMap(name string) []string {
+	cmd := exec.Command("nft", "-j", "list", "map", "inet", "filter", name)
+	stdout, err := cmd.Output()
+
+	ports := []string{}
+	//jq .nftables[1].map.elem[][0]
+	var data map[string]interface{}
+	err = json.Unmarshal(stdout, &data)
+	if err != nil {
+		fmt.Println(err)
+		return ports
+	}
+	data2, ok := data["nftables"].([]interface{})
+	if !ok {
+		return ports
+	}
+	data3, ok := data2[1].(map[string]interface{})
+	if !ok {
+		return ports
+	}
+	data4, ok := data3["map"].(map[string]interface{})
+	if !ok {
+		return ports
+	}
+	data5, ok := data4["elem"].([]interface{})
+	if !ok {
+		return ports
+	}
+	for _, entry := range data5 {
+		entryList, ok := entry.([]interface{})
+		if ok {
+			port, ok := entryList[0].(float64)
+			if ok {
+				ports = append(ports, strconv.Itoa(int(port)))
+			}
+		}
+	}
+	return ports
+}
+
+func setDefaultServicePortsLocked() {
+	//this firewall configuration does not know about
+	//the default service ports. Populate them and save
+
+	ports := getPortsFromPortVerdictMap("spr_tcp_port_accept")
+
+	service_ports := []ServicePort{}
+	//use UPSTREAM_SERVICES_ENABLE to determine default config
+	enable_upstream := os.Getenv("UPSTREAM_SERVICES_ENABLE") != ""
+
+	for _, port := range ports {
+		service_ports = append(service_ports, ServicePort{"tcp", port, enable_upstream})
+	}
+
+	gFirewallConfig.ServicePorts = service_ports
+
+	saveFirewallRulesLocked()
+}
+
 func loadFirewallRules() error {
 	FWmtx.Lock()
 	defer FWmtx.Unlock()
@@ -85,6 +144,9 @@ func loadFirewallRules() error {
 		err := json.Unmarshal(data, &gFirewallConfig)
 		if err != nil {
 			return err
+		}
+		if len(gFirewallConfig.ServicePorts) == 0 {
+			setDefaultServicePortsLocked()
 		}
 	}
 	return nil
@@ -739,19 +801,6 @@ func initUserFirewallRules() {
 		defer FWmtx.Unlock()
 
 		applyFirewallRulesLocked()
-
-		//TBD expose upstream_tcp_port_drop nfmap to UI for toggling
-		//NOTE: this will be overwritten if any ServicePorts are defined.
-		enable_upstream := os.Getenv("UPSTREAM_SERVICES_ENABLE")
-		if enable_upstream != "" {
-			cmd := exec.Command("nft", "flush", "map", "inet", "filter", "upstream_tcp_port_drop")
-			_, err := cmd.Output()
-
-			if err != nil {
-				fmt.Println("Failed to disable", err)
-				fmt.Println(cmd)
-			}
-		}
 
 		Interfacesmtx.Lock()
 		config := loadInterfacesConfigLocked()
