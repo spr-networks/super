@@ -204,7 +204,7 @@ table inet filter {
   }
 
   chain restrict_upstream_private_addresses {
-    counter ip saddr @upstream_private_rfc1918_allowed
+    counter ip saddr vmap @upstream_private_rfc1918_allowed
   }
 
   #    $(if [ "$VLANSIF" ]; then echo "counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access"; fi)
