@@ -68,7 +68,7 @@ const UpstreamServicesList = (props) => {
     <>
       <HStack justifyContent="space-between" alignItems="center" p={4}>
         <VStack maxW="60%">
-          <Heading fontSize="md">Allowed SPR Services from Upstream Interface</Heading>
+          <Heading fontSize="md">Allowed SPR Services</Heading>
           <Text color="muted.500" isTruncated>
           </Text>
         </VStack>
@@ -95,7 +95,7 @@ const UpstreamServicesList = (props) => {
       >
         <Heading fontSize="sm">Protocol</Heading>
         <Heading fontSize="sm">Port</Heading>
-        <Heading fontSize="sm">Enabled Upstream</Heading>
+        <Heading fontSize="sm">Enabled From Upstream WAN</Heading>
         <Heading fontSize="sm"></Heading>
       </HStack>
 
