@@ -56,7 +56,7 @@ const UpstreamServicesList = (props) => {
   }
 
   const toggleUpstream = (service_port, value) => {
-    service_port.Enabled = value
+    service_port.UpstreamEnabled = value
     firewallAPI.addServicePort(service_port).then(result => {
 
     }).catch(err => {
@@ -87,6 +87,18 @@ const UpstreamServicesList = (props) => {
         p={4}
         mb={4}
       >
+
+      <HStack
+        space={4}
+        justifyContent="space-between"
+        alignItems="center"
+      >
+        <Heading fontSize="sm">Protocol</Heading>
+        <Heading fontSize="sm">Port</Heading>
+        <Heading fontSize="sm">Enabled Upstream</Heading>
+        <Heading fontSize="sm"></Heading>
+      </HStack>
+
         <FlatList
           data={list}
           renderItem={({ item }) => (
