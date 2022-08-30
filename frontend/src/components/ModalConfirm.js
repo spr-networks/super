@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faCirclePlus, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { Button, FormControl, Input, Modal, Select } from 'native-base'
+import ClientSelect from 'components/ClientSelect'
 
 const ModalConfirm = (props) => {
   const defaultValue = props.defaultValue || ''
@@ -108,16 +109,27 @@ const ModalConfirm = (props) => {
       )
     }
 
+    if (type == 'IP')  {
+      return (
+             <ClientSelect
+                name="DstIP"
+                value={value}
+                onChange={handleChange}
+                onSubmitEditing={handlePress}
+                />
+      )
+    }
+
     return (
       <Input
-        name={type}
-        value={value}
-        variant="underlined"
-        placeholder={'Enter ' + (type == 'IP' ? 'IP address' : type) + '...'}
-        autoFocus
-        onChangeText={handleChange}
-        onSubmitEditing={handlePress}
-      />
+          name={type}
+          value={value}
+          variant="underlined"
+          placeholder={'Enter ' + (type == 'IP' ? 'IP address' : type) + '...'}
+          autoFocus
+          onChangeText={handleChange}
+          onSubmitEditing={handlePress}
+        />
     )
   }
 
