@@ -624,7 +624,7 @@ func modifyServicePort(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	re := regexp.MustCompile("^([0-9]$")
+	re := regexp.MustCompile("^([0-9].*)$")
 
 	if port.Port == "" || !re.MatchString(port.Port) {
 		http.Error(w, "Invalid Port", 400)
