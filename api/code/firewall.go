@@ -645,6 +645,17 @@ func modifyServicePort(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//update the existing rule  entry
+	for i := range gFirewallConfig.ServicePorts {
+		a := gFirewallConfig.ServicePorts[i]
+		if port.Protocol == a.Protocol && port.Port == a.Port {
+			gFirewallConfig.ServicePorts[i].UpstreamEnabled = port.UpstreamEnabled
+			saveFirewallRulesLocked()
+			deleteServicePort(a)
+			return
+		}
+	}
+
 	gFirewallConfig.ServicePorts = append(gFirewallConfig.ServicePorts, port)
 	saveFirewallRulesLocked()
 	applyFirewallRulesLocked()
