@@ -37,6 +37,7 @@ table inet filter {
     type ipv4_addr . ifname: verdict;
   }
 
+
   map upstream_tcp_port_drop {
     type inet_service : verdict;
     elements = {
@@ -47,7 +48,7 @@ table inet filter {
     }
   }
 
-  map lan_tcp_port_accept {
+  map spr_tcp_port_accept {
     type inet_service : verdict;
     elements = {
       22: accept,
@@ -70,6 +71,25 @@ table inet filter {
     flags interval
   }
 
+  # If a client is a part of this group, it will have
+  # src_ip : return to succeed
+  map upstream_private_rfc1918_allowed {
+    type ipv4_addr : verdict;
+  }
+
+  # goto does NOT return. packets will be dropped if
+  # the restrict_upstream_private_addresses does not see them
+  # in the upstream_private_rfc1918_allowed vmap
+  map drop_private_rfc1918 {
+    type ipv4_addr  : verdict;
+    flags interval
+    elements = {
+      10.0.0.0/8 : goto restrict_upstream_private_addresses,
+      172.16.0.0/12 : goto restrict_upstream_private_addresses,
+      192.168.0.0/16 : goto restrict_upstream_private_addresses
+    }
+  }
+
   chain PFWDROPLOG {
     counter log prefix "DRP:PFW "
     counter drop
@@ -82,15 +102,17 @@ table inet filter {
     iif lo counter accept
     counter jump F_EST_RELATED
 
+    # Drop input from the site to site output interfaces. They are only a sink,
+    # Not a source that can connect into SPR services
+    counter iifname "site*" jump DROPLOGINP
+
     # Allow wireguard from only WANIF interface to prevent loops
     $(if [ "$WANIF" ]; then echo "iifname $WANIF udp dport $WIREGUARD_PORT counter accept"; fi)
 
     # drop dhcp requests, multicast ports from upstream
+    # When updating lan_udp_accept, updated this list.
     $(if [ "$WANIF" ]; then echo "iifname $WANIF udp dport {67, 1900, 5353} counter jump DROPLOGINP"; fi)
 
-    # Drop input from the site to site interfaces.
-
-    counter iifname "site*" jump DROPLOGINP
 
     # drop ssh, iperf from upstream
     $(if [ "$WANIF" ]; then echo "counter iifname $WANIF tcp dport vmap @upstream_tcp_port_drop"; fi)
@@ -114,10 +136,11 @@ table inet filter {
     # Dynamic verdict map for dns access
     counter udp dport 53  ip saddr . iifname vmap @dns_access
 
-    # Allow ssh, iperf3 from non WAN interfaces (see upstream_tcp_port_drop)
-    counter tcp dport vmap @lan_tcp_port_accept
+    # Allow ssh, iperf3 from LAN and those not dropped from upstream (see upstream_tcp_port_drop)
+    counter tcp dport vmap @spr_tcp_port_accept
 
     # Allow udp for multicast proxy
+    # NOTE, if adding to lan_udp_accept, make sure to update the drop rule above
     counter udp dport vmap @lan_udp_accept
 
     # Fall through to log + drop
@@ -150,6 +173,9 @@ table inet filter {
     $(if [ "$LANIF" ]; then echo "iifname eq $LANIF jump DROP_MAC_SPOOF"; fi)
     jump WIPHY_MACSPOOF_CHECK
 
+    # Drop private_rfc1918 access on upstream
+    $(if [ "$WANIF" ]; then echo "counter oifname $WANIF ip daddr vmap @drop_private_rfc1918"; fi)
+
     # MSS clamping to handle upstream MTU limitations
     tcp flags syn tcp option maxseg size set rt mtu
 
@@ -175,6 +201,10 @@ table inet filter {
 
     # Fallthrough to log + drop
     counter jump DROPLOGFWD
+  }
+
+  chain restrict_upstream_private_addresses {
+    counter ip saddr @upstream_private_rfc1918_allowed
   }
 
   #    $(if [ "$VLANSIF" ]; then echo "counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access"; fi)
@@ -280,26 +310,24 @@ table inet nat {
 
     #jump USERDEF_PREROUTING
 
-    # Forwarding dnat maps
-
-    # Port Forwarding from Upstream
+    # DNAT Port Forwarding from Upstream to clients
     $(if [ "$WANIF" ]; then echo "counter iifname $WANIF dnat ip addr . port to ip daddr . udp dport map @udpfwd"; fi)
     $(if [ "$WANIF" ]; then echo "counter iifname $WANIF dnat ip addr . port to ip daddr . tcp dport map @tcpfwd"; fi)
     $(if [ "$WANIF" ]; then echo "counter iifname $WANIF ip protocol udp dnat to ip daddr map @udpanyfwd"; fi)
     $(if [ "$WANIF" ]; then echo "counter iifname $WANIF ip protocol tcp dnat to ip daddr map @tcpanyfwd"; fi)
 
+    # Used for DNAT forwarding
+    counter ip protocol tcp dnat ip saddr . ip daddr map @dnat_tcp_anymap
+    counter ip protocol udp dnat ip saddr . ip daddr map @dnat_udp_anymap
+
+    # Used for rerouting outbound traffic in PFW
     counter ip protocol tcp \
          dnat ip saddr . ip daddr . tcp dport map @dnat_tcp_ipmap : \
               ip saddr . ip daddr . tcp dport map @dnat_tcp_portmap
 
-    counter ip protocol tcp dnat ip saddr . ip daddr map @dnat_tcp_anymap
-
     counter ip protocol udp \
          dnat ip saddr . ip daddr . udp dport map @dnat_udp_ipmap : \
               ip saddr . ip daddr . udp dport map @dnat_udp_portmap
-
-    counter ip protocol udp dnat ip saddr . ip daddr map @dnat_udp_anymap
-
 
     # Reroute external DNS to our own server
     udp dport 53 counter dnat ip to $DNSIP:53
