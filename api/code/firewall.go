@@ -22,27 +22,43 @@ import (
 
 var FWmtx sync.Mutex
 
+type BaseRule struct {
+	RuleName string
+	Disabled bool
+}
+
 type ForwardingRule struct {
+	BaseRule
 	Protocol string
-	SrcIP    string
-	SrcPort  string
 	DstIP    string
 	DstPort  string
+	SrcIP    string
+	SrcPort  string
 }
 
 type BlockRule struct {
+	BaseRule
+	Protocol string
 	DstIP    string
 	SrcIP    string
+}
+
+type ForwardingBlockRule struct {
+	BaseRule
 	Protocol string
+	DstIP    string
+	DstPort  string
+	SrcIP    string
 }
 
 type FirewallConfig struct {
-	ForwardingRules []ForwardingRule
-	BlockRules      []BlockRule
+	ForwardingRules      []ForwardingRule
+	BlockRules           []BlockRule
+	ForwardingBlockRules []ForwardingBlockRule
 }
 
 var FirewallConfigFile = TEST_PREFIX + "/configs/base/firewall.json"
-var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}}
+var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []ForwardingBlockRule{}}
 
 func saveFirewallRulesLocked() {
 	file, _ := json.MarshalIndent(gFirewallConfig, "", " ")
@@ -148,11 +164,23 @@ func applyBlocking(blockRules []BlockRule) error {
 	return nil
 }
 
+func applyForwardBlocking(blockRules []ForwardingBlockRule) error {
+
+	for _, br := range blockRules {
+		addForwardBlock(br)
+	}
+
+	return nil
+}
+
 func applyFirewallRulesLocked() {
 
 	applyForwarding(gFirewallConfig.ForwardingRules)
 
 	applyBlocking(gFirewallConfig.BlockRules)
+
+	applyForwardBlocking(gFirewallConfig.ForwardingBlockRules)
+
 }
 
 func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
@@ -191,48 +219,6 @@ func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
 
 		}
 	}
-
-}
-
-func initUserFirewallRules() {
-	loadFirewallRules()
-
-	x := func() {
-		FWmtx.Lock()
-		defer FWmtx.Unlock()
-
-		applyFirewallRulesLocked()
-
-		//TBD expose upstream_tcp_port_drop nfmap to UI for toggling
-		enable_upstream := os.Getenv("UPSTREAM_SERVICES_ENABLE")
-		if enable_upstream != "" {
-			cmd := exec.Command("nft", "flush", "map", "inet", "filter", "upstream_tcp_port_drop")
-			_, err := cmd.Output()
-
-			if err != nil {
-				fmt.Println("Failed to disable", err)
-				fmt.Println(cmd)
-			}
-		}
-
-		Interfacesmtx.Lock()
-		config := loadInterfacesConfigLocked()
-		Interfacesmtx.Unlock()
-		applyRadioInterfaces(config)
-	}
-
-	// Workaround for docker-compose, which may start api very shortly
-	// after base is started, but before the rules are loaded.
-	// In the future we may want to formalize this
-
-	//run immediately
-	x()
-
-	//and also in 10 seconds
-	go func() {
-		time.Sleep(10 * time.Second)
-		x()
-	}()
 
 }
 
@@ -409,6 +395,63 @@ func blockIP(w http.ResponseWriter, r *http.Request) {
 	applyFirewallRulesLocked()
 }
 
+func blockForwardingIP(w http.ResponseWriter, r *http.Request) {
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	br := ForwardingBlockRule{}
+	err := json.NewDecoder(r.Body).Decode(&br)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if br.Protocol != "tcp" && br.Protocol != "udp" {
+		http.Error(w, "Invalid protocol", 400)
+		return
+	}
+
+	if CIDRorIP(br.SrcIP) != nil {
+		http.Error(w, "Invalid SrcIP", 400)
+		return
+	}
+
+	if CIDRorIP(br.DstIP) != nil {
+		http.Error(w, "Invalid DstIP", 400)
+		return
+	}
+
+	re := regexp.MustCompile("^([0-9].*-[0-9].*|[0-9]*)$")
+
+	if !re.MatchString(br.DstPort) {
+		http.Error(w, "Invalid DstPort", 400)
+		return
+	}
+
+	if br.DstPort == "" {
+		//all ports
+		br.DstPort = "0-65535"
+	}
+
+	if r.Method == http.MethodDelete {
+		for i := range gFirewallConfig.ForwardingBlockRules {
+			a := gFirewallConfig.ForwardingBlockRules[i]
+			if br == a {
+				gFirewallConfig.ForwardingBlockRules = append(gFirewallConfig.ForwardingBlockRules[:i], gFirewallConfig.ForwardingBlockRules[i+1:]...)
+				saveFirewallRulesLocked()
+				deleteForwardBlock(a)
+				return
+			}
+		}
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	gFirewallConfig.ForwardingBlockRules = append(gFirewallConfig.ForwardingBlockRules, br)
+	saveFirewallRulesLocked()
+	applyFirewallRulesLocked()
+}
+
 func addVerdict(IP string, Iface string, Table string) {
 	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ":", "accept", "}").Run()
 	if err != nil {
@@ -507,4 +550,89 @@ func addVerdictMac(IP string, MAC string, Iface string, Table string, Verdict st
 		fmt.Println("addVerdictMac Failed", MAC, Iface, Table, err)
 		return
 	}
+}
+
+var blockVerdict = "goto PFWDROPLOG"
+var blockVmapName = "fwd_block"
+
+func isForwardBlockInstalled(br ForwardingBlockRule) bool {
+	cmd := exec.Command("nft", "get", "element", "inet", "filter", blockVmapName, "{",
+		br.SrcIP, ".", br.DstIP, ".", br.Protocol, ".", br.DstPort, ":", blockVerdict, "}")
+
+	err := cmd.Run()
+
+	if err != nil {
+		return false
+	} else {
+		return true
+	}
+}
+
+func addForwardBlock(br ForwardingBlockRule) error {
+	cmd := exec.Command("nft", "add", "element", "inet", "filter", blockVmapName, "{",
+		br.SrcIP, ".", br.DstIP, ".", br.Protocol, ".", br.DstPort, ":", blockVerdict, "}")
+
+	_, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println("failed to add element", err)
+		fmt.Println(cmd)
+	}
+	return err
+}
+
+func deleteForwardBlock(br ForwardingBlockRule) error {
+	cmd := exec.Command("nft", "delete", "element", "inet", "filter", blockVmapName, "{",
+		br.SrcIP, ".", br.DstIP, ".", br.Protocol, ".", br.DstPort, ":", blockVerdict, "}")
+
+	_, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println("failed to delete element", err)
+		fmt.Println(cmd)
+	}
+
+	return err
+}
+
+func initUserFirewallRules() {
+	loadFirewallRules()
+
+	x := func() {
+		FWmtx.Lock()
+		defer FWmtx.Unlock()
+
+		applyFirewallRulesLocked()
+
+		//TBD expose upstream_tcp_port_drop nfmap to UI for toggling
+		enable_upstream := os.Getenv("UPSTREAM_SERVICES_ENABLE")
+		if enable_upstream != "" {
+			cmd := exec.Command("nft", "flush", "map", "inet", "filter", "upstream_tcp_port_drop")
+			_, err := cmd.Output()
+
+			if err != nil {
+				fmt.Println("Failed to disable", err)
+				fmt.Println(cmd)
+			}
+		}
+
+		Interfacesmtx.Lock()
+		config := loadInterfacesConfigLocked()
+		Interfacesmtx.Unlock()
+		applyRadioInterfaces(config)
+	}
+
+	// Workaround for docker-compose, which may start api very shortly
+	// after base is started, but before the rules are loaded.
+	// In the future we may want to formalize this
+
+	//run immediately
+	x()
+
+	//and also in 10 seconds
+	go func() {
+		time.Sleep(10 * time.Second)
+		x()
+	}()
+
 }

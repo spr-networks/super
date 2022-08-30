@@ -743,6 +743,15 @@ func toggleInterface(name string, enabled bool) error {
 	return nil
 }
 
+//when interfaces.json is updated, the firewall rules need to
+//be applied again
+func resetRadioFirewall() {
+	Interfacesmtx.Lock()
+	config := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
+	applyRadioInterfaces(config)
+}
+
 func hostapdEnableInterface(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
 	if !validInterface(iface) {
@@ -764,9 +773,13 @@ func hostapdEnableInterface(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//reset firewall rules to match the configuration
+	resetRadioFirewall()
+
 	//restart hostap container
 	callSuperdRestart("wifid")
 }
+
 func hostapdDisableInterface(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
 	if !validInterface(iface) {
@@ -780,6 +793,9 @@ func hostapdDisableInterface(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+
+	//apply firewall rules again
+	resetRadioFirewall()
 
 	//restart hostap container
 	callSuperdRestart("wifid")
@@ -810,6 +826,41 @@ func getInterfacesConfiguration(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(config)
+}
+
+func hostapdResetInterface(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	if !validInterface(iface) {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	//remove the interface configuration and write a fresh one
+	path := getHostapdConfigPath(iface)
+	_, err := os.Stat(path)
+	if err == nil {
+		err = os.Rename(path, path+".bak")
+		if err != nil {
+			http.Error(w, "Failed to rename hostapd.conf", 400)
+			return
+		}
+	}
+
+	//with the file renamed, configureInterface will write a default config
+	configureInterface("AP", iface)
+
+	err = toggleInterface(iface, true)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	callSuperdRestart("wifid")
+}
+
+func restartWifi(w http.ResponseWriter, r *http.Request) {
+	resetRadioFirewall()
+	callSuperdRestart("wifid")
 }
 
 /*
