@@ -244,7 +244,7 @@ func applyForwardBlocking(blockRules []ForwardingBlockRule) error {
 
 func deleteServicePort(port ServicePort) error {
 
-	if port.Protocol != "TCP" {
+	if port.Protocol != "tcp" {
 		fmt.Println("[-] Error: non TCP port described, unsupported")
 		return fmt.Errorf("invalid protocol for service port")
 	}
@@ -274,7 +274,7 @@ func deleteServicePort(port ServicePort) error {
 }
 
 func addServicePort(port ServicePort) error {
-	if port.Protocol != "TCP" {
+	if port.Protocol != "tcp" {
 		fmt.Println("[-] Error: non TCP port described, unsupported")
 		return fmt.Errorf("invalid protocol for service port")
 	}
