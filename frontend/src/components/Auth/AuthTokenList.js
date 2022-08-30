@@ -42,7 +42,7 @@ const AuthTokenList = (props) => {
       .then((tokens) => {
         setTokens(tokens)
       })
-      .catch((err) => context.error('' + err))
+      .catch((err) => context.errorResponse('Auth Token API:', '', err))
   }, [])
 
   const deleteListItem = (row) => {
@@ -54,7 +54,7 @@ const AuthTokenList = (props) => {
         newData.splice(prevIndex, 1)
         setTokens(newData)
       })
-      .catch((err) => context.error('' + err))
+      .catch((err) => context.errorResponse('Auth Token API:', '', err))
   }
 
   const handleAddToken = () => {}
@@ -69,7 +69,7 @@ const AuthTokenList = (props) => {
       .then((tokens) => {
         setTokens(tokens)
       })
-      .catch((err) => context.error('failed to fetch tokens'))
+      .catch((err) => context.errorResponse('Auth Token API:', '', err))
   }
 
   const notifyChange = () => {

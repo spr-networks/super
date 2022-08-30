@@ -1,5 +1,6 @@
-import React from 'react'
+import React, {useContext} from 'react'
 import PropTypes from 'prop-types'
+import { AlertContext } from 'AppContext'
 
 import ClientSelect from 'components/ClientSelect'
 import { firewallAPI } from 'api'
@@ -18,7 +19,7 @@ import {
   Text
 } from 'native-base'
 
-export default class AddForward extends React.Component {
+class AddForwardImpl extends React.Component {
   state = {
     Protocol: 'tcp',
     SrcIP: '0.0.0.0/0',
@@ -52,6 +53,8 @@ export default class AddForward extends React.Component {
       if (this.props.notifyChange) {
         this.props.notifyChange('forward')
       }
+    }).catch(err => {
+      this.props.alertContext.errorResponse('Firewall API Failure', '', err)
     })
   }
 
@@ -93,7 +96,7 @@ export default class AddForward extends React.Component {
         </HStack>
         <HStack space={2}>
           <FormControl flex="2">
-            <FormControl.Label>Rewrite IP address</FormControl.Label>
+            <FormControl.Label>Destination IP address</FormControl.Label>
             <ClientSelect
               name="DstIP"
               value={this.state.DstIP}
@@ -136,6 +139,12 @@ export default class AddForward extends React.Component {
   }
 }
 
-AddForward.propTypes = {
+AddForwardImpl.propTypes = {
   notifyChange: PropTypes.func
 }
+
+
+export default function AddForward() {
+  let alertContext = useContext(AlertContext);
+  return <AddForwardImpl alertContext={alertContext}></AddForwardImpl>
+};

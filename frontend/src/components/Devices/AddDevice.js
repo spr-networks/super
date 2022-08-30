@@ -135,7 +135,7 @@ const AddDevice = (props) => {
         setSubmitted(true)
       })
       .catch((error) => {
-        context.error(error.message)
+        context.errorResponse('DEVICE API:', '', error)
       })
   }
 

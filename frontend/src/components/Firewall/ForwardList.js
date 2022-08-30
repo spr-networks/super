@@ -83,7 +83,7 @@ const ForwardList = (props) => {
           </Text>
         </VStack>
         <ModalForm
-          title="Add Rewrite/Forwarding Rule"
+          title="Add Port Forwarding Rule"
           triggerText="Add Forward"
           modalRef={refModal}
         >

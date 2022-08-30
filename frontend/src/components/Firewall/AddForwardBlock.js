@@ -1,7 +1,8 @@
-import React from 'react'
+import React, {useContext} from 'react'
 import PropTypes from 'prop-types'
 
 import { firewallAPI } from 'api'
+import { AlertContext } from 'AppContext'
 
 import {
   Box,
@@ -18,7 +19,7 @@ import {
 } from 'native-base'
 
 
-export default class AddForwardBlock extends React.Component {
+class AddForwardBlockImpl extends React.Component {
   state = {
     SrcIP: '',
     DstIP: '',
@@ -55,6 +56,10 @@ export default class AddForwardBlock extends React.Component {
     }
 
     firewallAPI.addForwardBlock(block).then(done)
+    .catch(err => {
+      this.props.alertContext.errorResponse('Firewall API Failure', '', err)
+    })
+
   }
 
   componentDidMount() {}
@@ -121,6 +126,11 @@ export default class AddForwardBlock extends React.Component {
   }
 }
 
-AddForwardBlock.propTypes = {
+AddForwardBlockImpl.propTypes = {
   notifyChange: PropTypes.func
 }
+
+export default function AddForwardBlock() {
+  let alertContext = useContext(AlertContext);
+  return <AddForwardBlockImpl alertContext={alertContext}></AddForwardBlockImpl>
+};

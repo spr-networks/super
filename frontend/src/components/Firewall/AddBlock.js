@@ -1,7 +1,10 @@
-import React from 'react'
+import React, {useContext} from 'react'
 import PropTypes from 'prop-types'
 
+import ClientSelect from 'components/ClientSelect'
+
 import { firewallAPI } from 'api'
+import { AlertContext } from 'AppContext'
 
 import {
   Box,
@@ -17,12 +20,13 @@ import {
   Text
 } from 'native-base'
 
-export default class AddBlock extends React.Component {
+class AddBlockImpl extends React.Component {
   state = {
     SrcIP: '',
     DstIP: '',
     Protocol: 'tcp'
   }
+
 
   constructor(props) {
     super(props)
@@ -51,7 +55,12 @@ export default class AddBlock extends React.Component {
       }
     }
 
-    firewallAPI.addBlock(block).then(done)
+    firewallAPI
+      .addBlock(block)
+      .then(done)
+      .catch(err => {
+        this.props.alertContext.errorResponse('Firewall API Failure', '', err)
+      })
   }
 
   componentDidMount() {}
@@ -72,11 +81,10 @@ export default class AddBlock extends React.Component {
           </FormControl>
           <FormControl flex="1" isRequired>
             <FormControl.Label>Destination address</FormControl.Label>
-            <Input
-              size="md"
-              variant="underlined"
+            <ClientSelect
+              name="DstIP"
               value={this.state.DstIP}
-              onChangeText={(value) => this.handleChange('DstIP', value)}
+              onChange={(value) => this.handleChange('DstIP', value)}
             />
             <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
           </FormControl>
@@ -106,6 +114,12 @@ export default class AddBlock extends React.Component {
   }
 }
 
-AddBlock.propTypes = {
+AddBlockImpl.propTypes = {
   notifyChange: PropTypes.func
 }
+
+
+export default function AddBlock() {
+  let alertContext = useContext(AlertContext);
+  return <AddBlockImpl alertContext={alertContext}></AddBlockImpl>
+};
