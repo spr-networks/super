@@ -250,7 +250,7 @@ func deleteServicePort(port ServicePort) error {
 	}
 
 	//delete port from spr_tcp_port_accept
-	cmd := exec.Command("nft", "delete", "element", "inet", "nat", "spr_tcp_port_accept",
+	cmd := exec.Command("nft", "delete", "element", "inet", "filter", "spr_tcp_port_accept",
 		"{", port.Port, ":", "accept", "}")
 	_, err := cmd.Output()
 
@@ -260,7 +260,7 @@ func deleteServicePort(port ServicePort) error {
 	}
 
 	//add this disabled port  into upstream_tcp_port_drop
-	cmd = exec.Command("nft", "add", "element", "inet", "nat", "upstream_tcp_port_drop",
+	cmd = exec.Command("nft", "add", "element", "inet", "filter", "upstream_tcp_port_drop",
 		"{", port.Port, ":", "drop", "}")
 	_, err = cmd.Output()
 
@@ -281,7 +281,7 @@ func addServicePort(port ServicePort) error {
 
 	if port.UpstreamEnabled {
 		//remove this port from upstream_tcp_port_drop
-		cmd := exec.Command("nft", "delete", "element", "inet", "nat", "upstream_tcp_port_drop",
+		cmd := exec.Command("nft", "delete", "element", "inet", "filter", "upstream_tcp_port_drop",
 			"{", port.Port, ":", "drop", "}")
 		_, err := cmd.Output()
 
@@ -292,7 +292,7 @@ func addServicePort(port ServicePort) error {
 		}
 	} else {
 		//add this disabled port into upstream_tcp_port_drop
-		cmd := exec.Command("nft", "add", "element", "inet", "nat", "upstream_tcp_port_drop",
+		cmd := exec.Command("nft", "add", "element", "inet", "filter", "upstream_tcp_port_drop",
 			"{", port.Port, ":", "drop", "}")
 		_, err := cmd.Output()
 
@@ -304,7 +304,7 @@ func addServicePort(port ServicePort) error {
 	}
 
 	//add port to spr_tcp_port_accept for LAN to reach and WAN if UpstreamEnabled
-	cmd := exec.Command("nft", "add", "element", "inet", "nat", "spr_tcp_port_accept",
+	cmd := exec.Command("nft", "add", "element", "inet", "filter", "spr_tcp_port_accept",
 		"{", port.Port, ":", "accept", "}")
 	_, err := cmd.Output()
 
