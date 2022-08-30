@@ -51,14 +51,21 @@ type ForwardingBlockRule struct {
 	SrcIP    string
 }
 
+type ServicePort struct {
+	Protocol        string
+	Port            string
+	UpstreamEnabled bool
+}
+
 type FirewallConfig struct {
 	ForwardingRules      []ForwardingRule
 	BlockRules           []BlockRule
 	ForwardingBlockRules []ForwardingBlockRule
+	ServicePorts         []ServicePort
 }
 
 var FirewallConfigFile = TEST_PREFIX + "/configs/base/firewall.json"
-var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []ForwardingBlockRule{}}
+var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []ForwardingBlockRule{}, []ServicePort{}}
 
 func saveFirewallRulesLocked() {
 	file, _ := json.MarshalIndent(gFirewallConfig, "", " ")
@@ -173,6 +180,90 @@ func applyForwardBlocking(blockRules []ForwardingBlockRule) error {
 	return nil
 }
 
+func deleteServicePort(port ServicePort) error {
+
+	if port.Protocol != "TCP" {
+		fmt.Println("[-] Error: non TCP port described, unsupported")
+		return fmt.Errorf("invalid protocol for service port")
+	}
+
+	//delete port from spr_tcp_port_accept
+	cmd := exec.Command("nft", "delete", "element", "inet", "nat", "spr_tcp_port_accept",
+		"{", port.Port, ":", "accept", "}")
+	_, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println("failed to delete element from spr_tcp_port_accept", err)
+		fmt.Println(cmd)
+	}
+
+	//add this disabled port  into upstream_tcp_port_drop
+	cmd = exec.Command("nft", "add", "element", "inet", "nat", "upstream_tcp_port_drop",
+		"{", port.Port, ":", "drop", "}")
+	_, err = cmd.Output()
+
+	if err != nil {
+		fmt.Println("failed to add element to upstream_tcp_port_drop", err)
+		fmt.Println(cmd)
+		return err
+	}
+
+	return nil
+}
+
+func addServicePort(port ServicePort) error {
+	if port.Protocol != "TCP" {
+		fmt.Println("[-] Error: non TCP port described, unsupported")
+		return fmt.Errorf("invalid protocol for service port")
+	}
+
+	if port.UpstreamEnabled {
+		//remove this port from upstream_tcp_port_drop
+		cmd := exec.Command("nft", "delete", "element", "inet", "nat", "upstream_tcp_port_drop",
+			"{", port.Port, ":", "drop", "}")
+		_, err := cmd.Output()
+
+		if err != nil {
+			fmt.Println("failed to delete element from upstream_tcp_port_drop", err)
+			fmt.Println(cmd)
+			return err
+		}
+	} else {
+		//add this disabled port into upstream_tcp_port_drop
+		cmd := exec.Command("nft", "add", "element", "inet", "nat", "upstream_tcp_port_drop",
+			"{", port.Port, ":", "drop", "}")
+		_, err := cmd.Output()
+
+		if err != nil {
+			fmt.Println("failed to add element to upstream_tcp_port_drop", err)
+			fmt.Println(cmd)
+			return err
+		}
+	}
+
+	//add port to spr_tcp_port_accept for LAN to reach and WAN if UpstreamEnabled
+	cmd := exec.Command("nft", "add", "element", "inet", "nat", "spr_tcp_port_accept",
+		"{", port.Port, ":", "accept", "}")
+	_, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println("failed to add element to spr_tcp_port_accept", err)
+		fmt.Println(cmd)
+		return err
+	}
+
+	return nil
+}
+
+func applyServicePorts(servicePorts []ServicePort) error {
+
+	for _, port := range servicePorts {
+		addServicePort(port)
+	}
+
+	return nil
+}
+
 func applyFirewallRulesLocked() {
 
 	applyForwarding(gFirewallConfig.ForwardingRules)
@@ -180,6 +271,8 @@ func applyFirewallRulesLocked() {
 	applyBlocking(gFirewallConfig.BlockRules)
 
 	applyForwardBlocking(gFirewallConfig.ForwardingBlockRules)
+
+	applyServicePorts(gFirewallConfig.ServicePorts)
 
 }
 
@@ -452,6 +545,49 @@ func blockForwardingIP(w http.ResponseWriter, r *http.Request) {
 	applyFirewallRulesLocked()
 }
 
+func modifyServicePort(w http.ResponseWriter, r *http.Request) {
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	port := ServicePort{}
+	err := json.NewDecoder(r.Body).Decode(&port)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	//only TCP supported for now
+	if port.Protocol != "tcp" {
+		http.Error(w, "Invalid protocol, only tcp supported currently", 400)
+		return
+	}
+
+	re := regexp.MustCompile("^([0-9]$")
+
+	if port.Port == "" || !re.MatchString(port.Port) {
+		http.Error(w, "Invalid Port", 400)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		for i := range gFirewallConfig.ServicePorts {
+			a := gFirewallConfig.ServicePorts[i]
+			if port.Protocol == a.Protocol && port.Port == a.Port {
+				gFirewallConfig.ServicePorts = append(gFirewallConfig.ServicePorts[:i], gFirewallConfig.ServicePorts[i+1:]...)
+				saveFirewallRulesLocked()
+				deleteServicePort(a)
+				return
+			}
+		}
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	gFirewallConfig.ServicePorts = append(gFirewallConfig.ServicePorts, port)
+	saveFirewallRulesLocked()
+	applyFirewallRulesLocked()
+}
+
 func addVerdict(IP string, Iface string, Table string) {
 	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ":", "accept", "}").Run()
 	if err != nil {
@@ -605,6 +741,7 @@ func initUserFirewallRules() {
 		applyFirewallRulesLocked()
 
 		//TBD expose upstream_tcp_port_drop nfmap to UI for toggling
+		//NOTE: this will be overwritten if any ServicePorts are defined.
 		enable_upstream := os.Getenv("UPSTREAM_SERVICES_ENABLE")
 		if enable_upstream != "" {
 			cmd := exec.Command("nft", "flush", "map", "inet", "filter", "upstream_tcp_port_drop")
