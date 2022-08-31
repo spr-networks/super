@@ -98,13 +98,13 @@ const NotificationItem = ({ item, index, onDelete, onToggle, ...props }) => {
           <HStack space={2}>
             <Text color="muted.500">Source</Text>
             <Text>
-              {item.Conditions.SrcIp || '*'}:{item.Conditions.SrcPort || '*'}
+              {item.Conditions.SrcIP || '*'}:{item.Conditions.SrcPort || '*'}
             </Text>
           </HStack>
           <HStack space={2}>
             <Text color="muted.500">Dest</Text>
             <Text>
-              {item.Conditions.DestIp || '*'}:{item.Conditions.DestPort || '*'}
+              {item.Conditions.DstIP || '*'}:{item.Conditions.DstPort || '*'}
             </Text>
           </HStack>
         </Stack>
