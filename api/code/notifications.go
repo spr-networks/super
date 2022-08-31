@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -218,20 +219,33 @@ func logTraffic(topic string, data string) {
 		log.Fatal(err)
 	}
 
-	//fmt.Printf("## Notification: %v @ %v\n", topic, logEntry.Timestamp)
+	//log.Printf("## Notification: %v @ %v\n", topic, logEntry.Timestamp)
 
 	shouldNotify := checkNotificationTraffic(logEntry)
 
 	if shouldNotify {
-		fmt.Printf("Sending Notification to WebSocket: %v\n", topic)
+		log.Printf("Sending Notification to WebSocket: %v\n", topic)
 		WSNotifyValue("nft", logEntry)
 	}
 }
 
 // the rest is eventbus -> ws forwarding
-
 func NotificationsRunEventListener() {
+	go notificationEventServer()
 	go notificationEventListener()
+	//time.Sleep(time.Second)
+}
+
+// this is the main event server
+func notificationEventServer() {
+        log.Println("starting sprbus server...")
+
+        _, err := sprbus.NewServer(ServerEventSock)
+        if err != nil {
+                log.Fatal(err)
+        }
+
+	// not reached
 }
 
 // this is run in a separate thread
@@ -241,9 +255,16 @@ func notificationEventListener() {
 	log.Printf("notification settings: %v conditions loaded\n", len(gNotificationConfig))
 	//WSNotifyString("nft:event:init", `{"status": "init"}`)
 
-	// if file exitst - could be another client connected
+	// wait for server to start
+	for i := 0; i < 4; i++ {
+		if _, err := os.Stat(ServerEventSock); err == nil {
+			break
+		}
 
-	log.Println("client")
+		time.Sleep(time.Second/4)
+	}
+
+	log.Println("connecting sprbus client...")
 
 	client, err := sprbus.NewClient(ServerEventSock)
 	defer client.Close()
