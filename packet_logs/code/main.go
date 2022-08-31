@@ -51,9 +51,9 @@ type PacketInfo struct {
 var wg sync.WaitGroup
 
 func main() {
-	wg.Add(1)
-
-	go sprServer()
+	//this now runs in api container
+	//wg.Add(1)
+	//go sprServer()
 
 	client, err := sprbus.NewClient(ServerEventSock)
 	defer client.Close()
