@@ -7,9 +7,9 @@ import {
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
 
-import { firewallAPI, deviceAPI } from 'api'
+import { firewallAPI } from 'api'
 import ModalForm from 'components/ModalForm'
-import AddForward from './AddForward'
+import AddServicePort from './AddServicePort'
 
 import {
   Badge,
@@ -17,47 +17,28 @@ import {
   Box,
   FlatList,
   Heading,
+  HStack,
   IconButton,
   Stack,
-  HStack,
+  Switch,
   VStack,
   Text,
   useColorModeValue
 } from 'native-base'
 
-const ForwardList = (props) => {
+const UpstreamServicesList = (props) => {
   const [list, setList] = useState([])
 
   const refreshList = () => {
     firewallAPI.config().then((config) => {
       //setList(config.ForwardingRules)
-      let flist = config.ForwardingRules
-      deviceAPI
-        .list()
-        .then((devices) => {
-          flist = flist.map((rule) => {
-            let deviceDst = Object.values(devices)
-              .filter((d) => d.RecentIP == rule.DstIP)
-              .pop()
-
-            if (deviceDst) {
-              rule.deviceDst = deviceDst
-            }
-
-            return rule
-          })
-
-          setList(flist)
-        })
-        .catch((err) => {
-          //context.error('deviceAPI.list Error: ' + err)
-          setList(flist)
-        })
+      let flist = config.ServicePorts
+      setList(flist)
     })
   }
 
   const deleteListItem = (item) => {
-    firewallAPI.deleteForward(item).then((res) => {
+    firewallAPI.deleteServicePort(item).then((res) => {
       refreshList()
     })
   }
@@ -73,21 +54,29 @@ const ForwardList = (props) => {
     refreshList()
   }
 
+  const toggleUpstream = (service_port, value) => {
+    service_port.UpstreamEnabled = value
+    firewallAPI.addServicePort(service_port).then(result => {
+
+    }).catch(err => {
+      this.props.alertContext.errorResponse("Firewall API: ", '', err)
+    })
+  }
+
   return (
     <>
       <HStack justifyContent="space-between" alignItems="center" p={4}>
         <VStack maxW="60%">
-          <Heading fontSize="md">Port Forwarding</Heading>
+          <Heading fontSize="md">Allowed SPR Services</Heading>
           <Text color="muted.500" isTruncated>
-            Set rules for DNAT forwarding of incoming traffic
           </Text>
         </VStack>
         <ModalForm
-          title="Add Port Forwarding Rule"
-          triggerText="Add Forward"
+          title="Add Port"
+          triggerText="Add Port"
           modalRef={refModal}
         >
-          <AddForward notifyChange={notifyChange} />
+          <AddServicePort notifyChange={notifyChange} />
         </ModalForm>
       </HStack>
       <Box
@@ -97,6 +86,18 @@ const ForwardList = (props) => {
         p={4}
         mb={4}
       >
+
+      <HStack
+        space={4}
+        justifyContent="space-between"
+        alignItems="center"
+      >
+        <Heading fontSize="sm">Protocol</Heading>
+        <Heading fontSize="sm">Port</Heading>
+        <Heading fontSize="sm">Enabled From Upstream WAN</Heading>
+        <Heading fontSize="sm"></Heading>
+      </HStack>
+
         <FlatList
           data={list}
           renderItem={({ item }) => (
@@ -114,25 +115,13 @@ const ForwardList = (props) => {
                 alignItems="center"
               >
                 <Badge variant="outline">{item.Protocol}</Badge>
-
-                <HStack space={1}>
-                  <Text bold>
-                    {item.deviceSrc ? item.deviceSrc.Name : item.SrcIP}
-                  </Text>
-                  <Text color="muted.500">:</Text>
-                  <Text>{item.SrcPort}</Text>
-                </HStack>
-
-                <Icon color="muted.400" icon={faArrowRightLong} />
-
-                <HStack space={1}>
-                  <Text bold>
-                    {item.deviceDst ? item.deviceDst.Name : item.DstIP}
-                  </Text>
-                  <Text color="muted.500">:</Text>
-                  <Text>{item.DstPort}</Text>
-                </HStack>
-
+                <Text>{item.Port}</Text>
+                <Box w="100" alignItems="center" alignSelf="center">
+                  <Switch
+                    defaultIsChecked={item.UpstreamEnabled}
+                    onValueChange={() => toggleUpstream(item, !item.UpstreamEnabled)}
+                  />
+                </Box>
                 <IconButton
                   alignSelf="center"
                   size="sm"
@@ -148,27 +137,9 @@ const ForwardList = (props) => {
             `${item.Protocol}${item.DstIP}:${item.DstPort}`
           }
         />
-
-        <VStack>
-          {!list.length ? (
-            <Text alignSelf={'center'}>
-              There are no forward rules configured yet
-            </Text>
-          ) : null}
-          <Button
-            display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
-            variant={useColorModeValue('subtle', 'solid')}
-            colorScheme="muted"
-            leftIcon={<Icon icon={faCirclePlus} />}
-            onPress={() => refModal.current()}
-            mt={4}
-          >
-            Add Forward
-          </Button>
-        </VStack>
       </Box>
     </>
   )
 }
 
-export default ForwardList
+export default UpstreamServicesList

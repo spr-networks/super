@@ -87,6 +87,8 @@ type DeviceEntry struct {
 	DeviceTags []string
 }
 
+var DEVICE_TAG_PERMIT_PRIVATE_UPSTREAM_ACCESS = "lan_upstream"
+
 var config = APIConfig{}
 
 func loadConfig() {
@@ -414,6 +416,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	pskGenerated := false
 	pskModified := false
 	refreshGroups := false
+	refreshTags := false
 
 	if exists {
 		//updating an existing entry. Check what was requested
@@ -456,6 +459,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		if dev.DeviceTags != nil && !equalStringSlice(val.DeviceTags, dev.DeviceTags) {
 			val.DeviceTags = dev.DeviceTags
+			refreshTags = true
 		}
 
 		if dev.Groups != nil && !equalStringSlice(val.Groups, dev.Groups) {
@@ -499,6 +503,10 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		if refreshGroups {
 			refreshDeviceGroups(val)
+		}
+
+		if refreshTags {
+			refreshDeviceTags(val)
 		}
 
 		//mask the PSK if set and not generated
@@ -1127,6 +1135,10 @@ func lookupWGDevice(devices *map[string]DeviceEntry, WGPubKey string, IP string)
 	return DeviceEntry{}, false
 }
 
+func refreshDeviceTags(dev DeviceEntry) {
+	applyPrivateNetworkUpstreamDevice(dev)
+}
+
 func refreshDeviceGroups(dev DeviceEntry) {
 	if dev.WGPubKey != "" {
 		//refresh wg based on WGPubKey
@@ -1674,6 +1686,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/firewall/forward", modifyForwardRules).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/block", blockIP).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/block_forward", blockForwardingIP).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/service_port", modifyServicePort).Methods("PUT", "DELETE")
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")

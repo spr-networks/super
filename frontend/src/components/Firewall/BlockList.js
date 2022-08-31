@@ -51,6 +51,9 @@ const BlockList = (props) => {
           <Heading fontSize="md" isTruncated>
             {title}
           </Heading>
+          <Text color="muted.500" isTruncated>
+            Block traffic coming into the network at the PREROUTING stage
+          </Text>
         </VStack>
         <ModalForm
           title={`Add IP Block`}

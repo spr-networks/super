@@ -52,7 +52,7 @@ const ForwardBlockList = (props) => {
             {title}
           </Heading>
           <Text color="muted.500" isTruncated>
-            Add rules to block traffic forwarding
+            Add rules to block traffic at the FORWARDING stage
           </Text>
         </VStack>
         <ModalForm
