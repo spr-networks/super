@@ -1,6 +1,7 @@
 import React, {useContext} from 'react'
 import PropTypes from 'prop-types'
 
+import ClientSelect from 'components/ClientSelect'
 import { firewallAPI } from 'api'
 import { AlertContext } from 'AppContext'
 
@@ -70,21 +71,19 @@ class AddForwardBlockImpl extends React.Component {
         <HStack space={4}>
           <FormControl flex="1" isRequired>
             <FormControl.Label>Source address</FormControl.Label>
-            <Input
-              size="md"
-              variant="underlined"
+            <ClientSelect
+              name="SrcIP"
               value={this.state.SrcIP}
-              onChangeText={(value) => this.handleChange('SrcIP', value)}
+              onChange={(value) => this.handleChange('SrcIP', value)}
             />
             <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
           </FormControl>
           <FormControl flex="1" isRequired>
             <FormControl.Label>Destination address</FormControl.Label>
-            <Input
-              size="md"
-              variant="underlined"
+            <ClientSelect
+              name="DstIP"
               value={this.state.DstIP}
-              onChangeText={(value) => this.handleChange('DstIP', value)}
+              onChange={(value) => this.handleChange('DstIP', value)}
             />
             <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
           </FormControl>
