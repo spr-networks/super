@@ -1,4 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
+
+import { AlertContext } from 'AppContext'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faArrowRightLong,
@@ -27,6 +29,8 @@ import {
 } from 'native-base'
 
 const UpstreamServicesList = (props) => {
+  const context = useContext(AlertContext)
+
   const [list, setList] = useState([])
 
   const refreshList = () => {
@@ -56,11 +60,12 @@ const UpstreamServicesList = (props) => {
 
   const toggleUpstream = (service_port, value) => {
     service_port.UpstreamEnabled = value
-    firewallAPI.addServicePort(service_port).then(result => {
-
-    }).catch(err => {
-      this.props.alertContext.errorResponse("Firewall API: ", '', err)
-    })
+    firewallAPI
+      .addServicePort(service_port)
+      .then((result) => {})
+      .catch((err) => {
+        context.error('Firewall API: ' + err)
+      })
   }
 
   return (
@@ -68,14 +73,9 @@ const UpstreamServicesList = (props) => {
       <HStack justifyContent="space-between" alignItems="center" p={4}>
         <VStack maxW="60%">
           <Heading fontSize="md">Allowed SPR Services</Heading>
-          <Text color="muted.500" isTruncated>
-          </Text>
+          <Text color="muted.500" isTruncated></Text>
         </VStack>
-        <ModalForm
-          title="Add Port"
-          triggerText="Add Port"
-          modalRef={refModal}
-        >
+        <ModalForm title="Add Port" triggerText="Add Port" modalRef={refModal}>
           <AddServicePort notifyChange={notifyChange} />
         </ModalForm>
       </HStack>
@@ -86,17 +86,12 @@ const UpstreamServicesList = (props) => {
         p={4}
         mb={4}
       >
-
-      <HStack
-        space={4}
-        justifyContent="space-between"
-        alignItems="center"
-      >
-        <Heading fontSize="sm">Protocol</Heading>
-        <Heading fontSize="sm">Port</Heading>
-        <Heading fontSize="sm">Enabled From Upstream WAN</Heading>
-        <Heading fontSize="sm"></Heading>
-      </HStack>
+        <HStack space={4} justifyContent="space-between" alignItems="center">
+          <Heading fontSize="sm">Protocol</Heading>
+          <Heading fontSize="sm">Port</Heading>
+          <Heading fontSize="sm">Enabled From Upstream WAN</Heading>
+          <Heading fontSize="sm"></Heading>
+        </HStack>
 
         <FlatList
           data={list}
@@ -119,7 +114,9 @@ const UpstreamServicesList = (props) => {
                 <Box w="100" alignItems="center" alignSelf="center">
                   <Switch
                     defaultIsChecked={item.UpstreamEnabled}
-                    onValueChange={() => toggleUpstream(item, !item.UpstreamEnabled)}
+                    onValueChange={() =>
+                      toggleUpstream(item, !item.UpstreamEnabled)
+                    }
                   />
                 </Box>
                 <IconButton
@@ -134,7 +131,7 @@ const UpstreamServicesList = (props) => {
             </Box>
           )}
           keyExtractor={(item) =>
-            `${item.Protocol}${item.DstIP}:${item.DstPort}`
+            `${item.Protocol}${item.Port}:${item.UpstreamEnabled}`
           }
         />
       </Box>
