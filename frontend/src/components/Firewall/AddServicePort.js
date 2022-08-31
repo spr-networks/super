@@ -1,8 +1,7 @@
-import React, {useContext} from 'react'
+import React, { useContext, useState } from 'react'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'AppContext'
 
-import ClientSelect from 'components/ClientSelect'
 import { firewallAPI } from 'api'
 
 import {
@@ -22,108 +21,75 @@ import {
   Text
 } from 'native-base'
 
-class AddServicePortImpl extends React.Component {
-  state = {
-    Protocol: 'tcp',
-    Port: '0',
-    UpstreamEnabled: false
-  }
+const AddServicePort = ({ notifyChange, ...props }) => {
+  const context = useContext(AlertContext)
 
-  constructor(props) {
-    super(props)
+  const [Protocol, setProtocol] = useState('tcp')
+  const [Port, setPort] = useState('0')
+  const [UpstreamEnabled, setUpstreamEnabled] = useState(false)
 
-    this.handleChange = this.handleChange.bind(this)
-    this.handleSubmit = this.handleSubmit.bind(this)
-  }
-
-  handleChange(name, value) {
-    //TODO verify IP && port
-    this.setState({ [name]: value })
-  }
-
-  handleSubmit() {
+  const handleSubmit = () => {
     let rule = {
-      Protocol: this.state.Protocol,
-      Port: this.state.Port,
-      UpstreamEnabled: this.state.UpstreamEnabled
+      Protocol,
+      Port,
+      UpstreamEnabled
     }
 
-    firewallAPI.addServicePort(rule).then((res) => {
-      if (this.props.notifyChange) {
-        this.props.notifyChange('service_port')
-      }
-    }).catch(err => {
-      this.props.alertContext.errorResponse('Firewall API Failure', '', err)
-    })
-  }
-
-  componentDidMount() {}
-
-  render() {
-    let selOpt = (value) => {
-      return { label: value, value }
-    }
-
-    let Protocols = ['tcp', 'udp'].map((p) => {
-      return { label: p, value: p }
-    })
-
-    const toggleUpstream = (value) => {
-      this.state.UpstreamEnabled = value
-
-      let rule = {
-        Protocol: this.state.Protocol,
-        Port: this.state.Port,
-        UpstreamEnabled: this.state.UpstreamEnabled
-      }
-
-      firewallAPI.addServicePort(rule).then(result => {
-        if (this.props.notifyChange) {
-          this.props.notifyChange('service_port')
+    firewallAPI
+      .addServicePort(rule)
+      .then((res) => {
+        if (notifyChange) {
+          notifyChange('service_port')
         }
-      }).catch(err => {
-        this.props.alertContext.errorResponse("Firewall API: ", '', err)
       })
-    }
-
-    return (
-      <Stack space={4}>
-        <HStack space={4}>
-          <Badge variant="outline">{this.state.Protocol}</Badge>
-          <FormControl flex="1">
-            <FormControl.Label for="DstPort">Port</FormControl.Label>
-            <Input
-              w="100"
-              size="md"
-              variant="underlined"
-              name="Port"
-              value={this.state.Port}
-              onChangeText={(value) => this.handleChange('Port', value)}
-            />
-          </FormControl>
-          <Box w="150" alignItems="center" alignSelf="center">
-            <FormControl.Label for="DstPort">Upstream Enabled</FormControl.Label>
-              <Switch
-                defaultIsChecked={this.state.UpstreamEnabled}
-                onValueChange={() => toggleUpstream(!this.state.UpstreamEnabled)}
-              />
-          </Box>
-        </HStack>
-
-        <Button color="primary" size="md" onPress={this.handleSubmit}>
-          Save
-        </Button>
-      </Stack>
-    )
+      .catch((err) => {
+        context.error('Firewall API Failure: ' + err)
+      })
   }
+
+  let selOpt = (value) => {
+    return { label: value, value }
+  }
+
+  let Protocols = ['tcp', 'udp'].map((p) => {
+    return { label: p, value: p }
+  })
+
+  return (
+    <Stack space={4}>
+      <HStack space={4}>
+        <FormControl flex={1}>
+          <FormControl.Label for="Protocol">Protocol</FormControl.Label>
+          <Badge variant="outline" alignSelf="flex-start">
+            {Protocol}
+          </Badge>
+        </FormControl>
+
+        <FormControl flex={1}>
+          <FormControl.Label for="DstPort">Port</FormControl.Label>
+          <Input
+            w="100"
+            size="md"
+            variant="underlined"
+            name="Port"
+            value={Port}
+            onChangeText={(value) => setPort(value)}
+          />
+        </FormControl>
+        <Box flex={1} alignItems="center" alignSelf="center">
+          <FormControl.Label for="DstPort">Upstream Enabled</FormControl.Label>
+          <Switch
+            defaultIsChecked={UpstreamEnabled}
+            onValueChange={() => setUpstreamEnabled(!UpstreamEnabled)}
+          />
+        </Box>
+      </HStack>
+
+      <Button color="primary" size="md" onPress={handleSubmit}>
+        Save
+      </Button>
+    </Stack>
+  )
 }
 
-AddServicePortImpl.propTypes = {
-  notifyChange: PropTypes.func
-}
-
-
-export default function AddServicePort() {
-  let alertContext = useContext(AlertContext);
-  return <AddServicePortImpl alertContext={alertContext}></AddServicePortImpl>
-};
+export default AddServicePort
