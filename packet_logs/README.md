@@ -1,12 +1,7 @@
 # code
 
-eventbus used is:
-git clone https://github.com/asaskevich/EventBus.git
-
-forked for unix socket support + pr fixes @
-git clone https://github.com/spr-networks/EventBus.git
-
-still some bugs, see issues.
+The event bus is using moby pub-sub: 
+https://github.com/spr-networks/sprbus
 
 # setup
 
