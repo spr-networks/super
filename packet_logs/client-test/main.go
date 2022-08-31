@@ -27,7 +27,7 @@ import (
 	"github.com/spr-networks/sprbus"
 )
 
-var ServerEventSock = "/state/plugins/packet_logs/server.sock"
+var ServerEventSock = "/state/api/eventbus.sock"
 
 var wg sync.WaitGroup
 
