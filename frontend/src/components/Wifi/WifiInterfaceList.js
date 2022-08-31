@@ -341,6 +341,15 @@ const WifiInterfaceList = (props) => {
     wifiAPI.iwDev().then((devs) => {
       setDevs(devs)
 
+      /*
+      //TBD also grab interfacesConfiguration.
+      // The UI should handle interfaces that are configured,
+      // but not active on the system.
+      wifiAPI.interfacesConfiguration().then((config) => {
+
+      })
+      */
+
       wifiAPI.iwList().then((iws) => {
         iws = iws.map((iw) => {
           iw.devices = devs[iw.wiphy]

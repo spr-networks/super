@@ -12,6 +12,7 @@ apt-get -y install docker.io docker-compose nftables
 useradd -m -s /bin/bash ubuntu
 echo "ubuntu:ubuntu" | chpasswd
 usermod -aG sudo ubuntu
+passwd --expire ubuntu
 echo spr > /etc/hostname
 echo "127.0.0.1      spr" >> /etc/hosts
 
