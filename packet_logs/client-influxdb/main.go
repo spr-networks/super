@@ -14,7 +14,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"regexp"
+	//"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -90,13 +90,15 @@ func logTraffic(topic string, data string) {
 		org = config.InfluxDB.Org
 	}
 
+	bucket := "spr" // use spr bucket only
+	/*
 	bucket := strings.Replace(topic, "nft:", "", -1) // => prefix rule
-
 	validBucket := regexp.MustCompile(`^(lan|wan|drop):(in|out|forward|input|mac|pfw)$`).MatchString
 	if !validBucket(bucket) {
 		log.Println("invalid bucket, using default")
 		bucket = "spr"
 	}
+	*/
 
 	writeAPI := IFDB.WriteAPI(org, bucket)
 	//writeAPI.WriteRecord(fmt.Sprintf("thermostat,unit=temperature,user=%s avg=%f,max=%f", t.user, t.avg, t.max))
