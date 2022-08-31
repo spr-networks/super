@@ -326,6 +326,78 @@ func applyServicePorts(servicePorts []ServicePort) error {
 	return nil
 }
 
+func hasPrivateUpstreamAccess(ip string) bool {
+	cmd := exec.Command("nft", "get", "element", "inet", "filter", "upstream_private_rfc1918_allowed",
+		"{", ip, ":", "return", "}")
+	_, err := cmd.Output()
+	return err == nil
+}
+
+func allowPrivateUpstreamAccess(ip string) error {
+	cmd := exec.Command("nft", "add", "element", "inet", "filter", "upstream_private_rfc1918_allowed",
+		"{", ip, ":", "return", "}")
+	_, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println("failed to add element to upstream_private_rfc1918_allowed", err)
+		fmt.Println(cmd)
+	}
+
+	return err
+}
+
+func removePrivateUpstreamAccess(ip string) error {
+	cmd := exec.Command("nft", "delete", "element", "inet", "filter", "upstream_private_rfc1918_allowed",
+		"{", ip, ":", "return", "}")
+	_, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println("failed to remove element from upstream_private_rfc1918_allowed", err)
+		fmt.Println(cmd)
+	}
+
+	return err
+}
+
+func applyPrivateNetworkUpstreamDevice(device DeviceEntry) {
+	IP := device.RecentIP
+	if IP == "" {
+		return
+	}
+
+	foundTag := false
+	for _, tag := range device.DeviceTags {
+		if tag == DEVICE_TAG_PERMIT_PRIVATE_UPSTREAM_ACCESS {
+			foundTag = true
+			break
+		}
+	}
+
+	upstream_allowed := hasPrivateUpstreamAccess(IP)
+
+	if foundTag && !upstream_allowed {
+		//if has the tag but not in the verdict map, add it
+		allowPrivateUpstreamAccess(IP)
+	} else if upstream_allowed {
+		//if in the verdict map but does not have the tag, remove it
+		removePrivateUpstreamAccess(IP)
+	}
+}
+
+func applyPrivateNetworkUpstreamDevices() {
+	Devicesmtx.Lock()
+	devices := getDevicesJson()
+	Devicesmtx.Unlock()
+
+	for _, device := range devices {
+		applyPrivateNetworkUpstreamDevice(device)
+	}
+}
+
+func applyBuiltinTagFirewallRules() {
+	applyPrivateNetworkUpstreamDevices()
+}
+
 func applyFirewallRulesLocked() {
 
 	applyForwarding(gFirewallConfig.ForwardingRules)
@@ -336,6 +408,7 @@ func applyFirewallRulesLocked() {
 
 	applyServicePorts(gFirewallConfig.ServicePorts)
 
+	applyBuiltinTagFirewallRules()
 }
 
 func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
@@ -769,12 +842,7 @@ func isForwardBlockInstalled(br ForwardingBlockRule) bool {
 		br.SrcIP, ".", br.DstIP, ".", br.Protocol, ".", br.DstPort, ":", blockVerdict, "}")
 
 	err := cmd.Run()
-
-	if err != nil {
-		return false
-	} else {
-		return true
-	}
+	return err == nil
 }
 
 func addForwardBlock(br ForwardingBlockRule) error {

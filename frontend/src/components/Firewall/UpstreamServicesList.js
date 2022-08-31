@@ -34,7 +34,6 @@ const UpstreamServicesList = (props) => {
       //setList(config.ForwardingRules)
       let flist = config.ServicePorts
       setList(flist)
-      console.log(flist)
     })
   }
 
