@@ -18,7 +18,7 @@ import (
 )
 
 var NotificationSettingsFile = "/configs/base/notifications.json"
-var ServerEventSock = "/state/plugins/packet_logs/server.sock"
+var ServerEventSock = "/state/api/eventbus.sock"
 
 //notifications.json is array of this:
 type NotificationSetting struct {
