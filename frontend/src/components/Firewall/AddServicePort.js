@@ -89,28 +89,24 @@ class AddServicePortImpl extends React.Component {
     return (
       <Stack space={4}>
         <HStack space={4}>
-          <Heading fontSize="sm">Protocol</Heading>
-          <Heading fontSize="sm">Port</Heading>
-          <Heading fontSize="sm">Upstream Enabled</Heading>
-        </HStack>
-
-        <HStack space={4}>
           <Badge variant="outline">{this.state.Protocol}</Badge>
           <FormControl flex="1">
             <FormControl.Label for="DstPort">Port</FormControl.Label>
             <Input
+              w="100"
               size="md"
               variant="underlined"
-              name="DstPort"
+              name="Port"
               value={this.state.Port}
               onChangeText={(value) => this.handleChange('Port', value)}
             />
           </FormControl>
-          <Box w="100" alignItems="center" alignSelf="center">
-            <Switch
-              defaultIsChecked={this.state.UpstreamEnabled}
-              onValueChange={() => toggleUpstream(!this.state.UpstreamEnabled)}
-            />
+          <Box w="150" alignItems="center" alignSelf="center">
+            <FormControl.Label for="DstPort">Upstream Enabled</FormControl.Label>
+              <Switch
+                defaultIsChecked={this.state.UpstreamEnabled}
+                onValueChange={() => toggleUpstream(!this.state.UpstreamEnabled)}
+              />
           </Box>
         </HStack>
 
