@@ -15,6 +15,7 @@ import {
   Input,
   Link,
   Radio,
+  Select,
   Stack,
   Spinner,
   Switch,
@@ -47,19 +48,18 @@ const AddServicePort = ({ notifyChange, ...props }) => {
       })
   }
 
-  let selOpt = (value) => {
-    return { label: value, value }
-  }
-
-  let Protocols = ['tcp', 'udp'].map((p) => {
-    return { label: p, value: p }
-  })
-
   return (
     <Stack space={4}>
       <HStack space={4}>
         <FormControl flex={1}>
           <FormControl.Label for="Protocol">Protocol</FormControl.Label>
+          {/*<Select
+            selectedValue={Protocol}
+            onValueChange={(value) => setProtocol(value)}
+          >
+            <Select.Item label="tcp" value="tcp" />
+            <Select.Item label="udp" value="udp" />
+          </Select>*/}
           <Badge variant="outline" alignSelf="flex-start">
             {Protocol}
           </Badge>
