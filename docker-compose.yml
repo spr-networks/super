@@ -224,6 +224,7 @@ services:
     restart: always
     logging: *default-logging
     volumes:
+      - ./state/api/:/state/api/
       - ./state/plugins/packet_logs/:/state/plugins/packet_logs
       - ./configs/base/:/configs/base/
       - /dev/log:/dev/log
