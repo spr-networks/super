@@ -91,6 +91,9 @@ func logTraffic(topic string, data string) {
 	}
 
 	bucket := "spr" // use spr bucket only
+	if config.InfluxDB.Bucket != "" {
+		bucket = config.InfluxDB.Bucket
+	}
 	/*
 	bucket := strings.Replace(topic, "nft:", "", -1) // => prefix rule
 	validBucket := regexp.MustCompile(`^(lan|wan|drop):(in|out|forward|input|mac|pfw)$`).MatchString

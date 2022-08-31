@@ -35,11 +35,3 @@ docker run --rm --name=telegraf \
  }, 
 ...
 ```
-
-## create buckets for stats
-
-```sh
-for n in lan:in lan:out wan:in wan:out drop:forward drop:input drop:mac drop:pfw; do
-	docker exec -it influxdb influx bucket create -n "$n"; 
-done
-```
