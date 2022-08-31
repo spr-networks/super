@@ -380,7 +380,7 @@ const WifiHostapd = (props) => {
             type="submit"
             onPress={disableInterface}
           >
-            Disable Config
+            Disable Radio Interface
           </Button>
           <Button
             variant="solid"
@@ -436,7 +436,7 @@ const WifiHostapd = (props) => {
               mt={4}
               onPress={generateHostAPConfiguration}
             >
-              Generate HostAP Configuration
+              Enable HostAP
             </Button>
           )}
         </VStack>
