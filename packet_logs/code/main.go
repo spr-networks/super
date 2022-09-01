@@ -100,7 +100,16 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 		var dns layers.DNS
 		var dhcp layers.DHCPv4
 
-		result := PacketInfo{Prefix: *attrs.Prefix, Timestamp: *attrs.Timestamp}
+
+		result := PacketInfo{Prefix: *attrs.Prefix}
+
+		// Try to use timestamp attribute, otherwise grab current time
+		if (attrs.Timestamp != nil) {
+			result.Timestamp =  *attrs.Timestamp
+		} else {
+			result.Timestamp = time.Now()
+		}
+
 		result.Action = "allowed"
 		if NetfilterGroup == 1 {
 			result.Action = "blocked"
