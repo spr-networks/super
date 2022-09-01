@@ -26,7 +26,10 @@ export default class Firewall extends Component {
     return (
       <View>
         <VStack>
-          <ForwardList />
+          <ForwardList
+            list={this.state.config.ForwardingRules}
+            notifyChange={this.fetchConfig}
+          />
 
           <BlockList
             title="Inbound Traffic Block"
@@ -40,7 +43,8 @@ export default class Firewall extends Component {
             notifyChange={this.fetchConfig}
           />
 
-          <UpstreamServicesList />
+          <UpstreamServicesList
+            notifyChange={this.fetchConfig} />
 
         </VStack>
       </View>

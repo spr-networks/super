@@ -100,6 +100,8 @@ class AddForwardImpl extends React.Component {
             <ClientSelect
               name="DstIP"
               value={this.state.DstIP}
+              onSubmitEditing={(value) => this.handleChange('DstIP', value)}
+              onChangeText={(value) => this.handleChange('DstIP', value)}
               onChange={(value) => this.handleChange('DstIP', value)}
             />
           </FormControl>
@@ -144,7 +146,7 @@ AddForwardImpl.propTypes = {
 }
 
 
-export default function AddForward() {
+export default function AddForward(props) {
   let alertContext = useContext(AlertContext);
-  return <AddForwardImpl alertContext={alertContext}></AddForwardImpl>
+  return <AddForwardImpl notifyChange={props.notifyChange} alertContext={alertContext}></AddForwardImpl>
 };

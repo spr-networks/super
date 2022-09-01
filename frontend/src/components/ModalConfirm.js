@@ -115,6 +115,7 @@ const ModalConfirm = (props) => {
                 name="DstIP"
                 value={value}
                 onChange={handleChange}
+                onChangeText={handleChange}
                 onSubmitEditing={handlePress}
                 />
       )

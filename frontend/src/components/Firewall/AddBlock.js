@@ -30,7 +30,6 @@ class AddBlockImpl extends React.Component {
 
   constructor(props) {
     super(props)
-
     this.handleChange = this.handleChange.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
   }
@@ -84,6 +83,8 @@ class AddBlockImpl extends React.Component {
             <ClientSelect
               name="DstIP"
               value={this.state.DstIP}
+              onSubmitEditing={(value) => this.handleChange('DstIP', value)}
+              onChangeText={(value) => this.handleChange('DstIP', value)}
               onChange={(value) => this.handleChange('DstIP', value)}
             />
             <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
@@ -114,12 +115,8 @@ class AddBlockImpl extends React.Component {
   }
 }
 
-AddBlockImpl.propTypes = {
-  notifyChange: PropTypes.func
-}
 
-
-export default function AddBlock() {
+export default function AddBlock(props) {
   let alertContext = useContext(AlertContext);
-  return <AddBlockImpl alertContext={alertContext}></AddBlockImpl>
+  return <AddBlockImpl notifyChange={props.notifyChange} alertContext={alertContext}></AddBlockImpl>
 };

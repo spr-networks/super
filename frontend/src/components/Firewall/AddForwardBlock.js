@@ -74,6 +74,7 @@ class AddForwardBlockImpl extends React.Component {
             <ClientSelect
               name="SrcIP"
               value={this.state.SrcIP}
+              onChangeText={(value) => this.handleChange('SrcIP', value)}
               onChange={(value) => this.handleChange('SrcIP', value)}
             />
             <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
@@ -83,6 +84,8 @@ class AddForwardBlockImpl extends React.Component {
             <ClientSelect
               name="DstIP"
               value={this.state.DstIP}
+              onSubmitEditing={(value) => this.handleChange('DstIP', value)}
+              onChangeText={(value) => this.handleChange('DstIP', value)}
               onChange={(value) => this.handleChange('DstIP', value)}
             />
             <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
@@ -129,7 +132,7 @@ AddForwardBlockImpl.propTypes = {
   notifyChange: PropTypes.func
 }
 
-export default function AddForwardBlock() {
+export default function AddForwardBlock(props) {
   let alertContext = useContext(AlertContext);
-  return <AddForwardBlockImpl alertContext={alertContext}></AddForwardBlockImpl>
+  return <AddForwardBlockImpl notifyChange={props.notifyChange} alertContext={alertContext}></AddForwardBlockImpl>
 };
