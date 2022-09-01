@@ -1,4 +1,5 @@
 package main
+
 /*
 
 see README.md
@@ -38,7 +39,7 @@ type InfluxConfig struct {
 }
 
 type APIConfig struct {
-	InfluxDB  InfluxConfig
+	InfluxDB InfluxConfig
 	//Plugins   []interface{}
 	//PlusToken string
 }
@@ -73,7 +74,7 @@ type PacketInfo struct {
 func logTraffic(topic string, data string) {
 	var logEntry PacketInfo
 	if err := json.Unmarshal([]byte(data), &logEntry); err != nil {
-		  log.Fatal(err)
+		log.Fatal(err)
 	}
 
 	logEntry.Prefix = strings.TrimSpace(logEntry.Prefix)
@@ -96,12 +97,12 @@ func logTraffic(topic string, data string) {
 		bucket = config.InfluxDB.Bucket
 	}
 	/*
-	bucket := strings.Replace(topic, "nft:", "", -1) // => prefix rule
-	validBucket := regexp.MustCompile(`^(lan|wan|drop):(in|out|forward|input|mac|pfw)$`).MatchString
-	if !validBucket(bucket) {
-		log.Println("invalid bucket, using default")
-		bucket = "spr"
-	}
+		bucket := strings.Replace(topic, "nft:", "", -1) // => prefix rule
+		validBucket := regexp.MustCompile(`^(lan|wan|drop):(in|out|forward|input|mac|pfw)$`).MatchString
+		if !validBucket(bucket) {
+			log.Println("invalid bucket, using default")
+			bucket = "spr"
+		}
 	*/
 
 	writeAPI := IFDB.WriteAPI(org, bucket)
@@ -110,12 +111,12 @@ func logTraffic(topic string, data string) {
 	log.Printf("## prefix= %s, bucket=%s, action=%s\n", logEntry.Prefix, bucket, logEntry.Action)
 
 	/*
-	NOTES on tags vs. fields in InfluxDB:
+		NOTES on tags vs. fields in InfluxDB:
 
-	"A rule of thumb would be to persist highly dynamic values as fields and only use tags for GROUP BY clauses and InfluxQL functions, carefully designing your application around it."
+		"A rule of thumb would be to persist highly dynamic values as fields and only use tags for GROUP BY clauses and InfluxQL functions, carefully designing your application around it."
 
-	we use tags for prefix, src/dst ip, rest is fields
-*/
+		we use tags for prefix, src/dst ip, rest is fields
+	*/
 
 	if logEntry.TCP != nil {
 		p := influxdb2.NewPointWithMeasurement("tcp").
@@ -221,12 +222,14 @@ func main() {
 
 			topic := reply.GetTopic()
 			value := reply.GetValue()
+
+			// wildcard sub - value is topic+value
 			index := strings.Index(value, "{")
 			if index <= 0 {
 				continue
 			}
 
-			topic = value[0:index-1]
+			topic = value[0 : index-1]
 			value = value[index:len(value)]
 
 			logTraffic(topic, value)
