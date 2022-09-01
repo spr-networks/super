@@ -103,7 +103,8 @@ table inet filter {
     counter jump F_EST_RELATED
 
     # for logging - wlan* to catch everything
-    #$(if [ "$WANIF" ]; then echo "iifname \"wlan*\" log prefix \"lan:in \" group 0"; fi)
+    $(if [ "$WANIF" ]; then echo "iifname \"wlan*\" log prefix \"lan:in \" group 0"; fi)
+    $(if [ "$WANIF" ]; then echo "iifname $WANIF log prefix \"wan:in \" group 0"; fi)
 
     # Drop input from the site to site output interfaces. They are only a sink,
     # Not a source that can connect into SPR services
@@ -164,9 +165,8 @@ table inet filter {
 
     counter jump F_EST_RELATED
 
-    # for logging - todo LANIFS for each
+    # for logging
     $(if [ "$WANIF" ]; then echo "oifname $WANIF log prefix \"wan:out \" group 0"; fi)
-    #$(if [ "$LANIF" ]; then echo "iifname \"$LANIF.*\" log prefix \"wan:in \" group 0"; fi)
 
     # Allow DNAT for port forwarding
     counter ct status dnat accept
