@@ -10,7 +10,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/gopacket/layers"
@@ -219,7 +218,7 @@ func logTraffic(topic string, data string) {
 		log.Fatal(err)
 	}
 
-	//log.Printf("## Notification: %v @ %v\n", topic, logEntry.Timestamp)
+	log.Printf("## Notification: %v @ %v\n", topic, logEntry.Timestamp)
 
 	shouldNotify := checkNotificationTraffic(logEntry)
 
@@ -231,19 +230,23 @@ func logTraffic(topic string, data string) {
 
 // the rest is eventbus -> ws forwarding
 func NotificationsRunEventListener() {
+	// make sure the client dont connect to the prev socket
+	os.Remove(ServerEventSock)
+
 	go notificationEventServer()
-	go notificationEventListener()
-	//time.Sleep(time.Second)
+	notificationEventListener()
+	// not reached
+	log.Println("event thread exit")
 }
 
 // this is the main event server
 func notificationEventServer() {
-        log.Println("starting sprbus server...")
+	log.Println("starting sprbus server...")
 
-        _, err := sprbus.NewServer(ServerEventSock)
-        if err != nil {
-                log.Fatal(err)
-        }
+	_, err := sprbus.NewServer(ServerEventSock)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// not reached
 }
@@ -255,13 +258,16 @@ func notificationEventListener() {
 	log.Printf("notification settings: %v conditions loaded\n", len(gNotificationConfig))
 	//WSNotifyString("nft:event:init", `{"status": "init"}`)
 
+	// this is only to make sure the server is started
+	time.Sleep(time.Second)
+
 	// wait for server to start
 	for i := 0; i < 4; i++ {
 		if _, err := os.Stat(ServerEventSock); err == nil {
 			break
 		}
 
-		time.Sleep(time.Second/4)
+		time.Sleep(time.Second / 4)
 	}
 
 	log.Println("connecting sprbus client...")
@@ -274,7 +280,6 @@ func notificationEventListener() {
 	}
 
 	log.Println("subscribing to nft: prefix")
-	var wg sync.WaitGroup
 
 	// subscribe to all nft: rules
 	// rules = lan:in, lan:out, wan:in, wan:out, drop:input, drop:forward, drop:pfw
@@ -283,38 +288,31 @@ func notificationEventListener() {
 		log.Fatal(err)
 	}
 
-	go func() {
-		wg.Add(1)
-
-		for {
-			reply, err := stream.Recv()
-			if io.EOF == err {
-				break
-			}
-
-			if nil != err {
-				log.Fatal("ERRRRRR ", err) // Cancelled desc
-				wg.Done()
-				return
-			}
-
-			topic := reply.GetTopic()
-			value := reply.GetValue()
-
-			// wildcard sub - value is topic+value
-			index := strings.Index(value, "{")
-			if index <= 0 {
-				continue
-			}
-
-			topic = value[0 : index-1]
-			value = value[index:len(value)]
-
-			logTraffic(topic, value)
+	// main loop
+	for {
+		reply, err := stream.Recv()
+		if io.EOF == err {
+			break
 		}
-	}()
 
-	time.Sleep(time.Second)
+		if nil != err {
+			log.Fatal("sprbus error:", err) // Cancelled desc
+		}
 
-	wg.Wait()
+		topic := reply.GetTopic()
+		value := reply.GetValue()
+
+		// wildcard sub - value is topic+value
+		index := strings.Index(value, "{")
+		if index <= 0 {
+			continue
+		}
+
+		topic = value[0 : index-1]
+		value = value[index:len(value)]
+
+		logTraffic(topic, value)
+	}
+
+	log.Println("sprbus client exit")
 }
