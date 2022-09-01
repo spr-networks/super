@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 )
 
 import (
@@ -168,11 +169,22 @@ func PluginRoutes(external_router_authenticated *mux.Router) {
 		external_router_authenticated.HandleFunc("/plugins/"+entry.URI+"/"+"{rest:.*}", PluginRequestHandler(proxy))
 	}
 
-	//log into GHCR for PLUS
-	ghcrSuperdLogin()
-
 	//start PLUS features
-	startPlusServices()
+	withRetry(30, 3, startPlusServices)
+}
+
+func withRetry(interval int, attempts int, target func() error) {
+	go func() {
+
+		for i := 0; i < attempts; i++ {
+			err := target()
+			if err == nil {
+				break
+			}
+
+			time.Sleep(time.Duration(interval) * time.Second)
+		}
+	}()
 }
 
 // PLUS feature support
@@ -502,6 +514,9 @@ func installPlus() error {
 }
 
 func startPlusServices() error {
+	//log into GHCR for PLUS
+	ghcrSuperdLogin()
+
 	/*
 		For now, the only plugin is PFW. This is hardcoded.
 		In the future, a list of PLUS extensions can be dynamically configured
