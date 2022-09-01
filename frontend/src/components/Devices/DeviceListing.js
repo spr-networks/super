@@ -76,11 +76,6 @@ const DeviceListing = (props) => {
           .allStations(iface)
           .then((stations) => {
             let connectedMACs = Object.keys(stations)
-            console.log('macs:', connectedMACs)
-            console.log(
-              'devs:',
-              devices.filter((dev) => connectedMACs.includes(dev.MAC))
-            )
 
             setDevices(
               devices.map((dev) => {
