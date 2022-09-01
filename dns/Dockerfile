@@ -6,8 +6,8 @@ RUN mkdir /code
 WORKDIR /code
 
 ARG TARGETARCH
-RUN curl -O https://dl.google.com/go/go1.17.linux-${TARGETARCH}.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-${TARGETARCH}.tar.gz
+RUN curl -O https://dl.google.com/go/go1.19.linux-${TARGETARCH}.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.19.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 
 
@@ -31,7 +31,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
    sed -i 's/metadata:metadata/metadata:metadata\njsonlog:github.com\/spr-networks\/coredns-jsonlog/g' plugin.cfg && \
    sed -i 's/etcd:etcd/etcd:etcd\nblock:github.com\/spr-networks\/coredns-block\nrebinding_protection:github.com\/spr-networks\/coredns-rebinding_protection/g' plugin.cfg && \
    go generate && \
-   go mod tidy -compat=1.17 && \
+   go mod tidy -compat=1.19 && \
    go build -o /coredns
 
 FROM ubuntu:22.04
