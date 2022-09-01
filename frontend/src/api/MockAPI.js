@@ -24,6 +24,8 @@ export default function MockAPI() {
       plugin: Model,
       forwardrule: Model,
       blockrule: Model,
+      forwardblockrule: Model,
+      serviceport: Model,
       token: Model,
       pfwBlock: Model,
       pfwForward: Model
@@ -129,6 +131,40 @@ export default function MockAPI() {
         Protocol: 'udp'
       })
 
+      server.create('forwardblockrule', {
+        SrcIP: '1.2.3.4',
+        DstPort: "0-65535",
+        DstIP: '6.7.8.9/24',
+        Protocol: 'tcp'
+      })
+      server.create('forwardblockrule', {
+        SrcIP: '1.2.3.4',
+        DstIP: '6.7.8.9/24',
+        DstPort: "0-65535",
+        Protocol: 'tcp'
+      })
+
+      server.create('serviceport', {
+        "Protocol": "tcp",
+        "Port": "22",
+        "UpstreamEnabled": false
+      })
+      server.create('serviceport', {
+        "Protocol": "tcp",
+        "Port": "80",
+        "UpstreamEnabled": false
+      })
+      server.create('serviceport', {
+        "Protocol": "tcp",
+        "Port": "443",
+        "UpstreamEnabled": false
+      })
+      server.create('serviceport', {
+        "Protocol": "tcp",
+        "Port": "5201",
+        "UpstreamEnabled": false
+      })
+
       server.create('dnsblocklist', {
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/ads.txt',
         Enabled: true
@@ -204,6 +240,10 @@ export default function MockAPI() {
           return false
         }
       }
+
+      this.get('/setup', (schema, request) => {
+        return new Response(400, {}, { error: 'already set up' })
+      })
 
       this.get('/status', (schema, request) => {
         return authOK(request) ? '"Online"' : '"Error"'
@@ -1752,7 +1792,10 @@ export default function MockAPI() {
       this.get('/firewall/config', (schema, request) => {
         return {
           ForwardingRules: schema.forwardrules.all().models,
-          BlockRules: schema.blockrules.all().models
+          BlockRules: schema.blockrules.all().models,
+          ForwardingBlockRules: schema.forwardblockrules.all().models,
+          ServicePorts: schema.serviceports.all().models
+
         }
       })
 
@@ -1791,6 +1834,43 @@ export default function MockAPI() {
         let attrs = JSON.parse(request.requestBody)
         return schema.blockrules.where(attrs).destroy()
       })
+
+      this.put('/firewall/block_forward', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.forwardblockrules.create(attrs)
+      })
+
+      this.delete('/firewall/block_forward', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.forwardblockrules.where(attrs).destroy()
+      })
+
+      this.put('/firewall/service_port', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.serviceports.create(attrs)
+      })
+
+      this.delete('/firewall/service_port', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.serviceports.where(attrs).destroy()
+      })
+
 
       // tokens
       this.get('/tokens', (schema, request) => {
