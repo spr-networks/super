@@ -61,10 +61,17 @@ const AppAlert = (props) => {
           <HStack space={2} flexShrink={1}>
             <Alert.Icon mt={1} />
             <VStack space={2}>
-              <Text fontSize="md" color="coolGray.800" bold>
+              <Text
+                fontSize="md"
+                color={useColorModeValue('coolGray.800', 'coolGray.200')}
+                bold
+              >
                 {title}
               </Text>
-              <Text fontSize="md" color="coolGray.800">
+              <Text
+                fontSize="md"
+                color={useColorModeValue('coolGray.800', 'coolGray.200')}
+              >
                 {body}
               </Text>
             </VStack>
@@ -117,17 +124,21 @@ const AdminLayout = (props) => {
   alertState.error = (title, body) => alertState.alert('error', title, body)
 
   alertState.handleResponse = (alertType, title, bodyHeader, err) => {
-    err.response.text().then( data => {
-      alertState.alert(alertType, title, bodyHeader + " " + data)
+    err.response.text().then((data) => {
+      alertState.alert(alertType, title, bodyHeader + ' ' + data)
     })
   }
 
-  alertState.successResponse = (title, bodyHeader, err)  => alertState.handleResponse('success', title, bodyHeader, err)
-  alertState.infoResponse = (title, bodyHeader, err)  => alertState.handleResponse('info', title, bodyHeader, err)
-  alertState.warningResponse = (title, bodyHeader, err)  => alertState.handleResponse('warning', title, bodyHeader, err)
-  alertState.dangerResponse = (title, bodyHeader, err)  => alertState.handleResponse('danger', title, bodyHeader, err)
-  alertState.errorResponse = (title, bodyHeader, err)  => alertState.handleResponse('error', title, bodyHeader, err)
-
+  alertState.successResponse = (title, bodyHeader, err) =>
+    alertState.handleResponse('success', title, bodyHeader, err)
+  alertState.infoResponse = (title, bodyHeader, err) =>
+    alertState.handleResponse('info', title, bodyHeader, err)
+  alertState.warningResponse = (title, bodyHeader, err) =>
+    alertState.handleResponse('warning', title, bodyHeader, err)
+  alertState.dangerResponse = (title, bodyHeader, err) =>
+    alertState.handleResponse('danger', title, bodyHeader, err)
+  alertState.errorResponse = (title, bodyHeader, err) =>
+    alertState.handleResponse('error', title, bodyHeader, err)
 
   /*
   location = useLocation()
@@ -173,18 +184,23 @@ const AdminLayout = (props) => {
     if (isWifiDisabled == false) {
       //get list of devices, and check... TBD
 
-      wifiAPI.defaultInterface().then((iface) => {
-        wifiAPI
-          .status(iface)
-          .then((res) => {})
-          .catch((err) => {
-            alertState.error('hostapd failed to start-- check wifid service logs')
-          })
-      }).catch((err) => {
-        alertState.error('could not find a default wireless interface-- check wifid service logs')
-      })
-
-
+      wifiAPI
+        .defaultInterface()
+        .then((iface) => {
+          wifiAPI
+            .status(iface)
+            .then((res) => {})
+            .catch((err) => {
+              alertState.error(
+                'hostapd failed to start-- check wifid service logs'
+              )
+            })
+        })
+        .catch((err) => {
+          alertState.error(
+            'could not find a default wireless interface-- check wifid service logs'
+          )
+        })
     }
 
     connectWebsocket((event) => {
