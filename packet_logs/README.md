@@ -23,6 +23,7 @@ wan:out
 
 drop:input
 drop:forward
+drop:mac
 
 ## add log prefix + group to netfilter rules
 
@@ -96,13 +97,13 @@ NOTE this connects to unix socket eventbus listening on server.sock
 
 # Notes
 
-we use ulogd groups to categorize the packet:
+we use netfilter groups to categorize the packet:
 * group 0 == allow
 * group 1 == deny
 
-ulogd sets "action" to allowed or blocked depending on the group.
+and set action depending on what group is set for the packet
 
-## log pcap files
+## OLD log pcap files
 * modifiy Dockerfile to add ulogd2-pcap
 * enable pcap in ulogd.conf, see comments
 
@@ -112,7 +113,9 @@ docker-compose up -d packet_logs
 tail -f /state/plugins/packet_logs/ulogd.pcap | tcpdump -r - -qtnp
 ```
 
-## json format
+## OLD json format
+
+*NOTE* see client-influxdb for new example code.
 
 see code/types.go for golang struct of ulogd json format. also used in api/code/notifications.go
 
@@ -157,11 +160,13 @@ example packet:
 
 # Api code
 
+see client-influxdb in this repo for example usecase.
+
 notifications.go is run in api & forward the messages to websocket if user have set this up
 
 settings for when to notify:
 * have a notifications.json
-* use netfilter prefix + other filters like `src_ip` and `dest_ip`
+* use netfilter prefix + other filters like SrcIP and DstIP
 * log = true/false
 
 when event is received check against setting if we should forward to websocket
