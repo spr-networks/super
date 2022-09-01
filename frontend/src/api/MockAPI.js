@@ -171,7 +171,8 @@ export default function MockAPI() {
       })
       server.create('dnsblocklist', {
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt',
-        Enabled: false
+        Enabled: true,
+        Tags: ["focus"]
       })
       server.create('dnsoverride', {
         Type: 'block',
