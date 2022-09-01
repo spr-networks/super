@@ -2,7 +2,6 @@ import React, {useContext} from 'react'
 import PropTypes from 'prop-types'
 
 import ClientSelect from 'components/ClientSelect'
-
 import { firewallAPI } from 'api'
 import { AlertContext } from 'AppContext'
 
@@ -20,16 +19,18 @@ import {
   Text
 } from 'native-base'
 
-class AddBlockImpl extends React.Component {
+
+class AddForwardBlockImpl extends React.Component {
   state = {
     SrcIP: '',
     DstIP: '',
+    DstPort: '',
     Protocol: 'tcp'
   }
 
-
   constructor(props) {
     super(props)
+
     this.handleChange = this.handleChange.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
   }
@@ -45,21 +46,21 @@ class AddBlockImpl extends React.Component {
     let block = {
       SrcIP: this.state.SrcIP,
       DstIP: this.state.DstIP,
+      DstPort: this.state.DstPort,
       Protocol: this.state.Protocol
     }
 
     const done = (res) => {
       if (this.props.notifyChange) {
-        this.props.notifyChange('block')
+        this.props.notifyChange('forward_block')
       }
     }
 
-    firewallAPI
-      .addBlock(block)
-      .then(done)
-      .catch(err => {
-        this.props.alertContext.errorResponse('Firewall API Failure', '', err)
-      })
+    firewallAPI.addForwardBlock(block).then(done)
+    .catch(err => {
+      this.props.alertContext.errorResponse('Firewall API Failure', '', err)
+    })
+
   }
 
   componentDidMount() {}
@@ -70,11 +71,11 @@ class AddBlockImpl extends React.Component {
         <HStack space={4}>
           <FormControl flex="1" isRequired>
             <FormControl.Label>Source address</FormControl.Label>
-            <Input
-              size="md"
-              variant="underlined"
+            <ClientSelect
+              name="SrcIP"
               value={this.state.SrcIP}
               onChangeText={(value) => this.handleChange('SrcIP', value)}
+              onChange={(value) => this.handleChange('SrcIP', value)}
             />
             <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
           </FormControl>
@@ -89,11 +90,23 @@ class AddBlockImpl extends React.Component {
             />
             <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
           </FormControl>
+
         </HStack>
+
+        <FormControl flex="1">
+          <FormControl.Label>DestinationPort</FormControl.Label>
+          <Input
+            size="md"
+            variant="underlined"
+            value={this.state.DstPort}
+            onChangeText={(value) => this.handleChange('DstPort', value)}
+          />
+          <FormControl.HelperText>Optional port or port range (leave empty for all ports)</FormControl.HelperText>
+        </FormControl>
+
 
         <FormControl>
           <FormControl.Label>Protocol</FormControl.Label>
-
           <Radio.Group
             name="Protocol"
             defaultValue={this.state.Protocol}
@@ -115,8 +128,11 @@ class AddBlockImpl extends React.Component {
   }
 }
 
+AddForwardBlockImpl.propTypes = {
+  notifyChange: PropTypes.func
+}
 
-export default function AddBlock(props) {
+export default function AddForwardBlock(props) {
   let alertContext = useContext(AlertContext);
-  return <AddBlockImpl notifyChange={props.notifyChange} alertContext={alertContext}></AddBlockImpl>
+  return <AddForwardBlockImpl notifyChange={props.notifyChange} alertContext={alertContext}></AddForwardBlockImpl>
 };

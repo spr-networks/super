@@ -36,7 +36,6 @@ var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
 
 var ConfigFile = TEST_PREFIX + "/configs/base/config.sh"
-var HostapdConfigFile = TEST_PREFIX + "/configs/wifi/hostapd.conf"
 
 var ApiTlsCert = "/configs/base/www-api.crt"
 var ApiTlsKey = "/configs/base/www-api.key"
@@ -87,6 +86,8 @@ type DeviceEntry struct {
 	Groups     []string
 	DeviceTags []string
 }
+
+var DEVICE_TAG_PERMIT_PRIVATE_UPSTREAM_ACCESS = "lan_upstream"
 
 var config = APIConfig{}
 
@@ -163,7 +164,7 @@ func getStatus(w http.ResponseWriter, r *http.Request) {
 func getFeatures(w http.ResponseWriter, r *http.Request) {
 	reply := []string{"dns"}
 	//check which features are enabled
-	if os.Getenv("SSID_INTERFACE") != "" {
+	if os.Getenv("VIRTUAL_SPR") == "" {
 		reply = append(reply, "wifi")
 	}
 
@@ -415,6 +416,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	pskGenerated := false
 	pskModified := false
 	refreshGroups := false
+	refreshTags := false
 
 	if exists {
 		//updating an existing entry. Check what was requested
@@ -457,6 +459,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		if dev.DeviceTags != nil && !equalStringSlice(val.DeviceTags, dev.DeviceTags) {
 			val.DeviceTags = dev.DeviceTags
+			refreshTags = true
 		}
 
 		if dev.Groups != nil && !equalStringSlice(val.Groups, dev.Groups) {
@@ -500,6 +503,10 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		if refreshGroups {
 			refreshDeviceGroups(val)
+		}
+
+		if refreshTags {
+			refreshDeviceTags(val)
 		}
 
 		//mask the PSK if set and not generated
@@ -785,40 +792,6 @@ func getMapVerdict(name string) string {
 	return "accept"
 }
 
-func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, matchInterface bool) {
-
-	for _, name := range vmap_names {
-		entries := getNFTVerdictMap(name)
-		verdict := getMapVerdict(name)
-		for _, entry := range entries {
-
-			//do not flush wireguard entries from vmaps unless the incoming device is on the same interface
-			if strings.HasPrefix(Ifname, "wg") {
-				if Ifname != entry.ifname {
-					continue
-				}
-			} else if strings.HasPrefix(entry.ifname, "wg") {
-				continue
-			}
-
-			if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || (equalMAC(entry.mac, MAC) && (MAC != "")) {
-				if entry.mac != "" {
-					err := exec.Command("nft", "delete", "element", "inet", "filter", name, "{", entry.ipv4, ".", entry.ifname, ".", entry.mac, ":", verdict, "}").Run()
-					if err != nil {
-						fmt.Println("nft delete failed", err)
-					}
-				} else {
-					err := exec.Command("nft", "delete", "element", "inet", "filter", name, "{", entry.ipv4, ".", entry.ifname, ":", verdict, "}").Run()
-					if err != nil {
-						fmt.Println("nft delete failed", err)
-						return
-					}
-				}
-			}
-		}
-	}
-}
-
 func searchVmapsByMac(MAC string, VMaps []string) (error, string, string) {
 	//Search verdict maps and return the ipv4 and interface name
 	for _, name := range VMaps {
@@ -846,72 +819,6 @@ func updateAddr(Router string, Ifname string) {
 	err := exec.Command("ip", "addr", "add", Router+"/30", "dev", Ifname).Run()
 	if err != nil {
 		fmt.Println("update addr failed", Router, Ifname, err)
-		return
-	}
-}
-
-func addVerdictMac(IP string, MAC string, Iface string, Table string, Verdict string) {
-	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ".", MAC, ":", Verdict, "}").Run()
-	if err != nil {
-		fmt.Println("addVerdictMac Failed", MAC, Iface, Table, err)
-		return
-	}
-}
-
-func addVerdict(IP string, Iface string, Table string) {
-	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ":", "accept", "}").Run()
-	if err != nil {
-		fmt.Println("addVerdict Failed", Iface, Table, err)
-		return
-	}
-}
-
-func addDNSVerdict(IP string, Iface string) {
-	addVerdict(IP, Iface, "dns_access")
-}
-
-func addLANVerdict(IP string, Iface string) {
-	addVerdict(IP, Iface, "lan_access")
-}
-
-func addInternetVerdict(IP string, Iface string) {
-	addVerdict(IP, Iface, "internet_access")
-}
-
-func addCustomVerdict(ZoneName string, IP string, Iface string) {
-	//create verdict maps if they do not exist
-	err := exec.Command("nft", "list", "map", "inet", "filter", ZoneName+"_dst_access").Run()
-	if err != nil {
-		//two verdict maps are used for establishing custom groups.
-		// the {name}_dst_access map allows Inet packets to a certain IP/interface pair
-		//the {name}_src_access part allows Inet packets from a IP/IFace set
-
-		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_src_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "}").Run()
-		if err != nil {
-			fmt.Println("addCustomVerdict Failed", err)
-			return
-		}
-		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_dst_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "}").Run()
-		if err != nil {
-			fmt.Println("addCustomVerdict Failed", err)
-			return
-		}
-		err = exec.Command("nft", "insert", "rule", "inet", "filter", "CUSTOM_GROUPS", "ip", "daddr", ".", "oifname", "vmap", "@"+ZoneName+"_dst_access", "ip", "saddr", ".", "iifname", "vmap", "@"+ZoneName+"_src_access").Run()
-		if err != nil {
-			fmt.Println("addCustomVerdict Failed", err)
-			return
-		}
-	}
-
-	err = exec.Command("nft", "add", "element", "inet", "filter", ZoneName+"_dst_access", "{", IP, ".", Iface, ":", "continue", "}").Run()
-	if err != nil {
-		fmt.Println("addCustomVerdict Failed", err)
-		return
-	}
-
-	err = exec.Command("nft", "add", "element", "inet", "filter", ZoneName+"_src_access", "{", IP, ".", Iface, ":", "accept", "}").Run()
-	if err != nil {
-		fmt.Println("addCustomVerdict Failed", err)
 		return
 	}
 }
@@ -996,10 +903,21 @@ var DHCPmtx sync.Mutex
 
 func shouldFlushByInterface(Iface string) bool {
 	matchInterface := false
-	vlansif := os.Getenv("VLANSIF")
-	if len(vlansif) > 0 && strings.Contains(Iface, vlansif) {
-		matchInterface = true
+
+	Interfacesmtx.Lock()
+	//read the old configuration
+	config := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
+
+	for _, entry := range config {
+		if entry.Enabled && entry.Type == "AP" {
+			if strings.Contains(Iface, entry.Name+".") {
+				matchInterface = true
+				break
+			}
+		}
 	}
+
 	return matchInterface
 }
 
@@ -1215,6 +1133,10 @@ func lookupWGDevice(devices *map[string]DeviceEntry, WGPubKey string, IP string)
 		}
 	}
 	return DeviceEntry{}, false
+}
+
+func refreshDeviceTags(dev DeviceEntry) {
+	applyPrivateNetworkUpstreamDevice(dev)
 }
 
 func refreshDeviceGroups(dev DeviceEntry) {
@@ -1434,52 +1356,6 @@ func reloadPSKFiles(w http.ResponseWriter, r *http.Request) {
 	doReloadPSKFiles()
 }
 
-func doReloadPSKFiles() {
-	//generate PSK files for hostapd
-	devices := getDevicesJson()
-
-	wpa2 := ""
-	sae := ""
-
-	for keyval, entry := range devices {
-		if keyval == "pending" {
-			//set wildcard password at front. hostapd uses a FILO for the sae keys
-			if entry.PSKEntry.Type == "sae" {
-				sae = entry.PSKEntry.Psk + "|mac=ff:ff:ff:ff:ff:ff" + "\n" + sae
-				//apple downgrade workaround https://feedbackassistant.apple.com/feedback/9991042
-				wpa2 = "00:00:00:00:00:00 " + entry.PSKEntry.Psk + "\n" + wpa2
-			} else if entry.PSKEntry.Type == "wpa2" {
-				wpa2 = "00:00:00:00:00:00 " + entry.PSKEntry.Psk + "\n" + wpa2
-			}
-		} else {
-			if entry.PSKEntry.Type == "sae" {
-				sae += entry.PSKEntry.Psk + "|mac=" + entry.MAC + "\n"
-				//apple downgrade workaround https://feedbackassistant.apple.com/feedback/9991042
-				wpa2 += entry.MAC + " " + entry.PSKEntry.Psk + "\n"
-			} else if entry.PSKEntry.Type == "wpa2" {
-				wpa2 += entry.MAC + " " + entry.PSKEntry.Psk + "\n"
-			}
-		}
-	}
-
-	err := ioutil.WriteFile(TEST_PREFIX+"/configs/wifi/sae_passwords", []byte(sae), 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = ioutil.WriteFile(TEST_PREFIX+"/configs/wifi/wpa2pskfile", []byte(wpa2), 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	//reload the hostapd passwords
-	cmd := exec.Command("hostapd_cli", "-p", "/state/wifi/control", "-s", "/state/wifi/", "reload_wpa_psk")
-	err = cmd.Run()
-	if err != nil {
-		fmt.Println(err)
-	}
-
-}
-
 func getLogs(w http.ResponseWriter, r *http.Request) {
 	// TODO params : --since "1 hour ago" --until "50 minutes ago"
 	// 2000 entries ~2mb of data
@@ -1576,12 +1452,13 @@ func isSetupMode() bool {
 	return true
 }
 
-// initial setup only available if there is no .spr-setup-done
+// initial setup only available if there is no user/pass configured
 func setup(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if !isSetupMode() {
 		http.Error(w, "setup already done", 400)
+		return
 	}
 
 	if r.Method != http.MethodPut {
@@ -1604,7 +1481,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	//The first character cannot be !, #, or ; character
 	validSSID := regexp.MustCompile(`^[^!#;+\]\/"\t][^+\]\/"\t]{0,30}[^ +\]\/"\t]$|^[^ !#;+\]\/"\t]$[ \t]+$`).MatchString
 
-	if conf.InterfaceAP == "" {
+	if conf.InterfaceAP == "" || !validInterface(conf.InterfaceAP) {
 		http.Error(w, "Invalid AP interface", 400)
 		return
 	}
@@ -1630,18 +1507,6 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/*
-		envrc := fmt.Sprintf("SSID_INTERFACE=%q\nSSID_NAME=%q\n"+
-			"WANIF=%q\nCOMPOSE_FILE=docker-compose-prebuilt.yml\n"+
-			"COUNTRY_CODE=%q\n"+
-			"ADMIN_USER=admin\nADMIN_PASSWORD=%q\n",
-			conf.InterfaceAP, conf.SSID,
-			conf.InterfaceUplink,
-			conf.AdminPassword)
-
-		err = ioutil.WriteFile(SetupEnvFile, []byte(envrc), 0644)
-	*/
-
 	// write to auth_users.json
 	users := fmt.Sprintf("{%q: %q}", "admin", conf.AdminPassword)
 	err = ioutil.WriteFile(AuthUsersFile, []byte(users), 0644)
@@ -1659,12 +1524,8 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	configData := string(data)
-	matchSSID := regexp.MustCompile(`(?m)^(SSID_NAME)=(.*)`)
-	matchInterfaceAP := regexp.MustCompile(`(?m)^(SSID_INTERFACE)=(.*)`)
 	matchInterfaceUplink := regexp.MustCompile(`(?m)^(WANIF)=(.*)`)
 
-	configData = matchSSID.ReplaceAllString(configData, "$1="+conf.SSID)
-	configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+conf.InterfaceAP)
 	configData = matchInterfaceUplink.ReplaceAllString(configData, "$1="+conf.InterfaceUplink)
 
 	err = ioutil.WriteFile(ConfigFile, []byte(configData), 0755)
@@ -1673,28 +1534,34 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	//write to hostapd.conf
-	data, err = ioutil.ReadFile(HostapdConfigFile)
+	//generate and write to hostapd_iface.conf
+	data, err = ioutil.ReadFile(getHostapdConfigPath("template"))
 	if err != nil {
 		// we can use default template config here but better to copy it before in bash
-		http.Error(w, "Missing default config.sh", 400)
+		http.Error(w, "Missing default hostapd config", 400)
 		return
 	}
 
 	configData = string(data)
-	matchSSID = regexp.MustCompile(`(?m)^(ssid)=(.*)`)
-	matchInterfaceAP = regexp.MustCompile(`(?m)^(interface)=(.*)`)
+	matchSSID := regexp.MustCompile(`(?m)^(ssid)=(.*)`)
+	matchInterfaceAP := regexp.MustCompile(`(?m)^(interface)=(.*)`)
 	matchCountry := regexp.MustCompile(`(?m)^(country_code)=(.*)`)
+	matchControl := regexp.MustCompile(`(?m)^(ctrl_interface)=(.*)`)
 
 	configData = matchSSID.ReplaceAllString(configData, "$1="+conf.SSID)
 	configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+conf.InterfaceAP)
 	configData = matchCountry.ReplaceAllString(configData, "$1="+conf.CountryCode)
+	configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+conf.InterfaceAP)
 
-	err = ioutil.WriteFile(HostapdConfigFile, []byte(configData), 0755)
+	hostapd_path := getHostapdConfigPath(conf.InterfaceAP)
+	err = ioutil.WriteFile(hostapd_path, []byte(configData), 0755)
 	if err != nil {
-		http.Error(w, "Failed to write config to "+HostapdConfigFile, 400)
+		http.Error(w, "Failed to write config to "+hostapd_path, 400)
 		panic(err)
 	}
+
+	configureInterface("AP", conf.InterfaceAP)
+	configureInterface("Uplink", conf.InterfaceUplink)
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
 	callSuperdRestart("")
@@ -1799,9 +1666,9 @@ func main() {
 	// intial setup
 	external_router_public.HandleFunc("/setup", setup).Methods("GET", "PUT")
 	external_router_setup.HandleFunc("/ip/addr", ipAddr).Methods("GET")
-	external_router_setup.HandleFunc("/hostapd/config", hostapdConfig).Methods("GET")
-	external_router_setup.HandleFunc("/hostapd/config", hostapdUpdateConfig).Methods("PUT")
-	external_router_setup.HandleFunc("/hostapd/setChannel", hostapdChannelSwitch).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
+	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdUpdateConfig).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
 	external_router_setup.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")
 
 	//download cert from http
@@ -1819,6 +1686,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/firewall/config", getFirewallConfig).Methods("GET")
 	external_router_authenticated.HandleFunc("/firewall/forward", modifyForwardRules).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/block", blockIP).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/block_forward", blockForwardingIP).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/service_port", modifyServicePort).Methods("PUT", "DELETE")
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
@@ -1845,11 +1714,16 @@ func main() {
 	external_router_authenticated.HandleFunc("/reloadPSKFiles", reloadPSKFiles).Methods("PUT")
 
 	//hostapd information
-	external_router_authenticated.HandleFunc("/hostapd/status", hostapdStatus).Methods("GET")
-	external_router_authenticated.HandleFunc("/hostapd/all_stations", hostapdAllStations).Methods("GET")
-	external_router_authenticated.HandleFunc("/hostapd/config", hostapdConfig).Methods("GET")
-	external_router_authenticated.HandleFunc("/hostapd/config", hostapdUpdateConfig).Methods("PUT")
-	external_router_authenticated.HandleFunc("/hostapd/setChannel", hostapdChannelSwitch).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/status", hostapdStatus).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/all_stations", hostapdAllStations).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/config", hostapdUpdateConfig).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/enable", hostapdEnableInterface).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/disable", hostapdDisableInterface).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/resetConfiguration", hostapdResetInterface).Methods("PUT")
+	external_router_authenticated.HandleFunc("/interfacesConfiguration", getInterfacesConfiguration).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/restart", restartWifi).Methods("PUT")
 
 	//ip information
 	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")
@@ -1877,6 +1751,7 @@ func main() {
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
 	unix_wifid_router.HandleFunc("/reportPSKAuthSuccess", reportPSKAuthSuccess).Methods("PUT")
+	unix_wifid_router.HandleFunc("/interfaces", getEnabledAPInterfaces).Methods("GET")
 
 	// DHCP actions
 	unix_dhcpd_router.HandleFunc("/dhcpUpdate", dhcpUpdate).Methods("PUT")
@@ -1912,6 +1787,8 @@ func main() {
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
+	//initialize hostap  related items
+	initRadios()
 	//initialize user firewall rules
 	initUserFirewallRules()
 	//start the websocket handler

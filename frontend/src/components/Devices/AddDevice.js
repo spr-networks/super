@@ -1,5 +1,4 @@
 import React, { useContext, useState } from 'react'
-import QRCode from 'react-qr-code'
 
 import { deviceAPI, wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
@@ -24,6 +23,7 @@ const AddDevice = (props) => {
   const [mac, setMac] = useState('')
   const [name, setName] = useState('')
   const [groups, setGroups] = useState(['dns', 'wan'])
+  const [tags, setTags] = useState([])
   const [wpa, setWpa] = useState('sae')
   const [psk, setPsk] = useState('')
   const [device, setDevice] = useState({})
@@ -73,6 +73,7 @@ const AddDevice = (props) => {
   }
 
   const allGroups = ['wan', 'dns', 'lan']
+  const allTags = ['lan_upstream']
 
   const handleChange = (name, value) => {
     if (name == 'name') {
@@ -136,7 +137,7 @@ const AddDevice = (props) => {
         setSubmitted(true)
       })
       .catch((error) => {
-        context.error(error.message)
+        context.errorResponse('DEVICE API:', '', error)
       })
   }
 
@@ -258,6 +259,31 @@ const AddDevice = (props) => {
             Assign device to groups for network access
           </FormControl.HelperText>
         </FormControl>
+
+        <FormControl flex="1">
+          <FormControl.Label>Tags</FormControl.Label>
+          <Checkbox.Group
+            defaultValue={tags}
+            accessibilityLabel="Set Device Tags"
+            onChange={(values) => setTags(values)}
+            py={1}
+          >
+            <HStack w="100%" justifyContent="space-between">
+              {allTags.map((tag) => (
+                <Box key={tag} flex={1}>
+                  <Checkbox value={tag} colorScheme="primary">
+                    {tag}
+                  </Checkbox>
+                </Box>
+              ))}
+            </HStack>
+          </Checkbox.Group>
+
+          <FormControl.HelperText>
+            Assign device tags
+          </FormControl.HelperText>
+        </FormControl>
+
       </Stack>
 
       <Button mt="4" color="primary" size="md" onPress={handleSubmit}>

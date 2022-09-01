@@ -4,6 +4,8 @@ import { View, VStack } from 'native-base'
 import { firewallAPI } from 'api'
 import ForwardList from 'components/Firewall/ForwardList'
 import BlockList from 'components/Firewall/BlockList'
+import ForwardBlockList from 'components/Firewall/ForwardBlockList'
+import UpstreamServicesList from 'components/Firewall/UpstreamServicesList'
 
 export default class Firewall extends Component {
   state = { config: {} }
@@ -24,13 +26,26 @@ export default class Firewall extends Component {
     return (
       <View>
         <VStack>
-          <ForwardList />
+          <ForwardList
+            list={this.state.config.ForwardingRules}
+            notifyChange={this.fetchConfig}
+          />
 
           <BlockList
-            title="Block IP Source or Destination"
+            title="Inbound Traffic Block"
             list={this.state.config.BlockRules}
             notifyChange={this.fetchConfig}
           />
+
+          <ForwardBlockList
+            title="Forwarding Traffic Block"
+            list={this.state.config.ForwardingBlockRules}
+            notifyChange={this.fetchConfig}
+          />
+
+          <UpstreamServicesList
+            notifyChange={this.fetchConfig} />
+
         </VStack>
       </View>
     )

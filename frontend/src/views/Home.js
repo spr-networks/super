@@ -22,6 +22,7 @@ import {
 
 const Home = (props) => {
   const [pluginsEnabled, setPluginsEnabled] = useState([])
+  const [interfaces, setInterfaces] = useState([])
   const context = useContext(AppContext)
 
   useEffect(() => {
@@ -32,6 +33,16 @@ const Home = (props) => {
       )
       .catch((error) => error)
   }, [])
+
+  useEffect(() => {
+    wifiAPI
+      .interfaces("AP")
+      .then((ifaces) => {
+        setInterfaces(ifaces)
+      })
+      .catch((error) => error)
+  }, [])
+
 
   const flexDirection = useBreakpointValue({
     base: 'column',
@@ -52,10 +63,14 @@ const Home = (props) => {
               <WireguardPeersActive flex={1} />
             </>
           ) : (
-            <>
-              <WifiInfo flex={1} />
-              <WifiClients flex={1} />
-            </>
+            <VStack flex={1}>
+            {interfaces.map(iface => (
+              <HStack flex={1}>
+                <WifiInfo iface={iface} flex={1} />
+                <WifiClients iface={iface} flex={1} />
+              </HStack>
+            ))}
+            </VStack>
           )}
         </Stack>
 

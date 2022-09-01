@@ -90,8 +90,8 @@ services:
     privileged: true
     logging: *default-logging
     depends_on:
+      - "api"
       - "dhcp"
-      - "dns"
       - "multicast_udp_proxy"
     volumes:
       - ./configs/base/:/configs/base/
@@ -107,6 +107,7 @@ services:
     privileged: true
     depends_on:
       - "base"
+      - "api"
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -164,8 +165,6 @@ services:
     restart: always
     depends_on:
       - "base"
-      - "wifid"
-      - "dhcp"
       - "frontend"
       - "superd"
     logging: *default-logging
@@ -176,6 +175,7 @@ services:
       - ./configs/wifi/:/configs/wifi/
       - ./configs/wireguard/:/configs/wireguard/
       - ./configs/scripts/:/configs/scripts/
+      - ./configs/pfw/:/configs/pfw/
       - ./state/wifi/:/state/wifi/
       - ./state/dhcp/:/state/dhcp/
       - ./state/dns/:/state/dns/

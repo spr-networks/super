@@ -24,6 +24,8 @@ export default function MockAPI() {
       plugin: Model,
       forwardrule: Model,
       blockrule: Model,
+      forwardblockrule: Model,
+      serviceport: Model,
       token: Model,
       pfwBlock: Model,
       pfwForward: Model
@@ -103,7 +105,7 @@ export default function MockAPI() {
       })
 
       server.create('forwardrule', {
-        SIface: 'wlan0',
+        SIface: 'wlan1',
         Protocol: 'tcp',
         SrcIP: '10.10.10.10',
         SrcPort: 22,
@@ -129,13 +131,48 @@ export default function MockAPI() {
         Protocol: 'udp'
       })
 
+      server.create('forwardblockrule', {
+        SrcIP: '1.2.3.4',
+        DstPort: "0-65535",
+        DstIP: '6.7.8.9/24',
+        Protocol: 'tcp'
+      })
+      server.create('forwardblockrule', {
+        SrcIP: '1.2.3.4',
+        DstIP: '6.7.8.9/24',
+        DstPort: "0-65535",
+        Protocol: 'tcp'
+      })
+
+      server.create('serviceport', {
+        "Protocol": "tcp",
+        "Port": "22",
+        "UpstreamEnabled": false
+      })
+      server.create('serviceport', {
+        "Protocol": "tcp",
+        "Port": "80",
+        "UpstreamEnabled": false
+      })
+      server.create('serviceport', {
+        "Protocol": "tcp",
+        "Port": "443",
+        "UpstreamEnabled": false
+      })
+      server.create('serviceport', {
+        "Protocol": "tcp",
+        "Port": "5201",
+        "UpstreamEnabled": false
+      })
+
       server.create('dnsblocklist', {
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/ads.txt',
         Enabled: true
       })
       server.create('dnsblocklist', {
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt',
-        Enabled: false
+        Enabled: true,
+        Tags: ["focus"]
       })
       server.create('dnsoverride', {
         Type: 'block',
@@ -204,6 +241,10 @@ export default function MockAPI() {
           return false
         }
       }
+
+      this.get('/setup', (schema, request) => {
+        return new Response(400, {}, { error: 'already set up' })
+      })
 
       this.get('/status', (schema, request) => {
         return authOK(request) ? '"Online"' : '"Error"'
@@ -800,7 +841,266 @@ export default function MockAPI() {
               'P2P-GO: 0x00 0x20 0x40 0xa0 0xb0 0xc0 0xd0',
               'P2P-device: 0x40 0xd0'
             ]
-          }
+          },
+          {
+            wiphy: 'phy2',
+            wiphy_index: 2,
+            max_scan_ssids: 4,
+            max_scan_ies_length: '2243 bytes',
+            max_sched_scan_ssids: 0,
+            max_match_sets: 0,
+            retry_short_limit: 7,
+            retry_long_limit: 4,
+            coverage_class: '0 (up to 0m)',
+            device_supports: ['RSN-IBSS', 'AP-side u-APSD', 'T-DLS'],
+            supported_ciphers: [
+              'WEP40 (00-0f-ac:1)',
+              'WEP104 (00-0f-ac:5)',
+              'TKIP (00-0f-ac:2)',
+              'CCMP-128 (00-0f-ac:4)',
+              'CCMP-256 (00-0f-ac:10)',
+              'GCMP-128 (00-0f-ac:8)',
+              'GCMP-256 (00-0f-ac:9)',
+              'CMAC (00-0f-ac:6)',
+              'CMAC-256 (00-0f-ac:13)',
+              'GMAC-128 (00-0f-ac:11)',
+              'GMAC-256 (00-0f-ac:12)',
+              'Available Antennas: TX 0x3 RX 0x3',
+              'Configured Antennas: TX 0x3 RX 0x3'
+            ],
+            bands: [
+              {
+                band: 'Band 1',
+                capabilities: [
+                  '0x1ff',
+                  'RX LDPC',
+                  'HT20/HT40',
+                  'SM Power Save disabled',
+                  'RX Greenfield',
+                  'RX HT20 SGI',
+                  'RX HT40 SGI',
+                  'TX STBC',
+                  'RX STBC 1-stream',
+                  'Max AMSDU length: 3839 bytes',
+                  'No DSSS/CCK HT40',
+                  'Maximum RX AMPDU length 65535 bytes (exponent: 0x003)',
+                  'Minimum RX AMPDU time spacing: No restriction (0x00)',
+                  'HT TX/RX MCS rate indexes supported: 0-15'
+                ],
+                bitrates: [
+                  '1.0 Mbps (short preamble supported)',
+                  '2.0 Mbps (short preamble supported)',
+                  '5.5 Mbps (short preamble supported)',
+                  '11.0 Mbps (short preamble supported)',
+                  '6.0 Mbps',
+                  '9.0 Mbps',
+                  '12.0 Mbps',
+                  '18.0 Mbps',
+                  '24.0 Mbps',
+                  '36.0 Mbps',
+                  '48.0 Mbps',
+                  '54.0 Mbps'
+                ]
+              },
+              {
+                band: 'Band 2',
+                frequencies: [
+                  '5180 MHz [36] (18.0 dBm)',
+                  '5200 MHz [40] (18.0 dBm)',
+                  '5220 MHz [44] (18.0 dBm)',
+                  '5240 MHz [48] (18.0 dBm)',
+                  '5260 MHz [52] (18.0 dBm) (radar detection)',
+                  '5280 MHz [56] (18.0 dBm) (radar detection)',
+                  '5300 MHz [60] (18.0 dBm) (radar detection)',
+                  '5320 MHz [64] (18.0 dBm) (radar detection)',
+                  '5500 MHz [100] (18.0 dBm) (radar detection)',
+                  '5520 MHz [104] (18.0 dBm) (radar detection)',
+                  '5540 MHz [108] (18.0 dBm) (radar detection)',
+                  '5560 MHz [112] (18.0 dBm) (radar detection)',
+                  '5580 MHz [116] (18.0 dBm) (radar detection)',
+                  '5600 MHz [120] (18.0 dBm) (radar detection)',
+                  '5620 MHz [124] (18.0 dBm) (radar detection)',
+                  '5640 MHz [128] (18.0 dBm) (radar detection)',
+                  '5660 MHz [132] (18.0 dBm) (radar detection)',
+                  '5680 MHz [136] (18.0 dBm) (radar detection)',
+                  '5700 MHz [140] (18.0 dBm) (radar detection)',
+                  '5720 MHz [144] (18.0 dBm) (radar detection)',
+                  '5745 MHz [149] (18.0 dBm)',
+                  '5765 MHz [153] (18.0 dBm)',
+                  '5785 MHz [157] (18.0 dBm)',
+                  '5805 MHz [161] (18.0 dBm)',
+                  '5825 MHz [165] (18.0 dBm)',
+                  '5845 MHz [169] (18.0 dBm) (no IR)',
+                  '5865 MHz [173] (18.0 dBm) (no IR)'
+                ],
+                capabilities: [
+                  '0x1ff',
+                  'RX LDPC',
+                  'HT20/HT40',
+                  'SM Power Save disabled',
+                  'RX Greenfield',
+                  'RX HT20 SGI',
+                  'RX HT40 SGI',
+                  'TX STBC',
+                  'RX STBC 1-stream',
+                  'Max AMSDU length: 3839 bytes',
+                  'No DSSS/CCK HT40',
+                  'Maximum RX AMPDU length 65535 bytes (exponent: 0x003)',
+                  'Minimum RX AMPDU time spacing: No restriction (0x00)',
+                  'HT TX/RX MCS rate indexes supported: 0-15'
+                ],
+                vht_capabilities: [
+                  'Max MPDU length: 3895',
+                  'Supported Channel Width: neither 160 nor 80+80',
+                  'RX LDPC',
+                  'short GI (80 MHz)',
+                  'TX STBC',
+                  'RX antenna pattern consistency',
+                  'TX antenna pattern consistency'
+                ],
+                vht_rx_mcs_set: [
+                  '1 streams: MCS 0-9',
+                  '2 streams: MCS 0-9',
+                  '3 streams: not supported',
+                  '4 streams: not supported',
+                  '5 streams: not supported',
+                  '6 streams: not supported',
+                  '7 streams: not supported',
+                  '8 streams: not supported',
+                  'VHT RX highest supported: 0 Mbps'
+                ],
+                vht_tx_mcs_set: [
+                  '1 streams: MCS 0-9',
+                  '2 streams: MCS 0-9',
+                  '3 streams: not supported',
+                  '4 streams: not supported',
+                  '5 streams: not supported',
+                  '6 streams: not supported',
+                  '7 streams: not supported',
+                  '8 streams: not supported',
+                  'VHT TX highest supported: 0 Mbps'
+                ],
+                bitrates: [
+                  '6.0 Mbps',
+                  '9.0 Mbps',
+                  '12.0 Mbps',
+                  '18.0 Mbps',
+                  '24.0 Mbps',
+                  '36.0 Mbps',
+                  '48.0 Mbps',
+                  '54.0 Mbps'
+                ]
+              }
+            ],
+            supported_interface_modes: [
+              'IBSS',
+              'managed',
+              'AP',
+              'AP/VLAN',
+              'monitor',
+              'mesh point',
+              'P2P-client',
+              'P2P-GO'
+            ],
+            supported_commands: [
+              'new_interface',
+              'set_interface',
+              'new_key',
+              'start_ap',
+              'new_station',
+              'new_mpath',
+              'set_mesh_config',
+              'set_bss',
+              'authenticate',
+              'associate',
+              'deauthenticate',
+              'disassociate',
+              'join_ibss',
+              'join_mesh',
+              'remain_on_channel',
+              'set_tx_bitrate_mask',
+              'frame',
+              'frame_wait_cancel',
+              'set_wiphy_netns',
+              'set_channel',
+              'tdls_mgmt',
+              'tdls_oper',
+              'probe_client',
+              'set_noack_map',
+              'register_beacons',
+              'start_p2p_device',
+              'set_mcast_rate',
+              'connect',
+              'disconnect',
+              'channel_switch',
+              'set_qos_map',
+              'set_multicast_to_unicast'
+            ],
+            software_interface_modes: ['AP/VLAN', 'monitor'],
+            valid_interface_combinations: [
+              '#{ IBSS } <= 1, #{ managed, AP, mesh point, P2P-client, P2P-GO } <= 2,',
+              'total <= 2, #channels <= 1, STA/AP BI must match'
+            ],
+            ht_capability_overrides: [
+              'MCS: ff ff ff ff ff ff ff ff ff ff',
+              'maximum A-MSDU length',
+              'supported channel width',
+              'short GI for 40 MHz',
+              'max A-MPDU length exponent',
+              'min MPDU start spacing',
+              'Device supports TX status socket option.',
+              'Device supports HT-IBSS.',
+              'Device supports SAE with AUTHENTICATE command',
+              'Device supports low priority scan.',
+              'Device supports scan flush.',
+              'Device supports AP scan.',
+              'Device supports per-vif TX power setting',
+              'Driver supports full state transitions for AP/GO clients',
+              'Driver supports a userspace MPM',
+              'Device supports active monitor (which will ACK incoming frames)',
+              'Device supports configuring vdev MAC-addr on create.',
+              'max # scan plans: 1',
+              'max scan plan interval: -1',
+              'max scan plan iterations: 0'
+            ],
+            supported_tx_frame_types: [
+              'IBSS: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0',
+              'managed: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0',
+              'AP: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0',
+              'AP/VLAN: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0',
+              'mesh point: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0',
+              'P2P-client: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0',
+              'P2P-GO: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0',
+              'P2P-device: 0x00 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xa0 0xb0 0xc0 0xd0 0xe0 0xf0'
+            ],
+            supported_rx_frame_types: [
+              'IBSS: 0x40 0xb0 0xc0 0xd0',
+              'managed: 0x40 0xb0 0xd0',
+              'AP: 0x00 0x20 0x40 0xa0 0xb0 0xc0 0xd0',
+              'AP/VLAN: 0x00 0x20 0x40 0xa0 0xb0 0xc0 0xd0',
+              'mesh point: 0xb0 0xc0 0xd0',
+              'P2P-client: 0x40 0xd0',
+              'P2P-GO: 0x00 0x20 0x40 0xa0 0xb0 0xc0 0xd0',
+              'P2P-device: 0x40 0xd0'
+            ],
+            supported_extended_features: [
+              '[ VHT_IBSS ]: VHT-IBSS',
+              '[ RRM ]: RRM',
+              '[ FILS_STA ]: STA FILS (Fast Initial Link Setup)',
+              '[ CQM_RSSI_LIST ]: multiple CQM_RSSI_THOLD records',
+              '[ CONTROL_PORT_OVER_NL80211 ]: control port over nl80211',
+              '[ TXQS ]: FQ-CoDel-enabled intermediate TXQs',
+              '[ AIRTIME_FAIRNESS ]: airtime fairness scheduling',
+              '[ AQL ]: Airtime Queue Limits (AQL)',
+              '[ SCAN_RANDOM_SN ]: use random sequence numbers in scans',
+              '[ SCAN_MIN_PREQ_CONTENT ]: use probe request with only rate IEs in scans',
+              '[ CONTROL_PORT_NO_PREAUTH ]: disable pre-auth over nl80211 control port support',
+              '[ DEL_IBSS_STA ]: deletion of IBSS station support',
+              '[ SCAN_FREQ_KHZ ]: scan on kHz frequency support',
+              '[ CONTROL_PORT_OVER_NL80211_TX_STATUS ]: tx status for nl80211 control port support'
+            ]
+          },
+
         ]
       })
 
@@ -849,7 +1149,17 @@ export default function MockAPI() {
               channel: '36 (5180 MHz), width: 20 MHz, center1: 5180 MHz',
               txpower: '31.00 dBm'
             }
-          }
+          },
+          phy2: {
+            wlan2: {
+              ifindex: '5',
+              wdev: '0x1',
+              addr: '44:a5:6e:63:c5:f3',
+              type: 'managed',
+              channel: '36 (5180 MHz), width: 80 MHz, center1: 5210 MHz',
+              txpower: '18.00 dBm',
+            }
+          },
         }
       })
 
@@ -1010,13 +1320,13 @@ export default function MockAPI() {
         return result
       })
 
-      this.get('/hostapd/config', (schema) => {
+      this.get('/hostapd/wlan1/config', (schema) => {
         return {
           ap_isolate: 1,
           auth_algs: 1,
           channel: 36,
           country_code: 'US',
-          ctrl_interface: '/state/wifi/control',
+          ctrl_interface: '/state/wifi/control_wlan1',
           ht_capab:
             '[LDPC][HT40+][HT40-][GF][SHORT-GI-20][SHORT-GI-40][TX-STBC][RX-STBC1]',
           hw_mode: 'a',
@@ -1043,14 +1353,24 @@ export default function MockAPI() {
         }
       })
 
-      this.get('/hostapd/status', (schema) => {
+      this.get('/hostapd/wlan0/config', (schema) => {
+        //not defined so fail
+        return new Response(404, {}, { error: 'config not found' })
+      })
+
+      this.get('/hostapd/wlan2/config', (schema) => {
+        //not defined so fail
+        return new Response(404, {}, { error: 'config not found' })
+      })
+
+      this.get('/hostapd/wlan1/status', (schema) => {
         return {
           'ssid[0]': 'TestAP',
           channel: 36
         }
       })
 
-      this.get('/hostapd/all_stations', (schema) => {
+      this.get('/hostapd/wlan1/all_stations', (schema) => {
         return {
           '11:22:33:44:55:61': {
             AKMSuiteSelector: '00-0f-ac-2',
@@ -1113,7 +1433,13 @@ export default function MockAPI() {
         }
       })
 
-      this.put('/hostapd/setChannel', (schema) => {
+      this.put('/ip/link/:name/up', (schema) => {
+        return true
+      })
+
+
+
+      this.put('/hostapd/:dev/setChannel', (schema) => {
         return {
           Vht_oper_centr_freq_seg0_idx: 42,
           He_oper_centr_freq_seg0_idx: 42,
@@ -1467,7 +1793,10 @@ export default function MockAPI() {
       this.get('/firewall/config', (schema, request) => {
         return {
           ForwardingRules: schema.forwardrules.all().models,
-          BlockRules: schema.blockrules.all().models
+          BlockRules: schema.blockrules.all().models,
+          ForwardingBlockRules: schema.forwardblockrules.all().models,
+          ServicePorts: schema.serviceports.all().models
+
         }
       })
 
@@ -1506,6 +1835,43 @@ export default function MockAPI() {
         let attrs = JSON.parse(request.requestBody)
         return schema.blockrules.where(attrs).destroy()
       })
+
+      this.put('/firewall/block_forward', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.forwardblockrules.create(attrs)
+      })
+
+      this.delete('/firewall/block_forward', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.forwardblockrules.where(attrs).destroy()
+      })
+
+      this.put('/firewall/service_port', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.serviceports.create(attrs)
+      })
+
+      this.delete('/firewall/service_port', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.serviceports.where(attrs).destroy()
+      })
+
 
       // tokens
       this.get('/tokens', (schema, request) => {

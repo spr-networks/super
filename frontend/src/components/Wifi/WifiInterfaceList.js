@@ -125,7 +125,7 @@ const WifiInterface = (props) => {
           )}
         </VStack>
 
-        <Box h="100%" p={2}>
+        <Box h="100%" p={2} w="2/3">
           {tabList.map((tab) =>
             iw[tab] || ['other', 'SPR compability'].includes(tab) ? (
               <VStack key={tab} display={activeTab == tab ? 'flex' : 'none'}>
@@ -340,6 +340,15 @@ const WifiInterfaceList = (props) => {
   useEffect(() => {
     wifiAPI.iwDev().then((devs) => {
       setDevs(devs)
+
+      /*
+      //TBD also grab interfacesConfiguration.
+      // The UI should handle interfaces that are configured,
+      // but not active on the system.
+      wifiAPI.interfacesConfiguration().then((config) => {
+
+      })
+      */
 
       wifiAPI.iwList().then((iws) => {
         iws = iws.map((iw) => {

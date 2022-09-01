@@ -2,7 +2,7 @@
 set -a
 . /configs/base/config.sh
 
-sysctl net.ipv4.ip_forward=1 net.ipv6.conf.all.forwarding=1
+sysctl net.ipv4.ip_forward=1
 
 if [ "$LANIF" ]; then
   # set up static routes on LAN interface
@@ -10,12 +10,10 @@ if [ "$LANIF" ]; then
   ip addr add $LANIP/24 dev $LANIF
   ip link set dev $LANIF up
 else
-  if [ "$VLANIF" ]; then
-    # If there is no LAN interface, have the wifi/vlan if take the IP
-    ip addr flush dev $VLANIF
-    ip addr add $LANIP/32 dev $VLANIF
-    ip link set dev $VLANIF up
-  fi
+  # If there is no LAN interface, have a dummy interface claim  it
+  ip link add name sprloop type dummy
+  ip addr add $LANIP/32 dev sprloop
+  ip link set dev sprloop up
 fi
 
 if [ "$NFT_OVERRIDE" ]; then

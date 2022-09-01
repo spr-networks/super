@@ -129,7 +129,6 @@ services:
     restart: always
     depends_on:
       - "base-virt"
-      - "dhcp-virt"
       - "frontend"
       - "superd-virt"
     logging: *default-logging
@@ -140,6 +139,7 @@ services:
       - ./configs/wifi/:/configs/wifi/
       - ./configs/wireguard/:/configs/wireguard/
       - ./configs/scripts/:/configs/scripts/
+      - ./configs/pfw/:/configs/pfw/
       - ./state/wifi/:/state/wifi/
       - ./state/dhcp/:/state/dhcp/
       - ./state/dns/:/state/dns/

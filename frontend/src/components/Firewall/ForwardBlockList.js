@@ -9,7 +9,7 @@ import {
 
 import { firewallAPI } from 'api'
 import ModalForm from 'components/ModalForm'
-import AddBlock from './AddBlock'
+import AddForwardBlock from './AddForwardBlock'
 
 import {
   Badge,
@@ -25,9 +25,9 @@ import {
   useColorModeValue
 } from 'native-base'
 
-const BlockList = (props) => {
+const ForwardBlockList = (props) => {
   let list = props.list || []
-  let title = props.title || `BlockList:`
+  let title = props.title || `ForwardBlockList:`
 
   let refModal = useRef(null)
 
@@ -36,7 +36,7 @@ const BlockList = (props) => {
       props.notifyChange('block')
     }
 
-    firewallAPI.deleteBlock(item).then(done)
+    firewallAPI.deleteForwardBlock(item).then(done)
   }
 
   const notifyChange = (t) => {
@@ -52,15 +52,15 @@ const BlockList = (props) => {
             {title}
           </Heading>
           <Text color="muted.500" isTruncated>
-            Block traffic coming into the network at the PREROUTING stage
+            Add rules to block traffic at the FORWARDING stage
           </Text>
         </VStack>
         <ModalForm
-          title={`Add IP Block`}
-          triggerText="Add IP Block"
+          title={`Add Forwarding Block`}
+          triggerText="Add Forwarding Block"
           modalRef={refModal}
         >
-          <AddBlock notifyChange={notifyChange} />
+          <AddForwardBlock notifyChange={notifyChange} />
         </ModalForm>
       </HStack>
 
@@ -91,6 +91,7 @@ const BlockList = (props) => {
 
                 <Text>{item.SrcIP}</Text>
                 <Text>{item.DstIP}</Text>
+                <Text>{item.DstPort}</Text>
 
                 <IconButton
                   alignSelf="center"
@@ -109,7 +110,7 @@ const BlockList = (props) => {
         <VStack>
           {!list.length ? (
             <Text alignSelf={'center'}>
-              There are no block rules configured yet
+              There are no forwarding block rules configured yet
             </Text>
           ) : null}
           <Button
@@ -120,7 +121,7 @@ const BlockList = (props) => {
             onPress={() => refModal.current()}
             mt={4}
           >
-            Add IP Block
+            Add Forwarding Block
           </Button>
         </VStack>
       </Box>
@@ -128,8 +129,8 @@ const BlockList = (props) => {
   )
 }
 
-BlockList.propTypes = {
+ForwardBlockList.propTypes = {
   notifyChange: PropTypes.func.isRequired
 }
 
-export default BlockList
+export default ForwardBlockList

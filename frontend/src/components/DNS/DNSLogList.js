@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
+
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
@@ -8,6 +9,7 @@ import {
   faTimes
 } from '@fortawesome/free-solid-svg-icons'
 
+import { deviceAPI } from 'api'
 import { logAPI } from 'api/DNS'
 import ModalConfirm from 'components/ModalConfirm'
 
@@ -28,11 +30,21 @@ const DNSLogList = ({ title, description, ...props }) => {
   const context = useContext(AlertContext)
   const [type, setType] = useState(props.type)
   const [list, setList] = useState([])
+  const [ipNames, setIpNames] = useState({})
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   useEffect(() => {
     refreshBlocklists()
   }, [])
+
+  const ip_to_name = (ip) => {
+    if (ipNames[ip]) {
+      return ipNames[ip]
+    }
+    return ip
+  }
+
+  const cleanIp = (ip) => ip.replace(/\/.*/, '') // remove subnet
 
   const refreshBlocklists = async () => {
     try {
@@ -41,6 +53,17 @@ const DNSLogList = ({ title, description, ...props }) => {
         list = await logAPI.domainIgnores()
       } else {
         list = await logAPI.hostPrivacyList()
+
+        let devices = await deviceAPI.list()
+        let options = Object.values(devices)
+        let name_map = {}
+        for (let ident in devices) {
+          let d = devices[ident];
+          let key_ip = cleanIp(d.RecentIP)
+          let name_value = d.Name || d.RecentIP
+          name_map[key_ip] = name_value
+        }
+        setIpNames(name_map)
       }
 
       setList(list)
@@ -141,7 +164,7 @@ const DNSLogList = ({ title, description, ...props }) => {
               _dark={{ borderBottomColor: 'muted.600' }}
             >
               <Text>{item}</Text>
-
+              <Text>    {ip_to_name(item)}</Text>
               <IconButton
                 variant="ghost"
                 colorScheme="secondary"

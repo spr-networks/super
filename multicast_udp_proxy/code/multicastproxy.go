@@ -28,12 +28,12 @@ import (
 	"net"
 	"os"
 
+	"encoding/json"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/sys/unix"
-	"strings"
 	"io/ioutil"
-	"encoding/json"
+	"strings"
 )
 
 var debug = false
@@ -41,6 +41,7 @@ var debug = false
 var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 
 var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
+var InterfacesPublicConfigFile = TEST_PREFIX + "/state/public/interfaces.json"
 
 type PSKEntry struct {
 	Type string
@@ -76,6 +77,20 @@ func APIDevices() (map[string]DeviceEntry, error) {
 	return devs, nil
 }
 
+type InterfaceConfig struct {
+	Name    string
+	Type    string
+	Enabled bool
+}
+
+func APIInterfaces() ([]InterfaceConfig, error) {
+	data, err := os.ReadFile(InterfacesPublicConfigFile)
+	config := []InterfaceConfig{}
+	if err == nil {
+		err = json.Unmarshal(data, &config)
+	}
+	return config, err
+}
 
 func NewIPv4UDPConn(addr *net.UDPAddr) (*net.UDPConn, error) {
 	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, unix.IPPROTO_UDP)
@@ -137,7 +152,8 @@ func listenNewInterfaceUp(callback func(string)) {
 	for {
 		select {
 		case msg := <-lnkupdate:
-			{		if msg.Change == unix.IFF_UP {
+			{
+				if msg.Change == unix.IFF_UP {
 					if debug {
 						fmt.Println("link up", msg.Attrs().Name)
 					}
@@ -224,7 +240,7 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool)
 
 		if iface, err := net.InterfaceByIndex(oob.IfIndex); err != nil || !relayableInterface(iface.Name) {
 			if err != nil {
-				fmt.Println("got err for interface index", oob.IfIndex, err);
+				fmt.Println("got err for interface index", oob.IfIndex, err)
 			} else {
 				if debug {
 					fmt.Println("dropping from interface not specified for relay", iface.Name)
@@ -240,6 +256,11 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool)
 			woob = &ipv4.ControlMessage{IfIndex: idx, Src: peer.(*net.UDPAddr).IP}
 			// set dest as saddr (multicast)
 			if _, err = l4.WriteTo(buffer[0:n], woob, saddr); err != nil {
+
+				//NOTE: this will warn often about `required key not available`
+				//when sending to wireguard devices without the key
+				//or an unconfigured wireguard interface.
+				//TBD: parse that error code and suppress it 
 				fmt.Println("failed to write", err)
 				return
 			}
@@ -272,19 +293,39 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool)
 }
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Println("need a comma separated list of substrings for relayable interfaces")
-		return
-	}
-
-	ifaceNames := strings.Split(os.Args[1],",")
 
 	relayableInterface := func(ifaceName string) bool {
-		for _, target := range ifaceNames {
-			if strings.Contains(ifaceName, target) {
-				return true
+
+		//support comma separated list of interfaces to match on
+		if len(os.Args) == 2 {
+			ifaceNames := strings.Split(os.Args[1], ",")
+			for _, target := range ifaceNames {
+				if strings.Contains(ifaceName, target) {
+					return true
+				}
+			}
+		} else {
+			interfaces, err := APIInterfaces()
+			if err == nil {
+				for _, target := range interfaces {
+					match_name := target.Name
+					if target.Type == "AP" {
+						match_name += "."
+					}
+					if strings.Contains(ifaceName, match_name) {
+						return true
+					}
+				}
+			} else {
+				fmt.Println("[-] Multicast proxy failed to read interfaces", err)
 			}
 		}
+		//workaround for now for wireguard
+		// until it is in interfaces
+		if strings.Contains(ifaceName, "wg0") {
+			return true
+		}
+
 		return false
 	}
 

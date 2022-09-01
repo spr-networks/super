@@ -26,9 +26,14 @@ export default class SignalStrength extends Component {
   }
 
   async fetchData() {
-    const stations = await wifiAPI.allStations().catch((error) => {
-      this.context.error('API Failure get traffic: ' + error.message)
-    })
+    const interfaces = await wifiAPI.interfaces('AP')
+    let stations = []
+    for (let iface of interfaces) {
+      const new_stations = await wifiAPI.allStations(iface).catch((error) => {
+        this.context.error('API Failure get traffic: ' + error.message)
+      })
+      stations = stations.concat(new_stations)
+    }
 
     let signals = []
     for (let mac in stations) {

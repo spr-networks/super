@@ -31,12 +31,10 @@ import { AlertContext } from 'AppContext'
 const Setup = (props) => {
   const context = useContext(AlertContext)
   const navigate = useNavigate()
+  //TBD, not currently used for anything. in the future roll in channel selection
   const [config, setConfig] = useState({})
   const [wifiInterfaces, setWifiInterfaces] = useState([])
   const [uplinkInterfaces, setUplinkInterfaces] = useState([])
-
-  //NOTE could have > 2 wlan here
-  const interfaces = ['eth0', 'wlan0', 'wlan1']
 
   const [ssid, setSsid] = useState('SPRLab')
   const [countryWifi, setCountryWifi] = useState('US')
@@ -70,9 +68,9 @@ const Setup = (props) => {
   }, [ssid])
 
   useEffect(() => {
-    wifiAPI.config().then((conf) => {
+    wifiAPI.config(interfaceWifi).then((conf) => {
       setConfig((conf))
-    })
+    }, [interfaceWifi])
 
     wifiAPI.ipAddr().then((ipAddr) => {
       wifiAPI.iwDev().then((iwDev) => {

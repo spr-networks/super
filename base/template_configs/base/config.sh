@@ -1,10 +1,12 @@
 #!/bin/sh
 
-#comment below to DISABLE ssh, API from the Upstream Interface
+# comment below to DISABLE ssh, API from the Upstream Interface
 UPSTREAM_SERVICES_ENABLE=1
 
-SSID_NAME=TestLab
-SSID_INTERFACE=wlan1
+# Uncomment below to use SPR without wifi,
+#  as a VPN gateway for example
+#VIRTUAL_SPR=1
+
 #PPPIF=eth0
 #WANIF=ppp0
 #PPP_VLANID=201
@@ -14,8 +16,6 @@ RUN_WAN_DHCP=true
 RUN_WAN_DHCP_IPV=4
 # Uncomment the next line if a second ethernet port goes to wired LAN
 #LANIF=eth1
-VLANIF=wlan1
-VLANSIF=$VLANIF.
 
 LANIP=192.168.2.1
 DNSIP=$LANIP
