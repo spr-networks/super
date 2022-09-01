@@ -1458,6 +1458,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 
 	if !isSetupMode() {
 		http.Error(w, "setup already done", 400)
+		return
 	}
 
 	if r.Method != http.MethodPut {
