@@ -78,10 +78,11 @@ func logTraffic(topic string, data string) {
 
 	logEntry.Prefix = strings.TrimSpace(logEntry.Prefix)
 
-	fmt.Printf(">> %v @ %v\n", topic, logEntry.Timestamp)
+	log.Printf(">> %v @ %v\n", topic, logEntry.Timestamp)
+	log.Printf(">> %v => %v\n", logEntry.IP.SrcIP, logEntry.IP.DstIP)
 
 	if IFDB == nil {
-		fmt.Println("missing influxdb??")
+		log.Println("missing influxdb??")
 		return
 	}
 
@@ -106,7 +107,15 @@ func logTraffic(topic string, data string) {
 	writeAPI := IFDB.WriteAPI(org, bucket)
 	//writeAPI.WriteRecord(fmt.Sprintf("thermostat,unit=temperature,user=%s avg=%f,max=%f", t.user, t.avg, t.max))
 
-	fmt.Printf("## prefix= %s, bucket=%s, action=%s\n", logEntry.Prefix, bucket, logEntry.Action)
+	log.Printf("## prefix= %s, bucket=%s, action=%s\n", logEntry.Prefix, bucket, logEntry.Action)
+
+	/*
+	NOTES on tags vs. fields in InfluxDB:
+
+	"A rule of thumb would be to persist highly dynamic values as fields and only use tags for GROUP BY clauses and InfluxQL functions, carefully designing your application around it."
+
+	we use tags for prefix, src/dst ip, rest is fields
+*/
 
 	if logEntry.TCP != nil {
 		p := influxdb2.NewPointWithMeasurement("tcp").
@@ -139,8 +148,8 @@ func logTraffic(topic string, data string) {
 			//write one entry for each q
 			for _, q := range logEntry.DNS.Questions {
 				//log.Printf(">> DNS %s, %s\n", q.Type, q.Name)
-				p.AddTag("DNS.Type", fmt.Sprintf("%s", q.Type)).
-					AddTag("DNS.Name", fmt.Sprintf("%s", q.Name)).
+				p.AddField("DNS.Type", fmt.Sprintf("%s", q.Type)).
+					AddField("DNS.Name", fmt.Sprintf("%s", q.Name)).
 					AddField("DNS.ID", logEntry.DNS.ID)
 
 				writeAPI.WritePoint(p)
