@@ -1800,7 +1800,7 @@ func main() {
 	// collect traffic accounting statistics
 	trafficTimer()
 	// start the event handler
-	NotificationsRunEventListener()
+	go NotificationsRunEventListener()
 
 	sslPort, runSSL := os.LookupEnv("API_SSL_PORT")
 
