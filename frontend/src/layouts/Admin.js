@@ -212,6 +212,23 @@ const AdminLayout = (props) => {
   alertState.errorResponse = (title, bodyHeader, err) =>
     alertState.handleResponse('error', title, bodyHeader, err)
 
+  alertState.handleResponse = (alertType, title, bodyHeader, err) => {
+    err.response.text().then((data) => {
+      alertState.alert(alertType, title, bodyHeader + ' ' + data)
+    })
+  }
+
+  alertState.successResponse = (title, bodyHeader, err) =>
+    alertState.handleResponse('success', title, bodyHeader, err)
+  alertState.infoResponse = (title, bodyHeader, err) =>
+    alertState.handleResponse('info', title, bodyHeader, err)
+  alertState.warningResponse = (title, bodyHeader, err) =>
+    alertState.handleResponse('warning', title, bodyHeader, err)
+  alertState.dangerResponse = (title, bodyHeader, err) =>
+    alertState.handleResponse('danger', title, bodyHeader, err)
+  alertState.errorResponse = (title, bodyHeader, err) =>
+    alertState.handleResponse('error', title, bodyHeader, err)
+
   /*
   location = useLocation()
   useEffect(() => {

@@ -36,12 +36,13 @@ const Home = (props) => {
 
   useEffect(() => {
     wifiAPI
-      .interfaces('AP')
+      .interfaces("AP")
       .then((ifaces) => {
         setInterfaces(ifaces)
       })
       .catch((error) => error)
   }, [])
+
 
   const flexDirection = useBreakpointValue({
     base: 'column',
