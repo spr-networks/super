@@ -75,6 +75,8 @@ func main() {
 	fmt.Printf("exit\n")
 }
 
+var debugParse = false
+
 func logGroup(client *sprbus.Client, NetfilterGroup int) {
 	config := nflog.Config{
 		Group:    uint16(NetfilterGroup),
@@ -120,7 +122,9 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 		decoded := []gopacket.LayerType{}
 		packetData := *attrs.Payload
 		if err := parser.DecodeLayers(packetData, &decoded); err != nil {
-			fmt.Fprintf(os.Stderr, "packet parse error: %v\n", err)
+			if debugParse {
+				fmt.Fprintf(os.Stderr, "packet parse error: %v\n", err)
+			}
 			return 0
 		}
 
