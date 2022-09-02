@@ -91,7 +91,7 @@ table inet filter {
   }
 
   chain PFWDROPLOG {
-    counter log prefix "DRP:PFW "
+    counter log prefix "drop:pfw " group 1
     counter drop
   }
 
@@ -101,6 +101,10 @@ table inet filter {
     #jump USERDEF_INPUT
     iif lo counter accept
     counter jump F_EST_RELATED
+
+    # Mark whether the input came from upstream (wan:in) or local network (lan:in)
+    $(if [ "$WANIF" ]; then echo "iifname $WANIF log prefix \"wan:in \" group 0"; fi)
+    $(if [ "$WANIF" ]; then echo "iifname ne $WANIF log prefix \"lan:in \" group 0"; else echo "log prefix \"lan:in \" group 0"; fi)
 
     # Drop input from the site to site output interfaces. They are only a sink,
     # Not a source that can connect into SPR services
@@ -161,6 +165,10 @@ table inet filter {
 
     counter jump F_EST_RELATED
 
+    # mark outbound for upstream with wan:out and others as lan:out
+    $(if [ "$WANIF" ]; then echo "oifname $WANIF log prefix \"wan:out \" group 0"; fi)
+    $(if [ "$WANIF" ]; then echo "oifname ne $WANIF log prefix \"lan:out \" group 0"; else echo "log prefix \"lan:out \" group 0"; fi)
+
     # Allow DNAT for port forwarding
     counter ct status dnat accept
 
@@ -205,7 +213,7 @@ table inet filter {
 
   chain restrict_upstream_private_addresses {
     counter ip saddr vmap @upstream_private_rfc1918_allowed
-    log prefix "DRP:PRIVATE "
+    log prefix "drop:private " group 1
     counter drop
   }
 
@@ -225,12 +233,12 @@ table inet filter {
   }
 
   chain DROPLOGFWD {
-    counter log prefix "DRP:FWD "
+    counter log prefix "drop:forward " group 1
     counter drop
   }
 
   chain DROPLOGINP {
-    counter log prefix "DRP:INP "
+    counter log prefix "drop:input " group 1
     counter drop
   }
 
@@ -241,8 +249,8 @@ table inet filter {
   }
 
   chain DROP_MAC_SPOOF {
-  	counter ip saddr . iifname . ether saddr vmap @ethernet_filter
-    log prefix "DRP:MAC "
+    counter ip saddr . iifname . ether saddr vmap @ethernet_filter
+    log prefix "drop:mac " group 1
     counter drop
   }
 

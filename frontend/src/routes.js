@@ -24,12 +24,14 @@ import Logs from 'views/Logs'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
 import SystemInfo from 'views/SystemInfo'
+import Notifications from 'views/Notifications'
 import SpeedTest from 'views/SpeedTest'
 
 import {
   faArrowCircleUp,
   faBan,
   faBarChart,
+  faBell,
   faChartColumn,
   faCircleNodes,
   faCogs,
@@ -241,6 +243,13 @@ const routes = [
         name: 'System Info',
         icon: faWaveSquare,
         component: SystemInfo,
+        layout: 'admin'
+      },
+      {
+        path: 'notifications',
+        name: 'Notifications',
+        icon: faBell,
+        component: Notifications,
         layout: 'admin'
       },
       {

@@ -64,12 +64,24 @@ const parseLogMessage = (msg) => {
     body = `Authentication failure for MAC ${data.MAC}: ${reasonString}`
   } else if (msgType == 'StatusCalled') {
     body = `Status called with result: ${data}`
+  } else if (msgType == 'nft') {
+    // data.Action ==  allowed || blocked
+    type = 'confirm'
+
+    if (data.Action == 'blocked') {
+      type = 'warning'
+    }
+
+    title = `Netfilter ${data['Prefix']} ${data.Action}`
+    let protocol = data.TCP !== undefined ? 'TCP' : 'UDP'
+    body = `${data.IP.SrcIP} => ${data.IP.DstIP}:${data[protocol].DstPort}`
   }
 
   return {
     type,
     title,
-    body
+    body,
+    data
   }
 }
 

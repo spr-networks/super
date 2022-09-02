@@ -64,12 +64,16 @@ const Home = (props) => {
             </>
           ) : (
             <VStack flex={1}>
-            {interfaces.map(iface => (
-              <HStack flex={1}>
-                <WifiInfo iface={iface} flex={1} />
-                <WifiClients iface={iface} flex={1} />
-              </HStack>
-            ))}
+              {interfaces.map((iface) => (
+                <Stack
+                  direction={{ base: 'column', md: 'row' }}
+                  flex={1}
+                  space={{ base: 2, md: 4 }}
+                >
+                  <WifiInfo iface={iface} flex={1} />
+                  <WifiClients iface={iface} flex={1} />
+                </Stack>
+              ))}
             </VStack>
           )}
         </Stack>
