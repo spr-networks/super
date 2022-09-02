@@ -1,4 +1,4 @@
-export const init = () => {
+export const init = (...props) => {
   //Notification.requestPermission() ...
 }
 

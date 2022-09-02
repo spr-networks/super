@@ -198,6 +198,9 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
   let idx = (device.Name.charCodeAt(0) || 0) % colors.length
   let color = colors[idx]
   let iconColor = `${color}.400`
+  let borderColor = device.isConnected
+    ? 'green.600'
+    : useColorModeValue('muted.100', 'muted.700')
 
   const trigger = (triggerProps) => (
     <IconButton
@@ -291,6 +294,9 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
             _dark={{ bg: 'blueGray.700' }}
             p={4}
             rounded="full"
+            opacity={device.isConnected ? 1 : 0.65}
+            borderColor={borderColor}
+            borderWidth={1}
           >
             <Icon icon={icon} color={iconColor} size={7} />
           </Box>
