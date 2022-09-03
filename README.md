@@ -34,7 +34,7 @@ docker-compose up -d
 
 ## Useful Links
 
-* Join the Discord chat https://discord.gg/WeNKMVTR
+* Join the Discord chat https://discord.gg/EUjTKJPPAX
 * API Docs https://www.supernetworks.org/pages/api/0
 * Documentation Home: https://www.supernetworks.org/pages/docs/intro/
 * Raspberry Pi 4 Setup https://www.supernetworks.org/pages/docs/pi4b
