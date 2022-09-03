@@ -35,6 +35,8 @@ type ConditionEntry struct {
 	DstPort  int    `json:"DstPort"`
 	SrcIP    string `json:"SrcIP"`
 	SrcPort  int    `json:"SrcPort"`
+	InDev    string `json:"InDev"`
+	OutDev   string `json:"OutDev"`
 }
 
 //new format for notifications
@@ -160,6 +162,14 @@ func checkNotificationTraffic(logEntry PacketInfo) bool {
 		cond := setting.Conditions
 
 		if cond.Prefix != "" && cond.Prefix != prefix {
+			shouldNotify = false
+		}
+
+		if cond.InDev != "" && cond.InDev != logEntry.InDev {
+			shouldNotify = false
+		}
+
+		if cond.OutDev != "" && cond.OutDev != logEntry.OutDev {
 			shouldNotify = false
 		}
 
