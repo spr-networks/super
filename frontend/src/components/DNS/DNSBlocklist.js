@@ -1,6 +1,11 @@
 import React from 'react'
 import Icon from 'FontAwesomeUtils'
-import { faPen, faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
+import {
+  faEllipsis,
+  faToggleOn,
+  faToggleOff,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons'
 
 import { blockAPI } from 'api/DNS'
 import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
@@ -17,9 +22,6 @@ import {
   Menu,
   Stack,
   HStack,
-  VStack,
-  Skeleton,
-  Spacer,
   Spinner,
   Switch,
   Text,
@@ -40,6 +42,7 @@ export default class DNSBlocklist extends React.Component {
     super(props)
 
     this.state.list = []
+
     this.recommendedListDefault = [
       {
         URI: 'https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts'
@@ -60,6 +63,9 @@ export default class DNSBlocklist extends React.Component {
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/porn.txt'
       },
       {
+        URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/redirect.txt'
+      },
+      {
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/tracking.txt'
       },
       {
@@ -69,6 +75,7 @@ export default class DNSBlocklist extends React.Component {
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/everything.txt'
       }
     ]
+
     this.state.recommendedList = []
     this.state.pending = true
 
@@ -102,20 +109,9 @@ export default class DNSBlocklist extends React.Component {
           list = blocklist
         }
 
-        let recommendedList = []
-        for (let item of this.recommendedListDefault) {
-          let exists = false
-          for (let existing of list) {
-            if (existing.URI == item.URI) {
-              exists = true
-              break
-            }
-          }
-
-          if (!exists) {
-            recommendedList.push(item)
-          }
-        }
+        let recommendedList = this.recommendedListDefault.filter((_item) => {
+          return !list.map((listitem) => listitem.URI).includes(_item.URI)
+        })
 
         this.setState({ list })
         this.setState({ pending: false })
@@ -214,6 +210,24 @@ export default class DNSBlocklist extends React.Component {
 
     let edit = true //this.props.edit !== undefined ? this.props.edit : true
 
+    let trigger = (triggerProps) => {
+      return (
+        <IconButton
+          display={{ base: edit ? 'flex' : 'none' }}
+          variant="unstyled"
+          icon={<Icon icon={faEllipsis} color="muted.600" />}
+          {...triggerProps}
+        />
+      )
+    }
+
+    // only show actions if we have the list
+    const isOnlyRecommended = (item) => {
+      return (
+        this.state.list.filter((_item) => _item.URI === item.URI).length === 0
+      )
+    }
+
     return (
       <>
         <HStack justifyContent="space-between" alignItems="center" p={4}>
@@ -253,34 +267,39 @@ export default class DNSBlocklist extends React.Component {
           mb={4}
         >
           <FlatList
-            data={this.state.list}
+            data={[...this.state.list, ...this.state.recommendedList]}
             renderItem={({ item }) => (
               <Box
-                borderBottomWidth="1"
+                borderBottomWidth={1}
                 _dark={{
                   borderColor: 'muted.600'
                 }}
                 borderColor="muted.200"
-                py="2"
+                py={2}
               >
                 <HStack
                   space={3}
                   justifyContent="space-between"
                   alignItems="center"
                 >
-                  <Text minW="50%" isTruncated>
+                  <Text
+                    minW="50%"
+                    isTruncated
+                    _light={{
+                      color: isOnlyRecommended(item) ? 'muted.500' : 'black'
+                    }}
+                    _dark={{
+                      color: isOnlyRecommended(item) ? 'muted.500' : 'white'
+                    }}
+                  >
                     {item.URI}
                   </Text>
 
-                  <Box>
-                    <Switch
-                      isDisabled={this.state.pending}
-                      defaultIsChecked={item.Enabled}
-                      onValueChange={() =>
-                        this.handleItemSwitch(item, !item.Enabled)
-                      }
-                    />
-                  </Box>
+                  {item.Enabled ? (
+                    <Badge colorScheme="success" color="success.500">
+                      Enabled
+                    </Badge>
+                  ) : null}
 
                   <HStack
                     flex={2}
@@ -297,19 +316,38 @@ export default class DNSBlocklist extends React.Component {
                       : null}
                   </HStack>
 
-                  <Menu
-                    trigger={(triggerProps) => {
-                      return (
-                        <IconButton
-                          display={{ base: edit ? 'flex' : 'none' }}
-                          size="xs"
-                          variant="ghost"
-                          icon={<Icon icon={faPen} />}
-                          {...triggerProps}
-                        />
-                      )
-                    }}
-                  >
+                  <Menu trigger={trigger}>
+                    <Menu.Group title="Actions">
+                      <Menu.Item
+                        onPress={() =>
+                          this.handleItemSwitch(item, !item.Enabled)
+                        }
+                      >
+                        <HStack space={2} alignItems="center">
+                          {item.Enabled ? (
+                            <>
+                              <Icon icon={faToggleOn} />
+                              <Text>Disable</Text>
+                            </>
+                          ) : (
+                            <>
+                              <Icon icon={faToggleOff} />
+                              <Text>Enable</Text>
+                            </>
+                          )}
+                        </HStack>
+                      </Menu.Item>
+                      <Menu.Item
+                        onPress={() => this.deleteListItem(item)}
+                        display={isOnlyRecommended(item) ? 'none' : 'flex'}
+                      >
+                        <HStack space={2} alignItems="center">
+                          <Icon icon={faTrash} color="danger.700" />
+                          <Text color="danger.700">Delete</Text>
+                        </HStack>
+                      </Menu.Item>
+                    </Menu.Group>
+
                     <Menu.OptionGroup
                       title="Tags"
                       type="checkbox"
@@ -339,117 +377,6 @@ export default class DNSBlocklist extends React.Component {
                       </Menu.ItemOption>
                     </Menu.OptionGroup>
                   </Menu>
-
-                  <IconButton
-                    alignSelf="center"
-                    size="sm"
-                    variant="ghost"
-                    colorScheme="secondary"
-                    icon={<Icon icon={faXmark} />}
-                    onPress={() => this.deleteListItem(item)}
-                  />
-                </HStack>
-              </Box>
-            )}
-            keyExtractor={(item) => item.URI}
-          />
-
-          <FlatList
-            data={this.state.recommendedList}
-            renderItem={({ item }) => (
-              <Box
-                borderBottomWidth="1"
-                _dark={{
-                  borderColor: 'muted.600'
-                }}
-                borderColor="muted.200"
-                py="2"
-              >
-                <HStack
-                  space={3}
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Text minW="50%" isTruncated>
-                    {item.URI}
-                  </Text>
-
-                  <Box>
-                    <Switch
-                      isDisabled={this.state.pending}
-                      defaultIsChecked={item.Enabled}
-                      onValueChange={() =>
-                        this.handleItemSwitch(item, !item.Enabled)
-                      }
-                    />
-                  </Box>
-
-                  <HStack
-                    flex={2}
-                    space={1}
-                    alignSelf="center"
-                    alignItems="center"
-                  >
-                    {item.Tags
-                      ? item.Tags.map((entry) => (
-                          <Badge key={item.URI + entry} variant="outline">
-                            {entry}
-                          </Badge>
-                        ))
-                      : null}
-                  </HStack>
-
-                  <Menu
-                    trigger={(triggerProps) => {
-                      return (
-                        <IconButton
-                          display={{ base: edit ? 'flex' : 'none' }}
-                          size="xs"
-                          variant="ghost"
-                          icon={<Icon icon={faPen} />}
-                          {...triggerProps}
-                        />
-                      )
-                    }}
-                  >
-                    <Menu.OptionGroup
-                      title="Tags"
-                      type="checkbox"
-                      defaultValue={item.Tags ? item.Tags : []}
-                      onChange={(value) => handleChangeTags(item, value)}
-                    >
-                      {[
-                        ...new Set(
-                          defaultTags.concat(item.Tags ? item.Tags : [])
-                        )
-                      ].map((tag) => (
-                        <Menu.ItemOption key={tag} value={tag}>
-                          {tag}
-                        </Menu.ItemOption>
-                      ))}
-                      <Menu.ItemOption
-                        key="newTag"
-                        onPress={() => {
-                          this.setState({
-                            showModal: true,
-                            modalType: 'Tag',
-                            pendingItem: item
-                          })
-                        }}
-                      >
-                        New Tag...
-                      </Menu.ItemOption>
-                    </Menu.OptionGroup>
-                  </Menu>
-
-                  <IconButton
-                    alignSelf="center"
-                    size="sm"
-                    variant="ghost"
-                    colorScheme="secondary"
-                    icon={<Icon icon={faXmark} />}
-                    onPress={() => this.deleteListItem(item)}
-                  />
                 </HStack>
               </Box>
             )}
