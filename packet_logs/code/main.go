@@ -11,6 +11,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"log"
+	"net"
 	"os"
 	"strings"
 	"sync"
@@ -46,6 +47,8 @@ type PacketInfo struct {
 	Prefix    string         `json:"Prefix"`
 	Action    string         `json:"Action"`
 	Timestamp time.Time      `json:"Timestamp"`
+	InDev     string         `json:"InDev"`
+	OutDev    string         `json:"OutDev"`
 }
 
 var wg sync.WaitGroup
@@ -75,7 +78,7 @@ func main() {
 	fmt.Printf("exit\n")
 }
 
-var debugParse = false
+var verboseLog = false
 
 func logGroup(client *sprbus.Client, NetfilterGroup int) {
 	config := nflog.Config{
@@ -102,14 +105,28 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 		var dns layers.DNS
 		var dhcp layers.DHCPv4
 
-
 		result := PacketInfo{Prefix: *attrs.Prefix}
 
 		// Try to use timestamp attribute, otherwise grab current time
-		if (attrs.Timestamp != nil) {
-			result.Timestamp =  *attrs.Timestamp
+		if attrs.Timestamp != nil {
+			result.Timestamp = *attrs.Timestamp
 		} else {
 			result.Timestamp = time.Now()
+		}
+
+		// get devices
+		if attrs.InDev != nil {
+			iface, _ := net.InterfaceByIndex(int(*attrs.InDev))
+			if iface != nil {
+				result.InDev = iface.Name
+			}
+		}
+
+		if attrs.OutDev != nil {
+			iface, _ := net.InterfaceByIndex(int(*attrs.OutDev))
+			if iface != nil {
+				result.OutDev = iface.Name
+			}
 		}
 
 		result.Action = "allowed"
@@ -122,7 +139,7 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 		decoded := []gopacket.LayerType{}
 		packetData := *attrs.Payload
 		if err := parser.DecodeLayers(packetData, &decoded); err != nil {
-			if debugParse {
+			if verboseLog {
 				fmt.Fprintf(os.Stderr, "packet parse error: %v\n", err)
 			}
 			return 0
@@ -162,8 +179,10 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 		prefix := strings.TrimSpace(strings.ToLower(result.Prefix))
 		topic := fmt.Sprintf("nft:%s", prefix)
 
-		//fmt.Printf("##pub: %v\n%v\n", topic, string(data))
-		fmt.Printf("##pub: %v\n", topic)
+		if verboseLog {
+			//fmt.Printf("##pub: %v\n%v\n", topic, string(data))
+			fmt.Printf("##pub: %v\n", topic)
+		}
 
 		client.Publish(topic, string(data))
 
