@@ -261,7 +261,6 @@ export default class DNSBlocklist extends React.Component {
         <Box
           _light={{ bg: 'warmGray.50' }}
           _dark={{ bg: 'blueGray.800' }}
-          rounded={{ md: 'md' }}
           width="100%"
           p={4}
           mb={4}
