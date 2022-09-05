@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # this can be run like:
-# sh -c "$(curl -fsSL https://raw.github.com/spr-networks/super/master/virtual_install.sh)"
+# bash -c "$(curl -fsSL https://raw.github.com/spr-networks/super/master/virtual_install.sh)"
 
 install_deps() {
 	# install deps
@@ -45,7 +45,7 @@ fi
 
 DEV=eth0
 EXTERNAL_IP=$(ip addr show dev $DEV | grep inet -m 1|awk '{print $2}'|sed 's/\/.*//g')
-EXTERNAL_PORT=80
+EXTERNAL_PORT=8000
 if [ ${#EXTERNAL_IP} -eq 0 ]; then
 	echo "[-] failed to get external ip from $DEV"
 	echo "[?] fetch from https://ifconfig.me? [y/N] "
