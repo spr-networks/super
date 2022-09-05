@@ -38,6 +38,7 @@ if [ $? -eq 1 ]; then
 	## NOTE tmp fix for superd-virt container
 	cat docker-compose-virt.yml | sed 's/superd-virt/superd/g' > /tmp/p && mv /tmp/p docker-compose-virt.yml
 
+	docker-compose -f docker-compose-virt.yml pull
 	docker-compose -f docker-compose-virt.yml up -d
 else
 	echo "[+] spr already running"
