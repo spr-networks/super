@@ -34,7 +34,9 @@ if [ $? -eq 1 ]; then
 		./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
 	fi
 	
-	# TODO NOTE mv docker-compose-virt.yml docker-compose.yml to avoid confusion?
+	# TODO mv docker-compose-virt.yml docker-compose.yml to avoid confusion?
+	## NOTE tmp fix for superd-virt container
+	cat docker-compose-virt.yml | sed 's/superd-virt/superd/g' > /tmp/p && mv /tmp/p docker-compose-virt.yml
 
 	docker-compose -f docker-compose-virt.yml up -d
 else
