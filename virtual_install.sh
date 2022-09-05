@@ -76,7 +76,7 @@ else
 fi
 
 echo "[+] generating token..."
-TOKEN=$(cat /dev/urandom | fold -w ${1:-32} |head -1 |base64)
+TOKEN=$(dd if=/dev/urandom bs=1 count=32 2>/dev/null | base64)
 echo "[{\"Name\": \"admin\", \"Token\": \"$TOKEN\", \"Expire\": 0}]" > $SPR_DIR/configs/base/auth_tokens.json
 
 echo "[+] login information:"
