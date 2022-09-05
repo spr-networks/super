@@ -1172,6 +1172,9 @@ func refreshDeviceGroups(dev DeviceEntry) {
 	//remove from existing verdict maps
 	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), shouldFlushByInterface(ifname))
 
+	//add this MAC and IP to the ethernet filter
+	addVerdictMac(ipv4, dev.MAC, ifname, "ethernet_filter", "return")
+
 	//and re-add
 	populateVmapEntries(ipv4, dev.MAC, ifname, "")
 }
