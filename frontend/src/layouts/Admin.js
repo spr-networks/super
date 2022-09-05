@@ -270,28 +270,6 @@ const AdminLayout = (props) => {
         setIsPlusDisabled(true)
       })
 
-    if (isWifiDisabled == false) {
-      //get list of devices, and check... TBD
-
-      wifiAPI
-        .defaultInterface()
-        .then((iface) => {
-          wifiAPI
-            .status(iface)
-            .then((res) => {})
-            .catch((err) => {
-              alertState.error(
-                'hostapd failed to start-- check wifid service logs'
-              )
-            })
-        })
-        .catch((err) => {
-          alertState.error(
-            'could not find a default wireless interface-- check wifid service logs'
-          )
-        })
-    }
-
     // callback for notifications, web & ios
     // action = allow,deny,cancel, data = nft data
     const confirmTrafficAction = (action, data) => {
@@ -385,6 +363,31 @@ const AdminLayout = (props) => {
 
     Notifications.init(notificationArgs)
   }, [])
+
+  // this will trigger after the features check
+  useEffect(() => {
+    if (isWifiDisabled) {
+      return
+    }
+
+    wifiAPI
+      .defaultInterface()
+      .then((iface) => {
+        wifiAPI
+          .status(iface)
+          .then((res) => {})
+          .catch((err) => {
+            alertState.error(
+              'hostapd failed to start - check wifid service logs'
+            )
+          })
+      })
+      .catch((err) => {
+        alertState.error(
+          'could not find a default wireless interface - check wifid service logs'
+        )
+      })
+  }, [isWifiDisabled])
 
   let navbarHeight = 64
   let heightContent = Dimensions.get('window').height - navbarHeight

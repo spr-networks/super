@@ -423,7 +423,12 @@ func updatePlusExtension(composeFilePath string) bool {
 }
 
 func stopPlusExt(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Query().Get("name")
+	name := ""
+	err := json.NewDecoder(r.Body).Decode(&name)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
 
 	for _, entry := range config.Plugins {
 		if entry.Plus == true && entry.Name == name {
@@ -440,7 +445,12 @@ func stopPlusExt(w http.ResponseWriter, r *http.Request) {
 }
 
 func startPlusExt(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Query().Get("name")
+	name := ""
+	err := json.NewDecoder(r.Body).Decode(&name)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
 
 	for _, entry := range config.Plugins {
 		if entry.Plus == true && entry.Name == name {
@@ -458,7 +468,6 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "Plus extension not found: "+name, 404)
-
 }
 
 func stopPlusExtension(composeFilePath string) bool {
