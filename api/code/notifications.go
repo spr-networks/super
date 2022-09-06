@@ -231,12 +231,9 @@ func logTraffic(topic string, data string) {
 		log.Fatal(err)
 	}
 
-	log.Printf("## Notification: %v @ %v\n", topic, logEntry.Timestamp)
-
 	shouldNotify := checkNotificationTraffic(logEntry)
 
 	if shouldNotify {
-		log.Printf("Sending Notification to WebSocket: %v\n", topic)
 		WSNotifyValue("nft", logEntry)
 	}
 }

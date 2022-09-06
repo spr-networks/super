@@ -11,6 +11,10 @@ ENV PATH="/usr/local/go/bin:$PATH"
 COPY code/ /code/
 WORKDIR /code
 RUN go build -ldflags "-s -w" -o /packet_logs
+COPY stream-json-logs/ /code/stream-json-logs
+WORKDIR /code/stream-json-logs
+RUN go build -ldflags "-s -w" -o /stream-json-logs
+
 
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
@@ -21,4 +25,5 @@ COPY scripts /scripts/
 #COPY ulogd.conf /etc
 
 COPY --from=builder /packet_logs /
+COPY --from=builder /stream-json-logs /
 ENTRYPOINT ["/scripts/startup.sh"]
