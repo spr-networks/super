@@ -27,8 +27,12 @@ fi
 
 # generate default configs
 if [ ! -f configs/base/config.sh ]; then
+	echo "[+] generating configs..."
 	cp -R base/template_configs/ configs/
 	mv configs/base/virtual-config.sh configs/base/config.sh
+	# use NFT_OVERRIDE for now
+	echo "NFT_OVERRIDE=1" >> configs/base/config.sh
+	cat base/scripts/nft_rules.sh | sed 's/80: drop/80: accept/g' | sed 's/iif $DOCKERIF /iifname $DOCKERIF /g' > configs/base/nft_rules.sh
 	# generate dhcp config
 	./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
 fi
@@ -36,7 +40,7 @@ fi
 CONTAINER_CHECK=superapi
 
 # pull and start containers
-docker inspect "$CONTAINER_CHECK" > /dev/null
+docker inspect "$CONTAINER_CHECK" > /dev/null 2>&1
 if [ $? -eq 1 ]; then
 	echo "[+] starting spr..."
 
@@ -171,10 +175,7 @@ if [ $? -eq 1 ]; then
 fi
 
 DATA="{\"AllowedIPs\": \"\", \"PublicKey\": \"$PUBLIC_KEY\", \"Endpoint\": \"\"}"
-echo ">>" $DATA
 req_PUT "/plugins/wireguard/peer" "$DATA"
-
-echo RES= $RES
 
 echo "[+] peer added"
 
