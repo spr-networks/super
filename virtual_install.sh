@@ -11,7 +11,7 @@ fi
 install_deps() {
 	# install deps
 	apt update && \
-		apt install -y curl git docker-compose docker.io jq qrencode iproute2
+		apt install -y curl git docker-compose docker.io jq qrencode iproute2 wireguard-tools
 
 	git clone https://github.com/spr-networks/super.git
 	cd super
@@ -112,89 +112,73 @@ if [ "$YN" == "n" ] || [ "$YN" == "N" ] ; then
 	exit
 fi
 
-# use localhost
-API_HOST="http://0:8000"
-TOKEN=$(cat $SPR_DIR/configs/base/auth_tokens.json | jq -r '.[0].Token')
-
-rawurlencode() {
-	local string="${1}"
-	local strlen=${#string}
-	local encoded=""
-	local pos c o
-
-	for (( pos=0 ; pos<strlen ; pos++ )); do
-		c=${string:$pos:1}
-		case "$c" in
-			[-_.~a-zA-Z0-9] ) o="${c}" ;;
-			* )               printf -v o '%%%02x' "'$c"
-		esac
-		encoded+="${o}"
-	done
-	echo "${encoded}"
-}
-
-req_GET() {
-	RES=$(curl -X GET -s -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" "$API_HOST$1")
-}
-
-req_PUT() {
-	RES=$(curl -X PUT -s -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" "$API_HOST$1" --data "$2")
-}
-
-curl -s --connect-timeout 5 "$API_HOST" > /dev/null
-if [ $? -ne 0 ]; then
-	echo "[-] failed to connect to $API_HOST"
-        exit
+SERVER_PRIVATE_KEY=$(cat $SPR_DIR/configs/wireguard/wg0.conf | grep PrivateKey|awk '{print $3}')
+if [ "$SERVER_PRIVATE_KEY" == "privkey" ]; then
+	SERVER_PRIVATE_KEY=$(wg genkey)
 fi
+SERVER_PUBLIC_KEY=$(echo "$SERVER_PRIVATE_KEY" | wg pubkey)
 
-echo ""
+PRIVATE_KEY=$(wg genkey)
+PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
+PRESHARED_KEY=$(wg genpsk)
 
-RES=""
-req_GET "/status"
-if [ "$RES" != '"Online"' ]; then
-	echo "[-] api is down"
-	exit
-fi
+DHCP_RES=$(curl -s --unix-socket $SPR_DIR/state/dhcp/tinysubnets_plugin http://dhcp/DHCPRequest -X PUT \
+	--data "{\"Identifier\": \"$PUBLIC_KEY\"}")
 
-req_GET "/plugins/wireguard/genkey"
-PRIVATE_KEY=$(echo $RES | jq -r .PrivateKey)
-PUBLIC_KEY=$(echo $RES | jq -r .PublicKey)
-echo "[+] pubkey =" $PUBLIC_KEY
+CLIENT_IP=$(echo "$DHCP_RES" | jq -r .IP)
+GROUPS_JSON='["lan","wan","dns"]'
 
-ID=$(rawurlencode $PUBLIC_KEY)
-URL="/device?identity=$ID"
-DATA="{\"Groups\": [\"lan\", \"wan\", \"dns\"], \"WGPubKey\": \"$PUBLIC_KEY\"}"
-req_PUT "$URL" "$DATA"
+echo "[+] adding device $PUBLIC_KEY with ip $CLIENT_IP"
+cat > $SPR_DIR/configs/devices/devices.json << EOF
+{
+ "$PUBLIC_KEY": {
+  "Name": "peer1",
+  "MAC": "",
+  "WGPubKey": "$PUBLIC_KEY",
+  "VLANTag": "",
+  "RecentIP": "$CLIENT_IP",
+  "PSKEntry": {"Type": "","Psk": ""},
+  "Groups": $GROUPS_JSON,
+  "DeviceTags": []
+ }
+}
+EOF
 
-req_GET "/devices"
+# wg server config
+cat > $SPR_DIR/configs/wireguard/wg0.conf << EOF
+[Interface]
+PrivateKey = $SERVER_PRIVATE_KEY
+ListenPort = 51280
 
-echo "$RES" | grep "$PUBLIC_KEY" > /dev/null
-if [ $? -eq 1 ]; then
-	echo "[-] failed to add device"
-	exit
-fi
+[Peer]
+PublicKey = $PUBLIC_KEY
+PresharedKey = $PRESHARED_KEY
+AllowedIPs = $CLIENT_IP/32, 224.0.0.0/4
+EOF
 
-DATA="{\"AllowedIPs\": \"\", \"PublicKey\": \"$PUBLIC_KEY\", \"Endpoint\": \"\"}"
-req_PUT "/plugins/wireguard/peer" "$DATA"
+# wg client config
+_IFS=$IFS
+IFS='\n'
+CONF=$(cat << EOF
+[Interface]
+PrivateKey = $PRIVATE_KEY
+Address = $CLIENT_IP
+DNS = 192.168.2.1
 
-echo "[+] peer added"
-
-ENDPOINT="$EXTERNAL_IP:51280"
-
-CONF="[Interface]"
-CONF="$CONF\nPrivateKey = $PRIVATE_KEY"
-CONF="$CONF\nAddress = $(echo $RES | jq -r .Interface.Address)"
-CONF="$CONF\nDNS = $(echo $RES | jq -r .Interface.DNS)"
-CONF="$CONF\n"
-CONF="$CONF\n[Peer]"
-CONF="$CONF\nPublicKey = $(echo $RES | jq -r .Peer.PublicKey)"
-CONF="$CONF\nAllowedIPs = $(echo $RES | jq -r .Peer.AllowedIPs)"
-CONF="$CONF\nEndpoint = $(echo $ENDPOINT)"
-#CONF="$CONF\nEndpoint = $(echo $RES | jq -r .Peer.Endpoint)"
-CONF="$CONF\nPersistentKeepalive = $(echo $RES | jq -r .Peer.PersistentKeepalive)"
-CONF="$CONF\nPresharedKey = $(echo $RES | jq -r .Peer.PresharedKey)"
+[Peer]
+PublicKey = $SERVER_PUBLIC_KEY
+AllowedIPs = 0.0.0.0/0, ::/0
+Endpoint = $EXTERNAL_IP:51280
+PersistentKeepalive = 25
+PresharedKey = $PRESHARED_KEY
+EOF
+)
+IFS=$_IFS
 
 echo -e "[+] config:\n"
 echo -e "$CONF" | qrencode -t ansiutf8
 echo ""
 echo -e "$CONF"
+
+# reload wireguard config
+docker-compose -f docker-compose-virt.yml restart wireguard
