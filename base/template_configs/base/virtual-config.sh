@@ -4,7 +4,10 @@
 
 # Run in VIRTUAL mode (bridge network rather than host mode)
 VIRTUAL_SPR=1
-#comment below to DISABLE ssh, API from the Upstream Interface
+# uncomment below to allow API connections from the internet.
+# WARNING: the API will likely be vulnerable to MITM attacks
+#VIRTUAL_SPR_API_INTERNET=1
+#comment below to DISABLE ssh, API from the docker network altogether
 UPSTREAM_SERVICES_ENABLE=1
 WANIF=eth0
 RUN_WAN_DHCP=true
