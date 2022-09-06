@@ -32,7 +32,7 @@ if [ ! -f configs/base/config.sh ]; then
 	mv configs/base/virtual-config.sh configs/base/config.sh
 	# use NFT_OVERRIDE for now
 	echo "NFT_OVERRIDE=1" >> configs/base/config.sh
-	cat base/scripts/nft_rules.sh | sed 's/80: drop/80: accept/g' | sed 's/iif $DOCKERIF /iifname $DOCKERIF /g' > configs/base/nft_rules.sh
+	cat base/scripts/nft_rules.sh | sed 's/iif $DOCKERIF /iifname $DOCKERIF /g' > configs/base/nft_rules.sh
 	# generate dhcp config
 	./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
 fi
