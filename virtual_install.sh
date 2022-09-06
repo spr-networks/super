@@ -2,6 +2,10 @@
 
 # this can be run like:
 # bash -c "$(curl -fsSL https://raw.github.com/spr-networks/super/master/virtual_install.sh)"
+# run with SKIP_VPN=1 to skip vpn peer setup
+# if configs are already setup it'll only show the login info
+# for a clean reset:
+# docker-compose -f docker-compose-virt.yml down && rm -rf configs && ./virtual_install.sh
 
 if [ $UID -ne 0 ]; then
 	echo "[-] run as root or with sudo"
@@ -82,16 +86,17 @@ if [ ! -f $SPR_DIR/configs/base/auth_users.json ]; then
 	echo "[+] generating admin password"
 	PASSWORD=$(cat /dev/urandom | tr -dc '[:alpha:]' | fold -w ${1:-16} | head -n 1)
 	echo "{\"admin\" : \"$PASSWORD\"}" > $SPR_DIR/configs/base/auth_users.json
+
+	echo "[+] generating token..."
+	TOKEN=$(dd if=/dev/urandom bs=1 count=32 2>/dev/null | base64)
+	echo "[{\"Name\": \"admin\", \"Token\": \"$TOKEN\", \"Expire\": 0}]" > $SPR_DIR/configs/base/auth_tokens.json
 else
 	PASSWORD=$(cat "$SPR_DIR/configs/base/auth_users.json" | jq -r .admin)
+	TOKEN=$(cat "$SPR_DIR/configs/base/auth_tokens.json" | jq -r '.[0].Token')
 fi
 
-echo "[+] generating token..."
-TOKEN=$(dd if=/dev/urandom bs=1 count=32 2>/dev/null | base64)
-echo "[{\"Name\": \"admin\", \"Token\": \"$TOKEN\", \"Expire\": 0}]" > $SPR_DIR/configs/base/auth_tokens.json
-
 echo "[+] login information:"
-echo "================================================"
+echo "=========================================================="
 
 HOST=$EXTERNAL_IP
 if [ $HOST == "127.0.0.1" ]; then
@@ -102,20 +107,35 @@ echo " http tunnel: ssh $HOST -N -L $EXTERNAL_PORT:127.0.0.1:$EXTERNAL_PORT"
 echo "         url: http://localhost:$EXTERNAL_PORT/"
 echo "    username: admin"
 echo "    password: $PASSWORD"
-echo "       token: $TOKEN"
-echo "================================================"
+if [ ! -z "$TOKEN" ]; then
+	echo "       token: $TOKEN"
+fi
+echo "=========================================================="
 
-# NOTE use VPN_PEERS=2 etc on init
-echo -ne "[?] setup VPN peer? [Y/n] "
-read YN
-if [ "$YN" == "n" ] || [ "$YN" == "N" ] ; then
+#only show confirm if its the first one
+NUM_PEERS=$(grep '^\[Peer\]' $SPR_DIR/configs/wireguard/wg0.conf 2>/dev/null | wc -l)
+
+# if set - exit
+if [ ! -z $SKIP_VPN ]; then
 	exit
 fi
 
+echo "[+] num peers already configured: $NUM_PEERS"
+
+# NOTE wg startup will generate a server privkey
 SERVER_PRIVATE_KEY=$(cat $SPR_DIR/configs/wireguard/wg0.conf | grep PrivateKey|awk '{print $3}')
 if [ "$SERVER_PRIVATE_KEY" == "privkey" ]; then
 	SERVER_PRIVATE_KEY=$(wg genkey)
+
+cat > $SPR_DIR/configs/wireguard/wg0.conf << EOF
+[Interface]
+PrivateKey = $SERVER_PRIVATE_KEY
+ListenPort = 51280
+
+EOF
+
 fi
+
 SERVER_PUBLIC_KEY=$(echo "$SERVER_PRIVATE_KEY" | wg pubkey)
 
 PRIVATE_KEY=$(wg genkey)
@@ -128,11 +148,9 @@ DHCP_RES=$(curl -s --unix-socket $SPR_DIR/state/dhcp/tinysubnets_plugin http://d
 CLIENT_IP=$(echo "$DHCP_RES" | jq -r .IP)
 GROUPS_JSON='["lan","wan","dns"]'
 
-echo "[+] adding device $PUBLIC_KEY with ip $CLIENT_IP"
-cat > $SPR_DIR/configs/devices/devices.json << EOF
+NEW_DEVICE=$(cat << EOF
 {
- "$PUBLIC_KEY": {
-  "Name": "peer1",
+  "Name": "peer$NUM_PEERS",
   "MAC": "",
   "WGPubKey": "$PUBLIC_KEY",
   "VLANTag": "",
@@ -140,20 +158,21 @@ cat > $SPR_DIR/configs/devices/devices.json << EOF
   "PSKEntry": {"Type": "","Psk": ""},
   "Groups": $GROUPS_JSON,
   "DeviceTags": []
- }
 }
 EOF
+)
+
+echo "[+] adding device $PUBLIC_KEY with ip $CLIENT_IP"
+cat $SPR_DIR/configs/devices/devices.json | jq ".[\"$PUBLIC_KEY\"]=$NEW_DEVICE" > /tmp/d && \
+	mv /tmp/d $SPR_DIR/configs/devices/devices.json
 
 # wg server config
-cat > $SPR_DIR/configs/wireguard/wg0.conf << EOF
-[Interface]
-PrivateKey = $SERVER_PRIVATE_KEY
-ListenPort = 51280
-
+cat >> $SPR_DIR/configs/wireguard/wg0.conf << EOF
 [Peer]
 PublicKey = $PUBLIC_KEY
 PresharedKey = $PRESHARED_KEY
 AllowedIPs = $CLIENT_IP/32, 224.0.0.0/4
+
 EOF
 
 # wg client config
