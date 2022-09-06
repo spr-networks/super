@@ -31,7 +31,7 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
   superd-virt:
-    container_name: superd-virt
+    container_name: superd
     image: ghcr.io/spr-networks/super_superd
     build:
       context: superd
