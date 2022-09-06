@@ -23,10 +23,10 @@ services:
       labels: *default-labels
     privileged: true
     ports:
-      - "5353:53"
       - "51280:51280/udp"
-      - "8000:80"
-      - "4443:443"
+      - "127.0.0.1:5353:53"
+      - "127.0.0.1:8000:80"
+      - "127.0.0.1:4443:443"
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -147,6 +147,7 @@ services:
       - ./state/public/:/state/public/
       - ./frontend/build:/ui/
       - /var/log/journal:/var/log/journal:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
   plugin-lookup:
     container_name: super-plugin-lookup
     image: ghcr.io/spr-networks/super_plugin-lookup
