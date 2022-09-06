@@ -13,7 +13,7 @@ iptables-legacy -t nat --delete-chain
 
 #collect subnet of docker $WANIF interface when in VIRTUAL mode
 WAN_NET=""
-if [[ -z "$VIRTUAL_SPR_API_INTERNET" && "$WANIF" && "$VIRTUAL_SPR"]];
+if [[ -z "$VIRTUAL_SPR_API_INTERNET" && "$WANIF" && "$VIRTUAL_SPR" ]]
 then
   WAN_NET=$(ip -br addr show dev $WANIF | awk '{print $3}')
 fi
