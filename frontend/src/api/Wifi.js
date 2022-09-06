@@ -7,7 +7,8 @@ export class APIWifi extends API {
 
   config = (iface) => this.get(`hostapd/${iface}/config`)
   updateConfig = (iface, config) => this.put(`hostapd/${iface}/config`, config)
-  setChannel = (iface, params) => this.put(`hostapd/${iface}/setChannel`, params)
+  setChannel = (iface, params) =>
+    this.put(`hostapd/${iface}/setChannel`, params)
   allStations = (iface) => this.get(`hostapd/${iface}/all_stations`)
   status = (iface) => this.get(`hostapd/${iface}/status`)
   arp = () => this.get('arp')
@@ -18,7 +19,8 @@ export class APIWifi extends API {
   iwScan = (iface) => this.get(`iw/dev/${iface}/scan`)
   enableInterface = (iface) => this.put(`hostapd/${iface}/enable`)
   disableInterface = (iface) => this.put(`hostapd/${iface}/disable`)
-  resetInterfaceConfig = (iface) => this.put(`hostapd/${iface}/resetConfiguration`)
+  resetInterfaceConfig = (iface) =>
+    this.put(`hostapd/${iface}/resetConfiguration`)
   restartWifi = () => this.put(`hostapd/restart`)
   interfacesConfiguration = () => this.get(`interfacesConfiguration`)
   interfaces = (typeFilter) => {
@@ -33,18 +35,27 @@ export class APIWifi extends API {
             if (!devs[dev][wifi].type.includes(typeFilter)) continue
           }
           //ignore vlans
-          if (wifi.includes(".")) continue
+          if (wifi.includes('.')) continue
           ifaces = ifaces.concat(wifi)
         }
       }
+
       ifaces = ifaces.sort()
       return ifaces
     })
   }
 
   defaultInterface = () => {
-    return this.interfaces("AP").then((ifaces) => {
-      return ifaces[0]
+    return new Promise((resolve, reject) => {
+      this.interfaces('AP')
+        .then((ifaces) => {
+          if (!ifaces.length) {
+            reject('missing AP interface')
+          }
+
+          resolve(ifaces[0])
+        })
+        .catch(reject)
     })
   }
 
