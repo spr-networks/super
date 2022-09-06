@@ -1172,6 +1172,9 @@ func refreshDeviceGroups(dev DeviceEntry) {
 	//remove from existing verdict maps
 	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), shouldFlushByInterface(ifname))
 
+	//add this MAC and IP to the ethernet filter
+	addVerdictMac(ipv4, dev.MAC, ifname, "ethernet_filter", "return")
+
 	//and re-add
 	populateVmapEntries(ipv4, dev.MAC, ifname, "")
 }
@@ -1739,8 +1742,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
 	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated)).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/plusToken", plusToken).Methods("GET", "PUT")
-	external_router_authenticated.HandleFunc("/stopPlusExtension", stopPlusExt).Methods("GET")
-	external_router_authenticated.HandleFunc("/startPlusExtension", startPlusExt).Methods("GET")
+	external_router_authenticated.HandleFunc("/stopPlusExtension", stopPlusExt).Methods("PUT")
+	external_router_authenticated.HandleFunc("/startPlusExtension", startPlusExt).Methods("PUT")
 
 	// tokens api
 	external_router_authenticated.HandleFunc("/tokens", getAuthTokens).Methods("GET")

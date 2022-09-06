@@ -139,15 +139,15 @@ func loadFirewallRules() error {
 	defer FWmtx.Unlock()
 	data, err := ioutil.ReadFile(FirewallConfigFile)
 	if err != nil {
-		return err
+		fmt.Println("[-] Empty firewall configuration, initializing")
 	} else {
 		err := json.Unmarshal(data, &gFirewallConfig)
 		if err != nil {
-			return err
+			fmt.Println("[-] Failed to decode firewall configuration, initializing")
 		}
-		if len(gFirewallConfig.ServicePorts) == 0 {
-			setDefaultServicePortsLocked()
-		}
+	}
+	if len(gFirewallConfig.ServicePorts) == 0 {
+		setDefaultServicePortsLocked()
 	}
 	return nil
 }

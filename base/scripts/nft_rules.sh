@@ -11,6 +11,13 @@ iptables-legacy -t nat --flush
 iptables-legacy --delete-chain
 iptables-legacy -t nat --delete-chain
 
+#collect subnet of docker $WANIF interface when in VIRTUAL mode
+WAN_NET=""
+if [[ -z "$VIRTUAL_SPR_API_INTERNET" && "$WANIF" && "$VIRTUAL_SPR"]];
+then
+  WAN_NET=$(ip -br addr show dev $WANIF | awk '{print $3}')
+fi
+
 nft flush ruleset
 
 nft -f - << EOF
@@ -120,6 +127,9 @@ table inet filter {
 
     # drop ssh, iperf from upstream
     $(if [ "$WANIF" ]; then echo "counter iifname $WANIF tcp dport vmap @upstream_tcp_port_drop"; fi)
+
+    # Extra hardening for when running Virtual SPR, to avoid exposing API to the internet
+    $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WANIF" && "$WAN_NET" ]]; then echo "counter iifname $WANIF tcp dport 80 ip saddr != $WAN_NET drop"; fi)
 
     # DHCP Allow rules
     # Wired lan

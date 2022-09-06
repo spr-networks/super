@@ -62,7 +62,7 @@ const Tags = (props) => {
   return (
     <View>
       <VStack space={4}>
-        <Heading size="md" px={4}>
+        <Heading size="md" p={4}>
           Tags
         </Heading>
 

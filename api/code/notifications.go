@@ -35,18 +35,23 @@ type ConditionEntry struct {
 	DstPort  int    `json:"DstPort"`
 	SrcIP    string `json:"SrcIP"`
 	SrcPort  int    `json:"SrcPort"`
+	InDev    string `json:"InDev"`
+	OutDev   string `json:"OutDev"`
 }
 
 //new format for notifications
 type PacketInfo struct {
 	//Ethernet  *PacketEthernet `json:"Ethernet,omitempty"`
-	TCP       *layers.TCP  `json:"TCP,omitempty"`
-	UDP       *layers.UDP  `json:"UDP,omitempty"`
-	IP        *layers.IPv4 `json:"IP,omitempty"`
-	DNS       *layers.DNS  `json:"DNS,omitempty"`
-	Prefix    string       `json:"Prefix"`
-	Action    string       `json:"Action"`
-	Timestamp time.Time    `json:"Timestamp"`
+	TCP       *layers.TCP    `json:"TCP,omitempty"`
+	UDP       *layers.UDP    `json:"UDP,omitempty"`
+	IP        *layers.IPv4   `json:"IP,omitempty"`
+	DNS       *layers.DNS    `json:"DNS,omitempty"`
+	DHCP      *layers.DHCPv4 `json:"DHCP,omitempty"`
+	Prefix    string         `json:"Prefix"`
+	Action    string         `json:"Action"`
+	Timestamp time.Time      `json:"Timestamp"`
+	InDev     string         `json:"InDev"`
+	OutDev    string         `json:"OutDev"`
 }
 
 /* example:
@@ -160,6 +165,14 @@ func checkNotificationTraffic(logEntry PacketInfo) bool {
 			shouldNotify = false
 		}
 
+		if cond.InDev != "" && cond.InDev != logEntry.InDev {
+			shouldNotify = false
+		}
+
+		if cond.OutDev != "" && cond.OutDev != logEntry.OutDev {
+			shouldNotify = false
+		}
+
 		if cond.Protocol == "tcp" && logEntry.TCP == nil {
 			shouldNotify = false
 		}
@@ -218,12 +231,9 @@ func logTraffic(topic string, data string) {
 		log.Fatal(err)
 	}
 
-	log.Printf("## Notification: %v @ %v\n", topic, logEntry.Timestamp)
-
 	shouldNotify := checkNotificationTraffic(logEntry)
 
 	if shouldNotify {
-		log.Printf("Sending Notification to WebSocket: %v\n", topic)
 		WSNotifyValue("nft", logEntry)
 	}
 }

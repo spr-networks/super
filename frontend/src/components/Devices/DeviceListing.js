@@ -71,22 +71,25 @@ const DeviceListing = (props) => {
         setGroups([...new Set(devices.map((device) => device.Groups).flat())])
         setTags([...new Set(devices.map((device) => device.DeviceTags).flat())])
 
-        let iface = 'wlan1' // NOTE hardcoded
-        wifiAPI
-          .allStations(iface)
-          .then((stations) => {
-            let connectedMACs = Object.keys(stations)
+        // TODO check wg status for virt
+        if (!appContext.isWifiDisabled) {
+          let iface = 'wlan1' // NOTE hardcoded
+          wifiAPI
+            .allStations(iface)
+            .then((stations) => {
+              let connectedMACs = Object.keys(stations)
 
-            setDevices(
-              devices.map((dev) => {
-                dev.isConnected = connectedMACs.includes(dev.MAC)
-                return dev
-              })
-            )
-          })
-          .catch((error) => {
-            context.errorResponse('WIFI API Failure:', '', error)
-          })
+              setDevices(
+                devices.map((dev) => {
+                  dev.isConnected = connectedMACs.includes(dev.MAC)
+                  return dev
+                })
+              )
+            })
+            .catch((error) => {
+              context.errorResponse('WIFI API Failure:', '', error)
+            })
+        }
       })
       .catch((err) => {
         context.error('API Failure: ' + err.message)
