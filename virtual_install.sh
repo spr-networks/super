@@ -12,10 +12,20 @@ install_deps() {
 	#mkdir $INSTALL_DIR ; cd $INSTALL_DIR
 	git clone https://github.com/spr-networks/super.git
 	cd super
+
+  # overwrite docker-compose.yml
+	cp docker-compose-virt.yml docker-compose.yml
 }
 
 if [ ! -f "./docker-compose-virt.yml" ]; then
 	install_deps
+fi
+
+if [ ! -f configs/base/config.sh ]; then
+	cp -R base/template_configs/ configs/
+	mv configs/base/virtual-config.sh configs/base/config.sh
+	# generate dhcp config
+	./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
 fi
 
 CONTAINER_CHECK=superapi-virt
@@ -24,19 +34,6 @@ CONTAINER_CHECK=superapi-virt
 docker inspect "$CONTAINER_CHECK" > /dev/null
 if [ $? -eq 1 ]; then
 	echo "[+] starting spr..."
-	if [ ! -f configs/base/config.sh ]; then
-		cp -R base/template_configs/ configs/
-		mv configs/base/virtual-config.sh configs/base/config.sh
-		# use NFT_OVERRIDE for now
-		echo "NFT_OVERRIDE=1" >> configs/base/config.sh
-		cat base/scripts/nft_rules.sh | sed 's/80: drop/80: accept/g' | sed 's/iif $DOCKERIF /iifname $DOCKERIF /g' > configs/base/nft_rules.sh
-		# generate dhcp config
-		./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
-	fi
-	
-	# TODO mv docker-compose-virt.yml docker-compose.yml to avoid confusion?
-	## NOTE tmp fix for superd-virt container
-	cat docker-compose-virt.yml | sed 's/superd-virt/superd/g' > /tmp/p && mv /tmp/p docker-compose-virt.yml
 
 	docker-compose -f docker-compose-virt.yml pull
 	docker-compose -f docker-compose-virt.yml up -d
@@ -72,7 +69,7 @@ fi
 # only generate user if init
 if [ ! -f $SPR_DIR/configs/base/auth_users.json ]; then
 	echo "[+] generating admin password"
-	PASSWORD=$(cat /dev/urandom | tr -dc '[:alpha:]' | fold -w ${1:-12} | head -n 1)
+	PASSWORD=$(cat /dev/urandom | tr -dc '[:alpha:]' | fold -w ${1:-16} | head -n 1)
 	echo {\"admin\" : \"$PASSWORD\"} > $SPR_DIR/configs/base/auth_users.json
 else
 	PASSWORD=$(cat "$SPR_DIR/configs/base/auth_users.json" | jq -r .admin)
@@ -84,7 +81,7 @@ echo "[{\"Name\": \"admin\", \"Token\": \"$TOKEN\", \"Expire\": 0}]" > $SPR_DIR/
 
 echo "[+] login information:"
 echo "================================================"
-echo -e "\turl:      http://$EXTERNAL_IP:$EXTERNAL_PORT/"
+echo -e "\turl:      http://localhost:$EXTERNAL_PORT/"
 echo -e "\tusername: admin"
 echo -e "\tpassword: $PASSWORD"
 echo -e "\ttoken:    $TOKEN"

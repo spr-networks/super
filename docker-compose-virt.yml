@@ -15,8 +15,8 @@ x-logging:
 
 
 services:
-  base-virt:
-    container_name: superbase-virt
+  base:
+    container_name: superbase
     image: ghcr.io/spr-networks/super_base
     build:
       context: base
@@ -30,7 +30,7 @@ services:
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
-  superd-virt:
+  superd:
     container_name: superd
     image: ghcr.io/spr-networks/super_superd
     build:
@@ -42,15 +42,15 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./configs/base/:/configs/base/
       - ./:/super/
-  dhcp-virt:
-    container_name: superdhcp-virt
+  dhcp:
+    container_name: superdhcp
     image: ghcr.io/spr-networks/super_dhcp
     build:
       context: dhcp
       labels: *default-labels
-    network_mode: service:base-virt
+    network_mode: service:base
     depends_on:
-      - "base-virt"
+      - "base"
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -58,48 +58,48 @@ services:
       - ./configs/zones/:/configs/zones/
       - ./state/dhcp/:/state/dhcp/
       - /sys/fs/bpf:/sys/fs/bpf
-  dns-virt:
-    container_name: superdns-virt
+  dns:
+    container_name: superdns
     image: ghcr.io/spr-networks/super_dns
     build:
       context: dns
       labels: *default-labels
-    network_mode: service:base-virt
+    network_mode: service:base
     logging: *default-logging
     depends_on:
-      - "base-virt"
+      - "base"
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/dns/:/configs/dns/
       - ./state/dns/:/state/dns/
       - ./state/public/:/state/public/:ro
-  multicast_udp_proxy-virt:
-    container_name: super_multicast_udp_proxy-virt
+  multicast_udp_proxy:
+    container_name: super_multicast_udp_proxy
     image: ghcr.io/spr-networks/super_multicast_udp_proxy
     build:
       context: multicast_udp_proxy
       labels: *default-labels
-    network_mode: service:base-virt
+    network_mode: service:base
     depends_on:
-      - "base-virt"
+      - "base"
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./state/public/:/state/public/:ro
-  wireguard-virt:
-    container_name: superwireguard-virt
+  wireguard:
+    container_name: superwireguard
     image: ghcr.io/spr-networks/super_wireguard
     build:
       context: wireguard
       labels: *default-labels
-    network_mode: service:base-virt
+    network_mode: service:base
     cap_add:
       - net_admin
       - sys_module
     depends_on:
-      - "base-virt"
-      - "dhcp-virt"
-      - "api-virt"
+      - "base"
+      - "dhcp"
+      - "api"
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -116,20 +116,20 @@ services:
     network_mode: none
     volumes:
       - ./frontend/:/frontend
-  api-virt:
-    container_name: superapi-virt
+  api:
+    container_name: superapi
     image: ghcr.io/spr-networks/super_api
     build:
       context: api
       labels: *default-labels
-    network_mode: service:base-virt
+    network_mode: service:base
     cap_add:
       - net_admin
     restart: always
     depends_on:
-      - "base-virt"
+      - "base"
       - "frontend"
-      - "superd-virt"
+      - "superd"
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
@@ -147,21 +147,21 @@ services:
       - ./state/public/:/state/public/
       - ./frontend/build:/ui/
       - /var/log/journal:/var/log/journal:ro
-  plugin-lookup-virt:
-    container_name: super-plugin-lookup-virt
+  plugin-lookup:
+    container_name: super-plugin-lookup
     image: ghcr.io/spr-networks/super_plugin-lookup
     build:
       context: plugin-lookup
       labels: *default-labels
-    network_mode: service:base-virt
+    network_mode: service:base
     logging: *default-logging
     depends_on:
-      - "base-virt"
-      - "dns-virt"
+      - "base"
+      - "dns"
     volumes:
       - ./state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
-  dyndns-virt:
-    container_name: superdyndns-virt
+  dyndns:
+    container_name: superdyndns
     image: ghcr.io/spr-networks/super_dyndns
     build:
       context: dyndns
@@ -169,7 +169,7 @@ services:
     network_mode: bridge
     logging: *default-logging
     depends_on:
-      - "base-virt"
+      - "base"
     volumes:
       - ./state/plugins/dyndns/:/state/plugins/dyndns
       - ./configs/dyndns/:/configs/dyndns
