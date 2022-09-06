@@ -36,7 +36,6 @@ services:
     build:
       context: superd
       labels: *default-labels
-    network_mode: host
     privileged: true
     logging: *default-logging
     volumes:
