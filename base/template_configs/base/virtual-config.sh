@@ -2,6 +2,8 @@
 # This variant of the configuration is for running
 # without a wifi AP. See https://www.supernetworks.org/pages/docs/virtual_spr
 
+# Run in VIRTUAL mode (bridge network rather than host mode)
+VIRTUAL_SPR=1
 #comment below to DISABLE ssh, API from the Upstream Interface
 UPSTREAM_SERVICES_ENABLE=1
 WANIF=eth0
