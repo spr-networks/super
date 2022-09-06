@@ -15,7 +15,6 @@ COPY stream-json-logs/ /code/stream-json-logs
 WORKDIR /code/stream-json-logs
 RUN go build -ldflags "-s -w" -o /stream-json-logs
 
-
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 #RUN apt-get update
