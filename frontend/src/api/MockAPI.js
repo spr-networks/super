@@ -83,7 +83,10 @@ export default function MockAPI() {
         Name: 'dns-block',
         URI: 'dns/block',
         UnixPath: '/state/dns/dns_block_plugin',
-        Enabled: true
+        Enabled: true,
+        Plus: false,
+        GitURL: "",
+        ComposeFilePath: ""
       })
       server.create('plugin', {
         Name: 'dns-log',
@@ -102,6 +105,15 @@ export default function MockAPI() {
         URI: 'lookup',
         UnixPath: '/state/plugin-lookup/lookup_plugin',
         Enabled: true
+      })
+      server.create('plugin', {
+        Name: 'PFW',
+        URI: 'pfw',
+        UnixPath: '/state/plugins/pfw/socket',
+        Enabled: true,
+        Plus: true,
+        GitURL: "github.com/spr-networks/pfw_extension",
+        ComposeFilePath: "plugins/plus/pfw_extension/docker-compose.yml"
       })
 
       server.create('forwardrule', {
@@ -1320,6 +1332,66 @@ export default function MockAPI() {
         return result
       })
 
+      this.get('/notifications', (schema) => {
+        return [
+            {
+                "Conditions": {
+                    "Prefix": "nft:drop:forward",
+                    "Protocol": "tcp",
+                    "DstIP": "",
+                    "DstPort": 0,
+                    "SrcIP": "",
+                    "SrcPort": 0
+                },
+                "Notification": true
+            },
+            {
+                "Conditions": {
+                    "Prefix": "nft:drop:input",
+                    "Protocol": "tcp",
+                    "DstIP": "",
+                    "DstPort": 0,
+                    "SrcIP": "",
+                    "SrcPort": 0
+                },
+                "Notification": true
+            },
+            {
+                "Conditions": {
+                    "Prefix": "nft:drop:pfw",
+                    "Protocol": "tcp",
+                    "DstIP": "",
+                    "DstPort": 0,
+                    "SrcIP": "",
+                    "SrcPort": 0
+                },
+                "Notification": true
+            },
+            {
+                "Conditions": {
+                    "Prefix": "nft:drop:input",
+                    "Protocol": "udp",
+                    "DstIP": "",
+                    "DstPort": 0,
+                    "SrcIP": "",
+                    "SrcPort": 0
+                },
+                "Notification": true
+            },
+            {
+                "Conditions": {
+                    "Prefix": "nft:drop:forward",
+                    "Protocol": "udp",
+                    "DstIP": "",
+                    "DstPort": 0,
+                    "SrcIP": "",
+                    "SrcPort": 0
+                },
+                "Notification": true
+            }
+        ]
+      })
+
       this.get('/hostapd/wlan1/config', (schema) => {
         return {
           ap_isolate: 1,
@@ -1481,6 +1553,13 @@ export default function MockAPI() {
         let Name = request.params.name
         schema.plugins.findBy({ Name }).destroy()
         return schema.plugins.all().models
+      })
+
+      this.get('/plusToken', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        return JSON.stringify("token")
       })
 
       //DNS plugin
