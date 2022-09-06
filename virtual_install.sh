@@ -3,24 +3,29 @@
 # this can be run like:
 # bash -c "$(curl -fsSL https://raw.github.com/spr-networks/super/master/virtual_install.sh)"
 
+if [ $UID -ne 0 ]; then
+	echo "[-] run as root or with sudo"
+	exit
+fi
+
 install_deps() {
 	# install deps
 	apt update && \
-		apt install -y curl git docker-compose docker.io jq qrencode
+		apt install -y curl git docker-compose docker.io jq qrencode iproute2
 
-	#INSTALL_DIR=/home/spr
-	#mkdir $INSTALL_DIR ; cd $INSTALL_DIR
 	git clone https://github.com/spr-networks/super.git
 	cd super
 
-  # overwrite docker-compose.yml
+	# overwrite docker-compose.yml
 	cp docker-compose-virt.yml docker-compose.yml
 }
 
+# if not git dir is available
 if [ ! -f "./docker-compose-virt.yml" ]; then
 	install_deps
 fi
 
+# generate default configs
 if [ ! -f configs/base/config.sh ]; then
 	cp -R base/template_configs/ configs/
 	mv configs/base/virtual-config.sh configs/base/config.sh
@@ -28,9 +33,9 @@ if [ ! -f configs/base/config.sh ]; then
 	./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
 fi
 
-CONTAINER_CHECK=superapi-virt
+CONTAINER_CHECK=superapi
 
-# docker-compose up -d
+# pull and start containers
 docker inspect "$CONTAINER_CHECK" > /dev/null
 if [ $? -eq 1 ]; then
 	echo "[+] starting spr..."
@@ -42,9 +47,11 @@ else
 fi
 
 # external ip
-
 DEV=eth0
-EXTERNAL_IP=$(ip addr show dev $DEV | grep inet -m 1|awk '{print $2}'|sed 's/\/.*//g')
+DEV=$(ip route get 1.1.1.1 | grep -oP 'dev \K\w+' -m1)
+# NOTE if this is not eth0 - change config.sh
+
+EXTERNAL_IP=$(ip addr show dev $DEV | grep -oP "inet \K[0-9\.]+" -m1)
 EXTERNAL_PORT=8000
 if [ ${#EXTERNAL_IP} -eq 0 ]; then
 	echo "[-] failed to get external ip from $DEV"
@@ -70,7 +77,7 @@ fi
 if [ ! -f $SPR_DIR/configs/base/auth_users.json ]; then
 	echo "[+] generating admin password"
 	PASSWORD=$(cat /dev/urandom | tr -dc '[:alpha:]' | fold -w ${1:-16} | head -n 1)
-	echo {\"admin\" : \"$PASSWORD\"} > $SPR_DIR/configs/base/auth_users.json
+	echo "{\"admin\" : \"$PASSWORD\"}" > $SPR_DIR/configs/base/auth_users.json
 else
 	PASSWORD=$(cat "$SPR_DIR/configs/base/auth_users.json" | jq -r .admin)
 fi
@@ -81,13 +88,21 @@ echo "[{\"Name\": \"admin\", \"Token\": \"$TOKEN\", \"Expire\": 0}]" > $SPR_DIR/
 
 echo "[+] login information:"
 echo "================================================"
-echo -e "\turl:      http://localhost:$EXTERNAL_PORT/"
-echo -e "\tusername: admin"
-echo -e "\tpassword: $PASSWORD"
-echo -e "\ttoken:    $TOKEN"
+
+HOST=$EXTERNAL_IP
+if [ $HOST == "127.0.0.1" ]; then
+	HOST="sprvirtual"
+fi
+
+echo " http tunnel: ssh $HOST -N -L $EXTERNAL_PORT:127.0.0.1:$EXTERNAL_PORT"
+echo "         url: http://localhost:$EXTERNAL_PORT/"
+echo "    username: admin"
+echo "    password: $PASSWORD"
+echo "       token: $TOKEN"
 echo "================================================"
 
-echo -ne "[~] setup VPN peer? [Y/n] "
+# NOTE use VPN_PEERS=2 etc on init
+echo -ne "[?] setup VPN peer? [Y/n] "
 read YN
 if [ "$YN" == "n" ] || [ "$YN" == "N" ] ; then
 	exit
