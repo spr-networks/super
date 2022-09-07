@@ -3,6 +3,7 @@
 # this can be run like:
 # bash -c "$(curl -fsSL https://raw.github.com/spr-networks/super/master/virtual_install.sh)"
 # run with SKIP_VPN=1 to skip vpn peer setup
+# run with DNS_BLOCK=hosts,ads to enable adblock
 # if configs are already setup it'll only show the login info
 # for a clean reset:
 # docker-compose -f docker-compose-virt.yml down && rm -rf configs && ./virtual_install.sh
@@ -90,6 +91,30 @@ if [ ! -f $SPR_DIR/configs/base/auth_users.json ]; then
 else
 	PASSWORD=$(cat "$SPR_DIR/configs/base/auth_users.json" | jq -r .admin)
 	TOKEN=$(cat "$SPR_DIR/configs/base/auth_tokens.json" | jq -r '.[0].Token')
+fi
+
+# dns block
+# example, run with: DNS_BLOCK="hosts,malware,facebook,redirect"
+if [ ! -z "$DNS_BLOCK" ]; then
+        urls=()
+
+        _IFS=$IFS
+        IFS=','
+        for f in $DNS_BLOCK; do
+                if [ "$f" == "hosts" ]; then
+                        urls+=("https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts")
+                else
+                        urls+=( "https://raw.githubusercontent.com/blocklistproject/Lists/master/${f}.txt" )
+                fi
+        done
+        IFS=$_IFS
+
+        CONF='{"BlockLists": [], "PermitDomains": [], "BlockDomains": [], "ClientIPExclusions": null}'
+        for url in ${urls[@]}; do
+                CONF=$(echo $CONF | jq ".BlockLists |= . + [{\"URI\": \"$url\", \"Enabled\": true, \"Tags\": []}]")
+        done
+
+        echo $CONF | jq . > $SPR_DIR/state/dns/block_rules.json
 fi
 
 echo "[+] login information:"
@@ -198,3 +223,8 @@ echo -e "$CONF"
 
 # reload wireguard config
 docker-compose -f docker-compose-virt.yml restart wireguard
+
+# reload dns if we have modified blocks
+if [ ! -z "$DNS_BLOCK" ]; then
+	docker-compose -f docker-compose-virt.yml restart dns
+fi
