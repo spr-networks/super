@@ -184,7 +184,7 @@ NEW_DEVICE=$(cat << EOF
 EOF
 )
 
-echo "[+] adding device $PUBLIC_KEY with ip $CLIENT_IP"
+echo "[+] device ip address: $CLIENT_IP"
 cat $SPR_DIR/configs/devices/devices.json | jq ".[\"$PUBLIC_KEY\"]=$NEW_DEVICE" > /tmp/d && \
 	mv /tmp/d $SPR_DIR/configs/devices/devices.json
 
@@ -216,10 +216,11 @@ EOF
 )
 IFS=$_IFS
 
-echo -e "[+] config:\n"
+echo -e "[+] WireGuard QR Code (import in iOS & Android app):\n"
 echo -e "$CONF" | qrencode -t ansiutf8
-echo ""
-echo -e "$CONF"
+echo -e "\n[+] WireGuard config (save this as wg.conf & import in client):\n"
+echo -e "$CONF\n"
+echo -e "----------------------------------------------------------"
 
 # reload wireguard config
 docker-compose -f docker-compose-virt.yml restart wireguard
