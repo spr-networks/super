@@ -128,7 +128,8 @@ table inet filter {
     # drop ssh, iperf from upstream
     $(if [ "$WANIF" ]; then echo "counter iifname $WANIF tcp dport vmap @upstream_tcp_port_drop"; fi)
 
-    # Extra hardening for when running Virtual SPR, to avoid exposing API to the internet
+    # Extra hardening for API port 80 when running Virtual SPR, to avoid exposing API to the uplink hop
+    # https://github.com/moby/moby/issues/22054 This is an open issue with docker leaving forwarding open...
     $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WANIF" && "$WAN_NET" ]]; then echo "counter iifname $WANIF tcp dport 80 ip saddr != $WAN_NET drop"; fi)
 
     # DHCP Allow rules
