@@ -179,7 +179,7 @@ const DeviceListing = (props) => {
 
   return (
     <View>
-      <ScrollView h={h}>
+      <ScrollView h={h} pb={{ base: 0, md: 20 }}>
         <HStack justifyContent="space-between" p={4}>
           <Heading fontSize="md" alignSelf="center">
             Configured Devices
