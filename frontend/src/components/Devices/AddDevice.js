@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 
 import { deviceAPI, wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
@@ -31,6 +31,19 @@ const AddDevice = (props) => {
   const [submitted, setSubmitted] = useState(false)
 
   const [errors, setErrors] = useState({})
+
+  useEffect(() => {
+    deviceAPI.list().then((devs) => {
+      let pendingDevice = devs.pending !== undefined ? devs.pending : null
+
+      if (pendingDevice) {
+        context.info(
+          'Got Pending Device',
+          `Device "${pendingDevice.Name}" is added but not connected. Adding a new device will overwrite it`
+        )
+      }
+    })
+  }, [])
 
   const filterMAC = (value) => {
     //must be of the format 00:00:00:00:00:00
@@ -137,7 +150,7 @@ const AddDevice = (props) => {
         setSubmitted(true)
       })
       .catch((error) => {
-        context.errorResponse('DEVICE API:', '', error)
+        context.error('DEVICE API:', error)
       })
   }
 
@@ -146,7 +159,7 @@ const AddDevice = (props) => {
   }
 
   return (
-    <Stack space={4}>
+    <Stack space={4} width={['100%', '100%', '4/6']}>
       <Heading fontSize="lg">Add a new WiFi Device</Heading>
       <Text color="muted.500" fontSize="xs" mt="-3">
         Wired devices do not need to be added
@@ -279,11 +292,8 @@ const AddDevice = (props) => {
             </HStack>
           </Checkbox.Group>
 
-          <FormControl.HelperText>
-            Assign device tags
-          </FormControl.HelperText>
+          <FormControl.HelperText>Assign device tags</FormControl.HelperText>
         </FormControl>
-
       </Stack>
 
       <Button mt="4" color="primary" size="md" onPress={handleSubmit}>
