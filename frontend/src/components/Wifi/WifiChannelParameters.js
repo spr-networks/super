@@ -280,6 +280,7 @@ const WifiChannelParameters = ({
           <Button
             __flex={{ base: 1, md: 1 }}
             w={{ base: '2/3', md: '1/6' }}
+            mt={4}
             colorScheme="primary"
             size="sm"
             type="submit"

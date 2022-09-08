@@ -14,7 +14,7 @@ import {
   StatusBar
 } from 'react-native'
 import { TabView, SceneMap } from 'react-native-tab-view'
-import { Box, View, Text, useColorModeValue } from 'native-base'
+import { Box, ScrollView, Text, View, useColorModeValue } from 'native-base'
 
 const WirelessConfiguration = (props) => {
   const [index, setIndex] = useState(0) //1)
@@ -101,10 +101,14 @@ const WirelessConfiguration = (props) => {
     )
   }
 
-  let h = Dimensions.get('window').height
+  // also have the tabs
+  let navbarHeight = 64
+  let tabsHeight = 32
+  let heightContent =
+    Dimensions.get('window').height - navbarHeight - tabsHeight
 
   return (
-    <View minH={h}>
+    <View minH={heightContent}>
       <TabView
         navigationState={{
           index,

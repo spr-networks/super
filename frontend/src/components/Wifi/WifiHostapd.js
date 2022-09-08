@@ -3,6 +3,8 @@ import React, { useContext, useEffect, useState } from 'react'
 import { wifiAPI } from 'api'
 import { AlertContext } from 'AppContext'
 
+import { Platform } from 'react-native'
+
 import {
   Box,
   Button,
@@ -11,8 +13,10 @@ import {
   HStack,
   Input,
   Menu,
+  ScrollView,
   Select,
   Text,
+  View,
   VStack,
   useColorModeValue
 } from 'native-base'
@@ -317,7 +321,7 @@ const WifiHostapd = (props) => {
   )
 
   return (
-    <>
+    <ScrollView pb="20">
       <HStack justifyContent="space-between" alignItems="center" p={4}>
         <Heading fontSize="md">Wifi Interface</Heading>
 
@@ -365,11 +369,7 @@ const WifiHostapd = (props) => {
         <Heading fontSize="md" alignSelf="center">
           HostAP Config {iface}
         </Heading>
-
-        {/*
-        {interfaceMenu}
-
-        */}
+        {/*interfaceMenu*/}
         <HStack space={2}>
           <Button
             variant="solid"
@@ -380,7 +380,7 @@ const WifiHostapd = (props) => {
             type="submit"
             onPress={disableInterface}
           >
-            Disable Radio Interface
+            {Platform.OS == 'web' ? 'Disable Radio Interface' : 'Disable'}
           </Button>
           <Button
             variant="solid"
@@ -441,7 +441,7 @@ const WifiHostapd = (props) => {
           )}
         </VStack>
       </Box>
-    </>
+    </ScrollView>
   )
 
   /*
