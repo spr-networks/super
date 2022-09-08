@@ -144,58 +144,18 @@ fi
 
 echo "[+] num peers already configured: $NUM_PEERS"
 
-# NOTE wg startup will generate a server privkey
-SERVER_PRIVATE_KEY=$(cat $SPR_DIR/configs/wireguard/wg0.conf | grep PrivateKey|awk '{print $3}')
-if [ "$SERVER_PRIVATE_KEY" == "privkey" ]; then
-	SERVER_PRIVATE_KEY=$(wg genkey)
-
-cat > $SPR_DIR/configs/wireguard/wg0.conf << EOF
-[Interface]
-PrivateKey = $SERVER_PRIVATE_KEY
-ListenPort = 51280
-
-EOF
-
-fi
-
-SERVER_PUBLIC_KEY=$(echo "$SERVER_PRIVATE_KEY" | wg pubkey)
-
-PRIVATE_KEY=$(wg genkey)
-PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
-PRESHARED_KEY=$(wg genpsk)
-
-DHCP_RES=$(curl -s --unix-socket $SPR_DIR/state/dhcp/tinysubnets_plugin http://dhcp/DHCPRequest -X PUT \
-	--data "{\"Identifier\": \"$PUBLIC_KEY\"}")
-
-CLIENT_IP=$(echo "$DHCP_RES" | jq -r .IP)
-GROUPS_JSON='["lan","wan","dns"]'
-
-NEW_DEVICE=$(cat << EOF
-{
-  "Name": "peer$NUM_PEERS",
-  "MAC": "",
-  "WGPubKey": "$PUBLIC_KEY",
-  "VLANTag": "",
-  "RecentIP": "$CLIENT_IP",
-  "PSKEntry": {"Type": "","Psk": ""},
-  "Groups": $GROUPS_JSON,
-  "DeviceTags": []
-}
-EOF
-)
-
-echo "[+] device ip address: $CLIENT_IP"
-cat $SPR_DIR/configs/devices/devices.json | jq ".[\"$PUBLIC_KEY\"]=$NEW_DEVICE" > /tmp/d && \
-	mv /tmp/d $SPR_DIR/configs/devices/devices.json
-
-# wg server config
-cat >> $SPR_DIR/configs/wireguard/wg0.conf << EOF
-[Peer]
-PublicKey = $PUBLIC_KEY
-PresharedKey = $PRESHARED_KEY
-AllowedIPs = $CLIENT_IP/32, 224.0.0.0/4
-
-EOF
+# Use the API to generate a wireguard peer
+RET=$(curl -H "Authorization: Bearer ${TOKEN}" -X PUT http://localhost:8000/plugins/wireguard/peer --data '{}')                                                                                                                           
+PRIVATE_KEY=$(echo $RET | jq -r .Interface.PrivateKey)                                                                                                                                                                                    
+PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)                                                                                                                                                                                               
+PUBLIC_KEY_ESCAPED=$(echo \"${PUBLIC_KEY}\" | jq -r @uri)                                                                                                                                                                                 
+CLIENT_IP=$(echo $RET | jq -r .Interface.Address)                                                                                                                                                                                         
+SERVER_PUBLIC_KEY=$(echo $RET | jq -r .Peer.PublicKey)                                                                                                                                                                                    
+PRESHARED_KEY=$(echo $RET | jq -r .Peer.PresharedKey)                                                                                                                                                                                     
+DNS_IP=$(echo $RET | jq -r .Interface.DNS)                                                                                                                                                                                                
+                                                                                                                                                                                                                                          
+# Update the Groups for the Device and Name                                                                                                                                                                                               
+curl -H "Authorization: Bearer ${TOKEN}" -X PUT http://localhost:8000/device?identity=${PUBLIC_KEY_ESCAPED} --data "{\"Groups\": [\"wan\", \"lan\", \"dns\"], \"Name\": \"peer${NUM_PEERS}\"}"                                            
 
 # wg client config
 _IFS=$IFS
