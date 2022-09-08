@@ -1,4 +1,4 @@
-import React, {useContext} from 'react'
+import React, { useContext } from 'react'
 import PropTypes from 'prop-types'
 
 import ClientSelect from 'components/ClientSelect'
@@ -26,7 +26,6 @@ class AddBlockImpl extends React.Component {
     DstIP: '',
     Protocol: 'tcp'
   }
-
 
   constructor(props) {
     super(props)
@@ -57,8 +56,8 @@ class AddBlockImpl extends React.Component {
     firewallAPI
       .addBlock(block)
       .then(done)
-      .catch(err => {
-        this.props.alertContext.errorResponse('Firewall API Failure', '', err)
+      .catch((err) => {
+        this.props.alertContext.error('Firewall API Failure', err)
       })
   }
 
@@ -115,8 +114,12 @@ class AddBlockImpl extends React.Component {
   }
 }
 
-
 export default function AddBlock(props) {
-  let alertContext = useContext(AlertContext);
-  return <AddBlockImpl notifyChange={props.notifyChange} alertContext={alertContext}></AddBlockImpl>
-};
+  let alertContext = useContext(AlertContext)
+  return (
+    <AddBlockImpl
+      notifyChange={props.notifyChange}
+      alertContext={alertContext}
+    ></AddBlockImpl>
+  )
+}

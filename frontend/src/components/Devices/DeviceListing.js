@@ -86,13 +86,13 @@ const DeviceListing = (props) => {
                 })
               )
             })
-            .catch((error) => {
-              context.errorResponse('WIFI API Failure:', '', error)
+            .catch((err) => {
+              context.error('WIFI API Failure', err)
             })
         }
       })
       .catch((err) => {
-        context.error('API Failure: ' + err.message)
+        context.error('API Failure', err)
       })
   }
 

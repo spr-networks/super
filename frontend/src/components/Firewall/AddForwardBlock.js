@@ -1,4 +1,4 @@
-import React, {useContext} from 'react'
+import React, { useContext } from 'react'
 import PropTypes from 'prop-types'
 
 import ClientSelect from 'components/ClientSelect'
@@ -18,7 +18,6 @@ import {
   Spinner,
   Text
 } from 'native-base'
-
 
 class AddForwardBlockImpl extends React.Component {
   state = {
@@ -56,11 +55,12 @@ class AddForwardBlockImpl extends React.Component {
       }
     }
 
-    firewallAPI.addForwardBlock(block).then(done)
-    .catch(err => {
-      this.props.alertContext.errorResponse('Firewall API Failure', '', err)
-    })
-
+    firewallAPI
+      .addForwardBlock(block)
+      .then(done)
+      .catch((err) => {
+        this.props.alertContext.error('Firewall API Failure', err)
+      })
   }
 
   componentDidMount() {}
@@ -90,7 +90,6 @@ class AddForwardBlockImpl extends React.Component {
             />
             <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
           </FormControl>
-
         </HStack>
 
         <FormControl flex="1">
@@ -101,9 +100,10 @@ class AddForwardBlockImpl extends React.Component {
             value={this.state.DstPort}
             onChangeText={(value) => this.handleChange('DstPort', value)}
           />
-          <FormControl.HelperText>Optional port or port range (leave empty for all ports)</FormControl.HelperText>
+          <FormControl.HelperText>
+            Optional port or port range (leave empty for all ports)
+          </FormControl.HelperText>
         </FormControl>
-
 
         <FormControl>
           <FormControl.Label>Protocol</FormControl.Label>
@@ -133,6 +133,11 @@ AddForwardBlockImpl.propTypes = {
 }
 
 export default function AddForwardBlock(props) {
-  let alertContext = useContext(AlertContext);
-  return <AddForwardBlockImpl notifyChange={props.notifyChange} alertContext={alertContext}></AddForwardBlockImpl>
-};
+  let alertContext = useContext(AlertContext)
+  return (
+    <AddForwardBlockImpl
+      notifyChange={props.notifyChange}
+      alertContext={alertContext}
+    ></AddForwardBlockImpl>
+  )
+}
