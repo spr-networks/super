@@ -17,7 +17,7 @@ const useLocation = Platform.OS == 'web' ? useLocationWeb : useLocationNative
 */
 import { AppContext, AlertContext, alertState } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
-import Footer from 'components/Footer/Footer'
+//import Footer from 'components/Footer/Footer'
 import Sidebar from 'components/Sidebar/Sidebar'
 import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
 import { api, pfwAPI, wifiAPI } from 'api'

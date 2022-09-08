@@ -29,20 +29,23 @@ const Home = (props) => {
     pluginAPI
       .list()
       .then((plugins) =>
-        setPluginsEnabled(plugins.filter((p) => p.Enabled).map((p) => p.Name))
+        setPluginsEnabled(
+          plugins
+            .filter((p) => p.Enabled)
+            .map((p) => p.Name.replace(/-extension/, ''))
+        )
       )
       .catch((error) => error)
   }, [])
 
   useEffect(() => {
     wifiAPI
-      .interfaces("AP")
+      .interfaces('AP')
       .then((ifaces) => {
         setInterfaces(ifaces)
       })
       .catch((error) => error)
   }, [])
-
 
   const flexDirection = useBreakpointValue({
     base: 'column',

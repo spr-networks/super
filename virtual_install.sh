@@ -2,36 +2,47 @@
 
 # this can be run like:
 # bash -c "$(curl -fsSL https://raw.github.com/spr-networks/super/master/virtual_install.sh)"
+# run with SKIP_VPN=1 to skip vpn peer setup
+# run with DNS_BLOCK=hosts,ads to enable adblock
+# if configs are already setup it'll only show the login info
+# for a clean reset:
+# docker-compose -f docker-compose-virt.yml down && rm -rf configs && ./virtual_install.sh
+
+if [ $UID -ne 0 ]; then
+	echo "[-] run as root or with sudo"
+	exit
+fi
 
 install_deps() {
 	# install deps
 	apt update && \
-		apt install -y curl git docker-compose docker.io jq qrencode
+		apt install -y curl git docker-compose docker.io jq qrencode iproute2 wireguard-tools
 
-	#INSTALL_DIR=/home/spr
-	#mkdir $INSTALL_DIR ; cd $INSTALL_DIR
 	git clone https://github.com/spr-networks/super.git
 	cd super
 
-  # overwrite docker-compose.yml
+	# overwrite docker-compose.yml
 	cp docker-compose-virt.yml docker-compose.yml
 }
 
+# if not git dir is available
 if [ ! -f "./docker-compose-virt.yml" ]; then
 	install_deps
 fi
 
+# generate default configs
 if [ ! -f configs/base/config.sh ]; then
+	echo "[+] generating configs..."
 	cp -R base/template_configs/ configs/
 	mv configs/base/virtual-config.sh configs/base/config.sh
 	# generate dhcp config
 	./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
 fi
 
-CONTAINER_CHECK=superapi-virt
+CONTAINER_CHECK=superapi
 
-# docker-compose up -d
-docker inspect "$CONTAINER_CHECK" > /dev/null
+# pull and start containers
+docker inspect "$CONTAINER_CHECK" > /dev/null 2>&1
 if [ $? -eq 1 ]; then
 	echo "[+] starting spr..."
 
@@ -42,9 +53,11 @@ else
 fi
 
 # external ip
-
 DEV=eth0
-EXTERNAL_IP=$(ip addr show dev $DEV | grep inet -m 1|awk '{print $2}'|sed 's/\/.*//g')
+DEV=$(ip route get 1.1.1.1 | grep -oP 'dev \K\w+' -m1)
+# NOTE if this is not eth0 - change config.sh
+
+EXTERNAL_IP=$(ip addr show dev $DEV | grep -oP "inet \K[0-9\.]+" -m1)
 EXTERNAL_PORT=8000
 if [ ${#EXTERNAL_IP} -eq 0 ]; then
 	echo "[-] failed to get external ip from $DEV"
@@ -70,115 +83,149 @@ fi
 if [ ! -f $SPR_DIR/configs/base/auth_users.json ]; then
 	echo "[+] generating admin password"
 	PASSWORD=$(cat /dev/urandom | tr -dc '[:alpha:]' | fold -w ${1:-16} | head -n 1)
-	echo {\"admin\" : \"$PASSWORD\"} > $SPR_DIR/configs/base/auth_users.json
+	echo "{\"admin\" : \"$PASSWORD\"}" > $SPR_DIR/configs/base/auth_users.json
+
+	echo "[+] generating token..."
+	TOKEN=$(dd if=/dev/urandom bs=1 count=32 2>/dev/null | base64)
+	echo "[{\"Name\": \"admin\", \"Token\": \"$TOKEN\", \"Expire\": 0}]" > $SPR_DIR/configs/base/auth_tokens.json
 else
 	PASSWORD=$(cat "$SPR_DIR/configs/base/auth_users.json" | jq -r .admin)
+	TOKEN=$(cat "$SPR_DIR/configs/base/auth_tokens.json" | jq -r '.[0].Token')
 fi
 
-echo "[+] generating token..."
-TOKEN=$(dd if=/dev/urandom bs=1 count=32 2>/dev/null | base64)
-echo "[{\"Name\": \"admin\", \"Token\": \"$TOKEN\", \"Expire\": 0}]" > $SPR_DIR/configs/base/auth_tokens.json
+# dns block
+# example, run with: DNS_BLOCK="hosts,malware,facebook,redirect"
+if [ ! -z "$DNS_BLOCK" ]; then
+        urls=()
+
+        _IFS=$IFS
+        IFS=','
+        for f in $DNS_BLOCK; do
+                if [ "$f" == "hosts" ]; then
+                        urls+=("https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts")
+                else
+                        urls+=( "https://raw.githubusercontent.com/blocklistproject/Lists/master/${f}.txt" )
+                fi
+        done
+        IFS=$_IFS
+
+        CONF='{"BlockLists": [], "PermitDomains": [], "BlockDomains": [], "ClientIPExclusions": null}'
+        for url in ${urls[@]}; do
+                CONF=$(echo $CONF | jq ".BlockLists |= . + [{\"URI\": \"$url\", \"Enabled\": true, \"Tags\": []}]")
+        done
+
+        echo $CONF | jq . > $SPR_DIR/state/dns/block_rules.json
+fi
 
 echo "[+] login information:"
-echo "================================================"
-echo -e "\turl:      http://localhost:$EXTERNAL_PORT/"
-echo -e "\tusername: admin"
-echo -e "\tpassword: $PASSWORD"
-echo -e "\ttoken:    $TOKEN"
-echo "================================================"
+echo "=========================================================="
 
-echo -ne "[~] setup VPN peer? [Y/n] "
-read YN
-if [ "$YN" == "n" ] || [ "$YN" == "N" ] ; then
+HOST=$EXTERNAL_IP
+if [ $HOST == "127.0.0.1" ]; then
+	HOST="sprvirtual"
+fi
+
+echo " http tunnel: ssh $HOST -N -L $EXTERNAL_PORT:127.0.0.1:$EXTERNAL_PORT"
+echo "         url: http://localhost:$EXTERNAL_PORT/"
+echo "    username: admin"
+echo "    password: $PASSWORD"
+if [ ! -z "$TOKEN" ]; then
+	echo "       token: $TOKEN"
+fi
+echo "=========================================================="
+
+#only show confirm if its the first one
+NUM_PEERS=$(grep '^\[Peer\]' $SPR_DIR/configs/wireguard/wg0.conf 2>/dev/null | wc -l)
+
+# if set - exit
+if [ ! -z $SKIP_VPN ]; then
 	exit
 fi
 
-# use localhost
-API_HOST="http://0:8000"
-TOKEN=$(cat $SPR_DIR/configs/base/auth_tokens.json | jq -r '.[0].Token')
+echo "[+] num peers already configured: $NUM_PEERS"
 
-rawurlencode() {
-	local string="${1}"
-	local strlen=${#string}
-	local encoded=""
-	local pos c o
+# NOTE wg startup will generate a server privkey
+SERVER_PRIVATE_KEY=$(cat $SPR_DIR/configs/wireguard/wg0.conf | grep PrivateKey|awk '{print $3}')
+if [ "$SERVER_PRIVATE_KEY" == "privkey" ]; then
+	SERVER_PRIVATE_KEY=$(wg genkey)
 
-	for (( pos=0 ; pos<strlen ; pos++ )); do
-		c=${string:$pos:1}
-		case "$c" in
-			[-_.~a-zA-Z0-9] ) o="${c}" ;;
-			* )               printf -v o '%%%02x' "'$c"
-		esac
-		encoded+="${o}"
-	done
-	echo "${encoded}"
-}
+cat > $SPR_DIR/configs/wireguard/wg0.conf << EOF
+[Interface]
+PrivateKey = $SERVER_PRIVATE_KEY
+ListenPort = 51280
 
-req_GET() {
-	RES=$(curl -X GET -s -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" "$API_HOST$1")
-}
+EOF
 
-req_PUT() {
-	RES=$(curl -X PUT -s -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" "$API_HOST$1" --data "$2")
-}
-
-curl -s --connect-timeout 5 "$API_HOST" > /dev/null
-if [ $? -ne 0 ]; then
-	echo "[-] failed to connect to $API_HOST"
-        exit
 fi
 
-echo ""
+SERVER_PUBLIC_KEY=$(echo "$SERVER_PRIVATE_KEY" | wg pubkey)
 
-RES=""
-req_GET "/status"
-if [ "$RES" != '"Online"' ]; then
-	echo "[-] api is down"
-	exit
-fi
+PRIVATE_KEY=$(wg genkey)
+PUBLIC_KEY=$(echo "$PRIVATE_KEY" | wg pubkey)
+PRESHARED_KEY=$(wg genpsk)
 
-req_GET "/plugins/wireguard/genkey"
-PRIVATE_KEY=$(echo $RES | jq -r .PrivateKey)
-PUBLIC_KEY=$(echo $RES | jq -r .PublicKey)
-echo "[+] pubkey =" $PUBLIC_KEY
+DHCP_RES=$(curl -s --unix-socket $SPR_DIR/state/dhcp/tinysubnets_plugin http://dhcp/DHCPRequest -X PUT \
+	--data "{\"Identifier\": \"$PUBLIC_KEY\"}")
 
-ID=$(rawurlencode $PUBLIC_KEY)
-URL="/device?identity=$ID"
-DATA="{\"Groups\": [\"lan\", \"wan\", \"dns\"], \"WGPubKey\": \"$PUBLIC_KEY\"}"
-req_PUT "$URL" "$DATA"
+CLIENT_IP=$(echo "$DHCP_RES" | jq -r .IP)
+GROUPS_JSON='["lan","wan","dns"]'
 
-req_GET "/devices"
+NEW_DEVICE=$(cat << EOF
+{
+  "Name": "peer$NUM_PEERS",
+  "MAC": "",
+  "WGPubKey": "$PUBLIC_KEY",
+  "VLANTag": "",
+  "RecentIP": "$CLIENT_IP",
+  "PSKEntry": {"Type": "","Psk": ""},
+  "Groups": $GROUPS_JSON,
+  "DeviceTags": []
+}
+EOF
+)
 
-echo "$RES" | grep "$PUBLIC_KEY" > /dev/null
-if [ $? -eq 1 ]; then
-	echo "[-] failed to add device"
-	exit
-fi
+echo "[+] device ip address: $CLIENT_IP"
+cat $SPR_DIR/configs/devices/devices.json | jq ".[\"$PUBLIC_KEY\"]=$NEW_DEVICE" > /tmp/d && \
+	mv /tmp/d $SPR_DIR/configs/devices/devices.json
 
-DATA="{\"AllowedIPs\": \"\", \"PublicKey\": \"$PUBLIC_KEY\", \"Endpoint\": \"\"}"
-echo ">>" $DATA
-req_PUT "/plugins/wireguard/peer" "$DATA"
+# wg server config
+cat >> $SPR_DIR/configs/wireguard/wg0.conf << EOF
+[Peer]
+PublicKey = $PUBLIC_KEY
+PresharedKey = $PRESHARED_KEY
+AllowedIPs = $CLIENT_IP/32, 224.0.0.0/4
 
-echo RES= $RES
+EOF
 
-echo "[+] peer added"
+# wg client config
+_IFS=$IFS
+IFS='\n'
+CONF=$(cat << EOF
+[Interface]
+PrivateKey = $PRIVATE_KEY
+Address = $CLIENT_IP
+DNS = 192.168.2.1
 
-ENDPOINT="$EXTERNAL_IP:51280"
+[Peer]
+PublicKey = $SERVER_PUBLIC_KEY
+AllowedIPs = 0.0.0.0/0, ::/0
+Endpoint = $EXTERNAL_IP:51280
+PersistentKeepalive = 25
+PresharedKey = $PRESHARED_KEY
+EOF
+)
+IFS=$_IFS
 
-CONF="[Interface]"
-CONF="$CONF\nPrivateKey = $PRIVATE_KEY"
-CONF="$CONF\nAddress = $(echo $RES | jq -r .Interface.Address)"
-CONF="$CONF\nDNS = $(echo $RES | jq -r .Interface.DNS)"
-CONF="$CONF\n"
-CONF="$CONF\n[Peer]"
-CONF="$CONF\nPublicKey = $(echo $RES | jq -r .Peer.PublicKey)"
-CONF="$CONF\nAllowedIPs = $(echo $RES | jq -r .Peer.AllowedIPs)"
-CONF="$CONF\nEndpoint = $(echo $ENDPOINT)"
-#CONF="$CONF\nEndpoint = $(echo $RES | jq -r .Peer.Endpoint)"
-CONF="$CONF\nPersistentKeepalive = $(echo $RES | jq -r .Peer.PersistentKeepalive)"
-CONF="$CONF\nPresharedKey = $(echo $RES | jq -r .Peer.PresharedKey)"
-
-echo -e "[+] config:\n"
+echo -e "[+] WireGuard QR Code (import in iOS & Android app):\n"
 echo -e "$CONF" | qrencode -t ansiutf8
-echo ""
-echo -e "$CONF"
+echo -e "\n[+] WireGuard config (save this as wg.conf & import in client):\n"
+echo -e "$CONF\n"
+echo -e "----------------------------------------------------------"
+
+# reload wireguard config
+docker-compose -f docker-compose-virt.yml restart wireguard
+
+# reload dns if we have modified blocks
+if [ ! -z "$DNS_BLOCK" ]; then
+	docker-compose -f docker-compose-virt.yml restart dns
+fi
