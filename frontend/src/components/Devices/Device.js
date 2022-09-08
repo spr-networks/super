@@ -283,7 +283,6 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
         <Stack
           direction={{ base: 'column', md: 'row' }}
           space={4}
-          py={4}
           flex={1}
           justifyContent="space-between"
           alignItems="center"
@@ -344,7 +343,7 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
             space={2}
             alignSelf="center"
             alignItems="center"
-            justifyContent={{ base: 'center', md: 'flex-start' }}
+            justifyContent={{ base: 'flex-start', md: 'flex-start' }}
             flexWrap="wrap"
           >
             {groups.map((group) => (

@@ -680,7 +680,7 @@ const FlowList = (props) => {
       __bg={useColorModeValue('warmGray.50', 'blueGray.800')}
       rounded="md"
       space={4}
-      py={{ base: 0, md: 4 }}
+      py={4}
     >
       <Box flex={1} display={{ base: 'flex' }}>
         <HStack justifyContent="space-between" alignContent="center" px={4}>

@@ -138,7 +138,7 @@ const AuthTokenList = (props) => {
                 <Text flex={1}>{item.Name}</Text>
                 <HStack
                   flex={1}
-                  minW={{ base: '2/6', md: '3/6' }}
+                  minW={{ base: '1/6', md: '3/6' }}
                   alignItems="center"
                   justifyItems="flex-end"
                 >
@@ -150,7 +150,7 @@ const AuthTokenList = (props) => {
                   />
                 </HStack>
 
-                <HStack w="2/6" space={1} justifyContent="flex-end">
+                <HStack w="3/6" space={1} justifyContent="flex-end">
                   <Text color="muted.500">Expire</Text>
                   <Text
                     color={

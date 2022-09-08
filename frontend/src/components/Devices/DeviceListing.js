@@ -202,7 +202,7 @@ const DeviceListing = (props) => {
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
         >
           {devices !== null ? (
-            <Box safeArea>
+            <>
               {/*<SwipeListView
                 data={devices}
                 renderItem={renderItem}
@@ -220,7 +220,7 @@ const DeviceListing = (props) => {
                   There are no devices configured yet
                 </Text>
               ) : null}
-            </Box>
+            </>
           ) : null}
         </Box>
       </ScrollView>
