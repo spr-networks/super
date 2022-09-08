@@ -95,7 +95,7 @@ const WifiScan = (props) => {
       <HStack space={2}>
         <Box flex="2">
           {/*isOptionDisabled={(option) => option.disabled}*/}
-          <InputSelect options={devsScan} onChange={onChange} />
+          <InputSelect options={devsScan} value={iface} onChange={onChange} />
         </Box>
 
         <Button
