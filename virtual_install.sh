@@ -1,4 +1,4 @@
-[200~#!/bin/bash
+#!/bin/bash
 
 # this can be run like:
 # bash -c "$(curl -fsSL https://raw.github.com/spr-networks/super/master/virtual_install.sh)"
@@ -193,5 +193,4 @@ echo -e "----------------------------------------------------------"
 # reload dns if we have modified blocks
 if [ ! -z "$DNS_BLOCK" ]; then
 	docker-compose -f docker-compose-virt.yml restart dns
-fi[201~
-
+fi
