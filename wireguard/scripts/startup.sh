@@ -12,7 +12,8 @@ if [ $? -eq 0 ]; then
 	PUBKEY=$(echo $PRIVKEY | wg pubkey)
 	# only interface
 	ESCAPED_PUBKEY=$(printf '%s\n' "$PUBKEY" | sed -e 's/[\/&]/\\&/g')
-	cat $WIREGUARD_CONFIG | sed "s/PrivateKey = privkey/PrivateKey = $ESCAPED_PUBKEY/g" | tee $WIREGUARD_CONFIG
+	cat $WIREGUARD_CONFIG | sed "s/PrivateKey = privkey/PrivateKey = $ESCAPED_PUBKEY/g" | tee  /tmp/wg0.conf
+	mv /tmp/wg0.conf $WIREGUARD_CONFIG 
 fi
 
 . /scripts/up.sh
