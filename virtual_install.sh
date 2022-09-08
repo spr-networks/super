@@ -182,9 +182,6 @@ echo -e "\n[+] WireGuard config (save this as wg.conf & import in client):\n"
 echo -e "$CONF\n"
 echo -e "----------------------------------------------------------"
 
-# reload wireguard config
-docker-compose -f docker-compose-virt.yml restart wireguard
-
 # reload dns if we have modified blocks
 if [ ! -z "$DNS_BLOCK" ]; then
 	docker-compose -f docker-compose-virt.yml restart dns
