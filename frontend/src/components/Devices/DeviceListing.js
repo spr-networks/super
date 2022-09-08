@@ -86,13 +86,13 @@ const DeviceListing = (props) => {
                 })
               )
             })
-            .catch((error) => {
-              context.errorResponse('WIFI API Failure:', '', error)
+            .catch((err) => {
+              context.error('WIFI API Failure', err)
             })
         }
       })
       .catch((err) => {
-        context.error('API Failure: ' + err.message)
+        context.error('API Failure', err)
       })
   }
 
@@ -179,7 +179,7 @@ const DeviceListing = (props) => {
 
   return (
     <View>
-      <ScrollView h={h}>
+      <ScrollView h={h} pb={{ base: 0, md: 20 }}>
         <HStack justifyContent="space-between" p={4}>
           <Heading fontSize="md" alignSelf="center">
             Configured Devices
@@ -202,7 +202,7 @@ const DeviceListing = (props) => {
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
         >
           {devices !== null ? (
-            <Box safeArea>
+            <>
               {/*<SwipeListView
                 data={devices}
                 renderItem={renderItem}
@@ -220,7 +220,7 @@ const DeviceListing = (props) => {
                   There are no devices configured yet
                 </Text>
               ) : null}
-            </Box>
+            </>
           ) : null}
         </Box>
       </ScrollView>

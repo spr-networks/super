@@ -48,11 +48,11 @@ const WifiClients = (props) => {
 
   const refreshClients = async () => {
     const stations = await wifiAPI.allStations(iface).catch((error) => {
-      context.errorResponse('WIFI API Failure:', '', error)
+      context.error('WIFI API Failure', error)
     })
 
     const devices = await deviceAPI.list().catch((error) => {
-      context.errorResponse('Device API Failure:', '', error)
+      context.error('Device API Failure', error)
     })
 
     if (devices && stations) {

@@ -42,7 +42,7 @@ const AuthTokenList = (props) => {
       .then((tokens) => {
         setTokens(tokens)
       })
-      .catch((err) => context.errorResponse('Auth Token API:', '', err))
+      .catch((err) => context.error('Auth Token API', err))
   }, [])
 
   const deleteListItem = (row) => {
@@ -54,7 +54,7 @@ const AuthTokenList = (props) => {
         newData.splice(prevIndex, 1)
         setTokens(newData)
       })
-      .catch((err) => context.errorResponse('Auth Token API:', '', err))
+      .catch((err) => context.error('Auth Token API', err))
   }
 
   const handleAddToken = () => {}
@@ -69,7 +69,7 @@ const AuthTokenList = (props) => {
       .then((tokens) => {
         setTokens(tokens)
       })
-      .catch((err) => context.errorResponse('Auth Token API:', '', err))
+      .catch((err) => context.error('Auth Token API', err))
   }
 
   const notifyChange = () => {
@@ -138,7 +138,7 @@ const AuthTokenList = (props) => {
                 <Text flex={1}>{item.Name}</Text>
                 <HStack
                   flex={1}
-                  minW={{ base: '2/6', md: '3/6' }}
+                  minW={{ base: '1/6', md: '3/6' }}
                   alignItems="center"
                   justifyItems="flex-end"
                 >
@@ -150,7 +150,7 @@ const AuthTokenList = (props) => {
                   />
                 </HStack>
 
-                <HStack w="2/6" space={1} justifyContent="flex-end">
+                <HStack w="3/6" space={1} justifyContent="flex-end">
                   <Text color="muted.500">Expire</Text>
                   <Text
                     color={

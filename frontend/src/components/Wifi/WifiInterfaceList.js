@@ -26,6 +26,7 @@ import {
   VStack,
   SectionList,
   Text,
+  View,
   useColorModeValue
 } from 'native-base'
 
@@ -86,11 +87,9 @@ const WifiInterface = (props) => {
   }
 
   return (
-    <Box
+    <ScrollView
       key={iw.wiphy}
       bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      rounded="md"
-      width="100%"
       p={4}
     >
       <Heading fontSize="lg">{iw.wiphy}</Heading>
@@ -330,7 +329,7 @@ const WifiInterface = (props) => {
           )}
         </Box>
       </Stack>
-    </Box>
+    </ScrollView>
   )
 }
 
@@ -360,18 +359,16 @@ const WifiInterfaceList = (props) => {
     })
   }, [])
 
+  if (!iws.length) {
+    return <></>
+  }
+
   return (
-    <>
-      <VStack space={4}>
-        {iws.length ? (
-          <>
-            {iws.map((iw) => (
-              <WifiInterface key={iw.wiphy} iw={iw} />
-            ))}
-          </>
-        ) : null}
-      </VStack>
-    </>
+    <ScrollView>
+      {iws.map((iw) => (
+        <WifiInterface key={iw.wiphy} iw={iw} />
+      ))}
+    </ScrollView>
   )
 }
 

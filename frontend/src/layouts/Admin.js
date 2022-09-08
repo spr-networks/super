@@ -2,22 +2,8 @@ import React, { createContext, useEffect, useState } from 'react'
 import { Platform, Dimensions } from 'react-native'
 import { Outlet, useLocation } from 'react-router-dom'
 import Notifications from 'Notifications'
-/*
-import {
-  Outlet as OutletWeb,
-  useLocation as useLocationWeb
-} from 'react-router-dom'
-import {
-  Outlet as OutletNative,
-  useLocation as useLocationNative
-} from 'react-router-native'
-
-const Outlet = Platform.OS == 'web' ? OutletWeb : OutletNative
-const useLocation = Platform.OS == 'web' ? useLocationWeb : useLocationNative
-*/
 import { AppContext, AlertContext, alertState } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
-//import Footer from 'components/Footer/Footer'
 import Sidebar from 'components/Sidebar/Sidebar'
 import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
 import { api, pfwAPI, wifiAPI } from 'api'
@@ -33,11 +19,9 @@ import {
   CloseIcon,
   ScrollView,
   HStack,
-  Stack,
   VStack,
   Text,
   useColorModeValue,
-  useToken,
   useToast
 } from 'native-base'
 
@@ -108,11 +92,11 @@ const AppAlert = (props) => {
           flexShrink={1}
           space={2}
           justifyContent="space-between"
-          alignItems="center"
+          alignItems="flex-start"
         >
           <HStack space={2} flexShrink={1}>
             <Alert.Icon mt={1} />
-            <VStack space={2}>
+            <VStack space={2} w="100%">
               <Text
                 fontSize="md"
                 color={useColorModeValue('coolGray.800', 'coolGray.200')}
@@ -135,7 +119,7 @@ const AppAlert = (props) => {
             }}
             icon={
               <CloseIcon
-                size="3"
+                size={3}
                 color={useColorModeValue('coolGray.600', 'coolGray.400')}
               />
             }
@@ -167,23 +151,39 @@ const AdminLayout = (props) => {
       title = ucFirst(type)
     }
 
-    // web desktop notification
-    if (['error', 'success'].includes(type) && Platform.OS == 'web') {
-      Notifications.notification(title, body)
+    const showAlert = (type, title, body) => {
+      // web desktop notification
+      if (['error', 'success'].includes(type) && Platform.OS == 'web') {
+        Notifications.notification(title, body)
+      }
+
+      setAlert({ type, title, body })
+      setShowAlert(true)
+
+      // auto hide if not a confirm dialog
+      setTimeout((_) => setShowAlert(false), 5e3)
     }
 
-    setAlert({ type, title, body })
-    setShowAlert(true)
-
-    // auto hide if not a confirm dialog
-    setTimeout((_) => setShowAlert(false), 5e3)
+    // error response from api - get error msg instead of status
+    if (typeof body == 'object' && body.response !== undefined) {
+      body.response
+        .text()
+        .then((data) => {
+          showAlert(type, title, data)
+        })
+        .catch((err) => {
+          showAlert(type, title, JSON.stringify(body))
+        })
+    } else {
+      showAlert(type, title, body)
+    }
   }
 
   alertState.success = (title, body) => alertState.alert('success', title, body)
-  alertState.info = (title, body) => alertState.alert('info', title, body)
   alertState.warning = (title, body) => alertState.alert('warning', title, body)
   alertState.danger = (title, body) => alertState.alert('danger', title, body)
   alertState.error = (title, body) => alertState.alert('error', title, body)
+  alertState.info = (title, body) => alertState.alert('info', title, body)
   alertState.confirm = (title, body, onClose) => {
     // TODO cant change if a confirm is showing an we get another one
     if (showConfirmAlert) {
@@ -194,40 +194,6 @@ const AdminLayout = (props) => {
     setConfirmAlert({ type: 'confirm', title, body, onClose })
     setShowConfirmAlert(true)
   }
-
-  alertState.handleResponse = (alertType, title, bodyHeader, err) => {
-    err.response.text().then((data) => {
-      alertState.alert(alertType, title, bodyHeader + ' ' + data)
-    })
-  }
-
-  alertState.successResponse = (title, bodyHeader, err) =>
-    alertState.handleResponse('success', title, bodyHeader, err)
-  alertState.infoResponse = (title, bodyHeader, err) =>
-    alertState.handleResponse('info', title, bodyHeader, err)
-  alertState.warningResponse = (title, bodyHeader, err) =>
-    alertState.handleResponse('warning', title, bodyHeader, err)
-  alertState.dangerResponse = (title, bodyHeader, err) =>
-    alertState.handleResponse('danger', title, bodyHeader, err)
-  alertState.errorResponse = (title, bodyHeader, err) =>
-    alertState.handleResponse('error', title, bodyHeader, err)
-
-  alertState.handleResponse = (alertType, title, bodyHeader, err) => {
-    err.response.text().then((data) => {
-      alertState.alert(alertType, title, bodyHeader + ' ' + data)
-    })
-  }
-
-  alertState.successResponse = (title, bodyHeader, err) =>
-    alertState.handleResponse('success', title, bodyHeader, err)
-  alertState.infoResponse = (title, bodyHeader, err) =>
-    alertState.handleResponse('info', title, bodyHeader, err)
-  alertState.warningResponse = (title, bodyHeader, err) =>
-    alertState.handleResponse('warning', title, bodyHeader, err)
-  alertState.dangerResponse = (title, bodyHeader, err) =>
-    alertState.handleResponse('danger', title, bodyHeader, err)
-  alertState.errorResponse = (title, bodyHeader, err) =>
-    alertState.handleResponse('error', title, bodyHeader, err)
 
   /*
   location = useLocation()
@@ -502,8 +468,10 @@ const AdminLayout = (props) => {
       <AlertContext.Provider value={alertState}>
         <Slide in={showAlert} placement="top">
           <Box
-            maxWidth="90%"
-            top={16}
+            maxWidth={{ base: '100%', md: '90%' }}
+            w={{ base: '100%', md: 'auto' }}
+            mt={16}
+            flexWrap="wrap"
             position="static"
             alignItems="center"
             justifyContent="center"

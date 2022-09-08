@@ -1,4 +1,4 @@
-import React, {useContext} from 'react'
+import React, { useContext } from 'react'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'AppContext'
 
@@ -49,13 +49,16 @@ class AddForwardImpl extends React.Component {
       DstPort: this.state.DstPort
     }
 
-    firewallAPI.addForward(rule).then((res) => {
-      if (this.props.notifyChange) {
-        this.props.notifyChange('forward')
-      }
-    }).catch(err => {
-      this.props.alertContext.errorResponse('Firewall API Failure', '', err)
-    })
+    firewallAPI
+      .addForward(rule)
+      .then((res) => {
+        if (this.props.notifyChange) {
+          this.props.notifyChange('forward')
+        }
+      })
+      .catch((err) => {
+        this.props.alertContext.error('Firewall API Failure', err)
+      })
   }
 
   componentDidMount() {}
@@ -145,8 +148,12 @@ AddForwardImpl.propTypes = {
   notifyChange: PropTypes.func
 }
 
-
 export default function AddForward(props) {
-  let alertContext = useContext(AlertContext);
-  return <AddForwardImpl notifyChange={props.notifyChange} alertContext={alertContext}></AddForwardImpl>
-};
+  let alertContext = useContext(AlertContext)
+  return (
+    <AddForwardImpl
+      notifyChange={props.notifyChange}
+      alertContext={alertContext}
+    ></AddForwardImpl>
+  )
+}
