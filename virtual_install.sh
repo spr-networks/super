@@ -134,13 +134,21 @@ if [ ! -z "$TOKEN" ]; then
 fi
 echo "=========================================================="
 
-#only show confirm if its the first one
-NUM_PEERS=$(grep '^\[Peer\]' $SPR_DIR/configs/wireguard/wg0.conf 2>/dev/null | wc -l)
-
 # if set - exit
 if [ ! -z $SKIP_VPN ]; then
 	exit
 fi
+
+sleep 1
+while grep "= privkey" $SPR_DIR/configs/wireguard/wg0.conf > /dev/null;
+do
+     echo "... Waiting for wireguard service to start and initialize"
+     sleep 5
+done
+
+#only show confirm if its the first one
+NUM_PEERS=$(grep '^\[Peer\]' $SPR_DIR/configs/wireguard/wg0.conf 2>/dev/null | wc -l)
+
 
 echo "[+] num peers already configured: $NUM_PEERS"
 
