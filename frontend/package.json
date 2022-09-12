@@ -55,7 +55,7 @@
     "react": "^18.2.0",
     "react-chartjs-2": "^4.0.1",
     "react-dom": "^18.2.0",
-    "react-native": "^0.70.0",
+    "react-native": "0.68.2",
     "react-native-chart-kit": "^6.12.0",
     "react-native-macos": "^0.66.0-0",
     "react-native-pager-view": "^5.4.15",
