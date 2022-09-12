@@ -359,7 +359,7 @@ const AdminLayout = (props) => {
   let heightContent = Dimensions.get('window').height - navbarHeight
   if (Platform.OS == 'ios') {
     // statusbar
-    heightContent = Dimensions.get('window').height - navbarHeight - 64
+    heightContent = Dimensions.get('window').height - navbarHeight //- 16
   }
 
   return (
