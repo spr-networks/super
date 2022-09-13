@@ -12,9 +12,6 @@ ENV CC=clang
 ARG USE_TMPFS=true
 RUN --mount=type=tmpfs,target=/tmpfs \
     [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
-    go mod init multicastproxy && \
-    go get golang.org/x/net/ipv4@latest && \
-    go get github.com/vishvananda/netlink@latest
 COPY code/multicastproxy.go /code/
 RUN --mount=type=tmpfs,target=/tmpfs \
     go build -ldflags="-s -w" multicastproxy.go
