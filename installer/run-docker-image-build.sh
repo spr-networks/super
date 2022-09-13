@@ -1,6 +1,6 @@
 #!/bin/bash
 cd ..
-docker-compose pull
+DOCKER_DEFAULT_PLATFORM=linux/arm64 docker-compose pull
 cd installer
 cp ./data/spr.clean.img ./data/spr.img
 ./scripts/resize.sh
