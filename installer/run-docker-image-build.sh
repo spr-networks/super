@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 cd ..
 DOCKER_DEFAULT_PLATFORM=linux/arm64 docker-compose pull
 cd installer
