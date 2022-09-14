@@ -894,9 +894,10 @@ func initUserFirewallRules() {
 	//run immediately
 	x()
 
-	//and also in 10 seconds
+	//and also in 30 seconds
+	//TBD this should synchronize with 'base'
 	go func() {
-		time.Sleep(10 * time.Second)
+		time.Sleep(30 * time.Second)
 		x()
 	}()
 

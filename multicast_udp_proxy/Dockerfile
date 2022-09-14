@@ -10,12 +10,9 @@ RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-${TARGETARCH}.ta
 ENV PATH="/usr/local/go/bin:$PATH"
 ENV CC=clang
 ARG USE_TMPFS=true
+COPY code/ /code/
 RUN --mount=type=tmpfs,target=/tmpfs \
-    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
-    go mod init multicastproxy && \
-    go get golang.org/x/net/ipv4@latest && \
-    go get github.com/vishvananda/netlink@latest
-COPY code/multicastproxy.go /code/
+    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go
 RUN --mount=type=tmpfs,target=/tmpfs \
     go build -ldflags="-s -w" multicastproxy.go
 
