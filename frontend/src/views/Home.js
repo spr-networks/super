@@ -72,6 +72,7 @@ const Home = (props) => {
                   direction={{ base: 'column', md: 'row' }}
                   flex={1}
                   space={{ base: 2, md: 4 }}
+                  key={iface}
                 >
                   <WifiInfo iface={iface} flex={1} />
                   <WifiClients iface={iface} flex={1} />
