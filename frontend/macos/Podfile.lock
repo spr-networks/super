@@ -282,13 +282,13 @@ PODS:
   - React-jsinspector (0.68.45)
   - React-logger (0.68.45):
     - glog
-  - react-native-pager-view (5.4.25):
+  - react-native-pager-view (5.4.15):
     - React-Core
-  - react-native-safe-area-context (4.3.3):
+  - react-native-safe-area-context (4.2.5):
     - RCT-Folly
     - RCTRequired
     - RCTTypeSafety
-    - React-Core
+    - React
     - ReactCommon/turbomodule/core
   - React-perflogger (0.68.45)
   - React-RCTActionSheet (0.68.45):
@@ -355,13 +355,13 @@ PODS:
     - React-jsi (= 0.68.45)
     - React-logger (= 0.68.45)
     - React-perflogger (= 0.68.45)
-  - RNCAsyncStorage (1.17.10):
+  - RNCAsyncStorage (1.17.7):
     - React-Core
-  - RNCClipboard (1.11.0):
+  - RNCClipboard (1.10.0):
     - React-Core
   - RNCPushNotificationIOS (1.10.1):
     - React-Core
-  - RNSVG (12.4.4):
+  - RNSVG (12.4.3):
     - React-Core
   - SocketRocket (0.6.0)
   - Yoga (1.14.0)
@@ -557,8 +557,8 @@ SPEC CHECKSUMS:
   React-jsiexecutor: 3aaf74a4e10b2603351ae919ac556d362585ec48
   React-jsinspector: 5377c8149971be2fbb780b6f71b2d69e7b8897f1
   React-logger: c0a319cb2128e5006ab2a55db30801565497fcdd
-  react-native-pager-view: da490aa1f902c9a5aeecf0909cc975ad0e92e53e
-  react-native-safe-area-context: b456e1c40ec86f5593d58b275bd0e9603169daca
+  react-native-pager-view: b1914469643f40042e65d78cbf3d3dfebd6fb0d9
+  react-native-safe-area-context: ebf8c413eb8b5f7c392a036a315eb7b46b96845f
   React-perflogger: c1a7f13647ca3723b53809bbae206ea481099558
   React-RCTActionSheet: 9765fee9db62cfc6ebe91b42b2afd3fcd1389d43
   React-RCTAnimation: d3fa4dc5290f91ec001d9b29c2700f3bac922b9a
@@ -571,10 +571,10 @@ SPEC CHECKSUMS:
   React-RCTVibration: c3dc17464ccd085eb5ac41aaa28fc154698cefb5
   React-runtimeexecutor: 312e8e8ec9457e2507901947cbd0e6d77342fb77
   ReactCommon: 99cb4bfc12722d43a0b33fc30000ccb9ede37bb5
-  RNCAsyncStorage: 0c357f3156fcb16c8589ede67cc036330b6698ca
-  RNCClipboard: 4b8bec7c195e27bcec746f52dff7601161683249
+  RNCAsyncStorage: d81ee5c3db1060afd49ea7045ad460eff82d2b7d
+  RNCClipboard: f1736c75ab85b627a4d57587edb4b60999c4dd80
   RNCPushNotificationIOS: 87b8d16d3ede4532745e05b03c42cff33a36cc45
-  RNSVG: ecd661f380a07ba690c9c5929c475a44f432d674
+  RNSVG: f3b60aeeaa81960e2e0536c3a9eef50b667ef3a9
   SocketRocket: fccef3f9c5cedea1353a9ef6ada904fde10d6608
   Yoga: 7ed465c91fd55de39d4835467d52e18927007821
   YogaKit: f782866e155069a2cca2517aafea43200b01fd5a
