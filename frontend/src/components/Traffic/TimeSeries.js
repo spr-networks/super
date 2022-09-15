@@ -88,7 +88,7 @@ const TimeSeries = (props) => {
   )
 }
 
-TimeSeries.PropTypes = {
+TimeSeries.propTypes = {
   type: PropTypes.string.isRequired,
   title: PropTypes.string,
   chartMode: PropTypes.string,
