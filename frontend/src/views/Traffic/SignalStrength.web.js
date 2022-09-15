@@ -1,4 +1,4 @@
-import React, { useContext, Component } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 // react plugin used to create charts
 import { Chart as ChartJS } from 'chart.js/auto'
 import { Bar } from 'react-chartjs-2'
@@ -8,36 +8,28 @@ import { AlertContext } from 'layouts/Admin'
 
 import { Box, Heading, View } from 'native-base'
 
-export default class SignalStrength extends Component {
-  state = {
-    signals: {},
-    signals_rssi: {},
-    signals_rxtx: {},
-    signal_scale: 'All Time'
-  }
+export default (props) => {
+  const context = useContext(AlertContext)
 
-  macToName = {}
-  macToIP = {}
+  const [devices, setDevices] = useState(null)
+  const [signals, setSignals] = useState(null)
 
-  clientLabelFromMAC(mac) {
-    let name = this.macToName[mac]
-    let ip = this.macToIP[mac]
-    return `${name} ${ip}`
-  }
-
-  async fetchData() {
+  const fetchData = async () => {
     const interfaces = await wifiAPI.interfaces('AP')
-    let stations = []
+    let stations = {}
+
     for (let iface of interfaces) {
       const new_stations = await wifiAPI.allStations(iface).catch((error) => {
-        this.context.error('API Failure get traffic: ' + error.message)
+        context.error('API failed to get stations', error)
       })
-      stations = stations.concat(new_stations)
+
+      stations = { ...stations, ...new_stations }
     }
 
     let signals = []
     for (let mac in stations) {
       let station = stations[mac]
+
       signals.push({
         MAC: mac,
         Signal: parseInt(station.signal),
@@ -49,55 +41,25 @@ export default class SignalStrength extends Component {
     return signals
   }
 
-  async componentDidMount() {
-    // this is for mac => ip lookup in tooltip
-    const arp = await wifiAPI.arp().catch((error) => {
-      this.context.error('API Failure get traffic: ' + error.message)
-    })
-
-    for (const a of arp) {
-      //skip incomplete entries
-      if (a.MAC == '00:00:00:00:00:00') {
-        continue
-      }
-
-      this.macToIP[a.MAC] = a.IP
+  const signalToColor = (signal) => {
+    if (signal >= -60) {
+      return 'rgb(24, 206, 15)'
+    } else if (signal >= -70) {
+      return 'rgb(44, 168, 255)'
+    } else if (signal >= -80) {
+      return 'rgb(255, 178, 54)'
     }
 
-    // get devices for mac => name lookup
-    const devices = await deviceAPI.list().catch((error) => {
-      this.context.error('API Failure get traffic: ' + error.message)
-    })
-
-    Object.keys(devices).forEach((mac) => {
-      this.macToName[mac] = devices[mac].Name
-    })
-
-    const signals = await this.fetchData()
-    this.setState({ signals })
-
-    let signals_rssi = this.processData('RSSI')
-    let signals_rxtx = this.processData(['RX', 'TX'])
-
-    this.setState({ signals_rssi })
-    this.setState({ signals_rxtx })
+    return 'rgb(255, 54, 54)'
   }
 
-  processData(labels = ['RSSI']) {
-    labels = Array.isArray(labels) ? labels : [labels]
+  const clientLabelFromMAC = (mac) =>
+    devices[mac] ? `${devices[mac].RecentIP}\n${mac}\n` : mac
 
-    const signalToColor = (signal) => {
-      if (signal >= -60) {
-        return 'rgb(24, 206, 15)'
-      } else if (signal >= -70) {
-        return 'rgb(44, 168, 255)'
-      } else if (signal >= -80) {
-        return 'rgb(255, 178, 54)'
-      }
+  const deviceFieldByMAC = (mac, field) =>
+    devices && devices[mac] ? devices[mac][field] : mac
 
-      return 'rgb(255, 54, 54)'
-    }
-
+  const processData = (signals, labels) => {
     let data = {
       labels: [],
       datasets: []
@@ -128,9 +90,11 @@ export default class SignalStrength extends Component {
       data.datasets.push(dataset)
     })
 
-    let signals = this.state.signals
+    // set the data
     for (const entry of signals) {
-      data.labels.push(entry.MAC)
+      // used for id
+      let name = entry.MAC
+      data.labels.push(name)
 
       labels.map((label, index) => {
         if (label == 'RSSI') {
@@ -153,101 +117,95 @@ export default class SignalStrength extends Component {
     return data
   }
 
-  render() {
-    /*let handleScaleMenu = (e) => {
-      let choice = e.target.parentNode.getAttribute('value')
-      let scale = e.target.value
+  useEffect(() => {
+    fetchData()
+      .then(setSignals)
+      .catch((err) => context.error('Failed to fetch signals', err))
 
-      this.processTrafficHistory(choice, scale).then((result) => {
-        let o = {}
-        o[choice + '_scale'] = scale
-        o[choice] = result
-        this.setState(o)
-      })
-    }*/
+    deviceAPI
+      .list()
+      .then(setDevices)
+      .catch((err) => context.error('API failed to get devices', err))
+  }, [])
 
-    let options = {
-      indexAxis: 'x',
-      plugins: {
-        legend: { display: false },
-
-        tooltip: {
-          callbacks: {
-            beforeBody: (tooltipItems) =>
-              this.clientLabelFromMAC(tooltipItems[0].label)
-          }
-        }
-      },
-      scales: {}
-    }
-
-    let options_rssi = Object.assign(options, {
-      scales: {
-        RSSI: {
-          position: 'right',
-          type: 'linear',
-          ticks: {
-            includeBounds: true,
-            color: '#9f9f9f'
-          } /*
-          grid: {
-            zeroLineColor: 'transparent',
-            display: true,
-            drawBorder: false,
-            color: '#f0f0f0'
-          }*/
-        }
-      }
-    })
-
-    let options_rxtx = Object.assign(options, {
-      scales: {
-        RXTX: {
-          position: 'right',
-          type: 'linear',
-          ticks: {
-            includeBounds: true,
-            color: '#9f9f9f'
-          }
-        }
-      }
-    })
-
-    return (
-      <View>
-        <Box
-          rounded="md"
-          _light={{ bg: 'warmGray.50' }}
-          _dark={{ bg: 'blueGray.800' }}
-          width="100%"
-          p="4"
-          mb="4"
-        >
-          <Heading fontSize="lg">Device Signal Strength (RSSI)</Heading>
-          <Box>
-            {this.state.signals_rssi.datasets ? (
-              <Bar data={this.state.signals_rssi} options={options_rssi} />
-            ) : null}
-          </Box>
-        </Box>
-        <Box
-          rounded="md"
-          _light={{ bg: 'warmGray.50' }}
-          _dark={{ bg: 'blueGray.800' }}
-          width="100%"
-          p="4"
-          mb="4"
-        >
-          <Heading fontSize="lg">Device RX/TX Rate</Heading>
-          <Box>
-            {this.state.signals_rxtx.datasets ? (
-              <Bar data={this.state.signals_rxtx} options={options_rxtx} />
-            ) : null}
-          </Box>
-        </Box>
-      </View>
-    )
+  if (!signals) {
+    return <></>
   }
-}
 
-SignalStrength.contextType = AlertContext
+  let options = {
+    indexAxis: 'x',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          title: (tooltipItems) =>
+            deviceFieldByMAC(tooltipItems[0].label, 'Name'),
+          beforeBody: (tooltipItems) =>
+            clientLabelFromMAC(tooltipItems[0].label)
+        }
+      }
+    },
+    scales: {}
+  }
+
+  let optionsRSSI = {
+    ...options,
+    scales: {
+      RSSI: {
+        position: 'right',
+        type: 'linear',
+        ticks: {
+          includeBounds: true,
+          color: '#9f9f9f'
+        }
+      }
+    }
+  }
+
+  let optionsRXTX = {
+    ...options,
+    scales: {
+      RXTX: {
+        position: 'right',
+        type: 'linear',
+        ticks: {
+          includeBounds: true,
+          color: '#9f9f9f'
+        }
+      }
+    }
+  }
+
+  let signalsRSSI = processData(signals, ['RSSI'])
+  let signalsRXTX = processData(signals, ['RX', 'TX'])
+
+  return (
+    <>
+      <Heading p={4} fontSize="md">
+        Device Signal Strength (RSSI)
+      </Heading>
+
+      <Box
+        _light={{ bg: 'warmGray.50' }}
+        _dark={{ bg: 'blueGray.800' }}
+        p={4}
+        mb={4}
+      >
+        {signalsRSSI ? <Bar data={signalsRSSI} options={optionsRSSI} /> : null}
+      </Box>
+
+      <Heading p={4} fontSize="md">
+        Device RX/TX Rate
+      </Heading>
+
+      <Box
+        _light={{ bg: 'warmGray.50' }}
+        _dark={{ bg: 'blueGray.800' }}
+        p={4}
+        mb={4}
+      >
+        {signalsRXTX ? <Bar data={signalsRXTX} options={optionsRXTX} /> : null}
+      </Box>
+    </>
+  )
+}
