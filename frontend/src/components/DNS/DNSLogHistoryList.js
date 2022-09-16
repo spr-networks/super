@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { Dimensions } from 'react-native'
 import PropTypes from 'prop-types'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import Icon from 'FontAwesomeUtils'
@@ -36,6 +37,7 @@ import {
   VStack,
   Text,
   Tooltip,
+  View,
   ScrollView
 } from 'native-base'
 
@@ -364,8 +366,10 @@ const DNSLogHistoryList = (props) => {
     setListFiltered(filterList())
   }, [list, filterText, page])
 
+  let h = Dimensions.get('window').height - 64
+
   return (
-    <>
+    <View h={h}>
       <ModalForm
         title={
           'Add ' +
@@ -399,7 +403,7 @@ const DNSLogHistoryList = (props) => {
         <Stack
           space={2}
           direction={{ base: 'column', md: 'row' }}
-          h={{ base: '40%', md: 'auto' }}
+          h={{ base: '260', md: 'auto' }}
         >
           <FormControl flex={2} maxW={{ base: '100%', md: '1/3' }}>
             <FormControl.Label>Client</FormControl.Label>
@@ -494,7 +498,7 @@ const DNSLogHistoryList = (props) => {
           </HStack>
         ) : null}
       </Box>
-    </>
+    </View>
   )
 }
 
