@@ -890,7 +890,7 @@ func SyncBaseContainer() {
 	for err == nil {
 		// grab the lock exclusively. If this succeeds, that means base
 		// did not finish initializing yet. Unlock and retry after a second.
-		err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+		err = syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
 		if err == nil {
 			//release the lock -- and wait for bash
 			syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
