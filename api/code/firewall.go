@@ -875,8 +875,11 @@ func deleteForwardBlock(br ForwardingBlockRule) error {
 
 var BASE_READY = TEST_PREFIX + "/state/base/ready"
 func SyncBaseContainer() {
+
 	// Wait for the base container to grab the flock
-	file, err := os.Open(BASE_READY)
+
+
+	file, err := os.Open(BASE_READY, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		fmt.Println("[-] Failed to open base ready file", err)
 		return
