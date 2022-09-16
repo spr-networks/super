@@ -393,66 +393,68 @@ const DNSLogHistoryList = (props) => {
       <Box
         _light={{ bg: 'warmGray.50' }}
         _dark={{ bg: 'blueGray.800' }}
-        _rounded={{ md: 'md' }}
         width="100%"
         p={4}
       >
-        <VStack space={2} mb={4}>
-          <Stack space={2} direction={{ base: 'column', md: 'row' }}>
-            <FormControl flex={2} maxW={{ base: '100%', md: '1/3' }}>
-              <FormControl.Label>Client</FormControl.Label>
-              <ClientSelect
-                isDisabled
-                value={filterIps ? filterIps[0] : null}
-                onChange={handleChangeIp}
+        <Stack
+          space={2}
+          direction={{ base: 'column', md: 'row' }}
+          h={{ base: '40%', md: 'auto' }}
+        >
+          <FormControl flex={2} maxW={{ base: '100%', md: '1/3' }}>
+            <FormControl.Label>Client</FormControl.Label>
+            <ClientSelect
+              isDisabled
+              value={filterIps ? filterIps[0] : null}
+              onChange={handleChangeIp}
+            />
+          </FormControl>
+
+          <FormControl
+            flex={2}
+            display={{
+              base: filterIps.length && list.length ? 'flex' : 'none'
+            }}
+          >
+            <>
+              <FormControl.Label>Search</FormControl.Label>
+
+              <Input
+                type="text"
+                name="filterText"
+                size="lg"
+                placeholder="Filter domain..."
+                value={filterText}
+                onChangeText={handleChange}
+                InputRightElement={
+                  <Icon icon={faMagnifyingGlass} color="muted.400" mr={2} />
+                }
               />
-            </FormControl>
+            </>
+          </FormControl>
 
-            <FormControl
-              flex={2}
-              display={{
-                base: filterIps.length && list.length ? 'flex' : 'none'
-              }}
-            >
-              <>
-                <FormControl.Label>Search</FormControl.Label>
+          <FormControl
+            flex={{ base: 2, md: 1 }}
+            display={{
+              base: filterIps.length && list.length ? 'flex' : 'none'
+            }}
+          >
+            <>
+              <FormControl.Label>Delete history</FormControl.Label>
+              <Button
+                size="md"
+                variant="subtle"
+                colorScheme="danger"
+                leftIcon={<Icon icon={faTrash} />}
+                onPress={deleteHistory}
+              >
+                Delete
+              </Button>
+            </>
+          </FormControl>
+        </Stack>
 
-                <Input
-                  type="text"
-                  name="filterText"
-                  size="lg"
-                  placeholder="Filter domain..."
-                  value={filterText}
-                  onChangeText={handleChange}
-                  InputRightElement={
-                    <Icon icon={faMagnifyingGlass} color="muted.400" mr={2} />
-                  }
-                />
-              </>
-            </FormControl>
-
-            <FormControl
-              flex={{ base: 2, md: 1 }}
-              display={{
-                base: filterIps.length && list.length ? 'flex' : 'none'
-              }}
-            >
-              <>
-                <FormControl.Label>Delete history</FormControl.Label>
-                <Button
-                  size="md"
-                  variant="subtle"
-                  colorScheme="danger"
-                  leftIcon={<Icon icon={faTrash} />}
-                  onPress={deleteHistory}
-                >
-                  Delete
-                </Button>
-              </>
-            </FormControl>
-          </Stack>
-
-          {filterIps.length && !list.length ? (
+        {/*filterIps.length && !list.length ? (
             <HStack space={1}>
               <Spinner
                 alignSelf="flex-start"
@@ -460,10 +462,10 @@ const DNSLogHistoryList = (props) => {
               />
               <Text color="muted.500">Loading DNS logs...</Text>
             </HStack>
-          ) : null}
-        </VStack>
+          ) : null*/}
 
         <FlatList
+          h={{ base: '40%', md: 'auto' }}
           data={listFiltered}
           renderItem={({ item, index }) => (
             <ListItem
@@ -477,9 +479,9 @@ const DNSLogHistoryList = (props) => {
         />
 
         {total > 20 ? (
-          <HStack width="100%" space={2}>
+          <HStack h={{ base: '10%', md: 'auto' }} space={2}>
             <Button
-              flex="1"
+              flex={1}
               variant="ghost"
               isDisabled={page <= 1}
               onPress={() => setPage(page > 1 ? page - 1 : 1)}
