@@ -2,7 +2,8 @@ name: iOS Build
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ ios ]
+    #branches: [ main, dev ]
 #  pull_request:
 #    branches: [ main ]
 #  release:
@@ -12,15 +13,15 @@ jobs:
   ios-build:
     name: iOS Build
     runs-on: macOS-latest
-    defaults:
-      run:
-        working-directory: frontend
-
+#    defaults:
+#      run:
+#        working-directory: frontend
     steps:
       - name: Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
         with:
           access_token: ${{ github.token }}
+
       - name: Check out Git repository
         uses: actions/checkout@v2
 
@@ -28,7 +29,6 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: 18
-          cache: "yarn"
 
       - name: Install dependencies
         working-directory: ./frontend
