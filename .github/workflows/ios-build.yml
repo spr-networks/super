@@ -31,6 +31,7 @@ jobs:
           cache: "yarn"
 
       - name: Install dependencies
+        working-directory: ./frontend
         run: yarn install --frozen-lockfile
 
       - name: Restore buildcache
@@ -53,11 +54,14 @@ jobs:
           key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
           restore-keys: |
             ${{ runner.os }}-pods-
+
       - name: Install Pods
+        working-directory: ./frontend
         run: yarn setup:ios
 
       - name: Build IOS App
         uses: yukiarrr/ios-build-action@v1.4.0
+        working-directory: ./frontend
         with:
           project-path: ios/spr.xcodeproj
           p12-base64: ${{ secrets.IOS_P12_BASE64 }}
@@ -68,16 +72,19 @@ jobs:
           workspace-path: ios/spr.xcworkspace
 
       - name: Verify build
+        working-directory: ./frontend
         run: md5 output.ipa
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
+        working-directory: ./frontend
         with:
           name: SPR iOS IPA
           path: "output.ipa"
 
       - name: "Upload app to TestFlight"
         uses: apple-actions/upload-testflight-build@v1
+        working-directory: ./frontend
         with:
           app-path: "output.ipa"
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
