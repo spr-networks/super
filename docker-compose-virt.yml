@@ -30,6 +30,7 @@ services:
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
+      - ./state/base/:/state/base/
   superd:
     container_name: superd
     image: ghcr.io/spr-networks/super_superd
@@ -143,6 +144,7 @@ services:
       - ./state/dhcp/:/state/dhcp/
       - ./state/dns/:/state/dns/
       - ./state/api/:/state/api/
+      - ./state/base/:/state/base/
       - ./state/plugins/:/state/plugins/
       - ./state/public/:/state/public/
       - ./frontend/build:/ui/

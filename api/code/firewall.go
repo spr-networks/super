@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"syscall"
 )
 
 import (
@@ -872,7 +873,33 @@ func deleteForwardBlock(br ForwardingBlockRule) error {
 	return err
 }
 
+var BASE_READY = TEST_PREFIX + "/state/base/ready"
+func SyncBaseContainer() {
+	// Wait for the base container to grab the flock
+	file, err := os.Open(BASE_READY)
+	if err != nil {
+		fmt.Println("[-] Failed to open base ready file", err)
+		return
+	}
+	defer file.Close()
+
+	err = nil
+	for err == nil {
+		// grab the lock exclusively. If this succeeds, that means base
+		// did not finish initializing yet. Unlock and retry after a second.
+		err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+		if err == nil {
+			//release the lock -- and wait for bash
+			syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+			fmt.Println("[.] Waiting for base container to initialize")
+			time.Sleep(1 * time.Second)
+		}
+	}
+}
+
 func initUserFirewallRules() {
+	SyncBaseContainer()
+
 	loadFirewallRules()
 
 	x := func() {
@@ -893,12 +920,5 @@ func initUserFirewallRules() {
 
 	//run immediately
 	x()
-
-	//and also in 30 seconds
-	//TBD this should synchronize with 'base'
-	go func() {
-		time.Sleep(30 * time.Second)
-		x()
-	}()
 
 }

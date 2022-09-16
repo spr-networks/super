@@ -118,7 +118,8 @@ func saveConfig() {
 
 var UNIX_WIFID_LISTENER = TEST_PREFIX + "/state/wifi/apisock"
 var UNIX_DHCPD_LISTENER = TEST_PREFIX + "/state/dhcp/apisock"
-var UNIX_WIREGUARD_LISTENER = TEST_PREFIX + "/state/plugins/wireguard/apisock"
+var UNIX_WIREGUARD_LISTENER_PATH = TEST_PREFIX + "/state/plugins/wireguard/"
+var UNIX_WIREGUARD_LISTENER = UNIX_WIREGUARD_LISTENER_PATH + "apisock"
 
 func ipAddr(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("ip", "-j", "addr")
@@ -1779,6 +1780,10 @@ func main() {
 		panic(err)
 	}
 
+	// 1. Wireguard may be disabled and the path might not exist,
+	// 2. The container has not started yet for the first time
+	// -> Make the directory path regardless
+	_ = os.MkdirAll(UNIX_WIREGUARD_LISTENER_PATH, 0664)
 	os.Remove(UNIX_WIREGUARD_LISTENER)
 	unixWireguardListener, err := net.Listen("unix", UNIX_WIREGUARD_LISTENER)
 	if err != nil {

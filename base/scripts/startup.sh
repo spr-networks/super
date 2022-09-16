@@ -34,4 +34,6 @@ fi
 
 # performance tuning
 /scripts/perftune.sh
-while true; do sleep 100000; done
+
+#mark initialization as finished
+flock /state/base/foo bash -c "while true; do sleep 100000; done"
