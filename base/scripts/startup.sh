@@ -36,4 +36,4 @@ fi
 /scripts/perftune.sh
 
 #mark initialization as finished
-flock /state/base/foo bash -c "while true; do sleep 100000; done"
+flock /state/base/ready bash -c "while true; do sleep 100000; done"
