@@ -30,6 +30,12 @@ jobs:
         with:
           node-version: 18
 
+      - name: Cache node modules
+        uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+
       - name: Install dependencies
         working-directory: ./frontend
         run: yarn install --frozen-lockfile
@@ -48,10 +54,10 @@ jobs:
         uses: actions/cache@v2
         with:
           path: |
-            ios/Pods
+            frontend/ios/Pods
             ~/Library/Caches/CocoaPods
             ~/.cocoapods
-          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          key: ${{ runner.os }}-pods-cache-${{ hashFiles('ios/Podfile.lock') }}
           restore-keys: |
             ${{ runner.os }}-pods-
 
@@ -68,7 +74,7 @@ jobs:
           code-signing-identity: "Apple Development"
           team-id: ${{ secrets.IOS_TEAM_ID }}
           certificate-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-          workspace-path: ios/spr.xcworkspace
+          workspace-path: frontend/ios/spr.xcworkspace
 
       - name: Verify build
         run: md5 output.ipa
