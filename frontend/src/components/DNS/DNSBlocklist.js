@@ -1,4 +1,5 @@
 import React from 'react'
+import { Dimensions } from 'react-native'
 import Icon from 'FontAwesomeUtils'
 import {
   faEllipsis,
@@ -23,7 +24,6 @@ import {
   Stack,
   HStack,
   Spinner,
-  Switch,
   Text,
   useColorModeValue
 } from 'native-base'
@@ -282,8 +282,8 @@ export default class DNSBlocklist extends React.Component {
                   alignItems="center"
                 >
                   <Text
-                    minW="50%"
-                    isTruncated
+                    w="75%"
+                    flexWrap="wrap"
                     _light={{
                       color: isOnlyRecommended(item) ? 'muted.500' : 'black'
                     }}
