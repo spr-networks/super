@@ -308,6 +308,7 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
                 variant="underlined"
                 w="100%"
                 value={name}
+                autoFocus={false}
                 onChangeText={(value) => handleName(value)}
                 onSubmitEditing={handleSubmit}
               />
