@@ -174,8 +174,8 @@ const DeviceListing = (props) => {
   )
   */
 
-  let padding = Platform.OS == 'ios' ? 75 * 2 : 75
-  let h = Dimensions.get('window').height - padding
+  let navbarHeight = 64
+  let h = Dimensions.get('window').height - navbarHeight
 
   return (
     <View>
