@@ -1,6 +1,6 @@
 {
   "name": "supernetworks-SPR-ui",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Supernetworks Secure Programmable Router",
   "main": "index.js",
   "private": true,
