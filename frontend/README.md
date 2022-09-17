@@ -39,3 +39,9 @@ yarn setup:ios
 
 open ios/spr.xcworkspace in Xcode && build/run
 
+for testflight we need:
+
++ production certificate
++ App Store distribution provisioning profile
+
+= same as app store dist
