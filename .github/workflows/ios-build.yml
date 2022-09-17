@@ -2,10 +2,11 @@ name: iOS Build
 
 on:
   push:
-    branches: [ ios ]
+    tags:
+      - 'ios*' 
     #branches: [ main, dev ]
-#  pull_request:
-#    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 #  release:
 #    types: [published]
 
@@ -79,11 +80,11 @@ jobs:
       - name: Verify build
         run: md5 output.ipa
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: SPR iOS IPA
-          path: "output.ipa"
+#      - name: Upload Artifact
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: SPR iOS IPA
+#          path: "output.ipa"
 
       - name: "Upload app to TestFlight"
         uses: apple-actions/upload-testflight-build@v1
