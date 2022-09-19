@@ -28,7 +28,7 @@ import (
 
 var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
-var ApiVersionFile = TEST_PREFIX + "/configs/base/version.txt"
+var ApiVersionFile = TEST_PREFIX + "/version.txt"
 
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
