@@ -150,6 +150,7 @@ services:
       - ./frontend/build:/ui/
       - /var/log/journal:/var/log/journal:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./version.txt:/version.txt
   plugin-lookup:
     container_name: super-plugin-lookup
     image: ghcr.io/spr-networks/super_plugin-lookup

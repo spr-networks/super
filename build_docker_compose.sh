@@ -37,7 +37,7 @@ fi
 
 # set version
 # NOTE if we rebuild a single container could still be old version
-git describe --tags > configs/base/version.txt
+git describe --tags > ./version.txt
 
 # make sure state directories and files exist
 mkdir -p state/api/
