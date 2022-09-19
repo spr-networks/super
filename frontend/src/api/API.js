@@ -156,6 +156,10 @@ class API {
   features(url) {
     return this.get('/features')
   }
+
+  version() {
+    return this.get('/version')
+  }
 }
 
 export default API

@@ -211,6 +211,7 @@ const AdminLayout = (props) => {
   const [isNavbarOpen, setIsNavbarOpen] = useState(false)
   const [isWifiDisabled, setIsWifiDisabled] = useState(false)
   const [isPlusDisabled, setIsPlusDisabled] = useState(true)
+  const [version, setVersion] = useState('v0.1')
 
   useEffect(() => {
     api
@@ -235,6 +236,11 @@ const AdminLayout = (props) => {
       .catch((err) => {
         setIsPlusDisabled(true)
       })
+
+    api
+      .version()
+      .then(setVersion)
+      .catch((err) => {})
 
     // callback for notifications, web & ios
     // action = allow,deny,cancel, data = nft data
@@ -395,6 +401,7 @@ const AdminLayout = (props) => {
           style={{ backdropFilter: 'blur(10px)' }}
         >
           <AdminNavbar
+            version={version}
             isMobile={false}
             isOpenSidebar={isOpenSidebar}
             setIsOpenSidebar={setIsOpenSidebar}
@@ -409,6 +416,7 @@ const AdminLayout = (props) => {
           _style={{ backdropFilter: 'blur(10px)' }}
         >
           <AdminNavbar
+            version={version}
             isMobile={true}
             isOpenSidebar={isOpenSidebar}
             setIsOpenSidebar={setIsOpenSidebar}

@@ -85,8 +85,8 @@ export default function MockAPI() {
         UnixPath: '/state/dns/dns_block_plugin',
         Enabled: true,
         Plus: false,
-        GitURL: "",
-        ComposeFilePath: ""
+        GitURL: '',
+        ComposeFilePath: ''
       })
       server.create('plugin', {
         Name: 'dns-log',
@@ -112,8 +112,8 @@ export default function MockAPI() {
         UnixPath: '/state/plugins/pfw/socket',
         Enabled: true,
         Plus: true,
-        GitURL: "github.com/spr-networks/pfw_extension",
-        ComposeFilePath: "plugins/plus/pfw_extension/docker-compose.yml"
+        GitURL: 'github.com/spr-networks/pfw_extension',
+        ComposeFilePath: 'plugins/plus/pfw_extension/docker-compose.yml'
       })
 
       server.create('forwardrule', {
@@ -145,36 +145,36 @@ export default function MockAPI() {
 
       server.create('forwardblockrule', {
         SrcIP: '1.2.3.4',
-        DstPort: "0-65535",
+        DstPort: '0-65535',
         DstIP: '6.7.8.9/24',
         Protocol: 'tcp'
       })
       server.create('forwardblockrule', {
         SrcIP: '1.2.3.4',
         DstIP: '6.7.8.9/24',
-        DstPort: "0-65535",
+        DstPort: '0-65535',
         Protocol: 'tcp'
       })
 
       server.create('serviceport', {
-        "Protocol": "tcp",
-        "Port": "22",
-        "UpstreamEnabled": false
+        Protocol: 'tcp',
+        Port: '22',
+        UpstreamEnabled: false
       })
       server.create('serviceport', {
-        "Protocol": "tcp",
-        "Port": "80",
-        "UpstreamEnabled": false
+        Protocol: 'tcp',
+        Port: '80',
+        UpstreamEnabled: false
       })
       server.create('serviceport', {
-        "Protocol": "tcp",
-        "Port": "443",
-        "UpstreamEnabled": false
+        Protocol: 'tcp',
+        Port: '443',
+        UpstreamEnabled: false
       })
       server.create('serviceport', {
-        "Protocol": "tcp",
-        "Port": "5201",
-        "UpstreamEnabled": false
+        Protocol: 'tcp',
+        Port: '5201',
+        UpstreamEnabled: false
       })
 
       server.create('dnsblocklist', {
@@ -184,7 +184,7 @@ export default function MockAPI() {
       server.create('dnsblocklist', {
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt',
         Enabled: true,
-        Tags: ["focus"]
+        Tags: ['focus']
       })
       server.create('dnsoverride', {
         Type: 'block',
@@ -1111,13 +1111,16 @@ export default function MockAPI() {
               '[ SCAN_FREQ_KHZ ]: scan on kHz frequency support',
               '[ CONTROL_PORT_OVER_NL80211_TX_STATUS ]: tx status for nl80211 control port support'
             ]
-          },
-
+          }
         ]
       })
 
       this.get('/features', () => {
         return ['dns', 'wifi', 'ppp', 'wireguard']
+      })
+
+      this.get('/version', () => {
+        return '"v0.1.0-beta.0"'
       })
 
       this.get('/iw/dev', (schema) => {
@@ -1169,9 +1172,9 @@ export default function MockAPI() {
               addr: '44:a5:6e:63:c5:f3',
               type: 'managed',
               channel: '36 (5180 MHz), width: 80 MHz, center1: 5210 MHz',
-              txpower: '18.00 dBm',
+              txpower: '18.00 dBm'
             }
-          },
+          }
         }
       })
 
@@ -1334,61 +1337,61 @@ export default function MockAPI() {
 
       this.get('/notifications', (schema) => {
         return [
-            {
-                "Conditions": {
-                    "Prefix": "nft:drop:forward",
-                    "Protocol": "tcp",
-                    "DstIP": "",
-                    "DstPort": 0,
-                    "SrcIP": "",
-                    "SrcPort": 0
-                },
-                "Notification": true
+          {
+            Conditions: {
+              Prefix: 'nft:drop:forward',
+              Protocol: 'tcp',
+              DstIP: '',
+              DstPort: 0,
+              SrcIP: '',
+              SrcPort: 0
             },
-            {
-                "Conditions": {
-                    "Prefix": "nft:drop:input",
-                    "Protocol": "tcp",
-                    "DstIP": "",
-                    "DstPort": 0,
-                    "SrcIP": "",
-                    "SrcPort": 0
-                },
-                "Notification": true
+            Notification: true
+          },
+          {
+            Conditions: {
+              Prefix: 'nft:drop:input',
+              Protocol: 'tcp',
+              DstIP: '',
+              DstPort: 0,
+              SrcIP: '',
+              SrcPort: 0
             },
-            {
-                "Conditions": {
-                    "Prefix": "nft:drop:pfw",
-                    "Protocol": "tcp",
-                    "DstIP": "",
-                    "DstPort": 0,
-                    "SrcIP": "",
-                    "SrcPort": 0
-                },
-                "Notification": true
+            Notification: true
+          },
+          {
+            Conditions: {
+              Prefix: 'nft:drop:pfw',
+              Protocol: 'tcp',
+              DstIP: '',
+              DstPort: 0,
+              SrcIP: '',
+              SrcPort: 0
             },
-            {
-                "Conditions": {
-                    "Prefix": "nft:drop:input",
-                    "Protocol": "udp",
-                    "DstIP": "",
-                    "DstPort": 0,
-                    "SrcIP": "",
-                    "SrcPort": 0
-                },
-                "Notification": true
+            Notification: true
+          },
+          {
+            Conditions: {
+              Prefix: 'nft:drop:input',
+              Protocol: 'udp',
+              DstIP: '',
+              DstPort: 0,
+              SrcIP: '',
+              SrcPort: 0
             },
-            {
-                "Conditions": {
-                    "Prefix": "nft:drop:forward",
-                    "Protocol": "udp",
-                    "DstIP": "",
-                    "DstPort": 0,
-                    "SrcIP": "",
-                    "SrcPort": 0
-                },
-                "Notification": true
-            }
+            Notification: true
+          },
+          {
+            Conditions: {
+              Prefix: 'nft:drop:forward',
+              Protocol: 'udp',
+              DstIP: '',
+              DstPort: 0,
+              SrcIP: '',
+              SrcPort: 0
+            },
+            Notification: true
+          }
         ]
       })
 
@@ -1509,8 +1512,6 @@ export default function MockAPI() {
         return true
       })
 
-
-
       this.put('/hostapd/:dev/setChannel', (schema) => {
         return {
           Vht_oper_centr_freq_seg0_idx: 42,
@@ -1559,7 +1560,7 @@ export default function MockAPI() {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
-        return JSON.stringify("token")
+        return JSON.stringify('token')
       })
 
       //DNS plugin
@@ -1875,7 +1876,6 @@ export default function MockAPI() {
           BlockRules: schema.blockrules.all().models,
           ForwardingBlockRules: schema.forwardblockrules.all().models,
           ServicePorts: schema.serviceports.all().models
-
         }
       })
 
@@ -1950,7 +1950,6 @@ export default function MockAPI() {
         let attrs = JSON.parse(request.requestBody)
         return schema.serviceports.where(attrs).destroy()
       })
-
 
       // tokens
       this.get('/tokens', (schema, request) => {

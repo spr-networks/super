@@ -21,7 +21,12 @@ import {
   useToken
 } from 'native-base'
 
-const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
+const AdminNavbar = ({
+  isMobile,
+  isOpenSidebar,
+  setIsOpenSidebar,
+  version
+}) => {
   const { colorMode, toggleColorMode } = useColorMode()
 
   /*useEffect(() => {
@@ -73,7 +78,7 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
           </Text>
 
           <Text fontSize="md" color="muted.600">
-            v1.0-alpha
+            {version}
           </Text>
 
           <HStack marginLeft="auto" space="4">
@@ -156,7 +161,8 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
 AdminNavbar.propTypes = {
   isOpenSidebar: PropTypes.bool,
   setIsOpenSidebar: PropTypes.func,
-  isMobile: PropTypes.bool
+  isMobile: PropTypes.bool,
+  version: PropTypes.string
 }
 
 export default AdminNavbar

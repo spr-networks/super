@@ -23,7 +23,6 @@ import {
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
 import { ucFirst } from 'utils'
-//import LogList from 'components/Logs/LogList'
 
 const niceName = (name) => {
   if (Array.isArray(name)) {
@@ -151,6 +150,7 @@ const SystemInfo = (props) => {
   const [containers, setContainers] = useState([])
   const [uptime, setUptime] = useState({})
   const [hostname, setHostname] = useState('')
+  const [version, setVersion] = useState('')
 
   useEffect(() => {
     const fetchInfo = () => {
@@ -167,6 +167,11 @@ const SystemInfo = (props) => {
       api
         .get('/info/hostname')
         .then(setHostname)
+        .catch((err) => context.error(err))
+
+      api
+        .get('/version')
+        .then(setVersion)
         .catch((err) => context.error(err))
     }
 
@@ -194,8 +199,31 @@ const SystemInfo = (props) => {
     <>
       <HStack space={2} alignItems="flex-end" p={4}>
         <Heading fontSize="md">System Info</Heading>
-        <Text fontSize="xs">{hostname}</Text>
       </HStack>
+
+      <HStack space={4} mb={4}>
+        <HStack
+          flex={1}
+          space={2}
+          p={4}
+          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+          justifyContent="space-between"
+        >
+          <Text>Hostname</Text>
+          <Text color="muted.500">{hostname}</Text>
+        </HStack>
+        <HStack
+          flex={1}
+          space={2}
+          p={4}
+          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+          justifyContent="space-between"
+        >
+          <Text>SPR Version</Text>
+          <Text color="muted.500">{version}</Text>
+        </HStack>
+      </HStack>
+
       <Stack direction={{ base: 'column', md: 'row' }} space={4} mb={4}>
         <FlatList
           flex={1}
