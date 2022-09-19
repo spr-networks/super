@@ -77,7 +77,7 @@ const AdminNavbar = ({
             SPR
           </Text>
 
-          <Text fontSize="md" color="muted.600">
+          <Text fontSize="md" color="muted.600" isTruncated>
             {version}
           </Text>
 
