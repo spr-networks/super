@@ -35,6 +35,10 @@ if [ ! -f configs/dhcp/coredhcp.yml ]; then
   ./configs/scripts/gen_watchdog.sh  > configs/watchdog/watchdog.conf
 fi
 
+# set version
+# NOTE if we rebuild a single container could still be old version
+git describe --tags > configs/base/version.txt
+
 # make sure state directories and files exist
 mkdir -p state/api/
 mkdir -p state/dhcp/
