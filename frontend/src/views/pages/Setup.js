@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { api, wifiAPI } from 'api'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from 'FontAwesomeUtils'
@@ -295,6 +295,7 @@ const Setup = (props) => {
     'ZM',
     'ZW'
   ]
+
   useEffect(() => {
     api
       .get('/setup')
@@ -303,21 +304,7 @@ const Setup = (props) => {
         let msg = await err.response.text() // setup already done
         setIsDone(true)
       })
-  }, [])
 
-  useEffect(() => {
-    if ('login' in errors && password.length) {
-      setErrors({})
-    }
-  }, [password])
-
-  useEffect(() => {
-    if ('ssid' in errors && ssid.length) {
-      setErrors({})
-    }
-  }, [ssid])
-
-  useEffect(() => {
     wifiAPI.config(interfaceWifi).then(
       (conf) => {
         setConfig(conf)
@@ -352,29 +339,17 @@ const Setup = (props) => {
     })
   }, [])
 
-  const genWifiInterfaces = () => {
-    let ret = []
-    for (let wif of wifiInterfaces) {
-      ret.push(<Select.Item label={wif} value={wif} />)
+  useEffect(() => {
+    if ('login' in errors && password.length) {
+      setErrors({})
     }
-    return ret
-  }
+  }, [password])
 
-  const genUplinkInterfaces = () => {
-    let ret = []
-    for (let wif of uplinkInterfaces) {
-      ret.push(<Select.Item label={wif} value={wif} />)
+  useEffect(() => {
+    if ('ssid' in errors && ssid.length) {
+      setErrors({})
     }
-    return ret
-  }
-
-  const genCountries = () => {
-    let s = []
-    for (let code of countryCodes) {
-      s.push(<Select.Item key={code} label={code} value={code} />)
-    }
-    return s
-  }
+  }, [ssid])
 
   const handlePress = () => {
     if (
@@ -418,7 +393,6 @@ const Setup = (props) => {
   return (
     <View w="100%" alignItems="center">
       <Box
-        safeArea
         px={4}
         py={8}
         w="90%"
@@ -472,6 +446,7 @@ const Setup = (props) => {
                   value={ssid}
                   placeholder={'N\u0430me of your Wireless Network'}
                   onChangeText={(value) => setSsid(value)}
+                  autoFocus
                 />
                 {'ssid' in errors ? (
                   <FormControl.ErrorMessage
@@ -485,11 +460,15 @@ const Setup = (props) => {
               </FormControl>
               <FormControl isInvalid={'country' in errors}>
                 <FormControl.Label>Wifi Country Code</FormControl.Label>
+
                 <Select
                   selectedValue={countryWifi}
                   onValueChange={(value) => setCountryWifi(value)}
+                  accessibilityLabel={`Choose Country Code`}
                 >
-                  {genCountries()}
+                  {countryCodes.map((code) => (
+                    <Select.Item key={code} label={code} value={code} />
+                  ))}
                 </Select>
               </FormControl>
 
@@ -499,7 +478,9 @@ const Setup = (props) => {
                   selectedValue={interfaceWifi}
                   onValueChange={(value) => setInterfaceWifi(value)}
                 >
-                  {genWifiInterfaces()}
+                  {wifiInterfaces.map((wif) => (
+                    <Select.Item key={wif} label={wif} value={wif} />
+                  ))}
                 </Select>
               </FormControl>
 
@@ -511,9 +492,12 @@ const Setup = (props) => {
                   selectedValue={interfaceUplink}
                   onValueChange={(value) => setInterfaceUplink(value)}
                 >
-                  {genUplinkInterfaces()}
+                  {uplinkInterfaces.map((wif) => (
+                    <Select.Item key={wif} label={wif} value={wif} />
+                  ))}
                 </Select>
               </FormControl>
+
               <FormControl isInvalid={'login' in errors}>
                 <FormControl.Label>Admin Password</FormControl.Label>
                 <Input
@@ -538,6 +522,7 @@ const Setup = (props) => {
                   </FormControl.ErrorMessage>
                 ) : null}
               </FormControl>
+
               <Button
                 mt={8}
                 rounded="full"

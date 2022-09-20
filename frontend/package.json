@@ -53,7 +53,7 @@
     "metro-react-native-babel-preset": "^0.72.2",
     "miragejs": "^0.1.43",
     "moment": "^2.29.4",
-    "native-base": "^3.4.15",
+    "native-base": "^3.4.6",
     "prop-types": "^15.7.2",
     "react": "17.0.2",
     "react-chartjs-2": "^4.0.1",
