@@ -381,6 +381,29 @@ func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 
 }
 
+
+func syncDevices(w http.ResponseWriter, r *http.Request) {
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+
+	devices := map[string]DeviceEntry{}
+	err := json.NewDecoder(r.Body).Decode(&devices)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	saveDevicesJson(devices)
+
+	for _, val := range devices {
+		refreshDeviceGroups(val)
+		refreshDeviceTags(val)
+	}
+
+	doReloadPSKFiles()
+}
+
+
 func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, identity string) (string, int) {
 
 	Devicesmtx.Lock()
@@ -1738,6 +1761,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/groups", updateGroups).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/devices", getDevices).Methods("GET")
 	external_router_authenticated.HandleFunc("/device", handleUpdateDevice).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/devicesSync", syncDevices).Methods("PUT")
 
 	external_router_authenticated.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 
