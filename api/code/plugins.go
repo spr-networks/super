@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,8 +22,14 @@ import (
 
 var PlusUser = "lts-super-plus"
 var PfwGitURL = "github.com/spr-networks/pfw_extension"
+var MeshGitURL = "github.com/spr-networks/pfw_extension"
 
-var gPlusExtensionDefaults = []PluginConfig{{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml"}}
+var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
+
+var gPlusExtensionDefaults = []PluginConfig{
+	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml"},
+	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml"},
+}
 
 func PluginProxy(config PluginConfig) (*httputil.ReverseProxy, error) {
 	return &httputil.ReverseProxy{
@@ -254,6 +261,17 @@ func getSuperdClient() http.Client {
 	}
 	return c
 }
+
+func getMeshdClient() http.Client {
+	c := http.Client{}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", MeshdSocketPath)
+		},
+	}
+	return c
+}
+
 
 func ghcrSuperdLogin() bool {
 	if config.PlusToken == "" {
@@ -541,4 +559,57 @@ func startPlusServices() error {
 		}
 	}
 	return nil
+}
+
+
+// mesh support
+
+func updateMeshPluginConnect(event PSKAuthSuccess) {
+	jsonValue, _ := json.Marshal(event)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/stationConnect", bytes.NewBuffer(jsonValue))
+	if err != nil {
+		return
+	}
+
+	c := getMeshdClient()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println("meshd request failed", err)
+		return
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("meshd request failed", resp.StatusCode)
+		return
+	}
+
+}
+
+func updateMeshPluginDisconnect(event StationDisconnect) {
+	jsonValue, _ := json.Marshal(event)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/stationDisconnect", bytes.NewBuffer(jsonValue))
+	if err != nil {
+		return
+	}
+
+	c := getMeshdClient()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println("meshd request failed", err)
+		return
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("meshd request failed", resp.StatusCode)
+		return
+	}
+
 }

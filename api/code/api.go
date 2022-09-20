@@ -1345,6 +1345,13 @@ type PSKAuthSuccess struct {
 	Status string
 }
 
+type StationDisconnect struct {
+	Iface  string
+	Event  string
+	MAC    string
+	Status string
+}
+
 func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
@@ -1390,9 +1397,38 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	go updateMeshPluginConnect(pska)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pska)
 }
+
+func reportDisconnect(w http.ResponseWriter, r *http.Request) {
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+
+	event := StationDisconnect{}
+	err := json.NewDecoder(r.Body).Decode(&event)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	WSNotifyValue("StationDisconnect", event)
+
+	if event.Iface == "" || event.Event != "AP-STA-DISCONNECTED" || event.MAC == "" {
+		http.Error(w, "malformed data", 400)
+		return
+	}
+
+	event.Status = "Okay"
+
+	go updateMeshPluginDisconnect(event)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(event)
+}
+
 
 func genSecurePassword() string {
 	pw := make([]byte, 16)
@@ -1811,6 +1847,7 @@ func main() {
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
 	unix_wifid_router.HandleFunc("/reportPSKAuthSuccess", reportPSKAuthSuccess).Methods("PUT")
+	unix_wifid_router.HandleFunc("/reportDisconnect", reportDisconnect).Methods("PUT")
 	unix_wifid_router.HandleFunc("/interfaces", getEnabledAPInterfaces).Methods("GET")
 
 	// DHCP actions
