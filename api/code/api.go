@@ -383,6 +383,27 @@ func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 
 func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, identity string) (string, int) {
 
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+	Groupsmtx.Lock()
+	defer Groupsmtx.Unlock()
+
+	devices := getDevicesJson()
+	groups := getGroupsJson()
+
+	// copy another device
+	sourceDeviceMAC := r.URL.Query().Get("copy")
+	if sourceDeviceMAC != "" {
+		sourceDevice, exists := devices[sourceDeviceMAC]
+
+		if !exists {
+			return "invalid source device", 400
+		}
+
+		dev.PSKEntry.Type = sourceDevice.PSKEntry.Type
+		dev.PSKEntry.Psk = sourceDevice.PSKEntry.Psk
+	}
+
 	if dev.PSKEntry.Type != "" {
 		if dev.PSKEntry.Type != "sae" && dev.PSKEntry.Type != "wpa2" {
 			return "invalid PSK Type", 400
@@ -397,14 +418,6 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	dev.Groups = normalizeStringSlice(dev.Groups)
 	dev.DeviceTags = normalizeStringSlice(dev.DeviceTags)
 	dev.MAC = trimLower(dev.MAC)
-
-	Devicesmtx.Lock()
-	defer Devicesmtx.Unlock()
-	Groupsmtx.Lock()
-	defer Groupsmtx.Unlock()
-
-	devices := getDevicesJson()
-	groups := getGroupsJson()
 
 	val, exists := devices[identity]
 
