@@ -39,4 +39,5 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates
 COPY --from=builder /coredns /
-ENTRYPOINT /coredns -conf /configs/dns/Corefile
+COPY scripts/ /scripts
+ENTRYPOINT /scripts/startup.sh

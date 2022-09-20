@@ -19,7 +19,12 @@ fi
 if [ "$NFT_OVERRIDE" ]; then
   . /configs/base/nft_rules.sh
 else
-  . /scripts/nft_rules.sh
+  # If configured as a leaf router, run those firwall rules instead
+  if [ -f state/plugins/mesh/enabled ] && [ -f plugins/plus/mesh/mesh_rules.sh ]; then
+    . plugins/plus/mesh/mesh_rules.sh
+  else
+    . /scripts/nft_rules.sh
+  fi
 fi
 
 ret=$?
