@@ -1761,7 +1761,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/groups", updateGroups).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/devices", getDevices).Methods("GET")
 	external_router_authenticated.HandleFunc("/device", handleUpdateDevice).Methods("PUT", "DELETE")
-	external_router_authenticated.HandleFunc("/devicesSync", syncDevices).Methods("PUT")
+	external_router_authenticated.HandleFunc("/devices", syncDevices).Methods("PUT")
 
 	external_router_authenticated.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 
