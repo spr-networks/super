@@ -95,6 +95,9 @@ func doReloadPSKFiles() {
 		}
 	}
 
+	//if we are re-loading PSK files, update the mesh plugin to run a device sync
+
+	updateMeshPluginPSKReload(devices)
 }
 
 type HostapdConfigEntry struct {

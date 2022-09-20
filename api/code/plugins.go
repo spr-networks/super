@@ -563,10 +563,8 @@ func startPlusServices() error {
 
 
 // mesh support
-
-func updateMeshPluginConnect(event PSKAuthSuccess) {
-	jsonValue, _ := json.Marshal(event)
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/stationConnect", bytes.NewBuffer(jsonValue))
+func updateMeshPluginPut(endpoint string, jsonValue []byte) {
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/" + endpoint, bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return
 	}
@@ -589,27 +587,24 @@ func updateMeshPluginConnect(event PSKAuthSuccess) {
 
 }
 
+
+func updateMeshPluginConnect(event PSKAuthSuccess) {
+	jsonValue, _ := json.Marshal(event)
+	go updateMeshPluginPut("stationConnect",  jsonValue)
+}
+
 func updateMeshPluginDisconnect(event StationDisconnect) {
 	jsonValue, _ := json.Marshal(event)
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/stationDisconnect", bytes.NewBuffer(jsonValue))
-	if err != nil {
-		return
-	}
+	go updateMeshPluginPut("stationDisconnect", jsonValue)
+}
 
-	c := getMeshdClient()
+func updateMeshPluginPSKReload(devices map[string]DeviceEntry) {
+	jsonValue, _ := json.Marshal(devices)
+	go updateMeshPluginPut("syncDevices", jsonValue)
+}
 
-	resp, err := c.Do(req)
-	if err != nil {
-		fmt.Println("meshd request failed", err)
-		return
-	}
 
-	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("meshd request failed", resp.StatusCode)
-		return
-	}
-
+func updateMeshPluginGlobalSSID(SSID string) {
+	jsonValue, _ := json.Marshal(SSID)
+	go updateMeshPluginPut("setSSID", jsonValue)
 }

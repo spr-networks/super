@@ -1397,7 +1397,7 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	go updateMeshPluginConnect(pska)
+	updateMeshPluginConnect(pska)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pska)
@@ -1423,7 +1423,7 @@ func reportDisconnect(w http.ResponseWriter, r *http.Request) {
 
 	event.Status = "Okay"
 
-	go updateMeshPluginDisconnect(event)
+	updateMeshPluginDisconnect(event)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(event)
