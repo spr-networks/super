@@ -2,7 +2,6 @@
 set -a
 . /configs/base/config.sh
 
-sysctl net.ipv4.ip_forward=1
 
 if [ "$LANIF" ]; then
   # set up static routes on LAN interface
