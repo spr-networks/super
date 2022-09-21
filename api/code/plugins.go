@@ -528,8 +528,10 @@ func stopPlusServices() error {
 }
 
 func installPlus() error {
-	if !downloadPlusExtension(PfwGitURL) {
-		return errors.New("failed to download PfwGit")
+	for _, plugin := range gPlusExtensionDefaults {
+		if !downloadPlusExtension(plugin.GitURL) {
+			return errors.New("failed to download plugin " + plugin.GitURL)
+		}
 	}
 
 	if !ghcrSuperdLogin() {
