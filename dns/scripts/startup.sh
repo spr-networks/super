@@ -1,2 +1,2 @@
 #!/bin/bash
-coredns -conf /configs/dns/Corefile
+/coredns -conf /configs/dns/Corefile
