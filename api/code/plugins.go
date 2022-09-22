@@ -22,7 +22,7 @@ import (
 
 var PlusUser = "lts-super-plus"
 var PfwGitURL = "github.com/spr-networks/pfw_extension"
-var MeshGitURL = "github.com/spr-networks/pfw_extension"
+var MeshGitURL = "github.com/spr-networks/mesh_extension"
 
 var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
 
