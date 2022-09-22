@@ -21,6 +21,8 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./state/base/:/state/base/
+      - ./state/plugins/:/state/plugins/
+      - ./plugins/:/plugins/
   superd:
     container_name: superd
     image: ghcr.io/spr-networks/super_superd
