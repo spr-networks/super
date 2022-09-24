@@ -575,7 +575,7 @@ func updateMeshPluginPut(endpoint string, jsonValue []byte) {
 
 	resp, err := c.Do(req)
 	if err != nil {
-		fmt.Println("meshd request failed", err)
+		fmt.Println("meshd request failed", err, endpoint)
 		return
 	}
 
@@ -583,7 +583,7 @@ func updateMeshPluginPut(endpoint string, jsonValue []byte) {
 	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("meshd request failed", resp.StatusCode)
+		fmt.Println("meshd request failed", resp.StatusCode, endpoint)
 		return
 	}
 
