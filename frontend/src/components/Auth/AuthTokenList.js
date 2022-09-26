@@ -90,6 +90,7 @@ const AuthTokenList = (props) => {
     )
   }
 
+  const showClipboard = Platform.OS !== 'web' || navigator.clipboard
   const copy = (data) => {
     if (Platform.OS == 'web') {
       navigator.clipboard.writeText(data)
@@ -147,6 +148,7 @@ const AuthTokenList = (props) => {
                     variant="unstyled"
                     icon={<Icon size="4" icon={faCopy} color="muted.500" />}
                     onPress={() => copy(item.Token)}
+                    display={showClipboard ? 'flex' : 'none'}
                   />
                 </HStack>
 

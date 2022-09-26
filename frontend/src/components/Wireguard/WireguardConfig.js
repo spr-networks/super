@@ -36,7 +36,8 @@ const WireguardConfig = (props) => {
 
   let config = configFromJSON(props.config)
 
-  //const copy = (data) => navigator.clipboard.writeText(data)
+  // if web requires secure context
+  const showClipboard = Platform.OS !== 'web' || navigator.clipboard
   const copy = (data) => {
     if (Platform.OS == 'web') {
       navigator.clipboard.writeText(data)
@@ -87,6 +88,7 @@ const WireguardConfig = (props) => {
           size="sm"
           leftIcon={<Icon icon={faClone} />}
           onPress={() => copy(config)}
+          display={showClipboard ? 'flex' : 'none'}
         >
           Copy
         </Button>
