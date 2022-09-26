@@ -130,6 +130,7 @@ const AddDevice = (props) => {
       MAC: mac || 'pending',
       Name: name,
       Groups: groups,
+      DeviceTags: tags,
       PSKEntry: {
         Psk: psk,
         Type: wpa
