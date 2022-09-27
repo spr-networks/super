@@ -1847,7 +1847,7 @@ func main() {
 
 	// allow leaf nodes to report PSK events also
 	external_router_authenticated.HandleFunc("/reportPSKAuthSuccess", reportPSKAuthSuccess).Methods("PUT")
-	external_router_authenticated.HandleFunc("/reportPSKAuthFailure", reportPSKAuthSuccess).Methods("PUT")
+	external_router_authenticated.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
 	external_router_authenticated.HandleFunc("/reportDisconnect", reportPSKAuthSuccess).Methods("PUT")
 
 	// PSK management for stations
