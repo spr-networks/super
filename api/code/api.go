@@ -1850,7 +1850,7 @@ func main() {
 	// allow leaf nodes to report PSK events also
 	external_router_authenticated.HandleFunc("/reportPSKAuthSuccess", reportPSKAuthSuccess).Methods("PUT")
 	external_router_authenticated.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
-	external_router_authenticated.HandleFunc("/reportDisconnect", reportPSKAuthSuccess).Methods("PUT")
+	external_router_authenticated.HandleFunc("/reportDisconnect", reportDisconnect).Methods("PUT")
 
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
