@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 	"syscall"
+	"time"
 )
 
 import (
@@ -874,10 +874,10 @@ func deleteForwardBlock(br ForwardingBlockRule) error {
 }
 
 var BASE_READY = TEST_PREFIX + "/state/base/ready"
+
 func SyncBaseContainer() {
 
 	// Wait for the base container to grab the flock
-
 
 	file, err := os.OpenFile(BASE_READY, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {

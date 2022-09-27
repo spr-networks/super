@@ -20,7 +20,7 @@ import (
 var NotificationSettingsFile = "/configs/base/notifications.json"
 var ServerEventSock = "/state/api/eventbus.sock"
 
-//notifications.json is array of this:
+// notifications.json is array of this:
 type NotificationSetting struct {
 	//Conditions map[string]interface{}	`json:"Conditions"`
 	Conditions       ConditionEntry `json:"Conditions"`
@@ -39,7 +39,7 @@ type ConditionEntry struct {
 	OutDev   string `json:"OutDev"`
 }
 
-//new format for notifications
+// new format for notifications
 type PacketInfo struct {
 	//Ethernet  *PacketEthernet `json:"Ethernet,omitempty"`
 	TCP       *layers.TCP    `json:"TCP,omitempty"`

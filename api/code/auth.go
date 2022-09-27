@@ -110,9 +110,9 @@ type authnconfig struct {
 }
 
 type Token struct {
-	Name   string
-	Token  string
-	Expire int64
+	Name        string
+	Token       string
+	Expire      int64
 	ScopedPaths []string
 }
 
@@ -454,8 +454,6 @@ func (auth *authnconfig) authorizedToken(r *http.Request, token string) bool {
 	return false
 }
 
-
-
 func (auth *authnconfig) authenticateUser(username string, password string) bool {
 	users := map[string]string{}
 	data, err := os.ReadFile(AuthUsersFile)
@@ -496,7 +494,7 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 		//api token
 		token := auth.ExtractRequestToken(r)
 		if token != "" {
-			if auth.authenticateToken(token) && auth.authorizedToken(r, token){
+			if auth.authenticateToken(token) && auth.authorizedToken(r, token) {
 				authenticatedNext.ServeHTTP(w, r)
 				return
 			}

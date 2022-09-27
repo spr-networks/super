@@ -29,7 +29,7 @@ func getHostapdConfigPath(iface string) string {
 }
 
 /*
-	Generate a list of link devices in AP mode
+Generate a list of link devices in AP mode
 */
 func getAP_Ifaces() []string {
 	ret := []string{}
@@ -746,8 +746,8 @@ func toggleInterface(name string, enabled bool) error {
 	return nil
 }
 
-//when interfaces.json is updated, the firewall rules need to
-//be applied again
+// when interfaces.json is updated, the firewall rules need to
+// be applied again
 func resetRadioFirewall() {
 	Interfacesmtx.Lock()
 	config := loadInterfacesConfigLocked()
@@ -867,8 +867,8 @@ func restartWifi(w http.ResponseWriter, r *http.Request) {
 }
 
 /*
- This provides for a smooth transition to multi AP. It can be removed
- at some point.
+This provides for a smooth transition to multi AP. It can be removed
+at some point.
 */
 func multi_ap_migration() {
 	old_path := TEST_PREFIX + "/configs/wifi/hostapd.conf"

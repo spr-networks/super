@@ -272,7 +272,6 @@ func getMeshdClient() http.Client {
 	return c
 }
 
-
 func ghcrSuperdLogin() bool {
 	if config.PlusToken == "" {
 		return false
@@ -563,10 +562,9 @@ func startPlusServices() error {
 	return nil
 }
 
-
 // mesh support
 func updateMeshPluginPut(endpoint string, jsonValue []byte) {
-	req, err := http.NewRequest(http.MethodPut, "http://localhost/" + endpoint, bytes.NewBuffer(jsonValue))
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/"+endpoint, bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return
 	}
@@ -589,7 +587,6 @@ func updateMeshPluginPut(endpoint string, jsonValue []byte) {
 
 }
 
-
 func updateMeshPluginConnect(event PSKAuthSuccess) {
 	jsonValue, _ := json.Marshal(event)
 	go updateMeshPluginPut("stationConnect", jsonValue)
@@ -609,7 +606,6 @@ func updateMeshPluginPSKReload(devices map[string]DeviceEntry) {
 	jsonValue, _ := json.Marshal(devices)
 	go updateMeshPluginPut("syncDevices", jsonValue)
 }
-
 
 func updateMeshPluginGlobalSSID(SSID string) {
 	jsonValue, _ := json.Marshal(SSID)

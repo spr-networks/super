@@ -381,7 +381,6 @@ func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 
 }
 
-
 func syncDevices(w http.ResponseWriter, r *http.Request) {
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
@@ -402,7 +401,6 @@ func syncDevices(w http.ResponseWriter, r *http.Request) {
 
 	doReloadPSKFiles()
 }
-
 
 func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, identity string) (string, int) {
 
@@ -1432,7 +1430,6 @@ func reportDisconnect(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(event)
 }
 
-
 func genSecurePassword() string {
 	pw := make([]byte, 16)
 	n, err := crand.Read(pw)
@@ -1685,7 +1682,7 @@ func callSuperdRestart(target string) {
 	_, err = ioutil.ReadAll(resp.Body)
 }
 
-//set up SPA handler. From gorilla mux's documentation
+// set up SPA handler. From gorilla mux's documentation
 type spaHandler struct {
 	staticPath string
 	indexPath  string
