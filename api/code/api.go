@@ -1332,8 +1332,9 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//no longer assign MAC on Auth Failure due to noentry
+	updateMeshPluginConnectFailure(pskf)
 
+	//no longer assign MAC on Auth Failure due to noentry
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pskf)
 }
@@ -1843,6 +1844,11 @@ func main() {
 	external_router_authenticated.HandleFunc("/notifications", getNotificationSettings).Methods("GET")
 	external_router_authenticated.HandleFunc("/notifications", modifyNotificationSettings).Methods("DELETE", "PUT")
 	external_router_authenticated.HandleFunc("/notifications/{index:[0-9]+}", modifyNotificationSettings).Methods("DELETE", "PUT")
+
+	// allow leaf nodes to report PSK events also
+	external_router_authenticated.HandleFunc("/reportPSKAuthSuccess", reportPSKAuthSuccess).Methods("PUT")
+	external_router_authenticated.HandleFunc("/reportPSKAuthFailure", reportPSKAuthSuccess).Methods("PUT")
+	external_router_authenticated.HandleFunc("/reportDisconnect", reportPSKAuthSuccess).Methods("PUT")
 
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")

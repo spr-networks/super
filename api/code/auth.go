@@ -113,6 +113,7 @@ type Token struct {
 	Name   string
 	Token  string
 	Expire int64
+	ScopedPaths []string
 }
 
 func genBearerToken() string {
@@ -417,6 +418,44 @@ func (auth *authnconfig) authenticateToken(token string) bool {
 	return exists
 }
 
+func scopedPathMatch(pathToMatch string, paths []string) bool {
+	for _, entry := range paths {
+		if strings.HasPrefix(pathToMatch, entry) {
+			return true
+		}
+	}
+	return false
+}
+func (auth *authnconfig) authorizedToken(r *http.Request, token string) bool {
+	Tokensmtx.Lock()
+	//check api tokens
+	tokens := []Token{}
+	data, err := os.ReadFile(AuthTokensFile)
+	Tokensmtx.Unlock()
+	if err == nil {
+		json.Unmarshal(data, &tokens)
+	}
+
+	for _, t := range tokens {
+		if subtle.ConstantTimeCompare([]byte(token), []byte(t.Token)) == 1 {
+			if len(t.ScopedPaths) != 0 {
+				if !scopedPathMatch(r.URL.Path, t.ScopedPaths) {
+					//this url path did not match any of the scoped paths,
+					// continue
+					continue
+				}
+			}
+			if t.Expire == 0 || t.Expire > time.Now().Unix() {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+
+
 func (auth *authnconfig) authenticateUser(username string, password string) bool {
 	users := map[string]string{}
 	data, err := os.ReadFile(AuthUsersFile)
@@ -457,7 +496,7 @@ func (auth *authnconfig) Authenticate(authenticatedNext *mux.Router, publicNext 
 		//api token
 		token := auth.ExtractRequestToken(r)
 		if token != "" {
-			if auth.authenticateToken(token) {
+			if auth.authenticateToken(token) && auth.authorizedToken(r, token){
 				authenticatedNext.ServeHTTP(w, r)
 				return
 			}

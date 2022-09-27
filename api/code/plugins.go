@@ -308,7 +308,7 @@ func generatePFWAPIToken() {
 	//install API token for PLUS
 	var pfwConfigFile = TEST_PREFIX + "/configs/pfw/rules.json"
 	value := genBearerToken()
-	pfw_token := Token{"PLUS-API-Token", value, 0}
+	pfw_token := Token{"PLUS-API-Token", value, 0, []string{}}
 
 	Tokensmtx.Lock()
 	defer Tokensmtx.Unlock()
@@ -592,7 +592,12 @@ func updateMeshPluginPut(endpoint string, jsonValue []byte) {
 
 func updateMeshPluginConnect(event PSKAuthSuccess) {
 	jsonValue, _ := json.Marshal(event)
-	go updateMeshPluginPut("stationConnect",  jsonValue)
+	go updateMeshPluginPut("stationConnect", jsonValue)
+}
+
+func updateMeshPluginConnectFailure(event PSKAuthFailure) {
+	jsonValue, _ := json.Marshal(event)
+	go updateMeshPluginPut("stationConnectFailure", jsonValue)
 }
 
 func updateMeshPluginDisconnect(event StationDisconnect) {
