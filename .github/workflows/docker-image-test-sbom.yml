@@ -27,11 +27,11 @@ jobs:
      - name: list images
        run: docker-compose images
      # generate the output TODO dynamic
-     - name: List image output
-       id: set-matrix
-       run: echo "::set-output name=matrix::$(echo '[\"base\", \"api\"]')"
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+#     - name: List image output
+#       id: set-matrix
+#       run: echo "::set-output name=matrix::$(echo '[\"base\", \"api\"]')"
+#    outputs:
+#      matrix: ${{ steps.set-matrix.outputs.matrix }}
 
   sbom:
     needs: build_images
@@ -39,8 +39,8 @@ jobs:
 
     strategy:
       matrix:
-        #package: ${{ fromJson(["base", "api"]) }}
-        package: ${{ fromJson(needs.build_images.outputs.matrix) }}
+        #package: ${{ fromJson(needs.build_images.outputs.matrix) }}
+        package: ${{ fromJson(["base", "api"]) }}
     steps:
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
