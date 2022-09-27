@@ -1344,6 +1344,7 @@ type PSKAuthSuccess struct {
 	Event  string
 	MAC    string
 	Status string
+	Router string
 }
 
 type StationDisconnect struct {
@@ -1351,6 +1352,7 @@ type StationDisconnect struct {
 	Event  string
 	MAC    string
 	Status string
+	Router string
 }
 
 func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
