@@ -9,8 +9,9 @@ on:
 # 1st job builds the images, output a json array of all the image names
 # 2nd job iterates list of images and generates sbom for each
 jobs:
-  buildx:
+  build_images:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -33,12 +34,12 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
   sbom:
-    needs: buildx
+    needs: build_images
     runs-on: ubuntu-latest
     strategy:
       matrix:
         #package: ${{ fromJson(["base", "api"]) }}
-        package: ${{ fromJson(needs.buildx.outputs.matrix) }}
+        package: ${{ fromJson(needs.build_images.outputs.matrix) }}
     steps:
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
