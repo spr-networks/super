@@ -266,6 +266,11 @@ func getVersion(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(string(data))
 }
 
+func restart(w http.ResponseWriter, r *http.Request) {
+	//restart all containers
+	go callSuperdRestart("")
+}
+
 var Devicesmtx sync.Mutex
 
 func convertDevicesPublic(devices map[string]DeviceEntry) map[string]DeviceEntry {
@@ -1791,6 +1796,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/version", getVersion).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/restart", restart).Methods("PUT")
 
 	//device management
 	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")
