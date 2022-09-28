@@ -510,7 +510,7 @@ func CIDRorIP(IP string) error {
 	if err != nil {
 		ip := net.ParseIP(IP)
 		if ip == nil {
-			return err
+			return fmt.Errorf("invalid ip " + IP).Error()
 		} else {
 			return nil
 		}
