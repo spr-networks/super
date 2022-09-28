@@ -37,10 +37,22 @@ const WireguardConfig = (props) => {
   let config = configFromJSON(props.config)
 
   // if web requires secure context
-  const showClipboard = Platform.OS !== 'web' || navigator.clipboard
+  const showClipboard = true //Platform.OS !== 'web' || navigator.clipboard
   const copy = (data) => {
     if (Platform.OS == 'web') {
-      navigator.clipboard.writeText(data)
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(data)
+      } else {
+        var copyTextarea = document.createElement('textarea')
+        copyTextarea.style.position = 'fixed'
+        copyTextarea.style.opacity = '0'
+        copyTextarea.textContent = data
+
+        document.body.appendChild(copyTextarea)
+        copyTextarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(copyTextarea)
+      }
     } else {
       Clipboard.setString(data)
     }
