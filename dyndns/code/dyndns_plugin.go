@@ -162,18 +162,6 @@ func loadConfig() GodyndnsConfig {
 		fmt.Println(err)
 	}
 
-	//upgrade ip urls
-	if len(config.IpUrls) == 0 {
-		urls := []string{}
-		if config.IpUrl != "" {
-			urls = append(urls, config.IpUrl)
-		}
-		if config.Ipv6Url != "" {
-			urls = append(urls, config.Ipv6Url)
-		}
-		config.IpUrls = urls
-	}
-
 	return config
 }
 
@@ -212,7 +200,39 @@ func startIntervalTimer() {
 
 }
 
+func migrate_ip_urls() {
+	//upgrade ip urls from the old format
+	config := loadConfig()
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
+	if len(config.IpUrls) == 0 {
+		urls := []string{}
+		if config.IpUrl != "" {
+			urls = append(urls, config.IpUrl)
+		}
+		if config.Ipv6Url != "" {
+			urls = append(urls, config.Ipv6Url)
+		}
+		config.IpUrls = urls
+		config.RunOnce = true
+		data, _ := json.Marshal(config)
+		err = ioutil.WriteFile(GoDyndnsConfigFile, data, 0600)
+		if err != nil {
+			fmt.Println("[-] Failed to save migration")
+		}
+	}
+
+}
+
+func init() {
+	migrate_ip_urls()
+
+}
 func main() {
+
+	init()
+
 	unix_plugin_router := mux.NewRouter().StrictSlash(true)
 
 	unix_plugin_router.HandleFunc("/config", getConfiguration).Methods("GET")
