@@ -2,15 +2,15 @@ package main
 
 import (
 	"encoding/json"
-	"regexp"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
-	"time"
+	"regexp"
 	"sync"
+	"time"
 )
 
 import (
@@ -24,23 +24,23 @@ var TEST_PREFIX = ""
 var GoDyndnsConfigFile = TEST_PREFIX + "/configs/dyndns/godyndns.json"
 
 type GodyndnsDomain struct {
-	DomainName	string `json:"domain_name"`
+	DomainName string   `json:"domain_name"`
 	SubDomains []string `json:"sub_domains"`
 }
 type GodyndnsConfig struct {
-	Provider 		string			`json:"provider"`
-	Email				string			`json:"email"`
-	Password 		string			`json:"password"`
-	LoginToken 	string			`json:"login_token"`
-	Domains			[]GodyndnsDomain	`json:"domains"`
-	IpUrls		  []string			`json:"ip_urls"`
-	IpUrl		    string			`json:"ip_url"`		//deprecated entry, replaced by ip_urls
-	Ipv6Url 		string			`json:"ipv6_url"`	//deprecated entry, replaced by ip_urls
-	IpType			string			`json:"ip_type"`
-	Interval		int					`json:"interval"`
-	Socks5Proxy	string			`json:"socks5"`
-	Resolver		string			`json:"resolver"`
-	RunOnce			bool				`json:"run_once"`
+	Provider    string           `json:"provider"`
+	Email       string           `json:"email"`
+	Password    string           `json:"password"`
+	LoginToken  string           `json:"login_token"`
+	Domains     []GodyndnsDomain `json:"domains"`
+	IpUrls      []string         `json:"ip_urls"`
+	IpUrl       string           `json:"ip_url"`   //deprecated entry, replaced by ip_urls
+	Ipv6Url     string           `json:"ipv6_url"` //deprecated entry, replaced by ip_urls
+	IpType      string           `json:"ip_type"`
+	Interval    int              `json:"interval"`
+	Socks5Proxy string           `json:"socks5"`
+	Resolver    string           `json:"resolver"`
+	RunOnce     bool             `json:"run_once"`
 }
 
 func runGoDyndns() {
@@ -49,7 +49,7 @@ func runGoDyndns() {
 	if err != nil {
 		fmt.Println("godns failed to run", err)
 	}
-	fmt.Println("out",string(stdout))
+	fmt.Println("out", string(stdout))
 }
 
 func validateConfig(config GodyndnsConfig) error {
@@ -86,11 +86,11 @@ func validateConfig(config GodyndnsConfig) error {
 	}
 
 	for _, entry := range config.Domains {
-		if entry.DomainName != "" && !validCommand(entry.DomainName){
+		if entry.DomainName != "" && !validCommand(entry.DomainName) {
 			return fmt.Errorf("invalid domain name: " + entry.DomainName)
 		}
 		for _, subdomain := range entry.SubDomains {
-			if subdomain != "" && !validCommand(subdomain){
+			if subdomain != "" && !validCommand(subdomain) {
 				return fmt.Errorf("invalid subdomain: " + subdomain)
 			}
 		}
@@ -137,7 +137,6 @@ func refreshDyndns(w http.ResponseWriter, r *http.Request) {
 
 	runGoDyndns()
 }
-
 
 func getConfiguration(w http.ResponseWriter, r *http.Request) {
 	config := loadConfig()
@@ -217,7 +216,7 @@ func migrate_ip_urls() {
 		config.IpUrls = urls
 		config.RunOnce = true
 		data, _ := json.Marshal(config)
-		err = ioutil.WriteFile(GoDyndnsConfigFile, data, 0600)
+		err := ioutil.WriteFile(GoDyndnsConfigFile, data, 0600)
 		if err != nil {
 			fmt.Println("[-] Failed to save migration")
 		}
@@ -225,13 +224,13 @@ func migrate_ip_urls() {
 
 }
 
-func init() {
+func dyndns_init() {
 	migrate_ip_urls()
-
 }
+
 func main() {
 
-	init()
+	dyndns_init()
 
 	unix_plugin_router := mux.NewRouter().StrictSlash(true)
 
