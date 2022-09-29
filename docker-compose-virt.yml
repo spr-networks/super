@@ -58,6 +58,7 @@ services:
       - ./configs/dhcp/:/configs/dhcp/
       - ./configs/zones/:/configs/zones/
       - ./state/dhcp/:/state/dhcp/
+      - ./state/plugins/mesh/:/state/plugins/mesh/:ro
       - /sys/fs/bpf:/sys/fs/bpf
   dns:
     container_name: superdns
@@ -74,6 +75,7 @@ services:
       - ./configs/dns/:/configs/dns/
       - ./state/dns/:/state/dns/
       - ./state/public/:/state/public/:ro
+      - ./state/plugins/mesh/:/state/plugins/mesh/:ro
   multicast_udp_proxy:
     container_name: super_multicast_udp_proxy
     image: ghcr.io/spr-networks/super_multicast_udp_proxy
@@ -87,6 +89,7 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./state/public/:/state/public/:ro
+      - ./state/plugins/mesh/:/state/plugins/mesh/:ro
   wireguard:
     container_name: superwireguard
     image: ghcr.io/spr-networks/super_wireguard
@@ -107,6 +110,7 @@ services:
       - ./configs/wireguard/:/configs/wireguard/
       - ./state/plugins/wireguard/:/state/plugins/wireguard/
       - ./state/dhcp/:/state/dhcp/
+      - ./state/plugins/mesh/:/state/plugins/mesh/:ro
   frontend:
     container_name: superfrontend
     image: ghcr.io/spr-networks/super_frontend
