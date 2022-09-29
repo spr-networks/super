@@ -6,7 +6,7 @@ import { AppContext, AlertContext, alertState } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Sidebar from 'components/Sidebar/Sidebar'
 import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
-import { api, pfwAPI, wifiAPI } from 'api'
+import { api, meshAPI, pfwAPI, wifiAPI } from 'api'
 import { ucFirst } from 'utils'
 
 import {
@@ -211,6 +211,7 @@ const AdminLayout = (props) => {
   const [isNavbarOpen, setIsNavbarOpen] = useState(false)
   const [isWifiDisabled, setIsWifiDisabled] = useState(false)
   const [isPlusDisabled, setIsPlusDisabled] = useState(true)
+  const [isMeshNode, setIsMeshNode] = useState(false)
   const [version, setVersion] = useState('v0.1')
 
   useEffect(() => {
@@ -222,6 +223,11 @@ const AdminLayout = (props) => {
         } else {
           setIsWifiDisabled(true)
         }
+
+        meshAPI
+          .leafMode()
+          .then((res) => setIsMeshNode(res === true))
+          .catch((err) => {})
       })
       .catch((err) => {
         setIsWifiDisabled(true)
@@ -383,7 +389,9 @@ const AdminLayout = (props) => {
         isWifiDisabled,
         isPlusDisabled,
         setIsWifiDisabled,
-        setIsPlusDisabled
+        setIsPlusDisabled,
+        isMeshNode,
+        setIsMeshNode
       }}
     >
       <Box
@@ -434,6 +442,7 @@ const AdminLayout = (props) => {
             display={{ base: 'none', md: 'flex' }}
             position={{ base: 'absolute', md: 'static' }}
             h={heightContent}
+            w={isOpenSidebar ? 20 : 64}
           >
             <Sidebar
               isMobile={false}
