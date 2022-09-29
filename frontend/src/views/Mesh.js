@@ -1,10 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { AlertContext } from 'AppContext'
+import { Platform } from 'react-native'
 
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 
 import {
   faCirclePlus,
+  faCopy,
   faPlus,
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
@@ -144,7 +146,12 @@ const Mesh = (props) => {
 
   const leafHeader = () => {
     return (
-      <HStack space={3} justifyContent="space-between" alignItems="center">
+      <HStack
+        space={3}
+        justifyContent="space-between"
+        alignItems="center"
+        my={2}
+      >
         <Heading fontSize="sm">Router IP</Heading>
         <Heading fontSize="sm">Status</Heading>
         <Heading fontSize="sm">Token</Heading>
@@ -204,6 +211,26 @@ const Mesh = (props) => {
     })
   }
 
+  const copy = (data) => {
+    if (Platform.OS == 'web') {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(data)
+      } else {
+        var copyTextarea = document.createElement('textarea')
+        copyTextarea.style.position = 'fixed'
+        copyTextarea.style.opacity = '0'
+        copyTextarea.textContent = data
+
+        document.body.appendChild(copyTextarea)
+        copyTextarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(copyTextarea)
+      }
+    } else {
+      Clipboard.setString(data)
+    }
+  }
+
   return (
     <>
       {isLeafMode == true ? (
@@ -239,13 +266,13 @@ const Mesh = (props) => {
       ) : (
         <>
           <HStack justifyContent="space-between" alignItems="center" p={4}>
-            <VStack maxW="60%">
+            <VStack maxW="60%" space={1}>
               <Heading fontSize="md" isTruncated>
                 Mesh Setup
               </Heading>
               <Text color="muted.500" isTruncated>
                 Configure downstream routers for mesh networking. Only wired
-                backhaul is supported for now.
+                backhaul is supported for now
               </Text>
             </VStack>
             <ModalForm
@@ -269,7 +296,7 @@ const Mesh = (props) => {
               ListHeaderComponent={leafHeader}
               renderItem={({ item }) => (
                 <Box
-                  borderBottomWidth="1"
+                  borderBottomWidth={1}
                   _dark={{
                     borderColor: 'muted.600'
                   }}
@@ -319,42 +346,53 @@ const Mesh = (props) => {
                 Add Leaf Router
               </Button>
             </VStack>
-
-            <HStack justifyContent="space-between" alignItems="center" p={4}>
-              <VStack>
-                <Heading fontSize="md" isTruncated>
-                  Device Token
-                </Heading>
-                <Text color="muted.500" isTruncated>
-                  Generate an API token to use this device as a leaf router.
-                </Text>
-                {leafToken == '' ? (
-                  <Button
-                    display={{
-                      base: 'flex',
-                      md: leafRouters.length ? 'none' : 'flex'
-                    }}
-                    variant={useColorModeValue('subtle', 'solid')}
-                    colorScheme="muted"
-                    leftIcon={<Icon icon={faCirclePlus} />}
-                    onPress={() => generateLeafToken()}
-                    mt={4}
-                  >
-                    Generate API Token
-                  </Button>
-                ) : (
-                  <HStack
-                    justifyContent="space-between"
-                    alignItems="center"
-                    p={4}
-                  >
-                    <Text>API-Token: </Text>
-                    <Text>{leafToken} </Text>
-                  </HStack>
-                )}
-              </VStack>
-            </HStack>
           </Box>
+
+          <VStack space={1} p={4}>
+            <Heading fontSize="md">Device Token</Heading>
+            <Text color="muted.500" isTruncated>
+              Generate an API token to use this device as a leaf router
+            </Text>
+          </VStack>
+
+          <VStack
+            bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+            _rounded={{ md: 'md' }}
+            width="100%"
+            p={4}
+            mb={4}
+            justifyContent="space-between"
+          >
+            {leafToken == '' ? (
+              <Button
+                display={{
+                  base: 'flex',
+                  md: leafRouters.length ? 'none' : 'flex'
+                }}
+                variant={useColorModeValue('subtle', 'solid')}
+                colorScheme="muted"
+                leftIcon={<Icon icon={faCirclePlus} />}
+                onPress={() => generateLeafToken()}
+              >
+                Generate API Token
+              </Button>
+            ) : (
+              <HStack
+                __justifyContent="space-between"
+                alignItems="center"
+                space={2}
+                p={4}
+              >
+                <Text color="muted.500">API-Token</Text>
+                <Text>{leafToken}</Text>
+                <IconButton
+                  variant="unstyled"
+                  icon={<Icon size="4" icon={faCopy} color="muted.500" />}
+                  onPress={() => copy(leafToken)}
+                />
+              </HStack>
+            )}
+          </VStack>
         </>
       )}
     </>
