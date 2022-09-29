@@ -226,7 +226,7 @@ const AdminLayout = (props) => {
 
         meshAPI
           .leafMode()
-          .then((res) => setIsMeshNode(res === true))
+          .then((res) => setIsMeshNode(JSON.parse(res) === true))
           .catch((err) => {})
       })
       .catch((err) => {
