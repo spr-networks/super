@@ -63,7 +63,9 @@ const Login = (props) => {
         navigate('/auth/setup')
       })
       .catch(async (err) => {
-        let msg = await err.response.text() // setup already done
+        if (err.response) {
+          let msg = await err.response.text() // setup already done
+        }
       })
 
     AsyncStorage.getItem('user').then((login) => {

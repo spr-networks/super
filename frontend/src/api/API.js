@@ -53,8 +53,12 @@ let gAuthHeaders = null
 class API {
   baseURL = ''
   authHeaders = ''
+  remoteURL = ''
 
   getApiURL() {
+    if (this.remoteURL != '') {
+      return this.remoteURL
+    }
     return getApiURL()
   }
 
@@ -82,6 +86,14 @@ class API {
 
   setAuthHeaders(username = '', password = '') {
     this.authHeaders = 'Basic ' + Base64.btoa(username + ':' + password)
+  }
+
+  setAuthTokenHeaders(token = '') {
+    this.authHeaders = 'Bearer ' + token
+  }
+
+  setRemoteURL(url) {
+    this.remoteURL = url
   }
 
   async request(method = 'GET', url, body) {
@@ -160,6 +172,11 @@ class API {
   version() {
     return this.get('/version')
   }
+
+  restart() {
+    return this.put('/restart')
+  }
+  
 }
 
 export default API

@@ -289,6 +289,11 @@ const AdminLayout = (props) => {
         //console.log('[NOTIFICATION]', JSON.stringify(res))
         let { type, title, body, data } = res
 
+        if (title == 'StatusCalled') {
+          //ignore debug message
+          return
+        }
+
         //console.log('plus disabled:', isPlusDisabled)
 
         // confirm notifications use pfw

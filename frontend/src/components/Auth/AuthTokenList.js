@@ -37,12 +37,7 @@ const AuthTokenList = (props) => {
   const refModal = useRef(null)
 
   useEffect(() => {
-    authAPI
-      .tokens()
-      .then((tokens) => {
-        setTokens(tokens)
-      })
-      .catch((err) => context.error('Auth Token API', err))
+    refreshList()
   }, [])
 
   const deleteListItem = (row) => {
@@ -63,7 +58,7 @@ const AuthTokenList = (props) => {
     return expire > 0 && expire < parseInt(new Date().getTime() / 1e3)
   }
 
-  const refreshList = (next) => {
+  const refreshList = () => {
     authAPI
       .tokens()
       .then((tokens) => {
@@ -148,6 +143,13 @@ const AuthTokenList = (props) => {
                     icon={<Icon size="4" icon={faCopy} color="muted.500" />}
                     onPress={() => copy(item.Token)}
                   />
+
+                  { item.ScopedPaths != null && item.ScopedPaths.length > 0 ?
+                    <Text>{JSON.stringify(item.ScopedPaths)}</Text>
+                    :
+                       <Text>
+                      </Text>
+                  }
                 </HStack>
 
                 <HStack
