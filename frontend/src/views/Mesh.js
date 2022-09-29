@@ -65,8 +65,12 @@ const Mesh = (props) => {
         return
       }
 
+      for (let i = 0; i < routers.length; i++) {
+        routers[i].status = "Unknown"
+      }
+      setLeafRouters(routers)
+
       let checkedRouters = routers.map(async (router) => {
-        router.status = "Unknown"
         let rApi = new api()
         rApi.setRemoteURL("http://"+router.IP+"/")
         rApi.setAuthTokenHeaders(router.APIToken)
