@@ -119,7 +119,7 @@ const Mesh = (props) => {
 
   const notifyChange = (t) => {
     if (refModal && refModal.current) {
-      refModal.current()      
+      refModal.current()
     }
     if (props.notifyChange) {
       props.notifyChange('mesh')
@@ -147,12 +147,12 @@ const Mesh = (props) => {
   const doMeshReset = () => {
 
     meshAPI.setLeafMode("disable").then(result => {
+      let a = new api()
+      a.restart()
       notifyChange()
     }).catch(e => {
-      alert(e)
       alertContext.error('Mesh API fail to disable mesh mode')
     })
-
   }
 
   return (
