@@ -33,8 +33,9 @@ type GodyndnsConfig struct {
 	Password 		string			`json:"password"`
 	LoginToken 	string			`json:"login_token"`
 	Domains			[]GodyndnsDomain	`json:"domains"`
-	IpUrl				string			`json:"ip_url"`
-	Ipv6Url			string			`json:"ipv6_url"`
+	IpUrls		  []string			`json:"ip_urls"`
+	IpUrl		    string			`json:"ip_url"`		//deprecated entry, replaced by ip_urls
+	Ipv6Url 		string			`json:"ipv6_url"`	//deprecated entry, replaced by ip_urls
 	IpType			string			`json:"ip_type"`
 	Interval		int					`json:"interval"`
 	Socks5Proxy	string			`json:"socks5"`
@@ -62,13 +63,14 @@ func validateConfig(config GodyndnsConfig) error {
 		return fmt.Errorf("invalid email")
 	}
 
-
-	if config.IpUrl != "" && !validCommand(config.IpUrl) {
-		return fmt.Errorf("invalid IpUrl")
+	if len(config.IpUrls) == 0 {
+		return fmt.Errorf("invalid IpUrls")
 	}
 
-	if config.Ipv6Url != "" && !validCommand(config.Ipv6Url) {
-		return fmt.Errorf("invalid Ipv6Url")
+	for _, url := range config.IpUrls {
+		if !validCommand(url) {
+			return fmt.Errorf("invalid IpUrl: " + url)
+		}
 	}
 
 	if config.IpType != "" && !validCommand(config.IpType) {
@@ -107,7 +109,7 @@ func setConfiguration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-	fmt.Println(config)
+
 	err = validateConfig(config)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
@@ -155,10 +157,21 @@ func loadConfig() GodyndnsConfig {
 		return config
 	}
 
-
 	err = json.Unmarshal(data, &config)
 	if err != nil {
 		fmt.Println(err)
+	}
+
+	//upgrade ip urls
+	if len(config.IpUrls) == 0 {
+		urls := []string{}
+		if config.IpUrl != "" {
+			urls = append(urls, config.IpUrl)
+		}
+		if config.Ipv6Url != "" {
+			urls = append(urls, config.Ipv6Url)
+		}
+		config.Ipurls = urls
 	}
 
 	return config
