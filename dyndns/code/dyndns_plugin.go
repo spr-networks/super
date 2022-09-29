@@ -171,7 +171,7 @@ func loadConfig() GodyndnsConfig {
 		if config.Ipv6Url != "" {
 			urls = append(urls, config.Ipv6Url)
 		}
-		config.Ipurls = urls
+		config.IpUrls = urls
 	}
 
 	return config
