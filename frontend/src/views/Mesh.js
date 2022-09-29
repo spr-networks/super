@@ -23,7 +23,7 @@ import {
          VStack
        } from 'native-base'
 
-import api, { meshAPI} from 'api'
+import api, { meshAPI, authAPI } from 'api'
 import APIMesh from 'api/mesh'
 
 import ModalForm from 'components/ModalForm'
@@ -35,11 +35,17 @@ const Mesh = (props) => {
   const [leafRouters, setLeafRouters] = useState([])
   const [isLeafMode, setIsLeafMode] = useState([])
   const [config, setConfig] = useState({})
+  const [leafToken, setLeafToken] = useState("")
 
   let alertContext = useContext(AlertContext)
   let refModal = useRef(null)
 
   const refreshLeaves = () => {
+
+    retrieveLeafToken(token => {
+      setLeafToken(token)
+    })
+
     meshAPI.leafMode().then((result) => {
       setIsLeafMode(JSON.parse(result))
     }).catch((err) => {
@@ -155,6 +161,36 @@ const Mesh = (props) => {
     })
   }
 
+  const retrieveLeafToken = (func) => {
+
+    authAPI.tokens().then((tokens) => {
+      let name = "PLUS-MESH-API-DOWNHAUL-TOKEN"
+      for (let i = 0; i < tokens.length; i++) {
+        if (tokens[i].Name == name) {
+          func(tokens[i].Token)
+          return
+        }
+      }
+      func("")
+    }).catch(e => {
+      alertContext.error("Could not list API Tokens")
+    })
+
+  }
+
+  const generateLeafToken = () => {
+    retrieveLeafToken((t) => {
+      if (t == "") {
+        let name = "PLUS-MESH-API-DOWNHAUL-TOKEN"
+        authAPI.putToken(name, 0).then(token => {
+          setLeafToken(token.Token)
+        }).catch(e => {
+          alertContext.error("Could not generate API Token")
+        })
+      }
+    })
+  }
+
   return (
     <>
     {isLeafMode == true ?
@@ -267,6 +303,34 @@ const Mesh = (props) => {
           Add Leaf Router
         </Button>
       </VStack>
+
+      <HStack justifyContent="space-between" alignItems="center" p={4}>
+      <VStack>
+        <Heading fontSize="md" isTruncated>
+          Device Token
+        </Heading>
+        <Text color="muted.500" isTruncated>
+          Generate an API token to use this device as a leaf router.
+        </Text>
+          {(leafToken == "") ?
+            <Button
+              display={{ base: 'flex', md: leafRouters.length ? 'none' : 'flex' }}
+              variant={useColorModeValue('subtle', 'solid')}
+              colorScheme="muted"
+              leftIcon={<Icon icon={faCirclePlus} />}
+              onPress={() => generateLeafToken()}
+              mt={4}
+            >
+              Generate API Token
+            </Button>
+          :
+          <HStack justifyContent="space-between" alignItems="center" p={4}>
+            <Text>API-Token:  </Text>
+            <Text>{leafToken} </Text>
+          </HStack>
+        }
+      </VStack>
+      </HStack>
 
       </Box>
       </>)
