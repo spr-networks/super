@@ -2,7 +2,7 @@
 set -a
 . /configs/base/config.sh
 
-if [ -f state/plugins/mesh/enabled ]
+if [ -f state/plugins/mesh/enabled ]; then
   exit 0
 fi
 
