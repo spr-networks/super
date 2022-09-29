@@ -22,6 +22,8 @@ else
   if [ -f state/plugins/mesh/enabled ] && [ -f /plugins/plus/mesh_extension/mesh_rules.sh ]; then
     . /plugins/plus/mesh_extension/mesh_rules.sh
   else
+    # Delete mesh bridge in case it exists
+    ip link del br0
     . /scripts/nft_rules.sh
   fi
 fi
