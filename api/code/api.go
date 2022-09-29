@@ -1025,6 +1025,7 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 		newDevice.Groups = []string{}
 		newDevice.DeviceTags = []string{}
 		devices[newDevice.MAC] = newDevice
+		val = newDevice
 	} else {
 		//update recent IP
 		val.RecentIP = dhcp.IP
@@ -1048,6 +1049,9 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	addVerdictMac(dhcp.IP, dhcp.MAC, dhcp.Iface, "ethernet_filter", "return")
 
 	populateVmapEntries(dhcp.IP, dhcp.MAC, dhcp.Iface, "")
+
+	//apply the tags
+	applyPrivateNetworkUpstreamDevice(val)
 
 	//4. update local mappings file for DNS
 	updateLocalMappings(dhcp.IP, dhcp.Name)
@@ -1166,6 +1170,8 @@ func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface strin
 
 		//3. add entry to the appropriate verdict maps
 		populateVmapEntries(IP, MAC, Iface, PublicKey)
+
+		//TBD wireguard support for rules/maps based on tags.
 
 		//4. update local mappings file for DNS
 		if Name != "" {
