@@ -3,10 +3,9 @@ import PropTypes from 'prop-types'
 
 import ClientSelect from 'components/ClientSelect'
 
-import { meshAPI } from 'api'
 import { AlertContext } from 'AppContext'
 import APIMesh from 'api/mesh'
-import api, {authAPI } from 'api'
+import api, { authAPI, meshAPI, wifiAPI } from 'api'
 
 import {
   Box,
@@ -107,6 +106,10 @@ class AddLeafRouterImpl extends React.Component {
         .catch((err) => {
           this.props.alertContext.error('Mesh API Failure', err)
         })
+
+      wifiAPI.syncMesh().then(done).catch((err) => {
+        this.props.alertContext.error('Wifi API Failure while syncing mesh devices.json')
+      })
 
       //restart the leaf router
       let rAPI = new api()

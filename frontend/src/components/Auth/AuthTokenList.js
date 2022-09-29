@@ -150,7 +150,7 @@ const AuthTokenList = (props) => {
                   alignItems="center"
                   justifyItems="flex-end"
                 >
-                  <Text isTruncated>{item.Token}</Text>
+                  <Text>{item.Token}</Text>
                   <IconButton
                     variant="unstyled"
                     icon={<Icon size="4" icon={faCopy} color="muted.500" />}
@@ -159,9 +159,9 @@ const AuthTokenList = (props) => {
                   />
 
                   {item.ScopedPaths != null && item.ScopedPaths.length > 0 ? (
-                    <Text>{JSON.stringify(item.ScopedPaths)}</Text>
+                    <Text isTruncated>{JSON.stringify(item.ScopedPaths)}</Text>
                   ) : (
-                    <Text></Text>
+                    <Text isTruncated></Text>
                   )}
                 </HStack>
 

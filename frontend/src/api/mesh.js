@@ -12,6 +12,7 @@ export default class APIMesh extends API {
   addLeafRouter = (data) => this.put(`leafRouter`, data)
   delLeafRouter = (data) => this.delete(`leafRouter`, data)
   setParentCredentials = (data) => this.put(`setParentCredentials`, data)
+  setSSID = (data) => this.put(`setSSID`, data)
 }
 
 export const meshAPI = new APIMesh()

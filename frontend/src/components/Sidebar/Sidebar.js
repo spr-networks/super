@@ -103,7 +103,7 @@ const SidebarItem = (props) => {
     }
 
     // if mesh
-    let meshItems = ['Home', 'Wifi', 'MESH', 'System', 'Plugins', 'System Info']
+    let meshItems = ['Auth', 'Logs', 'Notifications', 'Home', 'Wifi', 'MESH', 'System', 'Plugins', 'System Info']
     if (isMeshNode && !meshItems.includes(item.name)) {
       display.base = 'none'
       return null
