@@ -96,7 +96,11 @@ func doReloadPSKFiles() {
 	}
 
 	//if we are re-loading PSK files, update the mesh plugin to run a device sync
+	updateMeshPluginPSKReload(devices)
+}
 
+func hostapdSyncMesh(w http.ResponseWriter, r *http.Request) {
+	devices := getDevicesJson()
 	updateMeshPluginPSKReload(devices)
 }
 
