@@ -146,7 +146,7 @@ const AuthTokenList = (props) => {
                 <Text flex={1}>{item.Name}</Text>
                 <HStack
                   flex={1}
-                  minW={{ base: '1/6', md: '3/6' }}
+                  minW={{ base: '1/6', md: '2/6' }}
                   alignItems="center"
                   justifyItems="flex-end"
                 >
@@ -158,12 +158,11 @@ const AuthTokenList = (props) => {
                     display={showClipboard ? 'flex' : 'none'}
                   />
 
-                  { item.ScopedPaths != null && item.ScopedPaths.length > 0 ?
+                  {item.ScopedPaths != null && item.ScopedPaths.length > 0 ? (
                     <Text>{JSON.stringify(item.ScopedPaths)}</Text>
-                    :
-                       <Text>
-                      </Text>
-                  }
+                  ) : (
+                    <Text></Text>
+                  )}
                 </HStack>
 
                 <HStack
