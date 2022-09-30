@@ -1081,6 +1081,21 @@ type DHCPUpdate struct {
 	Router string
 }
 
+func flushRoute(MAC string) {
+	arp_entry, err := GetArpEntryFromMAC(MAC)
+	if err != nil {
+		fmt.Println("Arp entry not found, insufficient information to refresh", MAC)
+		return
+	}
+
+	//delete previous arp entry and route
+	is_tiny, routeIP := toTinyIP(arp_entry.IP, 1)
+	if is_tiny {
+		exec.Command("ip", "addr", "del", routeIP.String(), "dev", arp_entry.Device).Run()
+		exec.Command("arp", "-i", arp_entry.Device, "-d", arp_entry.IP).Run()
+	}
+}
+
 func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	DHCPmtx.Lock()
 	defer DHCPmtx.Unlock()
@@ -1137,9 +1152,11 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	//1. delete this ip, mac from any existing verdict maps
 	flushVmaps(dhcp.IP, dhcp.MAC, dhcp.Iface, getVerdictMapNames(), shouldFlushByInterface(dhcp.Iface))
 
+	//this is needed for backhaul support
+	flushRoute(dhcp.MAC)
+
 	//2. update static arp entry
 	updateAddr(dhcp.Router, dhcp.Iface)
-
 	updateArp(dhcp.Iface, dhcp.IP, dhcp.MAC)
 
 	//3. add entry to appropriate verdict maps
