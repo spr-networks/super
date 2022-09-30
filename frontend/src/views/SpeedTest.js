@@ -179,7 +179,7 @@ const SpeedTest = (props) => {
       <VStack space={2} p={4}>
         <Heading size="md">Speed Test</Heading>
         <Text color="muted.500">
-          This test measure http request time to spr. Use iperf3 for more exact
+          This test measures http request time to spr. Use iperf3 for more exact
           results.
         </Text>
       </VStack>
