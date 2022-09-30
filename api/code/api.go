@@ -1038,12 +1038,6 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	//1. delete this ip, mac from any existing verdict maps
 	flushVmaps(dhcp.IP, dhcp.MAC, dhcp.Iface, getVerdictMapNames(), shouldFlushByInterface(dhcp.Iface))
 
-	// also delete this IP's routes
-	// Useful when a device has switched interfaces
-	_, newIP := toTinyIP(dhcp.IP, 2)
-	routeIP := newIP.String() + "/30"
-	exec.Command("ip", "route", "del", routeIP).Run()
-
 	//2. update static arp entry
 	updateAddr(dhcp.Router, dhcp.Iface)
 
