@@ -27,6 +27,7 @@ export default function MockAPI() {
       forwardblockrule: Model,
       serviceport: Model,
       token: Model,
+      backup: Model,
       pfwBlock: Model,
       pfwForward: Model
     },
@@ -241,6 +242,11 @@ export default function MockAPI() {
         Name: 'TokenTest2',
         Token: 'QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQgo=',
         Expire: 0
+      })
+
+      server.create('backup', {
+        Name: 'spr-configs-v0.1.0-beta.0.tgz',
+        Timestamp: Date.now()
       })
     },
     routes() {
@@ -1122,6 +1128,66 @@ export default function MockAPI() {
       this.get('/version', () => {
         return '"v0.1.0-beta.0"'
       })
+
+      this.get('/info/hostname', () => {
+        return '"ubuntu"'
+      })
+
+      this.get('/info/uptime', () => {
+        return {
+          time: '12:16:37',
+          uptime: '11 days, 5:52',
+          users: 0,
+          load_1m: 0.17,
+          load_5m: 0.12,
+          load_15m: 0.04,
+          time_hour: 12,
+          time_minute: 16,
+          time_second: 37,
+          uptime_days: 11,
+          uptime_hours: 5,
+          uptime_minutes: 52,
+          uptime_total_seconds: 971520
+        }
+      })
+
+      this.get('/info/docker', () => {
+        return []
+      })
+
+      this.put('/backup', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let version = '"v0.1.0-beta.0'
+        let backup = {
+          Name: `spr-configs-${version}.tgz`,
+          Timestamp: Date.now()
+        }
+
+        schema.backups.create(backup)
+
+        return JSON.stringify(backup.Name)
+      })
+
+      this.get('/backup', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        return schema.backups.all().models
+      })
+
+      this.del('/backup/:name', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let id = request.params.name
+        return schema.backups.findBy({ Name: id }).destroy()
+      })
+      ////
 
       this.get('/iw/dev', (schema) => {
         return {

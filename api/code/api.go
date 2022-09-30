@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/duo-labs/webauthn/webauthn"
 	"github.com/gorilla/handlers"
@@ -262,8 +263,106 @@ func getVersion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	version := strings.Trim(string(data), "\n")
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(string(data))
+	json.NewEncoder(w).Encode(version)
+}
+
+func doConfigsBackup(w http.ResponseWriter, r *http.Request) {
+	//if r.Method == http.MethodPut {
+	version, err := ioutil.ReadFile(ApiVersionFile)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	filename := fmt.Sprintf("spr-configs-%s.tgz", strings.Trim(string(version), "\n"))
+	validFilename := regexp.MustCompile(`^spr-configs-v[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+\.[0-9\-a-h]+)?.tgz$`).MatchString
+
+	if !validFilename(filename) {
+		http.Error(w, "Unexpected version found", 400)
+		return
+	}
+
+	backupDirectory := "/state/api"
+	backupFilePath := backupDirectory + "/" + filename
+
+	err = exec.Command("tar", "czf", backupFilePath, TEST_PREFIX+"/configs").Run()
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(filename)
+}
+
+func getConfigsBackup(w http.ResponseWriter, r *http.Request) {
+	// regex match git version tag
+	// tagFmt="^v?[0-9]+\.[0-9]+\.[0-9]+$"
+	// preTagFmt="^v?[0-9]+\.[0-9]+\.[0-9]+(-$suffix\.[0-9]+)$"
+	// example: v0.1.1-beta.5-1-g79a97ae
+	validFilename := regexp.MustCompile(`^spr-configs-v[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+\.[0-9\-a-h]+)?.tgz$`).MatchString
+	backupDirectory := "/state/api"
+
+	filename := mux.Vars(r)["name"]
+
+	// list files if empty
+	if filename == "" {
+		backups, err := filepath.Glob(backupDirectory + "/spr-configs-*.tgz")
+
+		if err != nil {
+			http.Error(w, "Invalid config name", 400)
+			return
+		}
+
+		type BackupFileEntry struct {
+			Name      string
+			Timestamp time.Time
+		}
+
+		result := []BackupFileEntry{}
+		for _, entry := range backups {
+			file, err := os.Stat(entry)
+			if err != nil {
+				continue
+			}
+
+			result = append(result, BackupFileEntry{
+				Name:      filepath.Base(entry),
+				Timestamp: file.ModTime(),
+			})
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(result)
+
+		return
+	}
+
+	if !validFilename(filename) {
+		http.Error(w, "Invalid config name", 400)
+		return
+	}
+
+	backupFilePath := backupDirectory + "/" + filename
+
+	// verify
+	absPath := filepath.Dir(filepath.Clean(backupFilePath))
+	_, err := os.Stat(backupFilePath)
+	if absPath != backupDirectory || err != nil {
+		http.Error(w, "Invalid config name", 400)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		os.Remove(backupFilePath)
+
+		return
+	}
+
+	http.ServeFile(w, r, backupFilePath)
 }
 
 func restart(w http.ResponseWriter, r *http.Request) {
@@ -1803,6 +1902,9 @@ func main() {
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/version", getVersion).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/restart", restart).Methods("PUT")
+	external_router_authenticated.HandleFunc("/backup", doConfigsBackup).Methods("PUT", "OPTIONS")
+	external_router_authenticated.HandleFunc("/backup/{name}", getConfigsBackup).Methods("GET", "DELETE", "OPTIONS")
+	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
 
 	//device management
 	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")
