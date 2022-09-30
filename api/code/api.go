@@ -365,6 +365,11 @@ func getConfigsBackup(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, backupFilePath)
 }
 
+func restart(w http.ResponseWriter, r *http.Request) {
+	//restart all containers
+	go callSuperdRestart("")
+}
+
 var Devicesmtx sync.Mutex
 
 func convertDevicesPublic(devices map[string]DeviceEntry) map[string]DeviceEntry {
@@ -478,6 +483,27 @@ func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+}
+
+func syncDevices(w http.ResponseWriter, r *http.Request) {
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+
+	devices := map[string]DeviceEntry{}
+	err := json.NewDecoder(r.Body).Decode(&devices)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	saveDevicesJson(devices)
+
+	for _, val := range devices {
+		refreshDeviceGroups(val)
+		refreshDeviceTags(val)
+	}
+
+	doReloadPSKFiles()
 }
 
 func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, identity string) (string, int) {
@@ -1055,6 +1081,21 @@ type DHCPUpdate struct {
 	Router string
 }
 
+func flushRoute(MAC string) {
+	arp_entry, err := GetArpEntryFromMAC(MAC)
+	if err != nil {
+		fmt.Println("Arp entry not found, insufficient information to refresh", MAC)
+		return
+	}
+
+	//delete previous arp entry and route
+	is_tiny, routeIP := toTinyIP(arp_entry.IP, 1)
+	if is_tiny {
+		exec.Command("ip", "addr", "del", routeIP.String(), "dev", arp_entry.Device).Run()
+		exec.Command("arp", "-i", arp_entry.Device, "-d", arp_entry.IP).Run()
+	}
+}
+
 func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	DHCPmtx.Lock()
 	defer DHCPmtx.Unlock()
@@ -1098,6 +1139,7 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 		newDevice.Groups = []string{}
 		newDevice.DeviceTags = []string{}
 		devices[newDevice.MAC] = newDevice
+		val = newDevice
 	} else {
 		//update recent IP
 		val.RecentIP = dhcp.IP
@@ -1110,9 +1152,11 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	//1. delete this ip, mac from any existing verdict maps
 	flushVmaps(dhcp.IP, dhcp.MAC, dhcp.Iface, getVerdictMapNames(), shouldFlushByInterface(dhcp.Iface))
 
+	//this is needed for backhaul support
+	flushRoute(dhcp.MAC)
+
 	//2. update static arp entry
 	updateAddr(dhcp.Router, dhcp.Iface)
-
 	updateArp(dhcp.Iface, dhcp.IP, dhcp.MAC)
 
 	//3. add entry to appropriate verdict maps
@@ -1121,6 +1165,9 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	addVerdictMac(dhcp.IP, dhcp.MAC, dhcp.Iface, "ethernet_filter", "return")
 
 	populateVmapEntries(dhcp.IP, dhcp.MAC, dhcp.Iface, "")
+
+	//apply the tags
+	applyPrivateNetworkUpstreamDevice(val)
 
 	//4. update local mappings file for DNS
 	updateLocalMappings(dhcp.IP, dhcp.Name)
@@ -1239,6 +1286,8 @@ func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface strin
 
 		//3. add entry to the appropriate verdict maps
 		populateVmapEntries(IP, MAC, Iface, PublicKey)
+
+		//TBD wireguard support for rules/maps based on tags.
 
 		//4. update local mappings file for DNS
 		if Name != "" {
@@ -1408,8 +1457,9 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//no longer assign MAC on Auth Failure due to noentry
+	updateMeshPluginConnectFailure(pskf)
 
+	//no longer assign MAC on Auth Failure due to noentry
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pskf)
 }
@@ -1419,6 +1469,15 @@ type PSKAuthSuccess struct {
 	Event  string
 	MAC    string
 	Status string
+	Router string
+}
+
+type StationDisconnect struct {
+	Iface  string
+	Event  string
+	MAC    string
+	Status string
+	Router string
 }
 
 func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
@@ -1466,8 +1525,36 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	updateMeshPluginConnect(pska)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pska)
+}
+
+func reportDisconnect(w http.ResponseWriter, r *http.Request) {
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+
+	event := StationDisconnect{}
+	err := json.NewDecoder(r.Body).Decode(&event)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	WSNotifyValue("StationDisconnect", event)
+
+	if event.Iface == "" || event.Event != "AP-STA-DISCONNECTED" || event.MAC == "" {
+		http.Error(w, "malformed data", 400)
+		return
+	}
+
+	event.Status = "Okay"
+
+	updateMeshPluginDisconnect(event)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(event)
 }
 
 func genSecurePassword() string {
@@ -1722,7 +1809,7 @@ func callSuperdRestart(target string) {
 	_, err = ioutil.ReadAll(resp.Body)
 }
 
-//set up SPA handler. From gorilla mux's documentation
+// set up SPA handler. From gorilla mux's documentation
 type spaHandler struct {
 	staticPath string
 	indexPath  string
@@ -1831,6 +1918,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/version", getVersion).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/restart", restart).Methods("PUT")
 	external_router_authenticated.HandleFunc("/backup", doConfigsBackup).Methods("PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup/{name}", getConfigsBackup).Methods("GET", "DELETE", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
@@ -1840,6 +1928,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/groups", updateGroups).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/devices", getDevices).Methods("GET")
 	external_router_authenticated.HandleFunc("/device", handleUpdateDevice).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/devices", syncDevices).Methods("PUT")
 
 	external_router_authenticated.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 
@@ -1855,6 +1944,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/enable", hostapdEnableInterface).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/disable", hostapdDisableInterface).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/resetConfiguration", hostapdResetInterface).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/syncMesh", hostapdSyncMesh).Methods("PUT")
 	external_router_authenticated.HandleFunc("/interfacesConfiguration", getInterfacesConfiguration).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/restart", restartWifi).Methods("PUT")
 
@@ -1886,9 +1976,15 @@ func main() {
 	external_router_authenticated.HandleFunc("/notifications", modifyNotificationSettings).Methods("DELETE", "PUT")
 	external_router_authenticated.HandleFunc("/notifications/{index:[0-9]+}", modifyNotificationSettings).Methods("DELETE", "PUT")
 
+	// allow leaf nodes to report PSK events also
+	external_router_authenticated.HandleFunc("/reportPSKAuthSuccess", reportPSKAuthSuccess).Methods("PUT")
+	external_router_authenticated.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
+	external_router_authenticated.HandleFunc("/reportDisconnect", reportDisconnect).Methods("PUT")
+
 	// PSK management for stations
 	unix_wifid_router.HandleFunc("/reportPSKAuthFailure", reportPSKAuthFailure).Methods("PUT")
 	unix_wifid_router.HandleFunc("/reportPSKAuthSuccess", reportPSKAuthSuccess).Methods("PUT")
+	unix_wifid_router.HandleFunc("/reportDisconnect", reportDisconnect).Methods("PUT")
 	unix_wifid_router.HandleFunc("/interfaces", getEnabledAPInterfaces).Methods("GET")
 
 	// DHCP actions

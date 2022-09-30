@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 	"syscall"
+	"time"
 )
 
 import (
@@ -510,7 +510,7 @@ func CIDRorIP(IP string) error {
 	if err != nil {
 		ip := net.ParseIP(IP)
 		if ip == nil {
-			return err
+			return fmt.Errorf("invalid ip " + IP)
 		} else {
 			return nil
 		}
@@ -874,10 +874,10 @@ func deleteForwardBlock(br ForwardingBlockRule) error {
 }
 
 var BASE_READY = TEST_PREFIX + "/state/base/ready"
+
 func SyncBaseContainer() {
 
 	// Wait for the base container to grab the flock
-
 
 	file, err := os.OpenFile(BASE_READY, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {

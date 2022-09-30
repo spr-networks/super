@@ -2,6 +2,13 @@
 rm /state/wifi/sta_mac_iface_map/*
 
 IFACES=$(curl --unix-socket /state/wifi/apisock http://localhost/interfaces)
+RET=$?
+
+while [ $RET -ne 0 ]; do
+  sleep 5
+  IFACES=$(curl --unix-socket /state/wifi/apisock http://localhost/interfaces)
+  RET=$?
+done
 
 for IFACE in $IFACES
 do

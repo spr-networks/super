@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Disable forwarding
+sysctl net.ipv4.ip_forward=0
+
+# Drop input
+iptables -P INPUT DROP
+
+# Empty flow table
+conntrack -D
+
 # Clean previous rules
 iptables --flush
 iptables -t nat --flush
@@ -420,3 +429,12 @@ table inet mangle {
 
 
 EOF
+
+# Enable forwarding
+sysctl net.ipv4.ip_forward=1
+
+# Enable ARP filter
+sysctl net.ipv4.conf.all.arp_filter=1
+
+# Enable input again
+iptables -P INPUT ACCEPT

@@ -22,6 +22,7 @@ export class APIWifi extends API {
   resetInterfaceConfig = (iface) =>
     this.put(`hostapd/${iface}/resetConfiguration`)
   restartWifi = () => this.put(`hostapd/restart`)
+  syncMesh = () => this.put(`hostapd/syncMesh`)
   interfacesConfiguration = () => this.get(`interfacesConfiguration`)
   interfaces = (typeFilter) => {
     //look up the interfaces from iw/dev

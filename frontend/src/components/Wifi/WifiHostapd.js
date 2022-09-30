@@ -232,16 +232,8 @@ const WifiHostapd = (props) => {
 
   // when selected and click save in channel form
   const updateChannels = (wifiParameters) => {
-    let updateConfig = () => {
-      let data = {
-        Channel: wifiParameters.Channel,
-        Hw_mode: wifiParameters.Mode,
-        Vht_oper_centr_freq_seg0_idx:
-          wifiParameters.Vht_oper_centr_freq_seg0_idx,
-        He_oper_centr_freq_seg0_idx: wifiParameters.He_oper_centr_freq_seg0_idx,
-        Vht_oper_chwidth: wifiParameters.Vht_oper_chwidth,
-        He_oper_chwidth: wifiParameters.He_oper_chwidth
-      }
+    let updateConfig = (params) => {
+      let data = {...params, ...wifiParameters}
 
       if (wifiParameters.Mode == 'b' || wifiParameters.Mode == 'g') {
         //empty out VHT capabilities for b/g mode
@@ -443,58 +435,6 @@ const WifiHostapd = (props) => {
       </Box>
     </ScrollView>
   )
-
-  /*
-  return (
-    <>
-    <Form onSubmit={handleSubmit}>
-      <Row>
-        <Col>
-          {Object.keys(config).map((label) => (
-            <Row key={label}>
-              <Label sm="3" className="sm-text-right">
-                {label}
-              </Label>
-              <Col sm="9">
-                <FormGroup className="row" key={label}>
-                  <Input
-                    autoFocus
-                    type="text"
-                    disabled={!canEdit.includes(label)}
-                    className="col-sm-9"
-                    name={label}
-                    value={config[label]}
-                    onChange={handleChange}
-                  />
-                </FormGroup>
-              </Col>
-            </Row>
-          ))}
-        </Col>
-      </Row>
-
-      <p className="text-center text-muted mt-4">
-        <em>NOTE:</em> Editing hostapd.conf requires restarting the Wifi &amp;
-        your connection will be dropped
-      </p>
-
-      <Row className="mt-4">
-        <Col sm={{ offset: 0, size: 12 }} className="text-center">
-          <Button
-            className="btn-wd"
-            color="primary"
-            size="md"
-            type="submit"
-            onClick={handleSubmit}
-          >
-            Save
-          </Button>
-        </Col>
-      </Row>
-    </Form>
-    </>
-  )
-*/
 }
 
 export default WifiHostapd

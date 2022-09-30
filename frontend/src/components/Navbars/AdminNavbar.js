@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useContext, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useNavigate } from 'react-router-dom'
@@ -21,12 +21,16 @@ import {
   useToken
 } from 'native-base'
 
+import { AppContext } from 'AppContext'
+
 const AdminNavbar = ({
   isMobile,
   isOpenSidebar,
   setIsOpenSidebar,
   version
 }) => {
+  const { isMeshNode } = useContext(AppContext)
+
   const { colorMode, toggleColorMode } = useColorMode()
 
   /*useEffect(() => {
@@ -76,8 +80,9 @@ const AdminNavbar = ({
           <Text fontSize="lg" bold>
             SPR
           </Text>
+          {isMeshNode ? <Text fontSize="lg">MESH</Text> : null}
 
-          <Text fontSize="md" color="muted.600" isTruncated>
+          <Text fontSize="sm" color="muted.600" isTruncated>
             {version}
           </Text>
 

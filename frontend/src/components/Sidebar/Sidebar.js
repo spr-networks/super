@@ -24,33 +24,34 @@ const Sidebar = (props) => {
   const sidebarItems = props.routes || []
 
   return (
-    <ScrollView overflowY="overlay">
-      <Box
-        py={5}
-        w={isMini ? '20' : '100%'} // 64
-        flex="1"
-        borderRightWidth={isMobile ? '0' : '1'}
-        _light={{
-          bg: 'sidebarBackgroundLight',
-          borderColor: 'sidebarBorderColorLight'
-        }}
-        _dark={{ bg: 'sidebarBackgroundDark', borderColor: 'borderColorDark' }}
-      >
-        <SidebarItem
-          sidebarItems={sidebarItems}
-          level={0}
-          isMobile={isMobile}
-          isMini={isMini}
-          setIsOpenSidebar={setIsOpenSidebar}
-        />
-      </Box>
+    <ScrollView
+      overflowY="overlay"
+      h="100%"
+      bg="amber.100"
+      py={5}
+      w={isMini ? '20' : '100%'}
+      flex={1}
+      borderRightWidth={isMobile ? '0' : '1'}
+      _light={{
+        bg: 'sidebarBackgroundLight',
+        borderColor: 'sidebarBorderColorLight'
+      }}
+      _dark={{ bg: 'sidebarBackgroundDark', borderColor: 'borderColorDark' }}
+    >
+      <SidebarItem
+        sidebarItems={sidebarItems}
+        level={0}
+        isMobile={isMobile}
+        isMini={isMini}
+        setIsOpenSidebar={setIsOpenSidebar}
+      />
     </ScrollView>
   )
 }
 
 const SidebarItem = (props) => {
   const { sidebarItems, level, isMobile, isMini, setIsOpenSidebar } = props
-  const { isWifiDisabled, isPlusDisabled } = useContext(AppContext)
+  const { isWifiDisabled, isPlusDisabled, isMeshNode } = useContext(AppContext)
   const { activeSidebarItem, setActiveSidebarItem } = useContext(AppContext)
 
   /*
@@ -97,6 +98,13 @@ const SidebarItem = (props) => {
   return sidebarItems.map((item, index) => {
     let display = { base: 'flex' }
     if (item.redirect || (item.layout !== 'admin' && !item.views)) {
+      display.base = 'none'
+      return null
+    }
+
+    // if mesh
+    let meshItems = ['Auth', 'Logs', 'Notifications', 'Home', 'Wifi', 'MESH', 'System', 'Plugins', 'System Info']
+    if (isMeshNode && !meshItems.includes(item.name)) {
       display.base = 'none'
       return null
     }

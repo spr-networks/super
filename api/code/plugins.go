@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,8 +22,14 @@ import (
 
 var PlusUser = "lts-super-plus"
 var PfwGitURL = "github.com/spr-networks/pfw_extension"
+var MeshGitURL = "github.com/spr-networks/mesh_extension"
 
-var gPlusExtensionDefaults = []PluginConfig{{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml"}}
+var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
+
+var gPlusExtensionDefaults = []PluginConfig{
+	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml"},
+	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml"},
+}
 
 func PluginProxy(config PluginConfig) (*httputil.ReverseProxy, error) {
 	return &httputil.ReverseProxy{
@@ -255,6 +262,16 @@ func getSuperdClient() http.Client {
 	return c
 }
 
+func getMeshdClient() http.Client {
+	c := http.Client{}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", MeshdSocketPath)
+		},
+	}
+	return c
+}
+
 func ghcrSuperdLogin() bool {
 	if config.PlusToken == "" {
 		return false
@@ -290,7 +307,7 @@ func generatePFWAPIToken() {
 	//install API token for PLUS
 	var pfwConfigFile = TEST_PREFIX + "/configs/pfw/rules.json"
 	value := genBearerToken()
-	pfw_token := Token{"PLUS-API-Token", value, 0}
+	pfw_token := Token{"PLUS-API-Token", value, 0, []string{}}
 
 	Tokensmtx.Lock()
 	defer Tokensmtx.Unlock()
@@ -510,8 +527,10 @@ func stopPlusServices() error {
 }
 
 func installPlus() error {
-	if !downloadPlusExtension(PfwGitURL) {
-		return errors.New("failed to download PfwGit")
+	for _, plugin := range gPlusExtensionDefaults {
+		if !downloadPlusExtension(plugin.GitURL) {
+			return errors.New("failed to download plugin " + plugin.GitURL)
+		}
 	}
 
 	if !ghcrSuperdLogin() {
@@ -541,4 +560,54 @@ func startPlusServices() error {
 		}
 	}
 	return nil
+}
+
+// mesh support
+func updateMeshPluginPut(endpoint string, jsonValue []byte) {
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/"+endpoint, bytes.NewBuffer(jsonValue))
+	if err != nil {
+		return
+	}
+
+	c := getMeshdClient()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println("meshd request failed", err, endpoint)
+		return
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("meshd request failed", resp.StatusCode, endpoint)
+		return
+	}
+
+}
+
+func updateMeshPluginConnect(event PSKAuthSuccess) {
+	jsonValue, _ := json.Marshal(event)
+	go updateMeshPluginPut("stationConnect", jsonValue)
+}
+
+func updateMeshPluginConnectFailure(event PSKAuthFailure) {
+	jsonValue, _ := json.Marshal(event)
+	go updateMeshPluginPut("stationConnectFailure", jsonValue)
+}
+
+func updateMeshPluginDisconnect(event StationDisconnect) {
+	jsonValue, _ := json.Marshal(event)
+	go updateMeshPluginPut("stationDisconnect", jsonValue)
+}
+
+func updateMeshPluginPSKReload(devices map[string]DeviceEntry) {
+	jsonValue, _ := json.Marshal(devices)
+	go updateMeshPluginPut("syncDevices", jsonValue)
+}
+
+func updateMeshPluginGlobalSSID(SSID string) {
+	jsonValue, _ := json.Marshal(SSID)
+	go updateMeshPluginPut("setSSID", jsonValue)
 }
