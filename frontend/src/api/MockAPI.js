@@ -296,16 +296,28 @@ export default function MockAPI() {
             Groups: [],
             DeviceTags: []
           }
+
           return schema.devices.create(_dev)
         }
       })
 
-      this.get('/groups', (schema, request) => {
-        if (!authOK(request)) {
+      this.put('/device', (schema, request) => {
+        let ups = new URLSearchParams(request.url.replace(/^\/device/, ''))
+        let id = ups.get('identity')
+        let copy = ups.get('copy')
+        if (!copy) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
-        return schema.groups.all().models
+        let dev = schema.devices.findBy({ MAC: copy })
+        if (!dev) {
+          return new Response(401, {}, { error: 'invalid device' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        let _dev = { ...attrs, PSKEntry: dev.PSKEntry, DeviceTags: [] }
+
+        return schema.devices.create(_dev)
       })
 
       this.del('/device/:id', (schema, request) => {
@@ -315,6 +327,25 @@ export default function MockAPI() {
 
         let id = request.params.id
         return schema.devices.findBy({ MAC: id }).destroy()
+      })
+
+      this.del('/device', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let ups = new URLSearchParams(request.url.replace(/^\/device/, ''))
+        let id = ups.get('identity')
+
+        return schema.devices.findBy({ MAC: id }).destroy()
+      })
+
+      this.get('/groups', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        return schema.groups.all().models
       })
 
       this.get('/pendingPSK', (schema, request) => {
