@@ -1939,6 +1939,22 @@ export default function MockAPI() {
         return status
       })
 
+      this.get('/plugins/wireguard/genkey', (schema, request) => {
+        const rKey = () => {
+          let key = ''
+          for (let i = 0; i < 32; i++) {
+            key += String.fromCharCode(r(255))
+          }
+
+          return Base64.btoa(key)
+        }
+
+        return {
+          PrivateKey: rKey(),
+          PublicKey: rKey()
+        }
+      })
+
       this.put('/plugins/wireguard/up', (schema, request) => {
         return true
       })
