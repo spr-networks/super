@@ -2,7 +2,6 @@
 set -a
 . /configs/base/config.sh
 
-sysctl net.ipv4.ip_forward=1
 
 if [ "$LANIF" ]; then
   # set up static routes on LAN interface
@@ -19,7 +18,14 @@ fi
 if [ "$NFT_OVERRIDE" ]; then
   . /configs/base/nft_rules.sh
 else
-  . /scripts/nft_rules.sh
+  # If configured as a leaf router, run those firwall rules instead
+  if [ -f state/plugins/mesh/enabled ] && [ -f /plugins/plus/mesh_extension/mesh_rules.sh ]; then
+    . /plugins/plus/mesh_extension/mesh_rules.sh
+  else
+    # Delete mesh bridge in case it exists
+    ip link del br0
+    . /scripts/nft_rules.sh
+  fi
 fi
 
 ret=$?

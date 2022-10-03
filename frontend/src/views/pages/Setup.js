@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { api, wifiAPI } from 'api'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from 'FontAwesomeUtils'
@@ -44,7 +44,258 @@ const Setup = (props) => {
   const [errors, setErrors] = React.useState({})
   const [isDone, setIsDone] = useState(false)
 
-  const countryCodes = ["AD","AE","AF","AG","AI","AL","AM","AO","AQ","AR","AS","AT","AU","AW","AX","AZ","BA","BB","BD","BE","BF","BG","BH","BI","BJ","BL","BM","BN","BO","BQ","BR","BS","BT","BV","BW","BY","BZ","CA","CC","CD","CF","CG","CH","CI","CK","CL","CM","CN","CO","CR","CU","CV","CW","CX","CY","CZ","DE","DJ","DK","DM","DO","DZ","EC","EE","EG","EH","ER","ES","ET","FI","FJ","FK","FM","FO","FR","GA","GB","GD","GE","GF","GG","GH","GI","GL","GM","GN","GP","GQ","GR","GS","GT","GU","GW","GY","HK","HM","HN","HR","HT","HU","ID","IE","IL","IM","IN","IO","IQ","IR","IS","IT","JE","JM","JO","JP","KE","KG","KH","KI","KM","KN","KP","KR","KW","KY","KZ","LA","LB","LC","LI","LK","LR","LS","LT","LU","LV","LY","MA","MC","MD","ME","MF","MG","MH","MK","ML","MM","MN","MO","MP","MQ","MR","MS","MT","MU","MV","MW","MX","MY","MZ","NA","NC","NE","NF","NG","NI","NL","NO","NP","NR","NU","NZ","OM","PA","PE","PF","PG","PH","PK","PL","PM","PN","PR","PS","PT","PW","PY","QA","RE","RO","RS","RU","RW","SA","SB","SC","SD","SE","SG","SH","SI","SJ","SK","SL","SM","SN","SO","SR","SS","ST","SV","SX","SY","SZ","TC","TD","TF","TG","TH","TJ","TK","TL","TM","TN","TO","TR","TT","TV","TW","TZ","UA","UG","UM","US","UY","UZ","VA","VC","VE","VG","VI","VN","VU","WF","WS","YE","YT","ZA","ZM","ZW"]
+  const countryCodes = [
+    'AD',
+    'AE',
+    'AF',
+    'AG',
+    'AI',
+    'AL',
+    'AM',
+    'AO',
+    'AQ',
+    'AR',
+    'AS',
+    'AT',
+    'AU',
+    'AW',
+    'AX',
+    'AZ',
+    'BA',
+    'BB',
+    'BD',
+    'BE',
+    'BF',
+    'BG',
+    'BH',
+    'BI',
+    'BJ',
+    'BL',
+    'BM',
+    'BN',
+    'BO',
+    'BQ',
+    'BR',
+    'BS',
+    'BT',
+    'BV',
+    'BW',
+    'BY',
+    'BZ',
+    'CA',
+    'CC',
+    'CD',
+    'CF',
+    'CG',
+    'CH',
+    'CI',
+    'CK',
+    'CL',
+    'CM',
+    'CN',
+    'CO',
+    'CR',
+    'CU',
+    'CV',
+    'CW',
+    'CX',
+    'CY',
+    'CZ',
+    'DE',
+    'DJ',
+    'DK',
+    'DM',
+    'DO',
+    'DZ',
+    'EC',
+    'EE',
+    'EG',
+    'EH',
+    'ER',
+    'ES',
+    'ET',
+    'FI',
+    'FJ',
+    'FK',
+    'FM',
+    'FO',
+    'FR',
+    'GA',
+    'GB',
+    'GD',
+    'GE',
+    'GF',
+    'GG',
+    'GH',
+    'GI',
+    'GL',
+    'GM',
+    'GN',
+    'GP',
+    'GQ',
+    'GR',
+    'GS',
+    'GT',
+    'GU',
+    'GW',
+    'GY',
+    'HK',
+    'HM',
+    'HN',
+    'HR',
+    'HT',
+    'HU',
+    'ID',
+    'IE',
+    'IL',
+    'IM',
+    'IN',
+    'IO',
+    'IQ',
+    'IR',
+    'IS',
+    'IT',
+    'JE',
+    'JM',
+    'JO',
+    'JP',
+    'KE',
+    'KG',
+    'KH',
+    'KI',
+    'KM',
+    'KN',
+    'KP',
+    'KR',
+    'KW',
+    'KY',
+    'KZ',
+    'LA',
+    'LB',
+    'LC',
+    'LI',
+    'LK',
+    'LR',
+    'LS',
+    'LT',
+    'LU',
+    'LV',
+    'LY',
+    'MA',
+    'MC',
+    'MD',
+    'ME',
+    'MF',
+    'MG',
+    'MH',
+    'MK',
+    'ML',
+    'MM',
+    'MN',
+    'MO',
+    'MP',
+    'MQ',
+    'MR',
+    'MS',
+    'MT',
+    'MU',
+    'MV',
+    'MW',
+    'MX',
+    'MY',
+    'MZ',
+    'NA',
+    'NC',
+    'NE',
+    'NF',
+    'NG',
+    'NI',
+    'NL',
+    'NO',
+    'NP',
+    'NR',
+    'NU',
+    'NZ',
+    'OM',
+    'PA',
+    'PE',
+    'PF',
+    'PG',
+    'PH',
+    'PK',
+    'PL',
+    'PM',
+    'PN',
+    'PR',
+    'PS',
+    'PT',
+    'PW',
+    'PY',
+    'QA',
+    'RE',
+    'RO',
+    'RS',
+    'RU',
+    'RW',
+    'SA',
+    'SB',
+    'SC',
+    'SD',
+    'SE',
+    'SG',
+    'SH',
+    'SI',
+    'SJ',
+    'SK',
+    'SL',
+    'SM',
+    'SN',
+    'SO',
+    'SR',
+    'SS',
+    'ST',
+    'SV',
+    'SX',
+    'SY',
+    'SZ',
+    'TC',
+    'TD',
+    'TF',
+    'TG',
+    'TH',
+    'TJ',
+    'TK',
+    'TL',
+    'TM',
+    'TN',
+    'TO',
+    'TR',
+    'TT',
+    'TV',
+    'TW',
+    'TZ',
+    'UA',
+    'UG',
+    'UM',
+    'US',
+    'UY',
+    'UZ',
+    'VA',
+    'VC',
+    'VE',
+    'VG',
+    'VI',
+    'VN',
+    'VU',
+    'WF',
+    'WS',
+    'YE',
+    'YT',
+    'ZA',
+    'ZM',
+    'ZW'
+  ]
+
   useEffect(() => {
     api
       .get('/setup')
@@ -53,29 +304,18 @@ const Setup = (props) => {
         let msg = await err.response.text() // setup already done
         setIsDone(true)
       })
-  }, [])
 
-  useEffect(() => {
-    if ('login' in errors && password.length) {
-      setErrors({})
-    }
-  }, [password])
-
-  useEffect(() => {
-    if ('ssid' in errors && ssid.length) {
-      setErrors({})
-    }
-  }, [ssid])
-
-  useEffect(() => {
-    wifiAPI.config(interfaceWifi).then((conf) => {
-      setConfig((conf))
-    }, [interfaceWifi])
+    wifiAPI.config(interfaceWifi).then(
+      (conf) => {
+        setConfig(conf)
+      },
+      [interfaceWifi]
+    )
 
     wifiAPI.ipAddr().then((ipAddr) => {
       wifiAPI.iwDev().then((iwDev) => {
         let wifiInterfaces = []
-        for (let dev of Object.values(iwDev)){
+        for (let dev of Object.values(iwDev)) {
           wifiInterfaces.push(...Object.keys(dev))
         }
         wifiInterfaces.sort()
@@ -83,7 +323,7 @@ const Setup = (props) => {
 
         let uplinkInterfaces = []
         for (let entry of ipAddr) {
-          if (entry.link_type == "ether") {
+          if (entry.link_type == 'ether') {
             if (entry.ifname.startsWith('docker')) {
               continue
             }
@@ -99,31 +339,17 @@ const Setup = (props) => {
     })
   }, [])
 
-
-  const genWifiInterfaces = () => {
-    let ret = []
-    for (let wif of wifiInterfaces) {
-      ret.push(<Select.Item label={wif} value={wif} />,)
+  useEffect(() => {
+    if ('login' in errors && password.length) {
+      setErrors({})
     }
-    return ret
-  }
+  }, [password])
 
-  const genUplinkInterfaces = () => {
-    let ret = []
-    for (let wif of uplinkInterfaces) {
-      ret.push(<Select.Item label={wif} value={wif} />,)
+  useEffect(() => {
+    if ('ssid' in errors && ssid.length) {
+      setErrors({})
     }
-    return ret
-  }
-
-
-  const genCountries = () => {
-    let s = []
-    for (let code of countryCodes) {
-      s.push(<Select.Item key={code} label={code} value={code} />)
-    }
-    return s
-  }
+  }, [ssid])
 
   const handlePress = () => {
     if (
@@ -167,7 +393,6 @@ const Setup = (props) => {
   return (
     <View w="100%" alignItems="center">
       <Box
-        safeArea
         px={4}
         py={8}
         w="90%"
@@ -214,12 +439,14 @@ const Setup = (props) => {
             </>
           ) : (
             <>
+              {/*NOTE Safari will autofill as contact if using Name in label and/or placeholder*/}
               <FormControl isInvalid={'ssid' in errors}>
-                <FormControl.Label>Wifi Name (SSID)</FormControl.Label>
+                <FormControl.Label>{'Wifi N\u0430me (SSID)'}</FormControl.Label>
                 <Input
                   value={ssid}
-                  placeholder="Name of your Wireless Network"
+                  placeholder={'N\u0430me of your Wireless Network'}
                   onChangeText={(value) => setSsid(value)}
+                  autoFocus
                 />
                 {'ssid' in errors ? (
                   <FormControl.ErrorMessage
@@ -233,11 +460,15 @@ const Setup = (props) => {
               </FormControl>
               <FormControl isInvalid={'country' in errors}>
                 <FormControl.Label>Wifi Country Code</FormControl.Label>
+
                 <Select
                   selectedValue={countryWifi}
                   onValueChange={(value) => setCountryWifi(value)}
+                  accessibilityLabel={`Choose Country Code`}
                 >
-                  {genCountries()}
+                  {countryCodes.map((code) => (
+                    <Select.Item key={code} label={code} value={code} />
+                  ))}
                 </Select>
               </FormControl>
 
@@ -247,7 +478,9 @@ const Setup = (props) => {
                   selectedValue={interfaceWifi}
                   onValueChange={(value) => setInterfaceWifi(value)}
                 >
-                  {genWifiInterfaces()}
+                  {wifiInterfaces.map((wif) => (
+                    <Select.Item key={wif} label={wif} value={wif} />
+                  ))}
                 </Select>
               </FormControl>
 
@@ -259,9 +492,12 @@ const Setup = (props) => {
                   selectedValue={interfaceUplink}
                   onValueChange={(value) => setInterfaceUplink(value)}
                 >
-                  {genUplinkInterfaces()}
+                  {uplinkInterfaces.map((wif) => (
+                    <Select.Item key={wif} label={wif} value={wif} />
+                  ))}
                 </Select>
               </FormControl>
+
               <FormControl isInvalid={'login' in errors}>
                 <FormControl.Label>Admin Password</FormControl.Label>
                 <Input
@@ -286,6 +522,7 @@ const Setup = (props) => {
                   </FormControl.ErrorMessage>
                 ) : null}
               </FormControl>
+
               <Button
                 mt={8}
                 rounded="full"

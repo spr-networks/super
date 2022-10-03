@@ -37,12 +37,7 @@ const AuthTokenList = (props) => {
   const refModal = useRef(null)
 
   useEffect(() => {
-    authAPI
-      .tokens()
-      .then((tokens) => {
-        setTokens(tokens)
-      })
-      .catch((err) => context.error('Auth Token API', err))
+    refreshList()
   }, [])
 
   const deleteListItem = (row) => {
@@ -63,7 +58,7 @@ const AuthTokenList = (props) => {
     return expire > 0 && expire < parseInt(new Date().getTime() / 1e3)
   }
 
-  const refreshList = (next) => {
+  const refreshList = () => {
     authAPI
       .tokens()
       .then((tokens) => {
@@ -90,9 +85,22 @@ const AuthTokenList = (props) => {
     )
   }
 
+  const showClipboard = true //Platform.OS !== 'web' || navigator.clipboard
   const copy = (data) => {
     if (Platform.OS == 'web') {
-      navigator.clipboard.writeText(data)
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(data)
+      } else {
+        var copyTextarea = document.createElement('textarea')
+        copyTextarea.style.position = 'fixed'
+        copyTextarea.style.opacity = '0'
+        copyTextarea.textContent = data
+
+        document.body.appendChild(copyTextarea)
+        copyTextarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(copyTextarea)
+      }
     } else {
       Clipboard.setString(data)
     }
@@ -138,16 +146,23 @@ const AuthTokenList = (props) => {
                 <Text flex={1}>{item.Name}</Text>
                 <HStack
                   flex={1}
-                  minW={{ base: '1/6', md: '3/6' }}
+                  minW={{ base: '1/6', md: '2/6' }}
                   alignItems="center"
                   justifyItems="flex-end"
                 >
-                  <Text isTruncated>{item.Token}</Text>
+                  <Text>{item.Token}</Text>
                   <IconButton
                     variant="unstyled"
                     icon={<Icon size="4" icon={faCopy} color="muted.500" />}
                     onPress={() => copy(item.Token)}
+                    display={showClipboard ? 'flex' : 'none'}
                   />
+
+                  {item.ScopedPaths != null && item.ScopedPaths.length > 0 ? (
+                    <Text isTruncated>{JSON.stringify(item.ScopedPaths)}</Text>
+                  ) : (
+                    <Text isTruncated></Text>
+                  )}
                 </HStack>
 
                 <HStack

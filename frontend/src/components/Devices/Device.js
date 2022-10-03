@@ -15,7 +15,8 @@ import {
   faEarth,
   faCircleNodes,
   faNetworkWired,
-  faTag
+  faTag,
+  faCopy
 } from '@fortawesome/free-solid-svg-icons'
 
 import {
@@ -150,6 +151,29 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
       )
   }
 
+  const duplicateDevice = () => {
+    // this will copy psk from source device
+
+    let data = {
+      MAC: 'pending',
+      Name: `${device.Name} #copy`,
+      Groups: groups
+    }
+
+    deviceAPI
+      .copy(device.MAC, data)
+      .then((res) => {
+        context.success(
+          'Device copied',
+          `${device.Name} copy saved as ${data.Name}`
+        )
+        notifyChange()
+      })
+      .catch((error) => {
+        context.error('Failed to duplicate device', error)
+      })
+  }
+
   const saveDevice = async () => {
     let id = device.MAC || device.WGPubKey
     if (!name) {
@@ -256,6 +280,12 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
         </Menu.ItemOption>
       </Menu.OptionGroup>
       <Menu.Group title="Actions">
+        <Menu.Item onPress={duplicateDevice}>
+          <HStack space={2} alignItems="center">
+            <Icon icon={faCopy} color="muted.500" />
+            <Text>Duplicate</Text>
+          </HStack>
+        </Menu.Item>
         <Menu.Item onPress={removeDevice}>
           <HStack space={2} alignItems="center">
             <Icon icon={faTrash} color="danger.700" />

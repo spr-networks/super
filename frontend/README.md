@@ -1,4 +1,4 @@
-## Intro
+# SPR UI
 
 The UI is built with [React Native](https://reactnative.dev/) and [Native Base](https://docs.nativebase.io/). 
 
@@ -10,9 +10,12 @@ main: ![action workflow](https://github.com/spr-networks/super/actions/workflows
 
 ## Running
 
-To test locally, you can point it to your SPR instance with the `REACT_APP_API` variable.
+To test locally:
+```bash
+yarn dev
+```
 
-Example:
+You can point it to your SPR instance with the `REACT_APP_API` variable:
 ```bash
 REACT_APP_API=http://192.168.2.1 yarn start
 ```
@@ -21,3 +24,24 @@ If you want to use the MockAPI (with only a frontend and no SPR system running):
 ```bash
 REACT_APP_API=mock yarn start
 ```
+
+iOS version:
+```bash
+yarn ios
+```
+
+## iOS build
+
+install deps:
+```sh
+yarn setup:ios
+```
+
+open ios/spr.xcworkspace in Xcode && build/run
+
+for testflight we need:
+
++ production certificate
++ App Store distribution provisioning profile
+
+= same as app store dist

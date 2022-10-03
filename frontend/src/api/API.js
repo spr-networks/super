@@ -53,8 +53,12 @@ let gAuthHeaders = null
 class API {
   baseURL = ''
   authHeaders = ''
+  remoteURL = ''
 
   getApiURL() {
+    if (this.remoteURL != '') {
+      return this.remoteURL
+    }
     return getApiURL()
   }
 
@@ -84,7 +88,20 @@ class API {
     this.authHeaders = 'Basic ' + Base64.btoa(username + ':' + password)
   }
 
-  async request(method = 'GET', url, body) {
+  setAuthTokenHeaders(token = '') {
+    this.authHeaders = 'Bearer ' + token
+  }
+
+  setRemoteURL(url) {
+    this.remoteURL = url
+  }
+
+  async fetch(method = 'GET', url, body) {
+    if (url == undefined) {
+      url = method
+      method = 'GET'
+    }
+
     if (!this.authHeaders) {
       this.authHeaders = await this.getAuthHeaders()
     }
@@ -110,13 +127,16 @@ class API {
       url = url.substr(1)
     }
 
+    let _url = `${baseURL}${url}`
+
+    return fetch(_url, opts)
+  }
+
+  async request(method = 'GET', url, body) {
     // if forced to not return data
     let skipReturnValue = method == 'DELETE'
 
-    let _url = `${baseURL}${url}`
-    //console.log('[API] fetch', _url)
-
-    return fetch(_url, opts).then((response) => {
+    return this.fetch(method, url, body).then((response) => {
       if (!response.ok) {
         return Promise.reject({ message: response.status, response })
       }
@@ -156,6 +176,15 @@ class API {
   features(url) {
     return this.get('/features')
   }
+
+  version() {
+    return this.get('/version')
+  }
+
+  restart() {
+    return this.put('/restart')
+  }
+
 }
 
 export default API

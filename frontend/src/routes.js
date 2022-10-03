@@ -20,6 +20,7 @@ import DynDns from 'views/DNS/DynDns'
 import Wireguard from 'views/Wireguard'
 import Firewall from 'views/Firewall'
 import PFW from 'views/Pfw'
+import Mesh from 'views/Mesh'
 import Logs from 'views/Logs'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
@@ -47,6 +48,7 @@ import {
   faObjectGroup,
   faPuzzlePiece,
   faSignal,
+  faSitemap,
   faTags,
   faThList,
   faUnlockAlt,
@@ -93,6 +95,14 @@ const routes = [
     wifi: true,
     component: WirelessConfiguration,
     layout: 'admin'
+  },
+  {
+    path: 'mesh',
+    name: 'MESH',
+    icon: faSitemap,
+    component: Mesh,
+    layout: 'admin',
+    plus: true
   },
   {
     path: 'wireguard',

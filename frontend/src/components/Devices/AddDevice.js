@@ -130,6 +130,7 @@ const AddDevice = (props) => {
       MAC: mac || 'pending',
       Name: name,
       Groups: groups,
+      DeviceTags: tags,
       PSKEntry: {
         Psk: psk,
         Type: wpa
@@ -159,7 +160,7 @@ const AddDevice = (props) => {
   }
 
   return (
-    <Stack space={4} width={['100%', '100%', '4/6']}>
+    <Stack space={4} width={['100%', '100%', '5/6']}>
       <Heading fontSize="lg">Add a new WiFi Device</Heading>
       <Text color="muted.500" fontSize="xs" mt="-3">
         Wired devices do not need to be added
@@ -229,7 +230,7 @@ const AddDevice = (props) => {
         space={4}
         alignItems="center"
       >
-        <FormControl flex="1" isInvalid={'psk' in errors}>
+        <FormControl flex="2" isInvalid={'psk' in errors}>
           <FormControl.Label>Passphrase</FormControl.Label>
           <Input
             variant="underlined"

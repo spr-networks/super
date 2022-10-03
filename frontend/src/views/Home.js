@@ -58,6 +58,13 @@ const Home = (props) => {
     lg: 'row'
   })
 
+  let show = {
+    dns: pluginsEnabled.includes('dns-block') && !context.isMeshNode,
+    vpn: context.isWifiDisabled,
+    vpnSide: !context.isWifiDisabled && !context.isMeshNode,
+    traffic: !context.isMeshNode
+  }
+
   return (
     <ScrollView>
       <Stack direction={{ base: 'column', md: 'row' }}>
@@ -67,7 +74,7 @@ const Home = (props) => {
             justifyContent="space-between"
             space={{ base: 0, md: 4 }}
           >
-            {context.isWifiDisabled ? (
+            {show.vpn ? (
               <>
                 <WireguardPeers flex={1} />
                 <WireguardPeersActive flex={1} />
@@ -90,19 +97,20 @@ const Home = (props) => {
           </Stack>
 
           <VStack>
-            <TotalTraffic />
+            {show.traffic ? <TotalTraffic /> : null}
+
             <Interfaces />
           </VStack>
         </VStack>
         <VStack flex={1} p={2}>
-          {pluginsEnabled.includes('dns-block') ? (
+          {show.dns ? (
             <VStack>
               <DNSMetrics />
               <DNSBlockMetrics />
               <DNSBlockPercent />
             </VStack>
           ) : null}
-          {context.isWifiDisabled ? null : <WireguardPeersActive />}
+          {show.vpnSide ? <WireguardPeersActive /> : null}
         </VStack>
       </Stack>
     </ScrollView>

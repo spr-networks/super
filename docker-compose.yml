@@ -21,6 +21,8 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./state/base/:/state/base/
+      - ./state/plugins/:/state/plugins/
+      - ./plugins/:/plugins/
   superd:
     container_name: superd
     image: ghcr.io/spr-networks/super_superd
@@ -50,6 +52,7 @@ services:
       - ./configs/dhcp/:/configs/dhcp/
       - ./configs/zones/:/configs/zones/
       - ./state/dhcp/:/state/dhcp/
+      - ./state/plugins/mesh/:/state/plugins/mesh/:ro
       - /sys/fs/bpf:/sys/fs/bpf
   dhcp_client:
     container_name: superdhcp_client
@@ -80,6 +83,7 @@ services:
       - ./configs/base/:/configs/base/
       - ./configs/dns/:/configs/dns/
       - ./state/dns/:/state/dns/
+      - ./state/plugins/mesh/:/state/plugins/mesh/:ro
       - ./state/public/:/state/public/:ro
   wifid:
     container_name: superwifid
@@ -113,6 +117,7 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./state/public/:/state/public/:ro
+      - ./state/plugins/mesh/:/state/plugins/mesh/:ro
   ppp:
     container_name: superppp
     image: ghcr.io/spr-networks/super_ppp
@@ -144,6 +149,7 @@ services:
       - ./configs/base/:/configs/base/
       - ./configs/wireguard/:/configs/wireguard/
       - ./state/plugins/wireguard/:/state/plugins/wireguard/
+      - ./state/plugins/mesh/:/state/plugins/mesh/:ro
       - ./state/dhcp/:/state/dhcp/
   frontend:
     container_name: superfrontend
@@ -188,6 +194,7 @@ services:
       - ./frontend/build:/ui/
       - /var/log/journal:/var/log/journal:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./version.txt:/version.txt
   plugin-lookup:
     container_name: super-plugin-lookup
     image: ghcr.io/spr-networks/super_plugin-lookup
@@ -230,4 +237,3 @@ services:
       - ./state/plugins/packet_logs/:/state/plugins/packet_logs
       - ./configs/base/:/configs/base/
       - /dev/log:/dev/log
-

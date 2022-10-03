@@ -26,6 +26,13 @@ export class APIDevice extends API {
     return this.put(`/device?identity=${encodeURIComponent(id)}`, data)
   }
 
+  copy = (id, data) => {
+    return this.put(
+      `/device?identity=pending&copy=${encodeURIComponent(id)}`,
+      data
+    )
+  }
+
   updateName = (id, Name) => this.update(id, { Name })
   updateGroups = (id, Groups) => this.update(id, { Groups })
   updateTags = (id, DeviceTags) => this.update(id, { DeviceTags })

@@ -1,13 +1,19 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { Platform } from 'react-native'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from 'FontAwesomeUtils'
 import {
+  faBoxArchive,
+  faDownload,
   faEllipsis,
   faHardDrive,
-  faListAlt
+  faListAlt,
+  faTrash
 } from '@fortawesome/free-solid-svg-icons'
 import {
   Badge,
+  Box,
+  Button,
   FlatList,
   Heading,
   IconButton,
@@ -16,14 +22,14 @@ import {
   Modal,
   Stack,
   Text,
+  ScrollView,
   VStack,
   useDisclose,
   useColorModeValue
 } from 'native-base'
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
-import { ucFirst } from 'utils'
-//import LogList from 'components/Logs/LogList'
+import { prettyDate, ucFirst } from 'utils'
 
 const niceName = (name) => {
   if (Array.isArray(name)) {
@@ -144,6 +150,129 @@ const renderDockerContainer = ({ item, navigate, showModal }) => {
   )
 }
 
+const ConfigsBackup = (props) => {
+  const context = useContext(AlertContext)
+
+  const [backups, setBackups] = useState([])
+
+  const doConfigsBackup = () => {
+    api
+      .put('/backup')
+      .then((filename) => {
+        context.success('got backup:', filename)
+        setBackups([
+          ...backups.filter((b) => b.Name !== filename),
+          { Name: filename, Timestamp: new Date() }
+        ])
+      })
+      .catch((err) => {
+        context.error('backup error', err)
+      })
+  }
+
+  // NOTE only if web
+  const downloadBackup = async (filename) => {
+    let url = `/backup/${filename}`
+
+    api
+      .fetch(url)
+      .then((res) => {
+        res.blob().then((blob) => {
+          var url = window.URL.createObjectURL(blob)
+          var a = document.createElement('a')
+          a.href = url
+          a.download = filename
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+        })
+      })
+      .catch((err) => {
+        context.error('Failed to download backup', err)
+      })
+  }
+
+  const deleteBackup = (filename) => {
+    api
+      .delete(`/backup/${filename}`)
+      .then((res) => {
+        setBackups(backups.filter((b) => b.Name !== filename))
+      })
+      .catch((err) => context.error('Failed to remove backup', err))
+  }
+
+  useEffect(() => {
+    api.get('/backup').then(setBackups).catch(context.error)
+  }, [])
+
+  const showDownloadBackups = Platform.OS == 'web'
+
+  return (
+    <>
+      <HStack
+        space={2}
+        alignItems="center"
+        justifyContent="space-between"
+        p={4}
+      >
+        <Heading fontSize="md">Backups</Heading>
+        <Button
+          size="sm"
+          variant="ghost"
+          colorScheme="blueGray"
+          leftIcon={<Icon icon={faBoxArchive} />}
+          onPress={doConfigsBackup}
+        >
+          Backup configs
+        </Button>
+      </HStack>
+
+      <Box
+        space={2}
+        p={4}
+        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+      >
+        <FlatList
+          data={backups}
+          keyExtractor={(item, index) => item.Timestamp}
+          renderItem={({ item }) => (
+            <Stack
+              direction="row"
+              space={{ base: 2, md: 4 }}
+              py={4}
+              borderBottomColor="borderColorCardLight"
+              _dark={{ borderBottomColor: 'borderColorCardDark' }}
+              borderBottomWidth={1}
+              alignItems="center"
+            >
+              <Badge variant="outline">{prettyDate(item.Timestamp)}</Badge>
+              <HStack space={2} display={{ base: 'none', md: 'flex' }}>
+                {/*<Text>Filename</Text>*/}
+                <Text color="muted.500">{item.Name}</Text>
+              </HStack>
+              <IconButton
+                size="sm"
+                onPress={() => downloadBackup(item.Name)}
+                icon={<Icon icon={faDownload} />}
+                display={showDownloadBackups ? 'flex' : 'none'}
+              />
+              <IconButton
+                size="sm"
+                colorScheme="danger"
+                onPress={() => deleteBackup(item.Name)}
+                icon={<Icon icon={faTrash} />}
+              />
+            </Stack>
+          )}
+        />
+        {!backups.length ? (
+          <Text color="muted.500">No backups available</Text>
+        ) : null}
+      </Box>
+    </>
+  )
+}
+
 const SystemInfo = (props) => {
   const context = useContext(AlertContext)
   const navigate = useNavigate()
@@ -151,6 +280,7 @@ const SystemInfo = (props) => {
   const [containers, setContainers] = useState([])
   const [uptime, setUptime] = useState({})
   const [hostname, setHostname] = useState('')
+  const [version, setVersion] = useState('')
 
   useEffect(() => {
     const fetchInfo = () => {
@@ -167,6 +297,11 @@ const SystemInfo = (props) => {
       api
         .get('/info/hostname')
         .then(setHostname)
+        .catch((err) => context.error(err))
+
+      api
+        .get('/version')
+        .then(setVersion)
         .catch((err) => context.error(err))
     }
 
@@ -191,11 +326,34 @@ const SystemInfo = (props) => {
   }
 
   return (
-    <>
+    <ScrollView>
       <HStack space={2} alignItems="flex-end" p={4}>
         <Heading fontSize="md">System Info</Heading>
-        <Text fontSize="xs">{hostname}</Text>
       </HStack>
+
+      <HStack space={4} mb={4}>
+        <HStack
+          flex={1}
+          space={2}
+          p={4}
+          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+          justifyContent="space-between"
+        >
+          <Text>Hostname</Text>
+          <Text color="muted.500">{hostname}</Text>
+        </HStack>
+        <HStack
+          flex={1}
+          space={2}
+          p={4}
+          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+          justifyContent="space-between"
+        >
+          <Text>SPR Version</Text>
+          <Text color="muted.500">{version}</Text>
+        </HStack>
+      </HStack>
+
       <Stack direction={{ base: 'column', md: 'row' }} space={4} mb={4}>
         <FlatList
           flex={1}
@@ -239,10 +397,13 @@ const SystemInfo = (props) => {
         />
       </Stack>
 
+      <ConfigsBackup />
+
       <Heading fontSize="md" p={4}>
         Docker Containers
       </Heading>
       <FlatList
+        minH={400}
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
         _rounded="md"
         data={containers}
@@ -259,7 +420,7 @@ const SystemInfo = (props) => {
           {/*<Modal.Footer />*/}
         </Modal.Content>
       </Modal>
-    </>
+    </ScrollView>
   )
 }
 

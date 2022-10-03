@@ -6,7 +6,7 @@ export class APIAuth extends API {
   }
 
   tokens = () => this.get('tokens')
-  putToken = (Name, Expire) => this.put('tokens', { Expire, Name })
+  putToken = (Name, Expire, ScopedPaths) => this.put('tokens', { Expire, Name, ScopedPaths })
   deleteToken = (Token) => this.delete('tokens', { Token })
 }
 

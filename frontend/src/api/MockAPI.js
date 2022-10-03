@@ -27,6 +27,7 @@ export default function MockAPI() {
       forwardblockrule: Model,
       serviceport: Model,
       token: Model,
+      backup: Model,
       pfwBlock: Model,
       pfwForward: Model
     },
@@ -85,8 +86,8 @@ export default function MockAPI() {
         UnixPath: '/state/dns/dns_block_plugin',
         Enabled: true,
         Plus: false,
-        GitURL: "",
-        ComposeFilePath: ""
+        GitURL: '',
+        ComposeFilePath: ''
       })
       server.create('plugin', {
         Name: 'dns-log',
@@ -112,8 +113,8 @@ export default function MockAPI() {
         UnixPath: '/state/plugins/pfw/socket',
         Enabled: true,
         Plus: true,
-        GitURL: "github.com/spr-networks/pfw_extension",
-        ComposeFilePath: "plugins/plus/pfw_extension/docker-compose.yml"
+        GitURL: 'github.com/spr-networks/pfw_extension',
+        ComposeFilePath: 'plugins/plus/pfw_extension/docker-compose.yml'
       })
 
       server.create('forwardrule', {
@@ -145,36 +146,36 @@ export default function MockAPI() {
 
       server.create('forwardblockrule', {
         SrcIP: '1.2.3.4',
-        DstPort: "0-65535",
+        DstPort: '0-65535',
         DstIP: '6.7.8.9/24',
         Protocol: 'tcp'
       })
       server.create('forwardblockrule', {
         SrcIP: '1.2.3.4',
         DstIP: '6.7.8.9/24',
-        DstPort: "0-65535",
+        DstPort: '0-65535',
         Protocol: 'tcp'
       })
 
       server.create('serviceport', {
-        "Protocol": "tcp",
-        "Port": "22",
-        "UpstreamEnabled": false
+        Protocol: 'tcp',
+        Port: '22',
+        UpstreamEnabled: false
       })
       server.create('serviceport', {
-        "Protocol": "tcp",
-        "Port": "80",
-        "UpstreamEnabled": false
+        Protocol: 'tcp',
+        Port: '80',
+        UpstreamEnabled: false
       })
       server.create('serviceport', {
-        "Protocol": "tcp",
-        "Port": "443",
-        "UpstreamEnabled": false
+        Protocol: 'tcp',
+        Port: '443',
+        UpstreamEnabled: false
       })
       server.create('serviceport', {
-        "Protocol": "tcp",
-        "Port": "5201",
-        "UpstreamEnabled": false
+        Protocol: 'tcp',
+        Port: '5201',
+        UpstreamEnabled: false
       })
 
       server.create('dnsblocklist', {
@@ -184,7 +185,7 @@ export default function MockAPI() {
       server.create('dnsblocklist', {
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt',
         Enabled: true,
-        Tags: ["focus"]
+        Tags: ['focus']
       })
       server.create('dnsoverride', {
         Type: 'block',
@@ -242,6 +243,11 @@ export default function MockAPI() {
         Token: 'QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQgo=',
         Expire: 0
       })
+
+      server.create('backup', {
+        Name: 'spr-configs-v0.1.0-beta.0.tgz',
+        Timestamp: Date.now()
+      })
     },
     routes() {
       // TODO hook for all
@@ -290,16 +296,28 @@ export default function MockAPI() {
             Groups: [],
             DeviceTags: []
           }
+
           return schema.devices.create(_dev)
         }
       })
 
-      this.get('/groups', (schema, request) => {
-        if (!authOK(request)) {
+      this.put('/device', (schema, request) => {
+        let ups = new URLSearchParams(request.url.replace(/^\/device/, ''))
+        let id = ups.get('identity')
+        let copy = ups.get('copy')
+        if (!copy) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
-        return schema.groups.all().models
+        let dev = schema.devices.findBy({ MAC: copy })
+        if (!dev) {
+          return new Response(401, {}, { error: 'invalid device' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        let _dev = { ...attrs, PSKEntry: dev.PSKEntry, DeviceTags: [] }
+
+        return schema.devices.create(_dev)
       })
 
       this.del('/device/:id', (schema, request) => {
@@ -309,6 +327,40 @@ export default function MockAPI() {
 
         let id = request.params.id
         return schema.devices.findBy({ MAC: id }).destroy()
+      })
+
+      this.del('/device', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let ups = new URLSearchParams(request.url.replace(/^\/device/, ''))
+        let id = ups.get('identity')
+
+        return schema.devices.findBy({ MAC: id }).destroy()
+      })
+
+      this.get('/interfacesConfiguration', (schema, request) => {
+        return [
+          {
+            Name: 'eth0',
+            Type: 'Uplink',
+            Enabled: true
+          },
+          {
+            Name: 'wlan1',
+            Type: 'AP',
+            Enabled: true
+          }
+        ]
+      })
+
+      this.get('/groups', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        return schema.groups.all().models
       })
 
       this.get('/pendingPSK', (schema, request) => {
@@ -1111,14 +1163,77 @@ export default function MockAPI() {
               '[ SCAN_FREQ_KHZ ]: scan on kHz frequency support',
               '[ CONTROL_PORT_OVER_NL80211_TX_STATUS ]: tx status for nl80211 control port support'
             ]
-          },
-
+          }
         ]
       })
 
       this.get('/features', () => {
         return ['dns', 'wifi', 'ppp', 'wireguard']
       })
+
+      this.get('/version', () => {
+        return '"v0.1.0-beta.0"'
+      })
+
+      this.get('/info/hostname', () => {
+        return '"ubuntu"'
+      })
+
+      this.get('/info/uptime', () => {
+        return {
+          time: '12:16:37',
+          uptime: '11 days, 5:52',
+          users: 0,
+          load_1m: 0.17,
+          load_5m: 0.12,
+          load_15m: 0.04,
+          time_hour: 12,
+          time_minute: 16,
+          time_second: 37,
+          uptime_days: 11,
+          uptime_hours: 5,
+          uptime_minutes: 52,
+          uptime_total_seconds: 971520
+        }
+      })
+
+      this.get('/info/docker', () => {
+        return []
+      })
+
+      this.put('/backup', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let version = '"v0.1.0-beta.0'
+        let backup = {
+          Name: `spr-configs-${version}.tgz`,
+          Timestamp: Date.now()
+        }
+
+        schema.backups.create(backup)
+
+        return JSON.stringify(backup.Name)
+      })
+
+      this.get('/backup', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        return schema.backups.all().models
+      })
+
+      this.del('/backup/:name', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let id = request.params.name
+        return schema.backups.findBy({ Name: id }).destroy()
+      })
+      ////
 
       this.get('/iw/dev', (schema) => {
         return {
@@ -1169,9 +1284,9 @@ export default function MockAPI() {
               addr: '44:a5:6e:63:c5:f3',
               type: 'managed',
               channel: '36 (5180 MHz), width: 80 MHz, center1: 5210 MHz',
-              txpower: '18.00 dBm',
+              txpower: '18.00 dBm'
             }
-          },
+          }
         }
       })
 
@@ -1334,61 +1449,61 @@ export default function MockAPI() {
 
       this.get('/notifications', (schema) => {
         return [
-            {
-                "Conditions": {
-                    "Prefix": "nft:drop:forward",
-                    "Protocol": "tcp",
-                    "DstIP": "",
-                    "DstPort": 0,
-                    "SrcIP": "",
-                    "SrcPort": 0
-                },
-                "Notification": true
+          {
+            Conditions: {
+              Prefix: 'nft:drop:forward',
+              Protocol: 'tcp',
+              DstIP: '',
+              DstPort: 0,
+              SrcIP: '',
+              SrcPort: 0
             },
-            {
-                "Conditions": {
-                    "Prefix": "nft:drop:input",
-                    "Protocol": "tcp",
-                    "DstIP": "",
-                    "DstPort": 0,
-                    "SrcIP": "",
-                    "SrcPort": 0
-                },
-                "Notification": true
+            Notification: true
+          },
+          {
+            Conditions: {
+              Prefix: 'nft:drop:input',
+              Protocol: 'tcp',
+              DstIP: '',
+              DstPort: 0,
+              SrcIP: '',
+              SrcPort: 0
             },
-            {
-                "Conditions": {
-                    "Prefix": "nft:drop:pfw",
-                    "Protocol": "tcp",
-                    "DstIP": "",
-                    "DstPort": 0,
-                    "SrcIP": "",
-                    "SrcPort": 0
-                },
-                "Notification": true
+            Notification: true
+          },
+          {
+            Conditions: {
+              Prefix: 'nft:drop:pfw',
+              Protocol: 'tcp',
+              DstIP: '',
+              DstPort: 0,
+              SrcIP: '',
+              SrcPort: 0
             },
-            {
-                "Conditions": {
-                    "Prefix": "nft:drop:input",
-                    "Protocol": "udp",
-                    "DstIP": "",
-                    "DstPort": 0,
-                    "SrcIP": "",
-                    "SrcPort": 0
-                },
-                "Notification": true
+            Notification: true
+          },
+          {
+            Conditions: {
+              Prefix: 'nft:drop:input',
+              Protocol: 'udp',
+              DstIP: '',
+              DstPort: 0,
+              SrcIP: '',
+              SrcPort: 0
             },
-            {
-                "Conditions": {
-                    "Prefix": "nft:drop:forward",
-                    "Protocol": "udp",
-                    "DstIP": "",
-                    "DstPort": 0,
-                    "SrcIP": "",
-                    "SrcPort": 0
-                },
-                "Notification": true
-            }
+            Notification: true
+          },
+          {
+            Conditions: {
+              Prefix: 'nft:drop:forward',
+              Protocol: 'udp',
+              DstIP: '',
+              DstPort: 0,
+              SrcIP: '',
+              SrcPort: 0
+            },
+            Notification: true
+          }
         ]
       })
 
@@ -1509,8 +1624,6 @@ export default function MockAPI() {
         return true
       })
 
-
-
       this.put('/hostapd/:dev/setChannel', (schema) => {
         return {
           Vht_oper_centr_freq_seg0_idx: 42,
@@ -1559,7 +1672,7 @@ export default function MockAPI() {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
-        return JSON.stringify("token")
+        return JSON.stringify('token')
       })
 
       //DNS plugin
@@ -1841,6 +1954,22 @@ export default function MockAPI() {
         return status
       })
 
+      this.get('/plugins/wireguard/genkey', (schema, request) => {
+        const rKey = () => {
+          let key = ''
+          for (let i = 0; i < 32; i++) {
+            key += String.fromCharCode(r(255))
+          }
+
+          return Base64.btoa(key)
+        }
+
+        return {
+          PrivateKey: rKey(),
+          PublicKey: rKey()
+        }
+      })
+
       this.put('/plugins/wireguard/up', (schema, request) => {
         return true
       })
@@ -1875,7 +2004,6 @@ export default function MockAPI() {
           BlockRules: schema.blockrules.all().models,
           ForwardingBlockRules: schema.forwardblockrules.all().models,
           ServicePorts: schema.serviceports.all().models
-
         }
       })
 
@@ -1950,7 +2078,6 @@ export default function MockAPI() {
         let attrs = JSON.parse(request.requestBody)
         return schema.serviceports.where(attrs).destroy()
       })
-
 
       // tokens
       this.get('/tokens', (schema, request) => {
@@ -2125,6 +2252,34 @@ export default function MockAPI() {
 
         let index = request.params.index
         return schema.pfwForwards.find(index).destroy()
+      })
+
+      this.get('/plugins/mesh/config', (schema, request) => {
+        return {
+          ParentIP: '',
+          ParentAPIToken: '',
+          LeafRouters: []
+        }
+      })
+
+      this.get('/plugins/mesh/leafMode', (schema, request) => {
+        return false
+      })
+
+      this.get('/plugins/mesh/leafRouters', (schema, request) => {
+        return []
+        /*
+        let token = schema.tokens.findBy({Name: 'PLUS-MESH-API-DOWNHAUL-TOKEN'})
+        let dev = schema.devices.findBy({Name: 'device-3'})
+
+        return [
+          {APIToken: token.Token, IP: dev.RecentIP},
+        ]
+        */
+      })
+
+      this.put('/plugins/mesh/setSSID', (schema, request) => {
+        return true
       })
     }
   })

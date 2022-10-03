@@ -98,6 +98,10 @@ export default class DynDns extends Component {
       this.context.success('Set Dyndns Configuration')
     }
 
+    //as an easy workaround,
+    //update ip_urls to be an array again
+    let ip_urls = this.state.config["ip_urls"]
+    this.state.config["ip_urls"] = ip_urls.split(",").map(e => e.trim())
     dyndnsAPI.setConfig(this.state.config).then(done, (e) => {
       this.context.error('API Failure: ' + e.message)
     })
@@ -265,7 +269,7 @@ export default class DynDns extends Component {
                     {Object.keys(this.state.config)
                       .filter(
                         (label) =>
-                          !['run_once', 'domains', 'socks5'].includes(label)
+                          !['run_once', 'domains', 'socks5', 'ip_url', 'ipv6_url'].includes(label)
                       )
                       .map((label) => (
                         <HStack key={label} space={4} justifyItems="center">

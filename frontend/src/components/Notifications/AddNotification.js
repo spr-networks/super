@@ -48,7 +48,11 @@ const AddNotifcation = ({ onSubmit, ...props }) => {
 
     { value: 'nft:drop:input', label: 'drop input' },
     { value: 'nft:drop:forward', label: 'drop forward' },
-    { value: 'nft:drop:pfw', label: 'drop pfw' }
+    { value: 'nft:drop:pfw', label: 'drop pfw' },
+
+    { value: 'nft:bridge:in', label: 'bridge in' },
+    { value: 'nft:drop:bridge', label: 'drop bridge' }
+
   ]
 
   return (

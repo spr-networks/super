@@ -1,10 +1,15 @@
 name: Docker Image CI
 
-on: [ push, pull_request ]
+#on: [ push, pull_request ]
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-
-  buildx:
+  build-images:
+    name: Build images
     runs-on: ubuntu-latest
     steps:
       -
@@ -27,3 +32,29 @@ jobs:
           ./build_docker_compose.sh \
             --set "*.platform=linux/amd64,linux/arm64" \
             `[ "${{ github.event_name }}" = "push" -a "${{ github.ref_name }}" = "main" ] && echo "--push"`
+      - name: Get images from docker-compose.yml
+        id: get-images
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -o json -I 0 '[.services|.[]|.image]' docker-compose.yml
+
+      - name: Set Matrix output
+        id: set-matrix
+        run: |
+          echo '::set-output name=matrix::${{ steps.get-images.outputs.result }}'
+
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+  sbom:
+    name: Generate SBOMs
+    needs: build-images
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: ${{ fromJson(needs.build-images.outputs.matrix) }}
+    steps:
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: '${{ matrix.image }}'

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useContext, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useNavigate } from 'react-router-dom'
@@ -21,7 +21,16 @@ import {
   useToken
 } from 'native-base'
 
-const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
+import { AppContext } from 'AppContext'
+
+const AdminNavbar = ({
+  isMobile,
+  isOpenSidebar,
+  setIsOpenSidebar,
+  version
+}) => {
+  const { isMeshNode } = useContext(AppContext)
+
   const { colorMode, toggleColorMode } = useColorMode()
 
   /*useEffect(() => {
@@ -71,9 +80,10 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
           <Text fontSize="lg" bold>
             SPR
           </Text>
+          {isMeshNode ? <Text fontSize="lg">MESH</Text> : null}
 
-          <Text fontSize="md" color="muted.600">
-            v1.0-alpha
+          <Text fontSize="sm" color="muted.600" isTruncated>
+            {version}
           </Text>
 
           <HStack marginLeft="auto" space="4">
@@ -156,7 +166,8 @@ const AdminNavbar = ({ isOpenSidebar, setIsOpenSidebar }) => {
 AdminNavbar.propTypes = {
   isOpenSidebar: PropTypes.bool,
   setIsOpenSidebar: PropTypes.func,
-  isMobile: PropTypes.bool
+  isMobile: PropTypes.bool,
+  version: PropTypes.string
 }
 
 export default AdminNavbar

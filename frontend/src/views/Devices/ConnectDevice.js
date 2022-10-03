@@ -21,35 +21,40 @@ const WifiConnect = (props) => {
 
   useEffect(() => {
     // fetch ap name
-    wifiAPI.interfaces('AP').then((ifaces) => {
-
-      Promise.all(ifaces.map(iface => {
-        return wifiAPI
-          .status(iface)
-          .then((status) => {
-            return status['ssid[0]']
+    wifiAPI
+      .interfaces('AP')
+      .then((ifaces) => {
+        Promise.all(
+          ifaces.map((iface) => {
+            return wifiAPI.status(iface).then((status) => {
+              return status['ssid[0]']
+            })
           })
-      })).then(results => {
-        let qrs = {}
-        results.map(ssid => {
-          qrs[ssid] = generateQRCode(ssid, device.PSKEntry.Psk, device.PSKEntry.Type)
+        ).then((results) => {
+          let qrs = {}
+          results.map((ssid) => {
+            qrs[ssid] = generateQRCode(
+              ssid,
+              device.PSKEntry.Psk,
+              device.PSKEntry.Type
+            )
+          })
+          setConnectQRs(qrs)
+          setSsids(results)
         })
-        setConnectQRs(qrs)
-        setSsids(results)
       })
-    }).catch((err) => {
-      setError('could not find wireless interfaces -- check wifid service logs')
-    })
+      .catch((err) => {
+        setError(
+          'could not find wireless interfaces -- check wifid service logs'
+        )
+      })
   }, [])
-
 
   // set qrcode
   const generateQRCode = (_ssid, password, type, hidden = false) => {
     type = 'WPA' //type.toUpperCase()
     return `WIFI:S:${_ssid};P:${password};T:${type};${hidden};`
   }
-
-
 
   const checkPendingStatus = () => {
     deviceAPI
@@ -75,8 +80,8 @@ const WifiConnect = (props) => {
 
   return (
     <VStack>
-    {ssids.map((ssid) => (
-      <Stack space={4} alignItems="center">
+      {ssids.map((ssid) => (
+        <Stack space={4} alignItems="center">
           <HStack space={1}>
             <Text fontSize="lg" color="muted.500">
               SSID
@@ -111,7 +116,7 @@ const WifiConnect = (props) => {
                   Error: {error}
                 </Text>
               ) : (
-                <Button key="wait" variant="subtle" colorScheme="muted.100">
+                <Button key="wait" variant="ghost" colorScheme="muted">
                   Waiting for connection...
                 </Button>
               )}
@@ -127,15 +132,14 @@ const WifiConnect = (props) => {
           <Button
             w="1/3"
             variant="ghost"
-            colorScheme="muted.800"
+            colorScheme="muted"
             leftIcon={<Icon icon={faArrowLeft} />}
             onPress={goBack}
           >
             Back
           </Button>
         </Stack>
-      )
-    )}
+      ))}
     </VStack>
   )
 }
