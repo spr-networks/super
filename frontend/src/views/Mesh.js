@@ -305,12 +305,12 @@ const Mesh = (props) => {
               }}
               renderItem={({ item }) => (
                 <Box
-                  borderBottomWidth="1"
+                  borderBottomWidth={1}
                   _dark={{
                     borderColor: 'muted.600'
                   }}
                   borderColor="muted.200"
-                  py="2"
+                  py={2}
                 >
                   <HStack
                     space={3}
@@ -369,16 +369,25 @@ const Mesh = (props) => {
                 </HStack>
               </Button>
             </VStack>
+          </Box>
 
-            {leafRouters.length == 0 ? (
-              <HStack justifyContent="space-between" alignItems="center" p={4}>
+          {leafRouters.length == 0 ? (
+            <>
+              <VStack p={4} space={1}>
+                <Heading fontSize="md">Device Token</Heading>
+                <Text color="muted.500" isTruncated>
+                  Generate an API token to use this device as a leaf router.
+                </Text>
+              </VStack>
+
+              <Box
+                bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+                _rounded={{ md: 'md' }}
+                width="100%"
+                p={4}
+                mb={4}
+              >
                 <VStack>
-                  <Heading fontSize="md" isTruncated>
-                    Device Token
-                  </Heading>
-                  <Text color="muted.500" isTruncated>
-                    Generate an API token to use this device as a leaf router.
-                  </Text>
                   {leafToken == '' ? (
                     <Button
                       display={{ md: 'flex' }}
@@ -401,9 +410,9 @@ const Mesh = (props) => {
                     </HStack>
                   )}
                 </VStack>
-              </HStack>
-            ) : null}
-          </Box>
+              </Box>
+            </>
+          ) : null}
         </>
       )}
     </>
