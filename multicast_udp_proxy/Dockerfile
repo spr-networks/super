@@ -12,8 +12,7 @@ ENV CC=clang
 ARG USE_TMPFS=true
 COPY code/ /code/
 RUN --mount=type=tmpfs,target=/tmpfs \
-    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go
-RUN --mount=type=tmpfs,target=/tmpfs \
+    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
     go build -ldflags="-s -w" multicastproxy.go
 
 FROM  ubuntu:22.04
