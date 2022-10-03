@@ -340,6 +340,21 @@ export default function MockAPI() {
         return schema.devices.findBy({ MAC: id }).destroy()
       })
 
+      this.get('/interfacesConfiguration', (schema, request) => {
+        return [
+          {
+            Name: 'eth0',
+            Type: 'Uplink',
+            Enabled: true
+          },
+          {
+            Name: 'wlan1',
+            Type: 'AP',
+            Enabled: true
+          }
+        ]
+      })
+
       this.get('/groups', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
@@ -2237,6 +2252,34 @@ export default function MockAPI() {
 
         let index = request.params.index
         return schema.pfwForwards.find(index).destroy()
+      })
+
+      this.get('/plugins/mesh/config', (schema, request) => {
+        return {
+          ParentIP: '',
+          ParentAPIToken: '',
+          LeafRouters: []
+        }
+      })
+
+      this.get('/plugins/mesh/leafMode', (schema, request) => {
+        return false
+      })
+
+      this.get('/plugins/mesh/leafRouters', (schema, request) => {
+        return []
+        /*
+        let token = schema.tokens.findBy({Name: 'PLUS-MESH-API-DOWNHAUL-TOKEN'})
+        let dev = schema.devices.findBy({Name: 'device-3'})
+
+        return [
+          {APIToken: token.Token, IP: dev.RecentIP},
+        ]
+        */
+      })
+
+      this.put('/plugins/mesh/setSSID', (schema, request) => {
+        return true
       })
     }
   })
