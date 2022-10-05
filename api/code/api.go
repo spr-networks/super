@@ -257,13 +257,29 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 
 // get spr version
 func getVersion(w http.ResponseWriter, r *http.Request) {
-	data, err := ioutil.ReadFile(ApiVersionFile)
+	plugin := r.URL.Query().Get("plugin")
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/version?plugin="+plugin, nil)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
+		http.Error(w, fmt.Errorf("failed to make request for version "+plugin).Error(), 400)
 		return
 	}
 
-	version := strings.Trim(string(data), "\n")
+	c := getSuperdClient()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to request version from superd "+plugin).Error(), 400)
+		return
+	}
+
+	defer resp.Body.Close()
+	version, err := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Errorf("failed to get version "+plugin+" "+string(resp.StatusCode)).Error(), 400)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(version)
