@@ -1,9 +1,12 @@
 # NOTE move this to docker build yml
-name: build and upload sbom artifact
+name: Build and Upload SBOM Artifact
 
 on:
-  push:
-    branches: [ main, dev ]
+  workflow_run:
+    workflows: ["Bump version"]
+    types: [completed]
+#  push:
+#    branches: [ main, dev ]
 
 jobs:
   build:
