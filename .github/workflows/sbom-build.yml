@@ -18,10 +18,10 @@ jobs:
       with:
         fetch-depth: '0'
 
-    - name: Test ref_name
-      env:
-        REF_TAG: ${{ github.ref_name }}
-      run: echo "ref_name == $REF_TAG =="
+    - name: Set env
+      run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+    - name: Test release tag version
+      run: echo "release == $RELEASE_VERSION =="
 
     - uses: anchore/sbom-action@v0
       with:
