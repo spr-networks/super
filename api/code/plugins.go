@@ -59,6 +59,15 @@ func PluginRequestHandler(proxy *httputil.ReverseProxy) func(http.ResponseWriter
 	}
 }
 
+func PluginEnabled(name string) bool {
+	for _, entry := range config.Plugins {
+		if entry.Name == name && entry.Enabled == true {
+			return true
+		}
+	}
+	return false
+}
+
 func PlusEnabled() bool {
 	return config.PlusToken != ""
 }
@@ -564,6 +573,15 @@ func startPlusServices() error {
 
 // mesh support
 func updateMeshPluginPut(endpoint string, jsonValue []byte) {
+
+	if !PlusEnabled() {
+		return
+	}
+
+	if !PluginEnabled("MESH") {
+		return
+	}
+
 	req, err := http.NewRequest(http.MethodPut, "http://localhost/"+endpoint, bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return

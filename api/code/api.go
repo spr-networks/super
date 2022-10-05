@@ -29,7 +29,6 @@ import (
 
 var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
-var ApiVersionFile = TEST_PREFIX + "/version.txt"
 
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
@@ -257,23 +256,67 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 
 // get spr version
 func getVersion(w http.ResponseWriter, r *http.Request) {
-	data, err := ioutil.ReadFile(ApiVersionFile)
+	plugin := r.URL.Query().Get("plugin")
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/version?plugin="+plugin, nil)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to make request for version "+plugin).Error(), 400)
+		return
+	}
+
+	c := getSuperdClient()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to request version from superd "+plugin).Error(), 400)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	version := ""
+	err = json.NewDecoder(resp.Body).Decode(&version)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
 
-	version := strings.Trim(string(data), "\n")
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Errorf("failed to get version "+plugin+" "+string(resp.StatusCode)).Error(), 400)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(version)
 }
 
 func doConfigsBackup(w http.ResponseWriter, r *http.Request) {
-	//if r.Method == http.MethodPut {
-	version, err := ioutil.ReadFile(ApiVersionFile)
+	//get version
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/version", nil)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to make request for version ").Error(), 400)
+		return
+	}
+
+	c := getSuperdClient()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to request version from superd").Error(), 400)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	version := ""
+	err = json.NewDecoder(resp.Body).Decode(&version)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Errorf("failed to get version "+string(resp.StatusCode)).Error(), 400)
 		return
 	}
 

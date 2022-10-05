@@ -1,17 +1,27 @@
 # NOTE move this to docker build yml
-name: build and upload sbom artifact
+name: SBOM Artifact
 
 on:
   push:
     branches: [ main, dev ]
+#  workflow_run:
+#    workflows: [Bump version]
+#    branches: [ main, dev ]
+#    types:
+#      - completed
 
 jobs:
-  build:
+  on-success:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         fetch-depth: '0'
+
+    - name: Set env
+      run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+    - name: Test release tag version
+      run: echo "Release == $RELEASE_VERSION =="
 
     - uses: anchore/sbom-action@v0
       with:
