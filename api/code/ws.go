@@ -26,11 +26,15 @@ func WSNotifyValue(msg_type string, data interface{}) {
 	if err != nil {
 		panic(err)
 	}
-	WSNotify <- WSMessage{msg_type, string(bytes)}
+	go func() {
+		WSNotify <- WSMessage{msg_type, string(bytes)}
+	}()
 }
 
 func WSNotifyString(msg_type string, data string) {
-	WSNotify <- WSMessage{msg_type, data}
+	go func() {
+		WSNotify <- WSMessage{msg_type, data}
+	}()
 }
 
 func WSRunBroadcast() {
