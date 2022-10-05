@@ -1,14 +1,14 @@
 # NOTE move this to docker build yml
-name: Build and Upload SBOM Artifact
+name: SBOM Artifact
 
 on:
-  workflow_run:
-    workflows: [Bump version]
-    types: [requested]
+  push:
     branches: [ main, dev ]
-    #types: [completed]
-#  push:
+#  workflow_run:
+#    workflows: [Bump version]
 #    branches: [ main, dev ]
+#    types:
+#      - completed
 
 jobs:
   on-success:
@@ -17,6 +17,11 @@ jobs:
     - uses: actions/checkout@v3
       with:
         fetch-depth: '0'
+
+    - name: Test ref_name
+      env:
+        REF_TAG: ${{ github.ref_name }}
+      run: echo "ref_name == $REF_TAG =="
 
     - uses: anchore/sbom-action@v0
       with:
