@@ -29,7 +29,6 @@ import (
 
 var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
-var ApiVersionFile = TEST_PREFIX + "/version.txt"
 
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
@@ -292,10 +291,32 @@ func getVersion(w http.ResponseWriter, r *http.Request) {
 }
 
 func doConfigsBackup(w http.ResponseWriter, r *http.Request) {
-	//if r.Method == http.MethodPut {
-	version, err := ioutil.ReadFile(ApiVersionFile)
+	//get version
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/version", nil)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to make request for version ").Error(), 400)
+		return
+	}
+
+	c := getSuperdClient()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to request version from superd").Error(), 400)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	version := ""
+	err = json.NewDecoder(resp.Body).Decode(&version)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Errorf("failed to get version "+string(resp.StatusCode)).Error(), 400)
 		return
 	}
 
