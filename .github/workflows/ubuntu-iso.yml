@@ -13,11 +13,13 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
-      -
-        name: Set up Qemu emulation
+      - name: Fetch tags
+        run:  git fetch --tags
+      - name: Get version from git
+        run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+      - name: Set up Qemu emulation
         run: ./installer/qemu-setup-linux.sh
-      -
-        name: Download the image
+      - name: Download the image
         working-directory: ./installer
         run: ./download-img.sh
       - name: Build install image
@@ -25,10 +27,6 @@ jobs:
         run: ./run-docker-image-build.sh
       - name: Compress image
         run: xz ./installer/data/spr.img
-      - name: Fetch tags
-        run:  git fetch --tags
-      - name: Get version from git
-        run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
