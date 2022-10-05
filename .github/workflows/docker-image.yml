@@ -6,6 +6,11 @@ on:
     branches: [ main, dev ]
   pull_request:
     branches: [ main ]
+  workflow_run:
+    workflows: ["Bump version"]
+    types:
+      - completed
+    branches: [ main ]
 
 jobs:
   build-images:
