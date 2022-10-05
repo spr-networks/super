@@ -276,7 +276,7 @@ func getVersion(w http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 
 	version := ""
-	err = json.NewDecoder(r.Body).Decode(&version)
+	err = json.NewDecoder(resp.Body).Decode(&version)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
