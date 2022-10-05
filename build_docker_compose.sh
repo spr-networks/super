@@ -38,6 +38,8 @@ fi
 # set version
 # NOTE if we rebuild a single container could still be old version
 git describe --tags > ./version.txt
+#git tag |sort -g|tail -1 > ./version.txt
+git describe --tags $(git rev-list --tags --max-count=1) > ./version.txt
 
 # make sure state directories and files exist
 mkdir -p state/api/
