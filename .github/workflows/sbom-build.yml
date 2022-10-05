@@ -4,12 +4,13 @@ name: Build and Upload SBOM Artifact
 on:
   workflow_run:
     workflows: ["Bump version"]
-    types: [completed]
+    types: [requested]
+    #types: [completed]
 #  push:
 #    branches: [ main, dev ]
 
 jobs:
-  build:
+  on-success:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
