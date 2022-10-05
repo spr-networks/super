@@ -25,6 +25,8 @@ jobs:
         run: ./run-docker-image-build.sh
       - name: Compress image
         run: xz ./installer/data/spr.img
+      - name: Fetch tags
+        run:  git fetch --tags
       - name: Get version from git
         run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
       - name: Create Release
