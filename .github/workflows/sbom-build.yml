@@ -16,3 +16,7 @@ jobs:
     - uses: anchore/sbom-action@v0
       with:
         path: ./
+
+    - uses: anchore/sbom-action/publish-sbom@v0
+      with:
+        sbom-artifact-match: ".*\\.spdx\\.json$"
