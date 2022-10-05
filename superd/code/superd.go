@@ -243,7 +243,7 @@ func versionForRepository(path string) string {
 func version(w http.ResponseWriter, r *http.Request) {
 	plugin := r.URL.Query().Get("plugin")
 
-	git_path := getHostSuperDir()
+	git_path := "/super/"
 
 	if plugin != "" {
 		git_path += "plugins/" + filepath.Clean(plugin)
