@@ -302,22 +302,43 @@ export default function MockAPI() {
       })
 
       this.put('/device', (schema, request) => {
-        let ups = new URLSearchParams(request.url.replace(/^\/device/, ''))
-        let id = ups.get('identity')
-        let copy = ups.get('copy')
-        if (!copy) {
+        if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
-        let dev = schema.devices.findBy({ MAC: copy })
-        if (!dev) {
-          return new Response(401, {}, { error: 'invalid device' })
-        }
+        let ups = new URLSearchParams(request.url.replace(/^\/device/, ''))
+        let id = ups.get('identity')
+        let copy = ups.get('copy')
 
+        let MAC = copy || id
+
+        let dev = schema.devices.findBy({ MAC })
         let attrs = JSON.parse(request.requestBody)
-        let _dev = { ...attrs, PSKEntry: dev.PSKEntry, DeviceTags: [] }
 
-        return schema.devices.create(_dev)
+        if (copy) {
+          let _dev = { ...attrs, PSKEntry: dev.PSKEntry, DeviceTags: [] }
+
+          return schema.devices.create(_dev)
+        } else if (dev) {
+          dev.update(attrs)
+          return schema.devices.findBy({ MAC }).attrs
+        } else {
+          let PSKEntry = attrs.PSKEntry || { Type: 'sae' }
+          if (!PSKEntry.Psk) {
+            PSKEntry.Psk = 'password'
+          }
+
+          let _dev = {
+            MAC,
+            Name: attrs.Name,
+            PSKEntry,
+            Groups: [],
+            DeviceTags: []
+          }
+
+          schema.devices.create(_dev)
+          return _dev
+        }
       })
 
       this.del('/device/:id', (schema, request) => {
