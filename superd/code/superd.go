@@ -228,6 +228,37 @@ func getHostSuperDir() string {
 	return strings.Trim(string(stdout), "'\n") + "/"
 }
 
+func versionForRepository(path string) string {
+	cmd := exec.Command("git", "-C", path, "describe", "--tags")
+	stdout, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println("[-]", err)
+		return ""
+	}
+	return strings.Trim(string(stdout), "'\n")
+}
+
+func version(w http.ResponseWriter, r *http.Request) {
+	plugin := r.URL.Query().Get("plugin")
+
+	git_path := getHostSuperDir()
+
+	if plugin != "" {
+		git_path += "plugins/" + filePath.Clean(plugin)
+	}
+
+	version := versionForRepository(git_path)
+	if version == "" {
+		http.Error(w, "Failed to retrieve version " + plugin , 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(version)
+}
+
+
 func main() {
 	err := os.Chdir("/super")
 	if err != nil {
@@ -254,6 +285,8 @@ func main() {
 
 	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("GET")
 	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("GET")
+
+	unix_plugin_router.HandleFunc("/version", version).Methods("GET")
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)
