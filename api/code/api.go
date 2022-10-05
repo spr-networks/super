@@ -274,7 +274,13 @@ func getVersion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer resp.Body.Close()
-	version, err := ioutil.ReadAll(resp.Body)
+
+	version := ""
+	err = json.NewDecoder(r.Body).Decode(&version)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		http.Error(w, fmt.Errorf("failed to get version "+plugin+" "+string(resp.StatusCode)).Error(), 400)
