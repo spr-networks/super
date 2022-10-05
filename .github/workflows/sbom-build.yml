@@ -5,6 +5,7 @@ on:
   workflow_run:
     workflows: ["Bump version"]
     types: [requested]
+    branches: [ main, dev ]
     #types: [completed]
 #  push:
 #    branches: [ main, dev ]
