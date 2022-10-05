@@ -3,7 +3,7 @@
 # deps: jq
 
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-VERSION=$(cat $DIR/../package.json | grep '"version"' | cut -d '"' -f4)
+VERSION=$(cat $DIR/../package.json | grep '"version"' | cut -d '"' -f4 | grep -Eo '[0-9]+\.[0-9]+.[0-9]+')
 BUILD=$(date +"%Y%m%d%H%M%S")
 
 PROJECT_DIR="$DIR/spr.xcodeproj"
