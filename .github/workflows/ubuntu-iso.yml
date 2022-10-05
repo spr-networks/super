@@ -25,14 +25,16 @@ jobs:
         run: ./run-docker-image-build.sh
       - name: Compress image
         run: xz ./installer/data/spr.img
+      - name: Get version from git
+        run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ env.RELEASE_VERSION }}
+          release_name: Release ${{ env.RELEASE_VERSION }}
           draft: false
           prerelease: false
       - name: Upload Release Asset
