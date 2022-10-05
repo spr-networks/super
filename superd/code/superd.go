@@ -11,6 +11,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -245,7 +246,7 @@ func version(w http.ResponseWriter, r *http.Request) {
 	git_path := getHostSuperDir()
 
 	if plugin != "" {
-		git_path += "plugins/" + filePath.Clean(plugin)
+		git_path += "plugins/" + filepath.Clean(plugin)
 	}
 
 	version := versionForRepository(git_path)
