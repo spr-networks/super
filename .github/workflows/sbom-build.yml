@@ -3,7 +3,7 @@ name: Build and Upload SBOM Artifact
 
 on:
   workflow_run:
-    workflows: ["Bump version"]
+    workflows: [Bump version]
     types: [requested]
     branches: [ main, dev ]
     #types: [completed]
