@@ -1,9 +1,12 @@
 #!/bin/bash
 # update ios project file to use same version as ui and current date as build number
-# deps: jq
 
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-VERSION=$(cat $DIR/../package.json | grep '"version"' | cut -d '"' -f4 | grep -Eo '[0-9]+\.[0-9]+.[0-9]+')
+VERSION=$(git describe --tags --abbrev=0 | grep -Eo '[0-9]+\.[0-9]+.[0-9]+')
+if [ -z "$VERSION" ]; then
+	VERSION=$(cat $DIR/../package.json | grep '"version"' | cut -d '"' -f4 | grep -Eo '[0-9]+\.[0-9]+.[0-9]+')
+fi
+
 BUILD=$(date +"%Y%m%d%H%M%S")
 
 PROJECT_DIR="$DIR/spr.xcodeproj"
