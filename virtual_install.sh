@@ -56,18 +56,20 @@ fi
 DEV=eth0
 DEV=$(ip route get 1.1.1.1 | grep -oP 'dev \K\w+' -m1)
 # NOTE if this is not eth0 - change config.sh
-
+# verify its a public ip address
 EXTERNAL_IP=$(ip addr show dev $DEV | grep -oP "inet \K[0-9\.]+" -m1)
+EXTERNAL_IP=$(echo "$EXTERNAL_IP" | grep -P '^(?!^0\.)(?!^10\.)(?!^100\.6[4-9]\.)(?!^100\.[7-9]\d\.)(?!^100\.1[0-1]\d\.)(?!^100\.12[0-7]\.)(?!^127\.)(?!^169\.254\.)(?!^172\.1[6-9]\.)(?!^172\.2[0-9]\.)(?!^172\.3[0-1]\.)(?!^192\.0\.0\.)(?!^192\.0\.2\.)(?!^192\.88\.99\.)(?!^192\.168\.)(?!^198\.1[8-9]\.)(?!^198\.51\.100\.)(?!^203.0\.113\.)(?!^22[4-9]\.)(?!^23[0-9]\.)(?!^24[0-9]\.)(?!^25[0-5]\.)(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))$')
 EXTERNAL_PORT=8000
 if [ ${#EXTERNAL_IP} -eq 0 ]; then
-	echo "[-] failed to get external ip from $DEV"
-	echo "[?] fetch from https://ifconfig.me? [y/N] "
-	read YN
-	if [ "$YN" == "y" ] || [ "$YN" == "Y" ] ; then
-		EXTERNAL_IP=$(curl -s "https://ifconfig.me")
-	else
-		EXTERNAL_IP="127.0.0.1"
-	fi
+        echo "[-] failed to get external ip for $DEV"
+        echo -n "[?] fetch from https://ifconfig.me? [Y/n] "
+        read YN
+        if [ "$YN" == "n" ] || [ "$YN" == "N" ] ; then
+                EXTERNAL_IP="127.0.0.1"
+                echo "[+] setting endpoint to $EXTERNAL_IP, change this manually in your config"
+        else
+                EXTERNAL_IP=$(curl -s "https://ifconfig.me")
+        fi
 fi
 
 # check spr is running
