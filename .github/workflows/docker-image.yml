@@ -20,6 +20,14 @@ jobs:
       -
         name: Checkout
         uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
+      -
+        name: Get version from git
+        run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0 | grep -Eo '[0-9]+\.[0-9]+.[0-9]+')" >> $GITHUB_ENV
+      -
+        name: Test release tag version
+        run: echo "RELEASE_VERSION == $RELEASE_VERSION"
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -41,7 +49,7 @@ jobs:
         id: get-images
         uses: mikefarah/yq@master
         with:
-          cmd: yq -o json -I 0 '[.services|.[]|.image]' docker-compose.yml
+          cmd: yq -o json -I 0 '[.services|.[]|.image]' docker-compose.yml | sed 's/:.*"/:latest"/g'
 
       - name: Set Matrix output
         id: set-matrix

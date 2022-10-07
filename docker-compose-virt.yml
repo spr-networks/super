@@ -17,7 +17,7 @@ x-logging:
 services:
   base:
     container_name: superbase
-    image: ghcr.io/spr-networks/super_base
+    image: ghcr.io/spr-networks/super_base:${RELEASE_VERSION:-latest}
     build:
       context: base
       labels: *default-labels
@@ -33,7 +33,7 @@ services:
       - ./state/base/:/state/base/
   superd:
     container_name: superd
-    image: ghcr.io/spr-networks/super_superd
+    image: ghcr.io/spr-networks/super_superd:${RELEASE_VERSION:-latest}
     build:
       context: superd
       labels: *default-labels
@@ -45,7 +45,7 @@ services:
       - ./:/super/
   dhcp:
     container_name: superdhcp
-    image: ghcr.io/spr-networks/super_dhcp
+    image: ghcr.io/spr-networks/super_dhcp:${RELEASE_VERSION:-latest}
     build:
       context: dhcp
       labels: *default-labels
@@ -62,7 +62,7 @@ services:
       - /sys/fs/bpf:/sys/fs/bpf
   dns:
     container_name: superdns
-    image: ghcr.io/spr-networks/super_dns
+    image: ghcr.io/spr-networks/super_dns:${RELEASE_VERSION:-latest}
     build:
       context: dns
       labels: *default-labels
@@ -78,7 +78,7 @@ services:
       - ./state/plugins/mesh/:/state/plugins/mesh/:ro
   multicast_udp_proxy:
     container_name: super_multicast_udp_proxy
-    image: ghcr.io/spr-networks/super_multicast_udp_proxy
+    image: ghcr.io/spr-networks/super_multicast_udp_proxy:${RELEASE_VERSION:-latest}
     build:
       context: multicast_udp_proxy
       labels: *default-labels
@@ -92,7 +92,7 @@ services:
       - ./state/plugins/mesh/:/state/plugins/mesh/:ro
   wireguard:
     container_name: superwireguard
-    image: ghcr.io/spr-networks/super_wireguard
+    image: ghcr.io/spr-networks/super_wireguard:${RELEASE_VERSION:-latest}
     build:
       context: wireguard
       labels: *default-labels
@@ -113,7 +113,7 @@ services:
       - ./state/plugins/mesh/:/state/plugins/mesh/:ro
   frontend:
     container_name: superfrontend
-    image: ghcr.io/spr-networks/super_frontend
+    image: ghcr.io/spr-networks/super_frontend:${RELEASE_VERSION:-latest}
     entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
     build:
       context: frontend
@@ -123,7 +123,7 @@ services:
       - ./frontend/:/frontend
   api:
     container_name: superapi
-    image: ghcr.io/spr-networks/super_api
+    image: ghcr.io/spr-networks/super_api:${RELEASE_VERSION:-latest}
     build:
       context: api
       labels: *default-labels
@@ -156,7 +156,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
   plugin-lookup:
     container_name: super-plugin-lookup
-    image: ghcr.io/spr-networks/super_plugin-lookup
+    image: ghcr.io/spr-networks/super_plugin-lookup:${RELEASE_VERSION:-latest}
     build:
       context: plugin-lookup
       labels: *default-labels
@@ -169,7 +169,7 @@ services:
       - ./state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
   dyndns:
     container_name: superdyndns
-    image: ghcr.io/spr-networks/super_dyndns
+    image: ghcr.io/spr-networks/super_dyndns:${RELEASE_VERSION:-latest}
     build:
       context: dyndns
       labels: *default-labels

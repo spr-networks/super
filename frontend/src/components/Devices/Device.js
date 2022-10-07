@@ -51,7 +51,7 @@ const GroupItem = React.memo(({ name }) => {
   let bg = groupColors[name] || 'muted.600'
 
   return (
-    <Button
+    <Badge
       key={name}
       variant="solid"
       colorScheme="muted"
@@ -63,7 +63,7 @@ const GroupItem = React.memo(({ name }) => {
       px={2}
     >
       {name}
-    </Button>
+    </Badge>
   )
 })
 
@@ -76,7 +76,7 @@ const TagItem = React.memo(({ name }) => {
 
   let icon = faTag
   return (
-    <Button
+    <Badge
       key={name}
       variant="outline"
       colorScheme={useColorModeValue('muted', 'blueGray')}
@@ -87,7 +87,7 @@ const TagItem = React.memo(({ name }) => {
       px={2}
     >
       {name}
-    </Button>
+    </Badge>
   )
 })
 

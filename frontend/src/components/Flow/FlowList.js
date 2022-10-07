@@ -5,8 +5,12 @@ import {
   faEllipsis,
   faCirclePlus,
   faCheck,
+  faCopy,
   faTrash,
-  faXmark
+  faXmark,
+  faEdit,
+  faToggleOn,
+  faToggleOff
 } from '@fortawesome/free-solid-svg-icons'
 import ModalForm from 'components/ModalForm'
 import { AlertContext } from 'AppContext'
@@ -193,11 +197,27 @@ const Flow = ({ flow, edit, ...props }) => {
       >
         <Menu.Group title="Actions">
           <Menu.Item onPress={onDisable}>
-            {flow.disabled ? 'Enable' : 'Disable'}
+            <HStack space={2} alignItems="center">
+              <Icon
+                icon={flow.disabled ? faToggleOn : faToggleOff}
+                color="muted.500"
+              />
+              <Text>{flow.disabled ? 'Enable' : 'Disable'}</Text>
+            </HStack>
           </Menu.Item>
           {/*<Divider mt="3" w="100%" />*/}
-          <Menu.Item onPress={onEdit}>Edit</Menu.Item>
-          <Menu.Item onPress={onDuplicate}>Duplicate</Menu.Item>
+          <Menu.Item onPress={onEdit}>
+            <HStack space={2} alignItems="center">
+              <Icon icon={faEdit} color="muted.500" />
+              <Text>Edit</Text>
+            </HStack>
+          </Menu.Item>
+          <Menu.Item onPress={onDuplicate}>
+            <HStack space={2} alignItems="center">
+              <Icon icon={faCopy} color="muted.500" />
+              <Text>Duplicate</Text>
+            </HStack>
+          </Menu.Item>
 
           <Menu.Item onPress={onDelete}>
             <HStack space={2} alignItems="center">
@@ -240,7 +260,7 @@ const Flow = ({ flow, edit, ...props }) => {
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
         p={4}
         space={4}
-        rounded="lg"
+        rounded={{ md: 'md' }}
       >
         <VStack flex={1} space={2}>
           <HStack space={2} alignItems="flex-end">
@@ -677,12 +697,11 @@ const FlowList = (props) => {
   return (
     <Stack
       direction={{ base: 'column', md: 'row' }}
-      __bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      rounded="md"
       space={4}
       py={4}
+      pr={{ md: 8 }}
     >
-      <Box flex={1} display={{ base: 'flex' }}>
+      <Box w={{ md: '2/3' }}>
         <HStack justifyContent="space-between" alignContent="center" px={4}>
           <VStack space={2}>
             <Heading fontSize="md">Flows</Heading>
@@ -691,6 +710,7 @@ const FlowList = (props) => {
         </HStack>
 
         <FlatList
+          px={{ md: 4 }}
           data={flows}
           renderItem={({ item, index }) => (
             <Box
@@ -717,10 +737,8 @@ const FlowList = (props) => {
 
       <VStack
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        _rounded={{ md: 'md' }}
         space={4}
         w={{ base: '100%', md: '390px' }}
-        mr={{ base: 0, lg: 8 }}
         p={4}
       >
         <Heading size="sm">Add &amp; Edit flow</Heading>
