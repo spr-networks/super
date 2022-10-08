@@ -49,7 +49,7 @@ jobs:
         id: get-images
         uses: mikefarah/yq@master
         with:
-          cmd: yq -o json -I 0 '[.services|.[]|.image]' docker-compose.yml | sed 's/:.*"/:latest"/g'
+          cmd: yq -o json -I 0 '[.services|.[]|.image]' docker-compose.yml | sed 's/:.*"/"/g'
 
       - name: Set Matrix output
         id: set-matrix
