@@ -25,6 +25,8 @@ jobs:
 
       - name: Check out Git repository
         uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
