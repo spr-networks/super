@@ -25,6 +25,8 @@ jobs:
 
       - name: Check out Git repository
         uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
@@ -58,9 +60,9 @@ jobs:
             frontend/ios/Pods
             ~/Library/Caches/CocoaPods
             ~/.cocoapods
-          key: ${{ runner.os }}-pods-cache-${{ hashFiles('ios/Podfile.lock') }}
+          key: ${{ runner.os }}-pods-cache-${{ hashFiles('frontend/ios/Podfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pods-
+            ${{ runner.os }}-pods-cache-
 
       - name: Install Pods
         working-directory: ./frontend
@@ -79,13 +81,11 @@ jobs:
 
       - name: Verify build
         run: md5 output.ipa
-
 #      - name: Upload Artifact
 #        uses: actions/upload-artifact@v2
 #        with:
 #          name: SPR iOS IPA
 #          path: "output.ipa"
-
       - name: "Upload app to TestFlight"
         uses: apple-actions/upload-testflight-build@v1
         with:

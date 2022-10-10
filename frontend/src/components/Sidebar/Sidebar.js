@@ -25,12 +25,9 @@ const Sidebar = (props) => {
 
   return (
     <ScrollView
-      overflowY="overlay"
-      h="100%"
-      bg="amber.100"
-      py={5}
+      mb={{ base: Platform.OS == 'ios' ? 20 : 0, md: 0 }}
+      pb={5}
       w={isMini ? '20' : '100%'}
-      flex={1}
       borderRightWidth={isMobile ? '0' : '1'}
       _light={{
         bg: 'sidebarBackgroundLight',
@@ -103,7 +100,17 @@ const SidebarItem = (props) => {
     }
 
     // if mesh
-    let meshItems = ['Auth', 'Logs', 'Notifications', 'Home', 'Wifi', 'MESH', 'System', 'Plugins', 'System Info']
+    let meshItems = [
+      'Auth',
+      'Logs',
+      'Notifications',
+      'Home',
+      'Wifi',
+      'MESH',
+      'System',
+      'Plugins',
+      'System Info'
+    ]
     if (isMeshNode && !meshItems.includes(item.name)) {
       display.base = 'none'
       return null
