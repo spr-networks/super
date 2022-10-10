@@ -17,7 +17,7 @@ jobs:
       - name: Fetch tags
         run:  git fetch --tags
       - name: Get version from git
-        run: echo "RELEASE_VERSION_SKIP=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+        run: echo "RELEASE_VERSION_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
       - name: Set up Qemu emulation
         run: ./installer/qemu-setup-linux.sh
       - name: Download the image
@@ -34,8 +34,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.RELEASE_VERSION }}
-          release_name: Release ${{ env.RELEASE_VERSION }}
+          tag_name: ${{ env.RELEASE_VERSION_TAG }}
+          release_name: Release ${{ env.RELEASE_VERSION_TAG }}
           draft: false
           prerelease: false
       - name: Upload Release Asset
