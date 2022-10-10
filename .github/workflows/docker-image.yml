@@ -24,10 +24,10 @@ jobs:
           fetch-depth: '0'
       -
         name: Get version from git
-        run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0 | grep -Eo '[0-9]+\.[0-9]+.[0-9]+')" >> $GITHUB_ENV
+        run: echo "RELEASE_VERSION_SKIP=$(git describe --tags --abbrev=0 | grep -Eo '[0-9]+\.[0-9]+.[0-9]+')" >> $GITHUB_ENV
       -
         name: Test release tag version
-        run: echo "RELEASE_VERSION == $RELEASE_VERSION"
+        run: echo "RELEASE_VERSION == $RELEASE_VERSION_SKIP"
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -38,6 +38,9 @@ jobs:
       -
         name: Authenticate to ghcr
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      -
+        name: Build and push status
+        run: echo "event = ${{ github.event_name }}, ref_name = ${{ github.ref_name }}. push main == push to ghcr"
       -
         name: Build and push containers
         run: |
