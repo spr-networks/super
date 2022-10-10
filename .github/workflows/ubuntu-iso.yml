@@ -17,7 +17,7 @@ jobs:
       - name: Fetch tags
         run:  git fetch --tags
       - name: Get version from git
-        run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+        run: echo "RELEASE_VERSION_SKIP=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
       - name: Set up Qemu emulation
         run: ./installer/qemu-setup-linux.sh
       - name: Download the image
