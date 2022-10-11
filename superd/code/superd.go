@@ -1,12 +1,11 @@
 /*
- The superd service allows the API to manage container state with docker.
+	 The superd service allows the API to manage container state with docker.
 
- It can:
- 	- restart services
-	- download predefined Plus containers
+	 It can:
+	 	- restart services
+		- download predefined Plus containers
 
- It is highly privileged. Access to this container is the same as access to the host
-
+	 It is highly privileged. Access to this container is the same as access to the host
 */
 package main
 
@@ -252,7 +251,7 @@ func version(w http.ResponseWriter, r *http.Request) {
 
 	version := versionForRepository(git_path)
 	if version == "" {
-		http.Error(w, "Failed to retrieve version " + plugin , 400)
+		http.Error(w, "Failed to retrieve version "+plugin, 400)
 		return
 	}
 
@@ -261,9 +260,9 @@ func version(w http.ResponseWriter, r *http.Request) {
 }
 
 func establishConfigsIfEmpty(SuperDir string) {
-	if _, err := os.Stat(SuperDir + "/configs"); os.IsNotExist(err) {
+	if _, err := os.Stat(SuperDir + "/configs/base/config.sh"); os.IsNotExist(err) {
 		//
-		_, err = exec.Command("cp", "-R", SuperDir + "/base/template_configs", SuperDir + "/configs").Output()
+		_, err = exec.Command("cp", "-R", SuperDir+"/base/template_configs", SuperDir+"/configs").Output()
 		if err != nil {
 			fmt.Println("failed to copy", err)
 			return
@@ -275,7 +274,7 @@ func establishConfigsIfEmpty(SuperDir string) {
 			return
 		}
 
-		err = ioutil.WriteFile(SuperDir + "/configs/dhcp/coredhcp.yml", output, 0600)
+		err = ioutil.WriteFile(SuperDir+"/configs/dhcp/coredhcp.yml", output, 0600)
 		if err != nil {
 			fmt.Println("failed to write coredhcp.yml", err)
 			return
@@ -297,7 +296,6 @@ func setup() {
 
 	establishConfigsIfEmpty(hostSuperDir)
 }
-
 
 func main() {
 	err := os.Chdir("/super")
