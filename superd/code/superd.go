@@ -264,6 +264,7 @@ func establishConfigsIfEmpty(SuperDir string) {
 		//
 		_, err = exec.Command("cp", "-R", SuperDir+"/base/template_configs", SuperDir+"/configs").Output()
 		if err != nil {
+			fmt.Println("cp", "-R", SuperDir+"/base/template_configs/.", SuperDir+"/configs")
 			fmt.Println("failed to copy", err)
 			return
 		}
@@ -294,7 +295,7 @@ func setup() {
 
 	os.Setenv("SUPERDIR", hostSuperDir)
 
-	establishConfigsIfEmpty(hostSuperDir)
+	establishConfigsIfEmpty("/super/")
 }
 
 func main() {
