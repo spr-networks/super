@@ -179,52 +179,48 @@ const DeviceListing = (props) => {
   let h = Dimensions.get('window').height - navbarHeight
 
   return (
-    <View>
-      <ScrollView h={h} pb={{ base: 0, md: 20 }}>
-        <HStack justifyContent="space-between" p={4}>
-          <Heading fontSize="md" alignSelf="center">
-            Configured Devices
-          </Heading>
+    <View h={h}>
+      <HStack justifyContent="space-between" p={4}>
+        <Heading fontSize="md" alignSelf="center">
+          Configured Devices
+        </Heading>
 
-          <Button
-            marginLeft="auto"
-            size="sm"
-            variant="ghost"
-            colorScheme="blueGray"
-            _rounded="lg"
-            leftIcon={<Icon icon={faCirclePlus} />}
-            onPress={handleRedirect}
-          >
-            Add Device
-          </Button>
-        </HStack>
+        <Button
+          marginLeft="auto"
+          size="sm"
+          variant="ghost"
+          colorScheme="blueGray"
+          _rounded="lg"
+          leftIcon={<Icon icon={faCirclePlus} />}
+          onPress={handleRedirect}
+        >
+          Add Device
+        </Button>
+      </HStack>
 
+      {/*<SwipeListView
+        data={devices}
+        renderItem={renderItem}
+        renderHiddenItem={renderHiddenItem}
+        rightOpenValue={-140}
+      />*/}
+
+      <FlatList
+        data={devices}
+        renderItem={renderItem}
+        keyExtractor={(item, index) => item.Name + index}
+        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+        pb={{ md: 10 }}
+      />
+      {devices !== null && !devices.length ? (
         <Box
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
         >
-          {devices !== null ? (
-            <>
-              {/*<SwipeListView
-                data={devices}
-                renderItem={renderItem}
-                renderHiddenItem={renderHiddenItem}
-                rightOpenValue={-140}
-              />*/}
-
-              <FlatList
-                data={devices}
-                renderItem={renderItem}
-                keyExtractor={(item, index) => item.Name + index}
-              />
-              {devices !== null && !devices.length ? (
-                <Text color="muted.500" p={4}>
-                  There are no devices configured yet
-                </Text>
-              ) : null}
-            </>
-          ) : null}
+          <Text color="muted.500" p={4}>
+            There are no devices configured yet
+          </Text>
         </Box>
-      </ScrollView>
+      ) : null}
 
       <Fab
         renderInPortal={false}

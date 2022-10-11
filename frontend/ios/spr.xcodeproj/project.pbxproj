@@ -499,7 +499,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.supernetworks.spr;
+				PRODUCT_BUNDLE_IDENTIFIER = org.supernetworks.app;
 				PRODUCT_NAME = spr;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -529,7 +529,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.supernetworks.spr;
+				PRODUCT_BUNDLE_IDENTIFIER = org.supernetworks.app;
 				PRODUCT_NAME = spr;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;

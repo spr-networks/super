@@ -1,6 +1,7 @@
 import React, { createContext, useEffect, useState } from 'react'
-import { Platform, Dimensions } from 'react-native'
+import { Dimensions, Platform } from 'react-native'
 import { Outlet, useLocation } from 'react-router-dom'
+
 import Notifications from 'Notifications'
 import { AppContext, AlertContext, alertState } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
@@ -375,8 +376,11 @@ const AdminLayout = (props) => {
   let navbarHeight = 64
   let heightContent = Dimensions.get('window').height - navbarHeight
   if (Platform.OS == 'ios') {
-    // statusbar
-    heightContent = Dimensions.get('window').height - navbarHeight //- 16
+    // statusbar, see https://github.com/GeekyAnts/NativeBase/blob/2af374e586034366dcefce9a0f23983836a7901f/src/components/composites/AppBar/utils.ts#L8
+    heightContent =
+      Dimensions.get('window').height -
+      navbarHeight -
+      (Platform.Version < 11 ? 0 : 20)
   }
 
   return (
@@ -455,11 +459,15 @@ const AdminLayout = (props) => {
           {/*mobile*/}
           {isOpenSidebar ? (
             <Box
-              position="absolute"
-              h={{ base: heightContent, md: heightContent }}
+              __position="absolute"
+              __h={heightContent}
               w="100%"
               zIndex={99}
               display={{ base: 'flex', md: 'none' }}
+              _light={{
+                bg: 'sidebarBackgroundLight'
+              }}
+              _dark={{ bg: 'sidebarBackgroundDark' }}
             >
               <Sidebar
                 isMobile={true}
@@ -474,13 +482,7 @@ const AdminLayout = (props) => {
           {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
           {/*h="calc(100% - 64px)"
                minH="calc(100vh - 64px)"*/}
-          <Box
-            flex={1}
-            px={{ base: 0, md: 0 }}
-            py={{ base: 0, md: 0 }}
-            ref={mainPanel}
-            __h={heightContent}
-          >
+          <Box flex={1} ref={mainPanel}>
             <Outlet />
             {/*NOTE footer should not be visible - outside of the view and show when scroll to bottom to use the most space*/}
             {/*<Footer />*/}
