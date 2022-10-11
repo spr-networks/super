@@ -262,9 +262,8 @@ func version(w http.ResponseWriter, r *http.Request) {
 func establishConfigsIfEmpty(SuperDir string) {
 	if _, err := os.Stat(SuperDir + "/configs/base/config.sh"); os.IsNotExist(err) {
 		//
-		_, err = exec.Command("cp", "-R", SuperDir+"/base/template_configs", SuperDir+"/configs").Output()
+		_, err = exec.Command("cp", "-R", SuperDir+"/base/template_configs/.", SuperDir+"/configs").Output()
 		if err != nil {
-			fmt.Println("cp", "-R", SuperDir+"/base/template_configs/.", SuperDir+"/configs")
 			fmt.Println("failed to copy", err)
 			return
 		}
