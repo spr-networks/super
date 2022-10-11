@@ -88,8 +88,6 @@ type DeviceEntry struct {
 	DeviceTags []string
 }
 
-var DEVICE_TAG_PERMIT_PRIVATE_UPSTREAM_ACCESS = "lan_upstream"
-
 var config = APIConfig{}
 
 func loadConfig() {
@@ -934,7 +932,6 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 	cmd := exec.Command("nft", "-j", "list", "map", "inet", "filter", map_name)
 	stdout, err := cmd.Output()
 	if err != nil {
-		fmt.Println("getNFTVerdictMap failed to list", map_name, err)
 		return existing
 	}
 
@@ -1364,15 +1361,17 @@ func refreshDeviceGroups(dev DeviceEntry) {
 	}
 
 	ifname := ""
-	ipv4 := ""
-	//check arp tables for the MAC to get the IP
-	arp_entry, err := GetArpEntryFromMAC(dev.MAC)
-	if err != nil {
-		fmt.Println("Arp entry not found, insufficient information to refresh", dev.MAC)
-		return
-	}
+	ipv4 := dev.RecentIP
 
-	ipv4 = arp_entry.IP
+	if ipv4 == "" {
+		//check arp tables for the MAC to get the IP
+		arp_entry, err := GetArpEntryFromMAC(dev.MAC)
+		if err != nil {
+			fmt.Println("Arp entry not found, insufficient information to refresh", dev.MAC)
+			return
+		}
+		ipv4 = arp_entry.IP
+	}
 
 	//check dhcp vmap for the interface
 	entries := getNFTVerdictMap("dhcp_access")
