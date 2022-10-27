@@ -116,7 +116,6 @@ table inet filter {
 
     #jump USERDEF_INPUT
     iif lo counter accept
-    counter jump F_EST_RELATED
 
     # Mark whether the input came from upstream (wan:in) or local network (lan:in)
     $(if [ "$WANIF" ]; then echo "iifname $WANIF log prefix \"wan:in \" group 0"; fi)
@@ -139,6 +138,8 @@ table inet filter {
 
     # Extra hardening for API port 80 when running Virtual SPR, to avoid exposing API to the internet
     $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WANIF" && "$WAN_NET" ]]; then echo "counter iifname $WANIF tcp dport 80 ip saddr != $WAN_NET drop"; fi)
+
+    counter jump F_EST_RELATED
 
     # DHCP Allow rules
     # Wired lan

@@ -1,5 +1,12 @@
 # A Secure Programmable Router
 
+[![release version](https://img.shields.io/github/v/release/spr-networks/super)](https://github.com/spr-networks/super/releases/latest)
+![version](https://img.shields.io/github/v/tag/spr-networks/super?sort=semver)
+![dev](https://img.shields.io/github/v/tag/spr-networks/super?branch=dev&label=dev)
+![docker build](https://github.com/spr-networks/super/actions/workflows/docker-image.yml/badge.svg?branch=main)
+![iso build](https://github.com/spr-networks/super/actions/workflows/ubuntu-iso.yml/badge.svg?branch=main)
+![license](https://img.shields.io/github/license/spr-networks/super)
+
 ## Introduction
 
 This project creates a hardened router setup for connecting IOT devices or running an entire home network. 

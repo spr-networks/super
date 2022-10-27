@@ -68,6 +68,8 @@ type FirewallConfig struct {
 var FirewallConfigFile = TEST_PREFIX + "/configs/base/firewall.json"
 var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []ForwardingBlockRule{}, []ServicePort{}}
 
+var DEVICE_TAG_PERMIT_PRIVATE_UPSTREAM_ACCESS = "lan_upstream"
+
 func saveFirewallRulesLocked() {
 	file, _ := json.MarshalIndent(gFirewallConfig, "", " ")
 	err := ioutil.WriteFile(FirewallConfigFile, file, 0600)
@@ -374,12 +376,12 @@ func applyPrivateNetworkUpstreamDevice(device DeviceEntry) {
 		}
 	}
 
-	upstream_allowed := hasPrivateUpstreamAccess(IP)
+	inUpstreamAllowed := hasPrivateUpstreamAccess(IP)
 
-	if foundTag && !upstream_allowed {
+	if foundTag && !inUpstreamAllowed {
 		//if has the tag but not in the verdict map, add it
 		allowPrivateUpstreamAccess(IP)
-	} else if upstream_allowed {
+	} else if !foundTag && inUpstreamAllowed {
 		//if in the verdict map but does not have the tag, remove it
 		removePrivateUpstreamAccess(IP)
 	}
