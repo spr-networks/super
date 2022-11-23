@@ -15,6 +15,8 @@ import {
   useColorModeValue
 } from 'native-base'
 
+import { FlashList } from "@shopify/flash-list";
+
 const Arp = (props) => {
   const [list, setList] = useState()
 
