@@ -361,6 +361,8 @@ PODS:
     - React-Core
   - RNCPushNotificationIOS (1.10.1):
     - React-Core
+  - RNFlashList (1.4.0):
+    - React-Core
   - RNSVG (12.4.3):
     - React-Core
   - SocketRocket (0.6.0)
@@ -428,6 +430,7 @@ DEPENDENCIES:
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNCClipboard (from `../node_modules/@react-native-clipboard/clipboard`)"
   - "RNCPushNotificationIOS (from `../node_modules/@react-native-community/push-notification-ios`)"
+  - "RNFlashList (from `../node_modules/@shopify/flash-list`)"
   - RNSVG (from `../node_modules/react-native-svg`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
@@ -520,6 +523,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-clipboard/clipboard"
   RNCPushNotificationIOS:
     :path: "../node_modules/@react-native-community/push-notification-ios"
+  RNFlashList:
+    :path: "../node_modules/@shopify/flash-list"
   RNSVG:
     :path: "../node_modules/react-native-svg"
   Yoga:
@@ -574,6 +579,7 @@ SPEC CHECKSUMS:
   RNCAsyncStorage: d81ee5c3db1060afd49ea7045ad460eff82d2b7d
   RNCClipboard: f1736c75ab85b627a4d57587edb4b60999c4dd80
   RNCPushNotificationIOS: 87b8d16d3ede4532745e05b03c42cff33a36cc45
+  RNFlashList: 399bf6a0db68f594ad2c86aaff3ea39564f39f8a
   RNSVG: f3b60aeeaa81960e2e0536c3a9eef50b667ef3a9
   SocketRocket: fccef3f9c5cedea1353a9ef6ada904fde10d6608
   Yoga: 99652481fcd320aefa4a7ef90095b95acd181952
