@@ -355,11 +355,8 @@ const SystemInfo = (props) => {
         </HStack>
       </HStack>
 
-      <Stack direction={{ base: 'column', md: 'row' }} space={4} mb={4}>
+      <Stack direction={{ base: 'column', md: 'row' }}   _rounded="md" space={4} mb={4} bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}>
         <FlashList
-          flex={1}
-          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-          _rounded="md"
           data={['time', 'uptime', 'users']}
           keyExtractor={(item, index) => index}
           renderItem={({ item }) => (
@@ -377,9 +374,6 @@ const SystemInfo = (props) => {
           )}
         />
         <FlashList
-          flex={1}
-          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-          _rounded="md"
           data={['load_1m', 'load_5m', 'load_15m']}
           keyExtractor={(item, index) => index}
           renderItem={({ item }) => (
@@ -403,16 +397,15 @@ const SystemInfo = (props) => {
       <Heading fontSize="md" p={4}>
         Docker Containers
       </Heading>
+      <Box minH={400} bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')} _rounded="md">
       <FlashList
-        minH={400}
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        _rounded="md"
         data={containers}
         keyExtractor={(item, index) => item.Id}
         renderItem={({ item }) =>
           renderDockerContainer({ item, navigate, showModal })
         }
       />
+      </Box>
       <Modal isOpen={isOpen} onClose={onClose} animationPreset="slide">
         <Modal.Content maxWidth={{ base: '100%', md: '90%' }}>
           <Modal.CloseButton />

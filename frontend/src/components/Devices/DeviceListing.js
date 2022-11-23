@@ -206,13 +206,12 @@ const DeviceListing = (props) => {
       />*/}
 
       <Box
-       bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+       bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')} pb={{ md: 10 }}
        >
       <FlashList
         data={devices}
         renderItem={renderItem}
         keyExtractor={(item, index) => item.Name + index}
-        pb={{ md: 10 }}
       />
       </Box>
       {devices !== null && !devices.length ? (
