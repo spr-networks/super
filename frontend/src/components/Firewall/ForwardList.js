@@ -15,7 +15,6 @@ import {
   Badge,
   Button,
   Box,
-  FlatList,
   Heading,
   IconButton,
   Stack,
@@ -24,6 +23,8 @@ import {
   Text,
   useColorModeValue
 } from 'native-base'
+
+import { FlashList } from "@shopify/flash-list";
 
 const ForwardList = (props) => {
   const [list, setList] = useState([])
@@ -97,7 +98,7 @@ const ForwardList = (props) => {
         p={4}
         mb={4}
       >
-        <FlatList
+        <FlashList
           data={list}
           renderItem={({ item }) => (
             <Box

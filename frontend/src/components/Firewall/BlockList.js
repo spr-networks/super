@@ -15,7 +15,6 @@ import {
   Badge,
   Button,
   Box,
-  FlatList,
   Heading,
   IconButton,
   Stack,
@@ -24,6 +23,8 @@ import {
   Text,
   useColorModeValue
 } from 'native-base'
+
+import { FlashList } from "@shopify/flash-list";
 
 const BlockList = (props) => {
   let list = props.list || []
@@ -71,7 +72,7 @@ const BlockList = (props) => {
         p={4}
         mb={4}
       >
-        <FlatList
+        <FlashList
           data={list}
           renderItem={({ item }) => (
             <Box

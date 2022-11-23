@@ -17,7 +17,6 @@ import ModalConfirm from 'components/ModalConfirm'
 import {
   Badge,
   Box,
-  FlatList,
   Heading,
   IconButton,
   Menu,
@@ -27,6 +26,8 @@ import {
   Text,
   useColorModeValue
 } from 'native-base'
+
+import { FlashList } from "@shopify/flash-list";
 
 export default class DNSBlocklist extends React.Component {
   state = {
@@ -265,7 +266,7 @@ export default class DNSBlocklist extends React.Component {
           p={4}
           mb={4}
         >
-          <FlatList
+          <FlashList
             data={[...this.state.list, ...this.state.recommendedList]}
             renderItem={({ item }) => (
               <Box

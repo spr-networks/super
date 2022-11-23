@@ -22,7 +22,6 @@ import { pfwAPI } from 'api/Pfw'
 import {
   Box,
   Button,
-  FlatList,
   FormControl,
   Heading,
   Input,
@@ -36,6 +35,8 @@ import {
   Divider
 } from 'native-base'
 import { dateArrayToStr } from './Utils'
+
+import { FlashList } from "@shopify/flash-list";
 
 const FlowCardList = ({
   title,
@@ -90,7 +91,7 @@ const FlowCardList = ({
         {title}
       </Text>
 
-      <FlatList
+      <FlashList
         data={cards}
         listKey={`list${cardType}`}
         keyExtractor={(item, index) => index}
@@ -709,7 +710,7 @@ const FlowList = (props) => {
           </VStack>
         </HStack>
 
-        <FlatList
+        <FlashList
           px={{ md: 4 }}
           data={flows}
           renderItem={({ item, index }) => (

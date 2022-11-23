@@ -17,7 +17,6 @@ import {
   Box,
   Button,
   Fab,
-  FlatList,
   Heading,
   IconButton,
   HStack,
@@ -27,6 +26,8 @@ import {
   VStack,
   useColorModeValue
 } from 'native-base'
+
+import { FlashList } from "@shopify/flash-list";
 
 const PeerList = (props) => {
   const [peers, setPeers] = useState(null)
@@ -108,7 +109,7 @@ const PeerList = (props) => {
           p={4}
         >
           {peers !== null && peers.length ? (
-            <FlatList
+            <FlashList
               data={peers}
               renderItem={({ item }) => (
                 <Box

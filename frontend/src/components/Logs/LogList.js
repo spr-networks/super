@@ -12,7 +12,6 @@ import {
   Badge,
   Box,
   Button,
-  FlatList,
   Heading,
   IconButton,
   Stack,
@@ -24,6 +23,8 @@ import {
   Text,
   useColorModeValue
 } from 'native-base'
+
+import { FlashList } from "@shopify/flash-list";
 
 const LogList = (props) => {
   const [list, setList] = useState([])
@@ -191,7 +192,7 @@ const LogList = (props) => {
         </HStack>
       </Stack>
 
-      <FlatList
+      <FlashList
         data={listFiltered}
         renderItem={({ item }) => (
           <Box

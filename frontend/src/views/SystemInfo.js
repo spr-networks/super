@@ -14,7 +14,6 @@ import {
   Badge,
   Box,
   Button,
-  FlatList,
   Heading,
   IconButton,
   HStack,
@@ -30,6 +29,8 @@ import {
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
 import { prettyDate, ucFirst } from 'utils'
+
+import { FlashList } from "@shopify/flash-list";
 
 const niceName = (name) => {
   if (Array.isArray(name)) {
@@ -54,7 +55,7 @@ const renderDockerContainer = ({ item, navigate, showModal }) => {
   const onMounts = () => {
     showModal(
       `${containerName} Volume Mounts`,
-      <FlatList
+      <FlashList
         data={item.Mounts}
         keyExtractor={(item) => item.Source}
         renderItem={({ item: mount }) => (
@@ -232,7 +233,7 @@ const ConfigsBackup = (props) => {
         p={4}
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
       >
-        <FlatList
+        <FlashList
           data={backups}
           keyExtractor={(item, index) => item.Timestamp}
           renderItem={({ item }) => (
@@ -355,7 +356,7 @@ const SystemInfo = (props) => {
       </HStack>
 
       <Stack direction={{ base: 'column', md: 'row' }} space={4} mb={4}>
-        <FlatList
+        <FlashList
           flex={1}
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
           _rounded="md"
@@ -375,7 +376,7 @@ const SystemInfo = (props) => {
             </HStack>
           )}
         />
-        <FlatList
+        <FlashList
           flex={1}
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
           _rounded="md"
@@ -402,7 +403,7 @@ const SystemInfo = (props) => {
       <Heading fontSize="md" p={4}>
         Docker Containers
       </Heading>
-      <FlatList
+      <FlashList
         minH={400}
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
         _rounded="md"

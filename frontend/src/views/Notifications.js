@@ -18,7 +18,6 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import {
   Box,
-  FlatList,
   Heading,
   HStack,
   IconButton,
@@ -29,6 +28,8 @@ import {
   useColorModeValue,
   Button
 } from 'native-base'
+
+import { FlashList } from "@shopify/flash-list";
 
 import { notificationsAPI } from 'api'
 import AddNotifcation from 'components/Notifications/AddNotification'
@@ -185,7 +186,7 @@ const Notifications = (props) => {
         width="100%"
         p={4}
       >
-        <FlatList
+        <FlashList
           data={notifications}
           renderItem={({ item, index }) => (
             <NotificationItem

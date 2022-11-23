@@ -18,7 +18,6 @@ import {
   Box,
   Divider,
   Fab,
-  FlatList,
   Heading,
   IconButton,
   Stack,
@@ -30,6 +29,7 @@ import {
   View,
   useColorModeValue
 } from 'native-base'
+import { FlashList } from "@shopify/flash-list";
 //import { SwipeListView } from 'components/SwipeListView'
 
 const DeviceListing = (props) => {
@@ -205,7 +205,7 @@ const DeviceListing = (props) => {
         rightOpenValue={-140}
       />*/}
 
-      <FlatList
+      <FlashList
         data={devices}
         renderItem={renderItem}
         keyExtractor={(item, index) => item.Name + index}

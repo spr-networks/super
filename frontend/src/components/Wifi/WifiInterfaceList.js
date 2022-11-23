@@ -16,7 +16,6 @@ import {
   Button,
   Checkbox,
   Divider,
-  FlatList,
   Flex,
   Heading,
   IconButton,
@@ -29,6 +28,8 @@ import {
   View,
   useColorModeValue
 } from 'native-base'
+
+import { FlashList } from "@shopify/flash-list";
 
 const WifiInterface = (props) => {
   const [activeTab, setActiveTab] = useState('devices')
@@ -53,7 +54,7 @@ const WifiInterface = (props) => {
   const dList = (dict, type = 'row') => {
     if (Object.keys(dict) && type == 'inline') {
       return (
-        <FlatList
+        <FlashList
           data={Object.keys(dict)}
           keyExtractor={(item) => item}
           renderItem={({ item }) => (
@@ -159,7 +160,7 @@ const WifiInterface = (props) => {
                   <>
                     {tab == 'other' ? (
                       <>
-                        <FlatList
+                        <FlashList
                           data={Object.keys(iw).filter(
                             (k) => !tabList.includes(k)
                           )}

@@ -17,7 +17,6 @@ import {
   Box,
   Button,
   Divider,
-  FlatList,
   Heading,
   HStack,
   IconButton,
@@ -25,6 +24,8 @@ import {
   Text,
   useColorModeValue
 } from 'native-base'
+
+import { FlashList } from "@shopify/flash-list";
 
 const DNSLogList = ({ title, description, ...props }) => {
   const context = useContext(AlertContext)
@@ -153,7 +154,7 @@ const DNSLogList = ({ title, description, ...props }) => {
             </Button>
           </VStack>
         ) : null}
-        <FlatList
+        <FlashList
           data={list}
           keyExtractor={(item, index) => index}
           renderItem={({ item }) => (

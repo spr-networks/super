@@ -7,7 +7,6 @@ import {
   Badge,
   View,
   Box,
-  FlatList,
   Heading,
   Stack,
   HStack,
@@ -81,7 +80,7 @@ const Arp = (props) => {
         p={4}
         mb={4}
       >
-        <FlatList
+        <FlashList
           data={list}
           renderItem={({ item }) => (
             <Box
