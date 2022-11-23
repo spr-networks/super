@@ -205,13 +205,16 @@ const DeviceListing = (props) => {
         rightOpenValue={-140}
       />*/}
 
+      <Box
+       bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+       >
       <FlashList
         data={devices}
         renderItem={renderItem}
         keyExtractor={(item, index) => item.Name + index}
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
         pb={{ md: 10 }}
       />
+      </Box>
       {devices !== null && !devices.length ? (
         <Box
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
@@ -228,6 +231,7 @@ const DeviceListing = (props) => {
         size="sm"
         icon={<Icon color="white" icon={faPlus} />}
         onPress={handleRedirect}
+        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
       />
     </View>
   )
