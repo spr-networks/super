@@ -9,7 +9,6 @@ import {
 
 import {
   Box,
-  FlatList,
   Heading,
   IconButton,
   Input,
@@ -21,6 +20,8 @@ import {
   Text,
   useColorModeValue
 } from 'native-base'
+
+import { FlashList } from "@shopify/flash-list";
 
 import { pluginAPI } from 'api'
 import { AppContext, alertState } from 'AppContext'
@@ -138,7 +139,7 @@ const PluginList = (props) => {
         p={4}
         mb={4}
       >
-        <FlatList
+        <FlashList
           data={list}
           renderItem={({ item }) => (
             <Box
@@ -192,7 +193,7 @@ const PluginList = (props) => {
             p={4}
             mb={4}
           >
-            <FlatList
+            <FlashList
               data={plusList}
               renderItem={({ item }) => (
                 <Box

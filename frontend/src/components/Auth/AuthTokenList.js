@@ -19,9 +19,10 @@ import {
   Text,
   View,
   VStack,
-  FlatList,
   useColorModeValue
 } from 'native-base'
+
+import { FlashList } from "@shopify/flash-list";
 
 import { authAPI } from 'api'
 import { AlertContext } from 'AppContext'
@@ -128,7 +129,7 @@ const AuthTokenList = (props) => {
         p={4}
         mb={4}
       >
-        <FlatList
+        <FlashList
           data={tokens}
           renderItem={({ item }) => (
             <Box

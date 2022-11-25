@@ -10,7 +10,6 @@ import {
   Badge,
   Box,
   Button,
-  FlatList,
   Heading,
   IconButton,
   Stack,
@@ -23,6 +22,8 @@ import {
   useColorModeValue
 } from 'native-base'
 import { faWifi } from '@fortawesome/free-solid-svg-icons'
+
+import { FlashList } from "@shopify/flash-list";
 
 const WifiScan = (props) => {
   const context = useContext(AlertContext)
@@ -107,7 +108,7 @@ const WifiScan = (props) => {
         </Button>
       </HStack>
 
-      <FlatList
+      <FlashList
         data={list}
         renderItem={({ item }) => (
           <Box

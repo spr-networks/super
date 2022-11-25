@@ -5,7 +5,6 @@ import { groupDescriptions } from 'api/Group'
 import {
   Badge,
   Box,
-  FlatList,
   Heading,
   Stack,
   HStack,
@@ -13,6 +12,8 @@ import {
   VStack,
   useColorModeValue
 } from 'native-base'
+
+import { FlashList } from "@shopify/flash-list";
 
 const GroupListing = ({ group, ...props }) => {
   const translateName = (name) => {
@@ -84,7 +85,7 @@ const GroupListing = ({ group, ...props }) => {
         _rounded={{ md: 'md' }}
         p={4}
       >
-        <FlatList
+        <FlashList
           data={list}
           renderItem={({ item }) => (
             <Box

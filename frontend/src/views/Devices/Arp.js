@@ -7,7 +7,6 @@ import {
   Badge,
   View,
   Box,
-  FlatList,
   Heading,
   Stack,
   HStack,
@@ -15,6 +14,8 @@ import {
   useBreakpointValue,
   useColorModeValue
 } from 'native-base'
+
+import { FlashList } from "@shopify/flash-list";
 
 const Arp = (props) => {
   const [list, setList] = useState()
@@ -81,7 +82,7 @@ const Arp = (props) => {
         p={4}
         mb={4}
       >
-        <FlatList
+        <FlashList
           data={list}
           renderItem={({ item }) => (
             <Box

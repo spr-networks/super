@@ -11,7 +11,6 @@ import {
   Box,
   Button,
   IconButton,
-  FlatList,
   FormControl,
   HStack,
   VStack,
@@ -22,6 +21,8 @@ import {
   useColorModeValue
 } from 'native-base'
 import { Pressable } from 'react-native'
+
+import { FlashList } from "@shopify/flash-list";
 
 // TODO we should just list available flow cards for cardType here
 
@@ -36,7 +37,7 @@ const AddFlowCard = ({ cardType, onSubmit, ...props }) => {
   return (
     <VStack space={2}>
       <Text bold>Select a Card</Text>
-      <FlatList
+      <FlashList
         data={cards}
         keyExtractor={(item) => item.title}
         renderItem={({ item }) => (

@@ -6,12 +6,13 @@ import { prettySignal } from 'utils'
 
 import {
   Box,
-  FlatList,
   Stack,
   HStack,
   Text,
   useColorModeValue
 } from 'native-base'
+
+import { FlashList } from "@shopify/flash-list";
 
 const WifiClients = (props) => {
   const [iface, setIface] = useState('wlan1')
@@ -91,7 +92,7 @@ const WifiClients = (props) => {
       width="100%"
       p="4"
     >
-      <FlatList
+      <FlashList
         data={clients}
         renderItem={({ item }) => (
           <Box

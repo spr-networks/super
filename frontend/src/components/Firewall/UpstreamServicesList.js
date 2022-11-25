@@ -17,7 +17,6 @@ import {
   Badge,
   Button,
   Box,
-  FlatList,
   Heading,
   HStack,
   IconButton,
@@ -27,6 +26,8 @@ import {
   Text,
   useColorModeValue
 } from 'native-base'
+
+import { FlashList } from "@shopify/flash-list";
 
 const UpstreamServicesList = (props) => {
   const context = useContext(AlertContext)
@@ -93,7 +94,7 @@ const UpstreamServicesList = (props) => {
           <Heading fontSize="sm"></Heading>
         </HStack>
 
-        <FlatList
+        <FlashList
           data={list}
           renderItem={({ item }) => (
             <Box
