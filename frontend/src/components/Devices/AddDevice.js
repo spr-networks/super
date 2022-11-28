@@ -13,6 +13,7 @@ import {
   HStack,
   Input,
   Radio,
+  ScrollView,
   Stack,
   Text
 } from 'native-base'
@@ -160,9 +161,9 @@ const AddDevice = (props) => {
   }
 
   return (
-    <Stack space={4} width={['100%', '100%', '5/6']}>
+    <ScrollView space={2} width={['100%', '100%', '5/6']} h={'100%'}>
       <Heading fontSize="lg">Add a new WiFi Device</Heading>
-      <Text color="muted.500" fontSize="xs" mt="-3">
+      <Text color="muted.500" fontSize="xs">
         Wired devices do not need to be added
       </Text>
 
@@ -185,7 +186,7 @@ const AddDevice = (props) => {
         )}
       </FormControl>
 
-      <Stack direction={{ base: 'column', md: 'row' }} space={4}>
+      <Stack space={2} minH={180}>
         <FormControl flex="1" isInvalid={'mac' in errors}>
           <FormControl.Label>MAC Address</FormControl.Label>
           <Input
@@ -300,7 +301,7 @@ const AddDevice = (props) => {
       <Button mt="4" color="primary" size="md" onPress={handleSubmit}>
         Save
       </Button>
-    </Stack>
+    </ScrollView>
   )
 }
 
