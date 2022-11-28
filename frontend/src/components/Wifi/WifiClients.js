@@ -4,15 +4,9 @@ import { wifiAPI, deviceAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import { prettySignal } from 'utils'
 
-import {
-  Box,
-  Stack,
-  HStack,
-  Text,
-  useColorModeValue
-} from 'native-base'
+import { Box, Stack, HStack, Text, useColorModeValue } from 'native-base'
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 
 const WifiClients = (props) => {
   const [iface, setIface] = useState('wlan1')
@@ -86,57 +80,53 @@ const WifiClients = (props) => {
   }, [])
 
   return (
-    <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      rounded="md"
-      width="100%"
-      p="4"
-    >
-      <FlashList
-        data={clients}
-        renderItem={({ item }) => (
-          <Box
-            borderBottomWidth="1"
-            _dark={{
-              borderColor: 'muted.600'
-            }}
-            borderColor="muted.200"
-            py="2"
-          >
-            <HStack space={2} justifyContent="space-between">
-              <Text flex="1" bold alignSelf="center">
-                {item.Name}
-              </Text>
+    <FlashList
+      data={clients}
+      estimatedItemSize={100}
+      renderItem={({ item }) => (
+        <Box
+          bg="warmGray.50"
+          borderBottomWidth={1}
+          _dark={{
+            bg: 'blueGray.800',
+            borderColor: 'muted.600'
+          }}
+          borderColor="muted.200"
+          p={4}
+        >
+          <HStack space={2} justifyContent="space-between">
+            <Text flex="1" bold alignSelf="center">
+              {item.Name}
+            </Text>
 
-              <Stack
-                flex="2"
-                direction={{ base: 'column', md: 'row' }}
-                space={2}
-                alignItems="center"
-              >
-                <Text bold>{item.RecentIP}</Text>
-                <Text color="muted.500">{item.MAC}</Text>
-              </Stack>
+            <Stack
+              flex="2"
+              direction={{ base: 'column', md: 'row' }}
+              space={2}
+              alignItems="center"
+            >
+              <Text bold>{item.RecentIP}</Text>
+              <Text color="muted.500">{item.MAC}</Text>
+            </Stack>
 
-              <Stack
-                direction={{ base: 'column', md: 'row' }}
-                space={2}
-                alignSelf="center"
-                marginLeft="auto"
-                flex={1}
-              >
-                <HStack space={1} alignItems="center">
-                  <Text color="muted.400">Signal</Text>
-                  {prettySignal(item.Signal)}
-                </HStack>
-                <Text flexWrap="nowrap">{item.Auth}</Text>
-              </Stack>
-            </HStack>
-          </Box>
-        )}
-        keyExtractor={(item) => item.Name}
-      />
-    </Box>
+            <Stack
+              direction={{ base: 'column', md: 'row' }}
+              space={2}
+              alignSelf="center"
+              marginLeft="auto"
+              flex={1}
+            >
+              <HStack space={1} alignItems="center">
+                <Text color="muted.400">Signal</Text>
+                {prettySignal(item.Signal)}
+              </HStack>
+              <Text flexWrap="nowrap">{item.Auth}</Text>
+            </Stack>
+          </HStack>
+        </Box>
+      )}
+      keyExtractor={(item) => item.Name}
+    />
   )
 }
 

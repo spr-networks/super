@@ -18,6 +18,7 @@ import {
   IconButton,
   HStack,
   Menu,
+  FlatList,
   Modal,
   Stack,
   Text,
@@ -30,7 +31,7 @@ import { api } from 'api'
 import { AlertContext } from 'AppContext'
 import { prettyDate, ucFirst } from 'utils'
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 
 const niceName = (name) => {
   if (Array.isArray(name)) {
@@ -355,10 +356,17 @@ const SystemInfo = (props) => {
         </HStack>
       </HStack>
 
-      <Stack direction={{ base: 'column', md: 'row' }}   _rounded="md" space={4} mb={4} bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}>
-        <FlashList
+      <Stack
+        direction={{ base: 'column', md: 'row' }}
+        _rounded="md"
+        space={4}
+        mb={4}
+        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+      >
+        <FlatList
           data={['time', 'uptime', 'users']}
           keyExtractor={(item, index) => index}
+          estimatedItemSize={100}
           renderItem={({ item }) => (
             <HStack
               space={2}
@@ -373,9 +381,10 @@ const SystemInfo = (props) => {
             </HStack>
           )}
         />
-        <FlashList
+        <FlatList
           data={['load_1m', 'load_5m', 'load_15m']}
           keyExtractor={(item, index) => index}
+          estimatedItemSize={100}
           renderItem={({ item }) => (
             <HStack
               space={2}
@@ -397,14 +406,19 @@ const SystemInfo = (props) => {
       <Heading fontSize="md" p={4}>
         Docker Containers
       </Heading>
-      <Box minH={400} bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')} _rounded="md">
-      <FlashList
-        data={containers}
-        keyExtractor={(item, index) => item.Id}
-        renderItem={({ item }) =>
-          renderDockerContainer({ item, navigate, showModal })
-        }
-      />
+      <Box
+        minH={400}
+        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+        _rounded="md"
+      >
+        <FlatList
+          data={containers}
+          keyExtractor={(item, index) => item.Id}
+          estimatedItemSize={100}
+          renderItem={({ item }) =>
+            renderDockerContainer({ item, navigate, showModal })
+          }
+        />
       </Box>
       <Modal isOpen={isOpen} onClose={onClose} animationPreset="slide">
         <Modal.Content maxWidth={{ base: '100%', md: '90%' }}>

@@ -1,5 +1,4 @@
 import React, { useContext, useEffect, useState } from 'react'
-
 import { wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 
@@ -10,12 +9,13 @@ import {
   Heading,
   Stack,
   HStack,
+  FlatList,
   Text,
   useBreakpointValue,
   useColorModeValue
 } from 'native-base'
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 
 const Arp = (props) => {
   const [list, setList] = useState()
@@ -70,56 +70,51 @@ const Arp = (props) => {
   })
 
   return (
-    <View>
+    <View h={'100%'}>
       <Heading fontSize="md" p={4}>
         ARP Table
       </Heading>
 
-      <Box
-        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        _rounded={{ md: 'md' }}
-        width="100%"
-        p={4}
-        mb={4}
-      >
-        <FlashList
-          data={list}
-          renderItem={({ item }) => (
-            <Box
-              borderBottomWidth="1"
-              _dark={{
-                borderColor: 'muted.600'
-              }}
-              borderColor="muted.200"
-              py="2"
-            >
-              <HStack space={3} justifyContent="space-between">
-                <Stack
-                  minW="40%"
-                  style={{ flexDirection }}
-                  space={3}
-                  justifyContent="space-between"
-                >
-                  <Text bold>{item.IP}</Text>
-                  <Text color="muted.500">{item.MAC}</Text>
-                </Stack>
-                <Stack
-                  minW="40%"
-                  style={{ flexDirection }}
-                  space={3}
-                  justifyContent="space-between"
-                >
-                  <Text fontSize="xs">Flags: {translateFlags(item.Flags)}</Text>
-                  <Box marginLeft="auto">
-                    <Badge variant="outline">{item.Device}</Badge>
-                  </Box>
-                </Stack>
-              </HStack>
-            </Box>
-          )}
-          keyExtractor={(item) => item.IP}
-        />
-      </Box>
+      <FlashList
+        data={list}
+        estimatedItemSize={100}
+        renderItem={({ item }) => (
+          <Box
+            bg="warmGray.50"
+            borderBottomWidth="1"
+            _dark={{
+              bg: 'blueGray.800',
+              borderColor: 'muted.600'
+            }}
+            borderColor="muted.200"
+            p={4}
+          >
+            <HStack space={3} justifyContent="space-between">
+              <Stack
+                minW="40%"
+                style={{ flexDirection }}
+                space={3}
+                justifyContent="space-between"
+              >
+                <Text bold>{item.IP}</Text>
+                <Text color="muted.500">{item.MAC}</Text>
+              </Stack>
+              <Stack
+                minW="40%"
+                style={{ flexDirection }}
+                space={3}
+                justifyContent="space-between"
+              >
+                <Text fontSize="xs">Flags: {translateFlags(item.Flags)}</Text>
+                <Box marginLeft="auto">
+                  <Badge variant="outline">{item.Device}</Badge>
+                </Box>
+              </Stack>
+            </HStack>
+          </Box>
+        )}
+        keyExtractor={(item) => item.IP}
+      />
     </View>
   )
 }

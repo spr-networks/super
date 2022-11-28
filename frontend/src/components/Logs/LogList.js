@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { Dimensions, Platform } from 'react-native'
 import { useNavigate } from 'react-router-dom'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faRefresh } from '@fortawesome/free-solid-svg-icons'
@@ -12,6 +13,7 @@ import {
   Badge,
   Box,
   Button,
+  FlatList,
   Heading,
   IconButton,
   Stack,
@@ -21,10 +23,11 @@ import {
   Spacer,
   Spinner,
   Text,
+  View,
   useColorModeValue
 } from 'native-base'
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 
 const LogList = (props) => {
   const [list, setList] = useState([])
@@ -150,12 +153,17 @@ const LogList = (props) => {
     )
   }
 
+  let h = Dimensions.get('window').height - (Platform.OS == 'ios' ? 64 * 2 : 64)
+
   return (
-    <Box bg={useColorModeValue('warmGray.50', 'blueGray.800')} p={4}>
+    <View h={h}>
       <Stack
         direction={{ base: 'column', md: 'row' }}
         space={2}
+        alignItems="flex-start"
         justifyContent="space-between"
+        h={{ base: 120, md: 20 }}
+        p={4}
       >
         <VStack space={1}>
           <Heading fontSize="lg">Logs</Heading>
@@ -194,12 +202,14 @@ const LogList = (props) => {
 
       <FlashList
         data={listFiltered}
+        estimatedItemSize={100}
         renderItem={({ item }) => (
           <Box
             borderBottomWidth={1}
+            bg="warmGray.50"
             borderColor="muted.200"
-            _dark={{ borderColor: 'muted.600' }}
-            py={2}
+            _dark={{ bg: 'blueGray.800', borderColor: 'muted.600' }}
+            p={4}
           >
             <HStack
               w="100%"
@@ -240,7 +250,7 @@ const LogList = (props) => {
           </Button>
         </HStack>
       ) : null}
-    </Box>
+    </View>
   )
 }
 

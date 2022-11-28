@@ -15,6 +15,7 @@ import {
   Box,
   Button,
   Fab,
+  FlatList,
   Heading,
   IconButton,
   HStack,
@@ -94,7 +95,7 @@ const SiteVPN = (props) => {
           mb={4}
         >
           {sites !== null && sites.length ? (
-            <FlashList
+            <FlatList
               data={sites}
               renderItem={({ item }) => (
                 <Box

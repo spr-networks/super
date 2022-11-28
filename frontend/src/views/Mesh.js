@@ -16,6 +16,7 @@ import {
   Box,
   Heading,
   HStack,
+  FlatList,
   IconButton,
   Input,
   Text,
@@ -24,7 +25,7 @@ import {
   VStack
 } from 'native-base'
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 
 import api, { wifiAPI, meshAPI, authAPI } from 'api'
 
@@ -288,7 +289,8 @@ const Mesh = (props) => {
             p={4}
             mb={4}
           >
-            <FlashList
+            <FlatList
+              estimatedItemSize={100}
               data={leafRouters}
               ListHeaderComponent={() => {
                 return leafRouters.length ? (

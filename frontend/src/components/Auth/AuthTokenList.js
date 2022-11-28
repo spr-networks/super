@@ -22,7 +22,7 @@ import {
   useColorModeValue
 } from 'native-base'
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 
 import { authAPI } from 'api'
 import { AlertContext } from 'AppContext'
@@ -108,7 +108,7 @@ const AuthTokenList = (props) => {
   }
 
   return (
-    <View mt={4}>
+    <View h={'100%'}>
       <HStack justifyContent="space-between" alignItems="center" p={4}>
         <Heading fontSize="md">API Tokens</Heading>
 
@@ -122,97 +122,90 @@ const AuthTokenList = (props) => {
           </ModalForm>
         </Box>
       </HStack>
-      <Box
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        _rounded={{ md: 'md' }}
-        width="100%"
-        p={4}
-        mb={4}
-      >
-        <FlashList
-          data={tokens}
-          renderItem={({ item }) => (
-            <Box
-              borderBottomWidth={1}
-              borderColor="muted.200"
-              _dark={{ borderColor: 'muted.600' }}
-              py={2}
-            >
-              <HStack
-                w="100%"
-                space={3}
-                alignItems="center"
-                __justifyContent="stretch"
-              >
-                <Text flex={1}>{item.Name}</Text>
-                <HStack
-                  flex={1}
-                  minW={{ base: '1/6', md: '2/6' }}
-                  alignItems="center"
-                  justifyItems="flex-end"
-                >
-                  <Text>{item.Token}</Text>
-                  <IconButton
-                    variant="unstyled"
-                    icon={<Icon size="4" icon={faCopy} color="muted.500" />}
-                    onPress={() => copy(item.Token)}
-                    display={showClipboard ? 'flex' : 'none'}
-                  />
 
-                  {item.ScopedPaths != null && item.ScopedPaths.length > 0 ? (
-                    <Text isTruncated>{JSON.stringify(item.ScopedPaths)}</Text>
-                  ) : (
-                    <Text isTruncated></Text>
-                  )}
-                </HStack>
-
-                <HStack
-                  w={{ base: '3/6', md: '2/6' }}
-                  space={1}
-                  justifyContent="flex-end"
-                >
-                  <Text color="muted.500">Expire</Text>
-                  <Text
-                    color={
-                      tokenExpired(item.Expire) ? 'warning.400' : 'muted.500'
-                    }
-                  >
-                    {item.Expire
-                      ? timeAgo(new Date(item.Expire * 1e3))
-                      : 'Never'}
-                  </Text>
-                </HStack>
-
-                <IconButton
-                  alignSelf="center"
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="secondary"
-                  icon={<Icon icon={faXmark} />}
-                  onPress={() => deleteListItem(item)}
-                />
-              </HStack>
-            </Box>
-          )}
-          keyExtractor={(item) => item.Token}
-        />
-
-        <VStack>
-          {tokens !== null && tokens.length === 0 ? (
-            <Text alignSelf="center">There are no API tokens added yet</Text>
-          ) : null}
-          <Button
-            display={{ base: 'flex', md: tokens.length ? 'none' : 'flex' }}
-            variant={useColorModeValue('subtle', 'solid')}
-            colorScheme="muted"
-            leftIcon={<Icon icon={faCirclePlus} />}
-            onPress={() => setIsModalOpen(true)}
-            mt={4}
+      <FlashList
+        data={tokens}
+        estimatedItemSize={100}
+        renderItem={({ item }) => (
+          <Box
+            bg="backgroundCardLight"
+            borderBottomWidth={1}
+            borderColor="muted.200"
+            _dark={{ bg: 'backgroundCardDark', borderColor: 'muted.600' }}
+            p={4}
           >
-            Add token
-          </Button>
-        </VStack>
-      </Box>
+            <HStack
+              w="100%"
+              space={3}
+              alignItems="center"
+              __justifyContent="stretch"
+            >
+              <Text flex={1}>{item.Name}</Text>
+              <HStack
+                flex={1}
+                minW={{ base: '1/6', md: '2/6' }}
+                alignItems="center"
+                justifyItems="flex-end"
+              >
+                <Text>{item.Token}</Text>
+                <IconButton
+                  variant="unstyled"
+                  icon={<Icon size="4" icon={faCopy} color="muted.500" />}
+                  onPress={() => copy(item.Token)}
+                  display={showClipboard ? 'flex' : 'none'}
+                />
+
+                {item.ScopedPaths != null && item.ScopedPaths.length > 0 ? (
+                  <Text isTruncated>{JSON.stringify(item.ScopedPaths)}</Text>
+                ) : (
+                  <Text isTruncated></Text>
+                )}
+              </HStack>
+
+              <HStack
+                w={{ base: '3/6', md: '2/6' }}
+                space={1}
+                justifyContent="flex-end"
+              >
+                <Text color="muted.500">Expire</Text>
+                <Text
+                  color={
+                    tokenExpired(item.Expire) ? 'warning.400' : 'muted.500'
+                  }
+                >
+                  {item.Expire ? timeAgo(new Date(item.Expire * 1e3)) : 'Never'}
+                </Text>
+              </HStack>
+
+              <IconButton
+                alignSelf="center"
+                size="sm"
+                variant="ghost"
+                colorScheme="secondary"
+                icon={<Icon icon={faXmark} />}
+                onPress={() => deleteListItem(item)}
+              />
+            </HStack>
+          </Box>
+        )}
+        keyExtractor={(item) => item.Token}
+      />
+
+      <VStack>
+        {tokens !== null && tokens.length === 0 ? (
+          <Text alignSelf="center">There are no API tokens added yet</Text>
+        ) : null}
+        <Button
+          display={{ base: 'flex', md: tokens.length ? 'none' : 'flex' }}
+          variant={useColorModeValue('subtle', 'solid')}
+          colorScheme="muted"
+          leftIcon={<Icon icon={faCirclePlus} />}
+          onPress={() => setIsModalOpen(true)}
+          mt={4}
+        >
+          Add token
+        </Button>
+      </VStack>
     </View>
   )
 }

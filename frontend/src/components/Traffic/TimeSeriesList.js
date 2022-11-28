@@ -11,12 +11,13 @@ import {
   Badge,
   Box,
   Stack,
+  FlatList,
   HStack,
   Pressable,
   Text
 } from 'native-base'
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 
 import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
@@ -110,7 +111,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
   }
 
   return (
-    <FlashList
+    <FlatList
       data={list}
       renderItem={({ item }) => (
         <Box

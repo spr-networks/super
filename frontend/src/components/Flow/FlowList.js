@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+import { Dimensions, Platform } from 'react-native'
 import PropTypes from 'prop-types'
 import { Icon } from 'FontAwesomeUtils'
 import {
@@ -22,6 +23,7 @@ import { pfwAPI } from 'api/Pfw'
 import {
   Box,
   Button,
+  FlatList,
   FormControl,
   Heading,
   Input,
@@ -32,11 +34,12 @@ import {
   VStack,
   Text,
   useColorModeValue,
-  Divider
+  Divider,
+  ScrollView
 } from 'native-base'
 import { dateArrayToStr } from './Utils'
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 
 const FlowCardList = ({
   title,
@@ -91,7 +94,7 @@ const FlowCardList = ({
         {title}
       </Text>
 
-      <FlashList
+      <FlatList
         data={cards}
         listKey={`list${cardType}`}
         keyExtractor={(item, index) => index}
@@ -695,12 +698,14 @@ const FlowList = (props) => {
     })
   }
 
+  let h = Dimensions.get('window').height - (Platform.OS == 'ios' ? 64 * 2 : 64)
+
   return (
     <Stack
       direction={{ base: 'column', md: 'row' }}
       space={4}
-      py={4}
       pr={{ md: 8 }}
+      h={h}
     >
       <Box w={{ md: '2/3' }}>
         <HStack justifyContent="space-between" alignContent="center" px={4}>
@@ -710,7 +715,7 @@ const FlowList = (props) => {
           </VStack>
         </HStack>
 
-        <FlashList
+        <FlatList
           px={{ md: 4 }}
           data={flows}
           renderItem={({ item, index }) => (
@@ -736,7 +741,7 @@ const FlowList = (props) => {
         />
       </Box>
 
-      <VStack
+      <ScrollView
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
         space={4}
         w={{ base: '100%', md: '390px' }}
@@ -745,7 +750,7 @@ const FlowList = (props) => {
         <Heading size="sm">Add &amp; Edit flow</Heading>
 
         <Flow edit={true} flow={flow} onSubmit={onSubmit} onReset={resetFlow} />
-      </VStack>
+      </ScrollView>
     </Stack>
   )
 }

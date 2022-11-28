@@ -1,16 +1,10 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+import { Dimensions, Platform } from 'react-native'
+
 import Icon from 'FontAwesomeUtils'
 import {
   faEllipsis,
-  faEllipsisV,
-  faLaptop,
-  faMobileScreen,
-  faObjectGroup,
   faTrash,
-  faEarth,
-  faCircleNodes,
-  faNetworkWired,
-  faTag,
   faToggleOn,
   faToggleOff,
   faBellSlash,
@@ -29,7 +23,7 @@ import {
   Button
 } from 'native-base'
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 
 import { notificationsAPI } from 'api'
 import AddNotifcation from 'components/Notifications/AddNotification'
@@ -80,12 +74,13 @@ const NotificationItem = ({ item, index, onDelete, onToggle, ...props }) => {
 
   return (
     <Box
+      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
       borderBottomWidth={1}
       _dark={{
         borderColor: 'muted.600'
       }}
       borderColor="muted.200"
-      py={2}
+      p={4}
     >
       <HStack space={2} justifyContent="space-between" alignItems="center">
         <Stack direction={{ base: 'column', md: 'row' }} space={2} w="1/3">
@@ -168,8 +163,10 @@ const Notifications = (props) => {
 
   const refModal = useRef(null)
 
+  let h = Dimensions.get('window').height - (Platform.OS == 'ios' ? 64 * 2 : 64)
+
   return (
-    <View>
+    <View h={h}>
       <HStack justifyContent="space-between" alignItems="center" p={4}>
         <Heading fontSize="md">Notifications</Heading>
         <ModalForm
@@ -180,25 +177,20 @@ const Notifications = (props) => {
           <AddNotifcation onSubmit={onSubmit} />
         </ModalForm>
       </HStack>
-      <Box
-        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        rounded="md"
-        width="100%"
-        p={4}
-      >
-        <FlashList
-          data={notifications}
-          renderItem={({ item, index }) => (
-            <NotificationItem
-              item={item}
-              index={index}
-              onToggle={onToggle}
-              onDelete={onDelete}
-            />
-          )}
-          keyExtractor={(item, index) => `notification-${index}`}
-        />
-      </Box>
+
+      <FlashList
+        data={notifications}
+        estimatedItemSize={100}
+        renderItem={({ item, index }) => (
+          <NotificationItem
+            item={item}
+            index={index}
+            onToggle={onToggle}
+            onDelete={onDelete}
+          />
+        )}
+        keyExtractor={(item, index) => `notification-${index}`}
+      />
     </View>
   )
 }

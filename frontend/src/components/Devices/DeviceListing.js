@@ -29,7 +29,7 @@ import {
   View,
   useColorModeValue
 } from 'native-base'
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 //import { SwipeListView } from 'components/SwipeListView'
 
 const DeviceListing = (props) => {
@@ -205,15 +205,13 @@ const DeviceListing = (props) => {
         rightOpenValue={-140}
       />*/}
 
-      <Box
-       bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')} pb={{ md: 10 }}
-       >
       <FlashList
         data={devices}
         renderItem={renderItem}
         keyExtractor={(item, index) => item.Name + index}
+        estimatedItemSize={100}
       />
-      </Box>
+
       {devices !== null && !devices.length ? (
         <Box
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
