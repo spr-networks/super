@@ -17,6 +17,7 @@ import {
   Box,
   Button,
   Divider,
+  FlatList,
   Heading,
   HStack,
   IconButton,
@@ -25,7 +26,7 @@ import {
   useColorModeValue
 } from 'native-base'
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 
 const DNSLogList = ({ title, description, ...props }) => {
   const context = useContext(AlertContext)
@@ -59,7 +60,7 @@ const DNSLogList = ({ title, description, ...props }) => {
         let options = Object.values(devices)
         let name_map = {}
         for (let ident in devices) {
-          let d = devices[ident];
+          let d = devices[ident]
           let key_ip = cleanIp(d.RecentIP)
           let name_value = d.Name || d.RecentIP
           name_map[key_ip] = name_value
@@ -134,13 +135,7 @@ const DNSLogList = ({ title, description, ...props }) => {
         />
       </HStack>
 
-      <Box
-        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        rounded={{ md: 'md' }}
-        width="100%"
-        p={4}
-        mb={4}
-      >
+      <Box rounded={{ md: 'md' }} width="100%" p={4} mb={4}>
         {!list.length ? (
           <VStack space={2}>
             <Text alignSelf={'center'}>List is empty</Text>
@@ -154,18 +149,19 @@ const DNSLogList = ({ title, description, ...props }) => {
             </Button>
           </VStack>
         ) : null}
-        <FlashList
+        <FlatList
           data={list}
           keyExtractor={(item, index) => index}
+          estimatedItemSize={100}
           renderItem={({ item }) => (
             <HStack
-              py={4}
+              p={4}
               borderBottomWidth={1}
-              _light={{ borderBottomColor: 'muted.200' }}
-              _dark={{ borderBottomColor: 'muted.600' }}
+              _light={{ bg: 'warmGray.50', borderBottomColor: 'muted.200' }}
+              _dark={{ bg: 'blueGray.800', borderBottomColor: 'muted.600' }}
             >
               <Text>{item}</Text>
-              <Text>    {ip_to_name(item)}</Text>
+              <Text> {ip_to_name(item)}</Text>
               <IconButton
                 variant="ghost"
                 colorScheme="secondary"

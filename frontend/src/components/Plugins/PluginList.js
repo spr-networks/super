@@ -9,6 +9,7 @@ import {
 
 import {
   Box,
+  FlatList,
   Heading,
   IconButton,
   Input,
@@ -18,10 +19,11 @@ import {
   Spacer,
   Switch,
   Text,
+  View,
   useColorModeValue
 } from 'native-base'
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 
 import { pluginAPI } from 'api'
 import { AppContext, alertState } from 'AppContext'
@@ -119,7 +121,7 @@ const PluginList = (props) => {
   }
 
   return (
-    <>
+    <View h={'100%'}>
       <HStack p={4} justifyContent="space-between" alignItems="center">
         <Heading fontSize="md">Plugins</Heading>
 
@@ -133,113 +135,119 @@ const PluginList = (props) => {
           </ModalForm>
         </Box>
       </HStack>
-      <Box
-        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        width="100%"
-        p={4}
-        mb={4}
-      >
-        <FlashList
-          data={list}
-          renderItem={({ item }) => (
-            <Box
-              borderBottomWidth="1"
-              _dark={{
-                borderColor: 'muted.600'
-              }}
-              borderColor="muted.200"
-              py="2"
-            >
-              <HStack space={3} justifyContent="space-between">
-                <VStack minW="20%">
-                  <Text bold>{item.Name}</Text>
-                  <Text>{item.URI}</Text>
-                </VStack>
 
-                <Text alignSelf="center" isTruncated>
-                  {item.UnixPath}
-                </Text>
-                <Spacer />
-                <Box w="100" alignItems="center" alignSelf="center">
-                  <Switch
-                    defaultIsChecked={item.Enabled}
-                    onValueChange={() => handleChange(item, !item.Enabled)}
-                  />
-                </Box>
+      <FlatList
+        data={list}
+        estimatedItemSize={100}
+        renderItem={({ item }) => (
+          <Box
+            bg="warmGray.50"
+            borderBottomWidth={1}
+            borderColor="muted.200"
+            _dark={{
+              bg: 'blueGray.800',
+              borderColor: 'muted.600'
+            }}
+            p={4}
+          >
+            <HStack space={3} justifyContent="space-between">
+              <VStack minW="20%">
+                <Text bold>{item.Name}</Text>
+                <Text>{item.URI}</Text>
+              </VStack>
 
-                <IconButton
-                  alignSelf="center"
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="secondary"
-                  icon={<Icon icon={faXmark} />}
-                  onPress={() => deleteListItem(item)}
+              <Text
+                alignSelf="center"
+                isTruncated
+                display={{ base: 'none', md: true }}
+              >
+                {item.UnixPath}
+              </Text>
+              <Spacer />
+              <Box w="100" alignItems="center" alignSelf="center">
+                <Switch
+                  defaultIsChecked={item.Enabled}
+                  onValueChange={() => handleChange(item, !item.Enabled)}
                 />
-              </HStack>
-            </Box>
-          )}
-          keyExtractor={(item) => item.Name}
-        />
-      </Box>
+              </Box>
+
+              <IconButton
+                alignSelf="center"
+                size="sm"
+                variant="ghost"
+                colorScheme="secondary"
+                icon={<Icon icon={faXmark} />}
+                onPress={() => deleteListItem(item)}
+              />
+            </HStack>
+          </Box>
+        )}
+        keyExtractor={(item) => item.Name}
+      />
 
       {activeToken !== '' ? (
         <>
           <Heading fontSize="md" p={4}>
             PLUS
           </Heading>
-          <Box
-            bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-            width="100%"
-            p={4}
-            mb={4}
-          >
-            <FlashList
-              data={plusList}
-              renderItem={({ item }) => (
-                <Box
-                  borderBottomWidth={1}
-                  _dark={{
-                    borderColor: 'muted.600'
-                  }}
-                  borderColor="muted.200"
-                  py={2}
-                >
-                  <HStack space={3} justifyContent="space-between">
-                    <VStack minW="20%">
-                      <Text bold>{item.Name}</Text>
-                      <Text>{item.URI}</Text>
-                    </VStack>
 
-                    <Text alignSelf="center" isTruncated>
-                      {item.UnixPath}
-                    </Text>
-                    <Spacer />
-                    <HStack alignSelf="center" space={1}>
-                      <Text color="muted.500">Compose Path</Text>
-                      <Text isTruncated>{item.ComposeFilePath}</Text>
-                    </HStack>
-                    <Spacer />
-                    <Box w="100" alignItems="center" alignSelf="center">
-                      <Switch
-                        defaultIsChecked={item.Enabled}
-                        onValueChange={() => handleChange(item, !item.Enabled)}
-                      />
-                    </Box>
+          <FlatList
+            data={plusList}
+            estimatedItemSize={100}
+            renderItem={({ item }) => (
+              <Box
+                bg="warmGray.50"
+                borderBottomWidth={1}
+                borderColor="muted.200"
+                _dark={{
+                  bg: 'blueGray.800',
+                  borderColor: 'muted.600'
+                }}
+                p={4}
+              >
+                <HStack space={3} justifyContent="space-between">
+                  <VStack minW="20%">
+                    <Text bold>{item.Name}</Text>
+                    <Text>{item.URI}</Text>
+                  </VStack>
 
-                    <IconButton
-                      alignSelf="center"
-                      size="sm"
-                      variant="ghost"
-                      colorScheme="secondary"
-                      icon={<Icon icon={faXmark} />}
-                      onPress={() => deleteListItem(item)}
-                    />
+                  <Text
+                    alignSelf="center"
+                    isTruncated
+                    display={{ base: 'none', md: true }}
+                  >
+                    {item.UnixPath}
+                  </Text>
+                  <Spacer />
+                  <HStack
+                    alignSelf="center"
+                    space={1}
+                    display={{ base: 'none', md: true }}
+                  >
+                    <Text color="muted.500">Compose Path</Text>
+                    <Text isTruncated>{item.ComposeFilePath}</Text>
                   </HStack>
-                </Box>
-              )}
-              keyExtractor={(item) => item.Name}
-            />
-          </Box>
+                  <Spacer />
+                  <Box w="100" alignItems="center" alignSelf="center">
+                    <Switch
+                      defaultIsChecked={item.Enabled}
+                      onValueChange={() => handleChange(item, !item.Enabled)}
+                    />
+                  </Box>
+
+                  <IconButton
+                    alignSelf="center"
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="secondary"
+                    icon={<Icon icon={faXmark} />}
+                    onPress={() => deleteListItem(item)}
+                  />
+                </HStack>
+              </Box>
+            )}
+            keyExtractor={(item) => item.Name}
+          />
         </>
       ) : (
         <></>
@@ -273,7 +281,7 @@ const PluginList = (props) => {
           onMouseLeave={handleTokenSubmit}
         />
       </Box>
-    </>
+    </View>
   )
 }
 

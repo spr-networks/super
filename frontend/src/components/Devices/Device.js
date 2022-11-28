@@ -301,6 +301,7 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
       <Stack
         direction={{ base: 'column-reverse', md: 'row' }}
         space={2}
+        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
         p={4}
         w="100%"
         key={device.MAC}

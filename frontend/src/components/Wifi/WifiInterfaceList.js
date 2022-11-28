@@ -29,7 +29,7 @@ import {
   useColorModeValue
 } from 'native-base'
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 
 const WifiInterface = (props) => {
   const [activeTab, setActiveTab] = useState('devices')
@@ -57,6 +57,7 @@ const WifiInterface = (props) => {
         <FlashList
           data={Object.keys(dict)}
           keyExtractor={(item) => item}
+          estimatedItemSize={100}
           renderItem={({ item }) => (
             <HStack space={2}>
               <Text bold>{item}</Text>
@@ -171,6 +172,7 @@ const WifiInterface = (props) => {
                             </VStack>
                           )}
                           keyExtractor={(item) => item}
+                          estimatedItemSize={100}
                         />
                       </>
                     ) : null}

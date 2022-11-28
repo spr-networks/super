@@ -25,6 +25,7 @@ import {
   Badge,
   Box,
   Button,
+  FlatList,
   FormControl,
   Heading,
   IconButton,
@@ -40,7 +41,7 @@ import {
   ScrollView
 } from 'native-base'
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 
 const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
   const colorByType = (type) => {
@@ -469,7 +470,7 @@ const DNSLogHistoryList = (props) => {
             </HStack>
           ) : null*/}
 
-        <FlashList
+        <FlatList
           h={{ base: '40%', md: 'auto' }}
           data={listFiltered}
           renderItem={({ item, index }) => (

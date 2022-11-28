@@ -23,7 +23,7 @@ import {
 } from 'native-base'
 import { faWifi } from '@fortawesome/free-solid-svg-icons'
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 
 const WifiScan = (props) => {
   const context = useContext(AlertContext)
@@ -92,6 +92,7 @@ const WifiScan = (props) => {
       rounded="md"
       width="100%"
       p={4}
+      h={'100%'}
     >
       <HStack space={2}>
         <Box flex="2">
@@ -110,6 +111,7 @@ const WifiScan = (props) => {
 
       <FlashList
         data={list}
+        estimatedItemSize={100}
         renderItem={({ item }) => (
           <Box
             borderBottomWidth="1"

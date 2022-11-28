@@ -14,13 +14,14 @@ import {
   Heading,
   IconButton,
   Stack,
+  FlatList,
   HStack,
   VStack,
   Text,
   useColorModeValue
 } from 'native-base'
 
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list'
 
 const DNSOverrideList = (props) => {
   const context = React.useContext(AlertContext)
@@ -76,7 +77,7 @@ const DNSOverrideList = (props) => {
         {!list || !list.length ? (
           <Text>{`No ${props.title.split(' ')[0]} rules configured`}</Text>
         ) : null}
-        <FlashList
+        <FlatList
           data={list}
           renderItem={({ item }) => (
             <Box
