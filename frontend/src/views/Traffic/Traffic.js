@@ -16,9 +16,13 @@ import {
 } from 'native-base'
 
 export default class Traffic extends Component {
-	render() {
-		return <Text>TODO</Text>
-	}
+  render() {
+    return (
+      <Text p={4} textAlign={'center'}>
+        TODO
+      </Text>
+    )
+  }
 }
 
 Traffic.contextType = AlertContext

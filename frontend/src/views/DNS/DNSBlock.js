@@ -5,7 +5,7 @@ import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 import PluginDisabled from 'views/PluginDisabled'
 
-import { View, VStack } from 'native-base'
+import { ScrollView, View, VStack } from 'native-base'
 
 const DNSBlock = (props) => {
   const context = useContext(AlertContext)
@@ -44,7 +44,7 @@ const DNSBlock = (props) => {
   }
 
   return (
-    <View>
+    <ScrollView>
       <VStack>
         <DNSBlocklist />
 
@@ -54,6 +54,7 @@ const DNSBlock = (props) => {
           title="Block Custom Domain"
           notifyChange={notifyChange}
         />
+
         <DNSOverrideList
           key="allowdomain"
           list={PermitDomains}
@@ -61,7 +62,7 @@ const DNSBlock = (props) => {
           notifyChange={notifyChange}
         />
       </VStack>
-    </View>
+    </ScrollView>
   )
 }
 
