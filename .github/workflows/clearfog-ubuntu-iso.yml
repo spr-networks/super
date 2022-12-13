@@ -22,10 +22,10 @@ jobs:
         run: ./installer/qemu-setup-linux.sh
       - name: Download the image
         working-directory: ./installer
-        run: ./download-img.sh
+        run: ./platforms/clearfog-download-img.sh
       - name: Build install image
         working-directory: ./installer
-        run: ./run-docker-image-build.sh
+        run: ./platforms/clearfog-image-build.sh
       - name: Compress image
         run: xz ./installer/data/spr.img
       - name: Create Release
@@ -46,5 +46,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./installer/data/spr.img.xz
-          asset_name: spr.img.xz
+          asset_name: clearfog-spr.img.xz
           asset_content_type: application/x-xz

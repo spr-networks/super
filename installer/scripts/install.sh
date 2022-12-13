@@ -7,7 +7,7 @@ echo nameserver 1.1.1.1 > /etc/resolv.conf
 
 apt-get update
 apt-get -y install --download-only linux-modules-extra-raspi
-apt-get -y install docker.io docker-compose nftables
+apt-get -y install docker.io docker-compose nftables wireless-regdb ethtool linux-firmware git nano iw
 
 useradd -m -s /bin/bash ubuntu
 echo "ubuntu:ubuntu" | chpasswd
