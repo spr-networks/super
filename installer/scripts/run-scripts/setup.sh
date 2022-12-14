@@ -9,7 +9,7 @@ dhclient $WANIF
 dpkg-reconfigure openssh-server
 
 # Resize to full disk
-ROOTPART=$(df | grep " /$" | awk '{print $1}')
+ROOTPART=$(mount | grep " / " | awk '{print $1}')
 PART=$(echo $ROOTPART | grep -o -E "[^0-9]+")
 PARTNUM=$(echo $ROOTPART | grep -o -E "[0-9]+")
 growpart $PART $PARTNUM
