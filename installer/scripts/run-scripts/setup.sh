@@ -8,10 +8,18 @@ ip link set $WANIF up
 dhclient $WANIF
 dpkg-reconfigure openssh-server
 
+
 # Resize to full disk
-ROOTPART=$(mount | grep " / " | awk '{print $1}')
-PART=$(echo $ROOTPART | grep -o -E "[^0-9]+")
-PARTNUM=$(echo $ROOTPART | grep -o -E "[0-9]+")
+ROOTPART=$(df | grep " /$" | awk '{print $1}')
+
+PART=$(echo $ROOTPART | sed -E 's/^\/dev\/([a-z]+[0-9]*)([p]?[0-9]*).*$/\1/')
+PARTNUM=$(echo $ROOTPART | sed -E 's/^\/dev\/[a-z]+[0-9]*([p]?[0-9]*).*$/\1/')
+
+if [ -z "$PARTNUM" ]; then
+  ROOTPART=$(echo $ROOTPART | grep -o -E "[^0-9]+")
+  PARTNUM=$(echo $ROOTPART | sed -E 's/^\/dev\/[a-z]+([0-9]*).*$/\1/')
+fi
+
 growpart $PART $PARTNUM
 resize2fs $ROOTPART
 
