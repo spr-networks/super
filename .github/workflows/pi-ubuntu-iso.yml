@@ -1,4 +1,4 @@
-name: Ubuntu ISO Installer
+name: PI Ubuntu ISO Installer
 
 on:
   workflow_run:

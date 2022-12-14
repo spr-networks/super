@@ -1,4 +1,4 @@
-name: Ubuntu ISO Installer
+name: Clearfog Ubuntu ISO Installer
 
 on:
   workflow_run:
