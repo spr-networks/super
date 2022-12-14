@@ -19,7 +19,10 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get -y --fix-broken install
 dpkg --configure -a
-apt-get -y install linux-modules-extra-raspi
+
+if grep --quiet Raspberry /proc/cpuinfo; then
+  apt-get -y install linux-modules-extra-raspi
+fi
 
 # disable iptables for  docker
 echo -ne "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json

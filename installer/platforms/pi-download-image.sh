@@ -13,4 +13,4 @@ if [ ! -f $IMG ]; then
 fi
 
 xzcat $IMG > spr.clean.img
-echo "[+] Extracted spr"
+echo "[+] Extracted pi arm64 ubuntu image"

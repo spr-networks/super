@@ -3,14 +3,12 @@
 set -e
 
 mkdir data
-VERSION="22.04.1"
-IMG="ubuntu-${VERSION}-preinstalled-server-arm64+raspi.img.xz"
-
 cd ./data
 
+IMG=ubuntu-cn9130-cf-pro-mmc.1.1.img
 if [ ! -f $IMG ]; then
-  wget -q "https://cdimage.ubuntu.com/releases/${VERSION}/release/${IMG}"
+  wget -q "https://github.com/spr-networks/cn913x_build/releases/download/refs%2Fheads%2Fsupernetworks/${IMG}"
 fi
 
-xzcat $IMG > spr.clean.img
-echo "[+] Extracted spr"
+cp $IMG spr.clean.img
+echo "[+] Extracted clearfog arm64 base image"

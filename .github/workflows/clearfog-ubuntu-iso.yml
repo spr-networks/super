@@ -25,7 +25,7 @@ jobs:
         run: ./platforms/clearfog-download-img.sh
       - name: Build install image
         working-directory: ./installer
-        run: ./platforms/clearfog-image-build.sh
+        run: ./platforms/clearfog-arm64-image-build.sh
       - name: Compress image
         run: xz ./installer/data/spr.img
       - name: Create Release

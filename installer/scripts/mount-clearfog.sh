@@ -23,5 +23,3 @@ echo "+ root is $LOOP_ROOT"
 
 mkdir /mnt/fs
 mount $LOOP_ROOT /mnt/fs
-mkdir -p /mnt/boot/firmware 2>/dev/null
-mount $LOOP_BOOT /mnt/boot/firmware
