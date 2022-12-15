@@ -22,10 +22,10 @@ jobs:
         run: ./installer/qemu-setup-linux.sh
       - name: Download the image
         working-directory: ./installer
-        run: ./platforms/clearfog-download-img.sh
+        run: ./clearfog-download-img.sh
       - name: Build install image
         working-directory: ./installer
-        run: ./platforms/clearfog-arm64-image-build.sh
+        run: ./clearfog-arm64-image-build.sh
       - name: Compress image
         run: xz ./installer/data/spr.img
       - name: Create Release
