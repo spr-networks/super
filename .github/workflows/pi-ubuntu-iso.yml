@@ -21,6 +21,7 @@ jobs:
       - name: Set up Qemu emulation
         run: ./installer/qemu-setup-linux.sh
       - name: Download the image
+        working-directory: ./installer
         run: ./pi-download-img.sh
       - name: Build install image
         working-directory: ./installer
