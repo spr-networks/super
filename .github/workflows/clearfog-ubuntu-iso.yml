@@ -22,7 +22,7 @@ jobs:
         run: ./installer/qemu-setup-linux.sh
       - name: Download the image
         working-directory: ./installer
-        run: ./clearfog-download-img.sh
+        run: ./clearfog-download*
       - name: Build install image
         working-directory: ./installer
         run: ./clearfog-arm64-image-build.sh
