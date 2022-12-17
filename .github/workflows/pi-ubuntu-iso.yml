@@ -34,8 +34,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.RELEASE_VERSION_TAG }}
           release_name: Release ${{ env.RELEASE_VERSION_TAG }}
+          tag_name: ${{ env.RELEASE_VERSION_TAG }}
           draft: false
           prerelease: false
       - name: Upload Release Asset
