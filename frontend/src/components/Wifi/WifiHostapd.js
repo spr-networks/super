@@ -88,6 +88,13 @@ const default2Ghz = {
 const WifiHostapd = (props) => {
   const context = useContext(AlertContext)
   const [iface, setIface] = useState('wlan1')
+
+  wifiAPI
+    .defaultInterface()
+    .then((name) => {
+      setIface(name)
+    })
+      
   const [updated, setUpdated] = useState(false)
   const [config, setConfig] = useState({})
   const [devices, setDevices] = useState([])

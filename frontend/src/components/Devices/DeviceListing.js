@@ -73,22 +73,34 @@ const DeviceListing = (props) => {
 
         // TODO check wg status for virt
         if (!appContext.isWifiDisabled) {
-          let iface = 'wlan1' // NOTE hardcoded
-          wifiAPI
-            .allStations(iface)
-            .then((stations) => {
-              let connectedMACs = Object.keys(stations)
 
-              setDevices(
-                devices.map((dev) => {
-                  dev.isConnected = connectedMACs.includes(dev.MAC)
-                  return dev
-                })
-              )
+          //for each device
+
+          //for each interface
+
+          wifiAPI.interfacesConfiguration().then((config) => {
+            config.forEach((iface) => {
+              if (iface.Type == "AP" &&  iface.Enabled == true) {
+                wifiAPI
+                  .allStations(iface.Name)
+                  .then((stations) => {
+                    let connectedMACs = Object.keys(stations)
+
+                    setDevices(
+                      devices.map((dev) => {
+                        dev.isConnected = connectedMACs.includes(dev.MAC)
+                        return dev
+                      })
+                    )
+                  })
+                  .catch((err) => {
+                    context.error('WIFI API Failure', err)
+                  })
+              }
             })
-            .catch((err) => {
-              context.error('WIFI API Failure', err)
-            })
+          })
+
+
         }
       })
       .catch((err) => {
