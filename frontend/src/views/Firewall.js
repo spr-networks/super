@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { View, VStack } from 'native-base'
+import { ScrollView, View, VStack } from 'native-base'
 
 import { firewallAPI } from 'api'
 import ForwardList from 'components/Firewall/ForwardList'
@@ -24,7 +24,7 @@ export default class Firewall extends Component {
 
   render() {
     return (
-      <View>
+      <ScrollView>
         <VStack>
           <ForwardList
             list={this.state.config.ForwardingRules}
@@ -43,11 +43,9 @@ export default class Firewall extends Component {
             notifyChange={this.fetchConfig}
           />
 
-          <UpstreamServicesList
-            notifyChange={this.fetchConfig} />
-
+          <UpstreamServicesList notifyChange={this.fetchConfig} />
         </VStack>
-      </View>
+      </ScrollView>
     )
   }
 }
