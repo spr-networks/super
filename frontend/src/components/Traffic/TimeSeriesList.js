@@ -111,7 +111,8 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
   }
 
   return (
-    <FlatList
+    <FlashList
+      estimatedItemSize={100}
       data={list}
       renderItem={({ item }) => (
         <Box

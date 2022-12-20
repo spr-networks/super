@@ -267,7 +267,8 @@ const DeviceListing = (props) => {
         size="sm"
         icon={<Icon color="white" icon={faPlus} />}
         onPress={handleRedirect}
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+        _bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+        bg="primary.500"
       />
     </View>
   )

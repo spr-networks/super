@@ -135,45 +135,43 @@ const DNSLogList = ({ title, description, ...props }) => {
         />
       </HStack>
 
-      <Box rounded={{ md: 'md' }} width="100%" p={4} mb={4}>
-        {!list.length ? (
-          <VStack space={2}>
-            <Text alignSelf={'center'}>List is empty</Text>
-            <Button
-              variant="subtle"
-              colorScheme="muted"
-              leftIcon={<Icon icon={faCirclePlus} />}
-              onPress={() => setIsModalOpen(true)}
-            >
-              {`Add ${title.replace(/ List$/, '')}`}
-            </Button>
-          </VStack>
-        ) : null}
-        <FlatList
-          data={list}
-          keyExtractor={(item, index) => index}
-          estimatedItemSize={100}
-          renderItem={({ item }) => (
-            <HStack
-              p={4}
-              borderBottomWidth={1}
-              _light={{ bg: 'warmGray.50', borderBottomColor: 'muted.200' }}
-              _dark={{ bg: 'blueGray.800', borderBottomColor: 'muted.600' }}
-            >
-              <Text>{item}</Text>
-              <Text> {ip_to_name(item)}</Text>
-              <IconButton
-                variant="ghost"
-                colorScheme="secondary"
-                icon={<Icon icon={faTimes} />}
-                size="sm"
-                onPress={() => deleteListItem(item)}
-                marginLeft="auto"
-              />
-            </HStack>
-          )}
-        />
-      </Box>
+      {!list.length ? (
+        <VStack space={2}>
+          <Text alignSelf={'center'}>List is empty</Text>
+          <Button
+            variant="subtle"
+            colorScheme="muted"
+            leftIcon={<Icon icon={faCirclePlus} />}
+            onPress={() => setIsModalOpen(true)}
+          >
+            {`Add ${title.replace(/ List$/, '')}`}
+          </Button>
+        </VStack>
+      ) : null}
+      <FlatList
+        data={list}
+        keyExtractor={(item, index) => index}
+        estimatedItemSize={100}
+        renderItem={({ item }) => (
+          <HStack
+            p={4}
+            borderBottomWidth={1}
+            _light={{ bg: 'warmGray.50', borderBottomColor: 'muted.200' }}
+            _dark={{ bg: 'blueGray.800', borderBottomColor: 'muted.600' }}
+          >
+            <Text>{item}</Text>
+            {type == 'IP' ? <Text> {ip_to_name(item)}</Text> : null}
+            <IconButton
+              variant="ghost"
+              colorScheme="secondary"
+              icon={<Icon icon={faTimes} />}
+              size="sm"
+              onPress={() => deleteListItem(item)}
+              marginLeft="auto"
+            />
+          </HStack>
+        )}
+      />
     </>
   )
 }

@@ -1,3 +1,5 @@
+import { Platform } from 'react-native'
+
 import AddDevice from 'views/Devices/AddDevice'
 import ConnectDevice from 'views/Devices/ConnectDevice'
 import Arp from 'views/Devices/Arp'
@@ -136,14 +138,16 @@ const routes = [
         name: 'Bandwidth Summary',
         icon: faLineChart,
         component: Traffic,
-        layout: 'admin'
+        layout: 'admin',
+        hidden: Platform.OS == 'ios'
       },
       {
         path: 'timeseries',
         name: 'Bandwidth Timeseries',
         icon: faChartColumn,
         component: TrafficTimeSeries,
-        layout: 'admin'
+        layout: 'admin',
+        hidden: Platform.OS == 'ios'
       },
       {
         path: 'signal/strength',
