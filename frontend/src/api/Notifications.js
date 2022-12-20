@@ -5,10 +5,21 @@ export class APINotifications extends API {
     super('')
   }
 
-  list = () => this.get('/notifications')
-  add = (data) => this.put('/notifications', data)
-  update = (index, data) => this.put(`/notifications/${index}`, data)
-  remove = (index) => this.delete(`/notifications/${index}`, {})
+  list() {
+    return this.get('/notifications');
+  }
+
+  add(data) {
+    return this.put('/notifications', data);
+  }
+
+  update(index, data) {
+    return this.put(`/notifications/${index}`, data);
+  }
+
+  remove(index) {
+    return this.delete(`/notifications/${index}`, {});
+  }
 }
 
 export const notificationsAPI = new APINotifications()

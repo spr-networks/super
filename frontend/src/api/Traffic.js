@@ -5,7 +5,7 @@ export class APITraffic extends API {
     super('')
   }
 
-  traffic = (name = null) => {
+  traffic(name = null) {
     if (name) {
       return this.map(name)
     }
@@ -13,8 +13,8 @@ export class APITraffic extends API {
     return this.get('/iptraffic')
   }
 
-  map = (name) => this.get(`/traffic/${name}`)
-  history = () => this.get('/traffic_history')
+  map(name){ return this.get(`/traffic/${name}`)}
+  history(){ return this.get('/traffic_history') }
 }
 
 export const trafficAPI = new APITraffic()

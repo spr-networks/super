@@ -5,9 +5,9 @@ export class APIDynDns extends API {
     super('/plugins/dyndns/')
   }
 
-  config = () => this.get('config')
-  setConfig = (data) => this.put('config', data)
-  refresh = () => this.get('refresh')
+  config(){ return this.get('config') }
+  setConfig(data){ return his.put('config', data) }
+  refresh(){ return this.get('refresh') }
 }
 
 export const dyndnsAPI = new APIDynDns()

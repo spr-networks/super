@@ -6,13 +6,29 @@ export class APIWireguard extends API {
   }
 
   //config = () => this.get('/config')
-  peers = () => this.get('peers')
-  status = () => this.get('status')
-  genKey = () => this.get('genkey')
-  putPeer = (data) => this.put('peer', data)
-  deletePeer = (data) => this.delete('peer', data)
-  up = () => this.put('up')
-  down = () => this.put('down')
+  peers() {
+    return this.get('peers');
+  }
+  status() {
+    return this.get('status');
+  }
+  genKey() {
+    return this.get('genkey');
+  }
+  putPeer(data) {
+    return this.put('peer', data);
+  }
+  deletePeer(data) {
+    return this.delete('peer', data);
+  }
+  up() {
+    return this.put('up');
+  }
+  down() {
+    return this.put('down');
+  }
+
+
 }
 
 export const wireguardAPI = new APIWireguard()

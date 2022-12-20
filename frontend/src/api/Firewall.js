@@ -5,20 +5,37 @@ export class APIFirewall extends API {
     super('/firewall/')
   }
 
-  config = () => {return this.get('config')}
+  config() {
+    return this.get('config');
+  }
 
-  addForward = (data) => this.put('forward', data)
-  deleteForward = (data) => this.delete('forward', data)
+  addForward(data) {
+    return this.put('forward', data);
+  }
+  deleteForward(data) {
+    return this.delete('forward', data);
+  }
 
-  addBlock = (data) => this.put('block', data)
-  deleteBlock = (data) => this.delete('block', data)
+  addBlock(data) {
+    return this.put('block', data);
+  }
+  deleteBlock(data) {
+    return this.delete('block', data);
+  }
 
-  addForwardBlock = (data) => this.put('block_forward', data)
-  deleteForwardBlock = (data) => this.delete('block_forward', data)
+  addForwardBlock(data) {
+    return this.put('block_forward', data);
+  }
+  deleteForwardBlock(data) {
+    return this.delete('block_forward', data);
+  }
 
-  addServicePort = (data) => this.put('service_port', data)
-  deleteServicePort = (data) => this.delete('service_port', data)
-
+  addServicePort(data) {
+    return this.put('service_port', data);
+  }
+  deleteServicePort(data) {
+    return this.delete('service_port', data);
+  }
 }
 
 export const firewallAPI = new APIFirewall()

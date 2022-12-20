@@ -128,7 +128,6 @@ class API {
     }
 
     let _url = `${baseURL}${url}`
-
     return fetch(_url, opts)
   }
 
