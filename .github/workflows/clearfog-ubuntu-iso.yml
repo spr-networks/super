@@ -22,7 +22,7 @@ jobs:
         run: ./installer/qemu-setup-linux.sh
       - name: Download the image
         working-directory: ./installer
-        run: ./clearfog-download-img.sh
+        run: ./clearfog-download*
       - name: Build install image
         working-directory: ./installer
         run: ./clearfog-arm64-image-build.sh
@@ -34,8 +34,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.RELEASE_VERSION_TAG }}
           release_name: Release ${{ env.RELEASE_VERSION_TAG }}
+          tag_name: ${{ env.RELEASE_VERSION_TAG }}
           draft: false
           prerelease: false
       - name: Upload Release Asset

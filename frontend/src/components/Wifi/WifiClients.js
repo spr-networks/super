@@ -11,6 +11,12 @@ import { FlashList } from '@shopify/flash-list'
 const WifiClients = (props) => {
   const [iface, setIface] = useState('wlan1')
 
+  wifiAPI
+    .defaultInterface()
+    .then((name) => {
+      setIface(name)
+    })
+    
   const [clients, setClients] = useState([])
   const context = useContext(AlertContext)
 
@@ -40,6 +46,7 @@ const WifiClients = (props) => {
 
     return suites[suite] || 'unknown'
   }
+
 
   const refreshClients = async () => {
     const stations = await wifiAPI.allStations(iface).catch((error) => {
