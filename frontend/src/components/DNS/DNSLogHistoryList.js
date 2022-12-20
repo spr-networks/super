@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Dimensions } from 'react-native'
+import { Dimensions, Platform } from 'react-native'
 import PropTypes from 'prop-types'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import Icon from 'FontAwesomeUtils'
@@ -26,6 +26,7 @@ import {
   Box,
   Button,
   FlatList,
+  Flex,
   FormControl,
   Heading,
   IconButton,
@@ -81,7 +82,9 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
   return (
     <Box
       borderBottomWidth={1}
+      _light={{ bg: 'warmGray.50' }}
       _dark={{
+        bg: 'blueGray.800',
         borderColor: 'muted.600'
       }}
       borderColor="muted.200"
@@ -368,10 +371,9 @@ const DNSLogHistoryList = (props) => {
     setListFiltered(filterList())
   }, [list, filterText, page])
 
-  let h = Dimensions.get('window').height - 64
-
+  let h = Platform.OS == 'web' ? Dimensions.get('window').height - 64 : '100%'
   return (
-    <View h={h}>
+    <View h={h} display="flex">
       <ModalForm
         title={
           'Add ' +
@@ -396,110 +398,97 @@ const DNSLogHistoryList = (props) => {
         ) : null}
       </HStack>
 
-      <Box
+      <Stack
         _light={{ bg: 'warmGray.50' }}
         _dark={{ bg: 'blueGray.800' }}
-        width="100%"
         p={4}
+        space={2}
+        direction={{ base: 'column', md: 'row' }}
+        flex={{ base: 1, md: 'none' }}
       >
-        <Stack
-          space={2}
-          direction={{ base: 'column', md: 'row' }}
-          h={{ base: '260', md: 'auto' }}
+        <FormControl flex={2} maxW={{ base: '100%', md: '1/3' }}>
+          <FormControl.Label>Client</FormControl.Label>
+          <ClientSelect
+            isDisabled
+            value={filterIps ? filterIps[0] : null}
+            onChange={handleChangeIp}
+          />
+        </FormControl>
+
+        <FormControl
+          flex={2}
+          display={{
+            base: filterIps.length && list.length ? 'flex' : 'none'
+          }}
         >
-          <FormControl flex={2} maxW={{ base: '100%', md: '1/3' }}>
-            <FormControl.Label>Client</FormControl.Label>
-            <ClientSelect
-              isDisabled
-              value={filterIps ? filterIps[0] : null}
-              onChange={handleChangeIp}
+          <>
+            <FormControl.Label>Search</FormControl.Label>
+
+            <Input
+              type="text"
+              name="filterText"
+              size="lg"
+              placeholder="Filter domain..."
+              value={filterText}
+              onChangeText={handleChange}
+              InputRightElement={
+                <Icon icon={faMagnifyingGlass} color="muted.400" mr={2} />
+              }
             />
-          </FormControl>
+          </>
+        </FormControl>
 
-          <FormControl
-            flex={2}
-            display={{
-              base: filterIps.length && list.length ? 'flex' : 'none'
-            }}
+        <FormControl
+          flex={{ base: 2, md: 1 }}
+          display={{
+            base: filterIps.length && list.length ? 'flex' : 'none'
+          }}
+        >
+          <FormControl.Label display={{ base: 'none', md: 'flex' }}>
+            Delete history
+          </FormControl.Label>
+          <Button
+            size="md"
+            variant="subtle"
+            colorScheme="danger"
+            leftIcon={<Icon icon={faTrash} />}
+            onPress={deleteHistory}
           >
-            <>
-              <FormControl.Label>Search</FormControl.Label>
+            Delete
+          </Button>
+        </FormControl>
+      </Stack>
 
-              <Input
-                type="text"
-                name="filterText"
-                size="lg"
-                placeholder="Filter domain..."
-                value={filterText}
-                onChangeText={handleChange}
-                InputRightElement={
-                  <Icon icon={faMagnifyingGlass} color="muted.400" mr={2} />
-                }
-              />
-            </>
-          </FormControl>
+      <FlashList
+        estimatedItemSize={100}
+        flex={2}
+        data={listFiltered}
+        renderItem={({ item, index }) => (
+          <ListItem
+            item={item}
+            hideClient={hideClient}
+            handleClickDomain={handleClickDomain}
+            triggerAlert={triggerAlert}
+          />
+        )}
+        keyExtractor={(item) => item.Timestamp + item.Remote}
+      />
 
-          <FormControl
-            flex={{ base: 2, md: 1 }}
-            display={{
-              base: filterIps.length && list.length ? 'flex' : 'none'
-            }}
+      {total > 20 ? (
+        <HStack h={{ base: 20, md: 'auto' }} space={2} alignItems="flex-start">
+          <Button
+            flex={1}
+            variant="ghost"
+            isDisabled={page <= 1}
+            onPress={() => setPage(page > 1 ? page - 1 : 1)}
           >
-            <>
-              <FormControl.Label>Delete history</FormControl.Label>
-              <Button
-                size="md"
-                variant="subtle"
-                colorScheme="danger"
-                leftIcon={<Icon icon={faTrash} />}
-                onPress={deleteHistory}
-              >
-                Delete
-              </Button>
-            </>
-          </FormControl>
-        </Stack>
-
-        {/*filterIps.length && !list.length ? (
-            <HStack space={1}>
-              <Spinner
-                alignSelf="flex-start"
-                accessibilityLabel="Loading DNS logs..."
-              />
-              <Text color="muted.500">Loading DNS logs...</Text>
-            </HStack>
-          ) : null*/}
-
-        <FlatList
-          h={{ base: '40%', md: 'auto' }}
-          data={listFiltered}
-          renderItem={({ item, index }) => (
-            <ListItem
-              item={item}
-              hideClient={hideClient}
-              handleClickDomain={handleClickDomain}
-              triggerAlert={triggerAlert}
-            />
-          )}
-          keyExtractor={(item) => item.Timestamp + item.Remote}
-        />
-
-        {total > 20 ? (
-          <HStack h={{ base: '10%', md: 'auto' }} space={2}>
-            <Button
-              flex={1}
-              variant="ghost"
-              isDisabled={page <= 1}
-              onPress={() => setPage(page > 1 ? page - 1 : 1)}
-            >
-              &larr; Previous
-            </Button>
-            <Button flex="1" variant="ghost" onPress={() => setPage(page + 1)}>
-              Next &rarr;
-            </Button>
-          </HStack>
-        ) : null}
-      </Box>
+            &larr; Previous
+          </Button>
+          <Button flex={1} variant="ghost" onPress={() => setPage(page + 1)}>
+            Next &rarr;
+          </Button>
+        </HStack>
+      ) : null}
     </View>
   )
 }

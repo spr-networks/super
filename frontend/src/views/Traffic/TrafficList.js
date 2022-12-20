@@ -13,7 +13,8 @@ import {
   useColorModeValue,
   SectionList,
   createIcon,
-  ScrollView
+  ScrollView,
+  View
 } from 'native-base'
 
 import { AlertContext } from 'layouts/Admin'
@@ -195,11 +196,6 @@ const TrafficList = (props) => {
     setListFiltered(filterList(list))
   }, [asns, page])
 
-  const flexDirection = useBreakpointValue({
-    base: 'column',
-    lg: 'row'
-  })
-
   let types = ['WanOut', 'WanIn', 'LanIn', 'LanOut']
 
   const handleChangeClient = (ip) => {
@@ -207,84 +203,77 @@ const TrafficList = (props) => {
   }
 
   return (
-    <>
-      <Box
+    <View h="100%" display="flex">
+      <Stack
+        direction={{ base: 'column', lg: 'row' }}
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        width="100%"
+        minH={{ base: 180, lg: 60 }}
         p={4}
-        pb={0}
+        space={2}
       >
-        <Stack direction={flexDirection} space={2}>
-          <Radio.Group
-            flex={1}
-            name="trafficType"
-            defaultValue={type}
-            accessibilityLabel="select type"
-            onChange={(type) => {
-              setFilterIps([])
-              setType(type)
-            }}
-          >
-            <HStack alignItems="center" space={2}>
-              {types.map((type) => (
-                <Radio
-                  key={type}
-                  value={type}
-                  colorScheme="primary"
-                  size="sm"
-                  _text={{ fontSize: 'xs' }}
-                  my={1}
-                >
-                  {type.replace(/(In|Out)/, ' $1')}
-                </Radio>
-              ))}
-            </HStack>
-          </Radio.Group>
-          <Box flex={1}>
-            <ClientSelect
-              value={filterIps}
-              onChange={handleChangeClient}
-              onSubmitEditing={handleChangeClient}
-            />
-          </Box>
-        </Stack>
-      </Box>
-      <Box
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        width="100%"
-        px={4}
-        py={2}
-      >
-        <ScrollView h="100%">
-          <TimeSeriesList
-            type={type}
-            data={listFiltered}
-            offset={offset}
-            filterIps={filterIps}
-            setFilterIps={setFilterIps}
+        <Radio.Group
+          flex={1}
+          name="trafficType"
+          defaultValue={type}
+          accessibilityLabel="select type"
+          onChange={(type) => {
+            setFilterIps([])
+            setType(type)
+          }}
+        >
+          <HStack alignItems="center" space={2}>
+            {types.map((type) => (
+              <Radio
+                key={type}
+                value={type}
+                colorScheme="primary"
+                size="sm"
+                _text={{ fontSize: 'xs' }}
+                my={1}
+              >
+                {type.replace(/(In|Out)/, ' $1')}
+              </Radio>
+            ))}
+          </HStack>
+        </Radio.Group>
+        <Box flex={1}>
+          <ClientSelect
+            value={filterIps}
+            onChange={handleChangeClient}
+            onSubmitEditing={handleChangeClient}
           />
-          {total > perPage ? (
-            <HStack width="100%" space={2}>
-              <Button
-                flex="1"
-                variant="unstyled"
-                isDisabled={page <= 1}
-                onPress={() => setPage(page > 1 ? page - 1 : 1)}
-              >
-                &larr; Previous
-              </Button>
-              <Button
-                flex="1"
-                variant="unstyled"
-                onPress={() => setPage(page + 1)}
-              >
-                Next &rarr;
-              </Button>
-            </HStack>
-          ) : null}
-        </ScrollView>
+        </Box>
+      </Stack>
+
+      <Box
+        flex={2}
+        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+        px={4}
+      >
+        <TimeSeriesList
+          type={type}
+          data={listFiltered}
+          offset={offset}
+          filterIps={filterIps}
+          setFilterIps={setFilterIps}
+        />
       </Box>
-    </>
+      {total > perPage ? (
+        <HStack h={{ base: 20, md: 'auto' }} space={2} alignItems="flex-start">
+          <Button
+            flex={1}
+            variant="ghost"
+            isDisabled={page <= 1}
+            onPress={() => setPage(page > 1 ? page - 1 : 1)}
+          >
+            &larr; Previous
+          </Button>
+          <Button flex={1} variant="ghost" onPress={() => setPage(page + 1)}>
+            Next &rarr;
+          </Button>
+        </HStack>
+      ) : null}
+    </View>
   )
 }
 

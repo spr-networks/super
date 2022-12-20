@@ -15,6 +15,7 @@ import {
   AlertDialog,
   Box,
   Button,
+  Flex,
   Slide,
   IconButton,
   CloseIcon,
@@ -399,6 +400,7 @@ const AdminLayout = (props) => {
       }}
     >
       <Box
+        display={{ base: 'flex' }}
         w="100%"
         h="100%" // md: '100vh'
         __alignItems="center"
@@ -440,7 +442,7 @@ const AdminLayout = (props) => {
           />
         </Box>
 
-        <HStack h={heightContent}>
+        <HStack>
           {/*desktop*/}
           <Box
             display={{ base: 'none', md: 'flex' }}
@@ -459,8 +461,6 @@ const AdminLayout = (props) => {
           {/*mobile*/}
           {isOpenSidebar ? (
             <Box
-              __position="absolute"
-              __h={heightContent}
               w="100%"
               zIndex={99}
               display={{ base: 'flex', md: 'none' }}
@@ -482,7 +482,7 @@ const AdminLayout = (props) => {
           {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
           {/*h="calc(100% - 64px)"
                minH="calc(100vh - 64px)"*/}
-          <Box flex={1} ref={mainPanel}>
+          <Box flex={1} ref={mainPanel} pb={10}>
             <Outlet />
             {/*NOTE footer should not be visible - outside of the view and show when scroll to bottom to use the most space*/}
             {/*<Footer />*/}
