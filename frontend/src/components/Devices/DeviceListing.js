@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
-import { deviceAPI, wifiAPI } from 'api'
+import { deviceAPI, wifiAPI, meshAPI, } from 'api'
+import APIWifi from 'api/Wifi'
 import { useNavigate } from 'react-router-dom'
 import Device from 'components/Devices/Device'
 import { AlertContext } from 'layouts/Admin'
@@ -73,11 +74,7 @@ const DeviceListing = (props) => {
 
         // TODO check wg status for virt
         if (!appContext.isWifiDisabled) {
-
-          //for each device
-
           //for each interface
-
           wifiAPI.interfacesConfiguration().then((config) => {
             config.forEach((iface) => {
               if (iface.Type == "AP" &&  iface.Enabled == true) {
@@ -88,7 +85,12 @@ const DeviceListing = (props) => {
 
                     setDevices(
                       devices.map((dev) => {
-                        dev.isConnected = connectedMACs.includes(dev.MAC)
+                        if (dev.isConnected == false) {
+                          dev.isConnected = connectedMACs.includes(dev.MAC)
+                          if (dev.isConnected) {
+                            alert(dev.MAC)
+                          }
+                        }
                         return dev
                       })
                     )
@@ -100,6 +102,31 @@ const DeviceListing = (props) => {
             })
           })
 
+          meshAPI.meshIter(new APIWifi()).then(r => r.forEach(remoteWifiApi => {
+            remoteWifiApi.interfacesConfiguration.call(remoteWifiApi).then((config) => {
+              config.forEach((iface) => {
+                if (iface.Type == "AP" &&  iface.Enabled == true) {
+                  remoteWifiApi
+                    .allStations.call(remoteWifiApi, iface.Name)
+                    .then((stations) => {
+                      let connectedMACs = Object.keys(stations)
+                      setDevices(
+                        devices.map((dev) => {
+                          if (dev.isConnected !== true) {
+                            dev.isConnected = connectedMACs.includes(dev.MAC)
+                          }
+                          return dev
+                        })
+                      )
+                    })
+                    .catch((err) => {
+                      context.error('WIFI API Failure ' + remoteWifiApi.remoteURL + " " + iface.Name, err)
+                    })
+                }
+              })
+            })
+
+          }))
 
         }
       })
@@ -240,7 +267,8 @@ const DeviceListing = (props) => {
         size="sm"
         icon={<Icon color="white" icon={faPlus} />}
         onPress={handleRedirect}
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+        _bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+        bg="primary.500"
       />
     </View>
   )

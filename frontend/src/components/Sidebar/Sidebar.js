@@ -126,6 +126,10 @@ const SidebarItem = (props) => {
       display.base = 'none'
     }
 
+    if (item.hidden) {
+      display.base = 'none'
+    }
+
     return (
       <Box key={index} w="100%" display={display}>
         {item.views === undefined ? (

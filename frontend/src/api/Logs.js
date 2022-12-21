@@ -5,7 +5,7 @@ export class APILogs extends API {
     super('/')
   }
 
-  latest = () => this.get('logs')
+  latest(){ return this.get('logs') }
 }
 
 export const logsAPI = new APILogs()

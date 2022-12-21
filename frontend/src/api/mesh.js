@@ -5,14 +5,53 @@ export default class APIMesh extends API {
     super('/plugins/mesh/')
   }
 
-  config = () => this.get(`config`)
-  leafMode = () => this.get(`leafMode`)
-  setLeafMode = (mode) => this.put(`leafMode/${mode}`)
-  leafRouters = () => this.get(`leafRouters`)
-  addLeafRouter = (data) => this.put(`leafRouter`, data)
-  delLeafRouter = (data) => this.delete(`leafRouter`, data)
-  setParentCredentials = (data) => this.put(`setParentCredentials`, data)
-  setSSID = (data) => this.put(`setSSID`, data)
+  config() {
+    return this.get(`config`);
+  }
+
+  leafMode() {
+    return this.get(`leafMode`);
+  }
+
+  setLeafMode(mode) {
+    return this.put(`leafMode/${mode}`);
+  }
+
+  leafRouters() {
+    return this.get(`leafRouters`);
+  }
+
+  addLeafRouter(data) {
+    return this.put(`leafRouter`, data);
+  }
+
+  delLeafRouter(data) {
+    return this.delete(`leafRouter`, data);
+  }
+
+  setParentCredentials(data) {
+    return this.put(`setParentCredentials`, data);
+  }
+
+  setSSID(data) {
+    return this.put(`setSSID`, data);
+  }
+
+  meshIter(rApi) {
+    return this.leafRouters().then((routers) => {
+      if (routers == null) {
+        return
+      }
+      let apis = []
+      for (let i = 0; i < routers.length; i++) {
+        let r = Object.assign(Object.create(Object.getPrototypeOf(rApi)), rApi)
+        r.setRemoteURL('http://' + routers[i].IP + '/')
+        r.setAuthTokenHeaders(routers[i].APIToken)
+        apis.push(r)
+      }
+      return apis
+    })
+  }
 }
 
 export const meshAPI = new APIMesh()

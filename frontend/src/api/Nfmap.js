@@ -20,7 +20,7 @@ export class APINfmap extends API {
     return n + '_mac_src_access'
   }
 
-  getNFVerdictMap = (group) => {
+  getNFVerdictMap(group) {
     return this.get('/' + this.translate(group)).then((v) => {
       let vmap = v.nftables[1].map
       let results = []

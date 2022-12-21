@@ -62,7 +62,7 @@ export default class Groups extends Component {
 
   render() {
     return (
-      <View>
+      <View h="100%">
         <VStack space={8}>
           {this.state.groups.map((group) => (
             <GroupListing key={group.Name} group={group} />

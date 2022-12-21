@@ -5,14 +5,32 @@ export class APIPlugin extends API {
     super('')
   }
 
-  list = () => this.get('/plugins')
-  add = (data) => this.put(`/plugins/${data.Name}`, data)
-  update = (data) => this.add(data)
-  remove = (data) => this.delete(`/plugins/${data.Name}`, data)
-  getPlusToken = () => this.get('/plusToken')
-  setPlusToken = (data) => this.put('/plusToken', data)
-  stopPlusExtension = (name) => this.put(`/stopPlusExtension`, name)
-  startPlusExtension = (name) => this.put(`/startPlusExtension`, name)
+  list() {
+    return this.get('/plugins');
+  }
+  add(data) {
+    return this.put(`/plugins/${data.Name}`, data);
+  }
+  update(data) {
+    return this.add(data);
+  }
+  remove(data) {
+    return this.delete(`/plugins/${data.Name}`, data);
+  }
+  getPlusToken() {
+    return this.get('/plusToken');
+  }
+  setPlusToken(data) {
+    return this.put('/plusToken', data);
+  }
+  stopPlusExtension(name) {
+    return this.put(`/stopPlusExtension`, name);
+  }
+  startPlusExtension(name) {
+    return this.put(`/startPlusExtension`, name);
+  }
+
+
 }
 
 export const pluginAPI = new APIPlugin()

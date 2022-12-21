@@ -5,6 +5,7 @@ import {
   Heading,
   HStack,
   View,
+  ScrollView,
   SectionList,
   Text,
   VStack
@@ -60,9 +61,9 @@ const Tags = (props) => {
   }, [])
 
   return (
-    <View>
-      <VStack space={4}>
-        <Heading size="md" p={4}>
+    <ScrollView>
+      <VStack space={2}>
+        <Heading size="sm" p={4}>
           Tags
         </Heading>
 
@@ -75,18 +76,7 @@ const Tags = (props) => {
             </Box>
           )}
           renderItem={({ item, section }) => (
-            <Box
-              bg="backgroundCardLight"
-              p={2}
-              borderBottomWidth={1}
-              borderBottomColor="muted.200"
-              _dark={{
-                bg: 'backgroundCardDark',
-                borderBottomColor: 'muted.700'
-              }}
-            >
-              <Device device={item} edit={false} />
-            </Box>
+            <Device device={item} edit={false} />
           )}
           keyExtractor={(item, index) => `${index}`}
         />
@@ -95,7 +85,7 @@ const Tags = (props) => {
           <Text>No tags configured for devices or services</Text>
         ) : null}
       </VStack>
-    </View>
+    </ScrollView>
   )
 }
 

@@ -5,13 +5,13 @@ export class APIDNSBlock extends API {
     super('/plugins/dns/block')
   }
 
-  config = () => this.get('/config')
-  blocklists = () => this.get('/blocklists')
-  putBlocklist = (data) => this.put('/blocklists', data)
-  deleteBlocklist = (data) => this.delete('/blocklists', data)
-  putOverride = (data) => this.put('/override', data)
-  deleteOverride = (data) => this.delete('/override', data)
-  metrics = () => this.get('/metrics')
+  config(){ return this.get('/config') }
+  blocklists() { return  this.get('/blocklists')}
+  putBlocklist(data) { return this.put('/blocklists', data) }
+  deleteBlocklist(data) { return this.delete('/blocklists', data) }
+  putOverrid(data) { return this.put('/override', data) }
+  deleteOverride(data) { return this.delete('/override', data) }
+  metrics(){ return this.get('/metrics') }
 }
 
 export class APIDNSLog extends API {
@@ -19,15 +19,35 @@ export class APIDNSLog extends API {
     super('/plugins/dns/log')
   }
 
-  config = () => this.get('/config')
-  hostPrivacyList = () => this.get('/host_privacy_list')
-  putHostPrivacyList = (data) => this.put('/host_privacy_list', data)
-  domainIgnores = () => this.get('/domain_ignores')
+  config() {
+    return this.get('/config');
+  }
+
+  hostPrivacyList() {
+    return this.get('/host_privacy_list');
+  }
+
+  putHostPrivacyList(data) {
+    return this.put('/host_privacy_list', data);
+  }
+
+  domainIgnores() {
+    return this.get('/domain_ignores');
+  }
+
   //putDomainIgnores = (data) => this.put(`/domain_ignores`, data)
-  putDomainIgnore = (item) => this.put(`/domain_ignore/${item}`, {})
-  deleteDomainIgnore = (item) => this.delete(`/domain_ignore/${item}`, {})
-  history = (ip) => this.get(`/history/${ip}`, {})
-  deleteHistory = (ip) => this.delete(`/history/${ip}`)
+  putDomainIgnore(item) {
+    return this.put(`/domain_ignore/${item}`, {});
+  }
+  deleteDomainIgnore(item) {
+    return this.delete(`/domain_ignore/${item}`, {});
+  }
+  history(ip) {
+    return this.get(`/history/${ip}`, {});
+  }
+  deleteHistory(ip) {
+    return this.delete(`/history/${ip}`);
+  }
 }
 
 export const blockAPI = new APIDNSBlock()

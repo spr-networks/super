@@ -708,11 +708,14 @@ const FlowList = (props) => {
       h={h}
     >
       <Box w={{ md: '2/3' }}>
-        <HStack justifyContent="space-between" alignContent="center" px={4}>
-          <VStack space={2}>
-            <Heading fontSize="md">Flows</Heading>
-            {!flows.length ? <Text>No flows configured</Text> : null}
-          </VStack>
+        <HStack
+          justifyContent="space-between"
+          alignContent="center"
+          p={4}
+          space={2}
+        >
+          <Heading fontSize="md">Flows</Heading>
+          {!flows.length ? <Text>No flows configured</Text> : null}
         </HStack>
 
         <FlatList
@@ -724,7 +727,7 @@ const FlowList = (props) => {
                 borderColor: 'muted.600'
               }}
               borderColor="muted.200"
-              py={2}
+              py={1}
             >
               <Flow
                 edit={false}

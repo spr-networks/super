@@ -5,8 +5,8 @@ export class APIGroup extends API {
     super('')
   }
 
-  list = () => this.get('/groups')
-  groups = () => this.get('/groups').then((res) => res.map((g) => g.Name))
+  list() { return this.get('/groups') }
+  groups() { return this.get('/groups').then((res) => res.map((g) => g.Name)) }
 }
 
 export const groupDescriptions = {
