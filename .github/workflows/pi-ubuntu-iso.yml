@@ -14,12 +14,10 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
-        with:
-          fetch-depth: '0'
       - name: Fetch tags
         run:  git fetch --tags
       - name: Get version from git
-        run: echo "RELEASE_VERSION_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+        run: echo "RELEASE_VERSION_TAG=$(git tag --contains $(git rev-parse HEAD) | grep -v clearfog)" >> $GITHUB_ENV
       - name: Set up Qemu emulation
         run: ./installer/qemu-setup-linux.sh
       - name: Download the image
