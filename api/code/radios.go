@@ -119,6 +119,10 @@ type HostapdConfigEntry struct {
 	He_oper_centr_freq_seg0_idx  int
 	Vht_oper_chwidth             int
 	He_oper_chwidth              int
+	Bss_transition               int
+	Time_advertisement           int
+	Rrm_neighbor_report          int
+	Rrm_beacon_report            int
 }
 
 func RunHostapdAllStations(iface string) (map[string]map[string]string, error) {
@@ -501,6 +505,26 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	if _, ok := newInput["He_mu_beamformer"]; ok {
 		conf["he_mu_beamformer"] = newConf.He_mu_beamformer
+		needRestart = true
+	}
+
+	if _, ok := newInput["Rrm_neighbor_report"]; ok {
+		conf["rrm_neighbor_report"] = newConf.Rrm_neighbor_report
+		needRestart = true
+	}
+
+	if _, ok := newInput["Rrm_beacon_report"]; ok {
+		conf["rrm_beacon_report"] = newConf.Rrm_beacon_report
+		needRestart = true
+	}
+
+	if _, ok := newInput["Bss_transition"]; ok {
+		conf["bss_transition"] = newConf.Bss_transition
+		needRestart = true
+	}
+
+	if _, ok := newInput["Time_advertisement"]; ok {
+		conf["time_advertisement"] = newConf.Time_advertisement
 		needRestart = true
 	}
 
