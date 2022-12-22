@@ -1,7 +1,7 @@
 #!/bin/bash
 apt-get update
 apt-get -y upgrade
-apt-get -y install docker.io docker-compose nftables wireless-regdb
+apt-get -y install docker.io docker-compose nftables wireless-regdb conntrack
 
 if grep --quiet Raspberry /proc/cpuinfo; then
   apt-get -y install linux-modules-extra-raspi
