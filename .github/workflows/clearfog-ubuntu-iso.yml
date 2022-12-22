@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
       - name: Fetch tags
         run:  git fetch --tags
       - name: Get version from git
@@ -35,7 +37,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           release_name: Clearfog Release ${{ env.RELEASE_VERSION_TAG }}
-          tag_name: ${{ env.RELEASE_VERSION_TAG }}
+          tag_name: clearfog-${{ env.RELEASE_VERSION_TAG }}
           draft: false
           prerelease: false
       - name: Upload Release Asset
