@@ -8,5 +8,5 @@ cd data
 CONTAINERS=$(docker images "ghcr.io/spr-networks/*:latest" | awk '{print $1}' | grep -v REPOSITORY)
 for x in $CONTAINERS
 do
-  docker save $x -o containers/$(basename $x).tar
+  docker save $x | gzip > containers/$(basename $x).tar.gz
 done
