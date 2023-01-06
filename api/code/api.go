@@ -1189,6 +1189,8 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 
 	WSNotifyValue("DHCPUpdateRequest", dhcp)
 
+	notifyFirewallDHCP(val)
+
 	// update local mappings file for DNS
 	updateLocalMappings(dhcp.IP, dhcp.Name)
 
@@ -1324,11 +1326,9 @@ func refreshDeviceGroups(dev DeviceEntry) {
 	if ipv4 == "" {
 		//check arp tables for the MAC to get the IP
 		arp_entry, err := GetArpEntryFromMAC(dev.MAC)
-		if err != nil {
-			fmt.Println("Arp entry not found, insufficient information to refresh", dev.MAC)
-			return
+		if err == nil {
+			ipv4 = arp_entry.IP
 		}
-		ipv4 = arp_entry.IP
 	}
 
 	//check dhcp vmap for the interface
@@ -1344,7 +1344,7 @@ func refreshDeviceGroups(dev DeviceEntry) {
 	}
 
 	if ifname == "" {
-		fmt.Println("dhcp_access entry not found, route not found, insufficient information to refresh", dev.MAC)
+		fmt.Println("dhcp_access entry not found, route not found, insufficient information to refresh", dev.RecentIP)
 		return
 	}
 

@@ -1066,7 +1066,6 @@ func getRouteInterface(IP string) string {
 	output, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("ip route failed", err)
 		return ""
 	}
 
