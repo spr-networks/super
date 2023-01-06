@@ -1008,11 +1008,7 @@ func updateArp(Ifname string, IP string, MAC string) {
 }
 
 func updateAddr(Router string, Ifname string) {
-	err := exec.Command("ip", "addr", "add", Router+"/30", "dev", Ifname).Run()
-	if err != nil {
-		fmt.Println("update addr failed", Router, Ifname, err)
-		return
-	}
+	exec.Command("ip", "addr", "add", Router+"/30", "dev", Ifname).Run()
 }
 
 func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
