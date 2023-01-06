@@ -913,6 +913,22 @@ func getWireguardClient() http.Client {
 	return c
 }
 
+// map of wg pubkeys to time of last DHCP
+var RecentDHCPWG = map[string]int64{}
+
+func notifyFirewallDHCP(device DeviceEntry) {
+	if device.WGPubKey == "" {
+		return
+	}
+
+	cur_time := time.Now().Unix()
+
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	RecentDHCPWG[device.WGPubKey] = cur_time
+}
+
 func getWireguardActivePeers() []string {
 	var data map[string]interface{}
 	var data2 map[string]interface{}
@@ -953,20 +969,32 @@ func getWireguardActivePeers() []string {
 	//iterate through peers
 	data2 = data["wg0"].(map[string]interface{})
 	data3 = data2["peers"].(map[string]interface{})
-	for _, entry := range data3 {
+	for pubkey, entry := range data3 {
 		data4 = entry.(map[string]interface{})
 		ts := data4["latestHandshake"]
 		if ts != nil {
 			t := int64(ts.(float64))
 			// Clients with a handshake time less than 3 minutes ago are active.
-			if (cur_time - t) < (60 * 3) {
-				data5 = data4["allowedIps"].([]interface{})
-				if data5 != nil && len(data5) > 0 {
-					var s string = data5[0].(string)
-					if s != "" {
-						pieces := strings.Split(s, "/")
-						handshakes = append(handshakes, pieces[0])
-					}
+			if (cur_time - t) > (60 * 3) {
+				continue
+			}
+
+			// locking for access to RecentDHCPWG
+			FWmtx.Lock()
+			last_dhcp := RecentDHCPWG[pubkey]
+			FWmtx.Unlock()
+
+			//dhcp was more recent, skip wireguard for this route
+			if last_dhcp > t {
+				continue
+			}
+
+			data5 = data4["allowedIps"].([]interface{})
+			if data5 != nil && len(data5) > 0 {
+				var s string = data5[0].(string)
+				if s != "" {
+					pieces := strings.Split(s, "/")
+					handshakes = append(handshakes, pieces[0])
 				}
 			}
 		}
