@@ -915,11 +915,11 @@ func getWireguardClient() http.Client {
 
 func getWireguardActivePeers() []string {
 	var data map[string]interface{}
-  var data2 map[string]interface{}
-  var data3 map[string]interface{}
-  var data4 map[string]interface{}
+	var data2 map[string]interface{}
+	var data3 map[string]interface{}
+	var data4 map[string]interface{}
 	var data5 []interface{}
-  handshakes := []string{}
+	handshakes := []string{}
 
 	req, err := http.NewRequest(http.MethodGet, "http://api-wg/status", nil)
 	if err != nil {
@@ -952,12 +952,12 @@ func getWireguardActivePeers() []string {
 
 	//iterate through peers
 	data2 = data["wg0"].(map[string]interface{})
-  data3 = data2["peers"].(map[string]interface{})
-  for _, entry := range data3 {
-    data4 = entry.(map[string]interface{})
-    ts := data4["latestHandshake"]
-    if ts != nil {
-      t := int64(ts.(float64))
+	data3 = data2["peers"].(map[string]interface{})
+	for _, entry := range data3 {
+		data4 = entry.(map[string]interface{})
+		ts := data4["latestHandshake"]
+		if ts != nil {
+			t := int64(ts.(float64))
 			// Clients with a handshake time less than 3 minutes ago are active.
 			if (cur_time - t) < (60 * 3) {
 				data5 = data4["allowedIps"].([]interface{})
@@ -969,8 +969,8 @@ func getWireguardActivePeers() []string {
 					}
 				}
 			}
-    }
-  }
+		}
+	}
 
 	return handshakes
 }
@@ -1027,7 +1027,7 @@ func getUplinkInterface() string {
 }
 
 type RouteEntry struct {
-	Dst   string `json:"dst"`
+	Dst string `json:"dst"`
 	Dev string `json:"dev"`
 }
 
@@ -1054,7 +1054,6 @@ func getRouteInterface(IP string) string {
 
 	return ""
 }
-
 
 func dynamicRouteLoop() {
 	//mesh APs do not need routes, as they use the bridge
@@ -1119,7 +1118,6 @@ func dynamicRouteLoop() {
 					continue
 				}
 
-
 				routeIP := entry.RecentIP
 				is_tiny, newIP := toTinyIP(entry.RecentIP, 2)
 				_, router := toTinyIP(entry.RecentIP, 1)
@@ -1166,7 +1164,6 @@ func dynamicRouteLoop() {
 		}
 	}
 }
-
 
 func initUserFirewallRules() {
 	SyncBaseContainer()
