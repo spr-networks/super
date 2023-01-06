@@ -918,7 +918,7 @@ func getWireguardActivePeers() []string {
   var data2 map[string]interface{}
   var data3 map[string]interface{}
   var data4 map[string]interface{}
-	var data5 []string
+	var data5 []interface{}
   handshakes := []string{}
 
 	req, err := http.NewRequest(http.MethodGet, "http://api-wg/status", nil)
@@ -960,10 +960,13 @@ func getWireguardActivePeers() []string {
       t := int64(ts.(float64))
 			// Clients with a handshake time less than 3 minutes ago are active.
 			if (cur_time - t) < (60 * 3) {
-				data5 = data4["allowedIps"].([]string)
+				data5 = data4["allowedIps"].([]interface{})
 				if data5 != nil && len(data5) > 0 {
-					pieces := strings.Split(data5[0], "/")
-					handshakes = append(handshakes, pieces[0])
+					var s string = data5[0].(string)
+					if s != "" {
+						pieces := strings.Split(s, "/")
+						handshakes = append(handshakes, pieces[0])
+					}
 				}
 			}
     }
