@@ -1211,5 +1211,6 @@ func initUserFirewallRules() {
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
 
+	//dynamic route refresh
 	go dynamicRouteLoop()
 }
