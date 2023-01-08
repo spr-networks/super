@@ -9,7 +9,7 @@ export class APIDNSBlock extends API {
   blocklists() { return  this.get('/blocklists')}
   putBlocklist(data) { return this.put('/blocklists', data) }
   deleteBlocklist(data) { return this.delete('/blocklists', data) }
-  putOverrid(data) { return this.put('/override', data) }
+  putOverride(data) { return this.put('/override', data) }
   deleteOverride(data) { return this.delete('/override', data) }
   metrics(){ return this.get('/metrics') }
 }
