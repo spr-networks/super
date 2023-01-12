@@ -915,8 +915,9 @@ func getWireguardClient() http.Client {
 
 // map of wg pubkeys to time of last DHCP
 var RecentDHCPWG = map[string]int64{}
+var RecentDHCPIface = map[string]string{}
 
-func notifyFirewallDHCP(device DeviceEntry) {
+func notifyFirewallDHCP(device DeviceEntry, iface string) {
 	if device.WGPubKey == "" {
 		return
 	}
@@ -927,6 +928,9 @@ func notifyFirewallDHCP(device DeviceEntry) {
 	defer FWmtx.Unlock()
 
 	RecentDHCPWG[device.WGPubKey] = cur_time
+	if device.MAC != "" {
+		RecentDHCPIface[device.MAC] = iface
+	}
 }
 
 func getWireguardActivePeers() []string {
@@ -1104,10 +1108,18 @@ func dynamicRouteLoop() {
 
 			suggested_device := map[string]string{}
 
+			FWmtx.Lock()
 			//if a wifi device is active, place that as priority
 			for mac, iface := range wifi_peers {
-				suggested_device[mac] = iface
+				dhcp_iface, exists := RecentDHCPIface[mac]
+				if !exists {
+					suggested_device[mac] = iface
+				} else {
+					//prioritize the interface that last got a DHCP for the MAC
+					suggested_device[mac] = dhcp_iface
+				}
 			}
+			FWmtx.Unlock()
 
 			//next, if wireguard is there, place that as priority
 			// if it is not already a wifi peer
