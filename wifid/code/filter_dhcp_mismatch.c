@@ -49,6 +49,12 @@ int FUNCNAME(struct xdp_md *ctx) {
         struct udphdr *udp = (void*)ip + sizeof(*ip);
         if ((void*)udp + sizeof(*udp) <= data_end) {
           if (udp->dest == bpf_ntohs(DHCPD_PORT)) {
+
+            // https://github.com/spr-networks/super/issues/110 block ip options
+            if (ip->ihl != 5) {
+              return XDP_DROP;
+            }
+
             struct dhcp *d = (void *)udp + sizeof(*udp);
             if( (void *)d + offsetof(struct dhcp, dp_sname) <= data_end) {
               if (d->dp_htype != 1 || d->dp_hlen != ETH_ALEN) { return XDP_DROP; }
