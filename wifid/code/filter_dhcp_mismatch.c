@@ -55,7 +55,7 @@ int FUNCNAME(struct xdp_md *ctx) {
             }
             if (ip->frag_off != 0) {
               return XDP_DROP;
-            }            
+            }
             struct dhcp *d = (void *)udp + sizeof(*udp);
             if( (void *)d + offsetof(struct dhcp, dp_sname) <= data_end) {
               if (d->dp_htype != 1 || d->dp_hlen != ETH_ALEN) { return XDP_DROP; }
@@ -65,7 +65,7 @@ int FUNCNAME(struct xdp_md *ctx) {
               }
               if (ret != 0) return XDP_DROP; //MISMATCH. drop
             } else {
-              //invalid dhhp len, drop that
+              //invalid dhcp len, drop that
               return XDP_DROP;
             }
           }
