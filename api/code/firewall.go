@@ -1079,7 +1079,7 @@ func getRouteInterface(IP string) string {
 		return ""
 	}
 
-	if len(output) == 1 {
+	if len(routes) == 1 {
 		return routes[0].Dev
 	}
 
@@ -1137,7 +1137,7 @@ func dynamicRouteLoop() {
 					continue
 				}
 
-				established_route_device := getRouteInterface(ident)
+				established_route_device := getRouteInterface(entry.RecentIP)
 
 				//try the ident (MAC) first for wifi
 				new_iface, exists := suggested_device[ident]
@@ -1156,6 +1156,8 @@ func dynamicRouteLoop() {
 				if established_route_device != "" && established_route_device == new_iface {
 					continue
 				}
+
+				fmt.Println("flushing route ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
 
 				routeIP := entry.RecentIP
 				is_tiny, newIP := toTinyIP(entry.RecentIP, 2)
