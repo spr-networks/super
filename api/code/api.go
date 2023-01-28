@@ -1185,7 +1185,7 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 
 	WSNotifyValue("DHCPUpdateRequest", dhcp)
 
-	notifyFirewallDHCP(val)
+	notifyFirewallDHCP(val, dhcp.Iface)
 
 	// update local mappings file for DNS
 	updateLocalMappings(dhcp.IP, dhcp.Name)
