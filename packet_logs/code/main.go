@@ -169,7 +169,7 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 
 		data, err := json.Marshal(result)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "json error:", err)
+			fmt.Fprintf(os.Stderr, "json error: %v", err)
 			return 0
 		}
 

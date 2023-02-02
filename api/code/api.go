@@ -280,7 +280,7 @@ func getVersion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		http.Error(w, fmt.Errorf("failed to get version "+plugin+" "+string(resp.StatusCode)).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to get version %s",plugin+" "+fmt.Sprint(resp.StatusCode)).Error(), 400)
 		return
 	}
 
@@ -314,7 +314,7 @@ func doConfigsBackup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		http.Error(w, fmt.Errorf("failed to get version "+string(resp.StatusCode)).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to get version %s", fmt.Sprint(resp.StatusCode)).Error(), 400)
 		return
 	}
 

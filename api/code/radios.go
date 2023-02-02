@@ -267,7 +267,7 @@ func ChanSwitch(iface string, mode string, channel int, bw int, ht_enabled bool,
 	result, err := RunHostapdCommandArray(iface, strings.Split(cmd, " "))
 
 	if !strings.Contains(result, "OK") && err == nil {
-		err = fmt.Errorf("Failed to run chan_switch", result)
+		err = fmt.Errorf("Failed to run chan_switch %s", result)
 	}
 
 	return calculated, err
