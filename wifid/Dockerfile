@@ -1,7 +1,8 @@
 FROM ubuntu:22.04 as builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl clang
+RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl
+RUN apt-get install -y --no-install-recommends clang
 RUN apt-get install -y pkg-config gcc llvm m4 emacs libpcap-dev libelf-dev make libnl-genl-3-dev libssl-dev
 RUN mkdir /code
 WORKDIR /code
@@ -36,8 +37,8 @@ RUN make install
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
-RUN apt-get install -y libnl-genl-3-dev
+RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
+RUN apt-get install -y --no-install-recommends libnl-genl-3-dev
 COPY --from=builder /code/hostap/hostapd/hostapd /usr/local/bin/
 COPY --from=builder /code/hostap/hostapd/hostapd_cli /usr/local/bin/
 COPY --from=builder /hostap_dhcp_helper /

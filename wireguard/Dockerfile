@@ -18,7 +18,8 @@ RUN --mount=type=tmpfs,target=/tmpfs \
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano wireguard-tools
+RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
+RUN apt-get install -y --no-install-recommends wireguard-tools
 COPY scripts /scripts/
 COPY --from=builder /wireguard_plugin /
 ENTRYPOINT ["/scripts/startup.sh"]

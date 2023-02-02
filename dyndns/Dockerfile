@@ -21,7 +21,7 @@ RUN --mount=type=tmpfs,target=/tmpfs go build
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends ca-certificates nftables iproute2 netcat inetutils-ping net-tools nano
+RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
 COPY --from=builder /code/godns/cmd/godns/godns /
 COPY --from=builder /code/dyndns_plugin /
 ENTRYPOINT ["/dyndns_plugin"]
