@@ -20,7 +20,7 @@ struct dhcp {
     unsigned char               dp_hlen;        /* hardware addr length */
     unsigned char               dp_hops;        /* gateway hops */
     unsigned int                dp_xid;         /* transaction ID */
-    unsigned short              dp_secs;        /* seconds since boot began */  
+    unsigned short              dp_secs;        /* seconds since boot began */
     unsigned short              dp_flags;       /* flags */
     struct in_addr      dp_ciaddr;      /* client IP address */
     struct in_addr      dp_yiaddr;      /* 'your' IP address */
@@ -49,6 +49,13 @@ int FUNCNAME(struct xdp_md *ctx) {
         struct udphdr *udp = (void*)ip + sizeof(*ip);
         if ((void*)udp + sizeof(*udp) <= data_end) {
           if (udp->dest == bpf_ntohs(DHCPD_PORT)) {
+            // https://github.com/spr-networks/super/issues/110 block ip options
+            if (ip->ihl != 5) {
+              return XDP_DROP;
+            }
+            if (ip->frag_off != 0) {
+              return XDP_DROP;
+            }
             struct dhcp *d = (void *)udp + sizeof(*udp);
             if( (void *)d + offsetof(struct dhcp, dp_sname) <= data_end) {
               if (d->dp_htype != 1 || d->dp_hlen != ETH_ALEN) { return XDP_DROP; }
@@ -58,7 +65,7 @@ int FUNCNAME(struct xdp_md *ctx) {
               }
               if (ret != 0) return XDP_DROP; //MISMATCH. drop
             } else {
-              //invalid dhhp len, drop that
+              //invalid dhcp len, drop that
               return XDP_DROP;
             }
           }
