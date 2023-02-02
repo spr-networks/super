@@ -1,7 +1,7 @@
 FROM ubuntu:22.04 as builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl
+RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl
 RUN mkdir /code
 WORKDIR /code
 ARG TARGETARCH
@@ -17,12 +17,9 @@ RUN go build -ldflags "-s -w" -o /stream-json-logs
 
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
-#RUN apt-get update
-#RUN apt-get install -y ulogd2 ulogd2-json #ulogd2-pcap
+RUN apt-get update
 
 COPY scripts /scripts/
-#COPY ulogd.conf /etc
-
 COPY --from=builder /packet_logs /
 COPY --from=builder /stream-json-logs /
 ENTRYPOINT ["/scripts/startup.sh"]
