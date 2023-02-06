@@ -27,6 +27,6 @@ COPY scripts /scripts/
 # iw list json parser
 RUN mkdir -p /root/.local/share/jc/jcparsers
 COPY scripts/iw_*.py /root/.local/share/jc/jcparsers
-
 COPY --from=builder /api /
+RUN rm -rf /var/lib/apt/lists/*
 ENTRYPOINT ["/scripts/startup.sh"]

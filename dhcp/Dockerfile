@@ -31,5 +31,5 @@ RUN apt-get install -y --no-install-recommends isc-dhcp-client ethtool
 COPY --from=builder /coredhcpd /
 COPY --from=builder /coredhcp_client /
 COPY scripts /scripts
-
+RUN rm -rf /var/lib/apt/lists/*
 ENTRYPOINT ["/scripts/startup.sh"]

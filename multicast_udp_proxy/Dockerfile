@@ -23,5 +23,5 @@ RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutil
 RUN mkdir /code/
 COPY --from=builder /code/multicastproxy /code/
 COPY scripts /scripts/
-
+RUN rm -rf /var/lib/apt/lists/*
 ENTRYPOINT ["/scripts/startup.sh"]

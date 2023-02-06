@@ -21,4 +21,5 @@ RUN apt-get install -y --no-install-recommends curl
 COPY scripts /scripts/
 COPY data /data/
 COPY --from=builder /lookup_plugin /
+RUN rm -rf /var/lib/apt/lists/*
 ENTRYPOINT ["/scripts/startup.sh"]

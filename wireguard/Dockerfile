@@ -22,4 +22,5 @@ RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutil
 RUN apt-get install -y --no-install-recommends wireguard-tools
 COPY scripts /scripts/
 COPY --from=builder /wireguard_plugin /
+RUN rm -rf /var/lib/apt/lists/*
 ENTRYPOINT ["/scripts/startup.sh"]
