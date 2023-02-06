@@ -1,7 +1,7 @@
 FROM ubuntu:22.04 as builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl
+RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl
 RUN mkdir /code
 WORKDIR /code
 ARG TARGETARCH
@@ -18,10 +18,8 @@ RUN --mount=type=tmpfs,target=/tmpfs \
 FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano
+RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
 RUN apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
     gnupg \
     lsb-release
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
