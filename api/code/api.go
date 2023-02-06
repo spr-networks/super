@@ -1008,11 +1008,7 @@ func updateArp(Ifname string, IP string, MAC string) {
 }
 
 func updateAddr(Router string, Ifname string) {
-	err := exec.Command("ip", "addr", "add", Router+"/30", "dev", Ifname).Run()
-	if err != nil {
-		fmt.Println("update addr failed", Router, Ifname, err)
-		return
-	}
+	exec.Command("ip", "addr", "add", Router+"/30", "dev", Ifname).Run()
 }
 
 func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
@@ -1189,27 +1185,9 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 
 	WSNotifyValue("DHCPUpdateRequest", dhcp)
 
-	//1. delete this ip, mac from any existing verdict maps
-	flushVmaps(dhcp.IP, dhcp.MAC, dhcp.Iface, getVerdictMapNames(), shouldFlushByInterface(dhcp.Iface))
+	notifyFirewallDHCP(val, dhcp.Iface)
 
-	//this is needed for backhaul support
-	flushRoute(dhcp.MAC)
-
-	//2. update static arp entry
-	updateAddr(dhcp.Router, dhcp.Iface)
-	updateArp(dhcp.Iface, dhcp.IP, dhcp.MAC)
-
-	//3. add entry to appropriate verdict maps
-
-	//add this MAC and IP to the ethernet filter
-	addVerdictMac(dhcp.IP, dhcp.MAC, dhcp.Iface, "ethernet_filter", "return")
-
-	populateVmapEntries(dhcp.IP, dhcp.MAC, dhcp.Iface, "")
-
-	//apply the tags
-	applyPrivateNetworkUpstreamDevice(val)
-
-	//4. update local mappings file for DNS
+	// update local mappings file for DNS
 	updateLocalMappings(dhcp.IP, dhcp.Name)
 
 	WSNotifyString("DHCPUpdateProcessed", "")
@@ -1307,29 +1285,7 @@ func toTinyIP(IP string, delta uint32) (bool, net.IP) {
 }
 
 func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface string, Name string, Create bool) {
-	//1. delete this ip from any existing verdict maps for the same wireguard interface
-	flushVmaps(IP, MAC, Iface, getVerdictMapNames(), false)
-
 	if Create {
-		//2.  Add route
-
-		routeIP := IP
-		is_tiny, newIP := toTinyIP(IP, 2)
-		if is_tiny {
-			routeIP = newIP.String() + "/30"
-		}
-
-		err := exec.Command("ip", "route", "add", routeIP, "dev", Iface, "metric", "200").Run()
-		if err != nil {
-			fmt.Println("ip route add failed", IP, err)
-		}
-
-		//3. add entry to the appropriate verdict maps
-		populateVmapEntries(IP, MAC, Iface, PublicKey)
-
-		//TBD wireguard support for rules/maps based on tags.
-
-		//4. update local mappings file for DNS
 		if Name != "" {
 			updateLocalMappings(IP, Name)
 		}
@@ -1366,11 +1322,12 @@ func refreshDeviceGroups(dev DeviceEntry) {
 	if ipv4 == "" {
 		//check arp tables for the MAC to get the IP
 		arp_entry, err := GetArpEntryFromMAC(dev.MAC)
-		if err != nil {
-			fmt.Println("Arp entry not found, insufficient information to refresh", dev.MAC)
+		if err == nil {
+			ipv4 = arp_entry.IP
+		} else {
+			fmt.Println("Missing IP for device, could not refresh device groups")
 			return
 		}
-		ipv4 = arp_entry.IP
 	}
 
 	//check dhcp vmap for the interface
@@ -1382,7 +1339,11 @@ func refreshDeviceGroups(dev DeviceEntry) {
 	}
 
 	if ifname == "" {
-		fmt.Println("dhcp_access entry not found, insufficient information to refresh", dev.MAC)
+		ifname = getRouteInterface(dev.RecentIP)
+	}
+
+	if ifname == "" {
+		fmt.Println("dhcp_access entry not found, route not found, insufficient information to refresh", dev.RecentIP)
 		return
 	}
 

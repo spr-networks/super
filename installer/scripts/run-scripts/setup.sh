@@ -43,7 +43,7 @@ ret=$?
 
 if [ "$ret" -ne "0" ]; then
 cd /containers
-  for x in `ls *.tar`
+  for x in `ls *.tar.gz`
   do
     docker load -i $x
   done

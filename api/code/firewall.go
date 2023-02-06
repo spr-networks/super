@@ -68,6 +68,8 @@ type FirewallConfig struct {
 var FirewallConfigFile = TEST_PREFIX + "/configs/base/firewall.json"
 var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []ForwardingBlockRule{}, []ServicePort{}}
 
+var WireguardSocketPath = TEST_PREFIX + "/state/plugins/wireguard/wireguard_plugin"
+
 var DEVICE_TAG_PERMIT_PRIVATE_UPSTREAM_ACCESS = "lan_upstream"
 
 func saveFirewallRulesLocked() {
@@ -901,28 +903,328 @@ func SyncBaseContainer() {
 	}
 }
 
+func getWireguardClient() http.Client {
+	c := http.Client{}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", WireguardSocketPath)
+		},
+	}
+	return c
+}
+
+// map of wg pubkeys to time of last DHCP
+var RecentDHCPWG = map[string]int64{}
+var RecentDHCPIface = map[string]string{}
+
+func notifyFirewallDHCP(device DeviceEntry, iface string) {
+	if device.WGPubKey == "" {
+		return
+	}
+
+	cur_time := time.Now().Unix()
+
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	RecentDHCPWG[device.WGPubKey] = cur_time
+	if device.MAC != "" {
+		RecentDHCPIface[device.MAC] = iface
+	}
+}
+
+func getWireguardActivePeers() []string {
+	var data map[string]interface{}
+	var data2 map[string]interface{}
+	var data3 map[string]interface{}
+	var data4 map[string]interface{}
+	var data5 []interface{}
+	handshakes := []string{}
+
+	req, err := http.NewRequest(http.MethodGet, "http://api-wg/status", nil)
+	if err != nil {
+		return handshakes
+	}
+
+	c := getWireguardClient()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println("wireguard request failed", err)
+		return handshakes
+	}
+
+	defer resp.Body.Close()
+	output, err := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("failed to retrieve wireguard information", resp.StatusCode)
+		return handshakes
+	}
+
+	err = json.Unmarshal(output, &data)
+	if err != nil {
+		fmt.Println(err)
+		return handshakes
+	}
+
+	cur_time := time.Now().Unix()
+
+	//iterate through peers
+	data2 = data["wg0"].(map[string]interface{})
+	data3 = data2["peers"].(map[string]interface{})
+	for pubkey, entry := range data3 {
+		data4 = entry.(map[string]interface{})
+		ts := data4["latestHandshake"]
+		if ts != nil {
+			t := int64(ts.(float64))
+			// Clients with a handshake time less than 3 minutes ago are active.
+			if (cur_time - t) > (60 * 3) {
+				continue
+			}
+
+			// locking for access to RecentDHCPWG
+			FWmtx.Lock()
+			last_dhcp := RecentDHCPWG[pubkey]
+			FWmtx.Unlock()
+
+			//dhcp was more recent, skip wireguard for this route
+			if last_dhcp > t {
+				continue
+			}
+
+			data5 = data4["allowedIps"].([]interface{})
+			if data5 != nil && len(data5) > 0 {
+				var s string = data5[0].(string)
+				if s != "" {
+					pieces := strings.Split(s, "/")
+					handshakes = append(handshakes, pieces[0])
+				}
+			}
+		}
+	}
+
+	return handshakes
+}
+
+var MESH_ENABLED_LEAF_PATH = TEST_PREFIX + "/state/plugins/mesh/enabled"
+
+func isLeafRouter() bool {
+	_, err := os.Stat(MESH_ENABLED_LEAF_PATH)
+	if err == nil {
+		return true
+	}
+	return false
+}
+
+func getWifiPeers() map[string]string {
+	//TBD. Problem here. hostapd could show stations *were* connected but no longer are.
+	// does the VLAN station stick around?
+
+	peers := make(map[string]string)
+
+	Interfacesmtx.Lock()
+	interfacesConfig := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
+
+	for _, entry := range interfacesConfig {
+		if entry.Enabled == true && entry.Type == "AP" {
+			wifi_peers, err := RunHostapdAllStations(entry.Name)
+			if err == nil {
+				for k, peer := range wifi_peers {
+					val, exists := peer["vlan_id"]
+					if exists && (val != "") {
+						peers[k] = entry.Name + "." + peer["vlan_id"]
+					}
+				}
+			}
+		}
+	}
+
+	return peers
+}
+
+func getUplinkInterface() string {
+	Interfacesmtx.Lock()
+	interfacesConfig := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
+
+	for _, entry := range interfacesConfig {
+		if entry.Enabled == true && entry.Type == "Uplink" {
+			return entry.Name
+		}
+	}
+
+	return ""
+}
+
+type RouteEntry struct {
+	Dst string `json:"dst"`
+	Dev string `json:"dev"`
+}
+
+func getRouteInterface(IP string) string {
+	routes := []RouteEntry{}
+
+	cmd := exec.Command("ip", "-j", "route", "get", IP)
+	output, err := cmd.Output()
+
+	if err != nil {
+		return ""
+	}
+
+	err = json.Unmarshal(output, &routes)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+
+	if len(routes) == 1 {
+		return routes[0].Dev
+	}
+
+	return ""
+}
+
+func dynamicRouteLoop() {
+	//mesh APs do not need routes, as they use the bridge
+	if isLeafRouter() {
+		return
+	}
+
+	ticker := time.NewTicker(1 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+
+			Devicesmtx.Lock()
+			devices := getDevicesJson()
+			Devicesmtx.Unlock()
+
+			lanif := os.Getenv("LANIF")
+
+			wireguard_peers := getWireguardActivePeers()
+			wifi_peers := getWifiPeers()
+
+			suggested_device := map[string]string{}
+
+			FWmtx.Lock()
+			//if a wifi device is active, place that as priority
+			for mac, iface := range wifi_peers {
+				dhcp_iface, exists := RecentDHCPIface[mac]
+				if !exists {
+					suggested_device[mac] = iface
+				} else {
+					//prioritize the interface that last got a DHCP for the MAC
+					suggested_device[mac] = dhcp_iface
+				}
+			}
+			FWmtx.Unlock()
+
+			//next, if wireguard is there, place that as priority
+			// if it is not already a wifi peer
+			for _, ip := range wireguard_peers {
+				_, exists := suggested_device[ip]
+				if !exists {
+					suggested_device[ip] = "wg0"
+				}
+			}
+
+			//now get the existing route and make an update if needed
+			for ident, entry := range devices {
+				//no IP yet for this device -> no route, continue
+				if entry.RecentIP == "" {
+					continue
+				}
+
+				established_route_device := getRouteInterface(entry.RecentIP)
+
+				//try the ident (MAC) first for wifi
+				new_iface, exists := suggested_device[ident]
+				if !exists {
+					// if that failed, try the IP address (for wireguard)
+					new_iface, exists = suggested_device[entry.RecentIP]
+				}
+
+				if !exists && lanif != "" {
+					//no new_iface and a LAN interface is set, use that.
+					//TBD: VLAN here based on the assigned vlan id
+					new_iface = lanif
+				}
+
+				//happy state
+				if established_route_device != "" && established_route_device == new_iface {
+					continue
+				}
+
+				fmt.Println("flushing route ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
+
+				routeIP := entry.RecentIP
+				is_tiny, newIP := toTinyIP(entry.RecentIP, 2)
+				_, router := toTinyIP(entry.RecentIP, 1)
+				routeIP = newIP.String() + "/30"
+
+				if !is_tiny {
+					fmt.Println("[-] Error, unknown IP address, not a tiny subnet", routeIP)
+					continue
+				}
+
+				//1. delete arp entry
+				flushRoute(entry.MAC)
+
+				//2. delete this ip, mac from any existing verdict maps
+				flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), shouldFlushByInterface(new_iface))
+
+				//3. delete the old router address
+				exec.Command("ip", "addr", "del", routeIP, "dev", established_route_device).Run()
+
+				//3. Update the route interface
+				exec.Command("ip", "route", "flush", routeIP).Run()
+				exec.Command("ip", "route", "add", routeIP, "dev", new_iface).Run()
+
+				//4. update router IP for the new interface. first delete the old addr
+				updateAddr(router.String(), new_iface)
+
+				//5. Update the ARP entry
+				if new_iface != "wg0" {
+					updateArp(new_iface, entry.RecentIP, entry.MAC)
+				}
+
+				//6. add entry to appropriate verdict maps
+				if new_iface != "wg0" {
+					//add this MAC and IP to the ethernet filter
+					addVerdictMac(entry.RecentIP, entry.MAC, new_iface, "ethernet_filter", "return")
+				}
+
+				populateVmapEntries(entry.RecentIP, entry.MAC, new_iface, entry.WGPubKey)
+
+				//apply the tags
+				applyPrivateNetworkUpstreamDevice(entry)
+
+			}
+		}
+	}
+}
+
 func initUserFirewallRules() {
 	SyncBaseContainer()
 
 	loadFirewallRules()
 
-	x := func() {
-		FWmtx.Lock()
-		defer FWmtx.Unlock()
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
 
-		applyFirewallRulesLocked()
+	applyFirewallRulesLocked()
 
-		Interfacesmtx.Lock()
-		config := loadInterfacesConfigLocked()
-		Interfacesmtx.Unlock()
-		applyRadioInterfaces(config)
-	}
+	Interfacesmtx.Lock()
+	config := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
 
-	// Workaround for docker-compose, which may start api very shortly
-	// after base is started, but before the rules are loaded.
-	// In the future we may want to formalize this
+	applyRadioInterfaces(config)
 
-	//run immediately
-	x()
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
 
+	//dynamic route refresh
+	go dynamicRouteLoop()
 }

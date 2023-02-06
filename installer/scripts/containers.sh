@@ -6,7 +6,4 @@
 mkdir data/containers/
 cd data
 CONTAINERS=$(docker images "ghcr.io/spr-networks/*:latest" | awk '{print $1}' | grep -v REPOSITORY)
-for x in $CONTAINERS
-do
-  docker save $x -o containers/$(basename $x).tar
-done
+docker save $CONTAINERS | gzip > containers/super.tar.gz
