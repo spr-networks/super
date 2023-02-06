@@ -22,5 +22,4 @@ RUN apt-get update
 COPY scripts /scripts/
 COPY --from=builder /packet_logs /
 COPY --from=builder /stream-json-logs /
-RUN rm -rf /var/lib/apt/lists/*
 ENTRYPOINT ["/scripts/startup.sh"]

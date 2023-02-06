@@ -28,5 +28,4 @@ RUN apt-get update
 RUN apt-get install -y --no-install-recommends docker-ce-cli docker-compose git
 COPY --from=builder /superd /
 COPY scripts /scripts
-RUN rm -rf /var/lib/apt/lists/*
 ENTRYPOINT ["/scripts/startup.sh"]

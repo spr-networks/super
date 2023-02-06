@@ -23,5 +23,4 @@ RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutil
 RUN apt-get install -y --no-install-recommends hostapd
 COPY scripts /scripts/
 COPY --from=builder /api_sample_plugin /
-RUN rm -rf /var/lib/apt/lists/*
 ENTRYPOINT ["/scripts/startup.sh"]

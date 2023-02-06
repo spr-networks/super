@@ -24,5 +24,4 @@ RUN apt-get update
 RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
 COPY --from=builder /code/godns/cmd/godns/godns /
 COPY --from=builder /code/dyndns_plugin /
-RUN rm -rf /var/lib/apt/lists/*
 ENTRYPOINT ["/dyndns_plugin"]

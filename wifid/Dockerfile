@@ -45,5 +45,4 @@ COPY --from=builder /hostap_dhcp_helper /
 RUN mkdir /code/
 COPY --from=builder /code/filter_dhcp_mismatch.o /code/
 COPY scripts /scripts
-RUN rm -rf /var/lib/apt/lists/*
 ENTRYPOINT /scripts/startup.sh

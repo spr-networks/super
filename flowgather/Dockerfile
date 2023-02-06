@@ -24,5 +24,4 @@ RUN apt-get update
 RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
 RUN mkdir /data
 COPY --from=/flowgather /
-RUN rm -rf /var/lib/apt/lists/*
 ENTRYPOINT ["/scripts/startup.sh"]
