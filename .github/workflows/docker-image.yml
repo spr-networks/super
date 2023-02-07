@@ -6,7 +6,7 @@ on:
     workflows: ["Bump version"]
     types:
       - completed
-    branches: [ main ]
+    branches: [ main, dev ]
 
 jobs:
   build-images:
