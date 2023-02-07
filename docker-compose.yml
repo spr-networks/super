@@ -15,6 +15,10 @@ services:
     build:
       context: base
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_base:latest
+        - ghcr.io/spr-networks/super_base:${RELEASE_VERSION:-latest}
     network_mode: host
     privileged: true
     logging: *default-logging
@@ -29,6 +33,10 @@ services:
     build:
       context: superd
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_superd:latest
+        - ghcr.io/spr-networks/super_superd:${RELEASE_VERSION:-latest}
     network_mode: host
     privileged: true
     logging: *default-logging
@@ -42,6 +50,10 @@ services:
     build:
       context: dhcp
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_dhcp:latest
+        - ghcr.io/spr-networks/super_dhcp:${RELEASE_VERSION:-latest}
     network_mode: host
     privileged: true
     depends_on:
@@ -60,6 +72,10 @@ services:
     build:
       context: dhcp
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_dhcp_client:latest
+        - ghcr.io/spr-networks/super_dhcp_client:${RELEASE_VERSION:-latest}
     network_mode: host
     privileged: true
     depends_on:
@@ -74,6 +90,10 @@ services:
     build:
       context: dns
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_dns:latest
+        - ghcr.io/spr-networks/super_dns:${RELEASE_VERSION:-latest}
     network_mode: host
     privileged: true
     logging: *default-logging
@@ -91,6 +111,10 @@ services:
     build:
       context: wifid
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_wifid:latest
+        - ghcr.io/spr-networks/super_wifid:${RELEASE_VERSION:-latest}
     network_mode: host
     privileged: true
     logging: *default-logging
@@ -108,6 +132,10 @@ services:
     build:
       context: multicast_udp_proxy
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_multicast_udp_proxy:latest
+        - ghcr.io/spr-networks/super_multicast_udp_proxy:${RELEASE_VERSION:-latest}
     network_mode: host
     privileged: true
     depends_on:
@@ -124,6 +152,10 @@ services:
     build:
       context: ppp
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_ppp:latest
+        - ghcr.io/spr-networks/super_ppp:${RELEASE_VERSION:-latest}
     network_mode: host
     privileged: true
     depends_on:
@@ -138,6 +170,10 @@ services:
     build:
       context: wireguard
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_wireguard:latest
+        - ghcr.io/spr-networks/super_wireguard:${RELEASE_VERSION:-latest}
     network_mode: host
     privileged: true
     depends_on:
@@ -158,6 +194,10 @@ services:
     build:
       context: frontend
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_frontend:latest
+        - ghcr.io/spr-networks/super_frontend:${RELEASE_VERSION:-latest}
     network_mode: none
     volumes:
       - ./frontend/:/frontend
@@ -167,6 +207,10 @@ services:
     build:
       context: api
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_api:latest
+        - ghcr.io/spr-networks/super_api:${RELEASE_VERSION:-latest}
     network_mode: host
     privileged: true
     restart: always
@@ -200,6 +244,10 @@ services:
     build:
       context: plugin-lookup
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_plugin-lookup:latest
+        - ghcr.io/spr-networks/super_plugin-lookup:${RELEASE_VERSION:-latest}
     network_mode: host
     logging: *default-logging
     depends_on:
@@ -213,6 +261,10 @@ services:
     build:
       context: dyndns
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_dyndns:latest
+        - ghcr.io/spr-networks/super_dyndns:${RELEASE_VERSION:-latest}
     network_mode: bridge
     logging: *default-logging
     depends_on:
@@ -227,6 +279,10 @@ services:
     build:
       context: packet_logs
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_packet_logs:latest
+        - ghcr.io/spr-networks/super_packet_logs:${RELEASE_VERSION:-latest}
     network_mode: host
     privileged: true
     restart: always
