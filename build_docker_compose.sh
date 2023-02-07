@@ -88,7 +88,7 @@ else
   docker buildx bake \
     --builder super-builder \
     --file docker-compose.yml \
-    ${BUILDARGS} "$@"
+    ${BUILDARGS} "$@" || exit 1
 fi
 
 ret=$?
