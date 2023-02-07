@@ -43,7 +43,7 @@ jobs:
           cp -R base/template_configs configs
           ./build_docker_compose.sh \
             --set "*.platform=linux/amd64,linux/arm64" \
-            `[ "${{ github.event_name }}" = "push" -a "${{ github.ref_name }}" = "main" ] && echo "--push"`
+            `[ "${{ github.event_name }}" = "push" -a "${{ github.ref_name }}" = "main" ] && echo "--push"` || exit 1
       - name: Get images from docker-compose.yml
         id: get-images
         uses: mikefarah/yq@master
