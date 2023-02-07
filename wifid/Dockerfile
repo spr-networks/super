@@ -34,11 +34,9 @@ WORKDIR /code/hostap/hostapd
 RUN make -j $(nproc)
 RUN make install
 
-FROM ubuntu:22.04
+FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
-RUN apt-get install -y --no-install-recommends libnl-genl-3-dev
+RUN apt-get update && apt-get install -y --no-install-recommends libnl-genl-3-dev && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /code/hostap/hostapd/hostapd /usr/local/bin/
 COPY --from=builder /code/hostap/hostapd/hostapd_cli /usr/local/bin/
 COPY --from=builder /hostap_dhcp_helper /
