@@ -35,10 +35,8 @@ RUN --mount=type=tmpfs,target=/tmpfs \
    go mod tidy -compat=1.19 && \
    go build -o /coredns
 
-FROM ubuntu:22.04
+FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
 COPY --from=builder /coredns /
 COPY scripts/ /scripts
 ENTRYPOINT /scripts/startup.sh

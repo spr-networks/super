@@ -17,12 +17,9 @@ RUN --mount=type=tmpfs,target=/tmpfs \
     go build -ldflags "-s -w" -o /api
 
 
-FROM ubuntu:22.04
+FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
-RUN apt-get install -y --no-install-recommends hostapd systemd jq jc iw
-RUN apt-get install -y --no-install-recommends git
+RUN apt-get update && apt-get install -y --no-install-recommends git hostapd iw jc && rm -rf /var/lib/apt/lists/*
 COPY scripts /scripts/
 # iw list json parser
 RUN mkdir -p /root/.local/share/jc/jcparsers

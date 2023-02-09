@@ -6,7 +6,9 @@ on:
     workflows: ["Bump version"]
     types:
       - completed
-    branches: [ main ]
+    branches:
+      - main
+      - dev
 
 jobs:
   build-images:
@@ -22,8 +24,12 @@ jobs:
         name: Get version from git
         run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0 | grep -Eo '[0-9]+\.[0-9]+.[0-9]+')" >> $GITHUB_ENV
       -
-        name: Test release tag version
-        run: echo "RELEASE_VERSION == $RELEASE_VERSION"
+        name: Set release channel for dev
+        run: echo "RELEASE_CHANNEL=dev" >> $GITHUB_ENV
+        if: ${{ github.ref_name == 'dev' }}"
+      -
+        name: Test release tag version and channel
+        run: echo "RELEASE_VERSION == $RELEASE_VERSION  CHANNEL == $RELEASE_CHANNEL"
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -43,7 +49,7 @@ jobs:
           cp -R base/template_configs configs
           ./build_docker_compose.sh \
             --set "*.platform=linux/amd64,linux/arm64" \
-            `[ "${{ github.event_name }}" = "push" -a "${{ github.ref_name }}" = "main" ] && echo "--push"`
+            `[[ "${{ github.event_name }}" = "workflow_run" && ("${{ github.ref_name }}" = "main" || ( ! -z $RELEASE_CHANNEL ) ) ]] && echo "--push"` || exit 1
       - name: Get images from docker-compose.yml
         id: get-images
         uses: mikefarah/yq@master

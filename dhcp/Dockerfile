@@ -23,11 +23,9 @@ RUN --mount=type=tmpfs,target=/tmpfs \
     go build -o /coredhcp_client ./cmds/exdhcp/dhclient/
 
 
-FROM ubuntu:22.04
+FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates curl
-RUN apt-get install -y --no-install-recommends isc-dhcp-client ethtool
+RUN apt-get update && apt-get install -y --no-install-recommends ethtool isc-dhcp-client && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /coredhcpd /
 COPY --from=builder /coredhcp_client /
 COPY scripts /scripts

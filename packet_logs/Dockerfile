@@ -15,10 +15,8 @@ COPY stream-json-logs/ /code/stream-json-logs
 WORKDIR /code/stream-json-logs
 RUN go build -ldflags "-s -w" -o /stream-json-logs
 
-FROM ubuntu:22.04
+FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-
 COPY scripts /scripts/
 COPY --from=builder /packet_logs /
 COPY --from=builder /stream-json-logs /

@@ -11,10 +11,14 @@ x-logging:
 services:
   base:
     container_name: superbase
-    image: ghcr.io/spr-networks/super_base:${RELEASE_VERSION:-latest}
+    image: ghcr.io/spr-networks/super_base:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: base
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_base${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_base:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
     logging: *default-logging
@@ -25,10 +29,14 @@ services:
       - ./plugins/:/plugins/
   superd:
     container_name: superd
-    image: ghcr.io/spr-networks/super_superd:${RELEASE_VERSION:-latest}
+    image: ghcr.io/spr-networks/super_superd:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: superd
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_superd${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_superd:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
     logging: *default-logging
@@ -38,10 +46,14 @@ services:
       - ./:/super/
   dhcp:
     container_name: superdhcp
-    image: ghcr.io/spr-networks/super_dhcp:${RELEASE_VERSION:-latest}
+    image: ghcr.io/spr-networks/super_dhcp:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: dhcp
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_dhcp${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_dhcp:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
     depends_on:
@@ -56,10 +68,14 @@ services:
       - /sys/fs/bpf:/sys/fs/bpf
   dhcp_client:
     container_name: superdhcp_client
-    image: ghcr.io/spr-networks/super_dhcp_client:${RELEASE_VERSION:-latest}
+    image: ghcr.io/spr-networks/super_dhcp_client:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: dhcp
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_dhcp_client${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_dhcp_client:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
     depends_on:
@@ -70,10 +86,14 @@ services:
       - ./configs/base/:/configs/base/
   dns:
     container_name: superdns
-    image: ghcr.io/spr-networks/super_dns:${RELEASE_VERSION:-latest}
+    image: ghcr.io/spr-networks/super_dns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: dns
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_dns${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_dns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
     logging: *default-logging
@@ -87,10 +107,14 @@ services:
       - ./state/public/:/state/public/:ro
   wifid:
     container_name: superwifid
-    image: ghcr.io/spr-networks/super_wifid:${RELEASE_VERSION:-latest}
+    image: ghcr.io/spr-networks/super_wifid:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: wifid
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_wifid${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_wifid:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
     logging: *default-logging
@@ -104,10 +128,14 @@ services:
       - ./state/wifi/:/state/wifi/
   multicast_udp_proxy:
     container_name: super_multicast_udp_proxy
-    image: ghcr.io/spr-networks/super_multicast_udp_proxy:${RELEASE_VERSION:-latest}
+    image: ghcr.io/spr-networks/super_multicast_udp_proxy:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: multicast_udp_proxy
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_multicast_udp_proxy${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_multicast_udp_proxy:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
     depends_on:
@@ -120,10 +148,14 @@ services:
       - ./state/plugins/mesh/:/state/plugins/mesh/:ro
   ppp:
     container_name: superppp
-    image: ghcr.io/spr-networks/super_ppp:${RELEASE_VERSION:-latest}
+    image: ghcr.io/spr-networks/super_ppp:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: ppp
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_ppp${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_ppp:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
     depends_on:
@@ -134,10 +166,14 @@ services:
       - ./configs/ppp/:/etc/ppp/
   wireguard:
     container_name: superwireguard
-    image: ghcr.io/spr-networks/super_wireguard:${RELEASE_VERSION:-latest}
+    image: ghcr.io/spr-networks/super_wireguard:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: wireguard
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_wireguard${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_wireguard:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
     depends_on:
@@ -153,20 +189,28 @@ services:
       - ./state/dhcp/:/state/dhcp/
   frontend:
     container_name: superfrontend
-    image: ghcr.io/spr-networks/super_frontend:${RELEASE_VERSION:-latest}
+    image: ghcr.io/spr-networks/super_frontend:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
     build:
       context: frontend
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_frontend${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_frontend:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: none
     volumes:
       - ./frontend/:/frontend
   api:
     container_name: superapi
-    image: ghcr.io/spr-networks/super_api:${RELEASE_VERSION:-latest}
+    image: ghcr.io/spr-networks/super_api:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: api
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_api${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_api:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
     restart: always
@@ -196,10 +240,14 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
   plugin-lookup:
     container_name: super-plugin-lookup
-    image: ghcr.io/spr-networks/super_plugin-lookup:${RELEASE_VERSION:-latest}
+    image: ghcr.io/spr-networks/super_plugin-lookup:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: plugin-lookup
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_plugin-lookup${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_plugin-lookup:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     logging: *default-logging
     depends_on:
@@ -209,10 +257,14 @@ services:
       - ./state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
   dyndns:
     container_name: superdyndns
-    image: ghcr.io/spr-networks/super_dyndns:${RELEASE_VERSION:-latest}
+    image: ghcr.io/spr-networks/super_dyndns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: dyndns
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_dyndns${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_dyndns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: bridge
     logging: *default-logging
     depends_on:
@@ -223,10 +275,14 @@ services:
       - ./configs/dyndns/:/configs/dyndns
   packet_logs:
     container_name: superpacket_logs
-    image: ghcr.io/spr-networks/super_packet_logs:${RELEASE_VERSION:-latest}
+    image: ghcr.io/spr-networks/super_packet_logs:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: packet_logs
       labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_packet_logs${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_packet_logs:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
     restart: always

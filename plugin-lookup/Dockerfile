@@ -1,7 +1,7 @@
 FROM ubuntu:22.04 as builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends git curl
+RUN apt-get install -y --no-install-recommends git curl ca-certificates
 ARG TARGETARCH
 RUN curl -O https://dl.google.com/go/go1.17.linux-${TARGETARCH}.tar.gz
 RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-${TARGETARCH}.tar.gz
@@ -14,10 +14,8 @@ RUN --mount=type=tmpfs,target=/tmpfs \
     [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
     go build -ldflags "-s -w" -o /lookup_plugin /code/lookup_plugin.go
 
-FROM ubuntu:22.04
+FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends curl
 COPY scripts /scripts/
 COPY data /data/
 COPY --from=builder /lookup_plugin /
