@@ -6,9 +6,9 @@ on:
     workflows: ["Bump version"]
     types:
       - completed
-    branches:
-      - main
-      - dev
+    branches: [main]
+  push:
+    branches: [dev]
 
 jobs:
   build-images:
@@ -76,4 +76,3 @@ jobs:
         uses: anchore/sbom-action@v0
         with:
           image: '${{ matrix.image }}'
-
