@@ -17,7 +17,7 @@ services:
       labels: *default-labels
       x-bake:
         tags:
-        - ghcr.io/spr-networks/super_base${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_base:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_base:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
@@ -35,7 +35,7 @@ services:
       labels: *default-labels
       x-bake:
         tags:
-        - ghcr.io/spr-networks/super_superd${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_superd:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_superd:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
@@ -52,7 +52,7 @@ services:
       labels: *default-labels
       x-bake:
         tags:
-        - ghcr.io/spr-networks/super_dhcp${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_dhcp:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_dhcp:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
@@ -74,7 +74,7 @@ services:
       labels: *default-labels
       x-bake:
         tags:
-        - ghcr.io/spr-networks/super_dhcp_client${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_dhcp_client:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_dhcp_client:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
@@ -92,7 +92,7 @@ services:
       labels: *default-labels
       x-bake:
         tags:
-        - ghcr.io/spr-networks/super_dns${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_dns:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_dns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
@@ -113,7 +113,7 @@ services:
       labels: *default-labels
       x-bake:
         tags:
-        - ghcr.io/spr-networks/super_wifid${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_wifid:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_wifid:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
@@ -134,7 +134,7 @@ services:
       labels: *default-labels
       x-bake:
         tags:
-        - ghcr.io/spr-networks/super_multicast_udp_proxy${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_multicast_udp_proxy:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_multicast_udp_proxy:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
@@ -154,7 +154,7 @@ services:
       labels: *default-labels
       x-bake:
         tags:
-        - ghcr.io/spr-networks/super_ppp${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_ppp:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_ppp:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
@@ -172,7 +172,7 @@ services:
       labels: *default-labels
       x-bake:
         tags:
-        - ghcr.io/spr-networks/super_wireguard${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_wireguard:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_wireguard:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
@@ -196,7 +196,7 @@ services:
       labels: *default-labels
       x-bake:
         tags:
-        - ghcr.io/spr-networks/super_frontend${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_frontend:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_frontend:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: none
     volumes:
@@ -209,7 +209,7 @@ services:
       labels: *default-labels
       x-bake:
         tags:
-        - ghcr.io/spr-networks/super_api${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_api:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_api:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
@@ -246,7 +246,7 @@ services:
       labels: *default-labels
       x-bake:
         tags:
-        - ghcr.io/spr-networks/super_plugin-lookup${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_plugin-lookup:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_plugin-lookup:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     logging: *default-logging
@@ -263,7 +263,7 @@ services:
       labels: *default-labels
       x-bake:
         tags:
-        - ghcr.io/spr-networks/super_dyndns${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_dyndns:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_dyndns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: bridge
     logging: *default-logging
@@ -281,7 +281,7 @@ services:
       labels: *default-labels
       x-bake:
         tags:
-        - ghcr.io/spr-networks/super_packet_logs${RELEASE_CHANNEL:-}:latest
+        - ghcr.io/spr-networks/super_packet_logs:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_packet_logs:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true

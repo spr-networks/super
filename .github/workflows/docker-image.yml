@@ -6,9 +6,9 @@ on:
     workflows: ["Bump version"]
     types:
       - completed
-    branches:
-      - main
-      - dev
+    branches: [main]
+  push:
+    branches: [dev]
 
 jobs:
   build-images:
@@ -25,7 +25,7 @@ jobs:
         run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0 | grep -Eo '[0-9]+\.[0-9]+.[0-9]+')" >> $GITHUB_ENV
       -
         name: Set release channel for dev
-        run: echo "RELEASE_CHANNEL=dev" >> $GITHUB_ENV
+        run: echo "RELEASE_CHANNEL=-dev" >> $GITHUB_ENV
         if: ${{ github.ref_name == 'dev' }}
       -
         name: Test release tag version and channel
@@ -54,7 +54,7 @@ jobs:
         id: get-images
         uses: mikefarah/yq@master
         with:
-          cmd: yq -o json -I 0 '[.services|.[]|.image]' docker-compose.yml | sed 's/:${RELEASE_VERSION:-latest}//g'
+          cmd: yq -o json -I 0 '[.services|.[]|.image]' docker-compose.yml | sed 's/:[^"]*//g'
 
       - name: Set Matrix output
         id: set-matrix

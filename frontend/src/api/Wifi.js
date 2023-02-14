@@ -18,7 +18,6 @@ export default class APIWifi extends API {
   }
 
   allStations(iface) {
-    console.log("from all " + this.remoteURL);
     return this.get(`hostapd/${iface}/all_stations`);
   }
 

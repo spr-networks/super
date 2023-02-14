@@ -28,7 +28,6 @@ if [ "$FOUND_PREBUILT_IMAGE" = "true" ]; then
     docker image prune -f
 fi
 
-
 # gen configs
 if [ ! -f configs/dhcp/coredhcp.yml ]; then
   ./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
