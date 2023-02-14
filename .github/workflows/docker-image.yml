@@ -49,7 +49,7 @@ jobs:
           cp -R base/template_configs configs
           ./build_docker_compose.sh \
             --set "*.platform=linux/amd64,linux/arm64" \
-            `[[ "${{ github.event_name }}" = "workflow_run" && ("${{ github.ref_name }}" = "main" || ( ! -z $RELEASE_CHANNEL ) ) ]] && echo "--push"` || exit 1
+            `[[ "${{ github.event_name }}" = "workflow_run" && ("${{ github.ref_name }}" = "main")  || ( ! -z $RELEASE_CHANNEL && ("${{ github.event_name }}" = "push") ]] && echo "--push"` || exit 1
       - name: Get images from docker-compose.yml
         id: get-images
         uses: mikefarah/yq@master
