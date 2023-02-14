@@ -970,6 +970,12 @@ func getWireguardActivePeers() []string {
 
 	cur_time := time.Now().Unix()
 
+	_, exists := data["wg0"];
+	if !exists {
+		fmt.Println("Failed to retrieve wg0 from wireguard status")
+		return handshakes
+	}
+
 	//iterate through peers
 	data2 = data["wg0"].(map[string]interface{})
 	data3 = data2["peers"].(map[string]interface{})
