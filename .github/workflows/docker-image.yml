@@ -26,7 +26,7 @@ jobs:
       -
         name: Set release channel for dev
         run: echo "RELEASE_CHANNEL=-dev" >> $GITHUB_ENV
-        if: ${{ github.ref_name == 'dev' }}"
+        if: ${{ github.ref_name == 'dev' }}
       -
         name: Test release tag version and channel
         run: echo "RELEASE_VERSION == $RELEASE_VERSION  CHANNEL == $RELEASE_CHANNEL"
