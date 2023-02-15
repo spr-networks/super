@@ -169,7 +169,7 @@ const WifiChannelParameters = ({
     let wifiParameters = {
       //Interface: iface,
       Channel: channel,
-      Mode: mode,
+      Hw_mode: mode,
       Bandwidth: bandwidth,
       HT_Enable: true,
       VHT_Enable: mode == 'a' ? true : false,
