@@ -235,6 +235,7 @@ const WifiHostapd = (props) => {
   const updateChannels = (wifiParameters) => {
     let updateConfig = (params) => {
       let data = {...params, ...wifiParameters}
+      console.log(data)
 
       if (wifiParameters.Mode == 'b' || wifiParameters.Mode == 'g') {
         //empty out VHT capabilities for b/g mode
@@ -244,6 +245,8 @@ const WifiHostapd = (props) => {
         //re-enable VHT capab
         data.Vht_capab = default5Ghz.vht_capab
       }
+
+      data.Hw_mode = data.Mode
 
       wifiAPI
         .updateConfig(iface, data)
