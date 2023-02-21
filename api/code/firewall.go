@@ -813,6 +813,13 @@ func hasCustomVerdict(ZoneName string, IP string, Iface string) bool {
 
 func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface string) bool {
 	//check if a device has its vmap entries established
+
+	//check ethernet filter entry is present
+	if !hasVerdictMac(entry.RecentIP, entry.MAC, Iface, "ethernet_filter", "return") {
+		return false
+	}
+
+	//check groups
 	zones := getGroupsJson()
 	zonesDisabled := map[string]bool{}
 
@@ -906,6 +913,11 @@ func addVerdictMac(IP string, MAC string, Iface string, Table string, Verdict st
 		fmt.Println("addVerdictMac Failed", MAC, Iface, Table, err)
 		return
 	}
+}
+
+func hasVerdictMac(IP string, MAC string, Iface string, Table string, Verdict string) bool {
+	err := exec.Command("nft", "get", "element", "inet", "filter", Table, "{", IP, ".", Iface, ".", MAC, ":", Verdict, "}").Run()
+	return err == nil
 }
 
 var blockVerdict = "goto PFWDROPLOG"
