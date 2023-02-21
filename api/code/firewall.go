@@ -747,6 +747,11 @@ func addVerdict(IP string, Iface string, Table string) {
 	}
 }
 
+func hasVerdict(IP string, Iface string, Table string) bool {
+	err := exec.Command("nft", "get", "element", "inet", "filter", Table, "{", IP, ".", Iface, ":", "accept", "}").Run()
+	return err == nil
+}
+
 func addDNSVerdict(IP string, Iface string) {
 	addVerdict(IP, Iface, "dns_access")
 }
@@ -795,6 +800,70 @@ func addCustomVerdict(ZoneName string, IP string, Iface string) {
 		fmt.Println("addCustomVerdict Failed", err)
 		return
 	}
+}
+
+func hasCustomVerdict(ZoneName string, IP string, Iface string) bool {
+	err := exec.Command("nft", "get", "element", "inet", "filter", ZoneName+"_dst_access", "{", IP, ".", Iface, ":", "continue", "}").Run()
+	if err == nil {
+		err = exec.Command("nft", "get", "element", "inet", "filter", ZoneName+"_src_access", "{", IP, ".", Iface, ":", "accept", "}").Run()
+		return err == nil
+	}
+	return false
+}
+
+func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface string) bool {
+	//check if a device has its vmap entries established
+	zones := getGroupsJson()
+	zonesDisabled := map[string]bool{}
+
+	for _, zone := range zones {
+		zonesDisabled[zone.Name] = zone.Disabled
+	}
+
+	val, exists := devices[entry.MAC]
+
+	if entry.MAC != "" {
+		if !exists {
+			//given a MAC that is not in the devices list. Exit
+			return false
+		}
+	} else if entry.WGPubKey != "" {
+		val, exists = devices[entry.WGPubKey]
+		//wg pub key is unknown, exit
+		if !exists {
+			return false
+		}
+	}
+
+	for _, zone_name := range val.Groups {
+		//skip zones that are disabled
+		if zonesDisabled[zone_name] {
+			continue
+		}
+		switch zone_name {
+		case "isolated":
+			continue
+		case "dns":
+			if !hasVerdict(entry.RecentIP, Iface, "dns_access") {
+				return false
+			}
+		case "lan":
+			if !hasVerdict(entry.RecentIP, Iface, "lan_access") {
+				return false
+			}
+		case "wan":
+			if !hasVerdict(entry.RecentIP, Iface, "internet_access") {
+				return false
+			}
+		default:
+			//custom group
+			if !hasCustomVerdict(zone_name, entry.RecentIP, Iface) {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, matchInterface bool) {
@@ -970,7 +1039,7 @@ func getWireguardActivePeers() []string {
 
 	cur_time := time.Now().Unix()
 
-	_, exists := data["wg0"];
+	_, exists := data["wg0"]
 	if !exists {
 		fmt.Println("Failed to retrieve wg0 from wireguard status")
 		return handshakes
@@ -1092,6 +1161,45 @@ func getRouteInterface(IP string) string {
 	return ""
 }
 
+func establishDevice(entry DeviceEntry, new_iface string, established_route_device string, routeIP string, router string) {
+
+	fmt.Println("flushing route and vmaps ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
+
+	//1. delete arp entry
+	flushRoute(entry.MAC)
+
+	//2. delete this ip, mac from any existing verdict maps
+	flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), shouldFlushByInterface(new_iface))
+
+	//3. delete the old router address
+	exec.Command("ip", "addr", "del", routeIP, "dev", established_route_device).Run()
+
+	//3. Update the route interface
+	exec.Command("ip", "route", "flush", routeIP).Run()
+	exec.Command("ip", "route", "add", routeIP, "dev", new_iface).Run()
+
+	fmt.Println("Populating route and vmaps ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
+
+	//4. update router IP for the new interface. first delete the old addr
+	updateAddr(router, new_iface)
+
+	//5. Update the ARP entry
+	if new_iface != "wg0" {
+		updateArp(new_iface, entry.RecentIP, entry.MAC)
+	}
+
+	//6. add entry to appropriate verdict maps
+	if new_iface != "wg0" {
+		//add this MAC and IP to the ethernet filter
+		addVerdictMac(entry.RecentIP, entry.MAC, new_iface, "ethernet_filter", "return")
+	}
+
+	populateVmapEntries(entry.RecentIP, entry.MAC, new_iface, entry.WGPubKey)
+
+	//apply the tags
+	applyPrivateNetworkUpstreamDevice(entry)
+}
+
 func dynamicRouteLoop() {
 	//mesh APs do not need routes, as they use the bridge
 	if isLeafRouter() {
@@ -1115,6 +1223,7 @@ func dynamicRouteLoop() {
 			suggested_device := map[string]string{}
 
 			FWmtx.Lock()
+
 			//if a wifi device is active, place that as priority
 			for mac, iface := range wifi_peers {
 				dhcp_iface, exists := RecentDHCPIface[mac]
@@ -1138,17 +1247,18 @@ func dynamicRouteLoop() {
 
 			//now get the existing route and make an update if needed
 			for ident, entry := range devices {
-				//no IP yet for this device -> no route, continue
+				//no IP yet for this device -> no route, skip this entry
 				if entry.RecentIP == "" {
 					continue
 				}
 
+				// this gets the current device destination for this entry (LANIF, wifi vlan, )
 				established_route_device := getRouteInterface(entry.RecentIP)
 
-				//try the ident (MAC) first for wifi
+				//try the ident (MAC) first for what the new route should be
 				new_iface, exists := suggested_device[ident]
 				if !exists {
-					// if that failed, try the IP address (for wireguard)
+					// if that failed, try looking it up by IP address (for wireguard)
 					new_iface, exists = suggested_device[entry.RecentIP]
 				}
 
@@ -1158,12 +1268,15 @@ func dynamicRouteLoop() {
 					new_iface = lanif
 				}
 
-				//happy state
+				//happy state -- the established interface matches the calculated interface to route to
 				if established_route_device != "" && established_route_device == new_iface {
-					continue
-				}
 
-				fmt.Println("flushing route ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
+					//investigate verdict maps and make sure device is there
+					if hasVmapEntries(devices, entry, new_iface) {
+						//vmaps happy, skip updating this device
+						continue
+					}
+				}
 
 				routeIP := entry.RecentIP
 				is_tiny, newIP := toTinyIP(entry.RecentIP, 2)
@@ -1175,38 +1288,7 @@ func dynamicRouteLoop() {
 					continue
 				}
 
-				//1. delete arp entry
-				flushRoute(entry.MAC)
-
-				//2. delete this ip, mac from any existing verdict maps
-				flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), shouldFlushByInterface(new_iface))
-
-				//3. delete the old router address
-				exec.Command("ip", "addr", "del", routeIP, "dev", established_route_device).Run()
-
-				//3. Update the route interface
-				exec.Command("ip", "route", "flush", routeIP).Run()
-				exec.Command("ip", "route", "add", routeIP, "dev", new_iface).Run()
-
-				//4. update router IP for the new interface. first delete the old addr
-				updateAddr(router.String(), new_iface)
-
-				//5. Update the ARP entry
-				if new_iface != "wg0" {
-					updateArp(new_iface, entry.RecentIP, entry.MAC)
-				}
-
-				//6. add entry to appropriate verdict maps
-				if new_iface != "wg0" {
-					//add this MAC and IP to the ethernet filter
-					addVerdictMac(entry.RecentIP, entry.MAC, new_iface, "ethernet_filter", "return")
-				}
-
-				populateVmapEntries(entry.RecentIP, entry.MAC, new_iface, entry.WGPubKey)
-
-				//apply the tags
-				applyPrivateNetworkUpstreamDevice(entry)
-
+				establishDevice(entry, new_iface, established_route_device, routeIP, router.String())
 			}
 		}
 	}
