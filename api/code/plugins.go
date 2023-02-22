@@ -605,7 +605,37 @@ func updateMeshPluginPut(endpoint string, jsonValue []byte) {
 
 }
 
+func deauthConnectedStation(event PSKAuthSuccess) {
+	devices := getDevicesJson()
+	device, exists := devices[event.MAC]
+	if exists {
+		established_route_device := getRouteInterface(device.RecentIP)
+		if isAPVlan(established_route_device) {
+			//okay, now we want to send a deauth command to this AP
+			parts := strings.Split(established_route_device, ".")
+			if len(parts) == 2 {
+				iface := parts[0]
+				RunHostapdCommandArray(iface, []string{"disassociate", event.MAC})
+				RunHostapdCommandArray(iface, []string{"deauthenticate", event.MAC})
+			}
+		}
+	}
+}
+
 func updateMeshPluginConnect(event PSKAuthSuccess) {
+
+	if !PlusEnabled() {
+		return
+	}
+
+	if !PluginEnabled("MESH") {
+		return
+	}
+
+	if event.Router != "" {
+		deauthConnectedStation(event)
+	}
+
 	jsonValue, _ := json.Marshal(event)
 	go updateMeshPluginPut("stationConnect", jsonValue)
 }

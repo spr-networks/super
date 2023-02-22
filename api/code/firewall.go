@@ -1181,7 +1181,7 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	flushRoute(entry.MAC)
 
 	//2. delete this ip, mac from any existing verdict maps
-	flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), shouldFlushByInterface(new_iface))
+	flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
 
 	//3. delete the old router address
 	exec.Command("ip", "addr", "del", routeIP, "dev", established_route_device).Run()
