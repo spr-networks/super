@@ -1089,9 +1089,7 @@ func updateLocalMappings(IP string, Name string) {
 
 var DHCPmtx sync.Mutex
 
-func shouldFlushByInterface(Iface string) bool {
-	matchInterface := false
-
+func isAPVlan(Iface string) bool {
 	Interfacesmtx.Lock()
 	//read the old configuration
 	config := loadInterfacesConfigLocked()
@@ -1100,13 +1098,12 @@ func shouldFlushByInterface(Iface string) bool {
 	for _, entry := range config {
 		if entry.Enabled && entry.Type == "AP" {
 			if strings.Contains(Iface, entry.Name+".") {
-				matchInterface = true
-				break
+				return true
 			}
 		}
 	}
 
-	return matchInterface
+	return false
 }
 
 type DHCPUpdate struct {
@@ -1348,7 +1345,7 @@ func refreshDeviceGroups(dev DeviceEntry) {
 	}
 
 	//remove from existing verdict maps
-	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), shouldFlushByInterface(ifname))
+	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname))
 
 	//add this MAC and IP to the ethernet filter
 	addVerdictMac(ipv4, dev.MAC, ifname, "ethernet_filter", "return")
