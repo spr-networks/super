@@ -10,7 +10,7 @@ dpkg-reconfigure openssh-server
 
 
 # Resize to full disk
-ROOTPART=$(df | grep " /$" | awk '{print $1}')
+ROOTPART=$(mount | grep " / " | awk '{print $1}')
 
 PART=$(echo $ROOTPART | sed -E 's/^\/dev\/([a-z]+[0-9]*)([p]?[0-9]*).*$/\1/')
 PARTNUM=$(echo $ROOTPART | sed -E 's/^\/dev\/[a-z]+[0-9]*([p]?[0-9]*).*$/\1/')
