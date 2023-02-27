@@ -69,7 +69,7 @@ const GroupListing = ({ group, ...props }) => {
   }
 
   return (
-    <VStack space={2} h={'100%'}>
+    <VStack space={2}>
       <HStack
         space={1}
         alignItems="center"
@@ -122,7 +122,6 @@ const GroupListing = ({ group, ...props }) => {
             </HStack>
           </Box>
         )}
-        keyExtractor={(item) => item.Name}
       />
     </VStack>
   )
