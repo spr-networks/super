@@ -7,8 +7,8 @@ github.com/moby/moby v23.0.1+incompatible h1:h9fbV+v0Ye04IenS/aQfJ2SM3J6NR4h+QoB
 github.com/moby/moby v23.0.1+incompatible/go.mod h1:fDXVQ6+S340veQPv35CzDahGBmHsiclFwfEygB/TWMc=
 github.com/moby/pubsub v1.0.0 h1:jkp/imWsmJz2f6LyFsk7EkVeN2HxR/HTTOY8kHrsxfA=
 github.com/moby/pubsub v1.0.0/go.mod h1:bXSO+3h5MNXXCaEG+6/NlAIk7MMZbySZlnB+cUQhKKc=
-github.com/spr-networks/sprbus v0.0.0-20220831120422-b5a9ed261380 h1:EP9mOmjfnG8ObepHcu+Y+SabZXJLQiSweFxLesa5Yio=
-github.com/spr-networks/sprbus v0.0.0-20220831120422-b5a9ed261380/go.mod h1:fK1hepbMhmj80wjrM//6LDvaP30pu0dwVNAWGaJHkqU=
+github.com/spr-networks/sprbus v0.0.0-20220811094515-092f7af34fb2 h1:c7RadfVpqqXxc/kxxbzY/oigEx6BvO/bMhkpf+5P5P4=
+github.com/spr-networks/sprbus v0.0.0-20220811094515-092f7af34fb2/go.mod h1:fK1hepbMhmj80wjrM//6LDvaP30pu0dwVNAWGaJHkqU=
 golang.org/x/net v0.7.0 h1:rJrUqqhjsgNp7KqAIc25s9pZnjU7TUcSY7HcVZjdn1g=
 golang.org/x/net v0.7.0/go.mod h1:2Tu9+aMcznHK/AK1HMvgo6xiTLG5rD5rZLDS+rp2Bjs=
 golang.org/x/sys v0.5.0 h1:MUK/U/4lj1t1oPg0HfuXDN/Z1wv31ZJ/YcPiGccS4DU=
