@@ -88,7 +88,7 @@ const DeviceListing = (props) => {
                         if (dev.isConnected == false) {
                           dev.isConnected = connectedMACs.includes(dev.MAC)
                           if (dev.isConnected) {
-                            alert(dev.MAC)
+
                           }
                         }
                         return dev
@@ -102,7 +102,7 @@ const DeviceListing = (props) => {
             })
           })
 
-          meshAPI.meshIter(new APIWifi()).then(r => r.forEach(remoteWifiApi => {
+          meshAPI.meshIter(() => new APIWifi()).then(r => r.forEach(remoteWifiApi => {
             remoteWifiApi.interfacesConfiguration.call(remoteWifiApi).then((config) => {
               config.forEach((iface) => {
                 if (iface.Type == "AP" &&  iface.Enabled == true) {
@@ -125,7 +125,6 @@ const DeviceListing = (props) => {
                 }
               })
             })
-
           }))
 
         }
@@ -247,7 +246,6 @@ const DeviceListing = (props) => {
       <FlashList
         data={devices}
         renderItem={renderItem}
-        keyExtractor={(item, index) => item.Name + index}
         estimatedItemSize={100}
       />
 
