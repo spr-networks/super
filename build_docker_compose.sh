@@ -36,9 +36,7 @@ fi
 
 # set version
 # NOTE if we rebuild a single container could still be old version
-git describe --tags > ./version.txt
-#git tag |sort -g|tail -1 > ./version.txt
-git describe --tags $(git rev-list --tags --max-count=1) > ./version.txt
+git tag -l --sort=-creatordate  | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 > ./version.txt
 
 # make sure state directories and files exist
 mkdir -p state/api/
