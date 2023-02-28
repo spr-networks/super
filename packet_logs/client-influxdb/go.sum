@@ -31,6 +31,8 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/spkg/bom v0.0.0-20160624110644-59b7046e48ad/go.mod h1:qLr4V1qq6nMqFKkMo8ZTx3f+BZEkzsRUY10Xsm2mwU0=
 github.com/spr-networks/sprbus v0.0.0-20220811094515-092f7af34fb2 h1:c7RadfVpqqXxc/kxxbzY/oigEx6BvO/bMhkpf+5P5P4=
 github.com/spr-networks/sprbus v0.0.0-20220811094515-092f7af34fb2/go.mod h1:fK1hepbMhmj80wjrM//6LDvaP30pu0dwVNAWGaJHkqU=
+github.com/spr-networks/sprbus v0.0.1 h1:ExT1sREKrGgubSsaqgUrkErjt08Nm+Cpj4qPl8oXxPU=
+github.com/spr-networks/sprbus v0.0.1/go.mod h1:PPHAPjoRbrs7oATHcMsS808khuvqJqICUEgiLTehu8E=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=

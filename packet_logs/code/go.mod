@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/florianl/go-nflog/v2 v2.0.1
 	github.com/google/gopacket v1.1.19
-	github.com/spr-networks/sprbus v0.0.0-20220811094515-092f7af34fb2
+	github.com/spr-networks/sprbus v0.0.1
 )
 
 require (
