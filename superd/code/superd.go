@@ -12,6 +12,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -263,6 +264,23 @@ func lastTagForRepository(path string) string {
 	return strings.Trim(string(stdout), "'\n")
 }
 
+func dockerImageLabel(image string, labelName string) (string, error) {
+    cmd := exec.Command("docker", "inspect", "--format={{index .Config.Labels \""+labelName+"\"}}", image)
+
+    var out bytes.Buffer
+    cmd.Stdout = &out
+
+    err := cmd.Run()
+    if err != nil {
+        return "", err
+    }
+
+    labelValue := out.String()
+    return labelValue, nil
+}
+
+
+
 func version(w http.ResponseWriter, r *http.Request) {
 	plugin := r.URL.Query().Get("plugin")
 
@@ -281,6 +299,37 @@ func version(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(version)
 }
+
+func container_version(w http.ResponseWriter, r *http.Request) {
+	//dockerImageLabel image, "org.supernetworks.version")
+	plugin := r.URL.Query().Get("plugin")
+	version := ""
+
+	if plugin == "" {
+		v, err := dockerImageLabel("superd", "org.supernetworks.version")
+		if err != nil {
+			http.Error(w, "Failed to retrieve version for superd", 400)
+			return
+		}
+		version = v
+	} else {
+		v, err := dockerImageLabel(plugin, "org.supernetworks.version")
+		if err != nil {
+			http.Error(w, "Failed to retrieve version "+plugin, 400)
+			return
+		}
+		version = v
+	}
+
+	if version == "" {
+		http.Error(w, "Failed to retrieve version "+plugin, 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(version)
+}
+
 
 func establishConfigsIfEmpty(SuperDir string) {
 	if _, err := os.Stat(SuperDir + "/configs/base/config.sh"); os.IsNotExist(err) {
@@ -340,7 +389,8 @@ func main() {
 	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("GET")
 	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("GET")
 
-	unix_plugin_router.HandleFunc("/version", version).Methods("GET")
+	unix_plugin_router.HandleFunc("/git_version", version).Methods("GET")
+	unix_plugin_router.HandleFunc("/container_version", container_version).Methods("GET")
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)

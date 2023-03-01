@@ -253,10 +253,10 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 // get spr version
-func getVersion(w http.ResponseWriter, r *http.Request) {
+func getGitVersion(w http.ResponseWriter, r *http.Request) {
 	plugin := r.URL.Query().Get("plugin")
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/version?plugin="+plugin, nil)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/git_version?plugin="+plugin, nil)
 	if err != nil {
 		http.Error(w, fmt.Errorf("failed to make request for version "+plugin).Error(), 400)
 		return
@@ -288,9 +288,45 @@ func getVersion(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(version)
 }
 
+func getContainerVersion(w http.ResponseWriter, r *http.Request) {
+	plugin := r.URL.Query().Get("plugin")
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/container_version?plugin="+plugin, nil)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to make request for version "+plugin).Error(), 400)
+		return
+	}
+
+	c := getSuperdClient()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to request version from superd "+plugin).Error(), 400)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	version := ""
+	err = json.NewDecoder(resp.Body).Decode(&version)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Errorf("failed to get version %s", plugin+" "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(version)
+}
+
+
 func doConfigsBackup(w http.ResponseWriter, r *http.Request) {
 	//get version
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/version", nil)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/git_version", nil)
 	if err != nil {
 		http.Error(w, fmt.Errorf("failed to make request for version ").Error(), 400)
 		return
@@ -1917,7 +1953,11 @@ func main() {
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
-	external_router_authenticated.HandleFunc("/version", getVersion).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/version", getContainerVersion).Methods("GET", "OPTIONS")
+
+//	external_router_authenticated.HandleFunc("/versions", getVersions).Methods("GET", "OPTIONS")
+//	external_router_authenticated.HandleFunc("/update_version", changeVersion).Methods("GET", "OPTIONS")
+
 	external_router_authenticated.HandleFunc("/restart", restart).Methods("PUT")
 	external_router_authenticated.HandleFunc("/backup", doConfigsBackup).Methods("PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup/{name}", getConfigsBackup).Methods("GET", "DELETE", "OPTIONS")
