@@ -1,6 +1,6 @@
 FROM ubuntu:22.04
 
-RUN apt-get update && apt-get -y install iproute2 wireless-tools iw nano tcpdump inetutils-ping netcat wpasupplicant curl hostapd isc-dhclient
+RUN apt-get update && apt-get -y install iproute2 wireless-tools iw nano tcpdump inetutils-ping netcat wpasupplicant curl hostapd isc-dhcp-client
 
 COPY w.conf /w.conf
 COPY go.sh /
