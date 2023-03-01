@@ -285,7 +285,6 @@ const AdminLayout = (props) => {
     }
 
     const handleWebSocketEvent = (event) => {
-      console.log('[webSocket]', event.data)
       if (event.data == 'success') {
         return
       } else if (event.data == 'Authentication failure') {

@@ -1,5 +1,6 @@
 import React, { Component, useEffect, useState } from 'react'
-import { wifiAPI } from 'api/Wifi'
+import { wifiAPI, meshAPI } from 'api'
+import APIWifi from 'api/Wifi'
 import StatsWidget from './StatsWidget'
 import { faClock, faLaptop, faWifi } from '@fortawesome/free-solid-svg-icons'
 
@@ -12,9 +13,37 @@ export class WifiClientCount extends Component {
     wifiAPI
       .allStations(this.props.iface)
       .then((stations) => {
-        this.setState({ numberOfWifiClients: Object.keys(stations).length })
+        let count = Object.keys(stations).length
+
+        this.setState({ numberOfWifiClients: count})
+        meshAPI.meshIter(() => new APIWifi()).then(r => {
+          let connectMACsList = [];  // Declare an array to store the 'connectMACs' variables
+          r.forEach(remoteWifiApi => {
+            remoteWifiApi.interfacesConfiguration.call(remoteWifiApi).then((config) => {
+              config.forEach((iface) => {
+                if (iface.Type == "AP" &&  iface.Enabled == true) {
+                  remoteWifiApi
+                    .allStations.call(remoteWifiApi, iface.Name)
+                    .then((stations) => {
+                      let connectedMACs = Object.keys(stations)
+                      connectMACsList.push(...connectedMACs);  // Push the 'connectedMACs' variable to the 'connectMACsList' array
+                    })
+                    .catch((err) => {
+
+                    })
+                }
+              })
+            })
+          })
+
+          this.setState({ numberOfWifiClients: (count + connectMACsList.length) })
+        });
+
       })
       .catch((err) => {})
+
+
+
   }
 
   render() {

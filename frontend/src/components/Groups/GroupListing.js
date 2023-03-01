@@ -6,6 +6,7 @@ import {
   Badge,
   Box,
   Heading,
+  FlatList,
   Stack,
   HStack,
   Text,
@@ -28,10 +29,12 @@ const GroupListing = ({ group, ...props }) => {
   }
 
   const list = []
+  let idx = 0;
   if (group.Members && group.Members.length > 0) {
     for (const dev of group.Members) {
       //if the device was in the vmap, mark it as active
       dev.ifname = ''
+      dev.key = idx++;
 
       if (group.vmap) {
         for (const entry of group.vmap) {
@@ -69,7 +72,7 @@ const GroupListing = ({ group, ...props }) => {
   }
 
   return (
-    <VStack space={2} h={'100%'}>
+    <VStack space={2}>
       <HStack
         space={1}
         alignItems="center"
@@ -80,7 +83,7 @@ const GroupListing = ({ group, ...props }) => {
         <Text color="muted.500">{groupDescriptions[group.Name] || ''}</Text>
       </HStack>
 
-      <FlashList
+      <FlatList
         data={list}
         estimatedItemSize={100}
         renderItem={({ item }) => (
@@ -122,7 +125,6 @@ const GroupListing = ({ group, ...props }) => {
             </HStack>
           </Box>
         )}
-        keyExtractor={(item) => item.Name}
       />
     </VStack>
   )

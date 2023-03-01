@@ -10,6 +10,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 )
@@ -230,6 +232,27 @@ func getHostSuperDir() string {
 }
 
 func versionForRepository(path string) string {
+	//git tag -l --sort=-creatordate  | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1
+	cmd := exec.Command("git", "-C", path, "tag", "-l", "--sort=-creatordate")
+	output, err := cmd.Output()
+	if err != nil {
+		fmt.Println("[-] version not found", err)
+		panic(err)
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(string(output)))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if matched, _ := regexp.MatchString(`^v[0-9]+\.[0-9]+\.[0-9]+$`, line); matched {
+			return strings.Trim(line, "'\n")
+		}
+	}
+
+	fmt.Println("[-] version not found", err)
+	return ""
+}
+
+func lastTagForRepository(path string) string {
 	cmd := exec.Command("git", "-C", path, "describe", "--tags")
 	stdout, err := cmd.Output()
 

@@ -10,7 +10,7 @@ server4:
     - dns: $DNSIP
     - router: $LANIP
     - netmask: $TINYNETMASK
-    - tiny_subnets: /state/dhcp/leases.txt $TINYNETSTART $TINYNETSTOP 730h0m0s
+    - tiny_subnets: /state/dhcp/leases.txt $TINYNETSTART $TINYNETSTOP 24h0m0s
     - execute: /scripts/dhcp_helper.sh
 
 END

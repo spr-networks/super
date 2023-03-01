@@ -41,11 +41,14 @@ const Tags = (props) => {
 
         tagNames = [...new Set(tagNames)]
 
+
         let tags = tagNames.map((name) => {
           let data = Object.values(devices).filter((device) =>
             device.DeviceTags.includes(name)
           )
-
+          if (name == "") {
+            name = "Empty Tag Name"
+          }
           return { name, data }
         })
 
