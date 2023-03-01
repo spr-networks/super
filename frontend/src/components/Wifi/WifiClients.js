@@ -9,8 +9,6 @@ import { Box, Stack, HStack, Text, useColorModeValue } from 'native-base'
 import { FlashList } from '@shopify/flash-list'
 
 const WifiClients = (props) => {
-  const [iface, setIface] = useState('wlan1')
-
   const [clients, setClients] = useState([])
   const context = useContext(AlertContext)
 
@@ -43,9 +41,22 @@ const WifiClients = (props) => {
 
 
   const refreshClients = async () => {
-    const stations = await wifiAPI.allStations(iface).catch((error) => {
+    const ifaces = await wifiAPI.interfaces('AP').catch((error) => {
       context.error('WIFI API Failure', error)
     })
+
+
+    let stations = {}
+    for (let iface of ifaces) {
+      let ret = await wifiAPI.allStations(iface).catch((error) => {
+        context.error('WIFI API Failure', error)
+      })
+
+      for (let mac of Object.keys(ret)) {
+        ret[mac].Iface = iface
+      }
+      stations = {...stations, ...ret}
+    }
 
     const devices = await deviceAPI.list().catch((error) => {
       context.error('Device API Failure', error)
@@ -60,7 +71,7 @@ const WifiClients = (props) => {
         let station = stations[client.MAC]
         client.Auth = akmSuiteAuth(station.AKMSuiteSelector)
         client.Signal = station.signal
-
+        client.Iface = station.Iface
         return client
       })
 
@@ -101,6 +112,15 @@ const WifiClients = (props) => {
             </Text>
 
             <Stack
+              flex="1"
+              direction={{ base: 'column', md: 'row' }}
+              space={1}
+              alignItems="center"
+            >
+              <Text>{item.Iface}</Text>
+            </Stack>
+
+            <Stack
               flex="2"
               direction={{ base: 'column', md: 'row' }}
               space={2}
@@ -109,6 +129,7 @@ const WifiClients = (props) => {
               <Text bold>{item.RecentIP}</Text>
               <Text color="muted.500">{item.MAC}</Text>
             </Stack>
+
 
             <Stack
               direction={{ base: 'column', md: 'row' }}

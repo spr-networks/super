@@ -24,7 +24,7 @@ jobs:
         run: ./installer/qemu-setup-linux.sh
       - name: Download the image
         working-directory: ./installer
-        run: ./pi-download*
+        run: ./pi-download-image.sh
       - name: Build install image
         working-directory: ./installer
         run: ./pi-arm64-image-build.sh

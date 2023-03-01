@@ -3,6 +3,7 @@ version: '3.4'
 x-labels:
   &default-labels
   org.supernetworks.ci: ${CI:-false}
+  org.supernetworks.version: ${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
 
 x-logging:
   &default-logging
