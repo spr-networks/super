@@ -318,7 +318,7 @@ func container_version(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Failed to retrieve version "+plugin, 400)
 			return
 		}
-		version = v
+		version = strings.Trim(v, "\n")
 	}
 
 	if version == "" {
