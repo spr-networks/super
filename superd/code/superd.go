@@ -11,8 +11,8 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -32,8 +32,53 @@ import (
 
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
-
 var ComposeAllowList = []string{"docker-compose.yml", "docker-compose-virt.yml", "plugins/plus/pfw_extension/docker-compose.yml", "plugins/plus/mesh_extension/docker-compose.yml"}
+var ReleaseChannelFile = "configs/base/release_channel"
+var ReleaseVersionFile = "configs/base/release_version"
+
+var ReleaseInfoMtx sync.Mutex
+
+func getReleaseVersion() string {
+	ReleaseInfoMtx.Lock()
+	defer ReleaseInfoMtx.Unlock()
+
+	data, err := os.ReadFile(ReleaseVersionFile)
+	if err != nil {
+		return string(data)
+	} else {
+		return ""
+	}
+}
+
+func setReleaseVersion(Version string) error {
+	ReleaseInfoMtx.Lock()
+	defer ReleaseInfoMtx.Unlock()
+
+	regex, _ := regexp.Compile("[^a-zA-Z0-9-_.]+")
+	versionFiltered := regex.ReplaceAllString(Version, "")
+	return os.WriteFile(ReleaseVersionFile, []byte(versionFiltered), 0644)
+}
+
+func getReleaseChannel() string {
+	ReleaseInfoMtx.Lock()
+	defer ReleaseInfoMtx.Unlock()
+
+	data, err := os.ReadFile(ReleaseChannelFile)
+	if err != nil {
+		return string(data)
+	} else {
+		return ""
+	}
+}
+
+func setReleaseChannel(Channel string) error {
+	ReleaseInfoMtx.Lock()
+	defer ReleaseInfoMtx.Unlock()
+
+	regex, _ := regexp.Compile("[^a-zA-Z0-9-_]+")
+	channelFiltered := regex.ReplaceAllString(Channel, "")
+	return os.WriteFile(ReleaseChannelFile, []byte(channelFiltered), 0644)
+}
 
 func getDefaultCompose() string {
 	envCompose := os.Getenv("COMPOSE_FILE")
@@ -49,7 +94,22 @@ func getDefaultCompose() string {
 	return "docker-compose.yml"
 }
 
+func initializeReleaseEnvironment() {
+	release_channel := getReleaseChannel()
+	if release_channel != "" {
+		os.Setenv("RELEASE_CHANNEL", release_channel)
+	}
+
+	release_version := getReleaseVersion()
+	if release_channel != "" {
+		os.Setenv("RELEASE_VERSION", release_version)
+	}
+}
+
 func composeCommand(composeFile string, target string, command string, optional string) {
+
+	// important to get/set release channel and version for rollbacks and dev channels etc
+	initializeReleaseEnvironment()
 
 	if composeFile == "" {
 		composeFile = getDefaultCompose()
@@ -265,24 +325,22 @@ func lastTagForRepository(path string) string {
 }
 
 func dockerImageLabel(image string, labelName string) (string, error) {
-		regex, _ := regexp.Compile("[^a-zA-Z0-9-_]+")
-		labelNameFiltered := regex.ReplaceAllString(labelName, "")
+	regex, _ := regexp.Compile("[^a-zA-Z0-9-_]+")
+	labelNameFiltered := regex.ReplaceAllString(labelName, "")
 
-    cmd := exec.Command("docker", "inspect", "--format={{index .Config.Labels \""+labelNameFiltered+"\"}}", image)
+	cmd := exec.Command("docker", "inspect", "--format={{index .Config.Labels \""+labelNameFiltered+"\"}}", image)
 
-    var out bytes.Buffer
-    cmd.Stdout = &out
+	var out bytes.Buffer
+	cmd.Stdout = &out
 
-    err := cmd.Run()
-    if err != nil {
-        return "", err
-    }
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	}
 
-    labelValue := out.String()
-    return labelValue, nil
+	labelValue := out.String()
+	return labelValue, nil
 }
-
-
 
 func version(w http.ResponseWriter, r *http.Request) {
 	plugin := r.URL.Query().Get("plugin")
@@ -333,6 +391,71 @@ func container_version(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(version)
 }
 
+type ReleaseInfo struct {
+	CustomChannel string
+	CustomVersion string
+	Current       string
+}
+
+func release_info(w http.ResponseWriter, r *http.Request) {
+
+	info := ReleaseInfo{}
+	if r.Method == http.MethodGet {
+		//load t
+		v, err := dockerImageLabel("superd", "org.supernetworks.version")
+		if err != nil {
+			fmt.Println("[i] Failed to retrieve version for superd")
+		} else {
+			info.Current = v
+		}
+
+		info.CustomChannel = getReleaseChannel()
+		info.CustomVersion = getReleaseVersion()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(info)
+		return
+	}
+
+	//PUT. Set these
+	err := json.NewDecoder(r.Body).Decode(&info)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if info.CustomChannel != "" {
+		//right now we only allow "-dev"
+		if info.CustomChannel != "-dev" {
+			http.Error(w, "Unsupported channel "+info.CustomChannel, 400)
+			return
+		}
+
+		// in case more channels are allowed in the future
+		regex, _ := regexp.Compile("[^a-zA-Z0-9-_]+")
+		channelFiltered := regex.ReplaceAllString(info.CustomChannel, "")
+		if channelFiltered != info.CustomChannel {
+			http.Error(w, "Channel includes unexpected characters", 400)
+			return
+		}
+
+		setReleaseChannel(info.CustomChannel)
+	}
+
+	if info.CustomVersion != "" {
+		regex, _ := regexp.Compile("[^a-zA-Z0-9-_.]+")
+		versionFiltered := regex.ReplaceAllString(info.CustomVersion, "")
+
+		if versionFiltered != info.CustomVersion {
+			http.Error(w, "Version includes unexpected characters", 400)
+			return
+		}
+
+		setReleaseVersion(info.CustomVersion)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(version)
+}
 
 func establishConfigsIfEmpty(SuperDir string) {
 	if _, err := os.Stat(SuperDir + "/configs/base/config.sh"); os.IsNotExist(err) {
@@ -394,6 +517,9 @@ func main() {
 
 	unix_plugin_router.HandleFunc("/git_version", version).Methods("GET")
 	unix_plugin_router.HandleFunc("/container_version", container_version).Methods("GET")
+
+	// get/set release channel
+	unix_plugin_router.HandleFunc("/release", release_info).Methods("GET", "PUT")
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)

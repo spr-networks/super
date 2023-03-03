@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	crand "crypto/rand"
 	"encoding/base64"
 	"encoding/binary"
@@ -288,6 +289,103 @@ func getGitVersion(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(version)
 }
 
+type ReleaseInfo struct {
+	CustomChannel string
+	CustomVersion string
+	Current       string
+}
+
+func releaseInfo(w http.ResponseWriter, r *http.Request) {
+	info := ReleaseInfo{}
+
+	c := getSuperdClient()
+
+	if r.Method == http.MethodGet {
+
+		req, err := http.NewRequest(http.MethodGet, "http://localhost/release", nil)
+		if err != nil {
+			http.Error(w, fmt.Errorf("failed to make request for version from superd ").Error(), 400)
+			return
+		}
+
+		resp, err := c.Do(req)
+		if err != nil {
+			http.Error(w, fmt.Errorf("failed to request version from superd ").Error(), 400)
+			return
+		}
+
+		defer resp.Body.Close()
+
+		err = json.NewDecoder(resp.Body).Decode(&info)
+		if err != nil {
+			http.Error(w, fmt.Errorf("failed to decode info").Error(), 400)
+			return
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			http.Error(w, fmt.Errorf("failed to get info "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(info)
+		return
+	}
+
+	//put
+	err := json.NewDecoder(r.Body).Decode(&info)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to decode info").Error(), 400)
+		return
+	}
+
+	jsonValue, _ := json.Marshal(info)
+
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/release", bytes.NewBuffer(jsonValue))
+	if err != nil {
+		return
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to set superd release").Error(), 400)
+		return
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Errorf("failed to set superd release "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+		return
+	}
+	//fall through success
+}
+
+func update(w http.ResponseWriter, r *http.Request) {
+	//tdb -> PUT into superd to start update
+
+	//1) superd update with service & compose_file
+
+	//2) start with service & compose_file
+
+}
+
+func releasesAvailable(w http.ResponseWriter, r *http.Request) {
+	reply := []string{"latest"}
+	//tdb -> query superd
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(reply)
+
+}
+
+func releaseChannels(w http.ResponseWriter, r *http.Request) {
+	reply := []string{"", "-dev"}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(reply)
+}
+
 func getContainerVersion(w http.ResponseWriter, r *http.Request) {
 	plugin := r.URL.Query().Get("plugin")
 
@@ -322,7 +420,6 @@ func getContainerVersion(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(version)
 }
-
 
 func doConfigsBackup(w http.ResponseWriter, r *http.Request) {
 	//get version
@@ -1951,17 +2048,19 @@ func main() {
 
 	//Misc
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
-	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
-	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
-	external_router_authenticated.HandleFunc("/version", getContainerVersion).Methods("GET", "OPTIONS")
-
-//	external_router_authenticated.HandleFunc("/versions", getVersions).Methods("GET", "OPTIONS")
-//	external_router_authenticated.HandleFunc("/update_version", changeVersion).Methods("GET", "OPTIONS")
-
 	external_router_authenticated.HandleFunc("/restart", restart).Methods("PUT")
 	external_router_authenticated.HandleFunc("/backup", doConfigsBackup).Methods("PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup/{name}", getConfigsBackup).Methods("GET", "DELETE", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
+
+	//updates, version, feature info
+	external_router_authenticated.HandleFunc("/release", releaseInfo).Methods("GET", "PUT", "OPTIONS")
+	external_router_authenticated.HandleFunc("/releaseChannels", releaseChannels).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/releasesAvailable", releasesAvailable).Methods("GET", "PUT", "OPTIONS")
+	external_router_authenticated.HandleFunc("/update", update).Methods("GET", "PUT", "OPTIONS")
+	external_router_authenticated.HandleFunc("/version", getContainerVersion).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
 
 	//device management
 	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")
