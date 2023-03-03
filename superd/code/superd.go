@@ -325,10 +325,7 @@ func lastTagForRepository(path string) string {
 }
 
 func dockerImageLabel(image string, labelName string) (string, error) {
-	regex, _ := regexp.Compile("[^a-zA-Z0-9-_]+")
-	labelNameFiltered := regex.ReplaceAllString(labelName, "")
-
-	cmd := exec.Command("docker", "inspect", "--format={{index .Config.Labels \""+labelNameFiltered+"\"}}", image)
+	cmd := exec.Command("docker", "inspect", "--format={{index .Config.Labels \""+labelName+"\"}}", image)
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
