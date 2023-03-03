@@ -32,7 +32,7 @@ import (
 
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
-var ComposeAllowList = []string{"docker-compose.yml", "docker-compose-virt.yml", "plugins/plus/pfw_extension/docker-compose.yml", "plugins/plus/mesh_extension/docker-compose.yml"}
+var ComposeAllowList = []string{"docker-compose.yml", "docker-compose-test.yml", "docker-compose-virt.yml", "plugins/plus/pfw_extension/docker-compose.yml", "plugins/plus/mesh_extension/docker-compose.yml"}
 var ReleaseChannelFile = "configs/base/release_channel"
 var ReleaseVersionFile = "configs/base/release_version"
 
