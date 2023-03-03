@@ -43,7 +43,7 @@ func getReleaseVersion() string {
 	defer ReleaseInfoMtx.Unlock()
 
 	data, err := os.ReadFile(ReleaseVersionFile)
-	if err != nil {
+	if err == nil {
 		return string(data)
 	} else {
 		return ""
@@ -64,7 +64,7 @@ func getReleaseChannel() string {
 	defer ReleaseInfoMtx.Unlock()
 
 	data, err := os.ReadFile(ReleaseChannelFile)
-	if err != nil {
+	if err == nil {
 		return string(data)
 	} else {
 		return ""
