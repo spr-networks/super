@@ -265,7 +265,10 @@ func lastTagForRepository(path string) string {
 }
 
 func dockerImageLabel(image string, labelName string) (string, error) {
-    cmd := exec.Command("docker", "inspect", "--format={{index .Config.Labels \""+labelName+"\"}}", image)
+		regex, _ := regexp.Compile("[^a-zA-Z0-9-_]+")
+		labelNameFiltered := regex.ReplaceAllString(labelName, "")
+
+    cmd := exec.Command("docker", "inspect", "--format={{index .Config.Labels \""+labelNameFiltered+"\"}}", image)
 
     var out bytes.Buffer
     cmd.Stdout = &out
@@ -311,7 +314,7 @@ func container_version(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Failed to retrieve version for superd", 400)
 			return
 		}
-		version = v
+		version = strings.Trim(v, "\n")
 	} else {
 		v, err := dockerImageLabel(plugin, "org.supernetworks.version")
 		if err != nil {
