@@ -385,6 +385,28 @@ func update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/start", nil)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to make superd start request").Error(), 400)
+		return
+	}
+
+	c := getSuperdClient()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to call superd start ").Error(), 400)
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Errorf("failed to call superd start "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+		return
+	}
+
 }
 
 func releasesAvailable(w http.ResponseWriter, r *http.Request) {
