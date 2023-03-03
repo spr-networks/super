@@ -2073,8 +2073,8 @@ func main() {
 	//updates, version, feature info
 	external_router_authenticated.HandleFunc("/release", releaseInfo).Methods("GET", "PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/releaseChannels", releaseChannels).Methods("GET", "OPTIONS")
-	external_router_authenticated.HandleFunc("/releasesAvailable", releasesAvailable).Methods("GET", "PUT", "OPTIONS")
-	external_router_authenticated.HandleFunc("/update", update).Methods("GET", "PUT", "OPTIONS")
+	external_router_authenticated.HandleFunc("/releasesAvailable", releasesAvailable).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/update", update).Methods("PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/version", getContainerVersion).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
 
