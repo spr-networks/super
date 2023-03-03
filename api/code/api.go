@@ -363,11 +363,27 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 func update(w http.ResponseWriter, r *http.Request) {
-	//tdb -> PUT into superd to start update
-
 	//1) superd update with service & compose_file
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/update", nil)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to make superd request").Error(), 400)
+		return
+	}
 
-	//2) start with service & compose_file
+	c := getSuperdClient()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to call superd update ").Error(), 400)
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Errorf("failed to call superd update "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+		return
+	}
 
 }
 
