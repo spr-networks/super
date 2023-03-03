@@ -310,7 +310,7 @@ func getContainerVersion(w http.ResponseWriter, r *http.Request) {
 	version := ""
 	err = json.NewDecoder(resp.Body).Decode(&version)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
+		http.Error(w, fmt.Errorf("failed to get version for %s", plugin).Error(), 400)
 		return
 	}
 
