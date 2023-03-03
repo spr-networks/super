@@ -410,7 +410,8 @@ func update(w http.ResponseWriter, r *http.Request) {
 
 func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 	reply := []string{"latest"}
-	//tdb -> query superd
+
+	//tdb -> query superd and have it fetch https://ghcr.io/v2/spr-networks/XYZ/tags/list
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
