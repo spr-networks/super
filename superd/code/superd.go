@@ -44,7 +44,7 @@ func getReleaseVersion() string {
 
 	data, err := os.ReadFile(ReleaseVersionFile)
 	if err == nil {
-		return string(data)
+		return strings.TrimSpace(string(data))
 	} else {
 		return ""
 	}
@@ -65,7 +65,7 @@ func getReleaseChannel() string {
 
 	data, err := os.ReadFile(ReleaseChannelFile)
 	if err == nil {
-		return string(data)
+		return strings.TrimSpace(string(data))
 	} else {
 		return ""
 	}
@@ -141,6 +141,10 @@ func composeCommand(composeFile string, target string, command string, optional 
 
 	cmd := "docker-compose"
 	if new_docker == true {
+		//certain commands, like up -d, will run in a new docker container
+		//so that superd updating itself does not result in docker killing
+		// the up -d command.
+
 		superdir := getHostSuperDir()
 		release_channel := getReleaseChannel()
 		release_version := getReleaseVersion()
