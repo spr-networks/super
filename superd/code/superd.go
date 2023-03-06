@@ -106,7 +106,8 @@ func initializeReleaseEnvironment() {
 	}
 }
 
-func composeCommand(composeFile string, target string, command string, optional string) {
+func composeCommand(composeFile string, target string, command string, optional string, new_docker bool) {
+	args := []string{}
 
 	// important to get/set release channel and version for rollbacks and dev channels etc
 	initializeReleaseEnvironment()
@@ -128,49 +129,52 @@ func composeCommand(composeFile string, target string, command string, optional 
 		return
 	}
 
-	if target != "" {
-		if optional != "" {
-			_, err := exec.Command("docker-compose", "-f", composeFile, command, optional, target).Output()
-			if err != nil {
-				fmt.Println("docker-compose "+command, composeFile, optional, target, "failed", err)
-			}
-		} else {
-			_, err := exec.Command("docker-compose", "-f", composeFile, command, target).Output()
-			if err != nil {
-				fmt.Println("docker-compose"+command, composeFile, "failed", err)
-			}
-		}
-	} else {
-		if optional != "" {
-			_, err := exec.Command("docker-compose", "-f", composeFile, command, optional).Output()
-			if err != nil {
-				fmt.Println("docker-compose", composeFile, command, optional, "failed", err)
-			}
-		} else {
-			_, err := exec.Command("docker-compose", "-f", composeFile, command).Output()
-			if err != nil {
-				fmt.Println("docker-compose", composeFile, command, "failed", err)
-			}
-		}
+	args = append(args, "-f", composeFile, command)
+
+	if optional != "" {
+		args = append(args, optional)
 	}
+
+	if target != "" {
+		args = append(args, target)
+	}
+
+	cmd := "docker-compose"
+	if new_docker == true {
+		cmd = "docker"
+		args = append([]string{}, "run",
+			"-v", getHostSuperDir()+":/super",
+			"-v", "/var/run/docker.sock:/var/run/docker.sock",
+			"--entrypoint=/bin/bash",
+			"ghcr.io/spr-networks/super_superd", //Q: use RELEASE_CHANNEL,VERSION here later?
+			"-c",
+			"docker-compose "+strings.Join(args, " "))
+	}
+
+	_, err := exec.Command(cmd, args...).Output()
+	if err != nil {
+		argS := fmt.Sprintf(cmd + " " + strings.Join(args, " "))
+		fmt.Println("failure: " + err.Error() + argS)
+	}
+
 }
 
 func update(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
-	composeCommand(compose, target, "pull", "")
+	composeCommand(compose, target, "pull", "", false)
 }
 
 func start(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
-	composeCommand(compose, target, "up", "-d")
+	composeCommand(compose, target, "up", "-d", true)
 }
 
 func stop(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
-	go composeCommand(compose, target, "stop", "")
+	go composeCommand(compose, target, "stop", "", false)
 }
 
 func restart(w http.ResponseWriter, r *http.Request) {
@@ -178,7 +182,7 @@ func restart(w http.ResponseWriter, r *http.Request) {
 	compose := r.URL.Query().Get("compose_file")
 
 	//run restart
-	go composeCommand(compose, target, "restart", "")
+	go composeCommand(compose, target, "restart", "", false)
 }
 
 func ghcr_auth(w http.ResponseWriter, r *http.Request) {
