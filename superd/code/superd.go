@@ -141,12 +141,27 @@ func composeCommand(composeFile string, target string, command string, optional 
 
 	cmd := "docker-compose"
 	if new_docker == true {
+		superdir := getHostSuperDir()
+		release_channel := getReleaseChannel()
+		release_version := getReleaseVersion()
+
 		cmd = "docker"
 		args = append([]string{}, "run",
-			"-v", getHostSuperDir()+":/super",
+			"-v", superdir+":/super",
 			"-v", "/var/run/docker.sock:/var/run/docker.sock",
-			"--entrypoint=/bin/bash",
-			"ghcr.io/spr-networks/super_superd", //Q: use RELEASE_CHANNEL,VERSION here later?
+			"-w", "/super/",
+			"-e", "SUPERDIR="+superdir)
+
+		if release_channel != "" {
+			args = append(args, "-e", "RELEASE_CHANNEL="+release_channel)
+		}
+
+		if release_version != "" {
+			args = append(args, "-e", "RELEASE_VERSION="+release_version)
+		}
+
+		args = append(args, "--entrypoint=/bin/bash",
+			"ghcr.io/spr-networks/super_superd",
 			"-c",
 			"docker-compose "+strings.Join(args, " "))
 	}
