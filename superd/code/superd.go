@@ -150,21 +150,21 @@ func composeCommand(composeFile string, target string, command string, optional 
 		release_version := getReleaseVersion()
 
 		cmd = "docker"
-		args = append([]string{}, "run",
+		d_args = append([]string{}, "run",
 			"-v", superdir+":/super",
 			"-v", "/var/run/docker.sock:/var/run/docker.sock",
 			"-w", "/super/",
 			"-e", "SUPERDIR="+superdir)
 
 		if release_channel != "" {
-			args = append(args, "-e", "RELEASE_CHANNEL="+release_channel)
+			d_args = append(d_args, "-e", "RELEASE_CHANNEL="+release_channel)
 		}
 
 		if release_version != "" {
-			args = append(args, "-e", "RELEASE_VERSION="+release_version)
+			d_args = append(d_args, "-e", "RELEASE_VERSION="+release_version)
 		}
 
-		args = append(args, "--entrypoint=/bin/bash",
+		args = append(d_args, "--entrypoint=/bin/bash",
 			"ghcr.io/spr-networks/super_superd",
 			"-c",
 			"docker-compose "+strings.Join(args, " "))
@@ -173,7 +173,7 @@ func composeCommand(composeFile string, target string, command string, optional 
 	_, err := exec.Command(cmd, args...).Output()
 	if err != nil {
 		argS := fmt.Sprintf(cmd + " " + strings.Join(args, " "))
-		fmt.Println("failure: " + err.Error() + argS)
+		fmt.Println("failure: " + err.Error() + " |" argS)
 	}
 
 }
