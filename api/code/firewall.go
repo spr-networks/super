@@ -1028,7 +1028,7 @@ func getWireguardActivePeers() []string {
 	}
 
 	c := getWireguardClient()
-
+	defer c.CloseIdleConnections()
 	resp, err := c.Do(req)
 	if err != nil {
 		fmt.Println("wireguard request failed", err)

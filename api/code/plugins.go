@@ -294,6 +294,7 @@ func ghcrSuperdLogin() bool {
 	}
 
 	c := getSuperdClient()
+	defer c.CloseIdleConnections()
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -378,6 +379,7 @@ func downloadPlusExtension(gitURL string) bool {
 	}
 
 	c := getSuperdClient()
+	defer c.CloseIdleConnections()
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -405,6 +407,7 @@ func startPlusExtension(composeFilePath string) bool {
 	}
 
 	c := getSuperdClient()
+	defer c.CloseIdleConnections()
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -430,6 +433,7 @@ func updatePlusExtension(composeFilePath string) bool {
 	}
 
 	c := getSuperdClient()
+	defer c.CloseIdleConnections()
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -503,6 +507,7 @@ func stopPlusExtension(composeFilePath string) bool {
 	}
 
 	c := getSuperdClient()
+	defer c.CloseIdleConnections()
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -588,6 +593,7 @@ func updateMeshPluginPut(endpoint string, jsonValue []byte) {
 	}
 
 	c := getMeshdClient()
+	defer c.CloseIdleConnections()
 
 	resp, err := c.Do(req)
 	if err != nil {

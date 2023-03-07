@@ -214,6 +214,7 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 				return net.Dial("unix", DockerSocketPath)
 			},
 		}
+		defer c.CloseIdleConnections()
 
 		req, err := http.NewRequest(http.MethodGet, "http://localhost/v1.41/containers/json?all=1", nil)
 		if err != nil {
@@ -264,6 +265,7 @@ func getGitVersion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := getSuperdClient()
+	defer c.CloseIdleConnections()
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -299,6 +301,7 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 	info := ReleaseInfo{}
 
 	c := getSuperdClient()
+	defer c.CloseIdleConnections()
 
 	if r.Method == http.MethodGet {
 
@@ -371,6 +374,7 @@ func update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := getSuperdClient()
+	defer c.CloseIdleConnections()
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -434,6 +438,7 @@ func getContainerVersion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := getSuperdClient()
+	defer c.CloseIdleConnections()
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -468,6 +473,7 @@ func doConfigsBackup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := getSuperdClient()
+	defer c.CloseIdleConnections()
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -1961,6 +1967,7 @@ func callSuperdRestart(target string) {
 			return net.Dial("unix", SuperdSocketPath)
 		},
 	}
+	defer c.CloseIdleConnections()
 
 	append := ""
 	if target != "" {
