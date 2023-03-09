@@ -8,9 +8,9 @@ docker build tests/sta1 -t sta1
 
 docker-compose -f docker-compose-test.yml up -d
 
-# start stations
-docker run --privileged --rm -d --name sta1 sta1
-docker run --privileged --rm -d --name sta2 sta1
+# start stations -- no docker network, they must rely on hwsim
+docker run --network none --privileged --rm -d --name sta1 sta1
+docker run --network none --privileged --rm -d --name sta2 sta1
 #docker run --privileged --rm -d --name sta3 sta1
 #docker run --privileged --rm -d --name sta4 sta1
 

@@ -11,6 +11,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,8 +32,53 @@ import (
 
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
+var ComposeAllowList = []string{"docker-compose.yml", "docker-compose-test.yml", "docker-compose-virt.yml", "plugins/plus/pfw_extension/docker-compose.yml", "plugins/plus/mesh_extension/docker-compose.yml"}
+var ReleaseChannelFile = "configs/base/release_channel"
+var ReleaseVersionFile = "configs/base/release_version"
 
-var ComposeAllowList = []string{"docker-compose.yml", "docker-compose-virt.yml", "plugins/plus/pfw_extension/docker-compose.yml", "plugins/plus/mesh_extension/docker-compose.yml"}
+var ReleaseInfoMtx sync.Mutex
+
+func getReleaseVersion() string {
+	ReleaseInfoMtx.Lock()
+	defer ReleaseInfoMtx.Unlock()
+
+	data, err := os.ReadFile(ReleaseVersionFile)
+	if err == nil {
+		return strings.TrimSpace(string(data))
+	} else {
+		return ""
+	}
+}
+
+func setReleaseVersion(Version string) error {
+	ReleaseInfoMtx.Lock()
+	defer ReleaseInfoMtx.Unlock()
+
+	regex, _ := regexp.Compile("[^a-zA-Z0-9-_.]+")
+	versionFiltered := regex.ReplaceAllString(Version, "")
+	return os.WriteFile(ReleaseVersionFile, []byte(versionFiltered), 0644)
+}
+
+func getReleaseChannel() string {
+	ReleaseInfoMtx.Lock()
+	defer ReleaseInfoMtx.Unlock()
+
+	data, err := os.ReadFile(ReleaseChannelFile)
+	if err == nil {
+		return strings.TrimSpace(string(data))
+	} else {
+		return ""
+	}
+}
+
+func setReleaseChannel(Channel string) error {
+	ReleaseInfoMtx.Lock()
+	defer ReleaseInfoMtx.Unlock()
+
+	regex, _ := regexp.Compile("[^a-zA-Z0-9-_]+")
+	channelFiltered := regex.ReplaceAllString(Channel, "")
+	return os.WriteFile(ReleaseChannelFile, []byte(channelFiltered), 0644)
+}
 
 func getDefaultCompose() string {
 	envCompose := os.Getenv("COMPOSE_FILE")
@@ -48,7 +94,23 @@ func getDefaultCompose() string {
 	return "docker-compose.yml"
 }
 
-func composeCommand(composeFile string, target string, command string, optional string) {
+func initializeReleaseEnvironment() {
+	release_channel := getReleaseChannel()
+	if release_channel != "" {
+		os.Setenv("RELEASE_CHANNEL", release_channel)
+	}
+
+	release_version := getReleaseVersion()
+	if release_channel != "" {
+		os.Setenv("RELEASE_VERSION", release_version)
+	}
+}
+
+func composeCommand(composeFile string, target string, command string, optional string, new_docker bool) {
+	args := []string{}
+
+	// important to get/set release channel and version for rollbacks and dev channels etc
+	initializeReleaseEnvironment()
 
 	if composeFile == "" {
 		composeFile = getDefaultCompose()
@@ -67,49 +129,71 @@ func composeCommand(composeFile string, target string, command string, optional 
 		return
 	}
 
-	if target != "" {
-		if optional != "" {
-			_, err := exec.Command("docker-compose", "-f", composeFile, command, optional, target).Output()
-			if err != nil {
-				fmt.Println("docker-compose "+command, composeFile, optional, target, "failed", err)
-			}
-		} else {
-			_, err := exec.Command("docker-compose", "-f", composeFile, command, target).Output()
-			if err != nil {
-				fmt.Println("docker-compose"+command, composeFile, "failed", err)
-			}
-		}
-	} else {
-		if optional != "" {
-			_, err := exec.Command("docker-compose", "-f", composeFile, command, optional).Output()
-			if err != nil {
-				fmt.Println("docker-compose", composeFile, command, optional, "failed", err)
-			}
-		} else {
-			_, err := exec.Command("docker-compose", "-f", composeFile, command).Output()
-			if err != nil {
-				fmt.Println("docker-compose", composeFile, command, "failed", err)
-			}
-		}
+	args = append(args, "-f", composeFile, command)
+
+	if optional != "" {
+		args = append(args, optional)
 	}
+
+	if target != "" {
+		args = append(args, target)
+	}
+
+	cmd := "docker-compose"
+	if new_docker == true {
+		//certain commands, like up -d, will run in a new docker container
+		//so that superd updating itself does not result in docker killing
+		// the up -d command.
+
+		superdir := getHostSuperDir()
+		release_channel := getReleaseChannel()
+		release_version := getReleaseVersion()
+
+		cmd = "docker"
+		d_args := append([]string{}, "run",
+			"-v", superdir+":/super",
+			"-v", "/var/run/docker.sock:/var/run/docker.sock",
+			"-w", "/super/",
+			"-e", "SUPERDIR="+superdir)
+
+		if release_channel != "" {
+			d_args = append(d_args, "-e", "RELEASE_CHANNEL="+release_channel)
+		}
+
+		if release_version != "" {
+			d_args = append(d_args, "-e", "RELEASE_VERSION="+release_version)
+		}
+
+		args = append(d_args, "--entrypoint=/bin/bash",
+			"ghcr.io/spr-networks/super_superd",
+			"-c",
+			"docker-compose "+strings.Join(args, " "))
+	}
+
+	_, err := exec.Command(cmd, args...).Output()
+	if err != nil {
+		argS := fmt.Sprintf(cmd + " " + strings.Join(args, " "))
+		fmt.Println("failure: " + err.Error() + " |" + argS)
+	}
+
 }
 
 func update(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
-	composeCommand(compose, target, "pull", "")
+	composeCommand(compose, target, "pull", "", false)
 }
 
 func start(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
-	composeCommand(compose, target, "up", "-d")
+	composeCommand(compose, target, "up", "-d", true)
 }
 
 func stop(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
-	go composeCommand(compose, target, "stop", "")
+	go composeCommand(compose, target, "stop", "", false)
 }
 
 func restart(w http.ResponseWriter, r *http.Request) {
@@ -117,7 +201,7 @@ func restart(w http.ResponseWriter, r *http.Request) {
 	compose := r.URL.Query().Get("compose_file")
 
 	//run restart
-	go composeCommand(compose, target, "restart", "")
+	go composeCommand(compose, target, "restart", "", false)
 }
 
 func ghcr_auth(w http.ResponseWriter, r *http.Request) {
@@ -263,6 +347,21 @@ func lastTagForRepository(path string) string {
 	return strings.Trim(string(stdout), "'\n")
 }
 
+func dockerImageLabel(image string, labelName string) (string, error) {
+	cmd := exec.Command("docker", "inspect", "--format={{index .Config.Labels \""+labelName+"\"}}", image)
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	}
+
+	labelValue := out.String()
+	return labelValue, nil
+}
+
 func version(w http.ResponseWriter, r *http.Request) {
 	plugin := r.URL.Query().Get("plugin")
 
@@ -276,6 +375,102 @@ func version(w http.ResponseWriter, r *http.Request) {
 	if version == "" {
 		http.Error(w, "Failed to retrieve version "+plugin, 400)
 		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(version)
+}
+
+func container_version(w http.ResponseWriter, r *http.Request) {
+	//dockerImageLabel image, "org.supernetworks.version")
+	plugin := r.URL.Query().Get("plugin")
+	version := ""
+
+	if plugin == "" {
+		v, err := dockerImageLabel("superd", "org.supernetworks.version")
+		if err != nil {
+			http.Error(w, "Failed to retrieve version for superd", 400)
+			return
+		}
+		version = strings.Trim(v, "\n")
+	} else {
+		v, err := dockerImageLabel(plugin, "org.supernetworks.version")
+		if err != nil {
+			http.Error(w, "Failed to retrieve version "+plugin, 400)
+			return
+		}
+		version = strings.Trim(v, "\n")
+	}
+
+	if version == "" {
+		http.Error(w, "Failed to retrieve version "+plugin, 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(version)
+}
+
+type ReleaseInfo struct {
+	CustomChannel string
+	CustomVersion string
+	Current       string
+}
+
+func release_info(w http.ResponseWriter, r *http.Request) {
+
+	info := ReleaseInfo{}
+	if r.Method == http.MethodGet {
+		//load t
+		v, err := dockerImageLabel("superd", "org.supernetworks.version")
+		if err != nil {
+			fmt.Println("[i] Failed to retrieve version for superd")
+		} else {
+			info.Current = v
+		}
+
+		info.CustomChannel = getReleaseChannel()
+		info.CustomVersion = getReleaseVersion()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(info)
+		return
+	}
+
+	//PUT. Set these
+	err := json.NewDecoder(r.Body).Decode(&info)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if info.CustomChannel != "" {
+		//right now we only allow "-dev"
+		if info.CustomChannel != "-dev" {
+			http.Error(w, "Unsupported channel "+info.CustomChannel, 400)
+			return
+		}
+
+		// in case more channels are allowed in the future
+		regex, _ := regexp.Compile("[^a-zA-Z0-9-_]+")
+		channelFiltered := regex.ReplaceAllString(info.CustomChannel, "")
+		if channelFiltered != info.CustomChannel {
+			http.Error(w, "Channel includes unexpected characters", 400)
+			return
+		}
+
+		setReleaseChannel(info.CustomChannel)
+	}
+
+	if info.CustomVersion != "" {
+		regex, _ := regexp.Compile("[^a-zA-Z0-9-_.]+")
+		versionFiltered := regex.ReplaceAllString(info.CustomVersion, "")
+
+		if versionFiltered != info.CustomVersion {
+			http.Error(w, "Version includes unexpected characters", 400)
+			return
+		}
+
+		setReleaseVersion(info.CustomVersion)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -340,7 +535,11 @@ func main() {
 	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("GET")
 	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("GET")
 
-	unix_plugin_router.HandleFunc("/version", version).Methods("GET")
+	unix_plugin_router.HandleFunc("/git_version", version).Methods("GET")
+	unix_plugin_router.HandleFunc("/container_version", container_version).Methods("GET")
+
+	// get/set release channel
+	unix_plugin_router.HandleFunc("/release", release_info).Methods("GET", "PUT")
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)

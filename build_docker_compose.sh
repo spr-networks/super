@@ -10,6 +10,12 @@ fi
 # remove prebuilt images
 FOUND_PREBUILT_IMAGE=false
 for SERVICE in $(docker-compose config --services); do
+
+  if [[ -z "$DO_CLEAN" ]]
+  then
+    break
+  fi
+
   IS_PREBUILT=$(docker inspect \
     --format '{{ index .Config.Labels "org.supernetworks.ci" }}' \
     "ghcr.io/spr-networks/super_${SERVICE}" \

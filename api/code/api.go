@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	crand "crypto/rand"
 	"encoding/base64"
 	"encoding/binary"
@@ -213,6 +214,7 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 				return net.Dial("unix", DockerSocketPath)
 			},
 		}
+		defer c.CloseIdleConnections()
 
 		req, err := http.NewRequest(http.MethodGet, "http://localhost/v1.41/containers/json?all=1", nil)
 		if err != nil {
@@ -253,16 +255,17 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 // get spr version
-func getVersion(w http.ResponseWriter, r *http.Request) {
+func getGitVersion(w http.ResponseWriter, r *http.Request) {
 	plugin := r.URL.Query().Get("plugin")
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/version?plugin="+plugin, nil)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/git_version?plugin="+plugin, nil)
 	if err != nil {
 		http.Error(w, fmt.Errorf("failed to make request for version "+plugin).Error(), 400)
 		return
 	}
 
 	c := getSuperdClient()
+	defer c.CloseIdleConnections()
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -288,15 +291,189 @@ func getVersion(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(version)
 }
 
+type ReleaseInfo struct {
+	CustomChannel string
+	CustomVersion string
+	Current       string
+}
+
+func releaseInfo(w http.ResponseWriter, r *http.Request) {
+	info := ReleaseInfo{}
+
+	c := getSuperdClient()
+	defer c.CloseIdleConnections()
+
+	if r.Method == http.MethodGet {
+
+		req, err := http.NewRequest(http.MethodGet, "http://localhost/release", nil)
+		if err != nil {
+			http.Error(w, fmt.Errorf("failed to make request for version from superd ").Error(), 400)
+			return
+		}
+
+		resp, err := c.Do(req)
+		if err != nil {
+			http.Error(w, fmt.Errorf("failed to request version from superd ").Error(), 400)
+			return
+		}
+
+		defer resp.Body.Close()
+
+		err = json.NewDecoder(resp.Body).Decode(&info)
+		if err != nil {
+			http.Error(w, fmt.Errorf("failed to decode info").Error(), 400)
+			return
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			http.Error(w, fmt.Errorf("failed to get info "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(info)
+		return
+	}
+
+	//put
+	err := json.NewDecoder(r.Body).Decode(&info)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to decode info").Error(), 400)
+		return
+	}
+
+	jsonValue, _ := json.Marshal(info)
+
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/release", bytes.NewBuffer(jsonValue))
+	if err != nil {
+		return
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to set superd release").Error(), 400)
+		return
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Errorf("failed to set superd release "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+		return
+	}
+	//fall through success
+}
+
+func update(w http.ResponseWriter, r *http.Request) {
+	//1) superd update with service & compose_file
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/update", nil)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to make superd request").Error(), 400)
+		return
+	}
+
+	c := getSuperdClient()
+	defer c.CloseIdleConnections()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to call superd update ").Error(), 400)
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Errorf("failed to call superd update "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+		return
+	}
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost/start", nil)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to make superd start request").Error(), 400)
+		return
+	}
+
+	c = getSuperdClient()
+
+	resp, err = c.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to call superd start ").Error(), 400)
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Errorf("failed to call superd start "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+		return
+	}
+
+}
+
+func releasesAvailable(w http.ResponseWriter, r *http.Request) {
+	reply := []string{"latest"}
+
+	//tdb -> query superd and have it fetch https://ghcr.io/v2/spr-networks/XYZ/tags/list
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(reply)
+
+}
+
+func releaseChannels(w http.ResponseWriter, r *http.Request) {
+	reply := []string{"", "-dev"}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(reply)
+}
+
+func getContainerVersion(w http.ResponseWriter, r *http.Request) {
+	plugin := r.URL.Query().Get("plugin")
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/container_version?plugin="+plugin, nil)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to make request for version "+plugin).Error(), 400)
+		return
+	}
+
+	c := getSuperdClient()
+	defer c.CloseIdleConnections()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to request version from superd "+plugin).Error(), 400)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	version := ""
+	err = json.NewDecoder(resp.Body).Decode(&version)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to get version for %s", plugin).Error(), 400)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Errorf("failed to get version %s", plugin+" "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(version)
+}
+
 func doConfigsBackup(w http.ResponseWriter, r *http.Request) {
 	//get version
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/version", nil)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/git_version", nil)
 	if err != nil {
 		http.Error(w, fmt.Errorf("failed to make request for version ").Error(), 400)
 		return
 	}
 
 	c := getSuperdClient()
+	defer c.CloseIdleConnections()
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -1790,6 +1967,7 @@ func callSuperdRestart(target string) {
 			return net.Dial("unix", SuperdSocketPath)
 		},
 	}
+	defer c.CloseIdleConnections()
 
 	append := ""
 	if target != "" {
@@ -1915,13 +2093,19 @@ func main() {
 
 	//Misc
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
-	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
-	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
-	external_router_authenticated.HandleFunc("/version", getVersion).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/restart", restart).Methods("PUT")
 	external_router_authenticated.HandleFunc("/backup", doConfigsBackup).Methods("PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup/{name}", getConfigsBackup).Methods("GET", "DELETE", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
+
+	//updates, version, feature info
+	external_router_authenticated.HandleFunc("/release", releaseInfo).Methods("GET", "PUT", "OPTIONS")
+	external_router_authenticated.HandleFunc("/releaseChannels", releaseChannels).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/releasesAvailable", releasesAvailable).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/update", update).Methods("PUT", "OPTIONS")
+	external_router_authenticated.HandleFunc("/version", getContainerVersion).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
 
 	//device management
 	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")

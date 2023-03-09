@@ -176,7 +176,10 @@ class API {
     return this.get('/features')
   }
 
-  version() {
+  version(plugin='') {
+    if (plugin !== '') {
+      return this.get('/version?plugin='+plugin)
+    }
     return this.get('/version')
   }
 

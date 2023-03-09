@@ -25,7 +25,7 @@ import {
 
 import { FlashList } from '@shopify/flash-list'
 
-import { pluginAPI } from 'api'
+import { api, pluginAPI } from 'api'
 import { AppContext, alertState } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import AddPlugin from 'components/Plugins/AddPlugin'
@@ -50,7 +50,18 @@ const PluginList = (props) => {
   const refreshList = (next) => {
     pluginAPI
       .list()
-      .then((plugins) => {
+      .then(async function(plugins) {
+        //get each plugin version
+        for (let i = 0; i < plugins.length; i++) {
+          let name = plugins[i].Name.toLowerCase()
+          if (name == 'dns-block-extension' || name == 'dns-log-extension') {
+            name = 'dns'
+          }
+          let ver = await api.version('super'+name).catch((err) => {
+            alertState.error('failed to fetch plugin version ' + name)
+          })
+          plugins[i].Version = ver
+        }
         setList(plugins)
       })
       .catch((err) => {
@@ -154,6 +165,7 @@ const PluginList = (props) => {
               <VStack minW="20%">
                 <Text bold>{item.Name}</Text>
                 <Text>{item.URI}</Text>
+                <Text>{item.Version}</Text>
               </VStack>
 
               <Text
@@ -209,8 +221,8 @@ const PluginList = (props) => {
                   <VStack minW="20%">
                     <Text bold>{item.Name}</Text>
                     <Text>{item.URI}</Text>
+                    <Text>{item.Version}</Text>
                   </VStack>
-
                   <Text
                     alignSelf="center"
                     isTruncated

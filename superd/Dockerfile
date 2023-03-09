@@ -26,4 +26,5 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 COPY --from=builder /superd /
 COPY scripts /scripts
+RUN git config --global --add safe.directory /super
 ENTRYPOINT ["/scripts/startup.sh"]
