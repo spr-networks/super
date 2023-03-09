@@ -1238,6 +1238,14 @@ func dynamicRouteLoop() {
 
 			//if a wifi device is active, place that as priority
 			for mac, iface := range wifi_peers {
+				dhcp_iface, exists := RecentDHCPIface[mac]
+				if !exists {
+					suggested_device[mac] = iface
+				} else {
+					//prioritize the interface that last got a DHCP for the MAC
+					suggested_device[mac] = dhcp_iface
+				}
+
 				suggested_device[mac] = iface
 			}
 			FWmtx.Unlock()
