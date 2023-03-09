@@ -1246,7 +1246,6 @@ func dynamicRouteLoop() {
 					suggested_device[mac] = dhcp_iface
 				}
 
-				suggested_device[mac] = iface
 			}
 			FWmtx.Unlock()
 
