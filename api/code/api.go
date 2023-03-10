@@ -13,6 +13,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -258,7 +259,10 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 func getGitVersion(w http.ResponseWriter, r *http.Request) {
 	plugin := r.URL.Query().Get("plugin")
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/git_version?plugin="+plugin, nil)
+	params := url.Values{}
+	params.Set("plugin", plugin)
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/git_version?"+params.Encode(), nil)
 	if err != nil {
 		http.Error(w, fmt.Errorf("failed to make request for version "+plugin).Error(), 400)
 		return
@@ -413,13 +417,50 @@ func update(w http.ResponseWriter, r *http.Request) {
 }
 
 func releasesAvailable(w http.ResponseWriter, r *http.Request) {
-	reply := []string{"latest"}
+	container := r.URL.Query().Get("container")
 
-	//tdb -> query superd and have it fetch https://ghcr.io/v2/spr-networks/XYZ/tags/list
+	params := url.Values{}
+	params.Set("container", container)
+
+	// support PLUS if configured
+	if config.PlusToken != "" {
+		params.Set("username", PlusUser)
+		params.Set("secret", config.PlusToken)
+	}
+
+	append := "?" + params.Encode()
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/remote_container_tags"+append, nil)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to make request for version "+container).Error(), 400)
+		return
+	}
+
+	c := getSuperdClient()
+	defer c.CloseIdleConnections()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to request version from superd "+append).Error(), 400)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	version := ""
+	err = json.NewDecoder(resp.Body).Decode(&version)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to get version for %s", container).Error(), 400)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Errorf("failed to get version %s", container+" "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(reply)
-
+	json.NewEncoder(w).Encode(version)
 }
 
 func releaseChannels(w http.ResponseWriter, r *http.Request) {
@@ -429,11 +470,13 @@ func releaseChannels(w http.ResponseWriter, r *http.Request) {
 }
 
 func getContainerVersion(w http.ResponseWriter, r *http.Request) {
-	plugin := r.URL.Query().Get("plugin")
+	container := r.URL.Query().Get("container")
+	params := url.Values{}
+	params.Set("container", container)
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/container_version?plugin="+plugin, nil)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/container_version?"+params.Encode(), nil)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to make request for version "+plugin).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to make request for version "+container).Error(), 400)
 		return
 	}
 
@@ -442,7 +485,7 @@ func getContainerVersion(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := c.Do(req)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to request version from superd "+plugin).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to request version from superd "+container).Error(), 400)
 		return
 	}
 
@@ -451,12 +494,12 @@ func getContainerVersion(w http.ResponseWriter, r *http.Request) {
 	version := ""
 	err = json.NewDecoder(resp.Body).Decode(&version)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to get version for %s", plugin).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to get version for %s", container).Error(), 400)
 		return
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		http.Error(w, fmt.Errorf("failed to get version %s", plugin+" "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to get version %s", container+" "+fmt.Sprint(resp.StatusCode)).Error(), 400)
 		return
 	}
 
@@ -1971,8 +2014,11 @@ func callSuperdRestart(target string) {
 
 	append := ""
 	if target != "" {
-		append += "?service=" + target
+		params := url.Values{}
+		params.Set("service", target)
+		append += "?" + params.Encode()
 	}
+
 	req, err := http.NewRequest(http.MethodGet, "http://localhost/restart"+append, nil)
 	if err != nil {
 		return

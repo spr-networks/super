@@ -12,18 +12,21 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 )
 
 import (
@@ -502,6 +505,102 @@ func establishConfigsIfEmpty(SuperDir string) {
 
 }
 
+func remote_container_tags(w http.ResponseWriter, r *http.Request) {
+	username := r.URL.Query().Get("username")
+	secret := r.URL.Query().Get("secret")
+	container := url.QueryEscape(r.URL.Query().Get("container"))
+
+	params := url.Values{}
+	params.Set("service", "ghcr.io")
+	params.Set("scope", "repository:spr-networks/"+container+":pull")
+
+	append := "?" + params.Encode()
+
+	// Set up the request to get the token
+	req, err := http.NewRequest("GET", "https://ghcr.io/token"+append, nil)
+	if err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+
+	if username != "" {
+		auth := base64.StdEncoding.EncodeToString([]byte(username + ":" + secret))
+		req.Header.Set("Authorization", "Basic "+auth)
+	}
+
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	// Send the request and get the response
+	resp, err := client.Do(req)
+	if err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Parse the response body to get the token
+	var token struct {
+		Token string `json:"token"`
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+	if err := json.Unmarshal(body, &token); err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+
+	// Sanitize the token to ensure it is a valid base64-encoded string
+	token.Token = strings.TrimSpace(token.Token)
+	_, err = base64.StdEncoding.DecodeString(token.Token)
+	if err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+
+	// Set up the request to get the list of tags
+	tagsURL := "https://ghcr.io/v2/spr-networks/" + container + "/tags/list"
+	req, err = http.NewRequest("GET", tagsURL, nil)
+	if err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+
+	// Add the Authorization header with the token
+	req.Header.Set("Authorization", "Bearer "+token.Token)
+
+	// Send the request and get the response
+	resp, err = client.Do(req)
+	if err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Print the response body
+	body, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+
+	// Parse the response body to get the list of tags
+	var tagsResp struct {
+		Tags []string `json:"tags"`
+	}
+	if err := json.Unmarshal(body, &tagsResp); err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tagsResp)
+}
+
 func setup() {
 	hostSuperDir := getHostSuperDir()
 
@@ -537,6 +636,8 @@ func main() {
 
 	unix_plugin_router.HandleFunc("/git_version", version).Methods("GET")
 	unix_plugin_router.HandleFunc("/container_version", container_version).Methods("GET")
+
+	unix_plugin_router.HandleFunc("/remote_container_tags", remote_container_tags).Methods("GET")
 
 	// get/set release channel
 	unix_plugin_router.HandleFunc("/release", release_info).Methods("GET", "PUT")

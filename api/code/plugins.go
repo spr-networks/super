@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"os"
 	"os/exec"
 	"regexp"
@@ -286,7 +287,10 @@ func ghcrSuperdLogin() bool {
 		return false
 	}
 
-	append := "?username=" + PlusUser + "&secret=" + config.PlusToken
+	params := url.Values{}
+	params.Set("username", PlusUser)
+	params.Set("secret", config.PlusToken)
+	append := "?" + params.Encode()
 
 	req, err := http.NewRequest(http.MethodGet, "http://localhost/ghcr_auth"+append, nil)
 	if err != nil {
@@ -372,8 +376,10 @@ func generatePFWAPIToken() {
 
 func downloadPlusExtension(gitURL string) bool {
 	ext := "https://" + PlusUser + ":" + config.PlusToken + "@" + gitURL
+	params := url.Values{}
+	params.Set("git_url", ext)
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/update_git?git_url="+ext, nil)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/update_git?"+params.Encode(), nil)
 	if err != nil {
 		return false
 	}
@@ -401,7 +407,10 @@ func downloadPlusExtension(gitURL string) bool {
 }
 
 func startPlusExtension(composeFilePath string) bool {
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/start?compose_file="+composeFilePath, nil)
+	params := url.Values{}
+	params.Set("compose_file", composeFilePath)
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/start?"+params.Encode(), nil)
 	if err != nil {
 		return false
 	}
@@ -427,7 +436,10 @@ func startPlusExtension(composeFilePath string) bool {
 }
 
 func updatePlusExtension(composeFilePath string) bool {
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/update?compose_file="+composeFilePath, nil)
+	params := url.Values{}
+	params.Set("compose_file", composeFilePath)
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/update?"+params.Encode(), nil)
 	if err != nil {
 		return false
 	}
@@ -501,7 +513,11 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 }
 
 func stopPlusExtension(composeFilePath string) bool {
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/stop?compose_file="+composeFilePath, nil)
+
+	params := url.Values{}
+	params.Set("compose_file", composeFilePath)
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/stop?"+params.Encode(), nil)
 	if err != nil {
 		return false
 	}
