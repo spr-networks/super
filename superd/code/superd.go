@@ -97,23 +97,24 @@ func getDefaultCompose() string {
 	return "docker-compose.yml"
 }
 
-func initializeReleaseEnvironment() {
-	release_channel := getReleaseChannel()
+func composeCommand(composeFile string, target string, command string, optional string, new_docker bool) {
+	args := []string{}
+	release_channel := ""
+	release_version := ""
+
+	if !strings.Contains(composeFile, "plugins") {
+		// important to get/set release channel and version for rollbacks and dev channels etc
+		release_channel = getReleaseChannel()
+		release_version = getReleaseVersion()
+	}
+
 	if release_channel != "" {
 		os.Setenv("RELEASE_CHANNEL", release_channel)
 	}
 
-	release_version := getReleaseVersion()
 	if release_channel != "" {
 		os.Setenv("RELEASE_VERSION", release_version)
 	}
-}
-
-func composeCommand(composeFile string, target string, command string, optional string, new_docker bool) {
-	args := []string{}
-
-	// important to get/set release channel and version for rollbacks and dev channels etc
-	initializeReleaseEnvironment()
 
 	if composeFile == "" {
 		composeFile = getDefaultCompose()
@@ -149,8 +150,6 @@ func composeCommand(composeFile string, target string, command string, optional 
 		// the up -d command.
 
 		superdir := getHostSuperDir()
-		release_channel := getReleaseChannel()
-		release_version := getReleaseVersion()
 
 		cmd = "docker"
 		d_args := append([]string{}, "run",
