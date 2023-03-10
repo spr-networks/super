@@ -432,6 +432,52 @@ func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 
 	req, err := http.NewRequest(http.MethodGet, "http://localhost/remote_container_tags"+append, nil)
 	if err != nil {
+		http.Error(w, fmt.Errorf("failed to make request for tags "+container).Error(), 400)
+		return
+	}
+
+	c := getSuperdClient()
+	defer c.CloseIdleConnections()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to request tags from superd "+append).Error(), 400)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	var tagsResp struct {
+		Tags []string `json:"tags"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&tagsResp)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to get tags for %s", container).Error(), 400)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Errorf("failed to get tags %s", container+" "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tagsResp.Tags)
+}
+
+func releaseChannels(w http.ResponseWriter, r *http.Request) {
+	reply := []string{"", "-dev"}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(reply)
+}
+
+func getContainerVersion(w http.ResponseWriter, r *http.Request) {
+	container := r.URL.Query().Get("container")
+	params := url.Values{}
+	params.Set("container", container)
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/container_version?"+params.Encode(), nil)
+	if err != nil {
 		http.Error(w, fmt.Errorf("failed to make request for version "+container).Error(), 400)
 		return
 	}
@@ -441,7 +487,7 @@ func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := c.Do(req)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to request version from superd "+append).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to request version from superd "+container).Error(), 400)
 		return
 	}
 
@@ -461,52 +507,6 @@ func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(version)
-}
-
-func releaseChannels(w http.ResponseWriter, r *http.Request) {
-	reply := []string{"", "-dev"}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(reply)
-}
-
-func getContainerVersion(w http.ResponseWriter, r *http.Request) {
-	container := r.URL.Query().Get("container")
-	params := url.Values{}
-	params.Set("container", container)
-
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/container_version?"+params.Encode(), nil)
-	if err != nil {
-		http.Error(w, fmt.Errorf("failed to make request for tags "+container).Error(), 400)
-		return
-	}
-
-	c := getSuperdClient()
-	defer c.CloseIdleConnections()
-
-	resp, err := c.Do(req)
-	if err != nil {
-		http.Error(w, fmt.Errorf("failed to request tags from superd "+container).Error(), 400)
-		return
-	}
-
-	defer resp.Body.Close()
-
-	var tagsResp struct {
-		Tags []string `json:"tags"`
-	}
-	err = json.NewDecoder(resp.Body).Decode(&tagsResp)
-	if err != nil {
-		http.Error(w, fmt.Errorf("failed to decode tags for %s", container).Error(), 400)
-		return
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		http.Error(w, fmt.Errorf("failed to get tags %s", container+" "+fmt.Sprint(resp.StatusCode)).Error(), 400)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tagsResp.Tags)
 }
 
 func doConfigsBackup(w http.ResponseWriter, r *http.Request) {
