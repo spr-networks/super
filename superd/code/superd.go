@@ -374,7 +374,7 @@ func dockerImageLabel(image string, labelName string) (string, error) {
 		return "", err
 	}
 
-	labelValue := out.String()
+	labelValue := strings.Trim(out.String(), "\n")
 	return labelValue, nil
 }
 
@@ -398,28 +398,20 @@ func version(w http.ResponseWriter, r *http.Request) {
 }
 
 func container_version(w http.ResponseWriter, r *http.Request) {
-	//dockerImageLabel image, "org.supernetworks.version")
-	plugin := r.URL.Query().Get("plugin")
-	version := ""
+	container := r.URL.Query().Get("container")
+	image := "superd"
+	if container != "" {
+		image = container
+	}
 
-	if plugin == "" {
-		v, err := dockerImageLabel("superd", "org.supernetworks.version")
-		if err != nil {
-			http.Error(w, "Failed to retrieve version for superd", 400)
-			return
-		}
-		version = strings.Trim(v, "\n")
-	} else {
-		v, err := dockerImageLabel(plugin, "org.supernetworks.version")
-		if err != nil {
-			http.Error(w, "Failed to retrieve version "+plugin, 400)
-			return
-		}
-		version = strings.Trim(v, "\n")
+	version, err := dockerImageLabel(image, "org.supernetworks.version")
+	if err != nil {
+		http.Error(w, "Failed to retrieve version "+image, 400)
+		return
 	}
 
 	if version == "" {
-		http.Error(w, "Failed to retrieve version "+plugin, 400)
+		http.Error(w, "Failed to retrieve version "+image, 400)
 		return
 	}
 
