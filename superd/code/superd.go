@@ -510,12 +510,10 @@ func establishConfigsIfEmpty(SuperDir string) {
 
 }
 
-
 type GhcrCreds struct {
 	Username string
-	Secret string
+	Secret   string
 }
-
 
 func remote_container_tags(w http.ResponseWriter, r *http.Request) {
 
