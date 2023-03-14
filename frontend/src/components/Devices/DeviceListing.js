@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
-import { deviceAPI, wifiAPI, meshAPI, } from 'api'
+import { deviceAPI, wifiAPI, meshAPI } from 'api'
 import APIWifi from 'api/Wifi'
 import { useNavigate } from 'react-router-dom'
 import Device from 'components/Devices/Device'
@@ -10,6 +10,7 @@ import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faCirclePlus,
   faEllipsis,
+  //faFilter,
   faPlus,
   faTimes
 } from '@fortawesome/free-solid-svg-icons'
@@ -76,8 +77,9 @@ const DeviceListing = (props) => {
         if (!appContext.isWifiDisabled) {
           //for each interface
           wifiAPI.interfacesConfiguration().then((config) => {
-            config.forEach((iface) => {
-              if (iface.Type == "AP" &&  iface.Enabled == true) {
+            config
+              .filter((iface) => iface.Type == 'AP' && iface.Enabled == true)
+              .forEach((iface) => {
                 wifiAPI
                   .allStations(iface.Name)
                   .then((stations) => {
@@ -85,48 +87,61 @@ const DeviceListing = (props) => {
 
                     setDevices(
                       devices.map((dev) => {
-                        if (dev.isConnected == false) {
+                        if (dev.isConnected !== true) {
                           dev.isConnected = connectedMACs.includes(dev.MAC)
-                          if (dev.isConnected) {
-
-                          }
                         }
+
                         return dev
                       })
                     )
                   })
                   .catch((err) => {
-                    context.error('WIFI API Failure', err)
+                    //context.error('WIFI API Failure', err)
                   })
-              }
-            })
+              })
           })
 
-          meshAPI.meshIter(() => new APIWifi()).then(r => r.forEach(remoteWifiApi => {
-            remoteWifiApi.interfacesConfiguration.call(remoteWifiApi).then((config) => {
-              config.forEach((iface) => {
-                if (iface.Type == "AP" &&  iface.Enabled == true) {
-                  remoteWifiApi
-                    .allStations.call(remoteWifiApi, iface.Name)
-                    .then((stations) => {
-                      let connectedMACs = Object.keys(stations)
-                      setDevices(
-                        devices.map((dev) => {
-                          if (dev.isConnected !== true) {
-                            dev.isConnected = connectedMACs.includes(dev.MAC)
-                          }
-                          return dev
-                        })
+          meshAPI
+            .meshIter(() => new APIWifi())
+            .then((r) =>
+              r.forEach((remoteWifiApi) => {
+                remoteWifiApi.interfacesConfiguration
+                  .call(remoteWifiApi)
+                  .then((config) => {
+                    config
+                      .filter(
+                        (iface) => iface.Type == 'AP' && iface.Enabled == true
                       )
-                    })
-                    .catch((err) => {
-                      context.error('WIFI API Failure ' + remoteWifiApi.remoteURL + " " + iface.Name, err)
-                    })
-                }
-              })
-            })
-          }))
+                      .forEach((iface) => {
+                        remoteWifiApi.allStations
+                          .call(remoteWifiApi, iface.Name)
+                          .then((stations) => {
+                            let connectedMACs = Object.keys(stations)
+                            setDevices(
+                              devices.map((dev) => {
+                                if (dev.isConnected !== true) {
+                                  dev.isConnected = connectedMACs.includes(
+                                    dev.MAC
+                                  )
+                                }
 
+                                return dev
+                              })
+                            )
+                          })
+                          .catch((err) => {
+                            context.error(
+                              'WIFI API Failure ' +
+                                remoteWifiApi.remoteURL +
+                                ' ' +
+                                iface.Name,
+                              err
+                            )
+                          })
+                      })
+                  })
+              })
+            )
         }
       })
       .catch((err) => {
@@ -220,20 +235,29 @@ const DeviceListing = (props) => {
     <View h={h}>
       <HStack justifyContent="space-between" p={4}>
         <Heading fontSize="md" alignSelf="center">
-          Configured Devices
+          Devices
         </Heading>
 
-        <Button
-          marginLeft="auto"
-          size="sm"
-          variant="ghost"
-          colorScheme="blueGray"
-          _rounded="lg"
-          leftIcon={<Icon icon={faCirclePlus} />}
-          onPress={handleRedirect}
-        >
-          Add Device
-        </Button>
+        <HStack ml="auto">
+          {/*<Button
+            size="sm"
+            variant="ghost"
+            colorScheme="blueGray"
+            leftIcon={<Icon icon={faFilter} />}
+            onPress={() => {}}
+          >
+            Filter
+          </Button>*/}
+          <Button
+            size="sm"
+            variant="ghost"
+            colorScheme="blueGray"
+            leftIcon={<Icon icon={faCirclePlus} />}
+            onPress={handleRedirect}
+          >
+            Add
+          </Button>
+        </HStack>
       </HStack>
 
       {/*<SwipeListView
