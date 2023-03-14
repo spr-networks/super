@@ -207,8 +207,22 @@ func restart(w http.ResponseWriter, r *http.Request) {
 }
 
 func ghcr_auth(w http.ResponseWriter, r *http.Request) {
-	username := r.URL.Query().Get("username")
-	secret := r.URL.Query().Get("secret")
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)
+		return
+	}
+
+	creds := GhcrCreds{}
+
+	if err := json.Unmarshal(body, &creds); err != nil {
+		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)
+		return
+	}
+
+	username := creds.Username
+	secret := creds.Secret
 
 	if username == "" || secret == "" {
 		http.Error(w, "need username and secret parameters", 400)
@@ -504,9 +518,30 @@ func establishConfigsIfEmpty(SuperDir string) {
 
 }
 
+
+type GhcrCreds struct {
+	Username string
+	Secret string
+}
+
+
 func remote_container_tags(w http.ResponseWriter, r *http.Request) {
-	username := r.URL.Query().Get("username")
-	secret := r.URL.Query().Get("secret")
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)
+		return
+	}
+
+	creds := GhcrCreds{}
+
+	if err := json.Unmarshal(body, &creds); err != nil {
+		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)
+		return
+	}
+
+	username := creds.Username
+	secret := creds.Secret
 	container := url.QueryEscape(r.URL.Query().Get("container"))
 
 	params := url.Values{}
@@ -543,7 +578,7 @@ func remote_container_tags(w http.ResponseWriter, r *http.Request) {
 	var token struct {
 		Token string `json:"token"`
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
 		return
@@ -625,18 +660,18 @@ func main() {
 	os.MkdirAll(UNIX_PLUGIN_LISTENER, 0755)
 
 	unix_plugin_router := mux.NewRouter().StrictSlash(true)
-	unix_plugin_router.HandleFunc("/restart", restart).Methods("GET")
-	unix_plugin_router.HandleFunc("/start", start).Methods("GET")
-	unix_plugin_router.HandleFunc("/update", update).Methods("GET")
-	unix_plugin_router.HandleFunc("/stop", stop).Methods("GET")
+	unix_plugin_router.HandleFunc("/restart", restart).Methods("PUT")
+	unix_plugin_router.HandleFunc("/start", start).Methods("PUT")
+	unix_plugin_router.HandleFunc("/update", update).Methods("PUT")
+	unix_plugin_router.HandleFunc("/stop", stop).Methods("PUT")
 
-	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("GET")
-	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("GET")
+	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("PUT")
+	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("PUT")
 
 	unix_plugin_router.HandleFunc("/git_version", version).Methods("GET")
 	unix_plugin_router.HandleFunc("/container_version", container_version).Methods("GET")
 
-	unix_plugin_router.HandleFunc("/remote_container_tags", remote_container_tags).Methods("GET")
+	unix_plugin_router.HandleFunc("/remote_container_tags", remote_container_tags).Methods("POST")
 
 	// get/set release channel
 	unix_plugin_router.HandleFunc("/release", release_info).Methods("GET", "PUT")
