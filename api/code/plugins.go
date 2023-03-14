@@ -282,17 +282,20 @@ func getMeshdClient() http.Client {
 	return c
 }
 
+type GhcrCreds struct {
+	Username string
+	Secret   string
+}
+
 func ghcrSuperdLogin() bool {
 	if config.PlusToken == "" {
 		return false
 	}
 
-	params := url.Values{}
-	params.Set("username", PlusUser)
-	params.Set("secret", config.PlusToken)
-	append := "?" + params.Encode()
+	creds := GhcrCreds{PlusUser, config.PlusToken}
+	jsonValue, _ := json.Marshal(creds)
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/ghcr_auth"+append, nil)
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/ghcr_auth", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return false
 	}
@@ -375,11 +378,13 @@ func generatePFWAPIToken() {
 }
 
 func downloadPlusExtension(gitURL string) bool {
-	ext := "https://" + PlusUser + ":" + config.PlusToken + "@" + gitURL
 	params := url.Values{}
-	params.Set("git_url", ext)
+	params.Set("git_url", gitURL)
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/update_git?"+params.Encode(), nil)
+	creds := GhcrCreds{PlusUser, config.PlusToken}
+	jsonValue, _ := json.Marshal(creds)
+
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/update_git?"+params.Encode(), bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return false
 	}
@@ -397,7 +402,7 @@ func downloadPlusExtension(gitURL string) bool {
 	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("failed to download extension: "+ext, resp.StatusCode)
+		fmt.Println("failed to download extension: "+gitURL, resp.StatusCode)
 		return false
 	}
 
@@ -410,7 +415,7 @@ func startPlusExtension(composeFilePath string) bool {
 	params := url.Values{}
 	params.Set("compose_file", composeFilePath)
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/start?"+params.Encode(), nil)
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/start?"+params.Encode(), nil)
 	if err != nil {
 		return false
 	}
@@ -439,7 +444,7 @@ func updatePlusExtension(composeFilePath string) bool {
 	params := url.Values{}
 	params.Set("compose_file", composeFilePath)
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/update?"+params.Encode(), nil)
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/update?"+params.Encode(), nil)
 	if err != nil {
 		return false
 	}
@@ -517,7 +522,7 @@ func stopPlusExtension(composeFilePath string) bool {
 	params := url.Values{}
 	params.Set("compose_file", composeFilePath)
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/stop?"+params.Encode(), nil)
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/stop?"+params.Encode(), nil)
 	if err != nil {
 		return false
 	}

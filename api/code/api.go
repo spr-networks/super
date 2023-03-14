@@ -371,7 +371,7 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 
 func update(w http.ResponseWriter, r *http.Request) {
 	//1) superd update with service & compose_file
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/update", nil)
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/update", nil)
 	if err != nil {
 		http.Error(w, fmt.Errorf("failed to make superd request").Error(), 400)
 		return
@@ -393,7 +393,7 @@ func update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req, err = http.NewRequest(http.MethodGet, "http://localhost/start", nil)
+	req, err = http.NewRequest(http.MethodPut, "http://localhost/start", nil)
 	if err != nil {
 		http.Error(w, fmt.Errorf("failed to make superd start request").Error(), 400)
 		return
@@ -422,15 +422,12 @@ func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 	params := url.Values{}
 	params.Set("container", container)
 
-	// support PLUS if configured
-	if config.PlusToken != "" {
-		params.Set("username", PlusUser)
-		params.Set("secret", config.PlusToken)
-	}
-
 	append := "?" + params.Encode()
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/remote_container_tags"+append, nil)
+	creds := GhcrCreds{PlusUser, config.PlusToken}
+	jsonValue, _ := json.Marshal(creds)
+
+	req, err := http.NewRequest(http.MethodPost, "http://localhost/remote_container_tags"+append, bytes.NewBuffer(jsonValue))
 	if err != nil {
 		http.Error(w, fmt.Errorf("failed to make request for tags "+container).Error(), 400)
 		return
@@ -2021,7 +2018,7 @@ func callSuperdRestart(target string) {
 		append += "?" + params.Encode()
 	}
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/restart"+append, nil)
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/restart"+append, nil)
 	if err != nil {
 		return
 	}
