@@ -2303,20 +2303,43 @@ export default function MockAPI() {
         return true
       })
 
-
       this.get('/release', (schema, request) => {
-        return {"CustomChannel":"-dev","CustomVersion":"0.1.29","Current":"latest-dev\n"}
+        return {
+          CustomChannel: '-dev',
+          CustomVersion: '0.1.29',
+          Current: 'latest-dev'
+        }
       })
 
       this.get('/releaseChannels', (schema, request) => {
-        return ["","-dev"]
+        return ['', '-dev']
       })
 
-      this.get('/releasesAvailable?container=super_superd', (schema, request) => {
-        return ["latest","0.1.7","0.1.25dev","0.1.25","latest-dev","0.1.25-dev","0.1.26","0.1.26-dev","0.1.27","0.1.27-dev","0.1.28","0.1.28-dev","0.1.29","0.1.29-dev","0.1.30","0.1.31","0.1.32","0.1.32-dev"]
-      })
-
-
+      this.get(
+        '/releasesAvailable?container=super_superd',
+        (schema, request) => {
+          return [
+            'latest',
+            '0.1.7',
+            '0.1.25dev',
+            '0.1.25',
+            'latest-dev',
+            '0.1.25-dev',
+            '0.1.26',
+            '0.1.26-dev',
+            '0.1.27',
+            '0.1.27-dev',
+            '0.1.28',
+            '0.1.28-dev',
+            '0.1.29',
+            '0.1.29-dev',
+            '0.1.30',
+            '0.1.31',
+            '0.1.32',
+            '0.1.32-dev'
+          ]
+        }
+      )
     }
   })
 
