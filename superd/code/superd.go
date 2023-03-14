@@ -221,6 +221,15 @@ func ghcr_auth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if creds.Secret != "" {
+		var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/=_]*$`)
+		if !base64Regex.MatchString(creds.Secret) {
+			// Handle invalid token
+			http.Error(w, "Invalid token "+err.Error(), 400)
+			return
+		}
+	}
+
 	username := creds.Username
 	secret := creds.Secret
 
@@ -262,6 +271,30 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 
 	git_url := r.URL.Query().Get("git_url")
 
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)
+		return
+	}
+
+	creds := GhcrCreds{}
+
+	if err := json.Unmarshal(body, &creds); err != nil {
+		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)
+		return
+	}
+
+	if creds.Secret != "" {
+		var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/=_]*$`)
+		if !base64Regex.MatchString(creds.Secret) {
+			// Handle invalid token
+			http.Error(w, "Invalid token "+err.Error(), 400)
+			return
+		}
+
+		git_url = "https://" + creds.Username + ":" + creds.Secret + "@" + git_url
+	}
+
 	if git_url == "" {
 		http.Error(w, "need git_url parameter", 400)
 		return
@@ -276,7 +309,7 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err := os.Chdir(PlusAddons)
+	err = os.Chdir(PlusAddons)
 	if err != nil {
 		http.Error(w, "Could not find addons directory", 500)
 		os.Chdir("/super")
@@ -528,6 +561,15 @@ func remote_container_tags(w http.ResponseWriter, r *http.Request) {
 	if err := json.Unmarshal(body, &creds); err != nil {
 		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)
 		return
+	}
+
+	if creds.Secret != "" {
+		var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/=_]*$`)
+		if !base64Regex.MatchString(creds.Secret) {
+			// Handle invalid token
+			http.Error(w, "Invalid token "+err.Error(), 400)
+			return
+		}
 	}
 
 	username := creds.Username
