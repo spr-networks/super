@@ -469,7 +469,7 @@ func releaseChannels(w http.ResponseWriter, r *http.Request) {
 }
 
 func getContainerVersion(w http.ResponseWriter, r *http.Request) {
-	container := r.URL.Query().Get("container")
+	container := r.URL.Query().Get("plugin")
 	params := url.Values{}
 	params.Set("container", container)
 
