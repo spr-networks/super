@@ -153,9 +153,9 @@ func composeCommand(composeFile string, target string, command string, optional 
 
 		cmd = "docker"
 		d_args := append([]string{}, "run",
-			"-v", superdir+":/super",
+			"-v", superdir+":"+superdir,
 			"-v", "/var/run/docker.sock:/var/run/docker.sock",
-			"-w", "/super/",
+			"-w", superdir,
 			"-e", "SUPERDIR="+superdir)
 
 		if release_channel != "" {
