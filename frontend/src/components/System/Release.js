@@ -191,12 +191,17 @@ const ReleaseInfo = ({ showModal, ...props }) => {
       let latest = versions[0]
       let latestDev = versions.find((v) => v.includes('-dev'))
 
+      // if latest get version
+      if (current.startsWith('latest')) {
+        current = current.includes('-dev') ? latestDev : latest
+      }
+
       if (current.includes('dev') && current != latestDev) {
         context.info(`Latest dev version is ${latestDev}, current ${current}`)
       } else if (current != latest) {
         context.info(`Latest version is ${latest}, current ${current}`)
       } else {
-        context.success(`${version} is the latest version of spr`)
+        context.success(`${current} is the latest version of spr`)
       }
     })
   }
