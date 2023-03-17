@@ -30,6 +30,7 @@ import { FlashList } from '@shopify/flash-list'
 
 import DockerInfo from 'components/System/Docker'
 import { BrandIcons } from 'FontAwesomeUtils'
+import ReleaseInfo from 'components/System/Release'
 
 const ConfigsBackup = (props) => {
   const context = useContext(AlertContext)
@@ -188,7 +189,6 @@ const SystemInfo = (props) => {
 
   const [modalTitle, setModalTitle] = useState('Container')
   const [modalBody, setModalBody] = useState('')
-  const [showDocker, setShowDocker] = useState(false)
 
   const showModal = (title, content) => {
     setModalTitle(title)
@@ -296,6 +296,8 @@ const SystemInfo = (props) => {
             </HStack>
           </Button>
         </HStack>*/}
+
+        <ReleaseInfo />
 
         <DockerInfo showModal={showModal} />
 
