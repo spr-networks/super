@@ -80,6 +80,11 @@ func setReleaseChannel(Channel string) error {
 
 	regex, _ := regexp.Compile("[^a-zA-Z0-9-_]+")
 	channelFiltered := regex.ReplaceAllString(Channel, "")
+
+	if (channelFiltered == "main") {
+		channelFiltered = ""
+	}
+
 	return os.WriteFile(ReleaseChannelFile, []byte(channelFiltered), 0644)
 }
 
@@ -485,11 +490,12 @@ func release_info(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if info.CustomChannel != "" {
-		//right now we only allow "-dev"
-		if info.CustomChannel != "-dev" {
+		//right now we only allow "-dev" and "main"
+		if info.CustomChannel != "-dev" && info.CustomChannel != "main" {
 			http.Error(w, "Unsupported channel "+info.CustomChannel, 400)
 			return
 		}
+
 
 		// in case more channels are allowed in the future
 		regex, _ := regexp.Compile("[^a-zA-Z0-9-_]+")
