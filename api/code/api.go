@@ -463,7 +463,7 @@ func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 }
 
 func releaseChannels(w http.ResponseWriter, r *http.Request) {
-	reply := []string{"", "-dev"}
+	reply := []string{"main", "-dev"}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
 }
