@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Icon } from 'FontAwesomeUtils'
-import { faPen, faRefresh } from '@fortawesome/free-solid-svg-icons'
+import { faWrench, faRefresh } from '@fortawesome/free-solid-svg-icons'
 import {
   Badge,
   Box,
   Button,
   Checkbox,
+  Flex,
   FormControl,
   Heading,
   HStack,
@@ -33,49 +34,69 @@ import InputSelect from 'components/InputSelect'
 
 */
 
-const UpdateReleaseInfo = ({ releaseInfo, onSubmit, ...props }) => {
+const prettyChannel = (channelStr) => {
+  if (channelStr == '') {
+    return 'main'
+  }
+  return channelStr.replace(/-/g, '')
+}
+
+const UpdateReleaseInfo = ({ releaseInfo, onSubmit, onReset, onUpdate, ...props }) => {
   const [versions, setVersions] = useState([])
+  const [channels, setChannels] = useState([])
   const [CustomChannel, setCustomChannel] = useState('')
   const [CustomVersion, setCustomVersion] = useState('')
   const [verifyMessage, setShowVerifyMessage] = useState('')
   const [verified, setVerified] = useState(false)
 
-  // fetch available releases onLoad
+
+  // fetch available releases and channels onLoad
   useEffect(() => {
-    if (releaseInfo.CustomVersion) {
+    if (releaseInfo.CustomVersion != '') {
       setCustomVersion(releaseInfo.CustomVersion)
+    }
+
+    if (releaseInfo.CustomChannel != '') {
+      setCustomChannel(releaseInfo.CustomChannel)
     }
 
     api.get('/releasesAvailable?container=super_base').then((versions) => {
       versions.reverse()
-      //NOTE testing
-      //versions[0] = '0.2.23'
-      //versions.push('0.0.1')
-      setVersions(versions.filter((v) => v.match(/^\d+.\d+.\d+(\-\w+)?$/)))
+      let updatedVersions = versions.filter((v) => v.match(/^\d+.\d+.\d+$/))
+      updatedVersions.unshift('latest');
+      setVersions(updatedVersions)
     })
+
+    api.get('/releaseChannels').then((channels) => {
+      let newChannels = []
+      for (let channel of channels) {
+        newChannels.push(channel)
+      }
+      setChannels(newChannels)
+    })
+
+    
   }, [])
+  
 
   const checkVersionChange = (currentVersion, newVersion) => {
-    if (newVersion.includes('-dev') && !currentVersion.includes('-dev')) {
-      return 'Be aware that the dev channel have new, cool features but can also be unstable'
-    }
+    let latest = versions[1]
 
-    let latest = versions[0]
-    let latestDev = versions.find((v) => v.includes('-dev'))
+    if (currentVersion.includes('-')) {
+      currentVersion = currentVersion.split('-')[0]
+    }
 
     // if, latest-dev tag - get the latest version
     if (currentVersion.startsWith('latest')) {
-      currentVersion = currentVersion.includes('-dev') ? latestDev : latest
+      currentVersion = latest
     }
 
     if (newVersion.startsWith('latest')) {
-      newVersion = newVersion.includes('-dev') ? latestDev : latest
+      newVersion = latest 
     }
 
-    let [newMajor, newMinor, newPatch] = newVersion.split('-')[0].split('.')
-    let [currentMajor, currentMinor, currentPatch] = currentVersion
-      .split('-')[0]
-      .split('.')
+    let [newMajor, newMinor, newPatch] = newVersion.split('.')
+    let [currentMajor, currentMinor, currentPatch] = currentVersion.split('.')
 
     // downgrade
     if (newMajor < currentMajor || newMinor < currentMinor) {
@@ -95,19 +116,15 @@ const UpdateReleaseInfo = ({ releaseInfo, onSubmit, ...props }) => {
     return null
   }
 
-  const handleChange = (value) => {
+  const handleChangeVersion = (value) => {
     let notify = checkVersionChange(releaseInfo.Current, value)
     setShowVerifyMessage(notify)
+        
+    setCustomVersion(value)
+  }
 
-    // version-channel, else its only version
-    if (value.includes('-')) {
-      let [version, channel] = value.split('-')
-      setCustomVersion(version)
-      setCustomChannel(`-${channel}`)
-    } else {
-      setCustomVersion(value)
-      setCustomChannel('')
-    }
+  const handleChangeChannel = (value) => {
+    setCustomChannel(value)
   }
 
   const handleSubmit = () => {
@@ -117,11 +134,19 @@ const UpdateReleaseInfo = ({ releaseInfo, onSubmit, ...props }) => {
     }
 
     onSubmit({
-      Current: releaseInfo.Current,
       CustomVersion,
       CustomChannel
     })
+
+    onUpdate()
   }
+
+
+  const handleReset = () => {
+    onReset()
+    onUpdate()
+  }
+
 
   return (
     <Stack space={4}>
@@ -135,10 +160,24 @@ const UpdateReleaseInfo = ({ releaseInfo, onSubmit, ...props }) => {
                 value
               }
             })}
-            value={releaseInfo.Current}
-            onChange={handleChange}
+            value={releaseInfo.CustomVersion}
+            onChange={handleChangeVersion}
             isDisabled
           />
+
+        <FormControl.Label>Custom Channel</FormControl.Label>
+          <InputSelect
+            options={channels.map((value) => {
+              return {
+                label: prettyChannel(value),
+                value
+              }
+            })}
+            value={releaseInfo.CustomChannel}
+            onChange={handleChangeChannel}
+            isDisabled
+          />
+
         </FormControl>
       </HStack>
 
@@ -160,9 +199,13 @@ const UpdateReleaseInfo = ({ releaseInfo, onSubmit, ...props }) => {
         </HStack>
       ) : null}
 
-      <Button color="primary" size="md" onPress={handleSubmit}>
+      <Button colorScheme="primary" size="md" onPress={handleSubmit}>
         Save
       </Button>
+      <Button colorScheme="secondary" size="md" onPress={handleReset}>
+        Reset to defaults
+      </Button>
+
     </Stack>
   )
 }
@@ -173,13 +216,17 @@ const ReleaseInfo = ({ showModal, ...props }) => {
   const [releaseInfo, setReleaseInfo] = useState(null)
   const [show, setShow] = useState(true)
 
-  useEffect(() => {
+  const updateRelease = () => {
     api
       .get('/release')
       .then((releaseInfo) => {
         setReleaseInfo(releaseInfo)
       })
       .catch((err) => context.error(err))
+  }
+
+  useEffect(() => {
+    updateRelease()
   }, [])
 
   const checkUpdate = () => {
@@ -196,7 +243,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
         current = current.includes('-dev') ? latestDev : latest
       }
 
-      if (current.includes('dev') && current != latestDev) {
+      if (current.includes('-dev') && current != latestDev) {
         context.info(`Latest dev version is ${latestDev}, current ${current}`)
       } else if (current != latest) {
         context.info(`Latest version is ${latest}, current ${current}`)
@@ -207,25 +254,65 @@ const ReleaseInfo = ({ showModal, ...props }) => {
   }
 
   const renderReleaseInfoRow = (label, value) => {
+    //normalize current-version and channel to hold LHS or RHS of -
+    if (label == 'Channel') {
+      value = prettyChannel(value)
+    } else if (label == 'Custom Version') {
+      let parts = value.split('-')
+      if (parts.length == 2) {
+        value = parts[0]
+      } 
+    }
+
     return (
       <HStack
-        space={2}
+        space={4}
         p={4}
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
         borderBottomColor="borderColorCardLight"
         _dark={{ borderBottomColor: 'borderColorCardDark' }}
+        alignItems="center"
         borderBottomWidth={1}
-        justifyContent="space-between"
+        justifyContent="flex-start"
       >
+      <Box flexBasis="10%" textAlign="left">
         <Text>{label}</Text>
+      </Box>
+      <Box flexBasis="10%" textAlign="justify">
         <Text color="muted.500">{value}</Text>
+      </Box>
       </HStack>
     )
   }
 
   const refModal = useRef(null)
 
+  const onReset = (info) => {
+    api
+    .delete('/release')
+    .then((result) => {
+      refModal.current()
+
+      context.success(
+        `Reset release settings`
+      )
+    })
+    .catch((err) => {
+      context.error(err)
+    })
+      
+  }
+
   const onSubmit = (info) => {
+    if (info.CustomChannel != 'main' && info.CustomChannel != '' && info.CustomChannel[0] != '-') {
+      info.CustomChannel = '-' + info.CustomChannel
+
+      //set to latest if version is not set yet
+      if (info.CustomVersion == '') {
+        info.CustomVersion = 'latest'
+      }
+    }
+
     api
       .put('/release', info)
       .then((result) => {
@@ -240,7 +327,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
 
         // TODO trigger download in background and notify user when ready
         context.success(
-          `Version updated from ${info.Current} to ${info.CustomVersion}${info.CustomChannel}. Restart SPR to trigger update`
+          `Release settings updated`
         )
       })
       .catch((err) => {
@@ -250,35 +337,38 @@ const ReleaseInfo = ({ showModal, ...props }) => {
 
   return (
     <Box {...props}>
-      <HStack alignItems="center" justifyContent="space-between" p={4}>
+      <HStack p={4}>
         <Heading fontSize="md" onPress={() => setShow(!show)}>
           SPR Release
         </Heading>
-        <Button
-          ml="auto"
-          size="sm"
-          variant="ghost"
-          colorScheme="blueGray"
-          leftIcon={<Icon icon={faRefresh} />}
-          onPress={checkUpdate}
-        >
-          Check for update
-        </Button>
-        <ModalForm
-          title="Set Release Version"
-          triggerText="Upgrade"
-          triggerIcon={faPen}
-          modalRef={refModal}
-        >
-          <UpdateReleaseInfo releaseInfo={releaseInfo} onSubmit={onSubmit} />
-        </ModalForm>
+        <Flex direction="row">
+          <Button
+            ml="50%"
+            size="sm"
+            variant="ghost"
+            colorScheme="blueGray"
+            leftIcon={<Icon icon={faRefresh} />}
+            onPress={checkUpdate}
+          >
+            Check for update
+          </Button>
+          <ModalForm
+            title="Set Release Version"
+            triggerText="Upgrade"
+            triggerIcon={faWrench}
+            modalRef={refModal}
+          >
+            <UpdateReleaseInfo releaseInfo={releaseInfo} onSubmit={onSubmit} onReset={onReset} onUpdate={updateRelease} />
+          </ModalForm>
+        </Flex>
       </HStack>
-      {/*NOTE also have .CustomChannel, .CustomVersion*/}
       {releaseInfo ? (
         <>
-          {renderReleaseInfoRow('Current Version', releaseInfo.Current)}
-          {/*renderReleaseInfoRow('Custom Channel', releaseInfo.CustomChannel)}
-          {renderReleaseInfoRow('Custom Version', releaseInfo.CustomVersion)*/}
+          <span>
+            {renderReleaseInfoRow('Current Version', releaseInfo.Current)}
+            {renderReleaseInfoRow('Custom Version', releaseInfo.CustomVersion)}
+            {renderReleaseInfoRow('Custom Channel', releaseInfo.CustomVersion != '' ? prettyChannel(releaseInfo.CustomChannel) : '')}
+          </span>
         </>
       ) : null}
     </Box>
