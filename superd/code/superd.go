@@ -53,6 +53,11 @@ func getReleaseVersion() string {
 	}
 }
 
+func resetCustomVersion() {
+	os.Remove(ReleaseVersionFile)
+	os.Remove(ReleaseChannelFile)
+}
+
 func setReleaseVersion(Version string) error {
 	ReleaseInfoMtx.Lock()
 	defer ReleaseInfoMtx.Unlock()
@@ -81,7 +86,7 @@ func setReleaseChannel(Channel string) error {
 	regex, _ := regexp.Compile("[^a-zA-Z0-9-_]+")
 	channelFiltered := regex.ReplaceAllString(Channel, "")
 
-	if (channelFiltered == "main") {
+	if channelFiltered == "main" {
 		channelFiltered = ""
 	}
 
@@ -464,7 +469,6 @@ type ReleaseInfo struct {
 }
 
 func release_info(w http.ResponseWriter, r *http.Request) {
-
 	info := ReleaseInfo{}
 	if r.Method == http.MethodGet {
 		//load t
@@ -477,6 +481,13 @@ func release_info(w http.ResponseWriter, r *http.Request) {
 
 		info.CustomChannel = getReleaseChannel()
 		info.CustomVersion = getReleaseVersion()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(info)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		resetCustomVersion()
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(info)
 		return
@@ -495,7 +506,6 @@ func release_info(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Unsupported channel "+info.CustomChannel, 400)
 			return
 		}
-
 
 		// in case more channels are allowed in the future
 		regex, _ := regexp.Compile("[^a-zA-Z0-9-_]+")
@@ -712,7 +722,7 @@ func main() {
 	unix_plugin_router.HandleFunc("/remote_container_tags", remote_container_tags).Methods("POST")
 
 	// get/set release channel
-	unix_plugin_router.HandleFunc("/release", release_info).Methods("GET", "PUT")
+	unix_plugin_router.HandleFunc("/release", release_info).Methods("GET", "PUT", "DELETE")
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)

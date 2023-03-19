@@ -308,7 +308,6 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 	defer c.CloseIdleConnections()
 
 	if r.Method == http.MethodGet {
-
 		req, err := http.NewRequest(http.MethodGet, "http://localhost/release", nil)
 		if err != nil {
 			http.Error(w, fmt.Errorf("failed to make request for version from superd ").Error(), 400)
@@ -336,6 +335,31 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(info)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		req, err := http.NewRequest(http.MethodDelete, "http://localhost/release", nil)
+		if err != nil {
+			http.Error(w, fmt.Errorf("failed to make superd request").Error(), 400)
+			return
+		}
+
+		resp, err := c.Do(req)
+		if err != nil {
+			http.Error(w, fmt.Errorf("failed to set superd release").Error(), 400)
+			return
+		}
+
+		defer resp.Body.Close()
+		_, err = ioutil.ReadAll(resp.Body)
+
+		if resp.StatusCode != http.StatusOK {
+			http.Error(w, fmt.Errorf("failed to set superd release "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+			return
+		}
+
+		// fall thru 200
 		return
 	}
 
@@ -2145,7 +2169,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
 
 	//updates, version, feature info
-	external_router_authenticated.HandleFunc("/release", releaseInfo).Methods("GET", "PUT", "OPTIONS")
+	external_router_authenticated.HandleFunc("/release", releaseInfo).Methods("GET", "PUT", "DELETE", "OPTIONS")
 	external_router_authenticated.HandleFunc("/releaseChannels", releaseChannels).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/releasesAvailable", releasesAvailable).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/update", update).Methods("PUT", "OPTIONS")
