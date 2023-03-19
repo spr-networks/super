@@ -515,7 +515,7 @@ func release_info(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(version)
+	json.NewEncoder(w).Encode(info)
 }
 
 func establishConfigsIfEmpty(SuperDir string) {
