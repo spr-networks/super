@@ -16,7 +16,6 @@ import {
   ScrollView,
   Select,
   Text,
-  View,
   VStack,
   useColorModeValue
 } from 'native-base'
@@ -260,7 +259,7 @@ const WifiHostapd = (props) => {
     }
 
     wifiAPI
-      .setChannel(iface, wifiParameters)
+      .calcChannel(iface, wifiParameters)
       .then(updateConfig)
       .catch((e) => {
         context.error('API Failure: ' + e.message)

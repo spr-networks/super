@@ -2,7 +2,6 @@ import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import { AlertContext } from 'AppContext'
-import { wifiAPI } from 'api'
 
 import {
   Box,
