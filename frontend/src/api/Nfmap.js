@@ -6,18 +6,12 @@ export class APINfmap extends API {
   }
 
   translate(n) {
-    if (n == 'wan') {
-      return 'internet_access'
-    } else if (n == 'dns') {
-      return 'dns_access'
-    } else if (n == 'lan') {
-      return 'lan_access'
-    } else if (n == 'dhcp') {
-      return 'dhcp_access'
+    if (['wan', 'dns', 'lan', 'dhcp'].includes(n)) {
+      n = n.replace('wan', 'internet')
+      return `${n}_access`
     }
 
-    //tbd handle _dst_access also
-    return n + '_mac_src_access'
+    return n
   }
 
   getNFVerdictMap(group) {
