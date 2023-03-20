@@ -63,9 +63,10 @@ type PluginConfig struct {
 }
 
 type APIConfig struct {
-	InfluxDB  InfluxConfig
-	Plugins   []PluginConfig
-	PlusToken string
+	InfluxDB   InfluxConfig
+	Plugins    []PluginConfig
+	PlusToken  string
+	AutoUpdate bool
 }
 
 type GroupEntry struct {
@@ -92,7 +93,12 @@ type DeviceEntry struct {
 
 var config = APIConfig{}
 
+var Configmtx sync.Mutex
+
 func loadConfig() {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
 	data, err := ioutil.ReadFile(ApiConfigPath)
 	if err != nil {
 		fmt.Println(err)
@@ -110,6 +116,9 @@ func loadConfig() {
 }
 
 func saveConfig() {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
 	file, _ := json.MarshalIndent(config, "", " ")
 	err := ioutil.WriteFile(ApiConfigPath, file, 0600)
 	if err != nil {
@@ -393,12 +402,55 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 	//fall through success
 }
 
+func checkUpdates() {
+
+	//once an hour, check if auto updates are enabled
+	// if they are, then performan an update
+	ticker := time.NewTicker(1 * time.Hour)
+	for {
+		select {
+		case <-ticker.C:
+			if config.AutoUpdate == true {
+				//TBD 1) check a release has aged?
+				//    2) check that a release is up to date
+
+				//performUpdate()
+			}
+		}
+	}
+}
+
+func autoUpdate(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(config.AutoUpdate)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		config.AutoUpdate = false
+		saveConfig()
+		// fall thru 200
+		return
+	}
+
+	config.AutoUpdate = true
+	saveConfig()
+}
+
 func update(w http.ResponseWriter, r *http.Request) {
+	errorStr := performUpdate()
+	if errorStr != "" {
+		http.Error(w, fmt.Errorf(errorStr).Error(), 400)
+		return
+	}
+}
+
+func performUpdate() string {
 	//1) superd update with service & compose_file
 	req, err := http.NewRequest(http.MethodPut, "http://localhost/update", nil)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to make superd request").Error(), 400)
-		return
+		return "failed to make update request"
 	}
 
 	c := getSuperdClient()
@@ -406,38 +458,36 @@ func update(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := c.Do(req)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to call superd update ").Error(), 400)
+		return "failed to call superd update "
 	}
 
 	defer resp.Body.Close()
 	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		http.Error(w, fmt.Errorf("failed to call superd update "+fmt.Sprint(resp.StatusCode)).Error(), 400)
-		return
+		return "failed to call superd update " + fmt.Sprint(resp.StatusCode)
 	}
 
 	req, err = http.NewRequest(http.MethodPut, "http://localhost/start", nil)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to make superd start request").Error(), 400)
-		return
+		return "failed to make superd start request"
 	}
 
 	c = getSuperdClient()
 
 	resp, err = c.Do(req)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to call superd start ").Error(), 400)
+		return "failed to call superd start "
 	}
 
 	defer resp.Body.Close()
 	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		http.Error(w, fmt.Errorf("failed to call superd start "+fmt.Sprint(resp.StatusCode)).Error(), 400)
-		return
+		return "failed to call superd start " + fmt.Sprint(resp.StatusCode)
 	}
 
+	return ""
 }
 
 func releasesAvailable(w http.ResponseWriter, r *http.Request) {
@@ -2132,6 +2182,7 @@ func main() {
 	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdUpdateConfig).Methods("PUT")
 	external_router_setup.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/calcChannel", hostapdChannelCalc).Methods("PUT")
 	external_router_setup.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")
 
 	//download cert from http
@@ -2175,6 +2226,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/update", update).Methods("PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/version", getContainerVersion).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/autoupdate", autoUpdate).Methods("GET", "PUT", "DELETE")
 
 	//device management
 	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")
@@ -2194,6 +2246,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/config", hostapdUpdateConfig).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/calcChannel", hostapdChannelCalc).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/enable", hostapdEnableInterface).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/disable", hostapdDisableInterface).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/resetConfiguration", hostapdResetInterface).Methods("PUT")
@@ -2288,6 +2341,8 @@ func main() {
 	trafficTimer()
 	// start the event handler
 	go NotificationsRunEventListener()
+
+	go checkUpdates()
 
 	sslPort, runSSL := os.LookupEnv("API_SSL_PORT")
 

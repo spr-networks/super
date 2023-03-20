@@ -181,16 +181,18 @@ type CalculatedChannelParameters struct {
 	He_oper_centr_freq_seg0_idx  int
 	Vht_oper_chwidth             int
 	He_oper_chwidth              int
+	Freq1                        int
+	Freq2                        int
+	Freq3                        int
 }
 
-func ChanSwitch(iface string, mode string, channel int, bw int, ht_enabled bool, vht_enabled bool, he_enabled bool) (CalculatedChannelParameters, error) {
+func ChanCalc(mode string, channel int, bw int, ht_enabled bool, vht_enabled bool, he_enabled bool) CalculatedChannelParameters {
 	freq1 := 0
 	freq2 := 0
-	//freq3 := 0 //for 80+80, not supported right now
+	freq3 := 0 //for 80+80, not supported right now
 
-	calculated := CalculatedChannelParameters{-1, -1, 0, 0}
+	calculated := CalculatedChannelParameters{-1, -1, 0, 0, 0, 0, 0}
 
-	cmd := ""
 	base := 5000
 	if mode == "b" || mode == "g" {
 		//2.4ghz
@@ -242,8 +244,16 @@ func ChanSwitch(iface string, mode string, channel int, bw int, ht_enabled bool,
 		}
 	}
 
-	//chan_switch 1 5180 sec_channel_offset=1 center_freq1=5210 bandwidth=80 vht
+	calculated.Freq1 = freq1
+	calculated.Freq2 = freq2
+	calculated.Freq3 = freq3
 
+	//chan_switch 1 5180 sec_channel_offset=1 center_freq1=5210 bandwidth=80 vht
+	return calculated
+}
+
+func ChanSwitch(iface string, bw int, freq1 int, freq2 int, ht_enabled bool, vht_enabled bool, he_enabled bool) error {
+	cmd := ""
 	if bw == 20 {
 		cmd = fmt.Sprintf("chan_switch 1 %d bandwidth=20", freq1)
 	} else if bw == 40 || bw == 80 || bw == 160 {
@@ -251,7 +261,7 @@ func ChanSwitch(iface string, mode string, channel int, bw int, ht_enabled bool,
 	} else if bw == 8080 {
 		//80 + 80 unsupported for now
 		// center_freq1, center_freq2
-		return CalculatedChannelParameters{}, fmt.Errorf("80+80 not supported")
+		return fmt.Errorf("80+80 not supported")
 	}
 
 	if ht_enabled {
@@ -262,6 +272,10 @@ func ChanSwitch(iface string, mode string, channel int, bw int, ht_enabled bool,
 		cmd += " vht"
 	}
 
+	if he_enabled {
+		cmd += " he"
+	}
+
 	fmt.Println("chan_switch command:", cmd)
 
 	result, err := RunHostapdCommandArray(iface, strings.Split(cmd, " "))
@@ -270,7 +284,7 @@ func ChanSwitch(iface string, mode string, channel int, bw int, ht_enabled bool,
 		err = fmt.Errorf("Failed to run chan_switch %s", result)
 	}
 
-	return calculated, err
+	return err
 }
 
 func hostapdChannelSwitch(w http.ResponseWriter, r *http.Request) {
@@ -288,11 +302,28 @@ func hostapdChannelSwitch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	calculated, err := ChanSwitch(iface, channelParams.Mode, channelParams.Channel, channelParams.Bandwidth, channelParams.HT_Enable, channelParams.VHT_Enable, channelParams.HE_Enable)
+	calculated := ChanCalc(channelParams.Mode, channelParams.Channel, channelParams.Bandwidth, channelParams.HT_Enable, channelParams.VHT_Enable, channelParams.HE_Enable)
+	err = ChanSwitch(iface, channelParams.Bandwidth, calculated.Freq1, calculated.Freq2, channelParams.HT_Enable, channelParams.VHT_Enable, channelParams.HE_Enable)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(calculated)
+
+}
+
+func hostapdChannelCalc(w http.ResponseWriter, r *http.Request) {
+	channelParams := ChannelParameters{}
+	err := json.NewDecoder(r.Body).Decode(&channelParams)
+
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	calculated := ChanCalc(channelParams.Mode, channelParams.Channel, channelParams.Bandwidth, channelParams.HT_Enable, channelParams.VHT_Enable, channelParams.HE_Enable)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(calculated)
