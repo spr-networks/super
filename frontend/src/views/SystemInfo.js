@@ -41,7 +41,7 @@ const ConfigsBackup = (props) => {
     api
       .put('/backup')
       .then((filename) => {
-        context.success('got backup:', filename)
+        context.success('configs saved', filename)
         setBackups([
           ...backups.filter((b) => b.Name !== filename),
           { Name: filename, Timestamp: new Date() }
@@ -277,27 +277,9 @@ const SystemInfo = (props) => {
           </Stack>
         </Box>
 
-        <ConfigsBackup />
-
-        {/*<HStack px={4}>
-          <Button
-            variant="ghost"
-            _colorScheme="secondary"
-            onPress={() => setShowDocker(!showDocker)}
-          >
-            <HStack space={2} alignItems="center">
-              <BrandIcons.Docker
-                color={useColorModeValue('blueGray.900', 'white')}
-                size="lg"
-              />
-              <Text color={useColorModeValue('blueGray.900', 'white')}>
-                Docker Containers
-              </Text>
-            </HStack>
-          </Button>
-        </HStack>*/}
-
         <ReleaseInfo />
+
+        <ConfigsBackup />
 
         <DockerInfo showModal={showModal} />
 

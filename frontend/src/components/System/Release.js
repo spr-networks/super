@@ -1,18 +1,22 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Icon } from 'FontAwesomeUtils'
-import { faWrench, faRefresh, faArrowUp } from '@fortawesome/free-solid-svg-icons'
+import {
+  faWrench,
+  faRefresh,
+  faArrowUp
+} from '@fortawesome/free-solid-svg-icons'
 import {
   Badge,
   Box,
   Button,
   Checkbox,
-  Flex,
   FormControl,
   Heading,
   HStack,
-  Link,
   Stack,
   Text,
+  Tooltip,
+  useBreakpointValue,
   useColorModeValue
 } from 'native-base'
 
@@ -21,19 +25,6 @@ import { AlertContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import InputSelect from 'components/InputSelect'
 
-/*
-
-* add link to system info under the plugins page
-
-* set channel, set auto update on/off for core and PLUS
-* set specific version/roll back
-
-* notify about new updates available
-* check for new updates?
-* dont allow downgrade for major. add “im sure” button
-
-*/
-
 const prettyChannel = (channelStr) => {
   if (channelStr == '') {
     return 'main'
@@ -41,14 +32,19 @@ const prettyChannel = (channelStr) => {
   return channelStr.replace(/-/g, '')
 }
 
-const UpdateReleaseInfo = ({ releaseInfo, onSubmit, onReset, onUpdate, ...props }) => {
+const UpdateReleaseInfo = ({
+  releaseInfo,
+  onSubmit,
+  onReset,
+  onUpdate,
+  ...props
+}) => {
   const [versions, setVersions] = useState([])
   const [channels, setChannels] = useState([])
   const [CustomChannel, setCustomChannel] = useState('')
   const [CustomVersion, setCustomVersion] = useState('')
   const [verifyMessage, setShowVerifyMessage] = useState('')
   const [verified, setVerified] = useState(false)
-
 
   // fetch available releases and channels onLoad
   useEffect(() => {
@@ -63,7 +59,7 @@ const UpdateReleaseInfo = ({ releaseInfo, onSubmit, onReset, onUpdate, ...props 
     api.get('/releasesAvailable?container=super_base').then((versions) => {
       versions.reverse()
       let updatedVersions = versions.filter((v) => v.match(/^\d+.\d+.\d+$/))
-      updatedVersions.unshift('latest');
+      updatedVersions.unshift('latest')
       setVersions(updatedVersions)
     })
 
@@ -74,10 +70,7 @@ const UpdateReleaseInfo = ({ releaseInfo, onSubmit, onReset, onUpdate, ...props 
       }
       setChannels(newChannels)
     })
-
-    
   }, [])
-  
 
   const checkVersionChange = (currentVersion, newVersion) => {
     let latest = versions[1]
@@ -92,7 +85,7 @@ const UpdateReleaseInfo = ({ releaseInfo, onSubmit, onReset, onUpdate, ...props 
     }
 
     if (newVersion.startsWith('latest')) {
-      newVersion = latest 
+      newVersion = latest
     }
 
     let [newMajor, newMinor, newPatch] = newVersion.split('.')
@@ -119,7 +112,7 @@ const UpdateReleaseInfo = ({ releaseInfo, onSubmit, onReset, onUpdate, ...props 
   const handleChangeVersion = (value) => {
     let notify = checkVersionChange(releaseInfo.Current, value)
     setShowVerifyMessage(notify)
-        
+
     setCustomVersion(value)
   }
 
@@ -141,12 +134,10 @@ const UpdateReleaseInfo = ({ releaseInfo, onSubmit, onReset, onUpdate, ...props 
     onUpdate()
   }
 
-
   const handleReset = () => {
     onReset()
     onUpdate()
   }
-
 
   return (
     <Stack space={4}>
@@ -165,7 +156,7 @@ const UpdateReleaseInfo = ({ releaseInfo, onSubmit, onReset, onUpdate, ...props 
             isDisabled
           />
 
-        <FormControl.Label>Custom Channel</FormControl.Label>
+          <FormControl.Label>Custom Channel</FormControl.Label>
           <InputSelect
             options={channels.map((value) => {
               return {
@@ -177,7 +168,6 @@ const UpdateReleaseInfo = ({ releaseInfo, onSubmit, onReset, onUpdate, ...props 
             onChange={handleChangeChannel}
             isDisabled
           />
-
         </FormControl>
       </HStack>
 
@@ -205,16 +195,13 @@ const UpdateReleaseInfo = ({ releaseInfo, onSubmit, onReset, onUpdate, ...props 
       <Button colorScheme="secondary" size="md" onPress={handleReset}>
         Reset to defaults
       </Button>
-
     </Stack>
   )
 }
 
 const ReleaseInfo = ({ showModal, ...props }) => {
   const context = useContext(AlertContext)
-
   const [releaseInfo, setReleaseInfo] = useState(null)
-  const [show, setShow] = useState(true)
 
   const updateRelease = () => {
     api
@@ -254,18 +241,22 @@ const ReleaseInfo = ({ showModal, ...props }) => {
   }
 
   const runUpdate = () => {
-    api.put('/update').then(() => {
-
-    }).catch((err) => {
-      //poll for the API coming back up
-      let interval = setInterval(() => {
-        api.get('/release').then(() => {
-          clearInterval(interval)
-          context.success('Update complete')
-          updateRelease()
-        }).catch(() => {})
-      }, 1000)
-    })
+    api
+      .put('/update')
+      .then(() => {})
+      .catch((err) => {
+        //poll for the API coming back up
+        let interval = setInterval(() => {
+          api
+            .get('/release')
+            .then(() => {
+              clearInterval(interval)
+              context.success('Update complete')
+              updateRelease()
+            })
+            .catch(() => {})
+        }, 1000)
+      })
   }
 
   const renderReleaseInfoRow = (label, value) => {
@@ -276,7 +267,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
       let parts = value.split('-')
       if (parts.length == 2) {
         value = parts[0]
-      } 
+      }
     }
 
     return (
@@ -290,12 +281,10 @@ const ReleaseInfo = ({ showModal, ...props }) => {
         borderBottomWidth={1}
         justifyContent="flex-start"
       >
-      <Box flexBasis="10%" textAlign="left">
-        <Text>{label}</Text>
-      </Box>
-      <Box flexBasis="10%" textAlign="justify">
-        <Text color="muted.500">{value}</Text>
-      </Box>
+        <Text whiteSpace={'nowrap'}>{label}</Text>
+        <Box textAlign="justify">
+          <Text color="muted.500">{value}</Text>
+        </Box>
       </HStack>
     )
   }
@@ -304,22 +293,23 @@ const ReleaseInfo = ({ showModal, ...props }) => {
 
   const onReset = (info) => {
     api
-    .delete('/release')
-    .then((result) => {
-      refModal.current()
+      .delete('/release')
+      .then((result) => {
+        refModal.current()
 
-      context.success(
-        `Reset release settings`
-      )
-    })
-    .catch((err) => {
-      context.error(err)
-    })
-      
+        context.success(`Reset release settings`)
+      })
+      .catch((err) => {
+        context.error(err)
+      })
   }
 
   const onSubmit = (info) => {
-    if (info.CustomChannel != 'main' && info.CustomChannel != '' && info.CustomChannel[0] != '-') {
+    if (
+      info.CustomChannel != 'main' &&
+      info.CustomChannel != '' &&
+      info.CustomChannel[0] != '-'
+    ) {
       info.CustomChannel = '-' + info.CustomChannel
 
       //set to latest if version is not set yet
@@ -341,9 +331,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
         refModal.current()
 
         // TODO trigger download in background and notify user when ready
-        context.success(
-          `Release settings updated`
-        )
+        context.success(`Release settings updated`)
       })
       .catch((err) => {
         context.error(err)
@@ -352,46 +340,72 @@ const ReleaseInfo = ({ showModal, ...props }) => {
 
   return (
     <Box {...props}>
-      <HStack p={4}>
-        <Heading fontSize="md" onPress={() => setShow(!show)}>
-          SPR Release
-        </Heading>
-        <Flex direction="row">
-          <Button
-            ml="50%"
-            size="sm"
-            variant="ghost"
-            colorScheme="blueGray"
-            leftIcon={<Icon icon={faRefresh} />}
-            onPress={checkUpdate}
-          >
-            Check for updates
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            colorScheme="blueGray"
-            leftIcon={<Icon icon={faArrowUp} />}
-            onPress={runUpdate}
-          >
-            Run Update
-          </Button>
-          <ModalForm
-            title="Set Release Version"
-            triggerText="Set Custom Release"
-            triggerIcon={faWrench}
-            modalRef={refModal}
-          >
-            <UpdateReleaseInfo releaseInfo={releaseInfo} onSubmit={onSubmit} onReset={onReset} onUpdate={updateRelease} />
+      <Stack
+        p={4}
+        direction={{ base: 'column', md: 'row' }}
+        space={{ base: 4, md: 0 }}
+        alignItems={{ base: 'left', md: 'center' }}
+        justifyContent="space-between"
+      >
+        <Heading fontSize="md">SPR Release</Heading>
+        <Stack
+          direction={{ base: 'row', md: 'row' }}
+          space={{ base: 2, md: 0 }}
+        >
+          <Tooltip label={'Check for new updates'}>
+            <Button
+              size="sm"
+              variant="ghost"
+              colorScheme="blueGray"
+              leftIcon={<Icon icon={faRefresh} />}
+              onPress={checkUpdate}
+            >
+              Check
+            </Button>
+          </Tooltip>
+          <Tooltip label={'Run update'}>
+            <Button
+              size="sm"
+              variant="ghost"
+              colorScheme="blueGray"
+              leftIcon={<Icon icon={faArrowUp} />}
+              onPress={runUpdate}
+            >
+              Update
+            </Button>
+          </Tooltip>
+          <Tooltip label={'Set Custom Version'}>
+            <Button
+              size="sm"
+              variant="ghost"
+              colorScheme="blueGray"
+              leftIcon={<Icon icon={faWrench} />}
+              onPress={() => refModal.current()}
+            >
+              Set Custom Version
+            </Button>
+          </Tooltip>
+          <ModalForm title="Set Release Version" modalRef={refModal}>
+            <UpdateReleaseInfo
+              releaseInfo={releaseInfo}
+              onSubmit={onSubmit}
+              onReset={onReset}
+              onUpdate={updateRelease}
+            />
           </ModalForm>
-        </Flex>
-      </HStack>
+        </Stack>
+      </Stack>
       {releaseInfo ? (
         <>
           <span>
             {renderReleaseInfoRow('Current Version', releaseInfo.Current)}
             {renderReleaseInfoRow('Custom Version', releaseInfo.CustomVersion)}
-            {renderReleaseInfoRow('Custom Channel', releaseInfo.CustomVersion != '' ? prettyChannel(releaseInfo.CustomChannel) : '')}
+            {renderReleaseInfoRow(
+              'Custom Channel',
+              releaseInfo.CustomVersion != ''
+                ? prettyChannel(releaseInfo.CustomChannel)
+                : ''
+            )}
           </span>
         </>
       ) : null}
