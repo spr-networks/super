@@ -259,7 +259,7 @@ const WifiHostapd = (props) => {
     }
 
     wifiAPI
-      .calcChannel(iface, wifiParameters)
+      .calcChannel(wifiParameters)
       .then(updateConfig)
       .catch((e) => {
         context.error('API Failure: ' + e.message)
