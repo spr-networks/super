@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Icon } from 'FontAwesomeUtils'
-import { faWrench, faRefresh } from '@fortawesome/free-solid-svg-icons'
+import { faWrench, faRefresh, faArrowUp } from '@fortawesome/free-solid-svg-icons'
 import {
   Badge,
   Box,
@@ -253,6 +253,21 @@ const ReleaseInfo = ({ showModal, ...props }) => {
     })
   }
 
+  const runUpdate = () => {
+    api.put('/update').then(() => {
+
+    }).catch((err) => {
+      //poll for the API coming back up
+      let interval = setInterval(() => {
+        api.get('/release').then(() => {
+          clearInterval(interval)
+          context.success('Update complete')
+          updateRelease()
+        }).catch(() => {})
+      }, 1000)
+    })
+  }
+
   const renderReleaseInfoRow = (label, value) => {
     //normalize current-version and channel to hold LHS or RHS of -
     if (label == 'Channel') {
@@ -350,11 +365,20 @@ const ReleaseInfo = ({ showModal, ...props }) => {
             leftIcon={<Icon icon={faRefresh} />}
             onPress={checkUpdate}
           >
-            Check for update
+            Check for updates
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            colorScheme="blueGray"
+            leftIcon={<Icon icon={faArrowUp} />}
+            onPress={runUpdate}
+          >
+            Run Update
           </Button>
           <ModalForm
             title="Set Release Version"
-            triggerText="Upgrade"
+            triggerText="Set Custom Release"
             triggerIcon={faWrench}
             modalRef={refModal}
           >
