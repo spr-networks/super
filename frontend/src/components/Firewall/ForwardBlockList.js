@@ -68,7 +68,6 @@ const ForwardBlockList = (props) => {
 
       <Box
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        _rounded={{ md: 'md' }}
         width="100%"
         p={4}
         mb={4}
