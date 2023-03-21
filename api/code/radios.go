@@ -463,13 +463,12 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	needRestart := false
+	needRestart := true
 
 	if len(newConf.Ssid) > 0 {
 		/* mac80211 state sometimes require a restart when changing ssid name --
 		attempting to do a set just creates a secondary name */
 		conf["ssid"] = newConf.Ssid
-		needRestart = true
 	}
 
 	if newConf.Channel > 0 {
@@ -506,57 +505,46 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	if _, ok := newInput["Country_code"]; ok {
 		conf["country_code"] = newConf.Country_code
-		needRestart = true
 	}
 
 	if _, ok := newInput["Vht_capab"]; ok {
 		conf["vht_capab"] = newConf.Vht_capab
-		needRestart = true
 	}
 
 	if _, ok := newInput["Ht_capab"]; ok {
 		conf["ht_capab"] = newConf.Ht_capab
-		needRestart = true
 	}
 
 	if _, ok := newInput["Ieee80211ax"]; ok {
 		conf["ieee80211ax"] = newConf.Ieee80211ax
-		needRestart = true
 	}
 
 	if _, ok := newInput["He_su_beamformer"]; ok {
 		conf["he_su_beamformer"] = newConf.He_su_beamformer
-		needRestart = true
 	}
 
 	if _, ok := newInput["He_su_beamformee"]; ok {
 		conf["he_su_beamformee"] = newConf.He_su_beamformee
-		needRestart = true
 	}
 
 	if _, ok := newInput["He_mu_beamformer"]; ok {
 		conf["he_mu_beamformer"] = newConf.He_mu_beamformer
-		needRestart = true
 	}
 
 	if _, ok := newInput["Rrm_neighbor_report"]; ok {
 		conf["rrm_neighbor_report"] = newConf.Rrm_neighbor_report
-		needRestart = true
 	}
 
 	if _, ok := newInput["Rrm_beacon_report"]; ok {
 		conf["rrm_beacon_report"] = newConf.Rrm_beacon_report
-		needRestart = true
 	}
 
 	if _, ok := newInput["Bss_transition"]; ok {
 		conf["bss_transition"] = newConf.Bss_transition
-		needRestart = true
 	}
 
 	if _, ok := newInput["Time_advertisement"]; ok {
 		conf["time_advertisement"] = newConf.Time_advertisement
-		needRestart = true
 	}
 
 	// write new conf
