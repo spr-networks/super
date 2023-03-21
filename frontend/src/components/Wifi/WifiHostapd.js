@@ -465,7 +465,7 @@ const WifiHostapd = (props) => {
     transmitUpdates()
   }
 
-  const filteredCapabilityStrings = (iface, band) => {
+  const filteredCapabilityStrings = (iface, wanted_band) => {
     let iw_info = iwMap[iface]
     let ht_capstr = ""
     let vht_capstr = ""
@@ -486,12 +486,12 @@ const WifiHostapd = (props) => {
         vht_capstr = iw_info.bands[i].vht_capabilities[0]
       }
 
-      if ( band.includes("Band 2") && band == 2) {
+      if ( band.includes("Band 2") && wanted_band == 2) {
         defaultConfig = filterCapabilities(default5Ghz, ht_capstr, vht_capstr, 2)
         break
-      } else if ( band.includes("Band 1") && band == 1) {
+      } else if ( band.includes("Band 1") && wanted_band == 1) {
         defaultConfig = filterCapabilities(default2Ghz, ht_capstr, vht_capstr, 1)
-      } else if ( band.includes("Band 4") && band == 5) {
+      } else if ( band.includes("Band 4") && wanted_band == 5) {
         //only set band 4 if not defined yet. 
         defaultConfig = filterCapabilities(default6Ghz, ht_capstr, vht_capstr, 4)
       }
@@ -598,7 +598,7 @@ const WifiHostapd = (props) => {
       if (wifiParameters.Mode == 'b' || wifiParameters.Mode == 'g') {
         //empty out VHT capabilities for b/g mode
         data.Vht_capab = ''
-      } else if (wifiParameters.Mode == 'a' && config.Vht_capab == undefined) {
+      } else if (wifiParameters.Mode == 'a' && (config.Vht_capab == undefined || config.Vht_capab == '')) {
         //re-enable vht capabilities for 5GHz
         let ht_capab, vht_capab = filteredCapabilityStrings(iface, 2)
         data.Vht_capab = vht_capab
