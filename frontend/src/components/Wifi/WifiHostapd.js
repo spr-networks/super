@@ -435,11 +435,15 @@ const WifiHostapd = (props) => {
         })
         setIwMap(iwMap)
         setIws(iws)
-
-        updateCapabilitiesTooltips()
       })
     })
   }
+
+  useEffect(() => {
+    if (iwMap && iwMap[iface] && config.interface && iface != '') {
+      updateCapabilitiesTooltips()
+    }
+  }, [iws, config, iface])
 
   useEffect(() => {
 
@@ -457,7 +461,6 @@ const WifiHostapd = (props) => {
     if (iface == '') {
       return
     }
-    //code after this point assumes iface is set
 
     //extract the interface state
     wifiAPI.interfacesConfiguration().then((ifaces) => {
@@ -834,7 +837,7 @@ const WifiHostapd = (props) => {
 
                 {canEdit.includes(label) ? (
                   tooltips[label] ? (
-                    <Tooltip label={tooltips[label]} openDelay={100}>
+                    <Tooltip label={tooltips[label]}>
                     <Input
                       size="lg"
                       type="text"
