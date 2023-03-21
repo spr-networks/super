@@ -281,7 +281,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
         borderBottomWidth={1}
         justifyContent="flex-start"
       >
-        <Text whiteSpace={'nowrap'}>{label}</Text>
+        <Text>{label}</Text>
         <Box textAlign="justify">
           <Text color="muted.500">{value}</Text>
         </Box>
@@ -344,7 +344,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
         p={4}
         direction={{ base: 'column', md: 'row' }}
         space={{ base: 4, md: 0 }}
-        alignItems={{ base: 'left', md: 'center' }}
+        alignItems={{ base: 'flex-start', md: 'center' }}
         justifyContent="space-between"
       >
         <Heading fontSize="md">SPR Release</Heading>
@@ -397,16 +397,14 @@ const ReleaseInfo = ({ showModal, ...props }) => {
       </Stack>
       {releaseInfo ? (
         <>
-          <span>
-            {renderReleaseInfoRow('Current Version', releaseInfo.Current)}
-            {renderReleaseInfoRow('Custom Version', releaseInfo.CustomVersion)}
-            {renderReleaseInfoRow(
-              'Custom Channel',
-              releaseInfo.CustomVersion != ''
-                ? prettyChannel(releaseInfo.CustomChannel)
-                : ''
-            )}
-          </span>
+          {renderReleaseInfoRow('Current Version', releaseInfo.Current)}
+          {renderReleaseInfoRow('Custom Version', releaseInfo.CustomVersion)}
+          {renderReleaseInfoRow(
+            'Custom Channel',
+            releaseInfo.CustomVersion != ''
+              ? prettyChannel(releaseInfo.CustomChannel)
+              : ''
+          )}
         </>
       ) : null}
     </Box>
