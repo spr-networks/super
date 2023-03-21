@@ -54,13 +54,13 @@ const WifiChannelParameters = ({
     setMode(config.hw_mode)
     setChannel(config.channel)
     
-    if (config.vht_chwidth == 0) {
+    if (config.vht_oper_chwidth == 0) {
       setBandwidth(40)
-    } else if (config.vht_chwidth == 1) {
+    } else if (config.vht_oper_chwidth == 1) {
       setBandwidth(80)
-    } else if (config.vht_chwidth == 2) {
+    } else if (config.vht_oper_chwidth == 2) {
       setBandwidth(160)
-    } else if (config.vht_chwidth == 3) {
+    } else if (config.vht_oper_chwidth == 3) {
       setBandwidth(8080)
     } else {
       // no vht. fall through
