@@ -62,6 +62,13 @@ const WifiChannelParameters = ({
       setBandwidth(160)
     } else if (config.vht_chwidth == 3) {
       setBandwidth(8080)
+    } else {
+      // no vht. fall through
+      if (config.ht_capab && config.ht_capab.includes("HT40")) {
+        setBandwidth(40)
+      } else {
+        setBandwidth(20)
+      }
     }
       
     //set bw and channels
