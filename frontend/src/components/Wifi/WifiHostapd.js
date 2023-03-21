@@ -16,6 +16,7 @@ import {
   ScrollView,
   Select,
   Text,
+  Tooltip,
   VStack,
   useColorModeValue
 } from 'native-base'
@@ -345,14 +346,16 @@ const filterCapabilities = (template, ht_capstr, vht_capstr, band) => {
 
 const WifiHostapd = (props) => {
   const context = useContext(AlertContext)
-  const [iface, setIface] = useState('wlan1')
+  const [iface, setIface] = useState('')
 
   const [updated, setUpdated] = useState(false)
   const [config, setConfig] = useState({})
+  const [tooltips, setTooltips] = useState({})
   const [devices, setDevices] = useState([])
   const [iws, setIws] = useState([])
   const [iwMap, setIwMap] = useState({})
 
+  //make sure to update commitConfig when updating these
   const canEditString = [
     'ssid',
     'country_code',
@@ -387,7 +390,40 @@ const WifiHostapd = (props) => {
       }, {})
   }
 
+  const updateCapabilitiesTooltips = () => {
+    //update the tooltips for vht_capab, ht_capab 
+
+    let ht_capab, vht_capab
+    if (config.hw_mode == 'a') {
+      //this assumes 5ghz, need to handle 6ghz and wifi 6
+      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+    } else if (config.hw_mode == 'g' || config.hw_mode == 'b') {
+      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+    } else {
+      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+      if (ht_capab == "" && vht_capab == "") {
+        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+      }
+      if (ht_capab == "" && vht_capab == "") {
+        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 4)
+      }
+    }
+
+    if (ht_capab || vht_capab) {
+      setTooltips({"ht_capab": ht_capab, "vht_capab": vht_capab})
+    }
+  }
+
   useEffect(() => {
+
+    if (iface == '') {
+      wifiAPI
+      .defaultInterface()
+      .then((iface) => {
+        setIface(iface)
+      })
+    }
+
     wifiAPI.iwDev().then((devs) => {
       setDevices(devs)
 
@@ -407,6 +443,8 @@ const WifiHostapd = (props) => {
         })
         setIwMap(iwMap)
         setIws(iws)
+
+        updateCapabilitiesTooltips()
       })
     })
 
@@ -436,7 +474,8 @@ const WifiHostapd = (props) => {
     setConfig(configNew)
   }
 
-  const transmitUpdates = () => {
+  const commitConfig = () => {
+    
     let data = {
       Ssid: config.ssid,
       Channel: parseInt(config.channel),
@@ -462,16 +501,51 @@ const WifiHostapd = (props) => {
 
     setUpdated(false)
 
-    transmitUpdates()
+    commitConfig()
   }
 
-  const filteredCapabilityStrings = (iface, wanted_band) => {
+  const generateCapabilitiesString = (iface, wanted_band) => {
+    let iw_info = iwMap[iface]
+    let ht_capstr = ""
+    let vht_capstr = ""
+
+    if (iw_info == undefined) {
+      return ["", ""]
+    }
+
+    for (let i = 0; i < iw_info.bands.length; i++) {
+      let band = iw_info.bands[i].band
+      let ht_capstr = "" 
+      let vht_capstr = ""
+
+      if (iw_info.bands[i].capabilities != undefined) {
+        ht_capstr = iw_info.bands[i].capabilities[0]
+      }
+
+      if (iw_info.bands[i].vht_capabilities != undefined) {
+        vht_capstr = iw_info.bands[i].vht_capabilities[0]
+      }
+
+
+      if ( band.includes("Band 2") && wanted_band == 2) {
+        return [mapHTCapabilities(ht_capstr), mapVHTCapabilities(vht_capstr)]
+      } else if ( band.includes("Band 1") && wanted_band == 1) {
+        return [mapHTCapabilities(ht_capstr), mapVHTCapabilities(vht_capstr)]
+      } else if ( band.includes("Band 4") && wanted_band == 4) {
+        return [mapHTCapabilities(ht_capstr), mapVHTCapabilities(vht_capstr)]
+      }
+    }
+
+    return ["", ""]
+  }
+
+
+  const generateConfigForBand = (iface, wanted_band) => {
     let iw_info = iwMap[iface]
     let ht_capstr = ""
     let vht_capstr = ""
 
     let defaultConfig
-    //iterate through bands, looking for band 2, band 1, band 4 in that order
 
     for (let i = 0; i < iw_info.bands.length; i++) {
       let band = iw_info.bands[i].band
@@ -491,17 +565,12 @@ const WifiHostapd = (props) => {
         break
       } else if ( band.includes("Band 1") && wanted_band == 1) {
         defaultConfig = filterCapabilities(default2Ghz, ht_capstr, vht_capstr, 1)
-      } else if ( band.includes("Band 4") && wanted_band == 5) {
-        //only set band 4 if not defined yet. 
+      } else if ( band.includes("Band 4") && wanted_band == 4) {
         defaultConfig = filterCapabilities(default6Ghz, ht_capstr, vht_capstr, 4)
       }
     }
 
-    if (defaultConfig == undefined) {
-      return "", ""
-    }
-
-    return defaultConfig.ht_capab, defaultConfig.vht_capab
+    return defaultConfig
   }
 
   const generateHostAPConfiguration = () => {
@@ -520,42 +589,19 @@ const WifiHostapd = (props) => {
 
     let iw_info = iwMap[iface]
 
-
     let defaultConfig
     //iterate through bands, looking for band 2, band 1, band 4 in that order
 
-    for (let i = 0; i < iw_info.bands.length; i++) {
-      let band = iw_info.bands[i].band
-      let ht_capstr = "" 
-      let vht_capstr = ""
-
-      if (iw_info.bands[i].capabilities != undefined) {
-        ht_capstr = iw_info.bands[i].capabilities[0]
-      }
-
-      if (iw_info.bands[i].vht_capabilities != undefined) {
-        vht_capstr = iw_info.bands[i].vht_capabilities[0]
-      }
-
-      if ( band.includes("Band 2")) {
-        defaultConfig = filterCapabilities(default5Ghz, ht_capstr, vht_capstr, 2)
-        break
-      } else if ( band.includes("Band 1")) {
-        defaultConfig = filterCapabilities(default2Ghz, ht_capstr, vht_capstr, 1)
-      } else if ( band.includes("Band 4") && defaultConfig == undefined) {
-        //only set band 4 if not defined yet. 
-        defaultConfig = filterCapabilities(default6Ghz, ht_capstr, vht_capstr, 4)
-      }
-    }
+    defaultConfig = generateConfigForBand(iface, 2) || generateConfigForBand(iface, 1) || generateConfigForBand(iface, 4)
 
     if (defaultConfig == undefined) {
       context.error("could not determine default hostap configuration. using a likely broken default")
-      defaultConfig = filterCapabilities(default5Ghz, ht_capstr, vht_capstr, 2)
+      return
     }
 
     //set the configuration in the UI
     setConfig(defaultConfig)
-    transmitUpdates()
+    commitConfig()
 
     //call hostapd to enable the interface
     wifiAPI.enableInterface(iface)
@@ -600,8 +646,8 @@ const WifiHostapd = (props) => {
         data.Vht_capab = ''
       } else if (wifiParameters.Mode == 'a' && (config.Vht_capab == undefined || config.Vht_capab == '')) {
         //re-enable vht capabilities for 5GHz
-        let ht_capab, vht_capab = filteredCapabilityStrings(iface, 2)
-        data.Vht_capab = vht_capab
+        let tempConfig = generateConfigForBand(iface, 2)
+        data.Vht_capab = tempConfig.Vht_capab
       }
 
       data.Hw_mode = data.Mode
@@ -753,7 +799,7 @@ const WifiHostapd = (props) => {
       <Box bg={useColorModeValue('warmGray.50', 'blueGray.800')} p={4}>
         <VStack space={2}>
           {config.interface ? (
-            Object.keys(config).map((label) => (
+            Object.keys(config).map((label) => (              
               <HStack
                 key={label}
                 space={4}
@@ -765,20 +811,36 @@ const WifiHostapd = (props) => {
                 </Text>
 
                 {canEdit.includes(label) ? (
-                  <Input
-                    size="lg"
-                    type="text"
-                    variant="underlined"
-                    flex={2}
-                    value={config[label]}
-                    onChangeText={(value) => handleChange(label, value)}
-                    onSubmitEditing={handleSubmit}
-                    onMouseLeave={handleSubmit}
-                  />
+                  tooltips[label] ? (
+                    <Tooltip label={tooltips[label]} openDelay={100}>
+                    <Input
+                      size="lg"
+                      type="text"
+                      variant="underlined"
+                      flex={2}
+                      value={config[label]}
+                      onChangeText={(value) => handleChange(label, value)}
+                      onSubmitEditing={handleSubmit}
+                      onMouseLeave={handleSubmit}
+                    />
+                    </Tooltip>
+                  ) : (
+                    <Input
+                      size="lg"
+                      type="text"
+                      variant="underlined"
+                      flex={2}
+                      value={config[label]}
+                      onChangeText={(value) => handleChange(label, value)}
+                      onSubmitEditing={handleSubmit}
+                      onMouseLeave={handleSubmit}
+                    />                    
+                  )
                 ) : (
                   <Text flex={2}>{config[label]}</Text>
                 )}
               </HStack>
+
             ))
           ) : (
             <Button
