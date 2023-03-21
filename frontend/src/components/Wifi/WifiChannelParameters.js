@@ -50,6 +50,20 @@ const WifiChannelParameters = ({
   useEffect(() => {
     //props.config.interface should match TBD
 
+    // switch to config-based settings
+    setMode(config.hw_mode)
+    setChannel(config.channel)
+    
+    if (config.vht_chwidth == 0) {
+      setBandwidth(40)
+    } else if (config.vht_chwidth == 1) {
+      setBandwidth(80)
+    } else if (config.vht_chwidth == 2) {
+      setBandwidth(160)
+    } else if (config.vht_chwidth == 3) {
+      setBandwidth(8080)
+    }
+      
     //set bw and channels
     for (let iw of iws) {
       if (iw.devices[iface]) {
@@ -70,7 +84,11 @@ const WifiChannelParameters = ({
           }
         }
 
+          //in the future, iw needs to be polled 
+          // to parse this correctly
+          // along with an explanation about restarts
         //get bandwidth and channel
+          /*
         if (cur_device.channel) {
           let parts = cur_device.channel.split(',')
 
@@ -84,21 +102,11 @@ const WifiChannelParameters = ({
           let channel = parseInt(parts[0].split(' ')[0])
           let bandwidth = parseInt(parts[1].split(' ')[2])
 
-          setBandwidth(bandwidth)
-          setChannel(channel)
         }
+          */
       }
     }
   }, [iface, config, iws])
-
-  useEffect(() => {
-    setBandwidth(0)
-    setChannel(0)
-  }, [mode])
-
-  useEffect(() => {
-    setErrors({})
-  }, [bandwidth, channel])
 
   const enumerateChannelOptions = () => {
     //const iface = props.config.interface

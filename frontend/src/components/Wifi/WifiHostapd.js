@@ -415,8 +415,7 @@ const WifiHostapd = (props) => {
     }
   }
 
-  useEffect(() => {
-
+  const updateIWS = () => {
     wifiAPI.iwDev().then((devs) => {
       setDevices(devs)
 
@@ -440,7 +439,12 @@ const WifiHostapd = (props) => {
         updateCapabilitiesTooltips()
       })
     })
+  }
 
+  useEffect(() => {
+
+      //in the future: maybe poll for refreshing this.
+    updateIWS()
 
     if (iface == '') {
       wifiAPI
