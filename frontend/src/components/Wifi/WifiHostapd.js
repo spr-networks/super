@@ -417,24 +417,6 @@ const WifiHostapd = (props) => {
 
   useEffect(() => {
 
-    if (iface == '') {
-      wifiAPI
-      .defaultInterface()
-      .then((defIface) => {
-        setIface(defIface)
-      })
-    }
-
-    //extract the interface state
-    wifiAPI.interfacesConfiguration().then((ifaces) => {
-      for(const i of ifaces) {
-        if (i.Name == iface) {
-          setInterfaceEnabled(i.Enabled)
-          break
-        }
-      }
-    })
-
     wifiAPI.iwDev().then((devs) => {
       setDevices(devs)
 
@@ -459,15 +441,40 @@ const WifiHostapd = (props) => {
       })
     })
 
+
+    if (iface == '') {
+      wifiAPI
+      .defaultInterface()
+      .then((defIface) => {
+        setIface(defIface)
+      })
+    }
+
+    if (iface == '') {
+      return
+    }
+    //code after this point assumes iface is set
+
+    //extract the interface state
+    wifiAPI.interfacesConfiguration().then((ifaces) => {
+      for(const i of ifaces) {
+        if (i.Name == iface) {
+          setInterfaceEnabled(i.Enabled)
+          break
+        }
+      }
+    })
+
+
     wifiAPI
-      .config(iface)
-      .then((conf) => {
-        setConfig(sortConf(conf))
-      })
-      .catch((err) => {
-        //configuration not found. How to handle?
-        setConfig({})
-      })
+    .config(iface)
+    .then((conf) => {
+      setConfig(sortConf(conf))
+    })
+    .catch((err) => {
+      //configuration not found. How to handle?
+      setConfig({})
+    })
   }, [iface])
 
   const handleChange = (name, value) => {
@@ -658,7 +665,7 @@ const WifiHostapd = (props) => {
       } else if (wifiParameters.Mode == 'a' && (config.Vht_capab == undefined || config.Vht_capab == '')) {
         //re-enable vht capabilities for 5GHz
         let tempConfig = generateConfigForBand(iface, 2)
-        data.Vht_capab = tempConfig.Vht_capab
+        data.Vht_capab = tempConfig.vht_capab
       }
 
       data.Hw_mode = data.Mode
