@@ -465,6 +465,44 @@ const WifiHostapd = (props) => {
     transmitUpdates()
   }
 
+  const filteredCapabilityStrings = (iface, band) => {
+    let iw_info = iwMap[iface]
+    let ht_capstr = ""
+    let vht_capstr = ""
+
+    let defaultConfig
+    //iterate through bands, looking for band 2, band 1, band 4 in that order
+
+    for (let i = 0; i < iw_info.bands.length; i++) {
+      let band = iw_info.bands[i].band
+      let ht_capstr = "" 
+      let vht_capstr = ""
+
+      if (iw_info.bands[i].capabilities != undefined) {
+        ht_capstr = iw_info.bands[i].capabilities[0]
+      }
+
+      if (iw_info.bands[i].vht_capabilities != undefined) {
+        vht_capstr = iw_info.bands[i].vht_capabilities[0]
+      }
+
+      if ( band.includes("Band 2") && band == 2) {
+        defaultConfig = filterCapabilities(default5Ghz, ht_capstr, vht_capstr, 2)
+        break
+      } else if ( band.includes("Band 1") && band == 1) {
+        defaultConfig = filterCapabilities(default2Ghz, ht_capstr, vht_capstr, 1)
+      } else if ( band.includes("Band 4") && band == 5) {
+        //only set band 4 if not defined yet. 
+        defaultConfig = filterCapabilities(default6Ghz, ht_capstr, vht_capstr, 4)
+      }
+    }
+
+    if (defaultConfig == undefined) {
+      return "", ""
+    }
+
+    return defaultConfig.ht_capab, defaultConfig.vht_capab
+  }
 
   const generateHostAPConfiguration = () => {
 
@@ -560,13 +598,10 @@ const WifiHostapd = (props) => {
       if (wifiParameters.Mode == 'b' || wifiParameters.Mode == 'g') {
         //empty out VHT capabilities for b/g mode
         data.Vht_capab = ''
-      } else if (wifiParameters.Mode == 'a') {
-        //hack for mediatek.... TBD need to calculate these instead
-        //re-enable VHT capab
-
-        //calculate VHT capab for iface in devices 
-
-//        data.Vht_capab = default5Ghz.vht_capab
+      } else if (wifiParameters.Mode == 'a' && config.Vht_capab == undefined) {
+        //re-enable vht capabilities for 5GHz
+        let ht_capab, vht_capab = filteredCapabilityStrings(iface, 2)
+        data.Vht_capab = vht_capab
       }
 
       data.Hw_mode = data.Mode
