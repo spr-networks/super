@@ -28,12 +28,13 @@ const WifiChannelParameters = ({
   const [bandwidth, setBandwidth] = useState(0)
   const [mode, setMode] = useState('a')
   const [errors, setErrors] = useState({})
+  const [disable160, setDisable160] = useState(true)
 
-  const bandwidth5 = [
+  let bandwidth5 = [
     { label: '20 MHz', value: 20 },
     { label: '40 MHz', value: 40 },
     { label: '80 MHz', value: 80 },
-    { label: '160 MHz', disabled: true, value: 160 },
+    { label: '160 MHz', disabled: disable160, value: 160 },
     { label: '80+80 MHz', disabled: true, value: 8080 }
   ]
 
@@ -82,10 +83,7 @@ const WifiChannelParameters = ({
           if (band.vht_capabilities) {
             for (let capability of band.vht_capabilities) {
               if (capability.includes('160 MHz')) {
-                let index160 = bandwidth5.findIndex(
-                  (item) => item.label == '160 MHz'
-                )
-                bandwidth5[index160].disabled = false
+                setDisable160(false)
               }
             }
           }
