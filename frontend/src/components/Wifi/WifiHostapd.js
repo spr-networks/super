@@ -669,7 +669,7 @@ const WifiHostapd = (props) => {
       if (wifiParameters.Mode == 'b' || wifiParameters.Mode == 'g') {
         //empty out VHT capabilities for b/g mode
         data.Vht_capab = ''
-      } else if (wifiParameters.Mode == 'a' && (config.Vht_capab == undefined || config.Vht_capab == '')) {
+      } else if (wifiParameters.Mode == 'a' && (config.vht_capab == undefined || config.vht_capab == '')) {
         //re-enable vht capabilities for 5GHz
         let tempConfig = generateConfigForBand(iface, 2)
         data.Vht_capab = tempConfig.vht_capab
