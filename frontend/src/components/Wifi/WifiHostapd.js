@@ -347,6 +347,7 @@ const filterCapabilities = (template, ht_capstr, vht_capstr, band) => {
 const WifiHostapd = (props) => {
   const context = useContext(AlertContext)
   const [iface, setIface] = useState('')
+  const [interfaceEnabled, setInterfaceEnabled] = useState(true)
 
   const [updated, setUpdated] = useState(false)
   const [config, setConfig] = useState({})
@@ -419,10 +420,20 @@ const WifiHostapd = (props) => {
     if (iface == '') {
       wifiAPI
       .defaultInterface()
-      .then((iface) => {
-        setIface(iface)
+      .then((defIface) => {
+        setIface(defIface)
       })
     }
+
+    //extract the interface state
+    wifiAPI.interfacesConfiguration().then((ifaces) => {
+      for(const i of ifaces) {
+        if (i.Name == iface) {
+          setInterfaceEnabled(i.Enabled)
+          break
+        }
+      }
+    })
 
     wifiAPI.iwDev().then((devs) => {
       setDevices(devs)
@@ -604,17 +615,17 @@ const WifiHostapd = (props) => {
     commitConfig()
 
     //call hostapd to enable the interface
-    wifiAPI.enableInterface(iface)
+    wifiAPI.enableInterface(iface).then(() => setInterfaceEnabled(true))
   }
 
   const disableInterface = () => {
     //call hostapd
     wifiAPI
       .disableInterface(iface)
-      .then(
-        //TBD: alert?
+      .then( () => {
         setConfig({})
-      )
+        setInterfaceEnabled(false)
+      })
       .catch(setConfig({}))
   }
 
@@ -798,7 +809,7 @@ const WifiHostapd = (props) => {
 
       <Box bg={useColorModeValue('warmGray.50', 'blueGray.800')} p={4}>
         <VStack space={2}>
-          {config.interface ? (
+          {config.interface && (interfaceEnabled == true) ? (
             Object.keys(config).map((label) => (              
               <HStack
                 key={label}
