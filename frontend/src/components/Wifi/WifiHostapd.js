@@ -84,6 +84,265 @@ const default2Ghz = {
   wpa_psk_file: '/configs/wifi/wpa2pskfile'
 }
 
+const default6Ghz = JSON.parse(JSON.stringify(default5Ghz))
+
+const htCapab = [
+  "[LDPC]",
+  "[HT40-]",
+  "[HT40+]",
+  "[GF]",
+  "[SHORT-GI-20]",
+  "[SHORT-GI-40]",
+  "[TX-STBC]",
+  "[RX-STBC1]",
+  "[RX-STBC12]",
+  "[RX-STBC123]",
+  "[DELAYED-BA]",
+  "[MAX-AMSDU-7935]",
+  "[DSSS_CCK-40]",
+  "[40-INTOLERANT]",
+  "[LSIG-TXOP-PROT]"
+];
+
+const vhtCapab = [
+  "[MAX-MPDU-7991]",
+  "[MAX-MPDU-11454]",
+  "[VHT160]",
+  "[VHT160-80PLUS80]",
+  "[RXLDPC]",
+  "[SHORT-GI-80]",
+  "[SHORT-GI-160]",
+  "[TX-STBC-2BY1]",
+  "[RX-STBC-1]",
+  "[RX-STBC-12]",
+  "[RX-STBC-123]",
+  "[RX-STBC-1234]",
+  "[SU-BEAMFORMER]",
+  "[SU-BEAMFORMEE]",
+  "[BF-ANTENNA-2]",
+  "[BF-ANTENNA-3]",
+  "[BF-ANTENNA-4]",
+  "[SOUNDING-DIMENSION-2]",
+  "[SOUNDING-DIMENSION-3]",
+  "[SOUNDING-DIMENSION-4]",
+  "[MU-BEAMFORMER]",
+  "[VHT-TXOP-PS]",
+  "[HTC-VHT]",
+  "[MAX-A-MPDU-LEN-EXP7]",
+  "[MAX-A-MPDU-LEN-EXP6]",
+  "[MAX-A-MPDU-LEN-EXP5]",
+  "[MAX-A-MPDU-LEN-EXP4]",
+  "[MAX-A-MPDU-LEN-EXP3]",
+  "[MAX-A-MPDU-LEN-EXP2]",
+  "[MAX-A-MPDU-LEN-EXP1]",
+  "[VHT-LINK-ADAPT2]",
+  "[VHT-LINK-ADAPT3]",
+  "[RX-ANTENNA-PATTERN]",
+  "[TX-ANTENNA-PATTERN]"
+];
+
+function mapHTCapabilities(capStr) {
+  // Extract HT capabilities bitfield from the 
+  const htCapa = parseInt(capStr, 16)
+
+  const parsedOutput = [];
+
+  // Check capabilities using bitwise operations
+  if (htCapa & (1 << 0)) {
+    parsedOutput.push("[LDPC]");
+  }
+
+  if (htCapa & (1 << 1)) {
+    //supports HT40+/-
+    parsedOutput.push("[HT40+]");
+    parsedOutput.push("[HT40-]");
+  }
+  
+
+  if (htCapa & (1 << 4)) {
+    parsedOutput.push("[GF]");
+  }
+  if (htCapa & (1 << 5)) {
+    parsedOutput.push("[SHORT-GI-20]");
+  }
+  if (htCapa & (1 << 6)) {
+    parsedOutput.push("[SHORT-GI-40]");
+  }
+  if (htCapa & (1 << 7)) {
+    parsedOutput.push("[TX-STBC]");
+  }
+
+  if ((htCapa & (1 << 8)) && (htCapa & (1 << 9))) {
+    parsedOutput.push("[RX-STBC123]");
+  } else if (htCapa & (1 << 9)) {
+    parsedOutput.push("[RX-STBC12]");
+  } else if (htCapa & (1 << 8)) {
+    parsedOutput.push("[RX-STBC1]");
+  }
+
+  if (htCapa & (1 << 10)) {
+    parsedOutput.push("[DELAYED-BA]");
+  }
+  if (htCapa & (1 << 11)) {
+    parsedOutput.push("[MAX-AMSDU-7935]");
+  }
+  if (htCapa & (1 << 12)) {
+    parsedOutput.push("[DSSS_CCK-40]");
+  }
+  if (htCapa & (1 << 14)) {
+    parsedOutput.push("[40-INTOLERANT]");
+  }
+
+  if (htCapa & (1 << 15)) {
+    parsedOutput.push("[LSIG-TXOP-PROT]");
+  }
+
+  return parsedOutput;
+}
+
+function mapVHTCapabilities(capStr) {
+  const capa =  parseInt(capStr, 16);
+
+  const parsedOutput = [];
+
+  // Check capabilities using bitwise operations
+  if (capa & (1 << 0)) {
+    parsedOutput.push("[MAX-MPDU-7991]");
+  }
+  if (capa & (1 << 1)) {
+    parsedOutput.push("[MAX-MPDU-11454]");
+  }
+  if (capa & (1 << 2)) {
+    parsedOutput.push("[VHT160]");
+  }
+  //note: if both 2 and 3 are set, then this is incorrect
+  if (capa & (1 << 3)) {
+    parsedOutput.push("[VHT160-80PLUS80]");
+  }
+  if (capa & (1 << 4)) {
+    parsedOutput.push("[RXLDPC]");
+  }
+  if (capa & (1 << 5)) {
+    parsedOutput.push("[SHORT-GI-80]");
+  }
+  if (capa & (1 << 6)) {
+    parsedOutput.push("[SHORT-GI-160]");
+  }
+  if (capa & (1 << 7)) {
+    parsedOutput.push("[TX-STBC-2BY1]");
+  }
+
+  switch ((capa & 0x700) >> 8) {
+    case 1: parsedOutput.push("[RX-STBC-1]"); break;
+    case 2: parsedOutput.push("[RX-STBC-12]"); break;
+    case 3: parsedOutput.push("[RX-STBC-123]"); break;
+    case 4: parsedOutput.push("[RX-STBC-1234]"); break;
+    case 5: parsedOutput.push("[RX-STBC-1234]"); break; //hostapd does not support 5 yet
+    case 6: parsedOutput.push("[RX-STBC-1234]"); break; //hostapd does not support 6 yet
+    case 7: parsedOutput.push("[RX-STBC-1234]"); break; //hostapd does not support 7 yet
+    default: break;
+  }
+
+  if (capa & (1 << 11)) {
+    parsedOutput.push("[SU-BEAMFORMER]");
+  }
+  if (capa & (1 << 12)) {
+    parsedOutput.push("[SU-BEAMFORMEE]");
+  }
+
+  let beamformingAntennas = ((capa & 0xe000) >> 13) + 1;
+  if (beamformingAntennas > 1) {
+    parsedOutput.push("[BF-ANTENNA-" + beamformingAntennas + "]");
+  }
+
+  let soundingDimensions = ((capa & 0x70000) >> 16) + 1;
+  if (soundingDimensions > 1) {
+    parsedOutput.push("[SOUNDING-DIMENSION-" + soundingDimensions + "]");
+  }
+
+  if (capa & (1 << 19)) {
+    parsedOutput.push("[MU-BEAMFORMER]");
+  }
+  if (capa & (1 << 21)) {
+    parsedOutput.push("[VHT-TXOP-PS]");
+  }
+  if (capa & (1 << 22)) {
+    parsedOutput.push("[HTC-VHT]");
+  }
+
+  let aMPDUExp = (capa & 0x3800000) >> 23
+
+  if (aMPDUExp > 0) {
+    parsedOutput.push("[MAX-A-MPDU-LEN-EXP" + aMPDUExp + "]");
+  }
+
+  if (capa & (1 << 28)) {
+    parsedOutput.push("[RX-ANTENNA-PATTERN]");
+  }
+  if (capa & (1 << 29)) {
+    parsedOutput.push("[TX-ANTENNA-PATTERN]");
+  }
+
+  let vhtAdapt = (capa & 0xc000000) >> 26;
+  if (vhtAdapt == 2 || vhtAdapt ==3) {
+    parsedOutput.push("[VHT-LINK-ADAPT" + vhtAdapt + "]");
+  }
+
+  return parsedOutput;
+}
+
+const filterHTCapabilities = (capstr, defaultstr) => {
+  let available = mapHTCapabilities(capstr)
+  let settings = defaultstr.split('[')
+  for (let setting of settings) {
+    if (setting == '') continue
+    setting = '[' + setting
+    if (available.indexOf(setting) == -1) {
+      defaultstr = defaultstr.replace(setting, '')
+    }
+  }
+  return defaultstr
+}
+
+const filterVHTCapabilities = (capstr, defaultstr) => {
+  let available = mapVHTCapabilities(capstr)
+  let settings = defaultstr.split('[')
+  for (let setting of settings) {
+    if (setting == '') continue
+    setting = '[' + setting
+    if (available.indexOf(setting) == -1) {
+      defaultstr = defaultstr.replace(setting, '')
+    }
+  }
+  return defaultstr
+}
+
+const filterCapabilities = (template, ht_capstr, vht_capstr, band) => {
+  //deep copy template
+  let config = JSON.parse(JSON.stringify(template))
+  if (band == 1) {
+    //delete vht_capab from config
+    if ("vht_capab" in config) {
+      delete config.vht_capab
+    } 
+    //filter ht
+    config.ht_capab = filterHTCapabilities(ht_capstr, config.ht_capab)
+
+  } else if (band == 2) {
+    //filter ht and vht capab in config
+    config.ht_capab = filterHTCapabilities(ht_capstr, config.ht_capab)
+    config.vht_capab = filterVHTCapabilities(vht_capstr, config.vht_capab)    
+  } else if (band == 4) {
+    //6ghz: anythign else? 
+    //filter both ht and vht
+    config.ht_capab = filterHTCapabilities(ht_capstr, config.ht_capab)
+    config.vht_capab = filterVHTCapabilities(vht_capstr, config.vht_capab)    
+  }
+
+  return config
+}
+
+
 const WifiHostapd = (props) => {
   const context = useContext(AlertContext)
   const [iface, setIface] = useState('wlan1')
@@ -92,6 +351,7 @@ const WifiHostapd = (props) => {
   const [config, setConfig] = useState({})
   const [devices, setDevices] = useState([])
   const [iws, setIws] = useState([])
+  const [iwMap, setIwMap] = useState({})
 
   const canEditString = [
     'ssid',
@@ -137,6 +397,15 @@ const WifiHostapd = (props) => {
           return iw
         })
 
+        //make a phy to iws map and devname to iw map
+        let iwMap = {}
+        iws.forEach((iw) => {
+          iwMap[iw.wiphy] = iw
+          Object.keys(iw.devices).forEach((dev) => {
+            iwMap[dev] = iw
+          })
+        })
+        setIwMap(iwMap)
         setIws(iws)
       })
     })
@@ -167,15 +436,18 @@ const WifiHostapd = (props) => {
     setConfig(configNew)
   }
 
-  const handleSubmit = () => {
-    if (updated == false) {
-      return
-    }
-
-    setUpdated(false)
+  const transmitUpdates = () => {
     let data = {
       Ssid: config.ssid,
-      Channel: parseInt(config.channel)
+      Channel: parseInt(config.channel),
+      Country_code: config.country_code,
+      Vht_capab: config.vht_capab,
+      Ht_capab: config.ht_capab,
+      Hw_mode: config.hw_mode,
+      Ieee80211ax: parseInt(config.ieee80211ax),
+      He_su_beamformer: parseInt(config.he_su_beamformer),
+      He_su_beamformee: parseInt(config.he_su_beamformee),
+      He_mu_beamformer: parseInt(config.he_mu_beamformer)    
     }
 
     wifiAPI.updateConfig(iface, data).then((config) => {
@@ -183,22 +455,110 @@ const WifiHostapd = (props) => {
     })
   }
 
+  const handleSubmit = () => {
+    if (updated == false) {
+      return
+    }
+
+    setUpdated(false)
+
+    transmitUpdates()
+  }
+
+  const filteredCapabilityStrings = (iface, band) => {
+    let iw_info = iwMap[iface]
+    let ht_capstr = ""
+    let vht_capstr = ""
+
+    let defaultConfig
+    //iterate through bands, looking for band 2, band 1, band 4 in that order
+
+    for (let i = 0; i < iw_info.bands.length; i++) {
+      let band = iw_info.bands[i].band
+      let ht_capstr = "" 
+      let vht_capstr = ""
+
+      if (iw_info.bands[i].capabilities != undefined) {
+        ht_capstr = iw_info.bands[i].capabilities[0]
+      }
+
+      if (iw_info.bands[i].vht_capabilities != undefined) {
+        vht_capstr = iw_info.bands[i].vht_capabilities[0]
+      }
+
+      if ( band.includes("Band 2") && band == 2) {
+        defaultConfig = filterCapabilities(default5Ghz, ht_capstr, vht_capstr, 2)
+        break
+      } else if ( band.includes("Band 1") && band == 1) {
+        defaultConfig = filterCapabilities(default2Ghz, ht_capstr, vht_capstr, 1)
+      } else if ( band.includes("Band 4") && band == 5) {
+        //only set band 4 if not defined yet. 
+        defaultConfig = filterCapabilities(default6Ghz, ht_capstr, vht_capstr, 4)
+      }
+    }
+
+    if (defaultConfig == undefined) {
+      return "", ""
+    }
+
+    return defaultConfig.ht_capab, defaultConfig.vht_capab
+  }
+
   const generateHostAPConfiguration = () => {
-    //call hostapd
-    wifiAPI
-      .enableInterface(iface)
-      .then(
-        wifiAPI
-          .config(iface)
-          .then((conf) => {
-            setConfig(sortConf(conf))
-          })
-          .catch((err) => {
-            //configuration not found. How to handle?
-            setConfig({})
-          })
-      )
-      .catch(setConfig({}))
+
+    //band 1 -> 2.4GHz
+    //band 2 -> 5GHz
+    //band 4 -> 6GHz
+    //band 5 -> 900MHz
+
+
+    //find iface in devices 
+    if (iwMap[iface] == undefined) {
+      context.error("Interface not found")
+      return
+    }
+
+    let iw_info = iwMap[iface]
+
+
+    let defaultConfig
+    //iterate through bands, looking for band 2, band 1, band 4 in that order
+
+    for (let i = 0; i < iw_info.bands.length; i++) {
+      let band = iw_info.bands[i].band
+      let ht_capstr = "" 
+      let vht_capstr = ""
+
+      if (iw_info.bands[i].capabilities != undefined) {
+        ht_capstr = iw_info.bands[i].capabilities[0]
+      }
+
+      if (iw_info.bands[i].vht_capabilities != undefined) {
+        vht_capstr = iw_info.bands[i].vht_capabilities[0]
+      }
+
+      if ( band.includes("Band 2")) {
+        defaultConfig = filterCapabilities(default5Ghz, ht_capstr, vht_capstr, 2)
+        break
+      } else if ( band.includes("Band 1")) {
+        defaultConfig = filterCapabilities(default2Ghz, ht_capstr, vht_capstr, 1)
+      } else if ( band.includes("Band 4") && defaultConfig == undefined) {
+        //only set band 4 if not defined yet. 
+        defaultConfig = filterCapabilities(default6Ghz, ht_capstr, vht_capstr, 4)
+      }
+    }
+
+    if (defaultConfig == undefined) {
+      context.error("could not determine default hostap configuration. using a likely broken default")
+      defaultConfig = filterCapabilities(default5Ghz, ht_capstr, vht_capstr, 2)
+    }
+
+    //set the configuration in the UI
+    setConfig(defaultConfig)
+    transmitUpdates()
+
+    //call hostapd to enable the interface
+    wifiAPI.enableInterface(iface)
   }
 
   const disableInterface = () => {
@@ -234,15 +594,14 @@ const WifiHostapd = (props) => {
   const updateChannels = (wifiParameters) => {
     let updateConfig = (params) => {
       let data = {...params, ...wifiParameters}
-      console.log(data)
 
       if (wifiParameters.Mode == 'b' || wifiParameters.Mode == 'g') {
         //empty out VHT capabilities for b/g mode
         data.Vht_capab = ''
-      } else if (wifiParameters.Mode == 'a') {
-        //hack for mediatek.... TBD need to calculate these instead
-        //re-enable VHT capab
-        data.Vht_capab = default5Ghz.vht_capab
+      } else if (wifiParameters.Mode == 'a' && config.Vht_capab == undefined) {
+        //re-enable vht capabilities for 5GHz
+        let ht_capab, vht_capab = filteredCapabilityStrings(iface, 2)
+        data.Vht_capab = vht_capab
       }
 
       data.Hw_mode = data.Mode

@@ -567,7 +567,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	err = ioutil.WriteFile(getHostapdConfigPath(iface), []byte(data), 0664)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 		http.Error(w, err.Error(), 400)
 		return
 	}
@@ -575,7 +575,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	if !needRestart {
 		_, err = RunHostapdCommand(iface, "reload")
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
 			http.Error(w, err.Error(), 400)
 			return
 		}

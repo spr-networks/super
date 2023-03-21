@@ -198,6 +198,10 @@ def parse(data, raw=False, quiet=False):
                     subsection_key = ['bands', nicekey(line)]
                 else:
                     subsection_key = nicekey(line)
+
+                if 'VHT Capabilities' in line and '(' in line and ')' in line:
+                    subsection.append(line.split("(")[1][:-2])
+
                 continue
 
             # subsection array, could use \t * x as index here
