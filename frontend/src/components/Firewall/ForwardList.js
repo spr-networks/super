@@ -93,75 +93,84 @@ const ForwardList = (props) => {
         </ModalForm>
       </HStack>
 
-      <FlatList
-        data={list}
-        renderItem={({ item }) => (
-          <Box
-            bg="warmGray.50"
-            borderBottomWidth={1}
-            _dark={{
-              bg: 'blueGray.800',
-              borderColor: 'muted.600'
-            }}
-            borderColor="muted.200"
-            p={4}
-          >
-            <HStack
-              space={3}
-              justifyContent="space-between"
-              alignItems="center"
+      <Box
+        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+        width="100%"
+        p={4}
+        mb={4}
+      >
+        <FlatList
+          data={list}
+          renderItem={({ item }) => (
+            <Box
+              bg="warmGray.50"
+              borderBottomWidth={1}
+              _dark={{
+                bg: 'blueGray.800',
+                borderColor: 'muted.600'
+              }}
+              borderColor="muted.200"
+              p={4}
             >
-              <Badge variant="outline">{item.Protocol}</Badge>
+              <HStack
+                space={3}
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Badge variant="outline">{item.Protocol}</Badge>
 
-              <HStack space={1}>
-                <Text bold>
-                  {item.deviceSrc ? item.deviceSrc.Name : item.SrcIP}
-                </Text>
-                <Text color="muted.500">:</Text>
-                <Text>{item.SrcPort}</Text>
+                <HStack space={1}>
+                  <Text bold>
+                    {item.deviceSrc ? item.deviceSrc.Name : item.SrcIP}
+                  </Text>
+                  <Text color="muted.500">:</Text>
+                  <Text>{item.SrcPort}</Text>
+                </HStack>
+
+                <Icon color="muted.400" icon={faArrowRightLong} />
+
+                <HStack space={1}>
+                  <Text bold>
+                    {item.deviceDst ? item.deviceDst.Name : item.DstIP}
+                  </Text>
+                  <Text color="muted.500">:</Text>
+                  <Text>{item.DstPort}</Text>
+                </HStack>
+
+                <IconButton
+                  alignSelf="center"
+                  size="sm"
+                  variant="ghost"
+                  colorScheme="secondary"
+                  icon={<Icon icon={faXmark} />}
+                  onPress={() => deleteListItem(item)}
+                />
               </HStack>
+            </Box>
+          )}
+          keyExtractor={(item) =>
+            `${item.Protocol}${item.DstIP}:${item.DstPort}`
+          }
+        />
 
-              <Icon color="muted.400" icon={faArrowRightLong} />
-
-              <HStack space={1}>
-                <Text bold>
-                  {item.deviceDst ? item.deviceDst.Name : item.DstIP}
-                </Text>
-                <Text color="muted.500">:</Text>
-                <Text>{item.DstPort}</Text>
-              </HStack>
-
-              <IconButton
-                alignSelf="center"
-                size="sm"
-                variant="ghost"
-                colorScheme="secondary"
-                icon={<Icon icon={faXmark} />}
-                onPress={() => deleteListItem(item)}
-              />
-            </HStack>
-          </Box>
-        )}
-        keyExtractor={(item) => `${item.Protocol}${item.DstIP}:${item.DstPort}`}
-      />
-
-      <VStack>
-        {!list.length ? (
-          <Text alignSelf={'center'}>
-            There are no forward rules configured yet
-          </Text>
-        ) : null}
-        <Button
-          display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
-          variant={useColorModeValue('subtle', 'solid')}
-          colorScheme="muted"
-          leftIcon={<Icon icon={faCirclePlus} />}
-          onPress={() => refModal.current()}
-          mt={4}
-        >
-          Add Forward
-        </Button>
-      </VStack>
+        <VStack>
+          {!list.length ? (
+            <Text alignSelf={'center'}>
+              There are no forward rules configured yet
+            </Text>
+          ) : null}
+          <Button
+            display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
+            variant={useColorModeValue('subtle', 'solid')}
+            colorScheme="muted"
+            leftIcon={<Icon icon={faCirclePlus} />}
+            onPress={() => refModal.current()}
+            mt={4}
+          >
+            Add Forward
+          </Button>
+        </VStack>
+      </Box>
     </>
   )
 }

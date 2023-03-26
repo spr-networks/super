@@ -17,6 +17,10 @@ export default class APIWifi extends API {
     return this.put(`hostapd/${iface}/setChannel`, params);
   }
 
+  calcChannel(params) {
+    return this.put(`hostapd/calcChannel`, params);
+  }
+
   allStations(iface) {
     return this.get(`hostapd/${iface}/all_stations`);
   }

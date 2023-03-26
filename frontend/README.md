@@ -28,6 +28,8 @@ REACT_APP_API=mock yarn start
 iOS version:
 ```bash
 yarn ios
+# might have to specify iPhone version:
+npx react-native run-ios --simulator="iPhone 14"
 ```
 
 ## iOS build

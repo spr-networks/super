@@ -10,11 +10,10 @@ import {
   Animated,
   Dimensions,
   Platform,
-  Pressable,
-  StatusBar
+  Pressable
 } from 'react-native'
 import { TabView, SceneMap } from 'react-native-tab-view'
-import { Box, ScrollView, Text, View, useColorModeValue } from 'native-base'
+import { Box, View, useColorModeValue } from 'native-base'
 
 const WirelessConfiguration = (props) => {
   const [index, setIndex] = useState(0) //1)

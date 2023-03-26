@@ -1,13 +1,9 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Platform } from 'react-native'
-import { useNavigate } from 'react-router-dom'
+import { Platform, TextBase } from 'react-native'
 import { Icon } from 'FontAwesomeUtils'
 import {
   faBoxArchive,
   faDownload,
-  faEllipsis,
-  faHardDrive,
-  faListAlt,
   faTrash
 } from '@fortawesome/free-solid-svg-icons'
 import {
@@ -17,13 +13,12 @@ import {
   Heading,
   IconButton,
   HStack,
-  Menu,
   FlatList,
   Modal,
   Stack,
   Text,
-  ScrollView,
   VStack,
+  ScrollView,
   useDisclose,
   useColorModeValue
 } from 'native-base'
@@ -33,124 +28,9 @@ import { prettyDate, ucFirst } from 'utils'
 
 import { FlashList } from '@shopify/flash-list'
 
-const niceName = (name) => {
-  if (Array.isArray(name)) {
-    name = name[0]
-  }
-
-  return name.replace(/^\//, '')
-}
-
-const stateColor = (state) => {
-  let stateColors = {
-    running: 'success',
-    exited: 'warning'
-  }
-  return stateColors[state] || 'muted'
-}
-
-const renderDockerContainer = ({ item, navigate, showModal }) => {
-  let containerName = niceName(item.Names)
-
-  const onRestart = () => {}
-  const onMounts = () => {
-    showModal(
-      `${containerName} Volume Mounts`,
-      <FlashList
-        data={item.Mounts}
-        keyExtractor={(item) => item.Source}
-        renderItem={({ item: mount }) => (
-          <HStack space={2} p={4} justifyContent="space-around">
-            {/*<Text>{mount.Type}</Text>*/}
-            <Text flex={1}>{mount.Source}</Text>
-            <Text flex={1} color="muted.500">
-              {mount.Destination}
-            </Text>
-            <Badge ml="auto" colorScheme="muted" variant="outline">
-              {mount.Mode}
-            </Badge>
-          </HStack>
-        )}
-      />
-    )
-  }
-
-  const onLogs = () => {
-    navigate(`/admin/logs/${containerName}`)
-  }
-
-  const trigger = (triggerProps) => (
-    <IconButton
-      variant="unstyled"
-      ml="auto"
-      icon={<Icon icon={faEllipsis} color="muted.600" />}
-      {...triggerProps}
-    ></IconButton>
-  )
-
-  const moreMenu = (
-    <Menu
-      flex={1}
-      w={190}
-      closeOnSelect={true}
-      trigger={trigger}
-      alignSelf="center"
-    >
-      <Menu.Group title="View more ...">
-        <Menu.Item onPress={onMounts}>
-          <HStack space={2} alignItems="center">
-            {<Icon icon={faHardDrive} color="muted.500" />}
-            <Text>Mounts</Text>
-          </HStack>
-        </Menu.Item>
-        <Menu.Item onPress={onLogs}>
-          <HStack space={2} alignItems="center">
-            <Icon icon={faListAlt} color="muted.500" />
-            <Text>Logs</Text>
-          </HStack>
-        </Menu.Item>
-      </Menu.Group>
-      {/*
-      <Menu.Group title="Actions">
-        <Menu.Item onPress={onRestart}>Restart</Menu.Item>
-      </Menu.Group>
-       */}
-    </Menu>
-  )
-
-  return (
-    <HStack
-      space={2}
-      p={4}
-      borderBottomColor="borderColorCardLight"
-      _dark={{ borderBottomColor: 'borderColorCardDark' }}
-      borderBottomWidth={1}
-      justifyContent="space-between"
-      alignItems="center"
-      flexWrap="wrap"
-    >
-      <Text flex={1}>{containerName}</Text>
-
-      <Text flex={1} color="muted.500" isTruncated>
-        {item.Image}
-      </Text>
-      <Badge ml="auto" colorScheme={stateColor(item.State)} variant="outline">
-        {item.State}
-      </Badge>
-      <Text
-        display={{ base: 'none', md: 'flex' }}
-        minW="200px"
-        ml="auto"
-        textAlign="right"
-        fontSize="xs"
-        color="muted.500"
-      >
-        {item.Status}
-      </Text>
-      {moreMenu}
-    </HStack>
-  )
-}
+import DockerInfo from 'components/System/Docker'
+import { BrandIcons } from 'FontAwesomeUtils'
+import ReleaseInfo from 'components/System/Release'
 
 const ConfigsBackup = (props) => {
   const context = useContext(AlertContext)
@@ -161,7 +41,7 @@ const ConfigsBackup = (props) => {
     api
       .put('/backup')
       .then((filename) => {
-        context.success('got backup:', filename)
+        context.success('configs saved', filename)
         setBackups([
           ...backups.filter((b) => b.Name !== filename),
           { Name: filename, Timestamp: new Date() }
@@ -211,12 +91,7 @@ const ConfigsBackup = (props) => {
 
   return (
     <>
-      <HStack
-        space={2}
-        alignItems="center"
-        justifyContent="space-between"
-        p={4}
-      >
+      <HStack alignItems="center" justifyContent="space-between" p={4}>
         <Heading fontSize="md">Backups</Heading>
         <Button
           size="sm"
@@ -277,9 +152,7 @@ const ConfigsBackup = (props) => {
 
 const SystemInfo = (props) => {
   const context = useContext(AlertContext)
-  const navigate = useNavigate()
 
-  const [containers, setContainers] = useState([])
   const [uptime, setUptime] = useState({})
   const [hostname, setHostname] = useState('')
   const [version, setVersion] = useState('')
@@ -292,13 +165,9 @@ const SystemInfo = (props) => {
         .catch((err) => context.error(err))
 
       api
-        .get('/info/docker')
-        .then(setContainers)
-        .catch((err) => context.error(err))
-
-      api
         .get('/info/hostname')
         .then(setHostname)
+
         .catch((err) => context.error(err))
 
       api
@@ -329,105 +198,100 @@ const SystemInfo = (props) => {
 
   return (
     <ScrollView>
-      <HStack space={2} alignItems="flex-end" p={4}>
-        <Heading fontSize="md">System Info</Heading>
-      </HStack>
-
-      <HStack space={4} mb={4}>
-        <HStack
-          flex={1}
-          space={2}
-          p={4}
-          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-          justifyContent="space-between"
-        >
-          <Text>Hostname</Text>
-          <Text color="muted.500">{hostname}</Text>
+      <VStack space={2}>
+        <HStack p={4}>
+          <Heading fontSize="md">System Info</Heading>
         </HStack>
-        <HStack
-          flex={1}
-          space={2}
-          p={4}
-          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-          justifyContent="space-between"
-        >
-          <Text>SPR Version</Text>
-          <Text color="muted.500">{version}</Text>
-        </HStack>
-      </HStack>
 
-      <Stack
-        direction={{ base: 'column', md: 'row' }}
-        _rounded="md"
-        space={4}
-        mb={4}
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-      >
-        <FlatList
-          data={['time', 'uptime', 'users']}
-          keyExtractor={(item, index) => index}
-          estimatedItemSize={100}
-          renderItem={({ item }) => (
+        <Box>
+          <HStack space={4} mb="4">
             <HStack
+              flex={1}
               space={2}
               p={4}
-              borderBottomColor="borderColorCardLight"
-              _dark={{ borderBottomColor: 'borderColorCardDark' }}
-              borderBottomWidth={1}
+              bg={useColorModeValue(
+                'backgroundCardLight',
+                'backgroundCardDark'
+              )}
               justifyContent="space-between"
             >
-              <Text>{niceKey(item)}</Text>
-              <Text color="muted.500">{uptime[item]}</Text>
+              <Text>Hostname</Text>
+              <Text color="muted.500">{hostname}</Text>
             </HStack>
-          )}
-        />
-        <FlatList
-          data={['load_1m', 'load_5m', 'load_15m']}
-          keyExtractor={(item, index) => index}
-          estimatedItemSize={100}
-          renderItem={({ item }) => (
             <HStack
+              flex={1}
               space={2}
               p={4}
-              borderBottomColor="borderColorCardLight"
-              _dark={{ borderBottomColor: 'borderColorCardDark' }}
-              borderBottomWidth={1}
+              bg={useColorModeValue(
+                'backgroundCardLight',
+                'backgroundCardDark'
+              )}
               justifyContent="space-between"
             >
-              <Text>{niceKey(item)}</Text>
-              <Text color="muted.500">{uptime[item]}</Text>
+              <Text>SPR Version</Text>
+              <Text color="muted.500">{version}</Text>
             </HStack>
-          )}
-        />
-      </Stack>
+          </HStack>
 
-      <ConfigsBackup />
+          <Stack
+            direction={{ base: 'column', md: 'row' }}
+            space={4}
+            bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+          >
+            <FlatList
+              data={['time', 'uptime', 'users']}
+              keyExtractor={(item, index) => index}
+              estimatedItemSize={100}
+              renderItem={({ item }) => (
+                <HStack
+                  space={2}
+                  p={4}
+                  borderBottomColor="borderColorCardLight"
+                  _dark={{ borderBottomColor: 'borderColorCardDark' }}
+                  borderBottomWidth={1}
+                  justifyContent="space-between"
+                >
+                  <Text>{niceKey(item)}</Text>
+                  <Text color="muted.500">{uptime[item]}</Text>
+                </HStack>
+              )}
+            />
+            <FlatList
+              data={['load_1m', 'load_5m', 'load_15m']}
+              keyExtractor={(item, index) => index}
+              estimatedItemSize={100}
+              renderItem={({ item }) => (
+                <HStack
+                  space={2}
+                  p={4}
+                  borderBottomColor="borderColorCardLight"
+                  _dark={{ borderBottomColor: 'borderColorCardDark' }}
+                  borderBottomWidth={1}
+                  justifyContent="space-between"
+                >
+                  <Text>{niceKey(item)}</Text>
+                  <Text color="muted.500">{uptime[item]}</Text>
+                </HStack>
+              )}
+            />
+          </Stack>
+        </Box>
 
-      <Heading fontSize="md" p={4}>
-        Docker Containers
-      </Heading>
-      <Box
-        minH={400}
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        _rounded="md"
-      >
-        <FlatList
-          data={containers}
-          keyExtractor={(item, index) => item.Id}
-          estimatedItemSize={100}
-          renderItem={({ item }) =>
-            renderDockerContainer({ item, navigate, showModal })
-          }
-        />
-      </Box>
-      <Modal isOpen={isOpen} onClose={onClose} animationPreset="slide">
-        <Modal.Content maxWidth={{ base: '100%', md: '90%' }}>
-          <Modal.CloseButton />
-          <Modal.Header>{modalTitle}</Modal.Header>
-          <Modal.Body>{modalBody}</Modal.Body>
-          {/*<Modal.Footer />*/}
-        </Modal.Content>
-      </Modal>
+        <ReleaseInfo />
+
+        <ConfigsBackup />
+
+        <DockerInfo showModal={showModal} />
+
+        <Modal isOpen={isOpen} onClose={onClose} animationPreset="slide">
+          <Modal.Content maxWidth={{ base: '100%', md: '90%' }}>
+            <Modal.CloseButton />
+            <Modal.Header>{modalTitle}</Modal.Header>
+            <Modal.Body>{modalBody}</Modal.Body>
+            {/*<Modal.Footer />*/}
+          </Modal.Content>
+        </Modal>
+      </VStack>
     </ScrollView>
   )
 }

@@ -1,13 +1,10 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import {
-  faCircleInfo,
-  faPlus,
-  faXmark
-} from '@fortawesome/free-solid-svg-icons'
+import { Icon } from 'FontAwesomeUtils'
+import { faCircleInfo, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import {
+  Badge,
   Box,
   FlatList,
   Heading,
@@ -20,7 +17,8 @@ import {
   Switch,
   Text,
   View,
-  useColorModeValue
+  useColorModeValue,
+  Tooltip
 } from 'native-base'
 
 import { FlashList } from '@shopify/flash-list'
@@ -47,21 +45,30 @@ const PluginList = (props) => {
     setPlusList(plugins.filter((x) => x.Plus == true))
   }
 
+  //get each plugin version
+  const getVersion = async (plugins) => {
+    for (let i = 0; i < plugins.length; i++) {
+      let name = plugins[i].Name.toLowerCase()
+      if (name == 'dns-block-extension' || name == 'dns-log-extension') {
+        name = 'dns'
+      }
+
+      let ver = await api.version('super' + name).catch((err) => {
+        alertState.error('failed to fetch plugin version ' + name)
+      })
+
+      plugins[i].Version = ver
+    }
+
+    return plugins
+  }
+
   const refreshList = (next) => {
     pluginAPI
       .list()
-      .then(async function(plugins) {
-        //get each plugin version
-        for (let i = 0; i < plugins.length; i++) {
-          let name = plugins[i].Name.toLowerCase()
-          if (name == 'dns-block-extension' || name == 'dns-log-extension') {
-            name = 'dns'
-          }
-          let ver = await api.version('super'+name).catch((err) => {
-            alertState.error('failed to fetch plugin version ' + name)
-          })
-          plugins[i].Version = ver
-        }
+      .then(async function (plugins) {
+        plugins = await getVersion(plugins)
+
         setList(plugins)
       })
       .catch((err) => {
@@ -84,7 +91,11 @@ const PluginList = (props) => {
 
   const handleChange = (plugin, value) => {
     plugin.Enabled = value
-    pluginAPI.update(plugin).then(setList)
+    pluginAPI.update(plugin).then(async (plugins) => {
+      plugins = await getVersion(plugins)
+      setList(plugins)
+    })
+
     if (plugin.Plus == true) {
       if (value == false) {
         pluginAPI.stopPlusExtension(plugin.Name)
@@ -131,6 +142,74 @@ const PluginList = (props) => {
     }
   }
 
+  const renderItem = ({ item }) => {
+    return (
+      <Box
+        bg="warmGray.50"
+        borderBottomWidth={1}
+        borderColor="muted.200"
+        _dark={{
+          bg: 'blueGray.800',
+          borderColor: 'muted.600'
+        }}
+        p={4}
+      >
+        <HStack space={3} justifyContent="space-between">
+          <VStack minW="20%" space={1}>
+            <Tooltip label={`URI: ${item.URI}`}>
+              <Text bold>{item.Name}</Text>
+            </Tooltip>
+
+            <Badge
+              variant={item.Version ? 'outline' : 'outline'}
+              colorScheme={item.Version ? 'trueGray' : 'muted'}
+              rounded="sm"
+              alignSelf="flex-start"
+            >
+              {item.Version || 'none'}
+            </Badge>
+          </VStack>
+
+          <Text
+            alignSelf="center"
+            isTruncated
+            display={{ base: 'none', md: true }}
+          >
+            {item.UnixPath}
+          </Text>
+          <Spacer />
+
+          {item.ComposeFilePath ? (
+            <HStack
+              alignSelf="center"
+              space={1}
+              display={{ base: 'none', md: true }}
+            >
+              <Text color="muted.500">Compose Path</Text>
+              <Text isTruncated>{item.ComposeFilePath}</Text>
+            </HStack>
+          ) : null}
+
+          <Box w="100" alignItems="center" alignSelf="center">
+            <Switch
+              defaultIsChecked={item.Enabled}
+              onValueChange={() => handleChange(item, !item.Enabled)}
+            />
+          </Box>
+
+          <IconButton
+            alignSelf="center"
+            size="sm"
+            variant="ghost"
+            colorScheme="secondary"
+            icon={<Icon icon={faXmark} />}
+            onPress={() => deleteListItem(item)}
+          />
+        </HStack>
+      </Box>
+    )
+  }
+
   return (
     <View h={'100%'}>
       <HStack p={4} justifyContent="space-between" alignItems="center">
@@ -150,50 +229,7 @@ const PluginList = (props) => {
       <FlatList
         data={list}
         estimatedItemSize={100}
-        renderItem={({ item }) => (
-          <Box
-            bg="warmGray.50"
-            borderBottomWidth={1}
-            borderColor="muted.200"
-            _dark={{
-              bg: 'blueGray.800',
-              borderColor: 'muted.600'
-            }}
-            p={4}
-          >
-            <HStack space={3} justifyContent="space-between">
-              <VStack minW="20%">
-                <Text bold>{item.Name}</Text>
-                <Text>{item.URI}</Text>
-                <Text>{item.Version}</Text>
-              </VStack>
-
-              <Text
-                alignSelf="center"
-                isTruncated
-                display={{ base: 'none', md: true }}
-              >
-                {item.UnixPath}
-              </Text>
-              <Spacer />
-              <Box w="100" alignItems="center" alignSelf="center">
-                <Switch
-                  defaultIsChecked={item.Enabled}
-                  onValueChange={() => handleChange(item, !item.Enabled)}
-                />
-              </Box>
-
-              <IconButton
-                alignSelf="center"
-                size="sm"
-                variant="ghost"
-                colorScheme="secondary"
-                icon={<Icon icon={faXmark} />}
-                onPress={() => deleteListItem(item)}
-              />
-            </HStack>
-          </Box>
-        )}
+        renderItem={renderItem}
         keyExtractor={(item) => item.Name}
       />
 
@@ -206,58 +242,7 @@ const PluginList = (props) => {
           <FlatList
             data={plusList}
             estimatedItemSize={100}
-            renderItem={({ item }) => (
-              <Box
-                bg="warmGray.50"
-                borderBottomWidth={1}
-                borderColor="muted.200"
-                _dark={{
-                  bg: 'blueGray.800',
-                  borderColor: 'muted.600'
-                }}
-                p={4}
-              >
-                <HStack space={3} justifyContent="space-between">
-                  <VStack minW="20%">
-                    <Text bold>{item.Name}</Text>
-                    <Text>{item.URI}</Text>
-                    <Text>{item.Version}</Text>
-                  </VStack>
-                  <Text
-                    alignSelf="center"
-                    isTruncated
-                    display={{ base: 'none', md: true }}
-                  >
-                    {item.UnixPath}
-                  </Text>
-                  <Spacer />
-                  <HStack
-                    alignSelf="center"
-                    space={1}
-                    display={{ base: 'none', md: true }}
-                  >
-                    <Text color="muted.500">Compose Path</Text>
-                    <Text isTruncated>{item.ComposeFilePath}</Text>
-                  </HStack>
-                  <Spacer />
-                  <Box w="100" alignItems="center" alignSelf="center">
-                    <Switch
-                      defaultIsChecked={item.Enabled}
-                      onValueChange={() => handleChange(item, !item.Enabled)}
-                    />
-                  </Box>
-
-                  <IconButton
-                    alignSelf="center"
-                    size="sm"
-                    variant="ghost"
-                    colorScheme="secondary"
-                    icon={<Icon icon={faXmark} />}
-                    onPress={() => deleteListItem(item)}
-                  />
-                </HStack>
-              </Box>
-            )}
+            renderItem={renderItem}
             keyExtractor={(item) => item.Name}
           />
         </>

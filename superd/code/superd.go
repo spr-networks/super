@@ -12,18 +12,21 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 )
 
 import (
@@ -48,6 +51,11 @@ func getReleaseVersion() string {
 	} else {
 		return ""
 	}
+}
+
+func resetCustomVersion() {
+	os.Remove(ReleaseVersionFile)
+	os.Remove(ReleaseChannelFile)
 }
 
 func setReleaseVersion(Version string) error {
@@ -77,6 +85,11 @@ func setReleaseChannel(Channel string) error {
 
 	regex, _ := regexp.Compile("[^a-zA-Z0-9-_]+")
 	channelFiltered := regex.ReplaceAllString(Channel, "")
+
+	if channelFiltered == "main" {
+		channelFiltered = ""
+	}
+
 	return os.WriteFile(ReleaseChannelFile, []byte(channelFiltered), 0644)
 }
 
@@ -94,23 +107,24 @@ func getDefaultCompose() string {
 	return "docker-compose.yml"
 }
 
-func initializeReleaseEnvironment() {
-	release_channel := getReleaseChannel()
+func composeCommand(composeFile string, target string, command string, optional string, new_docker bool) {
+	args := []string{}
+	release_channel := ""
+	release_version := ""
+
+	if !strings.Contains(composeFile, "plugins") {
+		// important to get/set release channel and version for rollbacks and dev channels etc
+		release_channel = getReleaseChannel()
+		release_version = getReleaseVersion()
+	}
+
 	if release_channel != "" {
 		os.Setenv("RELEASE_CHANNEL", release_channel)
 	}
 
-	release_version := getReleaseVersion()
 	if release_channel != "" {
 		os.Setenv("RELEASE_VERSION", release_version)
 	}
-}
-
-func composeCommand(composeFile string, target string, command string, optional string, new_docker bool) {
-	args := []string{}
-
-	// important to get/set release channel and version for rollbacks and dev channels etc
-	initializeReleaseEnvironment()
 
 	if composeFile == "" {
 		composeFile = getDefaultCompose()
@@ -146,14 +160,12 @@ func composeCommand(composeFile string, target string, command string, optional 
 		// the up -d command.
 
 		superdir := getHostSuperDir()
-		release_channel := getReleaseChannel()
-		release_version := getReleaseVersion()
 
 		cmd = "docker"
 		d_args := append([]string{}, "run",
-			"-v", superdir+":/super",
+			"-v", superdir+":"+superdir,
 			"-v", "/var/run/docker.sock:/var/run/docker.sock",
-			"-w", "/super/",
+			"-w", superdir,
 			"-e", "SUPERDIR="+superdir)
 
 		if release_channel != "" {
@@ -205,8 +217,31 @@ func restart(w http.ResponseWriter, r *http.Request) {
 }
 
 func ghcr_auth(w http.ResponseWriter, r *http.Request) {
-	username := r.URL.Query().Get("username")
-	secret := r.URL.Query().Get("secret")
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)
+		return
+	}
+
+	creds := GhcrCreds{}
+
+	if err := json.Unmarshal(body, &creds); err != nil {
+		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)
+		return
+	}
+
+	if creds.Secret != "" {
+		var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/=_]*$`)
+		if !base64Regex.MatchString(creds.Secret) {
+			// Handle invalid token
+			http.Error(w, "Invalid token "+err.Error(), 400)
+			return
+		}
+	}
+
+	username := creds.Username
+	secret := creds.Secret
 
 	if username == "" || secret == "" {
 		http.Error(w, "need username and secret parameters", 400)
@@ -246,6 +281,30 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 
 	git_url := r.URL.Query().Get("git_url")
 
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)
+		return
+	}
+
+	creds := GhcrCreds{}
+
+	if err := json.Unmarshal(body, &creds); err != nil {
+		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)
+		return
+	}
+
+	if creds.Secret != "" {
+		var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/=_]*$`)
+		if !base64Regex.MatchString(creds.Secret) {
+			// Handle invalid token
+			http.Error(w, "Invalid token "+err.Error(), 400)
+			return
+		}
+
+		git_url = "https://" + creds.Username + ":" + creds.Secret + "@" + git_url
+	}
+
 	if git_url == "" {
 		http.Error(w, "need git_url parameter", 400)
 		return
@@ -260,7 +319,7 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err := os.Chdir(PlusAddons)
+	err = os.Chdir(PlusAddons)
 	if err != nil {
 		http.Error(w, "Could not find addons directory", 500)
 		os.Chdir("/super")
@@ -358,7 +417,7 @@ func dockerImageLabel(image string, labelName string) (string, error) {
 		return "", err
 	}
 
-	labelValue := out.String()
+	labelValue := strings.Trim(out.String(), "\n")
 	return labelValue, nil
 }
 
@@ -382,28 +441,20 @@ func version(w http.ResponseWriter, r *http.Request) {
 }
 
 func container_version(w http.ResponseWriter, r *http.Request) {
-	//dockerImageLabel image, "org.supernetworks.version")
-	plugin := r.URL.Query().Get("plugin")
-	version := ""
+	container := r.URL.Query().Get("container")
+	image := "superd"
+	if container != "" {
+		image = container
+	}
 
-	if plugin == "" {
-		v, err := dockerImageLabel("superd", "org.supernetworks.version")
-		if err != nil {
-			http.Error(w, "Failed to retrieve version for superd", 400)
-			return
-		}
-		version = strings.Trim(v, "\n")
-	} else {
-		v, err := dockerImageLabel(plugin, "org.supernetworks.version")
-		if err != nil {
-			http.Error(w, "Failed to retrieve version "+plugin, 400)
-			return
-		}
-		version = strings.Trim(v, "\n")
+	version, err := dockerImageLabel(image, "org.supernetworks.version")
+	if err != nil {
+		http.Error(w, "Failed to retrieve version "+image, 400)
+		return
 	}
 
 	if version == "" {
-		http.Error(w, "Failed to retrieve version "+plugin, 400)
+		http.Error(w, "Failed to retrieve version "+image, 400)
 		return
 	}
 
@@ -418,7 +469,6 @@ type ReleaseInfo struct {
 }
 
 func release_info(w http.ResponseWriter, r *http.Request) {
-
 	info := ReleaseInfo{}
 	if r.Method == http.MethodGet {
 		//load t
@@ -436,6 +486,13 @@ func release_info(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Method == http.MethodDelete {
+		resetCustomVersion()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(info)
+		return
+	}
+
 	//PUT. Set these
 	err := json.NewDecoder(r.Body).Decode(&info)
 	if err != nil {
@@ -444,8 +501,8 @@ func release_info(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if info.CustomChannel != "" {
-		//right now we only allow "-dev"
-		if info.CustomChannel != "-dev" {
+		//right now we only allow "-dev" and "main"
+		if info.CustomChannel != "-dev" && info.CustomChannel != "main" {
 			http.Error(w, "Unsupported channel "+info.CustomChannel, 400)
 			return
 		}
@@ -474,7 +531,7 @@ func release_info(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(version)
+	json.NewEncoder(w).Encode(info)
 }
 
 func establishConfigsIfEmpty(SuperDir string) {
@@ -502,6 +559,130 @@ func establishConfigsIfEmpty(SuperDir string) {
 
 }
 
+type GhcrCreds struct {
+	Username string
+	Secret   string
+}
+
+func remote_container_tags(w http.ResponseWriter, r *http.Request) {
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)
+		return
+	}
+
+	creds := GhcrCreds{}
+
+	if err := json.Unmarshal(body, &creds); err != nil {
+		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)
+		return
+	}
+
+	if creds.Secret != "" {
+		var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/=_]*$`)
+		if !base64Regex.MatchString(creds.Secret) {
+			// Handle invalid token
+			http.Error(w, "Invalid token "+err.Error(), 400)
+			return
+		}
+	}
+
+	username := creds.Username
+	secret := creds.Secret
+	container := url.QueryEscape(r.URL.Query().Get("container"))
+
+	params := url.Values{}
+	params.Set("service", "ghcr.io")
+	params.Set("scope", "repository:spr-networks/"+container+":pull")
+
+	append := "?" + params.Encode()
+
+	// Set up the request to get the token
+	req, err := http.NewRequest("GET", "https://ghcr.io/token"+append, nil)
+	if err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+
+	if username != "" {
+		auth := base64.StdEncoding.EncodeToString([]byte(username + ":" + secret))
+		req.Header.Set("Authorization", "Basic "+auth)
+	}
+
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	// Send the request and get the response
+	resp, err := client.Do(req)
+	if err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Parse the response body to get the token
+	var token struct {
+		Token string `json:"token"`
+	}
+	body, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+	if err := json.Unmarshal(body, &token); err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+
+	// Sanitize the token to ensure it is a valid base64-encoded string
+	token.Token = strings.TrimSpace(token.Token)
+	_, err = base64.StdEncoding.DecodeString(token.Token)
+	if err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+
+	// Set up the request to get the list of tags
+	tagsURL := "https://ghcr.io/v2/spr-networks/" + container + "/tags/list"
+	req, err = http.NewRequest("GET", tagsURL, nil)
+	if err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+
+	// Add the Authorization header with the token
+	req.Header.Set("Authorization", "Bearer "+token.Token)
+
+	// Send the request and get the response
+	resp, err = client.Do(req)
+	if err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Print the response body
+	body, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+
+	// Parse the response body to get the list of tags
+	var tagsResp struct {
+		Tags []string `json:"tags"`
+	}
+	if err := json.Unmarshal(body, &tagsResp); err != nil {
+		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tagsResp)
+}
+
 func setup() {
 	hostSuperDir := getHostSuperDir()
 
@@ -527,19 +708,21 @@ func main() {
 	os.MkdirAll(UNIX_PLUGIN_LISTENER, 0755)
 
 	unix_plugin_router := mux.NewRouter().StrictSlash(true)
-	unix_plugin_router.HandleFunc("/restart", restart).Methods("GET")
-	unix_plugin_router.HandleFunc("/start", start).Methods("GET")
-	unix_plugin_router.HandleFunc("/update", update).Methods("GET")
-	unix_plugin_router.HandleFunc("/stop", stop).Methods("GET")
+	unix_plugin_router.HandleFunc("/restart", restart).Methods("PUT")
+	unix_plugin_router.HandleFunc("/start", start).Methods("PUT")
+	unix_plugin_router.HandleFunc("/update", update).Methods("PUT")
+	unix_plugin_router.HandleFunc("/stop", stop).Methods("PUT")
 
-	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("GET")
-	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("GET")
+	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("PUT")
+	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("PUT")
 
 	unix_plugin_router.HandleFunc("/git_version", version).Methods("GET")
 	unix_plugin_router.HandleFunc("/container_version", container_version).Methods("GET")
 
+	unix_plugin_router.HandleFunc("/remote_container_tags", remote_container_tags).Methods("POST")
+
 	// get/set release channel
-	unix_plugin_router.HandleFunc("/release", release_info).Methods("GET", "PUT")
+	unix_plugin_router.HandleFunc("/release", release_info).Methods("GET", "PUT", "DELETE")
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)

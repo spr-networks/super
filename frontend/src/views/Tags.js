@@ -41,13 +41,12 @@ const Tags = (props) => {
 
         tagNames = [...new Set(tagNames)]
 
-
         let tags = tagNames.map((name) => {
           let data = Object.values(devices).filter((device) =>
             device.DeviceTags.includes(name)
           )
-          if (name == "") {
-            name = "Empty Tag Name"
+          if (name == '') {
+            name = 'Empty Tag Name'
           }
           return { name, data }
         })
@@ -85,7 +84,7 @@ const Tags = (props) => {
         />
 
         {!tags.length ? (
-          <Text>No tags configured for devices or services</Text>
+          <Text px={4}>No tags configured for devices or services</Text>
         ) : null}
       </VStack>
     </ScrollView>

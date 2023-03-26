@@ -13,6 +13,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -62,9 +63,10 @@ type PluginConfig struct {
 }
 
 type APIConfig struct {
-	InfluxDB  InfluxConfig
-	Plugins   []PluginConfig
-	PlusToken string
+	InfluxDB   InfluxConfig
+	Plugins    []PluginConfig
+	PlusToken  string
+	AutoUpdate bool
 }
 
 type GroupEntry struct {
@@ -91,7 +93,12 @@ type DeviceEntry struct {
 
 var config = APIConfig{}
 
+var Configmtx sync.Mutex
+
 func loadConfig() {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
 	data, err := ioutil.ReadFile(ApiConfigPath)
 	if err != nil {
 		fmt.Println(err)
@@ -109,6 +116,9 @@ func loadConfig() {
 }
 
 func saveConfig() {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
 	file, _ := json.MarshalIndent(config, "", " ")
 	err := ioutil.WriteFile(ApiConfigPath, file, 0600)
 	if err != nil {
@@ -258,7 +268,10 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 func getGitVersion(w http.ResponseWriter, r *http.Request) {
 	plugin := r.URL.Query().Get("plugin")
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/git_version?plugin="+plugin, nil)
+	params := url.Values{}
+	params.Set("plugin", plugin)
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/git_version?"+params.Encode(), nil)
 	if err != nil {
 		http.Error(w, fmt.Errorf("failed to make request for version "+plugin).Error(), 400)
 		return
@@ -304,7 +317,6 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 	defer c.CloseIdleConnections()
 
 	if r.Method == http.MethodGet {
-
 		req, err := http.NewRequest(http.MethodGet, "http://localhost/release", nil)
 		if err != nil {
 			http.Error(w, fmt.Errorf("failed to make request for version from superd ").Error(), 400)
@@ -332,6 +344,31 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(info)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		req, err := http.NewRequest(http.MethodDelete, "http://localhost/release", nil)
+		if err != nil {
+			http.Error(w, fmt.Errorf("failed to make superd request").Error(), 400)
+			return
+		}
+
+		resp, err := c.Do(req)
+		if err != nil {
+			http.Error(w, fmt.Errorf("failed to set superd release").Error(), 400)
+			return
+		}
+
+		defer resp.Body.Close()
+		_, err = ioutil.ReadAll(resp.Body)
+
+		if resp.StatusCode != http.StatusOK {
+			http.Error(w, fmt.Errorf("failed to set superd release "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+			return
+		}
+
+		// fall thru 200
 		return
 	}
 
@@ -365,12 +402,55 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 	//fall through success
 }
 
-func update(w http.ResponseWriter, r *http.Request) {
-	//1) superd update with service & compose_file
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/update", nil)
-	if err != nil {
-		http.Error(w, fmt.Errorf("failed to make superd request").Error(), 400)
+func checkUpdates() {
+
+	//once an hour, check if auto updates are enabled
+	// if they are, then performan an update
+	ticker := time.NewTicker(1 * time.Hour)
+	for {
+		select {
+		case <-ticker.C:
+			if config.AutoUpdate == true {
+				//TBD 1) check a release has aged?
+				//    2) check that a release is up to date
+
+				//performUpdate()
+			}
+		}
+	}
+}
+
+func autoUpdate(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(config.AutoUpdate)
 		return
+	}
+
+	if r.Method == http.MethodDelete {
+		config.AutoUpdate = false
+		saveConfig()
+		// fall thru 200
+		return
+	}
+
+	config.AutoUpdate = true
+	saveConfig()
+}
+
+func update(w http.ResponseWriter, r *http.Request) {
+	errorStr := performUpdate()
+	if errorStr != "" {
+		http.Error(w, fmt.Errorf(errorStr).Error(), 400)
+		return
+	}
+}
+
+func performUpdate() string {
+	//1) superd update with service & compose_file
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/update", nil)
+	if err != nil {
+		return "failed to make update request"
 	}
 
 	c := getSuperdClient()
@@ -378,62 +458,52 @@ func update(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := c.Do(req)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to call superd update ").Error(), 400)
+		return "failed to call superd update "
 	}
 
 	defer resp.Body.Close()
 	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		http.Error(w, fmt.Errorf("failed to call superd update "+fmt.Sprint(resp.StatusCode)).Error(), 400)
-		return
+		return "failed to call superd update " + fmt.Sprint(resp.StatusCode)
 	}
 
-	req, err = http.NewRequest(http.MethodGet, "http://localhost/start", nil)
+	req, err = http.NewRequest(http.MethodPut, "http://localhost/start", nil)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to make superd start request").Error(), 400)
-		return
+		return "failed to make superd start request"
 	}
 
 	c = getSuperdClient()
 
 	resp, err = c.Do(req)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to call superd start ").Error(), 400)
+		return "failed to call superd start "
 	}
 
 	defer resp.Body.Close()
 	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		http.Error(w, fmt.Errorf("failed to call superd start "+fmt.Sprint(resp.StatusCode)).Error(), 400)
-		return
+		return "failed to call superd start " + fmt.Sprint(resp.StatusCode)
 	}
 
+	return ""
 }
 
 func releasesAvailable(w http.ResponseWriter, r *http.Request) {
-	reply := []string{"latest"}
+	container := r.URL.Query().Get("container")
 
-	//tdb -> query superd and have it fetch https://ghcr.io/v2/spr-networks/XYZ/tags/list
+	params := url.Values{}
+	params.Set("container", container)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(reply)
+	append := "?" + params.Encode()
 
-}
+	creds := GhcrCreds{PlusUser, config.PlusToken}
+	jsonValue, _ := json.Marshal(creds)
 
-func releaseChannels(w http.ResponseWriter, r *http.Request) {
-	reply := []string{"", "-dev"}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(reply)
-}
-
-func getContainerVersion(w http.ResponseWriter, r *http.Request) {
-	plugin := r.URL.Query().Get("plugin")
-
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/container_version?plugin="+plugin, nil)
+	req, err := http.NewRequest(http.MethodPost, "http://localhost/remote_container_tags"+append, bytes.NewBuffer(jsonValue))
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to make request for version "+plugin).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to make request for tags "+container).Error(), 400)
 		return
 	}
 
@@ -442,7 +512,53 @@ func getContainerVersion(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := c.Do(req)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to request version from superd "+plugin).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to request tags from superd "+append).Error(), 400)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	var tagsResp struct {
+		Tags []string `json:"tags"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&tagsResp)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to get tags for %s", container).Error(), 400)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Errorf("failed to get tags %s", container+" "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tagsResp.Tags)
+}
+
+func releaseChannels(w http.ResponseWriter, r *http.Request) {
+	reply := []string{"main", "-dev"}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(reply)
+}
+
+func getContainerVersion(w http.ResponseWriter, r *http.Request) {
+	container := r.URL.Query().Get("plugin")
+	params := url.Values{}
+	params.Set("container", container)
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/container_version?"+params.Encode(), nil)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to make request for version "+container).Error(), 400)
+		return
+	}
+
+	c := getSuperdClient()
+	defer c.CloseIdleConnections()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to request version from superd "+container).Error(), 400)
 		return
 	}
 
@@ -451,12 +567,12 @@ func getContainerVersion(w http.ResponseWriter, r *http.Request) {
 	version := ""
 	err = json.NewDecoder(resp.Body).Decode(&version)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to get version for %s", plugin).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to get version for %s", container).Error(), 400)
 		return
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		http.Error(w, fmt.Errorf("failed to get version %s", plugin+" "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to get version %s", container+" "+fmt.Sprint(resp.StatusCode)).Error(), 400)
 		return
 	}
 
@@ -1971,9 +2087,12 @@ func callSuperdRestart(target string) {
 
 	append := ""
 	if target != "" {
-		append += "?service=" + target
+		params := url.Values{}
+		params.Set("service", target)
+		append += "?" + params.Encode()
 	}
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/restart"+append, nil)
+
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/restart"+append, nil)
 	if err != nil {
 		return
 	}
@@ -2063,6 +2182,7 @@ func main() {
 	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdUpdateConfig).Methods("PUT")
 	external_router_setup.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/calcChannel", hostapdChannelCalc).Methods("PUT")
 	external_router_setup.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")
 
 	//download cert from http
@@ -2100,12 +2220,13 @@ func main() {
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
 
 	//updates, version, feature info
-	external_router_authenticated.HandleFunc("/release", releaseInfo).Methods("GET", "PUT", "OPTIONS")
+	external_router_authenticated.HandleFunc("/release", releaseInfo).Methods("GET", "PUT", "DELETE", "OPTIONS")
 	external_router_authenticated.HandleFunc("/releaseChannels", releaseChannels).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/releasesAvailable", releasesAvailable).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/update", update).Methods("PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/version", getContainerVersion).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/autoupdate", autoUpdate).Methods("GET", "PUT", "DELETE")
 
 	//device management
 	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")
@@ -2125,6 +2246,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/config", hostapdUpdateConfig).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/calcChannel", hostapdChannelCalc).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/enable", hostapdEnableInterface).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/disable", hostapdDisableInterface).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/resetConfiguration", hostapdResetInterface).Methods("PUT")
@@ -2219,6 +2341,8 @@ func main() {
 	trafficTimer()
 	// start the event handler
 	go NotificationsRunEventListener()
+
+	go checkUpdates()
 
 	sslPort, runSSL := os.LookupEnv("API_SSL_PORT")
 

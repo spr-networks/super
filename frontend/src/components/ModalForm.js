@@ -23,22 +23,23 @@ const ModalForm = (props) => {
     }
   })
 
+  let triggerProps = {
+    size: 'sm',
+    variant: 'ghost',
+    colorScheme: 'blueGray',
+    borderColor: 'info.400',
+    leftIcon: <Icon icon={props.triggerIcon || faCirclePlus} />,
+    onPress: toggleModal
+  }
+
+  if (props.triggerProps) {
+    triggerProps = { ...triggerProps, ...props.triggerProps }
+  }
+
   return (
     <>
       {props.triggerText ? (
-        <Box>
-          <Button
-            size="sm"
-            variant="ghost"
-            colorScheme="blueGray"
-            rounded="full"
-            borderColor="info.400"
-            leftIcon={<Icon icon={props.triggerIcon || faCirclePlus} />}
-            onPress={toggleModal}
-          >
-            {props.triggerText || 'Open Modal'}
-          </Button>
-        </Box>
+        <Button {...triggerProps}>{props.triggerText || 'Open Modal'}</Button>
       ) : null}
 
       {show ? (
@@ -62,6 +63,7 @@ const ModalForm = (props) => {
 ModalForm.propTypes = {
   title: PropTypes.string,
   triggerIcon: PropTypes.object,
+  triggerProps: PropTypes.object,
   triggerText: PropTypes.string,
   modalRef: PropTypes.any
 }
