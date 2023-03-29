@@ -61,5 +61,6 @@ if [ $GOT_ERROR -eq 0 ]; then
     echo -e "${GREEN}+ success${NC} host system looks good"
     exit 0
 else
+    error "run base/setup.sh for setup"
     exit 1
 fi
