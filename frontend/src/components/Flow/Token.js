@@ -30,7 +30,7 @@ const Token = ({
   const [value, setValue] = useState('' + defaultValue)
   const [isOpen, setIsOpen] = useState(false)
 
-  let size = props.size || 'xs'
+  let size = props.size || 'md'
   let options = props.options || [] // for autocomplete
 
   const tokenProps = {
@@ -174,7 +174,11 @@ const Token = ({
       />
     )
   }*/ else if (
-    ['DstPort', 'SrcPort', 'Tags', 'Groups', 'DstInterface'].includes(label)
+    (['Tags', 'Groups', 'DstInterface', 'Container', 'OriginalDstIP'].includes(
+      label
+    ) ||
+      label.endsWith('Port')) &&
+    options
   ) {
     // TODO menu
     // TODO props.options && isMultiple= value == array
@@ -189,7 +193,7 @@ const Token = ({
       <InputSelect
         isDisabled={isDisabled}
         isMultiple={isMultiple}
-        options={props.options}
+        options={options}
         value={value}
         onChange={onSelect}
         onChangeText={onChangeText}

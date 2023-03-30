@@ -6,7 +6,7 @@ import {
   faCircleInfo,
   faTrash
 } from '@fortawesome/free-solid-svg-icons'
-
+import { BrandIcons } from 'FontAwesomeUtils'
 import {
   Badge,
   Box,
@@ -38,13 +38,22 @@ const flowObjParse = (x) => {
 const FlowCard = ({ card, size, edit, ...props }) => {
   size = size || 'md'
   let { title, description } = card
-  let icon = (
-    <Icon
-      icon={card.icon}
-      color={card.color}
-      size={size == 'xs' ? '8x' : '12x'}
-    />
-  )
+  let icon = null
+  // if string use BrandIcons, else fontawesome component
+  if (typeof card.icon == 'string') {
+    icon = React.createElement(BrandIcons[card.icon], {
+      color: card.color,
+      size: 12
+    })
+  } else {
+    icon = (
+      <Icon
+        icon={card.icon}
+        color={card.color}
+        size={size == 'xs' ? '8x' : '12x'}
+      />
+    )
+  }
 
   const displayValueOrParam = (values, name) => {
     if (!values || values[name] === undefined) {
@@ -101,21 +110,24 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     // autocomplete with dynamic options
     const [options, setOptions] = useState({})
 
-    useEffect(() => {
+    useEffect(async () => {
       if (card.getOptions) {
-        card.params.map(async ({ name }) => {
-          let opts = await card.getOptions(name)
+        let optionsNew = { ...options }
 
-          if (!opts || !opts.length) {
-            return
+        for (let p of card.params) {
+          let name = p.name
+          let opts = await card.getOptions(name)
+          if (opts && opts.length) {
+            optionsNew[name] = opts
           }
-          setOptions({ ...options, [name]: opts })
-        })
+        }
+
+        setOptions(optionsNew)
       }
     }, [])
 
     body = (
-      <HStack space={2} flexWrap="wrap" maxW="210px">
+      <HStack space={2} flexWrap="wrap" maxW={{ base: '210px', md: '400px' }}>
         {card.params
           .filter((p) => !p.hidden)
           .map((p) => (
@@ -132,7 +144,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
               options={options[p.name]}
               description={p.description}
               format={p.format}
-              size={Object.keys(card.values).length >= 5 ? 'xs' : 'sm'}
+              size={Object.keys(card.values).length > 10 ? 'xs' : 'sm'}
               onChange={(value) => onChange(p.name, value)}
             />
           ))}
