@@ -36,8 +36,8 @@
   "homepage": "https://www.supernetworks.org/",
   "dependencies": {
     "@babel/preset-react": "^7.16.7",
-    "@fortawesome/fontawesome-svg-core": "^6.3.0",
-    "@fortawesome/free-solid-svg-icons": "^6.3.0",
+    "@fortawesome/fontawesome-svg-core": "^6.4.0",
+    "@fortawesome/free-solid-svg-icons": "^6.4.0",
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@fortawesome/react-native-fontawesome": "^0.3.0",
     "@react-aria/ssr": "^3.3.0",
