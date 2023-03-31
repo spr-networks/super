@@ -2,11 +2,13 @@ import React, { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from 'FontAwesomeUtils'
 import {
+  faArrowRightLong,
   faEllipsis,
+  faEye,
+  faEyeSlash,
   faHardDrive,
   faListAlt,
-  faEye,
-  faEyeSlash
+  faNetworkWired
 } from '@fortawesome/free-solid-svg-icons'
 import {
   Badge,
@@ -18,7 +20,8 @@ import {
   FlatList,
   Menu,
   Text,
-  useColorModeValue
+  useColorModeValue,
+  VStack
 } from 'native-base'
 import { FlashList } from '@shopify/flash-list'
 
@@ -77,6 +80,61 @@ const DockerInfo = ({ showModal, ...props }) => {
       navigate(`/admin/logs/${containerName}`)
     }
 
+    const getNetworkMode = (item) => {
+      let modes =
+        item.NetworkSettings &&
+        item.NetworkSettings.Networks &&
+        Object.keys(item.NetworkSettings.Networks)
+
+      let networkMode =
+        modes && modes.length == 1 ? modes[0] : 'multiple/unknown'
+
+      return networkMode
+    }
+
+    const onNetwork = () => {
+      let networkMode = getNetworkMode(item)
+      let ipAddress =
+        networkMode == 'host'
+          ? 'host'
+          : item.NetworkSettings.Networks.bridge.IPAddress
+      showModal(
+        `${containerName} Network`,
+        <VStack>
+          <VStack space={2}>
+            <Heading size="sm">IPAddress</Heading>
+            <Text>{ipAddress}</Text>
+          </VStack>
+          {item.Ports && item.Ports.length ? (
+            <VStack space={2}>
+              <Heading size="sm" my={2}>
+                Ports
+              </Heading>
+              {item.Ports.map((pmap, idx) => (
+                <HStack key={`pmap-${idx}`} space={2} maxW={400}>
+                  <HStack
+                    space={2}
+                    w={'400px'}
+                    alignItems="center"
+                    justifyContent="space-between"
+                  >
+                    <Badge variant="outline">{pmap.Type}</Badge>
+                    <Text flex={1}>
+                      {pmap.IP}:{pmap.PublicPort}
+                    </Text>
+                    <Icon icon={faArrowRightLong} color="muted.500" />
+                    <Text flex={1} justifyContent="flex-end">
+                      {ipAddress}:{pmap.PrivatePort}
+                    </Text>
+                  </HStack>
+                </HStack>
+              ))}
+            </VStack>
+          ) : null}
+        </VStack>
+      )
+    }
+
     const trigger = (triggerProps) => (
       <IconButton
         variant="unstyled"
@@ -95,16 +153,22 @@ const DockerInfo = ({ showModal, ...props }) => {
         alignSelf="center"
       >
         <Menu.Group title="View more ...">
+          <Menu.Item onPress={onLogs}>
+            <HStack space={2} alignItems="center">
+              <Icon icon={faListAlt} color="muted.500" />
+              <Text>Logs</Text>
+            </HStack>
+          </Menu.Item>
           <Menu.Item onPress={onMounts}>
             <HStack space={2} alignItems="center">
               {<Icon icon={faHardDrive} color="muted.500" />}
               <Text>Mounts</Text>
             </HStack>
           </Menu.Item>
-          <Menu.Item onPress={onLogs}>
+          <Menu.Item onPress={onNetwork} isDisabled={item.State != 'running'}>
             <HStack space={2} alignItems="center">
-              <Icon icon={faListAlt} color="muted.500" />
-              <Text>Logs</Text>
+              <Icon icon={faNetworkWired} color="muted.500" />
+              <Text>Network</Text>
             </HStack>
           </Menu.Item>
         </Menu.Group>
@@ -115,6 +179,16 @@ const DockerInfo = ({ showModal, ...props }) => {
          */}
       </Menu>
     )
+
+    const networkSummary = (item) => {
+      //<pre>{JSON.stringify(item.Ports)}</pre>
+      let networkMode = getNetworkMode(item)
+      return (
+        <Badge variant={'outline'} colorScheme="muted" fontSize="xs">
+          {networkMode}
+        </Badge>
+      )
+    }
 
     return (
       <HStack
@@ -127,24 +201,37 @@ const DockerInfo = ({ showModal, ...props }) => {
         alignItems="center"
         flexWrap="wrap"
       >
-        <Text flex={1}>{containerName}</Text>
+        <VStack flex={1} space={2}>
+          <Text>{containerName}</Text>
+          <HStack space={2} alignItems="center">
+            <Badge
+              colorScheme={stateColor(item.State)}
+              variant="outline"
+              size="xs"
+            >
+              {item.State}
+            </Badge>
+            {networkSummary(item)}
+          </HStack>
+        </VStack>
 
-        <Text flex={1} color="muted.500" isTruncated>
+        <Text flex={1} fontSize="xs" color="muted.500" isTruncated>
           {item.Image}
         </Text>
-        <Badge ml="auto" colorScheme={stateColor(item.State)} variant="outline">
-          {item.State}
-        </Badge>
-        <Text
-          display={{ base: 'none', md: 'flex' }}
-          minW="200px"
-          ml="auto"
-          textAlign="right"
-          fontSize="xs"
-          color="muted.500"
-        >
-          {item.Status}
-        </Text>
+
+        <VStack flex={1}>
+          {/* show more info here, privileged, network */}
+          <Text
+            display={{ base: 'none', md: 'flex' }}
+            minW="200px"
+            textAlign="right"
+            fontSize="xs"
+            color="muted.500"
+          >
+            {item.Status}
+          </Text>
+        </VStack>
+
         {moreMenu}
       </HStack>
     )
@@ -153,9 +240,17 @@ const DockerInfo = ({ showModal, ...props }) => {
   useEffect(() => {
     api
       .get('/info/docker')
-      .then((containers) =>
-        setContainers(containers.filter((c) => c.Image.match(/spr-networks/)))
-      )
+      .then((containers) => {
+        // prio running containers, newest first
+        containers.sort(
+          (a, b) =>
+            (b.State == 'running' ? 100 : 1) * b.Created -
+            (a.State == 'running' ? 100 : 1) * a.Created
+        )
+        containers = containers.filter((c) => c.State.match(/running|exited/))
+        setContainers(containers)
+        //setContainers(containers.filter(c => c.Image.match(/spr-networks/)))
+      })
       .catch((err) => context.error(err))
   }, [])
 

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import PropTypes from 'prop-types'
 import {
   faBan,
+  faBox,
   faBroadcastTower,
   faCircleArrowRight,
   faClock,
@@ -13,9 +14,38 @@ import {
   faTags
 } from '@fortawesome/free-solid-svg-icons'
 
-import { deviceAPI } from 'api'
+import { api, deviceAPI } from 'api'
 import { pfwAPI } from 'api/Pfw'
 import { numToDays, daysToNum, toCron, parseClient, toOption } from './Utils'
+import { BrandIcons } from 'FontAwesomeUtils'
+
+const defaultOptions = async function (name) {
+  if (name.endsWith('Port')) {
+    return [
+      { label: 'http', value: '80' },
+      { label: 'https', value: '443' },
+      { label: 'ssh', value: '22' },
+      { label: 'telnet', value: '23' },
+      { label: '3000', value: '3000' },
+      { label: '8080', value: '8080' }
+    ]
+  }
+
+  if (name == 'OriginalDstIP') {
+    let addrs = await api.get('/ip/addr')
+    addrs = addrs
+      .map((a) => {
+        let ais = a.addr_info.filter((ai) => ai.family == 'inet')
+        return ais
+      })
+      .filter((ais) => ais && ais.length)
+      .map((ais) => ais[0].local)
+    let opts = addrs.map((value) => {
+      return { label: value, value }
+    })
+    return opts
+  }
+}
 
 const triggers = [
   {
@@ -136,14 +166,7 @@ const actions = [
     },
     getOptions: function (name = 'DstPort') {
       if (name == 'DstPort') {
-        return [
-          { label: 'http', value: '80' },
-          { label: 'https', value: '443' },
-          { label: 'ssh', value: '22' },
-          { label: 'telnet', value: '23' },
-          { label: '3000', value: '3000' },
-          { label: '8080', value: '8080' }
-        ]
+        return defaultOptions(name)
       }
 
       return []
@@ -196,14 +219,7 @@ const actions = [
     },
     getOptions: function (name = 'DstPort') {
       if (name == 'DstPort') {
-        return [
-          { label: 'http', value: '80' },
-          { label: 'https', value: '443' },
-          { label: 'ssh', value: '22' },
-          { label: 'telnet', value: '23' },
-          { label: '3000', value: '3000' },
-          { label: '8080', value: '8080' }
-        ]
+        return defaultOptions(name)
       }
 
       return []
@@ -262,16 +278,13 @@ const actions = [
       OriginalDstIP: '0.0.0.0',
       OriginalDstPort: ''
     },
-    getOptions: function (name = 'DstPort') {
+    getOptions: async function (name = 'DstPort') {
       if (['DstPort', 'OriginalDstPort'].includes(name)) {
-        return [
-          { label: 'http', value: '80' },
-          { label: 'https', value: '443' },
-          { label: 'ssh', value: '22' },
-          { label: 'telnet', value: '23' },
-          { label: '3000', value: '3000' },
-          { label: '8080', value: '8080' }
-        ]
+        return defaultOptions(name)
+      }
+
+      if (name == 'OriginalDstIP') {
+        return await defaultOptions(name)
       }
 
       return []
@@ -334,16 +347,13 @@ const actions = [
       OriginalDstPort: '',
       DstPort: ''
     },
-    getOptions: function (name = 'DstPort') {
+    getOptions: async function (name = 'DstPort') {
       if (['DstPort', 'OriginalDstPort'].includes(name)) {
-        return [
-          { label: 'http', value: '80' },
-          { label: 'https', value: '443' },
-          { label: 'ssh', value: '22' },
-          { label: 'telnet', value: '23' },
-          { label: '3000', value: '3000' },
-          { label: '8080', value: '8080' }
-        ]
+        return defaultOptions(name)
+      }
+
+      if (name == 'OriginalDstIP') {
+        return await defaultOptions(name)
       }
 
       return []
@@ -503,6 +513,141 @@ const actions = [
       }
 
       return pfwAPI.addTags(data)
+    }
+  },
+  {
+    title: 'Docker Forward TCP',
+    cardType: 'action',
+    description:
+      'Forward TCP for specified source to exposed port for a local container',
+    color: 'blue.500',
+    icon: 'Docker',
+    params: [
+      {
+        name: 'Protocol',
+        type: PropTypes.string,
+        hidden: true
+      },
+      {
+        name: 'Client',
+        type: PropTypes.string,
+        description: 'IP/CIDR or Group'
+      },
+      {
+        name: 'OriginalDstIP',
+        type: PropTypes.string,
+        description: 'IP/CIDR'
+      },
+      {
+        name: 'OriginalDstPort',
+        type: PropTypes.string,
+        description:
+          'Original Destination port, range of ports, or empty for all'
+      },
+      {
+        name: 'Container',
+        type: PropTypes.string,
+        description: 'Docker container id'
+      },
+      {
+        name: 'ContainerPort',
+        type: PropTypes.string,
+        description: 'Port exposed by container'
+      },
+      {
+        name: 'DstIP',
+        type: PropTypes.string,
+        description: 'IP/CIDR',
+        hidden: true
+      },
+      {
+        name: 'DstPort',
+        type: PropTypes.string,
+        description: 'New Destination port, range of ports, or empty for all',
+        hidden: true
+      }
+    ],
+    values: {
+      Protocol: 'tcp',
+      Client: 'lan',
+      Container: 'container',
+      ContainerPort: '8080',
+      OriginalDstIP: '192.168.2.1',
+      OriginalDstPort: '8080',
+      DstPort: '8080',
+      DstIP: '0.0.0.0'
+    },
+    niceDockerName: function (c) {
+      return (c.Names[0] || c.Id.substr(0, 8)).replace(/^\//, '')
+    },
+    niceDockerLabel: function (c) {
+      let name = this.niceDockerName(c)
+      let ports = c.Ports.filter((p) => p.IP != '::').map((p) => p.PublicPort) // p.Type
+      return `${name}:${ports}`
+    },
+    getOptions: async function (name = 'DstPort') {
+      if (name.endsWith('Port') || name == 'OriginalDstIP') {
+        return await defaultOptions(name)
+      }
+
+      // get containers from docker api
+      if (name == 'Container') {
+        let containers = await api.get('/info/docker')
+
+        let opts = containers
+          .filter((c) => c.Ports && c.Ports.length)
+          .map((c) => {
+            return {
+              label: this.niceDockerLabel(c),
+              value: this.niceDockerName(c)
+            }
+          })
+
+        return opts
+      }
+
+      return []
+    },
+    preSubmit: async function () {
+      let containers = await api.get('/info/docker')
+      let container = containers.find(
+        (c) => this.niceDockerName(c) == this.values.Container
+      )
+
+      if (!container) {
+        console.error('no container??', this.values)
+        return
+      }
+
+      let DstIP = container.NetworkSettings.Networks.bridge.IPAddress
+      let DstPort = this.values.ContainerPort
+
+      //TODO this should be a iface select
+      let OriginalDstIP = '192.168.2.1'
+
+      let data = {
+        Protocol: this.values.Protocol,
+        Client: await parseClient(this.values.Client),
+        //OriginalDstIP: this.values.OriginalDstIP,
+        OriginalDstIP,
+        OriginalDstPort: this.values.OriginalDstPort,
+        DstIP,
+        DstPort
+      }
+
+      console.log('presubmit:', JSON.stringify(data))
+      return data
+    },
+    submit: function (data, flow) {
+      let isUpdate = flow.index !== undefined
+
+      console.log('submit:', JSON.stringify(data))
+
+      if (isUpdate) {
+        return pfwAPI.updateForward(data, flow.index)
+      }
+
+      return pfwAPI.addForward(data)
     }
   }
 ]

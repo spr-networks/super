@@ -1,3 +1,4 @@
+import { Icon as IconNb, useToken } from 'native-base'
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
 import PropTypes from 'prop-types'
@@ -115,6 +116,7 @@ const FlowCardList = ({
             key={`form${cardType}`}
             title={`Add ${cardType} to flow`}
             modalRef={refModal}
+            w="full"
           >
             <AddFlowCard cardType={cardType} onSubmit={handleAddCard} />
           </ModalForm>
@@ -155,6 +157,14 @@ const Flow = ({ flow, edit, ...props }) => {
     setTriggers(flow.triggers)
     setActions(flow.actions)
   }, [flow])
+
+  //set title when we update actions
+  useEffect(() => {
+    if (title == 'NewFlow' && actions.length) {
+      let title = actions[0].title
+      setTitle(title)
+    }
+  }, [actions])
 
   //mini
   if (!edit) {
@@ -289,6 +299,7 @@ const Flow = ({ flow, edit, ...props }) => {
             </HStack>
             <HStack space={2} alignItems="center">
               <Icon icon={action.icon} color={action.color} />
+
               <HStack space={2}>
                 {Object.keys(action.values).map((key) => (
                   <Text key={key}>{displayValue(action.values[key], key)}</Text>
@@ -335,7 +346,7 @@ const Flow = ({ flow, edit, ...props }) => {
   }
 
   return (
-    <VStack maxW={380} space={2}>
+    <VStack maxW={{ base: 380, md: 'full' }} space={2}>
       <FormControl>
         <FormControl.Label>Name</FormControl.Label>
         <Input
@@ -703,11 +714,12 @@ const FlowList = (props) => {
   return (
     <Stack
       direction={{ base: 'column', md: 'row' }}
+      __justifyContent="stretch"
       space={4}
       pr={{ md: 8 }}
       h={h}
     >
-      <Box w={{ md: '2/3' }}>
+      <Box __w={{ md: '3/6' }} flex="1">
         <HStack
           justifyContent="space-between"
           alignContent="center"
@@ -747,7 +759,7 @@ const FlowList = (props) => {
       <ScrollView
         bg={useColorModeValue('warmGray.50', 'blueGray.800')}
         space={4}
-        w={{ base: '100%', md: '390px' }}
+        maxW={{ base: '100%', md: '500px' }}
         p={4}
       >
         <Heading size="sm">Add &amp; Edit flow</Heading>
