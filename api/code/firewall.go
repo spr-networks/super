@@ -1275,10 +1275,15 @@ func dynamicRouteLoop() {
 					new_iface, exists = suggested_device[entry.RecentIP]
 				}
 
-				if !exists && lanif != "" {
-					//no new_iface and a LAN interface is set, use that.
-					//TBD: VLAN here based on the assigned vlan id
-					new_iface = lanif
+				if !exists {
+					if lanif != "" {
+						//no new_iface and a LAN interface is set, use that.
+						//TBD: VLAN here based on the assigned vlan id
+						new_iface = lanif
+					} else {
+						// disconnected devices will have empty new_iface, skip
+						continue
+					}
 				}
 
 				//happy state -- the established interface matches the calculated interface to route to
@@ -1289,6 +1294,8 @@ func dynamicRouteLoop() {
 						//vmaps happy, skip updating this device
 						continue
 					}
+
+					fmt.Println("[-] Missing vmap entries for mac=", ident, "new_iface=", new_iface)
 				}
 
 				routeIP := entry.RecentIP
