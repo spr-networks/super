@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/google/gopacket v1.1.19
 	github.com/influxdata/influxdb-client-go/v2 v2.12.2
-	github.com/spr-networks/sprbus v0.0.1
+	github.com/spr-networks/sprbus v0.1.0
 )
 
 require (

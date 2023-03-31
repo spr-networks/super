@@ -223,15 +223,6 @@ func main() {
 			topic := reply.GetTopic()
 			value := reply.GetValue()
 
-			// wildcard sub - value is topic+value
-			index := strings.Index(value, "{")
-			if index <= 0 {
-				continue
-			}
-
-			topic = value[0 : index-1]
-			value = value[index:len(value)]
-
 			logTraffic(topic, value)
 		}
 	}()

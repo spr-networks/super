@@ -1,4 +1,5 @@
 package main
+//NOTE this is old code - not using ulogd2 anymore
 
 import (
 	"bufio"

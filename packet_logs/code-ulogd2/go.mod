@@ -2,7 +2,7 @@ module main
 
 go 1.18
 
-require github.com/spr-networks/sprbus v0.0.0-20220811094515-092f7af34fb2
+require github.com/spr-networks/sprbus v0.1.0
 
 require (
 	github.com/golang/protobuf v1.5.2 // indirect

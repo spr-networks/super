@@ -9,12 +9,9 @@ https://pkg.go.dev/github.com/google/gopacket/layers#DNS
 */
 
 import (
-	//"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	//"regexp"
-	"strings"
 	"sync"
 	"time"
 
@@ -78,13 +75,6 @@ func main() {
 
 			topic := reply.GetTopic()
 			value := reply.GetValue()
-			index := strings.Index(value, "{")
-			if index <= 0 {
-				continue
-			}
-
-			topic = value[0 : index-1]
-			value = value[index:len(value)]
 
 			logTraffic(topic, value)
 		}

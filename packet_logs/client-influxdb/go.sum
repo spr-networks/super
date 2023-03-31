@@ -33,6 +33,8 @@ github.com/spr-networks/sprbus v0.0.0-20220811094515-092f7af34fb2 h1:c7RadfVpqqX
 github.com/spr-networks/sprbus v0.0.0-20220811094515-092f7af34fb2/go.mod h1:fK1hepbMhmj80wjrM//6LDvaP30pu0dwVNAWGaJHkqU=
 github.com/spr-networks/sprbus v0.0.1 h1:ExT1sREKrGgubSsaqgUrkErjt08Nm+Cpj4qPl8oXxPU=
 github.com/spr-networks/sprbus v0.0.1/go.mod h1:PPHAPjoRbrs7oATHcMsS808khuvqJqICUEgiLTehu8E=
+github.com/spr-networks/sprbus v0.1.0 h1:vqg5ltAlns6p++yKbYXVQ9i+IxBZAHbKyxsss8hZMDU=
+github.com/spr-networks/sprbus v0.1.0/go.mod h1:PPHAPjoRbrs7oATHcMsS808khuvqJqICUEgiLTehu8E=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=
