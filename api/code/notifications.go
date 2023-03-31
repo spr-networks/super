@@ -312,14 +312,14 @@ func notificationEventListener() {
 		topic := reply.GetTopic()
 		value := reply.GetValue()
 
-		// wildcard sub - value is topic+value
+		// wildcard sub - old version of sprbus
 		index := strings.Index(value, "{")
-		if index <= 0 {
+		if index > 1 {
+			topic = value[0 : index-1]
+			value = value[index:len(value)]
+		} else if index < 0 {
 			continue
 		}
-
-		topic = value[0 : index-1]
-		value = value[index:len(value)]
 
 		logTraffic(topic, value)
 	}
