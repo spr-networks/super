@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -18,7 +17,6 @@ import (
 )
 
 var NotificationSettingsFile = "/configs/base/notifications.json"
-var ServerEventSock = "/state/api/eventbus.sock"
 
 // notifications.json is array of this:
 type NotificationSetting struct {
@@ -234,40 +232,17 @@ func logTraffic(topic string, data string) {
 	shouldNotify := checkNotificationTraffic(logEntry)
 
 	if shouldNotify {
+        // TODO forward topic
 		WSNotifyValue("nft", logEntry)
 	}
 }
 
 // the rest is eventbus -> ws forwarding
-func NotificationsRunEventListener() {
-	// make sure the client dont connect to the prev socket
-	os.Remove(ServerEventSock)
-
-	go notificationEventServer()
-	notificationEventListener()
-	// not reached
-	log.Println("event thread exit")
-}
-
-// this is the main event server
-func notificationEventServer() {
-	log.Println("starting sprbus server...")
-
-	_, err := sprbus.NewServer(ServerEventSock)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// not reached
-}
-
 // this is run in a separate thread
-func notificationEventListener() {
+func NotificationsRunEventListener() {
 	loadNotificationConfig()
 
 	log.Printf("notification settings: %v conditions loaded\n", len(gNotificationConfig))
-	//WSNotifyString("nft:event:init", `{"status": "init"}`)
-
 	// this is only to make sure the server is started
 	time.Sleep(time.Second)
 
@@ -280,6 +255,7 @@ func notificationEventListener() {
 		time.Sleep(time.Second / 4)
 	}
 
+/*
 	log.Println("connecting sprbus client...")
 
 	client, err := sprbus.NewClient(ServerEventSock)
@@ -291,9 +267,9 @@ func notificationEventListener() {
 
 	log.Println("subscribing to nft: prefix")
 
-	// subscribe to all nft: rules
-	// rules = lan:in, lan:out, wan:in, wan:out, drop:input, drop:forward, drop:pfw
-	stream, err := client.SubscribeTopic("nft:")
+	// subscribe to all
+	// nft rules = lan:in, lan:out, wan:in, wan:out, drop:input, drop:forward, drop:pfw
+	stream, err := client.SubscribeTopic("")
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -306,23 +282,37 @@ func notificationEventListener() {
 		}
 
 		if nil != err {
-			log.Fatal("sprbus error:", err) // Cancelled desc
+			log.Println("sprbus error:", err) // Cancelled desc
 		}
 
 		topic := reply.GetTopic()
 		value := reply.GetValue()
 
-		// wildcard sub - old version of sprbus
-		index := strings.Index(value, "{")
-		if index > 1 {
-			topic = value[0 : index-1]
-			value = value[index:len(value)]
-		} else if index < 0 {
-			continue
-		}
+*/
 
-		logTraffic(topic, value)
-	}
+    sprbus.HandleEvent("", func (topic string, value string) {
+        if strings.HasPrefix(topic, "nft") {
+		    logTraffic(topic, value)
+        } else if strings.HasPrefix(topic, "wifi:auth") {
+            var data map[string]interface{}
+
+            if err := json.Unmarshal([]byte(value), &data); err != nil {
+                log.Println("failed to decode eventbus json:", err)
+                return
+            }
+
+            // TODO use topic here
+            name := "PSKAuthFailure"
+            if topic == "wifi:auth:success" {
+                name = "PSKAuthSuccess" 
+            }
+
+            WSNotifyValue(name, data)
+        }
+
+        //TODO forward to logging
+    })
+	//}
 
 	log.Println("sprbus client exit")
 }

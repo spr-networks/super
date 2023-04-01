@@ -9,7 +9,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.1
 	github.com/influxdata/influxdb-client-go/v2 v2.7.0
-	github.com/spr-networks/sprbus v0.1.1
+	github.com/spr-networks/sprbus v0.1.3
 )
 
 require (

@@ -27,6 +27,8 @@ import (
 	"github.com/duo-labs/webauthn/webauthn"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/spr-networks/sprbus"
+	"github.com/tidwall/gjson"
 )
 
 var TEST_PREFIX = os.Getenv("TEST_PREFIX")
@@ -167,7 +169,6 @@ func ipLinkUpDown(w http.ResponseWriter, r *http.Request) {
 
 func getStatus(w http.ResponseWriter, r *http.Request) {
 	reply := "Online"
-	WSNotifyString("StatusCalled", "test")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
 }
@@ -1473,14 +1474,14 @@ func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	saveDevicesJson(devices)
 
-	WSNotifyValue("DHCPUpdateRequest", dhcp)
+	sprbus.Publish("dhcp:update", dhcp)
 
 	notifyFirewallDHCP(val, dhcp.Iface)
 
 	// update local mappings file for DNS
 	updateLocalMappings(dhcp.IP, dhcp.Name)
 
-	WSNotifyString("DHCPUpdateProcessed", "")
+	//WSNotifyString("DHCPUpdateProcessed", "")
 }
 
 type WireguardUpdate struct {
@@ -1743,7 +1744,7 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WSNotifyValue("PSKAuthFailure", pskf)
+	sprbus.Publish("wifi:auth:fail", pskf)
 
 	if pskf.MAC == "" || (pskf.Type != "sae" && pskf.Type != "wpa") || (pskf.Reason != "noentry" && pskf.Reason != "mismatch") {
 		http.Error(w, "malformed data", 400)
@@ -1784,7 +1785,7 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WSNotifyValue("PSKAuthSuccess", pska)
+	sprbus.Publish("wifi:auth:success", pska)
 
 	if pska.Iface == "" || pska.Event != "AP-STA-CONNECTED" || pska.MAC == "" {
 		http.Error(w, "malformed data", 400)
@@ -1835,7 +1836,7 @@ func reportDisconnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WSNotifyValue("StationDisconnect", event)
+	sprbus.Publish("wifi:station:disconnect", event)
 
 	if event.Iface == "" || event.Event != "AP-STA-DISCONNECTED" || event.MAC == "" {
 		http.Error(w, "malformed data", 400)
@@ -2141,8 +2142,37 @@ func setSecurityHeaders(next http.Handler) http.Handler {
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+
+		logs := map[string]interface{}{}
+		logs["RemoteAddr"] = r.RemoteAddr
+		logs["Method"] = r.Method
+		logs["Path"] = r.URL.Path
+		sprbus.Publish("www:log:access", logs)
+
 		handler.ServeHTTP(w, r)
 	})
+}
+
+var ServerEventSock = "/state/api/eventbus.sock"
+
+func startEventBus() {
+	// make sure the client dont connect to the prev socket
+	os.Remove(ServerEventSock)
+
+	log.Println("starting sprbus server...")
+
+	_, err := sprbus.NewServer(ServerEventSock)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// not reached
+}
+
+func testEvent() {
+		go sprbus.HandleEvent("wifi", func(topic string, json string) {
+            fmt.Printf("[sprbus] topic=%v, value=%v\n", topic, gjson.Get(json, "@values"))
+		})
 }
 
 func main() {
@@ -2339,7 +2369,12 @@ func main() {
 	WSRunNotify()
 	// collect traffic accounting statistics
 	trafficTimer()
-	// start the event handler
+	// start the eventbus handler
+	go startEventBus()
+
+	//testEvent()
+
+	// notifications, connect to eventbus
 	go NotificationsRunEventListener()
 
 	go checkUpdates()
