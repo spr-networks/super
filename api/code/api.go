@@ -2170,9 +2170,9 @@ func startEventBus() {
 }
 
 func testEvent() {
-		go sprbus.HandleEvent("wifi", func(topic string, json string) {
-            fmt.Printf("[sprbus] topic=%v, value=%v\n", topic, gjson.Get(json, "@values"))
-		})
+	go sprbus.HandleEvent("wifi", func(topic string, json string) {
+		fmt.Printf("[sprbus] topic=%v, value=%v\n", topic, gjson.Get(json, "@values"))
+	})
 }
 
 func main() {

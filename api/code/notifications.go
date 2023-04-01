@@ -232,7 +232,7 @@ func logTraffic(topic string, data string) {
 	shouldNotify := checkNotificationTraffic(logEntry)
 
 	if shouldNotify {
-        // TODO forward topic
+		// TODO forward topic
 		WSNotifyValue("nft", logEntry)
 	}
 }
@@ -255,63 +255,63 @@ func NotificationsRunEventListener() {
 		time.Sleep(time.Second / 4)
 	}
 
-/*
-	log.Println("connecting sprbus client...")
+	/*
+		log.Println("connecting sprbus client...")
 
-	client, err := sprbus.NewClient(ServerEventSock)
-	defer client.Close()
+		client, err := sprbus.NewClient(ServerEventSock)
+		defer client.Close()
 
-	if err != nil {
-		log.Fatal("err", err)
-	}
-
-	log.Println("subscribing to nft: prefix")
-
-	// subscribe to all
-	// nft rules = lan:in, lan:out, wan:in, wan:out, drop:input, drop:forward, drop:pfw
-	stream, err := client.SubscribeTopic("")
-	if nil != err {
-		log.Fatal(err)
-	}
-
-	// main loop
-	for {
-		reply, err := stream.Recv()
-		if io.EOF == err {
-			break
+		if err != nil {
+			log.Fatal("err", err)
 		}
 
+		log.Println("subscribing to nft: prefix")
+
+		// subscribe to all
+		// nft rules = lan:in, lan:out, wan:in, wan:out, drop:input, drop:forward, drop:pfw
+		stream, err := client.SubscribeTopic("")
 		if nil != err {
-			log.Println("sprbus error:", err) // Cancelled desc
+			log.Fatal(err)
 		}
 
-		topic := reply.GetTopic()
-		value := reply.GetValue()
+		// main loop
+		for {
+			reply, err := stream.Recv()
+			if io.EOF == err {
+				break
+			}
 
-*/
+			if nil != err {
+				log.Println("sprbus error:", err) // Cancelled desc
+			}
 
-    sprbus.HandleEvent("", func (topic string, value string) {
-        if strings.HasPrefix(topic, "nft") {
-		    logTraffic(topic, value)
-        } else if strings.HasPrefix(topic, "wifi:auth") {
-            var data map[string]interface{}
+			topic := reply.GetTopic()
+			value := reply.GetValue()
 
-            if err := json.Unmarshal([]byte(value), &data); err != nil {
-                log.Println("failed to decode eventbus json:", err)
-                return
-            }
+	*/
 
-            // TODO use topic here
-            name := "PSKAuthFailure"
-            if topic == "wifi:auth:success" {
-                name = "PSKAuthSuccess" 
-            }
+	sprbus.HandleEvent("", func(topic string, value string) {
+		if strings.HasPrefix(topic, "nft") {
+			logTraffic(topic, value)
+		} else if strings.HasPrefix(topic, "wifi:auth") {
+			var data map[string]interface{}
 
-            WSNotifyValue(name, data)
-        }
+			if err := json.Unmarshal([]byte(value), &data); err != nil {
+				log.Println("failed to decode eventbus json:", err)
+				return
+			}
 
-        //TODO forward to logging
-    })
+			// TODO use topic here
+			name := "PSKAuthFailure"
+			if topic == "wifi:auth:success" {
+				name = "PSKAuthSuccess"
+			}
+
+			WSNotifyValue(name, data)
+		}
+
+		//TODO forward to logging
+	})
 	//}
 
 	log.Println("sprbus client exit")
