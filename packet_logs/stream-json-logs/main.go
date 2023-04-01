@@ -10,8 +10,6 @@ https://pkg.go.dev/github.com/google/gopacket/layers#DNS
 
 import (
 	"fmt"
-	"io"
-	"log"
 	"sync"
 	"time"
 
@@ -48,38 +46,7 @@ func logTraffic(topic string, data string) {
 }
 
 func main() {
-	client, err := sprbus.NewClient(ServerEventSock)
-	defer client.Close()
-
-	if err != nil {
-		log.Fatal("err", err)
-	}
-
-	stream, err := client.SubscribeTopic("nft:") // NOTE need to end with :
-	if nil != err {
-		log.Fatal(err)
-	}
-
-	go func() {
-		wg.Add(1)
-
-		for {
-			reply, err := stream.Recv()
-			if io.EOF == err {
-				break
-			}
-
-			if nil != err {
-				log.Fatal("ERRRRRR ", err) // Cancelled desc
-			}
-
-			topic := reply.GetTopic()
-			value := reply.GetValue()
-
-			logTraffic(topic, value)
-		}
-	}()
-
+    sprbus.HandleEvent("nft", logTraffic)
 	time.Sleep(time.Second)
 	wg.Wait()
 }
