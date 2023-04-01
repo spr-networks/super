@@ -243,10 +243,8 @@ func NotificationsRunEventListener() {
 	loadNotificationConfig()
 
 	log.Printf("notification settings: %v conditions loaded\n", len(gNotificationConfig))
-	// this is only to make sure the server is started
-	time.Sleep(time.Second)
 
-	// wait for server to start
+	// wait for sprbus server to start
 	for i := 0; i < 4; i++ {
 		if _, err := os.Stat(ServerEventSock); err == nil {
 			break
@@ -254,41 +252,6 @@ func NotificationsRunEventListener() {
 
 		time.Sleep(time.Second / 4)
 	}
-
-	/*
-		log.Println("connecting sprbus client...")
-
-		client, err := sprbus.NewClient(ServerEventSock)
-		defer client.Close()
-
-		if err != nil {
-			log.Fatal("err", err)
-		}
-
-		log.Println("subscribing to nft: prefix")
-
-		// subscribe to all
-		// nft rules = lan:in, lan:out, wan:in, wan:out, drop:input, drop:forward, drop:pfw
-		stream, err := client.SubscribeTopic("")
-		if nil != err {
-			log.Fatal(err)
-		}
-
-		// main loop
-		for {
-			reply, err := stream.Recv()
-			if io.EOF == err {
-				break
-			}
-
-			if nil != err {
-				log.Println("sprbus error:", err) // Cancelled desc
-			}
-
-			topic := reply.GetTopic()
-			value := reply.GetValue()
-
-	*/
 
 	sprbus.HandleEvent("", func(topic string, value string) {
 		if strings.HasPrefix(topic, "nft") {
@@ -312,7 +275,6 @@ func NotificationsRunEventListener() {
 
 		//TODO forward to logging
 	})
-	//}
 
 	log.Println("sprbus client exit")
 }
