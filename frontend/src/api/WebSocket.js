@@ -42,29 +42,29 @@ const parseLogMessage = (msg) => {
     type = 'info',
     body = typeof data === 'string' ? data : JSON.stringify(data)
 
-  const skipTypes = ['DHCPUpdateProcessed', 'DHCPUpdateRequest']
-  if (skipTypes.includes(msgType)) {
+  //skip
+  if (msgType.match(/^(dhcp|www):/)) {
     return null
   }
 
-  if (msgType == 'PSKAuthSuccess') {
-    type = 'success'
-    body = `Authentication success for MAC ${data.MAC}`
-  } else if (msgType == 'PSKAuthFailure') {
-    let wpaTypes = { sae: 'WPA3', wpa: 'WPA2' },
-      wpaType = wpaTypes[data.Type] || data.Type,
-      reasonString = 'unknown'
+  if (msgType.startsWith('wifi:auth')) {
+    if (msgType.includes('success')) {
+      type = 'success'
+      body = `Authentication success for MAC ${data.MAC}`
+    } else {
+      let wpaTypes = { sae: 'WPA3', wpa: 'WPA2' },
+        wpaType = wpaTypes[data.Type] || data.Type,
+        reasonString = 'unknown'
 
-    if (data.Reason == 'noentry') {
-      reasonString = `Unknown device with ${wpaType}`
-    } else if (data.Reason == 'mismatch') {
-      reasonString = `Wrong password with ${wpaType}`
+      if (data.Reason == 'noentry') {
+        reasonString = `Unknown device with ${wpaType}`
+      } else if (data.Reason == 'mismatch') {
+        reasonString = `Wrong password with ${wpaType}`
+      }
+
+      body = `Authentication failure for MAC ${data.MAC}: ${reasonString}`
     }
-
-    body = `Authentication failure for MAC ${data.MAC}: ${reasonString}`
-  } else if (msgType == 'StatusCalled') {
-    body = `Status called with result: ${data}`
-  } else if (msgType == 'nft') {
+  } else if (msgType.startsWith('nft')) {
     // data.Action ==  allowed || blocked
     type = 'confirm'
 
