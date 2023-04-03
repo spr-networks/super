@@ -23,6 +23,7 @@ import (
 	"github.com/duo-labs/webauthn/protocol"
 	"github.com/duo-labs/webauthn/webauthn"
 	"github.com/gorilla/mux"
+	"github.com/spr-networks/sprbus"
 )
 
 var AuthUsersFile = TEST_PREFIX + "/configs/base/auth_users.json"
@@ -446,10 +447,13 @@ func (auth *authnconfig) authorizedToken(r *http.Request, token string) bool {
 				}
 			}
 			if t.Expire == 0 || t.Expire > time.Now().Unix() {
+				sprbus.Publish("www:auth:token:success", map[string]int64{"expire": t.Expire})
 				return true
 			}
 		}
 	}
+
+	sprbus.Publish("www:auth:token:fail", "")
 
 	return false
 }
@@ -468,9 +472,13 @@ func (auth *authnconfig) authenticateUser(username string, password string) bool
 		expectedPasswordHash := sha256.Sum256([]byte(pwEntry))
 		passwordMatch := (subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1)
 		if passwordMatch {
+			sprbus.Publish("www:auth:user:success", map[string]string{"username": username})
 			return true
 		}
 	}
+
+	sprbus.Publish("www:auth:user:fail", map[string]string{"username": username})
+
 	return false
 }
 

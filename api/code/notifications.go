@@ -233,7 +233,7 @@ func logTraffic(topic string, data string) {
 
 	if shouldNotify {
 		// TODO forward topic
-		WSNotifyValue("nft", logEntry)
+		WSNotifyValue(topic, logEntry)
 	}
 }
 
@@ -264,13 +264,7 @@ func NotificationsRunEventListener() {
 				return
 			}
 
-			// TODO use topic here
-			name := "PSKAuthFailure"
-			if topic == "wifi:auth:success" {
-				name = "PSKAuthSuccess"
-			}
-
-			WSNotifyValue(name, data)
+			WSNotifyValue(topic, data)
 		}
 
 		//TODO forward to logging
