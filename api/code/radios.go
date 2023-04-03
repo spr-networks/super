@@ -8,7 +8,6 @@ import (
 	"github.com/gorilla/mux"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"

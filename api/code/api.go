@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
+	logStd "log"
 	"net"
 	"net/http"
 	"net/url"
@@ -28,7 +28,6 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/spr-networks/sprbus"
-	"github.com/tidwall/gjson"
 )
 
 var TEST_PREFIX = os.Getenv("TEST_PREFIX")
@@ -46,6 +45,9 @@ var ApiTlsCert = "/configs/base/www-api.crt"
 var ApiTlsKey = "/configs/base/www-api.key"
 
 var SuperdSocketPath = TEST_PREFIX + "/state/plugins/superd/socket"
+
+// NOTE .Fire will dial, print to stdout/stderr if sprbus not started
+var log = sprbus.NewLog("log:api")
 
 type InfluxConfig struct {
 	URL    string
@@ -103,11 +105,11 @@ func loadConfig() {
 
 	data, err := ioutil.ReadFile(ApiConfigPath)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	} else {
 		err = json.Unmarshal(data, &config)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	}
 
@@ -138,7 +140,7 @@ func ipAddr(w http.ResponseWriter, r *http.Request) {
 	stdout, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("ipAddr failed", err)
+		log.Println("ipAddr failed", err)
 		http.Error(w, "Not found", 404)
 		return
 	}
@@ -160,7 +162,7 @@ func ipLinkUpDown(w http.ResponseWriter, r *http.Request) {
 	_, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("ip link failed", err)
+		log.Println("ip link failed", err)
 		http.Error(w, "ip link failed", 400)
 		return
 	}
@@ -1301,7 +1303,7 @@ func searchVmapsByMac(MAC string, VMaps []string) (error, string, string) {
 func updateArp(Ifname string, IP string, MAC string) {
 	err := exec.Command("arp", "-i", Ifname, "-s", IP, MAC).Run()
 	if err != nil {
-		fmt.Println("arp -i", Ifname, IP, MAC, "failed", err)
+		log.Println("arp -i", Ifname, IP, MAC, "failed", err)
 		return
 	}
 }
@@ -1416,7 +1418,7 @@ type DHCPUpdate struct {
 func flushRoute(MAC string) {
 	arp_entry, err := GetArpEntryFromMAC(MAC)
 	if err != nil {
-		fmt.Println("Arp entry not found, insufficient information to refresh", MAC)
+		log.Println("Arp entry not found, insufficient information to refresh", MAC)
 		return
 	}
 
@@ -1622,7 +1624,7 @@ func refreshDeviceGroups(dev DeviceEntry) {
 		if err == nil {
 			ipv4 = arp_entry.IP
 		} else {
-			fmt.Println("Missing IP for device, could not refresh device groups")
+			log.Println("Missing IP for device, could not refresh device groups")
 			return
 		}
 	}
@@ -1640,7 +1642,7 @@ func refreshDeviceGroups(dev DeviceEntry) {
 	}
 
 	if ifname == "" {
-		fmt.Println("dhcp_access entry not found, route not found, insufficient information to refresh", dev.RecentIP)
+		log.Println("dhcp_access entry not found, route not found, insufficient information to refresh", dev.RecentIP)
 		return
 	}
 
@@ -1725,7 +1727,7 @@ func GetArpEntryFromMAC(mac string) (ArpEntry, error) {
 func showARP(w http.ResponseWriter, r *http.Request) {
 	entries, err := GetArpEntries()
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		http.Error(w, "Failed to get entries", 400)
 		return
 	}
@@ -2149,7 +2151,8 @@ func setSecurityHeaders(next http.Handler) http.Handler {
 
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		//use logStd here so we dont get dupes
+		logStd.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
 
 		logs := map[string]interface{}{}
 		logs["RemoteAddr"] = r.RemoteAddr
@@ -2177,15 +2180,12 @@ func startEventBus() {
 	// not reached
 }
 
-func testEvent() {
-	go sprbus.HandleEvent("wifi", func(topic string, json string) {
-		fmt.Printf("[sprbus] topic=%v, value=%v\n", topic, gjson.Get(json, "@values"))
-	})
-}
-
 func main() {
 
 	loadConfig()
+
+	// start eventbus
+	go startEventBus()
 
 	auth := new(authnconfig)
 	w, err := webauthn.New(&webauthn.Config{
@@ -2377,10 +2377,6 @@ func main() {
 	WSRunNotify()
 	// collect traffic accounting statistics
 	trafficTimer()
-	// start the eventbus handler
-	go startEventBus()
-
-	//testEvent()
 
 	// notifications, connect to eventbus
 	go NotificationsRunEventListener()

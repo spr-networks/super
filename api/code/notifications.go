@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
+	logStd "log"
 	"net/http"
 	"os"
 	"strconv"
@@ -226,7 +226,7 @@ func checkNotificationTraffic(logEntry PacketInfo) bool {
 func logTraffic(topic string, data string) {
 	var logEntry PacketInfo
 	if err := json.Unmarshal([]byte(data), &logEntry); err != nil {
-		log.Fatal(err)
+		logStd.Fatal(err)
 	}
 
 	shouldNotify := checkNotificationTraffic(logEntry)
@@ -265,10 +265,32 @@ func NotificationsRunEventListener() {
 			}
 
 			WSNotifyValue(topic, data)
-		}
+		} else if strings.HasPrefix(topic, "log:") {
+            // note could parse this and print for docker logs but a bit redundant
+            logStd.Printf("[%v] %v", topic, value)
+            /* this is logs from code, struct:
+               {
+                 "file": "/code/firewall.go:1195",
+                 "func": "main.establishDevice",
+                 "level": "info",
+                 "msg": "Populating route and vmaps aa:c0:6c:34:aa:20 192.168.2.10 ` eth0 ` wlan1.4116",
+                 "time": "2023-04-03T10:09:32Z"
+               }
+            */
 
-		//TODO forward to logging
+			//TODO forward to logdb
+            /*
+			f, err := os.OpenFile("/state/api/log.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				logStd.Println(err)
+			}
+			defer f.Close()
+			if _, err := f.WriteString(value); err != nil {
+				logStd.Println(err)
+			}
+            */
+		}
 	})
 
-	log.Println("sprbus client exit")
+	logStd.Println("sprbus client exit")
 }
