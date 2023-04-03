@@ -735,9 +735,10 @@ func saveDevicesJson(devices map[string]DeviceEntry) {
 		log.Fatal(err)
 	}
 
+	sprbus.Publish("devices:save", devices)
+
 	scrubbed_devices := convertDevicesPublic(devices)
 	savePublicDevicesJson(scrubbed_devices)
-
 }
 
 func getDevicesJson() map[string]DeviceEntry {
@@ -1001,6 +1002,8 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			val.PSKEntry.Psk = "**"
 		}
 
+		sprbus.Publish("device:update", val)
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(val)
 		return "", 200
@@ -1039,6 +1042,8 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 	devices[identity] = dev
 	saveDevicesJson(devices)
+
+	sprbus.Publish("device:save", dev)
 
 	if pskModified {
 		//psks updated -- update hostapd
@@ -1599,6 +1604,7 @@ func lookupWGDevice(devices *map[string]DeviceEntry, WGPubKey string, IP string)
 
 func refreshDeviceTags(dev DeviceEntry) {
 	applyPrivateNetworkUpstreamDevice(dev)
+	sprbus.Publish("device:tags:update", dev)
 }
 
 func refreshDeviceGroups(dev DeviceEntry) {
@@ -1646,6 +1652,8 @@ func refreshDeviceGroups(dev DeviceEntry) {
 
 	//and re-add
 	populateVmapEntries(ipv4, dev.MAC, ifname, "")
+
+	sprbus.Publish("device:groups:update", dev)
 }
 
 // from https://github.com/ItsJimi/go-arp/blob/master/arp.go
