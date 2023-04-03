@@ -22,6 +22,7 @@ import {
   IconButton,
   HStack,
   ScrollView,
+  Stack,
   Text,
   View,
   VStack,
@@ -113,60 +114,69 @@ const PeerList = (props) => {
             <FlatList
               data={peers}
               renderItem={({ item }) => (
-                <Box
-                  borderBottomWidth="1"
+                <HStack
+                  space={2}
+                  justifyContent="space-between"
+                  alignItems="center"
+                  borderBottomWidth={1}
+                  borderColor="muted.200"
                   _dark={{
                     borderColor: 'muted.600'
                   }}
-                  borderColor="muted.200"
-                  py="2"
+                  py={2}
                 >
-                  <HStack
-                    space={2}
+                  <Stack
+                    flex={1}
+                    space={1}
+                    direction={{ base: 'column', md: 'row' }}
                     justifyContent="space-between"
-                    alignItems="center"
                   >
                     <Text flex="1" bold>
                       {item.device ? item.device.Name : `peer`}
                     </Text>
                     <Text flex="1">{item.AllowedIPs}</Text>
                     <Text
+                      flex={2}
                       display={{ base: 'none', lg: 'flex' }}
                       fontSize="xs"
                       isTruncated
                     >
                       {item.PublicKey}
                     </Text>
-                    <Text>
+                    <Text flex={1}>
                       {item.LatestHandshake
                         ? prettyDate(new Date(item.LatestHandshake * 1e3))
                         : null}
                     </Text>
-                    <Text>
+                    <Text flex={1}>
                       {item.TransferRx ? (
                         <HStack space={1}>
-                          <HStack space={1}>
+                          <HStack space={1} alignItems={'center'}>
                             <Icon color="muted.500" icon={faArrowCircleUp} />
-                            <Text>{prettySize(item.TransferTx)}</Text>
+                            <Text fontSize="xs">
+                              {prettySize(item.TransferTx)}
+                            </Text>
                           </HStack>
-                          <HStack space={1}>
+                          <HStack space={1} alignItems={'center'}>
                             <Icon color="muted.500" icon={faArrowCircleDown} />
-                            <Text>{prettySize(item.TransferRx)}</Text>
+                            <Text fontSize="xs">
+                              {prettySize(item.TransferRx)}
+                            </Text>
                           </HStack>
                         </HStack>
                       ) : null}
                     </Text>
+                  </Stack>
 
-                    <IconButton
-                      alignSelf="center"
-                      size="sm"
-                      variant="ghost"
-                      colorScheme="secondary"
-                      icon={<Icon icon={faXmark} />}
-                      onPress={() => deleteListItem(item)}
-                    />
-                  </HStack>
-                </Box>
+                  <IconButton
+                    alignSelf="center"
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="secondary"
+                    icon={<Icon icon={faXmark} />}
+                    onPress={() => deleteListItem(item)}
+                  />
+                </HStack>
               )}
               keyExtractor={(item, index) => `${item.Name}${index}`}
             />
