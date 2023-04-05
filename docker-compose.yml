@@ -293,3 +293,20 @@ services:
       - ./state/plugins/packet_logs/:/state/plugins/packet_logs
       - ./configs/base/:/configs/base/
       - /dev/log:/dev/log
+  db:
+    container_name: superdb
+    image: ghcr.io/spr-networks/super_db:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: db
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_db:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_db:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: host
+    depends_on:
+      - "api"
+    logging: *default-logging
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./state/plugins/db/:/state/plugins/db/
