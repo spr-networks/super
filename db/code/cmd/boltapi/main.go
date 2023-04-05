@@ -98,16 +98,16 @@ func main() {
 
 	log.Println("database initd")
 
-    options := &bolt.Options{Timeout: 1 * time.Second}
+	options := &bolt.Options{Timeout: 1 * time.Second}
 	if *bucket != "" || *dump != false {
-        options.ReadOnly = true
-    }
+		options.ReadOnly = true
+	}
 
-    db, err := bolt.Open(*dbpath, 0664, options)
+	//db, err := bolt.Open(*dbpath, 0664, options)
+	db, err := bolt.Open(*dbpath, 0664, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	defer db.Close()
 
 	if *bucket != "" || *dump != false {

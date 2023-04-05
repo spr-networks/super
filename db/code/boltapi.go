@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	//"github.com/tidwall/gjson"
 )
 
 var (
@@ -35,8 +36,8 @@ type ApiError struct {
 }
 
 type BucketItem struct {
-	Key   string
-	Value interface{}
+	Key   string      `json:key`
+	Value interface{} `json:value`
 }
 
 //BucketItem helper functions
@@ -83,7 +84,7 @@ func Serve(boltdb *bolt.DB, socketpath string) error {
 		panic(err)
 	}
 
-fmt.Println("starting htp.Server...")
+	fmt.Println("starting htp.Server...")
 
 	pluginServer := http.Server{Handler: logRequest(router)}
 	return pluginServer.Serve(unixPluginListener)
@@ -179,6 +180,7 @@ func AddBucket(w http.ResponseWriter, r *http.Request) {
 
 func GetBucket(w http.ResponseWriter, r *http.Request) {
 	bucketName := mux.Vars(r)["name"]
+
 	items := []*BucketItem{}
 	if err := db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketName))
@@ -190,6 +192,7 @@ func GetBucket(w http.ResponseWriter, r *http.Request) {
 			bucketItem := &BucketItem{Key: string(k)}
 			bucketItem.DecodeValue(v)
 			items = append(items, bucketItem)
+
 			return nil
 		})
 	}); err != nil {
@@ -226,8 +229,9 @@ func AddBucketItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(strings.TrimSpace(bucketName)))
-		if bucket == nil {
+		//bucket := tx.Bucket([]byte(strings.TrimSpace(bucketName)))
+		bucket, err := tx.CreateBucketIfNotExists([]byte(strings.TrimSpace(bucketName)))
+		if err != nil {
 			return ErrBucketMissing
 		}
 
