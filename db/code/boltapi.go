@@ -1,17 +1,19 @@
 package boltapi
 
 import (
+	//"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/boltdb/bolt"
 	"github.com/gorilla/mux"
+	//"github.com/tidwall/gjson"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"strings"
-	//"github.com/tidwall/gjson"
+	//"time"
 )
 
 var (
@@ -74,6 +76,8 @@ func Serve(boltdb *bolt.DB, socketpath string) error {
 	router.HandleFunc("/bucket/{name}", AddBucketItem).Methods("PUT")
 	router.HandleFunc("/bucket/{name}", DeleteBucketItem).Methods("DELETE")
 
+	router.HandleFunc("/items/{name}", GetBucketItems).Methods("GET")
+
 	router.HandleFunc("/bucket/{name}/{key}", GetBucketItem).Methods("GET")
 	router.HandleFunc("/bucket/{name}/{key}", UpdateBucketItem).Methods("PUT")
 	router.HandleFunc("/bucket/{name}/{key}", DeleteBucketItem).Methods("DELETE")
@@ -84,7 +88,7 @@ func Serve(boltdb *bolt.DB, socketpath string) error {
 		panic(err)
 	}
 
-	fmt.Println("starting htp.Server...")
+	fmt.Println("starting http.Server...")
 
 	pluginServer := http.Server{Handler: logRequest(router)}
 	return pluginServer.Serve(unixPluginListener)
@@ -190,7 +194,9 @@ func GetBucket(w http.ResponseWriter, r *http.Request) {
 
 		return bucket.ForEach(func(k, v []byte) error {
 			bucketItem := &BucketItem{Key: string(k)}
+			// does this do anything atm.?
 			bucketItem.DecodeValue(v)
+
 			items = append(items, bucketItem)
 
 			return nil
@@ -207,6 +213,16 @@ func GetBucket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(items)
+}
+
+func GetBucketItems(w http.ResponseWriter, r *http.Request) {
+	bucketName := mux.Vars(r)["name"]
+
+	fmt.Println("bucket=", bucketName)
+	// TODO json decode .value for each item in bucket
+	// add search, range select here
+
+	http.Error(w, "Not implemented", http.StatusInternalServerError)
 }
 
 func AddBucketItem(w http.ResponseWriter, r *http.Request) {

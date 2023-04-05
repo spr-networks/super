@@ -103,8 +103,8 @@ func main() {
 		options.ReadOnly = true
 	}
 
-	//db, err := bolt.Open(*dbpath, 0664, options)
-	db, err := bolt.Open(*dbpath, 0664, &bolt.Options{Timeout: 1 * time.Second})
+	db, err := bolt.Open(*dbpath, 0664, options)
+	//db, err := bolt.Open(*dbpath, 0664, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		log.Fatal(err)
 	}
