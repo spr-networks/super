@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	logStd "log"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -237,6 +240,58 @@ func logTraffic(topic string, data string) {
 	}
 }
 
+// store log with bolt @ db container. fields: file, func, level, msg, time
+// TODO use same connection so we dont have to dial for each log entry
+var DbSocketPath = "/state/plugins/db/socket"
+
+func saveLogEntry(topic string, value string) error {
+	c := http.Client{}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", DbSocketPath)
+		},
+	}
+	defer c.CloseIdleConnections()
+
+	// key for logs = 8 bytes big endian unix nano ts
+	var key = make([]byte, 8)
+	binary.BigEndian.PutUint64(key, uint64(time.Now().UnixNano()))
+
+	url := fmt.Sprintf("http://localhost/bucket/%s", topic)
+
+	// key = byte encoded unix nano
+	type DbEntry struct {
+		Key   string `json:key`
+		Value string `json:value`
+	}
+
+	var entry DbEntry
+	entry.Key = string(key)
+	entry.Value = value
+
+	jsonValue, err := json.Marshal(entry)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("[logdb] url=%s, key=%s, value=%s\n", url, key, jsonValue)
+
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonValue))
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+
+	return err
+}
+
 // the rest is eventbus -> ws forwarding
 // this is run in a separate thread
 func NotificationsRunEventListener() {
@@ -253,6 +308,8 @@ func NotificationsRunEventListener() {
 		time.Sleep(time.Second / 4)
 	}
 
+	log.Println("registering handler for logging ...")
+
 	sprbus.HandleEvent("", func(topic string, value string) {
 		if strings.HasPrefix(topic, "nft") {
 			logTraffic(topic, value)
@@ -266,31 +323,53 @@ func NotificationsRunEventListener() {
 
 			WSNotifyValue(topic, data)
 		} else if strings.HasPrefix(topic, "log:") {
-            // note could parse this and print for docker logs but a bit redundant
-            logStd.Printf("[%v] %v", topic, value)
-            /* this is logs from code, struct:
-               {
-                 "file": "/code/firewall.go:1195",
-                 "func": "main.establishDevice",
-                 "level": "info",
-                 "msg": "Populating route and vmaps aa:c0:6c:34:aa:20 192.168.2.10 ` eth0 ` wlan1.4116",
-                 "time": "2023-04-03T10:09:32Z"
-               }
-            */
+			// log:api, log:www:access
 
-			//TODO forward to logdb
-            /*
-			f, err := os.OpenFile("/state/api/log.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			// for docker container logs
+			logStd.Printf("[%v] %v\n", topic, value)
+			err := saveLogEntry(topic, value)
+
 			if err != nil {
-				logStd.Println(err)
+				logStd.Println("error saving logs:", err)
 			}
-			defer f.Close()
-			if _, err := f.WriteString(value); err != nil {
-				logStd.Println(err)
-			}
-            */
 		}
 	})
 
 	logStd.Println("sprbus client exit")
 }
+
+//old code before db container: Talk directly to bolt db
+/*
+    var LogDbFilename = "/state/api/logs.db"
+
+	// open log db handle
+    // NOTE Bolt obtains a file lock on the data file so multiple processes cannot open the same database at the same time
+	logDb, err := bolt.Open(LogDbFilename, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer logDb.Close()
+
+	err = logDb.Update(func(tx *bolt.Tx) error {
+	    //timestamp := gjson.Get(value, "time").String()
+		//var t, err = time.Parse(time.RFC3339, timestamp)
+
+		// use timestamp in nanoseconds as 8byte for key
+		var k = make([]byte, 8)
+		binary.BigEndian.PutUint64(k, uint64(time.Now().UnixNano()))
+
+		// Create bucket (if it doesn't exist).
+		b, err := tx.CreateBucketIfNotExists([]byte(name))
+		if err != nil {
+			return err
+		}
+
+		if err := b.Put(k, []byte(value)); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return err
+*/

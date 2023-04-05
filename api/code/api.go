@@ -2155,10 +2155,10 @@ func logRequest(handler http.Handler) http.Handler {
 		logStd.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
 
 		logs := map[string]interface{}{}
-		logs["RemoteAddr"] = r.RemoteAddr
-		logs["Method"] = r.Method
-		logs["Path"] = r.URL.Path
-		sprbus.Publish("www:log:access", logs)
+		logs["remoteaddr"] = r.RemoteAddr
+		logs["method"] = r.Method
+		logs["path"] = r.URL.Path
+		sprbus.Publish("log:www:access", logs)
 
 		handler.ServeHTTP(w, r)
 	})
