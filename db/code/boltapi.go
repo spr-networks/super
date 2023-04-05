@@ -238,6 +238,7 @@ func AddBucketItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//BucketItem.Value is json object until its stored, then we serialize
 	encodedValue, err := payload.EncodeValue()
 	if err != nil {
 		fail(err, nil)
@@ -245,7 +246,7 @@ func AddBucketItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := db.Update(func(tx *bolt.Tx) error {
-		//bucket := tx.Bucket([]byte(strings.TrimSpace(bucketName)))
+		//create bucket if it doesnt exist
 		bucket, err := tx.CreateBucketIfNotExists([]byte(strings.TrimSpace(bucketName)))
 		if err != nil {
 			return ErrBucketMissing

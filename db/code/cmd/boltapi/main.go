@@ -11,7 +11,7 @@ import (
 	//"strings"
 	"boltapi"
 	"github.com/boltdb/bolt"
-	"github.com/tidwall/gjson"
+	//"github.com/tidwall/gjson"
 )
 
 var (
@@ -64,7 +64,9 @@ func cli(db *bolt.DB, bucket string) {
 				bucketItem := &boltapi.BucketItem{Key: string(k)}
 				bucketItem.DecodeValue(v)
 
-				fmt.Printf("[%s] %s\n", bucket, gjson.Get(string(v), "@values"))
+				//x, ok := gjson.Parse(string(v)).Value().(map[string]interface{})
+				//fmt.Printf("[%s] %s\n", bucket, gjson.Get(string(v), "@values"))
+				fmt.Printf("[%s] %s\n", bucket, v)
 
 				return nil
 			}); err != nil {

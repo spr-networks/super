@@ -29,3 +29,25 @@ install:
 * run in thread, have a config for logs so user can cap what/when to rotate
 
 * use sprbus / signal to tell main ton reopen a fresh db fd
+
+## howto send logs with curl
+
+```bash
+TOKEN="api-token"
+
+curl -si -H "Authorization: Bearer $TOKEN" \
+    spr/plugins/db/buckets
+
+curl -si -H "Authorization: Bearer $TOKEN" \
+    -X PUT -H "Content-Type: application/json" \
+    --data '{"name":"log:test"}'
+    spr/plugins/db/buckets
+
+curl -si -H "Authorization: Bearer $TOKEN" \
+    -X PUT -H "Content-Type: application/json" \
+    --data '{"key":"2234", "value": {"msg":"testmsg2", "test":"bbbb"}}' \
+    spr/plugins/db/bucket/log:test
+
+curl -si -H "Authorization: Bearer $TOKEN" \
+    spr/plugins/db/bucket/log:test
+```
