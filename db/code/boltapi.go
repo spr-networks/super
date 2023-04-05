@@ -1,7 +1,7 @@
 package boltapi
 
 import (
-	//"encoding/binary"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	//"time"
+	"time"
 )
 
 var (
@@ -194,7 +194,6 @@ func GetBucket(w http.ResponseWriter, r *http.Request) {
 
 		return bucket.ForEach(func(k, v []byte) error {
 			bucketItem := &BucketItem{Key: string(k)}
-			// does this do anything atm.?
 			bucketItem.DecodeValue(v)
 
 			items = append(items, bucketItem)
@@ -215,14 +214,46 @@ func GetBucket(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(items)
 }
 
+// array of .values, including time key
 func GetBucketItems(w http.ResponseWriter, r *http.Request) {
+	// TODO add search, range select here
 	bucketName := mux.Vars(r)["name"]
 
-	fmt.Println("bucket=", bucketName)
-	// TODO json decode .value for each item in bucket
-	// add search, range select here
+	var items []interface{}
+	if err := db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketName))
+		if bucket == nil {
+			return ErrBucketMissing
+		}
 
-	http.Error(w, "Not implemented", http.StatusInternalServerError)
+		return bucket.ForEach(func(k, v []byte) error {
+			bucketItem := &BucketItem{Key: string(k)}
+			bucketItem.DecodeValue(v)
+
+			jsonMap := bucketItem.Value.(map[string]interface{})
+
+			if _, exists := jsonMap["time"]; !exists {
+				// time from key
+				t := time.Unix(0, int64(binary.BigEndian.Uint64(k))).UTC()
+				jsonMap["time"] = t.Format(time.RFC3339)
+			}
+
+			items = append(items, jsonMap)
+
+			return nil
+		})
+	}); err != nil {
+		log.Println(ApiError{ErrBucketGet, err})
+		switch err {
+		case ErrBucketGet:
+			http.Error(w, ErrBucketGet.Error(), http.StatusInternalServerError)
+		case ErrBucketMissing:
+			http.Error(w, ErrBucketMissing.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	json.NewEncoder(w).Encode(items)
 }
 
 func AddBucketItem(w http.ResponseWriter, r *http.Request) {
