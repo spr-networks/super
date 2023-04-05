@@ -260,23 +260,28 @@ func saveLogEntry(topic string, value string) error {
 	url := fmt.Sprintf("http://localhost/bucket/%s", topic)
 
 	// key = byte encoded unix nano
+	// value = json object, saved as string in db
 	type DbEntry struct {
-		Key   string `json:key`
-		Value string `json:value`
+		Key string `json:key`
+		//not a string
+		Value interface{} `json:value`
 	}
 
+	//entry.Value is json object
 	var entry DbEntry
 	entry.Key = string(key)
-	entry.Value = value
+	if err := json.Unmarshal([]byte(value), &entry.Value); err != nil {
+		return err
+	}
 
-	jsonValue, err := json.Marshal(entry)
+	body, err := json.Marshal(entry)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("[logdb] url=%s, key=%s, value=%s\n", url, key, jsonValue)
+	fmt.Printf("[logdb] url=%s, body=%s\n", url, body)
 
-	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonValue))
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
