@@ -131,7 +131,7 @@ const ForwardList = (props) => {
 
                 <HStack space={1}>
                   <Text bold>
-                    {item.deviceDst ? item.deviceDst.Name : item.DstIP}
+                    { (item.deviceDst && item.deviceDst.Name && item.deviceDst.Name.length > 0) ? item.deviceDst.Name : item.DstIP}
                   </Text>
                   <Text color="muted.500">:</Text>
                   <Text>{item.DstPort}</Text>
