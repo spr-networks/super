@@ -1,18 +1,19 @@
 package main
 
 import (
+	"boltapi"
 	"encoding/binary"
-	//"encoding/hex"
-	//"encoding/json"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"log"
-	"net/http"
-	"time"
-	//"strings"
-	"boltapi"
 	"github.com/boltdb/bolt"
+	"github.com/spr-networks/sprbus"
+	"log"
+	logStd "log"
+	"net/http"
+	"strings"
+	"time"
 	//"github.com/tidwall/gjson"
 )
 
@@ -106,6 +107,42 @@ func cli(db *bolt.DB, bucket string) {
 	return
 }
 
+//TODO config
+func shouldLogEvent(topic string) bool {
+	// log:api, log:www:access
+	if strings.HasPrefix(topic, "log:") {
+		return true
+	}
+
+	return false
+}
+
+func saveLogEntry(topic string, value string) error {
+	var jsonData map[string]interface{} // json object
+	if err := json.Unmarshal([]byte(value), &jsonData); err != nil {
+		fmt.Println("db store, invalid json", err)
+		return err
+	}
+
+	_, err := boltapi.StoreItem(topic, jsonData)
+	return err
+}
+
+//subscribe to sprbus and store in db
+func handleLogEvent(topic string, value string) {
+	if !shouldLogEvent(topic) {
+		return
+	}
+
+	// for docker container logs
+	logStd.Printf("[%v] %v\n", topic, value)
+	err := saveLogEntry(topic, value)
+
+	if err != nil {
+		logStd.Println("error saving logs:", err)
+	}
+}
+
 func main() {
 	flag.Parse()
 
@@ -128,6 +165,8 @@ func main() {
 
 		return
 	}
+
+	go sprbus.HandleEvent("", handleLogEvent)
 
 	log.Println("serving", socketpath)
 	log.Fatal(boltapi.Serve(db, socketpath))

@@ -1,4 +1,3 @@
-
 currently we store data in bolt db.
 see documentation and code in code/boltapi.go for more information.
 
@@ -15,22 +14,52 @@ make
 
 # TODO
 
-* boltdb - add to makefile:
+- boltdb - add to makefile:
+
 ```yaml
-install:
-    go install github.com/spr-networks/super
+install: go install github.com/spr-networks/super
 ```
 
-* same api routes and methods should be used for other integrations
-* future: add more paths and handlers to Serve for new db engines.
+- same api routes and methods should be used for other integrations
+- future: add more paths and handlers to Serve for new db engines.
 
 **logrotate**
-* lumberjack: https://github.com/natefinch/lumberjack
-* run in thread, have a config for logs so user can cap what/when to rotate
 
-* use sprbus / signal to tell main ton reopen a fresh db fd
+- lumberjack: https://github.com/natefinch/lumberjack
+- run in thread, have a config for logs so user can cap what/when to rotate
+
+- use sprbus / signal to tell main ton reopen a fresh db fd
 
 ## howto send logs with curl
+
+by default current timestamp will be used as key
+
+```bash
+TOKEN="api-token"
+AUTH="Authorization: Bearer $TOKEN"
+
+# add data
+curl -si -H "$AUTH" -X PUT "spr/bucket/log:test" --data '{"msg":"logmsg1"}'
+curl -si -H "$AUTH" -X PUT "spr/bucket/log:test" --data '{"msg":"logmsg2"}'
+
+# list items
+curl -si -H "$AUTH" "spr/items/log:test jq .
+[
+  {
+    "msg": "logmsg1",
+    "time": "2023-04-06T11:55:43Z"
+  },
+  {
+    "msg": "logmsg2",
+    "time": "2023-04-06T11:55:46Z"
+  }
+]
+
+# delete items
+curl -X DELETE -s "0:8080/bucket/log:test"
+```
+
+for more control & setting key/values:
 
 ```bash
 TOKEN="api-token"
@@ -56,12 +85,4 @@ curl -si -H "$AUTH" spr/plugins/db/bucket/log:test
 curl -si -H "$AUTH" spr/plugins/db/items/log:test
 ```
 
-Note: its not required to create a bucket before sending data to it.
-If it doesnt exist it will be created, example:
-```bash
-curl -si -H "$AUTH" \
-    -X PUT --data '{"key":"1234", "value": {"msg":"test"}}' \
-    spr/plugins/db/bucket/log:testtmp
-
-curl -si -H "$AUTH" spr/plugins/db/items/log:testtmp
-```
+Note: If a bucket does not exist when adding data it will be created.

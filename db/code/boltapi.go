@@ -42,7 +42,7 @@ type BucketItem struct {
 	Value interface{} `json:value`
 }
 
-//BucketItem helper functions
+// BucketItem helper functions
 func (item *BucketItem) EncodeKey() []byte {
 	return []byte(item.Key)
 }
@@ -70,11 +70,10 @@ func Serve(boltdb *bolt.DB, socketpath string) error {
 
 	router.HandleFunc("/buckets", ListBuckets).Methods("GET")
 	router.HandleFunc("/buckets", AddBucket).Methods("PUT")
-	router.HandleFunc("/buckets", DeleteBucket).Methods("DELETE")
 
 	router.HandleFunc("/bucket/{name}", GetBucket).Methods("GET")
 	router.HandleFunc("/bucket/{name}", AddBucketItem).Methods("PUT")
-	router.HandleFunc("/bucket/{name}", DeleteBucketItem).Methods("DELETE")
+	router.HandleFunc("/bucket/{name}", DeleteBucket).Methods("DELETE")
 
 	router.HandleFunc("/items/{name}", GetBucketItems).Methods("GET")
 
@@ -89,7 +88,6 @@ func Serve(boltdb *bolt.DB, socketpath string) error {
 	}
 
 	fmt.Println("starting http.Server...")
-
 	pluginServer := http.Server{Handler: logRequest(router)}
 	return pluginServer.Serve(unixPluginListener)
 }
@@ -256,24 +254,33 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(items)
 }
 
-func AddBucketItem(w http.ResponseWriter, r *http.Request) {
-	fail := func(cusromErr, origErr error) {
-		log.Println(ApiError{cusromErr, origErr})
-		http.Error(w, cusromErr.Error(), http.StatusInternalServerError)
-	}
+func StoreItem(bucketName string, jsonData map[string]interface{}) (*BucketItem, error) {
+	var payload *BucketItem
+	// .key, .value
+	if len(jsonData) == 2 && jsonData["key"] != nil && jsonData["value"] != nil {
+		payload = &BucketItem{Key: jsonData["key"].(string), Value: jsonData["value"]}
+	} else {
+		//if .key and .value is not set but have valid json
+		//we set body as value and current time as key
+		var key = make([]byte, 8)
+		t := time.Now().UnixNano()
 
-	bucketName := mux.Vars(r)["name"]
-	payload := new(BucketItem)
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		fail(ErrBucketItemDecode, err)
-		return
+		// if time is set in json, use it as key
+		if strTime, ok := jsonData["time"].(string); ok {
+			if ts, err := time.Parse(time.RFC3339, strTime); err == nil {
+				t = ts.UnixNano()
+			}
+		}
+
+		binary.BigEndian.PutUint64(key, uint64(t))
+
+		payload = &BucketItem{Key: string(key), Value: jsonData}
 	}
 
 	//BucketItem.Value is json object until its stored, then we serialize
 	encodedValue, err := payload.EncodeValue()
 	if err != nil {
-		fail(err, nil)
-		return
+		return nil, err
 	}
 
 	if err := db.Update(func(tx *bolt.Tx) error {
@@ -285,8 +292,29 @@ func AddBucketItem(w http.ResponseWriter, r *http.Request) {
 
 		return bucket.Put(payload.EncodeKey(), encodedValue)
 	}); err != nil {
-		fail(ErrBucketItemCreate, err)
+		return nil, err
+	}
 
+	return payload, nil
+}
+
+func AddBucketItem(w http.ResponseWriter, r *http.Request) {
+	fail := func(cusromErr, origErr error) {
+		log.Println(ApiError{cusromErr, origErr})
+		http.Error(w, cusromErr.Error(), http.StatusInternalServerError)
+	}
+
+	bucketName := mux.Vars(r)["name"]
+
+	var jsonData map[string]interface{} // json object
+	if err := json.NewDecoder(r.Body).Decode(&jsonData); err != nil {
+		fail(ErrBucketItemDecode, err)
+		return
+	}
+
+	payload, err := StoreItem(bucketName, jsonData)
+	if err != nil {
+		fail(ErrBucketItemCreate, err)
 		return
 	}
 
@@ -370,10 +398,11 @@ func DeleteBucketItem(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//TODO
+// TODO
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		//sprbus.Publish("log:db", map[string]int64{"method": r.Method})
 		handler.ServeHTTP(w, r)
 	})
 }
