@@ -56,7 +56,7 @@ curl -si -H "$AUTH" "spr/items/log:test jq .
 ]
 
 # delete items
-curl -X DELETE -s "0:8080/bucket/log:test"
+curl -X DELETE -s "spr/bucket/log:test"
 ```
 
 for more control & setting key/values:
