@@ -4,7 +4,7 @@
 ![version](https://img.shields.io/github/v/tag/spr-networks/super?sort=semver)
 ![dev](https://img.shields.io/github/v/tag/spr-networks/super?branch=dev&label=dev)
 ![docker build](https://github.com/spr-networks/super/actions/workflows/docker-image.yml/badge.svg?branch=main)
-![iso build](https://github.com/spr-networks/super/actions/workflows/ubuntu-iso.yml/badge.svg?branch=main)
+![iso build](https://github.com/spr-networks/super/actions/workflows/pi-ubuntu-iso.yml/badge.svg?branch=main)
 ![license](https://img.shields.io/github/license/spr-networks/super)
 
 ## Introduction
