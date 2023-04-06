@@ -26,7 +26,7 @@ import (
 
 var (
 	gDBPath     = flag.String("gDBPath", "/state/plugins/db/logs.db", "Path to bolt database")
-	gConfigPath = flag.String("config", "/state/plugins/db/config.json", "Path to boltapi configuration")
+	gConfigPath = flag.String("config", "/configs/db/config.json", "Path to boltapi configuration")
 	gDump       = flag.Bool("dump", false, "list gBuckets. dont run http server")
 	gBucket     = flag.String("b", "", "bucket to dump. dont run http server")
 	gSocketPath = "/state/plugins/db/socket"

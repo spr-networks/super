@@ -198,4 +198,6 @@ services:
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
+      - ./configs/db/:/configs/db/
+      - ./state/api/:/state/api
       - ./state/plugins/db/:/state/plugins/db/
