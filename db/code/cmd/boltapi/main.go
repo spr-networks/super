@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/binary"
+	//"encoding/hex"
 	//"encoding/json"
 	"errors"
 	"flag"
@@ -64,9 +66,18 @@ func cli(db *bolt.DB, bucket string) {
 				bucketItem := &boltapi.BucketItem{Key: string(k)}
 				bucketItem.DecodeValue(v)
 
+				jsonMap := bucketItem.Value.(map[string]interface{})
+				fmt.Printf("[JSON] %v\n", jsonMap)
+
+				if _, exists := jsonMap["time"]; !exists {
+					// time from key
+					t := time.Unix(0, int64(binary.BigEndian.Uint64(k))).UTC()
+					jsonMap["time"] = t.Format(time.RFC3339)
+				}
+
 				//x, ok := gjson.Parse(string(v)).Value().(map[string]interface{})
 				//fmt.Printf("[%s] %s\n", bucket, gjson.Get(string(v), "@values"))
-				fmt.Printf("[%s] %s\n", bucket, v)
+				fmt.Printf("[%s] %s\n", bucket, jsonMap)
 
 				return nil
 			}); err != nil {

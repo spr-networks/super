@@ -34,20 +34,34 @@ install:
 
 ```bash
 TOKEN="api-token"
+AUTH="Authorization: Bearer $TOKEN"
 
-curl -si -H "Authorization: Bearer $TOKEN" \
+# list buckets
+curl -si -H "$AUTH" spr/plugins/db/buckets
+
+# add bucket
+curl -si -H "$AUTH" \
+    -X PUT --data '{"name":"log:test"}' \
     spr/plugins/db/buckets
 
-curl -si -H "Authorization: Bearer $TOKEN" \
-    -X PUT -H "Content-Type: application/json" \
-    --data '{"name":"log:test"}'
-    spr/plugins/db/buckets
-
-curl -si -H "Authorization: Bearer $TOKEN" \
-    -X PUT -H "Content-Type: application/json" \
-    --data '{"key":"2234", "value": {"msg":"testmsg2", "test":"bbbb"}}' \
+# add value with key to bucket
+curl -si -H "$AUTH" \
+    -X PUT --data '{"key":"1234", "value": {"msg":"test"}}' \
     spr/plugins/db/bucket/log:test
 
-curl -si -H "Authorization: Bearer $TOKEN" \
-    spr/plugins/db/bucket/log:test
+# get entries in bucket
+curl -si -H "$AUTH" spr/plugins/db/bucket/log:test
+
+# get only values for bucket
+curl -si -H "$AUTH" spr/plugins/db/items/log:test
+```
+
+Note: its not required to create a bucket before sending data to it.
+If it doesnt exist it will be created, example:
+```bash
+curl -si -H "$AUTH" \
+    -X PUT --data '{"key":"1234", "value": {"msg":"test"}}' \
+    spr/plugins/db/bucket/log:testtmp
+
+curl -si -H "$AUTH" spr/plugins/db/items/log:testtmp
 ```
