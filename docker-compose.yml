@@ -309,4 +309,5 @@ services:
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
+      - ./state/api/:/state/api/
       - ./state/plugins/db/:/state/plugins/db/
