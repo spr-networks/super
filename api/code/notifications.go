@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	logStd "log"
-	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -240,63 +237,6 @@ func logTraffic(topic string, data string) {
 	}
 }
 
-// store log with bolt @ db container. fields: file, func, level, msg, time
-// TODO use same connection so we dont have to dial for each log entry
-var DbSocketPath = "/state/plugins/db/socket"
-
-func saveLogEntry(topic string, value string) error {
-	c := http.Client{}
-	c.Transport = &http.Transport{
-		Dial: func(network, addr string) (net.Conn, error) {
-			return net.Dial("unix", DbSocketPath)
-		},
-	}
-	defer c.CloseIdleConnections()
-
-	// key for logs = 8 bytes big endian unix nano ts
-	var key = make([]byte, 8)
-	binary.BigEndian.PutUint64(key, uint64(time.Now().UnixNano()))
-
-	url := fmt.Sprintf("http://localhost/bucket/%s", topic)
-
-	// key = byte encoded unix nano
-	// value = json object, saved as string in db
-	type DbEntry struct {
-		Key string `json:key`
-		//not a string
-		Value interface{} `json:value`
-	}
-
-	//entry.Value is json object
-	var entry DbEntry
-	entry.Key = string(key)
-	if err := json.Unmarshal([]byte(value), &entry.Value); err != nil {
-		return err
-	}
-
-	body, err := json.Marshal(entry)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("[logdb] url=%s, body=%s\n", url, body)
-
-	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(body))
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
-
-	return err
-}
-
 // the rest is eventbus -> ws forwarding
 // this is run in a separate thread
 func NotificationsRunEventListener() {
@@ -332,49 +272,8 @@ func NotificationsRunEventListener() {
 
 			// for docker container logs
 			logStd.Printf("[%v] %v\n", topic, value)
-			err := saveLogEntry(topic, value)
-
-			if err != nil {
-				logStd.Println("error saving logs:", err)
-			}
 		}
 	})
 
 	logStd.Println("sprbus client exit")
 }
-
-//old code before db container: Talk directly to bolt db
-/*
-    var LogDbFilename = "/state/api/logs.db"
-
-	// open log db handle
-    // NOTE Bolt obtains a file lock on the data file so multiple processes cannot open the same database at the same time
-	logDb, err := bolt.Open(LogDbFilename, 0600, &bolt.Options{Timeout: 1 * time.Second})
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer logDb.Close()
-
-	err = logDb.Update(func(tx *bolt.Tx) error {
-	    //timestamp := gjson.Get(value, "time").String()
-		//var t, err = time.Parse(time.RFC3339, timestamp)
-
-		// use timestamp in nanoseconds as 8byte for key
-		var k = make([]byte, 8)
-		binary.BigEndian.PutUint64(k, uint64(time.Now().UnixNano()))
-
-		// Create bucket (if it doesn't exist).
-		b, err := tx.CreateBucketIfNotExists([]byte(name))
-		if err != nil {
-			return err
-		}
-
-		if err := b.Put(k, []byte(value)); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	return err
-*/
