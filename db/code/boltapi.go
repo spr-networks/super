@@ -229,7 +229,7 @@ func keyToTimeString(key []byte) (string, error) {
 	return ts.UTC().Format(time.RFC3339), err
 }
 
-//timestamp to 8 byte key
+// timestamp to 8 byte key
 func timeKey(s string) ([]byte, error) {
 	ts, err := time.Parse(time.RFC3339, s)
 	if err != nil {
