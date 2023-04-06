@@ -1,26 +1,36 @@
 package main
 
 import (
-	"boltapi"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/boltdb/bolt"
-	"github.com/spr-networks/sprbus"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
+)
+
+import (
+	"github.com/boltdb/bolt"
+	"github.com/spr-networks/sprbus"
 	//"github.com/tidwall/gjson"
 )
 
+import (
+	"boltapi"
+)
+
 var (
-	dbpath     = flag.String("dbpath", "/state/plugins/db/logs.db", "Path to bolt database")
-	dump       = flag.Bool("dump", false, "list buckets. dont run http server")
-	bucket     = flag.String("b", "", "bucket to dump. dont run http server")
-	socketpath = "/state/plugins/db/socket"
+	gDBPath     = flag.String("gDBPath", "/state/plugins/db/logs.db", "Path to bolt database")
+	gConfigPath = flag.String("config", "/state/plugins/db/config.json", "Path to boltapi configuration")
+	gDump       = flag.Bool("dump", false, "list gBuckets. dont run http server")
+	gBucket     = flag.String("b", "", "bucket to dump. dont run http server")
+	gSocketPath = "/state/plugins/db/socket"
+	DBmtx       sync.Mutex
 )
 
 type CustomResponseWriter struct {
@@ -55,7 +65,7 @@ var testF = func(w http.ResponseWriter, r *http.Request) {
 
 func cli(db *bolt.DB, bucket string) {
 	if err := db.View(func(tx *bolt.Tx) error {
-		// list single or all bucket(s)
+		// list single or all gBucket(s)
 		if bucket != "" {
 			b := tx.Bucket([]byte(bucket))
 			if b == nil {
@@ -76,7 +86,7 @@ func cli(db *bolt.DB, bucket string) {
 				}
 
 				//x, ok := gjson.Parse(string(v)).Value().(map[string]interface{})
-				//fmt.Printf("[%s] %s\n", bucket, gjson.Get(string(v), "@values"))
+				//fmt.Printf("[%s] %s\n", gBucket, gjson.Get(string(v), "@values"))
 				fmt.Printf("[%s] %s\n", bucket, jsonMap)
 
 				return nil
@@ -121,8 +131,20 @@ type LogConfig struct {
 }
 
 func loadConfig() *LogConfig {
+	DBmtx.Lock()
+	defer DBmtx.Unlock()
+
 	config := &LogConfig{
-		SaveEvents: []string{"log:api", "log:www:access"},
+		SaveEvents: []string{"log:api", "log:www:access", "dns:block:event", "dns:override:event"},
+	}
+	data, err := ioutil.ReadFile(*gConfigPath)
+	if err != nil {
+		log.Println("[-] Empty db configuration, initializing")
+	} else {
+		err := json.Unmarshal(data, &config)
+		if err != nil {
+			log.Println("[-] Failed to decode db configuration, initializing")
+		}
 	}
 
 	return config
@@ -140,7 +162,7 @@ func shouldLogEvent(topic string) bool {
 	return false
 }
 
-//subscribe to sprbus and store in db
+// subscribe to sprbus and store in db
 func handleLogEvent(topic string, value string) {
 	if !shouldLogEvent(topic) {
 		return
@@ -164,24 +186,24 @@ func main() {
 	log.Println("database initd")
 
 	options := &bolt.Options{Timeout: 1 * time.Second}
-	if *bucket != "" || *dump != false {
+	if *gBucket != "" || *gDump != false {
 		options.ReadOnly = true
 	}
 
-	db, err := bolt.Open(*dbpath, 0664, options)
+	db, err := bolt.Open(*gDBPath, 0664, options)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	if *bucket != "" || *dump != false {
-		cli(db, *bucket)
+	if *gBucket != "" || *gDump != false {
+		cli(db, *gBucket)
 
 		return
 	}
 
 	go sprbus.HandleEvent("", handleLogEvent)
 
-	log.Println("serving", socketpath)
-	log.Fatal(boltapi.Serve(db, socketpath))
+	log.Println("serving", gSocketPath)
+	log.Fatal(boltapi.Serve(db, gSocketPath))
 }
