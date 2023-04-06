@@ -232,8 +232,10 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 
 			if _, exists := jsonMap["time"]; !exists {
 				// time from key
-				t := time.Unix(0, int64(binary.BigEndian.Uint64(k))).UTC()
-				jsonMap["time"] = t.Format(time.RFC3339)
+				if len(k) == 8 {
+					t := time.Unix(0, int64(binary.BigEndian.Uint64(k))).UTC()
+					jsonMap["time"] = t.Format(time.RFC3339)
+				}
 			}
 
 			items = append(items, jsonMap)
