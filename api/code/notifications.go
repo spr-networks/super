@@ -271,7 +271,7 @@ func NotificationsRunEventListener() {
 			// log:api, log:www:access
 
 			// for docker container logs
-			logStd.Printf("[%v] %v\n", topic, value)
+			//logStd.Printf("[%v] %v\n", topic, value)
 		}
 	})
 
