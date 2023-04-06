@@ -11,16 +11,14 @@ export default class Dhcp extends Component {
   async componentDidMount() {
     const refreshList = async () => {
       let divs = []
-      const vmap = await nfmapAPI
-        .getNFVerdictMap('ethernet_filter')
-        .catch((error) => {
-          //404 = no clients in map yet
-          if (error.message !== 404) {
-            this.context.error(
-              'API Failure for: ' + v.Name + ' ' + error.message
-            )
-          }
-        })
+      //TBD -- need to call out into mesh nodes also for dhcp
+      // also this should use the new DHCP API. 
+      const vmap = await nfmapAPI.getNFVerdictMap('ethernet_filter').catch((error) => {
+        //404 = no clients in map yet
+        if (error.message !== 404) {
+          this.context.error('API Failure for: ' + v.Name + ' ' + error.message)
+        }
+      })
 
       const arp = await wifiAPI.arp().catch((error) => {
         this.context.error('API Failure:' + error.message)
