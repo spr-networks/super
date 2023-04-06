@@ -149,6 +149,7 @@ services:
       - ./state/dhcp/:/state/dhcp/
       - ./state/dns/:/state/dns/
       - ./state/api/:/state/api/
+      - ./state/backups/:/state/backups/
       - ./state/base/:/state/base/
       - ./state/plugins/:/state/plugins/
       - ./state/public/:/state/public/

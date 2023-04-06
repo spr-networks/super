@@ -36,6 +36,7 @@ var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
 var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
+var ConfigBackupDirectory = TEST_PREFIX + "/state/backups"
 
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
 
@@ -583,6 +584,7 @@ func getContainerVersion(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(version)
 }
 
+
 func doConfigsBackup(w http.ResponseWriter, r *http.Request) {
 	//get version
 	req, err := http.NewRequest(http.MethodGet, "http://localhost/git_version", nil)
@@ -622,8 +624,7 @@ func doConfigsBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	backupDirectory := "/state/api"
-	backupFilePath := backupDirectory + "/" + filename
+	backupFilePath := ConfigBackupDirectory + "/" + filename
 
 	err = exec.Command("tar", "czf", backupFilePath, TEST_PREFIX+"/configs").Run()
 	if err != nil {
@@ -641,13 +642,12 @@ func getConfigsBackup(w http.ResponseWriter, r *http.Request) {
 	// preTagFmt="^v?[0-9]+\.[0-9]+\.[0-9]+(-$suffix\.[0-9]+)$"
 	// example: v0.1.1-beta.5-1-g79a97ae
 	validFilename := regexp.MustCompile(`^spr-configs-v[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+\.[0-9\-a-h]+)?.tgz$`).MatchString
-	backupDirectory := "/state/api"
 
 	filename := mux.Vars(r)["name"]
 
 	// list files if empty
 	if filename == "" {
-		backups, err := filepath.Glob(backupDirectory + "/spr-configs-*.tgz")
+		backups, err := filepath.Glob(ConfigBackupDirectory + "/spr-configs-*.tgz")
 
 		if err != nil {
 			http.Error(w, "Invalid config name", 400)
@@ -683,12 +683,12 @@ func getConfigsBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	backupFilePath := backupDirectory + "/" + filename
+	backupFilePath := ConfigBackupDirectory + "/" + filename
 
 	// verify
 	absPath := filepath.Dir(filepath.Clean(backupFilePath))
 	_, err := os.Stat(backupFilePath)
-	if absPath != backupDirectory || err != nil {
+	if absPath != ConfigBackupDirectory || err != nil {
 		http.Error(w, "Invalid config name", 400)
 		return
 	}
