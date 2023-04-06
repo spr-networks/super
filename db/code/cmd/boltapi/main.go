@@ -135,7 +135,7 @@ func handleLogEvent(topic string, value string) {
 	}
 
 	// for docker container logs
-	logStd.Printf("[%v] %v\n", topic, value)
+	//logStd.Printf("[%v] %v\n", topic, value)
 	err := saveLogEntry(topic, value)
 
 	if err != nil {
