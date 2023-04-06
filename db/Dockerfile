@@ -17,7 +17,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
 
 FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends wireguard-tools && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && rm -rf /var/lib/apt/lists/*
 COPY scripts /scripts/
 COPY --from=builder /boltapi /
 ENTRYPOINT ["/scripts/startup.sh"]
