@@ -55,6 +55,9 @@ curl -si -H "$AUTH" "spr/items/log:test jq .
   }
 ]
 
+# search
+curl -s -H "$AUTH" 'spr/plugins/db/items/log:test?min=2023-04-06T16:14:45Z&max=2023-04-06T16:15:45Z' | jq .
+
 # delete items
 curl -X DELETE -s "spr/bucket/log:test"
 ```

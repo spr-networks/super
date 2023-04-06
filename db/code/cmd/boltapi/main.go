@@ -10,7 +10,6 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/spr-networks/sprbus"
 	"log"
-	logStd "log"
 	"net/http"
 	"strings"
 	"time"
@@ -107,25 +106,38 @@ func cli(db *bolt.DB, bucket string) {
 	return
 }
 
-//TODO config
+//TODO config file
+//config could be general for logging/events + notifications
+/*
+sprbus.json:
+	store: [],
+	notification: [],
+    db: {
+        logrotate: x
+    }
+*/
+type LogConfig struct {
+	SaveEvents []string `json:events`
+}
+
+func loadConfig() *LogConfig {
+	config := &LogConfig{
+		SaveEvents: []string{"log:api", "log:www:access"},
+	}
+
+	return config
+}
+
+var config = loadConfig()
+
 func shouldLogEvent(topic string) bool {
-	// log:api, log:www:access
-	if strings.HasPrefix(topic, "log:") {
-		return true
+	for _, event := range config.SaveEvents {
+		if strings.HasPrefix(topic, event) {
+			return true
+		}
 	}
 
 	return false
-}
-
-func saveLogEntry(topic string, value string) error {
-	var jsonData map[string]interface{} // json object
-	if err := json.Unmarshal([]byte(value), &jsonData); err != nil {
-		fmt.Println("db store, invalid json", err)
-		return err
-	}
-
-	_, err := boltapi.StoreItem(topic, jsonData)
-	return err
 }
 
 //subscribe to sprbus and store in db
@@ -134,12 +146,15 @@ func handleLogEvent(topic string, value string) {
 		return
 	}
 
-	// for docker container logs
-	//logStd.Printf("[%v] %v\n", topic, value)
-	err := saveLogEntry(topic, value)
+	var jsonData map[string]interface{} // json object
+	if err := json.Unmarshal([]byte(value), &jsonData); err != nil {
+		fmt.Println("db store, invalid json", err)
+		return
+	}
 
-	if err != nil {
-		logStd.Println("error saving logs:", err)
+	if _, err := boltapi.PutItem(topic, jsonData); err != nil {
+		fmt.Println("error saving data:", err)
+		return
 	}
 }
 
@@ -154,7 +169,6 @@ func main() {
 	}
 
 	db, err := bolt.Open(*dbpath, 0664, options)
-	//db, err := bolt.Open(*dbpath, 0664, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		log.Fatal(err)
 	}

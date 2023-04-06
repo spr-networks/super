@@ -1,6 +1,7 @@
 package boltapi
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -212,10 +213,64 @@ func GetBucket(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(items)
 }
 
+// try 8byte unix timestamp or string
+func keyToTimeString(key []byte) (string, error) {
+	var err error
+	ts := time.Now()
+
+	if len(key) == 8 {
+		ts = time.Unix(0, int64(binary.BigEndian.Uint64(key)))
+	} else if tsp, err := time.Parse(time.RFC3339, string(key)); err == nil {
+		ts = tsp
+	} else {
+		err = errors.New("failed to parse date")
+	}
+
+	return ts.UTC().Format(time.RFC3339), err
+}
+
+//timestamp to 8 byte key
+func timeKey(s string) ([]byte, error) {
+	ts, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return nil, errors.New("failed to parse date")
+	}
+
+	t := ts.UTC().UnixNano()
+	var key = make([]byte, 8)
+	binary.BigEndian.PutUint64(key, uint64(t))
+	return key, nil
+}
+
+func keyOrDefault(s interface{}, defaultKey string) []byte {
+	if strTime, ok := s.(string); ok {
+		key, err := timeKey(strTime)
+
+		if err == nil {
+			return key
+		}
+	}
+
+	key, _ := timeKey(defaultKey)
+
+	// 8 bytes vs. 30 bytes for key
+	//key = ts.Format(time.RFC3339Nano)
+
+	return key
+}
+
 // array of .values, including time key
 func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 	// TODO add search, range select here
 	bucketName := mux.Vars(r)["name"]
+
+	var minKey []byte
+	var maxKey []byte
+
+	min_q := r.URL.Query().Get("min")
+	max_q := r.URL.Query().Get("max")
+	minKey = keyOrDefault(min_q, time.Now().UTC().Add(-time.Minute*60).Format(time.RFC3339))
+	maxKey = keyOrDefault(max_q, time.Now().UTC().Format(time.RFC3339))
 
 	var items []interface{}
 	if err := db.View(func(tx *bolt.Tx) error {
@@ -224,24 +279,24 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 			return ErrBucketMissing
 		}
 
-		return bucket.ForEach(func(k, v []byte) error {
+		c := bucket.Cursor()
+		for k, v := c.Seek(minKey); k != nil && bytes.Compare(k, maxKey) <= 0; k, v = c.Next() {
 			bucketItem := &BucketItem{Key: string(k)}
 			bucketItem.DecodeValue(v)
 
 			jsonMap := bucketItem.Value.(map[string]interface{})
 
 			if _, exists := jsonMap["time"]; !exists {
-				// time from key
-				if len(k) == 8 {
-					t := time.Unix(0, int64(binary.BigEndian.Uint64(k))).UTC()
-					jsonMap["time"] = t.Format(time.RFC3339)
+				// derive time from key
+				if timeStr, err := keyToTimeString(k); err == nil {
+					jsonMap["time"] = timeStr
 				}
 			}
 
 			items = append(items, jsonMap)
+		}
 
-			return nil
-		})
+		return nil
 	}); err != nil {
 		log.Println(ApiError{ErrBucketGet, err})
 		switch err {
@@ -256,7 +311,7 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(items)
 }
 
-func StoreItem(bucketName string, jsonData map[string]interface{}) (*BucketItem, error) {
+func PutItem(bucketName string, jsonData map[string]interface{}) (*BucketItem, error) {
 	var payload *BucketItem
 	// .key, .value
 	if len(jsonData) == 2 && jsonData["key"] != nil && jsonData["value"] != nil {
@@ -264,17 +319,7 @@ func StoreItem(bucketName string, jsonData map[string]interface{}) (*BucketItem,
 	} else {
 		//if .key and .value is not set but have valid json
 		//we set body as value and current time as key
-		var key = make([]byte, 8)
-		t := time.Now().UnixNano()
-
-		// if time is set in json, use it as key
-		if strTime, ok := jsonData["time"].(string); ok {
-			if ts, err := time.Parse(time.RFC3339, strTime); err == nil {
-				t = ts.UnixNano()
-			}
-		}
-
-		binary.BigEndian.PutUint64(key, uint64(t))
+		key := keyOrDefault(jsonData["time"], time.Now().UTC().Format(time.RFC3339))
 
 		payload = &BucketItem{Key: string(key), Value: jsonData}
 	}
@@ -314,7 +359,7 @@ func AddBucketItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	payload, err := StoreItem(bucketName, jsonData)
+	payload, err := PutItem(bucketName, jsonData)
 	if err != nil {
 		fail(ErrBucketItemCreate, err)
 		return
