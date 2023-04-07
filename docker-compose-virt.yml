@@ -74,6 +74,7 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/dns/:/configs/dns/
+      - ./state/api/:/state/api/
       - ./state/dns/:/state/dns/
       - ./state/public/:/state/public/:ro
       - ./state/plugins/mesh/:/state/plugins/mesh/:ro

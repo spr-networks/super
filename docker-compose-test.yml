@@ -107,6 +107,7 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/dns/:/configs/dns/
+      - ./state/api/:/state/api/
       - ./state/dns/:/state/dns/
       - ./state/plugins/mesh/:/state/plugins/mesh/:ro
       - ./state/public/:/state/public/:ro
