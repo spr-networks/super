@@ -242,12 +242,13 @@ type AbstractDHCPRequest struct {
 	Identifier string
 }
 
-var tinysubnets_plugin_path = "/state/dhcp/tinysubnets_plugin"
+var dhcp_path = TEST_PREFIX + "/state/dhcp/apisock"
 var api_path = "/state/plugins/wireguard/apisock"
 
-type Record struct {
-	IP       net.IP
-	RouterIP net.IP
+type DHCPResponse struct {
+	IP        string
+	RouterIP  string
+	LeaseTime string
 }
 
 func getNewPeerAddress(PublicKey string) (string, error) {
@@ -255,7 +256,7 @@ func getNewPeerAddress(PublicKey string) (string, error) {
 	c := http.Client{}
 	c.Transport = &http.Transport{
 		Dial: func(network, addr string) (net.Conn, error) {
-			return net.Dial("unix", tinysubnets_plugin_path)
+			return net.Dial("unix", dhcp_path)
 		},
 	}
 
@@ -272,11 +273,11 @@ func getNewPeerAddress(PublicKey string) (string, error) {
 		return "", err
 	}
 
-	rec := Record{}
-	_ = json.NewDecoder(resp.Body).Decode(&rec)
+	dhcpResponse := DHCPResponse{}
+	_ = json.NewDecoder(resp.Body).Decode(&dhcpResponse)
 
-	if rec.IP.String() != "" {
-		return rec.IP.String(), nil
+	if dhcpResponse.IP != "" {
+		return dhcpResponse.IP, nil
 	}
 
 	return "", errors.New("Failed to receive IP")
