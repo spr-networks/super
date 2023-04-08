@@ -57,7 +57,6 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/dhcp/:/configs/dhcp/
-      - ./configs/zones/:/configs/zones/
       - ./state/dhcp/:/state/dhcp/
       - ./state/plugins/mesh/:/state/plugins/mesh/:ro
       - /sys/fs/bpf:/sys/fs/bpf
@@ -141,7 +140,6 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/devices/:/configs/devices/
-      - ./configs/zones/:/configs/zones/
       - ./configs/wifi/:/configs/wifi/
       - ./configs/wireguard/:/configs/wireguard/
       - ./configs/scripts/:/configs/scripts/
