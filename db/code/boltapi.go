@@ -8,17 +8,22 @@ import (
 	"fmt"
 	"github.com/boltdb/bolt"
 	"github.com/gorilla/mux"
+	"io/ioutil"
 	//"github.com/tidwall/gjson"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
 var (
 	db                   *bolt.DB
+	DBmtx       				 sync.Mutex
+	gConfigPath					 string
+	configPtr						 *LogConfig
 	ErrBucketList        = errors.New("error listing buckets")
 	ErrBucketGet         = errors.New("error retrieving bucket")
 	ErrBucketMissing     = errors.New("bucket doesn't exist")
@@ -43,6 +48,43 @@ type BucketItem struct {
 	Value interface{} `json:value`
 }
 
+
+type LogConfig struct {
+	SaveEvents []string `json:events`
+}
+
+func saveConfig(config *LogConfig) {
+	DBmtx.Lock()
+	defer DBmtx.Unlock()
+
+	file, _ := json.MarshalIndent(*config, "", " ")
+	err := ioutil.WriteFile(gConfigPath, file, 0600)
+	if err != nil {
+		fmt.Println("[-] Failed to write config for db")
+	}
+}
+
+func loadConfig() *LogConfig {
+	DBmtx.Lock()
+	defer DBmtx.Unlock()
+
+	config := &LogConfig{
+		SaveEvents: []string{"log:api", "log:www:access", "dns:block:event", "dns:override:event"},
+	}
+	data, err := ioutil.ReadFile(gConfigPath)
+	if err != nil {
+		log.Println("[-] Empty db configuration, initializing")
+	} else {
+		err := json.Unmarshal(data, &config)
+		if err != nil {
+			log.Println("[-] Failed to decode db configuration, initializing")
+		}
+	}
+
+	return config
+}
+
+
 // BucketItem helper functions
 func (item *BucketItem) EncodeKey() []byte {
 	return []byte(item.Key)
@@ -65,7 +107,9 @@ func (item *BucketItem) DecodeValue(rawValue []byte) error {
 	return nil
 }
 
-func Serve(boltdb *bolt.DB, socketpath string) error {
+func Serve(boltdb *bolt.DB, config *LogConfig, configpath string, socketpath string) error {
+	gConfigPath = configpath
+	configPtr = config
 	db = boltdb
 	router := mux.NewRouter().StrictSlash(true)
 
@@ -82,6 +126,8 @@ func Serve(boltdb *bolt.DB, socketpath string) error {
 	router.HandleFunc("/bucket/{name}/{key}", UpdateBucketItem).Methods("PUT")
 	router.HandleFunc("/bucket/{name}/{key}", DeleteBucketItem).Methods("DELETE")
 
+	router.HandleFunc("/config", GetSetConfig).Methods("GET", "PUT")
+
 	os.Remove(socketpath)
 	unixPluginListener, err := net.Listen("unix", socketpath)
 	if err != nil {
@@ -91,6 +137,28 @@ func Serve(boltdb *bolt.DB, socketpath string) error {
 	fmt.Println("starting http.Server...")
 	pluginServer := http.Server{Handler: logRequest(router)}
 	return pluginServer.Serve(unixPluginListener)
+}
+
+func GetSetConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		conf := loadConfig()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(conf)
+		return
+	}
+
+	newConfig := LogConfig{}
+
+	err := json.NewDecoder(r.Body).Decode(&newConfig)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	DBmtx.Lock()
+	defer DBmtx.Unlock()
+	saveConfig(&newConfig)
+	*configPtr = newConfig
 }
 
 func ListBuckets(w http.ResponseWriter, r *http.Request) {

@@ -6,11 +6,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -31,7 +29,6 @@ var (
 	gDump       = flag.Bool("dump", false, "list gBuckets. dont run http server")
 	gBucket     = flag.String("b", "", "bucket to dump. dont run http server")
 	gSocketPath = "/state/plugins/db/socket"
-	DBmtx       sync.Mutex
 )
 
 type CustomResponseWriter struct {
@@ -117,39 +114,6 @@ func cli(db *bolt.DB, bucket string) {
 	return
 }
 
-//TODO config file
-//config could be general for logging/events + notifications
-/*
-sprbus.json:
-	store: [],
-	notification: [],
-    db: {
-        logrotate: x
-    }
-*/
-type LogConfig struct {
-	SaveEvents []string `json:events`
-}
-
-func loadConfig() *LogConfig {
-	DBmtx.Lock()
-	defer DBmtx.Unlock()
-
-	config := &LogConfig{
-		SaveEvents: []string{"log:api", "log:www:access", "dns:block:event", "dns:override:event"},
-	}
-	data, err := ioutil.ReadFile(*gConfigPath)
-	if err != nil {
-		log.Println("[-] Empty db configuration, initializing")
-	} else {
-		err := json.Unmarshal(data, &config)
-		if err != nil {
-			log.Println("[-] Failed to decode db configuration, initializing")
-		}
-	}
-
-	return config
-}
 
 var config = loadConfig()
 
@@ -211,5 +175,5 @@ func main() {
 	go sprbus.HandleEvent("", handleLogEvent)
 
 	log.Println("serving", gSocketPath)
-	log.Fatal(boltapi.Serve(db, gSocketPath))
+	log.Fatal(boltapi.Serve(db, config, *gConfigPath, gSocketPath))
 }
