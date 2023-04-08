@@ -2205,6 +2205,8 @@ func main() {
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
+	//set up dhcp
+	initDHCP()
 	//initialize hostap  related items
 	initRadios()
 	//initialize user firewall rules
@@ -2217,6 +2219,7 @@ func main() {
 	// notifications, connect to eventbus
 	go NotificationsRunEventListener()
 
+	// updates when enabled
 	go checkUpdates()
 
 	sslPort, runSSL := os.LookupEnv("API_SSL_PORT")
