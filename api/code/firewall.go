@@ -1297,17 +1297,17 @@ func dynamicRouteLoop() {
 					log.Println("[-] Missing vmap entries for mac=", ident, "new_iface=", new_iface)
 				}
 
-				routeIP := entry.RecentIP
-				is_tiny, newIP := toTinyIP(entry.RecentIP, 2)
-				_, router := toTinyIP(entry.RecentIP, 1)
-				routeIP = newIP.String() + "/30"
+				//ex tinynet
+				//route is 192.168.2.4
+				//router is at 192.168.2.5
+				//device is at 192.168.2.6
+				//broadcast is at 192.168.2.7
+				routeIP := TinyIpDelta(entry.RecentIP, -2)
+				routerIP := TinyIpDelta(entry.RecentIP, -1)
 
-				if !is_tiny {
-					log.Println("[-] Error, unknown IP address, not a tiny subnet", routeIP)
-					continue
-				}
+				routeIPString := routeIP + "/30"
 
-				establishDevice(entry, new_iface, established_route_device, routeIP, router.String())
+				establishDevice(entry, new_iface, established_route_device, routeIPString, routerIP)
 			}
 		}
 	}
