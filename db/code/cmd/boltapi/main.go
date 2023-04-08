@@ -171,7 +171,7 @@ func main() {
 		return
 	}
 
-	boltapi.SetupConfig(*gConfigPath, &config)
+	boltapi.SetupConfig(*gConfigPath, config)
 
 	go sprbus.HandleEvent("", handleLogEvent)
 
