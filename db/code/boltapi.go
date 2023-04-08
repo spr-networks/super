@@ -21,9 +21,9 @@ import (
 
 var (
 	db                   *bolt.DB
-	DBmtx       				 sync.Mutex
-	gConfigPath					 string
-	configPtr						 *LogConfig
+	DBmtx                sync.Mutex
+	gConfigPath          string
+	configPtr            *LogConfig
 	ErrBucketList        = errors.New("error listing buckets")
 	ErrBucketGet         = errors.New("error retrieving bucket")
 	ErrBucketMissing     = errors.New("bucket doesn't exist")
@@ -47,7 +47,6 @@ type BucketItem struct {
 	Key   string      `json:key`
 	Value interface{} `json:value`
 }
-
 
 type LogConfig struct {
 	SaveEvents []string `json:events`
@@ -83,7 +82,6 @@ func loadConfig() *LogConfig {
 
 	return config
 }
-
 
 // BucketItem helper functions
 func (item *BucketItem) EncodeKey() []byte {
