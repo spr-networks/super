@@ -220,7 +220,6 @@ services:
       - "base"
       - "frontend"
       - "superd"
-      - "packet_logs"
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
