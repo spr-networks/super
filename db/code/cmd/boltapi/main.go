@@ -25,7 +25,8 @@ import (
 )
 
 var (
-	gDBPath     = flag.String("gDBPath", "/state/plugins/db/logs.db", "Path to bolt database")
+	gDBPath     = flag.String("dbpath", "/state/plugins/db/logs.db", "Path to bolt database")
+	gDebug      = flag.Bool"debug", false, "verbose output")
 	gConfigPath = flag.String("config", "/configs/db/config.json", "Path to boltapi configuration")
 	gDump       = flag.Bool("dump", false, "list gBuckets. dont run http server")
 	gBucket     = flag.String("b", "", "bucket to dump. dont run http server")
@@ -164,6 +165,11 @@ func shouldLogEvent(topic string) bool {
 
 // subscribe to sprbus and store in db
 func handleLogEvent(topic string, value string) {
+	if *gDebug {
+		fmt.Println("topic:", topic)
+		fmt.Println("value:", topic)
+	}
+
 	if !shouldLogEvent(topic) {
 		return
 	}
