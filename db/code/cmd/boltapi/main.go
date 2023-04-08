@@ -24,7 +24,7 @@ import (
 
 var (
 	gDBPath     = flag.String("dbpath", "/state/plugins/db/logs.db", "Path to bolt database")
-	gDebug      = flag.Bool"debug", false, "verbose output")
+	gDebug      = flag.Bool("debug", false, "verbose output")
 	gConfigPath = flag.String("config", "/configs/db/config.json", "Path to boltapi configuration")
 	gDump       = flag.Bool("dump", false, "list gBuckets. dont run http server")
 	gBucket     = flag.String("b", "", "bucket to dump. dont run http server")
@@ -114,8 +114,7 @@ func cli(db *bolt.DB, bucket string) {
 	return
 }
 
-
-var config = loadConfig()
+var config *boltapi.LogConfig
 
 func shouldLogEvent(topic string) bool {
 	for _, event := range config.SaveEvents {
@@ -172,8 +171,10 @@ func main() {
 		return
 	}
 
+	boltapi.SetupConfig(*gConfigPath, config)
+
 	go sprbus.HandleEvent("", handleLogEvent)
 
 	log.Println("serving", gSocketPath)
-	log.Fatal(boltapi.Serve(db, config, *gConfigPath, gSocketPath))
+	log.Fatal(boltapi.Serve(db, gSocketPath))
 }

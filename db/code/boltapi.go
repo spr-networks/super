@@ -23,7 +23,7 @@ var (
 	db                   *bolt.DB
 	DBmtx                sync.Mutex
 	gConfigPath          string
-	configPtr            *LogConfig
+	gConfigPtr           *LogConfig
 	ErrBucketList        = errors.New("error listing buckets")
 	ErrBucketGet         = errors.New("error retrieving bucket")
 	ErrBucketMissing     = errors.New("bucket doesn't exist")
@@ -61,6 +61,13 @@ func saveConfig(config *LogConfig) {
 	if err != nil {
 		fmt.Println("[-] Failed to write config for db")
 	}
+}
+
+func SetupConfig(configPath string, conf *LogConfig) {
+	gConfigPath = configPath
+	gConfigPtr = conf
+
+	*gConfigPtr = *loadConfig()
 }
 
 func loadConfig() *LogConfig {
@@ -105,9 +112,7 @@ func (item *BucketItem) DecodeValue(rawValue []byte) error {
 	return nil
 }
 
-func Serve(boltdb *bolt.DB, config *LogConfig, configpath string, socketpath string) error {
-	gConfigPath = configpath
-	configPtr = config
+func Serve(boltdb *bolt.DB, socketpath string) error {
 	db = boltdb
 	router := mux.NewRouter().StrictSlash(true)
 
@@ -156,7 +161,7 @@ func GetSetConfig(w http.ResponseWriter, r *http.Request) {
 	DBmtx.Lock()
 	defer DBmtx.Unlock()
 	saveConfig(&newConfig)
-	*configPtr = newConfig
+	*gConfigPtr = newConfig
 }
 
 func ListBuckets(w http.ResponseWriter, r *http.Request) {
