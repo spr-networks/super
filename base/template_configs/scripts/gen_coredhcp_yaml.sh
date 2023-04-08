@@ -10,6 +10,7 @@ server4:
     - server_id: $LANIP
     - dns: $DNSIP
     - router: $LANIP
+    - tiny_subnets
     - netmask: 255.255.255.252
 
 END
