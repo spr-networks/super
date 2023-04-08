@@ -88,7 +88,7 @@ func initDHCP() {
 
 func migrateDHCP() {
   //start the config with some defaults
-  lanip := os.getenv("LANIP")
+  lanip := os.Getenv("LANIP")
   if lanip == "" {
     lanip = "192.168.2.1"
   }
