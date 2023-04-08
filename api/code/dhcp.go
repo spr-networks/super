@@ -94,7 +94,7 @@ func migrateDHCP() {
   }
   tiny_net := TinyIpDelta(lanip, -1) + "/24"
 
-  gDhcpConfig.TinySubnets = []string{tiny_net}
+  gDhcpConfig.TinyNets = []string{tiny_net}
   gDhcpConfig.LeaseTime = "24h0m0s"
 
   saveDHCPConfig()
