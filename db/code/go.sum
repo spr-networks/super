@@ -18,8 +18,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0=
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
-github.com/spr-networks/sprbus v0.1.5 h1:6rRcgwNFS6hWklVnPtrEl8ZwWhsvuBwQZxS3lWf4RXY=
-github.com/spr-networks/sprbus v0.1.5/go.mod h1:9thsjSJle4XEyVEZFecM3bJh890IhohICCBUR7ETF+A=
+github.com/spr-networks/sprbus v0.1.6 h1:rjkGXBXM1jGRos2u/e4lQhl8p2jLeXAvxZaFJNaqD4g=
+github.com/spr-networks/sprbus v0.1.6/go.mod h1:9thsjSJle4XEyVEZFecM3bJh890IhohICCBUR7ETF+A=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=

@@ -173,7 +173,16 @@ func main() {
 
 	boltapi.SetupConfig(*gConfigPath, &config)
 
-	go sprbus.HandleEvent("", handleLogEvent)
+	go func() {
+		//retry 3 times to set this up
+		for i := 3; i > 0; i-- {
+			err = sprbus.HandleEvent("", handleLogEvent)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+		log.Fatal("failed to establish connection to sprbus")
+	}()
 
 	log.Println("serving", gSocketPath)
 	log.Fatal(boltapi.Serve(db, gSocketPath))
