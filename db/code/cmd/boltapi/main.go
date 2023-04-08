@@ -130,7 +130,7 @@ func shouldLogEvent(topic string) bool {
 func handleLogEvent(topic string, value string) {
 	if *gDebug {
 		fmt.Println("topic:", topic)
-		fmt.Println("value:", topic)
+		fmt.Println("value:", value)
 	}
 
 	if !shouldLogEvent(topic) {
