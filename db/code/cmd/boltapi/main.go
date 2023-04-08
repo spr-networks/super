@@ -114,7 +114,7 @@ func cli(db *bolt.DB, bucket string) {
 	return
 }
 
-var config *boltapi.LogConfig
+var config = boltapi.LogConfig{}
 
 func shouldLogEvent(topic string) bool {
 	for _, event := range config.SaveEvents {
