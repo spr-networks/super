@@ -197,7 +197,7 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 	devices := getDevicesJson()
 	val, exists := devices[dhcp.MAC]
 
-	if exists {
+	if exists && val.RecentIP != "" {
 		IP = val.RecentIP
 		Router = RouterFromTinyIP(IP)
 	} else {
