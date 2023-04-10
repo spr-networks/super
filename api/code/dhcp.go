@@ -15,9 +15,9 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"io/ioutil"
-  "os"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 
@@ -81,23 +81,23 @@ type DHCPResponse struct {
 var DHCPmtx sync.Mutex
 
 func initDHCP() {
-  DHCPmtx.Lock()
-  defer DHCPmtx.Unlock()
-  loadDHCPConfig()
+	DHCPmtx.Lock()
+	defer DHCPmtx.Unlock()
+	loadDHCPConfig()
 }
 
 func migrateDHCP() {
-  //start the config with some defaults
-  lanip := os.Getenv("LANIP")
-  if lanip == "" {
-    lanip = "192.168.2.1"
-  }
-  tiny_net := TinyIpDelta(lanip, -1) + "/24"
+	//start the config with some defaults
+	lanip := os.Getenv("LANIP")
+	if lanip == "" {
+		lanip = "192.168.2.1"
+	}
+	tiny_net := TinyIpDelta(lanip, -1) + "/24"
 
-  gDhcpConfig.TinyNets = []string{tiny_net}
-  gDhcpConfig.LeaseTime = "24h0m0s"
+	gDhcpConfig.TinyNets = []string{tiny_net}
+	gDhcpConfig.LeaseTime = "24h0m0s"
 
-  saveDHCPConfig()
+	saveDHCPConfig()
 }
 
 func loadDHCPConfig() {
@@ -105,8 +105,8 @@ func loadDHCPConfig() {
 	if err != nil {
 		log.Println(err)
 
-    //use LANIP to establish the DHCP configuration
-    migrateDHCP()
+		//use LANIP to establish the DHCP configuration
+		migrateDHCP()
 	} else {
 		err = json.Unmarshal(data, &gDhcpConfig)
 		if err != nil {
@@ -197,7 +197,7 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 	devices := getDevicesJson()
 	val, exists := devices[dhcp.MAC]
 
-	if exists && val.RecentIP != "" {
+	if exists && val.RecentIP != "" && isTinyNetIPLocked(val.RecentIP) {
 		IP = val.RecentIP
 		Router = RouterFromTinyIP(IP)
 	} else {
@@ -268,6 +268,34 @@ func RouterFromTinyIP(IP string) string {
 
 func TinyIPFromRouter(IP string) string {
 	return TwiddleTinyIP(net.ParseIP(IP), 1).String()
+}
+
+func isTinyNetIP(IP string) bool {
+	DHCPmtx.Lock()
+	defer DHCPmtx.Unlock()
+	return isTinyNetIPLocked(IP)
+}
+
+func isTinyNetIPLocked(IP string) bool {
+	ip := net.ParseIP(IP)
+	if ip == nil {
+		return false
+	}
+
+	for _, subnetString := range gDhcpConfig.TinyNets {
+		// check if theres free IPs in the range
+		_, subnet, err := net.ParseCIDR(subnetString)
+		if err != nil {
+			log.Println("Invalid subnet "+subnetString, err)
+			continue
+		}
+
+		if subnet.Contains(ip) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func genNewDeviceIP(devices *map[string]DeviceEntry) (string, string) {

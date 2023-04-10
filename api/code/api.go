@@ -1410,6 +1410,10 @@ func flushRoute(MAC string) {
 		return
 	}
 
+	if !isTinyNetIP(arp_entry.IP) {
+		log.Println("[] Error: Trying to flush non tiny IP: ", arp_entry.IP)
+		return
+	}
 	//delete previous arp entry and route
 	router := RouterFromTinyIP(arp_entry.IP)
 	exec.Command("ip", "addr", "del", router, "dev", arp_entry.Device).Run()
