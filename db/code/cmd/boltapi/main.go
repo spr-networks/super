@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 	"strings"
 	"time"
 )
@@ -30,36 +29,6 @@ var (
 	gBucket     = flag.String("b", "", "bucket to dump. dont run http server")
 	gSocketPath = "/state/plugins/db/socket"
 )
-
-type CustomResponseWriter struct {
-	body       []byte
-	statusCode int
-	header     http.Header
-}
-
-func NewCustomResponseWriter() *CustomResponseWriter {
-	return &CustomResponseWriter{
-		header: http.Header{},
-	}
-}
-
-func (w *CustomResponseWriter) Header() http.Header {
-	return w.header
-}
-
-func (w *CustomResponseWriter) Write(b []byte) (int, error) {
-	w.body = b
-	// implement it as per your requirement
-	return 0, nil
-}
-
-func (w *CustomResponseWriter) WriteHeader(statusCode int) {
-	w.statusCode = statusCode
-}
-
-var testF = func(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-}
 
 func cli(db *bolt.DB, bucket string) {
 	if err := db.View(func(tx *bolt.Tx) error {
@@ -172,6 +141,9 @@ func main() {
 	}
 
 	boltapi.SetupConfig(*gConfigPath, &config)
+
+	// runs every minute to rm old items if db size is too big
+	go boltapi.CheckSizeLoop(db, config, *gDebug)
 
 	go func() {
 		//retry 3 times to set this up

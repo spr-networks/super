@@ -49,18 +49,17 @@ type BucketItem struct {
 }
 
 type LogConfig struct {
-	SaveEvents []string `json:events`
+	SaveEvents []string `json:"SaveEvents"`
+	MaxSize    int64    `json:"MaxSize"`
 }
 
-func saveConfig(config *LogConfig) {
+func saveConfig(config LogConfig) error {
 	DBmtx.Lock()
 	defer DBmtx.Unlock()
 
-	file, _ := json.MarshalIndent(*config, "", " ")
+	file, _ := json.MarshalIndent(config, "", " ")
 	err := ioutil.WriteFile(gConfigPath, file, 0600)
-	if err != nil {
-		fmt.Println("[-] Failed to write config for db")
-	}
+	return err
 }
 
 func SetupConfig(configPath string, conf *LogConfig) {
@@ -74,8 +73,10 @@ func loadConfig() *LogConfig {
 	DBmtx.Lock()
 	defer DBmtx.Unlock()
 
+	// default config
 	config := &LogConfig{
 		SaveEvents: []string{"log:api", "log:www:access", "dns:block:event", "dns:override:event"},
+		MaxSize:    250 * 1024 * 1024, //bytes
 	}
 	data, err := ioutil.ReadFile(gConfigPath)
 	if err != nil {
@@ -137,9 +138,13 @@ func Serve(boltdb *bolt.DB, socketpath string) error {
 		panic(err)
 	}
 
-	fmt.Println("starting http.Server...")
+	log.Println("starting http.Server...")
+
 	pluginServer := http.Server{Handler: logRequest(router)}
 	return pluginServer.Serve(unixPluginListener)
+	//pluginServer := http.Server{Addr: ":8080", Handler: logRequest(router)}
+	//return pluginServer.ListenAndServe()
+
 }
 
 func GetSetConfig(w http.ResponseWriter, r *http.Request) {
@@ -158,10 +163,15 @@ func GetSetConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	DBmtx.Lock()
-	defer DBmtx.Unlock()
-	saveConfig(&newConfig)
+	if err := saveConfig(newConfig); err != nil {
+		fmt.Println("[-] Failed to write config for db")
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
 	*gConfigPtr = newConfig
+
+	json.NewEncoder(w).Encode(newConfig)
 }
 
 func ListBuckets(w http.ResponseWriter, r *http.Request) {
@@ -301,7 +311,7 @@ func keyToTimeString(key []byte) (string, error) {
 }
 
 // timestamp to 8 byte key
-func timeKey(s string) ([]byte, error) {
+func TimeKey(s string) ([]byte, error) {
 	ts, err := time.Parse(time.RFC3339, s)
 	if err != nil {
 		return nil, errors.New("failed to parse date")
@@ -315,14 +325,14 @@ func timeKey(s string) ([]byte, error) {
 
 func keyOrDefault(s interface{}, defaultKey string) []byte {
 	if strTime, ok := s.(string); ok {
-		key, err := timeKey(strTime)
+		key, err := TimeKey(strTime)
 
 		if err == nil {
 			return key
 		}
 	}
 
-	key, _ := timeKey(defaultKey)
+	key, _ := TimeKey(defaultKey)
 
 	// 8 bytes vs. 30 bytes for key
 	//key = ts.Format(time.RFC3339Nano)
@@ -340,8 +350,8 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 
 	min_q := r.URL.Query().Get("min")
 	max_q := r.URL.Query().Get("max")
-	minKey = keyOrDefault(min_q, time.Now().UTC().Add(-time.Minute*60).Format(time.RFC3339))
-	maxKey = keyOrDefault(max_q, time.Now().UTC().Format(time.RFC3339))
+	minKey = keyOrDefault(min_q, time.Now().UTC().Add(-time.Minute*60).Format(time.RFC3339Nano))
+	maxKey = keyOrDefault(max_q, time.Now().UTC().Format(time.RFC3339Nano))
 
 	var items []interface{}
 	if err := db.View(func(tx *bolt.Tx) error {
@@ -390,7 +400,7 @@ func PutItem(bucketName string, jsonData map[string]interface{}) (*BucketItem, e
 	} else {
 		//if .key and .value is not set but have valid json
 		//we set body as value and current time as key
-		key := keyOrDefault(jsonData["time"], time.Now().UTC().Format(time.RFC3339))
+		key := keyOrDefault(jsonData["time"], time.Now().UTC().Format(time.RFC3339Nano))
 
 		payload = &BucketItem{Key: string(key), Value: jsonData}
 	}
