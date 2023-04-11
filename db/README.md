@@ -14,21 +14,16 @@ make
 
 # TODO
 
-- boltdb - add to makefile:
-
-```yaml
-install: go install github.com/spr-networks/super
-```
-
 - same api routes and methods should be used for other integrations
 - future: add more paths and handlers to Serve for new db engines.
+- docusaurus
 
 **logrotate**
 
 - lumberjack: https://github.com/natefinch/lumberjack
 - run in thread, have a config for logs so user can cap what/when to rotate
 
-- use sprbus / signal to tell main ton reopen a fresh db fd
+- use sprbus / signal to tell main to reopen a fresh db fd
 
 ## howto send logs with curl
 
