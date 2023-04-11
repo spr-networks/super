@@ -83,6 +83,9 @@ func CheckSizeIteration(db *bolt.DB, config LogConfig, debug bool) error {
 		log.Println("prepare delete:", numToDelete, "items from", bucketName)
 	}
 
+	// dont delete for now - need a way to see if we have new vs. empty in db
+	return nil
+
 	//2. get keys to delete
 	keys := [][]byte{}
 	if err := db.View(func(tx *bolt.Tx) error {
