@@ -152,6 +152,7 @@ func main() {
 			if err != nil {
 				fmt.Println(err)
 			}
+			time.Sleep(1 * time.Second)
 		}
 		log.Fatal("failed to establish connection to sprbus")
 	}()
