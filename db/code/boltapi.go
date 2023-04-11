@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/boltdb/bolt"
 	"github.com/gorilla/mux"
 	"io/ioutil"
@@ -164,7 +163,7 @@ func GetSetConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := saveConfig(newConfig); err != nil {
-		fmt.Println("[-] Failed to write config for db")
+		log.Println("[-] Failed to write config for db")
 		http.Error(w, err.Error(), 400)
 		return
 	}
@@ -529,7 +528,7 @@ func DeleteBucketItem(w http.ResponseWriter, r *http.Request) {
 // TODO
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		log.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
 		//sprbus.Publish("log:db", map[string]int64{"method": r.Method})
 		handler.ServeHTTP(w, r)
 	})

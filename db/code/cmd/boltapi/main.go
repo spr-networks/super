@@ -97,23 +97,23 @@ func shouldLogEvent(topic string) bool {
 
 // subscribe to sprbus and store in db
 func handleLogEvent(topic string, value string) {
-	if *gDebug {
-		fmt.Println("topic:", topic)
-		fmt.Println("value:", value)
-	}
-
 	if !shouldLogEvent(topic) {
 		return
 	}
 
+	if *gDebug {
+		log.Println("topic:", topic)
+		log.Println("value:", value)
+	}
+
 	var jsonData map[string]interface{} // json object
 	if err := json.Unmarshal([]byte(value), &jsonData); err != nil {
-		fmt.Println("db store, invalid json", err)
+		log.Println("db store, invalid json", err)
 		return
 	}
 
 	if _, err := boltapi.PutItem(topic, jsonData); err != nil {
-		fmt.Println("error saving data:", err)
+		log.Println("error saving data:", err)
 		return
 	}
 }
@@ -150,7 +150,7 @@ func main() {
 		for i := 3; i > 0; i-- {
 			err = sprbus.HandleEvent("", handleLogEvent)
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 			}
 			time.Sleep(1 * time.Second)
 		}
