@@ -64,16 +64,13 @@ type DHCPResponse struct {
 var DHCPmtx sync.Mutex
 
 func SUBNETP1(subnet string) string {
-	ip, ipnet, err := net.ParseCIDR(subnet)
+	_, ipnet, err := net.ParseCIDR(subnet)
 	if err != nil {
 		log.Println("failed to parse subnet ip", err)
 		return os.Getenv("LANIP")
 	}
 
-	// Get the first IP address within the subnet by
-	// setting the host part of the IP address to 1
-	ip[3] = ipnet.IP[3] + 1
-	return ip.String()
+	return TinyIpDelta(ipnet.IP.String(), 1)
 }
 
 func getLANIP() string {
