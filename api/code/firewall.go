@@ -1342,6 +1342,8 @@ func updateFirewallSubnets(DNSIP string, TinyNets []string) {
 	//update firewall table rules to service the new tiny networks, where needed
 
 	//1) accounting
+	exec.Command("nft", "flush", "set", "ip", "accounting", "local_lan").Output()
+
 	for _, subnet := range TinyNets {
 		cmd := exec.Command("nft", "add", "element", "ip", "accounting", "local_lan", "{", subnet, "}")
 		_, err := cmd.Output()
