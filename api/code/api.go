@@ -2127,6 +2127,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/backup/{name}", getConfigsBackup).Methods("GET", "DELETE", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/subnetConfig", getSetDhcpConfig).Methods("GET", "PUT", "OPTIONS")
 
 	//updates, version, feature info
 	external_router_authenticated.HandleFunc("/release", releaseInfo).Methods("GET", "PUT", "DELETE", "OPTIONS")
