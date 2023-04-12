@@ -2,6 +2,7 @@
 set -a
 . /configs/base/config.sh
 
+export LANIP=$(cat /configs/base/lanip || echo "192.168.2.1")
 
 if [ "$LANIF" ]; then
   # set up static routes on LAN interface
@@ -42,4 +43,4 @@ fi
 /scripts/perftune.sh
 
 #mark initialization as finished
-flock /state/base/ready bash -c "while true; do sleep 100000; done"
+flock /state/base/ready bash -c "sleep inf"

@@ -20,11 +20,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var UNIX_PLUGIN_LISTENER = "/state/plugins/wireguard/wireguard_plugin"
+var UNIX_PLUGIN_LISTENER = TEST_PREFIX + "/state/plugins/wireguard/wireguard_plugin"
 
 var TEST_PREFIX = ""
 var WireguardInterface = "wg0"
 var WireguardConfigFile = TEST_PREFIX + "/configs/wireguard/wg0.conf"
+var DNSIPPath = TEST_PREFIX + "/configs/base/lanip"
 
 var Configmtx sync.Mutex
 
@@ -172,7 +173,7 @@ func getNetworkIP() (string, error) {
 	if len(addrs) > 0 {
 		return addrs[0].(*net.IPNet).IP.String(), nil
 	} else {
-		return "", errors.New(fmt.Sprintf("interface %s don't have an ipv4 address\n", iname))
+		return "", errors.New(fmt.Sprintf("interface %s doesn't have an ipv4 address\n", iname))
 	}
 }
 
@@ -242,12 +243,13 @@ type AbstractDHCPRequest struct {
 	Identifier string
 }
 
-var tinysubnets_plugin_path = "/state/dhcp/tinysubnets_plugin"
+var dhcp_path = TEST_PREFIX + "/state/dhcp/apisock"
 var api_path = "/state/plugins/wireguard/apisock"
 
-type Record struct {
-	IP       net.IP
-	RouterIP net.IP
+type DHCPResponse struct {
+	IP        string
+	RouterIP  string
+	LeaseTime string
 }
 
 func getNewPeerAddress(PublicKey string) (string, error) {
@@ -255,7 +257,7 @@ func getNewPeerAddress(PublicKey string) (string, error) {
 	c := http.Client{}
 	c.Transport = &http.Transport{
 		Dial: func(network, addr string) (net.Conn, error) {
-			return net.Dial("unix", tinysubnets_plugin_path)
+			return net.Dial("unix", dhcp_path)
 		},
 	}
 
@@ -272,11 +274,11 @@ func getNewPeerAddress(PublicKey string) (string, error) {
 		return "", err
 	}
 
-	rec := Record{}
-	_ = json.NewDecoder(resp.Body).Decode(&rec)
+	dhcpResponse := DHCPResponse{}
+	_ = json.NewDecoder(resp.Body).Decode(&dhcpResponse)
 
-	if rec.IP.String() != "" {
-		return rec.IP.String(), nil
+	if dhcpResponse.IP != "" {
+		return dhcpResponse.IP, nil
 	}
 
 	return "", errors.New("Failed to receive IP")
@@ -472,10 +474,17 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 
 	config.Interface.DNS = "1.1.1.1, 1.0.0.1"
 
-	// Point DNS to CoreDNS/DNSIP setting
-	dns, ok := os.LookupEnv("DNSIP")
-	if ok {
-		config.Interface.DNS = dns
+
+	dnsb, err := ioutil.ReadFile(DNSIPPath)
+	if err != nil {
+		//TBD this should be be pulled from the API
+		// Point DNS to CoreDNS/DNSIP setting
+		dns, ok := os.LookupEnv("DNSIP")
+		if ok {
+			config.Interface.DNS = dns
+		}
+	} else if len(dnsb) != 0 {
+		config.Interface.DNS = string(dnsb)
 	}
 
 	PublicKey, err := getPublicKey()

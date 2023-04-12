@@ -6,12 +6,6 @@ cat << END
 server4:
 #  Listens on all interfaces when none are configured. Note that iptables should block dhcp from $WANIF
   plugins:
-    - server_id: $LANIP
-    - dns: $DNSIP
-    - router: $LANIP
-    - netmask: $TINYNETMASK
-    - tiny_subnets: /state/dhcp/leases.txt $TINYNETSTART $TINYNETSTOP 24h0m0s
-    - execute: /scripts/dhcp_helper.sh
+    - tiny_subnets
 
 END
-

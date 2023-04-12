@@ -255,7 +255,7 @@ func NotificationsRunEventListener() {
 
 	log.Println("registering handler for logging ...")
 
-	sprbus.HandleEvent("", func(topic string, value string) {
+	notification := func(topic string, value string) {
 		if strings.HasPrefix(topic, "nft") {
 			logTraffic(topic, value)
 		} else if strings.HasPrefix(topic, "wifi:auth") {
@@ -273,7 +273,16 @@ func NotificationsRunEventListener() {
 			// for docker container logs
 			//logStd.Printf("[%v] %v\n", topic, value)
 		}
-	})
+	}
+
+	//retry 3 times to set this up
+	for i := 3; i > 0; i-- {
+		err := sprbus.HandleEvent("", notification)
+		if err != nil {
+			fmt.Println(err)
+		}
+		time.Sleep(1 * time.Second)
+	}
 
 	logStd.Println("sprbus client exit")
 }

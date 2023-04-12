@@ -2,6 +2,7 @@
 set -a
 . /configs/base/config.sh
 
+export DNSIP=$(cat /configs/base/lanip)
 if [ -f state/plugins/mesh/enabled ]; then
   exit 0
 fi

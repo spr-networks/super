@@ -1297,20 +1297,86 @@ func dynamicRouteLoop() {
 					log.Println("[-] Missing vmap entries for mac=", ident, "new_iface=", new_iface)
 				}
 
-				routeIP := entry.RecentIP
-				is_tiny, newIP := toTinyIP(entry.RecentIP, 2)
-				_, router := toTinyIP(entry.RecentIP, 1)
-				routeIP = newIP.String() + "/30"
+				//ex tinynet
+				//route is 192.168.2.4
+				//router is at 192.168.2.5
+				//device is at 192.168.2.6
+				//broadcast is at 192.168.2.7
+				routeIP := TinyIpDelta(entry.RecentIP, -2)
+				routerIP := TinyIpDelta(entry.RecentIP, -1)
 
-				if !is_tiny {
-					log.Println("[-] Error, unknown IP address, not a tiny subnet", routeIP)
-					continue
-				}
+				routeIPString := routeIP + "/30"
 
-				establishDevice(entry, new_iface, established_route_device, routeIP, router.String())
+				establishDevice(entry, new_iface, established_route_device, routeIPString, routerIP)
 			}
 		}
 	}
+}
+
+func getCurLANIP() string {
+	//attempt to retrieve the current LANIP
+	lanif := os.Getenv("LANIF")
+	if lanif == "" {
+		lanif = "sprloop"
+	}
+
+	ief, err := net.InterfaceByName(lanif)
+	if err != nil {
+		return ""
+	}
+
+	addrs, err := ief.Addrs()
+	if err != nil {
+		return ""
+	}
+
+	if len(addrs) > 0 {
+		return addrs[0].(*net.IPNet).IP.String()
+	}
+
+	return ""
+
+}
+
+func updateFirewallSubnets(DNSIP string, TinyNets []string) {
+	//update firewall table rules to service the new tiny networks, where needed
+
+	//1) accounting
+	exec.Command("nft", "flush", "set", "ip", "accounting", "local_lan").Output()
+
+	for _, subnet := range TinyNets {
+		cmd := exec.Command("nft", "add", "element", "ip", "accounting", "local_lan", "{", subnet, "}")
+		_, err := cmd.Output()
+
+		if err != nil {
+			log.Println("failed to add element", err)
+			log.Println(cmd)
+		}
+	}
+
+	//2) DNSIP
+	cmd := exec.Command("nft", "flush", "chain", "inet", "nat", "DNS_DNAT")
+	_, err := cmd.Output()
+	if err != nil {
+		log.Println("failed to flush chain", err)
+		return
+	}
+
+	//#    $(if [ "$VLANSIF" ]; then echo "counter iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF"; fi)
+	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
+		"udp", "dport", "53", "counter", "dnat", "ip", "to", DNSIP+":53")
+	_, err = cmd.Output()
+	if err != nil {
+		log.Println("failed to insert rule", cmd, err)
+	}
+
+	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
+		"tcp", "dport", "53", "counter", "dnat", "ip", "to", DNSIP+":53")
+	_, err = cmd.Output()
+	if err != nil {
+		log.Println("failed to insert rule", cmd, err)
+	}
+
 }
 
 func initUserFirewallRules() {
