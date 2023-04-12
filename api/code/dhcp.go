@@ -15,12 +15,12 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"io/ioutil"
+  "os"
 	"net"
 	"net/http"
-	"os"
-	"regexp"
-	"strconv"
+  "regexp"
 	"strings"
+  "strconv"
 	"sync"
 
 	"github.com/spr-networks/sprbus"
@@ -83,23 +83,23 @@ type DHCPResponse struct {
 var DHCPmtx sync.Mutex
 
 func initDHCP() {
-	DHCPmtx.Lock()
-	defer DHCPmtx.Unlock()
-	loadDHCPConfig()
+  DHCPmtx.Lock()
+  defer DHCPmtx.Unlock()
+  loadDHCPConfig()
 }
 
 func migrateDHCP() {
-	//start the config with some defaults
-	lanip := os.Getenv("LANIP")
-	if lanip == "" {
-		lanip = "192.168.2.1"
-	}
-	tiny_net := TinyIpDelta(lanip, -1) + "/24"
+  //start the config with some defaults
+  lanip := os.Getenv("LANIP")
+  if lanip == "" {
+    lanip = "192.168.2.1"
+  }
+  tiny_net := TinyIpDelta(lanip, -1) + "/24"
 
-	gDhcpConfig.TinyNets = []string{tiny_net}
-	gDhcpConfig.LeaseTime = "24h0m0s"
+  gDhcpConfig.TinyNets = []string{tiny_net}
+  gDhcpConfig.LeaseTime = "24h0m0s"
 
-	saveDHCPConfig()
+  saveDHCPConfig()
 }
 
 func loadDHCPConfig() {
@@ -107,8 +107,8 @@ func loadDHCPConfig() {
 	if err != nil {
 		log.Println(err)
 
-		//use LANIP to establish the DHCP configuration
-		migrateDHCP()
+    //use LANIP to establish the DHCP configuration
+    migrateDHCP()
 	} else {
 		err = json.Unmarshal(data, &gDhcpConfig)
 		if err != nil {
@@ -128,23 +128,23 @@ func saveDHCPConfig() {
 func getSetDhcpConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	DHCPmtx.Lock()
-	defer DHCPmtx.Unlock()
+  DHCPmtx.Lock()
+  defer DHCPmtx.Unlock()
 
-	if r.Method == http.MethodGet {
-		json.NewEncoder(w).Encode(gDhcpConfig)
-		return
+  if r.Method == http.MethodGet {
+    json.NewEncoder(w).Encode(gDhcpConfig)
+    return
 	}
 
-	conf := DHCPConfig{}
-	err := json.NewDecoder(r.Body).Decode(&conf)
+  conf := DHCPConfig{}
+  err := json.NewDecoder(r.Body).Decode(&conf)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
 
-	//validate tinynets
-	subnetRegex := regexp.MustCompile(`^(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}$`)
+  //validate tinynets
+  subnetRegex := regexp.MustCompile(`/^((?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.){3}(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])(?:\/(?:[1-9]|[1-2]\d|3[0-2]))$`)
 
 	if len(conf.TinyNets) != 0 {
 		for _, subnet := range conf.TinyNets {
@@ -165,24 +165,25 @@ func getSetDhcpConfig(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-	} else {
-		http.Error(w, "Need at least one subnet", 400)
-		return
-	}
+  } else {
+    http.Error(w, "Need at least one subnet", 400)
+    return
+  }
 
-	//reuse the existing lease time if not set
-	if conf.LeaseTime == "" {
-		conf.LeaseTime = gDhcpConfig.LeaseTime
-	} else {
-		timeRegex := regexp.MustCompile(`^(\d{1,2})h(\d{1,2})m(\d{1,2})s$`)
-		if !timeRegex.MatchString(conf.LeaseTime) {
-			http.Error(w, "Invalid lease time", 400)
-			return
-		}
-	}
+  //reuse the existing lease time if not set
+  if conf.LeaseTime == "" {
+    conf.LeaseTime = gDhcpConfig.LeaseTime
+  } else {
+    timeRegex := regexp.MustCompile(`^(\d{1,2})h(\d{1,2})m(\d{1,2})s$`)
+    if (!timeRegex.MatchString(conf.LeaseTime)) {
+      http.Error(w, "Invalid lease time", 400)
+      return
+    }
+  }
 
-	gDhcpConfig = conf
-	saveDHCPConfig()
+
+  gDhcpConfig  = conf
+  saveDHCPConfig()
 }
 
 func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
@@ -333,18 +334,19 @@ func TinyIPFromRouter(IP string) string {
 }
 
 func isTinyNetIP(IP string) bool {
-	DHCPmtx.Lock()
-	defer DHCPmtx.Unlock()
-	return isTinyNetIPLocked(IP)
+  DHCPmtx.Lock()
+  defer DHCPmtx.Unlock()
+  return isTinyNetIPLocked(IP)
 }
 
 func isTinyNetIPLocked(IP string) bool {
-	ip := net.ParseIP(IP)
-	if ip == nil {
-		return false
-	}
+  ip := net.ParseIP(IP)
+  if ip == nil {
+    return false
+  }
 
-	for _, subnetString := range gDhcpConfig.TinyNets {
+
+  for _, subnetString := range gDhcpConfig.TinyNets {
 		// check if theres free IPs in the range
 		_, subnet, err := net.ParseCIDR(subnetString)
 		if err != nil {
@@ -352,12 +354,12 @@ func isTinyNetIPLocked(IP string) bool {
 			continue
 		}
 
-		if subnet.Contains(ip) {
-			return true
-		}
-	}
+    if subnet.Contains(ip) {
+      return true
+    }
+  }
 
-	return false
+  return false
 }
 
 func genNewDeviceIP(devices *map[string]DeviceEntry) (string, string) {
