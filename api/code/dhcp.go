@@ -144,7 +144,7 @@ func getSetDhcpConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
   //validate tinynets
-  subnetRegex := regexp.MustCompile(`/^((?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.){3}(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])(?:\/(?:[1-9]|[1-2]\d|3[0-2]))$`)
+  subnetRegex := regexp.MustCompile(`^((?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.){3}(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])(?:\/(?:[1-9]|[1-2]\d|3[0-2]))$`)
 
 	if len(conf.TinyNets) != 0 {
 		for _, subnet := range conf.TinyNets {
