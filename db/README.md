@@ -1,9 +1,16 @@
-currently we store data in bolt db.
+# SPR Database
+
+currently we store data in bolt db. more engines can be implemented.
 see documentation and code in code/boltapi.go for more information.
 
-can switch engine easily with cmd packages
+The database is connected to [sprbus](https://github.com/spr-networks/sprbus)
+See configs/db/config.json for events to store and other options.
+Default is to store www access log and stdout of services.
 
-cmd/boltapi/main.go can be used to view database:
+`/topics` endpoint is available to get a list of all events published to
+sprbus (NOTE: some have lots of data and could fill up the db quickly)
+
+`cmd/boltapi/main.go` can be used to view database:
 
 ```bash
 make
@@ -12,18 +19,17 @@ make
 ./boltapi -b log:api
 ```
 
+**dev**
+```bash
+D=/home/spr/super
+./boltapi --config $D/configs/db/config.json --dbpath $D/state/plugins/db --debug
+```
+
 # TODO
 
 - same api routes and methods should be used for other integrations
 - future: add more paths and handlers to Serve for new db engines.
 - docusaurus
-
-**logrotate**
-
-- lumberjack: https://github.com/natefinch/lumberjack
-- run in thread, have a config for logs so user can cap what/when to rotate
-
-- use sprbus / signal to tell main to reopen a fresh db fd
 
 ## howto send logs with curl
 
