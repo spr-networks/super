@@ -35,6 +35,7 @@ var (
 	ErrBucketItemCreate  = errors.New("error creating bucket item")
 	ErrBucketItemUpdate  = errors.New("error updating bucket item")
 	ErrBucketItemDelete  = errors.New("error deleting bucket item")
+	seenEvents           = map[string]bool{}
 )
 
 type ApiError struct {
@@ -50,6 +51,10 @@ type BucketItem struct {
 type LogConfig struct {
 	SaveEvents []string `json:"SaveEvents"`
 	MaxSize    int64    `json:"MaxSize"`
+}
+
+func LogEvent(topic string) {
+	seenEvents[topic] = true
 }
 
 func saveConfig(config LogConfig) error {
@@ -71,6 +76,8 @@ func SetupConfig(configPath string, conf *LogConfig) {
 func loadConfig() *LogConfig {
 	DBmtx.Lock()
 	defer DBmtx.Unlock()
+
+	seenEvents = map[string]bool{}
 
 	// default config
 	config := &LogConfig{
@@ -132,6 +139,8 @@ func Serve(boltdb *bolt.DB, socketpath string) error {
 	router.HandleFunc("/config", GetSetConfig).Methods("GET", "PUT")
 	router.HandleFunc("/stats", GetStats).Methods("GET")
 	router.HandleFunc("/stats/{name}", GetBucketStats).Methods("GET")
+
+	router.HandleFunc("/topics", GetTopics).Methods("GET")
 
 	os.Remove(socketpath)
 	unixPluginListener, err := net.Listen("unix", socketpath)
@@ -211,6 +220,20 @@ func GetBucketStats(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stats)
+	return
+}
+
+// list of all topics seen by handleLogEvent
+func GetTopics(w http.ResponseWriter, r *http.Request) {
+	topics := make([]string, len(seenEvents))
+	i := 0
+	for topic := range seenEvents {
+		topics[i] = topic
+		i++
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(topics)
 	return
 }
 

@@ -97,13 +97,15 @@ func shouldLogEvent(topic string) bool {
 
 // subscribe to sprbus and store in db
 func handleLogEvent(topic string, value string) {
+	// keep a list of unique events
+	boltapi.LogEvent(topic)
+
 	if !shouldLogEvent(topic) {
 		return
 	}
 
 	if *gDebug {
-		log.Println("topic:", topic)
-		log.Println("value:", value)
+		log.Println("[event]", topic, value)
 	}
 
 	var jsonData map[string]interface{} // json object
@@ -141,6 +143,12 @@ func main() {
 	}
 
 	boltapi.SetupConfig(*gConfigPath, &config)
+
+	// keep a list of unique events for api
+	for k := range config.SaveEvents {
+		topic := config.SaveEvents[k]
+		boltapi.LogEvent(topic)
+	}
 
 	// runs every minute to rm old items if db size is too big
 	go boltapi.CheckSizeLoop(db, config, *gDebug)
