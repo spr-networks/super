@@ -1,8 +1,7 @@
 # A Secure Programmable Router
 
 [![release version](https://img.shields.io/github/v/release/spr-networks/super)](https://github.com/spr-networks/super/releases/latest)
-![version](https://img.shields.io/github/v/tag/spr-networks/super?sort=semver)
-![dev](https://img.shields.io/github/v/tag/spr-networks/super?branch=dev&label=dev)
+![version](https://img.shields.io/github/v/tag/spr-networks/super?sort=semver&label=version)
 ![docker build](https://github.com/spr-networks/super/actions/workflows/docker-image.yml/badge.svg?branch=main)
 ![iso build](https://github.com/spr-networks/super/actions/workflows/pi-ubuntu-iso.yml/badge.svg?branch=main)
 ![license](https://img.shields.io/github/license/spr-networks/super)
