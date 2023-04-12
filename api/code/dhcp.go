@@ -15,12 +15,12 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"io/ioutil"
-  "os"
 	"net"
 	"net/http"
-  "regexp"
+	"os"
+	"regexp"
+	"strconv"
 	"strings"
-  "strconv"
 	"sync"
 
 	"github.com/spr-networks/sprbus"
@@ -40,28 +40,6 @@ type DHCPConfig struct {
 	// additional dhcp options?
 }
 
-/*
-base/scripts/startup.sh
-
-ip addr flush dev $LANIF
-ip addr add $LANIP/24 dev $LANIF
-ip link set dev $LANIF up
-
-
-accounting.sh
-table ip accounting {
-
-      set local_lan {
-        type ipv4_addr
-        flags interval
-        elements = { $LANIP/24 }
-      }
-
-
-//if we want to handle multiple we need to add more support
-// to the project
-*/
-
 type DHCPRequest struct {
 	MAC        string
 	Identifier string
@@ -77,29 +55,52 @@ type AbstractDHCPRequest struct {
 type DHCPResponse struct {
 	IP        string
 	RouterIP  string
+	DNSIP     string
 	LeaseTime string
 }
 
 var DHCPmtx sync.Mutex
 
+func getDNSIP() string {
+	//this function assumes lock is held
+
+	if len(gDhcpConfig.TinyNets) == 0 {
+		//best effort
+		return os.Getenv("DNSIP")
+	}
+
+	//calculate from the first IP in the first subnet
+	ip, ipnet, err := net.ParseCIDR(gDhcpConfig.TinyNets[0])
+	if err != nil {
+		log.Println("failed to generate dns server ip", err)
+		return os.Getenv("DNSIP")
+	}
+
+	// Get the first IP address within the subnet by
+	// setting the host part of the IP address to 1
+	ip[3] = ipnet.IP[3] + 1
+
+	return ip.String()
+}
+
 func initDHCP() {
-  DHCPmtx.Lock()
-  defer DHCPmtx.Unlock()
-  loadDHCPConfig()
+	DHCPmtx.Lock()
+	defer DHCPmtx.Unlock()
+	loadDHCPConfig()
 }
 
 func migrateDHCP() {
-  //start the config with some defaults
-  lanip := os.Getenv("LANIP")
-  if lanip == "" {
-    lanip = "192.168.2.1"
-  }
-  tiny_net := TinyIpDelta(lanip, -1) + "/24"
+	//start the config with some defaults
+	lanip := os.Getenv("LANIP")
+	if lanip == "" {
+		lanip = "192.168.2.1"
+	}
+	tiny_net := TinyIpDelta(lanip, -1) + "/24"
 
-  gDhcpConfig.TinyNets = []string{tiny_net}
-  gDhcpConfig.LeaseTime = "24h0m0s"
+	gDhcpConfig.TinyNets = []string{tiny_net}
+	gDhcpConfig.LeaseTime = "24h0m0s"
 
-  saveDHCPConfig()
+	saveDHCPConfig()
 }
 
 func loadDHCPConfig() {
@@ -107,8 +108,8 @@ func loadDHCPConfig() {
 	if err != nil {
 		log.Println(err)
 
-    //use LANIP to establish the DHCP configuration
-    migrateDHCP()
+		//use LANIP to establish the DHCP configuration
+		migrateDHCP()
 	} else {
 		err = json.Unmarshal(data, &gDhcpConfig)
 		if err != nil {
@@ -128,23 +129,23 @@ func saveDHCPConfig() {
 func getSetDhcpConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-  DHCPmtx.Lock()
-  defer DHCPmtx.Unlock()
+	DHCPmtx.Lock()
+	defer DHCPmtx.Unlock()
 
-  if r.Method == http.MethodGet {
-    json.NewEncoder(w).Encode(gDhcpConfig)
-    return
+	if r.Method == http.MethodGet {
+		json.NewEncoder(w).Encode(gDhcpConfig)
+		return
 	}
 
-  conf := DHCPConfig{}
-  err := json.NewDecoder(r.Body).Decode(&conf)
+	conf := DHCPConfig{}
+	err := json.NewDecoder(r.Body).Decode(&conf)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
 
-  //validate tinynets
-  subnetRegex := regexp.MustCompile(`^((?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.){3}(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])(?:\/(?:[1-9]|[1-2]\d|3[0-2]))$`)
+	//validate tinynets
+	subnetRegex := regexp.MustCompile(`^((?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.){3}(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])(?:\/(?:[1-9]|[1-2]\d|3[0-2]))$`)
 
 	if len(conf.TinyNets) != 0 {
 		for _, subnet := range conf.TinyNets {
@@ -165,25 +166,24 @@ func getSetDhcpConfig(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-  } else {
-    http.Error(w, "Need at least one subnet", 400)
-    return
-  }
+	} else {
+		http.Error(w, "Need at least one subnet", 400)
+		return
+	}
 
-  //reuse the existing lease time if not set
-  if conf.LeaseTime == "" {
-    conf.LeaseTime = gDhcpConfig.LeaseTime
-  } else {
-    timeRegex := regexp.MustCompile(`^(\d{1,2})h(\d{1,2})m(\d{1,2})s$`)
-    if (!timeRegex.MatchString(conf.LeaseTime)) {
-      http.Error(w, "Invalid lease time", 400)
-      return
-    }
-  }
+	//reuse the existing lease time if not set
+	if conf.LeaseTime == "" {
+		conf.LeaseTime = gDhcpConfig.LeaseTime
+	} else {
+		timeRegex := regexp.MustCompile(`^(\d{1,2})h(\d{1,2})m(\d{1,2})s$`)
+		if !timeRegex.MatchString(conf.LeaseTime) {
+			http.Error(w, "Invalid lease time", 400)
+			return
+		}
+	}
 
-
-  gDhcpConfig  = conf
-  saveDHCPConfig()
+	gDhcpConfig = conf
+	saveDHCPConfig()
 }
 
 func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
@@ -276,7 +276,7 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 
 	handleDHCPResult(dhcp.MAC, IP, dhcp.Name, dhcp.Iface)
 
-	response := DHCPResponse{IP, Router, LeaseTime}
+	response := DHCPResponse{IP, Router, getDNSIP(), LeaseTime}
 
 	sprbus.Publish("dhcp:response", response)
 
@@ -334,19 +334,18 @@ func TinyIPFromRouter(IP string) string {
 }
 
 func isTinyNetIP(IP string) bool {
-  DHCPmtx.Lock()
-  defer DHCPmtx.Unlock()
-  return isTinyNetIPLocked(IP)
+	DHCPmtx.Lock()
+	defer DHCPmtx.Unlock()
+	return isTinyNetIPLocked(IP)
 }
 
 func isTinyNetIPLocked(IP string) bool {
-  ip := net.ParseIP(IP)
-  if ip == nil {
-    return false
-  }
+	ip := net.ParseIP(IP)
+	if ip == nil {
+		return false
+	}
 
-
-  for _, subnetString := range gDhcpConfig.TinyNets {
+	for _, subnetString := range gDhcpConfig.TinyNets {
 		// check if theres free IPs in the range
 		_, subnet, err := net.ParseCIDR(subnetString)
 		if err != nil {
@@ -354,12 +353,12 @@ func isTinyNetIPLocked(IP string) bool {
 			continue
 		}
 
-    if subnet.Contains(ip) {
-      return true
-    }
-  }
+		if subnet.Contains(ip) {
+			return true
+		}
+	}
 
-  return false
+	return false
 }
 
 func genNewDeviceIP(devices *map[string]DeviceEntry) (string, string) {
@@ -544,16 +543,18 @@ func abstractDhcpRequest(w http.ResponseWriter, r *http.Request) {
 	val, exists := lookupWGDevice(&devices, req.Identifier, "")
 
 	IP := ""
+	Router := ""
 
 	if exists {
 		IP = val.RecentIP
+		Router = RouterFromTinyIP(IP)
 	}
 
 	if IP == "" {
-		IP, _ = genNewDeviceIP(&devices)
+		IP, Router = genNewDeviceIP(&devices)
 	}
 
-	response := DHCPResponse{IP, "", ""}
+	response := DHCPResponse{IP, Router, getDNSIP(), gDhcpConfig.LeaseTime}
 	//return DHCPResponse now
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
