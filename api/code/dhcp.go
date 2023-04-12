@@ -267,6 +267,7 @@ func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
 		}
 	}
 
+	updatedDevices := false
 	if !exists {
 		//create a new device entry
 		newDevice := DeviceEntry{}
@@ -276,20 +277,26 @@ func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
 		newDevice.DeviceTags = []string{}
 		devices[newDevice.MAC] = newDevice
 		val = newDevice
+		updatedDevices = true
 	} else {
 		//update recent IP
 		if val.RecentIP != IP {
 			val.RecentIP = IP
 			devices[MAC] = val
+			updatedDevices = true
 		}
 	}
 
-	saveDevicesJson(devices)
+	if updatedDevices {
+		saveDevicesJson(devices)
+	}
 
 	notifyFirewallDHCP(val, Iface)
 
-	// update local mappings file for DNS
-	updateLocalMappings(IP, Name)
+	if Name != "" {
+		// update local mappings file for DNS
+		updateLocalMappings(IP, Name)
+	}
 }
 
 func dhcpRequest(w http.ResponseWriter, r *http.Request) {

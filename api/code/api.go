@@ -921,8 +921,20 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			val.VLANTag = dev.VLANTag
 		}
 
+		refreshIP := false
+
 		if dev.RecentIP != "" {
-			val.RecentIP = dev.RecentIP
+			new_ip := net.ParseIP(dev.RecentIP)
+			if new_ip != nil && isTinyNetIP(new_ip.String()) {
+				val.RecentIP = new_ip.String()
+				refreshIP = true
+			} else {
+				if new_ip == nil {
+					return "Invalid IP assignment", 400
+				} else {
+					return "IP assignment not in configured IP ranges", 400
+				}
+			}
 		}
 
 		if dev.PSKEntry.Psk != "" {
@@ -995,6 +1007,17 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		if refreshTags {
 			refreshDeviceTags(val)
+		}
+
+		if refreshIP {
+			if val.MAC != "" {
+				iface := getRouteInterface(val.RecentIP)
+				if iface != "" {
+					//if the device is currently routed, then update it
+					handleDHCPResult(val.MAC, val.RecentIP, "", iface)
+				}
+			}
+
 		}
 
 		//mask the PSK if set and not generated
