@@ -363,9 +363,15 @@ table inet nat {
          dnat ip saddr . ip daddr . udp dport map @dnat_udp_ipmap : \
               ip saddr . ip daddr . udp dport map @dnat_udp_portmap
 
+
     # Reroute external DNS to our own server
-    udp dport 53 counter dnat ip to $DNSIP:53
-    tcp dport 53 counter dnat ip to $DNSIP:53
+    udp dport 53 jump DNS_DNAT
+    tcp dport 53 jump DNS_DNAT
+  }
+
+  chain DNS_DNAT {
+    udp dport 53 counter dnat ip to $LANIP:53
+    tcp dport 53 counter dnat ip to $LANIP:53
   }
 
   #chain USERDEF_PREROUTING {
