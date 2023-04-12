@@ -22,7 +22,4 @@ do
   hostapd_cli -B -p /state/wifi/control_${IFACE} -a /scripts/action.sh
 done
 
-while true
-do
-  sleep 100000
-done
+sleep inf
