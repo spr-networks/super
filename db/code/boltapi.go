@@ -130,6 +130,8 @@ func Serve(boltdb *bolt.DB, socketpath string) error {
 	router.HandleFunc("/bucket/{name}/{key}", DeleteBucketItem).Methods("DELETE")
 
 	router.HandleFunc("/config", GetSetConfig).Methods("GET", "PUT")
+	router.HandleFunc("/stats", GetStats).Methods("GET")
+	router.HandleFunc("/stats/{name}", GetBucketStats).Methods("GET")
 
 	os.Remove(socketpath)
 	unixPluginListener, err := net.Listen("unix", socketpath)
@@ -171,6 +173,45 @@ func GetSetConfig(w http.ResponseWriter, r *http.Request) {
 	*gConfigPtr = newConfig
 
 	json.NewEncoder(w).Encode(newConfig)
+}
+
+func GetStats(w http.ResponseWriter, r *http.Request) {
+	var stats bolt.TxStats
+
+	if err := db.View(func(tx *bolt.Tx) error {
+		stats = tx.Stats()
+
+		return nil
+	}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stats)
+	return
+}
+
+func GetBucketStats(w http.ResponseWriter, r *http.Request) {
+	var stats bolt.BucketStats
+
+	bucketName := mux.Vars(r)["name"]
+
+	if err := db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketName))
+		if bucket == nil {
+			return ErrBucketMissing
+		}
+
+		stats = bucket.Stats()
+
+		return nil
+	}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stats)
+	return
 }
 
 func ListBuckets(w http.ResponseWriter, r *http.Request) {

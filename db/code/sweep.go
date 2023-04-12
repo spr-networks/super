@@ -22,7 +22,7 @@ when ceiling is hit run this to remove old items from buckets
 func CheckSizeIteration(db *bolt.DB, config LogConfig, debug bool) error {
 	var dbSize int64
 	bucketKeys := map[string]int{}
-	batchMaxDelete := 500 // max items to delete each iteration
+	batchMaxDelete := 200 // max items to delete each iteration
 
 	//1. get size of db + all buckets and num keys
 	if err := db.View(func(tx *bolt.Tx) error {
@@ -30,7 +30,12 @@ func CheckSizeIteration(db *bolt.DB, config LogConfig, debug bool) error {
 
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			stats := b.Stats()
-			bucketKeys[string(name)] = stats.KeyN
+			// NOTE only set if we're close to a full page on bucket
+			// can use stats diff also here to see if there'r updates
+			// this is to avoid growing any more
+			if float64(stats.BranchInuse)/float64(stats.BranchAlloc) > 0.75 {
+				bucketKeys[string(name)] = stats.KeyN
+			}
 
 			return nil
 		})
@@ -52,7 +57,7 @@ func CheckSizeIteration(db *bolt.DB, config LogConfig, debug bool) error {
 	// all buckets are empty
 	if len(bucketKeys) == 0 {
 		if debug {
-			log.Println("no buckets but db size is max. safe to rm db")
+			log.Println("no buckets to rm, db size is max")
 		}
 		return nil
 	}
@@ -82,9 +87,6 @@ func CheckSizeIteration(db *bolt.DB, config LogConfig, debug bool) error {
 	if debug {
 		log.Println("prepare delete:", numToDelete, "items from", bucketName)
 	}
-
-	// dont delete for now - need a way to see if we have new vs. empty in db
-	return nil
 
 	//2. get keys to delete
 	keys := [][]byte{}
