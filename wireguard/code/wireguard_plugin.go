@@ -20,11 +20,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var UNIX_PLUGIN_LISTENER = "/state/plugins/wireguard/wireguard_plugin"
+var UNIX_PLUGIN_LISTENER = TEST_PREFIX + "/state/plugins/wireguard/wireguard_plugin"
 
 var TEST_PREFIX = ""
 var WireguardInterface = "wg0"
 var WireguardConfigFile = TEST_PREFIX + "/configs/wireguard/wg0.conf"
+var DNSIPPath = TEST_PREFIX + "/configs/base/lanip"
 
 var Configmtx sync.Mutex
 
@@ -473,11 +474,17 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 
 	config.Interface.DNS = "1.1.1.1, 1.0.0.1"
 
-	//TBD this should be be pulled from the API 
-	// Point DNS to CoreDNS/DNSIP setting
-	dns, ok := os.LookupEnv("DNSIP")
-	if ok {
-		config.Interface.DNS = dns
+
+	dnsb, err := ioutil.ReadFile(DNSIPPath)
+	if err != nil {
+		//TBD this should be be pulled from the API
+		// Point DNS to CoreDNS/DNSIP setting
+		dns, ok := os.LookupEnv("DNSIP")
+		if ok {
+			config.Interface.DNS = dns
+		}
+	} else if len(dnsb) != 0 {
+		config.Interface.DNS = string(dnsb)
 	}
 
 	PublicKey, err := getPublicKey()
