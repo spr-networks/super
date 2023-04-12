@@ -2,7 +2,7 @@
 
 # reset hwsim
 modprobe -r mac80211_hwsim
-modprobe mac80211_hwsim radios=4
+modprobe mac80211_hwsim radios=8
 ip link set dev hwsim0 up
 
 
@@ -24,6 +24,5 @@ docker exec -d superwifid /scripts/startup.sh
 # give a radio to the stations
 move_iface_pid "wlan2" "sta1"
 move_iface_pid "wlan3" "sta2"
-
-#move_iface_pid "wlan4" "sta3"
+move_iface_pid "wlan4" "sta3"
 #move_iface_pid "wlan5" "sta4"
