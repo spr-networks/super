@@ -1799,6 +1799,7 @@ type SetupConfig struct {
 	AdminPassword   string
 	InterfaceAP     string
 	InterfaceUplink string
+	TinyNets        []string
 }
 
 func isSetupMode() bool {
@@ -1864,6 +1865,38 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Password cannot be empty", 400)
 		return
 	}
+
+	subnetRegex := regexp.MustCompile(`^(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}$`)
+
+	tinyNets := []string{}
+	if len(conf.TinyNets) != 0 {
+		for _, subnet := range conf.TinyNets {
+			if !subnetRegex.MatchString(subnet) {
+				http.Error(w, "Invalid subnet in TinyNets", 400)
+				return
+			}
+			// Extract prefix length from subnet
+			prefixStr := subnet[strings.IndexByte(subnet, '/')+1:]
+			prefix, err := strconv.Atoi(prefixStr)
+			if err != nil {
+				http.Error(w, "Invalid prefix length for TinyNets", 400)
+				return
+			}
+
+			if prefix < 8 || prefix > 24 {
+				http.Error(w, "Invalid prefix length for TinyNets: "+string(prefix), 400)
+				return
+			}
+
+			tinyNets = append(tinyNets, subnet)
+		}
+		//normalize tiny subnets and add them in
+	}
+
+	//update DHCP config
+	DHCPmtx.Lock()
+	gDhcpConfig.TinyNets = tinyNets
+	DHCPmtx.Unlock()
 
 	// write to auth_users.json
 	users := fmt.Sprintf("{%q: %q}", "admin", conf.AdminPassword)

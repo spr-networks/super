@@ -18,6 +18,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -121,6 +123,64 @@ func saveDHCPConfig() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// http r/w to set gDhcpConfig now
+func getSetDhcpConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	DHCPmtx.Lock()
+	defer DHCPmtx.Unlock()
+
+	if r.Method == http.MethodGet {
+		json.NewEncoder(w).Encode(gDhcpConfig)
+		return
+	}
+
+	conf := DHCPConfig{}
+	err := json.NewDecoder(r.Body).Decode(&conf)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	//validate tinynets
+	subnetRegex := regexp.MustCompile(`^(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}$`)
+
+	if len(conf.TinyNets) != 0 {
+		for _, subnet := range conf.TinyNets {
+			if !subnetRegex.MatchString(subnet) {
+				http.Error(w, "Invalid subnet in TinyNets", 400)
+				return
+			}
+			// Extract prefix length from subnet
+			prefixStr := subnet[strings.IndexByte(subnet, '/')+1:]
+			prefix, err := strconv.Atoi(prefixStr)
+			if err != nil {
+				http.Error(w, "Invalid prefix length for TinyNets", 400)
+				return
+			}
+
+			if prefix < 8 || prefix > 24 {
+				http.Error(w, "Invalid prefix length for TinyNets: "+string(prefix), 400)
+				return
+			}
+		}
+	}
+
+	//reuse the existing lease time if not set
+	if conf.LeaseTime == "" {
+		conf.LeaseTime = gDhcpConfig.LeaseTime
+	} else {
+		timeRegex := regexp.MustCompile(`^(\d{1,2})h(\d{1,2})m(\d{1,2})s$`)
+		if !timeRegex.MatchString(conf.LeaseTime) {
+			http.Error(w, "Invalid lease time", 400)
+			return
+		}
+	}
+
+	gDhcpConfig = conf
+	saveDHCPConfig()
 }
 
 func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
