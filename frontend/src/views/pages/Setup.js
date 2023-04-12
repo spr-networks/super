@@ -40,6 +40,7 @@ const Setup = (props) => {
   const [countryWifi, setCountryWifi] = useState('US')
   const [interfaceWifi, setInterfaceWifi] = useState('wlan1')
   const [interfaceUplink, setInterfaceUplink] = useState('eth0')
+  const [tinynet, setTinynet] = useState('192.168.2.1/24')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = React.useState({})
   const [isDone, setIsDone] = useState(false)
@@ -351,6 +352,13 @@ const Setup = (props) => {
     }
   }, [ssid])
 
+  useEffect(() => {
+    if ('tinynet' in errors && tinynet.length) {
+      setErrors({})
+    }
+  }, [tinynet])
+
+
   const handlePress = () => {
     if (
       !ssid.match(
@@ -361,6 +369,32 @@ const Setup = (props) => {
       return
     }
 
+
+    let nets = tinynet.split(" ")
+    let tinynets = []
+    for (let n of nets) {
+      //validate subnets
+      if( !n.match(
+          /^((?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.){3}(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])(?:\/(?:[1-9]|[1-2]\d|3[0-2]))$/
+        )) {
+          setErrors({...errors, tinynet: 'Not a valid ipv4 network'})
+          return
+        }
+
+      let pieces = n.split('/')
+      if (parseInt(pieces[1]) > 24) {
+        setErrors({...errors, tinynet: 'unsupported subnet size, use a /24 or larger network, you used:' + pieces[1]})
+        return
+      }
+
+      if (parseInt(pieces[1]) < 7) {
+        setErrors({...errors, tinynet: 'unsupported subnet size, use a /8 or smaller network, you used:' + pieces[1]})
+        return
+      }
+
+      tinynets.push(n)
+    }
+
     if (password.length < 5) {
       setErrors({
         ...errors,
@@ -369,12 +403,14 @@ const Setup = (props) => {
       return
     }
 
+
     const data = {
       InterfaceUplink: interfaceUplink,
       SSID: ssid,
       CountryCode: countryWifi,
       InterfaceAP: interfaceWifi,
-      AdminPassword: password
+      AdminPassword: password,
+      TinyNets: tinynets
     }
 
     api
@@ -497,6 +533,28 @@ const Setup = (props) => {
                   ))}
                 </Select>
               </FormControl>
+
+              <FormControl isInvalid={'tinynet' in errors}>
+                <FormControl.Label>
+                  Private Network Subnet(s)
+                </FormControl.Label>
+                <Input
+                  value={tinynet}
+                  placeholder={'Private subnet for network'}
+                  onChangeText={(value) => setTinynet(value)}
+                  autoFocus
+                />
+                {'tinynet' in errors ? (
+                  <FormControl.ErrorMessage
+                    _text={{
+                      fontSize: 'xs'
+                    }}
+                  >
+                    {errors.tinynet}
+                  </FormControl.ErrorMessage>
+                ) : null}
+              </FormControl>
+
 
               <FormControl isInvalid={'login' in errors}>
                 <FormControl.Label>Admin Password</FormControl.Label>
