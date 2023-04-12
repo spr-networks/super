@@ -172,7 +172,7 @@ func getNetworkIP() (string, error) {
 	if len(addrs) > 0 {
 		return addrs[0].(*net.IPNet).IP.String(), nil
 	} else {
-		return "", errors.New(fmt.Sprintf("interface %s don't have an ipv4 address\n", iname))
+		return "", errors.New(fmt.Sprintf("interface %s doesn't have an ipv4 address\n", iname))
 	}
 }
 
@@ -473,6 +473,7 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 
 	config.Interface.DNS = "1.1.1.1, 1.0.0.1"
 
+	//TBD this should be be pulled from the API 
 	// Point DNS to CoreDNS/DNSIP setting
 	dns, ok := os.LookupEnv("DNSIP")
 	if ok {
