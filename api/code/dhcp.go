@@ -18,6 +18,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -27,6 +28,7 @@ import (
 )
 
 var gDHCPConfigPath = TEST_PREFIX + "/configs/base/dhcp.json"
+var gLANIPPath = TEST_PREFIX + "/configs/base/lanip"
 var gDhcpConfig = DHCPConfig{}
 
 type DHCPConfig struct {
@@ -61,26 +63,78 @@ type DHCPResponse struct {
 
 var DHCPmtx sync.Mutex
 
-func getDNSIP() string {
-	//this function assumes lock is held
-
-	if len(gDhcpConfig.TinyNets) == 0 {
-		//best effort
-		return os.Getenv("DNSIP")
-	}
-
-	//calculate from the first IP in the first subnet
-	ip, ipnet, err := net.ParseCIDR(gDhcpConfig.TinyNets[0])
+func SUBNETP1(subnet string) string {
+	ip, ipnet, err := net.ParseCIDR(subnet)
 	if err != nil {
-		log.Println("failed to generate dns server ip", err)
-		return os.Getenv("DNSIP")
+		log.Println("failed to parse subnet ip", err)
+		return os.Getenv("LANIP")
 	}
 
 	// Get the first IP address within the subnet by
 	// setting the host part of the IP address to 1
 	ip[3] = ipnet.IP[3] + 1
-
 	return ip.String()
+}
+
+func getLANIP() string {
+	//this function assumes that the dhcp config lock is held
+
+	if len(gDhcpConfig.TinyNets) == 0 {
+		//best effort
+		return os.Getenv("LANIP")
+	}
+
+	//calculate from the first IP in the first subnet
+	return SUBNETP1(gDhcpConfig.TinyNets[0])
+}
+
+func updateLanIPs(TinyNets []string) {
+
+	dummyif := "sprloop"
+	lanif := os.Getenv("LANIF")
+	if lanif == "" {
+		lanif = dummyif
+	}
+
+	cmd := exec.Command("ip", "addr", "flush", "dev", lanif)
+	_, err := cmd.Output()
+	if err != nil {
+		log.Println("failed to flush", lanif)
+		if lanif == dummyif {
+			//try adding the dummy loop just in case
+			_, err = exec.Command("ip", "link", "add", "name", lanif, "type", "dummy").Output()
+			if err != nil {
+				log.Println("failed to make dummyif", err)
+				return
+			}
+		}
+	}
+
+	if lanif != dummyif {
+		//ensure sprloop is deleted when establishing LANIF,
+		// just in case
+		exec.Command("ip", "link", "del", dummyif).Output()
+	}
+
+	for _, subnet := range TinyNets {
+		parts := strings.Split(subnet, "/")
+		if len(parts) != 2 {
+			log.Println("invalid subnet", parts)
+			continue
+		}
+		mask := parts[1]
+		lanip := SUBNETP1(subnet)
+		_, err = exec.Command("ip", "addr", "add", lanip+"/"+mask, "dev", lanif).Output()
+		if err != nil {
+			log.Println("failed to add subnet to interface", lanip, mask)
+		}
+	}
+
+	_, err = exec.Command("ip", "link", "set", "dev", lanif, "up").Output()
+	if err != nil {
+		log.Println("failed to set link up for", lanif)
+		return
+	}
 }
 
 func initDHCP() {
@@ -115,6 +169,7 @@ func loadDHCPConfig() {
 		if err != nil {
 			log.Println(err)
 		}
+		updateFirewallSubnets(getLANIP(), gDhcpConfig.TinyNets)
 	}
 }
 
@@ -124,6 +179,16 @@ func saveDHCPConfig() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	lanIP := getLANIP()
+
+	err = ioutil.WriteFile(gLANIPPath, []byte(lanIP), 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	updateFirewallSubnets(lanIP, gDhcpConfig.TinyNets)
+	updateLanIPs(gDhcpConfig.TinyNets)
 }
 
 func getSetDhcpConfig(w http.ResponseWriter, r *http.Request) {
@@ -276,7 +341,7 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 
 	handleDHCPResult(dhcp.MAC, IP, dhcp.Name, dhcp.Iface)
 
-	response := DHCPResponse{IP, Router, getDNSIP(), LeaseTime}
+	response := DHCPResponse{IP, Router, getLANIP(), LeaseTime}
 
 	sprbus.Publish("dhcp:response", response)
 
@@ -554,7 +619,7 @@ func abstractDhcpRequest(w http.ResponseWriter, r *http.Request) {
 		IP, Router = genNewDeviceIP(&devices)
 	}
 
-	response := DHCPResponse{IP, Router, getDNSIP(), gDhcpConfig.LeaseTime}
+	response := DHCPResponse{IP, Router, getLANIP(), gDhcpConfig.LeaseTime}
 	//return DHCPResponse now
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
