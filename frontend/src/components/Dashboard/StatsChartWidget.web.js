@@ -157,7 +157,7 @@ const StatsChartWidget = (props) => {
 
   return (
     <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
       borderRadius="10"
       mb="4"
       p="5"

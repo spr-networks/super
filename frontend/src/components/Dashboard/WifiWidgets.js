@@ -15,35 +15,35 @@ export class WifiClientCount extends Component {
       .then((stations) => {
         let count = Object.keys(stations).length
 
-        this.setState({ numberOfWifiClients: count})
-        meshAPI.meshIter(() => new APIWifi()).then(r => {
-          let connectMACsList = [];  // Declare an array to store the 'connectMACs' variables
-          r.forEach(remoteWifiApi => {
-            remoteWifiApi.interfacesConfiguration.call(remoteWifiApi).then((config) => {
-              config.forEach((iface) => {
-                if (iface.Type == "AP" &&  iface.Enabled == true) {
-                  remoteWifiApi
-                    .allStations.call(remoteWifiApi, iface.Name)
-                    .then((stations) => {
-                      let connectedMACs = Object.keys(stations)
-                      connectMACsList.push(...connectedMACs);  // Push the 'connectedMACs' variable to the 'connectMACsList' array
-                    })
-                    .catch((err) => {
+        this.setState({ numberOfWifiClients: count })
+        meshAPI
+          .meshIter(() => new APIWifi())
+          .then((r) => {
+            let connectMACsList = [] // Declare an array to store the 'connectMACs' variables
+            r.forEach((remoteWifiApi) => {
+              remoteWifiApi.interfacesConfiguration
+                .call(remoteWifiApi)
+                .then((config) => {
+                  config.forEach((iface) => {
+                    if (iface.Type == 'AP' && iface.Enabled == true) {
+                      remoteWifiApi.allStations
+                        .call(remoteWifiApi, iface.Name)
+                        .then((stations) => {
+                          let connectedMACs = Object.keys(stations)
+                          connectMACsList.push(...connectedMACs) // Push the 'connectedMACs' variable to the 'connectMACsList' array
+                        })
+                        .catch((err) => {})
+                    }
+                  })
+                })
+            })
 
-                    })
-                }
-              })
+            this.setState({
+              numberOfWifiClients: count + connectMACsList.length
             })
           })
-
-          this.setState({ numberOfWifiClients: (count + connectMACsList.length) })
-        });
-
       })
       .catch((err) => {})
-
-
-
   }
 
   render() {
@@ -78,11 +78,10 @@ export const WifiInfo = (props) => {
         setSsid(status['ssid[0]'])
         setChannel(status['channel'])
       })
-      .catch((err) => {
-      })
+      .catch((err) => {})
   }, [])
 
-  let title = "AP " + props.iface
+  let title = 'AP ' + props.iface
   return (
     <StatsWidget
       {...props}
@@ -119,7 +118,7 @@ export const Interfaces = (props) => {
 
   return (
     <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
       borderRadius={10}
       mb={0}
       p={4}
