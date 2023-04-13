@@ -95,6 +95,7 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(device.Name)
+  const [ip, setIP] = useState(device.RecentIP)
   const [groups, setGroups] = useState(device.Groups.sort())
   const [tags, setTags] = useState(device.DeviceTags.sort())
   const [showModal, setShowModal] = useState(false)
@@ -136,6 +137,13 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
     setName(name)
     setEditing(name != device.Name)
   }
+
+
+  const handleIP = (ip) => {
+    setIP(ip)
+    setEditing(ip != device.RecentIP)
+  }
+
 
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
   let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
@@ -180,12 +188,24 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
       return
     }
 
-    deviceAPI
-      .updateName(id, name)
-      .then(notifyChange)
-      .catch((error) =>
-        context.error('[API] updateName error: ' + error.message)
-      )
+    if (name != device.Name){
+      deviceAPI
+        .updateName(id, name)
+        .then(notifyChange)
+        .catch((error) =>
+          context.error('[API] updateName error: ' + error.message)
+        )
+    }
+
+    if (ip != device.RecentIP) {
+      deviceAPI
+        .updateIP(id, ip)
+        .then(notifyChange)
+        .catch((error) =>
+          context.error('[API] updateIP error: ' + error.message + '. IP not in range or not a valid Supernetwork Device IP ')
+        )
+    }
+
   }
 
   const handleSubmit = () => {
@@ -358,7 +378,21 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
             space={1}
             justifyContent={{ base: 'space-around', md: 'center' }}
           >
-            <Text bold>{device.RecentIP}</Text>
+            {edit ? (
+              <Input
+                size="lg"
+                type="text"
+                variant="underlined"
+                w="100%"
+                value={ip}
+                autoFocus={false}
+                onChangeText={(value) => handleIP(value)}
+                onSubmitEditing={handleSubmit}
+              />
+            ) : (
+              <Text bold>{ip}</Text>
+            )}
+
             <Text fontSize="xs" color="muted.500">
               {device.MAC}
             </Text>
