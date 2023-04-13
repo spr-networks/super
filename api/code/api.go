@@ -925,7 +925,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		if dev.RecentIP != "" {
 			new_ip := net.ParseIP(dev.RecentIP)
-			if new_ip != nil && isTinyNetIP(new_ip.String()) {
+			if new_ip != nil && isTinyNetDeviceIP(new_ip.String()) {
 				val.RecentIP = new_ip.String()
 				refreshIP = true
 			} else {
