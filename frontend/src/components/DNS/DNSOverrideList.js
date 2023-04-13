@@ -67,13 +67,7 @@ const DNSOverrideList = (props) => {
         </ModalForm>
       </HStack>
 
-      <Box
-        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        _rounded={{ md: 'md' }}
-        width="100%"
-        p={4}
-        mb={4}
-      >
+      <Box px={4} mb={4}>
         {!list || !list.length ? (
           <Text>{`No ${props.title.split(' ')[0]} rules configured`}</Text>
         ) : null}
@@ -81,12 +75,14 @@ const DNSOverrideList = (props) => {
           data={list}
           renderItem={({ item }) => (
             <Box
+              bg="backgroundCardLight"
               borderBottomWidth={1}
               _dark={{
-                borderColor: 'muted.600'
+                bg: 'backgroundCardDark',
+                borderColor: 'borderColorCardDark'
               }}
-              borderColor="muted.200"
-              py={2}
+              borderColor="borderColorCardLight"
+              p={4}
             >
               <Stack
                 direction={{ base: 'row' }}

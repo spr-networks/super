@@ -205,10 +205,13 @@ const LogList = (props) => {
         estimatedItemSize={100}
         renderItem={({ item }) => (
           <Box
+            bg="backgroundCardLight"
             borderBottomWidth={1}
-            bg="warmGray.50"
-            borderColor="muted.200"
-            _dark={{ bg: 'blueGray.800', borderColor: 'muted.600' }}
+            _dark={{
+              bg: 'backgroundCardDark',
+              borderColor: 'borderColorCardDark'
+            }}
+            borderColor="borderColorCardLight"
             p={4}
           >
             <HStack

@@ -138,12 +138,10 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
     setEditing(name != device.Name)
   }
 
-
   const handleIP = (ip) => {
     setIP(ip)
     setEditing(ip != device.RecentIP)
   }
-
 
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
   let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
@@ -188,7 +186,7 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
       return
     }
 
-    if (name != device.Name){
+    if (name != device.Name) {
       deviceAPI
         .updateName(id, name)
         .then(notifyChange)
@@ -202,10 +200,13 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
         .updateIP(id, ip)
         .then(notifyChange)
         .catch((error) =>
-          context.error('[API] updateIP error: ' + error.message + '. IP not in range or not a valid Supernetwork Device IP ')
+          context.error(
+            '[API] updateIP error: ' +
+              error.message +
+              '. IP not in range or not a valid Supernetwork Device IP '
+          )
         )
     }
-
   }
 
   const handleSubmit = () => {
@@ -322,14 +323,17 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
         direction={{ base: 'column-reverse', md: 'row' }}
         space={2}
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        p={4}
-        w="100%"
+        p={8}
+        my={2}
+        mx={4}
+        rounded="md"
+        shadow="md"
         key={device.MAC}
         justifyContent="space-between"
         alignItems="center"
         _light={{ borderColor: 'coolGray.200' }}
         _dark={{ borderColor: 'muted.700' }}
-        borderBottomWidth={1}
+        borderBottomWidth={0}
       >
         <Stack
           direction={{ base: 'column', md: 'row' }}
@@ -337,6 +341,7 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
           flex={1}
           justifyContent="space-between"
           alignItems="center"
+          w="full"
         >
           <Box
             display={{ base: 'none', md: 'flex' }}
@@ -393,7 +398,11 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
               <Text bold>{ip}</Text>
             )}
 
-            <Text fontSize="xs" color="muted.500">
+            <Text
+              display={{ base: 'none', md: 'flex' }}
+              fontSize="xs"
+              color="muted.500"
+            >
               {device.MAC}
             </Text>
           </Stack>

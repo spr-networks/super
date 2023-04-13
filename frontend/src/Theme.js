@@ -23,12 +23,12 @@ export const theme = extendTheme({
     backgroundDark: colors.blueGray[900],
 
     backgroundContentLight: '#f4f3ef', // warmGray.200
-    backgroundContentDark: colors.blueGray[900],
+    backgroundContentDark: colors.gray[900], //colors.blueGray[900],
 
     backgroundCardLight: colors.warmGray[50],
-    backgroundCardDark: colors.blueGray[800],
+    backgroundCardDark: colors.black, //colors.blueGray[800],
     borderColorCardLight: colors.warmGray[100],
-    borderColorCardDark: colors.blueGray[700],
+    borderColorCardDark: colors.gray[900], //colors.blueGray[800],
 
     primaryTextDark: colors.cyan[200],
     primaryTextLight: colors.cyan[700],
@@ -46,7 +46,7 @@ export const theme = extendTheme({
     // navbar
 
     navbarBackgroundLight: colors.white, // colors.coolGray[100],
-    navbarBackgroundDark: colors.blueGray[900], //'#24292f',
+    navbarBackgroundDark: colors.black, //colors.blueGray[900], //'#24292f',
     navbarBorderColorLight: colors.coolGray[100],
     navbarBorderColorDark: colors.coolGray[800],
     navbarTextColorLight: colors.coolGray[600],
@@ -55,7 +55,7 @@ export const theme = extendTheme({
     // sidebar
 
     sidebarBackgroundLight: colors.coolGray[50], // colors.white
-    sidebarBackgroundDark: colors.blueGray[900], // + .alpha:50
+    sidebarBackgroundDark: colors.black, //colors.blueGray[900], // + .alpha:50
     sidebarBorderColorLight: colors.coolGray[100],
     sidebarBorderColorDark: colors.coolGray[800],
 
@@ -72,7 +72,7 @@ export const theme = extendTheme({
     activeSidebarItemHoverBackgroundDark: colors.coolGray[600],
 
     inactiveSidebarItemHoverBackgroundLight: colors.coolGray[100],
-    inactiveSidebarItemHoverBackgroundDark: colors.blueGray[800],
+    inactiveSidebarItemHoverBackgroundDark: colors.coolGray[900],
 
     // other
 

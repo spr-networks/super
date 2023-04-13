@@ -93,23 +93,18 @@ const ForwardList = (props) => {
         </ModalForm>
       </HStack>
 
-      <Box
-        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        width="100%"
-        p={4}
-        mb={4}
-      >
+      <Box px={4} mb={4}>
         <FlatList
           data={list}
           renderItem={({ item }) => (
             <Box
-              bg="warmGray.50"
+              bg="backgroundCardLight"
               borderBottomWidth={1}
               _dark={{
-                bg: 'blueGray.800',
-                borderColor: 'muted.600'
+                bg: 'backgroundCardDark',
+                borderColor: 'borderColorCardDark'
               }}
-              borderColor="muted.200"
+              borderColor="borderColorCardLight"
               p={4}
             >
               <HStack
@@ -131,7 +126,11 @@ const ForwardList = (props) => {
 
                 <HStack space={1}>
                   <Text bold>
-                    { (item.deviceDst && item.deviceDst.Name && item.deviceDst.Name.length > 0) ? item.deviceDst.Name : item.DstIP}
+                    {item.deviceDst &&
+                    item.deviceDst.Name &&
+                    item.deviceDst.Name.length > 0
+                      ? item.deviceDst.Name
+                      : item.DstIP}
                   </Text>
                   <Text color="muted.500">:</Text>
                   <Text>{item.DstPort}</Text>

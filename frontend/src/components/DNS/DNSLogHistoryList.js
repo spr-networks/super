@@ -82,12 +82,12 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
   return (
     <Box
       borderBottomWidth={1}
-      _light={{ bg: 'warmGray.50' }}
+      _light={{ bg: 'backgroundCardLight' }}
       _dark={{
-        bg: 'blueGray.800',
-        borderColor: 'muted.600'
+        bg: 'backgroundCardDark',
+        borderColor: 'borderColorCardDark'
       }}
-      borderColor="muted.200"
+      borderColor="borderColorCardLight"
     >
       <HStack
         space={{ base: 2, md: 8 }}
@@ -399,8 +399,8 @@ const DNSLogHistoryList = (props) => {
       </HStack>
 
       <Stack
-        _light={{ bg: 'warmGray.50' }}
-        _dark={{ bg: 'blueGray.800' }}
+        _light={{ bg: 'backgroundCardLight' }}
+        _dark={{ bg: 'backgroundCardDark' }}
         p={4}
         space={2}
         direction={{ base: 'column', md: 'row' }}

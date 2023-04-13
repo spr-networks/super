@@ -270,9 +270,8 @@ const Flow = ({ flow, edit, ...props }) => {
 
     return (
       <HStack
-        __bg={useColorModeValue('white', 'blueGray.700')}
-        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        p={4}
+        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+        p={8}
         space={4}
         rounded={{ md: 'md' }}
       >
@@ -757,7 +756,7 @@ const FlowList = (props) => {
       </Box>
 
       <ScrollView
-        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
         space={4}
         maxW={{ base: '100%', md: '500px' }}
         p={4}

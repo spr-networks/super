@@ -402,7 +402,6 @@ const AdminLayout = (props) => {
         display={{ base: 'flex' }}
         w="100%"
         h="100%" // md: '100vh'
-        __alignItems="center"
         nativeID="content-id"
         safeAreaTop
         bg={useColorModeValue(

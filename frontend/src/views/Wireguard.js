@@ -81,12 +81,11 @@ export default class Wireguard extends Component {
           />
         </HStack>
         <Box
-          _light={{ bg: 'warmGray.50' }}
-          _dark={{ bg: 'blueGray.800' }}
-          _rounded={{ md: 'md' }}
-          width="100%"
+          _light={{ bg: 'backgroundCardLight' }}
+          _dark={{ bg: 'backgroundCardDark' }}
           p={4}
           mb={4}
+          mx={4}
         >
           <Box>
             {this.state.config.listenPort ? (
