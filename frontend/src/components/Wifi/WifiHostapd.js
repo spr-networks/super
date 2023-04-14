@@ -88,208 +88,222 @@ const default2Ghz = {
 const default6Ghz = JSON.parse(JSON.stringify(default5Ghz))
 
 const htCapab = [
-  "[LDPC]",
-  "[HT40-]",
-  "[HT40+]",
-  "[GF]",
-  "[SHORT-GI-20]",
-  "[SHORT-GI-40]",
-  "[TX-STBC]",
-  "[RX-STBC1]",
-  "[RX-STBC12]",
-  "[RX-STBC123]",
-  "[DELAYED-BA]",
-  "[MAX-AMSDU-7935]",
-  "[DSSS_CCK-40]",
-  "[40-INTOLERANT]",
-  "[LSIG-TXOP-PROT]"
-];
+  '[LDPC]',
+  '[HT40-]',
+  '[HT40+]',
+  '[GF]',
+  '[SHORT-GI-20]',
+  '[SHORT-GI-40]',
+  '[TX-STBC]',
+  '[RX-STBC1]',
+  '[RX-STBC12]',
+  '[RX-STBC123]',
+  '[DELAYED-BA]',
+  '[MAX-AMSDU-7935]',
+  '[DSSS_CCK-40]',
+  '[40-INTOLERANT]',
+  '[LSIG-TXOP-PROT]'
+]
 
 const vhtCapab = [
-  "[MAX-MPDU-7991]",
-  "[MAX-MPDU-11454]",
-  "[VHT160]",
-  "[VHT160-80PLUS80]",
-  "[RXLDPC]",
-  "[SHORT-GI-80]",
-  "[SHORT-GI-160]",
-  "[TX-STBC-2BY1]",
-  "[RX-STBC-1]",
-  "[RX-STBC-12]",
-  "[RX-STBC-123]",
-  "[RX-STBC-1234]",
-  "[SU-BEAMFORMER]",
-  "[SU-BEAMFORMEE]",
-  "[BF-ANTENNA-2]",
-  "[BF-ANTENNA-3]",
-  "[BF-ANTENNA-4]",
-  "[SOUNDING-DIMENSION-2]",
-  "[SOUNDING-DIMENSION-3]",
-  "[SOUNDING-DIMENSION-4]",
-  "[MU-BEAMFORMER]",
-  "[VHT-TXOP-PS]",
-  "[HTC-VHT]",
-  "[MAX-A-MPDU-LEN-EXP7]",
-  "[MAX-A-MPDU-LEN-EXP6]",
-  "[MAX-A-MPDU-LEN-EXP5]",
-  "[MAX-A-MPDU-LEN-EXP4]",
-  "[MAX-A-MPDU-LEN-EXP3]",
-  "[MAX-A-MPDU-LEN-EXP2]",
-  "[MAX-A-MPDU-LEN-EXP1]",
-  "[VHT-LINK-ADAPT2]",
-  "[VHT-LINK-ADAPT3]",
-  "[RX-ANTENNA-PATTERN]",
-  "[TX-ANTENNA-PATTERN]"
-];
+  '[MAX-MPDU-7991]',
+  '[MAX-MPDU-11454]',
+  '[VHT160]',
+  '[VHT160-80PLUS80]',
+  '[RXLDPC]',
+  '[SHORT-GI-80]',
+  '[SHORT-GI-160]',
+  '[TX-STBC-2BY1]',
+  '[RX-STBC-1]',
+  '[RX-STBC-12]',
+  '[RX-STBC-123]',
+  '[RX-STBC-1234]',
+  '[SU-BEAMFORMER]',
+  '[SU-BEAMFORMEE]',
+  '[BF-ANTENNA-2]',
+  '[BF-ANTENNA-3]',
+  '[BF-ANTENNA-4]',
+  '[SOUNDING-DIMENSION-2]',
+  '[SOUNDING-DIMENSION-3]',
+  '[SOUNDING-DIMENSION-4]',
+  '[MU-BEAMFORMER]',
+  '[VHT-TXOP-PS]',
+  '[HTC-VHT]',
+  '[MAX-A-MPDU-LEN-EXP7]',
+  '[MAX-A-MPDU-LEN-EXP6]',
+  '[MAX-A-MPDU-LEN-EXP5]',
+  '[MAX-A-MPDU-LEN-EXP4]',
+  '[MAX-A-MPDU-LEN-EXP3]',
+  '[MAX-A-MPDU-LEN-EXP2]',
+  '[MAX-A-MPDU-LEN-EXP1]',
+  '[VHT-LINK-ADAPT2]',
+  '[VHT-LINK-ADAPT3]',
+  '[RX-ANTENNA-PATTERN]',
+  '[TX-ANTENNA-PATTERN]'
+]
 
 function mapHTCapabilities(capStr) {
-  // Extract HT capabilities bitfield from the 
+  // Extract HT capabilities bitfield from the
   const htCapa = parseInt(capStr, 16)
 
-  const parsedOutput = [];
+  const parsedOutput = []
 
   // Check capabilities using bitwise operations
   if (htCapa & (1 << 0)) {
-    parsedOutput.push("[LDPC]");
+    parsedOutput.push('[LDPC]')
   }
 
   if (htCapa & (1 << 1)) {
     //supports HT40+/-
-    parsedOutput.push("[HT40+]");
-    parsedOutput.push("[HT40-]");
+    parsedOutput.push('[HT40+]')
+    parsedOutput.push('[HT40-]')
   }
-  
 
   if (htCapa & (1 << 4)) {
-    parsedOutput.push("[GF]");
+    parsedOutput.push('[GF]')
   }
   if (htCapa & (1 << 5)) {
-    parsedOutput.push("[SHORT-GI-20]");
+    parsedOutput.push('[SHORT-GI-20]')
   }
   if (htCapa & (1 << 6)) {
-    parsedOutput.push("[SHORT-GI-40]");
+    parsedOutput.push('[SHORT-GI-40]')
   }
   if (htCapa & (1 << 7)) {
-    parsedOutput.push("[TX-STBC]");
+    parsedOutput.push('[TX-STBC]')
   }
 
-  if ((htCapa & (1 << 8)) && (htCapa & (1 << 9))) {
-    parsedOutput.push("[RX-STBC123]");
+  if (htCapa & (1 << 8) && htCapa & (1 << 9)) {
+    parsedOutput.push('[RX-STBC123]')
   } else if (htCapa & (1 << 9)) {
-    parsedOutput.push("[RX-STBC12]");
+    parsedOutput.push('[RX-STBC12]')
   } else if (htCapa & (1 << 8)) {
-    parsedOutput.push("[RX-STBC1]");
+    parsedOutput.push('[RX-STBC1]')
   }
 
   if (htCapa & (1 << 10)) {
-    parsedOutput.push("[DELAYED-BA]");
+    parsedOutput.push('[DELAYED-BA]')
   }
   if (htCapa & (1 << 11)) {
-    parsedOutput.push("[MAX-AMSDU-7935]");
+    parsedOutput.push('[MAX-AMSDU-7935]')
   }
   if (htCapa & (1 << 12)) {
-    parsedOutput.push("[DSSS_CCK-40]");
+    parsedOutput.push('[DSSS_CCK-40]')
   }
   if (htCapa & (1 << 14)) {
-    parsedOutput.push("[40-INTOLERANT]");
+    parsedOutput.push('[40-INTOLERANT]')
   }
 
   if (htCapa & (1 << 15)) {
-    parsedOutput.push("[LSIG-TXOP-PROT]");
+    parsedOutput.push('[LSIG-TXOP-PROT]')
   }
 
-  return parsedOutput;
+  return parsedOutput
 }
 
 function mapVHTCapabilities(capStr) {
-  const capa =  parseInt(capStr, 16);
+  const capa = parseInt(capStr, 16)
 
-  const parsedOutput = [];
+  const parsedOutput = []
 
   // Check capabilities using bitwise operations
   if (capa & (1 << 0)) {
-    parsedOutput.push("[MAX-MPDU-7991]");
+    parsedOutput.push('[MAX-MPDU-7991]')
   }
   if (capa & (1 << 1)) {
-    parsedOutput.push("[MAX-MPDU-11454]");
+    parsedOutput.push('[MAX-MPDU-11454]')
   }
   if (capa & (1 << 2)) {
-    parsedOutput.push("[VHT160]");
+    parsedOutput.push('[VHT160]')
   }
   //note: if both 2 and 3 are set, then this is incorrect
   if (capa & (1 << 3)) {
-    parsedOutput.push("[VHT160-80PLUS80]");
+    parsedOutput.push('[VHT160-80PLUS80]')
   }
   if (capa & (1 << 4)) {
-    parsedOutput.push("[RXLDPC]");
+    parsedOutput.push('[RXLDPC]')
   }
   if (capa & (1 << 5)) {
-    parsedOutput.push("[SHORT-GI-80]");
+    parsedOutput.push('[SHORT-GI-80]')
   }
   if (capa & (1 << 6)) {
-    parsedOutput.push("[SHORT-GI-160]");
+    parsedOutput.push('[SHORT-GI-160]')
   }
   if (capa & (1 << 7)) {
-    parsedOutput.push("[TX-STBC-2BY1]");
+    parsedOutput.push('[TX-STBC-2BY1]')
   }
 
   switch ((capa & 0x700) >> 8) {
-    case 1: parsedOutput.push("[RX-STBC-1]"); break;
-    case 2: parsedOutput.push("[RX-STBC-12]"); break;
-    case 3: parsedOutput.push("[RX-STBC-123]"); break;
-    case 4: parsedOutput.push("[RX-STBC-1234]"); break;
-    case 5: parsedOutput.push("[RX-STBC-1234]"); break; //hostapd does not support 5 yet
-    case 6: parsedOutput.push("[RX-STBC-1234]"); break; //hostapd does not support 6 yet
-    case 7: parsedOutput.push("[RX-STBC-1234]"); break; //hostapd does not support 7 yet
-    default: break;
+    case 1:
+      parsedOutput.push('[RX-STBC-1]')
+      break
+    case 2:
+      parsedOutput.push('[RX-STBC-12]')
+      break
+    case 3:
+      parsedOutput.push('[RX-STBC-123]')
+      break
+    case 4:
+      parsedOutput.push('[RX-STBC-1234]')
+      break
+    case 5:
+      parsedOutput.push('[RX-STBC-1234]')
+      break //hostapd does not support 5 yet
+    case 6:
+      parsedOutput.push('[RX-STBC-1234]')
+      break //hostapd does not support 6 yet
+    case 7:
+      parsedOutput.push('[RX-STBC-1234]')
+      break //hostapd does not support 7 yet
+    default:
+      break
   }
 
   if (capa & (1 << 11)) {
-    parsedOutput.push("[SU-BEAMFORMER]");
+    parsedOutput.push('[SU-BEAMFORMER]')
   }
   if (capa & (1 << 12)) {
-    parsedOutput.push("[SU-BEAMFORMEE]");
+    parsedOutput.push('[SU-BEAMFORMEE]')
   }
 
-  let beamformingAntennas = ((capa & 0xe000) >> 13) + 1;
+  let beamformingAntennas = ((capa & 0xe000) >> 13) + 1
   if (beamformingAntennas > 1) {
-    parsedOutput.push("[BF-ANTENNA-" + beamformingAntennas + "]");
+    parsedOutput.push('[BF-ANTENNA-' + beamformingAntennas + ']')
   }
 
-  let soundingDimensions = ((capa & 0x70000) >> 16) + 1;
+  let soundingDimensions = ((capa & 0x70000) >> 16) + 1
   if (soundingDimensions > 1) {
-    parsedOutput.push("[SOUNDING-DIMENSION-" + soundingDimensions + "]");
+    parsedOutput.push('[SOUNDING-DIMENSION-' + soundingDimensions + ']')
   }
 
   if (capa & (1 << 19)) {
-    parsedOutput.push("[MU-BEAMFORMER]");
+    parsedOutput.push('[MU-BEAMFORMER]')
   }
   if (capa & (1 << 21)) {
-    parsedOutput.push("[VHT-TXOP-PS]");
+    parsedOutput.push('[VHT-TXOP-PS]')
   }
   if (capa & (1 << 22)) {
-    parsedOutput.push("[HTC-VHT]");
+    parsedOutput.push('[HTC-VHT]')
   }
 
   let aMPDUExp = (capa & 0x3800000) >> 23
 
   if (aMPDUExp > 0) {
-    parsedOutput.push("[MAX-A-MPDU-LEN-EXP" + aMPDUExp + "]");
+    parsedOutput.push('[MAX-A-MPDU-LEN-EXP' + aMPDUExp + ']')
   }
 
   if (capa & (1 << 28)) {
-    parsedOutput.push("[RX-ANTENNA-PATTERN]");
+    parsedOutput.push('[RX-ANTENNA-PATTERN]')
   }
   if (capa & (1 << 29)) {
-    parsedOutput.push("[TX-ANTENNA-PATTERN]");
+    parsedOutput.push('[TX-ANTENNA-PATTERN]')
   }
 
-  let vhtAdapt = (capa & 0xc000000) >> 26;
-  if (vhtAdapt == 2 || vhtAdapt ==3) {
-    parsedOutput.push("[VHT-LINK-ADAPT" + vhtAdapt + "]");
+  let vhtAdapt = (capa & 0xc000000) >> 26
+  if (vhtAdapt == 2 || vhtAdapt == 3) {
+    parsedOutput.push('[VHT-LINK-ADAPT' + vhtAdapt + ']')
   }
 
-  return parsedOutput;
+  return parsedOutput
 }
 
 const filterHTCapabilities = (capstr, defaultstr) => {
@@ -323,26 +337,24 @@ const filterCapabilities = (template, ht_capstr, vht_capstr, band) => {
   let config = JSON.parse(JSON.stringify(template))
   if (band == 1) {
     //delete vht_capab from config
-    if ("vht_capab" in config) {
+    if ('vht_capab' in config) {
       delete config.vht_capab
-    } 
+    }
     //filter ht
     config.ht_capab = filterHTCapabilities(ht_capstr, config.ht_capab)
-
   } else if (band == 2) {
     //filter ht and vht capab in config
     config.ht_capab = filterHTCapabilities(ht_capstr, config.ht_capab)
-    config.vht_capab = filterVHTCapabilities(vht_capstr, config.vht_capab)    
+    config.vht_capab = filterVHTCapabilities(vht_capstr, config.vht_capab)
   } else if (band == 4) {
-    //6ghz: anythign else? 
+    //6ghz: anythign else?
     //filter both ht and vht
     config.ht_capab = filterHTCapabilities(ht_capstr, config.ht_capab)
-    config.vht_capab = filterVHTCapabilities(vht_capstr, config.vht_capab)    
+    config.vht_capab = filterVHTCapabilities(vht_capstr, config.vht_capab)
   }
 
   return config
 }
-
 
 const WifiHostapd = (props) => {
   const context = useContext(AlertContext)
@@ -392,26 +404,26 @@ const WifiHostapd = (props) => {
   }
 
   const updateCapabilitiesTooltips = () => {
-    //update the tooltips for vht_capab, ht_capab 
+    //update the tooltips for vht_capab, ht_capab
 
     let ht_capab, vht_capab
     if (config.hw_mode == 'a') {
       //this assumes 5ghz, need to handle 6ghz and wifi 6
-      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+      ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
     } else if (config.hw_mode == 'g' || config.hw_mode == 'b') {
-      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+      ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
     } else {
-      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
-      if (ht_capab == "" && vht_capab == "") {
-        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+      ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+      if (ht_capab == '' && vht_capab == '') {
+        ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
       }
-      if (ht_capab == "" && vht_capab == "") {
-        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 4)
+      if (ht_capab == '' && vht_capab == '') {
+        ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 4)
       }
     }
 
     if (ht_capab || vht_capab) {
-      setTooltips({"ht_capab": ht_capab, "vht_capab": vht_capab})
+      setTooltips({ ht_capab: ht_capab, vht_capab: vht_capab })
     }
   }
 
@@ -446,14 +458,11 @@ const WifiHostapd = (props) => {
   }, [iws, config, iface])
 
   useEffect(() => {
-
-      //in the future: maybe poll for refreshing this.
+    //in the future: maybe poll for refreshing this.
     updateIWS()
 
     if (iface == '') {
-      wifiAPI
-      .defaultInterface()
-      .then((defIface) => {
+      wifiAPI.defaultInterface().then((defIface) => {
         setIface(defIface)
       })
     }
@@ -464,7 +473,7 @@ const WifiHostapd = (props) => {
 
     //extract the interface state
     wifiAPI.interfacesConfiguration().then((ifaces) => {
-      for(const i of ifaces) {
+      for (const i of ifaces) {
         if (i.Name == iface) {
           setInterfaceEnabled(i.Enabled)
           break
@@ -472,16 +481,15 @@ const WifiHostapd = (props) => {
       }
     })
 
-
     wifiAPI
-    .config(iface)
-    .then((conf) => {
-      setConfig(sortConf(conf))
-    })
-    .catch((err) => {
-      //configuration not found. How to handle?
-      setConfig({})
-    })
+      .config(iface)
+      .then((conf) => {
+        setConfig(sortConf(conf))
+      })
+      .catch((err) => {
+        //configuration not found. How to handle?
+        setConfig({})
+      })
   }, [iface])
 
   const handleChange = (name, value) => {
@@ -500,7 +508,6 @@ const WifiHostapd = (props) => {
   }
 
   const commitConfig = () => {
-    
     let data = {
       Ssid: config.ssid,
       Channel: parseInt(config.channel),
@@ -511,7 +518,7 @@ const WifiHostapd = (props) => {
       Ieee80211ax: parseInt(config.ieee80211ax),
       He_su_beamformer: parseInt(config.he_su_beamformer),
       He_su_beamformee: parseInt(config.he_su_beamformee),
-      He_mu_beamformer: parseInt(config.he_mu_beamformer)    
+      He_mu_beamformer: parseInt(config.he_mu_beamformer)
     }
 
     wifiAPI.updateConfig(iface, data).then((config) => {
@@ -531,17 +538,17 @@ const WifiHostapd = (props) => {
 
   const generateCapabilitiesString = (iface, wanted_band) => {
     let iw_info = iwMap[iface]
-    let ht_capstr = ""
-    let vht_capstr = ""
+    let ht_capstr = ''
+    let vht_capstr = ''
 
     if (iw_info == undefined) {
-      return ["", ""]
+      return ['', '']
     }
 
     for (let i = 0; i < iw_info.bands.length; i++) {
       let band = iw_info.bands[i].band
-      let ht_capstr = "" 
-      let vht_capstr = ""
+      let ht_capstr = ''
+      let vht_capstr = ''
 
       if (iw_info.bands[i].capabilities != undefined) {
         ht_capstr = iw_info.bands[i].capabilities[0]
@@ -551,31 +558,29 @@ const WifiHostapd = (props) => {
         vht_capstr = iw_info.bands[i].vht_capabilities[0]
       }
 
-
-      if ( band.includes("Band 2") && wanted_band == 2) {
+      if (band.includes('Band 2') && wanted_band == 2) {
         return [mapHTCapabilities(ht_capstr), mapVHTCapabilities(vht_capstr)]
-      } else if ( band.includes("Band 1") && wanted_band == 1) {
+      } else if (band.includes('Band 1') && wanted_band == 1) {
         return [mapHTCapabilities(ht_capstr), mapVHTCapabilities(vht_capstr)]
-      } else if ( band.includes("Band 4") && wanted_band == 4) {
+      } else if (band.includes('Band 4') && wanted_band == 4) {
         return [mapHTCapabilities(ht_capstr), mapVHTCapabilities(vht_capstr)]
       }
     }
 
-    return ["", ""]
+    return ['', '']
   }
-
 
   const generateConfigForBand = (iface, wanted_band) => {
     let iw_info = iwMap[iface]
-    let ht_capstr = ""
-    let vht_capstr = ""
+    let ht_capstr = ''
+    let vht_capstr = ''
 
     let defaultConfig
 
     for (let i = 0; i < iw_info.bands.length; i++) {
       let band = iw_info.bands[i].band
-      let ht_capstr = "" 
-      let vht_capstr = ""
+      let ht_capstr = ''
+      let vht_capstr = ''
 
       if (iw_info.bands[i].capabilities != undefined) {
         ht_capstr = iw_info.bands[i].capabilities[0]
@@ -585,13 +590,28 @@ const WifiHostapd = (props) => {
         vht_capstr = iw_info.bands[i].vht_capabilities[0]
       }
 
-      if ( band.includes("Band 2") && wanted_band == 2) {
-        defaultConfig = filterCapabilities(default5Ghz, ht_capstr, vht_capstr, 2)
+      if (band.includes('Band 2') && wanted_band == 2) {
+        defaultConfig = filterCapabilities(
+          default5Ghz,
+          ht_capstr,
+          vht_capstr,
+          2
+        )
         break
-      } else if ( band.includes("Band 1") && wanted_band == 1) {
-        defaultConfig = filterCapabilities(default2Ghz, ht_capstr, vht_capstr, 1)
-      } else if ( band.includes("Band 4") && wanted_band == 4) {
-        defaultConfig = filterCapabilities(default6Ghz, ht_capstr, vht_capstr, 4)
+      } else if (band.includes('Band 1') && wanted_band == 1) {
+        defaultConfig = filterCapabilities(
+          default2Ghz,
+          ht_capstr,
+          vht_capstr,
+          1
+        )
+      } else if (band.includes('Band 4') && wanted_band == 4) {
+        defaultConfig = filterCapabilities(
+          default6Ghz,
+          ht_capstr,
+          vht_capstr,
+          4
+        )
       }
     }
 
@@ -599,16 +619,14 @@ const WifiHostapd = (props) => {
   }
 
   const generateHostAPConfiguration = () => {
-
     //band 1 -> 2.4GHz
     //band 2 -> 5GHz
     //band 4 -> 6GHz
     //band 5 -> 900MHz
 
-
-    //find iface in devices 
+    //find iface in devices
     if (iwMap[iface] == undefined) {
-      context.error("Interface not found")
+      context.error('Interface not found')
       return
     }
 
@@ -617,10 +635,15 @@ const WifiHostapd = (props) => {
     let defaultConfig
     //iterate through bands, looking for band 2, band 1, band 4 in that order
 
-    defaultConfig = generateConfigForBand(iface, 2) || generateConfigForBand(iface, 1) || generateConfigForBand(iface, 4)
+    defaultConfig =
+      generateConfigForBand(iface, 2) ||
+      generateConfigForBand(iface, 1) ||
+      generateConfigForBand(iface, 4)
 
     if (defaultConfig == undefined) {
-      context.error("could not determine default hostap configuration. using a likely broken default")
+      context.error(
+        'could not determine default hostap configuration. using a likely broken default'
+      )
       return
     }
 
@@ -636,7 +659,7 @@ const WifiHostapd = (props) => {
     //call hostapd
     wifiAPI
       .disableInterface(iface)
-      .then( () => {
+      .then(() => {
         setConfig({})
         setInterfaceEnabled(false)
       })
@@ -664,12 +687,15 @@ const WifiHostapd = (props) => {
   // when selected and click save in channel form
   const updateChannels = (wifiParameters) => {
     let updateConfig = (params) => {
-      let data = {...params, ...wifiParameters}
+      let data = { ...params, ...wifiParameters }
 
       if (wifiParameters.Mode == 'b' || wifiParameters.Mode == 'g') {
         //empty out VHT capabilities for b/g mode
         data.Vht_capab = ''
-      } else if (wifiParameters.Mode == 'a' && (config.vht_capab == undefined || config.vht_capab == '')) {
+      } else if (
+        wifiParameters.Mode == 'a' &&
+        (config.vht_capab == undefined || config.vht_capab == '')
+      ) {
         //re-enable vht capabilities for 5GHz
         let tempConfig = generateConfigForBand(iface, 2)
         data.Vht_capab = tempConfig.vht_capab
@@ -761,7 +787,10 @@ const WifiHostapd = (props) => {
           Restart All Wifi Devices
         </Button>
       </HStack>
-      <Box bg={useColorModeValue('warmGray.50', 'blueGray.800')} p={4}>
+      <Box
+        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+        p={4}
+      >
         <FormControl flex={1} w="2/3">
           <FormControl.Label>WiFi Interface</FormControl.Label>
           {devsSelect.length ? (
@@ -821,10 +850,13 @@ const WifiHostapd = (props) => {
         </HStack>
       </HStack>
 
-      <Box bg={useColorModeValue('warmGray.50', 'blueGray.800')} p={4}>
+      <Box
+        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+        p={4}
+      >
         <VStack space={2}>
-          {config.interface && (interfaceEnabled == true) ? (
-            Object.keys(config).map((label) => (              
+          {config.interface && interfaceEnabled == true ? (
+            Object.keys(config).map((label) => (
               <HStack
                 key={label}
                 space={4}
@@ -838,16 +870,16 @@ const WifiHostapd = (props) => {
                 {canEdit.includes(label) ? (
                   tooltips[label] ? (
                     <Tooltip label={tooltips[label]}>
-                    <Input
-                      size="lg"
-                      type="text"
-                      variant="underlined"
-                      flex={2}
-                      value={config[label]}
-                      onChangeText={(value) => handleChange(label, value)}
-                      onSubmitEditing={handleSubmit}
-                      onMouseLeave={handleSubmit}
-                    />
+                      <Input
+                        size="lg"
+                        type="text"
+                        variant="underlined"
+                        flex={2}
+                        value={config[label]}
+                        onChangeText={(value) => handleChange(label, value)}
+                        onSubmitEditing={handleSubmit}
+                        onMouseLeave={handleSubmit}
+                      />
                     </Tooltip>
                   ) : (
                     <Input
@@ -859,13 +891,12 @@ const WifiHostapd = (props) => {
                       onChangeText={(value) => handleChange(label, value)}
                       onSubmitEditing={handleSubmit}
                       onMouseLeave={handleSubmit}
-                    />                    
+                    />
                   )
                 ) : (
                   <Text flex={2}>{config[label]}</Text>
                 )}
               </HStack>
-
             ))
           ) : (
             <Button

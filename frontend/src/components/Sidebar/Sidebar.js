@@ -51,6 +51,10 @@ const SidebarItem = (props) => {
   const { isWifiDisabled, isPlusDisabled, isMeshNode } = useContext(AppContext)
   const { activeSidebarItem, setActiveSidebarItem } = useContext(AppContext)
 
+  /*useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [activeSidebarItem])*/
+
   /*
   const getCollapseInitialState = (routes) => {
     for (let i = 0; i < routes.length; i++) {

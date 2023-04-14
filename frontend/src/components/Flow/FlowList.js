@@ -713,10 +713,10 @@ const FlowList = (props) => {
   return (
     <Stack
       direction={{ base: 'column', md: 'row' }}
-      __justifyContent="stretch"
       space={4}
       pr={{ md: 8 }}
       h={h}
+      alignItems={'flex-start'}
     >
       <Box __w={{ md: '3/6' }} flex="1">
         <HStack
@@ -738,7 +738,7 @@ const FlowList = (props) => {
                 borderColor: 'muted.600'
               }}
               borderColor="muted.200"
-              py={1}
+              pb={4}
             >
               <Flow
                 edit={false}
@@ -760,6 +760,8 @@ const FlowList = (props) => {
         space={4}
         maxW={{ base: '100%', md: '500px' }}
         p={4}
+        mt={4}
+        rounded={'md'}
       >
         <Heading size="sm">Add &amp; Edit flow</Heading>
 

@@ -398,16 +398,13 @@ const AdminLayout = (props) => {
         setIsMeshNode
       }}
     >
-      <Box
-        display={{ base: 'flex' }}
-        w="100%"
-        h="100%" // md: '100vh'
-        nativeID="content-id"
+      <VStack
         safeAreaTop
         bg={useColorModeValue(
           'backgroundContentLight',
           'backgroundContentDark'
         )}
+        minH={heightContent + navbarHeight}
       >
         {/*desktop*/}
         <Box
@@ -440,12 +437,12 @@ const AdminLayout = (props) => {
           />
         </Box>
 
-        <HStack>
+        <HStack flex={1}>
           {/*desktop*/}
           <Box
             display={{ base: 'none', md: 'flex' }}
-            position={{ base: 'absolute', md: 'static' }}
-            h={heightContent}
+            __position={{ base: 'absolute', md: 'static' }}
+            __h={heightContent}
             w={isOpenSidebar ? 20 : 64}
           >
             <Sidebar
@@ -486,7 +483,7 @@ const AdminLayout = (props) => {
             {/*<Footer />*/}
           </Box>
         </HStack>
-      </Box>
+      </VStack>
       <AlertContext.Provider value={alertState}>
         <Slide in={showAlert} placement="top">
           <Box

@@ -54,7 +54,7 @@ const WifiChannelParameters = ({
     // switch to config-based settings
     setMode(config.hw_mode)
     setChannel(config.channel)
-    
+
     if (config.vht_oper_chwidth == 0) {
       setBandwidth(40)
     } else if (config.vht_oper_chwidth == 1) {
@@ -65,13 +65,13 @@ const WifiChannelParameters = ({
       setBandwidth(8080)
     } else {
       // no vht. fall through
-      if (config.ht_capab && config.ht_capab.includes("HT40")) {
+      if (config.ht_capab && config.ht_capab.includes('HT40')) {
         setBandwidth(40)
       } else {
         setBandwidth(20)
       }
     }
-      
+
     //set bw and channels
     for (let iw of iws) {
       if (iw.devices[iface]) {
@@ -89,11 +89,11 @@ const WifiChannelParameters = ({
           }
         }
 
-          //in the future, iw needs to be polled 
-          // to parse this correctly
-          // along with an explanation about restarts
+        //in the future, iw needs to be polled
+        // to parse this correctly
+        // along with an explanation about restarts
         //get bandwidth and channel
-          /*
+        /*
         if (cur_device.channel) {
           let parts = cur_device.channel.split(',')
 
@@ -201,8 +201,8 @@ const WifiChannelParameters = ({
 
       <VStack
         space={2}
-        _light={{ bg: 'warmGray.50' }}
-        _dark={{ bg: 'blueGray.800' }}
+        _light={{ bg: 'backgroundCardLight' }}
+        _dark={{ bg: 'backgroundCardDark' }}
         p={4}
         pb={8}
       >

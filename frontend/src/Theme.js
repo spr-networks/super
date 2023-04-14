@@ -67,7 +67,7 @@ export const theme = extendTheme({
     sidebarItemIconDark: colors.coolGray[400], //coolGray.50
 
     activeSidebarItemBackgroundLight: colors.coolGray[200], //colors.cyan[200],
-    activeSidebarItemBackgroundDark: colors.coolGray[700], //colors.cyan[700],
+    activeSidebarItemBackgroundDark: colors.trueGray[900], //colors.cyan[700],
     activeSidebarItemHoverBackgroundLight: colors.blueGray[200], //.alpha[60],'//colors.cyan[200],
     activeSidebarItemHoverBackgroundDark: colors.coolGray[600],
 

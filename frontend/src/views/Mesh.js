@@ -155,59 +155,79 @@ const Mesh = (props) => {
       })
       .catch((err) => {})
 
-
-      function updateX(k, prevState, x) {
-        let prev = prevState[k]
-        if (prev) {
-          let prevs = Object.keys(prev)
-          for (let i = 0; i < prevs.length; i++) {
-            if (x[k][prevs[i]] == undefined) {
-              x[k][prevs[i]] = prev[prevs[i]]
-            }
+    function updateX(k, prevState, x) {
+      let prev = prevState[k]
+      if (prev) {
+        let prevs = Object.keys(prev)
+        for (let i = 0; i < prevs.length; i++) {
+          if (x[k][prevs[i]] == undefined) {
+            x[k][prevs[i]] = prev[prevs[i]]
           }
         }
-        return {...prevState, ...x}
       }
+      return { ...prevState, ...x }
+    }
 
-      wifiAPI.interfacesConfiguration().then((config) => {
-        config.forEach((iface) => {
-          if (iface.Type == "AP" &&  iface.Enabled == true) {
-            wifiAPI
-              .allStations(iface.Name)
-              .then((stations) => {
-                let x = {"192.168.2.1": {[iface.Name] : Object.keys(stations)} }
-                setMesh((prevState, props) => updateX("192.168.2.1", prevState, x))
-              })
-              .catch((err) => {
-                console.log('WIFI API Failure', err)
-              })
-          }
-        })
+    wifiAPI.interfacesConfiguration().then((config) => {
+      config.forEach((iface) => {
+        if (iface.Type == 'AP' && iface.Enabled == true) {
+          wifiAPI
+            .allStations(iface.Name)
+            .then((stations) => {
+              let x = { '192.168.2.1': { [iface.Name]: Object.keys(stations) } }
+              setMesh((prevState, props) =>
+                updateX('192.168.2.1', prevState, x)
+              )
+            })
+            .catch((err) => {
+              console.log('WIFI API Failure', err)
+            })
+        }
       })
+    })
 
-      meshAPI.meshIter(() => new APIWifi()).then(r => r.forEach(remoteWifiApi => {
-        remoteWifiApi.interfacesConfiguration.call(remoteWifiApi).then((config) => {
-          config.forEach((iface) => {
-            if (iface.Type == "AP" &&  iface.Enabled == true) {
-              remoteWifiApi
-                .allStations.call(remoteWifiApi, iface.Name)
-                .then((stations) => {
-                  console.log("do it ... " + remoteWifiApi.remoteURL + " " + iface.Name)
+    meshAPI
+      .meshIter(() => new APIWifi())
+      .then((r) =>
+        r.forEach((remoteWifiApi) => {
+          remoteWifiApi.interfacesConfiguration
+            .call(remoteWifiApi)
+            .then((config) => {
+              config.forEach((iface) => {
+                if (iface.Type == 'AP' && iface.Enabled == true) {
+                  remoteWifiApi.allStations
+                    .call(remoteWifiApi, iface.Name)
+                    .then((stations) => {
+                      console.log(
+                        'do it ... ' +
+                          remoteWifiApi.remoteURL +
+                          ' ' +
+                          iface.Name
+                      )
 
-                  let x = { [remoteWifiApi.remoteURL]: {[iface.Name] : Object.keys(stations)} }
-                  setMesh((prevState, props) => updateX(remoteWifiApi.remoteURL, prevState, x) )
-                })
-                .catch((err) => {
-                  console.log('WIFI API Failure ' + remoteWifiApi.remoteURL + " " + iface.Name)
-                  console.log(err)
-                })
-            }
-          })
+                      let x = {
+                        [remoteWifiApi.remoteURL]: {
+                          [iface.Name]: Object.keys(stations)
+                        }
+                      }
+                      setMesh((prevState, props) =>
+                        updateX(remoteWifiApi.remoteURL, prevState, x)
+                      )
+                    })
+                    .catch((err) => {
+                      console.log(
+                        'WIFI API Failure ' +
+                          remoteWifiApi.remoteURL +
+                          ' ' +
+                          iface.Name
+                      )
+                      console.log(err)
+                    })
+                }
+              })
+            })
         })
-      }))
-
-
-
+      )
   }, [])
 
   const deleteListItem = (item) => {
@@ -340,11 +360,10 @@ const Mesh = (props) => {
           </HStack>
 
           <Box
-            bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-            _rounded={{ md: 'md' }}
-            width="100%"
+            bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+            rounded="md"
             p={4}
-            mb={4}
+            mx={4}
           >
             <FlatList
               estimatedItemSize={100}
@@ -441,11 +460,13 @@ const Mesh = (props) => {
               </VStack>
 
               <Box
-                bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-                _rounded={{ md: 'md' }}
-                width="100%"
+                bg={useColorModeValue(
+                  'backgroundCardLight',
+                  'backgroundCardDark'
+                )}
+                rounded="md"
                 p={4}
-                mb={4}
+                mx={4}
               >
                 <VStack>
                   {leafToken == '' ? (

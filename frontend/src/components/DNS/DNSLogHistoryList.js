@@ -449,7 +449,7 @@ const DNSLogHistoryList = (props) => {
           </FormControl.Label>
           <Button
             size="md"
-            variant="subtle"
+            variant="outline"
             colorScheme="danger"
             leftIcon={<Icon icon={faTrash} />}
             onPress={deleteHistory}

@@ -186,10 +186,11 @@ export default (props) => {
       </Heading>
 
       <Box
-        _light={{ bg: 'warmGray.50' }}
-        _dark={{ bg: 'blueGray.800' }}
+        _light={{ bg: 'backgroundCardLight' }}
+        _dark={{ bg: 'backgroundCardDark' }}
         p={4}
-        mb={4}
+        mx={4}
+        rounded="md"
       >
         {signalsRSSI ? <Bar data={signalsRSSI} options={optionsRSSI} /> : null}
       </Box>
@@ -199,10 +200,11 @@ export default (props) => {
       </Heading>
 
       <Box
-        _light={{ bg: 'warmGray.50' }}
-        _dark={{ bg: 'blueGray.800' }}
+        _light={{ bg: 'backgroundCardLight' }}
+        _dark={{ bg: 'backgroundCardDark' }}
         p={4}
-        mb={4}
+        mx={4}
+        rounded="md"
       >
         {signalsRXTX ? <Bar data={signalsRXTX} options={optionsRXTX} /> : null}
       </Box>
