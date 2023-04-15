@@ -45,7 +45,7 @@ func CheckSizeIteration(db *bolt.DB, config LogConfig, debug bool) error {
 	}
 
 	// return if db size is less than max size
-	if dbSize < config.MaxSize {
+	if uint64(dbSize) < config.MaxSize {
 		return nil
 	}
 

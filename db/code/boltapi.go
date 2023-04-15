@@ -50,7 +50,7 @@ type BucketItem struct {
 
 type LogConfig struct {
 	SaveEvents []string `json:"SaveEvents"`
-	MaxSize    int64    `json:"MaxSize"`
+	MaxSize    uint64   `json:"MaxSize"`
 }
 
 func LogEvent(topic string) {
@@ -181,14 +181,29 @@ func GetSetConfig(w http.ResponseWriter, r *http.Request) {
 
 	*gConfigPtr = newConfig
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(newConfig)
 }
 
+type DbStats struct {
+	Size   int64    `json:"Size"`
+	Topics []string `json:"Topics"`
+}
+
 func GetStats(w http.ResponseWriter, r *http.Request) {
-	var stats bolt.TxStats
+	stats := DbStats{}
 
 	if err := db.View(func(tx *bolt.Tx) error {
-		stats = tx.Stats()
+		stats.Size = tx.Size()
+
+		topics := make([]string, len(seenEvents))
+		i := 0
+		for topic := range seenEvents {
+			topics[i] = topic
+			i++
+		}
+
+		stats.Topics = topics
 
 		return nil
 	}); err != nil {
@@ -354,6 +369,7 @@ func GetBucket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(items)
 }
 
@@ -452,6 +468,7 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(items)
 }
 
@@ -509,6 +526,7 @@ func AddBucketItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(payload.Value)
 }
 
@@ -532,6 +550,7 @@ func GetBucketItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(bucketItem.Value)
 }
 
@@ -567,6 +586,7 @@ func UpdateBucketItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(payload.Value)
 }
 
