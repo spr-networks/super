@@ -25,7 +25,7 @@ export default class Firewall extends Component {
   render() {
     return (
       <ScrollView>
-        <VStack>
+        <VStack space={8}>
           <ForwardList
             list={this.state.config.ForwardingRules}
             notifyChange={this.fetchConfig}
