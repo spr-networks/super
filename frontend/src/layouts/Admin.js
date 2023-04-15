@@ -425,7 +425,9 @@ const AdminLayout = (props) => {
         <Box
           display={{ base: 'flex', md: 'none' }}
           w="100%"
-          position={{ base: 'relative', md: 'static' }}
+          _position={{ base: 'relative', md: 'static' }}
+          position={'sticky'}
+          top={0}
           zIndex={99}
           _style={{ backdropFilter: 'blur(10px)' }}
         >
@@ -437,13 +439,14 @@ const AdminLayout = (props) => {
           />
         </Box>
 
-        <HStack flex={1}>
+        <HStack position={'sticky'} top={16} flex={1}>
           {/*desktop*/}
           <Box
             display={{ base: 'none', md: 'flex' }}
             __position={{ base: 'absolute', md: 'static' }}
-            __h={heightContent}
+            __h="calc(100vh - 64px)"
             w={isOpenSidebar ? 20 : 64}
+            h={heightContent}
           >
             <Sidebar
               isMobile={false}
