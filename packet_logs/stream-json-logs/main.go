@@ -9,7 +9,9 @@ https://pkg.go.dev/github.com/google/gopacket/layers#DNS
 */
 
 import (
+	"flag"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -37,16 +39,33 @@ type PacketInfo struct {
 
 func logTraffic(topic string, data string) {
 	/*
-	var logEntry PacketInfo
-	if err := json.Unmarshal([]byte(data), &logEntry); err != nil {
-		log.Fatal(err)
-	}
+		var logEntry PacketInfo
+		if err := json.Unmarshal([]byte(data), &logEntry); err != nil {
+			log.Fatal(err)
+		}
 	*/
 	fmt.Println(data)
 }
 
 func main() {
-    sprbus.HandleEvent("nft", logTraffic)
-	time.Sleep(time.Second)
-	wg.Wait()
+	help := flag.Bool("help", false, "show help")
+	timeout := flag.Int("timeout", 20, "exit timeout")
+
+	flag.Parse()
+
+	if *help {
+		flag.Usage()
+		os.Exit(0)
+	}
+
+	go sprbus.HandleEvent("nft", logTraffic)
+
+	if *timeout != 0 {
+		time.Sleep(time.Second * time.Duration(*timeout))
+	} else {
+		for {
+			time.Sleep(time.Second)
+		}
+	}
+	//wg.Wait()
 }
