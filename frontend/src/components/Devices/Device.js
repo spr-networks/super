@@ -95,6 +95,7 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(device.Name)
+  const [ip, setIP] = useState(device.RecentIP)
   const [groups, setGroups] = useState(device.Groups.sort())
   const [tags, setTags] = useState(device.DeviceTags.sort())
   const [showModal, setShowModal] = useState(false)
@@ -135,6 +136,11 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
   const handleName = (name) => {
     setName(name)
     setEditing(name != device.Name)
+  }
+
+  const handleIP = (ip) => {
+    setIP(ip)
+    setEditing(ip != device.RecentIP)
   }
 
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
@@ -180,12 +186,27 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
       return
     }
 
-    deviceAPI
-      .updateName(id, name)
-      .then(notifyChange)
-      .catch((error) =>
-        context.error('[API] updateName error: ' + error.message)
-      )
+    if (name != device.Name) {
+      deviceAPI
+        .updateName(id, name)
+        .then(notifyChange)
+        .catch((error) =>
+          context.error('[API] updateName error: ' + error.message)
+        )
+    }
+
+    if (ip != device.RecentIP) {
+      deviceAPI
+        .updateIP(id, ip)
+        .then(notifyChange)
+        .catch((error) =>
+          context.error(
+            '[API] updateIP error: ' +
+              error.message +
+              '. IP not in range or not a valid Supernetwork Device IP '
+          )
+        )
+    }
   }
 
   const handleSubmit = () => {
@@ -302,14 +323,17 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
         direction={{ base: 'column-reverse', md: 'row' }}
         space={2}
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        p={4}
-        w="100%"
+        p={8}
+        my={2}
+        mx={4}
+        rounded="md"
+        shadow="md"
         key={device.MAC}
         justifyContent="space-between"
         alignItems="center"
         _light={{ borderColor: 'coolGray.200' }}
         _dark={{ borderColor: 'muted.700' }}
-        borderBottomWidth={1}
+        borderBottomWidth={0}
       >
         <Stack
           direction={{ base: 'column', md: 'row' }}
@@ -317,6 +341,7 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
           flex={1}
           justifyContent="space-between"
           alignItems="center"
+          w="full"
         >
           <Box
             display={{ base: 'none', md: 'flex' }}
@@ -358,8 +383,26 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
             space={1}
             justifyContent={{ base: 'space-around', md: 'center' }}
           >
-            <Text bold>{device.RecentIP}</Text>
-            <Text fontSize="xs" color="muted.500">
+            {edit ? (
+              <Input
+                size="lg"
+                type="text"
+                variant="underlined"
+                w="100%"
+                value={ip}
+                autoFocus={false}
+                onChangeText={(value) => handleIP(value)}
+                onSubmitEditing={handleSubmit}
+              />
+            ) : (
+              <Text bold>{ip}</Text>
+            )}
+
+            <Text
+              display={{ base: 'none', md: 'flex' }}
+              fontSize="xs"
+              color="muted.500"
+            >
               {device.MAC}
             </Text>
           </Stack>

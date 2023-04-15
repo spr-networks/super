@@ -53,7 +53,6 @@ const DockerInfo = ({ showModal, ...props }) => {
   const renderDockerContainer = ({ item, navigate, showModal }) => {
     let containerName = niceName(item.Names)
 
-    const onRestart = () => {}
     const onMounts = () => {
       showModal(
         `${containerName} Volume Mounts`,

@@ -135,12 +135,7 @@ const DNSLogList = ({ title, description, ...props }) => {
         />
       </HStack>
 
-      <Box
-        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        width="100%"
-        p={4}
-        mb={4}
-      >
+      <Box px={4} mb={4}>
         {!list.length ? (
           <VStack space={2}>
             <Text alignSelf={'center'}>List is empty</Text>
@@ -162,8 +157,15 @@ const DNSLogList = ({ title, description, ...props }) => {
             <HStack
               p={4}
               borderBottomWidth={1}
-              _light={{ bg: 'warmGray.50', borderBottomColor: 'muted.200' }}
-              _dark={{ bg: 'blueGray.800', borderBottomColor: 'muted.600' }}
+              _light={{
+                bg: 'backgroundCardLight',
+                borderBottomColor: 'borderColorCardLight'
+              }}
+              _dark={{
+                bg: 'backgroundCardDark',
+                borderBottomColor: 'borderColorCardDark'
+              }}
+              alignItems={'center'}
             >
               <Text>{item}</Text>
               {type == 'IP' ? <Text> {ip_to_name(item)}</Text> : null}

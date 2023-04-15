@@ -339,6 +339,7 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 	if IP == "" {
 		log.Println("Failed to find IP address for " + dhcp.MAC)
 		http.Error(w, "ip link failed", 400)
+		return
 	}
 
 	LeaseTime := gDhcpConfig.LeaseTime
@@ -425,6 +426,47 @@ func isTinyNetIPLocked(IP string) bool {
 		if subnet.Contains(ip) {
 			return true
 		}
+	}
+
+	return false
+}
+
+func isTinyNetDeviceIP(IP string) bool {
+	DHCPmtx.Lock()
+	defer DHCPmtx.Unlock()
+	return isTinyNetDeviceIPLocked(IP)
+}
+
+func isTinyNetDeviceIPLocked(IP string) bool {
+	//check if an IP belongs not just to a subnet,
+	//but that it would be a tinynet device IP
+	ip := net.ParseIP(IP)
+	if ip == nil {
+		return false
+	}
+
+	for _, subnetString := range gDhcpConfig.TinyNets {
+		// check if theres free IPs in the range
+		start_ip, subnet, err := net.ParseCIDR(subnetString)
+		if err != nil {
+			log.Println("Invalid subnet "+subnetString, err)
+			continue
+		}
+
+		device_ip := TwiddleTinyIP(start_ip, 2)
+
+		for {
+			if ip.String() == device_ip.String() {
+				return true
+			}
+
+			device_ip = TwiddleTinyIP(device_ip, 4)
+			if !subnet.Contains(device_ip) {
+				//ran out of IPs in this subnet
+				break
+			}
+		}
+
 	}
 
 	return false

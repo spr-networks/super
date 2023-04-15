@@ -74,12 +74,13 @@ const NotificationItem = ({ item, index, onDelete, onToggle, ...props }) => {
 
   return (
     <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
+      bg="backgroundCardLight"
       borderBottomWidth={1}
       _dark={{
-        borderColor: 'muted.600'
+        bg: 'backgroundCardDark',
+        borderColor: 'borderColorCardDark'
       }}
-      borderColor="muted.200"
+      borderColor="borderColorCardLight"
       p={4}
     >
       <HStack space={2} justifyContent="space-between" alignItems="center">

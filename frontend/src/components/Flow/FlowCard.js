@@ -127,7 +127,12 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     }, [])
 
     body = (
-      <HStack space={2} flexWrap="wrap" maxW={{ base: '210px', md: '400px' }}>
+      <HStack
+        flex={1}
+        flexWrap={'wrap'}
+        space={1}
+        maxW={{ base: '210px', md: '400px' }}
+      >
         {card.params
           .filter((p) => !p.hidden)
           .map((p) => (
@@ -144,7 +149,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
               options={options[p.name]}
               description={p.description}
               format={p.format}
-              size={Object.keys(card.values).length > 10 ? 'xs' : 'sm'}
+              size={Object.keys(card.values).length > 10 ? 'xs' : 'md'}
               onChange={(value) => onChange(p.name, value)}
             />
           ))}
@@ -189,12 +194,14 @@ const FlowCard = ({ card, size, edit, ...props }) => {
 
   return (
     <Box
-      bg={useColorModeValue('white', 'blueGray.700')}
+      bg={useColorModeValue('light', 'backgroundContentDark')}
       p={size == 'xs' ? 2 : 4}
-      borderRadius={5}
+      rounded="md"
       shadow={5}
       minW={320}
       mr={2}
+      borderColor={useColorModeValue('coolGray.50', 'coolGray.900')}
+      borderWidth={1}
       {...props}
     >
       <HStack justifyContent="space-between" alignItems="center" space={4}>
@@ -207,7 +214,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
         >
           {icon}
         </Box>
-        <VStack alignContent="center" space={size == 'xs' ? 0 : 1}>
+        <VStack flex={1} alignContent="center" space={size == 'xs' ? 0 : 1}>
           <HStack space={1} alignItems="center">
             <Text color="muted.400" fontSize="sm">
               {title}

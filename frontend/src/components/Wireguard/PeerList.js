@@ -104,12 +104,7 @@ const PeerList = (props) => {
             </ModalForm>
           </Box>
         </HStack>
-        <Box
-          bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-          _rounded={{ md: 'md' }}
-          width="100%"
-          p={4}
-        >
+        <Box width="100%" px={4}>
           {peers !== null && peers.length ? (
             <FlatList
               data={peers}
@@ -118,12 +113,14 @@ const PeerList = (props) => {
                   space={2}
                   justifyContent="space-between"
                   alignItems="center"
+                  bg="backgroundCardLight"
                   borderBottomWidth={1}
-                  borderColor="muted.200"
                   _dark={{
-                    borderColor: 'muted.600'
+                    bg: 'backgroundCardDark',
+                    borderColor: 'borderColorCardDark'
                   }}
-                  py={2}
+                  borderColor="borderColorCardLight"
+                  p={4}
                 >
                   <Stack
                     flex={1}

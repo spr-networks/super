@@ -35,8 +35,8 @@ const TimeSeries = (props) => {
 
   return (
     <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      rounded={{ base: 'none', md: 'md' }}
+      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+      __rounded={{ base: 'none', md: 'md' }}
       width="100%"
       p={4}
     >
