@@ -122,9 +122,8 @@ const FlowCardList = ({
           </ModalForm>
 
           <Button
-            _variant="subtle"
-            variant="ghost"
-            colorScheme="muted"
+            variant="outline"
+            colorScheme="blueGray"
             rounded="md"
             leftIcon={<Icon icon={faCirclePlus} color="muted.500" />}
             onPress={() => addCard(cardType)}
@@ -269,14 +268,21 @@ const Flow = ({ flow, edit, ...props }) => {
     }
 
     return (
-      <HStack
+      <Stack
+        direction={{ base: 'column-reverse', md: 'row' }}
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        p={8}
+        py={{ base: 6 }}
+        p={{ base: 2, md: 8 }}
         space={4}
         rounded={{ md: 'md' }}
+        shadow="2"
       >
-        <VStack flex={1} space={2}>
-          <HStack space={2} alignItems="flex-end">
+        <VStack flex={1} space={2} mt={{ base: -10, md: 0 }}>
+          <HStack space={2} alignItems="center">
+            <HStack space={2}>
+              <Icon icon={trigger.icon} color={trigger.color} />
+              <Icon icon={action.icon} color={action.color} />
+            </HStack>
             <Text bold>{title}</Text>
             {flow.disabled ? (
               <Text fontSize="xs" color="muted.500">
@@ -285,30 +291,18 @@ const Flow = ({ flow, edit, ...props }) => {
             ) : null}
           </HStack>
 
-          <HStack space={4} justifyContent="flex-start">
-            <HStack space={1} alignItems="center">
-              <Icon icon={trigger.icon} color={trigger.color} />
-              <HStack space={2}>
-                {Object.keys(trigger.values).map((key) => (
-                  <Text key={key}>
-                    {displayValue(trigger.values[key], key)}
-                  </Text>
-                ))}
-              </HStack>
-            </HStack>
-            <HStack space={2} alignItems="center">
-              <Icon icon={action.icon} color={action.color} />
+          <HStack space={2} flexWrap={'wrap'} px={1}>
+            {Object.keys(trigger.values).map((key) => (
+              <Text key={key}>{displayValue(trigger.values[key], key)}</Text>
+            ))}
 
-              <HStack space={2}>
-                {Object.keys(action.values).map((key) => (
-                  <Text key={key}>{displayValue(action.values[key], key)}</Text>
-                ))}
-              </HStack>
-            </HStack>
+            {Object.keys(action.values).map((key) => (
+              <Text key={key}>{displayValue(action.values[key], key)}</Text>
+            ))}
           </HStack>
         </VStack>
         {moreMenu}
-      </HStack>
+      </Stack>
     )
   }
 
@@ -711,18 +705,13 @@ const FlowList = (props) => {
   let h = Dimensions.get('window').height - (Platform.OS == 'ios' ? 64 * 2 : 64)
 
   return (
-    <Stack
-      direction={{ base: 'column', md: 'row' }}
-      space={4}
-      pr={{ md: 8 }}
-      h={h}
-      alignItems={'flex-start'}
-    >
-      <Box __w={{ md: '3/6' }} flex="1">
+    <Stack direction={{ base: 'column', md: 'row' }} h={{ md: h }}>
+      <VStack py={4}>
         <HStack
+          px={4}
+          pb={4}
           justifyContent="space-between"
           alignContent="center"
-          p={4}
           space={2}
         >
           <Heading fontSize="md">Flows</Heading>
@@ -730,15 +719,16 @@ const FlowList = (props) => {
         </HStack>
 
         <FlatList
-          px={{ md: 4 }}
           data={flows}
           renderItem={({ item, index }) => (
             <Box
               _dark={{
-                borderColor: 'muted.600'
+                borderColor: 'muted.900'
               }}
               borderColor="muted.200"
-              pb={4}
+              borderBottomWidth={{ base: 1, md: 0 }}
+              pb={{ base: 0, md: 4 }}
+              px={{ base: 0, md: 4 }}
             >
               <Flow
                 edit={false}
@@ -753,20 +743,32 @@ const FlowList = (props) => {
           listKey="flow"
           keyExtractor={(item, index) => index}
         />
-      </Box>
+      </VStack>
 
-      <ScrollView
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        space={4}
+      <VStack
         maxW={{ base: '100%', md: '500px' }}
-        p={4}
-        mt={4}
-        rounded={'md'}
+        flex={1}
+        maxH={{ md: '3/4' }}
+        ml={{ md: 'auto' }}
+        mr={{ md: 4 }}
       >
-        <Heading size="sm">Add &amp; Edit flow</Heading>
+        <Heading size="sm" my={4} px={4}>
+          Add &amp; Edit flow
+        </Heading>
 
-        <Flow edit={true} flow={flow} onSubmit={onSubmit} onReset={resetFlow} />
-      </ScrollView>
+        <Box
+          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+          p={4}
+          rounded={{ md: 'md' }}
+        >
+          <Flow
+            edit={true}
+            flow={flow}
+            onSubmit={onSubmit}
+            onReset={resetFlow}
+          />
+        </Box>
+      </VStack>
     </Stack>
   )
 }

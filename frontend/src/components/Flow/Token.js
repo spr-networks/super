@@ -45,7 +45,8 @@ const Token = ({
     },
     size,
     py: 0,
-    px: 1
+    px: 2,
+    mb: 2
   }
 
   // TODO have different default values. example: Client
