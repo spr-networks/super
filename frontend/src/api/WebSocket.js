@@ -29,6 +29,7 @@ async function connectWebsocket(messageCallback) {
 const parseLogMessage = (msg) => {
   const msgType = msg.Type
   let data = null
+
   try {
     if (msg.Data) {
       data = JSON.parse(msg.Data)

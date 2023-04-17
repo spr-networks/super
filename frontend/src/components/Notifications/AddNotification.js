@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 import {
   Box,
@@ -12,7 +12,7 @@ import {
 } from 'native-base'
 
 const AddNotifcation = ({ onSubmit, ...props }) => {
-  const [Prefix, setPrefix] = useState('wan:out')
+  const [Prefix, setPrefix] = useState('nft:wan:out')
   const [Protocol, setProtocol] = useState('tcp')
 
   const [DstIP, setDstIP] = useState('')
@@ -40,6 +40,7 @@ const AddNotifcation = ({ onSubmit, ...props }) => {
   }
 
   let prefixOptions = [
+    { value: '', label: 'Everything' },
     { value: 'nft:wan:out', label: 'WAN out' },
     { value: 'nft:wan:in', label: 'WAN in' },
 
@@ -52,8 +53,15 @@ const AddNotifcation = ({ onSubmit, ...props }) => {
 
     { value: 'nft:bridge:in', label: 'bridge in' },
     { value: 'nft:drop:bridge', label: 'drop bridge' }
-
   ]
+
+  useEffect(() => {
+    if (Prefix == '') {
+      setProtocol('')
+    } else {
+      setProtocol('tcp')
+    }
+  }, [Prefix])
 
   return (
     <Stack space={4}>
@@ -84,6 +92,7 @@ const AddNotifcation = ({ onSubmit, ...props }) => {
             onValueChange={setProtocol}
             accessibilityLabel={'Choose protocol'}
           >
+            <Select.Item value={''} label={'None'} />
             <Select.Item value={'tcp'} label={'TCP'} />
             <Select.Item value={'udp'} label={'UDP'} />
           </Select>

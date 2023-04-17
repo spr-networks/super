@@ -7,7 +7,7 @@ import { AppContext, AlertContext, alertState } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Sidebar from 'components/Sidebar/Sidebar'
 import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
-import { api, meshAPI, pfwAPI, wifiAPI } from 'api'
+import { api, notificationsAPI, meshAPI, pfwAPI, wifiAPI } from 'api'
 import { ucFirst } from 'utils'
 
 import {
@@ -216,6 +216,8 @@ const AdminLayout = (props) => {
   const [isMeshNode, setIsMeshNode] = useState(false)
   const [version, setVersion] = useState('v0.1')
 
+  const [notificationSettings, setNotificationSettings] = useState([])
+
   useEffect(() => {
     api
       .features()
@@ -249,6 +251,11 @@ const AdminLayout = (props) => {
       .version()
       .then(setVersion)
       .catch((err) => {})
+
+    // get stetings for notificaations
+    notificationsAPI.list().then((settings) => {
+      setNotificationSettings(settings)
+    })
 
     // callback for notifications, web & ios
     // action = allow,deny,cancel, data = nft data
@@ -291,7 +298,15 @@ const AdminLayout = (props) => {
         return alertState.error('Websocket failed to authenticate')
       }
 
-      const res = parseLogMessage(JSON.parse(event.data))
+      let eventData = JSON.parse(event.data)
+
+      // if false it means event is streamed for logs or cli
+      // this is set temporarily when viewing the sprbus via ws
+      if (!eventData.Notification) {
+        return
+      }
+
+      const res = parseLogMessage(eventData)
       if (res) {
         //console.log('[NOTIFICATION]', JSON.stringify(res))
         let { type, title, body, data } = res
