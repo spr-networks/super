@@ -17,23 +17,30 @@ var WSMtx sync.Mutex
 var WSNotify = make(chan WSMessage)
 
 type WSMessage struct {
-	Type string
-	Data string
+	Type         string
+	Data         string
+	Notification bool
 }
 
-func WSNotifyValue(msg_type string, data interface{}) {
+// if notification is set user will see a notification
+// this is to separate so we can show sprbus messages in ui/cli
+func WSNotifyMessage(msg_type string, data interface{}, notification bool) {
 	bytes, err := json.Marshal(data)
 	if err != nil {
 		panic(err)
 	}
 	go func() {
-		WSNotify <- WSMessage{msg_type, string(bytes)}
+		WSNotify <- WSMessage{msg_type, string(bytes), notification}
 	}()
+}
+
+func WSNotifyValue(msg_type string, data interface{}) {
+	WSNotifyMessage(msg_type, data, true)
 }
 
 func WSNotifyString(msg_type string, data string) {
 	go func() {
-		WSNotify <- WSMessage{msg_type, data}
+		WSNotify <- WSMessage{msg_type, data, true}
 	}()
 }
 

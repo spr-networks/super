@@ -223,20 +223,6 @@ func checkNotificationTraffic(logEntry PacketInfo) bool {
 	return false
 }
 
-func logTraffic(topic string, data string) {
-	var logEntry PacketInfo
-	if err := json.Unmarshal([]byte(data), &logEntry); err != nil {
-		logStd.Fatal(err)
-	}
-
-	shouldNotify := checkNotificationTraffic(logEntry)
-
-	if shouldNotify {
-		// TODO forward topic
-		WSNotifyValue(topic, logEntry)
-	}
-}
-
 // the rest is eventbus -> ws forwarding
 // this is run in a separate thread
 func NotificationsRunEventListener() {
@@ -256,8 +242,26 @@ func NotificationsRunEventListener() {
 	log.Println("registering handler for logging ...")
 
 	notification := func(topic string, value string) {
+		notifyAll := false
+		for _, setting := range gNotificationConfig {
+			// if theres a empty entry log all: {Notification: false} in json
+			if setting.SendNotification == false && len(setting.Conditions.Prefix) == 0 {
+				notifyAll = true
+				break
+			}
+		}
+
 		if strings.HasPrefix(topic, "nft") {
-			logTraffic(topic, value)
+			var logEntry PacketInfo
+			if err := json.Unmarshal([]byte(value), &logEntry); err != nil {
+				logStd.Fatal(err)
+			}
+
+			shouldNotify := checkNotificationTraffic(logEntry)
+			if shouldNotify || notifyAll {
+                isNotification := shouldNotify
+				WSNotifyMessage(topic, logEntry, isNotification)
+			}
 		} else if strings.HasPrefix(topic, "wifi:auth") {
 			var data map[string]interface{}
 
@@ -267,11 +271,15 @@ func NotificationsRunEventListener() {
 			}
 
 			WSNotifyValue(topic, data)
-		} else if strings.HasPrefix(topic, "log:") {
-			// log:api, log:www:access
+		} else if notifyAll {
+			var data map[string]interface{}
+			if err := json.Unmarshal([]byte(value), &data); err != nil {
+				log.Println("failed to decode eventbus json:", err)
+				return
+			}
 
-			// for docker container logs
-			//logStd.Printf("[%v] %v\n", topic, value)
+			// dont send as a notification - for sprbus view/ui
+			WSNotifyMessage(topic, data, false)
 		}
 	}
 
