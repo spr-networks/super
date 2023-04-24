@@ -4,17 +4,15 @@ set -a
 
 export LANIP=$(cat /configs/base/lanip || echo "192.168.2.1")
 
+# LANIF no longer owns LANIP. Use dummy IF to contain it
+ip link add name sprloop type dummy
+ip addr add $LANIP/32 dev sprloop
+ip link set dev sprloop up
+
 if [ "$LANIF" ]; then
   # set up static routes on LAN interface
-  ip addr flush dev $LANIF
-  ip addr add $LANIP/24 dev $LANIF
   ip link set dev $LANIF up
-else
-  # If there is no LAN interface, have a dummy interface claim  it
-  ip link add name sprloop type dummy
-  ip addr add $LANIP/32 dev sprloop
-  ip link set dev sprloop up
-fi
+fi 
 
 if [ "$NFT_OVERRIDE" ]; then
   . /configs/base/nft_rules.sh
