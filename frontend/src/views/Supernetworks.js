@@ -96,7 +96,7 @@ const Supernetworks = (props) => {
         leftIcon={<Icon icon={faCirclePlus} />}
         onPress={addTinyNet}
       >
-        <Text>Add TinyNet</Text>
+        <Text>Add Supernetwork</Text>
       </Button>
       <HStack
         space={4}
@@ -120,7 +120,7 @@ const Supernetworks = (props) => {
           colorScheme={'primary'}
           onPress={handleUpdate}
         >
-          Update Data
+          Update
         </Button>
       </HStack>
     </VStack>
