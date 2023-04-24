@@ -37,6 +37,7 @@ import {
   faBarChart,
   faBell,
   faChartColumn,
+  faDiagramProject,
   faCircleNodes,
   faCogs,
   faEthernet,
@@ -207,7 +208,7 @@ const routes = [
       {
         path: 'supernets',
         name: 'Supernetworks',
-        icon: faNetworkWired,
+        icon: faDiagramProject,
         component: Supernetworks,
         layout: 'admin'
       },
