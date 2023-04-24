@@ -246,6 +246,8 @@ func getSetDhcpConfig(w http.ResponseWriter, r *http.Request) {
 
 	gDhcpConfig = conf
 	saveDHCPConfig()
+
+	json.NewEncoder(w).Encode(gDhcpConfig)
 }
 
 func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
