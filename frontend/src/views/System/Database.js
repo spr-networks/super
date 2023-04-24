@@ -157,14 +157,6 @@ const Database = ({ showModal, closeModal, ...props }) => {
   }, [])
 
   useEffect(() => {
-    if (config && config.SaveEvents) {
-      setSaveEvents(config.SaveEvents)
-    }
-
-    if (stats && stats.Topics && stats.Topics.length) {
-      setAllEvents(stats.Topics)
-    }
-
     if (config && stats) {
       setPercentSize(
         Math.min(Math.round((stats.Size / config.MaxSize) * 100), 100)
