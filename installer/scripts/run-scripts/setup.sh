@@ -45,11 +45,17 @@ cd /containers
   done
 fi
 
-#rm -f /containers
+rm -f /containers
+if grep --quiet Raspberry /proc/cpuinfo; then
+  if ! grep -q "net.ifnames=0 biosdevname=0" /boot/firmware/cmdline.txt; then
+    sed -i '$s/$/ net.ifnames=0 biosdevname=0/' /boot/firmware/cmdline.txt
+  fi
+else
+  # TBD check the story for clearfog
+  mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
+  ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules
+fi
 
-
-mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
-ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules
 touch /home/spr/.spr-setup-done
 
 reboot
