@@ -218,7 +218,7 @@ const DockerInfo = ({ showModal, ...props }) => {
           {item.Image}
         </Text>
 
-        <VStack flex={1}>
+        <VStack flex={{ base: 0, md: 1 }}>
           {/* show more info here, privileged, network */}
           <Text
             display={{ base: 'none', md: 'flex' }}

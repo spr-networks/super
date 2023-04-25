@@ -1,5 +1,4 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Platform } from 'react-native'
 import { Icon } from 'FontAwesomeUtils'
 import {
   faBoxArchive,
@@ -21,6 +20,7 @@ import {
   Heading,
   HStack,
   Input,
+  Stack,
   Text,
   Tooltip,
   VStack,
@@ -313,7 +313,12 @@ const Database = ({ showModal, closeModal, ...props }) => {
           {renderConfigRow(
             'SaveEvents',
 
-            <HStack space={2} alignItems={'center'} flexWrap={'wrap'}>
+            <Stack
+              direction={{ base: 'column', md: 'row' }}
+              space={2}
+              alignItems={{ base: 'flex-start', md: 'center' }}
+              flexWrap={'wrap'}
+            >
               {config['SaveEvents'].map((topic) => (
                 <Button
                   key={`btn:${topic}`}
@@ -339,7 +344,7 @@ const Database = ({ showModal, closeModal, ...props }) => {
               >
                 Add
               </Button>
-            </HStack>
+            </Stack>
           )}
           {renderConfigRow(
             'MaxSize',

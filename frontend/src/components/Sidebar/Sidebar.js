@@ -25,7 +25,7 @@ const Sidebar = (props) => {
 
   return (
     <ScrollView
-      mb={{ base: Platform.OS == 'ios' ? 20 : 0, md: 0 }}
+      _mb={{ base: Platform.OS == 'ios' ? 20 : 0, md: 0 }}
       pb={5}
       w={isMini ? '20' : '100%'}
       borderRightWidth={isMobile ? '0' : '1'}

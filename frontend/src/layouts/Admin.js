@@ -440,8 +440,7 @@ const AdminLayout = (props) => {
         <Box
           display={{ base: 'flex', md: 'none' }}
           w="100%"
-          _position={{ base: 'relative', md: 'static' }}
-          position={'sticky'}
+          position={Platform.OS == 'web' ? 'sticky' : 'static'}
           top={0}
           zIndex={99}
           _style={{ backdropFilter: 'blur(10px)' }}
@@ -454,14 +453,17 @@ const AdminLayout = (props) => {
           />
         </Box>
 
-        <HStack position={'sticky'} top={16} flex={1}>
+        <HStack
+          position={Platform.OS == 'web' ? 'sticky' : 'static'}
+          top={Platform.OS == 'web' ? 16 : 0}
+          flex={1}
+        >
           {/*desktop*/}
           <Box
             display={{ base: 'none', md: 'flex' }}
             __position={{ base: 'absolute', md: 'static' }}
-            __h="calc(100vh - 64px)"
             w={isOpenSidebar ? 20 : 64}
-            h={heightContent}
+            _h={heightContent}
           >
             <Sidebar
               isMobile={false}
