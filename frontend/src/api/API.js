@@ -6,6 +6,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 let gApiURL = null
 
 export const setApiURL = (url) => {
+  if (url == 'mock') {
+    gApiURL = url
+    createServer()
+    return
+  }
+
   if (!url.endsWith('/')) {
     url += '/'
   }
@@ -14,13 +20,13 @@ export const setApiURL = (url) => {
 }
 
 export const getApiURL = () => {
-  if (gApiURL !== null) {
+  /*if (gApiURL !== null) {
     return gApiURL
-  }
+  }*/
 
   const { REACT_APP_API } = process.env
 
-  if (REACT_APP_API == 'mock') {
+  if (REACT_APP_API == 'mock' || gApiURL == 'mock') {
     createServer()
     return '/'
   }
@@ -176,9 +182,9 @@ class API {
     return this.get('/features')
   }
 
-  version(plugin='') {
+  version(plugin = '') {
     if (plugin !== '') {
-      return this.get('/version?plugin='+plugin)
+      return this.get('/version?plugin=' + plugin)
     }
     return this.get('/version')
   }
@@ -186,7 +192,6 @@ class API {
   restart() {
     return this.put('/restart')
   }
-
 }
 
 export default API
