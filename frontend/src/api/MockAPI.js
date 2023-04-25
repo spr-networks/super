@@ -254,8 +254,9 @@ export default function MockAPI() {
       const authOK = (request) => {
         try {
           let [type, b64auth] = request.requestHeaders.Authorization.split(' ')
-          return type == 'Basic' && atob(b64auth) == 'admin:admin'
+          return type == 'Basic' && Base64.atob(b64auth) == 'admin:admin'
         } catch (err) {
+          console.error('B64 err:', err)
           return false
         }
       }
@@ -2340,6 +2341,32 @@ export default function MockAPI() {
           ]
         }
       )
+
+      this.get('/plugins/db/config', (schema, request) => {
+        return {
+          SaveEvents: [
+            'www:auth:user:success',
+            'log:www:access',
+            'dns:serve:event',
+            'log:api'
+          ],
+          MaxSize: 10485760
+        }
+      })
+
+      this.get('/plugins/db/stats', (schema, request) => {
+        return {
+          Size: 13344768,
+          Topics: [
+            'nft:wan:in',
+            'dns:serve:event',
+            'nft:wan:out',
+            'log:www:access',
+            'www:auth:token:success',
+            'nft:lan:in'
+          ]
+        }
+      })
     }
   })
 
