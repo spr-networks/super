@@ -389,8 +389,14 @@ func getHostapdJson(iface string) (map[string]interface{}, error) {
 	}
 
 	conf := map[string]interface{}{}
+
 	for _, line := range strings.Split(string(data), "\n") {
 		if strings.HasPrefix(line, "#") || !strings.Contains(line, "=") {
+			continue
+		}
+
+		if strings.Contains(line, "#spr-gen-bss") {
+			//ignore special comment for generated bss strings
 			continue
 		}
 
@@ -423,6 +429,39 @@ func hostapdConfig(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conf)
+}
+
+func updateExtraBSS(iface string, data string) string {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	//read theinterfaces configuration
+	config := loadInterfacesConfigLocked()
+
+	for _, entry := range config {
+		if entry.Name == iface && entry.Type == "AP" {
+			// populate extra bss info
+			for i := 0; i < len(entry.ExtraBSS); i++ {
+
+				data += "bss=" + iface + "." + string(i) + " #spr-gen-bss\n"
+				data += "bssid=" + entry.ExtraBSS[i].Bssid + " #spr-gen-bss\n"
+				data += "ssid=" + entry.ExtraBSS[i].Ssid + " #spr-gen-bss\n"
+				data += "wpa=" + entry.ExtraBSS[i].Wpa + " #spr-gen-bss\n"
+				data += "wpa_key_mgmt=" + entry.ExtraBSS[i].WpaKeyMgmt + " #spr-gen-bss\n"
+				data += "rsn_pairwise=CCMP #spr-gen-bss\n"
+				data += "wpa_psk_file=/configs/wifi/wpa2pskfile #spr-gen-bss\n"
+
+				// default enabled
+				if !entry.ExtraBSS[i].DisableIsolation {
+					data += "ap_isolate=1 #spr-gen-bss\n"
+					data += "per_sta_vif=1 #spr-gen-bss\n"
+				}
+
+			}
+		}
+	}
+
+	return data
 }
 
 func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
@@ -552,6 +591,9 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		data += fmt.Sprint(key, "=", value, "\n")
 	}
 
+	// if anything goes is configured for the interface, enable it.
+	data = updateExtraBSS(iface, data)
+
 	err = ioutil.WriteFile(getHostapdConfigPath(iface), []byte(data), 0664)
 	if err != nil {
 		fmt.Println(err)
@@ -637,10 +679,19 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 
 var Interfacesmtx sync.Mutex
 
+type ExtraBSS struct {
+	Ssid             string
+	Bssid            string
+	Wpa              string
+	WpaKeyMgmt       string
+	DisableIsolation bool
+}
+
 type InterfaceConfig struct {
-	Name    string
-	Type    string
-	Enabled bool
+	Name     string
+	Type     string
+	Enabled  bool
+	ExtraBSS []ExtraBSS
 }
 
 var gAPIInterfacesPath = TEST_PREFIX + "/configs/base/interfaces.json"
@@ -737,7 +788,7 @@ func configureInterface(interfaceType string, name string) error {
 
 	}
 
-	newEntry := InterfaceConfig{name, interfaceType, true}
+	newEntry := InterfaceConfig{name, interfaceType, true, []ExtraBSS{}}
 
 	config := loadInterfacesConfigLocked()
 
