@@ -37,14 +37,14 @@ export default class APIMesh extends API {
     return this.put(`setSSID`, data);
   }
 
-  meshIter(rApi) {
+  meshIter(protocb) {
     return this.leafRouters().then((routers) => {
       if (routers == null) {
         return
       }
       let apis = []
       for (let i = 0; i < routers.length; i++) {
-        let r = Object.assign(Object.create(Object.getPrototypeOf(rApi)), rApi)
+        let r = protocb()
         r.setRemoteURL('http://' + routers[i].IP + '/')
         r.setAuthTokenHeaders(routers[i].APIToken)
         apis.push(r)

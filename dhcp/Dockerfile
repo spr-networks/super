@@ -16,6 +16,7 @@ ENV CC=clang
 ARG CACHEBUST=1
 RUN git clone https://github.com/spr-networks/coredhcp
 WORKDIR /code/coredhcp
+RUN git checkout spr-revamp
 ARG USE_TMPFS=true
 RUN --mount=type=tmpfs,target=/tmpfs \
     [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \

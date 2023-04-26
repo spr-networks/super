@@ -19,7 +19,6 @@ import (
 	"io"
 	"log"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
@@ -100,7 +99,7 @@ func main() {
 
 	fmt.Println("client connected:", client)
 
-	stream, err := client.SubscribeTopic("nft:lan:out:") // NOTE need to end with :
+	stream, err := client.SubscribeTopic("nft:wan:out")
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -121,13 +120,6 @@ func main() {
 
 			topic := reply.GetTopic()
 			value := reply.GetValue()
-			index := strings.Index(value, "{")
-			if index <= 0 {
-				continue
-			}
-
-			topic = value[0:index-1]
-			value = value[index:len(value)]
 
 			logTraffic(topic, value)
 		}

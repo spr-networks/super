@@ -88,11 +88,8 @@ const WifiScan = (props) => {
 
   return (
     <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      rounded="md"
-      width="100%"
+      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDarkv')}
       p={4}
-      h={'100%'}
     >
       <HStack space={2}>
         <Box flex="2">

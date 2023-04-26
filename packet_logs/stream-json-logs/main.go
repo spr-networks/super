@@ -9,12 +9,9 @@ https://pkg.go.dev/github.com/google/gopacket/layers#DNS
 */
 
 import (
-	//"encoding/json"
+	"flag"
 	"fmt"
-	"io"
-	"log"
-	//"regexp"
-	"strings"
+	"os"
 	"sync"
 	"time"
 
@@ -42,54 +39,33 @@ type PacketInfo struct {
 
 func logTraffic(topic string, data string) {
 	/*
-	var logEntry PacketInfo
-	if err := json.Unmarshal([]byte(data), &logEntry); err != nil {
-		log.Fatal(err)
-	}
+		var logEntry PacketInfo
+		if err := json.Unmarshal([]byte(data), &logEntry); err != nil {
+			log.Fatal(err)
+		}
 	*/
 	fmt.Println(data)
 }
 
 func main() {
-	client, err := sprbus.NewClient(ServerEventSock)
-	defer client.Close()
+	help := flag.Bool("help", false, "show help")
+	timeout := flag.Int("timeout", 20, "exit timeout")
 
-	if err != nil {
-		log.Fatal("err", err)
+	flag.Parse()
+
+	if *help {
+		flag.Usage()
+		os.Exit(0)
 	}
 
-	stream, err := client.SubscribeTopic("nft:") // NOTE need to end with :
-	if nil != err {
-		log.Fatal(err)
-	}
+	go sprbus.HandleEvent("nft", logTraffic)
 
-	go func() {
-		wg.Add(1)
-
+	if *timeout != 0 {
+		time.Sleep(time.Second * time.Duration(*timeout))
+	} else {
 		for {
-			reply, err := stream.Recv()
-			if io.EOF == err {
-				break
-			}
-
-			if nil != err {
-				log.Fatal("ERRRRRR ", err) // Cancelled desc
-			}
-
-			topic := reply.GetTopic()
-			value := reply.GetValue()
-			index := strings.Index(value, "{")
-			if index <= 0 {
-				continue
-			}
-
-			topic = value[0 : index-1]
-			value = value[index:len(value)]
-
-			logTraffic(topic, value)
+			time.Sleep(time.Second)
 		}
-	}()
-
-	time.Sleep(time.Second)
-	wg.Wait()
+	}
+	//wg.Wait()
 }

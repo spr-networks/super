@@ -29,6 +29,7 @@ import AuthSettings from 'views/AuthSettings'
 import SystemInfo from 'views/SystemInfo'
 import Notifications from 'views/Notifications'
 import SpeedTest from 'views/SpeedTest'
+import Supernetworks from 'views/Supernetworks'
 
 import {
   faArrowCircleUp,
@@ -36,6 +37,7 @@ import {
   faBarChart,
   faBell,
   faChartColumn,
+  faDiagramProject,
   faCircleNodes,
   faCogs,
   faEthernet,
@@ -203,6 +205,13 @@ const routes = [
     name: 'System',
     state: 'systemCollapse',
     views: [
+      {
+        path: 'supernets',
+        name: 'Supernetworks',
+        icon: faDiagramProject,
+        component: Supernetworks,
+        layout: 'admin'
+      },
       {
         path: 'dhcp',
         name: 'DHCP Table',

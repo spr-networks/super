@@ -163,6 +163,7 @@ const DeviceListing = (props) => {
 
   const renderItem = ({ item }) => (
     <Device
+      key={item.MAC} //keyExtractor is recommended, however, this fixes a bug on react web
       device={item}
       edit={true}
       groups={groups}

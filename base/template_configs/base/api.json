@@ -35,6 +35,12 @@
    "URI": "dyndns",
    "UnixPath": "/state/plugins/dyndns/dyndns_plugin",
    "Enabled": true
-  }
+  },
+  {
+   "Name": "db",
+   "URI": "db",
+   "UnixPath": "/state/plugins/db/socket",
+   "Enabled": true
+  },
  ]
 }

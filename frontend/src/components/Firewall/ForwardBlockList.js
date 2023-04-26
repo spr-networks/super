@@ -66,22 +66,19 @@ const ForwardBlockList = (props) => {
         </ModalForm>
       </HStack>
 
-      <Box
-        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        width="100%"
-        p={4}
-        mb={4}
-      >
+      <Box px={4} mb={4}>
         <FlatList
           data={list}
           renderItem={({ item }) => (
             <Box
-              borderBottomWidth="1"
+              bg="backgroundCardLight"
+              borderBottomWidth={1}
               _dark={{
-                borderColor: 'muted.600'
+                bg: 'backgroundCardDark',
+                borderColor: 'borderColorCardDark'
               }}
-              borderColor="muted.200"
-              py="2"
+              borderColor="borderColorCardLight"
+              p={4}
             >
               <HStack
                 space={3}

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -89,7 +88,7 @@ func getPortsFromPortVerdictMap(name string) []string {
 	var data map[string]interface{}
 	err = json.Unmarshal(stdout, &data)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return ports
 	}
 	data2, ok := data["nftables"].([]interface{})
@@ -144,11 +143,11 @@ func loadFirewallRules() error {
 	defer FWmtx.Unlock()
 	data, err := ioutil.ReadFile(FirewallConfigFile)
 	if err != nil {
-		fmt.Println("[-] Empty firewall configuration, initializing")
+		log.Println("[-] Empty firewall configuration, initializing")
 	} else {
 		err := json.Unmarshal(data, &gFirewallConfig)
 		if err != nil {
-			fmt.Println("[-] Failed to decode firewall configuration, initializing")
+			log.Println("[-] Failed to decode firewall configuration, initializing")
 		}
 	}
 	if len(gFirewallConfig.ServicePorts) == 0 {
@@ -164,8 +163,8 @@ func deleteBlock(br BlockRule) error {
 	_, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("failed to delete element", err)
-		fmt.Println(cmd)
+		log.Println("failed to delete element", err)
+		log.Println(cmd)
 	}
 
 	return err
@@ -186,8 +185,8 @@ func deleteForwarding(f ForwardingRule) error {
 	_, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("failed to delete element", err)
-		fmt.Println(cmd)
+		log.Println("failed to delete element", err)
+		log.Println(cmd)
 	}
 
 	return err
@@ -213,8 +212,8 @@ func applyForwarding(forwarding []ForwardingRule) error {
 		_, err := cmd.Output()
 
 		if err != nil {
-			fmt.Println("failed to add element", err)
-			fmt.Println(cmd)
+			log.Println("failed to add element", err)
+			log.Println(cmd)
 		}
 
 	}
@@ -230,8 +229,8 @@ func applyBlocking(blockRules []BlockRule) error {
 		_, err := cmd.Output()
 
 		if err != nil {
-			fmt.Println("failed to add element", err)
-			fmt.Println(cmd)
+			log.Println("failed to add element", err)
+			log.Println(cmd)
 		}
 	}
 
@@ -250,7 +249,7 @@ func applyForwardBlocking(blockRules []ForwardingBlockRule) error {
 func deleteServicePort(port ServicePort) error {
 
 	if port.Protocol != "tcp" {
-		fmt.Println("[-] Error: non TCP port described, unsupported")
+		log.Println("[-] Error: non TCP port described, unsupported")
 		return fmt.Errorf("invalid protocol for service port")
 	}
 
@@ -260,8 +259,8 @@ func deleteServicePort(port ServicePort) error {
 	_, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("failed to delete element from spr_tcp_port_accept", err)
-		fmt.Println(cmd)
+		log.Println("failed to delete element from spr_tcp_port_accept", err)
+		log.Println(cmd)
 	}
 
 	//add this disabled port  into upstream_tcp_port_drop
@@ -270,8 +269,8 @@ func deleteServicePort(port ServicePort) error {
 	_, err = cmd.Output()
 
 	if err != nil {
-		fmt.Println("failed to add element to upstream_tcp_port_drop", err)
-		fmt.Println(cmd)
+		log.Println("failed to add element to upstream_tcp_port_drop", err)
+		log.Println(cmd)
 		return err
 	}
 
@@ -280,7 +279,7 @@ func deleteServicePort(port ServicePort) error {
 
 func addServicePort(port ServicePort) error {
 	if port.Protocol != "tcp" {
-		fmt.Println("[-] Error: non TCP port described, unsupported")
+		log.Println("[-] Error: non TCP port described, unsupported")
 		return fmt.Errorf("invalid protocol for service port")
 	}
 
@@ -291,8 +290,8 @@ func addServicePort(port ServicePort) error {
 		_, err := cmd.Output()
 
 		if err != nil {
-			fmt.Println("failed to delete element from upstream_tcp_port_drop", err)
-			fmt.Println(cmd)
+			log.Println("failed to delete element from upstream_tcp_port_drop", err)
+			log.Println(cmd)
 			return err
 		}
 	} else {
@@ -302,8 +301,8 @@ func addServicePort(port ServicePort) error {
 		_, err := cmd.Output()
 
 		if err != nil {
-			fmt.Println("failed to add element to upstream_tcp_port_drop", err)
-			fmt.Println(cmd)
+			log.Println("failed to add element to upstream_tcp_port_drop", err)
+			log.Println(cmd)
 			return err
 		}
 	}
@@ -314,8 +313,8 @@ func addServicePort(port ServicePort) error {
 	_, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("failed to add element to spr_tcp_port_accept", err)
-		fmt.Println(cmd)
+		log.Println("failed to add element to spr_tcp_port_accept", err)
+		log.Println(cmd)
 		return err
 	}
 
@@ -344,8 +343,8 @@ func allowPrivateUpstreamAccess(ip string) error {
 	_, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("failed to add element to upstream_private_rfc1918_allowed", err)
-		fmt.Println(cmd)
+		log.Println("failed to add element to upstream_private_rfc1918_allowed", err)
+		log.Println(cmd)
 	}
 
 	return err
@@ -357,8 +356,8 @@ func removePrivateUpstreamAccess(ip string) error {
 	_, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("failed to remove element from upstream_private_rfc1918_allowed", err)
-		fmt.Println(cmd)
+		log.Println("failed to remove element from upstream_private_rfc1918_allowed", err)
+		log.Println(cmd)
 	}
 
 	return err
@@ -420,14 +419,14 @@ func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
 	cmd := exec.Command("nft", "flush", "chain", "inet", "filter", "WIPHY_MACSPOOF_CHECK")
 	_, err := cmd.Output()
 	if err != nil {
-		fmt.Println("failed to flush chain", err)
+		log.Println("failed to flush chain", err)
 		return
 	}
 
 	cmd = exec.Command("nft", "flush", "chain", "inet", "filter", "WIPHY_FORWARD_LAN")
 	_, err = cmd.Output()
 	if err != nil {
-		fmt.Println("failed to flush chain", err)
+		log.Println("failed to flush chain", err)
 		return
 	}
 
@@ -438,7 +437,7 @@ func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
 				"counter", "iifname", "eq", entry.Name+".*", "jump", "DROP_MAC_SPOOF")
 			_, err = cmd.Output()
 			if err != nil {
-				fmt.Println("failed to insert rule", cmd, err)
+				log.Println("failed to insert rule", cmd, err)
 			}
 
 			// $(if [ "$VLANSIF" ]; then echo "counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access"; fi)
@@ -447,7 +446,7 @@ func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
 				"counter", "oifname", entry.Name+".*", "ip", "saddr", ".", "iifname", "vmap", "@lan_access")
 			_, err = cmd.Output()
 			if err != nil {
-				fmt.Println("failed to insert rule", cmd, err)
+				log.Println("failed to insert rule", cmd, err)
 			}
 
 		}
@@ -462,7 +461,7 @@ func showNFMap(w http.ResponseWriter, r *http.Request) {
 	stdout, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("show NFMap failed to list", name, "->", err)
+		log.Println("show NFMap failed to list", name, "->", err)
 		http.Error(w, "Not found", 404)
 		return
 	}
@@ -479,7 +478,7 @@ func showNFTable(w http.ResponseWriter, r *http.Request) {
 	stdout, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("show NFMap failed to list ", family, " ", name, "->", err)
+		log.Println("show NFMap failed to list ", family, " ", name, "->", err)
 		http.Error(w, "Not found", 404)
 		return
 	}
@@ -493,7 +492,7 @@ func listNFTables(w http.ResponseWriter, r *http.Request) {
 	stdout, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("nft failed to list tables", err)
+		log.Println("nft failed to list tables", err)
 		http.Error(w, "nft failed to list tables", 400)
 		return
 	}
@@ -742,7 +741,7 @@ func modifyServicePort(w http.ResponseWriter, r *http.Request) {
 func addVerdict(IP string, Iface string, Table string) {
 	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ":", "accept", "}").Run()
 	if err != nil {
-		fmt.Println("addVerdict Failed", Iface, Table, err)
+		log.Println("addVerdict Failed", Iface, Table, err)
 		return
 	}
 }
@@ -774,30 +773,30 @@ func addCustomVerdict(ZoneName string, IP string, Iface string) {
 
 		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_src_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "}").Run()
 		if err != nil {
-			fmt.Println("addCustomVerdict Failed", err)
+			log.Println("addCustomVerdict Failed", err)
 			return
 		}
 		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_dst_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "}").Run()
 		if err != nil {
-			fmt.Println("addCustomVerdict Failed", err)
+			log.Println("addCustomVerdict Failed", err)
 			return
 		}
 		err = exec.Command("nft", "insert", "rule", "inet", "filter", "CUSTOM_GROUPS", "ip", "daddr", ".", "oifname", "vmap", "@"+ZoneName+"_dst_access", "ip", "saddr", ".", "iifname", "vmap", "@"+ZoneName+"_src_access").Run()
 		if err != nil {
-			fmt.Println("addCustomVerdict Failed", err)
+			log.Println("addCustomVerdict Failed", err)
 			return
 		}
 	}
 
 	err = exec.Command("nft", "add", "element", "inet", "filter", ZoneName+"_dst_access", "{", IP, ".", Iface, ":", "continue", "}").Run()
 	if err != nil {
-		fmt.Println("addCustomVerdict Failed", err)
+		log.Println("addCustomVerdict Failed", err)
 		return
 	}
 
 	err = exec.Command("nft", "add", "element", "inet", "filter", ZoneName+"_src_access", "{", IP, ".", Iface, ":", "accept", "}").Run()
 	if err != nil {
-		fmt.Println("addCustomVerdict Failed", err)
+		log.Println("addCustomVerdict Failed", err)
 		return
 	}
 }
@@ -893,12 +892,12 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 				if entry.mac != "" {
 					err := exec.Command("nft", "delete", "element", "inet", "filter", name, "{", entry.ipv4, ".", entry.ifname, ".", entry.mac, ":", verdict, "}").Run()
 					if err != nil {
-						fmt.Println("nft delete failed", err)
+						log.Println("nft delete failed", err)
 					}
 				} else {
 					err := exec.Command("nft", "delete", "element", "inet", "filter", name, "{", entry.ipv4, ".", entry.ifname, ":", verdict, "}").Run()
 					if err != nil {
-						fmt.Println("nft delete failed", err)
+						log.Println("nft delete failed", err)
 						return
 					}
 				}
@@ -910,7 +909,7 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 func addVerdictMac(IP string, MAC string, Iface string, Table string, Verdict string) {
 	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ".", MAC, ":", Verdict, "}").Run()
 	if err != nil {
-		fmt.Println("addVerdictMac Failed", MAC, Iface, Table, err)
+		log.Println("addVerdictMac Failed", MAC, Iface, Table, err)
 		return
 	}
 }
@@ -938,8 +937,8 @@ func addForwardBlock(br ForwardingBlockRule) error {
 	_, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("failed to add element", err)
-		fmt.Println(cmd)
+		log.Println("failed to add element", err)
+		log.Println(cmd)
 	}
 	return err
 }
@@ -951,8 +950,8 @@ func deleteForwardBlock(br ForwardingBlockRule) error {
 	_, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("failed to delete element", err)
-		fmt.Println(cmd)
+		log.Println("failed to delete element", err)
+		log.Println(cmd)
 	}
 
 	return err
@@ -965,7 +964,7 @@ func SyncBaseContainer() {
 
 	file, err := os.OpenFile(BASE_READY, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
-		fmt.Println("[-] Failed to open base ready file", err)
+		log.Println("[-] Failed to open base ready file", err)
 		return
 	}
 	defer file.Close()
@@ -978,7 +977,7 @@ func SyncBaseContainer() {
 		if err == nil {
 			//release the lock -- and wait for bash
 			syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
-			fmt.Println("[.] Waiting for base container to initialize")
+			log.Println("[.] Waiting for base container to initialize")
 			time.Sleep(1 * time.Second)
 		}
 	}
@@ -1031,7 +1030,7 @@ func getWireguardActivePeers() []string {
 	defer c.CloseIdleConnections()
 	resp, err := c.Do(req)
 	if err != nil {
-		fmt.Println("wireguard request failed", err)
+		log.Println("wireguard request failed", err)
 		return handshakes
 	}
 
@@ -1039,13 +1038,13 @@ func getWireguardActivePeers() []string {
 	output, err := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("failed to retrieve wireguard information", resp.StatusCode)
+		log.Println("failed to retrieve wireguard information", resp.StatusCode)
 		return handshakes
 	}
 
 	err = json.Unmarshal(output, &data)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return handshakes
 	}
 
@@ -1053,7 +1052,7 @@ func getWireguardActivePeers() []string {
 
 	_, exists := data["wg0"]
 	if !exists {
-		fmt.Println("Failed to retrieve wg0 from wireguard status")
+		log.Println("Failed to retrieve wg0 from wireguard status")
 		return handshakes
 	}
 
@@ -1162,7 +1161,7 @@ func getRouteInterface(IP string) string {
 
 	err = json.Unmarshal(output, &routes)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return ""
 	}
 
@@ -1175,7 +1174,7 @@ func getRouteInterface(IP string) string {
 
 func establishDevice(entry DeviceEntry, new_iface string, established_route_device string, routeIP string, router string) {
 
-	fmt.Println("flushing route and vmaps ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
+	log.Println("flushing route and vmaps ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
 
 	//1. delete arp entry
 	flushRoute(entry.MAC)
@@ -1190,7 +1189,7 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	exec.Command("ip", "route", "flush", routeIP).Run()
 	exec.Command("ip", "route", "add", routeIP, "dev", new_iface).Run()
 
-	fmt.Println("Populating route and vmaps ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
+	log.Println("Populating route and vmaps", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
 
 	//4. update router IP for the new interface. first delete the old addr
 	updateAddr(router, new_iface)
@@ -1275,10 +1274,15 @@ func dynamicRouteLoop() {
 					new_iface, exists = suggested_device[entry.RecentIP]
 				}
 
-				if !exists && lanif != "" {
-					//no new_iface and a LAN interface is set, use that.
-					//TBD: VLAN here based on the assigned vlan id
-					new_iface = lanif
+				if !exists {
+					if lanif != "" {
+						//no new_iface and a LAN interface is set, use that.
+						//TBD: VLAN here based on the assigned vlan id
+						new_iface = lanif
+					} else {
+						// disconnected devices will have empty new_iface, skip
+						continue
+					}
 				}
 
 				//happy state -- the established interface matches the calculated interface to route to
@@ -1289,22 +1293,90 @@ func dynamicRouteLoop() {
 						//vmaps happy, skip updating this device
 						continue
 					}
+
+					log.Println("[-] Missing vmap entries for mac=", ident, "new_iface=", new_iface)
 				}
 
-				routeIP := entry.RecentIP
-				is_tiny, newIP := toTinyIP(entry.RecentIP, 2)
-				_, router := toTinyIP(entry.RecentIP, 1)
-				routeIP = newIP.String() + "/30"
+				//ex tinynet
+				//route is 192.168.2.4
+				//router is at 192.168.2.5
+				//device is at 192.168.2.6
+				//broadcast is at 192.168.2.7
+				routeIP := TinyIpDelta(entry.RecentIP, -2)
+				routerIP := TinyIpDelta(entry.RecentIP, -1)
 
-				if !is_tiny {
-					fmt.Println("[-] Error, unknown IP address, not a tiny subnet", routeIP)
-					continue
-				}
+				routeIPString := routeIP + "/30"
 
-				establishDevice(entry, new_iface, established_route_device, routeIP, router.String())
+				establishDevice(entry, new_iface, established_route_device, routeIPString, routerIP)
 			}
 		}
 	}
+}
+
+func getCurLANIP() string {
+	//attempt to retrieve the current LANIP
+	lanif := os.Getenv("LANIF")
+	if lanif == "" {
+		lanif = "sprloop"
+	}
+
+	ief, err := net.InterfaceByName(lanif)
+	if err != nil {
+		return ""
+	}
+
+	addrs, err := ief.Addrs()
+	if err != nil {
+		return ""
+	}
+
+	if len(addrs) > 0 {
+		return addrs[0].(*net.IPNet).IP.String()
+	}
+
+	return ""
+
+}
+
+func updateFirewallSubnets(DNSIP string, TinyNets []string) {
+	//update firewall table rules to service the new tiny networks, where needed
+
+	//1) accounting
+	exec.Command("nft", "flush", "set", "ip", "accounting", "local_lan").Output()
+
+	for _, subnet := range TinyNets {
+		cmd := exec.Command("nft", "add", "element", "ip", "accounting", "local_lan", "{", subnet, "}")
+		_, err := cmd.Output()
+
+		if err != nil {
+			log.Println("failed to add element", err)
+			log.Println(cmd)
+		}
+	}
+
+	//2) DNSIP
+	cmd := exec.Command("nft", "flush", "chain", "inet", "nat", "DNS_DNAT")
+	_, err := cmd.Output()
+	if err != nil {
+		log.Println("failed to flush chain", err)
+		return
+	}
+
+	//#    $(if [ "$VLANSIF" ]; then echo "counter iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF"; fi)
+	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
+		"udp", "dport", "53", "counter", "dnat", "ip", "to", DNSIP+":53")
+	_, err = cmd.Output()
+	if err != nil {
+		log.Println("failed to insert rule", cmd, err)
+	}
+
+	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
+		"tcp", "dport", "53", "counter", "dnat", "ip", "to", DNSIP+":53")
+	_, err = cmd.Output()
+	if err != nil {
+		log.Println("failed to insert rule", cmd, err)
+	}
+
 }
 
 func initUserFirewallRules() {

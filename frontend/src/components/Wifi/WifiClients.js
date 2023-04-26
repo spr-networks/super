@@ -39,12 +39,10 @@ const WifiClients = (props) => {
     return suites[suite] || 'unknown'
   }
 
-
   const refreshClients = async () => {
     const ifaces = await wifiAPI.interfaces('AP').catch((error) => {
       context.error('WIFI API Failure', error)
     })
-
 
     let stations = {}
     for (let iface of ifaces) {
@@ -55,7 +53,7 @@ const WifiClients = (props) => {
       for (let mac of Object.keys(ret)) {
         ret[mac].Iface = iface
       }
-      stations = {...stations, ...ret}
+      stations = { ...stations, ...ret }
     }
 
     const devices = await deviceAPI.list().catch((error) => {
@@ -97,13 +95,13 @@ const WifiClients = (props) => {
       estimatedItemSize={100}
       renderItem={({ item }) => (
         <Box
-          bg="warmGray.50"
+          bg="backgroundCardLight"
           borderBottomWidth={1}
           _dark={{
-            bg: 'blueGray.800',
-            borderColor: 'muted.600'
+            bg: 'backgroundCardDark',
+            borderColor: 'borderColorCardDark'
           }}
-          borderColor="muted.200"
+          borderColor="borderColorCardLight"
           p={4}
         >
           <HStack space={2} justifyContent="space-between">
@@ -129,7 +127,6 @@ const WifiClients = (props) => {
               <Text bold>{item.RecentIP}</Text>
               <Text color="muted.500">{item.MAC}</Text>
             </Stack>
-
 
             <Stack
               direction={{ base: 'column', md: 'row' }}

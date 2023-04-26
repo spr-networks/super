@@ -22,7 +22,7 @@ describe('releases', () => {
       .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
-        assert(res.body.includes(''), 'missing stable')
+        assert(res.body.includes('main'), 'missing stable')
         assert(res.body.includes('-dev'), 'missing dev channel')
         done()
       })
@@ -53,7 +53,7 @@ describe('releases', () => {
         done()
       })
   })
-  
+
   it('should get the running version', (done) => {
     agent
       .get('/version')
@@ -64,7 +64,6 @@ describe('releases', () => {
         done()
       })
   })
-  
+
 
 })
-

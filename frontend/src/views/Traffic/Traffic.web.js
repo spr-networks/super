@@ -15,8 +15,7 @@ import {
   HStack,
   VStack,
   Text,
-  useColorModeValue,
-  View
+  useColorModeValue
 } from 'native-base'
 
 export default class Traffic extends Component {
@@ -295,16 +294,14 @@ export default class Traffic extends Component {
       })
     }
 
-    //TODO bg={useColorModeValue('warmGray.50', 'blueGray.800')}
     return (
-      <View>
+      <VStack space={4}>
         <Box
-          rounded="md"
-          _light={{ bg: 'warmGray.50' }}
-          _dark={{ bg: 'blueGray.800' }}
+          _light={{ bg: 'backgroundCardLight' }}
+          _dark={{ bg: 'backgroundCardDark' }}
+          _rounded="md"
           width="100%"
-          p="4"
-          mb="4"
+          p={4}
         >
           <HStack alignItems="center">
             <VStack>
@@ -328,12 +325,12 @@ export default class Traffic extends Component {
           </Box>
         </Box>
         <Box
-          rounded="md"
-          _light={{ bg: 'warmGray.50' }}
-          _dark={{ bg: 'blueGray.800' }}
+          _light={{ bg: 'backgroundCardLight' }}
+          _dark={{ bg: 'backgroundCardDark' }}
+          _rounded="md"
           width="100%"
-          p="4"
-          mb="4"
+          p={4}
+          mb={4}
         >
           <HStack alignItems="center">
             <VStack>
@@ -356,7 +353,7 @@ export default class Traffic extends Component {
             ) : null}
           </Box>
         </Box>
-      </View>
+      </VStack>
     )
   }
 }

@@ -54,7 +54,7 @@ const PluginList = (props) => {
       }
 
       let ver = await api.version('super' + name).catch((err) => {
-        alertState.error('failed to fetch plugin version ' + name)
+        console.error('failed to fetch plugin version ' + name)
       })
 
       plugins[i].Version = ver
@@ -145,13 +145,13 @@ const PluginList = (props) => {
   const renderItem = ({ item }) => {
     return (
       <Box
-        bg="warmGray.50"
+        bg="backgroundCardLight"
         borderBottomWidth={1}
-        borderColor="muted.200"
         _dark={{
-          bg: 'blueGray.800',
-          borderColor: 'muted.600'
+          bg: 'backgroundCardDark',
+          borderColor: 'borderColorCardDark'
         }}
+        borderColor="borderColorCardLight"
         p={4}
       >
         <HStack space={3} justifyContent="space-between">
@@ -263,8 +263,7 @@ const PluginList = (props) => {
       </HStack>
 
       <Box
-        bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-        width="100%"
+        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
         p={4}
         mb={4}
       >

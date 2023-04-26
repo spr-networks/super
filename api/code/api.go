@@ -4,13 +4,12 @@ import (
 	"bytes"
 	crand "crypto/rand"
 	"encoding/base64"
-	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
+	logStd "log"
 	"net"
 	"net/http"
 	"net/url"
@@ -27,6 +26,7 @@ import (
 	"github.com/duo-labs/webauthn/webauthn"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/spr-networks/sprbus"
 )
 
 var TEST_PREFIX = os.Getenv("TEST_PREFIX")
@@ -35,6 +35,7 @@ var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
 var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
+var ConfigBackupDirectory = TEST_PREFIX + "/state/backups"
 
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
 
@@ -44,6 +45,9 @@ var ApiTlsCert = "/configs/base/www-api.crt"
 var ApiTlsKey = "/configs/base/www-api.key"
 
 var SuperdSocketPath = TEST_PREFIX + "/state/plugins/superd/socket"
+
+// NOTE .Fire will dial, print to stdout/stderr if sprbus not started
+var log = sprbus.NewLog("log:api")
 
 type InfluxConfig struct {
 	URL    string
@@ -101,11 +105,11 @@ func loadConfig() {
 
 	data, err := ioutil.ReadFile(ApiConfigPath)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	} else {
 		err = json.Unmarshal(data, &config)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	}
 
@@ -136,7 +140,7 @@ func ipAddr(w http.ResponseWriter, r *http.Request) {
 	stdout, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("ipAddr failed", err)
+		log.Println("ipAddr failed", err)
 		http.Error(w, "Not found", 404)
 		return
 	}
@@ -158,7 +162,7 @@ func ipLinkUpDown(w http.ResponseWriter, r *http.Request) {
 	_, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println("ip link failed", err)
+		log.Println("ip link failed", err)
 		http.Error(w, "ip link failed", 400)
 		return
 	}
@@ -167,7 +171,6 @@ func ipLinkUpDown(w http.ResponseWriter, r *http.Request) {
 
 func getStatus(w http.ResponseWriter, r *http.Request) {
 	reply := "Online"
-	WSNotifyString("StatusCalled", "test")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
 }
@@ -619,8 +622,7 @@ func doConfigsBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	backupDirectory := "/state/api"
-	backupFilePath := backupDirectory + "/" + filename
+	backupFilePath := ConfigBackupDirectory + "/" + filename
 
 	err = exec.Command("tar", "czf", backupFilePath, TEST_PREFIX+"/configs").Run()
 	if err != nil {
@@ -638,13 +640,12 @@ func getConfigsBackup(w http.ResponseWriter, r *http.Request) {
 	// preTagFmt="^v?[0-9]+\.[0-9]+\.[0-9]+(-$suffix\.[0-9]+)$"
 	// example: v0.1.1-beta.5-1-g79a97ae
 	validFilename := regexp.MustCompile(`^spr-configs-v[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+\.[0-9\-a-h]+)?.tgz$`).MatchString
-	backupDirectory := "/state/api"
 
 	filename := mux.Vars(r)["name"]
 
 	// list files if empty
 	if filename == "" {
-		backups, err := filepath.Glob(backupDirectory + "/spr-configs-*.tgz")
+		backups, err := filepath.Glob(ConfigBackupDirectory + "/spr-configs-*.tgz")
 
 		if err != nil {
 			http.Error(w, "Invalid config name", 400)
@@ -680,12 +681,12 @@ func getConfigsBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	backupFilePath := backupDirectory + "/" + filename
+	backupFilePath := ConfigBackupDirectory + "/" + filename
 
 	// verify
 	absPath := filepath.Dir(filepath.Clean(backupFilePath))
 	_, err := os.Stat(backupFilePath)
-	if absPath != backupDirectory || err != nil {
+	if absPath != ConfigBackupDirectory || err != nil {
 		http.Error(w, "Invalid config name", 400)
 		return
 	}
@@ -734,9 +735,10 @@ func saveDevicesJson(devices map[string]DeviceEntry) {
 		log.Fatal(err)
 	}
 
+	sprbus.Publish("devices:save", devices)
+
 	scrubbed_devices := convertDevicesPublic(devices)
 	savePublicDevicesJson(scrubbed_devices)
-
 }
 
 func getDevicesJson() map[string]DeviceEntry {
@@ -919,8 +921,20 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			val.VLANTag = dev.VLANTag
 		}
 
+		refreshIP := false
+
 		if dev.RecentIP != "" {
-			val.RecentIP = dev.RecentIP
+			new_ip := net.ParseIP(dev.RecentIP)
+			if new_ip != nil && isTinyNetDeviceIP(new_ip.String()) {
+				val.RecentIP = new_ip.String()
+				refreshIP = true
+			} else {
+				if new_ip == nil {
+					return "Invalid IP assignment", 400
+				} else {
+					return "IP assignment not in configured IP ranges", 400
+				}
+			}
 		}
 
 		if dev.PSKEntry.Psk != "" {
@@ -995,10 +1009,23 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			refreshDeviceTags(val)
 		}
 
+		if refreshIP {
+			if val.MAC != "" {
+				iface := getRouteInterface(val.RecentIP)
+				if iface != "" {
+					//if the device is currently routed, then update it
+					handleDHCPResult(val.MAC, val.RecentIP, "", iface)
+				}
+			}
+
+		}
+
 		//mask the PSK if set and not generated
 		if val.PSKEntry.Psk != "" && pskGenerated == false {
 			val.PSKEntry.Psk = "**"
 		}
+
+		sprbus.Publish("device:update", val)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(val)
@@ -1038,6 +1065,8 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 	devices[identity] = dev
 	saveDevicesJson(devices)
+
+	sprbus.Publish("device:save", dev)
 
 	if pskModified {
 		//psks updated -- update hostapd
@@ -1295,7 +1324,7 @@ func searchVmapsByMac(MAC string, VMaps []string) (error, string, string) {
 func updateArp(Ifname string, IP string, MAC string) {
 	err := exec.Command("arp", "-i", Ifname, "-s", IP, MAC).Run()
 	if err != nil {
-		fmt.Println("arp -i", Ifname, IP, MAC, "failed", err)
+		log.Println("arp -i", Ifname, IP, MAC, "failed", err)
 		return
 	}
 }
@@ -1380,8 +1409,6 @@ func updateLocalMappings(IP string, Name string) {
 	ioutil.WriteFile(localMappingsPath, []byte(new_data), 0644)
 }
 
-var DHCPmtx sync.Mutex
-
 func isAPVlan(Iface string) bool {
 	Interfacesmtx.Lock()
 	//read the old configuration
@@ -1399,179 +1426,21 @@ func isAPVlan(Iface string) bool {
 	return false
 }
 
-type DHCPUpdate struct {
-	IP     string
-	MAC    string
-	Name   string
-	Iface  string
-	Router string
-}
-
 func flushRoute(MAC string) {
 	arp_entry, err := GetArpEntryFromMAC(MAC)
 	if err != nil {
-		fmt.Println("Arp entry not found, insufficient information to refresh", MAC)
+		log.Println("Arp entry not found, insufficient information to refresh", MAC)
 		return
 	}
 
+	if !isTinyNetIP(arp_entry.IP) {
+		log.Println("[] Error: Trying to flush non tiny IP: ", arp_entry.IP)
+		return
+	}
 	//delete previous arp entry and route
-	is_tiny, routeIP := toTinyIP(arp_entry.IP, 1)
-	if is_tiny {
-		exec.Command("ip", "addr", "del", routeIP.String(), "dev", arp_entry.Device).Run()
-		exec.Command("arp", "-i", arp_entry.Device, "-d", arp_entry.IP).Run()
-	}
-}
-
-func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
-	DHCPmtx.Lock()
-	defer DHCPmtx.Unlock()
-
-	Groupsmtx.Lock()
-	defer Groupsmtx.Unlock()
-
-	Devicesmtx.Lock()
-	defer Devicesmtx.Unlock()
-
-	//Handle networking tasks upon a DHCP
-	dhcp := DHCPUpdate{}
-	err := json.NewDecoder(r.Body).Decode(&dhcp)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	devices := getDevicesJson()
-	val, exists := devices[dhcp.MAC]
-
-	if !exists {
-		//wireguard integration: smoothly handle a wireguard only device gaining a MAC for the first time
-		val, exists = lookupWGDevice(&devices, "", dhcp.IP)
-		if exists && val.MAC == "" && val.WGPubKey != "" {
-			//If an entry has no MAC assigned and does have a WG Pub Key
-			//assign a MAC and delete wg pubkey indexing. WIll be MAC indexed below
-			val.MAC = dhcp.MAC
-			delete(devices, val.WGPubKey)
-		} else {
-			//did not find a suitable entry
-			exists = false
-		}
-	}
-
-	if !exists {
-		//create a new device entry
-		newDevice := DeviceEntry{}
-		newDevice.MAC = dhcp.MAC
-		newDevice.RecentIP = dhcp.IP
-		newDevice.Groups = []string{}
-		newDevice.DeviceTags = []string{}
-		devices[newDevice.MAC] = newDevice
-		val = newDevice
-	} else {
-		//update recent IP
-		val.RecentIP = dhcp.IP
-		devices[dhcp.MAC] = val
-	}
-	saveDevicesJson(devices)
-
-	WSNotifyValue("DHCPUpdateRequest", dhcp)
-
-	notifyFirewallDHCP(val, dhcp.Iface)
-
-	// update local mappings file for DNS
-	updateLocalMappings(dhcp.IP, dhcp.Name)
-
-	WSNotifyString("DHCPUpdateProcessed", "")
-}
-
-type WireguardUpdate struct {
-	IP        string
-	PublicKey string
-	Iface     string
-	Name      string
-}
-
-func wireguardUpdate(w http.ResponseWriter, r *http.Request) {
-	Groupsmtx.Lock()
-	defer Groupsmtx.Unlock()
-
-	Devicesmtx.Lock()
-	defer Devicesmtx.Unlock()
-
-	wg := WireguardUpdate{}
-	err := json.NewDecoder(r.Body).Decode(&wg)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	devices := getDevicesJson()
-	val, exists := lookupWGDevice(&devices, wg.PublicKey, wg.IP)
-
-	if r.Method == http.MethodDelete {
-		//delete a device's public key
-		if exists {
-			if val.MAC == "" {
-				//if no MAC is assigned, delete altogether
-				delete(devices, val.WGPubKey)
-			} else {
-				//otherwise update the WGPubKey to be empty
-				val.WGPubKey = ""
-				devices[val.MAC] = val
-			}
-			//falls through to save
-		} else {
-			http.Error(w, "Not found", 404)
-			return
-		}
-	} else {
-		if !exists {
-			//create a new device entry
-			newDevice := DeviceEntry{}
-			newDevice.RecentIP = wg.IP
-			newDevice.WGPubKey = wg.PublicKey
-			newDevice.Groups = []string{}
-			newDevice.DeviceTags = []string{}
-			devices[newDevice.WGPubKey] = newDevice
-			val = newDevice
-		} else {
-			//update recent IP
-			val.RecentIP = wg.IP
-			//override WGPubKey
-			if val.WGPubKey != wg.PublicKey {
-				val.WGPubKey = wg.PublicKey
-			}
-
-			if val.MAC != "" {
-				//key by MAC address when available
-				devices[val.MAC] = val
-				//remove WGPubKey
-				delete(devices, val.WGPubKey)
-			} else {
-				//key by WGPubKey
-				devices[val.WGPubKey] = val
-			}
-		}
-	}
-
-	saveDevicesJson(devices)
-
-	refreshWireguardDevice(val.MAC, wg.IP, wg.PublicKey, wg.Iface, wg.Name, r.Method == http.MethodPut)
-}
-
-func toTinyIP(IP string, delta uint32) (bool, net.IP) {
-	//check for tiny-net range, to have matching priority with wifi
-	tinynet := os.Getenv("TINYNETSTART")
-	if tinynet != "" {
-		_, subnet, _ := net.ParseCIDR(tinynet + "/24")
-		net_ip := net.ParseIP(IP)
-		if subnet.Contains(net_ip) {
-			u := binary.BigEndian.Uint32(net_ip.To4()) - delta
-			ip := net.IPv4(byte(u>>24), byte(u>>16), byte(u>>8), byte(u))
-			return true, ip
-		}
-	}
-
-	return false, net.IP{}
+	router := RouterFromTinyIP(arp_entry.IP)
+	exec.Command("ip", "addr", "del", router, "dev", arp_entry.Device).Run()
+	exec.Command("arp", "-i", arp_entry.Device, "-d", arp_entry.IP).Run()
 }
 
 func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface string, Name string, Create bool) {
@@ -1598,6 +1467,7 @@ func lookupWGDevice(devices *map[string]DeviceEntry, WGPubKey string, IP string)
 
 func refreshDeviceTags(dev DeviceEntry) {
 	applyPrivateNetworkUpstreamDevice(dev)
+	sprbus.Publish("device:tags:update", dev)
 }
 
 func refreshDeviceGroups(dev DeviceEntry) {
@@ -1615,7 +1485,7 @@ func refreshDeviceGroups(dev DeviceEntry) {
 		if err == nil {
 			ipv4 = arp_entry.IP
 		} else {
-			fmt.Println("Missing IP for device, could not refresh device groups")
+			log.Println("Missing IP for device, could not refresh device groups")
 			return
 		}
 	}
@@ -1633,7 +1503,7 @@ func refreshDeviceGroups(dev DeviceEntry) {
 	}
 
 	if ifname == "" {
-		fmt.Println("dhcp_access entry not found, route not found, insufficient information to refresh", dev.RecentIP)
+		log.Println("dhcp_access entry not found, route not found, insufficient information to refresh", dev.RecentIP)
 		return
 	}
 
@@ -1645,6 +1515,8 @@ func refreshDeviceGroups(dev DeviceEntry) {
 
 	//and re-add
 	populateVmapEntries(ipv4, dev.MAC, ifname, "")
+
+	sprbus.Publish("device:groups:update", dev)
 }
 
 // from https://github.com/ItsJimi/go-arp/blob/master/arp.go
@@ -1716,7 +1588,7 @@ func GetArpEntryFromMAC(mac string) (ArpEntry, error) {
 func showARP(w http.ResponseWriter, r *http.Request) {
 	entries, err := GetArpEntries()
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		http.Error(w, "Failed to get entries", 400)
 		return
 	}
@@ -1743,7 +1615,7 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WSNotifyValue("PSKAuthFailure", pskf)
+	sprbus.Publish("wifi:auth:fail", pskf)
 
 	if pskf.MAC == "" || (pskf.Type != "sae" && pskf.Type != "wpa") || (pskf.Reason != "noentry" && pskf.Reason != "mismatch") {
 		http.Error(w, "malformed data", 400)
@@ -1784,7 +1656,7 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WSNotifyValue("PSKAuthSuccess", pska)
+	sprbus.Publish("wifi:auth:success", pska)
 
 	if pska.Iface == "" || pska.Event != "AP-STA-CONNECTED" || pska.MAC == "" {
 		http.Error(w, "malformed data", 400)
@@ -1835,7 +1707,7 @@ func reportDisconnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WSNotifyValue("StationDisconnect", event)
+	sprbus.Publish("wifi:station:disconnect", event)
 
 	if event.Iface == "" || event.Event != "AP-STA-DISCONNECTED" || event.MAC == "" {
 		http.Error(w, "malformed data", 400)
@@ -1950,6 +1822,7 @@ type SetupConfig struct {
 	AdminPassword   string
 	InterfaceAP     string
 	InterfaceUplink string
+	TinyNets        []string
 }
 
 func isSetupMode() bool {
@@ -2015,6 +1888,38 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Password cannot be empty", 400)
 		return
 	}
+
+	subnetRegex := regexp.MustCompile(`^(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}$`)
+
+	tinyNets := []string{}
+	if len(conf.TinyNets) != 0 {
+		for _, subnet := range conf.TinyNets {
+			if !subnetRegex.MatchString(subnet) {
+				http.Error(w, "Invalid subnet in TinyNets", 400)
+				return
+			}
+			// Extract prefix length from subnet
+			prefixStr := subnet[strings.IndexByte(subnet, '/')+1:]
+			prefix, err := strconv.Atoi(prefixStr)
+			if err != nil {
+				http.Error(w, "Invalid prefix length for TinyNets", 400)
+				return
+			}
+
+			if prefix < 8 || prefix > 24 {
+				http.Error(w, "Invalid prefix length for TinyNets: "+string(prefix), 400)
+				return
+			}
+
+			tinyNets = append(tinyNets, subnet)
+		}
+		//normalize tiny subnets and add them in
+	}
+
+	//update DHCP config
+	DHCPmtx.Lock()
+	gDhcpConfig.TinyNets = tinyNets
+	DHCPmtx.Unlock()
 
 	// write to auth_users.json
 	users := fmt.Sprintf("{%q: %q}", "admin", conf.AdminPassword)
@@ -2140,14 +2045,41 @@ func setSecurityHeaders(next http.Handler) http.Handler {
 
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		//use logStd here so we dont get dupes
+		logStd.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+
+		logs := map[string]interface{}{}
+		logs["remoteaddr"] = r.RemoteAddr
+		logs["method"] = r.Method
+		logs["path"] = r.URL.Path
+		sprbus.Publish("log:www:access", logs)
+
 		handler.ServeHTTP(w, r)
 	})
+}
+
+var ServerEventSock = "/state/api/eventbus.sock"
+
+func startEventBus() {
+	// make sure the client dont connect to the prev socket
+	os.Remove(ServerEventSock)
+
+	log.Println("starting sprbus server...")
+
+	_, err := sprbus.NewServer(ServerEventSock)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// not reached
 }
 
 func main() {
 
 	loadConfig()
+
+	// start eventbus
+	go startEventBus()
 
 	auth := new(authnconfig)
 	w, err := webauthn.New(&webauthn.Config{
@@ -2218,6 +2150,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/backup/{name}", getConfigsBackup).Methods("GET", "DELETE", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/subnetConfig", getSetDhcpConfig).Methods("GET", "PUT", "OPTIONS")
 
 	//updates, version, feature info
 	external_router_authenticated.HandleFunc("/release", releaseInfo).Methods("GET", "PUT", "DELETE", "OPTIONS")
@@ -2294,7 +2227,9 @@ func main() {
 	unix_wifid_router.HandleFunc("/interfaces", getEnabledAPInterfaces).Methods("GET")
 
 	// DHCP actions
-	unix_dhcpd_router.HandleFunc("/dhcpUpdate", dhcpUpdate).Methods("PUT")
+	unix_dhcpd_router.HandleFunc("/dhcpUpdate", dhcpUpdate).Methods("PUT") //deprecated now
+	unix_dhcpd_router.HandleFunc("/dhcpRequest", dhcpRequest).Methods("PUT")
+	unix_dhcpd_router.HandleFunc("/abstractDhcpRequest", abstractDhcpRequest).Methods("PUT")
 
 	// Wireguard actions
 	unix_wireguard_router.HandleFunc("/wireguardUpdate", wireguardUpdate).Methods("PUT", "DELETE")
@@ -2331,6 +2266,8 @@ func main() {
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
+	//set up dhcp
+	initDHCP()
 	//initialize hostap  related items
 	initRadios()
 	//initialize user firewall rules
@@ -2339,9 +2276,11 @@ func main() {
 	WSRunNotify()
 	// collect traffic accounting statistics
 	trafficTimer()
-	// start the event handler
+
+	// notifications, connect to eventbus
 	go NotificationsRunEventListener()
 
+	// updates when enabled
 	go checkUpdates()
 
 	sslPort, runSSL := os.LookupEnv("API_SSL_PORT")

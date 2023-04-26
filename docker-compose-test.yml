@@ -67,7 +67,6 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/dhcp/:/configs/dhcp/
-      - ./configs/zones/:/configs/zones/
       - ./state/dhcp/:/state/dhcp/
       - ./state/plugins/mesh/:/state/plugins/mesh/:ro
       - /sys/fs/bpf:/sys/fs/bpf
@@ -107,6 +106,7 @@ services:
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/dns/:/configs/dns/
+      - ./state/api/:/state/api/
       - ./state/dns/:/state/dns/
       - ./state/plugins/mesh/:/state/plugins/mesh/:ro
       - ./state/public/:/state/public/:ro
@@ -223,12 +223,10 @@ services:
       - "base"
       - "frontend"
       - "superd"
-      - "packet_logs"
     logging: *default-logging
     volumes:
       - ./configs/base/:/configs/base/
       - ./configs/devices/:/configs/devices/
-      - ./configs/zones/:/configs/zones/
       - ./configs/wifi/:/configs/wifi/
       - ./configs/wireguard/:/configs/wireguard/
       - ./configs/scripts/:/configs/scripts/
@@ -237,6 +235,7 @@ services:
       - ./state/dhcp/:/state/dhcp/
       - ./state/dns/:/state/dns/
       - ./state/api/:/state/api/
+      - ./state/backups/:/state/backups/
       - ./state/base/:/state/base/
       - ./state/plugins/:/state/plugins/
       - ./state/public/:/state/public/
@@ -297,3 +296,22 @@ services:
       - ./state/plugins/packet_logs/:/state/plugins/packet_logs
       - ./configs/base/:/configs/base/
       - /dev/log:/dev/log
+  db:
+    container_name: superdb
+    image: ghcr.io/spr-networks/super_db:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: db
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_db:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_db:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: service:base
+    depends_on:
+      - "api"
+    logging: *default-logging
+    volumes:
+      - ./configs/base/:/configs/base/
+      - ./configs/db/:/configs/db/
+      - ./state/api/:/state/api/
+      - ./state/plugins/db/:/state/plugins/db/

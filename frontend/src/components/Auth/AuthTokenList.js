@@ -16,6 +16,7 @@ import {
   Heading,
   HStack,
   IconButton,
+  Stack,
   Text,
   View,
   VStack,
@@ -126,44 +127,46 @@ const AuthTokenList = (props) => {
       <FlashList
         data={tokens}
         estimatedItemSize={100}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <Box
             bg="backgroundCardLight"
-            borderBottomWidth={1}
+            borderBottomWidth={0}
+            my={2}
+            mx={4}
+            p={4}
+            rounded="md"
+            shadow="md"
             borderColor="muted.200"
             _dark={{ bg: 'backgroundCardDark', borderColor: 'muted.600' }}
-            p={4}
           >
-            <HStack
-              w="100%"
-              space={3}
-              alignItems="center"
-              __justifyContent="stretch"
-            >
-              <Text flex={1}>{item.Name}</Text>
-              <HStack
+            <HStack w="100%" space={3} alignItems="center">
+              <Stack
+                direction={{ base: 'column', md: 'row' }}
                 flex={1}
-                minW={{ base: '1/6', md: '2/6' }}
-                alignItems="center"
-                justifyItems="flex-end"
+                alignItems={{ md: 'center' }}
+                justifyContent={'space-between'}
+                space={4}
               >
-                <Text>{item.Token}</Text>
-                <IconButton
-                  variant="unstyled"
-                  icon={<Icon size="4" icon={faCopy} color="muted.500" />}
-                  onPress={() => copy(item.Token)}
-                  display={showClipboard ? 'flex' : 'none'}
-                />
+                <Text>{item.Name || `Token#${index}`}</Text>
+                <HStack alignItems="center" justifyItems="flex-end">
+                  <Text isTruncated>{item.Token}</Text>
+                  <IconButton
+                    variant="unstyled"
+                    icon={<Icon size="4" icon={faCopy} color="muted.500" />}
+                    onPress={() => copy(item.Token)}
+                    display={showClipboard ? 'flex' : 'none'}
+                  />
 
-                {item.ScopedPaths != null && item.ScopedPaths.length > 0 ? (
-                  <Text isTruncated>{JSON.stringify(item.ScopedPaths)}</Text>
-                ) : (
-                  <Text isTruncated></Text>
-                )}
-              </HStack>
+                  {item.ScopedPaths != null && item.ScopedPaths.length > 0 ? (
+                    <Text isTruncated>{JSON.stringify(item.ScopedPaths)}</Text>
+                  ) : (
+                    <Text isTruncated></Text>
+                  )}
+                </HStack>
+              </Stack>
 
               <HStack
-                w={{ base: '3/6', md: '2/6' }}
+                w={{ base: '6/12', md: '2/6' }}
                 space={1}
                 justifyContent="flex-end"
               >

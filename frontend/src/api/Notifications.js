@@ -6,19 +6,19 @@ export class APINotifications extends API {
   }
 
   list() {
-    return this.get('/notifications');
+    return this.get('/notifications')
   }
 
   add(data) {
-    return this.put('/notifications', data);
+    return this.put('/notifications', data)
   }
 
   update(index, data) {
-    return this.put(`/notifications/${index}`, data);
+    return this.put(`/notifications/${index}`, data)
   }
 
   remove(index) {
-    return this.delete(`/notifications/${index}`, {});
+    return this.delete(`/notifications/${index}`, {})
   }
 }
 

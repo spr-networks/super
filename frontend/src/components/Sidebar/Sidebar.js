@@ -25,7 +25,7 @@ const Sidebar = (props) => {
 
   return (
     <ScrollView
-      mb={{ base: Platform.OS == 'ios' ? 20 : 0, md: 0 }}
+      _mb={{ base: Platform.OS == 'ios' ? 20 : 0, md: 0 }}
       pb={5}
       w={isMini ? '20' : '100%'}
       borderRightWidth={isMobile ? '0' : '1'}
@@ -50,6 +50,10 @@ const SidebarItem = (props) => {
   const { sidebarItems, level, isMobile, isMini, setIsOpenSidebar } = props
   const { isWifiDisabled, isPlusDisabled, isMeshNode } = useContext(AppContext)
   const { activeSidebarItem, setActiveSidebarItem } = useContext(AppContext)
+
+  /*useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [activeSidebarItem])*/
 
   /*
   const getCollapseInitialState = (routes) => {

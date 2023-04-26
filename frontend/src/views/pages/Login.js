@@ -46,7 +46,12 @@ const Login = (props) => {
 
   const handleLogin = () => {
     if (Platform.OS !== 'web') {
-      setApiURL(`http://${hostname}/`)
+      let url = `http://${hostname}/`
+      if (hostname.match(/mock|test/g)) {
+        url = 'mock'
+      }
+
+      setApiURL(url)
     }
 
     doLogin(username, password)

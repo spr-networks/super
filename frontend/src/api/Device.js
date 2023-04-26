@@ -39,6 +39,11 @@ export class APIDevice extends API {
   updateName(id, Name) {
     return this.update(id, { Name });
   }
+
+  updateIP(id, RecentIP) {
+    return this.update(id, { RecentIP });
+  }
+
   updateGroups(id, Groups) {
     return this.update(id, { Groups });
   }

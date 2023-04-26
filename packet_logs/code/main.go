@@ -22,14 +22,6 @@ import (
 
 var ServerEventSock = "/state/api/eventbus.sock"
 
-func sprServer() {
-	fmt.Println("starting sprbus...")
-	_, err := sprbus.NewServer(ServerEventSock)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
 // this is to get strings for mac addrs instead of raw
 type PacketEthernet struct {
 	SrcMAC string
@@ -56,7 +48,6 @@ var wg sync.WaitGroup
 func main() {
 	//this now runs in api container
 	//wg.Add(1)
-	//go sprServer()
 
 	client, err := sprbus.NewClient(ServerEventSock)
 	defer client.Close()

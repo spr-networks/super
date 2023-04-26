@@ -3,9 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"log"
+	logStd "log"
 	"net/http"
 	"os"
 	"strconv"
@@ -18,7 +17,6 @@ import (
 )
 
 var NotificationSettingsFile = "/configs/base/notifications.json"
-var ServerEventSock = "/state/api/eventbus.sock"
 
 // notifications.json is array of this:
 type NotificationSetting struct {
@@ -225,53 +223,14 @@ func checkNotificationTraffic(logEntry PacketInfo) bool {
 	return false
 }
 
-func logTraffic(topic string, data string) {
-	var logEntry PacketInfo
-	if err := json.Unmarshal([]byte(data), &logEntry); err != nil {
-		log.Fatal(err)
-	}
-
-	shouldNotify := checkNotificationTraffic(logEntry)
-
-	if shouldNotify {
-		WSNotifyValue("nft", logEntry)
-	}
-}
-
 // the rest is eventbus -> ws forwarding
-func NotificationsRunEventListener() {
-	// make sure the client dont connect to the prev socket
-	os.Remove(ServerEventSock)
-
-	go notificationEventServer()
-	notificationEventListener()
-	// not reached
-	log.Println("event thread exit")
-}
-
-// this is the main event server
-func notificationEventServer() {
-	log.Println("starting sprbus server...")
-
-	_, err := sprbus.NewServer(ServerEventSock)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// not reached
-}
-
 // this is run in a separate thread
-func notificationEventListener() {
+func NotificationsRunEventListener() {
 	loadNotificationConfig()
 
 	log.Printf("notification settings: %v conditions loaded\n", len(gNotificationConfig))
-	//WSNotifyString("nft:event:init", `{"status": "init"}`)
 
-	// this is only to make sure the server is started
-	time.Sleep(time.Second)
-
-	// wait for server to start
+	// wait for sprbus server to start
 	for i := 0; i < 4; i++ {
 		if _, err := os.Stat(ServerEventSock); err == nil {
 			break
@@ -280,49 +239,58 @@ func notificationEventListener() {
 		time.Sleep(time.Second / 4)
 	}
 
-	log.Println("connecting sprbus client...")
+	log.Println("registering handler for logging ...")
 
-	client, err := sprbus.NewClient(ServerEventSock)
-	defer client.Close()
-
-	if err != nil {
-		log.Fatal("err", err)
-	}
-
-	log.Println("subscribing to nft: prefix")
-
-	// subscribe to all nft: rules
-	// rules = lan:in, lan:out, wan:in, wan:out, drop:input, drop:forward, drop:pfw
-	stream, err := client.SubscribeTopic("nft:")
-	if nil != err {
-		log.Fatal(err)
-	}
-
-	// main loop
-	for {
-		reply, err := stream.Recv()
-		if io.EOF == err {
-			break
+	notification := func(topic string, value string) {
+		notifyAll := false
+		for _, setting := range gNotificationConfig {
+			// if theres a empty entry log all: {Notification: false} in json
+			if setting.SendNotification == false && len(setting.Conditions.Prefix) == 0 {
+				notifyAll = true
+				break
+			}
 		}
 
-		if nil != err {
-			log.Fatal("sprbus error:", err) // Cancelled desc
+		if strings.HasPrefix(topic, "nft") {
+			var logEntry PacketInfo
+			if err := json.Unmarshal([]byte(value), &logEntry); err != nil {
+				logStd.Fatal(err)
+			}
+
+			shouldNotify := checkNotificationTraffic(logEntry)
+			if shouldNotify || notifyAll {
+                isNotification := shouldNotify
+				WSNotifyMessage(topic, logEntry, isNotification)
+			}
+		} else if strings.HasPrefix(topic, "wifi:auth") {
+			var data map[string]interface{}
+
+			if err := json.Unmarshal([]byte(value), &data); err != nil {
+				log.Println("failed to decode eventbus json:", err)
+				return
+			}
+
+			WSNotifyValue(topic, data)
+		} else if notifyAll {
+			var data map[string]interface{}
+			if err := json.Unmarshal([]byte(value), &data); err != nil {
+				log.Println("failed to decode eventbus json:", err)
+				return
+			}
+
+			// dont send as a notification - for sprbus view/ui
+			WSNotifyMessage(topic, data, false)
 		}
-
-		topic := reply.GetTopic()
-		value := reply.GetValue()
-
-		// wildcard sub - value is topic+value
-		index := strings.Index(value, "{")
-		if index <= 0 {
-			continue
-		}
-
-		topic = value[0 : index-1]
-		value = value[index:len(value)]
-
-		logTraffic(topic, value)
 	}
 
-	log.Println("sprbus client exit")
+	//retry 3 times to set this up
+	for i := 3; i > 0; i-- {
+		err := sprbus.HandleEvent("", notification)
+		if err != nil {
+			fmt.Println(err)
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	logStd.Println("sprbus client exit")
 }

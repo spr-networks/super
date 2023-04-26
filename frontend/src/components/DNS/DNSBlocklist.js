@@ -260,23 +260,19 @@ export default class DNSBlocklist extends React.Component {
           ) : null}
         </HStack>
 
-        <Box
-          _light={{ bg: 'warmGray.50' }}
-          _dark={{ bg: 'blueGray.800' }}
-          width="100%"
-          p={4}
-          mb={4}
-        >
+        <Box px={4} mb={4}>
           <FlatList
             data={[...this.state.list, ...this.state.recommendedList]}
             renderItem={({ item }) => (
               <Box
+                bg="backgroundCardLight"
                 borderBottomWidth={1}
                 _dark={{
-                  borderColor: 'muted.600'
+                  bg: 'backgroundCardDark',
+                  borderColor: 'borderColorCardDark'
                 }}
-                borderColor="muted.200"
-                py={2}
+                borderColor="borderColorCardLight"
+                p={4}
               >
                 <HStack
                   space={3}

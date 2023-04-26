@@ -10,6 +10,7 @@ export {
   getApiHostname
 } from './API'
 export { connectWebsocket } from './WebSocket'
+export { dbAPI } from './Db'
 export { deviceAPI } from './Device'
 export { groupAPI } from './Group'
 export { wifiAPI } from './Wifi'

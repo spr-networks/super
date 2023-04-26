@@ -29,12 +29,12 @@ const GroupListing = ({ group, ...props }) => {
   }
 
   const list = []
-  let idx = 0;
+  let idx = 0
   if (group.Members && group.Members.length > 0) {
     for (const dev of group.Members) {
       //if the device was in the vmap, mark it as active
       dev.ifname = ''
-      dev.key = idx++;
+      dev.key = idx++
 
       if (group.vmap) {
         for (const entry of group.vmap) {
@@ -88,13 +88,13 @@ const GroupListing = ({ group, ...props }) => {
         estimatedItemSize={100}
         renderItem={({ item }) => (
           <Box
-            bg="warmGray.50"
+            bg="backgroundCardLight"
             borderBottomWidth={1}
             _dark={{
-              bg: 'blueGray.800',
-              borderColor: 'muted.600'
+              bg: 'backgroundCardDark',
+              borderColor: 'borderColorCardDark'
             }}
-            borderColor="muted.200"
+            borderColor="borderColorCardLight"
             p={4}
           >
             <HStack

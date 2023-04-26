@@ -80,13 +80,13 @@ const Arp = (props) => {
         estimatedItemSize={100}
         renderItem={({ item }) => (
           <Box
-            bg="warmGray.50"
-            borderBottomWidth="1"
+            bg="backgroundCardLight"
+            borderBottomWidth={1}
             _dark={{
-              bg: 'blueGray.800',
-              borderColor: 'muted.600'
+              bg: 'backgroundCardDark',
+              borderColor: 'borderColorCardDark'
             }}
-            borderColor="muted.200"
+            borderColor="borderColorCardLight"
             p={4}
           >
             <HStack space={3} justifyContent="space-between">

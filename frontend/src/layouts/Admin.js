@@ -7,7 +7,7 @@ import { AppContext, AlertContext, alertState } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Sidebar from 'components/Sidebar/Sidebar'
 import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
-import { api, meshAPI, pfwAPI, wifiAPI } from 'api'
+import { api, notificationsAPI, meshAPI, pfwAPI, wifiAPI } from 'api'
 import { ucFirst } from 'utils'
 
 import {
@@ -216,6 +216,8 @@ const AdminLayout = (props) => {
   const [isMeshNode, setIsMeshNode] = useState(false)
   const [version, setVersion] = useState('v0.1')
 
+  const [notificationSettings, setNotificationSettings] = useState([])
+
   useEffect(() => {
     api
       .features()
@@ -249,6 +251,11 @@ const AdminLayout = (props) => {
       .version()
       .then(setVersion)
       .catch((err) => {})
+
+    // get stetings for notificaations
+    notificationsAPI.list().then((settings) => {
+      setNotificationSettings(settings)
+    })
 
     // callback for notifications, web & ios
     // action = allow,deny,cancel, data = nft data
@@ -291,7 +298,15 @@ const AdminLayout = (props) => {
         return alertState.error('Websocket failed to authenticate')
       }
 
-      const res = parseLogMessage(JSON.parse(event.data))
+      let eventData = JSON.parse(event.data)
+
+      // if false it means event is streamed for logs or cli
+      // this is set temporarily when viewing the sprbus via ws
+      if (!eventData.Notification) {
+        return
+      }
+
+      const res = parseLogMessage(eventData)
       if (res) {
         //console.log('[NOTIFICATION]', JSON.stringify(res))
         let { type, title, body, data } = res
@@ -398,17 +413,13 @@ const AdminLayout = (props) => {
         setIsMeshNode
       }}
     >
-      <Box
-        display={{ base: 'flex' }}
-        w="100%"
-        h="100%" // md: '100vh'
-        __alignItems="center"
-        nativeID="content-id"
+      <VStack
         safeAreaTop
         bg={useColorModeValue(
           'backgroundContentLight',
           'backgroundContentDark'
         )}
+        minH={heightContent + navbarHeight}
       >
         {/*desktop*/}
         <Box
@@ -429,7 +440,8 @@ const AdminLayout = (props) => {
         <Box
           display={{ base: 'flex', md: 'none' }}
           w="100%"
-          position={{ base: 'relative', md: 'static' }}
+          position={Platform.OS == 'web' ? 'sticky' : 'static'}
+          top={0}
           zIndex={99}
           _style={{ backdropFilter: 'blur(10px)' }}
         >
@@ -441,13 +453,17 @@ const AdminLayout = (props) => {
           />
         </Box>
 
-        <HStack>
+        <HStack
+          position={Platform.OS == 'web' ? 'sticky' : 'static'}
+          top={Platform.OS == 'web' ? 16 : 0}
+          flex={1}
+        >
           {/*desktop*/}
           <Box
             display={{ base: 'none', md: 'flex' }}
-            position={{ base: 'absolute', md: 'static' }}
-            h={heightContent}
+            __position={{ base: 'absolute', md: 'static' }}
             w={isOpenSidebar ? 20 : 64}
+            _h={heightContent}
           >
             <Sidebar
               isMobile={false}
@@ -487,7 +503,7 @@ const AdminLayout = (props) => {
             {/*<Footer />*/}
           </Box>
         </HStack>
-      </Box>
+      </VStack>
       <AlertContext.Provider value={alertState}>
         <Slide in={showAlert} placement="top">
           <Box

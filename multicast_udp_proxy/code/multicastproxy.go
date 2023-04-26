@@ -260,7 +260,11 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool)
 				//NOTE: this will warn often about `required key not available`
 				//when sending to wireguard devices without the key
 				//or an unconfigured wireguard interface.
-				//TBD: parse that error code and suppress it 
+				//suppress error
+				if strings.Contains(err.Error(), "sendmsg: required key not available") {
+					return
+				}
+
 				fmt.Println("failed to write", err)
 				return
 			}
