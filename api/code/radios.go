@@ -922,6 +922,22 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	path := getHostapdConfigPath(iface)
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Printf("Error reading hostapd conf: %v", err)
+		http.Error(w, "can't read hostapd config", http.StatusBadRequest)
+	}
+
+	// if anything goes is configured for the interface, enable it.
+	dataString := updateExtraBSS(iface, string(data))
+
+	err = ioutil.WriteFile(path, []byte(dataString), 0664)
+	if err != nil {
+		log.Printf("Error writing extrabss in new hostapd conf: %v", err)
+		http.Error(w, "can't write extrabss in new hostapd config", http.StatusBadRequest)
+	}
+
 	Interfacesmtx.Lock()
 	config := loadInterfacesConfigLocked()
 
