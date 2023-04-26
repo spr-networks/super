@@ -396,8 +396,8 @@ func getHostapdJson(iface string) (map[string]interface{}, error) {
 		}
 
 		if strings.Contains(line, "#spr-gen-bss") {
-			//ignore special comment for generated bss strings
-			continue
+			//ignore rest of config
+			break
 		}
 
 		pieces := strings.Split(line, "=")
@@ -442,19 +442,19 @@ func updateExtraBSS(iface string, data string) string {
 		if entry.Name == iface && entry.Type == "AP" {
 			// populate extra bss info
 			for i := 0; i < len(entry.ExtraBSS); i++ {
-
-				data += "bss=" + iface + "." + strconv.Itoa(i) + " #spr-gen-bss\n"
-				data += "bssid=" + entry.ExtraBSS[i].Bssid + " #spr-gen-bss\n"
-				data += "ssid=" + entry.ExtraBSS[i].Ssid + " #spr-gen-bss\n"
-				data += "wpa=" + entry.ExtraBSS[i].Wpa + " #spr-gen-bss\n"
-				data += "wpa_key_mgmt=" + entry.ExtraBSS[i].WpaKeyMgmt + " #spr-gen-bss\n"
-				data += "rsn_pairwise=CCMP #spr-gen-bss\n"
-				data += "wpa_psk_file=/configs/wifi/wpa2pskfile #spr-gen-bss\n"
+				data += "#spr-gen-bss\n"
+				data += "bss=" + iface + "." + strconv.Itoa(i) + "\n"
+				data += "bssid=" + entry.ExtraBSS[i].Bssid + "\n"
+				data += "ssid=" + entry.ExtraBSS[i].Ssid + "\n"
+				data += "wpa=" + entry.ExtraBSS[i].Wpa + "\n"
+				data += "wpa_key_mgmt=" + entry.ExtraBSS[i].WpaKeyMgmt + "\n"
+				data += "rsn_pairwise=CCMP\n"
+				data += "wpa_psk_file=/configs/wifi/wpa2pskfile\n"
 
 				// default enabled
 				if !entry.ExtraBSS[i].DisableIsolation {
-					data += "ap_isolate=1 #spr-gen-bss\n"
-					data += "per_sta_vif=1 #spr-gen-bss\n"
+					data += "ap_isolate=1\n"
+					data += "per_sta_vif=1\n"
 				}
 
 			}
