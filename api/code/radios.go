@@ -880,6 +880,9 @@ func hostapdEnableInterface(w http.ResponseWriter, r *http.Request) {
 	callSuperdRestart("wifid")
 }
 
+/*
+curl -u admin:sprlab localhost/hostapd/wlan1/enableExtraBSS -vv -X PUT --data '{"Ssid":"spr-extra", "Bssid": "06:a6:7e:6b:6e:35", "WpaKeyMgmt": "WPA-PSK WPA-PSK-SHA256"}'
+*/
 func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
 	if !validInterface(iface) {
@@ -897,6 +900,22 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 	extra := ExtraBSS{}
 	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 	err = json.NewDecoder(r.Body).Decode(&extra)
+
+	if err == nil {
+		//validate ExtraBSS
+		if extra.Wpa != "1" && extra.Wpa != "2" {
+			err = fmt.Errorf("Invalid Wpa value")
+		} else if extra.Ssid == "" {
+			err = fmt.Errorf("ssid needed")
+		} else if extra.Bssid == "" {
+			err = fmt.Errorf("bssid needed")
+		}
+	}
+
+	if extra.WpaKeyMgmt == "" {
+		extra.WpaKeyMgmt = "WPA-PSK WPA-PSK-SHA256"
+	}
+
 	if err != nil {
 		log.Printf("Error decoding ExtraBSS: %v", err)
 		http.Error(w, "can't decode ExtraBSS", http.StatusBadRequest)
