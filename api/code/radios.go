@@ -443,7 +443,7 @@ func updateExtraBSS(iface string, data string) string {
 			// populate extra bss info
 			for i := 0; i < len(entry.ExtraBSS); i++ {
 
-				data += "bss=" + iface + "." + string(i) + " #spr-gen-bss\n"
+				data += "bss=" + iface + "." + strconv.Itoa(i) + " #spr-gen-bss\n"
 				data += "bssid=" + entry.ExtraBSS[i].Bssid + " #spr-gen-bss\n"
 				data += "ssid=" + entry.ExtraBSS[i].Ssid + " #spr-gen-bss\n"
 				data += "wpa=" + entry.ExtraBSS[i].Wpa + " #spr-gen-bss\n"
