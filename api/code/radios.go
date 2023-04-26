@@ -432,6 +432,12 @@ func hostapdConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateExtraBSS(iface string, data string) string {
+	// skip previous generation
+	idx := strings.Index(data, "#spr-gen-bss")
+	if idx != -1 {
+		data = data[:idx]
+	}
+
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
 
