@@ -880,6 +880,56 @@ func hostapdEnableInterface(w http.ResponseWriter, r *http.Request) {
 	callSuperdRestart("wifid")
 }
 
+func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	if !validInterface(iface) {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Error reading body: %v", err)
+		http.Error(w, "can't read body", http.StatusBadRequest)
+		return
+	}
+
+	extra := ExtraBSS{}
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+	err = json.NewDecoder(r.Body).Decode(&extra)
+	if err != nil {
+		log.Printf("Error decoding ExtraBSS: %v", err)
+		http.Error(w, "can't decode ExtraBSS", http.StatusBadRequest)
+		return
+	}
+
+	Interfacesmtx.Lock()
+	config := loadInterfacesConfigLocked()
+
+	foundEntry := false
+	for i, _ := range config {
+		if config[i].Name == iface {
+			foundEntry = true
+			// only one extra BSS is supported for now
+			config[i].ExtraBSS = []ExtraBSS{extra}
+			break
+		}
+	}
+
+	if !foundEntry {
+		err = fmt.Errorf("interface not found")
+		log.Printf("Failed to update interface: %v", err)
+		http.Error(w, "Failed to update interface", http.StatusBadRequest)
+	}
+
+	writeInterfacesConfigLocked(config)
+
+	Interfacesmtx.Unlock()
+
+	//restart hostap container
+	callSuperdRestart("wifid")
+}
+
 func hostapdDisableInterface(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
 	if !validInterface(iface) {
