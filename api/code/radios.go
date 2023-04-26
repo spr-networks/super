@@ -389,9 +389,15 @@ func getHostapdJson(iface string) (map[string]interface{}, error) {
 	}
 
 	conf := map[string]interface{}{}
+
 	for _, line := range strings.Split(string(data), "\n") {
 		if strings.HasPrefix(line, "#") || !strings.Contains(line, "=") {
 			continue
+		}
+
+		if strings.Contains(line, "#spr-gen-bss") {
+			//ignore rest of config
+			break
 		}
 
 		pieces := strings.Split(line, "=")
@@ -423,6 +429,45 @@ func hostapdConfig(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conf)
+}
+
+func updateExtraBSS(iface string, data string) string {
+	// skip previous generation
+	idx := strings.Index(data, "#spr-gen-bss")
+	if idx != -1 {
+		data = data[:idx]
+	}
+
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	//read theinterfaces configuration
+	config := loadInterfacesConfigLocked()
+
+	for _, entry := range config {
+		if entry.Name == iface && entry.Type == "AP" {
+			// populate extra bss info
+			for i := 0; i < len(entry.ExtraBSS); i++ {
+				data += "#spr-gen-bss\n"
+				data += "bss=" + iface + "." + strconv.Itoa(i) + "\n"
+				data += "bssid=" + entry.ExtraBSS[i].Bssid + "\n"
+				data += "ssid=" + entry.ExtraBSS[i].Ssid + "\n"
+				data += "wpa=" + entry.ExtraBSS[i].Wpa + "\n"
+				data += "wpa_key_mgmt=" + entry.ExtraBSS[i].WpaKeyMgmt + "\n"
+				data += "rsn_pairwise=CCMP\n"
+				data += "wpa_psk_file=/configs/wifi/wpa2pskfile\n"
+
+				// default enabled
+				if !entry.ExtraBSS[i].DisableIsolation {
+					data += "ap_isolate=1\n"
+					data += "per_sta_vif=1\n"
+				}
+
+			}
+		}
+	}
+
+	return data
 }
 
 func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
@@ -552,6 +597,9 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		data += fmt.Sprint(key, "=", value, "\n")
 	}
 
+	// if anything goes is configured for the interface, enable it.
+	data = updateExtraBSS(iface, data)
+
 	err = ioutil.WriteFile(getHostapdConfigPath(iface), []byte(data), 0664)
 	if err != nil {
 		fmt.Println(err)
@@ -637,10 +685,19 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 
 var Interfacesmtx sync.Mutex
 
+type ExtraBSS struct {
+	Ssid             string
+	Bssid            string
+	Wpa              string
+	WpaKeyMgmt       string
+	DisableIsolation bool
+}
+
 type InterfaceConfig struct {
-	Name    string
-	Type    string
-	Enabled bool
+	Name     string
+	Type     string
+	Enabled  bool
+	ExtraBSS []ExtraBSS
 }
 
 var gAPIInterfacesPath = TEST_PREFIX + "/configs/base/interfaces.json"
@@ -737,7 +794,7 @@ func configureInterface(interfaceType string, name string) error {
 
 	}
 
-	newEntry := InterfaceConfig{name, interfaceType, true}
+	newEntry := InterfaceConfig{name, interfaceType, true, []ExtraBSS{}}
 
 	config := loadInterfacesConfigLocked()
 
@@ -824,6 +881,91 @@ func hostapdEnableInterface(w http.ResponseWriter, r *http.Request) {
 
 	//reset firewall rules to match the configuration
 	resetRadioFirewall()
+
+	//restart hostap container
+	callSuperdRestart("wifid")
+}
+
+/*
+curl -u admin:sprlab localhost/hostapd/wlan1/enableExtraBSS -vv -X PUT --data '{"Ssid":"spr-extra", "Bssid": "06:a6:7e:6b:6e:35", "WpaKeyMgmt": "WPA-PSK WPA-PSK-SHA256"}'
+*/
+func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	if !validInterface(iface) {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Error reading body: %v", err)
+		http.Error(w, "can't read body", http.StatusBadRequest)
+		return
+	}
+
+	extra := ExtraBSS{}
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+	err = json.NewDecoder(r.Body).Decode(&extra)
+
+	if err == nil {
+		//validate ExtraBSS
+		if extra.Wpa != "1" && extra.Wpa != "2" {
+			err = fmt.Errorf("Invalid Wpa value")
+		} else if extra.Ssid == "" {
+			err = fmt.Errorf("ssid needed")
+		} else if extra.Bssid == "" {
+			err = fmt.Errorf("bssid needed")
+		}
+	}
+
+	if extra.WpaKeyMgmt == "" {
+		extra.WpaKeyMgmt = "WPA-PSK WPA-PSK-SHA256"
+	}
+
+	if err != nil {
+		log.Printf("Error decoding ExtraBSS: %v", err)
+		http.Error(w, "can't decode ExtraBSS", http.StatusBadRequest)
+		return
+	}
+
+	path := getHostapdConfigPath(iface)
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Printf("Error reading hostapd conf: %v", err)
+		http.Error(w, "can't read hostapd config", http.StatusBadRequest)
+	}
+
+	// if anything goes is configured for the interface, enable it.
+	dataString := updateExtraBSS(iface, string(data))
+
+	err = ioutil.WriteFile(path, []byte(dataString), 0664)
+	if err != nil {
+		log.Printf("Error writing extrabss in new hostapd conf: %v", err)
+		http.Error(w, "can't write extrabss in new hostapd config", http.StatusBadRequest)
+	}
+
+	Interfacesmtx.Lock()
+	config := loadInterfacesConfigLocked()
+
+	foundEntry := false
+	for i, _ := range config {
+		if config[i].Name == iface {
+			foundEntry = true
+			// only one extra BSS is supported for now
+			config[i].ExtraBSS = []ExtraBSS{extra}
+			break
+		}
+	}
+
+	if !foundEntry {
+		err = fmt.Errorf("interface not found")
+		log.Printf("Failed to update interface: %v", err)
+		http.Error(w, "Failed to update interface", http.StatusBadRequest)
+	}
+
+	writeInterfacesConfigLocked(config)
+
+	Interfacesmtx.Unlock()
 
 	//restart hostap container
 	callSuperdRestart("wifid")

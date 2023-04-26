@@ -259,7 +259,7 @@ func NotificationsRunEventListener() {
 
 			shouldNotify := checkNotificationTraffic(logEntry)
 			if shouldNotify || notifyAll {
-                isNotification := shouldNotify
+				isNotification := shouldNotify
 				WSNotifyMessage(topic, logEntry, isNotification)
 			}
 		} else if strings.HasPrefix(topic, "wifi:auth") {

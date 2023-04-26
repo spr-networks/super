@@ -50,12 +50,14 @@ jobs:
           ./build_docker_compose.sh \
             --set "*.platform=linux/amd64,linux/arm64" \
             `[[ "${{ github.event_name }}" = "workflow_run" && ("${{ github.ref_name }}" = "main")  || ( ! -z $RELEASE_CHANNEL && ("${{ github.event_name }}" = "push")) ]] && echo "--push"` || exit 1
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install jq
       - name: Get images from docker-compose.yml
         id: get-images
-        uses: mikefarah/yq@master
-        with:
-          cmd: yq -o json -I 0 '[.services|.[]|.image]' docker-compose.yml | sed "s/:[^\"]*/:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}/g"
-
+        run: |
+          grep "image:" docker-compose.yml | awk '{print $2}' | jq --raw-input -s -c 'split("\n")|.[0:-1]' | sed "s/:[^\"]*/:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}/g"
       - name: Set Matrix output
         id: set-matrix
         run: |
