@@ -1,4 +1,4 @@
-name: SBOM Artifact
+name: SBOM Docker Artifact
 
 on:
   workflow_run:
