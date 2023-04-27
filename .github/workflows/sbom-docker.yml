@@ -1,0 +1,57 @@
+name: SBOM Artifact
+
+on:
+  workflow_run:
+    workflows: ["Docker Image CI"]
+    types:
+      - completed
+    branches: [main]
+  push:
+    branches: [dev]
+
+jobs:
+  get-images:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: '0'
+      -
+        name: Get version from git
+        run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0 | grep -Eo '[0-9]+\.[0-9]+.[0-9]+')" >> $GITHUB_ENV
+      -
+        name: Set release channel for dev
+        run: echo "RELEASE_CHANNEL=-dev" >> $GITHUB_ENV
+        if: ${{ github.ref_name == 'dev' }}
+      -
+        name: Test release tag version and channel
+        run: echo "RELEASE_VERSION == $RELEASE_VERSION  CHANNEL == $RELEASE_CHANNEL"
+      -
+        name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install jq
+      - name: Get images from docker-compose.yml
+        id: get-images
+        run: |
+          RES=$(grep "image:" docker-compose.yml | awk '{print $2}' | jq --raw-input -s -c 'split("\n")|.[0:-1]' | sed "s/:[^\"]*/:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}/g")
+          echo "images=$RES" >> $GITHUB_OUTPUT
+      - name: Set Matrix output
+        id: set-matrix
+        run: |
+          echo '::set-output name=matrix::${{ steps.get-images.outputs.result }}'
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+  sbom:
+    name: Generate SBOMs
+    needs: build-images
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: ${{ fromJson(needs.get-images.outputs.matrix) }}
+    steps:
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: '${{ matrix.image }}'
