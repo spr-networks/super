@@ -444,7 +444,6 @@ func updateExtraBSS(iface string, data string) string {
 	//read theinterfaces configuration
 	config := loadInterfacesConfigLocked()
 
-
 	for _, entry := range config {
 		if entry.Name == iface && entry.Type == "AP" {
 
@@ -455,8 +454,8 @@ func updateExtraBSS(iface string, data string) string {
 				//main bssid should have LLA to 0, others to 1? bit unclear
 				// hostapd said it depends on the driver.
 				hexInt, _ := strconv.ParseInt(bssid[:2], 16, 64)
-				hexStr := strconv.FormatInt(hexInt &^ 2, 16)
-				main_bssid :=  hexStr + bssid[2:]
+				hexStr := strconv.FormatInt(hexInt&^2, 16)
+				main_bssid := fmt.Sprintf("%02s", hexStr) + bssid[2:]
 
 				data += "#spr-gen-bss\n"
 				data += "bssid=" + main_bssid + "\n"
