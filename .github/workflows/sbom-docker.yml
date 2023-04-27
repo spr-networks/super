@@ -41,7 +41,7 @@ jobs:
 
   sbom:
     name: Generate SBOMs
-    needs: build-images
+    needs: get-images
     runs-on: ubuntu-latest
     strategy:
       matrix:
