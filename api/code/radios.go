@@ -462,10 +462,14 @@ func updateExtraBSS(iface string, data string) string {
 				data += "bss=" + iface + "." + strconv.Itoa(i) + "\n"
 				data += "bssid=" + entry.ExtraBSS[i].Bssid + "\n"
 				data += "ssid=" + entry.ExtraBSS[i].Ssid + "\n"
-				data += "wpa=" + entry.ExtraBSS[i].Wpa + "\n"
-				data += "wpa_key_mgmt=" + entry.ExtraBSS[i].WpaKeyMgmt + "\n"
-				data += "rsn_pairwise=CCMP\n"
-				data += "wpa_psk_file=/configs/wifi/wpa2pskfile\n"
+				if (entry.ExtraBSS[i].Wpa == "0") {
+					// Open AP
+				} else {
+					data += "wpa=" + entry.ExtraBSS[i].Wpa + "\n"
+					data += "wpa_key_mgmt=" + entry.ExtraBSS[i].WpaKeyMgmt + "\n"
+					data += "rsn_pairwise=CCMP\n"
+					data += "wpa_psk_file=/configs/wifi/wpa2pskfile\n"
+				}
 
 				// default enabled
 				if !entry.ExtraBSS[i].DisableIsolation {
