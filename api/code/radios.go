@@ -446,16 +446,30 @@ func updateExtraBSS(iface string, data string) string {
 
 	for _, entry := range config {
 		if entry.Name == iface && entry.Type == "AP" {
+
 			// populate extra bss info
 			for i := 0; i < len(entry.ExtraBSS); i++ {
+
+				bssid := entry.ExtraBSS[i].Bssid
+				//main bssid should have LLA to 0, others to 1? bit unclear
+				// hostapd said it depends on the driver.
+				hexInt, _ := strconv.ParseInt(bssid[:2], 16, 64)
+				hexStr := strconv.FormatInt(hexInt&^2, 16)
+				main_bssid := fmt.Sprintf("%02s", hexStr) + bssid[2:]
+
 				data += "#spr-gen-bss\n"
+				data += "bssid=" + main_bssid + "\n"
 				data += "bss=" + iface + "." + strconv.Itoa(i) + "\n"
 				data += "bssid=" + entry.ExtraBSS[i].Bssid + "\n"
 				data += "ssid=" + entry.ExtraBSS[i].Ssid + "\n"
-				data += "wpa=" + entry.ExtraBSS[i].Wpa + "\n"
-				data += "wpa_key_mgmt=" + entry.ExtraBSS[i].WpaKeyMgmt + "\n"
-				data += "rsn_pairwise=CCMP\n"
-				data += "wpa_psk_file=/configs/wifi/wpa2pskfile\n"
+				if (entry.ExtraBSS[i].Wpa == "0") {
+					// Open AP
+				} else {
+					data += "wpa=" + entry.ExtraBSS[i].Wpa + "\n"
+					data += "wpa_key_mgmt=" + entry.ExtraBSS[i].WpaKeyMgmt + "\n"
+					data += "rsn_pairwise=CCMP\n"
+					data += "wpa_psk_file=/configs/wifi/wpa2pskfile\n"
+				}
 
 				// default enabled
 				if !entry.ExtraBSS[i].DisableIsolation {
