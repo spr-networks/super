@@ -6,6 +6,6 @@ cat << END
 server4:
 #  Listens on all interfaces when none are configured. Note that iptables should block dhcp from $WANIF
   plugins:
-    - tiny_subnets
+    - tiny_subnets:
 
 END
