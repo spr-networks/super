@@ -10,8 +10,10 @@ on:
     branches: [dev]
 
 jobs:
-  get-images:
+  getImages:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.setMatrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -28,26 +30,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install jq
       - name: Get images from docker-compose.yml
-        id: get-images
+        id: setMatrix
         run: |
           RES=$(grep "image:" docker-compose.yml | awk '{print $2}' | jq --raw-input -s -c 'split("\n")|.[0:-1]' | sed "s/:[^\"]*/:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}/g")
-          echo "images=$RES" >> $GITHUB_OUTPUT
-      - name: Set Matrix output
-        id: set-matrix
-        run: |
-          echo '::set-output name=matrix::${{ steps.get-images.outputs.result }}'
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+          echo "debug: matrix=$RES"
+          echo "matrix=$( echo "$RES" )" >> $GITHUB_OUTPUT
 
   sbom:
     name: Generate SBOMs
-    needs: get-images
+    needs: getImages
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        image: ${{ fromJson(needs.get-images.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.getImages.outputs.matrix) }}
     steps:
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
-          image: '${{ matrix.image }}'
+          image: ${{ matrix }}
