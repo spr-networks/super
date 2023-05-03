@@ -41,6 +41,6 @@
    "URI": "db",
    "UnixPath": "/state/plugins/db/socket",
    "Enabled": true
-  },
+  }
  ]
 }
