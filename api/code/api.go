@@ -1919,6 +1919,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	//update DHCP config
 	DHCPmtx.Lock()
 	gDhcpConfig.TinyNets = tinyNets
+	saveDHCPConfig()
 	DHCPmtx.Unlock()
 
 	// write to auth_users.json
