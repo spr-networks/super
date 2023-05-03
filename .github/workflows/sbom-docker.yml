@@ -35,10 +35,9 @@ jobs:
           RES=$(grep "image:" docker-compose.yml | awk '{print $2}' | jq --raw-input -s -c 'split("\n")|.[0:-1]' | sed "s/:[^\"]*/:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}/g")
           echo "debug: matrix=$RES"
           echo "matrix=$( echo "$RES" )" >> $GITHUB_OUTPUT
-
   sbom:
     name: Generate SBOMs
-    needs: getImages
+    needs: [ getImages ]
     runs-on: ubuntu-latest
     strategy:
       matrix: ${{ fromJson(needs.getImages.outputs.matrix) }}
