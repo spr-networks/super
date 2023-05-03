@@ -32,7 +32,7 @@ jobs:
       - name: Get images from docker-compose.yml
         id: set-matrix
         run: |
-          JSON=$(grep "image:" docker-compose.yml | awk '{print $2}' | jq --raw-input -s -c 'split("\n")|.[0:-1]' | sed "s/:[^\"]*/:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}/g" | jq -cR
+          JSON=$(grep "image:" docker-compose.yml | awk '{print $2}' | jq --raw-input -s -c 'split("\n")|.[0:-1]' | sed "s/:[^\"]*/:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}/g" | jq -cR)
           echo "debug: matrix=$JSON"
           echo "matrix=$( echo "$JSON" )" >> $GITHUB_OUTPUT
   sbom:
