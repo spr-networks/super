@@ -32,7 +32,7 @@ jobs:
       - name: Get images from docker-compose.yml
         id: set-matrix
         run: |
-          JSON=$(grep "image:" docker-compose.yml | awk '{print $2}' | jq --raw-input -s -c 'split("\n")|.[0:-1]' | sed "s/:[^\"]*/:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}/g" | jq -c '{include: .}')
+          JSON=$(grep "image:" docker-compose.yml | awk '{print $2}' | jq --raw-input -s -c 'split("\n")|.[0:-1]' | sed "s/:[^\"]*/:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}/g")
           echo "debug: matrix=$JSON"
           echo "matrix=$( echo "$JSON" )" >> $GITHUB_OUTPUT
   sbom:
@@ -40,9 +40,10 @@ jobs:
     needs: [ getImages ]
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJson(needs.getImages.outputs.matrix) }}
+      matrix:
+        image: ${{ fromJson(needs.getImages.outputs.matrix) }}
     steps:
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ matrix }}
+          image: ${{ matrix.image }}
