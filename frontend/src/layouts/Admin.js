@@ -457,13 +457,14 @@ const AdminLayout = (props) => {
           position={Platform.OS == 'web' ? 'sticky' : 'static'}
           top={Platform.OS == 'web' ? 16 : 0}
           flex={1}
+          maxH={heightContent}
         >
           {/*desktop*/}
           <Box
             display={{ base: 'none', md: 'flex' }}
             __position={{ base: 'absolute', md: 'static' }}
             w={isOpenSidebar ? 20 : 64}
-            _h={heightContent}
+            h={heightContent}
           >
             <Sidebar
               isMobile={false}
@@ -497,7 +498,7 @@ const AdminLayout = (props) => {
           {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
           {/*h="calc(100% - 64px)"
                minH="calc(100vh - 64px)"*/}
-          <Box flex={1} ref={mainPanel} pb={10}>
+          <Box flex={1} ref={mainPanel}>
             <Outlet />
             {/*NOTE footer should not be visible - outside of the view and show when scroll to bottom to use the most space*/}
             {/*<Footer />*/}
