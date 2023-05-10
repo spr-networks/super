@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
 import {
   faBan,
