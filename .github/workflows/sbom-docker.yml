@@ -47,4 +47,4 @@ jobs:
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ matrix }}
+          image: ${{ matrix.image }}
