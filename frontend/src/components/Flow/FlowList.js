@@ -36,7 +36,8 @@ import {
   Text,
   useColorModeValue,
   Divider,
-  ScrollView
+  ScrollView,
+  View
 } from 'native-base'
 import { dateArrayToStr } from './Utils'
 
@@ -705,71 +706,74 @@ const FlowList = (props) => {
   let h = Dimensions.get('window').height - (Platform.OS == 'ios' ? 64 * 2 : 64)
 
   return (
-    <Stack direction={{ base: 'column', md: 'row' }} h={{ md: h }}>
-      <VStack py={4}>
-        <HStack
-          px={4}
-          pb={4}
-          justifyContent="space-between"
-          alignContent="center"
-          space={2}
-        >
-          <Heading fontSize="md">Flows</Heading>
-          {!flows.length ? <Text>No flows configured</Text> : null}
-        </HStack>
+    <ScrollView>
+      <Stack direction={{ base: 'column', md: 'row' }}>
+        <VStack py={4}>
+          <HStack
+            px={4}
+            pb={4}
+            justifyContent="space-between"
+            alignContent="center"
+            space={2}
+          >
+            <Heading fontSize="md">Flows</Heading>
+            {!flows.length ? <Text>No flows configured</Text> : null}
+          </HStack>
 
-        <FlatList
-          data={flows}
-          renderItem={({ item, index }) => (
-            <Box
-              _dark={{
-                borderColor: 'muted.900'
-              }}
-              borderColor="muted.200"
-              borderBottomWidth={{ base: 1, md: 0 }}
-              pb={{ base: 0, md: 4 }}
-              px={{ base: 0, md: 4 }}
-            >
-              <Flow
-                edit={false}
-                onDelete={() => onDelete(item, index)}
-                onDuplicate={onDuplicate}
-                onDisable={toggleDisable}
-                onEdit={() => onEdit(item, index)}
-                flow={item}
-              />
-            </Box>
-          )}
-          listKey="flow"
-          keyExtractor={(item, index) => index}
-        />
-      </VStack>
-
-      <VStack
-        maxW={{ base: '100%', md: '500px' }}
-        flex={1}
-        maxH={{ md: '3/4' }}
-        ml={{ md: 'auto' }}
-        mr={{ md: 4 }}
-      >
-        <Heading size="sm" my={4} px={4}>
-          Add &amp; Edit flow
-        </Heading>
-
-        <Box
-          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-          p={4}
-          rounded={{ md: 'md' }}
-        >
-          <Flow
-            edit={true}
-            flow={flow}
-            onSubmit={onSubmit}
-            onReset={resetFlow}
+          <FlatList
+            data={flows}
+            renderItem={({ item, index }) => (
+              <Box
+                _dark={{
+                  borderColor: 'muted.900'
+                }}
+                borderColor="muted.200"
+                borderBottomWidth={{ base: 1, md: 0 }}
+                pb={{ base: 0, md: 4 }}
+                px={{ base: 0, md: 4 }}
+              >
+                <Flow
+                  edit={false}
+                  onDelete={() => onDelete(item, index)}
+                  onDuplicate={onDuplicate}
+                  onDisable={toggleDisable}
+                  onEdit={() => onEdit(item, index)}
+                  flow={item}
+                />
+              </Box>
+            )}
+            listKey="flow"
+            keyExtractor={(item, index) => index}
           />
-        </Box>
-      </VStack>
-    </Stack>
+        </VStack>
+
+        <VStack
+          maxW={{ base: '100%', md: '500px' }}
+          flex={1}
+          maxH={{ md: '3/4' }}
+          ml={{ md: 'auto' }}
+          mr={{ md: 4 }}
+        >
+          <Heading size="sm" my={4} px={4}>
+            Add &amp; Edit flow
+          </Heading>
+
+          <Box
+            bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+            minH={450}
+            p={4}
+            rounded={{ md: 'md' }}
+          >
+            <Flow
+              edit={true}
+              flow={flow}
+              onSubmit={onSubmit}
+              onReset={resetFlow}
+            />
+          </Box>
+        </VStack>
+      </Stack>
+    </ScrollView>
   )
 }
 

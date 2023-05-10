@@ -40,6 +40,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
   let { title, description } = card
   let icon = null
   // if string use BrandIcons, else fontawesome component
+  // NOTE this does not work in ios
   if (typeof card.icon == 'string') {
     icon = React.createElement(BrandIcons[card.icon], {
       color: card.color,
@@ -197,10 +198,10 @@ const FlowCard = ({ card, size, edit, ...props }) => {
       bg={useColorModeValue('light', 'backgroundContentDark')}
       p={size == 'xs' ? 2 : 4}
       rounded="md"
-      shadow={5}
+      shadow={{ md: 5 }}
       minW={320}
       mr={2}
-      borderColor={useColorModeValue('coolGray.50', 'coolGray.900')}
+      borderColor={useColorModeValue('coolGray.200', 'coolGray.900')}
       borderWidth={1}
       {...props}
     >
@@ -214,6 +215,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
         >
           {icon}
         </Box>
+
         <VStack flex={1} alignContent="center" space={size == 'xs' ? 0 : 1}>
           <HStack space={1} alignItems="center">
             <Text color="muted.400" fontSize="sm">
@@ -236,6 +238,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
           </HStack>
           {body}
         </VStack>
+
         {edit ? moreMenu : null}
       </HStack>
     </Box>
