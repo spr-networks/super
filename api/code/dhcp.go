@@ -449,11 +449,13 @@ func isTinyNetDeviceIPLocked(IP string) bool {
 
 	for _, subnetString := range gDhcpConfig.TinyNets {
 		// check if theres free IPs in the range
-		start_ip, subnet, err := net.ParseCIDR(subnetString)
+		_, subnet, err := net.ParseCIDR(subnetString)
 		if err != nil {
 			log.Println("Invalid subnet "+subnetString, err)
 			continue
 		}
+		//get normalized start ip
+		start_ip, _, _ := net.ParseCIDR(subnetString)
 
 		device_ip := TwiddleTinyIP(start_ip, 2)
 
@@ -506,13 +508,14 @@ func genNewDeviceIP(devices *map[string]DeviceEntry) (string, string) {
 	*/
 	for _, subnetString := range gDhcpConfig.TinyNets {
 		// check if theres free IPs in the range
-		start_ip, subnet, err := net.ParseCIDR(subnetString)
+		_, subnet, err := net.ParseCIDR(subnetString)
 		if err != nil {
 			log.Println("Invalid subnet "+subnetString, err)
 			continue
 		}
 
-		//TBD sanity check that LSB of tinynet is 0
+		//get normalied start_ip
+		start_ip, _, _ := net.ParseCIDR(subnetString)
 
 		device_ip := TwiddleTinyIP(start_ip, 2)
 

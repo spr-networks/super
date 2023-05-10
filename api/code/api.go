@@ -1911,7 +1911,14 @@ func setup(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			tinyNets = append(tinyNets, subnet)
+			_, normalized_net, err := net.ParseCIDR(subnet)
+			if err != nil {
+				http.Error(w, "Failed to parse CIDR", 400)
+				return
+			}
+			//add normalized network range
+
+			tinyNets = append(tinyNets, normalized_net.String())
 		}
 		//normalize tiny subnets and add them in
 	}
