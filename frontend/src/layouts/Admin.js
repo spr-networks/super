@@ -389,14 +389,13 @@ const AdminLayout = (props) => {
   }, [isWifiDisabled])
 
   let navbarHeight = 64
-  let heightContent = Dimensions.get('window').height - navbarHeight
-  if (Platform.OS == 'ios') {
+  let heightFull = Dimensions.get('window').height
+  let heightContent = heightFull - navbarHeight
+  /*if (Platform.OS == 'ios') {
     // statusbar, see https://github.com/GeekyAnts/NativeBase/blob/2af374e586034366dcefce9a0f23983836a7901f/src/components/composites/AppBar/utils.ts#L8
-    heightContent =
-      Dimensions.get('window').height -
-      navbarHeight -
-      (Platform.Version < 11 ? 0 : 20)
-  }
+    heightFull =
+      Dimensions.get('window').height - (Platform.Version < 11 ? 0 : 20)
+  }*/
 
   return (
     <AppContext.Provider
@@ -419,7 +418,7 @@ const AdminLayout = (props) => {
           'backgroundContentLight',
           'backgroundContentDark'
         )}
-        minH={heightContent + navbarHeight}
+        minH={heightFull}
       >
         {/*desktop*/}
         <Box
