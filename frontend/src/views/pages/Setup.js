@@ -40,7 +40,7 @@ const Setup = (props) => {
   const [countryWifi, setCountryWifi] = useState('US')
   const [interfaceWifi, setInterfaceWifi] = useState('wlan1')
   const [interfaceUplink, setInterfaceUplink] = useState('eth0')
-  const [tinynet, setTinynet] = useState('192.168.2.1/24')
+  const [tinynet, setTinynet] = useState('192.168.2.0/24')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = React.useState({})
   const [isDone, setIsDone] = useState(false)
