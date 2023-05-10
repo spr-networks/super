@@ -389,14 +389,13 @@ const AdminLayout = (props) => {
   }, [isWifiDisabled])
 
   let navbarHeight = 64
-  let heightContent = Dimensions.get('window').height - navbarHeight
-  if (Platform.OS == 'ios') {
+  let heightFull = Dimensions.get('window').height
+  let heightContent = heightFull - navbarHeight
+  /*if (Platform.OS == 'ios') {
     // statusbar, see https://github.com/GeekyAnts/NativeBase/blob/2af374e586034366dcefce9a0f23983836a7901f/src/components/composites/AppBar/utils.ts#L8
-    heightContent =
-      Dimensions.get('window').height -
-      navbarHeight -
-      (Platform.Version < 11 ? 0 : 20)
-  }
+    heightFull =
+      Dimensions.get('window').height - (Platform.Version < 11 ? 0 : 20)
+  }*/
 
   return (
     <AppContext.Provider
@@ -419,7 +418,7 @@ const AdminLayout = (props) => {
           'backgroundContentLight',
           'backgroundContentDark'
         )}
-        minH={heightContent + navbarHeight}
+        minH={heightFull}
       >
         {/*desktop*/}
         <Box
@@ -457,13 +456,14 @@ const AdminLayout = (props) => {
           position={Platform.OS == 'web' ? 'sticky' : 'static'}
           top={Platform.OS == 'web' ? 16 : 0}
           flex={1}
+          maxH={heightContent}
         >
           {/*desktop*/}
           <Box
             display={{ base: 'none', md: 'flex' }}
             __position={{ base: 'absolute', md: 'static' }}
             w={isOpenSidebar ? 20 : 64}
-            _h={heightContent}
+            h={heightContent}
           >
             <Sidebar
               isMobile={false}
@@ -497,7 +497,7 @@ const AdminLayout = (props) => {
           {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
           {/*h="calc(100% - 64px)"
                minH="calc(100vh - 64px)"*/}
-          <Box flex={1} ref={mainPanel} pb={10}>
+          <Box flex={1} ref={mainPanel}>
             <Outlet />
             {/*NOTE footer should not be visible - outside of the view and show when scroll to bottom to use the most space*/}
             {/*<Footer />*/}

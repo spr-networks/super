@@ -1,4 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react'
+import { Dimensions, Platform } from 'react-native'
 import {
   Box,
   Button,
@@ -202,8 +203,10 @@ const TrafficList = (props) => {
     setFilterIps([ip])
   }
 
+  //let h = Platform.OS == 'web' ? Dimensions.get('window').height - 64 : '100%'
+
   return (
-    <View h="100%" display="flex">
+    <View display="flex">
       <Stack
         direction={{ base: 'column', lg: 'row' }}
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}

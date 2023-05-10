@@ -7,6 +7,7 @@ import {
   Modal,
   Stack,
   Text,
+  View,
   VStack,
   ScrollView,
   useDisclose,
@@ -71,7 +72,7 @@ const SystemInfo = (props) => {
   }
 
   return (
-    <ScrollView>
+    <ScrollView h={'100%'}>
       <VStack space={2}>
         <HStack p={4}>
           <Heading fontSize="md">System Info</Heading>

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
 import {
   faBan,
@@ -521,7 +522,7 @@ const actions = [
     description:
       'Forward TCP for specified source to exposed port for a local container',
     color: 'blue.500',
-    icon: 'Docker',
+    icon: Platform.OS == 'ios' ? faCircleArrowRight : 'Docker',
     params: [
       {
         name: 'Protocol',
