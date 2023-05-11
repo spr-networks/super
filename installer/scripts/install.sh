@@ -16,7 +16,9 @@ passwd --expire ubuntu
 echo spr > /etc/hostname
 echo "127.0.0.1      spr" >> /etc/hosts
 
-#tbd should be done at startup
+#update mediatek firmware
+git clone --depth 1 https://github.com/openwrt/mt76 /root/mt76
+cp -R /root/mt76/firmware/. /lib/firmware/mediatek/
 
 touch /etc/cloud/cloud-init.disabled
 # Add a bug fix for scatter/gather bugs with USB:
