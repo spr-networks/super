@@ -358,7 +358,6 @@ const Setup = (props) => {
     }
   }, [tinynet])
 
-
   const handlePress = () => {
     if (
       !ssid.match(
@@ -369,26 +368,37 @@ const Setup = (props) => {
       return
     }
 
-
-    let nets = tinynet.split(" ")
+    let nets = tinynet.split(' ')
     let tinynets = []
     for (let n of nets) {
       //validate subnets
-      if( !n.match(
+      if (
+        !n.match(
           /^((?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.){3}(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])(?:\/(?:[1-9]|[1-2]\d|3[0-2]))$/
-        )) {
-          setErrors({...errors, tinynet: 'Not a valid ipv4 network'})
-          return
-        }
+        )
+      ) {
+        setErrors({ ...errors, tinynet: 'Not a valid ipv4 network' })
+        return
+      }
 
       let pieces = n.split('/')
       if (parseInt(pieces[1]) > 24) {
-        setErrors({...errors, tinynet: 'unsupported subnet size, use a /24 or larger network, you used:' + pieces[1]})
+        setErrors({
+          ...errors,
+          tinynet:
+            'unsupported subnet size, use a /24 or larger network, you used:' +
+            pieces[1]
+        })
         return
       }
 
       if (parseInt(pieces[1]) < 7) {
-        setErrors({...errors, tinynet: 'unsupported subnet size, use a /8 or smaller network, you used:' + pieces[1]})
+        setErrors({
+          ...errors,
+          tinynet:
+            'unsupported subnet size, use a /8 or smaller network, you used:' +
+            pieces[1]
+        })
         return
       }
 
@@ -402,7 +412,6 @@ const Setup = (props) => {
       })
       return
     }
-
 
     const data = {
       InterfaceUplink: interfaceUplink,
@@ -453,7 +462,7 @@ const Setup = (props) => {
             <>
               <HStack alignSelf="center" alignItems="center" space={2}>
                 <Icon icon={faInfoCircle} color="muted.500" />
-                <Text alignSelf="center" color="muted.900">
+                <Text alignSelf="center" color="muted.500">
                   SPR is configured!
                 </Text>
               </HStack>
@@ -535,9 +544,7 @@ const Setup = (props) => {
               </FormControl>
 
               <FormControl isInvalid={'tinynet' in errors}>
-                <FormControl.Label>
-                  Private Network Subnet(s)
-                </FormControl.Label>
+                <FormControl.Label>Private Network Subnet(s)</FormControl.Label>
                 <Input
                   value={tinynet}
                   placeholder={'Private subnet for network'}
@@ -554,7 +561,6 @@ const Setup = (props) => {
                   </FormControl.ErrorMessage>
                 ) : null}
               </FormControl>
-
 
               <FormControl isInvalid={'login' in errors}>
                 <FormControl.Label>Admin Password</FormControl.Label>
