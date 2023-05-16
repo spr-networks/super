@@ -458,8 +458,8 @@ const WifiHostapd = (props) => {
       vht_capab.sort()
       new_config.vht_capab = vht_capab.join('')
     }
-    setConfig(new_config)
-    commitConfig()
+
+    pushConfig(new_config)
   }
 
 
@@ -541,6 +541,26 @@ const WifiHostapd = (props) => {
     configNew[name] = value
 
     setConfig(configNew)
+  }
+
+  const pushConfig = (inconfig) => {
+
+    let data = {
+      Ssid: inconfig.ssid,
+      Channel: parseInt(inconfig.channel),
+      Country_code: inconfig.country_code,
+      Vht_capab: inconfig.vht_capab,
+      Ht_capab: inconfig.ht_capab,
+      Hw_mode: inconfig.hw_mode,
+      Ieee80211ax: parseInt(inconfig.ieee80211ax),
+      He_su_beamformer: parseInt(inconfig.he_su_beamformer),
+      He_su_beamformee: parseInt(inconfig.he_su_beamformee),
+      He_mu_beamformer: parseInt(inconfig.he_mu_beamformer)
+    }
+
+    wifiAPI.updateConfig(iface, data).then((curConfig) => {
+      setConfig(curConfig)
+    })
   }
 
   const commitConfig = () => {
@@ -684,10 +704,6 @@ const WifiHostapd = (props) => {
       return
     }
 
-    /*
-    //state management error is causing failures between setCOnfig(default) and commitConfig
-    //so belwo code does not work
-    //if wifi 6 is supported, set it by default
     let has_wifi6 = false
 
     for (let i = 0; i < iw_info.bands.length; i++) {
@@ -710,12 +726,11 @@ const WifiHostapd = (props) => {
       defaultConfig.ieee80211ax = '0'
 
     }
-    */
 
-    //set the configuration in the UI
-    setConfig(defaultConfig)
+    pushConfig(defaultConfig)
 
-    commitConfig()
+    //set all vht/ht settings by default
+    updateCapabilities()
 
     //call hostapd to enable the interface
     wifiAPI.enableInterface(iface).then(() => setInterfaceEnabled(true))
