@@ -78,7 +78,7 @@ const Login = (props) => {
       if (login) {
         setUsername(login.username)
         setPassword(login.password)
-        doLogin(login.username, login.password)
+        //doLogin(login.username, login.password)
       }
     })
   }, [])
