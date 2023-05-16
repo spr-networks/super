@@ -9,6 +9,7 @@ import {
   Checkbox,
   FormControl,
   Heading,
+  Input,
   HStack,
   VStack,
   Stack,
@@ -21,7 +22,10 @@ const WifiChannelParameters = ({
   setIface,
   config,
   iws,
+  curInterface,
   onSubmit,
+  updateExtraBSS,
+  deleteExtraBSS,
   ...props
 }) => {
   const context = useContext(AlertContext)
@@ -31,7 +35,11 @@ const WifiChannelParameters = ({
   const [errors, setErrors] = useState({})
   const [disable160, setDisable160] = useState(true)
   const [disableWifi6, setDisableWifi6] = useState(true)
-  const [groupValues, setGroupValues] = React.useState(['']);
+  const [groupValues, setGroupValues] = React.useState([]);
+
+  //support for additional bssid
+  const [disableExtraBSS, setDisableExtraBSS] = useState(true)
+  const [extraSSID, setExtraSSID] = useState("-extra")
 
   let bandwidth5 = [
     { label: '20 MHz', value: 20 },
@@ -57,6 +65,7 @@ const WifiChannelParameters = ({
     // switch to config-based settings
     setMode(config.hw_mode)
     setChannel(config.channel)
+    setExtraSSID(config.ssid + "-extra")
 
     if (config.vht_oper_chwidth == 0) {
       setBandwidth(40)
@@ -77,6 +86,19 @@ const WifiChannelParameters = ({
 
     if (config.ieee80211ax == 1) {
       setGroupValues(['wifi6'])
+      if (!groupValues.includes('wifi6')) {
+        setGroupValues(groupValues.concat('wifi6'))
+      }
+    }
+
+    if (curInterface) {
+      if (curInterface.ExtraBSS && curInterface.ExtraBSS.length == 1) {
+        let extra = curInterface.ExtraBSS[0]
+        setExtraSSID(extra.Ssid)
+        if (!groupValues.includes('extrabss')) {
+          setGroupValues(groupValues.concat('extrabss'))
+        }
+      }
     }
 
     //set bw and channels
@@ -96,6 +118,18 @@ const WifiChannelParameters = ({
           }
           if (band.he_phy_capabilities) {
             setDisableWifi6(false)
+          }
+        }
+
+        //check if valid_interface_combinations supports multiple APs
+        let combos = iw.valid_interface_combinations
+        for (let combo of combos) {
+          let ap_entry = combo.split("#").filter((e) => e.includes('AP'))
+          if (ap_entry[0] && ap_entry[0].includes('<=')) {
+            let num_supported = parseInt(ap_entry[0].split("<=")[1])
+            if (num_supported > 0) {
+              setDisableExtraBSS(false)
+            }
           }
         }
 
@@ -121,7 +155,7 @@ const WifiChannelParameters = ({
           */
       }
     }
-  }, [iface, config, iws])
+  }, [iface, config, iws, curInterface])
 
   const enumerateChannelOptions = () => {
     //const iface = props.config.interface
@@ -183,9 +217,41 @@ const WifiChannelParameters = ({
     return true
   }
 
+  const getLLAIfaceAddr = (iface) => {
+    for (let iw of iws) {
+      if (iw.devices[iface]) {
+        let base = iw.devices[iface].addr
+        let updatedByte = parseInt(base.substr(0,2),16) | 2
+        const updatedByteHex = updatedByte.toString(16).padStart(2, '0').toUpperCase();
+        return updatedByteHex + base.substr(2)
+      }
+    }
+    return null
+  }
+
   const handleSubmit = () => {
     if (!isValid()) {
       return
+    }
+
+    if (groupValues.includes('extrabss')) {
+      //right now support exists for an additional AP running WPA1
+      // for backwards compatibility with older devices.
+      //configure it.
+
+      //API will take care of mediatek convention, where LLA  bit is cleared
+      // for main but set for extra
+      let bssid = getLLAIfaceAddr(iface)
+      updateExtraBSS(iface, {
+        'Ssid': extraSSID,
+        'Bssid': bssid,
+        'Wpa': "1"
+      });
+    } else {
+      //if interfaces had an extra bss then clear it out
+      if (curInterface.ExtraBSS && curInterface.ExtraBSS.length > 0) {
+        deleteExtraBSS(iface)
+      }
     }
 
     let wifiParameters = {
@@ -210,12 +276,15 @@ const WifiChannelParameters = ({
       wifiParameters.Ieee80211ax = 0
     }
 
+
+
     onSubmit(wifiParameters)
   }
 
   let bandwidths = mode == 'a' ? bandwidth5 : bandwidth24
 
-  let checkboxProps = disableWifi6 ? { isDisabled: true } : {};
+  let checkboxProps = disableWifi6 ? { isDisabled: true } : {}
+  let wpa1CheckboxProps = disableExtraBSS ? { isDisabled: true} : {}
 
   return (
     <>
@@ -329,8 +398,22 @@ const WifiChannelParameters = ({
         <HStack>
             <Checkbox.Group onChange={setGroupValues} value={groupValues} accessibilityLabel="wifi settings">
               <Checkbox {...checkboxProps} value="wifi6">Wifi 6 (AX) </Checkbox>
+              <Checkbox {...wpa1CheckboxProps} value="extrabss"> Enable WPA1 SSID </Checkbox>
             </Checkbox.Group>
         </HStack>
+        {groupValues.includes('extrabss') ? (
+          <HStack>
+          <Text flex={1}> Extra BSS Name </Text>
+          <Input
+            size="lg"
+            type="text"
+            variant="underlined"
+            flex={2}
+            value={extraSSID}
+            onChangeText={(value) => setExtraSSID(value)}
+          />
+          </HStack>
+        ) : null }
       </VStack>
     </>
   )

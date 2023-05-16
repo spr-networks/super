@@ -360,6 +360,7 @@ const WifiHostapd = (props) => {
   const context = useContext(AlertContext)
   const [iface, setIface] = useState('')
   const [interfaceEnabled, setInterfaceEnabled] = useState(true)
+  const [interfaces, setInterfaces] = useState([])
 
   const [updated, setUpdated] = useState(false)
   const [config, setConfig] = useState({})
@@ -509,6 +510,7 @@ const WifiHostapd = (props) => {
 
     //extract the interface state
     wifiAPI.interfacesConfiguration().then((ifaces) => {
+      setInterfaces(ifaces)
       for (const i of ifaces) {
         if (i.Name == iface) {
           setInterfaceEnabled(i.Enabled)
@@ -814,13 +816,44 @@ const WifiHostapd = (props) => {
       if (type.includes('AP/VLAN')) {
         continue
       }
-
-      devsSelect.push({ label, value: _iface, disabled: !type.includes('AP') })
+      devsSelect.push({ label, value: _iface, isDisabled: (_iface.includes('.')) })
 
       if (_iface == iface) {
         devSelected = devsSelect[devsSelect.length - 1].value
       }
     }
+  }
+
+  const updateExtraBSS = (iface, params) => {
+    wifiAPI.enableExtraBSS(iface, params).then((result) => {
+      //update interfaces
+      wifiAPI.interfacesConfiguration().then((ifaces) => {
+        setInterfaces(ifaces)
+        for (const i of ifaces) {
+          if (i.Name == iface) {
+            setInterfaceEnabled(i.Enabled)
+            break
+          }
+        }
+      })
+    })
+  }
+
+  const deleteExtraBSS = (iface) => {
+    wifiAPI.disableExtraBSS(iface).then((result) => {
+
+      //update interfaces
+      wifiAPI.interfacesConfiguration().then((ifaces) => {
+        setInterfaces(ifaces)
+        for (const i of ifaces) {
+          if (i.Name == iface) {
+            setInterfaceEnabled(i.Enabled)
+            break
+          }
+        }
+      })
+
+    })
   }
 
   const triggerBtn = (triggerProps) => (
@@ -851,6 +884,13 @@ const WifiHostapd = (props) => {
       </Menu.Group>
     </Menu>
   )
+
+  let curIface
+  for (let i of interfaces) {
+    if (i.Name == iface) {
+      curIface = i
+    }
+  }
 
   return (
     <ScrollView pb="20">
@@ -885,6 +925,7 @@ const WifiHostapd = (props) => {
                   key={dev.label}
                   label={dev.label}
                   value={dev.value}
+                  isDisabled={dev.isDisabled}
                 />
               ))}
             </Select>
@@ -895,9 +936,12 @@ const WifiHostapd = (props) => {
       <WifiChannelParameters
         iface={iface}
         iws={iws}
+        curInterface={curIface}
         setIface={setIface}
         config={config}
         onSubmit={updateChannels}
+        updateExtraBSS={updateExtraBSS}
+        deleteExtraBSS={deleteExtraBSS}
       />
 
       <HStack justifyContent="space-between" p={4}>

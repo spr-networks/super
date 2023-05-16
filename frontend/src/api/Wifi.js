@@ -65,6 +65,15 @@ export default class APIWifi extends API {
     return this.put(`hostapd/${iface}/resetConfiguration`);
   }
 
+
+  enableExtraBSS(iface, params) {
+    return this.put(`hostapd/${iface}/enableExtraBSS`, params);
+  }
+
+  disableExtraBSS(iface) {
+    return this.delete(`hostapd/${iface}/enableExtraBSS`);
+  }
+
   restartWifi() {
     return this.put(`hostapd/restart`);
   }
