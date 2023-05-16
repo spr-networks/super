@@ -409,16 +409,16 @@ const WifiHostapd = (props) => {
     let ht_capab, vht_capab
     if (config.hw_mode == 'a') {
       //this assumes 5ghz, need to handle 6ghz and wifi 6
-      ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
     } else if (config.hw_mode == 'g' || config.hw_mode == 'b') {
-      ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
     } else {
-      ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
       if (ht_capab == '' && vht_capab == '') {
-        ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
       }
       if (ht_capab == '' && vht_capab == '') {
-        ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 4)
+        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 4)
       }
     }
 
@@ -426,6 +426,42 @@ const WifiHostapd = (props) => {
       setTooltips({ ht_capab: ht_capab, vht_capab: vht_capab })
     }
   }
+
+  const updateCapabilities = () => {
+
+    let new_config = {...config}
+
+
+    //enable all capabilities
+
+    let ht_capab, vht_capab
+    if (config.hw_mode == 'a') {
+      //this assumes 5ghz, need to handle 6ghz and wifi 6
+      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+    } else if (config.hw_mode == 'g' || config.hw_mode == 'b') {
+      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+    } else {
+      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+      if (ht_capab == '' && vht_capab == '') {
+        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+      }
+      if (ht_capab == '' && vht_capab == '') {
+        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 4)
+      }
+
+    }
+    if (ht_capab) {
+      ht_capab.sort()
+      new_config.ht_capab = ht_capab.join('')
+    }
+    if (vht_capab) {
+      vht_capab.sort()
+      new_config.vht_capab = vht_capab.join('')
+    }
+    setConfig(new_config)
+    commitConfig()
+  }
+
 
   const updateIWS = () => {
     wifiAPI.iwDev().then((devs) => {
@@ -508,6 +544,7 @@ const WifiHostapd = (props) => {
   }
 
   const commitConfig = () => {
+
     let data = {
       Ssid: config.ssid,
       Channel: parseInt(config.channel),
@@ -521,8 +558,8 @@ const WifiHostapd = (props) => {
       He_mu_beamformer: parseInt(config.he_mu_beamformer)
     }
 
-    wifiAPI.updateConfig(iface, data).then((config) => {
-      setConfig(sortConf(config))
+    wifiAPI.updateConfig(iface, data).then((curConfig) => {
+      setConfig(curConfig)
     })
   }
 
@@ -647,8 +684,37 @@ const WifiHostapd = (props) => {
       return
     }
 
+    /*
+    //state management error is causing failures between setCOnfig(default) and commitConfig
+    //so belwo code does not work
+    //if wifi 6 is supported, set it by default
+    let has_wifi6 = false
+
+    for (let i = 0; i < iw_info.bands.length; i++) {
+      let band = iw_info.bands[i]
+      if (band.he_phy_capabilities) {
+        has_wifi6 = true
+        break
+      }
+    }
+
+    if (has_wifi6 == true) {
+      defaultConfig.he_mu_beamformer = '1'
+      defaultConfig.he_su_beamformee = '1'
+      defaultConfig.he_su_beamformer = '1'
+      defaultConfig.ieee80211ax = '1'
+    } else {
+      defaultConfig.he_mu_beamformer = '0'
+      defaultConfig.he_su_beamformee = '0'
+      defaultConfig.he_su_beamformer = '0'
+      defaultConfig.ieee80211ax = '0'
+
+    }
+    */
+
     //set the configuration in the UI
     setConfig(defaultConfig)
+
     commitConfig()
 
     //call hostapd to enable the interface
@@ -820,11 +886,24 @@ const WifiHostapd = (props) => {
       />
 
       <HStack justifyContent="space-between" p={4}>
+        <Heading fontSize="lg" alignSelf="center">
+          Advanced
+        </Heading>
         <Heading fontSize="md" alignSelf="center">
           HostAP Config {iface}
         </Heading>
         {/*interfaceMenu*/}
         <HStack space={2}>
+          <Button
+            variant="solid"
+            size="sm"
+            alignSelf="center"
+            _leftIcon={<Icon icon={faRotateRight} />}
+            type="submit"
+            onPress={updateCapabilities}
+          >
+            Update All Capabilities
+          </Button>
           <Button
             variant="solid"
             colorScheme="secondary"

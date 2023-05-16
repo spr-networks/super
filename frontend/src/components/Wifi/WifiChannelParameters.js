@@ -6,6 +6,7 @@ import { AlertContext } from 'AppContext'
 import {
   Box,
   Button,
+  Checkbox,
   FormControl,
   Heading,
   HStack,
@@ -29,6 +30,8 @@ const WifiChannelParameters = ({
   const [mode, setMode] = useState('a')
   const [errors, setErrors] = useState({})
   const [disable160, setDisable160] = useState(true)
+  const [disableWifi6, setDisableWifi6] = useState(true)
+  const [groupValues, setGroupValues] = React.useState(['']);
 
   let bandwidth5 = [
     { label: '20 MHz', value: 20 },
@@ -72,6 +75,10 @@ const WifiChannelParameters = ({
       }
     }
 
+    if (config.ieee80211ax == 1) {
+      setGroupValues(['wifi6'])
+    }
+
     //set bw and channels
     for (let iw of iws) {
       if (iw.devices[iface]) {
@@ -86,6 +93,9 @@ const WifiChannelParameters = ({
                 setDisable160(false)
               }
             }
+          }
+          if (band.he_phy_capabilities) {
+            setDisableWifi6(false)
           }
         }
 
@@ -188,10 +198,24 @@ const WifiChannelParameters = ({
       HE_Enable: true
     }
 
+    if (groupValues.includes('wifi6')) {
+      wifiParameters.He_mu_beamformer = 1
+      wifiParameters.He_su_beamformee = 1
+      wifiParameters.He_su_beamformer = 1
+      wifiParameters.Ieee80211ax = 1
+    } else {
+      wifiParameters.He_mu_beamformer = 0
+      wifiParameters.He_su_beamformee = 0
+      wifiParameters.He_su_beamformer = 0
+      wifiParameters.Ieee80211ax = 0
+    }
+
     onSubmit(wifiParameters)
   }
 
   let bandwidths = mode == 'a' ? bandwidth5 : bandwidth24
+
+  let checkboxProps = disableWifi6 ? { isDisabled: true } : {};
 
   return (
     <>
@@ -302,6 +326,11 @@ const WifiChannelParameters = ({
             Save
           </Button>
         </Stack>
+        <HStack>
+            <Checkbox.Group onChange={setGroupValues} value={groupValues} accessibilityLabel="wifi settings">
+              <Checkbox {...checkboxProps} value="wifi6">Wifi 6 (AX) </Checkbox>
+            </Checkbox.Group>
+        </HStack>
       </VStack>
     </>
   )
