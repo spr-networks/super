@@ -16,6 +16,14 @@ export class APIDb extends API {
   stats(bucket = null) {
     return this.get(bucket ? `stats/${bucket}` : 'stats')
   }
+
+  buckets() {
+    return this.get('buckets')
+  }
+
+  items(bucket, params = {}) {
+    return this.get(`items/${bucket}?${new URLSearchParams(params)}`)
+  }
 }
 
 export const dbAPI = new APIDb()
