@@ -360,6 +360,7 @@ const WifiHostapd = (props) => {
   const context = useContext(AlertContext)
   const [iface, setIface] = useState('')
   const [interfaceEnabled, setInterfaceEnabled] = useState(true)
+  const [interfaces, setInterfaces] = useState([])
 
   const [updated, setUpdated] = useState(false)
   const [config, setConfig] = useState({})
@@ -409,16 +410,16 @@ const WifiHostapd = (props) => {
     let ht_capab, vht_capab
     if (config.hw_mode == 'a') {
       //this assumes 5ghz, need to handle 6ghz and wifi 6
-      ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
     } else if (config.hw_mode == 'g' || config.hw_mode == 'b') {
-      ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
     } else {
-      ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
       if (ht_capab == '' && vht_capab == '') {
-        ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
       }
       if (ht_capab == '' && vht_capab == '') {
-        ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 4)
+        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 4)
       }
     }
 
@@ -426,6 +427,42 @@ const WifiHostapd = (props) => {
       setTooltips({ ht_capab: ht_capab, vht_capab: vht_capab })
     }
   }
+
+  const updateCapabilities = () => {
+
+    let new_config = {...config}
+
+
+    //enable all capabilities
+
+    let ht_capab, vht_capab
+    if (config.hw_mode == 'a') {
+      //this assumes 5ghz, need to handle 6ghz and wifi 6
+      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+    } else if (config.hw_mode == 'g' || config.hw_mode == 'b') {
+      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+    } else {
+      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+      if (ht_capab == '' && vht_capab == '') {
+        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+      }
+      if (ht_capab == '' && vht_capab == '') {
+        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 4)
+      }
+
+    }
+    if (ht_capab) {
+      ht_capab.sort()
+      new_config.ht_capab = ht_capab.join('')
+    }
+    if (vht_capab) {
+      vht_capab.sort()
+      new_config.vht_capab = vht_capab.join('')
+    }
+
+    pushConfig(new_config)
+  }
+
 
   const updateIWS = () => {
     wifiAPI.iwDev().then((devs) => {
@@ -473,6 +510,7 @@ const WifiHostapd = (props) => {
 
     //extract the interface state
     wifiAPI.interfacesConfiguration().then((ifaces) => {
+      setInterfaces(ifaces)
       for (const i of ifaces) {
         if (i.Name == iface) {
           setInterfaceEnabled(i.Enabled)
@@ -507,7 +545,28 @@ const WifiHostapd = (props) => {
     setConfig(configNew)
   }
 
+  const pushConfig = (inconfig) => {
+
+    let data = {
+      Ssid: inconfig.ssid,
+      Channel: parseInt(inconfig.channel),
+      Country_code: inconfig.country_code,
+      Vht_capab: inconfig.vht_capab,
+      Ht_capab: inconfig.ht_capab,
+      Hw_mode: inconfig.hw_mode,
+      Ieee80211ax: parseInt(inconfig.ieee80211ax),
+      He_su_beamformer: parseInt(inconfig.he_su_beamformer),
+      He_su_beamformee: parseInt(inconfig.he_su_beamformee),
+      He_mu_beamformer: parseInt(inconfig.he_mu_beamformer)
+    }
+
+    wifiAPI.updateConfig(iface, data).then((curConfig) => {
+      setConfig(curConfig)
+    })
+  }
+
   const commitConfig = () => {
+
     let data = {
       Ssid: config.ssid,
       Channel: parseInt(config.channel),
@@ -521,8 +580,8 @@ const WifiHostapd = (props) => {
       He_mu_beamformer: parseInt(config.he_mu_beamformer)
     }
 
-    wifiAPI.updateConfig(iface, data).then((config) => {
-      setConfig(sortConf(config))
+    wifiAPI.updateConfig(iface, data).then((curConfig) => {
+      setConfig(curConfig)
     })
   }
 
@@ -647,9 +706,33 @@ const WifiHostapd = (props) => {
       return
     }
 
-    //set the configuration in the UI
-    setConfig(defaultConfig)
-    commitConfig()
+    let has_wifi6 = false
+
+    for (let i = 0; i < iw_info.bands.length; i++) {
+      let band = iw_info.bands[i]
+      if (band.he_phy_capabilities) {
+        has_wifi6 = true
+        break
+      }
+    }
+
+    if (has_wifi6 == true) {
+      defaultConfig.he_mu_beamformer = '1'
+      defaultConfig.he_su_beamformee = '1'
+      defaultConfig.he_su_beamformer = '1'
+      defaultConfig.ieee80211ax = '1'
+    } else {
+      defaultConfig.he_mu_beamformer = '0'
+      defaultConfig.he_su_beamformee = '0'
+      defaultConfig.he_su_beamformer = '0'
+      defaultConfig.ieee80211ax = '0'
+
+    }
+
+    pushConfig(defaultConfig)
+
+    //set all vht/ht settings by default
+    updateCapabilities()
 
     //call hostapd to enable the interface
     wifiAPI.enableInterface(iface).then(() => setInterfaceEnabled(true))
@@ -733,13 +816,44 @@ const WifiHostapd = (props) => {
       if (type.includes('AP/VLAN')) {
         continue
       }
-
-      devsSelect.push({ label, value: _iface, disabled: !type.includes('AP') })
+      devsSelect.push({ label, value: _iface, isDisabled: (_iface.includes('.')) })
 
       if (_iface == iface) {
         devSelected = devsSelect[devsSelect.length - 1].value
       }
     }
+  }
+
+  const updateExtraBSS = (iface, params) => {
+    wifiAPI.enableExtraBSS(iface, params).then((result) => {
+      //update interfaces
+      wifiAPI.interfacesConfiguration().then((ifaces) => {
+        setInterfaces(ifaces)
+        for (const i of ifaces) {
+          if (i.Name == iface) {
+            setInterfaceEnabled(i.Enabled)
+            break
+          }
+        }
+      })
+    })
+  }
+
+  const deleteExtraBSS = (iface) => {
+    wifiAPI.disableExtraBSS(iface).then((result) => {
+
+      //update interfaces
+      wifiAPI.interfacesConfiguration().then((ifaces) => {
+        setInterfaces(ifaces)
+        for (const i of ifaces) {
+          if (i.Name == iface) {
+            setInterfaceEnabled(i.Enabled)
+            break
+          }
+        }
+      })
+
+    })
   }
 
   const triggerBtn = (triggerProps) => (
@@ -770,6 +884,13 @@ const WifiHostapd = (props) => {
       </Menu.Group>
     </Menu>
   )
+
+  let curIface
+  for (let i of interfaces) {
+    if (i.Name == iface) {
+      curIface = i
+    }
+  }
 
   return (
     <ScrollView pb="20">
@@ -804,6 +925,7 @@ const WifiHostapd = (props) => {
                   key={dev.label}
                   label={dev.label}
                   value={dev.value}
+                  isDisabled={dev.isDisabled}
                 />
               ))}
             </Select>
@@ -814,17 +936,33 @@ const WifiHostapd = (props) => {
       <WifiChannelParameters
         iface={iface}
         iws={iws}
+        curInterface={curIface}
         setIface={setIface}
         config={config}
         onSubmit={updateChannels}
+        updateExtraBSS={updateExtraBSS}
+        deleteExtraBSS={deleteExtraBSS}
       />
 
       <HStack justifyContent="space-between" p={4}>
+        <Heading fontSize="lg" alignSelf="center">
+          Advanced
+        </Heading>
         <Heading fontSize="md" alignSelf="center">
           HostAP Config {iface}
         </Heading>
         {/*interfaceMenu*/}
         <HStack space={2}>
+          <Button
+            variant="solid"
+            size="sm"
+            alignSelf="center"
+            _leftIcon={<Icon icon={faRotateRight} />}
+            type="submit"
+            onPress={updateCapabilities}
+          >
+            Update All Capabilities
+          </Button>
           <Button
             variant="solid"
             colorScheme="secondary"
