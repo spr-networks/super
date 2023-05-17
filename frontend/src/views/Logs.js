@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { View } from 'native-base'
 
 import LogList from 'components/Logs/LogList'
+import LogListDb from 'components/Logs/LogListDb'
 
 const Logs = (props) => {
   const [containers, setContainers] = useState([])
@@ -17,7 +18,8 @@ const Logs = (props) => {
 
   return (
     <View>
-      <LogList containers={containers} />
+      {/*<LogList containers={containers} />*/}
+      <LogListDb />
     </View>
   )
 }
