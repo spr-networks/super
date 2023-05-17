@@ -9,7 +9,8 @@ import {
   faEllipsisV,
   faPen,
   faMagnifyingGlass,
-  faTrash
+  faTrash,
+  faFilter
 } from '@fortawesome/free-solid-svg-icons'
 
 import { AlertContext } from 'layouts/Admin'
@@ -371,6 +372,8 @@ const DNSLogHistoryList = (props) => {
     setListFiltered(filterList())
   }, [list, filterText, page])
 
+  const [showForm, setShowForm] = useState(Platform.OS == 'web')
+
   let h = Platform.OS == 'web' ? Dimensions.get('window').height - 64 : '100%'
   return (
     <View h={h} display="flex">
@@ -402,23 +405,34 @@ const DNSLogHistoryList = (props) => {
         _light={{ bg: 'backgroundCardLight' }}
         _dark={{ bg: 'backgroundCardDark' }}
         p={4}
-        space={2}
+        space={{ base: 0, md: 2 }}
         direction={{ base: 'column', md: 'row' }}
-        flex={{ base: 1, md: 'none' }}
+        __flex={{ base: 1, md: 'none' }}
       >
-        <FormControl flex={2} maxW={{ base: '100%', md: '1/3' }}>
-          <FormControl.Label>Client</FormControl.Label>
-          <ClientSelect
-            isDisabled
-            value={filterIps ? filterIps[0] : null}
-            onChange={handleChangeIp}
+        <HStack maxW={{ base: '100%', md: '1/3' }}>
+          <FormControl flex={1}>
+            <FormControl.Label display={{ base: 'none', md: 'flex' }}>
+              Client
+            </FormControl.Label>
+            <ClientSelect
+              isDisabled
+              value={filterIps ? filterIps[0] : null}
+              onChange={handleChangeIp}
+            />
+          </FormControl>
+          <Button
+            display={{ base: 'block', md: 'none' }}
+            variant="ghost"
+            colorScheme="blueGray"
+            leftIcon={<Icon icon={faFilter} />}
+            onPress={() => setShowForm(!showForm)}
           />
-        </FormControl>
+        </HStack>
 
         <FormControl
           flex={2}
           display={{
-            base: filterIps.length && list.length ? 'flex' : 'none'
+            base: filterIps.length && list.length && showForm ? 'flex' : 'none'
           }}
         >
           <>
@@ -441,8 +455,9 @@ const DNSLogHistoryList = (props) => {
         <FormControl
           flex={{ base: 2, md: 1 }}
           display={{
-            base: filterIps.length && list.length ? 'flex' : 'none'
+            base: filterIps.length && list.length && showForm ? 'flex' : 'none'
           }}
+          mt={{ base: 4, md: 0 }}
         >
           <FormControl.Label display={{ base: 'none', md: 'flex' }}>
             Delete history
@@ -475,7 +490,7 @@ const DNSLogHistoryList = (props) => {
       />
 
       {total > 20 ? (
-        <HStack h={{ base: 20, md: 'auto' }} space={2} alignItems="flex-start">
+        <HStack space={2} alignItems="flex-start">
           <Button
             flex={1}
             variant="ghost"
