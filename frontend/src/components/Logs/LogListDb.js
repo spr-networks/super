@@ -160,8 +160,6 @@ const LogList = (props) => {
     return levels[level] || 'blueGray'
   }
 
-  let h = Platform.OS == 'web' ? Dimensions.get('window').height - 64 : '100%'
-
   const niceTopic = (topic) => topic && topic.replace(/^log:/, '')
 
   //skip some properties
@@ -185,6 +183,8 @@ const LogList = (props) => {
     filename = filename.replace(':', '#L') // line no
     return url + filename
   }
+
+  let h = Platform.OS == 'web' ? Dimensions.get('window').height - 64 : '100%'
 
   return (
     <View h={h} display="flex">
