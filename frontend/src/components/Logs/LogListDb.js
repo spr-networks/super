@@ -17,6 +17,7 @@ import {
   FlatList,
   Heading,
   Stack,
+  Link,
   HStack,
   VStack,
   ScrollView,
@@ -42,7 +43,7 @@ const LogList = (props) => {
   const [filter, setFilter] = useState({})
   const [logs, setLogs] = useState([])
   const [page, setPage] = useState(1)
-  const [total, setTotal] = useState(200)
+  const [total, setTotal] = useState(0)
   const perPage = 20
   const [params, setParams] = useState({ num: perPage })
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
@@ -169,11 +170,27 @@ const LogList = (props) => {
     return JSON.stringify(rest)
   }
 
+  //TODO support other containers
+  //NOTE this will not work if running an older version
+  const githubURL = (filename, bucket) => {
+    if (
+      bucket != 'log:api' ||
+      !filename.match(/^[a-z0-9\/_]+.go:[0-9]+$/gi, '')
+    ) {
+      return null
+    }
+
+    let containerDir = 'api'
+    let url = `https://github.com/spr-networks/super/blob/main/${containerDir}/`
+    filename = filename.replace(':', '#L') // line no
+    return url + filename
+  }
+
   return (
     <View h={h} display="flex">
       <HStack space={2} p={4} alignItems={'flex-end'}>
         <Heading fontSize="lg">Logs: {niceTopic(getCurrentBucket())}</Heading>
-        <Text color="muted.500" mt="auto">
+        <Text color="muted.500" mt="auto" display={total ? 'block' : 'none'}>
           {/*page={page}/{Math.ceil(total / perPage)}, total = {total}*/}
           {total} items
         </Text>
@@ -233,12 +250,15 @@ const LogList = (props) => {
                   {/*<Text color={'muted.500'} bold>
                     {item.bucket}
                   </Text>*/}
-                  <Text
-                    color={'muted.500'}
-                    display={!item.file && !item.func ? 'none' : 'block'}
-                  >
-                    {item.file}:{item.func}
-                  </Text>
+                  {getCurrentBucket() == 'log:api' && item.file && item.func ? (
+                    <Link
+                      color={'muted.500'}
+                      isExternal
+                      href={githubURL(item.file, getCurrentBucket())}
+                    >
+                      {item.file}:{item.func}
+                    </Link>
+                  ) : null}
                 </HStack>
               </VStack>
               <VStack space={1}>
