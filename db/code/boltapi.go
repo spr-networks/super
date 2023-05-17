@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -429,8 +430,16 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 
 	min_q := r.URL.Query().Get("min")
 	max_q := r.URL.Query().Get("max")
-	minKey = keyOrDefault(min_q, time.Now().UTC().Add(-time.Minute*60).Format(time.RFC3339Nano))
+	minKey = keyOrDefault(min_q, time.Now().UTC().Add(-time.Hour*24*365).Format(time.RFC3339Nano))
 	maxKey = keyOrDefault(max_q, time.Now().UTC().Format(time.RFC3339Nano))
+
+	maxNum := 100
+	num, err := strconv.Atoi(r.URL.Query().Get("num"))
+	if err != nil || num < 1 || num > maxNum {
+		num = maxNum
+	}
+
+	numFetched := 0
 
 	var items []interface{}
 	if err := db.View(func(tx *bolt.Tx) error {
@@ -439,8 +448,15 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 			return ErrBucketMissing
 		}
 
+		// seek to last if specified key is not available
 		c := bucket.Cursor()
-		for k, v := c.Seek(minKey); k != nil && bytes.Compare(k, maxKey) <= 0; k, v = c.Next() {
+		kStart, _ := c.Seek(maxKey)
+		if kStart == nil {
+			kStart, _ = c.Last()
+		}
+
+		for k, v := c.Seek(kStart); k != nil && bytes.Compare(k, minKey) >= 0; k, v = c.Prev() {
+			//for k, v := c.Seek(minKey); k != nil && bytes.Compare(k, maxKey) <= 0; k, v = c.Next() {
 			bucketItem := &BucketItem{Key: string(k)}
 			bucketItem.DecodeValue(v)
 
@@ -454,6 +470,11 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 			}
 
 			items = append(items, jsonMap)
+
+			numFetched += 1
+			if numFetched >= num {
+				return nil
+			}
 		}
 
 		return nil
