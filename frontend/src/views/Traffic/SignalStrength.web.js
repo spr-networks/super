@@ -6,7 +6,7 @@ import { Bar } from 'react-chartjs-2'
 import { deviceAPI, wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 
-import { Box, Heading, View } from 'native-base'
+import { Box, Heading, ScrollView } from 'native-base'
 
 export default (props) => {
   const context = useContext(AlertContext)
@@ -180,7 +180,7 @@ export default (props) => {
   let signalsRXTX = processData(signals, ['RX', 'TX'])
 
   return (
-    <>
+    <ScrollView pb={4}>
       <Heading p={4} fontSize="md">
         Device Signal Strength (RSSI)
       </Heading>
@@ -208,6 +208,6 @@ export default (props) => {
       >
         {signalsRXTX ? <Bar data={signalsRXTX} options={optionsRXTX} /> : null}
       </Box>
-    </>
+    </ScrollView>
   )
 }
