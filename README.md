@@ -18,6 +18,9 @@ with protections against MAC cloaking/spoofing and fine grained access controls.
 2. Programmable with an API 
 3. Easy to use 
 
+## Frequently Asked Questions
+Check out our [FAQ](https://www.supernetworks.org/pages/docs/faq) on our website
+
 ## UI Demo Page
 
 https://demo.supernetworks.org/
@@ -45,4 +48,8 @@ docker-compose up -d
 * Documentation Home: https://www.supernetworks.org/pages/docs/intro/
 * Raspberry Pi 4 Setup https://www.supernetworks.org/pages/docs/pi4b
 * General Setup Guide https://www.supernetworks.org/pages/docs/setup_run_spr
+* FAQ https://www.supernetworks.org/pages/docs/faq
+
+
+
 
