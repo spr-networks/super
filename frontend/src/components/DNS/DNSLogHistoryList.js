@@ -421,7 +421,7 @@ const DNSLogHistoryList = (props) => {
             />
           </FormControl>
           <Button
-            display={{ base: 'block', md: 'none' }}
+            display={{ base: 'flex', md: 'none' }}
             variant="ghost"
             colorScheme="blueGray"
             leftIcon={<Icon icon={faFilter} />}

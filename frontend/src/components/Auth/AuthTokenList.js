@@ -166,7 +166,7 @@ const AuthTokenList = (props) => {
               </Stack>
 
               <HStack
-                w={{ base: '6/12', md: '2/6' }}
+                w={{ base: '3/6', md: '2/6' }}
                 space={1}
                 justifyContent="flex-end"
               >

@@ -107,7 +107,7 @@ const LogList = (props) => {
   }
 
   // fetch logs for selected filter
-  useEffect(async () => {
+  useEffect(() => {
     // reset date start to now
     let max = new Date().toISOString()
     setParams({ ...params, max })
@@ -190,7 +190,7 @@ const LogList = (props) => {
     <View h={h} display="flex">
       <HStack space={2} p={4} alignItems={'flex-end'}>
         <Heading fontSize="lg">Logs: {niceTopic(getCurrentBucket())}</Heading>
-        <Text color="muted.500" mt="auto" display={total ? 'block' : 'none'}>
+        <Text color="muted.500" mt="auto" display={total ? 'flex' : 'none'}>
           {/*page={page}/{Math.ceil(total / perPage)}, total = {total}*/}
           {total} items
         </Text>
