@@ -9,6 +9,7 @@ import {
   Box,
   Heading,
   HStack,
+  Stack,
   Switch,
   Text,
   View,
@@ -93,13 +94,13 @@ const Wireguard = (props) => {
       >
         <Box>
           {config.listenPort ? (
-            <HStack space={1}>
+            <Stack direction={{ base: 'column', md: 'row' }} space={1}>
               <Text>
                 Wireguard is listening on port {config.listenPort} with
                 PublicKey:
               </Text>
               <Text italic>{config.publicKey}</Text>
-            </HStack>
+            </Stack>
           ) : (
             <Text>
               Wireguard is not running. See /configs/wireguard/wg0.conf
