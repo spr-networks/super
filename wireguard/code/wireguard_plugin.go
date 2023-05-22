@@ -249,6 +249,7 @@ var api_path = "/state/plugins/wireguard/apisock"
 type DHCPResponse struct {
 	IP        string
 	RouterIP  string
+	DNSIP     string
 	LeaseTime string
 }
 
@@ -263,7 +264,7 @@ func getNewPeerAddress(PublicKey string) (string, error) {
 
 	requestJson, _ := json.Marshal(AbstractDHCPRequest{Identifier: PublicKey})
 
-	req, err := http.NewRequest(http.MethodPut, "http://dhcp/DHCPRequest", bytes.NewBuffer(requestJson))
+	req, err := http.NewRequest(http.MethodPut, "http://dhcp/abstractDhcpRequest", bytes.NewBuffer(requestJson))
 	if err != nil {
 		return "", err
 	}

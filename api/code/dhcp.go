@@ -661,7 +661,7 @@ func abstractDhcpRequest(w http.ResponseWriter, r *http.Request) {
 	IP := ""
 	Router := ""
 
-	if exists {
+	if exists && val.RecentIP != "" {
 		IP = val.RecentIP
 		Router = RouterFromTinyIP(IP)
 	}
