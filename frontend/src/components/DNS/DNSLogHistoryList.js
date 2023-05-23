@@ -317,12 +317,19 @@ const DNSLogHistoryList = (props) => {
   }
 
   const deleteHistory = async () => {
-    //let confirmMsg = `Delete history for ${filterIps.join(', ')}?`
     if (!filterIps.length) {
       return
     }
 
-    filterIps.map(async () => await logAPI.deleteHistory)
+    for (let ip of filterIps) {
+      try {
+        await logAPI.deleteHistory(ip)
+      } catch (err) {
+        context.error(`Failed to delete dns history for ${ip}`)
+      }
+    }
+
+    context.success(`Deleted dns history for ${filterIps.join(', ')}`)
 
     refreshList()
   }
