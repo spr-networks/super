@@ -6,7 +6,8 @@
 export API_URL="http://192.168.2.1" # default
 export TOKEN=SPR-API-TOKEN
 # or
-#export AUTH=$(echo -ne "admin:admin") # default admin:admin
+#export API_URL="http://127.0.0.1:8000"
+#export AUTH="admin:admin" # default
 
 yarn test
 yarn test:plus
