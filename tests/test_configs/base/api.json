@@ -69,6 +69,5 @@
    "GitURL": "github.com/spr-networks/mesh_extension",
    "ComposeFilePath": "plugins/plus/mesh_extension/docker-compose.yml"
   }
- ],
- "PlusToken": "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"
+ ]
 }
