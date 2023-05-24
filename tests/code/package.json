@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "npx mocha"
+    "test": "npx mocha",
+    "test:plus": "npx mocha plus"
   },
   "author": "",
   "license": "ISC",

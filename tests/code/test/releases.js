@@ -28,6 +28,8 @@ describe('releases', () => {
       })
   })
 
+//NOTE requires internet
+/*
   it('should get releases available', (done) => {
     //return null for no container specified
     agent
@@ -40,7 +42,7 @@ describe('releases', () => {
       })
   })
 
-  it('should get releases available', (done) => {
+  it('should get releases available for superd', (done) => {
     //return a list for superd
     agent
       .get('/releasesAvailable?container=super_superd')
@@ -53,6 +55,7 @@ describe('releases', () => {
         done()
       })
   })
+*/
 
   it('should get the running version', (done) => {
     agent
