@@ -9,9 +9,9 @@ describe('releases', () => {
       .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
-        assert(res.body.Current != "", 'missing current')
-        assert(res.body.CustomChannel != "", 'missing custom channel')
-        assert(res.body.CustomVersion != "", 'missing custom version')
+        assert(res.body.Current != undefined, 'missing current')
+        assert(res.body.CustomChannel != undefined, 'missing custom channel')
+        assert(res.body.CustomVersion != undefined, 'missing custom version')
         done()
       })
   })
