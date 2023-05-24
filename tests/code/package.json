@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "npx mocha",
+    "test:host": "npx mocha host",
     "test:plus": "npx mocha plus"
   },
   "author": "",
