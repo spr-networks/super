@@ -1,0 +1,17 @@
+[
+ {
+  "Name": "wlan0",
+  "Type": "AP",
+  "Enabled": false
+ },
+ {
+  "Name": "eth0",
+  "Type": "Uplink",
+  "Enabled": false
+ },
+ {
+  "Name": "wlan1",
+  "Type": "AP",
+  "Enabled": true
+ }
+]

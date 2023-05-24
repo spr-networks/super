@@ -1,0 +1,37 @@
+{
+ "02:00:00:00:02:00": {
+  "Name": "test-sta1",
+  "MAC": "02:00:00:00:02:00",
+  "WGPubKey": "",
+  "VLANTag": "",
+  "RecentIP": "192.168.100.10",
+  "PSKEntry": {
+   "Type": "sae",
+   "Psk": "asdfasdf"
+  },
+  "Groups": [
+   "dns",
+   "wan",
+   "lan"
+  ],
+  "DeviceTags": [
+   "lan_upstream"
+  ]
+ },
+ "02:00:00:00:03:00": {
+  "Name": "test-sta2",
+  "MAC": "02:00:00:00:03:00",
+  "WGPubKey": "",
+  "VLANTag": "",
+  "RecentIP": "192.168.101.2",
+  "PSKEntry": {
+   "Type": "sae",
+   "Psk": "asdfasdf"
+  },
+  "Groups": [
+   "dns",
+   "wan"
+  ],
+  "DeviceTags": []
+ }
+}

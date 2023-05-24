@@ -1,0 +1,32 @@
+{
+ "ForwardingRules": [],
+ "BlockRules": [],
+ "ForwardingBlockRules": [],
+ "ServicePorts": [
+  {
+   "Protocol": "tcp",
+   "Port": "22",
+   "UpstreamEnabled": true
+  },
+  {
+   "Protocol": "tcp",
+   "Port": "80",
+   "UpstreamEnabled": true
+  },
+  {
+   "Protocol": "tcp",
+   "Port": "443",
+   "UpstreamEnabled": true
+  },
+  {
+   "Protocol": "tcp",
+   "Port": "5201",
+   "UpstreamEnabled": true
+  },
+  {
+   "Protocol": "tcp",
+   "Port": "6060",
+   "UpstreamEnabled": true
+  }
+ ]
+}

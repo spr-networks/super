@@ -1,0 +1,18 @@
+# Minimalistic default options file for DSL/PPPoE connections
+
+noipdefault
+defaultroute
+replacedefaultroute
+#hide-password
+#lcp-echo-interval 30
+#lcp-echo-failure 4
+noauth
+persist
+#mtu 1492
+#persist
+#maxfail 0
+#holdoff 20
+# Note, make sure to update this for the appropriate interface.
+# The below example assumes a tagged VLAN
+plugin rp-pppoe.so eth0.201
+user "user@provider"

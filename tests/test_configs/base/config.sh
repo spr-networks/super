@@ -1,0 +1,32 @@
+#!/bin/sh
+COMPOSE_FILE="docker-compose-test.yml"
+#VIRTUAL_SPR=1
+#comment below to DISABLE ssh, API from the Upstream Interface
+UPSTREAM_SERVICES_ENABLE=1
+
+SSID_NAME=TestLab
+SSID_INTERFACE=wlan0
+#PPPIF=eth0
+#WANIF=ppp0
+#PPP_VLANID=201
+#PPP_PROVIDER=provider-config
+#WANIF=wlp170s0
+WANIF=eth0 # for testing
+#RUN_WAN_DHCP=true
+#RUN_WAN_DHCP_IPV=4
+# Uncomment the next line if a second ethernet port goes to wired LAN
+#LANIF=eth1
+#VLANIF=wlan1
+#VLANSIF=$VLANIF.
+
+LANIP=192.168.100.1
+DNSIP=$LANIP
+TINYNETSTART=192.168.100.4
+TINYNETSTOP=192.168.100.255
+TINYNETMASK=255.255.255.252
+TINYSLASHMASK=30
+#DOCKERNET=172.0.0.0/8
+#DOCKERIF=docker0
+
+WIREGUARD_PORT=51280
+
