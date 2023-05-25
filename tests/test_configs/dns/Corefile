@@ -1,0 +1,22 @@
+. {
+  block enable_superapi
+  rebinding_protection
+
+  hosts /state/dns/local_mappings { 
+    ttl 60
+    reload 30s
+    fallthrough
+  }
+
+  forward . tls://1.1.1.1 tls://1.0.0.1 {
+    tls_servername cloudflare-dns.com
+  }
+
+  jsonlog {
+    enable_superapi
+    #influxdb http://test:8086/ test DNS credentials==
+  }
+  log
+  errors
+  cache 30
+}
