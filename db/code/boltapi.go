@@ -82,7 +82,7 @@ func loadConfig() *LogConfig {
 
 	// default config
 	config := &LogConfig{
-		SaveEvents: []string{"log:api", "log:www:access", "dns:block:event", "dns:override:event"},
+		SaveEvents: []string{"log:api", "dns:block:event", "dns:override:event"},
 		MaxSize:    250 * 1024 * 1024, //bytes
 	}
 	data, err := ioutil.ReadFile(gConfigPath)
