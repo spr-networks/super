@@ -1,9 +1,17 @@
 import React from 'react'
-import { render, waitFor } from '@testing-library/react-native'
+import {
+  act,
+  render,
+  screen,
+  fireEvent,
+  waitFor
+} from '@testing-library/react-native'
 import { NativeBaseProvider } from 'native-base'
 
 import { wireguardAPI, saveLogin } from 'api'
 import Wireguard from 'views/Wireguard'
+import PeerList from 'components/Wireguard/PeerList'
+import WireguardAddPeer from 'components/Wireguard/WireguardAddPeer'
 import createServer from 'api/MockAPI'
 
 let server
@@ -17,27 +25,45 @@ afterAll(() => {
   server.shutdown()
 })
 
+const inset = {
+  frame: { x: 0, y: 0, width: 0, height: 0 },
+  insets: { top: 0, left: 0, right: 0, bottom: 0 }
+}
+
 describe('Wireguard', () => {
   test('Peer list', async () => {
-    const inset = {
-      frame: { x: 0, y: 0, width: 0, height: 0 },
-      insets: { top: 0, left: 0, right: 0, bottom: 0 }
-    }
-
-    const { container, getByText } = render(
+    render(
       <NativeBaseProvider initialWindowMetrics={inset}>
-        <Wireguard />
+        <PeerList />
       </NativeBaseProvider>
     )
 
-    await waitFor(() => {
-      expect(container).toBeDefined()
+    await act(async () => {
+      expect(screen.getByText('Peers')).toBeTruthy()
+
+      expect(await screen.findByText('192.168.3.2/32')).not.toBeNull()
     })
-
-    // make sure we have all the tables in the document
-    expect(getByText('Wireguard')).toBeTruthy()
-
-    // wait for data to be populated
-    //await waitFor(() => expect(getByText('192.168.3.2/32')).toBeInTheDocument())
   })
+
+  /*
+  test('Add peer', async () => {
+    let config = { listenPort: 51280 }
+    let notifyChange = jest.fn()
+
+    render(
+      <NativeBaseProvider initialWindowMetrics={inset}>
+        <WireguardAddPeer config={config} notifyChange={notifyChange} />
+      </NativeBaseProvider>
+    )
+    await act(async () => {
+      expect(await screen.findByText('Client')).toBeTruthy()
+      fireEvent(await screen.findByText('Save'), 'pressIn')
+      fireEvent(await screen.findByText('Save'), 'pressOut')
+
+      await waitFor(() => {
+        expect(notifyChange).toHaveBeenCalled()
+      })
+    })
+  })
+  */
 })
