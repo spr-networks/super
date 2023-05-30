@@ -6,12 +6,7 @@ import WifiInterfaceList from 'components/Wifi/WifiInterfaceList'
 import WifiScan from 'components/Wifi/WifiScan'
 import WifiHostapd from 'components/Wifi/WifiHostapd'
 
-import {
-  Animated,
-  Dimensions,
-  Platform,
-  Pressable
-} from 'react-native'
+import { Animated, Dimensions, Platform, Pressable } from 'react-native'
 import { TabView, SceneMap } from 'react-native-tab-view'
 import { Box, View, useColorModeValue } from 'native-base'
 
@@ -104,10 +99,12 @@ const WirelessConfiguration = (props) => {
   let navbarHeight = 64
   let tabsHeight = 32
   let heightContent =
-    Dimensions.get('window').height - navbarHeight - tabsHeight
+    Platform.OS == 'web'
+      ? Dimensions.get('window').height - navbarHeight
+      : '100%'
 
   return (
-    <View minH={heightContent}>
+    <View h={heightContent}>
       <TabView
         navigationState={{
           index,
