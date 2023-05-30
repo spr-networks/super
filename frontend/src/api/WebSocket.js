@@ -1,5 +1,6 @@
 import { getApiHostname } from './API'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { deviceAPI } from './Device'
 
 async function connectWebsocket(messageCallback) {
   let login = await AsyncStorage.getItem('user')
@@ -26,7 +27,7 @@ async function connectWebsocket(messageCallback) {
   return ws
 }
 
-const parseLogMessage = (msg) => {
+const parseLogMessage = async (msg) => {
   const msgType = msg.Type
   let data = null
 
@@ -50,8 +51,17 @@ const parseLogMessage = (msg) => {
 
   if (msgType.startsWith('wifi:auth')) {
     if (msgType.includes('success')) {
+      let name = data.MAC
+
+      try {
+        let devices = await deviceAPI.list()
+        let device = devices[data.MAC] || null
+
+        name = device.Name || data.MAC
+      } catch (err) {}
+
       type = 'success'
-      body = `Authentication success for MAC ${data.MAC}`
+      body = `Authentication success for ${name}`
     } else {
       let wpaTypes = { sae: 'WPA3', wpa: 'WPA2' },
         wpaType = wpaTypes[data.Type] || data.Type,
