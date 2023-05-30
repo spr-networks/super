@@ -84,7 +84,7 @@ const Login = (props) => {
   }, [])
 
   return (
-    <View w="100%" alignItems="center">
+    <View w="100%" alignItems="center" pt={{ base: '1/4', md: '0' }}>
       <Box
         safeArea
         px={4}

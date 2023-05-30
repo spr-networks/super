@@ -16,7 +16,7 @@ const AuthLayout = () => {
       _light={{ bg: 'warmGray.200' }}
       _dark={{ bg: 'blueGray.900' }}
       alignItems="center"
-      justifyContent="center"
+      justifyContent={{ base: 'flex-start', md: 'center' }}
       nativeID={useColorModeValue(
         'nativebase-body-light',
         'nativebase-body-dark'
