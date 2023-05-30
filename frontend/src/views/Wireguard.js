@@ -13,6 +13,7 @@ import {
   Switch,
   Text,
   View,
+  ScrollView,
   useColorModeValue
 } from 'native-base'
 
@@ -75,7 +76,7 @@ const Wireguard = (props) => {
   }
 
   return (
-    <View>
+    <ScrollView>
       <HStack alignItems="center" p={4}>
         <Heading fontSize="md">Wireguard</Heading>
 
@@ -115,7 +116,7 @@ const Wireguard = (props) => {
         //PLUS feature
         <SiteVPN />
       ) : null}
-    </View>
+    </ScrollView>
   )
 }
 
