@@ -324,8 +324,8 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
         space={2}
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
         p={8}
-        my={2}
-        mx={4}
+        my={{ base: 1, md: 2 }}
+        mx={{ base: 0, md: 4 }}
         rounded="md"
         shadow="md"
         key={device.MAC}

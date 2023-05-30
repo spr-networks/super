@@ -229,13 +229,16 @@ const DeviceListing = (props) => {
   */
 
   // TODO
-  let navbarHeight = Platform.OS == 'ios' ? 64 * 2 : 64
-  let h = Dimensions.get('window').height - navbarHeight
+  let navbarHeight = 64
+  let h =
+    Platform.OS == 'web'
+      ? Dimensions.get('window').height - navbarHeight
+      : '100%'
 
   return (
     <View h={h}>
-      <HStack justifyContent="space-between" p={4}>
-        <Heading fontSize="md" alignSelf="center">
+      <HStack justifyContent="space-between">
+        <Heading fontSize="md" alignSelf="center" p={4}>
           Devices
         </Heading>
 
