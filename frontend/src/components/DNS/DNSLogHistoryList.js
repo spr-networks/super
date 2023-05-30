@@ -414,7 +414,8 @@ const DNSLogHistoryList = (props) => {
         p={4}
         space={{ base: 0, md: 2 }}
         direction={{ base: 'column', md: 'row' }}
-        __flex={{ base: 1, md: 'none' }}
+        _flex={{ base: 1, md: 'none' }}
+        h={Platform.OS == 'web' ? 'auto' : showForm ? 200 : 70}
       >
         <HStack maxW={{ base: '100%', md: '1/3' }}>
           <FormControl flex={1}>
