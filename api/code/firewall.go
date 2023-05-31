@@ -730,6 +730,7 @@ func modifyServicePort(w http.ResponseWriter, r *http.Request) {
 				gFirewallConfig.ServicePorts = append(gFirewallConfig.ServicePorts[:i], gFirewallConfig.ServicePorts[i+1:]...)
 				saveFirewallRulesLocked()
 				applyFirewallRulesLocked()
+				deleteServicePort(a)
 				return
 			}
 		}
