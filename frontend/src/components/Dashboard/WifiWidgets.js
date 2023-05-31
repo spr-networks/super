@@ -131,8 +131,13 @@ export const Interfaces = (props) => {
       <Divider _light={{ bg: 'muted.200' }} my="2" />
 
       <Box px="10">
-        {addrs.map((address) => (
-          <Stack key={address.local} direction="row" space="2" pb="2">
+        {addrs.map((address, index) => (
+          <Stack
+            key={`${address.local}.${index}`}
+            direction="row"
+            space="2"
+            pb="2"
+          >
             <Text flex="1" textAlign="right" bold>
               {address.ifname}
             </Text>

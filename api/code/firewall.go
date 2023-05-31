@@ -283,7 +283,14 @@ func addServicePort(port ServicePort) error {
 		return fmt.Errorf("invalid protocol for service port")
 	}
 
-	if port.UpstreamEnabled {
+	//check if it exists
+	cmd := exec.Command("nft", "get", "element", "inet", "filter", "upstream_tcp_port_drop",
+		"{", port.Port, ":", "drop", "}")
+	_, err := cmd.Output()
+
+	drop_entry_exists := err == nil
+
+	if port.UpstreamEnabled && drop_entry_exists {
 		//remove this port from upstream_tcp_port_drop
 		cmd := exec.Command("nft", "delete", "element", "inet", "filter", "upstream_tcp_port_drop",
 			"{", port.Port, ":", "drop", "}")
@@ -294,8 +301,8 @@ func addServicePort(port ServicePort) error {
 			log.Println(cmd)
 			return err
 		}
-	} else {
-		//add this disabled port into upstream_tcp_port_drop
+	} else if !port.UpstreamEnabled && !drop_entry_exists {
+		//add this  port into upstream_tcp_port_drop
 		cmd := exec.Command("nft", "add", "element", "inet", "filter", "upstream_tcp_port_drop",
 			"{", port.Port, ":", "drop", "}")
 		_, err := cmd.Output()
@@ -307,15 +314,23 @@ func addServicePort(port ServicePort) error {
 		}
 	}
 
-	//add port to spr_tcp_port_accept for LAN to reach and WAN if UpstreamEnabled
-	cmd := exec.Command("nft", "add", "element", "inet", "filter", "spr_tcp_port_accept",
+	cmd = exec.Command("nft", "get", "element", "inet", "filter", "spr_tcp_port_accept",
 		"{", port.Port, ":", "accept", "}")
-	_, err := cmd.Output()
+	_, err = cmd.Output()
 
 	if err != nil {
-		log.Println("failed to add element to spr_tcp_port_accept", err)
-		log.Println(cmd)
-		return err
+		//entry did not already exist, add it.
+
+		//add port to spr_tcp_port_accept for LAN to reach and WAN if UpstreamEnabled
+		cmd := exec.Command("nft", "add", "element", "inet", "filter", "spr_tcp_port_accept",
+			"{", port.Port, ":", "accept", "}")
+		_, err := cmd.Output()
+
+		if err != nil {
+			log.Println("failed to add element to spr_tcp_port_accept", err)
+			log.Println(cmd)
+			return err
+		}
 	}
 
 	return nil
@@ -715,6 +730,7 @@ func modifyServicePort(w http.ResponseWriter, r *http.Request) {
 				gFirewallConfig.ServicePorts = append(gFirewallConfig.ServicePorts[:i], gFirewallConfig.ServicePorts[i+1:]...)
 				saveFirewallRulesLocked()
 				applyFirewallRulesLocked()
+				deleteServicePort(a)
 				return
 			}
 		}

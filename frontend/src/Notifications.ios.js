@@ -1,6 +1,6 @@
 import PushNotificationIOS from '@react-native-community/push-notification-ios'
 
-const init = ({ onLocalNotification, ...props }) => {
+const init = ({ onLocalNotification, onRemoteNotification, ...props }) => {
   // init notifications
   PushNotificationIOS.requestPermissions({
     alert: true,
@@ -56,8 +56,15 @@ const init = ({ onLocalNotification, ...props }) => {
 
   if (onLocalNotification) {
     const type = 'localNotification'
-    //PushNotificationIOS.addEventList  ener('notification', onRemoteNotification)
     PushNotificationIOS.addEventListener(type, onLocalNotification)
+    return () => {
+      PushNotificationIOS.removeEventListener(type)
+    }
+  }
+
+  if (onRemoteNotification) {
+    const type = 'notification'
+    PushNotificationIOS.addEventListener(type, onRemoteNotification)
     return () => {
       PushNotificationIOS.removeEventListener(type)
     }

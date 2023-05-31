@@ -78,13 +78,13 @@ const Login = (props) => {
       if (login) {
         setUsername(login.username)
         setPassword(login.password)
-        doLogin(login.username, login.password)
+        //doLogin(login.username, login.password)
       }
     })
   }, [])
 
   return (
-    <View w="100%" alignItems="center">
+    <View w="100%" alignItems="center" pt={{ base: '1/4', md: '0' }}>
       <Box
         safeArea
         px={4}

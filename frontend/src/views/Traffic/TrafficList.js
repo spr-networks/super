@@ -203,10 +203,10 @@ const TrafficList = (props) => {
     setFilterIps([ip])
   }
 
-  //let h = Platform.OS == 'web' ? Dimensions.get('window').height - 64 : '100%'
+  let h = Platform.OS == 'web' ? Dimensions.get('window').height - 64 : '100%'
 
   return (
-    <View display="flex">
+    <View display="flex" h={h}>
       <Stack
         direction={{ base: 'column', lg: 'row' }}
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
@@ -262,7 +262,7 @@ const TrafficList = (props) => {
         />
       </Box>
       {total > perPage ? (
-        <HStack h={{ base: 20, md: 'auto' }} space={2} alignItems="flex-start">
+        <HStack space={2} alignItems="flex-start">
           <Button
             flex={1}
             variant="ghost"

@@ -16,12 +16,51 @@ import {
   HStack,
   Text,
   Collapse,
-  useColorModeValue
+  useColorModeValue,
+  Input
 } from 'native-base'
 
 const Sidebar = (props) => {
   const { isMobile, isMini, isOpenSidebar, setIsOpenSidebar } = props
-  const sidebarItems = props.routes || []
+  //const sidebarItems = props.routes || []
+  const [sidebarItems, setSidebarItems] = useState([])
+
+  useEffect(() => {
+    setSidebarItems(props.routes)
+  }, [])
+
+  const onChangeFilter = (value) => {
+    //TODO have some more logic here
+    let items = sidebarItems.map((pitem) => {
+      if (pitem.views) {
+        pitem.views = pitem.views.map((item) => {
+          item.hidden = !item.name.toLowerCase().startsWith(value.toLowerCase())
+
+          return item
+        })
+
+        // hide main if no match
+        let isEmpty = pitem.views.filter((item) => !item.hidden).length == 0
+        if (isEmpty) {
+          pitem.hidden = true
+        } else {
+          pitem.hidden = false
+        }
+      } else {
+        if (pitem.name) {
+          pitem.hidden = !pitem.name
+            .toLowerCase()
+            .startsWith(value.toLowerCase())
+        }
+      }
+
+      return pitem
+    })
+
+    setSidebarItems(items)
+  }
+
+  const showSearch = false
 
   return (
     <ScrollView
@@ -35,6 +74,11 @@ const Sidebar = (props) => {
       }}
       _dark={{ bg: 'sidebarBackgroundDark', borderColor: 'borderColorDark' }}
     >
+      {showSearch ? (
+        <Box p={4}>
+          <Input onChangeText={onChangeFilter} placeholder="Search menu" />
+        </Box>
+      ) : null}
       <SidebarItem
         sidebarItems={sidebarItems}
         level={0}

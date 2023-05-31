@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-
+import { Dimensions, Platform } from 'react-native'
 import Icon from 'FontAwesomeUtils'
 import {
   faCircleCheck,
@@ -31,9 +31,8 @@ import {
 
 import { FlashList } from '@shopify/flash-list'
 
-const WifiInterface = (props) => {
+const WifiInterface = ({ iw, ...props }) => {
   const [activeTab, setActiveTab] = useState('devices')
-  const { iw } = props
 
   let tabList = [
     'devices',
@@ -89,7 +88,7 @@ const WifiInterface = (props) => {
   }
 
   return (
-    <ScrollView
+    <View
       key={iw.wiphy}
       bg={useColorModeValue('warmGray.50', 'blueGray.800')}
       p={4}
@@ -103,6 +102,7 @@ const WifiInterface = (props) => {
         rounded="md"
         borderWidth={1}
         borderColor={useColorModeValue('muted.200', 'muted.700')}
+        flex={1}
       >
         <VStack
           borderRightWidth={1}
@@ -115,6 +115,7 @@ const WifiInterface = (props) => {
                 variant="ghost"
                 rounded={false}
                 colorScheme="primary"
+                justifyContent={'flex-start'}
                 _text={{
                   color: activeTab === tab ? 'primary.600' : 'muted.500'
                 }}
@@ -126,7 +127,7 @@ const WifiInterface = (props) => {
           )}
         </VStack>
 
-        <Box h="100%" p={2} w="2/3">
+        <Box h="100%" p={2} w={{ md: '2/3' }}>
           {tabList.map((tab) =>
             iw[tab] || ['other', 'SPR compability'].includes(tab) ? (
               <VStack key={tab} display={activeTab == tab ? 'flex' : 'none'}>
@@ -213,7 +214,7 @@ const WifiInterface = (props) => {
                         <Heading fontSize="md" color="muted.500">
                           {tab.replace(/_/g, ' ')}
                         </Heading>
-                        <HStack maxW="64%" space={2} flexWrap="wrap">
+                        <HStack maxW={{ md: '64%' }} space={2} flexWrap="wrap">
                           {iw[tab] &&
                             iw[tab].map((c) => (
                               <Box key={c} mb={2}>
@@ -332,7 +333,7 @@ const WifiInterface = (props) => {
           )}
         </Box>
       </Stack>
-    </ScrollView>
+    </View>
   )
 }
 
@@ -366,8 +367,16 @@ const WifiInterfaceList = (props) => {
     return <></>
   }
 
+  let navbarHeight = 64
+  let tabsHeight = 32
+
+  let h =
+    Platform.OS == 'web'
+      ? Dimensions.get('window').height - navbarHeight - tabsHeight
+      : '100%'
+
   return (
-    <ScrollView>
+    <ScrollView h={h}>
       {iws.map((iw) => (
         <WifiInterface key={iw.wiphy} iw={iw} />
       ))}

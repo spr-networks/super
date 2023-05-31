@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-
+import { Dimensions, Platform } from 'react-native'
 import { wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import InputSelect from 'components/InputSelect'
@@ -19,6 +19,7 @@ import {
   Spacer,
   Spinner,
   Text,
+  View,
   useColorModeValue
 } from 'native-base'
 import { faWifi } from '@fortawesome/free-solid-svg-icons'
@@ -86,12 +87,21 @@ const WifiScan = (props) => {
     setIface(devsScan[0].value)
   }
 
+  let navbarHeight = 64
+  let tabsHeight = 32
+
+  let h =
+    Platform.OS == 'web'
+      ? Dimensions.get('window').height - navbarHeight - tabsHeight
+      : '100%'
+
   return (
-    <Box
-      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDarkv')}
-      p={4}
-    >
-      <HStack space={2}>
+    <View h={h}>
+      <HStack
+        space={2}
+        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+        p={4}
+      >
         <Box flex="2">
           {/*isOptionDisabled={(option) => option.disabled}*/}
           <InputSelect options={devsScan} value={iface} onChange={onChange} />
@@ -106,17 +116,30 @@ const WifiScan = (props) => {
         </Button>
       </HStack>
 
+      {loading ? (
+        <HStack
+          space={1}
+          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+          p={4}
+        >
+          <Spinner accessibilityLabel="Loading logs" />
+          <Text>Loading...</Text>
+        </HStack>
+      ) : null}
+
       <FlashList
         data={list}
         estimatedItemSize={100}
         renderItem={({ item }) => (
           <Box
-            borderBottomWidth="1"
+            bg="backgroundCardLight"
+            borderBottomWidth={1}
             _dark={{
-              borderColor: 'muted.600'
+              bg: 'backgroundCardDark',
+              borderColor: 'borderColorCardDark'
             }}
-            borderColor="muted.200"
-            py="2"
+            borderColor="borderColorCardLight"
+            p={4}
           >
             <HStack
               w="100%"
@@ -198,14 +221,7 @@ const WifiScan = (props) => {
         )}
         keyExtractor={(item) => item.bssid}
       />
-
-      {loading ? (
-        <HStack space={1}>
-          <Spinner accessibilityLabel="Loading logs" />
-          <Text>Loading...</Text>
-        </HStack>
-      ) : null}
-    </Box>
+    </View>
   )
 }
 

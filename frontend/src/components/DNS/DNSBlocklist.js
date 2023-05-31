@@ -1,5 +1,5 @@
 import React from 'react'
-import { Dimensions } from 'react-native'
+import { Dimensions, Platform } from 'react-native'
 import Icon from 'FontAwesomeUtils'
 import {
   faEllipsis,
@@ -280,7 +280,7 @@ export default class DNSBlocklist extends React.Component {
                   alignItems="center"
                 >
                   <Text
-                    w="75%"
+                    w={{ base: '60%', md: '75%' }}
                     flexWrap="wrap"
                     _light={{
                       color: isOnlyRecommended(item) ? 'muted.500' : 'black'
@@ -292,18 +292,19 @@ export default class DNSBlocklist extends React.Component {
                     {item.URI}
                   </Text>
 
-                  {item.Enabled ? (
-                    <Badge colorScheme="success" color="success.500">
-                      Enabled
-                    </Badge>
-                  ) : null}
-
-                  <HStack
+                  <Stack
                     flex={2}
-                    space={1}
+                    space={{ base: 2, md: 1 }}
                     alignSelf="center"
                     alignItems="center"
+                    direction={{ base: 'column', md: 'row' }}
                   >
+                    {item.Enabled ? (
+                      <Badge colorScheme="success" color="success.500">
+                        Enabled
+                      </Badge>
+                    ) : null}
+
                     {item.Tags
                       ? item.Tags.map((entry) => (
                           <Badge key={item.URI + entry} variant="outline">
@@ -311,7 +312,7 @@ export default class DNSBlocklist extends React.Component {
                           </Badge>
                         ))
                       : null}
-                  </HStack>
+                  </Stack>
 
                   <Menu trigger={trigger}>
                     <Menu.Group title="Actions">

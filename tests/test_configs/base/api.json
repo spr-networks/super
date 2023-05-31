@@ -1,0 +1,73 @@
+{
+ "InfluxDB": {
+  "URL": "",
+  "Org": "",
+  "Bucket": "",
+  "Token": ""
+ },
+ "Plugins": [
+  {
+   "Name": "dns-block-extension",
+   "URI": "dns/block",
+   "UnixPath": "/state/dns/dns_block_plugin",
+   "Enabled": true,
+   "Plus": false,
+   "GitURL": "",
+   "ComposeFilePath": ""
+  },
+  {
+   "Name": "dns-log-extension",
+   "URI": "dns/log",
+   "UnixPath": "/state/dns/dns_log_plugin",
+   "Enabled": true,
+   "Plus": false,
+   "GitURL": "",
+   "ComposeFilePath": ""
+  },
+  {
+   "Name": "plugin-lookup",
+   "URI": "lookup",
+   "UnixPath": "/state/plugins/plugin-lookup/lookup_plugin",
+   "Enabled": true,
+   "Plus": false,
+   "GitURL": "",
+   "ComposeFilePath": ""
+  },
+  {
+   "Name": "wireguard",
+   "URI": "wireguard",
+   "UnixPath": "/state/plugins/wireguard/wireguard_plugin",
+   "Enabled": true,
+   "Plus": false,
+   "GitURL": "",
+   "ComposeFilePath": ""
+  },
+  {
+   "Name": "dyndns",
+   "URI": "dyndns",
+   "UnixPath": "/state/plugins/dyndns/dyndns_plugin",
+   "Enabled": true,
+   "Plus": false,
+   "GitURL": "",
+   "ComposeFilePath": ""
+  },
+  {
+   "Name": "PFW",
+   "URI": "pfw",
+   "UnixPath": "/state/plugins/pfw/socket",
+   "Enabled": true,
+   "Plus": true,
+   "GitURL": "github.com/spr-networks/pfw_extension",
+   "ComposeFilePath": "plugins/plus/pfw_extension/docker-compose.yml"
+  },
+  {
+   "Name": "MESH",
+   "URI": "mesh",
+   "UnixPath": "/state/plugins/mesh/socket",
+   "Enabled": true,
+   "Plus": true,
+   "GitURL": "github.com/spr-networks/mesh_extension",
+   "ComposeFilePath": "plugins/plus/mesh_extension/docker-compose.yml"
+  }
+ ]
+}

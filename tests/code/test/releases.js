@@ -9,9 +9,9 @@ describe('releases', () => {
       .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
-        assert(res.body.Current != "", 'missing current')
-        assert(res.body.CustomChannel != "", 'missing custom channel')
-        assert(res.body.CustomVersion != "", 'missing custom version')
+        assert(res.body.Current != undefined, 'missing current')
+        assert(res.body.CustomChannel != undefined, 'missing custom channel')
+        assert(res.body.CustomVersion != undefined, 'missing custom version')
         done()
       })
   })
@@ -28,6 +28,8 @@ describe('releases', () => {
       })
   })
 
+//NOTE requires internet
+/*
   it('should get releases available', (done) => {
     //return null for no container specified
     agent
@@ -40,7 +42,7 @@ describe('releases', () => {
       })
   })
 
-  it('should get releases available', (done) => {
+  it('should get releases available for superd', (done) => {
     //return a list for superd
     agent
       .get('/releasesAvailable?container=super_superd')
@@ -53,6 +55,7 @@ describe('releases', () => {
         done()
       })
   })
+*/
 
   it('should get the running version', (done) => {
     agent

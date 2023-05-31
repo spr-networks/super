@@ -4,11 +4,7 @@ import { View } from 'native-base'
 import DeviceListing from 'components/Devices/DeviceListing'
 
 const Devices = (props) => {
-  return (
-    <View>
-      <DeviceListing />
-    </View>
-  )
+  return <DeviceListing />
 }
 
 export default Devices

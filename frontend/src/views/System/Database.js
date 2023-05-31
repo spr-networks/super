@@ -26,24 +26,38 @@ import {
   VStack,
   useColorModeValue
 } from 'native-base'
-import { api, dbAPI } from 'api'
+import { dbAPI } from 'api'
 import { AlertContext } from 'AppContext'
-import { render } from '@testing-library/react'
 import { prettySize } from 'utils'
 
-const AddTopicForm = ({ topics, renderTopic, onSubmit, ...props }) => {
+const AddTopicForm = ({ allEvents, isStored, handleAddRemove, onSubmit }) => {
   const [value, setValue] = useState('')
   const handleChangeText = (value) => setValue(value)
   const handleSubmit = () => onSubmit(value)
+
+  const renderTopic = (topic) => (
+    <Button
+      key={`topic:${topic}:${isStored(topic)}`}
+      variant={isStored(topic) ? 'solid' : 'outline'}
+      colorScheme={isStored(topic) ? 'blueGray' : 'blueGray'}
+      onPress={() => handleAddRemove(topic)}
+      rounded="xs"
+      size="sm"
+      py={1}
+      mb={2}
+    >
+      {topic}
+    </Button>
+  )
 
   return (
     <HStack space={2} px={4} py={8}>
       <VStack flex={1} space={2}>
         <Heading fontSize="md">Registered Events</Heading>
-        <Text color="muted.400">Click event to add for storage</Text>
+        <Text color="muted.400">Click event to add or remove for storage</Text>
 
         <HStack space={2} mt={4} flexWrap={'wrap'}>
-          {topics.map(renderTopic)}
+          {allEvents && allEvents.length ? allEvents.map(renderTopic) : null}
         </HStack>
       </VStack>
       <FormControl flex={1} space={8}>
@@ -136,10 +150,10 @@ const Database = ({ showModal, closeModal, ...props }) => {
     dbAPI
       .stats()
       .then((stats) => {
-        //console.log('got stats:', JSON.stringify(stats))
+        //console.log('got topics:', JSON.stringify(stats.Topics))
         if (stats.Topics.length) {
           setStats(stats)
-          setAllEvents(stats.Topics)
+          //setAllEvents(stats.Topics)
         }
       })
       .catch(apiError)
@@ -150,18 +164,30 @@ const Database = ({ showModal, closeModal, ...props }) => {
       .config()
       .then((config) => {
         setConfig(config)
-        setSaveEvents(config.SaveEvents)
+        //setSaveEvents(config.SaveEvents)
       })
       .catch(apiError)
     syncStats()
   }, [])
 
   useEffect(() => {
-    if (config && stats) {
-      setPercentSize(
-        Math.min(Math.round((stats.Size / config.MaxSize) * 100), 100)
-      )
+    if (!config || !stats) {
+      return
     }
+
+    setPercentSize(
+      Math.min(Math.round((stats.Size / config.MaxSize) * 100), 100)
+    )
+
+    setSaveEvents([...config.SaveEvents])
+
+    let topics = config.SaveEvents || []
+    if (stats && stats.Topics) {
+      topics = [...new Set([...topics, ...stats.Topics])]
+    }
+
+    console.log('SETTING', topics)
+    setAllEvents(topics)
   }, [config, stats])
 
   const renderConfigRow = (key, value) => {
@@ -186,28 +212,8 @@ const Database = ({ showModal, closeModal, ...props }) => {
 
   const isStored = (name) => saveEvents.includes(name)
 
-  const renderTopic = (topic) => (
-    <Button
-      key={`topic:${topic}:${isStored(topic)}`}
-      variant={isStored(topic) ? 'solid' : 'outline'}
-      colorScheme={isStored(topic) ? 'blueGray' : 'blueGray'}
-      onPress={() => handleAddRemove(topic)}
-      rounded="xs"
-      size="sm"
-      py={1}
-      mb={2}
-    >
-      {topic}
-    </Button>
-  )
-
   const updateConfig = (newConfig) => {
-    return dbAPI
-      .setConfig(newConfig)
-      .then((config) => {
-        setConfig(config)
-      })
-      .catch(apiError)
+    return dbAPI.setConfig(newConfig).then(setConfig).catch(apiError)
   }
 
   const handleAddRemove = (topic = null) => {
@@ -223,6 +229,9 @@ const Database = ({ showModal, closeModal, ...props }) => {
     if (topic && !isRemove) {
       newConfig.SaveEvents = [...new Set([...newConfig.SaveEvents, topic])]
     }
+
+    // NOTE state mess up props to get on/off in modal - close for now
+    closeModal()
 
     return updateConfig(newConfig)
   }
@@ -241,8 +250,10 @@ const Database = ({ showModal, closeModal, ...props }) => {
     showModal(
       title,
       <AddTopicForm
-        topics={allEvents}
-        renderTopic={renderTopic}
+        allEvents={allEvents}
+        saveEvents={saveEvents}
+        isStored={isStored}
+        handleAddRemove={handleAddRemove}
         onSubmit={onSubmit}
       />
     )

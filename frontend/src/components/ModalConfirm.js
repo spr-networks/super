@@ -109,28 +109,28 @@ const ModalConfirm = (props) => {
       )
     }
 
-    if (type == 'IP')  {
+    if (type == 'IP') {
       return (
-             <ClientSelect
-                name="DstIP"
-                value={value}
-                onChange={handleChange}
-                onChangeText={handleChange}
-                onSubmitEditing={handlePress}
-                />
+        <ClientSelect
+          name="DstIP"
+          value={value}
+          onChange={handleChange}
+          onChangeText={handleChange}
+          onSubmitEditing={handlePress}
+        />
       )
     }
 
     return (
       <Input
-          name={type}
-          value={value}
-          variant="underlined"
-          placeholder={'Enter ' + (type == 'IP' ? 'IP address' : type) + '...'}
-          autoFocus
-          onChangeText={handleChange}
-          onSubmitEditing={handlePress}
-        />
+        name={type}
+        value={value}
+        variant="underlined"
+        placeholder={'Enter ' + (type == 'IP' ? 'IP address' : type) + '...'}
+        autoFocus={isOpen ? true : false}
+        onChangeText={handleChange}
+        onSubmitEditing={handlePress}
+      />
     )
   }
 

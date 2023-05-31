@@ -1,4 +1,4 @@
-import React, { useContext, Component } from 'react'
+import React, { useContext, useState, useEffect } from 'react'
 
 import { wireguardAPI } from 'api/Wireguard'
 import PeerList from 'components/Wireguard/PeerList'
@@ -9,108 +9,115 @@ import {
   Box,
   Heading,
   HStack,
+  Stack,
   Switch,
   Text,
   View,
+  ScrollView,
   useColorModeValue
 } from 'native-base'
 
-export default class Wireguard extends Component {
-  state = { isUp: true, config: {} }
+const Wireguard = (props) => {
+  const context = useContext(AppContext)
 
-  constructor(props) {
-    super(props)
-    this.config = {}
-    this.isUp = true
+  let [isUp, setIsUp] = useState(true)
+  let [config, setConfig] = useState({})
 
-    this.handleChange = this.handleChange.bind(this)
-  }
-
-  getStatus() {
+  const getStatus = () => {
     wireguardAPI
       .status()
       .then((status) => {
+        if (
+          !status ||
+          !Object.keys(status).length ||
+          !status.wg0 ||
+          !status.wg0.listenPort
+        ) {
+          setIsUp(false)
+          return
+        }
+
         let publicKey = status.wg0.publicKey,
           listenPort = status.wg0.listenPort
 
-        if (!listenPort) {
-          this.setState({ isUp: false })
-        }
-
-        let config = { publicKey, listenPort }
-        this.setState({ config })
+        setConfig({ publicKey, listenPort })
       })
       .catch((err) => {
-        this.setState({ isUp: false })
+        setIsUp(false)
       })
   }
 
-  componentDidMount() {
-    const fetchStatus = async () => {
-      await this.getStatus()
+  useEffect(() => {
+    getStatus()
+  }, [])
+
+  const handleChange = () => {
+    let done = (res) => {
+      let value = !isUp
+      if (!isUp) {
+        getStatus()
+      } else {
+        setConfig({})
+      }
+      setIsUp(value)
     }
 
-    fetchStatus()
+    if (isUp) {
+      wireguardAPI
+        .down()
+        .then(done)
+        .catch((err) => {})
+    } else {
+      wireguardAPI
+        .up()
+        .then(done)
+        .catch((err) => {})
+    }
   }
 
-  handleChange() {
-    let value = !this.state.isUp
-    let fn = value ? wireguardAPI.up : wireguardAPI.down
-    fn()
-      .then((res) => {
-        this.setState({ isUp: value })
-        if (value) {
-          this.getStatus()
-        } else {
-          this.setState({ config: {} })
-        }
-      })
-      .catch((err) => {})
-  }
+  return (
+    <ScrollView>
+      <HStack alignItems="center" p={4}>
+        <Heading fontSize="md">Wireguard</Heading>
 
-  render() {
-    return (
-      <View>
-        <HStack alignItems="center" p={4}>
-          <Heading fontSize="md">Wireguard</Heading>
-
-          <Switch
-            marginLeft="auto"
-            defaultIsChecked={this.state.isUp}
-            onValueChange={this.handleChange}
-          />
-        </HStack>
-        <Box
-          _light={{ bg: 'backgroundCardLight' }}
-          _dark={{ bg: 'backgroundCardDark' }}
-          p={4}
-          mb={4}
-          mx={4}
-        >
-          <Box>
-            {this.state.config.listenPort ? (
+        <Switch
+          marginLeft="auto"
+          isChecked={isUp}
+          onValueChange={handleChange}
+        />
+      </HStack>
+      <Box
+        _light={{ bg: 'backgroundCardLight' }}
+        _dark={{ bg: 'backgroundCardDark' }}
+        p={4}
+        mb={4}
+        mx={4}
+      >
+        <Box>
+          {config.listenPort ? (
+            <Stack direction={{ base: 'column', md: 'row' }} space={1}>
               <Text>
-                Wireguard is listening on port {this.state.config.listenPort}{' '}
-                with PublicKey:{' '}
-                <Text italic>{this.state.config.publicKey}</Text>
+                Wireguard is listening on port {config.listenPort} with
+                PublicKey:
               </Text>
-            ) : (
-              <Text>
-                Wireguard is not running. See /configs/wireguard/wg0.conf
-              </Text>
-            )}
-          </Box>
+              <Text italic>{config.publicKey}</Text>
+            </Stack>
+          ) : (
+            <Text>
+              Wireguard is not running. See /configs/wireguard/wg0.conf
+            </Text>
+          )}
         </Box>
+      </Box>
 
-        <PeerList />
+      <PeerList />
 
-        {!this.context.isPlusDisabled ? (
-          //PLUS feature
-          <SiteVPN />
-        ) : null}
-      </View>
-    )
-  }
+      {!context.isPlusDisabled ? (
+        //PLUS feature
+        <SiteVPN />
+      ) : null}
+    </ScrollView>
+  )
 }
 
-Wireguard.contextType = AppContext
+export default Wireguard

@@ -391,13 +391,13 @@ func getHostapdJson(iface string) (map[string]interface{}, error) {
 	conf := map[string]interface{}{}
 
 	for _, line := range strings.Split(string(data), "\n") {
-		if strings.HasPrefix(line, "#") || !strings.Contains(line, "=") {
-			continue
-		}
-
 		if strings.Contains(line, "#spr-gen-bss") {
 			//ignore rest of config
 			break
+		}
+
+		if strings.HasPrefix(line, "#") || !strings.Contains(line, "=") {
+			continue
 		}
 
 		pieces := strings.Split(line, "=")
@@ -462,7 +462,7 @@ func updateExtraBSS(iface string, data string) string {
 				data += "bss=" + iface + "." + strconv.Itoa(i) + "\n"
 				data += "bssid=" + entry.ExtraBSS[i].Bssid + "\n"
 				data += "ssid=" + entry.ExtraBSS[i].Ssid + "\n"
-				if (entry.ExtraBSS[i].Wpa == "0") {
+				if entry.ExtraBSS[i].Wpa == "0" {
 					// Open AP
 				} else {
 					data += "wpa=" + entry.ExtraBSS[i].Wpa + "\n"
@@ -910,6 +910,53 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Method == http.MethodDelete {
+
+		//first reset extra bss
+		Interfacesmtx.Lock()
+		config := loadInterfacesConfigLocked()
+		foundEntry := false
+		for i, _ := range config {
+			if config[i].Name == iface {
+				foundEntry = true
+				//disable
+				config[i].ExtraBSS = []ExtraBSS{}
+				break
+			}
+		}
+
+		if !foundEntry {
+			err := fmt.Errorf("interface not found")
+			log.Printf("Failed to update interface: %v", err)
+			http.Error(w, "Failed to update interface", http.StatusBadRequest)
+			Interfacesmtx.Unlock()
+			return
+		}
+
+		writeInterfacesConfigLocked(config)
+		Interfacesmtx.Unlock()
+
+		//next, update the configuration to remove evertying after spr-gen
+		path := getHostapdConfigPath(iface)
+		data, err := ioutil.ReadFile(path)
+		if err != nil {
+			log.Printf("Error reading hostapd conf: %v", err)
+			http.Error(w, "can't read hostapd config", http.StatusBadRequest)
+		}
+		dataString := string(data)
+		idx := strings.Index(dataString, "#spr-gen-bss")
+		if idx != -1 {
+			dataString = dataString[:idx]
+
+			err = ioutil.WriteFile(path, []byte(dataString), 0664)
+			if err != nil {
+				log.Printf("Error removing extrabss in new hostapd conf: %v", err)
+				http.Error(w, "can't write new hostapd config", http.StatusBadRequest)
+			}
+		}
+		return
+	}
+
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("Error reading body: %v", err)
@@ -975,6 +1022,8 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 		err = fmt.Errorf("interface not found")
 		log.Printf("Failed to update interface: %v", err)
 		http.Error(w, "Failed to update interface", http.StatusBadRequest)
+		Interfacesmtx.Unlock()
+		return
 	}
 
 	writeInterfacesConfigLocked(config)

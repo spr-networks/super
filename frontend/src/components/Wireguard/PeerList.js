@@ -37,6 +37,10 @@ const PeerList = (props) => {
 
   const refreshPeers = () => {
     wireguardAPI.status().then((status) => {
+      if (!status || !Object.keys(status).length) {
+        return
+      }
+
       let publicKey = status.wg0.publicKey,
         listenPort = status.wg0.listenPort
 

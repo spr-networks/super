@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
+import { Select } from 'native-base'
 
 import { groupAPI, deviceAPI } from 'api'
 import InputSelect from './InputSelect'
@@ -56,6 +57,19 @@ const ClientSelect = (props) => {
       })
       .catch((err) => {})
   }, [])
+
+  //if only select one client & cant specify: use select (example dns logs)
+  if (props.isDisabled && !props.isMultiple) {
+    return (
+      <Select selectedValue={props.value} onValueChange={props.onChange}>
+        {optGroups && optGroups.length == 1
+          ? optGroups[0].options.map((o) => (
+              <Select.Item label={o.label} value={o.value} />
+            ))
+          : null}
+      </Select>
+    )
+  }
 
   return <InputSelect title={title} groups={optGroups} {...props} />
 }

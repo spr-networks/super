@@ -291,7 +291,7 @@ const AdminLayout = (props) => {
       }
     }
 
-    const handleWebSocketEvent = (event) => {
+    const handleWebSocketEvent = async (event) => {
       if (event.data == 'success') {
         return
       } else if (event.data == 'Authentication failure') {
@@ -306,7 +306,7 @@ const AdminLayout = (props) => {
         return
       }
 
-      const res = parseLogMessage(eventData)
+      const res = await parseLogMessage(eventData)
       if (res) {
         //console.log('[NOTIFICATION]', JSON.stringify(res))
         let { type, title, body, data } = res

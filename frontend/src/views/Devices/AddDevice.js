@@ -6,7 +6,7 @@ import AddDevice from 'components/Devices/AddDevice'
 
 const AddDeviceView = () => {
   return (
-    <Box bg={useColorModeValue('warmGray.50', 'blueGray.800')} p={4}>
+    <Box bg={useColorModeValue('warmGray.50', 'blueGray.800')} p={4} h={'100%'}>
       <AddDevice />
     </Box>
   )

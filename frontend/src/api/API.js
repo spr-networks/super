@@ -32,7 +32,7 @@ export const getApiURL = () => {
   }
 
   if (Platform.OS == 'ios' || Platform.OS == 'macos') {
-    return 'http://192.168.2.1/'
+    return gApiURL || 'http://192.168.2.1/'
   }
 
   if (REACT_APP_API) {
