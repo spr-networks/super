@@ -1,4 +1,4 @@
-const agent = require('../agent')
+wconst agent = require('../agent')
 const assert = require('assert')
 
 describe('get interfaces', () => {
@@ -37,7 +37,7 @@ describe('get interfaces', () => {
 describe('calc channel', () => {
   let chanData = {"Channel":36,"Mode":"a","Bandwidth":80,"HT_Enable":true,"VHT_Enable":true,"HE_Enable":true,"He_mu_beamformer":0,"He_su_beamformee":0,"He_su_beamformer":0,"Ieee80211ax":0}
 
-  it('should calcluate channels', (done) => {
+  it('should calculate channels', (done) => {
     agent
       .put('/hostapd/calcChannel')
       .send(chanData)
