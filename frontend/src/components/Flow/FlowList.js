@@ -50,14 +50,16 @@ const FlowCardList = ({
   edit,
   ...props
 }) => {
-  const [cards, setCards] = useState(defaultCards)
+  const [cards, setCardsCall] = useState(defaultCards)
   let refModal = useRef(null)
 
-  useEffect(() => {
+  const setCards = (cards) => {
     if (props.onChange) {
       props.onChange(cards)
     }
-  }, [cards])
+    setCardsCall(cards)
+  }
+
 
   useEffect(() => {
     setCards(defaultCards)
