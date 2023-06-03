@@ -97,6 +97,10 @@ const LogList = (props) => {
     //let buckets = Object.keys(filter).filter((k) => filter[k])
     //buckets.map(async (bucket) => {
     let bucket = getCurrentBucket()
+    if (!bucket) {
+      return
+    }
+
     let stats = await dbAPI.stats(bucket)
     setTotal(stats.KeyN)
 
