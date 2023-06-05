@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	crand "crypto/rand"
-	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -952,7 +952,13 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			// generate a secure PSK
 
 			if val.PSKEntry.Psk == "" {
-				val.PSKEntry.Psk = genSecurePassword()
+				psk, err := genSecurePassword()
+				if err != nil {
+					log.Error("Failed to generate password")
+					return "Failed to generate password", 400
+				}
+
+				val.PSKEntry.Psk = psk
 				pskGenerated = true
 			}
 		}
@@ -1045,7 +1051,14 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	if dev.PSKEntry.Type != "" {
 		pskModified = true
 		if dev.PSKEntry.Psk == "" {
-			dev.PSKEntry.Psk = genSecurePassword()
+			psk, err := genSecurePassword()
+			if err != nil {
+				log.Error("Failed to generate password")
+				return "Failed to generate password", 400
+			}
+
+			dev.PSKEntry.Psk = psk
+
 			pskGenerated = true
 		}
 	}
@@ -1722,13 +1735,35 @@ func reportDisconnect(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(event)
 }
 
-func genSecurePassword() string {
-	pw := make([]byte, 16)
-	n, err := crand.Read(pw)
-	if n != 16 || err != nil {
-		log.Fatal(err)
+func genSecurePassword() (string, error) {
+	const pwUpperCharsHuman string = "ABCDEFGHJKMNPQRSTUVWXYZ"
+	const pwLowerCharsHuman string = "abcdefghjkmnpqrstuvwxyz"
+	const pwNumbersHuman string = "23456789"
+	const pwSpecialCharsHuman string = "=#%:;+-*" //"\"/\\_|~"
+	const cr string = pwUpperCharsHuman + pwLowerCharsHuman + pwNumbersHuman + pwSpecialCharsHuman
+
+	crl := len(cr)
+	mask := uint64(127)
+	var rs strings.Builder
+
+	num := 16
+
+	// read random bytes, if & 127 < crl add
+	for num != 0 {
+		rp := make([]byte, 8)
+		_, err := crand.Read(rp)
+		if err != nil {
+			return rs.String(), err
+		}
+
+		c := binary.BigEndian.Uint64(rp)
+		if idx := int(c & mask); idx < crl {
+			rs.WriteByte(cr[idx])
+			num--
+		}
 	}
-	return base64.RawURLEncoding.EncodeToString(pw)
+
+	return rs.String(), nil
 }
 
 func reloadPSKFiles(w http.ResponseWriter, r *http.Request) {
