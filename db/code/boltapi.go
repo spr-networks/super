@@ -72,6 +72,22 @@ func SetupConfig(configPath string, conf *LogConfig) {
 	gConfigPtr = conf
 
 	*gConfigPtr = *loadConfig()
+
+	// rename and make sure new syntax is used
+	config := *gConfigPtr
+	updated := false
+	for k := range config.SaveEvents {
+		topic := config.SaveEvents[k]
+
+		if topic == "dns:serve:event" {
+			config.SaveEvents[k] = "dns:serve:"
+			updated = true
+		}
+	}
+
+	if updated {
+		saveConfig(config)
+	}
 }
 
 func loadConfig() *LogConfig {
@@ -82,7 +98,7 @@ func loadConfig() *LogConfig {
 
 	// default config
 	config := &LogConfig{
-		SaveEvents: []string{"log:api", "dns:block:event", "dns:override:event"},
+		SaveEvents: []string{"log:api", "dns:block:event", "dns:override:event", "dns:serve:"},
 		MaxSize:    250 * 1024 * 1024, //bytes
 	}
 	data, err := ioutil.ReadFile(gConfigPath)
@@ -433,9 +449,14 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 	minKey = keyOrDefault(min_q, time.Now().UTC().Add(-time.Hour*24*365).Format(time.RFC3339Nano))
 	maxKey = keyOrDefault(max_q, time.Now().UTC().Format(time.RFC3339Nano))
 
-	maxNum := 100
+	// default 100, max 1000
+	maxNum := 1000
 	num, err := strconv.Atoi(r.URL.Query().Get("num"))
-	if err != nil || num < 1 || num > maxNum {
+	if err != nil || num < 1 {
+		num = 100
+	}
+
+	if num > maxNum {
 		num = maxNum
 	}
 
