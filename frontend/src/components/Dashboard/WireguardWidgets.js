@@ -31,8 +31,8 @@ const WireguardPeers = (props) => {
 }
 
 const WireguardPeersActive = (props) => {
-  const [numPeers, setNumPeers] = useState(4)
-  const [numPeersActive, setNumPeersActive] = useState(3)
+  const [numPeers, setNumPeers] = useState(0)
+  const [numPeersActive, setNumPeersActive] = useState(0)
 
   useEffect(() => {
     wireguardAPI.peers().then((peers) => {

@@ -17,8 +17,7 @@ import { AlertContext } from 'layouts/Admin'
 import ClientSelect from 'components/ClientSelect'
 import DNSAddOverride from './DNSAddOverride'
 import ModalForm from 'components/ModalForm'
-import { deviceAPI } from 'api'
-import { logAPI } from 'api/DNS'
+import { dbAPI, deviceAPI, logAPI } from 'api'
 import { prettyDate } from 'utils'
 import { format as timeAgo } from 'timeago.js'
 
@@ -175,6 +174,7 @@ const DNSLogHistoryList = (props) => {
   const [selectedType, setSelectedType] = useState('')
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
+  const [params, setParams] = useState({ num: 1000 })
 
   const [devices, setDevices] = useState({})
 
@@ -183,8 +183,6 @@ const DNSLogHistoryList = (props) => {
   const deviceByIp = (ip) => {
     return Object.values(devices).find((device) => device.RecentIP == ip) || {}
   }
-
-  const deviceNameByIp = (ip) => deviceByIp(ip).Name
 
   const refreshList = async () => {
     if (!filterIps.length) {
@@ -205,7 +203,12 @@ const DNSLogHistoryList = (props) => {
     allSettled(
       filterIps.map(async (ip) => {
         try {
-          let list = await logAPI.history(ip)
+          let bucket = `dns:serve:${ip}`
+
+          let stats = await dbAPI.stats(bucket)
+          setTotal(stats.KeyN)
+
+          let list = await dbAPI.items(bucket, params)
           return list
         } catch (error) {
           throw `${ip}`
@@ -242,8 +245,6 @@ const DNSLogHistoryList = (props) => {
   }
 
   const filterList = () => {
-    setTotal(list.length)
-
     let doFilter = filterText.length,
       listFiltered = []
 
@@ -289,8 +290,9 @@ const DNSLogHistoryList = (props) => {
       listFiltered = list
     }
 
-    let perPage = 20,
-      offset = (page - 1) * perPage
+    // no pagination for listFiltered if filterText
+    let perPage = filterText.length ? 100 : 20,
+      offset = 0 //(page - 1) * perPage
 
     listFiltered = listFiltered.slice(offset, offset + perPage)
 
@@ -323,7 +325,8 @@ const DNSLogHistoryList = (props) => {
 
     for (let ip of filterIps) {
       try {
-        await logAPI.deleteHistory(ip)
+        //await logAPI.deleteHistory(ip)
+        await dbAPI.deleteBucket(`dns:serve:${ip}`)
       } catch (err) {
         context.error(`Failed to delete dns history for ${ip}`)
       }
@@ -340,8 +343,14 @@ const DNSLogHistoryList = (props) => {
       refreshList()
     })
 
+    /*
     const interval = setInterval(() => {
+      console.log('ZZ', list.length, 'P=', page, 'ips=', filterIps)
       if (!list.length) {
+        return
+      }
+
+      if (page > 1) {
         return
       }
 
@@ -349,6 +358,7 @@ const DNSLogHistoryList = (props) => {
     }, 5 * 1e3)
 
     return () => clearInterval(interval)
+    */
   }, [])
 
   useEffect(() => {
@@ -362,6 +372,22 @@ const DNSLogHistoryList = (props) => {
       navigate(`/admin/dnsLog/${filterIps.join(',')}/${filterText || ':text'}`)
     }
   }, [filterIps])
+
+  useEffect(() => {
+    let max = new Date().toISOString()
+    let idx = listFiltered.length - 1
+    let l = listFiltered[idx]
+
+    if (page > 1 && l && l.time) {
+      max = l.time
+    }
+
+    setParams({ ...params, max })
+  }, [page])
+
+  useEffect(() => {
+    refreshList()
+  }, [params])
 
   const notifyChange = async () => {
     modalRef.current()
@@ -377,7 +403,7 @@ const DNSLogHistoryList = (props) => {
 
   useEffect(() => {
     setListFiltered(filterList())
-  }, [list, filterText, page])
+  }, [list, filterText])
 
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
 
@@ -497,15 +523,15 @@ const DNSLogHistoryList = (props) => {
         keyExtractor={(item) => item.Timestamp + item.Remote}
       />
 
-      {total > 20 ? (
+      {total > 20 && !filterText.length ? (
         <HStack space={2} alignItems="flex-start">
           <Button
             flex={1}
             variant="ghost"
             isDisabled={page <= 1}
-            onPress={() => setPage(page > 1 ? page - 1 : 1)}
+            onPress={() => setPage(/*page > 1 ? page - 1 : */ 1)}
           >
-            &larr; Previous
+            &larr; Start
           </Button>
           <Button flex={1} variant="ghost" onPress={() => setPage(page + 1)}>
             Next &rarr;

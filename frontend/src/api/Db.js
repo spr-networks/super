@@ -21,6 +21,10 @@ export class APIDb extends API {
     return this.get('buckets')
   }
 
+  deleteBucket(bucket) {
+    return this.delete(`bucket/${bucket}`)
+  }
+
   items(bucket, params = {}) {
     return this.get(`items/${bucket}?${new URLSearchParams(params)}`)
   }

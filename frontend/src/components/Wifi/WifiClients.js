@@ -111,6 +111,7 @@ const WifiClients = (props) => {
 
             <Stack
               flex="1"
+              display={{ base: 'none', md: 'block' }}
               direction={{ base: 'column', md: 'row' }}
               space={1}
               alignItems="center"
@@ -122,7 +123,7 @@ const WifiClients = (props) => {
               flex="2"
               direction={{ base: 'column', md: 'row' }}
               space={2}
-              alignItems="center"
+              justifyContent="center"
             >
               <Text bold>{item.RecentIP}</Text>
               <Text color="muted.500">{item.MAC}</Text>

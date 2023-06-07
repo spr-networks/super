@@ -142,6 +142,7 @@ const DeviceListing = (props) => {
                   })
               })
             )
+            .catch((err) => {})
         }
       })
       .catch((err) => {
