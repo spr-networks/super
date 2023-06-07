@@ -86,7 +86,7 @@ var gPluginTemplates = []PluginConfig{
 		ComposeFilePath: "ppp/docker-compose.yml",
 	},
 	{
-		Name:            "WIFI_UPLINK",
+		Name:            "WIFI-UPLINK",
 		Enabled:         false,
 		ComposeFilePath: "wifi_uplink/docker-compose.yml",
 	},
