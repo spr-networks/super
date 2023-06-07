@@ -10,7 +10,7 @@ x-labels:
   org.supernetworks.version: ${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
 
 services:
-  ppp:
+  wifi_uplink:
     container_name: superwifiuplink
     image: ghcr.io/spr-networks/super_wifiuplink:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
