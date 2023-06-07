@@ -90,6 +90,7 @@ var config = APIConfig{}
 var Configmtx sync.Mutex
 
 func loadConfig() {
+
 	Configmtx.Lock()
 	defer Configmtx.Unlock()
 
@@ -2074,6 +2075,9 @@ func startEventBus() {
 }
 
 func main() {
+
+	//update auth API
+	migrateAuthAPI()
 
 	loadConfig()
 

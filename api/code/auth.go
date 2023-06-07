@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -19,11 +20,45 @@ import (
 	"github.com/spr-networks/sprbus"
 )
 
-var AuthUsersFile = TEST_PREFIX + "/configs/base/auth_users.json"
-var AuthTokensFile = TEST_PREFIX + "/configs/base/auth_tokens.json"
+var AuthUsersFile = TEST_PREFIX + "/configs/auth/auth_users.json"
+var AuthTokensFile = TEST_PREFIX + "/configs/auth/auth_tokens.json"
+
 var AuthOtpFile = TEST_PREFIX + "/state/api/webauthn_otp"
 var AuthWebAuthnFile = TEST_PREFIX + "/state/api/webauthn.json"
 var Tokensmtx sync.Mutex
+
+func makeDstIfMissing(destFilePath string, srcFilePath string) {
+
+	if _, err := os.Stat(destFilePath); os.IsNotExist(err) {
+		srcFile, err := os.Open(srcFilePath)
+		if err != nil {
+			log.Println("[-] Auth Migration: No previous file found " + srcFilePath)
+			return
+		}
+		defer srcFile.Close()
+
+		destFile, err := os.Create(destFilePath)
+		if err != nil {
+			log.Println("[-] Auth Migration: could not make destination " + destFilePath)
+			return
+		}
+		defer destFile.Close()
+
+		_, err = io.Copy(destFile, srcFile)
+		if err != nil {
+			log.Println("[-] Auth Migration: could not make destination " + destFilePath)
+			return
+		}
+	}
+}
+
+func migrateAuthAPI() {
+	var oldAuthUsersFile = TEST_PREFIX + "/configs/base/auth_users.json"
+	var oldAuthTokensFile = TEST_PREFIX + "/configs/base/auth_tokens.json"
+
+	makeDstIfMissing(AuthUsersFile, oldAuthUsersFile)
+	makeDstIfMissing(AuthTokensFile, oldAuthTokensFile)
+}
 
 func loadOTP() int {
 	data, err := os.ReadFile(AuthOtpFile)

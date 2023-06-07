@@ -207,6 +207,7 @@ services:
       - "superd"
     logging: *default-logging
     volumes:
+      - ./configs/auth/:/configs/auth/
       - ./configs/base/:/configs/base/
       - ./configs/devices/:/configs/devices/
       - ./configs/wifi/:/configs/wifi/
