@@ -14,7 +14,7 @@ services:
     container_name: superwifiuplink
     image: ghcr.io/spr-networks/super_wifiuplink:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
-      context: wifi_uplink
+      context: .
       labels: *default-labels
       x-bake:
         tags:

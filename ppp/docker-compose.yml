@@ -14,7 +14,7 @@ services:
     container_name: superppp
     image: ghcr.io/spr-networks/super_ppp:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
-      context: ppp
+      context: .
       labels: *default-labels
       x-bake:
         tags:
