@@ -327,6 +327,7 @@ const DNSLogHistoryList = (props) => {
       try {
         //await logAPI.deleteHistory(ip)
         await dbAPI.deleteBucket(`dns:serve:${ip}`)
+        await logAPI.deleteHistory(ip) // TODO this is old
       } catch (err) {
         context.error(`Failed to delete dns history for ${ip}`)
       }
