@@ -101,10 +101,13 @@ else
 
   for plugin in $PLUGINS
   do 
+    pushd
+    cd ${plugin}
     docker buildx bake \
       --builder super-builder \
-      --file ${plugin}/docker-compose.yml \
+      --file docker-compose.yml \
       ${BUILDARGS} "$@" || exit 1
+    popd
   done
 fi
 
