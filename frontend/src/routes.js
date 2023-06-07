@@ -12,6 +12,7 @@ import SignalStrength from 'views/Traffic/SignalStrength'
 import Traffic from 'views/Traffic/Traffic'
 import TrafficTimeSeries from 'views/Traffic/TrafficTimeSeries'
 import TrafficList from 'views/Traffic/TrafficList'
+import UplinkConfiguration from 'views/UplinkConfiguration'
 import WirelessConfiguration from 'views/WirelessConfiguration'
 import Groups from 'views/Groups/Groups'
 import Tags from 'views/Tags'
@@ -44,6 +45,7 @@ import {
   faFire,
   faFireAlt,
   faGauge,
+  faGlobe,
   faHome,
   faLaptop,
   faLineChart,
@@ -98,6 +100,13 @@ const routes = [
     icon: faWifi,
     wifi: true,
     component: WirelessConfiguration,
+    layout: 'admin'
+  },
+  {
+    path: 'uplink',
+    name: 'Uplink',
+    icon: faGlobe,
+    component: UplinkConfiguration,
     layout: 'admin'
   },
   {
@@ -206,6 +215,13 @@ const routes = [
     state: 'systemCollapse',
     views: [
       {
+        path: 'info',
+        name: 'System Info',
+        icon: faWaveSquare,
+        component: SystemInfo,
+        layout: 'admin'
+      },
+      {
         path: 'supernets',
         name: 'Supernetworks',
         icon: faDiagramProject,
@@ -259,13 +275,6 @@ const routes = [
         name: 'Auth',
         icon: faUser,
         component: AuthSettings,
-        layout: 'admin'
-      },
-      {
-        path: 'info',
-        name: 'System Info',
-        icon: faWaveSquare,
-        component: SystemInfo,
         layout: 'admin'
       },
       {

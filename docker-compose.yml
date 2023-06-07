@@ -147,24 +147,6 @@ services:
       - ./configs/base/:/configs/base/
       - ./state/public/:/state/public/:ro
       - ./state/plugins/mesh/:/state/plugins/mesh/:ro
-  ppp:
-    container_name: superppp
-    image: ghcr.io/spr-networks/super_ppp:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
-    build:
-      context: ppp
-      labels: *default-labels
-      x-bake:
-        tags:
-        - ghcr.io/spr-networks/super_ppp:latest${RELEASE_CHANNEL:-}
-        - ghcr.io/spr-networks/super_ppp:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
-    network_mode: host
-    privileged: true
-    depends_on:
-      - "base"
-    logging: *default-logging
-    volumes:
-      - ./configs/base/:/configs/base/
-      - ./configs/ppp/:/etc/ppp/
   wireguard:
     container_name: superwireguard
     image: ghcr.io/spr-networks/super_wireguard:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}

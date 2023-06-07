@@ -1188,6 +1188,64 @@ func getRouteInterface(IP string) string {
 	return ""
 }
 
+func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
+	zones := getGroupsJson()
+	zonesDisabled := map[string]bool{}
+	serviceZones := map[string][]string{}
+
+	for _, zone := range zones {
+		zonesDisabled[zone.Name] = zone.Disabled
+		if len(zone.ServiceDestinations) > 0 {
+			serviceZones[zone.Name] = zone.ServiceDestinations
+		}
+	}
+
+	devices := getDevicesJson()
+	val, exists := devices[MAC]
+
+	if MAC != "" {
+		if !exists {
+			//given a MAC that is not in the devices list. Exit
+			return
+		}
+	} else if WGPubKey != "" {
+		val, exists = devices[WGPubKey]
+		//wg pub key is unknown, exit
+		if !exists {
+			return
+		}
+	}
+
+	for _, zone_name := range val.Groups {
+		//skip zones that are disabled
+		if zonesDisabled[zone_name] {
+			continue
+		}
+		//skip service zones
+		_, has_service := serviceZones[zone_name]
+		if has_service {
+			continue
+		}
+
+		switch zone_name {
+		case "isolated":
+			continue
+		case "dns":
+			addDNSVerdict(IP, Iface)
+		case "lan":
+			addLANVerdict(IP, Iface)
+		case "wan":
+			addInternetVerdict(IP, Iface)
+		default:
+			//custom group
+			addCustomVerdict(zone_name, IP, Iface)
+		}
+	}
+
+
+}
+
+
 func establishDevice(entry DeviceEntry, new_iface string, established_route_device string, routeIP string, router string) {
 
 	log.Println("flushing route and vmaps ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
@@ -1220,6 +1278,9 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 		//add this MAC and IP to the ethernet filter
 		addVerdictMac(entry.RecentIP, entry.MAC, new_iface, "ethernet_filter", "return")
 	}
+
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
 
 	populateVmapEntries(entry.RecentIP, entry.MAC, new_iface, entry.WGPubKey)
 

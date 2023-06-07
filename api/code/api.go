@@ -56,16 +56,6 @@ type InfluxConfig struct {
 	Token  string
 }
 
-type PluginConfig struct {
-	Name            string
-	URI             string
-	UnixPath        string
-	Enabled         bool
-	Plus            bool
-	GitURL          string
-	ComposeFilePath string
-}
-
 type APIConfig struct {
 	InfluxDB   InfluxConfig
 	Plugins    []PluginConfig
@@ -77,6 +67,7 @@ type GroupEntry struct {
 	Name      string
 	Disabled  bool
 	GroupTags []string
+	ServiceDestinations []string
 }
 
 type PSKEntry struct {
@@ -112,6 +103,18 @@ func loadConfig() {
 			log.Println(err)
 		}
 	}
+
+	before := len(config.Plugins)
+	updateConfigPluginDefaults(&config)
+
+	if len(config.Plugins) != before {
+		//save the configuration if an update was detected
+		file, _ := json.MarshalIndent(config, "", " ")
+		err := ioutil.WriteFile(ApiConfigPath, file, 0600)
+		if err != nil {
+			log.Fatal(err)
+		}
+}
 
 	//loading this will make sure devices-public.json is made
 	getDevicesJson()
@@ -1346,52 +1349,6 @@ func updateAddr(Router string, Ifname string) {
 	exec.Command("ip", "addr", "add", Router+"/30", "dev", Ifname).Run()
 }
 
-func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
-	zones := getGroupsJson()
-	zonesDisabled := map[string]bool{}
-
-	for _, zone := range zones {
-		zonesDisabled[zone.Name] = zone.Disabled
-	}
-
-	devices := getDevicesJson()
-	val, exists := devices[MAC]
-
-	if MAC != "" {
-		if !exists {
-			//given a MAC that is not in the devices list. Exit
-			return
-		}
-	} else if WGPubKey != "" {
-		val, exists = devices[WGPubKey]
-		//wg pub key is unknown, exit
-		if !exists {
-			return
-		}
-	}
-
-	for _, zone_name := range val.Groups {
-		//skip zones that are disabled
-		if zonesDisabled[zone_name] {
-			continue
-		}
-		switch zone_name {
-		case "isolated":
-			continue
-		case "dns":
-			addDNSVerdict(IP, Iface)
-		case "lan":
-			addLANVerdict(IP, Iface)
-		case "wan":
-			addInternetVerdict(IP, Iface)
-		default:
-			//custom group
-			addCustomVerdict(zone_name, IP, Iface)
-		}
-	}
-
-}
-
 var LocalMappingsmtx sync.Mutex
 
 func updateLocalMappings(IP string, Name string) {
@@ -2234,6 +2191,13 @@ func main() {
 	//ip information
 	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")
 	external_router_authenticated.HandleFunc("/ip/link/{interface}/{state}", ipLinkUpDown).Methods("PUT")
+
+	//uplink management
+//	external_router_authenticated.HandleFunc("/uplink/{interface}/enable", uplinkEnableInterface).Methods("PUT")
+//	external_router_authenticated.HandleFunc("/uplink/{interface}/disable", uplinkEnableInterface).Methods("PUT")
+//	external_router_authenticated.HandleFunc("/uplink/{interface}/bond", mangeBondInterface).Methods("PUT", "DELETE")
+//	external_router_authenticated.HandleFunc("/uplink/loadBalance", setLoadBalanceStrategy).Methods("PUT")
+
 
 	//iw list
 	external_router_authenticated.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")

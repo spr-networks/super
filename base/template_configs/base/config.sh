@@ -7,10 +7,6 @@ UPSTREAM_SERVICES_ENABLE=1
 #  as a VPN gateway for example
 #VIRTUAL_SPR=1
 
-#PPPIF=eth0
-#WANIF=ppp0
-#PPP_VLANID=201
-#PPP_PROVIDER=provider-config
 WANIF=eth0
 RUN_WAN_DHCP=true
 RUN_WAN_DHCP_IPV=4

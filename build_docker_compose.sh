@@ -52,6 +52,7 @@ mkdir -p state/wifi/
 mkdir -p state/wifi/sta_mac_iface_map/
 touch state/dns/local_mappings state/dhcp/leases.txt
 
+PLUGINS="ppp wifi_uplink"
 BUILDARGS=""
 if [ -f .github_creds ]; then
   BUILDARGS="--set *.args.GITHUB_CREDS=`cat .github_creds`"
@@ -65,6 +66,11 @@ then
   export DOCKER_BUILDKIT=1
   export COMPOSE_DOCKER_CLI_BUILD=1
   docker-compose build ${BUILDARGS} $@ || exit 1
+
+  for plugin in $PLUGINS
+  do 
+    docker-compose --file ${plugin}/docker-compose.yml build ${BUILDARGS} $@ || exit 1
+  done
 else
   # We use docker buildx so we can build multi-platform images. Unfortunately,
   # a limitation is that multi-platform images cannot be loaded from the builder
@@ -92,6 +98,14 @@ else
     --builder super-builder \
     --file docker-compose.yml \
     ${BUILDARGS} "$@" || exit 1
+
+  for plugin in $PLUGINS
+  do 
+    docker buildx bake \
+      --builder super-builder \
+      --file ${plugin}/docker-compose.yml \
+      ${BUILDARGS} "$@" || exit 1
+  done
 fi
 
 ret=$?
