@@ -204,6 +204,9 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 				if entry.Name == name {
 					config.Plugins = append(config.Plugins[:idx], config.Plugins[idx+1:]...)
 					found = true
+
+					// plugin was deleted, stop it
+					stopExtension(entry.ComposeFilePath)
 					break
 				}
 			}
@@ -239,6 +242,12 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 				if entry.Name == name || entry.Name == plugin.Name {
 					found = true
 					config.Plugins[idx] = plugin
+
+					if plugin.Enabled == false {
+						//plugin is on longer enabled, send stop
+						stopExtension(entry.ComposeFilePath)
+					}
+
 					break
 				}
 			}
