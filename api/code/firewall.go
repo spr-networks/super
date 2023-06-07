@@ -1242,9 +1242,7 @@ func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
 		}
 	}
 
-
 }
-
 
 func establishDevice(entry DeviceEntry, new_iface string, established_route_device string, routeIP string, router string) {
 

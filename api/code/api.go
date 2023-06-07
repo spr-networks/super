@@ -64,9 +64,9 @@ type APIConfig struct {
 }
 
 type GroupEntry struct {
-	Name      string
-	Disabled  bool
-	GroupTags []string
+	Name                string
+	Disabled            bool
+	GroupTags           []string
 	ServiceDestinations []string
 }
 
@@ -114,7 +114,7 @@ func loadConfig() {
 		if err != nil {
 			log.Fatal(err)
 		}
-}
+	}
 
 	//loading this will make sure devices-public.json is made
 	getDevicesJson()
@@ -2193,11 +2193,10 @@ func main() {
 	external_router_authenticated.HandleFunc("/ip/link/{interface}/{state}", ipLinkUpDown).Methods("PUT")
 
 	//uplink management
-//	external_router_authenticated.HandleFunc("/uplink/{interface}/enable", uplinkEnableInterface).Methods("PUT")
-//	external_router_authenticated.HandleFunc("/uplink/{interface}/disable", uplinkEnableInterface).Methods("PUT")
-//	external_router_authenticated.HandleFunc("/uplink/{interface}/bond", mangeBondInterface).Methods("PUT", "DELETE")
-//	external_router_authenticated.HandleFunc("/uplink/loadBalance", setLoadBalanceStrategy).Methods("PUT")
-
+	//	external_router_authenticated.HandleFunc("/uplink/{interface}/enable", uplinkEnableInterface).Methods("PUT")
+	//	external_router_authenticated.HandleFunc("/uplink/{interface}/disable", uplinkEnableInterface).Methods("PUT")
+	//	external_router_authenticated.HandleFunc("/uplink/{interface}/bond", mangeBondInterface).Methods("PUT", "DELETE")
+	//	external_router_authenticated.HandleFunc("/uplink/loadBalance", setLoadBalanceStrategy).Methods("PUT")
 
 	//iw list
 	external_router_authenticated.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")

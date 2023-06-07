@@ -27,7 +27,6 @@ var MeshGitURL = "github.com/spr-networks/mesh_extension"
 
 var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
 
-
 type PluginConfig struct {
 	Name            string
 	URI             string
@@ -45,76 +44,76 @@ var gPlusExtensionDefaults = []PluginConfig{
 
 var gPluginTemplates = []PluginConfig{
 	{
-   Name: "dns-block-extension",
-   URI: "dns/block",
-   UnixPath: "/state/dns/dns_block_plugin",
-   Enabled: true,
-  },
-  {
-   Name: "dns-log-extension",
-   URI: "dns/log",
-   UnixPath: "/state/dns/dns_log_plugin",
-   Enabled: true,
-  },
-  {
-   Name: "plugin-lookup",
-   URI: "lookup",
-   UnixPath: "/state/plugins/plugin-lookup/lookup_plugin",
-   Enabled: true,
-  },
-  {
-   Name: "wireguard",
-   URI: "wireguard",
-   UnixPath: "/state/plugins/wireguard/wireguard_plugin",
-   Enabled: true,
-  },
-  {
-   Name: "dyndns",
-   URI: "dyndns",
-   UnixPath: "/state/plugins/dyndns/dyndns_plugin",
-   Enabled: true,
-  },
-  {
-   Name: "db",
-   URI: "db",
-   UnixPath: "/state/plugins/db/socket",
-   Enabled: true,
- 	},
+		Name:     "dns-block-extension",
+		URI:      "dns/block",
+		UnixPath: "/state/dns/dns_block_plugin",
+		Enabled:  true,
+	},
+	{
+		Name:     "dns-log-extension",
+		URI:      "dns/log",
+		UnixPath: "/state/dns/dns_log_plugin",
+		Enabled:  true,
+	},
+	{
+		Name:     "plugin-lookup",
+		URI:      "lookup",
+		UnixPath: "/state/plugins/plugin-lookup/lookup_plugin",
+		Enabled:  true,
+	},
+	{
+		Name:     "wireguard",
+		URI:      "wireguard",
+		UnixPath: "/state/plugins/wireguard/wireguard_plugin",
+		Enabled:  true,
+	},
+	{
+		Name:     "dyndns",
+		URI:      "dyndns",
+		UnixPath: "/state/plugins/dyndns/dyndns_plugin",
+		Enabled:  true,
+	},
+	{
+		Name:     "db",
+		URI:      "db",
+		UnixPath: "/state/plugins/db/socket",
+		Enabled:  true,
+	},
 	//these have no API for now
 	{
-	 Name: "PPP",
-	 Enabled: false,
-	 ComposeFilePath: "ppp/docker-compose.yml",
-  },
+		Name:            "PPP",
+		Enabled:         false,
+		ComposeFilePath: "ppp/docker-compose.yml",
+	},
 	{
-	 Name: "WIFI_UPLINK",
-	 Enabled: false,
-	 ComposeFilePath: "wifi_uplink/docker-compose.yml",
-  },
-	}
+		Name:            "WIFI_UPLINK",
+		Enabled:         false,
+		ComposeFilePath: "wifi_uplink/docker-compose.yml",
+	},
+}
 
 func updateConfigPluginDefaults(config *APIConfig) {
-		//helper for updating the config to include defaults in the template
-		//assumes config is locked
+	//helper for updating the config to include defaults in the template
+	//assumes config is locked
 
-		covered := []string{}
-		for _, entry := range config.Plugins {
-			covered = append(covered, entry.Name)
-		}
+	covered := []string{}
+	for _, entry := range config.Plugins {
+		covered = append(covered, entry.Name)
+	}
 
-		//merge templates into config.Plugins
-		for _, template := range gPluginTemplates {
-			hasEntry := false
-			for _, name := range covered {
-				if name == template.Name {
-					hasEntry = true
-					break
-				}
-			}
-			if !hasEntry {
-				config.Plugins = append(config.Plugins, template)
+	//merge templates into config.Plugins
+	for _, template := range gPluginTemplates {
+		hasEntry := false
+		for _, name := range covered {
+			if name == template.Name {
+				hasEntry = true
+				break
 			}
 		}
+		if !hasEntry {
+			config.Plugins = append(config.Plugins, template)
+		}
+	}
 }
 
 func PluginProxy(config PluginConfig) (*httputil.ReverseProxy, error) {
@@ -523,7 +522,7 @@ func startExtension(composeFilePath string) bool {
 	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("failed to start " + composeFilePath + "  extension", resp.StatusCode)
+		fmt.Println("failed to start "+composeFilePath+"  extension", resp.StatusCode)
 		return false
 	}
 
@@ -632,7 +631,7 @@ func stopExtension(composeFilePath string) bool {
 	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("failed to stop " + composeFilePath + " extension", resp.StatusCode)
+		fmt.Println("failed to stop "+composeFilePath+" extension", resp.StatusCode)
 		return false
 	}
 
@@ -679,7 +678,7 @@ func startExtensionServices() error {
 	for _, entry := range config.Plugins {
 		if entry.ComposeFilePath != "" && entry.Enabled == true {
 
-			if entry.Plus == true  {
+			if entry.Plus == true {
 				//only plus extensions need updates for now
 				//as the others are built-in. this can change later
 				//when third party extensions are supported
