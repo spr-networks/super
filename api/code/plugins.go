@@ -590,7 +590,7 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 	for _, entry := range config.Plugins {
 		if entry.Name == name && entry.ComposeFilePath != "" && entry.Enabled == true {
 
-			if entry.Plus == true {
+			if PlusEnabled() && entry.Plus == true {
 				//only plus extensions update for now
 				if !updatePlusExtension(entry.ComposeFilePath) {
 					fmt.Println("[-] Failed to update pfw")
@@ -678,7 +678,7 @@ func startExtensionServices() error {
 	for _, entry := range config.Plugins {
 		if entry.ComposeFilePath != "" && entry.Enabled == true {
 
-			if entry.Plus == true {
+			if PlusEnabled() && entry.Plus == true {
 				//only plus extensions need updates for now
 				//as the others are built-in. this can change later
 				//when third party extensions are supported
