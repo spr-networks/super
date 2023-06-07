@@ -49,6 +49,8 @@ func makeDstIfMissing(destFilePath string, srcFilePath string) {
 			log.Println("[-] Auth Migration: could not make destination " + destFilePath)
 			return
 		}
+
+		os.Remove(srcFilePath)
 	}
 }
 
