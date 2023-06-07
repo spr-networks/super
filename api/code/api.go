@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/duo-labs/webauthn/webauthn"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/spr-networks/sprbus"
@@ -2081,19 +2080,6 @@ func main() {
 	// start eventbus
 	go startEventBus()
 
-	auth := new(authnconfig)
-	w, err := webauthn.New(&webauthn.Config{
-		RPDisplayName: "SPR",
-		RPID:          "localhost",
-		RPOrigin:      "http://localhost:3000", // The origin URL for WebAuthn requests
-	})
-
-	if err != nil {
-		log.Fatal("failed to create WebAuthn from config:", err)
-	}
-
-	auth.webAuthn = w
-
 	unix_dhcpd_router := mux.NewRouter().StrictSlash(true)
 	unix_wifid_router := mux.NewRouter().StrictSlash(true)
 	unix_wireguard_router := mux.NewRouter().StrictSlash(true)
@@ -2106,7 +2092,7 @@ func main() {
 	external_router_setup.Use(setSecurityHeaders)
 
 	//public websocket with internal authentication
-	external_router_public.HandleFunc("/ws", auth.webSocket).Methods("GET")
+	external_router_public.HandleFunc("/ws", webSocket).Methods("GET")
 
 	// intial setup
 	external_router_public.HandleFunc("/setup", setup).Methods("GET", "PUT")
@@ -2300,10 +2286,10 @@ func main() {
 
 		listenAddr := fmt.Sprint("0.0.0.0:", listenPort)
 
-		go http.ListenAndServeTLS(listenAddr, ApiTlsCert, ApiTlsKey, logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
+		go http.ListenAndServeTLS(listenAddr, ApiTlsCert, ApiTlsKey, logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
 	}
 
-	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(auth.Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
+	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
 
 	go wifidServer.Serve(unixWifidListener)
 

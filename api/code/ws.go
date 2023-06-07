@@ -74,7 +74,7 @@ func WSRunNotify() {
 	go WSRunBroadcast()
 }
 
-func (auth *authnconfig) webSocket(w http.ResponseWriter, r *http.Request) {
+func webSocket(w http.ResponseWriter, r *http.Request) {
 
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -102,7 +102,7 @@ func (auth *authnconfig) webSocket(w http.ResponseWriter, r *http.Request) {
 	msgs := string(msg)
 	if strings.Index(msgs, ":") != -1 {
 		pieces := strings.SplitN(msgs, ":", 2)
-		if auth.authenticateUser(pieces[0], pieces[1]) {
+		if authenticateUser(pieces[0], pieces[1]) {
 			c.WriteMessage(websocket.TextMessage, []byte("success"))
 			WSMtx.Lock()
 			WSClients = append(WSClients, c)
@@ -111,7 +111,7 @@ func (auth *authnconfig) webSocket(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		token := msgs
-		if auth.authenticateToken(token) {
+		if authenticateToken(token) {
 			c.WriteMessage(websocket.TextMessage, []byte("success"))
 			WSMtx.Lock()
 			WSClients = append(WSClients, c)
@@ -121,5 +121,4 @@ func (auth *authnconfig) webSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	c.WriteMessage(websocket.TextMessage, []byte("Authentication failure"))
 	c.Close()
-	//WSClients = append(WSClients, c)
 }
