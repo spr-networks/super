@@ -223,12 +223,12 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 				return
 			}
 
-			if !validURI(plugin.URI) {
+			if plugin.URI != "" && !validURI(plugin.URI) {
 				http.Error(w, "Invalid URI", 400)
 				return
 			}
 
-			if !validUnixPath(plugin.UnixPath) {
+			if plugin.UnixPath != "" && !validUnixPath(plugin.UnixPath) {
 				http.Error(w, "Invalid UnixPath", 400)
 				return
 			}
