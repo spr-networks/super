@@ -101,8 +101,7 @@ else
 
   for plugin in $PLUGINS
   do 
-    pushd
-    cd ${plugin}
+    pushd ${plugin}
     docker buildx bake \
       --builder super-builder \
       --file docker-compose.yml \
