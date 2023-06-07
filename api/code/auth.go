@@ -40,7 +40,6 @@ func saveOTP(data int) {
 	os.WriteFile(AuthOtpFile, []byte(strconv.Itoa(data)), 0661)
 }
 
-
 type Token struct {
 	Name        string
 	Token       string
@@ -67,7 +66,6 @@ func ExtractRequestToken(r *http.Request) string {
 	}
 	return ""
 }
-
 
 func authenticateToken(token string) bool {
 	exists := false
