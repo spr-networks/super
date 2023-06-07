@@ -1,0 +1,27 @@
+version: '3.4'
+
+x-logging:
+  &default-logging
+  driver: journald
+
+x-labels:
+  &default-labels
+  org.supernetworks.ci: ${CI:-false}
+  org.supernetworks.version: ${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+
+services:
+  ppp:
+    container_name: superppp
+    image: ghcr.io/spr-networks/super_ppp:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: ppp
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_ppp:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_ppp:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: host
+    privileged: true
+    logging: *default-logging
+    volumes:
+      - ./configs/ppp/:/etc/ppp/
