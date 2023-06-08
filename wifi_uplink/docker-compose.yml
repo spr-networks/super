@@ -1,0 +1,27 @@
+version: '3.4'
+
+x-logging:
+  &default-logging
+  driver: journald
+
+x-labels:
+  &default-labels
+  org.supernetworks.ci: ${CI:-false}
+  org.supernetworks.version: ${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+
+services:
+  wifi_uplink:
+    container_name: superwifiuplink
+    image: ghcr.io/spr-networks/super_wifiuplink:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: .
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_wifiuplink:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_wifiuplink:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: host
+    privileged: true
+    logging: *default-logging
+    volumes:
+      - ./configs/wifi_uplink/:/configs/wifi_uplink/

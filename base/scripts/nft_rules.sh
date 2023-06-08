@@ -174,7 +174,6 @@ table inet filter {
   #chain USERDEF_INPUT{
   #}
 
-  #    $(if [ "$VLANSIF" ]; then echo "counter iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF"; fi)
   chain WIPHY_MACSPOOF_CHECK {
   }
 
@@ -221,15 +220,24 @@ table inet filter {
     # Forward to WAN
     $(if [ "$WANIF" ]; then echo "counter oifname $WANIF ip saddr . iifname vmap @internet_access"; fi)
 
-    # Forward to wired LAN
+    # The @lan_access dynamic verdict map implements the special LAN group in SPR.
+    # It and allows one-way access to all stations, without an explicit relationship by IP,
+    #  with a NAT return path (F_EST_RELATED) 
+
+    # 1. Transmit to the LANIF interface
     $(if [ "$LANIF" ]; then echo "counter oifname $LANIF ip saddr . iifname vmap @lan_access"; fi)
 
-    # Forward @lan_access to wg
+    # 2. Transmit to the wireguard interface 
     counter oifname wg0 ip saddr . iifname vmap @lan_access
 
-    # Forward to wireless LAN
+    # 3. Forward to wireless stations. This verdict map is managed in firewall.go
     jump WIPHY_FORWARD_LAN
+
+    # Custom groups. Managed in firewall.go  
     jump CUSTOM_GROUPS
+
+    # Custom services represent one-way relationships, with NAT return path
+    jump CUSTOM_SERVICES
 
     # Fallthrough to log + drop
     counter jump DROPLOGFWD
@@ -241,7 +249,6 @@ table inet filter {
     counter drop
   }
 
-  #    $(if [ "$VLANSIF" ]; then echo "counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access"; fi)
   chain WIPHY_FORWARD_LAN {
   }
 
@@ -249,6 +256,10 @@ table inet filter {
   #}
 
   chain CUSTOM_GROUPS {
+
+  }
+
+  chain CUSTOM_SERVICES {
 
   }
 

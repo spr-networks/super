@@ -1,5 +1,5 @@
 #!/bin/bash
-. /configs/base/config.sh
+. /configs/ppp/vars.sh
 if [ "$PPPIF" ]; then
    if [ "$PPP_VLANID" ]; then
      ip link add link $PPPIF name $PPPIF.$PPP_VLANID type vlan id $PPP_VLANID

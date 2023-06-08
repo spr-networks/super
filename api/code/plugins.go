@@ -27,9 +27,93 @@ var MeshGitURL = "github.com/spr-networks/mesh_extension"
 
 var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
 
+type PluginConfig struct {
+	Name            string
+	URI             string
+	UnixPath        string
+	Enabled         bool
+	Plus            bool
+	GitURL          string
+	ComposeFilePath string
+}
+
 var gPlusExtensionDefaults = []PluginConfig{
 	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml"},
 	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml"},
+}
+
+var gPluginTemplates = []PluginConfig{
+	{
+		Name:     "dns-block-extension",
+		URI:      "dns/block",
+		UnixPath: "/state/dns/dns_block_plugin",
+		Enabled:  true,
+	},
+	{
+		Name:     "dns-log-extension",
+		URI:      "dns/log",
+		UnixPath: "/state/dns/dns_log_plugin",
+		Enabled:  true,
+	},
+	{
+		Name:     "plugin-lookup",
+		URI:      "lookup",
+		UnixPath: "/state/plugins/plugin-lookup/lookup_plugin",
+		Enabled:  true,
+	},
+	{
+		Name:     "wireguard",
+		URI:      "wireguard",
+		UnixPath: "/state/plugins/wireguard/wireguard_plugin",
+		Enabled:  true,
+	},
+	{
+		Name:     "dyndns",
+		URI:      "dyndns",
+		UnixPath: "/state/plugins/dyndns/dyndns_plugin",
+		Enabled:  true,
+	},
+	{
+		Name:     "db",
+		URI:      "db",
+		UnixPath: "/state/plugins/db/socket",
+		Enabled:  true,
+	},
+	//these have no API for now
+	{
+		Name:            "PPP",
+		Enabled:         false,
+		ComposeFilePath: "ppp/docker-compose.yml",
+	},
+	{
+		Name:            "WIFI-UPLINK",
+		Enabled:         false,
+		ComposeFilePath: "wifi_uplink/docker-compose.yml",
+	},
+}
+
+func updateConfigPluginDefaults(config *APIConfig) {
+	//helper for updating the config to include defaults in the template
+	//assumes config is locked
+
+	covered := []string{}
+	for _, entry := range config.Plugins {
+		covered = append(covered, entry.Name)
+	}
+
+	//merge templates into config.Plugins
+	for _, template := range gPluginTemplates {
+		hasEntry := false
+		for _, name := range covered {
+			if name == template.Name {
+				hasEntry = true
+				break
+			}
+		}
+		if !hasEntry {
+			config.Plugins = append(config.Plugins, template)
+		}
+	}
 }
 
 func PluginProxy(config PluginConfig) (*httputil.ReverseProxy, error) {
@@ -120,6 +204,9 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 				if entry.Name == name {
 					config.Plugins = append(config.Plugins[:idx], config.Plugins[idx+1:]...)
 					found = true
+
+					// plugin was deleted, stop it
+					stopExtension(entry.ComposeFilePath)
 					break
 				}
 			}
@@ -139,12 +226,12 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 				return
 			}
 
-			if !validURI(plugin.URI) {
+			if plugin.URI != "" && !validURI(plugin.URI) {
 				http.Error(w, "Invalid URI", 400)
 				return
 			}
 
-			if !validUnixPath(plugin.UnixPath) {
+			if plugin.UnixPath != "" && !validUnixPath(plugin.UnixPath) {
 				http.Error(w, "Invalid UnixPath", 400)
 				return
 			}
@@ -155,6 +242,12 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 				if entry.Name == name || entry.Name == plugin.Name {
 					found = true
 					config.Plugins[idx] = plugin
+
+					if plugin.Enabled == false {
+						//plugin is on longer enabled, send stop
+						stopExtension(entry.ComposeFilePath)
+					}
+
 					break
 				}
 			}
@@ -177,6 +270,11 @@ func PluginRoutes(external_router_authenticated *mux.Router) {
 			continue
 		}
 
+		if entry.URI == "" || entry.UnixPath == "" {
+			//skip entires with no URI OR no config.UnixPath
+			continue
+		}
+
 		proxy, err := PluginProxy(entry)
 		if err != nil {
 			panic(err)
@@ -186,8 +284,8 @@ func PluginRoutes(external_router_authenticated *mux.Router) {
 		external_router_authenticated.HandleFunc("/plugins/"+entry.URI+"/"+"{rest:.*}", PluginRequestHandler(proxy))
 	}
 
-	//start PLUS features
-	withRetry(30, 3, startPlusServices)
+	//start extension
+	withRetry(30, 3, startExtensionServices)
 }
 
 func withRetry(interval int, attempts int, target func() error) {
@@ -411,7 +509,7 @@ func downloadPlusExtension(gitURL string) bool {
 	return true
 }
 
-func startPlusExtension(composeFilePath string) bool {
+func startExtension(composeFilePath string) bool {
 	params := url.Values{}
 	params.Set("compose_file", composeFilePath)
 
@@ -433,7 +531,7 @@ func startPlusExtension(composeFilePath string) bool {
 	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("failed to start pfw extension", resp.StatusCode)
+		fmt.Println("failed to start "+composeFilePath+"  extension", resp.StatusCode)
 		return false
 	}
 
@@ -478,8 +576,8 @@ func stopPlusExt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, entry := range config.Plugins {
-		if entry.Plus == true && entry.Name == name {
-			if !stopPlusExtension(entry.ComposeFilePath) {
+		if entry.Name == name && entry.ComposeFilePath != "" {
+			if !stopExtension(entry.ComposeFilePath) {
 				http.Error(w, "Failed to stop service", 400)
 				return
 			}
@@ -488,7 +586,6 @@ func stopPlusExt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "Plus extension not found: "+name, 404)
-
 }
 
 func startPlusExt(w http.ResponseWriter, r *http.Request) {
@@ -500,13 +597,16 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, entry := range config.Plugins {
-		if entry.Plus == true && entry.Name == name {
+		if entry.Name == name && entry.ComposeFilePath != "" && entry.Enabled == true {
 
-			if !updatePlusExtension(entry.ComposeFilePath) {
-				fmt.Println("[-] Failed to update pfw")
+			if PlusEnabled() && entry.Plus == true {
+				//only plus extensions update for now
+				if !updatePlusExtension(entry.ComposeFilePath) {
+					fmt.Println("[-] Failed to update pfw")
+				}
 			}
 
-			if !startPlusExtension(entry.ComposeFilePath) {
+			if !startExtension(entry.ComposeFilePath) {
 				http.Error(w, "Failed to start service", 400)
 				return
 			}
@@ -517,7 +617,7 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Plus extension not found: "+name, 404)
 }
 
-func stopPlusExtension(composeFilePath string) bool {
+func stopExtension(composeFilePath string) bool {
 
 	params := url.Values{}
 	params.Set("compose_file", composeFilePath)
@@ -540,21 +640,18 @@ func stopPlusExtension(composeFilePath string) bool {
 	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("failed to stop pfw extension", resp.StatusCode)
+		fmt.Println("failed to stop "+composeFilePath+" extension", resp.StatusCode)
 		return false
 	}
 
 	return true
 }
 
-func stopPlusServices() error {
+func stopExtensionServices() error {
 	for _, entry := range config.Plugins {
-		if entry.Plus == true {
-			if !stopPlusExtension(entry.ComposeFilePath) {
-				return errors.New("Could not update PLUS Extension at " + entry.ComposeFilePath)
-			}
-			if !startPlusExtension(entry.ComposeFilePath) {
-				return errors.New("Could not start PLUS Extension at " + entry.ComposeFilePath)
+		if entry.Enabled && entry.ComposeFilePath != "" {
+			if !stopExtension(entry.ComposeFilePath) {
+				return errors.New("Could not stop Extension at " + entry.ComposeFilePath)
 			}
 		}
 	}
@@ -573,24 +670,34 @@ func installPlus() error {
 		fmt.Println("failed to log into ghcr")
 	}
 
-	return startPlusServices()
+	return startExtensionServices()
 }
 
-func startPlusServices() error {
-	//log into GHCR for PLUS
-	ghcrSuperdLogin()
+func startExtensionServices() error {
+
+	if PlusEnabled() {
+		//log into GHCR for PLUS
+		ghcrSuperdLogin()
+	}
 
 	/*
 		For now, the only plugin is PFW. This is hardcoded.
 		In the future, a list of PLUS extensions can be dynamically configured
 	*/
 	for _, entry := range config.Plugins {
-		if entry.Plus == true && entry.Enabled == true {
-			if !updatePlusExtension(entry.ComposeFilePath) {
-				return errors.New("Could not update PLUS Extension at " + entry.ComposeFilePath)
+		if entry.ComposeFilePath != "" && entry.Enabled == true {
+
+			if PlusEnabled() && entry.Plus == true {
+				//only plus extensions need updates for now
+				//as the others are built-in. this can change later
+				//when third party extensions are supported
+				if !updatePlusExtension(entry.ComposeFilePath) {
+					return errors.New("Could not update PLUS Extension at " + entry.ComposeFilePath)
+				}
 			}
-			if !startPlusExtension(entry.ComposeFilePath) {
-				return errors.New("Could not start PLUS Extension at " + entry.ComposeFilePath)
+
+			if !startExtension(entry.ComposeFilePath) {
+				return errors.New("Could not start Extension at " + entry.ComposeFilePath)
 			}
 		}
 	}
