@@ -108,12 +108,7 @@ func loadConfig() {
 	updateConfigPluginDefaults(&config)
 
 	if len(config.Plugins) != before {
-		//save the configuration if an update was detected
-		file, _ := json.MarshalIndent(config, "", " ")
-		err := ioutil.WriteFile(ApiConfigPath, file, 0600)
-		if err != nil {
-			log.Fatal(err)
-		}
+		saveConfigLocked()
 	}
 
 	//loading this will make sure devices-public.json is made
@@ -122,15 +117,19 @@ func loadConfig() {
 	initTraffic(config)
 }
 
-func saveConfig() {
-	Configmtx.Lock()
-	defer Configmtx.Unlock()
-
+func saveConfigLocked() {
 	file, _ := json.MarshalIndent(config, "", " ")
 	err := ioutil.WriteFile(ApiConfigPath, file, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func saveConfig() {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
+	saveConfigLocked()
 }
 
 var UNIX_WIFID_LISTENER = TEST_PREFIX + "/state/wifi/apisock"
@@ -705,7 +704,7 @@ func getConfigsBackup(w http.ResponseWriter, r *http.Request) {
 
 func restart(w http.ResponseWriter, r *http.Request) {
 	//restart all containers
-	go callSuperdRestart("")
+	go callSuperdRestart("", "")
 }
 
 var Devicesmtx sync.Mutex
@@ -1978,37 +1977,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	configureInterface("Uplink", conf.InterfaceUplink)
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
-	callSuperdRestart("")
-}
-
-func callSuperdRestart(target string) {
-	c := http.Client{}
-	c.Transport = &http.Transport{
-		Dial: func(network, addr string) (net.Conn, error) {
-			return net.Dial("unix", SuperdSocketPath)
-		},
-	}
-	defer c.CloseIdleConnections()
-
-	append := ""
-	if target != "" {
-		params := url.Values{}
-		params.Set("service", target)
-		append += "?" + params.Encode()
-	}
-
-	req, err := http.NewRequest(http.MethodPut, "http://localhost/restart"+append, nil)
-	if err != nil {
-		return
-	}
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return
-	}
-
-	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
+	callSuperdRestart("", "")
 }
 
 // set up SPA handler. From gorilla mux's documentation
@@ -2183,6 +2152,10 @@ func main() {
 	external_router_authenticated.HandleFunc("/ip/link/{interface}/{state}", ipLinkUpDown).Methods("PUT")
 
 	//uplink management
+	external_router_authenticated.HandleFunc("/uplink/wifi", getWpaSupplicantConfig).Methods("GET")
+	external_router_authenticated.HandleFunc("/uplink/wifi", updateWpaSupplicantConfig).Methods("PUT")
+	external_router_authenticated.HandleFunc("/uplink/wifi/restart", restartWpaClients).Methods("PUT")
+
 	//	external_router_authenticated.HandleFunc("/uplink/{interface}/enable", uplinkEnableInterface).Methods("PUT")
 	//	external_router_authenticated.HandleFunc("/uplink/{interface}/disable", uplinkEnableInterface).Methods("PUT")
 	//	external_router_authenticated.HandleFunc("/uplink/{interface}/bond", mangeBondInterface).Methods("PUT", "DELETE")

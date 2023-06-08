@@ -100,7 +100,6 @@ services:
     depends_on:
       - "base"
     volumes:
-      - ./configs/base/:/configs/base/
       - ./configs/dns/:/configs/dns/
       - ./state/api/:/state/api/
       - ./state/dns/:/state/dns/
@@ -206,7 +205,10 @@ services:
       - ./configs/auth/:/configs/auth/
       - ./configs/base/:/configs/base/
       - ./configs/devices/:/configs/devices/
+      - ./configs/dns:/configs/dns/
+      - ./configs/ppp:/configs/ppp/
       - ./configs/wifi/:/configs/wifi/
+      - ./configs/wifi_uplink/:/configs/wifi_uplink/
       - ./configs/wireguard/:/configs/wireguard/
       - ./configs/scripts/:/configs/scripts/
       - ./configs/pfw/:/configs/pfw/

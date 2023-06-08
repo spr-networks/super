@@ -629,7 +629,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		callSuperdRestart("wifid")
+		callSuperdRestart("", "wifid")
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -897,7 +897,7 @@ func hostapdEnableInterface(w http.ResponseWriter, r *http.Request) {
 	resetRadioFirewall()
 
 	//restart hostap container
-	callSuperdRestart("wifid")
+	callSuperdRestart("", "wifid")
 }
 
 /*
@@ -1031,7 +1031,7 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 	Interfacesmtx.Unlock()
 
 	//restart hostap container
-	callSuperdRestart("wifid")
+	callSuperdRestart("", "wifid")
 }
 
 func hostapdDisableInterface(w http.ResponseWriter, r *http.Request) {
@@ -1052,7 +1052,7 @@ func hostapdDisableInterface(w http.ResponseWriter, r *http.Request) {
 	resetRadioFirewall()
 
 	//restart hostap container
-	callSuperdRestart("wifid")
+	callSuperdRestart("", "wifid")
 }
 
 func getEnabledAPInterfaces(w http.ResponseWriter, r *http.Request) {
@@ -1109,12 +1109,12 @@ func hostapdResetInterface(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	callSuperdRestart("wifid")
+	callSuperdRestart("", "wifid")
 }
 
 func restartWifi(w http.ResponseWriter, r *http.Request) {
 	resetRadioFirewall()
-	callSuperdRestart("wifid")
+	callSuperdRestart("", "wifid")
 }
 
 /*

@@ -159,6 +159,9 @@ func PlusEnabled() bool {
 
 func getPlugins(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
 	ret := config.Plugins
 
 	if PlusEnabled() {
@@ -181,6 +184,9 @@ func getPlugins(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ret)
 }
 
+// this is a nested function since
+// we have to update the router when plugins
+// are managed.
 func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name := mux.Vars(r)["name"]
@@ -197,6 +203,9 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 			http.Error(w, err.Error(), 400)
 			return
 		}
+
+		Configmtx.Lock()
+		defer Configmtx.Unlock()
 
 		if r.Method == http.MethodDelete {
 			found := false
@@ -257,7 +266,7 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 			}
 		}
 
-		saveConfig()
+		saveConfigLocked()
 		PluginRoutes(router)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(config.Plugins)
@@ -302,6 +311,48 @@ func withRetry(interval int, attempts int, target func() error) {
 	}()
 }
 
+func restartPlugin(name string) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
+	for _, entry := range config.Plugins {
+		//carefully only send restart if enabled is set
+		//in case caller does not check.
+		if entry.Name == name && entry.Enabled == true {
+			if entry.ComposeFilePath != "" {
+				callSuperdRestart(entry.ComposeFilePath, "")
+			}
+		}
+	}
+
+}
+
+func enablePlugin(name string) bool {
+	//returns true if a change was made
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+	ret := false
+
+	if !PluginEnabled(name) {
+		//enable it
+
+		for i, entry := range config.Plugins {
+			if entry.Name == name {
+				config.Plugins[i].Enabled = true
+				if entry.ComposeFilePath != "" {
+					startExtension(entry.ComposeFilePath)
+					ret = true
+				}
+				break
+			}
+		}
+
+		saveConfigLocked()
+	}
+
+	return ret
+}
+
 // PLUS feature support
 
 func validPlusToken(token string) bool {
@@ -343,11 +394,14 @@ func plusToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
 	if validPlusToken(token) {
 		config.PlusToken = token
 		err := installPlus()
 		if err == nil {
-			saveConfig()
+			saveConfigLocked()
 			fmt.Println("[+] Installed token")
 			return
 		} else {
@@ -575,6 +629,9 @@ func stopPlusExt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
 	for _, entry := range config.Plugins {
 		if entry.Name == name && entry.ComposeFilePath != "" {
 			if !stopExtension(entry.ComposeFilePath) {
@@ -595,6 +652,9 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
 
 	for _, entry := range config.Plugins {
 		if entry.Name == name && entry.ComposeFilePath != "" && entry.Enabled == true {
@@ -702,6 +762,47 @@ func startExtensionServices() error {
 		}
 	}
 	return nil
+}
+
+func callSuperdRestart(composePath string, target string) {
+	c := http.Client{}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", SuperdSocketPath)
+		},
+	}
+	defer c.CloseIdleConnections()
+
+	append := ""
+	do_append := false
+	params := url.Values{}
+
+	if target != "" {
+		params.Set("service", target)
+		do_append = true
+	}
+
+	if composePath != "" {
+		params.Set("compose_file", composePath)
+		do_append = true
+	}
+
+	if do_append {
+		append += "?" + params.Encode()
+	}
+
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/restart"+append, nil)
+	if err != nil {
+		return
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
 }
 
 // mesh support
