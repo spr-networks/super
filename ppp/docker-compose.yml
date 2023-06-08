@@ -24,4 +24,4 @@ services:
     privileged: true
     logging: *default-logging
     volumes:
-      - ./configs/ppp/:/etc/ppp/
+      - "${SUPERDIR}./configs/ppp/:/etc/ppp/"

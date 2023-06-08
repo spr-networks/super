@@ -24,4 +24,4 @@ services:
     privileged: true
     logging: *default-logging
     volumes:
-      - ./configs/wifi_uplink/:/configs/wifi_uplink/
+      - "${SUPERDIR}./configs/wifi_uplink/:/configs/wifi_uplink/"
