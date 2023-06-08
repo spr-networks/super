@@ -90,7 +90,7 @@ func writeWPAs(config WPASupplicantConfig) {
 		}
 
 		var result bytes.Buffer
-		err = tmpl.Execute(&result, wpa.Networks)
+		err = tmpl.Execute(&result, wpa)
 		if err != nil {
 			fmt.Println("Error executing template:", err)
 			return
