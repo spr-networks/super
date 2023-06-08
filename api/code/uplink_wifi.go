@@ -72,33 +72,31 @@ func writeWPAs(config WPASupplicantConfig) {
 	//assumes lock is held
 
 	for _, wpa := range config.WPAs {
-		for _, network := range wpa.Networks {
-			tmpl, err := template.New("wpa_supplicant.conf").Parse(`ctrl_interface=DIR=/var/run/wpa_supplicant/` + wpa.Iface + `
-        {{range .Networks}}
-        {{if not .Disabled}}
-        network={
-        	ssid="{{.SSID}}"
-        	psk="{{.Password}}"
-        	{{if .Priority}}priority={{.Priority}}{{end}}
-        	{{if .BSSID}}bssid={{.BSSID}}{{end}}
-        }
-        {{end}}
-        {{end}}`)
+		tmpl, err := template.New("wpa_supplicant.conf").Parse(`ctrl_interface=DIR=/var/run/wpa_supplicant/` + wpa.Iface + `
+      {{range .Networks}}
+      {{if not .Disabled}}
+      network={
+      	ssid="{{.SSID}}"
+      	psk="{{.Password}}"
+      	{{if .Priority}}priority={{.Priority}}{{end}}
+      	{{if .BSSID}}bssid={{.BSSID}}{{end}}
+      }
+      {{end}}
+      {{end}}`)
 
-			if err != nil {
-				log.Println("Error parsing template:", err)
-				return
-			}
-
-			var result bytes.Buffer
-			err = tmpl.Execute(&result, network)
-			if err != nil {
-				fmt.Println("Error executing template:", err)
-				return
-			}
-			fp := TEST_PREFIX + "/configs/wifi_uplink/wpa_" + wpa.Iface + ".conf"
-			ioutil.WriteFile(fp, result.Bytes(), 0600)
+		if err != nil {
+			log.Println("Error parsing template:", err)
+			return
 		}
+
+		var result bytes.Buffer
+		err = tmpl.Execute(&result, wpa.Networks)
+		if err != nil {
+			fmt.Println("Error executing template:", err)
+			return
+		}
+		fp := TEST_PREFIX + "/configs/wifi_uplink/wpa_" + wpa.Iface + ".conf"
+		ioutil.WriteFile(fp, result.Bytes(), 0600)
 	}
 }
 
