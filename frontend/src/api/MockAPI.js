@@ -29,7 +29,8 @@ export default function MockAPI() {
       token: Model,
       backup: Model,
       pfwBlock: Model,
-      pfwForward: Model
+      pfwForward: Model,
+      uplink: Model
     },
     seeds(server) {
       server.create('device', {
@@ -2366,6 +2367,32 @@ export default function MockAPI() {
             'nft:lan:in'
           ]
         }
+      })
+
+      this.get('/uplink/wifi', (schema, request) => {
+        return {
+          WPAs: [
+            {
+              Disabled: true,
+              Password: 'password',
+              SSID: 'SPRLabs',
+              KeyMgmt: 'WPA-PSK WPA-PSK-SHA256',
+              Priority: '1',
+              BSSID: '00:11:22:33:44:55:66'
+            }
+          ]
+        }
+      })
+
+      this.put('/uplink/wifi', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        schema.uplinks.create(attrs)
+
+        return attrs
       })
     }
   })
