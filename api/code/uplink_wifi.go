@@ -176,7 +176,7 @@ func updateWpaSupplicantConfig(w http.ResponseWriter, r *http.Request) {
 	enabled := false
 
 	for _, wpa := range config.WPAs {
-		pattern := `^[a-zA-Z]+[0-9]*(\.[a-zA-Z]+[0-9]*)*$`
+		pattern := `^[a-zA-Z0-9]*(\.[a-zA-Z0-9]*)*$`
 		matched, err := regexp.MatchString(pattern, wpa.Iface)
 		if err != nil || !matched {
 			log.Println("Invalid iface name", err)
