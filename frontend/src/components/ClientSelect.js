@@ -83,7 +83,7 @@ const ClientSelect = (props) => {
       <Select selectedValue={props.value} onValueChange={props.onChange}>
         {optGroups && optGroups.length == 1
           ? optGroups[0].options.map((o) => (
-              <Select.Item label={o.label} value={o.value} />
+              <Select.Item key={o.value} label={o.label} value={o.value} />
             ))
           : null}
       </Select>
