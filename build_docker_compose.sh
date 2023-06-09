@@ -69,7 +69,7 @@ then
 
   for plugin in $PLUGINS
   do 
-    docker-compose --file ${plugin}/docker-compose.yml build ${BUILDARGS} $@ || exit 1
+    docker-compose --file ${plugin}/docker-compose.yml build ${BUILDARGS} || exit 1
   done
 else
   # We use docker buildx so we can build multi-platform images. Unfortunately,
@@ -105,7 +105,7 @@ else
     docker buildx bake \
       --builder super-builder \
       --file docker-compose.yml \
-      ${BUILDARGS} "$@" || exit 1
+      ${BUILDARGS} || exit 1
     popd
   done
 fi
