@@ -33,6 +33,7 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
 
   const handleChange = (value) => {
     let newValue = Array.isArray(value) ? value.join(',') : value
+
     if (onChange) {
       onChange(newValue)
     }
@@ -51,11 +52,8 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
           onChange={handleChange}
         >
           {group.options &&
-            group.options.map((item) => (
-              <Menu.ItemOption
-                key={group.title + item.value}
-                value={item.value}
-              >
+            group.options.map((item, idx) => (
+              <Menu.ItemOption key={group.title + idx} value={item.value}>
                 {item.label}
               </Menu.ItemOption>
             ))}
@@ -137,6 +135,21 @@ const InputSelect = (props) => {
   const isDisabled =
     props.isDisabled !== undefined ? props.isDisabled : isMultiple
 
+  const displayValue = (value) => {
+    if (typeof value == 'string') {
+      return value
+    }
+
+    let keys = ['Identity', 'SrcIP', 'Group', 'Tag']
+    for (let k of keys) {
+      if (typeof value[k] == 'string' && value[k].length) {
+        return value[k]
+      }
+    }
+
+    return JSON.stringify(value)
+  }
+
   return (
     <>
       <Input
@@ -144,7 +157,7 @@ const InputSelect = (props) => {
         variant="underlined"
         isDisabled={isDisabled}
         placeholder={title || ''}
-        value={value}
+        value={displayValue(value)}
         onChangeText={handleChangeText}
         onSubmitEditing={onSubmitEditing}
         InputRightElement={elem}
@@ -162,6 +175,10 @@ InputSelect.propTypes = {
   isMultiple: PropTypes.bool,
   title: PropTypes.string,
   options: PropTypes.array,
-  value: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
+  value: PropTypes.oneOfType([
+    PropTypes.object,
+    PropTypes.array,
+    PropTypes.string
+  ]),
   onChange: PropTypes.func
 }
