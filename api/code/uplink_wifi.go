@@ -26,6 +26,7 @@ type WPANetwork struct {
 	Disabled bool
 	Password string
 	SSID     string
+	KeyMgmt  string
 	Priority string `json:"omitempty"`
 	BSSID    string `json:"omitempty"`
 }
@@ -65,6 +66,22 @@ func (n *WPANetwork) Validate() error {
 		}
 	}
 
+	if n.KeyMgmt == "" {
+		return fmt.Errorf("KeyMgmt field must be set (WPA-PSK WPA-PSK-SHA256 or WPA-PSK WPA-PSK-SHA256 SAE)")
+	}
+
+	parts := strings.Split(n.KeyMgmt, " ")
+	for _, part := range parts {
+		if part == "WPA-PSK" {
+			continue
+		} else if part == "WPA-PSK-SHA256" {
+			continue
+		} else if part == "SAE" {
+			continue
+		}
+		return fmt.Errorf("KeyMgmt field has invalid field " + part)
+	}
+
 	return nil
 }
 
@@ -72,7 +89,7 @@ func writeWPAs(config WPASupplicantConfig) {
 	//assumes lock is held
 
 	for _, wpa := range config.WPAs {
-		tmpl, err := template.New("wpa_supplicant.conf").Parse(`ctrl_interface=DIR=/var/run/wpa_supplicant/` + wpa.Iface + `
+		tmpl, err := template.New("wpa_supplicant.conf").Parse(`ctrl_interface=DIR=/var/run/wpa_supplicant_` + wpa.Iface + `
       {{range .Networks}}
       {{if not .Disabled}}
       network={
@@ -80,6 +97,7 @@ func writeWPAs(config WPASupplicantConfig) {
       	psk="{{.Password}}"
       	{{if .Priority}}priority={{.Priority}}{{end}}
       	{{if .BSSID}}bssid={{.BSSID}}{{end}}
+        key_mgmt={{.KeyMgmt}}
       }
       {{end}}
       {{end}}`)
@@ -170,6 +188,9 @@ func updateWpaSupplicantConfig(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
+			if network.KeyMgmt == "" {
+				network.KeyMgmt = "WPA-PSK WPA-PSK-SHA256"
+			}
 			err := network.Validate()
 			if err != nil {
 				log.Println("Validation error:", err)
