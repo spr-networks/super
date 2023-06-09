@@ -27,8 +27,8 @@ type WPANetwork struct {
 	Password string
 	SSID     string
 	KeyMgmt  string
-	Priority string `json:"omitempty"`
-	BSSID    string `json:"omitempty"`
+	Priority string `json:",omitempty"`
+	BSSID    string `json:",omitempty"`
 }
 
 type WPAIface struct {
@@ -156,7 +156,7 @@ func saveWpaConfig(config WPASupplicantConfig) {
 }
 
 func getWpaSupplicantConfig(w http.ResponseWriter, r *http.Request) {
-  w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	err, config := loadWpaConfig()
 	if err != nil {
 		http.Error(w, "Failed to load wpa configuration", 400)
