@@ -116,19 +116,30 @@ const toCron = (days, from, to) => {
   return str
 }
 
-const parseClient = async (cli) => {
-  let Client = { Group: '', Identity: '', SrcIP: '' }
+const flowObjParse = (x) => {
+  if (typeof x == 'object') {
+    if (x.Identity != null && x.Identity != '') return x.Identity
+
+    if (x.Group != null && x.Group != '') return x.Group
+
+    if (x.SrcIP != null && x.SrcIP != '') return x.SrcIP
+
+    if (x.Tag != null && x.Tag != '') return x.Tag
+
+    return JSON.stringify(x)
+  }
+  return x
+}
+
+const parseClientIPOrIdentity = (cli) => {
+  let Client = { Group: '', Identity: '', SrcIP: '', Tag: '' }
 
   // if Client is from api we already have an object
   if (typeof cli === 'object') {
     return cli
   }
-
-  let groups = await deviceAPI.groups()
   if (cli.split('.').length == 4) {
     Client.SrcIP = cli
-  } else if (groups.includes(cli)) {
-    Client.Group = cli
   } else {
     Client.Identity = cli
   }
@@ -146,6 +157,7 @@ export {
   numToDays,
   daysToNum,
   toCron,
-  parseClient,
+  parseClientIPOrIdentity,
+  flowObjParse,
   toOption
 }

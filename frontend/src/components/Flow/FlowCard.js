@@ -21,19 +21,8 @@ import {
 
 import { getCard } from './FlowCards'
 import Token from './Token'
+import { flowObjParse } from './Utils'
 
-const flowObjParse = (x) => {
-  if (typeof x == 'object') {
-    if (x.Identity != null && x.Identity != '') return x.Identity
-
-    if (x.Group != null && x.Group != '') return x.Group
-
-    if (x.SrcIP != null && x.SrcIP != '') return x.SrcIP
-
-    return JSON.stringify(x)
-  }
-  return x
-}
 
 const FlowCard = ({ card, size, edit, ...props }) => {
   size = size || 'md'
@@ -137,6 +126,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
         {card.params
           .filter((p) => !p.hidden)
           .map((p) => (
+
             <Token
               key={p.name}
               label={p.name}

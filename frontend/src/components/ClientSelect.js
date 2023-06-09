@@ -40,13 +40,34 @@ const ClientSelect = (props) => {
             .then((groups) => {
               let options = groups.map((g) => g.Name)
               options = options.map((value) => {
-                return { label: value, value }
+                return { label: value, value: {Group: value} }
               })
 
               opts.push({
                 title: props.isMultiple ? 'Select Group' : 'Select Groups',
                 options
               })
+
+              if (props.showTags) {
+
+                let tagNames = Object.values(devices)
+                  .map((device) => {
+                    return device.DeviceTags
+                  })
+                  .flat()
+                  .filter((tagName) => tagName !== "")
+
+                tagNames = [...new Set(tagNames)]
+                let tagOptions = tagNames.map((t) => {
+                  return { label: t, value: {Tag: t} }
+                })
+
+                opts.push({
+                  title: props.isMultiple ? 'Select Tag' : 'Select Tags',
+                  options: tagOptions
+                })
+
+              }
 
               setOptGroups(opts)
             })

@@ -16,7 +16,7 @@ import {
 
 import { api, deviceAPI } from 'api'
 import { pfwAPI } from 'api/Pfw'
-import { numToDays, daysToNum, toCron, parseClient, toOption } from './Utils'
+import { numToDays, daysToNum, toCron, parseClientIPOrIdentity, toOption } from './Utils'
 import { BrandIcons } from 'FontAwesomeUtils'
 
 const defaultOptions = async function (name) {
@@ -172,7 +172,7 @@ const actions = [
       return []
     },
     preSubmit: async function () {
-      let Client = await parseClient(this.values.Client)
+      let Client = parseClientIPOrIdentity(this.values.Client)
 
       return { ...this.values, Client }
     },
@@ -226,7 +226,7 @@ const actions = [
     },
     //NOTE same as TCP
     preSubmit: async function () {
-      return { ...this.values, Client: await parseClient(this.values.Client) }
+      return { ...this.values, Client: parseClientIPOrIdentity(this.values.Client) }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
@@ -290,7 +290,7 @@ const actions = [
       return []
     },
     preSubmit: async function () {
-      return { ...this.values, Client: await parseClient(this.values.Client) }
+      return { ...this.values, Client: parseClientIPOrIdentity(this.values.Client) }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
@@ -359,7 +359,7 @@ const actions = [
       return []
     },
     preSubmit: async function () {
-      return { ...this.values, Client: await parseClient(this.values.Client) }
+      return { ...this.values, Client: parseClientIPOrIdentity(this.values.Client) }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
@@ -414,7 +414,7 @@ const actions = [
       }
     },
     preSubmit: async function () {
-      return { ...this.values, Client: await parseClient(this.values.Client) }
+      return { ...this.values, Client: parseClientIPOrIdentity(this.values.Client) }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
@@ -453,7 +453,7 @@ const actions = [
       })
     },
     preSubmit: async function () {
-      let Client = await parseClient(this.values.Client)
+      let Client = parseClientIPOrIdentity(this.values.Client)
       return { ...this.values, Client }
     },
     submit: function (data, flow) {
@@ -496,9 +496,9 @@ const actions = [
       })
     },
     preSubmit: async function () {
-      let Client = ''
+      let Client = {}
       try {
-        Client = await parseClient(this.values.Client)
+        Client = parseClientIPOrIdentity(this.values.Client)
       } catch (err) {
         console.log('parse fail:', err)
       }
@@ -627,7 +627,7 @@ const actions = [
 
       let data = {
         Protocol: this.values.Protocol,
-        Client: await parseClient(this.values.Client),
+        Client: parseClientIPOrIdentity(this.values.Client),
         //OriginalDstIP: this.values.OriginalDstIP,
         OriginalDstIP,
         OriginalDstPort: this.values.OriginalDstPort,

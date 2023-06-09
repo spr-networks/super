@@ -16,7 +16,7 @@ import TimeSelect from '../TimeSelect'
 import InputSelect from 'components/InputSelect'
 import ClientSelect from 'components/ClientSelect'
 
-import { niceDateToArray, dateArrayToStr } from './Utils'
+import { niceDateToArray, dateArrayToStr, flowObjParse } from './Utils'
 
 // token is like variables but for cards
 const Token = ({
@@ -49,7 +49,6 @@ const Token = ({
     mb: 2
   }
 
-  // TODO have different default values. example: Client
   const displayValue = (value, label) => {
     if (label == 'days') {
       return dateArrayToStr(value)
@@ -66,8 +65,8 @@ const Token = ({
 
       return '*'
     }
-
-    return value
+    let ret = flowObjParse(value)
+    return ret
   }
 
   // TODO autocomplete for selecting values:
@@ -152,6 +151,7 @@ const Token = ({
     inputElement = (
       <ClientSelect
         showGroups
+        showTags
         value={value}
         onChange={(value) => {
           onChangeText(value)
