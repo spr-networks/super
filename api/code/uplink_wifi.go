@@ -116,6 +116,9 @@ func writeWPAs(config WPASupplicantConfig) {
 		}
 		fp := TEST_PREFIX + "/configs/wifi_uplink/wpa_" + wpa.Iface + ".conf"
 		ioutil.WriteFile(fp, result.Bytes(), 0600)
+
+		//also update interfaces to mark this iface as an uplink
+		configureInterface("Uplink", wpa.Iface)
 	}
 }
 

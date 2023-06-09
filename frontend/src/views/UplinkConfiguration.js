@@ -98,16 +98,28 @@ const UplinkInfo = (props) => {
   //calculate uplink ips
   let uplinks = []
   let links = []
-  for (let link of Object.keys(linkIPs)) {
+  let filtered = ["lo", "sprloop", "wg0", "docker0"]
+  let k = Object.keys(linkIPs)
+  k.sort()
+  for (let link of k) {
+    if (filtered.includes(link)) {
+      continue
+    }
     //check if its in the interfaces configuration
     if (
       interfaces[link] &&
       (interfaces[link].Type == 'Uplink' || interfaces[link].Type == 'Bonded')
     ) {
-      let entry = { Interface: link, IPs: linkIPs[link] }
+      let entry = { Interface: link, IPs: linkIPs[link], Type: interfaces[link].Type }
       uplinks.push(entry)
+    } else {
+      let type = "Other"
+      if (interfaces[link] && interfaces[link].Type) {
+        type = interfaces[link].Type
+      }
+      let entry = { Interface: link, IPs: linkIPs[link], Type: type }
+      links.push(entry)
     }
-    links.push(link)
   }
 
   const { isOpen, onOpen, onClose } = useDisclose()
@@ -121,8 +133,8 @@ const UplinkInfo = (props) => {
     ></IconButton>
   )
 
-  const moreMenu = (
-    <Menu w={190} closeOnSelect={true} trigger={trigger}>
+  const moreMenu = (iface) => (
+    <Menu w={190} closeOnSelect={true} trigger={trigger} iface={iface}>
       <Menu.Item onPress={() => onOpen()}>Modify Interface</Menu.Item>
     </Menu>
   )
@@ -156,7 +168,48 @@ const UplinkInfo = (props) => {
                 }}
                 borderColor="borderColorCardLight"
               >
-                <Text flex={1}>{item.Interface}</Text>
+                <Text fontWeight="bold" flex={1}>{item.Interface}</Text>
+                <Text flex={1}>{item.Type}</Text>
+                <Text flex={1}>{item.IPs}</Text>
+                {moreMenu(item.Interface)}
+              </HStack>
+            )}
+            __ListHeaderComponent={() => (
+              <HStack
+                bg={useColorModeValue(
+                  'backgroundCardLight',
+                  'backgroundCardDark'
+                )}
+                p={3}
+                rounded="md"
+                my={1}
+              >
+                <Text flex={1} fontWeight="bold">
+                  Interface
+                </Text>
+                <Text flex={1} fontWeight="bold">
+                  IP Address
+                </Text>
+              </HStack>
+            )}
+          />
+
+          <FlatList
+            data={links}
+            renderItem={({ item }) => (
+              <HStack
+                p={4}
+                rounded="md"
+                alignItems="center"
+                borderBottomWidth={1}
+                _dark={{
+                  bg: 'backgroundCardDark',
+                  borderColor: 'borderColorCardDark'
+                }}
+                borderColor="borderColorCardLight"
+              >
+                <Text fontWeight="bold" flex={1}>{item.Interface}</Text>
+                <Text flex={1}>{item.Type}</Text>
                 <Text flex={1}>{item.IPs}</Text>
                 {moreMenu}
               </HStack>
@@ -185,7 +238,7 @@ const UplinkInfo = (props) => {
             <Modal.Content>
               <Modal.CloseButton />
               <Modal.Header fontSize="4xl" fontWeight="bold">
-                Hello World
+                Configure interface
               </Modal.Header>
               <Modal.Body>
                 Lorem ipsum dolor sit amet consectetur adipisicing elit. Quos
@@ -203,53 +256,6 @@ const UplinkInfo = (props) => {
           </Modal>
         </VStack>
 
-        <Box width={{ base: '100%', md: '50%' }} mx={{ base: 0, md: 4 }}>
-          <VStack
-            space={4}
-            mb={4}
-            bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-          >
-            <HStack
-              space={2}
-              p={4}
-              justifyContent="space-between"
-              borderBottomWidth={1}
-              _dark={{
-                bg: 'backgroundCardDark',
-                borderColor: 'borderColorCardDark'
-              }}
-              borderColor="borderColorCardLight"
-            >
-              <Text flex={1}>Uplink IPs</Text>
-              <VStack space={2}>
-                {uplinks.map((uplink, id) => (
-                  <HStack
-                    flex={1}
-                    space={2}
-                    key={id}
-                    justifyContent={'space-between'}
-                  >
-                    <Text bold>{uplink.Interface} </Text>{' '}
-                    <Text>{uplink.IPs}</Text>
-                  </HStack>
-                ))}
-              </VStack>
-            </HStack>
-            <Text p={4}>Manage Uplink Interfaces</Text>
-
-            <Text p={4} flexWrap={'wrap'}>
-              {JSON.stringify(links)}
-            </Text>
-
-            <HStack p={4} justifyContent="space-between">
-              <Text>Bond Interfaces</Text>
-            </HStack>
-
-            <HStack p={4} justifyContent="space-between">
-              <Text>Set Load Balancing Strategy</Text>
-            </HStack>
-          </VStack>
-        </Box>
       </VStack>
     </ScrollView>
   )
