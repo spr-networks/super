@@ -156,6 +156,7 @@ func saveWpaConfig(config WPASupplicantConfig) {
 }
 
 func getWpaSupplicantConfig(w http.ResponseWriter, r *http.Request) {
+  w.Header().Set("Content-Type", "application/json")
 	err, config := loadWpaConfig()
 	if err != nil {
 		http.Error(w, "Failed to load wpa configuration", 400)
