@@ -1454,7 +1454,7 @@ func refreshDeviceGroups(dev DeviceEntry) {
 		if err == nil {
 			ipv4 = arp_entry.IP
 		} else {
-			log.Println("Missing IP for device, could not refresh device groups")
+			log.Println("Missing IP for device, could not refresh device groups with MAC " + dev.MAC)
 			return
 		}
 	}
