@@ -410,8 +410,6 @@ func writePPP(interfaces []InterfaceConfig, config PPPConfig) error {
       persist
       {{if .MTU}}mtu {{.MTU}}{{end}}
       plugin rp-pppoe.so {{.Iface}}{{if .VLAN}}.{{.VLAN}}{{end}}
-      {{if .BSSID}}bssid={{.BSSID}}{{end}}
-      plugin rp-pppoe.so {{.Iface}}.{{.VLAN}}
       user "{{.Username}}"
       `)
 
