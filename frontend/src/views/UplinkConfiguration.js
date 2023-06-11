@@ -1,7 +1,5 @@
 /*
   TBD -
-    configure wlan0 as uplink
-
     configure ppp
 
     configure a bonded interface
@@ -42,25 +40,58 @@ import { ucFirst } from 'utils'
 import InputSelect from 'components/InputSelect'
 
 let keymgmts = [
+  { value: 'WPA-PSK WPA-PSK-SHA256 SAE', label: 'WPA2/WPA3' },
   { value: 'WPA-PSK WPA-PSK-SHA256', label: 'WPA2' },
-  { value: 'WPA-PSK WPA-PSK-SHA256 SAE', label: 'WPA3' }
+  { value: 'SAE', label: 'WPA3' }
 ]
 
-const UplinkAdd = ({ iface, onSubmit, ...props }) => {
-  const [item, setItem] = useState({})
+const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
+  const type = 'wifi'
+  const [item, setItem] = useState({
+    Disabled: false,
+    Password: '',
+    SSID: '',
+    KeyMgmt: 'WPA-PSK WPA-PSK-SHA256 SAE',
+    Priority: '1',
+    BSSID: '',
+  })
+
   const [ssids, setSSIDs] = useState([])
   const [optSSIDs, setOptsSSIDs] = useState([])
+  const [assignBSSID, setAssignBSSID] = useState(false)
+  const [disableWPA3, setDisableWPA3] = useState(false)
 
   const handleChangeSSID = (SSID) => {
     let ssidItem = ssids.find((item) => item.ssid == SSID)
-    let BSSID = ssidItem ? ssidItem.bssid : ''
-    let KeyMgmt = 'WPA-PSK WPA-PSK-SHA256'
+    let newBSSID = ''
 
-    if (ssidItem.authentication_suites.includes('SAE')) {
-      KeyMgmt = 'WPA-PSK WPA-PSK-SHA256 SAE'
+    if (ssidItem) {
+      //ssid was in the scan. grabs the first one.
+
+      /*
+      //disable wpa3 if ssid did not offer it
+      if (ssidItem.authentication_suites && !ssidItem.authentication_suites.includes('SAE')) {
+        setDisableWPA3(true)
+      }
+      */
+
+      //provide bssid from scan
+      newBSSID = ssidItem.bssid
     }
 
-    setItem({ ...item, SSID, BSSID, KeyMgmt })
+    if (newBSSID != '') {
+      setItem({ ...item, SSID, BSSID: newBSSID })
+    } else {
+      setItem({ ...item, SSID })
+    }
+  }
+
+  const doSubmit = (item) => {
+    //strip out BSSID if assignBSSID is not set
+    if (assignBSSID == false) {
+      item.BSSID = ''
+    }
+    onSubmit(item, type)
   }
 
   const scan = (iface) => {
@@ -74,6 +105,26 @@ const UplinkAdd = ({ iface, onSubmit, ...props }) => {
     )
   }
 
+  const getWifiClients = () => {
+    api
+      .get('/uplink/wifi')
+      .then((res) => {
+        //fill out the defaults for the matching iface
+        for (let entry of res.WPAs) {
+          if (entry.Iface == iface) {
+            if (entry.Networks && entry.Networks.length > 0) {
+              setItem(entry.Networks[0])
+            }
+            break
+          }
+        }
+      })
+      .catch((err) => {
+        context.error(err)
+      })
+  }
+
+
   useEffect(() => {
     if (ssids && ssids.length) {
       setOptsSSIDs(
@@ -85,21 +136,12 @@ const UplinkAdd = ({ iface, onSubmit, ...props }) => {
   }, [ssids])
 
   useEffect(() => {
-    //defaults
-    setItem({
-      Disabled: true,
-      Password: '',
-      SSID: '',
-      KeyMgmt: 'WPA-PSK WPA-PSK-SHA256 SAE',
-      Priority: '1', // TODO ui component for this
-      BSSID: '',
-      Iface: iface
-    })
-
     // scan on init
     if (iface != null) {
       scan(iface)
     }
+
+    getWifiClients()
   }, [])
 
   return (
@@ -110,6 +152,7 @@ const UplinkAdd = ({ iface, onSubmit, ...props }) => {
           options={optSSIDs}
           value={item.SSID}
           onChange={handleChangeSSID}
+          onChangeText={handleChangeSSID}
         />
       </FormControl>
       <FormControl>
@@ -121,6 +164,16 @@ const UplinkAdd = ({ iface, onSubmit, ...props }) => {
           onChangeText={(BSSID) => setItem({ ...item, BSSID })}
           autoFocus
         />
+
+        <Checkbox
+          size="sm"
+          colorScheme="primary"
+          value={!assignBSSID}
+          onChange={setAssignBSSID}
+        >
+          Assign
+        </Checkbox>
+
       </FormControl>
       <FormControl>
         <FormControl.Label>Auth</FormControl.Label>
@@ -129,7 +182,7 @@ const UplinkAdd = ({ iface, onSubmit, ...props }) => {
           onValueChange={(KeyMgmt) => setItem({ ...item, KeyMgmt })}
         >
           {keymgmts.map((opt) => (
-            <Select.Item key={opt.value} label={opt.label} value={opt.value} />
+            <Select.Item key={opt.value} label={opt.label} value={opt.value} isDisabled={opt.label.includes('WPA3') && disableWPA3} />
           ))}
         </Select>
       </FormControl>
@@ -147,6 +200,8 @@ const UplinkAdd = ({ iface, onSubmit, ...props }) => {
         />
       </FormControl>
 
+      { /*
+        //priority will only matter once UI supports multiple ssids.
       <FormControl>
         <FormControl.Label>Priority</FormControl.Label>
         <Input
@@ -162,6 +217,7 @@ const UplinkAdd = ({ iface, onSubmit, ...props }) => {
           autoFocus
         />
       </FormControl>
+      */ }
 
       <FormControl>
         <FormControl.Label>Status</FormControl.Label>
@@ -169,19 +225,197 @@ const UplinkAdd = ({ iface, onSubmit, ...props }) => {
         <Checkbox
           size="sm"
           colorScheme="primary"
+          defaultIsChecked
           value={!item.Disabled}
-          onChange={(Enabled) => setItem({ ...item, Disabled: !Enabled })}
+          onChange={(val) => setItem({ ...item, Disabled: !val })}
         >
           Enabled
         </Checkbox>
       </FormControl>
 
-      <Button colorScheme="primary" onPress={() => onSubmit(item)}>
+      <Button colorScheme="primary" onPress={() => doSubmit(item)}>
         Save
       </Button>
     </VStack>
   )
 }
+
+const UplinkAddIP = ({ iface, onSubmit, ...props }) => {
+  const type = 'ip'
+  const context = useContext(AlertContext)
+
+  const [item, setItem] = useState({
+    DisableDHCP: false,
+    IP: '',
+    Router: '',
+    Iface: ''
+  })
+
+  const [errors, setErrors] = useState({});
+
+  const [disableDHCP, setDisableDHCP] = useState(false)
+
+  const validate = () => {
+    if (disableDHCP == false) {
+      return true
+    }
+
+    const ipv4Regex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/
+    const ipv6Regex = /([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}/
+
+    let ip = item.IP
+    let ip_invalid = true
+    if (ip.includes("/")) {
+      let pieces = ip.split("/")
+      if (pieces.length == 2) {
+        let netSplit = parseInt(pieces[1])
+        if (netSplit >= 8 && netSplit <= 32) {
+          if (ipv4Regex.test(pieces[0]) || ipv6Regex.test(pieces[0])) {
+            ip_invalid = false
+          }
+        }
+      }
+    }
+
+    if (ip_invalid) {
+      context.error("Failed to validate IP")
+      return false
+    }
+
+    if (!ipv4Regex.test(item.Router) && !ipv6Regex.test(item.Router)) {
+      context.error("Failed to validate Router IP")
+      return false
+    }
+
+    return true
+  }
+
+  const doSubmit = (item) => {
+    validate() ? onSubmit(item, type) : null
+  }
+
+  useEffect(() => {
+  }, [])
+
+  return (
+    <VStack space={4}>
+      <FormControl>
+        <FormControl.Label>DHCP Settings</FormControl.Label>
+        <Checkbox
+          size="sm"
+          colorScheme="primary"
+          value={disableDHCP}
+          onChange={(value) => {setDisableDHCP(value) && setItem({ ...item, DisableDHCP: value})} }
+        >
+          Manually Set IP
+        </Checkbox>
+      </FormControl>
+
+      { disableDHCP ?  (
+        <>
+          <FormControl>
+            <FormControl.Label>Assign IP</FormControl.Label>
+            <Input
+              variant="underlined"
+              placeholder="192.168.1.1/24"
+              value={item.IP}
+              onChangeText={(IP) => setItem({ ...item, IP })}
+              autoFocus
+            />
+          </FormControl>
+          <FormControl>
+            <FormControl.Label>Assign Router</FormControl.Label>
+            <Input
+              variant="underlined"
+              placeholder="192.168.1.1"
+              value={item.Router}
+              onChangeText={(Router) => setItem({ ...item, Router })}
+              autoFocus
+            />
+          </FormControl>
+        </>
+      ) :
+        null
+      }
+
+      <Button colorScheme="primary" onPress={() => doSubmit(item)}>
+        Save
+      </Button>
+    </VStack>
+  )
+}
+
+const UplinkAddPPP = ({ iface, onSubmit, ...props }) => {
+  const type = 'ppp'
+  const [item, setItem] = useState({
+    Username: '',
+    Secret: '',
+    VLAN: '',
+    MTU: '',
+  })
+
+  const [disableDHCP, setDisableDHCP] = useState(false)
+
+  const doSubmit = (item) => {
+    onSubmit(item, type)
+  }
+
+  useEffect(() => {
+  }, [])
+
+  return (
+    <VStack space={4}>
+      <FormControl>
+        <FormControl.Label>Assign Client</FormControl.Label>
+        <Input
+          variant="underlined"
+          placeholder="user@provider.com"
+          value={item.Username}
+          onChangeText={(Username) => setItem({ ...item, Username })}
+          autoFocus
+        />
+      </FormControl>
+      <FormControl>
+        <FormControl.Label>Secret</FormControl.Label>
+        <Input
+          variant="underlined"
+          type="password"
+          autoComplete="off"
+          autoCorrect="off"
+          placeholder="Password..."
+          value={item.Secret}
+          onChangeText={(Secret) => setItem({ ...item, Secret })}
+          autoFocus
+        />
+      </FormControl>
+      <FormControl>
+        <FormControl.Label>VLAN ID</FormControl.Label>
+        <Input
+          variant="underlined"
+          placeholder="201 (Optional)"
+          value={item.VLAN}
+          onChangeText={(VLAN) => setItem({ ...item, VLAN })}
+          autoFocus
+        />
+      </FormControl>
+      <FormControl>
+        <FormControl.Label>Set MTU</FormControl.Label>
+        <Input
+          variant="underlined"
+          placeholder="1492 (Optional)"
+          value={item.MTU}
+          onChangeText={(MTU) => setItem({ ...item, MTU })}
+          autoFocus
+        />
+      </FormControl>
+      <Button colorScheme="primary" onPress={() => doSubmit(item)}>
+        Save
+      </Button>
+    </VStack>
+  )
+}
+
+
 
 const UplinkInfo = (props) => {
   const context = useContext(AlertContext)
@@ -190,6 +424,8 @@ const UplinkInfo = (props) => {
   const [linkIPs, setLinkIPs] = useState({})
 
   const [iface, setIface] = useState(null)
+
+  const [modal, setModal] = useState('')
 
   function isLocalIpAddress(ipAddress) {
     const ipv4Regex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/
@@ -293,24 +529,63 @@ const UplinkInfo = (props) => {
       <Menu.Item
         onPress={() => {
           setIface(iface)
+          setModal('ip')
           onOpen()
         }}
       >
         Modify Interface
       </Menu.Item>
+      <Menu.Item
+        onPress={() => {
+          setIface(iface)
+          setModal('wifi')
+          onOpen()
+        }}
+      >
+        Configure Wireless
+      </Menu.Item>
+      <Menu.Item
+        onPress={() => {
+          setIface(iface)
+          setModal('ppp')
+          onOpen()
+        }}
+      >
+        Configure PPP
+      </Menu.Item>
     </Menu>
   )
 
-  const onSubmit = (item) => {
-    console.log('save:', item)
-    //TODO verify endpoint is available
+  const onSubmit = (item, type) => {
+    //
+
+    let new_entry
+
+    if (type == 'wifi') {
+      new_entry = {Iface: iface, Enabled: true, Networks: [item]}
+    } else if (type == 'ppp') {
+      new_entry = {Iface: iface, PPP: [item]}
+    } else if (type == 'ip') {
+      new_entry = {Iface: iface, IPConfig: [item]}
+    } else {
+      context.error("Unknown type " + type)
+      return
+    }
+
+
     api
-      .put('/uplink/wifi', { WPAs: [item] })
-      .then((res) => onClose())
+      .put('/uplink/'+type, new_entry)
+      .then((res2) => onClose())
       .catch((err) => {
         context.error(err)
         onClose()
       })
+      .catch((err) => {
+        context.error(err)
+        onClose()
+      })
+
+
   }
 
   return (
@@ -349,18 +624,13 @@ const UplinkInfo = (props) => {
                 <Text flex={1}>{item.Type}</Text>
                 <Text flex={1}>{item.IPs}</Text>
                 <Box flex={1}>
-                  {item.Interface.match(/^wlan/)
-                    ? moreMenu(item.Interface)
-                    : null}
+                  {moreMenu(item.Interface)}
                 </Box>
               </HStack>
             )}
           />
         </VStack>
 
-        <HStack p={4}>
-          <Heading fontSize="md">Interfaces</Heading>
-        </HStack>
         <VStack
           mx={{ base: 0, md: 4 }}
           width={{ base: '100%', md: '50%' }}
@@ -385,7 +655,9 @@ const UplinkInfo = (props) => {
                 </Text>
                 <Text flex={1}>{item.Type}</Text>
                 <Text flex={1}>{item.IPs}</Text>
-                <Box flex={1}></Box>
+                <Box flex={1}>
+                  {moreMenu(item.Interface)}
+                </Box>
               </HStack>
             )}
           />
@@ -397,7 +669,9 @@ const UplinkInfo = (props) => {
                 {iface ? `Configure ${iface}` : 'Configure interface'}
               </Modal.Header>
               <Modal.Body>
-                {iface ? <UplinkAdd iface={iface} onSubmit={onSubmit} /> : null}
+                {iface && modal == 'wifi' ? <UplinkAddWifi iface={iface} onSubmit={onSubmit} /> : null}
+                {iface && modal == 'ip' ? <UplinkAddIP iface={iface} onSubmit={onSubmit} /> : null}
+                {iface && modal == 'ppp' ? <UplinkAddPPP iface={iface} onSubmit={onSubmit} /> : null}
               </Modal.Body>
             </Modal.Content>
           </Modal>

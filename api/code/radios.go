@@ -707,16 +707,6 @@ type ExtraBSS struct {
 	DisableIsolation bool
 }
 
-type InterfaceConfig struct {
-	Name     string
-	Type     string
-	Enabled  bool
-	ExtraBSS []ExtraBSS
-}
-
-var gAPIInterfacesPath = TEST_PREFIX + "/configs/base/interfaces.json"
-var gAPIInterfacesPublicPath = TEST_PREFIX + "/state/public/interfaces.json"
-
 /*
  Simple upgrade path to using templates
 */
@@ -731,24 +721,6 @@ func createHostAPTemplate() {
 	}
 }
 
-func loadInterfacesConfigLocked() []InterfaceConfig {
-	//read the old configuration
-	data, err := os.ReadFile(gAPIInterfacesPath)
-	config := []InterfaceConfig{}
-	if err == nil {
-		_ = json.Unmarshal(data, &config)
-	}
-	return config
-}
-
-func copyInterfacesConfigToPublic() {
-	Interfacesmtx.Lock()
-	config := loadInterfacesConfigLocked()
-	file, _ := json.MarshalIndent(config, "", " ")
-	ioutil.WriteFile(gAPIInterfacesPublicPath, file, 0660)
-	Interfacesmtx.Unlock()
-}
-
 func writeInterfacesConfigLocked(config []InterfaceConfig) error {
 	file, err := json.MarshalIndent(config, "", " ")
 	if err != nil {
@@ -760,107 +732,6 @@ func writeInterfacesConfigLocked(config []InterfaceConfig) error {
 	}
 	//write a copy to the public
 	return ioutil.WriteFile(gAPIInterfacesPublicPath, file, 0660)
-}
-
-func configureInterface(interfaceType string, name string) error {
-	Interfacesmtx.Lock()
-	defer Interfacesmtx.Unlock()
-
-	if interfaceType != "AP" && interfaceType != "Uplink" {
-		//generate a hostap config if it is not there yet (?)
-		return fmt.Errorf("Unknown interface type " + interfaceType)
-	}
-
-	if interfaceType == "AP" {
-		//ensure that a hostapd configuration exists for this interface.
-		path := getHostapdConfigPath(name)
-		_, err := os.Stat(path)
-		if os.IsNotExist(err) {
-
-			//copy the template over
-			input, err := ioutil.ReadFile(getHostapdConfigPath("template"))
-			if err != nil {
-				fmt.Println("missing template configuration")
-				createHostAPTemplate()
-				input, err = ioutil.ReadFile(getHostapdConfigPath("template"))
-				if err != nil {
-					fmt.Println("failed to create tempalte")
-					return err
-				}
-			}
-
-			configData := string(input)
-			matchSSID := regexp.MustCompile(`(?m)^(ssid)=(.*)`)
-			matchInterfaceAP := regexp.MustCompile(`(?m)^(interface)=(.*)`)
-			matchControl := regexp.MustCompile(`(?m)^(ctrl_interface)=(.*)`)
-
-			configData = matchSSID.ReplaceAllString(configData, "$1="+"SPR_"+name)
-			configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+name)
-			configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+name)
-
-			err = ioutil.WriteFile(path, []byte(configData), 0644)
-			if err != nil {
-				fmt.Println("Error creating", path)
-				return err
-			}
-
-		}
-
-	}
-
-	newEntry := InterfaceConfig{name, interfaceType, true, []ExtraBSS{}}
-
-	config := loadInterfacesConfigLocked()
-
-	foundEntry := false
-	for i, _ := range config {
-		if config[i].Name == name {
-			config[i] = newEntry
-			foundEntry = true
-			break
-		}
-	}
-
-	if !foundEntry {
-		config = append(config, newEntry)
-	}
-
-	err := writeInterfacesConfigLocked(config)
-	if err != nil {
-		fmt.Println("failed to write interfaces configuration file", err)
-		return err
-	}
-
-	return nil
-}
-
-func toggleInterface(name string, enabled bool) error {
-	Interfacesmtx.Lock()
-	defer Interfacesmtx.Unlock()
-
-	//read the old configuration
-	config := loadInterfacesConfigLocked()
-
-	foundEntry := false
-	madeChange := false
-	for i, _ := range config {
-		if config[i].Name == name {
-			foundEntry = true
-			madeChange = enabled != config[i].Enabled
-			config[i].Enabled = enabled
-			break
-		}
-	}
-
-	if !foundEntry {
-		return fmt.Errorf("interface not found")
-	}
-
-	if madeChange {
-		return writeInterfacesConfigLocked(config)
-	}
-
-	return nil
 }
 
 // when interfaces.json is updated, the firewall rules need to
@@ -881,12 +752,13 @@ func hostapdEnableInterface(w http.ResponseWriter, r *http.Request) {
 
 	//make a call to configure the interface,
 	// which ensures that a hostapd configuration is created
-	err := configureInterface("AP", iface)
+	err := configureInterface("AP", "", iface)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
 
+	//toggle will also kick off the restart
 	err = toggleInterface(iface, true)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
@@ -895,9 +767,6 @@ func hostapdEnableInterface(w http.ResponseWriter, r *http.Request) {
 
 	//reset firewall rules to match the configuration
 	resetRadioFirewall()
-
-	//restart hostap container
-	callSuperdRestart("", "wifid")
 }
 
 /*
@@ -1041,6 +910,7 @@ func hostapdDisableInterface(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//toggle will also kick off the restart
 	err := toggleInterface(iface, false)
 
 	if err != nil {
@@ -1050,9 +920,6 @@ func hostapdDisableInterface(w http.ResponseWriter, r *http.Request) {
 
 	//apply firewall rules again
 	resetRadioFirewall()
-
-	//restart hostap container
-	callSuperdRestart("", "wifid")
 }
 
 func getEnabledAPInterfaces(w http.ResponseWriter, r *http.Request) {
@@ -1070,16 +937,6 @@ func getEnabledAPInterfaces(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write([]byte(outputString))
-}
-
-func getInterfacesConfiguration(w http.ResponseWriter, r *http.Request) {
-	Interfacesmtx.Lock()
-	defer Interfacesmtx.Unlock()
-
-	config := loadInterfacesConfigLocked()
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(config)
 }
 
 func hostapdResetInterface(w http.ResponseWriter, r *http.Request) {
@@ -1101,15 +958,15 @@ func hostapdResetInterface(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//with the file renamed, configureInterface will write a default config
-	configureInterface("AP", iface)
+	configureInterface("AP", "", iface)
 
+	//toggle will also kick off the restart
 	err = toggleInterface(iface, true)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
 
-	callSuperdRestart("", "wifid")
 }
 
 func restartWifi(w http.ResponseWriter, r *http.Request) {
@@ -1158,14 +1015,14 @@ func multi_ap_migration() {
 		}
 
 		//configure interfaces
-		configureInterface("AP", name)
+		configureInterface("AP", "", name)
 		upstream_interface := os.Getenv("WANIF")
 		if upstream_interface == "" {
 			fmt.Println("did not have upstream interface to configure")
 			return
 		}
 
-		configureInterface("Uplink", upstream_interface)
+		configureInterface("Uplink", "ethernet", upstream_interface)
 	}
 
 }

@@ -1378,23 +1378,6 @@ func updateLocalMappings(IP string, Name string) {
 	ioutil.WriteFile(localMappingsPath, []byte(new_data), 0644)
 }
 
-func isAPVlan(Iface string) bool {
-	Interfacesmtx.Lock()
-	//read the old configuration
-	config := loadInterfacesConfigLocked()
-	Interfacesmtx.Unlock()
-
-	for _, entry := range config {
-		if entry.Enabled && entry.Type == "AP" {
-			if strings.Contains(Iface, entry.Name+".") {
-				return true
-			}
-		}
-	}
-
-	return false
-}
-
 func flushRoute(MAC string) {
 	arp_entry, err := GetArpEntryFromMAC(MAC)
 	if err != nil {
@@ -1973,8 +1956,8 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	configureInterface("AP", conf.InterfaceAP)
-	configureInterface("Uplink", conf.InterfaceUplink)
+	configureInterface("AP", "", conf.InterfaceAP)
+	configureInterface("Uplink", "ethernet", conf.InterfaceUplink)
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
 	callSuperdRestart("", "")
