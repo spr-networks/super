@@ -174,7 +174,6 @@ func insertWpaConfigAndSave(interfaces []InterfaceConfig, new_wpa WPAIface) erro
 	// as well as inserting new_wpa
 	WPAmtx.Lock()
 	defer WPAmtx.Unlock()
-	new_wpa.Enabled = true
 
 	config := WPASupplicantConfig{}
 
@@ -454,7 +453,6 @@ func isPPPUplinkIfaceEnabled(Name string, interfaces []InterfaceConfig) bool {
 func insertPPPConfigAndSave(interfaces []InterfaceConfig, new_ppp PPPIface) error {
 	PPPmtx.Lock()
 	defer PPPmtx.Unlock()
-	new_ppp.Enabled = true
 
 	config := PPPConfig{}
 
