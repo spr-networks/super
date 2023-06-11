@@ -25,6 +25,7 @@ type InterfaceConfig struct {
 	DisableDHCP bool       `json:",omitempty"`
 	IP          string     `json:",omitempty"`
 	Router      string     `json:",omitempty"`
+	VLAN        string     `json:",omitempty"`
 }
 
 // this will be exported to all containers in public/interfaces.json
@@ -224,7 +225,6 @@ func toggleInterface(name string, enabled bool) error {
 		//locka gain for defer
 		Interfacesmtx.Lock()
 		return err
-
 	}
 
 	return nil
@@ -283,16 +283,50 @@ func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool
 	if !found {
 		return []InterfaceConfig{}, fmt.Errorf("interface not found")
 	} else if changed {
-		writeInterfacesConfigLocked(interfaces)
+		err := writeInterfacesConfigLocked(interfaces)
 		if reset {
 			Interfacesmtx.Unlock()
 			resetInterface(interfaces, Iface, prev_type, prev_subtype, Enabled)
 			//lock again for defer
 			Interfacesmtx.Lock()
 		}
+		return interfaces, err
+	}
+	return interfaces, nil
+}
+
+func updateInterfaceIP(iconfig InterfaceConfig) error {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+	interfaces := loadInterfacesConfigLocked()
+
+	found := false
+	changed := false
+
+	for i, iface := range interfaces {
+		if iface.Name == iconfig.Name {
+			found = true
+			if interfaces[i].Enabled != iconfig.Enabled ||
+				interfaces[i].DisableDHCP != iconfig.DisableDHCP ||
+				interfaces[i].IP != iconfig.IP ||
+				interfaces[i].VLAN != iconfig.VLAN ||
+				interfaces[i].Router != iconfig.Router {
+				changed = true
+				interfaces[i].Enabled = iconfig.Enabled
+				interfaces[i].DisableDHCP = iconfig.DisableDHCP
+				interfaces[i].IP = iconfig.IP
+				interfaces[i].Router = iconfig.Router
+				interfaces[i].VLAN = iconfig.VLAN
+			}
+		}
 	}
 
-	return interfaces, nil
+	if !found {
+		return fmt.Errorf("interface not found")
+	} else if changed {
+		return writeInterfacesConfigLocked(interfaces)
+	}
+	return nil
 }
 
 func writeInterfacesConfigLocked(config []InterfaceConfig) error {

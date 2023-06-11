@@ -522,3 +522,27 @@ func updatePPPConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 /* Setting IP */
+
+func updateIPConfig(w http.ResponseWriter, r *http.Request) {
+	iconfig := InterfaceConfig{}
+	err := json.NewDecoder(r.Body).Decode(&iconfig)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if iconfig.DisableDHCP == true {
+		//validate router and ip
+	}
+
+	if iconfig.VLAN != "" {
+		//validate vlan tag
+	}
+
+	err = updateInterfaceIP(iconfig)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), 400)
+		return
+	}
+}
