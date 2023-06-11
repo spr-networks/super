@@ -295,7 +295,7 @@ func updateWpaSupplicantConfig(w http.ResponseWriter, r *http.Request) {
 /* PPP Support */
 
 // /configs/ppp is mounted to /etc
-var PPPConfigPath = TEST_PREFIX + "/etc/ppp/ppp.json"
+var PPPConfigPath = TEST_PREFIX + "/configs/ppp/ppp.json"
 
 var PPPmtx sync.Mutex
 
