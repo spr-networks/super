@@ -249,7 +249,7 @@ const UplinkAddIP = ({ iface, onSubmit, ...props }) => {
     DisableDHCP: false,
     IP: '',
     Router: '',
-    Iface: ''
+    VLAN: ''
   })
 
   const [errors, setErrors] = useState({});
@@ -567,7 +567,7 @@ const UplinkInfo = (props) => {
     } else if (type == 'ppp') {
       new_entry = {...item, Enabled: enable, Iface: iface}
     } else if (type == 'ip') {
-      new_entry = {Iface: iface, Enabled: enable, IPConfig: [item]}
+      new_entry = {...item, Name: iface, Enabled: enable}
     } else {
       context.error("Unknown type " + type)
       return

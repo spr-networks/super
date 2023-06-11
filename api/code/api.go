@@ -2127,7 +2127,6 @@ func main() {
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/resetConfiguration", hostapdResetInterface).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/enableExtraBSS", hostapdEnableExtraBSS).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/hostapd/syncMesh", hostapdSyncMesh).Methods("PUT")
-	external_router_authenticated.HandleFunc("/interfacesConfiguration", getInterfacesConfiguration).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/restart", restartWifi).Methods("PUT")
 
 	//ip information
@@ -2135,11 +2134,13 @@ func main() {
 	external_router_authenticated.HandleFunc("/ip/link/{interface}/{state}", ipLinkUpDown).Methods("PUT")
 
 	//uplink management
+	external_router_authenticated.HandleFunc("/interfacesConfiguration", getInterfacesConfiguration).Methods("GET")
 	external_router_authenticated.HandleFunc("/uplink/wifi", getWpaSupplicantConfig).Methods("GET")
 	external_router_authenticated.HandleFunc("/uplink/wifi", updateWpaSupplicantConfig).Methods("PUT")
+	external_router_authenticated.HandleFunc("/uplink/ppp", getPPPConfig).Methods("GET")
+	external_router_authenticated.HandleFunc("/uplink/ppp", updatePPPConfig).Methods("PUT")
+	external_router_authenticated.HandleFunc("/uplink/ip", updateIPConfig).Methods("PUT")
 
-	//	external_router_authenticated.HandleFunc("/uplink/{interface}/enable", uplinkEnableInterface).Methods("PUT")
-	//	external_router_authenticated.HandleFunc("/uplink/{interface}/disable", uplinkEnableInterface).Methods("PUT")
 	//	external_router_authenticated.HandleFunc("/uplink/{interface}/bond", mangeBondInterface).Methods("PUT", "DELETE")
 	//	external_router_authenticated.HandleFunc("/uplink/loadBalance", setLoadBalanceStrategy).Methods("PUT")
 
