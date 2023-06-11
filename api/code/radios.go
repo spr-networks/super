@@ -721,19 +721,6 @@ func createHostAPTemplate() {
 	}
 }
 
-func writeInterfacesConfigLocked(config []InterfaceConfig) error {
-	file, err := json.MarshalIndent(config, "", " ")
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(gAPIInterfacesPath, file, 0660)
-	if err != nil {
-		return err
-	}
-	//write a copy to the public
-	return ioutil.WriteFile(gAPIInterfacesPublicPath, file, 0660)
-}
-
 // when interfaces.json is updated, the firewall rules need to
 // be applied again
 func resetRadioFirewall() {
@@ -974,64 +961,6 @@ func restartWifi(w http.ResponseWriter, r *http.Request) {
 	callSuperdRestart("", "wifid")
 }
 
-/*
-This provides for a smooth transition to multi AP. It can be removed
-at some point.
-*/
-func multi_ap_migration() {
-	old_path := TEST_PREFIX + "/configs/wifi/hostapd.conf"
-	_, err := os.Stat(old_path)
-	if err == nil {
-		//if this file exists, then we need to migrate hostapd.conf into
-		// hostapd_{interface}.conf
-
-		//read the original file and replace ctrl_interface
-		input, err := ioutil.ReadFile(old_path)
-		if err != nil {
-			fmt.Println("[-] failed to read hostapd.conf file for migration")
-			return
-		}
-
-		name := os.Getenv("SSID_INTERFACE")
-		if name == "" {
-			fmt.Println("[-] Missing SSID_INTERFACE for migration")
-			return
-		}
-
-		configData := string(input)
-		matchControl := regexp.MustCompile(`(?m)^(ctrl_interface)=(.*)`)
-		configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+name)
-		path := getHostapdConfigPath(name)
-		err = ioutil.WriteFile(path, []byte(configData), 0644)
-		if err != nil {
-			fmt.Println("Error creating", path)
-			return
-		}
-
-		err = os.Rename(old_path, old_path+".bak")
-		if err != nil {
-			fmt.Println("[-] Failed to rename hostapd.conf")
-			return
-		}
-
-		//configure interfaces
-		configureInterface("AP", "", name)
-		upstream_interface := os.Getenv("WANIF")
-		if upstream_interface == "" {
-			fmt.Println("did not have upstream interface to configure")
-			return
-		}
-
-		configureInterface("Uplink", "ethernet", upstream_interface)
-	}
-
-}
-
 func initRadios() {
-	// If an install does not have interfaces.json yet,
-	// migrate it along with templates.
-
-	multi_ap_migration()
-
 	copyInterfacesConfigToPublic()
 }

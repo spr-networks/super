@@ -107,7 +107,6 @@ func resetInterface(interfaces []InterfaceConfig, name string, prev_type string,
 }
 
 func configureInterface(interfaceType string, subType string, name string) error {
-	//NOTE: this sets up the interface with Enabled set to False. Call toggle to enable
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
 
@@ -294,4 +293,17 @@ func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool
 	}
 
 	return interfaces, nil
+}
+
+func writeInterfacesConfigLocked(config []InterfaceConfig) error {
+	file, err := json.MarshalIndent(config, "", " ")
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(gAPIInterfacesPath, file, 0660)
+	if err != nil {
+		return err
+	}
+	//write a copy to the public
+	return ioutil.WriteFile(gAPIInterfacesPublicPath, file, 0660)
 }
