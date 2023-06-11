@@ -294,7 +294,7 @@ func updateWpaSupplicantConfig(w http.ResponseWriter, r *http.Request) {
 
 /* PPP Support */
 
-// /configs/ppp is mounted to /etc
+// /configs/ppp is mounted to /etc inside the container
 var PPPConfigPath = TEST_PREFIX + "/configs/ppp/ppp.json"
 
 var PPPmtx sync.Mutex
@@ -394,7 +394,7 @@ func writePPP(interfaces []InterfaceConfig, config PPPConfig) error {
 		log.Println("Error executing chap-secrets template:", err)
 		return err
 	}
-	fp := TEST_PREFIX + "/etc/ppp/chap-secrets"
+	fp := TEST_PREFIX + "/configs/ppp/chap-secrets"
 	err = ioutil.WriteFile(fp, result.Bytes(), 0600)
 	if err != nil {
 		return err
@@ -427,7 +427,7 @@ func writePPP(interfaces []InterfaceConfig, config PPPConfig) error {
 			return err
 		}
 
-		fp := TEST_PREFIX + "/etc/ppp/provider_" + ppp.Iface
+		fp := TEST_PREFIX + "/configs/ppp/provider_" + ppp.Iface
 		err = ioutil.WriteFile(fp, result.Bytes(), 0600)
 		if err != nil {
 			return err
