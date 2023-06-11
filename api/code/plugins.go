@@ -327,6 +327,11 @@ func restartPlugin(name string) {
 
 }
 
+func handleRestartPlugin(w http.ResponseWriter, r *http.Request) {
+	name := mux.Vars(r)["name"]
+	restartPlugin(name)
+}
+
 func enablePlugin(name string) bool {
 	//returns true if a change was made
 	Configmtx.Lock()

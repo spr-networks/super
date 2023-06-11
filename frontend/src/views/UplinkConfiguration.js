@@ -60,6 +60,7 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
   const [optSSIDs, setOptsSSIDs] = useState([])
   const [assignBSSID, setAssignBSSID] = useState(false)
   const [disableWPA3, setDisableWPA3] = useState(false)
+  const [enable, setEnable] = useState(true)
 
   const handleChangeSSID = (SSID) => {
     let ssidItem = ssids.find((item) => item.ssid == SSID)
@@ -91,7 +92,7 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
     if (assignBSSID == false) {
       item.BSSID = ''
     }
-    onSubmit(item, type)
+    onSubmit(item, type, enable)
   }
 
   const scan = (iface) => {
@@ -253,10 +254,10 @@ const UplinkAddIP = ({ iface, onSubmit, ...props }) => {
 
   const [errors, setErrors] = useState({});
 
-  const [disableDHCP, setDisableDHCP] = useState(false)
+  const [enable, setEnable] = useState(true)
 
   const validate = () => {
-    if (disableDHCP == false) {
+    if (item.DisableDHCP == false) {
       return true
     }
 
@@ -291,7 +292,7 @@ const UplinkAddIP = ({ iface, onSubmit, ...props }) => {
   }
 
   const doSubmit = (item) => {
-    validate() ? onSubmit(item, type) : null
+    validate() ? onSubmit(item, type, enable) : null
   }
 
   useEffect(() => {
@@ -304,14 +305,14 @@ const UplinkAddIP = ({ iface, onSubmit, ...props }) => {
         <Checkbox
           size="sm"
           colorScheme="primary"
-          value={disableDHCP}
-          onChange={(value) => {setDisableDHCP(value) && setItem({ ...item, DisableDHCP: value})} }
+          value={item.DisableDHCP}
+          onChange={(value) => {setItem({ ...item, DisableDHCP: value})} }
         >
           Manually Set IP
         </Checkbox>
       </FormControl>
 
-      { disableDHCP ?  (
+      { item.DisableDHCP ?  (
         <>
           <FormControl>
             <FormControl.Label>Assign IP</FormControl.Label>
@@ -354,10 +355,10 @@ const UplinkAddPPP = ({ iface, onSubmit, ...props }) => {
     MTU: '',
   })
 
-  const [disableDHCP, setDisableDHCP] = useState(false)
+  const [enable, setEnable] = useState(true)
 
   const doSubmit = (item) => {
-    onSubmit(item, type)
+    onSubmit(item, type, enable)
   }
 
   useEffect(() => {
@@ -556,17 +557,17 @@ const UplinkInfo = (props) => {
     </Menu>
   )
 
-  const onSubmit = (item, type) => {
+  const onSubmit = (item, type, enable) => {
     //
 
     let new_entry
 
     if (type == 'wifi') {
-      new_entry = {Iface: iface, Enabled: true, Networks: [item]}
+      new_entry = {Iface: iface, Enabled: enable, Networks: [item]}
     } else if (type == 'ppp') {
-      new_entry = {Iface: iface, PPP: [item]}
+      new_entry = {...item, Enabled: enable, Iface: iface}
     } else if (type == 'ip') {
-      new_entry = {Iface: iface, IPConfig: [item]}
+      new_entry = {Iface: iface, Enabled: enable, IPConfig: [item]}
     } else {
       context.error("Unknown type " + type)
       return

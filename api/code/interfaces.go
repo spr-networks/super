@@ -25,8 +25,6 @@ type InterfaceConfig struct {
 	DisableDHCP bool       `json:",omitempty"`
 	IP          string     `json:",omitempty"`
 	Router      string     `json:",omitempty"`
-	// WPAs []WPANetwork `json:",omitempty"`
-	// PPP []PPP `json:",omitempty"`
 }
 
 // this will be exported to all containers in public/interfaces.json
@@ -97,7 +95,7 @@ func resetInterface(interfaces []InterfaceConfig, name string, prev_type string,
 			restartPlugin("WIFI-UPLINK")
 		} else if prev_subtype == "ppp" {
 			//ppp was disabled, notify it
-			//insertWpaConfigAndSave(interfaces, WPAIface{})
+			insertPPPConfigAndSave(interfaces, PPPIface{})
 			restartPlugin("PPP")
 		}
 	} else if prev_type == "AP" {
@@ -109,6 +107,7 @@ func resetInterface(interfaces []InterfaceConfig, name string, prev_type string,
 }
 
 func configureInterface(interfaceType string, subType string, name string) error {
+	//NOTE: this sets up the interface with Enabled set to False. Call toggle to enable
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
 
@@ -183,12 +182,14 @@ func configureInterface(interfaceType string, subType string, name string) error
 		return err
 	}
 
-	Interfacesmtx.Unlock()
+	if prev_type != "" {
 
-	resetInterface(config, name, prev_type, prev_subtype, false)
+		Interfacesmtx.Unlock()
+		resetInterface(config, name, prev_type, prev_subtype, false)
+		//defer will unlock
+		Interfacesmtx.Lock()
 
-	//defer will unlock
-	Interfacesmtx.Lock()
+	}
 
 	return nil
 }
@@ -249,18 +250,24 @@ this is fairly complex as it will
 
 and then return the updated interface list.
 */
-func updateInterfaceType(Iface string, Type string, Subtype string) ([]InterfaceConfig, error) {
+func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool) ([]InterfaceConfig, error) {
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
 	interfaces := loadInterfacesConfigLocked()
 
 	found := false
 	changed := false
+	reset := false
+
 	prev_type := ""
 	prev_subtype := ""
 	for i, iface := range interfaces {
 		if iface.Name == Iface {
 			found = true
+			if interfaces[i].Enabled != Enabled {
+				interfaces[i].Enabled = Enabled
+				changed = true
+			}
 			if interfaces[i].Type != Type || interfaces[i].Subtype != Subtype {
 				prev_type = interfaces[i].Type
 				prev_subtype = interfaces[i].Subtype
@@ -268,6 +275,7 @@ func updateInterfaceType(Iface string, Type string, Subtype string) ([]Interface
 				interfaces[i].Type = Type
 				interfaces[i].Subtype = Subtype
 				changed = true
+				reset = true
 				break
 			}
 		}
@@ -277,11 +285,12 @@ func updateInterfaceType(Iface string, Type string, Subtype string) ([]Interface
 		return []InterfaceConfig{}, fmt.Errorf("interface not found")
 	} else if changed {
 		writeInterfacesConfigLocked(interfaces)
-		Interfacesmtx.Unlock()
-		resetInterface(interfaces, Iface, prev_type, prev_subtype, false)
-
-		//lock again for defer
-		Interfacesmtx.Lock()
+		if reset {
+			Interfacesmtx.Unlock()
+			resetInterface(interfaces, Iface, prev_type, prev_subtype, Enabled)
+			//lock again for defer
+			Interfacesmtx.Lock()
+		}
 	}
 
 	return interfaces, nil

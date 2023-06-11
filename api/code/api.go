@@ -2137,7 +2137,6 @@ func main() {
 	//uplink management
 	external_router_authenticated.HandleFunc("/uplink/wifi", getWpaSupplicantConfig).Methods("GET")
 	external_router_authenticated.HandleFunc("/uplink/wifi", updateWpaSupplicantConfig).Methods("PUT")
-	external_router_authenticated.HandleFunc("/uplink/wifi/restart", restartWpaClients).Methods("PUT")
 
 	//	external_router_authenticated.HandleFunc("/uplink/{interface}/enable", uplinkEnableInterface).Methods("PUT")
 	//	external_router_authenticated.HandleFunc("/uplink/{interface}/disable", uplinkEnableInterface).Methods("PUT")
@@ -2153,6 +2152,7 @@ func main() {
 	//plugins
 	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
 	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated)).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/plugins/{name}/restart", handleRestartPlugin).Methods("PUT")
 	external_router_authenticated.HandleFunc("/plusToken", plusToken).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/stopPlusExtension", stopPlusExt).Methods("PUT")
 	external_router_authenticated.HandleFunc("/startPlusExtension", startPlusExt).Methods("PUT")
