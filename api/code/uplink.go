@@ -378,7 +378,7 @@ func writePPP(interfaces []InterfaceConfig, config PPPConfig) error {
     # Secrets for authentication using CHAP
     # client        server  secret                  IP addresses
 
-    {{Range .PPPs}}
+    {{range .PPPs}}
       "{{.Username}}" * "{{.Secret}}"
     {{end}}
     `)
