@@ -153,7 +153,7 @@ func configureInterface(interfaceType string, subType string, name string) error
 
 	}
 
-	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", ""}
+	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", ""}
 
 	config := loadInterfacesConfigLocked()
 
