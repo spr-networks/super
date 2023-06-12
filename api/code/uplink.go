@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -426,7 +427,7 @@ user "{{.Username}}"
 		}
 
 		//make peers dir if it does not exist
-		err := os.MkdirAll(TEST_PREFIX+"/configs/ppp/peers/", os.ModePerm)
+		err = os.MkdirAll(TEST_PREFIX+"/configs/ppp/peers/", os.ModePerm)
 		if err != nil {
 			log.Println("Error creating directory:", err)
 			return err
