@@ -1,7 +1,5 @@
 /*
   TBD -
-    configure ppp
-
     configure a bonded interface
       set load balancing, failover
       test failover
@@ -361,7 +359,25 @@ const UplinkAddPPP = ({ iface, onSubmit, ...props }) => {
     onSubmit(item, type, enable)
   }
 
+  const getPPPClients = () => {
+    api
+      .get('/uplink/ppp')
+      .then((res) => {
+        //fill out the defaults for the matching iface
+        for (let entry of res.PPPs) {
+          if (entry.Iface == iface) {
+            setItem(entry)
+            break
+          }
+        }
+      })
+      .catch((err) => {
+        context.error(err)
+      })
+  }
+
   useEffect(() => {
+    getPPPClients()
   }, [])
 
   return (
@@ -423,6 +439,8 @@ const UplinkInfo = (props) => {
 
   const [interfaces, setInterfaces] = useState({})
   const [linkIPs, setLinkIPs] = useState({})
+  const [links, setLinks] = useState([])
+  const [uplinks, setUplinks] = useState([])
 
   const [iface, setIface] = useState(null)
 
@@ -447,72 +465,82 @@ const UplinkInfo = (props) => {
     throw new Error('The string is not a valid IP address.')
   }
 
-  useEffect(() => {
-    const fetchInfo = () => {
-      wifiAPI
-        .ipAddr()
-        .then((ifaces) => {
-          let x = {}
-          for (let iface of ifaces) {
-            let ips = []
-            for (let addr_info of iface.addr_info) {
-              if (addr_info.family == 'inet' || addr_info.family == 'inet6') {
-                if (addr_info.scope == 'global') {
-                  ips.push(addr_info.local)
-                }
+  const fetchInfo = () => {
+    wifiAPI
+      .ipAddr()
+      .then((ifaces) => {
+        let x = {}
+        for (let iface of ifaces) {
+          let ips = []
+          for (let addr_info of iface.addr_info) {
+            if (addr_info.family == 'inet' || addr_info.family == 'inet6') {
+              if (addr_info.scope == 'global') {
+                ips.push(addr_info.local)
               }
             }
-            x[iface.ifname] = ips
           }
-          setLinkIPs(x)
-        })
-        .catch((err) => context.error('fail ' + err))
+          x[iface.ifname] = ips
+        }
+        setLinkIPs(x)
+      })
+      .catch((err) => context.error('fail ' + err))
 
-      wifiAPI
-        .interfacesConfiguration()
-        .then((ifaces) => {
-          let x = {}
-          for (let iface of ifaces) {
-            x[iface.Name] = iface
-          }
-          setInterfaces(x)
-        })
-        .catch((err) => context.error(err))
-    }
+    wifiAPI
+      .interfacesConfiguration()
+      .then((ifaces) => {
+        let x = {}
+        for (let iface of ifaces) {
+          x[iface.Name] = iface
+        }
+        setInterfaces(x)
+      })
+      .catch((err) => context.error(err))
+  }
 
+  useEffect(() => {
     fetchInfo()
   }, [])
 
-  //calculate uplink ips
-  let uplinks = []
-  let links = []
-  let filtered = ['lo', 'sprloop', 'wg0', 'docker0']
-  let k = Object.keys(linkIPs)
-  k.sort()
-  for (let link of k) {
-    if (filtered.includes(link)) {
-      continue
-    }
-    //check if its in the interfaces configuration
-    if (
-      interfaces[link] &&
-      (interfaces[link].Type == 'Uplink' || interfaces[link].Type == 'Bonded')
-    ) {
-      let entry = {
-        Interface: link,
-        IPs: linkIPs[link],
-        Type: interfaces[link].Type
+  useEffect(() => {
+    calcLinks()
+  }, [interfaces, linkIPs])
+
+  const calcLinks = () => {
+    //calculate uplink ips
+    let uplinks = []
+    let links = []
+    let filtered = ['lo', 'sprloop', 'wg0', 'docker0']
+    let k = Object.keys(linkIPs)
+    k.sort()
+    for (let link of k) {
+      if (filtered.includes(link)) {
+        continue
       }
-      uplinks.push(entry)
-    } else {
-      let type = 'Other'
-      if (interfaces[link] && interfaces[link].Type) {
-        type = interfaces[link].Type
+      //check if its in the interfaces configuration
+      if (
+        interfaces[link] &&
+        (interfaces[link].Type == 'Uplink' || interfaces[link].Type == 'Bonded')
+      ) {
+        let entry = {
+          Interface: link,
+          IPs: linkIPs[link],
+          Type: interfaces[link].Type,
+          Subtype: interfaces[link].Subtype
+        }
+        uplinks.push(entry)
+      } else {
+        let type = 'Other'
+        if (interfaces[link] && interfaces[link].Type) {
+          type = interfaces[link].Type
+        }
+        let entry = { Interface: link, IPs: linkIPs[link], Type: type }
+        links.push(entry)
       }
-      let entry = { Interface: link, IPs: linkIPs[link], Type: type }
-      links.push(entry)
     }
+    setUplinks(uplinks)
+    setLinks(links)
   }
+
 
   const { isOpen, onOpen, onClose } = useDisclose()
 
@@ -576,16 +604,17 @@ const UplinkInfo = (props) => {
 
     api
       .put('/uplink/'+type, new_entry)
-      .then((res2) => onClose())
+      .then((res2) => {fetchInfo(); onClose()})
       .catch((err) => {
+        alert(err)
         context.error(err)
         onClose()
       })
       .catch((err) => {
+        alert(err)
         context.error(err)
         onClose()
       })
-
 
   }
 
@@ -623,6 +652,7 @@ const UplinkInfo = (props) => {
                   {item.Interface}
                 </Text>
                 <Text flex={1}>{item.Type}</Text>
+                <Text flex={1}>{item.Subtype}</Text>
                 <Text flex={1}>{item.IPs}</Text>
                 <Box flex={1}>
                   {moreMenu(item.Interface)}
