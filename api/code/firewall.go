@@ -63,6 +63,7 @@ type Endpoint struct {
 	BaseRule
 	Protocol string
 	IP       string
+	Address  string
 	Port     string
 }
 
@@ -784,7 +785,7 @@ func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if CIDRorIP(endpoint.IP) != nil {
+	if endpoint.IP != "" && (CIDRorIP(endpoint.IP) != nil) {
 		http.Error(w, "Invalid endpoint IP, must be IP or CIDR", 400)
 		return
 	}
