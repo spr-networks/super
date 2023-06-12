@@ -2,15 +2,68 @@ import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { Select } from 'native-base'
 
-import { groupAPI, deviceAPI } from 'api'
+import { groupAPI, deviceAPI, firewallAPI } from 'api'
 import InputSelect from './InputSelect'
 
 const ClientSelect = (props) => {
-  const [optGroups, setOptGroups] = useState([])
+  const [devOpts, setDevOpts] = useState({})
+  const [groupOpts, setGroupOpts] = useState({})
+  const [tagOpts, setTagOpts] = useState({})
+  const [endpointOpts, setEndpointOpts] = useState({})
 
   let title = props.isMultiple ? 'Select Clients' : 'Select Client'
 
   const cleanIp = (ip) => ip.replace(/\/.*/, '') // remove subnet
+
+  const getTagOpts = (devices) => {
+      let tagNames = Object.values(devices)
+        .map((device) => {
+          return device.DeviceTags
+        })
+        .flat()
+        .filter((tagName) => tagName !== '')
+
+      tagNames = [...new Set(tagNames)]
+      let tagOptions = tagNames.map((t) => {
+        return { label: t, value: { Tag: t } }
+      })
+      setTagOpts({
+        title: props.isMultiple ? 'Select Tag' : 'Select Tags',
+        options: tagOptions
+      })
+  }
+
+  const getGroupOpts = () => {
+    return groupAPI
+      .list()
+      .then((groups) => {
+        let options = groups.map((g) => g.Name)
+        options = options.map((value) => {
+          return { label: value, value: { Group: value } }
+        })
+
+        setGroupOpts({
+          title: props.isMultiple ? 'Select Group' : 'Select Groups',
+          options
+        })
+      })
+  }
+
+  const getEndpointOpts = () => {
+    return firewallAPI
+      .config()
+      .then((config) => {
+        let options = config.Endpoints.map((e) => e.RuleName)
+        options = options.map((value) => {
+          return { label: value, value: { Endpoint: value } }
+        })
+
+        setEndpointOpts({
+          title: props.isMultiple ? 'Select Endpoint' : 'Select Endpoint',
+          options
+        })
+      })
+  }
 
   // todo cache
   useEffect(() => {
@@ -27,62 +80,40 @@ const ClientSelect = (props) => {
             }
           })
 
-        let opts = []
-
-        opts.push({
+        let deviceOpts = {
           title: props.isMultiple ? 'Select Clients' : 'Select Client',
           options
-        })
-
-        if (props.showGroups) {
-          groupAPI
-            .list()
-            .then((groups) => {
-              let options = groups.map((g) => g.Name)
-              options = options.map((value) => {
-                return { label: value, value: { Group: value } }
-              })
-
-              opts.push({
-                title: props.isMultiple ? 'Select Group' : 'Select Groups',
-                options
-              })
-
-              if (props.showTags) {
-                let tagNames = Object.values(devices)
-                  .map((device) => {
-                    return device.DeviceTags
-                  })
-                  .flat()
-                  .filter((tagName) => tagName !== '')
-
-                tagNames = [...new Set(tagNames)]
-                let tagOptions = tagNames.map((t) => {
-                  return { label: t, value: { Tag: t } }
-                })
-
-                opts.push({
-                  title: props.isMultiple ? 'Select Tag' : 'Select Tags',
-                  options: tagOptions
-                })
-              }
-
-              setOptGroups(opts)
-            })
-            .catch((err) => {})
-        } else {
-          setOptGroups(opts)
         }
+        setDevOpts(deviceOpts)
+
+        if (props.showGroups) getGroupOpts()
+        if (props.showTags) getTagOpts(devices)
+        if (props.showEndpoints) getEndpointOpts()
+
       })
       .catch((err) => {})
   }, [])
+
+  const gatherOps = () => {
+    let ops = [devOpts]
+    if (groupOpts) {
+      ops.push(groupOpts)
+    }
+    if (tagOpts) {
+      ops.push(tagOpts)
+    }
+    if (endpointOpts) {
+      ops.push(endpointOpts)
+    }
+    return ops
+  }
 
   //if only select one client & cant specify: use select (example dns logs)
   if (props.isDisabled && !props.isMultiple) {
     return (
       <Select selectedValue={props.value} onValueChange={props.onChange}>
-        {optGroups && optGroups.length == 1
-          ? optGroups[0].options.map((o) => (
+        {opts && opts.length == 1
+          ? opts[0].options.map((o) => (
               <Select.Item key={o.value} label={o.label} value={o.value} />
             ))
           : null}
@@ -90,7 +121,7 @@ const ClientSelect = (props) => {
     )
   }
 
-  return <InputSelect title={title} groups={optGroups} {...props} />
+  return <InputSelect title={title} groups={gatherOps()} {...props} />
 }
 
 ClientSelect.propTypes = {

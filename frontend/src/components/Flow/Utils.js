@@ -126,13 +126,15 @@ const flowObjParse = (x) => {
 
     if (x.Tag != null && x.Tag != '') return x.Tag
 
+    if (x.Endpoint != null && x.Endpoint != '') return x.Endpoint
+
     return JSON.stringify(x)
   }
   return x
 }
 
 const parseClientIPOrIdentity = (cli) => {
-  let Client = { Group: '', Identity: '', SrcIP: '', Tag: '' }
+  let Client = { Group: '', Identity: '', SrcIP: '', Tag: '', Endpoint: '' }
 
   // if Client is from api we already have an object
   if (typeof cli === 'object') {
