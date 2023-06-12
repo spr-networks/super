@@ -9,6 +9,14 @@ export class APIFirewall extends API {
     return this.get('config');
   }
 
+  addEndpoint(data) {
+    return this.put('endpoint', data);
+  }
+
+  deleteEndpoint(data) {
+    return this.delete('endpoint', data);
+  }
+
   addForward(data) {
     return this.put('forward', data);
   }

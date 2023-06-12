@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import { ScrollView, View, VStack } from 'native-base'
 
 import { firewallAPI } from 'api'
+import EndpointList from 'components/Firewall/EndpointList'
 import ForwardList from 'components/Firewall/ForwardList'
 import BlockList from 'components/Firewall/BlockList'
 import ForwardBlockList from 'components/Firewall/ForwardBlockList'
@@ -26,6 +27,12 @@ export default class Firewall extends Component {
     return (
       <ScrollView>
         <VStack space={8}>
+
+          <EndpointList
+            list={this.state.config.Endpoints}
+            notifyChange={this.fetchConfig}
+          />
+
 
           <ForwardList
             list={this.state.config.ForwardingRules}
