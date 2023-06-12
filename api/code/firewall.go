@@ -57,15 +57,25 @@ type ServicePort struct {
 	UpstreamEnabled bool
 }
 
+// an endpoint describes an arbitrary service. It serves
+// as a helper for creating other firewall rules later
+type Endpoint struct {
+	BaseRule
+	Protocol string
+	IP       string
+	Port     string
+}
+
 type FirewallConfig struct {
 	ForwardingRules      []ForwardingRule
 	BlockRules           []BlockRule
 	ForwardingBlockRules []ForwardingBlockRule
 	ServicePorts         []ServicePort
+	Endpoints            []Endpoint
 }
 
 var FirewallConfigFile = TEST_PREFIX + "/configs/base/firewall.json"
-var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []ForwardingBlockRule{}, []ServicePort{}}
+var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []ForwardingBlockRule{}, []ServicePort{}, []Endpoint{}}
 
 var WireguardSocketPath = TEST_PREFIX + "/state/plugins/wireguard/wireguard_plugin"
 
@@ -752,6 +762,70 @@ func modifyServicePort(w http.ResponseWriter, r *http.Request) {
 	gFirewallConfig.ServicePorts = append(gFirewallConfig.ServicePorts, port)
 	saveFirewallRulesLocked()
 	applyFirewallRulesLocked()
+}
+
+/*
+Endpoints are a utility data structure for storing metadata.
+They are not directly applied into firewall rules
+*/
+func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	endpoint := Endpoint{}
+	err := json.NewDecoder(r.Body).Decode(&endpoint)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if endpoint.RuleName == "" {
+		http.Error(w, "Invalid endpoint name", 400)
+		return
+	}
+
+	if CIDRorIP(endpoint.IP) != nil {
+		http.Error(w, "Invalid endpoint IP, must be IP or CIDR", 400)
+		return
+	}
+
+	if endpoint.Protocol != "tcp" && endpoint.Protocol != "udp" {
+		http.Error(w, "Invalid protocol", 400)
+		return
+	}
+
+	re := regexp.MustCompile("^([0-9].*)$")
+
+	if endpoint.Port == "" || !re.MatchString(endpoint.Port) {
+		http.Error(w, "Invalid Port", 400)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		for i := range gFirewallConfig.Endpoints {
+			a := gFirewallConfig.Endpoints[i]
+			if endpoint.Protocol == a.Protocol && endpoint.Port == a.Port {
+				gFirewallConfig.ServicePorts = append(gFirewallConfig.ServicePorts[:i], gFirewallConfig.ServicePorts[i+1:]...)
+				saveFirewallRulesLocked()
+				return
+			}
+		}
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	//update the existing rule  entry
+	for i := range gFirewallConfig.Endpoints {
+		a := gFirewallConfig.Endpoints[i]
+		if endpoint.RuleName == a.RuleName {
+			gFirewallConfig.Endpoints[i] = endpoint
+			saveFirewallRulesLocked()
+			return
+		}
+	}
+
+	gFirewallConfig.Endpoints = append(gFirewallConfig.Endpoints, endpoint)
+	saveFirewallRulesLocked()
 }
 
 func addVerdict(IP string, Iface string, Table string) {
