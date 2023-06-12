@@ -93,17 +93,25 @@ const EndpointList = (props) => {
                 justifyContent="space-between"
                 alignItems="center"
               >
+                <HStack space={1}>
+                  <Text bold>
+                    {item.RuleName}
+                  </Text>
+                </HStack>
+
+                <Icon color="muted.400" icon={faArrowRightLong} />
+
                 <Badge variant="outline">{item.Protocol}</Badge>
 
                 <HStack space={1}>
                   <Text bold>
+                    {item.Domain}
                     {item.IP}
                   </Text>
                   <Text color="muted.500">:</Text>
                   <Text>{item.Port}</Text>
                 </HStack>
 
-                <Icon color="muted.400" icon={faArrowRightLong} />
 
                 <IconButton
                   alignSelf="center"
@@ -124,7 +132,7 @@ const EndpointList = (props) => {
         <VStack>
           {!list.length ? (
             <Text alignSelf={'center'}>
-              There are no forward rules configured yet
+              There are no endpoints defined yet
             </Text>
           ) : null}
           <Button

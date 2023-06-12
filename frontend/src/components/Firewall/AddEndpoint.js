@@ -43,8 +43,8 @@ class AddEndpointImpl extends React.Component {
   handleSubmit() {
     let rule = {
       RuleName: this.state.RuleName,
-      IP: this.state.ip,
-      Address: this.state.Address,
+      IP: this.state.IP,
+      Domain: this.state.Domain,
       Protocol: this.state.Protocol,
       Port: this.state.Port,
     }
@@ -76,7 +76,7 @@ class AddEndpointImpl extends React.Component {
       <Stack space={4}>
         <HStack space={2}>
           <FormControl flex="2">
-            <FormControl.Label>Rule Name</FormControl.Label>
+            <FormControl.Label>Name</FormControl.Label>
             <Input
               name="RuleName"
               value={this.state.RuleName}
@@ -89,12 +89,12 @@ class AddEndpointImpl extends React.Component {
         <HStack space={4}>
           <FormControl flex="2">
             <FormControl.Label>IP Address</FormControl.Label>
-            <Input
-              size="md"
-              variant="underlined"
-              name="SrcIP"
+            <ClientSelect
+              name="IP"
               value={this.state.IP}
+              onSubmitEditing={(value) => this.handleChange('IP', value)}
               onChangeText={(value) => this.handleChange('IP', value)}
+              onChange={(value) => this.handleChange('IP', value)}
             />
             <FormControl.HelperText>Accepts IP or CIDR</FormControl.HelperText>
           </FormControl>
@@ -106,6 +106,18 @@ class AddEndpointImpl extends React.Component {
               name="Port"
               value={this.state.Port}
               onChangeText={(value) => this.handleChange('Port', value)}
+            />
+          </FormControl>
+        </HStack>
+        <HStack space={4}>
+          <FormControl flex="1">
+            <FormControl.Label>Domain</FormControl.Label>
+            <Input
+              size="md"
+              variant="underlined"
+              name="Domain"
+              value={this.state.Domain}
+              onChangeText={(value) => this.handleChange('Domain', value)}
             />
           </FormControl>
         </HStack>
