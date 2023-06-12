@@ -63,7 +63,7 @@ type Endpoint struct {
 	BaseRule
 	Protocol string
 	IP       string
-	Address  string
+	Domain   string
 	Port     string
 }
 
@@ -790,6 +790,16 @@ func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if endpoint.IP == "" && endpoint.Domain == "" {
+		http.Error(w, "Need either IP or a Domain set", 400)
+		return
+	}
+
+	if endpoint.IP != "" && endpoint.Domain != "" {
+		http.Error(w, "Need either an IP or a Domain, not both", 400)
+		return
+	}
+
 	if endpoint.Protocol != "tcp" && endpoint.Protocol != "udp" {
 		http.Error(w, "Invalid protocol", 400)
 		return
@@ -797,7 +807,7 @@ func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	re := regexp.MustCompile("^([0-9].*)$")
 
-	if endpoint.Port == "" || !re.MatchString(endpoint.Port) {
+	if endpoint.Port != "any" && (endpoint.Port == "" || !re.MatchString(endpoint.Port)) {
 		http.Error(w, "Invalid Port", 400)
 		return
 	}
