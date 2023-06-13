@@ -387,7 +387,7 @@ func applyServicePorts(servicePorts []ServicePort) error {
 
 func hasFirewallDeviceEndpointEntry(srcIP string, e Endpoint) bool {
 
-	cmd := exec.Command("nft", "get", "element", "inet", "nat", "ept_"+e.Protocol+"fwd",
+	cmd := exec.Command("nft", "get", "element", "inet", "filter", "ept_"+e.Protocol+"fwd",
 		"{", srcIP, ".", e.IP, ".", e.Port, ":", "accept", "}")
 
 	_, err := cmd.Output()
@@ -396,7 +396,7 @@ func hasFirewallDeviceEndpointEntry(srcIP string, e Endpoint) bool {
 
 func addDeviceEndpointEntry(srcIP string, e Endpoint) {
 
-	cmd := exec.Command("nft", "add", "element", "inet", "nat", "ept_"+e.Protocol+"fwd",
+	cmd := exec.Command("nft", "add", "element", "inet", "filter", "ept_"+e.Protocol+"fwd",
 		"{", srcIP, ".", e.IP, ".", e.Port, ":", "accept", "}")
 
 	_, err := cmd.Output()
@@ -410,7 +410,7 @@ func addDeviceEndpointEntry(srcIP string, e Endpoint) {
 
 func deleteDeviceEndpointEntry(srcIP string, e Endpoint) {
 
-	cmd := exec.Command("nft", "delete", "element", "inet", "nat", "ept_"+e.Protocol+"fwd",
+	cmd := exec.Command("nft", "delete", "element", "inet", "filter", "ept_"+e.Protocol+"fwd",
 		"{", srcIP, ".", e.IP, ".", e.Port, ":", "accept", "}")
 
 	_, err := cmd.Output()
