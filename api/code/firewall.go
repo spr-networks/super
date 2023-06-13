@@ -987,8 +987,12 @@ func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
 	for i := range gFirewallConfig.Endpoints {
 		a := gFirewallConfig.Endpoints[i]
 		if endpoint.RuleName == a.RuleName {
+			//delete the old endpoint
+			deleteEndpoint(a)
 			gFirewallConfig.Endpoints[i] = endpoint
 			saveFirewallRulesLocked()
+			//apply the new rules
+			applyFirewallRulesLocked()
 			return
 		}
 	}
