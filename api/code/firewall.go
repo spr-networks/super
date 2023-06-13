@@ -58,13 +58,16 @@ type ServicePort struct {
 }
 
 // an endpoint describes an arbitrary service. It serves
-// as a helper for creating other firewall rules later
+// as a helper for creating other firewall rules,
+// as well as one-way connectivity from devices to the endpoint
+// when they share a tag.
 type Endpoint struct {
 	BaseRule
 	Protocol string
 	IP       string
 	Domain   string
 	Port     string
+	Tags     []string
 }
 
 type FirewallConfig struct {
@@ -816,7 +819,7 @@ func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
 		for i := range gFirewallConfig.Endpoints {
 			a := gFirewallConfig.Endpoints[i]
 			if endpoint.Protocol == a.Protocol && endpoint.Port == a.Port {
-				gFirewallConfig.ServicePorts = append(gFirewallConfig.ServicePorts[:i], gFirewallConfig.ServicePorts[i+1:]...)
+				gFirewallConfig.Endpoints = append(gFirewallConfig.Endpoints[:i], gFirewallConfig.Endpoints[i+1:]...)
 				saveFirewallRulesLocked()
 				return
 			}
