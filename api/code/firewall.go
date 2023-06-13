@@ -386,36 +386,18 @@ func applyServicePorts(servicePorts []ServicePort) error {
 }
 
 func hasFirewallDeviceEndpointEntry(srcIP string, e Endpoint) bool {
-	var cmd *exec.Cmd
 
-	if e.Port == "any" {
-		//
-		cmd = exec.Command("nft", "get", "element", "inet", "nat", e.Protocol+"anyfwd",
-			"{", srcIP, ":",
-			e.IP, "}")
-	} else {
-		cmd = exec.Command("nft", "get", "element", "inet", "nat", e.Protocol+"fwd",
-			"{", srcIP, ".", e.Port, ":",
-			e.IP, ".", e.Port, "}")
-	}
+	cmd := exec.Command("nft", "get", "element", "inet", "nat", "ept_"+e.Protocol+"fwd",
+		"{", srcIP, ".", e.IP, ".", e.Port, ":", "accept", "}")
 
 	_, err := cmd.Output()
 	return err == nil
 }
 
 func addDeviceEndpointEntry(srcIP string, e Endpoint) {
-	var cmd *exec.Cmd
 
-	if e.Port == "any" {
-		//
-		cmd = exec.Command("nft", "add", "element", "inet", "nat", e.Protocol+"anyfwd",
-			"{", srcIP, ":",
-			e.IP, "}")
-	} else {
-		cmd = exec.Command("nft", "add", "element", "inet", "nat", e.Protocol+"fwd",
-			"{", srcIP, ".", e.Port, ":",
-			e.IP, ".", e.Port, "}")
-	}
+	cmd := exec.Command("nft", "add", "element", "inet", "nat", "ept_"+e.Protocol+"fwd",
+		"{", srcIP, ".", e.IP, ".", e.Port, ":", "accept", "}")
 
 	_, err := cmd.Output()
 
@@ -427,18 +409,9 @@ func addDeviceEndpointEntry(srcIP string, e Endpoint) {
 }
 
 func deleteDeviceEndpointEntry(srcIP string, e Endpoint) {
-	var cmd *exec.Cmd
 
-	if e.Port == "any" {
-		//
-		cmd = exec.Command("nft", "delete", "element", "inet", "nat", e.Protocol+"anyfwd",
-			"{", srcIP, ":",
-			e.IP, "}")
-	} else {
-		cmd = exec.Command("nft", "delete", "element", "inet", "nat", e.Protocol+"fwd",
-			"{", srcIP, ".", e.Port, ":",
-			e.IP, ".", e.Port, "}")
-	}
+	cmd := exec.Command("nft", "delete", "element", "inet", "nat", "ept_"+e.Protocol+"fwd",
+		"{", srcIP, ".", e.IP, ".", e.Port, ":", "accept", "}")
 
 	_, err := cmd.Output()
 
@@ -964,6 +937,11 @@ func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
 		if endpoint.Port != "any" && (endpoint.Port == "" || !re.MatchString(endpoint.Port)) {
 			http.Error(w, "Invalid Port", 400)
 			return
+		}
+
+		if endpoint.Port == "any" {
+			//special case, convert any to interval
+			endpoint.Port = "0-65535"
 		}
 	}
 

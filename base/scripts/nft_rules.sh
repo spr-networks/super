@@ -1,5 +1,11 @@
 #!/bin/bash
 
+#TBD:
+#
+#- move all WAN stuff to verdict maps to account for multi-wan
+#- create PBR for load balacning across WAN interfaces for outbound  traffic
+#- can F_EST_RELATED be moved past MAC spoof check
+
 # Disable forwarding
 sysctl net.ipv4.ip_forward=0
 
@@ -106,6 +112,16 @@ table inet filter {
     }
   }
 
+  map ept_udpfwd {
+    type ipv4_addr . ipv4_addr . inet_service : verdict ;
+    flags interval;
+  }
+
+  map ept_tcpfwd {
+    type ipv4_addr . ipv4_addr . inet_service : verdict ;
+    flags interval;
+  }
+
   chain PFWDROPLOG {
     counter log prefix "drop:pfw " group 1
     counter drop
@@ -180,6 +196,9 @@ table inet filter {
   chain FORWARD {
     type filter hook forward priority 0; policy drop;
 
+    # MSS clamping to handle upstream MTU limitations
+    tcp flags syn tcp option maxseg size set rt mtu
+
     #jump USERDEF_FORWARD
 
     counter jump F_EST_RELATED
@@ -204,11 +223,13 @@ table inet filter {
     $(if [ "$LANIF" ]; then echo "iifname eq $LANIF jump DROP_MAC_SPOOF"; fi)
     jump WIPHY_MACSPOOF_CHECK
 
+    # After MAC SPOOF check, but before rfc1918 check
+    # These rules allow permits via endpoint verdict maps
+    counter ip saddr . ip daddr . udp dport vmap @ept_udpfwd
+    counter ip saddr . ip daddr . tcp dport vmap @ept_tcpfwd
+
     # Drop private_rfc1918 access on upstream
     $(if [ "$WANIF" ]; then echo "counter oifname $WANIF ip daddr vmap @drop_private_rfc1918"; fi)
-
-    # MSS clamping to handle upstream MTU limitations
-    tcp flags syn tcp option maxseg size set rt mtu
 
     # Block rules
     counter ip saddr . ip daddr . ip protocol . tcp dport vmap @fwd_block
@@ -222,18 +243,18 @@ table inet filter {
 
     # The @lan_access dynamic verdict map implements the special LAN group in SPR.
     # It and allows one-way access to all stations, without an explicit relationship by IP,
-    #  with a NAT return path (F_EST_RELATED) 
+    #  with a NAT return path (F_EST_RELATED)
 
     # 1. Transmit to the LANIF interface
     $(if [ "$LANIF" ]; then echo "counter oifname $LANIF ip saddr . iifname vmap @lan_access"; fi)
 
-    # 2. Transmit to the wireguard interface 
+    # 2. Transmit to the wireguard interface
     counter oifname wg0 ip saddr . iifname vmap @lan_access
 
     # 3. Forward to wireless stations. This verdict map is managed in firewall.go
     jump WIPHY_FORWARD_LAN
 
-    # Custom groups. Managed in firewall.go  
+    # Custom groups. Managed in firewall.go
     jump CUSTOM_GROUPS
 
     # Custom services represent one-way relationships, with NAT return path
@@ -340,7 +361,6 @@ table inet nat {
   map tcpanyfwd {
     type ipv4_addr : ipv4_addr;
   }
-
 
   map block {
     type ipv4_addr . ipv4_addr . inet_proto : verdict
