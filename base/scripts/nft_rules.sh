@@ -132,14 +132,11 @@ table inet filter {
     # When updating lan_udp_accept, updated this list.
     $(if [ "$WANIF" ]; then echo "iifname $WANIF udp dport {67, 1900, 5353} counter jump DROPLOGINP"; fi)
 
-
     # drop ssh, iperf from upstream
     $(if [ "$WANIF" ]; then echo "counter iifname $WANIF tcp dport vmap @upstream_tcp_port_drop"; fi)
 
     # Extra hardening for API port 80 when running Virtual SPR, to avoid exposing API to the internet
     $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WANIF" && "$WAN_NET" ]]; then echo "counter iifname $WANIF tcp dport 80 ip saddr != $WAN_NET drop"; fi)
-
-    counter jump F_EST_RELATED
 
     # DHCP Allow rules
     # Wired lan
@@ -150,8 +147,9 @@ table inet filter {
 
     # Prevent MAC Spoofing from LANIF, wired interfaces
     $(if [ "$LANIF" ]; then echo "iifname eq $LANIF jump DROP_MAC_SPOOF"; fi)
-
     jump WIPHY_MACSPOOF_CHECK
+
+    counter jump F_EST_RELATED
 
     # DNS Allow rules
     # Docker can DNS
@@ -222,18 +220,18 @@ table inet filter {
 
     # The @lan_access dynamic verdict map implements the special LAN group in SPR.
     # It and allows one-way access to all stations, without an explicit relationship by IP,
-    #  with a NAT return path (F_EST_RELATED) 
+    #  with a NAT return path (F_EST_RELATED)
 
     # 1. Transmit to the LANIF interface
     $(if [ "$LANIF" ]; then echo "counter oifname $LANIF ip saddr . iifname vmap @lan_access"; fi)
 
-    # 2. Transmit to the wireguard interface 
+    # 2. Transmit to the wireguard interface
     counter oifname wg0 ip saddr . iifname vmap @lan_access
 
     # 3. Forward to wireless stations. This verdict map is managed in firewall.go
     jump WIPHY_FORWARD_LAN
 
-    # Custom groups. Managed in firewall.go  
+    # Custom groups. Managed in firewall.go
     jump CUSTOM_GROUPS
 
     # Custom services represent one-way relationships, with NAT return path
