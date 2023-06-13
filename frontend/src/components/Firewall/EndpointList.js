@@ -2,13 +2,17 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faArrowRightLong,
+  faCircleNodes,
   faCirclePlus,
+  faEllipsis,
   faPlus,
-  faXmark
+  faTag,
+  faTrash
 } from '@fortawesome/free-solid-svg-icons'
 
 import { firewallAPI, deviceAPI } from 'api'
 import ModalForm from 'components/ModalForm'
+import ModalConfirm from 'components/ModalConfirm'
 import AddEndpoint from './AddEndpoint'
 
 import {
@@ -18,6 +22,7 @@ import {
   FlatList,
   Heading,
   IconButton,
+  Menu,
   Stack,
   HStack,
   VStack,
@@ -26,6 +31,25 @@ import {
 } from 'native-base'
 
 import { FlashList } from '@shopify/flash-list'
+
+//copied from Device.js, may want to move otu
+const TagItem = React.memo(({ name }) => {
+  let icon = faTag
+  return (
+    <Badge
+      key={name}
+      variant="outline"
+      colorScheme={useColorModeValue('muted', 'blueGray')}
+      leftIcon={<Icon icon={icon} size={3} />}
+      rounded="sm"
+      size="sm"
+      py={1}
+      px={2}
+    >
+      {name}
+    </Badge>
+  )
+})
 
 const EndpointList = (props) => {
   const [list, setList] = useState([])
@@ -37,13 +61,23 @@ const EndpointList = (props) => {
         setList(flist)
       }
     })
+    .catch((error) =>
+      context.error('[API] firewall Endpoints error: ' + error.message)
+    )
+
   }
 
   const deleteListItem = (item) => {
     firewallAPI.deleteEndpoint(item).then((res) => {
       refreshList()
     })
+    .catch((error) =>
+      context.error('[API] deleteEndpoint error: ' + error.message)
+    )
   }
+
+  const [showModal, setShowModal] = useState(false)
+  const [modalType, setModalType] = useState('')
 
   useEffect(() => {
     refreshList()
@@ -55,6 +89,72 @@ const EndpointList = (props) => {
     refModal.current()
     refreshList()
   }
+
+  const trigger = (triggerProps) => (
+    <IconButton
+      variant="unstyled"
+      ml="auto"
+      icon={<Icon icon={faEllipsis} color="muted.600" />}
+      {...triggerProps}>
+    </IconButton>
+  )
+
+  const defaultTags = []
+
+  const handleTags = (item, tags) => {
+    console.log("tags = " + tags)
+    console.log("item.Tags = " + item.Tags)
+    if (tags == null) {
+      tags = []
+    }
+
+    let newTags =[...new Set((tags.filter((x) => typeof x == "string" && x.length > 0)))]
+    item.Tags = newTags
+    console.log("newTags " + newTags)
+
+    firewallAPI
+      .addEndpoint(item)
+      .then((res) => {
+        refreshList()
+      })
+      .catch((err) => {
+        this.props.alertContext.error('Firewall API Failure', err.message)
+      })
+  }
+
+  const moreMenu = (item) => (
+    <Menu w={190} closeOnSelect={true} trigger={trigger}>
+      <Menu.OptionGroup
+        title="Tags"
+        type="checkbox"
+        defaultValue={item.Tags}
+        onChange={(t) => handleTags(item, t, 'change')}
+      >
+        {[...new Set(item.Tags)].map((tag) => (
+          <Menu.ItemOption key={tag} value={tag}>
+            {tag}
+          </Menu.ItemOption>
+        ))}
+        <Menu.ItemOption
+          key="newTag"
+          onPress={() => {
+            setModalType('Tag')
+            setShowModal(true)
+          }}
+        >
+          New Tag...
+        </Menu.ItemOption>
+      </Menu.OptionGroup>
+      <Menu.Group title="Actions">
+        <Menu.Item onPress={() => deleteListItem(item)}>
+          <HStack space={2} alignItems="center">
+            <Icon icon={faTrash} color="danger.700" />
+            <Text color="danger.700">Delete</Text>
+          </HStack>
+        </Menu.Item>
+      </Menu.Group>
+    </Menu>
+  )
 
   return (
     <>
@@ -112,16 +212,19 @@ const EndpointList = (props) => {
                   <Text>{item.Port}</Text>
                 </HStack>
 
+                {item.Tags.map((tag) => (
+                  <TagItem key={tag} name={tag} />
+                ))}
 
-                <IconButton
-                  alignSelf="center"
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="secondary"
-                  icon={<Icon icon={faXmark} />}
-                  onPress={() => deleteListItem(item)}
-                />
+                {moreMenu(item)}
               </HStack>
+
+              <ModalConfirm
+                type={modalType}
+                onSubmit={(t) => handleTags(item, [...item.Tags, t])}
+                onClose={() => setShowModal(false)}
+                isOpen={showModal}
+              />
             </Box>
           )}
           keyExtractor={(item) =>

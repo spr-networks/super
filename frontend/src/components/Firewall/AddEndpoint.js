@@ -23,7 +23,7 @@ class AddEndpointImpl extends React.Component {
   state = {
     RuleName: '',
     Protocol: 'tcp',
-    IP: '0.0.0.0/0',
+    IP: '',
     Port: 'any',
     Address: ''
   }
@@ -57,7 +57,7 @@ class AddEndpointImpl extends React.Component {
         }
       })
       .catch((err) => {
-        this.props.alertContext.error('Firewall API Failure', err)
+        this.props.alertContext.error('Firewall API Failure' + err.message)
       })
   }
 
