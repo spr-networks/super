@@ -85,6 +85,32 @@ var WireguardSocketPath = TEST_PREFIX + "/state/plugins/wireguard/wireguard_plug
 
 var DEVICE_TAG_PERMIT_PRIVATE_UPSTREAM_ACCESS = "lan_upstream"
 
+var BASE_READY = TEST_PREFIX + "/state/base/ready"
+
+func SyncBaseContainer() {
+	// Wait for the base container to grab the flock
+
+	file, err := os.OpenFile(BASE_READY, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		log.Println("[-] Failed to open base ready file", err)
+		return
+	}
+	defer file.Close()
+
+	err = nil
+	for err == nil {
+		// grab the lock exclusively. If this succeeds, that means base
+		// did not finish initializing yet. Unlock and retry after a second.
+		err = syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+		if err == nil {
+			//release the lock -- and wait for bash
+			syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+			log.Println("[.] Waiting for base container to initialize")
+			time.Sleep(1 * time.Second)
+		}
+	}
+}
+
 func saveFirewallRulesLocked() {
 	file, _ := json.MarshalIndent(gFirewallConfig, "", " ")
 	err := ioutil.WriteFile(FirewallConfigFile, file, 0600)
@@ -359,6 +385,123 @@ func applyServicePorts(servicePorts []ServicePort) error {
 	return nil
 }
 
+func hasFirewallDeviceEndpointEntry(srcIP string, e Endpoint) bool {
+	var cmd *exec.Cmd
+
+	if e.Port == "any" {
+		//
+		cmd = exec.Command("nft", "get", "element", "inet", "nat", e.Protocol+"anyfwd",
+			"{", srcIP, ":",
+			e.IP, "}")
+	} else {
+		cmd = exec.Command("nft", "get", "element", "inet", "nat", e.Protocol+"fwd",
+			"{", srcIP, ".", e.Port, ":",
+			e.IP, ".", e.Port, "}")
+	}
+
+	_, err := cmd.Output()
+	return err == nil
+}
+
+func addDeviceEndpointEntry(srcIP string, e Endpoint) {
+	var cmd *exec.Cmd
+
+	if e.Port == "any" {
+		//
+		cmd = exec.Command("nft", "add", "element", "inet", "nat", e.Protocol+"anyfwd",
+			"{", srcIP, ":",
+			e.IP, "}")
+	} else {
+		cmd = exec.Command("nft", "add", "element", "inet", "nat", e.Protocol+"fwd",
+			"{", srcIP, ".", e.Port, ":",
+			e.IP, ".", e.Port, "}")
+	}
+
+	_, err := cmd.Output()
+
+	if err != nil {
+		log.Println("failed to add element", err)
+		log.Println(cmd)
+	}
+
+}
+
+func deleteDeviceEndpointEntry(srcIP string, e Endpoint) {
+	var cmd *exec.Cmd
+
+	if e.Port == "any" {
+		//
+		cmd = exec.Command("nft", "delete", "element", "inet", "nat", e.Protocol+"anyfwd",
+			"{", srcIP, ":",
+			e.IP, "}")
+	} else {
+		cmd = exec.Command("nft", "delete", "element", "inet", "nat", e.Protocol+"fwd",
+			"{", srcIP, ".", e.Port, ":",
+			e.IP, ".", e.Port, "}")
+	}
+
+	_, err := cmd.Output()
+
+	if err != nil {
+		log.Println("failed to delete element", err)
+		log.Println(cmd)
+	}
+
+}
+
+func deleteEndpoint(e Endpoint) error {
+	//NOTE: Domains not implemented yet. This handles the IP case
+	if e.IP == "" {
+		return fmt.Errorf("Domain not implemented yet for " + e.RuleName)
+	}
+
+	Devicesmtx.Lock()
+	devices := getDevicesJson()
+	Devicesmtx.Unlock()
+
+	for _, d := range devices {
+		if d.RecentIP == "" {
+			continue
+		}
+
+		if hasFirewallDeviceEndpointEntry(d.RecentIP, e) {
+			deleteDeviceEndpointEntry(d.RecentIP, e)
+		}
+	}
+
+	return nil
+}
+
+func applyEndpointRules(device DeviceEntry) {
+	IP := device.RecentIP
+	if IP == "" {
+		return
+	}
+
+	for _, e := range gFirewallConfig.Endpoints {
+
+		deviceMatchesEndpoint := false
+
+		for _, e_tag := range e.Tags {
+			for _, tag := range device.DeviceTags {
+				if e_tag == tag {
+					deviceMatchesEndpoint = true
+					goto next
+				}
+			}
+		}
+	next:
+
+		hasAccess := hasFirewallDeviceEndpointEntry(IP, e)
+
+		if deviceMatchesEndpoint && !hasAccess {
+			addDeviceEndpointEntry(IP, e)
+		} else if !deviceMatchesEndpoint && hasAccess {
+			deleteDeviceEndpointEntry(IP, e)
+		}
+	}
+}
+
 func hasPrivateUpstreamAccess(ip string) bool {
 	cmd := exec.Command("nft", "get", "element", "inet", "filter", "upstream_private_rfc1918_allowed",
 		"{", ip, ":", "return", "}")
@@ -417,18 +560,15 @@ func applyPrivateNetworkUpstreamDevice(device DeviceEntry) {
 	}
 }
 
-func applyPrivateNetworkUpstreamDevices() {
+func applyBuiltinTagFirewallRules() {
 	Devicesmtx.Lock()
 	devices := getDevicesJson()
 	Devicesmtx.Unlock()
 
 	for _, device := range devices {
 		applyPrivateNetworkUpstreamDevice(device)
+		applyEndpointRules(device)
 	}
-}
-
-func applyBuiltinTagFirewallRules() {
-	applyPrivateNetworkUpstreamDevices()
 }
 
 func applyFirewallRulesLocked() {
@@ -770,7 +910,9 @@ func modifyServicePort(w http.ResponseWriter, r *http.Request) {
 
 /*
 Endpoints are a utility data structure for storing metadata.
-They are not directly applied into firewall rules
+
+They affect firewall policy when a device and an endpoint share a tag,
+that device is permitted to access the endpoint.
 */
 func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
 	FWmtx.Lock()
@@ -788,39 +930,52 @@ func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if endpoint.IP != "" && (CIDRorIP(endpoint.IP) != nil) {
-		http.Error(w, "Invalid endpoint IP, must be IP or CIDR", 400)
-		return
-	}
+	if r.Method != http.MethodDelete {
+		//when creating perofrm validation beyond rule name
+		if endpoint.IP != "" && (CIDRorIP(endpoint.IP) != nil) {
+			http.Error(w, "Invalid endpoint IP, must be IP or CIDR", 400)
+			return
+		}
 
-	if endpoint.IP == "" && endpoint.Domain == "" {
-		http.Error(w, "Need either IP or a Domain set", 400)
-		return
-	}
+		if endpoint.IP == "" && endpoint.Domain == "" {
+			http.Error(w, "Need either IP or a Domain set", 400)
+			return
+		}
 
-	if endpoint.IP != "" && endpoint.Domain != "" {
-		http.Error(w, "Need either an IP or a Domain, not both", 400)
-		return
-	}
+		if endpoint.IP != "" && endpoint.Domain != "" {
+			http.Error(w, "Need either an IP or a Domain, not both", 400)
+			return
+		}
 
-	if endpoint.Protocol != "tcp" && endpoint.Protocol != "udp" {
-		http.Error(w, "Invalid protocol", 400)
-		return
-	}
+		if endpoint.Protocol != "tcp" && endpoint.Protocol != "udp" {
+			http.Error(w, "Invalid protocol", 400)
+			return
+		}
 
-	re := regexp.MustCompile("^([0-9].*)$")
+		for _, tag := range endpoint.Tags {
+			if len(tag) == 0 {
+				http.Error(w, "Tag can not be empty", 400)
+				return
+			}
+		}
 
-	if endpoint.Port != "any" && (endpoint.Port == "" || !re.MatchString(endpoint.Port)) {
-		http.Error(w, "Invalid Port", 400)
-		return
+		re := regexp.MustCompile("^([0-9].*)$")
+
+		if endpoint.Port != "any" && (endpoint.Port == "" || !re.MatchString(endpoint.Port)) {
+			http.Error(w, "Invalid Port", 400)
+			return
+		}
 	}
 
 	if r.Method == http.MethodDelete {
 		for i := range gFirewallConfig.Endpoints {
 			a := gFirewallConfig.Endpoints[i]
-			if endpoint.Protocol == a.Protocol && endpoint.Port == a.Port {
+			//find and delete by endpoint Name
+			if endpoint.RuleName == a.RuleName {
 				gFirewallConfig.Endpoints = append(gFirewallConfig.Endpoints[:i], gFirewallConfig.Endpoints[i+1:]...)
 				saveFirewallRulesLocked()
+				//ensure firewall has endpoint access removed
+				deleteEndpoint(a)
 				return
 			}
 		}
@@ -840,6 +995,7 @@ func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	gFirewallConfig.Endpoints = append(gFirewallConfig.Endpoints, endpoint)
 	saveFirewallRulesLocked()
+	applyFirewallRulesLocked()
 }
 
 func addVerdict(IP string, Iface string, Table string) {
@@ -1059,32 +1215,6 @@ func deleteForwardBlock(br ForwardingBlockRule) error {
 	}
 
 	return err
-}
-
-var BASE_READY = TEST_PREFIX + "/state/base/ready"
-
-func SyncBaseContainer() {
-	// Wait for the base container to grab the flock
-
-	file, err := os.OpenFile(BASE_READY, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		log.Println("[-] Failed to open base ready file", err)
-		return
-	}
-	defer file.Close()
-
-	err = nil
-	for err == nil {
-		// grab the lock exclusively. If this succeeds, that means base
-		// did not finish initializing yet. Unlock and retry after a second.
-		err = syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
-		if err == nil {
-			//release the lock -- and wait for bash
-			syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
-			log.Println("[.] Waiting for base container to initialize")
-			time.Sleep(1 * time.Second)
-		}
-	}
 }
 
 func getWireguardClient() http.Client {
