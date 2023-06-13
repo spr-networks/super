@@ -109,7 +109,8 @@ class AddEndpointImpl extends React.Component {
             />
           </FormControl>
         </HStack>
-        <HStack space={4}>
+        {/* //domains are not yet implemented.
+          <HStack space={4}>
           <FormControl flex="1">
             <FormControl.Label>Domain</FormControl.Label>
             <Input
@@ -121,6 +122,7 @@ class AddEndpointImpl extends React.Component {
             />
           </FormControl>
         </HStack>
+        */}
 
         <FormControl>
           <FormControl.Label>Protocol</FormControl.Label>
