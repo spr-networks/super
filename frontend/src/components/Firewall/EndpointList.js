@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useContext } from 'react'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
+import { AlertContext } from 'AppContext'
 import {
   faArrowRightLong,
   faCircleNodes,
@@ -53,6 +54,7 @@ const TagItem = React.memo(({ name }) => {
 
 const EndpointList = (props) => {
   const [list, setList] = useState([])
+  let context = useContext(AlertContext)
 
   const refreshList = () => {
     firewallAPI.config().then((config) => {
@@ -102,15 +104,13 @@ const EndpointList = (props) => {
   const defaultTags = []
 
   const handleTags = (item, tags) => {
-    console.log("tags = " + tags)
-    console.log("item.Tags = " + item.Tags)
     if (tags == null) {
       tags = []
     }
-
     let newTags =[...new Set((tags.filter((x) => typeof x == "string" && x.length > 0)))]
+    newTags = newTags.map((tag) => tag.toLowerCase())
+
     item.Tags = newTags
-    console.log("newTags " + newTags)
 
     firewallAPI
       .addEndpoint(item)
@@ -212,9 +212,9 @@ const EndpointList = (props) => {
                   <Text>{item.Port}</Text>
                 </HStack>
 
-                {item.Tags.map((tag) => (
+                {item.Tags ? item.Tags.map((tag) => (
                   <TagItem key={tag} name={tag} />
-                ))}
+                )) : null}
 
                 {moreMenu(item)}
               </HStack>
