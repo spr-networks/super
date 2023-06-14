@@ -227,28 +227,29 @@ table inet filter {
 
     #jump USERDEF_FORWARD
 
-    # mark outbound for upstream with wan:out and others as lan:out
-    oifname @uplink_interfaces log prefix "wan:out " group 0
-    oifname != @uplink_interfaces log prefix "lan:out " group 0
 
     # Extra hardening for when running Virtual SPR, to avoid exposing API to the uplink hop
     # https://github.com/moby/moby/issues/22054 This is an open issue with docker leaving forwarding open...
     # Can disable this hardening by setting VIRTUAL_SPR_API_INTERNET=1
-    $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WANIF" && "$WAN_NET" ]]; then echo "counter iifname @uplink_interfaces tcp dport 80 ip saddr != $WAN_NET drop"; fi)
+    $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WANIF" && "$WAN_NET" ]]; then echo "counter iifname @uplink_interfaces tcp dport 80 ip saddr != $WAN_NET jump DROPLOGFWD"; fi)
 
     # Allow DNAT for port forwarding
     counter ct status dnat accept
 
-    # Do not forward from uplink interfaces after dnat
-    iifname @uplink_interfaces drop
-
     counter jump F_EST_RELATED
+
+    # Do not forward from uplink interfaces after dnat
+    # and after F_EST_RELATED
+    iifname @uplink_interfaces jump DROPLOGFWD
+
+    # Log after F_EST_RELATED to reduce logs
+
+    # mark outbound for upstream with wan:out and others as lan:out
+    oifname @uplink_interfaces log prefix "wan:out " group 0
+    oifname != @uplink_interfaces log prefix "lan:out " group 0
 
     # allow docker containers to communicate upstream
     iifname @dockerifs oifname @uplink_interfaces ip saddr $DOCKERNET counter accept
-
-    oifname @uplink_interfaces log prefix "wan:out " group 0
-    oifname != @uplink_interfaces log prefix "lan:out " group 0
 
     # allow docker containers to speak to LAN also
     iifname @dockerifs oifname @lan_interfaces  ip saddr $DOCKERNET counter accept
