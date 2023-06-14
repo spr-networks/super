@@ -162,14 +162,14 @@ table inet filter {
 
     # Drop input from the site to site output interfaces. They are only a sink,
     # Not a source that can connect into SPR services
-    counter iifname "site*" jump DROPLOGINP
+    counter iifname "site*" goto DROPLOGINP
 
     # Allow wireguard from only WANIF interfaces to prevent loops
     iifname @uplink_interfaces udp dport $WIREGUARD_PORT counter accept
 
     # drop dhcp requests, multicast ports from upstream
     # When updating lan_udp_accept, updated this list.
-    iifname @uplink_interfaces udp dport {67, 1900, 5353} counter jump DROPLOGINP
+    iifname @uplink_interfaces udp dport {67, 1900, 5353} counter goto DROPLOGINP
 
     # drop ssh, iperf from upstream
 
@@ -206,7 +206,7 @@ table inet filter {
     counter udp dport vmap @lan_udp_accept
 
     # Fall through to log + drop
-    counter jump DROPLOGINP
+    counter goto DROPLOGINP
   }
 
   #chain USERDEF_INPUT{
@@ -231,7 +231,7 @@ table inet filter {
     # Extra hardening for when running Virtual SPR, to avoid exposing API to the uplink hop
     # https://github.com/moby/moby/issues/22054 This is an open issue with docker leaving forwarding open...
     # Can disable this hardening by setting VIRTUAL_SPR_API_INTERNET=1
-    $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WANIF" && "$WAN_NET" ]]; then echo "counter iifname @uplink_interfaces tcp dport 80 ip saddr != $WAN_NET jump DROPLOGFWD"; fi)
+    $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WANIF" && "$WAN_NET" ]]; then echo "counter iifname @uplink_interfaces tcp dport 80 ip saddr != $WAN_NET goto DROPLOGFWD"; fi)
 
     # Allow DNAT for port forwarding
     counter ct status dnat accept
@@ -240,7 +240,7 @@ table inet filter {
 
     # Do not forward from uplink interfaces after dnat
     # and after F_EST_RELATED
-    iifname @uplink_interfaces jump DROPLOGFWD
+    iifname @uplink_interfaces goto DROPLOGFWD
 
     # Log after F_EST_RELATED to reduce logs
 
@@ -290,7 +290,22 @@ table inet filter {
     jump CUSTOM_GROUPS
 
     # Fallthrough to log + drop
-    counter jump DROPLOGFWD
+    counter goto DROPLOGFWD
+  }
+
+
+  map fwmark_to_oif {
+    type mark : ifname;
+    $(if [ "$WANIF" ]; then echo "elements = { 0 : $WANIF }" ; fi )
+  }
+
+  chain OUTBOUND_UPLINK {
+    # if its new, grab a mark RR
+    ct state new mark set numgen inc mod 1
+
+    # convert from the mark to the outbound interface to set on the packet
+    oifname set meta mark map @fwmark_to_oif
+    counter accept
   }
 
   chain restrict_upstream_private_addresses {
