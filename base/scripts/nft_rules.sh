@@ -302,10 +302,7 @@ table inet filter {
   chain OUTBOUND_UPLINK {
     # if its new, grab a mark RR
     ct state new mark set numgen inc mod 1
-
-    # convert from the mark to the outbound interface to set on the packet
-    oifname set meta mark map @fwmark_to_oif
-    counter accept
+    ct state new accept
   }
 
   chain restrict_upstream_private_addresses {

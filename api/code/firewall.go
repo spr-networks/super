@@ -222,14 +222,32 @@ func rebuildUplink() {
 		log.Println("failed to insert rule", cmd, err)
 	}
 
+	cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "OUTBOUND_UPLINK",
+		"ct", "state", "new", "accept")
+	_, err = cmd.Output()
+	if err != nil {
+		log.Println("failed to insert rule", cmd, err)
+	}
+
 	/*
-		cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "OUTBOUND_UPLINK",
-			"ct", "state", "new", "mark", "set", "numgen", "inc", "mod", len(outbound))
+		TBD: now set up the route tables
+	*/
+	for i, name := range outbound {
+		// ex: ip route replace default dev ppp0 table 0
+		cmd = exec.Command("ip", "route", "replace", "default", "dev", name, fmt.Sprintf("%d", i))
 		_, err = cmd.Output()
 		if err != nil {
-			log.Println("failed to insert rule", cmd, err)
+			log.Println("failed to replace default route", cmd, err)
 		}
 
+	}
+
+	/*
+		ip route add table 100 default dev eth1 via 192.168.0.1
+		ip route add table 101 default dev eth2 via 192.168.29.1
+		# select table based on mark on the packet
+		ip rule add fwmark 100 table 100
+		ip rule add fwmark 101 table 101
 	*/
 
 }
