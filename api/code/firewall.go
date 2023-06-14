@@ -954,6 +954,8 @@ func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
 				saveFirewallRulesLocked()
 				//ensure firewall has endpoint access removed
 				deleteEndpoint(a)
+				//re-apply rules. the deletion may not recognize a subset that is still on
+				applyFirewallRulesLocked()
 				return
 			}
 		}
