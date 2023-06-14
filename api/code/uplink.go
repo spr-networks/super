@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"regexp"
@@ -17,10 +18,48 @@ import (
 	"text/template"
 )
 
+/* Overall Uplinks configuration */
+
+var gAPIUplinksConfigPath = TEST_PREFIX + "/configs/base/uplinks.json"
+
+type UplinksConfig struct {
+	LoadBalanceStrategy string
+}
+
+var Uplinksmtx sync.Mutex
+
+func loadUplinksConfig() UplinksConfig {
+	Uplinksmtx.Lock()
+	defer Uplinksmtx.Unlock()
+
+	data, err := os.ReadFile(gAPIUplinksConfigPath)
+	config := UplinksConfig{}
+	if err == nil {
+		_ = json.Unmarshal(data, &config)
+	}
+	return config
+}
+
+func saveUplinksConfig(config UplinksConfig) error {
+	Uplinksmtx.Lock()
+	defer Uplinksmtx.Unlock()
+
+	file, err := json.MarshalIndent(config, "", " ")
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(gAPIUplinksConfigPath, file, 0660)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+
+
 /* WPA Supplicant Support */
 
 var WpaConfigPath = TEST_PREFIX + "/configs/wifi_uplink/wpa.json"
-
 var WPAmtx sync.Mutex
 
 type WPANetwork struct {
@@ -234,9 +273,7 @@ func updateWpaSupplicantConfig(w http.ResponseWriter, r *http.Request) {
 
 	enabled := false
 
-	pattern := `^[a-zA-Z0-9]*(\.[a-zA-Z0-9]*)*$`
-	matched, err := regexp.MatchString(pattern, wpa.Iface)
-	if err != nil || !matched {
+	if !isValidIface(wpa.Iface) {
 		log.Println("Invalid iface name", err)
 		http.Error(w, "Invalid iface name", 400)
 		return
@@ -327,9 +364,9 @@ func (p *PPPIface) Validate() error {
 	}
 
 	if p.VLAN != "" {
-		_, err := strconv.Atoi(p.VLAN)
-		if err != nil {
-			return fmt.Errorf("VLAN field must contain numeric value")
+		n, err := strconv.Atoi(p.VLAN)
+		if err != nil || n < 0 {
+			return fmt.Errorf("VLAN field must contain positive numeric value")
 		}
 	}
 
@@ -523,6 +560,9 @@ func updatePPPConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//TBD additional work is needed here.
+	// need to define a PPP0 ifname and store it.
+
 	//update the interface type
 	interfaces, err := updateInterfaceType(ppp.Iface, "Uplink", "ppp", ppp.Enabled)
 	if err != nil {
@@ -547,8 +587,7 @@ func updatePPPConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 /* Setting IP */
-
-func updateIPConfig(w http.ResponseWriter, r *http.Request) {
+func updateLinkIPConfig(w http.ResponseWriter, r *http.Request) {
 	iconfig := InterfaceConfig{}
 	err := json.NewDecoder(r.Body).Decode(&iconfig)
 	if err != nil {
@@ -557,14 +596,74 @@ func updateIPConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if iconfig.DisableDHCP == true {
-		//validate router and ip
+		//validate router and ip when dhcp is disabled
+		err = CIDRorIP(iconfig.IP)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		ip := net.ParseIP(iconfig.Router)
+		if ip == nil {
+			err = fmt.Errorf("invalid Router ip " + iconfig.Router)
+			http.Error(w, err.Error(), 400)
+			return
+		}
 	}
 
 	if iconfig.VLAN != "" {
-		//validate vlan tag
+		n, err := strconv.Atoi(iconfig.VLAN)
+		if err != nil || n < 0 {
+			err = fmt.Errorf("VLAN field must contain positive numeric value")
+			http.Error(w, err.Error(), 400)
+			return
+		}
 	}
 
 	err = updateInterfaceIP(iconfig)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), 400)
+		return
+	}
+}
+
+/* Setting basic settings */
+func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
+	iconfig := PublicInterfaceConfig{}
+	err := json.NewDecoder(r.Body).Decode(&iconfig)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if !isValidIface(iconfig.Name) {
+		http.Error(w, "Invalid iface name", 400)
+		return
+	}
+
+	if !isValidIfaceType(iconfig.Type) {
+		http.Error(w, "Invalid type", 400)
+		return
+	}
+
+	//AP has a separate path for configuration
+	if iconfig.Type == "AP" {
+		http.Error(w, "Set interface in AP mode using hostapd API instead", 400)
+		return
+	}
+
+	if iconfig.Subtype != "" {
+		http.Error(w, "Settting subtype not supported", 400)
+		return
+	}
+
+	i := InterfaceConfig{}
+	i.Name = iconfig.Name
+	i.Type = iconfig.Type
+	i.Enabled = iconfig.Enabled
+
+	err = updateInterfaceConfig(i)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), 400)
