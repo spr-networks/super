@@ -81,6 +81,52 @@ func copyInterfacesConfigToPublic() {
 	Interfacesmtx.Unlock()
 }
 
+func removeUplinkEntry(ifname string) {
+	cmd := exec.Command("nft", "delete", "element", "inet", "filter",
+		"uplink_interfaces", "{", ifname, "}")
+
+	_, err := cmd.Output()
+
+	if err != nil {
+		log.Println("failed to delete uplink_interfaces element", err)
+		log.Println(cmd)
+	}
+
+	cmd := exec.Command("nft", "delete", "element", "inet", "nat",
+		"uplink_interfaces", "{", ifname, "}")
+
+	_, err := cmd.Output()
+
+	if err != nil {
+		log.Println("failed to delete uplink_interfaces element", err)
+		log.Println(cmd)
+	}
+
+}
+
+func addUplinkEntry(ifname string) {
+	cmd := exec.Command("nft", "add", "element", "inet", "filter",
+		"uplink_interfaces", "{", ifname, "}")
+
+	_, err := cmd.Output()
+
+	if err != nil {
+		log.Println("failed to add uplink_interfaces element", err)
+		log.Println(cmd)
+	}
+
+	cmd := exec.Command("nft", "add", "element", "inet", "nat",
+		"uplink_interfaces", "{", ifname, "}")
+
+	_, err := cmd.Output()
+
+	if err != nil {
+		log.Println("failed to add uplink_interfaces element", err)
+		log.Println(cmd)
+	}
+
+}
+
 func resetInterface(interfaces []InterfaceConfig, name string, prev_type string, prev_subtype string, enabled bool) {
 
 	if prev_type == "" {
@@ -90,6 +136,9 @@ func resetInterface(interfaces []InterfaceConfig, name string, prev_type string,
 
 	// IMPORTANT, now the previous subtype / type needs to be updated
 	if prev_type == "Uplink" {
+
+		removeUplinkEntry(name)
+
 		if prev_subtype == "wifi" {
 			//wifi was disabled, notify it
 			insertWpaConfigAndSave(interfaces, WPAIface{})
@@ -183,13 +232,16 @@ func configureInterface(interfaceType string, subType string, name string) error
 	}
 
 	if prev_type != "" {
-
 		Interfacesmtx.Unlock()
 		resetInterface(config, name, prev_type, prev_subtype, false)
 		//defer will unlock
 		Interfacesmtx.Lock()
-
 	}
+
+	if interfaceType == "Uplink" {
+		addUplinkEntry(interfaceType)
+	}
+	//set the
 
 	return nil
 }
@@ -222,8 +274,13 @@ func toggleInterface(name string, enabled bool) error {
 		err := writeInterfacesConfigLocked(config)
 		Interfacesmtx.Unlock()
 		resetInterface(config, config[i].Name, config[i].Type, config[i].Subtype, enabled)
-		//locka gain for defer
+		//lock again for defer
 		Interfacesmtx.Lock()
+
+		if config[i].Type == "Uplink" && enabled {
+			addUplinkEntry(config[i].Name)
+		}
+
 		return err
 	}
 
@@ -289,7 +346,12 @@ func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool
 			resetInterface(interfaces, Iface, prev_type, prev_subtype, Enabled)
 			//lock again for defer
 			Interfacesmtx.Lock()
+
+			if Type == "Uplink" && Enabled {
+				addUplinkEntry(Iface)
+			}
 		}
+
 		return interfaces, err
 	}
 	return interfaces, nil
@@ -326,6 +388,17 @@ func updateInterfaceIP(iconfig InterfaceConfig) error {
 	} else if changed {
 		return writeInterfacesConfigLocked(interfaces)
 	}
+
+	if iconfig.Enabled {
+		if iconfig.DisableDHCP == true && iconfig.IP != "" {
+			//set IP address directly
+
+			//add route
+
+			//TBD: handle vlan
+		}
+	}
+
 	return nil
 }
 
