@@ -259,6 +259,8 @@ this is fairly complex as it will
 2) return a list of plugins to reboot as a result -- for now only 1 expected
 
 and then return the updated interface list.
+
+TBD: if an interface is not known, create it (?)
 */
 func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool) ([]InterfaceConfig, error) {
 	Interfacesmtx.Lock()
@@ -292,8 +294,16 @@ func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool
 	}
 
 	if !found {
-		return []InterfaceConfig{}, fmt.Errorf("interface not found")
-	} else if changed {
+		changed = true
+		new := InterfaceConfig{}
+		new.Name = Iface
+		new.Type = Type
+		new.Subtype = Subtype
+		new.Enabled = Enabled
+		interfaces = append(interfaces, new)
+	}
+
+	if changed {
 		err := writeInterfacesConfigLocked(interfaces)
 		if reset {
 			Interfacesmtx.Unlock()
