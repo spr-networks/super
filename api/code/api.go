@@ -1314,7 +1314,7 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 func getMapVerdict(name string) string {
 	//internet verdict jumps to a load balancing chain
 	if name == "internet_access" {
-		return "OUTBOUND_UPLINK"
+		return "goto OUTBOUND_UPLINK"
 	}
 
 	//custom map filtering for destinations is split between two tables.
