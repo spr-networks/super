@@ -2145,7 +2145,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/uplink/wifi", updateWpaSupplicantConfig).Methods("PUT")
 	external_router_authenticated.HandleFunc("/uplink/ppp", getPPPConfig).Methods("GET")
 	external_router_authenticated.HandleFunc("/uplink/ppp", updatePPPConfig).Methods("PUT")
-	external_router_authenticated.HandleFunc("/uplink/ip", updateIPConfig).Methods("PUT")
+	external_router_authenticated.HandleFunc("/uplink/ip", updateLinkIPConfig).Methods("PUT")
+	external_router_authenticated.HandleFunc("/uplink/config", updateLinkConfig).Methods("PUT")
 
 	//	external_router_authenticated.HandleFunc("/uplink/{interface}/bond", mangeBondInterface).Methods("PUT", "DELETE")
 	//	external_router_authenticated.HandleFunc("/uplink/loadBalance", setLoadBalanceStrategy).Methods("PUT")

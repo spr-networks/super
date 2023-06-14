@@ -215,8 +215,33 @@ func rebuildUplink() {
 		return
 	}
 
-	cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "OUTBOUND_UPLINK",
-		"ct", "state", "new", "mark", "set", "numgen", "inc", "mod", fmt.Sprintf("%d", len(outbound)))
+	if len(outbound) == 0 || len(outbound) == 1 {
+		// no outbound interfaces configured...
+		// or only one outbound configured. simply accept defaults
+		cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "OUTBOUND_UPLINK",
+			"ct", "state", "new", "accept")
+		_, err = cmd.Output()
+		if err != nil {
+			log.Println("failed to insert rule", cmd, err)
+		}
+		return
+	}
+
+	// multiple uplink interfaces are availabl and enabled
+	// use jhash saddr + saddr strategy to load balance for now
+	// in the future, can look at load distribution, round robin, and other approaches.
+
+	uplinkSettings := loadUplinksConfig()
+	if uplinkSettings.LoadBalanceStrategy == "" || uplinkSettings.LoadBalanceStrategy == "saddr.daddr" {
+		cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "OUTBOUND_UPLINK",
+			"ct", "state", "new", "counter", "meta", "nfmark", "set",
+				"jhash", "ip", "saddr", ".", "ip", "daddr", "mod", fmt.Sprintf("%d", len(outbound)), "offset", "1")
+	} else if uplinkSettings.LoadBalanceStrategy == "saddr" {
+		cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "OUTBOUND_UPLINK",
+			"ct", "state", "new", "counter", "meta", "nfmark", "set",
+				"jhash", "ip", "saddr", "mod", fmt.Sprintf("%d", len(outbound)), "offset", "1")
+	}
+
 	_, err = cmd.Output()
 	if err != nil {
 		log.Println("failed to insert rule", cmd, err)
@@ -229,26 +254,39 @@ func rebuildUplink() {
 		log.Println("failed to insert rule", cmd, err)
 	}
 
-	/*
-		TBD: now set up the route tables
-	*/
-	for i, name := range outbound {
-		// ex: ip route replace default dev ppp0 table 0
-		cmd = exec.Command("ip", "route", "replace", "default", "dev", name, fmt.Sprintf("%d", i))
-		_, err = cmd.Output()
+	const firstTableNumber = 10
+
+	for index, outboundInterface := range outbound {
+		tableNumber := firstTableNumber + index
+		markNumber := index + 1
+
+		// Delete the existing rule, if any.
+		cmd = exec.Command("ip", "rule", "del", "fwmark", fmt.Sprintf("%d", markNumber), "table", fmt.Sprintf("%d", tableNumber))
+		_, _ = cmd.Output() // Ignore errors, as the rule may not exist yet.
+
+		// Add a route for the current outbound interface to the specific table.
+		cmd = exec.Command("ip", "route", "add", "default", "dev", outboundInterface, "table", fmt.Sprintf("%d", tableNumber))
+		_, err := cmd.Output()
 		if err != nil {
-			log.Println("failed to replace default route", cmd, err)
+			log.Printf("failed to add route for interface %s: %v", outboundInterface, err)
+			continue
 		}
 
+		// Add a rule that matches the packet mark to the routing table.
+		cmd = exec.Command("ip", "rule", "add", "fwmark", fmt.Sprintf("%d", markNumber), "table", fmt.Sprintf("%d", tableNumber))
+		_, err = cmd.Output()
+		if err != nil {
+			log.Printf("failed to add rule for mark %d: %v", markNumber, err)
+			continue
+		}
 	}
 
-	/*
-		ip route add table 100 default dev eth1 via 192.168.0.1
-		ip route add table 101 default dev eth2 via 192.168.29.1
-		# select table based on mark on the packet
-		ip rule add fwmark 100 table 100
-		ip rule add fwmark 101 table 101
-	*/
+	// Flush the route cache to ensure the new route is used immediately.
+	cmd = exec.Command("ip", "route", "flush", "cache")
+	_, err = cmd.Output()
+	if err != nil {
+		log.Printf("failed to flush route cache: %v", err)
+	}
 
 }
 

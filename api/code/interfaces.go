@@ -36,6 +36,25 @@ type PublicInterfaceConfig struct {
 	Enabled bool
 }
 
+
+func isValidIface(Iface string) bool {
+	pattern := `^[a-zA-Z0-9]*(\.[a-zA-Z0-9]*)*$`
+	matched, err := regexp.MatchString(pattern, Iface)
+	return err == nil && matched
+}
+
+func isValidIfaceType(t string) bool {
+	validTypes := []string{"AP", "Uplink", "Other"}
+	for _, validType := range validTypes {
+		if t == validType {
+			return true
+		}
+	}
+	return false
+}
+
+
+
 func loadInterfacesConfigLocked() []InterfaceConfig {
 	//read the old configuration
 	data, err := os.ReadFile(gAPIInterfacesPath)
@@ -186,10 +205,7 @@ func configureInterface(interfaceType string, subType string, name string) error
 	}
 
 	if prev_type != "" {
-		Interfacesmtx.Unlock()
 		resetInterface(config, name, prev_type, prev_subtype, false)
-		//defer will unlock
-		Interfacesmtx.Lock()
 	}
 
 	if interfaceType == "Uplink" {
@@ -226,10 +242,7 @@ func toggleInterface(name string, enabled bool) error {
 
 	if madeChange {
 		err := writeInterfacesConfigLocked(config)
-		Interfacesmtx.Unlock()
 		resetInterface(config, config[i].Name, config[i].Type, config[i].Subtype, enabled)
-		//lock again for defer
-		Interfacesmtx.Lock()
 
 		if config[i].Type == "Uplink" && enabled {
 			addUplinkEntry(config[i].Name)
@@ -306,10 +319,7 @@ func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool
 	if changed {
 		err := writeInterfacesConfigLocked(interfaces)
 		if reset {
-			Interfacesmtx.Unlock()
 			resetInterface(interfaces, Iface, prev_type, prev_subtype, Enabled)
-			//lock again for defer
-			Interfacesmtx.Lock()
 
 			if Type == "Uplink" && Enabled {
 				addUplinkEntry(Iface)
@@ -361,6 +371,38 @@ func updateInterfaceIP(iconfig InterfaceConfig) error {
 
 			//TBD: handle vlan
 		}
+	}
+
+	return nil
+}
+
+func updateInterfaceConfig(iconfig InterfaceConfig) error {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+	interfaces := loadInterfacesConfigLocked()
+
+	found := false
+	changed := false
+
+	for i, iface := range interfaces {
+		if iface.Name == iconfig.Name {
+			found = true
+			if interfaces[i].Enabled != iconfig.Enabled ||
+				interfaces[i].Type != iconfig.Type {
+				changed = true
+				interfaces[i].Enabled = iconfig.Enabled
+				interfaces[i].Type = iconfig.Type
+			}
+		}
+	}
+
+	if !found {
+		interfaces = append(interfaces, iconfig)
+		changed = true
+	}
+
+	if changed {
+		return writeInterfacesConfigLocked(interfaces)
 	}
 
 	return nil
