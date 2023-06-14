@@ -196,6 +196,52 @@ func loadFirewallRules() error {
 	return nil
 }
 
+func rebuildUplink() {
+	//assumes Interfacesmtx is locked
+
+	interfaces := loadInterfacesConfigLocked()
+
+	outbound := []string{}
+	for _, iface := range interfaces {
+		if iface.Type == "Uplink" && iface.Enabled {
+			outbound = append(outbound, iface.Name)
+		}
+	}
+
+	cmd := exec.Command("nft", "flush", "chain", "inet", "filter", "OUTBOUND_UPLINK")
+	_, err := cmd.Output()
+	if err != nil {
+		log.Println("failed to flush chain OUTBOUND_UPLINK", err)
+		return
+	}
+
+	cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "OUTBOUND_UPLINK",
+		"ct", "state", "new", "mark", "set", "numgen", "inc", "mod", fmt.Sprintf("%d", len(outbound)))
+	_, err = cmd.Output()
+	if err != nil {
+		log.Println("failed to insert rule", cmd, err)
+	}
+
+	/*
+		cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "OUTBOUND_UPLINK",
+			"ct", "state", "new", "mark", "set", "numgen", "inc", "mod", len(outbound))
+		_, err = cmd.Output()
+		if err != nil {
+			log.Println("failed to insert rule", cmd, err)
+		}
+
+	*/
+
+}
+
+/*
+type InterfaceConfig struct {
+	Name        string
+	Type        string
+	Subtype     string
+	Enabled     bool
+*/
+
 func removeUplinkEntry(ifname string) {
 	cmd := exec.Command("nft", "delete", "element", "inet", "filter",
 		"uplink_interfaces", "{", ifname, "}")
@@ -217,6 +263,7 @@ func removeUplinkEntry(ifname string) {
 		log.Println(cmd)
 	}
 
+	rebuildUplink()
 }
 
 func addUplinkEntry(ifname string) {
@@ -240,6 +287,7 @@ func addUplinkEntry(ifname string) {
 		log.Println(cmd)
 	}
 
+	rebuildUplink()
 }
 
 func deleteBlock(br BlockRule) error {
