@@ -1037,7 +1037,8 @@ func addVerdict(IP string, Iface string, Table string) {
 }
 
 func hasVerdict(IP string, Iface string, Table string) bool {
-	err := exec.Command("nft", "get", "element", "inet", "filter", Table, "{", IP, ".", Iface, ":", "accept", "}").Run()
+	verdict := getMapVerdict(Table)
+	err := exec.Command("nft", "get", "element", "inet", "filter", Table, "{", IP, ".", Iface, ":", verdict, "}").Run()
 	return err == nil
 }
 
