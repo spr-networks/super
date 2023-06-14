@@ -59,6 +59,7 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
   const [assignBSSID, setAssignBSSID] = useState(false)
   const [disableWPA3, setDisableWPA3] = useState(false)
   const [enable, setEnable] = useState(true)
+  const context = useContext(AlertContext)
 
   const handleChangeSSID = (SSID) => {
     let ssidItem = ssids.find((item) => item.ssid == SSID)
@@ -606,12 +607,10 @@ const UplinkInfo = (props) => {
       .put('/uplink/'+type, new_entry)
       .then((res2) => {fetchInfo(); onClose()})
       .catch((err) => {
-        alert(err)
         context.error(err)
         onClose()
       })
       .catch((err) => {
-        alert(err)
         context.error(err)
         onClose()
       })
