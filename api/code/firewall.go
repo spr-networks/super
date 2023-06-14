@@ -196,6 +196,52 @@ func loadFirewallRules() error {
 	return nil
 }
 
+func removeUplinkEntry(ifname string) {
+	cmd := exec.Command("nft", "delete", "element", "inet", "filter",
+		"uplink_interfaces", "{", ifname, "}")
+
+	_, err := cmd.Output()
+
+	if err != nil {
+		log.Println("failed to delete uplink_interfaces element", err)
+		log.Println(cmd)
+	}
+
+	cmd = exec.Command("nft", "delete", "element", "inet", "nat",
+		"uplink_interfaces", "{", ifname, "}")
+
+	_, err = cmd.Output()
+
+	if err != nil {
+		log.Println("failed to delete uplink_interfaces element", err)
+		log.Println(cmd)
+	}
+
+}
+
+func addUplinkEntry(ifname string) {
+	cmd := exec.Command("nft", "add", "element", "inet", "filter",
+		"uplink_interfaces", "{", ifname, "}")
+
+	_, err := cmd.Output()
+
+	if err != nil {
+		log.Println("failed to add uplink_interfaces element", err)
+		log.Println(cmd)
+	}
+
+	cmd = exec.Command("nft", "add", "element", "inet", "nat",
+		"uplink_interfaces", "{", ifname, "}")
+
+	_, err = cmd.Output()
+
+	if err != nil {
+		log.Println("failed to add uplink_interfaces element", err)
+		log.Println(cmd)
+	}
+
+}
+
 func deleteBlock(br BlockRule) error {
 	cmd := exec.Command("nft", "delete", "element", "inet", "nat", "block", "{",
 		br.SrcIP, ".", br.DstIP, ".", br.Protocol, ":", "drop", "}")

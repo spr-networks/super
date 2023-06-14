@@ -81,52 +81,6 @@ func copyInterfacesConfigToPublic() {
 	Interfacesmtx.Unlock()
 }
 
-func removeUplinkEntry(ifname string) {
-	cmd := exec.Command("nft", "delete", "element", "inet", "filter",
-		"uplink_interfaces", "{", ifname, "}")
-
-	_, err := cmd.Output()
-
-	if err != nil {
-		log.Println("failed to delete uplink_interfaces element", err)
-		log.Println(cmd)
-	}
-
-	cmd := exec.Command("nft", "delete", "element", "inet", "nat",
-		"uplink_interfaces", "{", ifname, "}")
-
-	_, err := cmd.Output()
-
-	if err != nil {
-		log.Println("failed to delete uplink_interfaces element", err)
-		log.Println(cmd)
-	}
-
-}
-
-func addUplinkEntry(ifname string) {
-	cmd := exec.Command("nft", "add", "element", "inet", "filter",
-		"uplink_interfaces", "{", ifname, "}")
-
-	_, err := cmd.Output()
-
-	if err != nil {
-		log.Println("failed to add uplink_interfaces element", err)
-		log.Println(cmd)
-	}
-
-	cmd := exec.Command("nft", "add", "element", "inet", "nat",
-		"uplink_interfaces", "{", ifname, "}")
-
-	_, err := cmd.Output()
-
-	if err != nil {
-		log.Println("failed to add uplink_interfaces element", err)
-		log.Println(cmd)
-	}
-
-}
-
 func resetInterface(interfaces []InterfaceConfig, name string, prev_type string, prev_subtype string, enabled bool) {
 
 	if prev_type == "" {
