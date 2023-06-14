@@ -1050,7 +1050,12 @@ func addLANVerdict(IP string, Iface string) {
 }
 
 func addInternetVerdict(IP string, Iface string) {
-	addVerdict(IP, Iface, "internet_access")
+	err := exec.Command("nft", "add", "element", "inet", "filter",
+		"internet_access", "{", IP, ".", Iface, ":", getMapVerdict("internet_access"), "}").Run()
+	if err != nil {
+		log.Println("addVerdict Failed", Iface, "internet_access", err)
+		return
+	}
 }
 
 func addCustomVerdict(ZoneName string, IP string, Iface string) {
