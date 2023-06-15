@@ -52,6 +52,11 @@ table inet filter {
     $(if [ "$DOCKERIF" ]; then echo "elements = { $DOCKERIF }" ; fi )
   }
 
+  set supernetworks {
+    type ipv4_addr;
+    flags interval;
+  }
+
   # Dynamic maps of clients
   map dhcp_access {
     type ifname . ether_addr: verdict;
@@ -137,7 +142,7 @@ table inet filter {
   }
 
   chain PFWDROPLOG {
-    counter log prefix "drop:pfw " group 1
+    counter log prefix "drop:pfw " #group 1
     counter drop
   }
 
@@ -293,21 +298,9 @@ table inet filter {
     counter goto DROPLOGFWD
   }
 
-
-  map fwmark_to_oif {
-    type mark : ifname;
-    $(if [ "$WANIF" ]; then echo "elements = { 0 : $WANIF }" ; fi )
-  }
-
-  chain OUTBOUND_UPLINK {
-    # if its new, grab a mark RR
-    ct state new mark set numgen inc mod 1
-    ct state new accept
-  }
-
   chain restrict_upstream_private_addresses {
     counter ip saddr vmap @upstream_private_rfc1918_allowed
-    log prefix "drop:private " group 1
+    log prefix "drop:private " #group 1
     counter drop
   }
 
@@ -326,12 +319,12 @@ table inet filter {
   }
 
   chain DROPLOGFWD {
-    counter log prefix "drop:forward " group 1
+    counter log prefix "drop:forward " #group 1
     counter drop
   }
 
   chain DROPLOGINP {
-    counter log prefix "drop:input " group 1
+    counter log prefix "drop:input " #group 1
     counter drop
   }
 
@@ -343,7 +336,7 @@ table inet filter {
 
   chain DROP_MAC_SPOOF {
     counter ip saddr . iifname . ether saddr vmap @ethernet_filter
-    log prefix "drop:mac " group 1
+    log prefix "drop:mac " #group 1
     counter drop
   }
 
@@ -480,7 +473,6 @@ table inet nat {
     #jump USERDEF_POSTROUTING
 
     # Masquerade upstream traffic
-
     oifname @uplink_interfaces counter masquerade
 
     # Masquerade site-to-site VPN
@@ -495,19 +487,37 @@ table inet nat {
 
 table inet mangle {
 
+  set uplink_interfaces {
+    type ifname;
+    $(if [ "$WANIF" ]; then echo "elements = { $WANIF }" ; fi )
+  }
+
   map site_forward_mangle {
     type ipv4_addr . ipv4_addr : verdict;
     flags interval;
   }
 
-  chain PREROUTING {
-    type filter hook prerouting priority -150; policy accept;
-    counter ip saddr . ip daddr vmap @site_forward_mangle
+  set supernetworks {
+    type ipv4_addr;
+    flags interval;
   }
+
+  chain OUTBOUND_UPLINK {
+  }
+
 
   chain PREROUTING {
     type filter hook prerouting priority -150; policy accept;
+
+    // handle site-vpn marks first
+    counter ip saddr . ip daddr vmap @site_forward_mangle
+
+    //then go to load balancing if applied
+    jump OUTBOUND_UPLINK
+
+    //falls through into accept
   }
+
   chain INPUT {
     type filter hook prerouting priority -150; policy accept;
   }
@@ -519,6 +529,7 @@ table inet mangle {
   }
   chain POSTROUTING {
     type filter hook prerouting priority -150; policy accept;
+    counter ct mark set mark
   }
   chain DIVERT {
   }

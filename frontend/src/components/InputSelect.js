@@ -144,7 +144,7 @@ const InputSelect = (props) => {
       return value
     }
 
-    let keys = ['Identity', 'SrcIP', 'Group', 'Tag']
+    let keys = ['Identity', 'SrcIP', 'Group', 'Tag', 'Endpoint']
     for (let k of keys) {
       if (typeof value[k] == 'string' && value[k].length) {
         return value[k]

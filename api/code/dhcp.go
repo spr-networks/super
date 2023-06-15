@@ -165,9 +165,10 @@ func loadDHCPConfig() {
 		err = json.Unmarshal(data, &gDhcpConfig)
 		if err != nil {
 			log.Println(err)
+			return
 		}
-		updateFirewallSubnets(getLANIP(), gDhcpConfig.TinyNets)
 	}
+	updateFirewallSubnets(getLANIP(), gDhcpConfig.TinyNets)
 }
 
 func saveDHCPConfig() {
