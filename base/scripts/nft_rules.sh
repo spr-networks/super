@@ -509,13 +509,13 @@ table inet mangle {
   chain PREROUTING {
     type filter hook prerouting priority -150; policy accept;
 
-    // handle site-vpn marks first
+    # handle site-vpn marks first
     counter ip saddr . ip daddr vmap @site_forward_mangle
 
-    //then go to load balancing if applied
+    # then go to load balancing if applied
     jump OUTBOUND_UPLINK
 
-    //falls through into accept
+    #falls through into accept
   }
 
   chain INPUT {
