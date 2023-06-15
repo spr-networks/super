@@ -6,5 +6,5 @@ if [ "$PPPIF" ]; then
      ip link set up dev $PPPIF.$PPP_VLANID
    fi
   ip link set up dev $PPPIF
-  /usr/sbin/pppd nodetach call $PPP_PROVIDER 2>&1
+  /usr/sbin/pppd nodetach call $PPP_PROVIDER ifname $PPPIFNAME 2>&1
 fi

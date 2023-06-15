@@ -1890,6 +1890,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			//normalize tiny subnets and add them in
 			_, normalized_net, err := net.ParseCIDR(subnet)
 			if err != nil {
 				http.Error(w, "Failed to parse CIDR", 400)
@@ -1899,7 +1900,6 @@ func setup(w http.ResponseWriter, r *http.Request) {
 
 			tinyNets = append(tinyNets, normalized_net.String())
 		}
-		//normalize tiny subnets and add them in
 	}
 
 	//update DHCP config
@@ -1907,6 +1907,14 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	gDhcpConfig.TinyNets = tinyNets
 	saveDHCPConfig()
 	DHCPmtx.Unlock()
+
+	//update the firewall set of tiny nets
+	FWmtx.Lock()
+	for _, supernet := range tinyNets {
+		addSupernetworkEntry(supernet)
+	}
+	FWmtx.Unlock()
+	//
 
 	// write to auth_users.json
 	users := fmt.Sprintf("{%q: %q}", "admin", conf.AdminPassword)
@@ -2229,10 +2237,10 @@ func main() {
 
 	//set up dhcp
 	initDHCP()
+	//initialize firewall rules
+	initFirewallRules()
 	//initialize hostap  related items
 	initRadios()
-	//initialize user firewall rules
-	initUserFirewallRules()
 	//start the websocket handler
 	WSRunNotify()
 	// collect traffic accounting statistics
