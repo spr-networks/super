@@ -245,7 +245,7 @@ func getDefaultGateway(dev string) (string, error) {
 		for _, addr := range addrs {
 			if ipnet, ok := addr.(*net.IPNet); ok {
 				if ip4 := ipnet.IP.To4(); ip4 != nil {
-					return getDefaultGatewayForSubnet(ip4.String()), nil
+					return getDefaultGatewayForSubnet(ipnet.String()), nil
 				}
 			}
 		}
