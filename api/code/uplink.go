@@ -227,7 +227,6 @@ func insertWpaConfigAndSave(interfaces []InterfaceConfig, new_wpa WPAIface) erro
 		if wpa.Iface == new_wpa.Iface {
 			wpas = append(wpas, new_wpa)
 			found = true
-			break
 		} else {
 			//update the enabled status
 			wpa.Enabled = isWifiUplinkIfaceEnabled(wpa.Iface, interfaces)
@@ -346,7 +345,7 @@ type PPPIface struct {
 }
 
 func (p *PPPIface) Validate() error {
-	if p.Iface == "" {
+	if !isValidIface(p.Iface) {
 		return fmt.Errorf("Iface field empty")
 	}
 
@@ -367,6 +366,7 @@ func (p *PPPIface) Validate() error {
 		if err != nil || n < 0 {
 			return fmt.Errorf("VLAN field must contain positive numeric value")
 		}
+		p.VLAN = fmt.Sprintf("%d", n)
 	}
 
 	if p.MTU != "" {
@@ -374,6 +374,7 @@ func (p *PPPIface) Validate() error {
 		if err != nil || v < 0 {
 			return fmt.Errorf("MTU field must contain numeric positive value")
 		}
+		p.MTU = fmt.Sprintf("%d", v)
 	}
 
 	return nil
@@ -511,10 +512,11 @@ func insertPPPConfigAndSave(interfaces []InterfaceConfig, new_ppp PPPIface) erro
 			new_ppp.PPPIface = fmt.Sprintf("ppp%d", i)
 			ppps = append(ppps, new_ppp)
 			found = true
-			break
 		} else {
 			//update the enabled status
 			ppp.Enabled = isPPPUplinkIfaceEnabled(ppp.Iface, interfaces)
+			//update the index
+			ppp.PPPIface = fmt.Sprintf("ppp%d", i)
 			ppps = append(ppps, ppp)
 		}
 	}
@@ -554,6 +556,8 @@ func updatePPPConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//ignore PPPIface from input. Will be set by updateInterface
+	ppp.PPPIface = ""
 	err = ppp.Validate()
 	if err != nil {
 		log.Println("Validation error:", err)
@@ -619,6 +623,7 @@ func updateLinkIPConfig(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), 400)
 			return
 		}
+		iconfig.VLAN = fmt.Sprintf("%d", n)
 	}
 
 	err = updateInterfaceIP(iconfig)
