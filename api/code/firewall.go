@@ -266,6 +266,9 @@ func setDefaultUplinkGateway(iface string, index int) {
 	if err != nil {
 		log.Printf("Error with route setup", cmd, err)
 	}
+
+	cmd = exec.Command("ip", "route", "flush", "cache")
+	_, _ = cmd.Output()
 }
 
 func updateOutboundRoutes() {
@@ -337,7 +340,7 @@ func rebuildUplink() {
 		return
 	}
 
-	cmdArray := strings.Fields("ip daddr != @supernetworks ct state new counter meta mark set")
+	cmdArray := strings.Fields("add rule inet mangle OUTBOUND_UPLINK ip daddr != @supernetworks ct state new counter meta mark set")
 	uplinkSettings := loadUplinksConfig()
 
 	//saddr.daddr strategy assumed by default
