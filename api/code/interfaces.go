@@ -37,6 +37,9 @@ type PublicInterfaceConfig struct {
 }
 
 func isValidIface(Iface string) bool {
+	if Iface == "" {
+		return false
+	}
 	pattern := `^[a-zA-Z0-9]*(\.[a-zA-Z0-9]*)*$`
 	matched, err := regexp.MatchString(pattern, Iface)
 	return err == nil && matched
