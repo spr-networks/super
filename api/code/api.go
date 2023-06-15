@@ -1312,11 +1312,6 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 }
 
 func getMapVerdict(name string) string {
-	//internet verdict jumps to a load balancing chain
-	if name == "internet_access" {
-		return "goto OUTBOUND_UPLINK"
-	}
-
 	//custom map filtering for destinations is split between two tables.
 	// the src_access table is the second half, and _dst_access is the first half
 	// The first half uses a continue verdict to transfer into the second verdict map
