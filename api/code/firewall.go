@@ -337,9 +337,7 @@ func rebuildUplink() {
 		return
 	}
 
-	cmdArray := []string{"add", "rule", "inet", "mangle", "OUTBOUND_UPLINK",
-		"ct", "state", "new", "counter", "meta", "nfmark", "set"}
-
+	cmdArray := strings.Fields("ip daddr != @supernetworks ct state new counter meta mark set")
 	uplinkSettings := loadUplinksConfig()
 
 	//saddr.daddr strategy assumed by default
