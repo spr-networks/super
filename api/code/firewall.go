@@ -87,6 +87,8 @@ var DEVICE_TAG_PERMIT_PRIVATE_UPSTREAM_ACCESS = "lan_upstream"
 
 var BASE_READY = TEST_PREFIX + "/state/base/ready"
 
+const firstOutboundRouteTable = 11
+
 func SyncBaseContainer() {
 	// Wait for the base container to grab the flock
 
@@ -196,7 +198,97 @@ func loadFirewallRules() error {
 	return nil
 }
 
-func rebuildUplink() {
+// getDefaultGatewayForSubnet returns the first possible host IP for a given subnet
+func getDefaultGatewayForSubnet(subnet string) string {
+	// Parse the IP address and the network mask
+	ip, ipnet, err := net.ParseCIDR(subnet)
+	if err != nil {
+		log.Printf("Unable to parse the subnet: %v", err)
+		return ""
+	}
+
+	// Convert to 4-byte representation
+	ip4 := ip.To4()
+	if ip4 == nil {
+		log.Printf("Not a valid IPv4 address: %v", ip)
+		return ""
+	}
+
+	// Calculate the first possible host IP in the subnet
+	ip4[3] += 1
+
+	// Check if the IP is still within the subnet range
+	if !ipnet.Contains(ip4) {
+		log.Printf("Calculated gateway IP is not within the subnet: %v", ip4)
+		return ""
+	}
+
+	return ip4.String()
+}
+
+func getDefaultGateway(dev string) (string, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return "", err
+	}
+
+	for _, iface := range ifaces {
+		if iface.Name != dev {
+			continue
+		}
+
+		addrs, err := iface.Addrs()
+		if err != nil {
+			return "", err
+		}
+
+		for _, addr := range addrs {
+			if ipnet, ok := addr.(*net.IPNet); ok {
+				if ip4 := ipnet.IP.To4(); ip4 != nil {
+					return getDefaultGatewayForSubnet(ip4.String()), nil
+				}
+			}
+		}
+	}
+
+	return "", nil
+}
+
+func setDefaultUplinkGateway(iface string, index int) {
+	gateway, err := getDefaultGateway(iface)
+	if err != nil || gateway == "" {
+		//no gateway found, continue on
+		return
+	}
+	table := fmt.Sprintf("%d", firstOutboundRouteTable+index)
+	cmd := exec.Command("ip", "route", "replace", "default", "via", gateway, "dev", iface, "table", table)
+	_, err = cmd.Output()
+	if err != nil {
+		log.Printf("Error with route setup", cmd, err)
+	}
+}
+
+func updateOutboundRoutes() {
+	ticker := time.NewTicker(1 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			Interfacesmtx.Lock()
+			outbound := collectOutbound()
+			Interfacesmtx.Unlock()
+
+			FWmtx.Lock()
+			for i, iface := range outbound {
+				//TBD check that the interface actually reaches the internet
+				// if it does not, move it into a deactive state an rebuild uplink
+				setDefaultUplinkGateway(iface, i)
+			}
+			FWmtx.Unlock()
+		}
+	}
+}
+
+func collectOutbound() []string {
 	//assumes Interfacesmtx is locked
 
 	interfaces := loadInterfacesConfigLocked()
@@ -205,72 +297,75 @@ func rebuildUplink() {
 	for _, iface := range interfaces {
 		if iface.Type == "Uplink" && iface.Enabled {
 			outbound = append(outbound, iface.Name)
+			if len(outbound) > 255 {
+				log.Println("Too many outbound interfaces, truncating")
+				break
+			}
 		}
 	}
+	return outbound
+}
 
-	cmd := exec.Command("nft", "flush", "chain", "inet", "filter", "OUTBOUND_UPLINK")
+func rebuildUplink() {
+
+	outbound := collectOutbound()
+
+	cmd := exec.Command("nft", "flush", "chain", "inet", "mangle", "OUTBOUND_UPLINK")
 	_, err := cmd.Output()
 	if err != nil {
-		log.Println("failed to flush chain OUTBOUND_UPLINK", err)
+		log.Println("failed to flush chain mangle OUTBOUND_UPLINK", err)
 		return
 	}
 
-	if len(outbound) == 0 || len(outbound) == 1 {
-		// no outbound interfaces configured...
-		// or only one outbound configured. simply accept defaults
-		cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "OUTBOUND_UPLINK",
-			"ct", "state", "new", "accept")
-		_, err = cmd.Output()
-		if err != nil {
-			log.Println("failed to insert rule", cmd, err)
-		}
+	if len(outbound) < 2 {
+		//dont need more, outbound will work
 		return
 	}
 
-	// multiple uplink interfaces are availabl and enabled
-	// use jhash saddr + saddr strategy to load balance for now
-	// in the future, can look at load distribution, round robin, and other approaches.
+	// multiple uplink interfaces are enabled,
+	// use fwmark to enable a load balancing strategy
+	cmd = exec.Command("nft", strings.Fields("add rule inet mangle OUTBOUND_UPLINK 	counter meta mark set ct mark")...)
+	_, err = cmd.Output()
+	if err != nil {
+		log.Println("failed to insert rule to OUTBOUND_UPLINK", err)
+		return
+	}
+
+	cmd = exec.Command("nft", strings.Fields("add rule inet mangle OUTBOUND_UPLINK ct mark != 0x0 counter ct mark set mark")...)
+	if err != nil {
+		log.Println("failed to insert rule to OUTBOUND_UPLINK", err)
+		return
+	}
+
+	cmdArray := []string{"add", "rule", "inet", "mangle", "OUTBOUND_UPLINK",
+		"ct", "state", "new", "counter", "meta", "nfmark", "set"}
 
 	uplinkSettings := loadUplinksConfig()
-	if uplinkSettings.LoadBalanceStrategy == "" || uplinkSettings.LoadBalanceStrategy == "saddr.daddr" {
-		cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "OUTBOUND_UPLINK",
-			"ct", "state", "new", "counter", "meta", "nfmark", "set",
-				"jhash", "ip", "saddr", ".", "ip", "daddr", "mod", fmt.Sprintf("%d", len(outbound)), "offset", "1")
-	} else if uplinkSettings.LoadBalanceStrategy == "saddr" {
-		cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "OUTBOUND_UPLINK",
-			"ct", "state", "new", "counter", "meta", "nfmark", "set",
-				"jhash", "ip", "saddr", "mod", fmt.Sprintf("%d", len(outbound)), "offset", "1")
+
+	//saddr.daddr strategy assumed by default
+	strategy := []string{"jhash", "ip", "saddr", ".", "ip", "daddr"}
+	if uplinkSettings.LoadBalanceStrategy == "saddr" {
+		//saddr can be more consistent but has poor balancing
+		strategy = []string{"jhash", "ip", "saddr"}
 	}
+
+	cmdArray = append(cmdArray, strategy...)
+	cmdArray = append(cmdArray, []string{"mod", fmt.Sprintf("%d", len(outbound)), "offset", fmt.Sprintf("%d", firstOutboundRouteTable)}...)
+	cmd = exec.Command("nft", cmdArray...)
 
 	_, err = cmd.Output()
 	if err != nil {
 		log.Println("failed to insert rule", cmd, err)
+		return
 	}
-
-	cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "OUTBOUND_UPLINK",
-		"ct", "state", "new", "accept")
-	_, err = cmd.Output()
-	if err != nil {
-		log.Println("failed to insert rule", cmd, err)
-	}
-
-	const firstTableNumber = 10
 
 	for index, outboundInterface := range outbound {
-		tableNumber := firstTableNumber + index
-		markNumber := index + 1
+		tableNumber := firstOutboundRouteTable + index
+		markNumber := tableNumber
 
 		// Delete the existing rule, if any.
 		cmd = exec.Command("ip", "rule", "del", "fwmark", fmt.Sprintf("%d", markNumber), "table", fmt.Sprintf("%d", tableNumber))
 		_, _ = cmd.Output() // Ignore errors, as the rule may not exist yet.
-
-		// Add a route for the current outbound interface to the specific table.
-		cmd = exec.Command("ip", "route", "add", "default", "dev", outboundInterface, "table", fmt.Sprintf("%d", tableNumber))
-		_, err := cmd.Output()
-		if err != nil {
-			log.Printf("failed to add route for interface %s: %v", outboundInterface, err)
-			continue
-		}
 
 		// Add a rule that matches the packet mark to the routing table.
 		cmd = exec.Command("ip", "rule", "add", "fwmark", fmt.Sprintf("%d", markNumber), "table", fmt.Sprintf("%d", tableNumber))
@@ -279,6 +374,8 @@ func rebuildUplink() {
 			log.Printf("failed to add rule for mark %d: %v", markNumber, err)
 			continue
 		}
+
+		setDefaultUplinkGateway(outboundInterface, index)
 	}
 
 	// Flush the route cache to ensure the new route is used immediately.
@@ -290,60 +387,88 @@ func rebuildUplink() {
 
 }
 
-/*
-type InterfaceConfig struct {
-	Name        string
-	Type        string
-	Subtype     string
-	Enabled     bool
-*/
-
-func removeUplinkEntry(ifname string) {
-	cmd := exec.Command("nft", "delete", "element", "inet", "filter",
+func modifyUplinkEntry(ifname string, action string) error {
+	cmd := exec.Command("nft", action, "element", "inet", "filter",
 		"uplink_interfaces", "{", ifname, "}")
 
 	_, err := cmd.Output()
 
 	if err != nil {
-		log.Println("failed to delete uplink_interfaces element", err)
+		log.Println("failed to "+action+" uplink_interfaces element", err)
 		log.Println(cmd)
 	}
 
-	cmd = exec.Command("nft", "delete", "element", "inet", "nat",
+	cmd = exec.Command("nft", action, "element", "inet", "nat",
 		"uplink_interfaces", "{", ifname, "}")
 
 	_, err = cmd.Output()
 
 	if err != nil {
-		log.Println("failed to delete uplink_interfaces element", err)
+		log.Println("failed to "+action+" uplink_interfaces element", err)
 		log.Println(cmd)
 	}
 
 	rebuildUplink()
+	return err
 }
 
-func addUplinkEntry(ifname string) {
-	cmd := exec.Command("nft", "add", "element", "inet", "filter",
-		"uplink_interfaces", "{", ifname, "}")
+func addUplinkEntry(ifname string, subtype string) {
+	if subtype == "pppup" {
+		//ppp-up connects a ppp to the internt
+		//but packets go directly through the ppp not the pppup provider
+		return
+	}
+	modifyUplinkEntry(ifname, "add")
+
+}
+func removeUplinkEntry(ifname string) {
+	modifyUplinkEntry(ifname, "delete")
+}
+
+func flushSupernetworkEntries() {
+	exec.Command("nft", "flush", "set", "ip", "accounting", "local_lan").Output()
+	exec.Command("nft", "flush", "set", "inet", "mangle", "supernetworks").Output()
+	exec.Command("nft", "flush", "set", "ip", "filter", "supernetworks").Output()
+}
+
+func modifySupernetworkEntry(supernet string, action string) {
+	cmd := exec.Command("nft", action, "element", "inet", "mangle",
+		"supernetworks", "{", supernet, "}")
 
 	_, err := cmd.Output()
 
 	if err != nil {
-		log.Println("failed to add uplink_interfaces element", err)
+		log.Println("failed to "+action+" mangle supernetworks element", err)
 		log.Println(cmd)
 	}
 
-	cmd = exec.Command("nft", "add", "element", "inet", "nat",
-		"uplink_interfaces", "{", ifname, "}")
+	cmd = exec.Command("nft", action, "element", "inet", "filter",
+		"supernetworks", "{", supernet, "}")
 
 	_, err = cmd.Output()
 
 	if err != nil {
-		log.Println("failed to add uplink_interfaces element", err)
+		log.Println("failed to "+action+" filter supernetworks element", err)
 		log.Println(cmd)
 	}
 
-	rebuildUplink()
+	//also updated it under accounting
+	cmd = exec.Command("nft", action, "element", "ip", "accounting", "local_lan", "{", supernet, "}")
+	_, err = cmd.Output()
+
+	if err != nil {
+		log.Println("failed to "+action+" accounting supernetworks element", err)
+		log.Println(cmd)
+	}
+
+}
+
+func addSupernetworkEntry(supernet string) {
+	modifySupernetworkEntry(supernet, "add")
+}
+
+func removeSupernetworkEntry(supernet string) {
+	modifySupernetworkEntry(supernet, "delete")
 }
 
 func deleteBlock(br BlockRule) error {
@@ -694,7 +819,22 @@ func applyBuiltinTagFirewallRules() {
 	}
 }
 
+func populateSets() {
+	//dhcp config loading already handles supernetworks mana
+	Interfacesmtx.Lock()
+	interfaces := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
+
+	for _, iface := range interfaces {
+		if iface.Type == "Uplink" && iface.Enabled == true {
+			addUplinkEntry(iface.Name, iface.Subtype)
+		}
+	}
+}
+
 func applyFirewallRulesLocked() {
+
+	populateSets()
 
 	applyForwarding(gFirewallConfig.ForwardingRules)
 
@@ -1773,18 +1913,9 @@ func getCurLANIP() string {
 
 func updateFirewallSubnets(DNSIP string, TinyNets []string) {
 	//update firewall table rules to service the new tiny networks, where needed
-
-	//1) accounting
-	exec.Command("nft", "flush", "set", "ip", "accounting", "local_lan").Output()
-
-	for _, subnet := range TinyNets {
-		cmd := exec.Command("nft", "add", "element", "ip", "accounting", "local_lan", "{", subnet, "}")
-		_, err := cmd.Output()
-
-		if err != nil {
-			log.Println("failed to add element", err)
-			log.Println(cmd)
-		}
+	flushSupernetworkEntries()
+	for _, supernet := range TinyNets {
+		addSupernetworkEntry(supernet)
 	}
 
 	//2) DNSIP
@@ -1812,7 +1943,7 @@ func updateFirewallSubnets(DNSIP string, TinyNets []string) {
 
 }
 
-func initUserFirewallRules() {
+func initFirewallRules() {
 	SyncBaseContainer()
 
 	loadFirewallRules()
@@ -1823,14 +1954,16 @@ func initUserFirewallRules() {
 	applyFirewallRulesLocked()
 
 	Interfacesmtx.Lock()
-	config := loadInterfacesConfigLocked()
+	interfaces := loadInterfacesConfigLocked()
 	Interfacesmtx.Unlock()
 
-	applyRadioInterfaces(config)
+	applyRadioInterfaces(interfaces)
 
-	Devicesmtx.Lock()
-	defer Devicesmtx.Unlock()
-
-	//dynamic route refresh
+	// dynamic route refresh
 	go dynamicRouteLoop()
+
+	// check on outbound interfaces and
+	// update their routes
+	go updateOutboundRoutes()
+
 }
