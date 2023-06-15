@@ -337,6 +337,7 @@ func rebuildUplink() {
 	}
 
 	cmd = exec.Command("nft", strings.Fields("add rule inet mangle OUTBOUND_UPLINK ct mark != 0x0 counter ct mark set mark")...)
+	_, err = cmd.Output()
 	if err != nil {
 		log.Println("failed to insert rule to OUTBOUND_UPLINK", err)
 		return
