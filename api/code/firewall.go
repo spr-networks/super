@@ -201,11 +201,13 @@ func loadFirewallRules() error {
 // getDefaultGatewayForSubnet returns the first possible host IP for a given subnet
 func getDefaultGatewayForSubnet(subnet string) string {
 	// Parse the IP address and the network mask
-	ip, ipnet, err := net.ParseCIDR(subnet)
+	_, ipnet, err := net.ParseCIDR(subnet)
 	if err != nil {
 		log.Printf("Unable to parse the subnet: %v", err)
 		return ""
 	}
+
+	ip := ipnet.IP
 
 	// Convert to 4-byte representation
 	ip4 := ip.To4()
