@@ -36,7 +36,6 @@ type PublicInterfaceConfig struct {
 	Enabled bool
 }
 
-
 func isValidIface(Iface string) bool {
 	pattern := `^[a-zA-Z0-9]*(\.[a-zA-Z0-9]*)*$`
 	matched, err := regexp.MatchString(pattern, Iface)
@@ -52,8 +51,6 @@ func isValidIfaceType(t string) bool {
 	}
 	return false
 }
-
-
 
 func loadInterfacesConfigLocked() []InterfaceConfig {
 	//read the old configuration
@@ -116,7 +113,7 @@ func resetInterface(interfaces []InterfaceConfig, name string, prev_type string,
 			//wifi was disabled, notify it
 			insertWpaConfigAndSave(interfaces, WPAIface{})
 			restartPlugin("WIFI-UPLINK")
-		} else if prev_subtype == "ppp" {
+		} else if prev_subtype == "pppup" {
 			//ppp was disabled, notify it
 			insertPPPConfigAndSave(interfaces, PPPIface{})
 			restartPlugin("PPP")
@@ -209,7 +206,7 @@ func configureInterface(interfaceType string, subType string, name string) error
 	}
 
 	if interfaceType == "Uplink" {
-		addUplinkEntry(interfaceType)
+		addUplinkEntry(name, subType)
 	}
 	//set the
 
@@ -245,7 +242,7 @@ func toggleInterface(name string, enabled bool) error {
 		resetInterface(config, config[i].Name, config[i].Type, config[i].Subtype, enabled)
 
 		if config[i].Type == "Uplink" && enabled {
-			addUplinkEntry(config[i].Name)
+			addUplinkEntry(config[i].Name, config[i].Subtype)
 		}
 
 		return err
@@ -322,7 +319,7 @@ func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool
 			resetInterface(interfaces, Iface, prev_type, prev_subtype, Enabled)
 
 			if Type == "Uplink" && Enabled {
-				addUplinkEntry(Iface)
+				addUplinkEntry(Iface, Subtype)
 			}
 		}
 

@@ -55,8 +55,6 @@ func saveUplinksConfig(config UplinksConfig) error {
 	return nil
 }
 
-
-
 /* WPA Supplicant Support */
 
 var WpaConfigPath = TEST_PREFIX + "/configs/wifi_uplink/wpa.json"
@@ -339,6 +337,7 @@ var PPPmtx sync.Mutex
 
 type PPPIface struct {
 	Iface    string
+	PPPIface string
 	Enabled  bool
 	Username string
 	Secret   string
@@ -484,7 +483,7 @@ user "{{.Username}}"
 func isPPPUplinkIfaceEnabled(Name string, interfaces []InterfaceConfig) bool {
 	for _, iface := range interfaces {
 		if iface.Name == Name {
-			if iface.Type == "Uplink" && iface.Subtype == "ppp" {
+			if iface.Type == "Uplink" && iface.Subtype == "pppup" {
 				return iface.Enabled
 			}
 			break
@@ -507,8 +506,9 @@ func insertPPPConfigAndSave(interfaces []InterfaceConfig, new_ppp PPPIface) erro
 	ppps := []PPPIface{}
 
 	found := false
-	for _, ppp := range config.PPPs {
+	for i, ppp := range config.PPPs {
 		if ppp.Iface == new_ppp.Iface {
+			new_ppp.PPPIface = fmt.Sprintf("ppp%d", i)
 			ppps = append(ppps, new_ppp)
 			found = true
 			break
@@ -520,6 +520,7 @@ func insertPPPConfigAndSave(interfaces []InterfaceConfig, new_ppp PPPIface) erro
 	}
 
 	if !found && new_ppp.Iface != "" {
+		new_ppp.PPPIface = fmt.Sprintf("ppp%d", len(ppps))
 		ppps = append(ppps, new_ppp)
 	}
 
@@ -564,7 +565,7 @@ func updatePPPConfig(w http.ResponseWriter, r *http.Request) {
 	// need to define a PPP0 ifname and store it.
 
 	//update the interface type
-	interfaces, err := updateInterfaceType(ppp.Iface, "Uplink", "ppp", ppp.Enabled)
+	interfaces, err := updateInterfaceType(ppp.Iface, "Uplink", "pppup", ppp.Enabled)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), 400)
