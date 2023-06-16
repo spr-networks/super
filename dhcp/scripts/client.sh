@@ -26,7 +26,7 @@ if [ "$RUN_WAN_DHCP" ]; then
       if [ "$ret" -eq "1" ]
       then
         echo "Failed, trying dhclient for ${name}"
-        dhclient -nw -i ${name}
+        dhclient -nw ${name}
       fi
 
   done
