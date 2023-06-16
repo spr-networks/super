@@ -68,7 +68,7 @@ then
   docker-compose build ${BUILDARGS} $@ || exit 1
 
   for plugin in $PLUGINS
-  do 
+  do
     docker-compose --file ${plugin}/docker-compose.yml build ${BUILDARGS} || exit 1
   done
 else
@@ -100,12 +100,12 @@ else
     ${BUILDARGS} "$@" || exit 1
 
   for plugin in $PLUGINS
-  do 
+  do
     pushd ${plugin}
     docker buildx bake \
       --builder super-builder \
       --file docker-compose.yml \
-      ${BUILDARGS} || exit 1
+      ${BUILDARGS} "$@" || exit 1
     popd
   done
 fi
