@@ -271,16 +271,25 @@ func getDefaultGateway(dev string) (string, error) {
 		}
 	}
 
-	return "", nil
+	return "", fmt.Errorf("gateway not found")
 }
 
 func setDefaultUplinkGateway(iface string, index int) {
 	gateway, err := getDefaultGateway(iface)
 	if err != nil || gateway == "" {
 		//no gateway found, continue on
+		log.Println("failed to set default gw: not found", err)
 		return
 	}
+
 	table := fmt.Sprintf("%d", firstOutboundRouteTable+index)
+
+	current_table_route := getRouteGatewayForTable(table)
+	if current_table_route == gateway {
+		// route already set, make no updates
+		return
+	}
+
 	cmd := exec.Command("ip", "route", "replace", "default", "via", gateway, "dev", iface, "table", table)
 	_, err = cmd.Output()
 	if err != nil {
@@ -292,7 +301,7 @@ func setDefaultUplinkGateway(iface string, index int) {
 }
 
 func updateOutboundRoutes() {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(10 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
@@ -1693,8 +1702,9 @@ func getUplinkInterface() string {
 }
 
 type RouteEntry struct {
-	Dst string `json:"dst"`
-	Dev string `json:"dev"`
+	Dst     string `json:"dst"`
+	Dev     string `json:"dev"`
+	Gateway string `json:"gateway"`
 }
 
 func getRouteInterface(IP string) string {
@@ -1715,6 +1725,29 @@ func getRouteInterface(IP string) string {
 
 	if len(routes) == 1 {
 		return routes[0].Dev
+	}
+
+	return ""
+}
+
+func getRouteGatewayForTable(Table string) string {
+	routes := []RouteEntry{}
+
+	cmd := exec.Command("ip", "-j", "route", "show", "table", Table)
+	output, err := cmd.Output()
+
+	if err != nil {
+		return ""
+	}
+
+	err = json.Unmarshal(output, &routes)
+	if err != nil {
+		log.Println(err)
+		return ""
+	}
+
+	if len(routes) == 1 {
+		return routes[0].Gateway
 	}
 
 	return ""
