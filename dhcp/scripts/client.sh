@@ -21,7 +21,7 @@ if [ "$RUN_WAN_DHCP" ]; then
       /coredhcp_client -d -i ${name} -v ${RUN_WAN_DHCP_IPV}
 
       # check for an IP, if no IP, run dhclient as a fallback
-      ping -I ${name} 1.1.1.1 -c 1 -W 3
+      ping 1.1.1.1 -c 1 -W 3
       ret=$?
       if [ "$ret" -eq "1" ]
       then
