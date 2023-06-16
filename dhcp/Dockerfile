@@ -26,7 +26,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
 
 FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends ethtool isc-dhcp-client && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends jq ethtool isc-dhcp-client && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /coredhcpd /
 COPY --from=builder /coredhcp_client /
 COPY scripts /scripts
