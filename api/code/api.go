@@ -1678,7 +1678,7 @@ func genSecurePassword() (string, error) {
 	const pwUpperCharsHuman string = "ABCDEFGHJKMNPQRSTUVWXYZ"
 	const pwLowerCharsHuman string = "abcdefghjkmnpqrstuvwxyz"
 	const pwNumbersHuman string = "23456789"
-	const pwSpecialCharsHuman string = "=#%:;+-*" //"\"/\\_|~"
+	const pwSpecialCharsHuman string = "=#%+-*" //"\"/\\_|~"
 	const cr string = pwUpperCharsHuman + pwLowerCharsHuman + pwNumbersHuman + pwSpecialCharsHuman
 
 	crl := len(cr)
