@@ -229,6 +229,24 @@ func getDefaultGatewayForSubnet(subnet string) string {
 }
 
 func getDefaultGateway(dev string) (string, error) {
+
+	Interfacesmtx.Lock()
+	interfaces := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
+
+	// if dhcp is disabled, grab the router address
+	for _, iface := range interfaces {
+		if iface.Name == dev {
+			if iface.DisableDHCP == true {
+				return iface.Router, nil
+			}
+		}
+	}
+
+	//otherwise guess that DHCP exists
+	// at the start. NOTE: this will fail if DHCP
+	// is elsewhere.
+
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return "", err
@@ -829,11 +847,23 @@ func populateSets() {
 	interfaces := loadInterfacesConfigLocked()
 	Interfacesmtx.Unlock()
 
+	wanif := os.Getenv("WANIF")
+	found_wanif := false
 	for _, iface := range interfaces {
+		if iface.Name == wanif {
+			found_wanif = true
+		}
 		if iface.Type == "Uplink" && iface.Enabled == true {
 			addUplinkEntry(iface.Name, iface.Subtype)
 		}
 	}
+
+	//As a migration: when no longer in setup mode,
+	//import WANIF into interfaces.json
+	if !isSetupMode() && found_wanif == false {
+		configureInterface("Uplink", "ethernet", wanif)
+	}
+
 }
 
 func applyFirewallRulesLocked() {

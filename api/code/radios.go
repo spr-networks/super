@@ -17,10 +17,8 @@ import (
 	"sync"
 )
 
-var validInterface = regexp.MustCompile(`^[a-z0-9\.]+$`).MatchString
-
 func getHostapdConfigPath(iface string) string {
-	if !validInterface(iface) {
+	if !isValidIface(iface) {
 		return ""
 	}
 
@@ -288,7 +286,7 @@ func ChanSwitch(iface string, bw int, freq1 int, freq2 int, ht_enabled bool, vht
 
 func hostapdChannelSwitch(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
-	if !validInterface(iface) {
+	if !isValidIface(iface) {
 		http.Error(w, "Invalid interface", 400)
 		return
 	}
@@ -351,7 +349,7 @@ func RunHostapdCommand(iface string, cmd string) (string, error) {
 
 func hostapdStatus(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
-	if !validInterface(iface) {
+	if !isValidIface(iface) {
 		http.Error(w, "Invalid interface", 400)
 		return
 	}
@@ -367,7 +365,7 @@ func hostapdStatus(w http.ResponseWriter, r *http.Request) {
 
 func hostapdAllStations(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
-	if !validInterface(iface) {
+	if !isValidIface(iface) {
 		http.Error(w, "Invalid interface", 400)
 		return
 	}
@@ -416,7 +414,7 @@ func getHostapdJson(iface string) (map[string]interface{}, error) {
 
 func hostapdConfig(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
-	if !validInterface(iface) {
+	if !isValidIface(iface) {
 		http.Error(w, "Invalid interface", 400)
 		return
 	}
@@ -486,7 +484,7 @@ func updateExtraBSS(iface string, data string) string {
 
 func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
-	if !validInterface(iface) {
+	if !isValidIface(iface) {
 		http.Error(w, "Invalid interface", 400)
 		return
 	}
@@ -732,7 +730,7 @@ func resetRadioFirewall() {
 
 func hostapdEnableInterface(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
-	if !validInterface(iface) {
+	if !isValidIface(iface) {
 		http.Error(w, "Invalid interface", 400)
 		return
 	}
@@ -761,7 +759,7 @@ curl -u admin:sprlab localhost/hostapd/wlan1/enableExtraBSS -vv -X PUT --data '{
 */
 func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
-	if !validInterface(iface) {
+	if !isValidIface(iface) {
 		http.Error(w, "Invalid interface", 400)
 		return
 	}
@@ -892,7 +890,7 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 
 func hostapdDisableInterface(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
-	if !validInterface(iface) {
+	if !isValidIface(iface) {
 		http.Error(w, "Invalid interface", 400)
 		return
 	}
@@ -928,7 +926,7 @@ func getEnabledAPInterfaces(w http.ResponseWriter, r *http.Request) {
 
 func hostapdResetInterface(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
-	if !validInterface(iface) {
+	if !isValidIface(iface) {
 		http.Error(w, "Invalid interface", 400)
 		return
 	}

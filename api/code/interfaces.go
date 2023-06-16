@@ -40,9 +40,8 @@ func isValidIface(Iface string) bool {
 	if Iface == "" {
 		return false
 	}
-	pattern := `^[a-zA-Z0-9]*(\.[a-zA-Z0-9]*)*$`
-	matched, err := regexp.MatchString(pattern, Iface)
-	return err == nil && matched
+	var validInterface = regexp.MustCompile(`^[a-zA-Z0-9]*(\.[a-zA-Z0-9]*)*$`).MatchString
+	return validInterface(Iface)
 }
 
 func isValidIfaceType(t string) bool {
@@ -132,6 +131,10 @@ func resetInterface(interfaces []InterfaceConfig, name string, prev_type string,
 func configureInterface(interfaceType string, subType string, name string) error {
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
+
+	if !isValidIface(name) {
+		return fmt.Errorf("Invalid interace name " + name)
+	}
 
 	if interfaceType != "AP" && interfaceType != "Uplink" {
 		//generate a hostap config if it is not there yet (?)
@@ -264,18 +267,12 @@ func getInterfacesConfiguration(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(config)
 }
 
-/*
-update the interface type and subtype
-this is fairly complex as it will
-
-1) rewrite config for the previous type
-2) return a list of plugins to reboot as a result -- for now only 1 expected
-
-and then return the updated interface list.
-
-TBD: if an interface is not known, create it (?)
-*/
 func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool) ([]InterfaceConfig, error) {
+
+	if !isValidIface(Iface) {
+		return []InterfaceConfig{}, fmt.Errorf("Invalid iface name " + Iface)
+	}
+
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
 	interfaces := loadInterfacesConfigLocked()
@@ -332,6 +329,7 @@ func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool
 }
 
 func updateInterfaceIP(iconfig InterfaceConfig) error {
+	//assumes iconfig has been sanitized
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
 	interfaces := loadInterfacesConfigLocked()
@@ -377,6 +375,8 @@ func updateInterfaceIP(iconfig InterfaceConfig) error {
 }
 
 func updateInterfaceConfig(iconfig InterfaceConfig) error {
+	//asumes iconfig has been sanitized
+
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
 	interfaces := loadInterfacesConfigLocked()

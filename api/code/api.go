@@ -1837,12 +1837,12 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	//The first character cannot be !, #, or ; character
 	validSSID := regexp.MustCompile(`^[^!#;+\]\/"\t][^+\]\/"\t]{0,30}[^ +\]\/"\t]$|^[^ !#;+\]\/"\t]$[ \t]+$`).MatchString
 
-	if conf.InterfaceAP == "" || !validInterface(conf.InterfaceAP) {
+	if conf.InterfaceAP == "" || !isValidIface(conf.InterfaceAP) {
 		http.Error(w, "Invalid AP interface", 400)
 		return
 	}
 
-	if conf.InterfaceUplink == "" {
+	if conf.InterfaceUplink == "" || !isValidIface(conf.InterfaceUplink) {
 		http.Error(w, "Invalid Uplink interface", 400)
 		return
 	}
