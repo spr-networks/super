@@ -362,7 +362,7 @@ func rebuildUplink() {
 	}
 
 	rule := "add rule inet mangle OUTBOUND_UPLINK " +
-		"iif != lo iifname != \"wg0\" iifname != \"site*\" " +
+		"iif != lo iifname != \"site*\" " +
 		"iifname != @uplink_interfaces ip daddr != @supernetworks " +
 		"ip daddr != 224.0.0.0/4 meta mark set " + strategy + fmt.Sprintf(" mod %d offset %d", len(outbound), firstOutboundRouteTable)
 
