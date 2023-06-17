@@ -43,3 +43,4 @@ if [ "$RUN_WAN_DHCP" ]; then
   done
 
 fi
+wait
