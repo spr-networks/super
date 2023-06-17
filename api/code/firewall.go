@@ -380,13 +380,14 @@ func rebuildUplink() {
 	for index, outboundInterface := range outbound {
 		tableNumber := firstOutboundRouteTable + index
 		markNumber := tableNumber
+		indexStr := fmt.Sprintf("%d", markNumber)
 
 		// Delete the existing rule, if any.
-		cmd = exec.Command("ip", "rule", "del", "fwmark", fmt.Sprintf("%d", markNumber), "table", fmt.Sprintf("%d", tableNumber))
+		cmd = exec.Command("ip", "rule", "del", "fwmark", fmt.Sprintf("%d", markNumber), "table", indexStr)
 		_, _ = cmd.Output() // Ignore errors, as the rule may not exist yet.
 
 		// Add a rule that matches the packet mark to the routing table.
-		cmd = exec.Command("ip", "rule", "add", "fwmark", fmt.Sprintf("%d", markNumber), "table", fmt.Sprintf("%d", tableNumber))
+		cmd = exec.Command("ip", "rule", "add", "fwmark", fmt.Sprintf("%d", markNumber), "table", indexStr)
 		_, err = cmd.Output()
 		if err != nil {
 			log.Printf("failed to add rule for mark %d: %v", markNumber, err)
@@ -394,6 +395,27 @@ func rebuildUplink() {
 		}
 
 		setDefaultUplinkGateway(outboundInterface, index)
+
+		//create a utility mangle chain as well
+		err = exec.Command("nft", "list", "chain", "inet", "mangle", "mark"+indexStr).Run()
+		if err != nil {
+			//create it
+			err = exec.Command("nft", "add", "chain", "inet", "mangle", "mark"+indexStr).Run()
+			if err != nil {
+				log.Println("nft add chain "+indexStr+" failed", err)
+				continue
+			}
+
+			err = exec.Command("nft", "add", "rule", "inet", "mangle", "mark"+indexStr,
+				"meta", "mark", "set", indexStr).Run()
+			if err != nil {
+				//delete the chain
+				err = exec.Command("nft", "delete", "chain", "inet", "mangle", "mark"+indexStr).Run()
+				log.Println("failed to add rule for mark"+indexStr, err)
+				continue
+			}
+		}
+
 	}
 
 	// Flush the route cache to ensure the new route is used immediately.
