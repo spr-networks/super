@@ -439,6 +439,17 @@ func modifyUplinkEntry(ifname string, action string) error {
 		log.Println(cmd)
 	}
 
+	cmd = exec.Command("nft", action, "element", "inet", "mangle",
+		"uplink_interfaces", "{", ifname, "}")
+
+	_, err = cmd.Output()
+
+	if err != nil {
+		log.Println("failed to "+action+" uplink_interfaces element", err)
+		log.Println(cmd)
+	}
+
+
 	rebuildUplink()
 	return err
 }
