@@ -152,7 +152,6 @@ const Token = ({
       <ClientSelect
         showGroups
         showTags
-        showEndpoints
         value={value}
         onChange={(value) => {
           onChangeText(value)
