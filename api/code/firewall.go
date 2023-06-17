@@ -327,7 +327,7 @@ func collectOutbound() []string {
 
 	outbound := []string{}
 	for _, iface := range interfaces {
-		if iface.Type == "Uplink" && iface.Enabled {
+		if iface.Type == "Uplink" && && iface.Subtype != "pppup" && iface.Enabled {
 			outbound = append(outbound, iface.Name)
 			if len(outbound) > 128 {
 				//rules start at 11. 253/254/255 reserved
