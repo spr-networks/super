@@ -405,6 +405,10 @@ func rebuildUplink() {
 
 			err = exec.Command("nft", "add", "rule", "inet", "mangle", "mark"+indexStr,
 				"meta", "mark", "set", indexStr).Run()
+			if err == nil {
+				err = exec.Command("nft", "add", "rule", "inet", "mangle", "mark"+indexStr,
+					"accept").Run()
+			}
 			if err != nil {
 				//delete the chain
 				err = exec.Command("nft", "delete", "chain", "inet", "mangle", "mark"+indexStr).Run()
