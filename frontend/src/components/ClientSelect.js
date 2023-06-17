@@ -113,14 +113,14 @@ const ClientSelect = (props) => {
   if (props.isDisabled && !props.isMultiple) {
     return (
       <Select selectedValue={props.value} onValueChange={props.onChange}>
-        {devOpts.options.map((o) => (
+        {devOpts.options ? devOpts.options.map((o) => (
               <Select.Item key={o.value} label={o.label} value={o.value} />
-            ))}
+            )) : null}
       </Select>
     )
   }
 
-  return <InputSelect title={title} groups={opts} {...props} />
+  return <InputSelect title={title} groups={gatherOps()} {...props} />
 }
 
 ClientSelect.propTypes = {
