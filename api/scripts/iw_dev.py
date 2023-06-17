@@ -96,6 +96,8 @@ def parse(data, raw=False, quiet=False):
 
     nicekey = lambda x: x.lower().replace(' ', '_').replace('-', '_').replace('#', '')
 
+    iface = ""
+
     if jc.utils.has_data(data):
 
         for line in filter(None, data.splitlines()):
@@ -124,11 +126,12 @@ def parse(data, raw=False, quiet=False):
                 kv_values = line.strip().split('\t')
                 kv_values = filter(lambda x: len(x), kv_values)
                 kv_values = map(int, kv_values)
-                section[iface][kv_section] = dict(zip(kv_keys, kv_values))
+                if iface != "":
+                    section[iface][kv_section] = dict(zip(kv_keys, kv_values))
                 kv_section = kv_keys = None
                 continue
 
-            if line.strip().find(' ') and iface in section:
+            if line.strip().find(' ') and iface != "" and iface in section:
                 split_line = line.strip().split(' ')
                 section[iface][split_line[0]] = ' '.join(split_line[1:])
 
