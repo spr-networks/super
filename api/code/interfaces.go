@@ -417,6 +417,13 @@ func writeInterfacesConfigLocked(config []InterfaceConfig) error {
 	if err != nil {
 		return err
 	}
-	//write a copy to the public
+
+	public := loadInterfacesPublicConfigLocked()
+	file, err = json.MarshalIndent(public, "", " ")
+	if err != nil {
+		return err
+	}
+
+	//write a copy to the public path
 	return ioutil.WriteFile(gAPIInterfacesPublicPath, file, 0660)
 }
