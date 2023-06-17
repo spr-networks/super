@@ -389,9 +389,13 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 			found = true
 			if interfaces[i].Enabled != iconfig.Enabled ||
 				interfaces[i].Type != iconfig.Type {
+
 				changed = true
 				interfaces[i].Enabled = iconfig.Enabled
 				interfaces[i].Type = iconfig.Type
+
+				//reset with previous settings
+				resetInterface(interfaces, iface.Name, iface.Type, iface.Subtype, iface.Enabled)
 			}
 		}
 	}
