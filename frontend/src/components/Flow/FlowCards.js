@@ -14,7 +14,7 @@ import {
   faTags
 } from '@fortawesome/free-solid-svg-icons'
 
-import { api, deviceAPI } from 'api'
+import { api, deviceAPI, wifiAPI } from 'api'
 import { pfwAPI } from 'api/Pfw'
 import { numToDays, daysToNum, toCron, parseClientIPOrIdentity, toOption } from './Utils'
 import { BrandIcons } from 'FontAwesomeUtils'
@@ -372,9 +372,9 @@ const actions = [
     }
   },
   {
-    title: 'Forward to Site VPN',
+    title: 'Forward to Site VPN or Uplink Interface',
     cardType: 'action',
-    description: 'Forward traffic over a Site VPN Gateway',
+    description: 'Forward traffic over a Site VPN Gateway or Uplink Interface',
     color: 'purple.600',
     icon: faForward,
     params: [
@@ -398,7 +398,6 @@ const actions = [
     getOptions: function (name = 'DstInterface') {
       if (name == 'DstInterface') {
         return new Promise((resolve, reject) => {
-          //deviceAPI.groups().then((groups) => resolve(groups.map(toOption)))
           pfwAPI.config().then((config) => {
             let s = []
             for (
@@ -408,7 +407,18 @@ const actions = [
             ) {
               s.push({ label: 'site' + i, value: 'site' + i })
             }
-            resolve(s)
+
+            // pull in interfaces also
+            wifiAPI
+              .interfacesConfiguration()
+              .then((ifaces) => {
+                for (let iface of ifaces) {
+                  if (iface.Type == "Uplink" && iface.Subtype != "pppup" && iface.Enabled == true) {
+                    s.push({ label: iface.Name, value: iface.Name})
+                  }
+                }
+                resolve(s)
+              })
           })
         })
       }
