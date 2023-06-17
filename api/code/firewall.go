@@ -350,39 +350,25 @@ func rebuildUplink() {
 	}
 
 	if len(outbound) < 2 {
-		//dont need more, outbound will work
+		//dont need more, outbound will work as is
 		return
 	}
 
-	// multiple uplink interfaces are enabled,
-	// use fwmark to enable a load balancing strategy
-	cmd = exec.Command("nft", strings.Fields("add rule inet mangle OUTBOUND_UPLINK 	counter meta mark set ct mark")...)
-	_, err = cmd.Output()
-	if err != nil {
-		log.Println("failed to insert rule to OUTBOUND_UPLINK", err)
-		return
-	}
-
-	cmd = exec.Command("nft", strings.Fields("add rule inet mangle OUTBOUND_UPLINK ct mark != 0x0 counter ct mark set mark")...)
-	_, err = cmd.Output()
-	if err != nil {
-		log.Println("failed to insert rule to OUTBOUND_UPLINK", err)
-		return
-	}
-
-	cmdArray := strings.Fields("add rule inet mangle OUTBOUND_UPLINK ip daddr != @supernetworks ct state new counter meta mark set")
 	uplinkSettings := loadUplinksConfig()
 
 	//saddr.daddr strategy assumed by default
-	strategy := []string{"jhash", "ip", "saddr", ".", "ip", "daddr"}
+	strategy := "jhash ip saddr . ip daddr"
 	if uplinkSettings.LoadBalanceStrategy == "saddr" {
+		strategy = "jhash ip saddr"
 		//saddr can be more consistent but has poor balancing
-		strategy = []string{"jhash", "ip", "saddr"}
 	}
 
-	cmdArray = append(cmdArray, strategy...)
-	cmdArray = append(cmdArray, []string{"mod", fmt.Sprintf("%d", len(outbound)), "offset", fmt.Sprintf("%d", firstOutboundRouteTable)}...)
-	cmd = exec.Command("nft", cmdArray...)
+	rule := "add rule inet mangle OUTBOUND_UPLINK " +
+		"iif != lo iifname != \"wg0\" iifname != \"site*\" " +
+		"iifname != @uplink_interfaces ip daddr != @supernetworks " +
+		"ip daddr != 224.0.0.0/4 meta mark set " + strategy + fmt.Sprintf(" mod %d offset %d", len(outbound), firstOutboundRouteTable)
+
+	cmd = exec.Command("nft", strings.Fields(rule)...)
 
 	_, err = cmd.Output()
 	if err != nil {
@@ -448,7 +434,6 @@ func modifyUplinkEntry(ifname string, action string) error {
 		log.Println("failed to "+action+" uplink_interfaces element", err)
 		log.Println(cmd)
 	}
-
 
 	rebuildUplink()
 	return err
