@@ -108,20 +108,19 @@ const ClientSelect = (props) => {
     return ops
   }
 
+
   //if only select one client & cant specify: use select (example dns logs)
   if (props.isDisabled && !props.isMultiple) {
     return (
       <Select selectedValue={props.value} onValueChange={props.onChange}>
-        {opts && opts.length == 1
-          ? opts[0].options.map((o) => (
+        {devOpts.options.map((o) => (
               <Select.Item key={o.value} label={o.label} value={o.value} />
-            ))
-          : null}
+            ))}
       </Select>
     )
   }
 
-  return <InputSelect title={title} groups={gatherOps()} {...props} />
+  return <InputSelect title={title} groups={opts} {...props} />
 }
 
 ClientSelect.propTypes = {
