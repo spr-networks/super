@@ -529,7 +529,6 @@ table inet mangle {
   }
   chain POSTROUTING {
     type filter hook prerouting priority -150; policy accept;
-    counter ct mark set mark
   }
   chain DIVERT {
   }
