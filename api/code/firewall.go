@@ -228,11 +228,8 @@ func getDefaultGatewayForSubnet(subnet string) string {
 	return ip4.String()
 }
 
-func getDefaultGateway(dev string) (string, error) {
-
-	Interfacesmtx.Lock()
+func getDefaultGatewayLocked(dev string) (string, error) {
 	interfaces := loadInterfacesConfigLocked()
-	Interfacesmtx.Unlock()
 
 	// if dhcp is disabled, grab the router address
 	for _, iface := range interfaces {
@@ -275,7 +272,7 @@ func getDefaultGateway(dev string) (string, error) {
 }
 
 func setDefaultUplinkGateway(iface string, index int) {
-	gateway, err := getDefaultGateway(iface)
+	gateway, err := getDefaultGatewayLocked(iface)
 	if err != nil || gateway == "" {
 		//no gateway found, continue on
 		log.Println("failed to set default gw: not found", err)

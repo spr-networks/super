@@ -397,6 +397,7 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 				//reset with previous settings
 				resetInterface(interfaces, iface.Name, iface.Type, iface.Subtype, iface.Enabled)
 			}
+			break
 		}
 	}
 
