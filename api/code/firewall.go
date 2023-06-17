@@ -329,7 +329,8 @@ func collectOutbound() []string {
 	for _, iface := range interfaces {
 		if iface.Type == "Uplink" && iface.Enabled {
 			outbound = append(outbound, iface.Name)
-			if len(outbound) > 255 {
+			if len(outbound) > 128 {
+				//rules start at 11. 253/254/255 reserved
 				log.Println("Too many outbound interfaces, truncating")
 				break
 			}
