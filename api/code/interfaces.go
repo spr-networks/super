@@ -100,6 +100,8 @@ func copyInterfacesConfigToPublic() {
 }
 
 func resetInterface(interfaces []InterfaceConfig, name string, prev_type string, prev_subtype string, enabled bool) {
+	//NOTE: must run *after* write  has happened
+	// as gateway code depends on an updated interfaces list.
 
 	if prev_type == "" {
 		//nothing to do
@@ -384,18 +386,22 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 	found := false
 	changed := false
 
+	prev_type := ""
+	prev_subtype := ""
+	prev_enabled := false
+
 	for i, iface := range interfaces {
 		if iface.Name == iconfig.Name {
 			found = true
 			if interfaces[i].Enabled != iconfig.Enabled ||
 				interfaces[i].Type != iconfig.Type {
-
+				prev_type = iconfig.Type
+				prev_subtype = iconfig.Subtype
+				prev_enabled = iconfig.Enabled
 				changed = true
 				interfaces[i].Enabled = iconfig.Enabled
 				interfaces[i].Type = iconfig.Type
 
-				//reset with previous settings
-				resetInterface(interfaces, iface.Name, iface.Type, iface.Subtype, iface.Enabled)
 			}
 			break
 		}
@@ -407,7 +413,11 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 	}
 
 	if changed {
-		return writeInterfacesConfigLocked(interfaces)
+		err := writeInterfacesConfigLocked(interfaces)
+
+		//reset with previous settings
+		resetInterface(interfaces, iconfig.Name, prev_type, prev_subtype, prev_enabled)
+		return err
 	}
 
 	return nil
