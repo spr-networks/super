@@ -132,6 +132,8 @@ const triggers = [
   }
 ]
 
+//NOTE: titles have to match FlowList.js
+// or they may become invisible.
 const actions = [
   {
     title: 'Block TCP',

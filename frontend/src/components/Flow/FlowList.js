@@ -477,6 +477,8 @@ const convertForwardingRuleCard = (rule, index) => {
 
   let action
 
+  //NOTE: titles have to match or they will be invisible
+
   if (rule.Protocol != '') {
     action = NewCard({
       title: 'Forward ' + rule.Protocol.toUpperCase(),
@@ -492,7 +494,7 @@ const convertForwardingRuleCard = (rule, index) => {
     })
   } else if (rule.DstInterface != '') {
     action = NewCard({
-      title: 'Forward to Site VPN',
+      title: 'Forward to Site VPN or Uplink Interface',
       cardType: 'action',
       values: {
         Client: rule.Client,
