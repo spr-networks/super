@@ -23,7 +23,7 @@ if [ "$RUN_WAN_DHCP" ]; then
       # check for an IP, if no IP, run dhclient as a fallback
       ping 1.1.1.1 -c 1 -W 3
       ret=$?
-      if [ "$ret" -eq "1" ]
+      if [ "$ret" -ne "0" ]
       then
         echo "Failed, trying dhclient for ${name}"
         dhclient ${name}
