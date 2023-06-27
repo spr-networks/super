@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faCirclePlus, faPlus } from '@fortawesome/free-solid-svg-icons'
-import { Button, FormControl, Input, Modal, Select } from 'native-base'
+import { Button, FormControl, Input, Modal } from 'native-base'
+import { Select } from 'components/Select'
 import ClientSelect from 'components/ClientSelect'
 
 const ModalConfirm = (props) => {

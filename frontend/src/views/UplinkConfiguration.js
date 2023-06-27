@@ -24,10 +24,10 @@ import {
   ScrollView,
   useDisclose,
   useColorModeValue,
-  Select,
   Radio,
   Checkbox
 } from 'native-base'
+
 import Icon from 'FontAwesomeUtils'
 
 import { faEllipsis, faTag } from '@fortawesome/free-solid-svg-icons'
@@ -36,6 +36,7 @@ import { wifiAPI, api } from 'api'
 import { AlertContext } from 'AppContext'
 import { ucFirst } from 'utils'
 
+import  { Select } from 'components/Select'
 import InputSelect from 'components/InputSelect'
 
 let keymgmts = [

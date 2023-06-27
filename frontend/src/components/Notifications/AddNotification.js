@@ -4,12 +4,13 @@ import {
   Box,
   FormControl,
   Input,
-  Select,
   Stack,
   Switch,
   Button,
   HStack
 } from 'native-base'
+
+import  { Select } from 'components/Select'
 
 const AddNotifcation = ({ onSubmit, ...props }) => {
   const [Prefix, setPrefix] = useState('nft:wan:out')

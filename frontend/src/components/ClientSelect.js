@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import { Select } from 'native-base'
+import  { Select } from 'components/Select'
 
 import { groupAPI, deviceAPI, firewallAPI } from 'api'
 import InputSelect from './InputSelect'

@@ -13,9 +13,10 @@ import {
   HStack,
   VStack,
   Stack,
-  Select,
   Text
 } from 'native-base'
+
+import  { Select } from 'components/Select'
 
 const WifiChannelParameters = ({
   iface,
