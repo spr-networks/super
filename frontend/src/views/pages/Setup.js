@@ -23,9 +23,11 @@ import {
   VStack,
   FormControl,
   Input,
-  Select,
   useColorModeValue
 } from 'native-base'
+
+import  { Select } from 'components/Select'
+
 import { AlertContext } from 'AppContext'
 
 const Setup = (props) => {

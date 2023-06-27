@@ -14,12 +14,13 @@ import {
   Input,
   Menu,
   ScrollView,
-  Select,
   Text,
   Tooltip,
   VStack,
   useColorModeValue
 } from 'native-base'
+
+import  { Select } from 'components/Select'
 
 import WifiChannelParameters from 'components/Wifi/WifiChannelParameters'
 import { Icon } from 'FontAwesomeUtils'

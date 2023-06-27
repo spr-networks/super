@@ -3,7 +3,9 @@ import React, { useContext, useState } from 'react'
 import { authAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 
-import { Button, FormControl, Input, Select, Stack } from 'native-base'
+import { Button, FormControl, Input, Stack } from 'native-base'
+import  { Select } from 'components/Select'
+
 
 const AddAuthToken = (props) => {
   const context = useContext(AlertContext)

@@ -17,10 +17,12 @@ import {
   VStack,
   Input,
   Menu,
-  Select,
   Text,
   useColorModeValue
 } from 'native-base'
+
+import  { Select } from 'components/Select'
+
 import { Pressable } from 'react-native'
 
 import { FlashList } from '@shopify/flash-list'
