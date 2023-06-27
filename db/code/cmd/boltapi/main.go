@@ -154,13 +154,12 @@ func main() {
 	go boltapi.CheckSizeLoop(db, config, *gDebug)
 
 	go func() {
-		//retry 3 times to set this up
-		for i := 3; i > 0; i-- {
+		for i := 30; i > 0; i-- {
 			err = sprbus.HandleEvent("", handleLogEvent)
 			if err != nil {
 				log.Println(err)
 			}
-			time.Sleep(1 * time.Second)
+			time.Sleep( (i < 3 ? 1 : 5) * time.Second)
 		}
 		log.Fatal("failed to establish connection to sprbus")
 	}()
