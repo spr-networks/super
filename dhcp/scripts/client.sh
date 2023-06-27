@@ -2,6 +2,7 @@
 . /configs/base/config.sh
 
 JSON=/configs/base/interfaces.json
+STATE=/state/dhcp-client/
 
 if [ "$RUN_WAN_DHCP" ]; then
   # Reset WANIF to original MAC address
@@ -18,17 +19,21 @@ if [ "$RUN_WAN_DHCP" ]; then
   for name in ${names[@]}; do
       echo "Running coredhcp_client for ${name}"
 
-      /coredhcp_client -d -i ${name} -v ${RUN_WAN_DHCP_IPV}
-
+      /coredhcp_client -d -i ${name} -v ${RUN_WAN_DHCP_IPV} -lf ${STATE}/coredhcp-${name}.json
+      GATEWAY=$(jq -r .Routers[0] <  ${STATE}/coredhcp-${name}.json)
       # check for an IP, if no IP, run dhclient as a fallback
       ping 1.1.1.1 -c 1 -W 3
       ret=$?
       if [ "$ret" -ne "0" ]
       then
         echo "Failed, trying dhclient for ${name}"
-        dhclient ${name}
+        # NOTE: apparmor on ubuntu wants /var/run/dhclient*.lease
+        rm /var/run/dhclient_${name}.lease
+        dhclient -lf /var/run/dhclient_${name}.lease ${name}
+        GATEWAY=$(grep -E "^\s+option routers" /var/run/dhclient_${name}.lease  | awk '{print $3}' | cut -d ',' -f1 | cut -d ';' -f1)
       fi
-
+      # write the gateway router IP to disk
+      echo $GATEWAY > /state/dhcp-client/gateway.${name}
   done
 
   # Handle static IP assignments
