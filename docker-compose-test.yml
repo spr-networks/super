@@ -87,7 +87,8 @@ services:
     logging: *default-logging
     entrypoint: /scripts/client.sh
     volumes:
-      - ./configs/base/:/configs/base/
+      - ./configs/base/:/configs/base/:ro
+      - ./state/dhcp-client/:/state/dhcp-client/
   dns:
     container_name: superdns
     image: ghcr.io/spr-networks/super_dns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
@@ -222,6 +223,7 @@ services:
       - ./state/api/:/state/api/
       - ./state/backups/:/state/backups/
       - ./state/base/:/state/base/
+      - ./state/dhcp-client/:/state/dhcp-client/
       - ./state/plugins/:/state/plugins/
       - ./state/public/:/state/public/
       - ./frontend/build:/ui/
