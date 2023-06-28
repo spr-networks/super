@@ -7616,6 +7616,14 @@ invariant@*, invariant@^2.2.4:
   dependencies:
     loose-envify "^1.0.0"
 
+ip-address@^8.1.0:
+  version "8.1.0"
+  resolved "https://registry.yarnpkg.com/ip-address/-/ip-address-8.1.0.tgz#1fe9b4509b51ff7d2fbbef4d3d26994d9915a459"
+  integrity sha512-Wz91gZKpNKoXtqvY8ScarKYwhXoK4r/b5QuT+uywe/azv0/nUCo7Bh0IRRI7F9DHR06kJNWtzMGLIbXavngbKA==
+  dependencies:
+    jsbn "1.1.0"
+    sprintf-js "1.1.2"
+
 ip@^1.1.5:
   version "1.1.8"
   resolved "https://registry.npmjs.org/ip/-/ip-1.1.8.tgz"
@@ -8950,6 +8958,11 @@ js-yaml@^4.1.0:
   integrity sha512-wpxZs9NoxZaJESJGIZTyDEaYpl0FKSA+FB9aJiyemKhMwkxQg63h4T1KJgUGHpTqPDNRcmmYLugrRjJlBtWvRA==
   dependencies:
     argparse "^2.0.1"
+
+jsbn@1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/jsbn/-/jsbn-1.1.0.tgz#b01307cb29b618a1ed26ec79e911f803c4da0040"
+  integrity sha512-4bYVV3aAMtDTTu4+xsDYa6sy9GyJ69/amsu9sYF2zqjiEoZA5xJi3BrfX3uY+/IekIu7MwdObdbDWpoZdBv3/A==
 
 jsc-android@^250230.2.1:
   version "250230.2.1"
@@ -12715,6 +12728,11 @@ split-string@^3.0.1, split-string@^3.0.2:
   integrity sha512-NzNVhJDYpwceVVii8/Hu6DKfD2G+NrQHlS/V/qgv763EYudVwEcMQNxd2lh+0VrUByXN/oJkl5grOhYWvQUYiw==
   dependencies:
     extend-shallow "^3.0.0"
+
+sprintf-js@1.1.2:
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/sprintf-js/-/sprintf-js-1.1.2.tgz#da1765262bf8c0f571749f2ad6c26300207ae673"
+  integrity sha512-VE0SOVEHCk7Qc8ulkWw3ntAzXuqf7S2lvwQaDLRnUeIEaKNQJzV6BwmLKhOqT61aGhfUMrXeaBk+oDGCzvhcug==
 
 sprintf-js@~1.0.2:
   version "1.0.3"

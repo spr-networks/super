@@ -34,6 +34,8 @@ import {
   useColorModeValue
 } from 'native-base'
 
+import { Address4 } from 'ip-address';
+
 const GroupItem = React.memo(({ name }) => {
   let groupIcons = {
     wan: faCircleNodes,
@@ -138,7 +140,34 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
     setEditing(name != device.Name)
   }
 
+  function toLong(ipAddress) {
+    return ipAddress.parsedAddress.reduce((accumulator, octet) => (accumulator << 8) + Number(octet), 0);
+  }
+
+  function fromLong(long) {
+    return [(long >>> 24) & 0xff, (long >>> 16) & 0xff, (long >>> 8) & 0xff, long & 0xff].join('.');
+  }
+
+  function makeTinyAddress(ipAddress) {
+    let subnet
+    let address
+    try {
+      address = new Address4(ipAddress);
+      subnet = new Address4(address.startAddress().address + '/30');
+    } catch {
+      return ipAddress
+    }
+
+    return fromLong(toLong(subnet.startAddress())+2)
+  }
+
   const handleIP = (ip) => {
+    //transform ip into a tinynet address , and notify
+    let new_ip = makeTinyAddress(ip)
+    if (ip != new_ip) {
+      context.info("SPR Micro-Segmentation Uses /30 network IP assignments, forcing IP to device IP")
+      ip = new_ip
+    }
     setIP(ip)
     setEditing(ip != device.RecentIP)
   }
