@@ -16,7 +16,7 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
   }, [props.options])
 
   useEffect(() => {
-    if (!props.groups) {
+    if (!props.groups?.length) {
       return
     }
 
@@ -51,12 +51,11 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
           title={group.title}
           onChange={handleChange}
         >
-          {group.options &&
-            group.options.map((item, idx) => (
-              <Menu.ItemOption key={group.title + idx} value={item.value}>
-                {item.label}
-              </Menu.ItemOption>
-            ))}
+          {group.options?.map((item, idx) => (
+            <Menu.ItemOption key={group.title + idx} value={item.value}>
+              {item.label}
+            </Menu.ItemOption>
+          ))}
         </Menu.OptionGroup>
       ))}
     </Menu>
@@ -140,7 +139,7 @@ const InputSelect = (props) => {
       return value
     }
 
-    if (typeof value != 'object') {
+    if (typeof value != 'object' || Array.isArray(value)) {
       return value
     }
 
