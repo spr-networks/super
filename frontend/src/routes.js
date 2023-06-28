@@ -25,6 +25,7 @@ import Firewall from 'views/Firewall'
 import PFW from 'views/Pfw'
 import Mesh from 'views/Mesh'
 import Logs from 'views/Logs'
+import Events from 'views/Events'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
 import SystemInfo from 'views/SystemInfo'
@@ -49,6 +50,7 @@ import {
   faHome,
   faLaptop,
   faLineChart,
+  faList,
   faListAlt,
   faNetworkWired,
   faObjectGroup,
@@ -268,6 +270,13 @@ const routes = [
         name: 'Logs',
         icon: faListAlt,
         component: Logs,
+        layout: 'admin'
+      },
+      {
+        path: 'events',
+        name: 'Events',
+        icon: faList,
+        component: Events,
         layout: 'admin'
       },
       {
