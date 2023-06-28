@@ -244,7 +244,7 @@ func getDefaultGatewayLocked(dev string) (string, error) {
 	stateFile := "/state/dhcp-client/gateway." + dev
 	router, err := ioutil.ReadFile(stateFile)
 	if err == nil && string(router) != "" {
-		return string(router), nil
+		return strings.TrimSuffix(string(router)), nil
 	}
 
 	//otherwise guess that  the router is at the start as a fallback.
