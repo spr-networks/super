@@ -388,8 +388,12 @@ const WifiHostapd = (props) => {
 
   const sortConf = (conf) => {
     // put the ones we can change at the top
+    //force ssid at the top
     return Object.keys(conf)
       .sort((a, b) => {
+        if (a == 'ssid') {
+          return -1
+        }
         if (canEdit.includes(a)) {
           if (canEdit.includes(b)) {
             return a > b ? 1 : a < b ? -1 : 0
@@ -934,16 +938,19 @@ const WifiHostapd = (props) => {
         </FormControl>
       </Box>
 
-      <WifiChannelParameters
-        iface={iface}
-        iws={iws}
-        curInterface={curIface}
-        setIface={setIface}
-        config={config}
-        onSubmit={updateChannels}
-        updateExtraBSS={updateExtraBSS}
-        deleteExtraBSS={deleteExtraBSS}
-      />
+      {config.interface && interfaceEnabled == true ? (
+        <WifiChannelParameters
+          iface={iface}
+          iws={iws}
+          curInterface={curIface}
+          setIface={setIface}
+          config={config}
+          onSubmit={updateChannels}
+          updateExtraBSS={updateExtraBSS}
+          deleteExtraBSS={deleteExtraBSS}
+        />
+      )
+      : null }
 
       <HStack justifyContent="space-between" p={4}>
         <Heading fontSize="lg" alignSelf="center">
@@ -962,7 +969,7 @@ const WifiHostapd = (props) => {
             type="submit"
             onPress={updateCapabilities}
           >
-            Update All Capabilities
+            Update All HT/VHT Capabilities
           </Button>
           <Button
             variant="solid"
