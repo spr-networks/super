@@ -40,7 +40,7 @@ var ComposeAllowList = []string{"docker-compose.yml", "docker-compose-test.yml",
 																"plugins/plus/mesh_extension/docker-compose.yml",
 															  "ppp/docker-compose.yml",
 															  "wifi_uplink/docker-compose.yml"}
-																
+
 var ReleaseChannelFile = "configs/base/release_channel"
 var ReleaseVersionFile = "configs/base/release_version"
 
@@ -610,7 +610,7 @@ func remote_container_tags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if username != "" {
+	if username != "" && secret != "" {
 		auth := base64.StdEncoding.EncodeToString([]byte(username + ":" + secret))
 		req.Header.Set("Authorization", "Basic "+auth)
 	}
