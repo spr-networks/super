@@ -241,7 +241,7 @@ const TrafficList = (props) => {
         </Radio.Group>
         <Box flex={1}>
           <ClientSelect
-            value={filterIps}
+            value={filterIps && filterIps[0]}
             onChange={handleChangeClient}
             onSubmitEditing={handleChangeClient}
           />
