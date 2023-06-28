@@ -241,10 +241,17 @@ const ReleaseInfo = ({ showModal, ...props }) => {
   }
 
   const runUpdate = () => {
+
+    context.info(`Update started`)
+
     api
       .put('/update')
-      .then(() => {})
+      .then(() => {
+        //happens if already on the latest version, will return 200
+        context.success('Update complete')
+      })
       .catch((err) => {
+        //otherwise times out.
         //poll for the API coming back up
         let interval = setInterval(() => {
           api
@@ -254,7 +261,9 @@ const ReleaseInfo = ({ showModal, ...props }) => {
               context.success('Update complete')
               updateRelease()
             })
-            .catch(() => {})
+            .catch(() => {
+              context.info(`Waiting for update`)
+            })
         }, 1000)
       })
   }
