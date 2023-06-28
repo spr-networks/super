@@ -18,8 +18,8 @@ const Logs = (props) => {
 
   return (
     <View>
-      {/*<LogList containers={containers} />*/}
-      <LogListDb />
+      <LogList containers={containers} />
+      {/*<LogListDb />*/}
     </View>
   )
 }

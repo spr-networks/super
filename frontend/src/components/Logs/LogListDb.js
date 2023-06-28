@@ -193,7 +193,7 @@ const LogList = (props) => {
   return (
     <View h={h} display="flex">
       <HStack space={2} p={4} alignItems={'flex-end'}>
-        <Heading fontSize="lg">Logs: {niceTopic(getCurrentBucket())}</Heading>
+        <Heading fontSize="lg">Events: {niceTopic(getCurrentBucket())}</Heading>
         <Text color="muted.500" mt="auto" display={total ? 'flex' : 'none'}>
           {/*page={page}/{Math.ceil(total / perPage)}, total = {total}*/}
           {total} items
