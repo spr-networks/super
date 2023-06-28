@@ -452,8 +452,9 @@ func update(w http.ResponseWriter, r *http.Request) {
 }
 
 func performUpdate() string {
-	//1) superd update with service & compose_file
-	req, err := http.NewRequest(http.MethodPut, "http://localhost/update", nil)
+
+	//1) update /super git
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/update_git", bytes.NewBuffer([]byte("{}")))
 	if err != nil {
 		return "failed to make update request"
 	}
@@ -462,6 +463,20 @@ func performUpdate() string {
 	defer c.CloseIdleConnections()
 
 	resp, err := c.Do(req)
+	if err != nil {
+		return "failed to call superd git pull "
+	}
+
+	//2) superd update with service & compose_file
+	req, err = http.NewRequest(http.MethodPut, "http://localhost/update", nil)
+	if err != nil {
+		return "failed to make update request"
+	}
+
+	c = getSuperdClient()
+	defer c.CloseIdleConnections()
+
+	resp, err = c.Do(req)
 	if err != nil {
 		return "failed to call superd update "
 	}
@@ -473,12 +488,14 @@ func performUpdate() string {
 		return "failed to call superd update " + fmt.Sprint(resp.StatusCode)
 	}
 
+	//3 call start
 	req, err = http.NewRequest(http.MethodPut, "http://localhost/start", nil)
 	if err != nil {
 		return "failed to make superd start request"
 	}
 
 	c = getSuperdClient()
+	defer c.CloseIdleConnections()
 
 	resp, err = c.Do(req)
 	if err != nil {

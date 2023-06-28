@@ -36,10 +36,10 @@ import (
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
 var ComposeAllowList = []string{"docker-compose.yml", "docker-compose-test.yml", "docker-compose-virt.yml",
-																"plugins/plus/pfw_extension/docker-compose.yml",
-																"plugins/plus/mesh_extension/docker-compose.yml",
-															  "ppp/docker-compose.yml",
-															  "wifi_uplink/docker-compose.yml"}
+	"plugins/plus/pfw_extension/docker-compose.yml",
+	"plugins/plus/mesh_extension/docker-compose.yml",
+	"ppp/docker-compose.yml",
+	"wifi_uplink/docker-compose.yml"}
 
 var ReleaseChannelFile = "configs/base/release_channel"
 var ReleaseVersionFile = "configs/base/release_version"
@@ -311,7 +311,11 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if git_url == "" {
-		http.Error(w, "need git_url parameter", 400)
+		os.Chdir("/super")
+		//update SPR itself
+		os.Setenv("GIT_TERMINAL_PROMPT", "0")
+		out, _ := exec.Command("git", "pull").CombinedOutput()
+		fmt.Println(string(out))
 		return
 	}
 
