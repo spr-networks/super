@@ -198,16 +198,6 @@ const AuthTokenList = (props) => {
         {tokens !== null && tokens.length === 0 ? (
           <Text alignSelf="center">There are no API tokens added yet</Text>
         ) : null}
-        <Button
-          display={{ base: 'flex', md: tokens.length ? 'none' : 'flex' }}
-          variant={useColorModeValue('subtle', 'solid')}
-          colorScheme="muted"
-          leftIcon={<Icon icon={faCirclePlus} />}
-          onPress={() => setIsModalOpen(true)}
-          mt={4}
-        >
-          Add token
-        </Button>
       </VStack>
     </View>
   )
