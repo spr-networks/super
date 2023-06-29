@@ -363,6 +363,11 @@ func rebuildUplink() {
 		return
 	}
 
+	if isLeafRouter() {
+		// do not mess with OUTBDOUND_UPLINK for mesh for now, rely on br0
+		return
+	}
+
 	uplinkSettings := loadUplinksConfig()
 
 	//saddr.daddr strategy assumed by default
