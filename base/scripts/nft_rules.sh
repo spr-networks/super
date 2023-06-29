@@ -142,7 +142,7 @@ table inet filter {
   }
 
   chain PFWDROPLOG {
-    counter log prefix "drop:pfw " #group 1
+    counter log prefix "drop:pfw " group 1
     counter drop
   }
 
@@ -300,7 +300,7 @@ table inet filter {
 
   chain restrict_upstream_private_addresses {
     counter ip saddr vmap @upstream_private_rfc1918_allowed
-    log prefix "drop:private " #group 1
+    log prefix "drop:private " group 1
     counter drop
   }
 
@@ -319,12 +319,12 @@ table inet filter {
   }
 
   chain DROPLOGFWD {
-    counter log prefix "drop:forward " #group 1
+    counter log prefix "drop:forward " group 1
     counter drop
   }
 
   chain DROPLOGINP {
-    counter log prefix "drop:input " #group 1
+    counter log prefix "drop:input " group 1
     counter drop
   }
 
@@ -336,7 +336,7 @@ table inet filter {
 
   chain DROP_MAC_SPOOF {
     counter ip saddr . iifname . ether saddr vmap @ethernet_filter
-    log prefix "drop:mac " #group 1
+    log prefix "drop:mac " group 1
     counter drop
   }
 
