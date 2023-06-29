@@ -150,6 +150,8 @@ const SidebarItem = (props) => {
     // if mesh
     let meshItems = [
       'Auth',
+      'Events',
+      'Uplink',
       'Logs',
       'Notifications',
       'Home',
@@ -159,6 +161,7 @@ const SidebarItem = (props) => {
       'Plugins',
       'System Info'
     ]
+
     if (isMeshNode && !meshItems.includes(item.name)) {
       display.base = 'none'
       return null
@@ -170,7 +173,7 @@ const SidebarItem = (props) => {
     }
 
     // menu items hidden when plus mode is disabled
-    if (item.plus === true && isPlusDisabled) {
+    if (item.plus === true && isPlusDisabled && !meshItems.includes(item.name)) {
       display.base = 'none'
     }
 

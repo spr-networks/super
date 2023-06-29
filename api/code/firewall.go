@@ -278,6 +278,11 @@ func getDefaultGatewayLocked(dev string) (string, error) {
 }
 
 func setDefaultUplinkGateway(iface string, index int) {
+	// do not mess with route for mesh for now
+	if isLeafRouter() {
+		return
+	}
+
 	gateway, err := getDefaultGatewayLocked(iface)
 	if err != nil || gateway == "" {
 		//no gateway found, continue on

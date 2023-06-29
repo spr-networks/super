@@ -61,6 +61,7 @@ func loadInterfacesConfigLocked() []InterfaceConfig {
 	if err == nil {
 		_ = json.Unmarshal(data, &config)
 	}
+
 	return config
 }
 
