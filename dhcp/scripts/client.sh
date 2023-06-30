@@ -5,12 +5,22 @@ JSON=/configs/base/interfaces.json
 STATE=/state/dhcp-client/
 
 if [ "$RUN_WAN_DHCP" ]; then
-  # Reset WANIF to original MAC address
-  # This is useful for the mesh plugin,
-  # which changes the mac address temporarily.
-  ip link set dev $WANIF down
-  ip link set dev $WANIF address $(ethtool -P $WANIF | awk '{print $3}')
-  ip link set dev $WANIF up
+
+  _=$(ip link show br0)
+  ret=$?
+  if [ "$ret" -eq "0" ]
+  then
+    # Reset WANIF to original MAC address
+    # This is useful for the mesh plugin,
+    # which changes the mac address temporarily.
+
+    ip link set dev $WANIF down
+    ip link set dev $WANIF address $(ethtool -P $WANIF | awk '{print $3}')
+    ip link set dev $WANIF up
+
+    #we do not dhcp for mesh mode for now. all done
+    sleep inf
+  fi
 
 
   # will use WANIF if configs/base/interfaces.json is not available
