@@ -12,6 +12,8 @@ Create an adaptive, micro-segmented network for managing WiFi devices, remote VP
 
 Firewall rules dynamically enforce Policy for fine-grained device connectivity and internet access. 
 
+![image](https://github.com/spr-networks/super/assets/37549748/d3295f0a-1f7c-40de-ac4f-c63b17e36402)
+
 ## How it Works
 
 An unspoofable device identity is established with MAC & Per-Device PSK for WiFi (or a VPN Public Key for Remote Devices). From there, each device gets its own /30 subnet to exist on. Hardening and firewall blocks network attacks -- and routing rules redefine connectivity between devices and to the internet.
@@ -60,6 +62,7 @@ Observability
 
 Interoperability:
 - Runs on a wide variety of Linux systems with Docker
+- API Plugin System 
 
 &ast; Some features are part of SPR PLUS, a paid subscription to support the project
 
