@@ -33,7 +33,7 @@ Firewall:
 WiFi 
 - WPA3/2
 - WPA1 backwards compatibility
-- WiFi 6 SUPPORT
+- WiFi 6 Support
 
 Advanced Networking
 - Wireguard™ VPN
