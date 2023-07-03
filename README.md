@@ -8,15 +8,15 @@
 
 ## Overview
 
-Create an adaptive, micro-segmented network for managing WiFi devices, remote VPN access, and wired devices.
+Create an adaptive, micro-segmented network for managing WiFi devices, remote VPN access, and wired systems.
 
-Firewall rules dynamically enforce Policy for fine-grained device connectivity and internet access. 
+Firewall rules dynamically enforce policy for fine-grained device connectivity and internet access. 
 
 ![image](https://github.com/spr-networks/super/assets/37549748/d3295f0a-1f7c-40de-ac4f-c63b17e36402)
 
 ## How it Works
 
-An unspoofable device identity is established with MAC & Per-Device PSK for WiFi (or a VPN Public Key for Remote Devices). From there, each device gets its own /30 subnet to exist on. Hardening and firewall blocks network attack and routing rules redefine connectivity between devices and to the internet.
+An unspoofable device identity is established with a MAC address and Per-Device Passphrase for WiFi (or a VPN Public Key for Remote Devices). From there, each device gets its own /30 subnet to exist on. Hardening and strict firewall rules block network spoofing and impersonation, and routing rules redefine connectivity between devices and to the internet.
 
 ## Features
 
