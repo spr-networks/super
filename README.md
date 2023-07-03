@@ -16,7 +16,7 @@ Firewall rules dynamically enforce Policy for fine-grained device connectivity a
 
 ## How it Works
 
-An unspoofable device identity is established with MAC & Per-Device PSK for WiFi (or a VPN Public Key for Remote Devices). From there, each device gets its own /30 subnet to exist on. Hardening and firewall blocks network attacks -- and routing rules redefine connectivity between devices and to the internet.
+An unspoofable device identity is established with MAC & Per-Device PSK for WiFi (or a VPN Public Key for Remote Devices). From there, each device gets its own /30 subnet to exist on. Hardening and firewall blocks network attack and routing rules redefine connectivity between devices and to the internet.
 
 ## Features
 
@@ -76,7 +76,7 @@ Check out our [FAQ](https://www.supernetworks.org/pages/docs/faq) on our website
 
 ## Why SPR Over Alternatives
 
-SPR is built to support an adapative, microsegmented network that unifies WiFi, DNS, Routing, and Policy. It's not easy to bolt on the concepts onto exising router stacks -- while also achieving high assurance security that blocks network spoofing attacks and other network flaws. 
+SPR is built to support an adapative, microsegmented network that unifies WiFi, DNS, Routing, and Policy. It's not easy to bolt on the concepts onto exising router stacks while also achieving high assurance security that blocks network spoofing attacks and other network flaws. 
 
 ## UI Demo Page
 
@@ -100,7 +100,7 @@ docker-compose up -d
 
 ## Useful Links
 
-* Our website: https://www.supnetworks.org/
+* Our website: https://www.supernetworks.org/
 * API Docs https://www.supernetworks.org/pages/api/0
 * Documentation Home: https://www.supernetworks.org/pages/docs/intro/
 * Raspberry Pi 4 Setup https://www.supernetworks.org/pages/docs/pi4b
