@@ -61,7 +61,7 @@ Observability
 Interoperability:
 - Runs on a wide variety of Linux systems with Docker
 
-* Some features are part of SPR PLUS, a paid subscription to support the project
+&ast; Some features are part of SPR PLUS, a paid subscription to support the project
 
 ## Our Goals
 1. Be the best Security & Privacy choice
