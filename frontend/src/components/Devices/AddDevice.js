@@ -230,6 +230,7 @@ const AddDevice = (props) => {
         direction={{ base: 'column', md: 'row' }}
         space={4}
         alignItems="center"
+        pb={8}
       >
         <FormControl flex="2" isInvalid={'psk' in errors}>
           <FormControl.Label>Passphrase</FormControl.Label>
@@ -298,9 +299,11 @@ const AddDevice = (props) => {
         </FormControl>
       </Stack>
 
-      <Button mt="4" color="primary" size="md" onPress={handleSubmit}>
-        Save
-      </Button>
+      <Stack mt={4}>
+        <Button color="primary" size="md" onPress={handleSubmit}>
+          Save
+        </Button>
+      </Stack>
     </ScrollView>
   )
 }

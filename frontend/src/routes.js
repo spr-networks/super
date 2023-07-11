@@ -4,6 +4,7 @@ import AddDevice from 'views/Devices/AddDevice'
 import ConnectDevice from 'views/Devices/ConnectDevice'
 import Arp from 'views/Devices/Arp'
 import Devices from 'views/Devices/Devices'
+import Device from 'views/Devices/Device'
 import Dhcp from 'views/Groups/Dhcp'
 import Home from 'views/Home'
 import Login from 'views/pages/Login'
@@ -82,6 +83,13 @@ const routes = [
     icon: faLaptop,
     path: 'devices',
     component: Devices,
+    layout: 'admin'
+  },
+  {
+    name: 'Device',
+    path: 'devices/:id',
+    component: Device,
+    hidden: true,
     layout: 'admin'
   },
   {

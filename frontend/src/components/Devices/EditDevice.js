@@ -1,5 +1,4 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
 import { deviceAPI } from 'api/Device'
@@ -17,15 +16,14 @@ import {
   faCircleNodes,
   faNetworkWired,
   faTag,
-  faCopy,
-  faPen,
-  faWifi
+  faCopy
 } from '@fortawesome/free-solid-svg-icons'
 
 import {
   Badge,
   Button,
   Box,
+  FormControl,
   IconButton,
   Input,
   Menu,
@@ -34,7 +32,9 @@ import {
   VStack,
   Switch,
   Text,
-  useColorModeValue
+  useColorModeValue,
+  Heading,
+  ScrollView
 } from 'native-base'
 
 import { Address4 } from 'ip-address'
@@ -96,7 +96,7 @@ const TagItem = React.memo(({ name }) => {
   )
 })
 
-const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
+const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(device.Name)
@@ -105,7 +105,6 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   const [tags, setTags] = useState(device.DeviceTags.sort())
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState('')
-  const navigate = useNavigate()
 
   // for adding
   const defaultGroups = props.groups || ['wan', 'dns', 'lan']
@@ -120,6 +119,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
 
     deviceAPI
       .updateGroups(device.MAC || device.WGPubKey, groups)
+      .then(notifyChange)
       .catch((error) =>
         this.context.error('[API] updateDevice error: ' + error.message)
       )
@@ -189,40 +189,6 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
   let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
 
-  const removeDevice = () => {
-    let id = device.MAC || device.WGPubKey || 'pending'
-
-    deviceAPI
-      .deleteDevice(id)
-      .then(notifyChange)
-      .catch((error) =>
-        context.error('[API] deleteDevice error: ' + error.message)
-      )
-  }
-
-  const duplicateDevice = () => {
-    // this will copy psk from source device
-
-    let data = {
-      MAC: 'pending',
-      Name: `${device.Name} #copy`,
-      Groups: groups
-    }
-
-    deviceAPI
-      .copy(device.MAC, data)
-      .then((res) => {
-        context.success(
-          'Device copied',
-          `${device.Name} copy saved as ${data.Name}`
-        )
-        notifyChange()
-      })
-      .catch((error) => {
-        context.error('Failed to duplicate device', error)
-      })
-  }
-
   const saveDevice = async () => {
     let id = device.MAC || device.WGPubKey
     if (!name) {
@@ -288,7 +254,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   let iconColor = `${color}.400`
   let borderColor = device.isConnected
     ? 'green.600'
-    : useColorModeValue('muted.200', 'muted.700')
+    : useColorModeValue('muted.100', 'muted.700')
 
   const trigger = (triggerProps) => (
     <IconButton
@@ -301,7 +267,6 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
 
   const moreMenu = (
     <Menu w={190} closeOnSelect={true} trigger={trigger}>
-      {/*
       <Menu.OptionGroup
         title="Groups"
         type="checkbox"
@@ -344,23 +309,8 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
           New Tag...
         </Menu.ItemOption>
       </Menu.OptionGroup>
-      */}
+      {/*
       <Menu.Group title="Actions">
-        <Menu.Item
-          onPress={() =>
-            navigate(
-              `/admin/devices/${
-                device.MAC || encodeURIComponent(device.WGPubKey)
-              }`
-            )
-          }
-        >
-          <HStack space={2} alignItems="center">
-            <Icon icon={faPen} color="muted.500" />
-            <Text>Edit</Text>
-          </HStack>
-        </Menu.Item>
-
         <Menu.Item onPress={duplicateDevice}>
           <HStack space={2} alignItems="center">
             <Icon icon={faCopy} color="muted.500" />
@@ -374,153 +324,98 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
           </HStack>
         </Menu.Item>
       </Menu.Group>
+      */}
     </Menu>
   )
 
-  const inlineEdit = false
-
   return (
-    <>
-      <Stack
-        direction={{ base: 'row', md: 'row' }}
-        space={2}
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        p={4}
-        my={{ base: 1, md: 2 }}
-        mx={{ base: 0, md: 4 }}
-        rounded={{ md: 'md' }}
-        shadow={{ md: 'md' }}
-        key={device.MAC}
-        justifyContent="space-between"
-        alignItems="center"
-        _light={{ borderColor: 'coolGray.200' }}
-        _dark={{ borderColor: 'muted.700' }}
-        borderBottomWidth={0}
-      >
-        <Stack
-          direction={{ base: 'column', md: 'row' }}
-          space={2}
-          flex={1}
-          justifyContent="space-between"
-          __alignItems="center"
-          w="full"
-        >
-          <Box
+    <ScrollView space={2} width={['100%', '100%', '5/6']} h={'100%'}>
+      <Stack space={4}>
+        <Heading fontSize="md">Edit Device</Heading>
+        <FormControl>
+          <FormControl.Label>Name</FormControl.Label>
+
+          <Input
+            size="lg"
+            type="text"
+            w="100%"
+            value={name}
+            autoFocus={false}
+            onChangeText={(value) => handleName(value)}
+            onSubmitEditing={handleSubmit}
+          />
+
+          {device.oui !== undefined ? (
+            <FormControl.HelperText>{device.oui}</FormControl.HelperText>
+          ) : null}
+        </FormControl>
+
+        <FormControl>
+          <FormControl.Label>IP address</FormControl.Label>
+          <Input
+            size="lg"
+            type="text"
+            w="100%"
+            value={ip}
+            autoFocus={false}
+            onChangeText={(value) => handleIP(value)}
+            onSubmitEditing={handleSubmit}
+          />
+
+          <Text
             display={{ base: 'none', md: 'flex' }}
-            bg="white"
-            _dark={{ bg: 'blueGray.700' }}
-            p={4}
-            rounded="full"
-            opacity={device.isConnected ? 1 : 0.65}
-            borderColor={borderColor}
-            borderWidth={1}
+            fontSize="xs"
+            color="muted.500"
           >
-            <Icon icon={icon} color={iconColor} size={7} />
-          </Box>
+            {device.MAC}
+          </Text>
+        </FormControl>
 
-          <Stack
-            w={{ md: '1/3' }}
-            justifyContent={'space-between'}
-            direction={{ base: 'row', md: 'row' }}
-          >
-            <VStack
-              __w={{ md: '20%' }}
-              justifyContent={{ base: 'flex-end', md: 'center' }}
-            >
-              {inlineEdit ? (
-                <Input
-                  size="lg"
-                  type="text"
-                  variant="underlined"
-                  w="100%"
-                  value={name}
-                  autoFocus={false}
-                  onChangeText={(value) => handleName(value)}
-                  onSubmitEditing={handleSubmit}
-                />
-              ) : (
-                <Text bold>{device.Name || 'N/A'}</Text>
-              )}
+        <FormControl>
+          <FormControl.Label>
+            {device.MAC ? 'MAC address' : 'WG Pubkey'}
+          </FormControl.Label>
+          <Text isTruncated>{device.MAC || device.WGPubKey}</Text>
+        </FormControl>
 
-              <Text color="muted.500">{device.oui || ' '}</Text>
-            </VStack>
+        <FormControl display={device.MAC ? 'flex' : 'none'}>
+          <FormControl.Label>WiFi Auth</FormControl.Label>
+          <Text>{wifi_type}</Text>
+        </FormControl>
 
-            <VStack
-              __w={{ md: '12%' }}
-              justifyContent={{ base: 'flex-end', md: 'center' }}
-              alignItems={'flex-end'}
-            >
-              {inlineEdit ? (
-                <Input
-                  size="lg"
-                  type="text"
-                  variant="underlined"
-                  w="100%"
-                  value={ip}
-                  autoFocus={false}
-                  onChangeText={(value) => handleIP(value)}
-                  onSubmitEditing={handleSubmit}
-                />
-              ) : (
-                <HStack space={2} alignItems={'center'}>
-                  <Box display={{ base: 'flex', md: 'none' }}>
-                    <Icon
-                      icon={device.MAC ? faWifi : faCircleNodes}
-                      size={3}
-                      color={borderColor}
-                    />
-                  </Box>
-
-                  <Text bold>{ip}</Text>
-                </HStack>
-              )}
-
-              <Text color="muted.500">{device.MAC || ' '}</Text>
-            </VStack>
-          </Stack>
-
-          <Stack
-            w={{ base: '100%', md: '8%' }}
-            display={{ base: 'none', md: 'flex' }}
-            justifyContent="center"
-            alignItems={'center'}
-          >
-            <Text>{wifi_type}</Text>
-          </Stack>
-          <HStack
-            w={{ base: '100%', md: '40%' }}
-            space={2}
-            alignSelf="center"
-            alignItems="center"
-            justifyContent={{ base: 'flex-start', md: 'flex-start' }}
-            flexWrap="wrap"
-          >
-            {groups.map((group) => (
-              <GroupItem key={group} name={group} />
-            ))}
-
-            {tags.map((tag) => (
-              <TagItem key={tag} name={tag} />
-            ))}
+        <FormControl>
+          <FormControl.Label>Groups and Tags</FormControl.Label>
+          <HStack flexWrap="wrap" w="full" space={2}>
+            <HStack space={2} flexWrap="wrap">
+              {groups.map((group) => (
+                <GroupItem key={group} name={group} />
+              ))}
+            </HStack>
+            <HStack space={2} flexWrap="wrap">
+              {tags.map((tag) => (
+                <TagItem key={tag} name={tag} />
+              ))}
+            </HStack>
+            <HStack mr="auto">{moreMenu}</HStack>
           </HStack>
-        </Stack>
-        {showMenu ? moreMenu : null}
+        </FormControl>
+
+        <ModalConfirm
+          type={modalType}
+          onSubmit={handleSubmitNew}
+          onClose={() => setShowModal(false)}
+          isOpen={showModal}
+        />
       </Stack>
-      <ModalConfirm
-        type={modalType}
-        onSubmit={handleSubmitNew}
-        onClose={() => setShowModal(false)}
-        isOpen={showModal}
-      />
-    </>
+    </ScrollView>
   )
 })
 
-Device.propTypes = {
+EditDevice.propTypes = {
   device: PropTypes.object.isRequired,
-  showMenu: PropTypes.bool,
+  edit: PropTypes.bool,
   groups: PropTypes.array,
   tags: PropTypes.array
 }
 
-export default Device
+export default EditDevice
