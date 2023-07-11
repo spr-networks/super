@@ -59,6 +59,9 @@ export default (props) => {
   const deviceFieldByMAC = (mac, field) =>
     devices && devices[mac] ? devices[mac][field] : mac
 
+  const deviceByName = (name) =>
+    Object.values(devices).find((d) => d.Name == name)
+
   const processData = (signals, labels) => {
     let data = {
       labels: [],
@@ -93,7 +96,7 @@ export default (props) => {
     // set the data
     for (const entry of signals) {
       // used for id
-      let name = entry.MAC
+      let name = deviceFieldByMAC(entry.MAC, 'Name') || entry.MAC
       data.labels.push(name)
 
       labels.map((label, index) => {
@@ -139,9 +142,10 @@ export default (props) => {
       tooltip: {
         callbacks: {
           title: (tooltipItems) =>
-            deviceFieldByMAC(tooltipItems[0].label, 'Name'),
+            deviceByName(tooltipItems[0].label)?.RecentIP ||
+            tooltipItems[0].label,
           beforeBody: (tooltipItems) =>
-            clientLabelFromMAC(tooltipItems[0].label)
+            deviceByName(tooltipItems[0].label)?.MAC || tooltipItems[0].label
         }
       }
     },
