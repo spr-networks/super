@@ -361,14 +361,6 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
             onChangeText={(value) => handleIP(value)}
             onSubmitEditing={handleSubmit}
           />
-
-          <Text
-            display={{ base: 'none', md: 'flex' }}
-            fontSize="xs"
-            color="muted.500"
-          >
-            {device.MAC}
-          </Text>
         </FormControl>
 
         <FormControl>
