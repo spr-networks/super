@@ -17,6 +17,7 @@ import { AlertContext } from 'layouts/Admin'
 import ClientSelect from 'components/ClientSelect'
 import DNSAddOverride from './DNSAddOverride'
 import ModalForm from 'components/ModalForm'
+import useSwipe from 'components/useSwipe'
 import { dbAPI, deviceAPI, logAPI } from 'api'
 import { prettyDate } from 'utils'
 import { format as timeAgo } from 'timeago.js'
@@ -120,6 +121,9 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
 
           <Text color="muted.500" onPress={() => triggerAlert(item)}>
             {item.FirstAnswer || '0.0.0.0'}
+          </Text>
+          <Text color="muted.500" display={{ base: 'flex', md: 'none' }}>
+            {timeAgo(new Date(item.Timestamp))}
           </Text>
         </Stack>
 
@@ -407,9 +411,15 @@ const DNSLogHistoryList = (props) => {
 
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
 
+  const swipeHandlers = useSwipe({
+    onSwipedDown: () => {
+      refreshList()
+    }
+  })
+
   let h = Platform.OS == 'web' ? Dimensions.get('window').height - 64 : '100%'
   return (
-    <View h={h} display="flex">
+    <View h={h} display="flex" {...swipeHandlers}>
       <ModalForm
         title={
           'Add ' +
