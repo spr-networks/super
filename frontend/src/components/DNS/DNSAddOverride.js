@@ -110,7 +110,11 @@ export default class DNSAddOverride extends React.Component {
             <FormControl.ErrorMessage>
               Specify a domain name
             </FormControl.ErrorMessage>
-          ) : null}
+          ) : (
+            <FormControl.HelperText>
+              Trailing dot for domain name is to avoid prefix matching
+            </FormControl.HelperText>
+          )}
         </FormControl>
 
         <FormControl isInvalid={this.state.check.ResultIP == 'has-danger'}>
