@@ -178,7 +178,7 @@ const DNSLogHistoryList = (props) => {
 
   const [devices, setDevices] = useState({})
 
-  const modalRef = React.createRef(null)
+  const modalRef = React.useRef(null)
 
   const deviceByIp = (ip) => {
     return Object.values(devices).find((device) => device.RecentIP == ip) || {}
