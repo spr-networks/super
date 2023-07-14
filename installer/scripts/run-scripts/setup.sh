@@ -31,7 +31,7 @@ if grep --quiet Raspberry /proc/cpuinfo; then
 
   cat > /etc/udev/rules.d/10-network.rules << EOF
 ACTION=="add", SUBSYSTEM=="net", DEVPATH=="/devices/platform/soc/*", DRIVERS=="brcmfmac", NAME="wlan0"
-  EOF
+EOF
 
 fi
 
@@ -40,11 +40,11 @@ echo -ne "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
 
 # Suport for Netgear A8000-100PAS
 cat > /etc/udev/rules.d/90-usb-3574:6211-mt7921u.rules << EOF
-ACTION=="add", 
-SUBSYSTEM=="usb", 
-ENV{ID_VENDOR_ID}=="3574", 
-ENV{ID_MODEL_ID}=="6211", 
-RUN+="/usr/sbin/modprobe mt7921u", 
+ACTION=="add",
+SUBSYSTEM=="usb",
+ENV{ID_VENDOR_ID}=="3574",
+ENV{ID_MODEL_ID}=="6211",
+RUN+="/usr/sbin/modprobe mt7921u",
 RUN+="/bin/sh -c 'echo 3574 6211 > /sys/bus/usb/drivers/mt7921u/new_id'"
 EOF
 
