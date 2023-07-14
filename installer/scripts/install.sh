@@ -48,6 +48,7 @@ touch /lib/udev/rules.d/80-net-setup-link.rules
 
 # update sshd config to allow password login
 sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config
+sed -i "s/#PasswordAuthentication yes/PasswordAuthentication yes/" /etc/ssh/sshd_config
 
 # cleanup
 #apt-get autoremove -y && apt-get clean
