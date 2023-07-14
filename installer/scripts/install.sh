@@ -9,6 +9,8 @@ apt-get update
 apt-get -y install --download-only linux-modules-extra-raspi
 apt-get -y install docker.io docker-compose nftables wireless-regdb ethtool linux-firmware git nano iw cloud-utils fdisk tmux conntrack
 
+# dont use this
+rm /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
 useradd -m -s /bin/bash ubuntu
 echo "ubuntu:ubuntu" | chpasswd
 usermod -aG sudo ubuntu
