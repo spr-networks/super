@@ -48,6 +48,17 @@ RUN+="/usr/sbin/modprobe mt7921u",
 RUN+="/bin/sh -c 'echo 3574 6211 > /sys/bus/usb/drivers/mt7921u/new_id'"
 EOF
 
+# Suport for Netgear A8000-100PAS
+cat > /etc/udev/rules.d/90-usb-0846:9060-mt7921u.rules << EOF
+ACTION=="add",
+SUBSYSTEM=="usb",
+ENV{ID_VENDOR_ID}=="0846",
+ENV{ID_MODEL_ID}=="9060",
+RUN+="/usr/sbin/modprobe mt7921u",
+RUN+="/bin/sh -c 'echo 0846 9060 > /sys/bus/usb/drivers/mt7921u/new_id'"
+EOF
+
+
 #try docker-compose pull, else, load the offline containers
 
 
