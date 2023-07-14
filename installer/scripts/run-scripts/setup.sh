@@ -26,6 +26,13 @@ dpkg --configure -a
 
 if grep --quiet Raspberry /proc/cpuinfo; then
   apt-get -y install linux-modules-extra-raspi
+
+  # ensure system assigns wlan0 to built-in broadcom wifi
+
+  cat > /etc/udev/rules.d/10-network.rules << EOF
+ACTION=="add", SUBSYSTEM=="net", DEVPATH=="/devices/platform/soc/*", DRIVERS=="brcmfmac", NAME="wlan0"
+  EOF
+
 fi
 
 # disable iptables for  docker
