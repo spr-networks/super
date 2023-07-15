@@ -24,14 +24,56 @@ apt-get update
 apt-get -y --fix-broken install
 dpkg --configure -a
 
+apt-get -y install linux-firmware
+
+# Update mediatek firmware
+pushd /root/mt76/
+git pull
+cp -R /root/mt76/firmware/. /lib/firmware/mediatek/
+popd
+
 if grep --quiet Raspberry /proc/cpuinfo; then
   apt-get -y install linux-modules-extra-raspi
 
   # ensure system assigns wlan0 to built-in broadcom wifi
 
   cat > /etc/udev/rules.d/10-network.rules << EOF
-ACTION=="add", SUBSYSTEM=="net", DEVPATH=="/devices/platform/soc/*", DRIVERS=="brcmfmac", NAME="wlan0"
+ACTION=="add", SUBSYSTEM=="net", DEVPATH=="/devices/platform/soc/*", DRIVERS=="brcmfmac", NAME!="wlan0", RUN+="/etc/udev/wlan0-swap.sh %k"
 EOF
+
+  cat > /etc/udev/wlan0-swap.sh << EOF
+#!/bin/bash
+
+# Check if the script received an argument
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 interface_name"
+    exit 1
+fi
+
+# Check if the wlan0 interface exists
+if ip link show wlan0 > /dev/null 2>&1; then
+    # If wlan0 exists, rename it to wlan_tmp
+    ip link set wlan0 down
+    ip link set wlan0 name wlan_tmp
+    wlan_exists=true
+else
+    wlan_exists=false
+fi
+
+# Rename the given interface to wlan0
+ip link set "$1" down
+ip link set "$1" name wlan0
+ip link set wlan0 up
+
+if $wlan_exists; then
+    # If wlan0 existed, rename wlan_tmp to the given interface and bring it back up
+    ip link set wlan_tmp down
+    ip link set wlan_tmp name "$1"
+    ip link set "$1" up
+fi
+EOF
+
+  chmod +x /etc/udev/wlan0-swap.sh
 
 fi
 
