@@ -41,7 +41,7 @@ if grep --quiet Raspberry /proc/cpuinfo; then
 ACTION=="add", SUBSYSTEM=="net", DEVPATH=="/devices/platform/soc/*", DRIVERS=="brcmfmac", NAME!="wlan0", RUN+="/etc/udev/wlan0-swap.sh %k"
 EOF
 
-  cat > /etc/udev/wlan0-swap.sh << EOF
+  cat > /etc/udev/wlan0-swap.sh << 'EOF'
 #!/bin/bash
 
 # Check if the script received an argument
