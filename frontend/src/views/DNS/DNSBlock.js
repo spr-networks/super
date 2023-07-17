@@ -47,20 +47,6 @@ const DNSBlock = (props) => {
     <ScrollView>
       <VStack>
         <DNSBlocklist />
-
-        <DNSOverrideList
-          key="blockdomain"
-          list={BlockDomains}
-          title="Block Custom Domain"
-          notifyChange={notifyChange}
-        />
-
-        <DNSOverrideList
-          key="allowdomain"
-          list={PermitDomains}
-          title="Allow Custom Domain"
-          notifyChange={notifyChange}
-        />
       </VStack>
     </ScrollView>
   )
