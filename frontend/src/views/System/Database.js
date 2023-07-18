@@ -125,9 +125,8 @@ const EditSizeForm = ({ config, onSubmit, ...props }) => {
           <Icon icon={faInfoCircle} color="muted.500" mr={2} />
           Notice about size
         </Heading>
-        <Text>When the size limit is hit the db file will not shrink.</Text>
         <Text>
-          Old entries will be removed to keep the file size around what is
+          Older entries will be removed to keep the file size to around what is
           specified.
         </Text>
       </VStack>
