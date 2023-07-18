@@ -132,7 +132,8 @@ func main() {
 		options.ReadOnly = true
 	}
 
-	*db, err := bolt.Open(*gDBPath, 0664, options)
+	tdb, err := bolt.Open(*gDBPath, 0664, options)
+	*db = tdb
 	if err != nil {
 		log.Fatal(err)
 	}
