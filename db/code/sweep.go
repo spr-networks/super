@@ -2,10 +2,11 @@ package boltapi
 
 import (
 	"errors"
-	"github.com/boltdb/bolt"
 	"log"
 	"time"
 )
+
+import bolt "go.etcd.io/bbolt"
 
 func min(a, b int) int {
 	if a < b {

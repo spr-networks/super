@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"github.com/boltdb/bolt"
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	//"github.com/tidwall/gjson"
@@ -18,6 +17,8 @@ import (
 	"sync"
 	"time"
 )
+
+import bolt "go.etcd.io/bbolt"
 
 var (
 	db                   *bolt.DB

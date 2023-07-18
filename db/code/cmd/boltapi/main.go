@@ -12,10 +12,11 @@ import (
 )
 
 import (
-	"github.com/boltdb/bolt"
 	"github.com/spr-networks/sprbus"
 	//"github.com/tidwall/gjson"
 )
+
+import bolt "go.etcd.io/bbolt"
 
 import (
 	"boltapi"
