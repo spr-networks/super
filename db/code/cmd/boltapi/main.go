@@ -133,6 +133,7 @@ func main() {
 	}
 
 	tdb, err := bolt.Open(*gDBPath, 0664, options)
+	db := new(*bolt.DB)
 	*db = tdb
 	if err != nil {
 		log.Fatal(err)
