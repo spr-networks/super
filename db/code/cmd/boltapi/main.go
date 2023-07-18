@@ -151,8 +151,8 @@ func main() {
 		boltapi.LogEvent(topic)
 	}
 
-	// runs every minute to rm old items if db size is too big
-	go boltapi.CheckSizeLoop(db, config, *gDebug)
+	// loops to rm old items if db size is too big
+	go boltapi.CheckSizeLoop(*gDBPath, db, config, *gDebug)
 
 	go func() {
 		for i := 30; i > 0; i-- {
