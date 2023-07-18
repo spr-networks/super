@@ -21,8 +21,9 @@ import (
 import bolt "go.etcd.io/bbolt"
 
 var (
-	db                   *bolt.DB
-	DBmtx                sync.Mutex
+	db                   **bolt.DB
+	DBPtr                sync.RWMutex //mtx for db pointer, which can change with compaction
+	Configmtx            sync.Mutex
 	gConfigPath          string
 	gConfigPtr           *LogConfig
 	ErrBucketList        = errors.New("error listing buckets")
@@ -60,8 +61,8 @@ func LogEvent(topic string) {
 }
 
 func saveConfig(config LogConfig) error {
-	DBmtx.Lock()
-	defer DBmtx.Unlock()
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
 
 	file, _ := json.MarshalIndent(config, "", " ")
 	err := ioutil.WriteFile(gConfigPath, file, 0600)
@@ -92,8 +93,8 @@ func SetupConfig(configPath string, conf *LogConfig) {
 }
 
 func loadConfig() *LogConfig {
-	DBmtx.Lock()
-	defer DBmtx.Unlock()
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
 
 	seenEvents = map[string]bool{}
 
@@ -137,7 +138,7 @@ func (item *BucketItem) DecodeValue(rawValue []byte) error {
 	return nil
 }
 
-func Serve(boltdb *bolt.DB, socketpath string) error {
+func Serve(boltdb **bolt.DB, socketpath string) error {
 	db = boltdb
 	router := mux.NewRouter().StrictSlash(true)
 
@@ -209,9 +210,11 @@ type DbStats struct {
 }
 
 func GetStats(w http.ResponseWriter, r *http.Request) {
+	DBPtr.RLock()
+	defer DBPtr.RUnlock()
 	stats := DbStats{}
 
-	if err := db.View(func(tx *bolt.Tx) error {
+	if err := (*db).View(func(tx *bolt.Tx) error {
 		stats.Size = tx.Size()
 
 		topics := make([]string, len(seenEvents))
@@ -234,11 +237,13 @@ func GetStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetBucketStats(w http.ResponseWriter, r *http.Request) {
+	DBPtr.RLock()
+	defer DBPtr.RUnlock()
 	var stats bolt.BucketStats
 
 	bucketName := mux.Vars(r)["name"]
 
-	if err := db.View(func(tx *bolt.Tx) error {
+	if err := (*db).View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketName))
 		if bucket == nil {
 			return ErrBucketMissing
@@ -271,13 +276,15 @@ func GetTopics(w http.ResponseWriter, r *http.Request) {
 }
 
 func ListBuckets(w http.ResponseWriter, r *http.Request) {
+	DBPtr.RLock()
+	defer DBPtr.RUnlock()
 	fullParam := r.URL.Query().Get("full")
 	full := fullParam == "1" || fullParam == "true"
 
 	bucketNames := []string{}
 	buckets := []map[string]interface{}{}
 
-	if err := db.View(func(tx *bolt.Tx) error {
+	if err := (*db).View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, bucket *bolt.Bucket) error {
 
 			if full {
@@ -317,9 +324,11 @@ func ListBuckets(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteBucket(w http.ResponseWriter, r *http.Request) {
+	DBPtr.RLock()
+	defer DBPtr.RUnlock()
 	bucketName := mux.Vars(r)["name"]
 
-	if err := db.Update(func(tx *bolt.Tx) error {
+	if err := (*db).Update(func(tx *bolt.Tx) error {
 		return tx.DeleteBucket([]byte(strings.TrimSpace(bucketName)))
 	}); err != nil {
 		log.Println(ApiError{ErrBucketDelete, err})
@@ -330,6 +339,9 @@ func DeleteBucket(w http.ResponseWriter, r *http.Request) {
 }
 
 func AddBucket(w http.ResponseWriter, r *http.Request) {
+	DBPtr.RLock()
+	defer DBPtr.RUnlock()
+
 	fail := func(cusromErr, origErr error) {
 		log.Println(ApiError{cusromErr, origErr})
 		http.Error(w, cusromErr.Error(), http.StatusInternalServerError)
@@ -348,7 +360,7 @@ func AddBucket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := db.Update(func(tx *bolt.Tx) error {
+	if err := (*db).Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucket([]byte(strings.TrimSpace(bucketName)))
 		return err
 	}); err != nil {
@@ -359,10 +371,13 @@ func AddBucket(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetBucket(w http.ResponseWriter, r *http.Request) {
+	DBPtr.RLock()
+	defer DBPtr.RUnlock()
+
 	bucketName := mux.Vars(r)["name"]
 
 	items := []*BucketItem{}
-	if err := db.View(func(tx *bolt.Tx) error {
+	if err := (*db).View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketName))
 		if bucket == nil {
 			return ErrBucketMissing
@@ -439,6 +454,9 @@ func keyOrDefault(s interface{}, defaultKey string) []byte {
 
 // array of .values, including time key
 func GetBucketItems(w http.ResponseWriter, r *http.Request) {
+	DBPtr.RLock()
+	defer DBPtr.RUnlock()
+
 	// TODO add search, range select here
 	bucketName := mux.Vars(r)["name"]
 
@@ -464,7 +482,7 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 	numFetched := 0
 
 	var items []interface{}
-	if err := db.View(func(tx *bolt.Tx) error {
+	if err := (*db).View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketName))
 		if bucket == nil {
 			return ErrBucketMissing
@@ -534,7 +552,7 @@ func PutItem(bucketName string, jsonData map[string]interface{}) (*BucketItem, e
 		return nil, err
 	}
 
-	if err := db.Update(func(tx *bolt.Tx) error {
+	if err := (*db).Update(func(tx *bolt.Tx) error {
 		//create bucket if it doesnt exist
 		bucket, err := tx.CreateBucketIfNotExists([]byte(strings.TrimSpace(bucketName)))
 		if err != nil {
@@ -550,6 +568,9 @@ func PutItem(bucketName string, jsonData map[string]interface{}) (*BucketItem, e
 }
 
 func AddBucketItem(w http.ResponseWriter, r *http.Request) {
+	DBPtr.RLock()
+	defer DBPtr.RUnlock()
+
 	fail := func(cusromErr, origErr error) {
 		log.Println(ApiError{cusromErr, origErr})
 		http.Error(w, cusromErr.Error(), http.StatusInternalServerError)
@@ -574,11 +595,14 @@ func AddBucketItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetBucketItem(w http.ResponseWriter, r *http.Request) {
+	DBPtr.RLock()
+	defer DBPtr.RUnlock()
+
 	bucketName := mux.Vars(r)["name"]
 	bucketItemKey := mux.Vars(r)["key"]
 
 	bucketItem := new(BucketItem)
-	if err := db.View(func(tx *bolt.Tx) error {
+	if err := (*db).View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(strings.TrimSpace(bucketName)))
 		if bucket == nil {
 			return ErrBucketMissing
@@ -598,6 +622,9 @@ func GetBucketItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateBucketItem(w http.ResponseWriter, r *http.Request) {
+	DBPtr.RLock()
+	defer DBPtr.RUnlock()
+
 	fail := func(cusromErr, origErr error) {
 		log.Println(ApiError{cusromErr, origErr})
 		http.Error(w, cusromErr.Error(), http.StatusInternalServerError)
@@ -618,7 +645,7 @@ func UpdateBucketItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := db.Update(func(tx *bolt.Tx) error {
+	if err := (*db).Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(strings.TrimSpace(bucketName)))
 		if bucket == nil {
 			return ErrBucketMissing
@@ -634,10 +661,13 @@ func UpdateBucketItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteBucketItem(w http.ResponseWriter, r *http.Request) {
+	DBPtr.RLock()
+	defer DBPtr.RUnlock()
+
 	bucketName := mux.Vars(r)["name"]
 	bucketItemKey := mux.Vars(r)["key"]
 
-	if err := db.Update(func(tx *bolt.Tx) error {
+	if err := (*db).Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(strings.TrimSpace(bucketName)))
 		if bucket == nil {
 			return ErrBucketMissing

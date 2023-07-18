@@ -1,8 +1,8 @@
 package boltapi
 
 import (
-	"os"
 	"log"
+	"os"
 	"time"
 )
 
@@ -15,17 +15,17 @@ func min(a, b int) int {
 	return b
 }
 
-func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool) error {
+func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool) (error, bool) {
 	fstat, err := os.Stat(dbpath)
 
 	if err == nil {
 		log.Println("[-] Failed to open db for sweep", err)
-		return err
+		return err, false
 	}
 
 	//no need to sweep
 	if uint64(fstat.Size()) < config.MaxSize {
-		return nil
+		return nil, false
 	}
 
 	if debug {
@@ -45,7 +45,7 @@ func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool
 				count++
 			}
 
-			if (count > pMinEntriesDelete) {
+			if count > pMinEntriesDelete {
 
 				var nextKey []byte
 				deleted := 0
@@ -63,24 +63,57 @@ func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool
 
 			}
 
-
 			return nil
 		})
 	}); err != nil {
 		log.Println(err)
-		return err
+		return err, false
 	}
 
+	fstat, err = os.Stat(dbpath)
 
-	return nil
+	//if less than 25% over dont compact
+	if uint64(fstat.Size()) < uint64(1.25*float64(config.MaxSize)) {
+		return nil, false
+	}
+
+	// over 25% of max, run a compact command
+
+	dst, err := bolt.Open(dbpath+".tmp", fstat.Mode(), nil)
+	defer dst.Close()
+	if err != nil {
+		return err, false
+	}
+
+	err = bolt.Compact(dst, db, 0)
+
+	return err, true
 }
 
-func CheckSizeLoop(dbpath string, db *bolt.DB, config LogConfig, debug bool) {
+func CheckSizeLoop(dbpath string, db **bolt.DB, config LogConfig, debug bool) {
 	for {
-		err := CheckSizeIteration(dbpath, db, config, debug)
+		//lock db pointer during deletion
+
+		DBPtr.Lock()
+		err, compacted := CheckSizeIteration(dbpath, *db, config, debug)
 		if err != nil {
 			log.Println("db cleanup error:", err)
+		} else if compacted {
+			err = os.Rename(dbpath+".tmp", dbpath)
+			if err != nil {
+				log.Println("db compaction failed to move file:", err)
+			} else {
+				(*db).Close()
+				//re-open db
+				options := &bolt.Options{Timeout: 1 * time.Second}
+				*db, err = bolt.Open(dbpath, 0664, options)
+				if err != nil {
+					log.Println("db compaction failed to reopen db:", err)
+				}
+			}
 		}
+
+		DBPtr.Unlock()
 
 		time.Sleep(5 * time.Minute)
 	}

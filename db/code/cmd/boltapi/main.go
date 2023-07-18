@@ -121,6 +121,7 @@ func handleLogEvent(topic string, value string) {
 	}
 }
 
+var db **bolt.DB
 func main() {
 	flag.Parse()
 
@@ -131,15 +132,15 @@ func main() {
 		options.ReadOnly = true
 	}
 
-	db, err := bolt.Open(*gDBPath, 0664, options)
+	*db, err := bolt.Open(*gDBPath, 0664, options)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+
 
 	if *gBucket != "" || *gDump != false {
-		cli(db, *gBucket)
-
+		cli(*db, *gBucket)
+		(*db).Close()
 		return
 	}
 
