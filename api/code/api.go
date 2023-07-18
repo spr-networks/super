@@ -83,6 +83,8 @@ type DeviceEntry struct {
 	PSKEntry   PSKEntry
 	Groups     []string
 	DeviceTags []string
+	DHCPFirstTime		string
+	DHCPLastTime		string
 }
 
 var config = APIConfig{}
@@ -754,10 +756,10 @@ func saveDevicesJson(devices map[string]DeviceEntry) {
 		log.Fatal(err)
 	}
 
-	sprbus.Publish("devices:save", devices)
-
 	scrubbed_devices := convertDevicesPublic(devices)
 	savePublicDevicesJson(scrubbed_devices)
+
+	sprbus.Publish("devices:save", scrubbed_devices)
 }
 
 func getDevicesJson() map[string]DeviceEntry {

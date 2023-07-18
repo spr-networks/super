@@ -270,7 +270,6 @@ func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
 		}
 	}
 
-	updatedDevices := false
 	if !exists {
 		//create a new device entry
 		newDevice := DeviceEntry{}
@@ -278,21 +277,22 @@ func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
 		newDevice.RecentIP = IP
 		newDevice.Groups = []string{}
 		newDevice.DeviceTags = []string{}
+		newDevice.DHCPFirstTime = time.Now()
+		newDevice.LastDHCPTime = newDevice.DHCPFirstTime
 		devices[newDevice.MAC] = newDevice
 		val = newDevice
-		updatedDevices = true
 	} else {
 		//update recent IP
 		if val.RecentIP != IP {
 			val.RecentIP = IP
 			devices[MAC] = val
-			updatedDevices = true
 		}
+		//udpate last DHCP Time
+		val.DHCPLastTime = time.Now()
+		devices[MAC]= val
 	}
 
-	if updatedDevices {
-		saveDevicesJson(devices)
-	}
+	saveDevicesJson(devices)
 
 	notifyFirewallDHCP(val, Iface)
 
