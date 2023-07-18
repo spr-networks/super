@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/spr-networks/sprbus"
 )
@@ -277,8 +278,8 @@ func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
 		newDevice.RecentIP = IP
 		newDevice.Groups = []string{}
 		newDevice.DeviceTags = []string{}
-		newDevice.DHCPFirstTime = time.Now()
-		newDevice.LastDHCPTime = newDevice.DHCPFirstTime
+		newDevice.DHCPFirstTime = time.Now().String()
+		newDevice.DHCPLastTime = newDevice.DHCPFirstTime
 		devices[newDevice.MAC] = newDevice
 		val = newDevice
 	} else {
@@ -288,7 +289,7 @@ func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
 			devices[MAC] = val
 		}
 		//udpate last DHCP Time
-		val.DHCPLastTime = time.Now()
+		val.DHCPLastTime = time.Now().String()
 		devices[MAC]= val
 	}
 
