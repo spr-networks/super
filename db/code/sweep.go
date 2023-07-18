@@ -18,7 +18,7 @@ func min(a, b int) int {
 func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool) (error, bool) {
 	fstat, err := os.Stat(dbpath)
 
-	if err == nil {
+	if err != nil {
 		log.Println("[-] Failed to open db for sweep", err)
 		return err, false
 	}
