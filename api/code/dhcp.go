@@ -290,7 +290,7 @@ func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
 		}
 		//udpate last DHCP Time
 		val.DHCPLastTime = time.Now().String()
-		devices[MAC]= val
+		devices[MAC] = val
 	}
 
 	saveDevicesJson(devices)
