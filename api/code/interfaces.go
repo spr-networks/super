@@ -539,6 +539,9 @@ func refreshVlanTrunk(iface string, enable bool) {
 			log.Println("ip link del failed for "+iface.Name, err)
 			return
 		}
+
+		cmd = exec.Command("nft", "delete", "element", "inet", "filter", "lan_interfaces", "{", iface.Name, "}")
+		cmd.Output()
 	}
 
 	if !enable {
@@ -560,6 +563,20 @@ func refreshVlanTrunk(iface string, enable bool) {
 
 			if err != nil {
 				log.Println("ip link add link vlan failed", cmd, err)
+				continue
+			}
+
+			cmd = exec.Command("ip", "link", "set", iface+"."+dev.VLANTag, "up")
+			_, err = cmd.Output()
+			if err != nil {
+				log.Println("ip link set up vlan failed", cmd, err)
+				continue
+			}
+
+			cmd = exec.Command("nft", "add", "element", "inet", "filter", "lan_interfaces", "{", iface+"."+dev.VLANTag, "}")
+			_, err = cmd.Output()
+			if err != nil {
+				log.Println("update lan_interfaces failed", cmd, err)
 				continue
 			}
 
