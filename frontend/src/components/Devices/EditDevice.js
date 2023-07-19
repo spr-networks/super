@@ -100,7 +100,9 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(device.Name)
+  const [rawIP, setRawIP] = useState(device.RecentIP);
   const [ip, setIP] = useState(device.RecentIP)
+  const [vlantag, setVlanTag] = useState(device.VLANTag)
   const [groups, setGroups] = useState(device.Groups.sort())
   const [tags, setTags] = useState(device.DeviceTags.sort())
   const [showModal, setShowModal] = useState(false)
@@ -144,6 +146,18 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
     setEditing(name != device.Name)
   }
 
+  const isPositiveNumber = (str) => {
+    let num = parseFloat(str);
+    return !isNaN(num) && num > 0;
+  }
+
+  const handleVLAN = (value) => {
+    if (isPositiveNumber(value) || value == "") {
+      setVlanTag(value)
+      setEditing(value != device.VLANTag)
+    }
+  }
+
   function toLong(ipAddress) {
     return ipAddress.parsedAddress.reduce(
       (accumulator, octet) => (accumulator << 8) + Number(octet),
@@ -173,7 +187,7 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
     return fromLong(toLong(subnet.startAddress()) + 2)
   }
 
-  const handleIP = (ip) => {
+  const handleIPImpl = (ip) => {
     //transform ip into a tinynet address , and notify
     let new_ip = makeTinyAddress(ip)
     if (ip != new_ip) {
@@ -183,8 +197,23 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
       ip = new_ip
     }
     setIP(ip)
+    setRawIP(ip)
     setEditing(ip != device.RecentIP)
   }
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleIPImpl(rawIP);
+    }, 1000);  // delay in milliseconds
+
+    return () => clearTimeout(timer); // this will clear the timer in case inputValue changes within 2 seconds
+  }, [rawIP]);
+
+
+
+  const handleIP = (value) => {
+    setRawIP(value);
+  };
 
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
   let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
@@ -216,6 +245,19 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
           )
         )
     }
+
+    if (vlantag != device.VLANTag) {
+      deviceAPI
+        .updateVLANTag(id, vlantag)
+        .then(notifyChange)
+        .catch((error) =>
+          context.error(
+            '[API] update VLAN Tag error: ' +
+              error.message
+          )
+        )
+    }
+
   }
 
   const handleSubmit = () => {
@@ -356,9 +398,24 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
             size="lg"
             type="text"
             w="100%"
-            value={ip}
+            value={rawIP}
             autoFocus={false}
             onChangeText={(value) => handleIP(value)}
+            onSubmitEditing={handleSubmit}
+          />
+        </FormControl>
+
+        <FormControl>
+          <FormControl.Label>
+            VLAN Tag
+          </FormControl.Label>
+          <Input
+            size="lg"
+            type="text"
+            w="100%"
+            value={vlantag}
+            autoFocus={false}
+            onChangeText={(value) => handleVLAN(value)}
             onSubmitEditing={handleSubmit}
           />
         </FormControl>

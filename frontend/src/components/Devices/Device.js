@@ -480,6 +480,19 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
           </Stack>
 
           <Stack
+            w={{ base: '100%', md: '12%' }}
+            display={{ base: 'none', md: 'flex' }}
+            justifyContent="center"
+            alignItems={'center'}
+          >
+
+            {(device.VLANTag != "" ? (
+              <Text color="">VLAN <b> {device.VLANTag || ' '}</b></Text>
+            )
+            : null)}
+          </Stack>
+
+          <Stack
             w={{ base: '100%', md: '8%' }}
             display={{ base: 'none', md: 'flex' }}
             justifyContent="center"

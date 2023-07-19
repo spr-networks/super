@@ -44,6 +44,10 @@ export class APIDevice extends API {
     return this.update(id, { RecentIP });
   }
 
+  updateVLANTag(id, VLANTag) {
+    return this.update(id, { VLANTag });
+  }
+
   updateGroups(id, Groups) {
     return this.update(id, { Groups });
   }
