@@ -490,12 +490,12 @@ func updateLinkVlanTrunk(w http.ResponseWriter, r *http.Request) {
 
 	if !found {
 		if state == "enable" {
-			iface := InterfaceConfig{}
-			iface.Name = iface
-			iface.Type = "Downlink"
-			iface.Subtype = "VLAN-Trunk"
-			iface.Enabled = true
-			interfaces = append(interfaces, iface)
+			ifconfig := InterfaceConfig{}
+			ifconfig.Name = iface
+			ifconfig.Type = "Downlink"
+			ifconfig.Subtype = "VLAN-Trunk"
+			ifconfig.Enabled = true
+			interfaces = append(interfaces, ifconfig)
 			changed = true
 		} else {
 			http.Error(w, "Iface not found", 400)

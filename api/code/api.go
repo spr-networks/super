@@ -934,7 +934,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		if err != nil || n <= 0 {
 			return "VLANTag field must contain a value > 0", 400
 		}
-		refreshVlanTrunks := true
+		refreshVlanTrunks = true
 	}
 
 	if exists {
@@ -953,7 +953,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		} else if val.VLANTag != "" {
 			//reset VLANTag
 			val.VLANTag = ""
-			refreshVlanTrunks := true
+			refreshVlanTrunks = true
 		}
 
 		refreshIP := false
@@ -1066,7 +1066,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		if refreshVlanTrunks {
 			Devicesmtx.Unlock()
 			Groupsmtx.Unlock()
-			refreshVlanTrunks()
+			refreshVLANTrunks()
 			Devicesmtx.Lock()
 			Groupsmtx.Lock()
 		}
