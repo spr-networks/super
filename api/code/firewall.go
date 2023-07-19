@@ -1902,12 +1902,29 @@ func dynamicRouteLoop() {
 			devices := getDevicesJson()
 			Devicesmtx.Unlock()
 
+			// TBD: need to handle multiple trunk ports, lan ports
+			// that a device can arrive on.
+			// SPR currently assumes one named LANIF.
+
 			lanif := os.Getenv("LANIF")
+			lanif_vlan_trunk := false
 
 			wireguard_peers := getWireguardActivePeers()
 			wifi_peers := getWifiPeers()
 
 			suggested_device := map[string]string{}
+
+			Interfacesmtx.Lock()
+			interfaces := loadInterfacesConfigLocked()
+			Interfacesmtx.Unlock()
+
+			for _, ifconfig := range interfaces {
+				if ifconfig.Name == lanif {
+					if ifconfig.Subtype == "VLAN-Trunk" {
+						lanif_vlan_trunk = true
+					}
+				}
+			}
 
 			FWmtx.Lock()
 
@@ -1953,8 +1970,11 @@ func dynamicRouteLoop() {
 				if !exists {
 					if lanif != "" {
 						//no new_iface and a LAN interface is set, use that.
-						//TBD: VLAN here based on the assigned vlan id
-						new_iface = lanif
+						if lanif_vlan_trunk == false {
+							new_iface = lanif
+						} else {
+							new_iface = lanif + "." + entry.VLANTag
+						}
 					} else {
 						// disconnected devices will have empty new_iface, skip
 						continue

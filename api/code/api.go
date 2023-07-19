@@ -75,16 +75,16 @@ type PSKEntry struct {
 }
 
 type DeviceEntry struct {
-	Name       string
-	MAC        string
-	WGPubKey   string
-	VLANTag    string
-	RecentIP   string
-	PSKEntry   PSKEntry
-	Groups     []string
-	DeviceTags []string
-	DHCPFirstTime		string
-	DHCPLastTime		string
+	Name          string
+	MAC           string
+	WGPubKey      string
+	VLANTag       string
+	RecentIP      string
+	PSKEntry      PSKEntry
+	Groups        []string
+	DeviceTags    []string
+	DHCPFirstTime string
+	DHCPLastTime  string
 }
 
 var config = APIConfig{}
@@ -2169,6 +2169,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/uplink/ppp", updatePPPConfig).Methods("PUT")
 	external_router_authenticated.HandleFunc("/uplink/ip", updateLinkIPConfig).Methods("PUT")
 	external_router_authenticated.HandleFunc("/uplink/config", updateLinkConfig).Methods("PUT")
+	external_router_authenticated.HandleFunc("/link/vlan/{interface}/{state}", updateLinkVlanTrunk).Methods("PUT")
 
 	//	external_router_authenticated.HandleFunc("/uplink/{interface}/bond", mangeBondInterface).Methods("PUT", "DELETE")
 	//	external_router_authenticated.HandleFunc("/uplink/loadBalance", setLoadBalanceStrategy).Methods("PUT")
