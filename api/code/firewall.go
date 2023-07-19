@@ -1970,7 +1970,7 @@ func dynamicRouteLoop() {
 				if !exists {
 					if lanif != "" {
 						//no new_iface and a LAN interface is set, use that.
-						if lanif_vlan_trunk == false {
+						if lanif_vlan_trunk == false || entry.VLANTag == "" {
 							new_iface = lanif
 						} else {
 							new_iface = lanif + "." + entry.VLANTag
