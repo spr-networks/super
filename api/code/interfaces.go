@@ -558,7 +558,7 @@ func refreshVlanTrunk(iface string, enable bool) {
 		if dev.VLANTag != "" {
 			//create interface
 			cmd := exec.Command("ip", "link", "add", "link", iface,
-				"name", iface+"."+dev.VLANTag, "type", " vlan", "id", dev.VLANTag)
+				"name", iface+"."+dev.VLANTag, "type", "vlan", "id", dev.VLANTag)
 			_, err := cmd.Output()
 
 			if err != nil {
