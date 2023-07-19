@@ -926,6 +926,16 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	pskModified := false
 	refreshGroups := false
 	refreshTags := false
+	refreshVlanTrunks := false
+
+	//validations
+	if dev.VLANTag != "" {
+		n, err := strconv.Atoi(dev.VLANTag)
+		if err != nil || n <= 0 {
+			return "VLANTag field must contain a value > 0", 400
+		}
+		refreshVlanTrunks := true
+	}
 
 	if exists {
 		//updating an existing entry. Check what was requested
@@ -940,6 +950,10 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		if dev.VLANTag != "" {
 			val.VLANTag = dev.VLANTag
+		} else if val.VLANTag != "" {
+			//reset VLANTag
+			val.VLANTag = ""
+			refreshVlanTrunks := true
 		}
 
 		refreshIP := false
@@ -1045,6 +1059,16 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 				}
 			}
 
+		}
+
+		//locks no longer needed
+
+		if refreshVlanTrunks {
+			Devicesmtx.Unlock()
+			Groupsmtx.Unlock()
+			refreshVlanTrunks()
+			Devicesmtx.Lock()
+			Groupsmtx.Lock()
 		}
 
 		//mask the PSK if set and not generated
