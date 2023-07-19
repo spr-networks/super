@@ -286,7 +286,7 @@ func setDefaultUplinkGateway(iface string, index int) {
 	gateway, err := getDefaultGatewayLocked(iface)
 	if err != nil || gateway == "" {
 		//no gateway found, continue on
-		log.Println("failed to set default gw: not found", err)
+		log.Println("failed to set default gw for "+iface+": not found", err)
 		return
 	}
 
@@ -320,7 +320,7 @@ func updateOutboundRoutes() {
 			FWmtx.Lock()
 			for i, iface := range outbound {
 				//TBD check that the interface actually reaches the internet
-				// if it does not, move it into a deactive state an rebuild uplink
+				// if it does not, move it into a deactivated state and rebuild uplink
 				setDefaultUplinkGateway(iface, i)
 			}
 			FWmtx.Unlock()
@@ -2081,6 +2081,8 @@ func initFirewallRules() {
 	Interfacesmtx.Unlock()
 
 	applyRadioInterfaces(interfaces)
+
+	refreshVLANTrunks()
 
 	// dynamic route refresh
 	go dynamicRouteLoop()

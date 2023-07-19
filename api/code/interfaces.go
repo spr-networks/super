@@ -583,3 +583,22 @@ func refreshVlanTrunk(iface string, enable bool) {
 		}
 	}
 }
+
+// expects to hold interfacesmtx, devicesmtx
+func refreshVLANTrunks() {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+	interfaces := loadInterfacesConfigLocked()
+
+	for _, ifconfig := range interfaces {
+		if ifconfig.Type == "AP" || ifconfig.Type == "Uplink" {
+			continue
+		}
+
+		if ifconfig.Subtype == "VLAN-Trunk" {
+			refreshVlanTrunk(ifconfig.Name, true)
+		} else {
+			refreshVlanTrunk(ifconfig.Name, false)
+		}
+	}
+}
