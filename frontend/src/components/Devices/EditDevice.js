@@ -24,6 +24,7 @@ import {
   Button,
   Box,
   FormControl,
+  Heading,
   IconButton,
   Input,
   Menu,
@@ -32,9 +33,9 @@ import {
   VStack,
   Switch,
   Text,
+  ScrollView,
+  Tooltip,
   useColorModeValue,
-  Heading,
-  ScrollView
 } from 'native-base'
 
 import { Address4 } from 'ip-address'
@@ -393,7 +394,9 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
         </FormControl>
 
         <FormControl>
-          <FormControl.Label>IP address</FormControl.Label>
+          <Tooltip label={"Assign Micro Segmentation IP, every 4th ip from 2 (.2, .6, .10, .14, ...). Check the Supernetworks view to create new subnets"}>
+            <FormControl.Label>IP address</FormControl.Label>
+          </Tooltip>
           <Input
             size="lg"
             type="text"
@@ -406,9 +409,11 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
         </FormControl>
 
         <FormControl>
-          <FormControl.Label>
-            VLAN Tag
-          </FormControl.Label>
+          <Tooltip label={"For Wired Devices on a Managed Port: Assign VLAN Tag ID "}>
+            <FormControl.Label>
+              VLAN Tag ID
+            </FormControl.Label>
+          </Tooltip>
           <Input
             size="lg"
             type="text"

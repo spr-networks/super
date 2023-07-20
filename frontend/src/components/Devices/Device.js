@@ -34,6 +34,7 @@ import {
   VStack,
   Switch,
   Text,
+  Tooltip,
   useColorModeValue
 } from 'native-base'
 
@@ -377,6 +378,22 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
     </Menu>
   )
 
+  const getDates = (device) => {
+    let last = device.DHCPLastTime.split(' ')
+    let append = ''
+    if (last.length > 1) {
+      append = last[1].split('.')[0]
+    }
+    last = last[0] + ' ' + append
+    let first = device.DHCPFirstTime.split(' ')
+    append = ''
+    if (first.length > 1) {
+      append = first[1].split('.')[0]
+    }
+    first = first[0] + ' ' + append
+    return 'First DHCP: ' + first + ' and last DHCP: ' + last
+  }
+
   const inlineEdit = false
 
   return (
@@ -423,6 +440,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
             justifyContent={'space-between'}
             direction={{ base: 'row', md: 'row' }}
           >
+          <Tooltip label={getDates(device)}>
             <VStack
               __w={{ md: '20%' }}
               justifyContent={{ base: 'flex-end', md: 'center' }}
@@ -442,8 +460,10 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
                 <Text bold>{device.Name || 'N/A'}</Text>
               )}
 
-              <Text color="muted.500">{device.oui || ' '}</Text>
-            </VStack>
+                <Text color="muted.500">{device.oui || ' '}</Text>
+
+              </VStack>
+            </Tooltip>
 
             <VStack
               __w={{ md: '12%' }}

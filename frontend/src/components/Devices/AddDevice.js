@@ -15,7 +15,8 @@ import {
   Radio,
   ScrollView,
   Stack,
-  Text
+  Text,
+  Tooltip
 } from 'native-base'
 
 const AddDevice = (props) => {
@@ -27,6 +28,7 @@ const AddDevice = (props) => {
   const [tags, setTags] = useState([])
   const [wpa, setWpa] = useState('sae')
   const [psk, setPsk] = useState('')
+  const [vlan, setVlan] = useState('')
   const [device, setDevice] = useState({})
 
   const [submitted, setSubmitted] = useState(false)
@@ -89,6 +91,11 @@ const AddDevice = (props) => {
   const allGroups = ['wan', 'dns', 'lan']
   const allTags = ['lan_upstream']
 
+  const isPositiveNumber = (str) => {
+    let num = parseFloat(str);
+    return !isNaN(num) && num > 0;
+  }
+
   const handleChange = (name, value) => {
     if (name == 'name') {
       setName(value)
@@ -119,12 +126,26 @@ const AddDevice = (props) => {
       setWpa(value)
     }
 
+    if (name == 'vlan') {
+      if (!isPositiveNumber(value)) {
+        return setErrors({ ...errors, VLAN: 'invalid vlan tag'})
+      }
+      setVlan(value)
+      setWpa('none')
+    }
+
     setErrors({})
   }
 
   const handleSubmit = () => {
     if (Object.keys(errors).length) {
       return context.error('Invalid fields: ' + Object.keys(errors).join(','))
+    }
+
+    if (wpa == 'none' || vlan != '') {
+      if (mac == '') {
+        return context.error('A mac address assignment is needed when setting a wired vlan tag')
+      }
     }
 
     let data = {
@@ -136,6 +157,11 @@ const AddDevice = (props) => {
         Psk: psk,
         Type: wpa
       }
+    }
+
+    if (wpa == 'none') {
+      delete data.PSKEntry
+      data.VLANTag = vlan
     }
 
     //now submit to the API
@@ -164,9 +190,11 @@ const AddDevice = (props) => {
     <ScrollView space={2} width={['100%', '100%', '5/6']} h={'100%'}>
       <Heading fontSize="lg">Add a new WiFi Device</Heading>
       <Text color="muted.500" fontSize="xs">
-        Wired devices do not need to be added
+        Wired devices do not need to be added here. They will show up when they DHCP, and need WAN/DNS assignment for internet access.
       </Text>
-
+      <Text color="muted.500" fontSize="xs">
+      If they they need a VLAN Tag ID for a Managed Port do add the device here.
+      </Text>
       <FormControl isRequired isInvalid={'name' in errors}>
         <FormControl.Label>Device Name</FormControl.Label>
         <Input
@@ -191,7 +219,7 @@ const AddDevice = (props) => {
           <FormControl.Label>MAC Address</FormControl.Label>
           <Input
             variant="underlined"
-            autoComplete="off"
+            autoComplete="new-password"
             onChangeText={(value) => handleChange('mac', value)}
           />
           {'mac' in errors ? (
@@ -205,6 +233,25 @@ const AddDevice = (props) => {
           )}
         </FormControl>
 
+        <FormControl flex="1" isInvalid={'VLAN' in errors}>
+          <FormControl.Label>VLAN Tag ID</FormControl.Label>
+          <Input
+            variant="underlined"
+            autoComplete="new-password"
+            onChangeText={(value) => handleChange('vlan', value)}
+          />
+          {'VLAN' in errors ? (
+            <FormControl.ErrorMessage>
+              format: 1234
+            </FormControl.ErrorMessage>
+          ) : (
+            <FormControl.HelperText>
+              Only needed for Wired devices on a managed port, set VLAN Tag ID
+            </FormControl.HelperText>
+          )}
+        </FormControl>
+
+
         <FormControl flex="1">
           <FormControl.Label>Auth</FormControl.Label>
           <Radio.Group
@@ -213,12 +260,15 @@ const AddDevice = (props) => {
             accessibilityLabel="Auth"
             onChange={(value) => handleChange('wpa', value)}
           >
-            <HStack py="1" space={2}>
+            <HStack py="1" space={3}>
               <Radio size="sm" value="sae">
                 WPA3
               </Radio>
               <Radio size="sm" value="wpa2">
                 WPA2
+              </Radio>
+              <Radio size="sm" value="none">
+                Wired
               </Radio>
             </HStack>
           </Radio.Group>
@@ -237,7 +287,7 @@ const AddDevice = (props) => {
           <Input
             variant="underlined"
             type="password"
-            autoComplete="off"
+            autoComplete="new-password"
             autoCorrect="off"
             onChangeText={(value) => handleChange('psk', value)}
           />
