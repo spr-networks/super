@@ -46,7 +46,6 @@ const LANLinkSetConfig = ({ iface, onSubmit, ...props }) => {
 
   const [item, setItem] = useState({
     Type: 'Downlink',
-    Subtype: ''
   })
 
   const [errors, setErrors] = useState({})
@@ -54,15 +53,11 @@ const LANLinkSetConfig = ({ iface, onSubmit, ...props }) => {
   const [enable, setEnable] = useState(true)
 
   const validate = () => {
-    if (item.Type != 'Other' && item.Type != 'Downlink') {
+    if (item.Type != 'Other' && item.Type != 'Downlink' && item.Type != 'VLAN') {
       context.error('Failed to validate Type')
       return false
     }
 
-    if (item.Subtype != '' && item.Subtype != 'VLAN-Trunk') {
-      context.error('Failed to validate Type')
-      return false
-    }
     return true
   }
 
