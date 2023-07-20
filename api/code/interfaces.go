@@ -612,3 +612,46 @@ func refreshVLANTrunks() {
 		}
 	}
 }
+
+/* Setting basic settings */
+func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
+	iconfig := PublicInterfaceConfig{}
+	err := json.NewDecoder(r.Body).Decode(&iconfig)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if !isValidIface(iconfig.Name) {
+		http.Error(w, "Invalid iface name", 400)
+		return
+	}
+
+	if !isValidIfaceType(iconfig.Type) {
+		http.Error(w, "Invalid type", 400)
+		return
+	}
+
+	//AP has a separate path for configuration
+	if iconfig.Type == "AP" {
+		http.Error(w, "Set interface in AP mode using hostapd API instead", 400)
+		return
+	}
+
+	if iconfig.Subtype != "" {
+		http.Error(w, "Settting subtype not supported", 400)
+		return
+	}
+
+	i := InterfaceConfig{}
+	i.Name = iconfig.Name
+	i.Type = iconfig.Type
+	i.Enabled = iconfig.Enabled
+
+	err = updateInterfaceConfig(i)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), 400)
+		return
+	}
+}

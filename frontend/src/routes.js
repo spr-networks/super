@@ -14,6 +14,7 @@ import Traffic from 'views/Traffic/Traffic'
 import TrafficTimeSeries from 'views/Traffic/TrafficTimeSeries'
 import TrafficList from 'views/Traffic/TrafficList'
 import UplinkConfiguration from 'views/UplinkConfiguration'
+import LANLinkConfiguration from 'views/LANLinkConfiguration'
 import WirelessConfiguration from 'views/WirelessConfiguration'
 import Groups from 'views/Groups/Groups'
 import Tags from 'views/Tags'
@@ -118,6 +119,13 @@ const routes = [
     name: 'Uplink',
     icon: faGlobe,
     component: UplinkConfiguration,
+    layout: 'admin'
+  },
+  {
+    path: 'lanlink',
+    name: 'LAN',
+    icon: faEthernet,
+    component: LANLinkConfiguration,
     layout: 'admin'
   },
   {

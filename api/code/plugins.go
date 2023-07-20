@@ -597,7 +597,7 @@ func startExtension(composeFilePath string) bool {
 	return true
 }
 
-func updatePlusExtension(composeFilePath string) bool {
+func updateExtension(composeFilePath string) bool {
 	params := url.Values{}
 	params.Set("compose_file", composeFilePath)
 
@@ -665,9 +665,9 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 		if entry.Name == name && entry.ComposeFilePath != "" && entry.Enabled == true {
 
 			if PlusEnabled() && entry.Plus == true {
-				//only plus extensions update for now
-				if !updatePlusExtension(entry.ComposeFilePath) {
-					fmt.Println("[-] Failed to update pfw")
+				//only plus extensions update on start for now
+				if !updateExtension(entry.ComposeFilePath) {
+					fmt.Println("[-] Failed to update extension " + entry.ComposeFilePath)
 				}
 			}
 
@@ -745,19 +745,13 @@ func startExtensionServices() error {
 		ghcrSuperdLogin()
 	}
 
-	/*
-		For now, the only plugin is PFW. This is hardcoded.
-		In the future, a list of PLUS extensions can be dynamically configured
-	*/
 	for _, entry := range config.Plugins {
 		if entry.ComposeFilePath != "" && entry.Enabled == true {
 
 			if PlusEnabled() && entry.Plus == true {
-				//only plus extensions need updates for now
-				//as the others are built-in. this can change later
-				//when third party extensions are supported
-				if !updatePlusExtension(entry.ComposeFilePath) {
-					return errors.New("Could not update PLUS Extension at " + entry.ComposeFilePath)
+				//only plus extensions update on start for now
+				if !updateExtension(entry.ComposeFilePath) {
+					return errors.New("Could not update Extension at " + entry.ComposeFilePath)
 				}
 			}
 

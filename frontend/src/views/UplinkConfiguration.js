@@ -680,15 +680,16 @@ const UplinkInfo = (props) => {
       context.error('Unknown type ' + type)
       return
     }
+    let path = `/uplink/${type}`
+
+    if (type == 'config') {
+      path = `/link/${type}`
+    }
 
     api
-      .put('/uplink/' + type, new_entry)
+      .put(path, new_entry)
       .then((res2) => {
         fetchInfo()
-        onClose()
-      })
-      .catch((err) => {
-        context.error(err)
         onClose()
       })
       .catch((err) => {
@@ -710,7 +711,7 @@ const UplinkInfo = (props) => {
 
         <VStack
           mx={{ base: 0, md: 4 }}
-          width={{ base: '100%', md: '50%' }}
+          width={{ base: '100%', md: '75%' }}
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
           _space={2}
         >
@@ -756,7 +757,7 @@ const UplinkInfo = (props) => {
 
         <VStack
           mx={{ base: 0, md: 4 }}
-          width={{ base: '100%', md: '50%' }}
+          width={{ base: '100%', md: '75%' }}
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
           _space={2}
         >
