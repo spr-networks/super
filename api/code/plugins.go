@@ -664,8 +664,11 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 	for _, entry := range config.Plugins {
 		if entry.Name == name && entry.ComposeFilePath != "" && entry.Enabled == true {
 
-			if !updateExtension(entry.ComposeFilePath) {
-				fmt.Println("[-] Failed to update extension " + entry.ComposeFilePath)
+			if PlusEnabled() && entry.Plus == true {
+				//only plus extensions update on start for now
+				if !updateExtension(entry.ComposeFilePath) {
+					fmt.Println("[-] Failed to update extension " + entry.ComposeFilePath)
+				}
 			}
 
 			if !startExtension(entry.ComposeFilePath) {
@@ -745,8 +748,11 @@ func startExtensionServices() error {
 	for _, entry := range config.Plugins {
 		if entry.ComposeFilePath != "" && entry.Enabled == true {
 
-			if !updateExtension(entry.ComposeFilePath) {
-				return errors.New("Could not update Extension at " + entry.ComposeFilePath)
+			if PlusEnabled() && entry.Plus == true {
+				//only plus extensions update on start for now
+				if !updateExtension(entry.ComposeFilePath) {
+					return errors.New("Could not update Extension at " + entry.ComposeFilePath)
+				}
 			}
 
 			if !startExtension(entry.ComposeFilePath) {

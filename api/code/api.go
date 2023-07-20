@@ -469,7 +469,16 @@ func performUpdate() string {
 		return "failed to call superd git pull "
 	}
 
-	//2) superd update with service & compose_file
+	//2 update each plugin
+	for _, entry := range config.Plugins {
+		if entry.ComposeFilePath != "" && entry.Enabled == true {
+			if !updateExtension(entry.ComposeFilePath) {
+				fmt.Println("[-] Failed to update extension " + entry.ComposeFilePath)
+			}
+		}
+	}
+
+	//3) superd update with service & compose_file
 	req, err = http.NewRequest(http.MethodPut, "http://localhost/update", nil)
 	if err != nil {
 		return "failed to make update request"
