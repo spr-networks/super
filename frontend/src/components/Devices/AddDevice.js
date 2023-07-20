@@ -92,8 +92,8 @@ const AddDevice = (props) => {
   const allTags = ['lan_upstream']
 
   const isPositiveNumber = (str) => {
-    let num = parseFloat(str);
-    return !isNaN(num) && num > 0;
+    let num = parseFloat(str)
+    return !isNaN(num) && num > 0
   }
 
   const handleChange = (name, value) => {
@@ -128,7 +128,7 @@ const AddDevice = (props) => {
 
     if (name == 'vlan') {
       if (!isPositiveNumber(value)) {
-        return setErrors({ ...errors, VLAN: 'invalid vlan tag'})
+        return setErrors({ ...errors, VLAN: 'invalid vlan tag' })
       }
       setVlan(value)
       setWpa('none')
@@ -144,7 +144,9 @@ const AddDevice = (props) => {
 
     if (wpa == 'none' || vlan != '') {
       if (mac == '') {
-        return context.error('A mac address assignment is needed when setting a wired vlan tag')
+        return context.error(
+          'A mac address assignment is needed when setting a wired vlan tag'
+        )
       }
     }
 
@@ -190,10 +192,12 @@ const AddDevice = (props) => {
     <ScrollView space={2} width={['100%', '100%', '5/6']} h={'100%'}>
       <Heading fontSize="lg">Add a new WiFi Device</Heading>
       <Text color="muted.500" fontSize="xs">
-        Wired devices do not need to be added here. They will show up when they DHCP, and need WAN/DNS assignment for internet access.
+        Wired devices do not need to be added here. They will show up when they
+        DHCP, and need WAN/DNS assignment for internet access.
       </Text>
       <Text color="muted.500" fontSize="xs">
-      If they they need a VLAN Tag ID for a Managed Port do add the device here.
+        If they they need a VLAN Tag ID for a Managed Port do add the device
+        here.
       </Text>
       <FormControl isRequired isInvalid={'name' in errors}>
         <FormControl.Label>Device Name</FormControl.Label>
@@ -241,16 +245,13 @@ const AddDevice = (props) => {
             onChangeText={(value) => handleChange('vlan', value)}
           />
           {'VLAN' in errors ? (
-            <FormControl.ErrorMessage>
-              format: 1234
-            </FormControl.ErrorMessage>
+            <FormControl.ErrorMessage>format: 1234</FormControl.ErrorMessage>
           ) : (
             <FormControl.HelperText>
               Only needed for Wired devices on a managed port, set VLAN Tag ID
             </FormControl.HelperText>
           )}
         </FormControl>
-
 
         <FormControl flex="1">
           <FormControl.Label>Auth</FormControl.Label>
@@ -279,7 +280,7 @@ const AddDevice = (props) => {
       <Stack
         direction={{ base: 'column', md: 'row' }}
         space={4}
-        alignItems="center"
+        alignItems="flex-start"
         pb={8}
       >
         <FormControl flex="2" isInvalid={'psk' in errors}>
@@ -302,7 +303,7 @@ const AddDevice = (props) => {
           )}
         </FormControl>
 
-        <FormControl flex="1">
+        <FormControl flex={2}>
           <FormControl.Label>Groups</FormControl.Label>
           <Checkbox.Group
             defaultValue={groups}
@@ -326,7 +327,7 @@ const AddDevice = (props) => {
           </FormControl.HelperText>
         </FormControl>
 
-        <FormControl flex="1">
+        <FormControl flex={1}>
           <FormControl.Label>Tags</FormControl.Label>
           <Checkbox.Group
             defaultValue={tags}
