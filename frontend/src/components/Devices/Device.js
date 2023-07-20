@@ -440,28 +440,27 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
             justifyContent={'space-between'}
             direction={{ base: 'row', md: 'row' }}
           >
-          <Tooltip label={getDates(device)}>
-            <VStack
-              __w={{ md: '20%' }}
-              justifyContent={{ base: 'flex-end', md: 'center' }}
-            >
-              {inlineEdit ? (
-                <Input
-                  size="lg"
-                  type="text"
-                  variant="underlined"
-                  w="100%"
-                  value={name}
-                  autoFocus={false}
-                  onChangeText={(value) => handleName(value)}
-                  onSubmitEditing={handleSubmit}
-                />
-              ) : (
-                <Text bold>{device.Name || 'N/A'}</Text>
-              )}
+            <Tooltip label={getDates(device)}>
+              <VStack
+                __w={{ md: '20%' }}
+                justifyContent={{ base: 'flex-end', md: 'center' }}
+              >
+                {inlineEdit ? (
+                  <Input
+                    size="lg"
+                    type="text"
+                    variant="underlined"
+                    w="100%"
+                    value={name}
+                    autoFocus={false}
+                    onChangeText={(value) => handleName(value)}
+                    onSubmitEditing={handleSubmit}
+                  />
+                ) : (
+                  <Text bold>{device.Name || 'N/A'}</Text>
+                )}
 
                 <Text color="muted.500">{device.oui || ' '}</Text>
-
               </VStack>
             </Tooltip>
 
@@ -496,20 +495,14 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
               )}
 
               <Text color="muted.500">{device.MAC || ' '}</Text>
+
+              {device.VLANTag != '' ? (
+                <HStack space={1}>
+                  <Text>VLAN</Text>
+                  <Text bold> {device.VLANTag}</Text>
+                </HStack>
+              ) : null}
             </VStack>
-          </Stack>
-
-          <Stack
-            w={{ base: '100%', md: '12%' }}
-            display={{ base: 'none', md: 'flex' }}
-            justifyContent="center"
-            alignItems={'center'}
-          >
-
-            {(device.VLANTag != "" ? (
-              <Text color="">VLAN <b> {device.VLANTag || ' '}</b></Text>
-            )
-            : null)}
           </Stack>
 
           <Stack
