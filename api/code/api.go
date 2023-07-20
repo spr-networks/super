@@ -910,6 +910,17 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			saveDevicesJson(devices)
 			refreshDeviceGroups(val)
 			doReloadPSKFiles()
+
+			//if the device had a VLAN Tag, also refresh vlans
+			// upon deletion
+			if val.VLANTag != "" {
+				Devicesmtx.Unlock()
+				Groupsmtx.Unlock()
+				refreshVLANTrunks()
+				Devicesmtx.Lock()
+				Groupsmtx.Lock()
+			}
+
 			return "", 200
 		}
 
@@ -1137,6 +1148,15 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 	if pskGenerated == false {
 		dev.PSKEntry.Psk = "**"
+	}
+
+	// create vlans
+	if refreshVlanTrunks {
+		Devicesmtx.Unlock()
+		Groupsmtx.Unlock()
+		refreshVLANTrunks()
+		Devicesmtx.Lock()
+		Groupsmtx.Lock()
 	}
 
 	w.Header().Set("Content-Type", "application/json")
