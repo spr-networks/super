@@ -304,7 +304,7 @@ const LANLinkInfo = (props) => {
           Note: API support for multiple wired LAN interfaces is an upcoming feature.
         </Text>
         <Text fontSize="sm" color="muted.400">
-          For now, ensure the wired LAN is synchornized with the config/base/config.sh LANIF entry.
+          For now, ensure the wired LAN is synchronized with the config/base/config.sh LANIF entry.
         </Text>
 
         <VStack
