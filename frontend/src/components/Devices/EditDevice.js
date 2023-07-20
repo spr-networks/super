@@ -111,7 +111,7 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
 
   // for adding
   const defaultGroups = props.groups || ['wan', 'dns', 'lan']
-  const defaultTags = props.tags || []
+  const defaultTags = props.tags || ['lan_upstream']
 
   const handleGroups = (groups) => {
     if (!device.MAC && !device.WGPubKey) {
