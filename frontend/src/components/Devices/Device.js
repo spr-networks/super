@@ -4,6 +4,7 @@ import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
 import { deviceAPI } from 'api/Device'
 import ModalConfirm from 'components/ModalConfirm'
+import { prettyDate } from 'utils'
 
 import Icon from 'FontAwesomeUtils'
 import {
@@ -379,19 +380,19 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   )
 
   const getDates = (device) => {
-    let last = device.DHCPLastTime.split(' ')
-    let append = ''
-    if (last.length > 1) {
-      append = last[1].split('.')[0]
+    let res = ''
+
+    if (device.DHCPFirstTime) {
+      res += `First DHCP: ${prettyDate(device.DHCPFirstTime)}`
     }
-    last = last[0] + ' ' + append
-    let first = device.DHCPFirstTime.split(' ')
-    append = ''
-    if (first.length > 1) {
-      append = first[1].split('.')[0]
+
+    if (device.DHCPLastTime) {
+      res +=
+        (res.length ? '. ' : '') +
+        `Last DHCP: ${prettyDate(device.DHCPLastTime)}`
     }
-    first = first[0] + ' ' + append
-    return 'First DHCP: ' + first + ' and last DHCP: ' + last
+
+    return res
   }
 
   const inlineEdit = false
@@ -440,7 +441,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
             justifyContent={'space-between'}
             direction={{ base: 'row', md: 'row' }}
           >
-            <Tooltip label={getDates(device)}>
+            <Tooltip label={getDates(device)} isDisabled={!getDates(device)}>
               <VStack
                 __w={{ md: '20%' }}
                 justifyContent={{ base: 'flex-end', md: 'center' }}
