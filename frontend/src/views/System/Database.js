@@ -143,13 +143,14 @@ const Database = ({ showModal, closeModal, ...props }) => {
   const [allEvents, setAllEvents] = useState([])
   const [percentSize, setPercentSize] = useState(0)
 
+  const defaultTopics = ['nft:', 'wifi:', 'dhcp:', 'dns:']
+
   const apiError = (err) => context.error('db api error:', err)
 
   const syncStats = () => {
     dbAPI
       .stats()
       .then((stats) => {
-        //console.log('got topics:', JSON.stringify(stats.Topics))
         if (stats.Topics.length) {
           setStats(stats)
           //setAllEvents(stats.Topics)
@@ -182,10 +183,9 @@ const Database = ({ showModal, closeModal, ...props }) => {
 
     let topics = config.SaveEvents || []
     if (stats && stats.Topics) {
-      topics = [...new Set([...topics, ...stats.Topics])]
+      topics = [...new Set([...topics, ...stats.Topics, ...defaultTopics])]
     }
 
-    console.log('SETTING', topics)
     setAllEvents(topics)
   }, [config, stats])
 
