@@ -88,30 +88,18 @@ func getLANIP() string {
 
 func updateLanIPs(TinyNets []string) {
 
-	dummyif := "sprloop"
-	lanif := os.Getenv("LANIF")
-	if lanif == "" {
-		lanif = dummyif
-	}
+	lanif := "sprloop"
 
 	cmd := exec.Command("ip", "addr", "flush", "dev", lanif)
 	_, err := cmd.Output()
 	if err != nil {
 		log.Println("failed to flush", lanif)
-		if lanif == dummyif {
-			//try adding the dummy loop just in case
-			_, err = exec.Command("ip", "link", "add", "name", lanif, "type", "dummy").Output()
-			if err != nil {
-				log.Println("failed to make dummyif", err)
-				return
-			}
+		//try adding the dummy loop just in case
+		_, err = exec.Command("ip", "link", "add", "name", lanif, "type", "dummy").Output()
+		if err != nil {
+			log.Println("failed to make dummyif", err)
+			return
 		}
-	}
-
-	if lanif != dummyif {
-		//ensure sprloop is deleted when establishing LANIF,
-		// just in case
-		exec.Command("ip", "link", "del", dummyif).Output()
 	}
 
 	for _, subnet := range TinyNets {
