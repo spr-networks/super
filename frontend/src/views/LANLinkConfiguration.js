@@ -72,7 +72,7 @@ const LANLinkSetConfig = ({ iface, onSubmit, ...props }) => {
 
   let validTypes = [
     { label: 'Downlink', value: 'Downlink' },
-    { label: 'VLAN', value: 'VLAN' },
+    { label: 'VLAN Trunk Port', value: 'VLAN' },
     { label: 'Other', value: 'Other' }
   ]
 
