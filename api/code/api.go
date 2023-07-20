@@ -961,10 +961,6 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		if dev.VLANTag != "" {
 			val.VLANTag = dev.VLANTag
-		} else if val.VLANTag != "" {
-			//reset VLANTag
-			val.VLANTag = ""
-			refreshVlanTrunks = true
 		}
 
 		refreshIP := false
