@@ -6,66 +6,72 @@ export class APIDevice extends API {
   }
 
   list() {
-    return this.get('/devices');
+    return this.get('/devices')
   }
 
   update(id, data) {
     if (data === undefined) {
-      data = id;
-      id = data.MAC || data.WGPubKey;
+      data = id
+      id = data.MAC || data.WGPubKey
     }
 
     if (!data || !id) {
-      throw new Error('No key specified');
+      throw new Error('No key specified')
     }
 
     // check if the device id is MAC or wg base64
     if (id.includes(':')) {
-      data.MAC = id;
+      data.MAC = id
     } else if (id != 'pending') {
-      data.WGPubKey = id;
+      data.WGPubKey = id
     }
 
-    return this.put(`/device?identity=${encodeURIComponent(id)}`, data);
+    return this.put(`/device?identity=${encodeURIComponent(id)}`, data)
   }
 
   copy(id, data) {
     return this.put(
       `/device?identity=pending&copy=${encodeURIComponent(id)}`,
       data
-    );
+    )
   }
 
   updateName(id, Name) {
-    return this.update(id, { Name });
+    return this.update(id, { Name })
   }
 
   updateIP(id, RecentIP) {
-    return this.update(id, { RecentIP });
+    return this.update(id, { RecentIP })
   }
 
   updateVLANTag(id, VLANTag) {
-    return this.update(id, { VLANTag });
+    return this.update(id, { VLANTag })
   }
 
   updateGroups(id, Groups) {
-    return this.update(id, { Groups });
+    return this.update(id, { Groups })
   }
+
   updateTags(id, DeviceTags) {
-    return this.update(id, { DeviceTags });
+    return this.update(id, { DeviceTags })
   }
+
+  updateStyle(id, { Icon, Color }) {
+    return this.update(id, { Style: { Icon, Color } })
+  }
+
   deleteDevice(id) {
-    return this.delete(`/device?identity=${encodeURIComponent(id)}`, {});
+    return this.delete(`/device?identity=${encodeURIComponent(id)}`, {})
   }
   setPSK(MAC, Psk, Type, Name) {
-    return this.update({ MAC, Name, PSKEntry: { Psk, Type } });
+    return this.update({ MAC, Name, PSKEntry: { Psk, Type } })
   }
   pendingPSK() {
-    return this.get('/pendingPSK');
+    return this.get('/pendingPSK')
   }
 
   groups() {
-    return this.get('/groups').then((res) => res.map((g) => g.Name));
+    return this.get('/groups').then((res) => res.map((g) => g.Name))
   }
   tags() {
     return this.get('/devices').then((res) => [
@@ -73,16 +79,16 @@ export class APIDevice extends API {
         Object.values(res)
           .map((device) => device.DeviceTags)
           .flat()
-      ),
-    ]);
+      )
+    ])
   }
 
   // TODO add this functionality to base api
   oui(mac) {
-    return this.get(`/plugins/lookup/oui/${mac}`);
+    return this.get(`/plugins/lookup/oui/${mac}`)
   }
   ouis(macs) {
-    return this.get(`/plugins/lookup/ouis/${macs.join(',')}`);
+    return this.get(`/plugins/lookup/ouis/${macs.join(',')}`)
   }
 }
 
