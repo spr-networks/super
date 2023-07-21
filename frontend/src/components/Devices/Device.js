@@ -1,4 +1,5 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useState } from 'react'
+import { Platform } from 'react-native'
 import { useNavigate } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
@@ -9,9 +10,6 @@ import { prettyDate } from 'utils'
 import Icon from 'FontAwesomeUtils'
 import {
   faEllipsis,
-  faEllipsisV,
-  faLaptop,
-  faMobileScreen,
   faObjectGroup,
   faTrash,
   faEarth,
@@ -25,7 +23,6 @@ import {
 
 import {
   Badge,
-  Button,
   Box,
   IconButton,
   Input,
@@ -33,13 +30,14 @@ import {
   Stack,
   HStack,
   VStack,
-  Switch,
   Text,
   Tooltip,
   useColorModeValue
 } from 'native-base'
 
 import { Address4 } from 'ip-address'
+
+import IconItem from 'components/IconItem'
 
 const GroupItem = React.memo(({ name }) => {
   let groupIcons = {
@@ -97,6 +95,29 @@ const TagItem = React.memo(({ name }) => {
     </Badge>
   )
 })
+
+const DeviceIcon = ({ icon, color, isConnected, ...props }) => {
+  let _color = color ? `${color}.400` : 'blueGray.400'
+  let opacity = isConnected ? 1 : 0.65
+  let borderColor = isConnected
+    ? 'green.600'
+    : useColorModeValue('muted.200', 'muted.700')
+
+  return (
+    <Box
+      display={{ base: 'none', md: 'flex' }}
+      bg="white"
+      _dark={{ bg: 'blueGray.700' }}
+      p={4}
+      rounded="full"
+      opacity={opacity}
+      borderColor={borderColor}
+      borderWidth={1}
+    >
+      <IconItem name={icon} color={_color} size={8} />
+    </Box>
+  )
+}
 
 const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
@@ -248,7 +269,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
           context.error(
             '[API] updateIP error: ' +
               error.message +
-              '. IP not in range or not a valid Supernetwork Device IP '
+              '. IP not in range or not a valid Supernetwork Device IP'
           )
         )
     }
@@ -267,12 +288,6 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
     }
   }
 
-  // TODO
-  let icon = faLaptop
-  if (name.match(/iphone|mobile|android/i)) {
-    icon = faMobileScreen
-  }
-
   let colors = [
     'violet',
     'pink',
@@ -286,11 +301,6 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   ]
 
   let idx = (device.Name.charCodeAt(0) || 0) % colors.length
-  let color = colors[idx]
-  let iconColor = `${color}.400`
-  let borderColor = device.isConnected
-    ? 'green.600'
-    : useColorModeValue('muted.200', 'muted.700')
 
   const trigger = (triggerProps) => (
     <IconButton
@@ -303,50 +313,6 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
 
   const moreMenu = (
     <Menu w={190} closeOnSelect={true} trigger={trigger}>
-      {/*
-      <Menu.OptionGroup
-        title="Groups"
-        type="checkbox"
-        defaultValue={groups}
-        onChange={handleGroups}
-      >
-        {[...new Set(defaultGroups.concat(groups))].map((group) => (
-          <Menu.ItemOption key={group} value={group}>
-            {group}
-          </Menu.ItemOption>
-        ))}
-        <Menu.ItemOption
-          key="newGroup"
-          onPress={() => {
-            setModalType('Group')
-            setShowModal(true)
-          }}
-        >
-          New Group...
-        </Menu.ItemOption>
-      </Menu.OptionGroup>
-      <Menu.OptionGroup
-        title="Tags"
-        type="checkbox"
-        defaultValue={tags}
-        onChange={handleTags}
-      >
-        {[...new Set(defaultTags.concat(tags))].map((tag) => (
-          <Menu.ItemOption key={tag} value={tag}>
-            {tag}
-          </Menu.ItemOption>
-        ))}
-        <Menu.ItemOption
-          key="newTag"
-          onPress={() => {
-            setModalType('Tag')
-            setShowModal(true)
-          }}
-        >
-          New Tag...
-        </Menu.ItemOption>
-      </Menu.OptionGroup>
-      */}
       <Menu.Group title="Actions">
         <Menu.Item
           onPress={() =>
@@ -423,18 +389,13 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
           __alignItems="center"
           w="full"
         >
-          <Box
-            display={{ base: 'none', md: 'flex' }}
-            bg="white"
-            _dark={{ bg: 'blueGray.700' }}
-            p={4}
-            rounded="full"
-            opacity={device.isConnected ? 1 : 0.65}
-            borderColor={borderColor}
-            borderWidth={1}
-          >
-            <Icon icon={icon} color={iconColor} size={7} />
-          </Box>
+          {Platform.OS == 'web' ? (
+            <DeviceIcon
+              icon={device.Style?.Icon || 'Laptop'}
+              color={device.Style?.Color}
+              isConnected={device.isConnected}
+            />
+          ) : null}
 
           <Stack
             w={{ md: '1/3' }}
@@ -487,7 +448,11 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
                     <Icon
                       icon={device.MAC ? faWifi : faCircleNodes}
                       size={3}
-                      color={borderColor}
+                      color={
+                        device.isConnected
+                          ? 'green.600'
+                          : useColorModeValue('muted.200', 'muted.700')
+                      }
                     />
                   </Box>
 
@@ -500,7 +465,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
               {device.VLANTag != '' ? (
                 <HStack space={1}>
                   <Text>VLAN</Text>
-                  <Text bold> {device.VLANTag}</Text>
+                  <Text bold>{device.VLANTag}</Text>
                 </HStack>
               ) : null}
             </VStack>

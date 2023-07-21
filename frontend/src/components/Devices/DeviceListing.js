@@ -18,15 +18,11 @@ import {
 import {
   Button,
   Box,
-  Divider,
   Fab,
   Heading,
-  IconButton,
-  Stack,
   HStack,
   VStack,
   Pressable,
-  ScrollView,
   Text,
   View,
   useColorModeValue
@@ -301,11 +297,16 @@ const DeviceListing = (props) => {
           style={{ marginBottom: 20 }}
         />
       ) : (
-        <FlashList
-          data={devices}
-          renderItem={renderItem}
-          estimatedItemSize={100}
-        />
+        <>
+          <FlashList
+            data={devices}
+            renderItem={renderItem}
+            estimatedItemSize={100}
+          />
+
+          {/* padding */}
+          <Box display={{ base: 'none', md: 'flex' }} h={8}></Box>
+        </>
       )}
 
       {devices !== null && !devices.length ? (

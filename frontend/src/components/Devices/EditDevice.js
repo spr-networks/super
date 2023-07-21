@@ -1,44 +1,40 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
 import { deviceAPI } from 'api/Device'
 import ModalConfirm from 'components/ModalConfirm'
 
 import Icon from 'FontAwesomeUtils'
+
 import {
   faEllipsis,
-  faEllipsisV,
-  faLaptop,
-  faMobileScreen,
   faObjectGroup,
-  faTrash,
   faEarth,
   faCircleNodes,
-  faNetworkWired,
   faTag,
-  faCopy
+  faNetworkWired
 } from '@fortawesome/free-solid-svg-icons'
 
 import {
   Badge,
-  Button,
-  Box,
   FormControl,
   Heading,
+  HStack,
   IconButton,
   Input,
   Menu,
   Stack,
-  HStack,
-  VStack,
-  Switch,
   Text,
   ScrollView,
   Tooltip,
-  useColorModeValue,
+  useColorModeValue
 } from 'native-base'
 
 import { Address4 } from 'ip-address'
+
+import ColorPicker from 'components/ColorPicker'
+import IconPicker from 'components/IconPicker'
 
 const GroupItem = React.memo(({ name }) => {
   let groupIcons = {
@@ -97,21 +93,56 @@ const TagItem = React.memo(({ name }) => {
   )
 })
 
-const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
+const EditDevice = ({ device, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(device.Name)
-  const [rawIP, setRawIP] = useState(device.RecentIP);
+  const [rawIP, setRawIP] = useState(device.RecentIP)
   const [ip, setIP] = useState(device.RecentIP)
   const [vlantag, setVlanTag] = useState(device.VLANTag)
   const [groups, setGroups] = useState(device.Groups.sort())
   const [tags, setTags] = useState(device.DeviceTags.sort())
+  const [color, setColor] = useState(device.Style?.Color || 'blueGray')
+  const [icon, setIcon] = useState(device.Style?.Icon || 'Laptop')
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState('')
 
   // for adding
   const defaultGroups = props.groups || ['wan', 'dns', 'lan']
   const defaultTags = props.tags || ['lan_upstream']
+
+  useEffect(() => {
+    // if not icon is set, try to match on name
+    if (!device.Style?.Icon) {
+      if (name.match(/iphone/i)) {
+        setIcon('Apple')
+      } else if (name.match(/android/i)) {
+        setIcon('Android')
+      } else if (name.match(/phone/i)) {
+        setIcon('Mobile')
+      } else {
+        setIcon('Laptop')
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!icon || !color) {
+      return
+    }
+
+    if (icon != device.Style?.Icon || color != device.Style?.Color) {
+      deviceAPI
+        .updateStyle(device.MAC || device.WGPubKey, {
+          Icon: icon,
+          Color: color
+        })
+        .then((res) => {})
+        .catch((error) => {
+          context.error(`[API] updateStyle error: ${error.message}`)
+        })
+    }
+  }, [icon, color])
 
   const handleGroups = (groups) => {
     if (!device.MAC && !device.WGPubKey) {
@@ -148,12 +179,12 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
   }
 
   const isPositiveNumber = (str) => {
-    let num = parseFloat(str);
-    return !isNaN(num) && num > 0;
+    let num = parseFloat(str)
+    return !isNaN(num) && num > 0
   }
 
   const handleVLAN = (value) => {
-    if (isPositiveNumber(value) || value == "") {
+    if (isPositiveNumber(value) || value == '') {
       setVlanTag(value)
       setEditing(value != device.VLANTag)
     }
@@ -204,17 +235,15 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      handleIPImpl(rawIP);
-    }, 1000);  // delay in milliseconds
+      handleIPImpl(rawIP)
+    }, 1000) // delay in milliseconds
 
-    return () => clearTimeout(timer); // this will clear the timer in case inputValue changes within 2 seconds
-  }, [rawIP]);
-
-
+    return () => clearTimeout(timer) // this will clear the timer in case inputValue changes within 2 seconds
+  }, [rawIP])
 
   const handleIP = (value) => {
-    setRawIP(value);
-  };
+    setRawIP(value)
+  }
 
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
   let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
@@ -242,7 +271,7 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
           context.error(
             '[API] updateIP error: ' +
               error.message +
-              '. IP not in range or not a valid Supernetwork Device IP '
+              '. IP not in range or not a valid Supernetwork Device IP'
           )
         )
     }
@@ -252,13 +281,9 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
         .updateVLANTag(id, vlantag)
         .then(notifyChange)
         .catch((error) =>
-          context.error(
-            '[API] update VLAN Tag error: ' +
-              error.message
-          )
+          context.error('[API] update VLAN Tag error: ' + error.message)
         )
     }
-
   }
 
   const handleSubmit = () => {
@@ -273,31 +298,6 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
       handleTags(tags.concat(value))
     }
   }
-
-  // TODO
-  let icon = faLaptop
-  if (name.match(/iphone|mobile|android/i)) {
-    icon = faMobileScreen
-  }
-
-  let colors = [
-    'violet',
-    'pink',
-    'tertiary',
-    'rose',
-    'fuchsia',
-    'purple',
-    'cyan',
-    'teal',
-    'emerald'
-  ]
-
-  let idx = (device.Name.charCodeAt(0) || 0) % colors.length
-  let color = colors[idx]
-  let iconColor = `${color}.400`
-  let borderColor = device.isConnected
-    ? 'green.600'
-    : useColorModeValue('muted.100', 'muted.700')
 
   const trigger = (triggerProps) => (
     <IconButton
@@ -352,22 +352,6 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
           New Tag...
         </Menu.ItemOption>
       </Menu.OptionGroup>
-      {/*
-      <Menu.Group title="Actions">
-        <Menu.Item onPress={duplicateDevice}>
-          <HStack space={2} alignItems="center">
-            <Icon icon={faCopy} color="muted.500" />
-            <Text>Duplicate</Text>
-          </HStack>
-        </Menu.Item>
-        <Menu.Item onPress={removeDevice}>
-          <HStack space={2} alignItems="center">
-            <Icon icon={faTrash} color="danger.700" />
-            <Text color="danger.700">Delete</Text>
-          </HStack>
-        </Menu.Item>
-      </Menu.Group>
-      */}
     </Menu>
   )
 
@@ -394,7 +378,11 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
         </FormControl>
 
         <FormControl>
-          <Tooltip label={"Assign Micro Segmentation IP, every 4th ip from 2 (.2, .6, .10, .14, ...). Check the Supernetworks view to create new subnets"}>
+          <Tooltip
+            label={
+              'Assign Micro Segmentation IP, every 4th ip from 2 (.2, .6, .10, .14, ...). Check the Supernetworks view to create new subnets'
+            }
+          >
             <FormControl.Label>IP address</FormControl.Label>
           </Tooltip>
           <Input
@@ -409,10 +397,10 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
         </FormControl>
 
         <FormControl>
-          <Tooltip label={"For Wired Devices on a Managed Port: Assign VLAN Tag ID "}>
-            <FormControl.Label>
-              VLAN Tag ID
-            </FormControl.Label>
+          <Tooltip
+            label={'For Wired Devices on a Managed Port: Assign VLAN Tag ID '}
+          >
+            <FormControl.Label>VLAN Tag ID</FormControl.Label>
           </Tooltip>
           <Input
             size="lg"
@@ -425,17 +413,19 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
           />
         </FormControl>
 
-        <FormControl>
-          <FormControl.Label>
-            {device.MAC ? 'MAC address' : 'WG Pubkey'}
-          </FormControl.Label>
-          <Text isTruncated>{device.MAC || device.WGPubKey}</Text>
-        </FormControl>
+        <HStack>
+          <FormControl flex={1}>
+            <FormControl.Label>
+              {device.MAC ? 'MAC address' : 'WG Pubkey'}
+            </FormControl.Label>
+            <Text isTruncated>{device.MAC || device.WGPubKey}</Text>
+          </FormControl>
 
-        <FormControl display={device.MAC ? 'flex' : 'none'}>
-          <FormControl.Label>WiFi Auth</FormControl.Label>
-          <Text>{wifi_type}</Text>
-        </FormControl>
+          <FormControl flex={1} display={device.MAC ? 'flex' : 'none'}>
+            <FormControl.Label>WiFi Auth</FormControl.Label>
+            <Text>{wifi_type}</Text>
+          </FormControl>
+        </HStack>
 
         <FormControl>
           <FormControl.Label>Groups and Tags</FormControl.Label>
@@ -454,6 +444,29 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
           </HStack>
         </FormControl>
 
+        {Platform.OS == 'web' ? (
+          <Stack direction="column">
+            <FormControl flex={1}>
+              <FormControl.Label>Icon</FormControl.Label>
+              {icon ? (
+                <IconPicker
+                  value={icon}
+                  color={color}
+                  onChange={(icon) => setIcon(icon)}
+                />
+              ) : null}
+            </FormControl>
+            <FormControl>
+              <FormControl.Label>Color</FormControl.Label>
+
+              <ColorPicker
+                value={color}
+                onChange={(color) => setColor(color)}
+              />
+            </FormControl>
+          </Stack>
+        ) : null}
+
         <ModalConfirm
           type={modalType}
           onSubmit={handleSubmitNew}
@@ -463,7 +476,7 @@ const EditDevice = React.memo(({ device, notifyChange, ...props }) => {
       </Stack>
     </ScrollView>
   )
-})
+}
 
 EditDevice.propTypes = {
   device: PropTypes.object.isRequired,
