@@ -74,6 +74,11 @@ type PSKEntry struct {
 	Psk  string
 }
 
+type DeviceStyle struct {
+	Icon  string
+	Color string
+}
+
 type DeviceEntry struct {
 	Name          string
 	MAC           string
@@ -85,6 +90,7 @@ type DeviceEntry struct {
 	DeviceTags    []string
 	DHCPFirstTime string
 	DHCPLastTime  string
+	Style         DeviceStyle
 }
 
 var config = APIConfig{}
@@ -905,6 +911,15 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		return "psk too short", 400
 	}
 
+	validIconOrColor := regexp.MustCompile(`^[a-zA-z]+$`).MatchString
+	if dev.Style.Icon != "" && !validIconOrColor(dev.Style.Icon) {
+		return "invalid icon", 400
+	}
+
+	if dev.Style.Color != "" && !validIconOrColor(dev.Style.Color) {
+		return "invalid color", 400
+	}
+
 	//normalize groups and tags
 	dev.Groups = normalizeStringSlice(dev.Groups)
 	dev.DeviceTags = normalizeStringSlice(dev.DeviceTags)
@@ -1048,6 +1063,14 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			}
 
 			refreshGroups = true
+		}
+
+		if dev.Style.Icon != "" {
+			val.Style.Icon = dev.Style.Icon
+		}
+
+		if dev.Style.Color != "" {
+			val.Style.Color = dev.Style.Color
 		}
 
 		devices[identity] = val
