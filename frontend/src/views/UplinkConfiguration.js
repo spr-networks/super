@@ -36,7 +36,7 @@ import { wifiAPI, api } from 'api'
 import { AlertContext } from 'AppContext'
 import { ucFirst } from 'utils'
 
-import  { Select } from 'components/Select'
+import { Select } from 'components/Select'
 import InputSelect from 'components/InputSelect'
 
 let keymgmts = [
@@ -53,7 +53,7 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
     SSID: '',
     KeyMgmt: 'WPA-PSK WPA-PSK-SHA256 SAE',
     Priority: '1',
-    BSSID: '',
+    BSSID: ''
   })
 
   const [ssids, setSSIDs] = useState([])
@@ -126,7 +126,6 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
       })
   }
 
-
   useEffect(() => {
     if (ssids && ssids.length) {
       setOptsSSIDs(
@@ -175,7 +174,6 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
         >
           Assign
         </Checkbox>
-
       </FormControl>
       <FormControl>
         <FormControl.Label>Auth</FormControl.Label>
@@ -184,7 +182,12 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
           onValueChange={(KeyMgmt) => setItem({ ...item, KeyMgmt })}
         >
           {keymgmts.map((opt) => (
-            <Select.Item key={opt.value} label={opt.label} value={opt.value} isDisabled={opt.label.includes('WPA3') && disableWPA3} />
+            <Select.Item
+              key={opt.value}
+              label={opt.label}
+              value={opt.value}
+              isDisabled={opt.label.includes('WPA3') && disableWPA3}
+            />
           ))}
         </Select>
       </FormControl>
@@ -202,7 +205,7 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
         />
       </FormControl>
 
-      { /*
+      {/*
         //priority will only matter once UI supports multiple ssids.
       <FormControl>
         <FormControl.Label>Priority</FormControl.Label>
@@ -219,7 +222,7 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
           autoFocus
         />
       </FormControl>
-      */ }
+      */}
 
       <FormControl>
         <FormControl.Label>Status</FormControl.Label>
@@ -250,13 +253,13 @@ const UplinkSetConfig = ({ iface, onSubmit, ...props }) => {
     Type: 'Uplink'
   })
 
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState({})
 
   const [enable, setEnable] = useState(true)
 
   const validate = () => {
     if (item.Type != 'Other' && item.Type != 'Uplink') {
-      context.error("Failed to validate Type")
+      context.error('Failed to validate Type')
       return false
     }
     return true
@@ -266,34 +269,44 @@ const UplinkSetConfig = ({ iface, onSubmit, ...props }) => {
     validate() ? onSubmit(item, type, enable) : null
   }
 
-  let validTypes = [{label: "Uplink", value: "Uplink"}, {label: "Other", value: "Other"}]
+  let validTypes = [
+    { label: 'Uplink', value: 'Uplink' },
+    { label: 'Other', value: 'Other' }
+  ]
 
   return (
     <VStack space={4}>
       <FormControl>
         <FormControl.Label>Update Interface</FormControl.Label>
-          <FormControl>
-            <Checkbox
-              size="sm"
-              colorScheme="primary"
-              value={enable}
-              onChange={(value) => {setEnable(value)} }
-              defaultIsChecked>
-              Enabled
-            </Checkbox>
-          </FormControl>
-          <FormControl>
-            <FormControl.Label>Set Interface Type</FormControl.Label>
-            <Select
-              selectedValue={item.Type}
-              onValueChange={(Type) => setItem({ ...item, Type })}
-            >
-              {validTypes.map((opt) => (
-                <Select.Item key={opt.value} label={opt.label} value={opt.value} />
-              ))}
-            </Select>
-          </FormControl>
+        <FormControl>
+          <Checkbox
+            size="sm"
+            colorScheme="primary"
+            value={enable}
+            onChange={(value) => {
+              setEnable(value)
+            }}
+            defaultIsChecked
+          >
+            Enabled
+          </Checkbox>
         </FormControl>
+        <FormControl>
+          <FormControl.Label>Set Interface Type</FormControl.Label>
+          <Select
+            selectedValue={item.Type}
+            onValueChange={(Type) => setItem({ ...item, Type })}
+          >
+            {validTypes.map((opt) => (
+              <Select.Item
+                key={opt.value}
+                label={opt.label}
+                value={opt.value}
+              />
+            ))}
+          </Select>
+        </FormControl>
+      </FormControl>
       <Button colorScheme="primary" onPress={() => doSubmit(item)}>
         Save
       </Button>
@@ -312,7 +325,7 @@ const UplinkSetIP = ({ iface, onSubmit, ...props }) => {
     VLAN: ''
   })
 
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState({})
 
   const [enable, setEnable] = useState(true)
 
@@ -326,8 +339,8 @@ const UplinkSetIP = ({ iface, onSubmit, ...props }) => {
 
     let ip = item.IP
     let ip_invalid = true
-    if (ip.includes("/")) {
-      let pieces = ip.split("/")
+    if (ip.includes('/')) {
+      let pieces = ip.split('/')
       if (pieces.length == 2) {
         let netSplit = parseInt(pieces[1])
         if (netSplit >= 8 && netSplit <= 32) {
@@ -339,12 +352,12 @@ const UplinkSetIP = ({ iface, onSubmit, ...props }) => {
     }
 
     if (ip_invalid) {
-      context.error("Failed to validate IP")
+      context.error('Failed to validate IP')
       return false
     }
 
     if (!ipv4Regex.test(item.Router) && !ipv6Regex.test(item.Router)) {
-      context.error("Failed to validate Router IP")
+      context.error('Failed to validate Router IP')
       return false
     }
 
@@ -355,8 +368,7 @@ const UplinkSetIP = ({ iface, onSubmit, ...props }) => {
     validate() ? onSubmit(item, type, enable) : null
   }
 
-  useEffect(() => {
-  }, [])
+  useEffect(() => {}, [])
 
   return (
     <VStack space={4}>
@@ -366,13 +378,15 @@ const UplinkSetIP = ({ iface, onSubmit, ...props }) => {
           size="sm"
           colorScheme="primary"
           value={item.DisableDHCP}
-          onChange={(value) => {setItem({ ...item, DisableDHCP: value})} }
+          onChange={(value) => {
+            setItem({ ...item, DisableDHCP: value })
+          }}
         >
           Manually Set IP
         </Checkbox>
       </FormControl>
 
-      { item.DisableDHCP ?  (
+      {item.DisableDHCP ? (
         <>
           <FormControl>
             <FormControl.Label>Assign IP</FormControl.Label>
@@ -395,9 +409,7 @@ const UplinkSetIP = ({ iface, onSubmit, ...props }) => {
             />
           </FormControl>
         </>
-      ) :
-        null
-      }
+      ) : null}
 
       <Button colorScheme="primary" onPress={() => doSubmit(item)}>
         Save
@@ -412,7 +424,7 @@ const UplinkAddPPP = ({ iface, onSubmit, ...props }) => {
     Username: '',
     Secret: '',
     VLAN: '',
-    MTU: '',
+    MTU: ''
   })
 
   const [enable, setEnable] = useState(true)
@@ -493,8 +505,6 @@ const UplinkAddPPP = ({ iface, onSubmit, ...props }) => {
     </VStack>
   )
 }
-
-
 
 const UplinkInfo = (props) => {
   const context = useContext(AlertContext)
@@ -579,10 +589,7 @@ const UplinkInfo = (props) => {
         continue
       }
       //check if its in the interfaces configuration
-      if (
-        interfaces[link] &&
-        (interfaces[link].Type == 'Uplink')
-      ) {
+      if (interfaces[link] && interfaces[link].Type == 'Uplink') {
         let entry = {
           Interface: link,
           Enabled: interfaces[link].Enabled,
@@ -603,7 +610,6 @@ const UplinkInfo = (props) => {
     setUplinks(uplinks)
     setLinks(links)
   }
-
 
   const { isOpen, onOpen, onClose } = useDisclose()
 
@@ -663,35 +669,36 @@ const UplinkInfo = (props) => {
     let new_entry
 
     if (type == 'wifi') {
-      new_entry = {Iface: iface, Enabled: enable, Networks: [item]}
+      new_entry = { Iface: iface, Enabled: enable, Networks: [item] }
     } else if (type == 'ppp') {
-      new_entry = {...item, Enabled: enable, Iface: iface}
+      new_entry = { ...item, Enabled: enable, Iface: iface }
     } else if (type == 'ip') {
-      new_entry = {...item, Name: iface, Enabled: enable}
+      new_entry = { ...item, Name: iface, Enabled: enable }
     } else if (type == 'config') {
-      new_entry = {...item, Name: iface, Enabled: enable}
+      new_entry = { ...item, Name: iface, Enabled: enable }
     } else {
-      context.error("Unknown type " + type)
+      context.error('Unknown type ' + type)
       return
     }
+    let path = `/uplink/${type}`
 
+    if (type == 'config') {
+      path = `/link/${type}`
+    }
 
     api
-      .put('/uplink/'+type, new_entry)
-      .then((res2) => {fetchInfo(); onClose()})
-      .catch((err) => {
-        context.error(err)
+      .put(path, new_entry)
+      .then((res2) => {
+        fetchInfo()
         onClose()
       })
       .catch((err) => {
         context.error(err)
         onClose()
       })
-
   }
 
   const color_scheme = useColorModeValue('muted', 'blueGray')
-
 
   return (
     <ScrollView h={'100%'}>
@@ -704,7 +711,7 @@ const UplinkInfo = (props) => {
 
         <VStack
           mx={{ base: 0, md: 4 }}
-          width={{ base: '100%', md: '50%' }}
+          width={{ base: '100%', md: '75%' }}
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
           _space={2}
         >
@@ -728,8 +735,8 @@ const UplinkInfo = (props) => {
                 </Text>
                 <Text flex={1}>{item.Type}</Text>
                 <Text flex={1}>{item.Subtype}</Text>
-                <Text flex={1}>{item.IPs}</Text>
-                {item.Enabled ?  (
+                <Text flex={2}>{item.IPs}</Text>
+                {item.Enabled ? (
                   <Badge
                     key={item.Name}
                     variant="outline"
@@ -742,9 +749,7 @@ const UplinkInfo = (props) => {
                     Enabled
                   </Badge>
                 ) : null}
-                <Box flex={1}>
-                  {moreMenu(item.Interface)}
-                </Box>
+                <Box flex={1}>{moreMenu(item.Interface)}</Box>
               </HStack>
             )}
           />
@@ -752,7 +757,7 @@ const UplinkInfo = (props) => {
 
         <VStack
           mx={{ base: 0, md: 4 }}
-          width={{ base: '100%', md: '50%' }}
+          width={{ base: '100%', md: '75%' }}
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
           _space={2}
         >
@@ -769,15 +774,13 @@ const UplinkInfo = (props) => {
                 }}
                 borderColor="borderColorCardLight"
               >
-                <Text flex={1} fontWeight="bold">
+                <Text flex={3} fontWeight="bold">
                   {item.Interface}
                 </Text>
                 <Text flex={1}>{item.Type}</Text>
-                <Text flex={1}>{item.Enabled}</Text>
-                <Text flex={1}>{item.IPs}</Text>
-                <Box flex={1}>
-                  {moreMenu(item.Interface)}
-                </Box>
+                {/*<Text flex={1}>{item.Enabled}</Text>*/}
+                <Text flex={2}>{item.IPs}</Text>
+                <Box flex={1}>{moreMenu(item.Interface)}</Box>
               </HStack>
             )}
           />
@@ -789,10 +792,18 @@ const UplinkInfo = (props) => {
                 {iface ? `Configure ${iface}` : 'Configure interface'}
               </Modal.Header>
               <Modal.Body>
-                {iface && modal == 'wifi' ? <UplinkAddWifi iface={iface} onSubmit={onSubmit} /> : null}
-                {iface && modal == 'config' ? <UplinkSetConfig iface={iface} onSubmit={onSubmit} /> : null}
-                {iface && modal == 'ip' ? <UplinkSetIP iface={iface} onSubmit={onSubmit} /> : null}
-                {iface && modal == 'ppp' ? <UplinkAddPPP iface={iface} onSubmit={onSubmit} /> : null}
+                {iface && modal == 'wifi' ? (
+                  <UplinkAddWifi iface={iface} onSubmit={onSubmit} />
+                ) : null}
+                {iface && modal == 'config' ? (
+                  <UplinkSetConfig iface={iface} onSubmit={onSubmit} />
+                ) : null}
+                {iface && modal == 'ip' ? (
+                  <UplinkSetIP iface={iface} onSubmit={onSubmit} />
+                ) : null}
+                {iface && modal == 'ppp' ? (
+                  <UplinkAddPPP iface={iface} onSubmit={onSubmit} />
+                ) : null}
               </Modal.Body>
             </Modal.Content>
           </Modal>

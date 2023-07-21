@@ -12,10 +12,11 @@ import (
 )
 
 import (
-	"github.com/boltdb/bolt"
 	"github.com/spr-networks/sprbus"
 	//"github.com/tidwall/gjson"
 )
+
+import bolt "go.etcd.io/bbolt"
 
 import (
 	"boltapi"
@@ -120,6 +121,7 @@ func handleLogEvent(topic string, value string) {
 	}
 }
 
+var db **bolt.DB
 func main() {
 	flag.Parse()
 
@@ -130,15 +132,17 @@ func main() {
 		options.ReadOnly = true
 	}
 
-	db, err := bolt.Open(*gDBPath, 0664, options)
+	tdb, err := bolt.Open(*gDBPath, 0664, options)
+	db := new(*bolt.DB)
+	*db = tdb
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+
 
 	if *gBucket != "" || *gDump != false {
-		cli(db, *gBucket)
-
+		cli(*db, *gBucket)
+		(*db).Close()
 		return
 	}
 
@@ -150,8 +154,8 @@ func main() {
 		boltapi.LogEvent(topic)
 	}
 
-	// runs every minute to rm old items if db size is too big
-	go boltapi.CheckSizeLoop(db, config, *gDebug)
+	// loops to rm old items if db size is too big
+	go boltapi.CheckSizeLoop(*gDBPath, db, config, *gDebug)
 
 	go func() {
 		for i := 30; i > 0; i-- {

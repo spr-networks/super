@@ -4,6 +4,7 @@ import AddDevice from 'views/Devices/AddDevice'
 import ConnectDevice from 'views/Devices/ConnectDevice'
 import Arp from 'views/Devices/Arp'
 import Devices from 'views/Devices/Devices'
+import Device from 'views/Devices/Device'
 import Dhcp from 'views/Groups/Dhcp'
 import Home from 'views/Home'
 import Login from 'views/pages/Login'
@@ -13,10 +14,12 @@ import Traffic from 'views/Traffic/Traffic'
 import TrafficTimeSeries from 'views/Traffic/TrafficTimeSeries'
 import TrafficList from 'views/Traffic/TrafficList'
 import UplinkConfiguration from 'views/UplinkConfiguration'
+import LANLinkConfiguration from 'views/LANLinkConfiguration'
 import WirelessConfiguration from 'views/WirelessConfiguration'
 import Groups from 'views/Groups/Groups'
 import Tags from 'views/Tags'
 import DNSBlock from 'views/DNS/DNSBlock'
+import DNSOverride from 'views/DNS/DNSOverride'
 import DNSLog from 'views/DNS/DNSLog'
 import DNSLogEdit from 'views/DNS/DNSLogEdit'
 import DynDns from 'views/DNS/DynDns'
@@ -85,6 +88,13 @@ const routes = [
     layout: 'admin'
   },
   {
+    name: 'Device',
+    path: 'devices/:id',
+    component: Device,
+    hidden: true,
+    layout: 'admin'
+  },
+  {
     layout: 'admin',
     path: 'add_device',
     redirect: true,
@@ -109,6 +119,13 @@ const routes = [
     name: 'Uplink',
     icon: faGlobe,
     component: UplinkConfiguration,
+    layout: 'admin'
+  },
+  {
+    path: 'lanlink',
+    name: 'LAN',
+    icon: faEthernet,
+    component: LANLinkConfiguration,
     layout: 'admin'
   },
   {
@@ -187,6 +204,13 @@ const routes = [
         name: 'Blocklists/Ad-Block',
         icon: faBan,
         component: DNSBlock,
+        layout: 'admin'
+      },
+      {
+        path: 'dnsOverride',
+        name: 'Custom Override',
+        icon: faBan,
+        component: DNSOverride,
         layout: 'admin'
       },
       {

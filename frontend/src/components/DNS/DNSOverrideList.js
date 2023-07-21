@@ -85,45 +85,54 @@ const DNSOverrideList = (props) => {
               p={4}
             >
               <Stack
-                direction={{ base: 'row' }}
-                space={3}
-                justifyContent="space-evenly"
+                direction={{ base: 'row', md: 'row' }}
+                space={1}
+                justifyContent="space-between"
                 alignItems="center"
               >
-                <HStack flex={1} space={2}>
-                  <Stack space={2} direction={{ base: 'column', md: 'row' }}>
+                <Stack
+                  direction={{ base: 'column', md: 'row' }}
+                  justifyContent="space-evenly"
+                  flex={1}
+                  space={2}
+                >
+                  <Stack
+                    flex={1}
+                    space={2}
+                    direction={{ base: 'column', md: 'row' }}
+                  >
                     <Text bold>{item.Domain}</Text>
-                    <HStack space={2}>
+                    <HStack space={{ base: 0, md: 2 }}>
                       <Text
                         display={{ base: 'none', md: 'flex' }}
                         color="muted.500"
                       >
                         =
                       </Text>
-                      <Text>{item.ResultIP}</Text>
+                      <Text>{item.ResultIP || '0.0.0.0'}</Text>
                     </HStack>
                   </Stack>
-                </HStack>
 
-                <Stack
-                  flex={1}
-                  space={2}
-                  direction={{ base: 'column', md: 'row' }}
-                  justifyContent="space-between"
-                >
-                  <HStack space={1}>
-                    <Text color="muted.500">Client:</Text>
-                    <Text>{item.ClientIP}</Text>
-                  </HStack>
+                  <Stack
+                    flex={1}
+                    space={2}
+                    direction={{ base: 'column', md: 'row' }}
+                    justifyContent="space-between"
+                  >
+                    <HStack space={1}>
+                      <Text color="muted.500">Client:</Text>
+                      <Text>{item.ClientIP}</Text>
+                    </HStack>
 
-                  <HStack space={1}>
-                    <Text color="muted.500">Expiration:</Text>
-                    <Text>
-                      {item.Expiration
-                        ? timeAgo(new Date(item.Expiration * 1e3))
-                        : 'Never'}
-                    </Text>
-                  </HStack>
+                    <HStack space={1}>
+                      <Text color="muted.500">Expiration:</Text>
+                      <Text>
+                        {item.Expiration
+                          ? timeAgo(new Date(item.Expiration * 1e3))
+                          : 'Never'}
+                      </Text>
+                    </HStack>
+                  </Stack>
                 </Stack>
 
                 <IconButton

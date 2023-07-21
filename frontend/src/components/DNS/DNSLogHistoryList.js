@@ -121,6 +121,9 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
           <Text color="muted.500" onPress={() => triggerAlert(item)}>
             {item.FirstAnswer || '0.0.0.0'}
           </Text>
+          <Text color="muted.500" display={{ base: 'flex', md: 'none' }}>
+            {timeAgo(new Date(item.Timestamp))}
+          </Text>
         </Stack>
 
         <Text ml="auto" fontSize="xs" display={{ base: 'none', md: 'flex' }}>
@@ -178,7 +181,7 @@ const DNSLogHistoryList = (props) => {
 
   const [devices, setDevices] = useState({})
 
-  const modalRef = React.createRef(null)
+  const modalRef = React.useRef(null)
 
   const deviceByIp = (ip) => {
     return Object.values(devices).find((device) => device.RecentIP == ip) || {}

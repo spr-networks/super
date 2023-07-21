@@ -74,15 +74,23 @@ type PSKEntry struct {
 	Psk  string
 }
 
+type DeviceStyle struct {
+	Icon  string
+	Color string
+}
+
 type DeviceEntry struct {
-	Name       string
-	MAC        string
-	WGPubKey   string
-	VLANTag    string
-	RecentIP   string
-	PSKEntry   PSKEntry
-	Groups     []string
-	DeviceTags []string
+	Name          string
+	MAC           string
+	WGPubKey      string
+	VLANTag       string
+	RecentIP      string
+	PSKEntry      PSKEntry
+	Groups        []string
+	DeviceTags    []string
+	DHCPFirstTime string
+	DHCPLastTime  string
+	Style         DeviceStyle
 }
 
 var config = APIConfig{}
@@ -467,7 +475,16 @@ func performUpdate() string {
 		return "failed to call superd git pull "
 	}
 
-	//2) superd update with service & compose_file
+	//2) update each plugin
+	for _, entry := range config.Plugins {
+		if entry.ComposeFilePath != "" && entry.Enabled == true {
+			if !updateExtension(entry.ComposeFilePath) {
+				fmt.Println("[-] Failed to update extension " + entry.ComposeFilePath)
+			}
+		}
+	}
+
+	//3) superd update with service & compose_file
 	req, err = http.NewRequest(http.MethodPut, "http://localhost/update", nil)
 	if err != nil {
 		return "failed to make update request"
@@ -488,7 +505,7 @@ func performUpdate() string {
 		return "failed to call superd update " + fmt.Sprint(resp.StatusCode)
 	}
 
-	//3 call start
+	//4) call start
 	req, err = http.NewRequest(http.MethodPut, "http://localhost/start", nil)
 	if err != nil {
 		return "failed to make superd start request"
@@ -754,10 +771,10 @@ func saveDevicesJson(devices map[string]DeviceEntry) {
 		log.Fatal(err)
 	}
 
-	sprbus.Publish("devices:save", devices)
-
 	scrubbed_devices := convertDevicesPublic(devices)
 	savePublicDevicesJson(scrubbed_devices)
+
+	sprbus.Publish("devices:save", scrubbed_devices)
 }
 
 func getDevicesJson() map[string]DeviceEntry {
@@ -894,6 +911,15 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		return "psk too short", 400
 	}
 
+	validIconOrColor := regexp.MustCompile(`^[a-zA-z]+$`).MatchString
+	if dev.Style.Icon != "" && !validIconOrColor(dev.Style.Icon) {
+		return "invalid icon", 400
+	}
+
+	if dev.Style.Color != "" && !validIconOrColor(dev.Style.Color) {
+		return "invalid color", 400
+	}
+
 	//normalize groups and tags
 	dev.Groups = normalizeStringSlice(dev.Groups)
 	dev.DeviceTags = normalizeStringSlice(dev.DeviceTags)
@@ -908,6 +934,17 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			saveDevicesJson(devices)
 			refreshDeviceGroups(val)
 			doReloadPSKFiles()
+
+			//if the device had a VLAN Tag, also refresh vlans
+			// upon deletion
+			if val.VLANTag != "" {
+				Devicesmtx.Unlock()
+				Groupsmtx.Unlock()
+				refreshVLANTrunks()
+				Devicesmtx.Lock()
+				Groupsmtx.Lock()
+			}
+
 			return "", 200
 		}
 
@@ -924,6 +961,16 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	pskModified := false
 	refreshGroups := false
 	refreshTags := false
+	refreshVlanTrunks := false
+
+	//validations
+	if dev.VLANTag != "" {
+		n, err := strconv.Atoi(dev.VLANTag)
+		if err != nil || n <= 0 {
+			return "VLANTag field must contain a value > 0", 400
+		}
+		refreshVlanTrunks = true
+	}
 
 	if exists {
 		//updating an existing entry. Check what was requested
@@ -1018,6 +1065,14 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			refreshGroups = true
 		}
 
+		if dev.Style.Icon != "" {
+			val.Style.Icon = dev.Style.Icon
+		}
+
+		if dev.Style.Color != "" {
+			val.Style.Color = dev.Style.Color
+		}
+
 		devices[identity] = val
 		saveDevicesJson(devices)
 
@@ -1043,6 +1098,16 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 				}
 			}
 
+		}
+
+		//locks no longer needed
+
+		if refreshVlanTrunks {
+			Devicesmtx.Unlock()
+			Groupsmtx.Unlock()
+			refreshVLANTrunks()
+			Devicesmtx.Lock()
+			Groupsmtx.Lock()
 		}
 
 		//mask the PSK if set and not generated
@@ -1111,6 +1176,15 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 	if pskGenerated == false {
 		dev.PSKEntry.Psk = "**"
+	}
+
+	// create vlans
+	if refreshVlanTrunks {
+		Devicesmtx.Unlock()
+		Groupsmtx.Unlock()
+		refreshVLANTrunks()
+		Devicesmtx.Lock()
+		Groupsmtx.Lock()
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -2166,7 +2240,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/uplink/ppp", getPPPConfig).Methods("GET")
 	external_router_authenticated.HandleFunc("/uplink/ppp", updatePPPConfig).Methods("PUT")
 	external_router_authenticated.HandleFunc("/uplink/ip", updateLinkIPConfig).Methods("PUT")
-	external_router_authenticated.HandleFunc("/uplink/config", updateLinkConfig).Methods("PUT")
+	external_router_authenticated.HandleFunc("/link/config", updateLinkConfig).Methods("PUT")
+	external_router_authenticated.HandleFunc("/link/vlan/{interface}/{state}", updateLinkVlanTrunk).Methods("PUT")
 
 	//	external_router_authenticated.HandleFunc("/uplink/{interface}/bond", mangeBondInterface).Methods("PUT", "DELETE")
 	//	external_router_authenticated.HandleFunc("/uplink/loadBalance", setLoadBalanceStrategy).Methods("PUT")

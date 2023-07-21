@@ -89,7 +89,7 @@ export default (props) => {
     // set the data
     for (const entry of signals) {
       // used for id
-      let name = entry.MAC
+      let name = deviceFieldByMAC(entry.MAC, 'Name') || entry.MAC
       data.labels.push(name)
 
       labels.map((label, index) => {

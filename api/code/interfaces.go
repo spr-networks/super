@@ -7,11 +7,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 )
+
+import "github.com/gorilla/mux"
 
 var gAPIInterfacesPath = TEST_PREFIX + "/configs/base/interfaces.json"
 var gAPIInterfacesPublicPath = TEST_PREFIX + "/state/public/interfaces.json"
@@ -45,7 +49,7 @@ func isValidIface(Iface string) bool {
 }
 
 func isValidIfaceType(t string) bool {
-	validTypes := []string{"AP", "Uplink", "Other"}
+	validTypes := []string{"AP", "Uplink", "Downlink", "Other"}
 	for _, validType := range validTypes {
 		if t == validType {
 			return true
@@ -442,4 +446,212 @@ func writeInterfacesConfigLocked(config []InterfaceConfig) error {
 
 	//write a copy to the public path
 	return ioutil.WriteFile(gAPIInterfacesPublicPath, file, 0660)
+}
+
+/* VLAN Trunking Support */
+func updateLinkVlanTrunk(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	state := mux.Vars(r)["state"]
+
+	if state != "enable" && state != "disable" {
+		http.Error(w, "state must be `enable` or `disable`", 400)
+		return
+	}
+
+	if !isValidIface(iface) {
+		http.Error(w, "Invalid iface name", 400)
+		return
+	}
+
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+	interfaces := loadInterfacesConfigLocked()
+
+	found := false
+	changed := false
+
+	for i, ifconfig := range interfaces {
+		if ifconfig.Name == iface {
+			found = true
+			if ifconfig.Type == "AP" || ifconfig.Type == "Uplink" {
+				http.Error(w, "Iface has wrong type for vlan trunk", 400)
+				return
+			}
+
+			if state == "enable" {
+				interfaces[i].Subtype = "VLAN-Trunk"
+				interfaces[i].Enabled = true
+			} else {
+				interfaces[i].Subtype = ""
+			}
+			changed = true
+		}
+	}
+
+	if !found {
+		if state == "enable" {
+			ifconfig := InterfaceConfig{}
+			ifconfig.Name = iface
+			ifconfig.Type = "Downlink"
+			ifconfig.Subtype = "VLAN-Trunk"
+			ifconfig.Enabled = true
+			interfaces = append(interfaces, ifconfig)
+			changed = true
+		} else {
+			http.Error(w, "Iface not found", 400)
+			return
+		}
+	}
+
+	if changed {
+		err := writeInterfacesConfigLocked(interfaces)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		refreshVlanTrunk(iface, state == "enable")
+	}
+
+}
+
+func getVLANInterfaces(parent string) ([]net.Interface, error) {
+	var vlanInterfaces []net.Interface
+
+	allInterfaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, iface := range allInterfaces {
+		if strings.HasPrefix(iface.Name, parent+".") {
+			vlanInterfaces = append(vlanInterfaces, iface)
+		}
+	}
+
+	return vlanInterfaces, nil
+}
+
+func refreshVlanTrunk(iface string, enable bool) {
+	//first clear any vlan interfaces that already exist
+	ifaces, err := getVLANInterfaces(iface)
+	if err != nil {
+		log.Println("failed to enumerate iface "+iface, err)
+		return
+	}
+
+	for _, iface := range ifaces {
+		cmd := exec.Command("ip", "link", "del", iface.Name)
+		_, err := cmd.Output()
+
+		if err != nil {
+			log.Println("ip link del failed for "+iface.Name, err)
+			return
+		}
+
+		cmd = exec.Command("nft", "delete", "element", "inet", "filter", "lan_interfaces", "{", iface.Name, "}")
+		cmd.Output()
+	}
+
+	if !enable {
+		//all done
+		return
+	}
+
+	//next create vlans
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+
+	devices := getDevicesJson()
+	for _, dev := range devices {
+		if dev.VLANTag != "" {
+			//create interface
+			cmd := exec.Command("ip", "link", "add", "link", iface,
+				"name", iface+"."+dev.VLANTag, "type", "vlan", "id", dev.VLANTag)
+			_, err := cmd.Output()
+
+			if err != nil {
+				log.Println("ip link add link vlan failed", cmd, err)
+				continue
+			}
+
+			cmd = exec.Command("ip", "link", "set", iface+"."+dev.VLANTag, "up")
+			_, err = cmd.Output()
+			if err != nil {
+				log.Println("ip link set up vlan failed", cmd, err)
+				continue
+			}
+
+			cmd = exec.Command("nft", "add", "element", "inet", "filter", "lan_interfaces", "{", iface+"."+dev.VLANTag, "}")
+			_, err = cmd.Output()
+			if err != nil {
+				log.Println("update lan_interfaces failed", cmd, err)
+				continue
+			}
+
+		}
+	}
+}
+
+// expects to hold interfacesmtx, devicesmtx
+func refreshVLANTrunks() {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+	interfaces := loadInterfacesConfigLocked()
+
+	for _, ifconfig := range interfaces {
+		if ifconfig.Type == "AP" || ifconfig.Type == "Uplink" {
+			continue
+		}
+
+		if ifconfig.Subtype == "VLAN-Trunk" {
+			refreshVlanTrunk(ifconfig.Name, true)
+		} else {
+			refreshVlanTrunk(ifconfig.Name, false)
+		}
+	}
+}
+
+/* Setting basic settings */
+func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
+	iconfig := PublicInterfaceConfig{}
+	err := json.NewDecoder(r.Body).Decode(&iconfig)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if !isValidIface(iconfig.Name) {
+		http.Error(w, "Invalid iface name", 400)
+		return
+	}
+
+	if !isValidIfaceType(iconfig.Type) {
+		http.Error(w, "Invalid type", 400)
+		return
+	}
+
+	//AP has a separate path for configuration
+	if iconfig.Type == "AP" {
+		http.Error(w, "Set interface in AP mode using hostapd API instead", 400)
+		return
+	}
+
+	if iconfig.Subtype != "" {
+		http.Error(w, "Settting subtype not supported", 400)
+		return
+	}
+
+	i := InterfaceConfig{}
+	i.Name = iconfig.Name
+	i.Type = iconfig.Type
+	i.Enabled = iconfig.Enabled
+
+	err = updateInterfaceConfig(i)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), 400)
+		return
+	}
 }

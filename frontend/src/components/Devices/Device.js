@@ -1,27 +1,28 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useState } from 'react'
+import { Platform } from 'react-native'
+import { useNavigate } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
 import { deviceAPI } from 'api/Device'
 import ModalConfirm from 'components/ModalConfirm'
+import { prettyDate } from 'utils'
 
 import Icon from 'FontAwesomeUtils'
 import {
   faEllipsis,
-  faEllipsisV,
-  faLaptop,
-  faMobileScreen,
   faObjectGroup,
   faTrash,
   faEarth,
   faCircleNodes,
   faNetworkWired,
   faTag,
-  faCopy
+  faCopy,
+  faPen,
+  faWifi
 } from '@fortawesome/free-solid-svg-icons'
 
 import {
   Badge,
-  Button,
   Box,
   IconButton,
   Input,
@@ -29,12 +30,14 @@ import {
   Stack,
   HStack,
   VStack,
-  Switch,
   Text,
+  Tooltip,
   useColorModeValue
 } from 'native-base'
 
-import { Address4 } from 'ip-address';
+import { Address4 } from 'ip-address'
+
+import IconItem from 'components/IconItem'
 
 const GroupItem = React.memo(({ name }) => {
   let groupIcons = {
@@ -93,7 +96,30 @@ const TagItem = React.memo(({ name }) => {
   )
 })
 
-const Device = ({ device, edit, notifyChange, ...props }) => {
+const DeviceIcon = ({ icon, color, isConnected, ...props }) => {
+  let _color = color ? `${color}.400` : 'blueGray.400'
+  let opacity = isConnected ? 1 : 0.65
+  let borderColor = isConnected
+    ? 'green.600'
+    : useColorModeValue('muted.200', 'muted.700')
+
+  return (
+    <Box
+      display={{ base: 'none', md: 'flex' }}
+      bg="white"
+      _dark={{ bg: 'blueGray.700' }}
+      p={4}
+      rounded="full"
+      opacity={opacity}
+      borderColor={borderColor}
+      borderWidth={1}
+    >
+      <IconItem name={icon} color={_color} size={8} />
+    </Box>
+  )
+}
+
+const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(device.Name)
@@ -102,6 +128,7 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
   const [tags, setTags] = useState(device.DeviceTags.sort())
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState('')
+  const navigate = useNavigate()
 
   // for adding
   const defaultGroups = props.groups || ['wan', 'dns', 'lan']
@@ -141,31 +168,41 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
   }
 
   function toLong(ipAddress) {
-    return ipAddress.parsedAddress.reduce((accumulator, octet) => (accumulator << 8) + Number(octet), 0);
+    return ipAddress.parsedAddress.reduce(
+      (accumulator, octet) => (accumulator << 8) + Number(octet),
+      0
+    )
   }
 
   function fromLong(long) {
-    return [(long >>> 24) & 0xff, (long >>> 16) & 0xff, (long >>> 8) & 0xff, long & 0xff].join('.');
+    return [
+      (long >>> 24) & 0xff,
+      (long >>> 16) & 0xff,
+      (long >>> 8) & 0xff,
+      long & 0xff
+    ].join('.')
   }
 
   function makeTinyAddress(ipAddress) {
     let subnet
     let address
     try {
-      address = new Address4(ipAddress);
-      subnet = new Address4(address.startAddress().address + '/30');
+      address = new Address4(ipAddress)
+      subnet = new Address4(address.startAddress().address + '/30')
     } catch {
       return ipAddress
     }
 
-    return fromLong(toLong(subnet.startAddress())+2)
+    return fromLong(toLong(subnet.startAddress()) + 2)
   }
 
   const handleIP = (ip) => {
     //transform ip into a tinynet address , and notify
     let new_ip = makeTinyAddress(ip)
     if (ip != new_ip) {
-      context.info("SPR Micro-Segmentation Uses /30 network IP assignments, forcing IP to device IP")
+      context.info(
+        'SPR Micro-Segmentation Uses /30 network IP assignments, forcing IP to device IP'
+      )
       ip = new_ip
     }
     setIP(ip)
@@ -232,7 +269,7 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
           context.error(
             '[API] updateIP error: ' +
               error.message +
-              '. IP not in range or not a valid Supernetwork Device IP '
+              '. IP not in range or not a valid Supernetwork Device IP'
           )
         )
     }
@@ -251,12 +288,6 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
     }
   }
 
-  // TODO
-  let icon = faLaptop
-  if (name.match(/iphone|mobile|android/i)) {
-    icon = faMobileScreen
-  }
-
   let colors = [
     'violet',
     'pink',
@@ -270,11 +301,6 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
   ]
 
   let idx = (device.Name.charCodeAt(0) || 0) % colors.length
-  let color = colors[idx]
-  let iconColor = `${color}.400`
-  let borderColor = device.isConnected
-    ? 'green.600'
-    : useColorModeValue('muted.100', 'muted.700')
 
   const trigger = (triggerProps) => (
     <IconButton
@@ -287,49 +313,22 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
 
   const moreMenu = (
     <Menu w={190} closeOnSelect={true} trigger={trigger}>
-      <Menu.OptionGroup
-        title="Groups"
-        type="checkbox"
-        defaultValue={groups}
-        onChange={handleGroups}
-      >
-        {[...new Set(defaultGroups.concat(groups))].map((group) => (
-          <Menu.ItemOption key={group} value={group}>
-            {group}
-          </Menu.ItemOption>
-        ))}
-        <Menu.ItemOption
-          key="newGroup"
-          onPress={() => {
-            setModalType('Group')
-            setShowModal(true)
-          }}
-        >
-          New Group...
-        </Menu.ItemOption>
-      </Menu.OptionGroup>
-      <Menu.OptionGroup
-        title="Tags"
-        type="checkbox"
-        defaultValue={tags}
-        onChange={handleTags}
-      >
-        {[...new Set(defaultTags.concat(tags))].map((tag) => (
-          <Menu.ItemOption key={tag} value={tag}>
-            {tag}
-          </Menu.ItemOption>
-        ))}
-        <Menu.ItemOption
-          key="newTag"
-          onPress={() => {
-            setModalType('Tag')
-            setShowModal(true)
-          }}
-        >
-          New Tag...
-        </Menu.ItemOption>
-      </Menu.OptionGroup>
       <Menu.Group title="Actions">
+        <Menu.Item
+          onPress={() =>
+            navigate(
+              `/admin/devices/${
+                device.MAC || encodeURIComponent(device.WGPubKey)
+              }`
+            )
+          }
+        >
+          <HStack space={2} alignItems="center">
+            <Icon icon={faPen} color="muted.500" />
+            <Text>Edit</Text>
+          </HStack>
+        </Menu.Item>
+
         <Menu.Item onPress={duplicateDevice}>
           <HStack space={2} alignItems="center">
             <Icon icon={faCopy} color="muted.500" />
@@ -346,17 +345,35 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
     </Menu>
   )
 
+  const getDates = (device) => {
+    let res = ''
+
+    if (device.DHCPFirstTime) {
+      res += `First DHCP: ${prettyDate(device.DHCPFirstTime)}`
+    }
+
+    if (device.DHCPLastTime) {
+      res +=
+        (res.length ? '. ' : '') +
+        `Last DHCP: ${prettyDate(device.DHCPLastTime)}`
+    }
+
+    return res
+  }
+
+  const inlineEdit = false
+
   return (
     <>
       <Stack
-        direction={{ base: 'column-reverse', md: 'row' }}
+        direction={{ base: 'row', md: 'row' }}
         space={2}
         bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        p={8}
+        p={4}
         my={{ base: 1, md: 2 }}
         mx={{ base: 0, md: 4 }}
-        rounded="md"
-        shadow="md"
+        rounded={{ md: 'md' }}
+        shadow={{ md: 'md' }}
         key={device.MAC}
         justifyContent="space-between"
         alignItems="center"
@@ -366,82 +383,102 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
       >
         <Stack
           direction={{ base: 'column', md: 'row' }}
-          space={4}
+          space={2}
           flex={1}
           justifyContent="space-between"
-          alignItems="center"
+          __alignItems="center"
           w="full"
         >
-          <Box
-            display={{ base: 'none', md: 'flex' }}
-            bg="white"
-            _dark={{ bg: 'blueGray.700' }}
-            p={4}
-            rounded="full"
-            opacity={device.isConnected ? 1 : 0.65}
-            borderColor={borderColor}
-            borderWidth={1}
-          >
-            <Icon icon={icon} color={iconColor} size={7} />
-          </Box>
-
-          <VStack w={{ base: '100%', md: '20%' }} px={2}>
-            {edit ? (
-              <Input
-                size="lg"
-                type="text"
-                variant="underlined"
-                w="100%"
-                value={name}
-                autoFocus={false}
-                onChangeText={(value) => handleName(value)}
-                onSubmitEditing={handleSubmit}
-              />
-            ) : (
-              <Text bold>{device.Name}</Text>
-            )}
-
-            <Text color="muted.500">
-              {device.oui !== undefined ? device.oui : ' '}
-            </Text>
-          </VStack>
+          {Platform.OS == 'web' ? (
+            <DeviceIcon
+              icon={device.Style?.Icon || 'Laptop'}
+              color={device.Style?.Color}
+              isConnected={device.isConnected}
+            />
+          ) : null}
 
           <Stack
-            w={{ base: '100%', md: '12%' }}
-            direction={{ base: 'row', md: 'column' }}
-            space={1}
-            justifyContent={{ base: 'space-around', md: 'center' }}
+            w={{ md: '1/3' }}
+            justifyContent={'space-between'}
+            direction={{ base: 'row', md: 'row' }}
           >
-            {edit ? (
-              <Input
-                size="lg"
-                type="text"
-                variant="underlined"
-                w="100%"
-                value={ip}
-                autoFocus={false}
-                onChangeText={(value) => handleIP(value)}
-                onSubmitEditing={handleSubmit}
-              />
-            ) : (
-              <Text bold>{ip}</Text>
-            )}
+            <Tooltip label={getDates(device)} isDisabled={!getDates(device)}>
+              <VStack
+                __w={{ md: '20%' }}
+                justifyContent={{ base: 'flex-end', md: 'center' }}
+              >
+                {inlineEdit ? (
+                  <Input
+                    size="lg"
+                    type="text"
+                    variant="underlined"
+                    w="100%"
+                    value={name}
+                    autoFocus={false}
+                    onChangeText={(value) => handleName(value)}
+                    onSubmitEditing={handleSubmit}
+                  />
+                ) : (
+                  <Text bold>{device.Name || 'N/A'}</Text>
+                )}
 
-            <Text
-              display={{ base: 'none', md: 'flex' }}
-              fontSize="xs"
-              color="muted.500"
+                <Text color="muted.500">{device.oui || ' '}</Text>
+              </VStack>
+            </Tooltip>
+
+            <VStack
+              __w={{ md: '12%' }}
+              justifyContent={{ base: 'flex-end', md: 'center' }}
+              alignItems={'flex-end'}
             >
-              {device.MAC}
-            </Text>
+              {inlineEdit ? (
+                <Input
+                  size="lg"
+                  type="text"
+                  variant="underlined"
+                  w="100%"
+                  value={ip}
+                  autoFocus={false}
+                  onChangeText={(value) => handleIP(value)}
+                  onSubmitEditing={handleSubmit}
+                />
+              ) : (
+                <HStack space={2} alignItems={'center'}>
+                  <Box display={{ base: 'flex', md: 'none' }}>
+                    <Icon
+                      icon={device.MAC ? faWifi : faCircleNodes}
+                      size={3}
+                      color={
+                        device.isConnected
+                          ? 'green.600'
+                          : useColorModeValue('muted.200', 'muted.700')
+                      }
+                    />
+                  </Box>
+
+                  <Text bold>{ip}</Text>
+                </HStack>
+              )}
+
+              <Text color="muted.500">{device.MAC || ' '}</Text>
+
+              {device.VLANTag != '' ? (
+                <HStack space={1}>
+                  <Text>VLAN</Text>
+                  <Text bold>{device.VLANTag}</Text>
+                </HStack>
+              ) : null}
+            </VStack>
           </Stack>
-          <Text
+
+          <Stack
             w={{ base: '100%', md: '8%' }}
             display={{ base: 'none', md: 'flex' }}
             justifyContent="center"
+            alignItems={'center'}
           >
-            {wifi_type}
-          </Text>
+            <Text>{wifi_type}</Text>
+          </Stack>
           <HStack
             w={{ base: '100%', md: '40%' }}
             space={2}
@@ -459,7 +496,7 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
             ))}
           </HStack>
         </Stack>
-        {edit ? moreMenu : null}
+        {showMenu ? moreMenu : null}
       </Stack>
       <ModalConfirm
         type={modalType}
@@ -469,11 +506,11 @@ const Device = ({ device, edit, notifyChange, ...props }) => {
       />
     </>
   )
-}
+})
 
 Device.propTypes = {
   device: PropTypes.object.isRequired,
-  edit: PropTypes.bool,
+  showMenu: PropTypes.bool,
   groups: PropTypes.array,
   tags: PropTypes.array
 }

@@ -18,21 +18,17 @@ import {
 import {
   Button,
   Box,
-  Divider,
   Fab,
   Heading,
-  IconButton,
-  Stack,
   HStack,
   VStack,
   Pressable,
-  ScrollView,
   Text,
   View,
   useColorModeValue
 } from 'native-base'
 import { FlashList } from '@shopify/flash-list'
-//import { SwipeListView } from 'components/SwipeListView'
+import { SwipeListView } from 'components/SwipeListView'
 
 const DeviceListing = (props) => {
   const context = useContext(AlertContext)
@@ -42,6 +38,19 @@ const DeviceListing = (props) => {
   const navigate = useNavigate()
   const [groups, setGroups] = useState(['wan', 'dns', 'lan'])
   const [tags, setTags] = useState([])
+
+  const sortDevices = (a, b) => {
+    return (
+      parseInt(
+        parseInt(+b.isConnected || 0) * 1000 +
+          a.RecentIP.replace(/[^0-9]+/g, '')
+      ) -
+      parseInt(
+        parseInt(+a.isConnected || 0) * 1000 +
+          b.RecentIP.replace(/[^0-9]+/g, '')
+      )
+    )
+  }
 
   const refreshDevices = () => {
     deviceAPI
@@ -54,7 +63,7 @@ const DeviceListing = (props) => {
         let macs = Object.keys(devices).filter((id) => id.includes(':'))
 
         devices = Object.values(devices)
-        setDevices(devices)
+        setDevices(devices.sort(sortDevices))
 
         // set device oui if avail
         deviceAPI
@@ -66,7 +75,7 @@ const DeviceListing = (props) => {
               return d
             })
 
-            setDevices(devs)
+            setDevices(devs.sort(sortDevices))
           })
           .catch((err) => {})
 
@@ -85,15 +94,17 @@ const DeviceListing = (props) => {
                   .then((stations) => {
                     let connectedMACs = Object.keys(stations)
 
-                    setDevices(
-                      devices.map((dev) => {
-                        if (dev.isConnected !== true) {
-                          dev.isConnected = connectedMACs.includes(dev.MAC)
-                        }
+                    let devs = devices.map((dev) => {
+                      if (dev.isConnected !== true) {
+                        dev.isConnected = connectedMACs.includes(dev.MAC)
+                      }
 
-                        return dev
-                      })
-                    )
+                      return dev
+                    })
+
+                    devs.sort(sortDevices)
+
+                    setDevices(devs)
                   })
                   .catch((err) => {
                     //context.error('WIFI API Failure', err)
@@ -164,16 +175,15 @@ const DeviceListing = (props) => {
 
   const renderItem = ({ item }) => (
     <Device
-      key={item.MAC} //keyExtractor is recommended, however, this fixes a bug on react web
+      key={item.MAC || item.WGPubKey} //keyExtractor is recommended, however, this fixes a bug on react web
       device={item}
-      edit={true}
+      showMenu={true}
       groups={groups}
       tags={tags}
       notifyChange={refreshDevices}
     />
   )
 
-  /*
   const closeRow = (rowMap, rowKey) => {
     if (rowMap[rowKey]) {
       rowMap[rowKey].closeRow()
@@ -183,20 +193,34 @@ const DeviceListing = (props) => {
   const deleteRow = (rowMap, rowKey) => {
     closeRow(rowMap, rowKey)
     const newData = [...devices]
-    const prevIndex = devices.findIndex((item) => item.MAC === rowKey)
+    const prevIndex = devices.findIndex(
+      (item) => item.MAC === rowKey || item.WGPubKey == rowKey
+    )
     newData.splice(prevIndex, 1)
     setDevices(newData)
+    deviceAPI
+      .deleteDevice(rowKey)
+      .then(refreshDevices)
+      .catch((error) =>
+        context.error('[API] deleteDevice error: ' + error.message)
+      )
   }
 
   const renderHiddenItem = (data, rowMap) => (
-    <HStack flex="1" pl="2">
+    <HStack flex={1} pl={2} mt={1} mb={1}>
       <Pressable
         w="70"
         ml="auto"
         cursor="pointer"
         bg="coolGray.200"
         justifyContent="center"
-        onPress={() => closeRow(rowMap, data.item.MAC)}
+        onPress={() =>
+          navigate(
+            `/admin/devices/${
+              data.item.MAC || encodeURIComponent(data.item.WGPubKey)
+            }`
+          )
+        }
         _pressed={{
           opacity: 0.5
         }}
@@ -204,7 +228,7 @@ const DeviceListing = (props) => {
         <VStack alignItems="center" space={2}>
           <Icon icon={faEllipsis} color="coolGray.800" />
           <Text fontSize="xs" fontWeight="medium" color="coolGray.800">
-            More
+            Edit
           </Text>
         </VStack>
       </Pressable>
@@ -213,7 +237,7 @@ const DeviceListing = (props) => {
         cursor="pointer"
         bg="red.500"
         justifyContent="center"
-        onPress={() => deleteRow(rowMap, data.item.MAC)}
+        onPress={() => deleteRow(rowMap, data.item.MAC || data.item.WGPubKey)}
         _pressed={{
           opacity: 0.5
         }}
@@ -227,7 +251,6 @@ const DeviceListing = (props) => {
       </Pressable>
     </HStack>
   )
-  */
 
   // TODO
   let navbarHeight = 64
@@ -265,18 +288,26 @@ const DeviceListing = (props) => {
         </HStack>
       </HStack>
 
-      {/*<SwipeListView
-        data={devices}
-        renderItem={renderItem}
-        renderHiddenItem={renderHiddenItem}
-        rightOpenValue={-140}
-      />*/}
+      {Platform.OS == 'ios' ? (
+        <SwipeListView
+          data={devices}
+          renderItem={renderItem}
+          renderHiddenItem={renderHiddenItem}
+          rightOpenValue={-140}
+          style={{ marginBottom: 20 }}
+        />
+      ) : (
+        <>
+          <FlashList
+            data={devices}
+            renderItem={renderItem}
+            estimatedItemSize={100}
+          />
 
-      <FlashList
-        data={devices}
-        renderItem={renderItem}
-        estimatedItemSize={100}
-      />
+          {/* padding */}
+          <Box display={{ base: 'none', md: 'flex' }} h={8}></Box>
+        </>
+      )}
 
       {devices !== null && !devices.length ? (
         <Box

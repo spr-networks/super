@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/spr-networks/sprbus"
 )
@@ -87,30 +88,18 @@ func getLANIP() string {
 
 func updateLanIPs(TinyNets []string) {
 
-	dummyif := "sprloop"
-	lanif := os.Getenv("LANIF")
-	if lanif == "" {
-		lanif = dummyif
-	}
+	lanif := "sprloop"
 
 	cmd := exec.Command("ip", "addr", "flush", "dev", lanif)
 	_, err := cmd.Output()
 	if err != nil {
 		log.Println("failed to flush", lanif)
-		if lanif == dummyif {
-			//try adding the dummy loop just in case
-			_, err = exec.Command("ip", "link", "add", "name", lanif, "type", "dummy").Output()
-			if err != nil {
-				log.Println("failed to make dummyif", err)
-				return
-			}
+		//try adding the dummy loop just in case
+		_, err = exec.Command("ip", "link", "add", "name", lanif, "type", "dummy").Output()
+		if err != nil {
+			log.Println("failed to make dummyif", err)
+			return
 		}
-	}
-
-	if lanif != dummyif {
-		//ensure sprloop is deleted when establishing LANIF,
-		// just in case
-		exec.Command("ip", "link", "del", dummyif).Output()
 	}
 
 	for _, subnet := range TinyNets {
@@ -270,7 +259,6 @@ func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
 		}
 	}
 
-	updatedDevices := false
 	if !exists {
 		//create a new device entry
 		newDevice := DeviceEntry{}
@@ -278,21 +266,22 @@ func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
 		newDevice.RecentIP = IP
 		newDevice.Groups = []string{}
 		newDevice.DeviceTags = []string{}
+		newDevice.DHCPFirstTime = time.Now().String()
+		newDevice.DHCPLastTime = newDevice.DHCPFirstTime
 		devices[newDevice.MAC] = newDevice
 		val = newDevice
-		updatedDevices = true
 	} else {
 		//update recent IP
 		if val.RecentIP != IP {
 			val.RecentIP = IP
 			devices[MAC] = val
-			updatedDevices = true
 		}
+		//udpate last DHCP Time
+		val.DHCPLastTime = time.Now().String()
+		devices[MAC] = val
 	}
 
-	if updatedDevices {
-		saveDevicesJson(devices)
-	}
+	saveDevicesJson(devices)
 
 	notifyFirewallDHCP(val, Iface)
 

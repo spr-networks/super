@@ -3,9 +3,9 @@ module boltapi
 go 1.17
 
 require (
-	github.com/boltdb/bolt v1.3.1
 	github.com/gorilla/mux v1.8.0
 	github.com/spr-networks/sprbus v0.1.7
+	go.etcd.io/bbolt v1.3.7
 )
 
 require (

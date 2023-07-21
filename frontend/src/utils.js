@@ -3,7 +3,13 @@ import { Text } from 'native-base'
 
 // util functions
 export const prettyDate = (timestamp, locales = null) => {
-  return new Date(timestamp).toLocaleString()
+  let ts = timestamp
+  //golang UTC date format:
+  //2023-07-20 12:57:32.039846038 +0000 UTC m=+92926.449526088
+  if (typeof ts == 'string' && ts.includes('m=')) {
+    ts = ts.replace(/\sm=.*/g, '')
+  }
+  return new Date(ts).toLocaleString()
 }
 
 export const prettySize = (sz, round = false) => {

@@ -286,7 +286,7 @@ func setDefaultUplinkGateway(iface string, index int) {
 	gateway, err := getDefaultGatewayLocked(iface)
 	if err != nil || gateway == "" {
 		//no gateway found, continue on
-		log.Println("failed to set default gw: not found", err)
+		log.Println("failed to set default gw for "+iface+": not found", err)
 		return
 	}
 
@@ -320,7 +320,7 @@ func updateOutboundRoutes() {
 			FWmtx.Lock()
 			for i, iface := range outbound {
 				//TBD check that the interface actually reaches the internet
-				// if it does not, move it into a deactive state an rebuild uplink
+				// if it does not, move it into a deactivated state and rebuild uplink
 				setDefaultUplinkGateway(iface, i)
 			}
 			FWmtx.Unlock()
@@ -1902,12 +1902,29 @@ func dynamicRouteLoop() {
 			devices := getDevicesJson()
 			Devicesmtx.Unlock()
 
+			// TBD: need to handle multiple trunk ports, lan ports
+			// that a device can arrive on.
+			// SPR currently assumes one named LANIF.
+
 			lanif := os.Getenv("LANIF")
+			lanif_vlan_trunk := false
 
 			wireguard_peers := getWireguardActivePeers()
 			wifi_peers := getWifiPeers()
 
 			suggested_device := map[string]string{}
+
+			Interfacesmtx.Lock()
+			interfaces := loadInterfacesConfigLocked()
+			Interfacesmtx.Unlock()
+
+			for _, ifconfig := range interfaces {
+				if ifconfig.Name == lanif {
+					if ifconfig.Subtype == "VLAN-Trunk" {
+						lanif_vlan_trunk = true
+					}
+				}
+			}
 
 			FWmtx.Lock()
 
@@ -1953,8 +1970,11 @@ func dynamicRouteLoop() {
 				if !exists {
 					if lanif != "" {
 						//no new_iface and a LAN interface is set, use that.
-						//TBD: VLAN here based on the assigned vlan id
-						new_iface = lanif
+						if lanif_vlan_trunk == false || entry.VLANTag == "" {
+							new_iface = lanif
+						} else {
+							new_iface = lanif + "." + entry.VLANTag
+						}
 					} else {
 						// disconnected devices will have empty new_iface, skip
 						continue
@@ -2061,6 +2081,8 @@ func initFirewallRules() {
 	Interfacesmtx.Unlock()
 
 	applyRadioInterfaces(interfaces)
+
+	refreshVLANTrunks()
 
 	// dynamic route refresh
 	go dynamicRouteLoop()

@@ -48,7 +48,7 @@ const StatsChartWidget = (props) => {
     charts.push(
       <ProgressChart
         data={data}
-        width={Dimensions.get('window').width - 50}
+        width={Dimensions.get('window').width}
         height={270}
         strokeWidth={32}
         radius={64}
@@ -113,7 +113,7 @@ const StatsChartWidget = (props) => {
             datasets,
             legend
           }}
-          width={Dimensions.get('window').width - 80}
+          width={Dimensions.get('window').width - 25}
           height={270}
           yAxisSuffix={yAxisSuffix}
           chartConfig={{
