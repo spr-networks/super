@@ -6,9 +6,11 @@ rm -f /etc/resolv.conf
 echo nameserver 1.1.1.1 > /etc/resolv.conf
 
 apt-get update
-apt-get -y install --download-only linux-modules-extra-raspi
-apt-get -y install docker.io docker-compose nftables wireless-regdb ethtool linux-firmware git nano iw cloud-utils fdisk tmux conntrack
+apt-get -y install --download-only linux-modules-extra-raspi linux-firmware
+apt-get -y install docker.io docker-compose nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack
 
+# dont use this
+rm /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
 useradd -m -s /bin/bash ubuntu
 echo "ubuntu:ubuntu" | chpasswd
 usermod -aG sudo ubuntu
@@ -48,6 +50,7 @@ touch /lib/udev/rules.d/80-net-setup-link.rules
 
 # update sshd config to allow password login
 sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config
+sed -i "s/#PasswordAuthentication yes/PasswordAuthentication yes/" /etc/ssh/sshd_config
 
 # cleanup
 #apt-get autoremove -y && apt-get clean
