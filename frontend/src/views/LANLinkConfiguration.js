@@ -39,13 +39,12 @@ import { ucFirst } from 'utils'
 import { Select } from 'components/Select'
 import InputSelect from 'components/InputSelect'
 
-
 const LANLinkSetConfig = ({ iface, onSubmit, ...props }) => {
   const type = 'config'
   const context = useContext(AlertContext)
 
   const [item, setItem] = useState({
-    Type: 'Downlink',
+    Type: 'Downlink'
   })
 
   const [errors, setErrors] = useState({})
@@ -53,7 +52,11 @@ const LANLinkSetConfig = ({ iface, onSubmit, ...props }) => {
   const [enable, setEnable] = useState(true)
 
   const validate = () => {
-    if (item.Type != 'Other' && item.Type != 'Downlink' && item.Type != 'VLAN') {
+    if (
+      item.Type != 'Other' &&
+      item.Type != 'Downlink' &&
+      item.Type != 'VLAN'
+    ) {
       context.error('Failed to validate Type')
       return false
     }
@@ -143,7 +146,6 @@ const LANLinkInfo = (props) => {
   }
 
   const fetchInfo = () => {
-
     wifiAPI
       .ipAddr()
       .then((ifaces) => {
@@ -195,7 +197,11 @@ const LANLinkInfo = (props) => {
         continue
       }
       //check if its in the interfaces configuration
-      if (interfaces[link] && interfaces[link].Type != 'AP' && interfaces[link].Type != 'Uplink') {
+      if (
+        interfaces[link] &&
+        interfaces[link].Type != 'AP' &&
+        interfaces[link].Type != 'Uplink'
+      ) {
         let entry = {
           Interface: link,
           Enabled: interfaces[link].Enabled,
@@ -283,8 +289,6 @@ const LANLinkInfo = (props) => {
         context.error(err)
         onClose()
       })
-
-
   }
 
   const color_scheme = useColorModeValue('muted', 'blueGray')
@@ -292,24 +296,26 @@ const LANLinkInfo = (props) => {
   return (
     <ScrollView h={'100%'}>
       <VStack space={2}>
-        <HStack p={4}>
+        <VStack p={4} space={1}>
           <Heading fontSize="md">LAN Link Configuration</Heading>
-        </HStack>
-        <Text fontSize="sm" color="muted.400">
-          Note: API support for multiple wired LAN interfaces is an upcoming feature.
-        </Text>
-        <Text fontSize="sm" color="muted.400">
-          For now, ensure the wired LAN is synchronized with the config/base/config.sh LANIF entry.
-        </Text>
+          <Text fontSize="sm" color="muted.400">
+            Note: API support for multiple wired LAN interfaces is an upcoming
+            feature.
+          </Text>
+          <Text fontSize="sm" color="muted.400">
+            For now, ensure the wired LAN is synchronized with the
+            config/base/config.sh LANIF entry.
+          </Text>
+        </VStack>
 
         <VStack
           mx={{ base: 0, md: 4 }}
           width={{ base: '100%', md: '75%' }}
           bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-          _space={2}
         >
           <FlatList
             data={lanLinks}
+            keyExtractor={(item) => `${item.Interface}_${item.Type}`}
             renderItem={({ item }) => (
               <HStack
                 p={4}
@@ -356,6 +362,7 @@ const LANLinkInfo = (props) => {
         >
           <FlatList
             data={links}
+            keyExtractor={(item) => `${item.Interface}_${item.Type}`}
             renderItem={({ item }) => (
               <HStack
                 p={4}
