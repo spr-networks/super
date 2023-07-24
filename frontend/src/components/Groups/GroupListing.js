@@ -30,7 +30,7 @@ const GroupListing = ({ group, ...props }) => {
 
   const list = []
   let idx = 0
-  if (group.Members && group.Members.length > 0) {
+  if (group.Members?.length > 0) {
     for (const dev of group.Members) {
       //if the device was in the vmap, mark it as active
       dev.ifname = ''
@@ -72,61 +72,57 @@ const GroupListing = ({ group, ...props }) => {
   }
 
   return (
-    <VStack space={2}>
-      <HStack
-        space={1}
-        alignItems="center"
-        justifyContent="space-between"
-        p={4}
-      >
-        <Heading fontSize="md">{translateName(group.Name)}</Heading>
-        <Text color="muted.500">{groupDescriptions[group.Name] || ''}</Text>
-      </HStack>
+    <FlatList
+      ListHeaderComponent={
+        <HStack
+          space={1}
+          alignItems="center"
+          justifyContent="space-between"
+          p={4}
+        >
+          <Heading fontSize="md">{translateName(group.Name)}</Heading>
+          <Text color="muted.500">{groupDescriptions[group.Name] || ''}</Text>
+        </HStack>
+      }
+      data={list}
+      estimatedItemSize={100}
+      renderItem={({ item }) => (
+        <Box
+          key={item.Name}
+          bg="backgroundCardLight"
+          borderBottomWidth={1}
+          _dark={{
+            bg: 'backgroundCardDark',
+            borderColor: 'borderColorCardDark'
+          }}
+          borderColor="borderColorCardLight"
+          p={4}
+        >
+          <HStack space={2} alignItems="center" justifyContent="space-between">
+            <Text w="1/4" bold>
+              {item.Name}
+            </Text>
 
-      <FlatList
-        data={list}
-        estimatedItemSize={100}
-        renderItem={({ item }) => (
-          <Box
-            bg="backgroundCardLight"
-            borderBottomWidth={1}
-            _dark={{
-              bg: 'backgroundCardDark',
-              borderColor: 'borderColorCardDark'
-            }}
-            borderColor="borderColorCardLight"
-            p={4}
-          >
-            <HStack
-              space={2}
-              alignItems="center"
+            <Stack
+              direction={{ base: 'column', md: 'row' }}
+              w="1/2"
+              space={1}
               justifyContent="space-between"
             >
-              <Text w="1/4" bold>
-                {item.Name}
+              <Text>{item.IP}</Text>
+              <Text color="muted.500" fontSize="sm">
+                {item.MAC}
               </Text>
-
-              <Stack
-                direction={{ base: 'column', md: 'row' }}
-                w="1/2"
-                space={1}
-                justifyContent="space-between"
-              >
-                <Text>{item.IP}</Text>
-                <Text color="muted.500" fontSize="sm">
-                  {item.MAC}
-                </Text>
-              </Stack>
-              <Box marginLeft="auto">
-                {item.ifname ? (
-                  <Badge variant="outline">{item.ifname}</Badge>
-                ) : null}
-              </Box>
-            </HStack>
-          </Box>
-        )}
-      />
-    </VStack>
+            </Stack>
+            <Box marginLeft="auto">
+              {item.ifname ? (
+                <Badge variant="outline">{item.ifname}</Badge>
+              ) : null}
+            </Box>
+          </HStack>
+        </Box>
+      )}
+    />
   )
 }
 
