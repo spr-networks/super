@@ -1,4 +1,4 @@
-import React, { useContext, Component } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 // react plugin used to create charts
 import { Chart as ChartJS } from 'chart.js/auto'
 import { Bar } from 'react-chartjs-2'
@@ -8,50 +8,17 @@ import DateRange from 'components/DateRange'
 import { AlertContext } from 'layouts/Admin'
 import { prettySize } from 'utils'
 
-import {
-  Box,
-  Button,
-  Heading,
-  HStack,
-  VStack,
-  Text,
-  useColorModeValue
-} from 'native-base'
+import { Box, Button, Heading, HStack, VStack, Text } from 'native-base'
 
-export default class Traffic extends Component {
-  state = {
-    lan: { totalIn: 0, totalOut: 0 },
-    wan: { totalIn: 0, totalOut: 0 },
-    wan_scale: 'All Time',
-    lan_scale: 'All Time'
-  }
+export default (props) => {
+  const context = useContext(AlertContext)
+  const [lan, setLan] = useState({ totalIn: 0, totalOut: 0 })
+  const [wan, setWan] = useState({ totalIn: 0, totalOut: 0 })
+  const [lanScale, setLanScale] = useState('All Time')
+  const [wanScale, setWanScale] = useState('All Time')
+  const [devices, setDevices] = useState([])
 
-  macToName = {}
-  ipToMac = {}
-
-  async processTrafficHistory(target, scale) {
-    const devices = await deviceAPI.list().catch((error) => {
-      this.context.error(
-        'API Failure get ' + target + 'traffic: ' + error.message
-      )
-    })
-
-    const arp = await wifiAPI.arp().catch((error) => {
-      this.context.error('API Failure get arp information: ' + error.message)
-    })
-
-    for (const a of arp) {
-      //skip incomplete entries
-      if (a.MAC == '00:00:00:00:00:00') {
-        continue
-      }
-      this.ipToMac[a.IP] = a.MAC
-    }
-
-    Object.keys(devices).forEach((mac) => {
-      this.macToName[mac] = devices[mac].Name
-    })
-
+  const processTrafficHistory = async (target, scale) => {
     let processData = (data_in, data_out) => {
       if (!data_in || !data_out) {
         return
@@ -114,10 +81,10 @@ export default class Traffic extends Component {
       let d_in = []
       let d_out = []
 
-      for (const e of Object.keys(d)) {
-        d_labels.push(e)
-        d_in.push(d[e]['In'])
-        d_out.push(d[e]['Out'])
+      for (const ip of Object.keys(d)) {
+        d_labels.push(ip)
+        d_in.push(d[ip]['In'])
+        d_out.push(d[ip]['Out'])
       }
 
       data.labels = d_labels
@@ -132,7 +99,7 @@ export default class Traffic extends Component {
 
     if (do_time_series) {
       let traffic_series = await trafficAPI.history().catch((error) => {
-        this.context.error('API Failure get traffic history: ' + error.message)
+        context.error('API Failure get traffic history: ' + error.message)
       })
 
       let recent_reading = traffic_series[0]
@@ -206,18 +173,34 @@ export default class Traffic extends Component {
     }
   }
 
-  async componentDidMount() {
-    let lan_data = await this.processTrafficHistory('lan', this.state.lan_scale)
-    let wan_data = await this.processTrafficHistory('wan', this.state.wan_scale)
+  useEffect(async () => {
+    try {
+      let devices = await deviceAPI.list()
+      setDevices(Object.values(devices))
+    } catch (err) {
+      context.error(err)
+    }
+
+    let lan_data = await processTrafficHistory('lan', lanScale)
+    let wan_data = await processTrafficHistory('wan', wanScale)
+
     if (lan_data) {
-      this.setState({ lan: lan_data })
+      setLan(lan_data)
     }
     if (wan_data) {
-      this.setState({ wan: wan_data })
+      setWan(wan_data)
     }
+  }, [])
+
+  const deviceByIp = (ip) => {
+    return devices.find((dev) => dev.RecentIP == ip)
   }
 
-  templateData = {
+  const deviceNameOrIp = (ip) => {
+    return deviceByIp(ip)?.Name || ip
+  }
+
+  let templateData = {
     options: {
       indexAxis: 'x',
       plugins: {
@@ -236,12 +219,10 @@ export default class Traffic extends Component {
             },
             beforeBody: (TooltipItems, object) => {
               let ip = TooltipItems[0].label
-              let label = ''
-              let mac = this.ipToMac[ip]
-              let name = this.macToName[mac]
-              if (mac) {
-                label = mac
-              }
+              let label = deviceByIp(ip)?.MAC
+
+              let name = deviceNameOrIp(ip)
+
               if (name) {
                 label = label + '  ' + name
               }
@@ -284,78 +265,79 @@ export default class Traffic extends Component {
     }
   }
 
-  render() {
-    const handleChangeTime = (scale, choice) => {
-      this.state[choice + '_scale'] = scale
-      this.processTrafficHistory(choice, scale).then((result) => {
-        let o = {}
-        o[choice] = result
-        this.setState(o)
-      })
+  const handleChangeTime = (scale, choice) => {
+    if (choice == 'lan') {
+      setLanScale(scale)
+    } else {
+      setWanScale(scale)
     }
 
-    return (
-      <VStack space={4}>
-        <Box
-          _light={{ bg: 'backgroundCardLight' }}
-          _dark={{ bg: 'backgroundCardDark' }}
-          _rounded="md"
-          width="100%"
-          p={4}
-        >
-          <HStack alignItems="center">
-            <VStack>
-              <Heading fontSize="md">Device WAN Traffic</Heading>
-              <Text color="muted.500">
-                IN: {prettySize(this.state.wan.totalIn)}, OUT:{' '}
-                {prettySize(this.state.wan.totalOut)}
-              </Text>
-            </VStack>
-            <Button.Group size="sm" marginLeft="auto">
-              <DateRange
-                defaultValue={this.state.wan_scale}
-                onChange={(newValue) => handleChangeTime(newValue, 'wan')}
-              />
-            </Button.Group>
-          </HStack>
-          <Box>
-            {this.state.wan.datasets ? (
-              <Bar data={this.state.wan} options={this.templateData.options} />
-            ) : null}
-          </Box>
-        </Box>
-        <Box
-          _light={{ bg: 'backgroundCardLight' }}
-          _dark={{ bg: 'backgroundCardDark' }}
-          _rounded="md"
-          width="100%"
-          p={4}
-          mb={4}
-        >
-          <HStack alignItems="center">
-            <VStack>
-              <Heading fontSize="md">Device LAN Traffic</Heading>
-              <Text color="muted.500">
-                IN: {prettySize(this.state.lan.totalIn)}, OUT:{' '}
-                {prettySize(this.state.lan.totalOut)}
-              </Text>
-            </VStack>
-            <Button.Group size="sm" marginLeft="auto">
-              <DateRange
-                defaultValue={this.state.wan_scale}
-                onChange={(newValue) => handleChangeTime(newValue, 'lan')}
-              />
-            </Button.Group>
-          </HStack>
-          <Box>
-            {this.state.lan && this.state.lan.datasets ? (
-              <Bar data={this.state.lan} options={this.templateData.options} />
-            ) : null}
-          </Box>
-        </Box>
-      </VStack>
-    )
+    processTrafficHistory(choice, scale).then((result) => {
+      if (choice == 'lan') {
+        setLan(result)
+      } else {
+        setWan(result)
+      }
+    })
   }
-}
 
-Traffic.contextType = AlertContext
+  return (
+    <VStack space={4}>
+      <Box
+        _light={{ bg: 'backgroundCardLight' }}
+        _dark={{ bg: 'backgroundCardDark' }}
+        _rounded="md"
+        width="100%"
+        p={4}
+      >
+        <HStack alignItems="center">
+          <VStack>
+            <Heading fontSize="md">Device WAN Traffic</Heading>
+            <Text color="muted.500">
+              IN: {prettySize(wan.totalIn)}, OUT: {prettySize(wan.totalOut)}
+            </Text>
+          </VStack>
+          <Button.Group size="sm" marginLeft="auto">
+            <DateRange
+              defaultValue={wanScale}
+              onChange={(newValue) => handleChangeTime(newValue, 'wan')}
+            />
+          </Button.Group>
+        </HStack>
+        <Box>
+          {wan.datasets ? (
+            <Bar data={wan} options={templateData.options} />
+          ) : null}
+        </Box>
+      </Box>
+      <Box
+        _light={{ bg: 'backgroundCardLight' }}
+        _dark={{ bg: 'backgroundCardDark' }}
+        _rounded="md"
+        width="100%"
+        p={4}
+        mb={4}
+      >
+        <HStack alignItems="center">
+          <VStack>
+            <Heading fontSize="md">Device LAN Traffic</Heading>
+            <Text color="muted.500">
+              IN: {prettySize(lan.totalIn)}, OUT: {prettySize(lan.totalOut)}
+            </Text>
+          </VStack>
+          <Button.Group size="sm" marginLeft="auto">
+            <DateRange
+              defaultValue={lanScale}
+              onChange={(newValue) => handleChangeTime(newValue, 'lan')}
+            />
+          </Button.Group>
+        </HStack>
+        <Box>
+          {lan && lan.datasets ? (
+            <Bar data={lan} options={templateData.options} />
+          ) : null}
+        </Box>
+      </Box>
+    </VStack>
+  )
+}
