@@ -363,7 +363,7 @@ PODS:
     - React-Core
   - RNFlashList (1.4.0):
     - React-Core
-  - RNSVG (12.5.1):
+  - RNSVG (13.10.0):
     - React-Core
   - SocketRocket (0.6.0)
   - Yoga (1.14.0)
@@ -580,7 +580,7 @@ SPEC CHECKSUMS:
   RNCClipboard: 3f0451a8100393908bea5c5c5b16f96d45f30bfc
   RNCPushNotificationIOS: 87b8d16d3ede4532745e05b03c42cff33a36cc45
   RNFlashList: 399bf6a0db68f594ad2c86aaff3ea39564f39f8a
-  RNSVG: d7d7bc8229af3842c9cfc3a723c815a52cdd1105
+  RNSVG: 80584470ff1ffc7994923ea135a3e5ad825546b9
   SocketRocket: fccef3f9c5cedea1353a9ef6ada904fde10d6608
   Yoga: 99652481fcd320aefa4a7ef90095b95acd181952
   YogaKit: f782866e155069a2cca2517aafea43200b01fd5a
