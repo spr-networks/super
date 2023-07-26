@@ -48,7 +48,7 @@ export default function MockAPI() {
       })
 
       server.create('device', {
-        Name: 'rpi23',
+        Name: 'laptop',
         MAC: '22:22:22:22:22:22',
         WGPubKey: 'pubkey',
         VLANTag: 'vlantag',
@@ -63,10 +63,17 @@ export default function MockAPI() {
 
       for (let i = 3; i < 10; i++) {
         server.create('device', {
-          Name: `device-${i}`,
+          Name: `${rpick([
+            'phone',
+            'laptop',
+            'tv',
+            'desktop',
+            'iphone',
+            'android'
+          ])}`,
           MAC: Array(6).fill(`${i}${i}`).join(':'),
           WGPubKey: 'pubkey',
-          VLANTag: 'vlantag',
+          //VLANTag: 'vlantag',
           RecentIP: `192.168.2.10${i}`,
           PSKEntry: {
             Type: rpick(['wpa2', 'sae']),
@@ -1195,7 +1202,7 @@ export default function MockAPI() {
       })
 
       this.get('/version', () => {
-        return '"v0.1.0-beta.0"'
+        return '"v0.2.16"'
       })
 
       this.get('/info/hostname', () => {
@@ -1260,7 +1267,7 @@ export default function MockAPI() {
 
       this.get('/iw/dev', (schema) => {
         return {
-          phy0: {
+          phy1: {
             'wlan1.4103': {
               ifindex: '62',
               wdev: '0x9',
@@ -1273,7 +1280,7 @@ export default function MockAPI() {
               ifindex: '4',
               wdev: '0x1',
               addr: '44:a5:6e:63:c5:f2',
-              ssid: 'Ziggy',
+              ssid: 'TestAP',
               type: 'AP',
               channel: '36 (5180 MHz), width: 80 MHz, center1: 5210 MHz',
               txpower: '18.00 dBm',
@@ -1290,7 +1297,7 @@ export default function MockAPI() {
               }
             }
           },
-          phy1: {
+          phy0: {
             wlan0: {
               ifindex: '3',
               wdev: '0x100000001',
@@ -1582,12 +1589,12 @@ export default function MockAPI() {
 
       this.get('/hostapd/wlan1/all_stations', (schema) => {
         return {
-          '11:22:33:44:55:61': {
+          '11:11:11:11:11:11': {
             AKMSuiteSelector: '00-0f-ac-2',
             aid: '3',
             capability: '0x11',
             connected_time: '4946',
-            dot11RSNAStatsSTAAddress: '11:22:33:44:55:61',
+            dot11RSNAStatsSTAAddress: '11:11:11:11:11:11',
             dot11RSNAStatsSelectedPairwiseCipher: '00-0f-ac-4',
             dot11RSNAStatsTKIPLocalMICFailures: '0',
             dot11RSNAStatsTKIPRemoteMICFailures: '0',
@@ -1611,12 +1618,12 @@ export default function MockAPI() {
             vlan_id: '4247',
             wpa: '2'
           },
-          '11:22:33:44:55:62': {
+          '22:22:22:22:22:22': {
             AKMSuiteSelector: '00-0f-ac-2',
             aid: '3',
             capability: '0x11',
             connected_time: '4946',
-            dot11RSNAStatsSTAAddress: '11:22:33:44:55:61',
+            dot11RSNAStatsSTAAddress: '22:22:22:22:22:22',
             dot11RSNAStatsSelectedPairwiseCipher: '00-0f-ac-4',
             dot11RSNAStatsTKIPLocalMICFailures: '0',
             dot11RSNAStatsTKIPRemoteMICFailures: '0',
@@ -2360,13 +2367,105 @@ export default function MockAPI() {
           Size: 13344768,
           Topics: [
             'nft:wan:in',
-            'dns:serve:event',
+            'dns:serve:192.168.2.102',
             'nft:wan:out',
             'log:www:access',
             'www:auth:token:success',
             'nft:lan:in'
           ]
         }
+      })
+
+      this.get('/plugins/db/stats/:bucket', (schema, request) => {
+        return {
+          BranchPageN: 1,
+          BranchOverflowN: 0,
+          LeafPageN: 55,
+          LeafOverflowN: 0,
+          KeyN: 383,
+          Depth: 2,
+          BranchAlloc: 4096,
+          BranchInuse: 1336,
+          LeafAlloc: 225280,
+          LeafInuse: 205673,
+          BucketN: 1,
+          InlineBucketN: 0,
+          InlineBucketInuse: 0
+        }
+      })
+
+      this.get('/plugins/db/items/:ip', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let types = ['NOERROR', 'NODATA', 'OTHERERROR', 'BLOCKED']
+        let ip = request.params.ip
+        let revip = ip.split('').reverse().join('')
+        let day = 1 + parseInt(Math.random() * 28)
+        day = day.toString().padStart(2, '0')
+
+        return [
+          {
+            Q: [
+              {
+                Name: `${revip}.in-addr.arpa.`,
+                Qtype: 12,
+                Qclass: 1
+              }
+            ],
+            A: [
+              {
+                Hdr: {
+                  Name: `${revip}.in-addr.arpa.`,
+                  Rrtype: 12,
+                  Class: 1,
+                  Ttl: 30,
+                  Rdlength: 0
+                },
+                Ptr: 'rpi4.lan.'
+              }
+            ],
+            Type: 'NOERROR',
+            FirstName: `${revip}.in-addr.arpa.`,
+            FirstAnswer: 'rpi4.lan.',
+            Local: '[::]:53',
+            Remote: `${ip}:50862`,
+            Timestamp: `2022-03-${day}T08:05:34.983138386Z`
+          },
+          {
+            Q: [
+              {
+                Name: 'caldav.fe.apple-dns.net.',
+                Qtype: 65,
+                Qclass: 1
+              }
+            ],
+            A: [],
+            Type: 'NODATA',
+            FirstName: 'caldav.fe.apple-dns.net.',
+            FirstAnswer: '',
+            Local: '[::]:53',
+            Remote: `${ip}:50216`,
+            Timestamp: `2022-03-${day}T08:05:34.01579228Z`
+          },
+          {
+            Q: [
+              {
+                Name: `lb._dns-sd._udp.${revip}.in-addr.arpa.`,
+                Qtype: 12,
+                Qclass: 1
+              }
+            ],
+            A: [],
+            Type: 'OTHERERROR',
+            FirstName: `lb._dns-sd._udp.${revip}.in-addr.arpa.`,
+            FirstAnswer: '',
+            Local: '[::]:53',
+            Remote: `${ip}:64151`,
+            Timestamp: `2022-03-${day}T08:05:29.976935196Z`
+          }
+        ]
       })
 
       this.get('/uplink/wifi', (schema, request) => {
