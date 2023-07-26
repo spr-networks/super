@@ -53,7 +53,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
   }*/
 
   const AsnIcon = React.memo(({ asn }) => {
-    if (!asn || Platform.OS !== 'web') {
+    if (!asn) {
       return <></>
     }
 
@@ -87,7 +87,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
     for (let r in asnToIcon) {
       if (asnName.match(new RegExp(`${r}`))) {
         return (
-          <Box p={1} _dark={{ bg: 'muted.100', rounded: 'full' }} mr={2}>
+          <Box p={1} _dark={{ bg: 'muted.100', rounded: 'full' }} mr={1}>
             {asnToIcon[r]}
           </Box>
         )
