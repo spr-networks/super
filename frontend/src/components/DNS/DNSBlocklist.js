@@ -260,7 +260,7 @@ export default class DNSBlocklist extends React.Component {
           ) : null}
         </HStack>
 
-        <Box px={4} mb={4}>
+        <Box px={{ md: 4 }} mb={4}>
           <FlatList
             data={[...this.state.list, ...this.state.recommendedList]}
             renderItem={({ item }) => (
@@ -296,7 +296,7 @@ export default class DNSBlocklist extends React.Component {
                     flex={2}
                     space={{ base: 1, md: 1 }}
                     alignSelf="center"
-                    alignItems="center"
+                    alignItems={{ base: 'flex-end', md: 'center' }}
                     direction={{ base: 'column', md: 'row' }}
                   >
                     {item.Enabled ? (

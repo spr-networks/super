@@ -97,6 +97,7 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
         borderLeftColor={colorByType(item.Type) + '.500'}
         py={2}
         pl={2}
+        pr={4}
       >
         <Box display={{ base: 'none', md: 'flex' }} w="20">
           <Badge variant="outline" colorScheme={colorByType(item.Type)}>
