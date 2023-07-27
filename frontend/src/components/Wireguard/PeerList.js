@@ -29,46 +29,50 @@ import {
   useColorModeValue
 } from 'native-base'
 
-import { FlashList } from '@shopify/flash-list'
-
 const PeerList = (props) => {
   const [peers, setPeers] = useState(null)
   const [config, setConfig] = useState({})
 
   const refreshPeers = () => {
-    wireguardAPI.status().then((status) => {
-      if (!status || !Object.keys(status).length) {
-        return
-      }
+    wireguardAPI
+      .status()
+      .then((status) => {
+        if (!status || !Object.keys(status).length) {
+          return
+        }
 
-      let publicKey = status.wg0.publicKey,
-        listenPort = status.wg0.listenPort
+        let publicKey = status.wg0.publicKey,
+          listenPort = status.wg0.listenPort
 
-      setConfig({ publicKey, listenPort })
-    })
+        setConfig({ publicKey, listenPort })
+      })
+      .catch((err) => {})
 
-    wireguardAPI.peers().then((list) => {
-      deviceAPI
-        .list()
-        .then((devices) => {
-          list = list.map((peer) => {
-            let device = Object.values(devices)
-              .filter((d) => d.WGPubKey == peer.PublicKey)
-              .pop()
+    wireguardAPI
+      .peers()
+      .then((list) => {
+        deviceAPI
+          .list()
+          .then((devices) => {
+            list = list.map((peer) => {
+              let device = Object.values(devices)
+                .filter((d) => d.WGPubKey == peer.PublicKey)
+                .pop()
 
-            if (device) {
-              peer.device = device
-            }
+              if (device) {
+                peer.device = device
+              }
 
-            return peer
+              return peer
+            })
+
+            setPeers(list)
           })
-
-          setPeers(list)
-        })
-        .catch((err) => {
-          setPeers(list)
-        })
-    })
+          .catch((err) => {
+            setPeers(list)
+          })
+      })
+      .catch((err) => {})
   }
 
   useEffect(() => {
