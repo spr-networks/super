@@ -155,17 +155,17 @@ NUM_PEERS=$(grep '^\[Peer\]' $SPR_DIR/configs/wireguard/wg0.conf 2>/dev/null | w
 echo "[+] num peers already configured: $NUM_PEERS"
 
 # Use the API to generate a wireguard peer
-RET=$(curl -H "Authorization: Bearer ${TOKEN}" -X PUT http://localhost:8000/plugins/wireguard/peer --data '{}')                                                                                                                           
-PRIVATE_KEY=$(echo $RET | jq -r .Interface.PrivateKey)                                                                                                                                                                                    
-PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)                                                                                                                                                                                               
-PUBLIC_KEY_ESCAPED=$(echo \"${PUBLIC_KEY}\" | jq -r @uri)                                                                                                                                                                                 
-CLIENT_IP=$(echo $RET | jq -r .Interface.Address)                                                                                                                                                                                         
-SERVER_PUBLIC_KEY=$(echo $RET | jq -r .Peer.PublicKey)                                                                                                                                                                                    
-PRESHARED_KEY=$(echo $RET | jq -r .Peer.PresharedKey)                                                                                                                                                                                     
-DNS_IP=$(echo $RET | jq -r .Interface.DNS)                                                                                                                                                                                                
-                                                                                                                                                                                                                                          
-# Update the Groups for the Device and Name                                                                                                                                                                                               
-curl -H "Authorization: Bearer ${TOKEN}" -X PUT http://localhost:8000/device?identity=${PUBLIC_KEY_ESCAPED} --data "{\"Groups\": [\"wan\", \"lan\", \"dns\"], \"Name\": \"peer${NUM_PEERS}\"}"                                            
+RET=$(curl -H "Authorization: Bearer ${TOKEN}" -X PUT http://localhost:8000/plugins/wireguard/peer --data '{}')
+PRIVATE_KEY=$(echo $RET | jq -r .Interface.PrivateKey)
+PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)
+PUBLIC_KEY_ESCAPED=$(echo \"${PUBLIC_KEY}\" | jq -r @uri)
+CLIENT_IP=$(echo $RET | jq -r .Interface.Address)
+SERVER_PUBLIC_KEY=$(echo $RET | jq -r .Peer.PublicKey)
+PRESHARED_KEY=$(echo $RET | jq -r .Peer.PresharedKey)
+DNS_IP=$(echo $RET | jq -r .Interface.DNS)
+
+# Update the Groups for the Device and Name
+RET=$(curl -H "Authorization: Bearer ${TOKEN}" -X PUT http://localhost:8000/device?identity=${PUBLIC_KEY_ESCAPED} --data "{\"Groups\": [\"wan\", \"lan\", \"dns\"], \"Name\": \"peer${NUM_PEERS}\"}")
 
 # wg client config
 _IFS=$IFS
