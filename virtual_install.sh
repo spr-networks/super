@@ -82,17 +82,17 @@ if [ ${#SPR_DIR} -eq 0 ]; then
 fi
 
 # only generate user if init
-if [ ! -f $SPR_DIR/configs/base/auth_users.json ]; then
+if [ ! -f $SPR_DIR/configs/auth/auth_users.json ]; then
 	echo "[+] generating admin password"
 	PASSWORD=$(cat /dev/urandom | tr -dc '[:alpha:]' | fold -w ${1:-16} | head -n 1)
-	echo "{\"admin\" : \"$PASSWORD\"}" > $SPR_DIR/configs/base/auth_users.json
+	echo "{\"admin\" : \"$PASSWORD\"}" > $SPR_DIR/configs/auth/auth_users.json
 
 	echo "[+] generating token..."
 	TOKEN=$(dd if=/dev/urandom bs=1 count=32 2>/dev/null | base64)
-	echo "[{\"Name\": \"admin\", \"Token\": \"$TOKEN\", \"Expire\": 0}]" > $SPR_DIR/configs/base/auth_tokens.json
+	echo "[{\"Name\": \"admin\", \"Token\": \"$TOKEN\", \"Expire\": 0}]" > $SPR_DIR/configs/auth/auth_tokens.json
 else
-	PASSWORD=$(cat "$SPR_DIR/configs/base/auth_users.json" | jq -r .admin)
-	TOKEN=$(cat "$SPR_DIR/configs/base/auth_tokens.json" | jq -r '.[0].Token')
+	PASSWORD=$(cat "$SPR_DIR/configs/auth/auth_users.json" | jq -r .admin)
+	TOKEN=$(cat "$SPR_DIR/configs/auth/auth_tokens.json" | jq -r '.[0].Token')
 fi
 
 # dns block
