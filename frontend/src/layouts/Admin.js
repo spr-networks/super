@@ -211,7 +211,7 @@ const AdminLayout = (props) => {
   const [activeSidebarItem, setActiveSidebarItem] = useState(path)
   const [isOpenSidebar, setIsOpenSidebar] = useState(false)
   const [isNavbarOpen, setIsNavbarOpen] = useState(false)
-  const [isWifiDisabled, setIsWifiDisabled] = useState(false)
+  const [isWifiDisabled, setIsWifiDisabled] = useState(null)
   const [isPlusDisabled, setIsPlusDisabled] = useState(true)
   const [isMeshNode, setIsMeshNode] = useState(false)
   const [version, setVersion] = useState('v0.1')
@@ -222,11 +222,7 @@ const AdminLayout = (props) => {
     api
       .features()
       .then((res) => {
-        if (res.includes('wifi')) {
-          setIsWifiDisabled(false)
-        } else {
-          setIsWifiDisabled(true)
-        }
+        setIsWifiDisabled(!res.includes('wifi'))
 
         meshAPI
           .leafMode()
@@ -365,7 +361,7 @@ const AdminLayout = (props) => {
 
   // this will trigger after the features check
   useEffect(() => {
-    if (isWifiDisabled) {
+    if (isWifiDisabled || isWifiDisabled === null) {
       return
     }
 
