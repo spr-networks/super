@@ -47,6 +47,13 @@ const Mesh = (props) => {
   let alertContext = useContext(AlertContext)
   let refModal = useRef(null)
 
+  const catchMeshErr = (err) => {
+    alertContext.error(
+      'Mesh API Failure',
+      err?.message == 404 ? 'Is mesh plugin enabled?' : err
+    )
+  }
+
   const refreshLeaves = () => {
     retrieveLeafToken((token) => {
       setLeafToken(token)
@@ -57,18 +64,14 @@ const Mesh = (props) => {
       .then((result) => {
         setIsLeafMode(JSON.parse(result))
       })
-      .catch((err) => {
-        alertContext.error('Mesh API Failure', err)
-      })
+      .catch(catchMeshErr)
 
     meshAPI
       .config()
       .then((result) => {
         setConfig(result)
       })
-      .catch((err) => {
-        alertContext.error('Mesh API Failure', err)
-      })
+      .catch(catchMeshErr)
 
     meshAPI
       .leafRouters()
@@ -128,9 +131,7 @@ const Mesh = (props) => {
             alertContext.error('Remote API Failure', e)
           })
       })
-      .catch((err) => {
-        alertContext.error('Mesh API Failure', err)
-      })
+      .catch(catchMeshErr)
   }
 
   useEffect(() => {

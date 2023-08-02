@@ -62,6 +62,10 @@ const Sidebar = (props) => {
 
   const showSearch = false
 
+  if (!sidebarItems.length) {
+    return <></>
+  }
+
   return (
     <ScrollView
       _mb={{ base: Platform.OS == 'ios' ? 20 : 0, md: 0 }}
@@ -173,7 +177,11 @@ const SidebarItem = (props) => {
     }
 
     // menu items hidden when plus mode is disabled
-    if (item.plus === true && isPlusDisabled && !meshItems.includes(item.name)) {
+    if (
+      item.plus === true &&
+      isPlusDisabled &&
+      !meshItems.includes(item.name)
+    ) {
       display.base = 'none'
     }
 
@@ -365,7 +373,7 @@ const RotatingView = (props) => {
     Animated.timing(rotateAnim, {
       toValue: 1,
       duration: 100,
-      useNativeDriver: true
+      useNativeDriver: Platform.OS == 'ios' //true
     }).start()
   }
 
@@ -373,7 +381,7 @@ const RotatingView = (props) => {
     Animated.timing(rotateAnim, {
       toValue: 0,
       duration: 100,
-      useNativeDriver: true
+      useNativeDriver: Platform.OS == 'ios' //true
     }).start()
   }
 

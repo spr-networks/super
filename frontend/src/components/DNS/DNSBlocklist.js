@@ -260,7 +260,7 @@ export default class DNSBlocklist extends React.Component {
           ) : null}
         </HStack>
 
-        <Box px={4} mb={4}>
+        <Box px={{ md: 4 }} mb={4}>
           <FlatList
             data={[...this.state.list, ...this.state.recommendedList]}
             renderItem={({ item }) => (
@@ -275,7 +275,7 @@ export default class DNSBlocklist extends React.Component {
                 p={4}
               >
                 <HStack
-                  space={3}
+                  space={2}
                   justifyContent="space-between"
                   alignItems="center"
                 >
@@ -294,13 +294,17 @@ export default class DNSBlocklist extends React.Component {
 
                   <Stack
                     flex={2}
-                    space={{ base: 2, md: 1 }}
+                    space={{ base: 1, md: 1 }}
                     alignSelf="center"
-                    alignItems="center"
+                    alignItems={{ base: 'flex-end', md: 'center' }}
                     direction={{ base: 'column', md: 'row' }}
                   >
                     {item.Enabled ? (
-                      <Badge colorScheme="success" color="success.500">
+                      <Badge
+                        variant="outline"
+                        colorScheme="success"
+                        color="success.500"
+                      >
                         Enabled
                       </Badge>
                     ) : null}

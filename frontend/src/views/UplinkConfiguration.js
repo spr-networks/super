@@ -4,7 +4,7 @@
       set load balancing, failover
       test failover
 */
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import {
   Badge,
   Box,
@@ -17,14 +17,11 @@ import {
   FormControl,
   Modal,
   Menu,
-  Stack,
   Text,
-  View,
   VStack,
-  ScrollView,
+  View,
   useDisclose,
   useColorModeValue,
-  Radio,
   Checkbox
 } from 'native-base'
 
@@ -38,6 +35,7 @@ import { ucFirst } from 'utils'
 
 import { Select } from 'components/Select'
 import InputSelect from 'components/InputSelect'
+import { deviceAPI } from 'api'
 
 let keymgmts = [
   { value: 'WPA-PSK WPA-PSK-SHA256 SAE', label: 'WPA2/WPA3' },
@@ -588,22 +586,20 @@ const UplinkInfo = (props) => {
       if (filtered.includes(link)) {
         continue
       }
+
       //check if its in the interfaces configuration
-      if (interfaces[link] && interfaces[link].Type == 'Uplink') {
+      if (interfaces[link]?.Type == 'Uplink') {
         let entry = {
           Interface: link,
-          Enabled: interfaces[link].Enabled,
           IPs: linkIPs[link],
           Type: interfaces[link].Type,
-          Subtype: interfaces[link].Subtype
+          Subtype: interfaces[link].Subtype,
+          Enabled: interfaces[link].Enabled
         }
         uplinks.push(entry)
       } else {
-        let type = 'Other'
-        if (interfaces[link] && interfaces[link].Type) {
-          type = interfaces[link].Type
-        }
-        let entry = { Interface: link, IPs: linkIPs[link], Type: type }
+        let Type = interfaces[link]?.Type || 'Other'
+        let entry = { Interface: link, IPs: linkIPs[link], Type }
         links.push(entry)
       }
     }
@@ -664,8 +660,6 @@ const UplinkInfo = (props) => {
   )
 
   const onSubmit = (item, type, enable) => {
-    //
-
     let new_entry
 
     if (type == 'wifi') {
@@ -698,10 +692,8 @@ const UplinkInfo = (props) => {
       })
   }
 
-  const color_scheme = useColorModeValue('muted', 'blueGray')
-
   return (
-    <ScrollView h={'100%'}>
+    <View h={'100%'}>
       <VStack space={2}>
         <HStack p={4}>
           <Heading fontSize="md">Uplink Configuration</Heading>
@@ -717,6 +709,7 @@ const UplinkInfo = (props) => {
         >
           <FlatList
             data={uplinks}
+            keyExtractor={(item) => `${item.Interface}_${item.Type}`}
             renderItem={({ item }) => (
               <HStack
                 p={4}
@@ -735,16 +728,19 @@ const UplinkInfo = (props) => {
                 </Text>
                 <Text flex={1}>{item.Type}</Text>
                 <Text flex={1}>{item.Subtype}</Text>
-                <Text flex={2}>{item.IPs}</Text>
+                <VStack flex={2} space={1}>
+                  {item.IPs.map((ip, i) => (
+                    <Text key={ip} display={i == 0 ? 'flex' : 'none'}>
+                      {ip}
+                    </Text>
+                  ))}
+                </VStack>
                 {item.Enabled ? (
                   <Badge
                     key={item.Name}
                     variant="outline"
-                    colorScheme={color_scheme}
-                    rounded="sm"
-                    size="sm"
-                    py={1}
-                    px={2}
+                    colorScheme="success"
+                    color="success.500"
                   >
                     Enabled
                   </Badge>
@@ -763,6 +759,7 @@ const UplinkInfo = (props) => {
         >
           <FlatList
             data={links}
+            keyExtractor={(item) => `${item.Interface}_${item.Type}`}
             renderItem={({ item }) => (
               <HStack
                 p={4}
@@ -778,8 +775,11 @@ const UplinkInfo = (props) => {
                   {item.Interface}
                 </Text>
                 <Text flex={1}>{item.Type}</Text>
-                {/*<Text flex={1}>{item.Enabled}</Text>*/}
-                <Text flex={2}>{item.IPs}</Text>
+                <VStack flex={2} space={1}>
+                  {item.IPs.map((ip) => (
+                    <Text key={ip}>{ip}</Text>
+                  ))}
+                </VStack>
                 <Box flex={1}>{moreMenu(item.Interface)}</Box>
               </HStack>
             )}
@@ -809,7 +809,7 @@ const UplinkInfo = (props) => {
           </Modal>
         </VStack>
       </VStack>
-    </ScrollView>
+    </View>
   )
 }
 

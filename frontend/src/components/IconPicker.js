@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react'
 import { HStack, Pressable } from 'native-base'
 
 import IconItem from './IconItem'
-import { BrandIcons } from 'FontAwesomeUtils'
 
 const IconPicker = ({ value, color, onChange, ...props }) => {
   const [selected, setSelected] = useState(null)
@@ -48,17 +47,19 @@ const IconPicker = ({ value, color, onChange, ...props }) => {
   return (
     <HStack
       flexWrap={'wrap'}
-      justifyContent={{ base: 'space-evenly', md: 'flex-start' }}
+      justifyContent={{ base: 'space-between', md: 'flex-start' }}
     >
       {icons.map((name) => (
         <Pressable
           onPress={() => setSelected(name)}
           p={2}
+          px={{ base: 1, md: 2 }}
           opacity={selected == name ? 1 : 0.5}
         >
           <IconItem
             name={name}
             color={selected == name && color ? `${color}.400` : 'blueGray.500'}
+            size={10}
           />
         </Pressable>
       ))}

@@ -289,7 +289,7 @@ const AddDevice = (props) => {
             variant="underlined"
             type="password"
             autoComplete="new-password"
-            autoCorrect="off"
+            autoCorrect={false}
             onChangeText={(value) => handleChange('psk', value)}
           />
           {'psk' in errors ? (

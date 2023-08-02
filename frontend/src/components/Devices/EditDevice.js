@@ -444,28 +444,23 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           </HStack>
         </FormControl>
 
-        {Platform.OS == 'web' ? (
-          <Stack direction="column">
-            <FormControl flex={1}>
-              <FormControl.Label>Icon</FormControl.Label>
-              {icon ? (
-                <IconPicker
-                  value={icon}
-                  color={color}
-                  onChange={(icon) => setIcon(icon)}
-                />
-              ) : null}
-            </FormControl>
-            <FormControl>
-              <FormControl.Label>Color</FormControl.Label>
-
-              <ColorPicker
-                value={color}
-                onChange={(color) => setColor(color)}
+        <Stack direction="column">
+          <FormControl flex={1}>
+            <FormControl.Label>Icon</FormControl.Label>
+            {icon ? (
+              <IconPicker
+                value={icon}
+                color={color}
+                onChange={(icon) => setIcon(icon)}
               />
-            </FormControl>
-          </Stack>
-        ) : null}
+            ) : null}
+          </FormControl>
+          <FormControl>
+            <FormControl.Label>Color</FormControl.Label>
+
+            <ColorPicker value={color} onChange={(color) => setColor(color)} />
+          </FormControl>
+        </Stack>
 
         <ModalConfirm
           type={modalType}

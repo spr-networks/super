@@ -462,7 +462,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
 
               <Text color="muted.500">{device.MAC || ' '}</Text>
 
-              {device.VLANTag != '' ? (
+              {device.VLANTag?.length ? (
                 <HStack space={1}>
                   <Text>VLAN</Text>
                   <Text bold>{device.VLANTag}</Text>

@@ -42,6 +42,7 @@ export class WifiClientCount extends Component {
               numberOfWifiClients: count + connectMACsList.length
             })
           })
+          .catch((err) => {})
       })
       .catch((err) => {})
   }

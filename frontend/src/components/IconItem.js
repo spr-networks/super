@@ -55,11 +55,6 @@ const IconItem = ({ name, color, size, ...props }) => {
     return <></>
   }
 
-  // NOTE ios dont support svg elems atm.
-  if (Platform.OS == 'ios') {
-    return <></>
-  }
-
   return <Component size={_size} color={color || 'blueGray.500'} {...props} />
 }
 
