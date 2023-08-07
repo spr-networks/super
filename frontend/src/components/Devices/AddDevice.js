@@ -89,6 +89,11 @@ const AddDevice = (props) => {
   }
 
   const allGroups = ['wan', 'dns', 'lan']
+  const groupTips = {
+    'wan': 'Allow Internet Access',
+    'dns': 'Allow DNS Queries',
+    'lan': 'Allow access to ALL other devices on the network'
+  }
   const allTags = ['lan_upstream']
 
   const isPositiveNumber = (str) => {
@@ -254,7 +259,7 @@ const AddDevice = (props) => {
         </FormControl>
 
         <FormControl flex="1">
-          <FormControl.Label>Auth</FormControl.Label>
+          <FormControl.Label>Authentication</FormControl.Label>
           <Radio.Group
             name="Auth"
             defaultValue={'sae'}
@@ -313,11 +318,22 @@ const AddDevice = (props) => {
           >
             <HStack w="100%" justifyContent="space-between">
               {allGroups.map((group) => (
-                <Box key={group} flex={1}>
+                  (groupTips[group] !== null ) ?  (
+                    <Tooltip label={groupTips[group]} openDelay={300}>
+                    <Box key={group} flex={1}>
+                    <Checkbox value={group} colorScheme="primary">
+                      {group}
+                    </Checkbox>
+                    </Box>
+                    </Tooltip>
+                  ) :
+                  (
+                  <Box key={group} flex={1}>
                   <Checkbox value={group} colorScheme="primary">
                     {group}
                   </Checkbox>
-                </Box>
+                  </Box>
+                  )
               ))}
             </HStack>
           </Checkbox.Group>
@@ -335,6 +351,7 @@ const AddDevice = (props) => {
             onChange={(values) => setTags(values)}
             py={1}
           >
+            <Tooltip label="lan_upstream allows devices to query LAN addresses in front of the SPR Router" openDelay={300}>
             <HStack w="100%" justifyContent="space-between">
               {allTags.map((tag) => (
                 <Box key={tag} flex={1}>
@@ -344,6 +361,7 @@ const AddDevice = (props) => {
                 </Box>
               ))}
             </HStack>
+            </Tooltip>
           </Checkbox.Group>
 
           <FormControl.HelperText>Assign device tags</FormControl.HelperText>
