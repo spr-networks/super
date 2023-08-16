@@ -254,10 +254,11 @@ table inet filter {
     oifname != @uplink_interfaces log prefix "lan:out " group 0
 
     # allow docker containers to communicate upstream
-    iifname @dockerifs oifname @uplink_interfaces ip saddr $DOCKERNET counter accept
+    $(if [ "$DOCKERIF" ]; then echo "iifname @dockerifs oifname @uplink_interfaces ip saddr $DOCKERNET counter accept" ; fi )
+
 
     # allow docker containers to speak to LAN also
-    iifname @dockerifs oifname @lan_interfaces  ip saddr $DOCKERNET counter accept
+    $(if [ "$DOCKERIF" ]; then echo "iifname @dockerifs oifname @lan_interfaces  ip saddr $DOCKERNET counter accept" ; fi )
 
     # Verify MAC addresses for LANIF/WIPHYs
     iifname @lan_interfaces jump DROP_MAC_SPOOF
