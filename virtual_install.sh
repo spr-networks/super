@@ -82,17 +82,17 @@ if [ ${#SPR_DIR} -eq 0 ]; then
 fi
 
 # only generate user if init
-if [ ! -f $SPR_DIR/configs/base/auth_users.json ]; then
+if [ ! -f $SPR_DIR/configs/auth/auth_users.json ]; then
 	echo "[+] generating admin password"
 	PASSWORD=$(cat /dev/urandom | tr -dc '[:alpha:]' | fold -w ${1:-16} | head -n 1)
-	echo "{\"admin\" : \"$PASSWORD\"}" > $SPR_DIR/configs/base/auth_users.json
+	echo "{\"admin\" : \"$PASSWORD\"}" > $SPR_DIR/configs/auth/auth_users.json
 
 	echo "[+] generating token..."
 	TOKEN=$(dd if=/dev/urandom bs=1 count=32 2>/dev/null | base64)
-	echo "[{\"Name\": \"admin\", \"Token\": \"$TOKEN\", \"Expire\": 0}]" > $SPR_DIR/configs/base/auth_tokens.json
+	echo "[{\"Name\": \"admin\", \"Token\": \"$TOKEN\", \"Expire\": 0}]" > $SPR_DIR/configs/auth/auth_tokens.json
 else
-	PASSWORD=$(cat "$SPR_DIR/configs/base/auth_users.json" | jq -r .admin)
-	TOKEN=$(cat "$SPR_DIR/configs/base/auth_tokens.json" | jq -r '.[0].Token')
+	PASSWORD=$(cat "$SPR_DIR/configs/auth/auth_users.json" | jq -r .admin)
+	TOKEN=$(cat "$SPR_DIR/configs/auth/auth_tokens.json" | jq -r '.[0].Token')
 fi
 
 # dns block
@@ -155,17 +155,17 @@ NUM_PEERS=$(grep '^\[Peer\]' $SPR_DIR/configs/wireguard/wg0.conf 2>/dev/null | w
 echo "[+] num peers already configured: $NUM_PEERS"
 
 # Use the API to generate a wireguard peer
-RET=$(curl -H "Authorization: Bearer ${TOKEN}" -X PUT http://localhost:8000/plugins/wireguard/peer --data '{}')                                                                                                                           
-PRIVATE_KEY=$(echo $RET | jq -r .Interface.PrivateKey)                                                                                                                                                                                    
-PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)                                                                                                                                                                                               
-PUBLIC_KEY_ESCAPED=$(echo \"${PUBLIC_KEY}\" | jq -r @uri)                                                                                                                                                                                 
-CLIENT_IP=$(echo $RET | jq -r .Interface.Address)                                                                                                                                                                                         
-SERVER_PUBLIC_KEY=$(echo $RET | jq -r .Peer.PublicKey)                                                                                                                                                                                    
-PRESHARED_KEY=$(echo $RET | jq -r .Peer.PresharedKey)                                                                                                                                                                                     
-DNS_IP=$(echo $RET | jq -r .Interface.DNS)                                                                                                                                                                                                
-                                                                                                                                                                                                                                          
-# Update the Groups for the Device and Name                                                                                                                                                                                               
-curl -H "Authorization: Bearer ${TOKEN}" -X PUT http://localhost:8000/device?identity=${PUBLIC_KEY_ESCAPED} --data "{\"Groups\": [\"wan\", \"lan\", \"dns\"], \"Name\": \"peer${NUM_PEERS}\"}"                                            
+RET=$(curl -s -H "Authorization: Bearer ${TOKEN}" -X PUT http://localhost:8000/plugins/wireguard/peer --data '{}')
+PRIVATE_KEY=$(echo $RET | jq -r .Interface.PrivateKey)
+PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)
+PUBLIC_KEY_ESCAPED=$(echo \"${PUBLIC_KEY}\" | jq -r @uri)
+CLIENT_IP=$(echo $RET | jq -r .Interface.Address)
+SERVER_PUBLIC_KEY=$(echo $RET | jq -r .Peer.PublicKey)
+PRESHARED_KEY=$(echo $RET | jq -r .Peer.PresharedKey)
+DNS_IP=$(echo $RET | jq -r .Interface.DNS)
+
+# Update the Groups for the Device and Name
+RET=$(curl -s -H "Authorization: Bearer ${TOKEN}" -X PUT http://localhost:8000/device?identity=${PUBLIC_KEY_ESCAPED} --data "{\"Groups\": [\"wan\", \"lan\", \"dns\"], \"Name\": \"peer${NUM_PEERS}\"}")
 
 # wg client config
 _IFS=$IFS
