@@ -301,7 +301,7 @@ const DeviceListing = (props) => {
           <FlashList
             data={devices}
             renderItem={renderItem}
-            estimatedItemSize={100}
+            estimatedItemSize={120}
           />
 
           {/* padding */}
