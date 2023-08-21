@@ -37,12 +37,14 @@ export default class DNSBlocklist extends React.Component {
     pending: false,
     showModal: false,
     modalType: '',
-    pendingItem: {}
+    pendingItem: {},
+    showURI: true
   }
 
   constructor(props) {
     super(props)
 
+    this.state.showURI = Platform.OS == 'web'
     this.state.list = []
 
     this.recommendedListDefault = [
@@ -230,6 +232,23 @@ export default class DNSBlocklist extends React.Component {
       )
     }
 
+    const niceURI = (uri) => {
+      if (this.state.showURI) {
+        return uri
+      }
+
+      return uri
+        .replace(
+          /https:\/\/raw\.githubusercontent\.com\/([A-Za-z]+)?(\/([A-Za-z]+)\/master\/)?/,
+          ''
+        )
+        .replace(/\.txt$/, '')
+    }
+
+    const toggleShowURI = (e) => {
+      this.setState({ showURI: !this.state.showURI })
+    }
+
     return (
       <>
         <HStack justifyContent="space-between" alignItems="center" p={4}>
@@ -288,8 +307,9 @@ export default class DNSBlocklist extends React.Component {
                     _dark={{
                       color: isOnlyRecommended(item) ? 'muted.500' : 'white'
                     }}
+                    onPress={toggleShowURI}
                   >
-                    {item.URI}
+                    {niceURI(item.URI)}
                   </Text>
 
                   <Stack
