@@ -35,6 +35,7 @@ import { faEllipsis, faTag } from '@fortawesome/free-solid-svg-icons'
 import { wifiAPI, api } from 'api'
 import { AlertContext } from 'AppContext'
 import { ucFirst } from 'utils'
+import { Address4 } from 'ip-address'
 
 import { Select } from 'components/Select'
 import InputSelect from 'components/InputSelect'
@@ -125,6 +126,7 @@ const LANLinkInfo = (props) => {
   const [iface, setIface] = useState(null)
 
   const [modal, setModal] = useState('')
+  const [supernets, setSupernets] = useState([])
 
   function isLocalIpAddress(ipAddress) {
     const ipv4Regex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/
@@ -175,6 +177,11 @@ const LANLinkInfo = (props) => {
         setInterfaces(x)
       })
       .catch((err) => context.error(err))
+
+      api.get('/subnetConfig').then((config) => {
+        setSupernets(config.TinyNets)
+      })
+
   }
 
   useEffect(() => {
@@ -233,6 +240,24 @@ const LANLinkInfo = (props) => {
       {...triggerProps}
     ></IconButton>
   )
+
+  const truncateSupernetIps = (ips) => {
+    if (ips.length < 3) return false
+    let count = 0
+    //check if ips all belong in supernets
+    for (let ip of ips) {
+      let local_addr = new Address4(ip)
+      for (let subnet of supernets) {
+        let sub_addr = new Address4(subnet)
+        if (local_addr.isInSubnet(sub_addr)) {
+          count++;
+        }
+      }
+    }
+    if (count == ips.length)
+      return true
+    return false
+  }
 
   const moreMenu = (iface) => (
     <Menu w={190} closeOnSelect={true} trigger={trigger}>
@@ -335,9 +360,15 @@ const LANLinkInfo = (props) => {
                 <Text flex={1}>{item.Type}</Text>
                 <Text flex={1}>{item.Subtype}</Text>
                 <VStack flex={2} space={1}>
-                  {item.IPs.map((ip) => (
-                    <Text key={ip}>{ip}</Text>
-                  ))}
+                { (truncateSupernetIps(item.IPs)) ?
+                  supernets.map((net) => (
+                    <Text>{net}</Text>
+                  ))
+
+                   : item.IPs.map((ip) => (
+                  <Text key={ip}>{ip}</Text>
+                  ))
+                }
                 </VStack>
                 {item.Enabled ? (
                   <Badge
@@ -384,9 +415,15 @@ const LANLinkInfo = (props) => {
                 <Text flex={1}>{item.Type}</Text>
                 {/*<Text flex={1}>{item.Enabled}</Text>*/}
                 <VStack flex={2} space={1}>
-                  {item.IPs.map((ip) => (
+                  { (truncateSupernetIps(item.IPs)) ?
+                    supernets.map((net) => (
+                      <Text>{net}</Text>
+                    ))
+
+                     : item.IPs.map((ip) => (
                     <Text key={ip}>{ip}</Text>
-                  ))}
+                    ))
+                  }
                 </VStack>
                 <Box flex={1}>{moreMenu(item.Interface)}</Box>
               </HStack>
