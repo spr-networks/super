@@ -81,7 +81,6 @@ const DeviceListing = (props) => {
 
         setGroups([...new Set(devices.map((device) => device.Groups).flat())])
         setTags([...new Set(devices.map((device) => device.DeviceTags).flat())])
-
         // TODO check wg status for virt
         if (!appContext.isWifiDisabled) {
           //for each interface
