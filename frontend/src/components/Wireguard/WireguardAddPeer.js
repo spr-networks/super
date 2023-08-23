@@ -44,6 +44,7 @@ export default class WireguardAddPeer extends React.Component {
     this.handleChangeEndpoint = this.handleChangeEndpoint.bind(this)
     this.handleClickGenerate = this.handleClickGenerate.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
+
   }
 
   handleChange(name, value) {
@@ -173,7 +174,8 @@ export default class WireguardAddPeer extends React.Component {
     wifiAPI.ipAddr().then((data) => {
       api.get('/subnetConfig').then((config) => {
 
-        let addrs = []
+        let addrs = this.props.defaultEndpoints.map(e => { return {"local": e} })
+
         for (let entry of data) {
           next:
           for (let address of entry.addr_info) {
@@ -272,6 +274,7 @@ export default class WireguardAddPeer extends React.Component {
             options={endpoints}
             value={this.state.endpoint}
             onChange={this.handleChangeEndpoint}
+            onChangeText={this.handleChangeEndpoint}
           />
           <FormControl.HelperText>
             Leave empty for default
