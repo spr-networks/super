@@ -591,7 +591,7 @@ const UplinkInfo = (props) => {
       if (interfaces[link]?.Type == 'Uplink') {
         let entry = {
           Interface: link,
-          IPs: linkIPs[link],
+          IPs: linkIPs[link].sort(),
           Type: interfaces[link].Type,
           Subtype: interfaces[link].Subtype,
           Enabled: interfaces[link].Enabled
@@ -599,7 +599,7 @@ const UplinkInfo = (props) => {
         uplinks.push(entry)
       } else {
         let Type = interfaces[link]?.Type || 'Other'
-        let entry = { Interface: link, IPs: linkIPs[link], Type }
+        let entry = { Interface: link, IPs: linkIPs[link].sort(), Type }
         links.push(entry)
       }
     }

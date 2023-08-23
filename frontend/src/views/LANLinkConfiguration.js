@@ -205,7 +205,7 @@ const LANLinkInfo = (props) => {
         let entry = {
           Interface: link,
           Enabled: interfaces[link].Enabled,
-          IPs: linkIPs[link],
+          IPs: linkIPs[link].sort(),
           Type: interfaces[link].Type,
           Subtype: interfaces[link].Subtype
         }
@@ -215,7 +215,7 @@ const LANLinkInfo = (props) => {
         if (interfaces[link] && interfaces[link].Type) {
           type = interfaces[link].Type
         }
-        let entry = { Interface: link, IPs: linkIPs[link], Type: type }
+        let entry = { Interface: link, IPs: linkIPs[link].sort(), Type: type }
         links.push(entry)
       }
     }
@@ -334,7 +334,11 @@ const LANLinkInfo = (props) => {
                 </Text>
                 <Text flex={1}>{item.Type}</Text>
                 <Text flex={1}>{item.Subtype}</Text>
-                <Text flex={2}>{item.IPs}</Text>
+                <VStack flex={2} space={1}>
+                  {item.IPs.map((ip) => (
+                    <Text key={ip}>{ip}</Text>
+                  ))}
+                </VStack>
                 {item.Enabled ? (
                   <Badge
                     key={item.Name}
@@ -379,7 +383,11 @@ const LANLinkInfo = (props) => {
                 </Text>
                 <Text flex={1}>{item.Type}</Text>
                 {/*<Text flex={1}>{item.Enabled}</Text>*/}
-                <Text flex={2}>{item.IPs}</Text>
+                <VStack flex={2} space={1}>
+                  {item.IPs.map((ip) => (
+                    <Text key={ip}>{ip}</Text>
+                  ))}
+                </VStack>
                 <Box flex={1}>{moreMenu(item.Interface)}</Box>
               </HStack>
             )}
