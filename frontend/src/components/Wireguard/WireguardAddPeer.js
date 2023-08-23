@@ -6,7 +6,9 @@ import WireguardConfig from './WireguardConfig'
 import { AlertContext } from 'layouts/Admin'
 import ClientSelect from 'components/ClientSelect'
 import { deviceAPI, wireguardAPI } from 'api'
-import { wifiAPI } from 'api'
+import { api, wifiAPI } from 'api'
+
+import { Address4 } from 'ip-address'
 
 import {
   Box,
@@ -169,20 +171,33 @@ export default class WireguardAddPeer extends React.Component {
 
   componentDidMount() {
     wifiAPI.ipAddr().then((data) => {
-      let addrs = []
-      for (let entry of data) {
-        for (let address of entry.addr_info) {
-          if (address.scope == 'global') {
-            address.ifname = entry.ifname
-            addrs.push(address)
-          }
+      api.get('/subnetConfig').then((config) => {
 
-          break
+        let addrs = []
+        for (let entry of data) {
+          next:
+          for (let address of entry.addr_info) {
+            if (address.scope == 'global') {
+              //filter out any tiny net ips
+              let local_addr = new Address4(address.local)
+              for (let net of config.TinyNets) {
+                let subnet = new Address4(net)
+                if (local_addr.isInSubnet(subnet)) {
+                  continue next;
+                }
+              }
+
+              address.ifname = entry.ifname
+              addrs.push(address)
+            }
+            break
+          }
         }
-      }
-      // config.wg0.listenPort
-      //ip:port :51280
-      this.setState({ addrs })
+        // config.wg0.listenPort
+        //ip:port :51280
+        this.setState({ addrs })
+
+      })
     })
   }
 
