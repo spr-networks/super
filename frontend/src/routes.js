@@ -58,6 +58,7 @@ import {
   faNetworkWired,
   faObjectGroup,
   faPuzzlePiece,
+  faRandom,
   faSignal,
   faSitemap,
   faTags,
@@ -208,8 +209,8 @@ const routes = [
       },
       {
         path: 'dnsOverride',
-        name: 'Custom Override',
-        icon: faBan,
+        name: 'DNS Overrides',
+        icon: faRandom,
         component: DNSOverride,
         layout: 'admin'
       },
