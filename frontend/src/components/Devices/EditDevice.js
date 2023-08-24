@@ -277,8 +277,10 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     }
 
     if (vlantag != device.VLANTag) {
+      //api cant distinguish empty on assignment,
+      // so set it to "0"
       deviceAPI
-        .updateVLANTag(id, vlantag)
+        .updateVLANTag(id, vlantag == "" ? "0" : vlantag)
         .then(notifyChange)
         .catch((error) =>
           context.error('[API] update VLAN Tag error: ' + error.message)

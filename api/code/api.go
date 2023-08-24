@@ -966,7 +966,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	//validations
 	if dev.VLANTag != "" {
 		n, err := strconv.Atoi(dev.VLANTag)
-		if err != nil || n <= 0 {
+		if err != nil || n < 0 {
 			return "VLANTag field must contain a value > 0", 400
 		}
 		refreshVlanTrunks = true
@@ -984,7 +984,12 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		}
 
 		if dev.VLANTag != "" {
-			val.VLANTag = dev.VLANTag
+			//reset to empty
+			if dev.VLANTag == "0" {
+				val.VLANTag = ""
+			} else {
+				val.VLANTag = dev.VLANTag
+			}
 		}
 
 		refreshIP := false

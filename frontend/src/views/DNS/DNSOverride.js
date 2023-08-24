@@ -56,7 +56,7 @@ const DNSBlock = (props) => {
         <DNSOverrideList
           key="allowdomain"
           list={PermitDomains}
-          title="Allow Custom Domain"
+          title="Permit Domain Override"
           notifyChange={notifyChange}
         />
       </VStack>
