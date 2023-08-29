@@ -3,7 +3,8 @@
 # this can be run like:
 # bash -c "$(curl -fsSL https://raw.github.com/spr-networks/super/master/virtual_install.sh)"
 # run with SKIP_VPN=1 to skip vpn peer setup
-# run with DNS_BLOCK=hosts,ads to enable adblock
+# run with SKIP_DNS_BLOCK=1 to disable dns block, default is hosts,ads
+# add custom blocks with DNS_BLOCK=hosts,ads,facebook
 # if configs are already setup it'll only show the login info
 # for a clean reset:
 # docker-compose -f docker-compose-virt.yml down && rm -rf configs && ./virtual_install.sh
@@ -95,9 +96,13 @@ else
 	TOKEN=$(cat "$SPR_DIR/configs/auth/auth_tokens.json" | jq -r '.[0].Token')
 fi
 
-# dns block
+# dns block. default: hosts,ads
 # example, run with: DNS_BLOCK="hosts,malware,facebook,redirect"
-if [ ! -z "$DNS_BLOCK" ]; then
+if [ -z "$DNS_BLOCK" ]; then
+	DNS_BLOCK="hosts,ads"
+fi
+
+if [ ! -z "$DNS_BLOCK" ] && [ -z $SKIP_DNS_BLOCK ]; then
         urls=()
 
         _IFS=$IFS
@@ -186,13 +191,17 @@ EOF
 )
 IFS=$_IFS
 
-echo -e "[+] WireGuard QR Code (import in iOS & Android app):\n"
-echo -e "$CONF" | qrencode -t ansiutf8
 echo -e "\n[+] WireGuard config (save this as wg.conf & import in client):\n"
 echo -e "$CONF\n"
-echo -e "----------------------------------------------------------"
+
+>/dev/tty printf "Show QR Code? [Y/n]? "
+</dev/tty read -rn1
+if [[ ! $REPLY =~ [nN](oO)* ]]; then
+	echo -e "[+] WireGuard QR Code (import in iOS & Android app):\n"
+	echo -e "$CONF" | qrencode -t ansiutf8
+fi
 
 # reload dns if we have modified blocks
 if [ ! -z "$DNS_BLOCK" ]; then
-	docker-compose -f docker-compose-virt.yml restart dns
+	docker-compose -f docker-compose-virt.yml restart dns >/dev/null 2>&1 &
 fi
