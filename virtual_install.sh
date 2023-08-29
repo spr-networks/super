@@ -194,7 +194,7 @@ IFS=$_IFS
 echo -e "\n[+] WireGuard config (save this as wg.conf & import in client):\n"
 echo -e "$CONF\n"
 
->/dev/tty printf "Show QR Code? [Y/n]? "
+>/dev/tty printf "Show QR Code? [Y/n] "
 </dev/tty read -rn1
 if [[ ! $REPLY =~ [nN](oO)* ]]; then
 	echo -e "[+] WireGuard QR Code (import in iOS & Android app):\n"
