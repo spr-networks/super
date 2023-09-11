@@ -1,6 +1,7 @@
 import React from 'react'
 import { Text } from 'native-base'
 import { Platform } from 'react-native'
+import Clipboard from '@react-native-clipboard/clipboard'
 
 export const copy = (data) => {
   if (Platform.OS == 'web') {
