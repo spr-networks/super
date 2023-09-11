@@ -130,10 +130,9 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   const [modalType, setModalType] = useState('')
   const navigate = useNavigate()
 
-  // for adding
   const defaultGroups = props.groups || ['wan', 'dns', 'lan']
   const defaultTags = props.tags || []
-
+  
   const handleGroups = (groups) => {
     if (!device.MAC && !device.WGPubKey) {
       return
@@ -380,6 +379,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
         _light={{ borderColor: 'coolGray.200' }}
         _dark={{ borderColor: 'muted.700' }}
         borderBottomWidth={0}
+        minH={120}
       >
         <Stack
           direction={{ base: 'column', md: 'row' }}
@@ -422,7 +422,9 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
                   <Text bold>{device.Name || 'N/A'}</Text>
                 )}
 
-                <Text color="muted.500">{device.oui || ' '}</Text>
+                <Text color="muted.500" isTruncated maxW={150}>
+                  {device.oui || ' '}
+                </Text>
               </VStack>
             </Tooltip>
 

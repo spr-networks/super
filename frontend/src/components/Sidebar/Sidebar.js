@@ -179,8 +179,7 @@ const SidebarItem = (props) => {
     // menu items hidden when plus mode is disabled
     if (
       item.plus === true &&
-      isPlusDisabled &&
-      !meshItems.includes(item.name)
+      isPlusDisabled
     ) {
       display.base = 'none'
     }

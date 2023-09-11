@@ -1,10 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { AlertContext } from 'AppContext'
+import { copy } from 'utils'
 
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 
 import {
   faCirclePlus,
+  faCopy,
   faPlus,
   faRefresh,
   faXmark
@@ -20,6 +22,7 @@ import {
   IconButton,
   Input,
   Text,
+  Tooltip,
   useColorModeValue,
   View,
   VStack
@@ -399,7 +402,14 @@ const Mesh = (props) => {
                   >
                     <Text>{item.IP}</Text>
                     {renderLeafStatus(item)}
-                    <Text>{item.APIToken}</Text>
+                    <Tooltip label={item.APIToken}>
+                      <IconButton
+                        variant="unstyled"
+                        icon={<Icon size="4" icon={faCopy} color="muted.500" />}
+                        onPress={() => copy(item.APIToken)}
+                        display={'flex'}
+                      />
+                    </Tooltip>
 
                     <IconButton
                       alignSelf="center"

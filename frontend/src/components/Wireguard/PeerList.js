@@ -108,7 +108,10 @@ const PeerList = (props) => {
               triggerClass="pull-right"
               modalRef={refModal}
             >
-              <WireguardAddPeer config={config} notifyChange={refreshPeers} />
+              <WireguardAddPeer
+                config={config}
+                notifyChange={refreshPeers}
+                defaultEndpoints={props.defaultEndpoints} />
             </ModalForm>
           </Box>
         </HStack>

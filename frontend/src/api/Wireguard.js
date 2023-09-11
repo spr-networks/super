@@ -27,6 +27,15 @@ export class APIWireguard extends API {
   down() {
     return this.put('down')
   }
+
+  getEndpoints() {
+    return this.get('endpoints')
+  }
+
+  setEndpoints(endpoints) {
+    return this.put('endpoints', endpoints)
+  }
+
 }
 
 export const wireguardAPI = new APIWireguard()

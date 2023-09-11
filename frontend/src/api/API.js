@@ -76,8 +76,7 @@ class API {
   // reads from Async/localStorage if no username provided
   async getAuthHeaders(username = null, password = null) {
     if (username && password) {
-      return
-      'Basic ' + Base64.btoa(username + ':' + password)
+      return 'Basic ' + Base64.btoa(username + ':' + password)
     }
 
     if (gAuthHeaders) {
