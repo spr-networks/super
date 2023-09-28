@@ -65,9 +65,9 @@ type DNSSettings struct {
 }
 
 type MulticastAddress struct {
-	Address string //adderss:port pair
+	Address  string //adderss:port pair
 	Disabled bool
-	Tag string
+	Tag      string
 }
 
 type MulticastSettings struct {
@@ -480,7 +480,7 @@ func parseDNSCorefile() DNSSettings {
 		if strings.Contains(line, "tls_servername") {
 			serverNameMatch := serverNameRegex.FindStringSubmatch(line)
 			if len(serverNameMatch) > 1 {
-			 	settings.UpstreamTLSHost = serverNameMatch[1]
+				settings.UpstreamTLSHost = serverNameMatch[1]
 			}
 		}
 	}
@@ -510,9 +510,11 @@ func updateDNSCorefile(dns DNSSettings) {
 		line := scanner.Text()
 		if strings.Contains(line, "forward . ") {
 			if dns.TlsDisable == true {
-				line = ipRegex.ReplaceAllString(line, dns.UpstreamIPAddress) // Replace with the new IP
+				line = ipRegex.ReplaceAllString(line, "") // Replace with the new IP
+				line = line + dns.UpstreamIPAddress + " {"
 			} else {
-				line = ipRegex.ReplaceAllString(line, "tls://"+dns.UpstreamIPAddress) // Replace with the new IP
+				line = ipRegex.ReplaceAllString(line, "") // Replace with the new IP
+				line = line + "tls://" + dns.UpstreamIPAddress + " {"
 			}
 		}
 		if !dns.TlsDisable && strings.Contains(line, "tls_servername") {
@@ -593,8 +595,6 @@ func dnsSettings(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(config.DNS)
 }
 
-
-
 func saveMulticastJsonLocked(settings MulticastSettings) {
 	file, _ := json.MarshalIndent(settings, "", " ")
 	err := ioutil.WriteFile(MulticastConfigFile, file, 0600)
@@ -638,11 +638,9 @@ func multicastSettings(w http.ResponseWriter, r *http.Request) {
 		settings = loadMulticastJsonLocked()
 	}
 
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(settings)
 }
-
 
 func autoUpdate(w http.ResponseWriter, r *http.Request) {
 	Configmtx.Lock()
