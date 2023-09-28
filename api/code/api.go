@@ -67,7 +67,7 @@ type DNSSettings struct {
 type MulticastAddress struct {
 	Address  string //adderss:port pair
 	Disabled bool
-	Tag      string
+	Tags     []string
 }
 
 type MulticastSettings struct {
@@ -508,12 +508,19 @@ func updateDNSCorefile(dns DNSSettings) {
 		line := scanner.Text()
 		if strings.Contains(line, "forward . ") {
 			if dns.TlsDisable == true {
-				line = ipRegex.ReplaceAllString(line, "") // Replace with the new IP
-				line = line + dns.UpstreamIPAddress + " {"
+				line = ipRegex.ReplaceAllString(line, dns.UpstreamIPAddress) // Replace with the new IP
 			} else {
-				line = ipRegex.ReplaceAllString(line, "") // Replace with the new IP
-				line = line + "tls://" + dns.UpstreamIPAddress + " {"
+				line = ipRegex.ReplaceAllString(line, "tls://"+dns.UpstreamIPAddress) // Replace with the new IP
 			}
+
+			//only pick one for now
+			matches := ipRegex.FindAllStringIndex(line, -1)
+			if len(matches) > 1 {
+				for _, match := range matches[1:] {
+					line = line[:match[0]] + "" + line[match[1]:]
+				}
+			}
+
 		}
 		if !dns.TlsDisable && strings.Contains(line, "tls_servername") {
 			line = serverNameRegex.ReplaceAllString(line, "tls_servername "+dns.UpstreamTLSHost) // Replace with the new server name
