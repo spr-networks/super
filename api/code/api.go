@@ -473,8 +473,6 @@ func parseDNSCorefile() DNSSettings {
 			ipMatch := ipRegex.FindStringSubmatch(line)
 			if len(ipMatch) > 1 {
 				settings.UpstreamIPAddress = ipMatch[1]
-				ipAddress := ipMatch[1]
-				fmt.Printf("Found IP Address: %s\n", ipAddress)
 			}
 		}
 		if strings.Contains(line, "tls_servername") {
@@ -627,9 +625,17 @@ func multicastSettings(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, entry := range settings.Addresses {
-			_, err := net.ResolveUDPAddr("udp4", entry.Address)
+			saddr, err := net.ResolveUDPAddr("udp4", entry.Address)
 			if !strings.Contains(entry.Address, ":") || err != nil {
 				http.Error(w, fmt.Errorf("failed to parse udp address ").Error(), 400)
+				return
+			}
+
+			_, multicastNet, _ := net.ParseCIDR("224.0.0.0/4")
+
+			//double check multicast range
+			if !multicastNet.Contains(saddr.IP) {
+				http.Error(w, fmt.Errorf("Invalid multicast IP ").Error(), 400)
 				return
 			}
 		}
