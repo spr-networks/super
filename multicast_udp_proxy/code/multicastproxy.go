@@ -6,7 +6,6 @@ This allows isolated interfaces to perform zeroconf (mdns or ssdp)
 Requirements:
 - hostapd.conf should have multicast_to_unicast=1 When disable_dgaf=1 or ap_isolate=1 are set.
 
-
 Design:
 - Sending Multicast packets requires joining the multicast group on each interface
 - Netlink messages are used to detect new interfaces as they arrive (for example due to per_sta_vif=1)
@@ -42,6 +41,17 @@ var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 
 var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
 var InterfacesPublicConfigFile = TEST_PREFIX + "/state/public/interfaces.json"
+var MulticastConfigFile = TEST_PREFIX + "/configs/base/multicast.json"
+
+type MulticastAddress struct {
+	Address  string //adderss:port pair
+	Disabled bool
+	Tags     []string
+}
+
+type MulticastSettings struct {
+	Addresses []MulticastAddress
+}
 
 type PSKEntry struct {
 	Type string
@@ -168,7 +178,7 @@ type listener4 struct {
 	*ipv4.PacketConn
 }
 
-func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool) {
+func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool, tags []string) {
 	l4 := listener4{}
 
 	saddr, err := net.ResolveUDPAddr("udp4", s_saddr)
@@ -296,7 +306,19 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool)
 
 }
 
+func loadMulticastJson() MulticastSettings {
+	settings := MulticastSettings{}
+	data, err := ioutil.ReadFile(MulticastConfigFile)
+	if err != nil {
+		return settings
+	}
+	_ = json.Unmarshal(data, &settings)
+	return settings
+}
+
 func main() {
+
+	settings := loadMulticastJson()
 
 	relayableInterface := func(ifaceName string) bool {
 
@@ -336,10 +358,22 @@ func main() {
 		return false
 	}
 
-	//mdns
-	go handleProxy("224.0.0.251:5353", relayableInterface)
+	if len(settings.Addresses) == 0 {
+		//run defaults
+		//mdns
+		go handleProxy("224.0.0.251:5353", relayableInterface, []string{})
 
-	//ssdp
-	handleProxy("239.255.255.250:1900", relayableInterface)
+		//ssdp
+		handleProxy("239.255.255.250:1900", relayableInterface, []string{})
+	} else {
+
+		for _, address := range settings.Addresses {
+			if address.Disabled == false {
+				go handleProxy(address.Address, relayableInterface, address.Tags)
+			}
+		}
+
+		select {}
+	}
 
 }
