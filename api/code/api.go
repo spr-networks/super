@@ -578,7 +578,7 @@ func dnsSettings(w http.ResponseWriter, r *http.Request) {
 		config.DNS = settings
 		saveConfigLocked()
 		updateDNSCorefile(config.DNS)
-
+		callSuperdRestart("", "dns")
 	} else {
 		//migrate the settings, if dns is empty, parse the file
 		if config.DNS.UpstreamIPAddress == "" {
@@ -587,6 +587,7 @@ func dnsSettings(w http.ResponseWriter, r *http.Request) {
 				config.DNS = ret
 				saveConfigLocked()
 				updateDNSCorefile(config.DNS)
+				callSuperdRestart("", "dns")
 			}
 		}
 	}
@@ -634,6 +635,7 @@ func multicastSettings(w http.ResponseWriter, r *http.Request) {
 		}
 
 		saveMulticastJsonLocked(settings)
+		callSuperdRestart("", "multicast_udp_proxy")
 	} else {
 		settings = loadMulticastJsonLocked()
 	}
