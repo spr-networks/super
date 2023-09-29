@@ -83,17 +83,17 @@ table inet filter {
     flags interval;
   }
 
-  map upstream_tcp_port_drop {
+  map wan_tcp_accept {
     type inet_service : verdict;
     elements = {
-      22: drop,
-      80: drop,
-      443: drop,
-      5201: drop
+      22: accept,
+      80: accept,
+      443: accept,
+      5201: accept
     }
   }
 
-  map spr_tcp_port_accept {
+  map lan_tcp_accept {
     type inet_service : verdict;
     elements = {
       22: accept,
@@ -188,6 +188,8 @@ table inet filter {
     # drop dhcp requests from upstream
     iifname @uplink_interfaces udp dport {67} counter goto DROPLOGINP
 
+    $(if [ "$WANIF" ]; then echo "counter iifname $WANIF tcp dport vmap @upstream_tcp_port_drop"; fi)
+
     # Extra hardening for API port 80 when running Virtual SPR, to avoid exposing API to the internet
     # https://github.com/moby/moby/issues/22054 This is an open issue with docker leaving forwarding open...
     # Can disable this hardening by setting VIRTUAL_SPR_API_INTERNET=1
@@ -213,16 +215,18 @@ table inet filter {
     # Dynamic verdict map for dns access
     counter udp dport 53  ip saddr . iifname vmap @dns_access
 
-    # Allow ssh, iperf3 from LAN and those not dropped from upstream (see upstream_tcp_port_drop)
-    counter tcp dport vmap @spr_tcp_port_accept
+    # TCP services
+    iifname @lan_interfaces counter tcp dport vmap @lan_tcp_accept
+    iifname @uplink_interfaces counter tcp dport vmap @wan_tcp_accept
+
+    # UDP services
+    iifname @lan_interfaces counter udp dport vmap @lan_udp_accept
+    iifname @uplink_interfaces counter udp dport vmap @wan_udp_accept
 
     # Allow udp for multicast proxy
     ip daddr 224.0.0.0/4 iifname @lan_interfaces counter udp dport vmap @multicast_lan_udp_accept
     ip daddr 224.0.0.0/4 iifname @uplink_interfaces counter udp dport vmap @multicast_wan_udp_accept
 
-    # Allow udp from rules
-    iifname @lan_interfaces counter udp dport vmap @lan_udp_accept
-    iifname @uplink_interfaces counter udp dport vmap @wan_udp_accept
 
     icmp type { echo-reply, echo-request } ip saddr . iifname vmap @ping_rules
 
