@@ -67,8 +67,10 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
 
   const moreMenu = (
     <Menu w={190} p={0} closeOnSelect={true} trigger={trigger}>
-      <Menu.Item onPress={() => handleClickDomain('permit', item.FirstName)}>
-        Add Domain Override
+      <Menu.Item
+        _text={{ color: 'success.600' }}
+        onPress={() => handleClickDomain('permit', item.FirstName)}>
+        Permit Domain
       </Menu.Item>
       <Menu.Item
         _text={{ color: 'danger.600' }}

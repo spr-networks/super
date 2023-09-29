@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Platform } from 'react-native'
 import Clipboard from '@react-native-clipboard/clipboard'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
+import {copy} from 'utils'
 import {
   faCirclePlus,
   faCopy,
@@ -18,6 +18,7 @@ import {
   IconButton,
   Stack,
   Text,
+  Tooltip,
   View,
   VStack,
   useColorModeValue
@@ -88,25 +89,6 @@ const AuthTokenList = (props) => {
   }
 
   const showClipboard = true //Platform.OS !== 'web' || navigator.clipboard
-  const copy = (data) => {
-    if (Platform.OS == 'web') {
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(data)
-      } else {
-        var copyTextarea = document.createElement('textarea')
-        copyTextarea.style.position = 'fixed'
-        copyTextarea.style.opacity = '0'
-        copyTextarea.textContent = data
-
-        document.body.appendChild(copyTextarea)
-        copyTextarea.select()
-        document.execCommand('copy')
-        document.body.removeChild(copyTextarea)
-      }
-    } else {
-      Clipboard.setString(data)
-    }
-  }
 
   return (
     <View h={'100%'}>
@@ -149,14 +131,15 @@ const AuthTokenList = (props) => {
               >
                 <Text>{item.Name || `Token#${index}`}</Text>
                 <HStack alignItems="center" justifyItems="flex-end">
-                  <Text isTruncated>{item.Token}</Text>
-                  <IconButton
-                    variant="unstyled"
-                    icon={<Icon size="4" icon={faCopy} color="muted.500" />}
-                    onPress={() => copy(item.Token)}
-                    display={showClipboard ? 'flex' : 'none'}
-                  />
-
+                    <Text isTruncated>Copy Token</Text>
+                    <Tooltip label={item.Token} onPress={alert} >
+                    <IconButton
+                      variant="unstyled"
+                      icon={<Icon size="4" icon={faCopy} color="muted.500" />}
+                      display={showClipboard ? 'flex' : 'none'}
+                      onPress={() => copy(item.Token)}
+                    />
+                    </Tooltip>
                   {item.ScopedPaths != null && item.ScopedPaths.length > 0 ? (
                     <Text isTruncated>{JSON.stringify(item.ScopedPaths)}</Text>
                   ) : (

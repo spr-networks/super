@@ -15,6 +15,8 @@ const DeviceView = () => {
   const navigate = useNavigate()
   const params = useParams()
   const [device, setDevice] = useState(null)
+  const [groups, setGroups] = useState([])
+  const [tags, setTags] = useState([])
 
   useEffect(() => {
     let { id } = params
@@ -36,6 +38,10 @@ const DeviceView = () => {
             .catch((err) => {})
         }
       }
+
+      setGroups([...new Set(Object.values(devs).map((device) => device.Groups).flat())])
+      setTags([...new Set(Object.values(devs).map((device) => device.DeviceTags).flat())])
+
     })
   }, [])
 
@@ -60,9 +66,11 @@ const DeviceView = () => {
         <EditDevice
           key={device.MAC || device.WGPubKey}
           device={device}
-          groups={device.groups}
-          tags={device.tags}
+          groups={groups}
+          tags={tags}
           notifyChange={refreshDevice}
+          allGroups={groups}
+          allTags={tags}
         />
       ) : null}
     </Box>

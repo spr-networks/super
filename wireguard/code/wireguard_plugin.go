@@ -26,8 +26,13 @@ var TEST_PREFIX = ""
 var WireguardInterface = "wg0"
 var WireguardConfigFile = TEST_PREFIX + "/configs/wireguard/wg0.conf"
 var DNSIPPath = TEST_PREFIX + "/configs/base/lanip"
+var WireguardSPRConfigFile = TEST_PREFIX + "/configs/wireguard/wg.json"
 
 var Configmtx sync.Mutex
+
+type SPRConfig struct {
+	Endpoints []string
+}
 
 type KeyPair struct {
 	PrivateKey string
@@ -475,7 +480,6 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 
 	config.Interface.DNS = "1.1.1.1, 1.0.0.1"
 
-
 	dnsb, err := ioutil.ReadFile(DNSIPPath)
 	if err != nil {
 		//TBD this should be be pulled from the API
@@ -594,6 +598,54 @@ func pluginDown(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(true)
 }
 
+func loadSprConfig() SPRConfig {
+	spr := SPRConfig{}
+
+	data, err := ioutil.ReadFile(WireguardSPRConfigFile)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		err = json.Unmarshal(data, &spr)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
+	return spr
+}
+
+func saveSprConfig(config SPRConfig) {
+	file, _ := json.MarshalIndent(config, "", " ")
+	err := ioutil.WriteFile(WireguardSPRConfigFile, file, 0600)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func getSetEndpoints(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
+	//load the SPR Config
+	spr := loadSprConfig()
+
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(spr.Endpoints)
+		return
+	}
+
+	endpoints := []string{}
+	err := json.NewDecoder(r.Body).Decode(&endpoints)
+
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	saveSprConfig(spr)
+}
+
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
@@ -625,6 +677,8 @@ func main() {
 
 	unix_plugin_router.HandleFunc("/up", pluginUp).Methods("PUT")
 	unix_plugin_router.HandleFunc("/down", pluginDown).Methods("PUT")
+
+	unix_plugin_router.HandleFunc("/endpoints", getSetEndpoints).Methods("GET", "PUT")
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)
