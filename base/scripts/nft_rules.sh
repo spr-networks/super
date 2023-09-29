@@ -188,8 +188,6 @@ table inet filter {
     # drop dhcp requests from upstream
     iifname @uplink_interfaces udp dport {67} counter goto DROPLOGINP
 
-    $(if [ "$WANIF" ]; then echo "counter iifname $WANIF tcp dport vmap @upstream_tcp_port_drop"; fi)
-
     # Extra hardening for API port 80 when running Virtual SPR, to avoid exposing API to the internet
     # https://github.com/moby/moby/issues/22054 This is an open issue with docker leaving forwarding open...
     # Can disable this hardening by setting VIRTUAL_SPR_API_INTERNET=1
