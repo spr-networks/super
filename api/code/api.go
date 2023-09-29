@@ -31,6 +31,7 @@ import (
 
 var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
+var SetupDonePath = TEST_PREFIX + "/configs/base/.setup_done"
 
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
@@ -71,6 +72,7 @@ type MulticastAddress struct {
 }
 
 type MulticastSettings struct {
+	Disabled  bool
 	Addresses []MulticastAddress
 }
 
@@ -100,17 +102,20 @@ type DeviceStyle struct {
 }
 
 type DeviceEntry struct {
-	Name          string
-	MAC           string
-	WGPubKey      string
-	VLANTag       string
-	RecentIP      string
-	PSKEntry      PSKEntry
-	Groups        []string
-	DeviceTags    []string
-	DHCPFirstTime string
-	DHCPLastTime  string
-	Style         DeviceStyle
+	Name           string
+	MAC            string
+	WGPubKey       string
+	VLANTag        string
+	RecentIP       string
+	PSKEntry       PSKEntry
+	Groups         []string
+	DeviceTags     []string
+	DHCPFirstTime  string
+	DHCPLastTime   string
+	Style          DeviceStyle
+	DeviceTimeout  string
+	DeleteTimeout  bool
+	DeviceDisabled bool
 }
 
 var config = APIConfig{}
@@ -2255,7 +2260,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 
 	configData = matchInterfaceUplink.ReplaceAllString(configData, "$1="+conf.InterfaceUplink)
 
-	err = ioutil.WriteFile(ConfigFile, []byte(configData), 0755)
+	err = ioutil.WriteFile(ConfigFile, []byte(configData), 0644)
 	if err != nil {
 		http.Error(w, "Failed to write config to "+ConfigFile, 400)
 		panic(err)
@@ -2281,7 +2286,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+conf.InterfaceAP)
 
 	hostapd_path := getHostapdConfigPath(conf.InterfaceAP)
-	err = ioutil.WriteFile(hostapd_path, []byte(configData), 0755)
+	err = ioutil.WriteFile(hostapd_path, []byte(configData), 0644)
 	if err != nil {
 		http.Error(w, "Failed to write config to "+hostapd_path, 400)
 		panic(err)
@@ -2289,6 +2294,8 @@ func setup(w http.ResponseWriter, r *http.Request) {
 
 	configureInterface("AP", "", conf.InterfaceAP)
 	configureInterface("Uplink", "ethernet", conf.InterfaceUplink)
+
+	ioutil.WriteFile(SetupDonePath, []byte("true"), 0644)
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
 	callSuperdRestart("", "")
@@ -2408,6 +2415,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/firewall/block_forward", blockForwardingIP).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/service_port", modifyServicePort).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/endpoint", modifyEndpoint).Methods("PUT", "DELETE")
+	//external_router_authenticated.HandleFunc("/firewall/icmp", modifyIcmp).Methods("PUT", "DELETE")
+	//external_router_authenticated.HandleFunc("/firewall/multicast", modifyMulticast).Methods("PUT", "DELETE")
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")

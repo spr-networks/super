@@ -70,16 +70,24 @@ type Endpoint struct {
 	Tags     []string
 }
 
+type MulticastPort struct {
+	Port     string
+	Upstream bool
+}
+
 type FirewallConfig struct {
 	ForwardingRules      []ForwardingRule
 	BlockRules           []BlockRule
 	ForwardingBlockRules []ForwardingBlockRule
 	ServicePorts         []ServicePort
 	Endpoints            []Endpoint
+	MulticastPorts       []MulticastPort
+	PingLan              bool
+	PingWan              bool
 }
 
 var FirewallConfigFile = TEST_PREFIX + "/configs/base/firewall.json"
-var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []ForwardingBlockRule{}, []ServicePort{}, []Endpoint{}}
+var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []ForwardingBlockRule{}, []ServicePort{}, []Endpoint{}, []MulticastPort{}, false, false}
 
 var WireguardSocketPath = TEST_PREFIX + "/state/plugins/wireguard/wireguard_plugin"
 
@@ -1246,6 +1254,55 @@ func modifyServicePort(w http.ResponseWriter, r *http.Request) {
 	}
 
 	gFirewallConfig.ServicePorts = append(gFirewallConfig.ServicePorts, port)
+	saveFirewallRulesLocked()
+	applyFirewallRulesLocked()
+}
+
+func modifyMulticast(w http.ResponseWriter, r *http.Request) {
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	port := MulticastPort{}
+	err := json.NewDecoder(r.Body).Decode(&port)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	re := regexp.MustCompile("^([0-9].*)$")
+
+	if port.Port == "" || !re.MatchString(port.Port) {
+		http.Error(w, "Invalid Port", 400)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		for i := range gFirewallConfig.MulticastPorts {
+			a := gFirewallConfig.MulticastPorts[i]
+			if port.Port == a.Port {
+				gFirewallConfig.MulticastPorts = append(gFirewallConfig.MulticastPorts[:i], gFirewallConfig.MulticastPorts[i+1:]...)
+				saveFirewallRulesLocked()
+				applyFirewallRulesLocked()
+				//deleteServicePort(a)
+				return
+			}
+		}
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	//update the existing rule  entry
+	for i := range gFirewallConfig.MulticastPorts {
+		a := gFirewallConfig.MulticastPorts[i]
+		if port.Port == a.Port {
+			gFirewallConfig.MulticastPorts[i].Upstream = port.Upstream
+			saveFirewallRulesLocked()
+			applyFirewallRulesLocked()
+			return
+		}
+	}
+
+	gFirewallConfig.MulticastPorts = append(gFirewallConfig.MulticastPorts, port)
 	saveFirewallRulesLocked()
 	applyFirewallRulesLocked()
 }

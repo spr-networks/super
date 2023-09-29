@@ -78,6 +78,11 @@ table inet filter {
     type ipv4_addr . ifname: verdict;
   }
 
+  map ping_rules {
+    type ipv4_addr . ifname: verdict;
+    flags interval;
+  }
+
   map upstream_tcp_port_drop {
     type inet_service : verdict;
     elements = {
@@ -98,12 +103,20 @@ table inet filter {
     }
   }
 
+  map multicast_lan_udp_accept {
+    type inet_service : verdict;
+  }
+
+  map multicast_wan_udp_accept {
+    type inet_service : verdict;
+  }
+
+  map wan_udp_accept {
+    type inet_service : verdict;
+  }
+
   map lan_udp_accept {
     type inet_service : verdict;
-    elements = {
-      1900: accept,
-      5353: accept
-    }
   }
 
   map fwd_block {
@@ -172,11 +185,8 @@ table inet filter {
     # Allow wireguard from only WANIF interfaces to prevent loops
     iifname @uplink_interfaces udp dport $WIREGUARD_PORT counter accept
 
-    # drop dhcp requests, multicast ports from upstream
-    # When updating lan_udp_accept, updated this list.
-    iifname @uplink_interfaces udp dport {67, 1900, 5353} counter goto DROPLOGINP
-
-    # drop ssh, iperf from upstream
+    # drop dhcp requests from upstream
+    iifname @uplink_interfaces udp dport {67} counter goto DROPLOGINP
 
     # Extra hardening for API port 80 when running Virtual SPR, to avoid exposing API to the internet
     # https://github.com/moby/moby/issues/22054 This is an open issue with docker leaving forwarding open...
@@ -207,8 +217,14 @@ table inet filter {
     counter tcp dport vmap @spr_tcp_port_accept
 
     # Allow udp for multicast proxy
-    # NOTE, if adding to lan_udp_accept, make sure to update the drop rule above
-    counter udp dport vmap @lan_udp_accept
+    ip daddr 224.0.0.0/4 iifname @lan_interfaces counter udp dport vmap @multicast_lan_udp_accept
+    ip daddr 224.0.0.0/4 iifname @uplink_interfaces counter udp dport vmap @multicast_wan_udp_accept
+
+    # Allow udp from rules
+    iifname @lan_interfaces counter udp dport vmap @lan_udp_accept
+    iifname @uplink_interfaces counter udp dport vmap @wan_udp_accept
+
+    icmp type { echo-reply, echo-request } ip saddr . iifname vmap @ping_rules
 
     # Fall through to log + drop
     counter goto DROPLOGINP
