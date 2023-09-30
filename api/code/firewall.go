@@ -954,26 +954,34 @@ func applyPingRules() {
 		if iface.Type == "Uplink" && pingWan {
 			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
 				"{", "0.0.0.0/0", ".", iface.Name, ":", "accept", "}")
-			_, err = cmd.Output()
+			err = cmd.Run()
+			if err != nil {
+				fmt.Println("[-] Ping rule failed to add", err)
+			}
 		} else if iface.Type == "AP" && pingLan {
 			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
 				"{", "0.0.0.0/0", ".", iface.Name+".*", ":", "accept", "}")
 			_, err = cmd.Output()
+			if err != nil {
+				fmt.Println("[-] Ping rule failed to add", err)
+			}
 		} else if iface.Type == "DownLink" && pingLan {
 			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
 				"{", "0.0.0.0/0", ".", iface.Name, ":", "accept", "}")
 			_, err = cmd.Output()
+			if err != nil {
+				fmt.Println("[-] Ping rule failed to add", err)
+			}
 
 			if iface.Subtype == "VLAN-Trunk" {
 				//add vlan interfaces as well for vlan trunk
 				cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
 					"{", "0.0.0.0/0", ".", iface.Name+".*", ":", "accept", "}")
 				_, err = cmd.Output()
+				if err != nil {
+					fmt.Println("[-] Ping rule failed to add", err)
+				}
 			}
-		}
-
-		if err != nil {
-			fmt.Println("[-] Ping rule failed to add", err)
 		}
 	}
 
