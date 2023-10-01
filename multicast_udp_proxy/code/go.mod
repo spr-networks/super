@@ -3,9 +3,13 @@ module test
 go 1.17
 
 require (
+	github.com/pion/mdns v0.0.9
 	github.com/vishvananda/netlink v1.1.0
-	golang.org/x/net v0.7.0
-	golang.org/x/sys v0.5.0
+	golang.org/x/net v0.15.0
+	golang.org/x/sys v0.12.0
 )
 
-require github.com/vishvananda/netns v0.0.4 // indirect
+require (
+	github.com/pion/logging v0.2.2 // indirect
+	github.com/vishvananda/netns v0.0.4 // indirect
+)
