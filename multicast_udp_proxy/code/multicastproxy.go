@@ -43,6 +43,7 @@ var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
 var InterfacesPublicConfigFile = TEST_PREFIX + "/state/public/interfaces.json"
 var MulticastConfigFile = TEST_PREFIX + "/configs/base/multicast.json"
+var SetupDonePath = TEST_PREFIX + "/configs/base/.setup_done"
 
 type MulticastAddress struct {
 	Address  string //address:port pair
@@ -319,9 +320,7 @@ func loadMulticastJson() MulticastSettings {
 }
 
 func isSetupMode() bool {
-	// InterfacesPublicConfigFile is written when user setup is done
-	// TODO change this and mount same file we will use in api for status
-	_, err := os.Stat(InterfacesPublicConfigFile)
+	_, err := os.Stat(SetupDonePath)
 	if err == nil || !os.IsNotExist(err) {
 		//fmt.Println("mock setup mode")
 		//return true
