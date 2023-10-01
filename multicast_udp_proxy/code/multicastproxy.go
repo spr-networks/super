@@ -28,6 +28,7 @@ import (
 	"os"
 
 	"encoding/json"
+	"github.com/pion/mdns"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/sys/unix"
@@ -317,7 +318,98 @@ func loadMulticastJson() MulticastSettings {
 	return settings
 }
 
+func isSetupMode() bool {
+	// InterfacesPublicConfigFile is written when user setup is done
+	// TODO change this and mount same file we will use in api for status
+	_, err := os.Stat(InterfacesPublicConfigFile)
+	if err == nil || !os.IsNotExist(err) {
+		//fmt.Println("mock setup mode")
+		//return true
+		return false
+	}
+
+	return true
+}
+
+func ifaceAddr(iface *net.Interface) (string, error) {
+	addrs, err := iface.Addrs()
+	if err != nil {
+		return "", err
+	}
+
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok {
+			if ip4 := ipnet.IP.To4(); ip4 != nil {
+				return ip4.String(), nil
+			}
+		}
+	}
+
+	//return addrs[0].(*net.IPNet).IP.String(), nil
+	return "", fmt.Errorf("no ip addr found for iface %v", iface.Name)
+}
+
+// mdns publish spr.local on wanif ip addr
+func mdnsPublish() {
+	// just exit on virtual
+	if os.Getenv("VIRTUAL_SPR") != "" {
+		fmt.Println("spr virtual setup, skipping mdns")
+		return
+	}
+
+	wanif := os.Getenv("WANIF")
+
+	iface, err := net.InterfaceByName(wanif)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("wanif=", wanif, "iface=", iface)
+	if !strings.Contains(iface.Flags.String(), "up") {
+		panic(fmt.Errorf("err: iface=%v is not up", iface.Name))
+	}
+
+	// verify iface have an ip addr
+	ip, err := ifaceAddr(iface)
+	if err != nil {
+		panic(err)
+	}
+
+	addr, err := net.ResolveUDPAddr("udp", mdns.DefaultAddress)
+	if err != nil {
+		panic(err)
+	}
+
+	l, err := net.ListenUDP("udp4", addr)
+	if err != nil {
+		panic(err)
+	}
+
+	hostname, _ := os.Hostname() //spr
+	name := fmt.Sprintf("%v.local", hostname)
+
+	fmt.Println("ip=", ip, "name=", name)
+
+	_, err = mdns.Server(ipv4.NewPacketConn(l), &mdns.Config{
+		LocalNames:   []string{name},
+		LocalAddress: net.ParseIP(ip),
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	select {}
+}
+
 func main() {
+	if isSetupMode() {
+		fmt.Println("Setup mode, publishing mdns")
+		mdnsPublish()
+		return
+	}
+
+	fmt.Println("Multicast proxy starting")
 
 	settings := loadMulticastJson()
 
