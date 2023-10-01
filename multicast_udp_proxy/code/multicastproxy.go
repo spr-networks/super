@@ -44,12 +44,13 @@ var InterfacesPublicConfigFile = TEST_PREFIX + "/state/public/interfaces.json"
 var MulticastConfigFile = TEST_PREFIX + "/configs/base/multicast.json"
 
 type MulticastAddress struct {
-	Address  string //adderss:port pair
+	Address  string //address:port pair
 	Disabled bool
 	Tags     []string
 }
 
 type MulticastSettings struct {
+	Disabled  bool
 	Addresses []MulticastAddress
 }
 
@@ -356,6 +357,12 @@ func main() {
 		}
 
 		return false
+	}
+
+	//multicast disabled outright
+	if settings.Disabled == true {
+		fmt.Println("[-] Multicast disabled by configuration")
+		return
 	}
 
 	if len(settings.Addresses) == 0 {

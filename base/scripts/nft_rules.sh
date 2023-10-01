@@ -78,17 +78,12 @@ table inet filter {
     type ipv4_addr . ifname: verdict;
   }
 
-  map upstream_tcp_port_drop {
-    type inet_service : verdict;
-    elements = {
-      22: drop,
-      80: drop,
-      443: drop,
-      5201: drop
-    }
+  map ping_rules {
+    type ipv4_addr . ifname: verdict;
+    flags interval;
   }
 
-  map spr_tcp_port_accept {
+  map wan_tcp_accept {
     type inet_service : verdict;
     elements = {
       22: accept,
@@ -98,12 +93,30 @@ table inet filter {
     }
   }
 
-  map lan_udp_accept {
+  map lan_tcp_accept {
     type inet_service : verdict;
     elements = {
-      1900: accept,
-      5353: accept
+      22: accept,
+      80: accept,
+      443: accept,
+      5201: accept
     }
+  }
+
+  map multicast_lan_udp_accept {
+    type inet_service : verdict;
+  }
+
+  map multicast_wan_udp_accept {
+    type inet_service : verdict;
+  }
+
+  map wan_udp_accept {
+    type inet_service : verdict;
+  }
+
+  map lan_udp_accept {
+    type inet_service : verdict;
   }
 
   map fwd_block {
@@ -172,11 +185,8 @@ table inet filter {
     # Allow wireguard from only WANIF interfaces to prevent loops
     iifname @uplink_interfaces udp dport $WIREGUARD_PORT counter accept
 
-    # drop dhcp requests, multicast ports from upstream
-    # When updating lan_udp_accept, updated this list.
-    iifname @uplink_interfaces udp dport {67, 1900, 5353} counter goto DROPLOGINP
-
-    # drop ssh, iperf from upstream
+    # drop dhcp requests from upstream
+    iifname @uplink_interfaces udp dport {67} counter goto DROPLOGINP
 
     # Extra hardening for API port 80 when running Virtual SPR, to avoid exposing API to the internet
     # https://github.com/moby/moby/issues/22054 This is an open issue with docker leaving forwarding open...
@@ -203,12 +213,20 @@ table inet filter {
     # Dynamic verdict map for dns access
     counter udp dport 53  ip saddr . iifname vmap @dns_access
 
-    # Allow ssh, iperf3 from LAN and those not dropped from upstream (see upstream_tcp_port_drop)
-    counter tcp dport vmap @spr_tcp_port_accept
+    # TCP services
+    iifname @lan_interfaces counter tcp dport vmap @lan_tcp_accept
+    iifname @uplink_interfaces counter tcp dport vmap @wan_tcp_accept
+
+    # UDP services
+    iifname @lan_interfaces counter udp dport vmap @lan_udp_accept
+    iifname @uplink_interfaces counter udp dport vmap @wan_udp_accept
 
     # Allow udp for multicast proxy
-    # NOTE, if adding to lan_udp_accept, make sure to update the drop rule above
-    counter udp dport vmap @lan_udp_accept
+    ip daddr 224.0.0.0/4 iifname @lan_interfaces counter udp dport vmap @multicast_lan_udp_accept
+    ip daddr 224.0.0.0/4 iifname @uplink_interfaces counter udp dport vmap @multicast_wan_udp_accept
+
+
+    icmp type { echo-reply, echo-request } ip saddr . iifname vmap @ping_rules
 
     # Fall through to log + drop
     counter goto DROPLOGINP

@@ -70,16 +70,24 @@ type Endpoint struct {
 	Tags     []string
 }
 
+type MulticastPort struct {
+	Port     string
+	Upstream bool
+}
+
 type FirewallConfig struct {
 	ForwardingRules      []ForwardingRule
 	BlockRules           []BlockRule
 	ForwardingBlockRules []ForwardingBlockRule
 	ServicePorts         []ServicePort
 	Endpoints            []Endpoint
+	MulticastPorts       []MulticastPort
+	PingLan              bool
+	PingWan              bool
 }
 
 var FirewallConfigFile = TEST_PREFIX + "/configs/base/firewall.json"
-var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []ForwardingBlockRule{}, []ServicePort{}, []Endpoint{}}
+var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []ForwardingBlockRule{}, []ServicePort{}, []Endpoint{}, []MulticastPort{}, false, false}
 
 var WireguardSocketPath = TEST_PREFIX + "/state/plugins/wireguard/wireguard_plugin"
 
@@ -628,91 +636,97 @@ func applyForwardBlocking(blockRules []ForwardingBlockRule) error {
 	return nil
 }
 
-func deleteServicePort(port ServicePort) error {
+func deletePortVmap(port string, vmap string) error {
 
-	if port.Protocol != "tcp" {
-		log.Println("[-] Error: non TCP port described, unsupported")
-		return fmt.Errorf("invalid protocol for service port")
-	}
-
-	//delete port from spr_tcp_port_accept
-	cmd := exec.Command("nft", "delete", "element", "inet", "filter", "spr_tcp_port_accept",
-		"{", port.Port, ":", "accept", "}")
+	//check if it exists
+	cmd := exec.Command("nft", "get", "element", "inet", "filter", vmap,
+		"{", port, ":", "accept", "}")
 	_, err := cmd.Output()
 
 	if err != nil {
-		log.Println("failed to delete element from spr_tcp_port_accept", err)
-		log.Println(cmd)
+
+		cmd := exec.Command("nft", "delete", "element", "inet", "filter", vmap,
+			"{", port, ":", "accept", "}")
+		_, err := cmd.Output()
+
+		if err != nil {
+			log.Println("failed to delete element from "+vmap, err)
+			log.Println(cmd)
+		}
 	}
 
-	//add this disabled port  into upstream_tcp_port_drop
-	cmd = exec.Command("nft", "add", "element", "inet", "filter", "upstream_tcp_port_drop",
-		"{", port.Port, ":", "drop", "}")
-	_, err = cmd.Output()
+	return err
+}
+
+func addPortVmap(port string, vmap string) error {
+
+	//check if it exists
+	cmd := exec.Command("nft", "get", "element", "inet", "filter", vmap,
+		"{", port, ":", "accept", "}")
+	_, err := cmd.Output()
 
 	if err != nil {
-		log.Println("failed to add element to upstream_tcp_port_drop", err)
-		log.Println(cmd)
-		return err
+		//entry did not already exist, add it.
+
+		cmd := exec.Command("nft", "add", "element", "inet", "filter", vmap,
+			"{", port, ":", "accept", "}")
+		_, err := cmd.Output()
+
+		if err != nil {
+			log.Println("failed to add element to "+vmap, err)
+			log.Println(cmd)
+			return err
+		}
 	}
 
 	return nil
 }
 
-func addServicePort(port ServicePort) error {
-	if port.Protocol != "tcp" {
-		log.Println("[-] Error: non TCP port described, unsupported")
+func deleteServicePort(port ServicePort) error {
+
+	if port.Protocol != "tcp" && port.Protocol != "udp" {
+		log.Println("[-] Error: non TCP/UDP port described, unsupported")
 		return fmt.Errorf("invalid protocol for service port")
 	}
 
-	//check if it exists
-	cmd := exec.Command("nft", "get", "element", "inet", "filter", "upstream_tcp_port_drop",
-		"{", port.Port, ":", "drop", "}")
-	_, err := cmd.Output()
+	vmap := "lan_" + port.Protocol + "_accept"
 
-	drop_entry_exists := err == nil
+	err := deletePortVmap(port.Port, vmap)
+	if err != nil {
+		fmt.Println("errored out adding service port", err)
+	}
 
-	if port.UpstreamEnabled && drop_entry_exists {
-		//remove this port from upstream_tcp_port_drop
-		cmd := exec.Command("nft", "delete", "element", "inet", "filter", "upstream_tcp_port_drop",
-			"{", port.Port, ":", "drop", "}")
-		_, err := cmd.Output()
-
+	// delete from upstream as well
+	if port.UpstreamEnabled {
+		vmap = "wan_" + port.Protocol + "_accept"
+		err = deletePortVmap(port.Port, vmap)
 		if err != nil {
-			log.Println("failed to delete element from upstream_tcp_port_drop", err)
-			log.Println(cmd)
-			return err
-		}
-	} else if !port.UpstreamEnabled && !drop_entry_exists {
-		//add this  port into upstream_tcp_port_drop
-		cmd := exec.Command("nft", "add", "element", "inet", "filter", "upstream_tcp_port_drop",
-			"{", port.Port, ":", "drop", "}")
-		_, err := cmd.Output()
-
-		if err != nil {
-			log.Println("failed to add element to upstream_tcp_port_drop", err)
-			log.Println(cmd)
-			return err
+			fmt.Println("errored out adding service port", err)
 		}
 	}
 
-	cmd = exec.Command("nft", "get", "element", "inet", "filter", "spr_tcp_port_accept",
-		"{", port.Port, ":", "accept", "}")
-	_, err = cmd.Output()
+	return err
+}
 
+func addServicePort(port ServicePort) error {
+
+	if port.Protocol != "tcp" && port.Protocol != "udp" {
+		log.Println("[-] Error: non TCP/udp port described, unsupported")
+		return fmt.Errorf("invalid protocol for service port")
+	}
+
+	vmap := "lan_" + port.Protocol + "_accept"
+
+	err := addPortVmap(port.Port, vmap)
 	if err != nil {
-		//entry did not already exist, add it.
+		fmt.Println("errored out adding service port", err)
+		return err
+	}
 
-		//add port to spr_tcp_port_accept for LAN to reach and WAN if UpstreamEnabled
-		cmd := exec.Command("nft", "add", "element", "inet", "filter", "spr_tcp_port_accept",
-			"{", port.Port, ":", "accept", "}")
-		_, err := cmd.Output()
-
-		if err != nil {
-			log.Println("failed to add element to spr_tcp_port_accept", err)
-			log.Println(cmd)
-			return err
-		}
+	// delete from upstream as well
+	if port.UpstreamEnabled {
+		vmap = "wan_" + port.Protocol + "_accept"
+		err = addPortVmap(port.Port, vmap)
 	}
 
 	return nil
@@ -722,6 +736,35 @@ func applyServicePorts(servicePorts []ServicePort) error {
 
 	for _, port := range servicePorts {
 		addServicePort(port)
+	}
+
+	return nil
+}
+
+func deleteMulticastPort(port MulticastPort) error {
+
+	vmap := "multicast_lan_udp_accept"
+	if port.Upstream == true {
+		vmap = "multicast_wan_udp_accept"
+	}
+
+	return deletePortVmap(port.Port, vmap)
+}
+
+func addMulticastPort(port MulticastPort) error {
+
+	vmap := "multicast_lan_udp_accept"
+	if port.Upstream == true {
+		vmap = "multicast_wan_udp_accept"
+	}
+
+	return addPortVmap(port.Port, vmap)
+}
+
+func applyMulticastPorts(multicastPorts []MulticastPort) error {
+
+	for _, port := range multicastPorts {
+		addMulticastPort(port)
 	}
 
 	return nil
@@ -886,6 +929,64 @@ func applyBuiltinTagFirewallRules() {
 	}
 }
 
+func applyPingRules() {
+	Interfacesmtx.Lock()
+	interfaces := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
+
+	cmd := exec.Command("nft", "flush", "map", "inet", "filter", "ping_rules")
+	_, err := cmd.Output()
+	if err != nil {
+		fmt.Println("- Failed to flush ping map", err)
+		return
+	}
+
+	pingWan := gFirewallConfig.PingWan
+	pingLan := gFirewallConfig.PingLan
+
+	if isSetupMode() {
+		//during set up mode override and do ping wan / lan regardless.
+		pingWan = true
+		pingLan = true
+	}
+
+	for _, iface := range interfaces {
+		if iface.Type == "Uplink" && pingWan {
+			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
+				"{", "0.0.0.0/0", ".", iface.Name, ":", "accept", "}")
+			err = cmd.Run()
+			if err != nil {
+				fmt.Println("[-] Ping rule failed to add", err)
+			}
+		} else if iface.Type == "AP" && pingLan {
+			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
+				"{", "0.0.0.0/0", ".", iface.Name+".*", ":", "accept", "}")
+			_, err = cmd.Output()
+			if err != nil {
+				fmt.Println("[-] Ping rule failed to add", err)
+			}
+		} else if iface.Type == "DownLink" && pingLan {
+			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
+				"{", "0.0.0.0/0", ".", iface.Name, ":", "accept", "}")
+			_, err = cmd.Output()
+			if err != nil {
+				fmt.Println("[-] Ping rule failed to add", err)
+			}
+
+			if iface.Subtype == "VLAN-Trunk" {
+				//add vlan interfaces as well for vlan trunk
+				cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
+					"{", "0.0.0.0/0", ".", iface.Name+".*", ":", "accept", "}")
+				_, err = cmd.Output()
+				if err != nil {
+					fmt.Println("[-] Ping rule failed to add", err)
+				}
+			}
+		}
+	}
+
+}
+
 func populateSets() {
 	//dhcp config loading already handles supernetworks mana
 	Interfacesmtx.Lock()
@@ -923,7 +1024,12 @@ func applyFirewallRulesLocked() {
 
 	applyServicePorts(gFirewallConfig.ServicePorts)
 
+	applyMulticastPorts(gFirewallConfig.MulticastPorts)
+
 	applyBuiltinTagFirewallRules()
+
+	applyPingRules()
+
 }
 
 func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
@@ -1206,9 +1312,9 @@ func modifyServicePort(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//only TCP supported for now
-	if port.Protocol != "tcp" {
-		http.Error(w, "Invalid protocol, only tcp supported currently", 400)
+	//only TCP/UDP supported for now
+	if port.Protocol != "tcp" && port.Protocol != "udp" {
+		http.Error(w, "Invalid protocol, only tcp/udp supported currently", 400)
 		return
 	}
 
@@ -1246,6 +1352,79 @@ func modifyServicePort(w http.ResponseWriter, r *http.Request) {
 	}
 
 	gFirewallConfig.ServicePorts = append(gFirewallConfig.ServicePorts, port)
+	saveFirewallRulesLocked()
+	applyFirewallRulesLocked()
+}
+
+func modifyIcmp(w http.ResponseWriter, r *http.Request) {
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	type IcmpOptions struct {
+		PingLan bool
+		PingWan bool
+	}
+
+	options := IcmpOptions{}
+	err := json.NewDecoder(r.Body).Decode(&options)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	gFirewallConfig.PingLan = options.PingLan
+	gFirewallConfig.PingWan = options.PingWan
+	saveFirewallRulesLocked()
+
+	applyPingRules()
+
+}
+
+func modifyMulticast(w http.ResponseWriter, r *http.Request) {
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	port := MulticastPort{}
+	err := json.NewDecoder(r.Body).Decode(&port)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	re := regexp.MustCompile("^([0-9].*)$")
+
+	if port.Port == "" || !re.MatchString(port.Port) {
+		http.Error(w, "Invalid Port", 400)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		for i := range gFirewallConfig.MulticastPorts {
+			a := gFirewallConfig.MulticastPorts[i]
+			if port.Port == a.Port {
+				gFirewallConfig.MulticastPorts = append(gFirewallConfig.MulticastPorts[:i], gFirewallConfig.MulticastPorts[i+1:]...)
+				saveFirewallRulesLocked()
+				applyFirewallRulesLocked()
+				deleteMulticastPort(a)
+				return
+			}
+		}
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	//update the existing rule  entry
+	for i := range gFirewallConfig.MulticastPorts {
+		a := gFirewallConfig.MulticastPorts[i]
+		if port.Port == a.Port {
+			gFirewallConfig.MulticastPorts[i].Upstream = port.Upstream
+			saveFirewallRulesLocked()
+			applyFirewallRulesLocked()
+			return
+		}
+	}
+
+	gFirewallConfig.MulticastPorts = append(gFirewallConfig.MulticastPorts, port)
 	saveFirewallRulesLocked()
 	applyFirewallRulesLocked()
 }
