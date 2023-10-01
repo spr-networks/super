@@ -49,7 +49,6 @@ mkdir -p state/api/
 mkdir -p state/dhcp/
 mkdir -p state/dns/
 mkdir -p state/wifi/
-mkdir -p state/wifi/sta_mac_iface_map/
 touch state/dns/local_mappings state/dhcp/leases.txt
 
 PLUGINS="ppp wifi_uplink"

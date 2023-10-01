@@ -1,5 +1,4 @@
 #!/bin/bash
-rm /state/wifi/sta_mac_iface_map/*
 
 IFACES=$(curl --unix-socket /state/wifi/apisock http://localhost/interfaces)
 RET=$?
