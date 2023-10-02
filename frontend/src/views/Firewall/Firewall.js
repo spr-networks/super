@@ -39,7 +39,6 @@ export default class Firewall extends Component {
             notifyChange={this.fetchConfig}
           />
 
-          <UpstreamServicesList notifyChange={this.fetchConfig} />
 
           <BlockList
             title="Inbound Traffic Block"
