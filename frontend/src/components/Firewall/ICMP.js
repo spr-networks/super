@@ -37,6 +37,7 @@ const ICMP = (props) => {
 
     setStatus(updated)
   }
+
   return (
     <>
       <HStack justifyContent="space-between" alignItems="center" p={4}>
