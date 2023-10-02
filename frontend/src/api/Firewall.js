@@ -50,11 +50,6 @@ export class APIFirewall extends API {
   }
 
   setMulticast(data) {
-    /*
-    type MulticastPort struct {
-        Port     string
-        Upstream bool
-    }*/
     return this.put('multicast', data)
   }
 }
