@@ -1,5 +1,5 @@
 /*
-	A proxy for udp multicast
+	A proxy for udp multicast and mdns publishing for 'spr'
 
 This allows isolated interfaces to perform zeroconf (mdns or ssdp)
 
@@ -43,7 +43,6 @@ var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
 var InterfacesPublicConfigFile = TEST_PREFIX + "/state/public/interfaces.json"
 var MulticastConfigFile = TEST_PREFIX + "/configs/base/multicast.json"
-var SetupDonePath = TEST_PREFIX + "/configs/base/.setup_done"
 
 type MulticastAddress struct {
 	Address  string //address:port pair
@@ -52,8 +51,10 @@ type MulticastAddress struct {
 }
 
 type MulticastSettings struct {
-	Disabled  bool
-	Addresses []MulticastAddress
+	Disabled      bool
+	Addresses     []MulticastAddress
+	AdvertiseMDNS bool
+	MDNSName      string
 }
 
 type PSKEntry struct {
@@ -319,16 +320,6 @@ func loadMulticastJson() MulticastSettings {
 	return settings
 }
 
-func isSetupMode() bool {
-	_, err := os.Stat(SetupDonePath)
-	if err == nil || !os.IsNotExist(err) {
-		//fmt.Println("mock setup mode")
-		//return true
-		return false
-	}
-
-	return true
-}
 
 func ifaceAddr(iface *net.Interface) (string, error) {
 	addrs, err := iface.Addrs()
@@ -348,16 +339,7 @@ func ifaceAddr(iface *net.Interface) (string, error) {
 	return "", fmt.Errorf("no ip addr found for iface %v", iface.Name)
 }
 
-// mdns publish spr.local on wanif ip addr
-func mdnsPublish() {
-	// just exit on virtual
-	if os.Getenv("VIRTUAL_SPR") != "" {
-		fmt.Println("spr virtual setup, skipping mdns")
-		return
-	}
-
-	wanif := os.Getenv("WANIF")
-
+func mdnsPublishIface(settings MulticastSettings, wanif string) {
 	iface, err := net.InterfaceByName(wanif)
 	if err != nil {
 		panic(err)
@@ -384,10 +366,14 @@ func mdnsPublish() {
 		panic(err)
 	}
 
-	hostname, _ := os.Hostname() //spr
+	hostname := settings.MDNSName
+	if hostname == "" {
+		hostname, _ = os.Hostname()
+	}
+
 	name := fmt.Sprintf("%v.local", hostname)
 
-	fmt.Println("ip=", ip, "name=", name)
+	fmt.Println("mdns advertise ip=", ip, "name=", name)
 
 	_, err = mdns.Server(ipv4.NewPacketConn(l), &mdns.Config{
 		LocalNames:   []string{name},
@@ -397,20 +383,51 @@ func mdnsPublish() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// mdns publish spr.local on wanif ip addr
+func mdnsPublish(settings MulticastSettings) {
+
+	// just exit on virtual
+	if os.Getenv("VIRTUAL_SPR") != "" {
+		fmt.Println("spr virtual setup, skipping mdns")
+		return
+	}
+
+	if !settings.AdvertiseMDNS {
+		return
+	}
+
+	wanif := os.Getenv("WANIF")
+	wanif_covered := false
+
+	interfaces, err := APIInterfaces()
+	if err == nil {
+		for _, target := range interfaces {
+			if target.Type == "Uplink" {
+				mdnsPublishIface(settings, target.Name)
+				if target.Name == wanif {
+					wanif_covered = true
+				}
+			}
+		}
+	}
+
+	if !wanif_covered {
+		mdnsPublishIface(settings, wanif)
+	}
 
 	select {}
 }
 
 func main() {
-	if isSetupMode() {
-		fmt.Println("Setup mode, publishing mdns")
-		mdnsPublish()
-		return
-	}
 
 	fmt.Println("Multicast proxy starting")
 
 	settings := loadMulticastJson()
+
+	// in addition to being a proxy this code will advertise a name for spr over mdns
+	go mdnsPublish(settings)
 
 	relayableInterface := func(ifaceName string) bool {
 
