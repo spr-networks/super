@@ -23,6 +23,7 @@ import DNSOverride from 'views/DNS/DNSOverride'
 import DNSLog from 'views/DNS/DNSLog'
 import DNSLogEdit from 'views/DNS/DNSLogEdit'
 import DynDns from 'views/DNS/DynDns'
+import CoreDns from 'views/DNS/CoreDns'
 import Wireguard from 'views/Wireguard'
 import Firewall from 'views/Firewall/Firewall'
 import FirewallSettings from 'views/Firewall/FirewallSettings'
@@ -51,6 +52,7 @@ import {
   faFireAlt,
   faGauge,
   faGlobe,
+  faHammer,
   faHome,
   faLaptop,
   faLineChart,
@@ -251,7 +253,15 @@ const routes = [
         icon: faArrowCircleUp,
         component: DynDns,
         layout: 'admin'
+      },
+      {
+        path: 'dns',
+        name: 'DNS Settings',
+        icon: faHammer,
+        component: CoreDns,
+        layout: 'admin'
       }
+
     ]
   },
   {
