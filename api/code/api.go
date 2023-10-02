@@ -72,8 +72,10 @@ type MulticastAddress struct {
 }
 
 type MulticastSettings struct {
-	Disabled  bool
-	Addresses []MulticastAddress
+	Disabled             bool
+	Addresses            []MulticastAddress
+	DisableMDNSAdvertise bool
+	MDNSName             string
 }
 
 type APIConfig struct {
@@ -2295,10 +2297,41 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	configureInterface("AP", "", conf.InterfaceAP)
 	configureInterface("Uplink", "ethernet", conf.InterfaceUplink)
 
+	//disable ping from wan, mdns once setup is complete
+	disableSetupSettings()
+
 	ioutil.WriteFile(SetupDonePath, []byte("true"), 0644)
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
 	callSuperdRestart("", "")
+}
+
+func disableSetupSettings() {
+	//during setup we enabled mdns. disable it now by default
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+	settings := loadMulticastJsonLocked()
+	settings.DisableMDNSAdvertise = true
+
+	//add SSDP and MDNS to proxy defaults
+	settings.Addresses = []MulticastAddress{MulticastAddress{Address: "224.0.0.251:5353"}}
+	settings.Addresses = append(settings.Addresses, MulticastAddress{Address: "239.255.255.250:1900"})
+
+	saveMulticastJsonLocked(settings)
+}
+
+func migrateMDNS() {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+	settings := loadMulticastJsonLocked()
+
+	if len(settings.Addresses) == 0 {
+		//add SSDP and MDNS to proxy defaults
+		settings.Addresses = append(settings.Addresses, MulticastAddress{Address: "224.0.0.251:5353"})
+		settings.Addresses = append(settings.Addresses, MulticastAddress{Address: "239.255.255.250:1900"})
+	}
+
+	saveMulticastJsonLocked(settings)
 }
 
 // set up SPA handler. From gorilla mux's documentation
@@ -2368,6 +2401,8 @@ func main() {
 
 	//update auth API
 	migrateAuthAPI()
+	//update multicast.json
+	migrateMDNS()
 
 	loadConfig()
 
