@@ -1432,6 +1432,8 @@ func modifyMulticast(w http.ResponseWriter, r *http.Request) {
 		a := gFirewallConfig.MulticastPorts[i]
 		if port.Port == a.Port {
 			gFirewallConfig.MulticastPorts[i].Upstream = port.Upstream
+			//remove previous entry
+			deleteMulticastPort(port)
 			saveFirewallRulesLocked()
 			applyFirewallRulesLocked()
 			return
