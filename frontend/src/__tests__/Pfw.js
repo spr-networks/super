@@ -4,7 +4,7 @@ import { NativeBaseProvider } from 'native-base'
 
 import { pfwAPI, saveLogin } from 'api'
 import FlowList from 'components/Flow/FlowList'
-import PFW from 'views/Pfw'
+import PFW from 'views/Firewall/Pfw'
 import createServer from 'api/MockAPI'
 
 let server
