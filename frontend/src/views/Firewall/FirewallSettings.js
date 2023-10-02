@@ -1,12 +1,13 @@
 import React from 'react'
 import { Text, View, VStack } from 'native-base'
 
+import ICMP from 'components/Firewall/ICMP'
+
 const FWSettings = (props) => {
   return (
-    <VStack p={4}>
-      <Text bold>TODO</Text>
-      <Text>Multicast services</Text>
-      <Text>ICMP on/off</Text>
+    <VStack>
+      <ICMP />
+      <Text p={4}>TODO: Multicast services</Text>
     </VStack>
   )
 }
