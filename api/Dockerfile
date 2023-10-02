@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git hostapd iw 
 COPY scripts /scripts/
 # iw list json parser
 RUN mkdir -p /root/.local/share/jc/jcparsers
-COPY scripts/iw_*.py /root/.local/share/jc/jcparsers
+COPY scripts/iw*.py /root/.local/share/jc/jcparsers
 
 COPY --from=builder /api /
 ENTRYPOINT ["/scripts/startup.sh"]
