@@ -240,7 +240,16 @@ const AdminLayout = (props) => {
         setIsPlusDisabled(false)
       })
       .catch((err) => {
-        setIsPlusDisabled(true)
+        //if no pfw check if mesh is around
+        meshAPI
+          .leafMode()
+          .then((res) => {
+            setIsPlusDisabled(false)
+          })
+          .catch((err) => {
+            setIsPlusDisabled(true)
+          })
+
       })
 
     api

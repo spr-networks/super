@@ -2,10 +2,11 @@ import React, { Component } from 'react'
 import { ScrollView, View, VStack } from 'native-base'
 
 import { firewallAPI } from 'api'
+import BlockList from 'components/Firewall/BlockList'
 import EndpointList from 'components/Firewall/EndpointList'
 import ForwardList from 'components/Firewall/ForwardList'
-import BlockList from 'components/Firewall/BlockList'
 import ForwardBlockList from 'components/Firewall/ForwardBlockList'
+import MulticastPorts from 'components/Firewall/MulticastPorts'
 import UpstreamServicesList from 'components/Firewall/UpstreamServicesList'
 
 export default class Firewall extends Component {
@@ -16,7 +17,10 @@ export default class Firewall extends Component {
   }
 
   fetchConfig = () => {
-    firewallAPI.config().then((config) => this.setState({ config }))
+    firewallAPI.config().then((config) => {
+      config.MulticastPorts = [];
+      this.setState({ config })
+    })
   }
 
   componentDidMount() {
@@ -36,6 +40,11 @@ export default class Firewall extends Component {
 
           <ForwardList
             list={this.state.config.ForwardingRules}
+            notifyChange={this.fetchConfig}
+          />
+
+          <MulticastPorts
+            list={this.state.config.MulticastPorts}
             notifyChange={this.fetchConfig}
           />
 
