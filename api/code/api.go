@@ -2297,8 +2297,8 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	configureInterface("AP", "", conf.InterfaceAP)
 	configureInterface("Uplink", "ethernet", conf.InterfaceUplink)
 
-	//disable ping from wan, mdns once setup is complete
-	disableSetupSettings()
+	// disable mdns advertising and set up default multicast rules
+	multicastSettingsSetupDone()
 
 	ioutil.WriteFile(SetupDonePath, []byte("true"), 0644)
 
@@ -2306,10 +2306,9 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	callSuperdRestart("", "")
 }
 
-func disableSetupSettings() {
+func multicastSettingsSetupDone() {
 	//during setup we enabled mdns. disable it now by default
 	Configmtx.Lock()
-	defer Configmtx.Unlock()
 	settings := loadMulticastJsonLocked()
 	settings.DisableMDNSAdvertise = true
 
@@ -2318,6 +2317,15 @@ func disableSetupSettings() {
 	settings.Addresses = append(settings.Addresses, MulticastAddress{Address: "239.255.255.250:1900"})
 
 	saveMulticastJsonLocked(settings)
+	Configmtx.Unlock()
+
+	// set up rules for firewall as well
+	FWmtx.Lock()
+	gFirewallConfig.MulticastPorts = []MulticastPort{MulticastPort{Port: "5353", Upstream: false}}
+	gFirewallConfig.MulticastPorts = append(gFirewallConfig.MulticastPorts, MulticastPort{Port: "1900", Upstream: false})
+	saveFirewallRulesLocked()
+	FWmtx.Unlock()
+
 }
 
 func migrateMDNS() {
@@ -2329,6 +2337,15 @@ func migrateMDNS() {
 		//add SSDP and MDNS to proxy defaults
 		settings.Addresses = append(settings.Addresses, MulticastAddress{Address: "224.0.0.251:5353"})
 		settings.Addresses = append(settings.Addresses, MulticastAddress{Address: "239.255.255.250:1900"})
+
+		//also update the firewall ports for multicast
+		FWmtx.Lock()
+		//under setup mode do accept from upstream.
+		gFirewallConfig.MulticastPorts = []MulticastPort{MulticastPort{Port: "5353", Upstream: isSetupMode()}}
+		gFirewallConfig.MulticastPorts = append(gFirewallConfig.MulticastPorts, MulticastPort{Port: "5353", Upstream: false})
+		saveFirewallRulesLocked()
+
+		FWmtx.Unlock()
 	}
 
 	saveMulticastJsonLocked(settings)

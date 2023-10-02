@@ -70,9 +70,11 @@ type Endpoint struct {
 	Tags     []string
 }
 
+// NOTE , we do not need an address to filter with as well,
+// the multicast proxy will take care of that.
 type MulticastPort struct {
-	Port     string
-	Upstream bool
+	Port     string //udp port number to listen on
+	Upstream bool   // if enabled will advertose both on uplink and lan interfaces
 }
 
 type FirewallConfig struct {
@@ -762,9 +764,21 @@ func addMulticastPort(port MulticastPort) error {
 }
 
 func applyMulticastPorts(multicastPorts []MulticastPort) error {
-
+	foundMDNS := false
 	for _, port := range multicastPorts {
+		if isSetupMode() {
+			//during setup do allow wan interfaces to mdns
+			if port.Port == "5353" {
+				port.Upstream = true
+				foundMDNS = true
+			}
+		}
 		addMulticastPort(port)
+	}
+
+	if isSetupMode() && !foundMDNS {
+		//during setup, do allow mdns from upstream.
+		addMulticastPort(MulticastPort{Port: "5353", Upstream: true})
 	}
 
 	return nil
