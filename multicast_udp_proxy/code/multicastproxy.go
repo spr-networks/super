@@ -51,10 +51,10 @@ type MulticastAddress struct {
 }
 
 type MulticastSettings struct {
-	Disabled      bool
-	Addresses     []MulticastAddress
-	AdvertiseMDNS bool
-	MDNSName      string
+	Disabled             bool
+	Addresses            []MulticastAddress
+	DisableMDNSAdvertise bool
+	MDNSName             string
 }
 
 type PSKEntry struct {
@@ -320,7 +320,6 @@ func loadMulticastJson() MulticastSettings {
 	return settings
 }
 
-
 func ifaceAddr(iface *net.Interface) (string, error) {
 	addrs, err := iface.Addrs()
 	if err != nil {
@@ -394,7 +393,7 @@ func mdnsPublish(settings MulticastSettings) {
 		return
 	}
 
-	if !settings.AdvertiseMDNS {
+	if settings.DisableMDNSAdvertise {
 		return
 	}
 
