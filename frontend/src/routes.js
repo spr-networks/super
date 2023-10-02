@@ -25,8 +25,9 @@ import DNSLogEdit from 'views/DNS/DNSLogEdit'
 import DynDns from 'views/DNS/DynDns'
 import CoreDns from 'views/DNS/CoreDns'
 import Wireguard from 'views/Wireguard'
-import Firewall from 'views/Firewall'
-import PFW from 'views/Pfw'
+import Firewall from 'views/Firewall/Firewall'
+import FirewallSettings from 'views/Firewall/FirewallSettings'
+import PFW from 'views/Firewall/Pfw'
 import Mesh from 'views/Mesh'
 import Logs from 'views/Logs'
 import Events from 'views/Events'
@@ -146,21 +147,37 @@ const routes = [
     component: Wireguard,
     layout: 'admin'
   },
+
   {
-    path: 'firewall',
     name: 'Firewall',
-    icon: faFireAlt,
-    component: Firewall,
-    layout: 'admin'
-  },
-  {
-    path: 'pfw',
-    name: 'PFW',
     icon: faFire,
-    component: PFW,
-    layout: 'admin',
-    plus: true
+    state: 'firewallCollapse',
+    views: [
+      {
+        path: 'firewall',
+        name: 'Firewall',
+        icon: faFireAlt,
+        component: Firewall,
+        layout: 'admin'
+      },
+      {
+        path: 'firewallSettings',
+        name: 'Firewall Settings',
+        icon: faCogs,
+        component: FirewallSettings,
+        layout: 'admin'
+      },
+      {
+        path: 'pfw',
+        name: 'PFW',
+        icon: faFire,
+        component: PFW,
+        layout: 'admin',
+        plus: true
+      }
+    ]
   },
+
   {
     name: 'Traffic',
     icon: faLineChart,
