@@ -645,7 +645,7 @@ func deletePortVmap(port string, vmap string) error {
 		"{", port, ":", "accept", "}")
 	_, err := cmd.Output()
 
-	if err != nil {
+	if err == nil {
 
 		cmd := exec.Command("nft", "delete", "element", "inet", "filter", vmap,
 			"{", port, ":", "accept", "}")
