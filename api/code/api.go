@@ -2319,6 +2319,7 @@ func multicastSettingsSetupDone() {
 	saveMulticastJsonLocked(settings)
 	Configmtx.Unlock()
 
+	loadFirewallRules()
 	// set up rules for firewall as well
 	FWmtx.Lock()
 	gFirewallConfig.MulticastPorts = []MulticastPort{MulticastPort{Port: "5353", Upstream: false}}
@@ -2338,6 +2339,8 @@ func migrateMDNS() {
 		settings.Addresses = append(settings.Addresses, MulticastAddress{Address: "224.0.0.251:5353"})
 		settings.Addresses = append(settings.Addresses, MulticastAddress{Address: "239.255.255.250:1900"})
 
+		//make sure config is loaded.
+		loadFirewallRules()
 		//also update the firewall ports for multicast
 		FWmtx.Lock()
 		//under setup mode do accept from upstream.
