@@ -72,7 +72,7 @@ const UpstreamServicesList = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
+      <HStack justifyContent="space-between" alignItems="center" py={4}>
         <VStack maxW="60%">
           <Heading fontSize="md">Allowed SPR Services</Heading>
           <Text color="muted.500" isTruncated></Text>
@@ -81,7 +81,7 @@ const UpstreamServicesList = (props) => {
           <AddServicePort notifyChange={notifyChange} />
         </ModalForm>
       </HStack>
-      <Box px={4} mb={4}>
+      <Box mb={4}>
         <HStack
           space={4}
           justifyContent="space-between"
@@ -97,41 +97,38 @@ const UpstreamServicesList = (props) => {
         <FlatList
           data={list}
           renderItem={({ item }) => (
-            <Box
+            <HStack
+              space={4}
+              justifyContent="space-between"
+              alignItems="center"
               bg="backgroundCardLight"
               borderBottomWidth={1}
+              borderColor="borderColorCardLight"
               _dark={{
                 bg: 'backgroundCardDark',
                 borderColor: 'borderColorCardDark'
               }}
-              borderColor="borderColorCardLight"
               p={4}
             >
-              <HStack
-                space={3}
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                <Badge variant="outline">{item.Protocol}</Badge>
-                <Text>{item.Port}</Text>
-                <Box w="100" alignItems="center" alignSelf="center">
-                  <Switch
-                    defaultIsChecked={item.UpstreamEnabled}
-                    onValueChange={() =>
-                      toggleUpstream(item, !item.UpstreamEnabled)
-                    }
-                  />
-                </Box>
-                <IconButton
-                  alignSelf="center"
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="secondary"
-                  icon={<Icon icon={faXmark} />}
-                  onPress={() => deleteListItem(item)}
+              <Badge variant="outline">{item.Protocol}</Badge>
+              <Text w={20}>{item.Port}</Text>
+              <Box w={100} alignItems="center" alignSelf="center">
+                <Switch
+                  defaultIsChecked={item.UpstreamEnabled}
+                  onValueChange={() =>
+                    toggleUpstream(item, !item.UpstreamEnabled)
+                  }
                 />
-              </HStack>
-            </Box>
+              </Box>
+              <IconButton
+                alignSelf="center"
+                size="sm"
+                variant="ghost"
+                colorScheme="secondary"
+                icon={<Icon icon={faXmark} />}
+                onPress={() => deleteListItem(item)}
+              />
+            </HStack>
           )}
           keyExtractor={(item) =>
             `${item.Protocol}${item.Port}:${item.UpstreamEnabled}`

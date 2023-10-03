@@ -49,7 +49,7 @@ const ForwardBlockList = (props) => {
   return (
     <>
       <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <VStack maxW="60%">
+        <VStack maxW={{ base: 'full', md: '60%' }}>
           <Heading fontSize="md" isTruncated>
             {title}
           </Heading>
@@ -60,6 +60,9 @@ const ForwardBlockList = (props) => {
         <ModalForm
           title={`Add Forwarding Block`}
           triggerText="Add Forwarding Block"
+          triggerProps={{
+            display: { base: 'none', md: list.length ? 'flex' : 'none' }
+          }}
           modalRef={refModal}
         >
           <AddForwardBlock notifyChange={notifyChange} />
@@ -107,14 +110,15 @@ const ForwardBlockList = (props) => {
 
         <VStack>
           {!list.length ? (
-            <Text alignSelf={'center'}>
-              There are no forwarding block rules configured yet
+            <Text flexWrap="wrap">
+              Control forward and block rules on the LAN.
             </Text>
           ) : null}
           <Button
             display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
             variant={useColorModeValue('subtle', 'solid')}
-            colorScheme="muted"
+            colorScheme={useColorModeValue('primary', 'muted')}
+            rounded="none"
             leftIcon={<Icon icon={faCirclePlus} />}
             onPress={() => refModal.current()}
             mt={4}

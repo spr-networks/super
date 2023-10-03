@@ -28,25 +28,28 @@ import {
 import { AppContext, alertState } from 'AppContext'
 
 const MDNSAdvertise = (props) => {
-  const [config, setConfig] = useState({ Disabled: false, DisableMDNSAdvertise: false, MDNSName: "", Addresses: [] })
+  const [config, setConfig] = useState({
+    Disabled: false,
+    DisableMDNSAdvertise: false,
+    MDNSName: '',
+    Addresses: []
+  })
 
   const toggleMDNS = (key) => {
-    setConfig({...config, DisableMDNSAdvertise: !config.DisableMDNSAdvertise})
+    setConfig({ ...config, DisableMDNSAdvertise: !config.DisableMDNSAdvertise })
   }
 
   const toggleMulticast = (key) => {
-    setConfig({...config, Disabled: !config.Disabled})
+    setConfig({ ...config, Disabled: !config.Disabled })
   }
 
   const onChangeText = (value) => {
-    setConfig({...config, MDNSName: value})
+    setConfig({ ...config, MDNSName: value })
   }
 
   const submitSettings = (value) => {
-    Multicast
-      .setConfig(config)
+    Multicast.setConfig(config)
       .then(() => {
-
         let proxy_mdns = false
         for (let addr of config.Addresses) {
           if (addr.Disabled == false && addr.Address.includes(':5353')) {
@@ -57,48 +60,45 @@ const MDNSAdvertise = (props) => {
         if (!config.DisableMDNSAdvertise) {
           //next we need to update the firewall as well
           firewallAPI
-          .addMulticastPort({Port: "5353", Upstream: true})
-          .then(() => {
-            alertState.success("Updated Multicast Settings")
-          })
-          .catch((err) => {
-            alertState.error("Failed to update firewall rule")
-          })
+            .addMulticastPort({ Port: '5353', Upstream: true })
+            .then(() => {
+              alertState.success('Updated Multicast Settings')
+            })
+            .catch((err) => {
+              alertState.error('Failed to update firewall rule')
+            })
         } else if (proxy_mdns) {
           //instead update to disable from upstream interfaces
           firewallAPI
-          .addMulticastPort({Port: "5353", Upstream: false})
-          .then(() => {
-            alertState.success("Updated Multicast Settings")
-          })
-          .catch((err) => {
-            alertState.error("Failed to update firewall rule")
-          })
+            .addMulticastPort({ Port: '5353', Upstream: false })
+            .then(() => {
+              alertState.success('Updated Multicast Settings')
+            })
+            .catch((err) => {
+              alertState.error('Failed to update firewall rule')
+            })
         } else {
           //delete the por taltogether
           firewallAPI
-          .deleteMulticastPort({Port: "5353", Upstream: false})
-          .then(() => {
-            alertState.success("Updated Multicast Settings")
-          })
-          .catch((err) => {
-            alertState.error("Failed to update firewall rule")
-          })
+            .deleteMulticastPort({ Port: '5353', Upstream: false })
+            .then(() => {
+              alertState.success('Updated Multicast Settings')
+            })
+            .catch((err) => {
+              alertState.error('Failed to update firewall rule')
+            })
         }
       })
-      .catch((err) => alertState.error("failed " + JSON.stringify(err)))
+      .catch((err) => alertState.error('failed ' + JSON.stringify(err)))
   }
 
   useEffect(() => {
-    Multicast
-      .config()
-      .then(setConfig)
+    Multicast.config().then(setConfig)
   }, [])
-
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
+      <HStack justifyContent="space-between" alignItems="center" py={4}>
         <VStack maxW="60%">
           <Heading fontSize="md" isTruncated>
             Multicast Settings
@@ -109,7 +109,7 @@ const MDNSAdvertise = (props) => {
         </VStack>
       </HStack>
 
-      <VStack px={4} width={{ base: '100%', md: '75%' }}>
+      <VStack>
         <Box
           bg="backgroundCardLight"
           borderBottomWidth={1}
@@ -158,21 +158,24 @@ const MDNSAdvertise = (props) => {
           borderColor="borderColorCardLight"
           p={4}
         >
-          <HStack space={4} justifyContent="space-between" alignItems="center">
-            <Text bold>mDNS Name</Text>
-            <Input
-              value={config.MDNSName}
-              onChangeText={onChangeText}
-            />
+          <HStack
+            space={4}
+            justifyContent="space-between"
+            alignContent="center"
+          >
+            <VStack flex={1}>
+              <Text bold>mDNS Name</Text>
+              <Text color="muted.500" isTruncated>
+                Defaults to 'spr.local'. Set the name without the .local part or
+                leave empty to use hostname
+              </Text>
+            </VStack>
+            <Input value={config.MDNSName} onChangeText={onChangeText} />
           </HStack>
-          <Text color="muted.500" isTruncated>
-            Defaults to 'spr.local'. Set the name without the .local part or leave empty to use hostname
-          </Text>
         </Box>
-        <Button
-          colorScheme="primary"
-          onPress={submitSettings}
-        >Save Multicast settings</Button>
+        <Button rounded="none" colorScheme="primary" onPress={submitSettings}>
+          Save Multicast settings
+        </Button>
       </VStack>
     </>
   )

@@ -30,13 +30,9 @@ const ICMP = (props) => {
   const contextType = useContext(AppContext)
 
   useEffect(() => {
-    firewallAPI
-      .config()
-      .then((config) => {
-        setStatus({PingLan: config.PingLan, PingWan: config.PingWan})
-      })
-
-
+    firewallAPI.config().then((config) => {
+      setStatus({ PingLan: config.PingLan, PingWan: config.PingWan })
+    })
   }, [])
 
   const togglePing = (key) => {
@@ -44,7 +40,7 @@ const ICMP = (props) => {
     firewallAPI
       .setICMP(updated)
       .then(() => {
-        alertState.success("Updated Ping Settings")
+        alertState.success('Updated Ping Settings')
       })
       .catch((err) => alertState.error(err))
 
@@ -53,7 +49,7 @@ const ICMP = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
+      <HStack justifyContent="space-between" alignItems="center" py={4}>
         <VStack maxW="60%">
           <Heading fontSize="md" isTruncated>
             Ping Settings
@@ -64,7 +60,7 @@ const ICMP = (props) => {
         </VStack>
       </HStack>
 
-      <VStack px={4} width={{ base: '100%', md: '75%' }}>
+      <VStack>
         <Box
           bg="backgroundCardLight"
           borderBottomWidth={1}

@@ -49,17 +49,20 @@ const BlockList = (props) => {
   return (
     <>
       <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <VStack maxW="60%">
+        <VStack maxW={{ base: 'full', md: '60%' }}>
           <Heading fontSize="md" isTruncated>
             {title}
           </Heading>
-          <Text color="muted.500" isTruncated>
+          <Text color="muted.500" flexWrap="wrap">
             Block traffic coming into the network at the PREROUTING stage
           </Text>
         </VStack>
         <ModalForm
           title={`Add IP Block`}
           triggerText="Add IP Block"
+          triggerProps={{
+            display: { base: 'none', md: list.length ? 'flex' : 'none' }
+          }}
           modalRef={refModal}
         >
           <AddBlock notifyChange={notifyChange} />
@@ -106,14 +109,16 @@ const BlockList = (props) => {
 
         <VStack>
           {!list.length ? (
-            <Text alignSelf={'center'}>
-              There are no block rules configured yet
+            <Text flexWrap="wrap">
+              Block inbound WAN traffic from reaching a private IP address on
+              the LAN.
             </Text>
           ) : null}
           <Button
             display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
             variant={useColorModeValue('subtle', 'solid')}
-            colorScheme="muted"
+            colorScheme={useColorModeValue('primary', 'muted')}
+            rounded="none"
             leftIcon={<Icon icon={faCirclePlus} />}
             onPress={() => refModal.current()}
             mt={4}

@@ -44,10 +44,8 @@ const MulticastPorts = (props) => {
   }
 
   const deleteListItem = (item) => {
-
     //need to 1) remove the entry from multi cast settings
-    //  2) remove from firewall api. 
-
+    //  2) remove from firewall api.
     /*
     firewallAPI.deleteMulticastPort(item).then((res) => {
       refreshList()
@@ -69,7 +67,7 @@ const MulticastPorts = (props) => {
   return (
     <>
       <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <VStack maxW="60%">
+        <VStack maxW={{ base: 'full', md: '60%' }}>
           <Heading fontSize="md">Multicast Services</Heading>
           <Text color="muted.500" isTruncated>
             Set services for Multicast Proxy
@@ -78,6 +76,9 @@ const MulticastPorts = (props) => {
         <ModalForm
           title="Add Multicast Service Rule"
           triggerText="Add Multicast Service"
+          triggerProps={{
+            display: { base: 'none', md: list.length ? 'flex' : 'none' }
+          }}
           modalRef={refModal}
         >
           <AddMulticastPort notifyChange={notifyChange} />
@@ -103,7 +104,6 @@ const MulticastPorts = (props) => {
                 justifyContent="space-between"
                 alignItems="center"
               >
-
                 <HStack space={1}>
                   <Text>{item.Address}</Text>
                 </HStack>
@@ -119,9 +119,7 @@ const MulticastPorts = (props) => {
               </HStack>
             </Box>
           )}
-          keyExtractor={(item) =>
-            `${item.Address}`
-          }
+          keyExtractor={(item) => `${item.Address}`}
         />
 
         <VStack>
@@ -133,7 +131,7 @@ const MulticastPorts = (props) => {
           <Button
             display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
             variant={useColorModeValue('subtle', 'solid')}
-            colorScheme="muted"
+            colorScheme={useColorModeValue('primary', 'muted')}
             leftIcon={<Icon icon={faCirclePlus} />}
             onPress={() => refModal.current()}
             mt={4}

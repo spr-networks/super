@@ -78,7 +78,7 @@ const ForwardList = (props) => {
   return (
     <>
       <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <VStack maxW="60%">
+        <VStack maxW={{ base: 'full', md: '60%' }}>
           <Heading fontSize="md">Port Forwarding</Heading>
           <Text color="muted.500" isTruncated>
             Set rules for DNAT forwarding of incoming traffic
@@ -87,6 +87,7 @@ const ForwardList = (props) => {
         <ModalForm
           title="Add Port Forwarding Rule"
           triggerText="Add Forward"
+          triggerProps={{ display: list.length ? 'flex' : 'none' }}
           modalRef={refModal}
         >
           <AddForward notifyChange={notifyChange} />
@@ -154,14 +155,16 @@ const ForwardList = (props) => {
 
         <VStack>
           {!list.length ? (
-            <Text alignSelf={'center'}>
-              There are no forward rules configured yet
+            <Text flexWrap="wrap">
+              Forward incoming WAN packets to access a service that runs on the
+              LAN.
             </Text>
           ) : null}
           <Button
             display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
             variant={useColorModeValue('subtle', 'solid')}
-            colorScheme="muted"
+            colorScheme={useColorModeValue('primary', 'muted')}
+            rounded="none"
             leftIcon={<Icon icon={faCirclePlus} />}
             onPress={() => refModal.current()}
             mt={4}
