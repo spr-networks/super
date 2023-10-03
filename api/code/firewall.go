@@ -744,23 +744,21 @@ func applyServicePorts(servicePorts []ServicePort) error {
 }
 
 func deleteMulticastPort(port MulticastPort) error {
-
-	vmap := "multicast_lan_udp_accept"
+	err := deletePortVmap(port.Port, "multicast_lan_udp_accept")
 	if port.Upstream == true {
-		vmap = "multicast_wan_udp_accept"
+		return deletePortVmap(port.Port, "multicast_wan_udp_accept")
 	}
-
-	return deletePortVmap(port.Port, vmap)
+	return err
 }
 
 func addMulticastPort(port MulticastPort) error {
 
-	vmap := "multicast_lan_udp_accept"
+	err := addPortVmap(port.Port, "multicast_lan_udp_accept")
 	if port.Upstream == true {
-		vmap = "multicast_wan_udp_accept"
+		return addPortVmap(port.Port, "multicast_wan_udp_accept")
 	}
 
-	return addPortVmap(port.Port, vmap)
+	return err
 }
 
 func applyMulticastPorts(multicastPorts []MulticastPort) error {
