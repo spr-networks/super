@@ -7,18 +7,11 @@ import MDNSAdvertise from 'components/Firewall/MDNSAdvertise'
 
 const FWSettings = (props) => {
 
-  let fetchConfig = () => {
-    firewallAPI.config().then((config) => {
-      config.MulticastPorts = [];
-      this.setState({ config })
-    })
-  }
-
   return (
     <VStack>
       <ICMP />
       <MDNSAdvertise />
-      <UpstreamServicesList notifyChange={fetchConfig} />
+      <UpstreamServicesList />
     </VStack>
   )
 }

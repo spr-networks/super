@@ -4,6 +4,7 @@ import { AlertContext } from 'AppContext'
 
 import ClientSelect from 'components/ClientSelect'
 import { firewallAPI } from 'api'
+import { Multicast } from 'api/Multicast'
 
 import {
   Box,
@@ -21,7 +22,8 @@ import {
 
 class AddMulticastPortImpl extends React.Component {
   state = {
-    Address: '0.0.0.0:0',
+    Address: '',
+    Port: '0'
   }
 
   constructor(props) {
@@ -37,96 +39,66 @@ class AddMulticastPortImpl extends React.Component {
   }
 
   handleSubmit() {
-    let rule = {
-      Address: this.state.Address,
-    }
 
-    firewallAPI
-      .addForward(rule)
-      .then((res) => {
-        if (this.props.notifyChange) {
-          this.props.notifyChange('forward')
-        }
-      })
-      .catch((err) => {
-        this.props.alertContext.error('Firewall API Failure', err)
-      })
+    Multicast.
+      config()
+      .then((config) => {
+
+      config.Addresses.push({Address: this.state.Address + ":" + this.state.Port})
+
+      Multicast.setConfig(config)
+        .then((res) => {
+          //great, now update the firewall also
+
+          firewallAPI
+            .setMulticast({Port: this.state.Port, Upstream: false})
+            .then(() => {
+            })
+            .catch((err) => {
+              this.props.alertContext.error('Firewall API Failure', err)
+            })
+
+          if (this.props.notifyChange) {
+            this.props.notifyChange('multicast')
+          }
+        })
+        .catch((err) => {
+          this.props.alertContext.error('Multicast API Failure', err)
+        })
+
+    })
+
   }
 
   componentDidMount() {}
 
   render() {
-    let selOpt = (value) => {
-      return { label: value, value }
-    }
-
-    let Protocols = ['tcp', 'udp'].map((p) => {
-      return { label: p, value: p }
-    })
 
     return (
       <Stack space={4}>
         <HStack space={4}>
           <FormControl flex="2">
-            <FormControl.Label>Source IP Address</FormControl.Label>
+            <FormControl.Label>Address</FormControl.Label>
             <Input
               size="md"
               variant="underlined"
-              name="SrcIP"
-              value={this.state.SrcIP}
-              onChangeText={(value) => this.handleChange('SrcIP', value)}
+              name="Address"
+              value={this.state.Address}
+              onChangeText={(value) => this.handleChange('Address', value)}
             />
-            <FormControl.HelperText>Accepts IP or CIDR</FormControl.HelperText>
+            <FormControl.HelperText>Multicast IP Address</FormControl.HelperText>
           </FormControl>
-          <FormControl flex="1">
-            <FormControl.Label>Incoming Port</FormControl.Label>
-            <Input
-              size="md"
-              variant="underlined"
-              name="SrcPort"
-              value={this.state.SrcPort}
-              onChangeText={(value) => this.handleChange('SrcPort', value)}
-            />
-          </FormControl>
-        </HStack>
-        <HStack space={2}>
           <FormControl flex="2">
-            <FormControl.Label>Destination IP address</FormControl.Label>
-            <ClientSelect
-              name="DstIP"
-              value={this.state.DstIP}
-              onSubmitEditing={(value) => this.handleChange('DstIP', value)}
-              onChangeText={(value) => this.handleChange('DstIP', value)}
-              onChange={(value) => this.handleChange('DstIP', value)}
-            />
-          </FormControl>
-          <FormControl flex="1">
-            <FormControl.Label for="DstPort">Dest Port</FormControl.Label>
-            <Input
-              size="md"
-              variant="underlined"
-              name="DstPort"
-              value={this.state.DstPort}
-              onChangeText={(value) => this.handleChange('DstPort', value)}
-            />
-          </FormControl>
+            <FormControl.Label>Port</FormControl.Label>
+              <Input
+                size="md"
+                variant="underlined"
+                name="Port"
+                value={this.state.Port}
+                onChangeText={(value) => this.handleChange('Port', value)}
+              />
+            </FormControl>
         </HStack>
-
-        <FormControl>
-          <FormControl.Label>Protocol</FormControl.Label>
-
-          <Radio.Group
-            name="Protocol"
-            defaultValue={this.state.Protocol}
-            accessibilityLabel="Protocol"
-            onChange={(value) => this.handleChange('Protocol', value)}
-          >
-            <HStack space={2}>
-              <Radio value="tcp">tcp</Radio>
-              <Radio value="udp">udp</Radio>
-            </HStack>
-          </Radio.Group>
-        </FormControl>
 
         <Button color="primary" size="md" onPress={this.handleSubmit}>
           Save

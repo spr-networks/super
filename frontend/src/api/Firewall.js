@@ -45,6 +45,14 @@ export class APIFirewall extends API {
     return this.delete('service_port', data)
   }
 
+  addMulticastPort(data) {
+    return this.put('multicast', data)
+  }
+  
+  deleteMulticastPort(data) {
+    return this.delete('multicast', data)
+  }
+
   setICMP(data) {
     return this.put('icmp', data)
   }

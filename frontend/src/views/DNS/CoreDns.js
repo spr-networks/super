@@ -25,7 +25,6 @@ const CoreDns = (props) => {
 
   const contextType = useContext(AppContext)
 
-
   let presets = {
     '1.1.1.1': 'cloudflare-dns.com',
     '9.9.9.9': 'dns.quad9.net',
@@ -64,19 +63,11 @@ const CoreDns = (props) => {
       .then((config) => {
         setHost(config.UpstreamTLSHost)
         setIp(config.UpstreamIPAddress)
-        //setEnableTls(config.DisableTls)
+        setDisableTls(config.DisableTls)
       })
 
   }, [])
 
-  /*
-      tbd
-
-        set Upstream IP adddress, tls hostname,
-
-        presets:
-          google, enxtdns, cloudflare.
-  */
   let options = [
     { label: 'Cloudflare (1.1.1.1)', value: '1.1.1.1' },
     { label: 'Quad9 (9.9.9.9)', value: '9.9.9.9' },

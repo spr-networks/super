@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
-  faArrowRightLong,
   faCirclePlus,
   faPlus,
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
 
 import { firewallAPI, deviceAPI } from 'api'
+import { Multicast } from 'api/Multicast'
+
 import ModalForm from 'components/ModalForm'
 import AddMulticastPort from './AddMulticastPort'
 
@@ -29,20 +30,29 @@ import { FlashList } from '@shopify/flash-list'
 
 const MulticastPorts = (props) => {
   const [list, setList] = useState([])
+  const [ports, setPorts] = useState([])
 
   const refreshList = () => {
     firewallAPI.config().then((config) => {
-      let flist = config.MulticastPorts
       if (config.MulticastPorts) {
-        setList(flist)
+        Multicast.config().then((mcast) => {
+          setList(mcast.Addresses)
+          setPorts(config.MulticastPorts)
+        })
       }
     })
   }
 
   const deleteListItem = (item) => {
+
+    //need to 1) remove the entry from multi cast settings
+    //  2) remove from firewall api. 
+
+    /*
     firewallAPI.deleteMulticastPort(item).then((res) => {
       refreshList()
     })
+    */
   }
 
   useEffect(() => {
@@ -67,7 +77,7 @@ const MulticastPorts = (props) => {
         </VStack>
         <ModalForm
           title="Add Multicast Service Rule"
-          triggerText="Add Multicast"
+          triggerText="Add Multicast Service"
           modalRef={refModal}
         >
           <AddMulticastPort notifyChange={notifyChange} />
@@ -97,8 +107,6 @@ const MulticastPorts = (props) => {
                 <HStack space={1}>
                   <Text>{item.Address}</Text>
                 </HStack>
-
-                <Icon color="muted.400" icon={faArrowRightLong} />
 
                 <IconButton
                   alignSelf="center"

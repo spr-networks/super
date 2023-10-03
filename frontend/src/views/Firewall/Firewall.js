@@ -7,6 +7,7 @@ import ForwardList from 'components/Firewall/ForwardList'
 import BlockList from 'components/Firewall/BlockList'
 import ForwardBlockList from 'components/Firewall/ForwardBlockList'
 import UpstreamServicesList from 'components/Firewall/UpstreamServicesList'
+import MulticastPorts from 'components/Firewall/MulticastPorts'
 
 export default class Firewall extends Component {
   state = { config: {} }
@@ -49,6 +50,11 @@ export default class Firewall extends Component {
           <ForwardBlockList
             title="Forwarding Traffic Block"
             list={this.state.config.ForwardingBlockRules}
+            notifyChange={this.fetchConfig}
+          />
+
+          <MulticastPorts
+            list={this.state.config.MulticastPorts}
             notifyChange={this.fetchConfig}
           />
 

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faCirclePlus,
@@ -7,6 +7,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 
 import { firewallAPI } from 'api'
+import { AppContext, alertState } from 'AppContext'
 
 import {
   Badge,
@@ -24,16 +25,28 @@ import {
 } from 'native-base'
 
 const ICMP = (props) => {
-  const [status, setStatus] = useState({ PingLan: true, PingWan: false })
+  const [status, setStatus] = useState({ PingLan: false, PingWan: false })
+
+  const contextType = useContext(AppContext)
+
+  useEffect(() => {
+    firewallAPI
+      .config()
+      .then((config) => {
+        setStatus({PingLan: config.PingLan, PingWan: config.PingWan})
+      })
+
+
+  }, [])
+
   const togglePing = (key) => {
     let updated = { ...status, [key]: !status[key] }
-
     firewallAPI
       .setICMP(updated)
       .then(() => {
-        console.log('updated')
+        alertState.success("Updated Ping Settings")
       })
-      .catch((err) => console.error(err))
+      .catch((err) => alertState.error(err))
 
     setStatus(updated)
   }
@@ -43,7 +56,7 @@ const ICMP = (props) => {
       <HStack justifyContent="space-between" alignItems="center" p={4}>
         <VStack maxW="60%">
           <Heading fontSize="md" isTruncated>
-            ICMP Settings
+            Ping Settings
           </Heading>
           <Text color="muted.500" isTruncated>
             Allow ping on LAN or WAN network
@@ -66,7 +79,7 @@ const ICMP = (props) => {
             <Text bold>LAN</Text>
 
             <Switch
-              defaultIsChecked={status.PingLan}
+              isChecked={status.PingLan}
               onValueChange={() => togglePing('PingLan')}
             />
           </HStack>
@@ -85,7 +98,7 @@ const ICMP = (props) => {
             <Text bold>WAN</Text>
 
             <Switch
-              defaultIsChecked={status.PingWan}
+              isChecked={status.PingWan}
               onValueChange={() => togglePing('PingWan')}
             />
           </HStack>

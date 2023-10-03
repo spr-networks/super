@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useContext, useRef, useState, useEffect } from 'react'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faCirclePlus,
@@ -7,6 +7,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 
 import { firewallAPI } from 'api'
+import { Multicast } from 'api/Multicast'
 
 import {
   Badge,
@@ -15,6 +16,7 @@ import {
   FlatList,
   Heading,
   IconButton,
+  Input,
   Stack,
   HStack,
   VStack,
@@ -23,30 +25,86 @@ import {
   useColorModeValue
 } from 'native-base'
 
+import { AppContext, alertState } from 'AppContext'
+
 const MDNSAdvertise = (props) => {
-  const [status, setStatus] = useState({ PingLan: true, PingWan: false })
-  const togglePing = (key) => {
-    let updated = { ...status, [key]: !status[key] }
+  const [config, setConfig] = useState({ Disabled: false, DisableMDNSAdvertise: false, MDNSName: "", Addresses: [] })
 
-    firewallAPI
-      .setICMP(updated)
-      .then(() => {
-        console.log('updated')
-      })
-      .catch((err) => console.error(err))
-
-    setStatus(updated)
+  const toggleMDNS = (key) => {
+    setConfig({...config, DisableMDNSAdvertise: !config.DisableMDNSAdvertise})
   }
+
+  const toggleMulticast = (key) => {
+    setConfig({...config, Disabled: !config.Disabled})
+  }
+
+  const onChangeText = (value) => {
+    setConfig({...config, MDNSName: value})
+  }
+
+  const submitSettings = (value) => {
+    Multicast
+      .setConfig(config)
+      .then(() => {
+
+        let proxy_mdns = false
+        for (let addr of config.Addresses) {
+          if (addr.Disabled == false && addr.Address.includes(':5353')) {
+            proxy_mdns = true
+          }
+        }
+
+        if (!config.DisableMDNSAdvertise) {
+          //next we need to update the firewall as well
+          firewallAPI
+          .addMulticastPort({Port: "5353", Upstream: true})
+          .then(() => {
+            alertState.success("Updated Multicast Settings")
+          })
+          .catch((err) => {
+            alertState.error("Failed to update firewall rule")
+          })
+        } else if (proxy_mdns) {
+          //instead update to disable from upstream interfaces
+          firewallAPI
+          .addMulticastPort({Port: "5353", Upstream: false})
+          .then(() => {
+            alertState.success("Updated Multicast Settings")
+          })
+          .catch((err) => {
+            alertState.error("Failed to update firewall rule")
+          })
+        } else {
+          //delete the por taltogether
+          firewallAPI
+          .deleteMulticastPort({Port: "5353", Upstream: false})
+          .then(() => {
+            alertState.success("Updated Multicast Settings")
+          })
+          .catch((err) => {
+            alertState.error("Failed to update firewall rule")
+          })
+        }
+      })
+      .catch((err) => alertState.error("failed " + JSON.stringify(err)))
+  }
+
+  useEffect(() => {
+    Multicast
+      .config()
+      .then(setConfig)
+  }, [])
+
 
   return (
     <>
       <HStack justifyContent="space-between" alignItems="center" p={4}>
         <VStack maxW="60%">
           <Heading fontSize="md" isTruncated>
-            Advertise mDNS Name
+            Multicast Settings
           </Heading>
           <Text color="muted.500" isTruncated>
-            Broadcast mDNS name on interfaces
+            Configure Multicast Proxy
           </Text>
         </VStack>
       </HStack>
@@ -63,11 +121,11 @@ const MDNSAdvertise = (props) => {
           p={4}
         >
           <HStack space={4} justifyContent="space-between" alignItems="center">
-            <Text bold>LAN</Text>
+            <Text bold>Enable Multicast Proxy</Text>
 
             <Switch
-              defaultIsChecked={status.PingLan}
-              onValueChange={() => togglePing('PingLan')}
+              isChecked={!config.Disabled}
+              onValueChange={() => toggleMulticast()}
             />
           </HStack>
         </Box>
@@ -82,14 +140,39 @@ const MDNSAdvertise = (props) => {
           p={4}
         >
           <HStack space={4} justifyContent="space-between" alignItems="center">
-            <Text bold>WAN</Text>
+            <Text bold>Advertise Router over mDNS</Text>
 
             <Switch
-              defaultIsChecked={status.PingWan}
-              onValueChange={() => togglePing('PingWan')}
+              isChecked={!config.DisableMDNSAdvertise}
+              onValueChange={() => toggleMDNS()}
             />
           </HStack>
         </Box>
+        <Box
+          bg="backgroundCardLight"
+          borderBottomWidth={1}
+          _dark={{
+            bg: 'backgroundCardDark',
+            borderColor: 'borderColorCardDark'
+          }}
+          borderColor="borderColorCardLight"
+          p={4}
+        >
+          <HStack space={4} justifyContent="space-between" alignItems="center">
+            <Text bold>mDNS Name</Text>
+            <Input
+              value={config.MDNSName}
+              onChangeText={onChangeText}
+            />
+          </HStack>
+          <Text color="muted.500" isTruncated>
+            Defaults to 'spr.local'. Set the name without the .local part or leave empty to use hostname
+          </Text>
+        </Box>
+        <Button
+          colorScheme="primary"
+          onPress={submitSettings}
+        >Save Multicast settings</Button>
       </VStack>
     </>
   )
