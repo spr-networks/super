@@ -18,6 +18,8 @@
     #influxdb http://test:8086/ test DNS credentials==
   }
   log
-  errors
+  errors {
+    stacktrace
+  }
   cache 30
 }
