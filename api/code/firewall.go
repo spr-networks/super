@@ -1168,7 +1168,7 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	re := regexp.MustCompile("^([0-9].*-[0-9].*|[0-9]*)$")
+	re := regexp.MustCompile("^([0-9]+-[0-9]+|[0-9]+)$")
 
 	if fwd.SrcPort != "any" && !re.MatchString(fwd.SrcPort) {
 		http.Error(w, "Invalid SrcPort", 400)
@@ -1284,7 +1284,7 @@ func blockForwardingIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	re := regexp.MustCompile("^([0-9].*-[0-9].*|[0-9]*)$")
+	re := regexp.MustCompile("^([0-9]+-[0-9]+|[0-9]+)$")
 
 	if !re.MatchString(br.DstPort) {
 		http.Error(w, "Invalid DstPort", 400)
@@ -1332,7 +1332,7 @@ func modifyServicePort(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	re := regexp.MustCompile("^([0-9].*)$")
+	re := regexp.MustCompile("^([0-9]+)$")
 
 	if port.Port == "" || !re.MatchString(port.Port) {
 		http.Error(w, "Invalid Port", 400)
@@ -1405,7 +1405,7 @@ func modifyMulticast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	re := regexp.MustCompile("^([0-9].*)$")
+	re := regexp.MustCompile("^([0-9]+)$")
 
 	if port.Port == "" || !re.MatchString(port.Port) {
 		http.Error(w, "Invalid Port", 400)
@@ -1496,7 +1496,7 @@ func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		re := regexp.MustCompile("^([0-9].*)$")
+		re := regexp.MustCompile("^([0-9]+)$")
 
 		if endpoint.Port != "any" && (endpoint.Port == "" || !re.MatchString(endpoint.Port)) {
 			http.Error(w, "Invalid Port", 400)
