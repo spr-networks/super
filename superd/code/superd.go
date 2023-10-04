@@ -424,7 +424,7 @@ func dockerImageLabel(image string, labelName string) (string, error) {
 	err := cmd.Run()
 	if err != nil {
 		//in case the container has not been created use the full image name
-		spr_prefix := "ghcr.io/spr-networks/super_wifiuplink/"
+		spr_prefix := "ghcr.io/spr-networks/"
 		cmd = exec.Command("docker", "inspect", "--format={{index .Config.Labels \""+labelName+"\"}}", spr_prefix+image)
 
 		var out bytes.Buffer
