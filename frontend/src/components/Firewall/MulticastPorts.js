@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faCirclePlus,
   faPlus,
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
+import { AppContext, alertState } from 'AppContext'
 
 import { firewallAPI, deviceAPI } from 'api'
 import { Multicast } from 'api/Multicast'
@@ -32,6 +33,8 @@ const MulticastPorts = (props) => {
   const [list, setList] = useState([])
   const [ports, setPorts] = useState([])
 
+  const contextType = useContext(AppContext)
+
   const refreshList = () => {
     firewallAPI.config().then((config) => {
       if (config.MulticastPorts) {
@@ -41,16 +44,50 @@ const MulticastPorts = (props) => {
         })
       }
     })
-  }
+    .catch((err) => {
+      alertState.error("Failed to retrieve multicast settings")
+    })
+}
 
   const deleteListItem = (item) => {
-    //need to 1) remove the entry from multi cast settings
-    //  2) remove from firewall api.
-    /*
-    firewallAPI.deleteMulticastPort(item).then((res) => {
-      refreshList()
+
+    const matches = (obj, target) => {
+      for (let [key, val] of Object.entries(target)) {
+        if (obj[key] !== val) return false;
+      }
+      return true;
+    };
+    let newList = list.filter(entry => !matches(entry,item))
+    setList(newList)
+    let inUse = {}
+    for (let entry of newList) {
+      let port = entry.Address.split(":")[1]
+      inUse[port] = 1
+    }
+    let item_port = item.Address.split(":")[1]
+
+    Multicast.config().then((mcast) => {
+      mcast.Addresses = newList
+      Multicast.setConfig(mcast).then(() => {
+        //now update the firewall rule if nothing else uses that port
+        if (!inUse[item_port]) {
+          firewallAPI
+          .deleteMulticastPort({Port: item_port, Upstream: false})
+          .then(() => {
+          })
+          .catch((err) => {
+            alertState.error("Fireall API failed to delete multicast port " + item_port)
+          })
+        }
+
+      })
+      .catch((err) => {
+        alertState.error("Failed to update multicast settings")
+      })
     })
-    */
+    .catch((err) => {
+      alertState.error("Failed to retrieve multicast settings")
+    })
   }
 
   useEffect(() => {
