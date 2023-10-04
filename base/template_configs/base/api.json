@@ -48,7 +48,7 @@
     ComposeFilePath: "ppp/docker-compose.yml"
   },
   {
-    Name: "WIFI_UPLINK",
+    Name: "WIFIUPLINK",
     Enabled: false,
     ComposeFilePath: "wifi_uplink/docker-compose.yml"
   }
