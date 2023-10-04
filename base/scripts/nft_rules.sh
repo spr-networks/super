@@ -37,11 +37,15 @@ nft flush ruleset
 nft -f - << EOF
 
 table inet filter {
+  # this set contains uplink interfaces wired or wireless even
+  # dynamically updated for multi-wan
   set uplink_interfaces {
     type ifname;
     $(if [ "$WANIF" ]; then echo "elements = { $WANIF }" ; fi )
   }
 
+  # this set cocntians wired lan, wired vlan, and wireless vlan clients
+  # dynamically updated
   set lan_interfaces {
     type ifname;
     $(if [ "$LANIF" ]; then echo "elements = { $LANIF }" ; fi )
@@ -52,6 +56,7 @@ table inet filter {
     $(if [ "$DOCKERIF" ]; then echo "elements = { $DOCKERIF }" ; fi )
   }
 
+  # dynamically updated -- list of lan networks to pick client subnets from
   set supernetworks {
     type ipv4_addr;
     flags interval;
@@ -62,6 +67,7 @@ table inet filter {
     type ifname . ether_addr: verdict;
   }
 
+  # filter for mac spoofing protection
   map ethernet_filter {
     type ipv4_addr . ifname . ether_addr : verdict;
   }
@@ -204,7 +210,6 @@ table inet filter {
 
     # Prevent MAC Spoofing from LANIF, wired interfaces
     iifname @lan_interfaces jump DROP_MAC_SPOOF
-    jump WIPHY_MACSPOOF_CHECK
 
     # DNS Allow rules
     # Docker can DNS
@@ -222,9 +227,10 @@ table inet filter {
     iifname @uplink_interfaces counter udp dport vmap @wan_udp_accept
 
     # Allow udp for multicast proxy
+    # Note: the multicast proxy will filter the ip address, the firewall only needs
+    # to know the port and interface combo to allow.
     ip daddr 224.0.0.0/4 iifname @lan_interfaces counter udp dport vmap @multicast_lan_udp_accept
     ip daddr 224.0.0.0/4 iifname @uplink_interfaces counter udp dport vmap @multicast_wan_udp_accept
-
 
     icmp type { echo-reply, echo-request } ip saddr . iifname vmap @ping_rules
 
@@ -234,9 +240,6 @@ table inet filter {
 
   #chain USERDEF_INPUT{
   #}
-
-  chain WIPHY_MACSPOOF_CHECK {
-  }
 
   chain FORWARD {
     type filter hook forward priority 0; policy drop;
@@ -280,7 +283,6 @@ table inet filter {
 
     # Verify MAC addresses for LANIF/WIPHYs
     iifname @lan_interfaces jump DROP_MAC_SPOOF
-    jump WIPHY_MACSPOOF_CHECK
 
     # After MAC SPOOF check, but before rfc1918 check
     # These rules allow permits via endpoint verdict maps
@@ -323,9 +325,6 @@ table inet filter {
     counter drop
   }
 
-  chain WIPHY_FORWARD_LAN {
-  }
-
   #chain USERDEF_FORWARD {
   #}
 
@@ -363,17 +362,19 @@ table inet filter {
 
 
 table inet nat {
-
+  # see description above. duplicated since nftables doesnt have cross-table sets
   set uplink_interfaces {
     type ifname;
     $(if [ "$WANIF" ]; then echo "elements = { $WANIF }" ; fi )
   }
 
+  # see description above. duplicated since nftables doesnt have cross-table sets
   set lan_interfaces {
     type ifname;
     $(if [ "$LANIF" ]; then echo "elements = { $LANIF }" ; fi )
   }
 
+  # see description above. duplicated since nftables doesnt have cross-table sets
   set dockerifs {
     type ifname;
     $(if [ "$DOCKERIF" ]; then echo "elements = { $DOCKERIF }" ; fi )
@@ -506,16 +507,19 @@ table inet nat {
 
 table inet mangle {
 
+  # see description above. duplicated since nftables doesnt have cross-table sets
   set uplink_interfaces {
     type ifname;
     $(if [ "$WANIF" ]; then echo "elements = { $WANIF }" ; fi )
   }
 
+  # see description above. duplicated since nftables doesnt have cross-table sets
   map site_forward_mangle {
     type ipv4_addr . ipv4_addr : verdict;
     flags interval;
   }
 
+  # see description above. duplicated since nftables doesnt have cross-table sets
   set supernetworks {
     type ipv4_addr;
     flags interval;
