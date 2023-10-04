@@ -533,6 +533,16 @@ func getVLANInterfaces(parent string) ([]net.Interface, error) {
 	return vlanInterfaces, nil
 }
 
+func addLanInterface(iface string) {
+	exec.Command("nft", "add", "element", "inet", "filter", "lan_interfaces", "{", iface, "}").Run()
+	exec.Command("nft", "add", "element", "inet", "nat", "lan_interfaces", "{", iface, "}").Run()
+}
+
+func deleteLanInterface(iface string) {
+	exec.Command("nft", "delete", "element", "inet", "filter", "lan_interfaces", "{", iface, "}").Run()
+	exec.Command("nft", "delete", "element", "inet", "nat", "lan_interfaces", "{", iface, "}").Run()
+}
+
 func refreshVlanTrunk(iface string, enable bool) {
 	//first clear any vlan interfaces that already exist
 	ifaces, err := getVLANInterfaces(iface)
@@ -550,8 +560,7 @@ func refreshVlanTrunk(iface string, enable bool) {
 			return
 		}
 
-		cmd = exec.Command("nft", "delete", "element", "inet", "filter", "lan_interfaces", "{", iface.Name, "}")
-		cmd.Output()
+		deleteLanInterface(iface.Name)
 	}
 
 	if !enable {
@@ -583,13 +592,7 @@ func refreshVlanTrunk(iface string, enable bool) {
 				continue
 			}
 
-			cmd = exec.Command("nft", "add", "element", "inet", "filter", "lan_interfaces", "{", iface+"."+dev.VLANTag, "}")
-			_, err = cmd.Output()
-			if err != nil {
-				log.Println("update lan_interfaces failed", cmd, err)
-				continue
-			}
-
+			addLanInterface(iface + "." + dev.VLANTag)
 		}
 	}
 }

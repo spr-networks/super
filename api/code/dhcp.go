@@ -241,6 +241,9 @@ func getSetDhcpConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
+
+	addLanInterface(Iface)
+
 	devices := getDevicesJson()
 	val, exists := devices[MAC]
 
@@ -530,89 +533,6 @@ func genNewDeviceIP(devices *map[string]DeviceEntry) (string, string) {
 	log.Println("[-] ERROR: No more IPs left to hand out from subnets")
 	return "", ""
 }
-
-/*
-func (p *PluginState) requestRecord(clientAddr string, subMask uint32) (*Record, bool) {
-
-	record, ok := p.Recordsv4[clientAddr]
-
-	if !ok {
-		// Allocating new address since there isn't one allocated
-		log.Printf("Client address %s is new, leasing new IPv4 address", clientAddr)
-
-		if (subMask != 0) {
-			// Expecting a /30
-			slash30 := binary.BigEndian.Uint32(net.IPv4Mask(255,255,255,252))
-
-			if subMask != slash30 {
-				log.Errorf("Only /30 (255.255.255.252) is currently supported")
-				return &Record{}, false
-			}
-		}
-
-		//run from start until end, incrementing by 4
-		ipStart := binary.BigEndian.Uint32(ipRangeStart.To4())
-		ipEnd := binary.BigEndian.Uint32(ipRangeEnd.To4())
-
-		var routerIP net.IP
-		var ip net.IP
-
-		for u32_ip := ipStart; u32_ip + 3 < ipEnd; u32_ip += 4 {
-				u := u32_ip + 1
-				routerIP = net.IPv4(byte(u>>24), byte(u>>16), byte(u>>8), byte(u))
-
-				u = u32_ip + 2
-				ip = net.IPv4(byte(u>>24), byte(u>>16), byte(u>>8), byte(u))
-
-				if (p.IPTaken[u]) {
-					continue
-				} else {
-					//found an entry to use
-					break;
-				}
-		}
-
-		if ip == nil {
-			log.Errorf("Could not allocate IP for ClientAddr %s: ran out", clientAddr)
-			return &Record{}, false
-		}
-
-		rec := Record{
-			IP:      ip.To4(),
-			RouterIP: routerIP,
-			expires: time.Now().Add(p.LeaseTime),
-		}
-
-		err := p.saveIPAddress(clientAddr, &rec)
-		if err != nil {
-			log.Errorf("SaveIPAddress for MAC %s failed: %v", clientAddr, err)
-			return &Record{}, false
-		}
-		p.Recordsv4[clientAddr] = &rec
-		p.IPTaken[ binary.BigEndian.Uint32(ip.To4()) ] = true
-		record = &rec
-	} else {
-		// Ensure we extend the existing lease at least past when the one we're giving expires
-		if record.expires.Before(time.Now().Add(p.LeaseTime)) {
-			record.expires = time.Now().Add(p.LeaseTime).Round(time.Second)
-			err := p.saveIPAddress(clientAddr, record)
-			if err != nil {
-				log.Errorf("Could not persist lease for ClientAddr %s: %v", clientAddr, err)
-				return &Record{}, false
-			}
-		}
-
-		//calculate the router ip  from the recored IP. it's just -1
-		u := binary.BigEndian.Uint32(record.IP.To4())
-		u = u - 1
-		record.RouterIP = net.IPv4(byte(u>>24), byte(u>>16), byte(u>>8), byte(u))
-
-	}
-
-	return record, true
-}
-
-*/
 
 // Wireguard support
 

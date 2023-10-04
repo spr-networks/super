@@ -1996,6 +1996,8 @@ func reportDisconnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	deleteLanInterface(event.Iface)
+
 	event.Status = "Okay"
 
 	updateMeshPluginDisconnect(event)

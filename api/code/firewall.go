@@ -1045,15 +1045,8 @@ func applyFirewallRulesLocked() {
 }
 
 func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
-	cmd := exec.Command("nft", "flush", "chain", "inet", "filter", "WIPHY_MACSPOOF_CHECK")
+	cmd := exec.Command("nft", "flush", "chain", "inet", "filter", "WIPHY_FORWARD_LAN")
 	_, err := cmd.Output()
-	if err != nil {
-		log.Println("failed to flush chain", err)
-		return
-	}
-
-	cmd = exec.Command("nft", "flush", "chain", "inet", "filter", "WIPHY_FORWARD_LAN")
-	_, err = cmd.Output()
 	if err != nil {
 		log.Println("failed to flush chain", err)
 		return
@@ -1061,14 +1054,6 @@ func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
 
 	for _, entry := range interfacesConfig {
 		if entry.Enabled == true && entry.Type == "AP" {
-			//#    $(if [ "$VLANSIF" ]; then echo "counter iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF"; fi)
-			cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "WIPHY_MACSPOOF_CHECK",
-				"counter", "iifname", "eq", entry.Name+".*", "jump", "DROP_MAC_SPOOF")
-			_, err = cmd.Output()
-			if err != nil {
-				log.Println("failed to insert rule", cmd, err)
-			}
-
 			// $(if [ "$VLANSIF" ]; then echo "counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access"; fi)
 
 			cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "WIPHY_FORWARD_LAN",
@@ -1784,9 +1769,13 @@ var RecentDHCPWG = map[string]int64{}
 var RecentDHCPIface = map[string]string{}
 
 func notifyFirewallDHCP(device DeviceEntry, iface string) {
+	addLanInterface(iface)
+
 	if device.WGPubKey == "" {
 		return
 	}
+
+	// for wireguard clilents only below
 
 	cur_time := time.Now().Unix()
 
