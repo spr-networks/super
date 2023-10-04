@@ -325,6 +325,10 @@ table inet filter {
     counter drop
   }
 
+  chain WIPHY_FORWARD_LAN {
+    
+  }
+
   #chain USERDEF_FORWARD {
   #}
 
