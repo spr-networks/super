@@ -263,7 +263,11 @@ const LANLinkInfo = (props) => {
     <IconButton
       variant="unstyled"
       ml="auto"
-      onPress = {setModal('config')}
+      onPress={() => {
+        setIface(iface)
+        setModal('config')
+        onOpen()
+      }}
       icon={<Icon icon={faEllipsis} color="muted.600" />}
     ></IconButton>
   )
