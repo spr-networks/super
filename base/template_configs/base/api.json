@@ -34,7 +34,7 @@
    "Name": "dyndns",
    "URI": "dyndns",
    "UnixPath": "/state/plugins/dyndns/dyndns_plugin",
-   "Enabled": true
+   "Enabled": false
   },
   {
    "Name": "db",

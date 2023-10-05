@@ -44,9 +44,18 @@ table inet filter {
     $(if [ "$WANIF" ]; then echo "elements = { $WANIF }" ; fi )
   }
 
-  # this set cocntians wired lan, wired vlan, and wireless vlan clients
+  # this set contains wired lan, wired vlan, and wireless vlan clients
   # dynamically updated
   set lan_interfaces {
+    type ifname;
+    $(if [ "$LANIF" ]; then echo "elements = { $LANIF }" ; fi )
+  }
+
+  # this set contains only the wired interfaces, for DHCP whitelisting.
+  # without knowing the mac address for dhcp_access ahead of time.
+  # VLANs are *not* placed here as VLANs are currently 1:1 per device.
+  # but VLANs make it into dhcp_access
+  set wired_lan_interfaces {
     type ifname;
     $(if [ "$LANIF" ]; then echo "elements = { $LANIF }" ; fi )
   }
@@ -63,6 +72,8 @@ table inet filter {
   }
 
   # Dynamic maps of clients
+  # This is used to whitelist mac addresses to interfaces to block
+  # spoofing during DHCP requests
   map dhcp_access {
     type ifname . ether_addr: verdict;
   }
@@ -203,7 +214,7 @@ table inet filter {
 
     # DHCP Allow rules
     # Wired lan
-    iifname @lan_interfaces udp dport 67 counter accept
+    iifname @wired_lan_interfaces udp dport 67 counter accept
 
     # Authorized wireless stations & MACs. They do not have an ip address yet
     counter udp dport 67 iifname . ether saddr vmap @dhcp_access
@@ -326,7 +337,7 @@ table inet filter {
   }
 
   chain WIPHY_FORWARD_LAN {
-    
+
   }
 
   #chain USERDEF_FORWARD {
