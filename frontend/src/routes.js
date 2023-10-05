@@ -23,9 +23,11 @@ import DNSOverride from 'views/DNS/DNSOverride'
 import DNSLog from 'views/DNS/DNSLog'
 import DNSLogEdit from 'views/DNS/DNSLogEdit'
 import DynDns from 'views/DNS/DynDns'
+import CoreDns from 'views/DNS/CoreDns'
 import Wireguard from 'views/Wireguard'
-import Firewall from 'views/Firewall'
-import PFW from 'views/Pfw'
+import Firewall from 'views/Firewall/Firewall'
+import FirewallSettings from 'views/Firewall/FirewallSettings'
+import PFW from 'views/Firewall/Pfw'
 import Mesh from 'views/Mesh'
 import Logs from 'views/Logs'
 import Events from 'views/Events'
@@ -50,6 +52,7 @@ import {
   faFireAlt,
   faGauge,
   faGlobe,
+  faHammer,
   faHome,
   faLaptop,
   faLineChart,
@@ -144,56 +147,41 @@ const routes = [
     component: Wireguard,
     layout: 'admin'
   },
+
   {
-    path: 'firewall',
     name: 'Firewall',
-    icon: faFireAlt,
-    component: Firewall,
-    layout: 'admin'
-  },
-  {
-    path: 'pfw',
-    name: 'PFW',
     icon: faFire,
-    component: PFW,
-    layout: 'admin',
-    plus: true
-  },
-  {
-    name: 'Traffic',
-    icon: faLineChart,
-    state: 'trafficCollapse',
+    state: 'firewallCollapse',
     views: [
       {
-        path: 'traffic',
-        name: 'Bandwidth Summary',
-        icon: faLineChart,
-        component: Traffic,
-        layout: 'admin',
-        hidden: Platform.OS == 'ios'
-      },
-      {
-        path: 'timeseries',
-        name: 'Bandwidth Timeseries',
-        icon: faChartColumn,
-        component: TrafficTimeSeries,
-        layout: 'admin',
-        hidden: Platform.OS == 'ios'
-      },
-      {
-        path: 'signal/strength',
-        name: 'Signal Strength',
-        icon: faSignal,
-        component: SignalStrength,
+        path: 'firewall',
+        name: 'Firewall',
+        icon: faFireAlt,
+        component: Firewall,
         layout: 'admin'
       },
       {
-        path: 'trafficlist',
-        name: 'Traffic',
-        icon: faBarChart,
-        component: TrafficList,
+        path: 'firewallSettings',
+        name: 'Services',
+        icon: faCogs,
+        component: FirewallSettings,
         layout: 'admin'
-      }
+      },
+      {
+        path: 'pfw',
+        name: 'PFW',
+        icon: faFire,
+        component: PFW,
+        layout: 'admin',
+        plus: true
+      },
+      {
+        path: 'supernets',
+        name: 'Supernetworks',
+        icon: faDiagramProject,
+        component: Supernetworks,
+        layout: 'admin'
+      },
     ]
   },
   {
@@ -234,6 +222,78 @@ const routes = [
         icon: faArrowCircleUp,
         component: DynDns,
         layout: 'admin'
+      },
+      {
+        path: 'dns',
+        name: 'DNS Settings',
+        icon: faHammer,
+        component: CoreDns,
+        layout: 'admin'
+      }
+
+    ]
+  },
+  {
+    name: 'Traffic',
+    icon: faLineChart,
+    state: 'trafficCollapse',
+    views: [
+      {
+        path: 'traffic',
+        name: 'Bandwidth Summary',
+        icon: faLineChart,
+        component: Traffic,
+        layout: 'admin',
+        hidden: Platform.OS == 'ios'
+      },
+      {
+        path: 'timeseries',
+        name: 'Bandwidth Timeseries',
+        icon: faChartColumn,
+        component: TrafficTimeSeries,
+        layout: 'admin',
+        hidden: Platform.OS == 'ios'
+      },
+      {
+        path: 'signal/strength',
+        name: 'Signal Strength',
+        icon: faSignal,
+        component: SignalStrength,
+        layout: 'admin'
+      },
+      {
+        path: 'trafficlist',
+        name: 'Traffic',
+        icon: faBarChart,
+        component: TrafficList,
+        layout: 'admin'
+      }
+    ]
+  },
+  {
+    name: 'Events',
+    state: 'eventsCollapse',
+    views: [
+      {
+        path: 'events',
+        name: 'Events',
+        icon: faList,
+        component: Events,
+        layout: 'admin'
+      },
+      {
+        path: 'logs/:containers',
+        name: 'Logs',
+        icon: faListAlt,
+        component: Logs,
+        layout: 'admin'
+      },
+      {
+        path: 'notifications',
+        name: 'Notifications',
+        icon: faBell,
+        component: Notifications,
+        layout: 'admin'
       }
     ]
   },
@@ -249,10 +309,17 @@ const routes = [
         layout: 'admin'
       },
       {
-        path: 'supernets',
-        name: 'Supernetworks',
-        icon: faDiagramProject,
-        component: Supernetworks,
+        path: 'plugins',
+        name: 'Plugins',
+        icon: faPuzzlePiece,
+        component: Plugins,
+        layout: 'admin'
+      },
+      {
+        path: 'auth/',
+        name: 'Auth',
+        icon: faUser,
+        component: AuthSettings,
         layout: 'admin'
       },
       {
@@ -283,41 +350,7 @@ const routes = [
         component: Tags,
         layout: 'admin'
       },
-      {
-        path: 'plugins',
-        name: 'Plugins',
-        icon: faPuzzlePiece,
-        component: Plugins,
-        layout: 'admin'
-      },
-      {
-        path: 'logs/:containers',
-        name: 'Logs',
-        icon: faListAlt,
-        component: Logs,
-        layout: 'admin'
-      },
-      {
-        path: 'events',
-        name: 'Events',
-        icon: faList,
-        component: Events,
-        layout: 'admin'
-      },
-      {
-        path: 'auth/',
-        name: 'Auth',
-        icon: faUser,
-        component: AuthSettings,
-        layout: 'admin'
-      },
-      {
-        path: 'notifications',
-        name: 'Notifications',
-        icon: faBell,
-        component: Notifications,
-        layout: 'admin'
-      },
+
       {
         path: 'speedtest',
         name: 'Speed Test',

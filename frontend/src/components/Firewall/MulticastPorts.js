@@ -1,15 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
-  faArrowRightLong,
   faCirclePlus,
   faPlus,
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
+import { AppContext, alertState } from 'AppContext'
 
 import { firewallAPI, deviceAPI } from 'api'
+import { Multicast } from 'api/Multicast'
+
 import ModalForm from 'components/ModalForm'
-import AddForward from './AddForward'
+import AddMulticastPort from './AddMulticastPort'
 
 import {
   Badge,
@@ -27,40 +29,64 @@ import {
 
 import { FlashList } from '@shopify/flash-list'
 
-const ForwardList = (props) => {
+const MulticastPorts = (props) => {
   const [list, setList] = useState([])
+  const [ports, setPorts] = useState([])
+
+  const contextType = useContext(AppContext)
 
   const refreshList = () => {
     firewallAPI.config().then((config) => {
-      //setList(config.ForwardingRules)
-      let flist = config.ForwardingRules
-      deviceAPI
-        .list()
-        .then((devices) => {
-          flist = flist.map((rule) => {
-            let deviceDst = Object.values(devices)
-              .filter((d) => d.RecentIP == rule.DstIP)
-              .pop()
-
-            if (deviceDst) {
-              rule.deviceDst = deviceDst
-            }
-
-            return rule
-          })
-
-          setList(flist)
+      if (config.MulticastPorts) {
+        Multicast.config().then((mcast) => {
+          setList(mcast.Addresses)
+          setPorts(config.MulticastPorts)
         })
-        .catch((err) => {
-          //context.error('deviceAPI.list Error: ' + err)
-          setList(flist)
-        })
+      }
     })
-  }
+    .catch((err) => {
+      alertState.error("Failed to retrieve multicast settings")
+    })
+}
 
   const deleteListItem = (item) => {
-    firewallAPI.deleteForward(item).then((res) => {
-      refreshList()
+
+    const matches = (obj, target) => {
+      for (let [key, val] of Object.entries(target)) {
+        if (obj[key] !== val) return false;
+      }
+      return true;
+    };
+    let newList = list.filter(entry => !matches(entry,item))
+    setList(newList)
+    let inUse = {}
+    for (let entry of newList) {
+      let port = entry.Address.split(":")[1]
+      inUse[port] = 1
+    }
+    let item_port = item.Address.split(":")[1]
+
+    Multicast.config().then((mcast) => {
+      mcast.Addresses = newList
+      Multicast.setConfig(mcast).then(() => {
+        //now update the firewall rule if nothing else uses that port
+        if (!inUse[item_port]) {
+          firewallAPI
+          .deleteMulticastPort({Port: item_port, Upstream: false})
+          .then(() => {
+          })
+          .catch((err) => {
+            alertState.error("Fireall API failed to delete multicast port " + item_port)
+          })
+        }
+
+      })
+      .catch((err) => {
+        alertState.error("Failed to update multicast settings")
+      })
+    })
+    .catch((err) => {
+      alertState.error("Failed to retrieve multicast settings")
     })
   }
 
@@ -79,18 +105,20 @@ const ForwardList = (props) => {
     <>
       <HStack justifyContent="space-between" alignItems="center" p={4}>
         <VStack maxW={{ base: 'full', md: '60%' }}>
-          <Heading fontSize="md">Port Forwarding</Heading>
+          <Heading fontSize="md">Multicast Proxy</Heading>
           <Text color="muted.500" isTruncated>
-            Set rules for DNAT forwarding of incoming traffic
+            Set ip:port addresses to proxy
           </Text>
         </VStack>
         <ModalForm
-          title="Add Port Forwarding Rule"
-          triggerText="Add Forward"
-          triggerProps={{ display: list.length ? 'flex' : 'none' }}
+          title="Add Multicast Service Rule"
+          triggerText="Add Multicast Service"
+          triggerProps={{
+            display: { base: 'none', md: list.length ? 'flex' : 'none' }
+          }}
           modalRef={refModal}
         >
-          <AddForward notifyChange={notifyChange} />
+          <AddMulticastPort notifyChange={notifyChange} />
         </ModalForm>
       </HStack>
 
@@ -113,28 +141,8 @@ const ForwardList = (props) => {
                 justifyContent="space-between"
                 alignItems="center"
               >
-                <Badge variant="outline">{item.Protocol}</Badge>
-
                 <HStack space={1}>
-                  <Text bold>
-                    {item.deviceSrc ? item.deviceSrc.Name : item.SrcIP}
-                  </Text>
-                  <Text color="muted.500">:</Text>
-                  <Text>{item.SrcPort}</Text>
-                </HStack>
-
-                <Icon color="muted.400" icon={faArrowRightLong} />
-
-                <HStack space={1}>
-                  <Text bold>
-                    {item.deviceDst &&
-                    item.deviceDst.Name &&
-                    item.deviceDst.Name.length > 0
-                      ? item.deviceDst.Name
-                      : item.DstIP}
-                  </Text>
-                  <Text color="muted.500">:</Text>
-                  <Text>{item.DstPort}</Text>
+                  <Text>{item.Address}</Text>
                 </HStack>
 
                 <IconButton
@@ -148,28 +156,24 @@ const ForwardList = (props) => {
               </HStack>
             </Box>
           )}
-          keyExtractor={(item) =>
-            `${item.Protocol}${item.DstIP}:${item.DstPort}`
-          }
+          keyExtractor={(item) => `${item.Address}`}
         />
 
         <VStack>
           {!list.length ? (
-            <Text flexWrap="wrap">
-              Forward incoming WAN packets to access a service that runs on the
-              LAN.
+            <Text alignSelf={'center'}>
+              There are no multicast proxy rules configured yet
             </Text>
           ) : null}
           <Button
             display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
             variant={useColorModeValue('subtle', 'solid')}
             colorScheme={useColorModeValue('primary', 'muted')}
-            rounded="none"
             leftIcon={<Icon icon={faCirclePlus} />}
             onPress={() => refModal.current()}
             mt={4}
           >
-            Add Forward
+            Add Multicast Service
           </Button>
         </VStack>
       </Box>
@@ -177,4 +181,4 @@ const ForwardList = (props) => {
   )
 }
 
-export default ForwardList
+export default MulticastPorts

@@ -422,6 +422,8 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 
 		//reset with previous settings
 		resetInterface(interfaces, iconfig.Name, prev_type, prev_subtype, prev_enabled)
+
+		refreshDownlinks()
 		return err
 	}
 
@@ -533,6 +535,20 @@ func getVLANInterfaces(parent string) ([]net.Interface, error) {
 	return vlanInterfaces, nil
 }
 
+func addLanInterface(iface string) {
+	exec.Command("nft", "add", "element", "inet", "filter", "lan_interfaces", "{", iface, "}").Run()
+	exec.Command("nft", "add", "element", "inet", "nat", "lan_interfaces", "{", iface, "}").Run()
+}
+
+func addWiredLanInterface(iface string) {
+	exec.Command("nft", "add", "element", "inet", "filter", "wired_lan_interfaces", "{", iface, "}").Run()
+}
+
+func deleteLanInterface(iface string) {
+	exec.Command("nft", "delete", "element", "inet", "filter", "lan_interfaces", "{", iface, "}").Run()
+	exec.Command("nft", "delete", "element", "inet", "nat", "lan_interfaces", "{", iface, "}").Run()
+}
+
 func refreshVlanTrunk(iface string, enable bool) {
 	//first clear any vlan interfaces that already exist
 	ifaces, err := getVLANInterfaces(iface)
@@ -550,9 +566,10 @@ func refreshVlanTrunk(iface string, enable bool) {
 			return
 		}
 
-		cmd = exec.Command("nft", "delete", "element", "inet", "filter", "lan_interfaces", "{", iface.Name, "}")
-		cmd.Output()
+		deleteLanInterface(iface.Name)
 	}
+
+	//future: also reset all vlans from dhcp_access.
 
 	if !enable {
 		//all done
@@ -567,8 +584,10 @@ func refreshVlanTrunk(iface string, enable bool) {
 	for _, dev := range devices {
 		if dev.VLANTag != "" {
 			//create interface
+			vlanIface := iface + "." + dev.VLANTag
+
 			cmd := exec.Command("ip", "link", "add", "link", iface,
-				"name", iface+"."+dev.VLANTag, "type", "vlan", "id", dev.VLANTag)
+				"name", vlanIface, "type", "vlan", "id", dev.VLANTag)
 			_, err := cmd.Output()
 
 			if err != nil {
@@ -576,20 +595,16 @@ func refreshVlanTrunk(iface string, enable bool) {
 				continue
 			}
 
-			cmd = exec.Command("ip", "link", "set", iface+"."+dev.VLANTag, "up")
+			cmd = exec.Command("ip", "link", "set", vlanIface, "up")
 			_, err = cmd.Output()
 			if err != nil {
 				log.Println("ip link set up vlan failed", cmd, err)
 				continue
 			}
 
-			cmd = exec.Command("nft", "add", "element", "inet", "filter", "lan_interfaces", "{", iface+"."+dev.VLANTag, "}")
-			_, err = cmd.Output()
-			if err != nil {
-				log.Println("update lan_interfaces failed", cmd, err)
-				continue
-			}
-
+			addLanInterface(vlanIface)
+			// add vlan to dhcp_access
+			exec.Command("nft", "add", "element", "inet", "filter", "dhcp_access", "{", vlanIface, ".", dev.MAC, ":", "accept", "}").Run()
 		}
 	}
 }
@@ -609,6 +624,31 @@ func refreshVLANTrunks() {
 			refreshVlanTrunk(ifconfig.Name, true)
 		} else {
 			refreshVlanTrunk(ifconfig.Name, false)
+		}
+	}
+
+}
+
+func refreshDownlinks() {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+	interfaces := loadInterfacesConfigLocked()
+
+	//empty the wired lan interfaces list
+	exec.Command("nft", "flush", "set", "inet", "filter", "wired_lan_interfaces").Run()
+
+	// and repopulate it
+	lanif := os.Getenv("LANIF")
+	if lanif != "" {
+		addWiredLanInterface(lanif)
+	}
+	for _, ifconfig := range interfaces {
+		if ifconfig.Type == "Downlink" {
+			if lanif != "" && ifconfig.Name == lanif {
+				//already covered
+				continue
+			}
+			addWiredLanInterface(ifconfig.Name)
 		}
 	}
 }

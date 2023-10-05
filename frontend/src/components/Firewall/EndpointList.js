@@ -57,25 +57,28 @@ const EndpointList = (props) => {
   let context = useContext(AlertContext)
 
   const refreshList = () => {
-    firewallAPI.config().then((config) => {
-      let flist = config.Endpoints
-      if (flist != null) {
-        setList(flist)
-      }
-    })
-    .catch((error) =>
-      context.error('[API] firewall Endpoints error: ' + error.message)
-    )
-
+    firewallAPI
+      .config()
+      .then((config) => {
+        let flist = config.Endpoints
+        if (flist != null) {
+          setList(flist)
+        }
+      })
+      .catch((error) =>
+        context.error('[API] firewall Endpoints error: ' + error.message)
+      )
   }
 
   const deleteListItem = (item) => {
-    firewallAPI.deleteEndpoint(item).then((res) => {
-      refreshList()
-    })
-    .catch((error) =>
-      context.error('[API] deleteEndpoint error: ' + error.message)
-    )
+    firewallAPI
+      .deleteEndpoint(item)
+      .then((res) => {
+        refreshList()
+      })
+      .catch((error) =>
+        context.error('[API] deleteEndpoint error: ' + error.message)
+      )
   }
 
   const [showModal, setShowModal] = useState(false)
@@ -97,8 +100,8 @@ const EndpointList = (props) => {
       variant="unstyled"
       ml="auto"
       icon={<Icon icon={faEllipsis} color="muted.600" />}
-      {...triggerProps}>
-    </IconButton>
+      {...triggerProps}
+    ></IconButton>
   )
 
   const defaultTags = []
@@ -107,7 +110,9 @@ const EndpointList = (props) => {
     if (tags == null) {
       tags = []
     }
-    let newTags =[...new Set((tags.filter((x) => typeof x == "string" && x.length > 0)))]
+    let newTags = [
+      ...new Set(tags.filter((x) => typeof x == 'string' && x.length > 0))
+    ]
     newTags = newTags.map((tag) => tag.toLowerCase())
 
     item.Tags = newTags
@@ -159,15 +164,18 @@ const EndpointList = (props) => {
   return (
     <>
       <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <VStack maxW="60%">
+        <VStack maxW={{ base: 'full', md: '60%' }}>
           <Heading fontSize="md">Endpoints</Heading>
-          <Text color="muted.500" isTruncated>
+          <Text color="muted.500" flexWrap="wrap">
             Describe Service Endpoints for building Firewall Rules
           </Text>
         </VStack>
         <ModalForm
           title="Add Service Endpoint"
           triggerText="Add Service Endpoint"
+          triggerProps={{
+            display: { base: 'none', md: list.length ? 'flex' : 'none' }
+          }}
           modalRef={refModal}
         >
           <AddEndpoint notifyChange={notifyChange} />
@@ -194,9 +202,7 @@ const EndpointList = (props) => {
                 alignItems="center"
               >
                 <HStack space={1}>
-                  <Text bold>
-                    {item.RuleName}
-                  </Text>
+                  <Text bold>{item.RuleName}</Text>
                 </HStack>
 
                 <Icon color="muted.400" icon={faArrowRightLong} />
@@ -212,9 +218,9 @@ const EndpointList = (props) => {
                   <Text>{item.Port}</Text>
                 </HStack>
 
-                {item.Tags ? item.Tags.map((tag) => (
-                  <TagItem key={tag} name={tag} />
-                )) : null}
+                {item.Tags
+                  ? item.Tags.map((tag) => <TagItem key={tag} name={tag} />)
+                  : null}
 
                 {moreMenu(item)}
               </HStack>
@@ -227,21 +233,22 @@ const EndpointList = (props) => {
               />
             </Box>
           )}
-          keyExtractor={(item) =>
-            `${item.Protocol}${item.iP}:${item.Port}`
-          }
+          keyExtractor={(item) => `${item.Protocol}${item.iP}:${item.Port}`}
         />
 
         <VStack>
           {!list.length ? (
-            <Text alignSelf={'center'}>
-              There are no endpoints defined yet
+            <Text flexWrap="wrap">
+              Service Endpoints serves as helpers for creating other firewall
+              rules, as well as one-way connectivity from devices to the
+              endpoint when they share a tag.
             </Text>
           ) : null}
           <Button
             display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
             variant={useColorModeValue('subtle', 'solid')}
-            colorScheme="muted"
+            colorScheme={useColorModeValue('primary', 'muted')}
+            rounded="none"
             leftIcon={<Icon icon={faCirclePlus} />}
             onPress={() => refModal.current()}
             mt={4}

@@ -1,11 +1,10 @@
 /*
-	A proxy for udp multicast
+	A proxy for udp multicast and mdns publishing for 'spr'
 
 This allows isolated interfaces to perform zeroconf (mdns or ssdp)
 
 Requirements:
 - hostapd.conf should have multicast_to_unicast=1 When disable_dgaf=1 or ap_isolate=1 are set.
-
 
 Design:
 - Sending Multicast packets requires joining the multicast group on each interface
@@ -29,6 +28,7 @@ import (
 	"os"
 
 	"encoding/json"
+	"github.com/pion/mdns"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/sys/unix"
@@ -42,6 +42,20 @@ var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 
 var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
 var InterfacesPublicConfigFile = TEST_PREFIX + "/state/public/interfaces.json"
+var MulticastConfigFile = TEST_PREFIX + "/configs/base/multicast.json"
+
+type MulticastAddress struct {
+	Address  string //address:port pair
+	Disabled bool
+	Tags     []string
+}
+
+type MulticastSettings struct {
+	Disabled             bool
+	Addresses            []MulticastAddress
+	DisableMDNSAdvertise bool
+	MDNSName             string
+}
 
 type PSKEntry struct {
 	Type string
@@ -168,7 +182,7 @@ type listener4 struct {
 	*ipv4.PacketConn
 }
 
-func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool) {
+func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool, tags []string) {
 	l4 := listener4{}
 
 	saddr, err := net.ResolveUDPAddr("udp4", s_saddr)
@@ -296,7 +310,129 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool)
 
 }
 
+func loadMulticastJson() MulticastSettings {
+	settings := MulticastSettings{}
+	data, err := ioutil.ReadFile(MulticastConfigFile)
+	if err != nil {
+		return settings
+	}
+	_ = json.Unmarshal(data, &settings)
+	return settings
+}
+
+func ifaceAddr(iface *net.Interface) (string, error) {
+	addrs, err := iface.Addrs()
+	if err != nil {
+		return "", err
+	}
+
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok {
+			if ip4 := ipnet.IP.To4(); ip4 != nil {
+				return ip4.String(), nil
+			}
+		}
+	}
+
+	//return addrs[0].(*net.IPNet).IP.String(), nil
+	return "", fmt.Errorf("no ip addr found for iface %v", iface.Name)
+}
+
+func mdnsPublishIface(settings MulticastSettings, wanif string) {
+	iface, err := net.InterfaceByName(wanif)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("wanif=", wanif, "iface=", iface)
+	if !strings.Contains(iface.Flags.String(), "up") {
+		fmt.Println("err: iface=%v is not up", iface.Name)
+		return
+	}
+
+	// verify iface have an ip addr
+	ip, err := ifaceAddr(iface)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	addr, err := net.ResolveUDPAddr("udp", mdns.DefaultAddress)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	l, err := net.ListenUDP("udp4", addr)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	hostname := settings.MDNSName
+	if hostname == "" {
+		hostname, _ = os.Hostname()
+	}
+
+	name := fmt.Sprintf("%v.local", hostname)
+
+	fmt.Println("mdns advertise ip=", ip, "name=", name)
+
+	_, err = mdns.Server(ipv4.NewPacketConn(l), &mdns.Config{
+		LocalNames:   []string{name},
+		LocalAddress: net.ParseIP(ip),
+	})
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+}
+
+// mdns publish spr.local on wanif ip addr
+func mdnsPublish(settings MulticastSettings) {
+
+	// just exit on virtual
+	if os.Getenv("VIRTUAL_SPR") != "" {
+		fmt.Println("spr virtual setup, skipping mdns")
+		return
+	}
+
+	if settings.DisableMDNSAdvertise {
+		return
+	}
+
+	wanif := os.Getenv("WANIF")
+	wanif_covered := false
+
+	interfaces, err := APIInterfaces()
+	if err == nil {
+		for _, target := range interfaces {
+			if target.Type == "Uplink" {
+				mdnsPublishIface(settings, target.Name)
+				if target.Name == wanif {
+					wanif_covered = true
+				}
+			}
+		}
+	}
+
+	if !wanif_covered {
+		mdnsPublishIface(settings, wanif)
+	}
+
+	select {}
+}
+
 func main() {
+
+	fmt.Println("Multicast proxy starting")
+
+	settings := loadMulticastJson()
+
+	// in addition to being a proxy this code will advertise a name for spr over mdns
+	go mdnsPublish(settings)
 
 	relayableInterface := func(ifaceName string) bool {
 
@@ -336,10 +472,28 @@ func main() {
 		return false
 	}
 
-	//mdns
-	go handleProxy("224.0.0.251:5353", relayableInterface)
+	//multicast disabled outright
+	if settings.Disabled == true {
+		fmt.Println("[-] Multicast disabled by configuration")
+		return
+	}
 
-	//ssdp
-	handleProxy("239.255.255.250:1900", relayableInterface)
+	if len(settings.Addresses) == 0 {
+		//run defaults
+		//mdns
+		go handleProxy("224.0.0.251:5353", relayableInterface, []string{})
+
+		//ssdp
+		handleProxy("239.255.255.250:1900", relayableInterface, []string{})
+	} else {
+
+		for _, address := range settings.Addresses {
+			if address.Disabled == false {
+				go handleProxy(address.Address, relayableInterface, address.Tags)
+			}
+		}
+
+		select {}
+	}
 
 }

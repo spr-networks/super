@@ -1,4 +1,5 @@
 #!/bin/bash
+set -a
 . /configs/base/config.sh
 
 # Do not run in mesh mode for now

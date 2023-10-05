@@ -54,7 +54,8 @@ const PluginList = (props) => {
       }
 
       let ver = await api.version('super' + name).catch((err) => {
-        alertState.error('failed to fetch plugin version ' + name)
+        //this is noisy, we can disable for now
+        //alertState.error('failed to fetch plugin version ' + name)
       })
 
       plugins[i].Version = ver

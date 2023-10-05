@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	crand "crypto/rand"
 	"encoding/binary"
@@ -30,6 +31,7 @@ import (
 
 var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
+var SetupDonePath = TEST_PREFIX + "/configs/base/.setup_done"
 
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
@@ -39,6 +41,8 @@ var ConfigBackupDirectory = TEST_PREFIX + "/state/backups"
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
 
 var ConfigFile = TEST_PREFIX + "/configs/base/config.sh"
+var DNSConfigFile = TEST_PREFIX + "/configs/dns/Corefile"
+var MulticastConfigFile = TEST_PREFIX + "/configs/base/multicast.json"
 
 var ApiTlsCert = "/configs/base/www-api.crt"
 var ApiTlsKey = "/configs/base/www-api.key"
@@ -55,11 +59,31 @@ type InfluxConfig struct {
 	Token  string
 }
 
+type DNSSettings struct {
+	UpstreamTLSHost   string
+	UpstreamIPAddress string
+	TlsDisable        bool
+}
+
+type MulticastAddress struct {
+	Address  string //adderss:port pair
+	Disabled bool
+	Tags     []string
+}
+
+type MulticastSettings struct {
+	Disabled             bool
+	Addresses            []MulticastAddress
+	DisableMDNSAdvertise bool
+	MDNSName             string
+}
+
 type APIConfig struct {
 	InfluxDB   InfluxConfig
 	Plugins    []PluginConfig
 	PlusToken  string
 	AutoUpdate bool
+	DNS        DNSSettings
 }
 
 type GroupEntry struct {
@@ -80,17 +104,20 @@ type DeviceStyle struct {
 }
 
 type DeviceEntry struct {
-	Name          string
-	MAC           string
-	WGPubKey      string
-	VLANTag       string
-	RecentIP      string
-	PSKEntry      PSKEntry
-	Groups        []string
-	DeviceTags    []string
-	DHCPFirstTime string
-	DHCPLastTime  string
-	Style         DeviceStyle
+	Name           string
+	MAC            string
+	WGPubKey       string
+	VLANTag        string
+	RecentIP       string
+	PSKEntry       PSKEntry
+	Groups         []string
+	DeviceTags     []string
+	DHCPFirstTime  string
+	DHCPLastTime   string
+	Style          DeviceStyle
+	DeviceTimeout  string
+	DeleteTimeout  bool
+	DeviceDisabled bool
 }
 
 var config = APIConfig{}
@@ -433,7 +460,214 @@ func checkUpdates() {
 	}
 }
 
+func parseDNSCorefile() DNSSettings {
+	settings := DNSSettings{}
+
+	file, err := os.Open(DNSConfigFile)
+	if err != nil {
+		fmt.Printf("Error opening file: %v\n", err)
+		return settings
+	}
+	defer file.Close()
+
+	ipRegex := regexp.MustCompile(`\b(?:[a-zA-Z]+:\/\/)?\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`)
+	serverNameRegex := regexp.MustCompile(`tls_servername\s+([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,})`)
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "forward . ") {
+			ipMatch := ipRegex.FindStringSubmatch(line)
+			if len(ipMatch) > 1 {
+				settings.UpstreamIPAddress = ipMatch[1]
+			}
+		}
+		if strings.Contains(line, "tls_servername") {
+			serverNameMatch := serverNameRegex.FindStringSubmatch(line)
+			if len(serverNameMatch) > 1 {
+				settings.UpstreamTLSHost = serverNameMatch[1]
+			}
+		}
+	}
+
+	if settings.UpstreamIPAddress != "" && settings.UpstreamTLSHost == "" {
+		settings.TlsDisable = true
+	}
+
+	return settings
+}
+
+func updateDNSCorefile(dns DNSSettings) {
+	// Read the file
+	file, err := os.Open(DNSConfigFile)
+	if err != nil {
+		fmt.Printf("Error opening file: %v\n", err)
+		return
+	}
+	defer file.Close()
+
+	ipRegex := regexp.MustCompile(`\b(?:[a-zA-Z]+:\/\/)?\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`)
+	serverNameRegex := regexp.MustCompile(`tls_servername\s+([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,})`)
+
+	var updatedLines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "forward . ") {
+			if dns.TlsDisable == true {
+				line = ipRegex.ReplaceAllString(line, dns.UpstreamIPAddress) // Replace with the new IP
+			} else {
+				line = ipRegex.ReplaceAllString(line, "tls://"+dns.UpstreamIPAddress) // Replace with the new IP
+			}
+
+			//only pick one for now
+			matches := ipRegex.FindAllStringIndex(line, -1)
+			if len(matches) > 1 {
+				for _, match := range matches[1:] {
+					line = line[:match[0]] + "" + line[match[1]:]
+				}
+			}
+
+		}
+		if !dns.TlsDisable && strings.Contains(line, "tls_servername") {
+			line = serverNameRegex.ReplaceAllString(line, "tls_servername "+dns.UpstreamTLSHost) // Replace with the new server name
+		}
+		updatedLines = append(updatedLines, line)
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Printf("Error reading file: %v\n", err)
+		return
+	}
+
+	// Write the updated content back to the file
+	outputFile, err := os.Create(DNSConfigFile)
+	if err != nil {
+		fmt.Printf("Error creating file: %v\n", err)
+		return
+	}
+	defer outputFile.Close()
+	writer := bufio.NewWriter(outputFile)
+	for _, line := range updatedLines {
+		_, err := writer.WriteString(line + "\n")
+		if err != nil {
+			fmt.Printf("Error writing to file: %v\n", err)
+			return
+		}
+	}
+	writer.Flush()
+}
+
+func dnsSettings(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
+	if r.Method == http.MethodPut {
+		settings := DNSSettings{}
+		err := json.NewDecoder(r.Body).Decode(&settings)
+		if err != nil {
+			http.Error(w, fmt.Errorf("failed to deserialize settings").Error(), 400)
+			return
+		}
+
+		new_ip := net.ParseIP(settings.UpstreamIPAddress)
+		if new_ip == nil {
+			http.Error(w, fmt.Errorf("Invalid IP Address for DNS").Error(), 400)
+			return
+		}
+
+		if settings.TlsDisable == true && settings.UpstreamTLSHost != "" {
+			http.Error(w, fmt.Errorf("Unexpected TLS Host when TLS is disabled").Error(), 400)
+			return
+		}
+
+		const dnsPattern = `^(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}\.?)$`
+		dnsRegex := regexp.MustCompile(dnsPattern)
+		if settings.TlsDisable == false && !dnsRegex.MatchString(settings.UpstreamTLSHost) {
+			http.Error(w, fmt.Errorf("Invalid DNS TLS host name").Error(), 400)
+			return
+		}
+
+		config.DNS = settings
+		saveConfigLocked()
+		updateDNSCorefile(config.DNS)
+		callSuperdRestart("", "dns")
+	} else {
+		//migrate the settings, if dns is empty, parse the file
+		if config.DNS.UpstreamIPAddress == "" {
+			ret := parseDNSCorefile()
+			if ret.UpstreamIPAddress != "" {
+				config.DNS = ret
+				saveConfigLocked()
+				updateDNSCorefile(config.DNS)
+				callSuperdRestart("", "dns")
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(config.DNS)
+}
+
+func saveMulticastJsonLocked(settings MulticastSettings) {
+	file, _ := json.MarshalIndent(settings, "", " ")
+	err := ioutil.WriteFile(MulticastConfigFile, file, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func loadMulticastJsonLocked() MulticastSettings {
+	settings := MulticastSettings{}
+	data, err := ioutil.ReadFile(MulticastConfigFile)
+	if err != nil {
+		return settings
+	}
+	_ = json.Unmarshal(data, &settings)
+	return settings
+}
+
+func multicastSettings(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+	settings := MulticastSettings{}
+
+	if r.Method == http.MethodPut {
+		err := json.NewDecoder(r.Body).Decode(&settings)
+		if err != nil {
+			http.Error(w, fmt.Errorf("failed to deserialize settings").Error(), 400)
+			return
+		}
+
+		for _, entry := range settings.Addresses {
+			saddr, err := net.ResolveUDPAddr("udp4", entry.Address)
+			if !strings.Contains(entry.Address, ":") || err != nil {
+				http.Error(w, fmt.Errorf("failed to parse udp address ").Error(), 400)
+				return
+			}
+
+			_, multicastNet, _ := net.ParseCIDR("224.0.0.0/4")
+
+			//double check multicast range
+			if !multicastNet.Contains(saddr.IP) {
+				http.Error(w, fmt.Errorf("Invalid multicast IP ").Error(), 400)
+				return
+			}
+		}
+
+		saveMulticastJsonLocked(settings)
+		callSuperdRestart("", "multicast_udp_proxy")
+	} else {
+		settings = loadMulticastJsonLocked()
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(settings)
+}
+
 func autoUpdate(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
 	if r.Method == http.MethodGet {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(config.AutoUpdate)
@@ -1762,6 +1996,8 @@ func reportDisconnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	deleteLanInterface(event.Iface)
+
 	event.Status = "Okay"
 
 	updateMeshPluginDisconnect(event)
@@ -2028,7 +2264,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 
 	configData = matchInterfaceUplink.ReplaceAllString(configData, "$1="+conf.InterfaceUplink)
 
-	err = ioutil.WriteFile(ConfigFile, []byte(configData), 0755)
+	err = ioutil.WriteFile(ConfigFile, []byte(configData), 0644)
 	if err != nil {
 		http.Error(w, "Failed to write config to "+ConfigFile, 400)
 		panic(err)
@@ -2054,7 +2290,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+conf.InterfaceAP)
 
 	hostapd_path := getHostapdConfigPath(conf.InterfaceAP)
-	err = ioutil.WriteFile(hostapd_path, []byte(configData), 0755)
+	err = ioutil.WriteFile(hostapd_path, []byte(configData), 0644)
 	if err != nil {
 		http.Error(w, "Failed to write config to "+hostapd_path, 400)
 		panic(err)
@@ -2063,8 +2299,61 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	configureInterface("AP", "", conf.InterfaceAP)
 	configureInterface("Uplink", "ethernet", conf.InterfaceUplink)
 
+	// disable mdns advertising and set up default multicast rules
+	multicastSettingsSetupDone()
+
+	ioutil.WriteFile(SetupDonePath, []byte("true"), 0644)
+
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
 	callSuperdRestart("", "")
+}
+
+func multicastSettingsSetupDone() {
+	//during setup we enabled mdns. disable it now by default
+	Configmtx.Lock()
+	settings := loadMulticastJsonLocked()
+	settings.DisableMDNSAdvertise = true
+
+	//add SSDP and MDNS to proxy defaults
+	settings.Addresses = []MulticastAddress{MulticastAddress{Address: "224.0.0.251:5353"}}
+	settings.Addresses = append(settings.Addresses, MulticastAddress{Address: "239.255.255.250:1900"})
+
+	saveMulticastJsonLocked(settings)
+	Configmtx.Unlock()
+
+	loadFirewallRules()
+	// set up rules for firewall as well
+	FWmtx.Lock()
+	gFirewallConfig.MulticastPorts = []MulticastPort{MulticastPort{Port: "5353", Upstream: false}}
+	gFirewallConfig.MulticastPorts = append(gFirewallConfig.MulticastPorts, MulticastPort{Port: "1900", Upstream: false})
+	saveFirewallRulesLocked()
+	FWmtx.Unlock()
+
+}
+
+func migrateMDNS() {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+	settings := loadMulticastJsonLocked()
+
+	if len(settings.Addresses) == 0 {
+		//add SSDP and MDNS to proxy defaults
+		settings.Addresses = append(settings.Addresses, MulticastAddress{Address: "224.0.0.251:5353"})
+		settings.Addresses = append(settings.Addresses, MulticastAddress{Address: "239.255.255.250:1900"})
+
+		//make sure config is loaded.
+		loadFirewallRules()
+		//also update the firewall ports for multicast
+		FWmtx.Lock()
+		//under setup mode do accept from upstream.
+		gFirewallConfig.MulticastPorts = []MulticastPort{MulticastPort{Port: "5353", Upstream: isSetupMode()}}
+		gFirewallConfig.MulticastPorts = append(gFirewallConfig.MulticastPorts, MulticastPort{Port: "5353", Upstream: false})
+		saveFirewallRulesLocked()
+
+		FWmtx.Unlock()
+	}
+
+	saveMulticastJsonLocked(settings)
 }
 
 // set up SPA handler. From gorilla mux's documentation
@@ -2134,6 +2423,8 @@ func main() {
 
 	//update auth API
 	migrateAuthAPI()
+	//update multicast.json
+	migrateMDNS()
 
 	loadConfig()
 
@@ -2181,6 +2472,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/firewall/block_forward", blockForwardingIP).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/service_port", modifyServicePort).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/endpoint", modifyEndpoint).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/multicast", modifyMulticast).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/icmp", modifyIcmp).Methods("PUT")
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
@@ -2198,6 +2491,9 @@ func main() {
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/subnetConfig", getSetDhcpConfig).Methods("GET", "PUT", "OPTIONS")
+
+	external_router_authenticated.HandleFunc("/dnsSettings", dnsSettings).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/multicastSettings", multicastSettings).Methods("GET", "PUT")
 
 	//updates, version, feature info
 	external_router_authenticated.HandleFunc("/release", releaseInfo).Methods("GET", "PUT", "DELETE", "OPTIONS")

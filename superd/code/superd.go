@@ -423,7 +423,19 @@ func dockerImageLabel(image string, labelName string) (string, error) {
 
 	err := cmd.Run()
 	if err != nil {
-		return "", err
+		//in case the container has not been created use the full image name
+		spr_prefix := "ghcr.io/spr-networks/super_"
+		image_name := strings.Replace(image, "super", "", 1)
+		image_name = strings.ReplaceAll(image_name, "-", "_")
+		cmd = exec.Command("docker", "inspect", "--format={{index .Config.Labels \""+labelName+"\"}}", spr_prefix+image_name)
+
+		var out bytes.Buffer
+		cmd.Stdout = &out
+
+		err := cmd.Run()
+		if err != nil {
+			return "", err
+		}
 	}
 
 	labelValue := strings.Trim(out.String(), "\n")

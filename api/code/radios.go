@@ -657,9 +657,9 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// use json parsers if available (iw_list, iw_dev, iw-scan)
+	// use json parsers if available (iwlist, iwdev, iw-scan)
 	if command == "list" || command == "dev" || strings.HasSuffix(command, "scan") {
-		parser := "--iw_" + command // bug: jc dont allow - when using local parsers
+		parser := "--iw" + command // bug: jc dont allow - when using local parsers
 		if strings.HasSuffix(command, "scan") {
 			parser = "--iw-scan"
 		}

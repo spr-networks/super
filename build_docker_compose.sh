@@ -7,6 +7,12 @@ if [ '!' -d "configs/" ]; then
   exit 1
 fi
 
+shopt -s expand_aliases
+if ! which docker-compose > /dev/null 2>&1; then
+    # Set an alias for docker-compose if it's missing
+    alias docker-compose='docker compose'
+fi
+
 # remove prebuilt images
 FOUND_PREBUILT_IMAGE=false
 for SERVICE in $(docker-compose config --services); do
@@ -49,7 +55,6 @@ mkdir -p state/api/
 mkdir -p state/dhcp/
 mkdir -p state/dns/
 mkdir -p state/wifi/
-mkdir -p state/wifi/sta_mac_iface_map/
 touch state/dns/local_mappings state/dhcp/leases.txt
 
 PLUGINS="ppp wifi_uplink"

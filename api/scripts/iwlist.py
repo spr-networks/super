@@ -47,6 +47,7 @@ class info():
 
     compatible = ['linux', 'freebsd']
     magic_commands = ['iw list']
+    tags = ['command']
 
 
 __version__ = info.version
