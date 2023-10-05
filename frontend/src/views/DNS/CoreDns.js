@@ -79,7 +79,6 @@ const CoreDns = (props) => {
 
     <Box
       bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-      width="50%"
       p={4}
       mb={4}
     >
