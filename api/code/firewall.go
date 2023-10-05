@@ -2266,6 +2266,8 @@ func initFirewallRules() {
 
 	refreshVLANTrunks()
 
+	refreshDownlinks()
+
 	// dynamic route refresh
 	go dynamicRouteLoop()
 
