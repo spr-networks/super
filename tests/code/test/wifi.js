@@ -1,4 +1,4 @@
-wconst agent = require('../agent')
+const agent = require('../agent')
 const assert = require('assert')
 
 describe('get interfaces', () => {
