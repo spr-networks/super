@@ -20,11 +20,26 @@ import {
   Text
 } from 'native-base'
 
+import InputSelect from 'components/InputSelect'
+
 class AddMulticastPortImpl extends React.Component {
   state = {
     Address: '',
     Port: '0'
   }
+
+  MulticastPorts = {
+    '224.0.0.251': '5353',
+    '239.255.255.250': '1900',
+    '224.0.1.129': '319',
+    '224.0.1.129-2': '320',
+  }
+  MulticastServices = [
+    { label: "mDNS", value: "224.0.0.251" },
+    { label: "SSDP", value: "239.255.255.250" },
+    { label: "PTP events", value: "224.0.1.129"},
+    { label: "PTP general", value: "224.0.1.129-2"}
+  ]
 
   constructor(props) {
     super(props)
@@ -35,6 +50,16 @@ class AddMulticastPortImpl extends React.Component {
 
   handleChange(name, value) {
     //TODO verify IP && port
+    if (name == 'Address') {
+      if (this.MulticastPorts[value]) {
+        this.setState({'Port': this.MulticastPorts[value]})
+      }
+      if (value.includes('-')) {
+        let new_value = value.split('-')[0]
+        this.setState({ [name]: new_value })
+        return
+      }
+    }
     this.setState({ [name]: value })
   }
 
@@ -79,12 +104,13 @@ class AddMulticastPortImpl extends React.Component {
         <HStack space={4}>
           <FormControl flex="2">
             <FormControl.Label>Address</FormControl.Label>
-            <Input
+            <InputSelect
               size="md"
               variant="underlined"
               name="Address"
+              options={this.MulticastServices}
               value={this.state.Address}
-              onChangeText={(value) => this.handleChange('Address', value)}
+              onChange={(value) => this.handleChange('Address', value)}
             />
             <FormControl.HelperText>Multicast IP Address</FormControl.HelperText>
           </FormControl>

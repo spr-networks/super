@@ -105,9 +105,9 @@ const MulticastPorts = (props) => {
     <>
       <HStack justifyContent="space-between" alignItems="center" p={4}>
         <VStack maxW={{ base: 'full', md: '60%' }}>
-          <Heading fontSize="md">Multicast Services</Heading>
+          <Heading fontSize="md">Multicast Proxy</Heading>
           <Text color="muted.500" isTruncated>
-            Set services for Multicast Proxy
+            Set ip:port addresses to proxy
           </Text>
         </VStack>
         <ModalForm
