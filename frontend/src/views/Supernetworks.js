@@ -36,6 +36,9 @@ const Supernetworks = (props) => {
         TinyNets: tinyNets,
         LeaseTime: leaseTime
       })
+      .then(() => {
+        context.success("Updated supernetworks")
+      })
       .catch((err) => context.error('' + err))
   }
 
@@ -114,15 +117,15 @@ const Supernetworks = (props) => {
           value={leaseTime}
           onChangeText={(text) => setLeaseTime(text)}
         />
-        <Button
-          size="md"
-          variant="solid"
-          colorScheme={'primary'}
-          onPress={handleUpdate}
-        >
-          Update
-        </Button>
       </HStack>
+      <Button
+        size="md"
+        variant="solid"
+        colorScheme={'primary'}
+        onPress={handleUpdate}
+      >
+        Save Settings
+      </Button>
     </VStack>
   )
 }

@@ -84,7 +84,7 @@ const CoreDns = (props) => {
       mb={4}
     >
     <VStack space={4}>
-      <Heading fontSize="md">Dynamic DNS</Heading>
+      <Heading fontSize="md">Core DNS Settings</Heading>
         <Text bold>DNS IP</Text>
         <InputSelect
           options={options}
