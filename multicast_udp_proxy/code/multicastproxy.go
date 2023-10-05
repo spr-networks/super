@@ -341,28 +341,33 @@ func ifaceAddr(iface *net.Interface) (string, error) {
 func mdnsPublishIface(settings MulticastSettings, wanif string) {
 	iface, err := net.InterfaceByName(wanif)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 
 	fmt.Println("wanif=", wanif, "iface=", iface)
 	if !strings.Contains(iface.Flags.String(), "up") {
-		panic(fmt.Errorf("err: iface=%v is not up", iface.Name))
+		fmt.Println("err: iface=%v is not up", iface.Name)
+		return
 	}
 
 	// verify iface have an ip addr
 	ip, err := ifaceAddr(iface)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 
 	addr, err := net.ResolveUDPAddr("udp", mdns.DefaultAddress)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 
 	l, err := net.ListenUDP("udp4", addr)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 
 	hostname := settings.MDNSName
@@ -380,7 +385,8 @@ func mdnsPublishIface(settings MulticastSettings, wanif string) {
 	})
 
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 }
 
