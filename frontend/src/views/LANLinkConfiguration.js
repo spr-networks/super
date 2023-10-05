@@ -260,17 +260,12 @@ const LANLinkInfo = (props) => {
   }
 
   const moreMenu = (iface) => (
-    <Menu w={190} closeOnSelect={true} trigger={trigger}>
-      <Menu.Item
-        onPress={() => {
-          setIface(iface)
-          setModal('config')
-          onOpen()
-        }}
-      >
-        Modify Interface
-      </Menu.Item>
-    </Menu>
+    <IconButton
+      variant="unstyled"
+      ml="auto"
+      onPress = {setModal('config')}
+      icon={<Icon icon={faEllipsis} color="muted.600" />}
+    ></IconButton>
   )
 
   const onSubmit = (item, type, enable) => {
