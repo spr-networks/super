@@ -42,6 +42,7 @@ var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 
 var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
 var InterfacesPublicConfigFile = TEST_PREFIX + "/state/public/interfaces.json"
+var PublicIPIfaceMapFile = TEST_PREFIX + "/state/public/ip-iface-map.json"
 var MulticastConfigFile = TEST_PREFIX + "/configs/base/multicast.json"
 
 type MulticastAddress struct {
@@ -57,20 +58,30 @@ type MulticastSettings struct {
 	MDNSName             string
 }
 
-type PSKEntry struct {
-	Type string
-	Psk  string
+type DeviceEntry struct {
+	Name     string
+	MAC      string
+	WGPubKey string
+	VLANTag  string
+	RecentIP string
+	//PSKEntry       PSKEntry // not used by proxy
+	Groups        []string
+	DeviceTags    []string
+	DHCPFirstTime string
+	DHCPLastTime  string
+	//Style          DeviceStyle // not used by proxy
+	DeviceTimeout  string
+	DeleteTimeout  bool
+	DeviceDisabled bool
 }
 
-type DeviceEntry struct {
-	Name       string
-	MAC        string
-	WGPubKey   string
-	VLANTag    string
-	RecentIP   string
-	PSKEntry   PSKEntry
-	Groups     []string
-	DeviceTags []string
+func IPIfaceMap() (map[string]string, error) {
+	data, err := os.ReadFile(PublicIPIfaceMapFile)
+	ifaceMap := map[string]string{}
+	if err == nil {
+		err = json.Unmarshal(data, &ifaceMap)
+	}
+	return ifaceMap, err
 }
 
 func APIDevices() (map[string]DeviceEntry, error) {
@@ -211,7 +222,7 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool,
 			return
 		}
 
-		//join mdns group
+		//join multicast group
 		if relayableInterface(interfaceName) {
 			l4.JoinGroup(ief, saddr)
 		} else {
@@ -232,7 +243,7 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool,
 		foo(iface.Name)
 	}
 
-	//when new interfaces show up, join them for mdns
+	//when new interfaces show up, join them for the multicast service
 	go func() {
 		listenNewInterfaceUp(foo)
 	}()
@@ -289,8 +300,21 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool,
 			fmt.Println("failed net interfaces")
 			continue
 		}
-		//join all existing interfaces for mdns
 
+		//for eficiency preload ip-iface and devices
+		skipTags := false
+		ifaceMap, err := IPIfaceMap()
+		if err != nil {
+			fmt.Println("[-] Failed to read iface map")
+			skipTags = true
+		}
+		devices, err := APIDevices()
+		if err != nil {
+			fmt.Println("[-] Failed to read devices")
+			skipTags = true
+		}
+
+		//join all existing interfaces for mdns
 		for _, iface := range ifaces {
 
 			if iface.Index == oob.IfIndex {
@@ -299,6 +323,22 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool,
 			}
 
 			if relayableInterface(iface.Name) {
+				//if theres tags, make sure the receiver has the tag
+
+				if len(tags) != 0 {
+					if skipTags {
+						//failed to load ifaceMap and devices, however tags are set, abort
+						continue
+					}
+					if !ensureIfaceTagged(ifaceMap, devices, tags, iface.Name) {
+						//a device with intersecting tags was not located on this interface,
+						// do not transmit
+						//note: by default, the wired downlinks will most likely
+						//get the multicast message as wired downlink is the default iface for devices.
+						continue
+					}
+				}
+
 				if debug {
 					fmt.Println(n, peer.String(), " being broadcast to -> ", iface.Name, iface.Index, n)
 				}
@@ -423,6 +463,26 @@ func mdnsPublish(settings MulticastSettings) {
 	}
 
 	select {}
+}
+
+func ensureIfaceTagged(ifaceMap map[string]string, devices map[string]DeviceEntry, tags []string, ifaceName string) bool {
+	for _, device := range devices {
+		if device.RecentIP != "" {
+			curIface, exists := ifaceMap[device.RecentIP]
+			if exists && curIface == ifaceName {
+				//check if the device tags intersect with the wanted tags
+				for _, wantedTag := range tags {
+					for _, currentTag := range device.DeviceTags {
+						if wantedTag == currentTag {
+							return true
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return false
 }
 
 func main() {
