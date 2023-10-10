@@ -954,6 +954,11 @@ func hostapdResetInterface(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func isWifiDevice(entry DeviceEntry) bool {
+	//if a PSK is set, it is a wifi station
+	return entry.PSKEntry.Type != ""
+}
+
 func restartWifi(w http.ResponseWriter, r *http.Request) {
 	resetRadioFirewall()
 	callSuperdRestart("", "wifid")

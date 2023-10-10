@@ -2189,10 +2189,11 @@ func dynamicRouteLoop() {
 					new_iface, exists = suggested_device[entry.RecentIP]
 				}
 
+				//update the iface map with the designated interface
 				newIfaceMap[entry.RecentIP] = new_iface
 
 				if !exists {
-					if lanif != "" {
+					if lanif != "" && !isWifiDevice(entry) {
 						//no new_iface and a LAN interface is set, use that.
 						if lanif_vlan_trunk == false || entry.VLANTag == "" {
 							new_iface = lanif
