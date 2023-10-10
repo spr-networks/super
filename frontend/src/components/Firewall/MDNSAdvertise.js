@@ -98,7 +98,7 @@ const MDNSAdvertise = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" py={4}>
+      <HStack justifyContent="space-between" alignItems="center" p={4}>
         <VStack maxW="60%">
           <Heading fontSize="md" isTruncated>
             Multicast Settings
@@ -164,7 +164,7 @@ const MDNSAdvertise = (props) => {
             _justifyContent="stretch"
             alignItems={{ base: 'none', md: 'center' }}
           >
-            <VStack maxW={{ md: '1/2' }}>
+            <VStack maxW={{ md: '1/2' }} space={2}>
               <Text bold>mDNS Name</Text>
               <Text color="muted.500" flexWrap={'wrap'}>
                 Defaults to 'spr.local'. Set the name without the .local part or

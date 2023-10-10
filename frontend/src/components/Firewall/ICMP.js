@@ -49,7 +49,7 @@ const ICMP = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" py={4}>
+      <HStack justifyContent="space-between" alignItems="center" p={4}>
         <VStack maxW="60%">
           <Heading fontSize="md" isTruncated>
             Ping Settings

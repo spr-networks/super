@@ -87,14 +87,16 @@ const ForwardList = (props) => {
         <ModalForm
           title="Add Port Forwarding Rule"
           triggerText="Add Forward"
-          triggerProps={{ display: list.length ? 'flex' : 'none' }}
+          triggerProps={{
+            display: { base: 'none', md: list.length ? 'flex' : 'none' }
+          }}
           modalRef={refModal}
         >
           <AddForward notifyChange={notifyChange} />
         </ModalForm>
       </HStack>
 
-      <Box px={4} mb={4}>
+      <Box px={{ base: 0, md: 4 }}>
         <FlatList
           data={list}
           renderItem={({ item }) => (
@@ -155,7 +157,7 @@ const ForwardList = (props) => {
 
         <VStack>
           {!list.length ? (
-            <Text flexWrap="wrap">
+            <Text px={{ base: 4, md: 0 }} mb={4} flexWrap="wrap">
               Forward incoming WAN packets to access a service that runs on the
               LAN.
             </Text>
@@ -167,7 +169,6 @@ const ForwardList = (props) => {
             rounded="none"
             leftIcon={<Icon icon={faCirclePlus} />}
             onPress={() => refModal.current()}
-            mt={4}
           >
             Add Forward
           </Button>

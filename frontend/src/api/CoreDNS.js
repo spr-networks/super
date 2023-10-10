@@ -5,8 +5,12 @@ export class APICoreDNS extends API {
     super('/')
   }
 
-  config(){ return this.get('dnsSettings') }
-  setConfig(data){ return this.put('dnsSettings', data) }
+  config() {
+    return this.get('dnsSettings')
+  }
+  setConfig(data) {
+    return this.put('dnsSettings', data)
+  }
 }
 
 export const CoreDNS = new APICoreDNS()

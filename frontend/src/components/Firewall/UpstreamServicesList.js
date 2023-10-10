@@ -72,21 +72,31 @@ const UpstreamServicesList = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" py={4}>
-        <VStack maxW="60%">
+      <HStack justifyContent="space-between" alignItems="center">
+        <VStack maxW="60%" p={4}>
           <Heading fontSize="md">Allowed SPR Services</Heading>
-          <Text color="muted.500" isTruncated></Text>
+          <Text color="muted.500" isTruncated>
+            Ports to allow from upstream
+          </Text>
         </VStack>
-        <ModalForm title="Add Port" triggerText="Add Port" modalRef={refModal}>
+        <ModalForm
+          title="Add Port"
+          triggerText="Add Port"
+          triggerProps={{
+            display: { base: 'none', md: list.length ? 'flex' : 'none' }
+          }}
+          modalRef={refModal}
+        >
           <AddServicePort notifyChange={notifyChange} />
         </ModalForm>
       </HStack>
-      <Box mb={4}>
+      <Box>
         <HStack
           space={4}
           justifyContent="space-between"
           alignItems="center"
           mb={4}
+          px={4}
         >
           <Heading fontSize="sm">Protocol</Heading>
           <Heading fontSize="sm">Port</Heading>
@@ -134,6 +144,25 @@ const UpstreamServicesList = (props) => {
             `${item.Protocol}${item.Port}:${item.UpstreamEnabled}`
           }
         />
+
+        <VStack>
+          {!list.length ? (
+            <Text px={{ base: 4, md: 0 }} flexWrap="wrap">
+              No upstream services added
+            </Text>
+          ) : null}
+          <Button
+            display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
+            variant={useColorModeValue('subtle', 'solid')}
+            colorScheme={useColorModeValue('primary', 'muted')}
+            rounded="none"
+            leftIcon={<Icon icon={faCirclePlus} />}
+            onPress={() => refModal.current()}
+            mt={0}
+          >
+            Add Service Port
+          </Button>
+        </VStack>
       </Box>
     </>
   )
