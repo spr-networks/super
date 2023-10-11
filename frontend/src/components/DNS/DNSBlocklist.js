@@ -25,6 +25,7 @@ import {
   HStack,
   Spinner,
   Text,
+  VStack,
   useColorModeValue
 } from 'native-base'
 
@@ -49,33 +50,43 @@ export default class DNSBlocklist extends React.Component {
 
     this.recommendedListDefault = [
       {
+        Info: 'Steven Black\'s Adware & Malware block list',
         URI: 'https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts'
       },
       {
+        Info: 'BlockList Project Ads',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/ads.txt'
       },
       {
+        Info: 'BlockList Project Facebook and related services',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/facebook.txt'
       },
       {
+        Info: 'BlockList Project Twitter and related services',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/twitter.txt'
       },
       {
+        Info: 'BlockList Project Malware List',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/malware.txt'
       },
       {
+        Info: 'BlockList Project Pornography List',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/porn.txt'
       },
       {
+        Info: 'BlockList Project Redirect List, often used with spam',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/redirect.txt'
       },
       {
+        Info: 'BlockList Project Tracker List for sites that track and gather visitor information',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/tracking.txt'
       },
       {
+        Info: 'BlockList Project Youtube domains',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt'
       },
       {
+        Info: 'BlockList Project Everything list',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/everything.txt'
       }
     ]
@@ -116,6 +127,15 @@ export default class DNSBlocklist extends React.Component {
         let recommendedList = this.recommendedListDefault.filter((_item) => {
           return !list.map((listitem) => listitem.URI).includes(_item.URI)
         })
+
+        //for every entry in list see if theres an annotation from rec default to set
+        for (let entry of list) {
+          for (let rec of this.recommendedListDefault) {
+            if (entry.URI == rec.URI) {
+              entry.Info = rec.Info
+            }
+          }
+        }
 
         this.setState({ list })
         this.setState({ pending: false })
@@ -298,19 +318,25 @@ export default class DNSBlocklist extends React.Component {
                   justifyContent="space-between"
                   alignItems="center"
                 >
-                  <Text
-                    w={{ base: '60%', md: '75%' }}
-                    flexWrap="wrap"
+                <VStack
+                  w={{ base: '60%', md: '75%' }}
+                  flexWrap="wrap"
+                  onPress={toggleShowURI}
+                  >
+                    <Text color="muted.500" isTruncated>
+                      {item.Info}
+                    </Text>
+                    <Text
                     _light={{
                       color: isOnlyRecommended(item) ? 'muted.500' : 'black'
                     }}
                     _dark={{
                       color: isOnlyRecommended(item) ? 'muted.500' : 'white'
                     }}
-                    onPress={toggleShowURI}
-                  >
-                    {niceURI(item.URI)}
-                  </Text>
+                    >
+                      {niceURI(item.URI)}
+                    </Text>
+                  </VStack>
 
                   <Stack
                     flex={2}
