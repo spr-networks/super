@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"strings"
 )
@@ -14,12 +15,12 @@ import (
 	"github.com/bradfitz/ip2asn"
 	"github.com/dutchcoders/go-ouitools"
 	"github.com/gorilla/mux"
-	"inet.af/netaddr"
 )
 
 var TEST_PREFIX = ""
 
 var UNIX_PLUGIN_LISTENER = "/state/plugins/plugin-lookup/lookup_plugin"
+
 //var UNIX_PLUGIN_LISTENER = "./http.sock"
 
 var ASN_FILENAME = "../data/ip2asn-v4.tsv"
@@ -62,13 +63,18 @@ func initDb() error {
 func lookupASN(ipAddress string) (ASNEntry, error) {
 	asn := ASNEntry{}
 
-	ip, err := netaddr.ParseIP(ipAddress)
+	ip := net.ParseIP(ipAddress)
+	if ip == nil {
+		return asn, fmt.Errorf("failed to parse IP")
+	}
+
+	netip, err := netip.ParseAddr(asn.IP)
 	if err != nil {
 		return asn, err
 	}
 
 	asn.IP = ip.String()
-	asn.ASN = mIp2Asn.ASofIP(ip)
+	asn.ASN = mIp2Asn.ASofIP(netip)
 	asn.Name = mIp2Asn.ASName(asn.ASN)
 	asn.Country = mIp2Asn.ASCountry(asn.ASN)
 
