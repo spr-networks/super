@@ -246,24 +246,6 @@ services:
       - "dns"
     volumes:
       - ./state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
-  dyndns:
-    container_name: superdyndns
-    image: ghcr.io/spr-networks/super_dyndns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
-    build:
-      context: dyndns
-      labels: *default-labels
-      x-bake:
-        tags:
-        - ghcr.io/spr-networks/super_dyndns:latest${RELEASE_CHANNEL:-}
-        - ghcr.io/spr-networks/super_dyndns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
-    network_mode: bridge
-    logging: *default-logging
-    depends_on:
-      - "base"
-      - "dns"
-    volumes:
-      - ./state/plugins/dyndns/:/state/plugins/dyndns
-      - ./configs/dyndns/:/configs/dyndns
   packet_logs:
     container_name: superpacket_logs
     image: ghcr.io/spr-networks/super_packet_logs:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
