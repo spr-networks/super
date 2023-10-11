@@ -69,61 +69,63 @@ const ForwardBlockList = (props) => {
         </ModalForm>
       </HStack>
 
-      <FlatList
-        data={list}
-        renderItem={({ item }) => (
-          <Box
-            bg="backgroundCardLight"
-            borderBottomWidth={1}
-            _dark={{
-              bg: 'backgroundCardDark',
-              borderColor: 'borderColorCardDark'
-            }}
-            borderColor="borderColorCardLight"
-            p={4}
-          >
-            <HStack
-              space={3}
-              justifyContent="space-between"
-              alignItems="center"
+      <Box px={{ base: 0, md: 4 }}>
+        <FlatList
+          data={list}
+          renderItem={({ item }) => (
+            <Box
+              bg="backgroundCardLight"
+              borderBottomWidth={1}
+              _dark={{
+                bg: 'backgroundCardDark',
+                borderColor: 'borderColorCardDark'
+              }}
+              borderColor="borderColorCardLight"
+              p={4}
             >
-              <Badge variant="outline">{item.Protocol}</Badge>
+              <HStack
+                space={3}
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Badge variant="outline">{item.Protocol}</Badge>
 
-              <Text>{item.SrcIP}</Text>
-              <Text>{item.DstIP}</Text>
-              <Text>{item.DstPort}</Text>
+                <Text>{item.SrcIP}</Text>
+                <Text>{item.DstIP}</Text>
+                <Text>{item.DstPort}</Text>
 
-              <IconButton
-                alignSelf="center"
-                size="sm"
-                variant="ghost"
-                colorScheme="secondary"
-                icon={<Icon icon={faXmark} />}
-                onPress={() => deleteListItem(item)}
-              />
-            </HStack>
-          </Box>
-        )}
-        keyExtractor={(item) => `${item.Protocol}${item.SrcIP}${item.DstIP}`}
-      />
+                <IconButton
+                  alignSelf="center"
+                  size="sm"
+                  variant="ghost"
+                  colorScheme="secondary"
+                  icon={<Icon icon={faXmark} />}
+                  onPress={() => deleteListItem(item)}
+                />
+              </HStack>
+            </Box>
+          )}
+          keyExtractor={(item) => `${item.Protocol}${item.SrcIP}${item.DstIP}`}
+        />
 
-      <VStack>
-        {!list.length ? (
-          <Text px={{ base: 4, md: 0 }} mb={4} flexWrap="wrap">
-            Control forward and block rules on the LAN.
-          </Text>
-        ) : null}
-        <Button
-          display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
-          variant={useColorModeValue('subtle', 'solid')}
-          colorScheme={useColorModeValue('primary', 'muted')}
-          rounded="none"
-          leftIcon={<Icon icon={faCirclePlus} />}
-          onPress={() => refModal.current()}
-        >
-          Add Forwarding Block
-        </Button>
-      </VStack>
+        <VStack>
+          {!list.length ? (
+            <Text px={{ base: 4, md: 0 }} mb={4} flexWrap="wrap">
+              Control forward and block rules on the LAN.
+            </Text>
+          ) : null}
+          <Button
+            display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
+            variant={useColorModeValue('subtle', 'solid')}
+            colorScheme={useColorModeValue('primary', 'muted')}
+            rounded="none"
+            leftIcon={<Icon icon={faCirclePlus} />}
+            onPress={() => refModal.current()}
+          >
+            Add Forwarding Block
+          </Button>
+        </VStack>
+      </Box>
     </>
   )
 }

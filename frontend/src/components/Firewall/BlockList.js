@@ -69,7 +69,7 @@ const BlockList = (props) => {
         </ModalForm>
       </HStack>
 
-      <Box>
+      <Box px={{ base: 0, md: 4 }}>
         <FlatList
           data={list}
           renderItem={({ item }) => (
