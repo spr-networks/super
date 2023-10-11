@@ -121,6 +121,27 @@ export default class DNSBlocklist extends React.Component {
   refreshBlocklists() {
     let list = []
 
+    const optMap = {
+      'Weekly': 24*7*60*60,
+      'Daily': 24*60*60,
+      'Four Hours': 24*60*60*4,
+      'Hourly': 60*60
+    }
+
+    blockAPI
+      .config()
+      .then((config) => {
+        if (config != null) {
+          if (config.RefreshSeconds != 0) {
+            for (let opt of Object.keys(optMap)) {
+              if (optMap[opt] == config.RefreshSeconds) {
+                this.setState({seconds: opt})
+              }
+            }
+          }
+        }
+      })
+
     blockAPI
       .blocklists()
       .then((blocklist) => {
@@ -281,9 +302,16 @@ export default class DNSBlocklist extends React.Component {
 
     const submitRefresh = (value) => {
 
+      const optMap = {
+        'Weekly': 24*7*60*60,
+        'Daily': 24*60*60,
+        'Four Hours': 24*60*60*4,
+        'Hourly': 60*60
+      }
+
       blockAPI.setRefresh(optMap[value]).then(
         () => {
-          this.context.success('Updated DNS Blocklist Refresh Settings')
+          this.context.success('Updated DNS Blocklist Refresh Frequency')
         },
         (e) => {
           this.context.error('API Failure: ' + e.message)
@@ -291,12 +319,6 @@ export default class DNSBlocklist extends React.Component {
       )
     }
 
-    const optMap = {
-      'Weekly': 24*7*60*60,
-      'Daily': 24*60*60,
-      'Four Hours': 24*60*60*4,
-      'Hourly': 60*60
-    }
 
     const options = [
       { label: 'Weekly', value: 'Weekly' },
@@ -481,7 +503,7 @@ export default class DNSBlocklist extends React.Component {
               <Box
               >
                 <VStack space={4}>
-                  <Text bold>Refresh Settings</Text>
+                  <Text bold>Refresh Frequency</Text>
                   <InputSelect
                     options={options}
                     value={this.state.seconds}
