@@ -1,7 +1,7 @@
 FROM ubuntu:23.04 as builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl
+RUN apt-get install -y --no-install-recommends nftables iproute2 netcat-traditional inetutils-ping net-tools nano ca-certificates git curl
 RUN mkdir /code/
 WORKDIR /code/
 ARG TARGETARCH
