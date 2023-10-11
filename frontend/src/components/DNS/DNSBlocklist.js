@@ -17,6 +17,7 @@ import ModalConfirm from 'components/ModalConfirm'
 import {
   Badge,
   Box,
+  Button,
   FlatList,
   Heading,
   IconButton,
@@ -29,6 +30,8 @@ import {
   useColorModeValue
 } from 'native-base'
 
+import InputSelect from 'components/InputSelect'
+
 import { FlashList } from '@shopify/flash-list'
 
 export default class DNSBlocklist extends React.Component {
@@ -39,7 +42,8 @@ export default class DNSBlocklist extends React.Component {
     showModal: false,
     modalType: '',
     pendingItem: {},
-    showURI: true
+    showURI: true,
+    seconds: 'Weekly',
   }
 
   constructor(props) {
@@ -269,6 +273,38 @@ export default class DNSBlocklist extends React.Component {
       this.setState({ showURI: !this.state.showURI })
     }
 
+    const onChangeText = (what, value) => {
+      if (what == 'seconds') {
+        this.setState({seconds: value})
+      }
+    }
+
+    const submitRefresh = (value) => {
+
+      blockAPI.setRefresh(optMap[value]).then(
+        () => {
+          this.context.success('Updated DNS Blocklist Refresh Settings')
+        },
+        (e) => {
+          this.context.error('API Failure: ' + e.message)
+        }
+      )
+    }
+
+    const optMap = {
+      'Weekly': 24*7*60*60,
+      'Daily': 24*60*60,
+      'Four Hours': 24*60*60*4,
+      'Hourly': 60*60
+    }
+
+    const options = [
+      { label: 'Weekly', value: 'Weekly' },
+      { label: 'Daily', value: 'Daily' },
+      { label: 'Four Hours', value: 'Four Hours' },
+      { label: 'Hourly', value: 'Hourly'}
+    ] //[{ label: t, value: { Tag: t } }]
+
     return (
       <>
         <HStack justifyContent="space-between" alignItems="center" p={4}>
@@ -430,6 +466,35 @@ export default class DNSBlocklist extends React.Component {
             )}
             keyExtractor={(item) => item.URI}
           />
+
+          <Box
+            bg="backgroundCardLight"
+            borderWidth={1}
+            _dark={{
+              bg: 'backgroundCardDark',
+              borderColor: 'borderColorCardDark'
+            }}
+            borderColor="borderColorCardLight"
+            p={4}
+          >
+            <VStack width={{ base: '100%', md: '75%' }}>
+              <Box
+              >
+                <VStack space={4}>
+                  <Text bold>Refresh Settings</Text>
+                  <InputSelect
+                    options={options}
+                    value={this.state.seconds}
+                    onChange={(v) => onChangeText('seconds', v)}
+                    onChangeText={(v) => onChangeText('seconds', v)}
+                  />
+                </VStack>
+              </Box>
+              <Button colorScheme="primary" rounded="none" onPress={submitRefresh}>
+                Save
+              </Button>
+            </VStack>
+          </Box>
 
           <ModalConfirm
             type={this.state.modalType}
