@@ -68,10 +68,11 @@ var gPluginTemplates = []PluginConfig{
 		Enabled:  true,
 	},
 	{
-		Name:     "dyndns",
-		URI:      "dyndns",
-		UnixPath: "/state/plugins/dyndns/dyndns_plugin",
-		Enabled:  true,
+		Name:            "dyndns",
+		URI:             "dyndns",
+		UnixPath:        "/state/plugins/dyndns/dyndns_plugin",
+		Enabled:         false,
+		ComposeFilePath: "dyndns/docker-compose.yml",
 	},
 	{
 		Name:     "db",
