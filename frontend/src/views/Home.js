@@ -1,14 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react'
-import {
-  Box,
-  Stack,
-  HStack,
-  VStack,
-  ScrollView,
-  useBreakpointValue
-} from 'native-base'
-import { AppContext, alertState } from 'AppContext'
-import { pluginAPI, pfwAPI, wifiAPI, api } from 'api'
+import { Box, VStack, ScrollView } from '@gluestack-ui/themed'
+import { AppContext } from 'AppContext'
+import { pluginAPI, wifiAPI } from 'api'
 
 import {
   WifiClients,
@@ -53,11 +46,6 @@ const Home = (props) => {
       .catch((error) => error)
   }, [])
 
-  const flexDirection = useBreakpointValue({
-    base: 'column',
-    lg: 'row'
-  })
-
   let show = {
     dns: pluginsEnabled.includes('dns-block') && !context.isMeshNode,
     vpn: context.isWifiDisabled,
@@ -66,35 +54,39 @@ const Home = (props) => {
   }
 
   return (
-    <ScrollView>
-      <Stack direction={{ base: 'column', md: 'row' }}>
-        <VStack flex={{ base: 1, md: 2 }} p={2}>
-          <Stack
-            direction={{ base: 'column', md: 'row' }}
-            justifyContent="space-between"
-            space={{ base: 0, md: 4 }}
-          >
-            {show.vpn ? (
-              <>
-                <WireguardPeers flex={1} />
-                <WireguardPeersActive flex={1} />
-              </>
-            ) : (
-              <VStack flex={1}>
-                {interfaces.map((iface) => (
-                  <Stack
-                    direction={{ base: 'column', md: 'row' }}
-                    flex={1}
-                    space={{ base: 2, md: 4 }}
-                    key={iface}
-                  >
-                    <WifiInfo iface={iface} flex={1} />
-                    <WifiClients iface={iface} flex={1} />
-                  </Stack>
-                ))}
-              </VStack>
-            )}
-          </Stack>
+    <ScrollView sx={{ '@md': { h: '100vh' } }}>
+      <Box
+        flexDirection="row"
+        sx={{
+          '@base': { flexDirection: 'column' },
+          '@md': { flexDirection: 'row' }
+        }}
+        space="md"
+        p="$4"
+        gap="$4"
+      >
+        <VStack sx={{ '@md': { flex: 2 } }}>
+          {show.vpn ? (
+            <>
+              <WireguardPeers flex={1} />
+              <WireguardPeersActive flex={1} />
+            </>
+          ) : (
+            <VStack flex={1} space="md">
+              {interfaces.map((iface) => (
+                <Box
+                  flexDirection="column"
+                  space="md"
+                  sx={{ '@md': { flexDirection: 'row', gap: '$4' } }}
+                  flex={1}
+                  key={iface}
+                >
+                  <WifiInfo iface={iface} flex={1} />
+                  <WifiClients iface={iface} flex={1} />
+                </Box>
+              ))}
+            </VStack>
+          )}
 
           <VStack>
             {show.traffic ? <TotalTraffic /> : null}
@@ -112,7 +104,7 @@ const Home = (props) => {
           ) : null}
           {show.vpnSide ? <WireguardPeersActive /> : null}
         </VStack>
-      </Stack>
+      </Box>
     </ScrollView>
   )
 }

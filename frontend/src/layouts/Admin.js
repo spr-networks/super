@@ -402,11 +402,7 @@ const AdminLayout = (props) => {
     >
       <VStack
         safeAreaTop
-        bg={
-          colorMode == 'light'
-            ? 'backgroundContentLight'
-            : 'backgroundContentDark'
-        }
+        bg={colorMode == 'light' ? '$coolGray100' : '$gray900'}
         minH={heightFull}
       >
         {/*desktop*/}
@@ -460,8 +456,8 @@ const AdminLayout = (props) => {
               },
               '@md': { display: 'flex' }
             }}
-            w={isOpenSidebar ? '20' : '64'}
-            h={heightContent}
+            width={isOpenSidebar ? 20 : 260}
+            height={heightContent}
           >
             <Sidebar
               isMobile={false}

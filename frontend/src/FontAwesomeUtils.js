@@ -1,14 +1,9 @@
 import React from 'react'
-import PropTypes from 'prop-types'
 import { FontAwesomeIcon as FontAwesomeIconNative } from '@fortawesome/react-native-fontawesome'
 import { FontAwesomeIcon as FontAwesomeIconReact } from '@fortawesome/react-fontawesome'
-import {
-  solid,
-  regular,
-  brands
-} from '@fortawesome/fontawesome-svg-core/import.macro'
 import { Platform, StyleSheet } from 'react-native'
-import { Icon as IconNb, useToken } from 'native-base'
+//import { Icon as IconNb, useToken } from 'native-base'
+import { Icon as IconNb, useToken } from '@gluestack-ui/themed'
 export * from '@fortawesome/react-native-fontawesome'
 
 import { Svg, Path, Use, G, Symbol } from 'react-native-svg'
@@ -47,9 +42,15 @@ export default function Icon({ color, icon, size, style, ...props }) {
     style.marginLeft = props.ml * 4
   }
 
+  color = color.replace(/^\$/, '').replace(/\./g, '') // amber.400, $amber400 => amber400
+
   const webStyles = StyleSheet.flatten([
     style,
-    { color: useToken('colors', color), width: size, height: size }
+    {
+      color: useToken('colors', color),
+      width: size,
+      height: size
+    }
   ])
 
   /*if (typeof icon === 'string') {

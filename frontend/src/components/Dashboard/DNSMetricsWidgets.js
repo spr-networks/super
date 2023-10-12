@@ -79,7 +79,7 @@ export const DNSBlockMetrics = (props) => {
   return (
     <StatsWidget
       icon={faBan}
-      iconColor="danger.400"
+      iconColor="red400"
       title="Blocked DNS queries"
       text={blockedQueries}
     />
