@@ -15,10 +15,16 @@ if [ -z "$GOT_IMAGE" ]; then
         exit
 fi
 
+export API_URL="http://localhost:8000"
+export AUTH="admin:admin"
+
+echo "~ running tests @ $API_URL"
+
 ID=$(docker run --network host \
 	--privileged \
 	-d \
-	-v $D_TEST/code:/code \
+	-e API_URL="$API_URL" \
+	-e AUTH="$AUTH" \
 	-w /code \
 	--entrypoint=/go.sh \
 	--name $NAME $IMAGE)
