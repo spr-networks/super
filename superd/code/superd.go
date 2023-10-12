@@ -38,6 +38,7 @@ var PlusAddons = "plugins/plus"
 var ComposeAllowList = []string{"docker-compose.yml", "docker-compose-test.yml", "docker-compose-virt.yml",
 	"plugins/plus/pfw_extension/docker-compose.yml",
 	"plugins/plus/mesh_extension/docker-compose.yml",
+	"dyndns/docker-compose.yml",
 	"ppp/docker-compose.yml",
 	"wifi_uplink/docker-compose.yml"}
 
