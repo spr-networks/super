@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
 import { Outlet, useLocation } from 'react-router-dom'
 
@@ -13,19 +13,31 @@ import { ucFirst } from 'utils'
 import {
   Alert,
   AlertDialog,
+  AlertDialogBackdrop,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogCloseButton,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertIcon,
+  AlertText,
   Box,
   Button,
-  Flex,
-  Slide,
-  IconButton,
-  CloseIcon,
-  ScrollView,
+  ButtonGroup,
+  ButtonText,
+  Heading,
   HStack,
+  Icon,
+  InfoIcon,
+  CheckCircleIcon,
+  CloseIcon,
+  Pressable,
   VStack,
-  Text,
-  useColorModeValue,
-  useToast
-} from 'native-base'
+  useColorMode
+} from '@gluestack-ui/themed'
+
+//NOTE Slice transition not available in gluestack-ui
+import { Slide } from 'native-base'
 
 import { routes } from 'routes'
 
@@ -44,37 +56,42 @@ const ConfirmTrafficAlert = (props) => {
       isOpen={showAlert}
       onClose={onPressClose}
     >
-      <AlertDialog.Content>
-        <AlertDialog.CloseButton />
-        <AlertDialog.Header>{title}</AlertDialog.Header>
-        <AlertDialog.Body>{body}</AlertDialog.Body>
-        <AlertDialog.Footer>
-          <Button.Group space={2}>
+      <AlertDialogBackdrop />
+      <AlertDialogContent>
+        <AlertDialogCloseButton>
+          <Icon as={CloseIcon} />
+        </AlertDialogCloseButton>
+        <AlertDialogHeader>
+          <Heading size="lg">{title}</Heading>
+        </AlertDialogHeader>
+        <AlertDialogBody>{body}</AlertDialogBody>
+        <AlertDialogFooter>
+          <ButtonGroup space={2}>
             <Button
               variant="unstyled"
               colorScheme="coolGray"
               onPress={onPressClose}
               ref={cancelRef}
             >
-              Cancel
+              <ButtonText>Cancel</ButtonText>
             </Button>
             <Button
               variant="outline"
               colorScheme="danger"
               onPress={onPressDeny}
             >
-              Deny
+              <ButtonText>Deny</ButtonText>
             </Button>
             <Button
               variant="outline"
               colorScheme="success"
               onPress={onPressAllow}
             >
-              Allow
+              <ButtonText>Allow</ButtonText>
             </Button>
-          </Button.Group>
-        </AlertDialog.Footer>
-      </AlertDialog.Content>
+          </ButtonGroup>
+        </AlertDialogFooter>
+      </AlertDialogContent>
     </AlertDialog>
   )
 }
@@ -82,53 +99,23 @@ const ConfirmTrafficAlert = (props) => {
 const AppAlert = (props) => {
   const { type, title, body, showAlert, toggle } = props
 
+  //CheckCircleIcon
+  //InfoIcon
+  let alertIcon = CheckCircleIcon
+
   return (
-    <Alert
-      w="100%"
-      variant="outline-light"
-      status={type}
-      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-    >
-      <VStack space={2} flexShrink={1} w="100%">
-        <HStack
-          flexShrink={1}
-          space={2}
-          justifyContent="space-between"
-          alignItems="flex-start"
-        >
-          <HStack space={2} flexShrink={1}>
-            <Alert.Icon mt={1} />
-            <VStack space={2} w="100%">
-              <Text
-                fontSize="md"
-                color={useColorModeValue('coolGray.800', 'coolGray.200')}
-                bold
-              >
-                {title}
-              </Text>
-              <Text
-                fontSize="md"
-                color={useColorModeValue('coolGray.800', 'coolGray.200')}
-              >
-                {body}
-              </Text>
-            </VStack>
-          </HStack>
-          <IconButton
-            variant="unstyled"
-            _focus={{
-              borderWidth: 0
-            }}
-            icon={
-              <CloseIcon
-                size={3}
-                color={useColorModeValue('coolGray.600', 'coolGray.400')}
-              />
-            }
-            onPress={toggle}
-          />
-        </HStack>
-      </VStack>
+    <Alert action={type}>
+      <AlertIcon as={alertIcon} size="xl" mr="$3" />
+      <HStack space="md">
+        <VStack space="xs">
+          <AlertText fontWeight="$bold">{title}</AlertText>
+
+          <AlertText>{body}</AlertText>
+        </VStack>
+        <Pressable onPress={toggle}>
+          <Icon as={CloseIcon} />
+        </Pressable>
+      </HStack>
     </Alert>
   )
 }
@@ -205,7 +192,7 @@ const AdminLayout = (props) => {
     mainPanel.current.scrollTop = 0
   }, [location])*/
 
-  const toast = useToast()
+  //const toast = useToast()
 
   let path = location.pathname.replace(/^\/admin\//, '')
   const [activeSidebarItem, setActiveSidebarItem] = useState(path)
@@ -249,7 +236,6 @@ const AdminLayout = (props) => {
           .catch((err) => {
             setIsPlusDisabled(true)
           })
-
       })
 
     api
@@ -396,11 +382,8 @@ const AdminLayout = (props) => {
   let navbarHeight = 64
   let heightFull = Dimensions.get('window').height
   let heightContent = heightFull - navbarHeight
-  /*if (Platform.OS == 'ios') {
-    // statusbar, see https://github.com/GeekyAnts/NativeBase/blob/2af374e586034366dcefce9a0f23983836a7901f/src/components/composites/AppBar/utils.ts#L8
-    heightFull =
-      Dimensions.get('window').height - (Platform.Version < 11 ? 0 : 20)
-  }*/
+
+  const colorMode = useColorMode()
 
   return (
     <AppContext.Provider
@@ -419,17 +402,19 @@ const AdminLayout = (props) => {
     >
       <VStack
         safeAreaTop
-        bg={useColorModeValue(
-          'backgroundContentLight',
-          'backgroundContentDark'
-        )}
+        bg={
+          colorMode == 'light'
+            ? 'backgroundContentLight'
+            : 'backgroundContentDark'
+        }
         minH={heightFull}
       >
         {/*desktop*/}
         <Box
-          display={{ base: 'none', md: 'flex' }}
-          position={{ base: 'absolute', md: 'static' }}
-          w="100%"
+          sx={{
+            '@base': { display: 'none', position: 'absolute' },
+            '@md': { display: 'flex', position: 'static' }
+          }}
           zIndex={99}
           style={{ backdropFilter: 'blur(10px)' }}
         >
@@ -442,9 +427,13 @@ const AdminLayout = (props) => {
         </Box>
         {/*mobile*/}
         <Box
-          display={{ base: 'flex', md: 'none' }}
-          w="100%"
-          position={Platform.OS == 'web' ? 'sticky' : 'static'}
+          sx={{
+            '@base': {
+              display: 'flex',
+              position: Platform.OS == 'web' ? 'sticky' : 'static'
+            },
+            '@md': { display: 'none' }
+          }}
           top={0}
           zIndex={99}
           _style={{ backdropFilter: 'blur(10px)' }}
@@ -465,9 +454,13 @@ const AdminLayout = (props) => {
         >
           {/*desktop*/}
           <Box
-            display={{ base: 'none', md: 'flex' }}
-            __position={{ base: 'absolute', md: 'static' }}
-            w={isOpenSidebar ? 20 : 64}
+            sx={{
+              '@base': {
+                display: 'none'
+              },
+              '@md': { display: 'flex' }
+            }}
+            w={isOpenSidebar ? '20' : '64'}
             h={heightContent}
           >
             <Sidebar
@@ -483,11 +476,16 @@ const AdminLayout = (props) => {
             <Box
               w="100%"
               zIndex={99}
-              display={{ base: 'flex', md: 'none' }}
-              _light={{
-                bg: 'sidebarBackgroundLight'
+              sx={{
+                '@base': {
+                  display: 'flex'
+                },
+                '@md': { display: 'none' },
+                _light: {
+                  bg: 'sidebarBackgroundLight'
+                },
+                _dark: { bg: 'sidebarBackgroundDark' }
               }}
-              _dark={{ bg: 'sidebarBackgroundDark' }}
             >
               <Sidebar
                 isMobile={true}
@@ -512,11 +510,21 @@ const AdminLayout = (props) => {
       <AlertContext.Provider value={alertState}>
         <Slide in={showAlert} placement="top">
           <Box
-            maxWidth={{ base: '100%', md: '90%' }}
-            w={{ base: '100%', md: 'auto' }}
-            mt={16}
+            sx={{
+              '@base': {
+                maxWidth: '100%',
+                w: '100%'
+              },
+              '@md': {
+                minWidth: '$1/4',
+                maxWidth: '90%',
+                w: 'auto'
+              }
+            }}
+            mt="$16"
             flexWrap="wrap"
-            position="static"
+            position="fixed"
+            top="20"
             alignItems="center"
             justifyContent="center"
             alignSelf="center"
@@ -529,6 +537,7 @@ const AdminLayout = (props) => {
             />
           </Box>
         </Slide>
+
         <ConfirmTrafficAlert
           title={confirmAlert.title}
           body={confirmAlert.body}

@@ -1,26 +1,31 @@
 import React, { useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { saveLogin, testLogin, getApiURL, setApiURL, getApiHostname } from 'api'
+import { saveLogin, testLogin, setApiURL, getApiHostname } from 'api'
 import { useNavigate } from 'react-router-dom'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faKey, faServer, faUser } from '@fortawesome/free-solid-svg-icons'
-import Icon from 'FontAwesomeUtils'
+
 import { api } from 'api'
 
 import {
   Box,
   Button,
-  Center,
-  Text,
-  View,
-  Heading,
-  HStack,
-  VStack,
+  ButtonText,
   FormControl,
+  FormControlError,
+  FormControlErrorIcon,
+  FormControlErrorText,
   Input,
-  useColorModeValue
-} from 'native-base'
+  InputField,
+  InputIcon,
+  InputSlot,
+  Heading,
+  View,
+  VStack,
+  useColorMode,
+  GlobeIcon,
+  LockIcon,
+  AlertCircleIcon
+} from '@gluestack-ui/themed'
 
 const Login = (props) => {
   const navigate = useNavigate()
@@ -83,100 +88,99 @@ const Login = (props) => {
     })
   }, [])
 
+  const colorMode = useColorMode()
+
   return (
-    <View w="100%" alignItems="center" pt={{ base: '1/4', md: '0' }}>
-      <Box
-        safeArea
-        px={4}
-        py={8}
-        w="90%"
-        maxW={360}
-        bg={useColorModeValue('white', 'blueGray.900')}
-        rounded={10}
-        shadow={2}
-      >
+    <Box
+      px="$4"
+      py="$8"
+      sx={{
+        '@base': { w: 'full', mt: '$1/4' },
+        '@md': { w: '$1/4', mt: '$0', alignSelf: 'center', rounded: 10 }
+      }}
+      bg={colorMode === 'light' ? 'white' : 'blueGray.900'}
+      shadow={2}
+    >
+      <VStack space="lg">
         <Heading
+          alignSelf="center"
           size="lg"
           fontWeight="300"
-          color="coolGray.800"
-          _dark={{
-            color: 'warmGray.50'
+          color="$coolGray800"
+          sx={{
+            _dark: {
+              color: '$warmGray50'
+            }
           }}
-          alignSelf="center"
         >
           Login
         </Heading>
-        <VStack space={4} mt={12}>
-          <FormControl
-            display={{ base: Platform.OS === 'web' ? 'none' : 'flex' }}
-          >
-            <Input
-              type="text"
+        <FormControl
+          sx={{
+            '@base': { display: Platform.OS === 'web' ? 'none' : 'flex' }
+          }}
+        >
+          <Input>
+            <InputField
               value={hostname}
-              autoCapitalize="none"
-              variant="outline"
-              size="md"
-              InputLeftElement={
-                <Icon icon={faServer} size={4} ml={2} color="muted.400" />
-              }
-              placeholder="Hostname..."
               onChangeText={(value) => setHostname(value)}
-            />
-          </FormControl>
-          <FormControl>
-            {/*<FormControl.Label>Username</FormControl.Label>*/}
-            <Input
               type="text"
-              value={username}
+              placeholder="Hostname"
               autoCapitalize="none"
-              variant="outline"
-              size="md"
-              InputLeftElement={
-                <Icon icon={faUser} size={4} ml={2} color="muted.400" />
-              }
-              placeholder="Username..."
-              onChangeText={(value) => setUsername(value)}
             />
-          </FormControl>
-          <FormControl isInvalid={'login' in errors}>
-            {/*<FormControl.Label>Password</FormControl.Label>*/}
-            <Input
-              type="password"
+            <InputSlot pr="$3">
+              <InputIcon as={GlobeIcon} color="$muted.400" />
+            </InputSlot>
+          </Input>
+        </FormControl>
+
+        <FormControl>
+          <Input>
+            <InputField
+              value={username}
+              onChangeText={(value) => setUsername(value)}
+              type="text"
+              placeholder="Username"
+              autoCapitalize="none"
+            />
+          </Input>
+        </FormControl>
+
+        <FormControl isInvalid={'login' in errors}>
+          <Input>
+            <InputField
               value={password}
-              variant="outline"
-              size="md"
-              InputLeftElement={
-                <Icon icon={faKey} size={4} ml={2} color="muted.400" />
-              }
-              placeholder="Password"
               onChangeText={(value) => setPassword(value)}
               onSubmitEditing={handleLogin}
+              type="password"
+              placeholder="Password"
             />
-            {'login' in errors ? (
-              <FormControl.ErrorMessage
-                _text={{
-                  fontSize: 'xs'
-                }}
-              >
-                Invalid Password
-              </FormControl.ErrorMessage>
-            ) : null}
-          </FormControl>
-          <Button
-            mt={8}
-            rounded="full"
-            colorScheme="yellow"
-            bg="#fbc658"
-            _hover={{
+            <InputSlot pr="$3">
+              <InputIcon as={LockIcon} color="$muted.400" />
+            </InputSlot>
+          </Input>
+          {'login' in errors ? (
+            <FormControlError>
+              <FormControlErrorIcon as={AlertCircleIcon} />
+              <FormControlErrorText>Invalid Password</FormControlErrorText>
+            </FormControlError>
+          ) : null}
+        </FormControl>
+        <Button
+          rounded="full"
+          colorScheme="yellow"
+          bg="#fbc658"
+          sx={{
+            ':hover': {
               bg: '#fab526'
-            }}
-            onPress={handleLogin}
-          >
-            Login
-          </Button>
-        </VStack>
-      </Box>
-    </View>
+            }
+          }}
+          onPress={handleLogin}
+        >
+          <ButtonText>Login</ButtonText>
+        </Button>
+      </VStack>
+    </Box>
   )
 }
 

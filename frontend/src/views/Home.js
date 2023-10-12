@@ -7,7 +7,7 @@ import {
   ScrollView,
   useBreakpointValue
 } from 'native-base'
-import { AppContext } from 'AppContext'
+import { AppContext, alertState } from 'AppContext'
 import { pluginAPI, pfwAPI, wifiAPI, api } from 'api'
 
 import {
