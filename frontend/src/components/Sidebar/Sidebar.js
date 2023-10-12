@@ -163,7 +163,8 @@ const SidebarItem = (props) => {
       'MESH',
       'System',
       'Plugins',
-      'System Info'
+      'System Info',
+      'Signal Strength'
     ]
 
     if (isMeshNode && !meshItems.includes(item.name)) {
