@@ -20,6 +20,8 @@ export default class DNSAddOverride extends React.Component {
 
   expirationOptions = [
     {label: 'Never', value: 0},
+    {label: '5 Minutes', value: 60*5},
+    {label: '30 Minutes', value: 60*30},
     {label: '1 Hour', value: 60*60},
     {label: '1 Day', value: 60*60*24},
     {label: '1 Week', value: 60*60*24*7},
