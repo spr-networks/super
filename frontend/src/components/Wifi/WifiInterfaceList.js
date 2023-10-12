@@ -32,9 +32,10 @@ import {
 import { FlashList } from '@shopify/flash-list'
 
 const WifiInterface = ({ iw, ...props }) => {
-  const [activeTab, setActiveTab] = useState('devices')
+  const [activeTab, setActiveTab] = useState('SPR compatibility')
 
   let tabList = [
+    'SPR compatibility',
     'devices',
     'supported_interface_modes',
     'supported_commands',
@@ -43,7 +44,6 @@ const WifiInterface = ({ iw, ...props }) => {
     'device_supports',
     'bands',
     'other',
-    'SPR compability'
   ]
 
   /*const toggleIfaceState = (iface, state) => {
@@ -109,7 +109,7 @@ const WifiInterface = ({ iw, ...props }) => {
           borderRightColor={useColorModeValue('muted.200', 'muted.700')}
         >
           {tabList.map((tab) =>
-            iw[tab] || ['other', 'SPR compability'].includes(tab) ? (
+            iw[tab] || ['other', 'SPR compatibility'].includes(tab) ? (
               <Button
                 key={tab}
                 variant="ghost"
@@ -129,7 +129,7 @@ const WifiInterface = ({ iw, ...props }) => {
 
         <Box h="100%" p={2} w={{ md: '2/3' }}>
           {tabList.map((tab) =>
-            iw[tab] || ['other', 'SPR compability'].includes(tab) ? (
+            iw[tab] || ['other', 'SPR compatibility'].includes(tab) ? (
               <VStack key={tab} display={activeTab == tab ? 'flex' : 'none'}>
                 {tab == 'devices' ? (
                   <>
@@ -257,9 +257,9 @@ const WifiInterface = ({ iw, ...props }) => {
                       </VStack>
                     ) : null}
 
-                    {tab == 'SPR compability' ? (
+                    {tab == 'SPR compatibility' ? (
                       <VStack space={2}>
-                        <Text bold>SPR compability for {iw.wiphy}</Text>
+                        <Text bold>SPR compatibility for {iw.wiphy}</Text>
 
                         <HStack space={4} alignItems="center">
                           <Icon

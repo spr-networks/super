@@ -63,7 +63,7 @@ if [ ! -f configs/dhcp/coredhcp.yml ]; then
 fi
 
 mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
-touch /lib/udev/rules.d/80-net-setup-link.rules
+ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules
 
 # update sshd config to allow password login
 sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config

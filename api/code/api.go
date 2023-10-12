@@ -36,6 +36,7 @@ var SetupDonePath = TEST_PREFIX + "/configs/base/.setup_done"
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
 var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
+var PublicIfaceMapFile = TEST_PREFIX + "/state/public/ip-iface-map.json"
 var ConfigBackupDirectory = TEST_PREFIX + "/state/backups"
 
 var GroupsConfigFile = DevicesConfigPath + "groups.json"
@@ -139,10 +140,9 @@ func loadConfig() {
 		}
 	}
 
-	before := len(config.Plugins)
-	updateConfigPluginDefaults(&config)
+	update := updateConfigPluginDefaults(&config)
 
-	if len(config.Plugins) != before {
+	if update {
 		saveConfigLocked()
 	}
 
@@ -2533,6 +2533,7 @@ func main() {
 	//ip information
 	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")
 	external_router_authenticated.HandleFunc("/ip/link/{interface}/{state}", ipLinkUpDown).Methods("PUT")
+	external_router_authenticated.HandleFunc("/ip/interfaces", ipIfaceMappings).Methods("GET")
 
 	//uplink management
 	external_router_authenticated.HandleFunc("/interfacesConfiguration", getInterfacesConfiguration).Methods("GET")

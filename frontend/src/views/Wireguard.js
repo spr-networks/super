@@ -60,7 +60,9 @@ const Wireguard = (props) => {
     getStatus()
 
     wireguardAPI.getEndpoints().then(endpoints => {
-      setEndpoints(endpoints)
+      if (endpoints) {
+        setEndpoints(endpoints)
+      }
     })
 
   }, [])
@@ -80,7 +82,7 @@ const Wireguard = (props) => {
   }
 
   const updateNewDomain = () => {
-    let s = endpoints.concat(pendingEndpoint)
+    let s = endpoints ? endpoints.concat(pendingEndpoint) : [pendingEndpoint];
     setPendingEndpoint("")
     setShowInput(false)
     setEndpoints(s)

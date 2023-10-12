@@ -34,7 +34,8 @@
    "Name": "dyndns",
    "URI": "dyndns",
    "UnixPath": "/state/plugins/dyndns/dyndns_plugin",
-   "Enabled": false
+   "Enabled": false,
+   "ComposeFilePath": "dyndns/docker-compose.yml"
   },
   {
    "Name": "db",
@@ -43,14 +44,14 @@
    "Enabled": true
   },
   {
-    Name: "PPP",
-    Enabled: false,
-    ComposeFilePath: "ppp/docker-compose.yml"
+    "Name": "PPP",
+    "Enabled": false,
+    "ComposeFilePath": "ppp/docker-compose.yml"
   },
   {
-    Name: "WIFIUPLINK",
-    Enabled: false,
-    ComposeFilePath: "wifi_uplink/docker-compose.yml"
+    "Name": "WIFIUPLINK",
+    "Enabled": false,
+    "ComposeFilePath": "wifi_uplink/docker-compose.yml"
   }
  ]
 }

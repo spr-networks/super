@@ -77,7 +77,7 @@ const AdminNavbar = ({
             onPress={() => setIsOpenSidebar(!isOpenSidebar)}
           />
 
-          <Text fontSize="lg" bold>
+          <Text fontSize="lg" bold onPress={() => navigate('/admin/home')}>
             SPR
           </Text>
           {isMeshNode ? <Text fontSize="lg">MESH</Text> : null}
@@ -86,7 +86,7 @@ const AdminNavbar = ({
             {version}
           </Text>
 
-          <HStack marginLeft="auto" space="4">
+          <HStack marginLeft="auto" space={4}>
             <Link
               p={4}
               isExternal

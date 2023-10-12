@@ -1,7 +1,7 @@
-FROM ubuntu:22.04 as builder
+FROM ubuntu:23.04 as builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends nftables iproute2 netcat inetutils-ping net-tools nano ca-certificates git curl
+RUN apt-get install -y --no-install-recommends nftables iproute2 netcat-traditional inetutils-ping net-tools nano ca-certificates git curl
 RUN apt-get install -y --no-install-recommends clang
 RUN apt-get install -y pkg-config gcc llvm m4 emacs libpcap-dev libelf-dev make libnl-genl-3-dev libssl-dev
 RUN mkdir /code
@@ -16,8 +16,8 @@ WORKDIR /code
 RUN clang -O3 -target bpf -D __BPF_TRACING__ -I xdp-tools/headers/ -I xdp-tools/lib/libbpf/src/root/usr/include/ -c filter_dhcp_mismatch.c
 
 ARG TARGETARCH
-RUN curl -O https://dl.google.com/go/go1.17.linux-${TARGETARCH}.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.linux-${TARGETARCH}.tar.gz
+RUN curl -O https://dl.google.com/go/go1.20.linux-${TARGETARCH}.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.20.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 COPY code/main.go /code/
 ARG USE_TMPFS=true

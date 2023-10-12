@@ -98,7 +98,7 @@ const MDNSAdvertise = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" py={4}>
+      <HStack justifyContent="space-between" alignItems="center" p={4}>
         <VStack maxW="60%">
           <Heading fontSize="md" isTruncated>
             Multicast Settings
@@ -158,20 +158,26 @@ const MDNSAdvertise = (props) => {
           borderColor="borderColorCardLight"
           p={4}
         >
-          <HStack
+          <Stack
+            direction={{ base: 'column', md: 'row' }}
             space={4}
-            justifyContent="space-between"
-            alignContent="center"
+            _justifyContent="stretch"
+            alignItems={{ base: 'none', md: 'center' }}
           >
-            <VStack flex={1}>
+            <VStack maxW={{ md: '1/2' }} space={2}>
               <Text bold>mDNS Name</Text>
-              <Text color="muted.500" isTruncated>
+              <Text color="muted.500" flexWrap={'wrap'}>
                 Defaults to 'spr.local'. Set the name without the .local part or
                 leave empty to use hostname
               </Text>
             </VStack>
-            <Input value={config.MDNSName} onChangeText={onChangeText} />
-          </HStack>
+            <Input
+              flex={1}
+              value={config.MDNSName}
+              onChangeText={onChangeText}
+              placeholder="spr"
+            />
+          </Stack>
         </Box>
         <Button rounded="none" colorScheme="primary" onPress={submitSettings}>
           Save Multicast settings

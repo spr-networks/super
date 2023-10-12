@@ -69,7 +69,7 @@ const BlockList = (props) => {
         </ModalForm>
       </HStack>
 
-      <Box px={4} mb={4}>
+      <Box px={{ base: 0, md: 4 }}>
         <FlatList
           data={list}
           renderItem={({ item }) => (
@@ -109,7 +109,7 @@ const BlockList = (props) => {
 
         <VStack>
           {!list.length ? (
-            <Text flexWrap="wrap">
+            <Text px={{ base: 4, md: 0 }} mb={4} flexWrap="wrap">
               Block inbound WAN traffic from reaching a private IP address on
               the LAN.
             </Text>
@@ -121,7 +121,6 @@ const BlockList = (props) => {
             rounded="none"
             leftIcon={<Icon icon={faCirclePlus} />}
             onPress={() => refModal.current()}
-            mt={4}
           >
             Add IP Block
           </Button>

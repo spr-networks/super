@@ -4,7 +4,7 @@ import { wifiAPI, deviceAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import { prettySignal } from 'utils'
 
-import { Box, Stack, HStack, Text, useColorModeValue } from 'native-base'
+import { Box, Stack, HStack, Text, Tooltip, useColorModeValue } from 'native-base'
 
 import { FlashList } from '@shopify/flash-list'
 
@@ -70,10 +70,22 @@ const WifiClients = (props) => {
         client.Auth = akmSuiteAuth(station.AKMSuiteSelector)
         client.Signal = station.signal
         client.Iface = station.Iface
+        client.TXRate = station.tx_rate_info
         return client
       })
-
       setClients(clients)
+    }
+  }
+
+  const getWifiSpeedString = (txrate) => {
+    if (txrate.includes(' he')) {
+      return '802.11ax'
+    } else if (txrate.includes( 'vht')) {
+      return '802.11ac'
+    } else if (txrate.includes( 'ht')) {
+      return '802.11n'
+    } else {
+      return '802.11a/b/g'
     }
   }
 
@@ -134,8 +146,13 @@ const WifiClients = (props) => {
               space={2}
               alignSelf="center"
               marginLeft="auto"
-              flex={1}
+              flex={2}
             >
+              <HStack space={1} alignItems="center">
+                <Tooltip label={item.TXRate}>
+                  <Text>{getWifiSpeedString(item.TXRate)}</Text>
+                </Tooltip>
+              </HStack>
               <HStack space={1} alignItems="center">
                 <Text color="muted.400">Signal</Text>
                 {prettySignal(item.Signal)}

@@ -9,5 +9,9 @@ RUN apt-get update && apt-get install -y \
 RUN npm install n -g && \
     n latest
 
+COPY code /code
+WORKDIR /code
+RUN npm install
+
 COPY go.sh /
 ENTRYPOINT ["/go.sh"]

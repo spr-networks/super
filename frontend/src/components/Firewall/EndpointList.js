@@ -182,7 +182,7 @@ const EndpointList = (props) => {
         </ModalForm>
       </HStack>
 
-      <Box px={4} mb={4}>
+      <Box px={{ base: 0, md: 4 }}>
         <FlatList
           data={list}
           renderItem={({ item }) => (
@@ -207,7 +207,9 @@ const EndpointList = (props) => {
 
                 <Icon color="muted.400" icon={faArrowRightLong} />
 
-                <Badge variant="outline">{item.Protocol}</Badge>
+                <Box alignItems="center">
+                  <Badge variant="outline">{item.Protocol}</Badge>
+                </Box>
 
                 <HStack space={1}>
                   <Text bold>
@@ -218,9 +220,16 @@ const EndpointList = (props) => {
                   <Text>{item.Port}</Text>
                 </HStack>
 
-                {item.Tags
-                  ? item.Tags.map((tag) => <TagItem key={tag} name={tag} />)
-                  : null}
+                <Box
+                  display={{
+                    base: 'none',
+                    md: item.Tags?.length ? 'flex' : 'none'
+                  }}
+                >
+                  {item.Tags
+                    ? item.Tags.map((tag) => <TagItem key={tag} name={tag} />)
+                    : null}
+                </Box>
 
                 {moreMenu(item)}
               </HStack>
@@ -238,7 +247,7 @@ const EndpointList = (props) => {
 
         <VStack>
           {!list.length ? (
-            <Text flexWrap="wrap">
+            <Text px={{ base: 4, md: 0 }} mb={4} flexWrap="wrap">
               Service Endpoints serves as helpers for creating other firewall
               rules, as well as one-way connectivity from devices to the
               endpoint when they share a tag.
@@ -251,7 +260,6 @@ const EndpointList = (props) => {
             rounded="none"
             leftIcon={<Icon icon={faCirclePlus} />}
             onPress={() => refModal.current()}
-            mt={4}
           >
             Add Endpoint
           </Button>

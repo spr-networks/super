@@ -5,8 +5,8 @@ go 1.17
 require (
 	github.com/pion/mdns v0.0.9
 	github.com/vishvananda/netlink v1.1.0
-	golang.org/x/net v0.15.0
-	golang.org/x/sys v0.12.0
+	golang.org/x/net v0.17.0
+	golang.org/x/sys v0.13.0
 )
 
 require (

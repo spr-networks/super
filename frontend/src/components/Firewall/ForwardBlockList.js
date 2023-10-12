@@ -69,7 +69,7 @@ const ForwardBlockList = (props) => {
         </ModalForm>
       </HStack>
 
-      <Box px={4} mb={4}>
+      <Box px={{ base: 0, md: 4 }}>
         <FlatList
           data={list}
           renderItem={({ item }) => (
@@ -110,7 +110,7 @@ const ForwardBlockList = (props) => {
 
         <VStack>
           {!list.length ? (
-            <Text flexWrap="wrap">
+            <Text px={{ base: 4, md: 0 }} mb={4} flexWrap="wrap">
               Control forward and block rules on the LAN.
             </Text>
           ) : null}
@@ -121,7 +121,6 @@ const ForwardBlockList = (props) => {
             rounded="none"
             leftIcon={<Icon icon={faCirclePlus} />}
             onPress={() => refModal.current()}
-            mt={4}
           >
             Add Forwarding Block
           </Button>

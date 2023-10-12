@@ -91,6 +91,9 @@ type FirewallConfig struct {
 var FirewallConfigFile = TEST_PREFIX + "/configs/base/firewall.json"
 var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []ForwardingBlockRule{}, []ServicePort{}, []Endpoint{}, []MulticastPort{}, false, false}
 
+// IP -> Iface map
+var gIfaceMap = map[string]string{}
+
 var WireguardSocketPath = TEST_PREFIX + "/state/plugins/wireguard/wireguard_plugin"
 
 var DEVICE_TAG_PERMIT_PRIVATE_UPSTREAM_ACCESS = "lan_upstream"
@@ -960,6 +963,30 @@ func applyPingRules() {
 		//during set up mode override and do ping wan / lan regardless.
 		pingWan = true
 		pingLan = true
+	}
+
+	if len(interfaces) == 0 {
+		//interfaces not ready to go.
+
+		if pingWan {
+			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
+				"{", "0.0.0.0/0", ".", os.Getenv("WANIF"), ":", "accept", "}")
+			err = cmd.Run()
+			if err != nil {
+				fmt.Println("[-] Ping rule failed to add", err)
+			}
+		}
+
+		if pingLan {
+			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
+				"{", "0.0.0.0/0", ".", os.Getenv("LANIF"), ":", "accept", "}")
+			err = cmd.Run()
+			if err != nil {
+				fmt.Println("[-] Ping rule failed to add", err)
+			}
+		}
+
+		return
 	}
 
 	for _, iface := range interfaces {
@@ -2027,6 +2054,39 @@ func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
 
 }
 
+func stringMapsAreEqual(map1, map2 map[string]string) bool {
+	if len(map1) != len(map2) {
+		return false
+	}
+
+	for key, value1 := range map1 {
+		value2, ok := map2[key]
+		if !ok || value1 != value2 {
+			return false
+		}
+	}
+	return true
+}
+
+/*
+SPR provides an up to date mapping between IP Addresses and Interfaces
+in this file. This allows looking up devices by IP to get an interface name.
+
+The multicast proxy depends on this for applying tags to broadcasts.
+*/
+func updateIfaceMap(ifaceMap map[string]string) {
+	file, _ := json.MarshalIndent(ifaceMap, "", " ")
+	err := ioutil.WriteFile(PublicIfaceMapFile, file, 0600)
+	if err != nil {
+		gIfaceMap = ifaceMap
+	}
+}
+
+func ipIfaceMappings(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(gIfaceMap)
+}
+
 func establishDevice(entry DeviceEntry, new_iface string, established_route_device string, routeIP string, router string) {
 
 	log.Println("flushing route and vmaps ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
@@ -2132,6 +2192,10 @@ func dynamicRouteLoop() {
 				}
 			}
 
+			//PublicIfaceMapFile
+
+			newIfaceMap := map[string]string{}
+
 			//now get the existing route and make an update if needed
 			for ident, entry := range devices {
 				//no IP yet for this device -> no route, skip this entry
@@ -2149,14 +2213,18 @@ func dynamicRouteLoop() {
 					new_iface, exists = suggested_device[entry.RecentIP]
 				}
 
+				//update the iface map with the designated interface
+				newIfaceMap[entry.RecentIP] = new_iface
+
 				if !exists {
-					if lanif != "" {
+					if lanif != "" && !isWifiDevice(entry) {
 						//no new_iface and a LAN interface is set, use that.
 						if lanif_vlan_trunk == false || entry.VLANTag == "" {
 							new_iface = lanif
 						} else {
 							new_iface = lanif + "." + entry.VLANTag
 						}
+						newIfaceMap[entry.RecentIP] = new_iface
 					} else {
 						// disconnected devices will have empty new_iface, skip
 						continue
@@ -2187,6 +2255,13 @@ func dynamicRouteLoop() {
 
 				establishDevice(entry, new_iface, established_route_device, routeIPString, routerIP)
 			}
+
+			//all devices processed, now update the iface mapping
+			//newIfaceMap[entry.RecentIP] = new_iface
+			if !stringMapsAreEqual(newIfaceMap, gIfaceMap) {
+				updateIfaceMap(newIfaceMap)
+			}
+
 		}
 	}
 }

@@ -12,6 +12,7 @@ export class APIDNSBlock extends API {
   putOverride(data) { return this.put('/override', data) }
   deleteOverride(data) { return this.delete('/override', data) }
   metrics(){ return this.get('/metrics') }
+  setRefresh(seconds) { return this.put(`/setRefresh?seconds=${seconds}`);  }
 }
 
 export class APIDNSLog extends API {
@@ -48,6 +49,7 @@ export class APIDNSLog extends API {
   deleteHistory(ip) {
     return this.delete(`/history/${ip}`);
   }
+
 }
 
 export const blockAPI = new APIDNSBlock()

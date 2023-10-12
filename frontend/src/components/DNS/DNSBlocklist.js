@@ -17,6 +17,7 @@ import ModalConfirm from 'components/ModalConfirm'
 import {
   Badge,
   Box,
+  Button,
   FlatList,
   Heading,
   IconButton,
@@ -25,8 +26,11 @@ import {
   HStack,
   Spinner,
   Text,
+  VStack,
   useColorModeValue
 } from 'native-base'
+
+import InputSelect from 'components/InputSelect'
 
 import { FlashList } from '@shopify/flash-list'
 
@@ -38,7 +42,8 @@ export default class DNSBlocklist extends React.Component {
     showModal: false,
     modalType: '',
     pendingItem: {},
-    showURI: true
+    showURI: true,
+    seconds: 'Weekly',
   }
 
   constructor(props) {
@@ -49,33 +54,43 @@ export default class DNSBlocklist extends React.Component {
 
     this.recommendedListDefault = [
       {
+        Info: 'Steven Black\'s Adware & Malware block list',
         URI: 'https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts'
       },
       {
+        Info: 'BlockList Project Ads',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/ads.txt'
       },
       {
+        Info: 'BlockList Project Facebook and related services',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/facebook.txt'
       },
       {
+        Info: 'BlockList Project Twitter and related services',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/twitter.txt'
       },
       {
+        Info: 'BlockList Project Malware List',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/malware.txt'
       },
       {
+        Info: 'BlockList Project Pornography List',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/porn.txt'
       },
       {
+        Info: 'BlockList Project Redirect List, often used with spam',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/redirect.txt'
       },
       {
+        Info: 'BlockList Project Tracker List for sites that track and gather visitor information',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/tracking.txt'
       },
       {
+        Info: 'BlockList Project Youtube domains',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt'
       },
       {
+        Info: 'BlockList Project Everything list',
         URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/everything.txt'
       }
     ]
@@ -106,6 +121,27 @@ export default class DNSBlocklist extends React.Component {
   refreshBlocklists() {
     let list = []
 
+    const optMap = {
+      'Weekly': 24*7*60*60,
+      'Daily': 24*60*60,
+      'Four Hours': 24*60*60*4,
+      'Hourly': 60*60
+    }
+
+    blockAPI
+      .config()
+      .then((config) => {
+        if (config != null) {
+          if (config.RefreshSeconds != 0) {
+            for (let opt of Object.keys(optMap)) {
+              if (optMap[opt] == config.RefreshSeconds) {
+                this.setState({seconds: opt})
+              }
+            }
+          }
+        }
+      })
+
     blockAPI
       .blocklists()
       .then((blocklist) => {
@@ -116,6 +152,15 @@ export default class DNSBlocklist extends React.Component {
         let recommendedList = this.recommendedListDefault.filter((_item) => {
           return !list.map((listitem) => listitem.URI).includes(_item.URI)
         })
+
+        //for every entry in list see if theres an annotation from rec default to set
+        for (let entry of list) {
+          for (let rec of this.recommendedListDefault) {
+            if (entry.URI == rec.URI) {
+              entry.Info = rec.Info
+            }
+          }
+        }
 
         this.setState({ list })
         this.setState({ pending: false })
@@ -249,6 +294,39 @@ export default class DNSBlocklist extends React.Component {
       this.setState({ showURI: !this.state.showURI })
     }
 
+    const onChangeText = (what, value) => {
+      if (what == 'seconds') {
+        this.setState({seconds: value})
+      }
+    }
+
+    const submitRefresh = (value) => {
+
+      const optMap = {
+        'Weekly': 24*7*60*60,
+        'Daily': 24*60*60,
+        'Four Hours': 24*60*60*4,
+        'Hourly': 60*60
+      }
+
+      blockAPI.setRefresh(optMap[value]).then(
+        () => {
+          this.context.success('Updated DNS Blocklist Refresh Frequency')
+        },
+        (e) => {
+          this.context.error('API Failure: ' + e.message)
+        }
+      )
+    }
+
+
+    const options = [
+      { label: 'Weekly', value: 'Weekly' },
+      { label: 'Daily', value: 'Daily' },
+      { label: 'Four Hours', value: 'Four Hours' },
+      { label: 'Hourly', value: 'Hourly'}
+    ] //[{ label: t, value: { Tag: t } }]
+
     return (
       <>
         <HStack justifyContent="space-between" alignItems="center" p={4}>
@@ -298,19 +376,25 @@ export default class DNSBlocklist extends React.Component {
                   justifyContent="space-between"
                   alignItems="center"
                 >
-                  <Text
-                    w={{ base: '60%', md: '75%' }}
-                    flexWrap="wrap"
+                <VStack
+                  w={{ base: '60%', md: '75%' }}
+                  flexWrap="wrap"
+                  onPress={toggleShowURI}
+                  >
+                    <Text color="muted.500" isTruncated>
+                      {item.Info}
+                    </Text>
+                    <Text
                     _light={{
                       color: isOnlyRecommended(item) ? 'muted.500' : 'black'
                     }}
                     _dark={{
                       color: isOnlyRecommended(item) ? 'muted.500' : 'white'
                     }}
-                    onPress={toggleShowURI}
-                  >
-                    {niceURI(item.URI)}
-                  </Text>
+                    >
+                      {niceURI(item.URI)}
+                    </Text>
+                  </VStack>
 
                   <Stack
                     flex={2}
@@ -404,6 +488,35 @@ export default class DNSBlocklist extends React.Component {
             )}
             keyExtractor={(item) => item.URI}
           />
+
+          <Box
+            bg="backgroundCardLight"
+            borderWidth={1}
+            _dark={{
+              bg: 'backgroundCardDark',
+              borderColor: 'borderColorCardDark'
+            }}
+            borderColor="borderColorCardLight"
+            p={4}
+          >
+            <VStack width={{ base: '100%', md: '75%' }}>
+              <Box
+              >
+                <VStack space={4}>
+                  <Text bold>Refresh Frequency</Text>
+                  <InputSelect
+                    options={options}
+                    value={this.state.seconds}
+                    onChange={(v) => onChangeText('seconds', v)}
+                    onChangeText={(v) => onChangeText('seconds', v)}
+                  />
+                </VStack>
+              </Box>
+              <Button colorScheme="primary" rounded="none" onPress={submitRefresh}>
+                Save
+              </Button>
+            </VStack>
+          </Box>
 
           <ModalConfirm
             type={this.state.modalType}
