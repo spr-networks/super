@@ -1,55 +1,55 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { StyleSheet } from 'react-native'
-import { Box, Stack, Link, Text } from 'native-base'
+import { HStack, Link, LinkText, Text } from '@gluestack-ui/themed'
 
 function Footer(props) {
-  let color = props.color || 'muted.600'
+  let color = props.color || '$muted600'
   let _text = props.color
     ? {
         color,
-        style: styles.text
+        fontWeight: '300',
+        size: 'xs',
+        textShadow: '1px 1px 0px #222'
       }
     : {}
 
   return (
-    <Stack
-      direction="row"
-      space={2}
-      py={4}
+    <HStack
+      space="sm"
+      p="$4"
       display={{ base: 'none', md: 'flex' }}
-      justifyContent="flex-end"
+      alignItems="center"
       {...props}
     >
-      <Link _text={_text} isExternal href="https://www.supernetworks.org/">
-        Supernetworks
+      <Link sx={{ _text }} isExternal href="https://www.supernetworks.org/">
+        <LinkText>Supernetworks</LinkText>
       </Link>
       <Link
-        _text={_text}
+        sx={{ _text }}
         isExternal
         href="https://www.supernetworks.org/pages/blog"
       >
-        Blog
+        <LinkText>Blog</LinkText>
       </Link>
       <Link
-        _text={_text}
+        sx={{ _text }}
         isExternal
         href="https://www.supernetworks.org/pages/docs/intro"
       >
-        Documentation
+        <LinkText>Documentation</LinkText>
       </Link>
       <Link
-        _text={_text}
+        sx={{ _text }}
         isExternal
         href="https://github.com/spr-networks/super"
       >
-        Github
+        <LinkText>Github</LinkText>
       </Link>
 
-      <Text color={color} style={_text.style} w={100} marginLeft={0}>
+      <Text {..._text} size="md">
         &copy; {1900 + new Date().getYear()} SPR
       </Text>
-    </Stack>
+    </HStack>
   )
 }
 
@@ -60,11 +60,3 @@ Footer.propTypes = {
 }
 
 export default Footer
-
-const styles = StyleSheet.create({
-  text: {
-    fontWeight: 200,
-    textDecorationStyle: 'none',
-    textShadow: '1px 1px 0px #222'
-  }
-})
