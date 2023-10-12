@@ -1004,7 +1004,7 @@ func applyPingRules() {
 			if err != nil {
 				fmt.Println("[-] Ping rule failed to add", err)
 			}
-		} else if iface.Type == "DownLink" && pingLan {
+		} else if iface.Type == "Downlink" && pingLan {
 			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
 				"{", "0.0.0.0/0", ".", iface.Name, ":", "accept", "}")
 			_, err = cmd.Output()
