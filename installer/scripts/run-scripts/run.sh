@@ -5,6 +5,12 @@ set -a
 
 . /spr-environment.sh
 
+shopt -s expand_aliases
+if ! which docker-compose > /dev/null 2>&1; then
+    # Set an alias for docker-compose if it's missing
+    alias docker-compose='docker compose'
+fi
+
 # Work-around for USB bug with Ubuntu & TP-Link adapters
 if grep --quiet Raspberry /proc/cpuinfo; then
   # Reset the bus for TP-Link adapter
@@ -28,4 +34,3 @@ if [ "$ret" -ne "0" ]; then
    docker-compose -f $COMPOSE_FILE pull
    docker-compose -f $COMPOSE_FILE up -d
 fi
-
