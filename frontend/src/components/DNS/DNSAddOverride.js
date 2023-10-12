@@ -3,6 +3,8 @@ import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 import ClientSelect from 'components/ClientSelect'
+import { format as timeAgo } from 'timeago.js'
+import InputSelect from 'components/InputSelect'
 
 import { Button, FormControl, Input, VStack } from 'native-base'
 
@@ -15,6 +17,13 @@ export default class DNSAddOverride extends React.Component {
     Expiration: 0,
     check: {}
   }
+
+  expirationOptions = [
+    {label: 'Never', value: 0},
+    {label: '1 Hour', value: 60*60},
+    {label: '1 Day', value: 60*60*24},
+    {label: '1 Week', value: 60*60*24*7},
+  ]
 
   constructor(props) {
     super(props)
@@ -159,13 +168,14 @@ export default class DNSAddOverride extends React.Component {
         <FormControl>
           <FormControl.Label>Expiration</FormControl.Label>
 
-          <Input
-            type="number"
-            name="Expiration"
-            value={this.state.Expiration}
-            onChangeText={(value) =>
-              this.handleChange('Expiration', parseInt(value))
-            }
+          <InputSelect
+            options={this.expirationOptions}
+            value={
+              this.state.Expiration
+                ? timeAgo(new Date(Date.now() + this.state.Expiration * 1e3))
+                : 'Never'}
+            onChange={(v) => this.handleChange('Expiration', parseInt(v))}
+            onChangeText={(v) => this.handleChange('Expiration', parseInt(v))}
           />
 
           <FormControl.HelperText>
