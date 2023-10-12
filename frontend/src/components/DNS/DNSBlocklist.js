@@ -43,7 +43,7 @@ export default class DNSBlocklist extends React.Component {
     modalType: '',
     pendingItem: {},
     showURI: true,
-    seconds: 'Weekly',
+    seconds: 'Weekly'
   }
 
   constructor(props) {
@@ -54,7 +54,7 @@ export default class DNSBlocklist extends React.Component {
 
     this.recommendedListDefault = [
       {
-        Info: 'Steven Black\'s Adware & Malware block list',
+        Info: "Steven Black's Adware & Malware block list",
         URI: 'https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts'
       },
       {
@@ -122,25 +122,23 @@ export default class DNSBlocklist extends React.Component {
     let list = []
 
     const optMap = {
-      'Weekly': 24*7*60*60,
-      'Daily': 24*60*60,
-      'Four Hours': 24*60*60*4,
-      'Hourly': 60*60
+      Weekly: 24 * 7 * 60 * 60,
+      Daily: 24 * 60 * 60,
+      'Four Hours': 24 * 60 * 60 * 4,
+      Hourly: 60 * 60
     }
 
-    blockAPI
-      .config()
-      .then((config) => {
-        if (config != null) {
-          if (config.RefreshSeconds != 0) {
-            for (let opt of Object.keys(optMap)) {
-              if (optMap[opt] == config.RefreshSeconds) {
-                this.setState({seconds: opt})
-              }
+    blockAPI.config().then((config) => {
+      if (config != null) {
+        if (config.RefreshSeconds != 0) {
+          for (let opt of Object.keys(optMap)) {
+            if (optMap[opt] == config.RefreshSeconds) {
+              this.setState({ seconds: opt })
             }
           }
         }
-      })
+      }
+    })
 
     blockAPI
       .blocklists()
@@ -296,17 +294,16 @@ export default class DNSBlocklist extends React.Component {
 
     const onChangeText = (what, value) => {
       if (what == 'seconds') {
-        this.setState({seconds: value})
+        this.setState({ seconds: value })
       }
     }
 
     const submitRefresh = (value) => {
-
       const optMap = {
-        'Weekly': 24*7*60*60,
-        'Daily': 24*60*60,
-        'Four Hours': 24*60*60*4,
-        'Hourly': 60*60
+        Weekly: 24 * 7 * 60 * 60,
+        Daily: 24 * 60 * 60,
+        'Four Hours': 24 * 60 * 60 * 4,
+        Hourly: 60 * 60
       }
 
       blockAPI.setRefresh(optMap[value]).then(
@@ -319,12 +316,11 @@ export default class DNSBlocklist extends React.Component {
       )
     }
 
-
     const options = [
       { label: 'Weekly', value: 'Weekly' },
       { label: 'Daily', value: 'Daily' },
       { label: 'Four Hours', value: 'Four Hours' },
-      { label: 'Hourly', value: 'Hourly'}
+      { label: 'Hourly', value: 'Hourly' }
     ] //[{ label: t, value: { Tag: t } }]
 
     return (
@@ -357,7 +353,7 @@ export default class DNSBlocklist extends React.Component {
           ) : null}
         </HStack>
 
-        <Box px={{ md: 4 }} mb={4}>
+        <VStack space={4} px={{ md: 0 }} mb={4}>
           <FlatList
             data={[...this.state.list, ...this.state.recommendedList]}
             renderItem={({ item }) => (
@@ -376,21 +372,22 @@ export default class DNSBlocklist extends React.Component {
                   justifyContent="space-between"
                   alignItems="center"
                 >
-                <VStack
-                  w={{ base: '60%', md: '75%' }}
-                  flexWrap="wrap"
-                  onPress={toggleShowURI}
+                  <VStack
+                    w={{ base: '60%', md: '75%' }}
+                    flexWrap="wrap"
+                    onPress={toggleShowURI}
                   >
-                    <Text color="muted.500" isTruncated>
+                    <Text bold isTruncated>
                       {item.Info}
                     </Text>
                     <Text
-                    _light={{
-                      color: isOnlyRecommended(item) ? 'muted.500' : 'black'
-                    }}
-                    _dark={{
-                      color: isOnlyRecommended(item) ? 'muted.500' : 'white'
-                    }}
+                      _light={{
+                        color: isOnlyRecommended(item) ? 'muted.500' : 'black'
+                      }}
+                      _dark={{
+                        color: isOnlyRecommended(item) ? 'muted.500' : 'white'
+                      }}
+                      isTruncated
                     >
                       {niceURI(item.URI)}
                     </Text>
@@ -498,24 +495,25 @@ export default class DNSBlocklist extends React.Component {
             }}
             borderColor="borderColorCardLight"
             p={4}
+            width={{ base: '100%', md: '50%' }}
           >
-            <VStack width={{ base: '100%', md: '75%' }}>
-              <Box
-              >
-                <VStack space={4}>
-                  <Text bold>Refresh Frequency</Text>
-                  <InputSelect
-                    options={options}
-                    value={this.state.seconds}
-                    onChange={(v) => onChangeText('seconds', v)}
-                    onChangeText={(v) => onChangeText('seconds', v)}
-                  />
-                </VStack>
-              </Box>
-              <Button colorScheme="primary" rounded="none" onPress={submitRefresh}>
-                Save
-              </Button>
+            <VStack space={4}>
+              <Text bold>Refresh Frequency</Text>
+              <InputSelect
+                options={options}
+                value={this.state.seconds}
+                onChange={(v) => onChangeText('seconds', v)}
+                onChangeText={(v) => onChangeText('seconds', v)}
+              />
             </VStack>
+
+            <Button
+              colorScheme="primary"
+              rounded="none"
+              onPress={submitRefresh}
+            >
+              Save
+            </Button>
           </Box>
 
           <ModalConfirm
@@ -524,7 +522,7 @@ export default class DNSBlocklist extends React.Component {
             onClose={() => this.setState({ showModal: false })}
             isOpen={this.state.showModal}
           />
-        </Box>
+        </VStack>
       </>
     )
   }
