@@ -1,0 +1,27 @@
+version: '3.4'
+
+x-logging:
+  &default-logging
+  driver: journald
+
+x-labels:
+  &default-labels
+  org.supernetworks.ci: ${CI:-false}
+  org.supernetworks.version: ${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+
+services:
+  dyndns:
+    container_name: superdyndns
+    image: ghcr.io/spr-networks/super_dyndns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: .
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_dyndns:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_dyndns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: bridge
+    logging: *default-logging
+    volumes:
+      - "${SUPERDIR}/state/plugins/:/state/plugins/dyndns/"
+      - "${SUPERDIR}/configs/dyndns/:/etc/dyndns/"
