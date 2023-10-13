@@ -1,11 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
 import Icon from 'FontAwesomeUtils'
-import {
-  faToggleOn,
-  faToggleOff,
-  faTrash
-} from '@fortawesome/free-solid-svg-icons'
+import { faToggleOn, faToggleOff } from '@fortawesome/free-solid-svg-icons'
 
 import { blockAPI } from 'api/DNS'
 import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
@@ -27,7 +23,8 @@ import {
   BadgeText,
   ButtonText,
   ThreeDotsIcon,
-  useColorMode
+  useColorMode,
+  CloseIcon
 } from '@gluestack-ui/themed'
 import { Menu } from 'native-base' //TODONB
 
@@ -437,8 +434,8 @@ const DNSBlocklist = (props) => {
                       display={isOnlyRecommended(item) ? 'none' : 'flex'}
                     >
                       <HStack space={'md'} alignItems="center">
-                        <Icon icon={faTrash} color="$red700" />
-                        <Text color="$danger700">Delete</Text>
+                        <CloseIcon color="$red700" />
+                        <Text color="$red700">Delete</Text>
                       </HStack>
                     </Menu.Item>
                   </Menu.Group>

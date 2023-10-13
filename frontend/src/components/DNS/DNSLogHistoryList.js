@@ -1,18 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
 import PropTypes from 'prop-types'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import Icon from 'FontAwesomeUtils'
-import {
-  faBan,
-  faEllipsis,
-  faEllipsisV,
-  faPen,
-  faMagnifyingGlass,
-  faTrash,
-  faFilter
-} from '@fortawesome/free-solid-svg-icons'
-
+import { useNavigate } from 'react-router-dom'
 import { AlertContext } from 'layouts/Admin'
 import ClientSelect from 'components/ClientSelect'
 import DNSAddOverride from './DNSAddOverride'
@@ -23,53 +12,61 @@ import { format as timeAgo } from 'timeago.js'
 
 import {
   Badge,
+  BadgeText,
   Box,
   Button,
-  FlatList,
-  Flex,
+  ButtonText,
+  ButtonIcon,
   FormControl,
+  FormControlLabel,
+  FormControlLabelText,
   Heading,
-  IconButton,
   Input,
-  Menu,
-  Stack,
-  Spinner,
   HStack,
   VStack,
   Text,
-  Tooltip,
   View,
-  ScrollView
-} from 'native-base'
+  ScrollView,
+  ThreeDotsIcon,
+  useColorMode,
+  SlashIcon,
+  TrashIcon,
+  InputField,
+  InputIcon,
+  SearchIcon,
+  InputSlot
+} from '@gluestack-ui/themed'
+
+import { Menu, Tooltip } from 'native-base' //TODONB
 
 import { FlashList } from '@shopify/flash-list'
+import { FilterIcon } from 'lucide-react-native'
 
 const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
   const colorByType = (type) => {
     let keys = {
+      BLOCKED: 'error',
       NOERROR: 'success',
       NODATA: 'warning',
       OTHERERROR: 'danger',
-      NXDOMAIN: 'danger'
+      NXDOMAIN: 'info'
     }
 
-    return keys[type] || 'danger'
+    return keys[type] || 'muted'
   }
 
   const trigger = (triggerProps) => (
-    <IconButton
-      variant="unstyled"
-      _ml="auto"
-      icon={<Icon icon={faEllipsis} color="muted.600" />}
-      {...triggerProps}
-    ></IconButton>
+    <Button variant="link" {...triggerProps}>
+      <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
+    </Button>
   )
 
   const moreMenu = (
     <Menu w={190} p={0} closeOnSelect={true} trigger={trigger}>
       <Menu.Item
         _text={{ color: 'success.600' }}
-        onPress={() => handleClickDomain('permit', item.FirstName)}>
+        onPress={() => handleClickDomain('permit', item.FirstName)}
+      >
         Permit Domain
       </Menu.Item>
       <Menu.Item
@@ -84,52 +81,65 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
   return (
     <Box
       borderBottomWidth={1}
-      _light={{ bg: 'backgroundCardLight' }}
-      _dark={{
-        bg: 'backgroundCardDark',
-        borderColor: 'borderColorCardDark'
+      bg="$backgroundCardLight"
+      borderColor="$borderColorCardLight"
+      sx={{
+        _dark: {
+          bg: '$backgroundCardDark',
+          borderColor: '$borderColorCardDark'
+        }
       }}
-      borderColor="borderColorCardLight"
     >
       <HStack
-        space={{ base: 2, md: 8 }}
+        space="md"
         justifyContent="space-between"
         alignItems="center"
         borderLeftWidth={2}
-        borderLeftColor={colorByType(item.Type) + '.500'}
-        py={2}
-        pl={2}
-        pr={4}
+        borderLeftColor={'$' + colorByType(item.Type) + '500'}
+        py="$2"
+        pl="$2"
+        pr="$4"
       >
-        <Box display={{ base: 'none', md: 'flex' }} w="20">
-          <Badge variant="outline" colorScheme={colorByType(item.Type)}>
-            {item.Type}
+        <Box
+          sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
+          w="$20"
+        >
+          <Badge variant="outline" action={colorByType(item.Type)}>
+            <BadgeText>{item.Type}</BadgeText>
           </Badge>
         </Box>
 
         {hideClient ? null : (
-          <Stack flex={1} space={1} justifyItems="center">
+          <VStack flex={1} space={'md'} justifyItems="center">
             <Text bold>{item.device.Name}</Text>
-            <Text flex={1} display={{ base: 'none', md: 'flex' }}>
+            <Text
+              flex={1}
+              sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
+            >
               {item.Remote.split(':')[0]}
             </Text>
-          </Stack>
+          </VStack>
         )}
 
-        <Stack flex={3} space={1}>
+        <VStack flex={3} space="sm">
           <Text bold isTruncated>
             {item.FirstName}
           </Text>
 
-          <Text color="muted.500" onPress={() => triggerAlert(item)}>
+          <Text color="$muted500" onPress={() => triggerAlert(item)}>
             {item.FirstAnswer || '0.0.0.0'}
           </Text>
-          <Text color="muted.500" display={{ base: 'flex', md: 'none' }}>
+          <Text color="$muted500" sx={{ '@md': { display: 'none' } }}>
             {timeAgo(new Date(item.Timestamp))}
           </Text>
-        </Stack>
+        </VStack>
 
-        <Text ml="auto" fontSize="xs" display={{ base: 'none', md: 'flex' }}>
+        <Text
+          color="$muted500"
+          ml="auto"
+          size="xs"
+          sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
+        >
           <Tooltip label={prettyDate(item.Timestamp)}>
             {timeAgo(new Date(item.Timestamp))}
           </Tooltip>
@@ -143,22 +153,23 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
             ></IconButton>
           </Tooltip>*/}
 
-        <HStack space={2} ml="auto">
+        <HStack space={'md'} ml="auto">
           <Tooltip label="Add Domain Block" openDelay={300}>
-            <IconButton
-              display={{
-                base: 'none',
-                md: 'flex'
+            <Button
+              sx={{
+                '@base': { display: 'none' },
+                '@md': { display: 'flex' }
               }}
-              variant="unstyled"
-              icon={<Icon icon={faBan} color="danger.800" />}
+              variant="link"
               onPress={() =>
                 handleClickDomain(
                   item.Type === 'BLOCKED' ? 'permit' : 'block',
                   item.FirstName
                 )
               }
-            ></IconButton>
+            >
+              <ButtonIcon as={SlashIcon} color="$red700" />
+            </Button>
           </Tooltip>
 
           {moreMenu}
@@ -414,6 +425,9 @@ const DNSLogHistoryList = (props) => {
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
 
   let h = Platform.OS == 'web' ? Dimensions.get('window').height - 64 : '100%'
+
+  const colorMode = useColorMode()
+
   return (
     <View h={h} display="flex">
       <ModalForm
@@ -433,27 +447,37 @@ const DNSLogHistoryList = (props) => {
         />
       </ModalForm>
 
-      <HStack space={2} p={4}>
+      <HStack space="md" p="$4">
         <Heading fontSize="md">{filterIps.join(',')} DNS Log</Heading>
         {filterIps.length ? (
-          <Text color="muted.500">{total} records</Text>
+          <Text color="$muted500">{total} records</Text>
         ) : null}
       </HStack>
 
-      <Stack
-        _light={{ bg: 'backgroundCardLight' }}
-        _dark={{ bg: 'backgroundCardDark' }}
-        p={4}
-        space={{ base: 0, md: 2 }}
-        direction={{ base: 'column', md: 'row' }}
-        _flex={{ base: 1, md: 'none' }}
+      <VStack
+        sx={{
+          '@md': {
+            flexDirection: 'row',
+            gap: 'md'
+          }
+        }}
+        bg={
+          colorMode == 'light' ? '$backgroundCardLight' : '$backgroundCardDark'
+        }
+        space="md"
+        p="$4"
         h={Platform.OS == 'web' ? 'auto' : showForm ? 200 : 70}
       >
-        <HStack maxW={{ base: '100%', md: '1/3' }}>
-          <FormControl flex={1}>
-            <FormControl.Label display={{ base: 'none', md: 'flex' }}>
-              Client
-            </FormControl.Label>
+        <HStack
+          sx={{ '@base': { maxWidth: '100%' }, '@md': { maxWidth: '$1/3' } }}
+          space="md"
+        >
+          <FormControl>
+            <FormControlLabel
+              sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
+            >
+              <FormControlLabelText size="sm">Client</FormControlLabelText>
+            </FormControlLabel>
             <ClientSelect
               isDisabled
               value={filterIps ? filterIps[0] : null}
@@ -461,58 +485,81 @@ const DNSLogHistoryList = (props) => {
             />
           </FormControl>
           <Button
-            display={{ base: 'flex', md: 'none' }}
-            variant="ghost"
-            colorScheme="blueGray"
-            leftIcon={<Icon icon={faFilter} />}
+            sx={{ '@md': { display: 'none' } }}
+            variant="link"
             onPress={() => setShowForm(!showForm)}
-          />
+          >
+            <ButtonIcon as={FilterIcon} />
+          </Button>
         </HStack>
 
         <FormControl
-          flex={2}
-          display={{
-            base: filterIps.length && list.length && showForm ? 'flex' : 'none'
+          flex={1}
+          sx={{
+            '@base': {
+              display:
+                filterIps.length && list.length && showForm ? 'flex' : 'none'
+            }
           }}
         >
           <>
-            <FormControl.Label>Search</FormControl.Label>
+            <FormControlLabel>
+              <FormControlLabelText
+                size="sm"
+                sx={{
+                  '@base': { display: 'none' },
+                  '@md': { display: 'flex' }
+                }}
+              >
+                Search
+              </FormControlLabelText>
+            </FormControlLabel>
 
-            <Input
-              type="text"
-              name="filterText"
-              size="lg"
-              placeholder="Filter domain..."
-              value={filterText}
-              onChangeText={handleChange}
-              InputRightElement={
-                <Icon icon={faMagnifyingGlass} color="muted.400" mr={2} />
-              }
-            />
+            <Input size="sm">
+              <InputField
+                type="text"
+                name="filterText"
+                placeholder="Filter domain..."
+                value={filterText}
+                onChangeText={handleChange}
+              />
+              <InputSlot pr="$3">
+                <InputIcon as={SearchIcon} />
+              </InputSlot>
+            </Input>
           </>
         </FormControl>
 
         <FormControl
-          flex={{ base: 2, md: 1 }}
-          display={{
-            base: filterIps.length && list.length && showForm ? 'flex' : 'none'
+          flex={1}
+          sx={{
+            '@base': {
+              mt: 4,
+              display:
+                filterIps.length && list.length && showForm ? 'flex' : 'none'
+            },
+            '@md': {
+              mt: 0
+            }
           }}
-          mt={{ base: 4, md: 0 }}
         >
-          <FormControl.Label display={{ base: 'none', md: 'flex' }}>
-            Delete history
-          </FormControl.Label>
-          <Button
-            size="md"
-            variant="outline"
-            colorScheme="danger"
-            leftIcon={<Icon icon={faTrash} />}
-            onPress={deleteHistory}
+          <FormControlLabel
+            sx={{
+              '@base': { display: 'none' },
+              '@md': { display: 'flex' }
+            }}
           >
-            Delete
+            <FormControlLabelText size="sm">
+              Delete history
+            </FormControlLabelText>
+          </FormControlLabel>
+
+          <Button size="sm" action="negative" onPress={deleteHistory}>
+            <ButtonIcon as={TrashIcon}></ButtonIcon>
+            <ButtonText>Delete</ButtonText>
           </Button>
         </FormControl>
-      </Stack>
+      </VStack>
 
       <FlashList
         estimatedItemSize={100}
@@ -530,17 +577,25 @@ const DNSLogHistoryList = (props) => {
       />
 
       {total > 20 && !filterText.length ? (
-        <HStack space={2} alignItems="flex-start">
+        <HStack space="md" alignItems="flex-start">
           <Button
             flex={1}
-            variant="ghost"
+            action="secondary"
+            variant="link"
             isDisabled={page <= 1}
+            size="sm"
             onPress={() => setPage(/*page > 1 ? page - 1 : */ 1)}
           >
-            &larr; Start
+            <ButtonText>&larr; Start</ButtonText>
           </Button>
-          <Button flex={1} variant="ghost" onPress={() => setPage(page + 1)}>
-            Next &rarr;
+          <Button
+            flex={1}
+            action="secondary"
+            variant="link"
+            size="sm"
+            onPress={() => setPage(page + 1)}
+          >
+            <ButtonText>Next &rarr;</ButtonText>
           </Button>
         </HStack>
       ) : null}

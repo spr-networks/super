@@ -1,7 +1,5 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import ModalForm from 'components/ModalForm'
 import DNSAddOverride from 'components/DNS/DNSAddOverride'
@@ -11,7 +9,6 @@ import { format as timeAgo } from 'timeago.js'
 
 import {
   Box,
-  Heading,
   VStack,
   FlatList,
   HStack,
@@ -22,8 +19,6 @@ import {
 } from '@gluestack-ui/themed'
 
 import ListHeader from 'components/List/ListHeader'
-
-import { FlashList } from '@shopify/flash-list'
 
 const DNSOverrideList = (props) => {
   const context = React.useContext(AlertContext)
@@ -97,14 +92,17 @@ const DNSOverrideList = (props) => {
                 >
                   <VStack
                     flex={1}
-                    space={2}
+                    space="md"
                     sx={{ '@md': { flexDirection: 'row' } }}
                   >
                     <Text bold>{item.Domain}</Text>
-                    <HStack space={{ base: 0, md: 2 }}>
+                    <HStack space={'md'}>
                       <Text
-                        display={{ base: 'none', md: 'flex' }}
-                        color="muted.500"
+                        sx={{
+                          '@base': { display: 'none' },
+                          '@md': { display: 'flex' }
+                        }}
+                        color="$muted500"
                       >
                         =
                       </Text>

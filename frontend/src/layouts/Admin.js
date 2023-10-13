@@ -513,7 +513,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         <Box
           sx={{
             '@base': {
-              maxWidth: '100%',
+              maxWidth: '90%',
               w: '100%',
               display: showAlert ? 'block' : 'none'
             },

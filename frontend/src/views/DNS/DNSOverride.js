@@ -6,13 +6,13 @@ import { blockAPI } from 'api/DNS'
 import PluginDisabled from 'views/PluginDisabled'
 
 import {
-  View,
   ScrollView,
-  VStack,
   Fab,
   FabIcon,
   FabLabel,
-  AddIcon
+  AddIcon,
+  View,
+  VStack
 } from '@gluestack-ui/themed'
 
 const DNSBlock = (props) => {
