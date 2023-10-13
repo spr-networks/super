@@ -84,8 +84,8 @@ const Home = (props) => {
                   }}
                   key={iface}
                 >
-                  <WifiInfo iface={iface} />
-                  <WifiClients iface={iface} />
+                  <WifiInfo iface={iface} flex={1} />
+                  <WifiClients iface={iface} flex={1} />
                 </Box>
               ))}
             </VStack>
