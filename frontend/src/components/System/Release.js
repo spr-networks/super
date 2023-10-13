@@ -6,7 +6,6 @@ import {
   faArrowUp
 } from '@fortawesome/free-solid-svg-icons'
 import {
-  Badge,
   Box,
   Button,
   Checkbox,
@@ -16,7 +15,6 @@ import {
   Stack,
   Text,
   Tooltip,
-  useBreakpointValue,
   useColorModeValue
 } from 'native-base'
 
@@ -241,7 +239,6 @@ const ReleaseInfo = ({ showModal, ...props }) => {
   }
 
   const runUpdate = () => {
-
     context.info(`Update started`)
 
     api

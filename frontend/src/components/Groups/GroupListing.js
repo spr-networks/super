@@ -4,17 +4,14 @@ import { groupDescriptions } from 'api/Group'
 
 import {
   Badge,
+  BadgeText,
   Box,
   Heading,
   FlatList,
-  Stack,
   HStack,
   Text,
-  VStack,
-  useColorModeValue
-} from 'native-base'
-
-import { FlashList } from '@shopify/flash-list'
+  useColorMode
+} from '@gluestack-ui/themed'
 
 const GroupListing = ({ group, ...props }) => {
   const translateName = (name) => {
@@ -71,17 +68,19 @@ const GroupListing = ({ group, ...props }) => {
     }
   }
 
+  const colorMode = useColorMode()
+
   return (
     <FlatList
       ListHeaderComponent={
         <HStack
-          space={1}
+          space={'sm'}
           alignItems="center"
           justifyContent="space-between"
-          p={4}
+          p={'$4'}
         >
-          <Heading fontSize="md">{translateName(group.Name)}</Heading>
-          <Text color="muted.500">{groupDescriptions[group.Name] || ''}</Text>
+          <Heading size="md">{translateName(group.Name)}</Heading>
+          <Text color="$muted500">{groupDescriptions[group.Name] || ''}</Text>
         </HStack>
       }
       data={list}
@@ -89,34 +88,43 @@ const GroupListing = ({ group, ...props }) => {
       renderItem={({ item }) => (
         <Box
           key={item.Name}
-          bg="backgroundCardLight"
+          bg={
+            colorMode == 'light'
+              ? '$backgroundCardLight'
+              : '$backgroundCardDark'
+          }
+          borderColor={
+            colorMode == 'light'
+              ? '$borderColorCardLight'
+              : '$borderColorCardDark'
+          }
           borderBottomWidth={1}
-          _dark={{
-            bg: 'backgroundCardDark',
-            borderColor: 'borderColorCardDark'
-          }}
-          borderColor="borderColorCardLight"
-          p={4}
+          p="$4"
         >
-          <HStack space={2} alignItems="center" justifyContent="space-between">
-            <Text w="1/4" bold>
+          <HStack space="md" alignItems="center" justifyContent="space-between">
+            <Text w="$1/4" bold size="sm">
               {item.Name}
             </Text>
 
-            <Stack
-              direction={{ base: 'column', md: 'row' }}
-              w="1/2"
-              space={1}
+            <Box
+              sx={{
+                '@base': { flexDirection: 'column' },
+                '@md': { flexDirection: 'row' }
+              }}
+              w="$1/2"
+              space="sm"
               justifyContent="space-between"
             >
-              <Text>{item.IP}</Text>
-              <Text color="muted.500" fontSize="sm">
+              <Text size="sm">{item.IP}</Text>
+              <Text color="$muted500" size="sm">
                 {item.MAC}
               </Text>
-            </Stack>
-            <Box marginLeft="auto">
+            </Box>
+            <Box ml="auto">
               {item.ifname ? (
-                <Badge variant="outline">{item.ifname}</Badge>
+                <Badge variant="outline" action="success">
+                  <BadgeText>{item.ifname}</BadgeText>
+                </Badge>
               ) : null}
             </Box>
           </HStack>

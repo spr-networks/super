@@ -50,13 +50,14 @@ const Home = (props) => {
 
   let show = {
     dns: pluginsEnabled.includes('dns-block') && !context.isMeshNode,
+    wifi: !context.isWifiDisabled,
     vpn: context.isWifiDisabled,
     vpnSide: !context.isWifiDisabled && !context.isMeshNode,
     traffic: !context.isMeshNode
   }
 
   return (
-    <ScrollView sx={{ '@md': { h: '100vh' } }}>
+    <ScrollView sx={{ '@md': { h: '90vh' } }}>
       <Box
         flexDirection="row"
         sx={{
@@ -96,8 +97,8 @@ const Home = (props) => {
             <Interfaces />
           </VStack>
         </VStack>
-        <VStack flex={1} space={'md'}>
-          <ServicesEnabled />
+        <VStack flex={1} space="md">
+          <ServicesEnabled features={show} />
           {show.dns ? (
             <VStack space="md">
               <DNSMetrics />

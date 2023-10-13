@@ -1,18 +1,18 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+
 import {
   Box,
   Heading,
   HStack,
   FlatList,
-  Modal,
-  Stack,
   Text,
-  View,
   VStack,
   ScrollView,
-  useDisclose,
-  useColorModeValue
-} from 'native-base'
+  useColorMode
+} from '@gluestack-ui/themed'
+
+import { Modal, useDisclose } from 'native-base'
+
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
 import { ucFirst } from 'utils'
@@ -71,85 +71,108 @@ const SystemInfo = (props) => {
     return onClose
   }
 
+  const colorMode = useColorMode()
+
   return (
-    <ScrollView h={'100%'}>
-      <VStack space={2}>
-        <HStack p={4}>
-          <Heading fontSize="md">System Info</Heading>
+    <ScrollView>
+      <VStack space="md">
+        <HStack p="$4">
+          <Heading size="md">System Info</Heading>
         </HStack>
 
         <Box>
-          <HStack space={4} mb="4">
+          <HStack space="md" mb="$4">
             <HStack
               flex={1}
-              space={2}
-              p={4}
-              bg={useColorModeValue(
-                'backgroundCardLight',
-                'backgroundCardDark'
-              )}
+              space="md"
+              p="$4"
+              bg={
+                colorMode == 'light'
+                  ? '$backgroundCardLight'
+                  : '$backgroundCardDark'
+              }
               justifyContent="space-between"
             >
               <Text>Hostname</Text>
-              <Text color="muted.500">{hostname}</Text>
+              <Text color="$muted500">{hostname}</Text>
             </HStack>
             <HStack
               flex={1}
-              space={2}
-              p={4}
-              bg={useColorModeValue(
-                'backgroundCardLight',
-                'backgroundCardDark'
-              )}
+              space={'md'}
+              p="$4"
+              bg={
+                colorMode == 'light'
+                  ? '$backgroundCardLight'
+                  : '$backgroundCardDark'
+              }
               justifyContent="space-between"
             >
               <Text>SPR Version</Text>
-              <Text color="muted.500">{version}</Text>
+              <Text color="$muted500">{version}</Text>
             </HStack>
           </HStack>
 
-          <Stack
-            direction={{ base: 'column', md: 'row' }}
-            space={4}
-            bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+          <Box
+            sx={{
+              '@base': { flexDirection: 'column', gap: '$3' },
+              '@md': { flexDirection: 'row', gap: '$3' }
+            }}
           >
             <FlatList
+              flex="1"
               data={['time', 'uptime', 'users']}
               keyExtractor={(item, index) => index}
               estimatedItemSize={100}
               renderItem={({ item }) => (
                 <HStack
-                  space={2}
-                  p={4}
-                  borderBottomColor="borderColorCardLight"
-                  _dark={{ borderBottomColor: 'borderColorCardDark' }}
+                  space="md"
+                  p="$4"
+                  bg={
+                    colorMode == 'light'
+                      ? '$backgroundCardLight'
+                      : '$backgroundCardDark'
+                  }
+                  borderBottomColor={
+                    colorMode == 'light'
+                      ? '$borderColorCardLight'
+                      : '$borderColorCardDark'
+                  }
                   borderBottomWidth={1}
                   justifyContent="space-between"
                 >
                   <Text>{niceKey(item)}</Text>
-                  <Text color="muted.500">{uptime[item]}</Text>
+                  <Text color="$muted500">{uptime[item]}</Text>
                 </HStack>
               )}
             />
             <FlatList
+              flex="1"
               data={['load_1m', 'load_5m', 'load_15m']}
               keyExtractor={(item, index) => index}
               estimatedItemSize={100}
               renderItem={({ item }) => (
                 <HStack
-                  space={2}
-                  p={4}
-                  borderBottomColor="borderColorCardLight"
-                  _dark={{ borderBottomColor: 'borderColorCardDark' }}
+                  space="md"
+                  p="$4"
+                  bg={
+                    colorMode == 'light'
+                      ? '$backgroundCardLight'
+                      : '$backgroundCardDark'
+                  }
+                  borderBottomColor={
+                    colorMode == 'light'
+                      ? '$borderColorCardLight'
+                      : '$borderColorCardDark'
+                  }
                   borderBottomWidth={1}
                   justifyContent="space-between"
                 >
                   <Text>{niceKey(item)}</Text>
-                  <Text color="muted.500">{uptime[item]}</Text>
+                  <Text color="$muted500">{uptime[item]}</Text>
                 </HStack>
               )}
             />
-          </Stack>
+          </Box>
         </Box>
 
         <Database showModal={showModal} closeModal={onClose} />

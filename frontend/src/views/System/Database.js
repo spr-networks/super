@@ -1,34 +1,36 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Icon } from 'FontAwesomeUtils'
 import {
-  faBoxArchive,
-  faCirclePlus,
   faDatabase,
-  faExchange,
   faInfoCircle,
-  faPen,
-  faPenFancy,
-  faPencil,
-  faPercent,
-  faTrash
+  faPencil
 } from '@fortawesome/free-solid-svg-icons'
 import {
-  Badge,
   Button,
+  ButtonIcon,
+  ButtonText,
   Box,
   FormControl,
+  FormControlLabel,
+  FormControlLabelText,
+  FormControlHelperText,
   Heading,
   HStack,
   Input,
-  Stack,
+  InputField,
   Text,
   Tooltip,
   VStack,
-  useColorModeValue
-} from 'native-base'
+  useColorMode,
+  ButtonGroup,
+  TooltipContent,
+  TooltipText
+} from '@gluestack-ui/themed'
+
 import { dbAPI } from 'api'
 import { AlertContext } from 'AppContext'
 import { prettySize } from 'utils'
+import { PlusIcon } from 'lucide-react-native'
 
 const AddTopicForm = ({ allEvents, isStored, handleAddRemove, onSubmit }) => {
   const [value, setValue] = useState('')
@@ -43,47 +45,50 @@ const AddTopicForm = ({ allEvents, isStored, handleAddRemove, onSubmit }) => {
       onPress={() => handleAddRemove(topic)}
       rounded="xs"
       size="sm"
-      py={1}
-      mb={2}
+      py={'$1'}
+      mb={'$2'}
     >
-      {topic}
+      <ButtonText>{topic}</ButtonText>
     </Button>
   )
 
   return (
-    <HStack space={2} px={4} py={8}>
-      <VStack flex={1} space={2}>
-        <Heading fontSize="md">Registered Events</Heading>
-        <Text color="muted.400">Click event to add or remove for storage</Text>
+    <HStack space="md" px="$4" py="$8">
+      <VStack flex={1} space={'md'}>
+        <Heading size="md">Registered Events</Heading>
+        <Text color="$muted500">Click event to add or remove for storage</Text>
 
-        <HStack space={2} mt={4} flexWrap={'wrap'}>
+        <HStack space={'md'} mt={'$4'} flexWrap={'wrap'}>
           {allEvents && allEvents.length ? allEvents.map(renderTopic) : null}
         </HStack>
       </VStack>
-      <FormControl flex={1} space={8}>
-        <FormControl.Label>Or add a custom Event name</FormControl.Label>
+      <FormControl flex={1} space={'$8'}>
+        <FormControlLabel>
+          <FormControlLabelText>
+            Or add a custom Event name
+          </FormControlLabelText>
+        </FormControlLabel>
 
-        <Input
-          size="lg"
-          type="text"
-          variant="underlined"
-          w="100%"
-          value={value}
-          placeholder="service:event:name"
-          autoFocus={true}
-          onChangeText={handleChangeText}
-          onSubmitEditing={handleSubmit}
-        />
-        <FormControl.HelperText flexDir={'row'} my={4}>
-          <Text color="muted.400" italic bold>
+        <Input size="lg" variant="underlined" w="100%">
+          <InputField
+            type="text"
+            placeholder="service:event:name"
+            autoFocus={true}
+            value={value}
+            onChangeText={handleChangeText}
+            onSubmitEditing={handleSubmit}
+          />
+        </Input>
+        <FormControlHelperText flexDir={'row'} my={'$4'}>
+          <Text color="$muted500" italic bold>
             Note:
           </Text>{' '}
-          <Text color="muted.400">using a prefix like</Text>{' '}
-          <Text color="muted.400" italic>
+          <Text color="$muted500">using a prefix like</Text>{' '}
+          <Text color="$muted500" italic>
             "www:"
           </Text>{' '}
-          <Text color="muted.400">will store all events from www</Text>
-        </FormControl.HelperText>
+          <Text color="$muted500">will store all events from www</Text>
+        </FormControlHelperText>
       </FormControl>
     </HStack>
   )
@@ -102,27 +107,31 @@ const EditSizeForm = ({ config, onSubmit, ...props }) => {
   const handleSubmit = () => onSubmit(parseInt(size * 1024 * 1024))
 
   return (
-    <HStack space={20}>
-      <FormControl flex={1} space={8}>
-        <FormControl.Label>Max size for database file in MB</FormControl.Label>
+    <HStack space={'xl'}>
+      <FormControl flex={1} space={'xl'}>
+        <FormControlLabel>
+          <FormControlLabelText>
+            Max size for database file in MB
+          </FormControlLabelText>
+        </FormControlLabel>
 
-        <Input
-          size="lg"
-          type="text"
-          variant="underlined"
-          value={size}
-          placeholder="size in mb"
-          autoFocus={true}
-          onChangeText={handleChangeText}
-          onSubmitEditing={handleSubmit}
-        />
-        <FormControl.HelperText flexDir={'row'} my={4}>
+        <Input size="lg" variant="underlined">
+          <InputField
+            type="text"
+            value={size}
+            placeholder="size in mb"
+            autoFocus={true}
+            onChangeText={handleChangeText}
+            onSubmitEditing={handleSubmit}
+          />
+        </Input>
+        <FormControlHelperText flexDir={'row'} my={4}>
           Size in kB: {size * 1024}kB
-        </FormControl.HelperText>
+        </FormControlHelperText>
       </FormControl>
-      <VStack flex={1} space={1}>
-        <Heading fontSize="md" mb={4}>
-          <Icon icon={faInfoCircle} color="muted.500" mr={2} />
+      <VStack flex={1} space={'sm'}>
+        <Heading size="md" mb={'$4'}>
+          <Icon icon={faInfoCircle} color="$muted500" mr={2} />
           Notice about size
         </Heading>
         <Text>
@@ -192,10 +201,13 @@ const Database = ({ showModal, closeModal, ...props }) => {
   const renderConfigRow = (key, value) => {
     return (
       <HStack
-        space={2}
-        p={4}
-        borderBottomColor="borderColorCardLight"
-        _dark={{ borderBottomColor: 'borderColorCardDark' }}
+        space="md"
+        p="$4"
+        borderBottomColor={
+          colorMode == 'light'
+            ? '$borderColorCardLight'
+            : '$borderColorCardDark'
+        }
         borderBottomWidth={1}
         justifyContent="space-between"
       >
@@ -285,76 +297,90 @@ const Database = ({ showModal, closeModal, ...props }) => {
     return color
   }
 
+  const colorMode = useColorMode()
+
   return (
-    <VStack space={2}>
-      <HStack alignItems="center" justifyContent="space-between" p={4}>
-        <VStack space={2}>
+    <VStack space="md">
+      <HStack alignItems="center" justifyContent="space-between" p={'$4'}>
+        <VStack space="md">
           <Heading fontSize="md">Database</Heading>
-          <HStack space={2}>
-            <Text color="muted.500">
-              <Icon icon={faDatabase} color="muted.500" size="xs" />{' '}
+          <HStack space="md" alignItems="center">
+            <Icon icon={faDatabase} color="$muted500" size="xs" />
+            <Text color="$muted500" size="sm">
               {stats && stats.Size ? prettySize(stats.Size) : null}
             </Text>
             <Text
               color={percentColor(percentSize)}
+              size="sm"
             >{`${percentSize}% allocated`}</Text>
           </HStack>
         </VStack>
-        <Tooltip label={'Set max file size for database'}>
-          <Button
-            size="sm"
-            ml="auto"
-            variant="ghost"
-            colorScheme={'blueGray'}
-            leftIcon={<Icon icon={faPencil} />}
-            onPress={handlePressEditSize}
-          >
-            Set file size limit
-          </Button>
+        <Tooltip
+          placement="bottomx"
+          trigger={() => {
+            return (
+              <Button
+                size="xs"
+                ml="auto"
+                variant="outline"
+                action="secondary"
+                leftIcon={<Icon icon={faPencil} />}
+                onPress={handlePressEditSize}
+              >
+                <ButtonText>Set file size limit</ButtonText>
+              </Button>
+            )
+          }}
+        >
+          <TooltipContent>
+            <TooltipText>Set max file size for database</TooltipText>
+          </TooltipContent>
         </Tooltip>
       </HStack>
 
       {config && config.SaveEvents ? (
         <Box
-          space={2}
-          px={4}
-          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+          px="$4"
+          bg={
+            colorMode == 'light'
+              ? '$backgroundCardLight'
+              : '$backgroundCardDark'
+          }
         >
           {renderConfigRow(
             'SaveEvents',
 
-            <Stack
-              direction={{ base: 'column', md: 'row' }}
-              space={2}
+            <Box
+              sx={{
+                '@base': { flexDirection: 'column', gap: 3 },
+                '@md': { flexDirection: 'row', gap: 3 }
+              }}
               alignItems={{ base: 'flex-start', md: 'center' }}
               flexWrap={'wrap'}
             >
-              {config['SaveEvents'].map((topic) => (
+              <ButtonGroup>
+                {config['SaveEvents'].map((topic) => (
+                  <Button
+                    key={`btn:${topic}`}
+                    action="secondary"
+                    variant="outline"
+                    size="xs"
+                    onPress={() => handleAddRemove(topic)}
+                  >
+                    <ButtonText>{topic}</ButtonText>
+                  </Button>
+                ))}
                 <Button
-                  key={`btn:${topic}`}
-                  variant={'solid'}
-                  colorScheme={'blueGray'}
-                  rounded="xs"
-                  size="sm"
-                  py={1}
-                  mb={2}
-                  onPress={() => handleAddRemove(topic)}
+                  action="primary"
+                  variant="outline"
+                  size="xs"
+                  onPress={() => handlePressAdd()}
                 >
-                  {topic}
+                  <ButtonIcon as={PlusIcon} />
+                  <ButtonText>Add</ButtonText>
                 </Button>
-              ))}
-              <Button
-                onPress={() => handlePressAdd()}
-                variant="outline"
-                colorScheme="blueGray"
-                size="xs"
-                py={1}
-                mb={2}
-                leftIcon={<Icon icon={faCirclePlus} />}
-              >
-                Add
-              </Button>
-            </Stack>
+              </ButtonGroup>
+            </Box>
           )}
           {renderConfigRow(
             'MaxSize',

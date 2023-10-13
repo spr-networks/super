@@ -11,8 +11,9 @@ import {
 import { Icon } from 'FontAwesomeUtils'
 
 import { Box, HStack, Text, VStack, useColorMode } from '@gluestack-ui/themed'
+import { WifiIcon } from 'lucide-react-native'
 
-const ServicesEnabled = (props) => {
+const ServicesEnabled = ({ features, ...props }) => {
   useEffect(() => {}, [])
 
   return (
@@ -33,31 +34,47 @@ const ServicesEnabled = (props) => {
         flexWrap="wrap"
       >
         <VStack space="md">
-          <Box p="$4" rounded="$full" bg="$primary500">
+          <Box
+            p="$4"
+            rounded="$full"
+            bg={features?.wifi ? '$success400' : '$muted300'}
+          >
             <Icon icon={faWifi} size={8} color="$white" />
           </Box>
-          <Text alignSelf="center">AP on</Text>
+          <Text alignSelf="center">WiFi</Text>
         </VStack>
 
         <VStack space="md">
-          <Box p="$4" rounded="$full" bg="$primary500">
+          <Box
+            p="$4"
+            rounded="$full"
+            bg={features?.dns ? '$success400' : '$muted300'}
+          >
             <Icon icon={faEarth} size={8} color="$white" />
           </Box>
-          <Text alignSelf="center">DNS on</Text>
+          <Text alignSelf="center">DNS</Text>
         </VStack>
 
         <VStack space="md">
-          <Box p="$4" rounded="$full" bg="$primary500">
+          <Box
+            p="$4"
+            rounded="$full"
+            bg={features?.dns ? '$success400' : '$muted300'}
+          >
             <Icon icon={faBan} size={8} color="$white" />
           </Box>
-          <Text alignSelf="center">Block on</Text>
+          <Text alignSelf="center">Block</Text>
         </VStack>
 
         <VStack space="md">
-          <Box p="$4" rounded="$full" bg="$muted300">
+          <Box
+            p="$4"
+            rounded="$full"
+            bg={features?.vpn ? '$success400' : '$muted300'}
+          >
             <Icon icon={faCircleNodes} size={8} color="white" />
           </Box>
-          <Text alignSelf="center">VPN off</Text>
+          <Text alignSelf="center">VPN</Text>
         </VStack>
       </HStack>
     </Box>
