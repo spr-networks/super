@@ -29,6 +29,7 @@ import {
 import { Menu } from 'native-base' //TODONB
 
 import InputSelect from 'components/InputSelect'
+import ListHeader from 'components/List/ListHeader'
 
 const DNSBlocklist = (props) => {
   const context = useContext(AlertContext)
@@ -300,22 +301,19 @@ const DNSBlocklist = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" p="$4">
-        <VStack sx={{ '@md': { flexDirection: 'row' } }} space="md">
-          <Heading fontSize="md">DNS Blocklists</Heading>
-
-          {!pending ? (
-            <Text color="$muted500">
-              {blockedDomains.toLocaleString()} blocked domains
-            </Text>
+      <ListHeader
+        title="DNS Blocklists"
+        description={
+          !pending ? (
+            <>{blockedDomains.toLocaleString()} blocked domains</>
           ) : (
-            <HStack space={1}>
+            <HStack space="sm">
               <Spinner accessibilityLabel="Loading lists" />
               <Text color="$muted500">Update running...</Text>
             </HStack>
-          )}
-        </VStack>
-
+          )
+        }
+      >
         {!pending ? (
           <ModalForm
             title="Add DNS Blocklist"
@@ -326,9 +324,9 @@ const DNSBlocklist = (props) => {
             <DNSAddBlocklist notifyChange={notifyChangeBlocklist} />
           </ModalForm>
         ) : null}
-      </HStack>
+      </ListHeader>
 
-      <VStack space={'md'} mb={'$4'}>
+      <VStack space="md" mb="$4">
         <FlatList
           data={[...list, ...recommendedList]}
           renderItem={({ item }) => (
