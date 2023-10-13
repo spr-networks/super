@@ -2,18 +2,9 @@ import React, { useContext, useEffect, useState } from 'react'
 import { wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 
-import {
-  Badge,
-  View,
-  Box,
-  Heading,
-  Stack,
-  HStack,
-  FlatList,
-  Text,
-  useBreakpointValue,
-  useColorModeValue
-} from 'native-base'
+import { Badge, BadgeText, View, Box, Text, VStack } from '@gluestack-ui/themed'
+
+import { ListHeader, ListItem } from 'components/List'
 
 import { FlashList } from '@shopify/flash-list'
 
@@ -64,54 +55,38 @@ const Arp = (props) => {
     refreshList()
   }, [])
 
-  const flexDirection = useBreakpointValue({
-    base: 'column',
-    lg: 'row'
-  })
-
   return (
-    <View h={'100%'}>
-      <Heading fontSize="md" p={4}>
-        ARP Table
-      </Heading>
+    <View>
+      <ListHeader title="ARP Table"></ListHeader>
 
       <FlashList
         data={list}
         estimatedItemSize={100}
         renderItem={({ item }) => (
-          <Box
-            bg="backgroundCardLight"
-            borderBottomWidth={1}
-            _dark={{
-              bg: 'backgroundCardDark',
-              borderColor: 'borderColorCardDark'
-            }}
-            borderColor="borderColorCardLight"
-            p={4}
-          >
-            <HStack space={3} justifyContent="space-between">
-              <Stack
-                minW="40%"
-                style={{ flexDirection }}
-                space={3}
-                justifyContent="space-between"
-              >
-                <Text bold>{item.IP}</Text>
-                <Text color="muted.500">{item.MAC}</Text>
-              </Stack>
-              <Stack
-                minW="40%"
-                style={{ flexDirection }}
-                space={3}
-                justifyContent="space-between"
-              >
-                <Text fontSize="xs">Flags: {translateFlags(item.Flags)}</Text>
-                <Box marginLeft="auto">
-                  <Badge variant="outline">{item.Device}</Badge>
-                </Box>
-              </Stack>
-            </HStack>
-          </Box>
+          <ListItem>
+            <VStack
+              minW="40%"
+              sx={{ '@md': { flexDirection: 'row' } }}
+              space={'md'}
+              justifyContent="space-between"
+            >
+              <Text bold>{item.IP}</Text>
+              <Text color="$muted500">{item.MAC}</Text>
+            </VStack>
+            <VStack
+              minW="40%"
+              sx={{ '@md': { flexDirection: 'row' } }}
+              space={'md'}
+              justifyContent="space-between"
+            >
+              <Text size="xs">Flags: {translateFlags(item.Flags)}</Text>
+              <Box ml="auto">
+                <Badge action="success" variant="outline">
+                  <BadgeText>{item.Device}</BadgeText>
+                </Badge>
+              </Box>
+            </VStack>
+          </ListItem>
         )}
         keyExtractor={(item) => item.IP}
       />

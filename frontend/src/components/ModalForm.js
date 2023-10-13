@@ -39,7 +39,7 @@ const ModalForm = (props) => {
       {props.triggerText ? (
         <Button {...triggerProps}>
           <ButtonText>{props.triggerText || 'Open Modal'}</ButtonText>
-          <ButtonIcon as={PlusIcon} />
+          <ButtonIcon as={PlusIcon} ml="$1" />
         </Button>
       ) : null}
 

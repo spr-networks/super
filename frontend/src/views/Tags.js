@@ -1,29 +1,16 @@
 import React, { useContext, useEffect, useState } from 'react'
 import {
   Box,
-  Divider,
-  Heading,
-  HStack,
-  View,
   ScrollView,
   SectionList,
   Text,
   VStack
-} from 'native-base'
+} from '@gluestack-ui/themed'
 
 import { deviceAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import Device from 'components/Devices/Device'
-
-/*const DeviceItem = ({ device, ...props }) => {
-  return (
-    <HStack space={2}>
-      <Text bold>{device.Name}</Text>
-      <Text>{device.RecentIP}</Text>
-      <Text>{device.MAC}</Text>
-    </HStack>
-  )
-}*/
+import { ListHeader } from 'components/List'
 
 const Tags = (props) => {
   const context = useContext(AlertContext)
@@ -64,16 +51,13 @@ const Tags = (props) => {
 
   return (
     <ScrollView>
-      <VStack space={2}>
-        <Heading size="sm" p={4}>
-          Tags
-        </Heading>
+      <VStack space="md">
+        <ListHeader title="Tags" />
 
         <SectionList
           sections={tags}
-          _renderSectionFooter={({ section }) => <Divider my={2} />}
           renderSectionHeader={({ section: { name } }) => (
-            <Box p={4}>
+            <Box p="$4">
               <Text bold>{name}</Text>
             </Box>
           )}
@@ -84,7 +68,7 @@ const Tags = (props) => {
         />
 
         {!tags.length ? (
-          <Text px={4}>No tags configured for devices or services</Text>
+          <Text px="$4">No tags configured for devices or services</Text>
         ) : null}
       </VStack>
     </ScrollView>

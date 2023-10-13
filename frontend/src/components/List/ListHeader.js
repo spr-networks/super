@@ -20,8 +20,13 @@ const ListHeader = ({ title, description, ...props }) => {
       </Button>
   */
   return (
-    <HStack justifyContent="space-between" alignItems="center" p="$4">
-      <VStack
+    <VStack
+      justifyContent="space-between"
+      p="$4"
+      space="md"
+      sx={{ '@md': { flexDirection: 'row', alignItems: 'center', gap: 'md' } }}
+    >
+      <HStack
         sx={{ '@md': { flexDirection: 'row' } }}
         space="sm"
         alignItems="center"
@@ -30,10 +35,10 @@ const ListHeader = ({ title, description, ...props }) => {
         <Text size="sm" color="$muted500">
           {description}
         </Text>
-      </VStack>
+      </HStack>
 
       {props.children}
-    </HStack>
+    </VStack>
   )
 }
 

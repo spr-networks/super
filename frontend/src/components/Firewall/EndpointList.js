@@ -1,12 +1,5 @@
 import React, { useEffect, useRef, useState, useContext } from 'react'
-import { Icon } from 'FontAwesomeUtils'
 import { AlertContext } from 'AppContext'
-import {
-  faArrowRightLong,
-  faEllipsis,
-  faTag,
-  faTrash
-} from '@fortawesome/free-solid-svg-icons'
 
 import { firewallAPI } from 'api'
 import ModalForm from 'components/ModalForm'
@@ -33,17 +26,7 @@ import {
 
 import { ListHeader, ListItem } from 'components/List'
 import { Menu } from 'native-base' //TODONB
-
-//copied from Device.js, may want to move otu
-const TagItem = React.memo(({ name }) => {
-  let icon = faTag
-  return (
-    <Badge key={name} action="muted" variant="outline" size="sm">
-      <Icon icon={icon} size={3} />
-      <BadgeText>{name}</BadgeText>
-    </Badge>
-  )
-})
+import TagItem from 'components/TagItem'
 
 const EndpointList = (props) => {
   const [list, setList] = useState([])
@@ -161,7 +144,10 @@ const EndpointList = (props) => {
           title="Add Service Endpoint"
           triggerText="Add Service Endpoint"
           triggerProps={{
-            display: { base: 'none', md: list.length ? 'flex' : 'none' }
+            sx: {
+              '@base': { display: 'none' },
+              '@md': { display: list.length ? 'flex' : 'none' }
+            }
           }}
           modalRef={refModal}
         >
@@ -174,15 +160,13 @@ const EndpointList = (props) => {
           data={list}
           renderItem={({ item }) => (
             <ListItem>
+              <Badge action="muted" variant="outline">
+                <BadgeText>{item.Protocol}</BadgeText>
+              </Badge>
+
               <Text bold>{item.RuleName}</Text>
 
               <ArrowRightIcon color="$muted400" />
-
-              <Box alignItems="center">
-                <Badge action="muted" variant="outline">
-                  <BadgeText>{item.Protocol}</BadgeText>
-                </Badge>
-              </Box>
 
               <HStack space="sm">
                 <Text bold>

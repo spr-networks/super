@@ -195,7 +195,10 @@ const MulticastPorts = (props) => {
           title="Add Multicast Service Rule"
           triggerText="Add Multicast Service"
           triggerProps={{
-            display: { base: 'none', md: list.length ? 'flex' : 'none' }
+            sx: {
+              '@base': { display: 'none' },
+              '@md': { display: list.length ? 'flex' : 'none' }
+            }
           }}
           modalRef={refModal}
         >
@@ -207,9 +210,7 @@ const MulticastPorts = (props) => {
         data={list}
         renderItem={({ item }) => (
           <ListItem>
-            <HStack space={1}>
-              <Text>{item.Address}</Text>
-            </HStack>
+            <Text>{item.Address}</Text>
 
             <HStack>
               {item.Tags
@@ -277,6 +278,7 @@ const MulticastPorts = (props) => {
         ) : null}
         <Button
           sx={{ '@md': { display: list.length ? 'none' : 'flex' } }}
+          rounded="$none"
           onPress={() => refModal.current()}
         >
           <ButtonText>Add Multicast Service</ButtonText>

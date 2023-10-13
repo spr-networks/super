@@ -1,12 +1,12 @@
 import React from 'react'
 import PluginList from 'components/Plugins/PluginList'
-import { View } from 'native-base'
+import { ScrollView } from '@gluestack-ui/themed'
 
 const Plugins = (props) => {
   return (
-    <View>
+    <ScrollView sx={{ '@md': { h: '90vh' } }}>
       <PluginList />
-    </View>
+    </ScrollView>
   )
 }
 

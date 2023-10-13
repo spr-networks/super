@@ -1,27 +1,27 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import { Icon } from 'FontAwesomeUtils'
-import {
-  faBoxArchive,
-  faDownload,
-  faTrash
-} from '@fortawesome/free-solid-svg-icons'
+
 import {
   Badge,
+  BadgeText,
   Box,
   Button,
-  Heading,
-  IconButton,
+  ButtonIcon,
+  ButtonText,
   HStack,
-  Stack,
   Text,
-  useColorModeValue
-} from 'native-base'
+  DownloadIcon,
+  TrashIcon,
+  CloseIcon
+} from '@gluestack-ui/themed'
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
 import { prettyDate } from 'utils'
 
 import { FlashList } from '@shopify/flash-list'
+import { ListHeader, ListItem } from 'components/List'
+import { BoxIcon } from 'lucide-react-native'
 
 const ConfigsBackup = (props) => {
   const context = useContext(AlertContext)
@@ -82,59 +82,61 @@ const ConfigsBackup = (props) => {
 
   return (
     <>
-      <HStack alignItems="center" justifyContent="space-between" p={4}>
-        <Heading fontSize="md">Backups</Heading>
+      <ListHeader title="Backups">
         <Button
           size="sm"
-          variant="ghost"
-          colorScheme="blueGray"
-          leftIcon={<Icon icon={faBoxArchive} />}
+          action="secondary"
+          variant="link"
           onPress={doConfigsBackup}
         >
-          Backup configs
+          <ButtonText>Backup configs</ButtonText>
+          <ButtonIcon as={BoxIcon} ml="$1" color="$muted500" />
         </Button>
-      </HStack>
+      </ListHeader>
 
-      <Box
-        space={2}
-        p={4}
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-      >
+      <Box>
         <FlashList
           data={backups}
-          keyExtractor={(item, index) => item.Timestamp}
+          keyExtractor={(item) => item.Timestamp}
           renderItem={({ item }) => (
-            <Stack
-              direction="row"
-              space={{ base: 2, md: 4 }}
-              py={4}
-              borderBottomColor="borderColorCardLight"
-              _dark={{ borderBottomColor: 'borderColorCardDark' }}
-              borderBottomWidth={1}
-              alignItems="center"
-            >
-              <Badge variant="outline">{prettyDate(item.Timestamp)}</Badge>
-              <HStack space={2} display={{ base: 'none', md: 'flex' }}>
-                {/*<Text>Filename</Text>*/}
-                <Text color="muted.500">{item.Name}</Text>
+            <ListItem>
+              <Badge action="muted" variant="outline">
+                <BadgeText>{prettyDate(item.Timestamp)}</BadgeText>
+              </Badge>
+              <HStack
+                space="md"
+                sx={{
+                  '@base': { display: 'none', '@md': { display: 'flex' } }
+                }}
+              >
+                <Text color="$muted500">{item.Name}</Text>
               </HStack>
-              <IconButton
-                size="sm"
-                onPress={() => downloadBackup(item.Name)}
-                icon={<Icon icon={faDownload} />}
-                display={showDownloadBackups ? 'flex' : 'none'}
-              />
-              <IconButton
-                size="sm"
-                colorScheme="danger"
-                onPress={() => deleteBackup(item.Name)}
-                icon={<Icon icon={faTrash} />}
-              />
-            </Stack>
+              <HStack space={'xl'}>
+                <Button
+                  size="sm"
+                  action="secondary"
+                  variant="link"
+                  onPress={() => downloadBackup(item.Name)}
+                  sx={{
+                    '@base': { display: showDownloadBackups ? 'flex' : 'none' }
+                  }}
+                >
+                  <ButtonIcon as={DownloadIcon} />
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="link"
+                  onPress={() => deleteBackup(item.Name)}
+                >
+                  <ButtonIcon as={CloseIcon} color="$red700" />
+                </Button>
+              </HStack>
+            </ListItem>
           )}
         />
         {!backups.length ? (
-          <Text color="muted.500">No backups available</Text>
+          <Text color="$muted500">No backups available</Text>
         ) : null}
       </Box>
     </>

@@ -1,30 +1,28 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import Clipboard from '@react-native-clipboard/clipboard'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import {copy} from 'utils'
-import {
-  faCirclePlus,
-  faCopy,
-  faPlus,
-  faXmark
-} from '@fortawesome/free-solid-svg-icons'
+import { copy } from 'utils'
 import { format as timeAgo } from 'timeago.js'
 
 import {
-  Box,
+  AddIcon,
   Button,
-  Heading,
+  ButtonIcon,
+  ButtonText,
   HStack,
-  IconButton,
-  Stack,
   Text,
-  Tooltip,
+  /*Tooltip,
+  TooltipContent,
+  TooltipText,*/
   View,
   VStack,
-  useColorModeValue
-} from 'native-base'
+  CloseIcon,
+  CopyIcon
+} from '@gluestack-ui/themed'
+
+import { Tooltip } from 'native-base' //TODONB
 
 import { FlashList } from '@shopify/flash-list'
+
+import { ListHeader, ListItem } from 'components/List'
 
 import { authAPI } from 'api'
 import { AlertContext } from 'AppContext'
@@ -80,10 +78,11 @@ const AuthTokenList = (props) => {
       <Button
         {...triggerProps}
         marginLeft="auto"
-        variant="ghost"
-        colorScheme="blueGray"
+        variant="link"
+        action="primary"
       >
-        Add Token
+        <ButtonText>Add Token</ButtonText>
+        <ButtonIcon as={AddIcon} ml="$1" />
       </Button>
     )
   }
@@ -92,87 +91,79 @@ const AuthTokenList = (props) => {
 
   return (
     <View h={'100%'}>
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <Heading fontSize="md">API Tokens</Heading>
-
-        <Box alignSelf="center">
-          <ModalForm
-            title="Create new Auth Token"
-            triggerText="Add Auth Token"
-            modalRef={refModal}
-          >
-            <AddAuthToken notifyChange={notifyChange} />
-          </ModalForm>
-        </Box>
-      </HStack>
+      <ListHeader title="API Tokens">
+        <ModalForm
+          title="Create new Auth Token"
+          triggerText="Add Auth Token"
+          modalRef={refModal}
+        >
+          <AddAuthToken notifyChange={notifyChange} />
+        </ModalForm>
+      </ListHeader>
 
       <FlashList
         data={tokens}
         estimatedItemSize={100}
         renderItem={({ item, index }) => (
-          <Box
-            bg="backgroundCardLight"
-            borderBottomWidth={0}
-            my={2}
-            mx={4}
-            p={4}
-            rounded="md"
-            shadow="md"
-            borderColor="muted.200"
-            _dark={{ bg: 'backgroundCardDark', borderColor: 'muted.600' }}
-          >
-            <HStack w="100%" space={3} alignItems="center">
-              <Stack
-                direction={{ base: 'column', md: 'row' }}
-                flex={1}
-                alignItems={{ md: 'center' }}
-                justifyContent={'space-between'}
-                space={4}
-              >
-                <Text>{item.Name || `Token#${index}`}</Text>
-                <HStack alignItems="center" justifyItems="flex-end">
-                    <Text isTruncated>Copy Token</Text>
-                    <Tooltip label={item.Token} onPress={alert} >
-                    <IconButton
-                      variant="unstyled"
-                      icon={<Icon size="4" icon={faCopy} color="muted.500" />}
-                      display={showClipboard ? 'flex' : 'none'}
-                      onPress={() => copy(item.Token)}
-                    />
-                    </Tooltip>
-                  {item.ScopedPaths != null && item.ScopedPaths.length > 0 ? (
-                    <Text isTruncated>{JSON.stringify(item.ScopedPaths)}</Text>
-                  ) : (
-                    <Text isTruncated></Text>
-                  )}
-                </HStack>
-              </Stack>
-
-              <HStack
-                w={{ base: '3/6', md: '2/6' }}
-                space={1}
-                justifyContent="flex-end"
-              >
-                <Text color="muted.500">Expire</Text>
-                <Text
-                  color={
-                    tokenExpired(item.Expire) ? 'warning.400' : 'muted.500'
-                  }
-                >
-                  {item.Expire ? timeAgo(new Date(item.Expire * 1e3)) : 'Never'}
-                </Text>
+          <ListItem>
+            <VStack
+              sx={{
+                '@md': { flexDirection: 'row', alignItems: 'center' }
+              }}
+              flex="1"
+              space="md"
+              justifyContent={'space-between'}
+            >
+              <Text>{item.Name || `Token#${index}`}</Text>
+              <HStack space="sm" alignItems="center" justifyItems="flex-end">
+                <Tooltip label={item.Token} onPress={alert}>
+                  <Button
+                    size="sm"
+                    action="secondary"
+                    variant="link"
+                    display={showClipboard ? 'flex' : 'none'}
+                    onPress={() => copy(item.Token)}
+                  >
+                    <ButtonText>Copy Token</ButtonText>
+                    <ButtonIcon as={CopyIcon} ml="$1" />
+                  </Button>
+                </Tooltip>
+                {item.ScopedPaths != null && item.ScopedPaths.length > 0 ? (
+                  <Text isTruncated>{JSON.stringify(item.ScopedPaths)}</Text>
+                ) : (
+                  <Text isTruncated></Text>
+                )}
               </HStack>
+            </VStack>
 
-              <IconButton
-                alignSelf="center"
+            <HStack
+              sx={{
+                '@base': { w: '$3/6' },
+                '@md': { w: '$2/6' }
+              }}
+              space="sm"
+              justifyContent="flex-end"
+            >
+              <Text size="sm" color="$muted500">
+                Expire
+              </Text>
+              <Text
                 size="sm"
-                variant="ghost"
-                colorScheme="secondary"
-                icon={<Icon icon={faXmark} />}
-                onPress={() => deleteListItem(item)}
-              />
+                color={tokenExpired(item.Expire) ? '$warning400' : '$muted500'}
+              >
+                {item.Expire ? timeAgo(new Date(item.Expire * 1e3)) : 'Never'}
+              </Text>
             </HStack>
-          </Box>
+
+            <Button
+              alignSelf="center"
+              variant="link"
+              onPress={() => deleteListItem(item)}
+              ml="$8"
+            >
+              <ButtonIcon as={CloseIcon} color="$red700" />
+            </Button>
+          </ListItem>
         )}
         keyExtractor={(item) => item.Token}
       />

@@ -1,11 +1,5 @@
 import React, { useRef } from 'react'
 import PropTypes from 'prop-types'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import {
-  faCirclePlus,
-  faPlus,
-  faXmark
-} from '@fortawesome/free-solid-svg-icons'
 
 import { firewallAPI } from 'api'
 import ModalForm from 'components/ModalForm'
@@ -13,19 +7,19 @@ import AddBlock from './AddBlock'
 
 import {
   Badge,
+  BadgeText,
   Button,
+  ButtonText,
+  ButtonIcon,
   Box,
   FlatList,
-  Heading,
-  IconButton,
-  Stack,
-  HStack,
   VStack,
   Text,
-  useColorModeValue
-} from 'native-base'
+  AddIcon,
+  CloseIcon
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+import { ListHeader, ListItem } from 'components/List'
 
 const BlockList = (props) => {
   let list = props.list || []
@@ -48,81 +42,68 @@ const BlockList = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <VStack maxW={{ base: 'full', md: '60%' }}>
-          <Heading fontSize="md" isTruncated>
-            {title}
-          </Heading>
-          <Text color="muted.500" flexWrap="wrap">
-            Block traffic coming into the network at the PREROUTING stage
-          </Text>
-        </VStack>
+      <ListHeader
+        title={title}
+        description="Block traffic coming into the network at the PREROUTING stage"
+      >
         <ModalForm
           title={`Add IP Block`}
           triggerText="Add IP Block"
           triggerProps={{
-            display: { base: 'none', md: list.length ? 'flex' : 'none' }
+            sx: {
+              '@base': { display: 'none' },
+              '@md': { display: list.length ? 'flex' : 'none' }
+            }
           }}
           modalRef={refModal}
         >
           <AddBlock notifyChange={notifyChange} />
         </ModalForm>
-      </HStack>
+      </ListHeader>
 
-      <Box px={{ base: 0, md: 4 }}>
+      <Box>
         <FlatList
           data={list}
           renderItem={({ item }) => (
-            <Box
-              bg="backgroundCardLight"
-              borderBottomWidth={1}
-              _dark={{
-                bg: 'backgroundCardDark',
-                borderColor: 'borderColorCardDark'
-              }}
-              borderColor="borderColorCardLight"
-              p={4}
-            >
-              <HStack
-                space={3}
-                justifyContent="space-between"
-                alignItems="center"
+            <ListItem>
+              <Badge action="info" variant="outline">
+                <BadgeText>{item.Protocol}</BadgeText>
+              </Badge>
+
+              <Text>{item.SrcIP}</Text>
+              <Text>{item.DstIP}</Text>
+
+              <Button
+                alignSelf="center"
+                size="sm"
+                action="negative"
+                variant="link"
+                onPress={() => deleteListItem(item)}
               >
-                <Badge variant="outline">{item.Protocol}</Badge>
-
-                <Text>{item.SrcIP}</Text>
-                <Text>{item.DstIP}</Text>
-
-                <IconButton
-                  alignSelf="center"
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="secondary"
-                  icon={<Icon icon={faXmark} />}
-                  onPress={() => deleteListItem(item)}
-                />
-              </HStack>
-            </Box>
+                <ButtonIcon as={CloseIcon} color="$red700" />
+              </Button>
+            </ListItem>
           )}
           keyExtractor={(item) => `${item.Protocol}${item.SrcIP}${item.DstIP}`}
         />
 
         <VStack>
           {!list.length ? (
-            <Text px={{ base: 4, md: 0 }} mb={4} flexWrap="wrap">
+            <Text px="$4" mb="$4" flexWrap="wrap">
               Block inbound WAN traffic from reaching a private IP address on
               the LAN.
             </Text>
           ) : null}
+
           <Button
-            display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
-            variant={useColorModeValue('subtle', 'solid')}
-            colorScheme={useColorModeValue('primary', 'muted')}
-            rounded="none"
-            leftIcon={<Icon icon={faCirclePlus} />}
+            sx={{ '@md': { display: list.length ? 'none' : 'flex' } }}
+            action="primary"
+            variant="solid"
+            rounded="$none"
             onPress={() => refModal.current()}
           >
-            Add IP Block
+            <ButtonText>Add IP Block</ButtonText>
+            <ButtonIcon as={AddIcon} />
           </Button>
         </VStack>
       </Box>

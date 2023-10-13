@@ -11,7 +11,7 @@ import {
   useColorMode
 } from '@gluestack-ui/themed'
 
-import { Modal, useDisclose } from 'native-base'
+import { Modal, useDisclose } from 'native-base' //TODONB
 
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
@@ -93,7 +93,7 @@ const SystemInfo = (props) => {
               }
               justifyContent="space-between"
             >
-              <Text>Hostname</Text>
+              <Text size="sm">Hostname</Text>
               <Text color="$muted500">{hostname}</Text>
             </HStack>
             <HStack
@@ -107,7 +107,7 @@ const SystemInfo = (props) => {
               }
               justifyContent="space-between"
             >
-              <Text>SPR Version</Text>
+              <Text size="sm">SPR Version</Text>
               <Text color="$muted500">{version}</Text>
             </HStack>
           </HStack>
@@ -140,7 +140,7 @@ const SystemInfo = (props) => {
                   borderBottomWidth={1}
                   justifyContent="space-between"
                 >
-                  <Text>{niceKey(item)}</Text>
+                  <Text size="sm">{niceKey(item)}</Text>
                   <Text color="$muted500">{uptime[item]}</Text>
                 </HStack>
               )}
@@ -167,7 +167,7 @@ const SystemInfo = (props) => {
                   borderBottomWidth={1}
                   justifyContent="space-between"
                 >
-                  <Text>{niceKey(item)}</Text>
+                  <Text size="sm">{niceKey(item)}</Text>
                   <Text color="$muted500">{uptime[item]}</Text>
                 </HStack>
               )}

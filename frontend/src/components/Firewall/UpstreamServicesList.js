@@ -95,47 +95,41 @@ const UpstreamServicesList = (props) => {
 
       <Box>
         <HStack
-          space={'md'}
+          space="md"
           justifyContent="space-between"
           alignItems="center"
           mb="$4"
           px="$4"
         >
-          <Heading size="sm">Protocol</Heading>
-          <Heading size="sm">Port</Heading>
-          <Heading size="sm">Enabled From Upstream WAN</Heading>
-          <Heading size="sm"></Heading>
+          <Heading size="xs">Protocol</Heading>
+          <Heading size="xs">Port</Heading>
+          <Heading size="xs">Enabled From Upstream WAN</Heading>
+          <Heading size="xs"></Heading>
         </HStack>
 
         <FlatList
           data={list}
           renderItem={({ item }) => (
             <ListItem key={`upstream:${JSON.stringify(item)}`}>
-              <HStack
-                space="md"
-                justifyContent="space-between"
-                alignItems="center"
+              <Badge action="muted" variant="outline">
+                <BadgeText>{item.Protocol}</BadgeText>
+              </Badge>
+              <Text w={100}>{item.Port}</Text>
+              <Box w={100} alignItems="center" alignSelf="center">
+                <Switch
+                  value={item.UpstreamEnabled}
+                  onToggle={() => toggleUpstream(item, !item.UpstreamEnabled)}
+                />
+              </Box>
+              <Button
+                alignSelf="center"
+                size="sm"
+                action="negative"
+                variant="link"
+                onPress={() => deleteListItem(item)}
               >
-                <Badge action="muted" variant="outline">
-                  <BadgeText>{item.Protocol}</BadgeText>
-                </Badge>
-                <Text w={100}>{item.Port}</Text>
-                <Box w={100} alignItems="center" alignSelf="center">
-                  <Switch
-                    value={item.UpstreamEnabled}
-                    onToggle={() => toggleUpstream(item, !item.UpstreamEnabled)}
-                  />
-                </Box>
-                <Button
-                  alignSelf="center"
-                  size="sm"
-                  action="negative"
-                  variant="link"
-                  onPress={() => deleteListItem(item)}
-                >
-                  <ButtonIcon as={CloseIcon} color="$red700" />
-                </Button>
-              </HStack>
+                <ButtonIcon as={CloseIcon} color="$red700" />
+              </Button>
             </ListItem>
           )}
           keyExtractor={(item) =>

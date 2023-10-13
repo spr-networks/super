@@ -1,11 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import {
-  faArrowRightLong,
-  faCirclePlus,
-  faPlus,
-  faXmark
-} from '@fortawesome/free-solid-svg-icons'
 
 import { firewallAPI, deviceAPI } from 'api'
 import ModalForm from 'components/ModalForm'
@@ -13,19 +6,22 @@ import AddForward from './AddForward'
 
 import {
   Badge,
+  BadgeText,
   Button,
+  ButtonText,
+  ButtonIcon,
   Box,
   FlatList,
-  Heading,
-  IconButton,
-  Stack,
   HStack,
   VStack,
   Text,
-  useColorModeValue
-} from 'native-base'
+  AddIcon,
+  ArrowRightIcon,
+  CloseIcon
+} from '@gluestack-ui/themed'
 
 import ListHeader from 'components/List/ListHeader'
+import { ListItem } from 'components/List'
 
 const ForwardList = (props) => {
   const [list, setList] = useState([])
@@ -96,59 +92,47 @@ const ForwardList = (props) => {
         </ModalForm>
       </ListHeader>
 
-      <Box px={{ base: 0, md: 4 }}>
+      <Box>
         <FlatList
           data={list}
           renderItem={({ item }) => (
-            <Box
-              bg="backgroundCardLight"
-              borderBottomWidth={1}
-              _dark={{
-                bg: 'backgroundCardDark',
-                borderColor: 'borderColorCardDark'
-              }}
-              borderColor="borderColorCardLight"
-              p={4}
-            >
-              <HStack
-                space={3}
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                <Badge variant="outline">{item.Protocol}</Badge>
+            <ListItem>
+              <Badge action="muted" variant="outline">
+                <BadgeText>{item.Protocol}</BadgeText>
+              </Badge>
 
-                <HStack space={1}>
-                  <Text bold>
-                    {item.deviceSrc ? item.deviceSrc.Name : item.SrcIP}
-                  </Text>
-                  <Text color="muted.500">:</Text>
-                  <Text>{item.SrcPort}</Text>
-                </HStack>
-
-                <Icon color="muted.400" icon={faArrowRightLong} />
-
-                <HStack space={1}>
-                  <Text bold>
-                    {item.deviceDst &&
-                    item.deviceDst.Name &&
-                    item.deviceDst.Name.length > 0
-                      ? item.deviceDst.Name
-                      : item.DstIP}
-                  </Text>
-                  <Text color="muted.500">:</Text>
-                  <Text>{item.DstPort}</Text>
-                </HStack>
-
-                <IconButton
-                  alignSelf="center"
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="secondary"
-                  icon={<Icon icon={faXmark} />}
-                  onPress={() => deleteListItem(item)}
-                />
+              <HStack space={1}>
+                <Text bold>
+                  {item.deviceSrc ? item.deviceSrc.Name : item.SrcIP}
+                </Text>
+                <Text color="$muted500">:</Text>
+                <Text>{item.SrcPort}</Text>
               </HStack>
-            </Box>
+
+              <ArrowRightIcon color="$muted500" />
+
+              <HStack space={1}>
+                <Text bold>
+                  {item.deviceDst &&
+                  item.deviceDst.Name &&
+                  item.deviceDst.Name.length > 0
+                    ? item.deviceDst.Name
+                    : item.DstIP}
+                </Text>
+                <Text color="$muted500">:</Text>
+                <Text>{item.DstPort}</Text>
+              </HStack>
+
+              <Button
+                alignSelf="center"
+                size="sm"
+                action="negative"
+                variant="link"
+                onPress={() => deleteListItem(item)}
+              >
+                <ButtonIcon as={CloseIcon} color="$red700" />
+              </Button>
+            </ListItem>
           )}
           keyExtractor={(item) =>
             `${item.Protocol}${item.DstIP}:${item.DstPort}`
@@ -157,20 +141,21 @@ const ForwardList = (props) => {
 
         <VStack>
           {!list.length ? (
-            <Text px={{ base: 4, md: 0 }} mb={4} flexWrap="wrap">
+            <Text px="$4" mb="$4" flexWrap="wrap">
               Forward incoming WAN packets to access a service that runs on the
               LAN.
             </Text>
           ) : null}
+
           <Button
-            display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
-            variant={useColorModeValue('subtle', 'solid')}
-            colorScheme={useColorModeValue('primary', 'muted')}
-            rounded="none"
-            leftIcon={<Icon icon={faCirclePlus} />}
+            sx={{ '@md': { display: list.length ? 'none' : 'flex' } }}
+            action="primary"
+            variant="solid"
+            rounded="$none"
             onPress={() => refModal.current()}
           >
-            Add Forward
+            <ButtonText>Add Forward</ButtonText>
+            <ButtonIcon as={AddIcon} />
           </Button>
         </VStack>
       </Box>

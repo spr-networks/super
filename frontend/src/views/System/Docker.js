@@ -2,27 +2,32 @@ import React, { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from 'FontAwesomeUtils'
 import {
-  faArrowRightLong,
-  faEllipsis,
-  faEye,
-  faEyeSlash,
   faHardDrive,
   faListAlt,
   faNetworkWired
 } from '@fortawesome/free-solid-svg-icons'
 import {
   Badge,
+  BadgeText,
   Box,
   Button,
+  ButtonText,
+  ButtonIcon,
   Heading,
   HStack,
-  IconButton,
   FlatList,
-  Menu,
   Text,
-  useColorModeValue,
-  VStack
-} from 'native-base'
+  VStack,
+  ThreeDotsIcon,
+  EyeIcon,
+  EyeOffIcon,
+  ArrowRightIcon
+} from '@gluestack-ui/themed'
+
+import { Menu } from 'native-base' //TODONB
+
+import { ListHeader, ListItem } from 'components/List'
+
 import { FlashList } from '@shopify/flash-list'
 
 import { api } from 'api'
@@ -60,14 +65,14 @@ const DockerInfo = ({ showModal, ...props }) => {
           data={item.Mounts}
           keyExtractor={(item) => item.Source}
           renderItem={({ item: mount }) => (
-            <HStack space={2} p={4} justifyContent="space-around">
+            <HStack space="md" p="$4" justifyContent="space-around">
               {/*<Text>{mount.Type}</Text>*/}
               <Text flex={1}>{mount.Source}</Text>
-              <Text flex={1} color="muted.500">
+              <Text flex={1} color="$muted500">
                 {mount.Destination}
               </Text>
-              <Badge ml="auto" colorScheme="muted" variant="outline">
-                {mount.Mode}
+              <Badge ml="auto" action="muted" variant="outline">
+                <BadgeText>{mount.Mode}</BadgeText>
               </Badge>
             </HStack>
           )}
@@ -100,20 +105,20 @@ const DockerInfo = ({ showModal, ...props }) => {
       showModal(
         `${containerName} Network`,
         <VStack>
-          <VStack space={2}>
+          <VStack space="md">
             <Heading size="sm">IPAddress</Heading>
             <Text>{ipAddress}</Text>
           </VStack>
           {item.Ports && item.Ports.length ? (
-            <VStack space={2}>
-              <Heading size="sm" my={2}>
+            <VStack space="md">
+              <Heading size="sm" my="$2">
                 Ports
               </Heading>
               {item.Ports.map((pmap, idx) => (
-                <HStack key={`pmap-${idx}`} space={2} maxW={400}>
+                <HStack key={`pmap-${idx}`} space="md" maxW={400}>
                   <HStack
-                    space={2}
-                    w={'400px'}
+                    space="md"
+                    w={'200'}
                     alignItems="center"
                     justifyContent="space-between"
                   >
@@ -121,7 +126,7 @@ const DockerInfo = ({ showModal, ...props }) => {
                     <Text flex={1}>
                       {pmap.IP}:{pmap.PublicPort}
                     </Text>
-                    <Icon icon={faArrowRightLong} color="muted.500" />
+                    <ArrowRightIcon color="$muted500" />
                     <Text flex={1} justifyContent="flex-end">
                       {ipAddress}:{pmap.PrivatePort}
                     </Text>
@@ -135,12 +140,9 @@ const DockerInfo = ({ showModal, ...props }) => {
     }
 
     const trigger = (triggerProps) => (
-      <IconButton
-        variant="unstyled"
-        ml="auto"
-        icon={<Icon icon={faEllipsis} color="muted.600" />}
-        {...triggerProps}
-      ></IconButton>
+      <Button variant="link" ml="auto" {...triggerProps}>
+        <ButtonIcon as={ThreeDotsIcon} color="$muted500" />
+      </Button>
     )
 
     const moreMenu = (
@@ -153,20 +155,20 @@ const DockerInfo = ({ showModal, ...props }) => {
       >
         <Menu.Group title="View more ...">
           <Menu.Item onPress={onLogs}>
-            <HStack space={2} alignItems="center">
-              <Icon icon={faListAlt} color="muted.500" />
+            <HStack space="md" alignItems="center">
+              <Icon icon={faListAlt} color="$muted500" />
               <Text>Logs</Text>
             </HStack>
           </Menu.Item>
           <Menu.Item onPress={onMounts}>
-            <HStack space={2} alignItems="center">
-              {<Icon icon={faHardDrive} color="muted.500" />}
+            <HStack space="md" alignItems="center">
+              {<Icon icon={faHardDrive} color="$muted500" />}
               <Text>Mounts</Text>
             </HStack>
           </Menu.Item>
           <Menu.Item onPress={onNetwork} isDisabled={item.State != 'running'}>
-            <HStack space={2} alignItems="center">
-              <Icon icon={faNetworkWired} color="muted.500" />
+            <HStack space="md" alignItems="center">
+              <Icon icon={faNetworkWired} color="$muted500" />
               <Text>Network</Text>
             </HStack>
           </Menu.Item>
@@ -183,56 +185,42 @@ const DockerInfo = ({ showModal, ...props }) => {
       //<pre>{JSON.stringify(item.Ports)}</pre>
       let networkMode = getNetworkMode(item)
       return (
-        <Badge variant={'outline'} colorScheme="muted" fontSize="xs">
-          {networkMode}
+        <Badge action="muted" variant={'outline'} size="sm">
+          <BadgeText>{networkMode}</BadgeText>
         </Badge>
       )
     }
 
     return (
-      <HStack
-        space={2}
-        p={4}
-        borderBottomColor="borderColorCardLight"
-        _dark={{ borderBottomColor: 'borderColorCardDark' }}
-        borderBottomWidth={1}
-        justifyContent="space-between"
-        alignItems="center"
-        flexWrap="wrap"
-      >
-        <VStack flex={1} space={2}>
-          <Text>{containerName}</Text>
-          <HStack space={2} alignItems="center">
-            <Badge
-              colorScheme={stateColor(item.State)}
-              variant="outline"
-              size="xs"
-            >
-              {item.State}
+      <ListItem>
+        <VStack flex={1} space="md">
+          <Text size="sm">{containerName}</Text>
+          <HStack space="md" alignItems="center">
+            <Badge action={stateColor(item.State)} variant="outline" size="sm">
+              <BadgeText>{item.State}</BadgeText>
             </Badge>
             {networkSummary(item)}
           </HStack>
         </VStack>
 
-        <Text flex={1} fontSize="xs" color="muted.500" isTruncated>
+        <Text flex={1} size="xs" color="muted.500" isTruncated>
           {item.Image}
         </Text>
 
-        <VStack flex={{ base: 0, md: 1 }}>
-          {/* show more info here, privileged, network */}
+        <VStack flex={1}>
           <Text
-            display={{ base: 'none', md: 'flex' }}
-            minW="200px"
+            sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
+            minW="200"
             textAlign="right"
-            fontSize="xs"
-            color="muted.500"
+            size="xs"
+            color="$muted500"
           >
             {item.Status}
           </Text>
         </VStack>
 
         {moreMenu}
-      </HStack>
+      </ListItem>
     )
   }
 
@@ -257,35 +245,30 @@ const DockerInfo = ({ showModal, ...props }) => {
 
   return (
     <Box {...props}>
-      <HStack alignItems="center" justifyContent="space-between" p={4}>
-        <Heading fontSize="md" onPress={() => setShowDocker(!showDocker)}>
-          Docker Containers
-        </Heading>
+      <ListHeader title="Docker Containers">
         <Button
+          ml="auto"
           size="sm"
-          variant="ghost"
-          colorScheme="blueGray"
-          leftIcon={<Icon icon={showDocker ? faEyeSlash : faEye} />}
+          action="muted"
+          variant="link"
           onPress={() => setShowDocker(!showDocker)}
         >
-          {showDocker ? 'Hide info' : 'Show info'}
+          <ButtonText color="$muted500">
+            {showDocker ? 'Hide info' : 'Show info'}
+          </ButtonText>
         </Button>
-      </HStack>
+        <ButtonIcon as={showDocker ? EyeOffIcon : EyeIcon} ml="$1" />
+      </ListHeader>
 
-      <Box
-        minH={400}
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+      <FlatList
+        data={containers}
         display={showDocker ? 'flex' : 'none'}
-      >
-        <FlatList
-          data={containers}
-          keyExtractor={(item, index) => item.Id}
-          estimatedItemSize={100}
-          renderItem={({ item }) =>
-            renderDockerContainer({ item, navigate, showModal })
-          }
-        />
-      </Box>
+        keyExtractor={(item, index) => item.Id}
+        estimatedItemSize={100}
+        renderItem={({ item }) =>
+          renderDockerContainer({ item, navigate, showModal })
+        }
+      />
     </Box>
   )
 }

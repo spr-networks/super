@@ -30,7 +30,7 @@ import {
 import { dbAPI } from 'api'
 import { AlertContext } from 'AppContext'
 import { prettySize } from 'utils'
-import { PlusIcon } from 'lucide-react-native'
+import { PlusIcon, Settings2Icon } from 'lucide-react-native'
 
 const AddTopicForm = ({ allEvents, isStored, handleAddRemove, onSubmit }) => {
   const [value, setValue] = useState('')
@@ -107,8 +107,8 @@ const EditSizeForm = ({ config, onSubmit, ...props }) => {
   const handleSubmit = () => onSubmit(parseInt(size * 1024 * 1024))
 
   return (
-    <HStack space={'xl'}>
-      <FormControl flex={1} space={'xl'}>
+    <HStack space="xl">
+      <FormControl>
         <FormControlLabel>
           <FormControlLabelText>
             Max size for database file in MB
@@ -125,13 +125,13 @@ const EditSizeForm = ({ config, onSubmit, ...props }) => {
             onSubmitEditing={handleSubmit}
           />
         </Input>
-        <FormControlHelperText flexDir={'row'} my={4}>
+        <FormControlHelperText flexDir={'row'} my="$4">
           Size in kB: {size * 1024}kB
         </FormControlHelperText>
       </FormControl>
-      <VStack flex={1} space={'sm'}>
-        <Heading size="md" mb={'$4'}>
-          <Icon icon={faInfoCircle} color="$muted500" mr={2} />
+      <VStack flex={1} space="sm">
+        <Heading size="md" mb="$4">
+          <Icon icon={faInfoCircle} color="$muted500" mr="$2" />
           Notice about size
         </Heading>
         <Text>
@@ -211,7 +211,7 @@ const Database = ({ showModal, closeModal, ...props }) => {
         borderBottomWidth={1}
         justifyContent="space-between"
       >
-        <Text>{key}</Text>
+        <Text size="sm">{key}</Text>
         {value}
       </HStack>
     )
@@ -322,12 +322,13 @@ const Database = ({ showModal, closeModal, ...props }) => {
               <Button
                 size="xs"
                 ml="auto"
-                variant="outline"
                 action="secondary"
+                variant="solid"
                 leftIcon={<Icon icon={faPencil} />}
                 onPress={handlePressEditSize}
               >
                 <ButtonText>Set file size limit</ButtonText>
+                <ButtonIcon as={Settings2Icon} ml="$1" />
               </Button>
             )
           }}
