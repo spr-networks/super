@@ -1,4 +1,5 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 
 import {
   Heading,
@@ -20,9 +21,15 @@ const ListHeader = ({ title, description, ...props }) => {
   */
   return (
     <HStack justifyContent="space-between" alignItems="center" p="$4">
-      <VStack sx={{ '@md': { flexDirection: 'row' } }} space="sm">
-        <Heading size="md">{title}</Heading>
-        <Text color="$muted500">{description}</Text>
+      <VStack
+        sx={{ '@md': { flexDirection: 'row' } }}
+        space="sm"
+        alignItems="center"
+      >
+        <Heading size="sm">{title}</Heading>
+        <Text size="sm" color="$muted500">
+          {description}
+        </Text>
       </VStack>
 
       {props.children}
@@ -31,3 +38,8 @@ const ListHeader = ({ title, description, ...props }) => {
 }
 
 export default ListHeader
+
+ListHeader.propTypes = {
+  title: PropTypes.string,
+  description: PropTypes.string
+}

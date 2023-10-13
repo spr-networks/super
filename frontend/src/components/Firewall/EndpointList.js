@@ -1,53 +1,46 @@
 import React, { useEffect, useRef, useState, useContext } from 'react'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
+import { Icon } from 'FontAwesomeUtils'
 import { AlertContext } from 'AppContext'
 import {
   faArrowRightLong,
-  faCircleNodes,
-  faCirclePlus,
   faEllipsis,
-  faPlus,
   faTag,
   faTrash
 } from '@fortawesome/free-solid-svg-icons'
 
-import { firewallAPI, deviceAPI } from 'api'
+import { firewallAPI } from 'api'
 import ModalForm from 'components/ModalForm'
 import ModalConfirm from 'components/ModalConfirm'
 import AddEndpoint from './AddEndpoint'
 
 import {
   Badge,
+  BadgeText,
   Button,
+  ButtonIcon,
+  ButtonText,
   Box,
   FlatList,
-  Heading,
-  IconButton,
-  Menu,
-  Stack,
   HStack,
   VStack,
   Text,
-  useColorModeValue
-} from 'native-base'
+  useColorMode,
+  ThreeDotsIcon,
+  ArrowRightIcon,
+  AddIcon,
+  TrashIcon
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+import { ListHeader, ListItem } from 'components/List'
+import { Menu } from 'native-base' //TODONB
 
 //copied from Device.js, may want to move otu
 const TagItem = React.memo(({ name }) => {
   let icon = faTag
   return (
-    <Badge
-      key={name}
-      variant="outline"
-      colorScheme={useColorModeValue('muted', 'blueGray')}
-      leftIcon={<Icon icon={icon} size={3} />}
-      rounded="sm"
-      size="sm"
-      py={1}
-      px={2}
-    >
-      {name}
+    <Badge key={name} action="muted" variant="outline" size="sm">
+      <Icon icon={icon} size={3} />
+      <BadgeText>{name}</BadgeText>
     </Badge>
   )
 })
@@ -96,12 +89,9 @@ const EndpointList = (props) => {
   }
 
   const trigger = (triggerProps) => (
-    <IconButton
-      variant="unstyled"
-      ml="auto"
-      icon={<Icon icon={faEllipsis} color="muted.600" />}
-      {...triggerProps}
-    ></IconButton>
+    <Button variant="link" {...triggerProps}>
+      <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
+    </Button>
   )
 
   const defaultTags = []
@@ -152,9 +142,9 @@ const EndpointList = (props) => {
       </Menu.OptionGroup>
       <Menu.Group title="Actions">
         <Menu.Item onPress={() => deleteListItem(item)}>
-          <HStack space={2} alignItems="center">
-            <Icon icon={faTrash} color="danger.700" />
-            <Text color="danger.700">Delete</Text>
+          <HStack space={'md'} alignItems="center">
+            <TrashIcon color="$red700" />
+            <Text color="$red700">Delete</Text>
           </HStack>
         </Menu.Item>
       </Menu.Group>
@@ -163,13 +153,10 @@ const EndpointList = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <VStack maxW={{ base: 'full', md: '60%' }}>
-          <Heading fontSize="md">Endpoints</Heading>
-          <Text color="muted.500" flexWrap="wrap">
-            Describe Service Endpoints for building Firewall Rules
-          </Text>
-        </VStack>
+      <ListHeader
+        title="Endpoints"
+        description="Describe Service Endpoints for building Firewall Rules"
+      >
         <ModalForm
           title="Add Service Endpoint"
           triggerText="Add Service Endpoint"
@@ -180,59 +167,44 @@ const EndpointList = (props) => {
         >
           <AddEndpoint notifyChange={notifyChange} />
         </ModalForm>
-      </HStack>
+      </ListHeader>
 
-      <Box px={{ base: 0, md: 4 }}>
+      <Box>
         <FlatList
           data={list}
           renderItem={({ item }) => (
-            <Box
-              bg="backgroundCardLight"
-              borderBottomWidth={1}
-              _dark={{
-                bg: 'backgroundCardDark',
-                borderColor: 'borderColorCardDark'
-              }}
-              borderColor="borderColorCardLight"
-              p={4}
-            >
-              <HStack
-                space={3}
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                <HStack space={1}>
-                  <Text bold>{item.RuleName}</Text>
-                </HStack>
+            <ListItem>
+              <Text bold>{item.RuleName}</Text>
 
-                <Icon color="muted.400" icon={faArrowRightLong} />
+              <ArrowRightIcon color="$muted400" />
 
-                <Box alignItems="center">
-                  <Badge variant="outline">{item.Protocol}</Badge>
-                </Box>
+              <Box alignItems="center">
+                <Badge action="muted" variant="outline">
+                  <BadgeText>{item.Protocol}</BadgeText>
+                </Badge>
+              </Box>
 
-                <HStack space={1}>
-                  <Text bold>
-                    {item.Domain}
-                    {item.IP}
-                  </Text>
-                  <Text color="muted.500">:</Text>
-                  <Text>{item.Port}</Text>
-                </HStack>
-
-                <Box
-                  display={{
-                    base: 'none',
-                    md: item.Tags?.length ? 'flex' : 'none'
-                  }}
-                >
-                  {item.Tags
-                    ? item.Tags.map((tag) => <TagItem key={tag} name={tag} />)
-                    : null}
-                </Box>
-
-                {moreMenu(item)}
+              <HStack space="sm">
+                <Text bold>
+                  {item.Domain}
+                  {item.IP}
+                </Text>
+                <Text color="$muted500">:</Text>
+                <Text>{item.Port}</Text>
               </HStack>
+
+              <Box
+                sx={{
+                  '@base': { display: 'none' },
+                  '@md': { display: item.Tags?.length ? 'flex' : 'none' }
+                }}
+              >
+                {item.Tags
+                  ? item.Tags.map((tag) => <TagItem key={tag} name={tag} />)
+                  : null}
+              </Box>
+
+              {moreMenu(item)}
 
               <ModalConfirm
                 type={modalType}
@@ -240,28 +212,28 @@ const EndpointList = (props) => {
                 onClose={() => setShowModal(false)}
                 isOpen={showModal}
               />
-            </Box>
+            </ListItem>
           )}
           keyExtractor={(item) => `${item.Protocol}${item.iP}:${item.Port}`}
         />
 
         <VStack>
           {!list.length ? (
-            <Text px={{ base: 4, md: 0 }} mb={4} flexWrap="wrap">
+            <Text px="$4" mb="$4" flexWrap="wrap">
               Service Endpoints serves as helpers for creating other firewall
               rules, as well as one-way connectivity from devices to the
               endpoint when they share a tag.
             </Text>
           ) : null}
           <Button
-            display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
-            variant={useColorModeValue('subtle', 'solid')}
-            colorScheme={useColorModeValue('primary', 'muted')}
-            rounded="none"
-            leftIcon={<Icon icon={faCirclePlus} />}
+            sx={{ '@md': { display: list.length ? 'none' : 'flex' } }}
+            action="primary"
+            variant="solid"
+            rounded="$none"
             onPress={() => refModal.current()}
           >
-            Add Endpoint
+            <ButtonText>Add Endpoint</ButtonText>
+            <ButtonIcon as={AddIcon} />
           </Button>
         </VStack>
       </Box>

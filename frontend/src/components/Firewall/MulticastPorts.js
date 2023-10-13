@@ -3,10 +3,6 @@ import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import {
   faCirclePlus,
   faTags,
-  faPlus,
-  faToggleOn,
-  faToggleOff,
-  faTrash,
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -19,23 +15,25 @@ import ModalForm from 'components/ModalForm'
 import ModalConfirm from 'components/ModalConfirm'
 import AddMulticastPort from './AddMulticastPort'
 
+import { Menu, Tooltip } from 'native-base' //TODONB
+
 import {
   Badge,
+  BadgeText,
   Button,
-  Box,
+  ButtonIcon,
+  ButtonText,
   FlatList,
-  Heading,
-  IconButton,
-  Menu,
-  Stack,
   HStack,
   VStack,
   Text,
-  Tooltip,
-  useColorModeValue
-} from 'native-base'
+  useColorMode,
+  AddIcon,
+  CloseIcon
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+import { ListHeader, ListItem } from 'components/List'
+import { ThreeDotsIcon } from '@gluestack-ui/themed'
 
 const MulticastPorts = (props) => {
   const [list, setList] = useState([])
@@ -45,7 +43,7 @@ const MulticastPorts = (props) => {
     pending: false,
     showModal: false,
     modalType: '',
-    pendingItem: {},
+    pendingItem: {}
   })
 
   const contextType = useContext(AppContext)
@@ -125,40 +123,35 @@ const MulticastPorts = (props) => {
       return
     }
 
-    //alert(JSON.stringify(item.Tags) + " vs " + JSON.stringify(tags))
-
     if (tags != null) {
       tags = tags.filter((v) => typeof v === 'string')
       tags = [...new Set(tags)]
     }
 
-    const newList = list.map(entry => {
+    const newList = list.map((entry) => {
       if (entry.Address === item.Address) {
-        return {...item, Tags: tags};
+        return { ...item, Tags: tags }
       }
-      return entry;
-    });
+      return entry
+    })
 
-    setList(newList);
+    setList(newList)
 
     Multicast.config()
       .then((mcast) => {
         mcast.Addresses = newList
         Multicast.setConfig(mcast)
           .then(() => {
-            alertState.success("Updated tags")
+            alertState.success('Updated tags')
             refreshList()
-          }
-        )
-        .catch((error) => {
-          alertState.error('API Failure: ' + error.message)
-        })
-      }
-    )
-    .catch((error) => {
-      alertState.error('API Failure: ' + error.message)
-    })
-
+          })
+          .catch((error) => {
+            alertState.error('API Failure: ' + error.message)
+          })
+      })
+      .catch((error) => {
+        alertState.error('API Failure: ' + error.message)
+      })
   }
 
   const handleSubmitNew = (item, value) => {
@@ -183,12 +176,9 @@ const MulticastPorts = (props) => {
           'Set a tag to whitelist client interfaces that will receive this multicast service. NOTE: wired downlinks not isolated without VLANs'
         }
       >
-        <IconButton
-          display={{ base: 'flex' }}
-          variant="unstyled"
-          icon={<Icon icon={faTags} color="muted.600" />}
-          {...triggerProps}
-        />
+        <Button variant="link" {...triggerProps}>
+          <Icon icon={faTags} color="$muted600" />
+        </Button>
       </Tooltip>
     )
   }
@@ -197,13 +187,10 @@ const MulticastPorts = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <VStack maxW={{ base: 'full', md: '60%' }}>
-          <Heading fontSize="md">Multicast Proxy</Heading>
-          <Text color="muted.500" isTruncated>
-            Set ip:port addresses to proxy
-          </Text>
-        </VStack>
+      <ListHeader
+        title="Multicast Proxy"
+        description="Set ip:port addresses to proxy"
+      >
         <ModalForm
           title="Add Multicast Service Rule"
           triggerText="Add Multicast Service"
@@ -214,49 +201,31 @@ const MulticastPorts = (props) => {
         >
           <AddMulticastPort notifyChange={notifyChange} />
         </ModalForm>
-      </HStack>
+      </ListHeader>
 
       <FlatList
         data={list}
         renderItem={({ item }) => (
-          <Box
-            bg="backgroundCardLight"
-            borderBottomWidth={1}
-            _dark={{
-              bg: 'backgroundCardDark',
-              borderColor: 'borderColorCardDark'
-            }}
-            borderColor="borderColorCardLight"
-            p={4}
-          >
-            <HStack
-              space={4}
-              justifyContent="space-between"
-              alignItems="left"
-            >
-              <HStack space={1}>
-                <Text>{item.Address}</Text>
-              </HStack>
+          <ListItem>
+            <HStack space={1}>
+              <Text>{item.Address}</Text>
+            </HStack>
 
-              <HStack>
+            <HStack>
               {item.Tags
                 ? item.Tags.map((entry) => (
-                    <Badge key={item.URI + entry} variant="outline">
-                      {entry}
+                    <Badge
+                      key={item.URI + entry}
+                      action="muted"
+                      variant="outline"
+                    >
+                      <BadgeText>{entry}</BadgeText>
                     </Badge>
                   ))
                 : null}
-              </HStack>
+            </HStack>
 
-              <IconButton
-                alignSelf="center"
-                size="sm"
-                variant="ghost"
-                colorScheme="secondary"
-                icon={<Icon icon={faXmark} />}
-                onPress={() => deleteListItem(item)}
-              />
-
+            <HStack ml="auto" space="xl">
               <Menu trigger={trigger}>
                 <Menu.OptionGroup
                   title="Tags"
@@ -265,9 +234,7 @@ const MulticastPorts = (props) => {
                   onChange={(value) => handleTags(item, value)}
                 >
                   {[
-                    ...new Set(
-                      defaultTags.concat(item.Tags ? item.Tags : [])
-                    )
+                    ...new Set(defaultTags.concat(item.Tags ? item.Tags : []))
                   ].map((tag) => (
                     <Menu.ItemOption key={tag} value={tag}>
                       {tag} x
@@ -288,26 +255,32 @@ const MulticastPorts = (props) => {
                 </Menu.OptionGroup>
               </Menu>
 
+              <Button
+                action="negative"
+                variant="link"
+                alignSelf="center"
+                onPress={() => deleteListItem(item)}
+              >
+                <ButtonIcon as={CloseIcon} color="$red700" />
+              </Button>
             </HStack>
-          </Box>
+          </ListItem>
         )}
         keyExtractor={(item) => `${item.Address}`}
       />
 
       <VStack>
         {!list.length ? (
-          <Text px={{ base: 4, md: 0 }} mb={4} flexWrap="wrap">
+          <Text px="$4" mb="$4" flexWrap="wrap">
             There are no multicast proxy rules configured yet
           </Text>
         ) : null}
         <Button
-          display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
-          variant={useColorModeValue('subtle', 'solid')}
-          colorScheme={useColorModeValue('primary', 'muted')}
-          leftIcon={<Icon icon={faCirclePlus} />}
+          sx={{ '@md': { display: list.length ? 'none' : 'flex' } }}
           onPress={() => refModal.current()}
         >
-          Add Multicast Service
+          <ButtonText>Add Multicast Service</ButtonText>
+          <ButtonIcon as={AddIcon} />
         </Button>
 
         <ModalConfirm
@@ -317,7 +290,6 @@ const MulticastPorts = (props) => {
           isOpen={state.showModal}
         />
       </VStack>
-
     </>
   )
 }

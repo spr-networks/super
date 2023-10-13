@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
-import { Box, Button, Modal } from 'native-base'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faCirclePlus, faPlus } from '@fortawesome/free-solid-svg-icons'
+import { Modal } from 'native-base' //TODONB
+import { Button, ButtonIcon, ButtonText } from '@gluestack-ui/themed'
+import { PlusIcon } from 'lucide-react-native'
 
 const ModalForm = (props) => {
   const [show, setShow] = useState(false)
@@ -24,11 +24,9 @@ const ModalForm = (props) => {
   })
 
   let triggerProps = {
-    size: 'sm',
-    variant: 'ghost',
-    colorScheme: 'blueGray',
-    borderColor: 'info.400',
-    leftIcon: <Icon icon={props.triggerIcon || faCirclePlus} />,
+    size: 'xs',
+    variant: 'solid',
+    action: 'primary',
     onPress: toggleModal
   }
 
@@ -39,7 +37,10 @@ const ModalForm = (props) => {
   return (
     <>
       {props.triggerText ? (
-        <Button {...triggerProps}>{props.triggerText || 'Open Modal'}</Button>
+        <Button {...triggerProps}>
+          <ButtonText>{props.triggerText || 'Open Modal'}</ButtonText>
+          <ButtonIcon as={PlusIcon} />
+        </Button>
       ) : null}
 
       {show ? (

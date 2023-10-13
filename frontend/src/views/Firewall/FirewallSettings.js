@@ -1,5 +1,5 @@
 import React from 'react'
-import { ScrollView, Text, View, VStack } from 'native-base'
+import { ScrollView, VStack } from '@gluestack-ui/themed'
 import UpstreamServicesList from 'components/Firewall/UpstreamServicesList'
 
 import ICMP from 'components/Firewall/ICMP'
@@ -7,8 +7,8 @@ import MDNSAdvertise from 'components/Firewall/MDNSAdvertise'
 
 const FWSettings = (props) => {
   return (
-    <ScrollView>
-      <VStack space={4} width={{ base: '100%', md: '75%' }}>
+    <ScrollView __sx={{ '@md': { width: '$3/4' } }}>
+      <VStack space="lg">
         <ICMP />
         <UpstreamServicesList />
         <MDNSAdvertise />

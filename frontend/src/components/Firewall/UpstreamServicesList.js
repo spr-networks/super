@@ -15,20 +15,23 @@ import AddServicePort from './AddServicePort'
 
 import {
   Badge,
+  BadgeText,
   Button,
+  ButtonIcon,
+  ButtonText,
   Box,
   FlatList,
   Heading,
   HStack,
-  IconButton,
-  Stack,
   Switch,
   VStack,
   Text,
-  useColorModeValue
-} from 'native-base'
+  AddIcon,
+  RemoveIcon,
+  CloseIcon
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+import { ListHeader, ListItem } from 'components/List'
 
 const UpstreamServicesList = (props) => {
   const context = useContext(AlertContext)
@@ -64,7 +67,9 @@ const UpstreamServicesList = (props) => {
     service_port.UpstreamEnabled = value
     firewallAPI
       .addServicePort(service_port)
-      .then((result) => {})
+      .then((result) => {
+        refreshList()
+      })
       .catch((err) => {
         context.error('Firewall API: ' + err)
       })
@@ -72,13 +77,10 @@ const UpstreamServicesList = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center">
-        <VStack maxW="60%" p={4}>
-          <Heading fontSize="md">Allowed SPR Services</Heading>
-          <Text color="muted.500" isTruncated>
-            Ports to allow from upstream
-          </Text>
-        </VStack>
+      <ListHeader
+        title="Allowed SPR Services"
+        description="Ports to allow from upstream"
+      >
         <ModalForm
           title="Add Port"
           triggerText="Add Port"
@@ -89,56 +91,52 @@ const UpstreamServicesList = (props) => {
         >
           <AddServicePort notifyChange={notifyChange} />
         </ModalForm>
-      </HStack>
+      </ListHeader>
+
       <Box>
         <HStack
-          space={4}
+          space={'md'}
           justifyContent="space-between"
           alignItems="center"
-          mb={4}
-          px={4}
+          mb="$4"
+          px="$4"
         >
-          <Heading fontSize="sm">Protocol</Heading>
-          <Heading fontSize="sm">Port</Heading>
-          <Heading fontSize="sm">Enabled From Upstream WAN</Heading>
-          <Heading fontSize="sm"></Heading>
+          <Heading size="sm">Protocol</Heading>
+          <Heading size="sm">Port</Heading>
+          <Heading size="sm">Enabled From Upstream WAN</Heading>
+          <Heading size="sm"></Heading>
         </HStack>
 
         <FlatList
           data={list}
           renderItem={({ item }) => (
-            <HStack
-              space={4}
-              justifyContent="space-between"
-              alignItems="center"
-              bg="backgroundCardLight"
-              borderBottomWidth={1}
-              borderColor="borderColorCardLight"
-              _dark={{
-                bg: 'backgroundCardDark',
-                borderColor: 'borderColorCardDark'
-              }}
-              p={4}
-            >
-              <Badge variant="outline">{item.Protocol}</Badge>
-              <Text w={20}>{item.Port}</Text>
-              <Box w={100} alignItems="center" alignSelf="center">
-                <Switch
-                  defaultIsChecked={item.UpstreamEnabled}
-                  onValueChange={() =>
-                    toggleUpstream(item, !item.UpstreamEnabled)
-                  }
-                />
-              </Box>
-              <IconButton
-                alignSelf="center"
-                size="sm"
-                variant="ghost"
-                colorScheme="secondary"
-                icon={<Icon icon={faXmark} />}
-                onPress={() => deleteListItem(item)}
-              />
-            </HStack>
+            <ListItem key={`upstream:${JSON.stringify(item)}`}>
+              <HStack
+                space="md"
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Badge action="muted" variant="outline">
+                  <BadgeText>{item.Protocol}</BadgeText>
+                </Badge>
+                <Text w={100}>{item.Port}</Text>
+                <Box w={100} alignItems="center" alignSelf="center">
+                  <Switch
+                    value={item.UpstreamEnabled}
+                    onToggle={() => toggleUpstream(item, !item.UpstreamEnabled)}
+                  />
+                </Box>
+                <Button
+                  alignSelf="center"
+                  size="sm"
+                  action="negative"
+                  variant="link"
+                  onPress={() => deleteListItem(item)}
+                >
+                  <ButtonIcon as={CloseIcon} color="$red700" />
+                </Button>
+              </HStack>
+            </ListItem>
           )}
           keyExtractor={(item) =>
             `${item.Protocol}${item.Port}:${item.UpstreamEnabled}`
@@ -152,15 +150,15 @@ const UpstreamServicesList = (props) => {
             </Text>
           ) : null}
           <Button
-            display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
-            variant={useColorModeValue('subtle', 'solid')}
-            colorScheme={useColorModeValue('primary', 'muted')}
-            rounded="none"
-            leftIcon={<Icon icon={faCirclePlus} />}
+            sx={{ '@md': { display: list.length ? 'none' : 'flex' } }}
+            action="primary"
+            variant="solid"
+            rounded="$none"
             onPress={() => refModal.current()}
             mt={0}
           >
-            Add Service Port
+            <ButtonText>Add Service Port</ButtonText>
+            <ButtonIcon as={AddIcon} />
           </Button>
         </VStack>
       </Box>

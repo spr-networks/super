@@ -25,7 +25,7 @@ import {
   useColorModeValue
 } from 'native-base'
 
-import { FlashList } from '@shopify/flash-list'
+import ListHeader from 'components/List/ListHeader'
 
 const ForwardList = (props) => {
   const [list, setList] = useState([])
@@ -77,24 +77,24 @@ const ForwardList = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <VStack maxW={{ base: 'full', md: '60%' }}>
-          <Heading fontSize="md">Port Forwarding</Heading>
-          <Text color="muted.500" isTruncated>
-            Set rules for DNAT forwarding of incoming traffic
-          </Text>
-        </VStack>
+      <ListHeader
+        title="Port Forwarding"
+        description="Set rules for DNAT forwarding of incoming traffic"
+      >
         <ModalForm
           title="Add Port Forwarding Rule"
           triggerText="Add Forward"
           triggerProps={{
-            display: { base: 'none', md: list.length ? 'flex' : 'none' }
+            sx: {
+              '@base': { display: 'none' },
+              '@md': { display: list.length ? 'flex' : 'none' }
+            }
           }}
           modalRef={refModal}
         >
           <AddForward notifyChange={notifyChange} />
         </ModalForm>
-      </HStack>
+      </ListHeader>
 
       <Box px={{ base: 0, md: 4 }}>
         <FlatList

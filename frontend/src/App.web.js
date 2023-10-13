@@ -29,8 +29,8 @@ export default function App() {
   }
 
   return (
-    <GluestackUIProvider config={config} colorMode={colorMode}>
-      <NativeBaseProvider theme={theme}>
+    <NativeBaseProvider theme={theme}>
+      <GluestackUIProvider config={config} colorMode={colorMode}>
         <Router>
           <Routes>
             <Route
@@ -60,7 +60,7 @@ export default function App() {
             </Route>
           </Routes>
         </Router>
-      </NativeBaseProvider>
-    </GluestackUIProvider>
+      </GluestackUIProvider>
+    </NativeBaseProvider>
   )
 }

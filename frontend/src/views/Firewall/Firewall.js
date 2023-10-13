@@ -1,15 +1,12 @@
 import React, { Component } from 'react'
-import { Button, ScrollView, View, VStack } from 'native-base'
+import { ScrollView, VStack } from '@gluestack-ui/themed'
 
 import { firewallAPI } from 'api'
 import EndpointList from 'components/Firewall/EndpointList'
 import ForwardList from 'components/Firewall/ForwardList'
 import BlockList from 'components/Firewall/BlockList'
 import ForwardBlockList from 'components/Firewall/ForwardBlockList'
-import UpstreamServicesList from 'components/Firewall/UpstreamServicesList'
 import MulticastPorts from 'components/Firewall/MulticastPorts'
-
-import { Box, Heading, HStack, Text } from 'native-base'
 
 export default class Firewall extends Component {
   state = { config: {} }
@@ -28,8 +25,8 @@ export default class Firewall extends Component {
 
   render() {
     return (
-      <ScrollView width={{ base: '100%', md: '75%' }}>
-        <VStack space={4}>
+      <ScrollView __sx={{ '@md': { width: '$3/4' } }}>
+        <VStack space="lg">
           <EndpointList
             list={this.state.config.Endpoints}
             notifyChange={this.fetchConfig}
