@@ -140,10 +140,9 @@ func loadConfig() {
 		}
 	}
 
-	before := len(config.Plugins)
-	updateConfigPluginDefaults(&config)
+	update := updateConfigPluginDefaults(&config)
 
-	if len(config.Plugins) != before {
+	if update {
 		saveConfigLocked()
 	}
 

@@ -965,6 +965,30 @@ func applyPingRules() {
 		pingLan = true
 	}
 
+	if len(interfaces) == 0 {
+		//interfaces not ready to go.
+
+		if pingWan {
+			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
+				"{", "0.0.0.0/0", ".", os.Getenv("WANIF"), ":", "accept", "}")
+			err = cmd.Run()
+			if err != nil {
+				fmt.Println("[-] Ping rule failed to add", err)
+			}
+		}
+
+		if pingLan {
+			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
+				"{", "0.0.0.0/0", ".", os.Getenv("LANIF"), ":", "accept", "}")
+			err = cmd.Run()
+			if err != nil {
+				fmt.Println("[-] Ping rule failed to add", err)
+			}
+		}
+
+		return
+	}
+
 	for _, iface := range interfaces {
 		if iface.Type == "Uplink" && pingWan {
 			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
@@ -980,7 +1004,7 @@ func applyPingRules() {
 			if err != nil {
 				fmt.Println("[-] Ping rule failed to add", err)
 			}
-		} else if iface.Type == "DownLink" && pingLan {
+		} else if iface.Type == "Downlink" && pingLan {
 			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
 				"{", "0.0.0.0/0", ".", iface.Name, ":", "accept", "}")
 			_, err = cmd.Output()

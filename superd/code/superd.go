@@ -38,6 +38,7 @@ var PlusAddons = "plugins/plus"
 var ComposeAllowList = []string{"docker-compose.yml", "docker-compose-test.yml", "docker-compose-virt.yml",
 	"plugins/plus/pfw_extension/docker-compose.yml",
 	"plugins/plus/mesh_extension/docker-compose.yml",
+	"dyndns/docker-compose.yml",
 	"ppp/docker-compose.yml",
 	"wifi_uplink/docker-compose.yml"}
 
@@ -181,10 +182,26 @@ func composeCommand(composeFile string, target string, command string, optional 
 			d_args = append(d_args, "-e", "RELEASE_VERSION="+release_version)
 		}
 
-		args = append(d_args, "--entrypoint=/bin/bash",
-			"ghcr.io/spr-networks/super_superd",
-			"-c",
-			"docker-compose "+strings.Join(args, " "))
+		//docker.io, ever annoying, integrated compose as a subcommand.
+		// so now we need to handle both cases
+		haveOldDC := true
+		_, err := exec.LookPath("docker-compose")
+		if err != nil {
+			haveOldDC = false
+		}
+
+		if haveOldDC {
+			args = append(d_args, "--entrypoint=/bin/bash",
+				"ghcr.io/spr-networks/super_superd",
+				"-c",
+				"docker-compose "+strings.Join(args, " "))
+		} else {
+			args = append(d_args, "--entrypoint=/bin/bash",
+				"ghcr.io/spr-networks/super_superd",
+				"-c",
+				"docker compose "+strings.Join(args, " "))
+		}
+
 	}
 
 	_, err := exec.Command(cmd, args...).Output()
