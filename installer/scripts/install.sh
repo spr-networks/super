@@ -24,7 +24,7 @@ apt-get update
 apt-get -y install --download-only linux-modules-extra-raspi linux-firmware
 apt-get -y install nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack
 # install docker and buildx
-apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 # dont use this
 rm /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
@@ -63,7 +63,7 @@ if [ ! -f configs/dhcp/coredhcp.yml ]; then
 fi
 
 mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
-touch /lib/udev/rules.d/80-net-setup-link.rules
+ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules
 
 # update sshd config to allow password login
 sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config

@@ -103,6 +103,11 @@ EOF
 
 #try docker-compose pull, else, load the offline containers
 
+shopt -s expand_aliases
+if ! which docker-compose > /dev/null 2>&1; then
+    # Set an alias for docker-compose if it's missing
+    alias docker-compose='docker compose'
+fi
 
 
 cd /home/spr/super/

@@ -93,9 +93,10 @@ var gPluginTemplates = []PluginConfig{
 	},
 }
 
-func updateConfigPluginDefaults(config *APIConfig) {
+func updateConfigPluginDefaults(config *APIConfig) bool {
 	//helper for updating the config to include defaults in the template
 	//assumes config is locked
+	update := false
 
 	covered := []string{}
 	for _, entry := range config.Plugins {
@@ -113,8 +114,22 @@ func updateConfigPluginDefaults(config *APIConfig) {
 		}
 		if !hasEntry {
 			config.Plugins = append(config.Plugins, template)
+			update = true
 		}
 	}
+
+	//handle migrations
+	for _, entry := range config.Plugins {
+		if entry.Name == "dyndns" {
+			if entry.ComposeFilePath == "" {
+				entry.ComposeFilePath = "dyndns/docker-compose.yml"
+				update = true
+			}
+		}
+	}
+
+	return update
+
 }
 
 func PluginProxy(config PluginConfig) (*httputil.ReverseProxy, error) {
