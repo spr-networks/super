@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useNavigate } from 'react-router-dom'
 
-import { useColorMode as useColorModeNB } from 'native-base'
+import { useColorMode as useColorModeNB } from 'native-base' //TODONB
 
 import {
   Button,
