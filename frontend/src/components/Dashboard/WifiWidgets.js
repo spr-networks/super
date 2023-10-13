@@ -4,7 +4,16 @@ import APIWifi from 'api/Wifi'
 import StatsWidget from './StatsWidget'
 import { faClock, faLaptop, faWifi } from '@fortawesome/free-solid-svg-icons'
 
-import { Divider, Box, Stack, Icon, Text, useColorModeValue } from 'native-base'
+import {
+  Divider,
+  Box,
+  Heading,
+  HStack,
+  Icon,
+  Text,
+  VStack,
+  useColorMode
+} from '@gluestack-ui/themed'
 
 export class WifiClientCount extends Component {
   state = { numberOfClients: 0 }
@@ -58,7 +67,7 @@ export class WifiClients extends WifiClientCount {
       <StatsWidget
         {...this.props}
         icon={faLaptop}
-        iconColor="blueGray.400"
+        iconColor="$blueGray400"
         title="Active WiFi Clients"
         text={this.state.numberOfWifiClients}
         textFooter="Online"
@@ -87,7 +96,7 @@ export const WifiInfo = (props) => {
     <StatsWidget
       {...props}
       icon={faWifi}
-      iconColor="info.400"
+      iconColor="$info400"
       title={title}
       text={ssid}
       textFooter={'Channel ' + channel}
@@ -119,33 +128,35 @@ export const Interfaces = (props) => {
 
   return (
     <Box
-      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+      bg={
+        useColorMode() == 'light'
+          ? '$backgroundCardLight'
+          : '$backgroundCardDark'
+      }
       borderRadius={10}
       mb={0}
-      p={4}
-      shadow={4}
+      p={'$4'}
+      shadow={'$4'}
     >
-      <Text fontSize="lg" textAlign="center">
+      <Heading size="md" fontWeight="300" textAlign="center">
         Interfaces
-      </Text>
+      </Heading>
 
-      <Divider _light={{ bg: 'muted.200' }} my="2" />
+      <Divider
+        bg={useColorMode() == 'light' ? '$muted200' : '$muted.600'}
+        my="$4"
+      />
 
-      <Box px="10">
+      <Box px="$10">
         {addrs.map((address, index) => (
-          <Stack
-            key={`${address.local}.${index}`}
-            direction="row"
-            space="2"
-            pb="2"
-          >
-            <Text flex="1" textAlign="right" bold>
+          <HStack key={`${address.local}.${index}`} space="md" pb="$2">
+            <Text size="sm" flex="1" textAlign="right" bold>
               {address.ifname}
             </Text>
             <Text flex="1">
               {address.local}/{address.prefixlen}
             </Text>
-          </Stack>
+          </HStack>
         ))}
       </Box>
     </Box>

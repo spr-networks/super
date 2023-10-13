@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { prettySize } from 'utils'
-import { Divider, Box, Text, useColorModeValue } from 'native-base'
+import { Divider, Box, Text, useColorMode } from '@gluestack-ui/themed'
 import { Dimensions } from 'react-native'
 import { LineChart, ProgressChart } from 'react-native-chart-kit'
 import chroma from 'chroma-js'
@@ -141,17 +141,23 @@ const StatsChartWidget = (props) => {
 
   return (
     <Box
-      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+      bg={
+        useColorMode() == 'light'
+          ? '$backgroundCardLight'
+          : '$backgroundCardDark'
+      }
       borderRadius={10}
-      mb={4}
-      py={5}
+      mb={'$4'}
+      py={'$5'}
       shadow={4}
     >
       <Text
-        fontSize="lg"
+        size="lg"
         fontWeight={300}
-        _light={{ color: 'muted.800' }}
-        _dark={{ color: 'muted.400' }}
+        color="$muted800"
+        sx={{
+          _dark: { color: '$muted400' }
+        }}
         textAlign="center"
       >
         {title}
@@ -159,14 +165,17 @@ const StatsChartWidget = (props) => {
       {props.description ? <Text>{props.description}</Text> : null}
 
       {charts.map((chart, idx) => (
-        <Box key={`chart_${idx}`} minH={{ base: 100, md: 280 }}>
+        <Box
+          key={`chart_${idx}`}
+          sx={{ '@base': { minH: 100 }, '@md': { minH: 280 } }}
+        >
           {chart}
         </Box>
       ))}
 
       {props.footerText ? (
-        <Box p="2">
-          <Divider _light={{ bg: 'muted.200' }} my="2" />
+        <Box p="$2">
+          <Divider my="$2" />
           {/*<i className={props.footerIcon} />*/}
           <Text>{props.footerText}</Text>
         </Box>

@@ -5,7 +5,7 @@ import chroma from 'chroma-js'
 
 import { prettySize } from 'utils'
 
-import { Divider, Box, Text, useColorModeValue } from 'native-base'
+import { Divider, Box, Text, useColorMode } from '@gluestack-ui/themed'
 
 ChartJS.register(ArcElement, Tooltip, Legend, Title)
 
@@ -126,13 +126,13 @@ const StatsChartWidget = (props) => {
     }
 
     //    let colors = chroma.scale('Spectral').mode('lch').colors(labels.length)
-    let colors = useColorModeValue(
-      chroma
-        .scale('BuPu')
-        .mode('lch')
-        .colors(labels.length + 1),
-      ['#cc0000', '#00cccc', '#cc00cc']
-    )
+    let colors =
+      useColorMode == 'light'
+        ? chroma
+            .scale('BuPu')
+            .mode('lch')
+            .colors(labels.length + 1)
+        : ['#cc0000', '#00cccc', '#cc00cc']
 
     dataopts.datasets = datas.map((data, i) => {
       return {
@@ -157,17 +157,22 @@ const StatsChartWidget = (props) => {
 
   return (
     <Box
-      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-      borderRadius="10"
-      mb="4"
-      p="5"
+      bg={
+        useColorMode() == 'light'
+          ? '$backgroundCardLight'
+          : '$backgroundCardDark'
+      }
+      borderRadius={10}
+      p="$4"
       shadow={4}
     >
       <Text
-        fontSize="lg"
+        size="lg"
         fontWeight={300}
-        _light={{ color: 'muted.800' }}
-        _dark={{ color: 'muted.400' }}
+        color="$muted800"
+        sx={{
+          _dark: { color: '$muted400' }
+        }}
         textAlign="center"
       >
         {props.title}
@@ -175,8 +180,8 @@ const StatsChartWidget = (props) => {
       {props.description ? <Text>{props.description}</Text> : null}
       <Box minH={{ base: 100, md: 280 }}>{chart}</Box>
       {props.footerText ? (
-        <Box p="2">
-          <Divider _light={{ bg: 'muted.200' }} my="2" />
+        <Box p="$2">
+          <Divider my="$2" />
           {/*<i className={props.footerIcon} />*/}
           <Text>{props.footerText}</Text>
         </Box>

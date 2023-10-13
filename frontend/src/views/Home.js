@@ -12,12 +12,14 @@ import {
   WireguardPeers,
   WireguardPeersActive
 } from 'components/Dashboard/WireguardWidgets'
+
 import { TotalTraffic } from 'components/Dashboard/TrafficWidgets'
 import {
   DNSMetrics,
   DNSBlockMetrics,
   DNSBlockPercent
 } from 'components/Dashboard/DNSMetricsWidgets'
+import { ServicesEnabled } from 'components/Dashboard/ServicesWidgets'
 
 const Home = (props) => {
   const [pluginsEnabled, setPluginsEnabled] = useState([])
@@ -64,39 +66,40 @@ const Home = (props) => {
         space="md"
         p="$4"
         gap="$4"
+        mb="$8"
       >
-        <VStack sx={{ '@md': { flex: 2 } }}>
+        <VStack space="md" sx={{ '@md': { flex: 2 } }}>
           {show.vpn ? (
             <>
               <WireguardPeers flex={1} />
               <WireguardPeersActive flex={1} />
             </>
           ) : (
-            <VStack flex={1} space="md">
+            <VStack space="md">
               {interfaces.map((iface) => (
                 <Box
-                  flexDirection="column"
-                  space="md"
-                  sx={{ '@md': { flexDirection: 'row', gap: '$4' } }}
-                  flex={1}
+                  sx={{
+                    '@base': { flexDirection: 'column', gap: '$3' },
+                    '@md': { flexDirection: 'row', gap: '$3' }
+                  }}
                   key={iface}
                 >
-                  <WifiInfo iface={iface} flex={1} />
-                  <WifiClients iface={iface} flex={1} />
+                  <WifiInfo iface={iface} />
+                  <WifiClients iface={iface} />
                 </Box>
               ))}
             </VStack>
           )}
 
-          <VStack>
+          <VStack space="md">
             {show.traffic ? <TotalTraffic /> : null}
-
             <Interfaces />
           </VStack>
         </VStack>
-        <VStack flex={1} p={2}>
+        <VStack flex={1} space={'md'}>
+          <ServicesEnabled />
           {show.dns ? (
-            <VStack>
+            <VStack space="md">
               <DNSMetrics />
               <DNSBlockMetrics />
               <DNSBlockPercent />

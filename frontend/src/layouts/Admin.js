@@ -28,7 +28,6 @@ import {
   Heading,
   HStack,
   Icon,
-  InfoIcon,
   CheckCircleIcon,
   CloseIcon,
   Pressable,
@@ -36,8 +35,8 @@ import {
   useColorMode
 } from '@gluestack-ui/themed'
 
-//NOTE Slice transition not available in gluestack-ui
-import { Slide } from 'native-base'
+//NOTE Slice transition for Alerts not available in gluestack-ui
+//import { Slide } from 'native-base'
 
 import { routes } from 'routes'
 
@@ -106,13 +105,13 @@ const AppAlert = (props) => {
   return (
     <Alert action={type}>
       <AlertIcon as={alertIcon} size="xl" mr="$3" />
-      <HStack space="md">
+      <HStack space="md" flex="1">
         <VStack space="xs">
           <AlertText fontWeight="$bold">{title}</AlertText>
 
           <AlertText>{body}</AlertText>
         </VStack>
-        <Pressable onPress={toggle}>
+        <Pressable ml="auto" onPress={toggle}>
           <Icon as={CloseIcon} />
         </Pressable>
       </HStack>
@@ -120,7 +119,7 @@ const AppAlert = (props) => {
   )
 }
 
-const AdminLayout = (props) => {
+const AdminLayout = ({ toggleColorMode, ...props }) => {
   const mainPanel = React.useRef()
   const location = useLocation()
 
@@ -402,7 +401,11 @@ const AdminLayout = (props) => {
     >
       <VStack
         safeAreaTop
-        bg={colorMode == 'light' ? '$coolGray100' : '$gray900'}
+        bg={
+          colorMode == 'light'
+            ? '$backgroundContentLight'
+            : '$backgroundContentDark'
+        }
         minH={heightFull}
       >
         {/*desktop*/}
@@ -419,6 +422,7 @@ const AdminLayout = (props) => {
             isMobile={false}
             isOpenSidebar={isOpenSidebar}
             setIsOpenSidebar={setIsOpenSidebar}
+            toggleColorMode={toggleColorMode}
           />
         </Box>
         {/*mobile*/}
@@ -439,6 +443,7 @@ const AdminLayout = (props) => {
             isMobile={true}
             isOpenSidebar={isOpenSidebar}
             setIsOpenSidebar={setIsOpenSidebar}
+            toggleColorMode={toggleColorMode}
           />
         </Box>
 
@@ -504,35 +509,33 @@ const AdminLayout = (props) => {
         </HStack>
       </VStack>
       <AlertContext.Provider value={alertState}>
-        <Slide in={showAlert} placement="top">
-          <Box
-            sx={{
-              '@base': {
-                maxWidth: '100%',
-                w: '100%'
-              },
-              '@md': {
-                minWidth: '$1/4',
-                maxWidth: '90%',
-                w: 'auto'
-              }
-            }}
-            mt="$16"
-            flexWrap="wrap"
-            position="fixed"
-            top="20"
-            alignItems="center"
-            justifyContent="center"
-            alignSelf="center"
-          >
-            <AppAlert
-              title={alert.title}
-              body={alert.body}
-              type={alert.type}
-              toggle={toggleAlert}
-            />
-          </Box>
-        </Slide>
+        {/*<Slide in={showAlert} placement="top"></Slide>*/}
+        <Box
+          sx={{
+            '@base': {
+              maxWidth: '100%',
+              w: '100%',
+              display: showAlert ? 'block' : 'none'
+            },
+            '@md': {
+              minWidth: '$1/4',
+              maxWidth: '90%',
+              w: 'auto'
+            }
+          }}
+          mt="$16"
+          flexWrap="wrap"
+          position="fixed"
+          top="20"
+          alignSelf="center"
+        >
+          <AppAlert
+            title={alert.title}
+            body={alert.body}
+            type={alert.type}
+            toggle={toggleAlert}
+          />
+        </Box>
 
         <ConfirmTrafficAlert
           title={confirmAlert.title}

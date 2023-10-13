@@ -10,49 +10,51 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { Icon } from 'FontAwesomeUtils'
 
-import { Box, HStack, Text, VStack, useColorModeValue } from 'native-base'
+import { Box, HStack, Text, VStack, useColorMode } from '@gluestack-ui/themed'
 
 const ServicesEnabled = (props) => {
   useEffect(() => {}, [])
 
   return (
     <Box
-      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+      bg={
+        useColorMode() == 'light'
+          ? '$backgroundCardLight'
+          : '$backgroundCardDark'
+      }
       borderRadius={10}
-      mb={4}
       shadow={4}
-      flex={1}
     >
       <HStack
-        space={8}
+        space="lg"
         justifyContent="space-around"
-        p={4}
+        p="$4"
         rounded="lg"
         flexWrap="wrap"
       >
-        <VStack space={2}>
-          <Box p={4} rounded="full" bg="primary.500">
-            <Icon icon={faWifi} size={8} color="white" />
+        <VStack space="md">
+          <Box p="$4" rounded="$full" bg="$primary500">
+            <Icon icon={faWifi} size={8} color="$white" />
           </Box>
           <Text alignSelf="center">AP on</Text>
         </VStack>
 
-        <VStack space={2}>
-          <Box p={4} rounded="full" bg="primary.500">
-            <Icon icon={faEarth} size={8} color="white" />
+        <VStack space="md">
+          <Box p="$4" rounded="$full" bg="$primary500">
+            <Icon icon={faEarth} size={8} color="$white" />
           </Box>
           <Text alignSelf="center">DNS on</Text>
         </VStack>
 
-        <VStack space={2}>
-          <Box p={4} rounded="full" bg="primary.500">
-            <Icon icon={faBan} size={8} color="white" />
+        <VStack space="md">
+          <Box p="$4" rounded="$full" bg="$primary500">
+            <Icon icon={faBan} size={8} color="$white" />
           </Box>
           <Text alignSelf="center">Block on</Text>
         </VStack>
 
-        <VStack space={2}>
-          <Box p={4} rounded="full" bg="muted.300">
+        <VStack space="md">
+          <Box p="$4" rounded="$full" bg="$muted300">
             <Icon icon={faCircleNodes} size={8} color="white" />
           </Box>
           <Text alignSelf="center">VPN off</Text>
