@@ -42,7 +42,7 @@ export default function Icon({ color, icon, size, style, ...props }) {
     style.marginLeft = props.ml * 4
   }
 
-  color = color.replace(/^\$/, '').replace(/\./g, '') // amber.400, $amber400 => amber400
+  color = color?.replace(/^\$/, '')?.replace(/\./g, '') // amber.400, $amber400 => amber400
 
   const webStyles = StyleSheet.flatten([
     style,
