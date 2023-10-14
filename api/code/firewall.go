@@ -728,10 +728,14 @@ func addServicePort(port ServicePort) error {
 		return err
 	}
 
-	// delete from upstream as well
+	vmap = "wan_" + port.Protocol + "_accept"
+
+	// add to upstream as well
 	if port.UpstreamEnabled {
-		vmap = "wan_" + port.Protocol + "_accept"
 		err = addPortVmap(port.Port, vmap)
+	} else {
+		//ensure deleted
+		err = deletePortVmap(port.Port, vmap)
 	}
 
 	return nil
@@ -759,6 +763,9 @@ func addMulticastPort(port MulticastPort) error {
 	err := addPortVmap(port.Port, "multicast_lan_udp_accept")
 	if port.Upstream == true {
 		return addPortVmap(port.Port, "multicast_wan_udp_accept")
+	} else {
+		//ensure deleted
+		err = deletePortVmap(port.Port, "Multicast_wan_udp_accept")
 	}
 
 	return err
