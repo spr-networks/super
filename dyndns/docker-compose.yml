@@ -24,4 +24,4 @@ services:
     logging: *default-logging
     volumes:
       - "${SUPERDIR}/state/plugins/dyndns/:/state/plugins/dyndns/"
-      - "${SUPERDIR}/configs/dyndns/:/etc/dyndns/"
+      - "${SUPERDIR}/configs/dyndns/:/configs/dyndns/"
