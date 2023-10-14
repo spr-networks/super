@@ -2158,6 +2158,7 @@ func dynamicRouteLoop() {
 
 			Devicesmtx.Lock()
 			devices := getDevicesJson()
+			checkDeviceExpiries(devices)
 			Devicesmtx.Unlock()
 
 			// TBD: need to handle multiple trunk ports, lan ports
