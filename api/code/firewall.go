@@ -1931,7 +1931,7 @@ func isMeshPluginEnabled() bool {
 	return false
 }
 
-func meshPluginDownlik() string {
+func meshPluginDownlink() string {
 	//tbd this should be a paramter in mesh setup.
 	//query config and get it
 	lanif := os.Getenv("LANIF")
@@ -2265,7 +2265,7 @@ func dynamicRouteLoop() {
 						newIfaceMap[entry.RecentIP] = new_iface
 					} else if meshPluginEnabled && wifiDevice {
 						//mesh plugin was enabled and it was a wifi device
-						new_iface = meshPluginDownlik()
+						new_iface = meshPluginDownlink()
 						newIfaceMap[entry.RecentIP] = new_iface
 					} else {
 

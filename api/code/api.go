@@ -1091,6 +1091,16 @@ func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func handleExpirations(val *DeviceEntry, req *DeviceEntry) {
+	if req.DeviceExpiration == -1 {
+		val.DeviceExpiration = 0
+	} else if req.DeviceExpiration > 0 {
+		val.DeviceExpiration = time.Now().Unix() + req.DeviceExpiration
+	}
+	val.DeleteExpiration = req.DeleteExpiration
+	val.DeviceDisabled = req.DeviceDisabled
+}
+
 func checkDeviceExpiries(devices map[string]DeviceEntry) {
 	curtime := time.Now().Unix()
 	todelete := []string{}
@@ -1338,6 +1348,8 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			val.Style.Color = dev.Style.Color
 		}
 
+		handleExpirations(&val, &dev)
+
 		devices[identity] = val
 		saveDevicesJson(devices)
 
@@ -1425,6 +1437,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		refreshGroups = true
 	}
 
+	handleExpirations(&val, &dev)
 	devices[identity] = dev
 	saveDevicesJson(devices)
 
