@@ -1903,6 +1903,7 @@ func getWireguardActivePeers() []string {
 }
 
 var MESH_ENABLED_LEAF_PATH = TEST_PREFIX + "/state/plugins/mesh/enabled"
+var MESH_SOCKET_PATH = TEST_PREFIX + "/state/plugins/mesh/socket"
 
 func isLeafRouter() bool {
 	_, err := os.Stat(MESH_ENABLED_LEAF_PATH)
@@ -1910,6 +1911,22 @@ func isLeafRouter() bool {
 		return true
 	}
 	return false
+}
+
+func isMeshPluginEnabled() bool {
+	//tbd query config
+	_, err := os.Stat(MESH_SOCKET_PATH)
+	if err == nil {
+		return true
+	}
+	return false
+}
+
+func meshPluginDownlik() string {
+	//tbd this should be a paramter in mesh setup.
+	//query config and get it
+	lanif := os.Getenv("LANIF")
+	return lanif
 }
 
 func getWifiPeers() map[string]string {
@@ -2224,7 +2241,11 @@ func dynamicRouteLoop() {
 				newIfaceMap[entry.RecentIP] = new_iface
 
 				if !exists {
-					if lanif != "" && !isWifiDevice(entry) {
+					meshPluginEnabled := isMeshPluginEnabled()
+					wifiDevice := isWifiDevice(entry)
+					if lanif != "" && (!meshPluginEnabled && !wifiDevice) {
+						// when mesh plugin is off and not a wifi device, then go for lanif
+
 						//no new_iface and a LAN interface is set, use that.
 						if lanif_vlan_trunk == false || entry.VLANTag == "" {
 							new_iface = lanif
@@ -2232,7 +2253,12 @@ func dynamicRouteLoop() {
 							new_iface = lanif + "." + entry.VLANTag
 						}
 						newIfaceMap[entry.RecentIP] = new_iface
+					} else if meshPluginEnabled && wifiDevice {
+						//mesh plugin was enabled and it was a wifi device
+						new_iface = meshPluginDownlik()
+						newIfaceMap[entry.RecentIP] = new_iface
 					} else {
+
 						// disconnected devices will have empty new_iface, skip
 						continue
 					}
