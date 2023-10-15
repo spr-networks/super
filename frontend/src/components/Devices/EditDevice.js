@@ -6,6 +6,8 @@ import { deviceAPI } from 'api/Device'
 import ModalConfirm from 'components/ModalConfirm'
 
 import Icon from 'FontAwesomeUtils'
+import { format as timeAgo } from 'timeago.js'
+import InputSelect from 'components/InputSelect'
 
 import {
   faEllipsis,
@@ -18,6 +20,7 @@ import {
 
 import {
   Badge,
+  Checkbox,
   FormControl,
   Heading,
   HStack,
@@ -106,10 +109,20 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [icon, setIcon] = useState(device.Style?.Icon || 'Laptop')
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState('')
+  const [expiration, setExpiration] = useState(0)
+  const [deleteExpiry, setDeleteExpiry] = useState(false)
 
   // for adding
   const defaultGroups = props.groups || ['wan', 'dns', 'lan']
   const defaultTags = props.tags || ['lan_upstream']
+
+  const expirationOptions = [
+    {label: 'Never', value: 0},
+    {label: '1 Hour', value: 60*60},
+    {label: '1 Day', value: 60*60*24},
+    {label: '1 Week', value: 60*60*24*7},
+    {label: '4 Weeks', value: 60*60*24*7*4},
+  ]
 
   useEffect(() => {
     // if not icon is set, try to match on name
@@ -301,6 +314,17 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     }
   }
 
+  const handleChange = (name, value) => {
+    if (name == 'Expiration') {
+      if (value == 0 && expiration != 0) {
+        //gotcha in the API is to reset should set to -1
+        //this is so that setting 0 does not update expiry
+        value = -1
+      }
+      setExpiration(value)
+    }
+  }
+
   const trigger = (triggerProps) => (
     <IconButton
       variant="unstyled"
@@ -461,6 +485,39 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
             <FormControl.Label>Color</FormControl.Label>
 
             <ColorPicker value={color} onChange={(color) => setColor(color)} />
+          </FormControl>
+        </Stack>
+
+        <Stack>
+          <FormControl flex={2}>
+            <FormControl.Label>Expiration</FormControl.Label>
+
+            <InputSelect
+              options={expirationOptions}
+              value={
+                expiration
+                  ? timeAgo(new Date(Date.now() + expiration * 1e3))
+                  : 'Never'}
+              onChange={(v) => handleChange('Expiration', parseInt(v))}
+              onChangeText={(v) => handleChange('Expiration', parseInt(v))}
+            />
+
+            <FormControl.HelperText>
+              If non zero has unix time for when the entry should disappear
+            </FormControl.HelperText>
+
+            <FormControl.Label>Delete on expiry</FormControl.Label>
+            <Checkbox
+              accessibilityLabel="Enabled"
+              value={deleteExpiry}
+              isChecked={deleteExpiry}
+              onChange={(enabled) =>
+                setDeleteExpiry(!deleteExpiry)
+              }
+            >
+              Remove device
+            </Checkbox>
+
           </FormControl>
         </Stack>
 

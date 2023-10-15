@@ -34,6 +34,7 @@ const AddDevice = (props) => {
   const [device, setDevice] = useState({})
   const [expiration, setExpiration] = useState(0)
   const [deleteExpiry, setDeleteExpiry] = useState(false)
+  const [deviceDisabled, setDeviceDisabled] = useState(false)
 
   const [submitted, setSubmitted] = useState(false)
 
@@ -157,6 +158,11 @@ const AddDevice = (props) => {
     }
 
     if (name == 'Expiration') {
+      if (value == 0 && expiration != 0) {
+        //gotcha in the API is to reset should set to -1
+        //this is so that setting 0 does not update expiry
+        value = -1
+      }
       setExpiration(value)
     }
 
@@ -184,14 +190,11 @@ const AddDevice = (props) => {
       PSKEntry: {
         Psk: psk,
         Type: wpa
-      }
+      },
+      DeviceExpiration: expiration,
+      DeleteExpiration: deleteExpiry,
+      DeviceDisabled: deviceDisabled
     }
-
-    /*
-      DeviceTimeout  int64
-      DeleteTimeout  bool
-      Disabled bool
-    */
 
     if (wpa == 'none') {
       delete data.PSKEntry
