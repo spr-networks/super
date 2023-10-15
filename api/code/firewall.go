@@ -2243,7 +2243,7 @@ func dynamicRouteLoop() {
 				if !exists {
 					meshPluginEnabled := isMeshPluginEnabled()
 					wifiDevice := isWifiDevice(entry)
-					if lanif != "" && (!meshPluginEnabled && !wifiDevice) {
+					if lanif != "" && !wifiDevice {
 						// when mesh plugin is off and not a wifi device, then go for lanif
 
 						//no new_iface and a LAN interface is set, use that.
