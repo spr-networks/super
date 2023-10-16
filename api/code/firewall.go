@@ -728,16 +728,25 @@ func addServicePort(port ServicePort) error {
 		return err
 	}
 
-	// delete from upstream as well
+	vmap = "wan_" + port.Protocol + "_accept"
+
+	// add to upstream as well
 	if port.UpstreamEnabled {
-		vmap = "wan_" + port.Protocol + "_accept"
 		err = addPortVmap(port.Port, vmap)
+	} else {
+		//ensure deleted
+		err = deletePortVmap(port.Port, vmap)
 	}
 
 	return nil
 }
 
 func applyServicePorts(servicePorts []ServicePort) error {
+
+	exec.Command("nft", "flush", "map", "ip", "filter", "lan_tcp_accept").Run()
+	exec.Command("nft", "flush", "map", "ip", "filter", "wan_tcp_accept").Run()
+	exec.Command("nft", "flush", "map", "ip", "filter", "lan_udp_accept").Run()
+	exec.Command("nft", "flush", "map", "ip", "filter", "wan_udp_accept").Run()
 
 	for _, port := range servicePorts {
 		addServicePort(port)
@@ -759,12 +768,19 @@ func addMulticastPort(port MulticastPort) error {
 	err := addPortVmap(port.Port, "multicast_lan_udp_accept")
 	if port.Upstream == true {
 		return addPortVmap(port.Port, "multicast_wan_udp_accept")
+	} else {
+		//ensure deleted
+		err = deletePortVmap(port.Port, "Multicast_wan_udp_accept")
 	}
 
 	return err
 }
 
 func applyMulticastPorts(multicastPorts []MulticastPort) error {
+	//reset multicast ports
+	exec.Command("nft", "flush", "map", "ip", "filter", "multicast_lan_udp_accept").Run()
+	exec.Command("nft", "flush", "map", "ip", "filter", "multicast_wan_udp_accept").Run()
+
 	foundMDNS := false
 	for _, port := range multicastPorts {
 		if isSetupMode() {
@@ -1896,6 +1912,7 @@ func getWireguardActivePeers() []string {
 }
 
 var MESH_ENABLED_LEAF_PATH = TEST_PREFIX + "/state/plugins/mesh/enabled"
+var MESH_SOCKET_PATH = TEST_PREFIX + "/state/plugins/mesh/socket"
 
 func isLeafRouter() bool {
 	_, err := os.Stat(MESH_ENABLED_LEAF_PATH)
@@ -1903,6 +1920,22 @@ func isLeafRouter() bool {
 		return true
 	}
 	return false
+}
+
+func isMeshPluginEnabled() bool {
+	//tbd query config
+	_, err := os.Stat(MESH_SOCKET_PATH)
+	if err == nil {
+		return true
+	}
+	return false
+}
+
+func meshPluginDownlink() string {
+	//tbd this should be a paramter in mesh setup.
+	//query config and get it
+	lanif := os.Getenv("LANIF")
+	return lanif
 }
 
 func getWifiPeers() map[string]string {
@@ -2142,6 +2175,7 @@ func dynamicRouteLoop() {
 
 			Devicesmtx.Lock()
 			devices := getDevicesJson()
+			checkDeviceExpiries(devices)
 			Devicesmtx.Unlock()
 
 			// TBD: need to handle multiple trunk ports, lan ports
@@ -2217,7 +2251,11 @@ func dynamicRouteLoop() {
 				newIfaceMap[entry.RecentIP] = new_iface
 
 				if !exists {
-					if lanif != "" && !isWifiDevice(entry) {
+					meshPluginEnabled := isMeshPluginEnabled()
+					wifiDevice := isWifiDevice(entry)
+					if lanif != "" && (!meshPluginEnabled && !wifiDevice) {
+						// when mesh plugin is off and not a wifi device, then go for lanif
+
 						//no new_iface and a LAN interface is set, use that.
 						if lanif_vlan_trunk == false || entry.VLANTag == "" {
 							new_iface = lanif
@@ -2225,7 +2263,12 @@ func dynamicRouteLoop() {
 							new_iface = lanif + "." + entry.VLANTag
 						}
 						newIfaceMap[entry.RecentIP] = new_iface
+					} else if meshPluginEnabled && wifiDevice {
+						//mesh plugin was enabled and it was a wifi device
+						new_iface = meshPluginDownlink()
+						newIfaceMap[entry.RecentIP] = new_iface
 					} else {
+
 						// disconnected devices will have empty new_iface, skip
 						continue
 					}

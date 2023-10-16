@@ -105,20 +105,20 @@ type DeviceStyle struct {
 }
 
 type DeviceEntry struct {
-	Name           string
-	MAC            string
-	WGPubKey       string
-	VLANTag        string
-	RecentIP       string
-	PSKEntry       PSKEntry
-	Groups         []string
-	DeviceTags     []string
-	DHCPFirstTime  string
-	DHCPLastTime   string
-	Style          DeviceStyle
-	DeviceTimeout  string
-	DeleteTimeout  bool
-	DeviceDisabled bool
+	Name             string
+	MAC              string
+	WGPubKey         string
+	VLANTag          string
+	RecentIP         string
+	PSKEntry         PSKEntry
+	Groups           []string
+	DeviceTags       []string
+	DHCPFirstTime    string
+	DHCPLastTime     string
+	Style            DeviceStyle
+	DeviceExpiration int64 //tbd need to observe this.
+	DeleteExpiration bool
+	DeviceDisabled   bool
 }
 
 var config = APIConfig{}
@@ -1091,6 +1091,37 @@ func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func handleExpirations(val *DeviceEntry, req *DeviceEntry) {
+	if req.DeviceExpiration == -1 {
+		val.DeviceExpiration = 0
+	} else if req.DeviceExpiration > 0 {
+		val.DeviceExpiration = time.Now().Unix() + req.DeviceExpiration
+	}
+	val.DeleteExpiration = req.DeleteExpiration
+	val.DeviceDisabled = req.DeviceDisabled
+}
+
+func checkDeviceExpiries(devices map[string]DeviceEntry) {
+	curtime := time.Now().Unix()
+	todelete := []string{}
+	for k, entry := range devices {
+		if entry.DeviceDisabled == false && entry.DeviceExpiration != 0 {
+			if entry.DeviceExpiration < curtime {
+				//expire the device
+				entry.DeviceDisabled = true
+				if entry.DeleteExpiration {
+					todelete = append(todelete, k)
+				}
+			}
+		}
+	}
+
+	for _, k := range todelete {
+		deleteDeviceLocked(devices, k)
+	}
+
+}
+
 func syncDevices(w http.ResponseWriter, r *http.Request) {
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
@@ -1110,6 +1141,25 @@ func syncDevices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	doReloadPSKFiles()
+}
+
+func deleteDeviceLocked(devices map[string]DeviceEntry, identity string) {
+	val := devices[identity]
+	delete(devices, identity)
+	saveDevicesJson(devices)
+	refreshDeviceGroups(val)
+	doReloadPSKFiles()
+
+	//if the device had a VLAN Tag, also refresh vlans
+	// upon deletion
+	if val.VLANTag != "" {
+		Devicesmtx.Unlock()
+		Groupsmtx.Unlock()
+		refreshVLANTrunks()
+		Devicesmtx.Lock()
+		Groupsmtx.Lock()
+	}
+
 }
 
 func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, identity string) (string, int) {
@@ -1164,21 +1214,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	if r.Method == http.MethodDelete {
 		//delete a device
 		if exists {
-			delete(devices, identity)
-			saveDevicesJson(devices)
-			refreshDeviceGroups(val)
-			doReloadPSKFiles()
-
-			//if the device had a VLAN Tag, also refresh vlans
-			// upon deletion
-			if val.VLANTag != "" {
-				Devicesmtx.Unlock()
-				Groupsmtx.Unlock()
-				refreshVLANTrunks()
-				Devicesmtx.Lock()
-				Groupsmtx.Lock()
-			}
-
+			deleteDeviceLocked(devices, identity)
 			return "", 200
 		}
 
@@ -1312,6 +1348,8 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			val.Style.Color = dev.Style.Color
 		}
 
+		handleExpirations(&val, &dev)
+
 		devices[identity] = val
 		saveDevicesJson(devices)
 
@@ -1399,6 +1437,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		refreshGroups = true
 	}
 
+	handleExpirations(&val, &dev)
 	devices[identity] = dev
 	saveDevicesJson(devices)
 

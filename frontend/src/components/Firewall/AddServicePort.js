@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { AlertContext } from 'AppContext'
 
 import { firewallAPI } from 'api'
+import InputSelect from 'components/InputSelect'
 
 import {
   Badge,
@@ -15,6 +16,7 @@ import {
   Input,
   Link,
   Radio,
+  Select,
   Stack,
   Spinner,
   Switch,
@@ -52,16 +54,13 @@ const AddServicePort = ({ notifyChange, ...props }) => {
       <HStack space={4}>
         <FormControl flex={1}>
           <FormControl.Label for="Protocol">Protocol</FormControl.Label>
-          {/*<Select
+          {<Select
             selectedValue={Protocol}
             onValueChange={(value) => setProtocol(value)}
           >
             <Select.Item label="tcp" value="tcp" />
             <Select.Item label="udp" value="udp" />
-          </Select>*/}
-          <Badge variant="outline" alignSelf="flex-start">
-            {Protocol}
-          </Badge>
+          </Select>}
         </FormControl>
 
         <FormControl flex={1}>

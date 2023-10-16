@@ -102,12 +102,6 @@ table inet filter {
 
   map wan_tcp_accept {
     type inet_service : verdict;
-    elements = {
-      22: accept,
-      80: accept,
-      443: accept,
-      5201: accept
-    }
   }
 
   map lan_tcp_accept {
