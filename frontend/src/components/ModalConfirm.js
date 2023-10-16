@@ -1,8 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faCirclePlus, faPlus } from '@fortawesome/free-solid-svg-icons'
-import { Button, FormControl, Input, Modal } from 'native-base'
+import { Icon } from 'FontAwesomeUtils'
+import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
+import {
+  Button,
+  ButtonText,
+  FormControl,
+  Input,
+  InputField
+} from '@gluestack-ui/themed'
+
+import { Modal } from 'native-base' //TODONB
+
 import { Select } from 'components/Select'
 import ClientSelect from 'components/ClientSelect'
 
@@ -123,15 +132,16 @@ const ModalConfirm = (props) => {
     }
 
     return (
-      <Input
-        name={type}
-        value={value}
-        variant="underlined"
-        placeholder={'Enter ' + (type == 'IP' ? 'IP address' : type) + '...'}
-        autoFocus={isOpen ? true : false}
-        onChangeText={handleChange}
-        onSubmitEditing={handlePress}
-      />
+      <Input size="md" variant="underlined">
+        <InputField
+          name={type}
+          value={value}
+          placeholder={'Enter ' + (type == 'IP' ? 'IP address' : type) + '...'}
+          autoFocus={isOpen ? true : false}
+          onChangeText={handleChange}
+          onSubmitEditing={handlePress}
+        />
+      </Input>
     )
   }
 
@@ -152,8 +162,8 @@ const ModalConfirm = (props) => {
             </FormControl>
           </Modal.Body>
           <Modal.Footer>
-            <Button w="100%" onPress={handlePress}>
-              Save
+            <Button action="primary" onPress={handlePress}>
+              <ButtonText>Save</ButtonText>
             </Button>
           </Modal.Footer>
         </Modal.Content>

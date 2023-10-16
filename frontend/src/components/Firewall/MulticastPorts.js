@@ -27,7 +27,6 @@ import {
   HStack,
   VStack,
   Text,
-  useColorMode,
   AddIcon,
   CloseIcon
 } from '@gluestack-ui/themed'

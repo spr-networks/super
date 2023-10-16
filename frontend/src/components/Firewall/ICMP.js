@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { firewallAPI } from 'api'
 import { alertState } from 'AppContext'
 
-import { HStack, VStack, Switch, Text } from '@gluestack-ui/themed'
+import { VStack, Switch, Text } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
 

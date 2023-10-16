@@ -1,13 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 
 import { AlertContext } from 'AppContext'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import {
-  faArrowRightLong,
-  faCirclePlus,
-  faPlus,
-  faXmark
-} from '@fortawesome/free-solid-svg-icons'
 
 import { firewallAPI } from 'api'
 import ModalForm from 'components/ModalForm'
@@ -27,7 +20,6 @@ import {
   VStack,
   Text,
   AddIcon,
-  RemoveIcon,
   CloseIcon
 } from '@gluestack-ui/themed'
 

@@ -2,12 +2,6 @@ import React, { useContext, useEffect, useState } from 'react'
 
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import {
-  faCirclePlus,
-  faPlus,
-  faTimes
-} from '@fortawesome/free-solid-svg-icons'
 
 import { deviceAPI } from 'api'
 import { logAPI } from 'api/DNS'
@@ -16,17 +10,16 @@ import ModalConfirm from 'components/ModalConfirm'
 import {
   Box,
   Button,
-  Divider,
+  ButtonIcon,
+  ButtonText,
   FlatList,
-  Heading,
-  HStack,
-  IconButton,
   VStack,
   Text,
-  useColorModeValue
-} from 'native-base'
+  CloseIcon,
+  AddIcon
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+import { ListHeader, ListItem } from 'components/List'
 
 const DNSLogList = ({ title, description, ...props }) => {
   const context = useContext(AlertContext)
@@ -112,40 +105,34 @@ const DNSLogList = ({ title, description, ...props }) => {
   const triggerAdd = (triggerProps) => {
     return (
       <Button {...triggerProps} marginLeft="auto">
-        {'Add ' + type}
+        <ButtonText>{'Add ' + type}</ButtonText>
+        <ButtonIcon as={AddIcon} ml="$1" />
       </Button>
     )
   }
 
   return (
     <>
-      <HStack alignItems="center" p={4}>
-        <VStack maxW="60%">
-          <Heading fontSize="md">{title}</Heading>
-          <Text color="muted.500" isTruncated>
-            {description}
-          </Text>
-        </VStack>
-
+      <ListHeader title={title} description={description}>
         <ModalConfirm
           type={type}
           onSubmit={handleSubmit}
           trigger={triggerAdd}
           isOpen={isModalOpen}
         />
-      </HStack>
+      </ListHeader>
 
-      <Box px={4} mb={4}>
+      <Box px="$4" mb="$4">
         {!list.length ? (
-          <VStack space={2}>
+          <VStack space="md">
             <Text alignSelf={'center'}>List is empty</Text>
             <Button
-              variant="subtle"
-              colorScheme="muted"
-              leftIcon={<Icon icon={faCirclePlus} />}
+              action="secondary"
+              variant="solid"
               onPress={() => setIsModalOpen(true)}
             >
-              {`Add ${title.replace(/ List$/, '')}`}
+              <ButtonText>{`Add ${title.replace(/ List$/, '')}`}</ButtonText>
+              <ButtonIcon as={AddIcon} ml="$1" />
             </Button>
           </VStack>
         ) : null}
@@ -154,30 +141,19 @@ const DNSLogList = ({ title, description, ...props }) => {
           keyExtractor={(item, index) => index}
           estimatedItemSize={100}
           renderItem={({ item }) => (
-            <HStack
-              p={4}
-              borderBottomWidth={1}
-              _light={{
-                bg: 'backgroundCardLight',
-                borderBottomColor: 'borderColorCardLight'
-              }}
-              _dark={{
-                bg: 'backgroundCardDark',
-                borderBottomColor: 'borderColorCardDark'
-              }}
-              alignItems={'center'}
-            >
+            <ListItem>
               <Text>{item}</Text>
               {type == 'IP' ? <Text> {ip_to_name(item)}</Text> : null}
-              <IconButton
-                variant="ghost"
-                colorScheme="secondary"
-                icon={<Icon icon={faTimes} />}
+              <Button
                 size="sm"
+                action="secondary"
+                variant="link"
                 onPress={() => deleteListItem(item)}
                 marginLeft="auto"
-              />
-            </HStack>
+              >
+                <ButtonIcon as={CloseIcon} />
+              </Button>
+            </ListItem>
           )}
         />
       </Box>

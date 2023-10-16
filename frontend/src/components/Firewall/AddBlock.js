@@ -1,5 +1,4 @@
 import React, { useContext } from 'react'
-import PropTypes from 'prop-types'
 
 import ClientSelect from 'components/ClientSelect'
 
@@ -7,18 +6,20 @@ import { firewallAPI } from 'api'
 import { AlertContext } from 'AppContext'
 
 import {
-  Box,
   Button,
-  Checkbox,
+  ButtonText,
   FormControl,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlLabel,
+  FormControlLabelText,
   Input,
-  Link,
-  Radio,
-  Stack,
+  InputField,
   HStack,
-  Spinner,
-  Text
-} from 'native-base'
+  VStack
+} from '@gluestack-ui/themed'
+
+import ProtocolRadio from 'components/Form/ProtocolRadio'
 
 class AddBlockImpl extends React.Component {
   state = {
@@ -65,20 +66,27 @@ class AddBlockImpl extends React.Component {
 
   render() {
     return (
-      <Stack space={4}>
-        <HStack space={4}>
+      <VStack space="md">
+        <HStack space="md">
           <FormControl flex="1" isRequired>
-            <FormControl.Label>Source address</FormControl.Label>
-            <Input
-              size="md"
-              variant="underlined"
-              value={this.state.SrcIP}
-              onChangeText={(value) => this.handleChange('SrcIP', value)}
-            />
-            <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
+            <FormControlLabel>
+              <FormControlLabelText>Source address</FormControlLabelText>
+            </FormControlLabel>
+
+            <Input size="md" variant="underlined">
+              <InputField
+                value={this.state.SrcIP}
+                onChangeText={(value) => this.handleChange('SrcIP', value)}
+              />
+            </Input>
+            <FormControlHelper>
+              <FormControlHelperText>IP address or CIDR</FormControlHelperText>
+            </FormControlHelper>
           </FormControl>
           <FormControl flex="1" isRequired>
-            <FormControl.Label>Destination address</FormControl.Label>
+            <FormControlLabel>
+              <FormControlLabelText>Destination address</FormControlLabelText>
+            </FormControlLabel>
             <ClientSelect
               name="DstIP"
               value={this.state.DstIP}
@@ -86,30 +94,27 @@ class AddBlockImpl extends React.Component {
               onChangeText={(value) => this.handleChange('DstIP', value)}
               onChange={(value) => this.handleChange('DstIP', value)}
             />
-            <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
+            <FormControlHelper>
+              <FormControlHelperText>IP address or CIDR</FormControlHelperText>
+            </FormControlHelper>
           </FormControl>
         </HStack>
 
         <FormControl>
-          <FormControl.Label>Protocol</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Protocol</FormControlLabelText>
+          </FormControlLabel>
 
-          <Radio.Group
-            name="Protocol"
-            defaultValue={this.state.Protocol}
-            accessibilityLabel="Protocol"
+          <ProtocolRadio
+            value={this.state.Protocol}
             onChange={(value) => this.handleChange('Protocol', value)}
-          >
-            <HStack space={2}>
-              <Radio value="tcp">tcp</Radio>
-              <Radio value="udp">udp</Radio>
-            </HStack>
-          </Radio.Group>
+          />
         </FormControl>
 
-        <Button color="primary" size="md" onPress={this.handleSubmit}>
-          Save
+        <Button action="primary" size="md" onPress={this.handleSubmit}>
+          <ButtonText>Save</ButtonText>
         </Button>
-      </Stack>
+      </VStack>
     )
   }
 }

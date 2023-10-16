@@ -1,30 +1,19 @@
-import React, { useContext, useRef, useState, useEffect } from 'react'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import {
-  faCirclePlus,
-  faPlus,
-  faXmark
-} from '@fortawesome/free-solid-svg-icons'
+import React, { useState, useEffect } from 'react'
+
+import { alertState } from 'AppContext'
 
 import { firewallAPI } from 'api'
 import { Multicast } from 'api/Multicast'
 
 import {
-  Badge,
-  BadgeText,
   Button,
   ButtonText,
-  ButtonIcon,
-  Box,
   Input,
   InputField,
-  HStack,
   VStack,
   Switch,
   Text
 } from '@gluestack-ui/themed'
-
-import { AppContext, alertState } from 'AppContext'
 
 import { ListHeader, ListItem } from 'components/List'
 
