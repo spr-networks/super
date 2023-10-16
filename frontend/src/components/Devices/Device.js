@@ -132,7 +132,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
 
   const defaultGroups = props.groups || ['wan', 'dns', 'lan']
   const defaultTags = props.tags || []
-  
+
   const handleGroups = (groups) => {
     if (!device.MAC && !device.WGPubKey) {
       return

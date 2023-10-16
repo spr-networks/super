@@ -3,6 +3,8 @@ import React, { useContext, useEffect, useState } from 'react'
 import { deviceAPI, wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import WifiConnect from 'views/Devices/ConnectDevice'
+import { format as timeAgo } from 'timeago.js'
+import InputSelect from 'components/InputSelect'
 
 import {
   Box,
@@ -30,10 +32,26 @@ const AddDevice = (props) => {
   const [psk, setPsk] = useState('')
   const [vlan, setVlan] = useState('')
   const [device, setDevice] = useState({})
+  const [expiration, setExpiration] = useState(0)
+  const [deleteExpiry, setDeleteExpiry] = useState(false)
+  const [deviceDisabled, setDeviceDisabled] = useState(false)
 
   const [submitted, setSubmitted] = useState(false)
 
   const [errors, setErrors] = useState({})
+
+  const expirationOptions = [
+    {label: 'Never', value: 0},
+    {label: '1 Hour', value: 60*60},
+    {label: '1 Day', value: 60*60*24},
+    {label: '1 Week', value: 60*60*24*7},
+    {label: '4 Weeks', value: 60*60*24*7*4},
+  ]
+
+  const tagTips = {
+    'guest': 'This is a guest device',
+    'lan_upstream': "lan_upstream allows devices to query LAN addresses upstream of the SPR Router"
+  }
 
   useEffect(() => {
     deviceAPI.list().then((devs) => {
@@ -94,7 +112,7 @@ const AddDevice = (props) => {
     'dns': 'Allow DNS Queries',
     'lan': 'Allow access to ALL other devices on the network'
   }
-  const allTags = ['lan_upstream']
+  const allTags = ['lan_upstream', 'guest']
 
   const isPositiveNumber = (str) => {
     let num = parseFloat(str)
@@ -139,6 +157,15 @@ const AddDevice = (props) => {
       setWpa('none')
     }
 
+    if (name == 'Expiration') {
+      if (value == 0 && expiration != 0) {
+        //gotcha in the API is to reset should set to -1
+        //this is so that setting 0 does not update expiry
+        value = -1
+      }
+      setExpiration(value)
+    }
+
     setErrors({})
   }
 
@@ -163,7 +190,10 @@ const AddDevice = (props) => {
       PSKEntry: {
         Psk: psk,
         Type: wpa
-      }
+      },
+      DeviceExpiration: expiration,
+      DeleteExpiration: deleteExpiry,
+      DeviceDisabled: deviceDisabled
     }
 
     if (wpa == 'none') {
@@ -343,7 +373,7 @@ const AddDevice = (props) => {
           </FormControl.HelperText>
         </FormControl>
 
-        <FormControl flex={1}>
+        <FormControl flex={2}>
           <FormControl.Label>Tags</FormControl.Label>
           <Checkbox.Group
             defaultValue={tags}
@@ -351,20 +381,53 @@ const AddDevice = (props) => {
             onChange={(values) => setTags(values)}
             py={1}
           >
-            <Tooltip label="lan_upstream allows devices to query LAN addresses in front of the SPR Router" openDelay={300}>
             <HStack w="100%" justifyContent="space-between">
               {allTags.map((tag) => (
+                <Tooltip label={tagTips[tag]} openDelay={300}>
                 <Box key={tag} flex={1}>
                   <Checkbox value={tag} colorScheme="primary">
                     {tag}
                   </Checkbox>
                 </Box>
+                </Tooltip>
               ))}
             </HStack>
-            </Tooltip>
           </Checkbox.Group>
 
           <FormControl.HelperText>Assign device tags</FormControl.HelperText>
+        </FormControl>
+      </Stack>
+
+      <Stack>
+        <FormControl flex={2}>
+          <FormControl.Label>Expiration</FormControl.Label>
+
+          <InputSelect
+            options={expirationOptions}
+            value={
+              expiration
+                ? timeAgo(new Date(Date.now() + expiration * 1e3))
+                : 'Never'}
+            onChange={(v) => handleChange('Expiration', parseInt(v))}
+            onChangeText={(v) => handleChange('Expiration', parseInt(v))}
+          />
+
+          <FormControl.HelperText>
+            If non zero has unix time for when the entry should disappear
+          </FormControl.HelperText>
+
+          <FormControl.Label>Delete on expiry</FormControl.Label>
+          <Checkbox
+            accessibilityLabel="Enabled"
+            value={deleteExpiry}
+            isChecked={deleteExpiry}
+            onChange={(enabled) =>
+              setDeleteExpiry(!deleteExpiry)
+            }
+          >
+            Remove device
+          </Checkbox>
+
         </FormControl>
       </Stack>
 
