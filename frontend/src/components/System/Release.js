@@ -1,10 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Icon } from 'FontAwesomeUtils'
-import {
-  faWrench,
-  faRefresh,
-  faArrowUp
-} from '@fortawesome/free-solid-svg-icons'
+
 import {
   Box,
   Button,
@@ -15,15 +10,20 @@ import {
   FormControlLabelText,
   FormControlHelper,
   FormControlHelperText,
-  Heading,
   HStack,
   Text,
+  VStack,
   ArrowUpIcon,
   SettingsIcon,
-  ButtonGroup
+  ButtonGroup,
+  Checkbox,
+  CheckboxIcon,
+  CheckboxIndicator,
+  CheckboxLabel,
+  CheckIcon
 } from '@gluestack-ui/themed'
 
-import { Checkbox, Tooltip, VStack } from 'native-base'
+import { Tooltip } from 'native-base' //TODONB
 
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
@@ -182,17 +182,19 @@ const UpdateReleaseInfo = ({
         </FormControl>
       </HStack>
 
-      {verifyMessage && verifyMessage.length ? (
+      {verifyMessage?.length ? (
         <HStack space={4}>
           <FormControl flex={2}>
             <Checkbox
-              accessibilityLabel="Verified"
-              colorScheme="green"
+              size="md"
               value={verified}
               isChecked={verified}
               onChange={(enabled) => setVerified(!verified)}
             >
-              I know what I'm doing
+              <CheckboxIndicator mr="$2">
+                <CheckboxIcon as={CheckIcon} />
+              </CheckboxIndicator>
+              <CheckboxLabel>I know what I'm doing</CheckboxLabel>
             </Checkbox>
 
             <FormControlHelper>

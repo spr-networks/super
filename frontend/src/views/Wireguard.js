@@ -4,24 +4,24 @@ import { wireguardAPI } from 'api/Wireguard'
 import PeerList from 'components/Wireguard/PeerList'
 import SiteVPN from 'components/Wireguard/SiteVPN'
 import { AppContext } from 'AppContext'
-import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faXmark, faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 
 import {
   Box,
   Button,
+  ButtonIcon,
+  ButtonText,
   FlatList,
-  Heading,
-  HStack,
-  IconButton,
   Input,
-  Stack,
+  InputField,
+  ScrollView,
   Switch,
   Text,
-  View,
-  ScrollView,
-  useColorModeValue
-} from 'native-base'
+  VStack,
+  AddIcon,
+  CloseIcon
+} from '@gluestack-ui/themed'
+
+import { ListHeader, ListItem } from 'components/List'
 
 const Wireguard = (props) => {
   const context = useContext(AppContext)
@@ -30,7 +30,7 @@ const Wireguard = (props) => {
   let [config, setConfig] = useState({})
   let [endpoints, setEndpoints] = useState([])
   let [showInput, setShowInput] = useState(false)
-  let [pendingEndpoint, setPendingEndpoint] = useState("")
+  let [pendingEndpoint, setPendingEndpoint] = useState('')
 
   const getStatus = () => {
     wireguardAPI
@@ -59,12 +59,11 @@ const Wireguard = (props) => {
   useEffect(() => {
     getStatus()
 
-    wireguardAPI.getEndpoints().then(endpoints => {
+    wireguardAPI.getEndpoints().then((endpoints) => {
       if (endpoints) {
         setEndpoints(endpoints)
       }
     })
-
   }, [])
 
   const addDomain = () => {
@@ -72,9 +71,9 @@ const Wireguard = (props) => {
   }
 
   const deleteDomain = (v) => {
-    let s = endpoints.filter(e => e != v)
+    let s = endpoints.filter((e) => e != v)
     setEndpoints(s)
-    wireguardAPI.setEndpoints(s).then( () => {})
+    wireguardAPI.setEndpoints(s).then(() => {})
   }
 
   const handleEndpoint = (v) => {
@@ -82,11 +81,11 @@ const Wireguard = (props) => {
   }
 
   const updateNewDomain = () => {
-    let s = endpoints ? endpoints.concat(pendingEndpoint) : [pendingEndpoint];
-    setPendingEndpoint("")
+    let s = endpoints ? endpoints.concat(pendingEndpoint) : [pendingEndpoint]
+    setPendingEndpoint('')
     setShowInput(false)
     setEndpoints(s)
-    wireguardAPI.setEndpoints(s).then( () => {})
+    wireguardAPI.setEndpoints(s).then(() => {})
   }
 
   const handleChange = () => {
@@ -115,125 +114,80 @@ const Wireguard = (props) => {
 
   return (
     <ScrollView>
-      <HStack alignItems="center" p={4}>
-        <Heading fontSize="md">Wireguard</Heading>
-
-        <Switch
-          marginLeft="auto"
-          isChecked={isUp}
-          onValueChange={handleChange}
-        />
-      </HStack>
-      <Box
-        _light={{ bg: 'backgroundCardLight' }}
-        _dark={{ bg: 'backgroundCardDark' }}
-        p={4}
-        mb={4}
-        mx={4}
-      >
-        <Box>
-          {config.listenPort ? (
-            <Stack direction={{ base: 'column', md: 'row' }} space={1}>
-              <Text>
-                Wireguard is listening on port {config.listenPort} with
-                PublicKey:
-              </Text>
-              <Text italic>{config.publicKey}</Text>
-            </Stack>
-          ) : (
-            <Text>
-              Wireguard is not running. See /configs/wireguard/wg0.conf
-            </Text>
-          )}
-        </Box>
-
-      </Box>
+      <ListHeader title="Wireguard">
+        <Switch marginLeft="auto" value={isUp} onToggle={handleChange} />
+      </ListHeader>
 
       <Box
-      _light={{ bg: 'backgroundCardLight' }}
-      _dark={{ bg: 'backgroundCardDark' }}
-      p={4}
-      mb={4}
-      mx={4}
-      >
-        <Heading fontSize="sm">Default Endpoints</Heading>
-        <Box>
-        <FlatList
-          data={endpoints}
-          renderItem={({ item }) => (
-            <HStack
-              space={2}
-              justifyContent="space-between"
-              alignItems="center"
-              bg="backgroundCardLight"
-              borderBottomWidth={1}
-              _dark={{
-                bg: 'backgroundCardDark',
-                borderColor: 'borderColorCardDark'
-              }}
-              borderColor="borderColorCardLight"
-              p={4}
-            >
-              <Stack
-                flex={1}
-                space={1}
-                direction={{ base: 'column', md: 'row' }}
-                justifyContent="space-between"
-              >
-                <Text flex="1" bold>
-                  {item}
-                </Text>
-                <IconButton
-                  alignSelf="center"
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="secondary"
-                  icon={<Icon icon={faXmark} />}
-                  onPress={() => deleteDomain(item)}
-                />
-              </Stack>
-            </HStack>
-          )}/>
-        </Box>
-        {(showInput ?
-
-          <Input
-            size="lg"
-            type="text"
-            w="100%"
-            value={pendingEndpoint}
-            autoFocus={false}
-            onChangeText={(value) => handleEndpoint(value)}
-            onSubmitEditing={updateNewDomain}
-            placeholder="yourdomain.com"
-          />
-
-
-          : null)}
-      </Box>
-      <Button
-        display={{
-          base: 'flex',
-          md: 'flex'
+        bg="$backgroundCardLight"
+        sx={{
+          _dark: {
+            bg: '$backgroundCardDark'
+          }
         }}
-        variant={useColorModeValue('subtle', 'solid')}
-        colorScheme={useColorModeValue('muted', 'muted')}
-        leftIcon={<Icon icon={faCirclePlus} />}
-        onPress={addDomain}
-        mt={4}
+        p="$4"
+        mb="$4"
       >
-        Add Endpoint
+        {config.listenPort ? (
+          <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
+            <Text>
+              Wireguard is listening on port {config.listenPort} with PublicKey:
+            </Text>
+            <Text italic>{config.publicKey}</Text>
+          </VStack>
+        ) : (
+          <Text>Wireguard is not running. See /configs/wireguard/wg0.conf</Text>
+        )}
+      </Box>
+
+      <ListHeader
+        title="Default Endpoints"
+        description="Set default endpoint clients should connect to"
+      ></ListHeader>
+      <FlatList
+        data={endpoints}
+        renderItem={({ item }) => (
+          <ListItem>
+            <Text flex="1" bold>
+              {item}
+            </Text>
+
+            <Button size="sm" variant="link" onPress={() => deleteDomain(item)}>
+              <ButtonIcon as={CloseIcon} color="$red700" />
+            </Button>
+          </ListItem>
+        )}
+      />
+
+      {showInput ? (
+        <ListItem>
+          <Input w="$full">
+            <InputField
+              type="text"
+              placeholder="yourdomain.com"
+              value={pendingEndpoint}
+              autoFocus={false}
+              onChangeText={(value) => handleEndpoint(value)}
+              onSubmitEditing={updateNewDomain}
+            />
+          </Input>
+        </ListItem>
+      ) : null}
+
+      <Button
+        sx={{ '@md': { display: endpoints.length ? 'none' : 'flex' } }}
+        action="primary"
+        variant="solid"
+        rounded="$none"
+        onPress={addDomain}
+      >
+        <ButtonText>Add Endpoint</ButtonText>
+        <ButtonIcon as={AddIcon} />
       </Button>
 
+      <PeerList defaultEndpoints={endpoints} />
 
-      <PeerList
-        defaultEndpoints={endpoints}
-       />
-
-      {!context.isPlusDisabled ? (
-        //PLUS feature
-        <SiteVPN />
-      ) : null}
+      {!context.isPlusDisabled ? <SiteVPN /> : null}
     </ScrollView>
   )
 }

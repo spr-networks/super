@@ -1,22 +1,21 @@
 import React, { useContext, useState, useEffect } from 'react'
 import {
+  AddIcon,
   Box,
   Button,
-  Container,
-  Form,
+  ButtonIcon,
+  ButtonText,
   Heading,
   HStack,
-  IconButton,
   Input,
+  InputField,
   Text,
-  View,
-  VStack,
-  useColorModeValue
-} from 'native-base'
-import { Icon } from 'FontAwesomeUtils'
+  TrashIcon,
+  VStack
+} from '@gluestack-ui/themed'
+
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
-import { faCirclePlus, faTrash } from '@fortawesome/free-solid-svg-icons'
 
 const Supernetworks = (props) => {
   const context = useContext(AlertContext)
@@ -37,7 +36,7 @@ const Supernetworks = (props) => {
         LeaseTime: leaseTime
       })
       .then(() => {
-        context.success("Updated supernetworks")
+        context.success('Updated supernetworks')
       })
       .catch((err) => context.error('' + err))
   }
@@ -57,75 +56,87 @@ const Supernetworks = (props) => {
   }
 
   return (
-    <VStack justifyContent="space-between">
-      <HStack p={4}>
-        <Heading fontSize="md">Supernetworks</Heading>
-      </HStack>
-      {tinyNets.map((tinyNet, index) => (
-        <HStack
-          key={index}
-          space={4}
-          alignItems="center"
-          justifyContent="space-between"
-          p={4}
-          py={8}
-          bg="white"
-          borderBottomColor="borderColorCardLight"
-          _dark={{
-            bg: 'blueGray.700',
-            borderBottomColor: 'borderColorCardDark'
-          }}
-          borderBottomWidth={1}
-        >
-          <Input
-            flex={1}
-            variant="underlined"
-            value={tinyNet}
-            onChangeText={(text) => updateTinyNet(text, index)}
-          />
+    <VStack sx={{ '@md': { w: '$3/4' } }}>
+      <Heading size="sm" p="$4">
+        Supernetworks
+      </Heading>
 
-          <IconButton
-            _variant="solid"
-            size="sm"
-            colorScheme="danger"
-            onPress={() => removeTinyNet(index)}
-            icon={<Icon icon={faTrash} />}
-          />
-        </HStack>
-      ))}
-      <Button
-        variant={useColorModeValue('subtle', 'solid')}
-        colorScheme="primary"
-        leftIcon={<Icon icon={faCirclePlus} />}
-        onPress={addTinyNet}
-      >
-        <Text>Add Supernetwork</Text>
-      </Button>
-      <HStack
-        space={4}
-        mt={4}
-        alignItems="center"
-        p={4}
-        py={8}
-        bg="white"
-        _dark={{ bg: 'blueGray.700' }}
-      >
-        <Text>Lease Time</Text>
-        <Input
-          flex={1}
-          variant="underlined"
-          value={leaseTime}
-          onChangeText={(text) => setLeaseTime(text)}
-        />
-      </HStack>
-      <Button
-        size="md"
-        variant="solid"
-        colorScheme={'primary'}
-        onPress={handleUpdate}
-      >
-        Save Settings
-      </Button>
+      <VStack space="xl">
+        <Box flex="$1">
+          {tinyNets.map((tinyNet, index) => (
+            <HStack
+              key={index}
+              space="md"
+              alignItems="center"
+              justifyContent="space-between"
+              p="$4"
+              py="$8"
+              bg="white"
+              borderBottomColor="$borderColorCardLight"
+              borderBottomWidth={1}
+              sx={{
+                _dark: {
+                  bg: '$blueGray700',
+                  borderBottomColor: '$borderColorCardDark'
+                }
+              }}
+            >
+              <Input flex={1} variant="underlined">
+                <InputField
+                  value={tinyNet}
+                  onChangeText={(text) => updateTinyNet(text, index)}
+                />
+              </Input>
+
+              <Button
+                size="sm"
+                action="negative"
+                variant="solid"
+                onPress={() => removeTinyNet(index)}
+              >
+                <ButtonText>Remove</ButtonText>
+                <ButtonIcon as={TrashIcon} ml="$1" />
+              </Button>
+            </HStack>
+          ))}
+          <Button
+            action="secondary"
+            variant="solid"
+            rounded="$none"
+            onPress={addTinyNet}
+          >
+            <ButtonText>Add Supernetwork</ButtonText>
+            <ButtonIcon as={AddIcon} ml="$1" />
+          </Button>
+        </Box>
+
+        <Box flex="$1">
+          <HStack
+            space="md"
+            alignItems="center"
+            p="$4"
+            py="$8"
+            bg="white"
+            sx={{ _dark: { bg: '$blueGray700' } }}
+          >
+            <Text>Lease Time</Text>
+            <Input flex={1} variant="underlined">
+              <InputField
+                value={leaseTime}
+                onChangeText={(text) => setLeaseTime(text)}
+              />
+            </Input>
+          </HStack>
+          <Button
+            action="primary"
+            variant="solid"
+            rounded="$none"
+            onPress={handleUpdate}
+          >
+            <ButtonText>Save Settings</ButtonText>
+          </Button>
+        </Box>
+      </VStack>
     </VStack>
   )
 }

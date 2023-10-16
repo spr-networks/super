@@ -141,7 +141,7 @@ const DockerInfo = ({ showModal, ...props }) => {
 
     const trigger = (triggerProps) => (
       <Button variant="link" ml="auto" {...triggerProps}>
-        <ButtonIcon as={ThreeDotsIcon} color="$muted500" />
+        <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
       </Button>
     )
 

@@ -6,29 +6,27 @@ import { useNavigate } from 'react-router-dom'
 import Device from 'components/Devices/Device'
 import { AlertContext } from 'layouts/Admin'
 import { AppContext } from 'AppContext'
-import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
-import {
-  faCirclePlus,
-  faEllipsis,
-  //faFilter,
-  faPlus,
-  faTimes
-} from '@fortawesome/free-solid-svg-icons'
 
 import {
   Button,
+  ButtonText,
   Box,
   Fab,
-  Heading,
   HStack,
   VStack,
   Pressable,
   Text,
   View,
-  useColorModeValue
-} from 'native-base'
+  AddIcon,
+  FabIcon,
+  FabLabel,
+  ThreeDotsIcon,
+  CloseIcon
+} from '@gluestack-ui/themed'
 import { FlashList } from '@shopify/flash-list'
 import { SwipeListView } from 'components/SwipeListView'
+import { ButtonIcon } from '@gluestack-ui/themed'
+import { ListHeader } from 'components/List'
 
 const DeviceListing = (props) => {
   const context = useContext(AlertContext)
@@ -206,12 +204,12 @@ const DeviceListing = (props) => {
   }
 
   const renderHiddenItem = (data, rowMap) => (
-    <HStack flex={1} pl={2} mt={1} mb={1}>
+    <HStack flex={1} pl="$2" my="$1">
       <Pressable
         w="70"
         ml="auto"
         cursor="pointer"
-        bg="coolGray.200"
+        bg="$coolGray200"
         justifyContent="center"
         onPress={() =>
           navigate(
@@ -224,9 +222,9 @@ const DeviceListing = (props) => {
           opacity: 0.5
         }}
       >
-        <VStack alignItems="center" space={2}>
-          <Icon icon={faEllipsis} color="coolGray.800" />
-          <Text fontSize="xs" fontWeight="medium" color="coolGray.800">
+        <VStack alignItems="center" space="md">
+          <ThreeDotsIcon color="$coolGray800" />
+          <Text size="xs" fontWeight="medium" color="$coolGray800">
             Edit
           </Text>
         </VStack>
@@ -234,16 +232,16 @@ const DeviceListing = (props) => {
       <Pressable
         w="70"
         cursor="pointer"
-        bg="red.500"
+        bg="$red500"
         justifyContent="center"
         onPress={() => deleteRow(rowMap, data.item.MAC || data.item.WGPubKey)}
         _pressed={{
           opacity: 0.5
         }}
       >
-        <VStack alignItems="center" space={2}>
-          <Icon icon={faTimes} color="white" />
-          <Text color="white" fontSize="xs" fontWeight="medium">
+        <VStack alignItems="center" space="md">
+          <CloseIcon color="$white" />
+          <Text size="xs" color="$white" fontWeight="$medium">
             Delete
           </Text>
         </VStack>
@@ -260,32 +258,30 @@ const DeviceListing = (props) => {
 
   return (
     <View h={h}>
-      <HStack justifyContent="space-between">
-        <Heading fontSize="md" alignSelf="center" p={4}>
-          Devices
-        </Heading>
-
-        <HStack ml="auto">
-          {/*<Button
+      <ListHeader title="Devices">
+        <Button
+          size="sm"
+          action="primary"
+          variant="solid"
+          sx={{
+            '@base': { display: 'none' },
+            '@md': { display: 'flex' }
+          }}
+          onPress={handleRedirect}
+        >
+          <ButtonText>Add</ButtonText>
+          <ButtonIcon as={AddIcon} ml="$2" />
+        </Button>
+        {/*<Button
             size="sm"
             variant="ghost"
             colorScheme="blueGray"
             leftIcon={<Icon icon={faFilter} />}
             onPress={() => {}}
-          >
+            >
             Filter
           </Button>*/}
-          <Button
-            size="sm"
-            variant="ghost"
-            colorScheme="blueGray"
-            leftIcon={<Icon icon={faCirclePlus} />}
-            onPress={handleRedirect}
-          >
-            Add
-          </Button>
-        </HStack>
-      </HStack>
+      </ListHeader>
 
       {Platform.OS == 'ios' ? (
         <SwipeListView
@@ -304,15 +300,18 @@ const DeviceListing = (props) => {
           />
 
           {/* padding */}
-          <Box display={{ base: 'none', md: 'flex' }} h={8}></Box>
+          <Box sx={{ '@md': { h: '$10' } }}></Box>
         </>
       )}
 
       {devices !== null && !devices.length ? (
         <Box
-          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+          bg="$backgroundCardLight"
+          sx={{
+            _dark: { bg: '$backgroundCardDark' }
+          }}
         >
-          <Text color="muted.500" p={4}>
+          <Text color="$muted500" p="$4">
             There are no devices configured yet
           </Text>
         </Box>
@@ -322,11 +321,12 @@ const DeviceListing = (props) => {
         renderInPortal={false}
         shadow={2}
         size="sm"
-        icon={<Icon color="white" icon={faPlus} />}
         onPress={handleRedirect}
-        _bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        bg="primary.500"
-      />
+        bg="$primary500"
+      >
+        <FabIcon as={AddIcon} mr="$1" />
+        <FabLabel>Add Device</FabLabel>
+      </Fab>
     </View>
   )
 }

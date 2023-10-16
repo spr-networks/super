@@ -11,18 +11,23 @@ import { api, wifiAPI } from 'api'
 import { Address4 } from 'ip-address'
 
 import {
-  Box,
   Button,
+  ButtonText,
   Checkbox,
+  CheckboxGroup,
+  CheckboxIcon,
+  CheckboxIndicator,
+  CheckboxLabel,
   FormControl,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlLabel,
+  FormControlLabelText,
   Input,
-  Link,
-  Stack,
+  InputField,
   HStack,
-  Spinner,
-  Text,
   VStack
-} from 'native-base'
+} from '@gluestack-ui/themed'
 
 export default class WireguardAddPeer extends React.Component {
   state = {
@@ -44,7 +49,6 @@ export default class WireguardAddPeer extends React.Component {
     this.handleChangeEndpoint = this.handleChangeEndpoint.bind(this)
     this.handleClickGenerate = this.handleClickGenerate.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
-
   }
 
   handleChange(name, value) {
@@ -173,19 +177,19 @@ export default class WireguardAddPeer extends React.Component {
   componentDidMount() {
     wifiAPI.ipAddr().then((data) => {
       api.get('/subnetConfig').then((config) => {
-
-        let addrs = this.props.defaultEndpoints.map(e => { return {"local": e} })
+        let addrs = this.props.defaultEndpoints.map((e) => {
+          return { local: e }
+        })
 
         for (let entry of data) {
-          next:
-          for (let address of entry.addr_info) {
+          next: for (let address of entry.addr_info) {
             if (address.scope == 'global') {
               //filter out any tiny net ips
               let local_addr = new Address4(address.local)
               for (let net of config.TinyNets) {
                 let subnet = new Address4(net)
                 if (local_addr.isInSubnet(subnet)) {
-                  continue next;
+                  continue next
                 }
               }
 
@@ -198,7 +202,6 @@ export default class WireguardAddPeer extends React.Component {
         // config.wg0.listenPort
         //ip:port :51280
         this.setState({ addrs })
-
       })
     })
   }
@@ -221,54 +224,44 @@ export default class WireguardAddPeer extends React.Component {
     let newPeer = this.state.AllowedIPs == ''
 
     return (
-      <VStack space={4}>
+      <VStack space="md">
         <FormControl>
-          <FormControl.Label>Client</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Client</FormControlLabelText>
+          </FormControlLabel>
 
           <ClientSelect
             value={this.state.AllowedIPs}
             onChange={this.handleChangeClient}
           />
-          {/*<Input
-                type="text"
-                id="AllowedIPs"
-                placeholder="192.168.3.2/32"
-                name="AllowedIPs"
-                value={this.state.AllowedIPs}
-                onChange={this.handleChange}
-                autoFocus
-              />*/}
-          <FormControl.HelperText>Leave empty to assign</FormControl.HelperText>
+          <FormControlHelper>
+            <FormControlHelperText>Leave empty to assign</FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
         <FormControl>
-          <FormControl.Label>PublicKey</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>PublicKey</FormControlLabelText>
+          </FormControlLabel>
 
-          <Input
-            variant="underlined"
-            placeholder="base64 pubkey"
-            value={this.state.PublicKey}
-            onChangeText={(value) => this.handleChange('PublicKey', value)}
-            autoFocus
-          />
-          {/*
-            InputRightElement={
-              <Button
-                rounded="none"
-                h="full"
-                onPress={this.handleClickGenerate}
-              >
-                Generate
-              </Button>
-            }
-*/}
-
-          <FormControl.HelperText>
-            Leave empty to generate, else run wg pubkey &lt; peer.key
-          </FormControl.HelperText>
+          <Input variant="underlined">
+            <InputField
+              placeholder="base64 pubkey"
+              value={this.state.PublicKey}
+              onChangeText={(value) => this.handleChange('PublicKey', value)}
+              autoFocus
+            />
+          </Input>
+          <FormControlHelper>
+            <FormControlHelperText>
+              Leave empty to generate, else run wg pubkey &lt; peer.key
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
         <FormControl>
-          <FormControl.Label>Endpoint</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Endpoint</FormControlLabelText>
+          </FormControlLabel>
 
           <InputSelect
             options={endpoints}
@@ -276,55 +269,69 @@ export default class WireguardAddPeer extends React.Component {
             onChange={this.handleChangeEndpoint}
             onChangeText={this.handleChangeEndpoint}
           />
-          <FormControl.HelperText>
-            Leave empty for default
-          </FormControl.HelperText>
+          <FormControlHelper>
+            <FormControlHelperText>
+              Leave empty for default
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
         {newPeer ? (
-          <VStack>
-            <FormControl flex="1">
-              <FormControl.Label>Device Name</FormControl.Label>
-              <Input
-                size="md"
-                variant="underlined"
-                value={this.state.deviceName}
-                onChangeText={(value) => this.handleChange('deviceName', value)}
-              />
+          <>
+            <FormControl>
+              <FormControlLabel>
+                <FormControlLabelText>Device Name</FormControlLabelText>
+              </FormControlLabel>
+              <Input size="md" variant="underlined">
+                <InputField
+                  value={this.state.deviceName}
+                  onChangeText={(value) =>
+                    this.handleChange('deviceName', value)
+                  }
+                />
+              </Input>
 
-              <FormControl.HelperText>
-                Assign device name
-              </FormControl.HelperText>
+              <FormControlHelper>
+                <FormControlHelperText>
+                  Assign device name
+                </FormControlHelperText>
+              </FormControlHelper>
             </FormControl>
 
-            <FormControl flex={1}>
-              <FormControl.Label>Groups</FormControl.Label>
-              <Checkbox.Group
-                defaultValue={this.state.groups}
+            <FormControl>
+              <FormControlLabel>
+                <FormControlLabelText>Groups</FormControlLabelText>
+              </FormControlLabel>
+
+              <CheckboxGroup
+                value={this.state.groups}
                 accessibilityLabel="Set Device Groups"
                 onChange={(values) => this.handleChange('groups', values)}
-                py="1"
+                py="$1"
               >
-                <HStack w="100%" justifyContent="space-between">
+                <HStack space="xl">
                   {allGroups.map((group) => (
-                    <Box key={group} flex={1}>
-                      <Checkbox value={group} colorScheme="primary">
-                        {group}
-                      </Checkbox>
-                    </Box>
+                    <Checkbox value={group} colorScheme="primary">
+                      <CheckboxIndicator mr="$2">
+                        <CheckboxIcon />
+                      </CheckboxIndicator>
+                      <CheckboxLabel>{group}</CheckboxLabel>
+                    </Checkbox>
                   ))}
                 </HStack>
-              </Checkbox.Group>
+              </CheckboxGroup>
 
-              <FormControl.HelperText>
-                Assign device to groups for network access
-              </FormControl.HelperText>
+              <FormControlHelper>
+                <FormControlHelperText>
+                  Assign device to groups for network access
+                </FormControlHelperText>
+              </FormControlHelper>
             </FormControl>
-          </VStack>
+          </>
         ) : null}
 
-        <Button colorScheme="primary" onPress={this.handleSubmit}>
-          Save
+        <Button action="primary" onPress={this.handleSubmit}>
+          <ButtonText>Save</ButtonText>
         </Button>
       </VStack>
     )

@@ -1,6 +1,6 @@
 import React, { useContext, Component } from 'react'
 
-import { View, VStack } from 'native-base'
+import { VStack } from '@gluestack-ui/themed'
 
 import { deviceAPI, trafficAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
@@ -237,23 +237,21 @@ class TrafficTimeSeries extends Component {
     }
 
     return (
-      <View>
-        <VStack space={4}>
-          {['WanOut', 'WanIn', 'LanIn', 'LanOut'].map((type) => {
-            return (
-              <TimeSeries
-                key={type}
-                type={type}
-                title={prettyTitle(type)}
-                data={this.state[type]}
-                chartMode={this.state.chartModes[type]}
-                handleChangeTime={handleChangeTime}
-                handleChangeMode={handleChangeMode}
-              />
-            )
-          })}
-        </VStack>
-      </View>
+      <VStack space="md">
+        {['WanOut', 'WanIn', 'LanIn', 'LanOut'].map((type) => {
+          return (
+            <TimeSeries
+              key={type}
+              type={type}
+              title={prettyTitle(type)}
+              data={this.state[type]}
+              chartMode={this.state.chartModes[type]}
+              handleChangeTime={handleChangeTime}
+              handleChangeMode={handleChangeMode}
+            />
+          )
+        })}
+      </VStack>
     )
   }
 }

@@ -7,7 +7,7 @@ import { deviceAPI, wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 
 import { Dimensions } from 'react-native'
-import { Box, Heading, Text, ScrollView, useColorModeValue } from 'native-base'
+import { Box, Heading, ScrollView, useColorMode } from '@gluestack-ui/themed'
 
 export default (props) => {
   const context = useContext(AlertContext)
@@ -116,18 +116,16 @@ export default (props) => {
     return <></>
   }
 
-  let colors = useColorModeValue(chroma.scale('BuPu').mode('lch').colors(4), [
-    '#cc0000',
-    '#cccc00',
-    '#00cccc',
-    '#cc00cc'
-  ])
+  const colorMode = useColorMode()
+
+  let colors =
+    colorMode == 'light'
+      ? chroma.scale('BuPu').mode('lch').colors(4)
+      : ['#cc0000', '#cccc00', '#00cccc', '#cc00cc']
 
   const options = {
-    backgroundColor: useColorModeValue(
-      'backgroundCardLigt',
-      'backgroundCardDark'
-    ),
+    backgroundColor:
+      colorMode == 'light' ? '$backgroundCardLigt' : '$backgroundCardDark',
     backgroundGradientFromOpacity: 0,
     backgroundGradientToOpacity: 0,
     color: (opacity = 1) => chroma(colors[1]).darken().alpha(opacity).css()
@@ -162,15 +160,17 @@ export default (props) => {
 
   return (
     <ScrollView>
-      <Heading p={4} fontSize="md">
+      <Heading size="sm" p="$4">
         Device Signal Strength (RSSI)
       </Heading>
 
       <Box
-        _light={{ bg: 'warmGray.50' }}
-        _dark={{ bg: 'blueGray.800' }}
-        p={4}
-        mb={4}
+        bg="$backgroundCardLight"
+        sx={{
+          _dark: { bg: '$backgroundCardDark' }
+        }}
+        p="$4"
+        mb="$4"
       >
         {signalsRSSI ? (
           <BarChart
@@ -188,15 +188,16 @@ export default (props) => {
 
       {signalsRX ? (
         <>
-          <Heading p={4} fontSize="md">
+          <Heading size="sm" p="$4">
             Device RX Rate
           </Heading>
 
           <Box
-            _light={{ bg: 'warmGray.50' }}
-            _dark={{ bg: 'blueGray.800' }}
-            p={4}
-            mb={4}
+            bg="$backgroundCardLight"
+            sx={{
+              _dark: { bg: '$backgroundCardDark' }
+            }}
+            p="$4"
           >
             <BarChart
               width={width}
@@ -211,16 +212,18 @@ export default (props) => {
 
       {signalsTX ? (
         <>
-          <Heading p={4} fontSize="md">
+          <Heading size="sm" p="$4">
             Device TX Rate
           </Heading>
 
           <Box
-            _light={{ bg: 'warmGray.50' }}
-            _dark={{ bg: 'blueGray.800' }}
-            p={4}
-            mb={4}
-            pb={16}
+            bg="$backgroundCardLight"
+            sx={{
+              _dark: { bg: '$backgroundCardDark' }
+            }}
+            p="$4"
+            mb="$4"
+            pb="$16"
           >
             <BarChart
               width={width}

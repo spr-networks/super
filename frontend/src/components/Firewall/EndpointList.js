@@ -17,11 +17,13 @@ import {
   HStack,
   VStack,
   Text,
-  useColorMode,
   ThreeDotsIcon,
   ArrowRightIcon,
   AddIcon,
   TrashIcon
+  /*Menu,
+  MenuItem,
+  MenuItemLabel*/
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
@@ -71,7 +73,7 @@ const EndpointList = (props) => {
     refreshList()
   }
 
-  const trigger = (triggerProps) => (
+  const trigger = ({ ...triggerProps }) => (
     <Button variant="link" {...triggerProps}>
       <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
     </Button>

@@ -4,10 +4,17 @@ import QRCode from 'react-qr-code'
 
 import { deviceAPI, wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
-import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 
-import { Box, Button, HStack, Stack, Text, View, VStack } from 'native-base'
+import {
+  Box,
+  Button,
+  ButtonText,
+  ButtonIcon,
+  HStack,
+  Text,
+  VStack,
+  ArrowLeftIcon
+} from '@gluestack-ui/themed'
 
 const WifiConnect = (props) => {
   const context = useContext(AlertContext)
@@ -81,17 +88,17 @@ const WifiConnect = (props) => {
   return (
     <VStack>
       {ssids.map((ssid) => (
-        <Stack space={4} alignItems="center">
-          <HStack space={1}>
-            <Text fontSize="lg" color="muted.500">
+        <VStack key={ssid} space="md" alignItems="center">
+          <HStack space="sm">
+            <Text size="lg" color="$muted500">
               SSID
             </Text>
-            <Text bold fontSize="lg">
+            <Text bold size="lg">
               {ssid}
             </Text>
           </HStack>
           <HStack space={1}>
-            <Text fontSize="md" color="muted.500">
+            <Text size="md" color="$muted500">
               Password
             </Text>
             <Text bold fontSize="md">
@@ -101,44 +108,39 @@ const WifiConnect = (props) => {
 
           {success ? (
             <Button
-              w="40%"
+              w="$2/5"
+              action="success"
               variant="solid"
-              colorScheme="success"
-              bg="green.500"
+              bg="$green500"
               onPress={() => navigate('/admin/devices')}
             >
-              Success
+              <ButtonText>Success</ButtonText>
             </Button>
           ) : (
             <>
               {error ? (
-                <Text key="err" color="danger.500">
+                <Text key="err" color="$red500">
                   Error: {error}
                 </Text>
               ) : (
-                <Button key="wait" variant="ghost" colorScheme="muted">
-                  Waiting for connection...
+                <Button key="wait" action="secondary" variant="link">
+                  <ButtonText>Waiting for connection...</ButtonText>
                 </Button>
               )}
             </>
           )}
 
           {connectQRs[ssid] ? (
-            <Box bg="white" p={4}>
+            <Box bg="$white" p="$4">
               <QRCode value={connectQRs[ssid]} />
             </Box>
           ) : null}
 
-          <Button
-            w="1/3"
-            variant="ghost"
-            colorScheme="muted"
-            leftIcon={<Icon icon={faArrowLeft} />}
-            onPress={goBack}
-          >
-            Back
+          <Button w="$1/3" action="secondary" variant="solid" onPress={goBack}>
+            <ButtonIcon as={ArrowLeftIcon} />
+            <ButtonText>Back</ButtonText>
           </Button>
-        </Stack>
+        </VStack>
       ))}
     </VStack>
   )

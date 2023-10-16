@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 
-import { HStack, Pressable } from 'native-base'
+import { HStack, Pressable } from '@gluestack-ui/themed'
 
 import IconItem from './IconItem'
 
@@ -52,8 +52,11 @@ const IconPicker = ({ value, color, onChange, ...props }) => {
       {icons.map((name) => (
         <Pressable
           onPress={() => setSelected(name)}
-          p={2}
-          px={{ base: 1, md: 2 }}
+          p="$2"
+          sx={{
+            '@base': { px: '$1' },
+            '@md': { px: '$2' }
+          }}
           opacity={selected == name ? 1 : 0.5}
         >
           <IconItem

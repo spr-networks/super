@@ -3,12 +3,19 @@ import React, { useContext, useEffect, useState } from 'react'
 import { Chart as ChartJS } from 'chart.js/auto'
 import { Bar } from 'react-chartjs-2'
 
-import { deviceAPI, trafficAPI, wifiAPI } from 'api'
+import { deviceAPI, trafficAPI } from 'api'
 import DateRange from 'components/DateRange'
 import { AlertContext } from 'layouts/Admin'
 import { prettySize } from 'utils'
 
-import { Box, Button, Heading, HStack, VStack, Text } from 'native-base'
+import {
+  Box,
+  ButtonGroup,
+  Heading,
+  HStack,
+  VStack,
+  Text
+} from '@gluestack-ui/themed'
 
 export default (props) => {
   const context = useContext(AlertContext)
@@ -282,27 +289,27 @@ export default (props) => {
   }
 
   return (
-    <VStack space={4}>
+    <VStack space="md">
       <Box
-        _light={{ bg: 'backgroundCardLight' }}
-        _dark={{ bg: 'backgroundCardDark' }}
-        _rounded="md"
-        width="100%"
-        p={4}
+        bg="$backgroundCardLight"
+        sx={{
+          _dark: { bg: '$backgroundCardDark' }
+        }}
+        p="$4"
       >
         <HStack alignItems="center">
           <VStack>
-            <Heading fontSize="md">Device WAN Traffic</Heading>
-            <Text color="muted.500">
+            <Heading size="sm">Device WAN Traffic</Heading>
+            <Text color="$muted500">
               IN: {prettySize(wan.totalIn)}, OUT: {prettySize(wan.totalOut)}
             </Text>
           </VStack>
-          <Button.Group size="sm" marginLeft="auto">
+          <ButtonGroup size="sm" marginLeft="auto">
             <DateRange
               defaultValue={wanScale}
               onChange={(newValue) => handleChangeTime(newValue, 'wan')}
             />
-          </Button.Group>
+          </ButtonGroup>
         </HStack>
         <Box>
           {wan.datasets ? (
@@ -311,26 +318,26 @@ export default (props) => {
         </Box>
       </Box>
       <Box
-        _light={{ bg: 'backgroundCardLight' }}
-        _dark={{ bg: 'backgroundCardDark' }}
-        _rounded="md"
-        width="100%"
-        p={4}
-        mb={4}
+        bg="$backgroundCardLight"
+        sx={{
+          _dark: { bg: '$backgroundCardDark' }
+        }}
+        p="$4"
+        mb="$4"
       >
         <HStack alignItems="center">
           <VStack>
-            <Heading fontSize="md">Device LAN Traffic</Heading>
-            <Text color="muted.500">
+            <Heading size="sm">Device LAN Traffic</Heading>
+            <Text color="$muted500">
               IN: {prettySize(lan.totalIn)}, OUT: {prettySize(lan.totalOut)}
             </Text>
           </VStack>
-          <Button.Group size="sm" marginLeft="auto">
+          <ButtonGroup size="sm" marginLeft="auto">
             <DateRange
               defaultValue={lanScale}
               onChange={(newValue) => handleChangeTime(newValue, 'lan')}
             />
-          </Button.Group>
+          </ButtonGroup>
         </HStack>
         <Box>
           {lan && lan.datasets ? (

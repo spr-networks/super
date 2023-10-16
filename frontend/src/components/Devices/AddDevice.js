@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 
-import { deviceAPI, wifiAPI } from 'api'
+import { deviceAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import WifiConnect from 'views/Devices/ConnectDevice'
 import { format as timeAgo } from 'timeago.js'
@@ -9,17 +9,38 @@ import InputSelect from 'components/InputSelect'
 import {
   Box,
   Button,
+  ButtonText,
   Checkbox,
+  CheckboxGroup,
+  CheckboxIcon,
+  CheckboxIndicator,
+  CheckboxLabel,
   FormControl,
+  FormControlLabel,
+  FormControlLabelText,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlError,
+  FormControlErrorIcon,
+  FormControlErrorText,
   Heading,
   HStack,
   Input,
+  InputField,
+  RadioGroup,
   Radio,
+  RadioIndicator,
+  RadioIcon,
+  RadioLabel,
   ScrollView,
-  Stack,
+  VStack,
   Text,
-  Tooltip
-} from 'native-base'
+  AlertCircleIcon,
+  CircleIcon,
+  Tooltip,
+  TooltipContent,
+  TooltipText
+} from '@gluestack-ui/themed'
 
 const AddDevice = (props) => {
   const context = useContext(AlertContext)
@@ -41,16 +62,17 @@ const AddDevice = (props) => {
   const [errors, setErrors] = useState({})
 
   const expirationOptions = [
-    {label: 'Never', value: 0},
-    {label: '1 Hour', value: 60*60},
-    {label: '1 Day', value: 60*60*24},
-    {label: '1 Week', value: 60*60*24*7},
-    {label: '4 Weeks', value: 60*60*24*7*4},
+    { label: 'Never', value: 0 },
+    { label: '1 Hour', value: 60 * 60 },
+    { label: '1 Day', value: 60 * 60 * 24 },
+    { label: '1 Week', value: 60 * 60 * 24 * 7 },
+    { label: '4 Weeks', value: 60 * 60 * 24 * 7 * 4 }
   ]
 
   const tagTips = {
-    'guest': 'This is a guest device',
-    'lan_upstream': "lan_upstream allows devices to query LAN addresses upstream of the SPR Router"
+    guest: 'This is a guest device',
+    lan_upstream:
+      'lan_upstream allows devices to query LAN addresses upstream of the SPR Router'
   }
 
   useEffect(() => {
@@ -108,9 +130,9 @@ const AddDevice = (props) => {
 
   const allGroups = ['wan', 'dns', 'lan']
   const groupTips = {
-    'wan': 'Allow Internet Access',
-    'dns': 'Allow DNS Queries',
-    'lan': 'Allow access to ALL other devices on the network'
+    wan: 'Allow Internet Access',
+    dns: 'Allow DNS Queries',
+    lan: 'Allow access to ALL other devices on the network'
   }
   const allTags = ['lan_upstream', 'guest']
 
@@ -224,218 +246,315 @@ const AddDevice = (props) => {
   }
 
   return (
-    <ScrollView space={2} width={['100%', '100%', '5/6']} h={'100%'}>
-      <Heading fontSize="lg">Add a new WiFi Device</Heading>
-      <Text color="muted.500" fontSize="xs">
-        Wired devices do not need to be added here. They will show up when they
-        DHCP, and need WAN/DNS assignment for internet access.
-      </Text>
-      <Text color="muted.500" fontSize="xs">
-        If they they need a VLAN Tag ID for a Managed Port do add the device
-        here.
-      </Text>
-      <FormControl isRequired isInvalid={'name' in errors}>
-        <FormControl.Label>Device Name</FormControl.Label>
-        <Input
-          size="md"
-          autoFocus
-          value={name}
-          onChangeText={(value) => handleChange('name', value)}
-          onBlur={() => handleChange('name', name)}
-          onSubmitEditing={handleSubmit}
-        />
-        {'name' in errors ? (
-          <FormControl.ErrorMessage>Cannot be empty</FormControl.ErrorMessage>
-        ) : (
-          <FormControl.HelperText>
-            A unique name for the device
-          </FormControl.HelperText>
-        )}
-      </FormControl>
+    <ScrollView
+      space="md"
+      width="$full"
+      sx={{
+        '@md': { width: '$5/6' }
+      }}
+      h="$full"
+    >
+      <Heading size="sm">Add a new WiFi Device</Heading>
+      <VStack mb="$4">
+        <Text color="$muted500" size="xs">
+          Wired devices do not need to be added here. They will show up when
+          they DHCP, and need WAN/DNS assignment for internet access.
+        </Text>
+        <Text color="$muted500" size="xs">
+          If they they need a VLAN Tag ID for a Managed Port do add the device
+          here.
+        </Text>
+      </VStack>
 
-      <Stack space={2} minH={180}>
-        <FormControl flex="1" isInvalid={'mac' in errors}>
-          <FormControl.Label>MAC Address</FormControl.Label>
-          <Input
-            variant="underlined"
-            autoComplete="new-password"
-            onChangeText={(value) => handleChange('mac', value)}
-          />
-          {'mac' in errors ? (
-            <FormControl.ErrorMessage>
-              format: 00:00:00:00:00:00
-            </FormControl.ErrorMessage>
+      <VStack space="lg">
+        <FormControl isRequired isInvalid={'name' in errors}>
+          <FormControlLabel>
+            <FormControlLabelText>Device Name</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md">
+            <InputField
+              autoFocus
+              value={name}
+              onChangeText={(value) => handleChange('name', value)}
+              onBlur={() => handleChange('name', name)}
+              onSubmitEditing={handleSubmit}
+            />
+          </Input>
+          {'name' in errors ? (
+            <FormControlError>
+              <FormControlErrorIcon as={AlertCircleIcon} />
+              <FormControlErrorText>Cannot be empty</FormControlErrorText>
+            </FormControlError>
           ) : (
-            <FormControl.HelperText>
-              Optional. Will be assigned on connect if empty
-            </FormControl.HelperText>
+            <FormControlHelper>
+              <FormControlHelperText>
+                A unique name for the device
+              </FormControlHelperText>
+            </FormControlHelper>
           )}
         </FormControl>
 
-        <FormControl flex="1" isInvalid={'VLAN' in errors}>
-          <FormControl.Label>VLAN Tag ID</FormControl.Label>
-          <Input
-            variant="underlined"
-            autoComplete="new-password"
-            onChangeText={(value) => handleChange('vlan', value)}
-          />
-          {'VLAN' in errors ? (
-            <FormControl.ErrorMessage>format: 1234</FormControl.ErrorMessage>
-          ) : (
-            <FormControl.HelperText>
-              Only needed for Wired devices on a managed port, set VLAN Tag ID
-            </FormControl.HelperText>
-          )}
-        </FormControl>
+        <VStack space="md" minH={180}>
+          <FormControl flex="1" isInvalid={'mac' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>MAC Address</FormControlLabelText>
+            </FormControlLabel>
+            <Input variant="underlined">
+              <InputField
+                autoComplete="new-password"
+                onChangeText={(value) => handleChange('mac', value)}
+              />
+            </Input>
+            {'mac' in errors ? (
+              <FormControlError>
+                <FormControlErrorIcon as={AlertCircleIcon} />
+                <FormControlErrorText>
+                  format: 00:00:00:00:00:00
+                </FormControlErrorText>
+              </FormControlError>
+            ) : (
+              <FormControlHelper>
+                <FormControlHelperText>
+                  Optional. Will be assigned on connect if empty
+                </FormControlHelperText>
+              </FormControlHelper>
+            )}
+          </FormControl>
 
-        <FormControl flex="1">
-          <FormControl.Label>Authentication</FormControl.Label>
-          <Radio.Group
-            name="Auth"
-            defaultValue={'sae'}
-            accessibilityLabel="Auth"
-            onChange={(value) => handleChange('wpa', value)}
-          >
-            <HStack py="1" space={3}>
-              <Radio size="sm" value="sae">
-                WPA3
-              </Radio>
-              <Radio size="sm" value="wpa2">
-                WPA2
-              </Radio>
-              <Radio size="sm" value="none">
-                Wired
-              </Radio>
-            </HStack>
-          </Radio.Group>
-          <FormControl.HelperText>WPA3 is recommended</FormControl.HelperText>
-        </FormControl>
-      </Stack>
+          <FormControl flex="1" isInvalid={'VLAN' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>VLAN Tag ID</FormControlLabelText>
+            </FormControlLabel>
+            <Input variant="underlined">
+              <InputField
+                autoComplete="new-password"
+                onChangeText={(value) => handleChange('vlan', value)}
+              />
+            </Input>
 
-      <Stack
-        direction={{ base: 'column', md: 'row' }}
-        space={4}
-        alignItems="flex-start"
-        pb={8}
-      >
-        <FormControl flex="2" isInvalid={'psk' in errors}>
-          <FormControl.Label>Passphrase</FormControl.Label>
-          <Input
-            variant="underlined"
-            type="password"
-            autoComplete="new-password"
-            autoCorrect={false}
-            onChangeText={(value) => handleChange('psk', value)}
-          />
-          {'psk' in errors ? (
-            <FormControl.ErrorMessage>
-              must be at least 8 characters long
-            </FormControl.ErrorMessage>
-          ) : (
-            <FormControl.HelperText>
-              Optional. If empty a random password will be generated
-            </FormControl.HelperText>
-          )}
-        </FormControl>
+            {'VLAN' in errors ? (
+              <FormControlError>
+                <FormControlErrorIcon as={AlertCircleIcon} />
+                <FormControlErrorText>format: 1234</FormControlErrorText>
+              </FormControlError>
+            ) : (
+              <FormControlHelper>
+                <FormControlHelperText>
+                  Only needed for Wired devices on a managed port, set VLAN Tag
+                  ID
+                </FormControlHelperText>
+              </FormControlHelper>
+            )}
+          </FormControl>
 
-        <FormControl flex={2}>
-          <FormControl.Label>Groups</FormControl.Label>
-          <Checkbox.Group
-            defaultValue={groups}
-            accessibilityLabel="Set Device Groups"
-            onChange={(values) => setGroups(values)}
-            py={1}
-          >
-            <HStack w="100%" justifyContent="space-between">
-              {allGroups.map((group) => (
-                  (groupTips[group] !== null ) ?  (
-                    <Tooltip label={groupTips[group]} openDelay={300}>
-                    <Box key={group} flex={1}>
-                    <Checkbox value={group} colorScheme="primary">
-                      {group}
-                    </Checkbox>
-                    </Box>
+          <FormControl flex="1">
+            <FormControlLabel>
+              <FormControlLabelText>Authentication</FormControlLabelText>
+            </FormControlLabel>
+
+            <RadioGroup
+              defaultValue={'sae'}
+              accessibilityLabel="Auth"
+              onChange={(value) => handleChange('wpa', value)}
+            >
+              <HStack py="1" space="md">
+                <Radio value="sae" size="md">
+                  <RadioIndicator mr="$2">
+                    <RadioIcon as={CircleIcon} strokeWidth={1} />
+                  </RadioIndicator>
+                  <RadioLabel>WPA3</RadioLabel>
+                </Radio>
+                <Radio value="wpa2" size="md">
+                  <RadioIndicator mr="$2">
+                    <RadioIcon as={CircleIcon} strokeWidth={1} />
+                  </RadioIndicator>
+                  <RadioLabel>WPA2</RadioLabel>
+                </Radio>
+                <Radio value="none" size="md">
+                  <RadioIndicator mr="$2">
+                    <RadioIcon as={CircleIcon} strokeWidth={1} />
+                  </RadioIndicator>
+                  <RadioLabel>Wired</RadioLabel>
+                </Radio>
+              </HStack>
+            </RadioGroup>
+
+            <FormControlHelper>
+              <FormControlHelperText>WPA3 is recommended</FormControlHelperText>
+            </FormControlHelper>
+          </FormControl>
+        </VStack>
+
+        <VStack
+          sx={{
+            '@md': { flexDirection: 'row' }
+          }}
+          space="md"
+          alignItems="flex-start"
+          pb="$8"
+        >
+          <FormControl flex="2" isInvalid={'psk' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>Passphrase</FormControlLabelText>
+            </FormControlLabel>
+            <Input variant="underlined">
+              <InputField
+                type="password"
+                autoComplete="new-password"
+                autoCorrect={false}
+                onChangeText={(value) => handleChange('psk', value)}
+              />
+            </Input>
+            {'psk' in errors ? (
+              <FormControlError>
+                <FormControlErrorIcon as={AlertCircleIcon} />
+                <FormControlErrorText>
+                  must be at least 8 characters long
+                </FormControlErrorText>
+              </FormControlError>
+            ) : (
+              <FormControlHelper>
+                <FormControlHelperText>
+                  Optional. If empty a random password will be generated
+                </FormControlHelperText>
+              </FormControlHelper>
+            )}
+          </FormControl>
+
+          <FormControl flex={2}>
+            <FormControlLabel>
+              <FormControlLabelText>Groups</FormControlLabelText>
+            </FormControlLabel>
+
+            <CheckboxGroup
+              value={groups}
+              accessibilityLabel="Set Device Groups"
+              onChange={(values) => setGroups(values)}
+              py="$1"
+            >
+              <HStack space="xl">
+                {allGroups.map((group) =>
+                  groupTips[group] !== null ? (
+                    <Tooltip
+                      placement="bottom"
+                      trigger={(triggerProps) => {
+                        return (
+                          <Box {...triggerProps}>
+                            <Checkbox value={group} colorScheme="primary">
+                              <CheckboxIndicator mr="$2">
+                                <CheckboxIcon />
+                              </CheckboxIndicator>
+                              <CheckboxLabel>{group}</CheckboxLabel>
+                            </Checkbox>
+                          </Box>
+                        )
+                      }}
+                    >
+                      <TooltipContent>
+                        <TooltipText>{groupTips[group]}</TooltipText>
+                      </TooltipContent>
                     </Tooltip>
-                  ) :
-                  (
-                  <Box key={group} flex={1}>
-                  <Checkbox value={group} colorScheme="primary">
-                    {group}
-                  </Checkbox>
-                  </Box>
+                  ) : (
+                    <Checkbox value={group} colorScheme="primary">
+                      <CheckboxIndicator mr="$2">
+                        <CheckboxIcon />
+                      </CheckboxIndicator>
+                      <CheckboxLabel>{group}</CheckboxLabel>
+                    </Checkbox>
                   )
-              ))}
-            </HStack>
-          </Checkbox.Group>
+                )}
+              </HStack>
+            </CheckboxGroup>
 
-          <FormControl.HelperText>
-            Assign device to groups for network access
-          </FormControl.HelperText>
-        </FormControl>
+            <FormControlHelper>
+              <FormControlHelperText>
+                Assign device to groups for network access
+              </FormControlHelperText>
+            </FormControlHelper>
+          </FormControl>
 
-        <FormControl flex={2}>
-          <FormControl.Label>Tags</FormControl.Label>
-          <Checkbox.Group
-            defaultValue={tags}
-            accessibilityLabel="Set Device Tags"
-            onChange={(values) => setTags(values)}
-            py={1}
-          >
-            <HStack w="100%" justifyContent="space-between">
-              {allTags.map((tag) => (
-                <Tooltip label={tagTips[tag]} openDelay={300}>
-                <Box key={tag} flex={1}>
-                  <Checkbox value={tag} colorScheme="primary">
-                    {tag}
-                  </Checkbox>
-                </Box>
-                </Tooltip>
-              ))}
-            </HStack>
-          </Checkbox.Group>
+          <FormControl flex={2}>
+            <FormControlLabel>
+              <FormControlLabelText>Tags</FormControlLabelText>
+            </FormControlLabel>
+            <Checkbox.Group
+              defaultValue={tags}
+              accessibilityLabel="Set Device Tags"
+              onChange={(values) => setTags(values)}
+              py={1}
+            >
+              <HStack space="md">
+                {allTags.map((tag) => (
+                  <Tooltip
+                    placement="bottom"
+                    trigger={(triggerProps) => {
+                      return (
+                        <Box {...triggerProps}>
+                          <Checkbox value={tag} colorScheme="primary">
+                            <CheckboxIndicator mr="$2">
+                              <CheckboxIcon />
+                            </CheckboxIndicator>
+                            <CheckboxLabel>{tag}</CheckboxLabel>
+                          </Checkbox>
+                        </Box>
+                      )
+                    }}
+                  >
+                    <TooltipContent>
+                      <TooltipText>{tagTips[tag] || ''}</TooltipText>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </HStack>
+            </Checkbox.Group>
 
-          <FormControl.HelperText>Assign device tags</FormControl.HelperText>
-        </FormControl>
-      </Stack>
+            <FormControlHelper>
+              <FormControlHelperText>Assign device tags</FormControlHelperText>
+            </FormControlHelper>
+          </FormControl>
+        </VStack>
 
-      <Stack>
-        <FormControl flex={2}>
-          <FormControl.Label>Expiration</FormControl.Label>
+        <VStack>
+          <FormControl flex={2}>
+            <FormControlLabel>
+              <FormControlLabelText>Expiration</FormControlLabelText>
+            </FormControlLabel>
 
-          <InputSelect
-            options={expirationOptions}
-            value={
-              expiration
-                ? timeAgo(new Date(Date.now() + expiration * 1e3))
-                : 'Never'}
-            onChange={(v) => handleChange('Expiration', parseInt(v))}
-            onChangeText={(v) => handleChange('Expiration', parseInt(v))}
-          />
+            <InputSelect
+              options={expirationOptions}
+              value={
+                expiration
+                  ? timeAgo(new Date(Date.now() + expiration * 1e3))
+                  : 'Never'
+              }
+              onChange={(v) => handleChange('Expiration', parseInt(v))}
+              onChangeText={(v) => handleChange('Expiration', parseInt(v))}
+            />
 
-          <FormControl.HelperText>
-            If non zero has unix time for when the entry should disappear
-          </FormControl.HelperText>
+            <FormControlHelper>
+              <FormControlHelperText>
+                If non zero has unix time for when the entry should disappear
+              </FormControlHelperText>
+            </FormControlHelper>
 
-          <FormControl.Label>Delete on expiry</FormControl.Label>
-          <Checkbox
-            accessibilityLabel="Enabled"
-            value={deleteExpiry}
-            isChecked={deleteExpiry}
-            onChange={(enabled) =>
-              setDeleteExpiry(!deleteExpiry)
-            }
-          >
-            Remove device
-          </Checkbox>
+            <FormControlLabel>
+              <FormControlLabelText>Delete on expiry</FormControlLabelText>
+            </FormControlLabel>
+            <Checkbox
+              accessibilityLabel="Enabled"
+              value={deleteExpiry}
+              isChecked={deleteExpiry}
+              onChange={(enabled) => setDeleteExpiry(!deleteExpiry)}
+            >
+              Remove device
+            </Checkbox>
+          </FormControl>
+        </VStack>
 
-        </FormControl>
-      </Stack>
-
-      <Stack mt={4}>
-        <Button color="primary" size="md" onPress={handleSubmit}>
-          Save
+        <Button action="primary" size="md" onPress={handleSubmit}>
+          <ButtonText>Save</ButtonText>
         </Button>
-      </Stack>
+      </VStack>
     </ScrollView>
   )
 }

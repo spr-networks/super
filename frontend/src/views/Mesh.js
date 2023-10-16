@@ -28,8 +28,6 @@ import {
   VStack
 } from 'native-base'
 
-import { FlashList } from '@shopify/flash-list'
-
 import api, { wifiAPI, meshAPI, authAPI } from 'api'
 import APIWifi from 'api/Wifi'
 

@@ -1,5 +1,4 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
 import { deviceAPI } from 'api/Device'
@@ -10,7 +9,6 @@ import { format as timeAgo } from 'timeago.js'
 import InputSelect from 'components/InputSelect'
 
 import {
-  faEllipsis,
   faObjectGroup,
   faEarth,
   faCircleNodes,
@@ -20,19 +18,39 @@ import {
 
 import {
   Badge,
+  BadgeIcon,
+  BadgeText,
+  Button,
+  ButtonText,
   Checkbox,
+  CheckboxIcon,
+  CheckboxIndicator,
+  CheckboxLabel,
+  CheckIcon,
   FormControl,
+  FormControlLabel,
+  FormControlLabelText,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlError,
+  FormControlErrorIcon,
+  FormControlErrorText,
   Heading,
   HStack,
-  IconButton,
   Input,
-  Menu,
-  Stack,
-  Text,
+  InputField,
   ScrollView,
+  VStack,
+  Text,
   Tooltip,
-  useColorModeValue
-} from 'native-base'
+  TooltipContent,
+  TooltipText,
+  useColorMode,
+  ButtonIcon,
+  ThreeDotsIcon
+} from '@gluestack-ui/themed'
+
+import { Menu } from 'native-base' //TODONB
 
 import { Address4 } from 'ip-address'
 
@@ -46,32 +64,26 @@ const GroupItem = React.memo(({ name }) => {
     lan: faNetworkWired
   }
 
+  let colorMode = useColorMode()
+
   let groupColors = {
-    dns: useColorModeValue('muted.500', 'blueGray.700'), //'orange.400',
-    lan: useColorModeValue('muted.400', 'blueGray.600'), //'violet.600',
-    wan: useColorModeValue('muted.500', 'blueGray.700') //'cyan.500'
+    dns: colorMode == 'light' ? '$muted500' : '$blueGray700',
+    lan: colorMode == 'light' ? '$muted400' : '$blueGray600',
+    wan: colorMode == 'light' ? '$muted500' : '$blueGray700'
   }
 
   let icon = groupIcons[name] || faObjectGroup
-  let bg = groupColors[name] || 'muted.600'
+  let bg = groupColors[name] || '$muted600'
 
   return (
-    <Badge
-      key={name}
-      variant="solid"
-      colorScheme="muted"
-      bg={bg}
-      leftIcon={<Icon icon={icon} size={3} />}
-      rounded="sm"
-      size="sm"
-      py={1}
-      px={2}
-    >
-      {name}
+    <Badge action="muted" variant="solid" rounded="sm" size="sm">
+      <BadgeText mr="$2">{name}</BadgeText>
+      <Icon icon={icon} color="$muted500" />
     </Badge>
   )
 })
 
+//TODO move to TagItem
 const TagItem = React.memo(({ name }) => {
   let tagIcons = {
     wan: faCircleNodes,
@@ -81,17 +93,9 @@ const TagItem = React.memo(({ name }) => {
 
   let icon = faTag
   return (
-    <Badge
-      key={name}
-      variant="outline"
-      colorScheme={useColorModeValue('muted', 'blueGray')}
-      leftIcon={<Icon icon={icon} size={3} />}
-      rounded="sm"
-      size="sm"
-      py={1}
-      px={2}
-    >
-      {name}
+    <Badge action="muted" variant="solid" rounded="sm" size="sm">
+      <BadgeText mr="$2">{name}</BadgeText>
+      <Icon icon={icon} color="$muted500" />
     </Badge>
   )
 })
@@ -117,11 +121,11 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const defaultTags = props.tags || ['lan_upstream']
 
   const expirationOptions = [
-    {label: 'Never', value: 0},
-    {label: '1 Hour', value: 60*60},
-    {label: '1 Day', value: 60*60*24},
-    {label: '1 Week', value: 60*60*24*7},
-    {label: '4 Weeks', value: 60*60*24*7*4},
+    { label: 'Never', value: 0 },
+    { label: '1 Hour', value: 60 * 60 },
+    { label: '1 Day', value: 60 * 60 * 24 },
+    { label: '1 Week', value: 60 * 60 * 24 * 7 },
+    { label: '4 Weeks', value: 60 * 60 * 24 * 7 * 4 }
   ]
 
   useEffect(() => {
@@ -293,7 +297,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       //api cant distinguish empty on assignment,
       // so set it to "0"
       deviceAPI
-        .updateVLANTag(id, vlantag == "" ? "0" : vlantag)
+        .updateVLANTag(id, vlantag == '' ? '0' : vlantag)
         .then(notifyChange)
         .catch((error) =>
           context.error('[API] update VLAN Tag error: ' + error.message)
@@ -326,12 +330,9 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   }
 
   const trigger = (triggerProps) => (
-    <IconButton
-      variant="unstyled"
-      ml="auto"
-      icon={<Icon icon={faEllipsis} color="muted.600" />}
-      {...triggerProps}
-    ></IconButton>
+    <Button action="primary" variant="link" {...triggerProps} mx="$2">
+      <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
+    </Button>
   )
 
   const moreMenu = (
@@ -382,86 +383,128 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   )
 
   return (
-    <ScrollView space={2} width={['100%', '100%', '5/6']} h={'100%'}>
-      <Stack space={4}>
-        <Heading fontSize="md">Edit Device</Heading>
-        <FormControl>
-          <FormControl.Label>Name</FormControl.Label>
+    <ScrollView
+      space="md"
+      width="$full"
+      sx={{
+        '@md': { width: '$5/6' }
+      }}
+      h="$full"
+      pb="$8"
+    >
+      <VStack space="lg">
+        <Heading size="md">Edit Device</Heading>
 
-          <Input
-            size="lg"
-            type="text"
-            w="100%"
-            value={name}
-            autoFocus={false}
-            onChangeText={(value) => handleName(value)}
-            onSubmitEditing={handleSubmit}
-          />
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Name</FormControlLabelText>
+          </FormControlLabel>
+
+          <Input variant="underlined">
+            <InputField
+              type="text"
+              value={name}
+              autoFocus={false}
+              onChangeText={(value) => handleName(value)}
+              onSubmitEditing={handleSubmit}
+            />
+          </Input>
 
           {device.oui !== undefined ? (
-            <FormControl.HelperText>{device.oui}</FormControl.HelperText>
+            <FormControlHelper>
+              <FormControlHelperText>{device.oui}</FormControlHelperText>
+            </FormControlHelper>
           ) : null}
         </FormControl>
 
         <FormControl>
           <Tooltip
-            label={
-              'Assign Micro Segmentation IP, every 4th ip from 2 (.2, .6, .10, .14, ...). Check the Supernetworks view to create new subnets'
-            }
+            placement="bottom"
+            trigger={(triggerProps) => {
+              return (
+                <FormControlLabel {...triggerProps}>
+                  <FormControlLabelText>IP address</FormControlLabelText>
+                </FormControlLabel>
+              )
+            }}
           >
-            <FormControl.Label>IP address</FormControl.Label>
+            <TooltipContent>
+              <TooltipText>
+                Assign Micro Segmentation IP, every 4th ip from 2 (.2, .6, .10,
+                .14, ...). Check the Supernetworks view to create new subnets
+              </TooltipText>
+            </TooltipContent>
           </Tooltip>
-          <Input
-            size="lg"
-            type="text"
-            w="100%"
-            value={rawIP}
-            autoFocus={false}
-            onChangeText={(value) => handleIP(value)}
-            onSubmitEditing={handleSubmit}
-          />
+
+          <Input variant="underlined">
+            <InputField
+              type="text"
+              value={rawIP}
+              autoFocus={false}
+              onChangeText={(value) => handleIP(value)}
+              onSubmitEditing={handleSubmit}
+            />
+          </Input>
         </FormControl>
 
         <FormControl>
           <Tooltip
-            label={'For Wired Devices on a Managed Port: Assign VLAN Tag ID '}
+            placement="bottom"
+            trigger={(triggerProps) => {
+              return (
+                <FormControlLabel {...triggerProps}>
+                  <FormControlLabelText>VLAN Tag ID</FormControlLabelText>
+                </FormControlLabel>
+              )
+            }}
           >
-            <FormControl.Label>VLAN Tag ID</FormControl.Label>
+            <TooltipContent>
+              <TooltipText>
+                For Wired Devices on a Managed Port: Assign VLAN Tag ID
+              </TooltipText>
+            </TooltipContent>
           </Tooltip>
-          <Input
-            size="lg"
-            type="text"
-            w="100%"
-            value={vlantag}
-            autoFocus={false}
-            onChangeText={(value) => handleVLAN(value)}
-            onSubmitEditing={handleSubmit}
-          />
+
+          <Input variant="underlined">
+            <InputField
+              type="text"
+              value={vlantag}
+              autoFocus={false}
+              onChangeText={(value) => handleVLAN(value)}
+              onSubmitEditing={handleSubmit}
+            />
+          </Input>
         </FormControl>
 
-        <HStack>
+        <HStack space="md">
           <FormControl flex={1}>
-            <FormControl.Label>
-              {device.MAC ? 'MAC address' : 'WG Pubkey'}
-            </FormControl.Label>
+            <FormControlLabel>
+              <FormControlLabelText>
+                {device.MAC ? 'MAC address' : 'WG Pubkey'}
+              </FormControlLabelText>
+            </FormControlLabel>
             <Text isTruncated>{device.MAC || device.WGPubKey}</Text>
           </FormControl>
 
           <FormControl flex={1} display={device.MAC ? 'flex' : 'none'}>
-            <FormControl.Label>WiFi Auth</FormControl.Label>
+            <FormControlLabel>
+              <FormControlLabelText>WiFi Auth</FormControlLabelText>
+            </FormControlLabel>
             <Text>{wifi_type}</Text>
           </FormControl>
         </HStack>
 
         <FormControl>
-          <FormControl.Label>Groups and Tags</FormControl.Label>
-          <HStack flexWrap="wrap" w="full" space={2}>
-            <HStack space={2} flexWrap="wrap">
+          <FormControlLabel>
+            <FormControlLabelText>Groups and Tags</FormControlLabelText>
+          </FormControlLabel>
+          <HStack flexWrap="wrap" w="full" space="md">
+            <HStack space="md" flexWrap="wrap">
               {groups.map((group) => (
                 <GroupItem key={group} name={group} />
               ))}
             </HStack>
-            <HStack space={2} flexWrap="wrap">
+            <HStack space="md" flexWrap="wrap">
               {tags.map((tag) => (
                 <TagItem key={tag} name={tag} />
               ))}
@@ -470,9 +513,11 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           </HStack>
         </FormControl>
 
-        <Stack direction="column">
+        <VStack space="lg">
           <FormControl flex={1}>
-            <FormControl.Label>Icon</FormControl.Label>
+            <FormControlLabel>
+              <FormControlLabelText>Icon</FormControlLabelText>
+            </FormControlLabel>
             {icon ? (
               <IconPicker
                 value={icon}
@@ -482,44 +527,56 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
             ) : null}
           </FormControl>
           <FormControl>
-            <FormControl.Label>Color</FormControl.Label>
+            <FormControlLabel>
+              <FormControlLabelText>Color</FormControlLabelText>
+            </FormControlLabel>
 
             <ColorPicker value={color} onChange={(color) => setColor(color)} />
           </FormControl>
-        </Stack>
+        </VStack>
 
-        <Stack>
-          <FormControl flex={2}>
-            <FormControl.Label>Expiration</FormControl.Label>
+        <VStack space="lg">
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Expiration</FormControlLabelText>
+            </FormControlLabel>
 
             <InputSelect
               options={expirationOptions}
               value={
                 expiration
                   ? timeAgo(new Date(Date.now() + expiration * 1e3))
-                  : 'Never'}
+                  : 'Never'
+              }
               onChange={(v) => handleChange('Expiration', parseInt(v))}
               onChangeText={(v) => handleChange('Expiration', parseInt(v))}
             />
 
-            <FormControl.HelperText>
-              If non zero has unix time for when the entry should disappear
-            </FormControl.HelperText>
+            <FormControlHelper>
+              <FormControlHelperText>
+                If non zero has unix time for when the entry should disappear
+              </FormControlHelperText>
+            </FormControlHelper>
+          </FormControl>
 
-            <FormControl.Label>Delete on expiry</FormControl.Label>
+          <FormControl mt="$2">
+            <FormControlLabel>
+              <FormControlLabelText>Delete on expiry</FormControlLabelText>
+            </FormControlLabel>
+
             <Checkbox
               accessibilityLabel="Enabled"
               value={deleteExpiry}
               isChecked={deleteExpiry}
-              onChange={(enabled) =>
-                setDeleteExpiry(!deleteExpiry)
-              }
+              onChange={(enabled) => setDeleteExpiry(!deleteExpiry)}
             >
-              Remove device
+              <CheckboxIndicator mr="$2">
+                <CheckboxIcon as={CheckIcon} />
+              </CheckboxIndicator>
+              <CheckboxLabel>Remove device</CheckboxLabel>
             </Checkbox>
-
           </FormControl>
-        </Stack>
+        </VStack>
 
         <ModalConfirm
           type={modalType}
@@ -527,7 +584,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           onClose={() => setShowModal(false)}
           isOpen={showModal}
         />
-      </Stack>
+      </VStack>
     </ScrollView>
   )
 }
