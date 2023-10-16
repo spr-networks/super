@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import { HStack, Text } from 'native-base'
-import  { Select } from 'components/Select'
+import { HStack, Text } from '@gluestack-ui/themed'
+import { Select } from 'components/Select'
 
 const TimeSelect = ({ value, onChange, ...props }) => {
   let [hh, mm] = value.split(':')
@@ -26,9 +26,9 @@ const TimeSelect = ({ value, onChange, ...props }) => {
   }, [hour, minute])
 
   return (
-    <HStack space={1} justifyContent="center">
+    <HStack space="sm" justifyContent="center">
       <Select
-        w={20}
+        w={'$20'}
         selectedValue={hour}
         onValueChange={setHour}
         accessibilityLabel={`Choose hour`}
@@ -39,7 +39,7 @@ const TimeSelect = ({ value, onChange, ...props }) => {
       </Select>
       <Text>:</Text>
       <Select
-        w={20}
+        w={'$20'}
         selectedValue={minute}
         onValueChange={setMinute}
         accessibilityLabel={`Choose minute`}

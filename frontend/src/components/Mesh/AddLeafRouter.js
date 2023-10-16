@@ -1,5 +1,4 @@
 import React, { useContext } from 'react'
-import PropTypes from 'prop-types'
 
 import ClientSelect from 'components/ClientSelect'
 
@@ -8,18 +7,17 @@ import APIMesh from 'api/mesh'
 import api, { authAPI, meshAPI, wifiAPI } from 'api'
 
 import {
-  Box,
   Button,
-  Checkbox,
+  ButtonText,
   FormControl,
+  FormControlLabel,
+  FormControlLabelText,
+  FormControlHelper,
+  FormControlHelperText,
   Input,
-  Link,
-  Radio,
-  Stack,
-  HStack,
-  Spinner,
-  Text
-} from 'native-base'
+  InputField,
+  VStack
+} from '@gluestack-ui/themed'
 
 class AddLeafRouterImpl extends React.Component {
   state = {
@@ -43,7 +41,7 @@ class AddLeafRouterImpl extends React.Component {
 
     let leaf = {
       IP: this.state.IP,
-      APIToken: this.state.APIToken,
+      APIToken: this.state.APIToken
     }
 
     const done = (res) => {
@@ -54,108 +52,131 @@ class AddLeafRouterImpl extends React.Component {
 
     //first, verify that the API Token is correct
     let rMeshAPI = new APIMesh()
-    rMeshAPI.setRemoteURL("http://" + leaf.IP + "/")
+    rMeshAPI.setRemoteURL('http://' + leaf.IP + '/')
     rMeshAPI.setAuthTokenHeaders(leaf.APIToken)
 
-    rMeshAPI.leafMode().then(async (result) => {
+    rMeshAPI
+      .leafMode()
+      .then(async (result) => {
+        //At this point, communication with the remote Mesh plugins is correct.
 
-      //At this point, communication with the remote Mesh plugins is correct.
+        //1. Generate an API Token for the remote Mesh to send in API events
 
-      //1. Generate an API Token for the remote Mesh to send in API events
+        let tokens = await authAPI.tokens()
+        let parentAPIToken = ''
 
-      let tokens = await authAPI.tokens()
-      let parentAPIToken = ""
-
-      for (let i = 0; i < tokens.length; i++) {
-        if (tokens[i].Name == "PLUS-MESH-API-TOKEN") {
-          parentAPIToken = tokens[i].Token
-          break
+        for (let i = 0; i < tokens.length; i++) {
+          if (tokens[i].Name == 'PLUS-MESH-API-TOKEN') {
+            parentAPIToken = tokens[i].Token
+            break
+          }
         }
-      }
 
-      if (parentAPIToken == "") {
-        let paths = ['/reportPSKAuthSuccess', '/reportPSKAuthFailure', '/reportDisconnect']
-        let token = await authAPI.putToken("PLUS-MESH-API-TOKEN", 0, paths)
-        if (token) {
-          parentAPIToken = token.Token
-        } else {
-          this.props.alertContext.error("Could not generate Parent Token")
+        if (parentAPIToken == '') {
+          let paths = [
+            '/reportPSKAuthSuccess',
+            '/reportPSKAuthFailure',
+            '/reportDisconnect'
+          ]
+          let token = await authAPI.putToken('PLUS-MESH-API-TOKEN', 0, paths)
+          if (token) {
+            parentAPIToken = token.Token
+          } else {
+            this.props.alertContext.error('Could not generate Parent Token')
+            return
+          }
+        }
+
+        //tbd Fix with fetch of LANIP
+        let lanIP = leaf.IP.split('.').slice(0, 3).join('.') + '.1'
+
+        let status = await rMeshAPI.setParentCredentials({
+          ParentAPIToken: parentAPIToken,
+          ParentIP: lanIP
+        })
+        if (status != true) {
+          this.props.alertContext.error(
+            'Failed to program leaf with parent api token'
+          )
           return
         }
-      }
 
-      //tbd Fix with fetch of LANIP
-      let lanIP = (leaf.IP.split(".").slice(0,3)).join('.')+".1"
+        //enable mesh mode
+        status = await rMeshAPI.setLeafMode('enable')
+        if (status != true) {
+          this.props.alertContext.error('Failed to enable leaf mode')
+          return
+        }
 
-      let status = await rMeshAPI.setParentCredentials({ParentAPIToken: parentAPIToken, ParentIP: lanIP })
-      if (status != true) {
-        this.props.alertContext.error("Failed to program leaf with parent api token")
-        return
-      }
+        meshAPI
+          .addLeafRouter(leaf)
+          .then(done)
+          .catch((err) => {
+            this.props.alertContext.error('Mesh API Failure', err)
+          })
 
-      //enable mesh mode
-      status = await rMeshAPI.setLeafMode("enable")
-      if (status != true) {
-        this.props.alertContext.error("Failed to enable leaf mode")
-        return
-      }
+        wifiAPI
+          .syncMesh()
+          .then(done)
+          .catch((err) => {
+            this.props.alertContext.error(
+              'Wifi API Failure while syncing mesh devices.json'
+            )
+          })
 
-      meshAPI
-        .addLeafRouter(leaf)
-        .then(done)
-        .catch((err) => {
-          this.props.alertContext.error('Mesh API Failure', err)
-        })
-
-      wifiAPI.syncMesh().then(done).catch((err) => {
-        this.props.alertContext.error('Wifi API Failure while syncing mesh devices.json')
+        //restart the leaf router
+        let rAPI = new api()
+        rAPI.setRemoteURL('http://' + leaf.IP + '/')
+        rAPI.setAuthTokenHeaders(leaf.APIToken)
+        await rAPI.restart()
       })
-
-      //restart the leaf router
-      let rAPI = new api()
-      rAPI.setRemoteURL("http://" + leaf.IP + "/")
-      rAPI.setAuthTokenHeaders(leaf.APIToken)
-      await rAPI.restart()
-    }).catch(e => {
-      console.log(e)
-      this.props.alertContext.error('API Failure, Mesh Plugin On?')
-    })
-
-
+      .catch((e) => {
+        console.log(e)
+        this.props.alertContext.error('API Failure, Mesh Plugin On?')
+      })
   }
 
   componentDidMount() {}
 
   render() {
     return (
-      <Stack space={4}>
-        <HStack space={4}>
-          <FormControl flex="1" isRequired>
-            <FormControl.Label>Leaf Router IP</FormControl.Label>
-            <ClientSelect
-              name="IP"
-              value={this.state.IP}
-              onSubmitEditing={(value) => this.handleChange('IP', value)}
-              onChangeText={(value) => this.handleChange('IP', value)}
-              onChange={(value) => this.handleChange('IP', value)}
-            />
-            <FormControl.HelperText>IP address</FormControl.HelperText>
-          </FormControl>
-          <FormControl flex="1" isRequired>
-            <FormControl.Label>API Token</FormControl.Label>
-            <Input
-              size="md"
-              variant="underlined"
+      <VStack space="md">
+        <FormControl flex="1" isRequired>
+          <FormControlLabel>
+            <FormControlLabelText>Leaf Router IP</FormControlLabelText>
+          </FormControlLabel>
+          <ClientSelect
+            name="IP"
+            value={this.state.IP}
+            onSubmitEditing={(value) => this.handleChange('IP', value)}
+            onChangeText={(value) => this.handleChange('IP', value)}
+            onChange={(value) => this.handleChange('IP', value)}
+          />
+          <FormControlHelper>
+            <FormControlHelperText>IP address</FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+        <FormControl flex="1" isRequired>
+          <FormControlLabel>
+            <FormControlLabelText>API Token</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
               value={this.state.APIToken}
               onChangeText={(value) => this.handleChange('APIToken', value)}
             />
-            <FormControl.HelperText>API Token for downstream device. Log in and generate an API token</FormControl.HelperText>
-          </FormControl>
-        </HStack>
-        <Button color="primary" size="md" onPress={this.handleSubmit}>
-          Save
+          </Input>
+          <FormControlHelper>
+            <FormControlHelperText>
+              API Token for downstream device. Log in and generate an API token
+            </FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+
+        <Button action="primary" size="md" onPress={this.handleSubmit}>
+          <ButtonText>Save</ButtonText>
         </Button>
-      </Stack>
+      </VStack>
     )
   }
 }

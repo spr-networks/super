@@ -4,7 +4,19 @@ import { wifiAPI, deviceAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import { prettySignal } from 'utils'
 
-import { Box, Stack, HStack, Text, Tooltip, useColorModeValue } from 'native-base'
+import {
+  Badge,
+  BadgeText,
+  Box,
+  HStack,
+  VStack,
+  Text,
+  Tooltip,
+  TooltipContent,
+  TooltipText
+} from '@gluestack-ui/themed'
+
+import { ListItem } from 'components/List'
 
 import { FlashList } from '@shopify/flash-list'
 
@@ -80,9 +92,9 @@ const WifiClients = (props) => {
   const getWifiSpeedString = (txrate) => {
     if (txrate.includes(' he')) {
       return '802.11ax'
-    } else if (txrate.includes( 'vht')) {
+    } else if (txrate.includes('vht')) {
       return '802.11ac'
-    } else if (txrate.includes( 'ht')) {
+    } else if (txrate.includes('ht')) {
       return '802.11n'
     } else {
       return '802.11a/b/g'
@@ -106,61 +118,61 @@ const WifiClients = (props) => {
       data={clients}
       estimatedItemSize={100}
       renderItem={({ item }) => (
-        <Box
-          bg="backgroundCardLight"
-          borderBottomWidth={1}
-          _dark={{
-            bg: 'backgroundCardDark',
-            borderColor: 'borderColorCardDark'
-          }}
-          borderColor="borderColorCardLight"
-          p={4}
-        >
-          <HStack space={2} justifyContent="space-between">
-            <Text flex="1" bold alignSelf="center">
-              {item.Name}
-            </Text>
+        <ListItem>
+          <Text flex="1" bold alignSelf="center">
+            {item.Name}
+          </Text>
 
-            <Stack
-              flex="1"
-              display={{ base: 'none', md: 'block' }}
-              direction={{ base: 'column', md: 'row' }}
-              space={1}
-              alignItems="center"
-            >
-              <Text>{item.Iface}</Text>
-            </Stack>
+          <Box
+            flex="1"
+            sx={{ '@base': { display: 'flex' }, '@md': { display: 'flex' } }}
+            alignItems="center"
+          >
+            <Badge variant="outline" action="success">
+              <BadgeText>{item.Iface}</BadgeText>
+            </Badge>
+          </Box>
 
-            <Stack
-              flex="2"
-              direction={{ base: 'column', md: 'row' }}
-              space={2}
-              justifyContent="center"
-            >
-              <Text bold>{item.RecentIP}</Text>
-              <Text color="muted.500">{item.MAC}</Text>
-            </Stack>
+          <VStack
+            flex="2"
+            sx={{ '@md': { flexDirection: 'row' } }}
+            space="md"
+            justifyContent="center"
+          >
+            <Text bold>{item.RecentIP}</Text>
+            <Text color="$muted500">{item.MAC}</Text>
+          </VStack>
 
-            <Stack
-              direction={{ base: 'column', md: 'row' }}
-              space={2}
-              alignSelf="center"
-              marginLeft="auto"
-              flex={2}
-            >
-              <HStack space={1} alignItems="center">
-                <Tooltip label={item.TXRate}>
-                  <Text>{getWifiSpeedString(item.TXRate)}</Text>
-                </Tooltip>
-              </HStack>
-              <HStack space={1} alignItems="center">
-                <Text color="muted.400">Signal</Text>
-                {prettySignal(item.Signal)}
-              </HStack>
-              <Text flexWrap="nowrap">{item.Auth}</Text>
-            </Stack>
-          </HStack>
-        </Box>
+          <VStack
+            sx={{ '@md': { flexDirection: 'row' } }}
+            space="md"
+            alignSelf="center"
+            marginLeft="auto"
+            flex={2}
+          >
+            <HStack space="sm" alignItems="center">
+              <Tooltip
+                placement="bottom"
+                trigger={(triggerProps) => {
+                  return (
+                    <Text {...triggerProps}>
+                      {getWifiSpeedString(item.TXRate)}
+                    </Text>
+                  )
+                }}
+              >
+                <TooltipContent>
+                  <TooltipText>{item.TXRate}</TooltipText>
+                </TooltipContent>
+              </Tooltip>
+            </HStack>
+            <HStack space="sm" alignItems="center">
+              <Text color="$muted400">Signal</Text>
+              {prettySignal(item.Signal)}
+            </HStack>
+            <Text flexWrap="nowrap">{item.Auth}</Text>
+          </VStack>
+        </ListItem>
       )}
       keyExtractor={(item) => item.Name}
     />

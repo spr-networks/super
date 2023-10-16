@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import './Toggle.css'
-import { cleanup } from '@testing-library/react'
 
-import { Switch } from 'native-base'
+import { Switch } from '@gluestack-ui/themed'
 
 const Toggle = (props) => {
   const [isChecked, setIsChecked] = useState(props.isChecked || false)
@@ -37,7 +36,7 @@ const Toggle = (props) => {
   return (
     <Switch
       defaultIsChecked={isChecked}
-      onTrackColor={isDisabled ? 'info.200' : 'info.500'}
+      onTrackColor={isDisabled ? '$info200' : '$info500'}
       onValueChange={handleChange}
     />
   )

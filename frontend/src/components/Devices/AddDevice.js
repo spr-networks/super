@@ -357,7 +357,7 @@ const AddDevice = (props) => {
               accessibilityLabel="Auth"
               onChange={(value) => handleChange('wpa', value)}
             >
-              <HStack py="1" space="md">
+              <HStack py="$1" space="md">
                 <Radio value="sae" size="md">
                   <RadioIndicator mr="$2">
                     <RadioIcon as={CircleIcon} strokeWidth={1} />
@@ -477,7 +477,7 @@ const AddDevice = (props) => {
             <FormControlLabel>
               <FormControlLabelText>Tags</FormControlLabelText>
             </FormControlLabel>
-            <Checkbox.Group
+            <CheckboxGroup
               defaultValue={tags}
               accessibilityLabel="Set Device Tags"
               onChange={(values) => setTags(values)}
@@ -506,7 +506,7 @@ const AddDevice = (props) => {
                   </Tooltip>
                 ))}
               </HStack>
-            </Checkbox.Group>
+            </CheckboxGroup>
 
             <FormControlHelper>
               <FormControlHelperText>Assign device tags</FormControlHelperText>
@@ -540,13 +540,16 @@ const AddDevice = (props) => {
             <FormControlLabel>
               <FormControlLabelText>Delete on expiry</FormControlLabelText>
             </FormControlLabel>
+
             <Checkbox
-              accessibilityLabel="Enabled"
               value={deleteExpiry}
-              isChecked={deleteExpiry}
-              onChange={(enabled) => setDeleteExpiry(!deleteExpiry)}
+              defaultIsChecked={deleteExpiry}
+              onChange={() => setDeleteExpiry(!deleteExpiry)}
             >
-              Remove device
+              <CheckboxIndicator mr="$2">
+                <CheckboxIcon />
+              </CheckboxIndicator>
+              <CheckboxLabel>Remove device</CheckboxLabel>
             </Checkbox>
           </FormControl>
         </VStack>

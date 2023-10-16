@@ -2,31 +2,22 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import { AlertContext } from 'AppContext'
 import { copy } from 'utils'
 
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-
 import {
-  faCirclePlus,
-  faCopy,
-  faPlus,
-  faRefresh,
-  faXmark
-} from '@fortawesome/free-solid-svg-icons'
-
-import {
-  Badge,
   Button,
+  ButtonGroup,
+  ButtonIcon,
+  ButtonText,
   Box,
   Heading,
   HStack,
   FlatList,
-  IconButton,
-  Input,
   Text,
   Tooltip,
-  useColorModeValue,
-  View,
-  VStack
-} from 'native-base'
+  VStack,
+  AddIcon,
+  CloseIcon,
+  CopyIcon
+} from '@gluestack-ui/themed'
 
 import api, { wifiAPI, meshAPI, authAPI } from 'api'
 import APIWifi from 'api/Wifi'
@@ -35,6 +26,8 @@ import APIMesh from 'api/mesh'
 
 import ModalForm from 'components/ModalForm'
 import AddLeafRouter from 'components/Mesh/AddLeafRouter'
+import { ListHeader, ListItem } from 'components/List'
+import { RefreshCwIcon } from 'lucide-react-native'
 
 const Mesh = (props) => {
   const [leafRouters, setLeafRouters] = useState([])
@@ -311,199 +304,143 @@ const Mesh = (props) => {
   return (
     <>
       {isLeafMode == true ? (
-        <>
-          <HStack justifyContent="space-between" alignItems="center" p={4}>
-            <VStack maxW="60%">
-              <Heading fontSize="md" isTruncated>
-                Mesh Setup
-              </Heading>
-              <Text color="muted.500" isTruncated>
-                This router is configured as a downlink with backhaul to a
-                central SPR instance. You can reset it on this page.
-              </Text>
-              <Text isTruncated> ParentIP: {config.ParentIP} </Text>
-              <Text isTruncated>
-                {' '}
-                Parent Notification Token: {config.ParentAPIToken}{' '}
-              </Text>
+        <VStack>
+          <ListHeader
+            title="Mesh Setup"
+            description="This router is configured as a downlink with backhaul to a central SPR instance. You can reset it on this page."
+          >
+            <Button action="negative" onPress={() => doMeshReset()} mt="$4">
+              <ButtonText>Reset Mesh</ButtonText>
+              <ButtonIcon as={CloseIcon} ml="$1" />
+            </Button>
+          </ListHeader>
 
-              <Button
-                display={{ base: 'flex', md: 'flex' }}
-                variant={useColorModeValue('subtle', 'solid')}
-                colorScheme="warning"
-                leftIcon={<Icon icon={faXmark} />}
-                onPress={() => doMeshReset()}
-                mt={4}
-              >
-                Reset Mesh
-              </Button>
-            </VStack>
-          </HStack>
-        </>
+          <VStack>
+            <Text isTruncated> ParentIP: {config.ParentIP}</Text>
+            <Text isTruncated>
+              Parent Notification Token: {config.ParentAPIToken}
+            </Text>
+          </VStack>
+        </VStack>
       ) : (
-        <>
-          <HStack justifyContent="space-between" alignItems="center" p={4}>
-            <VStack maxW="60%">
-              <Heading fontSize="md" isTruncated>
-                Mesh Setup
-              </Heading>
-              <Text color="muted.500" isTruncated>
-                Configure downstream routers for mesh networking. Only wired
-                backhaul is supported for now.
-              </Text>
-            </VStack>
+        <VStack>
+          <ListHeader
+            title=" Mesh Setup"
+            description="Configure downstream routers for mesh networking. Only wired backhaul is supported for now."
+          >
             <ModalForm
-              title={`Add Leaf Router`}
+              title="Add Leaf Router"
               triggerText="Add Leaf Router"
               modalRef={refModal}
             >
               <AddLeafRouter notifyChange={notifyChange} />
             </ModalForm>
-          </HStack>
+          </ListHeader>
 
-          <Box
-            bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-            rounded="md"
-            p={4}
-            mx={4}
-          >
-            <FlatList
-              estimatedItemSize={100}
-              data={leafRouters}
-              ListHeaderComponent={() => {
-                return leafRouters.length ? (
-                  <HStack
-                    space={3}
-                    justifyContent="space-between"
-                    alignItems="center"
-                  >
-                    <Heading fontSize="sm">Router IP</Heading>
-                    <Heading fontSize="sm">Status</Heading>
-                    <Heading fontSize="sm">Token</Heading>
-                    <Text></Text>
-                  </HStack>
-                ) : null
-              }}
-              renderItem={({ item }) => (
-                <Box
-                  borderBottomWidth={1}
-                  _dark={{
-                    borderColor: 'muted.600'
-                  }}
-                  borderColor="muted.200"
-                  py={2}
+          <FlatList
+            estimatedItemSize={100}
+            data={leafRouters}
+            ListHeaderComponent={() => {
+              return leafRouters.length ? (
+                <HStack
+                  space="md"
+                  justifyContent="space-between"
+                  alignItems="center"
                 >
-                  <HStack
-                    space={3}
-                    justifyContent="space-between"
-                    alignItems="center"
-                  >
-                    <Text>{item.IP}</Text>
-                    {renderLeafStatus(item)}
-                    <Tooltip label={item.APIToken}>
-                      <IconButton
-                        variant="unstyled"
-                        icon={<Icon size="4" icon={faCopy} color="muted.500" />}
-                        onPress={() => copy(item.APIToken)}
-                        display={'flex'}
-                      />
-                    </Tooltip>
-
-                    <IconButton
-                      alignSelf="center"
-                      size="sm"
-                      variant="ghost"
-                      colorScheme="secondary"
-                      icon={<Icon icon={faXmark} />}
-                      onPress={() => deleteListItem(item)}
-                    />
-                  </HStack>
-                </Box>
-              )}
-              keyExtractor={(item) => `${item.IP}${item.APIToken}`}
-            />
-
-            <VStack>
-              {!leafRouters.length ? (
-                <Text alignSelf={'center'}>
-                  There are no leaf routers configured yet
-                </Text>
-              ) : null}
-              <Button
-                display={{
-                  base: 'flex',
-                  md: leafRouters.length ? 'none' : 'flex'
-                }}
-                variant={useColorModeValue('subtle', 'solid')}
-                colorScheme="muted"
-                leftIcon={<Icon icon={faCirclePlus} />}
-                onPress={() => refModal.current()}
-                mt={4}
-              >
-                Add Leaf Router
-              </Button>
-
-              <Button
-                display={{ base: 'flex', md: 'flex' }}
-                variant={useColorModeValue('subtle', 'solid')}
-                colorScheme="muted"
-                leftIcon={<Icon icon={faRefresh} />}
-                onPress={() => doSyncSSID()}
-                mt={4}
-              >
-                <HStack space={2} alignItems="center">
-                  <Text>Sync SSID Across Devices</Text>
-                  <Badge colorScheme="primary">{ssid}</Badge>
+                  <Heading size="sm">Router IP</Heading>
+                  <Heading size="sm">Status</Heading>
+                  <Heading size="sm">Token</Heading>
+                  <Text></Text>
                 </HStack>
+              ) : null
+            }}
+            renderItem={({ item }) => (
+              <ListItem>
+                <Text>{item.IP}</Text>
+                {renderLeafStatus(item)}
+                <Tooltip label={item.APIToken}>
+                  <Button
+                    action="secondary"
+                    variant="link"
+                    onPress={() => copy(item.APIToken)}
+                  >
+                    <ButtonIcon as={CopyIcon} />
+                  </Button>
+                </Tooltip>
+
+                <Button
+                  size="sm"
+                  variant="link"
+                  onPress={() => deleteListItem(item)}
+                >
+                  <ButtonIcon as={CloseIcon} />
+                </Button>
+              </ListItem>
+            )}
+            keyExtractor={(item) => `${item.IP}${item.APIToken}`}
+          />
+
+          <VStack space="md" p="$4">
+            {!leafRouters.length ? (
+              <Text>There are no leaf routers configured yet</Text>
+            ) : null}
+
+            <ButtonGroup>
+              <Button
+                sx={{
+                  '@md': { display: leafRouters.length ? 'none' : 'flex' }
+                }}
+                action="primary"
+                onPress={() => refModal.current()}
+              >
+                <ButtonText>Add Leaf Router</ButtonText>
+                <ButtonIcon as={AddIcon} ml="$1" />
               </Button>
-            </VStack>
-          </Box>
+
+              <Button action="secondary" onPress={() => doSyncSSID()}>
+                <ButtonText>Sync SSID Across Devices: {ssid}</ButtonText>
+                <ButtonIcon as={RefreshCwIcon} ml="$1" />
+              </Button>
+            </ButtonGroup>
+          </VStack>
 
           {leafRouters.length == 0 ? (
             <>
-              <VStack p={4} space={1}>
-                <Heading fontSize="md">Device Token</Heading>
-                <Text color="muted.500" isTruncated>
-                  Generate an API token to use this device as a leaf router.
-                </Text>
-              </VStack>
+              <ListHeader
+                title="Device Token"
+                description="Generate an API token to use this device as a leaf router."
+              ></ListHeader>
 
               <Box
-                bg={useColorModeValue(
-                  'backgroundCardLight',
-                  'backgroundCardDark'
-                )}
-                rounded="md"
-                p={4}
-                mx={4}
+                bg="$backgroundCardLight"
+                sx={{
+                  _dark: { bg: '$backgroundCardDark' }
+                }}
+                p="$4"
               >
-                <VStack>
-                  {leafToken == '' ? (
-                    <Button
-                      display={{ md: 'flex' }}
-                      variant={useColorModeValue('subtle', 'solid')}
-                      colorScheme="muted"
-                      leftIcon={<Icon icon={faCirclePlus} />}
-                      onPress={() => generateLeafToken()}
-                      mt={4}
-                    >
-                      Generate API Token
-                    </Button>
-                  ) : (
-                    <HStack
-                      justifyContent="space-between"
-                      alignItems="center"
-                      p={4}
-                    >
-                      <Text color="muted.500">API-Token</Text>
-                      <Text>{leafToken}</Text>
-                    </HStack>
-                  )}
-                </VStack>
+                {leafToken == '' ? (
+                  <Button
+                    action="secondary"
+                    onPress={() => generateLeafToken()}
+                    mt="$4"
+                  >
+                    <ButtonText>Generate API Token</ButtonText>
+                    <ButtonIcon as={AddIcon} ml="$1" />
+                  </Button>
+                ) : (
+                  <HStack
+                    justifyContent="space-between"
+                    alignItems="center"
+                    p="$4"
+                  >
+                    <Text color="$muted500">API-Token</Text>
+                    <Text>{leafToken}</Text>
+                  </HStack>
+                )}
               </Box>
             </>
           ) : null}
-        </>
+        </VStack>
       )}
     </>
   )

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Text } from 'native-base'
+import { Text } from '@gluestack-ui/themed'
 import { Platform } from 'react-native'
 import Clipboard from '@react-native-clipboard/clipboard'
 
@@ -51,15 +51,15 @@ export const prettySize = (sz, round = false) => {
 }
 
 export const prettySignal = (signal) => {
-  let className = 'muted.500'
+  let className = '$muted500'
   if (signal >= -50) {
-    className = 'success.600'
+    className = '$success600'
   } else if (signal >= -60) {
-    className = 'success.500'
+    className = '$success500'
   } else if (signal >= -70) {
-    className = 'warning.500'
+    className = '$warning500'
   } else {
-    className = 'danger.500'
+    className = '$danger500'
   }
 
   return <Text color={className}>{signal}</Text>

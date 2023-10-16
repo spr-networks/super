@@ -6,9 +6,10 @@ import WifiInterfaceList from 'components/Wifi/WifiInterfaceList'
 import WifiScan from 'components/Wifi/WifiScan'
 import WifiHostapd from 'components/Wifi/WifiHostapd'
 
-import { Animated, Dimensions, Platform, Pressable } from 'react-native'
+import { Animated, Dimensions, Platform } from 'react-native'
 import { TabView, SceneMap } from 'react-native-tab-view'
-import { Box, View, useColorModeValue } from 'native-base'
+
+import { Box, View, Pressable, useColorMode } from '@gluestack-ui/themed'
 
 const WirelessConfiguration = (props) => {
   const [index, setIndex] = useState(0) //1)
@@ -18,11 +19,11 @@ const WirelessConfiguration = (props) => {
   const [routes] = useState([
     {
       key: 'first',
-      title: 'Clients'
+      title: 'Interfaces'
     },
     {
       key: 'second',
-      title: 'Interfaces'
+      title: 'Clients'
     },
     {
       key: 'third',
@@ -40,8 +41,8 @@ const WirelessConfiguration = (props) => {
   }
 
   const renderScene = SceneMap({
-    first: WifiClients,
-    second: WifiInterfaceList,
+    first: WifiInterfaceList,
+    second: WifiClients,
     third: WifiScan,
     fourth: WifiHostapd
   })
@@ -57,22 +58,30 @@ const WirelessConfiguration = (props) => {
               inputIndex === i ? 1 : 0.5
             )
           })
+
+          const colorMode = useColorMode()
           const color =
             index === i
-              ? useColorModeValue('#000', '#e5e5e5')
-              : useColorModeValue('#1f2937', '#a1a1aa')
+              ? colorMode == 'light'
+                ? '#000'
+                : '#e5e5e5'
+              : colorMode == 'light'
+              ? '#1f2937'
+              : '#a1a1aa'
           const borderColor =
             index === i
-              ? 'cyan.500'
-              : useColorModeValue('coolGray.200', 'gray.400')
+              ? '$cyan500'
+              : colorMode == 'light'
+              ? '$coolGray200'
+              : '$gray400'
           return (
             <Box
               key={route.title}
-              borderBottomWidth="3"
+              borderBottomWidth={3}
               borderColor={borderColor}
               flex={1}
               alignItems="center"
-              p={3}
+              p="$4"
               cursor="pointer"
             >
               <Pressable

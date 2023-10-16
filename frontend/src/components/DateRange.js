@@ -1,8 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Button, Menu } from 'native-base'
+import { Button, ButtonIcon, ButtonText } from '@gluestack-ui/themed'
+import { Menu } from 'native-base' //TODONB
 import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import { faCalendar } from '@fortawesome/free-solid-svg-icons'
+import { CalendarIcon } from 'lucide-react-native'
 
 const DateRange = (props) => {
   const scales = [
@@ -18,13 +20,9 @@ const DateRange = (props) => {
 
   const trigger = (triggerProps) => {
     return (
-      <Button
-        variant="ghost"
-        leftIcon={<Icon icon={faCalendar} />}
-        {...triggerProps}
-        colorScheme={colorScheme}
-      >
-        {title}
+      <Button variant="link" {...triggerProps} colorScheme={colorScheme}>
+        <ButtonText>{title}</ButtonText>
+        <ButtonIcon as={CalendarIcon} ml="$1" />
       </Button>
     )
   }

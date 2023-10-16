@@ -1,22 +1,18 @@
 import React, { useContext, useEffect, useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
-import {
-  Modal,
-  View,
-  useDisclose
-} from 'native-base'
+import { Modal, useDisclose } from 'native-base' //TODONB
+
+import { View } from '@gluestack-ui/themed'
 
 import LogListDb from 'components/Logs/LogListDb'
 import Database from 'views/System/Database'
 
 const Events = (props) => {
-
   const { isOpen, onOpen, onClose } = useDisclose()
 
   const [modalTitle, setModalTitle] = useState('Container')
   const [modalBody, setModalBody] = useState('')
   const refModal = useRef(null)
-
 
   const showModal = (title, content) => {
     setModalTitle(title)

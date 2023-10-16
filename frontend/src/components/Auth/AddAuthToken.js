@@ -3,9 +3,20 @@ import React, { useContext, useState } from 'react'
 import { authAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 
-import { Button, FormControl, Input, Stack } from 'native-base'
-import  { Select } from 'components/Select'
+import {
+  Button,
+  ButtonText,
+  FormControl,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlLabel,
+  FormControlLabelText,
+  Input,
+  InputField,
+  VStack
+} from '@gluestack-ui/themed'
 
+import { Select } from 'components/Select'
 
 const AddAuthToken = (props) => {
   const context = useContext(AlertContext)
@@ -53,27 +64,33 @@ const AddAuthToken = (props) => {
   }
 
   return (
-    <Stack space={4}>
+    <VStack space="md">
       <FormControl>
-        <FormControl.Label>Name</FormControl.Label>
+        <FormControlLabel>
+          <FormControlLabelText>Name</FormControlLabelText>
+        </FormControlLabel>
 
-        <Input
-          type="text"
-          variant="underlined"
-          name="Name"
-          value={Name}
-          onChangeText={(value) => handleChange('Name', value)}
-          onSubmitEditing={handleSubmit}
-          autoFocus
-        />
+        <Input variant="underlined">
+          <InputField
+            type="text"
+            value={Name}
+            onChangeText={(value) => handleChange('Name', value)}
+            onSubmitEditing={handleSubmit}
+            autoFocus
+          />
+        </Input>
 
-        <FormControl.HelperText>
-          Use a unique name to identify your plugin
-        </FormControl.HelperText>
+        <FormControlHelper>
+          <FormControlHelperText>
+            Use a unique name to identify your plugin
+          </FormControlHelperText>
+        </FormControlHelper>
       </FormControl>
 
       <FormControl>
-        <FormControl.Label>Expiration</FormControl.Label>
+        <FormControlLabel>
+          <FormControlLabelText>Expiration</FormControlLabelText>
+        </FormControlLabel>
 
         <Select
           selectedValue={Expiration}
@@ -86,10 +103,10 @@ const AddAuthToken = (props) => {
         </Select>
       </FormControl>
 
-      <Button color="primary" size="md" onPress={handleSubmit}>
-        Save
+      <Button action="primary" size="md" onPress={handleSubmit}>
+        <ButtonText>Save</ButtonText>
       </Button>
-    </Stack>
+    </VStack>
   )
 }
 

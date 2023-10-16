@@ -1,61 +1,54 @@
 import React, { Component } from 'react'
 import { dyndnsAPI } from 'api/Dyndns'
-import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faXmark, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { AlertContext } from 'AppContext'
 import { ucFirst } from 'utils'
 
 import {
   Box,
   Button,
+  ButtonText,
+  ButtonGroup,
   Divider,
   FormControl,
-  Heading,
+  FormControlLabel,
+  FormControlLabelText,
   HStack,
-  IconButton,
   Input,
+  InputField,
+  InputSlot,
   Link,
-  Stack,
   Switch,
   SectionList,
   Text,
   View,
   VStack,
-  useColorModeValue,
-  InputGroup,
-  InputRightAddon
-} from 'native-base'
+  ButtonIcon,
+  CloseIcon,
+  AddIcon,
+  LinkText
+} from '@gluestack-ui/themed'
+
+import { ListHeader } from 'components/List'
 
 const Subdomain = ({ entry, domain, updateSubdomain, deleteSubdomain }) => (
-  <HStack space={2} my={2}>
-    <InputGroup width="100%">
-      <Input
-        flex={1}
-        size="md"
-        variant="outline"
-        defaultValue={entry}
-        onChangeText={(value) => updateSubdomain(domain, entry, value)}
-      />
-      <InputRightAddon
-        children={
-          <Text fontSize="xs" color="muted.500">
-            .{domain}
-          </Text>
-        }
-      />
-      <InputRightAddon
-        children={
-          <Button.Group size="sm">
-            <IconButton
-              variant="ghost"
-              colorScheme="secondary"
-              icon={<Icon icon={faXmark} />}
-              onPress={() => deleteSubdomain(domain, entry)}
-            />
-          </Button.Group>
-        }
-      />
-    </InputGroup>
+  <HStack space="md" my="$2">
+    <Input
+      flex={1}
+      size="md"
+      variant="outline"
+      defaultValue={entry}
+      onChangeText={(value) => updateSubdomain(domain, entry, value)}
+    >
+      <InputSlot>
+        <Button
+          action="secondary"
+          variant="link"
+          onPress={() => deleteSubdomain(domain, entry)}
+        >
+          <ButtonIcon as={CloseIcon} />
+        </Button>
+      </InputSlot>
+    </Input>
   </HStack>
 )
 
@@ -225,46 +218,39 @@ export default class DynDns extends Component {
 
     return (
       <View>
-        <HStack alignItems="center" p={4}>
-          <VStack space={1}>
-            <Heading fontSize="md">Dynamic DNS</Heading>
-            <HStack space={1}>
-              <Text color="muted.500" fontSize="xs">
-                Powered by godns.
-              </Text>
-              <Link
-                _text={{ color: 'muted.500', fontSize: 'xs' }}
-                href="https://github.com/TimothyYe/godns#configuration-file-format"
-              >
-                Read the documentation
-              </Link>
-            </HStack>
-          </VStack>
-
+        <ListHeader title="Dynamic DNS" description="Powered by godns">
+          <Link
+            href="https://github.com/TimothyYe/godns#configuration-file-format"
+            isExternal
+          >
+            <LinkText size="sm" color="$muted500">
+              Read the documentation
+            </LinkText>
+          </Link>
           <Switch
             marginLeft="auto"
+            value={this.state.isUp}
             defaultIsChecked={this.state.isUp}
             onValueChange={this.handleChange}
           />
-        </HStack>
+        </ListHeader>
 
         <Box
-          rounded="md"
-          _light={{ bg: 'backgroundCardLight' }}
-          _dark={{ bg: 'backgroundCardDark' }}
-          width="100%"
-          p={4}
-          mb={4}
+          bg="$backgroundCardLight"
+          sx={{
+            _dark: { bg: '$backgroundCardDark' }
+          }}
+          p="$4"
         >
           <VStack space={4}>
             {this.state.config.provider != undefined ? (
-              <VStack space={8}>
-                <Stack
-                  space={2}
+              <VStack space="md">
+                <VStack
+                  space="md"
                   width={['100%', '100%', '5/6']}
-                  direction={{ base: 'column', md: 'row' }}
+                  sx={{ '@md': { flexDirection: 'row' } }}
                 >
-                  <VStack space={4} minW="1/2">
+                  <VStack space="md" minW="$1/2">
                     {Object.keys(this.state.config)
                       .filter(
                         (label) =>
@@ -277,85 +263,92 @@ export default class DynDns extends Component {
                           ].includes(label)
                       )
                       .map((label) => (
-                        <HStack key={label} space={4} justifyItems="center">
-                          <FormControl.Label
-                            flex={1}
-                            fontSize="xs"
-                            justifyContent="flex-end"
-                          >
-                            {niceLabel(label)}
-                          </FormControl.Label>
-                          <Input
-                            flex={2}
-                            size="md"
-                            variant="underlined"
-                            value={this.state.config[label]}
-                            onChangeText={(value) => handleChange(label, value)}
-                          />
-                        </HStack>
+                        <FormControl>
+                          <HStack key={label} space="md" justifyItems="center">
+                            <FormControlLabel
+                              flex={1}
+                              fontSize="xs"
+                              justifyContent="flex-end"
+                            >
+                              <FormControlLabelText>
+                                {niceLabel(label)}
+                              </FormControlLabelText>
+                            </FormControlLabel>
+                            <Input flex={2} variant="underlined">
+                              <InputField
+                                value={this.state.config[label]}
+                                onChangeText={(value) =>
+                                  handleChange(label, value)
+                                }
+                              />
+                            </Input>
+                          </HStack>
+                        </FormControl>
                       ))}
                   </VStack>
 
-                  <VStack space={4} minW="1/2">
-                    <HStack space={4}>
-                      <FormControl.Label flex={1} justifyContent="flex-end">
-                        Domains
-                      </FormControl.Label>
+                  <VStack space="md" minW="$1/2">
+                    <HStack space="md">
+                      <FormControlLabel flex={1} justifyContent="flex-end">
+                        <FormControlLabelText>Domains</FormControlLabelText>
+                      </FormControlLabel>
 
-                      <Button.Group
-                        flex={2}
-                        size="xs"
-                        justifyContent="flex-end"
-                      >
+                      <ButtonGroup flex={2} size="xs" justifyContent="flex-end">
                         <Button
+                          action="primary"
                           variant="outline"
-                          colorScheme="primary"
-                          leftIcon={<Icon icon={faPlus} />}
                           onPress={() => this.addDomain('domain.tld')}
                         >
-                          Add domain
+                          <ButtonText>Add domain</ButtonText>
+                          <ButtonIcon as={AddIcon} ml="$1" />
                         </Button>
-                      </Button.Group>
+                      </ButtonGroup>
                     </HStack>
 
-                    <Stack
-                      direction={{ base: 'column', md: 'row' }}
+                    <VStack
+                      sx={{ '@md': { flexDirection: 'row' } }}
                       justifyContent="flex-start"
                     >
                       <Box
-                        display={{ base: 'none', md: 'flex' }}
+                        sx={{
+                          '@base': { display: 'none' },
+                          '@md': { display: 'flex' }
+                        }}
                         flex={1}
                       ></Box>
                       <SectionList
                         sections={domainData}
                         renderSectionFooter={({ section }) => (
-                          <Divider my={2} />
+                          <Divider my="$2" />
                         )}
                         renderSectionHeader={({ section: { domain } }) => (
-                          <HStack space={2} my={2}>
-                            <Input
-                              flex={1}
-                              size="md"
-                              variant="underlined"
-                              defaultValue={domain}
-                              onChangeText={(d) => this.updateDomain(domain, d)}
-                            />
-                            <Button.Group size="sm">
-                              <IconButton
-                                variant="ghost"
-                                colorScheme="primary"
-                                icon={<Icon icon={faPlus} />}
+                          <HStack space="md" my="$2">
+                            <Input flex={1} variant="underlined">
+                              <InputField
+                                defaultValue={domain}
+                                onChangeText={(d) =>
+                                  this.updateDomain(domain, d)
+                                }
+                              />
+                            </Input>
+                            <ButtonGroup size="sm">
+                              <Button
+                                action="primary"
+                                variant="link"
                                 onPress={() =>
                                   this.addSubdomain(domain, 'subdomain')
                                 }
-                              />
-                              <IconButton
-                                variant="ghost"
-                                colorScheme="secondary"
-                                icon={<Icon icon={faXmark} />}
+                              >
+                                <ButtonIcon as={AddIcon} />
+                              </Button>
+                              <Button
+                                action="secondary"
+                                variant="link"
                                 onPress={() => this.deleteDomain(domain)}
-                              />
-                            </Button.Group>
+                              >
+                                <ButtonIcon as={CloseIcon} />
+                              </Button>
+                            </ButtonGroup>
                           </HStack>
                         )}
                         renderItem={({ item, section }) => (
@@ -370,18 +363,18 @@ export default class DynDns extends Component {
                           `${item.provider}-${index}`
                         }
                       />
-                    </Stack>
+                    </VStack>
                   </VStack>
-                </Stack>
+                </VStack>
 
                 <Button
-                  colorScheme="primary"
+                  action="primary"
                   size="md"
-                  w="1/3"
+                  w="$1/3"
                   alignSelf="center"
                   onPress={this.handleSubmit}
                 >
-                  Save
+                  <ButtonText>Save</ButtonText>
                 </Button>
               </VStack>
             ) : (

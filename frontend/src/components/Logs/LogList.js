@@ -1,8 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
 import { useNavigate } from 'react-router-dom'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faRefresh } from '@fortawesome/free-solid-svg-icons'
 
 import { logsAPI } from 'api'
 import InputSelect from 'components/InputSelect'
@@ -11,23 +9,25 @@ import { AlertContext } from 'layouts/Admin'
 
 import {
   Badge,
+  BadgeText,
   Box,
   Button,
-  FlatList,
+  ButtonIcon,
+  ButtonText,
   Heading,
-  IconButton,
   Stack,
   HStack,
   VStack,
-  ScrollView,
-  Spacer,
   Spinner,
   Text,
   View,
-  useColorModeValue
-} from 'native-base'
+  ArrowLeftIcon,
+  ArrowRightIcon
+} from '@gluestack-ui/themed'
 
 import { FlashList } from '@shopify/flash-list'
+import { RefreshCwIcon } from 'lucide-react-native'
+import { ListItem } from 'components/List'
 
 const LogList = (props) => {
   const [list, setList] = useState([])
@@ -146,8 +146,8 @@ const LogList = (props) => {
   const prettyLine = (line) => {
     let p = line.split(' ')
     return (
-      <HStack space={1}>
-        <Text color="muted.500">{p[0]}</Text>
+      <HStack space="md">
+        <Text color="$muted500">{p[0]}</Text>
         <Text>{p.slice(1).join(' ')}</Text>
       </HStack>
     )
@@ -157,18 +157,20 @@ const LogList = (props) => {
 
   return (
     <View h={h}>
-      <Stack
-        direction={{ base: 'column', md: 'row' }}
-        space={2}
+      <VStack
+        h="120"
+        sx={{
+          '@md': { flexDirection: 'row', h: '$20' }
+        }}
+        space={'md'}
         alignItems="flex-start"
         justifyContent="space-between"
-        h={{ base: 120, md: 20 }}
-        p={4}
+        p="$4"
       >
-        <VStack space={1}>
-          <Heading fontSize="lg">Logs</Heading>
+        <VStack space="sm">
+          <Heading size="sm">Logs</Heading>
           {list.length ? (
-            <Text color="muted.500" fontSize="xs">
+            <Text size="xs" color="$muted500">
               {`${(page - 1) * 20} - ${Math.min(page * 20, total)}  / ${total}`}
               {/*`Logs from ${prettyDate(
               list[list.length - 1].__REALTIME_TIMESTAMP / 1e3
@@ -179,7 +181,7 @@ const LogList = (props) => {
           )}
         </VStack>
 
-        <HStack flex="2" space={1}>
+        <HStack flex="2" space="sm">
           {list ? (
             <Box flex="2">
               <InputSelect
@@ -191,65 +193,58 @@ const LogList = (props) => {
             </Box>
           ) : null}
           <Button
-            colorScheme="primary"
+            action="primary"
             marginLeft="auto"
             alignSelf="center"
-            leftIcon={<Icon icon={faRefresh} />}
             onPress={handleClickRefresh}
-          ></Button>
+          >
+            <ButtonIcon as={RefreshCwIcon} />
+          </Button>
         </HStack>
-      </Stack>
+      </VStack>
 
       <FlashList
         data={listFiltered}
         estimatedItemSize={100}
         renderItem={({ item }) => (
-          <Box
-            bg="backgroundCardLight"
-            borderBottomWidth={1}
-            _dark={{
-              bg: 'backgroundCardDark',
-              borderColor: 'borderColorCardDark'
-            }}
-            borderColor="borderColorCardLight"
-            p={4}
-          >
-            <HStack
-              w="100%"
-              space={3}
-              alignItems="center"
-              justifyContent={{ base: 'space-evenly' }}
-            >
-              <Text flex={2} flexWrap="wrap">
-                {item.MESSAGE}
+          <ListItem>
+            <Text flex={2} size="sm" flexWrap="wrap">
+              {item.MESSAGE}
+            </Text>
+            <VStack space="md" alignSelf="flex-start">
+              <Text size="xs" marginLeft="auto" whiteSpace="nowrap">
+                {prettyDate(item.__REALTIME_TIMESTAMP / 1e3)}
               </Text>
-              <VStack space={2} alignSelf="flex-start">
-                <Text fontSize="xs" marginLeft="auto" whiteSpace="nowrap">
-                  {prettyDate(item.__REALTIME_TIMESTAMP / 1e3)}
-                </Text>
 
-                <Badge variant="outline" colorScheme="primary" ml="auto">
-                  {item.CONTAINER_NAME || item._TRANSPORT}
-                </Badge>
-              </VStack>
-            </HStack>
-          </Box>
+              <Badge action="primary" variant="outline" ml="auto">
+                <BadgeText>{item.CONTAINER_NAME || item._TRANSPORT}</BadgeText>
+              </Badge>
+            </VStack>
+          </ListItem>
         )}
         keyExtractor={(item) => item.__REALTIME_TIMESTAMP}
       />
 
       {total > 20 ? (
-        <HStack width="100%" space={2}>
+        <HStack width="100%" space="md">
           <Button
             flex="1"
-            variant="ghost"
+            action="primary"
+            variant="link"
             isDisabled={page <= 1}
             onPress={() => setPage(page > 1 ? page - 1 : 1)}
           >
-            &larr; Previous
+            <ButtonIcon as={ArrowLeftIcon} mr="$1" />
+            <ButtonText>Previous</ButtonText>
           </Button>
-          <Button flex="1" variant="ghost" onPress={() => setPage(page + 1)}>
-            Next &rarr;
+          <Button
+            flex="1"
+            action="primary"
+            variant="link"
+            onPress={() => setPage(page + 1)}
+          >
+            <ButtonIcon as={ArrowRightIcon} mr="$1" />
+            <ButtonText>Next</ButtonText>
           </Button>
         </HStack>
       ) : null}

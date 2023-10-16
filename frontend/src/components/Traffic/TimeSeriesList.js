@@ -3,19 +3,18 @@ import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
 import { format as timeAgo } from 'timeago.js'
 
-import { trafficAPI, wifiAPI } from 'api'
 import { prettyDate, prettySize } from 'utils'
 import { BrandIcons } from 'FontAwesomeUtils'
 
 import {
   Badge,
+  BadgeText,
   Box,
-  Stack,
-  FlatList,
   HStack,
   Pressable,
-  Text
-} from 'native-base'
+  Text,
+  VStack
+} from '@gluestack-ui/themed'
 
 import { FlashList } from '@shopify/flash-list'
 
@@ -117,27 +116,29 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
       renderItem={({ item }) => (
         <Box
           borderBottomWidth={1}
-          _dark={{
-            borderColor: 'muted.600'
+          borderColor="$muted200"
+          py="$4"
+          sx={{
+            '@md': { h: '$12', py: '$2' },
+            _dark: {
+              borderColor: '$muted600'
+            }
           }}
-          borderColor="muted.200"
-          py={{ base: 4, md: 2 }}
-          h={{ md: 12 }}
         >
-          <HStack
-            direction={{ base: 'column', md: 'row' }}
-            space={2}
+          <VStack
+            sx={{ '@md': { flexDirection: 'row' } }}
+            space="md"
             justifyContent="space-between"
           >
-            <Stack
-              direction={{ base: 'column', md: 'row' }}
+            <VStack
+              sx={{ '@md': { flexDirection: 'row' } }}
               flex={2}
-              space={2}
+              space="md"
               justifyContent="space-between"
             >
               <HStack
                 flex={1}
-                space={2}
+                space="md"
                 justifyContent="space-between"
                 alignItems="center"
               >
@@ -148,7 +149,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
                   <Text>{item.Src}</Text>
                 </Pressable>
                 <Box alignText="center">
-                  <Icon color="muted.200" icon={faArrowRight} size="xs" />
+                  <Icon color="$muted200" icon={faArrowRight} size="xs" />
                 </Box>
                 {/*['WanIn', 'LanOut', 'LanIn'].includes(type) ? (
                   <Text bold>{item.deviceDst && item.deviceDst.Name}</Text>
@@ -161,28 +162,27 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
                 <HStack flex={1} alignItems="center">
                   {/*TODO also src depending on type*/}
                   <AsnIcon asn={item.Asn} />
-                  <Text color="muted.500" isTruncated>
+                  <Text color="$muted500" isTruncated>
                     {item.Asn}
                   </Text>
                 </HStack>
               ) : null}
-            </Stack>
+            </VStack>
 
-            <Stack
-              direction="row"
-              marginLeft={{ base: '0', md: 'auto' }}
-              space={2}
+            <VStack
+              sx={{ '@md': { ml: 'auto' } }}
+              space={'md'}
               flex={2 / 3}
               justifyContent="space-between"
             >
-              <Badge alignSelf="center" variant="outline" color="muted.500">
-                {prettySize(item.Bytes)}
+              <Badge action="muted" variant="outline" alignSelf="center">
+                <BadgeText>{prettySize(item.Bytes)}</BadgeText>
               </Badge>
-              <Text fontSize="xs" alignSelf="flex-start">
+              <Text size="xs" alignSelf="flex-start">
                 {timeAgo(item.Timestamp)}
               </Text>
-            </Stack>
-          </HStack>
+            </VStack>
+          </VStack>
         </Box>
       )}
       keyExtractor={(item) => item.Src + item.Dst + item.Bytes}

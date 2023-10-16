@@ -4,27 +4,23 @@ import { wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import InputSelect from 'components/InputSelect'
 import { prettySignal } from 'utils'
-import Icon from 'FontAwesomeUtils'
 
 import {
-  Badge,
   Box,
   Button,
-  Heading,
-  IconButton,
-  Stack,
+  ButtonIcon,
   HStack,
   VStack,
   ScrollView,
-  Spacer,
   Spinner,
   Text,
   View,
-  useColorModeValue
-} from 'native-base'
-import { faWifi } from '@fortawesome/free-solid-svg-icons'
+  ButtonText
+} from '@gluestack-ui/themed'
 
 import { FlashList } from '@shopify/flash-list'
+import { WifiIcon } from 'lucide-react-native'
+import { ListItem } from 'components/List'
 
 const WifiScan = (props) => {
   const context = useContext(AlertContext)
@@ -98,29 +94,28 @@ const WifiScan = (props) => {
   return (
     <View h={h}>
       <HStack
-        space={2}
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        p={4}
+        space="md"
+        bg="$backgroundCardLight"
+        sx={{ _dark: { bg: '$backgroundCardDark' } }}
+        p="$4"
       >
         <Box flex="2">
           {/*isOptionDisabled={(option) => option.disabled}*/}
           <InputSelect options={devsScan} value={iface} onChange={onChange} />
         </Box>
 
-        <Button
-          colorScheme="primary"
-          leftIcon={<Icon icon={faWifi} />}
-          onPress={() => scan(iface)}
-        >
-          Scan
+        <Button action="primary" onPress={() => scan(iface)}>
+          <ButtonText>Scan</ButtonText>
+          <ButtonIcon as={WifiIcon} ml="$1" />
         </Button>
       </HStack>
 
       {loading ? (
         <HStack
-          space={1}
-          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-          p={4}
+          space="sm"
+          bg="$backgroundCardLight"
+          sx={{ _dark: { bg: '$backgroundCardDark' } }}
+          p="$4"
         >
           <Spinner accessibilityLabel="Loading logs" />
           <Text>Loading...</Text>
@@ -131,93 +126,97 @@ const WifiScan = (props) => {
         data={list}
         estimatedItemSize={100}
         renderItem={({ item }) => (
-          <Box
-            bg="backgroundCardLight"
-            borderBottomWidth={1}
-            _dark={{
-              bg: 'backgroundCardDark',
-              borderColor: 'borderColorCardDark'
-            }}
-            borderColor="borderColorCardLight"
-            p={4}
-          >
-            <HStack
-              w="100%"
-              space={1}
-              alignItems="center"
-              justifyContent="space-between"
+          <ListItem>
+            <VStack flex="2" space="md">
+              <Text bold onPress={(e) => triggerAlert(item)}>
+                {item.ssid}
+              </Text>
+
+              <Text color="$muted500" size="sm">
+                {item.bssid}
+              </Text>
+            </VStack>
+
+            <VStack flex="1" space="md" alignItems="flex-end">
+              <HStack space="sm" alignItems="center">
+                <Text color="$muted400" size="xs">
+                  Channel
+                </Text>
+                <Text>{item.primary_channel}</Text>
+              </HStack>
+              <HStack space="sm" alignItems="center">
+                <Text
+                  sx={{
+                    '@base': { display: 'none' },
+                    '@md': { display: 'flex' }
+                  }}
+                  color="$muted400"
+                  size="xs"
+                >
+                  Freq
+                </Text>
+                <Text size="sm">{Number(item.freq / 1e3).toFixed(2)} GHz</Text>
+              </HStack>
+            </VStack>
+
+            <VStack flex="1" space="md" alignItems="flex-end">
+              <HStack space="sm" alignItems="center">
+                <Text
+                  sx={{
+                    '@base': { display: 'none' },
+                    '@md': { display: 'flex' }
+                  }}
+                  color="$muted400"
+                  size="xs"
+                >
+                  Signal
+                </Text>
+                <Text size="sm">{prettySignal(item.signal_dbm)}</Text>
+              </HStack>
+              <HStack space="sm">
+                <Text
+                  sx={{
+                    '@base': { display: 'none' },
+                    '@md': { display: 'flex' }
+                  }}
+                  color="$muted400"
+                  size="xs"
+                >
+                  Auth
+                </Text>
+                <Text size="sm">{item.authentication_suites || '-'}</Text>
+              </HStack>
+            </VStack>
+
+            <VStack
+              sx={{
+                '@base': { display: 'none' },
+                '@md': { display: 'flex' }
+              }}
+              flex="1"
+              space="md"
+              alignItems="flex-end"
             >
-              <VStack flex="2" space={2}>
-                <Text bold onPress={(e) => triggerAlert(item)}>
-                  {item.ssid}
-                </Text>
-
-                <Text color="muted.500" fontSize="sm">
-                  {item.bssid}
-                </Text>
-              </VStack>
-
-              <VStack flex="1" space={2} alignItems="flex-end">
-                <HStack space={1} alignItems="center">
-                  <Text color="muted.400" fontSize="xs">
-                    Channel
+              {item.model ? (
+                <HStack space="sm" alignItems="center">
+                  <Text color="$muted400" size="xs">
+                    Model
                   </Text>
-                  <Text>{item.primary_channel}</Text>
-                </HStack>
-                <HStack space={1} alignItems="center">
-                  <Text
-                    display={{ base: 'none', md: 'flex' }}
-                    color="muted.400"
-                    fontSize="xs"
-                  >
-                    Freq
+                  <Text size="sm">
+                    {item.model} / {item.model_number}
                   </Text>
-                  <Text>{Number(item.freq / 1e3).toFixed(2)} GHz</Text>
                 </HStack>
-              </VStack>
-
-              <VStack flex="1" space={2} alignItems="flex-end">
-                <HStack space={1} alignItems="center">
-                  <Text color="muted.400" fontSize="xs">
-                    Signal
+              ) : null}
+              {item.device_name ? (
+                <HStack space="sm" alignItems="center">
+                  <Text color="$muted400" size="xs">
+                    Device Name
                   </Text>
-                  <Text>{prettySignal(item.signal_dbm)}</Text>
+                  <Text size="sm">{item.device_name}</Text>
                 </HStack>
-                <HStack space={1}>
-                  <Text color="muted.400" fontSize="xs">
-                    Auth
-                  </Text>
-                  <Text>{item.authentication_suites || '-'}</Text>
-                </HStack>
-              </VStack>
-
-              <VStack
-                display={{ base: 'none', md: 'flex' }}
-                flex="1"
-                space={2}
-                alignItems="flex-end"
-              >
-                {item.model ? (
-                  <HStack space={1} alignItems="center">
-                    <Text color="muted.400" fontSize="xs">
-                      Model
-                    </Text>
-                    <Text>
-                      {item.model} / {item.model_number}
-                    </Text>
-                  </HStack>
-                ) : null}
-                {item.device_name ? (
-                  <HStack space={1} alignItems="center">
-                    <Text color="muted.400" fontSize="xs">
-                      Device Name
-                    </Text>
-                    <Text>{item.device_name}</Text>
-                  </HStack>
-                ) : null}
-              </VStack>
-            </HStack>
-          </Box>
+              ) : null}
+            </VStack>
+          </ListItem>
         )}
         keyExtractor={(item) => item.bssid}
       />

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 
-import { HStack, Pressable } from 'native-base'
+import { HStack, Pressable } from '@gluestack-ui/themed'
 
 export default ({ value, onChange, ...props }) => {
   const [selected, setSelected] = useState(null)
@@ -33,13 +33,13 @@ export default ({ value, onChange, ...props }) => {
   }
 
   return (
-    <HStack space={1} w={{ base: 'full', md: '2/3' }}>
+    <HStack space="sm" w="$full" sx={{ '@md': { w: '$2/3' } }}>
       {colors.map((c) => (
         <Pressable
           flex={1}
-          bg={`${c}.400`}
+          bg={`$${c}400`}
           opacity={value == c ? 1 : 0.4}
-          p={4}
+          p="$4"
           onPress={() => onPress(c)}
         />
       ))}

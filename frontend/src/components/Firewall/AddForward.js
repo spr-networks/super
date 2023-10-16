@@ -6,18 +6,20 @@ import ClientSelect from 'components/ClientSelect'
 import { firewallAPI } from 'api'
 
 import {
-  Box,
   Button,
-  Checkbox,
+  ButtonText,
   FormControl,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlLabel,
+  FormControlLabelText,
   Input,
-  Link,
-  Radio,
-  Stack,
+  InputField,
   HStack,
-  Spinner,
-  Text
-} from 'native-base'
+  VStack
+} from '@gluestack-ui/themed'
+
+import ProtocolRadio from 'components/Form/ProtocolRadio'
 
 class AddForwardImpl extends React.Component {
   state = {
@@ -73,33 +75,42 @@ class AddForwardImpl extends React.Component {
     })
 
     return (
-      <Stack space={4}>
-        <HStack space={4}>
+      <VStack space="md">
+        <HStack space="md">
           <FormControl flex="2">
-            <FormControl.Label>Source IP Address</FormControl.Label>
-            <Input
-              size="md"
-              variant="underlined"
-              name="SrcIP"
-              value={this.state.SrcIP}
-              onChangeText={(value) => this.handleChange('SrcIP', value)}
-            />
-            <FormControl.HelperText>Accepts IP or CIDR</FormControl.HelperText>
+            <FormControlLabel>
+              <FormControlLabelText>Source IP Address</FormControlLabelText>
+            </FormControlLabel>
+            <Input size="md" variant="underlined">
+              <InputField
+                variant="underlined"
+                value={this.state.SrcIP}
+                onChangeText={(value) => this.handleChange('SrcIP', value)}
+              />
+            </Input>
+            <FormControlHelper>
+              <FormControlHelperText>Accepts IP or CIDR</FormControlHelperText>
+            </FormControlHelper>
           </FormControl>
           <FormControl flex="1">
-            <FormControl.Label>Incoming Port</FormControl.Label>
-            <Input
-              size="md"
-              variant="underlined"
-              name="SrcPort"
-              value={this.state.SrcPort}
-              onChangeText={(value) => this.handleChange('SrcPort', value)}
-            />
+            <FormControlLabel>
+              <FormControlLabelText>Incoming Port</FormControlLabelText>
+            </FormControlLabel>
+            <Input size="md" variant="underlined">
+              <InputField
+                value={this.state.SrcPort}
+                onChangeText={(value) => this.handleChange('SrcPort', value)}
+              />
+            </Input>
           </FormControl>
         </HStack>
         <HStack space={2}>
           <FormControl flex="2">
-            <FormControl.Label>Destination IP address</FormControl.Label>
+            <FormControlLabel>
+              <FormControlLabelText>
+                Destination IP address
+              </FormControlLabelText>
+            </FormControlLabel>
             <ClientSelect
               name="DstIP"
               value={this.state.DstIP}
@@ -109,37 +120,33 @@ class AddForwardImpl extends React.Component {
             />
           </FormControl>
           <FormControl flex="1">
-            <FormControl.Label for="DstPort">Dest Port</FormControl.Label>
-            <Input
-              size="md"
-              variant="underlined"
-              name="DstPort"
-              value={this.state.DstPort}
-              onChangeText={(value) => this.handleChange('DstPort', value)}
-            />
+            <FormControlLabel>
+              <FormControlLabelText>Dest Port</FormControlLabelText>
+            </FormControlLabel>
+            <Input size="md" variant="underlined">
+              <InputField
+                value={this.state.DstPort}
+                onChangeText={(value) => this.handleChange('DstPort', value)}
+              />
+            </Input>
           </FormControl>
         </HStack>
 
         <FormControl>
-          <FormControl.Label>Protocol</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Protocol</FormControlLabelText>
+          </FormControlLabel>
 
-          <Radio.Group
-            name="Protocol"
-            defaultValue={this.state.Protocol}
-            accessibilityLabel="Protocol"
+          <ProtocolRadio
+            value={this.state.Protocol}
             onChange={(value) => this.handleChange('Protocol', value)}
-          >
-            <HStack space={2}>
-              <Radio value="tcp">tcp</Radio>
-              <Radio value="udp">udp</Radio>
-            </HStack>
-          </Radio.Group>
+          />
         </FormControl>
 
-        <Button color="primary" size="md" onPress={this.handleSubmit}>
-          Save
+        <Button action="primary" size="md" onPress={this.handleSubmit}>
+          <ButtonText>Save</ButtonText>
         </Button>
-      </Stack>
+      </VStack>
     )
   }
 }
