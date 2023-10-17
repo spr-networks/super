@@ -16,7 +16,7 @@ import {
 } from '@gluestack-ui/themed'
 
 /*
-//import { Select as NBSelect } from 'native-base'
+//import { Select as NBSelect } //OLD
 
 const Select = (props) => {
   const isSafari = () =>

@@ -1,7 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
-import Icon from 'FontAwesomeUtils'
-import { faToggleOn, faToggleOff } from '@fortawesome/free-solid-svg-icons'
 
 import { blockAPI } from 'api/DNS'
 import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
@@ -11,25 +9,34 @@ import ModalConfirm from 'components/ModalConfirm'
 
 import {
   Badge,
+  BadgeIcon,
   Button,
   ButtonIcon,
   Box,
   FlatList,
   HStack,
+  Icon,
   Spinner,
   Text,
   VStack,
   BadgeText,
   ButtonText,
+  Menu,
+  MenuItem,
+  MenuItemLabel,
   ThreeDotsIcon,
   useColorMode,
   CloseIcon
 } from '@gluestack-ui/themed'
 
-import { Menu } from 'components/Menu'
-
 import InputSelect from 'components/InputSelect'
 import ListHeader from 'components/List/ListHeader'
+import {
+  CircleIcon,
+  TagIcon,
+  ToggleLeftIcon,
+  ToggleRightIcon
+} from 'lucide-react-native'
 
 const DNSBlocklist = (props) => {
   const context = useContext(AlertContext)
@@ -399,69 +406,65 @@ const DNSBlocklist = (props) => {
                     ? item.Tags.map((entry) => (
                         <Badge
                           key={item.URI + entry}
-                          action="info"
+                          action="muted"
                           variant="outline"
                         >
                           <BadgeText>{entry}</BadgeText>
+                          <BadgeIcon as={TagIcon} ml="$1" />
                         </Badge>
                       ))
                     : null}
                 </HStack>
 
-                <Menu trigger={trigger}>
-                  <Menu.Group title="Actions">
-                    <Menu.Item
-                      onPress={() => handleItemSwitch(item, !item.Enabled)}
-                    >
-                      <HStack space={'md'} alignItems="center">
-                        {item.Enabled ? (
-                          <>
-                            <Icon icon={faToggleOn} />
-                            <Text>Disable</Text>
-                          </>
-                        ) : (
-                          <>
-                            <Icon icon={faToggleOff} />
-                            <Text>Enable</Text>
-                          </>
-                        )}
-                      </HStack>
-                    </Menu.Item>
-                    <Menu.Item
-                      onPress={() => deleteListItem(item)}
-                      display={isOnlyRecommended(item) ? 'none' : 'flex'}
-                    >
-                      <HStack space={'md'} alignItems="center">
-                        <CloseIcon color="$red700" />
-                        <Text color="$red700">Delete</Text>
-                      </HStack>
-                    </Menu.Item>
-                  </Menu.Group>
+                <Menu
+                  trigger={trigger}
+                  selectionMode="single"
+                  onSelectionChange={(e) => {
+                    let key = e.currentKey
+                    if (key == 'onoff') {
+                      handleItemSwitch(item, !item.Enabled)
+                    } else if (key == 'deleteItem') {
+                      deleteListItem(item)
+                    } else if (key == 'newTag') {
+                      setModalType('Tag')
+                      setPendingItem(item)
+                      setShowModal(true)
+                    } else {
+                      let tags = item.Tags.filter((t) => t != key)
+                      handleChangeTags(item, tags)
+                    }
+                  }}
+                >
+                  <MenuItem key="onoff" textValue="onoff">
+                    <Icon as={item.Enabled ? CircleIcon : CircleIcon} mr="$2" />
+                    <MenuItemLabel size="sm">
+                      {item.Enabled ? 'Disable' : 'Enable'}
+                    </MenuItemLabel>
+                  </MenuItem>
 
-                  <Menu.OptionGroup
-                    title="Tags"
-                    type="checkbox"
-                    defaultValue={item.Tags ? item.Tags : []}
-                    onChange={(value) => handleChangeTags(item, value)}
+                  <MenuItem
+                    key="deleteItem"
+                    display={isOnlyRecommended(item) ? 'none' : 'flex'}
                   >
-                    {[
-                      ...new Set(defaultTags.concat(item.Tags ? item.Tags : []))
-                    ].map((tag) => (
-                      <Menu.ItemOption key={tag} value={tag}>
-                        {tag}
-                      </Menu.ItemOption>
-                    ))}
-                    <Menu.ItemOption
-                      key="newTag"
-                      onPress={() => {
-                        setModalType('Tag')
-                        setPendingItem(item)
-                        setShowModal(true)
-                      }}
-                    >
-                      New Tag...
-                    </Menu.ItemOption>
-                  </Menu.OptionGroup>
+                    <CloseIcon color="$red700" mr="$2" />
+                    <MenuItemLabel size="sm" color="$red700">
+                      Delete
+                    </MenuItemLabel>
+                  </MenuItem>
+
+                  {[
+                    ...new Set(defaultTags.concat(item.Tags ? item.Tags : []))
+                  ].map((tag) => (
+                    <MenuItem key={tag} textValue={tag}>
+                      <CloseIcon mr="$2" />
+                      <MenuItemLabel size="sm">{tag}</MenuItemLabel>
+                    </MenuItem>
+                  ))}
+
+                  <MenuItem key="newTag" textValue="newTag">
+                    <Icon as={TagIcon} mr="$2" />
+                    <MenuItemLabel size="sm">New Tag...</MenuItemLabel>
+                  </MenuItem>
                 </Menu>
               </HStack>
             </Box>

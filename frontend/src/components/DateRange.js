@@ -1,7 +1,9 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Button, ButtonIcon, ButtonText } from '@gluestack-ui/themed'
-import { Menu } from 'components/Menu'
+
+import { Menu, MenuItem, MenuItemLabel } from '@gluestack-ui/themed'
+
 import { CalendarIcon } from 'lucide-react-native'
 
 const DateRange = (props) => {
@@ -25,25 +27,24 @@ const DateRange = (props) => {
     )
   }
 
-  const handleChange = (value) => {
+  const handleChange = (e) => {
+    let value = e.currentKey
     if (props.onChange) {
       props.onChange(value)
     }
   }
 
   return (
-    <Menu w="190" trigger={trigger} onChangeValue={handleChange}>
-      <Menu.OptionGroup defaultValue={defaultValue} title="Select Date Range">
-        {scales.map((scale) => (
-          <Menu.ItemOption
-            key={scale.value}
-            value={scale.value}
-            onPress={(e) => handleChange(scale.value)}
-          >
-            {scale.label}
-          </Menu.ItemOption>
-        ))}
-      </Menu.OptionGroup>
+    <Menu
+      trigger={trigger}
+      selectionMode="single"
+      onSelectionChange={handleChange}
+    >
+      {scales.map((scale) => (
+        <MenuItem key={scale.value} textValue={scale.value}>
+          <MenuItemLabel size="sm">{scale.label}</MenuItemLabel>
+        </MenuItem>
+      ))}
     </Menu>
   )
 }

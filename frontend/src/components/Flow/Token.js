@@ -7,8 +7,6 @@ import {
   FormControl,
   FormControlHelper,
   FormControlHelperText,
-  FormControlLabel,
-  FormControlLabelText,
   Icon,
   Input,
   InputField,
@@ -24,10 +22,12 @@ import {
   PopoverHeader,
   CloseIcon,
   Heading,
-  Text
+  Menu,
+  MenuItem,
+  MenuItemLabel,
+  AddIcon,
+  CircleIcon
 } from '@gluestack-ui/themed'
-
-import { Menu } from 'components/Menu'
 
 import TimeSelect from '../TimeSelect'
 import InputSelect from 'components/InputSelect'
@@ -135,20 +135,49 @@ const Token = ({
       </Tooltip>
     )*/
 
-    return (
-      <Menu w="190" closeOnSelect={!isMultiple} trigger={trigger}>
-        <Menu.OptionGroup
+    /*
+    //<Menu closeOnSelect={!isMultiple} trigger={trigger}>
+            <Menu.OptionGroup
           defaultValue={defaultValue}
           type={inputType}
           title={title}
           onChange={handleChange}
         >
-          {options.map((item) => (
-            <Menu.ItemOption key={item.value} value={item.value}>
-              {item.label}
-            </Menu.ItemOption>
-          ))}
-        </Menu.OptionGroup>
+    */
+    return (
+      <Menu
+        trigger={trigger}
+        selectionMode={isMultiple ? 'multiple' : 'single'}
+        closeOnSelect={!isMultiple}
+        selectedKeys={defaultValue}
+        onSelectionChange={(e) => {
+          let key = e.currentKey
+          let [action, day] = key.split(':')
+          let values = defaultValue
+          if (action == 'add') {
+            values.push(day)
+          } else {
+            values = values.filter((d) => d != day)
+          }
+          handleChange(values)
+        }}
+      >
+        {options.map((item) => (
+          <MenuItem
+            key={
+              defaultValue.includes(item.value)
+                ? `delete:${item.value}`
+                : `add:${item.value}`
+            }
+            textValue={item.value}
+          >
+            <Icon
+              as={defaultValue.includes(item.value) ? CircleIcon : AddIcon}
+              mr="$2"
+            />
+            <MenuItemLabel size="sm">{item.label}</MenuItemLabel>
+          </MenuItem>
+        ))}
       </Menu>
     )
   }

@@ -7,17 +7,15 @@ import {
   Box,
   HStack,
   Icon,
-  /*Menu,
+  Menu,
   MenuItem,
-  MenuItemLabel,*/
+  MenuItemLabel,
   View,
   VStack,
   Text,
   TrashIcon,
   ThreeDotsIcon
 } from '@gluestack-ui/themed'
-
-import { Menu } from 'components/Menu'
 
 import { FlashList } from '@shopify/flash-list'
 
@@ -41,17 +39,31 @@ const NotificationItem = ({ item, index, onDelete, onToggle, ...props }) => {
   )
 
   const moreMenu = (
-    <Menu closeOnSelect={true} trigger={trigger}>
-      <Menu.Item key="delete" onPress={() => onDelete(index)}>
-        <TrashIcon color="$red700" />
-        <Text size="sm" color="$red700">
+    <Menu
+      trigger={trigger}
+      selectionMode="single"
+      onSelectionChange={(e) => {
+        let action = e.currentKey
+        if (action == 'delete') {
+          onDelete(index)
+        } else if (action == 'onoff') {
+          onToggle(index, item)
+        }
+      }}
+    >
+      <MenuItem key="delete" textValue="delete">
+        <TrashIcon color="$red700" mr="$2" />
+        <MenuItemLabel size="sm" color="$red700">
           Delete
-        </Text>
-      </Menu.Item>
-      <Menu.Item key="onoff" onPress={() => onToggle(index, item)}>
-        <Icon as={item.Notification ? BellIcon : BellOffIcon} />
-        <Text size="sm">{item.Notification ? 'Disable' : 'Enable'}</Text>
-      </Menu.Item>
+        </MenuItemLabel>
+      </MenuItem>
+
+      <MenuItem key="onoff" textValue="onoff">
+        <Icon as={item.Notification ? BellIcon : BellOffIcon} mr="$2" />
+        <MenuItemLabel size="sm">
+          {item.Notification ? 'Disable' : 'Enable'}
+        </MenuItemLabel>
+      </MenuItem>
     </Menu>
   )
 

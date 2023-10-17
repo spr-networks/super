@@ -10,14 +10,14 @@ import {
   WifiIcon
 } from 'lucide-react-native'
 
-const TagItem = React.memo(({ name }) => {
+const TagItem = React.memo(({ name, size }) => {
   //TODO - also use + fix tagItem component
   return (
     <Badge
       key={name}
       action="muted"
       variant="outline"
-      size="sm"
+      size={size || 'sm'}
       py="$1"
       px="$2"
     >
@@ -27,7 +27,7 @@ const TagItem = React.memo(({ name }) => {
   )
 })
 
-const GroupItem = React.memo(({ name }) => {
+const GroupItem = React.memo(({ name, size }) => {
   let groupIcons = {
     wan: Globe2Icon,
     dns: GlobeIcon,
@@ -43,7 +43,7 @@ const GroupItem = React.memo(({ name }) => {
   }
 
   let icon = groupIcons[name] || UsersIcon
-  let bg = groupColors[name] || '$muted600'
+  let bg = groupColors[name] || '$muted200'
 
   return (
     <Badge
@@ -51,7 +51,7 @@ const GroupItem = React.memo(({ name }) => {
       action="muted"
       variant="outline"
       bg={bg}
-      size="sm"
+      size={size || 'sm'}
       py="$1"
       px="$2"
     >

@@ -1,28 +1,49 @@
 import React from 'react'
 
-import { Menu, MenuItem, MenuItemLabel } from '@gluestack-ui/themed'
+//import { NativeBaseProvider, Menu as MenuNB } from 'native-base'
+//import { theme } from 'Theme'
 
-//TODO tags, actions etc.
+import {
+  Box,
+  Button,
+  ButtonIcon,
+  ButtonText,
+  Menu,
+  MenuItem,
+  MenuItemLabel
+} from '@gluestack-ui/themed'
+
 const TestMenu = (props) => {
   return (
-    <Box bg="$amber100" p="$32">
-      <Menu
-        placement="bottom center"
-        selectionMode="single"
-        trigger={({ ...triggerProps }) => {
-          return (
-            <Button {...triggerProps}>
-              <ButtonText>Menu</ButtonText>
-            </Button>
-          )
-        }}
-      >
-        <MenuItem key="Delete" textValue="Delete">
-          <MenuItemLabel color="$red700">Delete</MenuItemLabel>
-        </MenuItem>
-      </Menu>
-    </Box>
+    <Menu
+      placement="bottom center"
+      selectionMode="single"
+      trigger={props.trigger}
+      onSelectionChange={(e) => alert(`Testmenu: ${e.currentKey} selected`)}
+    >
+      <MenuItem key="Delete" textValue="Delete">
+        <MenuItemLabel color="$red700">Delete</MenuItemLabel>
+      </MenuItem>
+    </Menu>
   )
+
+  //<MenuNB {...props}>{props.children}</MenuNB>
+  /*return (
+    <NativeBaseProvider theme={theme}>
+      <MenuNB trigger={props.trigger}>
+        <MenuNB.Item>Hello</MenuNB.Item>
+        <MenuNB.Item>Hello23</MenuNB.Item>
+      </MenuNB>
+    </NativeBaseProvider>
+  )*/
 }
 
-export default TestMenu
+//Menu, Menu.Item
+TestMenu.Item = MenuItem
+
+//let MenuExport = TestMenu
+let MenuExport = Menu
+
+export default MenuExport
+
+export { MenuExport as Menu, MenuItem, MenuItemLabel }

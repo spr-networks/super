@@ -15,17 +15,22 @@ import {
   Box,
   FlatList,
   HStack,
+  Icon,
   VStack,
   Text,
   ThreeDotsIcon,
   ArrowRightIcon,
   AddIcon,
-  TrashIcon
+  TrashIcon,
+  Menu,
+  MenuItem,
+  MenuItemLabel,
+  CloseIcon
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
-import { Menu } from 'components/Menu'
 import TagItem from 'components/TagItem'
+import { TagIcon } from 'lucide-react-native'
 
 const EndpointList = (props) => {
   const [list, setList] = useState([])
@@ -82,9 +87,11 @@ const EndpointList = (props) => {
     if (tags == null) {
       tags = []
     }
+
     let newTags = [
       ...new Set(tags.filter((x) => typeof x == 'string' && x.length > 0))
     ]
+
     newTags = newTags.map((tag) => tag.toLowerCase())
 
     item.Tags = newTags
@@ -100,36 +107,39 @@ const EndpointList = (props) => {
   }
 
   const moreMenu = (item) => (
-    <Menu w={190} closeOnSelect={true} trigger={trigger}>
-      <Menu.OptionGroup
-        title="Tags"
-        type="checkbox"
-        defaultValue={item.Tags}
-        onChange={(t) => handleTags(item, t, 'change')}
-      >
-        {[...new Set(item.Tags)].map((tag) => (
-          <Menu.ItemOption key={tag} value={tag}>
-            {tag}
-          </Menu.ItemOption>
-        ))}
-        <Menu.ItemOption
-          key="newTag"
-          onPress={() => {
-            setModalType('Tag')
-            setShowModal(true)
-          }}
-        >
-          New Tag...
-        </Menu.ItemOption>
-      </Menu.OptionGroup>
-      <Menu.Group title="Actions">
-        <Menu.Item onPress={() => deleteListItem(item)}>
-          <HStack space={'md'} alignItems="center">
-            <TrashIcon color="$red700" />
-            <Text color="$red700">Delete</Text>
-          </HStack>
-        </Menu.Item>
-      </Menu.Group>
+    <Menu
+      trigger={trigger}
+      selectionMode="single"
+      onSelectionChange={(e) => {
+        let key = e.currentKey
+        if (key == 'newTag') {
+          setModalType('Tag')
+          setShowModal(true)
+        } else if (key == 'deleteItem') {
+          deleteListItem(item)
+        } else {
+          // its a tag
+          let tags = item.Tags.filter((t) => t != key)
+          handleTags(item, tags)
+        }
+      }}
+    >
+      {[...new Set(item?.Tags)].map((tag) => (
+        <MenuItem key={tag} textValue={tag}>
+          <CloseIcon mr="$2" />
+          <MenuItemLabel size="sm">{tag}</MenuItemLabel>
+        </MenuItem>
+      ))}
+      <MenuItem key="newTag" textValue="newTag">
+        <Icon as={TagIcon} mr="$2" />
+        <MenuItemLabel size="sm">New Tag...</MenuItemLabel>
+      </MenuItem>
+      <MenuItem key="deleteItem" textValue="deleteItem">
+        <TrashIcon color="$red700" mr="$2" />
+        <MenuItemLabel size="sm" color="$red700">
+          Delete
+        </MenuItemLabel>
+      </MenuItem>
     </Menu>
   )
 
@@ -176,22 +186,23 @@ const EndpointList = (props) => {
                 <Text>{item.Port}</Text>
               </HStack>
 
-              <Box
+              <VStack
                 sx={{
                   '@base': { display: 'none' },
                   '@md': { display: item.Tags?.length ? 'flex' : 'none' }
                 }}
+                space="xs"
               >
                 {item.Tags
                   ? item.Tags.map((tag) => <TagItem key={tag} name={tag} />)
                   : null}
-              </Box>
+              </VStack>
 
               {moreMenu(item)}
 
               <ModalConfirm
                 type={modalType}
-                onSubmit={(t) => handleTags(item, [...item.Tags, t])}
+                onSubmit={(t) => handleTags(item, [...(item?.Tags || []), t])}
                 onClose={() => setShowModal(false)}
                 isOpen={showModal}
               />

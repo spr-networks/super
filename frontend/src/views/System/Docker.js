@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { Platform } from 'react-native'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from 'FontAwesomeUtils'
 import {
@@ -15,6 +16,9 @@ import {
   ButtonIcon,
   Heading,
   HStack,
+  Menu,
+  MenuItem,
+  MenuItemLabel,
   FlatList,
   Text,
   VStack,
@@ -23,8 +27,6 @@ import {
   EyeOffIcon,
   ArrowRightIcon
 } from '@gluestack-ui/themed'
-
-import { Menu } from 'components/Menu'
 
 import { ListHeader, ListItem } from 'components/List'
 
@@ -148,36 +150,35 @@ const DockerInfo = ({ showModal, ...props }) => {
     const moreMenu = (
       <Menu
         flex={1}
-        w={190}
-        closeOnSelect={true}
         trigger={trigger}
-        alignSelf="center"
+        selectionMode="single"
+        onSelectionChange={(e) => {
+          let value = e.currentKey
+          if (value == 'logs') {
+            onLogs()
+          } else if (value == 'mounts') {
+            onMounts()
+          } else if (value == 'network') {
+            onNetwork()
+          }
+
+          if (Platform.OS == 'web' && window !== undefined) {
+            window.scrollTo(0, 0)
+          }
+        }}
       >
-        <Menu.Group title="View more ...">
-          <Menu.Item onPress={onLogs}>
-            <HStack space="md" alignItems="center">
-              <Icon icon={faListAlt} color="$muted500" />
-              <Text>Logs</Text>
-            </HStack>
-          </Menu.Item>
-          <Menu.Item onPress={onMounts}>
-            <HStack space="md" alignItems="center">
-              {<Icon icon={faHardDrive} color="$muted500" />}
-              <Text>Mounts</Text>
-            </HStack>
-          </Menu.Item>
-          <Menu.Item onPress={onNetwork} isDisabled={item.State != 'running'}>
-            <HStack space="md" alignItems="center">
-              <Icon icon={faNetworkWired} color="$muted500" />
-              <Text>Network</Text>
-            </HStack>
-          </Menu.Item>
-        </Menu.Group>
-        {/*
-        <Menu.Group title="Actions">
-          <Menu.Item onPress={onRestart}>Restart</Menu.Item>
-        </Menu.Group>
-         */}
+        <MenuItem key="logs">
+          <Icon icon={faListAlt} color="$muted500" mr="$2" />
+          <MenuItemLabel>Logs</MenuItemLabel>
+        </MenuItem>
+        <MenuItem key="mounts">
+          <Icon icon={faHardDrive} color="$muted500" mr="$2" />
+          <MenuItemLabel>Mounts</MenuItemLabel>
+        </MenuItem>
+        <MenuItem key="network" isDisabled={item.State != 'running'}>
+          <Icon icon={faNetworkWired} color="$muted500" mr="$2" />
+          <MenuItemLabel>Network</MenuItemLabel>
+        </MenuItem>
       </Menu>
     )
 

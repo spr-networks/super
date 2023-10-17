@@ -19,6 +19,9 @@ import {
   FormControlLabelText,
   Heading,
   Icon,
+  Menu,
+  MenuItem,
+  MenuItemLabel,
   Modal,
   ModalBackdrop,
   ModalBody,
@@ -37,8 +40,6 @@ import {
   ThreeDotsIcon
 } from '@gluestack-ui/themed'
 
-import { Menu } from 'components/Menu'
-
 import { wifiAPI, api } from 'api'
 import { AlertContext } from 'AppContext'
 
@@ -46,6 +47,12 @@ import { Select } from 'components/Select'
 import InputSelect from 'components/InputSelect'
 import { Address4 } from 'ip-address'
 import { ListHeader, ListItem } from 'components/List'
+import {
+  ArrowDownUpIcon,
+  CableIcon,
+  NetworkIcon,
+  WifiIcon
+} from 'lucide-react-native'
 
 let keymgmts = [
   { value: 'WPA-PSK WPA-PSK-SHA256 SAE', label: 'WPA2/WPA3' },
@@ -661,7 +668,7 @@ const UplinkInfo = (props) => {
     setLinks(links)
   }
 
-  const trigger = (triggerProps) => (
+  const trigger = ({ ...triggerProps }) => (
     <Button action="secondary" variant="link" ml="auto" {...triggerProps}>
       <ButtonIcon as={ThreeDotsIcon} />
     </Button>
@@ -685,43 +692,31 @@ const UplinkInfo = (props) => {
   }
 
   const moreMenu = (iface) => (
-    <Menu w={190} closeOnSelect={true} trigger={trigger}>
-      <Menu.Item
-        onPress={() => {
-          setIface(iface)
-          setModal('config')
-          setShowModal(true)
-        }}
-      >
-        Modify Interface
-      </Menu.Item>
-      <Menu.Item
-        onPress={() => {
-          setIface(iface)
-          setModal('ip')
-          setShowModal(true)
-        }}
-      >
-        Modify IP Settings
-      </Menu.Item>
-      <Menu.Item
-        onPress={() => {
-          setIface(iface)
-          setModal('wifi')
-          setShowModal(true)
-        }}
-      >
-        Configure Wireless
-      </Menu.Item>
-      <Menu.Item
-        onPress={() => {
-          setIface(iface)
-          setModal('ppp')
-          setShowModal(true)
-        }}
-      >
-        Configure PPP
-      </Menu.Item>
+    <Menu
+      trigger={trigger}
+      selectionMode="single"
+      onSelectionChange={(e) => {
+        setIface(iface)
+        setModal(e.currentKey)
+        setShowModal(true)
+      }}
+    >
+      <MenuItem key="config" textValue="config">
+        <Icon as={ArrowDownUpIcon} mr="$2" />
+        <MenuItemLabel size="sm">Modify Interface</MenuItemLabel>
+      </MenuItem>
+      <MenuItem key="ip" textValue="ip">
+        <Icon as={ArrowDownUpIcon} mr="$2" />
+        <MenuItemLabel size="sm">Modify IP Settings</MenuItemLabel>
+      </MenuItem>
+      <MenuItem key="wifi" textValue="wifi">
+        <Icon as={WifiIcon} mr="$2" />
+        <MenuItemLabel size="sm">Configure Wireless</MenuItemLabel>
+      </MenuItem>
+      <MenuItem key="ppp" textValue="ppp">
+        <Icon as={CableIcon} mr="$2" />
+        <MenuItemLabel size="sm">Configure PPP</MenuItemLabel>
+      </MenuItem>
     </Menu>
   )
 

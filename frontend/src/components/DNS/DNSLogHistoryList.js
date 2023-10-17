@@ -24,6 +24,9 @@ import {
   Input,
   HStack,
   VStack,
+  Menu,
+  MenuItem,
+  MenuItemLabel,
   Text,
   View,
   ScrollView,
@@ -39,8 +42,6 @@ import {
   SearchIcon,
   InputSlot
 } from '@gluestack-ui/themed'
-
-import { Menu } from 'components/Menu'
 
 import { FlashList } from '@shopify/flash-list'
 import { FilterIcon } from 'lucide-react-native'
@@ -65,19 +66,22 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
   )
 
   const moreMenu = (
-    <Menu w={190} p={0} closeOnSelect={true} trigger={trigger}>
-      <Menu.Item
-        _text={{ color: 'success.600' }}
-        onPress={() => handleClickDomain('permit', item.FirstName)}
-      >
-        Permit Domain
-      </Menu.Item>
-      <Menu.Item
-        _text={{ color: 'danger.600' }}
-        onPress={() => handleClickDomain('block', item.FirstName)}
-      >
-        Block Domain
-      </Menu.Item>
+    <Menu
+      trigger={trigger}
+      selectionMode="single"
+      onSelectionChange={(e) => {
+        let action = e.currentKey
+        handleClickDomain(action, item.FirstName)
+      }}
+    >
+      <MenuItem key="permit">
+        <SlashIcon color="$green700" mr="$2" />
+        <MenuItemLabel size="sm">Permit Domain</MenuItemLabel>
+      </MenuItem>
+      <MenuItem key="block">
+        <SlashIcon color="$red700" mr="$2" />
+        <MenuItemLabel size="sm">Block Domain</MenuItemLabel>
+      </MenuItem>
     </Menu>
   )
 
@@ -166,13 +170,13 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
                   '@md': { display: 'flex' }
                 }}
                 variant="link"
+                {...triggerProps}
                 onPress={() =>
                   handleClickDomain(
                     item.Type === 'BLOCKED' ? 'permit' : 'block',
                     item.FirstName
                   )
                 }
-                {...triggerProps}
               >
                 <ButtonIcon as={SlashIcon} color="$red700" />
               </Button>

@@ -1,12 +1,19 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
-import { deviceAPI } from 'api/Device'
-
-import Icon from 'FontAwesomeUtils'
-import { faCaretDown, faCaretUp } from '@fortawesome/free-solid-svg-icons'
-
-import { IconButton, Input, Menu } from 'native-base'
+import {
+  Button,
+  ButtonIcon,
+  Icon,
+  Input,
+  InputField,
+  InputSlot,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  Menu,
+  MenuItem,
+  MenuItemLabel
+} from '@gluestack-ui/themed'
 
 const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
   const [groups, setGroups] = useState([])
@@ -41,7 +48,7 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
 
   let closeOnSelect = !isMultiple
 
-  return (
+  /*return (
     <Menu w={200} maxH={360} closeOnSelect={closeOnSelect} trigger={trigger}>
       {groups.map((group) => (
         <Menu.OptionGroup
@@ -58,6 +65,22 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
           ))}
         </Menu.OptionGroup>
       ))}
+    </Menu>
+  )*/
+
+  return (
+    <Menu
+      trigger={trigger}
+      selectionMode="single"
+      onSelectionChange={(e) => handleChange(e.currentKey)}
+    >
+      {groups.map((group) => {
+        return group.options?.map((item, idx) => (
+          <MenuItem key={item.value} textValue={item.value}>
+            <MenuItemLabel size="sm">{item.label}</MenuItemLabel>
+          </MenuItem>
+        ))
+      })}
     </Menu>
   )
 }
@@ -104,15 +127,17 @@ const InputSelect = (props) => {
 
   let trigger = (triggerProps) => {
     return (
-      <IconButton
+      <Button
         size="xs"
-        rounded="none"
-        w="12"
-        h="full"
+        w="$12"
+        h="$full"
+        variant="link"
+        rounded="$none"
         onPress={() => setIsOpen(!isOpen)}
-        icon={<Icon icon={isOpen ? faCaretUp : faCaretDown} />}
         {...triggerProps}
-      />
+      >
+        <ButtonIcon as={isOpen ? ChevronUpIcon : ChevronDownIcon} />
+      </Button>
     )
   }
 
@@ -155,16 +180,15 @@ const InputSelect = (props) => {
 
   return (
     <>
-      <Input
-        size="md"
-        variant="underlined"
-        isDisabled={isDisabled}
-        placeholder={title || ''}
-        value={displayValue(value)}
-        onChangeText={handleChangeText}
-        onSubmitEditing={onSubmitEditing}
-        InputRightElement={elem}
-      />
+      <Input size="md" isDisabled={isDisabled}>
+        <InputField
+          placeholder={title || ''}
+          value={displayValue(value)}
+          onChangeText={handleChangeText}
+          onSubmitEditing={onSubmitEditing}
+        />
+        <InputSlot>{elem}</InputSlot>
+      </Input>
     </>
   )
 }

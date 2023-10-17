@@ -33,10 +33,12 @@ import {
   TooltipText,
   ButtonIcon,
   ThreeDotsIcon,
-  ArrowLeftIcon
+  ArrowLeftIcon,
+  Menu,
+  MenuItem,
+  MenuItemLabel,
+  AddIcon
 } from '@gluestack-ui/themed'
-
-import { Menu } from 'components/Menu'
 
 import { Address4 } from 'ip-address'
 
@@ -275,59 +277,102 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     }
   }
 
-  const trigger = (triggerProps) => (
-    <Button action="primary" variant="link" {...triggerProps} mx="$2">
-      <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
-    </Button>
-  )
+  const moreMenuGroups = (
+    <Menu
+      trigger={(triggerProps) => (
+        <Button
+          action="secondary"
+          variant="outline"
+          size="xs"
+          {...triggerProps}
+        >
+          <ButtonText>Edit Groups</ButtonText>
+          <ButtonIcon as={AddIcon} ml="$2" />
+        </Button>
+      )}
+      selectionMode="multiple"
+      selectedKeys={[...groups, ...tags]}
+      onSelectionChange={(e) => {
+        let key = e.currentKey
+        if (key == 'newGroup') {
+          setModalType('Group')
+          setShowModal(true)
+        } else {
+          let [action, group] = key.split(':')
+          let ngroups = []
+          if (action == 'delete') {
+            ngroups = groups.filter((t) => t != group)
+          } else {
+            ngroups = [...new Set([...groups, group])]
+          }
 
-  const moreMenu = (
-    <Menu w={190} closeOnSelect={true} trigger={trigger}>
-      <Menu.OptionGroup
-        title="Groups"
-        type="checkbox"
-        defaultValue={groups}
-        onChange={handleGroups}
-      >
-        {[...new Set(defaultGroups.concat(groups))].map((group) => (
-          <Menu.ItemOption key={group} value={group}>
-            {group}
-          </Menu.ItemOption>
-        ))}
-        <Menu.ItemOption
-          key="newGroup"
-          onPress={() => {
-            setModalType('Group')
-            setShowModal(true)
-          }}
+          handleGroups(ngroups)
+        }
+      }}
+    >
+      {[...new Set(defaultGroups.concat(groups))].map((group) => (
+        <MenuItem
+          key={groups.includes(group) ? `delete:${group}` : `add:${group}`}
+          value={group}
         >
-          New Group...
-        </Menu.ItemOption>
-      </Menu.OptionGroup>
-      <Menu.OptionGroup
-        title="Tags"
-        type="checkbox"
-        defaultValue={tags}
-        onChange={handleTags}
-      >
-        {[...new Set(defaultTags.concat(tags))].map((tag) => (
-          <Menu.ItemOption key={tag} value={tag}>
-            {tag}
-          </Menu.ItemOption>
-        ))}
-        <Menu.ItemOption
-          key="newTag"
-          onPress={() => {
-            setModalType('Tag')
-            setShowModal(true)
-          }}
-        >
-          New Tag...
-        </Menu.ItemOption>
-      </Menu.OptionGroup>
+          <MenuItemLabel size="sm">{group}</MenuItemLabel>
+        </MenuItem>
+      ))}
+
+      <MenuItem key="newGroup" textValue="newGroup">
+        <MenuItemLabel size="sm">New Group...</MenuItemLabel>
+      </MenuItem>
     </Menu>
   )
 
+  const moreMenuTags = (
+    <Menu
+      trigger={(triggerProps) => (
+        <Button
+          action="secondary"
+          variant="outline"
+          size="xs"
+          {...triggerProps}
+        >
+          <ButtonText>Edit Tags</ButtonText>
+          <ButtonIcon as={AddIcon} ml="$1" />
+        </Button>
+      )}
+      selectionMode="multiple"
+      selectedKeys={[...tags]}
+      onSelectionChange={(e) => {
+        //return alert(JSON.stringify(e))
+        let key = e.currentKey
+        if (key == 'newTag') {
+          setModalType('Tag')
+          setShowModal(true)
+        } else {
+          let [action, tag] = key.split(':')
+          let ntags = []
+          if (action == 'delete') {
+            ntags = tags.filter((t) => t != tag)
+          } else {
+            ntags = [...new Set([...tags, tag])]
+          }
+
+          handleTags(ntags)
+        }
+      }}
+    >
+      {[...new Set(defaultTags.concat(tags))].map((tag) => (
+        <MenuItem
+          key={tags.includes(tag) ? `delete:${tag}` : `add:${tag}`}
+          value={tag}
+        >
+          <MenuItemLabel size="sm">{tag}</MenuItemLabel>
+        </MenuItem>
+      ))}
+
+      <MenuItem key="newTag" textValue="newTag">
+        <MenuItemLabel size="sm">New Tag...</MenuItemLabel>
+      </MenuItem>
+    </Menu>
+  )
   return (
     <ScrollView
       space="md"
@@ -442,20 +487,36 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
 
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Groups and Tags</FormControlLabelText>
+            <FormControlLabelText>Groups</FormControlLabelText>
           </FormControlLabel>
           <HStack flexWrap="wrap" w="$full" space="md">
             <HStack space="md" flexWrap="wrap" alignItems="center">
               {groups.map((group) => (
-                <GroupItem key={group} name={group} />
+                <GroupItem key={group} name={group} size="md" />
               ))}
             </HStack>
-            <HStack space="md" flexWrap="wrap" alignItems="center">
+
+            {moreMenuGroups}
+          </HStack>
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Tags</FormControlLabelText>
+          </FormControlLabel>
+
+          <HStack flexWrap="wrap" w="$full" space="md">
+            <HStack
+              space="md"
+              flexWrap="wrap"
+              alignItems="center"
+              display={tags?.length ? 'flex' : 'none'}
+            >
               {tags.map((tag) => (
-                <TagItem key={tag} name={tag} />
+                <TagItem key={tag} name={tag} size="md" />
               ))}
             </HStack>
-            <HStack mr="auto">{moreMenu}</HStack>
+            {moreMenuTags}
           </HStack>
         </FormControl>
 

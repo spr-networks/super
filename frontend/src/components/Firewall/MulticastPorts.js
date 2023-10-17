@@ -4,6 +4,7 @@ import { AppContext, alertState } from 'AppContext'
 
 import {
   Badge,
+  BadgeIcon,
   BadgeText,
   Button,
   ButtonIcon,
@@ -13,20 +14,21 @@ import {
   HStack,
   VStack,
   Text,
+  Menu,
+  MenuItem,
+  MenuItemLabel,
   AddIcon,
   CloseIcon
 } from '@gluestack-ui/themed'
 
 import { TagIcon } from 'lucide-react-native'
 
-import { firewallAPI, deviceAPI } from 'api'
+import { firewallAPI } from 'api'
 import { Multicast } from 'api/Multicast'
 
 import ModalForm from 'components/ModalForm'
 import ModalConfirm from 'components/ModalConfirm'
 import AddMulticastPort from './AddMulticastPort'
-
-import { Menu } from 'components/Menu'
 
 import { ListHeader, ListItem } from 'components/List'
 
@@ -204,7 +206,7 @@ const MulticastPorts = (props) => {
         data={list}
         renderItem={({ item }) => (
           <ListItem>
-            <Text>{item.Address}</Text>
+            <Text flex="1">{item.Address}</Text>
 
             <HStack>
               {item.Tags
@@ -215,39 +217,43 @@ const MulticastPorts = (props) => {
                       variant="outline"
                     >
                       <BadgeText>{entry}</BadgeText>
+                      <BadgeIcon as={TagIcon} ml="$1" />
                     </Badge>
                   ))
                 : null}
             </HStack>
 
             <HStack ml="auto" space="xl">
-              <Menu trigger={trigger}>
-                <Menu.OptionGroup
-                  title="Tags"
-                  type="checkbox"
-                  defaultValue={item.Tags ? item.Tags : []}
-                  onChange={(value) => handleTags(item, value)}
-                >
-                  {[
-                    ...new Set(defaultTags.concat(item.Tags ? item.Tags : []))
-                  ].map((tag) => (
-                    <Menu.ItemOption key={tag} value={tag}>
-                      {tag} x
-                    </Menu.ItemOption>
-                  ))}
-                  <Menu.ItemOption
-                    key="newTag"
-                    onPress={() => {
-                      setState({
-                        showModal: true,
-                        modalType: 'Tag',
-                        pendingItem: item
-                      })
-                    }}
-                  >
-                    New Tag...
-                  </Menu.ItemOption>
-                </Menu.OptionGroup>
+              <Menu
+                trigger={trigger}
+                selectionMode="single"
+                onSelectionChange={(e) => {
+                  let key = e.currentKey
+                  if (key == 'newTag') {
+                    setState({
+                      showModal: true,
+                      modalType: 'Tag',
+                      pendingItem: item
+                    })
+                  } else {
+                    // its a tag
+                    let tags = item.Tags.filter((t) => t != key)
+                    handleTags(item, tags)
+                  }
+                }}
+              >
+                {[
+                  ...new Set(defaultTags.concat(item.Tags ? item.Tags : []))
+                ].map((tag) => (
+                  <MenuItem key={tag} value={tag}>
+                    <CloseIcon mr="$2" />
+                    <MenuItemLabel size="sm">{tag}</MenuItemLabel>
+                  </MenuItem>
+                ))}
+                <MenuItem key="newTag" textValue="newTag">
+                  <Icon as={TagIcon} mr="$2" />
+                  <MenuItemLabel size="sm">New Tag...</MenuItemLabel>
+                </MenuItem>
               </Menu>
 
               <Button

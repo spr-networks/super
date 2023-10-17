@@ -28,6 +28,9 @@ import {
   VStack,
   Text,
   ScrollView,
+  Menu,
+  MenuItem,
+  MenuItemLabel,
   AddIcon,
   ThreeDotsIcon,
   TrashIcon,
@@ -35,8 +38,6 @@ import {
   CloseIcon,
   CopyIcon
 } from '@gluestack-ui/themed'
-
-import { Menu } from 'components/Menu'
 
 import { dateArrayToStr } from './Utils'
 import { PencilIcon, ToggleLeftIcon } from 'lucide-react-native'
@@ -200,41 +201,45 @@ const Flow = ({ flow, edit, ...props }) => {
     const moreMenu = (
       <Menu
         flex={1}
-        w={190}
         closeOnSelect={true}
         trigger={triggerBtn}
-        alignSelf="center"
+        selectionMode="single"
+        onSelectionChange={(e) => {
+          let key = e.currentKey
+          if (key == 'disable') {
+            onDisable()
+          } else if (key == 'edit') {
+            onEdit()
+          } else if (key == 'duplicate') {
+            onDuplicate()
+          } else if (key == 'delete') {
+            onDelete()
+          }
+        }}
       >
-        <Menu.Group title="Actions">
-          <Menu.Item onPress={onDisable}>
-            <HStack space="md" alignItems="center">
-              <Icon
-                as={flow.disabled ? ToggleRightIcon : ToggleLeftIcon}
-                color="$muted500"
-              />
-              <Text>{flow.disabled ? 'Enable' : 'Disable'}</Text>
-            </HStack>
-          </Menu.Item>
-          <Menu.Item onPress={onEdit}>
-            <HStack space="md" alignItems="center">
-              <Icon as={PencilIcon} color="$muted500" />
-              <Text>Edit</Text>
-            </HStack>
-          </Menu.Item>
-          <Menu.Item onPress={onDuplicate}>
-            <HStack space="md" alignItems="center">
-              <CopyIcon color="$muted500" />
-              <Text>Duplicate</Text>
-            </HStack>
-          </Menu.Item>
+        <MenuItem key="disable">
+          <Icon
+            as={flow.disabled ? ToggleRightIcon : ToggleLeftIcon}
+            color="$muted500"
+            mr="$2"
+          />
+          <MenuItemLabel size="sm">
+            {flow.disabled ? 'Enable' : 'Disable'}
+          </MenuItemLabel>
+        </MenuItem>
+        <MenuItem key="edit">
+          <Icon as={PencilIcon} color="$muted500" mr="$2" />
+          <MenuItemLabel size="sm">Edit</MenuItemLabel>
+        </MenuItem>
+        <MenuItem key="duplicate">
+          <CopyIcon color="$muted500" mr="$2" />
+          <MenuItemLabel size="sm">Duplicate</MenuItemLabel>
+        </MenuItem>
 
-          <Menu.Item onPress={onDelete}>
-            <HStack space="md" alignItems="center">
-              <TrashIcon color="$red700" />
-              <Text color="$red700">Delete</Text>
-            </HStack>
-          </Menu.Item>
-        </Menu.Group>
+        <MenuItem key="delete">
+          <TrashIcon color="$red700" mr="$2" />
+          <MenuItemLabel color="$red700">Delete</MenuItemLabel>
+        </MenuItem>
       </Menu>
     )
 

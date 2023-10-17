@@ -7,7 +7,7 @@ import { deviceAPI } from 'api/Device'
 import ModalConfirm from 'components/ModalConfirm'
 import { prettyDate } from 'utils'
 
-import Icon from 'FontAwesomeUtils'
+import { Icon as IconFA } from 'FontAwesomeUtils'
 import { faCircleNodes, faPen, faWifi } from '@fortawesome/free-solid-svg-icons'
 
 import {
@@ -17,6 +17,7 @@ import {
   Button,
   ButtonIcon,
   Box,
+  Icon,
   Input,
   InputField,
   HStack,
@@ -25,18 +26,20 @@ import {
   Tooltip,
   TooltipContent,
   TooltipText,
+  Menu,
+  MenuItem,
+  MenuItemLabel,
   useColorMode,
   CopyIcon,
   TrashIcon,
   ThreeDotsIcon
 } from '@gluestack-ui/themed'
 
-import { Menu } from 'components/Menu'
-
 import { Address4 } from 'ip-address'
 
 import { TagItem, GroupItem } from 'components/TagItem'
 import IconItem from 'components/IconItem'
+import { PencilIcon } from 'lucide-react-native'
 
 const DeviceIcon = ({ icon, color, isConnected, ...props }) => {
   let _color = color ? `$${color}400` : '$blueGray400'
@@ -253,36 +256,39 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   )
 
   const moreMenu = (
-    <Menu w={190} closeOnSelect={true} trigger={trigger}>
-      <Menu.Group title="Actions">
-        <Menu.Item
-          onPress={() =>
-            navigate(
-              `/admin/devices/${
-                device.MAC || encodeURIComponent(device.WGPubKey)
-              }`
-            )
-          }
-        >
-          <HStack space="md" alignItems="center">
-            <Icon icon={faPen} color="$muted500" />
-            <Text>Edit</Text>
-          </HStack>
-        </Menu.Item>
+    <Menu
+      trigger={trigger}
+      selectionMode="single"
+      onSelectionChange={(e) => {
+        let key = e.currentKey
+        if (key == 'edit') {
+          navigate(
+            `/admin/devices/${
+              device.MAC || encodeURIComponent(device.WGPubKey)
+            }`
+          )
+        } else if (key == 'duplicate') {
+          duplicateDevice()
+        } else if (key == 'delete') {
+          removeDevice()
+        }
+      }}
+    >
+      <MenuItem key="edit">
+        <Icon as={PencilIcon} color="$muted500" mr="$2" />
+        <MenuItemLabel size="sm">Edit</MenuItemLabel>
+      </MenuItem>
 
-        <Menu.Item onPress={duplicateDevice}>
-          <HStack space="md" alignItems="center">
-            <CopyIcon color="$muted500" />
-            <Text>Duplicate</Text>
-          </HStack>
-        </Menu.Item>
-        <Menu.Item onPress={removeDevice}>
-          <HStack space="md" alignItems="center">
-            <TrashIcon color="$red700" />
-            <Text color="$red700">Delete</Text>
-          </HStack>
-        </Menu.Item>
-      </Menu.Group>
+      <MenuItem key="duplicate">
+        <CopyIcon color="$muted500" mr="$2" />
+        <MenuItemLabel size="sm">Duplicate</MenuItemLabel>
+      </MenuItem>
+      <MenuItem key="delete">
+        <TrashIcon color="$red700" mr="$2" />
+        <MenuItemLabel size="sm" color="$red700">
+          Delete
+        </MenuItemLabel>
+      </MenuItem>
     </Menu>
   )
 
@@ -419,7 +425,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
               ) : (
                 <HStack space="md" alignItems="center">
                   <Box sx={{ '@md': { display: 'none' } }}>
-                    <Icon
+                    <IconFA
                       icon={device.MAC ? faWifi : faCircleNodes}
                       size={3}
                       color={

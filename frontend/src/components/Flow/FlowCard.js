@@ -18,10 +18,11 @@ import {
   TooltipText,
   ThreeDotsIcon,
   InfoIcon,
-  TrashIcon
+  TrashIcon,
+  Menu,
+  MenuItem,
+  MenuItemLabel
 } from '@gluestack-ui/themed'
-
-import { Menu } from 'components/Menu'
 
 import { getCard } from './FlowCards'
 import Token from './Token'
@@ -166,14 +167,22 @@ const FlowCard = ({ card, size, edit, ...props }) => {
   }
 
   const moreMenu = (
-    <Menu w={190} p={0} closeOnSelect={true} trigger={trigger}>
-      {/*<Menu.Item>Edit</Menu.Item>*/}
-      <Menu.Item onPress={onDelete}>
-        <HStack space="md" alignItems="center">
-          <TrashIcon color="$red700" />
-          <Text color="$red700">Delete</Text>
-        </HStack>
-      </Menu.Item>
+    <Menu
+      trigger={trigger}
+      selectionMode="single"
+      onSelectionChange={(e) => {
+        let key = e.currentKey
+        if (key == 'delete') {
+          onDelete()
+        }
+      }}
+    >
+      <MenuItem key="delete" textValue="delete">
+        <TrashIcon color="$red700" ml="$2" />
+        <MenuItemLabel size="sm" color="$red700">
+          Delete
+        </MenuItemLabel>
+      </MenuItem>
     </Menu>
   )
 
