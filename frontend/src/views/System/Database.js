@@ -1,10 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Icon } from 'FontAwesomeUtils'
-import {
-  faDatabase,
-  faInfoCircle,
-  faPencil
-} from '@fortawesome/free-solid-svg-icons'
+import { faDatabase, faPencil } from '@fortawesome/free-solid-svg-icons'
+
 import {
   Button,
   ButtonIcon,
@@ -24,7 +21,8 @@ import {
   useColorMode,
   ButtonGroup,
   TooltipContent,
-  TooltipText
+  TooltipText,
+  InfoIcon
 } from '@gluestack-ui/themed'
 
 import { dbAPI } from 'api'
@@ -130,10 +128,12 @@ const EditSizeForm = ({ config, onSubmit, ...props }) => {
         </FormControlHelperText>
       </FormControl>
       <VStack flex={1} space="sm">
-        <Heading size="md" mb="$4">
-          <Icon icon={faInfoCircle} color="$muted500" mr="$2" />
-          Notice about size
-        </Heading>
+        <HStack space="sm">
+          <InfoIcon color="$muted500" />
+          <Heading size="xs" mb="$4">
+            Notice about size
+          </Heading>
+        </HStack>
         <Text>
           Older entries will be removed to keep the file size to around what is
           specified.

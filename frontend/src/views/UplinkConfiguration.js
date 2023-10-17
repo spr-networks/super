@@ -12,10 +12,19 @@ import {
   Button,
   ButtonText,
   Input,
+  InputField,
   FlatList,
   FormControl,
   FormControlLabel,
   FormControlLabelText,
+  Heading,
+  Icon,
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalContent,
+  ModalCloseButton,
+  ModalHeader,
   Text,
   VStack,
   View,
@@ -23,12 +32,12 @@ import {
   CheckboxIcon,
   CheckboxIndicator,
   CheckboxLabel,
-  InputField,
+  CloseIcon,
   ButtonIcon,
   ThreeDotsIcon
 } from '@gluestack-ui/themed'
 
-import { Menu, Modal, useDisclose } from 'native-base' //TODONB
+import { Menu } from 'components/Menu'
 
 import { wifiAPI, api } from 'api'
 import { AlertContext } from 'AppContext'
@@ -36,8 +45,7 @@ import { AlertContext } from 'AppContext'
 import { Select } from 'components/Select'
 import InputSelect from 'components/InputSelect'
 import { Address4 } from 'ip-address'
-import { ListItem } from 'components/List'
-import { ListHeader } from 'components/List'
+import { ListHeader, ListItem } from 'components/List'
 
 let keymgmts = [
   { value: 'WPA-PSK WPA-PSK-SHA256 SAE', label: 'WPA2/WPA3' },
@@ -158,6 +166,7 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
           onChangeText={handleChangeSSID}
         />
       </FormControl>
+
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText>BSSID</FormControlLabelText>
@@ -200,16 +209,17 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
         <FormControlLabel>
           <FormControlLabelText>Password</FormControlLabelText>
         </FormControlLabel>
-        <Input
-          variant="underlined"
-          type="password"
-          autoComplete="off"
-          autoCorrect="off"
-          placeholder="Password..."
-          value={item.Password}
-          onChangeText={(Password) => setItem({ ...item, Password })}
-          autoFocus
-        />
+        <Input variant="underlined">
+          <InputField
+            type="password"
+            autoComplete="off"
+            autoCorrect="off"
+            placeholder="Password..."
+            value={item.Password}
+            onChangeText={(Password) => setItem({ ...item, Password })}
+            autoFocus
+          />
+        </Input>
       </FormControl>
 
       {/*
@@ -247,7 +257,6 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
           <CheckboxLabel>Enabled</CheckboxLabel>
         </Checkbox>
       </FormControl>
-
       <Button action="primary" onPress={() => doSubmit(item)}>
         <ButtonText>Save</ButtonText>
       </Button>
@@ -552,6 +561,7 @@ const UplinkInfo = (props) => {
 
   const [iface, setIface] = useState(null)
 
+  const [showModal, setShowModal] = useState(false)
   const [modal, setModal] = useState('')
 
   const [supernets, setSupernets] = useState([])
@@ -651,8 +661,6 @@ const UplinkInfo = (props) => {
     setLinks(links)
   }
 
-  const { isOpen, onOpen, onClose } = useDisclose()
-
   const trigger = (triggerProps) => (
     <Button action="secondary" variant="link" ml="auto" {...triggerProps}>
       <ButtonIcon as={ThreeDotsIcon} />
@@ -682,7 +690,7 @@ const UplinkInfo = (props) => {
         onPress={() => {
           setIface(iface)
           setModal('config')
-          onOpen()
+          setShowModal(true)
         }}
       >
         Modify Interface
@@ -691,7 +699,7 @@ const UplinkInfo = (props) => {
         onPress={() => {
           setIface(iface)
           setModal('ip')
-          onOpen()
+          setShowModal(true)
         }}
       >
         Modify IP Settings
@@ -700,7 +708,7 @@ const UplinkInfo = (props) => {
         onPress={() => {
           setIface(iface)
           setModal('wifi')
-          onOpen()
+          setShowModal(true)
         }}
       >
         Configure Wireless
@@ -709,7 +717,7 @@ const UplinkInfo = (props) => {
         onPress={() => {
           setIface(iface)
           setModal('ppp')
-          onOpen()
+          setShowModal(true)
         }}
       >
         Configure PPP
@@ -742,11 +750,11 @@ const UplinkInfo = (props) => {
       .put(path, new_entry)
       .then((res2) => {
         fetchInfo()
-        onClose()
+        setShowModal(false)
       })
       .catch((err) => {
         context.error(err)
-        onClose()
+        setShowModal(false)
       })
   }
 
@@ -803,13 +811,23 @@ const UplinkInfo = (props) => {
           )}
         />
 
-        <Modal isOpen={isOpen} onClose={onClose}>
-          <Modal.Content>
-            <Modal.CloseButton />
-            <Modal.Header fontSize="4xl" fontWeight="bold">
-              {iface ? `Configure ${iface}` : 'Configure interface'}
-            </Modal.Header>
-            <Modal.Body>
+        <Modal
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false)
+          }}
+        >
+          <ModalBackdrop />
+          <ModalContent>
+            <ModalHeader>
+              <Heading size="sm">
+                {iface ? `Configure ${iface}` : 'Configure interface'}
+              </Heading>
+              <ModalCloseButton>
+                <Icon as={CloseIcon} />
+              </ModalCloseButton>
+            </ModalHeader>
+            <ModalBody pb="$6">
               {iface && modal == 'wifi' ? (
                 <UplinkAddWifi iface={iface} onSubmit={onSubmit} />
               ) : null}
@@ -822,8 +840,8 @@ const UplinkInfo = (props) => {
               {iface && modal == 'ppp' ? (
                 <UplinkAddPPP iface={iface} onSubmit={onSubmit} />
               ) : null}
-            </Modal.Body>
-          </Modal.Content>
+            </ModalBody>
+          </ModalContent>
         </Modal>
       </VStack>
     </View>

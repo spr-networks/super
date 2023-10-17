@@ -8,10 +8,16 @@ import {
   Text,
   VStack,
   ScrollView,
-  useColorMode
+  useColorMode,
+  Icon,
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalContent,
+  ModalCloseButton,
+  ModalHeader,
+  CloseIcon
 } from '@gluestack-ui/themed'
-
-import { Modal, useDisclose } from 'native-base' //TODONB
 
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
@@ -28,6 +34,7 @@ const SystemInfo = (props) => {
   const [uptime, setUptime] = useState({})
   const [hostname, setHostname] = useState('')
   const [version, setVersion] = useState('')
+  const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
     const fetchInfo = () => {
@@ -57,18 +64,20 @@ const SystemInfo = (props) => {
 
   const niceKey = (key) => ucFirst(key.replace(/_/, ' ').replace(/m$/, ' min'))
 
-  const { isOpen, onOpen, onClose } = useDisclose()
-
   const [modalTitle, setModalTitle] = useState('Container')
   const [modalBody, setModalBody] = useState('')
   const refModal = useRef(null)
 
-  const showModal = (title, content) => {
+  const onShowModal = (title, content) => {
     setModalTitle(title)
     setModalBody(content)
-    onOpen()
+    setShowModal(true)
 
-    return onClose
+    return showModal
+  }
+
+  const onClose = () => {
+    setShowModal(false)
   }
 
   const colorMode = useColorMode()
@@ -175,26 +184,25 @@ const SystemInfo = (props) => {
           </Box>
         </Box>
 
-        <Database showModal={showModal} closeModal={onClose} />
+        <Database showModal={onShowModal} closeModal={onClose} />
 
         <ReleaseInfo />
 
         <ConfigsBackup />
 
-        <DockerInfo showModal={showModal} />
+        <DockerInfo showModal={onShowModal} />
 
-        <Modal
-          ref={refModal}
-          isOpen={isOpen}
-          onClose={onClose}
-          animationPreset="slide"
-        >
-          <Modal.Content maxWidth={{ base: '100%', md: '90%' }}>
-            <Modal.CloseButton />
-            <Modal.Header>{modalTitle}</Modal.Header>
-            <Modal.Body>{modalBody}</Modal.Body>
-            {/*<Modal.Footer />*/}
-          </Modal.Content>
+        <Modal isOpen={showModal} onClose={onClose}>
+          <ModalBackdrop />
+          <ModalContent>
+            <ModalHeader>
+              <Heading size="sm">{modalTitle}</Heading>
+              <ModalCloseButton>
+                <Icon as={CloseIcon} />
+              </ModalCloseButton>
+            </ModalHeader>
+            <ModalBody pb="$6">{modalBody}</ModalBody>
+          </ModalContent>
         </Modal>
       </VStack>
     </ScrollView>

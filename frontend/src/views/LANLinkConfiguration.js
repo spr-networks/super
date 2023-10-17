@@ -15,18 +15,24 @@ import {
   CheckboxIcon,
   CheckboxIndicator,
   CheckboxLabel,
-  HStack,
   FlatList,
   FormControl,
   FormControlLabel,
   FormControlLabelText,
+  Heading,
+  Icon,
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalContent,
+  ModalCloseButton,
+  ModalHeader,
   Text,
   VStack,
   ScrollView,
+  CloseIcon,
   ThreeDotsIcon
 } from '@gluestack-ui/themed'
-
-import { Modal, useDisclose } from 'native-base' //TODONB
 
 import { wifiAPI, api } from 'api'
 import { AlertContext } from 'AppContext'
@@ -42,8 +48,6 @@ const LANLinkSetConfig = ({ iface, onSubmit, ...props }) => {
   const [item, setItem] = useState({
     Type: 'Downlink'
   })
-
-  const [errors, setErrors] = useState({})
 
   const [enable, setEnable] = useState(true)
 
@@ -116,7 +120,9 @@ const LANLinkInfo = (props) => {
 
   const [iface, setIface] = useState(null)
 
+  const [showModal, setShowModal] = useState(false)
   const [modal, setModal] = useState('')
+
   const [supernets, setSupernets] = useState([])
 
   function isLocalIpAddress(ipAddress) {
@@ -220,8 +226,6 @@ const LANLinkInfo = (props) => {
     setLinks(links)
   }
 
-  const { isOpen, onOpen, onClose } = useDisclose()
-
   const trigger = (triggerProps) => (
     <Button variant="link" ml="auto" {...triggerProps}>
       <ThreeDotsIcon />
@@ -252,7 +256,7 @@ const LANLinkInfo = (props) => {
       onPress={() => {
         setIface(iface)
         setModal('config')
-        onOpen()
+        setShowModal(true)
       }}
     >
       <ThreeDotsIcon />
@@ -366,18 +370,28 @@ const LANLinkInfo = (props) => {
         )}
       />
 
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <Modal.Content>
-          <Modal.CloseButton />
-          <Modal.Header fontSize="4xl" fontWeight="bold">
-            {iface ? `Configure ${iface}` : 'Configure interface'}
-          </Modal.Header>
-          <Modal.Body>
+      <Modal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false)
+        }}
+      >
+        <ModalBackdrop />
+        <ModalContent>
+          <ModalHeader>
+            <Heading size="sm">
+              {iface ? `Configure ${iface}` : 'Configure interface'}
+            </Heading>
+            <ModalCloseButton>
+              <Icon as={CloseIcon} />
+            </ModalCloseButton>
+          </ModalHeader>
+          <ModalBody>
             {iface && modal == 'config' ? (
               <LANLinkSetConfig iface={iface} onSubmit={onSubmit} />
             ) : null}
-          </Modal.Body>
-        </Modal.Content>
+          </ModalBody>
+        </ModalContent>
       </Modal>
     </ScrollView>
   )

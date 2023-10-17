@@ -7,6 +7,9 @@ import {
   Box,
   HStack,
   Icon,
+  /*Menu,
+  MenuItem,
+  MenuItemLabel,*/
   View,
   VStack,
   Text,
@@ -14,7 +17,7 @@ import {
   ThreeDotsIcon
 } from '@gluestack-ui/themed'
 
-import { Menu } from 'native-base' //TODONB
+import { Menu } from 'components/Menu'
 
 import { FlashList } from '@shopify/flash-list'
 
@@ -38,30 +41,17 @@ const NotificationItem = ({ item, index, onDelete, onToggle, ...props }) => {
   )
 
   const moreMenu = (
-    <Menu w={190} closeOnSelect={true} trigger={trigger}>
-      <Menu.Group title="Actions">
-        <Menu.Item onPress={() => onDelete(index)}>
-          <HStack space="md" alignItems="center">
-            <TrashIcon color="$red700" />
-            <Text color="$red700">Delete</Text>
-          </HStack>
-        </Menu.Item>
-        <Menu.Item onPress={() => onToggle(index, item)}>
-          <HStack space="md" alignItems="center">
-            {item.Notification ? (
-              <>
-                <Icon as={BellOffIcon} />
-                <Text>Disable</Text>
-              </>
-            ) : (
-              <>
-                <Icon as={BellIcon} />
-                <Text>Enable</Text>
-              </>
-            )}
-          </HStack>
-        </Menu.Item>
-      </Menu.Group>
+    <Menu closeOnSelect={true} trigger={trigger}>
+      <Menu.Item key="delete" onPress={() => onDelete(index)}>
+        <TrashIcon color="$red700" />
+        <Text size="sm" color="$red700">
+          Delete
+        </Text>
+      </Menu.Item>
+      <Menu.Item key="onoff" onPress={() => onToggle(index, item)}>
+        <Icon as={item.Notification ? BellIcon : BellOffIcon} />
+        <Text size="sm">{item.Notification ? 'Disable' : 'Enable'}</Text>
+      </Menu.Item>
     </Menu>
   )
 

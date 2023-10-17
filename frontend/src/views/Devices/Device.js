@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useParams } from 'react-router-dom'
-import { Box, View, Text, useColorModeValue } from 'native-base'
+import { Box } from '@gluestack-ui/themed'
 import EditDevice from 'components/Devices/EditDevice'
 import { AlertContext } from 'layouts/Admin'
 
@@ -39,9 +39,20 @@ const DeviceView = () => {
         }
       }
 
-      setGroups([...new Set(Object.values(devs).map((device) => device.Groups).flat())])
-      setTags([...new Set(Object.values(devs).map((device) => device.DeviceTags).flat())])
-
+      setGroups([
+        ...new Set(
+          Object.values(devs)
+            .map((device) => device.Groups)
+            .flat()
+        )
+      ])
+      setTags([
+        ...new Set(
+          Object.values(devs)
+            .map((device) => device.DeviceTags)
+            .flat()
+        )
+      ])
     })
   }, [])
 
@@ -57,8 +68,11 @@ const DeviceView = () => {
 
   return (
     <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      p={4}
+      bg="$backgroundCardLight"
+      sx={{
+        _dark: { bg: '$backgroundCardDark' }
+      }}
+      p="$4"
       h={'100%'}
       {...swipeHandlers}
     >

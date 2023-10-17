@@ -24,7 +24,7 @@ import {
   ArrowRightIcon
 } from '@gluestack-ui/themed'
 
-import { Menu } from 'native-base' //TODONB
+import { Menu } from 'components/Menu'
 
 import { ListHeader, ListItem } from 'components/List'
 
