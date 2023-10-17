@@ -23,8 +23,6 @@ import {
   CheckIcon
 } from '@gluestack-ui/themed'
 
-import { Tooltip } from 'native-base' //TODONB
-
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
@@ -377,28 +375,24 @@ const ReleaseInfo = ({ showModal, ...props }) => {
             '@md': { flexDirection: 'row', gap: 'md', alignItems: 'center' }
           }}
         >
-          <Tooltip label={'Check for new updates'}>
-            <Button size="sm" onPress={checkUpdate}>
-              <ButtonText>Check</ButtonText>
-              <ButtonIcon as={RefreshCcwIcon} ml="$1" />
-            </Button>
-          </Tooltip>
-          <Tooltip label={'Run update'}>
-            <Button size="sm" onPress={runUpdate}>
-              <ButtonText>Update</ButtonText>
-              <ButtonIcon as={ArrowUpIcon} ml="$1" />
-            </Button>
-          </Tooltip>
-          <Tooltip label={'Set Custom Version'}>
-            <Button
-              action="secondary"
-              size="sm"
-              onPress={() => refModal.current()}
-            >
-              <ButtonText>Set Version</ButtonText>
-              <ButtonIcon as={SettingsIcon} ml="$1" />
-            </Button>
-          </Tooltip>
+          <Button size="sm" onPress={checkUpdate}>
+            <ButtonText>Check</ButtonText>
+            <ButtonIcon as={RefreshCcwIcon} ml="$1" />
+          </Button>
+
+          <Button size="sm" onPress={runUpdate}>
+            <ButtonText>Update</ButtonText>
+            <ButtonIcon as={ArrowUpIcon} ml="$1" />
+          </Button>
+
+          <Button
+            action="secondary"
+            size="sm"
+            onPress={() => refModal.current()}
+          >
+            <ButtonText>Set Version</ButtonText>
+            <ButtonIcon as={SettingsIcon} ml="$1" />
+          </Button>
         </ButtonGroup>
         <ModalForm title="Set Release Version" modalRef={refModal}>
           <UpdateReleaseInfo

@@ -27,8 +27,11 @@ import {
   Text,
   View,
   ScrollView,
-  ThreeDotsIcon,
+  Tooltip,
+  TooltipContent,
+  TooltipText,
   useColorMode,
+  ThreeDotsIcon,
   SlashIcon,
   TrashIcon,
   InputField,
@@ -37,7 +40,7 @@ import {
   InputSlot
 } from '@gluestack-ui/themed'
 
-import { Menu, Tooltip } from 'native-base' //TODONB
+import { Menu } from 'components/Menu'
 
 import { FlashList } from '@shopify/flash-list'
 import { FilterIcon } from 'lucide-react-native'
@@ -134,42 +137,50 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
           </Text>
         </VStack>
 
-        <Text
-          color="$muted500"
-          ml="auto"
-          size="xs"
-          sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
-        >
-          <Tooltip label={prettyDate(item.Timestamp)}>
-            {timeAgo(new Date(item.Timestamp))}
-          </Tooltip>
-        </Text>
-
-        {/*<Tooltip label="Add Domain Override" openDelay={300}>
-            <IconButton
-              variant="ghost"
-              icon={<Icon icon={faPen} color="muted.400" />}
-              onPress={() => handleClickDomain('permit', item.FirstName)}
-            ></IconButton>
-          </Tooltip>*/}
-
-        <HStack space={'md'} ml="auto">
-          <Tooltip label="Add Domain Block" openDelay={300}>
-            <Button
-              sx={{
-                '@base': { display: 'none' },
-                '@md': { display: 'flex' }
-              }}
-              variant="link"
-              onPress={() =>
-                handleClickDomain(
-                  item.Type === 'BLOCKED' ? 'permit' : 'block',
-                  item.FirstName
-                )
-              }
+        <Tooltip
+          placement="bottom"
+          trigger={(triggerProps) => (
+            <Text
+              color="$muted500"
+              ml="auto"
+              size="xs"
+              sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
+              {...triggerProps}
             >
-              <ButtonIcon as={SlashIcon} color="$red700" />
-            </Button>
+              {timeAgo(new Date(item.Timestamp))}
+            </Text>
+          )}
+        >
+          <TooltipContent>
+            <TooltipText>{prettyDate(item.Timestamp)}</TooltipText>
+          </TooltipContent>
+        </Tooltip>
+
+        <HStack space="md" ml="auto">
+          <Tooltip
+            placement="bottom"
+            trigger={(triggerProps) => (
+              <Button
+                sx={{
+                  '@base': { display: 'none' },
+                  '@md': { display: 'flex' }
+                }}
+                variant="link"
+                onPress={() =>
+                  handleClickDomain(
+                    item.Type === 'BLOCKED' ? 'permit' : 'block',
+                    item.FirstName
+                  )
+                }
+                {...triggerProps}
+              >
+                <ButtonIcon as={SlashIcon} color="$red700" />
+              </Button>
+            )}
+          >
+            <TooltipContent>
+              <TooltipText>Add Domain Block</TooltipText>
+            </TooltipContent>
           </Tooltip>
 
           {moreMenu}
@@ -447,8 +458,8 @@ const DNSLogHistoryList = (props) => {
         />
       </ModalForm>
 
-      <HStack space="md" p="$4">
-        <Heading fontSize="md">{filterIps.join(',')} DNS Log</Heading>
+      <HStack space="md" p="$4" alignItems="center">
+        <Heading size="sm">{filterIps.join(',')} DNS Log</Heading>
         {filterIps.length ? (
           <Text color="$muted500">{total} records</Text>
         ) : null}
@@ -515,7 +526,7 @@ const DNSLogHistoryList = (props) => {
               </FormControlLabelText>
             </FormControlLabel>
 
-            <Input size="sm">
+            <Input size="md">
               <InputField
                 type="text"
                 name="filterText"

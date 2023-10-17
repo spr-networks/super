@@ -1,7 +1,5 @@
-import React, { useState, useRef } from 'react'
+import React from 'react'
 import PropTypes from 'prop-types'
-import { prettySize } from 'utils'
-import { Text } from 'native-base'
 
 const TimeSeriesChart = (props) => {
   return <></>

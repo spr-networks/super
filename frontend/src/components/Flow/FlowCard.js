@@ -21,7 +21,7 @@ import {
   TrashIcon
 } from '@gluestack-ui/themed'
 
-import { Menu } from 'native-base' //TODONB
+import { Menu } from 'components/Menu'
 
 import { getCard } from './FlowCards'
 import Token from './Token'

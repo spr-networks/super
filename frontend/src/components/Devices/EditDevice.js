@@ -1,25 +1,14 @@
 import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
+import { useNavigate } from 'react-router-dom'
 import { AlertContext } from 'layouts/Admin'
 import { deviceAPI } from 'api/Device'
 import ModalConfirm from 'components/ModalConfirm'
 
-import Icon from 'FontAwesomeUtils'
 import { format as timeAgo } from 'timeago.js'
 import InputSelect from 'components/InputSelect'
 
 import {
-  faObjectGroup,
-  faEarth,
-  faCircleNodes,
-  faTag,
-  faNetworkWired
-} from '@fortawesome/free-solid-svg-icons'
-
-import {
-  Badge,
-  BadgeIcon,
-  BadgeText,
   Button,
   ButtonText,
   Checkbox,
@@ -32,9 +21,6 @@ import {
   FormControlLabelText,
   FormControlHelper,
   FormControlHelperText,
-  FormControlError,
-  FormControlErrorIcon,
-  FormControlErrorText,
   Heading,
   HStack,
   Input,
@@ -45,60 +31,18 @@ import {
   Tooltip,
   TooltipContent,
   TooltipText,
-  useColorMode,
   ButtonIcon,
-  ThreeDotsIcon
+  ThreeDotsIcon,
+  ArrowLeftIcon
 } from '@gluestack-ui/themed'
 
-import { Menu } from 'native-base' //TODONB
+import { Menu } from 'components/Menu'
 
 import { Address4 } from 'ip-address'
 
+import { TagItem, GroupItem } from 'components/TagItem'
 import ColorPicker from 'components/ColorPicker'
 import IconPicker from 'components/IconPicker'
-
-const GroupItem = React.memo(({ name }) => {
-  let groupIcons = {
-    wan: faCircleNodes,
-    dns: faEarth,
-    lan: faNetworkWired
-  }
-
-  let colorMode = useColorMode()
-
-  let groupColors = {
-    dns: colorMode == 'light' ? '$muted500' : '$blueGray700',
-    lan: colorMode == 'light' ? '$muted400' : '$blueGray600',
-    wan: colorMode == 'light' ? '$muted500' : '$blueGray700'
-  }
-
-  let icon = groupIcons[name] || faObjectGroup
-  let bg = groupColors[name] || '$muted600'
-
-  return (
-    <Badge action="muted" variant="solid" rounded="sm" size="sm">
-      <BadgeText mr="$2">{name}</BadgeText>
-      <Icon icon={icon} color="$muted500" />
-    </Badge>
-  )
-})
-
-//TODO move to TagItem
-const TagItem = React.memo(({ name }) => {
-  let tagIcons = {
-    wan: faCircleNodes,
-    dns: faEarth,
-    lan: faNetworkWired
-  }
-
-  let icon = faTag
-  return (
-    <Badge action="muted" variant="solid" rounded="sm" size="sm">
-      <BadgeText mr="$2">{name}</BadgeText>
-      <Icon icon={icon} color="$muted500" />
-    </Badge>
-  )
-})
 
 const EditDevice = ({ device, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
@@ -127,6 +71,8 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     { label: '1 Week', value: 60 * 60 * 24 * 7 },
     { label: '4 Weeks', value: 60 * 60 * 24 * 7 * 4 }
   ]
+
+  const navigate = useNavigate()
 
   useEffect(() => {
     // if not icon is set, try to match on name
@@ -386,14 +332,14 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     <ScrollView
       space="md"
       width="$full"
-      sx={{
-        '@md': { width: '$5/6' }
-      }}
       h="$full"
+      sx={{
+        '@md': { width: '$5/6', h: '90vh' }
+      }}
       pb="$8"
     >
       <VStack space="lg">
-        <Heading size="md">Edit Device</Heading>
+        <Heading size="sm">Edit Device</Heading>
 
         <FormControl>
           <FormControlLabel>
@@ -498,13 +444,13 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           <FormControlLabel>
             <FormControlLabelText>Groups and Tags</FormControlLabelText>
           </FormControlLabel>
-          <HStack flexWrap="wrap" w="full" space="md">
-            <HStack space="md" flexWrap="wrap">
+          <HStack flexWrap="wrap" w="$full" space="md">
+            <HStack space="md" flexWrap="wrap" alignItems="center">
               {groups.map((group) => (
                 <GroupItem key={group} name={group} />
               ))}
             </HStack>
-            <HStack space="md" flexWrap="wrap">
+            <HStack space="md" flexWrap="wrap" alignItems="center">
               {tags.map((tag) => (
                 <TagItem key={tag} name={tag} />
               ))}
@@ -577,6 +523,11 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
             </Checkbox>
           </FormControl>
         </VStack>
+
+        <Button action="secondary" onPress={() => navigate('/admin/devices')}>
+          <ButtonIcon as={ArrowLeftIcon} />
+          <ButtonText>Back</ButtonText>
+        </Button>
 
         <ModalConfirm
           type={modalType}

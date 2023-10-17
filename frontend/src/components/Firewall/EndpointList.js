@@ -21,13 +21,10 @@ import {
   ArrowRightIcon,
   AddIcon,
   TrashIcon
-  /*Menu,
-  MenuItem,
-  MenuItemLabel*/
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
-import { Menu } from 'native-base' //TODONB
+import { Menu } from 'components/Menu'
 import TagItem from 'components/TagItem'
 
 const EndpointList = (props) => {

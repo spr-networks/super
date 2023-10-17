@@ -1,21 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import {
-  faCirclePlus,
-  faTags,
-  faXmark
-} from '@fortawesome/free-solid-svg-icons'
 
 import { AppContext, alertState } from 'AppContext'
-
-import { firewallAPI, deviceAPI } from 'api'
-import { Multicast } from 'api/Multicast'
-
-import ModalForm from 'components/ModalForm'
-import ModalConfirm from 'components/ModalConfirm'
-import AddMulticastPort from './AddMulticastPort'
-
-import { Menu, Tooltip } from 'native-base' //TODONB
 
 import {
   Badge,
@@ -24,6 +9,7 @@ import {
   ButtonIcon,
   ButtonText,
   FlatList,
+  Icon,
   HStack,
   VStack,
   Text,
@@ -31,8 +17,18 @@ import {
   CloseIcon
 } from '@gluestack-ui/themed'
 
+import { TagIcon } from 'lucide-react-native'
+
+import { firewallAPI, deviceAPI } from 'api'
+import { Multicast } from 'api/Multicast'
+
+import ModalForm from 'components/ModalForm'
+import ModalConfirm from 'components/ModalConfirm'
+import AddMulticastPort from './AddMulticastPort'
+
+import { Menu } from 'components/Menu'
+
 import { ListHeader, ListItem } from 'components/List'
-import { ThreeDotsIcon } from '@gluestack-ui/themed'
 
 const MulticastPorts = (props) => {
   const [list, setList] = useState([])
@@ -169,16 +165,15 @@ const MulticastPorts = (props) => {
   }
 
   let trigger = (triggerProps) => {
-    return (
-      <Tooltip
+    /*<Tooltip
         label={
           'Set a tag to whitelist client interfaces that will receive this multicast service. NOTE: wired downlinks not isolated without VLANs'
         }
-      >
-        <Button variant="link" {...triggerProps}>
-          <Icon icon={faTags} color="$muted600" />
-        </Button>
-      </Tooltip>
+      ></Tooltip>*/
+    return (
+      <Button variant="link" {...triggerProps}>
+        <Icon as={TagIcon} color="$muted600" />
+      </Button>
     )
   }
 

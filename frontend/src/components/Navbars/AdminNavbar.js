@@ -3,8 +3,6 @@ import PropTypes from 'prop-types'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useNavigate } from 'react-router-dom'
 
-import { useColorMode as useColorModeNB } from 'native-base' //TODONB
-
 import {
   Button,
   ButtonIcon,
@@ -38,7 +36,7 @@ const AdminNavbar = ({
   const { isMeshNode } = useContext(AppContext)
 
   const colorMode = useColorMode()
-  const toggleColorModeNB = useColorModeNB().toggleColorMode
+  //const toggleColorModeNB = useColorModeNB().toggleColorMode
 
   const navigate = useNavigate()
   const logout = async () => {
@@ -129,7 +127,7 @@ const AdminNavbar = ({
             <Button
               onPress={() => {
                 toggleColorMode()
-                toggleColorModeNB()
+                //toggleColorModeNB()
               }}
               variant="link"
             >

@@ -36,7 +36,7 @@ import {
   CopyIcon
 } from '@gluestack-ui/themed'
 
-import { Menu } from 'native-base' //TODONB
+import { Menu } from 'components/Menu'
 
 import { dateArrayToStr } from './Utils'
 import { PencilIcon, ToggleLeftIcon } from 'lucide-react-native'
@@ -753,8 +753,8 @@ const FlowList = (props) => {
             '@md': {
               ml: 'auto',
               mr: '$4',
-              maxH: '$3/4',
-              maxW: '500px'
+              maxHeight: '$3/4',
+              maxWidth: '500px'
             }
           }}
           flex={1}

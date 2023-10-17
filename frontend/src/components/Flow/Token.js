@@ -9,15 +9,25 @@ import {
   FormControlHelperText,
   FormControlLabel,
   FormControlLabelText,
+  Icon,
   Input,
   InputField,
   HStack,
   Tooltip,
   TooltipContent,
-  TooltipText
+  TooltipText,
+  Popover,
+  PopoverBackdrop,
+  PopoverBody,
+  PopoverContent,
+  PopoverCloseButton,
+  PopoverHeader,
+  CloseIcon,
+  Heading,
+  Text
 } from '@gluestack-ui/themed'
 
-import { Menu, Popover, Tooltip as TooltipNB } from 'native-base' //TODONB
+import { Menu } from 'components/Menu'
 
 import TimeSelect from '../TimeSelect'
 import InputSelect from 'components/InputSelect'
@@ -220,8 +230,7 @@ const Token = ({
   }
 
   //NOTE treat empty value as *
-  //  </TooltipNB>
-  const trigger = (triggerProps) => (
+  /*const trigger = (triggerProps) => (
     <TooltipNB label={label}>
       <Button
         {...tokenProps}
@@ -231,9 +240,9 @@ const Token = ({
         <ButtonText>{displayValue(value)}</ButtonText>
       </Button>
     </TooltipNB>
-  )
+  )*/
 
-  /*const trigger = (triggerProps) => (
+  const trigger = (triggerProps) => (
     <Tooltip
       placement="bottom"
       trigger={(triggerPropsTooltip) => {
@@ -253,23 +262,31 @@ const Token = ({
         <TooltipText>{label}</TooltipText>
       </TooltipContent>
     </Tooltip>
-  )*/
+  )
 
   return (
     <>
       <Popover
-        position="auto"
+        placement="bottom"
         trigger={trigger}
         isOpen={isOpen}
         onClose={() => setIsOpen(!isOpen)}
       >
-        <Popover.Content minW={180}>
-          <Popover.Body>
+        <PopoverBackdrop />
+        <PopoverContent minW={180}>
+          <PopoverHeader>
+            <Heading size="sm">{label}</Heading>
+            <PopoverCloseButton>
+              <Icon as={CloseIcon} />
+            </PopoverCloseButton>
+          </PopoverHeader>
+          <PopoverBody>
             <HStack space="md">
               <FormControl flex={1}>
-                <FormControlLabel>
+                {/*<FormControlLabel>
                   <FormControlLabelText>{label}</FormControlLabelText>
-                </FormControlLabel>
+                </FormControlLabel>*/}
+
                 {inputElement}
                 <FormControlHelper>
                   <FormControlHelperText>{description}</FormControlHelperText>
@@ -281,8 +298,8 @@ const Token = ({
                 icon={<Icon icon={faTag} />}
               />*/}
             </HStack>
-          </Popover.Body>
-        </Popover.Content>
+          </PopoverBody>
+        </PopoverContent>
       </Popover>
     </>
   )

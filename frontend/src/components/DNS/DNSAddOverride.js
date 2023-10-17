@@ -18,7 +18,8 @@ import {
   FormControlLabelText,
   Input,
   InputField,
-  VStack
+  VStack,
+  Text
 } from '@gluestack-ui/themed'
 
 export default class DNSAddOverride extends React.Component {

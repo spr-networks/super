@@ -9,16 +9,14 @@ import {
   ButtonText,
   HStack,
   Text,
-  /*Tooltip,
+  Tooltip,
   TooltipContent,
-  TooltipText,*/
+  TooltipText,
   View,
   VStack,
   CloseIcon,
   CopyIcon
 } from '@gluestack-ui/themed'
-
-import { Tooltip } from 'native-base' //TODONB
 
 import { FlashList } from '@shopify/flash-list'
 
@@ -116,18 +114,29 @@ const AuthTokenList = (props) => {
             >
               <Text>{item.Name || `Token#${index}`}</Text>
               <HStack space="sm" alignItems="center" justifyItems="flex-end">
-                <Tooltip label={item.Token} onPress={alert}>
-                  <Button
-                    size="sm"
-                    action="secondary"
-                    variant="link"
-                    display={showClipboard ? 'flex' : 'none'}
-                    onPress={() => copy(item.Token)}
-                  >
-                    <ButtonText>Copy Token</ButtonText>
-                    <ButtonIcon as={CopyIcon} ml="$1" />
-                  </Button>
+                <Tooltip
+                  placement="bottom"
+                  trigger={(triggerProps) => {
+                    return (
+                      <Button
+                        size="sm"
+                        action="secondary"
+                        variant="link"
+                        display={showClipboard ? 'flex' : 'none'}
+                        {...triggerProps}
+                        onPress={() => copy(item.Token)}
+                      >
+                        <ButtonText>Copy Token</ButtonText>
+                        <ButtonIcon as={CopyIcon} ml="$1" />
+                      </Button>
+                    )
+                  }}
+                >
+                  <TooltipContent>
+                    <TooltipText>{item.Token}</TooltipText>
+                  </TooltipContent>
                 </Tooltip>
+
                 {item.ScopedPaths != null && item.ScopedPaths.length > 0 ? (
                   <Text isTruncated>{JSON.stringify(item.ScopedPaths)}</Text>
                 ) : (

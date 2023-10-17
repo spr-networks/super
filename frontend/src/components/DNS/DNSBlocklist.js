@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Dimensions, Platform } from 'react-native'
+import { Platform } from 'react-native'
 import Icon from 'FontAwesomeUtils'
 import { faToggleOn, faToggleOff } from '@fortawesome/free-solid-svg-icons'
 
@@ -15,7 +15,6 @@ import {
   ButtonIcon,
   Box,
   FlatList,
-  Heading,
   HStack,
   Spinner,
   Text,
@@ -26,7 +25,8 @@ import {
   useColorMode,
   CloseIcon
 } from '@gluestack-ui/themed'
-import { Menu } from 'native-base' //TODONB
+
+import { Menu } from 'components/Menu'
 
 import InputSelect from 'components/InputSelect'
 import ListHeader from 'components/List/ListHeader'

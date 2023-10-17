@@ -13,13 +13,16 @@ import {
   Pressable,
   ScrollView,
   HStack,
+  VStack,
   Text,
   useColorMode,
   Input,
   InputField
 } from '@gluestack-ui/themed'
 
-import { Collapse } from 'native-base'
+const Collapse = ({ isOpen, ...props }) => {
+  return <VStack display={isOpen ? 'flex' : 'none'}>{props.children}</VStack>
+}
 
 const Sidebar = (props) => {
   const { isMobile, isMini, isOpenSidebar, setIsOpenSidebar } = props
