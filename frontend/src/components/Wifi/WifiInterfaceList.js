@@ -112,6 +112,7 @@ const WifiInterface = ({ iw, ...props }) => {
           sx={{
             _dark: { borderRightColor: '$borderColorCardDark' }
           }}
+          p="$2"
         >
           {tabList.map((tab) =>
             iw[tab] || ['other', 'SPR compatibility'].includes(tab) ? (
@@ -119,6 +120,7 @@ const WifiInterface = ({ iw, ...props }) => {
                 key={tab}
                 action="primary"
                 variant="link"
+                size="sm"
                 rounded={false}
                 justifyContent={'flex-start'}
                 onPress={() => setActiveTab(tab)}

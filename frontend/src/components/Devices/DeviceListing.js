@@ -261,7 +261,7 @@ const DeviceListing = (props) => {
     <View h={h}>
       <ListHeader title="Devices">
         <Button
-          size="sm"
+          size="xs"
           action="primary"
           variant="solid"
           sx={{

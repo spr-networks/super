@@ -14,7 +14,7 @@ const ListItem = (props) => {
           borderColor: '$borderColorCardDark'
         }
       }}
-      p="$4"
+      p={props.p || '$4'}
     >
       <HStack space="md" justifyContent="space-between" alignItems="center">
         {props.children}

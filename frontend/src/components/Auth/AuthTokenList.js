@@ -115,13 +115,14 @@ const AuthTokenList = (props) => {
               <Text>{item.Name || `Token#${index}`}</Text>
               <HStack space="sm" alignItems="center" justifyItems="flex-end">
                 <Tooltip
+                  h={undefined}
                   placement="bottom"
                   trigger={(triggerProps) => {
                     return (
                       <Button
-                        size="sm"
+                        size="xs"
                         action="secondary"
-                        variant="link"
+                        variant="outline"
                         display={showClipboard ? 'flex' : 'none'}
                         {...triggerProps}
                         onPress={() => copy(item.Token)}

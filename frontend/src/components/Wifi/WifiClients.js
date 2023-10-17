@@ -118,7 +118,7 @@ const WifiClients = (props) => {
       data={clients}
       estimatedItemSize={100}
       renderItem={({ item }) => (
-        <ListItem>
+        <ListItem p="$8">
           <Text flex="1" bold alignSelf="center">
             {item.Name}
           </Text>

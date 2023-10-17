@@ -1,9 +1,4 @@
 import React from 'react'
-/*
-//import { NativeBaseProvider } from 'native-base'
-//import { theme } from 'Theme'
-//<NativeBaseProvider theme={theme}></NativeBaseProvider>
-*/
 import {
   BrowserRouter as Router,
   Route,

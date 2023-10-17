@@ -9,7 +9,7 @@ export const config = {
     colors: {
       ...defaultConfig.tokens.colors,
       primary0: '#ffffff',
-      primary50: '#FFF1F2',
+      /*primary50: '#FFF1F2',
       primary100: '#FFE4E6',
       primary200: '#FECDD3',
       primary300: '#FDA4AF',
@@ -20,7 +20,18 @@ export const config = {
       primary700: '#BE123C',
       primary800: '#9F1239',
       primary900: '#881337',
-      primary950: '#440A1C',
+      primary950: '#440A1C',*/
+
+      primary50: colors.blueGray50,
+      primary100: colors.blueGray100,
+      primary200: colors.blueGray200,
+      primary300: colors.blueGray300,
+      primary400: colors.blueGray700,
+      primary500: colors.blueGray500,
+      primary600: colors.blueGray600,
+      primary700: colors.blueGray700,
+      primary800: colors.blueGray800,
+      primary900: colors.blueGray900,
 
       muted50: '#fafafa',
       muted100: '#f5f5f5',

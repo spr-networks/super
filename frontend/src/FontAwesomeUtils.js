@@ -16,7 +16,7 @@ const FontAwesomeIcon = FontAwesomeIconNative
 }*/
 
 export default function Icon({ color, icon, size, style, ...props }) {
-  // behave like native-base
+  // behave like native base
   if (!parseInt(size)) {
     let szs = {
       xs: 3,

@@ -1,17 +1,9 @@
 import React from 'react'
 
-//import { NativeBaseProvider, Menu as MenuNB } from 'native-base'
+//import { NativeBaseProvider, Menu as MenuNB } from nb
 //import { theme } from 'Theme'
 
-import {
-  Box,
-  Button,
-  ButtonIcon,
-  ButtonText,
-  Menu,
-  MenuItem,
-  MenuItemLabel
-} from '@gluestack-ui/themed'
+import { Menu, MenuItem, MenuItemLabel } from '@gluestack-ui/themed'
 
 const TestMenu = (props) => {
   return (
