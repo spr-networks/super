@@ -3,14 +3,21 @@ import PropTypes from 'prop-types'
 
 import {
   Button,
+  ButtonText,
   FormControl,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlLabel,
+  FormControlLabelText,
   Input,
+  InputField,
   HStack,
-  Menu,
-  Popover,
   Tooltip,
-  useColorModeValue
-} from 'native-base'
+  TooltipContent,
+  TooltipText
+} from '@gluestack-ui/themed'
+
+import { Menu, Popover, Tooltip as TooltipNB } from 'native-base' //TODONB
 
 import TimeSelect from '../TimeSelect'
 import InputSelect from 'components/InputSelect'
@@ -30,23 +37,15 @@ const Token = ({
   const [value, setValue] = useState('' + defaultValue)
   const [isOpen, setIsOpen] = useState(false)
 
-  let size = props.size || 'md'
+  let size = props.size || 'xs'
   let options = props.options || [] // for autocomplete
 
   const tokenProps = {
-    colorScheme: 'light',
-    textAlign: 'center',
-    rounded: 'md',
+    action: 'secondary',
     variant: 'outline',
-    bg: useColorModeValue('muted.50', 'muted.700'),
-    borderColor: useColorModeValue('muted.200', 'muted.600'),
-    _text: {
-      color: useColorModeValue('muted.600', 'muted.200')
-    },
-    size,
-    py: 0,
-    px: 2,
-    mb: 2
+    size: 'xs',
+    p: '$1',
+    px: '$2'
   }
 
   const displayValue = (value, label) => {
@@ -102,13 +101,29 @@ const Token = ({
 
     // skip popover & use the menu directly
     // triggers differ slightly
+    //<Tooltip label={label}></Tooltip>
     const trigger = (triggerProps) => (
-      <Tooltip label={label} bg="muted.800" _text={{ color: 'muted.200' }}>
-        <Button {...tokenProps} {...triggerProps}>
-          {displayValue(value, label)}
-        </Button>
-      </Tooltip>
+      <Button {...tokenProps} {...triggerProps}>
+        <ButtonText>{displayValue(value, label)}</ButtonText>
+      </Button>
     )
+
+    /*const trigger = (triggerProps) => (
+      <Tooltip
+        placement="bottom"
+        trigger={(triggerPropsTooltip) => {
+          return (
+            <Button {...tokenProps} {...triggerProps} {...triggerPropsTooltip}>
+              <ButtonText>{displayValue(value, label)}</ButtonText>
+            </Button>
+          )
+        }}
+      >
+        <TooltipContent>
+          <TooltipText>{label}</TooltipText>
+        </TooltipContent>
+      </Tooltip>
+    )*/
 
     return (
       <Menu w="190" closeOnSelect={!isMultiple} trigger={trigger}>
@@ -129,12 +144,13 @@ const Token = ({
   }
 
   let inputElement = (
-    <Input
-      variant="outlined"
-      defaultValue={value}
-      onChangeText={onChangeText}
-      onSubmitEditing={() => setIsOpen(false)}
-    />
+    <Input variant="outlined">
+      <InputField
+        defaultValue={value}
+        onChangeText={onChangeText}
+        onSubmitEditing={() => setIsOpen(false)}
+      />
+    </Input>
   )
 
   // time picker
@@ -204,17 +220,40 @@ const Token = ({
   }
 
   //NOTE treat empty value as *
+  //  </TooltipNB>
   const trigger = (triggerProps) => (
-    <Tooltip label={label} bg="muted.800" _text={{ color: 'muted.200' }}>
+    <TooltipNB label={label}>
       <Button
         {...tokenProps}
         {...triggerProps}
         onPress={() => setIsOpen(!isOpen)}
       >
-        {displayValue(value)}
+        <ButtonText>{displayValue(value)}</ButtonText>
       </Button>
-    </Tooltip>
+    </TooltipNB>
   )
+
+  /*const trigger = (triggerProps) => (
+    <Tooltip
+      placement="bottom"
+      trigger={(triggerPropsTooltip) => {
+        return (
+          <Button
+            {...tokenProps}
+            {...triggerProps}
+            {...triggerPropsTooltip}
+            onPress={() => setIsOpen(!isOpen)}
+          >
+            <ButtonText>{displayValue(value)}</ButtonText>
+          </Button>
+        )
+      }}
+    >
+      <TooltipContent>
+        <TooltipText>{label}</TooltipText>
+      </TooltipContent>
+    </Tooltip>
+  )*/
 
   return (
     <>
@@ -226,11 +265,15 @@ const Token = ({
       >
         <Popover.Content minW={180}>
           <Popover.Body>
-            <HStack space={1}>
+            <HStack space="md">
               <FormControl flex={1}>
-                <FormControl.Label>{label}</FormControl.Label>
+                <FormControlLabel>
+                  <FormControlLabelText>{label}</FormControlLabelText>
+                </FormControlLabel>
                 {inputElement}
-                <FormControl.HelperText>{description}</FormControl.HelperText>
+                <FormControlHelper>
+                  <FormControlHelperText>{description}</FormControlHelperText>
+                </FormControlHelper>
               </FormControl>
               {/*<IconButton
                 ml="auto"

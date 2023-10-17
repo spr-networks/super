@@ -1,19 +1,7 @@
-import { Icon as IconNb, useToken } from 'native-base'
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
-import PropTypes from 'prop-types'
-import { Icon } from 'FontAwesomeUtils'
-import {
-  faEllipsis,
-  faCirclePlus,
-  faCheck,
-  faCopy,
-  faTrash,
-  faXmark,
-  faEdit,
-  faToggleOn,
-  faToggleOff
-} from '@fortawesome/free-solid-svg-icons'
+import { Icon as IconFA } from 'FontAwesomeUtils'
+
 import ModalForm from 'components/ModalForm'
 import { AlertContext } from 'AppContext'
 import { FlowCard, NewCard } from './FlowCard'
@@ -24,24 +12,35 @@ import { pfwAPI } from 'api/Pfw'
 import {
   Box,
   Button,
+  ButtonText,
+  ButtonIcon,
   FlatList,
   FormControl,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlLabel,
+  FormControlLabelText,
   Heading,
+  Icon,
   Input,
-  IconButton,
-  Menu,
-  Stack,
+  InputField,
   HStack,
   VStack,
   Text,
-  useColorModeValue,
-  Divider,
   ScrollView,
-  View
-} from 'native-base'
-import { dateArrayToStr } from './Utils'
+  AddIcon,
+  ThreeDotsIcon,
+  TrashIcon,
+  CheckIcon,
+  CloseIcon,
+  CopyIcon
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+import { Menu } from 'native-base' //TODONB
+
+import { dateArrayToStr } from './Utils'
+import { PencilIcon, ToggleLeftIcon } from 'lucide-react-native'
+import { ToggleRightIcon } from 'lucide-react-native'
 
 const FlowCardList = ({
   title,
@@ -59,7 +58,6 @@ const FlowCardList = ({
     }
     setCardsCall(cards)
   }
-
 
   useEffect(() => {
     setCards(defaultCards)
@@ -93,8 +91,8 @@ const FlowCardList = ({
   }
 
   return (
-    <VStack space={1}>
-      <Text bold fontSize="sm">
+    <VStack space="sm">
+      <Text bold size="sm">
         {title}
       </Text>
 
@@ -108,7 +106,7 @@ const FlowCardList = ({
             card={item}
             onChange={onChange}
             onDelete={() => deleteCard(index)}
-            mb={2}
+            mb="$2"
           />
         )}
       />
@@ -125,16 +123,15 @@ const FlowCardList = ({
           </ModalForm>
 
           <Button
+            action="primary"
             variant="outline"
-            colorScheme="blueGray"
-            rounded="md"
-            leftIcon={<Icon icon={faCirclePlus} color="muted.500" />}
             onPress={() => addCard(cardType)}
             __disabled={cardType == 'trigger' && cards.length}
             display={{ base: cards.length ? 'none' : 'flex' }}
             key={'add' + cardType}
           >
-            Add card
+            <ButtonText>Add card</ButtonText>
+            <ButtonIcon as={AddIcon} ml="$1" />
           </Button>
         </>
       ) : null}
@@ -171,12 +168,9 @@ const Flow = ({ flow, edit, ...props }) => {
   //mini
   if (!edit) {
     const triggerBtn = (triggerProps) => (
-      <IconButton
-        variant="unstyled"
-        ml="auto"
-        icon={<Icon icon={faEllipsis} color="muted.600" />}
-        {...triggerProps}
-      ></IconButton>
+      <Button action="secondary" variant="link" ml="auto" {...triggerProps}>
+        <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
+      </Button>
     )
 
     const onEdit = () => {
@@ -213,32 +207,31 @@ const Flow = ({ flow, edit, ...props }) => {
       >
         <Menu.Group title="Actions">
           <Menu.Item onPress={onDisable}>
-            <HStack space={2} alignItems="center">
+            <HStack space="md" alignItems="center">
               <Icon
-                icon={flow.disabled ? faToggleOn : faToggleOff}
-                color="muted.500"
+                as={flow.disabled ? ToggleRightIcon : ToggleLeftIcon}
+                color="$muted500"
               />
               <Text>{flow.disabled ? 'Enable' : 'Disable'}</Text>
             </HStack>
           </Menu.Item>
-          {/*<Divider mt="3" w="100%" />*/}
           <Menu.Item onPress={onEdit}>
-            <HStack space={2} alignItems="center">
-              <Icon icon={faEdit} color="muted.500" />
+            <HStack space="md" alignItems="center">
+              <Icon as={PencilIcon} color="$muted500" />
               <Text>Edit</Text>
             </HStack>
           </Menu.Item>
           <Menu.Item onPress={onDuplicate}>
-            <HStack space={2} alignItems="center">
-              <Icon icon={faCopy} color="muted.500" />
+            <HStack space="md" alignItems="center">
+              <CopyIcon color="$muted500" />
               <Text>Duplicate</Text>
             </HStack>
           </Menu.Item>
 
           <Menu.Item onPress={onDelete}>
-            <HStack space={2} alignItems="center">
-              <Icon icon={faTrash} color="danger.700" />
-              <Text color="danger.700">Delete</Text>
+            <HStack space="md" alignItems="center">
+              <TrashIcon color="$red700" />
+              <Text color="$red700">Delete</Text>
             </HStack>
           </Menu.Item>
         </Menu.Group>
@@ -271,30 +264,33 @@ const Flow = ({ flow, edit, ...props }) => {
     }
 
     return (
-      <Stack
-        direction={{ base: 'column-reverse', md: 'row' }}
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        py={{ base: 6 }}
-        p={{ base: 2, md: 8 }}
-        space={4}
-        rounded={{ md: 'md' }}
-        shadow="2"
+      <VStack
+        p="$2"
+        py="$6"
+        sx={{
+          '@base': { flexDirection: 'column-reverse' },
+          '@md': { flexDirection: 'row', p: '$8' },
+          _dark: { bg: '$backgroundCardDark' }
+        }}
+        bg="$backgroundCardLight"
+        space="md"
+        shadow={2}
       >
-        <VStack flex={1} space={2} mt={{ base: -10, md: 0 }}>
-          <HStack space={2} alignItems="center">
-            <HStack space={2}>
-              <Icon icon={trigger.icon} color={trigger.color} />
-              <Icon icon={action.icon} color={action.color} />
+        <VStack flex={1} space="md">
+          <HStack space="md" alignItems="center">
+            <HStack space="md">
+              <IconFA icon={trigger.icon} color={trigger.color} />
+              <IconFA icon={action.icon} color={action.color} />
             </HStack>
             <Text bold>{title}</Text>
             {flow.disabled ? (
-              <Text fontSize="xs" color="muted.500">
+              <Text size="xs" color="$muted500">
                 Disabled
               </Text>
             ) : null}
           </HStack>
 
-          <HStack space={2} flexWrap={'wrap'} px={1}>
+          <HStack space="md" flexWrap={'wrap'} px="$1">
             {Object.keys(trigger.values).map((key) => (
               <Text key={key}>{displayValue(trigger.values[key], key)}</Text>
             ))}
@@ -305,7 +301,7 @@ const Flow = ({ flow, edit, ...props }) => {
           </HStack>
         </VStack>
         {moreMenu}
-      </Stack>
+      </VStack>
     )
   }
 
@@ -342,20 +338,26 @@ const Flow = ({ flow, edit, ...props }) => {
   }
 
   return (
-    <VStack maxW={{ base: 380, md: 'full' }} space={2}>
+    <VStack maxW={380} sx={{ '@md': { maxW: '$full' } }} space="md">
       <FormControl>
-        <FormControl.Label>Name</FormControl.Label>
-        <Input
-          variant="underlined"
-          value={title}
-          onChangeText={(value) => setTitle(value)}
-          onSubmitEditing={onSubmit}
-        />
-        <FormControl.HelperText>
-          Use a unique name to identify this flow
-        </FormControl.HelperText>
+        <FormControlLabel>
+          <FormControlLabelText>Name</FormControlLabelText>
+        </FormControlLabel>
+        <Input variant="underlined">
+          <InputField
+            value={title}
+            onChangeText={(value) => setTitle(value)}
+            onSubmitEditing={onSubmit}
+          />
+        </Input>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Use a unique name to identify this flow
+          </FormControlHelperText>
+        </FormControlHelper>
       </FormControl>
-      <Stack direction={edit ? 'column' : 'row'} space={4}>
+      <VStack flexDirection={edit ? 'column' : 'row'} space="md">
         <FlowCardList
           title="When..."
           cards={triggers}
@@ -372,26 +374,18 @@ const Flow = ({ flow, edit, ...props }) => {
         />
 
         {edit ? (
-          <VStack mt={4} space={2}>
-            <Button
-              variant="solid"
-              colorScheme="primary"
-              leftIcon={<Icon icon={faCheck} />}
-              onPress={onSubmit}
-            >
-              Save
+          <VStack mt="$4" space="md">
+            <Button action="primary" variant="solid" onPress={onSubmit}>
+              <ButtonText>Save</ButtonText>
+              <ButtonIcon as={CheckIcon} ml="$1" />
             </Button>
-            <Button
-              variant="ghost"
-              colorScheme="secondary"
-              leftIcon={<Icon icon={faXmark} />}
-              onPress={onReset}
-            >
-              Reset
+            <Button action="secondary" variant="outline" onPress={onReset}>
+              <ButtonText>Reset</ButtonText>
+              <ButtonIcon as={CloseIcon} ml="$1" />
             </Button>
           </VStack>
         ) : null}
-      </Stack>
+      </VStack>
     </VStack>
   )
 }
@@ -711,16 +705,16 @@ const FlowList = (props) => {
 
   return (
     <ScrollView>
-      <Stack direction={{ base: 'column', md: 'row' }}>
-        <VStack py={4}>
+      <VStack sx={{ '@md': { flexDirection: 'row' } }}>
+        <VStack py="$4">
           <HStack
-            px={4}
-            pb={4}
+            px="$4"
+            pb="$4"
             justifyContent="space-between"
             alignContent="center"
-            space={2}
+            space="sm"
           >
-            <Heading fontSize="md">Flows</Heading>
+            <Heading size="md">Flows</Heading>
             {!flows.length ? <Text>No flows configured</Text> : null}
           </HStack>
 
@@ -728,13 +722,16 @@ const FlowList = (props) => {
             data={flows}
             renderItem={({ item, index }) => (
               <Box
-                _dark={{
-                  borderColor: 'muted.900'
+                borderColor="$muted200"
+                borderBottomWidth="$1"
+                sx={{
+                  _dark: { borderColor: '$muted900' },
+                  '@md': {
+                    pb: '$4',
+                    px: '$4',
+                    borderBottomWidth: '$0'
+                  }
                 }}
-                borderColor="muted.200"
-                borderBottomWidth={{ base: 1, md: 0 }}
-                pb={{ base: 0, md: 4 }}
-                px={{ base: 0, md: 4 }}
               >
                 <Flow
                   edit={false}
@@ -752,21 +749,28 @@ const FlowList = (props) => {
         </VStack>
 
         <VStack
-          maxW={{ base: '100%', md: '500px' }}
+          sx={{
+            '@md': {
+              ml: 'auto',
+              mr: '$4',
+              maxH: '$3/4',
+              maxW: '500px'
+            }
+          }}
           flex={1}
-          maxH={{ md: '3/4' }}
-          ml={{ md: 'auto' }}
-          mr={{ md: 4 }}
         >
-          <Heading size="sm" my={4} px={4}>
+          <Heading size="sm" my="$4" px="$4">
             Add &amp; Edit flow
           </Heading>
 
           <Box
-            bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+            bg="$backgroundCardLight"
+            sx={{
+              '@md': { rounded: 'md' },
+              _dark: { bg: '$backgroundCardDark' }
+            }}
             minH={450}
-            p={4}
-            rounded={{ md: 'md' }}
+            p="$4"
           >
             <Flow
               edit={true}
@@ -776,7 +780,7 @@ const FlowList = (props) => {
             />
           </Box>
         </VStack>
-      </Stack>
+      </VStack>
     </ScrollView>
   )
 }

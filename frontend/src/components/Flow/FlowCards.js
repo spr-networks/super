@@ -16,7 +16,13 @@ import {
 
 import { api, deviceAPI, wifiAPI } from 'api'
 import { pfwAPI } from 'api/Pfw'
-import { numToDays, daysToNum, toCron, parseClientIPOrIdentity, toOption } from './Utils'
+import {
+  numToDays,
+  daysToNum,
+  toCron,
+  parseClientIPOrIdentity,
+  toOption
+} from './Utils'
 import { BrandIcons } from 'FontAwesomeUtils'
 
 const defaultOptions = async function (name) {
@@ -52,7 +58,7 @@ const triggers = [
     title: 'Always',
     cardType: 'trigger',
     description: 'Always run the selected trigger',
-    color: 'violet.300',
+    color: '$violet300',
     icon: faRepeat,
     params: [],
     values: {},
@@ -64,7 +70,7 @@ const triggers = [
     title: 'Date',
     cardType: 'trigger',
     description: 'Trigger on selected date and time',
-    color: 'violet.300',
+    color: '$violet300',
     icon: faClock,
     params: [
       {
@@ -126,7 +132,7 @@ const triggers = [
     hidden: true,
     cardType: 'trigger',
     description: 'Trigger this card by sending a GET request',
-    color: 'red.400',
+    color: '$red400',
     icon: faBroadcastTower,
     params: [{ name: 'event', type: PropTypes.string }]
   }
@@ -140,7 +146,7 @@ const actions = [
     cardType: 'action',
     description:
       'Block TCP from source address or group to destination address',
-    color: 'red.400',
+    color: '$red400',
     icon: faBan,
     params: [
       {
@@ -228,7 +234,10 @@ const actions = [
     },
     //NOTE same as TCP
     preSubmit: async function () {
-      return { ...this.values, Client: parseClientIPOrIdentity(this.values.Client) }
+      return {
+        ...this.values,
+        Client: parseClientIPOrIdentity(this.values.Client)
+      }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
@@ -245,7 +254,7 @@ const actions = [
     cardType: 'action',
     description:
       'Forward TCP for specified source to destination address and port',
-    color: 'emerald.600',
+    color: '$emerald600',
     icon: faCircleArrowRight,
     params: [
       {
@@ -292,7 +301,10 @@ const actions = [
       return []
     },
     preSubmit: async function () {
-      return { ...this.values, Client: parseClientIPOrIdentity(this.values.Client) }
+      return {
+        ...this.values,
+        Client: parseClientIPOrIdentity(this.values.Client)
+      }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
@@ -309,7 +321,7 @@ const actions = [
     cardType: 'action',
     description:
       'Forward UDP for specified source to destination address and port',
-    color: 'emerald.400',
+    color: '$emerald400',
     icon: faCircleArrowRight,
     params: [
       {
@@ -361,7 +373,10 @@ const actions = [
       return []
     },
     preSubmit: async function () {
-      return { ...this.values, Client: parseClientIPOrIdentity(this.values.Client) }
+      return {
+        ...this.values,
+        Client: parseClientIPOrIdentity(this.values.Client)
+      }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
@@ -377,7 +392,7 @@ const actions = [
     title: 'Forward to Site VPN or Uplink Interface',
     cardType: 'action',
     description: 'Forward traffic over a Site VPN Gateway or Uplink Interface',
-    color: 'purple.600',
+    color: '$purple600',
     icon: faForward,
     params: [
       {
@@ -411,22 +426,27 @@ const actions = [
             }
 
             // pull in interfaces also
-            wifiAPI
-              .interfacesConfiguration()
-              .then((ifaces) => {
-                for (let iface of ifaces) {
-                  if (iface.Type == "Uplink" && iface.Subtype != "pppup" && iface.Enabled == true) {
-                    s.push({ label: iface.Name, value: iface.Name})
-                  }
+            wifiAPI.interfacesConfiguration().then((ifaces) => {
+              for (let iface of ifaces) {
+                if (
+                  iface.Type == 'Uplink' &&
+                  iface.Subtype != 'pppup' &&
+                  iface.Enabled == true
+                ) {
+                  s.push({ label: iface.Name, value: iface.Name })
                 }
-                resolve(s)
-              })
+              }
+              resolve(s)
+            })
           })
         })
       }
     },
     preSubmit: async function () {
-      return { ...this.values, Client: parseClientIPOrIdentity(this.values.Client) }
+      return {
+        ...this.values,
+        Client: parseClientIPOrIdentity(this.values.Client)
+      }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
@@ -442,7 +462,7 @@ const actions = [
     title: 'Set Device Groups',
     cardType: 'action',
     description: 'A device joins a group only when conditions are met',
-    color: 'cyan.500',
+    color: '$cyan500',
     icon: faObjectGroup,
     params: [
       {
@@ -483,7 +503,7 @@ const actions = [
     title: 'Set Device Tags',
     cardType: 'action',
     description: 'Assign device tags when conditions are met',
-    color: 'cyan.500',
+    color: '$cyan500',
     icon: faTags,
     params: [
       {
@@ -532,7 +552,7 @@ const actions = [
     cardType: 'action',
     description:
       'Forward TCP for specified source to exposed port for a local container',
-    color: 'blue.500',
+    color: '$blue500',
     icon: Platform.OS == 'ios' ? faCircleArrowRight : 'Docker',
     params: [
       {
