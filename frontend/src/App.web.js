@@ -1,6 +1,9 @@
 import React from 'react'
-import { NativeBaseProvider } from 'native-base'
-
+/*
+//import { NativeBaseProvider } from 'native-base'
+//import { theme } from 'Theme'
+//<NativeBaseProvider theme={theme}></NativeBaseProvider>
+*/
 import {
   BrowserRouter as Router,
   Route,
@@ -17,7 +20,6 @@ import {
 import AuthLayout from 'layouts/Auth'
 import AdminLayout from 'layouts/Admin'
 import { routesAuth, routesAdmin } from 'routes'
-import { theme } from 'Theme'
 
 import { GluestackUIProvider } from '@gluestack-ui/themed'
 import { config } from 'gluestack-ui.config'
@@ -29,38 +31,32 @@ export default function App() {
   }
 
   return (
-    <NativeBaseProvider theme={theme}>
-      <GluestackUIProvider config={config} colorMode={colorMode}>
-        <Router>
-          <Routes>
-            <Route
-              key="index"
-              path="/"
-              element={<Navigate to="/auth/login" />}
-            />
+    <GluestackUIProvider config={config} colorMode={colorMode}>
+      <Router>
+        <Routes>
+          <Route key="index" path="/" element={<Navigate to="/auth/login" />} />
 
-            <Route
-              key="auth"
-              path="/auth"
-              element={<AuthLayout toggleColorMode={toggleColorMode} />}
-            >
-              {routesAuth.map((r) => (
-                <Route key={r.path} path={r.path} element={<r.element />} />
-              ))}
-            </Route>
+          <Route
+            key="auth"
+            path="/auth"
+            element={<AuthLayout toggleColorMode={toggleColorMode} />}
+          >
+            {routesAuth.map((r) => (
+              <Route key={r.path} path={r.path} element={<r.element />} />
+            ))}
+          </Route>
 
-            <Route
-              key="admin"
-              path="/admin"
-              element={<AdminLayout toggleColorMode={toggleColorMode} />}
-            >
-              {routesAdmin.map((r) => (
-                <Route key={r.path} path={r.path} element={<r.element />} />
-              ))}
-            </Route>
-          </Routes>
-        </Router>
-      </GluestackUIProvider>
-    </NativeBaseProvider>
+          <Route
+            key="admin"
+            path="/admin"
+            element={<AdminLayout toggleColorMode={toggleColorMode} />}
+          >
+            {routesAdmin.map((r) => (
+              <Route key={r.path} path={r.path} element={<r.element />} />
+            ))}
+          </Route>
+        </Routes>
+      </Router>
+    </GluestackUIProvider>
   )
 }

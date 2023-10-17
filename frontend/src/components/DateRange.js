@@ -1,9 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Button, ButtonIcon, ButtonText } from '@gluestack-ui/themed'
-import { Menu } from 'native-base' //TODONB
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faCalendar } from '@fortawesome/free-solid-svg-icons'
+import { Menu } from 'components/Menu'
 import { CalendarIcon } from 'lucide-react-native'
 
 const DateRange = (props) => {

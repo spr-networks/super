@@ -2,7 +2,6 @@ import React from 'react'
 import { FontAwesomeIcon as FontAwesomeIconNative } from '@fortawesome/react-native-fontawesome'
 import { FontAwesomeIcon as FontAwesomeIconReact } from '@fortawesome/react-fontawesome'
 import { Platform, StyleSheet } from 'react-native'
-//import { Icon as IconNb, useToken } from 'native-base'
 import { Icon as IconNb, useToken } from '@gluestack-ui/themed'
 export * from '@fortawesome/react-native-fontawesome'
 

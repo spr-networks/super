@@ -36,7 +36,6 @@ import {
 } from '@gluestack-ui/themed'
 
 //NOTE Slice transition for Alerts not available in gluestack-ui
-//import { Slide } from 'native-base'
 
 import { routes } from 'routes'
 
