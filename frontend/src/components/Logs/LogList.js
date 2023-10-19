@@ -14,8 +14,8 @@ import {
   Button,
   ButtonIcon,
   ButtonText,
+  FlatList,
   Heading,
-  Stack,
   HStack,
   VStack,
   Spinner,
@@ -25,7 +25,7 @@ import {
   ArrowRightIcon
 } from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+//import { FlashList } from '@shopify/flash-list'
 import { RefreshCwIcon } from 'lucide-react-native'
 import { ListItem } from 'components/List'
 
@@ -203,7 +203,7 @@ const LogList = (props) => {
         </HStack>
       </VStack>
 
-      <FlashList
+      <FlatList
         data={listFiltered}
         estimatedItemSize={100}
         renderItem={({ item }) => (

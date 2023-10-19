@@ -1,5 +1,4 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { copy } from 'utils'
 import { format as timeAgo } from 'timeago.js'
 
 import {
@@ -7,18 +6,15 @@ import {
   Button,
   ButtonIcon,
   ButtonText,
+  FlatList,
   HStack,
   Text,
-  Tooltip,
-  TooltipContent,
-  TooltipText,
   View,
   VStack,
-  CloseIcon,
-  CopyIcon
+  CloseIcon
 } from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+//import { FlashList } from '@shopify/flash-list'
 
 import { ListHeader, ListItem } from 'components/List'
 
@@ -26,6 +22,7 @@ import { authAPI } from 'api'
 import { AlertContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import AddAuthToken from 'components/Auth/AddAuthToken'
+import TokenItem from 'components/TokenItem'
 
 const AuthTokenList = (props) => {
   const context = useContext(AlertContext)
@@ -85,8 +82,6 @@ const AuthTokenList = (props) => {
     )
   }
 
-  const showClipboard = true //Platform.OS !== 'web' || navigator.clipboard
-
   return (
     <View h={'100%'}>
       <ListHeader title="API Tokens">
@@ -99,7 +94,7 @@ const AuthTokenList = (props) => {
         </ModalForm>
       </ListHeader>
 
-      <FlashList
+      <FlatList
         data={tokens}
         estimatedItemSize={100}
         renderItem={({ item, index }) => (
@@ -114,29 +109,7 @@ const AuthTokenList = (props) => {
             >
               <Text>{item.Name || `Token#${index}`}</Text>
               <HStack space="sm" alignItems="center" justifyItems="flex-end">
-                <Tooltip
-                  h={undefined}
-                  placement="bottom"
-                  trigger={(triggerProps) => {
-                    return (
-                      <Button
-                        size="xs"
-                        action="secondary"
-                        variant="outline"
-                        display={showClipboard ? 'flex' : 'none'}
-                        {...triggerProps}
-                        onPress={() => copy(item.Token)}
-                      >
-                        <ButtonText>Copy Token</ButtonText>
-                        <ButtonIcon as={CopyIcon} ml="$1" />
-                      </Button>
-                    )
-                  }}
-                >
-                  <TooltipContent>
-                    <TooltipText>{item.Token}</TooltipText>
-                  </TooltipContent>
-                </Tooltip>
+                <TokenItem token={item.Token} />
 
                 {item.ScopedPaths != null && item.ScopedPaths.length > 0 ? (
                   <Text isTruncated>{JSON.stringify(item.ScopedPaths)}</Text>

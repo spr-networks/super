@@ -5,6 +5,7 @@ import {
   Button,
   ButtonIcon,
   Box,
+  FlatList,
   HStack,
   Icon,
   Menu,
@@ -17,7 +18,7 @@ import {
   ThreeDotsIcon
 } from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+//import { FlashList } from '@shopify/flash-list'
 
 import { notificationsAPI } from 'api'
 import AddNotifcation from 'components/Notifications/AddNotification'
@@ -162,7 +163,7 @@ const Notifications = (props) => {
         </ModalForm>
       </ListHeader>
 
-      <FlashList
+      <FlatList
         data={notifications}
         estimatedItemSize={100}
         renderItem={({ item, index }) => (

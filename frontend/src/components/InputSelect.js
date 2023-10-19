@@ -79,9 +79,6 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
       ))}
     </Menu>
   )*/
-  if (groups) {
-    console.log(JSON.stringify(groups))
-  }
 
   const menuItem = (item) => {
     let value = item.value
@@ -113,6 +110,7 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
     <Menu
       trigger={trigger}
       selectionMode="single"
+      closeOnSelect={true}
       onSelectionChange={(e) => handleChange(e.currentKey)}
     >
       {groups.map((group) => {

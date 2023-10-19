@@ -17,6 +17,7 @@ import {
   Button,
   ButtonText,
   ButtonIcon,
+  FlatList,
   FormControl,
   FormControlLabel,
   FormControlLabelText,
@@ -43,7 +44,7 @@ import {
   InputSlot
 } from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+//import { FlashList } from '@shopify/flash-list'
 import { FilterIcon } from 'lucide-react-native'
 
 const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
@@ -576,7 +577,7 @@ const DNSLogHistoryList = (props) => {
         </FormControl>
       </VStack>
 
-      <FlashList
+      <FlatList
         estimatedItemSize={100}
         flex={2}
         data={listFiltered}

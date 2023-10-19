@@ -364,10 +364,11 @@ const DNSBlocklist = (props) => {
                   flexWrap="wrap"
                   onPress={toggleShowURI}
                 >
-                  <Text bold isTruncated>
+                  <Text size="sm" bold isTruncated>
                     {item.Info}
                   </Text>
                   <Text
+                    size="sm"
                     color={
                       isOnlyRecommended(item)
                         ? '$muted500'

@@ -16,6 +16,7 @@ import {
   Button,
   ButtonText,
   Divider,
+  FlatList,
   Heading,
   ScrollView,
   HStack,
@@ -25,7 +26,7 @@ import {
   View
 } from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+//import { FlashList } from '@shopify/flash-list'
 
 const WifiInterface = ({ iw, ...props }) => {
   const [activeTab, setActiveTab] = useState('SPR compatibility')
@@ -49,7 +50,7 @@ const WifiInterface = ({ iw, ...props }) => {
   const dList = (dict, type = 'row') => {
     if (Object.keys(dict) && type == 'inline') {
       return (
-        <FlashList
+        <FlatList
           data={Object.keys(dict)}
           keyExtractor={(item) => item}
           estimatedItemSize={100}
@@ -170,7 +171,7 @@ const WifiInterface = ({ iw, ...props }) => {
                   <>
                     {tab == 'other' ? (
                       <>
-                        <FlashList
+                        <FlatList
                           data={Object.keys(iw).filter(
                             (k) => !tabList.includes(k)
                           )}

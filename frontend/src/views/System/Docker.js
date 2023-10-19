@@ -30,7 +30,7 @@ import {
 
 import { ListHeader, ListItem } from 'components/List'
 
-import { FlashList } from '@shopify/flash-list'
+//import { FlashList } from '@shopify/flash-list'
 
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
@@ -63,7 +63,7 @@ const DockerInfo = ({ showModal, ...props }) => {
     const onMounts = () => {
       showModal(
         `${containerName} Volume Mounts`,
-        <FlashList
+        <FlatList
           data={item.Mounts}
           keyExtractor={(item) => item.Source}
           renderItem={({ item: mount }) => (

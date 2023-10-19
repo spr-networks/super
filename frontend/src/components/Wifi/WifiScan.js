@@ -9,6 +9,7 @@ import {
   Box,
   Button,
   ButtonIcon,
+  FlatList,
   HStack,
   VStack,
   ScrollView,
@@ -18,7 +19,7 @@ import {
   ButtonText
 } from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+//import { FlashList } from '@shopify/flash-list'
 import { WifiIcon } from 'lucide-react-native'
 import { ListItem } from 'components/List'
 
@@ -122,7 +123,7 @@ const WifiScan = (props) => {
         </HStack>
       ) : null}
 
-      <FlashList
+      <FlatList
         data={list}
         estimatedItemSize={100}
         renderItem={({ item }) => (

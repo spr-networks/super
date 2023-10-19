@@ -9,6 +9,7 @@ import {
   Button,
   ButtonIcon,
   ButtonText,
+  FlatList,
   HStack,
   Text,
   DownloadIcon,
@@ -19,7 +20,7 @@ import { api } from 'api'
 import { AlertContext } from 'AppContext'
 import { prettyDate } from 'utils'
 
-import { FlashList } from '@shopify/flash-list'
+//import { FlashList } from '@shopify/flash-list'
 import { ListHeader, ListItem } from 'components/List'
 import { BoxIcon } from 'lucide-react-native'
 
@@ -95,7 +96,7 @@ const ConfigsBackup = (props) => {
       </ListHeader>
 
       <Box>
-        <FlashList
+        <FlatList
           data={backups}
           keyExtractor={(item) => item.Timestamp}
           renderItem={({ item }) => (

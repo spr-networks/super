@@ -2,11 +2,19 @@ import React, { useContext, useEffect, useState } from 'react'
 import { wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 
-import { Badge, BadgeText, View, Box, Text, VStack } from '@gluestack-ui/themed'
+import {
+  Badge,
+  BadgeText,
+  FlatList,
+  View,
+  Box,
+  Text,
+  VStack
+} from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
 
-import { FlashList } from '@shopify/flash-list'
+//import { FlashList } from '@shopify/flash-list'
 
 const Arp = (props) => {
   const [list, setList] = useState()
@@ -59,7 +67,7 @@ const Arp = (props) => {
     <View>
       <ListHeader title="ARP Table"></ListHeader>
 
-      <FlashList
+      <FlatList
         data={list}
         estimatedItemSize={100}
         renderItem={({ item }) => (

@@ -19,6 +19,8 @@ import {
   CopyIcon
 } from '@gluestack-ui/themed'
 
+import { RefreshCwIcon } from 'lucide-react-native'
+
 import api, { wifiAPI, meshAPI, authAPI } from 'api'
 import APIWifi from 'api/Wifi'
 
@@ -27,7 +29,7 @@ import APIMesh from 'api/mesh'
 import ModalForm from 'components/ModalForm'
 import AddLeafRouter from 'components/Mesh/AddLeafRouter'
 import { ListHeader, ListItem } from 'components/List'
-import { RefreshCwIcon } from 'lucide-react-native'
+import TokenItem from 'components/TokenItem'
 
 const Mesh = (props) => {
   const [leafRouters, setLeafRouters] = useState([])
@@ -223,6 +225,7 @@ const Mesh = (props) => {
             })
         })
       )
+      .catch((err) => {})
   }, [])
 
   const deleteListItem = (item) => {
@@ -434,7 +437,7 @@ const Mesh = (props) => {
                     p="$4"
                   >
                     <Text color="$muted500">API-Token</Text>
-                    <Text>{leafToken}</Text>
+                    <TokenItem token={leafToken} />
                   </HStack>
                 )}
               </Box>

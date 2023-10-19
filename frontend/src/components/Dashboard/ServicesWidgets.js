@@ -24,7 +24,6 @@ const ServicesEnabled = ({ features, ...props }) => {
           : '$backgroundCardDark'
       }
       borderRadius={10}
-      shadow={4}
     >
       <HStack
         space="lg"

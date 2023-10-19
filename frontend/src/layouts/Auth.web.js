@@ -16,9 +16,6 @@ const AuthLayout = () => {
       }}
       alignItems="center"
       justifyContent="center"
-      nativeID={
-        colorMode == 'light' ? 'nativebase-body-light' : 'nativebase-body-dark'
-      }
     >
       <View w="100vw" h="100vh" bg="$black">
         <Image

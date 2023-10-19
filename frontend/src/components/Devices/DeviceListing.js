@@ -12,6 +12,7 @@ import {
   ButtonText,
   Box,
   Fab,
+  FlatList,
   HStack,
   VStack,
   Pressable,
@@ -24,7 +25,7 @@ import {
   CloseIcon
 } from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+//import { FlashList } from '@shopify/flash-list'
 import { SwipeListView } from 'components/SwipeListView'
 import { ButtonIcon } from '@gluestack-ui/themed'
 import { ListHeader } from 'components/List'
@@ -294,7 +295,7 @@ const DeviceListing = (props) => {
         />
       ) : (
         <>
-          <FlashList
+          <FlatList
             data={devices}
             renderItem={renderItem}
             estimatedItemSize={120}

@@ -8,6 +8,7 @@ import {
   Badge,
   BadgeText,
   Box,
+  FlatList,
   HStack,
   VStack,
   Text,
@@ -18,7 +19,7 @@ import {
 
 import { ListItem } from 'components/List'
 
-import { FlashList } from '@shopify/flash-list'
+//import { FlashList } from '@shopify/flash-list'
 
 const WifiClients = (props) => {
   const [clients, setClients] = useState([])
@@ -114,7 +115,7 @@ const WifiClients = (props) => {
   }, [])
 
   return (
-    <FlashList
+    <FlatList
       data={clients}
       estimatedItemSize={100}
       renderItem={({ item }) => (

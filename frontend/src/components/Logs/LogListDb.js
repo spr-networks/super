@@ -5,7 +5,7 @@
  */
 import React, { useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
-import { logsAPI, dbAPI } from 'api'
+import { dbAPI } from 'api'
 import { prettyDate } from 'utils'
 import { AlertContext } from 'layouts/Admin'
 
@@ -16,6 +16,7 @@ import {
   Button,
   ButtonText,
   ButtonIcon,
+  FlatList,
   Heading,
   Link,
   HStack,
@@ -30,7 +31,7 @@ import {
 
 import { FilterIcon, FilterXIcon } from 'lucide-react-native'
 
-import { FlashList } from '@shopify/flash-list'
+//import { FlashList } from '@shopify/flash-list'
 import { ArrowLeftIcon, ArrowRightIcon } from '@gluestack-ui/themed'
 import { ListItem } from 'components/List'
 
@@ -199,8 +200,8 @@ const LogList = (props) => {
           {total} items
         </Text>
 
-        {/*
         <Tooltip
+          h={undefined}
           placement="bottom"
           trigger={(triggerProps) => (
             <Button
@@ -208,8 +209,8 @@ const LogList = (props) => {
               size="sm"
               action="secondary"
               variant="link"
-              onPress={() => setShowForm(!showForm)}
               {...triggerProps}
+              onPress={() => setShowForm(!showForm)}
             >
               <ButtonIcon as={showForm ? FilterXIcon : FilterIcon} />
             </Button>
@@ -219,17 +220,6 @@ const LogList = (props) => {
             <TooltipText>Set filter for logs</TooltipText>
           </TooltipContent>
         </Tooltip>
-        */}
-
-        <Button
-          ml="auto"
-          size="sm"
-          action="secondary"
-          variant="link"
-          onPress={() => setShowForm(!showForm)}
-        >
-          <ButtonIcon as={showForm ? FilterXIcon : FilterIcon} />
-        </Button>
       </HStack>
 
       <HStack
@@ -246,7 +236,6 @@ const LogList = (props) => {
             action="primary"
             variant={filter[topic] ? 'solid' : 'outline'}
             rounded="xs"
-            py="$0.5"
             mb="$0.5"
             onPress={() => handleTopicFilter(topic)}
           >
@@ -254,7 +243,7 @@ const LogList = (props) => {
           </Button>
         ))}
       </HStack>
-      <FlashList
+      <FlatList
         flex={2}
         data={logs}
         estimatedItemSize={100}
