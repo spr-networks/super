@@ -178,7 +178,7 @@ const PluginList = (props) => {
         </VStack>
 
         <VStack
-          flex="1"
+          flex={1}
           space="md"
           sx={{
             '@base': { display: 'none' },

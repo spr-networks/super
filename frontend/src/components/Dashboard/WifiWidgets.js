@@ -134,26 +134,27 @@ export const Interfaces = (props) => {
           : '$backgroundCardDark'
       }
       borderRadius={10}
-      mb={0}
-      p={'$4'}
-      shadow={'$4'}
+      p="$4"
     >
       <Heading size="md" fontWeight="300" textAlign="center">
         Interfaces
       </Heading>
 
       <Divider
-        bg={useColorMode() == 'light' ? '$muted200' : '$muted.600'}
+        bg="$muted200"
+        sx={{
+          _dark: { bg: 'muted600' }
+        }}
         my="$4"
       />
 
       <Box px="$10">
         {addrs.map((address, index) => (
           <HStack key={`${address.local}.${index}`} space="md" pb="$2">
-            <Text size="sm" flex="1" textAlign="right" bold>
+            <Text size="sm" flex={1} textAlign="right" bold>
               {address.ifname}
             </Text>
-            <Text flex="1">
+            <Text size="sm" flex={1}>
               {address.local}/{address.prefixlen}
             </Text>
           </HStack>

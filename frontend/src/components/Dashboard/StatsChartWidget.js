@@ -8,9 +8,12 @@ import chroma from 'chroma-js'
 
 const StatsChartWidget = (props) => {
   let maxNum = 16
+  const colorMode = useColorMode()
+
   let backgroundColor =
-    props.colors ||
-    useColorModeValue('backgroundCardLigt', 'backgroundCardDark')
+    props.colors || colorMode == 'light'
+      ? '$backgroundCardLigt'
+      : '$backgroundCardDark'
   let legends = props.labels || ['Sample1', 'Sample2']
   let isLineChart = props.type === 'Line'
   let title = props.title
@@ -19,11 +22,10 @@ const StatsChartWidget = (props) => {
     return <></>
   }
 
-  let colors = useColorModeValue(chroma.scale('BuPu').mode('lch').colors(3), [
-    '#cc0000',
-    '#00cccc',
-    '#cc00cc'
-  ])
+  let colors =
+    colorMode == 'light'
+      ? chroma.scale('BuPu').mode('lch').colors(3)
+      : ['#cc0000', '#00cccc', '#cc00cc']
 
   let values = []
   let charts = []
@@ -141,15 +143,13 @@ const StatsChartWidget = (props) => {
 
   return (
     <Box
-      bg={
-        useColorMode() == 'light'
-          ? '$backgroundCardLight'
-          : '$backgroundCardDark'
-      }
+      bg="$backgroundCardLight"
+      sx={{
+        _dark: { bg: '$backgroundCardDark' }
+      }}
       borderRadius={10}
-      mb={'$4'}
-      py={'$5'}
-      shadow={4}
+      mb="$4"
+      py="$5"
     >
       <Text
         size="lg"

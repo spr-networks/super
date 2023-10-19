@@ -68,7 +68,7 @@ class AddBlockImpl extends React.Component {
     return (
       <VStack space="md">
         <HStack space="md">
-          <FormControl flex="1" isRequired>
+          <FormControl flex={1} isRequired>
             <FormControlLabel>
               <FormControlLabelText>Source address</FormControlLabelText>
             </FormControlLabel>
@@ -83,7 +83,7 @@ class AddBlockImpl extends React.Component {
               <FormControlHelperText>IP address or CIDR</FormControlHelperText>
             </FormControlHelper>
           </FormControl>
-          <FormControl flex="1" isRequired>
+          <FormControl flex={1} isRequired>
             <FormControlLabel>
               <FormControlLabelText>Destination address</FormControlLabelText>
             </FormControlLabel>

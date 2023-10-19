@@ -208,7 +208,7 @@ const DeviceListing = (props) => {
   const renderHiddenItem = (data, rowMap) => (
     <HStack flex={1} pl="$2" my="$1">
       <Pressable
-        w="70"
+        w={70}
         ml="auto"
         cursor="pointer"
         bg="$coolGray200"
@@ -232,7 +232,7 @@ const DeviceListing = (props) => {
         </VStack>
       </Pressable>
       <Pressable
-        w="70"
+        w={70}
         cursor="pointer"
         bg="$red500"
         justifyContent="center"
@@ -259,14 +259,14 @@ const DeviceListing = (props) => {
       : '100%'
 
   return (
-    <View h={h}>
+    <View h="$full" sx={{ '@md': { h: '90vh' } }}>
       <ListHeader title="Devices">
         <Button
           size="xs"
           action="primary"
           variant="solid"
+          display="none"
           sx={{
-            '@base': { display: 'none' },
             '@md': { display: 'flex' }
           }}
           onPress={handleRedirect}
@@ -274,6 +274,7 @@ const DeviceListing = (props) => {
           <ButtonText>Add</ButtonText>
           <ButtonIcon as={AddIcon} ml="$2" />
         </Button>
+
         {/*<Button
             size="sm"
             variant="ghost"
@@ -301,8 +302,8 @@ const DeviceListing = (props) => {
             estimatedItemSize={120}
           />
 
-          {/* padding */}
-          <Box sx={{ '@md': { h: '$10' } }}></Box>
+          {/* padding for Fab on Desktop */}
+          <Box sx={{ '@md': { h: '$8' } }}></Box>
         </>
       )}
 

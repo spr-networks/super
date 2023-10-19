@@ -91,12 +91,13 @@ export default (props) => {
   )
   */
 
+  //<ScrollView sx={{ '@md': { h: '90vh' } }}>
   return (
-    <ScrollView sx={{ '@md': { h: '90vh' } }}>
+    <View h="$full" sx={{ '@md': { h: '90vh' } }}>
       {groups.map((group) => (
         <GroupListing key={group.Name} group={group} />
       ))}
-    </ScrollView>
+    </View>
   )
 
   /*
@@ -124,7 +125,7 @@ export default (props) => {
         )}
         renderSectionHeader={({ section: { title } }) => (
           <Center>
-            <Heading fontSize="$xl" mt="$8" pb="$4">
+            <Heading size="$xl" mt="$8" pb="$4">
               {title}
             </Heading>
           </Center>

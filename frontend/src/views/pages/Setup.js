@@ -463,9 +463,9 @@ const Setup = (props) => {
           {isDone ? (
             <>
               <VStack alignItems="center" space="md">
-                <InfoIcon color="$muted4 00" />
+                <InfoIcon color="$muted400" />
 
-                <Text flex="1" color="$muted500">
+                <Text flex={1} color="$muted500">
                   SPR is configured!
                 </Text>
               </VStack>
@@ -598,7 +598,7 @@ const Setup = (props) => {
                 {'login' in errors ? (
                   <FormControlErrorMessage
                     _text={{
-                      fontSize: 'xs'
+                      size: 'xs'
                     }}
                   >
                     {errors.login}

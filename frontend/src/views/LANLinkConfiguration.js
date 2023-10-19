@@ -311,11 +311,11 @@ const LANLinkInfo = (props) => {
       <ListHeader title="LAN Link Configuration"></ListHeader>
 
       <VStack space="md" p="$4">
-        <Text fontSize="sm" color="$muted500">
+        <Text size="sm" color="$muted500">
           Note: API support for multiple wired LAN interfaces is an upcoming
           feature.
         </Text>
-        <Text fontSize="sm" color="$muted500">
+        <Text size="sm" color="$muted500">
           For now, ensure the wired LAN is synchronized with the
           config/base/config.sh LANIF entry.
         </Text>

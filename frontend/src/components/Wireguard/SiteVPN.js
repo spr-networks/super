@@ -78,17 +78,17 @@ const SiteVPN = (props) => {
           data={sites}
           renderItem={({ item }) => (
             <ListItem>
-              <Text flex="1" bold>
+              <Text flex={1} bold>
                 {item.Interface}
               </Text>
-              <Text flex="1">{item.Address}</Text>
-              <Text flex="1">{item.Endpoint}</Text>
+              <Text flex={1}>{item.Address}</Text>
+              <Text flex={1}>{item.Endpoint}</Text>
               <Text
                 sx={{
                   '@base': { display: 'none' },
                   '@md': { display: 'flex' }
                 }}
-                fontSize="xs"
+                size="xs"
                 isTruncated
               >
                 {item.PeerPublicKey}
@@ -98,7 +98,7 @@ const SiteVPN = (props) => {
                   '@base': { display: 'none' },
                   '@md': { display: 'flex' }
                 }}
-                fontSize="xs"
+                size="xs"
                 isTruncated
               >
                 {item.PublicKey}

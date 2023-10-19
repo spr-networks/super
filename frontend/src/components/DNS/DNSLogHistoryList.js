@@ -304,7 +304,10 @@ const DNSLogHistoryList = (props) => {
           match = match || item.FirstName.includes(filterText)
           match = match || item.FirstAnswer.includes(filterText)
           match =
-            match || item.Q.filter((r) => r.Name.includes(filterText)).length
+            match ||
+            item.Q.filter((r) =>
+              r.Name.toLowerCase().includes(filterText.toLowerCase())
+            ).length
           match = match || item.Type.match(filterText.toUpperCase())
         } catch (err) {
           match = false
@@ -346,7 +349,7 @@ const DNSLogHistoryList = (props) => {
       'info',
       'DNS query',
       <ScrollView w="100%" h="400">
-        <Text fontSize="xs">{JSON.stringify(item, null, '  ')}</Text>
+        <Text size="xs">{JSON.stringify(item, null, '  ')}</Text>
       </ScrollView>
     )
   }
@@ -488,7 +491,7 @@ const DNSLogHistoryList = (props) => {
           sx={{ '@base': { maxWidth: '100%' }, '@md': { maxWidth: '$1/3' } }}
           space="md"
         >
-          <FormControl>
+          <FormControl flex={1}>
             <FormControlLabel
               sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
             >
@@ -518,32 +521,31 @@ const DNSLogHistoryList = (props) => {
             }
           }}
         >
-          <>
-            <FormControlLabel>
-              <FormControlLabelText
-                size="sm"
-                sx={{
-                  '@base': { display: 'none' },
-                  '@md': { display: 'flex' }
-                }}
-              >
-                Search
-              </FormControlLabelText>
-            </FormControlLabel>
+          <FormControlLabel>
+            <FormControlLabelText
+              size="sm"
+              sx={{
+                '@base': { display: 'none' },
+                '@md': { display: 'flex' }
+              }}
+            >
+              Search
+            </FormControlLabelText>
+          </FormControlLabel>
 
-            <Input size="md">
-              <InputField
-                type="text"
-                name="filterText"
-                placeholder="Filter domain..."
-                value={filterText}
-                onChangeText={handleChange}
-              />
-              <InputSlot pr="$3">
-                <InputIcon as={SearchIcon} />
-              </InputSlot>
-            </Input>
-          </>
+          <Input size="md">
+            <InputField
+              type="text"
+              name="filterText"
+              placeholder="Filter domain..."
+              value={filterText}
+              onChangeText={handleChange}
+              autoCapitalize="none"
+            />
+            <InputSlot pr="$3">
+              <InputIcon as={SearchIcon} />
+            </InputSlot>
+          </Input>
         </FormControl>
 
         <FormControl

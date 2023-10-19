@@ -22,18 +22,33 @@ const ListHeader = ({ title, description, ...props }) => {
   return (
     <VStack
       justifyContent="space-between"
-      p="$4"
-      space="md"
-      sx={{ '@md': { flexDirection: 'row', alignItems: 'center', gap: 'md' } }}
+      p="$2"
+      px="$3"
+      space="sm"
+      sx={{
+        '@md': {
+          p: '$4',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 'md'
+        }
+      }}
     >
       <VStack
         sx={{ '@md': { flexDirection: 'row', alignItems: 'center' } }}
         space="sm"
       >
-        <Heading size="sm">{title}</Heading>
-        <Text size="sm" color="$muted500">
-          {description}
+        <Text size="md" bold>
+          {title}
         </Text>
+        {description ? (
+          <Text size="sm" color="$muted500">
+            {description}
+          </Text>
+        ) : null}
+        {/*description && typeof description !== 'string' ? (
+          <>{description}</>
+        ) : null*/}
       </VStack>
 
       {props.children}
@@ -45,5 +60,5 @@ export default ListHeader
 
 ListHeader.propTypes = {
   title: PropTypes.string,
-  description: PropTypes.string
+  description: PropTypes.oneOfType([PropTypes.string, PropTypes.object])
 }

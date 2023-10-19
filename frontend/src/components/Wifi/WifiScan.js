@@ -60,7 +60,7 @@ const WifiScan = (props) => {
       'info',
       'Scan',
       <ScrollView w="100%" h="400">
-        <Text fontSize="xs">{JSON.stringify(item, null, '  ')}</Text>
+        <Text size="xs">{JSON.stringify(item, null, '  ')}</Text>
       </ScrollView>
     )
   }
@@ -100,7 +100,7 @@ const WifiScan = (props) => {
         sx={{ _dark: { bg: '$backgroundCardDark' } }}
         p="$4"
       >
-        <Box flex="2">
+        <Box flex={2}>
           {/*isOptionDisabled={(option) => option.disabled}*/}
           <InputSelect options={devsScan} value={iface} onChange={onChange} />
         </Box>
@@ -128,17 +128,17 @@ const WifiScan = (props) => {
         estimatedItemSize={100}
         renderItem={({ item }) => (
           <ListItem>
-            <VStack flex="2" space="md">
+            <VStack flex={2} space="md">
               <Text bold onPress={(e) => triggerAlert(item)}>
                 {item.ssid}
               </Text>
 
-              <Text color="$muted500" size="sm">
+              <Text color="$muted400" size="sm">
                 {item.bssid}
               </Text>
             </VStack>
 
-            <VStack flex="1" space="md" alignItems="flex-end">
+            <VStack flex={1} space="md" alignItems="flex-end">
               <HStack space="sm" alignItems="center">
                 <Text color="$muted400" size="xs">
                   Channel
@@ -160,7 +160,7 @@ const WifiScan = (props) => {
               </HStack>
             </VStack>
 
-            <VStack flex="1" space="md" alignItems="flex-end">
+            <VStack flex={1} space="md" alignItems="flex-end">
               <HStack space="sm" alignItems="center">
                 <Text
                   sx={{
@@ -194,7 +194,7 @@ const WifiScan = (props) => {
                 '@base': { display: 'none' },
                 '@md': { display: 'flex' }
               }}
-              flex="1"
+              flex={1}
               space="md"
               alignItems="flex-end"
             >

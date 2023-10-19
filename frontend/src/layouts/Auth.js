@@ -5,10 +5,10 @@ import { Box } from '@gluestack-ui/themed'
 const AuthLayout = () => {
   return (
     <Box
-      w="full"
-      h="full"
+      bg="$warmGray200"
+      w="$full"
+      h="$full"
       _sx={{
-        _light: { bg: '$warmGray200' },
         _dark: { bg: '$blueGray900' }
       }}
       alignItems="center"

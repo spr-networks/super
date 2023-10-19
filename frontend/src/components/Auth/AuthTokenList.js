@@ -103,7 +103,7 @@ const AuthTokenList = (props) => {
               sx={{
                 '@md': { flexDirection: 'row', alignItems: 'center' }
               }}
-              flex="1"
+              flex={1}
               space="md"
               justifyContent={'space-between'}
             >

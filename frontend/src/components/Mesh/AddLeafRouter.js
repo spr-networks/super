@@ -141,7 +141,7 @@ class AddLeafRouterImpl extends React.Component {
   render() {
     return (
       <VStack space="md">
-        <FormControl flex="1" isRequired>
+        <FormControl flex={1} isRequired>
           <FormControlLabel>
             <FormControlLabelText>Leaf Router IP</FormControlLabelText>
           </FormControlLabel>
@@ -156,7 +156,7 @@ class AddLeafRouterImpl extends React.Component {
             <FormControlHelperText>IP address</FormControlHelperText>
           </FormControlHelper>
         </FormControl>
-        <FormControl flex="1" isRequired>
+        <FormControl flex={1} isRequired>
           <FormControlLabel>
             <FormControlLabelText>API Token</FormControlLabelText>
           </FormControlLabel>

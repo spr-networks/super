@@ -101,7 +101,7 @@ const WifiConnect = (props) => {
             <Text size="md" color="$muted500">
               Password
             </Text>
-            <Text bold fontSize="md">
+            <Text bold size="md">
               {device.PSKEntry.Psk}
             </Text>
           </HStack>

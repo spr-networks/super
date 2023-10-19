@@ -320,6 +320,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
         p="$4"
         my="$1"
         mx="$0"
+        flexDirection="column-reverse"
         sx={{
           '@md': {
             flexDirection: 'row',
@@ -352,8 +353,9 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
           ) : null}
 
           <VStack
-            sx={{ '@md': { flexDirection: 'row', w: '$1/3' } }}
+            space="md"
             justifyContent="space-between"
+            sx={{ '@md': { flexDirection: 'row', w: '$1/3' } }}
           >
             {/*<Tooltip label={getDates(device)} isDisabled={!getDates(device)}>
               <VStack
@@ -408,9 +410,9 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
             </Tooltip>
 
             <VStack
-              justifyContent="flex-end"
-              sx={{ '@md': { justifyContent: 'center' } }}
-              alignItems="flex-end"
+              sx={{
+                '@md': { justifyContent: 'center', alignItems: 'flex-end' }
+              }}
             >
               {inlineEdit ? (
                 <Input size="lg" variant="underlined" w="100%">
@@ -471,12 +473,12 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
             <Text size="sm">{wifi_type}</Text>
           </VStack>
           <HStack
-            sx={{ '@md': { w: '$2/5' } }}
             space="sm"
-            alignSelf="center"
             alignItems="center"
             justifyContent="flex-start"
             flexWrap="wrap"
+            alignItems="flex-start"
+            sx={{ '@md': { w: '$2/5', alignSelf: 'center' } }}
           >
             {groups.map((group) => (
               <GroupItem key={group} name={group} />

@@ -204,18 +204,15 @@ const DockerInfo = ({ showModal, ...props }) => {
           </HStack>
         </VStack>
 
-        <Text flex={1} size="xs" color="muted.500" isTruncated>
+        <Text flex={1} size="xs" color="$muted500" isTruncated>
           {item.Image}
         </Text>
 
-        <VStack flex={1}>
-          <Text
-            sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
-            minW="200"
-            textAlign="right"
-            size="xs"
-            color="$muted500"
-          >
+        <VStack
+          flex={1}
+          sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
+        >
+          <Text minW="200" textAlign="right" size="xs" color="$muted500">
             {item.Status}
           </Text>
         </VStack>
@@ -257,8 +254,8 @@ const DockerInfo = ({ showModal, ...props }) => {
           <ButtonText color="$muted500">
             {showDocker ? 'Hide info' : 'Show info'}
           </ButtonText>
+          <ButtonIcon as={showDocker ? EyeOffIcon : EyeIcon} ml="$1" />
         </Button>
-        <ButtonIcon as={showDocker ? EyeOffIcon : EyeIcon} ml="$1" />
       </ListHeader>
 
       <FlatList

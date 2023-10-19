@@ -70,8 +70,6 @@ const GroupListing = ({ group, ...props }) => {
     }
   }
 
-  const colorMode = useColorMode()
-
   return (
     <FlatList
       ListHeaderComponent={
@@ -84,7 +82,7 @@ const GroupListing = ({ group, ...props }) => {
       estimatedItemSize={100}
       renderItem={({ item }) => (
         <ListItem>
-          <Text flex="1" bold size="sm">
+          <Text flex={1} bold size="sm">
             {item.Name}
           </Text>
 

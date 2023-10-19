@@ -110,10 +110,10 @@ const MDNSAdvertise = (props) => {
               Defaults to 'spr.local'. Set the name without the .local part or
               leave empty to use hostname
             </Text>
+            <Input flex={1} value={config.MDNSName} onChangeText={onChangeText}>
+              <InputField type="text" placeholder="spr" />
+            </Input>
           </VStack>
-          <Input flex={1} value={config.MDNSName} onChangeText={onChangeText}>
-            <InputField type="text" placeholder="spr" />
-          </Input>
         </ListItem>
         <Button rounded="$none" onPress={submitSettings}>
           <ButtonText>Save Multicast settings</ButtonText>

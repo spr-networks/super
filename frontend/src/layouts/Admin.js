@@ -32,7 +32,7 @@ import {
   CloseIcon,
   Pressable,
   VStack,
-  useColorMode
+  Text
 } from '@gluestack-ui/themed'
 
 //NOTE Slice transition for Alerts not available in gluestack-ui
@@ -104,7 +104,7 @@ const AppAlert = (props) => {
   return (
     <Alert action={type}>
       <AlertIcon as={alertIcon} size="xl" mr="$3" />
-      <HStack space="md" flex="1">
+      <HStack space="md" flex={1}>
         <VStack space="xs">
           <AlertText fontWeight="$bold">{title}</AlertText>
 
@@ -381,7 +381,11 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   let heightFull = Dimensions.get('window').height
   let heightContent = heightFull - navbarHeight
 
-  const colorMode = useColorMode()
+  /*return (
+    <Box bg="$red200" p="$20">
+      <Text>TEST 2.0</Text>
+    </Box>
+  )*/
 
   return (
     <AppContext.Provider
@@ -400,17 +404,19 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     >
       <VStack
         safeAreaTop
-        bg={
-          colorMode == 'light'
-            ? '$backgroundContentLight'
-            : '$backgroundContentDark'
-        }
+        bg="$backgroundContentLight"
+        sx={{
+          _dark: {
+            bg: '$backgroundContentDark'
+          }
+        }}
+        h="$full"
         minH={heightFull}
       >
         {/*desktop*/}
         <Box
+          display="none"
           sx={{
-            '@base': { display: 'none', position: 'absolute' },
             '@md': { display: 'flex', position: 'static' }
           }}
           zIndex={99}
@@ -450,14 +456,12 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           position={Platform.OS == 'web' ? 'sticky' : 'static'}
           top={Platform.OS == 'web' ? 16 : 0}
           flex={1}
-          maxH={heightContent}
+          h={heightContent}
         >
           {/*desktop*/}
           <Box
+            display="none"
             sx={{
-              '@base': {
-                display: 'none'
-              },
               '@md': { display: 'flex' }
             }}
             width={isOpenSidebar ? 20 : 260}
@@ -482,9 +486,9 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
                 },
                 '@md': { display: 'none' },
                 _light: {
-                  bg: 'sidebarBackgroundLight'
+                  bg: '$sidebarBackgroundLight'
                 },
-                _dark: { bg: 'sidebarBackgroundDark' }
+                _dark: { bg: '$sidebarBackgroundDark' }
               }}
             >
               <Sidebar

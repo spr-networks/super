@@ -116,8 +116,10 @@ const SystemInfo = (props) => {
               }
               justifyContent="space-between"
             >
-              <Text size="sm">SPR Version</Text>
-              <Text color="$muted500">{version}</Text>
+              <Text size="sm">Version</Text>
+              <Text size="md" color="$muted500">
+                {version}
+              </Text>
             </HStack>
           </HStack>
 
@@ -128,7 +130,7 @@ const SystemInfo = (props) => {
             }}
           >
             <FlatList
-              flex="1"
+              flex={1}
               data={['time', 'uptime', 'users']}
               keyExtractor={(item, index) => index}
               estimatedItemSize={100}
@@ -155,7 +157,7 @@ const SystemInfo = (props) => {
               )}
             />
             <FlatList
-              flex="1"
+              flex={1}
               data={['load_1m', 'load_5m', 'load_15m']}
               keyExtractor={(item, index) => index}
               estimatedItemSize={100}

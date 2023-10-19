@@ -371,8 +371,8 @@ const ReleaseInfo = ({ showModal, ...props }) => {
           space="md"
           flexDirection="column"
           sx={{
-            '@base': { flexDirection: 'column', gap: 'md' },
-            '@md': { flexDirection: 'row', gap: 'md', alignItems: 'center' }
+            '@base': { flexDirection: 'column', gap: '$3' },
+            '@md': { flexDirection: 'row', gap: '$3', alignItems: 'center' }
           }}
         >
           <Button size="sm" onPress={checkUpdate}>

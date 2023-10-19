@@ -92,7 +92,7 @@ class AddForwardImpl extends React.Component {
               <FormControlHelperText>Accepts IP or CIDR</FormControlHelperText>
             </FormControlHelper>
           </FormControl>
-          <FormControl flex="1">
+          <FormControl flex={1}>
             <FormControlLabel>
               <FormControlLabelText>Incoming Port</FormControlLabelText>
             </FormControlLabel>
@@ -119,7 +119,7 @@ class AddForwardImpl extends React.Component {
               onChange={(value) => this.handleChange('DstIP', value)}
             />
           </FormControl>
-          <FormControl flex="1">
+          <FormControl flex={1}>
             <FormControlLabel>
               <FormControlLabelText>Dest Port</FormControlLabelText>
             </FormControlLabel>

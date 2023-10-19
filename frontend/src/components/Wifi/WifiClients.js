@@ -119,14 +119,14 @@ const WifiClients = (props) => {
       data={clients}
       estimatedItemSize={100}
       renderItem={({ item }) => (
-        <ListItem p="$8">
-          <Text flex="1" bold alignSelf="center">
+        <ListItem>
+          <Text flex={1} bold alignSelf="center">
             {item.Name}
           </Text>
 
           <Box
-            flex="1"
-            sx={{ '@base': { display: 'flex' }, '@md': { display: 'flex' } }}
+            flex={1}
+            sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
             alignItems="center"
           >
             <Badge variant="outline" action="success">
@@ -135,21 +135,20 @@ const WifiClients = (props) => {
           </Box>
 
           <VStack
-            flex="2"
-            sx={{ '@md': { flexDirection: 'row' } }}
-            space="md"
+            flex={2}
+            space="sm"
             justifyContent="center"
+            sx={{ '@md': { flexDirection: 'row' } }}
           >
             <Text bold>{item.RecentIP}</Text>
             <Text color="$muted500">{item.MAC}</Text>
           </VStack>
 
           <VStack
-            sx={{ '@md': { flexDirection: 'row' } }}
-            space="md"
-            alignSelf="center"
-            marginLeft="auto"
             flex={2}
+            space="md"
+            alignItems="flex-end"
+            sx={{ '@md': { flexDirection: 'row' } }}
           >
             <HStack space="sm" alignItems="center">
               <Tooltip

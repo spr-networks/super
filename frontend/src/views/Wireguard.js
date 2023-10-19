@@ -11,6 +11,7 @@ import {
   ButtonIcon,
   ButtonText,
   FlatList,
+  HStack,
   Input,
   InputField,
   ScrollView,
@@ -114,9 +115,7 @@ const Wireguard = (props) => {
 
   return (
     <ScrollView>
-      <ListHeader title="Wireguard">
-        <Switch marginLeft="auto" value={isUp} onToggle={handleChange} />
-      </ListHeader>
+      <ListHeader title="Wireguard"></ListHeader>
 
       <Box
         bg="$backgroundCardLight"
@@ -128,16 +127,26 @@ const Wireguard = (props) => {
         p="$4"
         mb="$4"
       >
-        {config.listenPort ? (
-          <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
-            <Text>
-              Wireguard is listening on port {config.listenPort} with PublicKey:
-            </Text>
-            <Text italic>{config.publicKey}</Text>
+        <HStack space="md">
+          <VStack flex={1} space="md" sx={{ '@md': { flexDirection: 'row' } }}>
+            {config.listenPort ? (
+              <>
+                <Text size="sm">
+                  Wireguard is listening on port {config.listenPort} with
+                  PublicKey:
+                </Text>
+                <Text size="sm" italic>
+                  {config.publicKey}
+                </Text>
+              </>
+            ) : (
+              <Text size="sm">
+                Wireguard is not running. See /configs/wireguard/wg0.conf
+              </Text>
+            )}
           </VStack>
-        ) : (
-          <Text>Wireguard is not running. See /configs/wireguard/wg0.conf</Text>
-        )}
+          <Switch marginLeft="auto" value={isUp} onToggle={handleChange} />
+        </HStack>
       </Box>
 
       <ListHeader
@@ -148,7 +157,7 @@ const Wireguard = (props) => {
         data={endpoints}
         renderItem={({ item }) => (
           <ListItem>
-            <Text flex="1" bold>
+            <Text flex={1} bold>
               {item}
             </Text>
 

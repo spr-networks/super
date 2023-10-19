@@ -95,11 +95,10 @@ const Login = (props) => {
       px="$4"
       py="$8"
       sx={{
-        '@base': { w: 'full', mt: '$1/4' },
+        '@base': { w: '$full', mt: '$1/4' },
         '@md': { w: '$1/4', mt: '$0', alignSelf: 'center', rounded: 10 }
       }}
-      bg={colorMode === 'light' ? 'white' : 'blueGray.900'}
-      shadow={2}
+      bg={colorMode === 'light' ? 'white' : '$blueGray900'}
     >
       <VStack space="lg">
         <Heading
@@ -129,7 +128,7 @@ const Login = (props) => {
               autoCapitalize="none"
             />
             <InputSlot pr="$3">
-              <InputIcon as={GlobeIcon} color="$muted.400" />
+              <InputIcon as={GlobeIcon} color="$muted400" />
             </InputSlot>
           </Input>
         </FormControl>
@@ -156,7 +155,7 @@ const Login = (props) => {
               placeholder="Password"
             />
             <InputSlot pr="$3">
-              <InputIcon as={LockIcon} color="$muted.400" />
+              <InputIcon as={LockIcon} color="$muted400" />
             </InputSlot>
           </Input>
           {'login' in errors ? (

@@ -100,7 +100,7 @@ const Arp = (props) => {
             </VStack>
           </ListItem>
         )}
-        keyExtractor={(item) => item.IP}
+        keyExtractor={(item) => item.IP + item.Device}
       />
     </View>
   )

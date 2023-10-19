@@ -113,45 +113,43 @@ const PeerList = (props) => {
           data={peers}
           renderItem={({ item }) => (
             <ListItem>
-              <Text bold>{item.device ? item.device.Name : `peer`}</Text>
+              <Text size="sm" bold>
+                {item.device ? item.device.Name : `peer`}
+              </Text>
+
               <VStack
-                flex="2"
+                flex={1}
                 sx={{ '@md': { flexDirection: 'row', gap: 'md' } }}
                 alignItems="flex-end"
               >
-                <Text flex="1" size="sm">
-                  {item.AllowedIPs}
-                </Text>
-                <Text
+                <Text size="sm">{item.AllowedIPs.trim()}</Text>
+                {/*<Text
                   flex={2}
-                  sx={{
-                    '@base': { display: 'none' },
-                    '@md': { display: 'none' }
-                  }}
+                  display="none"
                   size="xs"
                   isTruncated
                 >
                   {item.PublicKey}
-                </Text>
-                <Text flex={1}>
-                  {item.LatestHandshake
-                    ? prettyDate(new Date(item.LatestHandshake * 1e3))
-                    : null}
-                </Text>
-                <Text flex={1}>
-                  {item.TransferRx ? (
-                    <HStack space="sm">
-                      <HStack space="xs" alignItems="center">
-                        <Icon as={ArrowUpCircleIcon} color="$muted500" />
-                        <Text size="xs">{prettySize(item.TransferTx)}</Text>
-                      </HStack>
-                      <HStack space="xs" alignItems="center">
-                        <Icon as={ArrowDownCircleIcon} color="$muted500" />
-                        <Text size="xs">{prettySize(item.TransferRx)}</Text>
-                      </HStack>
+                </Text>*/}
+
+                {item.LatestHandshake ? (
+                  <Text flex={1}>
+                    {prettyDate(new Date(item.LatestHandshake * 1e3))}
+                  </Text>
+                ) : null}
+
+                {item.TransferRx ? (
+                  <HStack flex={1} space="sm">
+                    <HStack space="xs" alignItems="center">
+                      <Icon as={ArrowUpCircleIcon} color="$muted500" />
+                      <Text size="xs">{prettySize(item.TransferTx)}</Text>
                     </HStack>
-                  ) : null}
-                </Text>
+                    <HStack space="xs" alignItems="center">
+                      <Icon as={ArrowDownCircleIcon} color="$muted500" />
+                      <Text size="xs">{prettySize(item.TransferRx)}</Text>
+                    </HStack>
+                  </HStack>
+                ) : null}
               </VStack>
               <Button
                 size="sm"

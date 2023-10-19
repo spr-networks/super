@@ -105,7 +105,7 @@ const EditSizeForm = ({ config, onSubmit, ...props }) => {
   const handleSubmit = () => onSubmit(parseInt(size * 1024 * 1024))
 
   return (
-    <HStack space="xl">
+    <VStack space="xl">
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText>
@@ -134,12 +134,12 @@ const EditSizeForm = ({ config, onSubmit, ...props }) => {
             Notice about size
           </Heading>
         </HStack>
-        <Text>
+        <Text size="sm">
           Older entries will be removed to keep the file size to around what is
           specified.
         </Text>
       </VStack>
-    </HStack>
+    </VStack>
   )
 }
 
@@ -303,7 +303,7 @@ const Database = ({ showModal, closeModal, ...props }) => {
     <VStack space="md">
       <HStack alignItems="center" justifyContent="space-between" p={'$4'}>
         <VStack space="md">
-          <Heading fontSize="md">Database</Heading>
+          <Heading size="md">Database</Heading>
           <HStack space="md" alignItems="center">
             <Icon icon={faDatabase} color="$muted500" size="xs" />
             <Text color="$muted500" size="sm">

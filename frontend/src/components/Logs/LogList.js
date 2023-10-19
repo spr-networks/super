@@ -228,7 +228,7 @@ const LogList = (props) => {
       {total > 20 ? (
         <HStack width="100%" space="md">
           <Button
-            flex="1"
+            flex={1}
             action="primary"
             variant="link"
             isDisabled={page <= 1}
@@ -238,7 +238,7 @@ const LogList = (props) => {
             <ButtonText>Previous</ButtonText>
           </Button>
           <Button
-            flex="1"
+            flex={1}
             action="primary"
             variant="link"
             onPress={() => setPage(page + 1)}

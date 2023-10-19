@@ -81,7 +81,8 @@ const WirelessConfiguration = (props) => {
               borderColor={borderColor}
               flex={1}
               alignItems="center"
-              p="$4"
+              px="$2"
+              py="$4"
               cursor="pointer"
             >
               <Pressable

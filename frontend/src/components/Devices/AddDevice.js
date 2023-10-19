@@ -295,7 +295,7 @@ const AddDevice = (props) => {
         </FormControl>
 
         <VStack space="md" minH={180}>
-          <FormControl flex="1" isInvalid={'mac' in errors}>
+          <FormControl flex={1} isInvalid={'mac' in errors}>
             <FormControlLabel>
               <FormControlLabelText>MAC Address</FormControlLabelText>
             </FormControlLabel>
@@ -321,7 +321,7 @@ const AddDevice = (props) => {
             )}
           </FormControl>
 
-          <FormControl flex="1" isInvalid={'VLAN' in errors}>
+          <FormControl flex={1} isInvalid={'VLAN' in errors}>
             <FormControlLabel>
               <FormControlLabelText>VLAN Tag ID</FormControlLabelText>
             </FormControlLabel>
@@ -347,7 +347,7 @@ const AddDevice = (props) => {
             )}
           </FormControl>
 
-          <FormControl flex="1">
+          <FormControl flex={1}>
             <FormControlLabel>
               <FormControlLabelText>Authentication</FormControlLabelText>
             </FormControlLabel>

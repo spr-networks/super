@@ -951,7 +951,12 @@ const WifiHostapd = (props) => {
         />
       ) : null}
 
-      <HStack justifyContent="space-between" p="$4">
+      <VStack
+        justifyContent="space-between"
+        p="$4"
+        space="md"
+        sx={{ '@md': { flexDirection: 'row' } }}
+      >
         <Heading size="sm" alignSelf="center">
           Advanced HostAP Config {iface}
         </Heading>
@@ -984,7 +989,7 @@ const WifiHostapd = (props) => {
             <ButtonText>Reset Config</ButtonText>
           </Button>
         </VStack>
-      </HStack>
+      </VStack>
 
       <Box
         bg="$backgroundCardLight"

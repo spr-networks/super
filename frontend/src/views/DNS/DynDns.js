@@ -267,7 +267,7 @@ export default class DynDns extends Component {
                           <HStack key={label} space="md" justifyItems="center">
                             <FormControlLabel
                               flex={1}
-                              fontSize="xs"
+                              size="xs"
                               justifyContent="flex-end"
                             >
                               <FormControlLabelText>

@@ -48,7 +48,7 @@ const AdminNavbar = ({
     <>
       <HStack
         w="100%"
-        borderBottomWidth={'$1'}
+        borderBottomWidth="$1"
         bg={
           colorMode == 'light'
             ? '$navbarBackgroundLight'
@@ -59,11 +59,15 @@ const AdminNavbar = ({
             ? '$navbarBorderColorLight'
             : '$navbarBorderColorDark'
         }
-        px={'$5'}
-        h={'$16'}
+        px="$3"
+        pt="$2"
+        sx={{
+          '@md': { px: '$4', pt: '$0' }
+        }}
+        h="$16"
         justifyContent="space-between"
       >
-        <HStack w="100%" alignItems="center" space={'sm'} px={'$2'}>
+        <HStack w="100%" alignItems="center" space={'sm'}>
           <Button
             variant="link"
             onPress={() => setIsOpenSidebar(!isOpenSidebar)}
@@ -79,16 +83,16 @@ const AdminNavbar = ({
             />
           </Button>
 
-          <Text fontSize="lg" bold onPress={() => navigate('/admin/home')}>
+          <Text size="lg" bold onPress={() => navigate('/admin/home')}>
             SPR
           </Text>
-          {isMeshNode ? <Text fontSize="lg">MESH</Text> : null}
+          {isMeshNode ? <Text size="lg">MESH</Text> : null}
 
-          <Text fontSize="sm" color="muted.600" isTruncated>
+          <Text size="sm" color="$muted600" isTruncated>
             {version}
           </Text>
 
-          <HStack marginLeft="auto" space={'2xl'} alignItems="center">
+          <HStack marginLeft="auto" space="2xl" alignItems="center">
             <Link
               isExternal
               href="https://www.supernetworks.org/pages/docs/intro"
@@ -107,7 +111,7 @@ const AdminNavbar = ({
               <LinkText size="sm">Docs</LinkText>
             </Link>
             <Link
-              fontSize="md"
+              size="md"
               isExternal
               href="https://www.supernetworks.org/pages/api/0"
               sx={{

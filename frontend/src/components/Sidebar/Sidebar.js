@@ -311,7 +311,7 @@ export const CollapsibleSidebarItem = (props) => {
             _text={{
               textTransform: 'uppercase',
               fontWeight: '600',
-              fontSize: 'sm',
+              size: 'sm',
               _dark: { color: '$coolGray50' },
               _light: { color: '$blueGray900' }
             }}

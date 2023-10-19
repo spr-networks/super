@@ -108,7 +108,11 @@ const ClientSelect = (props) => {
   //if only select one client & cant specify: use select (example dns logs)
   if (props.isDisabled && !props.isMultiple) {
     return (
-      <Select selectedValue={props.value} onValueChange={props.onChange}>
+      <Select
+        placeholder="Select Client"
+        selectedValue={props.value}
+        onValueChange={props.onChange}
+      >
         {devOpts?.options?.map((o) => (
           <Select.Item key={o.value} label={o.label} value={o.value} />
         ))}

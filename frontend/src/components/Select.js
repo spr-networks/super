@@ -28,7 +28,7 @@ const Select = (props) => {
   return (
     <SelectGS {...props}>
       <SelectTrigger variant="outline" size="md">
-        <SelectInput placeholder="Select option" />
+        <SelectInput placeholder={props.placeholder || 'Select option'} />
         <SelectIcon mr="$3">
           <Icon as={ChevronDownIcon} />
         </SelectIcon>

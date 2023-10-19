@@ -768,17 +768,31 @@ const UplinkInfo = (props) => {
               <Text flex={1} fontWeight="bold">
                 {item.Interface}
               </Text>
-              <Text flex={1}>{item.Type}</Text>
-              <Text flex={1}>{item.Subtype}</Text>
+
+              <Text flex={1} size="sm">
+                {item.Type}
+              </Text>
+
+              {item.Subtype ? (
+                <Text flex={1} size="sm">
+                  {item.Subtype}
+                </Text>
+              ) : null}
+
               <VStack flex={2} space={1}>
                 {item.IPs.map((ip, i) => (
-                  <Text key={ip} display={i == 0 ? 'flex' : 'none'}>
+                  <Text size="sm" key={ip} display={i == 0 ? 'flex' : 'none'}>
                     {ip}
                   </Text>
                 ))}
               </VStack>
               {item.Enabled ? (
-                <Badge key={item.Name} action="success" variant="outline">
+                <Badge
+                  size="sm"
+                  key={item.Name}
+                  action="success"
+                  variant="outline"
+                >
                   <BadgeText>Enabled</BadgeText>
                 </Badge>
               ) : null}

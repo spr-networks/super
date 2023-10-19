@@ -313,9 +313,8 @@ const WifiChannelParameters = ({
         </Text>
 
         <VStack
-          sx={{ '@md': { flexDirection: 'row' } }}
+          sx={{ '@md': { flexDirection: 'row', alignItems: 'center' } }}
           space="md"
-          alignItems="center"
         >
           <FormControl flex={1}>
             <FormControlLabel>

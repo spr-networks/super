@@ -71,7 +71,7 @@ class AddForwardBlockImpl extends React.Component {
     return (
       <VStack space="md">
         <HStack space="md">
-          <FormControl flex="1" isRequired>
+          <FormControl flex={1} isRequired>
             <FormControlLabel>
               <FormControlLabelText>Source address</FormControlLabelText>
             </FormControlLabel>
@@ -85,7 +85,7 @@ class AddForwardBlockImpl extends React.Component {
               <FormControlHelperText>IP address or CIDR</FormControlHelperText>
             </FormControlHelper>
           </FormControl>
-          <FormControl flex="1" isRequired>
+          <FormControl flex={1} isRequired>
             <FormControlLabel>
               <FormControlLabelText>Destination address</FormControlLabelText>
             </FormControlLabel>
@@ -102,7 +102,7 @@ class AddForwardBlockImpl extends React.Component {
           </FormControl>
         </HStack>
 
-        <FormControl flex="1">
+        <FormControl flex={1}>
           <FormControlLabel>
             <FormControlLabelText>Destination Port</FormControlLabelText>
           </FormControlLabel>

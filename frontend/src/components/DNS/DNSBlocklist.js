@@ -306,19 +306,21 @@ const DNSBlocklist = (props) => {
 
   const colorMode = useColorMode()
 
+  /*
+   <HStack space="sm">
+              <Spinner accessibilityLabel="Loading lists" />
+              <Text color="$muted500">Update running...</Text>
+            </HStack>
+   */
+
   return (
     <>
       <ListHeader
         title="DNS Blocklists"
         description={
-          !pending ? (
-            <>{blockedDomains.toLocaleString()} blocked domains</>
-          ) : (
-            <HStack space="sm">
-              <Spinner accessibilityLabel="Loading lists" />
-              <Text color="$muted500">Update running...</Text>
-            </HStack>
-          )
+          !pending
+            ? `${blockedDomains.toLocaleString()} blocked domains`
+            : 'Update running...'
         }
       >
         {!pending ? (
@@ -361,10 +363,9 @@ const DNSBlocklist = (props) => {
                   _sx={{
                     '@md': { width: '$3/4' }
                   }}
-                  flexWrap="wrap"
                   onPress={toggleShowURI}
                 >
-                  <Text size="sm" bold isTruncated>
+                  <Text size="sm" bold flexWrap="wrap">
                     {item.Info}
                   </Text>
                   <Text
@@ -398,7 +399,7 @@ const DNSBlocklist = (props) => {
                   }}
                 >
                   {item.Enabled ? (
-                    <Badge action="success" variant="outline">
+                    <Badge size="sm" action="success" variant="outline">
                       <BadgeText>Enabled</BadgeText>
                     </Badge>
                   ) : null}
@@ -445,6 +446,7 @@ const DNSBlocklist = (props) => {
 
                   <MenuItem
                     key="deleteItem"
+                    textValue="deleteItem"
                     display={isOnlyRecommended(item) ? 'none' : 'flex'}
                   >
                     <CloseIcon color="$red700" mr="$2" />

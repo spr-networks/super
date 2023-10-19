@@ -93,7 +93,7 @@ const WifiInterface = ({ iw, ...props }) => {
       }}
       p="$4"
     >
-      <Heading fontSize="lg">{iw.wiphy}</Heading>
+      <Heading size="lg">{iw.wiphy}</Heading>
 
       <VStack
         sx={{
@@ -205,7 +205,7 @@ const WifiInterface = ({ iw, ...props }) => {
                         })}
                         keyExtractor={(item, index) => item.label}
                         renderSectionHeader={({ section: { title } }) => (
-                          <Heading fontSize="md">{title}</Heading>
+                          <Heading size="md">{title}</Heading>
                         )}
                         renderSectionFooter={() => <Divider my="$2" />}
                         renderItem={({ item }) => (
@@ -248,7 +248,7 @@ const WifiInterface = ({ iw, ...props }) => {
 
                         {/*tab == 'supported_interface_modes' ? (
                           <>
-                            <Heading fontSize="sm">
+                            <Heading size="sm">
                               software interface modes (can always be added)
                             </Heading>
 
@@ -260,7 +260,7 @@ const WifiInterface = ({ iw, ...props }) => {
                               ))}
                             </HStack>
 
-                            <Heading fontSize="sm" color="muted.500">
+                            <Heading size="sm" color="muted.500">
                               valid interface combinations
                             </Heading>
                             <Text italic>
@@ -314,7 +314,7 @@ const WifiInterface = ({ iw, ...props }) => {
                           />
 
                           <Text w={100}>WPA3/SAE</Text>
-                          <Text color="$muted500" fontSize="sm">
+                          <Text color="$muted500" size="sm">
                             Recommended for better security
                           </Text>
                         </HStack>
@@ -334,7 +334,7 @@ const WifiInterface = ({ iw, ...props }) => {
                           />
 
                           <Text w={100}>AP/VLAN</Text>
-                          <Text color="$muted500" fontSize="sm">
+                          <Text color="$muted500" size="sm">
                             Required to create virtual interfaces
                           </Text>
                         </HStack>

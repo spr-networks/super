@@ -87,11 +87,11 @@ const ConfigsBackup = (props) => {
         <Button
           size="sm"
           action="secondary"
-          variant="link"
+          variant="solid"
           onPress={doConfigsBackup}
         >
           <ButtonText>Backup configs</ButtonText>
-          <ButtonIcon as={BoxIcon} ml="$1" color="$muted500" />
+          <ButtonIcon as={BoxIcon} ml="$1" />
         </Button>
       </ListHeader>
 

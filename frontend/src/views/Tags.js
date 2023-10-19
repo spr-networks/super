@@ -1,11 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import {
-  Box,
-  ScrollView,
-  SectionList,
-  Text,
-  VStack
-} from '@gluestack-ui/themed'
+import { Box, View, SectionList, Text, VStack } from '@gluestack-ui/themed'
 
 import { deviceAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
@@ -50,7 +44,7 @@ const Tags = (props) => {
   }, [])
 
   return (
-    <ScrollView>
+    <View h="$full">
       <VStack space="md">
         <ListHeader title="Tags" />
 
@@ -71,7 +65,7 @@ const Tags = (props) => {
           <Text px="$4">No tags configured for devices or services</Text>
         ) : null}
       </VStack>
-    </ScrollView>
+    </View>
   )
 }
 

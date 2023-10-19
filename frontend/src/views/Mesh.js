@@ -388,7 +388,10 @@ const Mesh = (props) => {
               <Text>There are no leaf routers configured yet</Text>
             ) : null}
 
-            <ButtonGroup>
+            <ButtonGroup
+              flexDirection="column"
+              sx={{ '@md': { flexDirection: 'row' } }}
+            >
               <Button
                 sx={{
                   '@md': { display: leafRouters.length ? 'none' : 'flex' }

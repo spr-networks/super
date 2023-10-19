@@ -207,7 +207,7 @@ const MulticastPorts = (props) => {
         data={list}
         renderItem={({ item }) => (
           <ListItem>
-            <Text flex="1">{item.Address}</Text>
+            <Text flex={1}>{item.Address}</Text>
 
             <HStack space="sm">
               {item.Tags

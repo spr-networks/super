@@ -205,7 +205,7 @@ const SpeedTest = (props) => {
           </VStack>
 
           <HStack space="md" alignItems="center" justifyContent="space-between">
-            <HStack flex="1" space="sm">
+            <HStack flex={1} space="sm">
               <Icon icon={faCircleArrowDown} color="$muted500" />
               <Text color="$muted500">Download</Text>
             </HStack>
@@ -231,7 +231,7 @@ const SpeedTest = (props) => {
           </VStack>
 
           <HStack space="md" alignItems="center" justifyContent="space-between">
-            <HStack flex="1" space="md">
+            <HStack flex={1} space="md">
               <Icon icon={faCircleArrowUp} color="$muted500" />
               <Text color="$muted500">Upload</Text>
             </HStack>

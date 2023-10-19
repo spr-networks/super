@@ -109,7 +109,7 @@ class AddEndpointImpl extends React.Component {
               <FormControlHelperText>Accepts IP or CIDR</FormControlHelperText>
             </FormControlHelper>
           </FormControl>
-          <FormControl flex="1">
+          <FormControl flex={1}>
             <FormControlLabel>
               <FormControlLabelText>Port</FormControlLabelText>
             </FormControlLabel>
@@ -123,7 +123,7 @@ class AddEndpointImpl extends React.Component {
         </HStack>
         {/* //domains are not yet implemented.
           <HStack space={4}>
-          <FormControl flex="1">
+          <FormControl flex={1}>
             <FormControlLabel>Domain</FormControlLabel>
             <Input
               size="md"
