@@ -25,7 +25,7 @@ export default class Firewall extends Component {
 
   render() {
     return (
-      <ScrollView __sx={{ '@md': { width: '$3/4' } }}>
+      <ScrollView sx={{ '@md': { height: '90vh' } }}>
         <VStack space="lg">
           <EndpointList
             list={this.state.config.Endpoints}

@@ -26,16 +26,15 @@ const ListHeader = ({ title, description, ...props }) => {
       space="md"
       sx={{ '@md': { flexDirection: 'row', alignItems: 'center', gap: 'md' } }}
     >
-      <HStack
-        sx={{ '@md': { flexDirection: 'row' } }}
+      <VStack
+        sx={{ '@md': { flexDirection: 'row', alignItems: 'center' } }}
         space="sm"
-        alignItems="center"
       >
         <Heading size="sm">{title}</Heading>
         <Text size="sm" color="$muted500">
           {description}
         </Text>
-      </HStack>
+      </VStack>
 
       {props.children}
     </VStack>

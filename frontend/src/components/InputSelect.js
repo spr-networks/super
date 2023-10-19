@@ -14,6 +14,8 @@ import {
   MenuItem,
   MenuItemLabel
 } from '@gluestack-ui/themed'
+import { LaptopIcon, TagIcon, WifiIcon, UsersIcon } from 'lucide-react-native'
+import { ucFirst } from 'utils'
 
 const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
   const [groups, setGroups] = useState([])
@@ -41,6 +43,16 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
   const handleChange = (value) => {
     let newValue = Array.isArray(value) ? value.join(',') : value
 
+    //TODO handle multiple
+    //translate tag:t1 to {Tag:"t1"}, group:dns to {Group:"dns"}
+    if (typeof newValue == 'string') {
+      if (newValue.match(/^(group|tag):/)) {
+        let [prefix, v] = newValue.split(':')
+        let key = ucFirst(prefix)
+        newValue = { [key]: v }
+      }
+    }
+
     if (onChange) {
       onChange(newValue)
     }
@@ -67,6 +79,35 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
       ))}
     </Menu>
   )*/
+  if (groups) {
+    console.log(JSON.stringify(groups))
+  }
+
+  const menuItem = (item) => {
+    let value = item.value
+    let icon = LaptopIcon
+    if (typeof value == 'object') {
+      let prefix = 'group',
+        v = 'empty'
+      icon = UsersIcon //GroupIcon
+      if (value.Tag) {
+        prefix = 'tag'
+        v = value.Tag
+        icon = TagIcon
+      } else {
+        v = value.Group
+      }
+
+      value = `${prefix}:${v}`
+    }
+
+    return (
+      <MenuItem key={value} textValue={value}>
+        <Icon as={icon} mr="$2" />
+        <MenuItemLabel size="xs">{item.label}</MenuItemLabel>
+      </MenuItem>
+    )
+  }
 
   return (
     <Menu
@@ -75,11 +116,7 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
       onSelectionChange={(e) => handleChange(e.currentKey)}
     >
       {groups.map((group) => {
-        return group.options?.map((item, idx) => (
-          <MenuItem key={item.value} textValue={item.value}>
-            <MenuItemLabel size="sm">{item.label}</MenuItemLabel>
-          </MenuItem>
-        ))
+        return group.options?.map(menuItem)
       })}
     </Menu>
   )

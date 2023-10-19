@@ -386,7 +386,7 @@ const LANLinkInfo = (props) => {
               <Icon as={CloseIcon} />
             </ModalCloseButton>
           </ModalHeader>
-          <ModalBody>
+          <ModalBody pb="$6">
             {iface && modal == 'config' ? (
               <LANLinkSetConfig iface={iface} onSubmit={onSubmit} />
             ) : null}

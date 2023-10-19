@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import {
+  Badge,
+  BadgeText,
   Button,
   ButtonText,
+  Pressable,
   FormControl,
   FormControlHelper,
   FormControlHelperText,
@@ -51,10 +54,10 @@ const Token = ({
   let options = props.options || [] // for autocomplete
 
   const tokenProps = {
-    action: 'secondary',
+    action: 'muted',
     variant: 'outline',
     size: 'xs',
-    p: '$1',
+    py: '$0',
     px: '$2'
   }
 
@@ -214,22 +217,7 @@ const Token = ({
         }}
       />
     )
-  } /* else if (['DstPort', 'SrcPort'].includes(label)) {
-    const onSelect = (value) => {
-      onChangeText(value)
-      setIsOpen(false)
-    }
-
-    inputElement = (
-      <InputSelect
-        options={options}
-        value={value}
-        onChange={onSelect}
-        onChangeText={onChangeText}
-        onSubmitEditing={() => setIsOpen(false)}
-      />
-    )
-  }*/ else if (
+  } else if (
     (['Tags', 'Groups', 'DstInterface', 'Container', 'OriginalDstIP'].includes(
       label
     ) ||
@@ -273,17 +261,19 @@ const Token = ({
 
   const trigger = (triggerProps) => (
     <Tooltip
+      h={undefined}
       placement="bottom"
       trigger={(triggerPropsTooltip) => {
         return (
-          <Button
-            {...tokenProps}
+          <Pressable
             {...triggerProps}
             {...triggerPropsTooltip}
             onPress={() => setIsOpen(!isOpen)}
           >
-            <ButtonText>{displayValue(value)}</ButtonText>
-          </Button>
+            <Badge {...tokenProps}>
+              <BadgeText>{displayValue(value)}</BadgeText>
+            </Badge>
+          </Pressable>
         )
       }}
     >

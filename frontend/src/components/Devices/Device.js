@@ -472,7 +472,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
           </VStack>
           <HStack
             sx={{ '@md': { w: '$2/5' } }}
-            space="md"
+            space="sm"
             alignSelf="center"
             alignItems="center"
             justifyContent="flex-start"

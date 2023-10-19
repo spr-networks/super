@@ -54,7 +54,7 @@
     "chroma-js": "^2.4.2",
     "ip-address": "^8.1.0",
     "jest": "^28.1.0",
-    "lucide-react-native": "^0.286.0",
+    "lucide-react-native": "^0.288.0",
     "metro-react-native-babel-preset": "^0.72.2",
     "miragejs": "^0.1.43",
     "moment": "^2.29.4",

@@ -144,7 +144,7 @@ const EndpointList = (props) => {
   )
 
   return (
-    <>
+    <VStack>
       <ListHeader
         title="Endpoints"
         description="Describe Service Endpoints for building Firewall Rules"
@@ -155,7 +155,7 @@ const EndpointList = (props) => {
           triggerProps={{
             sx: {
               '@base': { display: 'none' },
-              '@md': { display: list.length ? 'flex' : 'none' }
+              '@md': { display: list.length ? 'flex' : 'flex' }
             }
           }}
           modalRef={refModal}
@@ -164,74 +164,75 @@ const EndpointList = (props) => {
         </ModalForm>
       </ListHeader>
 
-      <Box>
-        <FlatList
-          data={list}
-          renderItem={({ item }) => (
-            <ListItem>
-              <Badge action="muted" variant="outline">
-                <BadgeText>{item.Protocol}</BadgeText>
-              </Badge>
+      <FlatList
+        data={list}
+        renderItem={({ item }) => (
+          <ListItem>
+            <Badge action="muted" variant="outline">
+              <BadgeText>{item.Protocol}</BadgeText>
+            </Badge>
 
-              <Text bold>{item.RuleName}</Text>
+            <Text bold>{item.RuleName}</Text>
 
-              <ArrowRightIcon color="$muted400" />
+            <ArrowRightIcon color="$muted400" />
 
-              <HStack space="sm">
-                <Text bold>
-                  {item.Domain}
-                  {item.IP}
-                </Text>
-                <Text color="$muted500">:</Text>
-                <Text>{item.Port}</Text>
-              </HStack>
+            <HStack space="sm">
+              <Text bold>
+                {item.Domain}
+                {item.IP}
+              </Text>
+              <Text color="$muted500">:</Text>
+              <Text>{item.Port}</Text>
+            </HStack>
 
-              <VStack
-                sx={{
-                  '@base': { display: 'none' },
-                  '@md': { display: item.Tags?.length ? 'flex' : 'none' }
-                }}
-                space="xs"
-              >
-                {item.Tags
-                  ? item.Tags.map((tag) => <TagItem key={tag} name={tag} />)
-                  : null}
-              </VStack>
+            <VStack
+              sx={{
+                '@base': { display: 'none' },
+                '@md': { display: item.Tags?.length ? 'flex' : 'none' }
+              }}
+              space="xs"
+            >
+              {item.Tags
+                ? item.Tags.map((tag) => <TagItem key={tag} name={tag} />)
+                : null}
+            </VStack>
 
-              {moreMenu(item)}
+            {moreMenu(item)}
 
-              <ModalConfirm
-                type={modalType}
-                onSubmit={(t) => handleTags(item, [...(item?.Tags || []), t])}
-                onClose={() => setShowModal(false)}
-                isOpen={showModal}
-              />
-            </ListItem>
-          )}
-          keyExtractor={(item) => `${item.Protocol}${item.iP}:${item.Port}`}
-        />
+            <ModalConfirm
+              type={modalType}
+              onSubmit={(t) => handleTags(item, [...(item?.Tags || []), t])}
+              onClose={() => setShowModal(false)}
+              isOpen={showModal}
+            />
+          </ListItem>
+        )}
+        keyExtractor={(item) => `${item.Protocol}${item.iP}:${item.Port}`}
+      />
 
-        <VStack>
-          {!list.length ? (
-            <Text px="$4" mb="$4" flexWrap="wrap">
-              Service Endpoints serves as helpers for creating other firewall
-              rules, as well as one-way connectivity from devices to the
-              endpoint when they share a tag.
-            </Text>
-          ) : null}
-          <Button
-            sx={{ '@md': { display: list.length ? 'none' : 'flex' } }}
-            action="primary"
-            variant="solid"
-            rounded="$none"
-            onPress={() => refModal.current()}
-          >
-            <ButtonText>Add Endpoint</ButtonText>
-            <ButtonIcon as={AddIcon} />
-          </Button>
-        </VStack>
-      </Box>
-    </>
+      {!list.length ? (
+        <Text
+          bg="$backgroundCardLight"
+          sx={{ _dark: { bg: '$backgroundCardDark' } }}
+          p="$4"
+          flexWrap="wrap"
+        >
+          Service Endpoints serves as helpers for creating other firewall rules,
+          as well as one-way connectivity from devices to the endpoint when they
+          share a tag.
+        </Text>
+      ) : null}
+      <Button
+        sx={{ '@md': { display: list.length ? 'none' : 'none' } }}
+        action="primary"
+        variant="solid"
+        rounded="$none"
+        onPress={() => refModal.current()}
+      >
+        <ButtonText>Add Endpoint</ButtonText>
+        <ButtonIcon as={AddIcon} />
+      </Button>
+    </VStack>
   )
 }
 

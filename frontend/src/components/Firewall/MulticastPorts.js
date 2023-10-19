@@ -31,6 +31,7 @@ import ModalConfirm from 'components/ModalConfirm'
 import AddMulticastPort from './AddMulticastPort'
 
 import { ListHeader, ListItem } from 'components/List'
+import TagItem from 'components/TagItem'
 
 const MulticastPorts = (props) => {
   const [list, setList] = useState([])
@@ -39,7 +40,7 @@ const MulticastPorts = (props) => {
   const [state, setState] = useState({
     pending: false,
     showModal: false,
-    modalType: '',
+    modalType: 'Tag',
     pendingItem: {}
   })
 
@@ -182,7 +183,7 @@ const MulticastPorts = (props) => {
   const defaultTags = []
 
   return (
-    <>
+    <VStack>
       <ListHeader
         title="Multicast Proxy"
         description="Set ip:port addresses to proxy"
@@ -193,7 +194,7 @@ const MulticastPorts = (props) => {
           triggerProps={{
             sx: {
               '@base': { display: 'none' },
-              '@md': { display: list.length ? 'flex' : 'none' }
+              '@md': { display: list.length ? 'flex' : 'flex' }
             }
           }}
           modalRef={refModal}
@@ -208,18 +209,9 @@ const MulticastPorts = (props) => {
           <ListItem>
             <Text flex="1">{item.Address}</Text>
 
-            <HStack>
+            <HStack space="sm">
               {item.Tags
-                ? item.Tags.map((entry) => (
-                    <Badge
-                      key={item.URI + entry}
-                      action="muted"
-                      variant="outline"
-                    >
-                      <BadgeText>{entry}</BadgeText>
-                      <BadgeIcon as={TagIcon} ml="$1" />
-                    </Badge>
-                  ))
+                ? item.Tags.map((entry) => <TagItem name={entry} />)
                 : null}
             </HStack>
 
@@ -270,29 +262,27 @@ const MulticastPorts = (props) => {
         keyExtractor={(item) => `${item.Address}`}
       />
 
-      <VStack>
-        {!list.length ? (
-          <Text px="$4" mb="$4" flexWrap="wrap">
-            There are no multicast proxy rules configured yet
-          </Text>
-        ) : null}
-        <Button
-          sx={{ '@md': { display: list.length ? 'none' : 'flex' } }}
-          rounded="$none"
-          onPress={() => refModal.current()}
-        >
-          <ButtonText>Add Multicast Service</ButtonText>
-          <ButtonIcon as={AddIcon} />
-        </Button>
+      {!list.length ? (
+        <Text p="$4" flexWrap="wrap">
+          There are no multicast proxy rules configured yet
+        </Text>
+      ) : null}
+      <Button
+        sx={{ '@md': { display: list.length ? 'none' : 'none' } }}
+        rounded="$none"
+        onPress={() => refModal.current()}
+      >
+        <ButtonText>Add Multicast Service</ButtonText>
+        <ButtonIcon as={AddIcon} />
+      </Button>
 
-        <ModalConfirm
-          type={state.modalType}
-          onSubmit={(v) => handleSubmitNew(state.pendingItem, v)}
-          onClose={() => setState({ showModal: false })}
-          isOpen={state.showModal}
-        />
-      </VStack>
-    </>
+      <ModalConfirm
+        type={state.modalType}
+        onSubmit={(v) => handleSubmitNew(state.pendingItem, v)}
+        onClose={() => setState({ showModal: false })}
+        isOpen={state.showModal}
+      />
+    </VStack>
   )
 }
 

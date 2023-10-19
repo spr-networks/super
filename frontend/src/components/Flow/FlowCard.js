@@ -21,7 +21,8 @@ import {
   TrashIcon,
   Menu,
   MenuItem,
-  MenuItemLabel
+  MenuItemLabel,
+  CloseIcon
 } from '@gluestack-ui/themed'
 
 import { getCard } from './FlowCards'
@@ -115,11 +116,11 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     body = (
       <HStack
         flex={1}
-        flexWrap={'wrap'}
+        flexWrap="wrap"
         space="sm"
         sx={{
-          '@base': { maxW: '210px' },
-          '@md': { maxW: '400px' }
+          '@base': { maxWidth: '210px' },
+          '@md': { maxWidth: '400px' }
         }}
       >
         {card.params
@@ -166,7 +167,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     }
   }
 
-  const moreMenu = (
+  let moreMenu = (
     <Menu
       trigger={trigger}
       selectionMode="single"
@@ -186,6 +187,13 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     </Menu>
   )
 
+  //only one item - show button
+  moreMenu = (
+    <Button action="secondary" variant="link" size="sm" onPress={onDelete}>
+      <ButtonIcon as={CloseIcon} />
+    </Button>
+  )
+
   return (
     <Box
       bg="$light"
@@ -196,7 +204,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
         '@md': { shadow: 5 }
       }}
       p={size == 'xs' ? '$2' : '$4'}
-      rounded="md"
+      rounded="$md"
       minW={320}
       mr="$2"
       {...props}
@@ -223,6 +231,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
             </Text>
             {edit && description ? (
               <Tooltip
+                h={undefined}
                 placement="bottom"
                 trigger={(triggerProps) => {
                   return (

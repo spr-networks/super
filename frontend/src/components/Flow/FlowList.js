@@ -120,7 +120,9 @@ const FlowCardList = ({
             modalRef={refModal}
             w="full"
           >
-            <AddFlowCard cardType={cardType} onSubmit={handleAddCard} />
+            <ScrollView maxHeight={400}>
+              <AddFlowCard cardType={cardType} onSubmit={handleAddCard} />
+            </ScrollView>
           </ModalForm>
 
           <Button
@@ -270,8 +272,8 @@ const Flow = ({ flow, edit, ...props }) => {
 
     return (
       <VStack
-        p="$2"
-        py="$6"
+        p="$4"
+        py="$4"
         sx={{
           '@base': { flexDirection: 'column-reverse' },
           '@md': { flexDirection: 'row', p: '$8' },
@@ -295,13 +297,17 @@ const Flow = ({ flow, edit, ...props }) => {
             ) : null}
           </HStack>
 
-          <HStack space="md" flexWrap={'wrap'} px="$1">
+          <HStack space="md" flexWrap="wrap">
             {Object.keys(trigger.values).map((key) => (
-              <Text key={key}>{displayValue(trigger.values[key], key)}</Text>
+              <Text key={key} size="sm">
+                {displayValue(trigger.values[key], key)}
+              </Text>
             ))}
 
             {Object.keys(action.values).map((key) => (
-              <Text key={key}>{displayValue(action.values[key], key)}</Text>
+              <Text key={key} size="sm">
+                {displayValue(action.values[key], key)}
+              </Text>
             ))}
           </HStack>
         </VStack>
@@ -379,16 +385,26 @@ const Flow = ({ flow, edit, ...props }) => {
         />
 
         {edit ? (
-          <VStack mt="$4" space="md">
-            <Button action="primary" variant="solid" onPress={onSubmit}>
+          <HStack my="$2" space="md">
+            <Button
+              flex={1}
+              action="primary"
+              variant="solid"
+              onPress={onSubmit}
+            >
               <ButtonText>Save</ButtonText>
               <ButtonIcon as={CheckIcon} ml="$1" />
             </Button>
-            <Button action="secondary" variant="outline" onPress={onReset}>
+            <Button
+              flex={1}
+              action="secondary"
+              variant="outline"
+              onPress={onReset}
+            >
               <ButtonText>Reset</ButtonText>
               <ButtonIcon as={CloseIcon} ml="$1" />
             </Button>
-          </VStack>
+          </HStack>
         ) : null}
       </VStack>
     </VStack>
@@ -709,9 +725,9 @@ const FlowList = (props) => {
   let h = Dimensions.get('window').height - (Platform.OS == 'ios' ? 64 * 2 : 64)
 
   return (
-    <ScrollView>
+    <ScrollView sx={{ '@md': { height: '90vh' } }}>
       <VStack sx={{ '@md': { flexDirection: 'row' } }}>
-        <VStack py="$4">
+        <VStack py="$4" sx={{ '@md': { flex: 1 } }}>
           <HStack
             px="$4"
             pb="$4"

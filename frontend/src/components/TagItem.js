@@ -12,17 +12,22 @@ import {
 
 const TagItem = React.memo(({ name, size }) => {
   //TODO - also use + fix tagItem component
+  let colorMode = useColorMode()
+  let bg = colorMode == 'light' ? '$blueGray200' : '$blueGray500'
+  let fg = colorMode == 'light' ? '$muted800' : '$muted100'
+
   return (
     <Badge
       key={name}
       action="muted"
-      variant="outline"
+      variant="solid"
+      bg={bg}
       size={size || 'sm'}
       py="$1"
       px="$2"
     >
-      <BadgeText>{name}</BadgeText>
-      <BadgeIcon as={TagIcon} ml="$1" />
+      <BadgeText color={fg}>{name}</BadgeText>
+      <BadgeIcon color={fg} as={TagIcon} ml="$1" />
     </Badge>
   )
 })
@@ -44,19 +49,20 @@ const GroupItem = React.memo(({ name, size }) => {
 
   let icon = groupIcons[name] || UsersIcon
   let bg = groupColors[name] || '$muted200'
+  let fg = colorMode == 'light' ? '$muted800' : '$muted100'
 
   return (
     <Badge
       key={name}
       action="muted"
-      variant="outline"
+      variant="solid"
       bg={bg}
       size={size || 'sm'}
       py="$1"
       px="$2"
     >
-      <BadgeText>{name}</BadgeText>
-      <BadgeIcon as={icon} ml="$1" />
+      <BadgeText color={fg}>{name}</BadgeText>
+      <BadgeIcon color={fg} as={icon} ml="$1" />
     </Badge>
   )
 })

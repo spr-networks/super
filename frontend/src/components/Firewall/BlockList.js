@@ -41,7 +41,7 @@ const BlockList = (props) => {
   }
 
   return (
-    <>
+    <VStack>
       <ListHeader
         title={title}
         description="Block traffic coming into the network at the PREROUTING stage"
@@ -52,7 +52,7 @@ const BlockList = (props) => {
           triggerProps={{
             sx: {
               '@base': { display: 'none' },
-              '@md': { display: list.length ? 'flex' : 'none' }
+              '@md': { display: list.length ? 'flex' : 'flex' }
             }
           }}
           modalRef={refModal}
@@ -61,53 +61,54 @@ const BlockList = (props) => {
         </ModalForm>
       </ListHeader>
 
-      <Box>
-        <FlatList
-          data={list}
-          renderItem={({ item }) => (
-            <ListItem>
-              <Badge action="info" variant="outline">
-                <BadgeText>{item.Protocol}</BadgeText>
-              </Badge>
+      <FlatList
+        data={list}
+        renderItem={({ item }) => (
+          <ListItem>
+            <Badge action="info" variant="outline">
+              <BadgeText>{item.Protocol}</BadgeText>
+            </Badge>
 
-              <Text>{item.SrcIP}</Text>
-              <Text>{item.DstIP}</Text>
+            <Text>{item.SrcIP}</Text>
+            <Text>{item.DstIP}</Text>
 
-              <Button
-                alignSelf="center"
-                size="sm"
-                action="negative"
-                variant="link"
-                onPress={() => deleteListItem(item)}
-              >
-                <ButtonIcon as={CloseIcon} color="$red700" />
-              </Button>
-            </ListItem>
-          )}
-          keyExtractor={(item) => `${item.Protocol}${item.SrcIP}${item.DstIP}`}
-        />
+            <Button
+              alignSelf="center"
+              size="sm"
+              action="negative"
+              variant="link"
+              onPress={() => deleteListItem(item)}
+            >
+              <ButtonIcon as={CloseIcon} color="$red700" />
+            </Button>
+          </ListItem>
+        )}
+        keyExtractor={(item) => `${item.Protocol}${item.SrcIP}${item.DstIP}`}
+      />
 
-        <VStack>
-          {!list.length ? (
-            <Text px="$4" mb="$4" flexWrap="wrap">
-              Block inbound WAN traffic from reaching a private IP address on
-              the LAN.
-            </Text>
-          ) : null}
+      {!list.length ? (
+        <Text
+          bg="$backgroundCardLight"
+          sx={{ _dark: { bg: '$backgroundCardDark' } }}
+          p="$4"
+          flexWrap="wrap"
+        >
+          Block inbound WAN traffic from reaching a private IP address on the
+          LAN.
+        </Text>
+      ) : null}
 
-          <Button
-            sx={{ '@md': { display: list.length ? 'none' : 'flex' } }}
-            action="primary"
-            variant="solid"
-            rounded="$none"
-            onPress={() => refModal.current()}
-          >
-            <ButtonText>Add IP Block</ButtonText>
-            <ButtonIcon as={AddIcon} />
-          </Button>
-        </VStack>
-      </Box>
-    </>
+      <Button
+        sx={{ '@md': { display: list.length ? 'none' : 'none' } }}
+        action="primary"
+        variant="solid"
+        rounded="$none"
+        onPress={() => refModal.current()}
+      >
+        <ButtonText>Add IP Block</ButtonText>
+        <ButtonIcon as={AddIcon} />
+      </Button>
+    </VStack>
   )
 }
 
