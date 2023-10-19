@@ -26,5 +26,6 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 COPY --from=builder /superd /
 COPY scripts /scripts
+COPY scripts/docker-compose /usr/bin/docker-compose
 RUN git config --global --add safe.directory /super
 ENTRYPOINT ["/scripts/startup.sh"]
