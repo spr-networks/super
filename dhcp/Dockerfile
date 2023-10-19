@@ -29,6 +29,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends jq ethtool isc-
 COPY --from=builder /coredhcpd /
 COPY --from=builder /coredhcp_client /
 COPY scripts /scripts
-COPY scripts/dhclient-gateway-hook.sh /etc/dhclient-enter-hooks.d/spr-gateway
+COPY scripts/dhclient-gateway-hook.sh /etc/dhcp/dhclient-enter-hooks.d/spr-gateway
 
 ENTRYPOINT ["/scripts/startup.sh"]
