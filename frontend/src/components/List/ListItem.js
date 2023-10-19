@@ -2,9 +2,9 @@ import React from 'react'
 
 import { Box, HStack } from '@gluestack-ui/themed'
 
-const ListItem = (props) => {
+const ListItem = ({ p, children, ...props }) => {
   return (
-    <Box
+    <HStack
       bg="$backgroundCardLight"
       borderColor="$borderColorCardLight"
       borderBottomWidth={1}
@@ -14,12 +14,14 @@ const ListItem = (props) => {
           borderColor: '$borderColorCardDark'
         }
       }}
-      p={props.p || '$4'}
+      p={p || '$4'}
+      space="md"
+      justifyContent="space-between"
+      alignItems="center"
+      {...props}
     >
-      <HStack space="md" justifyContent="space-between" alignItems="center">
-        {props.children}
-      </HStack>
-    </Box>
+      {children}
+    </HStack>
   )
 }
 

@@ -14,6 +14,7 @@ import {
   Heading,
   HStack,
   VStack,
+  ScrollView,
   Text
 } from '@gluestack-ui/themed'
 
@@ -289,62 +290,64 @@ export default (props) => {
   }
 
   return (
-    <VStack space="md">
-      <Box
-        bg="$backgroundCardLight"
-        sx={{
-          _dark: { bg: '$backgroundCardDark' }
-        }}
-        p="$4"
-      >
-        <HStack alignItems="center">
-          <VStack>
-            <Heading size="sm">Device WAN Traffic</Heading>
-            <Text color="$muted500">
-              IN: {prettySize(wan.totalIn)}, OUT: {prettySize(wan.totalOut)}
-            </Text>
-          </VStack>
-          <ButtonGroup size="sm" marginLeft="auto">
-            <DateRange
-              defaultValue={wanScale}
-              onChange={(newValue) => handleChangeTime(newValue, 'wan')}
-            />
-          </ButtonGroup>
-        </HStack>
-        <Box>
-          {wan.datasets ? (
-            <Bar data={wan} options={templateData.options} />
-          ) : null}
+    <ScrollView sx={{ '@md': { height: '90vh' } }}>
+      <VStack space="md">
+        <Box
+          bg="$backgroundCardLight"
+          sx={{
+            _dark: { bg: '$backgroundCardDark' }
+          }}
+          p="$4"
+        >
+          <HStack alignItems="center">
+            <VStack>
+              <Heading size="sm">Device WAN Traffic</Heading>
+              <Text color="$muted500">
+                IN: {prettySize(wan.totalIn)}, OUT: {prettySize(wan.totalOut)}
+              </Text>
+            </VStack>
+            <ButtonGroup size="sm" marginLeft="auto">
+              <DateRange
+                defaultValue={wanScale}
+                onChange={(newValue) => handleChangeTime(newValue, 'wan')}
+              />
+            </ButtonGroup>
+          </HStack>
+          <Box>
+            {wan.datasets ? (
+              <Bar data={wan} options={templateData.options} />
+            ) : null}
+          </Box>
         </Box>
-      </Box>
-      <Box
-        bg="$backgroundCardLight"
-        sx={{
-          _dark: { bg: '$backgroundCardDark' }
-        }}
-        p="$4"
-        mb="$4"
-      >
-        <HStack alignItems="center">
-          <VStack>
-            <Heading size="sm">Device LAN Traffic</Heading>
-            <Text color="$muted500">
-              IN: {prettySize(lan.totalIn)}, OUT: {prettySize(lan.totalOut)}
-            </Text>
-          </VStack>
-          <ButtonGroup size="sm" marginLeft="auto">
-            <DateRange
-              defaultValue={lanScale}
-              onChange={(newValue) => handleChangeTime(newValue, 'lan')}
-            />
-          </ButtonGroup>
-        </HStack>
-        <Box>
-          {lan && lan.datasets ? (
-            <Bar data={lan} options={templateData.options} />
-          ) : null}
+        <Box
+          bg="$backgroundCardLight"
+          sx={{
+            _dark: { bg: '$backgroundCardDark' }
+          }}
+          p="$4"
+          mb="$4"
+        >
+          <HStack alignItems="center">
+            <VStack>
+              <Heading size="sm">Device LAN Traffic</Heading>
+              <Text color="$muted500">
+                IN: {prettySize(lan.totalIn)}, OUT: {prettySize(lan.totalOut)}
+              </Text>
+            </VStack>
+            <ButtonGroup size="sm" marginLeft="auto">
+              <DateRange
+                defaultValue={lanScale}
+                onChange={(newValue) => handleChangeTime(newValue, 'lan')}
+              />
+            </ButtonGroup>
+          </HStack>
+          <Box>
+            {lan && lan.datasets ? (
+              <Bar data={lan} options={templateData.options} />
+            ) : null}
+          </Box>
         </Box>
-      </Box>
-    </VStack>
+      </VStack>
+    </ScrollView>
   )
 }

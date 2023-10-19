@@ -7,6 +7,7 @@ import { CoreDNS } from 'api/CoreDNS'
 import {
   Box,
   Button,
+  ButtonIcon,
   ButtonText,
   Checkbox,
   CheckboxIcon,
@@ -17,7 +18,9 @@ import {
   InputField,
   Text,
   View,
-  VStack
+  VStack,
+  HStack,
+  CheckIcon
 } from '@gluestack-ui/themed'
 import { ListHeader } from 'components/List'
 
@@ -98,7 +101,7 @@ const CoreDns = (props) => {
         }}
         p="$4"
       >
-        <VStack space="md">
+        <VStack space="lg">
           <Heading size="md"></Heading>
           <Text bold>DNS IP</Text>
           <InputSelect
@@ -128,11 +131,14 @@ const CoreDns = (props) => {
             </CheckboxIndicator>
             <CheckboxLabel>Enabled</CheckboxLabel>
           </Checkbox>
+          <HStack>
+            <Button action="primary" onPress={submitSettings}>
+              <ButtonText>Save</ButtonText>
+              <ButtonIcon as={CheckIcon} ml="$1" />
+            </Button>
+          </HStack>
         </VStack>
       </Box>
-      <Button action="primary" rounded="$none" onPress={submitSettings}>
-        <ButtonText>Save</ButtonText>
-      </Button>
     </View>
   )
 }

@@ -78,8 +78,12 @@ const Arp = (props) => {
               space={'md'}
               justifyContent="space-between"
             >
-              <Text bold>{item.IP}</Text>
-              <Text color="$muted500">{item.MAC}</Text>
+              <Text size="sm" bold>
+                {item.IP}
+              </Text>
+              <Text size="sm" color="$muted500">
+                {item.MAC}
+              </Text>
             </VStack>
             <VStack
               minW="40%"

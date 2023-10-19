@@ -184,7 +184,7 @@ export default (props) => {
   let signalsRXTX = processData(signals, ['RX', 'TX'])
 
   return (
-    <ScrollView pb="$4">
+    <ScrollView sx={{ '@md': { height: '90vh' } }} pb="$4">
       <Heading size="sm" p="$4">
         Device Signal Strength (RSSI)
       </Heading>
