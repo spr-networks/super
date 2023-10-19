@@ -160,6 +160,13 @@ func composeCommand(composeFile string, target string, command string, optional 
 	}
 
 	cmd := "docker-compose"
+
+	haveOldDC := true
+	_, err := exec.LookPath("docker-compose")
+	if err != nil {
+		haveOldDC = false
+	}
+
 	if new_docker == true {
 		//certain commands, like up -d, will run in a new docker container
 		//so that superd updating itself does not result in docker killing
@@ -184,11 +191,6 @@ func composeCommand(composeFile string, target string, command string, optional 
 
 		//docker.io, ever annoying, integrated compose as a subcommand.
 		// so now we need to handle both cases
-		haveOldDC := true
-		_, err := exec.LookPath("docker-compose")
-		if err != nil {
-			haveOldDC = false
-		}
 
 		if haveOldDC {
 			args = append(d_args, "--entrypoint=/bin/bash",
@@ -204,7 +206,15 @@ func composeCommand(composeFile string, target string, command string, optional 
 
 	}
 
-	_, err := exec.Command(cmd, args...).Output()
+	if !new_docker && !haveOldDC {
+		//need to run docker compose instead of docker-compose
+		// if new_docker then this is already handled.
+		// but if not new_docker and dont have old docker compose, this fixes it
+		cmd = "docker"
+		args = append([]string{"compose"}, args...)
+	}
+
+	_, err = exec.Command(cmd, args...).Output()
 	if err != nil {
 		argS := fmt.Sprintf(cmd + " " + strings.Join(args, " "))
 		fmt.Println("failure: " + err.Error() + " |" + argS)
@@ -235,7 +245,7 @@ func restart(w http.ResponseWriter, r *http.Request) {
 	compose := r.URL.Query().Get("compose_file")
 
 	//run restart
-	go composeCommand(compose, target, "restart", "", false)
+	go composeCommand(compose, target, "restart", "", target == "")
 }
 
 func ghcr_auth(w http.ResponseWriter, r *http.Request) {
