@@ -25,6 +25,7 @@ const TagItem = React.memo(({ name, size }) => {
       size={size || 'sm'}
       py="$1"
       px="$2"
+      rounded="$lg"
     >
       <BadgeText color={fg}>{name}</BadgeText>
       <BadgeIcon color={fg} as={TagIcon} ml="$1" />
@@ -42,9 +43,9 @@ const GroupItem = React.memo(({ name, size }) => {
   let colorMode = useColorMode()
 
   let groupColors = {
-    dns: colorMode == 'light' ? '$muted200' : '$blueGray700',
-    lan: colorMode == 'light' ? '$muted100' : '$blueGray600',
-    wan: colorMode == 'light' ? '$muted200' : '$blueGray700'
+    dns: colorMode == 'light' ? '$blueGray200' : '$blueGray700',
+    lan: colorMode == 'light' ? '$blueGray100' : '$blueGray600',
+    wan: colorMode == 'light' ? '$blueGray200' : '$blueGray700'
   }
 
   let icon = groupIcons[name] || UsersIcon
@@ -60,6 +61,7 @@ const GroupItem = React.memo(({ name, size }) => {
       size={size || 'sm'}
       py="$1"
       px="$2"
+      rounded="$lg"
     >
       <BadgeText color={fg}>{name}</BadgeText>
       <BadgeIcon color={fg} as={icon} ml="$1" />

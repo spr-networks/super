@@ -251,15 +251,8 @@ const DeviceListing = (props) => {
     </HStack>
   )
 
-  // TODO
-  let navbarHeight = 64
-  let h =
-    Platform.OS == 'web'
-      ? Dimensions.get('window').height - navbarHeight
-      : '100%'
-
   return (
-    <View h="$full" sx={{ '@md': { h: '90vh' } }}>
+    <View h="$full" sx={{ '@md': { h: '92vh' } }}>
       <ListHeader title="Devices">
         <Button
           size="xs"
@@ -300,10 +293,8 @@ const DeviceListing = (props) => {
             data={devices}
             renderItem={renderItem}
             estimatedItemSize={120}
+            contentContainerStyle={{ paddingBottom: 32 }}
           />
-
-          {/* padding for Fab on Desktop */}
-          <Box sx={{ '@md': { h: '$8' } }}></Box>
         </>
       )}
 

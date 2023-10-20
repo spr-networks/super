@@ -806,14 +806,20 @@ const UplinkInfo = (props) => {
           keyExtractor={(item) => `${item.Interface}_${item.Type}`}
           renderItem={({ item }) => (
             <ListItem>
-              <Text flex={3} fontWeight="bold">
+              <Text flex={3} size="md" bold>
                 {item.Interface}
               </Text>
-              <Text flex={1}>{item.Type}</Text>
+              <Text flex={1} size="sm" color="$muted500">
+                {item.Type}
+              </Text>
               <VStack flex={2} space={1}>
                 {truncateSupernetIps(item.IPs)
-                  ? supernets.map((net) => <Text>{net}</Text>)
-                  : item.IPs.map((ip) => <Text key={ip}>{ip}</Text>)}
+                  ? supernets.map((net) => <Text size="sm">{net}</Text>)
+                  : item.IPs.map((ip) => (
+                      <Text size="sm" bold key={ip}>
+                        {ip}
+                      </Text>
+                    ))}
               </VStack>
               <Box flex={1}>{moreMenu(item.Interface)}</Box>
             </ListItem>

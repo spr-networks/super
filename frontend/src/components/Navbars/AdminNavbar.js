@@ -61,10 +61,10 @@ const AdminNavbar = ({
         }
         px="$3"
         pt="$2"
+        h="$16"
         sx={{
           '@md': { px: '$4', pt: '$0' }
         }}
-        h="$16"
         justifyContent="space-between"
       >
         <HStack w="100%" alignItems="center" space={'sm'}>
@@ -88,8 +88,20 @@ const AdminNavbar = ({
           </Text>
           {isMeshNode ? <Text size="lg">MESH</Text> : null}
 
-          <Text size="sm" color="$muted600" isTruncated>
-            {version}
+          <Text
+            size="xs"
+            color="$muted600"
+            sx={{
+              _dark: { color: '$muted400' }
+            }}
+            isTruncated
+            borderWidth={1}
+            borderColor="$muted500"
+            rounded="$2xl"
+            py="$0.5"
+            px="$2"
+          >
+            {`v${version}`}
           </Text>
 
           <HStack marginLeft="auto" space="2xl" alignItems="center">

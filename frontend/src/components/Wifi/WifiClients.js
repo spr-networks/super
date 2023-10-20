@@ -140,8 +140,12 @@ const WifiClients = (props) => {
             justifyContent="center"
             sx={{ '@md': { flexDirection: 'row' } }}
           >
-            <Text bold>{item.RecentIP}</Text>
-            <Text color="$muted500">{item.MAC}</Text>
+            <Text size="sm" bold>
+              {item.RecentIP}
+            </Text>
+            <Text size="sm" color="$muted500">
+              {item.MAC}
+            </Text>
           </VStack>
 
           <VStack
