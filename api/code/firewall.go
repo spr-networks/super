@@ -743,6 +743,11 @@ func addServicePort(port ServicePort) error {
 
 func applyServicePorts(servicePorts []ServicePort) error {
 
+	exec.Command("nft", "flush", "map", "ip", "filter", "lan_tcp_accept").Run()
+	exec.Command("nft", "flush", "map", "ip", "filter", "wan_tcp_accept").Run()
+	exec.Command("nft", "flush", "map", "ip", "filter", "lan_udp_accept").Run()
+	exec.Command("nft", "flush", "map", "ip", "filter", "wan_udp_accept").Run()
+
 	for _, port := range servicePorts {
 		addServicePort(port)
 	}
@@ -772,6 +777,10 @@ func addMulticastPort(port MulticastPort) error {
 }
 
 func applyMulticastPorts(multicastPorts []MulticastPort) error {
+	//reset multicast ports
+	exec.Command("nft", "flush", "map", "ip", "filter", "multicast_lan_udp_accept").Run()
+	exec.Command("nft", "flush", "map", "ip", "filter", "multicast_wan_udp_accept").Run()
+
 	foundMDNS := false
 	for _, port := range multicastPorts {
 		if isSetupMode() {
@@ -1922,7 +1931,7 @@ func isMeshPluginEnabled() bool {
 	return false
 }
 
-func meshPluginDownlik() string {
+func meshPluginDownlink() string {
 	//tbd this should be a paramter in mesh setup.
 	//query config and get it
 	lanif := os.Getenv("LANIF")
@@ -2166,6 +2175,7 @@ func dynamicRouteLoop() {
 
 			Devicesmtx.Lock()
 			devices := getDevicesJson()
+			checkDeviceExpiries(devices)
 			Devicesmtx.Unlock()
 
 			// TBD: need to handle multiple trunk ports, lan ports
@@ -2243,7 +2253,7 @@ func dynamicRouteLoop() {
 				if !exists {
 					meshPluginEnabled := isMeshPluginEnabled()
 					wifiDevice := isWifiDevice(entry)
-					if lanif != "" && !wifiDevice {
+					if lanif != "" && (!meshPluginEnabled && !wifiDevice) {
 						// when mesh plugin is off and not a wifi device, then go for lanif
 
 						//no new_iface and a LAN interface is set, use that.
@@ -2255,7 +2265,7 @@ func dynamicRouteLoop() {
 						newIfaceMap[entry.RecentIP] = new_iface
 					} else if meshPluginEnabled && wifiDevice {
 						//mesh plugin was enabled and it was a wifi device
-						new_iface = meshPluginDownlik()
+						new_iface = meshPluginDownlink()
 						newIfaceMap[entry.RecentIP] = new_iface
 					} else {
 
