@@ -12,7 +12,8 @@ import {
   InputField,
   VStack,
   Switch,
-  Text
+  Text,
+  HStack
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
@@ -103,21 +104,39 @@ const MDNSAdvertise = (props) => {
           <Text bold>Advertise Router over mDNS</Text>
           <Switch value={!config.DisableMDNSAdvertise} onToggle={toggleMDNS} />
         </ListItem>
-        <ListItem>
-          <VStack sx={{ '@md': { maxWidth: '$1/2' } }} space="md">
+
+        <VStack
+          space="md"
+          bg="$backgroundCardLight"
+          p="$4"
+          sx={{
+            _dark: {
+              bg: '$backgroundCardDark'
+            }
+          }}
+        >
+          <VStack
+            space="md"
+            sx={{
+              '@md': { maxWidth: '$1/2' }
+            }}
+          >
             <Text bold>mDNS Name</Text>
             <Text size="sm" color="$muted500" flexWrap="wrap">
               Defaults to 'spr.local'. Set the name without the .local part or
               leave empty to use hostname
             </Text>
-            <Input flex={1} value={config.MDNSName} onChangeText={onChangeText}>
+            <Input value={config.MDNSName} onChangeText={onChangeText}>
               <InputField type="text" placeholder="spr" />
             </Input>
+
+            <HStack>
+              <Button onPress={submitSettings}>
+                <ButtonText>Save Multicast settings</ButtonText>
+              </Button>
+            </HStack>
           </VStack>
-        </ListItem>
-        <Button rounded="$none" onPress={submitSettings}>
-          <ButtonText>Save Multicast settings</ButtonText>
-        </Button>
+        </VStack>
       </VStack>
     </>
   )

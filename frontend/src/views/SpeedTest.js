@@ -1,5 +1,6 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useState } from 'react'
 
+/*
 import { Icon } from 'FontAwesomeUtils'
 import {
   faCirclePlay,
@@ -7,16 +8,26 @@ import {
   faCircleArrowDown,
   faCircleArrowUp
 } from '@fortawesome/free-solid-svg-icons'
+*/
 
 import {
   Button,
+  ButtonIcon,
   HStack,
+  Icon,
   Progress,
   ProgressFilledTrack,
   Text,
   View,
   VStack
 } from '@gluestack-ui/themed'
+
+import {
+  PlayIcon,
+  PauseIcon,
+  ArrowUpCircleIcon,
+  ArrowDownCircleIcon
+} from 'lucide-react-native'
 
 import { getApiURL } from 'api/API'
 import { api } from 'api'
@@ -159,12 +170,6 @@ const SpeedTest = (props) => {
     startTestDownload()
   }
 
-  let icon = isRunning ? (
-    <Icon size="10" icon={faCirclePause} color="muted.300" />
-  ) : (
-    <Icon size="10" icon={faCirclePlay} color="muted.300" />
-  )
-
   return (
     <View>
       <ListHeader
@@ -183,9 +188,15 @@ const SpeedTest = (props) => {
         p="$4"
         pb="$12"
       >
-        <HStack space="sm" justifyContent="flex-start" p="$4">
-          <Button action="primary" variant="link" onPress={startTest}>
-            {icon}
+        <HStack space="sm" p="$4">
+          <Button
+            action="primary"
+            variant="solid"
+            rounded="$full"
+            size="xl"
+            onPress={startTest}
+          >
+            <ButtonIcon as={isRunning ? PauseIcon : PlayIcon} />
           </Button>
         </HStack>
 
@@ -206,10 +217,10 @@ const SpeedTest = (props) => {
 
           <HStack space="md" alignItems="center" justifyContent="space-between">
             <HStack flex={1} space="sm">
-              <Icon icon={faCircleArrowDown} color="$muted500" />
+              <Icon as={ArrowDownCircleIcon} color="$muted500" />
               <Text color="$muted500">Download</Text>
             </HStack>
-            <Progress flex="2" size="md" rounded="md" value={percentDown}>
+            <Progress flex={2} size="md" rounded="md" value={percentDown}>
               <ProgressFilledTrack />
             </Progress>
           </HStack>
@@ -231,8 +242,8 @@ const SpeedTest = (props) => {
           </VStack>
 
           <HStack space="md" alignItems="center" justifyContent="space-between">
-            <HStack flex={1} space="md">
-              <Icon icon={faCircleArrowUp} color="$muted500" />
+            <HStack flex={1} space="md" alignItems="center">
+              <Icon as={ArrowUpCircleIcon} color="$muted500" />
               <Text color="$muted500">Upload</Text>
             </HStack>
             <Progress flex="2" size="md" rounded="md" value={percentUp}>
