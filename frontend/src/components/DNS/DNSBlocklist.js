@@ -512,7 +512,7 @@ export default class DNSBlocklist extends React.Component {
                   />
                 </VStack>
               </Box>
-              <Button colorScheme="primary" rounded="none" onPress={submitRefresh}>
+              <Button colorScheme="primary" rounded="none" onPress={() => submitRefresh(this.state.seconds)}>
                 Save
               </Button>
             </VStack>
