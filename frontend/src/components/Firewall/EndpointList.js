@@ -177,12 +177,14 @@ const EndpointList = (props) => {
             <ArrowRightIcon color="$muted400" />
 
             <HStack space="sm">
-              <Text bold>
+              <Text size="sm" bold>
                 {item.Domain}
                 {item.IP}
               </Text>
-              <Text color="$muted500">:</Text>
-              <Text>{item.Port}</Text>
+              <Text size="sm" color="$muted500">
+                :
+              </Text>
+              <Text size="sm">{item.Port}</Text>
             </HStack>
 
             <VStack

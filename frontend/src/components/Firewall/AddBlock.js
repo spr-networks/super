@@ -67,38 +67,36 @@ class AddBlockImpl extends React.Component {
   render() {
     return (
       <VStack space="md">
-        <HStack space="md">
-          <FormControl flex={1} isRequired>
-            <FormControlLabel>
-              <FormControlLabelText>Source address</FormControlLabelText>
-            </FormControlLabel>
+        <FormControl isRequired>
+          <FormControlLabel>
+            <FormControlLabelText>Source address</FormControlLabelText>
+          </FormControlLabel>
 
-            <Input size="md" variant="underlined">
-              <InputField
-                value={this.state.SrcIP}
-                onChangeText={(value) => this.handleChange('SrcIP', value)}
-              />
-            </Input>
-            <FormControlHelper>
-              <FormControlHelperText>IP address or CIDR</FormControlHelperText>
-            </FormControlHelper>
-          </FormControl>
-          <FormControl flex={1} isRequired>
-            <FormControlLabel>
-              <FormControlLabelText>Destination address</FormControlLabelText>
-            </FormControlLabel>
-            <ClientSelect
-              name="DstIP"
-              value={this.state.DstIP}
-              onSubmitEditing={(value) => this.handleChange('DstIP', value)}
-              onChangeText={(value) => this.handleChange('DstIP', value)}
-              onChange={(value) => this.handleChange('DstIP', value)}
+          <Input size="md" variant="underlined">
+            <InputField
+              value={this.state.SrcIP}
+              onChangeText={(value) => this.handleChange('SrcIP', value)}
             />
-            <FormControlHelper>
-              <FormControlHelperText>IP address or CIDR</FormControlHelperText>
-            </FormControlHelper>
-          </FormControl>
-        </HStack>
+          </Input>
+          <FormControlHelper>
+            <FormControlHelperText>IP address or CIDR</FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+        <FormControl isRequired>
+          <FormControlLabel>
+            <FormControlLabelText>Destination address</FormControlLabelText>
+          </FormControlLabel>
+          <ClientSelect
+            name="DstIP"
+            value={this.state.DstIP}
+            onSubmitEditing={(value) => this.handleChange('DstIP', value)}
+            onChangeText={(value) => this.handleChange('DstIP', value)}
+            onChange={(value) => this.handleChange('DstIP', value)}
+          />
+          <FormControlHelper>
+            <FormControlHelperText>IP address or CIDR</FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
 
         <FormControl>
           <FormControlLabel>

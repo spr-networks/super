@@ -285,7 +285,6 @@ const DeviceListing = (props) => {
           renderItem={renderItem}
           renderHiddenItem={renderHiddenItem}
           rightOpenValue={-140}
-          style={{ marginBottom: 20 }}
         />
       ) : (
         <>

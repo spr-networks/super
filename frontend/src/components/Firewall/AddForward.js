@@ -76,61 +76,56 @@ class AddForwardImpl extends React.Component {
 
     return (
       <VStack space="md">
-        <HStack space="md">
-          <FormControl flex="2">
-            <FormControlLabel>
-              <FormControlLabelText>Source IP Address</FormControlLabelText>
-            </FormControlLabel>
-            <Input size="md" variant="underlined">
-              <InputField
-                variant="underlined"
-                value={this.state.SrcIP}
-                onChangeText={(value) => this.handleChange('SrcIP', value)}
-              />
-            </Input>
-            <FormControlHelper>
-              <FormControlHelperText>Accepts IP or CIDR</FormControlHelperText>
-            </FormControlHelper>
-          </FormControl>
-          <FormControl flex={1}>
-            <FormControlLabel>
-              <FormControlLabelText>Incoming Port</FormControlLabelText>
-            </FormControlLabel>
-            <Input size="md" variant="underlined">
-              <InputField
-                value={this.state.SrcPort}
-                onChangeText={(value) => this.handleChange('SrcPort', value)}
-              />
-            </Input>
-          </FormControl>
-        </HStack>
-        <HStack space={2}>
-          <FormControl flex="2">
-            <FormControlLabel>
-              <FormControlLabelText>
-                Destination IP address
-              </FormControlLabelText>
-            </FormControlLabel>
-            <ClientSelect
-              name="DstIP"
-              value={this.state.DstIP}
-              onSubmitEditing={(value) => this.handleChange('DstIP', value)}
-              onChangeText={(value) => this.handleChange('DstIP', value)}
-              onChange={(value) => this.handleChange('DstIP', value)}
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Source IP Address</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              variant="underlined"
+              value={this.state.SrcIP}
+              onChangeText={(value) => this.handleChange('SrcIP', value)}
             />
-          </FormControl>
-          <FormControl flex={1}>
-            <FormControlLabel>
-              <FormControlLabelText>Dest Port</FormControlLabelText>
-            </FormControlLabel>
-            <Input size="md" variant="underlined">
-              <InputField
-                value={this.state.DstPort}
-                onChangeText={(value) => this.handleChange('DstPort', value)}
-              />
-            </Input>
-          </FormControl>
-        </HStack>
+          </Input>
+          <FormControlHelper>
+            <FormControlHelperText>Accepts IP or CIDR</FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Incoming Port</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              value={this.state.SrcPort}
+              onChangeText={(value) => this.handleChange('SrcPort', value)}
+            />
+          </Input>
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Destination IP address</FormControlLabelText>
+          </FormControlLabel>
+          <ClientSelect
+            name="DstIP"
+            value={this.state.DstIP}
+            onSubmitEditing={(value) => this.handleChange('DstIP', value)}
+            onChangeText={(value) => this.handleChange('DstIP', value)}
+            onChange={(value) => this.handleChange('DstIP', value)}
+          />
+        </FormControl>
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Dest Port</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              value={this.state.DstPort}
+              onChangeText={(value) => this.handleChange('DstPort', value)}
+            />
+          </Input>
+        </FormControl>
 
         <FormControl>
           <FormControlLabel>

@@ -76,51 +76,47 @@ class AddEndpointImpl extends React.Component {
 
     return (
       <VStack space="md">
-        <HStack space="md">
-          <FormControl flex="2">
-            <FormControlLabel>
-              <FormControlLabelText>Name</FormControlLabelText>
-            </FormControlLabel>
-            <Input>
-              <InputField
-                value={this.state.RuleName}
-                onSubmitEditing={(value) =>
-                  this.handleChange('RuleName', value)
-                }
-                onChangeText={(value) => this.handleChange('RuleName', value)}
-                onChange={(value) => this.handleChange('RuleName', value)}
-              />
-            </Input>
-          </FormControl>
-        </HStack>
-        <HStack space="md">
-          <FormControl flex="2">
-            <FormControlLabel>
-              <FormControlLabelText>IP Address</FormControlLabelText>
-            </FormControlLabel>
-            <ClientSelect
-              name="IP"
-              value={this.state.IP}
-              onSubmitEditing={(value) => this.handleChange('IP', value)}
-              onChangeText={(value) => this.handleChange('IP', value)}
-              onChange={(value) => this.handleChange('IP', value)}
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Name</FormControlLabelText>
+          </FormControlLabel>
+          <Input>
+            <InputField
+              value={this.state.RuleName}
+              onSubmitEditing={(value) => this.handleChange('RuleName', value)}
+              onChangeText={(value) => this.handleChange('RuleName', value)}
+              onChange={(value) => this.handleChange('RuleName', value)}
             />
-            <FormControlHelper>
-              <FormControlHelperText>Accepts IP or CIDR</FormControlHelperText>
-            </FormControlHelper>
-          </FormControl>
-          <FormControl flex={1}>
-            <FormControlLabel>
-              <FormControlLabelText>Port</FormControlLabelText>
-            </FormControlLabel>
-            <Input size="sm" variant="underlined">
-              <InputField
-                value={this.state.Port}
-                onChangeText={(value) => this.handleChange('Port', value)}
-              />
-            </Input>
-          </FormControl>
-        </HStack>
+          </Input>
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>IP Address</FormControlLabelText>
+          </FormControlLabel>
+          <ClientSelect
+            name="IP"
+            value={this.state.IP}
+            onSubmitEditing={(value) => this.handleChange('IP', value)}
+            onChangeText={(value) => this.handleChange('IP', value)}
+            onChange={(value) => this.handleChange('IP', value)}
+          />
+          <FormControlHelper>
+            <FormControlHelperText>Accepts IP or CIDR</FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+        <FormControl flex={1}>
+          <FormControlLabel>
+            <FormControlLabelText>Port</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="sm" variant="underlined">
+            <InputField
+              value={this.state.Port}
+              onChangeText={(value) => this.handleChange('Port', value)}
+            />
+          </Input>
+        </FormControl>
+
         {/* //domains are not yet implemented.
           <HStack space={4}>
           <FormControl flex={1}>
