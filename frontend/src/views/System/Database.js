@@ -316,7 +316,7 @@ const Database = ({ showModal, closeModal, ...props }) => {
           </HStack>
         </VStack>
         <Tooltip
-          placement="bottomx"
+          h={undefined}
           trigger={() => {
             return (
               <Button

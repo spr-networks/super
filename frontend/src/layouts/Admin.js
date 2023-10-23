@@ -32,12 +32,15 @@ import {
   CloseIcon,
   Pressable,
   VStack,
-  Text
+  Text,
+  SlashIcon,
+  InfoIcon
 } from '@gluestack-ui/themed'
 
 //NOTE Slice transition for Alerts not available in gluestack-ui
 
 import { routes } from 'routes'
+import { Slash } from 'lucide-react-native'
 
 const ConfirmTrafficAlert = (props) => {
   const { type, title, body, showAlert, onClose } = props
@@ -97,20 +100,26 @@ const ConfirmTrafficAlert = (props) => {
 const AppAlert = (props) => {
   const { type, title, body, showAlert, toggle } = props
 
-  //CheckCircleIcon
-  //InfoIcon
-  let alertIcon = CheckCircleIcon
+  let iconType = {
+    success: CheckCircleIcon,
+    warning: SlashIcon,
+    danger: InfoIcon,
+    error: SlashIcon,
+    info: InfoIcon
+  }
+
+  let alertIcon = iconType[type] || InfoIcon
+  let alertType = type == 'danger' ? 'warning' : type
 
   return (
-    <Alert action={type}>
-      <AlertIcon as={alertIcon} size="xl" mr="$3" />
-      <HStack space="md" flex={1}>
-        <VStack space="xs">
+    <Alert action={alertType}>
+      <HStack space="md" w="$full">
+        <AlertIcon as={alertIcon} size="xl" mr="$3" alignSelf="center" />
+        <VStack space="xs" flex={1}>
           <AlertText fontWeight="$bold">{title}</AlertText>
-
-          <AlertText>{body}</AlertText>
+          <AlertText flexWrap="wrap">{body}</AlertText>
         </VStack>
-        <Pressable ml="auto" onPress={toggle}>
+        <Pressable ml="auto" mr="$2" onPress={toggle}>
           <Icon as={CloseIcon} />
         </Pressable>
       </HStack>
@@ -464,7 +473,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             sx={{
               '@md': { display: 'flex' }
             }}
-            width={isOpenSidebar ? 20 : 260}
+            width={isOpenSidebar ? 80 : 260}
             height={heightContent}
           >
             <Sidebar
@@ -516,20 +525,23 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         <Box
           sx={{
             '@base': {
-              maxWidth: '90%',
-              w: '100%',
+              maxWidth: '100%',
+              width: '100%',
               display: showAlert ? 'block' : 'none'
             },
             '@md': {
-              minWidth: '$1/4',
-              maxWidth: '90%',
-              w: 'auto'
+              _width: '$2/6',
+              _marginLeft: '-$1/6',
+              _left: '$1/2',
+              width: isOpenSidebar
+                ? 'calc(100vw - 80px)'
+                : 'calc(100vw - 260px)',
+              left: isOpenSidebar ? 80 : 260
             }
           }}
-          mt="$16"
           flexWrap="wrap"
           position="fixed"
-          top="20"
+          top="$16"
           alignSelf="center"
         >
           <AppAlert
