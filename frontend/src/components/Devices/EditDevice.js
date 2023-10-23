@@ -23,6 +23,7 @@ import {
   FormControlHelperText,
   Heading,
   HStack,
+  Icon,
   Input,
   InputField,
   ScrollView,
@@ -37,7 +38,8 @@ import {
   Menu,
   MenuItem,
   MenuItemLabel,
-  AddIcon
+  AddIcon,
+  CloseIcon
 } from '@gluestack-ui/themed'
 
 import { Address4 } from 'ip-address'
@@ -45,6 +47,8 @@ import { Address4 } from 'ip-address'
 import { TagItem, GroupItem } from 'components/TagItem'
 import ColorPicker from 'components/ColorPicker'
 import IconPicker from 'components/IconPicker'
+
+import { GroupMenu, TagMenu } from 'components/TagMenu'
 
 const EditDevice = ({ device, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
@@ -277,102 +281,6 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     }
   }
 
-  const moreMenuGroups = (
-    <Menu
-      trigger={(triggerProps) => (
-        <Button
-          action="secondary"
-          variant="outline"
-          size="xs"
-          {...triggerProps}
-        >
-          <ButtonText>Edit Groups</ButtonText>
-          <ButtonIcon as={AddIcon} ml="$2" />
-        </Button>
-      )}
-      selectionMode="multiple"
-      selectedKeys={[...groups, ...tags]}
-      onSelectionChange={(e) => {
-        let key = e.currentKey
-        if (key == 'newGroup') {
-          setModalType('Group')
-          setShowModal(true)
-        } else {
-          let [action, group] = key.split(':')
-          let ngroups = []
-          if (action == 'delete') {
-            ngroups = groups.filter((t) => t != group)
-          } else {
-            ngroups = [...new Set([...groups, group])]
-          }
-
-          handleGroups(ngroups)
-        }
-      }}
-    >
-      {[...new Set(defaultGroups.concat(groups))].map((group) => (
-        <MenuItem
-          key={groups.includes(group) ? `delete:${group}` : `add:${group}`}
-          value={group}
-        >
-          <MenuItemLabel size="sm">{group}</MenuItemLabel>
-        </MenuItem>
-      ))}
-
-      <MenuItem key="newGroup" textValue="newGroup">
-        <MenuItemLabel size="sm">New Group...</MenuItemLabel>
-      </MenuItem>
-    </Menu>
-  )
-
-  const moreMenuTags = (
-    <Menu
-      trigger={(triggerProps) => (
-        <Button
-          action="secondary"
-          variant="outline"
-          size="xs"
-          {...triggerProps}
-        >
-          <ButtonText>Edit Tags</ButtonText>
-          <ButtonIcon as={AddIcon} ml="$1" />
-        </Button>
-      )}
-      selectionMode="multiple"
-      selectedKeys={[...tags]}
-      onSelectionChange={(e) => {
-        //return alert(JSON.stringify(e))
-        let key = e.currentKey
-        if (key == 'newTag') {
-          setModalType('Tag')
-          setShowModal(true)
-        } else {
-          let [action, tag] = key.split(':')
-          let ntags = []
-          if (action == 'delete') {
-            ntags = tags.filter((t) => t != tag)
-          } else {
-            ntags = [...new Set([...tags, tag])]
-          }
-
-          handleTags(ntags)
-        }
-      }}
-    >
-      {[...new Set(defaultTags.concat(tags))].map((tag) => (
-        <MenuItem
-          key={tags.includes(tag) ? `delete:${tag}` : `add:${tag}`}
-          value={tag}
-        >
-          <MenuItemLabel size="sm">{tag}</MenuItemLabel>
-        </MenuItem>
-      ))}
-
-      <MenuItem key="newTag" textValue="newTag">
-        <MenuItemLabel size="sm">New Tag...</MenuItemLabel>
-      </MenuItem>
-    </Menu>
-  )
   return (
     <ScrollView
       space="md"
@@ -492,11 +400,15 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           <HStack flexWrap="wrap" w="$full" space="md">
             <HStack space="md" flexWrap="wrap" alignItems="center">
               {groups.map((group) => (
-                <GroupItem key={group} name={group} size="md" />
+                <GroupItem key={group} name={group} size="sm" />
               ))}
             </HStack>
 
-            {moreMenuGroups}
+            <GroupMenu
+              items={[...new Set(defaultGroups.concat(groups))]}
+              selectedKeys={groups}
+              onSelectionChange={handleGroups}
+            />
           </HStack>
         </FormControl>
 
@@ -513,10 +425,14 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
               display={tags?.length ? 'flex' : 'none'}
             >
               {tags.map((tag) => (
-                <TagItem key={tag} name={tag} size="md" />
+                <TagItem key={tag} name={tag} size="sm" />
               ))}
             </HStack>
-            {moreMenuTags}
+            <TagMenu
+              items={[...new Set(defaultTags.concat(tags))]}
+              selectedKeys={tags}
+              onSelectionChange={handleTags}
+            />
           </HStack>
         </FormControl>
 

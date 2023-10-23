@@ -3,9 +3,6 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import { AppContext, alertState } from 'AppContext'
 
 import {
-  Badge,
-  BadgeIcon,
-  BadgeText,
   Button,
   ButtonIcon,
   ButtonText,
@@ -14,12 +11,11 @@ import {
   HStack,
   VStack,
   Text,
-  Menu,
-  MenuItem,
-  MenuItemLabel,
   AddIcon,
   CloseIcon
 } from '@gluestack-ui/themed'
+
+import { AlertContext } from 'layouts/Admin'
 
 import { TagIcon } from 'lucide-react-native'
 
@@ -27,24 +23,17 @@ import { firewallAPI } from 'api'
 import { Multicast } from 'api/Multicast'
 
 import ModalForm from 'components/ModalForm'
-import ModalConfirm from 'components/ModalConfirm'
 import AddMulticastPort from './AddMulticastPort'
 
 import { ListHeader, ListItem } from 'components/List'
-import TagItem from 'components/TagItem'
+import { TagItem } from 'components/TagItem'
+import { TagMenu } from 'components/TagMenu'
 
 const MulticastPorts = (props) => {
   const [list, setList] = useState([])
   const [ports, setPorts] = useState([])
 
-  const [state, setState] = useState({
-    pending: false,
-    showModal: false,
-    modalType: 'Tag',
-    pendingItem: {}
-  })
-
-  const contextType = useContext(AppContext)
+  const context = useContext(AlertContext)
 
   const matches = (obj, target) => {
     for (let [key, val] of Object.entries(target)) {
@@ -90,18 +79,18 @@ const MulticastPorts = (props) => {
                 .deleteMulticastPort({ Port: item_port, Upstream: false })
                 .then(() => {})
                 .catch((err) => {
-                  alertState.error(
-                    'Fireall API failed to delete multicast port ' + item_port
+                  context.error(
+                    'Firewall API failed to delete multicast port ' + item_port
                   )
                 })
             }
           })
           .catch((err) => {
-            alertState.error('Failed to update multicast settings')
+            context.error('Failed to update multicast settings')
           })
       })
       .catch((err) => {
-        alertState.error('Failed to retrieve multicast settings')
+        context.error('Failed to retrieve multicast settings')
       })
   }
 
@@ -121,10 +110,7 @@ const MulticastPorts = (props) => {
       return
     }
 
-    if (tags != null) {
-      tags = tags.filter((v) => typeof v === 'string')
-      tags = [...new Set(tags)]
-    }
+    tags = tags ? [...new Set(tags)] : []
 
     const newList = list.map((entry) => {
       if (entry.Address === item.Address) {
@@ -141,6 +127,7 @@ const MulticastPorts = (props) => {
         Multicast.setConfig(mcast)
           .then(() => {
             alertState.success('Updated tags')
+            console.log('upup')
             refreshList()
           })
           .catch((error) => {
@@ -150,21 +137,6 @@ const MulticastPorts = (props) => {
       .catch((error) => {
         alertState.error('API Failure: ' + error.message)
       })
-  }
-
-  const handleSubmitNew = (item, value) => {
-    //this runs when someone hits Okay
-    if (!item) {
-      return //workaround for react state glitch
-    }
-
-    let tags = []
-    if (item.Tags) {
-      tags = item.Tags.concat(value)
-    } else {
-      tags = [value]
-    }
-    handleTags(item, tags)
   }
 
   let trigger = (triggerProps) => {
@@ -210,43 +182,18 @@ const MulticastPorts = (props) => {
             <Text flex={1}>{item.Address}</Text>
 
             <HStack space="sm">
-              {item.Tags
-                ? item.Tags.map((entry) => <TagItem name={entry} />)
-                : null}
+              {item.Tags?.map((entry) => (
+                <TagItem name={entry} />
+              ))}
             </HStack>
 
             <HStack ml="auto" space="xl">
-              <Menu
+              <TagMenu
+                items={[...new Set(defaultTags.concat(item?.Tags || []))]}
+                selectedKeys={item?.Tags}
+                onSelectionChange={(tags) => handleTags(item, tags)}
                 trigger={trigger}
-                selectionMode="single"
-                onSelectionChange={(e) => {
-                  let key = e.currentKey
-                  if (key == 'newTag') {
-                    setState({
-                      showModal: true,
-                      modalType: 'Tag',
-                      pendingItem: item
-                    })
-                  } else {
-                    // its a tag
-                    let tags = item.Tags.filter((t) => t != key)
-                    handleTags(item, tags)
-                  }
-                }}
-              >
-                {[
-                  ...new Set(defaultTags.concat(item.Tags ? item.Tags : []))
-                ].map((tag) => (
-                  <MenuItem key={tag} value={tag}>
-                    <CloseIcon mr="$2" />
-                    <MenuItemLabel size="sm">{tag}</MenuItemLabel>
-                  </MenuItem>
-                ))}
-                <MenuItem key="newTag" textValue="newTag">
-                  <Icon as={TagIcon} mr="$2" />
-                  <MenuItemLabel size="sm">New Tag...</MenuItemLabel>
-                </MenuItem>
-              </Menu>
+              />
 
               <Button
                 action="negative"
@@ -275,13 +222,6 @@ const MulticastPorts = (props) => {
         <ButtonText>Add Multicast Service</ButtonText>
         <ButtonIcon as={AddIcon} />
       </Button>
-
-      <ModalConfirm
-        type={state.modalType}
-        onSubmit={(v) => handleSubmitNew(state.pendingItem, v)}
-        onClose={() => setState({ showModal: false })}
-        isOpen={state.showModal}
-      />
     </VStack>
   )
 }
