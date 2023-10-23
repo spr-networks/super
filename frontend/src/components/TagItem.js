@@ -10,11 +10,11 @@ import {
   WifiIcon
 } from 'lucide-react-native'
 
-const TagItem = React.memo(({ name, size }) => {
+const TagItem = React.memo(({ name, size, ...props }) => {
   //TODO - also use + fix tagItem component
   let colorMode = useColorMode()
-  let bg = colorMode == 'light' ? '$blueGray200' : '$blueGray500'
-  let fg = colorMode == 'light' ? '$muted800' : '$muted100'
+  let bg = props.bg || (colorMode == 'light' ? '$blueGray200' : '$blueGray500')
+  let fg = props.color || (colorMode == 'light' ? '$muted800' : '$muted100')
 
   return (
     <Badge

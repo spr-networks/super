@@ -1,10 +1,18 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Box, View, SectionList, Text, VStack } from '@gluestack-ui/themed'
+import {
+  Box,
+  HStack,
+  View,
+  SectionList,
+  Text,
+  VStack
+} from '@gluestack-ui/themed'
 
 import { deviceAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import Device from 'components/Devices/Device'
 import { ListHeader } from 'components/List'
+import TagItem from 'components/TagItem'
 
 const Tags = (props) => {
   const context = useContext(AlertContext)
@@ -51,9 +59,15 @@ const Tags = (props) => {
         <SectionList
           sections={tags}
           renderSectionHeader={({ section: { name } }) => (
-            <Box p="$4">
+            <HStack p="$4">
+              {/*<TagItem
+                bg="$blueGray600"
+                color="$muted100"
+                name={name}
+                size="lg"
+              />*/}
               <Text bold>{name}</Text>
-            </Box>
+            </HStack>
           )}
           renderItem={({ item, section }) => (
             <Device device={item} edit={false} />
