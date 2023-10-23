@@ -14,6 +14,24 @@ import {
   faTags
 } from '@fortawesome/free-solid-svg-icons'
 
+import {
+  BanIcon,
+  BoxIcon,
+  BoxesIcon,
+  RadioTowerIcon,
+  ArrowRightCircleIcon,
+  ClockIcon,
+  MoreHorizontalIcon,
+  ArrowRightFromLineIcon,
+  RepeatIcon,
+  SplitIcon,
+  TagIcon,
+  TagsIcon,
+  WaypointsIcon
+} from 'lucide-react-native'
+
+import { BrandIcons } from 'IconUtils'
+
 import { api, deviceAPI, wifiAPI } from 'api'
 import { pfwAPI } from 'api/Pfw'
 import {
@@ -23,7 +41,6 @@ import {
   parseClientIPOrIdentity,
   toOption
 } from './Utils'
-import { BrandIcons } from 'FontAwesomeUtils'
 
 const defaultOptions = async function (name) {
   if (name.endsWith('Port')) {
@@ -59,7 +76,7 @@ const triggers = [
     cardType: 'trigger',
     description: 'Always run the selected trigger',
     color: '$violet300',
-    icon: faRepeat,
+    icon: RepeatIcon,
     params: [],
     values: {},
     preSubmit: function () {
@@ -71,7 +88,7 @@ const triggers = [
     cardType: 'trigger',
     description: 'Trigger on selected date and time',
     color: '$violet300',
-    icon: faClock,
+    icon: ClockIcon,
     params: [
       {
         name: 'days',
@@ -133,7 +150,7 @@ const triggers = [
     cardType: 'trigger',
     description: 'Trigger this card by sending a GET request',
     color: '$red400',
-    icon: faBroadcastTower,
+    icon: RadioTowerIcon,
     params: [{ name: 'event', type: PropTypes.string }]
   }
 ]
@@ -147,7 +164,7 @@ const actions = [
     description:
       'Block TCP from source address or group to destination address',
     color: '$red400',
-    icon: faBan,
+    icon: BanIcon,
     params: [
       {
         name: 'Protocol',
@@ -199,8 +216,8 @@ const actions = [
     cardType: 'action',
     description:
       'Block UDP from source address or group to destination address',
-    color: 'warning.400',
-    icon: faBan,
+    color: '$warning400',
+    icon: BanIcon,
     params: [
       {
         name: 'Protocol',
@@ -255,7 +272,7 @@ const actions = [
     description:
       'Forward TCP for specified source to destination address and port',
     color: '$emerald600',
-    icon: faCircleArrowRight,
+    icon: SplitIcon,
     params: [
       {
         name: 'Protocol',
@@ -322,7 +339,7 @@ const actions = [
     description:
       'Forward UDP for specified source to destination address and port',
     color: '$emerald400',
-    icon: faCircleArrowRight,
+    icon: SplitIcon,
     params: [
       {
         name: 'Protocol',
@@ -393,7 +410,7 @@ const actions = [
     cardType: 'action',
     description: 'Forward traffic over a Site VPN Gateway or Uplink Interface',
     color: '$purple600',
-    icon: faForward,
+    icon: WaypointsIcon,
     params: [
       {
         name: 'Client',
@@ -463,7 +480,7 @@ const actions = [
     cardType: 'action',
     description: 'A device joins a group only when conditions are met',
     color: '$cyan500',
-    icon: faObjectGroup,
+    icon: BoxesIcon,
     params: [
       {
         name: 'Client',
@@ -504,7 +521,7 @@ const actions = [
     cardType: 'action',
     description: 'Assign device tags when conditions are met',
     color: '$cyan500',
-    icon: faTags,
+    icon: TagsIcon,
     params: [
       {
         name: 'Client',
@@ -553,7 +570,7 @@ const actions = [
     description:
       'Forward TCP for specified source to exposed port for a local container',
     color: '$blue500',
-    icon: Platform.OS == 'ios' ? faCircleArrowRight : 'Docker',
+    icon: BrandIcons.Docker, //SplitIcon, //Platform.OS == 'ios' ? SplitIcon : 'Docker',
     params: [
       {
         name: 'Protocol',

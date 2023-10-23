@@ -1,6 +1,5 @@
 import React, { useEffect, useState, Component } from 'react'
-import { faBan, faEarthAmericas } from '@fortawesome/free-solid-svg-icons'
-
+import { BanIcon, GlobeIcon } from 'lucide-react-native'
 import { blockAPI } from 'api/DNS'
 import StatsWidget from './StatsWidget'
 import StatsChartWidget from './StatsChartWidget'
@@ -37,8 +36,8 @@ export const DNSMetrics = (props) => {
 
   return (
     <StatsWidget
-      icon={faEarthAmericas}
-      iconColor="green.400"
+      icon={GlobeIcon}
+      iconColor="$green400"
       title="Total DNS queries"
       text={totalQueries}
     />
@@ -78,8 +77,8 @@ export const DNSBlockMetrics = (props) => {
 
   return (
     <StatsWidget
-      icon={faBan}
-      iconColor="red400"
+      icon={BanIcon}
+      iconColor="$red400"
       title="Blocked DNS queries"
       text={blockedQueries}
     />

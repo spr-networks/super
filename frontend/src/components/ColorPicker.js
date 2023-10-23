@@ -38,8 +38,10 @@ export default ({ value, onChange, ...props }) => {
         <Pressable
           flex={1}
           bg={`$${c}400`}
-          opacity={value == c ? 1 : 0.4}
+          opacity={value == c ? 1 : 0.25}
           p="$4"
+          borderWidth={1}
+          borderColor="$muted500"
           onPress={() => onPress(c)}
         />
       ))}

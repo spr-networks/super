@@ -1,12 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import { useNavigate } from 'react-router-dom'
-import { Icon } from 'FontAwesomeUtils'
-import {
-  faHardDrive,
-  faListAlt,
-  faNetworkWired
-} from '@fortawesome/free-solid-svg-icons'
+
 import {
   Badge,
   BadgeText,
@@ -16,6 +11,7 @@ import {
   ButtonIcon,
   Heading,
   HStack,
+  Icon,
   Menu,
   MenuItem,
   MenuItemLabel,
@@ -28,9 +24,9 @@ import {
   ArrowRightIcon
 } from '@gluestack-ui/themed'
 
-import { ListHeader, ListItem } from 'components/List'
+import { HardDriveIcon, ListIcon, CableIcon } from 'lucide-react-native'
 
-//import { FlashList } from '@shopify/flash-list'
+import { ListHeader, ListItem } from 'components/List'
 
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
@@ -168,16 +164,16 @@ const DockerInfo = ({ showModal, ...props }) => {
         }}
       >
         <MenuItem key="logs">
-          <Icon icon={faListAlt} color="$muted500" mr="$2" />
-          <MenuItemLabel>Logs</MenuItemLabel>
+          <Icon as={ListIcon} color="$muted500" mr="$2" />
+          <MenuItemLabel size="sm">Logs</MenuItemLabel>
         </MenuItem>
         <MenuItem key="mounts">
-          <Icon icon={faHardDrive} color="$muted500" mr="$2" />
-          <MenuItemLabel>Mounts</MenuItemLabel>
+          <Icon as={HardDriveIcon} color="$muted500" mr="$2" />
+          <MenuItemLabel size="sm">Mounts</MenuItemLabel>
         </MenuItem>
         <MenuItem key="network" isDisabled={item.State != 'running'}>
-          <Icon icon={faNetworkWired} color="$muted500" mr="$2" />
-          <MenuItemLabel>Network</MenuItemLabel>
+          <Icon as={CableIcon} color="$muted500" mr="$2" />
+          <MenuItemLabel size="sm">Network</MenuItemLabel>
         </MenuItem>
       </Menu>
     )

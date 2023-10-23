@@ -16,6 +16,7 @@ import {
 } from '@gluestack-ui/themed'
 import { LaptopIcon, TagIcon, WifiIcon, UsersIcon } from 'lucide-react-native'
 import { ucFirst } from 'utils'
+import IconItem from './IconItem'
 
 const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
   const [groups, setGroups] = useState([])
@@ -98,9 +99,15 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
       value = `${prefix}:${v}`
     }
 
+    //item.icon is for devices and group icons
+
     return (
       <MenuItem key={value} textValue={value}>
-        <Icon as={icon} mr="$2" />
+        {item.icon ? (
+          <IconItem name={item.icon} color={item.color} size={20} mr="$2" />
+        ) : (
+          <Icon as={icon} mr="$2" />
+        )}
         <MenuItemLabel size="xs">{item.label}</MenuItemLabel>
       </MenuItem>
     )

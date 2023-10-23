@@ -1,6 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
-import { Icon as IconFA } from 'FontAwesomeUtils'
 
 import ModalForm from 'components/ModalForm'
 import { AlertContext } from 'AppContext'
@@ -10,6 +9,8 @@ import AddFlowCard from './AddFlowCard'
 import { pfwAPI } from 'api/Pfw'
 
 import {
+  Badge,
+  BadgeText,
   Box,
   Button,
   ButtonText,
@@ -40,8 +41,13 @@ import {
 } from '@gluestack-ui/themed'
 
 import { dateArrayToStr } from './Utils'
-import { PencilIcon, ToggleLeftIcon } from 'lucide-react-native'
-import { ToggleRightIcon } from 'lucide-react-native'
+import {
+  CircleIcon,
+  PencilIcon,
+  ToggleLeftIcon,
+  ToggleRightIcon,
+  CircleSlashIcon
+} from 'lucide-react-native'
 
 const FlowCardList = ({
   title,
@@ -118,7 +124,7 @@ const FlowCardList = ({
             key={`form${cardType}`}
             title={`Add ${cardType} to flow`}
             modalRef={refModal}
-            w="full"
+            w="$full"
           >
             <ScrollView maxHeight={400}>
               <AddFlowCard cardType={cardType} onSubmit={handleAddCard} />
@@ -221,8 +227,8 @@ const Flow = ({ flow, edit, ...props }) => {
       >
         <MenuItem key="disable">
           <Icon
-            as={flow.disabled ? ToggleRightIcon : ToggleLeftIcon}
-            color="$muted500"
+            as={flow.disabled ? CheckIcon : CircleSlashIcon}
+            color={flow.disabled ? '$success700' : '$red700'}
             mr="$2"
           />
           <MenuItemLabel size="sm">
@@ -286,8 +292,8 @@ const Flow = ({ flow, edit, ...props }) => {
         <VStack flex={1} space="md">
           <HStack space="md" alignItems="center">
             <HStack space="md">
-              <IconFA icon={trigger.icon} color={trigger.color} />
-              <IconFA icon={action.icon} color={action.color} />
+              <Icon as={trigger.icon} color={trigger.color} />
+              <Icon as={action.icon} color={action.color} />
             </HStack>
             <Text bold>{title}</Text>
             {flow.disabled ? (
@@ -297,17 +303,21 @@ const Flow = ({ flow, edit, ...props }) => {
             ) : null}
           </HStack>
 
-          <HStack space="md" flexWrap="wrap">
+          <HStack space="sm" flexWrap="wrap">
             {Object.keys(trigger.values).map((key) => (
-              <Text key={key} size="sm">
-                {displayValue(trigger.values[key], key)}
-              </Text>
+              <Badge variant="outline" action="muted" size="xs">
+                <BadgeText key={key}>
+                  {displayValue(trigger.values[key], key)}
+                </BadgeText>
+              </Badge>
             ))}
 
             {Object.keys(action.values).map((key) => (
-              <Text key={key} size="sm">
-                {displayValue(action.values[key], key)}
-              </Text>
+              <Badge variant="outline" action="muted" size="xs">
+                <BadgeText key={key}>
+                  {displayValue(action.values[key], key)}
+                </BadgeText>
+              </Badge>
             ))}
           </HStack>
         </VStack>
@@ -725,7 +735,7 @@ const FlowList = (props) => {
   let h = Dimensions.get('window').height - (Platform.OS == 'ios' ? 64 * 2 : 64)
 
   return (
-    <ScrollView sx={{ '@md': { height: '90vh' } }}>
+    <ScrollView sx={{ '@md': { height: '92vh' } }}>
       <VStack sx={{ '@md': { flexDirection: 'row' } }}>
         <VStack py="$4" sx={{ '@md': { flex: 1 } }}>
           <HStack
@@ -775,7 +785,7 @@ const FlowList = (props) => {
               ml: 'auto',
               mr: '$4',
               maxHeight: '$3/4',
-              maxWidth: '500px'
+              maxWidth: '$1/2'
             }
           }}
           flex={1}

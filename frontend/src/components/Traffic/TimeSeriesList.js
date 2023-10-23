@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { format as timeAgo } from 'timeago.js'
 
 import { prettyDate, prettySize } from 'utils'
-import { BrandIcons } from 'FontAwesomeUtils'
+import { BrandIcons } from 'IconUtils'
 
 import {
   ArrowRightIcon,
@@ -13,6 +13,7 @@ import {
   Box,
   FlatList,
   HStack,
+  Icon,
   Pressable,
   Text,
   VStack
@@ -160,7 +161,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
               <HStack flex={1} alignItems="center">
                 {/*TODO also src depending on type*/}
                 <AsnIcon asn={item.Asn} />
-                <Text color="$muted500" isTruncated>
+                <Text color="$muted500" size="sm" isTruncated>
                   {item.Asn}
                 </Text>
               </HStack>

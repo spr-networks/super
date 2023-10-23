@@ -7,13 +7,7 @@ import { deviceAPI } from 'api/Device'
 import ModalConfirm from 'components/ModalConfirm'
 import { prettyDate } from 'utils'
 
-import { Icon as IconFA } from 'FontAwesomeUtils'
-import { faCircleNodes, faPen, faWifi } from '@fortawesome/free-solid-svg-icons'
-
 import {
-  Badge,
-  BadgeIcon,
-  BadgeText,
   Button,
   ButtonIcon,
   Box,
@@ -39,10 +33,10 @@ import { Address4 } from 'ip-address'
 
 import { TagItem, GroupItem } from 'components/TagItem'
 import IconItem from 'components/IconItem'
-import { PencilIcon } from 'lucide-react-native'
+import { PencilIcon, WaypointsIcon, WifiIcon } from 'lucide-react-native'
 
-const DeviceIcon = ({ icon, color, isConnected, ...props }) => {
-  let _color = color ? `$${color}400` : '$blueGray400'
+const DeviceIcon = ({ icon, color: _color, isConnected, ...props }) => {
+  let color = _color ? `$${_color}400` : '$blueGray400'
   let opacity = isConnected ? 1 : 0.65
   let borderColor = isConnected ? '$green600' : '$muted500'
 
@@ -62,7 +56,7 @@ const DeviceIcon = ({ icon, color, isConnected, ...props }) => {
       borderColor={borderColor}
       borderWidth={1}
     >
-      <IconItem name={icon} color={_color} size={8} />
+      <IconItem name={icon} color={color} size={32} />
     </Box>
   )
 }
@@ -235,19 +229,22 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
     }
   }
 
+  /*
   let colors = [
     'violet',
-    'pink',
-    'tertiary',
-    'rose',
     'fuchsia',
     'purple',
-    'cyan',
+    'pink',
+    'tertiary',
     'teal',
-    'emerald'
+    'cyan',
+    'blueGray',
+    'dark',
+    'amber'
   ]
 
   let idx = (device.Name.charCodeAt(0) || 0) % colors.length
+  */
 
   const trigger = (triggerProps) => (
     <Button action="secondary" variant="link" ml="auto" {...triggerProps}>
@@ -427,8 +424,8 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
               ) : (
                 <HStack space="md" alignItems="center">
                   <Box sx={{ '@md': { display: 'none' } }}>
-                    <IconFA
-                      icon={device.MAC ? faWifi : faCircleNodes}
+                    <Icon
+                      as={device.MAC ? WifiIcon : WaypointsIcon}
                       size={3}
                       color={
                         device.isConnected

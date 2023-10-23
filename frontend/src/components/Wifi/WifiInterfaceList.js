@@ -1,11 +1,5 @@
 import React, { useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
-import Icon from 'FontAwesomeUtils'
-import {
-  faCircleCheck,
-  faCircleExclamation,
-  faCircleXmark
-} from '@fortawesome/free-solid-svg-icons'
 
 import { wifiAPI } from 'api'
 
@@ -18,6 +12,7 @@ import {
   Divider,
   FlatList,
   Heading,
+  Icon,
   ScrollView,
   HStack,
   VStack,
@@ -25,6 +20,8 @@ import {
   Text,
   View
 } from '@gluestack-ui/themed'
+
+import { AlertCircleIcon, CheckCircleIcon } from 'lucide-react-native'
 
 //import { FlashList } from '@shopify/flash-list'
 
@@ -277,17 +274,17 @@ const WifiInterface = ({ iw, ...props }) => {
 
                         <HStack space="md" alignItems="center">
                           <Icon
+                            as={
+                              iw.bands.length > 1
+                                ? CheckCircleIcon
+                                : AlertCircleIcon
+                            }
                             color={
                               iw.bands.length > 1
                                 ? '$success600'
                                 : '$warning600'
                             }
-                            icon={
-                              iw.bands.length > 1
-                                ? faCircleCheck
-                                : faCircleExclamation
-                            }
-                            size={4}
+                            size="lg"
                           />
                           <Text w={100}>5GHz</Text>
                           <Text color="$muted500" size="sm">
@@ -296,21 +293,21 @@ const WifiInterface = ({ iw, ...props }) => {
                         </HStack>
                         <HStack space="md" alignItems="center">
                           <Icon
-                            icon={
+                            as={
                               iw.supported_ciphers.includes(
                                 'GCMP-128 (00-0f-ac:8)'
                               )
-                                ? faCircleCheck
-                                : faCircleExclamation
+                                ? CheckCircleIcon
+                                : AlertCircleIcon
                             }
                             color={
                               iw.supported_ciphers.includes(
                                 'GCMP-128 (00-0f-ac:8)'
                               )
-                                ? 'success.600'
-                                : 'warning.600'
+                                ? '$success600'
+                                : '$warning600'
                             }
-                            size={4}
+                            size="lg"
                           />
 
                           <Text w={100}>WPA3/SAE</Text>
@@ -320,17 +317,17 @@ const WifiInterface = ({ iw, ...props }) => {
                         </HStack>
                         <HStack space="md" alignItems="center">
                           <Icon
-                            icon={
+                            as={
                               iw.supported_interface_modes.includes('AP/VLAN')
-                                ? faCircleCheck
-                                : faCircleXmark
+                                ? CheckCircleIcon
+                                : AlertCircleIcon
                             }
                             color={
                               iw.supported_interface_modes.includes('AP/VLAN')
                                 ? '$success600'
                                 : '$error600'
                             }
-                            size={4}
+                            size="lg"
                           />
 
                           <Text w={100}>AP/VLAN</Text>

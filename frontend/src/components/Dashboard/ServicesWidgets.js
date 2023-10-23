@@ -24,13 +24,6 @@ const ServicesEnabled = ({ features, ...props }) => {
   const colorOn = colorMode == 'light' ? '$blueGray500' : '$blueGray600',
     colorOff = colorMode == 'light' ? '$muted300' : '$muted500'
 
-  /*
-    <Icon icon={faWifi} size={8} color="$white" />
-    <Icon icon={faEarth} size={8} color="$white" />
-    <Icon icon={faBan} size={8} color="$white" />
-    <Icon icon={faCircleNodes} size={8} color="white" />
-  */
-
   return (
     <Box
       bg="$backgroundCardLight"

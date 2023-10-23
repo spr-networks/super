@@ -1,6 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
-import { Icon } from 'FontAwesomeUtils'
 
 import {
   Badge,
@@ -13,16 +12,15 @@ import {
   HStack,
   Text,
   DownloadIcon,
-  TrashIcon,
   CloseIcon
 } from '@gluestack-ui/themed'
+
+import { BoxIcon } from 'lucide-react-native'
+
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
 import { prettyDate } from 'utils'
-
-//import { FlashList } from '@shopify/flash-list'
 import { ListHeader, ListItem } from 'components/List'
-import { BoxIcon } from 'lucide-react-native'
 
 const ConfigsBackup = (props) => {
   const context = useContext(AlertContext)

@@ -5,8 +5,6 @@ import { AlertContext } from 'layouts/Admin'
 import { prettySignal } from 'utils'
 
 import {
-  Badge,
-  BadgeText,
   Box,
   FlatList,
   HStack,

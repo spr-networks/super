@@ -17,7 +17,10 @@ import {
   ChevronUpIcon,
   SplitIcon,
   WaypointsIcon,
-  CastIcon
+  CastIcon,
+  RouteIcon,
+  RouteOffIcon,
+  ArrowLeftToLineIcon
 } from 'lucide-react-native'
 
 //TODO accordion component
@@ -145,7 +148,7 @@ const Firewall = (props) => {
     {
       label: 'Endpoints',
       description: 'Describe Service Endpoints for building Firewall Rules',
-      icon: WaypointsIcon,
+      icon: RouteIcon, //WaypointsIcon,
       renderItem: () => (
         <EndpointList list={config.Endpoints} notifyChange={fetchConfig} />
       )
@@ -162,7 +165,7 @@ const Firewall = (props) => {
       label: 'Inbound Traffic Block',
       description:
         'Block traffic coming into the network at the PREROUTING stage',
-      icon: BanIcon,
+      icon: ArrowLeftToLineIcon, //RouteOffIcon,
       renderItem: () => (
         <BlockList
           title="Inbound Traffic Block"

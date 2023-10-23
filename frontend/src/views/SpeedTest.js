@@ -1,15 +1,5 @@
 import React, { useContext, useState } from 'react'
 
-/*
-import { Icon } from 'FontAwesomeUtils'
-import {
-  faCirclePlay,
-  faCirclePause,
-  faCircleArrowDown,
-  faCircleArrowUp
-} from '@fortawesome/free-solid-svg-icons'
-*/
-
 import {
   Button,
   ButtonIcon,

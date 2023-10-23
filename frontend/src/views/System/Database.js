@@ -1,6 +1,4 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Icon } from 'FontAwesomeUtils'
-import { faDatabase, faPencil } from '@fortawesome/free-solid-svg-icons'
 
 import {
   Button,
@@ -13,6 +11,7 @@ import {
   FormControlHelperText,
   Heading,
   HStack,
+  Icon,
   Input,
   InputField,
   Text,
@@ -28,7 +27,7 @@ import {
 import { dbAPI } from 'api'
 import { AlertContext } from 'AppContext'
 import { prettySize } from 'utils'
-import { PlusIcon, Settings2Icon } from 'lucide-react-native'
+import { DatabaseIcon, PlusIcon, Settings2Icon } from 'lucide-react-native'
 
 const AddTopicForm = ({ allEvents, isStored, handleAddRemove, onSubmit }) => {
   const [value, setValue] = useState('')
@@ -305,7 +304,7 @@ const Database = ({ showModal, closeModal, ...props }) => {
         <VStack space="md">
           <Heading size="md">Database</Heading>
           <HStack space="md" alignItems="center">
-            <Icon icon={faDatabase} color="$muted500" size="xs" />
+            <Icon as={DatabaseIcon} color="$muted500" size="xs" />
             <Text color="$muted500" size="sm">
               {stats && stats.Size ? prettySize(stats.Size) : null}
             </Text>
@@ -324,7 +323,6 @@ const Database = ({ showModal, closeModal, ...props }) => {
                 ml="auto"
                 action="secondary"
                 variant="solid"
-                leftIcon={<Icon icon={faPencil} />}
                 onPress={handlePressEditSize}
               >
                 <ButtonText>Set file size limit</ButtonText>

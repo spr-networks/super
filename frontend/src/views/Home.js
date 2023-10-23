@@ -97,6 +97,7 @@ const Home = (props) => {
             <Interfaces />
           </VStack>
         </VStack>
+
         <VStack flex={1} space="md">
           <ServicesEnabled features={show} />
           {show.dns ? (

@@ -32,17 +32,20 @@ const IconPicker = ({ value, color, onChange, ...props }) => {
     'Sonos'
   ]
 
-  let faIcons = [
+  let lucideIcons = [
     'Desktop',
     'Ethernet',
     'Laptop',
     'Mobile',
+    'Router',
+    'Tablet',
+    'Tv',
     'Video',
-    'Wif',
+    'Wifi',
     'Wire'
   ]
 
-  icons = [...faIcons, ...okBrands]
+  icons = [...lucideIcons, ...okBrands]
 
   return (
     <HStack
@@ -61,8 +64,8 @@ const IconPicker = ({ value, color, onChange, ...props }) => {
         >
           <IconItem
             name={name}
-            color={selected == name && color ? `${color}.400` : 'blueGray.500'}
-            size={10}
+            color={selected == name && color ? `$${color}400` : '$blueGray500'}
+            size={48}
           />
         </Pressable>
       ))}

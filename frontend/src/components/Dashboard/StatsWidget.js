@@ -1,7 +1,12 @@
 import React from 'react'
-import { Divider, Box, HStack, Text, useColorMode } from '@gluestack-ui/themed'
-
-import { Icon } from 'FontAwesomeUtils'
+import {
+  Divider,
+  Box,
+  HStack,
+  Icon,
+  Text,
+  useColorMode
+} from '@gluestack-ui/themed'
 
 const StatsWidget = ({
   title,
@@ -26,7 +31,7 @@ const StatsWidget = ({
     >
       <HStack p="$4" justifyContent="space-between">
         <Box p="$2">
-          <Icon size={16} color={iconColor || '$warmGray50'} icon={icon} />
+          <Icon as={icon} size={64} color={iconColor || '$warmGray50'} />
         </Box>
         <Box>
           <Text
@@ -51,7 +56,7 @@ const StatsWidget = ({
         <Box>
           <Divider />
           <HStack space="md" p="$2" px="$4" alignItems="center">
-            <Icon icon={iconFooter} color="$warmGray500" />
+            {/*<Icon icon={iconFooter} color="$warmGray500" />*/}
             <Text color="$muted500" size="xs" fontWeight={300}>
               {textFooter}
             </Text>

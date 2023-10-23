@@ -2,8 +2,8 @@ import React, { Component, useEffect, useState } from 'react'
 import { wifiAPI, meshAPI } from 'api'
 import APIWifi from 'api/Wifi'
 import StatsWidget from './StatsWidget'
-import { faClock, faLaptop, faWifi } from '@fortawesome/free-solid-svg-icons'
 
+import { ClockIcon, Laptop2Icon, WifiIcon } from 'lucide-react-native'
 import {
   Divider,
   Box,
@@ -66,12 +66,12 @@ export class WifiClients extends WifiClientCount {
     return (
       <StatsWidget
         {...this.props}
-        icon={faLaptop}
+        icon={Laptop2Icon}
         iconColor="$blueGray400"
         title="Active WiFi Clients"
         text={this.state.numberOfWifiClients}
         textFooter="Online"
-        iconFooter={faClock}
+        iconFooter={ClockIcon}
       />
     )
   }
@@ -80,6 +80,8 @@ export class WifiClients extends WifiClientCount {
 export const WifiInfo = (props) => {
   const [ssid, setSsid] = useState('')
   const [channel, setChannel] = useState(0)
+
+  const colorMode = useColorMode()
 
   useEffect(() => {
     wifiAPI
@@ -95,12 +97,12 @@ export const WifiInfo = (props) => {
   return (
     <StatsWidget
       {...props}
-      icon={faWifi}
-      iconColor="$info400"
+      icon={WifiIcon}
+      iconColor={colorMode == 'light' ? '$info400' : '$info700'}
       title={title}
       text={ssid}
       textFooter={'Channel ' + channel}
-      iconFooter={faWifi}
+      iconFooter={WifiIcon}
     />
   )
 }

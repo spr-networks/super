@@ -1,7 +1,7 @@
 import React, { Component, useEffect, useState } from 'react'
 import { wireguardAPI } from 'api'
 import StatsWidget from './StatsWidget'
-import { faClock, faCircleNodes } from '@fortawesome/free-solid-svg-icons'
+import { WaypointsIcon } from 'lucide-react-native'
 
 const WireguardPeers = (props) => {
   const [numPeers, setNumPeers] = useState(0)
@@ -22,8 +22,8 @@ const WireguardPeers = (props) => {
   return (
     <StatsWidget
       {...props}
-      icon={faCircleNodes}
-      iconColor="info.400"
+      icon={WaypointsIcon}
+      iconColor="$info400"
       title="VPN Peers"
       text={numPeers}
     />
@@ -46,8 +46,8 @@ const WireguardPeersActive = (props) => {
   return (
     <StatsWidget
       {...props}
-      icon={faCircleNodes}
-      iconColor="blueGray.400"
+      icon={WaypointsIcon}
+      iconColor="$blueGray400"
       title="Active VPN Connections"
       text={numPeersActive}
     />

@@ -4,6 +4,7 @@ import PropTypes from 'prop-types'
 import { Badge, BadgeIcon, BadgeText, useColorMode } from '@gluestack-ui/themed'
 import {
   CableIcon,
+  RouteIcon,
   TagIcon,
   NetworkIcon,
   GlobeIcon,
@@ -40,7 +41,7 @@ const GroupItem = React.memo(({ name, size }) => {
   let groupIcons = {
     wan: Globe2Icon,
     dns: GlobeIcon,
-    lan: NetworkIcon
+    lan: RouteIcon //NetworkIcon is crammed
   }
 
   let colorMode = useColorMode()

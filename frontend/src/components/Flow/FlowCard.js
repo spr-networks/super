@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
-import { Icon as IconFA } from 'FontAwesomeUtils'
-import { BrandIcons } from 'FontAwesomeUtils'
-
 import {
   Badge,
   BadgeText,
@@ -11,6 +8,7 @@ import {
   Button,
   ButtonIcon,
   HStack,
+  Icon,
   VStack,
   Text,
   Tooltip,
@@ -32,23 +30,14 @@ import { flowObjParse } from './Utils'
 const FlowCard = ({ card, size, edit, ...props }) => {
   size = size || 'md'
   let { title, description } = card
-  let icon = null
-  // if string use BrandIcons, else fontawesome component
-  // NOTE this does not work in ios
-  if (typeof card.icon == 'string') {
-    icon = React.createElement(BrandIcons[card.icon], {
-      color: card.color,
-      size: 12
-    })
-  } else {
-    icon = (
-      <IconFA
-        icon={card.icon}
-        color={card.color}
-        size={size == 'xs' ? '8x' : '12x'}
-      />
-    )
-  }
+  let icon = (
+    <Icon
+      as={card.icon}
+      color={card.color}
+      size={size == 'xs' ? 24 : 42}
+      w="$full"
+    />
+  )
 
   const displayValueOrParam = (values, name) => {
     if (!values || values[name] === undefined) {
@@ -196,7 +185,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
 
   return (
     <Box
-      bg="$light"
+      bg="$warmGray50"
       borderWidth="$1"
       borderColor="$coolGray200"
       sx={{
