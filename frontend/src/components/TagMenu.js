@@ -50,7 +50,6 @@ const ItemMenu = ({
           if (key == 'newItem') {
             setShowModal(true)
           } else {
-            console.log('items:', JSON.stringify(items), 'k:', key)
             let [action, item] = key.split(':')
             let nitems = []
             if (action == 'delete') {
