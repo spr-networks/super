@@ -1731,6 +1731,14 @@ export default function MockAPI() {
         }
       })
 
+      this.put('/plugins/dns/block/setRefresh', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        return new Response(200, {})
+      })
+
       this.get('/plugins/dns/block/blocklists', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })

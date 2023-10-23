@@ -223,7 +223,7 @@ const DNSBlocklist = (props) => {
   }, [])
 
   const notifyChangeBlocklist = async () => {
-    await notifyChange()
+    notifyChange()
     // close modal when added
     refAddBlocklistModal.current()
   }
@@ -493,7 +493,7 @@ const DNSBlocklist = (props) => {
               onChange={(v) => onChangeText('seconds', v)}
               onChangeText={(v) => onChangeText('seconds', v)}
             />
-            <Button action="primary" onPress={submitRefresh}>
+            <Button action="primary" onPress={() => submitRefresh(seconds)}>
               <ButtonText>Save</ButtonText>
             </Button>
           </VStack>
