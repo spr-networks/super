@@ -1,13 +1,16 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 
 import { Badge, BadgeIcon, BadgeText, useColorMode } from '@gluestack-ui/themed'
 import {
+  CableIcon,
   TagIcon,
   NetworkIcon,
   GlobeIcon,
   Globe2Icon,
   UsersIcon,
-  WifiIcon
+  WifiIcon,
+  PowerIcon
 } from 'lucide-react-native'
 
 const TagItem = React.memo(({ name, size, ...props }) => {
@@ -69,6 +72,65 @@ const GroupItem = React.memo(({ name, size }) => {
   )
 })
 
+const InterfaceItem = React.memo(({ name, size, ...props }) => {
+  let isWifi = name.startsWith('wlan')
+  let isOffline = !name.length
+  let colorMode = useColorMode()
+
+  let k = isWifi ? 'wifi' : isOffline ? 'offline' : 'ethernet'
+
+  let styles = {
+    wifi: {
+      bg: { light: '$blueGray300', dark: '$blueGray700' },
+      fg: { light: '$muted600', dark: '$muted300' },
+      icon: WifiIcon
+    },
+    ethernet: {
+      bg: { light: '$muted200', dark: '$muted800' },
+      fg: { light: '$muted600', dark: '$muted200' },
+      icon: CableIcon
+    },
+    offline: {
+      bg: { light: '$muted100', dark: '$blueGray800' },
+      fg: { light: '$muted400', dark: '$blueGray600' },
+      icon: PowerIcon
+    }
+  }
+
+  let icon = styles[k].icon
+
+  let bg = props.bg || styles[k].bg[colorMode]
+  let fg = props.color || styles[k].fg[colorMode]
+
+  return (
+    <Badge
+      action="muted"
+      variant="solid"
+      bg={bg}
+      size={size || 'md'}
+      rounded="$lg"
+    >
+      {icon != PowerIcon ? <BadgeIcon color={fg} as={icon} mr="$1" /> : null}
+      <BadgeText color={fg}>{name?.length ? name : 'offline'}</BadgeText>
+    </Badge>
+  )
+})
+
+TagItem.propTypes = {
+  name: PropTypes.string.isRequired,
+  size: PropTypes.any
+}
+
+GroupItem.propTypes = {
+  name: PropTypes.string.isRequired,
+  size: PropTypes.any
+}
+
+InterfaceItem.propTypes = {
+  name: PropTypes.string.isRequired,
+  size: PropTypes.any
+}
+
 export default TagItem
 
-export { TagItem, GroupItem }
+export { TagItem, GroupItem, InterfaceItem }
