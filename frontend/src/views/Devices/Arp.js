@@ -13,6 +13,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
+import { InterfaceItem } from 'components/TagItem'
 
 //import { FlashList } from '@shopify/flash-list'
 
@@ -92,11 +93,8 @@ const Arp = (props) => {
               justifyContent="space-between"
             >
               <Text size="xs">Flags: {translateFlags(item.Flags)}</Text>
-              <Box ml="auto">
-                <Badge action="success" variant="outline">
-                  <BadgeText>{item.Device}</BadgeText>
-                </Badge>
-              </Box>
+
+              <InterfaceItem name={item.Device} />
             </VStack>
           </ListItem>
         )}

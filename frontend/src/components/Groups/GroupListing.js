@@ -4,6 +4,7 @@ import { groupDescriptions } from 'api/Group'
 
 import {
   Badge,
+  BadgeIcon,
   BadgeText,
   Box,
   FlatList,
@@ -14,6 +15,8 @@ import {
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
+import { CableIcon, WifiIcon } from 'lucide-react-native'
+import { InterfaceItem } from 'components/TagItem'
 
 const GroupListing = ({ group, ...props }) => {
   const translateName = (name) => {
@@ -86,7 +89,7 @@ const GroupListing = ({ group, ...props }) => {
             {item.Name}
           </Text>
 
-          <VStack flex="2" space="sm">
+          <VStack flex={2} space="sm">
             <Text size="sm" bold>
               {item.IP || ' '}
             </Text>
@@ -95,15 +98,9 @@ const GroupListing = ({ group, ...props }) => {
             </Text>
           </VStack>
 
-          {item.ifname ? (
-            <Badge variant="outline" action="success">
-              <BadgeText>{item.ifname}</BadgeText>
-            </Badge>
-          ) : (
-            <Badge variant="outline" action="muted">
-              <BadgeText>offline</BadgeText>
-            </Badge>
-          )}
+          <HStack flex={1} justifyContent="flex-end">
+            <InterfaceItem name={item?.ifname} />
+          </HStack>
         </ListItem>
       )}
     />

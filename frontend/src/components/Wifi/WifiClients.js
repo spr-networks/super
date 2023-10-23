@@ -18,6 +18,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { ListItem } from 'components/List'
+import { InterfaceItem } from 'components/TagItem'
 
 //import { FlashList } from '@shopify/flash-list'
 
@@ -129,9 +130,7 @@ const WifiClients = (props) => {
             sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
             alignItems="center"
           >
-            <Badge variant="outline" action="success">
-              <BadgeText>{item.Iface}</BadgeText>
-            </Badge>
+            <InterfaceItem name={item.Iface} />
           </Box>
 
           <VStack
@@ -156,6 +155,7 @@ const WifiClients = (props) => {
           >
             <HStack space="sm" alignItems="center">
               <Tooltip
+                h={undefined}
                 placement="bottom"
                 trigger={(triggerProps) => {
                   return (
