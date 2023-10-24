@@ -4,8 +4,6 @@ import { useNavigate } from 'react-router-dom'
 /*import { useNavigate as useNavigateWeb } from 'react-router-dom'
 import { useNavigate as useNavigateNative } from 'react-router-native'*/
 import { Animated } from 'react-native'
-import Icon from 'FontAwesomeUtils'
-import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import { AppContext } from 'AppContext'
 
 import {
@@ -13,12 +11,15 @@ import {
   Pressable,
   ScrollView,
   HStack,
+  Icon,
   VStack,
   Text,
   useColorMode,
   Input,
   InputField
 } from '@gluestack-ui/themed'
+
+import { ChevronDownIcon } from 'lucide-react-native'
 
 const Collapse = ({ isOpen, ...props }) => {
   return <VStack display={isOpen ? 'flex' : 'none'}>{props.children}</VStack>
@@ -201,12 +202,12 @@ const SidebarItem = (props) => {
                 alignItems="center"
                 pl={level > 1 ? level + 14 : '0'}
               >
-                {item.icon && typeof item.icon !== 'string' ? (
+                {item.icon !== undefined ? (
                   <Icon
+                    as={item.icon}
                     color={
                       colorMode == 'light' ? '$coolGray600' : '$coolGray400'
                     }
-                    icon={item.icon}
                   />
                 ) : null}
                 {isMini ? null : (
@@ -289,7 +290,7 @@ export const CollapsibleSidebarItem = (props) => {
               </Text>
             </Box>
             <RotatingView isCollapsed={isCollapsed}>
-              <Icon icon={faCaretDown} size="2" color="$coolGray400" />
+              <Icon as={ChevronDownIcon} color="$coolGray400" />
             </RotatingView>
           </HStack>
         </Pressable>
