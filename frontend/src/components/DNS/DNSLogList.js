@@ -104,7 +104,7 @@ const DNSLogList = ({ title, description, ...props }) => {
 
   const triggerAdd = (triggerProps) => {
     return (
-      <Button {...triggerProps} marginLeft="auto">
+      <Button {...triggerProps} size="xs" variant="solid" action="primary">
         <ButtonText>{'Add ' + type}</ButtonText>
         <ButtonIcon as={AddIcon} ml="$1" />
       </Button>
@@ -151,7 +151,7 @@ const DNSLogList = ({ title, description, ...props }) => {
                 onPress={() => deleteListItem(item)}
                 marginLeft="auto"
               >
-                <ButtonIcon as={CloseIcon} />
+                <ButtonIcon as={CloseIcon} color="$red700" />
               </Button>
             </ListItem>
           )}
