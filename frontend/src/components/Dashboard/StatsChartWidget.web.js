@@ -125,7 +125,7 @@ const StatsChartWidget = (props) => {
       datas = [datas]
     }
 
-    //    let colors = chroma.scale('Spectral').mode('lch').colors(labels.length)
+    //let colors = chroma.scale('Spectral').mode('lch').colors(labels.length)
     let colors =
       useColorMode == 'light'
         ? chroma
@@ -134,9 +134,11 @@ const StatsChartWidget = (props) => {
             .colors(labels.length + 1)
         : ['#cc0000', '#00cccc', '#cc00cc']
 
+    //dataopts.labels = datas[0].map((d) => d.x)
     dataopts.datasets = datas.map((data, i) => {
+      //data = data.map((d) => d.y)
       return {
-        label: labels[i],
+        label: labels[i], //WanoutWanIn
         data,
         //fill: true,
         //backgroundColor: chroma(colors[i]).alpha(0.75).css(),
@@ -178,7 +180,9 @@ const StatsChartWidget = (props) => {
         {props.title}
       </Text>
       {props.description ? <Text>{props.description}</Text> : null}
-      <Box minH={{ base: 100, md: 280 }}>{chart}</Box>
+      <Box sx={{ '@base': { minHeight: 100 }, '@md': { minHeight: 280 } }}>
+        {chart}
+      </Box>
       {props.footerText ? (
         <Box p="$2">
           <Divider my="$2" />
