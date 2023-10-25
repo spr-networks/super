@@ -365,6 +365,7 @@ const Flow = ({ flow, edit, ...props }) => {
             value={title}
             onChangeText={(value) => setTitle(value)}
             onSubmitEditing={onSubmit}
+            placeholder="Name"
           />
         </Input>
 
