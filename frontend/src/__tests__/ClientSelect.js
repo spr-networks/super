@@ -1,12 +1,6 @@
 import 'react-native'
 import React from 'react'
-import {
-  cleanup,
-  render,
-  screen,
-  fireEvent,
-  waitFor
-} from '@testing-library/react-native'
+import { cleanup, render, screen, fireEvent, waitFor } from 'test-utils'
 
 import ClientSelect from 'components/ClientSelect'
 

@@ -31,4 +31,10 @@ describe('PFW', () => {
     let config = await pfwAPI.config()
     expect(config.BlockRules.length).toBeGreaterThan(0)
   })
+
+  test('Add flow', async () => {
+    const utils = render(<PFW />)
+    expect(screen.getByText('Add & Edit flow')).toBeTruthy()
+    expect(screen.getByPlaceholderText('Name')).toBeTruthy()
+  })
 })
