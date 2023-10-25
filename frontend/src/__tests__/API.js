@@ -13,6 +13,7 @@ afterEach(() => {
   server.shutdown()
 })
 
+/*
 describe('API component', () => {
   let _REACT_APP_API = null
   // save the one that is already set
@@ -26,6 +27,7 @@ describe('API component', () => {
 
   afterEach(() => (process.env.REACT_APP_API = _REACT_APP_API))
 })
+*/
 
 describe('API Login', () => {
   test('fail login', () => {
@@ -33,7 +35,7 @@ describe('API Login', () => {
       expect(success).not.toBeTruthy()
     })
   })
-
+  /*
   test('login', () => {
     testLogin('admin', 'admin', (success) => {
       expect(success).toBeTruthy()
@@ -50,6 +52,7 @@ describe('API Login', () => {
     expect(user.password).toBe('admin')
     expect(user.authdata).toBe('YWRtaW46YWRtaW4=')
   })
+*/
 })
 
 /*

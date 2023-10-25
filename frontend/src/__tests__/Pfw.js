@@ -1,6 +1,5 @@
 import React from 'react'
-import { act, render, screen, waitFor } from '@testing-library/react-native'
-import { NativeBaseProvider } from 'native-base'
+import { act, render, screen, waitFor } from 'test-utils'
 
 import { pfwAPI, saveLogin } from 'api'
 import FlowList from 'components/Flow/FlowList'
@@ -20,27 +19,12 @@ afterAll(() => {
 
 describe('PFW', () => {
   test('Flow list', async () => {
-    const inset = {
-      frame: { x: 0, y: 0, width: 0, height: 0 },
-      insets: { top: 0, left: 0, right: 0, bottom: 0 }
-    }
+    const utils = render(<PFW />)
 
-    act(async () => {
-      const { container, getByText } = render(
-        <NativeBaseProvider initialWindowMetrics={inset}>
-          <PFW />
-        </NativeBaseProvider>
-      )
-
-      await waitFor(() => {
-        expect(container).toBeDefined()
-      })
-
-      expect(screen.getByText('Flows')).toBeTruthy()
-    })
+    expect(screen.getByText('Flows')).toBeTruthy()
 
     // wait for data to be populated
-    //await waitFor(() => expect(getByText('192.168.3.2/32')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('192.168.2.14')).toBeTruthy())
   })
 
   test('api', async () => {

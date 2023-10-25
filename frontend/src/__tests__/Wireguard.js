@@ -1,12 +1,6 @@
 import React from 'react'
-import {
-  act,
-  render,
-  screen,
-  fireEvent,
-  waitFor
-} from '@testing-library/react-native'
-import { NativeBaseProvider } from 'native-base'
+
+import { act, render, screen, fireEvent, waitFor } from 'test-utils'
 
 import { wireguardAPI, saveLogin } from 'api'
 import Wireguard from 'views/Wireguard'
@@ -25,45 +19,37 @@ afterAll(() => {
   server.shutdown()
 })
 
-const inset = {
-  frame: { x: 0, y: 0, width: 0, height: 0 },
-  insets: { top: 0, left: 0, right: 0, bottom: 0 }
-}
-
 describe('Wireguard', () => {
   test('Peer list', async () => {
-    render(
-      <NativeBaseProvider initialWindowMetrics={inset}>
-        <PeerList />
-      </NativeBaseProvider>
-    )
+    const utils = render(<PeerList />)
 
-    await act(async () => {
-      expect(screen.getByText('Peers')).toBeTruthy()
-
-      expect(await screen.findByText('192.168.3.2/32')).not.toBeNull()
-    })
+    expect(screen.getByText('Peers')).toBeTruthy()
+    expect(await screen.findByText('192.168.3.2/32')).not.toBeNull()
   })
 
-  /*
-  test('Add peer', async () => {
+  /*test('Add peer', async () => {
     let config = { listenPort: 51280 }
     let notifyChange = jest.fn()
+    let endpoints = []
 
     render(
-      <NativeBaseProvider initialWindowMetrics={inset}>
-        <WireguardAddPeer config={config} notifyChange={notifyChange} />
-      </NativeBaseProvider>
+      <WireguardAddPeer
+        config={config}
+        notifyChange={notifyChange}
+        defaultEndpoints={endpoints}
+      />
     )
-    await act(async () => {
-      expect(await screen.findByText('Client')).toBeTruthy()
-      fireEvent(await screen.findByText('Save'), 'pressIn')
-      fireEvent(await screen.findByText('Save'), 'pressOut')
 
-      await waitFor(() => {
-        expect(notifyChange).toHaveBeenCalled()
-      })
+    expect(await screen.findByText('Client')).toBeTruthy()
+    //expect(screen.getByPlaceholderText('base64 pubkey')).toBeTruthy()
+
+
+    fireEvent(await screen.findByText('Save'), 'pressIn')
+    fireEvent(await screen.findByText('Save'), 'pressOut')
+
+    await waitFor(() => {
+      expect(notifyChange).toHaveBeenCalled()
     })
-  })
-  */
+   
+  })*/
 })
