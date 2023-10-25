@@ -305,18 +305,14 @@ const Flow = ({ flow, edit, ...props }) => {
 
           <HStack space="sm" flexWrap="wrap">
             {Object.keys(trigger.values).map((key) => (
-              <Badge variant="outline" action="muted" size="xs">
-                <BadgeText key={key}>
-                  {displayValue(trigger.values[key], key)}
-                </BadgeText>
+              <Badge key={key} variant="outline" action="muted" size="xs">
+                <BadgeText>{displayValue(trigger.values[key], key)}</BadgeText>
               </Badge>
             ))}
 
             {Object.keys(action.values).map((key) => (
-              <Badge variant="outline" action="muted" size="xs">
-                <BadgeText key={key}>
-                  {displayValue(action.values[key], key)}
-                </BadgeText>
+              <Badge key={key} variant="outline" action="muted" size="xs">
+                <BadgeText>{displayValue(action.values[key], key)}</BadgeText>
               </Badge>
             ))}
           </HStack>

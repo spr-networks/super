@@ -311,7 +311,7 @@ export default class WireguardAddPeer extends React.Component {
               >
                 <HStack space="xl">
                   {allGroups.map((group) => (
-                    <Checkbox value={group} colorScheme="primary">
+                    <Checkbox key={group} value={group} colorScheme="primary">
                       <CheckboxIndicator mr="$2">
                         <CheckboxIcon />
                       </CheckboxIndicator>
