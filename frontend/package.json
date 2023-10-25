@@ -128,7 +128,7 @@
       "./src/setupTests.js"
     ],
     "transformIgnorePatterns": [
-      "/node_modules/(?!(@react-native|react-native|@fortawesome|@react-native-community/push-notification-ios|@gluestack-ui|@expo|@legendapp)/).*/"
+      "/node_modules/(?!(@react-native|react-native|react-router-native|@fortawesome|@react-native-community/push-notification-ios|@gluestack-ui|@expo|@legendapp)/).*/"
     ],
     "globals": {
       "__DEV__": true
