@@ -208,7 +208,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const [isWifiDisabled, setIsWifiDisabled] = useState(null)
   const [isPlusDisabled, setIsPlusDisabled] = useState(true)
   const [isMeshNode, setIsMeshNode] = useState(false)
-  const [version, setVersion] = useState('v0.1')
+  const [version, setVersion] = useState('0.2.1')
 
   const [notificationSettings, setNotificationSettings] = useState([])
 
