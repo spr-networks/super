@@ -24,9 +24,9 @@ var ServerEventSock = "/state/api/eventbus.sock"
 
 // this is to get strings for mac addrs instead of raw
 type PacketEthernet struct {
-	SrcMAC       string
-	DstMAC       string
-	EthernetType uint16
+	SrcMAC string
+	DstMAC string
+	HwType uint16
 }
 
 // new format
@@ -156,8 +156,8 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 
 		var ethd PacketEthernet
 
-		ethd.EthernetType = *attrs.HwType
-		if ethd.EthernetType == 1 {
+		ethd.HwType = *attrs.HwType
+		if ethd.HwType == 1 {
 
 			if attrs.HwHeader != nil && len(*attrs.HwHeader) >= 12 {
 				hwHeader := *attrs.HwHeader
