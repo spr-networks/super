@@ -4,17 +4,19 @@ import { groupDescriptions } from 'api/Group'
 
 import {
   Badge,
+  BadgeIcon,
+  BadgeText,
   Box,
-  Heading,
   FlatList,
-  Stack,
   HStack,
   Text,
   VStack,
-  useColorModeValue
-} from 'native-base'
+  useColorMode
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+import { ListHeader, ListItem } from 'components/List'
+import { CableIcon, WifiIcon } from 'lucide-react-native'
+import { InterfaceItem } from 'components/TagItem'
 
 const GroupListing = ({ group, ...props }) => {
   const translateName = (name) => {
@@ -74,53 +76,32 @@ const GroupListing = ({ group, ...props }) => {
   return (
     <FlatList
       ListHeaderComponent={
-        <HStack
-          space={1}
-          alignItems="center"
-          justifyContent="space-between"
-          p={4}
-        >
-          <Heading fontSize="md">{translateName(group.Name)}</Heading>
-          <Text color="muted.500">{groupDescriptions[group.Name] || ''}</Text>
-        </HStack>
+        <ListHeader
+          title={translateName(group.Name)}
+          description={groupDescriptions[group.Name] || ''}
+        ></ListHeader>
       }
       data={list}
       estimatedItemSize={100}
       renderItem={({ item }) => (
-        <Box
-          key={item.Name}
-          bg="backgroundCardLight"
-          borderBottomWidth={1}
-          _dark={{
-            bg: 'backgroundCardDark',
-            borderColor: 'borderColorCardDark'
-          }}
-          borderColor="borderColorCardLight"
-          p={4}
-        >
-          <HStack space={2} alignItems="center" justifyContent="space-between">
-            <Text w="1/4" bold>
-              {item.Name}
-            </Text>
+        <ListItem>
+          <Text flex={1} bold size="sm">
+            {item.Name}
+          </Text>
 
-            <Stack
-              direction={{ base: 'column', md: 'row' }}
-              w="1/2"
-              space={1}
-              justifyContent="space-between"
-            >
-              <Text>{item.IP}</Text>
-              <Text color="muted.500" fontSize="sm">
-                {item.MAC}
-              </Text>
-            </Stack>
-            <Box marginLeft="auto">
-              {item.ifname ? (
-                <Badge variant="outline">{item.ifname}</Badge>
-              ) : null}
-            </Box>
+          <VStack flex={2} space="sm">
+            <Text size="sm" bold>
+              {item.IP || ' '}
+            </Text>
+            <Text size="sm" color="$muted500">
+              {item.MAC}
+            </Text>
+          </VStack>
+
+          <HStack flex={1} justifyContent="flex-end">
+            <InterfaceItem name={item?.ifname} />
           </HStack>
-        </Box>
+        </ListItem>
       )}
     />
   )

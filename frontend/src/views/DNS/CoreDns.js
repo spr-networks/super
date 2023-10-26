@@ -1,5 +1,4 @@
-import React, { Component, useEffect, useState, useContext } from 'react'
-import { useParams } from 'react-router-dom'
+import React, { useEffect, useState, useContext } from 'react'
 import InputSelect from 'components/InputSelect'
 import { AppContext, alertState } from 'AppContext'
 
@@ -8,15 +7,22 @@ import { CoreDNS } from 'api/CoreDNS'
 import {
   Box,
   Button,
+  ButtonIcon,
+  ButtonText,
   Checkbox,
+  CheckboxIcon,
+  CheckboxIndicator,
+  CheckboxLabel,
   Heading,
-  HStack,
   Input,
+  InputField,
   Text,
   View,
   VStack,
-  useColorModeValue
-} from 'native-base'
+  HStack,
+  CheckIcon
+} from '@gluestack-ui/themed'
+import { ListHeader } from 'components/List'
 
 const CoreDns = (props) => {
   const [ip, setIp] = useState('')
@@ -85,47 +91,54 @@ const CoreDns = (props) => {
   ] //[{ label: t, value: { Tag: t } }]
 
   return (
-    <View>
-      <VStack width={{ base: '100%', md: '75%' }}>
-        <Box
-          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-          p={4}
-        >
-          <VStack space={4}>
-            <Heading fontSize="md">Core DNS Settings</Heading>
-            <Text bold>DNS IP</Text>
-            <InputSelect
-              options={options}
-              value={ip}
-              onChange={(v) => onChangeText('ip', v)}
-              onChangeText={(v) => onChangeText('ip', v)}
-            />
-            <Text bold>DNS Hostname</Text>
-            <Input
-              variant="underlined"
+    <View sx={{ '@md': { w: '$3/5' } }}>
+      <ListHeader title="Core DNS Settings"></ListHeader>
+
+      <Box
+        bg="$backgroundCardLight"
+        sx={{
+          _dark: { bg: '$backgroundCardDark' }
+        }}
+        p="$4"
+      >
+        <VStack space="lg">
+          <Heading size="md"></Heading>
+          <Text bold>DNS IP</Text>
+          <InputSelect
+            options={options}
+            value={ip}
+            onChange={(v) => onChangeText('ip', v)}
+            onChangeText={(v) => onChangeText('ip', v)}
+          />
+          <Text bold>DNS Hostname</Text>
+          <Input variant="underlined">
+            <InputField
               value={host}
               onChangeText={(v) => onChangeText('host', v)}
             />
-            <Text bold>
-              Encrypt Outbound DNS Requests with DoH (DNS over HTTPS)
-            </Text>
-            <Checkbox
-              size="sm"
-              colorScheme="primary"
-              value={enableTls}
-              onChange={(value) => {
-                setEnableTls(value)
-              }}
-              defaultIsChecked={enableTls}
-            >
-              Enabled
-            </Checkbox>
-          </VStack>
-        </Box>
-        <Button colorScheme="primary" rounded="none" onPress={submitSettings}>
-          Save
-        </Button>
-      </VStack>
+          </Input>
+          <Text bold>
+            Encrypt Outbound DNS Requests with DoH (DNS over HTTPS)
+          </Text>
+
+          <Checkbox
+            value={enableTls}
+            defaultIsChecked={enableTls}
+            onChange={setEnableTls}
+          >
+            <CheckboxIndicator mr="$2">
+              <CheckboxIcon />
+            </CheckboxIndicator>
+            <CheckboxLabel>Enabled</CheckboxLabel>
+          </Checkbox>
+          <HStack>
+            <Button action="primary" onPress={submitSettings}>
+              <ButtonText>Save</ButtonText>
+              <ButtonIcon as={CheckIcon} ml="$1" />
+            </Button>
+          </HStack>
+        </VStack>
+      </Box>
     </View>
   )
 }

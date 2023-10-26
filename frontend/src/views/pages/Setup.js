@@ -1,34 +1,31 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { api, wifiAPI } from 'api'
 import { useNavigate } from 'react-router-dom'
-import { FontAwesomeIcon } from 'FontAwesomeUtils'
-import {
-  faCircleExclamation,
-  faEthernet,
-  faInfoCircle,
-  faKey,
-  faUser
-} from '@fortawesome/free-solid-svg-icons'
-import Icon from 'FontAwesomeUtils'
 
 import {
   Box,
   Button,
-  Center,
   Text,
   View,
-  Link,
   Heading,
   HStack,
   VStack,
   FormControl,
+  FormControlLabel,
+  FormControlLabelText,
   Input,
-  useColorModeValue
-} from 'native-base'
+  InputField,
+  InputIcon,
+  ButtonText,
+  InputSlot,
+  FormControlErrorText,
+  InfoIcon
+} from '@gluestack-ui/themed'
 
-import  { Select } from 'components/Select'
+import { Select } from 'components/Select'
 
 import { AlertContext } from 'AppContext'
+import { AlertCircle, KeyRoundIcon } from 'lucide-react-native'
 
 const Setup = (props) => {
   const context = useContext(AlertContext)
@@ -440,73 +437,83 @@ const Setup = (props) => {
   return (
     <View w="100%" alignItems="center">
       <Box
-        px={4}
-        py={8}
+        px="$4"
+        py="$8"
         w="90%"
-        maxW={360}
-        bg={useColorModeValue('white', 'blueGray.900')}
+        maxWidth={360}
+        bg="$white"
+        sx={{
+          _dark: { bg: '$blueGray900' }
+        }}
         rounded={10}
         shadow={2}
       >
         <Heading
           size="lg"
           fontWeight="300"
-          color="coolGray.800"
-          _dark={{
-            color: 'warmGray.50'
+          color="$coolGray800"
+          sx={{
+            _dark: { color: '$warmGray50' }
           }}
           alignSelf="center"
         >
           Setup
         </Heading>
-        <VStack space={4} mt={12}>
+        <VStack space="md" mt="$12">
           {isDone ? (
             <>
-              <HStack alignSelf="center" alignItems="center" space={2}>
-                <Icon icon={faInfoCircle} color="muted.500" />
-                <Text alignSelf="center" color="muted.500">
+              <VStack alignItems="center" space="md">
+                <InfoIcon color="$muted400" />
+
+                <Text flex={1} color="$muted500">
                   SPR is configured!
                 </Text>
-              </HStack>
+              </VStack>
 
               <Button
-                mt={8}
-                alignSelf="center"
-                rounded="full"
+                mt="$8"
+                mx="$auto"
+                rounded="$full"
                 colorScheme="yellow"
                 bg="#fbc658"
-                _hover={{
-                  bg: '#fab526'
+                sx={{
+                  _hover: {
+                    bg: '#fab526'
+                  }
                 }}
-                px={8}
+                px="$8"
                 href="/auth/login"
               >
-                Click here to login
+                <ButtonText>Click here to login</ButtonText>
               </Button>
             </>
           ) : (
             <>
               {/*NOTE Safari will autofill as contact if using Name in label and/or placeholder*/}
               <FormControl isInvalid={'ssid' in errors}>
-                <FormControl.Label>{'Wifi N\u0430me (SSID)'}</FormControl.Label>
-                <Input
-                  value={ssid}
-                  placeholder={'N\u0430me of your Wireless Network'}
-                  onChangeText={(value) => setSsid(value)}
-                  autoFocus
-                />
+                <FormControlLabel>
+                  <FormControlLabelText>
+                    {'Wifi N\u0430me (SSID)'}
+                  </FormControlLabelText>
+                </FormControlLabel>
+                <Input>
+                  <InputField
+                    value={ssid}
+                    placeholder={'N\u0430me of your Wireless Network'}
+                    onChangeText={(value) => setSsid(value)}
+                    autoFocus
+                  />
+                </Input>
                 {'ssid' in errors ? (
-                  <FormControl.ErrorMessage
-                    _text={{
-                      fontSize: 'xs'
-                    }}
-                  >
-                    {errors.ssid}
-                  </FormControl.ErrorMessage>
+                  <FormControlError>
+                    <FormControlErrorText>{errors.ssid}</FormControlErrorText>
+                  </FormControlError>
                 ) : null}
               </FormControl>
               <FormControl isInvalid={'country' in errors}>
-                <FormControl.Label>Wifi Country Code</FormControl.Label>
+                <FormControlLabel>
+                  <FormControlLabelText>Wifi Country Code</FormControlLabelText>
+                </FormControlLabel>
 
                 <Select
                   selectedValue={countryWifi}
@@ -520,7 +527,9 @@ const Setup = (props) => {
               </FormControl>
 
               <FormControl isInvalid={'wifi' in errors}>
-                <FormControl.Label>Wifi Interface</FormControl.Label>
+                <FormControlLabel>
+                  <FormControlLabelText>Wifi Interface</FormControlLabelText>
+                </FormControlLabel>
                 <Select
                   selectedValue={interfaceWifi}
                   onValueChange={(value) => setInterfaceWifi(value)}
@@ -532,9 +541,11 @@ const Setup = (props) => {
               </FormControl>
 
               <FormControl isInvalid={'uplink' in errors}>
-                <FormControl.Label>
-                  Uplink Interface (Internet)
-                </FormControl.Label>
+                <FormControlLabel>
+                  <FormControlLabelText>
+                    Uplink Interface (Internet)
+                  </FormControlLabelText>
+                </FormControlLabel>
                 <Select
                   selectedValue={interfaceUplink}
                   onValueChange={(value) => setInterfaceUplink(value)}
@@ -546,65 +557,72 @@ const Setup = (props) => {
               </FormControl>
 
               <FormControl isInvalid={'tinynet' in errors}>
-                <FormControl.Label>Private Network Subnet(s)</FormControl.Label>
-                <Input
-                  value={tinynet}
-                  placeholder={'Private subnet for network'}
-                  onChangeText={(value) => setTinynet(value)}
-                  autoFocus
-                />
+                <FormControlLabel>
+                  <FormControlLabelText>
+                    Private Network Subnet(s)
+                  </FormControlLabelText>
+                </FormControlLabel>
+                <Input>
+                  <InputField
+                    value={tinynet}
+                    placeholder={'Private subnet for network'}
+                    onChangeText={(value) => setTinynet(value)}
+                    autoFocus
+                  />
+                </Input>
                 {'tinynet' in errors ? (
-                  <FormControl.ErrorMessage
-                    _text={{
-                      fontSize: 'xs'
-                    }}
-                  >
-                    {errors.tinynet}
-                  </FormControl.ErrorMessage>
+                  <FormControlError>
+                    <FormControlErrorText>
+                      {errors.tinynet}
+                    </FormControlErrorText>
+                  </FormControlError>
                 ) : null}
               </FormControl>
 
               <FormControl isInvalid={'login' in errors}>
-                <FormControl.Label>Admin Password</FormControl.Label>
-                <Input
-                  type="password"
-                  value={password}
-                  variant="outline"
-                  size="md"
-                  InputLeftElement={
-                    <Icon icon={faKey} size={4} ml={2} color="muted.400" />
-                  }
-                  placeholder="Password"
-                  onChangeText={(value) => setPassword(value)}
-                  onSubmitEditing={handlePress}
-                />
+                <FormControlLabel>
+                  <FormControlLabelText>Admin Password</FormControlLabelText>
+                </FormControlLabel>
+                <Input variant="outline" size="md">
+                  <InputField
+                    type="password"
+                    value={password}
+                    placeholder="Password"
+                    onChangeText={(value) => setPassword(value)}
+                    onSubmitEditing={handlePress}
+                  />
+                  <InputSlot>
+                    <InputIcon as={KeyRoundIcon} mr="$2" />
+                  </InputSlot>
+                </Input>
                 {'login' in errors ? (
-                  <FormControl.ErrorMessage
+                  <FormControlErrorMessage
                     _text={{
-                      fontSize: 'xs'
+                      size: 'xs'
                     }}
                   >
                     {errors.login}
-                  </FormControl.ErrorMessage>
+                  </FormControlErrorMessage>
                 ) : null}
               </FormControl>
 
               <Button
-                mt={8}
-                rounded="full"
-                colorScheme="yellow"
+                mt="$8"
+                rounded="$full"
                 bg="#fbc658"
-                _hover={{
-                  bg: '#fab526'
+                sx={{
+                  _hover: {
+                    bg: '#fab526'
+                  }
                 }}
                 onPress={handlePress}
               >
-                Save
+                <ButtonText>Save</ButtonText>
               </Button>
               {'submit' in errors ? (
-                <HStack space={2} alignSelf="center" alignItems="center">
-                  <Icon icon={faCircleExclamation} color="error.700" />
-                  <Text color="error.700">{errors.submit}</Text>
+                <HStack space="md" alignSelf="center" alignItems="center">
+                  <AlertCircle color="$red700" />
+                  <Text color="$red700">{errors.submit}</Text>
                 </HStack>
               ) : null}
             </>

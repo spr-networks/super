@@ -1,11 +1,19 @@
 import React, { useContext, useEffect, useState } from 'react'
-import DNSBlocklist from 'components/DNS/DNSBlocklist'
+
 import DNSOverrideList from 'components/DNS/DNSOverrideList'
 import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 import PluginDisabled from 'views/PluginDisabled'
 
-import { ScrollView, View, VStack } from 'native-base'
+import {
+  ScrollView,
+  Fab,
+  FabIcon,
+  FabLabel,
+  AddIcon,
+  View,
+  VStack
+} from '@gluestack-ui/themed'
 
 const DNSBlock = (props) => {
   const context = useContext(AlertContext)
@@ -44,7 +52,7 @@ const DNSBlock = (props) => {
   }
 
   return (
-    <ScrollView>
+    <View h="$full">
       <VStack>
         <DNSOverrideList
           key="blockdomain"
@@ -60,7 +68,32 @@ const DNSBlock = (props) => {
           notifyChange={notifyChange}
         />
       </VStack>
-    </ScrollView>
+
+      {/*
+      <Fab
+        size="md"
+        placement="bottom right"
+        isHovered={false}
+        isDisabled={false}
+        isPressed={false}
+      >
+        <FabIcon as={AddIcon} mr="$1" />
+        <FabLabel>Add Block</FabLabel>
+      </Fab>
+      <Fab
+        action="secondary"
+        size="md"
+        placement="bottom right"
+        mr="$40"
+        isHovered={false}
+        isDisabled={false}
+        isPressed={false}
+      >
+        <FabIcon as={AddIcon} mr="$1" />
+        <FabLabel>Add Permit</FabLabel>
+      </Fab>
+      */}
+    </View>
   )
 }
 

@@ -8,23 +8,29 @@ import { Platform } from 'react-native'
 import {
   Box,
   Button,
+  ButtonIcon,
+  ButtonText,
   FormControl,
+  FormControlLabel,
+  FormControlLabelText,
   Heading,
   HStack,
   Input,
-  Menu,
+  InputField,
   ScrollView,
   Text,
   Tooltip,
-  VStack,
-  useColorModeValue
-} from 'native-base'
+  TooltipContent,
+  TooltipText,
+  VStack
+} from '@gluestack-ui/themed'
 
-import  { Select } from 'components/Select'
+import { RotateCwIcon, WifiIcon } from 'lucide-react-native'
+
+import { Select } from 'components/Select'
 
 import WifiChannelParameters from 'components/Wifi/WifiChannelParameters'
-import { Icon } from 'FontAwesomeUtils'
-import { faRotateRight, faWifi } from '@fortawesome/free-solid-svg-icons'
+import { ListHeader } from 'components/List'
 
 const default5Ghz = {
   ap_isolate: 1,
@@ -415,16 +421,16 @@ const WifiHostapd = (props) => {
     let ht_capab, vht_capab
     if (config.hw_mode == 'a') {
       //this assumes 5ghz, need to handle 6ghz and wifi 6
-      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+      ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
     } else if (config.hw_mode == 'g' || config.hw_mode == 'b') {
-      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+      ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
     } else {
-      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+      ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
       if (ht_capab == '' && vht_capab == '') {
-        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+        ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
       }
       if (ht_capab == '' && vht_capab == '') {
-        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 4)
+        ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 4)
       }
     }
 
@@ -434,27 +440,24 @@ const WifiHostapd = (props) => {
   }
 
   const updateCapabilities = () => {
-
-    let new_config = {...config}
-
+    let new_config = { ...config }
 
     //enable all capabilities
 
     let ht_capab, vht_capab
     if (config.hw_mode == 'a') {
       //this assumes 5ghz, need to handle 6ghz and wifi 6
-      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+      ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
     } else if (config.hw_mode == 'g' || config.hw_mode == 'b') {
-      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+      ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
     } else {
-      [ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
+      ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 2)
       if (ht_capab == '' && vht_capab == '') {
-        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
+        ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 1)
       }
       if (ht_capab == '' && vht_capab == '') {
-        [ht_capab, vht_capab] = generateCapabilitiesString(iface, 4)
+        ;[ht_capab, vht_capab] = generateCapabilitiesString(iface, 4)
       }
-
     }
     if (ht_capab) {
       ht_capab.sort()
@@ -467,7 +470,6 @@ const WifiHostapd = (props) => {
 
     pushConfig(new_config)
   }
-
 
   const updateIWS = () => {
     wifiAPI.iwDev().then((devs) => {
@@ -551,7 +553,6 @@ const WifiHostapd = (props) => {
   }
 
   const pushConfig = (inconfig) => {
-
     let data = {
       Ssid: inconfig.ssid,
       Channel: parseInt(inconfig.channel),
@@ -571,7 +572,6 @@ const WifiHostapd = (props) => {
   }
 
   const commitConfig = () => {
-
     let data = {
       Ssid: config.ssid,
       Channel: parseInt(config.channel),
@@ -731,7 +731,6 @@ const WifiHostapd = (props) => {
       defaultConfig.he_su_beamformee = '0'
       defaultConfig.he_su_beamformer = '0'
       defaultConfig.ieee80211ax = '0'
-
     }
 
     pushConfig(defaultConfig)
@@ -821,7 +820,11 @@ const WifiHostapd = (props) => {
       if (type.includes('AP/VLAN')) {
         continue
       }
-      devsSelect.push({ label, value: _iface, isDisabled: (_iface.includes('.')) })
+      devsSelect.push({
+        label,
+        value: _iface,
+        isDisabled: _iface.includes('.')
+      })
 
       if (_iface == iface) {
         devSelected = devsSelect[devsSelect.length - 1].value
@@ -846,7 +849,6 @@ const WifiHostapd = (props) => {
 
   const deleteExtraBSS = (iface) => {
     wifiAPI.disableExtraBSS(iface).then((result) => {
-
       //update interfaces
       wifiAPI.interfacesConfiguration().then((ifaces) => {
         setInterfaces(ifaces)
@@ -857,23 +859,23 @@ const WifiHostapd = (props) => {
           }
         }
       })
-
     })
   }
 
   const triggerBtn = (triggerProps) => (
     <Button
-      variant="subtle"
       size="sm"
+      action="secondary"
+      variant="outline"
       alignSelf="center"
-      leftIcon={<Icon icon={faWifi} />}
       {...triggerProps}
     >
-      {`${iface} Options`}
+      <ButtonText>{`${iface} Options`}</ButtonText>
+      <ButtonIcon as={WifiIcon} ml="$1" />
     </Button>
   )
 
-  const interfaceMenu = (
+  /*const interfaceMenu = (
     <Menu
       flex={1}
       w={190}
@@ -888,7 +890,7 @@ const WifiHostapd = (props) => {
         </Menu.Item>
       </Menu.Group>
     </Menu>
-  )
+  )*/
 
   let curIface
   for (let i of interfaces) {
@@ -898,27 +900,25 @@ const WifiHostapd = (props) => {
   }
 
   return (
-    <ScrollView pb="20">
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <Heading fontSize="md">Wifi Interface</Heading>
-
-        <Button
-          colorScheme="secondary"
-          size="sm"
-          alignSelf="center"
-          leftIcon={<Icon icon={faRotateRight} />}
-          type="submit"
-          onPress={restartWifi}
-        >
-          Restart All Wifi Devices
+    <ScrollView pb="$20">
+      <ListHeader title="Wifi Interface">
+        <Button size="sm" action="secondary" onPress={restartWifi}>
+          <ButtonText>Restart All Wifi Devices</ButtonText>
+          <ButtonIcon as={RotateCwIcon} ml="$1" />
         </Button>
-      </HStack>
+      </ListHeader>
+
       <Box
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        p={4}
+        bg="$backgroundCardLight"
+        sx={{
+          _dark: { bg: '$backgroundCardDark' }
+        }}
+        p="$4"
       >
-        <FormControl flex={1} w="2/3">
-          <FormControl.Label>WiFi Interface</FormControl.Label>
+        <FormControl flex={1} w="$2/3">
+          <FormControlLabel>
+            <FormControlLabelText>WiFi Interface</FormControlLabelText>
+          </FormControlLabel>
           {devsSelect.length ? (
             <Select
               selectedValue={devSelected}
@@ -949,95 +949,107 @@ const WifiHostapd = (props) => {
           updateExtraBSS={updateExtraBSS}
           deleteExtraBSS={deleteExtraBSS}
         />
-      )
-      : null }
+      ) : null}
 
-      <HStack justifyContent="space-between" p={4}>
-        <Heading fontSize="lg" alignSelf="center">
-          Advanced
-        </Heading>
-        <Heading fontSize="md" alignSelf="center">
-          HostAP Config {iface}
+      <VStack
+        justifyContent="space-between"
+        p="$4"
+        space="md"
+        sx={{ '@md': { flexDirection: 'row' } }}
+      >
+        <Heading size="sm" alignSelf="center">
+          Advanced HostAP Config {iface}
         </Heading>
         {/*interfaceMenu*/}
-        <HStack space={2}>
+        <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
           <Button
-            variant="solid"
             size="sm"
-            alignSelf="center"
-            _leftIcon={<Icon icon={faRotateRight} />}
-            type="submit"
+            action="secondary"
+            variant="solid"
             onPress={updateCapabilities}
           >
-            Update All HT/VHT Capabilities
+            <ButtonText>Update All HT/VHT Capabilities</ButtonText>
           </Button>
           <Button
-            variant="solid"
-            colorScheme="secondary"
             size="sm"
-            alignSelf="center"
-            _leftIcon={<Icon icon={faRotateRight} />}
-            type="submit"
+            action="secondary"
+            variant="solid"
             onPress={disableInterface}
           >
-            {Platform.OS == 'web' ? 'Disable Radio Interface' : 'Disable'}
+            <ButtonText>
+              {Platform.OS == 'web' ? 'Disable Radio Interface' : 'Disable'}
+            </ButtonText>
           </Button>
           <Button
-            variant="solid"
-            colorScheme="secondary"
             size="sm"
-            alignSelf="center"
-            _leftIcon={<Icon icon={faRotateRight} />}
-            type="submit"
+            action="secondary"
+            variant="solid"
             onPress={resetInterfaceConfig}
           >
-            Reset Config
+            <ButtonText>Reset Config</ButtonText>
           </Button>
-        </HStack>
-      </HStack>
+        </VStack>
+      </VStack>
 
       <Box
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        p={4}
+        bg="$backgroundCardLight"
+        sx={{
+          _dark: { bg: '$backgroundCardDark' }
+        }}
+        p="$4"
       >
-        <VStack space={2}>
+        <VStack space="md">
           {config.interface && interfaceEnabled == true ? (
             Object.keys(config).map((label) => (
               <HStack
                 key={label}
-                space={4}
+                space="md"
                 justifyContent="center"
                 alignItems="center"
               >
-                <Text bold flex={1} textAlign="right">
+                <Text bold flex={1} size="sm" textAlign="right">
                   {label}
                 </Text>
 
                 {canEdit.includes(label) ? (
                   tooltips[label] ? (
-                    <Tooltip label={tooltips[label]}>
-                      <Input
-                        size="lg"
+                    <Tooltip
+                      placement="bottom"
+                      trigger={(triggerProps) => {
+                        return (
+                          <Input
+                            size="md"
+                            variant="underlined"
+                            flex={2}
+                            {...triggerProps}
+                          >
+                            <InputField
+                              type="text"
+                              value={config[label]}
+                              onChangeText={(value) =>
+                                handleChange(label, value)
+                              }
+                              onSubmitEditing={handleSubmit}
+                              onMouseLeave={handleSubmit}
+                            />
+                          </Input>
+                        )
+                      }}
+                    >
+                      <TooltipContent>
+                        <TooltipText>{tooltips[label]}</TooltipText>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Input size="md" flex={2} variant="underlined">
+                      <InputField
                         type="text"
-                        variant="underlined"
-                        flex={2}
                         value={config[label]}
                         onChangeText={(value) => handleChange(label, value)}
                         onSubmitEditing={handleSubmit}
                         onMouseLeave={handleSubmit}
                       />
-                    </Tooltip>
-                  ) : (
-                    <Input
-                      size="lg"
-                      type="text"
-                      variant="underlined"
-                      flex={2}
-                      value={config[label]}
-                      onChangeText={(value) => handleChange(label, value)}
-                      onSubmitEditing={handleSubmit}
-                      onMouseLeave={handleSubmit}
-                    />
+                    </Input>
                   )
                 ) : (
                   <Text flex={2}>{config[label]}</Text>
@@ -1046,15 +1058,14 @@ const WifiHostapd = (props) => {
             ))
           ) : (
             <Button
-              colorScheme="primary"
               size="md"
+              action="primary"
               width="50%"
               alignSelf="center"
-              type="submit"
-              mt={4}
+              mt="$4"
               onPress={generateHostAPConfiguration}
             >
-              Enable HostAP
+              <ButtonText>Enable HostAP</ButtonText>
             </Button>
           )}
         </VStack>

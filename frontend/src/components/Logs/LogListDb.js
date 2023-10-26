@@ -5,34 +5,35 @@
  */
 import React, { useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
-import { logsAPI, dbAPI } from 'api'
-import InputSelect from 'components/InputSelect'
+import { dbAPI } from 'api'
 import { prettyDate } from 'utils'
 import { AlertContext } from 'layouts/Admin'
 
 import {
   Badge,
+  BadgeText,
   Box,
   Button,
+  ButtonText,
+  ButtonIcon,
   FlatList,
   Heading,
-  Stack,
   Link,
   HStack,
   VStack,
-  ScrollView,
   Text,
   View,
-  useColorModeValue,
-  Tooltip
-} from 'native-base'
+  Tooltip,
+  TooltipContent,
+  TooltipText,
+  LinkText
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
-import Icon from 'FontAwesomeUtils'
-import {
-  faFilter,
-  faFilterCircleXmark
-} from '@fortawesome/free-solid-svg-icons'
+import { FilterIcon, FilterXIcon } from 'lucide-react-native'
+
+//import { FlashList } from '@shopify/flash-list'
+import { ArrowLeftIcon, ArrowRightIcon } from '@gluestack-ui/themed'
+import { ListItem } from 'components/List'
 
 const LogListItem = (props) => {
   return <></>
@@ -156,12 +157,12 @@ const LogList = (props) => {
 
   const levelToColor = (level) => {
     let levels = {
-      info: 'blueGray',
-      warning: 'orange',
-      error: 'danger',
+      info: 'info',
+      warning: 'warning',
+      error: 'error',
       success: 'success'
     }
-    return levels[level] || 'blueGray'
+    return levels[level] || 'muted'
   }
 
   const niceTopic = (topic) => topic && topic.replace(/^log:/, '')
@@ -192,112 +193,118 @@ const LogList = (props) => {
 
   return (
     <View h={h} display="flex">
-      <HStack space={2} p={4} alignItems={'flex-end'}>
-        <Heading fontSize="lg">Events: {niceTopic(getCurrentBucket())}</Heading>
-        <Text color="muted.500" mt="auto" display={total ? 'flex' : 'none'}>
+      <HStack space="md" p="$4" alignItems="flex-end">
+        <Heading size="sm">Events: {niceTopic(getCurrentBucket())}</Heading>
+        <Text color="$muted500" mt="auto" display={total ? 'flex' : 'none'}>
           {/*page={page}/{Math.ceil(total / perPage)}, total = {total}*/}
           {total} items
         </Text>
-        <Tooltip label="Set filter for logs">
-          <Button
-            ml="auto"
-            size="sm"
-            variant="ghost"
-            colorScheme="blueGray"
-            leftIcon={<Icon icon={showForm ? faFilterCircleXmark : faFilter} />}
-            onPress={() => setShowForm(!showForm)}
-          />
+
+        <Tooltip
+          h={undefined}
+          placement="bottom"
+          trigger={(triggerProps) => (
+            <Button
+              ml="auto"
+              size="sm"
+              action="secondary"
+              variant="link"
+              {...triggerProps}
+              onPress={() => setShowForm(!showForm)}
+            >
+              <ButtonIcon as={showForm ? FilterXIcon : FilterIcon} />
+            </Button>
+          )}
+        >
+          <TooltipContent>
+            <TooltipText>Set filter for logs</TooltipText>
+          </TooltipContent>
         </Tooltip>
       </HStack>
 
       <HStack
-        space={2}
-        px={4}
-        pb={2}
+        space="md"
+        px="$4"
+        pb="$2"
         display={showForm ? 'flex' : 'none'}
         flexWrap="wrap"
       >
         {Object.keys(filter).map((topic) => (
           <Button
             key={`btn:${topic}:${filter[topic]}`}
+            size="xs"
+            action="primary"
             variant={filter[topic] ? 'solid' : 'outline'}
-            colorScheme={'blueGray'}
             rounded="xs"
-            size="sm"
-            py={1}
-            mb={2}
+            mb="$0.5"
             onPress={() => handleTopicFilter(topic)}
           >
-            {niceTopic(topic)}
+            <ButtonText>{niceTopic(topic)}</ButtonText>
           </Button>
         ))}
       </HStack>
-      <FlashList
+      <FlatList
         flex={2}
         data={logs}
         estimatedItemSize={100}
         renderItem={({ item }) => (
-          <Box
-            bg="backgroundCardLight"
-            borderBottomWidth={1}
-            _dark={{
-              bg: 'backgroundCardDark',
-              borderColor: 'borderColorCardDark'
-            }}
-            borderColor="borderColorCardLight"
-            p={4}
-          >
-            <HStack space={2}>
-              <VStack space={1} flex={1}>
-                <Text>{item.msg || dumpJSON(item)}</Text>
-                <HStack space={1}>
-                  {/*<Text color={'muted.500'} bold>
+          <ListItem>
+            <VStack space="sm" flex={1}>
+              <Text>{item.msg || dumpJSON(item)}</Text>
+              <HStack space="sm">
+                {/*<Text color={'muted.500'} bold>
                     {item.bucket}
                   </Text>*/}
-                  {getCurrentBucket() == 'log:api' && item.file && item.func ? (
-                    <Link
-                      color={'muted.500'}
-                      isExternal
-                      href={githubURL(item.file, getCurrentBucket())}
-                    >
+                {getCurrentBucket() == 'log:api' && item.file && item.func ? (
+                  <Link
+                    color="$muted500"
+                    isExternal
+                    href={githubURL(item.file, getCurrentBucket())}
+                  >
+                    <LinkText size="sm">
                       {item.file}:{item.func}
-                    </Link>
-                  ) : null}
-                </HStack>
-              </VStack>
-              <VStack space={1}>
+                    </LinkText>
+                  </Link>
+                ) : null}
+              </HStack>
+            </VStack>
+            <VStack space="sm">
+              <Box alignItems="flex-end">
                 <Badge
-                  variant={'outline'}
-                  colorScheme={levelToColor(item.level)}
+                  size="sm"
+                  action={levelToColor(item.level)}
+                  variant="outline"
                 >
-                  {item.level || 'info'}
+                  <BadgeText>{item.level || 'info'}</BadgeText>
                 </Badge>
+              </Box>
 
-                <Text>{prettyDate(item.time)}</Text>
-              </VStack>
-            </HStack>
-          </Box>
+              <Text size="sm">{prettyDate(item.time)}</Text>
+            </VStack>
+          </ListItem>
         )}
         keyExtractor={(item, index) => item.time + index}
       />
 
       {total > perPage ? (
-        <HStack space={2} alignItems="flex-start">
+        <HStack space="md" alignItems="flex-start">
           <Button
             flex={1}
-            variant="ghost"
+            variant="link"
             isDisabled={page <= 1}
             onPress={prevPage}
           >
-            &larr; Start
+            <ButtonIcon as={ArrowLeftIcon} mr="$1" />
+            <ButtonText>Start</ButtonText>
           </Button>
           <Button
             flex={1}
-            variant="ghost"
+            variant="link"
             isDisabled={page >= Math.ceil(total / perPage)}
             onPress={nextPage}
           >
-            Next &rarr;
+            <ButtonText>Next</ButtonText>
+            <ButtonIcon as={ArrowRightIcon} ml="$1" />
           </Button>
         </HStack>
       ) : null}

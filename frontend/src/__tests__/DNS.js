@@ -1,10 +1,5 @@
 import React from 'react'
-import {
-  render,
-  waitFor,
-  waitForElementToBeRemoved
-} from '@testing-library/react-native'
-import { NativeBaseProvider } from 'native-base'
+import { render, screen, waitFor, waitForElementToBeRemoved } from 'test-utils'
 
 import DNSBlock from 'views/DNS/DNSBlock'
 //import DNSBlocklist from 'components/DNS/DNSBlocklist'
@@ -34,21 +29,10 @@ describe('DNS Block', () => {
   })*/
 
   test('DNS block list', async () => {
-    const inset = {
-      frame: { x: 0, y: 0, width: 0, height: 0 },
-      insets: { top: 0, left: 0, right: 0, bottom: 0 }
-    }
-
-    const { container, getByText } = render(
-      <NativeBaseProvider initialWindowMetrics={inset}>
-        <DNSBlock />
-      </NativeBaseProvider>
-    )
-
-    //expect(container).toBeDefined()
+    const utils = render(<DNSBlock />)
 
     await waitFor(() => {
-      expect(getByText('DNS Blocklists')).toBeTruthy()
+      expect(screen.getByText('DNS Blocklists')).toBeTruthy()
     })
 
     // wait for data to be populated

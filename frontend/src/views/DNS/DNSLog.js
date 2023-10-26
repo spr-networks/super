@@ -1,11 +1,11 @@
-import React, { Component, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import DNSLogHistoryList from 'components/DNS/DNSLogHistoryList'
 import PluginDisabled from 'views/PluginDisabled'
 import { logAPI } from 'api/DNS'
 
-import { View } from 'native-base'
+import { View } from '@gluestack-ui/themed'
 
 const DNSLog = (props) => {
   const [isEnabled, setIsEnabled] = useState(true)

@@ -1,34 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Icon } from 'FontAwesomeUtils'
-import {
-  faCirclePlus,
-  faPlus,
-  faXmark
-} from '@fortawesome/free-solid-svg-icons'
 
-import { wireguardAPI, deviceAPI, pfwAPI } from 'api'
+import { pfwAPI } from 'api'
 import WireguardAddSite from 'components/Wireguard/WireguardAddSite'
 import ModalForm from 'components/ModalForm'
-import { prettyDate, prettySize } from 'utils'
 
 import {
-  Box,
   Button,
-  Fab,
+  ButtonIcon,
+  ButtonText,
   FlatList,
-  Heading,
-  IconButton,
   HStack,
-  ScrollView,
   Text,
-  View,
   VStack,
-  useColorModeValue
-} from 'native-base'
+  AddIcon,
+  CloseIcon
+} from '@gluestack-ui/themed'
+
+import { ListHeader, ListItem } from 'components/List'
 
 const SiteVPN = (props) => {
   const [sites, setSites] = useState(null)
-  const [config, setConfig] = useState({})
 
   const refreshSites = () => {
     pfwAPI.config().then((config) => {
@@ -64,108 +55,91 @@ const SiteVPN = (props) => {
   }
 
   return (
-    <View>
-      <ScrollView mt={4}>
-        <HStack
-          p={4}
-          justifyContent="space-between"
-          space={1}
-          alignItems="center"
+    <>
+      <ListHeader title="Site-To-Site VPNs">
+        <ModalForm
+          title="Add Site VPN"
+          triggerText="Add Site"
+          triggerClass="pull-right"
+          triggerProps={{
+            sx: {
+              '@base': { display: 'none' },
+              '@md': { display: sites?.length ? 'flex' : 'none' }
+            }
+          }}
+          modalRef={refModal}
         >
-          <Heading fontSize="md" alignSelf="center">
-            Site-To-Site VPNs
-          </Heading>
+          <WireguardAddSite notifyChange={refreshSites} />
+        </ModalForm>
+      </ListHeader>
 
-          <Box alignSelf="center">
-            <ModalForm
-              title="Add Site VPN"
-              triggerText="Add Site"
-              triggerClass="pull-right"
-              modalRef={refModal}
-            >
-              <WireguardAddSite notifyChange={refreshSites} />
-            </ModalForm>
-          </Box>
-        </HStack>
-        <Box p={4} mb={4}>
-          {sites !== null && sites.length ? (
-            <FlatList
-              data={sites}
-              renderItem={({ item }) => (
-                <Box
-                  bg="backgroundCardLight"
-                  borderBottomWidth={1}
-                  _dark={{
-                    bg: 'backgroundCardDark',
-                    borderColor: 'borderColorCardDark'
-                  }}
-                  borderColor="borderColorCardLight"
-                  p={4}
-                >
-                  <HStack
-                    space={2}
-                    justifyContent="space-between"
-                    alignItems="center"
-                  >
-                    <Text flex="1" bold>
-                      {item.Interface}
-                    </Text>
-                    <Text flex="1">{item.Address}</Text>
-                    <Text flex="1">{item.Endpoint}</Text>
-                    <Text
-                      display={{ base: 'none', lg: 'flex' }}
-                      fontSize="xs"
-                      isTruncated
-                    >
-                      {item.PeerPublicKey}
-                    </Text>
-                    <Text
-                      display={{ base: 'none', lg: 'flex' }}
-                      fontSize="xs"
-                      isTruncated
-                    >
-                      {item.PublicKey}
-                    </Text>
-
-                    <IconButton
-                      alignSelf="center"
-                      size="sm"
-                      variant="ghost"
-                      colorScheme="secondary"
-                      icon={<Icon icon={faXmark} />}
-                      onPress={() => deleteListItem(item)}
-                    />
-                  </HStack>
-                </Box>
-              )}
-              keyExtractor={(item, index) => `${item.Name}${index}`}
-            />
-          ) : null}
-
-          <VStack>
-            {sites !== null && sites.length === 0 ? (
-              <Text alignSelf="center">
-                There are no site VPNs configured yet
+      {sites !== null && sites.length ? (
+        <FlatList
+          data={sites}
+          renderItem={({ item }) => (
+            <ListItem>
+              <Text flex={1} bold>
+                {item.Interface}
               </Text>
-            ) : null}
+              <Text flex={1}>{item.Address}</Text>
+              <Text flex={1}>{item.Endpoint}</Text>
+              <Text
+                sx={{
+                  '@base': { display: 'none' },
+                  '@md': { display: 'flex' }
+                }}
+                size="xs"
+                isTruncated
+              >
+                {item.PeerPublicKey}
+              </Text>
+              <Text
+                sx={{
+                  '@base': { display: 'none' },
+                  '@md': { display: 'flex' }
+                }}
+                size="xs"
+                isTruncated
+              >
+                {item.PublicKey}
+              </Text>
 
-            <Button
-              display={{
-                base: 'flex',
-                md: 'flex'
-              }}
-              variant={useColorModeValue('subtle', 'solid')}
-              colorScheme={useColorModeValue('muted', 'muted')}
-              leftIcon={<Icon icon={faCirclePlus} />}
-              onPress={triggerModal}
-              mt={4}
-            >
-              Add a Site
-            </Button>
-          </VStack>
-        </Box>
-      </ScrollView>
-    </View>
+              <Button
+                size="sm"
+                variant="link"
+                onPress={() => deleteListItem(item)}
+              >
+                <ButtonIcon as={CloseIcon} color="$red700" />
+              </Button>
+            </ListItem>
+          )}
+          keyExtractor={(item, index) => `${item.Name}${index}`}
+        />
+      ) : null}
+
+      <VStack>
+        {sites !== null && sites.length === 0 ? (
+          <Text px="$4" mb="$4" flexWrap="wrap">
+            There are no site VPNs configured yet
+          </Text>
+        ) : null}
+
+        <Button
+          sx={{
+            '@md': {
+              display: sites?.length === 0 ? 'flex' : 'none'
+            }
+          }}
+          action="primary"
+          variant="solid"
+          rounded="$none"
+          onPress={triggerModal}
+        >
+          <ButtonText>Add a Site</ButtonText>
+          <ButtonIcon as={AddIcon} />
+        </Button>
+      </VStack>
+    </>
   )
 }
 

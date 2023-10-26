@@ -3,7 +3,18 @@ import React, { useContext, useState } from 'react'
 import { pluginAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 
-import { Button, FormControl, Input, Stack } from 'native-base'
+import {
+  Button,
+  ButtonText,
+  FormControl,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlLabel,
+  FormControlLabelText,
+  Input,
+  InputField,
+  VStack
+} from '@gluestack-ui/themed'
 
 const AddPlugin = (props) => {
   const contextType = useContext(AlertContext)
@@ -40,61 +51,75 @@ const AddPlugin = (props) => {
   }
 
   return (
-    <Stack space={4}>
+    <VStack space="md">
       <FormControl>
-        <FormControl.Label>Name</FormControl.Label>
+        <FormControlLabel>
+          <FormControlLabelText>Name</FormControlLabelText>
+        </FormControlLabel>
 
-        <Input
-          type="text"
-          variant="underlined"
-          name="Name"
-          value={Name}
-          onChangeText={(value) => handleChange('Name', value)}
-          autoFocus
-        />
+        <Input variant="underlined">
+          <InputField
+            type="text"
+            name="Name"
+            value={Name}
+            onChangeText={(value) => handleChange('Name', value)}
+            autoFocus
+          />
+        </Input>
 
-        <FormControl.HelperText>
-          Use a unique name to identify your plugin
-        </FormControl.HelperText>
+        <FormControlHelper>
+          <FormControlHelperText>
+            Use a unique name to identify your plugin
+          </FormControlHelperText>
+        </FormControlHelper>
       </FormControl>
       <FormControl>
-        <FormControl.Label>URI</FormControl.Label>
+        <FormControlLabel>
+          <FormControlLabelText>URI</FormControlLabelText>
+        </FormControlLabel>
 
-        <Input
-          type="text"
-          variant="underlined"
-          name="URI"
-          value={URI}
-          onChangeText={(value) => handleChange('URI', value)}
-          autoFocus
-        />
+        <Input variant="underlined">
+          <InputField
+            type="text"
+            name="URI"
+            value={URI}
+            onChangeText={(value) => handleChange('URI', value)}
+            autoFocus
+          />
+        </Input>
 
-        <FormControl.HelperText>
-          {'Plugin will be @ "http://spr/plugins/' + (URI || 'URI') + '"'}
-        </FormControl.HelperText>
+        <FormControlHelper>
+          <FormControlHelperText>
+            {'Plugin will be @ "http://spr/plugins/' + (URI || 'URI') + '"'}
+          </FormControlHelperText>
+        </FormControlHelper>
       </FormControl>
 
       <FormControl>
-        <FormControl.Label>UNIX Path</FormControl.Label>
+        <FormControlLabel>
+          <FormControlLabelText>UNIX Path</FormControlLabelText>
+        </FormControlLabel>
 
-        <Input
-          type="text"
-          variant="underlined"
-          name="UnixPath"
-          value={UnixPath}
-          onChangeText={(value) => handleChange('UnixPath', value)}
-          autoFocus
-        />
+        <Input variant="underlined">
+          <InputField
+            type="text"
+            value={UnixPath}
+            onChangeText={(value) => handleChange('UnixPath', value)}
+            autoFocus
+          />
+        </Input>
 
-        <FormControl.HelperText>
-          Plugin pathname for unix socket
-        </FormControl.HelperText>
+        <FormControlHelper>
+          <FormControlHelperText>
+            Plugin pathname for unix socket
+          </FormControlHelperText>
+        </FormControlHelper>
       </FormControl>
 
-      <Button color="primary" size="md" onPress={handleSubmit}>
-        Save
+      <Button action="primary" size="md" onPress={handleSubmit}>
+        <ButtonText>Save</ButtonText>
       </Button>
-    </Stack>
+    </VStack>
   )
 }
 

@@ -6,18 +6,20 @@ import ClientSelect from 'components/ClientSelect'
 import { firewallAPI } from 'api'
 
 import {
-  Box,
   Button,
-  Checkbox,
+  ButtonText,
   FormControl,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlLabel,
+  FormControlLabelText,
   Input,
-  Link,
-  Radio,
-  Stack,
-  HStack,
-  Spinner,
-  Text
-} from 'native-base'
+  InputField,
+  VStack,
+  HStack
+} from '@gluestack-ui/themed'
+
+import ProtocolRadio from 'components/Form/ProtocolRadio'
 
 class AddEndpointImpl extends React.Component {
   state = {
@@ -46,7 +48,7 @@ class AddEndpointImpl extends React.Component {
       IP: this.state.IP,
       Domain: this.state.Domain,
       Protocol: this.state.Protocol,
-      Port: this.state.Port,
+      Port: this.state.Port
     }
 
     firewallAPI
@@ -73,46 +75,52 @@ class AddEndpointImpl extends React.Component {
     })
 
     return (
-      <Stack space={4}>
-        <HStack space={2}>
-          <FormControl flex="2">
-            <FormControl.Label>Name</FormControl.Label>
-            <Input
-              name="RuleName"
+      <VStack space="md">
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Name</FormControlLabelText>
+          </FormControlLabel>
+          <Input>
+            <InputField
               value={this.state.RuleName}
               onSubmitEditing={(value) => this.handleChange('RuleName', value)}
               onChangeText={(value) => this.handleChange('RuleName', value)}
               onChange={(value) => this.handleChange('RuleName', value)}
             />
-          </FormControl>
-        </HStack>
-        <HStack space={4}>
-          <FormControl flex="2">
-            <FormControl.Label>IP Address</FormControl.Label>
-            <ClientSelect
-              name="IP"
-              value={this.state.IP}
-              onSubmitEditing={(value) => this.handleChange('IP', value)}
-              onChangeText={(value) => this.handleChange('IP', value)}
-              onChange={(value) => this.handleChange('IP', value)}
-            />
-            <FormControl.HelperText>Accepts IP or CIDR</FormControl.HelperText>
-          </FormControl>
-          <FormControl flex="1">
-            <FormControl.Label>Port</FormControl.Label>
-            <Input
-              size="md"
-              variant="underlined"
-              name="Port"
+          </Input>
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>IP Address</FormControlLabelText>
+          </FormControlLabel>
+          <ClientSelect
+            name="IP"
+            value={this.state.IP}
+            onSubmitEditing={(value) => this.handleChange('IP', value)}
+            onChangeText={(value) => this.handleChange('IP', value)}
+            onChange={(value) => this.handleChange('IP', value)}
+          />
+          <FormControlHelper>
+            <FormControlHelperText>Accepts IP or CIDR</FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+        <FormControl flex={1}>
+          <FormControlLabel>
+            <FormControlLabelText>Port</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="sm" variant="underlined">
+            <InputField
               value={this.state.Port}
               onChangeText={(value) => this.handleChange('Port', value)}
             />
-          </FormControl>
-        </HStack>
+          </Input>
+        </FormControl>
+
         {/* //domains are not yet implemented.
           <HStack space={4}>
-          <FormControl flex="1">
-            <FormControl.Label>Domain</FormControl.Label>
+          <FormControl flex={1}>
+            <FormControlLabel>Domain</FormControlLabel>
             <Input
               size="md"
               variant="underlined"
@@ -125,25 +133,20 @@ class AddEndpointImpl extends React.Component {
         */}
 
         <FormControl>
-          <FormControl.Label>Protocol</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Protocol</FormControlLabelText>
+          </FormControlLabel>
 
-          <Radio.Group
-            name="Protocol"
-            defaultValue={this.state.Protocol}
-            accessibilityLabel="Protocol"
+          <ProtocolRadio
+            value={this.state.Protocol}
             onChange={(value) => this.handleChange('Protocol', value)}
-          >
-            <HStack space={2}>
-              <Radio value="tcp">tcp</Radio>
-              <Radio value="udp">udp</Radio>
-            </HStack>
-          </Radio.Group>
+          />
         </FormControl>
 
-        <Button color="primary" size="md" onPress={this.handleSubmit}>
-          Save
+        <Button action="primary" size="md" onPress={this.handleSubmit}>
+          <ButtonText>Save</ButtonText>
         </Button>
-      </Stack>
+      </VStack>
     )
   }
 }

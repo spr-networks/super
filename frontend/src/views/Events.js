@@ -1,47 +1,55 @@
-import React, { useContext, useEffect, useState, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import React, { useState, useRef } from 'react'
+
 import {
-  Modal,
   View,
-  useDisclose
-} from 'native-base'
+  Heading,
+  Icon,
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalContent,
+  ModalCloseButton,
+  ModalHeader,
+  CloseIcon
+} from '@gluestack-ui/themed'
 
 import LogListDb from 'components/Logs/LogListDb'
 import Database from 'views/System/Database'
 
 const Events = (props) => {
-
-  const { isOpen, onOpen, onClose } = useDisclose()
+  const [showModal, setShowModal] = useState(false)
 
   const [modalTitle, setModalTitle] = useState('Container')
   const [modalBody, setModalBody] = useState('')
-  const refModal = useRef(null)
 
-
-  const showModal = (title, content) => {
+  const onShowModal = (title, content) => {
     setModalTitle(title)
     setModalBody(content)
-    onOpen()
+    setShowModal(true)
 
     return onClose
+  }
+
+  const onClose = () => {
+    setShowModal(false)
   }
 
   return (
     <View>
       <LogListDb />
-      <Database showModal={showModal} closeModal={onClose} />
-      <Modal
-        ref={refModal}
-        isOpen={isOpen}
-        onClose={onClose}
-        animationPreset="slide"
-      >
-        <Modal.Content maxWidth={{ base: '100%', md: '90%' }}>
-          <Modal.CloseButton />
-          <Modal.Header>{modalTitle}</Modal.Header>
-          <Modal.Body>{modalBody}</Modal.Body>
-          {/*<Modal.Footer />*/}
-        </Modal.Content>
+      <Database showModal={onShowModal} closeModal={onClose} />
+
+      <Modal isOpen={showModal} onClose={onClose}>
+        <ModalBackdrop />
+        <ModalContent>
+          <ModalHeader>
+            <Heading size="sm">{modalTitle}</Heading>
+            <ModalCloseButton>
+              <Icon as={CloseIcon} />
+            </ModalCloseButton>
+          </ModalHeader>
+          <ModalBody>{modalBody}</ModalBody>
+        </ModalContent>
       </Modal>
     </View>
   )

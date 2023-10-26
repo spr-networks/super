@@ -2,15 +2,35 @@ import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import {
+  Badge,
+  BadgeText,
   Button,
+  ButtonText,
+  Pressable,
   FormControl,
+  FormControlHelper,
+  FormControlHelperText,
+  Icon,
   Input,
+  InputField,
   HStack,
-  Menu,
-  Popover,
   Tooltip,
-  useColorModeValue
-} from 'native-base'
+  TooltipContent,
+  TooltipText,
+  Popover,
+  PopoverBackdrop,
+  PopoverBody,
+  PopoverContent,
+  PopoverCloseButton,
+  PopoverHeader,
+  CloseIcon,
+  Heading,
+  Menu,
+  MenuItem,
+  MenuItemLabel,
+  AddIcon,
+  CircleIcon
+} from '@gluestack-ui/themed'
 
 import TimeSelect from '../TimeSelect'
 import InputSelect from 'components/InputSelect'
@@ -30,23 +50,15 @@ const Token = ({
   const [value, setValue] = useState('' + defaultValue)
   const [isOpen, setIsOpen] = useState(false)
 
-  let size = props.size || 'md'
+  let size = props.size || 'xs'
   let options = props.options || [] // for autocomplete
 
   const tokenProps = {
-    colorScheme: 'light',
-    textAlign: 'center',
-    rounded: 'md',
+    action: 'muted',
     variant: 'outline',
-    bg: useColorModeValue('muted.50', 'muted.700'),
-    borderColor: useColorModeValue('muted.200', 'muted.600'),
-    _text: {
-      color: useColorModeValue('muted.600', 'muted.200')
-    },
-    size,
-    py: 0,
-    px: 2,
-    mb: 2
+    size: 'xs',
+    py: '$0',
+    px: '$2'
   }
 
   const displayValue = (value, label) => {
@@ -102,39 +114,85 @@ const Token = ({
 
     // skip popover & use the menu directly
     // triggers differ slightly
+    //<Tooltip label={label}></Tooltip>
     const trigger = (triggerProps) => (
-      <Tooltip label={label} bg="muted.800" _text={{ color: 'muted.200' }}>
-        <Button {...tokenProps} {...triggerProps}>
-          {displayValue(value, label)}
-        </Button>
-      </Tooltip>
+      <Button {...tokenProps} {...triggerProps}>
+        <ButtonText>{displayValue(value, label)}</ButtonText>
+      </Button>
     )
 
-    return (
-      <Menu w="190" closeOnSelect={!isMultiple} trigger={trigger}>
-        <Menu.OptionGroup
+    /*const trigger = (triggerProps) => (
+      <Tooltip
+        placement="bottom"
+        trigger={(triggerPropsTooltip) => {
+          return (
+            <Button {...tokenProps} {...triggerProps} {...triggerPropsTooltip}>
+              <ButtonText>{displayValue(value, label)}</ButtonText>
+            </Button>
+          )
+        }}
+      >
+        <TooltipContent>
+          <TooltipText>{label}</TooltipText>
+        </TooltipContent>
+      </Tooltip>
+    )*/
+
+    /*
+    //<Menu closeOnSelect={!isMultiple} trigger={trigger}>
+            <Menu.OptionGroup
           defaultValue={defaultValue}
           type={inputType}
           title={title}
           onChange={handleChange}
         >
-          {options.map((item) => (
-            <Menu.ItemOption key={item.value} value={item.value}>
-              {item.label}
-            </Menu.ItemOption>
-          ))}
-        </Menu.OptionGroup>
+    */
+    return (
+      <Menu
+        trigger={trigger}
+        selectionMode={isMultiple ? 'multiple' : 'single'}
+        closeOnSelect={!isMultiple}
+        selectedKeys={defaultValue}
+        onSelectionChange={(e) => {
+          let key = e.currentKey
+          let [action, day] = key.split(':')
+          let values = defaultValue
+          if (action == 'add') {
+            values.push(day)
+          } else {
+            values = values.filter((d) => d != day)
+          }
+          handleChange(values)
+        }}
+      >
+        {options.map((item) => (
+          <MenuItem
+            key={
+              defaultValue.includes(item.value)
+                ? `delete:${item.value}`
+                : `add:${item.value}`
+            }
+            textValue={item.value}
+          >
+            <Icon
+              as={defaultValue.includes(item.value) ? CircleIcon : AddIcon}
+              mr="$2"
+            />
+            <MenuItemLabel size="sm">{item.label}</MenuItemLabel>
+          </MenuItem>
+        ))}
       </Menu>
     )
   }
 
   let inputElement = (
-    <Input
-      variant="outlined"
-      defaultValue={value}
-      onChangeText={onChangeText}
-      onSubmitEditing={() => setIsOpen(false)}
-    />
+    <Input variant="outlined">
+      <InputField
+        defaultValue={value}
+        onChangeText={onChangeText}
+        onSubmitEditing={() => setIsOpen(false)}
+      />
+    </Input>
   )
 
   // time picker
@@ -159,22 +217,7 @@ const Token = ({
         }}
       />
     )
-  } /* else if (['DstPort', 'SrcPort'].includes(label)) {
-    const onSelect = (value) => {
-      onChangeText(value)
-      setIsOpen(false)
-    }
-
-    inputElement = (
-      <InputSelect
-        options={options}
-        value={value}
-        onChange={onSelect}
-        onChangeText={onChangeText}
-        onSubmitEditing={() => setIsOpen(false)}
-      />
-    )
-  }*/ else if (
+  } else if (
     (['Tags', 'Groups', 'DstInterface', 'Container', 'OriginalDstIP'].includes(
       label
     ) ||
@@ -204,33 +247,69 @@ const Token = ({
   }
 
   //NOTE treat empty value as *
-  const trigger = (triggerProps) => (
-    <Tooltip label={label} bg="muted.800" _text={{ color: 'muted.200' }}>
+  /*const trigger = (triggerProps) => (
+    <TooltipNB label={label}>
       <Button
         {...tokenProps}
         {...triggerProps}
         onPress={() => setIsOpen(!isOpen)}
       >
-        {displayValue(value)}
+        <ButtonText>{displayValue(value)}</ButtonText>
       </Button>
+    </TooltipNB>
+  )*/
+
+  const trigger = (triggerProps) => (
+    <Tooltip
+      h={undefined}
+      placement="bottom"
+      trigger={(triggerPropsTooltip) => {
+        return (
+          <Pressable
+            {...triggerProps}
+            {...triggerPropsTooltip}
+            onPress={() => setIsOpen(!isOpen)}
+          >
+            <Badge {...tokenProps}>
+              <BadgeText>{displayValue(value)}</BadgeText>
+            </Badge>
+          </Pressable>
+        )
+      }}
+    >
+      <TooltipContent>
+        <TooltipText>{label}</TooltipText>
+      </TooltipContent>
     </Tooltip>
   )
 
   return (
     <>
       <Popover
-        position="auto"
+        placement="bottom"
         trigger={trigger}
         isOpen={isOpen}
         onClose={() => setIsOpen(!isOpen)}
       >
-        <Popover.Content minW={180}>
-          <Popover.Body>
-            <HStack space={1}>
+        <PopoverBackdrop />
+        <PopoverContent minW={180}>
+          <PopoverHeader>
+            <Heading size="sm">{label}</Heading>
+            <PopoverCloseButton>
+              <Icon as={CloseIcon} />
+            </PopoverCloseButton>
+          </PopoverHeader>
+          <PopoverBody>
+            <HStack space="md">
               <FormControl flex={1}>
-                <FormControl.Label>{label}</FormControl.Label>
+                {/*<FormControlLabel>
+                  <FormControlLabelText>{label}</FormControlLabelText>
+                </FormControlLabel>*/}
+
                 {inputElement}
-                <FormControl.HelperText>{description}</FormControl.HelperText>
+                <FormControlHelper>
+                  <FormControlHelperText>{description}</FormControlHelperText>
+                </FormControlHelper>
               </FormControl>
               {/*<IconButton
                 ml="auto"
@@ -238,8 +317,8 @@ const Token = ({
                 icon={<Icon icon={faTag} />}
               />*/}
             </HStack>
-          </Popover.Body>
-        </Popover.Content>
+          </PopoverBody>
+        </PopoverContent>
       </Popover>
     </>
   )

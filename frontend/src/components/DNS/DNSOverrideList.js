@@ -1,7 +1,5 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import ModalForm from 'components/ModalForm'
 import DNSAddOverride from 'components/DNS/DNSAddOverride'
@@ -11,17 +9,16 @@ import { format as timeAgo } from 'timeago.js'
 
 import {
   Box,
-  Heading,
-  IconButton,
-  Stack,
+  VStack,
   FlatList,
   HStack,
-  VStack,
   Text,
-  useColorModeValue
-} from 'native-base'
+  Button,
+  ButtonIcon,
+  CloseIcon
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+import ListHeader from 'components/List/ListHeader'
 
 const DNSOverrideList = (props) => {
   const context = React.useContext(AlertContext)
@@ -52,12 +49,7 @@ const DNSOverrideList = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <Stack direction={{ base: 'column', md: 'row' }} space={1}>
-          <Heading fontSize="md">{props.title || 'DNS Override'}</Heading>
-          <Text color="muted.500">Set rules for DNS queries</Text>
-        </Stack>
-
+      <ListHeader title={props.title} description="Set rules for DNS queries">
         <ModalForm
           title={'Add ' + props.title}
           triggerText={'Add ' + props.title.split(' ')[0]}
@@ -65,9 +57,9 @@ const DNSOverrideList = (props) => {
         >
           <DNSAddOverride type={overrideType} notifyChange={notifyChange} />
         </ModalForm>
-      </HStack>
+      </ListHeader>
 
-      <Box px={4} mb={4}>
+      <Box mb="$4">
         {!list || !list.length ? (
           <Text>{`No ${props.title.split(' ')[0]} rules configured`}</Text>
         ) : null}
@@ -75,75 +67,75 @@ const DNSOverrideList = (props) => {
           data={list}
           renderItem={({ item }) => (
             <Box
-              bg="backgroundCardLight"
+              bg="$backgroundCardLight"
               borderBottomWidth={1}
-              _dark={{
-                bg: 'backgroundCardDark',
-                borderColor: 'borderColorCardDark'
+              borderColor="$borderColorCardLight"
+              sx={{
+                _dark: {
+                  bg: '$backgroundCardDark',
+                  borderColor: '$borderColorCardDark'
+                }
               }}
-              borderColor="borderColorCardLight"
-              p={4}
+              p="$4"
             >
-              <Stack
-                direction={{ base: 'row', md: 'row' }}
-                space={1}
+              <VStack
+                sx={{ '@base': { flexDirection: 'row' } }}
+                space="sm"
                 justifyContent="space-between"
                 alignItems="center"
               >
-                <Stack
-                  direction={{ base: 'column', md: 'row' }}
+                <VStack
+                  sx={{ '@md': { flexDirection: 'row' } }}
                   justifyContent="space-evenly"
                   flex={1}
-                  space={2}
+                  space={'md'}
                 >
-                  <Stack
+                  <VStack
                     flex={1}
-                    space={2}
-                    direction={{ base: 'column', md: 'row' }}
+                    space="md"
+                    sx={{ '@md': { flexDirection: 'row' } }}
                   >
                     <Text bold>{item.Domain}</Text>
-                    <HStack space={{ base: 0, md: 2 }}>
+                    <HStack space={'md'}>
                       <Text
-                        display={{ base: 'none', md: 'flex' }}
-                        color="muted.500"
+                        sx={{
+                          '@base': { display: 'none' },
+                          '@md': { display: 'flex' }
+                        }}
+                        color="$muted500"
                       >
                         =
                       </Text>
                       <Text>{item.ResultIP || '0.0.0.0'}</Text>
                     </HStack>
-                  </Stack>
+                  </VStack>
 
-                  <Stack
+                  <VStack
                     flex={1}
-                    space={2}
-                    direction={{ base: 'column', md: 'row' }}
+                    space="md"
+                    sx={{ '@md': { flexDirection: 'row' } }}
                     justifyContent="space-between"
                   >
-                    <HStack space={1}>
-                      <Text color="muted.500">Client:</Text>
+                    <HStack space={'md'}>
+                      <Text color="$muted500">Client:</Text>
                       <Text>{item.ClientIP}</Text>
                     </HStack>
 
-                    <HStack space={1}>
-                      <Text color="muted.500">Expiration:</Text>
+                    <HStack space={'md'}>
+                      <Text color="$muted500">Expiration:</Text>
                       <Text>
                         {item.Expiration
                           ? timeAgo(new Date(item.Expiration * 1e3))
                           : 'Never'}
                       </Text>
                     </HStack>
-                  </Stack>
-                </Stack>
+                  </VStack>
+                </VStack>
 
-                <IconButton
-                  alignSelf="center"
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="secondary"
-                  icon={<Icon icon={faXmark} />}
-                  onPress={() => deleteListItem(item)}
-                />
-              </Stack>
+                <Button variant="link" onPress={() => deleteListItem(item)}>
+                  <ButtonIcon as={CloseIcon} color="$red700" />
+                </Button>
+              </VStack>
             </Box>
           )}
           keyExtractor={(item) => item.Domain}

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React from 'react'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
@@ -6,7 +6,21 @@ import ClientSelect from 'components/ClientSelect'
 import { format as timeAgo } from 'timeago.js'
 import InputSelect from 'components/InputSelect'
 
-import { Button, FormControl, Input, VStack } from 'native-base'
+import {
+  Button,
+  ButtonText,
+  FormControl,
+  FormControlError,
+  FormControlErrorText,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlLabel,
+  FormControlLabelText,
+  Input,
+  InputField,
+  VStack,
+  Text
+} from '@gluestack-ui/themed'
 
 export default class DNSAddOverride extends React.Component {
   state = {
@@ -19,12 +33,12 @@ export default class DNSAddOverride extends React.Component {
   }
 
   expirationOptions = [
-    {label: 'Never', value: 0},
-    {label: '5 Minutes', value: 60*5},
-    {label: '30 Minutes', value: 60*30},
-    {label: '1 Hour', value: 60*60},
-    {label: '1 Day', value: 60*60*24},
-    {label: '1 Week', value: 60*60*24*7},
+    { label: 'Never', value: 0 },
+    { label: '5 Minutes', value: 60 * 5 },
+    { label: '30 Minutes', value: 60 * 30 },
+    { label: '1 Hour', value: 60 * 60 },
+    { label: '1 Day', value: 60 * 60 * 24 },
+    { label: '1 Week', value: 60 * 60 * 24 * 7 }
   ]
 
   constructor(props) {
@@ -102,55 +116,72 @@ export default class DNSAddOverride extends React.Component {
 
   render() {
     return (
-      <VStack space={2}>
+      <VStack space="md">
         <FormControl
           isRequired
           isInvalid={this.state.check.Domain == 'has-danger'}
         >
-          <FormControl.Label>Domain</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Domain</FormControlLabelText>
+          </FormControlLabel>
 
-          <Input
-            type="text"
-            name="Domain"
-            value={this.state.Domain}
-            onChangeText={(value) => this.handleChange('Domain', value)}
-            onSubmitEditing={this.handleSubmit}
-            autoFocus
-          />
+          <Input size="md" variant="underlined">
+            <InputField
+              type="text"
+              name="Domain"
+              value={this.state.Domain}
+              onChangeText={(value) => this.handleChange('Domain', value)}
+              onSubmitEditing={this.handleSubmit}
+              autoFocus
+            />
+          </Input>
           {this.state.check.Domain == 'has-danger' ? (
-            <FormControl.ErrorMessage>
-              Specify a domain name
-            </FormControl.ErrorMessage>
+            <FormControlError>
+              <FormControlErrorText>Specify a domain name</FormControlErrorText>
+            </FormControlError>
           ) : (
-            <FormControl.HelperText>
-              Trailing dot for domain name is to avoid prefix matching
-            </FormControl.HelperText>
+            <FormControlHelper>
+              <FormControlHelperText>
+                Trailing dot for domain name is to avoid prefix matching
+              </FormControlHelperText>
+            </FormControlHelper>
           )}
         </FormControl>
 
         <FormControl isInvalid={this.state.check.ResultIP == 'has-danger'}>
-          <FormControl.Label>Result IP</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Result IP</FormControlLabelText>
+          </FormControlLabel>
 
-          <Input
-            type="text"
-            name="ResultIP"
-            value={this.state.ResultIP}
-            onChangeText={(value) => this.handleChange('ResultIP', value)}
-          />
+          <Input variant="underlined">
+            <InputField
+              type="text"
+              name="ResultIP"
+              value={this.state.ResultIP}
+              onChangeText={(value) => this.handleChange('ResultIP', value)}
+            />
+          </Input>
 
           {this.state.check.ResultIP == 'has-danger' ? (
-            <FormControl.ErrorMessage>
-              Please enter a valid IP or leave empty
-            </FormControl.ErrorMessage>
+            <FormControlError>
+              <FormControlErrorText>
+                Please enter a valid IP or leave empty
+              </FormControlErrorText>
+            </FormControlError>
           ) : (
-            <FormControl.HelperText>
-              Optional. Set a custom IP address to return for domain name lookup
-            </FormControl.HelperText>
+            <FormControlHelper>
+              <FormControlHelperText>
+                Optional. Set a custom IP address to return for domain name
+                lookup
+              </FormControlHelperText>
+            </FormControlHelper>
           )}
         </FormControl>
 
         <FormControl isInvalid={this.state.check.ClientIP == 'has-danger'}>
-          <FormControl.Label>Client IP</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Client IP</FormControlLabelText>
+          </FormControlLabel>
 
           <ClientSelect
             value={this.state.ClientIP}
@@ -158,40 +189,44 @@ export default class DNSAddOverride extends React.Component {
           />
 
           {this.state.check.ClientIP == 'has-danger' ? (
-            <FormControl.ErrorMessage>
-              Please enter a valid IP or *
-            </FormControl.ErrorMessage>
+            <FormControlError>
+              <FormControlErrorText>
+                Please enter a valid IP or *
+              </FormControlErrorText>
+            </FormControlError>
           ) : null}
-          <FormControl.HelperText>
-            Optional. Set a Client IP this rule is applied to
-          </FormControl.HelperText>
+          <FormControlHelper>
+            <FormControlHelperText>
+              Optional. Set a Client IP this rule is applied to
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
         <FormControl>
-          <FormControl.Label>Expiration</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Expiration</FormControlLabelText>
+          </FormControlLabel>
 
           <InputSelect
             options={this.expirationOptions}
             value={
               this.state.Expiration
                 ? timeAgo(new Date(Date.now() + this.state.Expiration * 1e3))
-                : 'Never'}
+                : 'Never'
+            }
             onChange={(v) => this.handleChange('Expiration', parseInt(v))}
             onChangeText={(v) => this.handleChange('Expiration', parseInt(v))}
           />
 
-          <FormControl.HelperText>
-            If non zero has unix time for when the entry should disappear
-          </FormControl.HelperText>
+          <FormControlHelper>
+            <FormControlHelperText>
+              If non zero has unix time for when the entry should disappear
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
-        <Button
-          mt={2}
-          variant="solid"
-          colorScheme="primary"
-          onPress={this.handleSubmit}
-        >
-          Save
+        <Button action="primary" variant="solid" onPress={this.handleSubmit}>
+          <ButtonText>Save</ButtonText>
         </Button>
       </VStack>
     )

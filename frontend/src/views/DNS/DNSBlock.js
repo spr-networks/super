@@ -5,7 +5,7 @@ import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 import PluginDisabled from 'views/PluginDisabled'
 
-import { ScrollView, View, VStack } from 'native-base'
+import { ScrollView, View, VStack } from '@gluestack-ui/themed'
 
 const DNSBlock = (props) => {
   const context = useContext(AlertContext)

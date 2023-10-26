@@ -1,56 +1,36 @@
 import React, { useEffect, useRef, useState, useContext } from 'react'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
 import { AlertContext } from 'AppContext'
-import {
-  faArrowRightLong,
-  faCircleNodes,
-  faCirclePlus,
-  faEllipsis,
-  faPlus,
-  faTag,
-  faTrash
-} from '@fortawesome/free-solid-svg-icons'
 
-import { firewallAPI, deviceAPI } from 'api'
+import { firewallAPI } from 'api'
 import ModalForm from 'components/ModalForm'
 import ModalConfirm from 'components/ModalConfirm'
 import AddEndpoint from './AddEndpoint'
 
 import {
   Badge,
+  BadgeText,
   Button,
+  ButtonIcon,
+  ButtonText,
   Box,
   FlatList,
-  Heading,
-  IconButton,
-  Menu,
-  Stack,
   HStack,
+  Icon,
   VStack,
   Text,
-  useColorModeValue
-} from 'native-base'
+  ThreeDotsIcon,
+  ArrowRightIcon,
+  AddIcon,
+  TrashIcon,
+  Menu,
+  MenuItem,
+  MenuItemLabel,
+  CloseIcon
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
-
-//copied from Device.js, may want to move otu
-const TagItem = React.memo(({ name }) => {
-  let icon = faTag
-  return (
-    <Badge
-      key={name}
-      variant="outline"
-      colorScheme={useColorModeValue('muted', 'blueGray')}
-      leftIcon={<Icon icon={icon} size={3} />}
-      rounded="sm"
-      size="sm"
-      py={1}
-      px={2}
-    >
-      {name}
-    </Badge>
-  )
-})
+import { ListHeader, ListItem } from 'components/List'
+import TagItem from 'components/TagItem'
+import { TagIcon } from 'lucide-react-native'
 
 const EndpointList = (props) => {
   const [list, setList] = useState([])
@@ -95,13 +75,10 @@ const EndpointList = (props) => {
     refreshList()
   }
 
-  const trigger = (triggerProps) => (
-    <IconButton
-      variant="unstyled"
-      ml="auto"
-      icon={<Icon icon={faEllipsis} color="muted.600" />}
-      {...triggerProps}
-    ></IconButton>
+  const trigger = ({ ...triggerProps }) => (
+    <Button variant="link" {...triggerProps}>
+      <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
+    </Button>
   )
 
   const defaultTags = []
@@ -110,9 +87,11 @@ const EndpointList = (props) => {
     if (tags == null) {
       tags = []
     }
+
     let newTags = [
       ...new Set(tags.filter((x) => typeof x == 'string' && x.length > 0))
     ]
+
     newTags = newTags.map((tag) => tag.toLowerCase())
 
     item.Tags = newTags
@@ -128,144 +107,134 @@ const EndpointList = (props) => {
   }
 
   const moreMenu = (item) => (
-    <Menu w={190} closeOnSelect={true} trigger={trigger}>
-      <Menu.OptionGroup
-        title="Tags"
-        type="checkbox"
-        defaultValue={item.Tags}
-        onChange={(t) => handleTags(item, t, 'change')}
-      >
-        {[...new Set(item.Tags)].map((tag) => (
-          <Menu.ItemOption key={tag} value={tag}>
-            {tag}
-          </Menu.ItemOption>
-        ))}
-        <Menu.ItemOption
-          key="newTag"
-          onPress={() => {
-            setModalType('Tag')
-            setShowModal(true)
-          }}
-        >
-          New Tag...
-        </Menu.ItemOption>
-      </Menu.OptionGroup>
-      <Menu.Group title="Actions">
-        <Menu.Item onPress={() => deleteListItem(item)}>
-          <HStack space={2} alignItems="center">
-            <Icon icon={faTrash} color="danger.700" />
-            <Text color="danger.700">Delete</Text>
-          </HStack>
-        </Menu.Item>
-      </Menu.Group>
+    <Menu
+      trigger={trigger}
+      selectionMode="single"
+      onSelectionChange={(e) => {
+        let key = e.currentKey
+        if (key == 'newTag') {
+          setModalType('Tag')
+          setShowModal(true)
+        } else if (key == 'deleteItem') {
+          deleteListItem(item)
+        } else {
+          // its a tag
+          let tags = item.Tags.filter((t) => t != key)
+          handleTags(item, tags)
+        }
+      }}
+    >
+      {[...new Set(item?.Tags)].map((tag) => (
+        <MenuItem key={tag} textValue={tag}>
+          <CloseIcon mr="$2" />
+          <MenuItemLabel size="sm">{tag}</MenuItemLabel>
+        </MenuItem>
+      ))}
+      <MenuItem key="newTag" textValue="newTag">
+        <Icon as={TagIcon} mr="$2" />
+        <MenuItemLabel size="sm">New Tag...</MenuItemLabel>
+      </MenuItem>
+      <MenuItem key="deleteItem" textValue="deleteItem">
+        <TrashIcon color="$red700" mr="$2" />
+        <MenuItemLabel size="sm" color="$red700">
+          Delete
+        </MenuItemLabel>
+      </MenuItem>
     </Menu>
   )
 
   return (
-    <>
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <VStack maxW={{ base: 'full', md: '60%' }}>
-          <Heading fontSize="md">Endpoints</Heading>
-          <Text color="muted.500" flexWrap="wrap">
-            Describe Service Endpoints for building Firewall Rules
-          </Text>
-        </VStack>
+    <VStack>
+      <ListHeader
+        title="Endpoints"
+        description="Describe Service Endpoints for building Firewall Rules"
+      >
         <ModalForm
           title="Add Service Endpoint"
           triggerText="Add Service Endpoint"
           triggerProps={{
-            display: { base: 'none', md: list.length ? 'flex' : 'none' }
+            sx: {
+              '@base': { display: 'none' },
+              '@md': { display: list.length ? 'flex' : 'flex' }
+            }
           }}
           modalRef={refModal}
         >
           <AddEndpoint notifyChange={notifyChange} />
         </ModalForm>
-      </HStack>
+      </ListHeader>
 
-      <Box px={{ base: 0, md: 4 }}>
-        <FlatList
-          data={list}
-          renderItem={({ item }) => (
-            <Box
-              bg="backgroundCardLight"
-              borderBottomWidth={1}
-              _dark={{
-                bg: 'backgroundCardDark',
-                borderColor: 'borderColorCardDark'
+      <FlatList
+        data={list}
+        renderItem={({ item }) => (
+          <ListItem>
+            <Badge action="muted" variant="outline">
+              <BadgeText>{item.Protocol}</BadgeText>
+            </Badge>
+
+            <Text bold>{item.RuleName}</Text>
+
+            <ArrowRightIcon color="$muted400" />
+
+            <HStack space="sm">
+              <Text size="sm" bold>
+                {item.Domain}
+                {item.IP}
+              </Text>
+              <Text size="sm" color="$muted500">
+                :
+              </Text>
+              <Text size="sm">{item.Port}</Text>
+            </HStack>
+
+            <VStack
+              sx={{
+                '@base': { display: 'none' },
+                '@md': { display: item.Tags?.length ? 'flex' : 'none' }
               }}
-              borderColor="borderColorCardLight"
-              p={4}
+              space="xs"
             >
-              <HStack
-                space={3}
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                <HStack space={1}>
-                  <Text bold>{item.RuleName}</Text>
-                </HStack>
+              {item.Tags
+                ? item.Tags.map((tag) => <TagItem key={tag} name={tag} />)
+                : null}
+            </VStack>
 
-                <Icon color="muted.400" icon={faArrowRightLong} />
+            {moreMenu(item)}
 
-                <Box alignItems="center">
-                  <Badge variant="outline">{item.Protocol}</Badge>
-                </Box>
+            <ModalConfirm
+              type={modalType}
+              onSubmit={(t) => handleTags(item, [...(item?.Tags || []), t])}
+              onClose={() => setShowModal(false)}
+              isOpen={showModal}
+            />
+          </ListItem>
+        )}
+        keyExtractor={(item) => `${item.Protocol}${item.iP}:${item.Port}`}
+      />
 
-                <HStack space={1}>
-                  <Text bold>
-                    {item.Domain}
-                    {item.IP}
-                  </Text>
-                  <Text color="muted.500">:</Text>
-                  <Text>{item.Port}</Text>
-                </HStack>
-
-                <Box
-                  display={{
-                    base: 'none',
-                    md: item.Tags?.length ? 'flex' : 'none'
-                  }}
-                >
-                  {item.Tags
-                    ? item.Tags.map((tag) => <TagItem key={tag} name={tag} />)
-                    : null}
-                </Box>
-
-                {moreMenu(item)}
-              </HStack>
-
-              <ModalConfirm
-                type={modalType}
-                onSubmit={(t) => handleTags(item, [...item.Tags, t])}
-                onClose={() => setShowModal(false)}
-                isOpen={showModal}
-              />
-            </Box>
-          )}
-          keyExtractor={(item) => `${item.Protocol}${item.iP}:${item.Port}`}
-        />
-
-        <VStack>
-          {!list.length ? (
-            <Text px={{ base: 4, md: 0 }} mb={4} flexWrap="wrap">
-              Service Endpoints serves as helpers for creating other firewall
-              rules, as well as one-way connectivity from devices to the
-              endpoint when they share a tag.
-            </Text>
-          ) : null}
-          <Button
-            display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
-            variant={useColorModeValue('subtle', 'solid')}
-            colorScheme={useColorModeValue('primary', 'muted')}
-            rounded="none"
-            leftIcon={<Icon icon={faCirclePlus} />}
-            onPress={() => refModal.current()}
-          >
-            Add Endpoint
-          </Button>
-        </VStack>
-      </Box>
-    </>
+      {!list.length ? (
+        <Text
+          bg="$backgroundCardLight"
+          sx={{ _dark: { bg: '$backgroundCardDark' } }}
+          p="$4"
+          flexWrap="wrap"
+        >
+          Service Endpoints serves as helpers for creating other firewall rules,
+          as well as one-way connectivity from devices to the endpoint when they
+          share a tag.
+        </Text>
+      ) : null}
+      <Button
+        sx={{ '@md': { display: list.length ? 'none' : 'none' } }}
+        action="primary"
+        variant="solid"
+        rounded="$none"
+        onPress={() => refModal.current()}
+      >
+        <ButtonText>Add Endpoint</ButtonText>
+        <ButtonIcon as={AddIcon} />
+      </Button>
+    </VStack>
   )
 }
 

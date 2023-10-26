@@ -1,5 +1,12 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { ScrollView, SectionList, Text, View, VStack } from 'native-base'
+import {
+  SectionList,
+  Center,
+  Text,
+  Heading,
+  ScrollView,
+  View
+} from '@gluestack-ui/themed'
 
 import { groupAPI, deviceAPI, nfmapAPI } from 'api'
 import GroupListing from 'components/Groups/GroupListing'
@@ -84,11 +91,47 @@ export default (props) => {
   )
   */
 
+  //<ScrollView sx={{ '@md': { h: '90vh' } }}>
   return (
-    <ScrollView>
+    <View h="$full" sx={{ '@md': { h: '90vh' } }}>
       {groups.map((group) => (
         <GroupListing key={group.Name} group={group} />
       ))}
-    </ScrollView>
+    </View>
   )
+
+  /*
+  let data = [
+    {
+      title: 'Cyan',
+      data: ['$cyan100', '$cyan200', '$cyan300', '$cyan400', '$cyan500']
+    },
+    { title: 'Yellow', data: ['$yellow100', '$yellow200', '$yellow300'] }
+  ]
+
+  return (
+    <>
+      <SectionList
+        minWidth={300}
+        mb="$4"
+        sections={data}
+        keyExtractor={(item, index) => item + index}
+        renderItem={({ item }) => (
+          <Center py="$4" bg={item}>
+            <Text color="$black">
+              {typeof item === 'string' ? item.slice(-3) : ''}
+            </Text>
+          </Center>
+        )}
+        renderSectionHeader={({ section: { title } }) => (
+          <Center>
+            <Heading size="$xl" mt="$8" pb="$4">
+              {title}
+            </Heading>
+          </Center>
+        )}
+      />
+    </>
+  )
+  */
 }

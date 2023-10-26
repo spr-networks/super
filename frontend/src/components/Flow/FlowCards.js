@@ -14,10 +14,33 @@ import {
   faTags
 } from '@fortawesome/free-solid-svg-icons'
 
+import {
+  BanIcon,
+  BoxIcon,
+  BoxesIcon,
+  RadioTowerIcon,
+  ArrowRightCircleIcon,
+  ClockIcon,
+  MoreHorizontalIcon,
+  ArrowRightFromLineIcon,
+  RepeatIcon,
+  SplitIcon,
+  TagIcon,
+  TagsIcon,
+  WaypointsIcon
+} from 'lucide-react-native'
+
+import { BrandIcons } from 'IconUtils'
+
 import { api, deviceAPI, wifiAPI } from 'api'
 import { pfwAPI } from 'api/Pfw'
-import { numToDays, daysToNum, toCron, parseClientIPOrIdentity, toOption } from './Utils'
-import { BrandIcons } from 'FontAwesomeUtils'
+import {
+  numToDays,
+  daysToNum,
+  toCron,
+  parseClientIPOrIdentity,
+  toOption
+} from './Utils'
 
 const defaultOptions = async function (name) {
   if (name.endsWith('Port')) {
@@ -52,8 +75,8 @@ const triggers = [
     title: 'Always',
     cardType: 'trigger',
     description: 'Always run the selected trigger',
-    color: 'violet.300',
-    icon: faRepeat,
+    color: '$violet300',
+    icon: RepeatIcon,
     params: [],
     values: {},
     preSubmit: function () {
@@ -64,8 +87,8 @@ const triggers = [
     title: 'Date',
     cardType: 'trigger',
     description: 'Trigger on selected date and time',
-    color: 'violet.300',
-    icon: faClock,
+    color: '$violet300',
+    icon: ClockIcon,
     params: [
       {
         name: 'days',
@@ -126,8 +149,8 @@ const triggers = [
     hidden: true,
     cardType: 'trigger',
     description: 'Trigger this card by sending a GET request',
-    color: 'red.400',
-    icon: faBroadcastTower,
+    color: '$red400',
+    icon: RadioTowerIcon,
     params: [{ name: 'event', type: PropTypes.string }]
   }
 ]
@@ -140,8 +163,8 @@ const actions = [
     cardType: 'action',
     description:
       'Block TCP from source address or group to destination address',
-    color: 'red.400',
-    icon: faBan,
+    color: '$red400',
+    icon: BanIcon,
     params: [
       {
         name: 'Protocol',
@@ -193,8 +216,8 @@ const actions = [
     cardType: 'action',
     description:
       'Block UDP from source address or group to destination address',
-    color: 'warning.400',
-    icon: faBan,
+    color: '$warning400',
+    icon: BanIcon,
     params: [
       {
         name: 'Protocol',
@@ -228,7 +251,10 @@ const actions = [
     },
     //NOTE same as TCP
     preSubmit: async function () {
-      return { ...this.values, Client: parseClientIPOrIdentity(this.values.Client) }
+      return {
+        ...this.values,
+        Client: parseClientIPOrIdentity(this.values.Client)
+      }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
@@ -245,8 +271,8 @@ const actions = [
     cardType: 'action',
     description:
       'Forward TCP for specified source to destination address and port',
-    color: 'emerald.600',
-    icon: faCircleArrowRight,
+    color: '$emerald600',
+    icon: SplitIcon,
     params: [
       {
         name: 'Protocol',
@@ -292,7 +318,10 @@ const actions = [
       return []
     },
     preSubmit: async function () {
-      return { ...this.values, Client: parseClientIPOrIdentity(this.values.Client) }
+      return {
+        ...this.values,
+        Client: parseClientIPOrIdentity(this.values.Client)
+      }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
@@ -309,8 +338,8 @@ const actions = [
     cardType: 'action',
     description:
       'Forward UDP for specified source to destination address and port',
-    color: 'emerald.400',
-    icon: faCircleArrowRight,
+    color: '$emerald400',
+    icon: SplitIcon,
     params: [
       {
         name: 'Protocol',
@@ -361,7 +390,10 @@ const actions = [
       return []
     },
     preSubmit: async function () {
-      return { ...this.values, Client: parseClientIPOrIdentity(this.values.Client) }
+      return {
+        ...this.values,
+        Client: parseClientIPOrIdentity(this.values.Client)
+      }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
@@ -377,8 +409,8 @@ const actions = [
     title: 'Forward to Site VPN or Uplink Interface',
     cardType: 'action',
     description: 'Forward traffic over a Site VPN Gateway or Uplink Interface',
-    color: 'purple.600',
-    icon: faForward,
+    color: '$purple600',
+    icon: WaypointsIcon,
     params: [
       {
         name: 'Client',
@@ -411,22 +443,27 @@ const actions = [
             }
 
             // pull in interfaces also
-            wifiAPI
-              .interfacesConfiguration()
-              .then((ifaces) => {
-                for (let iface of ifaces) {
-                  if (iface.Type == "Uplink" && iface.Subtype != "pppup" && iface.Enabled == true) {
-                    s.push({ label: iface.Name, value: iface.Name})
-                  }
+            wifiAPI.interfacesConfiguration().then((ifaces) => {
+              for (let iface of ifaces) {
+                if (
+                  iface.Type == 'Uplink' &&
+                  iface.Subtype != 'pppup' &&
+                  iface.Enabled == true
+                ) {
+                  s.push({ label: iface.Name, value: iface.Name })
                 }
-                resolve(s)
-              })
+              }
+              resolve(s)
+            })
           })
         })
       }
     },
     preSubmit: async function () {
-      return { ...this.values, Client: parseClientIPOrIdentity(this.values.Client) }
+      return {
+        ...this.values,
+        Client: parseClientIPOrIdentity(this.values.Client)
+      }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
@@ -442,8 +479,8 @@ const actions = [
     title: 'Set Device Groups',
     cardType: 'action',
     description: 'A device joins a group only when conditions are met',
-    color: 'cyan.500',
-    icon: faObjectGroup,
+    color: '$cyan500',
+    icon: BoxesIcon,
     params: [
       {
         name: 'Client',
@@ -483,8 +520,8 @@ const actions = [
     title: 'Set Device Tags',
     cardType: 'action',
     description: 'Assign device tags when conditions are met',
-    color: 'cyan.500',
-    icon: faTags,
+    color: '$cyan500',
+    icon: TagsIcon,
     params: [
       {
         name: 'Client',
@@ -532,8 +569,8 @@ const actions = [
     cardType: 'action',
     description:
       'Forward TCP for specified source to exposed port for a local container',
-    color: 'blue.500',
-    icon: Platform.OS == 'ios' ? faCircleArrowRight : 'Docker',
+    color: '$blue500',
+    icon: BrandIcons.Docker, //SplitIcon, //Platform.OS == 'ios' ? SplitIcon : 'Docker',
     params: [
       {
         name: 'Protocol',

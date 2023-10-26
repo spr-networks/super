@@ -5,10 +5,26 @@ import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/asy
 global.self = global
 //global.window = {}
 global.XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest
-
+//TODO mock-socket or alternative
+global.WebSocket = class {
+  addEventListener(event, fn) {}
+}
 jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage)
 jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter')
 jest.mock('react-native-chart-kit', () => () => <></>)
+
+jest.mock('@react-native-community/push-notification-ios', () => {
+  return {
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    requestPermissions: jest.fn(() => Promise.resolve({ data: {} })),
+    removeAllPendingNotificationRequests: jest.fn(),
+    removeAllDeliveredNotifications: jest.fn(),
+    setNotificationCategories: jest.fn(),
+
+    configure: jest.fn()
+  }
+})
 
 // NOTE not used anymore
 global.localStorage = {

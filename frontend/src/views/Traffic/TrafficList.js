@@ -3,27 +3,26 @@ import { Dimensions, Platform } from 'react-native'
 import {
   Box,
   Button,
+  ButtonIcon,
+  ButtonText,
   HStack,
+  RadioGroup,
   Radio,
-  Stack,
-  Icon,
-  Image,
-  Text,
+  RadioIndicator,
+  RadioIcon,
+  RadioLabel,
   VStack,
-  useBreakpointValue,
-  useColorModeValue,
-  SectionList,
-  createIcon,
-  ScrollView,
-  View
-} from 'native-base'
+  View,
+  CircleIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon
+} from '@gluestack-ui/themed'
 
 import { AlertContext } from 'layouts/Admin'
 import TimeSeriesList from 'components/Traffic/TimeSeriesList'
 import ClientSelect from 'components/ClientSelect'
-import DateRange from 'components/DateRange'
 
-import { deviceAPI, trafficAPI, wifiAPI } from 'api'
+import { trafficAPI, wifiAPI } from 'api'
 
 const TrafficList = (props) => {
   const context = useContext(AlertContext)
@@ -206,39 +205,37 @@ const TrafficList = (props) => {
   let h = Platform.OS == 'web' ? Dimensions.get('window').height - 64 : '100%'
 
   return (
-    <View display="flex" h={h}>
-      <Stack
-        direction={{ base: 'column', lg: 'row' }}
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        minH={{ base: 180, lg: 60 }}
-        p={4}
-        space={2}
+    <View h={h}>
+      <VStack
+        bg="$backgroundCardLight"
+        minHeight={180}
+        sx={{
+          '@lg': { flexDirection: 'row', minHeight: 60 },
+          _dark: { bg: '$backgroundCardDark' }
+        }}
+        p="$4"
+        space="md"
       >
-        <Radio.Group
+        <RadioGroup
           flex={1}
-          name="trafficType"
           defaultValue={type}
-          accessibilityLabel="select type"
+          accessibilityLabel="Select Type"
           onChange={(type) => {
             setFilterIps([])
             setType(type)
           }}
         >
-          <HStack alignItems="center" space={2}>
+          <HStack py="1" space="md">
             {types.map((type) => (
-              <Radio
-                key={type}
-                value={type}
-                colorScheme="primary"
-                size="sm"
-                _text={{ fontSize: 'xs' }}
-                my={1}
-              >
-                {type.replace(/(In|Out)/, ' $1')}
+              <Radio key={type} value={type} size="md">
+                <RadioIndicator mr="$2">
+                  <RadioIcon as={CircleIcon} strokeWidth={1} />
+                </RadioIndicator>
+                <RadioLabel>{type.replace(/(In|Out)/, ' $1')}</RadioLabel>
               </Radio>
             ))}
           </HStack>
-        </Radio.Group>
+        </RadioGroup>
         <Box flex={1}>
           <ClientSelect
             value={filterIps && filterIps[0]}
@@ -246,12 +243,15 @@ const TrafficList = (props) => {
             onSubmitEditing={handleChangeClient}
           />
         </Box>
-      </Stack>
+      </VStack>
 
       <Box
         flex={2}
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        px={4}
+        bg="$backgroundCardLight"
+        sx={{
+          _dark: { bg: '$backgroundCardDark' }
+        }}
+        px="$4"
       >
         <TimeSeriesList
           type={type}
@@ -262,17 +262,19 @@ const TrafficList = (props) => {
         />
       </Box>
       {total > perPage ? (
-        <HStack space={2} alignItems="flex-start">
+        <HStack space="md" alignItems="flex-start">
           <Button
             flex={1}
-            variant="ghost"
+            variant="link"
             isDisabled={page <= 1}
             onPress={() => setPage(page > 1 ? page - 1 : 1)}
           >
-            &larr; Previous
+            <ButtonIcon as={ArrowLeftIcon} mr="$1" />
+            <ButtonText>Previous</ButtonText>
           </Button>
-          <Button flex={1} variant="ghost" onPress={() => setPage(page + 1)}>
-            Next &rarr;
+          <Button flex={1} variant="link" onPress={() => setPage(page + 1)}>
+            <ButtonText>Next</ButtonText>
+            <ButtonIcon as={ArrowRightIcon} ml="$1" />
           </Button>
         </HStack>
       ) : null}

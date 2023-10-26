@@ -1,6 +1,6 @@
 import React, { useContext, Component } from 'react'
 
-import { View, VStack } from 'native-base'
+import { ScrollView, VStack } from '@gluestack-ui/themed'
 
 import { deviceAPI, trafficAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
@@ -237,8 +237,8 @@ class TrafficTimeSeries extends Component {
     }
 
     return (
-      <View>
-        <VStack space={4}>
+      <ScrollView sx={{ '@md': { height: '90vh' } }}>
+        <VStack space="md">
           {['WanOut', 'WanIn', 'LanIn', 'LanOut'].map((type) => {
             return (
               <TimeSeries
@@ -253,7 +253,7 @@ class TrafficTimeSeries extends Component {
             )
           })}
         </VStack>
-      </View>
+      </ScrollView>
     )
   }
 }

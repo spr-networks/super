@@ -1,5 +1,4 @@
 import React from 'react'
-import { View } from 'native-base'
 
 import DeviceListing from 'components/Devices/DeviceListing'
 

@@ -1,35 +1,29 @@
 import React, { useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
-import Icon from 'FontAwesomeUtils'
-import {
-  faCircleCheck,
-  faCircleExclamation,
-  faCircleXmark,
-  faX
-} from '@fortawesome/free-solid-svg-icons'
 
 import { wifiAPI } from 'api'
 
 import {
   Badge,
+  BadgeText,
   Box,
   Button,
-  Checkbox,
+  ButtonText,
   Divider,
-  Flex,
+  FlatList,
   Heading,
-  IconButton,
+  Icon,
   ScrollView,
-  Stack,
   HStack,
   VStack,
   SectionList,
   Text,
-  View,
-  useColorModeValue
-} from 'native-base'
+  View
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+import { AlertCircleIcon, CheckCircleIcon } from 'lucide-react-native'
+
+//import { FlashList } from '@shopify/flash-list'
 
 const WifiInterface = ({ iw, ...props }) => {
   const [activeTab, setActiveTab] = useState('SPR compatibility')
@@ -43,7 +37,7 @@ const WifiInterface = ({ iw, ...props }) => {
     'supported_extended_features',
     'device_supports',
     'bands',
-    'other',
+    'other'
   ]
 
   /*const toggleIfaceState = (iface, state) => {
@@ -53,12 +47,12 @@ const WifiInterface = ({ iw, ...props }) => {
   const dList = (dict, type = 'row') => {
     if (Object.keys(dict) && type == 'inline') {
       return (
-        <FlashList
+        <FlatList
           data={Object.keys(dict)}
           keyExtractor={(item) => item}
           estimatedItemSize={100}
           renderItem={({ item }) => (
-            <HStack space={2}>
+            <HStack space="md">
               <Text bold>{item}</Text>
               <Text>{dict[item]}</Text>
             </HStack>
@@ -68,13 +62,13 @@ const WifiInterface = ({ iw, ...props }) => {
     }
 
     return (
-      <VStack space={1} justifyContent="center">
+      <VStack space="md" justifyContent="center">
         {Object.keys(dict).map((label) => (
-          <HStack key={label} space={2}>
-            <Text w="1/4" bold>
+          <HStack key={label} space="md">
+            <Text w="$1/4" bold>
               {label}
             </Text>
-            <VStack flex={2} space={2} justifyContent="center">
+            <VStack flex={2} space="md" justifyContent="center">
               {typeof dict[label] == 'object' ? (
                 <Box>{dList(dict[label], 'inline')}</Box>
               ) : (
@@ -90,59 +84,71 @@ const WifiInterface = ({ iw, ...props }) => {
   return (
     <View
       key={iw.wiphy}
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      p={4}
+      bg="$backgroundCardLight"
+      sx={{
+        _dark: { bg: '$backgroundCardDark' }
+      }}
+      p="$4"
     >
-      <Heading fontSize="lg">{iw.wiphy}</Heading>
+      <Heading size="lg">{iw.wiphy}</Heading>
 
-      <Stack
-        direction={{ base: 'column', md: 'row' }}
-        space={2}
-        my={2}
-        rounded="md"
+      <VStack
+        sx={{
+          '@md': { flexDirection: 'row' },
+          _dark: { borderColor: '$borderColorCardDark' }
+        }}
+        space="md"
+        my="$2"
+        rounded="$md"
         borderWidth={1}
-        borderColor={useColorModeValue('muted.200', 'muted.700')}
+        borderColor="$borderColorCardLight"
         flex={1}
       >
         <VStack
           borderRightWidth={1}
-          borderRightColor={useColorModeValue('muted.200', 'muted.700')}
+          borderRightColor="$borderColorCardLight"
+          sx={{
+            _dark: { borderRightColor: '$borderColorCardDark' }
+          }}
+          p="$2"
         >
           {tabList.map((tab) =>
             iw[tab] || ['other', 'SPR compatibility'].includes(tab) ? (
               <Button
                 key={tab}
-                variant="ghost"
+                action="primary"
+                variant="link"
+                size="sm"
                 rounded={false}
-                colorScheme="primary"
                 justifyContent={'flex-start'}
-                _text={{
-                  color: activeTab === tab ? 'primary.600' : 'muted.500'
-                }}
                 onPress={() => setActiveTab(tab)}
               >
-                {tab.replace(/_/g, ' ').replace('supported ', '')}
+                <ButtonText
+                  color={activeTab === tab ? '$primary600' : '$muted500'}
+                >
+                  {tab.replace(/_/g, ' ').replace('supported ', '')}
+                </ButtonText>
               </Button>
             ) : null
           )}
         </VStack>
 
-        <Box h="100%" p={2} w={{ md: '2/3' }}>
+        <Box h="100%" p="$2" sx={{ '@md': { w: '$2/3' } }}>
           {tabList.map((tab) =>
             iw[tab] || ['other', 'SPR compatibility'].includes(tab) ? (
               <VStack key={tab} display={activeTab == tab ? 'flex' : 'none'}>
                 {tab == 'devices' ? (
                   <>
                     {Object.keys(iw[tab]).map((iface) => (
-                      <VStack key={iface} space={4}>
-                        <HStack space={1} alignItems="center">
-                          <Heading fontSize="lg">{iface}</Heading>
-                          <Text fontSize="sm" color="muted.500">
+                      <VStack key={iface} space="md">
+                        <HStack space="sm" alignItems="center">
+                          <Heading size="md">{iface}</Heading>
+                          <Text size="sm" color="$muted500">
                             {iw[tab][iface].type}
                           </Text>
                         </HStack>
                         {dList(iw[tab][iface])}
-                        <Divider my={4} />
+                        <Divider my="$4" />
                       </VStack>
                     ))}
 
@@ -162,12 +168,16 @@ const WifiInterface = ({ iw, ...props }) => {
                   <>
                     {tab == 'other' ? (
                       <>
-                        <FlashList
+                        <FlatList
                           data={Object.keys(iw).filter(
                             (k) => !tabList.includes(k)
                           )}
                           renderItem={({ item }) => (
-                            <VStack maxW="64%" flexWrap="wrap" mb={2}>
+                            <VStack
+                              sx={{ '@md': { w: '$2/3' } }}
+                              flexWrap="wrap"
+                              mb="$2"
+                            >
                               <Text bold>{item}</Text>
                               <Text>{iw[item]}</Text>
                             </VStack>
@@ -192,11 +202,11 @@ const WifiInterface = ({ iw, ...props }) => {
                         })}
                         keyExtractor={(item, index) => item.label}
                         renderSectionHeader={({ section: { title } }) => (
-                          <Heading fontSize="md">{title}</Heading>
+                          <Heading size="md">{title}</Heading>
                         )}
-                        renderSectionFooter={() => <Divider my={2} />}
+                        renderSectionFooter={() => <Divider my="$2" />}
                         renderItem={({ item }) => (
-                          <VStack py={2}>
+                          <VStack py="$2">
                             <Text bold>{item.label}</Text>
                             <VStack>
                               {item.value.map((v, index) => (
@@ -210,22 +220,23 @@ const WifiInterface = ({ iw, ...props }) => {
 
                     {tab.includes('support') &&
                     iw['supported_interface_modes'] ? (
-                      <VStack space={4}>
-                        <Heading fontSize="md" color="muted.500">
+                      <VStack space="md">
+                        <Heading size="md" color="$muted500">
                           {tab.replace(/_/g, ' ')}
                         </Heading>
-                        <HStack maxW={{ md: '64%' }} space={2} flexWrap="wrap">
+                        <HStack
+                          space="md"
+                          flexWrap="wrap"
+                          sx={{ '@md': { maxW: '$2/3' } }}
+                        >
                           {iw[tab] &&
                             iw[tab].map((c) => (
-                              <Box key={c} mb={2}>
+                              <Box key={c} mb="$2">
                                 {tab.match(/extended/) ? (
                                   <Text isTruncated>{c}</Text>
                                 ) : (
-                                  <Badge
-                                    variant="outline"
-                                    colorScheme="primary"
-                                  >
-                                    {c}
+                                  <Badge action="muted" variant="outline">
+                                    <BadgeText>{c}</BadgeText>
                                   </Badge>
                                 )}
                               </Box>
@@ -234,7 +245,7 @@ const WifiInterface = ({ iw, ...props }) => {
 
                         {/*tab == 'supported_interface_modes' ? (
                           <>
-                            <Heading fontSize="sm">
+                            <Heading size="sm">
                               software interface modes (can always be added)
                             </Heading>
 
@@ -246,7 +257,7 @@ const WifiInterface = ({ iw, ...props }) => {
                               ))}
                             </HStack>
 
-                            <Heading fontSize="sm" color="muted.500">
+                            <Heading size="sm" color="muted.500">
                               valid interface combinations
                             </Heading>
                             <Text italic>
@@ -258,69 +269,69 @@ const WifiInterface = ({ iw, ...props }) => {
                     ) : null}
 
                     {tab == 'SPR compatibility' ? (
-                      <VStack space={2}>
+                      <VStack space="md">
                         <Text bold>SPR compatibility for {iw.wiphy}</Text>
 
-                        <HStack space={4} alignItems="center">
+                        <HStack space="md" alignItems="center">
                           <Icon
+                            as={
+                              iw.bands.length > 1
+                                ? CheckCircleIcon
+                                : AlertCircleIcon
+                            }
                             color={
                               iw.bands.length > 1
-                                ? 'success.600'
-                                : 'warning.600'
+                                ? '$success600'
+                                : '$warning600'
                             }
-                            icon={
-                              iw.bands.length > 1
-                                ? faCircleCheck
-                                : faCircleExclamation
-                            }
-                            size={4}
+                            size="lg"
                           />
-                          <Text w={20}>5GHz</Text>
-                          <Text color="muted.500" fontSize="sm">
+                          <Text w={100}>5GHz</Text>
+                          <Text color="$muted500" size="sm">
                             Recommended for maximum speed
                           </Text>
                         </HStack>
-                        <HStack space={4} alignItems="center">
+                        <HStack space="md" alignItems="center">
                           <Icon
-                            icon={
+                            as={
                               iw.supported_ciphers.includes(
                                 'GCMP-128 (00-0f-ac:8)'
                               )
-                                ? faCircleCheck
-                                : faCircleExclamation
+                                ? CheckCircleIcon
+                                : AlertCircleIcon
                             }
                             color={
                               iw.supported_ciphers.includes(
                                 'GCMP-128 (00-0f-ac:8)'
                               )
-                                ? 'success.600'
-                                : 'warning.600'
+                                ? '$success600'
+                                : '$warning600'
                             }
-                            size={4}
+                            size="lg"
                           />
 
-                          <Text w={20}>WPA3/SAE</Text>
-                          <Text color="muted.500" fontSize="sm">
+                          <Text w={100}>WPA3/SAE</Text>
+                          <Text color="$muted500" size="sm">
                             Recommended for better security
                           </Text>
                         </HStack>
-                        <HStack space={4} alignItems="center">
+                        <HStack space="md" alignItems="center">
                           <Icon
-                            icon={
+                            as={
                               iw.supported_interface_modes.includes('AP/VLAN')
-                                ? faCircleCheck
-                                : faCircleXmark
+                                ? CheckCircleIcon
+                                : AlertCircleIcon
                             }
                             color={
                               iw.supported_interface_modes.includes('AP/VLAN')
-                                ? 'success.600'
-                                : 'error.600'
+                                ? '$success600'
+                                : '$error600'
                             }
-                            size={4}
+                            size="lg"
                           />
 
-                          <Text w={20}>AP/VLAN</Text>
-                          <Text color="muted.500" fontSize="sm">
+                          <Text w={100}>AP/VLAN</Text>
+                          <Text color="$muted500" size="sm">
                             Required to create virtual interfaces
                           </Text>
                         </HStack>
@@ -332,7 +343,7 @@ const WifiInterface = ({ iw, ...props }) => {
             ) : null
           )}
         </Box>
-      </Stack>
+      </VStack>
     </View>
   )
 }

@@ -1,29 +1,18 @@
 import React, { useContext, useEffect, useState } from 'react'
 import {
   Box,
-  Divider,
-  Heading,
   HStack,
   View,
-  ScrollView,
   SectionList,
   Text,
   VStack
-} from 'native-base'
+} from '@gluestack-ui/themed'
 
 import { deviceAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import Device from 'components/Devices/Device'
-
-/*const DeviceItem = ({ device, ...props }) => {
-  return (
-    <HStack space={2}>
-      <Text bold>{device.Name}</Text>
-      <Text>{device.RecentIP}</Text>
-      <Text>{device.MAC}</Text>
-    </HStack>
-  )
-}*/
+import { ListHeader } from 'components/List'
+import TagItem from 'components/TagItem'
 
 const Tags = (props) => {
   const context = useContext(AlertContext)
@@ -63,19 +52,22 @@ const Tags = (props) => {
   }, [])
 
   return (
-    <ScrollView>
-      <VStack space={2}>
-        <Heading size="sm" p={4}>
-          Tags
-        </Heading>
+    <View h="$full">
+      <VStack space="md">
+        <ListHeader title="Tags" />
 
         <SectionList
           sections={tags}
-          _renderSectionFooter={({ section }) => <Divider my={2} />}
           renderSectionHeader={({ section: { name } }) => (
-            <Box p={4}>
+            <HStack p="$4">
+              {/*<TagItem
+                bg="$blueGray600"
+                color="$muted100"
+                name={name}
+                size="lg"
+              />*/}
               <Text bold>{name}</Text>
-            </Box>
+            </HStack>
           )}
           renderItem={({ item, section }) => (
             <Device device={item} edit={false} />
@@ -84,10 +76,10 @@ const Tags = (props) => {
         />
 
         {!tags.length ? (
-          <Text px={4}>No tags configured for devices or services</Text>
+          <Text px="$4">No tags configured for devices or services</Text>
         ) : null}
       </VStack>
-    </ScrollView>
+    </View>
   )
 }
 

@@ -4,41 +4,42 @@
       set load balancing, failover
       test failover
 */
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import {
   Badge,
+  BadgeText,
   Box,
   Button,
-  Heading,
-  HStack,
-  IconButton,
-  Input,
+  ButtonText,
+  Checkbox,
+  CheckboxIcon,
+  CheckboxIndicator,
+  CheckboxLabel,
   FlatList,
   FormControl,
+  FormControlLabel,
+  FormControlLabelText,
+  Heading,
+  Icon,
   Modal,
-  Menu,
-  Stack,
+  ModalBackdrop,
+  ModalBody,
+  ModalContent,
+  ModalCloseButton,
+  ModalHeader,
   Text,
-  View,
   VStack,
   ScrollView,
-  useDisclose,
-  useColorModeValue,
-  Radio,
-  Checkbox
-} from 'native-base'
-
-import Icon from 'FontAwesomeUtils'
-
-import { faEllipsis, faTag } from '@fortawesome/free-solid-svg-icons'
+  CloseIcon,
+  ThreeDotsIcon
+} from '@gluestack-ui/themed'
 
 import { wifiAPI, api } from 'api'
 import { AlertContext } from 'AppContext'
-import { ucFirst } from 'utils'
 import { Address4 } from 'ip-address'
 
 import { Select } from 'components/Select'
-import InputSelect from 'components/InputSelect'
+import { ListHeader, ListItem } from 'components/List'
 
 const LANLinkSetConfig = ({ iface, onSubmit, ...props }) => {
   const type = 'config'
@@ -47,8 +48,6 @@ const LANLinkSetConfig = ({ iface, onSubmit, ...props }) => {
   const [item, setItem] = useState({
     Type: 'Downlink'
   })
-
-  const [errors, setErrors] = useState({})
 
   const [enable, setEnable] = useState(true)
 
@@ -76,40 +75,36 @@ const LANLinkSetConfig = ({ iface, onSubmit, ...props }) => {
   ]
 
   return (
-    <VStack space={4}>
+    <VStack space="lg">
       <FormControl>
-        <FormControl.Label>Update Interface</FormControl.Label>
-        <FormControl>
-          <Checkbox
-            size="sm"
-            colorScheme="primary"
-            value={enable}
-            onChange={(value) => {
-              setEnable(value)
-            }}
-            defaultIsChecked
-          >
-            Enabled
-          </Checkbox>
-        </FormControl>
-        <FormControl>
-          <FormControl.Label>Set Interface Type</FormControl.Label>
-          <Select
-            selectedValue={item.Type}
-            onValueChange={(Type) => setItem({ ...item, Type })}
-          >
-            {validTypes.map((opt) => (
-              <Select.Item
-                key={opt.value}
-                label={opt.label}
-                value={opt.value}
-              />
-            ))}
-          </Select>
-        </FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Update Interface</FormControlLabelText>
+        </FormControlLabel>
+
+        <Checkbox value={enable} onChange={setEnable} defaultIsChecked>
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Enabled</CheckboxLabel>
+        </Checkbox>
       </FormControl>
-      <Button colorScheme="primary" onPress={() => doSubmit(item)}>
-        Save
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Set Interface Type</FormControlLabelText>
+        </FormControlLabel>
+        <Select
+          selectedValue={item.Type}
+          onValueChange={(Type) => setItem({ ...item, Type })}
+        >
+          {validTypes.map((opt) => (
+            <Select.Item key={opt.value} label={opt.label} value={opt.value} />
+          ))}
+        </Select>
+      </FormControl>
+
+      <Button action="primary" onPress={() => doSubmit(item)}>
+        <ButtonText>Save</ButtonText>
       </Button>
     </VStack>
   )
@@ -125,7 +120,9 @@ const LANLinkInfo = (props) => {
 
   const [iface, setIface] = useState(null)
 
+  const [showModal, setShowModal] = useState(false)
   const [modal, setModal] = useState('')
+
   const [supernets, setSupernets] = useState([])
 
   function isLocalIpAddress(ipAddress) {
@@ -178,10 +175,9 @@ const LANLinkInfo = (props) => {
       })
       .catch((err) => context.error(err))
 
-      api.get('/subnetConfig').then((config) => {
-        setSupernets(config.TinyNets)
-      })
-
+    api.get('/subnetConfig').then((config) => {
+      setSupernets(config.TinyNets)
+    })
   }
 
   useEffect(() => {
@@ -230,15 +226,10 @@ const LANLinkInfo = (props) => {
     setLinks(links)
   }
 
-  const { isOpen, onOpen, onClose } = useDisclose()
-
   const trigger = (triggerProps) => (
-    <IconButton
-      variant="unstyled"
-      ml="auto"
-      icon={<Icon icon={faEllipsis} color="muted.600" />}
-      {...triggerProps}
-    ></IconButton>
+    <Button variant="link" ml="auto" {...triggerProps}>
+      <ThreeDotsIcon />
+    </Button>
   )
 
   const truncateSupernetIps = (ips) => {
@@ -250,26 +241,26 @@ const LANLinkInfo = (props) => {
       for (let subnet of supernets) {
         let sub_addr = new Address4(subnet)
         if (local_addr.isInSubnet(sub_addr)) {
-          count++;
+          count++
         }
       }
     }
-    if (count == ips.length)
-      return true
+    if (count == ips.length) return true
     return false
   }
 
   const moreMenu = (iface) => (
-    <IconButton
-      variant="unstyled"
+    <Button
+      variant="link"
       ml="auto"
       onPress={() => {
         setIface(iface)
         setModal('config')
-        onOpen()
+        setShowModal(true)
       }}
-      icon={<Icon icon={faEllipsis} color="muted.600" />}
-    ></IconButton>
+    >
+      <ThreeDotsIcon />
+    </Button>
   )
 
   const onSubmit = (item, type, enable) => {
@@ -315,135 +306,93 @@ const LANLinkInfo = (props) => {
       })
   }
 
-  const color_scheme = useColorModeValue('muted', 'blueGray')
-
   return (
-    <ScrollView h={'100%'}>
-      <VStack space={2}>
-        <VStack p={4} space={1}>
-          <Heading fontSize="md">LAN Link Configuration</Heading>
-          <Text fontSize="sm" color="muted.400">
-            Note: API support for multiple wired LAN interfaces is an upcoming
-            feature.
-          </Text>
-          <Text fontSize="sm" color="muted.400">
-            For now, ensure the wired LAN is synchronized with the
-            config/base/config.sh LANIF entry.
-          </Text>
-        </VStack>
+    <ScrollView h="$full">
+      <ListHeader title="LAN Link Configuration"></ListHeader>
 
-        <VStack
-          mx={{ base: 0, md: 4 }}
-          width={{ base: '100%', md: '75%' }}
-          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        >
-          <FlatList
-            data={lanLinks}
-            keyExtractor={(item) => `${item.Interface}_${item.Type}`}
-            renderItem={({ item }) => (
-              <HStack
-                p={4}
-                rounded="md"
-                alignItems="center"
-                justifyContent={'space-between'}
-                borderBottomWidth={1}
-                _dark={{
-                  bg: 'backgroundCardDark',
-                  borderColor: 'borderColorCardDark'
-                }}
-                borderColor="borderColorCardLight"
-              >
-                <Text flex={1} fontWeight="bold">
-                  {item.Interface}
-                </Text>
-                <Text flex={1}>{item.Type}</Text>
-                <Text flex={1}>{item.Subtype}</Text>
-                <VStack flex={2} space={1}>
-                { (truncateSupernetIps(item.IPs)) ?
-                  supernets.map((net) => (
-                    <Text>{net}</Text>
-                  ))
-
-                   : item.IPs.map((ip) => (
-                  <Text key={ip}>{ip}</Text>
-                  ))
-                }
-                </VStack>
-                {item.Enabled ? (
-                  <Badge
-                    key={item.Name}
-                    variant="outline"
-                    colorScheme={color_scheme}
-                    rounded="sm"
-                    size="sm"
-                    py={1}
-                    px={2}
-                  >
-                    Enabled
-                  </Badge>
-                ) : null}
-                <Box flex={1}>{moreMenu(item.Interface)}</Box>
-              </HStack>
-            )}
-          />
-        </VStack>
-
-        <VStack
-          mx={{ base: 0, md: 4 }}
-          width={{ base: '100%', md: '75%' }}
-          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-          _space={2}
-        >
-          <FlatList
-            data={links}
-            keyExtractor={(item) => `${item.Interface}_${item.Type}`}
-            renderItem={({ item }) => (
-              <HStack
-                p={4}
-                rounded="md"
-                alignItems="center"
-                borderBottomWidth={1}
-                _dark={{
-                  borderColor: 'borderColorCardDark'
-                }}
-                borderColor="borderColorCardLight"
-              >
-                <Text flex={3} fontWeight="bold">
-                  {item.Interface}
-                </Text>
-                <Text flex={1}>{item.Type}</Text>
-                {/*<Text flex={1}>{item.Enabled}</Text>*/}
-                <VStack flex={2} space={1}>
-                  { (truncateSupernetIps(item.IPs)) ?
-                    supernets.map((net) => (
-                      <Text>{net}</Text>
-                    ))
-
-                     : item.IPs.map((ip) => (
-                    <Text key={ip}>{ip}</Text>
-                    ))
-                  }
-                </VStack>
-                <Box flex={1}>{moreMenu(item.Interface)}</Box>
-              </HStack>
-            )}
-          />
-
-          <Modal isOpen={isOpen} onClose={onClose}>
-            <Modal.Content>
-              <Modal.CloseButton />
-              <Modal.Header fontSize="4xl" fontWeight="bold">
-                {iface ? `Configure ${iface}` : 'Configure interface'}
-              </Modal.Header>
-              <Modal.Body>
-                {iface && modal == 'config' ? (
-                  <LANLinkSetConfig iface={iface} onSubmit={onSubmit} />
-                ) : null}
-              </Modal.Body>
-            </Modal.Content>
-          </Modal>
-        </VStack>
+      <VStack space="md" p="$4">
+        <Text size="sm" color="$muted500">
+          Note: API support for multiple wired LAN interfaces is an upcoming
+          feature.
+        </Text>
+        <Text size="sm" color="$muted500">
+          For now, ensure the wired LAN is synchronized with the
+          config/base/config.sh LANIF entry.
+        </Text>
       </VStack>
+
+      <FlatList
+        data={lanLinks}
+        keyExtractor={(item) => `${item.Interface}_${item.Type}`}
+        renderItem={({ item }) => (
+          <ListItem>
+            <Text flex={1} bold>
+              {item.Interface}
+            </Text>
+            <Text flex={1}>{item.Type}</Text>
+            <Text flex={1}>{item.Subtype}</Text>
+            <VStack flex={2} space={1}>
+              {truncateSupernetIps(item.IPs)
+                ? supernets.map((net) => <Text>{net}</Text>)
+                : item.IPs.map((ip) => <Text key={ip}>{ip}</Text>)}
+            </VStack>
+            {item.Enabled ? (
+              <Badge
+                key={item.Name}
+                action="success"
+                variant="outline"
+                size="sm"
+              >
+                <BadgeText>Enabled</BadgeText>
+              </Badge>
+            ) : null}
+            <Box flex={1}>{moreMenu(item.Interface)}</Box>
+          </ListItem>
+        )}
+      />
+
+      <FlatList
+        data={links}
+        keyExtractor={(item) => `${item.Interface}_${item.Type}`}
+        renderItem={({ item }) => (
+          <ListItem>
+            <Text flex={3} fontWeight="bold">
+              {item.Interface}
+            </Text>
+            <Text flex={1}>{item.Type}</Text>
+            <VStack flex={2} space={1}>
+              {truncateSupernetIps(item.IPs)
+                ? supernets.map((net) => <Text>{net}</Text>)
+                : item.IPs.map((ip) => <Text key={ip}>{ip}</Text>)}
+            </VStack>
+            <Box flex={1}>{moreMenu(item.Interface)}</Box>
+          </ListItem>
+        )}
+      />
+
+      <Modal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false)
+        }}
+      >
+        <ModalBackdrop />
+        <ModalContent>
+          <ModalHeader>
+            <Heading size="sm">
+              {iface ? `Configure ${iface}` : 'Configure interface'}
+            </Heading>
+            <ModalCloseButton>
+              <Icon as={CloseIcon} />
+            </ModalCloseButton>
+          </ModalHeader>
+          <ModalBody pb="$6">
+            {iface && modal == 'config' ? (
+              <LANLinkSetConfig iface={iface} onSubmit={onSubmit} />
+            ) : null}
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </ScrollView>
   )
 }

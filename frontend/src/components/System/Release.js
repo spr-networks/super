@@ -1,29 +1,34 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Icon } from 'FontAwesomeUtils'
+
 import {
-  faWrench,
-  faRefresh,
-  faArrowUp
-} from '@fortawesome/free-solid-svg-icons'
-import {
-  Badge,
   Box,
   Button,
-  Checkbox,
+  ButtonIcon,
+  ButtonText,
   FormControl,
-  Heading,
+  FormControlLabel,
+  FormControlLabelText,
+  FormControlHelper,
+  FormControlHelperText,
   HStack,
-  Stack,
   Text,
-  Tooltip,
-  useBreakpointValue,
-  useColorModeValue
-} from 'native-base'
+  VStack,
+  ArrowUpIcon,
+  SettingsIcon,
+  ButtonGroup,
+  Checkbox,
+  CheckboxIcon,
+  CheckboxIndicator,
+  CheckboxLabel,
+  CheckIcon
+} from '@gluestack-ui/themed'
 
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import InputSelect from 'components/InputSelect'
+import { RefreshCcwIcon } from 'lucide-react-native'
+import { ListHeader } from 'components/List'
 
 const prettyChannel = (channelStr) => {
   if (channelStr == '') {
@@ -140,10 +145,12 @@ const UpdateReleaseInfo = ({
   }
 
   return (
-    <Stack space={4}>
-      <HStack space={4}>
+    <VStack space="md">
+      <HStack space="md">
         <FormControl flex={2}>
-          <FormControl.Label>Custom Version</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Custom Version</FormControlLabelText>
+          </FormControlLabel>
           <InputSelect
             options={versions.map((value) => {
               return {
@@ -156,7 +163,9 @@ const UpdateReleaseInfo = ({
             isDisabled
           />
 
-          <FormControl.Label>Custom Channel</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Custom Channel</FormControlLabelText>
+          </FormControlLabel>
           <InputSelect
             options={channels.map((value) => {
               return {
@@ -171,31 +180,35 @@ const UpdateReleaseInfo = ({
         </FormControl>
       </HStack>
 
-      {verifyMessage && verifyMessage.length ? (
+      {verifyMessage?.length ? (
         <HStack space={4}>
           <FormControl flex={2}>
             <Checkbox
-              accessibilityLabel="Verified"
-              colorScheme="green"
+              size="md"
               value={verified}
               isChecked={verified}
               onChange={(enabled) => setVerified(!verified)}
             >
-              I know what I'm doing
+              <CheckboxIndicator mr="$2">
+                <CheckboxIcon as={CheckIcon} />
+              </CheckboxIndicator>
+              <CheckboxLabel>I know what I'm doing</CheckboxLabel>
             </Checkbox>
 
-            <FormControl.HelperText>{verifyMessage}</FormControl.HelperText>
+            <FormControlHelper>
+              <FormControlHelperText>{verifyMessage}</FormControlHelperText>
+            </FormControlHelper>
           </FormControl>
         </HStack>
       ) : null}
 
-      <Button colorScheme="primary" size="md" onPress={handleSubmit}>
-        Save
+      <Button action="primary" size="md" onPress={handleSubmit}>
+        <ButtonText>Save</ButtonText>
       </Button>
-      <Button colorScheme="secondary" size="md" onPress={handleReset}>
-        Reset to defaults
+      <Button action="secondary" size="md" onPress={handleReset}>
+        <ButtonText>Reset to defaults</ButtonText>
       </Button>
-    </Stack>
+    </VStack>
   )
 }
 
@@ -241,7 +254,6 @@ const ReleaseInfo = ({ showModal, ...props }) => {
   }
 
   const runUpdate = () => {
-
     context.info(`Update started`)
 
     api
@@ -281,18 +293,23 @@ const ReleaseInfo = ({ showModal, ...props }) => {
 
     return (
       <HStack
-        space={4}
-        p={4}
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        borderBottomColor="borderColorCardLight"
-        _dark={{ borderBottomColor: 'borderColorCardDark' }}
-        alignItems="center"
+        space="md"
+        p="$4"
+        bg="$backgroundCardLight"
+        borderBottomColor="$borderColorCardLight"
+        sx={{
+          _dark: {
+            bg: '$backgroundCardDark',
+            borderBottomColor: '$borderColorCardDark'
+          }
+        }}
         borderBottomWidth={1}
+        alignItems="center"
         justifyContent="flex-start"
       >
-        <Text>{label}</Text>
+        <Text size="sm">{label}</Text>
         <Box textAlign="justify">
-          <Text color="muted.500">{value}</Text>
+          <Text color="$muted500">{value}</Text>
         </Box>
       </HStack>
     )
@@ -349,61 +366,44 @@ const ReleaseInfo = ({ showModal, ...props }) => {
 
   return (
     <Box {...props}>
-      <Stack
-        p={4}
-        direction={{ base: 'column', md: 'row' }}
-        space={{ base: 4, md: 0 }}
-        alignItems={{ base: 'flex-start', md: 'center' }}
-        justifyContent="space-between"
-      >
-        <Heading fontSize="md">SPR Release</Heading>
-        <Stack
-          direction={{ base: 'row', md: 'row' }}
-          space={{ base: 2, md: 0 }}
+      <ListHeader title="SPR Release">
+        <ButtonGroup
+          space="md"
+          flexDirection="column"
+          sx={{
+            '@base': { flexDirection: 'column', gap: '$3' },
+            '@md': { flexDirection: 'row', gap: '$3', alignItems: 'center' }
+          }}
         >
-          <Tooltip label={'Check for new updates'}>
-            <Button
-              size="sm"
-              variant="ghost"
-              colorScheme="blueGray"
-              leftIcon={<Icon icon={faRefresh} />}
-              onPress={checkUpdate}
-            >
-              Check
-            </Button>
-          </Tooltip>
-          <Tooltip label={'Run update'}>
-            <Button
-              size="sm"
-              variant="ghost"
-              colorScheme="blueGray"
-              leftIcon={<Icon icon={faArrowUp} />}
-              onPress={runUpdate}
-            >
-              Update
-            </Button>
-          </Tooltip>
-          <Tooltip label={'Set Custom Version'}>
-            <Button
-              size="sm"
-              variant="ghost"
-              colorScheme="blueGray"
-              leftIcon={<Icon icon={faWrench} />}
-              onPress={() => refModal.current()}
-            >
-              Set Custom Version
-            </Button>
-          </Tooltip>
-          <ModalForm title="Set Release Version" modalRef={refModal}>
-            <UpdateReleaseInfo
-              releaseInfo={releaseInfo}
-              onSubmit={onSubmit}
-              onReset={onReset}
-              onUpdate={updateRelease}
-            />
-          </ModalForm>
-        </Stack>
-      </Stack>
+          <Button size="sm" onPress={checkUpdate}>
+            <ButtonText>Check</ButtonText>
+            <ButtonIcon as={RefreshCcwIcon} ml="$1" />
+          </Button>
+
+          <Button size="sm" onPress={runUpdate}>
+            <ButtonText>Update</ButtonText>
+            <ButtonIcon as={ArrowUpIcon} ml="$1" />
+          </Button>
+
+          <Button
+            action="secondary"
+            size="sm"
+            onPress={() => refModal.current()}
+          >
+            <ButtonText>Set Version</ButtonText>
+            <ButtonIcon as={SettingsIcon} ml="$1" />
+          </Button>
+        </ButtonGroup>
+        <ModalForm title="Set Release Version" modalRef={refModal}>
+          <UpdateReleaseInfo
+            releaseInfo={releaseInfo}
+            onSubmit={onSubmit}
+            onReset={onReset}
+            onUpdate={updateRelease}
+          />
+        </ModalForm>
+      </ListHeader>
+
       {releaseInfo ? (
         <>
           {renderReleaseInfoRow('Current Version', releaseInfo.Current)}

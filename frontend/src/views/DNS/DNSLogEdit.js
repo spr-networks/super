@@ -3,7 +3,7 @@ import DNSLogList from 'components/DNS/DNSLogList'
 import PluginDisabled from 'views/PluginDisabled'
 import { logAPI } from 'api/DNS'
 
-import { View, VStack } from 'native-base'
+import { View, VStack } from '@gluestack-ui/themed'
 
 export default class DNSLogEdit extends Component {
   state = { enabled: true }

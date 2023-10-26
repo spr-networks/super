@@ -1,54 +1,39 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import {
-  faCirclePlus,
-  faTags,
-  faPlus,
-  faToggleOn,
-  faToggleOff,
-  faTrash,
-  faXmark
-} from '@fortawesome/free-solid-svg-icons'
 
 import { AppContext, alertState } from 'AppContext'
 
-import { firewallAPI, deviceAPI } from 'api'
-import { Multicast } from 'api/Multicast'
-
-import ModalForm from 'components/ModalForm'
-import ModalConfirm from 'components/ModalConfirm'
-import AddMulticastPort from './AddMulticastPort'
-
 import {
-  Badge,
   Button,
-  Box,
+  ButtonIcon,
+  ButtonText,
   FlatList,
-  Heading,
-  IconButton,
-  Menu,
-  Stack,
+  Icon,
   HStack,
   VStack,
   Text,
-  Tooltip,
-  useColorModeValue
-} from 'native-base'
+  AddIcon,
+  CloseIcon
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+import { AlertContext } from 'layouts/Admin'
+
+import { TagIcon } from 'lucide-react-native'
+
+import { firewallAPI } from 'api'
+import { Multicast } from 'api/Multicast'
+
+import ModalForm from 'components/ModalForm'
+import AddMulticastPort from './AddMulticastPort'
+
+import { ListHeader, ListItem } from 'components/List'
+import { TagItem } from 'components/TagItem'
+import { TagMenu } from 'components/TagMenu'
 
 const MulticastPorts = (props) => {
   const [list, setList] = useState([])
   const [ports, setPorts] = useState([])
 
-  const [state, setState] = useState({
-    pending: false,
-    showModal: false,
-    modalType: '',
-    pendingItem: {},
-  })
-
-  const contextType = useContext(AppContext)
+  const context = useContext(AlertContext)
 
   const matches = (obj, target) => {
     for (let [key, val] of Object.entries(target)) {
@@ -94,18 +79,18 @@ const MulticastPorts = (props) => {
                 .deleteMulticastPort({ Port: item_port, Upstream: false })
                 .then(() => {})
                 .catch((err) => {
-                  alertState.error(
-                    'Fireall API failed to delete multicast port ' + item_port
+                  context.error(
+                    'Firewall API failed to delete multicast port ' + item_port
                   )
                 })
             }
           })
           .catch((err) => {
-            alertState.error('Failed to update multicast settings')
+            context.error('Failed to update multicast settings')
           })
       })
       .catch((err) => {
-        alertState.error('Failed to retrieve multicast settings')
+        context.error('Failed to retrieve multicast settings')
       })
   }
 
@@ -125,200 +110,119 @@ const MulticastPorts = (props) => {
       return
     }
 
-    //alert(JSON.stringify(item.Tags) + " vs " + JSON.stringify(tags))
+    tags = tags ? [...new Set(tags)] : []
 
-    if (tags != null) {
-      tags = tags.filter((v) => typeof v === 'string')
-      tags = [...new Set(tags)]
-    }
-
-    const newList = list.map(entry => {
+    const newList = list.map((entry) => {
       if (entry.Address === item.Address) {
-        return {...item, Tags: tags};
+        return { ...item, Tags: tags }
       }
-      return entry;
-    });
+      return entry
+    })
 
-    setList(newList);
+    setList(newList)
 
     Multicast.config()
       .then((mcast) => {
         mcast.Addresses = newList
         Multicast.setConfig(mcast)
           .then(() => {
-            alertState.success("Updated tags")
+            alertState.success('Updated tags')
+            console.log('upup')
             refreshList()
-          }
-        )
-        .catch((error) => {
-          alertState.error('API Failure: ' + error.message)
-        })
-      }
-    )
-    .catch((error) => {
-      alertState.error('API Failure: ' + error.message)
-    })
-
-  }
-
-  const handleSubmitNew = (item, value) => {
-    //this runs when someone hits Okay
-    if (!item) {
-      return //workaround for react state glitch
-    }
-
-    let tags = []
-    if (item.Tags) {
-      tags = item.Tags.concat(value)
-    } else {
-      tags = [value]
-    }
-    handleTags(item, tags)
+          })
+          .catch((error) => {
+            alertState.error('API Failure: ' + error.message)
+          })
+      })
+      .catch((error) => {
+        alertState.error('API Failure: ' + error.message)
+      })
   }
 
   let trigger = (triggerProps) => {
-    return (
-      <Tooltip
+    /*<Tooltip
         label={
           'Set a tag to whitelist client interfaces that will receive this multicast service. NOTE: wired downlinks not isolated without VLANs'
         }
-      >
-        <IconButton
-          display={{ base: 'flex' }}
-          variant="unstyled"
-          icon={<Icon icon={faTags} color="muted.600" />}
-          {...triggerProps}
-        />
-      </Tooltip>
+      ></Tooltip>*/
+    return (
+      <Button variant="link" {...triggerProps}>
+        <Icon as={TagIcon} color="$muted600" />
+      </Button>
     )
   }
 
   const defaultTags = []
 
   return (
-    <>
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <VStack maxW={{ base: 'full', md: '60%' }}>
-          <Heading fontSize="md">Multicast Proxy</Heading>
-          <Text color="muted.500" isTruncated>
-            Set ip:port addresses to proxy
-          </Text>
-        </VStack>
+    <VStack>
+      <ListHeader
+        title="Multicast Proxy"
+        description="Set ip:port addresses to proxy"
+      >
         <ModalForm
           title="Add Multicast Service Rule"
           triggerText="Add Multicast Service"
           triggerProps={{
-            display: { base: 'none', md: list.length ? 'flex' : 'none' }
+            sx: {
+              '@base': { display: 'none' },
+              '@md': { display: list.length ? 'flex' : 'flex' }
+            }
           }}
           modalRef={refModal}
         >
           <AddMulticastPort notifyChange={notifyChange} />
         </ModalForm>
-      </HStack>
+      </ListHeader>
 
       <FlatList
         data={list}
         renderItem={({ item }) => (
-          <Box
-            bg="backgroundCardLight"
-            borderBottomWidth={1}
-            _dark={{
-              bg: 'backgroundCardDark',
-              borderColor: 'borderColorCardDark'
-            }}
-            borderColor="borderColorCardLight"
-            p={4}
-          >
-            <HStack
-              space={4}
-              justifyContent="space-between"
-              alignItems="left"
-            >
-              <HStack space={1}>
-                <Text>{item.Address}</Text>
-              </HStack>
+          <ListItem>
+            <Text flex={1}>{item.Address}</Text>
 
-              <HStack>
-              {item.Tags
-                ? item.Tags.map((entry) => (
-                    <Badge key={item.URI + entry} variant="outline">
-                      {entry}
-                    </Badge>
-                  ))
-                : null}
-              </HStack>
+            <HStack space="sm">
+              {item.Tags?.map((entry) => (
+                <TagItem name={entry} />
+              ))}
+            </HStack>
 
-              <IconButton
-                alignSelf="center"
-                size="sm"
-                variant="ghost"
-                colorScheme="secondary"
-                icon={<Icon icon={faXmark} />}
-                onPress={() => deleteListItem(item)}
+            <HStack ml="auto" space="xl">
+              <TagMenu
+                items={[...new Set(defaultTags.concat(item?.Tags || []))]}
+                selectedKeys={item?.Tags}
+                onSelectionChange={(tags) => handleTags(item, tags)}
+                trigger={trigger}
               />
 
-              <Menu trigger={trigger}>
-                <Menu.OptionGroup
-                  title="Tags"
-                  type="checkbox"
-                  defaultValue={item.Tags ? item.Tags : []}
-                  onChange={(value) => handleTags(item, value)}
-                >
-                  {[
-                    ...new Set(
-                      defaultTags.concat(item.Tags ? item.Tags : [])
-                    )
-                  ].map((tag) => (
-                    <Menu.ItemOption key={tag} value={tag}>
-                      {tag} x
-                    </Menu.ItemOption>
-                  ))}
-                  <Menu.ItemOption
-                    key="newTag"
-                    onPress={() => {
-                      setState({
-                        showModal: true,
-                        modalType: 'Tag',
-                        pendingItem: item
-                      })
-                    }}
-                  >
-                    New Tag...
-                  </Menu.ItemOption>
-                </Menu.OptionGroup>
-              </Menu>
-
+              <Button
+                action="negative"
+                variant="link"
+                alignSelf="center"
+                onPress={() => deleteListItem(item)}
+              >
+                <ButtonIcon as={CloseIcon} color="$red700" />
+              </Button>
             </HStack>
-          </Box>
+          </ListItem>
         )}
         keyExtractor={(item) => `${item.Address}`}
       />
 
-      <VStack>
-        {!list.length ? (
-          <Text px={{ base: 4, md: 0 }} mb={4} flexWrap="wrap">
-            There are no multicast proxy rules configured yet
-          </Text>
-        ) : null}
-        <Button
-          display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
-          variant={useColorModeValue('subtle', 'solid')}
-          colorScheme={useColorModeValue('primary', 'muted')}
-          leftIcon={<Icon icon={faCirclePlus} />}
-          onPress={() => refModal.current()}
-        >
-          Add Multicast Service
-        </Button>
-
-        <ModalConfirm
-          type={state.modalType}
-          onSubmit={(v) => handleSubmitNew(state.pendingItem, v)}
-          onClose={() => setState({ showModal: false })}
-          isOpen={state.showModal}
-        />
-      </VStack>
-
-    </>
+      {!list.length ? (
+        <Text p="$4" flexWrap="wrap">
+          There are no multicast proxy rules configured yet
+        </Text>
+      ) : null}
+      <Button
+        sx={{ '@md': { display: list.length ? 'none' : 'none' } }}
+        rounded="$none"
+        onPress={() => refModal.current()}
+      >
+        <ButtonText>Add Multicast Service</ButtonText>
+        <ButtonIcon as={AddIcon} />
+      </Button>
+    </VStack>
   )
 }
 

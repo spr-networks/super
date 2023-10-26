@@ -1,49 +1,43 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import { Icon } from 'FontAwesomeUtils'
-import {
-  faEllipsis,
-  faCircleInfo,
-  faTrash
-} from '@fortawesome/free-solid-svg-icons'
-import { BrandIcons } from 'FontAwesomeUtils'
+
 import {
   Badge,
+  BadgeText,
   Box,
-  IconButton,
+  Button,
+  ButtonIcon,
   HStack,
+  Icon,
   VStack,
-  Menu,
   Text,
   Tooltip,
-  useColorModeValue
-} from 'native-base'
+  TooltipContent,
+  TooltipText,
+  ThreeDotsIcon,
+  InfoIcon,
+  TrashIcon,
+  Menu,
+  MenuItem,
+  MenuItemLabel,
+  CloseIcon
+} from '@gluestack-ui/themed'
 
 import { getCard } from './FlowCards'
 import Token from './Token'
 import { flowObjParse } from './Utils'
 
-
 const FlowCard = ({ card, size, edit, ...props }) => {
   size = size || 'md'
   let { title, description } = card
-  let icon = null
-  // if string use BrandIcons, else fontawesome component
-  // NOTE this does not work in ios
-  if (typeof card.icon == 'string') {
-    icon = React.createElement(BrandIcons[card.icon], {
-      color: card.color,
-      size: 12
-    })
-  } else {
-    icon = (
-      <Icon
-        icon={card.icon}
-        color={card.color}
-        size={size == 'xs' ? '8x' : '12x'}
-      />
-    )
-  }
+  let icon = (
+    <Icon
+      as={card.icon}
+      color={card.color}
+      size={size == 'xs' ? 24 : 42}
+      w="$full"
+    />
+  )
 
   const displayValueOrParam = (values, name) => {
     if (!values || values[name] === undefined) {
@@ -62,30 +56,22 @@ const FlowCard = ({ card, size, edit, ...props }) => {
   }
 
   let body = (
-    <VStack space={2}>
-      <Text
-        noOfLines={2}
-        w="2/3"
-        fontSize="sm"
-        color={useColorModeValue('muted.700', 'muted.200')}
-      >
+    <VStack space="md">
+      <Text noOfLines={2} w="$2/3" size="sm" color="$muted500">
         {description}
       </Text>
-      <HStack space={1} flexWrap="wrap">
+      <HStack space="sm" flexWrap="wrap">
         {card.params
           .filter((p) => !p.hidden)
           .map((p) => (
             <Badge
               key={p.name}
+              action="muted"
               variant="outline"
-              bg={useColorModeValue('muted.50', 'muted.700')}
-              borderColor={useColorModeValue('muted.200', 'muted.600')}
-              rounded="md"
               size="xs"
-              py={0}
-              px={1}
+              py="$0"
             >
-              {displayValueOrParam(card.values, p.name)}
+              <BadgeText>{displayValueOrParam(card.values, p.name)}</BadgeText>
             </Badge>
           ))}
       </HStack>
@@ -119,14 +105,16 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     body = (
       <HStack
         flex={1}
-        flexWrap={'wrap'}
-        space={1}
-        maxW={{ base: '210px', md: '400px' }}
+        flexWrap="wrap"
+        space="sm"
+        sx={{
+          '@base': { maxWidth: '210px' },
+          '@md': { maxWidth: '400px' }
+        }}
       >
         {card.params
           .filter((p) => !p.hidden)
           .map((p) => (
-
             <Token
               key={p.name}
               label={p.name}
@@ -140,7 +128,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
               options={options[p.name]}
               description={p.description}
               format={p.format}
-              size={Object.keys(card.values).length > 10 ? 'xs' : 'md'}
+              size={Object.keys(card.values).length > 10 ? 'xs' : 'xs'}
               onChange={(value) => onChange(p.name, value)}
             />
           ))}
@@ -149,12 +137,9 @@ const FlowCard = ({ card, size, edit, ...props }) => {
   }
 
   const trigger = (triggerProps) => (
-    <IconButton
-      variant="unstyled"
-      ml="auto"
-      icon={<Icon icon={faEllipsis} color="muted.600" />}
-      {...triggerProps}
-    ></IconButton>
+    <Button action="secondary" variant="link" ml="auto" {...triggerProps}>
+      <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
+    </Button>
   )
 
   const onChange = (name, value) => {
@@ -171,31 +156,49 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     }
   }
 
-  const moreMenu = (
-    <Menu w={190} p={0} closeOnSelect={true} trigger={trigger}>
-      {/*<Menu.Item>Edit</Menu.Item>*/}
-      <Menu.Item _text={{ color: 'danger.600' }} onPress={onDelete}>
-        <HStack space={2} alignItems="center">
-          <Icon icon={faTrash} color="danger.700" />
-          <Text color="danger.700">Delete</Text>
-        </HStack>
-      </Menu.Item>
+  let moreMenu = (
+    <Menu
+      trigger={trigger}
+      selectionMode="single"
+      onSelectionChange={(e) => {
+        let key = e.currentKey
+        if (key == 'delete') {
+          onDelete()
+        }
+      }}
+    >
+      <MenuItem key="delete" textValue="delete">
+        <TrashIcon color="$red700" ml="$2" />
+        <MenuItemLabel size="sm" color="$red700">
+          Delete
+        </MenuItemLabel>
+      </MenuItem>
     </Menu>
+  )
+
+  //only one item - show button
+  moreMenu = (
+    <Button action="secondary" variant="link" size="sm" onPress={onDelete}>
+      <ButtonIcon as={CloseIcon} />
+    </Button>
   )
 
   return (
     <Box
-      bg={useColorModeValue('light', 'backgroundContentDark')}
-      p={size == 'xs' ? 2 : 4}
-      rounded="md"
-      shadow={{ md: 5 }}
+      bg="$warmGray50"
+      borderWidth="$1"
+      borderColor="$coolGray200"
+      sx={{
+        _dark: { bg: '$backgroundContentDark', borderColor: '$coolGray900' },
+        '@md': { shadow: 5 }
+      }}
+      p={size == 'xs' ? '$2' : '$4'}
+      rounded="$md"
       minW={320}
-      mr={2}
-      borderColor={useColorModeValue('coolGray.200', 'coolGray.900')}
-      borderWidth={1}
+      mr="$2"
       {...props}
     >
-      <HStack justifyContent="space-between" alignItems="center" space={4}>
+      <HStack justifyContent="space-between" alignItems="center" space="md">
         <Box
           height={size == 'xs' ? 30 : 50}
           rounded="full"
@@ -206,23 +209,30 @@ const FlowCard = ({ card, size, edit, ...props }) => {
           {icon}
         </Box>
 
-        <VStack flex={1} alignContent="center" space={size == 'xs' ? 0 : 1}>
-          <HStack space={1} alignItems="center">
-            <Text color="muted.400" fontSize="sm">
+        <VStack
+          flex={1}
+          alignContent="center"
+          space={size == 'xs' ? 'xs' : 'sm'}
+        >
+          <HStack space="sm" alignItems="center">
+            <Text size="sm" color="$muted400">
               {title}
             </Text>
             {edit && description ? (
               <Tooltip
-                label={description}
-                bg="muted.800"
-                _text={{ color: 'muted.200' }}
+                h={undefined}
+                placement="bottom"
+                trigger={(triggerProps) => {
+                  return (
+                    <Button action="secondary" variant="link" {...triggerProps}>
+                      <ButtonIcon as={InfoIcon} color="$muted400" />
+                    </Button>
+                  )
+                }}
               >
-                <IconButton
-                  variant="unstyled"
-                  icon={
-                    <Icon icon={faCircleInfo} size="xs" color="muted.200" />
-                  }
-                />
+                <TooltipContent>
+                  <TooltipText>{description}</TooltipText>
+                </TooltipContent>
               </Tooltip>
             ) : null}
           </HStack>

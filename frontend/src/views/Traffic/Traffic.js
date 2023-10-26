@@ -1,28 +1,15 @@
-import React, { useContext, Component } from 'react'
-import { deviceAPI, trafficAPI, wifiAPI } from 'api'
-import DateRange from 'components/DateRange'
+import React, { useContext } from 'react'
 import { AlertContext } from 'layouts/Admin'
-import { prettySize } from 'utils'
 
-import {
-  Box,
-  Button,
-  Heading,
-  HStack,
-  VStack,
-  Text,
-  useColorModeValue,
-  View
-} from 'native-base'
+import { Text } from '@gluestack-ui/themed'
 
-export default class Traffic extends Component {
-  render() {
-    return (
-      <Text p={4} textAlign={'center'}>
-        TODO
-      </Text>
-    )
-  }
+const Traffic = (props) => {
+  //const context = useContext(AlertContext)
+  return (
+    <Text p="$4" textAlign={'center'}>
+      TODO
+    </Text>
+  )
 }
 
-Traffic.contextType = AlertContext
+export default Traffic

@@ -1,36 +1,28 @@
-import React, { useContext, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Icon } from 'FontAwesomeUtils'
+import React, { useContext, useState } from 'react'
+
 import {
-  faGauge,
-  faGaugeHigh,
-  faGaugeMed,
-  faGaugeSimple,
-  faPlay,
-  faPause,
-  faCirclePlay,
-  faCirclePause,
-  faDownload,
-  faCircleArrowDown,
-  faCircleArrowUp
-} from '@fortawesome/free-solid-svg-icons'
-import {
-  Box,
   Button,
-  Heading,
+  ButtonIcon,
   HStack,
-  IconButton,
+  Icon,
   Progress,
-  Stack,
+  ProgressFilledTrack,
   Text,
   View,
-  VStack,
-  useColorModeValue
-} from 'native-base'
+  VStack
+} from '@gluestack-ui/themed'
+
+import {
+  PlayIcon,
+  PauseIcon,
+  ArrowUpCircleIcon,
+  ArrowDownCircleIcon
+} from 'lucide-react-native'
 
 import { getApiURL } from 'api/API'
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
+import { ListHeader } from 'components/List'
 
 const SpeedTest = (props) => {
   const context = useContext(AlertContext)
@@ -168,85 +160,87 @@ const SpeedTest = (props) => {
     startTestDownload()
   }
 
-  let icon = isRunning ? (
-    <Icon size="10" icon={faCirclePause} color="muted.300" />
-  ) : (
-    <Icon size="10" icon={faCirclePlay} color="muted.300" />
-  )
-
   return (
     <View>
-      <VStack space={2} p={4}>
-        <Heading size="md">Speed Test</Heading>
-        <Text color="muted.500">
-          This test measures http request time to spr. Use iperf3 for more exact
-          results.
-        </Text>
-      </VStack>
+      <ListHeader
+        title="Speed Test"
+        description="This test measures http request time to spr. Use iperf3 for more exact results"
+      ></ListHeader>
 
       <VStack
-        space={4}
-        px={4}
-        py={8}
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        rounded="md"
+        space="xl"
+        bg="$backgroundCardLight"
+        sx={{
+          _dark: {
+            bg: '$backgroundCardDark'
+          }
+        }}
+        p="$4"
+        pb="$12"
       >
-        <HStack space={1} justifyContent="flex-start">
-          <IconButton
+        <HStack space="sm" p="$4">
+          <Button
+            action="primary"
+            variant="solid"
+            rounded="$full"
+            size="xl"
             onPress={startTest}
-            variant="unstyled"
-            colorScheme="muted"
-            icon={icon}
-          />
+          >
+            <ButtonIcon as={isRunning ? PauseIcon : PlayIcon} />
+          </Button>
         </HStack>
-        <HStack space={4} mx="4" alignItems="center">
-          <VStack space={1} w={{ base: '50%', md: '20%' }}>
-            <HStack space={2} alignItems="center">
-              <Text fontSize="32" color="muted.500">
+
+        <VStack space="md" mx="$4" sx={{ '@md': { w: '$1/3' } }}>
+          <VStack
+            space="sm"
+            sx={{ '@base': { w: '$1/2', '@md': { w: '$1/5' } } }}
+          >
+            <HStack w={200} space="md" alignItems="center">
+              <Text size="4xl" color="$muted500">
                 {speedDown.toFixed(2)}
               </Text>
-              <Text fontSize="24" color="muted.400">
+              <Text size="xl" color="$muted400">
                 mbps
               </Text>
             </HStack>
-
-            <HStack space={1}>
-              <Icon icon={faCircleArrowDown} color="muted.500" />
-              <Text color="muted.500">Download</Text>
-            </HStack>
           </VStack>
-          <Progress
-            w={{ base: '50%', md: '70%' }}
-            size="md"
-            rounded="md"
-            colorScheme="emerald"
-            value={percentDown}
-          />
-        </HStack>
-        <HStack space={4} mx="4" alignItems="center">
-          <VStack space={1} w={{ base: '50%', md: '20%' }}>
-            <HStack space={2} alignItems="center">
-              <Text fontSize="32" color="muted.500" textAlign="right">
+
+          <HStack space="md" alignItems="center" justifyContent="space-between">
+            <HStack flex={1} space="sm">
+              <Icon as={ArrowDownCircleIcon} color="$muted500" />
+              <Text color="$muted500">Download</Text>
+            </HStack>
+            <Progress flex={2} size="md" rounded="md" value={percentDown}>
+              <ProgressFilledTrack />
+            </Progress>
+          </HStack>
+        </VStack>
+
+        <VStack space="md" mx="$4" sx={{ '@md': { w: '$1/3' } }}>
+          <VStack
+            space="md"
+            sx={{ '@base': { w: '$1/2', '@md': { w: '$1/5' } } }}
+          >
+            <HStack w={200} space="md" alignItems="center">
+              <Text size="4xl" color="$muted500">
                 {speedUp.toFixed(2)}
               </Text>
-              <Text fontSize="24" color="muted.400">
+              <Text size="xl" color="$muted400">
                 mbps
               </Text>
             </HStack>
-            <HStack space={2} alignItems="center">
-              <Icon icon={faCircleArrowUp} color="muted.500" />
-              <Text color="muted.500">Upload</Text>
-            </HStack>
           </VStack>
 
-          <Progress
-            w={{ base: '50%', md: '70%' }}
-            size="md"
-            rounded="md"
-            colorScheme="violet"
-            value={percentUp}
-          />
-        </HStack>
+          <HStack space="md" alignItems="center" justifyContent="space-between">
+            <HStack flex={1} space="md" alignItems="center">
+              <Icon as={ArrowUpCircleIcon} color="$muted500" />
+              <Text color="$muted500">Upload</Text>
+            </HStack>
+            <Progress flex="2" size="md" rounded="md" value={percentUp}>
+              <ProgressFilledTrack />
+            </Progress>
+          </HStack>
+        </VStack>
       </VStack>
     </View>
   )

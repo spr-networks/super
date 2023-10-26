@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { ScrollView, View, VStack } from 'native-base'
+import { ScrollView, VStack } from '@gluestack-ui/themed'
 
 import { wifiAPI, deviceAPI, nfmapAPI } from 'api'
 import GroupListing from 'components/Groups/GroupListing'
@@ -82,8 +82,8 @@ export default class Dhcp extends Component {
 
   render() {
     return (
-      <ScrollView>
-        <VStack space={4}>
+      <ScrollView sx={{ '@md': { h: '90vh' } }}>
+        <VStack space={'md'}>
           {this.state.groups.map((group) => (
             <GroupListing key={group.Name} group={group} />
           ))}

@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { Box, View, useColorModeValue } from 'native-base'
+import { View } from '@gluestack-ui/themed'
 
 import useSwipe from 'components/useSwipe'
 import AddDevice from 'components/Devices/AddDevice'
@@ -16,14 +16,17 @@ const AddDeviceView = () => {
   })
 
   return (
-    <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      p={4}
+    <View
+      bg="$backgroundCardLight"
+      sx={{
+        _dark: { bg: '$backgroundCardDark' }
+      }}
+      p="$4"
       h={'100%'}
       {...swipeHandlers}
     >
       <AddDevice />
-    </Box>
+    </View>
   )
 }
 
