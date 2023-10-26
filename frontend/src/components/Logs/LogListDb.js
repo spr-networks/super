@@ -8,8 +8,8 @@ import { Dimensions, Platform } from 'react-native'
 import { dbAPI } from 'api'
 import { prettyDate } from 'utils'
 import { AlertContext } from 'layouts/Admin'
-import SyntaxHighlighter from 'react-syntax-highlighter';
-import { dark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import SyntaxHighlighter from 'react-native-syntax-highlighter';
+import { dark } from 'react-syntax-highlighter/styles/hljs';
 import { Buffer } from 'buffer';
 
 import {
@@ -77,7 +77,7 @@ const LogList = (props) => {
 
   useEffect(() => {
     let filter = {}
-    let defaultFilter = 'nft:drop:forward'
+    let defaultFilter = 'api'
     topics.map((topic) => {
       filter[topic] = topic == defaultFilter
     })
@@ -340,7 +340,7 @@ const LogList = (props) => {
         renderItem={({ item }) => (
           <ListItem>
             <VStack space="sm" flex={1}>
-              <Text>{item.msg || dumpJSON(item)}</Text>
+              {prettyEvent(item)}
               <HStack space="sm">
                 {/*<Text color={'muted.500'} bold>
                     {item.bucket}
