@@ -436,6 +436,7 @@ const AddDevice = (props) => {
                 {allGroups.map((group) =>
                   groupTips[group] !== null ? (
                     <Tooltip
+                      h={undefined}
                       placement="bottom"
                       trigger={(triggerProps) => {
                         return (
@@ -486,6 +487,7 @@ const AddDevice = (props) => {
               <HStack space="md">
                 {allTags.map((tag) => (
                   <Tooltip
+                    h={undefined}
                     placement="bottom"
                     trigger={(triggerProps) => {
                       return (

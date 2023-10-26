@@ -361,15 +361,8 @@ const Mesh = (props) => {
               <ListItem>
                 <Text>{item.IP}</Text>
                 {renderLeafStatus(item)}
-                <Tooltip label={item.APIToken}>
-                  <Button
-                    action="secondary"
-                    variant="link"
-                    onPress={() => copy(item.APIToken)}
-                  >
-                    <ButtonIcon as={CopyIcon} />
-                  </Button>
-                </Tooltip>
+                <TokenItem token={item.APIToken} />
+
 
                 <Button
                   size="sm"
