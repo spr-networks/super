@@ -30,16 +30,16 @@ describe('API component', () => {
 */
 
 describe('API Login', () => {
-  test('fail login', () => {
-    testLogin('admin', 'adminzz', (success) => {
-      expect(success).not.toBeTruthy()
-    })
-  })
-  /*
   test('login', () => {
     testLogin('admin', 'admin', (success) => {
       expect(success).toBeTruthy()
       saveLogin('admin', 'admin')
+    })
+  })
+
+  test('fail login', () => {
+    testLogin('admin', 'adminzz', (success) => {
+      expect(success).not.toBeTruthy()
     })
   })
 
@@ -52,7 +52,6 @@ describe('API Login', () => {
     expect(user.password).toBe('admin')
     expect(user.authdata).toBe('YWRtaW46YWRtaW4=')
   })
-*/
 })
 
 /*
