@@ -26,7 +26,7 @@ var ServerEventSock = "/state/api/eventbus.sock"
 type PacketEthernet struct {
 	SrcMAC       string
 	DstMAC       string
-	EthernetType int
+	EthernetType uint16
 }
 
 // new format
@@ -90,13 +90,11 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 	defer cancel()
 
 	hook := func(attrs nflog.Attribute) int {
-		//var eth layers.Ethernet
 		var ip4 layers.IPv4
 		var tcp layers.TCP
 		var udp layers.UDP
 		var dns layers.DNS
 		var dhcp layers.DHCPv4
-		var ethernet layers.Ethernet
 
 		result := PacketInfo{Prefix: *attrs.Prefix}
 
@@ -127,8 +125,10 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 			result.Action = "blocked"
 		}
 
+		//TBD ipv6
+
 		// DecodingLayerParser takes about 10% of the time as NewPacket to decode packet data, but only for known packet stacks.
-		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &ethernet, &ip4, &tcp, &udp, &dns, &dhcp)
+		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeIPv4, &ip4, &tcp, &udp, &dns, &dhcp)
 		decoded := []gopacket.LayerType{}
 		packetData := *attrs.Payload
 		if err := parser.DecodeLayers(packetData, &decoded); err != nil {
@@ -141,12 +141,6 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 		// iterate to see what layer we have
 		for _, layerType := range decoded {
 			switch layerType {
-			case layers.LayerTypeEthernet:
-				var ethd PacketEthernet
-				ethd.SrcMAC = fmt.Sprintf("%v", ethernet.SrcMAC)
-				ethd.DstMAC = fmt.Sprintf("%v", ethernet.DstMAC)
-				ethd.EthernetType = int(ethernet.EthernetType)
-				result.Ethernet = &ethd
 			case layers.LayerTypeIPv4:
 				result.IP = &ip4
 			case layers.LayerTypeTCP:
@@ -159,6 +153,21 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 				result.DHCP = &dhcp
 			}
 		}
+
+		var ethd PacketEthernet
+
+		ethd.EthernetType = *attrs.HwType
+		if ethd.EthernetType == 1 {
+
+			if attrs.HwHeader != nil && len(*attrs.HwHeader) >= 12 {
+				hwHeader := *attrs.HwHeader
+				dstMAC := hwHeader[:6]
+				srcMAC := hwHeader[6:12]
+				ethd.SrcMAC = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", dstMAC[0], dstMAC[1], dstMAC[2], dstMAC[3], dstMAC[4], dstMAC[5])
+				ethd.DstMAC = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", srcMAC[0], srcMAC[1], srcMAC[2], srcMAC[3], srcMAC[4], srcMAC[5])
+			}
+		}
+		result.Ethernet = &ethd
 
 		data, err := json.Marshal(result)
 		if err != nil {
