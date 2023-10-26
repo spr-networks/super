@@ -30,7 +30,8 @@ export default function MockAPI() {
       backup: Model,
       pfwBlock: Model,
       pfwForward: Model,
-      uplink: Model
+      uplink: Model,
+      tinynets: Model
     },
     seeds(server) {
       server.create('device', {
@@ -256,6 +257,8 @@ export default function MockAPI() {
         Name: 'spr-configs-v0.1.0-beta.0.tgz',
         Timestamp: Date.now()
       })
+
+      server.create('tinynet', { Subnet: '192.168.2.0/24' })
     },
     routes() {
       // TODO hook for all
@@ -1202,7 +1205,7 @@ export default function MockAPI() {
       })
 
       this.get('/version', () => {
-        return '"v0.2.16"'
+        return '"0.2.26"'
       })
 
       this.get('/info/hostname', () => {
@@ -2016,6 +2019,10 @@ export default function MockAPI() {
         return true
       })
 
+      this.get('/plugins/wireguard/endpoints', (schema, request) => {
+        return []
+      })
+
       // nftables
       this.get('/nftables', (schema, request) => {
         return {
@@ -2500,6 +2507,49 @@ export default function MockAPI() {
         schema.uplinks.create(attrs)
 
         return attrs
+      })
+
+      this.get('/subnetConfig', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let TinyNets = schema.tinynets.all().models.map((s) => s.Subnet)
+
+        return { TinyNets, LeaseTime: '24h0m0s' }
+      })
+
+      this.put('/subnetConfig', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        // array of strings subnets
+        let attrs = JSON.parse(request.requestBody)
+        schema.tinynets.all().destroy()
+        attrs.TinyNets.map((Subnet) => {
+          schema.tinynets.create({ Subnet })
+        })
+      })
+
+      this.get('/multicastSettings', (schema, request) => {
+        return {
+          Disabled: false,
+          Addresses: [
+            {
+              Address: '239.255.255.250:1900',
+              Disabled: false,
+              Tags: []
+            },
+            {
+              Address: '224.0.0.251:5353',
+              Disabled: false,
+              Tags: null
+            }
+          ],
+          DisableMDNSAdvertise: false,
+          MDNSName: ''
+        }
       })
     }
   })
