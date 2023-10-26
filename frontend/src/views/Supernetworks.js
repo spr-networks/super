@@ -5,38 +5,48 @@ import {
   Button,
   ButtonIcon,
   ButtonText,
-  Heading,
+  FlatList,
   HStack,
   Input,
   InputField,
   Text,
+  VStack,
   TrashIcon,
-  VStack
+  CloseIcon
 } from '@gluestack-ui/themed'
 
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
 
+import { ListHeader, ListItem } from 'components/List'
+
 const Supernetworks = (props) => {
   const context = useContext(AlertContext)
   const [tinyNets, setTinyNets] = useState([])
   const [leaseTime, setLeaseTime] = useState('')
+  const [isUnsaved, setIsUnsaved] = useState(false)
 
-  useEffect(() => {
+  const fetchConfig = () => {
     api.get('/subnetConfig').then((config) => {
       setTinyNets(config.TinyNets)
       setLeaseTime(config.LeaseTime)
+      setIsUnsaved(false)
     })
+  }
+
+  useEffect(() => {
+    fetchConfig()
   }, [])
 
-  const handleUpdate = () => {
+  const handleUpdate = (_tinyNets) => {
     api
       .put('/subnetConfig', {
-        TinyNets: tinyNets,
+        TinyNets: _tinyNets || tinyNets,
         LeaseTime: leaseTime
       })
       .then(() => {
         context.success('Updated supernetworks')
+        fetchConfig()
       })
       .catch((err) => context.error('' + err))
   }
@@ -45,62 +55,56 @@ const Supernetworks = (props) => {
     setTinyNets([...tinyNets, ''])
   }
 
-  const removeTinyNet = (index) => {
-    setTinyNets(tinyNets.filter((_, i) => i !== index))
+  const deleteListItem = (index) => {
+    const newTinyNets = tinyNets.filter((_, i) => i !== index)
+    setTinyNets(newTinyNets)
+    handleUpdate(newTinyNets)
   }
 
   const updateTinyNet = (text, index) => {
     const newTinyNets = [...tinyNets]
     newTinyNets[index] = text
     setTinyNets(newTinyNets)
+    setIsUnsaved(true)
   }
+
+  const list = tinyNets
 
   return (
     <VStack sx={{ '@md': { w: '$3/4' } }}>
-      <Heading size="sm" p="$4">
-        Supernetworks
-      </Heading>
+      <ListHeader title="Supernetworks"></ListHeader>
 
-      <VStack space="xl">
-        <Box flex="$1">
-          {tinyNets.map((tinyNet, index) => (
-            <HStack
-              key={index}
-              space="md"
-              alignItems="center"
-              justifyContent="space-between"
-              p="$4"
-              py="$8"
-              bg="white"
-              borderBottomColor="$borderColorCardLight"
-              borderBottomWidth={1}
-              sx={{
-                _dark: {
-                  bg: '$blueGray700',
-                  borderBottomColor: '$borderColorCardDark'
-                }
-              }}
-            >
-              <Input flex={1} variant="underlined">
-                <InputField
-                  value={tinyNet}
-                  onChangeText={(text) => updateTinyNet(text, index)}
-                />
-              </Input>
-
+      <FlatList
+        data={list}
+        renderItem={({ item, index }) => (
+          <ListItem>
+            <Input flex={1} variant="outline">
+              <InputField
+                value={item}
+                onChangeText={(text) => updateTinyNet(text, index)}
+                onSubmitEditing={() => handleUpdate()}
+              />
+            </Input>
+            <HStack ml="auto" space="xl">
               <Button
-                size="sm"
                 action="negative"
-                variant="solid"
-                onPress={() => removeTinyNet(index)}
+                variant="link"
+                alignSelf="center"
+                onPress={() => deleteListItem(index)}
               >
-                <ButtonText>Remove</ButtonText>
-                <ButtonIcon as={TrashIcon} ml="$1" />
+                <ButtonIcon as={CloseIcon} color="$red700" />
               </Button>
             </HStack>
-          ))}
+          </ListItem>
+        )}
+        keyExtractor={(item) => `${item.Address}`}
+      />
+
+      {/**/}
+      <VStack space="xl">
+        <Box flex="$1">
           <Button
-            action="secondary"
+            action="primary"
             variant="solid"
             rounded="$none"
             onPress={addTinyNet}
@@ -123,7 +127,10 @@ const Supernetworks = (props) => {
             <Input flex={1} variant="underlined">
               <InputField
                 value={leaseTime}
-                onChangeText={(text) => setLeaseTime(text)}
+                onChangeText={(text) => {
+                  setLeaseTime(text)
+                  setIsUnsaved(true)
+                }}
               />
             </Input>
           </HStack>
@@ -132,8 +139,11 @@ const Supernetworks = (props) => {
             variant="solid"
             rounded="$none"
             onPress={handleUpdate}
+            isDisabled={!isUnsaved}
           >
-            <ButtonText>Save Settings</ButtonText>
+            <ButtonText>
+              {isUnsaved ? 'Save unsaved changes' : 'Save'}
+            </ButtonText>
           </Button>
         </Box>
       </VStack>
