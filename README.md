@@ -82,6 +82,12 @@ SPR is built to support an adapative, microsegmented network that unifies WiFi, 
 
 https://demo.supernetworks.org/
 
+## SPR Bus Events
+
+https://github.com/spr-networks/sprbus
+
+![image](https://user-images.githubusercontent.com/37542945/232639810-7e17380c-42ea-480b-811e-cf5add04a0d2.gif)
+
 ## Updating 
 #### Building from scratch
 ```bash

@@ -73,6 +73,7 @@
     "react-router-dom": "^6.3.0",
     "react-router-native": "^6.3.0",
     "react-scripts": "^5.0.1",
+    "react-syntax-highlighter": "^15.5.0",
     "source-map-explorer": "^2.5.2",
     "timeago.js": "^4.0.2"
   },
@@ -86,6 +87,7 @@
     "css-loader": "^6.7.1",
     "html-webpack-plugin": "^5.5.0",
     "pod-install": "^0.1.38",
+    "react-devtools-core": "^4.28.4",
     "react-test-renderer": "17.0.2",
     "serve": "^13.0.2",
     "style-loader": "^3.3.1",

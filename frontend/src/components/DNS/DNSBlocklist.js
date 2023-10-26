@@ -497,14 +497,22 @@ export default class DNSBlocklist extends React.Component {
             p={4}
             width={{ base: '100%', md: '50%' }}
           >
-            <VStack space={4}>
-              <Text bold>Refresh Frequency</Text>
-              <InputSelect
-                options={options}
-                value={this.state.seconds}
-                onChange={(v) => onChangeText('seconds', v)}
-                onChangeText={(v) => onChangeText('seconds', v)}
-              />
+            <VStack width={{ base: '100%', md: '75%' }}>
+              <Box
+              >
+                <VStack space={4}>
+                  <Text bold>Refresh Frequency</Text>
+                  <InputSelect
+                    options={options}
+                    value={this.state.seconds}
+                    onChange={(v) => onChangeText('seconds', v)}
+                    onChangeText={(v) => onChangeText('seconds', v)}
+                  />
+                </VStack>
+              </Box>
+              <Button colorScheme="primary" rounded="none" onPress={() => submitRefresh(this.state.seconds)}>
+                Save
+              </Button>
             </VStack>
 
             <Button
