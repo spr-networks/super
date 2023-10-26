@@ -363,7 +363,6 @@ const Mesh = (props) => {
                 {renderLeafStatus(item)}
                 <TokenItem token={item.APIToken} />
 
-
                 <Button
                   size="sm"
                   variant="link"
