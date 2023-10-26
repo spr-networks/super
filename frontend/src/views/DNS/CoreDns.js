@@ -80,7 +80,7 @@ const CoreDns = (props) => {
 
       setHost(config.UpstreamTLSHost)
       setIp(config.UpstreamIPAddress)
-      setDisableTls(config.DisableTls)
+      setEnableTls(!config.DisableTls)
     })
   }, [])
 
