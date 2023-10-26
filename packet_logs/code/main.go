@@ -163,8 +163,8 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 				hwHeader := *attrs.HwHeader
 				dstMAC := hwHeader[:6]
 				srcMAC := hwHeader[6:12]
-				ethd.SrcMAC = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", dstMAC[0], dstMAC[1], dstMAC[2], dstMAC[3], dstMAC[4], dstMAC[5])
-				ethd.DstMAC = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", srcMAC[0], srcMAC[1], srcMAC[2], srcMAC[3], srcMAC[4], srcMAC[5])
+				ethd.DstMAC = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", dstMAC[0], dstMAC[1], dstMAC[2], dstMAC[3], dstMAC[4], dstMAC[5])
+				ethd.SrcMAC = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", srcMAC[0], srcMAC[1], srcMAC[2], srcMAC[3], srcMAC[4], srcMAC[5])
 			}
 		}
 		result.Ethernet = &ethd
