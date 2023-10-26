@@ -168,7 +168,7 @@ const LogList = (props) => {
         p="$4"
       >
         <VStack space="sm">
-          <Heading size="sm">Logs</Heading>
+          <Heading size="sm">Service Container Logs</Heading>
           {list.length ? (
             <Text size="xs" color="$muted500">
               {`${(page - 1) * 20} - ${Math.min(page * 20, total)}  / ${total}`}

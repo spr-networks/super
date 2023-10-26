@@ -8,6 +8,9 @@ import { Dimensions, Platform } from 'react-native'
 import { dbAPI } from 'api'
 import { prettyDate } from 'utils'
 import { AlertContext } from 'layouts/Admin'
+import SyntaxHighlighter from 'react-syntax-highlighter';
+import { dark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import { Buffer } from 'buffer';
 
 import {
   Badge,
@@ -74,7 +77,7 @@ const LogList = (props) => {
 
   useEffect(() => {
     let filter = {}
-    let defaultFilter = 'log:api'
+    let defaultFilter = 'nft:drop:forward'
     topics.map((topic) => {
       filter[topic] = topic == defaultFilter
     })
@@ -168,9 +171,96 @@ const LogList = (props) => {
   const niceTopic = (topic) => topic && topic.replace(/^log:/, '')
 
   //skip some properties
-  const dumpJSON = (item) => {
+  const dumpJSON = (item, clean=false) => {
     let { time, bucket, ...rest } = item
+    if (clean) {
+      return JSON.stringify(rest, null, 2)
+    } else {
+      return JSON.stringify(rest)
+    }
     return JSON.stringify(rest)
+  }
+
+  const formatHexString = (buffer) => {
+    let hexString = '';
+    let asciiString = '';
+    let resultString = '';
+
+    for (let i = 0; i < buffer.length; i++) {
+      const byte = buffer[i];
+      hexString += byte.toString(16).padStart(2, '0');
+      asciiString += byte >= 32 && byte <= 126 ? String.fromCharCode(byte) : '.';
+      if (i % 8 === 7) hexString += '  ';
+
+      if (i % 16 === 15) {
+        resultString += hexString + ' |' + asciiString + '|\n';
+        hexString = '';
+        asciiString = '';
+      } else {
+        hexString += ' ';
+      }
+    }
+
+    if (hexString) {
+      const remainingBytes = buffer.length % 16;
+      if (remainingBytes <= 8) {
+        hexString += ' '.repeat((8 - remainingBytes) * 3 + 1);
+      } else {
+        hexString += ' '.repeat((16 - remainingBytes) * 3);
+      }
+      resultString += hexString + '  | ' + asciiString;
+    }
+
+    return resultString; //.trimEnd();
+
+  };
+
+
+
+  const getPayloadHex = (obj) => {
+    for (let key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        if (key === 'Payload' && typeof obj[key] === 'string') {
+          const buffer = Buffer.from(obj[key], 'base64');
+          const hexString = formatHexString(buffer);
+          return hexString;
+        } else if (typeof obj[key] === 'object') {
+          let ret = getPayloadHex(obj[key]);
+          if (ret) {
+            return ret;
+          }
+        }
+      }
+    }
+    return null
+  };
+
+
+  const prettyEvent = (item) => {
+    let hexLines = getPayloadHex(item)
+
+    if (!item.msg) {
+      return  <Box>
+                {(hexLines ?
+                  <SyntaxHighlighter
+                    language='text'
+                    style={dark}
+                    >
+                    {hexLines}
+                  </SyntaxHighlighter>
+                  : null)}
+                <SyntaxHighlighter
+                  	language='json'
+                    style={dark}
+                    wrapLongLines={true}
+                    lineProps={{ style: { flexWrap: 'wrap', lineHeight: 1.5 } }} // Adjusted line height
+                  >
+                  	{dumpJSON(item, true)}
+                  </SyntaxHighlighter>
+              </Box>
+    }
+
+    return <Text>{item.msg}</Text>
   }
 
   //TODO support other containers
