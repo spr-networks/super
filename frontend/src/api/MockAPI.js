@@ -285,7 +285,13 @@ export default function MockAPI() {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
-        return schema.devices.all().models
+        let devices = schema.devices.all().models
+        let res = {}
+        for (let d of devices) {
+          res[d.MAC] = d
+        }
+
+        return res
       })
 
       this.put('/device/:id', (schema, request) => {
@@ -426,6 +432,54 @@ export default function MockAPI() {
         if (id.match(/(lan|internet|dns|dhcp)_access/)) {
           return {
             nftables: [{}, { map: { elem: ['wifi0', 'eth0'], type: 'zz' } }]
+          }
+        } else if (id == 'ethernet_filter') {
+          return {
+            nftables: [
+              {
+                metainfo: {
+                  version: '1.0.6',
+                  release_name: 'Lester Gooch #5',
+                  json_schema_version: 1
+                }
+              },
+              {
+                map: {
+                  family: 'inet',
+                  name: 'ethernet_filter',
+                  table: 'filter',
+                  type: ['ipv4_addr', 'ifname', 'ether_addr'],
+                  handle: 20,
+                  map: 'verdict',
+                  elem: [
+                    [
+                      {
+                        concat: [
+                          '192.168.2.101',
+                          'wlan1.4096',
+                          '11:11:11:11:11:11'
+                        ]
+                      },
+                      {
+                        return: null
+                      }
+                    ],
+                    [
+                      {
+                        concat: [
+                          '192.168.2.102',
+                          'wlan1.4097',
+                          '22:22:22:22:22:22'
+                        ]
+                      },
+                      {
+                        return: null
+                      }
+                    ]
+                  ]
+                }
+              }
+            ]
           }
         }
 
@@ -2377,6 +2431,20 @@ export default function MockAPI() {
         }
       })
 
+      this.get('/plugins/db/buckets', (schema, request) => {
+        return [
+          'dns:block:event',
+          'dns:serve:192.168.2.101',
+          'dns:serve:event',
+          'log:api',
+          'log:test',
+          'log:www:access',
+          'nft:lan:in',
+          'nft:wan:in',
+          'www:auth:user:success'
+        ]
+      })
+
       this.get('/plugins/db/stats', (schema, request) => {
         return {
           Size: 13344768,
@@ -2550,6 +2618,41 @@ export default function MockAPI() {
           DisableMDNSAdvertise: false,
           MDNSName: ''
         }
+      })
+
+      this.get('/dnsSettings', (schema, request) => {
+        return { UpstreamTLSHost: '', UpstreamIPAddress: '', TlsDisable: false }
+      })
+
+      this.get('/logs', (schema, request) => {
+        let logs = []
+        let log = {
+          _HOSTNAME: 'spr',
+          CONTAINER_NAME: 'superwireguard',
+          PRIORITY: '6',
+          CONTAINER_ID_FULL:
+            'f2a279845383b08b22aaea297d4e027971f6ab76d1c9c192eb1020b20dfa3cf3',
+          CONTAINER_ID: 'f2a279845383',
+          _EXE: '/usr/bin/dockerd',
+          SYSLOG_IDENTIFIER: 'f2a279845383',
+          _MACHINE_ID: 'c2726e42e7de4a85bc9d837c034242a4',
+          IMAGE_NAME: 'ghcr.io/spr-networks/super_wireguard:latest-dev',
+          CONTAINER_TAG: 'f2a279845383',
+          __REALTIME_TIMESTAMP: '1698316313985702',
+          MESSAGE: '@ GET /status'
+        }
+
+        for (let i = 0; i < 10; i++) {
+          let __REALTIME_TIMESTAMP =
+            parseInt(log.__REALTIME_TIMESTAMP) + i * 1e6
+          let CONTAINER_NAME = rpick([
+            'superapi',
+            'superwifid',
+            'superwireguard'
+          ])
+          logs.push({ ...log, CONTAINER_NAME, __REALTIME_TIMESTAMP })
+        }
+        return logs
       })
     }
   })
