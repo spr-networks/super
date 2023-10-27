@@ -37,6 +37,7 @@ const Events = (props) => {
   return (
     <View>
       <LogListDb />
+      {/*
       <Database showModal={onShowModal} closeModal={onClose} />
 
       <Modal isOpen={showModal} onClose={onClose}>
@@ -51,6 +52,7 @@ const Events = (props) => {
           <ModalBody>{modalBody}</ModalBody>
         </ModalContent>
       </Modal>
+      */}
     </View>
   )
 }
