@@ -30,7 +30,11 @@ import {
   ScrollView
 } from '@gluestack-ui/themed'
 
-import { FilterIcon, FilterXIcon } from 'lucide-react-native'
+import {
+  FilterIcon,
+  FilterXIcon,
+  SlidersHorizontalIcon
+} from 'lucide-react-native'
 
 //import { FlashList } from '@shopify/flash-list'
 import { ArrowLeftIcon, ArrowRightIcon } from '@gluestack-ui/themed'
@@ -297,6 +301,7 @@ const LogList = (props) => {
   const SelectTopic = ({ options, selectedValue, onValueChange, ...props }) => {
     return (
       <Select
+        size="xs"
         selectedValue={selectedValue}
         selectedLabel={selectedValue}
         onValueChange={onValueChange}
@@ -346,13 +351,25 @@ const LogList = (props) => {
 
   return (
     <View h={h} display="flex">
-      <HStack space="md" p="$4" alignItems="flex-end">
-        <Heading size="sm">Events: {niceTopic(getCurrentBucket())}</Heading>
-        <Text color="$muted500" mt="auto" display={total ? 'flex' : 'none'}>
+      <HStack
+        space="md"
+        p="$4"
+        alignItems="center"
+        __sx={{ '@md': { flexDirection: 'row' } }}
+      >
+        <Heading size="sm">Events</Heading>
+        <Text
+          color="$muted500"
+          sx={{
+            '@base': { display: 'none' },
+            '@md': { display: total ? 'flex' : 'none' }
+          }}
+        >
           {/*page={page}/{Math.ceil(total / perPage)}, total = {total}*/}
           {total} items
         </Text>
 
+        {/*
         <Tooltip label="Set filter for logs" ml="auto">
           <Button
             ml="auto"
@@ -361,9 +378,19 @@ const LogList = (props) => {
             variant="link"
             onPress={() => setShowForm(!showForm)}
           >
-            <ButtonIcon as={showForm ? FilterXIcon : FilterIcon} />
+            <ButtonIcon
+              as={showForm ? FilterXIcon : FilterIcon}
+            />
           </Button>
         </Tooltip>
+        */}
+        <HStack sx={{ '@md': { marginLeft: 'auto' } }}>
+          <SelectTopic
+            options={Object.keys(filter)}
+            selectedValue={Object.keys(filter).find((f) => filter[f])}
+            onValueChange={handleTopicFilter}
+          />
+        </HStack>
       </HStack>
 
       <HStack
@@ -373,11 +400,11 @@ const LogList = (props) => {
         display={showForm ? 'flex' : 'none'}
         flexWrap="wrap"
       >
-        <SelectTopic
+        {/*<SelectTopic
           options={Object.keys(filter)}
           selectedValue={Object.keys(filter).find((f) => filter[f])}
           onValueChange={handleTopicFilter}
-        />
+        />*/}
       </HStack>
       <FlatList
         flex={2}
