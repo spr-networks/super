@@ -390,6 +390,16 @@ export default function MockAPI() {
             Name: 'wlan1',
             Type: 'AP',
             Enabled: true
+          },
+          {
+            Name: 'ppp0',
+            Type: 'Uplink',
+            Enabled: true
+          },
+          {
+            Name: 'eth0.123',
+            Type: 'Other',
+            Enabled: true
           }
         ]
       })
@@ -529,8 +539,77 @@ export default function MockAPI() {
             broadcast: 'ff:ff:ff:ff:ff:ff',
             addr_info: [
               {
-                family: 'inet4',
+                family: 'inet',
+                local: '192.168.22.22',
+                prefixlen: 24,
+                scope: 'global',
+                valid_life_time: 4294967295,
+                preferred_life_time: 'preferred_life_time'
+              }
+            ]
+          },
+          {
+            ifindex: 3,
+            ifname: 'wlan1',
+            flags: ['BROADCAST'],
+            mtu: 0,
+            qdisc: 'string',
+            operstate: 'UP',
+            group: 'default',
+            txqlen: 1000,
+            link_type: 'ether',
+            address: '11:22:33:44:55:66',
+            broadcast: 'ff:ff:ff:ff:ff:ff',
+            addr_info: [
+              {
+                family: 'inet',
                 local: '192.168.2.1',
+                prefixlen: 24,
+                scope: 'global',
+                valid_life_time: 4294967295,
+                preferred_life_time: 'preferred_life_time'
+              }
+            ]
+          },
+          {
+            ifindex: 4,
+            ifname: 'ppp0',
+            flags: ['BROADCAST'],
+            mtu: 0,
+            qdisc: 'string',
+            operstate: 'UP',
+            group: 'default',
+            txqlen: 1000,
+            link_type: 'ether',
+            address: '00:11:00:11:00:33',
+            broadcast: 'ff:ff:ff:ff:ff:ff',
+            addr_info: [
+              {
+                family: 'inet',
+                local: '11.22.33.44',
+                prefixlen: 24,
+                scope: 'global',
+                valid_life_time: 4294967295,
+                preferred_life_time: 'preferred_life_time'
+              }
+            ]
+          },
+          {
+            ifindex: 5,
+            ifname: 'eth0.123',
+            flags: ['BROADCAST'],
+            mtu: 0,
+            qdisc: 'string',
+            operstate: 'UP',
+            group: 'default',
+            txqlen: 1000,
+            link_type: 'ether',
+            address: '00:22:00:11:00:11',
+            broadcast: 'ff:ff:ff:ff:ff:ff',
+            addr_info: [
+              {
+                family: 'inet',
+                local: '192.168.99.99',
                 prefixlen: 24,
                 scope: 'global',
                 valid_life_time: 4294967295,
