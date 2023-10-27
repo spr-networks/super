@@ -309,7 +309,7 @@ const LANLinkInfo = (props) => {
 
   return (
     <ScrollView h="$full">
-      <VStack space="md">
+      <VStack space="md" sx={{ '@md': { maxWidth: '$3/4' } }}>
         <ListHeader title="LAN Link Configuration"></ListHeader>
 
         <VStack space="md" p="$4">
@@ -328,7 +328,7 @@ const LANLinkInfo = (props) => {
           keyExtractor={(item) => `${item.Interface}_${item.Type}`}
           renderItem={({ item }) => (
             <ListItem>
-              <Text flex={1} size="md" bold>
+              <Text flex={1} size="sm" bold>
                 {item.Interface}
               </Text>
               <VStack flex={1} space="sm">
@@ -363,7 +363,7 @@ const LANLinkInfo = (props) => {
           keyExtractor={(item) => `${item.Interface}_${item.Type}`}
           renderItem={({ item }) => (
             <ListItem>
-              <Text flex={1} fontWeight="bold">
+              <Text flex={1} size="sm" bold>
                 {item.Interface}
               </Text>
               <VStack flex={1} space="sm">

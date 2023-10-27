@@ -757,7 +757,7 @@ const UplinkInfo = (props) => {
 
   return (
     <View h={'100%'}>
-      <VStack space="md">
+      <VStack space="md" sx={{ '@md': { maxWidth: '$3/4' } }}>
         <ListHeader title="Uplink Configuration" />
 
         {/* for each uplink, display a pleasant table with the interface name and the ip address*/}
@@ -767,7 +767,7 @@ const UplinkInfo = (props) => {
           keyExtractor={(item) => `${item.Interface}_${item.Type}`}
           renderItem={({ item }) => (
             <ListItem>
-              <Text flex={1} bold>
+              <Text flex={1} size="sm" bold>
                 {item.Interface}
               </Text>
               <VStack flex={1} space="sm">
@@ -801,7 +801,7 @@ const UplinkInfo = (props) => {
           keyExtractor={(item) => `${item.Interface}_${item.Type}`}
           renderItem={({ item }) => (
             <ListItem>
-              <Text flex={1} size="md" bold>
+              <Text flex={1} size="sm" bold>
                 {item.Interface}
               </Text>
               <Text flex={1} size="sm">
