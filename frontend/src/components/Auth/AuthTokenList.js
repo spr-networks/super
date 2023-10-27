@@ -22,6 +22,7 @@ import { authAPI } from 'api'
 import { AlertContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import AddAuthToken from 'components/Auth/AddAuthToken'
+import TokenItem from 'components/TokenItem'
 
 const AuthTokenList = (props) => {
   const context = useContext(AlertContext)
