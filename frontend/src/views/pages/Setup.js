@@ -482,7 +482,7 @@ const Setup = (props) => {
                   }
                 }}
                 px="$8"
-                href="/auth/login"
+                onPress={() => navigate('/auth/login')}
               >
                 <ButtonText>Click here to login</ButtonText>
               </Button>
