@@ -15,7 +15,7 @@ const ListItem = ({ p, children, ...props }) => {
         }
       }}
       p={p || '$4'}
-      space="md"
+      space="sm"
       justifyContent="space-between"
       alignItems="center"
       {...props}
