@@ -5,6 +5,7 @@ import { AlertContext } from 'AppContext'
 
 import {
   Button,
+  ButtonIcon,
   ButtonText,
   Checkbox,
   CheckboxGroup,
@@ -19,10 +20,16 @@ import {
   HStack,
   VStack,
   Text,
-  InputField
+  InputField,
+  CheckIcon
 } from '@gluestack-ui/themed'
 
 import { Select } from 'components/Select'
+
+let modes = [
+  { label: '5 GHz', value: 'a' },
+  { label: '2.4 GHz', value: 'g' }
+]
 
 const WifiChannelParameters = ({
   iface,
@@ -38,7 +45,7 @@ const WifiChannelParameters = ({
   const context = useContext(AlertContext)
   const [channel, setChannel] = useState(0)
   const [bandwidth, setBandwidth] = useState(0)
-  const [mode, setMode] = useState('a')
+  const [mode, setMode] = useState(config.hw_mode) //('a')
   const [errors, setErrors] = useState({})
   const [disable160, setDisable160] = useState(true)
   const [disableWifi6, setDisableWifi6] = useState(true)
@@ -47,6 +54,8 @@ const WifiChannelParameters = ({
   //support for additional bssid
   const [disableExtraBSS, setDisableExtraBSS] = useState(true)
   const [extraSSID, setExtraSSID] = useState('-extra')
+
+  const [selectedMode, setSelectedMode] = useState(modes[0])
 
   let bandwidth5 = [
     { label: '20 MHz', value: 20 },
@@ -61,16 +70,12 @@ const WifiChannelParameters = ({
     { label: '40 MHz', value: 40 }
   ]
 
-  let modes = [
-    { label: '5 GHz', value: 'a' },
-    { label: '2.4 GHz', value: 'g' }
-  ]
-
   useEffect(() => {
     //props.config.interface should match TBD
 
     // switch to config-based settings
     setMode(config.hw_mode)
+    setSelectedMode(modes.find((v) => v.value == config.hw_mode))
     setChannel(config.channel)
     setExtraSSID(config.ssid + '-extra')
 
@@ -294,6 +299,8 @@ const WifiChannelParameters = ({
   let checkboxProps = disableWifi6 ? { isDisabled: true } : {}
   let wpa1CheckboxProps = disableExtraBSS ? { isDisabled: true } : {}
 
+  console.log('GHOON', config, iface)
+
   return (
     <>
       <HStack justifyContent="space-between" p="$4">
@@ -322,6 +329,7 @@ const WifiChannelParameters = ({
             </FormControlLabel>
             <Select
               selectedValue={mode}
+              selectedLabel={modes.find((v) => v.value == mode)?.label}
               onValueChange={(value) => setMode(value)}
             >
               {modes.map((item) => (
@@ -335,34 +343,39 @@ const WifiChannelParameters = ({
             </Select>
           </FormControl>
 
-          <FormControl flex={1} isInvalid={'bandwidth' in errors}>
-            <FormControlLabel>
-              <FormControlLabelText>Bandwidth</FormControlLabelText>
-            </FormControlLabel>
-            <Select
-              selectedValue={bandwidth}
-              onValueChange={(value) => {
-                setBandwidth(parseInt(value))
-              }}
-            >
-              <Select.Item label="" value={0} />
-              {bandwidths.map((item) => (
-                <Select.Item
-                  key={item.label}
-                  label={item.label}
-                  value={item.value}
-                  isDisabled={item.disabled}
-                />
-              ))}
-            </Select>
-            {'bandwidth' in errors ? (
-              <FormControlErrorMessage>
-                <FormControlErrorMessageText>
-                  Invalid Bandwidth
-                </FormControlErrorMessageText>
-              </FormControlErrorMessage>
-            ) : null}
-          </FormControl>
+          {bandwidth ? (
+            <FormControl flex={1} isInvalid={'bandwidth' in errors}>
+              <FormControlLabel>
+                <FormControlLabelText>Bandwidth</FormControlLabelText>
+              </FormControlLabel>
+              <Select
+                selectedValue={bandwidth}
+                selectedLabel={
+                  bandwidths.find((v) => v.value == bandwidth)?.label
+                }
+                onValueChange={(value) => {
+                  setBandwidth(parseInt(value))
+                }}
+              >
+                <Select.Item label="" value={0} />
+                {bandwidths.map((item) => (
+                  <Select.Item
+                    key={item.label}
+                    label={item.label}
+                    value={item.value}
+                    isDisabled={item.disabled}
+                  />
+                ))}
+              </Select>
+              {'bandwidth' in errors ? (
+                <FormControlErrorMessage>
+                  <FormControlErrorMessageText>
+                    Invalid Bandwidth
+                  </FormControlErrorMessageText>
+                </FormControlErrorMessage>
+              ) : null}
+            </FormControl>
+          ) : null}
 
           <FormControl flex={1} isInvalid={'channel' in errors}>
             <FormControlLabel for="Channel">
@@ -396,11 +409,12 @@ const WifiChannelParameters = ({
             action="primary"
             sx={{
               '@base': { w: '$2/3', alignSelf: 'center' },
-              '@md': { w: '$1/6', alignSelf: 'flex-end' }
+              '@md': { w: 120, alignSelf: 'flex-end' }
             }}
             onPress={handleSubmit}
           >
             <ButtonText>Save</ButtonText>
+            <ButtonIcon as={CheckIcon} ml="$1" />
           </Button>
         </VStack>
 
