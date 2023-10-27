@@ -7,15 +7,13 @@ import React, { useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
 import { dbAPI } from 'api'
 import { prettyDate } from 'utils'
-import { AlertContext } from 'layouts/Admin'
-import SyntaxHighlighter from 'react-native-syntax-highlighter';
-import { dark } from 'react-syntax-highlighter/styles/hljs';
-import { Buffer } from 'buffer';
+import SyntaxHighlighter from 'react-native-syntax-highlighter'
+import { github, ocean } from 'react-syntax-highlighter/styles/hljs'
+import { Buffer } from 'buffer'
 
 import {
   Badge,
   BadgeText,
-  Box,
   Button,
   ButtonText,
   ButtonIcon,
@@ -26,10 +24,10 @@ import {
   VStack,
   Text,
   View,
-  Tooltip,
-  TooltipContent,
-  TooltipText,
-  LinkText
+  LinkText,
+  useColorMode,
+  CopyIcon,
+  ScrollView
 } from '@gluestack-ui/themed'
 
 import { FilterIcon, FilterXIcon } from 'lucide-react-native'
@@ -37,6 +35,9 @@ import { FilterIcon, FilterXIcon } from 'lucide-react-native'
 //import { FlashList } from '@shopify/flash-list'
 import { ArrowLeftIcon, ArrowRightIcon } from '@gluestack-ui/themed'
 import { ListItem } from 'components/List'
+import { Select } from 'components/Select'
+import { Tooltip } from 'components/Tooltip'
+import { copy } from 'utils'
 
 const LogListItem = (props) => {
   return <></>
@@ -51,6 +52,8 @@ const LogList = (props) => {
   const perPage = 20
   const [params, setParams] = useState({ num: perPage })
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
+
+  const colorMode = useColorMode()
 
   useEffect(() => {
     //TODO map logs, merge timestamps
@@ -77,7 +80,7 @@ const LogList = (props) => {
 
   useEffect(() => {
     let filter = {}
-    let defaultFilter = 'api'
+    let defaultFilter = 'log:api'
     topics.map((topic) => {
       filter[topic] = topic == defaultFilter
     })
@@ -171,96 +174,156 @@ const LogList = (props) => {
   const niceTopic = (topic) => topic && topic.replace(/^log:/, '')
 
   //skip some properties
-  const dumpJSON = (item, clean=false) => {
+  const dumpJSON = (item, clean = false) => {
     let { time, bucket, ...rest } = item
     if (clean) {
       return JSON.stringify(rest, null, 2)
-    } else {
-      return JSON.stringify(rest)
     }
+
     return JSON.stringify(rest)
   }
 
   const formatHexString = (buffer) => {
-    let hexString = '';
-    let asciiString = '';
-    let resultString = '';
+    let hexString = ''
+    let asciiString = ''
+    let resultString = ''
 
     for (let i = 0; i < buffer.length; i++) {
-      const byte = buffer[i];
-      hexString += byte.toString(16).padStart(2, '0');
-      asciiString += byte >= 32 && byte <= 126 ? String.fromCharCode(byte) : '.';
-      if (i % 8 === 7) hexString += '  ';
+      const byte = buffer[i]
+      hexString += byte.toString(16).padStart(2, '0')
+      asciiString += byte >= 32 && byte <= 126 ? String.fromCharCode(byte) : '.'
+      if (i % 8 === 7) hexString += '  '
 
       if (i % 16 === 15) {
-        resultString += hexString + ' |' + asciiString + '|\n';
-        hexString = '';
-        asciiString = '';
+        resultString += hexString + ' |' + asciiString + '|\n'
+        hexString = ''
+        asciiString = ''
       } else {
-        hexString += ' ';
+        hexString += ' '
       }
     }
 
     if (hexString) {
-      const remainingBytes = buffer.length % 16;
+      const remainingBytes = buffer.length % 16
       if (remainingBytes <= 8) {
-        hexString += ' '.repeat((8 - remainingBytes) * 3 + 1);
+        hexString += ' '.repeat((8 - remainingBytes) * 3 + 1)
       } else {
-        hexString += ' '.repeat((16 - remainingBytes) * 3);
+        hexString += ' '.repeat((16 - remainingBytes) * 3)
       }
-      resultString += hexString + '  | ' + asciiString;
+      resultString += hexString + '  | ' + asciiString
     }
 
-    return resultString; //.trimEnd();
-
-  };
-
-
+    return resultString //.trimEnd();
+  }
 
   const getPayloadHex = (obj) => {
     for (let key in obj) {
       if (obj.hasOwnProperty(key)) {
         if (key === 'Payload' && typeof obj[key] === 'string') {
-          const buffer = Buffer.from(obj[key], 'base64');
-          const hexString = formatHexString(buffer);
-          return hexString;
+          const buffer = Buffer.from(obj[key], 'base64')
+          const hexString = formatHexString(buffer)
+          return hexString
         } else if (typeof obj[key] === 'object') {
-          let ret = getPayloadHex(obj[key]);
+          let ret = getPayloadHex(obj[key])
           if (ret) {
-            return ret;
+            return ret
           }
         }
       }
     }
     return null
-  };
-
+  }
 
   const prettyEvent = (item) => {
     let hexLines = getPayloadHex(item)
+    const syntaxTheme = colorMode == 'light' ? github : ocean
 
     if (!item.msg) {
-      return  <Box>
-                {(hexLines ?
-                  <SyntaxHighlighter
-                    language='text'
-                    style={dark}
-                    >
-                    {hexLines}
-                  </SyntaxHighlighter>
-                  : null)}
-                <SyntaxHighlighter
-                  	language='json'
-                    style={dark}
-                    wrapLongLines={true}
-                    lineProps={{ style: { flexWrap: 'wrap', lineHeight: 1.5 } }} // Adjusted line height
-                  >
-                  	{dumpJSON(item, true)}
-                  </SyntaxHighlighter>
-              </Box>
+      //TODO wrap items in scrollview if > x lines
+      //<ScrollView maxHeight={150} borderColor="$muted200" borderWidth="$1"></ScrollView>
+      return (
+        <VStack space={'md'} sx={{ '@md': { flexDirection: 'row' } }}>
+          <SyntaxHighlighter
+            highlighter={'hljs'}
+            language="json"
+            style={syntaxTheme}
+            wrapLongLines={true}
+            lineProps={{ style: { flexWrap: 'wrap', lineHeight: 1.5 } }} // Adjusted line height
+            customStyle={{
+              backgroundColor: 'transparent'
+            }}
+          >
+            {dumpJSON(item, true)}
+          </SyntaxHighlighter>
+
+          <Tooltip label="Copy JSON">
+            <Button
+              action="primary"
+              variant="link"
+              size="xs"
+              display={item.msg ? 'none' : 'flex'}
+              onPress={() => copy(JSON.stringify(item))}
+              position="absolute"
+              sx={{
+                '@base': { right: '$0' },
+                '@md': {
+                  right: hexLines ? '$1/2' : '$0',
+                  marginRight: '$10'
+                }
+              }}
+            >
+              <ButtonIcon as={CopyIcon} ml="$1" />
+            </Button>
+          </Tooltip>
+
+          {hexLines ? (
+            <SyntaxHighlighter
+              language="brainfuck"
+              style={syntaxTheme}
+              customStyle={{
+                backgroundColor: 'transparent'
+              }}
+            >
+              {hexLines}
+            </SyntaxHighlighter>
+          ) : null}
+        </VStack>
+      )
     }
 
-    return <Text>{item.msg}</Text>
+    return <Text size="sm">{item.msg}</Text>
+  }
+
+  const SelectTopic = ({ options, selectedValue, onValueChange, ...props }) => {
+    return (
+      <Select
+        selectedValue={selectedValue}
+        selectedLabel={selectedValue}
+        onValueChange={onValueChange}
+      >
+        {options.map((value) => (
+          <Select.Item key={value} label={niceTopic(value)} value={value} />
+        ))}
+      </Select>
+    )
+
+    /*return (
+      <>
+        {options.map((topic, i) => (
+          <Button
+            key={`btn:${topic}:${filter[topic]}`}
+            size="xs"
+            action="primary"
+            variant={topic == selectedValue ? 'solid' : 'outline'}
+            rounded="xs"
+            mb="$0.5"
+            onPress={() => onValueChange(topic)}
+          >
+            <ButtonText>{niceTopic(topic)}</ButtonText>
+          </Button>
+        ))}
+      </>
+    )*/
   }
 
   //TODO support other containers
@@ -290,25 +353,16 @@ const LogList = (props) => {
           {total} items
         </Text>
 
-        <Tooltip
-          h={undefined}
-          placement="bottom"
-          trigger={(triggerProps) => (
-            <Button
-              ml="auto"
-              size="sm"
-              action="secondary"
-              variant="link"
-              {...triggerProps}
-              onPress={() => setShowForm(!showForm)}
-            >
-              <ButtonIcon as={showForm ? FilterXIcon : FilterIcon} />
-            </Button>
-          )}
-        >
-          <TooltipContent>
-            <TooltipText>Set filter for logs</TooltipText>
-          </TooltipContent>
+        <Tooltip label="Set filter for logs" ml="auto">
+          <Button
+            ml="auto"
+            size="sm"
+            action="secondary"
+            variant="link"
+            onPress={() => setShowForm(!showForm)}
+          >
+            <ButtonIcon as={showForm ? FilterXIcon : FilterIcon} />
+          </Button>
         </Tooltip>
       </HStack>
 
@@ -319,32 +373,21 @@ const LogList = (props) => {
         display={showForm ? 'flex' : 'none'}
         flexWrap="wrap"
       >
-        {Object.keys(filter).map((topic) => (
-          <Button
-            key={`btn:${topic}:${filter[topic]}`}
-            size="xs"
-            action="primary"
-            variant={filter[topic] ? 'solid' : 'outline'}
-            rounded="xs"
-            mb="$0.5"
-            onPress={() => handleTopicFilter(topic)}
-          >
-            <ButtonText>{niceTopic(topic)}</ButtonText>
-          </Button>
-        ))}
+        <SelectTopic
+          options={Object.keys(filter)}
+          selectedValue={Object.keys(filter).find((f) => filter[f])}
+          onValueChange={handleTopicFilter}
+        />
       </HStack>
       <FlatList
         flex={2}
         data={logs}
         estimatedItemSize={100}
         renderItem={({ item }) => (
-          <ListItem>
+          <ListItem alignItems="flex-start">
             <VStack space="sm" flex={1}>
               {prettyEvent(item)}
               <HStack space="sm">
-                {/*<Text color={'muted.500'} bold>
-                    {item.bucket}
-                  </Text>*/}
                 {getCurrentBucket() == 'log:api' && item.file && item.func ? (
                   <Link
                     color="$muted500"
@@ -358,18 +401,22 @@ const LogList = (props) => {
                 ) : null}
               </HStack>
             </VStack>
-            <VStack space="sm">
-              <Box alignItems="flex-end">
-                <Badge
-                  size="sm"
-                  action={levelToColor(item.level)}
-                  variant="outline"
-                >
-                  <BadgeText>{item.level || 'info'}</BadgeText>
-                </Badge>
-              </Box>
+            <VStack
+              space="sm"
+              alignItems="flex-end"
+              sx={{ '@base': { width: 80 }, '@md': { width: 'auto' } }}
+            >
+              <Text size="xs" textAlign="right">
+                {prettyDate(item.time)}
+              </Text>
 
-              <Text size="sm">{prettyDate(item.time)}</Text>
+              <Badge
+                size="md"
+                action={levelToColor(item.level)}
+                variant="outline"
+              >
+                <BadgeText>{item.level || 'info'}</BadgeText>
+              </Badge>
             </VStack>
           </ListItem>
         )}
