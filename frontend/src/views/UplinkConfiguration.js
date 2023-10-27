@@ -37,7 +37,8 @@ import {
   CheckboxLabel,
   CloseIcon,
   ButtonIcon,
-  ThreeDotsIcon
+  ThreeDotsIcon,
+  HStack
 } from '@gluestack-ui/themed'
 
 import { wifiAPI, api } from 'api'
@@ -664,6 +665,7 @@ const UplinkInfo = (props) => {
         links.push(entry)
       }
     }
+
     setUplinks(uplinks)
     setLinks(links)
   }
@@ -765,19 +767,13 @@ const UplinkInfo = (props) => {
           keyExtractor={(item) => `${item.Interface}_${item.Type}`}
           renderItem={({ item }) => (
             <ListItem>
-              <Text flex={1} fontWeight="bold">
+              <Text flex={1} bold>
                 {item.Interface}
               </Text>
-
-              <Text flex={1} size="sm">
-                {item.Type}
-              </Text>
-
-              {item.Subtype ? (
-                <Text flex={1} size="sm">
-                  {item.Subtype}
-                </Text>
-              ) : null}
+              <VStack flex={1} space="sm">
+                <Text size="sm">{item.Type}</Text>
+                <Text size="sm">{item.Subtype}</Text>
+              </VStack>
 
               <VStack flex={2} space={1}>
                 {item.IPs.map((ip, i) => (
@@ -786,16 +782,15 @@ const UplinkInfo = (props) => {
                   </Text>
                 ))}
               </VStack>
-              {item.Enabled ? (
-                <Badge
-                  size="sm"
-                  key={item.Name}
-                  action="success"
-                  variant="outline"
-                >
-                  <BadgeText>Enabled</BadgeText>
-                </Badge>
-              ) : null}
+
+              <HStack flex={1}>
+                {item.Enabled ? (
+                  <Badge size="sm" action="success" variant="outline">
+                    <BadgeText>Enabled</BadgeText>
+                  </Badge>
+                ) : null}
+              </HStack>
+
               <Box flex={1}>{moreMenu(item.Interface)}</Box>
             </ListItem>
           )}
@@ -806,21 +801,22 @@ const UplinkInfo = (props) => {
           keyExtractor={(item) => `${item.Interface}_${item.Type}`}
           renderItem={({ item }) => (
             <ListItem>
-              <Text flex={3} size="md" bold>
+              <Text flex={1} size="md" bold>
                 {item.Interface}
               </Text>
-              <Text flex={1} size="sm" color="$muted500">
+              <Text flex={1} size="sm">
                 {item.Type}
               </Text>
-              <VStack flex={2} space={1}>
+              <VStack flex={3} space="sm">
                 {truncateSupernetIps(item.IPs)
                   ? supernets.map((net) => <Text size="sm">{net}</Text>)
                   : item.IPs.map((ip) => (
-                      <Text size="sm" bold key={ip}>
+                      <Text size="sm" key={ip}>
                         {ip}
                       </Text>
                     ))}
               </VStack>
+
               <Box flex={1}>{moreMenu(item.Interface)}</Box>
             </ListItem>
           )}

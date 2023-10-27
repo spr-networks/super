@@ -20,6 +20,7 @@ import {
   FormControlLabel,
   FormControlLabelText,
   Heading,
+  HStack,
   Icon,
   Modal,
   ModalBackdrop,
@@ -308,91 +309,104 @@ const LANLinkInfo = (props) => {
 
   return (
     <ScrollView h="$full">
-      <ListHeader title="LAN Link Configuration"></ListHeader>
+      <VStack space="md">
+        <ListHeader title="LAN Link Configuration"></ListHeader>
 
-      <VStack space="md" p="$4">
-        <Text size="sm" color="$muted500">
-          Note: API support for multiple wired LAN interfaces is an upcoming
-          feature.
-        </Text>
-        <Text size="sm" color="$muted500">
-          For now, ensure the wired LAN is synchronized with the
-          config/base/config.sh LANIF entry.
-        </Text>
+        <VStack space="md" p="$4">
+          <Text size="sm" color="$muted500">
+            Note: API support for multiple wired LAN interfaces is an upcoming
+            feature.
+          </Text>
+          <Text size="sm" color="$muted500">
+            For now, ensure the wired LAN is synchronized with the
+            config/base/config.sh LANIF entry.
+          </Text>
+        </VStack>
+
+        <FlatList
+          data={lanLinks}
+          keyExtractor={(item) => `${item.Interface}_${item.Type}`}
+          renderItem={({ item }) => (
+            <ListItem>
+              <Text flex={1} size="md" bold>
+                {item.Interface}
+              </Text>
+              <VStack flex={1} space="sm">
+                <Text size="sm">{item.Type}</Text>
+                <Text size="sm" color="$muted500">
+                  {item.Subtype}
+                </Text>
+              </VStack>
+              <VStack flex={2} space="sm">
+                {truncateSupernetIps(item.IPs)
+                  ? supernets.map((net) => <Text size="sm">{net}</Text>)
+                  : item.IPs.map((ip) => (
+                      <Text size="sm" key={ip}>
+                        {ip}
+                      </Text>
+                    ))}
+              </VStack>
+              <HStack flex={1}>
+                {item.Enabled ? (
+                  <Badge action="success" variant="outline" size="sm">
+                    <BadgeText>Enabled</BadgeText>
+                  </Badge>
+                ) : null}
+              </HStack>
+              <Box flex={1}>{moreMenu(item.Interface)}</Box>
+            </ListItem>
+          )}
+        />
+
+        <FlatList
+          data={links}
+          keyExtractor={(item) => `${item.Interface}_${item.Type}`}
+          renderItem={({ item }) => (
+            <ListItem>
+              <Text flex={1} fontWeight="bold">
+                {item.Interface}
+              </Text>
+              <VStack flex={1} space="sm">
+                <Text size="sm">{item.Type}</Text>
+              </VStack>
+              <VStack flex={3} space="sm">
+                {truncateSupernetIps(item.IPs)
+                  ? supernets.map((net) => <Text size="sm">{net}</Text>)
+                  : item.IPs.map((ip) => (
+                      <Text size="sm" key={ip}>
+                        {ip}
+                      </Text>
+                    ))}
+              </VStack>
+              <Box flex={1}>{moreMenu(item.Interface)}</Box>
+            </ListItem>
+          )}
+        />
+
+        <Modal
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false)
+          }}
+        >
+          <ModalBackdrop />
+          <ModalContent>
+            <ModalHeader>
+              <Heading size="sm">
+                {iface ? `Configure ${iface}` : 'Configure interface'}
+              </Heading>
+              <ModalCloseButton>
+                <Icon as={CloseIcon} />
+              </ModalCloseButton>
+            </ModalHeader>
+            <ModalBody pb="$6">
+              {iface && modal == 'config' ? (
+                <LANLinkSetConfig iface={iface} onSubmit={onSubmit} />
+              ) : null}
+            </ModalBody>
+          </ModalContent>
+        </Modal>
       </VStack>
-
-      <FlatList
-        data={lanLinks}
-        keyExtractor={(item) => `${item.Interface}_${item.Type}`}
-        renderItem={({ item }) => (
-          <ListItem>
-            <Text flex={1} bold>
-              {item.Interface}
-            </Text>
-            <Text flex={1}>{item.Type}</Text>
-            <Text flex={1}>{item.Subtype}</Text>
-            <VStack flex={2} space={1}>
-              {truncateSupernetIps(item.IPs)
-                ? supernets.map((net) => <Text>{net}</Text>)
-                : item.IPs.map((ip) => <Text key={ip}>{ip}</Text>)}
-            </VStack>
-            {item.Enabled ? (
-              <Badge
-                key={item.Name}
-                action="success"
-                variant="outline"
-                size="sm"
-              >
-                <BadgeText>Enabled</BadgeText>
-              </Badge>
-            ) : null}
-            <Box flex={1}>{moreMenu(item.Interface)}</Box>
-          </ListItem>
-        )}
-      />
-
-      <FlatList
-        data={links}
-        keyExtractor={(item) => `${item.Interface}_${item.Type}`}
-        renderItem={({ item }) => (
-          <ListItem>
-            <Text flex={3} fontWeight="bold">
-              {item.Interface}
-            </Text>
-            <Text flex={1}>{item.Type}</Text>
-            <VStack flex={2} space={1}>
-              {truncateSupernetIps(item.IPs)
-                ? supernets.map((net) => <Text>{net}</Text>)
-                : item.IPs.map((ip) => <Text key={ip}>{ip}</Text>)}
-            </VStack>
-            <Box flex={1}>{moreMenu(item.Interface)}</Box>
-          </ListItem>
-        )}
-      />
-
-      <Modal
-        isOpen={showModal}
-        onClose={() => {
-          setShowModal(false)
-        }}
-      >
-        <ModalBackdrop />
-        <ModalContent>
-          <ModalHeader>
-            <Heading size="sm">
-              {iface ? `Configure ${iface}` : 'Configure interface'}
-            </Heading>
-            <ModalCloseButton>
-              <Icon as={CloseIcon} />
-            </ModalCloseButton>
-          </ModalHeader>
-          <ModalBody pb="$6">
-            {iface && modal == 'config' ? (
-              <LANLinkSetConfig iface={iface} onSubmit={onSubmit} />
-            ) : null}
-          </ModalBody>
-        </ModalContent>
-      </Modal>
     </ScrollView>
   )
 }
