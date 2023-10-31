@@ -26,7 +26,7 @@ export const config = {
       primary100: colors.blueGray100,
       primary200: colors.blueGray200,
       primary300: colors.blueGray300,
-      primary400: colors.blueGray700,
+      primary400: colors.blueGray400,
       primary500: colors.blueGray500,
       primary600: colors.blueGray600,
       primary700: colors.blueGray700,
