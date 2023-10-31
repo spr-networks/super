@@ -5,12 +5,17 @@ import {
   Text,
   Heading,
   ScrollView,
-  View
+  View,
+  GlobeIcon
 } from '@gluestack-ui/themed'
 
 import { groupAPI, deviceAPI, nfmapAPI } from 'api'
 import GroupListing from 'components/Groups/GroupListing'
 import { AlertContext } from 'layouts/Admin'
+
+import Accordion from 'components/Accordion'
+import { groupIcons } from 'components/IconItem'
+import { groupDescriptions } from 'api/Group'
 
 export default (props) => {
   const context = useContext(AlertContext)
@@ -72,12 +77,7 @@ export default (props) => {
       title: 'Header 1',
       data: { stuff: ['hello', 'hihi'] }
     },
-    {
-      title: 'Header 2',
-      data: { stuff: ['dada', 'data'] }
-    }
   ]
-
   return (
     <SectionList
       __sections={groups.map((group) => {
@@ -91,47 +91,17 @@ export default (props) => {
   )
   */
 
-  //<ScrollView sx={{ '@md': { h: '90vh' } }}>
-  return (
-    <View h="$full" sx={{ '@md': { h: '90vh' } }}>
-      {groups.map((group) => (
-        <GroupListing key={group.Name} group={group} />
-      ))}
-    </View>
-  )
-
-  /*
-  let data = [
-    {
-      title: 'Cyan',
-      data: ['$cyan100', '$cyan200', '$cyan300', '$cyan400', '$cyan500']
-    },
-    { title: 'Yellow', data: ['$yellow100', '$yellow200', '$yellow300'] }
-  ]
+  let items = groups.map((group) => ({
+    label: group.Name,
+    description: groupDescriptions[group.Name] || '',
+    icon: groupIcons[group.Name] || GlobeIcon,
+    renderItem: () => <GroupListing key={group.Name} group={group} />
+  }))
+  let open = ['wan']
 
   return (
-    <>
-      <SectionList
-        minWidth={300}
-        mb="$4"
-        sections={data}
-        keyExtractor={(item, index) => item + index}
-        renderItem={({ item }) => (
-          <Center py="$4" bg={item}>
-            <Text color="$black">
-              {typeof item === 'string' ? item.slice(-3) : ''}
-            </Text>
-          </Center>
-        )}
-        renderSectionHeader={({ section: { title } }) => (
-          <Center>
-            <Heading size="$xl" mt="$8" pb="$4">
-              {title}
-            </Heading>
-          </Center>
-        )}
-      />
-    </>
+    <ScrollView h="$full" sx={{ '@md': { h: '92vh' } }}>
+      <Accordion items={items} open={open} />
+    </ScrollView>
   )
-  */
 }

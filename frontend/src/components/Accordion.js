@@ -80,7 +80,7 @@ const Accordion = ({ items, ...props }) => {
   return (
     <VStack>
       {items.map((item) => (
-        <VStack>
+        <VStack key={`alist:${item.label}`}>
           <AccordionHeader
             key={`aitem.${item.label}`}
             title={item.label}
@@ -103,7 +103,7 @@ const Accordion = ({ items, ...props }) => {
 
 Accordion.propTypes = {
   items: PropTypes.array,
-  open: PropTypes.func
+  open: PropTypes.array
 }
 
 export default Accordion
