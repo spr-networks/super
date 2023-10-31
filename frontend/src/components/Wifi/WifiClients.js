@@ -157,7 +157,7 @@ const WifiClients = (props) => {
                 placement="bottom"
                 trigger={(triggerProps) => {
                   return (
-                    <Text {...triggerProps}>
+                    <Text size="sm" {...triggerProps}>
                       {getWifiSpeedString(item.TXRate)}
                     </Text>
                   )
@@ -169,10 +169,14 @@ const WifiClients = (props) => {
               </Tooltip>
             </HStack>
             <HStack space="sm" alignItems="center">
-              <Text color="$muted400">Signal</Text>
+              <Text color="$muted400" size="sm">
+                Signal
+              </Text>
               {prettySignal(item.Signal)}
             </HStack>
-            <Text flexWrap="nowrap">{item.Auth}</Text>
+            <Text flexWrap="nowrap" size="sm">
+              {item.Auth}
+            </Text>
           </VStack>
         </ListItem>
       )}

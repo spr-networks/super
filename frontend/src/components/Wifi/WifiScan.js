@@ -190,11 +190,11 @@ const WifiScan = (props) => {
             </VStack>
 
             <VStack
+              flex={1}
               sx={{
                 '@base': { display: 'none' },
-                '@md': { display: 'flex' }
+                '@md': { display: 'flex', flex: 2 }
               }}
-              flex={1}
               space="md"
               alignItems="flex-end"
             >
