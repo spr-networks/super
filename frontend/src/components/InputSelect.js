@@ -103,10 +103,10 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
 
     return (
       <MenuItem key={value} textValue={value}>
-        {item.icon ? (
+        {item.icon && typeof item.icon === 'string' ? (
           <IconItem name={item.icon} color={item.color} size={20} mr="$2" />
         ) : (
-          <Icon as={icon} mr="$2" />
+          <Icon as={item.icon || icon} mr="$2" />
         )}
         <MenuItemLabel size="xs">{item.label}</MenuItemLabel>
       </MenuItem>
