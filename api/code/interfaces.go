@@ -121,7 +121,7 @@ func resetInterface(interfaces []InterfaceConfig, name string, prev_type string,
 		if prev_subtype == "wifi" {
 			//wifi was disabled, notify it
 			insertWpaConfigAndSave(interfaces, WPAIface{})
-			restartPlugin("WIFI-UPLINK")
+			restartPlugin("WIFIUPLINK")
 		} else if prev_subtype == "pppup" {
 			//ppp was disabled, notify it
 			insertPPPConfigAndSave(interfaces, PPPIface{})
