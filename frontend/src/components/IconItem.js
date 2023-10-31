@@ -46,7 +46,7 @@ let deviceIcons = {
 let groupIcons = {
   wan: Globe2,
   dns: Globe,
-  lan: Network
+  lan: Cable //Network
 }
 
 const IconItem = ({ name, color, size: _size, ...props }) => {
@@ -78,3 +78,5 @@ const DeviceIcon = (name) => {
 }
 
 export default IconItem
+
+export { groupIcons, deviceIcons }
