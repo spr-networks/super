@@ -1,9 +1,8 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
+import PropTypes from 'prop-types'
 
 import { blockAPI } from 'api/DNS'
-import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
-import ModalForm from 'components/ModalForm'
 import { AlertContext } from 'layouts/Admin'
 import ModalConfirm from 'components/ModalConfirm'
 
@@ -12,7 +11,6 @@ import {
   BadgeIcon,
   Button,
   ButtonIcon,
-  Box,
   FlatList,
   HStack,
   Icon,
@@ -20,7 +18,6 @@ import {
   Text,
   VStack,
   BadgeText,
-  ButtonText,
   Menu,
   MenuItem,
   MenuItemLabel,
@@ -29,16 +26,10 @@ import {
   CloseIcon
 } from '@gluestack-ui/themed'
 
-import InputSelect from 'components/InputSelect'
-import ListHeader from 'components/List/ListHeader'
-import {
-  CircleIcon,
-  TagIcon,
-  ToggleLeftIcon,
-  ToggleRightIcon
-} from 'lucide-react-native'
+import { ListHeader, ListItem } from 'components/List'
+import { CircleIcon, TagIcon } from 'lucide-react-native'
 
-const DNSBlocklist = (props) => {
+const DNSBlocklist = ({ config, ...props }) => {
   const context = useContext(AlertContext)
 
   const [list, setList] = useState([])
@@ -49,7 +40,6 @@ const DNSBlocklist = (props) => {
   const [modalType, setModalType] = useState('')
   const [pendingItem, setPendingItem] = useState({})
   const [showURI, setShowURI] = useState(Platform.OS == 'web')
-  const [seconds, setSeconds] = useState('Weekly')
 
   let recommendedListDefault = [
     {
@@ -94,8 +84,6 @@ const DNSBlocklist = (props) => {
     }
   ]
 
-  let refAddBlocklistModal = React.createRef()
-
   const refreshMetrics = () => {
     blockAPI.metrics().then((metrics) => {
       setBlockedDomains(metrics.BlockedDomains)
@@ -104,25 +92,6 @@ const DNSBlocklist = (props) => {
 
   const refreshBlocklists = () => {
     let list = []
-
-    const optMap = {
-      Weekly: 24 * 7 * 60 * 60,
-      Daily: 24 * 60 * 60,
-      'Four Hours': 24 * 60 * 60 * 4,
-      Hourly: 60 * 60
-    }
-
-    blockAPI.config().then((config) => {
-      if (config != null) {
-        if (config.RefreshSeconds != 0) {
-          for (let opt of Object.keys(optMap)) {
-            if (optMap[opt] == config.RefreshSeconds) {
-              setSeconds(opt)
-            }
-          }
-        }
-      }
-    })
 
     blockAPI
       .blocklists()
@@ -160,7 +129,7 @@ const DNSBlocklist = (props) => {
 
   const handleItemSwitch = (item, value) => {
     item.Enabled = value
-    const list = list.map((_item) => {
+    const newList = list.map((_item) => {
       if (_item.URI == item.URI) {
         _item.Enabled = item.Enabled
       }
@@ -169,7 +138,7 @@ const DNSBlocklist = (props) => {
     })
 
     // only update the ui
-    setList(list)
+    setList(newList)
     setPending(true)
 
     blockAPI
@@ -222,11 +191,10 @@ const DNSBlocklist = (props) => {
     refreshMetrics()
   }, [])
 
-  const notifyChangeBlocklist = async () => {
-    notifyChange()
-    // close modal when added
-    refAddBlocklistModal.current()
-  }
+  // trigger update on prop change
+  useEffect(() => {
+    refreshBlocklists()
+  }, [config])
 
   const handleChangeTags = (item, tags) => {
     return handleTags(item, tags)
@@ -273,37 +241,6 @@ const DNSBlocklist = (props) => {
     setShowURI(!showURI)
   }
 
-  const onChangeText = (what, value) => {
-    if (what == 'seconds') {
-      setSeconds(value)
-    }
-  }
-
-  const submitRefresh = (value) => {
-    const optMap = {
-      Weekly: 24 * 7 * 60 * 60,
-      Daily: 24 * 60 * 60,
-      'Four Hours': 24 * 60 * 60 * 4,
-      Hourly: 60 * 60
-    }
-
-    blockAPI.setRefresh(optMap[value]).then(
-      () => {
-        context.success('Updated DNS Blocklist Refresh Frequency')
-      },
-      (e) => {
-        context.error('API Failure: ' + e.message)
-      }
-    )
-  }
-
-  const options = [
-    { label: 'Weekly', value: 'Weekly' },
-    { label: 'Daily', value: 'Daily' },
-    { label: 'Four Hours', value: 'Four Hours' },
-    { label: 'Hourly', value: 'Hourly' }
-  ] //[{ label: t, value: { Tag: t } }]
-
   const colorMode = useColorMode()
 
   /*
@@ -323,190 +260,142 @@ const DNSBlocklist = (props) => {
             : 'Update running...'
         }
       >
-        {!pending ? (
-          <ModalForm
-            title="Add DNS Blocklist"
-            triggerText="Add List"
-            triggerClass="pull-right"
-            modalRef={refAddBlocklistModal}
-          >
-            <DNSAddBlocklist notifyChange={notifyChangeBlocklist} />
-          </ModalForm>
-        ) : null}
+        {props.renderHeader ? props.renderHeader() : null}
       </ListHeader>
 
-      <VStack space="md" mb="$4">
-        <FlatList
-          data={[...list, ...recommendedList]}
-          renderItem={({ item }) => (
-            <Box
-              bg={
-                colorMode == 'light'
-                  ? '$backgroundCardLight'
-                  : '$backgroundCardDark'
-              }
-              borderBottomWidth={1}
-              borderColor={
-                colorMode == 'light'
-                  ? '$borderColorCardLight'
-                  : '$borderColorCardDark'
-              }
-              p="$4"
+      <FlatList
+        data={[...list, ...recommendedList]}
+        contentContainerStyle={{ paddingBottom: 64 }}
+        renderItem={({ item }) => (
+          <ListItem>
+            <VStack
+              w="$4/6"
+              _sx={{
+                '@md': { width: '$3/4' }
+              }}
+              onPress={toggleShowURI}
             >
-              <HStack
-                space="md"
-                justifyContent="space-between"
-                alignItems="center"
+              <Text size="sm" bold flexWrap="wrap">
+                {item.Info}
+              </Text>
+              <Text
+                size="sm"
+                color={
+                  isOnlyRecommended(item)
+                    ? '$muted500'
+                    : colorMode == 'light'
+                    ? '$black'
+                    : '$white'
+                }
+                isTruncated
               >
-                <VStack
-                  w="$4/6"
-                  _sx={{
-                    '@md': { width: '$3/4' }
-                  }}
-                  onPress={toggleShowURI}
-                >
-                  <Text size="sm" bold flexWrap="wrap">
-                    {item.Info}
-                  </Text>
-                  <Text
-                    size="sm"
-                    color={
-                      isOnlyRecommended(item)
-                        ? '$muted500'
-                        : colorMode == 'light'
-                        ? '$black'
-                        : '$white'
-                    }
-                    isTruncated
-                  >
-                    {niceURI(item.URI)}
-                  </Text>
-                </VStack>
+                {niceURI(item.URI)}
+              </Text>
+            </VStack>
 
-                <HStack
-                  flex={2}
-                  space="md"
-                  alignSelf="center"
-                  sx={{
-                    '@base': {
-                      flexDirection: 'column',
-                      alignItems: 'flex-end'
-                    },
-                    '@md': {
-                      flexDirection: 'row',
-                      alignItems: 'center'
-                    }
-                  }}
-                >
-                  {item.Enabled ? (
-                    <Badge size="sm" action="success" variant="outline">
-                      <BadgeText>Enabled</BadgeText>
+            <HStack
+              flex={2}
+              space="md"
+              alignSelf="center"
+              sx={{
+                '@base': {
+                  flexDirection: 'column',
+                  alignItems: 'flex-end'
+                },
+                '@md': {
+                  flexDirection: 'row',
+                  alignItems: 'center'
+                }
+              }}
+            >
+              {item.Enabled ? (
+                <Badge size="sm" action="success" variant="outline">
+                  <BadgeText>Enabled</BadgeText>
+                </Badge>
+              ) : null}
+
+              {item.Tags
+                ? item.Tags.map((entry) => (
+                    <Badge
+                      key={item.URI + entry}
+                      action="muted"
+                      variant="outline"
+                    >
+                      <BadgeText>{entry}</BadgeText>
+                      <BadgeIcon as={TagIcon} ml="$1" />
                     </Badge>
-                  ) : null}
+                  ))
+                : null}
+            </HStack>
 
-                  {item.Tags
-                    ? item.Tags.map((entry) => (
-                        <Badge
-                          key={item.URI + entry}
-                          action="muted"
-                          variant="outline"
-                        >
-                          <BadgeText>{entry}</BadgeText>
-                          <BadgeIcon as={TagIcon} ml="$1" />
-                        </Badge>
-                      ))
-                    : null}
-                </HStack>
+            <Menu
+              trigger={trigger}
+              selectionMode="single"
+              onSelectionChange={(e) => {
+                let key = e.currentKey
+                if (key == 'onoff') {
+                  handleItemSwitch(item, !item.Enabled)
+                } else if (key == 'deleteItem') {
+                  deleteListItem(item)
+                } else if (key == 'newTag') {
+                  setModalType('Tag')
+                  setPendingItem(item)
+                  setShowModal(true)
+                } else {
+                  let tags = item.Tags.filter((t) => t != key)
+                  handleChangeTags(item, tags)
+                }
+              }}
+            >
+              <MenuItem key="onoff" textValue="onoff">
+                <Icon as={item.Enabled ? CircleIcon : CircleIcon} mr="$2" />
+                <MenuItemLabel size="sm">
+                  {item.Enabled ? 'Disable' : 'Enable'}
+                </MenuItemLabel>
+              </MenuItem>
 
-                <Menu
-                  trigger={trigger}
-                  selectionMode="single"
-                  onSelectionChange={(e) => {
-                    let key = e.currentKey
-                    if (key == 'onoff') {
-                      handleItemSwitch(item, !item.Enabled)
-                    } else if (key == 'deleteItem') {
-                      deleteListItem(item)
-                    } else if (key == 'newTag') {
-                      setModalType('Tag')
-                      setPendingItem(item)
-                      setShowModal(true)
-                    } else {
-                      let tags = item.Tags.filter((t) => t != key)
-                      handleChangeTags(item, tags)
-                    }
-                  }}
-                >
-                  <MenuItem key="onoff" textValue="onoff">
-                    <Icon as={item.Enabled ? CircleIcon : CircleIcon} mr="$2" />
-                    <MenuItemLabel size="sm">
-                      {item.Enabled ? 'Disable' : 'Enable'}
-                    </MenuItemLabel>
+              <MenuItem
+                key="deleteItem"
+                textValue="deleteItem"
+                display={isOnlyRecommended(item) ? 'none' : 'flex'}
+              >
+                <CloseIcon color="$red700" mr="$2" />
+                <MenuItemLabel size="sm" color="$red700">
+                  Delete
+                </MenuItemLabel>
+              </MenuItem>
+
+              {[...new Set(defaultTags.concat(item.Tags ? item.Tags : []))].map(
+                (tag) => (
+                  <MenuItem key={tag} textValue={tag}>
+                    <CloseIcon mr="$2" />
+                    <MenuItemLabel size="sm">{tag}</MenuItemLabel>
                   </MenuItem>
+                )
+              )}
 
-                  <MenuItem
-                    key="deleteItem"
-                    textValue="deleteItem"
-                    display={isOnlyRecommended(item) ? 'none' : 'flex'}
-                  >
-                    <CloseIcon color="$red700" mr="$2" />
-                    <MenuItemLabel size="sm" color="$red700">
-                      Delete
-                    </MenuItemLabel>
-                  </MenuItem>
+              <MenuItem key="newTag" textValue="newTag">
+                <Icon as={TagIcon} mr="$2" />
+                <MenuItemLabel size="sm">New Tag...</MenuItemLabel>
+              </MenuItem>
+            </Menu>
+          </ListItem>
+        )}
+        keyExtractor={(item) => item.URI}
+      />
 
-                  {[
-                    ...new Set(defaultTags.concat(item.Tags ? item.Tags : []))
-                  ].map((tag) => (
-                    <MenuItem key={tag} textValue={tag}>
-                      <CloseIcon mr="$2" />
-                      <MenuItemLabel size="sm">{tag}</MenuItemLabel>
-                    </MenuItem>
-                  ))}
-
-                  <MenuItem key="newTag" textValue="newTag">
-                    <Icon as={TagIcon} mr="$2" />
-                    <MenuItemLabel size="sm">New Tag...</MenuItemLabel>
-                  </MenuItem>
-                </Menu>
-              </HStack>
-            </Box>
-          )}
-          keyExtractor={(item) => item.URI}
-        />
-
-        <Box
-          bg={
-            colorMode == 'light'
-              ? '$backgroundCardLight'
-              : '$backgroundCardDark'
-          }
-          p="$4"
-          w="$full"
-          sx={{ '@md': { width: '$1/2' } }}
-        >
-          <VStack space="md">
-            <Text bold>Refresh Frequency</Text>
-            <InputSelect
-              options={options}
-              value={seconds}
-              onChange={(v) => onChangeText('seconds', v)}
-              onChangeText={(v) => onChangeText('seconds', v)}
-            />
-            <Button action="primary" onPress={() => submitRefresh(seconds)}>
-              <ButtonText>Save</ButtonText>
-            </Button>
-          </VStack>
-        </Box>
-
-        <ModalConfirm
-          type={modalType}
-          onSubmit={(v) => handleSubmitNew(pendingItem, v)}
-          onClose={() => setShowModal(false)}
-          isOpen={showModal}
-        />
-      </VStack>
+      <ModalConfirm
+        type={modalType}
+        onSubmit={(v) => handleSubmitNew(pendingItem, v)}
+        onClose={() => setShowModal(false)}
+        isOpen={showModal}
+      />
     </>
   )
 }
+
+DNSBlocklist.propTypes = {
+  renderHeader: PropTypes.func
+}
+
 export default DNSBlocklist
