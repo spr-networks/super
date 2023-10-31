@@ -82,7 +82,7 @@ const InterfaceItem = React.memo(({ name, size, ...props }) => {
 
   let styles = {
     wifi: {
-      bg: { light: '$blueGray300', dark: '$blueGray700' },
+      bg: { light: '$blueGray200', dark: '$blueGray700' },
       fg: { light: '$muted600', dark: '$muted300' },
       icon: WifiIcon
     },
