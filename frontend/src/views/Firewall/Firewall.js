@@ -8,13 +8,9 @@ import BlockList from 'components/Firewall/BlockList'
 import ForwardBlockList from 'components/Firewall/ForwardBlockList'
 import MulticastPorts from 'components/Firewall/MulticastPorts'
 
-import { HStack, Icon, Pressable, Text } from '@gluestack-ui/themed'
 import {
-  ArrowDownUpIcon,
   ArrowRightFromLineIcon,
   BanIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
   SplitIcon,
   WaypointsIcon,
   CastIcon,
@@ -23,92 +19,7 @@ import {
   ArrowLeftToLineIcon
 } from 'lucide-react-native'
 
-//TODO accordion component
-const TabBar = ({ title, description, icon, isOpen, onPress, ...props }) => {
-  const [showDescription, setShowDescription] = useState(false)
-  return (
-    <Pressable
-      onPress={onPress}
-      onHoverIn={() => setShowDescription(true)}
-      onHoverOut={() => setShowDescription(false)}
-    >
-      <HStack
-        bg="$muted50"
-        borderColor="$muted200"
-        sx={{
-          _dark: {
-            bg: '$backgroundContentDark',
-            borderColor: '$borderColorCardDark'
-          }
-        }}
-        px="$4"
-        py="$6"
-        justifyContent="space-between"
-        borderBottomWidth="$1"
-      >
-        <HStack space="md" alignItems="center">
-          <Icon size="xl" color="$primary600" as={icon || ArrowDownUpIcon} />
-          <Text size="md">{title}</Text>
-          {description && showDescription ? (
-            <Text size="sm" color="$muted500">
-              {description}
-            </Text>
-          ) : null}
-        </HStack>
-        <Icon as={isOpen ? ChevronUpIcon : ChevronDownIcon} />
-      </HStack>
-    </Pressable>
-  )
-}
-
-const TabScene = ({ isOpen, ...props }) => {
-  return (
-    <VStack display={isOpen ? 'flex' : 'none'} pb="$4">
-      {props.renderItem ? (
-        props.renderItem()
-      ) : (
-        <Text bold>{props.title || 'title'}</Text>
-      )}
-    </VStack>
-  )
-}
-
-const Tabs = ({ items, ...props }) => {
-  const [open, setOpen] = useState(props.open || [])
-
-  const handlePress = (label) => {
-    if (open.includes(label)) {
-      setOpen(open.filter((l) => l != label))
-    } else {
-      setOpen([...open, label])
-    }
-  }
-
-  useEffect(() => {}, [])
-
-  return (
-    <VStack>
-      {items.map((item) => (
-        <VStack>
-          <TabBar
-            key={`tabbar.${item.label}`}
-            title={item.label}
-            description={item.description}
-            icon={item.icon}
-            isOpen={open.includes(item.label)}
-            onPress={() => handlePress(item.label)}
-          />
-          <TabScene
-            key={`tabscene.${item.label}`}
-            title={item.label}
-            renderItem={item.renderItem}
-            isOpen={open.includes(item.label)}
-          />
-        </VStack>
-      ))}
-    </VStack>
-  )
-}
+import { Accordion } from 'components/Accordion'
 
 const Firewall = (props) => {
   const [config, setConfig] = useState({})
@@ -202,7 +113,7 @@ const Firewall = (props) => {
   return (
     <ScrollView sx={{ '@md': { height: '90vh' } }}>
       <VStack space="lg">
-        <Tabs items={items} open={open} />
+        <Accordion items={items} open={open} />
         {/*
         <EndpointList list={config.Endpoints} notifyChange={fetchConfig} />
         <ForwardList list={config.ForwardingRules} notifyChange={fetchConfig} />
