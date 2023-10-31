@@ -79,7 +79,7 @@ const GroupListing = ({ group, ...props }) => {
         <ListHeader
           title={translateName(group.Name)}
           description={groupDescriptions[group.Name] || ''}
-        ></ListHeader>
+        />
       }
       data={list}
       estimatedItemSize={100}
