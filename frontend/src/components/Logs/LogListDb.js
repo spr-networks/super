@@ -246,9 +246,13 @@ const LogList = (props) => {
       //TODO wrap items in scrollview if > x lines
       //<ScrollView maxHeight={150} borderColor="$muted200" borderWidth="$1"></ScrollView>
       return (
-        <VStack space={'md'} sx={{ '@md': { flexDirection: 'row' } }}>
+        <VStack
+          space="md"
+          alignItems="flex-end"
+          sx={{ '@md': { flexDirection: 'row', alignItems: 'flex-start' } }}
+        >
           <SyntaxHighlighter
-            highlighter={'hljs'}
+            highlighter="hljs"
             language="json"
             style={syntaxTheme}
             wrapLongLines={true}
@@ -267,12 +271,13 @@ const LogList = (props) => {
               size="xs"
               display={item.msg ? 'none' : 'flex'}
               onPress={() => copy(JSON.stringify(item))}
-              position="absolute"
+              position="sticky"
               sx={{
-                '@base': { right: '$0' },
+                '@base': { right: '$0', marginTop: '-$10 ' },
                 '@md': {
                   right: hexLines ? '$1/2' : '$0',
-                  marginRight: '$10'
+                  marginRight: '$10',
+                  marginTop: '$0'
                 }
               }}
             >
@@ -305,6 +310,7 @@ const LogList = (props) => {
         selectedValue={selectedValue}
         selectedLabel={selectedValue}
         onValueChange={onValueChange}
+        minWidth="$32"
       >
         {options.map((value) => (
           <Select.Item key={value} label={niceTopic(value)} value={value} />
