@@ -12,6 +12,8 @@ import {
   ButtonText,
   Box,
   Fab,
+  FabIcon,
+  FabLabel,
   FlatList,
   HStack,
   VStack,
@@ -19,8 +21,6 @@ import {
   Text,
   View,
   AddIcon,
-  FabIcon,
-  FabLabel,
   ThreeDotsIcon,
   CloseIcon
 } from '@gluestack-ui/themed'
