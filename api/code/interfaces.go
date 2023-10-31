@@ -423,7 +423,7 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 		//reset with previous settings
 		resetInterface(interfaces, iconfig.Name, prev_type, prev_subtype, prev_enabled)
 
-		refreshDownlinks()
+		refreshDownlinksLocked()
 		return err
 	}
 
@@ -632,6 +632,11 @@ func refreshVLANTrunks() {
 func refreshDownlinks() {
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
+
+	refreshDownlinksLocked()
+}
+
+func refreshDownlinksLocked() {
 	interfaces := loadInterfacesConfigLocked()
 
 	//empty the wired lan interfaces list
@@ -652,6 +657,7 @@ func refreshDownlinks() {
 		}
 	}
 }
+
 
 /* Setting basic settings */
 func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
