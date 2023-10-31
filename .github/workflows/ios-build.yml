@@ -76,7 +76,7 @@ jobs:
         run: yarn setup:ios
 
       - name: Build iOS App
-        uses: yukiarrr/ios-build-action@v1.4.0
+        uses: yukiarrr/ios-build-action@v1.11.0
         with:
           project-path: frontend/ios/spr.xcodeproj
           p12-base64: ${{ secrets.IOS_P12_BASE64 }}
