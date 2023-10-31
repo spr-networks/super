@@ -143,6 +143,7 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
         </VStack>
 
         <Tooltip
+          h={undefined}
           placement="bottom"
           trigger={(triggerProps) => (
             <Text
@@ -163,6 +164,7 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
 
         <HStack space="md" ml="auto">
           <Tooltip
+            h={undefined}
             placement="bottom"
             trigger={(triggerProps) => (
               <Button
