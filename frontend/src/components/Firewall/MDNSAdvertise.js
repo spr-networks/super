@@ -13,7 +13,9 @@ import {
   VStack,
   Switch,
   Text,
-  HStack
+  HStack,
+  ButtonIcon,
+  CheckIcon
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
@@ -133,6 +135,7 @@ const MDNSAdvertise = (props) => {
             <HStack>
               <Button onPress={submitSettings}>
                 <ButtonText>Save Multicast settings</ButtonText>
+                <ButtonIcon as={CheckIcon} ml="$1" />
               </Button>
             </HStack>
           </VStack>

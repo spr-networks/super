@@ -38,9 +38,12 @@ const ModalForm = (props) => {
   })
 
   let triggerProps = {
-    size: 'xs',
+    size: 'sm',
     variant: 'solid',
     action: 'primary',
+    sx: {
+      '@md': { size: 'xs' }
+    },
     onPress: toggleModal
   }
 

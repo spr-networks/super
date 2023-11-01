@@ -98,7 +98,7 @@ const GroupListing = ({ group, ...props }) => {
             </Text>
           </VStack>
 
-          <HStack flex={1} justifyContent="flex-end">
+          <HStack justifyContent="flex-end">
             <InterfaceItem name={item?.ifname} />
           </HStack>
         </ListItem>

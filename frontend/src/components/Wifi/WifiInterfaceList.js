@@ -287,7 +287,12 @@ const WifiInterface = ({ iw, ...props }) => {
                             size="lg"
                           />
                           <Text w={100}>5GHz</Text>
-                          <Text color="$muted500" size="sm">
+                          <Text
+                            flex={1}
+                            color="$muted500"
+                            size="sm"
+                            flexWrap="wrap"
+                          >
                             Recommended for maximum speed
                           </Text>
                         </HStack>
@@ -311,7 +316,12 @@ const WifiInterface = ({ iw, ...props }) => {
                           />
 
                           <Text w={100}>WPA3/SAE</Text>
-                          <Text color="$muted500" size="sm">
+                          <Text
+                            flex={1}
+                            color="$muted500"
+                            size="sm"
+                            flexWrap="wrap"
+                          >
                             Recommended for better security
                           </Text>
                         </HStack>
@@ -331,7 +341,12 @@ const WifiInterface = ({ iw, ...props }) => {
                           />
 
                           <Text w={100}>AP/VLAN</Text>
-                          <Text color="$muted500" size="sm">
+                          <Text
+                            flex={1}
+                            color="$muted500"
+                            size="sm"
+                            flexWrap="wrap"
+                          >
                             Required to create virtual interfaces
                           </Text>
                         </HStack>

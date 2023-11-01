@@ -1,8 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import ModalForm from 'components/ModalForm'
-import DNSAddOverride from 'components/DNS/DNSAddOverride'
 import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 import { format as timeAgo } from 'timeago.js'
@@ -19,8 +17,9 @@ import {
 } from '@gluestack-ui/themed'
 
 import ListHeader from 'components/List/ListHeader'
+import { ListItem } from 'components/List'
 
-const DNSOverrideList = (props) => {
+const DNSOverrideList = ({ title, list, ...props }) => {
   const context = React.useContext(AlertContext)
 
   const deleteListItem = async (item) => {
@@ -34,113 +33,74 @@ const DNSOverrideList = (props) => {
       })
   }
 
-  let modalRef = React.useRef(null) //React.createRef()
-
-  const notifyChange = async () => {
-    if (props.notifyChange) {
-      await props.notifyChange('config')
-    }
-    // close modal when added
-    modalRef.current()
-  }
-
-  let overrideType = props.title.includes('Block') ? 'block' : 'permit'
-  let list = props.list
-
   return (
     <>
-      <ListHeader title={props.title} description="Set rules for DNS queries">
-        <ModalForm
-          title={'Add ' + props.title}
-          triggerText={'Add ' + props.title.split(' ')[0]}
-          modalRef={modalRef}
-        >
-          <DNSAddOverride type={overrideType} notifyChange={notifyChange} />
-        </ModalForm>
+      <ListHeader title={title} description="Set rules for DNS queries">
+        {props.renderHeader ? props.renderHeader() : null}
       </ListHeader>
 
-      <Box mb="$4">
-        {!list || !list.length ? (
-          <Text>{`No ${props.title.split(' ')[0]} rules configured`}</Text>
-        ) : null}
-        <FlatList
-          data={list}
-          renderItem={({ item }) => (
-            <Box
-              bg="$backgroundCardLight"
-              borderBottomWidth={1}
-              borderColor="$borderColorCardLight"
-              sx={{
-                _dark: {
-                  bg: '$backgroundCardDark',
-                  borderColor: '$borderColorCardDark'
-                }
-              }}
-              p="$4"
+      {!list || !list.length ? (
+        <Text>{`No ${title.split(' ')[0]} rules configured`}</Text>
+      ) : null}
+      <FlatList
+        data={list}
+        renderItem={({ item }) => (
+          <ListItem>
+            <VStack
+              sx={{ '@md': { flexDirection: 'row' } }}
+              justifyContent="space-evenly"
+              flex={1}
+              space="md"
             >
               <VStack
-                sx={{ '@base': { flexDirection: 'row' } }}
-                space="sm"
-                justifyContent="space-between"
-                alignItems="center"
+                flex={1}
+                space="md"
+                sx={{ '@md': { flexDirection: 'row' } }}
               >
-                <VStack
-                  sx={{ '@md': { flexDirection: 'row' } }}
-                  justifyContent="space-evenly"
-                  flex={1}
-                  space={'md'}
-                >
-                  <VStack
-                    flex={1}
-                    space="md"
-                    sx={{ '@md': { flexDirection: 'row' } }}
+                <Text bold>{item.Domain}</Text>
+                <HStack space={'md'}>
+                  <Text
+                    sx={{
+                      '@base': { display: 'none' },
+                      '@md': { display: 'flex' }
+                    }}
+                    color="$muted500"
                   >
-                    <Text bold>{item.Domain}</Text>
-                    <HStack space={'md'}>
-                      <Text
-                        sx={{
-                          '@base': { display: 'none' },
-                          '@md': { display: 'flex' }
-                        }}
-                        color="$muted500"
-                      >
-                        =
-                      </Text>
-                      <Text>{item.ResultIP || '0.0.0.0'}</Text>
-                    </HStack>
-                  </VStack>
-
-                  <VStack
-                    flex={1}
-                    space="md"
-                    sx={{ '@md': { flexDirection: 'row' } }}
-                    justifyContent="space-between"
-                  >
-                    <HStack space={'md'}>
-                      <Text color="$muted500">Client:</Text>
-                      <Text>{item.ClientIP}</Text>
-                    </HStack>
-
-                    <HStack space={'md'}>
-                      <Text color="$muted500">Expiration:</Text>
-                      <Text>
-                        {item.Expiration
-                          ? timeAgo(new Date(item.Expiration * 1e3))
-                          : 'Never'}
-                      </Text>
-                    </HStack>
-                  </VStack>
-                </VStack>
-
-                <Button variant="link" onPress={() => deleteListItem(item)}>
-                  <ButtonIcon as={CloseIcon} color="$red700" />
-                </Button>
+                    =
+                  </Text>
+                  <Text>{item.ResultIP || '0.0.0.0'}</Text>
+                </HStack>
               </VStack>
-            </Box>
-          )}
-          keyExtractor={(item) => item.Domain}
-        />
-      </Box>
+
+              <VStack
+                flex={1}
+                space="md"
+                sx={{ '@md': { flexDirection: 'row' } }}
+                justifyContent="space-between"
+              >
+                <HStack space={'md'}>
+                  <Text color="$muted500">Client:</Text>
+                  <Text>{item.ClientIP}</Text>
+                </HStack>
+
+                <HStack space={'md'}>
+                  <Text color="$muted500">Expiration:</Text>
+                  <Text>
+                    {item.Expiration
+                      ? timeAgo(new Date(item.Expiration * 1e3))
+                      : 'Never'}
+                  </Text>
+                </HStack>
+              </VStack>
+            </VStack>
+
+            <Button variant="link" onPress={() => deleteListItem(item)}>
+              <ButtonIcon as={CloseIcon} color="$red700" />
+            </Button>
+          </ListItem>
+        )}
+        keyExtractor={(item) => item.Domain}
+      />
     </>
   )
 }

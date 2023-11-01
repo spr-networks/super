@@ -107,7 +107,7 @@ export default class DNSAddOverride extends React.Component {
     blockAPI
       .putOverride(override)
       .then(() => {
-        this.props.notifyChange('override')
+        this.props.notifyChange(this.state.Type)
       })
       .catch((error) => {
         this.context.error('API Failure: ' + error.message)

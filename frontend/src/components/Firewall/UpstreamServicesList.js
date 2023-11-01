@@ -77,7 +77,10 @@ const UpstreamServicesList = (props) => {
           title="Add Port"
           triggerText="Add Port"
           triggerProps={{
-            display: { base: 'none', md: list.length ? 'flex' : 'none' }
+            sx: {
+              '@base': { display: 'none' },
+              '@md': { display: list.length ? 'flex' : 'flex' }
+            }
           }}
           modalRef={refModal}
         >
