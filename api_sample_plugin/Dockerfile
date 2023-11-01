@@ -18,7 +18,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
 
 FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends hostapd && rm -rf /var/lib/apt/lists/*
+#RUN apt-get update && apt-get install -y --no-install-recommends tcpdump && rm -rf /var/lib/apt/lists/*
 COPY scripts /scripts/
 COPY --from=builder /api_sample_plugin /
 ENTRYPOINT ["/scripts/startup.sh"]
