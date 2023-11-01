@@ -60,7 +60,7 @@ const AdminNavbar = ({
             : '$navbarBorderColorDark'
         }
         px="$3"
-        pt="$2"
+        pt="$3"
         h="$16"
         sx={{
           '@md': { px: '$4', pt: '$0' }
