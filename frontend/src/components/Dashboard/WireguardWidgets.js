@@ -8,12 +8,17 @@ const WireguardPeers = (props) => {
   const [numPeersActive, setNumPeersActive] = useState(0)
 
   useEffect(() => {
-    wireguardAPI.peers().then((peers) => {
-      setNumPeers(peers.length)
-      let ts = parseInt(new Date().getTime() / 1e3) - 60 * 2 // active within 2 min
-      let active = peers.filter((p) => p.LatestHandshake >= ts).length
-      setNumPeersActive(active)
-    })
+    wireguardAPI
+      .peers()
+      .then((peers) => {
+        setNumPeers(peers.length)
+        let ts = parseInt(new Date().getTime() / 1e3) - 60 * 2 // active within 2 min
+        let active = peers.filter((p) => p.LatestHandshake >= ts).length
+        setNumPeersActive(active)
+      })
+      .catch((err) => {
+        //disabled
+      })
   }, [])
 
   /*  textFooter={`Total ${numPeers} clients`}
@@ -35,12 +40,17 @@ const WireguardPeersActive = (props) => {
   const [numPeersActive, setNumPeersActive] = useState(0)
 
   useEffect(() => {
-    wireguardAPI.peers().then((peers) => {
-      setNumPeers(peers.length)
-      let ts = parseInt(new Date().getTime() / 1e3) - 60 * 2 // active within 2 min
-      let active = peers.filter((p) => p.LatestHandshake >= ts).length
-      setNumPeersActive(active)
-    })
+    wireguardAPI
+      .peers()
+      .then((peers) => {
+        setNumPeers(peers.length)
+        let ts = parseInt(new Date().getTime() / 1e3) - 60 * 2 // active within 2 min
+        let active = peers.filter((p) => p.LatestHandshake >= ts).length
+        setNumPeersActive(active)
+      })
+      .catch((err) => {
+        //disabled
+      })
   }, [])
 
   return (

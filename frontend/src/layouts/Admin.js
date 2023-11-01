@@ -209,6 +209,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const [isPlusDisabled, setIsPlusDisabled] = useState(true)
   const [isMeshNode, setIsMeshNode] = useState(false)
   const [version, setVersion] = useState('0.2.1')
+  const [features, setFeatures] = useState([])
 
   const [notificationSettings, setNotificationSettings] = useState([])
 
@@ -216,6 +217,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     api
       .features()
       .then((res) => {
+        setFeatures([...res])
         setIsWifiDisabled(!res.includes('wifi'))
 
         meshAPI
@@ -401,14 +403,12 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       value={{
         activeSidebarItem,
         setActiveSidebarItem,
-        setIsNavbarOpen,
         isNavbarOpen,
+        setIsNavbarOpen,
         isWifiDisabled,
         isPlusDisabled,
-        setIsWifiDisabled,
-        setIsPlusDisabled,
         isMeshNode,
-        setIsMeshNode
+        features
       }}
     >
       <VStack

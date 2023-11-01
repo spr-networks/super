@@ -23,9 +23,11 @@ import {
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
+import { AlertContext } from 'layouts/Admin'
 
 const Wireguard = (props) => {
-  const context = useContext(AppContext)
+  const appContext = useContext(AppContext)
+  const context = useContext(AlertContext)
 
   let [isUp, setIsUp] = useState(true)
   let [config, setConfig] = useState({})
@@ -60,11 +62,16 @@ const Wireguard = (props) => {
   useEffect(() => {
     getStatus()
 
-    wireguardAPI.getEndpoints().then((endpoints) => {
-      if (endpoints) {
-        setEndpoints(endpoints)
-      }
-    })
+    wireguardAPI
+      .getEndpoints()
+      .then((endpoints) => {
+        if (endpoints) {
+          setEndpoints(endpoints)
+        }
+      })
+      .catch((err) => {
+        context.error('Wireguard plugin is disabled')
+      })
   }, [])
 
   const addDomain = () => {
@@ -196,7 +203,7 @@ const Wireguard = (props) => {
 
       <PeerList defaultEndpoints={endpoints} />
 
-      {!context.isPlusDisabled ? <SiteVPN /> : null}
+      {!appContext.isPlusDisabled ? <SiteVPN /> : null}
     </ScrollView>
   )
 }

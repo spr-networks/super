@@ -29,13 +29,20 @@ const Home = (props) => {
   useEffect(() => {
     pluginAPI
       .list()
-      .then((plugins) =>
+      .then((plugins) => {
+        console.log(
+          'EP:',
+          plugins
+            .filter((p) => p.Enabled)
+            .map((p) => p.Name.replace(/-extension/, ''))
+        )
+
         setPluginsEnabled(
           plugins
             .filter((p) => p.Enabled)
             .map((p) => p.Name.replace(/-extension/, ''))
         )
-      )
+      })
       .catch((error) => error)
   }, [])
 
@@ -51,10 +58,19 @@ const Home = (props) => {
   let show = {
     dns: pluginsEnabled.includes('dns-block') && !context.isMeshNode,
     wifi: !context.isWifiDisabled,
-    vpn: context.isWifiDisabled,
-    vpnSide: !context.isWifiDisabled && !context.isMeshNode,
+    vpnInfo: context.isWifiDisabled && context.features.includes('wireguard'),
+    vpnSide:
+      !context.isWifiDisabled &&
+      !context.isMeshNode &&
+      pluginsEnabled.includes('wireguard'),
     traffic: !context.isMeshNode
   }
+
+  //NOTE wireguard listed as feature when not enabled
+  //features=dns,ppp,wifi,wireguard
+  let services = [...pluginsEnabled]
+  let featuresNoVPN = context.features.filter((f) => f != 'wireguard')
+  services = [...services, ...featuresNoVPN]
 
   return (
     <ScrollView sx={{ '@md': { h: '90vh' } }}>
@@ -70,7 +86,7 @@ const Home = (props) => {
         mb="$8"
       >
         <VStack space="md" sx={{ '@md': { flex: 2 } }}>
-          {show.vpn ? (
+          {show.vpnInfo ? (
             <>
               <WireguardPeers flex={1} />
               <WireguardPeersActive flex={1} />
@@ -99,7 +115,7 @@ const Home = (props) => {
         </VStack>
 
         <VStack flex={1} space="md">
-          <ServicesEnabled features={show} />
+          <ServicesEnabled features={services} />
           {show.dns ? (
             <VStack space="md">
               <DNSMetrics />
