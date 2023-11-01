@@ -73,8 +73,8 @@ const ClientSelect = (props) => {
             return {
               label: `${d.Name || d.RecentIP}`,
               value: cleanIp(d.RecentIP),
-              icon: d.Style?.Icon,
-              color: d.Style?.Color
+              icon: d.Style?.Icon || 'Laptop',
+              color: d.Style?.Color || 'blueGray'
             }
           })
 

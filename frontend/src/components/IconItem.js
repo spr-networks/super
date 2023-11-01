@@ -18,6 +18,7 @@ import {
   Globe,
   Globe2
 } from 'lucide-react-native'
+import { Platform } from 'react-native'
 
 let okBrands = [
   'Apple',
@@ -60,8 +61,13 @@ const IconItem = ({ name, color, size: _size, ...props }) => {
     return <Icon as={lucideIcons[name]} color={color} size={size} {...props} />
   }
 
-  if (!okBrands.includes(name)) {
+  if (!Object.keys(BrandIcons).includes(name)) {
     return <></>
+  }
+
+  //TODO fix
+  if (Platform.OS == 'ios') {
+    return <Icon as={Laptop2} color={color} size={size} {...props} />
   }
 
   return (
