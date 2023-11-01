@@ -16,12 +16,13 @@ import {
   VStack,
   Switch,
   Text,
-  View,
   CloseIcon,
   LinkText,
   Tooltip,
   TooltipContent,
-  TooltipText
+  TooltipText,
+  ScrollView,
+  Spinner
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
@@ -48,32 +49,33 @@ const PluginList = (props) => {
     setPlusList(plugins.filter((x) => x.Plus == true))
   }
 
-  //get each plugin version
-  const getVersion = async (plugins) => {
-    for (let i = 0; i < plugins.length; i++) {
-      let name = plugins[i].Name.toLowerCase()
-      if (name == 'dns-block-extension' || name == 'dns-log-extension') {
-        name = 'dns'
-      }
-
-      let ver = await api.version('super' + name).catch((err) => {
-        //this is noisy, we can disable for now
-        //alertState.error('failed to fetch plugin version ' + name)
-      })
-
-      plugins[i].Version = ver
+  const getPluginVersion = (plugin) => {
+    let name = plugin.Name.toLowerCase()
+    if (name.match(/^dns-(block|log)-extension$/)) {
+      name = 'dns'
     }
 
-    return plugins
+    return api.version(`super${name}`)
+  }
+
+  //get each plugin version
+  const fetchVersions = async (plugins) => {
+    let pluginsV = [...plugins]
+    for (let i = 0; i < pluginsV.length; i++) {
+      let v = await getPluginVersion(pluginsV[i]).catch((err) => {})
+      pluginsV[i].Version = v || ''
+      setList(pluginsV)
+    }
   }
 
   const refreshList = (next) => {
     pluginAPI
       .list()
-      .then(async function (plugins) {
-        plugins = await getVersion(plugins)
-
+      .then((plugins) => {
         setList(plugins)
+        fetchVersions(plugins)
+          .then((withVersion) => {})
+          .catch((err) => {})
       })
       .catch((err) => {
         alertState.error('failed to fetch plugins')
@@ -97,8 +99,7 @@ const PluginList = (props) => {
     plugin.Enabled = value
     pluginAPI
       .update(plugin)
-      .then(async (plugins) => {
-        plugins = await getVersion(plugins)
+      .then((plugins) => {
         setList(plugins)
       })
       .catch((err) => {
@@ -151,85 +152,90 @@ const PluginList = (props) => {
     }
   }
 
-  const renderItem = ({ item }) => {
-    return (
-      <ListItem>
-        <VStack space="sm">
-          <Tooltip
-            placement="top"
-            trigger={(triggerProps) => (
-              <Text bold {...triggerProps}>
-                {item.Name}
-              </Text>
-            )}
-          >
-            <TooltipContent>
-              <TooltipText>{`URI: ${item.URI}`}</TooltipText>
-            </TooltipContent>
-          </Tooltip>
-
-          <Badge
-            variant="outline"
-            action={item.Version ? 'success' : 'muted'}
-            alignSelf="flex-start"
-          >
-            <BadgeText>{item.Version || 'none'}</BadgeText>
-          </Badge>
-        </VStack>
-
-        <VStack
-          flex={1}
-          space="md"
-          sx={{
-            '@base': { display: 'none' },
-            '@md': { display: 'none' }
-          }}
+  const renderItem = ({ item }) => (
+    <ListItem>
+      <VStack space="sm">
+        <Tooltip
+          h={undefined}
+          placement="top"
+          trigger={(triggerProps) => (
+            <Text bold {...triggerProps}>
+              {item.Name}
+            </Text>
+          )}
         >
-          <Text size="sm" isTruncated>
-            {item.UnixPath}
-          </Text>
+          <TooltipContent>
+            <TooltipText>{`URI: ${item.URI}`}</TooltipText>
+          </TooltipContent>
+        </Tooltip>
 
-          {item.ComposeFilePath ? (
-            <HStack
-              space="sm"
-              sx={{
-                '@base': { display: 'none' },
-                '@base': { display: 'flex' }
-              }}
+        <HStack>
+          {item.Version === undefined ? (
+            <Spinner size="small" />
+          ) : (
+            <Badge
+              variant="outline"
+              action={item.Version ? 'success' : 'muted'}
+              alignSelf="flex-start"
             >
-              <Text size="sm" color="$muted500">
-                Compose Path
-              </Text>
-              <Text size="sm" isTruncated>
-                {item.ComposeFilePath}
-              </Text>
-            </HStack>
-          ) : null}
-        </VStack>
-
-        <HStack space="4xl">
-          <Box w="100" alignItems="center" alignSelf="center">
-            <Switch
-              value={item.Enabled}
-              onValueChange={() => handleChange(item, !item.Enabled)}
-            />
-          </Box>
-
-          <Button
-            alignSelf="center"
-            variant="link"
-            onPress={() => deleteListItem(item)}
-            ml="$8"
-          >
-            <ButtonIcon as={CloseIcon} color="$red700" />
-          </Button>
+              <BadgeText>{item.Version || 'none'}</BadgeText>
+            </Badge>
+          )}
         </HStack>
-      </ListItem>
-    )
-  }
+      </VStack>
+
+      <VStack
+        flex={1}
+        space="md"
+        sx={{
+          '@base': { display: 'none' },
+          '@md': { display: 'none' }
+        }}
+      >
+        <Text size="sm" isTruncated>
+          {item.UnixPath}
+        </Text>
+
+        {item.ComposeFilePath ? (
+          <HStack
+            space="sm"
+            sx={{
+              '@base': { display: 'none' },
+              '@base': { display: 'flex' }
+            }}
+          >
+            <Text size="sm" color="$muted500">
+              Compose Path
+            </Text>
+            <Text size="sm" isTruncated>
+              {item.ComposeFilePath}
+            </Text>
+          </HStack>
+        ) : null}
+      </VStack>
+
+      <HStack space="4xl">
+        <Box w="100" alignItems="center" alignSelf="center">
+          <Switch
+            value={item.Enabled}
+            onValueChange={() => handleChange(item, !item.Enabled)}
+          />
+        </Box>
+
+        <Button
+          alignSelf="center"
+          variant="link"
+          onPress={() => deleteListItem(item)}
+          ml="$8"
+        >
+          <ButtonIcon as={CloseIcon} color="$red700" />
+        </Button>
+      </HStack>
+    </ListItem>
+  )
 
   return (
-    <View h={'100%'}>
+    <ScrollView sx={{ '@md': { h: '92vh' } }}>
       <ListHeader title="Plugins" description="">
         <ModalForm
           title="Add a new Plugin"
@@ -244,7 +250,7 @@ const PluginList = (props) => {
         data={list}
         estimatedItemSize={100}
         renderItem={renderItem}
-        keyExtractor={(item) => item.Name}
+        keyExtractor={(item) => JSON.stringify(item)}
       />
 
       {activeToken !== '' ? (
@@ -295,7 +301,7 @@ const PluginList = (props) => {
           />
         </Input>
       </Box>
-    </View>
+    </ScrollView>
   )
 }
 
