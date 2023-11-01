@@ -13,7 +13,7 @@ on:
 jobs:
   ios-build:
     name: iOS Build
-    runs-on: macOS-13
+    runs-on: macOS-13-arm64
 #    defaults:
 #      run:
 #        working-directory: frontend
