@@ -30,13 +30,6 @@ const Home = (props) => {
     pluginAPI
       .list()
       .then((plugins) => {
-        console.log(
-          'EP:',
-          plugins
-            .filter((p) => p.Enabled)
-            .map((p) => p.Name.replace(/-extension/, ''))
-        )
-
         setPluginsEnabled(
           plugins
             .filter((p) => p.Enabled)
