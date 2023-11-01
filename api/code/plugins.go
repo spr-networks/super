@@ -585,6 +585,10 @@ func downloadPlusExtension(gitURL string) bool {
 }
 
 func startExtension(composeFilePath string) bool {
+	if composeFilePath == "" {
+		//no-op
+		return true
+	}
 	params := url.Values{}
 	params.Set("compose_file", composeFilePath)
 
@@ -654,7 +658,7 @@ func stopPlusExt(w http.ResponseWriter, r *http.Request) {
 	defer Configmtx.Unlock()
 
 	for _, entry := range config.Plugins {
-		if entry.Name == name && entry.ComposeFilePath != "" {
+		if entry.Name == name {
 			if !stopExtension(entry.ComposeFilePath) {
 				http.Error(w, "Failed to stop service", 400)
 				return
@@ -699,6 +703,13 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 }
 
 func stopExtension(composeFilePath string) bool {
+
+	if composeFilePath == "" {
+		//if theres no custom compose path,
+		// this is a built-in plugin in the superd compose file
+		// and this call to stop is a no-op
+		return true
+	}
 
 	params := url.Values{}
 	params.Set("compose_file", composeFilePath)
