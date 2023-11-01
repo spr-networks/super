@@ -38,7 +38,9 @@ import {
   CloseIcon,
   ButtonIcon,
   ThreeDotsIcon,
-  HStack
+  HStack,
+  BadgeIcon,
+  CheckCircleIcon
 } from '@gluestack-ui/themed'
 
 import { wifiAPI, api } from 'api'
@@ -302,43 +304,40 @@ const UplinkSetConfig = ({ iface, onSubmit, ...props }) => {
   ]
 
   return (
-    <VStack space="md">
+    <VStack space="lg">
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText>Update Interface</FormControlLabelText>
         </FormControlLabel>
-        <FormControl>
-          <Checkbox
-            value={enable}
-            defaultIsChecked
-            onChange={(value) => {
-              setEnable(value)
-            }}
-          >
-            <CheckboxIndicator mr="$2">
-              <CheckboxIcon />
-            </CheckboxIndicator>
-            <CheckboxLabel>Enabled</CheckboxLabel>
-          </Checkbox>
-        </FormControl>
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText>Set Interface Type</FormControlLabelText>
-          </FormControlLabel>
-          <Select
-            selectedValue={item.Type}
-            onValueChange={(Type) => setItem({ ...item, Type })}
-          >
-            {validTypes.map((opt) => (
-              <Select.Item
-                key={opt.value}
-                label={opt.label}
-                value={opt.value}
-              />
-            ))}
-          </Select>
-        </FormControl>
+
+        <Checkbox
+          value={enable}
+          defaultIsChecked
+          onChange={(value) => {
+            setEnable(value)
+          }}
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Enabled</CheckboxLabel>
+        </Checkbox>
       </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Set Interface Type</FormControlLabelText>
+        </FormControlLabel>
+        <Select
+          selectedValue={item.Type}
+          onValueChange={(Type) => setItem({ ...item, Type })}
+        >
+          {validTypes.map((opt) => (
+            <Select.Item key={opt.value} label={opt.label} value={opt.value} />
+          ))}
+        </Select>
+      </FormControl>
+
       <Button colorScheme="primary" onPress={() => doSubmit(item)}>
         <ButtonText>Save</ButtonText>
       </Button>
@@ -403,7 +402,7 @@ const UplinkSetIP = ({ iface, onSubmit, ...props }) => {
   useEffect(() => {}, [])
 
   return (
-    <VStack space="md">
+    <VStack space="lg">
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText>DHCP Settings</FormControlLabelText>
@@ -496,7 +495,7 @@ const UplinkAddPPP = ({ iface, onSubmit, ...props }) => {
   }, [])
 
   return (
-    <VStack space="md">
+    <VStack space="lg">
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText>Assign Client</FormControlLabelText>
@@ -770,9 +769,17 @@ const UplinkInfo = (props) => {
               <Text flex={1} size="sm" bold>
                 {item.Interface}
               </Text>
-              <VStack flex={1} space="sm">
+              <VStack flex={1} space="xs">
                 <Text size="sm">{item.Type}</Text>
-                <Text size="sm">{item.Subtype}</Text>
+                <Text
+                  size="sm"
+                  sx={{
+                    '@base': { display: 'none' },
+                    '@md': { display: 'flex' }
+                  }}
+                >
+                  {item.Subtype}
+                </Text>
               </VStack>
 
               <VStack flex={2} space={1}>
@@ -783,7 +790,7 @@ const UplinkInfo = (props) => {
                 ))}
               </VStack>
 
-              <HStack flex={1}>
+              <HStack>
                 {item.Enabled ? (
                   <Badge size="sm" action="success" variant="outline">
                     <BadgeText>Enabled</BadgeText>
