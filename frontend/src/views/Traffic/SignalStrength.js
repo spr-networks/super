@@ -61,6 +61,10 @@ export default (props) => {
     devices && devices[mac] ? devices[mac][field] : mac
 
   const processData = (signals, labels) => {
+    if (!signals) {
+      return
+    }
+
     let data = {
       labels: [],
       datasets: []
@@ -111,10 +115,6 @@ export default (props) => {
       .then(setDevices)
       .catch((err) => context.error('API failed to get devices', err))
   }, [])
-
-  if (!signals) {
-    return <></>
-  }
 
   const colorMode = useColorMode()
 
