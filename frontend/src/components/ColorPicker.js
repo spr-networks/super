@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 
 import { HStack, Pressable } from '@gluestack-ui/themed'
+import { Tooltip } from './Tooltip'
 
 export default ({ value, onChange, ...props }) => {
   const [selected, setSelected] = useState(null)
@@ -17,14 +18,14 @@ export default ({ value, onChange, ...props }) => {
 
   let colors = [
     'violet',
-    'fuchsia',
     'purple',
+    'fuchsia',
     'pink',
+    'red',
     'tertiary',
     'teal',
     'cyan',
     'blueGray',
-    'dark',
     'amber'
   ]
 
@@ -33,17 +34,19 @@ export default ({ value, onChange, ...props }) => {
   }
 
   return (
-    <HStack space="sm" w="$full" sx={{ '@md': { w: '$2/3' } }}>
+    <HStack space="md" w="$full" flexWrap="wrap">
       {colors.map((c) => (
-        <Pressable
-          flex={1}
-          bg={`$${c}400`}
-          opacity={value == c ? 1 : 0.25}
-          p="$4"
-          borderWidth={1}
-          borderColor="$muted500"
-          onPress={() => onPress(c)}
-        />
+        <Tooltip label={c}>
+          <Pressable
+            flex={1}
+            bg={`$${c}400`}
+            opacity={value == c ? 1 : 0.25}
+            sx={{ '@base': { p: '$7' }, '@md': { p: '$4' } }}
+            borderWidth={1}
+            borderColor="$muted500"
+            onPress={() => onPress(c)}
+          />
+        </Tooltip>
       ))}
     </HStack>
   )
