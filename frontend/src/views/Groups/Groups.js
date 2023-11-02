@@ -39,9 +39,7 @@ export default (props) => {
 
     for (let MAC in devices) {
       let device = devices[MAC]
-      for (const entry of device.Groups) {
-        members[entry].push(device)
-      }
+      device.Groups.map((g) => members[g].push(device))
     }
 
     for (let group of groups) {

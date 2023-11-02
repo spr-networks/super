@@ -18,6 +18,53 @@ import { ListHeader, ListItem } from 'components/List'
 import { CableIcon, WifiIcon } from 'lucide-react-native'
 import { InterfaceItem } from 'components/TagItem'
 
+const mapDeviceVMAP = (dev, group) => {
+  dev.ifname = ''
+  if (!group.vmap) {
+    return dev
+  }
+
+  //if the device was in the vmap, mark it as active
+  for (const entry of group.vmap) {
+    // NOTE not all maps have ether_addr so also match on ip
+    if (entry.ifname && entry.ether_addr == dev.MAC) {
+      dev.ifname = entry.ifname
+      if (dev.IP) {
+        continue
+      }
+
+      if (entry.ipv4_addr) {
+        dev.IP = entry.ipv4_addr
+      } else if (group.ipMap && group.ipMap[dev.MAC]) {
+        dev.IP = group.ipMap[dev.MAC].IP
+      }
+    } else if (
+      entry.ifname &&
+      entry.ipv4_addr &&
+      entry.ipv4_addr == dev.RecentIP
+    ) {
+      dev.ifname = entry.ifname
+      dev.IP = dev.IP || entry.ipv4_addr
+    }
+  }
+
+  return dev
+}
+
+const getGroupMembers = (group) => {
+  if (!group.Members?.length) {
+    return []
+  }
+
+  const list = group.Members.map((dev) => mapDeviceVMAP(dev, group))
+
+  //sort by ip asc, offline last
+  const iplp = (ip) => parseInt(ip?.split('.')[3] || 256)
+  return list.sort((a, b) => {
+    return parseInt(iplp(a.IP)) - parseInt(iplp(b.IP))
+  })
+}
+
 const GroupListing = ({ group, ...props }) => {
   const translateName = (name) => {
     if (name === 'dns') {
@@ -30,49 +77,7 @@ const GroupListing = ({ group, ...props }) => {
     return name
   }
 
-  const list = []
-  let idx = 0
-  if (group.Members?.length > 0) {
-    for (const dev of group.Members) {
-      //if the device was in the vmap, mark it as active
-      dev.ifname = ''
-      dev.key = idx++
-
-      if (group.vmap) {
-        for (const entry of group.vmap) {
-          // NOTE not all maps have ether_addr so also match on ip
-          if (entry.ifname && entry.ether_addr == dev.MAC) {
-            dev.ifname = entry.ifname
-
-            if (dev.IP) {
-              continue
-            }
-
-            if (entry.ipv4_addr) {
-              dev.IP = entry.ipv4_addr
-            } else if (group.ipMap && group.ipMap[dev.MAC]) {
-              dev.IP = group.ipMap[dev.MAC].IP
-            }
-          } else if (
-            entry.ifname &&
-            entry.ipv4_addr &&
-            entry.ipv4_addr == dev.RecentIP
-          ) {
-            dev.ifname = entry.ifname
-
-            if (dev.IP) {
-              continue
-            }
-
-            dev.IP = entry.ipv4_addr
-          }
-        }
-      }
-
-      list.push(dev)
-    }
-  }
-
+  const list = getGroupMembers(group)
   return (
     <FlatList
       ListHeaderComponent={
