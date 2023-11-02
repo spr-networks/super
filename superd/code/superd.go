@@ -733,6 +733,15 @@ func remote_container_tags(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(tagsResp)
 }
 
+func compose_paths(w http.ResponseWriter, r *http.Request) {
+	//NOTE: DO NOT add modification here. A user should have to
+	// be using console access to add paths, since docker containers
+	// represent privilege escalation
+	// That should not happen from the UI alone.
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ComposeAllowList)
+}
+
 func setup() {
 	hostSuperDir := getHostSuperDir()
 
@@ -787,6 +796,8 @@ func main() {
 
 	// get/set release channel
 	unix_plugin_router.HandleFunc("/release", release_info).Methods("GET", "PUT", "DELETE")
+
+	unix_plugin_router.HandleFunc("/compose_paths", compose_paths).Methods("GET")
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)
