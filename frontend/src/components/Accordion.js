@@ -75,7 +75,9 @@ const Accordion = ({ items, ...props }) => {
     }
   }
 
-  useEffect(() => {}, [])
+  useEffect(() => {
+    setOpen(props.open)
+  }, [props.open])
 
   return (
     <VStack>
