@@ -42,6 +42,8 @@ var ComposeAllowList = []string{"docker-compose.yml", "docker-compose-test.yml",
 	"ppp/docker-compose.yml",
 	"wifi_uplink/docker-compose.yml"}
 
+var CUSTOM_ALLOW_PATH = "configs/base/custom_compose_paths.json"
+
 var ReleaseChannelFile = "configs/base/release_channel"
 var ReleaseVersionFile = "configs/base/release_version"
 
@@ -742,6 +744,20 @@ func setup() {
 	os.Setenv("SUPERDIR", hostSuperDir)
 
 	establishConfigsIfEmpty("/super/")
+
+	//augment ComposeAllowList
+
+	data, err := ioutil.ReadFile(CUSTOM_ALLOW_PATH)
+	if err == nil {
+		newAllow := []string{}
+		err = json.Unmarshal(data, &newAllow)
+		if err != nil {
+			fmt.Println("Failed to load custom compose json", err)
+		} else {
+			ComposeAllowList = append(ComposeAllowList, newAllow...)
+		}
+	}
+
 }
 
 func main() {
