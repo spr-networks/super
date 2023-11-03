@@ -299,8 +299,6 @@ const WifiChannelParameters = ({
   let checkboxProps = disableWifi6 ? { isDisabled: true } : {}
   let wpa1CheckboxProps = disableExtraBSS ? { isDisabled: true } : {}
 
-  console.log('GHOON', config, iface)
-
   return (
     <>
       <HStack justifyContent="space-between" p="$4">

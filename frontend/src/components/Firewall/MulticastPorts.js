@@ -127,7 +127,6 @@ const MulticastPorts = (props) => {
         Multicast.setConfig(mcast)
           .then(() => {
             alertState.success('Updated tags')
-            console.log('upup')
             refreshList()
           })
           .catch((error) => {
