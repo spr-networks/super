@@ -1,31 +1,10 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import PropTypes from 'prop-types'
-import { Icon } from 'FontAwesomeUtils'
-import { faClock, faEllipsis } from '@fortawesome/free-solid-svg-icons'
 
 import { FlowCard } from './FlowCard'
 import { getCards } from './FlowCards'
 
-import {
-  Badge,
-  Box,
-  Button,
-  IconButton,
-  FlatList,
-  FormControl,
-  HStack,
-  VStack,
-  Input,
-  Menu,
-  Text,
-  useColorModeValue
-} from 'native-base'
-
-import  { Select } from 'components/Select'
-
-import { Pressable } from 'react-native'
-
-import { FlashList } from '@shopify/flash-list'
+import { FlatList, Pressable, VStack, Text } from '@gluestack-ui/themed'
 
 // TODO we should just list available flow cards for cardType here
 
@@ -38,14 +17,14 @@ const AddFlowCard = ({ cardType, onSubmit, ...props }) => {
   const cards = getCards(cardType)
 
   return (
-    <VStack space={2}>
+    <VStack space="md">
       <Text bold>Select a Card</Text>
       <FlatList
         data={cards}
         keyExtractor={(item) => item.title}
         renderItem={({ item }) => (
           <Pressable onPress={() => handleSelect(item)}>
-            <FlowCard edit={false} card={item} my={2} />
+            <FlowCard edit={false} card={item} my="$2" />
           </Pressable>
         )}
       />

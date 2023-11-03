@@ -311,7 +311,7 @@ func updateWpaSupplicantConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uplink_plugin := "WIFI-UPLINK"
+	uplink_plugin := "WIFIUPLINK"
 
 	started := false
 	if enabled {

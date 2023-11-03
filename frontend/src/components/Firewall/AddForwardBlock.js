@@ -6,18 +6,20 @@ import { firewallAPI } from 'api'
 import { AlertContext } from 'AppContext'
 
 import {
-  Box,
   Button,
-  Checkbox,
+  ButtonText,
   FormControl,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlLabel,
+  FormControlLabelText,
   Input,
-  Link,
-  Radio,
-  Stack,
+  InputField,
   HStack,
-  Spinner,
-  Text
-} from 'native-base'
+  VStack
+} from '@gluestack-ui/themed'
+
+import ProtocolRadio from 'components/Form/ProtocolRadio'
 
 class AddForwardBlockImpl extends React.Component {
   state = {
@@ -67,63 +69,69 @@ class AddForwardBlockImpl extends React.Component {
 
   render() {
     return (
-      <Stack space={4}>
-        <HStack space={4}>
-          <FormControl flex="1" isRequired>
-            <FormControl.Label>Source address</FormControl.Label>
-            <ClientSelect
-              name="SrcIP"
-              value={this.state.SrcIP}
-              onChangeText={(value) => this.handleChange('SrcIP', value)}
-              onChange={(value) => this.handleChange('SrcIP', value)}
-            />
-            <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
-          </FormControl>
-          <FormControl flex="1" isRequired>
-            <FormControl.Label>Destination address</FormControl.Label>
-            <ClientSelect
-              name="DstIP"
-              value={this.state.DstIP}
-              onSubmitEditing={(value) => this.handleChange('DstIP', value)}
-              onChangeText={(value) => this.handleChange('DstIP', value)}
-              onChange={(value) => this.handleChange('DstIP', value)}
-            />
-            <FormControl.HelperText>IP address or CIDR</FormControl.HelperText>
-          </FormControl>
-        </HStack>
-
-        <FormControl flex="1">
-          <FormControl.Label>DestinationPort</FormControl.Label>
-          <Input
-            size="md"
-            variant="underlined"
-            value={this.state.DstPort}
-            onChangeText={(value) => this.handleChange('DstPort', value)}
+      <VStack space="md">
+        <FormControl isRequired>
+          <FormControlLabel>
+            <FormControlLabelText>Source address</FormControlLabelText>
+          </FormControlLabel>
+          <ClientSelect
+            name="SrcIP"
+            value={this.state.SrcIP}
+            onChangeText={(value) => this.handleChange('SrcIP', value)}
+            onChange={(value) => this.handleChange('SrcIP', value)}
           />
-          <FormControl.HelperText>
-            Optional port or port range (leave empty for all ports)
-          </FormControl.HelperText>
+          <FormControlHelper>
+            <FormControlHelperText>IP address or CIDR</FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+        <FormControl isRequired>
+          <FormControlLabel>
+            <FormControlLabelText>Destination address</FormControlLabelText>
+          </FormControlLabel>
+          <ClientSelect
+            name="DstIP"
+            value={this.state.DstIP}
+            onSubmitEditing={(value) => this.handleChange('DstIP', value)}
+            onChangeText={(value) => this.handleChange('DstIP', value)}
+            onChange={(value) => this.handleChange('DstIP', value)}
+          />
+          <FormControlHelper>
+            <FormControlHelperText>IP address or CIDR</FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
         <FormControl>
-          <FormControl.Label>Protocol</FormControl.Label>
-          <Radio.Group
-            name="Protocol"
-            defaultValue={this.state.Protocol}
-            accessibilityLabel="Protocol"
-            onChange={(value) => this.handleChange('Protocol', value)}
-          >
-            <HStack space={2}>
-              <Radio value="tcp">tcp</Radio>
-              <Radio value="udp">udp</Radio>
-            </HStack>
-          </Radio.Group>
+          <FormControlLabel>
+            <FormControlLabelText>Destination Port</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              value={this.state.DstPort}
+              onChangeText={(value) => this.handleChange('DstPort', value)}
+            />
+          </Input>
+          <FormControlHelper>
+            <FormControlHelperText>
+              Optional port or port range (leave empty for all ports)
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
-        <Button color="primary" size="md" onPress={this.handleSubmit}>
-          Save
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Protocol</FormControlLabelText>
+          </FormControlLabel>
+
+          <ProtocolRadio
+            value={this.state.Protocol}
+            onChange={(value) => this.handleChange('Protocol', value)}
+          />
+        </FormControl>
+
+        <Button action="primary" size="md" onPress={this.handleSubmit}>
+          <ButtonText>Save</ButtonText>
         </Button>
-      </Stack>
+      </VStack>
     )
   }
 }

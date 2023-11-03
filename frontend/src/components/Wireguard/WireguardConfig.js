@@ -4,10 +4,19 @@ import Clipboard from '@react-native-clipboard/clipboard'
 import PropTypes from 'prop-types'
 import QRCode from 'react-qr-code'
 
-import Icon from 'FontAwesomeUtils'
-import { faClone, faFile } from '@fortawesome/free-solid-svg-icons'
+import {
+  Box,
+  Button,
+  ButtonIcon,
+  ButtonText,
+  HStack,
+  ScrollView,
+  Text,
+  VStack,
+  CopyIcon
+} from '@gluestack-ui/themed'
 
-import { Box, Button, HStack, ScrollView, Text, VStack } from 'native-base'
+import { FileIcon } from 'lucide-react-native'
 
 const WireguardConfig = (props) => {
   if (!props.config) {
@@ -80,44 +89,46 @@ const WireguardConfig = (props) => {
   }
 
   return (
-    <VStack space={4}>
+    <VStack space="md">
       <ScrollView
-        fontSize="xs"
         style={{ whiteSpace: 'pre-wrap' }}
         borderWidth={1}
-        borderColor="muted.200"
-        h="10vh"
-        p={2}
+        borderColor="$muted200"
+        sx={{
+          '@base': { height: '$1/2' },
+          '@md': { height: '$1/4' }
+        }}
+        p="$2"
       >
-        <Text fontSize="xs">{config}</Text>
+        <Text size="xs">{config}</Text>
       </ScrollView>
 
-      <HStack space={2} justifyContent="space-between">
+      <HStack space="md" justifyContent="space-between">
         <Button
           flex={1}
+          action="primary"
           variant="outline"
-          colorScheme="primary"
           size="sm"
-          leftIcon={<Icon icon={faClone} />}
           onPress={() => copy(config)}
           display={showClipboard ? 'flex' : 'none'}
         >
-          Copy
+          <ButtonText>Copy</ButtonText>
+          <ButtonIcon as={CopyIcon} ml="$1" />
         </Button>
 
         <Button
           flex={1}
+          action="primary"
           variant="outline"
-          colorScheme="primary"
           size="sm"
-          leftIcon={<Icon icon={faFile} />}
           onPress={() => saveFile(config)}
         >
-          Download
+          <ButtonText>Download</ButtonText>
+          <ButtonIcon as={FileIcon} ml="$1" />
         </Button>
       </HStack>
 
-      <Box bg="white" p={4} alignSelf="center">
+      <Box bg="white" p="$4" justifySelf="center">
         <QRCode value={config} />
       </Box>
     </VStack>

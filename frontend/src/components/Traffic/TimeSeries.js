@@ -1,10 +1,18 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 
 import DateRange from 'components/DateRange'
 import TimeSeriesChart from 'components/Traffic/TimeSeriesChart'
 
-import { Button, Box, Heading, Stack, useColorModeValue } from 'native-base'
+import {
+  Button,
+  ButtonText,
+  ButtonGroup,
+  Box,
+  HStack
+} from '@gluestack-ui/themed'
+
+import { ListHeader } from 'components/List'
 
 const TimeSeries = (props) => {
   const [filterIPs, setFilterIPs] = useState([])
@@ -34,57 +42,51 @@ const TimeSeries = (props) => {
   }
 
   return (
-    <Box
-      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-      __rounded={{ base: 'none', md: 'md' }}
-      width="100%"
-      p={4}
-    >
-      <Stack
-        direction={{ base: 'column', md: 'row' }}
-        space="2"
-        justifyContent="space-between"
-      >
-        <Heading fontSize="md">{props.title || props.type}</Heading>
-
-        <Stack
-          direction={{ base: 'column', md: 'row' }}
-          space={2}
-          alignItems="center"
-        >
-          <Button.Group size="xs" isAttached colorScheme="primary">
+    <>
+      <ListHeader title={props.title || props.type}>
+        <HStack space="md">
+          <ButtonGroup size="xs" isAttached colorScheme="primary">
             <Button
               onPress={(e) => handleChartMode('percent')}
               variant={chartMode !== 'percent' ? 'outline' : 'solid'}
             >
-              Percent
+              <ButtonText>Percent</ButtonText>
             </Button>
             <Button
               onPress={(e) => handleChartMode('data')}
               variant={chartMode !== 'data' ? 'outline' : 'solid'}
             >
-              Data
+              <ButtonText>Data</ButtonText>
             </Button>
-          </Button.Group>
+          </ButtonGroup>
 
-          <Button.Group size="sm">
+          <ButtonGroup size="sm">
             <DateRange
               colorScheme="primary"
               defaultValue={offset}
               onChange={handleChangeTime}
             />
-          </Button.Group>
-        </Stack>
-      </Stack>
+          </ButtonGroup>
+        </HStack>
+      </ListHeader>
 
-      <TimeSeriesChart
-        type={props.type}
-        title={props.title}
-        data={props.data}
-        mode={chartMode}
-        onClick={handleClickClient}
-      />
-    </Box>
+      <Box
+        bg="$backgroundCardLight"
+        sx={{
+          _dark: { bg: '$backgroundCardDark' }
+        }}
+        p="$4"
+        mb="$4"
+      >
+        <TimeSeriesChart
+          type={props.type}
+          title={props.title}
+          data={props.data}
+          mode={chartMode}
+          onClick={handleClickClient}
+        />
+      </Box>
+    </>
   )
 }
 

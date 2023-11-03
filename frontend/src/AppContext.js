@@ -8,9 +8,7 @@ export const AppContext = createContext({
   isWifiDisabled: false,
   isPlusDisabled: true,
   isMeshNode: false,
-  setIsWifiDisabled: (value) => {},
-  setIsPlusDisabled: (value) => {},
-  setIsMeshNode: (value) => {}
+  features: []
 })
 
 export const alertState = {

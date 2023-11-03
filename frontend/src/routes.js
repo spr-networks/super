@@ -39,54 +39,52 @@ import SpeedTest from 'views/SpeedTest'
 import Supernetworks from 'views/Supernetworks'
 
 import {
-  faArrowCircleUp,
-  faBan,
-  faBarChart,
-  faBell,
-  faChartColumn,
-  faDiagramProject,
-  faCircleNodes,
-  faCogs,
-  faEthernet,
-  faFire,
-  faFireAlt,
-  faGauge,
-  faGlobe,
-  faHammer,
-  faHome,
-  faLaptop,
-  faLineChart,
-  faList,
-  faListAlt,
-  faNetworkWired,
-  faObjectGroup,
-  faPuzzlePiece,
-  faRandom,
-  faSignal,
-  faSitemap,
-  faTags,
-  faThList,
-  faUnlockAlt,
-  faUser,
-  faWaveSquare,
-  faWifi
-} from '@fortawesome/free-solid-svg-icons'
-/*TODO WireguardIcon: {
-icon: (5) [576, 512, Array(3), 'f012', 'M544 0c-17.67 0-32 14.33-32 31.1V480C512 497.7 526…-14.33 32-31.1V223.1C320 206.3 305.7 192 288 192z']
-iconName: "signal"
-prefix: "fas"}*/
+  ActivityIcon,
+  ArrowUpCircleIcon,
+  BanIcon,
+  BarChart3Icon,
+  BarChartHorizontalIcon,
+  BellIcon,
+  CableIcon,
+  EyeIcon,
+  FlameIcon,
+  GaugeIcon,
+  GlobeIcon,
+  HammerIcon,
+  HomeIcon,
+  KeyIcon,
+  LaptopIcon,
+  LineChartIcon,
+  ListTreeIcon,
+  PuzzleIcon,
+  ScanSearchIcon,
+  SeparatorVerticalIcon,
+  Settings2Icon,
+  SettingsIcon,
+  ShuffleIcon,
+  SignalIcon,
+  Table2Icon,
+  TableIcon,
+  TagsIcon,
+  TargetIcon,
+  UsersIcon,
+  WaypointsIcon,
+  WifiIcon
+} from 'lucide-react-native'
+
+//import { BrandIcons } from 'IconUtils'
 
 const routes = [
   {
     path: 'home',
     name: 'Home',
-    icon: faHome,
+    icon: HomeIcon,
     component: Home,
     layout: 'admin'
   },
   {
     name: 'Devices',
-    icon: faLaptop,
+    icon: LaptopIcon,
     path: 'devices',
     component: Devices,
     layout: 'admin'
@@ -113,7 +111,7 @@ const routes = [
   {
     path: 'wireless',
     name: 'Wifi',
-    icon: faWifi,
+    icon: WifiIcon,
     wifi: true,
     component: WirelessConfiguration,
     layout: 'admin'
@@ -121,21 +119,21 @@ const routes = [
   {
     path: 'uplink',
     name: 'Uplink',
-    icon: faGlobe,
+    icon: GlobeIcon,
     component: UplinkConfiguration,
     layout: 'admin'
   },
   {
     path: 'lanlink',
     name: 'LAN',
-    icon: faEthernet,
+    icon: CableIcon,
     component: LANLinkConfiguration,
     layout: 'admin'
   },
   {
     path: 'mesh',
     name: 'MESH',
-    icon: faSitemap,
+    icon: TargetIcon,
     component: Mesh,
     layout: 'admin',
     plus: true
@@ -143,34 +141,34 @@ const routes = [
   {
     path: 'wireguard',
     name: 'VPN',
-    icon: faCircleNodes,
+    icon: WaypointsIcon,
     component: Wireguard,
     layout: 'admin'
   },
 
   {
     name: 'Firewall',
-    icon: faFire,
+    icon: FlameIcon,
     state: 'firewallCollapse',
     views: [
       {
         path: 'firewall',
         name: 'Firewall',
-        icon: faFireAlt,
+        icon: FlameIcon,
         component: Firewall,
         layout: 'admin'
       },
       {
         path: 'firewallSettings',
         name: 'Services',
-        icon: faCogs,
+        icon: Settings2Icon,
         component: FirewallSettings,
         layout: 'admin'
       },
       {
         path: 'pfw',
         name: 'PFW',
-        icon: faFire,
+        icon: FlameIcon,
         component: PFW,
         layout: 'admin',
         plus: true
@@ -178,10 +176,10 @@ const routes = [
       {
         path: 'supernets',
         name: 'Supernetworks',
-        icon: faDiagramProject,
+        icon: SeparatorVerticalIcon,
         component: Supernetworks,
         layout: 'admin'
-      },
+      }
     ]
   },
   {
@@ -191,57 +189,56 @@ const routes = [
       {
         path: 'dnsBlock',
         name: 'Blocklists/Ad-Block',
-        icon: faBan,
+        icon: BanIcon,
         component: DNSBlock,
         layout: 'admin'
       },
       {
         path: 'dnsOverride',
         name: 'DNS Overrides',
-        icon: faRandom,
+        icon: ShuffleIcon,
         component: DNSOverride,
         layout: 'admin'
       },
       {
         path: 'dnsLog/:ips/:text',
         name: 'DNS Log',
-        icon: faThList,
+        icon: ListTreeIcon,
         component: DNSLog,
         layout: 'admin'
       },
       {
         path: 'dnsLogEdit',
         name: 'DNS Log Settings',
-        icon: faCogs,
+        icon: SettingsIcon,
         component: DNSLogEdit,
         layout: 'admin'
       },
       {
         path: 'dyndns',
         name: 'Dynamic DNS',
-        icon: faArrowCircleUp,
+        icon: ArrowUpCircleIcon,
         component: DynDns,
         layout: 'admin'
       },
       {
         path: 'dns',
         name: 'DNS Settings',
-        icon: faHammer,
+        icon: HammerIcon,
         component: CoreDns,
         layout: 'admin'
       }
-
     ]
   },
   {
     name: 'Traffic',
-    icon: faLineChart,
+    icon: LineChartIcon,
     state: 'trafficCollapse',
     views: [
       {
         path: 'traffic',
         name: 'Bandwidth Summary',
-        icon: faLineChart,
+        icon: LineChartIcon,
         component: Traffic,
         layout: 'admin',
         hidden: Platform.OS == 'ios'
@@ -249,7 +246,7 @@ const routes = [
       {
         path: 'timeseries',
         name: 'Bandwidth Timeseries',
-        icon: faChartColumn,
+        icon: BarChart3Icon,
         component: TrafficTimeSeries,
         layout: 'admin',
         hidden: Platform.OS == 'ios'
@@ -257,14 +254,14 @@ const routes = [
       {
         path: 'signal/strength',
         name: 'Signal Strength',
-        icon: faSignal,
+        icon: SignalIcon,
         component: SignalStrength,
         layout: 'admin'
       },
       {
         path: 'trafficlist',
         name: 'Traffic',
-        icon: faBarChart,
+        icon: BarChartHorizontalIcon,
         component: TrafficList,
         layout: 'admin'
       }
@@ -277,21 +274,21 @@ const routes = [
       {
         path: 'events',
         name: 'Events',
-        icon: faList,
+        icon: EyeIcon,
         component: Events,
         layout: 'admin'
       },
       {
         path: 'logs/:containers',
         name: 'Logs',
-        icon: faListAlt,
+        icon: ScanSearchIcon,
         component: Logs,
         layout: 'admin'
       },
       {
         path: 'notifications',
         name: 'Notifications',
-        icon: faBell,
+        icon: BellIcon,
         component: Notifications,
         layout: 'admin'
       }
@@ -304,49 +301,49 @@ const routes = [
       {
         path: 'info',
         name: 'System Info',
-        icon: faWaveSquare,
+        icon: ActivityIcon,
         component: SystemInfo,
         layout: 'admin'
       },
       {
         path: 'plugins',
         name: 'Plugins',
-        icon: faPuzzlePiece,
+        icon: PuzzleIcon,
         component: Plugins,
         layout: 'admin'
       },
       {
         path: 'auth/',
         name: 'Auth',
-        icon: faUser,
+        icon: KeyIcon,
         component: AuthSettings,
         layout: 'admin'
       },
       {
         path: 'dhcp',
         name: 'DHCP Table',
-        icon: faNetworkWired,
+        icon: TableIcon,
         component: Dhcp,
         layout: 'admin'
       },
       {
         path: 'arp',
         name: 'ARP Table',
-        icon: faEthernet,
+        icon: Table2Icon,
         component: Arp,
         layout: 'admin'
       },
       {
         path: 'groups',
         name: 'Groups',
-        icon: faObjectGroup,
+        icon: UsersIcon,
         component: Groups,
         layout: 'admin'
       },
       {
         path: 'tags',
         name: 'Tags',
-        icon: faTags,
+        icon: TagsIcon,
         component: Tags,
         layout: 'admin'
       },
@@ -354,7 +351,7 @@ const routes = [
       {
         path: 'speedtest',
         name: 'Speed Test',
-        icon: faGauge,
+        icon: GaugeIcon,
         component: SpeedTest,
         layout: 'admin'
       }

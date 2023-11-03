@@ -1,43 +1,52 @@
 import React, { useContext, useState, useEffect } from 'react'
 import {
+  AddIcon,
   Box,
   Button,
-  Container,
-  Form,
-  Heading,
+  ButtonIcon,
+  ButtonText,
+  FlatList,
   HStack,
-  IconButton,
   Input,
+  InputField,
   Text,
-  View,
   VStack,
-  useColorModeValue
-} from 'native-base'
-import { Icon } from 'FontAwesomeUtils'
+  TrashIcon,
+  CloseIcon
+} from '@gluestack-ui/themed'
+
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
-import { faCirclePlus, faTrash } from '@fortawesome/free-solid-svg-icons'
+
+import { ListHeader, ListItem } from 'components/List'
 
 const Supernetworks = (props) => {
   const context = useContext(AlertContext)
   const [tinyNets, setTinyNets] = useState([])
   const [leaseTime, setLeaseTime] = useState('')
+  const [isUnsaved, setIsUnsaved] = useState(false)
 
-  useEffect(() => {
+  const fetchConfig = () => {
     api.get('/subnetConfig').then((config) => {
       setTinyNets(config.TinyNets)
       setLeaseTime(config.LeaseTime)
+      setIsUnsaved(false)
     })
+  }
+
+  useEffect(() => {
+    fetchConfig()
   }, [])
 
-  const handleUpdate = () => {
+  const handleUpdate = (_tinyNets) => {
     api
       .put('/subnetConfig', {
-        TinyNets: tinyNets,
+        TinyNets: _tinyNets || tinyNets,
         LeaseTime: leaseTime
       })
       .then(() => {
-        context.success("Updated supernetworks")
+        context.success('Updated supernetworks')
+        fetchConfig()
       })
       .catch((err) => context.error('' + err))
   }
@@ -46,86 +55,98 @@ const Supernetworks = (props) => {
     setTinyNets([...tinyNets, ''])
   }
 
-  const removeTinyNet = (index) => {
-    setTinyNets(tinyNets.filter((_, i) => i !== index))
+  const deleteListItem = (index) => {
+    const newTinyNets = tinyNets.filter((_, i) => i !== index)
+    setTinyNets(newTinyNets)
+    handleUpdate(newTinyNets)
   }
 
   const updateTinyNet = (text, index) => {
     const newTinyNets = [...tinyNets]
     newTinyNets[index] = text
     setTinyNets(newTinyNets)
+    setIsUnsaved(true)
   }
 
-  return (
-    <VStack justifyContent="space-between">
-      <HStack p={4}>
-        <Heading fontSize="md">Supernetworks</Heading>
-      </HStack>
-      {tinyNets.map((tinyNet, index) => (
-        <HStack
-          key={index}
-          space={4}
-          alignItems="center"
-          justifyContent="space-between"
-          p={4}
-          py={8}
-          bg="white"
-          borderBottomColor="borderColorCardLight"
-          _dark={{
-            bg: 'blueGray.700',
-            borderBottomColor: 'borderColorCardDark'
-          }}
-          borderBottomWidth={1}
-        >
-          <Input
-            flex={1}
-            variant="underlined"
-            value={tinyNet}
-            onChangeText={(text) => updateTinyNet(text, index)}
-          />
+  const list = tinyNets
 
-          <IconButton
-            _variant="solid"
-            size="sm"
-            colorScheme="danger"
-            onPress={() => removeTinyNet(index)}
-            icon={<Icon icon={faTrash} />}
-          />
-        </HStack>
-      ))}
-      <Button
-        variant={useColorModeValue('subtle', 'solid')}
-        colorScheme="primary"
-        leftIcon={<Icon icon={faCirclePlus} />}
-        onPress={addTinyNet}
-      >
-        <Text>Add Supernetwork</Text>
-      </Button>
-      <HStack
-        space={4}
-        mt={4}
-        alignItems="center"
-        p={4}
-        py={8}
-        bg="white"
-        _dark={{ bg: 'blueGray.700' }}
-      >
-        <Text>Lease Time</Text>
-        <Input
-          flex={1}
-          variant="underlined"
-          value={leaseTime}
-          onChangeText={(text) => setLeaseTime(text)}
-        />
-      </HStack>
-      <Button
-        size="md"
-        variant="solid"
-        colorScheme={'primary'}
-        onPress={handleUpdate}
-      >
-        Save Settings
-      </Button>
+  return (
+    <VStack sx={{ '@md': { w: '$3/4' } }}>
+      <ListHeader title="Supernetworks"></ListHeader>
+
+      <FlatList
+        data={list}
+        renderItem={({ item, index }) => (
+          <ListItem>
+            <Input flex={1} variant="outline">
+              <InputField
+                value={item}
+                onChangeText={(text) => updateTinyNet(text, index)}
+                onSubmitEditing={() => handleUpdate()}
+              />
+            </Input>
+            <HStack ml="auto" space="xl">
+              <Button
+                action="negative"
+                variant="link"
+                alignSelf="center"
+                onPress={() => deleteListItem(index)}
+              >
+                <ButtonIcon as={CloseIcon} color="$red700" />
+              </Button>
+            </HStack>
+          </ListItem>
+        )}
+        keyExtractor={(item) => `${item.Address}`}
+      />
+
+      {/**/}
+      <VStack space="xl">
+        <Box flex="$1">
+          <Button
+            action="primary"
+            variant="solid"
+            rounded="$none"
+            onPress={addTinyNet}
+          >
+            <ButtonText>Add Supernetwork</ButtonText>
+            <ButtonIcon as={AddIcon} ml="$1" />
+          </Button>
+        </Box>
+
+        <Box flex="$1">
+          <HStack
+            space="md"
+            alignItems="center"
+            p="$4"
+            py="$8"
+            bg="white"
+            sx={{ _dark: { bg: '$blueGray700' } }}
+          >
+            <Text>Lease Time</Text>
+            <Input flex={1} variant="underlined">
+              <InputField
+                value={leaseTime}
+                onChangeText={(text) => {
+                  setLeaseTime(text)
+                  setIsUnsaved(true)
+                }}
+              />
+            </Input>
+          </HStack>
+          <Button
+            action="primary"
+            variant="solid"
+            rounded="$none"
+            onPress={handleUpdate}
+            isDisabled={!isUnsaved}
+          >
+            <ButtonText>
+              {isUnsaved ? 'Save unsaved changes' : 'Save'}
+            </ButtonText>
+          </Button>
+        </Box>
+      </VStack>
     </VStack>
   )
 }

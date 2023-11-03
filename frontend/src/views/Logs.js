@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { View } from 'native-base'
+import { View } from '@gluestack-ui/themed'
 
 import LogList from 'components/Logs/LogList'
 import LogListDb from 'components/Logs/LogListDb'

@@ -1,8 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Button, Menu } from 'native-base'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faCalendar } from '@fortawesome/free-solid-svg-icons'
+import { Button, ButtonIcon, ButtonText } from '@gluestack-ui/themed'
+
+import { Menu, MenuItem, MenuItemLabel } from '@gluestack-ui/themed'
+
+import { CalendarIcon } from 'lucide-react-native'
 
 const DateRange = (props) => {
   const scales = [
@@ -18,36 +20,31 @@ const DateRange = (props) => {
 
   const trigger = (triggerProps) => {
     return (
-      <Button
-        variant="ghost"
-        leftIcon={<Icon icon={faCalendar} />}
-        {...triggerProps}
-        colorScheme={colorScheme}
-      >
-        {title}
+      <Button variant="link" {...triggerProps} colorScheme={colorScheme}>
+        <ButtonText>{title}</ButtonText>
+        <ButtonIcon as={CalendarIcon} ml="$1" />
       </Button>
     )
   }
 
-  const handleChange = (value) => {
+  const handleChange = (e) => {
+    let value = e.currentKey
     if (props.onChange) {
       props.onChange(value)
     }
   }
 
   return (
-    <Menu w="190" trigger={trigger} onChangeValue={handleChange}>
-      <Menu.OptionGroup defaultValue={defaultValue} title="Select Date Range">
-        {scales.map((scale) => (
-          <Menu.ItemOption
-            key={scale.value}
-            value={scale.value}
-            onPress={(e) => handleChange(scale.value)}
-          >
-            {scale.label}
-          </Menu.ItemOption>
-        ))}
-      </Menu.OptionGroup>
+    <Menu
+      trigger={trigger}
+      selectionMode="single"
+      onSelectionChange={handleChange}
+    >
+      {scales.map((scale) => (
+        <MenuItem key={scale.value} textValue={scale.value}>
+          <MenuItemLabel size="sm">{scale.label}</MenuItemLabel>
+        </MenuItem>
+      ))}
     </Menu>
   )
 }

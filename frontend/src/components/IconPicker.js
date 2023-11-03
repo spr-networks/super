@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react'
 
-import { HStack, Pressable } from 'native-base'
+import { HStack, Pressable } from '@gluestack-ui/themed'
 
 import IconItem from './IconItem'
+import { Platform } from 'react-native'
+import { Tooltip } from './Tooltip'
 
 const IconPicker = ({ value, color, onChange, ...props }) => {
   const [selected, setSelected] = useState(null)
@@ -32,17 +34,23 @@ const IconPicker = ({ value, color, onChange, ...props }) => {
     'Sonos'
   ]
 
-  let faIcons = [
+  let lucideIcons = [
     'Desktop',
     'Ethernet',
     'Laptop',
     'Mobile',
+    'Router',
+    'Tablet',
+    'Tv',
     'Video',
-    'Wif',
+    'Wifi',
     'Wire'
   ]
 
-  icons = [...faIcons, ...okBrands]
+  icons = [...lucideIcons]
+  if (Platform.OS == 'web') {
+    icons = [...lucideIcons, ...okBrands]
+  }
 
   return (
     <HStack
@@ -50,18 +58,25 @@ const IconPicker = ({ value, color, onChange, ...props }) => {
       justifyContent={{ base: 'space-between', md: 'flex-start' }}
     >
       {icons.map((name) => (
-        <Pressable
-          onPress={() => setSelected(name)}
-          p={2}
-          px={{ base: 1, md: 2 }}
-          opacity={selected == name ? 1 : 0.5}
-        >
-          <IconItem
-            name={name}
-            color={selected == name && color ? `${color}.400` : 'blueGray.500'}
-            size={10}
-          />
-        </Pressable>
+        <Tooltip label={name}>
+          <Pressable
+            onPress={() => setSelected(name)}
+            p="$2"
+            sx={{
+              '@base': { px: '$1' },
+              '@md': { px: '$2' }
+            }}
+            opacity={selected == name ? 1 : 0.5}
+          >
+            <IconItem
+              name={name}
+              color={
+                selected == name && color ? `$${color}400` : '$blueGray500'
+              }
+              size={48}
+            />
+          </Pressable>
+        </Tooltip>
       ))}
     </HStack>
   )

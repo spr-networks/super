@@ -4,9 +4,21 @@ import { wifiAPI, deviceAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import { prettySignal } from 'utils'
 
-import { Box, Stack, HStack, Text, Tooltip, useColorModeValue } from 'native-base'
+import {
+  Box,
+  FlatList,
+  HStack,
+  VStack,
+  Text,
+  Tooltip,
+  TooltipContent,
+  TooltipText
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+import { ListItem } from 'components/List'
+import { InterfaceItem } from 'components/TagItem'
+
+//import { FlashList } from '@shopify/flash-list'
 
 const WifiClients = (props) => {
   const [clients, setClients] = useState([])
@@ -80,9 +92,9 @@ const WifiClients = (props) => {
   const getWifiSpeedString = (txrate) => {
     if (txrate.includes(' he')) {
       return '802.11ax'
-    } else if (txrate.includes( 'vht')) {
+    } else if (txrate.includes('vht')) {
       return '802.11ac'
-    } else if (txrate.includes( 'ht')) {
+    } else if (txrate.includes('ht')) {
       return '802.11n'
     } else {
       return '802.11a/b/g'
@@ -102,65 +114,71 @@ const WifiClients = (props) => {
   }, [])
 
   return (
-    <FlashList
+    <FlatList
       data={clients}
       estimatedItemSize={100}
       renderItem={({ item }) => (
-        <Box
-          bg="backgroundCardLight"
-          borderBottomWidth={1}
-          _dark={{
-            bg: 'backgroundCardDark',
-            borderColor: 'borderColorCardDark'
-          }}
-          borderColor="borderColorCardLight"
-          p={4}
-        >
-          <HStack space={2} justifyContent="space-between">
-            <Text flex="1" bold alignSelf="center">
-              {item.Name}
+        <ListItem>
+          <Text flex={1} bold alignSelf="center">
+            {item.Name}
+          </Text>
+
+          <Box
+            flex={1}
+            sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
+            alignItems="center"
+          >
+            <InterfaceItem name={item.Iface} />
+          </Box>
+
+          <VStack
+            flex={2}
+            space="sm"
+            justifyContent="center"
+            sx={{ '@md': { flexDirection: 'row' } }}
+          >
+            <Text size="sm" bold>
+              {item.RecentIP}
             </Text>
+            <Text size="sm" color="$muted500">
+              {item.MAC}
+            </Text>
+          </VStack>
 
-            <Stack
-              flex="1"
-              display={{ base: 'none', md: 'block' }}
-              direction={{ base: 'column', md: 'row' }}
-              space={1}
-              alignItems="center"
-            >
-              <Text>{item.Iface}</Text>
-            </Stack>
-
-            <Stack
-              flex="2"
-              direction={{ base: 'column', md: 'row' }}
-              space={2}
-              justifyContent="center"
-            >
-              <Text bold>{item.RecentIP}</Text>
-              <Text color="muted.500">{item.MAC}</Text>
-            </Stack>
-
-            <Stack
-              direction={{ base: 'column', md: 'row' }}
-              space={2}
-              alignSelf="center"
-              marginLeft="auto"
-              flex={2}
-            >
-              <HStack space={1} alignItems="center">
-                <Tooltip label={item.TXRate}>
-                  <Text>{getWifiSpeedString(item.TXRate)}</Text>
-                </Tooltip>
-              </HStack>
-              <HStack space={1} alignItems="center">
-                <Text color="muted.400">Signal</Text>
-                {prettySignal(item.Signal)}
-              </HStack>
-              <Text flexWrap="nowrap">{item.Auth}</Text>
-            </Stack>
-          </HStack>
-        </Box>
+          <VStack
+            flex={2}
+            space="md"
+            alignItems="flex-end"
+            sx={{ '@md': { flexDirection: 'row' } }}
+          >
+            <HStack space="sm" alignItems="center">
+              <Tooltip
+                h={undefined}
+                placement="bottom"
+                trigger={(triggerProps) => {
+                  return (
+                    <Text size="sm" {...triggerProps}>
+                      {getWifiSpeedString(item.TXRate)}
+                    </Text>
+                  )
+                }}
+              >
+                <TooltipContent>
+                  <TooltipText>{item.TXRate}</TooltipText>
+                </TooltipContent>
+              </Tooltip>
+            </HStack>
+            <HStack space="sm" alignItems="center">
+              <Text color="$muted400" size="sm">
+                Signal
+              </Text>
+              {prettySignal(item.Signal)}
+            </HStack>
+            <Text flexWrap="nowrap" size="sm">
+              {item.Auth}
+            </Text>
+          </VStack>
+        </ListItem>
       )}
       keyExtractor={(item) => item.Name}
     />

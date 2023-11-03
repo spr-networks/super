@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { Select } from 'components/Select'
 import { groupAPI, deviceAPI, firewallAPI } from 'api'
 import InputSelect from './InputSelect'
+import { GlobeIcon } from 'lucide-react-native'
 
 const ClientSelect = (props) => {
   const [devOpts, setDevOpts] = useState(null)
@@ -36,7 +37,7 @@ const ClientSelect = (props) => {
     return groupAPI.list().then((groups) => {
       let options = groups.map((g) => g.Name)
       options = options.map((value) => {
-        return { label: value, value: { Group: value } }
+        return { label: value, value: { Group: value }, icon: value }
       })
 
       setGroupOpts({
@@ -71,7 +72,9 @@ const ClientSelect = (props) => {
           .map((d) => {
             return {
               label: `${d.Name || d.RecentIP}`,
-              value: cleanIp(d.RecentIP)
+              value: cleanIp(d.RecentIP),
+              icon: d.Style?.Icon || 'Laptop',
+              color: d.Style?.Color || 'blueGray'
             }
           })
 
@@ -108,7 +111,11 @@ const ClientSelect = (props) => {
   //if only select one client & cant specify: use select (example dns logs)
   if (props.isDisabled && !props.isMultiple) {
     return (
-      <Select selectedValue={props.value} onValueChange={props.onChange}>
+      <Select
+        placeholder="Select Client"
+        selectedValue={props.value}
+        onValueChange={props.onChange}
+      >
         {devOpts?.options?.map((o) => (
           <Select.Item key={o.value} label={o.label} value={o.value} />
         ))}

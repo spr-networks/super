@@ -1,26 +1,22 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import InputSelect from 'components/InputSelect'
 
-import WireguardConfig from './WireguardConfig'
 import { AlertContext } from 'layouts/Admin'
-import ClientSelect from 'components/ClientSelect'
 import { wireguardAPI, pfwAPI } from 'api'
 
 import {
-  Box,
   Button,
-  Checkbox,
+  ButtonText,
   FormControl,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlLabel,
+  FormControlLabelText,
   Input,
-  InputRightElement,
-  Link,
-  Stack,
+  InputField,
   HStack,
-  Spinner,
-  Text,
   VStack
-} from 'native-base'
+} from '@gluestack-ui/themed'
 
 export default class WireguardAddSite extends React.Component {
   state = {
@@ -77,40 +73,53 @@ export default class WireguardAddSite extends React.Component {
 
   render() {
     return (
-      <VStack space={4}>
+      <VStack space="md">
         <FormControl>
-          <FormControl.Label>Remote Endpoint</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Remote Endpoint</FormControlLabelText>
+          </FormControlLabel>
 
-          <Input
-            size="md"
-            variant="underlined"
-            value={this.state.Endpoint}
-            onChangeText={(value) => this.handleChange('Endpoint', value)}
-          />
+          <Input size="md" variant="underlined">
+            <InputField
+              value={this.state.Endpoint}
+              onChangeText={(value) => this.handleChange('Endpoint', value)}
+            />
+          </Input>
 
-          <FormControl.HelperText>
-            The remote wireguard VPN address and port, "1.2.3.4:51820"
-          </FormControl.HelperText>
+          <FormControlHelper>
+            <FormControlHelperText>
+              The remote wireguard VPN address and port, "1.2.3.4:51820"
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
         <FormControl>
-          <FormControl.Label>Remote Peer's PublicKey</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Remote Peer's PublicKey</FormControlLabelText>
+          </FormControlLabel>
 
-          <Input
-            variant="underlined"
-            placeholder="base64 pubkey"
-            value={this.state.PeerPublicKey}
-            onChangeText={(value) => this.handleChange('PeerPublicKey', value)}
-            autoFocus
-          />
+          <Input variant="underlined">
+            <InputField
+              placeholder="base64 pubkey"
+              value={this.state.PeerPublicKey}
+              onChangeText={(value) =>
+                this.handleChange('PeerPublicKey', value)
+              }
+              autoFocus
+            />
+          </Input>
 
-          <FormControl.HelperText>
-            The Public Key for the Remote Endpoint
-          </FormControl.HelperText>
+          <FormControlHelper>
+            <FormControlHelperText>
+              The Public Key for the Remote Endpoint
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
         <FormControl>
-          <FormControl.Label>Interface Address</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Interface Address</FormControlLabelText>
+          </FormControlLabel>
 
           <Input
             size="md"
@@ -119,63 +128,81 @@ export default class WireguardAddSite extends React.Component {
             onChangeText={(value) => this.handleChange('Address', value)}
           />
 
-          <FormControl.HelperText>
-            The local interface address
-          </FormControl.HelperText>
+          <FormControlHelper>
+            <FormControlHelperText>
+              The local interface address
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
         <FormControl>
-          <FormControl.Label>PresharedKey</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>PresharedKey</FormControlLabelText>
+          </FormControlLabel>
 
-          <Input
-            variant="underlined"
-            placeholder="base64 pubkey"
-            value={this.state.PresharedKey}
-            onChangeText={(value) => this.handleChange('PresharedKey', value)}
-            autoFocus
-          />
+          <Input variant="underlined">
+            <InputField
+              placeholder="base64 pubkey"
+              value={this.state.PresharedKey}
+              onChangeText={(value) => this.handleChange('PresharedKey', value)}
+              autoFocus
+            />
+          </Input>
 
-          <FormControl.HelperText>
-            Leave empty if no PresharedKey is configured
-          </FormControl.HelperText>
+          <FormControlHelper>
+            <FormControlHelperText>
+              Leave empty if no PresharedKey is configured
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
         <FormControl>
-          <FormControl.Label>PrivateKey</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>PrivateKey</FormControlLabelText>
+          </FormControlLabel>
 
           <HStack>
-            <Input
-              variant="underlined"
-              placeholder="base64 pubkey"
-              value={this.state.PrivateKey}
-              onChangeText={(value) => this.handleChange('PrivateKey', value)}
-              autoFocus
-              flex={1}
-            />
+            <Input size="sm" variant="underlined" flex={1}>
+              <InputField
+                placeholder="base64 pubkey"
+                value={this.state.PrivateKey}
+                onChangeText={(value) => this.handleChange('PrivateKey', value)}
+                autoFocus
+              />
+            </Input>
 
             <Button
-              rounded="none"
-              h="full"
+              size="sm"
+              rounded="$none"
               variant="solid"
-              colorScheme="muted"
+              action="secondary"
               onPress={this.handleClickGenerate}
             >
-              Generate
+              <ButtonText>Generate</ButtonText>
             </Button>
           </HStack>
-          <FormControl.HelperText>
-            Local Site's Private Key
-          </FormControl.HelperText>
-
-          <FormControl.Label>Public Key:</FormControl.Label>
-          <FormControl.HelperText>
-            {' '}
-            {this.state.PublicKey}{' '}
-          </FormControl.HelperText>
+          <FormControlHelper>
+            <FormControlHelperText>
+              Local Site's Private Key
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
-        <Button colorScheme="primary" onPress={this.handleSubmit}>
-          Save
+        {this.state.PublicKey ? (
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Public Key</FormControlLabelText>
+            </FormControlLabel>
+            <FormControlHelper>
+              <FormControlHelperText size="xs">
+                {this.state.PublicKey}
+              </FormControlHelperText>
+            </FormControlHelper>
+          </FormControl>
+        ) : null}
+
+        <Button action="primary" onPress={this.handleSubmit}>
+          <ButtonText>Save</ButtonText>
         </Button>
       </VStack>
     )

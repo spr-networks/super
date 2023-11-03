@@ -1,31 +1,24 @@
-import React, { useContext, useRef, useState, useEffect } from 'react'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import {
-  faCirclePlus,
-  faPlus,
-  faXmark
-} from '@fortawesome/free-solid-svg-icons'
+import React, { useState, useEffect } from 'react'
+
+import { alertState } from 'AppContext'
 
 import { firewallAPI } from 'api'
 import { Multicast } from 'api/Multicast'
 
 import {
-  Badge,
   Button,
-  Box,
-  FlatList,
-  Heading,
-  IconButton,
+  ButtonText,
   Input,
-  Stack,
-  HStack,
+  InputField,
   VStack,
   Switch,
   Text,
-  useColorModeValue
-} from 'native-base'
+  HStack,
+  ButtonIcon,
+  CheckIcon
+} from '@gluestack-ui/themed'
 
-import { AppContext, alertState } from 'AppContext'
+import { ListHeader, ListItem } from 'components/List'
 
 const MDNSAdvertise = (props) => {
   const [config, setConfig] = useState({
@@ -98,90 +91,55 @@ const MDNSAdvertise = (props) => {
 
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <VStack maxW="60%">
-          <Heading fontSize="md" isTruncated>
-            Multicast Settings
-          </Heading>
-          <Text color="muted.500" isTruncated>
-            Configure Multicast Proxy
-          </Text>
-        </VStack>
-      </HStack>
+      <ListHeader
+        title="Multicast Settings"
+        description="Configure Multicast Proxy"
+      ></ListHeader>
 
       <VStack>
-        <Box
-          bg="backgroundCardLight"
-          borderBottomWidth={1}
-          _dark={{
-            bg: 'backgroundCardDark',
-            borderColor: 'borderColorCardDark'
-          }}
-          borderColor="borderColorCardLight"
-          p={4}
-        >
-          <HStack space={4} justifyContent="space-between" alignItems="center">
-            <Text bold>Enable Multicast Proxy</Text>
+        <ListItem>
+          <Text bold>Enable Multicast Proxy</Text>
+          <Switch value={!config.Disabled} onToggle={toggleMulticast} />
+        </ListItem>
 
-            <Switch
-              isChecked={!config.Disabled}
-              onValueChange={() => toggleMulticast()}
-            />
-          </HStack>
-        </Box>
-        <Box
-          bg="backgroundCardLight"
-          borderBottomWidth={1}
-          _dark={{
-            bg: 'backgroundCardDark',
-            borderColor: 'borderColorCardDark'
-          }}
-          borderColor="borderColorCardLight"
-          p={4}
-        >
-          <HStack space={4} justifyContent="space-between" alignItems="center">
-            <Text bold>Advertise Router over mDNS</Text>
+        <ListItem>
+          <Text bold>Advertise Router over mDNS</Text>
+          <Switch value={!config.DisableMDNSAdvertise} onToggle={toggleMDNS} />
+        </ListItem>
 
-            <Switch
-              isChecked={!config.DisableMDNSAdvertise}
-              onValueChange={() => toggleMDNS()}
-            />
-          </HStack>
-        </Box>
-        <Box
-          bg="backgroundCardLight"
-          borderBottomWidth={1}
-          _dark={{
-            bg: 'backgroundCardDark',
-            borderColor: 'borderColorCardDark'
+        <VStack
+          space="md"
+          bg="$backgroundCardLight"
+          p="$4"
+          sx={{
+            _dark: {
+              bg: '$backgroundCardDark'
+            }
           }}
-          borderColor="borderColorCardLight"
-          p={4}
         >
-          <Stack
-            direction={{ base: 'column', md: 'row' }}
-            space={4}
-            _justifyContent="stretch"
-            alignItems={{ base: 'none', md: 'center' }}
+          <VStack
+            space="md"
+            sx={{
+              '@md': { maxWidth: '$1/2' }
+            }}
           >
-            <VStack maxW={{ md: '1/2' }} space={2}>
-              <Text bold>mDNS Name</Text>
-              <Text color="muted.500" flexWrap={'wrap'}>
-                Defaults to 'spr.local'. Set the name without the .local part or
-                leave empty to use hostname
-              </Text>
-            </VStack>
-            <Input
-              flex={1}
-              value={config.MDNSName}
-              onChangeText={onChangeText}
-              placeholder="spr"
-            />
-          </Stack>
-        </Box>
-        <Button rounded="none" colorScheme="primary" onPress={submitSettings}>
-          Save Multicast settings
-        </Button>
+            <Text bold>mDNS Name</Text>
+            <Text size="sm" color="$muted500" flexWrap="wrap">
+              Defaults to 'spr.local'. Set the name without the .local part or
+              leave empty to use hostname
+            </Text>
+            <Input value={config.MDNSName} onChangeText={onChangeText}>
+              <InputField type="text" placeholder="spr" />
+            </Input>
+
+            <HStack>
+              <Button onPress={submitSettings}>
+                <ButtonText>Save Multicast settings</ButtonText>
+                <ButtonIcon as={CheckIcon} ml="$1" />
+              </Button>
+            </HStack>
+          </VStack>
+        </VStack>
       </VStack>
     </>
   )

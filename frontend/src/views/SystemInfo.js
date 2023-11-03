@@ -1,18 +1,24 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+
 import {
   Box,
   Heading,
   HStack,
   FlatList,
-  Modal,
-  Stack,
   Text,
-  View,
   VStack,
   ScrollView,
-  useDisclose,
-  useColorModeValue
-} from 'native-base'
+  useColorMode,
+  Icon,
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalContent,
+  ModalCloseButton,
+  ModalHeader,
+  CloseIcon
+} from '@gluestack-ui/themed'
+
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
 import { ucFirst } from 'utils'
@@ -28,6 +34,7 @@ const SystemInfo = (props) => {
   const [uptime, setUptime] = useState({})
   const [hostname, setHostname] = useState('')
   const [version, setVersion] = useState('')
+  const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
     const fetchInfo = () => {
@@ -57,121 +64,147 @@ const SystemInfo = (props) => {
 
   const niceKey = (key) => ucFirst(key.replace(/_/, ' ').replace(/m$/, ' min'))
 
-  const { isOpen, onOpen, onClose } = useDisclose()
-
   const [modalTitle, setModalTitle] = useState('Container')
   const [modalBody, setModalBody] = useState('')
   const refModal = useRef(null)
 
-  const showModal = (title, content) => {
+  const onShowModal = (title, content) => {
     setModalTitle(title)
     setModalBody(content)
-    onOpen()
+    setShowModal(true)
 
-    return onClose
+    return showModal
   }
 
+  const onClose = () => {
+    setShowModal(false)
+  }
+
+  const colorMode = useColorMode()
+
   return (
-    <ScrollView h={'100%'}>
-      <VStack space={2}>
-        <HStack p={4}>
-          <Heading fontSize="md">System Info</Heading>
+    <ScrollView h="$full" sx={{ '@md': { h: '92vh' } }}>
+      <VStack space="md">
+        <HStack p="$4">
+          <Heading size="md">System Info</Heading>
         </HStack>
 
         <Box>
-          <HStack space={4} mb="4">
+          <HStack space="md" mb="$4">
             <HStack
               flex={1}
-              space={2}
-              p={4}
-              bg={useColorModeValue(
-                'backgroundCardLight',
-                'backgroundCardDark'
-              )}
+              space="md"
+              p="$4"
+              bg={
+                colorMode == 'light'
+                  ? '$backgroundCardLight'
+                  : '$backgroundCardDark'
+              }
               justifyContent="space-between"
             >
-              <Text>Hostname</Text>
-              <Text color="muted.500">{hostname}</Text>
+              <Text size="sm">Hostname</Text>
+              <Text color="$muted500">{hostname}</Text>
             </HStack>
             <HStack
               flex={1}
-              space={2}
-              p={4}
-              bg={useColorModeValue(
-                'backgroundCardLight',
-                'backgroundCardDark'
-              )}
+              space={'md'}
+              p="$4"
+              bg={
+                colorMode == 'light'
+                  ? '$backgroundCardLight'
+                  : '$backgroundCardDark'
+              }
               justifyContent="space-between"
             >
-              <Text>SPR Version</Text>
-              <Text color="muted.500">{version}</Text>
+              <Text size="sm">Version</Text>
+              <Text size="md" color="$muted500">
+                {version}
+              </Text>
             </HStack>
           </HStack>
 
-          <Stack
-            direction={{ base: 'column', md: 'row' }}
-            space={4}
-            bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+          <Box
+            sx={{
+              '@base': { flexDirection: 'column', gap: '$3' },
+              '@md': { flexDirection: 'row', gap: '$3' }
+            }}
           >
             <FlatList
+              flex={1}
               data={['time', 'uptime', 'users']}
               keyExtractor={(item, index) => index}
               estimatedItemSize={100}
               renderItem={({ item }) => (
                 <HStack
-                  space={2}
-                  p={4}
-                  borderBottomColor="borderColorCardLight"
-                  _dark={{ borderBottomColor: 'borderColorCardDark' }}
+                  space="md"
+                  p="$4"
+                  bg={
+                    colorMode == 'light'
+                      ? '$backgroundCardLight'
+                      : '$backgroundCardDark'
+                  }
+                  borderBottomColor={
+                    colorMode == 'light'
+                      ? '$borderColorCardLight'
+                      : '$borderColorCardDark'
+                  }
                   borderBottomWidth={1}
                   justifyContent="space-between"
                 >
-                  <Text>{niceKey(item)}</Text>
-                  <Text color="muted.500">{uptime[item]}</Text>
+                  <Text size="sm">{niceKey(item)}</Text>
+                  <Text color="$muted500">{uptime[item]}</Text>
                 </HStack>
               )}
             />
             <FlatList
+              flex={1}
               data={['load_1m', 'load_5m', 'load_15m']}
               keyExtractor={(item, index) => index}
               estimatedItemSize={100}
               renderItem={({ item }) => (
                 <HStack
-                  space={2}
-                  p={4}
-                  borderBottomColor="borderColorCardLight"
-                  _dark={{ borderBottomColor: 'borderColorCardDark' }}
+                  space="md"
+                  p="$4"
+                  bg={
+                    colorMode == 'light'
+                      ? '$backgroundCardLight'
+                      : '$backgroundCardDark'
+                  }
+                  borderBottomColor={
+                    colorMode == 'light'
+                      ? '$borderColorCardLight'
+                      : '$borderColorCardDark'
+                  }
                   borderBottomWidth={1}
                   justifyContent="space-between"
                 >
-                  <Text>{niceKey(item)}</Text>
-                  <Text color="muted.500">{uptime[item]}</Text>
+                  <Text size="sm">{niceKey(item)}</Text>
+                  <Text color="$muted500">{uptime[item]}</Text>
                 </HStack>
               )}
             />
-          </Stack>
+          </Box>
         </Box>
 
-        <Database showModal={showModal} closeModal={onClose} />
+        <Database showModal={onShowModal} closeModal={onClose} />
 
         <ReleaseInfo />
 
         <ConfigsBackup />
 
-        <DockerInfo showModal={showModal} />
+        <DockerInfo showModal={onShowModal} />
 
-        <Modal
-          ref={refModal}
-          isOpen={isOpen}
-          onClose={onClose}
-          animationPreset="slide"
-        >
-          <Modal.Content maxWidth={{ base: '100%', md: '90%' }}>
-            <Modal.CloseButton />
-            <Modal.Header>{modalTitle}</Modal.Header>
-            <Modal.Body>{modalBody}</Modal.Body>
-            {/*<Modal.Footer />*/}
-          </Modal.Content>
+        <Modal isOpen={showModal} onClose={onClose}>
+          <ModalBackdrop />
+          <ModalContent>
+            <ModalHeader>
+              <Heading size="sm">{modalTitle}</Heading>
+              <ModalCloseButton>
+                <Icon as={CloseIcon} />
+              </ModalCloseButton>
+            </ModalHeader>
+            <ModalBody pb="$6">{modalBody}</ModalBody>
+          </ModalContent>
         </Modal>
       </VStack>
     </ScrollView>

@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, VStack } from 'native-base'
+import { VStack } from '@gluestack-ui/themed'
 
 import FlowList from 'components/Flow/FlowList'
 

@@ -4,21 +4,26 @@ import { useNavigate } from 'react-router-dom'
 /*import { useNavigate as useNavigateWeb } from 'react-router-dom'
 import { useNavigate as useNavigateNative } from 'react-router-native'*/
 import { Animated } from 'react-native'
-import Icon from 'FontAwesomeUtils'
-import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import { AppContext } from 'AppContext'
 
 import {
   Box,
-  Link,
   Pressable,
   ScrollView,
   HStack,
+  Icon,
+  VStack,
   Text,
-  Collapse,
-  useColorModeValue,
-  Input
-} from 'native-base'
+  useColorMode,
+  Input,
+  InputField
+} from '@gluestack-ui/themed'
+
+import { ChevronDownIcon } from 'lucide-react-native'
+
+const Collapse = ({ isOpen, ...props }) => {
+  return <VStack display={isOpen ? 'flex' : 'none'}>{props.children}</VStack>
+}
 
 const Sidebar = (props) => {
   const { isMobile, isMini, isOpenSidebar, setIsOpenSidebar } = props
@@ -68,19 +73,24 @@ const Sidebar = (props) => {
 
   return (
     <ScrollView
-      _mb={{ base: Platform.OS == 'ios' ? 20 : 0, md: 0 }}
-      pb={5}
       w={isMini ? '20' : '100%'}
-      borderRightWidth={isMobile ? '0' : '1'}
-      _light={{
-        bg: 'sidebarBackgroundLight',
-        borderColor: 'sidebarBorderColorLight'
+      borderRightWidth={isMobile ? '$0' : '$1'}
+      sx={{
+        _light: {
+          bg: '$sidebarBackgroundLight',
+          borderColor: '$coolGray100'
+        },
+        _dark: { bg: '$sidebarBackgroundDark', borderColor: '$coolGray800' }
       }}
-      _dark={{ bg: 'sidebarBackgroundDark', borderColor: 'borderColorDark' }}
     >
       {showSearch ? (
-        <Box p={4}>
-          <Input onChangeText={onChangeFilter} placeholder="Search menu" />
+        <Box p="$4">
+          <Input>
+            <InputField
+              onChangeText={onChangeFilter}
+              placeholder="Search menu"
+            />
+          </Input>
         </Box>
       ) : null}
       <SidebarItem
@@ -98,56 +108,16 @@ const SidebarItem = (props) => {
   const { sidebarItems, level, isMobile, isMini, setIsOpenSidebar } = props
   const { isWifiDisabled, isPlusDisabled, isMeshNode } = useContext(AppContext)
   const { activeSidebarItem, setActiveSidebarItem } = useContext(AppContext)
+  const navigate = useNavigate()
 
   /*useEffect(() => {
     window.scrollTo(0, 0)
   }, [activeSidebarItem])*/
 
-  /*
-  const getCollapseInitialState = (routes) => {
-    for (let i = 0; i < routes.length; i++) {
-      if (routes[i].collapse && getCollapseInitialState(routes[i].views)) {
-        return true
-      } else if (window.location.pathname.indexOf(routes[i].path) !== -1) {
-        return true
-      }
-    }
-    return false
-  }
-
-  const activeRoute = (routeName) => {
-    return props.location.pathname.indexOf(routeName) > -1 ? 'active' : ''
-  }
-
-  React.useEffect(() => {
-    setCollapseStates(getCollapseStates(props.routes))
-  }, [])*/
-
-  /*
-
-  const getCollapseStates = (routes) => {
-    let initialState = {}
-    routes.map((prop, key) => {
-      if (prop.collapse) {
-        initialState = {
-          [prop.state]: getCollapseInitialState(prop.views),
-          ...getCollapseStates(prop.views),
-          ...initialState
-        }
-      }
-      return null
-    })
-    return initialState
-  }
-*/
-
-  //const navigate = Platform.OS == 'web' ? useNavigateWeb() : useNavigateNative()
-  const navigate = useNavigate()
-
   return sidebarItems.map((item, index) => {
-    let display = { base: 'flex' }
+    let display = 'flex'
     if (item.redirect || (item.layout !== 'admin' && !item.views)) {
-      display.base = 'none'
+      display = 'none'
       return null
     }
 
@@ -168,26 +138,25 @@ const SidebarItem = (props) => {
     ]
 
     if (isMeshNode && !meshItems.includes(item.name)) {
-      display.base = 'none'
+      display = 'none'
       return null
     }
 
     // menu items hidden when wifi mode is disabled
     if (item.wifi === true && isWifiDisabled) {
-      display.base = 'none'
+      display = 'none'
     }
 
     // menu items hidden when plus mode is disabled
-    if (
-      item.plus === true &&
-      isPlusDisabled
-    ) {
-      display.base = 'none'
+    if (item.plus === true && isPlusDisabled) {
+      display = 'none'
     }
 
     if (item.hidden) {
-      display.base = 'none'
+      display = 'none'
     }
+
+    const colorMode = useColorMode()
 
     return (
       <Box key={index} w="100%" display={display}>
@@ -203,56 +172,48 @@ const SidebarItem = (props) => {
                 setIsOpenSidebar(false)
               }
             }}
-            _hover={{
-              _light: {
+            sx={{
+              bg:
+                item.path === activeSidebarItem
+                  ? colorMode == 'light'
+                    ? '$coolGray200'
+                    : '$coolGray800'
+                  : 'transparent',
+
+              ':hover': {
                 bg:
                   item.path === activeSidebarItem
-                    ? 'activeSidebarItemHoverBackgroundLight'
-                    : 'inactiveSidebarItemHoverBackgroundLight'
-              },
-              _dark: {
-                bg:
-                  item.path === activeSidebarItem
-                    ? 'activeSidebarItemHoverBackgroundDark'
-                    : 'inactiveSidebarItemHoverBackgroundDark'
+                    ? '$blueGray200'
+                    : '$coolGray100',
+
+                _dark: {
+                  bg:
+                    item.path === activeSidebarItem
+                      ? '$coolGray600'
+                      : '$coolGray900'
+                }
               }
             }}
-            _light={{
-              bg:
-                item.path === activeSidebarItem
-                  ? 'activeSidebarItemBackgroundLight'
-                  : 'transparent'
-            }}
-            _dark={{
-              bg:
-                item.path === activeSidebarItem
-                  ? 'activeSidebarItemBackgroundDark'
-                  : 'transparent'
-            }}
           >
-            <Box px="8" py="2">
+            <Box px="$8" py="$2.5">
               <HStack
-                space="3"
+                space={'sm'}
                 alignItems="center"
-                pl={level > 1 ? level + 14 + 'px' : '0px'}
+                pl={level > 1 ? level + 14 : '0'}
               >
-                {item.icon && typeof item.icon !== 'string' ? (
+                {item.icon !== undefined ? (
                   <Icon
-                    color={useColorModeValue(
-                      'sidebarItemIconLight',
-                      'sidebarItemIconDark'
-                    )}
-                    icon={item.icon}
+                    as={item.icon}
+                    color={
+                      colorMode == 'light' ? '$coolGray600' : '$coolGray400'
+                    }
                   />
                 ) : null}
                 {isMini ? null : (
                   <Text
                     fontWeight="300"
-                    fontSize="sm"
-                    color={useColorModeValue(
-                      'sidebarItemTextLight',
-                      'sidebarItemTextDark'
-                    )}
+                    size="sm"
+                    color={colorMode == 'light' ? '#11181c' : '$coolGray300'}
                   >
                     {item.name}
                   </Text>
@@ -298,6 +259,7 @@ export const CollapsibleSidebarItem = (props) => {
   } = props
   const [isCollapsed, setIsCollapsed] = useState(collapsed)
   const isHeadingCollapsible = true
+  const colorMode = useColorMode()
 
   if (isHeadingCollapsible || level > 0)
     return (
@@ -310,28 +272,24 @@ export const CollapsibleSidebarItem = (props) => {
           <HStack
             justifyContent="space-between"
             alignItems="center"
-            px={8}
-            py={2.5}
+            px={'$8'}
+            py={'$2.5'}
           >
             {/*icon && typeof icon !== 'string' ? (
               <Icon icon={icon} />
             ) : null*/}
-            <Box
-              flexShrink="1"
-              _text={{
-                fontWeight: '600', // '300',
-                textTransform: 'uppercase',
-                fontSize: 'sm',
-                color: useColorModeValue(
-                  'sidebarItemHeadingTextLight',
-                  'sidebarItemHeadingTextDark'
-                )
-              }}
-            >
-              {isMini ? title.substr(0, 1) : title}
+            <Box flexShrink="1">
+              <Text
+                size="sm"
+                textTransform="uppercase"
+                fontWeight="600"
+                color={colorMode == 'light' ? '$blueGray900' : '$coolGray300'}
+              >
+                {isMini ? title.substr(0, 1) : title}
+              </Text>
             </Box>
             <RotatingView isCollapsed={isCollapsed}>
-              <Icon icon={faCaretDown} size="2" color="coolGray.400" />
+              <Icon as={ChevronDownIcon} color="$coolGray400" />
             </RotatingView>
           </HStack>
         </Pressable>
@@ -340,22 +298,22 @@ export const CollapsibleSidebarItem = (props) => {
     )
   else
     return (
-      <Box mb="9">
+      <Box mb="$9">
         <HStack
           justifyContent="space-between"
           alignItems="center"
-          pl="8"
-          px="4"
-          py="2.5"
+          pl="$8"
+          px="$4"
+          py="$2.5"
         >
           <Box
             flexShrink="1"
             _text={{
               textTransform: 'uppercase',
               fontWeight: '600',
-              fontSize: 'sm',
-              _dark: { color: 'coolGray.50' },
-              _light: { color: 'blueGray.900' }
+              size: 'sm',
+              _dark: { color: '$coolGray50' },
+              _light: { color: '$blueGray900' }
             }}
           >
             {title}

@@ -1,27 +1,23 @@
 import React, { useContext, useState } from 'react'
-import PropTypes from 'prop-types'
 import { AlertContext } from 'AppContext'
 
 import { firewallAPI } from 'api'
-import InputSelect from 'components/InputSelect'
 
 import {
-  Badge,
   Box,
   Button,
-  Checkbox,
+  ButtonText,
   FormControl,
-  Heading,
+  FormControlLabel,
+  FormControlLabelText,
   HStack,
   Input,
-  Link,
-  Radio,
-  Select,
-  Stack,
-  Spinner,
-  Switch,
-  Text
-} from 'native-base'
+  InputField,
+  VStack,
+  Switch
+} from '@gluestack-ui/themed'
+
+import { Select, SelectItem } from 'components/Select'
 
 const AddServicePort = ({ notifyChange, ...props }) => {
   const context = useContext(AlertContext)
@@ -50,43 +46,45 @@ const AddServicePort = ({ notifyChange, ...props }) => {
   }
 
   return (
-    <Stack space={4}>
-      <HStack space={4}>
+    <VStack space="md">
+      <HStack space="md">
         <FormControl flex={1}>
-          <FormControl.Label for="Protocol">Protocol</FormControl.Label>
-          {<Select
+          <FormControlLabel>
+            <FormControlLabelText>Protocol</FormControlLabelText>
+          </FormControlLabel>
+
+          <Select
             selectedValue={Protocol}
             onValueChange={(value) => setProtocol(value)}
           >
-            <Select.Item label="tcp" value="tcp" />
-            <Select.Item label="udp" value="udp" />
-          </Select>}
+            <SelectItem label="tcp" value="tcp" />
+            <SelectItem label="udp" value="udp" />
+          </Select>
         </FormControl>
 
         <FormControl flex={1}>
-          <FormControl.Label for="DstPort">Port</FormControl.Label>
-          <Input
-            w="100"
-            size="md"
-            variant="underlined"
-            name="Port"
-            value={Port}
-            onChangeText={(value) => setPort(value)}
-          />
+          <FormControlLabel>
+            <FormControlLabelText>Port</FormControlLabelText>
+          </FormControlLabel>
+          <Input w="100" size="md" variant="underlined">
+            <InputField value={Port} onChangeText={(value) => setPort(value)} />
+          </Input>
         </FormControl>
         <Box flex={1} alignItems="center" alignSelf="center">
-          <FormControl.Label for="DstPort">Upstream Enabled</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Upstream Enabled</FormControlLabelText>
+          </FormControlLabel>
           <Switch
-            defaultIsChecked={UpstreamEnabled}
-            onValueChange={() => setUpstreamEnabled(!UpstreamEnabled)}
+            value={UpstreamEnabled}
+            onToggle={() => setUpstreamEnabled(!UpstreamEnabled)}
           />
         </Box>
       </HStack>
 
-      <Button color="primary" size="md" onPress={handleSubmit}>
-        Save
+      <Button action="primary" size="md" onPress={handleSubmit}>
+        <ButtonText>Save</ButtonText>
       </Button>
-    </Stack>
+    </VStack>
   )
 }
 

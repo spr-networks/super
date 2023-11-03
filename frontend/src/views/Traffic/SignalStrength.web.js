@@ -6,7 +6,7 @@ import { Bar } from 'react-chartjs-2'
 import { deviceAPI, wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 
-import { Box, Heading, ScrollView } from 'native-base'
+import { Box, Heading, ScrollView, VStack } from '@gluestack-ui/themed'
 
 export default (props) => {
   const context = useContext(AlertContext)
@@ -184,31 +184,31 @@ export default (props) => {
   let signalsRXTX = processData(signals, ['RX', 'TX'])
 
   return (
-    <ScrollView pb={4}>
-      <Heading p={4} fontSize="md">
+    <ScrollView sx={{ '@md': { height: '92vh' } }}>
+      <Heading size="sm" p="$4">
         Device Signal Strength (RSSI)
       </Heading>
 
       <Box
-        _light={{ bg: 'backgroundCardLight' }}
-        _dark={{ bg: 'backgroundCardDark' }}
-        p={4}
-        mx={4}
-        rounded="md"
+        bg="$backgroundCardLight"
+        sx={{
+          _dark: { bg: '$backgroundCardDark' }
+        }}
+        p="$4"
       >
         {signalsRSSI ? <Bar data={signalsRSSI} options={optionsRSSI} /> : null}
       </Box>
 
-      <Heading p={4} fontSize="md">
+      <Heading size="sm" p="$4">
         Device RX/TX Rate
       </Heading>
 
       <Box
-        _light={{ bg: 'backgroundCardLight' }}
-        _dark={{ bg: 'backgroundCardDark' }}
-        p={4}
-        mx={4}
-        rounded="md"
+        bg="$backgroundCardLight"
+        sx={{
+          _dark: { bg: '$backgroundCardDark' }
+        }}
+        p="$4"
       >
         {signalsRXTX ? <Bar data={signalsRXTX} options={optionsRXTX} /> : null}
       </Box>

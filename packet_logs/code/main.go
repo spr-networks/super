@@ -26,21 +26,22 @@ var ServerEventSock = "/state/api/eventbus.sock"
 type PacketEthernet struct {
 	SrcMAC string
 	DstMAC string
+	HwType uint16
 }
 
-//new format
+// new format
 type PacketInfo struct {
-	//Ethernet  *PacketEthernet `json:"Ethernet,omitempty"`
-	TCP       *layers.TCP    `json:"TCP,omitempty"`
-	UDP       *layers.UDP    `json:"UDP,omitempty"`
-	IP        *layers.IPv4   `json:"IP,omitempty"`
-	DNS       *layers.DNS    `json:"DNS,omitempty"`
-	DHCP      *layers.DHCPv4 `json:"DHCP,omitempty"`
-	Prefix    string         `json:"Prefix"`
-	Action    string         `json:"Action"`
-	Timestamp time.Time      `json:"Timestamp"`
-	InDev     string         `json:"InDev"`
-	OutDev    string         `json:"OutDev"`
+	Ethernet  *PacketEthernet `json:"Ethernet,omitempty"`
+	TCP       *layers.TCP     `json:"TCP,omitempty"`
+	UDP       *layers.UDP     `json:"UDP,omitempty"`
+	IP        *layers.IPv4    `json:"IP,omitempty"`
+	DNS       *layers.DNS     `json:"DNS,omitempty"`
+	DHCP      *layers.DHCPv4  `json:"DHCP,omitempty"`
+	Prefix    string          `json:"Prefix"`
+	Action    string          `json:"Action"`
+	Timestamp time.Time       `json:"Timestamp"`
+	InDev     string          `json:"InDev"`
+	OutDev    string          `json:"OutDev"`
 }
 
 var wg sync.WaitGroup
@@ -89,7 +90,6 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 	defer cancel()
 
 	hook := func(attrs nflog.Attribute) int {
-		//var eth layers.Ethernet
 		var ip4 layers.IPv4
 		var tcp layers.TCP
 		var udp layers.UDP
@@ -125,6 +125,8 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 			result.Action = "blocked"
 		}
 
+		//TBD ipv6
+
 		// DecodingLayerParser takes about 10% of the time as NewPacket to decode packet data, but only for known packet stacks.
 		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeIPv4, &ip4, &tcp, &udp, &dns, &dhcp)
 		decoded := []gopacket.LayerType{}
@@ -139,12 +141,6 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 		// iterate to see what layer we have
 		for _, layerType := range decoded {
 			switch layerType {
-			/*case layers.LayerTypeEthernet:
-			var ethd PacketEthernet
-			ethd.SrcMAC = fmt.Sprintf("%v", eth.SrcMAC)
-			ethd.DstMAC = fmt.Sprintf("%v", eth.DstMAC)
-			result.Ethernet = &ethd
-			*/
 			case layers.LayerTypeIPv4:
 				result.IP = &ip4
 			case layers.LayerTypeTCP:
@@ -157,6 +153,21 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 				result.DHCP = &dhcp
 			}
 		}
+
+		var ethd PacketEthernet
+
+		ethd.HwType = *attrs.HwType
+		if ethd.HwType == 1 {
+
+			if attrs.HwHeader != nil && len(*attrs.HwHeader) >= 12 {
+				hwHeader := *attrs.HwHeader
+				dstMAC := hwHeader[:6]
+				srcMAC := hwHeader[6:12]
+				ethd.DstMAC = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", dstMAC[0], dstMAC[1], dstMAC[2], dstMAC[3], dstMAC[4], dstMAC[5])
+				ethd.SrcMAC = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", srcMAC[0], srcMAC[1], srcMAC[2], srcMAC[3], srcMAC[4], srcMAC[5])
+			}
+		}
+		result.Ethernet = &ethd
 
 		data, err := json.Marshal(result)
 		if err != nil {

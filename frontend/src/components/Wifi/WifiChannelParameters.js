@@ -4,19 +4,32 @@ import PropTypes from 'prop-types'
 import { AlertContext } from 'AppContext'
 
 import {
-  Box,
   Button,
+  ButtonIcon,
+  ButtonText,
   Checkbox,
+  CheckboxGroup,
+  CheckboxIcon,
+  CheckboxIndicator,
+  CheckboxLabel,
   FormControl,
+  FormControlLabel,
+  FormControlLabelText,
   Heading,
   Input,
   HStack,
   VStack,
-  Stack,
-  Text
-} from 'native-base'
+  Text,
+  InputField,
+  CheckIcon
+} from '@gluestack-ui/themed'
 
-import  { Select } from 'components/Select'
+import { Select } from 'components/Select'
+
+let modes = [
+  { label: '5 GHz', value: 'a' },
+  { label: '2.4 GHz', value: 'g' }
+]
 
 const WifiChannelParameters = ({
   iface,
@@ -32,15 +45,17 @@ const WifiChannelParameters = ({
   const context = useContext(AlertContext)
   const [channel, setChannel] = useState(0)
   const [bandwidth, setBandwidth] = useState(0)
-  const [mode, setMode] = useState('a')
+  const [mode, setMode] = useState(config.hw_mode) //('a')
   const [errors, setErrors] = useState({})
   const [disable160, setDisable160] = useState(true)
   const [disableWifi6, setDisableWifi6] = useState(true)
-  const [groupValues, setGroupValues] = React.useState([]);
+  const [groupValues, setGroupValues] = React.useState([])
 
   //support for additional bssid
   const [disableExtraBSS, setDisableExtraBSS] = useState(true)
-  const [extraSSID, setExtraSSID] = useState("-extra")
+  const [extraSSID, setExtraSSID] = useState('-extra')
+
+  const [selectedMode, setSelectedMode] = useState(modes[0])
 
   let bandwidth5 = [
     { label: '20 MHz', value: 20 },
@@ -55,18 +70,14 @@ const WifiChannelParameters = ({
     { label: '40 MHz', value: 40 }
   ]
 
-  let modes = [
-    { label: '5 GHz', value: 'a' },
-    { label: '2.4 GHz', value: 'g' }
-  ]
-
   useEffect(() => {
     //props.config.interface should match TBD
 
     // switch to config-based settings
     setMode(config.hw_mode)
+    setSelectedMode(modes.find((v) => v.value == config.hw_mode))
     setChannel(config.channel)
-    setExtraSSID(config.ssid + "-extra")
+    setExtraSSID(config.ssid + '-extra')
 
     if (config.vht_oper_chwidth == 0) {
       setBandwidth(40)
@@ -125,9 +136,9 @@ const WifiChannelParameters = ({
         //check if valid_interface_combinations supports multiple APs
         let combos = iw.valid_interface_combinations
         for (let combo of combos) {
-          let ap_entry = combo.split("#").filter((e) => e.includes('AP'))
+          let ap_entry = combo.split('#').filter((e) => e.includes('AP'))
           if (ap_entry[0] && ap_entry[0].includes('<=')) {
-            let num_supported = parseInt(ap_entry[0].split("<=")[1])
+            let num_supported = parseInt(ap_entry[0].split('<=')[1])
             if (num_supported > 0) {
               setDisableExtraBSS(false)
             }
@@ -222,8 +233,11 @@ const WifiChannelParameters = ({
     for (let iw of iws) {
       if (iw.devices[iface]) {
         let base = iw.devices[iface].addr
-        let updatedByte = parseInt(base.substr(0,2),16) | 2
-        const updatedByteHex = updatedByte.toString(16).padStart(2, '0').toUpperCase();
+        let updatedByte = parseInt(base.substr(0, 2), 16) | 2
+        const updatedByteHex = updatedByte
+          .toString(16)
+          .padStart(2, '0')
+          .toUpperCase()
         return updatedByteHex + base.substr(2)
       }
     }
@@ -244,10 +258,10 @@ const WifiChannelParameters = ({
       // for main but set for extra
       let bssid = getLLAIfaceAddr(iface)
       updateExtraBSS(iface, {
-        'Ssid': extraSSID,
-        'Bssid': bssid,
-        'Wpa': "1"
-      });
+        Ssid: extraSSID,
+        Bssid: bssid,
+        Wpa: '1'
+      })
     } else {
       //if interfaces had an extra bss then clear it out
       if (curInterface.ExtraBSS && curInterface.ExtraBSS.length > 0) {
@@ -277,43 +291,43 @@ const WifiChannelParameters = ({
       wifiParameters.Ieee80211ax = 0
     }
 
-
-
     onSubmit(wifiParameters)
   }
 
   let bandwidths = mode == 'a' ? bandwidth5 : bandwidth24
 
   let checkboxProps = disableWifi6 ? { isDisabled: true } : {}
-  let wpa1CheckboxProps = disableExtraBSS ? { isDisabled: true} : {}
+  let wpa1CheckboxProps = disableExtraBSS ? { isDisabled: true } : {}
 
   return (
     <>
-      <HStack justifyContent="space-between" p={4}>
-        <Heading fontSize="md">Channel Selection</Heading>
+      <HStack justifyContent="space-between" p="$4">
+        <Heading size="sm">Channel Selection</Heading>
       </HStack>
 
       <VStack
-        space={2}
-        _light={{ bg: 'backgroundCardLight' }}
-        _dark={{ bg: 'backgroundCardDark' }}
-        p={4}
-        pb={8}
+        space="md"
+        bg="$backgroundCardLight"
+        sx={{ _dark: { bg: '$backgroundCardDark' } }}
+        p="$4"
+        pb="$8"
       >
-        <Text pb={4} color="muted.500">
+        <Text pb="$4" color="$muted500" flexWrap="wrap">
           Use the Channel Selection to make sure the correct Frequency,
           Bandwidth &amp; Channel is set. This will update your HostAP config.
         </Text>
 
-        <Stack
-          direction={{ base: 'column', md: 'row' }}
-          space={2}
-          alignItems="center"
+        <VStack
+          sx={{ '@md': { flexDirection: 'row', alignItems: 'center' } }}
+          space="md"
         >
           <FormControl flex={1}>
-            <FormControl.Label>Frequency Band</FormControl.Label>
+            <FormControlLabel>
+              <FormControlLabelText>Frequency Band</FormControlLabelText>
+            </FormControlLabel>
             <Select
               selectedValue={mode}
+              selectedLabel={modes.find((v) => v.value == mode)?.label}
               onValueChange={(value) => setMode(value)}
             >
               {modes.map((item) => (
@@ -327,37 +341,44 @@ const WifiChannelParameters = ({
             </Select>
           </FormControl>
 
-          <FormControl flex={1} isInvalid={'bandwidth' in errors}>
-            <FormControl.Label>Bandwidth</FormControl.Label>
-            <Select
-              selectedValue={bandwidth}
-              onValueChange={(value) => {
-                setBandwidth(parseInt(value))
-              }}
-            >
-              <Select.Item label="" value={0} />
-              {bandwidths.map((item) => (
-                <Select.Item
-                  key={item.label}
-                  label={item.label}
-                  value={item.value}
-                  isDisabled={item.disabled}
-                />
-              ))}
-            </Select>
-            {'bandwidth' in errors ? (
-              <FormControl.ErrorMessage
-                _text={{
-                  fontSize: 'xs'
+          {bandwidth ? (
+            <FormControl flex={1} isInvalid={'bandwidth' in errors}>
+              <FormControlLabel>
+                <FormControlLabelText>Bandwidth</FormControlLabelText>
+              </FormControlLabel>
+              <Select
+                selectedValue={bandwidth}
+                selectedLabel={
+                  bandwidths.find((v) => v.value == bandwidth)?.label
+                }
+                onValueChange={(value) => {
+                  setBandwidth(parseInt(value))
                 }}
               >
-                Invalid Bandwidth
-              </FormControl.ErrorMessage>
-            ) : null}
-          </FormControl>
+                <Select.Item label="" value={0} />
+                {bandwidths.map((item) => (
+                  <Select.Item
+                    key={item.label}
+                    label={item.label}
+                    value={item.value}
+                    isDisabled={item.disabled}
+                  />
+                ))}
+              </Select>
+              {'bandwidth' in errors ? (
+                <FormControlErrorMessage>
+                  <FormControlErrorMessageText>
+                    Invalid Bandwidth
+                  </FormControlErrorMessageText>
+                </FormControlErrorMessage>
+              ) : null}
+            </FormControl>
+          ) : null}
 
           <FormControl flex={1} isInvalid={'channel' in errors}>
-            <FormControl.Label for="Channel">Channel</FormControl.Label>
+            <FormControlLabel for="Channel">
+              <FormControlLabelText>Channel</FormControlLabelText>
+            </FormControlLabel>
             <Select
               selectedValue={channel}
               onValueChange={(value) => setChannel(parseInt(value))}
@@ -373,48 +394,62 @@ const WifiChannelParameters = ({
               ))}
             </Select>
             {'channel' in errors ? (
-              <FormControl.ErrorMessage
-                _text={{
-                  fontSize: 'xs'
-                }}
-              >
-                Invalid Channel
-              </FormControl.ErrorMessage>
+              <FormControlErrorMessage>
+                <FormControlErrorMessageText>
+                  Invalid Channel
+                </FormControlErrorMessageText>
+              </FormControlErrorMessage>
             ) : null}
           </FormControl>
 
           <Button
-            __flex={{ base: 1, md: 1 }}
-            w={{ base: '2/3', md: '1/6' }}
-            mt={4}
-            colorScheme="primary"
-            size="sm"
-            type="submit"
-            alignSelf={{ base: 'center', md: 'flex-end' }}
+            size="md"
+            action="primary"
+            sx={{
+              '@base': { w: '$2/3', alignSelf: 'center' },
+              '@md': { w: 120, alignSelf: 'flex-end' }
+            }}
             onPress={handleSubmit}
           >
-            Save
+            <ButtonText>Save</ButtonText>
+            <ButtonIcon as={CheckIcon} ml="$1" />
           </Button>
-        </Stack>
-        <HStack>
-            <Checkbox.Group onChange={setGroupValues} value={groupValues} accessibilityLabel="wifi settings">
-              <Checkbox {...checkboxProps} value="wifi6">Wifi 6 (AX) </Checkbox>
-              <Checkbox {...wpa1CheckboxProps} value="extrabss"> Enable WPA1 SSID </Checkbox>
-            </Checkbox.Group>
-        </HStack>
+        </VStack>
+
+        <CheckboxGroup
+          value={groupValues}
+          accessibilityLabel="WiFi Settings"
+          onChange={setGroupValues}
+        >
+          <HStack space="md">
+            <Checkbox {...checkboxProps} value={'wifi6'}>
+              <CheckboxIndicator mr="$2">
+                <CheckboxIcon />
+              </CheckboxIndicator>
+              <CheckboxLabel>Wifi 6 (AX)</CheckboxLabel>
+            </Checkbox>
+
+            <Checkbox {...checkboxProps} value={'extrabss'}>
+              <CheckboxIndicator mr="$2">
+                <CheckboxIcon />
+              </CheckboxIndicator>
+              <CheckboxLabel>Enable WPA1 SSID</CheckboxLabel>
+            </Checkbox>
+          </HStack>
+        </CheckboxGroup>
+
         {groupValues.includes('extrabss') ? (
           <HStack>
-          <Text flex={1}> Extra BSS Name </Text>
-          <Input
-            size="lg"
-            type="text"
-            variant="underlined"
-            flex={2}
-            value={extraSSID}
-            onChangeText={(value) => setExtraSSID(value)}
-          />
+            <Text flex={1}> Extra BSS Name</Text>
+            <Input flex={2} size="md" variant="underlined">
+              <InputField
+                type="text"
+                value={extraSSID}
+                onChangeText={(value) => setExtraSSID(value)}
+              />
+            </Input>
           </HStack>
-        ) : null }
+        ) : null}
       </VStack>
     </>
   )

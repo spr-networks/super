@@ -1,18 +1,17 @@
-import React, { useContext, useState } from 'react'
+import React, { useState } from 'react'
 
 import {
   Box,
   Button,
-  Heading,
-  HStack,
+  ButtonText,
+  ButtonGroup,
   Text,
-  View,
-  VStack,
-  useColorModeValue
-} from 'native-base'
+  View
+} from '@gluestack-ui/themed'
 
 import { api } from 'api'
 import { Base64 } from 'utils'
+import { ListHeader } from 'components/List'
 
 let ApiBaseUrl = api.baseURL
 let TOKEN = ''
@@ -189,33 +188,33 @@ const WebAuthn = (props) => {
 
   return (
     <View>
+      <ListHeader title="Webauthn">
+        <Text
+          marginLeft="auto"
+          pt="$2"
+          color={status.startsWith('success') ? '$success500' : '$muted500'}
+        >
+          {status}
+        </Text>
+      </ListHeader>
+
       <Box
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        rounded="md"
-        width="100%"
-        p={4}
+        bg="$backgroundCardLight"
+        sx={{
+          _dark: { bg: '$backgroundCardDark' }
+        }}
+        p="$4"
+        mb="$4"
       >
-        <HStack space="1" mb="2">
-          <Heading fontSize="lg">Webauthn</Heading>
-
-          <Text
-            marginLeft="auto"
-            pt={2}
-            color={status.startsWith('success') ? 'success.500' : 'muted.500'}
-          >
-            {status}
-          </Text>
-        </HStack>
-
-        <Button.Group size="md">
-          <Button colorScheme="primary" onPress={handleClickRegister}>
-            Register Webauthn device
+        <ButtonGroup size="md">
+          <Button action="primary" onPress={handleClickRegister}>
+            <ButtonText>Register Webauthn device</ButtonText>
           </Button>
 
-          <Button colorScheme="secondary" onPress={handleClickLogin}>
-            Verify Webauthn device
+          <Button action="secondary" onPress={handleClickLogin}>
+            <ButtonText>Verify Webauthn device</ButtonText>
           </Button>
-        </Button.Group>
+        </ButtonGroup>
       </Box>
     </View>
   )

@@ -1,27 +1,31 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Icon } from 'FontAwesomeUtils'
-import { faCircleInfo, faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import {
   Badge,
+  BadgeText,
   Box,
+  Button,
+  ButtonIcon,
   FlatList,
-  Heading,
-  IconButton,
   Input,
+  InputField,
+  InfoIcon,
   Link,
   HStack,
   VStack,
-  Spacer,
   Switch,
   Text,
-  View,
-  useColorModeValue,
-  Tooltip
-} from 'native-base'
+  CloseIcon,
+  LinkText,
+  Tooltip,
+  TooltipContent,
+  TooltipText,
+  ScrollView,
+  Spinner
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+import { ListHeader, ListItem } from 'components/List'
 
 import { api, pluginAPI } from 'api'
 import { AppContext, alertState } from 'AppContext'
@@ -45,32 +49,33 @@ const PluginList = (props) => {
     setPlusList(plugins.filter((x) => x.Plus == true))
   }
 
-  //get each plugin version
-  const getVersion = async (plugins) => {
-    for (let i = 0; i < plugins.length; i++) {
-      let name = plugins[i].Name.toLowerCase()
-      if (name == 'dns-block-extension' || name == 'dns-log-extension') {
-        name = 'dns'
-      }
-
-      let ver = await api.version('super' + name).catch((err) => {
-        //this is noisy, we can disable for now
-        //alertState.error('failed to fetch plugin version ' + name)
-      })
-
-      plugins[i].Version = ver
+  const getPluginVersion = (plugin) => {
+    let name = plugin.Name.toLowerCase()
+    if (name.match(/^dns-(block|log)-extension$/)) {
+      name = 'dns'
     }
 
-    return plugins
+    return api.version(`super${name}`)
+  }
+
+  //get each plugin version
+  const fetchVersions = async (plugins) => {
+    let pluginsV = [...plugins]
+    for (let i = 0; i < pluginsV.length; i++) {
+      let v = await getPluginVersion(pluginsV[i]).catch((err) => {})
+      pluginsV[i].Version = v || ''
+      setList(pluginsV)
+    }
   }
 
   const refreshList = (next) => {
     pluginAPI
       .list()
-      .then(async function (plugins) {
-        plugins = await getVersion(plugins)
-
+      .then((plugins) => {
         setList(plugins)
+        fetchVersions(plugins)
+          .then((withVersion) => {})
+          .catch((err) => {})
       })
       .catch((err) => {
         alertState.error('failed to fetch plugins')
@@ -92,13 +97,14 @@ const PluginList = (props) => {
 
   const handleChange = (plugin, value) => {
     plugin.Enabled = value
-    pluginAPI.update(plugin).then(async (plugins) => {
-      plugins = await getVersion(plugins)
-      setList(plugins)
-    })
-    .catch(err => {
-      alertState.error('Failed to update plugin state: ' + err.message)
-    })
+    pluginAPI
+      .update(plugin)
+      .then((plugins) => {
+        setList(plugins)
+      })
+      .catch((err) => {
+        alertState.error('Failed to update plugin state: ' + err.message)
+      })
 
     if (plugin.Plus == true) {
       if (value == false) {
@@ -146,102 +152,110 @@ const PluginList = (props) => {
     }
   }
 
-  const renderItem = ({ item }) => {
-    return (
-      <Box
-        bg="backgroundCardLight"
-        borderBottomWidth={1}
-        _dark={{
-          bg: 'backgroundCardDark',
-          borderColor: 'borderColorCardDark'
-        }}
-        borderColor="borderColorCardLight"
-        p={4}
-      >
-        <HStack space={3} justifyContent="space-between">
-          <VStack minW="20%" space={1}>
-            <Tooltip label={`URI: ${item.URI}`}>
-              <Text bold>{item.Name}</Text>
-            </Tooltip>
+  const renderItem = ({ item }) => (
+    <ListItem>
+      <VStack space="sm">
+        <Tooltip
+          h={undefined}
+          placement="top"
+          trigger={(triggerProps) => (
+            <Text bold {...triggerProps}>
+              {item.Name}
+            </Text>
+          )}
+        >
+          <TooltipContent>
+            <TooltipText>{`URI: ${item.URI}`}</TooltipText>
+          </TooltipContent>
+        </Tooltip>
 
+        <HStack>
+          {item.Version === undefined ? (
+            <Spinner size="small" />
+          ) : (
             <Badge
-              variant={item.Version ? 'outline' : 'outline'}
-              colorScheme={item.Version ? 'trueGray' : 'muted'}
-              rounded="sm"
+              variant="outline"
+              action={item.Version ? 'success' : 'muted'}
               alignSelf="flex-start"
             >
-              {item.Version || 'none'}
+              <BadgeText>{item.Version || 'none'}</BadgeText>
             </Badge>
-          </VStack>
-
-          <Text
-            alignSelf="center"
-            isTruncated
-            display={{ base: 'none', md: true }}
-          >
-            {item.UnixPath}
-          </Text>
-          <Spacer />
-
-          {item.ComposeFilePath ? (
-            <HStack
-              alignSelf="center"
-              space={1}
-              display={{ base: 'none', md: true }}
-            >
-              <Text color="muted.500">Compose Path</Text>
-              <Text isTruncated>{item.ComposeFilePath}</Text>
-            </HStack>
-          ) : null}
-
-          <Box w="100" alignItems="center" alignSelf="center">
-            <Switch
-              defaultIsChecked={item.Enabled}
-              onValueChange={() => handleChange(item, !item.Enabled)}
-            />
-          </Box>
-
-          <IconButton
-            alignSelf="center"
-            size="sm"
-            variant="ghost"
-            colorScheme="secondary"
-            icon={<Icon icon={faXmark} />}
-            onPress={() => deleteListItem(item)}
-          />
+          )}
         </HStack>
-      </Box>
-    )
-  }
+      </VStack>
+
+      <VStack
+        flex={1}
+        space="md"
+        sx={{
+          '@base': { display: 'none' },
+          '@md': { display: 'none' }
+        }}
+      >
+        <Text size="sm" isTruncated>
+          {item.UnixPath}
+        </Text>
+
+        {item.ComposeFilePath ? (
+          <HStack
+            space="sm"
+            sx={{
+              '@base': { display: 'none' },
+              '@base': { display: 'flex' }
+            }}
+          >
+            <Text size="sm" color="$muted500">
+              Compose Path
+            </Text>
+            <Text size="sm" isTruncated>
+              {item.ComposeFilePath}
+            </Text>
+          </HStack>
+        ) : null}
+      </VStack>
+
+      <HStack space="4xl">
+        <Box w="100" alignItems="center" alignSelf="center">
+          <Switch
+            value={item.Enabled}
+            onValueChange={() => handleChange(item, !item.Enabled)}
+          />
+        </Box>
+
+        <Button
+          alignSelf="center"
+          variant="link"
+          onPress={() => deleteListItem(item)}
+          ml="$8"
+        >
+          <ButtonIcon as={CloseIcon} color="$red700" />
+        </Button>
+      </HStack>
+    </ListItem>
+  )
 
   return (
-    <View h={'100%'}>
-      <HStack p={4} justifyContent="space-between" alignItems="center">
-        <Heading fontSize="md">Plugins</Heading>
-
-        <Box alignSelf="center">
-          <ModalForm
-            title="Add a new Plugin"
-            triggerText="Add Plugin"
-            modalRef={refModal}
-          >
-            <AddPlugin notifyChange={notifyChange} />
-          </ModalForm>
-        </Box>
-      </HStack>
+    <ScrollView sx={{ '@md': { h: '92vh' } }}>
+      <ListHeader title="Plugins" description="">
+        <ModalForm
+          title="Add a new Plugin"
+          triggerText="Add Plugin"
+          modalRef={refModal}
+        >
+          <AddPlugin notifyChange={notifyChange} />
+        </ModalForm>
+      </ListHeader>
 
       <FlatList
         data={list}
         estimatedItemSize={100}
         renderItem={renderItem}
-        keyExtractor={(item) => item.Name}
+        keyExtractor={(item) => JSON.stringify(item)}
       />
 
       {activeToken !== '' ? (
         <>
-          <Heading fontSize="md" p={4}>
-            PLUS
-          </Heading>
+          <ListHeader title="PLUS Plugins" />
 
           <FlatList
             data={plusList}
@@ -254,34 +268,40 @@ const PluginList = (props) => {
         <></>
       )}
 
-      <HStack p={4} justifyContent="space-between" alignItems="center">
-        <Heading fontSize="md">
-          {activeToken == '' ? 'Enable PLUS' : 'Reset PLUS Token'}
-        </Heading>
-        <HStack space={2} alignItems="center">
-          <Icon icon={faCircleInfo} color="muted.500" />
-          <Link _text="text" isExternal href="https://www.supernetworks.org/">
-            Learn about PLUS Mode
+      <ListHeader
+        title={activeToken == '' ? 'Enable PLUS' : 'Reset PLUS Token'}
+      >
+        <HStack space="md" alignItems="center">
+          <InfoIcon color="$muted500" />
+          <Link isExternal href="https://www.supernetworks.org/">
+            <LinkText>Learn about PLUS Mode</LinkText>
           </Link>
         </HStack>
-      </HStack>
+      </ListHeader>
 
       <Box
-        bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-        p={4}
-        mb={4}
+        p="$4"
+        mb="$4"
+        bg="$backgroundCardLight"
+        sx={{
+          _dark: {
+            bg: '$backgroundCardDark'
+          }
+        }}
       >
         <Input
-          size="lg"
-          type="text"
-          variant="underlined"
-          placeholder={activeToken || 'Token'}
           onChangeText={(value) => handleToken(value)}
           onSubmitEditing={handleTokenSubmit}
           onMouseLeave={handleTokenSubmit}
-        />
+        >
+          <InputField
+            type="text"
+            variant="underlined"
+            placeholder={activeToken || 'Token'}
+          />
+        </Input>
       </Box>
-    </View>
+    </ScrollView>
   )
 }
 

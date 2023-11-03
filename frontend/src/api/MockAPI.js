@@ -30,7 +30,8 @@ export default function MockAPI() {
       backup: Model,
       pfwBlock: Model,
       pfwForward: Model,
-      uplink: Model
+      uplink: Model,
+      tinynets: Model
     },
     seeds(server) {
       server.create('device', {
@@ -256,6 +257,8 @@ export default function MockAPI() {
         Name: 'spr-configs-v0.1.0-beta.0.tgz',
         Timestamp: Date.now()
       })
+
+      server.create('tinynet', { Subnet: '192.168.2.0/24' })
     },
     routes() {
       // TODO hook for all
@@ -282,7 +285,13 @@ export default function MockAPI() {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
-        return schema.devices.all().models
+        let devices = schema.devices.all().models
+        let res = {}
+        for (let d of devices) {
+          res[d.MAC] = d
+        }
+
+        return res
       })
 
       this.put('/device/:id', (schema, request) => {
@@ -381,6 +390,16 @@ export default function MockAPI() {
             Name: 'wlan1',
             Type: 'AP',
             Enabled: true
+          },
+          {
+            Name: 'ppp0',
+            Type: 'Uplink',
+            Enabled: true
+          },
+          {
+            Name: 'eth0.123',
+            Type: 'Other',
+            Enabled: true
           }
         ]
       })
@@ -423,6 +442,54 @@ export default function MockAPI() {
         if (id.match(/(lan|internet|dns|dhcp)_access/)) {
           return {
             nftables: [{}, { map: { elem: ['wifi0', 'eth0'], type: 'zz' } }]
+          }
+        } else if (id == 'ethernet_filter') {
+          return {
+            nftables: [
+              {
+                metainfo: {
+                  version: '1.0.6',
+                  release_name: 'Lester Gooch #5',
+                  json_schema_version: 1
+                }
+              },
+              {
+                map: {
+                  family: 'inet',
+                  name: 'ethernet_filter',
+                  table: 'filter',
+                  type: ['ipv4_addr', 'ifname', 'ether_addr'],
+                  handle: 20,
+                  map: 'verdict',
+                  elem: [
+                    [
+                      {
+                        concat: [
+                          '192.168.2.101',
+                          'wlan1.4096',
+                          '11:11:11:11:11:11'
+                        ]
+                      },
+                      {
+                        return: null
+                      }
+                    ],
+                    [
+                      {
+                        concat: [
+                          '192.168.2.102',
+                          'wlan1.4097',
+                          '22:22:22:22:22:22'
+                        ]
+                      },
+                      {
+                        return: null
+                      }
+                    ]
+                  ]
+                }
+              }
+            ]
           }
         }
 
@@ -472,8 +539,77 @@ export default function MockAPI() {
             broadcast: 'ff:ff:ff:ff:ff:ff',
             addr_info: [
               {
-                family: 'inet4',
+                family: 'inet',
+                local: '192.168.22.22',
+                prefixlen: 24,
+                scope: 'global',
+                valid_life_time: 4294967295,
+                preferred_life_time: 'preferred_life_time'
+              }
+            ]
+          },
+          {
+            ifindex: 3,
+            ifname: 'wlan1',
+            flags: ['BROADCAST'],
+            mtu: 0,
+            qdisc: 'string',
+            operstate: 'UP',
+            group: 'default',
+            txqlen: 1000,
+            link_type: 'ether',
+            address: '11:22:33:44:55:66',
+            broadcast: 'ff:ff:ff:ff:ff:ff',
+            addr_info: [
+              {
+                family: 'inet',
                 local: '192.168.2.1',
+                prefixlen: 24,
+                scope: 'global',
+                valid_life_time: 4294967295,
+                preferred_life_time: 'preferred_life_time'
+              }
+            ]
+          },
+          {
+            ifindex: 4,
+            ifname: 'ppp0',
+            flags: ['BROADCAST'],
+            mtu: 0,
+            qdisc: 'string',
+            operstate: 'UP',
+            group: 'default',
+            txqlen: 1000,
+            link_type: 'ether',
+            address: '00:11:00:11:00:33',
+            broadcast: 'ff:ff:ff:ff:ff:ff',
+            addr_info: [
+              {
+                family: 'inet',
+                local: '11.22.33.44',
+                prefixlen: 24,
+                scope: 'global',
+                valid_life_time: 4294967295,
+                preferred_life_time: 'preferred_life_time'
+              }
+            ]
+          },
+          {
+            ifindex: 5,
+            ifname: 'eth0.123',
+            flags: ['BROADCAST'],
+            mtu: 0,
+            qdisc: 'string',
+            operstate: 'UP',
+            group: 'default',
+            txqlen: 1000,
+            link_type: 'ether',
+            address: '00:22:00:11:00:11',
+            broadcast: 'ff:ff:ff:ff:ff:ff',
+            addr_info: [
+              {
+                family: 'inet',
+                local: '192.168.99.99',
                 prefixlen: 24,
                 scope: 'global',
                 valid_life_time: 4294967295,
@@ -1202,7 +1338,7 @@ export default function MockAPI() {
       })
 
       this.get('/version', () => {
-        return '"v0.2.16"'
+        return '"0.2.26"'
       })
 
       this.get('/info/hostname', () => {
@@ -1736,7 +1872,7 @@ export default function MockAPI() {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
-        return new Response(200, {});
+        return new Response(200, {})
       })
 
       this.get('/plugins/dns/block/blocklists', (schema, request) => {
@@ -2014,6 +2150,10 @@ export default function MockAPI() {
 
       this.put('/plugins/wireguard/down', (schema, request) => {
         return true
+      })
+
+      this.get('/plugins/wireguard/endpoints', (schema, request) => {
+        return []
       })
 
       // nftables
@@ -2370,6 +2510,20 @@ export default function MockAPI() {
         }
       })
 
+      this.get('/plugins/db/buckets', (schema, request) => {
+        return [
+          'dns:block:event',
+          'dns:serve:192.168.2.101',
+          'dns:serve:event',
+          'log:api',
+          'log:test',
+          'log:www:access',
+          'nft:lan:in',
+          'nft:wan:in',
+          'www:auth:user:success'
+        ]
+      })
+
       this.get('/plugins/db/stats', (schema, request) => {
         return {
           Size: 13344768,
@@ -2500,6 +2654,84 @@ export default function MockAPI() {
         schema.uplinks.create(attrs)
 
         return attrs
+      })
+
+      this.get('/subnetConfig', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let TinyNets = schema.tinynets.all().models.map((s) => s.Subnet)
+
+        return { TinyNets, LeaseTime: '24h0m0s' }
+      })
+
+      this.put('/subnetConfig', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        // array of strings subnets
+        let attrs = JSON.parse(request.requestBody)
+        schema.tinynets.all().destroy()
+        attrs.TinyNets.map((Subnet) => {
+          schema.tinynets.create({ Subnet })
+        })
+      })
+
+      this.get('/multicastSettings', (schema, request) => {
+        return {
+          Disabled: false,
+          Addresses: [
+            {
+              Address: '239.255.255.250:1900',
+              Disabled: false,
+              Tags: []
+            },
+            {
+              Address: '224.0.0.251:5353',
+              Disabled: false,
+              Tags: null
+            }
+          ],
+          DisableMDNSAdvertise: false,
+          MDNSName: ''
+        }
+      })
+
+      this.get('/dnsSettings', (schema, request) => {
+        return { UpstreamTLSHost: '', UpstreamIPAddress: '', TlsDisable: false }
+      })
+
+      this.get('/logs', (schema, request) => {
+        let logs = []
+        let log = {
+          _HOSTNAME: 'spr',
+          CONTAINER_NAME: 'superwireguard',
+          PRIORITY: '6',
+          CONTAINER_ID_FULL:
+            'f2a279845383b08b22aaea297d4e027971f6ab76d1c9c192eb1020b20dfa3cf3',
+          CONTAINER_ID: 'f2a279845383',
+          _EXE: '/usr/bin/dockerd',
+          SYSLOG_IDENTIFIER: 'f2a279845383',
+          _MACHINE_ID: 'c2726e42e7de4a85bc9d837c034242a4',
+          IMAGE_NAME: 'ghcr.io/spr-networks/super_wireguard:latest-dev',
+          CONTAINER_TAG: 'f2a279845383',
+          __REALTIME_TIMESTAMP: '1698316313985702',
+          MESSAGE: '@ GET /status'
+        }
+
+        for (let i = 0; i < 10; i++) {
+          let __REALTIME_TIMESTAMP =
+            parseInt(log.__REALTIME_TIMESTAMP) + i * 1e6
+          let CONTAINER_NAME = rpick([
+            'superapi',
+            'superwifid',
+            'superwireguard'
+          ])
+          logs.push({ ...log, CONTAINER_NAME, __REALTIME_TIMESTAMP })
+        }
+        return logs
       })
     }
   })

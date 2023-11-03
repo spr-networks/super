@@ -1,29 +1,25 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons'
 
-import ModalForm from 'components/ModalForm'
-import DNSAddOverride from 'components/DNS/DNSAddOverride'
 import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 import { format as timeAgo } from 'timeago.js'
 
 import {
   Box,
-  Heading,
-  IconButton,
-  Stack,
+  VStack,
   FlatList,
   HStack,
-  VStack,
   Text,
-  useColorModeValue
-} from 'native-base'
+  Button,
+  ButtonIcon,
+  CloseIcon
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+import ListHeader from 'components/List/ListHeader'
+import { ListItem } from 'components/List'
 
-const DNSOverrideList = (props) => {
+const DNSOverrideList = ({ title, list, ...props }) => {
   const context = React.useContext(AlertContext)
 
   const deleteListItem = async (item) => {
@@ -37,118 +33,74 @@ const DNSOverrideList = (props) => {
       })
   }
 
-  let modalRef = React.useRef(null) //React.createRef()
-
-  const notifyChange = async () => {
-    if (props.notifyChange) {
-      await props.notifyChange('config')
-    }
-    // close modal when added
-    modalRef.current()
-  }
-
-  let overrideType = props.title.includes('Block') ? 'block' : 'permit'
-  let list = props.list
-
   return (
     <>
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <Stack direction={{ base: 'column', md: 'row' }} space={1}>
-          <Heading fontSize="md">{props.title || 'DNS Override'}</Heading>
-          <Text color="muted.500">Set rules for DNS queries</Text>
-        </Stack>
+      <ListHeader title={title} description="Set rules for DNS queries">
+        {props.renderHeader ? props.renderHeader() : null}
+      </ListHeader>
 
-        <ModalForm
-          title={'Add ' + props.title}
-          triggerText={'Add ' + props.title.split(' ')[0]}
-          modalRef={modalRef}
-        >
-          <DNSAddOverride type={overrideType} notifyChange={notifyChange} />
-        </ModalForm>
-      </HStack>
-
-      <Box px={4} mb={4}>
-        {!list || !list.length ? (
-          <Text>{`No ${props.title.split(' ')[0]} rules configured`}</Text>
-        ) : null}
-        <FlatList
-          data={list}
-          renderItem={({ item }) => (
-            <Box
-              bg="backgroundCardLight"
-              borderBottomWidth={1}
-              _dark={{
-                bg: 'backgroundCardDark',
-                borderColor: 'borderColorCardDark'
-              }}
-              borderColor="borderColorCardLight"
-              p={4}
+      {!list || !list.length ? (
+        <Text>{`No ${title.split(' ')[0]} rules configured`}</Text>
+      ) : null}
+      <FlatList
+        data={list}
+        renderItem={({ item }) => (
+          <ListItem>
+            <VStack
+              sx={{ '@md': { flexDirection: 'row' } }}
+              justifyContent="space-evenly"
+              flex={1}
+              space="md"
             >
-              <Stack
-                direction={{ base: 'row', md: 'row' }}
-                space={1}
-                justifyContent="space-between"
-                alignItems="center"
+              <VStack
+                flex={1}
+                space="md"
+                sx={{ '@md': { flexDirection: 'row' } }}
               >
-                <Stack
-                  direction={{ base: 'column', md: 'row' }}
-                  justifyContent="space-evenly"
-                  flex={1}
-                  space={2}
-                >
-                  <Stack
-                    flex={1}
-                    space={2}
-                    direction={{ base: 'column', md: 'row' }}
+                <Text bold>{item.Domain}</Text>
+                <HStack space={'md'}>
+                  <Text
+                    sx={{
+                      '@base': { display: 'none' },
+                      '@md': { display: 'flex' }
+                    }}
+                    color="$muted500"
                   >
-                    <Text bold>{item.Domain}</Text>
-                    <HStack space={{ base: 0, md: 2 }}>
-                      <Text
-                        display={{ base: 'none', md: 'flex' }}
-                        color="muted.500"
-                      >
-                        =
-                      </Text>
-                      <Text>{item.ResultIP || '0.0.0.0'}</Text>
-                    </HStack>
-                  </Stack>
+                    =
+                  </Text>
+                  <Text>{item.ResultIP || '0.0.0.0'}</Text>
+                </HStack>
+              </VStack>
 
-                  <Stack
-                    flex={1}
-                    space={2}
-                    direction={{ base: 'column', md: 'row' }}
-                    justifyContent="space-between"
-                  >
-                    <HStack space={1}>
-                      <Text color="muted.500">Client:</Text>
-                      <Text>{item.ClientIP}</Text>
-                    </HStack>
+              <VStack
+                flex={1}
+                space="md"
+                sx={{ '@md': { flexDirection: 'row' } }}
+                justifyContent="space-between"
+              >
+                <HStack space={'md'}>
+                  <Text color="$muted500">Client:</Text>
+                  <Text>{item.ClientIP}</Text>
+                </HStack>
 
-                    <HStack space={1}>
-                      <Text color="muted.500">Expiration:</Text>
-                      <Text>
-                        {item.Expiration
-                          ? timeAgo(new Date(item.Expiration * 1e3))
-                          : 'Never'}
-                      </Text>
-                    </HStack>
-                  </Stack>
-                </Stack>
+                <HStack space={'md'}>
+                  <Text color="$muted500">Expiration:</Text>
+                  <Text>
+                    {item.Expiration
+                      ? timeAgo(new Date(item.Expiration * 1e3))
+                      : 'Never'}
+                  </Text>
+                </HStack>
+              </VStack>
+            </VStack>
 
-                <IconButton
-                  alignSelf="center"
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="secondary"
-                  icon={<Icon icon={faXmark} />}
-                  onPress={() => deleteListItem(item)}
-                />
-              </Stack>
-            </Box>
-          )}
-          keyExtractor={(item) => item.Domain}
-        />
-      </Box>
+            <Button variant="link" onPress={() => deleteListItem(item)}>
+              <ButtonIcon as={CloseIcon} color="$red700" />
+            </Button>
+          </ListItem>
+        )}
+        keyExtractor={(item) => item.Domain}
+      />
     </>
   )
 }

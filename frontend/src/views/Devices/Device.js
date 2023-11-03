@@ -1,12 +1,14 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useParams } from 'react-router-dom'
-import { Box, View, Text, useColorModeValue } from 'native-base'
+import { ScrollView } from '@gluestack-ui/themed'
 import EditDevice from 'components/Devices/EditDevice'
 import { AlertContext } from 'layouts/Admin'
 
 import useSwipe from 'components/useSwipe'
 import { deviceAPI } from 'api'
+
+import { ListHeader } from 'components/List'
 
 //import AddDevice from 'components/Devices/AddDevice'
 
@@ -39,9 +41,20 @@ const DeviceView = () => {
         }
       }
 
-      setGroups([...new Set(Object.values(devs).map((device) => device.Groups).flat())])
-      setTags([...new Set(Object.values(devs).map((device) => device.DeviceTags).flat())])
-
+      setGroups([
+        ...new Set(
+          Object.values(devs)
+            .map((device) => device.Groups)
+            .flat()
+        )
+      ])
+      setTags([
+        ...new Set(
+          Object.values(devs)
+            .map((device) => device.DeviceTags)
+            .flat()
+        )
+      ])
     })
   }, [])
 
@@ -56,12 +69,16 @@ const DeviceView = () => {
   })
 
   return (
-    <Box
-      bg={useColorModeValue('warmGray.50', 'blueGray.800')}
-      p={4}
-      h={'100%'}
+    <ScrollView
+      space="md"
+      h="$full"
+      width="$full"
+      sx={{
+        '@md': { h: '92vh' }
+      }}
       {...swipeHandlers}
     >
+      <ListHeader title="Edit Device" />
       {device ? (
         <EditDevice
           key={device.MAC || device.WGPubKey}
@@ -73,7 +90,7 @@ const DeviceView = () => {
           allTags={tags}
         />
       ) : null}
-    </Box>
+    </ScrollView>
   )
 }
 

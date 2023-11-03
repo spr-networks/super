@@ -1,9 +1,21 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { ScrollView, SectionList, Text, View, VStack } from 'native-base'
+import {
+  SectionList,
+  Center,
+  Text,
+  Heading,
+  ScrollView,
+  View,
+  GlobeIcon
+} from '@gluestack-ui/themed'
 
 import { groupAPI, deviceAPI, nfmapAPI } from 'api'
 import GroupListing from 'components/Groups/GroupListing'
 import { AlertContext } from 'layouts/Admin'
+
+import Accordion from 'components/Accordion'
+import { groupIcons } from 'components/IconItem'
+import { groupDescriptions } from 'api/Group'
 
 export default (props) => {
   const context = useContext(AlertContext)
@@ -27,9 +39,7 @@ export default (props) => {
 
     for (let MAC in devices) {
       let device = devices[MAC]
-      for (const entry of device.Groups) {
-        members[entry].push(device)
-      }
+      device.Groups.map((g) => members[g].push(device))
     }
 
     for (let group of groups) {
@@ -65,12 +75,7 @@ export default (props) => {
       title: 'Header 1',
       data: { stuff: ['hello', 'hihi'] }
     },
-    {
-      title: 'Header 2',
-      data: { stuff: ['dada', 'data'] }
-    }
   ]
-
   return (
     <SectionList
       __sections={groups.map((group) => {
@@ -84,11 +89,17 @@ export default (props) => {
   )
   */
 
+  let items = groups.map((group) => ({
+    label: group.Name,
+    description: groupDescriptions[group.Name] || '',
+    icon: groupIcons[group.Name] || GlobeIcon,
+    renderItem: () => <GroupListing key={group.Name} group={group} />
+  }))
+  let open = ['wan']
+
   return (
-    <ScrollView>
-      {groups.map((group) => (
-        <GroupListing key={group.Name} group={group} />
-      ))}
+    <ScrollView h="$full" sx={{ '@md': { h: '92vh' } }}>
+      <Accordion items={items} open={open} />
     </ScrollView>
   )
 }

@@ -1,8 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faCirclePlus, faPlus } from '@fortawesome/free-solid-svg-icons'
-import { Button, FormControl, Input, Modal } from 'native-base'
+
+import {
+  Button,
+  ButtonIcon,
+  ButtonText,
+  Heading,
+  FormControl,
+  Input,
+  InputField,
+  Icon,
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalContent,
+  ModalCloseButton,
+  ModalHeader,
+  ModalFooter,
+  AddIcon,
+  CloseIcon
+} from '@gluestack-ui/themed'
+
 import { Select } from 'components/Select'
 import ClientSelect from 'components/ClientSelect'
 
@@ -61,11 +79,9 @@ const ModalConfirm = (props) => {
 
   let triggerProps = {
     size: 'sm',
-    variant: 'ghost', //'outline',
-    colorScheme: 'blueGray',
-    //borderColor: 'info.400',
-    rounded: 'full',
-    leftIcon: <Icon icon={faCirclePlus} />
+    variant: 'link', //'outline',
+    rounded: '$full'
+    //leftIcon: <Icon icon={faCirclePlus} />
   }
 
   const updateTrigger = () => {
@@ -123,15 +139,16 @@ const ModalConfirm = (props) => {
     }
 
     return (
-      <Input
-        name={type}
-        value={value}
-        variant="underlined"
-        placeholder={'Enter ' + (type == 'IP' ? 'IP address' : type) + '...'}
-        autoFocus={isOpen ? true : false}
-        onChangeText={handleChange}
-        onSubmitEditing={handlePress}
-      />
+      <Input size="md" variant="underlined">
+        <InputField
+          name={type}
+          value={value}
+          placeholder={'Enter ' + (type == 'IP' ? 'IP address' : type) + '...'}
+          autoFocus={isOpen ? true : false}
+          onChangeText={handleChange}
+          onSubmitEditing={handlePress}
+        />
+      </Input>
     )
   }
 
@@ -139,24 +156,29 @@ const ModalConfirm = (props) => {
     <>
       {trigger ? updateTrigger() : null}
 
-      <Modal isOpen={isOpen} onClose={handleClose} animationPreset="slide">
-        <Modal.Content maxWidth="250px">
-          <Modal.CloseButton />
-          <Modal.Header>{`Add ${type}`}</Modal.Header>
-          <Modal.Body>
+      <Modal isOpen={isOpen} onClose={handleClose}>
+        <ModalBackdrop />
+        <ModalContent>
+          <ModalHeader>
+            <Heading size="sm">{`Add ${type}`}</Heading>
+            <ModalCloseButton>
+              <Icon as={CloseIcon} />
+            </ModalCloseButton>
+          </ModalHeader>
+          <ModalBody>
             <FormControl>
               {/*<FormControl.Label>
               {type == 'IP' ? 'IP address' : type}
               </FormControl.Label>*/}
               {renderItem()}
             </FormControl>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button w="100%" onPress={handlePress}>
-              Save
+          </ModalBody>
+          <ModalFooter>
+            <Button action="primary" onPress={handlePress}>
+              <ButtonText>Save</ButtonText>
             </Button>
-          </Modal.Footer>
-        </Modal.Content>
+          </ModalFooter>
+        </ModalContent>
       </Modal>
     </>
   )

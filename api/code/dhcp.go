@@ -56,10 +56,11 @@ type AbstractDHCPRequest struct {
 }
 
 type DHCPResponse struct {
-	IP        string
-	RouterIP  string
-	DNSIP     string
-	LeaseTime string
+	Identifier string
+	IP         string
+	RouterIP   string
+	DNSIP      string
+	LeaseTime  string
 }
 
 var DHCPmtx sync.Mutex
@@ -341,7 +342,7 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 
 	handleDHCPResult(dhcp.MAC, IP, dhcp.Name, dhcp.Iface)
 
-	response := DHCPResponse{IP, Router, getLANIP(), LeaseTime}
+	response := DHCPResponse{dhcp.MAC, IP, Router, getLANIP(), LeaseTime}
 
 	sprbus.Publish("dhcp:response", response)
 
@@ -580,7 +581,7 @@ func abstractDhcpRequest(w http.ResponseWriter, r *http.Request) {
 		IP, Router = genNewDeviceIP(&devices)
 	}
 
-	response := DHCPResponse{IP, Router, getLANIP(), gDhcpConfig.LeaseTime}
+	response := DHCPResponse{req.Identifier, IP, Router, getLANIP(), gDhcpConfig.LeaseTime}
 	//return DHCPResponse now
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)

@@ -1,0 +1,23 @@
+version: '3.4'
+
+x-logging:
+  &default-logging
+  driver: journald
+
+x-labels:
+  &default-labels
+  org.supernetworks.ci: ${CI:-false}
+  org.supernetworks.version: ${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+
+services:
+  api_sample_plugin:
+    container_name: superapi_sample_plugin
+    build:
+      context: .
+      labels: *default-labels
+    logging: *default-logging
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - "${SUPERDIR}./state/plugins/api_sample_plugin:/state/plugins/api_sample_plugin"
+      - "${SUPERDIR}./state/public/:/state/public/:ro"

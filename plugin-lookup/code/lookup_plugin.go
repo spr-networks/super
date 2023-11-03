@@ -68,7 +68,7 @@ func lookupASN(ipAddress string) (ASNEntry, error) {
 		return asn, fmt.Errorf("failed to parse IP")
 	}
 
-	netip, err := netip.ParseAddr(asn.IP)
+	netip, err := netip.ParseAddr(ip.String())
 	if err != nil {
 		return asn, err
 	}

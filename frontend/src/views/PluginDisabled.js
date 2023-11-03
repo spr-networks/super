@@ -1,5 +1,5 @@
 import React, { useContext, Component } from 'react'
-import { Box, View, Heading, Link, Text, VStack } from 'native-base'
+import { Box, View, Heading, Link, Text } from '@gluestack-ui/themed'
 
 export default class PluginDisabled extends Component {
   render() {
@@ -7,14 +7,16 @@ export default class PluginDisabled extends Component {
 
     return (
       <View>
+        <Heading size="sm" p="$4">
+          {title}
+        </Heading>
         <Box
-          _light={{ bg: 'warmGray.50' }}
-          _dark={{ bg: 'blueGray.800' }}
-          rounded="md"
-          width="100%"
-          p="4"
+          bg="$backgroundCardLight"
+          sx={{
+            _dark: { bg: '$backgroundCardDark' }
+          }}
+          p="$4"
         >
-          <Heading>{title}</Heading>
           <Text>
             Read more{' '}
             <Link

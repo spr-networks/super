@@ -1,21 +1,28 @@
 import React from 'react'
-import { NativeBaseProvider } from 'native-base'
-import { SSRProvider } from '@react-aria/ssr'
+import { SafeAreaView } from 'react-native'
 import {
   NativeRouter as Router,
   Route,
   Routes,
   Navigate
 } from 'react-router-native'
+
 import AuthLayout from 'layouts/Auth'
 import AdminLayout from 'layouts/Admin'
 import { routesAuth, routesAdmin } from 'routes'
-import { theme } from 'Theme'
+
+import { GluestackUIProvider } from '@gluestack-ui/themed'
+import { config } from 'gluestack-ui.config'
 
 export default function App() {
+  const [colorMode, setColorMode] = React.useState('light')
+  const toggleColorMode = () => {
+    setColorMode((prev) => (prev === 'light' ? 'dark' : 'light'))
+  }
+
   return (
-    <SSRProvider>
-      <NativeBaseProvider theme={theme}>
+    <>
+      <GluestackUIProvider config={config} colorMode={colorMode}>
         <Router>
           <Routes>
             <Route
@@ -24,20 +31,28 @@ export default function App() {
               element={<Navigate to="/auth/login" />}
             />
 
-            <Route key="auth" path="/auth" element={<AuthLayout />}>
+            <Route
+              key="auth"
+              path="/auth"
+              element={<AuthLayout toggleColorMode={toggleColorMode} />}
+            >
               {routesAuth.map((r) => (
                 <Route key={r.path} path={r.path} element={<r.element />} />
               ))}
             </Route>
 
-            <Route key="admin" path="/admin" element={<AdminLayout />}>
+            <Route
+              key="admin"
+              path="/admin"
+              element={<AdminLayout toggleColorMode={toggleColorMode} />}
+            >
               {routesAdmin.map((r) => (
                 <Route key={r.path} path={r.path} element={<r.element />} />
               ))}
             </Route>
           </Routes>
         </Router>
-      </NativeBaseProvider>
-    </SSRProvider>
+      </GluestackUIProvider>
+    </>
   )
 }

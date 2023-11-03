@@ -1,14 +1,28 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import { Box, Button, Modal } from 'native-base'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faCirclePlus, faPlus } from '@fortawesome/free-solid-svg-icons'
+
+import {
+  Button,
+  ButtonIcon,
+  ButtonText,
+  Heading,
+  Icon,
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalContent,
+  ModalCloseButton,
+  ModalHeader,
+  CloseIcon
+} from '@gluestack-ui/themed'
+
+import { PlusIcon } from 'lucide-react-native'
 
 const ModalForm = (props) => {
-  const [show, setShow] = useState(false)
+  const [showModal, setShowModal] = useState(false)
 
-  const closeModal = () => setShow(false)
-  const toggleModal = () => setShow(!show)
+  const onClose = () => setShowModal(false)
+  const toggleModal = () => setShowModal(!showModal)
 
   // this allows us to close the modal using a ref to the modal
   useEffect(() => {
@@ -25,10 +39,11 @@ const ModalForm = (props) => {
 
   let triggerProps = {
     size: 'sm',
-    variant: 'ghost',
-    colorScheme: 'blueGray',
-    borderColor: 'info.400',
-    leftIcon: <Icon icon={props.triggerIcon || faCirclePlus} />,
+    variant: 'solid',
+    action: 'primary',
+    sx: {
+      '@md': { size: 'xs' }
+    },
     onPress: toggleModal
   }
 
@@ -39,21 +54,25 @@ const ModalForm = (props) => {
   return (
     <>
       {props.triggerText ? (
-        <Button {...triggerProps}>{props.triggerText || 'Open Modal'}</Button>
+        <Button {...triggerProps}>
+          <ButtonText>{props.triggerText || 'Open Modal'}</ButtonText>
+          <ButtonIcon as={PlusIcon} ml="$1" />
+        </Button>
       ) : null}
 
-      {show ? (
-        <Modal isOpen={show} onClose={toggleModal} animationPreset="slide">
-          <Modal.Content
-            width={{ base: '100%' }}
-            maxW={{ base: '100%', md: '440px' }}
-            rounded={{ base: 'none', md: 'md' }}
-          >
-            <Modal.CloseButton />
-            <Modal.Header>{props.title || 'Title'}</Modal.Header>
-            <Modal.Body>{props.children}</Modal.Body>
-            {/*<Modal.Footer />*/}
-          </Modal.Content>
+      {showModal ? (
+        <Modal isOpen={showModal} onClose={onClose}>
+          <ModalBackdrop />
+          <ModalContent>
+            <ModalHeader>
+              <Heading size="sm">{props.title || 'Title'}</Heading>
+              <ModalCloseButton>
+                <Icon as={CloseIcon} />
+              </ModalCloseButton>
+            </ModalHeader>
+            <ModalBody pb="$6">{props.children}</ModalBody>
+            {/*<ModalFooter />*/}
+          </ModalContent>
         </Modal>
       ) : null}
     </>

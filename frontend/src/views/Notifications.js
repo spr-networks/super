@@ -1,34 +1,32 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
 
-import Icon from 'FontAwesomeUtils'
 import {
-  faEllipsis,
-  faTrash,
-  faToggleOn,
-  faToggleOff,
-  faBellSlash,
-  faBell
-} from '@fortawesome/free-solid-svg-icons'
-import {
+  Button,
+  ButtonIcon,
   Box,
-  Heading,
+  FlatList,
   HStack,
-  IconButton,
+  Icon,
   Menu,
+  MenuItem,
+  MenuItemLabel,
   View,
-  Stack,
+  VStack,
   Text,
-  useColorModeValue,
-  Button
-} from 'native-base'
+  TrashIcon,
+  ThreeDotsIcon
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+//import { FlashList } from '@shopify/flash-list'
 
 import { notificationsAPI } from 'api'
 import AddNotifcation from 'components/Notifications/AddNotification'
 import { AlertContext } from 'layouts/Admin'
 import ModalForm from 'components/ModalForm'
+import { ListHeader } from 'components/List'
+import { ListItem } from 'components/List'
+import { BellIcon, BellOffIcon } from 'lucide-react-native'
 
 const NotificationItem = ({ item, index, onDelete, onToggle, ...props }) => {
   if (!item) {
@@ -36,84 +34,71 @@ const NotificationItem = ({ item, index, onDelete, onToggle, ...props }) => {
   }
 
   const trigger = (triggerProps) => (
-    <IconButton
-      variant="unstyled"
-      ml="auto"
-      icon={<Icon icon={faEllipsis} color="muted.600" />}
-      {...triggerProps}
-    ></IconButton>
+    <Button variant="link" ml="auto" {...triggerProps}>
+      <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
+    </Button>
   )
 
   const moreMenu = (
-    <Menu w={190} closeOnSelect={true} trigger={trigger}>
-      <Menu.Group title="Actions">
-        <Menu.Item onPress={() => onDelete(index)}>
-          <HStack space={2} alignItems="center">
-            <Icon icon={faTrash} color="danger.700" />
-            <Text color="danger.700">Delete</Text>
-          </HStack>
-        </Menu.Item>
-        <Menu.Item onPress={() => onToggle(index, item)}>
-          <HStack space={2} alignItems="center">
-            {item.Notification ? (
-              <>
-                <Icon icon={faToggleOn} />
-                <Text>Disable</Text>
-              </>
-            ) : (
-              <>
-                <Icon icon={faToggleOff} />
-                <Text>Enable</Text>
-              </>
-            )}
-          </HStack>
-        </Menu.Item>
-      </Menu.Group>
+    <Menu
+      trigger={trigger}
+      selectionMode="single"
+      onSelectionChange={(e) => {
+        let action = e.currentKey
+        if (action == 'delete') {
+          onDelete(index)
+        } else if (action == 'onoff') {
+          onToggle(index, item)
+        }
+      }}
+    >
+      <MenuItem key="delete" textValue="delete">
+        <TrashIcon color="$red700" mr="$2" />
+        <MenuItemLabel size="sm" color="$red700">
+          Delete
+        </MenuItemLabel>
+      </MenuItem>
+
+      <MenuItem key="onoff" textValue="onoff">
+        <Icon as={item.Notification ? BellIcon : BellOffIcon} mr="$2" />
+        <MenuItemLabel size="sm">
+          {item.Notification ? 'Disable' : 'Enable'}
+        </MenuItemLabel>
+      </MenuItem>
     </Menu>
   )
 
   return (
-    <Box
-      bg="backgroundCardLight"
-      borderBottomWidth={1}
-      _dark={{
-        bg: 'backgroundCardDark',
-        borderColor: 'borderColorCardDark'
-      }}
-      borderColor="borderColorCardLight"
-      p={4}
-    >
-      <HStack space={2} justifyContent="space-between" alignItems="center">
-        <Stack direction={{ base: 'column', md: 'row' }} space={2} w="1/3">
-          <Text bold>{item.Conditions.Prefix || '*prefix'}</Text>
-          <HStack space={2}>
-            <Text color="muted.500">Protocol</Text>
-            <Text>{item.Conditions.Protocol || 'any'}</Text>
-          </HStack>
-        </Stack>
-        <Stack direction={{ base: 'column', md: 'row' }} space={2} w="1/3">
-          <HStack space={2}>
-            <Text color="muted.500">Source</Text>
-            <Text>
-              {item.Conditions.SrcIP || '*'}:{item.Conditions.SrcPort || '*'}
-            </Text>
-          </HStack>
-          <HStack space={2}>
-            <Text color="muted.500">Dest</Text>
-            <Text>
-              {item.Conditions.DstIP || '*'}:{item.Conditions.DstPort || '*'}
-            </Text>
-          </HStack>
-        </Stack>
-        <Box display={{ base: 'none', md: 'flex' }}>
-          <Icon
-            icon={item.Notification ? faBell : faBellSlash}
-            color="muted.500"
-          />
-        </Box>
-        <Box>{moreMenu}</Box>
-      </HStack>
-    </Box>
+    <ListItem>
+      <VStack sx={{ '@md': { flexDirection: 'row' } }} space="md" w="$1/3">
+        <Text bold>{item.Conditions.Prefix || '*prefix'}</Text>
+        <HStack space="md">
+          <Text color="$muted500">Protocol</Text>
+          <Text>{item.Conditions.Protocol || 'any'}</Text>
+        </HStack>
+      </VStack>
+      <VStack sx={{ '@md': { flexDirection: 'row' } }} space="md" w="$1/3">
+        <HStack space="md">
+          <Text color="$muted500">Source</Text>
+          <Text>
+            {item.Conditions.SrcIP || '*'}:{item.Conditions.SrcPort || '*'}
+          </Text>
+        </HStack>
+        <HStack space="md">
+          <Text color="$muted500">Dest</Text>
+          <Text>
+            {item.Conditions.DstIP || '*'}:{item.Conditions.DstPort || '*'}
+          </Text>
+        </HStack>
+      </VStack>
+      <Box sx={{ '@base': { display: 'none', '@md': { display: 'flex' } } }}>
+        <Icon
+          as={item.Notification ? BellIcon : BellOffIcon}
+          color="$muted500"
+        />
+      </Box>
+      <Box>{moreMenu}</Box>
+    </ListItem>
   )
 }
 
@@ -168,8 +153,7 @@ const Notifications = (props) => {
 
   return (
     <View h={h}>
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <Heading fontSize="md">Notifications</Heading>
+      <ListHeader title="Notifications">
         <ModalForm
           title="Add Notification"
           triggerText="Add Notification"
@@ -177,9 +161,9 @@ const Notifications = (props) => {
         >
           <AddNotifcation onSubmit={onSubmit} />
         </ModalForm>
-      </HStack>
+      </ListHeader>
 
-      <FlashList
+      <FlatList
         data={notifications}
         estimatedItemSize={100}
         renderItem={({ item, index }) => (

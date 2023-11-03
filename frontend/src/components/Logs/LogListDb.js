@@ -5,34 +5,43 @@
  */
 import React, { useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
-import { logsAPI, dbAPI } from 'api'
-import InputSelect from 'components/InputSelect'
+import { dbAPI } from 'api'
 import { prettyDate } from 'utils'
-import { AlertContext } from 'layouts/Admin'
+import SyntaxHighlighter from 'react-native-syntax-highlighter'
+import { github, ocean } from 'react-syntax-highlighter/styles/hljs'
+import { Buffer } from 'buffer'
 
 import {
   Badge,
-  Box,
+  BadgeText,
   Button,
+  ButtonText,
+  ButtonIcon,
   FlatList,
   Heading,
-  Stack,
   Link,
   HStack,
   VStack,
-  ScrollView,
   Text,
   View,
-  useColorModeValue,
-  Tooltip
-} from 'native-base'
+  LinkText,
+  useColorMode,
+  CopyIcon,
+  ScrollView
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
-import Icon from 'FontAwesomeUtils'
 import {
-  faFilter,
-  faFilterCircleXmark
-} from '@fortawesome/free-solid-svg-icons'
+  FilterIcon,
+  FilterXIcon,
+  SlidersHorizontalIcon
+} from 'lucide-react-native'
+
+//import { FlashList } from '@shopify/flash-list'
+import { ArrowLeftIcon, ArrowRightIcon } from '@gluestack-ui/themed'
+import { ListItem } from 'components/List'
+import { Select } from 'components/Select'
+import { Tooltip } from 'components/Tooltip'
+import { copy } from 'utils'
 
 const LogListItem = (props) => {
   return <></>
@@ -47,6 +56,8 @@ const LogList = (props) => {
   const perPage = 20
   const [params, setParams] = useState({ num: perPage })
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
+
+  const colorMode = useColorMode()
 
   useEffect(() => {
     //TODO map logs, merge timestamps
@@ -156,20 +167,174 @@ const LogList = (props) => {
 
   const levelToColor = (level) => {
     let levels = {
-      info: 'blueGray',
-      warning: 'orange',
-      error: 'danger',
+      info: 'info',
+      warning: 'warning',
+      error: 'error',
       success: 'success'
     }
-    return levels[level] || 'blueGray'
+    return levels[level] || 'muted'
   }
 
   const niceTopic = (topic) => topic && topic.replace(/^log:/, '')
 
   //skip some properties
-  const dumpJSON = (item) => {
+  const dumpJSON = (item, clean = false) => {
     let { time, bucket, ...rest } = item
+    if (clean) {
+      return JSON.stringify(rest, null, 2)
+    }
+
     return JSON.stringify(rest)
+  }
+
+  const formatHexString = (buffer) => {
+    let hexString = ''
+    let asciiString = ''
+    let resultString = ''
+
+    for (let i = 0; i < buffer.length; i++) {
+      const byte = buffer[i]
+      hexString += byte.toString(16).padStart(2, '0')
+      asciiString += byte >= 32 && byte <= 126 ? String.fromCharCode(byte) : '.'
+      if (i % 8 === 7) hexString += '  '
+
+      if (i % 16 === 15) {
+        resultString += hexString + ' |' + asciiString + '|\n'
+        hexString = ''
+        asciiString = ''
+      } else {
+        hexString += ' '
+      }
+    }
+
+    if (hexString) {
+      const remainingBytes = buffer.length % 16
+      if (remainingBytes <= 8) {
+        hexString += ' '.repeat((8 - remainingBytes) * 3 + 1)
+      } else {
+        hexString += ' '.repeat((16 - remainingBytes) * 3)
+      }
+      resultString += hexString + '  | ' + asciiString
+    }
+
+    return resultString //.trimEnd();
+  }
+
+  const getPayloadHex = (obj) => {
+    for (let key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        if (key === 'Payload' && typeof obj[key] === 'string') {
+          const buffer = Buffer.from(obj[key], 'base64')
+          const hexString = formatHexString(buffer)
+          return hexString
+        } else if (typeof obj[key] === 'object') {
+          let ret = getPayloadHex(obj[key])
+          if (ret) {
+            return ret
+          }
+        }
+      }
+    }
+    return null
+  }
+
+  const prettyEvent = (item) => {
+    let hexLines = getPayloadHex(item)
+    const syntaxTheme = colorMode == 'light' ? github : ocean
+
+    if (!item.msg) {
+      //TODO wrap items in scrollview if > x lines
+      //<ScrollView maxHeight={150} borderColor="$muted200" borderWidth="$1"></ScrollView>
+      return (
+        <VStack
+          space="md"
+          alignItems="flex-end"
+          sx={{ '@md': { flexDirection: 'row', alignItems: 'flex-start' } }}
+        >
+          <SyntaxHighlighter
+            highlighter="hljs"
+            language="json"
+            style={syntaxTheme}
+            wrapLongLines={true}
+            lineProps={{ style: { flexWrap: 'wrap', lineHeight: 1.5 } }} // Adjusted line height
+            customStyle={{
+              backgroundColor: 'transparent'
+            }}
+          >
+            {dumpJSON(item, true)}
+          </SyntaxHighlighter>
+
+          <Tooltip label="Copy JSON">
+            <Button
+              action="primary"
+              variant="link"
+              size="xs"
+              display={item.msg ? 'none' : 'flex'}
+              onPress={() => copy(JSON.stringify(item))}
+              position="sticky"
+              sx={{
+                '@base': { right: '$0', marginTop: '-$10 ' },
+                '@md': {
+                  right: hexLines ? '$1/2' : '$0',
+                  marginRight: '$10',
+                  marginTop: '$0'
+                }
+              }}
+            >
+              <ButtonIcon as={CopyIcon} ml="$1" />
+            </Button>
+          </Tooltip>
+
+          {hexLines ? (
+            <SyntaxHighlighter
+              language="brainfuck"
+              style={syntaxTheme}
+              customStyle={{
+                backgroundColor: 'transparent'
+              }}
+            >
+              {hexLines}
+            </SyntaxHighlighter>
+          ) : null}
+        </VStack>
+      )
+    }
+
+    return <Text size="sm">{item.msg}</Text>
+  }
+
+  const SelectTopic = ({ options, selectedValue, onValueChange, ...props }) => {
+    return (
+      <Select
+        size="xs"
+        selectedValue={selectedValue}
+        selectedLabel={selectedValue}
+        onValueChange={onValueChange}
+        minWidth="$32"
+      >
+        {options.map((value) => (
+          <Select.Item key={value} label={niceTopic(value)} value={value} />
+        ))}
+      </Select>
+    )
+
+    /*return (
+      <>
+        {options.map((topic, i) => (
+          <Button
+            key={`btn:${topic}:${filter[topic]}`}
+            size="xs"
+            action="primary"
+            variant={topic == selectedValue ? 'solid' : 'outline'}
+            rounded="xs"
+            mb="$0.5"
+            onPress={() => onValueChange(topic)}
+          >
+            <ButtonText>{niceTopic(topic)}</ButtonText>
+          </Button>
+        ))}
+      </>
+    )*/
   }
 
   //TODO support other containers
@@ -192,112 +357,124 @@ const LogList = (props) => {
 
   return (
     <View h={h} display="flex">
-      <HStack space={2} p={4} alignItems={'flex-end'}>
-        <Heading fontSize="lg">Events: {niceTopic(getCurrentBucket())}</Heading>
-        <Text color="muted.500" mt="auto" display={total ? 'flex' : 'none'}>
+      <HStack
+        space="md"
+        p="$4"
+        alignItems="center"
+        __sx={{ '@md': { flexDirection: 'row' } }}
+      >
+        <Heading size="sm">Events</Heading>
+        <Text
+          color="$muted500"
+          sx={{
+            '@base': { display: 'none' },
+            '@md': { display: total ? 'flex' : 'none' }
+          }}
+        >
           {/*page={page}/{Math.ceil(total / perPage)}, total = {total}*/}
           {total} items
         </Text>
-        <Tooltip label="Set filter for logs">
+
+        {/*
+        <Tooltip label="Set filter for logs" ml="auto">
           <Button
             ml="auto"
             size="sm"
-            variant="ghost"
-            colorScheme="blueGray"
-            leftIcon={<Icon icon={showForm ? faFilterCircleXmark : faFilter} />}
+            action="secondary"
+            variant="link"
             onPress={() => setShowForm(!showForm)}
-          />
+          >
+            <ButtonIcon
+              as={showForm ? FilterXIcon : FilterIcon}
+            />
+          </Button>
         </Tooltip>
+        */}
+        <HStack sx={{ '@md': { marginLeft: 'auto' } }}>
+          <SelectTopic
+            options={Object.keys(filter)}
+            selectedValue={Object.keys(filter).find((f) => filter[f])}
+            onValueChange={handleTopicFilter}
+          />
+        </HStack>
       </HStack>
 
       <HStack
-        space={2}
-        px={4}
-        pb={2}
+        space="md"
+        px="$4"
+        pb="$2"
         display={showForm ? 'flex' : 'none'}
         flexWrap="wrap"
       >
-        {Object.keys(filter).map((topic) => (
-          <Button
-            key={`btn:${topic}:${filter[topic]}`}
-            variant={filter[topic] ? 'solid' : 'outline'}
-            colorScheme={'blueGray'}
-            rounded="xs"
-            size="sm"
-            py={1}
-            mb={2}
-            onPress={() => handleTopicFilter(topic)}
-          >
-            {niceTopic(topic)}
-          </Button>
-        ))}
+        {/*<SelectTopic
+          options={Object.keys(filter)}
+          selectedValue={Object.keys(filter).find((f) => filter[f])}
+          onValueChange={handleTopicFilter}
+        />*/}
       </HStack>
-      <FlashList
+      <FlatList
         flex={2}
         data={logs}
         estimatedItemSize={100}
         renderItem={({ item }) => (
-          <Box
-            bg="backgroundCardLight"
-            borderBottomWidth={1}
-            _dark={{
-              bg: 'backgroundCardDark',
-              borderColor: 'borderColorCardDark'
-            }}
-            borderColor="borderColorCardLight"
-            p={4}
-          >
-            <HStack space={2}>
-              <VStack space={1} flex={1}>
-                <Text>{item.msg || dumpJSON(item)}</Text>
-                <HStack space={1}>
-                  {/*<Text color={'muted.500'} bold>
-                    {item.bucket}
-                  </Text>*/}
-                  {getCurrentBucket() == 'log:api' && item.file && item.func ? (
-                    <Link
-                      color={'muted.500'}
-                      isExternal
-                      href={githubURL(item.file, getCurrentBucket())}
-                    >
+          <ListItem alignItems="flex-start">
+            <VStack space="sm" flex={1}>
+              {prettyEvent(item)}
+              <HStack space="sm">
+                {getCurrentBucket() == 'log:api' && item.file && item.func ? (
+                  <Link
+                    color="$muted500"
+                    isExternal
+                    href={githubURL(item.file, getCurrentBucket())}
+                  >
+                    <LinkText size="sm">
                       {item.file}:{item.func}
-                    </Link>
-                  ) : null}
-                </HStack>
-              </VStack>
-              <VStack space={1}>
-                <Badge
-                  variant={'outline'}
-                  colorScheme={levelToColor(item.level)}
-                >
-                  {item.level || 'info'}
-                </Badge>
+                    </LinkText>
+                  </Link>
+                ) : null}
+              </HStack>
+            </VStack>
+            <VStack
+              space="sm"
+              alignItems="flex-end"
+              sx={{ '@base': { width: 80 }, '@md': { width: 'auto' } }}
+            >
+              <Text size="xs" textAlign="right">
+                {prettyDate(item.time)}
+              </Text>
 
-                <Text>{prettyDate(item.time)}</Text>
-              </VStack>
-            </HStack>
-          </Box>
+              <Badge
+                size="md"
+                action={levelToColor(item.level)}
+                variant="outline"
+              >
+                <BadgeText>{item.level || 'info'}</BadgeText>
+              </Badge>
+            </VStack>
+          </ListItem>
         )}
         keyExtractor={(item, index) => item.time + index}
       />
 
       {total > perPage ? (
-        <HStack space={2} alignItems="flex-start">
+        <HStack space="md" alignItems="flex-start">
           <Button
             flex={1}
-            variant="ghost"
+            variant="link"
             isDisabled={page <= 1}
             onPress={prevPage}
           >
-            &larr; Start
+            <ButtonIcon as={ArrowLeftIcon} mr="$1" />
+            <ButtonText>Start</ButtonText>
           </Button>
           <Button
             flex={1}
-            variant="ghost"
+            variant="link"
             isDisabled={page >= Math.ceil(total / perPage)}
             onPress={nextPage}
           >
-            Next &rarr;
+            <ButtonText>Next</ButtonText>
+            <ButtonIcon as={ArrowRightIcon} ml="$1" />
           </Button>
         </HStack>
       ) : null}

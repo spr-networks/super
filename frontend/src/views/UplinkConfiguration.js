@@ -7,36 +7,55 @@
 import React, { useContext, useEffect, useState } from 'react'
 import {
   Badge,
+  BadgeText,
   Box,
   Button,
-  Heading,
-  HStack,
-  IconButton,
+  ButtonText,
   Input,
+  InputField,
   FlatList,
   FormControl,
-  Modal,
+  FormControlLabel,
+  FormControlLabelText,
+  Heading,
+  Icon,
   Menu,
+  MenuItem,
+  MenuItemLabel,
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalContent,
+  ModalCloseButton,
+  ModalHeader,
   Text,
   VStack,
   View,
-  useDisclose,
-  useColorModeValue,
-  Checkbox
-} from 'native-base'
-
-import Icon from 'FontAwesomeUtils'
-
-import { faEllipsis, faTag } from '@fortawesome/free-solid-svg-icons'
+  Checkbox,
+  CheckboxIcon,
+  CheckboxIndicator,
+  CheckboxLabel,
+  CloseIcon,
+  ButtonIcon,
+  ThreeDotsIcon,
+  HStack,
+  BadgeIcon,
+  CheckCircleIcon
+} from '@gluestack-ui/themed'
 
 import { wifiAPI, api } from 'api'
 import { AlertContext } from 'AppContext'
-import { ucFirst } from 'utils'
 
 import { Select } from 'components/Select'
 import InputSelect from 'components/InputSelect'
-import { deviceAPI } from 'api'
 import { Address4 } from 'ip-address'
+import { ListHeader, ListItem } from 'components/List'
+import {
+  ArrowDownUpIcon,
+  CableIcon,
+  NetworkIcon,
+  WifiIcon
+} from 'lucide-react-native'
 
 let keymgmts = [
   { value: 'WPA-PSK WPA-PSK-SHA256 SAE', label: 'WPA2/WPA3' },
@@ -145,9 +164,11 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
   }, [])
 
   return (
-    <VStack space={4}>
+    <VStack space="lg">
       <FormControl>
-        <FormControl.Label>SSID</FormControl.Label>
+        <FormControlLabel>
+          <FormControlLabelText>SSID</FormControlLabelText>
+        </FormControlLabel>
         <InputSelect
           options={optSSIDs}
           value={item.SSID}
@@ -155,27 +176,31 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
           onChangeText={handleChangeSSID}
         />
       </FormControl>
-      <FormControl>
-        <FormControl.Label>BSSID</FormControl.Label>
-        <Input
-          variant="underlined"
-          placeholder="BSSID Optional"
-          value={item.BSSID}
-          onChangeText={(BSSID) => setItem({ ...item, BSSID })}
-          autoFocus
-        />
 
-        <Checkbox
-          size="sm"
-          colorScheme="primary"
-          value={!assignBSSID}
-          onChange={setAssignBSSID}
-        >
-          Assign
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>BSSID</FormControlLabelText>
+        </FormControlLabel>
+        <Input variant="underlined">
+          <InputField
+            placeholder="BSSID Optional"
+            value={item.BSSID}
+            onChangeText={(BSSID) => setItem({ ...item, BSSID })}
+            autoFocus
+          />
+        </Input>
+
+        <Checkbox value={!assignBSSID} onChange={setAssignBSSID}>
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Assign</CheckboxLabel>
         </Checkbox>
       </FormControl>
       <FormControl>
-        <FormControl.Label>Auth</FormControl.Label>
+        <FormControlLabel>
+          <FormControlLabelText>Auth</FormControlLabelText>
+        </FormControlLabel>
         <Select
           selectedValue={item.KeyMgmt}
           onValueChange={(KeyMgmt) => setItem({ ...item, KeyMgmt })}
@@ -191,23 +216,26 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
         </Select>
       </FormControl>
       <FormControl>
-        <FormControl.Label>Password</FormControl.Label>
-        <Input
-          variant="underlined"
-          type="password"
-          autoComplete="off"
-          autoCorrect="off"
-          placeholder="Password..."
-          value={item.Password}
-          onChangeText={(Password) => setItem({ ...item, Password })}
-          autoFocus
-        />
+        <FormControlLabel>
+          <FormControlLabelText>Password</FormControlLabelText>
+        </FormControlLabel>
+        <Input variant="underlined">
+          <InputField
+            type="password"
+            autoComplete="off"
+            autoCorrect="off"
+            placeholder="Password..."
+            value={item.Password}
+            onChangeText={(Password) => setItem({ ...item, Password })}
+            autoFocus
+          />
+        </Input>
       </FormControl>
 
       {/*
         //priority will only matter once UI supports multiple ssids.
       <FormControl>
-        <FormControl.Label>Priority</FormControl.Label>
+        <FormControlLabel>Priority</FormControlLabel>
         <Input
           variant="underlined"
           keyboardType="numeric"
@@ -224,21 +252,23 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
       */}
 
       <FormControl>
-        <FormControl.Label>Status</FormControl.Label>
+        <FormControlLabel>
+          <FormControlLabelText>Status</FormControlLabelText>
+        </FormControlLabel>
 
         <Checkbox
-          size="sm"
-          colorScheme="primary"
-          defaultIsChecked
           value={!item.Disabled}
+          defaultIsChecked
           onChange={(val) => setItem({ ...item, Disabled: !val })}
         >
-          Enabled
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Enabled</CheckboxLabel>
         </Checkbox>
       </FormControl>
-
-      <Button colorScheme="primary" onPress={() => doSubmit(item)}>
-        Save
+      <Button action="primary" onPress={() => doSubmit(item)}>
+        <ButtonText>Save</ButtonText>
       </Button>
     </VStack>
   )
@@ -274,40 +304,42 @@ const UplinkSetConfig = ({ iface, onSubmit, ...props }) => {
   ]
 
   return (
-    <VStack space={4}>
+    <VStack space="lg">
       <FormControl>
-        <FormControl.Label>Update Interface</FormControl.Label>
-        <FormControl>
-          <Checkbox
-            size="sm"
-            colorScheme="primary"
-            value={enable}
-            onChange={(value) => {
-              setEnable(value)
-            }}
-            defaultIsChecked
-          >
-            Enabled
-          </Checkbox>
-        </FormControl>
-        <FormControl>
-          <FormControl.Label>Set Interface Type</FormControl.Label>
-          <Select
-            selectedValue={item.Type}
-            onValueChange={(Type) => setItem({ ...item, Type })}
-          >
-            {validTypes.map((opt) => (
-              <Select.Item
-                key={opt.value}
-                label={opt.label}
-                value={opt.value}
-              />
-            ))}
-          </Select>
-        </FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Update Interface</FormControlLabelText>
+        </FormControlLabel>
+
+        <Checkbox
+          value={enable}
+          defaultIsChecked
+          onChange={(value) => {
+            setEnable(value)
+          }}
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Enabled</CheckboxLabel>
+        </Checkbox>
       </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Set Interface Type</FormControlLabelText>
+        </FormControlLabel>
+        <Select
+          selectedValue={item.Type}
+          onValueChange={(Type) => setItem({ ...item, Type })}
+        >
+          {validTypes.map((opt) => (
+            <Select.Item key={opt.value} label={opt.label} value={opt.value} />
+          ))}
+        </Select>
+      </FormControl>
+
       <Button colorScheme="primary" onPress={() => doSubmit(item)}>
-        Save
+        <ButtonText>Save</ButtonText>
       </Button>
     </VStack>
   )
@@ -370,48 +402,57 @@ const UplinkSetIP = ({ iface, onSubmit, ...props }) => {
   useEffect(() => {}, [])
 
   return (
-    <VStack space={4}>
+    <VStack space="lg">
       <FormControl>
-        <FormControl.Label>DHCP Settings</FormControl.Label>
+        <FormControlLabel>
+          <FormControlLabelText>DHCP Settings</FormControlLabelText>
+        </FormControlLabel>
         <Checkbox
-          size="sm"
-          colorScheme="primary"
           value={item.DisableDHCP}
           onChange={(value) => {
             setItem({ ...item, DisableDHCP: value })
           }}
         >
-          Manually Set IP
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Manually Set IP</CheckboxLabel>
         </Checkbox>
       </FormControl>
 
       {item.DisableDHCP ? (
         <>
           <FormControl>
-            <FormControl.Label>Assign IP</FormControl.Label>
-            <Input
-              variant="underlined"
-              placeholder="192.168.1.1/24"
-              value={item.IP}
-              onChangeText={(IP) => setItem({ ...item, IP })}
-              autoFocus
-            />
+            <FormControlLabel>
+              <FormControlLabelText>Assign IP</FormControlLabelText>
+            </FormControlLabel>
+            <Input variant="underlined">
+              <InputField
+                placeholder="192.168.1.1/24"
+                value={item.IP}
+                onChangeText={(IP) => setItem({ ...item, IP })}
+                autoFocus
+              />
+            </Input>
           </FormControl>
           <FormControl>
-            <FormControl.Label>Assign Router</FormControl.Label>
-            <Input
-              variant="underlined"
-              placeholder="192.168.1.1"
-              value={item.Router}
-              onChangeText={(Router) => setItem({ ...item, Router })}
-              autoFocus
-            />
+            <FormControlLabel>
+              <FormControlLabelText>Assign Router</FormControlLabelText>
+            </FormControlLabel>
+            <Input variant="underlined">
+              <InputField
+                placeholder="192.168.1.1"
+                value={item.Router}
+                onChangeText={(Router) => setItem({ ...item, Router })}
+                autoFocus
+              />
+            </Input>
           </FormControl>
         </>
       ) : null}
 
-      <Button colorScheme="primary" onPress={() => doSubmit(item)}>
-        Save
+      <Button action="primary" onPress={() => doSubmit(item)}>
+        <ButtonText>Save</ButtonText>
       </Button>
     </VStack>
   )
@@ -454,52 +495,64 @@ const UplinkAddPPP = ({ iface, onSubmit, ...props }) => {
   }, [])
 
   return (
-    <VStack space={4}>
+    <VStack space="lg">
       <FormControl>
-        <FormControl.Label>Assign Client</FormControl.Label>
-        <Input
-          variant="underlined"
-          placeholder="user@provider.com"
-          value={item.Username}
-          onChangeText={(Username) => setItem({ ...item, Username })}
-          autoFocus
-        />
+        <FormControlLabel>
+          <FormControlLabelText>Assign Client</FormControlLabelText>
+        </FormControlLabel>
+        <Input variant="underlined">
+          <InputField
+            placeholder="user@provider.com"
+            value={item.Username}
+            onChangeText={(Username) => setItem({ ...item, Username })}
+            autoFocus
+          />
+        </Input>
       </FormControl>
       <FormControl>
-        <FormControl.Label>Secret</FormControl.Label>
-        <Input
-          variant="underlined"
-          type="password"
-          autoComplete="off"
-          autoCorrect="off"
-          placeholder="Password..."
-          value={item.Secret}
-          onChangeText={(Secret) => setItem({ ...item, Secret })}
-          autoFocus
-        />
+        <FormControlLabel>
+          <FormControlLabelText>Secret</FormControlLabelText>
+        </FormControlLabel>
+        <Input variant="underlined">
+          <InputField
+            type="password"
+            autoComplete="off"
+            autoCorrect="off"
+            placeholder="Password..."
+            value={item.Secret}
+            onChangeText={(Secret) => setItem({ ...item, Secret })}
+            autoFocus
+          />
+        </Input>
       </FormControl>
       <FormControl>
-        <FormControl.Label>VLAN ID</FormControl.Label>
-        <Input
-          variant="underlined"
-          placeholder="201 (Optional)"
-          value={item.VLAN}
-          onChangeText={(VLAN) => setItem({ ...item, VLAN })}
-          autoFocus
-        />
+        <FormControlLabel>
+          <FormControlLabelText>VLAN ID</FormControlLabelText>
+        </FormControlLabel>
+        <Input variant="underlined">
+          <InputField
+            placeholder="201 (Optional)"
+            value={item.VLAN}
+            onChangeText={(VLAN) => setItem({ ...item, VLAN })}
+            autoFocus
+          />
+        </Input>
       </FormControl>
       <FormControl>
-        <FormControl.Label>Set MTU</FormControl.Label>
-        <Input
-          variant="underlined"
-          placeholder="1492 (Optional)"
-          value={item.MTU}
-          onChangeText={(MTU) => setItem({ ...item, MTU })}
-          autoFocus
-        />
+        <FormControlLabel>
+          <FormControlLabelText>Set MTU</FormControlLabelText>
+        </FormControlLabel>
+        <Input variant="underlined">
+          <InputField
+            placeholder="1492 (Optional)"
+            value={item.MTU}
+            onChangeText={(MTU) => setItem({ ...item, MTU })}
+            autoFocus
+          />
+        </Input>
       </FormControl>
-      <Button colorScheme="primary" onPress={() => doSubmit(item)}>
-        Save
+      <Button action="primary" onPress={() => doSubmit(item)}>
+        <ButtonText>Save</ButtonText>
       </Button>
     </VStack>
   )
@@ -515,6 +568,7 @@ const UplinkInfo = (props) => {
 
   const [iface, setIface] = useState(null)
 
+  const [showModal, setShowModal] = useState(false)
   const [modal, setModal] = useState('')
 
   const [supernets, setSupernets] = useState([])
@@ -569,10 +623,9 @@ const UplinkInfo = (props) => {
       })
       .catch((err) => context.error(err))
 
-      api.get('/subnetConfig').then((config) => {
-        setSupernets(config.TinyNets)
-      })
-
+    api.get('/subnetConfig').then((config) => {
+      setSupernets(config.TinyNets)
+    })
   }
 
   useEffect(() => {
@@ -611,19 +664,15 @@ const UplinkInfo = (props) => {
         links.push(entry)
       }
     }
+
     setUplinks(uplinks)
     setLinks(links)
   }
 
-  const { isOpen, onOpen, onClose } = useDisclose()
-
-  const trigger = (triggerProps) => (
-    <IconButton
-      variant="unstyled"
-      ml="auto"
-      icon={<Icon icon={faEllipsis} color="muted.600" />}
-      {...triggerProps}
-    ></IconButton>
+  const trigger = ({ ...triggerProps }) => (
+    <Button action="secondary" variant="link" ml="auto" {...triggerProps}>
+      <ButtonIcon as={ThreeDotsIcon} />
+    </Button>
   )
 
   const truncateSupernetIps = (ips) => {
@@ -635,53 +684,40 @@ const UplinkInfo = (props) => {
       for (let subnet of supernets) {
         let sub_addr = new Address4(subnet)
         if (local_addr.isInSubnet(sub_addr)) {
-          count++;
+          count++
         }
       }
     }
-    if (count == ips.length)
-      return true
+    if (count == ips.length) return true
     return false
   }
 
   const moreMenu = (iface) => (
-    <Menu w={190} closeOnSelect={true} trigger={trigger}>
-      <Menu.Item
-        onPress={() => {
-          setIface(iface)
-          setModal('config')
-          onOpen()
-        }}
-      >
-        Modify Interface
-      </Menu.Item>
-      <Menu.Item
-        onPress={() => {
-          setIface(iface)
-          setModal('ip')
-          onOpen()
-        }}
-      >
-        Modify IP Settings
-      </Menu.Item>
-      <Menu.Item
-        onPress={() => {
-          setIface(iface)
-          setModal('wifi')
-          onOpen()
-        }}
-      >
-        Configure Wireless
-      </Menu.Item>
-      <Menu.Item
-        onPress={() => {
-          setIface(iface)
-          setModal('ppp')
-          onOpen()
-        }}
-      >
-        Configure PPP
-      </Menu.Item>
+    <Menu
+      trigger={trigger}
+      selectionMode="single"
+      onSelectionChange={(e) => {
+        setIface(iface)
+        setModal(e.currentKey)
+        setShowModal(true)
+      }}
+    >
+      <MenuItem key="config" textValue="config">
+        <Icon as={ArrowDownUpIcon} mr="$2" />
+        <MenuItemLabel size="sm">Modify Interface</MenuItemLabel>
+      </MenuItem>
+      <MenuItem key="ip" textValue="ip">
+        <Icon as={ArrowDownUpIcon} mr="$2" />
+        <MenuItemLabel size="sm">Modify IP Settings</MenuItemLabel>
+      </MenuItem>
+      <MenuItem key="wifi" textValue="wifi">
+        <Icon as={WifiIcon} mr="$2" />
+        <MenuItemLabel size="sm">Configure Wireless</MenuItemLabel>
+      </MenuItem>
+      <MenuItem key="ppp" textValue="ppp">
+        <Icon as={CableIcon} mr="$2" />
+        <MenuItemLabel size="sm">Configure PPP</MenuItemLabel>
+      </MenuItem>
     </Menu>
   )
 
@@ -710,136 +746,121 @@ const UplinkInfo = (props) => {
       .put(path, new_entry)
       .then((res2) => {
         fetchInfo()
-        onClose()
+        setShowModal(false)
       })
       .catch((err) => {
         context.error(err)
-        onClose()
+        setShowModal(false)
       })
   }
 
   return (
     <View h={'100%'}>
-      <VStack space={2}>
-        <HStack p={4}>
-          <Heading fontSize="md">Uplink Configuration</Heading>
-        </HStack>
+      <VStack space="md" sx={{ '@md': { maxWidth: '$3/4' } }}>
+        <ListHeader title="Uplink Configuration" />
 
         {/* for each uplink, display a pleasant table with the interface name and the ip address*/}
 
-        <VStack
-          mx={{ base: 0, md: 4 }}
-          width={{ base: '100%', md: '75%' }}
-          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-          _space={2}
-        >
-          <FlatList
-            data={uplinks}
-            keyExtractor={(item) => `${item.Interface}_${item.Type}`}
-            renderItem={({ item }) => (
-              <HStack
-                p={4}
-                rounded="md"
-                alignItems="center"
-                justifyContent={'space-between'}
-                borderBottomWidth={1}
-                _dark={{
-                  bg: 'backgroundCardDark',
-                  borderColor: 'borderColorCardDark'
-                }}
-                borderColor="borderColorCardLight"
-              >
-                <Text flex={1} fontWeight="bold">
-                  {item.Interface}
+        <FlatList
+          data={uplinks}
+          keyExtractor={(item) => `${item.Interface}_${item.Type}`}
+          renderItem={({ item }) => (
+            <ListItem>
+              <Text flex={1} size="sm" bold>
+                {item.Interface}
+              </Text>
+              <VStack flex={1} space="xs">
+                <Text size="sm">{item.Type}</Text>
+                <Text
+                  size="sm"
+                  sx={{
+                    '@base': { display: 'none' },
+                    '@md': { display: 'flex' }
+                  }}
+                >
+                  {item.Subtype}
                 </Text>
-                <Text flex={1}>{item.Type}</Text>
-                <Text flex={1}>{item.Subtype}</Text>
-                <VStack flex={2} space={1}>
-                  {item.IPs.map((ip, i) => (
-                    <Text key={ip} display={i == 0 ? 'flex' : 'none'}>
-                      {ip}
-                    </Text>
-                  ))}
-                </VStack>
+              </VStack>
+
+              <VStack flex={2} space={1}>
+                {item.IPs.map((ip, i) => (
+                  <Text size="sm" key={ip} display={i == 0 ? 'flex' : 'none'}>
+                    {ip}
+                  </Text>
+                ))}
+              </VStack>
+
+              <HStack>
                 {item.Enabled ? (
-                  <Badge
-                    key={item.Name}
-                    variant="outline"
-                    colorScheme="success"
-                    color="success.500"
-                  >
-                    Enabled
+                  <Badge size="sm" action="success" variant="outline">
+                    <BadgeText>Enabled</BadgeText>
                   </Badge>
                 ) : null}
-                <Box flex={1}>{moreMenu(item.Interface)}</Box>
               </HStack>
-            )}
-          />
-        </VStack>
 
-        <VStack
-          mx={{ base: 0, md: 4 }}
-          width={{ base: '100%', md: '75%' }}
-          bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-          _space={2}
+              <Box flex={1}>{moreMenu(item.Interface)}</Box>
+            </ListItem>
+          )}
+        />
+
+        <FlatList
+          data={links}
+          keyExtractor={(item) => `${item.Interface}_${item.Type}`}
+          renderItem={({ item }) => (
+            <ListItem>
+              <Text flex={1} size="sm" bold>
+                {item.Interface}
+              </Text>
+              <Text flex={1} size="sm">
+                {item.Type}
+              </Text>
+              <VStack flex={3} space="sm">
+                {truncateSupernetIps(item.IPs)
+                  ? supernets.map((net) => <Text size="sm">{net}</Text>)
+                  : item.IPs.map((ip) => (
+                      <Text size="sm" key={ip}>
+                        {ip}
+                      </Text>
+                    ))}
+              </VStack>
+
+              <Box flex={1}>{moreMenu(item.Interface)}</Box>
+            </ListItem>
+          )}
+        />
+
+        <Modal
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false)
+          }}
         >
-          <FlatList
-            data={links}
-            keyExtractor={(item) => `${item.Interface}_${item.Type}`}
-            renderItem={({ item }) => (
-              <HStack
-                p={4}
-                rounded="md"
-                alignItems="center"
-                borderBottomWidth={1}
-                _dark={{
-                  borderColor: 'borderColorCardDark'
-                }}
-                borderColor="borderColorCardLight"
-              >
-                <Text flex={3} fontWeight="bold">
-                  {item.Interface}
-                </Text>
-                <Text flex={1}>{item.Type}</Text>
-                <VStack flex={2} space={1}>
-                  { (truncateSupernetIps(item.IPs)) ?
-                    supernets.map((net) => (
-                      <Text>{net}</Text>
-                    ))
-
-                     : item.IPs.map((ip) => (
-                    <Text key={ip}>{ip}</Text>
-                    ))
-                  }
-                </VStack>
-                <Box flex={1}>{moreMenu(item.Interface)}</Box>
-              </HStack>
-            )}
-          />
-
-          <Modal isOpen={isOpen} onClose={onClose}>
-            <Modal.Content>
-              <Modal.CloseButton />
-              <Modal.Header fontSize="4xl" fontWeight="bold">
+          <ModalBackdrop />
+          <ModalContent>
+            <ModalHeader>
+              <Heading size="sm">
                 {iface ? `Configure ${iface}` : 'Configure interface'}
-              </Modal.Header>
-              <Modal.Body>
-                {iface && modal == 'wifi' ? (
-                  <UplinkAddWifi iface={iface} onSubmit={onSubmit} />
-                ) : null}
-                {iface && modal == 'config' ? (
-                  <UplinkSetConfig iface={iface} onSubmit={onSubmit} />
-                ) : null}
-                {iface && modal == 'ip' ? (
-                  <UplinkSetIP iface={iface} onSubmit={onSubmit} />
-                ) : null}
-                {iface && modal == 'ppp' ? (
-                  <UplinkAddPPP iface={iface} onSubmit={onSubmit} />
-                ) : null}
-              </Modal.Body>
-            </Modal.Content>
-          </Modal>
-        </VStack>
+              </Heading>
+              <ModalCloseButton>
+                <Icon as={CloseIcon} />
+              </ModalCloseButton>
+            </ModalHeader>
+            <ModalBody pb="$6">
+              {iface && modal == 'wifi' ? (
+                <UplinkAddWifi iface={iface} onSubmit={onSubmit} />
+              ) : null}
+              {iface && modal == 'config' ? (
+                <UplinkSetConfig iface={iface} onSubmit={onSubmit} />
+              ) : null}
+              {iface && modal == 'ip' ? (
+                <UplinkSetIP iface={iface} onSubmit={onSubmit} />
+              ) : null}
+              {iface && modal == 'ppp' ? (
+                <UplinkAddPPP iface={iface} onSubmit={onSubmit} />
+              ) : null}
+            </ModalBody>
+          </ModalContent>
+        </Modal>
       </VStack>
     </View>
   )

@@ -1,5 +1,5 @@
-import React, { createContext, useEffect, useState } from 'react'
-import { Dimensions, Platform } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { Dimensions, Platform, SafeAreaView } from 'react-native'
 import { Outlet, useLocation } from 'react-router-dom'
 
 import Notifications from 'Notifications'
@@ -13,21 +13,35 @@ import { ucFirst } from 'utils'
 import {
   Alert,
   AlertDialog,
+  AlertDialogBackdrop,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogCloseButton,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertIcon,
+  AlertText,
   Box,
   Button,
-  Flex,
-  Slide,
-  IconButton,
-  CloseIcon,
-  ScrollView,
+  ButtonGroup,
+  ButtonText,
+  Heading,
   HStack,
+  Icon,
+  CheckCircleIcon,
+  CloseIcon,
+  Pressable,
   VStack,
   Text,
-  useColorModeValue,
-  useToast
-} from 'native-base'
+  SlashIcon,
+  InfoIcon,
+  useColorMode
+} from '@gluestack-ui/themed'
+
+//NOTE Slice transition for Alerts not available in gluestack-ui
 
 import { routes } from 'routes'
+import { Slash } from 'lucide-react-native'
 
 const ConfirmTrafficAlert = (props) => {
   const { type, title, body, showAlert, onClose } = props
@@ -44,37 +58,42 @@ const ConfirmTrafficAlert = (props) => {
       isOpen={showAlert}
       onClose={onPressClose}
     >
-      <AlertDialog.Content>
-        <AlertDialog.CloseButton />
-        <AlertDialog.Header>{title}</AlertDialog.Header>
-        <AlertDialog.Body>{body}</AlertDialog.Body>
-        <AlertDialog.Footer>
-          <Button.Group space={2}>
+      <AlertDialogBackdrop />
+      <AlertDialogContent>
+        <AlertDialogCloseButton>
+          <Icon as={CloseIcon} />
+        </AlertDialogCloseButton>
+        <AlertDialogHeader>
+          <Heading size="lg">{title}</Heading>
+        </AlertDialogHeader>
+        <AlertDialogBody>{body}</AlertDialogBody>
+        <AlertDialogFooter>
+          <ButtonGroup space={2}>
             <Button
               variant="unstyled"
               colorScheme="coolGray"
               onPress={onPressClose}
               ref={cancelRef}
             >
-              Cancel
+              <ButtonText>Cancel</ButtonText>
             </Button>
             <Button
               variant="outline"
               colorScheme="danger"
               onPress={onPressDeny}
             >
-              Deny
+              <ButtonText>Deny</ButtonText>
             </Button>
             <Button
               variant="outline"
               colorScheme="success"
               onPress={onPressAllow}
             >
-              Allow
+              <ButtonText>Allow</ButtonText>
             </Button>
-          </Button.Group>
-        </AlertDialog.Footer>
-      </AlertDialog.Content>
+          </ButtonGroup>
+        </AlertDialogFooter>
+      </AlertDialogContent>
     </AlertDialog>
   )
 }
@@ -82,58 +101,34 @@ const ConfirmTrafficAlert = (props) => {
 const AppAlert = (props) => {
   const { type, title, body, showAlert, toggle } = props
 
+  let iconType = {
+    success: CheckCircleIcon,
+    warning: SlashIcon,
+    danger: InfoIcon,
+    error: SlashIcon,
+    info: InfoIcon
+  }
+
+  let alertIcon = iconType[type] || InfoIcon
+  let alertType = type == 'danger' ? 'warning' : type
+
   return (
-    <Alert
-      w="100%"
-      variant="outline-light"
-      status={type}
-      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
-    >
-      <VStack space={2} flexShrink={1} w="100%">
-        <HStack
-          flexShrink={1}
-          space={2}
-          justifyContent="space-between"
-          alignItems="flex-start"
-        >
-          <HStack space={2} flexShrink={1}>
-            <Alert.Icon mt={1} />
-            <VStack space={2} w="100%">
-              <Text
-                fontSize="md"
-                color={useColorModeValue('coolGray.800', 'coolGray.200')}
-                bold
-              >
-                {title}
-              </Text>
-              <Text
-                fontSize="md"
-                color={useColorModeValue('coolGray.800', 'coolGray.200')}
-              >
-                {body}
-              </Text>
-            </VStack>
-          </HStack>
-          <IconButton
-            variant="unstyled"
-            _focus={{
-              borderWidth: 0
-            }}
-            icon={
-              <CloseIcon
-                size={3}
-                color={useColorModeValue('coolGray.600', 'coolGray.400')}
-              />
-            }
-            onPress={toggle}
-          />
-        </HStack>
-      </VStack>
+    <Alert action={alertType}>
+      <HStack space="md" w="$full">
+        <AlertIcon as={alertIcon} size="xl" mr="$3" alignSelf="center" />
+        <VStack space="xs" flex={1}>
+          <AlertText fontWeight="$bold">{title}</AlertText>
+          <AlertText flexWrap="wrap">{body}</AlertText>
+        </VStack>
+        <Pressable ml="auto" mr="$2" onPress={toggle}>
+          <Icon as={CloseIcon} />
+        </Pressable>
+      </HStack>
     </Alert>
   )
 }
 
-const AdminLayout = (props) => {
+const AdminLayout = ({ toggleColorMode, ...props }) => {
   const mainPanel = React.useRef()
   const location = useLocation()
 
@@ -205,7 +200,7 @@ const AdminLayout = (props) => {
     mainPanel.current.scrollTop = 0
   }, [location])*/
 
-  const toast = useToast()
+  //const toast = useToast()
 
   let path = location.pathname.replace(/^\/admin\//, '')
   const [activeSidebarItem, setActiveSidebarItem] = useState(path)
@@ -214,7 +209,8 @@ const AdminLayout = (props) => {
   const [isWifiDisabled, setIsWifiDisabled] = useState(null)
   const [isPlusDisabled, setIsPlusDisabled] = useState(true)
   const [isMeshNode, setIsMeshNode] = useState(false)
-  const [version, setVersion] = useState('v0.1')
+  const [version, setVersion] = useState('0.2.1')
+  const [features, setFeatures] = useState([])
 
   const [notificationSettings, setNotificationSettings] = useState([])
 
@@ -222,6 +218,7 @@ const AdminLayout = (props) => {
     api
       .features()
       .then((res) => {
+        setFeatures([...res])
         setIsWifiDisabled(!res.includes('wifi'))
 
         meshAPI
@@ -249,7 +246,6 @@ const AdminLayout = (props) => {
           .catch((err) => {
             setIsPlusDisabled(true)
           })
-
       })
 
     api
@@ -393,43 +389,48 @@ const AdminLayout = (props) => {
       })
   }, [isWifiDisabled])
 
-  let navbarHeight = 64
-  let heightFull = Dimensions.get('window').height
-  let heightContent = heightFull - navbarHeight
-  /*if (Platform.OS == 'ios') {
-    // statusbar, see https://github.com/GeekyAnts/NativeBase/blob/2af374e586034366dcefce9a0f23983836a7901f/src/components/composites/AppBar/utils.ts#L8
-    heightFull =
-      Dimensions.get('window').height - (Platform.Version < 11 ? 0 : 20)
-  }*/
+  /*return (
+    <Box bg="$red200" p="$20">
+      <Text>TEST 2.0</Text>
+    </Box>
+  )*/
+  const colorMode = useColorMode()
+  const backgroundColor = colorMode === 'light' ? 'white' : 'black'
 
   return (
     <AppContext.Provider
       value={{
         activeSidebarItem,
         setActiveSidebarItem,
-        setIsNavbarOpen,
         isNavbarOpen,
+        setIsNavbarOpen,
         isWifiDisabled,
         isPlusDisabled,
-        setIsWifiDisabled,
-        setIsPlusDisabled,
         isMeshNode,
-        setIsMeshNode
+        features
       }}
     >
+      <SafeAreaView
+        style={{
+          backgroundColor
+        }}
+      />
+
       <VStack
-        safeAreaTop
-        bg={useColorModeValue(
-          'backgroundContentLight',
-          'backgroundContentDark'
-        )}
-        minH={heightFull}
+        bg="$backgroundContentLight"
+        sx={{
+          _dark: {
+            bg: '$backgroundContentDark'
+          }
+        }}
+        flex={1}
       >
         {/*desktop*/}
         <Box
-          display={{ base: 'none', md: 'flex' }}
-          position={{ base: 'absolute', md: 'static' }}
-          w="100%"
+          display="none"
+          sx={{
+            '@md': { display: 'flex', position: 'static' }
+          }}
           zIndex={99}
           style={{ backdropFilter: 'blur(10px)' }}
         >
@@ -438,22 +439,27 @@ const AdminLayout = (props) => {
             isMobile={false}
             isOpenSidebar={isOpenSidebar}
             setIsOpenSidebar={setIsOpenSidebar}
+            toggleColorMode={toggleColorMode}
           />
         </Box>
         {/*mobile*/}
         <Box
-          display={{ base: 'flex', md: 'none' }}
-          w="100%"
-          position={Platform.OS == 'web' ? 'sticky' : 'static'}
+          sx={{
+            '@base': {
+              display: 'flex',
+              position: Platform.OS == 'web' ? 'sticky' : 'static'
+            },
+            '@md': { display: 'none' }
+          }}
           top={0}
           zIndex={99}
-          _style={{ backdropFilter: 'blur(10px)' }}
         >
           <AdminNavbar
             version={version}
             isMobile={true}
             isOpenSidebar={isOpenSidebar}
             setIsOpenSidebar={setIsOpenSidebar}
+            toggleColorMode={toggleColorMode}
           />
         </Box>
 
@@ -461,14 +467,17 @@ const AdminLayout = (props) => {
           position={Platform.OS == 'web' ? 'sticky' : 'static'}
           top={Platform.OS == 'web' ? 16 : 0}
           flex={1}
-          maxH={heightContent}
         >
           {/*desktop*/}
           <Box
-            display={{ base: 'none', md: 'flex' }}
-            __position={{ base: 'absolute', md: 'static' }}
-            w={isOpenSidebar ? 20 : 64}
-            h={heightContent}
+            display="none"
+            sx={{
+              '@md': {
+                display: 'flex',
+                height: Dimensions.get('window').height - 64
+              }
+            }}
+            width={isOpenSidebar ? 80 : 260}
           >
             <Sidebar
               isMobile={false}
@@ -480,55 +489,75 @@ const AdminLayout = (props) => {
           </Box>
           {/*mobile*/}
           {isOpenSidebar ? (
-            <Box
-              w="100%"
-              zIndex={99}
-              display={{ base: 'flex', md: 'none' }}
-              _light={{
-                bg: 'sidebarBackgroundLight'
+            <SafeAreaView
+              style={{
+                width: '100%',
+                backgroundColor: colorMode == 'light' ? '#f9fafb' : 'black'
               }}
-              _dark={{ bg: 'sidebarBackgroundDark' }}
             >
-              <Sidebar
-                isMobile={true}
-                isMini={false}
-                isOpenSidebar={isOpenSidebar}
-                setIsOpenSidebar={setIsOpenSidebar}
-                routes={routes}
-              />
-            </Box>
+              <Box
+                w="100%"
+                zIndex={99}
+                sx={{
+                  '@md': { display: 'none' }
+                }}
+              >
+                <Sidebar
+                  isMobile={true}
+                  isMini={false}
+                  isOpenSidebar={isOpenSidebar}
+                  setIsOpenSidebar={setIsOpenSidebar}
+                  routes={routes}
+                />
+              </Box>
+            </SafeAreaView>
           ) : null}
 
-          {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
-          {/*h="calc(100% - 64px)"
-               minH="calc(100vh - 64px)"*/}
           <Box flex={1} ref={mainPanel}>
-            <Outlet />
-            {/*NOTE footer should not be visible - outside of the view and show when scroll to bottom to use the most space*/}
-            {/*<Footer />*/}
+            <SafeAreaView
+              style={{
+                width: '100%',
+                backgroundColor: colorMode == 'light' ? '#f3f4f6' : 'black'
+              }}
+            >
+              <Outlet />
+            </SafeAreaView>
           </Box>
         </HStack>
       </VStack>
+
       <AlertContext.Provider value={alertState}>
-        <Slide in={showAlert} placement="top">
-          <Box
-            maxWidth={{ base: '100%', md: '90%' }}
-            w={{ base: '100%', md: 'auto' }}
-            mt={16}
-            flexWrap="wrap"
-            position="static"
-            alignItems="center"
-            justifyContent="center"
-            alignSelf="center"
-          >
-            <AppAlert
-              title={alert.title}
-              body={alert.body}
-              type={alert.type}
-              toggle={toggleAlert}
-            />
-          </Box>
-        </Slide>
+        {/*<Slide in={showAlert} placement="top"></Slide>*/}
+        <Box
+          sx={{
+            '@base': {
+              maxWidth: '100%',
+              width: '100%',
+              display: showAlert ? 'block' : 'none'
+            },
+            '@md': {
+              _width: '$2/6',
+              _marginLeft: '-$1/6',
+              _left: '$1/2',
+              width: isOpenSidebar
+                ? 'calc(100vw - 80px)'
+                : 'calc(100vw - 260px)',
+              left: isOpenSidebar ? 80 : 260
+            }
+          }}
+          flexWrap="wrap"
+          position="fixed"
+          top="$16"
+          alignSelf="center"
+        >
+          <AppAlert
+            title={alert.title}
+            body={alert.body}
+            type={alert.type}
+            toggle={toggleAlert}
+          />
+        </Box>
+
         <ConfirmTrafficAlert
           title={confirmAlert.title}
           body={confirmAlert.body}

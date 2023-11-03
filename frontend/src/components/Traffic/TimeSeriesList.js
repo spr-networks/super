@@ -3,24 +3,23 @@ import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
 import { format as timeAgo } from 'timeago.js'
 
-import { trafficAPI, wifiAPI } from 'api'
 import { prettyDate, prettySize } from 'utils'
-import { BrandIcons } from 'FontAwesomeUtils'
+import { BrandIcons } from 'IconUtils'
 
 import {
+  ArrowRightIcon,
   Badge,
+  BadgeText,
   Box,
-  Stack,
   FlatList,
   HStack,
+  Icon,
   Pressable,
-  Text
-} from 'native-base'
+  Text,
+  VStack
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
-
-import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faArrowRight } from '@fortawesome/free-solid-svg-icons'
+//import { FlashList } from '@shopify/flash-list'
 
 const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
   const regexLAN = /^192\.168\./ //TODO dont rely on this
@@ -111,79 +110,77 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
   }
 
   return (
-    <FlashList
+    <FlatList
       estimatedItemSize={100}
       data={list}
       renderItem={({ item }) => (
-        <Box
+        <VStack
           borderBottomWidth={1}
-          _dark={{
-            borderColor: 'muted.600'
+          borderColor="$muted200"
+          py="$4"
+          sx={{
+            '@md': { height: '$12', py: '$2', flexDirection: 'row' },
+            _dark: {
+              borderColor: '$muted600'
+            }
           }}
-          borderColor="muted.200"
-          py={{ base: 4, md: 2 }}
-          h={{ md: 12 }}
+          space="md"
+          justifyContent="space-between"
         >
-          <HStack
-            direction={{ base: 'column', md: 'row' }}
-            space={2}
+          <VStack
+            sx={{ '@md': { flexDirection: 'row' } }}
+            flex={2}
+            space="md"
             justifyContent="space-between"
           >
-            <Stack
-              direction={{ base: 'column', md: 'row' }}
-              flex={2}
-              space={2}
+            <HStack
+              flex={1}
+              space="md"
               justifyContent="space-between"
+              alignItems="center"
             >
-              <HStack
-                flex={1}
-                space={2}
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                {/*['WanOut', 'LanOut', 'LanIn'].includes(type) ? (
+              {/*['WanOut', 'LanOut', 'LanIn'].includes(type) ? (
                   <Text bold>{item.deviceSrc && item.deviceSrc.Name}</Text>
                 ) : null*/}
-                <Pressable flex={1} onPress={onPressIp}>
-                  <Text>{item.Src}</Text>
-                </Pressable>
-                <Box alignText="center">
-                  <Icon color="muted.200" icon={faArrowRight} size="xs" />
-                </Box>
-                {/*['WanIn', 'LanOut', 'LanIn'].includes(type) ? (
+              <Pressable flex={1} onPress={onPressIp}>
+                <Text size="sm">{item.Src}</Text>
+              </Pressable>
+              <Box alignText="center">
+                <ArrowRightIcon color="$muted200" />
+              </Box>
+              {/*['WanIn', 'LanOut', 'LanIn'].includes(type) ? (
                   <Text bold>{item.deviceDst && item.deviceDst.Name}</Text>
                 ) : null*/}
-                <Pressable flex={1} onPress={onPressIp}>
-                  <Text textAlign="right">{item.Dst}</Text>
-                </Pressable>
+              <Pressable flex={1} onPress={onPressIp}>
+                <Text size="sm" textAlign="right">
+                  {item.Dst}
+                </Text>
+              </Pressable>
+            </HStack>
+            {showASN ? (
+              <HStack flex={1} alignItems="center">
+                {/*TODO also src depending on type*/}
+                <AsnIcon asn={item.Asn} />
+                <Text color="$muted500" size="sm" isTruncated>
+                  {item.Asn}
+                </Text>
               </HStack>
-              {showASN ? (
-                <HStack flex={1} alignItems="center">
-                  {/*TODO also src depending on type*/}
-                  <AsnIcon asn={item.Asn} />
-                  <Text color="muted.500" isTruncated>
-                    {item.Asn}
-                  </Text>
-                </HStack>
-              ) : null}
-            </Stack>
+            ) : null}
+          </VStack>
 
-            <Stack
-              direction="row"
-              marginLeft={{ base: '0', md: 'auto' }}
-              space={2}
-              flex={2 / 3}
-              justifyContent="space-between"
-            >
-              <Badge alignSelf="center" variant="outline" color="muted.500">
-                {prettySize(item.Bytes)}
-              </Badge>
-              <Text fontSize="xs" alignSelf="flex-start">
-                {timeAgo(item.Timestamp)}
-              </Text>
-            </Stack>
+          <HStack
+            space="md"
+            flex={1}
+            justifyContent="space-between"
+            alignItems="center"
+            sx={{ '@md': { justifyContent: 'flex-end' } }}
+          >
+            <Text size="xs">{timeAgo(item.Timestamp)}</Text>
+            <Badge action="muted" variant="outline" alignSelf="center">
+              <BadgeText>{prettySize(item.Bytes)}</BadgeText>
+            </Badge>
           </HStack>
-        </Box>
+        </VStack>
       )}
       keyExtractor={(item) => item.Src + item.Dst + item.Bytes}
     />

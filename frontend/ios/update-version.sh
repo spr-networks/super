@@ -3,11 +3,17 @@
 
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 VERSION=$(git describe --tags --abbrev=0 | grep -Eo '[0-9]+\.[0-9]+.[0-9]+')
+
+echo "+ git version tag = $VERSION"
+
 if [ -z "$VERSION" ]; then
 	VERSION=$(cat $DIR/../package.json | grep '"version"' | cut -d '"' -f4 | grep -Eo '[0-9]+\.[0-9]+.[0-9]+')
 fi
 
 BUILD=$(date +"%Y%m%d%H%M%S")
+
+echo "+ iOS version = $VERSION"
+echo "+ build = $BUILD"
 
 PROJECT_DIR="$DIR/spr.xcodeproj"
 PROJECT_FILE="$PROJECT_DIR/project.pbxproj"

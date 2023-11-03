@@ -1,61 +1,86 @@
-import React, { Component, useEffect, useState } from 'react'
-import { wireguardAPI } from 'api'
-import StatsWidget from './StatsWidget'
+import React, { useEffect } from 'react'
+
 import {
-  faBan,
-  faCircleNodes,
-  faEarth,
-  faLaptop,
-  faWifi
-} from '@fortawesome/free-solid-svg-icons'
-import { Icon } from 'FontAwesomeUtils'
+  Box,
+  HStack,
+  Icon,
+  Text,
+  VStack,
+  useColorMode
+} from '@gluestack-ui/themed'
 
-import { Box, HStack, Text, VStack, useColorModeValue } from 'native-base'
+import {
+  BanIcon,
+  GlobeIcon,
+  WaypointsIcon,
+  WifiIcon
+} from 'lucide-react-native'
 
-const ServicesEnabled = (props) => {
+const ServicesEnabled = ({ features, ...props }) => {
   useEffect(() => {}, [])
+
+  const colorMode = useColorMode()
+  //$success400
+  const colorOn = colorMode == 'light' ? '$blueGray500' : '$blueGray600',
+    colorOff = colorMode == 'light' ? '$muted300' : '$muted500'
 
   return (
     <Box
-      bg={useColorModeValue('backgroundCardLight', 'backgroundCardDark')}
+      bg="$backgroundCardLight"
+      sx={{
+        _dark: { bg: '$backgroundCardDark' }
+      }}
       borderRadius={10}
-      mb={4}
-      shadow={4}
-      flex={1}
     >
       <HStack
-        space={8}
+        space="lg"
         justifyContent="space-around"
-        p={4}
+        p="$4"
         rounded="lg"
         flexWrap="wrap"
       >
-        <VStack space={2}>
-          <Box p={4} rounded="full" bg="primary.500">
-            <Icon icon={faWifi} size={8} color="white" />
+        <VStack space="md">
+          <Box
+            p="$4"
+            rounded="$full"
+            bg={features.includes('wifi') ? colorOn : colorOff}
+          >
+            <Icon as={WifiIcon} color="$white" size={32} />
           </Box>
-          <Text alignSelf="center">AP on</Text>
+          <Text alignSelf="center">WiFi</Text>
         </VStack>
 
-        <VStack space={2}>
-          <Box p={4} rounded="full" bg="primary.500">
-            <Icon icon={faEarth} size={8} color="white" />
+        <VStack space="md">
+          <Box
+            p="$4"
+            rounded="$full"
+            bg={features.includes('dns') ? colorOn : colorOff}
+          >
+            <Icon as={GlobeIcon} color="$white" size={32} />
           </Box>
-          <Text alignSelf="center">DNS on</Text>
+          <Text alignSelf="center">DNS</Text>
         </VStack>
 
-        <VStack space={2}>
-          <Box p={4} rounded="full" bg="primary.500">
-            <Icon icon={faBan} size={8} color="white" />
+        <VStack space="md">
+          <Box
+            p="$4"
+            rounded="$full"
+            bg={features.includes('dns-block') ? colorOn : colorOff}
+          >
+            <Icon as={BanIcon} color="$white" size={32} />
           </Box>
-          <Text alignSelf="center">Block on</Text>
+          <Text alignSelf="center">Block</Text>
         </VStack>
 
-        <VStack space={2}>
-          <Box p={4} rounded="full" bg="muted.300">
-            <Icon icon={faCircleNodes} size={8} color="white" />
+        <VStack space="md">
+          <Box
+            p="$4"
+            rounded="$full"
+            bg={features.includes('wireguard') ? colorOn : colorOff}
+          >
+            <Icon as={WaypointsIcon} color="$white" size={32} />
           </Box>
-          <Text alignSelf="center">VPN off</Text>
+          <Text alignSelf="center">VPN</Text>
         </VStack>
       </HStack>
     </Box>

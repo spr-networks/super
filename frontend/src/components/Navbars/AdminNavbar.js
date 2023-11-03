@@ -2,24 +2,26 @@ import React, { useContext, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useNavigate } from 'react-router-dom'
-import Icon, { FontAwesomeIcon } from 'FontAwesomeUtils'
-import { faArrowRightFromBracket } from '@fortawesome/free-solid-svg-icons'
+
 import {
   Button,
-  Box,
-  Flex,
-  HamburgerIcon,
+  ButtonIcon,
   HStack,
-  IconButton,
   Link,
+  LinkText,
   Text,
+  MenuIcon,
   MoonIcon,
   SunIcon,
+  /*TODO
   Tooltip,
-  useColorMode,
-  useColorModeValue,
-  useToken
-} from 'native-base'
+  TooltipContent,
+  TooltipText,
+  */
+  useColorMode
+} from '@gluestack-ui/themed'
+
+import { LogOutIcon } from 'lucide-react-native'
 
 import { AppContext } from 'AppContext'
 
@@ -27,22 +29,14 @@ const AdminNavbar = ({
   isMobile,
   isOpenSidebar,
   setIsOpenSidebar,
-  version
+  version,
+  toggleColorMode,
+  ...props
 }) => {
   const { isMeshNode } = useContext(AppContext)
 
-  const { colorMode, toggleColorMode } = useColorMode()
-
-  /*useEffect(() => {
-    if (colorMode === 'light')
-      document
-        .getElementsByTagName('html')[0]
-        .setAttribute('data-theme', 'light')
-    else
-      document
-        .getElementsByTagName('html')[0]
-        .setAttribute('data-theme', 'dark')
-  }, [colorMode])*/
+  const colorMode = useColorMode()
+  //const toggleColorModeNB = useColorModeNB().toggleColorMode
 
   const navigate = useNavigate()
   const logout = async () => {
@@ -54,108 +48,130 @@ const AdminNavbar = ({
     <>
       <HStack
         w="100%"
-        borderBottomWidth={1}
-        bg={useColorModeValue('navbarBackgroundLight', 'navbarBackgroundDark')}
-        borderColor={useColorModeValue(
-          'navbarBorderColorLight',
-          'navbarBorderColorDark'
-        )}
-        px={5}
-        h={16}
+        borderBottomWidth="$1"
+        borderTopWidth="$1"
+        bg={
+          colorMode == 'light'
+            ? '$navbarBackgroundLight'
+            : '$navbarBackgroundDark'
+        }
+        borderColor={
+          colorMode == 'light'
+            ? '$navbarBorderColorLight'
+            : '$navbarBorderColorDark'
+        }
+        px="$3"
+        h="$16"
+        sx={{
+          '@md': { px: '$4' }
+        }}
         justifyContent="space-between"
       >
-        <HStack w="100%" alignItems="center" space={1}>
-          <IconButton
-            variant="unstyled"
-            icon={<HamburgerIcon />}
-            _icon={{
-              color: useColorModeValue(
-                'navbarTextColorLight',
-                'navbarTextColorDark'
-              )
-            }}
+        <HStack w="100%" alignItems="center" space={'sm'}>
+          <Button
+            variant="link"
             onPress={() => setIsOpenSidebar(!isOpenSidebar)}
-          />
+          >
+            <ButtonIcon
+              size="xl"
+              color={
+                colorMode == 'light'
+                  ? '$navbarTextColorLight'
+                  : '$navbarTextColorDark'
+              }
+              as={MenuIcon}
+            />
+          </Button>
 
-          <Text fontSize="lg" bold onPress={() => navigate('/admin/home')}>
+          <Text size="lg" bold onPress={() => navigate('/admin/home')}>
             SPR
           </Text>
-          {isMeshNode ? <Text fontSize="lg">MESH</Text> : null}
+          {isMeshNode ? <Text size="lg">MESH</Text> : null}
 
-          <Text fontSize="sm" color="muted.600" isTruncated>
-            {version}
+          <Text
+            size="xs"
+            color="$muted600"
+            sx={{
+              _dark: { color: '$muted400' }
+            }}
+            isTruncated
+            borderWidth={1}
+            borderColor="$muted500"
+            rounded="$2xl"
+            py="$0.5"
+            px="$2"
+          >
+            {`v${version}`}
           </Text>
 
-          <HStack marginLeft="auto" space={4}>
+          <HStack marginLeft="auto" space="2xl" alignItems="center">
             <Link
-              p={4}
               isExternal
               href="https://www.supernetworks.org/pages/docs/intro"
-              _text={{
-                textDecorationLine: 'none',
-                color: useColorModeValue(
-                  'navbarTextColorLight',
-                  'navbarTextColorDark'
-                )
+              sx={{
+                '@base': { display: 'none' },
+                '@lg': { display: 'flex' },
+                _text: {
+                  textDecorationLine: 'none',
+                  color:
+                    colorMode == 'light'
+                      ? '$navbarTextColorLight'
+                      : '$navbarTextColorDark'
+                }
               }}
-              display={{ base: 'none', lg: 'flex' }}
             >
-              Docs
+              <LinkText size="sm">Docs</LinkText>
             </Link>
             <Link
-              p={4}
-              fontSize="md"
+              size="md"
               isExternal
               href="https://www.supernetworks.org/pages/api/0"
-              _text={{
-                textDecorationLine: 'none',
-                color: useColorModeValue(
-                  'navbarTextColorLight',
-                  'navbarTextColorDark'
-                )
+              sx={{
+                '@base': { display: 'none' },
+                '@lg': { display: 'flex' },
+                _text: {
+                  textDecorationLine: 'none',
+                  color:
+                    colorMode == 'light'
+                      ? '$navbarTextColorLight'
+                      : '$navbarTextColorDark'
+                }
               }}
-              display={{ base: 'none', lg: 'flex' }}
             >
-              API
+              <LinkText size="sm">API</LinkText>
             </Link>
-            <Tooltip label="Toggle Theme">
-              <IconButton
-                p="0"
-                onPress={() => {
-                  toggleColorMode()
-                  const date = new Date()
-                }}
-                variant="unstyled"
-                _icon={{
-                  size: 5,
-                  color: useColorModeValue(
-                    'navbarTextColorLight',
-                    'navbarTextColorDark'
-                  )
-                }}
-                icon={useColorModeValue(<MoonIcon />, <SunIcon />)}
+            <Button
+              onPress={() => {
+                toggleColorMode()
+                //toggleColorModeNB()
+              }}
+              variant="link"
+            >
+              <ButtonIcon
+                as={colorMode == 'light' ? MoonIcon : SunIcon}
+                size="xl"
+                color={
+                  colorMode == 'light'
+                    ? '$navbarTextColorLight'
+                    : '$navbarTextColorDark'
+                }
               />
-            </Tooltip>
-            <Tooltip label="Logout">
-              <IconButton
-                variant="unstyled"
-                _icon={{
-                  size: 5,
-                  color: useColorModeValue(
-                    'navbarTextColorLight',
-                    'navbarTextColorDark'
-                  )
-                }}
-                _text={{
-                  color: useColorModeValue(
-                    'navbarTextColorLight',
-                    'navbarTextColorDark'
-                  )
-                }}
-                icon={<Icon icon={faArrowRightFromBracket} />}
-                onPress={logout}
-              />
-            </Tooltip>
+            </Button>
+
+            <Button
+              variant="link"
+              onPress={logout}
+              sx={{
+                _icon: {
+                  color:
+                    colorMode == 'light'
+                      ? '$navbarTextColorLight'
+                      : '$navbarTextColorDark'
+                }
+              }}
+            >
+              <ButtonIcon as={LogOutIcon} size="lg" />
+            </Button>
           </HStack>
         </HStack>
       </HStack>

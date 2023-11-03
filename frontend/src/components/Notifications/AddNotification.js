@@ -1,16 +1,21 @@
 import React, { useEffect, useState } from 'react'
 
 import {
-  Box,
-  FormControl,
-  Input,
-  Stack,
-  Switch,
   Button,
-  HStack
-} from 'native-base'
+  ButtonText,
+  FormControl,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlLabel,
+  FormControlLabelText,
+  Input,
+  InputField,
+  Switch,
+  HStack,
+  VStack
+} from '@gluestack-ui/themed'
 
-import  { Select } from 'components/Select'
+import { Select } from 'components/Select'
 
 const AddNotifcation = ({ onSubmit, ...props }) => {
   const [Prefix, setPrefix] = useState('nft:wan:out')
@@ -65,10 +70,12 @@ const AddNotifcation = ({ onSubmit, ...props }) => {
   }, [Prefix])
 
   return (
-    <Stack space={4}>
-      <HStack space={4}>
+    <VStack space="md">
+      <HStack space="md">
         <FormControl flex={2}>
-          <FormControl.Label>Prefix</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Prefix</FormControlLabelText>
+          </FormControlLabel>
           <Select
             selectedValue={Prefix}
             onValueChange={setPrefix}
@@ -82,12 +89,16 @@ const AddNotifcation = ({ onSubmit, ...props }) => {
               />
             ))}
           </Select>
-          <FormControl.HelperText>
-            Log prefix in Netfilter
-          </FormControl.HelperText>
+          <FormControlHelper>
+            <FormControlHelperText>
+              Log prefix in Netfilter
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
         <FormControl flex={1}>
-          <FormControl.Label>Protocol</FormControl.Label>
+          <FormControlLabel>
+            <FormControlLabelText>Protocol</FormControlLabelText>
+          </FormControlLabel>
           <Select
             selectedValue={Protocol}
             onValueChange={setProtocol}
@@ -97,70 +108,82 @@ const AddNotifcation = ({ onSubmit, ...props }) => {
             <Select.Item value={'tcp'} label={'TCP'} />
             <Select.Item value={'udp'} label={'UDP'} />
           </Select>
-          {/*<FormControl.HelperText>Protocol</FormControl.HelperText>*/}
+          {/*<FormControlHelperText>Protocol</FormControlHelperText>*/}
         </FormControl>
       </HStack>
-      <HStack space={4}>
+      <HStack space="md">
         <FormControl flex={2}>
-          <FormControl.Label>Destination IP address</FormControl.Label>
-          <Input
-            type="text"
-            variant="underlined"
-            name="DstIP"
-            value={DstIP}
-            placeholder="1.1.1.1"
-            onChangeText={(value) => setDstIP(value)}
-            autoFocus
-          />
+          <FormControlLabel>
+            <FormControlLabelText>Destination IP address</FormControlLabelText>
+          </FormControlLabel>
+          <Input type="text" variant="underlined">
+            <InputField
+              name="DstIP"
+              value={DstIP}
+              placeholder="1.1.1.1"
+              onChangeText={(value) => setDstIP(value)}
+              autoFocus
+            />
+          </Input>
         </FormControl>
         <FormControl flex={1}>
-          <FormControl.Label>Destination Port</FormControl.Label>
-          <Input
-            type="text"
-            variant="underlined"
-            name="DstPort"
-            value={DstPort}
-            onChangeText={(value) => setDstPort(value)}
-            autoFocus
-          />
+          <FormControlLabel>
+            <FormControlLabelText>Destination Port</FormControlLabelText>
+          </FormControlLabel>
+          <Input variant="underlined">
+            <InputField
+              type="text"
+              name="DstPort"
+              value={DstPort}
+              onChangeText={(value) => setDstPort(value)}
+              autoFocus
+            />
+          </Input>
         </FormControl>
       </HStack>
-      <HStack space={4}>
+      <HStack space="md">
         <FormControl flex={2}>
-          <FormControl.Label>Source IP address</FormControl.Label>
-          <Input
-            type="text"
-            variant="underlined"
-            name="SrcIP"
-            value={SrcIP}
-            placeholder="192.168.2.X"
-            onChangeText={(value) => setSrcIP(value)}
-            autoFocus
-          />
+          <FormControlLabel>
+            <FormControlLabelText>Source IP address</FormControlLabelText>
+          </FormControlLabel>
+          <Input type="text" variant="underlined">
+            <InputField
+              name="SrcIP"
+              value={SrcIP}
+              placeholder="192.168.2.X"
+              onChangeText={(value) => setSrcIP(value)}
+              autoFocus
+            />
+          </Input>
         </FormControl>
         <FormControl flex={1}>
-          <FormControl.Label>Source Port</FormControl.Label>
-          <Input
-            type="text"
-            variant="underlined"
-            name="SrcPort"
-            value={SrcPort}
-            onChangeText={(value) => setSrcPort(value)}
-            autoFocus
-          />
+          <FormControlLabel>
+            <FormControlLabelText>Source Port</FormControlLabelText>
+          </FormControlLabel>
+          <Input type="text" variant="underlined">
+            <InputField
+              name="SrcPort"
+              value={SrcPort}
+              onChangeText={(value) => setSrcPort(value)}
+              autoFocus
+            />
+          </Input>
         </FormControl>
       </HStack>
       <FormControl>
-        <FormControl.Label>Enable Notification</FormControl.Label>
+        <FormControlLabel>
+          <FormControlLabelText>Enable Notification</FormControlLabelText>
+        </FormControlLabel>
         <Switch
           defaultIsChecked={Notification}
+          value={Notification}
           onValueChange={() => setNotification(!Notification)}
         />
       </FormControl>
-      <Button color="primary" size="md" onPress={handleSubmit}>
-        Save
+      <Button action="primary" size="md" onPress={handleSubmit}>
+        <ButtonText>Save</ButtonText>
       </Button>
-    </Stack>
+    </VStack>
   )
 }
 

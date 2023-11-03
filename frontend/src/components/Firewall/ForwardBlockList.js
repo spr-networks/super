@@ -1,11 +1,5 @@
 import React, { useRef } from 'react'
 import PropTypes from 'prop-types'
-import { Icon, FontAwesomeIcon } from 'FontAwesomeUtils'
-import {
-  faCirclePlus,
-  faPlus,
-  faXmark
-} from '@fortawesome/free-solid-svg-icons'
 
 import { firewallAPI } from 'api'
 import ModalForm from 'components/ModalForm'
@@ -13,19 +7,19 @@ import AddForwardBlock from './AddForwardBlock'
 
 import {
   Badge,
+  BadgeText,
   Button,
+  ButtonText,
+  ButtonIcon,
   Box,
   FlatList,
-  Heading,
-  IconButton,
-  Stack,
-  HStack,
   VStack,
   Text,
-  useColorModeValue
-} from 'native-base'
+  AddIcon,
+  CloseIcon
+} from '@gluestack-ui/themed'
 
-import { FlashList } from '@shopify/flash-list'
+import { ListHeader, ListItem } from 'components/List'
 
 const ForwardBlockList = (props) => {
   let list = props.list || []
@@ -47,86 +41,74 @@ const ForwardBlockList = (props) => {
   }
 
   return (
-    <>
-      <HStack justifyContent="space-between" alignItems="center" p={4}>
-        <VStack maxW={{ base: 'full', md: '60%' }}>
-          <Heading fontSize="md" isTruncated>
-            {title}
-          </Heading>
-          <Text color="muted.500" isTruncated>
-            Add rules to block traffic at the FORWARDING stage
-          </Text>
-        </VStack>
+    <VStack>
+      <ListHeader
+        title={title}
+        description="Add rules to block traffic at the FORWARDING stage"
+      >
         <ModalForm
           title={`Add Forwarding Block`}
           triggerText="Add Forwarding Block"
           triggerProps={{
-            display: { base: 'none', md: list.length ? 'flex' : 'none' }
+            sx: {
+              '@base': { display: 'none' },
+              '@md': { display: list.length ? 'flex' : 'flex' }
+            }
           }}
           modalRef={refModal}
         >
           <AddForwardBlock notifyChange={notifyChange} />
         </ModalForm>
-      </HStack>
+      </ListHeader>
 
-      <Box px={{ base: 0, md: 4 }}>
-        <FlatList
-          data={list}
-          renderItem={({ item }) => (
-            <Box
-              bg="backgroundCardLight"
-              borderBottomWidth={1}
-              _dark={{
-                bg: 'backgroundCardDark',
-                borderColor: 'borderColorCardDark'
-              }}
-              borderColor="borderColorCardLight"
-              p={4}
+      <FlatList
+        data={list}
+        renderItem={({ item }) => (
+          <ListItem>
+            <Badge action="muted" variant="outline">
+              <BadgeText>{item.Protocol}</BadgeText>
+            </Badge>
+
+            <Text>{item.SrcIP}</Text>
+            <Text>{item.DstIP}</Text>
+            <Text>{item.DstPort}</Text>
+
+            <Button
+              alignSelf="center"
+              size="sm"
+              action="negative"
+              variant="link"
+              onPress={() => deleteListItem(item)}
             >
-              <HStack
-                space={3}
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                <Badge variant="outline">{item.Protocol}</Badge>
+              <ButtonIcon as={CloseIcon} color="$red700" />
+            </Button>
+          </ListItem>
+        )}
+        keyExtractor={(item) => `${item.Protocol}${item.SrcIP}${item.DstIP}`}
+      />
 
-                <Text>{item.SrcIP}</Text>
-                <Text>{item.DstIP}</Text>
-                <Text>{item.DstPort}</Text>
+      {!list.length ? (
+        <Text
+          bg="$backgroundCardLight"
+          sx={{ _dark: { bg: '$backgroundCardDark' } }}
+          p="$4"
+          flexWrap="wrap"
+        >
+          Control forward and block rules on the LAN.
+        </Text>
+      ) : null}
 
-                <IconButton
-                  alignSelf="center"
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="secondary"
-                  icon={<Icon icon={faXmark} />}
-                  onPress={() => deleteListItem(item)}
-                />
-              </HStack>
-            </Box>
-          )}
-          keyExtractor={(item) => `${item.Protocol}${item.SrcIP}${item.DstIP}`}
-        />
-
-        <VStack>
-          {!list.length ? (
-            <Text px={{ base: 4, md: 0 }} mb={4} flexWrap="wrap">
-              Control forward and block rules on the LAN.
-            </Text>
-          ) : null}
-          <Button
-            display={{ base: 'flex', md: list.length ? 'none' : 'flex' }}
-            variant={useColorModeValue('subtle', 'solid')}
-            colorScheme={useColorModeValue('primary', 'muted')}
-            rounded="none"
-            leftIcon={<Icon icon={faCirclePlus} />}
-            onPress={() => refModal.current()}
-          >
-            Add Forwarding Block
-          </Button>
-        </VStack>
-      </Box>
-    </>
+      <Button
+        sx={{ '@md': { display: list.length ? 'none' : 'none' } }}
+        action="primary"
+        variant="solid"
+        rounded="$none"
+        onPress={() => refModal.current()}
+      >
+        <ButtonText>Add Forwarding Block</ButtonText>
+        <ButtonIcon as={AddIcon} />
+      </Button>
+    </VStack>
   )
 }
 

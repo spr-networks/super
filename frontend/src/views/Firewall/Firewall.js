@@ -1,63 +1,143 @@
-import React, { Component } from 'react'
-import { Button, ScrollView, View, VStack } from 'native-base'
+import React, { useEffect, useState } from 'react'
+import { ScrollView, VStack } from '@gluestack-ui/themed'
 
 import { firewallAPI } from 'api'
 import EndpointList from 'components/Firewall/EndpointList'
 import ForwardList from 'components/Firewall/ForwardList'
 import BlockList from 'components/Firewall/BlockList'
 import ForwardBlockList from 'components/Firewall/ForwardBlockList'
-import UpstreamServicesList from 'components/Firewall/UpstreamServicesList'
 import MulticastPorts from 'components/Firewall/MulticastPorts'
 
-import { Box, Heading, HStack, Text } from 'native-base'
+import {
+  ArrowRightFromLineIcon,
+  BanIcon,
+  SplitIcon,
+  WaypointsIcon,
+  CastIcon,
+  RouteIcon,
+  RouteOffIcon,
+  ArrowLeftToLineIcon
+} from 'lucide-react-native'
 
-export default class Firewall extends Component {
-  state = { config: {} }
+import { Accordion } from 'components/Accordion'
 
-  constructor(props) {
-    super(props)
+const Firewall = (props) => {
+  const [config, setConfig] = useState({})
+
+  const fetchConfig = () => {
+    firewallAPI.config().then(setConfig)
   }
 
-  fetchConfig = () => {
-    firewallAPI.config().then((config) => this.setState({ config }))
-  }
+  const [open, setOpen] = useState(['Endpoints', 'Multicast Proxy'])
 
-  componentDidMount() {
-    this.fetchConfig()
-  }
+  useEffect(() => {
+    fetchConfig()
+  }, [])
 
-  render() {
-    return (
-      <ScrollView width={{ base: '100%', md: '75%' }}>
-        <VStack space={4}>
-          <EndpointList
-            list={this.state.config.Endpoints}
-            notifyChange={this.fetchConfig}
-          />
+  //ones with items open by default
+  useEffect(() => {
+    let keyLabels = {
+      Endpoints: 'Endpoints',
+      ForwardingRules: 'PortForwarding',
+      BlockRules: 'Inbound Traffic Block',
+      ForwardingBlockRules: 'Forwarding Traffic Block',
+      MulticastPorts: 'Multicast Proxy'
+    }
 
-          <ForwardList
-            list={this.state.config.ForwardingRules}
-            notifyChange={this.fetchConfig}
-          />
+    let keys = Object.keys(keyLabels)
+    keys.map((key) => {
+      let defaults = []
+      if (config[key]?.length) {
+        defaults.push(keyLabels[key])
+      }
 
-          <BlockList
-            title="Inbound Traffic Block"
-            list={this.state.config.BlockRules}
-            notifyChange={this.fetchConfig}
-          />
+      setOpen(defaults)
+    })
+  }, [config])
 
-          <ForwardBlockList
-            title="Forwarding Traffic Block"
-            list={this.state.config.ForwardingBlockRules}
-            notifyChange={this.fetchConfig}
-          />
+  let items = [
+    {
+      label: 'Endpoints',
+      description: 'Describe Service Endpoints for building Firewall Rules',
+      icon: RouteIcon, //WaypointsIcon,
+      renderItem: () => (
+        <EndpointList list={config.Endpoints} notifyChange={fetchConfig} />
+      )
+    },
+    {
+      label: 'Port Forwarding',
+      description: 'Set rules for DNAT forwarding of incoming traffic',
+      icon: SplitIcon,
+      renderItem: () => (
+        <ForwardList list={config.ForwardingRules} notifyChange={fetchConfig} />
+      )
+    },
+    {
+      label: 'Inbound Traffic Block',
+      description:
+        'Block traffic coming into the network at the PREROUTING stage',
+      icon: ArrowLeftToLineIcon, //RouteOffIcon,
+      renderItem: () => (
+        <BlockList
+          title="Inbound Traffic Block"
+          list={config.BlockRules}
+          notifyChange={fetchConfig}
+        />
+      )
+    },
+    {
+      label: 'Forwarding Traffic Block',
+      description: 'Add rules to block traffic at the FORWARDING stage',
+      icon: ArrowRightFromLineIcon,
+      renderItem: () => (
+        <ForwardBlockList
+          title="Forwarding Traffic Block"
+          list={config.ForwardingBlockRules}
+          notifyChange={fetchConfig}
+        />
+      )
+    },
+    {
+      label: 'Multicast Proxy',
+      description: 'Set ip:port addresses to proxy',
+      icon: CastIcon,
+      renderItem: () => (
+        <MulticastPorts
+          list={config.MulticastPorts}
+          notifyChange={fetchConfig}
+        />
+      )
+    }
+  ]
 
-          <MulticastPorts
-            list={this.state.config.MulticastPorts}
-            notifyChange={this.fetchConfig}
-          />
-        </VStack>
-      </ScrollView>
-    )
-  }
+  return (
+    <ScrollView sx={{ '@md': { height: '92vh' } }}>
+      <VStack space="lg">
+        <Accordion items={items} open={open} />
+        {/*
+        <EndpointList list={config.Endpoints} notifyChange={fetchConfig} />
+        <ForwardList list={config.ForwardingRules} notifyChange={fetchConfig} />
+
+        <BlockList
+          title="Inbound Traffic Block"
+          list={config.BlockRules}
+          notifyChange={fetchConfig}
+        />
+
+        <ForwardBlockList
+          title="Forwarding Traffic Block"
+          list={config.ForwardingBlockRules}
+          notifyChange={fetchConfig}
+        />
+
+        <MulticastPorts
+          list={config.MulticastPorts}
+          notifyChange={fetchConfig}
+        />
+        */}
+      </VStack>
+    </ScrollView>
+  )
 }
+
+export default Firewall

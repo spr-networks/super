@@ -42,6 +42,8 @@ var ComposeAllowList = []string{"docker-compose.yml", "docker-compose-test.yml",
 	"ppp/docker-compose.yml",
 	"wifi_uplink/docker-compose.yml"}
 
+var CUSTOM_ALLOW_PATH = "configs/base/custom_compose_paths.json"
+
 var ReleaseChannelFile = "configs/base/release_channel"
 var ReleaseVersionFile = "configs/base/release_version"
 
@@ -731,6 +733,15 @@ func remote_container_tags(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(tagsResp)
 }
 
+func compose_paths(w http.ResponseWriter, r *http.Request) {
+	//NOTE: DO NOT add modification here. A user should have to
+	// be using console access to add paths, since docker containers
+	// represent privilege escalation
+	// That should not happen from the UI alone.
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ComposeAllowList)
+}
+
 func setup() {
 	hostSuperDir := getHostSuperDir()
 
@@ -742,6 +753,20 @@ func setup() {
 	os.Setenv("SUPERDIR", hostSuperDir)
 
 	establishConfigsIfEmpty("/super/")
+
+	//augment ComposeAllowList
+
+	data, err := ioutil.ReadFile(CUSTOM_ALLOW_PATH)
+	if err == nil {
+		newAllow := []string{}
+		err = json.Unmarshal(data, &newAllow)
+		if err != nil {
+			fmt.Println("Failed to load custom compose json", err)
+		} else {
+			ComposeAllowList = append(ComposeAllowList, newAllow...)
+		}
+	}
+
 }
 
 func main() {
@@ -771,6 +796,8 @@ func main() {
 
 	// get/set release channel
 	unix_plugin_router.HandleFunc("/release", release_info).Methods("GET", "PUT", "DELETE")
+
+	unix_plugin_router.HandleFunc("/compose_paths", compose_paths).Methods("GET")
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)

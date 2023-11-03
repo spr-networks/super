@@ -1,14 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react'
-import {
-  Box,
-  Stack,
-  HStack,
-  VStack,
-  ScrollView,
-  useBreakpointValue
-} from 'native-base'
+import { Box, VStack, ScrollView } from '@gluestack-ui/themed'
 import { AppContext } from 'AppContext'
-import { pluginAPI, pfwAPI, wifiAPI, api } from 'api'
+import { pluginAPI, wifiAPI } from 'api'
 
 import {
   WifiClients,
@@ -19,12 +12,14 @@ import {
   WireguardPeers,
   WireguardPeersActive
 } from 'components/Dashboard/WireguardWidgets'
+
 import { TotalTraffic } from 'components/Dashboard/TrafficWidgets'
 import {
   DNSMetrics,
   DNSBlockMetrics,
   DNSBlockPercent
 } from 'components/Dashboard/DNSMetricsWidgets'
+import { ServicesEnabled } from 'components/Dashboard/ServicesWidgets'
 
 const Home = (props) => {
   const [pluginsEnabled, setPluginsEnabled] = useState([])
@@ -34,13 +29,13 @@ const Home = (props) => {
   useEffect(() => {
     pluginAPI
       .list()
-      .then((plugins) =>
+      .then((plugins) => {
         setPluginsEnabled(
           plugins
             .filter((p) => p.Enabled)
             .map((p) => p.Name.replace(/-extension/, ''))
         )
-      )
+      })
       .catch((error) => error)
   }, [])
 
@@ -53,58 +48,68 @@ const Home = (props) => {
       .catch((error) => error)
   }, [])
 
-  const flexDirection = useBreakpointValue({
-    base: 'column',
-    lg: 'row'
-  })
-
   let show = {
     dns: pluginsEnabled.includes('dns-block') && !context.isMeshNode,
-    vpn: context.isWifiDisabled,
-    vpnSide: !context.isWifiDisabled && !context.isMeshNode,
+    wifi: !context.isWifiDisabled,
+    vpnInfo: context.isWifiDisabled && context.features.includes('wireguard'),
+    vpnSide:
+      !context.isWifiDisabled &&
+      !context.isMeshNode &&
+      pluginsEnabled.includes('wireguard'),
     traffic: !context.isMeshNode
   }
 
+  //NOTE wireguard listed as feature when not enabled
+  //features=dns,ppp,wifi,wireguard
+  let services = [...pluginsEnabled]
+  let featuresNoVPN = context.features.filter((f) => f != 'wireguard')
+  services = [...services, ...featuresNoVPN]
+
   return (
-    <ScrollView>
-      <Stack direction={{ base: 'column', md: 'row' }}>
-        <VStack flex={{ base: 1, md: 2 }} p={2}>
-          <Stack
-            direction={{ base: 'column', md: 'row' }}
-            justifyContent="space-between"
-            space={{ base: 0, md: 4 }}
-          >
-            {show.vpn ? (
-              <>
-                <WireguardPeers flex={1} />
-                <WireguardPeersActive flex={1} />
-              </>
-            ) : (
-              <VStack flex={1}>
-                {interfaces.map((iface) => (
-                  <Stack
-                    direction={{ base: 'column', md: 'row' }}
-                    flex={1}
-                    space={{ base: 2, md: 4 }}
-                    key={iface}
-                  >
-                    <WifiInfo iface={iface} flex={1} />
-                    <WifiClients iface={iface} flex={1} />
-                  </Stack>
-                ))}
-              </VStack>
-            )}
-          </Stack>
+    <ScrollView sx={{ '@md': { h: '92vh' } }}>
+      <Box
+        flexDirection="row"
+        sx={{
+          '@base': { flexDirection: 'column' },
+          '@md': { flexDirection: 'row' }
+        }}
+        space="md"
+        p="$4"
+        gap="$4"
+      >
+        <VStack space="md" sx={{ '@md': { flex: 2 } }}>
+          {show.vpnInfo ? (
+            <>
+              <WireguardPeers flex={1} />
+              <WireguardPeersActive flex={1} />
+            </>
+          ) : (
+            <VStack space="md">
+              {interfaces.map((iface) => (
+                <Box
+                  sx={{
+                    '@base': { flexDirection: 'column', gap: '$3' },
+                    '@md': { flexDirection: 'row', gap: '$3' }
+                  }}
+                  key={iface}
+                >
+                  <WifiInfo iface={iface} flex={1} />
+                  <WifiClients iface={iface} flex={1} />
+                </Box>
+              ))}
+            </VStack>
+          )}
 
-          <VStack>
+          <VStack space="md">
             {show.traffic ? <TotalTraffic /> : null}
-
             <Interfaces />
           </VStack>
         </VStack>
-        <VStack flex={1} p={2}>
+
+        <VStack flex={1} space="md">
+          <ServicesEnabled features={services} />
           {show.dns ? (
-            <VStack>
+            <VStack space="md">
               <DNSMetrics />
               <DNSBlockMetrics />
               <DNSBlockPercent />
@@ -112,7 +117,7 @@ const Home = (props) => {
           ) : null}
           {show.vpnSide ? <WireguardPeersActive /> : null}
         </VStack>
-      </Stack>
+      </Box>
     </ScrollView>
   )
 }

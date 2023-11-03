@@ -4,17 +4,24 @@ import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 
 import {
-  Box,
   Button,
+  ButtonText,
   Checkbox,
+  CheckboxIcon,
+  CheckboxIndicator,
+  CheckboxLabel,
   FormControl,
+  FormControlLabel,
+  FormControlLabelText,
   Input,
+  InputField,
   Link,
-  Stack,
+  LinkText,
   HStack,
   Spinner,
-  Text
-} from 'native-base'
+  Text,
+  VStack
+} from '@gluestack-ui/themed'
 
 export default class DNSAddBlocklist extends React.Component {
   state = { URI: '', Enabled: true, pending: false }
@@ -69,62 +76,68 @@ export default class DNSAddBlocklist extends React.Component {
     }
 
     return (
-      <Box>
-        <Stack space={2}>
-          <FormControl.Label>URI</FormControl.Label>
+      <VStack space="lg">
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>URI</FormControlLabelText>
+          </FormControlLabel>
 
-          <Stack space={2}>
-            <Input
-              type="text"
-              placeholder="https://..."
-              name="URI"
-              value={this.state.URI}
-              onSubmitEditing={this.handleSubmit}
-              onChangeText={this.handleChange}
-              autoFocus
-            />
-            <HStack space={1}>
+          <VStack space="sm">
+            <Input variant="underlined">
+              <InputField
+                type="text"
+                placeholder="https://..."
+                name="URI"
+                value={this.state.URI}
+                onSubmitEditing={this.handleSubmit}
+                onChangeText={this.handleChange}
+                autoFocus
+              />
+            </Input>
+            <HStack space="sm" flexWrap="wrap">
               <Link
-                color="muted.500"
+                color="$muted500"
                 isExternal
                 href="https://github.com/StevenBlack/hosts"
               >
-                See here
+                <LinkText size="sm">See here</LinkText>
               </Link>
               <Link
-                color="muted.500"
+                color="$muted500"
                 isExternal
                 href="https://github.com/blocklistproject/Lists"
               >
-                and here
+                <LinkText size="sm">and here</LinkText>
               </Link>
-              <Text color="muted.500">for examples of host files to use</Text>
+              <Text size="sm" color="$muted500">
+                for examples of host files to use
+              </Text>
             </HStack>
-          </Stack>
+          </VStack>
+        </FormControl>
 
-          {/*<FormControl.Label>Enabled</FormControl.Label>*/}
-          <Checkbox
-            accessibilityLabel="Enabled"
-            colorScheme="green"
-            value={this.state.Enabled}
-            isChecked={this.state.Enabled}
-            onChange={(enabled) =>
-              this.handleSwitchChange(this, !this.state.Enabled)
-            }
-          >
-            Enabled
-          </Checkbox>
+        <Checkbox
+          accessibilityLabel="Enabled"
+          value={this.state.Enabled}
+          isChecked={this.state.Enabled}
+          onChange={(enabled) =>
+            this.handleSwitchChange(this, !this.state.Enabled)
+          }
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Enabled</CheckboxLabel>
+        </Checkbox>
 
-          <Button
-            mt={2}
-            variant="solid"
-            colorScheme="primary"
-            onPress={this.handleSubmit}
-          >
-            Save
-          </Button>
-        </Stack>
-      </Box>
+        <Button
+          variant="solid"
+          colorScheme="primary"
+          onPress={this.handleSubmit}
+        >
+          <ButtonText>Save</ButtonText>
+        </Button>
+      </VStack>
     )
   }
 }

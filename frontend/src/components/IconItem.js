@@ -1,61 +1,88 @@
 import React from 'react'
-import { Platform } from 'react-native'
 
-import Icon from 'FontAwesomeUtils'
-import { BrandIcons } from 'FontAwesomeUtils'
+import { Box, Icon } from '@gluestack-ui/themed'
+import { BrandIcons } from 'IconUtils'
 
 import {
-  faLaptop,
-  faMobileScreen,
-  faDesktop,
-  faNetworkWired,
-  faWifi,
-  faVideo,
-  faEthernet
-} from '@fortawesome/free-solid-svg-icons'
+  Computer,
+  Laptop,
+  Laptop2,
+  Cable,
+  Network,
+  Router,
+  Smartphone,
+  Tv,
+  Video,
+  Wifi,
+  Tablet,
+  Globe,
+  Globe2
+} from 'lucide-react-native'
+import { Platform } from 'react-native'
 
-const IconItem = ({ name, color, size, ...props }) => {
-  let okBrands = [
-    'Apple',
-    'Android',
-    'Linux',
-    'Microsoft',
-    'PlayStation',
-    'RaspberryPi',
-    'Synology',
-    'Sonos'
-  ]
+let okBrands = [
+  'Apple',
+  'Android',
+  'Linux',
+  'Microsoft',
+  'PlayStation',
+  'RaspberryPi',
+  'Synology',
+  'Sonos'
+]
 
-  let faIcons = {
-    Desktop: faDesktop,
-    Ethernet: faEthernet,
-    Laptop: faLaptop,
-    Mobile: faMobileScreen,
-    Video: faVideo,
-    Wifi: faWifi,
-    Wired: faNetworkWired
+let deviceIcons = {
+  Ethernet: Network,
+  Desktop: Computer,
+  Laptop: Laptop2,
+  Mobile: Smartphone,
+  Router: Router,
+  Tablet: Tablet,
+  Tv: Tv,
+  Video: Video,
+  Wifi: Wifi,
+  Wire: Cable
+}
+
+let groupIcons = {
+  wan: Globe2,
+  dns: Globe,
+  lan: Cable //Network
+}
+
+const IconItem = ({ name, color, size: _size, ...props }) => {
+  let size = _size || 64
+
+  let isLIcon = Object.keys(deviceIcons).includes(name)
+  let isGroupOrTag = Object.keys(groupIcons).includes(name)
+  let lucideIcons = { ...deviceIcons, ...groupIcons }
+
+  if (isLIcon || isGroupOrTag) {
+    return <Icon as={lucideIcons[name]} color={color} size={size} {...props} />
   }
 
-  let _size = size || 10
-
-  let isFaIcon = Object.keys(faIcons).includes(name)
-  if (isFaIcon) {
-    let Component = React.createElement(Icon, {
-      icon: faIcons[name],
-      size: _size,
-      color: color || 'blueGray.500'
-    })
-
-    return <>{Component}</>
-  }
-
-  let Component = BrandIcons[name]
-
-  if (!okBrands.includes(name) || !Component) {
+  if (!Object.keys(BrandIcons).includes(name)) {
     return <></>
   }
 
-  return <Component size={_size} color={color || 'blueGray.500'} {...props} />
+  //TODO fix
+  if (Platform.OS == 'ios') {
+    return <Icon as={Laptop2} color={color} size={size} {...props} />
+  }
+
+  return (
+    <Icon as={BrandIcons[name]} color={color} size={size} w={size} {...props} />
+  )
+}
+
+const DeviceIcon = (name) => {
+  if (Object.keys(lucideIcons).includes(name)) {
+    return lucideIcons[name]
+  }
+
+  return BrandIcons[name] || null
 }
 
 export default IconItem
+
+export { groupIcons, deviceIcons }

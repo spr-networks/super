@@ -1,12 +1,22 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
-import { deviceAPI } from 'api/Device'
-
-import Icon from 'FontAwesomeUtils'
-import { faCaretDown, faCaretUp } from '@fortawesome/free-solid-svg-icons'
-
-import { IconButton, Input, Menu } from 'native-base'
+import {
+  Button,
+  ButtonIcon,
+  Icon,
+  Input,
+  InputField,
+  InputSlot,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  Menu,
+  MenuItem,
+  MenuItemLabel
+} from '@gluestack-ui/themed'
+import { LaptopIcon, TagIcon, WifiIcon, UsersIcon } from 'lucide-react-native'
+import { ucFirst } from 'utils'
+import IconItem from './IconItem'
 
 const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
   const [groups, setGroups] = useState([])
@@ -34,6 +44,16 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
   const handleChange = (value) => {
     let newValue = Array.isArray(value) ? value.join(',') : value
 
+    //TODO handle multiple
+    //translate tag:t1 to {Tag:"t1"}, group:dns to {Group:"dns"}
+    if (typeof newValue == 'string') {
+      if (newValue.match(/^(group|tag):/)) {
+        let [prefix, v] = newValue.split(':')
+        let key = ucFirst(prefix)
+        newValue = { [key]: v }
+      }
+    }
+
     if (onChange) {
       onChange(newValue)
     }
@@ -41,7 +61,7 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
 
   let closeOnSelect = !isMultiple
 
-  return (
+  /*return (
     <Menu w={200} maxH={360} closeOnSelect={closeOnSelect} trigger={trigger}>
       {groups.map((group) => (
         <Menu.OptionGroup
@@ -58,6 +78,51 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
           ))}
         </Menu.OptionGroup>
       ))}
+    </Menu>
+  )*/
+
+  const menuItem = (item) => {
+    let value = item.value
+    let icon = LaptopIcon
+    if (typeof value == 'object') {
+      let prefix = 'group',
+        v = 'empty'
+      icon = UsersIcon //GroupIcon
+      if (value.Tag) {
+        prefix = 'tag'
+        v = value.Tag
+        icon = TagIcon
+      } else {
+        v = value.Group
+      }
+
+      value = `${prefix}:${v}`
+    }
+
+    //item.icon is for devices and group icons
+
+    return (
+      <MenuItem key={value} textValue={value}>
+        {item.icon?.length > 0 ? (
+          <IconItem name={item.icon} color={item.color} size={20} mr="$2" />
+        ) : (
+          <Icon as={LaptopIcon} mr="$2" size={20} />
+        )}
+        <MenuItemLabel size="xs">{item.label}</MenuItemLabel>
+      </MenuItem>
+    )
+  }
+
+  return (
+    <Menu
+      trigger={trigger}
+      selectionMode="single"
+      closeOnSelect={true}
+      onSelectionChange={(e) => handleChange(e.currentKey)}
+    >
+      {groups.map((group) => {
+        return group.options?.map(menuItem)
+      })}
     </Menu>
   )
 }
@@ -104,15 +169,17 @@ const InputSelect = (props) => {
 
   let trigger = (triggerProps) => {
     return (
-      <IconButton
+      <Button
         size="xs"
-        rounded="none"
-        w="12"
-        h="full"
+        w="$12"
+        h="$full"
+        variant="link"
+        rounded="$none"
         onPress={() => setIsOpen(!isOpen)}
-        icon={<Icon icon={isOpen ? faCaretUp : faCaretDown} />}
         {...triggerProps}
-      />
+      >
+        <ButtonIcon as={isOpen ? ChevronUpIcon : ChevronDownIcon} />
+      </Button>
     )
   }
 
@@ -155,16 +222,15 @@ const InputSelect = (props) => {
 
   return (
     <>
-      <Input
-        size="md"
-        variant="underlined"
-        isDisabled={isDisabled}
-        placeholder={title || ''}
-        value={displayValue(value)}
-        onChangeText={handleChangeText}
-        onSubmitEditing={onSubmitEditing}
-        InputRightElement={elem}
-      />
+      <Input size="md" isDisabled={isDisabled}>
+        <InputField
+          placeholder={title || ''}
+          value={displayValue(value)}
+          onChangeText={handleChangeText}
+          onSubmitEditing={onSubmitEditing}
+        />
+        <InputSlot>{elem}</InputSlot>
+      </Input>
     </>
   )
 }
