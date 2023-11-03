@@ -73,15 +73,14 @@ const Sidebar = (props) => {
 
   return (
     <ScrollView
-      pb={'$5'}
       w={isMini ? '20' : '100%'}
-      borderRightWidth={isMobile ? '0' : '1'}
+      borderRightWidth={isMobile ? '$0' : '$1'}
       sx={{
         _light: {
-          bg: '$coolGray50',
+          bg: '$sidebarBackgroundLight',
           borderColor: '$coolGray100'
         },
-        _dark: { bg: '$black', borderColor: '$coolGray.800' }
+        _dark: { bg: '$sidebarBackgroundDark', borderColor: '$coolGray800' }
       }}
     >
       {showSearch ? (

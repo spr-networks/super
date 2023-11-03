@@ -83,7 +83,7 @@ const SystemInfo = (props) => {
   const colorMode = useColorMode()
 
   return (
-    <ScrollView>
+    <ScrollView h="$full" sx={{ '@md': { h: '92vh' } }}>
       <VStack space="md">
         <HStack p="$4">
           <Heading size="md">System Info</Heading>

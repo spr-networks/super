@@ -1,4 +1,5 @@
 import React from 'react'
+import { SafeAreaView } from 'react-native'
 import {
   NativeRouter as Router,
   Route,
@@ -20,32 +21,38 @@ export default function App() {
   }
 
   return (
-    <GluestackUIProvider config={config} colorMode={colorMode}>
-      <Router>
-        <Routes>
-          <Route key="index" path="/" element={<Navigate to="/auth/login" />} />
+    <>
+      <GluestackUIProvider config={config} colorMode={colorMode}>
+        <Router>
+          <Routes>
+            <Route
+              key="index"
+              path="/"
+              element={<Navigate to="/auth/login" />}
+            />
 
-          <Route
-            key="auth"
-            path="/auth"
-            element={<AuthLayout toggleColorMode={toggleColorMode} />}
-          >
-            {routesAuth.map((r) => (
-              <Route key={r.path} path={r.path} element={<r.element />} />
-            ))}
-          </Route>
+            <Route
+              key="auth"
+              path="/auth"
+              element={<AuthLayout toggleColorMode={toggleColorMode} />}
+            >
+              {routesAuth.map((r) => (
+                <Route key={r.path} path={r.path} element={<r.element />} />
+              ))}
+            </Route>
 
-          <Route
-            key="admin"
-            path="/admin"
-            element={<AdminLayout toggleColorMode={toggleColorMode} />}
-          >
-            {routesAdmin.map((r) => (
-              <Route key={r.path} path={r.path} element={<r.element />} />
-            ))}
-          </Route>
-        </Routes>
-      </Router>
-    </GluestackUIProvider>
+            <Route
+              key="admin"
+              path="/admin"
+              element={<AdminLayout toggleColorMode={toggleColorMode} />}
+            >
+              {routesAdmin.map((r) => (
+                <Route key={r.path} path={r.path} element={<r.element />} />
+              ))}
+            </Route>
+          </Routes>
+        </Router>
+      </GluestackUIProvider>
+    </>
   )
 }

@@ -237,7 +237,7 @@ class TrafficTimeSeries extends Component {
     }
 
     return (
-      <ScrollView sx={{ '@md': { height: '90vh' } }}>
+      <ScrollView sx={{ '@md': { height: '92vh' } }}>
         <VStack space="md">
           {['WanOut', 'WanIn', 'LanIn', 'LanOut'].map((type) => {
             return (

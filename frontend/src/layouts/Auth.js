@@ -5,7 +5,7 @@ import { Box } from '@gluestack-ui/themed'
 const AuthLayout = () => {
   return (
     <Box
-      bg="$warmGray200"
+      bg="$warmGray100"
       w="$full"
       h="$full"
       _sx={{

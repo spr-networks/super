@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Dimensions, Platform } from 'react-native'
+import { Dimensions, Platform, SafeAreaView } from 'react-native'
 import { Outlet, useLocation } from 'react-router-dom'
 
 import Notifications from 'Notifications'
@@ -34,7 +34,8 @@ import {
   VStack,
   Text,
   SlashIcon,
-  InfoIcon
+  InfoIcon,
+  useColorMode
 } from '@gluestack-ui/themed'
 
 //NOTE Slice transition for Alerts not available in gluestack-ui
@@ -388,15 +389,13 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       })
   }, [isWifiDisabled])
 
-  let navbarHeight = 64
-  let heightFull = Dimensions.get('window').height
-  let heightContent = heightFull - navbarHeight
-
   /*return (
     <Box bg="$red200" p="$20">
       <Text>TEST 2.0</Text>
     </Box>
   )*/
+  const colorMode = useColorMode()
+  const backgroundColor = colorMode === 'light' ? 'white' : 'black'
 
   return (
     <AppContext.Provider
@@ -411,16 +410,20 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         features
       }}
     >
+      <SafeAreaView
+        style={{
+          backgroundColor
+        }}
+      />
+
       <VStack
-        safeAreaTop
         bg="$backgroundContentLight"
         sx={{
           _dark: {
             bg: '$backgroundContentDark'
           }
         }}
-        h="$full"
-        minH={heightFull}
+        flex={1}
       >
         {/*desktop*/}
         <Box
@@ -450,7 +453,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           }}
           top={0}
           zIndex={99}
-          _style={{ backdropFilter: 'blur(10px)' }}
         >
           <AdminNavbar
             version={version}
@@ -465,16 +467,17 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           position={Platform.OS == 'web' ? 'sticky' : 'static'}
           top={Platform.OS == 'web' ? 16 : 0}
           flex={1}
-          h={heightContent}
         >
           {/*desktop*/}
           <Box
             display="none"
             sx={{
-              '@md': { display: 'flex' }
+              '@md': {
+                display: 'flex',
+                height: Dimensions.get('window').height - 64
+              }
             }}
             width={isOpenSidebar ? 80 : 260}
-            height={heightContent}
           >
             <Sidebar
               isMobile={false}
@@ -486,40 +489,43 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           </Box>
           {/*mobile*/}
           {isOpenSidebar ? (
-            <Box
-              w="100%"
-              zIndex={99}
-              sx={{
-                '@base': {
-                  display: 'flex'
-                },
-                '@md': { display: 'none' },
-                _light: {
-                  bg: '$sidebarBackgroundLight'
-                },
-                _dark: { bg: '$sidebarBackgroundDark' }
+            <SafeAreaView
+              style={{
+                width: '100%',
+                backgroundColor: colorMode == 'light' ? '#f9fafb' : 'black'
               }}
             >
-              <Sidebar
-                isMobile={true}
-                isMini={false}
-                isOpenSidebar={isOpenSidebar}
-                setIsOpenSidebar={setIsOpenSidebar}
-                routes={routes}
-              />
-            </Box>
+              <Box
+                w="100%"
+                zIndex={99}
+                sx={{
+                  '@md': { display: 'none' }
+                }}
+              >
+                <Sidebar
+                  isMobile={true}
+                  isMini={false}
+                  isOpenSidebar={isOpenSidebar}
+                  setIsOpenSidebar={setIsOpenSidebar}
+                  routes={routes}
+                />
+              </Box>
+            </SafeAreaView>
           ) : null}
 
-          {/*<ScrollContext.Provider value={{ timestamp, setTimestamp }}>*/}
-          {/*h="calc(100% - 64px)"
-               minH="calc(100vh - 64px)"*/}
           <Box flex={1} ref={mainPanel}>
-            <Outlet />
-            {/*NOTE footer should not be visible - outside of the view and show when scroll to bottom to use the most space*/}
-            {/*<Footer />*/}
+            <SafeAreaView
+              style={{
+                width: '100%',
+                backgroundColor: colorMode == 'light' ? '#f3f4f6' : 'black'
+              }}
+            >
+              <Outlet />
+            </SafeAreaView>
           </Box>
         </HStack>
       </VStack>
+
       <AlertContext.Provider value={alertState}>
         {/*<Slide in={showAlert} placement="top"></Slide>*/}
         <Box

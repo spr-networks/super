@@ -111,7 +111,7 @@ const Firewall = (props) => {
   ]
 
   return (
-    <ScrollView sx={{ '@md': { height: '90vh' } }}>
+    <ScrollView sx={{ '@md': { height: '92vh' } }}>
       <VStack space="lg">
         <Accordion items={items} open={open} />
         {/*

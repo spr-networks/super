@@ -290,7 +290,7 @@ export default (props) => {
   }
 
   return (
-    <ScrollView sx={{ '@md': { height: '90vh' } }}>
+    <ScrollView sx={{ '@md': { height: '92vh' } }}>
       <VStack space="md">
         <Box
           bg="$backgroundCardLight"

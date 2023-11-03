@@ -66,7 +66,7 @@ const Home = (props) => {
   services = [...services, ...featuresNoVPN]
 
   return (
-    <ScrollView sx={{ '@md': { h: '90vh' } }}>
+    <ScrollView sx={{ '@md': { h: '92vh' } }}>
       <Box
         flexDirection="row"
         sx={{
@@ -76,7 +76,6 @@ const Home = (props) => {
         space="md"
         p="$4"
         gap="$4"
-        mb="$8"
       >
         <VStack space="md" sx={{ '@md': { flex: 2 } }}>
           {show.vpnInfo ? (

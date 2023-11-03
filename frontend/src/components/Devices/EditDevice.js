@@ -282,238 +282,234 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   }
 
   return (
-    <ScrollView
-      space="md"
-      width="$full"
-      h="$full"
+    <VStack
+      space="lg"
+      bg="$backgroundCardLight"
       sx={{
-        '@md': { width: '$5/6', h: '90vh' }
+        '@md': { width: '$5/6' },
+        _dark: { bg: '$backgroundCardDark' }
       }}
-      pb="$8"
+      p="$4"
     >
-      <VStack space="lg">
-        <Heading size="sm">Edit Device</Heading>
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Name</FormControlLabelText>
+        </FormControlLabel>
 
-        <FormControl>
+        <Input variant="outline">
+          <InputField
+            type="text"
+            value={name}
+            autoFocus={false}
+            onChangeText={(value) => handleName(value)}
+            onSubmitEditing={handleSubmit}
+          />
+        </Input>
+
+        {device.oui !== undefined ? (
+          <FormControlHelper>
+            <FormControlHelperText>{device.oui}</FormControlHelperText>
+          </FormControlHelper>
+        ) : null}
+      </FormControl>
+
+      <FormControl>
+        <Tooltip
+          placement="bottom"
+          trigger={(triggerProps) => {
+            return (
+              <FormControlLabel {...triggerProps}>
+                <FormControlLabelText>IP address</FormControlLabelText>
+              </FormControlLabel>
+            )
+          }}
+        >
+          <TooltipContent>
+            <TooltipText>
+              Assign Micro Segmentation IP, every 4th ip from 2 (.2, .6, .10,
+              .14, ...). Check the Supernetworks view to create new subnets
+            </TooltipText>
+          </TooltipContent>
+        </Tooltip>
+
+        <Input variant="underlined">
+          <InputField
+            type="text"
+            value={rawIP}
+            autoFocus={false}
+            onChangeText={(value) => handleIP(value)}
+            onSubmitEditing={handleSubmit}
+          />
+        </Input>
+      </FormControl>
+
+      <FormControl>
+        <Tooltip
+          placement="bottom"
+          trigger={(triggerProps) => {
+            return (
+              <FormControlLabel {...triggerProps}>
+                <FormControlLabelText>VLAN Tag ID</FormControlLabelText>
+              </FormControlLabel>
+            )
+          }}
+        >
+          <TooltipContent>
+            <TooltipText>
+              For Wired Devices on a Managed Port: Assign VLAN Tag ID
+            </TooltipText>
+          </TooltipContent>
+        </Tooltip>
+
+        <Input variant="underlined">
+          <InputField
+            type="text"
+            value={vlantag}
+            autoFocus={false}
+            onChangeText={(value) => handleVLAN(value)}
+            onSubmitEditing={handleSubmit}
+          />
+        </Input>
+      </FormControl>
+
+      <HStack space="md">
+        <FormControl flex={1}>
           <FormControlLabel>
-            <FormControlLabelText>Name</FormControlLabelText>
+            <FormControlLabelText>
+              {device.MAC ? 'MAC address' : 'WG Pubkey'}
+            </FormControlLabelText>
           </FormControlLabel>
+          <Text isTruncated>{device.MAC || device.WGPubKey}</Text>
+        </FormControl>
 
-          <Input variant="underlined">
-            <InputField
-              type="text"
-              value={name}
-              autoFocus={false}
-              onChangeText={(value) => handleName(value)}
-              onSubmitEditing={handleSubmit}
+        <FormControl flex={1} display={device.MAC ? 'flex' : 'none'}>
+          <FormControlLabel>
+            <FormControlLabelText>WiFi Auth</FormControlLabelText>
+          </FormControlLabel>
+          <Text>{wifi_type}</Text>
+        </FormControl>
+      </HStack>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Groups</FormControlLabelText>
+        </FormControlLabel>
+        <HStack flexWrap="wrap" w="$full" space="md">
+          <HStack space="md" flexWrap="wrap" alignItems="center">
+            {groups.map((group) => (
+              <GroupItem key={group} name={group} size="sm" />
+            ))}
+          </HStack>
+
+          <GroupMenu
+            items={[...new Set(defaultGroups.concat(groups))]}
+            selectedKeys={groups}
+            onSelectionChange={handleGroups}
+          />
+        </HStack>
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Tags</FormControlLabelText>
+        </FormControlLabel>
+
+        <HStack flexWrap="wrap" w="$full" space="md">
+          <HStack
+            space="md"
+            flexWrap="wrap"
+            alignItems="center"
+            display={tags?.length ? 'flex' : 'none'}
+          >
+            {tags.map((tag) => (
+              <TagItem key={tag} name={tag} size="sm" />
+            ))}
+          </HStack>
+          <TagMenu
+            items={[...new Set(defaultTags.concat(tags))]}
+            selectedKeys={tags}
+            onSelectionChange={handleTags}
+          />
+        </HStack>
+      </FormControl>
+
+      <VStack space="lg">
+        <FormControl flex={1}>
+          <FormControlLabel>
+            <FormControlLabelText>Icon</FormControlLabelText>
+          </FormControlLabel>
+          {icon ? (
+            <IconPicker
+              value={icon}
+              color={color}
+              onChange={(icon) => setIcon(icon)}
             />
-          </Input>
-
-          {device.oui !== undefined ? (
-            <FormControlHelper>
-              <FormControlHelperText>{device.oui}</FormControlHelperText>
-            </FormControlHelper>
           ) : null}
         </FormControl>
-
-        <FormControl>
-          <Tooltip
-            placement="bottom"
-            trigger={(triggerProps) => {
-              return (
-                <FormControlLabel {...triggerProps}>
-                  <FormControlLabelText>IP address</FormControlLabelText>
-                </FormControlLabel>
-              )
-            }}
-          >
-            <TooltipContent>
-              <TooltipText>
-                Assign Micro Segmentation IP, every 4th ip from 2 (.2, .6, .10,
-                .14, ...). Check the Supernetworks view to create new subnets
-              </TooltipText>
-            </TooltipContent>
-          </Tooltip>
-
-          <Input variant="underlined">
-            <InputField
-              type="text"
-              value={rawIP}
-              autoFocus={false}
-              onChangeText={(value) => handleIP(value)}
-              onSubmitEditing={handleSubmit}
-            />
-          </Input>
-        </FormControl>
-
-        <FormControl>
-          <Tooltip
-            placement="bottom"
-            trigger={(triggerProps) => {
-              return (
-                <FormControlLabel {...triggerProps}>
-                  <FormControlLabelText>VLAN Tag ID</FormControlLabelText>
-                </FormControlLabel>
-              )
-            }}
-          >
-            <TooltipContent>
-              <TooltipText>
-                For Wired Devices on a Managed Port: Assign VLAN Tag ID
-              </TooltipText>
-            </TooltipContent>
-          </Tooltip>
-
-          <Input variant="underlined">
-            <InputField
-              type="text"
-              value={vlantag}
-              autoFocus={false}
-              onChangeText={(value) => handleVLAN(value)}
-              onSubmitEditing={handleSubmit}
-            />
-          </Input>
-        </FormControl>
-
-        <HStack space="md">
-          <FormControl flex={1}>
-            <FormControlLabel>
-              <FormControlLabelText>
-                {device.MAC ? 'MAC address' : 'WG Pubkey'}
-              </FormControlLabelText>
-            </FormControlLabel>
-            <Text isTruncated>{device.MAC || device.WGPubKey}</Text>
-          </FormControl>
-
-          <FormControl flex={1} display={device.MAC ? 'flex' : 'none'}>
-            <FormControlLabel>
-              <FormControlLabelText>WiFi Auth</FormControlLabelText>
-            </FormControlLabel>
-            <Text>{wifi_type}</Text>
-          </FormControl>
-        </HStack>
-
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Groups</FormControlLabelText>
-          </FormControlLabel>
-          <HStack flexWrap="wrap" w="$full" space="md">
-            <HStack space="md" flexWrap="wrap" alignItems="center">
-              {groups.map((group) => (
-                <GroupItem key={group} name={group} size="sm" />
-              ))}
-            </HStack>
-
-            <GroupMenu
-              items={[...new Set(defaultGroups.concat(groups))]}
-              selectedKeys={groups}
-              onSelectionChange={handleGroups}
-            />
-          </HStack>
-        </FormControl>
-
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText>Tags</FormControlLabelText>
+            <FormControlLabelText>Color</FormControlLabelText>
           </FormControlLabel>
 
-          <HStack flexWrap="wrap" w="$full" space="md">
-            <HStack
-              space="md"
-              flexWrap="wrap"
-              alignItems="center"
-              display={tags?.length ? 'flex' : 'none'}
-            >
-              {tags.map((tag) => (
-                <TagItem key={tag} name={tag} size="sm" />
-              ))}
-            </HStack>
-            <TagMenu
-              items={[...new Set(defaultTags.concat(tags))]}
-              selectedKeys={tags}
-              onSelectionChange={handleTags}
-            />
-          </HStack>
+          <ColorPicker value={color} onChange={(color) => setColor(color)} />
         </FormControl>
-
-        <VStack space="lg">
-          <FormControl flex={1}>
-            <FormControlLabel>
-              <FormControlLabelText>Icon</FormControlLabelText>
-            </FormControlLabel>
-            {icon ? (
-              <IconPicker
-                value={icon}
-                color={color}
-                onChange={(icon) => setIcon(icon)}
-              />
-            ) : null}
-          </FormControl>
-          <FormControl>
-            <FormControlLabel>
-              <FormControlLabelText>Color</FormControlLabelText>
-            </FormControlLabel>
-
-            <ColorPicker value={color} onChange={(color) => setColor(color)} />
-          </FormControl>
-        </VStack>
-
-        <VStack space="lg">
-          <FormControl>
-            <FormControlLabel>
-              <FormControlLabelText>Expiration</FormControlLabelText>
-            </FormControlLabel>
-
-            <InputSelect
-              options={expirationOptions}
-              value={
-                expiration
-                  ? timeAgo(new Date(Date.now() + expiration * 1e3))
-                  : 'Never'
-              }
-              onChange={(v) => handleChange('Expiration', parseInt(v))}
-              onChangeText={(v) => handleChange('Expiration', parseInt(v))}
-            />
-
-            <FormControlHelper>
-              <FormControlHelperText>
-                If non zero has unix time for when the entry should disappear
-              </FormControlHelperText>
-            </FormControlHelper>
-          </FormControl>
-
-          <FormControl mt="$2">
-            <FormControlLabel>
-              <FormControlLabelText>Delete on expiry</FormControlLabelText>
-            </FormControlLabel>
-
-            <Checkbox
-              accessibilityLabel="Enabled"
-              value={deleteExpiry}
-              isChecked={deleteExpiry}
-              onChange={(enabled) => setDeleteExpiry(!deleteExpiry)}
-            >
-              <CheckboxIndicator mr="$2">
-                <CheckboxIcon as={CheckIcon} />
-              </CheckboxIndicator>
-              <CheckboxLabel>Remove device</CheckboxLabel>
-            </Checkbox>
-          </FormControl>
-        </VStack>
-
-        <Button action="secondary" onPress={() => navigate('/admin/devices')}>
-          <ButtonIcon as={ArrowLeftIcon} />
-          <ButtonText>Back</ButtonText>
-        </Button>
-
-        <ModalConfirm
-          type={modalType}
-          onSubmit={handleSubmitNew}
-          onClose={() => setShowModal(false)}
-          isOpen={showModal}
-        />
       </VStack>
-    </ScrollView>
+
+      <VStack space="lg">
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Expiration</FormControlLabelText>
+          </FormControlLabel>
+
+          <InputSelect
+            options={expirationOptions}
+            value={
+              expiration
+                ? timeAgo(new Date(Date.now() + expiration * 1e3))
+                : 'Never'
+            }
+            onChange={(v) => handleChange('Expiration', parseInt(v))}
+            onChangeText={(v) => handleChange('Expiration', parseInt(v))}
+          />
+
+          <FormControlHelper>
+            <FormControlHelperText>
+              If non zero has unix time for when the entry should disappear
+            </FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+
+        <FormControl mt="$2">
+          <FormControlLabel>
+            <FormControlLabelText>Delete on expiry</FormControlLabelText>
+          </FormControlLabel>
+
+          <Checkbox
+            accessibilityLabel="Enabled"
+            value={deleteExpiry}
+            isChecked={deleteExpiry}
+            onChange={(enabled) => setDeleteExpiry(!deleteExpiry)}
+          >
+            <CheckboxIndicator mr="$2">
+              <CheckboxIcon as={CheckIcon} />
+            </CheckboxIndicator>
+            <CheckboxLabel>Remove device</CheckboxLabel>
+          </Checkbox>
+        </FormControl>
+      </VStack>
+
+      <Button action="secondary" onPress={() => navigate('/admin/devices')}>
+        <ButtonIcon as={ArrowLeftIcon} />
+        <ButtonText>Back</ButtonText>
+      </Button>
+
+      <ModalConfirm
+        type={modalType}
+        onSubmit={handleSubmitNew}
+        onClose={() => setShowModal(false)}
+        isOpen={showModal}
+      />
+    </VStack>
   )
 }
 

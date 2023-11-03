@@ -1,12 +1,14 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useParams } from 'react-router-dom'
-import { Box } from '@gluestack-ui/themed'
+import { ScrollView } from '@gluestack-ui/themed'
 import EditDevice from 'components/Devices/EditDevice'
 import { AlertContext } from 'layouts/Admin'
 
 import useSwipe from 'components/useSwipe'
 import { deviceAPI } from 'api'
+
+import { ListHeader } from 'components/List'
 
 //import AddDevice from 'components/Devices/AddDevice'
 
@@ -67,15 +69,16 @@ const DeviceView = () => {
   })
 
   return (
-    <Box
-      bg="$backgroundCardLight"
+    <ScrollView
+      space="md"
+      h="$full"
+      width="$full"
       sx={{
-        _dark: { bg: '$backgroundCardDark' }
+        '@md': { h: '92vh' }
       }}
-      p="$4"
-      h={'100%'}
       {...swipeHandlers}
     >
+      <ListHeader title="Edit Device" />
       {device ? (
         <EditDevice
           key={device.MAC || device.WGPubKey}
@@ -87,7 +90,7 @@ const DeviceView = () => {
           allTags={tags}
         />
       ) : null}
-    </Box>
+    </ScrollView>
   )
 }
 

@@ -186,7 +186,7 @@ const SpeedTest = (props) => {
             size="xl"
             onPress={startTest}
           >
-            <ButtonIcon as={isRunning ? PauseIcon : PlayIcon} />
+            <ButtonIcon as={isRunning ? PauseIcon : PlayIcon} size="xl" />
           </Button>
         </HStack>
 
@@ -236,7 +236,7 @@ const SpeedTest = (props) => {
               <Icon as={ArrowUpCircleIcon} color="$muted500" />
               <Text color="$muted500">Upload</Text>
             </HStack>
-            <Progress flex="2" size="md" rounded="md" value={percentUp}>
+            <Progress flex={2} size="md" rounded="md" value={percentUp}>
               <ProgressFilledTrack />
             </Progress>
           </HStack>

@@ -49,6 +49,7 @@ const AdminNavbar = ({
       <HStack
         w="100%"
         borderBottomWidth="$1"
+        borderTopWidth="$1"
         bg={
           colorMode == 'light'
             ? '$navbarBackgroundLight'
@@ -60,10 +61,9 @@ const AdminNavbar = ({
             : '$navbarBorderColorDark'
         }
         px="$3"
-        pt="$3"
         h="$16"
         sx={{
-          '@md': { px: '$4', pt: '$0' }
+          '@md': { px: '$4' }
         }}
         justifyContent="space-between"
       >

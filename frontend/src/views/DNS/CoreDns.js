@@ -92,7 +92,7 @@ const CoreDns = (props) => {
 
   return (
     <View sx={{ '@md': { w: '$3/5' } }}>
-      <ListHeader title="Core DNS Settings"></ListHeader>
+      <ListHeader title="Core DNS Settings" />
 
       <Box
         bg="$backgroundCardLight"

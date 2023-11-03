@@ -82,7 +82,7 @@ export default class Dhcp extends Component {
 
   render() {
     return (
-      <ScrollView sx={{ '@md': { h: '90vh' } }}>
+      <ScrollView sx={{ '@md': { h: '92vh' } }}>
         <VStack space={'md'}>
           {this.state.groups.map((group) => (
             <GroupListing key={group.Name} group={group} />

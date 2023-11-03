@@ -94,22 +94,24 @@ export default class DNSAddBlocklist extends React.Component {
                 autoFocus
               />
             </Input>
-            <HStack space="sm">
+            <HStack space="sm" flexWrap="wrap">
               <Link
                 color="$muted500"
                 isExternal
                 href="https://github.com/StevenBlack/hosts"
               >
-                <LinkText>See here</LinkText>
+                <LinkText size="sm">See here</LinkText>
               </Link>
               <Link
                 color="$muted500"
                 isExternal
                 href="https://github.com/blocklistproject/Lists"
               >
-                <LinkText>and here</LinkText>
+                <LinkText size="sm">and here</LinkText>
               </Link>
-              <Text color="$muted500">for examples of host files to use</Text>
+              <Text size="sm" color="$muted500">
+                for examples of host files to use
+              </Text>
             </HStack>
           </VStack>
         </FormControl>
