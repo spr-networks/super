@@ -173,9 +173,8 @@ const EditDatabase = ({ onSubmit, ...props }) => {
   const [config, setConfig] = useState(null)
   const [stats, setStats] = useState(null)
 
-  const [saveEvents, setSaveEvents] = useState([])
+  //this one is to make sure defaultTopics is also included
   const [allEvents, setAllEvents] = useState([])
-
   const defaultTopics = ['nft:', 'wifi:', 'dhcp:', 'dns:serve']
   const apiError = (err) => context.error('db api error:', err)
 
@@ -223,8 +222,6 @@ const EditDatabase = ({ onSubmit, ...props }) => {
       return
     }
 
-    setSaveEvents([...config.SaveEvents])
-
     let topics = config.SaveEvents || []
     if (stats && stats.Topics) {
       topics = [...new Set([...topics, ...stats.Topics, ...defaultTopics])]
@@ -243,11 +240,11 @@ const EditDatabase = ({ onSubmit, ...props }) => {
   }
 
   return (
-    <VStack space="md">
+    <VStack space="lg">
       <EditSizeForm config={config} onSubmit={handleSubmitSize} />
       <AddTopicForm
         allEvents={allEvents}
-        saveEvents={saveEvents}
+        saveEvents={config?.SaveEvents}
         handleAddRemove={handleAddRemove}
         onSubmit={handleAddRemove}
       />

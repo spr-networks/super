@@ -3,7 +3,7 @@
  * timestamp
  * pagination
  */
-import React, { useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
 import { dbAPI } from 'api'
 import { prettyDate } from 'utils'
@@ -30,15 +30,12 @@ import {
   ScrollView
 } from '@gluestack-ui/themed'
 
-import {
-  FilterIcon,
-  FilterXIcon,
-  Settings2Icon,
-  SlidersHorizontalIcon
-} from 'lucide-react-native'
+import { Settings2Icon } from 'lucide-react-native'
 
 //import { FlashList } from '@shopify/flash-list'
+import { EditDatabase } from 'views/System/EditDatabase'
 import { ArrowLeftIcon, ArrowRightIcon } from '@gluestack-ui/themed'
+import { ModalContext } from 'AppContext'
 import { ListItem } from 'components/List'
 import { Select } from 'components/Select'
 import { Tooltip } from 'components/Tooltip'
@@ -49,6 +46,7 @@ const LogListItem = (props) => {
 }
 
 const LogList = (props) => {
+  const modalContext = useContext(ModalContext)
   const [topics, setTopics] = useState([])
   const [filter, setFilter] = useState({})
   const [logs, setLogs] = useState([])
@@ -356,6 +354,13 @@ const LogList = (props) => {
 
   let h = Platform.OS == 'web' ? Dimensions.get('window').height - 64 : '100%'
 
+  const handlePressEdit = () => {
+    modalContext.modal(
+      'Change database size limit',
+      <EditDatabase onSubmit={() => {}} />
+    )
+  }
+
   return (
     <View h={h} display="flex">
       <HStack
@@ -392,7 +397,7 @@ const LogList = (props) => {
         </Tooltip>
         */}
         <HStack space="sm" sx={{ '@md': { marginLeft: 'auto' } }}>
-          <Button variant="outline" action="primary">
+          <Button variant="outline" action="primary" onPress={handlePressEdit}>
             <ButtonIcon as={Settings2Icon} color="$primary500"></ButtonIcon>
           </Button>
           <SelectTopic
