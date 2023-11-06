@@ -1,156 +1,27 @@
 import React, { useContext, useEffect, useState } from 'react'
 
 import {
-  Badge,
-  BadgeText,
   Button,
   ButtonIcon,
   ButtonText,
   Box,
-  FormControl,
-  FormControlLabel,
-  FormControlLabelText,
-  FormControlHelperText,
   Heading,
   HStack,
   Icon,
-  Input,
-  InputField,
   Text,
   Tooltip,
   VStack,
   useColorMode,
   TooltipContent,
-  TooltipText,
-  InfoIcon,
-  Pressable
+  TooltipText
 } from '@gluestack-ui/themed'
 
 import { dbAPI } from 'api'
 import { AlertContext, ModalContext } from 'AppContext'
 import { prettySize } from 'utils'
-import { DatabaseIcon, PlusIcon, Settings2Icon } from 'lucide-react-native'
+import { DatabaseIcon, Settings2Icon } from 'lucide-react-native'
 
-const TopicItem = ({ topic, onPress, isDisabled, ...props }) => (
-  <Pressable onPress={onPress}>
-    <Badge
-      variant="outline"
-      action={isDisabled ? 'muted' : 'success'}
-      size="xs"
-    >
-      <BadgeText>{topic}</BadgeText>
-    </Badge>
-  </Pressable>
-)
-
-const AddTopicForm = ({ allEvents, isStored, handleAddRemove, onSubmit }) => {
-  const [value, setValue] = useState('')
-  const handleChangeText = (value) => setValue(value)
-  const handleSubmit = () => onSubmit(value)
-
-  const renderTopic = (topic) => (
-    <TopicItem
-      key={`topic:${topic}:${isStored(topic)}`}
-      topic={topic}
-      onPress={() => handleAddRemove(topic)}
-      isDisabled={!isStored(topic)}
-    />
-  )
-
-  return (
-    <HStack space="md" flexDirection="column" pb="$4">
-      <VStack flex={2} space="sm">
-        <Heading size="md">Registered Events</Heading>
-        <Text color="$muted500">Click event to add or remove for storage</Text>
-
-        <HStack space="sm" flexWrap="wrap">
-          {allEvents && allEvents.length ? allEvents.map(renderTopic) : null}
-        </HStack>
-      </VStack>
-      <FormControl flex={1} space={'$8'}>
-        <FormControlLabel>
-          <FormControlLabelText>
-            Or add a custom Event name
-          </FormControlLabelText>
-        </FormControlLabel>
-
-        <Input size="lg" variant="underlined" w="100%">
-          <InputField
-            type="text"
-            placeholder="service:event:name"
-            autoFocus={true}
-            value={value}
-            onChangeText={handleChangeText}
-            onSubmitEditing={handleSubmit}
-          />
-        </Input>
-        <FormControlHelperText flexDir={'row'} my={'$4'}>
-          <HStack space="sm">
-            <Text color="$muted500" italic bold>
-              Note:
-            </Text>
-            <Text color="$muted500">using a prefix like</Text>
-            <Text color="$muted500" italic>
-              "www:"
-            </Text>
-            <Text color="$muted500">will store all events from www</Text>
-          </HStack>
-        </FormControlHelperText>
-      </FormControl>
-    </HStack>
-  )
-}
-
-const EditSizeForm = ({ config, onSubmit, ...props }) => {
-  const [size, setSize] = useState(0)
-  const handleChangeText = (value) => {
-    setSize(value)
-  }
-
-  useEffect(() => {
-    setSize(config.MaxSize / 1024 / 1024)
-  }, [config])
-
-  const handleSubmit = () => onSubmit(parseInt(size * 1024 * 1024))
-
-  return (
-    <VStack space="xl">
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>
-            Max size for database file in MB
-          </FormControlLabelText>
-        </FormControlLabel>
-
-        <Input size="lg" variant="underlined">
-          <InputField
-            type="text"
-            value={size}
-            placeholder="size in mb"
-            autoFocus={true}
-            onChangeText={handleChangeText}
-            onSubmitEditing={handleSubmit}
-          />
-        </Input>
-        <FormControlHelperText flexDir={'row'} my="$4">
-          Size in kB: {size * 1024}kB
-        </FormControlHelperText>
-      </FormControl>
-      <VStack flex={1} space="sm">
-        <HStack space="sm">
-          <InfoIcon color="$muted500" />
-          <Heading size="xs" mb="$4">
-            Notice about size
-          </Heading>
-        </HStack>
-        <Text size="sm">
-          Older entries will be removed to keep the file size to around what is
-          specified.
-        </Text>
-      </VStack>
-    </VStack>
-  )
-}
+import { EditDatabase, TopicItem, toggleSaveTopic } from './EditDatabase'
 
 const Database = ({ ...props }) => {
   const context = useContext(AlertContext)
@@ -158,11 +29,7 @@ const Database = ({ ...props }) => {
   const [config, setConfig] = useState(null)
   const [stats, setStats] = useState(null)
 
-  const [saveEvents, setSaveEvents] = useState([])
-  const [allEvents, setAllEvents] = useState([])
   const [percentSize, setPercentSize] = useState(0)
-
-  const defaultTopics = ['nft:', 'wifi:', 'dhcp:', 'dns:']
 
   const apiError = (err) => context.error('db api error:', err)
 
@@ -172,7 +39,6 @@ const Database = ({ ...props }) => {
       .then((stats) => {
         if (stats.Topics.length) {
           setStats(stats)
-          //setAllEvents(stats.Topics)
         }
       })
       .catch(apiError)
@@ -183,7 +49,6 @@ const Database = ({ ...props }) => {
       .config()
       .then((config) => {
         setConfig(config)
-        //setSaveEvents(config.SaveEvents)
       })
       .catch(apiError)
     syncStats()
@@ -197,15 +62,6 @@ const Database = ({ ...props }) => {
     setPercentSize(
       Math.min(Math.round((stats.Size / config.MaxSize) * 100), 100)
     )
-
-    setSaveEvents([...config.SaveEvents])
-
-    let topics = config.SaveEvents || []
-    if (stats && stats.Topics) {
-      topics = [...new Set([...topics, ...stats.Topics, ...defaultTopics])]
-    }
-
-    setAllEvents(topics)
   }, [config, stats])
 
   const renderConfigRow = (key, value) => {
@@ -227,70 +83,19 @@ const Database = ({ ...props }) => {
     )
   }
 
-  /*const getTopics = (type = null) => {
-    return [...new Set([...saveEvents, ...allEvents])]
-  }*/
-
-  const isStored = (name) => saveEvents.includes(name)
-
   const updateConfig = (newConfig) => {
     return dbAPI.setConfig(newConfig).then(setConfig).catch(apiError)
   }
 
   const handleAddRemove = (topic = null) => {
-    let isRemove = topic && saveEvents.includes(topic)
-    let newConfig = { ...config }
-
-    // click badge, solid = remove
-    if (topic && isRemove) {
-      newConfig.SaveEvents = newConfig.SaveEvents.filter((t) => t != topic)
-    }
-
-    // click badge, outline = add
-    if (topic && !isRemove) {
-      newConfig.SaveEvents = [...new Set([...newConfig.SaveEvents, topic])]
-    }
-
-    if (!isRemove) {
-      modalContext.setShowModal(false)
-    }
-
+    let newConfig = toggleSaveTopic(topic, config)
     return updateConfig(newConfig)
   }
 
-  //onsubmit call handleAddRemove
-  const handlePressAdd = () => {
-    syncStats()
-
-    let title = 'Add event topic for storage'
-
-    const onSubmit = (value) => {
-      handleAddRemove(value)
-    }
-
-    modalContext.modal(
-      title,
-      <AddTopicForm
-        allEvents={allEvents}
-        saveEvents={saveEvents}
-        isStored={isStored}
-        handleAddRemove={handleAddRemove}
-        onSubmit={onSubmit}
-      />
-    )
-
-    return
-  }
-
-  const handleSubmitSize = (value) => {
-    updateConfig({ ...config, MaxSize: value })
-    modalContext.setShowModal(false)
-  }
-
-  const handlePressEditSize = () => {
+  const handlePressEdit = () => {
     modalContext.modal(
       'Change database size limit',
-      <EditSizeForm config={config} onSubmit={handleSubmitSize} />
+      <EditDatabase config={config} stats={stats} onSubmit={setConfig} />
     )
   }
 
@@ -327,23 +132,24 @@ const Database = ({ ...props }) => {
         </VStack>
         <Tooltip
           h={undefined}
-          trigger={() => {
+          trigger={(triggerPropsTooltip) => {
             return (
               <Button
-                size="xs"
+                size="sm"
                 ml="auto"
-                action="secondary"
+                action="primary"
                 variant="solid"
-                onPress={handlePressEditSize}
+                {...triggerPropsTooltip}
+                onPress={handlePressEdit}
               >
-                <ButtonText>Set file size limit</ButtonText>
+                <ButtonText>Edit</ButtonText>
                 <ButtonIcon as={Settings2Icon} ml="$1" />
               </Button>
             )
           }}
         >
           <TooltipContent>
-            <TooltipText>Set max file size for database</TooltipText>
+            <TooltipText>Edit max file size and topics</TooltipText>
           </TooltipContent>
         </Tooltip>
       </HStack>
@@ -366,24 +172,16 @@ const Database = ({ ...props }) => {
                 '@md': { flexDirection: 'row', gap: 3 }
               }}
               alignItems={{ base: 'flex-start', md: 'center' }}
-              flexWrap={'wrap'}
+              flexWrap="wrap"
             >
               <HStack space="sm" alignItems="center">
                 {config['SaveEvents'].map((topic) => (
                   <TopicItem
+                    key={topic}
                     topic={topic}
                     onPress={() => handleAddRemove(topic)}
                   />
                 ))}
-                <Button
-                  action="primary"
-                  variant="outline"
-                  size="xs"
-                  onPress={handlePressAdd}
-                >
-                  <ButtonIcon as={PlusIcon} />
-                  <ButtonText>Add</ButtonText>
-                </Button>
               </HStack>
             </Box>
           )}
