@@ -82,7 +82,7 @@ const SystemInfo = (props) => {
             </HStack>
             <HStack
               flex={1}
-              space={'md'}
+              space="md"
               p="$4"
               bg={
                 colorMode == 'light'
