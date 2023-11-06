@@ -15,5 +15,12 @@ export const alertState = {
   alert: () => {}
 }
 
+export const modalState = {
+  modal: () => {},
+  setShowModal: () => {},
+  toggleModal: () => {}
+}
+
 // TODO Toast
 export const AlertContext = createContext(alertState)
+export const ModalContext = createContext(modalState)
