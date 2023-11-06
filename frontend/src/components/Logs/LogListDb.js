@@ -57,8 +57,6 @@ const LogList = (props) => {
       })
 
       setTopics(buckets)
-      //only log: prefix
-      //setTopics(buckets.filter((b) => b.startsWith('log:')))
     })
   }, [])
 
