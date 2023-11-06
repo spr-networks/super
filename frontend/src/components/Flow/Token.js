@@ -211,6 +211,10 @@ const Token = ({
         showGroups
         showTags
         value={value}
+        onSubmitEditing={(value) => {
+          onChangeText(value)
+          setIsOpen(false)
+        }}
         onChange={(value) => {
           onChangeText(value)
           setIsOpen(false)
