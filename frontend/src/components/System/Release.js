@@ -62,9 +62,9 @@ const UpdateReleaseInfo = ({
     }
 
     api.get('/releasesAvailable?container=super_base').then((versions) => {
-      versions.reverse()
-      let updatedVersions = versions.filter((v) => v.match(/^\d+.\d+.\d+$/))
-      updatedVersions.unshift('latest')
+      versions?.reverse()
+      let updatedVersions = versions?.filter((v) => v.match(/^\d+.\d+.\d+$/))
+      updatedVersions?.unshift('latest')
       setVersions(updatedVersions)
     })
 
@@ -152,7 +152,7 @@ const UpdateReleaseInfo = ({
             <FormControlLabelText>Custom Version</FormControlLabelText>
           </FormControlLabel>
           <InputSelect
-            options={versions.map((value) => {
+            options={versions?.map((value) => {
               return {
                 label: value,
                 value
@@ -233,7 +233,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
     let current = releaseInfo.Current
 
     api.get('/releasesAvailable?container=super_base').then((versions) => {
-      versions.reverse() // sort by latest first
+      versions?.reverse() // sort by latest first
 
       let latest = versions[0]
       let latestDev = versions.find((v) => v.includes('-dev'))
