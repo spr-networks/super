@@ -63,9 +63,11 @@ const defaultOptions = async function (name) {
       })
       .filter((ais) => ais && ais.length)
       .map((ais) => ais[0].local)
-    let opts = addrs.map((value) => {
+
+    let opts = [...new Set(addrs)].map((value) => {
       return { label: value, value }
     })
+
     return opts
   }
 }
