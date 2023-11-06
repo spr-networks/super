@@ -33,6 +33,7 @@ import {
 import {
   FilterIcon,
   FilterXIcon,
+  Settings2Icon,
   SlidersHorizontalIcon
 } from 'lucide-react-native'
 
@@ -390,7 +391,10 @@ const LogList = (props) => {
           </Button>
         </Tooltip>
         */}
-        <HStack sx={{ '@md': { marginLeft: 'auto' } }}>
+        <HStack space="sm" sx={{ '@md': { marginLeft: 'auto' } }}>
+          <Button variant="outline" action="primary">
+            <ButtonIcon as={Settings2Icon} color="$primary500"></ButtonIcon>
+          </Button>
           <SelectTopic
             options={Object.keys(filter)}
             selectedValue={Object.keys(filter).find((f) => filter[f])}
@@ -399,19 +403,6 @@ const LogList = (props) => {
         </HStack>
       </HStack>
 
-      <HStack
-        space="md"
-        px="$4"
-        pb="$2"
-        display={showForm ? 'flex' : 'none'}
-        flexWrap="wrap"
-      >
-        {/*<SelectTopic
-          options={Object.keys(filter)}
-          selectedValue={Object.keys(filter).find((f) => filter[f])}
-          onValueChange={handleTopicFilter}
-        />*/}
-      </HStack>
       <FlatList
         flex={2}
         data={logs}

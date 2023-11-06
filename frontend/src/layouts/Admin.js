@@ -3,7 +3,13 @@ import { Dimensions, Platform, SafeAreaView } from 'react-native'
 import { Outlet, useLocation } from 'react-router-dom'
 
 import Notifications from 'Notifications'
-import { AppContext, AlertContext, alertState } from 'AppContext'
+import {
+  AppContext,
+  AlertContext,
+  alertState,
+  ModalContext,
+  modalState
+} from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Sidebar from 'components/Sidebar/Sidebar'
 import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
@@ -29,10 +35,15 @@ import {
   HStack,
   Icon,
   CheckCircleIcon,
-  CloseIcon,
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalContent,
+  ModalCloseButton,
+  ModalHeader,
   Pressable,
   VStack,
-  Text,
+  CloseIcon,
   SlashIcon,
   InfoIcon,
   useColorMode
@@ -41,7 +52,6 @@ import {
 //NOTE Slice transition for Alerts not available in gluestack-ui
 
 import { routes } from 'routes'
-import { Slash } from 'lucide-react-native'
 
 const ConfirmTrafficAlert = (props) => {
   const { type, title, body, showAlert, onClose } = props
@@ -134,10 +144,15 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
   const [showAlert, setShowAlert] = useState(false)
   const [showConfirmAlert, setShowConfirmAlert] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+
   const [alert, setAlert] = useState({})
   const [confirmAlert, setConfirmAlert] = useState({})
+  const [modal, setModal] = useState({})
+
   const toggleAlert = () => setShowAlert(!showAlert)
 
+  //setup alert context
   alertState.alert = (type = 'info', title, body = null) => {
     if (typeof title !== 'string') {
       title = JSON.stringify(title)
@@ -191,6 +206,19 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     setConfirmAlert({ type: 'confirm', title, body, onClose })
     setShowConfirmAlert(true)
   }
+
+  modalState.modal = (title, body, onClose) => {
+    if (typeof title === 'object') {
+      body = title.body
+      onClose = title.onClose
+      title = title.title
+    }
+
+    setModal({ title, body, onClose })
+    setShowModal(true)
+  }
+  modalState.setShowModal = setShowModal
+  modalState.toggleModal = () => setShowModal(!showModal)
 
   /*
   location = useLocation()
@@ -526,6 +554,29 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         </HStack>
       </VStack>
 
+      <ModalContext.Provider value={modalState}>
+        <Modal
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false)
+            if (modal.onClose) {
+              modal.onClose()
+            }
+          }}
+        >
+          <ModalBackdrop />
+          <ModalContent>
+            <ModalHeader>
+              <Heading size="sm">{modal.title}</Heading>
+              <ModalCloseButton>
+                <Icon as={CloseIcon} />
+              </ModalCloseButton>
+            </ModalHeader>
+            <ModalBody pb="$6">{modal.body}</ModalBody>
+          </ModalContent>
+        </Modal>
+      </ModalContext.Provider>
+
       <AlertContext.Provider value={alertState}>
         {/*<Slide in={showAlert} placement="top"></Slide>*/}
         <Box
@@ -565,49 +616,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           showAlert={showConfirmAlert}
           onClose={confirmAlert.onClose}
         />
-
-        {/*toast.show({render: ({ id }) => { return (<h2>custom toast!</h2>) })*/}
-
-        {/*
-                  <Slide in={showAlert} placement="top">
-                    <Box
-                      w="100%"
-                      position="absolute"
-                      p="4"
-                      borderRadius="xs"
-                      bg={alertType + '.200'}
-                      alignItems="center"
-                      justifyContent="center"
-                    >
-                      <HStack space={2}>
-                        <Icon
-                          icon={
-                            alertType == 'error'
-                              ? faCircleXmark
-                              : alertType == 'success'
-                              ? faCheckCircle
-                              : faCircleExclamation
-                          }
-                          size="sm"
-                          color={alertType + '.600'}
-                          _dark={{
-                            color: alertType + '.700'
-                          }}
-                        />
-                        <Text
-                          color={alertType + '.600'}
-                          textAlign="center"
-                          _dark={{
-                            color: alertType + '.700'
-                          }}
-                          fontWeight="medium"
-                        >
-                          <Text bold>{alertTitle}</Text> {alertBody}
-                        </Text>
-                      </HStack>
-                    </Box>
-                  </Slide>
-                  */}
       </AlertContext.Provider>
     </AppContext.Provider>
   )

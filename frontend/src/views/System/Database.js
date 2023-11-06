@@ -1,6 +1,8 @@
 import React, { useContext, useEffect, useState } from 'react'
 
 import {
+  Badge,
+  BadgeText,
   Button,
   ButtonIcon,
   ButtonText,
@@ -18,16 +20,28 @@ import {
   Tooltip,
   VStack,
   useColorMode,
-  ButtonGroup,
   TooltipContent,
   TooltipText,
-  InfoIcon
+  InfoIcon,
+  Pressable
 } from '@gluestack-ui/themed'
 
 import { dbAPI } from 'api'
-import { AlertContext } from 'AppContext'
+import { AlertContext, ModalContext } from 'AppContext'
 import { prettySize } from 'utils'
 import { DatabaseIcon, PlusIcon, Settings2Icon } from 'lucide-react-native'
+
+const TopicItem = ({ topic, onPress, isDisabled, ...props }) => (
+  <Pressable onPress={onPress}>
+    <Badge
+      variant="outline"
+      action={isDisabled ? 'muted' : 'success'}
+      size="xs"
+    >
+      <BadgeText>{topic}</BadgeText>
+    </Badge>
+  </Pressable>
+)
 
 const AddTopicForm = ({ allEvents, isStored, handleAddRemove, onSubmit }) => {
   const [value, setValue] = useState('')
@@ -35,27 +49,21 @@ const AddTopicForm = ({ allEvents, isStored, handleAddRemove, onSubmit }) => {
   const handleSubmit = () => onSubmit(value)
 
   const renderTopic = (topic) => (
-    <Button
+    <TopicItem
       key={`topic:${topic}:${isStored(topic)}`}
-      variant={isStored(topic) ? 'solid' : 'outline'}
-      colorScheme={isStored(topic) ? 'blueGray' : 'blueGray'}
+      topic={topic}
       onPress={() => handleAddRemove(topic)}
-      rounded="xs"
-      size="sm"
-      py={'$1'}
-      mb={'$2'}
-    >
-      <ButtonText>{topic}</ButtonText>
-    </Button>
+      isDisabled={!isStored(topic)}
+    />
   )
 
   return (
-    <HStack space="md" px="$4" py="$8">
-      <VStack flex={1} space={'md'}>
+    <HStack space="md" flexDirection="column" pb="$4">
+      <VStack flex={2} space="sm">
         <Heading size="md">Registered Events</Heading>
         <Text color="$muted500">Click event to add or remove for storage</Text>
 
-        <HStack space={'md'} mt={'$4'} flexWrap={'wrap'}>
+        <HStack space="sm" flexWrap="wrap">
           {allEvents && allEvents.length ? allEvents.map(renderTopic) : null}
         </HStack>
       </VStack>
@@ -77,14 +85,16 @@ const AddTopicForm = ({ allEvents, isStored, handleAddRemove, onSubmit }) => {
           />
         </Input>
         <FormControlHelperText flexDir={'row'} my={'$4'}>
-          <Text color="$muted500" italic bold>
-            Note:
-          </Text>{' '}
-          <Text color="$muted500">using a prefix like</Text>{' '}
-          <Text color="$muted500" italic>
-            "www:"
-          </Text>{' '}
-          <Text color="$muted500">will store all events from www</Text>
+          <HStack space="sm">
+            <Text color="$muted500" italic bold>
+              Note:
+            </Text>
+            <Text color="$muted500">using a prefix like</Text>
+            <Text color="$muted500" italic>
+              "www:"
+            </Text>
+            <Text color="$muted500">will store all events from www</Text>
+          </HStack>
         </FormControlHelperText>
       </FormControl>
     </HStack>
@@ -142,8 +152,9 @@ const EditSizeForm = ({ config, onSubmit, ...props }) => {
   )
 }
 
-const Database = ({ showModal, closeModal, ...props }) => {
+const Database = ({ ...props }) => {
   const context = useContext(AlertContext)
+  const modalContext = useContext(ModalContext)
   const [config, setConfig] = useState(null)
   const [stats, setStats] = useState(null)
 
@@ -240,8 +251,9 @@ const Database = ({ showModal, closeModal, ...props }) => {
       newConfig.SaveEvents = [...new Set([...newConfig.SaveEvents, topic])]
     }
 
-    // NOTE state mess up props to get on/off in modal - close for now
-    closeModal()
+    if (!isRemove) {
+      modalContext.setShowModal(false)
+    }
 
     return updateConfig(newConfig)
   }
@@ -254,10 +266,9 @@ const Database = ({ showModal, closeModal, ...props }) => {
 
     const onSubmit = (value) => {
       handleAddRemove(value)
-      closeModal()
     }
 
-    showModal(
+    modalContext.modal(
       title,
       <AddTopicForm
         allEvents={allEvents}
@@ -273,25 +284,25 @@ const Database = ({ showModal, closeModal, ...props }) => {
 
   const handleSubmitSize = (value) => {
     updateConfig({ ...config, MaxSize: value })
-    closeModal()
+    modalContext.setShowModal(false)
   }
 
   const handlePressEditSize = () => {
-    showModal(
+    modalContext.modal(
       'Change database size limit',
       <EditSizeForm config={config} onSubmit={handleSubmitSize} />
     )
   }
 
   const percentColor = (percent) => {
-    let color = 'muted.700' //'success.500' 'warning.700'
+    let color = '$muted700' //'success500' 'warning700'
 
     if (percent > 95) {
-      color = 'warning.700'
+      color = '$warning700'
     } else if (percent > 75) {
-      color = 'warning.700'
+      color = '$warning700'
     } else if (percent > 50) {
-      color = 'muted.700'
+      color = '$muted700'
     }
     return color
   }
@@ -300,7 +311,7 @@ const Database = ({ showModal, closeModal, ...props }) => {
 
   return (
     <VStack space="md">
-      <HStack alignItems="center" justifyContent="space-between" p={'$4'}>
+      <HStack alignItems="center" justifyContent="space-between" p="$4">
         <VStack space="md">
           <Heading size="md">Database</Heading>
           <HStack space="md" alignItems="center">
@@ -357,28 +368,23 @@ const Database = ({ showModal, closeModal, ...props }) => {
               alignItems={{ base: 'flex-start', md: 'center' }}
               flexWrap={'wrap'}
             >
-              <ButtonGroup>
+              <HStack space="sm" alignItems="center">
                 {config['SaveEvents'].map((topic) => (
-                  <Button
-                    key={`btn:${topic}`}
-                    action="secondary"
-                    variant="outline"
-                    size="xs"
+                  <TopicItem
+                    topic={topic}
                     onPress={() => handleAddRemove(topic)}
-                  >
-                    <ButtonText>{topic}</ButtonText>
-                  </Button>
+                  />
                 ))}
                 <Button
                   action="primary"
                   variant="outline"
                   size="xs"
-                  onPress={() => handlePressAdd()}
+                  onPress={handlePressAdd}
                 >
                   <ButtonIcon as={PlusIcon} />
                   <ButtonText>Add</ButtonText>
                 </Button>
-              </ButtonGroup>
+              </HStack>
             </Box>
           )}
           {renderConfigRow(

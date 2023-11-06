@@ -29,7 +29,7 @@ import { HardDriveIcon, ListIcon, CableIcon } from 'lucide-react-native'
 import { ListHeader, ListItem } from 'components/List'
 
 import { api } from 'api'
-import { AlertContext } from 'AppContext'
+import { AlertContext, ModalContext } from 'AppContext'
 
 const niceName = (name) => {
   if (Array.isArray(name)) {
@@ -47,29 +47,30 @@ const stateColor = (state) => {
   return stateColors[state] || 'muted'
 }
 
-const DockerInfo = ({ showModal, ...props }) => {
+const DockerInfo = ({ ...props }) => {
   const context = useContext(AlertContext)
+  const modalContext = useContext(ModalContext)
   const navigate = useNavigate()
 
   const [containers, setContainers] = useState([])
 
-  const renderDockerContainer = ({ item, navigate, showModal }) => {
+  const renderDockerContainer = ({ item, navigate }) => {
     let containerName = niceName(item.Names)
 
     const onMounts = () => {
-      showModal(
+      modalContext.modal(
         `${containerName} Volume Mounts`,
         <FlatList
           data={item.Mounts}
           keyExtractor={(item) => item.Source}
           renderItem={({ item: mount }) => (
-            <HStack space="md" p="$4" justifyContent="space-around">
+            <HStack space="sm" p="$4" justifyContent="space-around">
               {/*<Text>{mount.Type}</Text>*/}
-              <Text flex={1}>{mount.Source}</Text>
-              <Text flex={1} color="$muted500">
+              <Text size="xs">{mount.Source}</Text>
+              <Text size="xs" color="$muted500">
                 {mount.Destination}
               </Text>
-              <Badge ml="auto" action="muted" variant="outline">
+              <Badge size="sm" ml="auto" action="muted" variant="outline">
                 <BadgeText>{mount.Mode}</BadgeText>
               </Badge>
             </HStack>
@@ -100,7 +101,7 @@ const DockerInfo = ({ showModal, ...props }) => {
         networkMode == 'host'
           ? 'host'
           : item.NetworkSettings.Networks.bridge.IPAddress
-      showModal(
+      modalContext.modal(
         `${containerName} Network`,
         <VStack>
           <VStack space="md">
@@ -259,9 +260,7 @@ const DockerInfo = ({ showModal, ...props }) => {
         display={showDocker ? 'flex' : 'none'}
         keyExtractor={(item, index) => item.Id}
         estimatedItemSize={100}
-        renderItem={({ item }) =>
-          renderDockerContainer({ item, navigate, showModal })
-        }
+        renderItem={({ item }) => renderDockerContainer({ item, navigate })}
       />
     </Box>
   )

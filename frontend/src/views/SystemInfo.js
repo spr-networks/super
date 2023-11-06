@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 
 import {
   Box,
@@ -8,15 +8,7 @@ import {
   Text,
   VStack,
   ScrollView,
-  useColorMode,
-  Icon,
-  Modal,
-  ModalBackdrop,
-  ModalBody,
-  ModalContent,
-  ModalCloseButton,
-  ModalHeader,
-  CloseIcon
+  useColorMode
 } from '@gluestack-ui/themed'
 
 import { api } from 'api'
@@ -34,7 +26,6 @@ const SystemInfo = (props) => {
   const [uptime, setUptime] = useState({})
   const [hostname, setHostname] = useState('')
   const [version, setVersion] = useState('')
-  const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
     const fetchInfo = () => {
@@ -63,22 +54,6 @@ const SystemInfo = (props) => {
   }, [])
 
   const niceKey = (key) => ucFirst(key.replace(/_/, ' ').replace(/m$/, ' min'))
-
-  const [modalTitle, setModalTitle] = useState('Container')
-  const [modalBody, setModalBody] = useState('')
-  const refModal = useRef(null)
-
-  const onShowModal = (title, content) => {
-    setModalTitle(title)
-    setModalBody(content)
-    setShowModal(true)
-
-    return showModal
-  }
-
-  const onClose = () => {
-    setShowModal(false)
-  }
 
   const colorMode = useColorMode()
 
@@ -186,26 +161,10 @@ const SystemInfo = (props) => {
           </Box>
         </Box>
 
-        <Database showModal={onShowModal} closeModal={onClose} />
-
+        <Database />
         <ReleaseInfo />
-
         <ConfigsBackup />
-
-        <DockerInfo showModal={onShowModal} />
-
-        <Modal isOpen={showModal} onClose={onClose}>
-          <ModalBackdrop />
-          <ModalContent>
-            <ModalHeader>
-              <Heading size="sm">{modalTitle}</Heading>
-              <ModalCloseButton>
-                <Icon as={CloseIcon} />
-              </ModalCloseButton>
-            </ModalHeader>
-            <ModalBody pb="$6">{modalBody}</ModalBody>
-          </ModalContent>
-        </Modal>
+        <DockerInfo />
       </VStack>
     </ScrollView>
   )
