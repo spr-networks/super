@@ -94,7 +94,7 @@ const AddTopicForm = ({ allEvents, saveEvents, handleAddRemove, onSubmit }) => {
           Click event to add or remove for storage
         </Text>
 
-        <HStack space="sm" flexWrap="wrap">
+        <HStack space="sm" flexWrap="wrap" mb="$1">
           {allEvents?.map((topic) => (
             <TopicItem
               key={topic}
