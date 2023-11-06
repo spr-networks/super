@@ -32,7 +32,6 @@ import {
 
 import { Settings2Icon } from 'lucide-react-native'
 
-//import { FlashList } from '@shopify/flash-list'
 import { EditDatabase } from 'views/System/EditDatabase'
 import { ArrowLeftIcon, ArrowRightIcon } from '@gluestack-ui/themed'
 import { ModalContext } from 'AppContext'
@@ -396,9 +395,9 @@ const LogList = (props) => {
           </Button>
         </Tooltip>
         */}
-        <HStack space="sm" sx={{ '@md': { marginLeft: 'auto' } }}>
+        <HStack space="sm" marginLeft="auto">
           <Button variant="outline" action="primary" onPress={handlePressEdit}>
-            <ButtonIcon as={Settings2Icon} color="$primary500"></ButtonIcon>
+            <ButtonIcon as={Settings2Icon} color="$primary500" />
           </Button>
           <SelectTopic
             options={Object.keys(filter)}

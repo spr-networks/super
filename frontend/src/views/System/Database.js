@@ -9,11 +9,8 @@ import {
   HStack,
   Icon,
   Text,
-  Tooltip,
   VStack,
-  useColorMode,
-  TooltipContent,
-  TooltipText
+  useColorMode
 } from '@gluestack-ui/themed'
 
 import { dbAPI } from 'api'
@@ -22,6 +19,7 @@ import { prettySize } from 'utils'
 import { DatabaseIcon, Settings2Icon } from 'lucide-react-native'
 
 import { EditDatabase, TopicItem, toggleSaveTopic } from './EditDatabase'
+import { Tooltip } from 'components/Tooltip'
 
 const Database = ({ ...props }) => {
   const context = useContext(AlertContext)
@@ -130,27 +128,17 @@ const Database = ({ ...props }) => {
             >{`${percentSize}% allocated`}</Text>
           </HStack>
         </VStack>
-        <Tooltip
-          h={undefined}
-          trigger={(triggerPropsTooltip) => {
-            return (
-              <Button
-                size="sm"
-                ml="auto"
-                action="primary"
-                variant="solid"
-                {...triggerPropsTooltip}
-                onPress={handlePressEdit}
-              >
-                <ButtonText>Edit</ButtonText>
-                <ButtonIcon as={Settings2Icon} ml="$1" />
-              </Button>
-            )
-          }}
-        >
-          <TooltipContent>
-            <TooltipText>Edit max file size and topics</TooltipText>
-          </TooltipContent>
+        <Tooltip label="Edit max file size and topics">
+          <Button
+            size="sm"
+            ml="auto"
+            action="primary"
+            variant="solid"
+            onPress={handlePressEdit}
+          >
+            <ButtonText>Edit</ButtonText>
+            <ButtonIcon as={Settings2Icon} ml="$1" />
+          </Button>
         </Tooltip>
       </HStack>
 

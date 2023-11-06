@@ -17,19 +17,15 @@ import {
   Input,
   InputField,
   Text,
-  Tooltip,
   VStack,
-  useColorMode,
-  TooltipContent,
-  TooltipText,
   InfoIcon,
   Pressable
 } from '@gluestack-ui/themed'
 
+import { Tooltip } from 'components/Tooltip'
+
 import { dbAPI } from 'api'
-import { AlertContext, ModalContext } from 'AppContext'
-import { prettySize } from 'utils'
-import { DatabaseIcon, PlusIcon, Settings2Icon } from 'lucide-react-native'
+import { ModalContext } from 'AppContext'
 
 const TopicItem = ({ topic, onPress, isDisabled, ...props }) => (
   <Pressable onPress={onPress}>
@@ -42,6 +38,48 @@ const TopicItem = ({ topic, onPress, isDisabled, ...props }) => (
     </Badge>
   </Pressable>
 )
+
+const EditSizeForm = ({ config, onSubmit, ...props }) => {
+  const [size, setSize] = useState(0)
+  const handleChangeText = (value) => {
+    setSize(value)
+  }
+
+  useEffect(() => {
+    setSize(config?.MaxSize / 1024 / 1024)
+  }, [config])
+
+  const handleSubmit = () => onSubmit(parseInt(size * 1024 * 1024))
+
+  return (
+    <VStack space="sm">
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>
+            Max size for database file in MB
+          </FormControlLabelText>
+          <Tooltip label="Older entries will be removed to keep the file size to around what is specified">
+            <InfoIcon color="$muted500" ml="$1" />
+          </Tooltip>
+        </FormControlLabel>
+
+        <Input size="lg" variant="underlined">
+          <InputField
+            type="text"
+            value={size}
+            placeholder="size in mb"
+            autoFocus={true}
+            onChangeText={handleChangeText}
+            onSubmitEditing={handleSubmit}
+          />
+        </Input>
+        <FormControlHelperText>
+          Size in kB: {size * 1024}kB
+        </FormControlHelperText>
+      </FormControl>
+    </VStack>
+  )
+}
 
 const AddTopicForm = ({ allEvents, saveEvents, handleAddRemove, onSubmit }) => {
   const [value, setValue] = useState('')
@@ -72,6 +110,11 @@ const AddTopicForm = ({ allEvents, saveEvents, handleAddRemove, onSubmit }) => {
           <FormControlLabelText>
             Or add a custom Event name
           </FormControlLabelText>
+          <Tooltip
+            label={'Using a prefix like "www:" will store all events from www'}
+          >
+            <InfoIcon color="$muted500" ml="$1" />
+          </Tooltip>
         </FormControlLabel>
 
         <Input size="lg" variant="underlined" w="100%">
@@ -84,69 +127,7 @@ const AddTopicForm = ({ allEvents, saveEvents, handleAddRemove, onSubmit }) => {
             onSubmitEditing={handleSubmit}
           />
         </Input>
-        <FormControlHelperText flexDir="row" my="$2">
-          <HStack space="sm">
-            <Text size="sm" color="$muted500" italic bold>
-              Note:
-            </Text>
-            <Text size="sm" color="$muted500">
-              using a prefix like
-            </Text>
-            <Text size="sm" color="$muted500" italic>
-              "www:"
-            </Text>
-            <Text size="sm" color="$muted500">
-              will store all events from www
-            </Text>
-          </HStack>
-        </FormControlHelperText>
       </FormControl>
-    </VStack>
-  )
-}
-
-const EditSizeForm = ({ config, onSubmit, ...props }) => {
-  const [size, setSize] = useState(0)
-  const handleChangeText = (value) => {
-    setSize(value)
-  }
-
-  useEffect(() => {
-    setSize(config?.MaxSize / 1024 / 1024)
-  }, [config])
-
-  const handleSubmit = () => onSubmit(parseInt(size * 1024 * 1024))
-
-  return (
-    <VStack space="sm">
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>
-            Max size for database file in MB
-          </FormControlLabelText>
-        </FormControlLabel>
-
-        <Input size="lg" variant="underlined">
-          <InputField
-            type="text"
-            value={size}
-            placeholder="size in mb"
-            autoFocus={true}
-            onChangeText={handleChangeText}
-            onSubmitEditing={handleSubmit}
-          />
-        </Input>
-        <FormControlHelperText>
-          Size in kB: {size * 1024}kB
-        </FormControlHelperText>
-      </FormControl>
-      <HStack space="sm">
-        <InfoIcon color="$muted500" />
-        <Text size="xs">
-          Older entries will be removed to keep the file size to around what is
-          specified.
-        </Text>
-      </HStack>
     </VStack>
   )
 }
@@ -236,6 +217,7 @@ const EditDatabase = ({ onSubmit, ...props }) => {
 
   const handleAddRemove = (topic = null) => {
     let newConfig = toggleSaveTopic(topic, config)
+    setConfig(newConfig) //update ui
     return updateConfig(newConfig)
   }
 
