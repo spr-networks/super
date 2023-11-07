@@ -135,8 +135,7 @@ const FlowCardList = ({
             action="primary"
             variant="outline"
             onPress={() => addCard(cardType)}
-            __disabled={cardType == 'trigger' && cards.length}
-            display={{ base: cards.length ? 'none' : 'flex' }}
+            display={cards.length ? 'none' : 'flex'}
             key={'add' + cardType}
           >
             <ButtonText>Add card</ButtonText>
