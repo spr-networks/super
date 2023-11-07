@@ -27,7 +27,11 @@ import {
   SplitIcon,
   TagIcon,
   TagsIcon,
-  WaypointsIcon
+  WaypointsIcon,
+  ArrowDownUpIcon,
+  ArrowUpDownIcon,
+  BinaryIcon,
+  ArrowUp
 } from 'lucide-react-native'
 
 import { BrandIcons } from 'IconUtils'
@@ -51,7 +55,7 @@ const defaultOptions = async function (name) {
       { label: 'telnet', value: '23' },
       { label: '3000', value: '3000' },
       { label: '8080', value: '8080' }
-    ]
+    ].map((opt) => ({ ...opt, icon: BinaryIcon }))
   }
 
   if (name == 'OriginalDstIP') {
@@ -65,7 +69,7 @@ const defaultOptions = async function (name) {
       .map((ais) => ais[0].local)
 
     let opts = [...new Set(addrs)].map((value) => {
-      return { label: value, value }
+      return { label: value, value, icon: ArrowUpDownIcon }
     })
 
     return opts

@@ -14,9 +14,6 @@ import {
   Input,
   InputField,
   HStack,
-  Tooltip,
-  TooltipContent,
-  TooltipText,
   Popover,
   PopoverBackdrop,
   PopoverBody,
@@ -33,6 +30,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import TimeSelect from '../TimeSelect'
+import Tooltip from 'components/Tooltip'
 import InputSelect from 'components/InputSelect'
 import ClientSelect from 'components/ClientSelect'
 
@@ -113,40 +111,16 @@ const Token = ({
     }
 
     // skip popover & use the menu directly
-    // triggers differ slightly
-    //<Tooltip label={label}></Tooltip>
     const trigger = (triggerProps) => (
-      <Button {...tokenProps} {...triggerProps}>
-        <ButtonText>{displayValue(value, label)}</ButtonText>
-      </Button>
+      <Tooltip label={label}>
+        <Pressable {...triggerProps}>
+          <Badge {...tokenProps}>
+            <BadgeText>{displayValue(value, label)}</BadgeText>
+          </Badge>
+        </Pressable>
+      </Tooltip>
     )
 
-    /*const trigger = (triggerProps) => (
-      <Tooltip
-        placement="bottom"
-        trigger={(triggerPropsTooltip) => {
-          return (
-            <Button {...tokenProps} {...triggerProps} {...triggerPropsTooltip}>
-              <ButtonText>{displayValue(value, label)}</ButtonText>
-            </Button>
-          )
-        }}
-      >
-        <TooltipContent>
-          <TooltipText>{label}</TooltipText>
-        </TooltipContent>
-      </Tooltip>
-    )*/
-
-    /*
-    //<Menu closeOnSelect={!isMultiple} trigger={trigger}>
-            <Menu.OptionGroup
-          defaultValue={defaultValue}
-          type={inputType}
-          title={title}
-          onChange={handleChange}
-        >
-    */
     return (
       <Menu
         trigger={trigger}
@@ -206,7 +180,6 @@ const Token = ({
 
     inputElement = <TimeSelect value={value} onChange={onSelect} />
   } else if (label == 'Client') {
-    console.log('client token with value=', value)
     inputElement = (
       <ClientSelect
         showGroups
@@ -251,40 +224,13 @@ const Token = ({
     )
   }
 
-  //NOTE treat empty value as *
-  /*const trigger = (triggerProps) => (
-    <TooltipNB label={label}>
-      <Button
-        {...tokenProps}
-        {...triggerProps}
-        onPress={() => setIsOpen(!isOpen)}
-      >
-        <ButtonText>{displayValue(value)}</ButtonText>
-      </Button>
-    </TooltipNB>
-  )*/
-
   const trigger = (triggerProps) => (
-    <Tooltip
-      h={undefined}
-      placement="bottom"
-      trigger={(triggerPropsTooltip) => {
-        return (
-          <Pressable
-            {...triggerProps}
-            {...triggerPropsTooltip}
-            onPress={() => setIsOpen(!isOpen)}
-          >
-            <Badge {...tokenProps}>
-              <BadgeText>{displayValue(value)}</BadgeText>
-            </Badge>
-          </Pressable>
-        )
-      }}
-    >
-      <TooltipContent>
-        <TooltipText>{label}</TooltipText>
-      </TooltipContent>
+    <Tooltip label={label}>
+      <Pressable {...triggerProps} onPress={() => setIsOpen(!isOpen)}>
+        <Badge {...tokenProps}>
+          <BadgeText>{displayValue(value, label)}</BadgeText>
+        </Badge>
+      </Pressable>
     </Tooltip>
   )
 

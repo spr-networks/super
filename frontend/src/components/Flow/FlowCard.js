@@ -143,12 +143,6 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     )
   }
 
-  const trigger = (triggerProps) => (
-    <Button action="secondary" variant="link" ml="auto" {...triggerProps}>
-      <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
-    </Button>
-  )
-
   const onChange = (name, value) => {
     card.values[name] = value
 
