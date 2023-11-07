@@ -504,7 +504,13 @@ const actions = [
     },
     getOptions: function (value = 'Groups') {
       return new Promise((resolve, reject) => {
-        deviceAPI.groups().then((groups) => resolve(groups.map(toOption)))
+        deviceAPI
+          .groups()
+          .then((groups) =>
+            resolve(
+              groups.map(toOption).map((opt) => ({ ...opt, icon: opt.value }))
+            )
+          )
       })
     },
     preSubmit: async function () {
@@ -546,7 +552,7 @@ const actions = [
     getOptions: function (value = 'Tags') {
       return new Promise((resolve, reject) => {
         deviceAPI.tags().then((tags) => {
-          resolve(tags.map(toOption))
+          resolve(tags.map(toOption).map((opt) => ({ ...opt, icon: TagIcon })))
         })
       })
     },

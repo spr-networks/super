@@ -782,7 +782,7 @@ const FlowList = (props) => {
           sx={{
             '@md': {
               ml: 'auto',
-              mr: '$4',
+              _mr: '$4',
               maxHeight: '$3/4',
               maxWidth: '$1/2'
             }

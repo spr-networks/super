@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { Select } from 'components/Select'
 import { groupAPI, deviceAPI, firewallAPI } from 'api'
 import InputSelect from './InputSelect'
-import { GlobeIcon } from 'lucide-react-native'
+import { GlobeIcon, TagIcon } from 'lucide-react-native'
 
 const ClientSelect = (props) => {
   const [devOpts, setDevOpts] = useState(null)
@@ -25,7 +25,7 @@ const ClientSelect = (props) => {
 
     tagNames = [...new Set(tagNames)]
     let tagOptions = tagNames.map((t) => {
-      return { label: t, value: { Tag: t } }
+      return { label: t, value: { Tag: t }, icon: TagIcon }
     })
     setTagOpts({
       title: props.isMultiple ? 'Select Tag' : 'Select Tags',
