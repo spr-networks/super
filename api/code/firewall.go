@@ -2122,7 +2122,8 @@ func ipIfaceMappings(w http.ResponseWriter, r *http.Request) {
 
 func establishDevice(entry DeviceEntry, new_iface string, established_route_device string, routeIP string, router string) {
 
-	log.Println("flushing route and vmaps ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
+	// too noisy
+	//log.Println("flushing route and vmaps ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
 
 	//1. delete arp entry
 	flushRoute(entry.MAC)
@@ -2137,7 +2138,8 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	exec.Command("ip", "route", "flush", routeIP).Run()
 	exec.Command("ip", "route", "add", routeIP, "dev", new_iface).Run()
 
-	log.Println("Populating route and vmaps", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
+	// too noisy
+	//log.Println("Populating route and vmaps", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
 
 	//4. update router IP for the new interface. first delete the old addr
 	updateAddr(router, new_iface)
