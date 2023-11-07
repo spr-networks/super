@@ -197,13 +197,14 @@ const SidebarItem = (props) => {
           >
             <Box px="$8" py="$2.5">
               <HStack
-                space={'sm'}
+                space="sm"
                 alignItems="center"
                 pl={level > 1 ? level + 14 : '0'}
               >
                 {item.icon !== undefined ? (
                   <Icon
                     as={item.icon}
+                    size={18}
                     color={
                       colorMode == 'light' ? '$coolGray600' : '$coolGray400'
                     }
