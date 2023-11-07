@@ -157,13 +157,11 @@ const Flow = ({ flow, edit, ...props }) => {
   const [actions, setActions] = useState(flow.actions)
 
   useEffect(() => {
-    if (!flow || !flow.triggers || !flow.actions) {
-      return
+    if (flow?.triggers && flow?.actions) {
+      setTitle(flow.title)
+      setTriggers(flow.triggers)
+      setActions(flow.actions)
     }
-
-    setTitle(flow.title)
-    setTriggers(flow.triggers)
-    setActions(flow.actions)
   }, [flow])
 
   //set title when we update actions
@@ -787,9 +785,9 @@ const FlowList = (props) => {
           }}
           flex={1}
         >
-          <Heading size="sm" my="$4" px="$4">
+          {/*<Heading size="sm" my="$4" px="$4">
             Add &amp; Edit flow
-          </Heading>
+          </Heading>*/}
 
           <Box
             bg="$backgroundCardLight"

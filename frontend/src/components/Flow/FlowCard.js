@@ -86,19 +86,23 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     // autocomplete with dynamic options
     const [options, setOptions] = useState({})
 
-    useEffect(async () => {
-      if (card.getOptions) {
-        let optionsNew = { ...options }
+    const fetchOptions = async () => {
+      let optionsNew = { ...options }
 
-        for (let p of card.params) {
-          let name = p.name
-          let opts = await card.getOptions(name)
-          if (opts && opts.length) {
-            optionsNew[name] = opts
-          }
+      for (let p of card.params) {
+        let name = p.name
+        let opts = await card.getOptions(name)
+        if (opts && opts.length) {
+          optionsNew[name] = opts
         }
+      }
 
-        setOptions(optionsNew)
+      setOptions(optionsNew)
+    }
+
+    useEffect(() => {
+      if (card.getOptions) {
+        fetchOptions()
       }
     }, [])
 
@@ -156,28 +160,9 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     }
   }
 
-  let moreMenu = (
-    <Menu
-      trigger={trigger}
-      selectionMode="single"
-      onSelectionChange={(e) => {
-        let key = e.currentKey
-        if (key == 'delete') {
-          onDelete()
-        }
-      }}
-    >
-      <MenuItem key="delete" textValue="delete">
-        <TrashIcon color="$red700" ml="$2" />
-        <MenuItemLabel size="sm" color="$red700">
-          Delete
-        </MenuItemLabel>
-      </MenuItem>
-    </Menu>
-  )
-
   //only one item - show button
-  moreMenu = (
+
+  let moreMenu = (
     <Button action="secondary" variant="link" size="sm" onPress={onDelete}>
       <ButtonIcon as={CloseIcon} />
     </Button>
@@ -189,8 +174,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
       borderWidth="$1"
       borderColor="$coolGray200"
       sx={{
-        _dark: { bg: '$backgroundContentDark', borderColor: '$coolGray900' },
-        '@md': { shadow: 5 }
+        _dark: { bg: '$backgroundContentDark', borderColor: '$coolGray900' }
       }}
       p={size == 'xs' ? '$2' : '$4'}
       rounded="$md"
