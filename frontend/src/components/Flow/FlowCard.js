@@ -50,6 +50,9 @@ const FlowCard = ({ card, size, edit, ...props }) => {
 
     if (Array.isArray(values[name])) {
       return values[name].join(',')
+    } else if (typeof values[name] === 'object') {
+      //Client have {Group: "lan", Identity: ""} etc.
+      return flowObjParse(values[name])
     }
 
     return values[name]

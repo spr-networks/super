@@ -49,6 +49,8 @@ import {
   CircleSlashIcon
 } from 'lucide-react-native'
 
+import { Tooltip } from 'components/Tooltip'
+
 const FlowCardList = ({
   title,
   cards: defaultCards,
@@ -149,7 +151,6 @@ const FlowCardList = ({
 
 // Add/Edit flow
 const Flow = ({ flow, edit, ...props }) => {
-  const context = useContext(AlertContext)
   // NOTE we have multiple but only support one atm.
   const [title, setTitle] = useState(flow.title)
   const [triggers, setTriggers] = useState(flow.triggers)
@@ -302,15 +303,21 @@ const Flow = ({ flow, edit, ...props }) => {
 
           <HStack space="sm" flexWrap="wrap">
             {Object.keys(trigger.values).map((key) => (
-              <Badge key={key} variant="outline" action="muted" size="xs">
-                <BadgeText>{displayValue(trigger.values[key], key)}</BadgeText>
-              </Badge>
+              <Tooltip label={key}>
+                <Badge key={key} variant="outline" action="muted" size="xs">
+                  <BadgeText>
+                    {displayValue(trigger.values[key], key)}
+                  </BadgeText>
+                </Badge>
+              </Tooltip>
             ))}
 
             {Object.keys(action.values).map((key) => (
-              <Badge key={key} variant="outline" action="muted" size="xs">
-                <BadgeText>{displayValue(action.values[key], key)}</BadgeText>
-              </Badge>
+              <Tooltip label={key}>
+                <Badge key={key} variant="outline" action="muted" size="xs">
+                  <BadgeText>{displayValue(action.values[key], key)}</BadgeText>
+                </Badge>
+              </Tooltip>
             ))}
           </HStack>
         </VStack>
@@ -725,8 +732,6 @@ const FlowList = (props) => {
       fetchFlows()
     })
   }
-
-  let h = Dimensions.get('window').height - (Platform.OS == 'ios' ? 64 * 2 : 64)
 
   return (
     <ScrollView sx={{ '@md': { height: '92vh' } }}>

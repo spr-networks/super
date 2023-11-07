@@ -206,6 +206,7 @@ const Token = ({
 
     inputElement = <TimeSelect value={value} onChange={onSelect} />
   } else if (label == 'Client') {
+    console.log('client token with value=', value)
     inputElement = (
       <ClientSelect
         showGroups

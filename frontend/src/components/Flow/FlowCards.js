@@ -620,7 +620,7 @@ const actions = [
     ],
     values: {
       Protocol: 'tcp',
-      Client: 'lan',
+      Client: { Group: 'lan' },
       Container: 'container',
       ContainerPort: '8080',
       OriginalDstIP: '192.168.2.1',
