@@ -57,6 +57,7 @@ import {
   LineChartIcon,
   ListTreeIcon,
   PuzzleIcon,
+  RouterIcon,
   ScanSearchIcon,
   SeparatorVerticalIcon,
   Settings2Icon,
@@ -66,7 +67,6 @@ import {
   Table2Icon,
   TableIcon,
   TagsIcon,
-  TargetIcon,
   UsersIcon,
   WaypointsIcon,
   WifiIcon
@@ -133,7 +133,7 @@ const routes = [
   {
     path: 'mesh',
     name: 'MESH',
-    icon: TargetIcon,
+    icon: RouterIcon,
     component: Mesh,
     layout: 'admin',
     plus: true
