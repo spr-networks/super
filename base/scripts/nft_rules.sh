@@ -522,9 +522,21 @@ table inet mangle {
     $(if [ "$WANIF" ]; then echo "elements = { $WANIF }" ; fi )
   }
 
-  # see description above. duplicated since nftables doesnt have cross-table sets
+  # src ip . dst ip
   map site_forward_mangle {
     type ipv4_addr . ipv4_addr : verdict;
+    flags interval;
+  }
+
+  # src ip . dst ip . dst port
+  map site_forward_tcp_port_mangle {
+    type ipv4_addr . ipv4_addr . inet_service: verdict;
+    flags interval;
+  }
+
+  # src ip . dst ip . dst port
+  map site_forward_udp_port_mangle {
+    type ipv4_addr . ipv4_addr . inet_service: verdict;
     flags interval;
   }
 
@@ -543,6 +555,11 @@ table inet mangle {
 
     # handle site-vpn marks first
     counter ip saddr . ip daddr vmap @site_forward_mangle
+
+    # and port specific ones
+    counter ip saddr . ip daddr . tcp dport vmap @site_forward_tcp_port_mangle
+    counter ip saddr . ip daddr . udp dport vmap @site_forward_udp_port_mangle
+
 
     # then go to load balancing if applied
     jump OUTBOUND_UPLINK
