@@ -15,6 +15,7 @@ import TrafficTimeSeries from 'views/Traffic/TrafficTimeSeries'
 import TrafficList from 'views/Traffic/TrafficList'
 import UplinkConfiguration from 'views/UplinkConfiguration'
 import LANLinkConfiguration from 'views/LANLinkConfiguration'
+import ContainerNetConfiguration from 'views/ContainerNetConfiguration'
 import WirelessConfiguration from 'views/WirelessConfiguration'
 import Groups from 'views/Groups/Groups'
 import Tags from 'views/Tags'
@@ -46,6 +47,7 @@ import {
   BarChartHorizontalIcon,
   BellIcon,
   CableIcon,
+  ContainerIcon,
   EyeIcon,
   FlameIcon,
   GaugeIcon,
@@ -129,6 +131,13 @@ const routes = [
     name: 'LAN',
     icon: CableIcon,
     component: LANLinkConfiguration,
+    layout: 'admin'
+  },
+  {
+    path: 'containernets',
+    name: 'Containers',
+    icon: ContainerIcon,
+    component: ContainerNetConfiguration,
     layout: 'admin'
   },
   {
