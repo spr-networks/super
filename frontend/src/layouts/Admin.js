@@ -52,6 +52,7 @@ import {
 //NOTE Slice transition for Alerts not available in gluestack-ui
 
 import { routes } from 'routes'
+import { deviceAPI } from 'api'
 
 const ConfirmTrafficAlert = (props) => {
   const { type, title, body, showAlert, onClose } = props
@@ -239,8 +240,29 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const [isMeshNode, setIsMeshNode] = useState(false)
   const [version, setVersion] = useState('0.2.1')
   const [features, setFeatures] = useState([])
+  const [devices, setDevices] = useState([])
 
   const [notificationSettings, setNotificationSettings] = useState([])
+
+  // device context stuff
+  const getDevices = (forceFetch = false) => {
+    return new Promise((resolve, reject) => {
+      if (!forceFetch && devices?.length) {
+        return resolve(devices)
+      }
+
+      deviceAPI
+        .list()
+        .then((devices) => {
+          setDevices(Object.values(devices))
+          resolve(Object.values(devices))
+        })
+        .catch(reject)
+    })
+  }
+
+  const getDevice = (value, type = 'MAC') =>
+    devices.find((d) => d[type] == value)
 
   useEffect(() => {
     api
@@ -284,6 +306,10 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     // get stetings for notificaations
     notificationsAPI.list().then((settings) => {
       setNotificationSettings(settings)
+    })
+
+    getDevices().then((res) => {
+      console.log('++ got', res.length, 'devices')
     })
 
     // callback for notifications, web & ios
@@ -435,7 +461,10 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         isWifiDisabled,
         isPlusDisabled,
         isMeshNode,
-        features
+        features,
+        devices,
+        getDevices,
+        getDevice
       }}
     >
       <SafeAreaView
