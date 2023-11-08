@@ -19,7 +19,8 @@ import {
   Text,
   VStack,
   InfoIcon,
-  Pressable
+  Pressable,
+  ScrollView
 } from '@gluestack-ui/themed'
 
 import { Tooltip } from 'components/Tooltip'
@@ -93,7 +94,6 @@ const AddTopicForm = ({ allEvents, saveEvents, handleAddRemove, onSubmit }) => {
         <Text size="sm" color="$muted500">
           Click event to add or remove for storage
         </Text>
-
         <HStack space="sm" flexWrap="wrap" mb="$1">
           {allEvents?.map((topic) => (
             <TopicItem
