@@ -656,7 +656,7 @@ const actions = [
         let containers = await api.get('/info/docker')
 
         let opts = containers
-          .filter((c) => c.Ports && c.Ports.length)
+          .filter((c) => c.State == "running")
           .map((c) => {
             return {
               label: this.niceDockerLabel(c),
