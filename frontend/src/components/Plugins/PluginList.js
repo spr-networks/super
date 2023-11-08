@@ -273,7 +273,7 @@ const PluginList = (props) => {
       >
         <HStack space="md" alignItems="center">
           <InfoIcon color="$muted500" />
-          <Link isExternal href="https://www.supernetworks.org/">
+          <Link isExternal href="https://www.supernetworks.org/plus.html">
             <LinkText>Learn about PLUS Mode</LinkText>
           </Link>
         </HStack>
