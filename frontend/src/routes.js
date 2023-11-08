@@ -56,6 +56,7 @@ import {
   LaptopIcon,
   LineChartIcon,
   ListTreeIcon,
+  NetworkIcon,
   PuzzleIcon,
   RouterIcon,
   ScanSearchIcon,
@@ -176,7 +177,7 @@ const routes = [
       {
         path: 'supernets',
         name: 'Supernetworks',
-        icon: SeparatorVerticalIcon,
+        icon: NetworkIcon,
         component: Supernetworks,
         layout: 'admin'
       }
