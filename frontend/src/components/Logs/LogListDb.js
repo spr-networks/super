@@ -173,7 +173,11 @@ const LogList = (props) => {
   }
 
   return (
-    <View h="$full" sx={{ '@md': { height: '92vh' } }} display="flex">
+    <View
+      h="$full"
+      sx={{ '@md': { height: '92vh', maxWidth: '$3/4' } }}
+      display="flex"
+    >
       <HStack space="md" p="$4" alignItems="center">
         <Heading size="sm">Events</Heading>
         <Text
