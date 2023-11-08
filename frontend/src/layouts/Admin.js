@@ -444,6 +444,13 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         }}
       />
 
+      {/*<SafeAreaView
+        style={{
+          width: '100%',
+          backgroundColor: colorMode == 'light' ? '#f3f4f6' : 'black',
+          flex: 1
+        }}
+      >*/}
       <VStack
         bg="$backgroundContentLight"
         sx={{
