@@ -185,7 +185,12 @@ const LogList = (props) => {
           {/*page={page}/{Math.ceil(total / perPage)}, total = {total}*/}
           {total} items
         </Text>
-        <HStack space="md" alignItems="center">
+        <HStack
+          space="md"
+          alignItems="center"
+          display="none"
+          sx={{ '@md': { display: 'flex' } }}
+        >
           <InfoIcon color="$muted500" />
           <Link href="/admin/info">
             <LinkText>Enable more events under Database settings</LinkText>
