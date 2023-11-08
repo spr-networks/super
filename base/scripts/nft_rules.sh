@@ -1,8 +1,6 @@
 #!/bin/bash
 
 #TBD:
-#
-#- create PBR for load balacning across WAN interfaces for outbound  traffic
 #- can F_EST_RELATED be moved past MAC spoof check
 
 # Disable forwarding
@@ -60,10 +58,35 @@ table inet filter {
     $(if [ "$LANIF" ]; then echo "elements = { $LANIF }" ; fi )
   }
 
+  # Used for Site to Site VPNs
+  set outbound_sites {
+    type ifname;
+  }
+
   set dockerifs {
     type ifname;
     $(if [ "$DOCKERIF" ]; then echo "elements = { $DOCKERIF }" ; fi )
   }
+
+  # fwd_iface_* maps explicitly allow ranges, whereas @internet_access, @lan_access do not.
+  # We can consider rolling them in the same place later.
+
+  # iface /src range to forward to lan , for ex. for a custom docker network
+  # iifname . ip src addr : accept
+  map fwd_iface_lan {
+    type ifname . ipv4_addr : verdict;
+    flags interval
+    $(if [ "$DOCKERIF" ]; then echo "elements = { $DOCKERIF . $DOCKERNET : accept }" ; fi )
+  }
+
+  # iface /src range to forward to uplinks , for ex. for a custom docker network
+  # iifname . ip src addr : accept
+  map fwd_iface_wan {
+    type ifname . ipv4_addr : verdict;
+    flags interval
+    $(if [ "$DOCKERIF" ]; then echo "elements = { $DOCKERIF . $DOCKERNET : accept }" ; fi )
+  }
+
 
   # dynamically updated -- list of lan networks to pick client subnets from
   set supernetworks {
@@ -89,6 +112,12 @@ table inet filter {
 
   map internet_access {
     type ipv4_addr . ifname: verdict;
+  }
+
+  # oifname . ip saddr . iifname
+  map site_iface_access {
+    type ifname . ipv4_addr . ifname : verdict;
+    flags interval;
   }
 
   map lan_access {
@@ -279,13 +308,6 @@ table inet filter {
     oifname @uplink_interfaces log prefix "wan:out " group 0
     oifname != @uplink_interfaces log prefix "lan:out " group 0
 
-    # allow docker containers to communicate upstream
-    $(if [ "$DOCKERIF" ]; then echo "iifname @dockerifs oifname @uplink_interfaces ip saddr $DOCKERNET counter accept" ; fi )
-
-
-    # allow docker containers to speak to LAN also
-    $(if [ "$DOCKERIF" ]; then echo "iifname @dockerifs oifname @lan_interfaces  ip saddr $DOCKERNET counter accept" ; fi )
-
     # Verify MAC addresses for LANIF/WIPHYs
     iifname @lan_interfaces jump DROP_MAC_SPOOF
 
@@ -297,15 +319,23 @@ table inet filter {
     # Drop private_rfc1918 access on upstream
     counter oifname @uplink_interfaces ip daddr vmap @drop_private_rfc1918
 
-    # Forward to Site VPN if client has internet access
-    counter oifname "site*" ip saddr . iifname vmap @internet_access
+    # Allow additional interfaces to communicate upstream
+    # This includes docker0, see fwd_iface definitions above
+    # Note: if they should have rfc1918 forwarding access they need
+    # to be added to @upstream_private_rfc1918_allowed.
+    # These maps explicitly allow ranges, whereas @internet_access, @lan_access do not.
+    # We can consider combining them later.
+    counter oifname @uplink_interfaces iifname . ip saddr vmap @fwd_iface_wan
+    counter oifname @lan_interfaces    iifname . ip saddr vmap @fwd_iface_lan
+
+    # Forward to Site VPN if client has site access
+    counter oifname @outbound_sites ip saddr . iifname vmap @internet_access
 
     # Forward to uplink interfaces
-    # TBD NOW: needs PBR.
     counter oifname @uplink_interfaces ip saddr . iifname vmap @internet_access
 
     # The @lan_access dynamic verdict map implements the special LAN group in SPR.
-    # It and allows one-way access to all stations, without an explicit relationship by IP,
+    # It allows one-way access to all stations, without an explicit relationship by IP,
     #  with a NAT return path (F_EST_RELATED)
 
     # 1. Transmit to the LANIF interface
@@ -381,12 +411,6 @@ table inet nat {
   set lan_interfaces {
     type ifname;
     $(if [ "$LANIF" ]; then echo "elements = { $LANIF }" ; fi )
-  }
-
-  # see description above. duplicated since nftables doesnt have cross-table sets
-  set dockerifs {
-    type ifname;
-    $(if [ "$DOCKERIF" ]; then echo "elements = { $DOCKERIF }" ; fi )
   }
 
   map upstream_supernetworks_drop {
