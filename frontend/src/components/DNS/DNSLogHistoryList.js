@@ -37,6 +37,7 @@ import {
   useColorMode,
   ThreeDotsIcon,
   SlashIcon,
+  CheckIcon,
   TrashIcon,
   InputField,
   InputIcon,
@@ -76,7 +77,7 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
       }}
     >
       <MenuItem key="permit">
-        <SlashIcon color="$green700" mr="$2" />
+        <CheckIcon color="$green700" mr="$2" />
         <MenuItemLabel size="sm">Permit Domain</MenuItemLabel>
       </MenuItem>
       <MenuItem key="block">
@@ -167,30 +168,64 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
             h={undefined}
             placement="bottom"
             trigger={(triggerProps) => (
-              <Button
-                sx={{
-                  '@base': { display: 'none' },
-                  '@md': { display: 'flex' }
-                }}
-                variant="link"
-                {...triggerProps}
-                onPress={() =>
-                  handleClickDomain(
-                    item.Type === 'BLOCKED' ? 'permit' : 'block',
-                    item.FirstName
-                  )
-                }
-              >
-                <ButtonIcon as={SlashIcon} color="$red700" />
-              </Button>
+              <HStack>
+
+                <Button
+                  sx={{
+                    '@base': { display: 'none' },
+                    '@md': { display: 'flex' }
+                  }}
+                  variant="link"
+                  {...triggerProps}
+                  onPress={() =>
+                    handleClickDomain(
+                      'permit',
+                      item.FirstName
+                    )
+                  }
+                >
+                {item.Type}
+                  <ButtonIcon as={CheckIcon}
+                    color="$green700" />
+                </Button>
+              </HStack>
             )}
           >
             <TooltipContent>
-              <TooltipText>Add Domain Block</TooltipText>
+              <TooltipText>Permit Domain</TooltipText>
             </TooltipContent>
           </Tooltip>
 
-          {moreMenu}
+          <Tooltip
+            h={undefined}
+            placement="bottom"
+            trigger={(triggerProps) => (
+              <HStack>
+                <Button
+                  sx={{
+                    '@base': { display: 'none' },
+                    '@md': { display: 'flex' }
+                  }}
+                  variant="link"
+                  {...triggerProps}
+                  onPress={() =>
+                    handleClickDomain(
+                      'block',
+                      item.FirstName
+                    )
+                  }
+                >
+                  <ButtonIcon as={SlashIcon}
+                    color="$red700" />
+                </Button>
+              </HStack>
+            )}
+          >
+            <TooltipContent>
+              <TooltipText>Block Domain</TooltipText>
+            </TooltipContent>
+          </Tooltip>
+
         </HStack>
       </HStack>
     </Box>
