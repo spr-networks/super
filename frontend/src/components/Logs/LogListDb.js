@@ -28,6 +28,7 @@ import { EditDatabase } from 'views/System/EditDatabase'
 import LogListItem from './LogListItem'
 import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
+import { Tooltip } from 'components/Tooltip'
 
 const LogList = (props) => {
   const modalContext = useContext(ModalContext)
@@ -185,17 +186,6 @@ const LogList = (props) => {
           {/*page={page}/{Math.ceil(total / perPage)}, total = {total}*/}
           {total} items
         </Text>
-        <HStack
-          space="md"
-          alignItems="center"
-          display="none"
-          sx={{ '@md': { display: 'flex' } }}
-        >
-          <InfoIcon color="$muted500" />
-          <Link href="/admin/info">
-            <LinkText>Enable more events under Database settings</LinkText>
-          </Link>
-        </HStack>
 
         {/*
         <Tooltip label="Set filter for logs" ml="auto">
@@ -213,9 +203,15 @@ const LogList = (props) => {
         </Tooltip>
         */}
         <HStack space="sm" marginLeft="auto">
-          <Button variant="outline" action="primary" onPress={handlePressEdit}>
-            <ButtonIcon as={Settings2Icon} color="$primary500" />
-          </Button>
+          <Tooltip label="Edit events & database settings">
+            <Button
+              variant="outline"
+              action="primary"
+              onPress={handlePressEdit}
+            >
+              <ButtonIcon as={Settings2Icon} color="$primary500" />
+            </Button>
+          </Tooltip>
           <SelectTopic
             options={Object.keys(filter)}
             selectedValue={Object.keys(filter).find((f) => filter[f])}

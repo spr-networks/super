@@ -67,7 +67,7 @@ const EditSizeForm = ({ config, onSubmit, ...props }) => {
         <Input size="lg" variant="underlined">
           <InputField
             type="text"
-            value={size}
+            value={'' + size}
             placeholder="size in mb"
             autoFocus={true}
             onChangeText={handleChangeText}
@@ -94,16 +94,18 @@ const AddTopicForm = ({ allEvents, saveEvents, handleAddRemove, onSubmit }) => {
         <Text size="sm" color="$muted500">
           Click event to add or remove for storage
         </Text>
-        <HStack space="sm" flexWrap="wrap" mb="$1">
-          {allEvents?.map((topic) => (
-            <TopicItem
-              key={topic}
-              topic={topic}
-              onPress={() => handleAddRemove(topic)}
-              isDisabled={!saveEvents.includes(topic)}
-            />
-          ))}
-        </HStack>
+        <ScrollView maxHeight="$48">
+          <HStack space="sm" flexWrap="wrap" mb="$1">
+            {allEvents?.map((topic) => (
+              <TopicItem
+                key={topic}
+                topic={topic}
+                onPress={() => handleAddRemove(topic)}
+                isDisabled={!saveEvents.includes(topic)}
+              />
+            ))}
+          </HStack>
+        </ScrollView>
       </VStack>
       <FormControl flex={1}>
         <FormControlLabel>
