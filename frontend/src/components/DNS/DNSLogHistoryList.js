@@ -473,11 +473,7 @@ const DNSLogHistoryList = (props) => {
   return (
     <View h={h} display="flex">
       <ModalForm
-        title={
-          'Add ' +
-          (selectedType == 'block' ? 'block' : 'override') +
-          ' for Domain'
-        }
+        title={'Add override for Domain'}
         modalRef={modalRef}
         hideButton={true}
       >
