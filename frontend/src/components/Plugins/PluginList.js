@@ -289,12 +289,11 @@ const PluginList = (props) => {
           }
         }}
       >
-        <Input
-          onChangeText={(value) => handleToken(value)}
-          onSubmitEditing={handleTokenSubmit}
-          onMouseLeave={handleTokenSubmit}
-        >
+        <Input>
           <InputField
+            onChangeText={(value) => handleToken(value)}
+            onSubmitEditing={handleTokenSubmit}
+            onMouseLeave={handleTokenSubmit}
             type="text"
             variant="underlined"
             placeholder={activeToken || 'Token'}
