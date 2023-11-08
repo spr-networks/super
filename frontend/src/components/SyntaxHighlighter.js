@@ -32,7 +32,7 @@ const JSONSyntax = ({ language, ...props }) => {
   )
 }
 
-const HEXSyntax = () => {
+const HEXSyntax = ({ ...props }) => {
   const colorMode = useColorMode()
   const syntaxTheme = colorMode == 'light' ? github : ocean
 
