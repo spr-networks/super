@@ -5,9 +5,8 @@
  */
 import React from 'react'
 import { prettyDate } from 'utils'
-import SyntaxHighlighter from 'react-native-syntax-highlighter'
-import { github, ocean } from 'react-syntax-highlighter/styles/hljs'
 import { Buffer } from 'buffer'
+import { JSONSyntax, HEXSyntax } from 'components/SyntaxHighlighter'
 
 import {
   Badge,
@@ -121,7 +120,6 @@ const LogListItem = ({ item, selected, ...props }) => {
 
   const prettyEvent = (item) => {
     let hexLines = getPayloadHex(item)
-    const syntaxTheme = colorMode == 'light' ? github : ocean
 
     if (!item.msg) {
       //TODO wrap items in scrollview if > x lines
@@ -132,18 +130,7 @@ const LogListItem = ({ item, selected, ...props }) => {
           alignItems="flex-end"
           sx={{ '@md': { flexDirection: 'row', alignItems: 'flex-start' } }}
         >
-          <SyntaxHighlighter
-            highlighter="hljs"
-            language="json"
-            style={syntaxTheme}
-            wrapLongLines={true}
-            lineProps={{ style: { flexWrap: 'wrap', lineHeight: 1.5 } }} // Adjusted line height
-            customStyle={{
-              backgroundColor: 'transparent'
-            }}
-          >
-            {dumpJSON(item, true)}
-          </SyntaxHighlighter>
+          <JSONSyntax>{dumpJSON(item, true)}</JSONSyntax>
 
           <Tooltip label="Copy JSON">
             <Button
@@ -166,17 +153,7 @@ const LogListItem = ({ item, selected, ...props }) => {
             </Button>
           </Tooltip>
 
-          {hexLines ? (
-            <SyntaxHighlighter
-              language="brainfuck"
-              style={syntaxTheme}
-              customStyle={{
-                backgroundColor: 'transparent'
-              }}
-            >
-              {hexLines}
-            </SyntaxHighlighter>
-          ) : null}
+          {hexLines ? <HEXSyntax>{hexLines}</HEXSyntax> : null}
         </VStack>
       )
     }
