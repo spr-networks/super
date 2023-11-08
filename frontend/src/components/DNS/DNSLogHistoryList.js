@@ -169,7 +169,6 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
             placement="bottom"
             trigger={(triggerProps) => (
               <HStack>
-
                 <Button
                   sx={{
                     '@base': { display: 'none' },
@@ -177,16 +176,10 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
                   }}
                   variant="link"
                   {...triggerProps}
-                  onPress={() =>
-                    handleClickDomain(
-                      'permit',
-                      item.FirstName
-                    )
-                  }
+                  onPress={() => handleClickDomain('permit', item.FirstName)}
                 >
-                {item.Type}
-                  <ButtonIcon as={CheckIcon}
-                    color="$green700" />
+                  {/*<ButtonText>{item.Type}</ButtonText>*/}
+                  <ButtonIcon as={CheckIcon} color="$green700" />
                 </Button>
               </HStack>
             )}
@@ -208,15 +201,9 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
                   }}
                   variant="link"
                   {...triggerProps}
-                  onPress={() =>
-                    handleClickDomain(
-                      'block',
-                      item.FirstName
-                    )
-                  }
+                  onPress={() => handleClickDomain('block', item.FirstName)}
                 >
-                  <ButtonIcon as={SlashIcon}
-                    color="$red700" />
+                  <ButtonIcon as={SlashIcon} color="$red700" />
                 </Button>
               </HStack>
             )}
@@ -225,7 +212,6 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
               <TooltipText>Block Domain</TooltipText>
             </TooltipContent>
           </Tooltip>
-
         </HStack>
       </HStack>
     </Box>
