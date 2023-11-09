@@ -412,9 +412,9 @@ const actions = [
     }
   },
   {
-    title: 'Forward to Site VPN or Uplink Interface',
+    title: 'Forward all traffic to Site VPN, an Uplink, or a Custom Interface',
     cardType: 'action',
-    description: 'Forward traffic over a Site VPN Gateway or Uplink Interface',
+    description: 'Forward traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
     color: '$purple600',
     icon: WaypointsIcon,
     params: [
@@ -427,15 +427,197 @@ const actions = [
       {
         name: 'DstInterface',
         type: PropTypes.string,
-        description: 'Destination site (ex: site0)'
-      }
+        description: 'Destination site (ex: site0, Must begin with "site" or be an Uplink interface)'
+      },
+      {
+        name: 'DstIP',
+        type: PropTypes.string,
+        description: 'IP destination, set as destination route, needed for containers'
+      },
     ],
     values: {
       Client: '0.0.0.0',
       OriginalDstIP: '0.0.0.0',
+      DstIP: '',
       DstInterface: ''
     },
     getOptions: function (name = 'DstInterface') {
+      if (name == 'DstInterface') {
+        return new Promise((resolve, reject) => {
+          pfwAPI.config().then((config) => {
+            let s = []
+            for (
+              let i = 0;
+              config.SiteVPNs != null && i < config.SiteVPNs.length;
+              i++
+            ) {
+              s.push({ label: 'site' + i, value: 'site' + i })
+            }
+
+            // pull in interfaces also
+            wifiAPI.interfacesConfiguration().then((ifaces) => {
+              for (let iface of ifaces) {
+                if (
+                  iface.Type == 'Uplink' &&
+                  iface.Subtype != 'pppup' &&
+                  iface.Enabled == true
+                ) {
+                  s.push({ label: iface.Name, value: iface.Name })
+                }
+              }
+              resolve(s)
+            })
+          })
+        })
+      }
+    },
+    preSubmit: async function () {
+      return {
+        ...this.values,
+        Client: parseClientIPOrIdentity(this.values.Client)
+      }
+    },
+    submit: function (data, flow) {
+      let isUpdate = flow.index !== undefined
+
+      if (isUpdate) {
+        return pfwAPI.updateForward(data, flow.index)
+      }
+
+      return pfwAPI.addForward(data)
+    }
+  },
+  {
+    title: 'UDP Port Forward to Site VPN, an Uplink, or a Custom Interface',
+    cardType: 'action',
+    description: 'Forward UDP traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
+    color: '$purple400',
+    icon: WaypointsIcon,
+    params: [
+      {
+        name: 'Client',
+        type: PropTypes.string,
+        description: 'IP/CIDR or Group'
+      },
+      { name: 'OriginalDstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      {
+        name: 'OriginalDstPort',
+        type: PropTypes.string,
+        description:
+          'Original Destination port, range of ports, or empty for all'
+      },
+      {
+        name: 'DstInterface',
+        type: PropTypes.string,
+        description: 'Destination site (ex: site0, Must begin with "site" or be an Uplink interface)'
+      },
+      {
+        name: 'DstIP',
+        type: PropTypes.string,
+        description: 'IP destination, set as destination route, needed for containers'
+      },
+    ],
+    values: {
+      Client: '0.0.0.0',
+      OriginalDstIP: '0.0.0.0',
+      DstIP: '',
+      OriginalDstPort: '',
+      Protocol: 'udp',
+      DstInterface: ''
+    },
+    getOptions: function (name = 'DstInterface') {
+      if (['OriginalDstPort'].includes(name)) {
+        return defaultOptions(name)
+      }
+
+      if (name == 'DstInterface') {
+        return new Promise((resolve, reject) => {
+          pfwAPI.config().then((config) => {
+            let s = []
+            for (
+              let i = 0;
+              config.SiteVPNs != null && i < config.SiteVPNs.length;
+              i++
+            ) {
+              s.push({ label: 'site' + i, value: 'site' + i })
+            }
+
+            // pull in interfaces also
+            wifiAPI.interfacesConfiguration().then((ifaces) => {
+              for (let iface of ifaces) {
+                if (
+                  iface.Type == 'Uplink' &&
+                  iface.Subtype != 'pppup' &&
+                  iface.Enabled == true
+                ) {
+                  s.push({ label: iface.Name, value: iface.Name })
+                }
+              }
+              resolve(s)
+            })
+          })
+        })
+      }
+    },
+    preSubmit: async function () {
+      return {
+        ...this.values,
+        Client: parseClientIPOrIdentity(this.values.Client)
+      }
+    },
+    submit: function (data, flow) {
+      let isUpdate = flow.index !== undefined
+
+      if (isUpdate) {
+        return pfwAPI.updateForward(data, flow.index)
+      }
+
+      return pfwAPI.addForward(data)
+    }
+  },
+  {
+    title: 'TCP Port Forward to Site VPN, an Uplink, or a Custom Interface',
+    cardType: 'action',
+    description: 'Forward UDP traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
+    color: '$purple400',
+    icon: WaypointsIcon,
+    params: [
+      {
+        name: 'Client',
+        type: PropTypes.string,
+        description: 'IP/CIDR or Group'
+      },
+      { name: 'OriginalDstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      {
+        name: 'OriginalDstPort',
+        type: PropTypes.string,
+        description:
+          'Original Destination port, range of ports, or empty for all'
+      },
+      {
+        name: 'DstInterface',
+        type: PropTypes.string,
+        description: 'Destination site (ex: site0, Must begin with "site" or be an Uplink interface)'
+      },
+      {
+        name: 'DstIP',
+        type: PropTypes.string,
+        description: 'IP destination, set as destination route, needed for containers'
+      },
+    ],
+    values: {
+      Client: '0.0.0.0',
+      OriginalDstIP: '0.0.0.0',
+      DstIP: '',
+      OriginalDstPort: '',
+      Protocol: 'tcp',
+      DstInterface: ''
+    },
+    getOptions: function (name = 'DstInterface') {
+      if (['OriginalDstPort'].includes(name)) {
+        return defaultOptions(name)
+      }
+
       if (name == 'DstInterface') {
         return new Promise((resolve, reject) => {
           pfwAPI.config().then((config) => {

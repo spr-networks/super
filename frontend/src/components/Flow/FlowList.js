@@ -505,7 +505,7 @@ const convertForwardingRuleCard = (rule, index) => {
 
   //NOTE: titles have to match or they will be invisible
 
-  if (rule.Protocol != '') {
+  if (rule.DstInterface == '' && rule.Protocol != '') {
     action = NewCard({
       title: 'Forward ' + rule.Protocol.toUpperCase(),
       cardType: 'action',
@@ -519,15 +519,31 @@ const convertForwardingRuleCard = (rule, index) => {
       }
     })
   } else if (rule.DstInterface != '') {
-    action = NewCard({
-      title: 'Forward to Site VPN or Uplink Interface',
-      cardType: 'action',
-      values: {
-        Client: rule.Client,
-        OriginalDstIP: rule.OriginalDstIP,
-        DstInterface: rule.DstInterface
-      }
-    })
+    if (rule.Protocol == '') {
+      action = NewCard({
+        title: 'Forward all traffic to Site VPN, an Uplink, or a Custom Interface',
+        cardType: 'action',
+        values: {
+          Client: rule.Client,
+          OriginalDstIP: rule.OriginalDstIP,
+          DstInterface: rule.DstInterface
+        }
+      })
+    } else {
+      action = NewCard({
+        title: rule.Protocol.toUpperCase() + ' Port Forward to Site VPN, an Uplink, or a Custom Interface',
+        cardType: 'action',
+        values: {
+          Client: rule.Client,
+          OriginalDstIP: rule.OriginalDstIP,
+          OriginalDstPort: rule.OriginalDstPort,
+          DstIP: rule.DstIP,
+          Protocol: rule.Protocol,
+          DstInterface: rule.DstInterface
+        }
+      })
+
+    }
   }
 
   return {
