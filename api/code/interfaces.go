@@ -658,7 +658,6 @@ func refreshDownlinksLocked() {
 	}
 }
 
-
 /* Setting basic settings */
 func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 	iconfig := PublicInterfaceConfig{}

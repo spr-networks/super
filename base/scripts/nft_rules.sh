@@ -63,11 +63,6 @@ table inet filter {
     type ifname;
   }
 
-  set dockerifs {
-    type ifname;
-    $(if [ "$DOCKERIF" ]; then echo "elements = { $DOCKERIF }" ; fi )
-  }
-
   # fwd_iface_* maps explicitly allow ranges, whereas @internet_access, @lan_access do not.
   # We can consider rolling them in the same place later.
 
@@ -108,6 +103,7 @@ table inet filter {
 
   map dns_access {
     type ipv4_addr . ifname: verdict;
+    flags interval;
   }
 
   map internet_access {

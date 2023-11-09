@@ -51,6 +51,16 @@ type ForwardingBlockRule struct {
 	SrcIP    string
 }
 
+type ContainerInterfaceRule struct {
+	WAN       bool
+	LAN       bool
+	DNS       bool
+	Interface string
+	SrcIP     string
+	// Groups    []string //unused for now-> will need to update comparison for these
+	// Tags      []string //unused for now
+}
+
 type ServicePort struct {
 	Protocol        string
 	Port            string
@@ -78,18 +88,21 @@ type MulticastPort struct {
 }
 
 type FirewallConfig struct {
-	ForwardingRules      []ForwardingRule
-	BlockRules           []BlockRule
-	ForwardingBlockRules []ForwardingBlockRule
-	ServicePorts         []ServicePort
-	Endpoints            []Endpoint
-	MulticastPorts       []MulticastPort
-	PingLan              bool
-	PingWan              bool
+	ForwardingRules         []ForwardingRule
+	BlockRules              []BlockRule
+	ForwardingBlockRules    []ForwardingBlockRule
+	ContainerInterfaceRules []ContainerInterfaceRule
+	ServicePorts            []ServicePort
+	Endpoints               []Endpoint
+	MulticastPorts          []MulticastPort
+	PingLan                 bool
+	PingWan                 bool
 }
 
 var FirewallConfigFile = TEST_PREFIX + "/configs/base/firewall.json"
-var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []ForwardingBlockRule{}, []ServicePort{}, []Endpoint{}, []MulticastPort{}, false, false}
+var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{},
+	[]ForwardingBlockRule{}, []ContainerInterfaceRule{}, []ServicePort{},
+	[]Endpoint{}, []MulticastPort{}, false, false}
 
 // IP -> Iface map
 var gIfaceMap = map[string]string{}
@@ -549,6 +562,49 @@ func addSupernetworkEntry(supernet string) {
 
 func removeSupernetworkEntry(supernet string) {
 	modifySupernetworkEntry(supernet, "delete")
+}
+
+func modifyContainerInterfaceRules(w http.ResponseWriter, r *http.Request) {
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	crule := ContainerInterfaceRule{}
+	err := json.NewDecoder(r.Body).Decode(&crule)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if CIDRorIP(crule.SrcIP) != nil {
+		http.Error(w, "Invalid SrcIP", 400)
+		return
+	}
+
+	if !isValidIface(crule.Interface) {
+		http.Error(w, "Invalid Interface", 400)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		for i := range gFirewallConfig.ContainerInterfaceRules {
+			a := gFirewallConfig.ContainerInterfaceRules[i]
+			if crule == a {
+				gFirewallConfig.ContainerInterfaceRules = append(gFirewallConfig.ContainerInterfaceRules[:i], gFirewallConfig.ContainerInterfaceRules[i+1:]...)
+				saveFirewallRulesLocked()
+				err = applyContainerInterfaceRule(a, "delete", true)
+				if err != nil {
+					http.Error(w, err.Error(), 400)
+				}
+				return
+			}
+		}
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	gFirewallConfig.ContainerInterfaceRules = append(gFirewallConfig.ContainerInterfaceRules, crule)
+	saveFirewallRulesLocked()
+	applyFirewallRulesLocked()
 }
 
 func deleteBlock(br BlockRule) error {
@@ -1067,6 +1123,91 @@ func populateSets() {
 
 }
 
+func applyContainerInterfaceRule(container_rule ContainerInterfaceRule, action string, fthru bool) error {
+	var err error
+
+	if container_rule.WAN {
+		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_wan",
+			"{", container_rule.Interface, ".", container_rule.SrcIP, ":", "accept", "}").Run()
+		if err != nil {
+			log.Println("failed to populate "+container_rule.Interface+" "+container_rule.SrcIP+" on fwd_iface_wan", err)
+			if !fthru {
+				return err
+			}
+		}
+	}
+
+	if container_rule.LAN {
+		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_lan",
+			"{", container_rule.Interface, ".", container_rule.SrcIP, ":", "accept", "}").Run()
+		if err != nil {
+			log.Println("failed to populate "+container_rule.Interface+" "+container_rule.SrcIP+" on fwd_iface_lan", err)
+			if !fthru {
+				return err
+			}
+		}
+	}
+
+	if container_rule.DNS {
+		err = exec.Command("nft", action, "element", "inet", "filter", "dns_access",
+			"{", container_rule.SrcIP, ".", container_rule.Interface, ":", "accept", "}").Run()
+		if err != nil {
+			log.Println("failed to populate "+container_rule.Interface+" "+container_rule.SrcIP+" on dns_access", err)
+			if !fthru {
+				return err
+			}
+		}
+	}
+
+	return err
+}
+
+func applyContainerInterfaces() {
+	//lets start simple.
+	/*
+		counter oifname @uplink_interfaces iifname . ip saddr vmap @fwd_iface_wan
+		counter oifname @lan_interfaces    iifname . ip saddr vmap @fwd_iface_lan
+		counter udp dport 53  ip saddr . iifname vmap @dns_access
+
+		$(if [ "$DOCKERIF" ]; then echo "elements = { $DOCKERIF . $DOCKERNET : accept }" ; fi )
+	*/
+
+	err := exec.Command("nft", "flush", "set", "inet", "filter", "fwd_iface_wan").Run()
+	if err != nil {
+		log.Println("failed to flush fwd_iface_wan", err)
+	}
+
+	err = exec.Command("nft", "flush", "set", "inet", "filter", "fwd_iface_wan").Run()
+	if err != nil {
+		log.Println("failed to flush fwd_iface_lan", err)
+	}
+
+	dockerif := os.Getenv("DOCKERIF")
+	dockernet := os.Getenv("DOCKERNET")
+
+	if dockerif != "" && dockernet != "" {
+		//prepopulate default docker0
+		err = exec.Command("nft", "add", "element", "inet", "filter", "fwd_iface_wan",
+			"{", dockerif, ".", dockernet, ":", "accept", "}").Run()
+		if err != nil {
+			log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_wan", err)
+		}
+
+		err = exec.Command("nft", "add", "element", "inet", "filter", "fwd_iface_lan",
+			"{", dockerif, ".", dockernet, ":", "accept", "}").Run()
+		if err != nil {
+			log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_lan", err)
+		}
+	}
+
+	for _, container_rule := range gFirewallConfig.ContainerInterfaceRules {
+		applyContainerInterfaceRule(container_rule, "add", false)
+	}
+
+	// TBD: clean up stale iface from dns_access (?) here
+
+}
+
 func applyFirewallRulesLocked() {
 
 	populateSets()
@@ -1085,6 +1226,7 @@ func applyFirewallRulesLocked() {
 
 	applyPingRules()
 
+	applyContainerInterfaces()
 }
 
 func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
