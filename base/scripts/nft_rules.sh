@@ -63,6 +63,12 @@ table inet filter {
     type ifname;
   }
 
+  map custom_interface_forward {
+    # iifname src_ip oifname {site} dst_ip
+    type ifname . ipv4_addr . ifname . ipv4_addr : verdict;
+    flags interval;
+  }
+
   # fwd_iface_* maps explicitly allow ranges, whereas @internet_access, @lan_access do not.
   # We can consider rolling them in the same place later.
 
@@ -321,11 +327,19 @@ table inet filter {
     # to be added to @upstream_private_rfc1918_allowed.
     # These maps explicitly allow ranges, whereas @internet_access, @lan_access do not.
     # We can consider combining them later.
+
     counter oifname @uplink_interfaces iifname . ip saddr vmap @fwd_iface_wan
     counter oifname @lan_interfaces    iifname . ip saddr vmap @fwd_iface_lan
 
+    # Now accept LAN to the container/custom interface in reverse
+    counter iifname @lan_interfaces    oifname . ip daddr vmap @fwd_iface_lan
+
+
     # Forward to Site VPN if client has site access
     counter oifname @outbound_sites ip saddr . iifname vmap @internet_access
+
+    # Forward to custom interfaces if client has site access
+    counter iifname . ip saddr . oifname . ip daddr vmap @custom_interface_forward
 
     # Forward to uplink interfaces
     counter oifname @uplink_interfaces ip saddr . iifname vmap @internet_access
