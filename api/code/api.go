@@ -1579,7 +1579,11 @@ func normalizeStringSlice(a []string) []string {
 	}
 	ret := []string{}
 	for _, entry := range a {
-		ret = append(ret, trimLower(entry))
+		next := trimLower(entry)
+		if next == "" {
+			continue
+		}
+		ret = append(ret, next)
 	}
 	return ret
 }
