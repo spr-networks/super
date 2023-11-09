@@ -3,7 +3,7 @@
  * timestamp
  * pagination
  */
-import React, { useContext } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { prettyDate } from 'utils'
 import { Buffer } from 'buffer'
 import { JSONSyntax, HEXSyntax } from 'components/SyntaxHighlighter'
@@ -18,9 +18,9 @@ import {
   VStack,
   Text,
   LinkText,
-  useColorMode,
   CopyIcon,
-  ScrollView
+  ScrollView,
+  ButtonGroup
 } from '@gluestack-ui/themed'
 
 import { AppContext } from 'AppContext'
@@ -28,6 +28,8 @@ import { ListItem } from 'components/List'
 import { Tooltip } from 'components/Tooltip'
 import { copy } from 'utils'
 import { InterfaceItem } from 'components/TagItem'
+import DeviceItem from 'components/Devices/DeviceItem'
+import { FileJsonIcon, Maximize2Icon } from 'lucide-react-native'
 
 //utils
 const levelToColor = (level) => {
@@ -117,189 +119,230 @@ const getPayloadHex = (obj) => {
   return null
 }
 
-const LogListItem = ({ item, selected, ...props }) => {
+const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
   const context = useContext(AppContext)
 
-  const prettyEvent = (item, selected) => {
-    let hexLines = false //getPayloadHex(item)
+  const [maxHeight, setMaxHeight] = useState(150)
 
-    //TODO make a component of this
-    const DeviceItem = React.memo(({ item, ...props }) => {
-      return (
-        <Text size="md" bold>
-          {item?.Name}
-        </Text>
-      )
-    })
-
-    //TODO component
-
-    const niceEvent = (event) => {
-      let events = {
-        'AP-STA-CONNECTED': 'connect',
-        'AP-STA-DISCONNECTED': 'disconnect'
-      }
-
-      return events[event] || event
+  const niceEvent = (event) => {
+    let events = {
+      'AP-STA-CONNECTED': 'connect',
+      'AP-STA-DISCONNECTED': 'disconnect'
     }
 
-    const wifiSta = () => (
-      <>
-        <HStack space="md" alignItems="center">
-          <InterfaceItem name={item.Iface} />
-          <DeviceItem item={context.getDevice(item.MAC)}></DeviceItem>
-          <Text size="md">{niceEvent(item.Event)}</Text>
-          {['Router', 'Status'].map((f) =>
-            item[f]?.length ? (
-              <HStack space="sm">
-                <Text size="sm" bold>
-                  {f}
-                </Text>
-                <Text size="sm">{item[f]}</Text>
-              </HStack>
-            ) : null
-          )}
-        </HStack>
-      </>
-    )
-
-    const eventParsers = {
-      'log:api': (item) => (
-        <>
-          <Text size="sm">{item.msg}</Text>
-          {item.file && item.func ? (
-            <HStack space="sm">
-              <Badge
-                size="md"
-                action={levelToColor(item.level)}
-                variant="outline"
-              >
-                <BadgeText>{item.level || 'info'}</BadgeText>
-              </Badge>
-              <Link
-                color="$muted500"
-                isExternal
-                href={githubURL(item.file, selected)}
-              >
-                <LinkText size="sm">
-                  {item.file}:{item.func}
-                </LinkText>
-              </Link>
-            </HStack>
-          ) : null}
-        </>
-      ),
-      'dhcp:request': (item) => (
-        <HStack space="xl" gap="$8" alignItems="center">
-          <InterfaceItem name={item.Iface} />
-          <DeviceItem item={context.getDevice(item.MAC, 'MAC')} />
-          {['Identifier', 'Name'].map((t) =>
-            item[t] ? (
-              <HStack space="sm">
-                <Text size="sm" color="$muted500">
-                  {t}
-                </Text>
-                <Text size="sm">{item[t]}</Text>
-              </HStack>
-            ) : null
-          )}
-        </HStack>
-      ),
-      'dhcp:response': (item) => (
-        <HStack space="xl" gap="$8" alignItems="center">
-          <DeviceItem item={context.getDevice(item.IP, 'RecentIP')} />
-          {['LeaseTime', 'DNSIP', 'RouterIP'].map((t) =>
-            item[t] ? (
-              <HStack space="sm">
-                <Text size="sm" color="$muted500">
-                  {t}
-                </Text>
-                <Text size="sm">{item[t]}</Text>
-              </HStack>
-            ) : null
-          )}
-        </HStack>
-      ),
-
-      'dns:block:event': (item) => (
-        <HStack space="sm">
-          <DeviceItem item={context.getDevice(item.ClientIP, 'RecentIP')} />
-          <Text size="md">block</Text>
-          <Text size="md">{item.Name}</Text>
-        </HStack>
-      ),
-      'wifi:station:disconnect': wifiSta,
-      'wifi:auth:success': wifiSta,
-      'www:auth:user:success': (item) => (
-        <HStack space="sm">
-          <Text size="md" bold>
-            {item.username}
-          </Text>
-          <Text size="md">login</Text>
-        </HStack>
-      )
-    }
-
-    if (eventParsers[selected]) {
-      return eventParsers[selected](item)
-    }
-
-    if (!item.msg) {
-      //TODO wrap items in scrollview if > x lines
-
-      return (
-        <ScrollView maxHeight={150} borderColor="$muted200" borderWidth="$1">
-          <VStack
-            space="md"
-            alignItems="flex-end"
-            sx={{ '@md': { flexDirection: 'row', alignItems: 'flex-start' } }}
-          >
-            <JSONSyntax>{dumpJSON(item, true)}</JSONSyntax>
-
-            <Tooltip label="Copy JSON">
-              <Button
-                action="primary"
-                variant="link"
-                size="xs"
-                display={item.msg ? 'none' : 'flex'}
-                onPress={() => copy(JSON.stringify(item))}
-                position="sticky"
-                sx={{
-                  '@base': { right: '$0', marginTop: '-$10 ' },
-                  '@md': {
-                    right: hexLines ? '$1/2' : '$0',
-                    marginRight: '$10',
-                    marginTop: '$0'
-                  }
-                }}
-              >
-                <ButtonIcon as={CopyIcon} ml="$1" />
-              </Button>
-            </Tooltip>
-
-            {hexLines ? <HEXSyntax>{hexLines}</HEXSyntax> : null}
-          </VStack>
-        </ScrollView>
-      )
-    }
-
-    return <Text size="sm">{item.msg}</Text>
+    return events[event] || event
   }
 
-  return (
-    <ListItem alignItems="flex-start" flexDirection="column">
+  const eventParsers = {
+    'log:api': (item) => (
+      <VStack space="md">
+        <Text size="sm">{item.msg}</Text>
+        {item.file && item.func ? (
+          <HStack space="sm">
+            <Badge
+              size="sm"
+              action={levelToColor(item.level)}
+              variant="outline"
+            >
+              <BadgeText>{item.level || 'info'}</BadgeText>
+            </Badge>
+            <Link
+              color="$muted500"
+              isExternal
+              href={githubURL(item.file, selected)}
+            >
+              <LinkText size="sm">
+                {item.file}:{item.func}
+              </LinkText>
+            </Link>
+          </HStack>
+        ) : null}
+      </VStack>
+    ),
+    'dhcp:request': (item) => (
+      <>
+        <DeviceItem flex={1} item={context.getDevice(item.MAC, 'MAC')} />
+
+        {['Identifier', 'Name'].map((t) =>
+          item[t] ? (
+            <HStack space="sm">
+              <Text size="sm" color="$muted500">
+                {t}
+              </Text>
+              <Text size="sm">{item[t]}</Text>
+            </HStack>
+          ) : null
+        )}
+        <InterfaceItem name={item.Iface} />
+      </>
+    ),
+    'dhcp:response': (item) => (
+      <>
+        <DeviceItem flex={1} item={context.getDevice(item.IP, 'RecentIP')} />
+        {['LeaseTime', 'DNSIP', 'RouterIP'].map((t) =>
+          item[t] ? (
+            <HStack space="sm">
+              <Text size="sm" color="$muted500">
+                {t}
+              </Text>
+              <Text size="sm">{item[t]}</Text>
+            </HStack>
+          ) : null
+        )}
+      </>
+    ),
+
+    'dns:block:event': (item) => (
+      <>
+        <DeviceItem item={context.getDevice(item.ClientIP, 'RecentIP')} />
+        <Text size="md">block</Text>
+        <Text size="md">{item.Name}</Text>
+      </>
+    ),
+    'wifi:auth:success': () => (
+      <>
+        <DeviceItem flex={1} item={context.getDevice(item.MAC)} />
+        {['Router', 'Status'].map((f) =>
+          item[f]?.length ? (
+            <HStack space="sm">
+              <Text size="sm" bold>
+                {f}
+              </Text>
+              <Text size="sm">{item[f]}</Text>
+            </HStack>
+          ) : null
+        )}
+        <Text size="md">{niceEvent(item.Event)}</Text>
+        <InterfaceItem name={item.Iface} />
+      </>
+    ),
+    'www:auth:user:success': (item) => (
+      <>
+        <Text size="md" bold>
+          {item.username}
+        </Text>
+        <Text size="md">login</Text>
+      </>
+    )
+  }
+
+  eventParsers['wifi:station:disconnect'] = 'wifi:auth:success'
+
+  useEffect(() => {
+    setIsParsable(eventParsers[selected] !== undefined)
+  }, [])
+
+  let hexLines = getPayloadHex(item)
+
+  if (!showJSON && eventParsers[selected]) {
+    return (
       <HStack
-        space="sm"
-        alignItems="flex-end"
-        sx={{ '@base': { width: 80 }, '@md': { width: 'auto' } }}
+        w="$full"
+        space="3xl"
+        alignItems="center"
+        p="$4"
+        justifyContent="space-between"
       >
-        <Text size="xs" textAlign="right">
+        {eventParsers[selected](item)}
+      </HStack>
+    )
+  } else {
+    let jsonData = dumpJSON(item, true)
+    let numLines = jsonData.split('\n').length
+    return (
+      <ScrollView
+        maxHeight={maxHeight}
+        borderColor="$secondary200"
+        sx={{ _dark: { borderColor: '$secondary700' } }}
+        borderWidth="$1"
+        w="$full"
+      >
+        <JSONSyntax>{jsonData}</JSONSyntax>
+        {hexLines ? <HEXSyntax>{hexLines}</HEXSyntax> : null}
+        <Button
+          action="secondary"
+          variant="link"
+          size="xs"
+          sx={{
+            '@md': { position: 'absolute', right: 8 }
+          }}
+          onPress={() => {
+            setMaxHeight(maxHeight == '$full' ? 150 : '$full')
+          }}
+          isDisabled={numLines <= 8}
+        >
+          <ButtonIcon as={Maximize2Icon} color="$muted500" />
+        </Button>
+      </ScrollView>
+    )
+  }
+}
+
+const LogListItem = ({ item, selected, ...props }) => {
+  const [isParsable, setIsParsable] = useState(true)
+  const [showJSON, setShowJSON] = useState(false)
+
+  useEffect(() => {
+    setShowJSON(!isParsable)
+  }, [isParsable])
+
+  return (
+    <ListItem
+      alignItems="flex-start"
+      flexDirection="column"
+      p="$0"
+      bg="$coolGray50"
+      borderColor="$secondary200"
+      sx={{
+        _dark: { bg: '$secondary900', borderColor: '$secondary800' }
+      }}
+      space="$0"
+    >
+      <HStack
+        w="$full"
+        bg="$coolGray100"
+        sx={{
+          _dark: { bg: '$secondary950' }
+        }}
+        alignItems="center"
+        px="$4"
+      >
+        <Text size="xs" bold>
           {prettyDate(item.time)}
         </Text>
+        <ButtonGroup ml="auto" space="md">
+          <Tooltip label="Toggle JSON data">
+            <Button
+              action="primary"
+              variant="link"
+              size="sm"
+              onPress={() => setShowJSON(!showJSON)}
+              isDisabled={!isParsable}
+            >
+              <ButtonIcon as={FileJsonIcon} />
+            </Button>
+          </Tooltip>
+
+          <Tooltip label="Copy JSON event">
+            <Button
+              action="primary"
+              variant="link"
+              size="sm"
+              onPress={() => copy(JSON.stringify(item))}
+              {...props}
+            >
+              <ButtonIcon as={CopyIcon} />
+            </Button>
+          </Tooltip>
+        </ButtonGroup>
       </HStack>
-      <VStack space="sm" w="$full">
-        {prettyEvent(item, selected)}
-      </VStack>
+
+      <PrettyItem
+        item={item}
+        selected={selected}
+        showJSON={showJSON}
+        setIsParsable={setIsParsable}
+      />
     </ListItem>
   )
 }
