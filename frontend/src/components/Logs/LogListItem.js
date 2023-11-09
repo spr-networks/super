@@ -165,7 +165,11 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
 
         {['Identifier', 'Name'].map((t) =>
           item[t] ? (
-            <HStack space="sm">
+            <HStack
+              space="sm"
+              display="none"
+              sx={{ '@md': { display: 'flex' } }}
+            >
               <Text size="sm" color="$muted500">
                 {t}
               </Text>
@@ -181,7 +185,11 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         <DeviceItem flex={1} item={context.getDevice(item.IP, 'RecentIP')} />
         {['LeaseTime', 'DNSIP', 'RouterIP'].map((t) =>
           item[t] ? (
-            <HStack space="sm">
+            <HStack
+              space="sm"
+              display="none"
+              sx={{ '@md': { display: 'flex' } }}
+            >
               <Text size="sm" color="$muted500">
                 {t}
               </Text>
@@ -204,7 +212,11 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         <DeviceItem flex={1} item={context.getDevice(item.MAC)} />
         {['Router', 'Status'].map((f) =>
           item[f]?.length ? (
-            <HStack space="sm">
+            <HStack
+              space="sm"
+              display="none"
+              sx={{ '@md': { display: 'flex' } }}
+            >
               <Text size="sm" bold>
                 {f}
               </Text>
@@ -212,7 +224,9 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
             </HStack>
           ) : null
         )}
-        <Text size="md">{niceEvent(item.Event)}</Text>
+        <Text size="md" display="none" sx={{ '@md': { display: 'flex' } }}>
+          {niceEvent(item.Event)}
+        </Text>
         <InterfaceItem name={item.Iface} />
       </>
     ),
@@ -254,7 +268,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         maxHeight={maxHeight}
         borderColor="$secondary200"
         sx={{ _dark: { borderColor: '$secondary700' } }}
-        borderWidth="$1"
+        borderWidth="$0"
         w="$full"
       >
         <JSONSyntax>{jsonData}</JSONSyntax>
@@ -263,9 +277,8 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
           action="secondary"
           variant="link"
           size="xs"
-          sx={{
-            '@md': { position: 'absolute', right: 8 }
-          }}
+          position="absolute"
+          right="$4"
           onPress={() => {
             setMaxHeight(maxHeight == '$full' ? 150 : '$full')
           }}

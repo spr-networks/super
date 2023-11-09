@@ -3,13 +3,13 @@
 import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
-import { HStack, Text } from '@gluestack-ui/themed'
+import { HStack, Text, VStack } from '@gluestack-ui/themed'
 
 import IconItem from 'components/IconItem'
 
 //TODO make a component of this
 const DeviceItem = React.memo(({ item, ...props }) => {
-  //TODO pass in as props
+  //TODO pass in as props. for now some hardcoded for mobile
   let show = ['Style', 'Name', 'MAC', 'RecentIP']
 
   return (
@@ -27,10 +27,20 @@ const DeviceItem = React.memo(({ item, ...props }) => {
           {item?.Name || 'N/A'}
         </Text>
       ) : null}
-      {show.includes('MAC') ? <Text size="sm">{item?.MAC}</Text> : null}
-      {show.includes('RecentIP') ? (
-        <Text size="md">{item?.RecentIP}</Text>
-      ) : null}
+      <VStack
+        sx={{
+          '@md': {
+            flexDirection: 'row-reverse',
+            gap: '$8',
+            alignItems: 'center'
+          }
+        }}
+      >
+        {show.includes('RecentIP') ? (
+          <Text size="md">{item?.RecentIP}</Text>
+        ) : null}
+        {show.includes('MAC') ? <Text size="sm">{item?.MAC}</Text> : null}
+      </VStack>
     </HStack>
   )
 })
