@@ -59,7 +59,7 @@ type ContainerInterfaceRule struct {
 	DNS       bool
 	Interface string
 	SrcIP     string
-	Groups    []string //unused for now-> will need to update comparison for these
+	Groups    []string
 	Tags      []string //unused for now
 }
 

@@ -7,16 +7,18 @@ import ForwardList from 'components/Firewall/ForwardList'
 import BlockList from 'components/Firewall/BlockList'
 import ForwardBlockList from 'components/Firewall/ForwardBlockList'
 import MulticastPorts from 'components/Firewall/MulticastPorts'
+import ContainerInterfaceRulesList from 'components/Firewall/ContainerInterfaceRulesList'
 
 import {
+  ArrowLeftToLineIcon,
   ArrowRightFromLineIcon,
   BanIcon,
-  SplitIcon,
-  WaypointsIcon,
   CastIcon,
+  ContainerIcon,
   RouteIcon,
   RouteOffIcon,
-  ArrowLeftToLineIcon
+  SplitIcon,
+  WaypointsIcon,
 } from 'lucide-react-native'
 
 import { Accordion } from 'components/Accordion'
@@ -41,6 +43,7 @@ const Firewall = (props) => {
       ForwardingRules: 'PortForwarding',
       BlockRules: 'Inbound Traffic Block',
       ForwardingBlockRules: 'Forwarding Traffic Block',
+      ContainerInterfaceRules: 'Container Interface Rules',
       MulticastPorts: 'Multicast Proxy'
     }
 
@@ -93,6 +96,18 @@ const Firewall = (props) => {
         <ForwardBlockList
           title="Forwarding Traffic Block"
           list={config.ForwardingBlockRules}
+          notifyChange={fetchConfig}
+        />
+      )
+    },
+    {
+      label: 'Container Interface Rules',
+      description: 'Allow custom docker container networks access',
+      icon: ContainerIcon,
+      renderItem: () => (
+        <ContainerInterfaceRulesList
+          title="Container Interface Rules"
+          list={config.ContainerInterfaceRules}
           notifyChange={fetchConfig}
         />
       )
