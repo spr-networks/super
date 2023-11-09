@@ -1485,10 +1485,10 @@
   resolved "https://registry.yarnpkg.com/@gluestack-style/legend-motion-animation-driver/-/legend-motion-animation-driver-1.0.2.tgz#051c26b0d501e03b12e4dbfe01b292eee5c29c8f"
   integrity sha512-rB5HIhVzpgPQ9C1JJvY30a1bP0sQRWWFgUHVaiefH8dA/XRAQpmAIMF48JDctrvoBi/tKp5xN10mLE5CtnDRHg==
 
-"@gluestack-style/react@^1.0.11":
-  version "1.0.11"
-  resolved "https://registry.yarnpkg.com/@gluestack-style/react/-/react-1.0.11.tgz#9cc8ce9956bad1cfdabbb37626e36c916f260f26"
-  integrity sha512-EP/pciHm9IaYzXYQVkcwAE4PDuXXvivvk4Lfjsr/ox0QGPtxc+MTBXJlhJoUf+hvosTBv42ElzD+wzW9G2DD0g==
+"@gluestack-style/react@^1.0.15":
+  version "1.0.15"
+  resolved "https://registry.yarnpkg.com/@gluestack-style/react/-/react-1.0.15.tgz#fa0a450bda000172dbcdb8b3f567e2085ec6bc25"
+  integrity sha512-/gpHcQNAG88ZvMcPtE2ZHUxC9u4W6ToGkAgbrOe01IL1I2YBBlo7y1HLooJIofOGLQY2AjtoU/A5w3LrwFFjHA==
   dependencies:
     inline-style-prefixer "^6.0.1"
     normalize-css-color "^1.0.2"
@@ -1608,10 +1608,10 @@
     "@react-native-aria/focus" "^0.2.9"
     "@react-native-aria/interactions" "^0.2.11"
 
-"@gluestack-ui/input@^0.1.22":
-  version "0.1.22"
-  resolved "https://registry.yarnpkg.com/@gluestack-ui/input/-/input-0.1.22.tgz#df2c042fb6f478deed3533b9b213a094589398f3"
-  integrity sha512-9lz8l0glWNXqldp/9+ScyS8bbV0z1s32IltthbmdZfeuv1daHZvzJmaRJrvuQsMVGsu/d8oLwEg6tBlcWo5SCg==
+"@gluestack-ui/input@^0.1.23":
+  version "0.1.23"
+  resolved "https://registry.yarnpkg.com/@gluestack-ui/input/-/input-0.1.23.tgz#69580f67c6d7927ee6957e552d628999c42b87e6"
+  integrity sha512-tfPk6uXWJG8aiT8sqg+zp91IxOd+8GrQYwUdl5PZwrW+6Xk9siAHBjYYVO6lQCvFrFSqcj3JQeuL0CZWrdoFrg==
   dependencies:
     "@gluestack-ui/form-control" "^0.1.14"
     "@gluestack-ui/utils" "^0.1.12"
@@ -1786,10 +1786,10 @@
     "@gluestack-ui/utils" "^0.1.12"
     "@react-native-aria/focus" "^0.2.9"
 
-"@gluestack-ui/themed@^1.0.9":
-  version "1.0.9"
-  resolved "https://registry.yarnpkg.com/@gluestack-ui/themed/-/themed-1.0.9.tgz#f7fb1983c87d0df84c73d05d8765f03699bb2df6"
-  integrity sha512-WXzAwlLdovFqanrSSHDP3u7yYTpls3vFcOydRppNvRIiEeCPreEyvFme0kFr7DVSGNiNyeaIq8v0KXAkv+Cu5w==
+"@gluestack-ui/themed@^1.0.13":
+  version "1.0.13"
+  resolved "https://registry.yarnpkg.com/@gluestack-ui/themed/-/themed-1.0.13.tgz#3c0499f2301a89e17c45ca5b894b0bd72fc9c2b9"
+  integrity sha512-2TWRlSoJKkVah9apN3s31u9czlk7tdmznM2/ap/mH5fozpmVY2/vQc1xwjFx/b+1Pe9GGV5smjrKHrPD8/+KDw==
   dependencies:
     "@expo/html-elements" latest
     "@gluestack-style/animation-resolver" "^1.0.2"
@@ -1806,7 +1806,7 @@
     "@gluestack-ui/form-control" "^0.1.15"
     "@gluestack-ui/icon" "^0.1.18"
     "@gluestack-ui/image" "^0.1.6"
-    "@gluestack-ui/input" "^0.1.22"
+    "@gluestack-ui/input" "^0.1.23"
     "@gluestack-ui/linear-gradient" "^0.1.2"
     "@gluestack-ui/link" "^0.1.15"
     "@gluestack-ui/menu" "^0.2.25"
