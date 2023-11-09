@@ -181,7 +181,7 @@ export default (props) => {
     }
   }
 
-  useEffect(async () => {
+  const fetchData = async () => {
     try {
       let devices = await deviceAPI.list()
       setDevices(Object.values(devices))
@@ -198,6 +198,10 @@ export default (props) => {
     if (wan_data) {
       setWan(wan_data)
     }
+  }
+
+  useEffect(() => {
+    fetchData()
   }, [])
 
   const deviceByIp = (ip) => {
