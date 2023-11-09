@@ -43,7 +43,7 @@ const Firewall = (props) => {
       ForwardingRules: 'PortForwarding',
       BlockRules: 'Inbound Traffic Block',
       ForwardingBlockRules: 'Forwarding Traffic Block',
-      ContainerInterfaceRules: 'Container Interface Rules',
+      ContainerInterfaceRules: 'Custom Interface Access',
       MulticastPorts: 'Multicast Proxy'
     }
 
@@ -101,12 +101,12 @@ const Firewall = (props) => {
       )
     },
     {
-      label: 'Container Interface Rules',
-      description: 'Allow custom docker container networks access',
+      label: 'Custom Interface Access',
+      description: 'Allow custom interfaces network access',
       icon: ContainerIcon,
       renderItem: () => (
         <ContainerInterfaceRulesList
-          title="Container Interface Rules"
+          title="Custom Interface Access"
           list={config.ContainerInterfaceRules}
           notifyChange={fetchConfig}
         />

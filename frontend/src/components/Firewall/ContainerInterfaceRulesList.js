@@ -48,8 +48,8 @@ const ContainerInterfaceRulesList = (props) => {
         description="Add rules to allow custom docker networks access"
       >
         <ModalForm
-          title={`Add Container Interface Rule`}
-          triggerText="Add Container Interface Rule"
+          title={`Add Custom Interface Rule`}
+          triggerText="Add Custom Interface Rule"
           triggerProps={{
             sx: {
               '@base': { display: 'none' },
@@ -111,7 +111,7 @@ const ContainerInterfaceRulesList = (props) => {
         rounded="$none"
         onPress={() => refModal.current()}
       >
-        <ButtonText>Add Container Interface Rule</ButtonText>
+        <ButtonText>Add Interface Rule</ButtonText>
         <ButtonIcon as={AddIcon} />
       </Button>
     </VStack>

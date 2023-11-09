@@ -42,6 +42,8 @@ import { Address4 } from 'ip-address'
 import { Select } from 'components/Select'
 import { ListHeader, ListItem } from 'components/List'
 
+{
+  /*
 const LANLinkSetConfig = ({ iface, onSubmit, ...props }) => {
   const type = 'config'
   const context = useContext(AlertContext)
@@ -109,6 +111,7 @@ const LANLinkSetConfig = ({ iface, onSubmit, ...props }) => {
     </VStack>
   )
 }
+*/}
 
 const ContainerNetInfo = (props) => {
   const context = useContext(AlertContext)
@@ -121,10 +124,10 @@ const ContainerNetInfo = (props) => {
 
   const [iface, setIface] = useState(null)
 
+  {/*
   const [showModal, setShowModal] = useState(false)
   const [modal, setModal] = useState('')
-
-  const [supernets, setSupernets] = useState([])
+  */}
 
   function isLocalIpAddress(ipAddress) {
     const ipv4Regex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/
@@ -167,13 +170,17 @@ const ContainerNetInfo = (props) => {
 
       api.get('/info/docker').then((docker) => {
         let networked = docker.
-          filter((c) => c.State == "running" && c.NetworkSettings.Networks.bridge == null && c.NetworkSettings.Networks.host == null)
+          filter((c) => c.State == "running" && c.NetworkSettings.Networks.host == null)
 
         let netMap = {}
         for (let c of Object.values(networked)) {
           for (let network of Object.values(c.NetworkSettings.Networks)) {
             if (network.IPAddress != "") {
-              netMap[network.Gateway] = c
+              if (netMap[network.Gateway] === undefined) {
+                netMap[network.Gateway] = [c]
+              } else {
+                netMap[network.Gateway].append(c)
+              }
             }
           }
         }
@@ -181,20 +188,6 @@ const ContainerNetInfo = (props) => {
         setDockerNetmap(netMap)
       }).catch((err) => context.error('fail ' + err))
 
-      /*
-      let opts = containers
-        .filter((c) => c.State == "running")
-        .map((c) => {
-          return {
-            label: this.niceDockerLabel(c),
-            value: this.niceDockerName(c)
-          }
-        })
-        */
-
-    api.get('/subnetConfig').then((config) => {
-      setSupernets(config.TinyNets)
-    })
   }
 
   useEffect(() => {
@@ -239,16 +232,20 @@ const ContainerNetInfo = (props) => {
         for (let link_ip of linkIPs[link]) {
           if (container_gateway == link_ip) {
             //okay go through each container, and see if the ip address matches
-            let container = dockerNetmap[container_gateway]
-            let type = 'Docker Network'
-            let networkName = getNetworkName(container, container_gateway)
-            let c_ip = container.NetworkSettings.Networks[networkName].IPAddress
-            let c_prefix = container.NetworkSettings.Networks[networkName].IPPrefixLen
-            let entry = { Interface: link, IPs: linkIPs[link].sort(), Type: type,
-              Container: container,
-              ContainerIP:  c_ip + "/" + c_prefix,
-              Gateway: container_gateway}
-            links.push(entry)
+            let containers = dockerNetmap[container_gateway]
+
+            for (let container of containers) {
+              let type = 'Docker Network'
+              let networkName = getNetworkName(container, container_gateway)
+              let c_ip = container.NetworkSettings.Networks[networkName].IPAddress
+              let c_prefix = container.NetworkSettings.Networks[networkName].IPPrefixLen
+              let entry = { Interface: link, IPs: linkIPs[link].sort(), Type: type,
+                Container: container,
+                ContainerIP:  c_ip,
+                Prefix: c_prefix,
+                Gateway: container_gateway}
+              links.push(entry)
+            }
           }
         }
       }
@@ -261,23 +258,6 @@ const ContainerNetInfo = (props) => {
       <ThreeDotsIcon />
     </Button>
   )
-
-  const truncateSupernetIps = (ips) => {
-    if (ips.length < 3) return false
-    let count = 0
-    //check if ips all belong in supernets
-    for (let ip of ips) {
-      let local_addr = new Address4(ip)
-      for (let subnet of supernets) {
-        let sub_addr = new Address4(subnet)
-        if (local_addr.isInSubnet(sub_addr)) {
-          count++
-        }
-      }
-    }
-    if (count == ips.length) return true
-    return false
-  }
 
   const moreMenu = (iface) => (
     <Button
@@ -338,42 +318,8 @@ const ContainerNetInfo = (props) => {
 
   return (
     <ScrollView h="$full">
-      <VStack space="md" sx={{ '@md': { maxWidth: '$3/4' } }}>
-        <ListHeader title="Container Networks Configuration"></ListHeader>
-        <FlatList
-          data={lanLinks}
-          keyExtractor={(item) => `${item.Interface}_${item.Type}`}
-          renderItem={({ item }) => (
-            <ListItem>
-              <Text flex={1} size="sm" bold>
-                {item.Interface}
-              </Text>
-              <VStack flex={1} space="sm">
-                <Text size="sm">{item.Type}</Text>
-                <Text size="sm" color="$muted500">
-                  {item.Subtype}
-                </Text>
-              </VStack>
-              <VStack flex={2} space="sm">
-                {truncateSupernetIps(item.IPs)
-                  ? supernets.map((net) => <Text size="sm">{net}</Text>)
-                  : item.IPs.map((ip) => (
-                      <Text size="sm" key={ip}>
-                        {ip}
-                      </Text>
-                    ))}
-              </VStack>
-              <HStack flex={1}>
-                {item.Enabled ? (
-                  <Badge action="success" variant="outline" size="sm">
-                    <BadgeText>Enabled</BadgeText>
-                  </Badge>
-                ) : null}
-              </HStack>
-              <Box flex={1}>{moreMenu(item.Interface)}</Box>
-            </ListItem>
-          )}
-        />
+      <VStack space="md">
+        <ListHeader title="Container Networks"></ListHeader>
 
         <FlatList
           data={links}
@@ -390,8 +336,17 @@ const ContainerNetInfo = (props) => {
                 <Text size="sm">{getNetworkName(item.Container, item.Gateway)}</Text>
               </VStack>
 
+
               <VStack flex={1} space="sm">
-                <Text size="sm">{JSON.stringify(item.Container?.Names)}</Text>
+                {item.IPs.map((ip) => (
+                      <Text size="sm" key={ip}>
+                        {ip}
+                      </Text>
+                ))}
+              </VStack>
+
+              <VStack flex={1} space="sm">
+                <Text size="sm">{item.Container?.Names[0].slice(1)}</Text>
               </VStack>
 
               <VStack flex={1} space="sm">
@@ -399,20 +354,16 @@ const ContainerNetInfo = (props) => {
               </VStack>
 
 
-              <VStack flex={3} space="sm">
-                {truncateSupernetIps(item.IPs)
-                  ? supernets.map((net) => <Text size="sm">{net}</Text>)
-                  : item.IPs.map((ip) => (
-                      <Text size="sm" key={ip}>
-                        {ip}
-                      </Text>
-                    ))}
-              </VStack>
-              <Box flex={1}>{moreMenu(item.Interface)}</Box>
+                <VStack flex={1} space="sm">
+                  <Text size="sm">{item.Prefix ? "/" + item.Prefix: ""}</Text>
+                </VStack>
+
+              {/*<Box flex={1}>{moreMenu(item.Interface)}</Box>*/}
             </ListItem>
           )}
         />
 
+        {/*
         <Modal
           isOpen={showModal}
           onClose={() => {
@@ -430,25 +381,14 @@ const ContainerNetInfo = (props) => {
               </ModalCloseButton>
             </ModalHeader>
             <ModalBody pb="$6">
-              {/*
-                TBD what to configure here?
-                first iteration
-                  1. WAN access
-                  2. DNS access
-                  3. LAN access
 
-                  4. Groups: TBD?
-                  5. Tags: TBD?
-
-                  
-
-              */}
               {iface && modal == 'config' ? (
                 <LANLinkSetConfig iface={iface} onSubmit={onSubmit} />
               ) : null}
             </ModalBody>
           </ModalContent>
         </Modal>
+        */}
       </VStack>
     </ScrollView>
   )
