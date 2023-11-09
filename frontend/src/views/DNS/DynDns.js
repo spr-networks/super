@@ -36,9 +36,11 @@ const Subdomain = ({ entry, domain, updateSubdomain, deleteSubdomain }) => (
       flex={1}
       size="md"
       variant="outline"
-      defaultValue={entry}
-      onChangeText={(value) => updateSubdomain(domain, entry, value)}
     >
+      <InputField
+        defaultValue={entry}
+        onChangeText={(value) => updateSubdomain(domain, entry, value)}
+      />
       <InputSlot>
         <Button
           action="secondary"
