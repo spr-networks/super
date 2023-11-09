@@ -28,8 +28,8 @@ import ProtocolRadio from 'components/Form/ProtocolRadio'
 
 class AddContainerInterfaceRuleImpl extends React.Component {
   state = {
-    SrcIP: '172.20.0.2',
-    Interface: 'site99',
+    SrcIP: '',
+    Interface: '',
     WAN: false,
     LAN: false,
     DNS: false,

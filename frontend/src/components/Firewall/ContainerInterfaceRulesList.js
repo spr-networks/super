@@ -13,6 +13,7 @@ import {
   ButtonIcon,
   Box,
   FlatList,
+  HStack,
   VStack,
   Text,
   AddIcon,
@@ -65,13 +66,18 @@ const ContainerInterfaceRulesList = (props) => {
         data={list}
         renderItem={({ item }) => (
           <ListItem>
-            <Badge action="muted" variant="outline">
-              <BadgeText>{item.Protocol}</BadgeText>
-            </Badge>
 
+            <Text>{item.Interface}</Text>
             <Text>{item.SrcIP}</Text>
-            <Text>{item.DstIP}</Text>
-            <Text>{item.DstPort}</Text>
+            <HStack>
+            { ["DNS", "LAN", "WAN"].map((entry) => {
+              if (item[entry]) {
+                return <Badge action="muted" variant="outline">
+                  <BadgeText>{entry}</BadgeText>
+                </Badge>
+              }
+            })}
+            </HStack>
 
             <Button
               alignSelf="center"
