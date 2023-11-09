@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import PropTypes from 'prop-types'
 import { groupDescriptions } from 'api/Group'
 
@@ -14,9 +14,11 @@ import {
   useColorMode
 } from '@gluestack-ui/themed'
 
+import { AppContext } from 'AppContext'
 import { ListHeader, ListItem } from 'components/List'
 import { CableIcon, WifiIcon } from 'lucide-react-native'
 import { InterfaceItem } from 'components/TagItem'
+import DeviceItem from 'components/Devices/DeviceItem'
 
 const mapDeviceVMAP = (dev, group) => {
   dev.ifname = ''
@@ -66,6 +68,7 @@ const getGroupMembers = (group) => {
 }
 
 const GroupListing = ({ group, ...props }) => {
+  const appContext = useContext(AppContext)
   const translateName = (name) => {
     if (name === 'dns') {
       return 'DNS'
@@ -90,6 +93,7 @@ const GroupListing = ({ group, ...props }) => {
       estimatedItemSize={100}
       renderItem={({ item }) => (
         <ListItem>
+          {/*
           <Text flex={1} bold size="sm">
             {item.Name}
           </Text>
@@ -102,6 +106,12 @@ const GroupListing = ({ group, ...props }) => {
               {item.MAC}
             </Text>
           </VStack>
+            */}
+          <DeviceItem
+            w="$1/2"
+            item={appContext.getDevice(item.MAC, 'MAC')}
+            justifyContent="space-between"
+          />
 
           <HStack justifyContent="flex-end">
             <InterfaceItem name={item?.ifname} />
