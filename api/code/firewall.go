@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"reflect"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -57,8 +59,37 @@ type ContainerInterfaceRule struct {
 	DNS       bool
 	Interface string
 	SrcIP     string
-	// Groups    []string //unused for now-> will need to update comparison for these
-	// Tags      []string //unused for now
+	Groups    []string //unused for now-> will need to update comparison for these
+	Tags      []string //unused for now
+}
+
+func (c *ContainerInterfaceRule) Equals(other *ContainerInterfaceRule) bool {
+	// Create copies of the Groups and Tags so that the original slices are not modified
+	cGroups := make([]string, len(c.Groups))
+	copy(cGroups, c.Groups)
+	cTags := make([]string, len(c.Tags))
+	copy(cTags, c.Tags)
+
+	otherGroups := make([]string, len(other.Groups))
+	copy(otherGroups, other.Groups)
+	otherTags := make([]string, len(other.Tags))
+	copy(otherTags, other.Tags)
+
+	// Sort the copies of Groups and Tags
+	sort.Strings(cGroups)
+	sort.Strings(cTags)
+	sort.Strings(otherGroups)
+	sort.Strings(otherTags)
+
+	// Create a copy of ContainerInterfaceRule to compare the sorted slices
+	cCopy := *c
+	otherCopy := *other
+	cCopy.Groups = cGroups
+	cCopy.Tags = cTags
+	otherCopy.Groups = otherGroups
+	otherCopy.Tags = otherTags
+
+	return reflect.DeepEqual(cCopy, otherCopy)
 }
 
 type ServicePort struct {
@@ -585,10 +616,14 @@ func modifyContainerInterfaceRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//we accept them, but they are not useful for now
+	crule.Groups = normalizeStringSlice(crule.Groups)
+	crule.Tags = normalizeStringSlice(crule.Tags)
+
 	if r.Method == http.MethodDelete {
 		for i := range gFirewallConfig.ContainerInterfaceRules {
 			a := gFirewallConfig.ContainerInterfaceRules[i]
-			if crule == a {
+			if crule.Equals(&a) {
 				gFirewallConfig.ContainerInterfaceRules = append(gFirewallConfig.ContainerInterfaceRules[:i], gFirewallConfig.ContainerInterfaceRules[i+1:]...)
 				saveFirewallRulesLocked()
 				err = applyContainerInterfaceRule(a, "delete", true)
@@ -1158,6 +1193,14 @@ func applyContainerInterfaceRule(container_rule ContainerInterfaceRule, action s
 			}
 		}
 	}
+
+	for _, group := range container_rule.Groups {
+		addCustomVerdict(group, container_rule.SrcIP, container_rule.Interface)
+	}
+
+	/*
+		TBD: tags support?
+	*/
 
 	return err
 }
@@ -1753,12 +1796,12 @@ func addCustomVerdict(ZoneName string, IP string, Iface string) {
 		// the {name}_dst_access map allows Inet packets to a certain IP/interface pair
 		//the {name}_src_access part allows Inet packets from a IP/IFace set
 
-		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_src_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "}").Run()
+		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_src_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "flags", "interval", ";", "}").Run()
 		if err != nil {
 			log.Println("addCustomVerdict Failed", err)
 			return
 		}
-		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_dst_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "}").Run()
+		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_dst_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "flags", "interval", ";", "}").Run()
 		if err != nil {
 			log.Println("addCustomVerdict Failed", err)
 			return
