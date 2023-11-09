@@ -239,8 +239,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
       </>
     )
   }
-
-  eventParsers['wifi:station:disconnect'] = 'wifi:auth:success'
+  eventParsers['wifi:station:disconnect'] = eventParsers['wifi:auth:success']
 
   useEffect(() => {
     setIsParsable(eventParsers[selected] !== undefined)
