@@ -63,11 +63,24 @@ table inet filter {
     type ifname;
   }
 
-  map custom_interface_forward {
-    # iifname src_ip oifname {site} dst_ip
-    type ifname . ipv4_addr . ifname . ipv4_addr : verdict;
+  # src ip . dst ip
+  map site_forward {
+    type ipv4_addr . ipv4_addr . ifname : verdict;
     flags interval;
   }
+
+  # src ip . dst ip . dst port
+  map site_forward_tcp_port {
+    type ipv4_addr . ipv4_addr . inet_service . ifname: verdict;
+    flags interval;
+  }
+
+  # src ip . dst ip . dst port
+  map site_forward_udp_port {
+    type ipv4_addr . ipv4_addr . inet_service . ifname: verdict;
+    flags interval;
+  }
+
 
   # fwd_iface_* maps explicitly allow ranges, whereas @internet_access, @lan_access do not.
   # We can consider rolling them in the same place later.
@@ -338,8 +351,12 @@ table inet filter {
     # Forward to Site VPN if client has site access
     counter oifname @outbound_sites ip saddr . iifname vmap @internet_access
 
-    # Forward to custom interfaces if client has site access
-    counter iifname . ip saddr . oifname . ip daddr vmap @custom_interface_forward
+    # Forward to site interfaces if client has site access, filtered by src+addr
+    counter ip saddr . ip daddr . oifname vmap @site_forward
+
+    # and port specific ones
+    counter ip saddr . ip daddr . tcp dport . oifname vmap @site_forward_tcp_port
+    counter ip saddr . ip daddr . udp dport . oifname vmap @site_forward_udp_port
 
     # Forward to uplink interfaces
     counter oifname @uplink_interfaces ip saddr . iifname vmap @internet_access
