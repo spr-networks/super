@@ -1165,7 +1165,9 @@ func applyContainerInterfaceRule(container_rule ContainerInterfaceRule, action s
 		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_wan",
 			"{", container_rule.Interface, ".", container_rule.SrcIP, ":", "accept", "}").Run()
 		if err != nil {
-			log.Println("failed to populate "+container_rule.Interface+" "+container_rule.SrcIP+" on fwd_iface_wan", err)
+			if action != "delete" {
+				log.Println("failed to "+action+" "+container_rule.Interface+" "+container_rule.SrcIP+" on fwd_iface_wan", err)
+			}
 			if !fthru {
 				return err
 			}
@@ -1176,7 +1178,9 @@ func applyContainerInterfaceRule(container_rule ContainerInterfaceRule, action s
 		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_lan",
 			"{", container_rule.Interface, ".", container_rule.SrcIP, ":", "accept", "}").Run()
 		if err != nil {
-			log.Println("failed to populate "+container_rule.Interface+" "+container_rule.SrcIP+" on fwd_iface_lan", err)
+			if action != "delete" {
+				log.Println("failed to "+action+" "+container_rule.Interface+" "+container_rule.SrcIP+" on fwd_iface_lan", err)
+			}
 			if !fthru {
 				return err
 			}
@@ -1187,7 +1191,9 @@ func applyContainerInterfaceRule(container_rule ContainerInterfaceRule, action s
 		err = exec.Command("nft", action, "element", "inet", "filter", "dns_access",
 			"{", container_rule.SrcIP, ".", container_rule.Interface, ":", "accept", "}").Run()
 		if err != nil {
-			log.Println("failed to populate "+container_rule.Interface+" "+container_rule.SrcIP+" on dns_access", err)
+			if action != "delete" {
+				log.Println("failed to  "+action+" "+container_rule.Interface+" "+container_rule.SrcIP+" on dns_access", err)
+			}
 			if !fthru {
 				return err
 			}
@@ -1206,21 +1212,12 @@ func applyContainerInterfaceRule(container_rule ContainerInterfaceRule, action s
 }
 
 func applyContainerInterfaces() {
-	//lets start simple.
-	/*
-		counter oifname @uplink_interfaces iifname . ip saddr vmap @fwd_iface_wan
-		counter oifname @lan_interfaces    iifname . ip saddr vmap @fwd_iface_lan
-		counter udp dport 53  ip saddr . iifname vmap @dns_access
-
-		$(if [ "$DOCKERIF" ]; then echo "elements = { $DOCKERIF . $DOCKERNET : accept }" ; fi )
-	*/
-
-	err := exec.Command("nft", "flush", "set", "inet", "filter", "fwd_iface_wan").Run()
+	err := exec.Command("nft", "flush", "map", "inet", "filter", "fwd_iface_wan").Run()
 	if err != nil {
 		log.Println("failed to flush fwd_iface_wan", err)
 	}
 
-	err = exec.Command("nft", "flush", "set", "inet", "filter", "fwd_iface_wan").Run()
+	err = exec.Command("nft", "flush", "map", "inet", "filter", "fwd_iface_lan").Run()
 	if err != nil {
 		log.Println("failed to flush fwd_iface_lan", err)
 	}
