@@ -309,7 +309,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     })
 
     getDevices().then((res) => {
-      console.log('++ got', res.length, 'devices')
+      //console.log('++ got', res.length, 'devices')
     })
 
     // callback for notifications, web & ios
