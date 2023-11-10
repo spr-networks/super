@@ -108,8 +108,8 @@ const GroupListing = ({ group, ...props }) => {
           </VStack>
             */}
           <DeviceItem
-            w="$1/2"
             item={appContext.getDevice(item.MAC, 'MAC')}
+            w="$1/2"
             justifyContent="space-between"
           />
 

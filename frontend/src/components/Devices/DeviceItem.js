@@ -23,7 +23,7 @@ const DeviceItem = React.memo(({ item, ...props }) => {
       ) : null}
 
       {show.includes('Name') ? (
-        <Text size="md" bold={!!item?.Name} w="$1/3">
+        <Text size="md" bold={!!item?.Name} w="$1/3" minWidth="$24">
           {item?.Name || 'N/A'}
         </Text>
       ) : null}

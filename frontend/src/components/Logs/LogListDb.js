@@ -156,7 +156,8 @@ const LogList = (props) => {
         selectedValue={selectedValue}
         selectedLabel={selectedValue}
         onValueChange={onValueChange}
-        minWidth="$32"
+        maxWidth="$32"
+        sx={{ '@md': { maxWidth: '$full' } }}
       >
         {options.map((value) => (
           <Select.Item key={value} label={niceTopic(value)} value={value} />

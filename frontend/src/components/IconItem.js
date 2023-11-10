@@ -1,11 +1,10 @@
 import React from 'react'
 
-import { Box, Icon } from '@gluestack-ui/themed'
+import { Icon } from '@gluestack-ui/themed'
 import { BrandIcons } from 'IconUtils'
 
 import {
   Computer,
-  Laptop,
   Laptop2,
   Cable,
   Network,
@@ -19,17 +18,6 @@ import {
   Globe2
 } from 'lucide-react-native'
 import { Platform } from 'react-native'
-
-let okBrands = [
-  'Apple',
-  'Android',
-  'Linux',
-  'Microsoft',
-  'PlayStation',
-  'RaspberryPi',
-  'Synology',
-  'Sonos'
-]
 
 let deviceIcons = {
   Ethernet: Network,
