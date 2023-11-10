@@ -235,7 +235,7 @@ table inet filter {
 
     # Drop input from the site to site output interfaces. They are only a sink,
     # Not a source that can connect into SPR services
-    counter iifname "site*" goto DROPLOGINP
+    counter iifname @outbound_sites goto DROPLOGINP
 
     # Allow wireguard from only WANIF interfaces to prevent loops
     iifname @uplink_interfaces udp dport $WIREGUARD_PORT counter accept
