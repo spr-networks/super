@@ -32,13 +32,11 @@ import { ListHeader } from 'components/List'
 
 const Subdomain = ({ entry, domain, updateSubdomain, deleteSubdomain }) => (
   <HStack space="md" my="$2">
-    <Input
-      flex={1}
-      size="md"
-      variant="outline"
-      defaultValue={entry}
-      onChangeText={(value) => updateSubdomain(domain, entry, value)}
-    >
+    <Input flex={1} size="md" variant="outline">
+      <InputField
+        defaultValue={entry}
+        onChangeText={(value) => updateSubdomain(domain, entry, value)}
+      />
       <InputSlot>
         <Button
           action="secondary"
