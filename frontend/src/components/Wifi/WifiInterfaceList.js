@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react'
-import { Dimensions, Platform } from 'react-native'
 
 import { wifiAPI } from 'api'
 
@@ -21,7 +20,9 @@ import {
   View
 } from '@gluestack-ui/themed'
 
-import { AlertCircleIcon, CheckCircleIcon } from 'lucide-react-native'
+import { Accordion } from 'components/Accordion'
+
+import { AlertCircleIcon, CheckCircleIcon, WifiIcon } from 'lucide-react-native'
 
 //import { FlashList } from '@shopify/flash-list'
 
@@ -85,22 +86,22 @@ const WifiInterface = ({ iw, ...props }) => {
     <View
       key={iw.wiphy}
       bg="$backgroundCardLight"
+      minHeight={200}
+      maxHeight={400}
       sx={{
-        _dark: { bg: '$backgroundCardDark' }
+        _dark: { bg: '$backgroundCardDark' },
+        '@md': { minHeight: 420, maxHeight: 420 }
       }}
-      p="$4"
     >
-      <Heading size="lg">{iw.wiphy}</Heading>
-
       <VStack
         sx={{
-          '@md': { flexDirection: 'row' },
+          '_@md': { flexDirection: 'row' },
           _dark: { borderColor: '$borderColorCardDark' }
         }}
         space="md"
         my="$2"
         rounded="$md"
-        borderWidth={1}
+        borderWidth="$0"
         borderColor="$borderColorCardLight"
         flex={1}
       >
@@ -111,21 +112,24 @@ const WifiInterface = ({ iw, ...props }) => {
             _dark: { borderRightColor: '$borderColorCardDark' }
           }}
           p="$2"
+          px="$2"
+          flexDirection="row"
+          space="md"
+          flexWrap="wrap"
         >
           {tabList.map((tab) =>
             iw[tab] || ['other', 'SPR compatibility'].includes(tab) ? (
               <Button
                 key={tab}
-                action="primary"
-                variant="link"
+                action={activeTab === tab ? 'primary' : 'secondary'}
+                variant={activeTab === tab ? 'outline' : 'link'}
+                p="$1.5"
                 size="sm"
                 rounded={false}
                 justifyContent={'flex-start'}
                 onPress={() => setActiveTab(tab)}
               >
-                <ButtonText
-                  color={activeTab === tab ? '$primary600' : '$muted500'}
-                >
+                <ButtonText>
                   {tab.replace(/_/g, ' ').replace('supported ', '')}
                 </ButtonText>
               </Button>
@@ -133,7 +137,7 @@ const WifiInterface = ({ iw, ...props }) => {
           )}
         </VStack>
 
-        <Box h="100%" p="$2" sx={{ '@md': { w: '$2/3' } }}>
+        <ScrollView h="$full" p="$2" sx={{ '_@md': { w: '$2/3' } }}>
           {tabList.map((tab) =>
             iw[tab] || ['other', 'SPR compatibility'].includes(tab) ? (
               <VStack key={tab} display={activeTab == tab ? 'flex' : 'none'}>
@@ -357,7 +361,7 @@ const WifiInterface = ({ iw, ...props }) => {
               </VStack>
             ) : null
           )}
-        </Box>
+        </ScrollView>
       </VStack>
     </View>
   )
@@ -389,24 +393,44 @@ const WifiInterfaceList = (props) => {
     })
   }, [])
 
-  if (!iws.length) {
-    return <></>
+  const getMainDev = (item) => {
+    let devKey = Object.keys(item.devices)
+      .filter((dev) => !dev.includes('.'))
+      ?.pop()
+
+    return item.devices[devKey]
   }
 
-  let navbarHeight = 64
-  let tabsHeight = 32
+  const getDesc = (item) => {
+    let dev = getMainDev(item)
+    if (dev?.type == 'AP' && dev.ssid) {
+      return `${dev.type}: ${dev.ssid}`
+    }
 
-  let h =
-    Platform.OS == 'web'
-      ? Dimensions.get('window').height - navbarHeight - tabsHeight
-      : '100%'
+    return `${dev.type}`
+  }
+
+  const getIconColor = (item) => {
+    let dev = getMainDev(item)
+    if (dev?.type == 'AP' && dev.ssid) {
+      return '$success500'
+    }
+
+    return '$primary500'
+  }
+
+  const items = iws.map((item) => ({
+    label: item.wiphy,
+    description: getDesc(item),
+    icon: WifiIcon,
+    colorIcon: getIconColor(item),
+    renderItem: () => <WifiInterface iw={item} />
+  }))
 
   return (
-    <ScrollView h={h}>
-      {iws.map((iw) => (
-        <WifiInterface key={iw.wiphy} iw={iw} />
-      ))}
-    </ScrollView>
+    <View flex={1}>
+      <Accordion items={items} open={['phy0']} showDescription={true} />
+    </View>
   )
 }
 
