@@ -46,6 +46,10 @@ import {
   toOption
 } from './Utils'
 
+const labelsProtocol = [
+  {label: 'tcp', value: 'tcp'},
+  {label: 'udp', value: 'udp'},
+]
 const defaultOptions = async function (name) {
   if (name.endsWith('Port')) {
     return [
@@ -759,17 +763,16 @@ const actions = [
     }
   },
   {
-    title: 'Docker Forward TCP',
+    title: 'Docker Forward',
     cardType: 'action',
     description:
-      'Forward TCP for specified source to exposed port for a local container',
+      'Forward traffic to a local container. The container does NOT need to expose ports',
     color: '$blue500',
     icon: BrandIcons.Docker, //SplitIcon, //Platform.OS == 'ios' ? SplitIcon : 'Docker',
     params: [
       {
         name: 'Protocol',
         type: PropTypes.string,
-        hidden: true
       },
       {
         name: 'Client',
@@ -829,6 +832,10 @@ const actions = [
       return `${name}:${ports}`
     },
     getOptions: async function (name = 'DstPort') {
+      if (name == 'Protocol') {
+        return labelsProtocol
+      }
+
       if (name.endsWith('Port') || name == 'OriginalDstIP') {
         return await defaultOptions(name)
       }
@@ -862,7 +869,21 @@ const actions = [
         return
       }
 
-      let DstIP = container.NetworkSettings.Networks.bridge.IPAddress
+      let DstIP
+
+      let networks = container.NetworkSettings.Networks
+      if (networks.bridge) {
+        DstIP = container.NetworkSettings.Networks.bridge.IPAddress
+      } else {
+        let values = Object.values(container.NetworkSettings.Networks)
+        if (values.length > 0 ) {
+          DstIP = values[0].IPAddress
+        } else {
+          context.error("container has no IP address")
+          return
+        }
+      }
+
       let DstPort = this.values.ContainerPort
 
       //TODO this should be a iface select

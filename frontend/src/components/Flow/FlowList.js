@@ -422,7 +422,7 @@ const Flow = ({ flow, edit, ...props }) => {
   )
 }
 
-const saveFlow = async (flow) => {
+const saveFlow = async (flow, context) => {
   let trigger = flow.triggers[0],
     action = flow.actions[0]
 
@@ -437,7 +437,8 @@ const saveFlow = async (flow) => {
       ...(await action.preSubmit())
     }
   } catch (err) {
-    context.error(err)
+    context.error(err.message)
+    return
   }
 
   data.disabled = flow.disabled
@@ -661,7 +662,7 @@ const FlowList = (props) => {
     }
 
     // send flow to api
-    saveFlow(flow)
+    saveFlow(flow, context)
       .then((res) => {
         // update ui
         fetchFlows()
