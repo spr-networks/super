@@ -49,6 +49,11 @@ export default (props) => {
     if (groups) {
       // get vmap for each group and show list
       for (const group of groups) {
+        //other groups have _src_access, _dst_access maps
+        //but we dont need to analyze those
+        if (!['lan', 'wan', 'dns'].includes(group.Name)) {
+          continue
+        }
         const vmap = await nfmapAPI
           .getNFVerdictMap(group.Name)
           .catch((error) => {

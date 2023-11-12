@@ -11,7 +11,8 @@ export const AppContext = createContext({
   features: [],
   devices: [],
   getDevices: () => {},
-  getDevice: () => {}
+  getDevice: () => {},
+  getGroups: () => []
 })
 
 export const alertState = {

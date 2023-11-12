@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 
 import ClientSelect from 'components/ClientSelect'
 import { firewallAPI } from 'api'
-import { AlertContext } from 'AppContext'
+import { AlertContext, AppContext } from 'AppContext'
 
 import {
   Button,
@@ -20,9 +20,13 @@ import {
   FormControlLabelText,
   Input,
   InputField,
+  Text,
   HStack,
   VStack
 } from '@gluestack-ui/themed'
+
+import { TagItem, GroupItem } from 'components/TagItem'
+import { GroupMenu, TagMenu } from 'components/TagMenu'
 
 import ProtocolRadio from 'components/Form/ProtocolRadio'
 
@@ -34,8 +38,11 @@ class AddContainerInterfaceRuleImpl extends React.Component {
     LAN: false,
     DNS: false,
     Groups: [],
-    Tags: []
+    Tags: [],
+    GroupOptions: []
   }
+
+  defaultGroups = ['wan', 'dns', 'lan']
 
   constructor(props) {
     super(props)
@@ -55,10 +62,11 @@ class AddContainerInterfaceRuleImpl extends React.Component {
     let crule = {
       SrcIP: this.state.SrcIP,
       Interface: this.state.Interface,
-      WAN: this.state.WAN,
-      LAN: this.state.LAN,
-      DNS: this.state.DNS
+      WAN: this.state.Groups.includes("wan"),
+      LAN: this.state.Groups.includes("lan"),
+      DNS: this.state.Groups.includes("dns")
     }
+
 
     const done = (res) => {
       if (this.props.notifyChange) {
@@ -74,9 +82,23 @@ class AddContainerInterfaceRuleImpl extends React.Component {
       })
   }
 
-  componentDidMount() {}
+  componentDidMount() {
+    this.props.appContext.getGroups()
+    .then((groups) => {
+      this.handleChange('GroupOptions', groups) //groups.map(x => ({label: x, value: x})))
+    })
+  }
+
+  handleGroups = (groups) => {
+    this.handleChange('Groups', groups)
+  }
 
   render() {
+    //this.props.appContext.getGroups().then((g) => {
+//      alert(g)
+  //  })
+    //alert(this.props.appContext.getGroups())
+
     return (
       <VStack space="md">
         <FormControl isRequired>
@@ -97,60 +119,21 @@ class AddContainerInterfaceRuleImpl extends React.Component {
 
         <FormControl isRequired>
           <FormControlLabel>
-            <FormControlLabelText>Interface Name</FormControlLabelText>
+            <FormControlLabelText>Network Groups</FormControlLabelText>
           </FormControlLabel>
-          <Input size="md" variant="underlined">
-            <InputField
-              variant="underlined"
-              value={this.state.Interface}
-              onChangeText={(value) => this.handleChange('Interface', value)}
-            />
-          </Input>
-          <FormControlHelper>
-            <FormControlHelperText>Interface</FormControlHelperText>
-          </FormControlHelper>
-        </FormControl>
+          <HStack flexWrap="wrap" w="$full" space="md">
+            <HStack space="md" flexWrap="wrap" alignItems="center">
+              {this.state.Groups.map((group) => (
+                <GroupItem key={group} name={group} size="sm" />
+              ))}
+            </HStack>
 
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText>Network Options</FormControlLabelText>
-          </FormControlLabel>
-          <CheckboxGroup>
-            <Checkbox
-              value={this.state.WAN}
-              onChange={(value) => this.handleChange('WAN', value)}
-              defaultIsChecked={this.state.WAN}
-            >
-              <CheckboxIndicator mr="$1">
-                <CheckboxIcon />
-              </CheckboxIndicator>
-              <CheckboxLabel>WAN</CheckboxLabel>
-            </Checkbox>
-          </CheckboxGroup>
-          <CheckboxGroup>
-            <Checkbox
-              value={this.state.LAN}
-              defaultIsChecked={this.state.LAN}
-              onChange={(value) => this.handleChange('LAN', value)}
-            >
-              <CheckboxIndicator mr="$2">
-                <CheckboxIcon />
-              </CheckboxIndicator>
-              <CheckboxLabel>LAN</CheckboxLabel>
-            </Checkbox>
-          </CheckboxGroup>
-          <CheckboxGroup>
-            <Checkbox
-              value={this.state.DNS}
-              defaultIsChecked={this.state.DNS}
-              onChange={(value) => this.handleChange('DNS', value)}
-            >
-              <CheckboxIndicator mr="$2">
-                <CheckboxIcon />
-              </CheckboxIndicator>
-              <CheckboxLabel>DNS</CheckboxLabel>
-            </Checkbox>
-          </CheckboxGroup>
+            <GroupMenu
+              items={[...new Set(this.defaultGroups.concat(this.state.GroupOptions))]}
+              selectedKeys={this.state.Groups}
+              onSelectionChange={this.handleGroups}
+            />
+          </HStack>
         </FormControl>
 
         <Button action="primary" size="md" onPress={this.handleSubmit}>
@@ -171,6 +154,7 @@ export default function AddContainerInterfaceRule(props) {
     <AddContainerInterfaceRuleImpl
       notifyChange={props.notifyChange}
       alertContext={alertContext}
+      appContext={props.appContext}
     ></AddContainerInterfaceRuleImpl>
   )
 }

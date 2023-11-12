@@ -30,7 +30,7 @@ const Firewall = (props) => {
     firewallAPI.config().then(setConfig)
   }
 
-  const [open, setOpen] = useState(['Endpoints', 'Multicast Proxy'])
+  const [open, setOpen] = useState(['Endpoints', 'Port Forwarding'])
 
   useEffect(() => {
     fetchConfig()

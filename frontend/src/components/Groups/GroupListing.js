@@ -80,6 +80,7 @@ const GroupListing = ({ group, ...props }) => {
     return name
   }
 
+
   const list = getGroupMembers(group)
   return (
     <FlatList

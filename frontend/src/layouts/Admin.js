@@ -241,6 +241,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const [version, setVersion] = useState('0.2.1')
   const [features, setFeatures] = useState([])
   const [devices, setDevices] = useState([])
+  const [groups, setGroups] = useState([])
 
   const [notificationSettings, setNotificationSettings] = useState([])
 
@@ -253,9 +254,12 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
       deviceAPI
         .list()
-        .then((devices) => {
-          setDevices(Object.values(devices))
-          resolve(Object.values(devices))
+        .then((devices_) => {
+          setDevices(Object.values(devices_))
+          const uniqueGroups = [...new Set(Object.values(devices_).flatMap(d => d.Groups))];
+          setGroups(uniqueGroups)
+          resolve(Object.values(devices_))
+
         })
         .catch(reject)
     })
@@ -263,6 +267,15 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
   const getDevice = (value, type = 'MAC') =>
     devices.find((d) => d[type] == value)
+
+  const getGroups = () => {
+    return new Promise((resolve, reject) => {
+      getDevices().then((d) => {
+        return resolve(groups)
+      })
+      .catch(reject)
+    })
+  }
 
   useEffect(() => {
     api
@@ -464,7 +477,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         features,
         devices,
         getDevices,
-        getDevice
+        getDevice,
+        getGroups
       }}
     >
       <SafeAreaView

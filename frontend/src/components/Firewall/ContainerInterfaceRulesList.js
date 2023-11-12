@@ -1,9 +1,10 @@
-import React, { useRef } from 'react'
+import React, { useRef, useContext } from 'react'
 import PropTypes from 'prop-types'
 
 import { firewallAPI } from 'api'
 import ModalForm from 'components/ModalForm'
 import AddContainerInterfaceRule from './AddContainerInterfaceRule'
+import { AppContext } from 'AppContext'
 
 import {
   Badge,
@@ -27,10 +28,11 @@ const ContainerInterfaceRulesList = (props) => {
   let title = props.title || `ContainerInterfaceRulesList:`
 
   let refModal = useRef(null)
+  const appContext = useContext(AppContext)
 
   const deleteListItem = (item) => {
     const done = (res) => {
-      props.notifyChange('container_interface')
+      props.notifyChange('custom_interface')
     }
 
     firewallAPI.deleteContainerInterfaceRule(item).then(done)
@@ -38,14 +40,15 @@ const ContainerInterfaceRulesList = (props) => {
 
   const notifyChange = (t) => {
     refModal.current()
-    props.notifyChange('container_interface')
+    props.notifyChange('custom_interface')
   }
+
 
   return (
     <VStack>
       <ListHeader
         title={title}
-        description="Add rules to allow custom docker networks access"
+        description="Manage network access for custom interface names"
       >
         <ModalForm
           title={`Add Custom Interface Rule`}
@@ -58,7 +61,7 @@ const ContainerInterfaceRulesList = (props) => {
           }}
           modalRef={refModal}
         >
-          <AddContainerInterfaceRule notifyChange={notifyChange} />
+          <AddContainerInterfaceRule notifyChange={notifyChange} appContext={appContext} />
         </ModalForm>
       </ListHeader>
 
