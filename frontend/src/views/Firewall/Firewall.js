@@ -107,7 +107,7 @@ const Firewall = (props) => {
       renderItem: () => (
         <ContainerInterfaceRulesList
           title="Custom Interface Access"
-          list={config.ContainerInterfaceRules}
+          list={config.CustomInterfaceRules}
           notifyChange={fetchConfig}
         />
       )
