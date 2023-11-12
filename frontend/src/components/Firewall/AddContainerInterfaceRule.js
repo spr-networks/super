@@ -116,6 +116,22 @@ class AddContainerInterfaceRuleImpl extends React.Component {
 
         <FormControl isRequired>
           <FormControlLabel>
+            <FormControlLabelText>Interface</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              variant="underlined"
+              value={this.state.Interface}
+              onChangeText={(value) => this.handleChange('Interface', value)}
+            />
+          </Input>
+          <FormControlHelper>
+            <FormControlHelperText>Interface name</FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+
+        <FormControl isRequired>
+          <FormControlLabel>
             <FormControlLabelText>Network Groups</FormControlLabelText>
           </FormControlLabel>
           <HStack flexWrap="wrap" w="$full" space="md">
