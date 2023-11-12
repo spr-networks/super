@@ -100,7 +100,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
       <VStack space="md">
         <FormControl isRequired>
           <FormControlLabel>
-            <FormControlLabelText>Source address</FormControlLabelText>
+            <FormControlLabelText>Interface Address Range</FormControlLabelText>
           </FormControlLabel>
           <Input size="md" variant="underlined">
             <InputField
