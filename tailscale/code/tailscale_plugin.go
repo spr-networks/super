@@ -2,13 +2,11 @@ package tailscale_plugin
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
-	"reflect"
 	"sync"
 )
 
@@ -32,16 +30,19 @@ func httpInternalError(msg string, err error, w http.ResponseWriter) {
 	http.Error(w, err.Error(), 500)
 }
 
-func structToArgs(v interface{}) ([]string, error) {
-	t := reflect.TypeOf(v)
-	if t.Kind() != reflect.Struct {
-		return nil, errors.New("Not a struct")
-	}
-	result := make([]string, t.NumField())
-	for i := 0; i < t.NumField(); i++ {
-		t.Field(i).
-			append(result, "")
+func (tsp *tailscalePlugin) handleGetPeers(w http.ResponseWriter, r *http.Request) {
+	tsp.clientMtx.Lock()
+	defer tsp.clientMtx.Unlock()
 
+	tsdStatus, tsdErr := tsp.tsdClient.Status(r.Context())
+	if tsdErr != nil {
+		httpInternalError("Getting tailscale peers failed", tsdErr, w)
+		return
+	}
+
+	if jsonErr := json.NewEncoder(w).Encode(tsdStatus.Peers()); jsonErr != nil {
+		httpInternalError("Encoding tailscale peers failed", jsonErr, w)
+		return
 	}
 }
 
@@ -49,7 +50,7 @@ func (tsp *tailscalePlugin) handleGetStatus(w http.ResponseWriter, r *http.Reque
 	tsp.clientMtx.Lock()
 	defer tsp.clientMtx.Unlock()
 
-	tsdStatus, tsdErr := tsp.tsdClient.Status(r.Context())
+	tsdStatus, tsdErr := tsp.tsdClient.StatusWithoutPeers(r.Context())
 	if tsdErr != nil {
 		httpInternalError("Getting tailscale status failed", tsdErr, w)
 		return
@@ -180,11 +181,10 @@ func main() {
 
 	unix_plugin_router := mux.NewRouter().StrictSlash(true)
 
-	unix_plugin_router.HandleFunc("/genkey", pluginGenKey).Methods("GET")
-	unix_plugin_router.HandleFunc("/config", pluginGetConfig).Methods("GET")
+	//unix_plugin_router.HandleFunc("/config", pluginGetConfig).Methods("GET")
+	//unix_plugin_router.HandleFunc("/reauth", plugin.handleReauth).Methods("POST")
 	unix_plugin_router.HandleFunc("/status", plugin.handleGetStatus).Methods("GET")
-	unix_plugin_router.HandleFunc("/peers", pluginGetPeers).Methods("GET")
-	unix_plugin_router.HandleFunc("/peer", pluginPeer).Methods("PUT", "DELETE")
+	unix_plugin_router.HandleFunc("/peers", plugin.handleGetPeers).Methods("GET")
 
 	unix_plugin_router.HandleFunc("/up", plugin.handleUp).Methods("PUT")
 	unix_plugin_router.HandleFunc("/down", plugin.handleDown).Methods("PUT")
