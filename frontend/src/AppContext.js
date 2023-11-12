@@ -5,6 +5,8 @@ export const AppContext = createContext({
   setActiveSidebarItem: (sidebarItem) => {},
   isNavbarOpen: false,
   setIsNavbarOpen: (isNavbarOpen) => {},
+  isSimpleMode: false,
+  setIsSimpleMode: (isSimpleMode) => {},
   isWifiDisabled: false,
   isPlusDisabled: true,
   isMeshNode: false,

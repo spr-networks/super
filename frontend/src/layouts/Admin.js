@@ -235,6 +235,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const [activeSidebarItem, setActiveSidebarItem] = useState(path)
   const [isOpenSidebar, setIsOpenSidebar] = useState(false)
   const [isNavbarOpen, setIsNavbarOpen] = useState(false)
+  const [isSimpleMode, setIsSimpleMode] = useState(false)
   const [isWifiDisabled, setIsWifiDisabled] = useState(null)
   const [isPlusDisabled, setIsPlusDisabled] = useState(true)
   const [isMeshNode, setIsMeshNode] = useState(false)
@@ -256,10 +257,11 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         .list()
         .then((devices_) => {
           setDevices(Object.values(devices_))
-          const uniqueGroups = [...new Set(Object.values(devices_).flatMap(d => d.Groups))];
+          const uniqueGroups = [
+            ...new Set(Object.values(devices_).flatMap((d) => d.Groups))
+          ]
           setGroups(uniqueGroups)
           resolve(Object.values(devices_))
-
         })
         .catch(reject)
     })
@@ -270,10 +272,11 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
   const getGroups = () => {
     return new Promise((resolve, reject) => {
-      getDevices().then((d) => {
-        return resolve(groups)
-      })
-      .catch(reject)
+      getDevices()
+        .then((d) => {
+          return resolve(groups)
+        })
+        .catch(reject)
     })
   }
 
@@ -471,6 +474,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         setActiveSidebarItem,
         isNavbarOpen,
         setIsNavbarOpen,
+        isSimpleMode,
+        setIsSimpleMode,
         isWifiDisabled,
         isPlusDisabled,
         isMeshNode,
@@ -517,6 +522,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             isMobile={false}
             isOpenSidebar={isOpenSidebar}
             setIsOpenSidebar={setIsOpenSidebar}
+            isSimpleMode={isSimpleMode}
+            setIsSimpleMode={setIsSimpleMode}
             toggleColorMode={toggleColorMode}
           />
         </Box>
@@ -562,6 +569,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
               isMini={isOpenSidebar}
               isOpenSidebar={true}
               setIsOpenSidebar={setIsOpenSidebar}
+              isSimpleMode={isSimpleMode}
+              setIsSimpleMode={setIsSimpleMode}
               routes={routes}
             />
           </Box>

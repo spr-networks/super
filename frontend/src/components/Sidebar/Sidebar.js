@@ -8,6 +8,9 @@ import { AppContext } from 'AppContext'
 
 import {
   Box,
+  Button,
+  ButtonGroup,
+  ButtonText,
   Pressable,
   ScrollView,
   HStack,
@@ -25,15 +28,7 @@ const Collapse = ({ isOpen, ...props }) => {
   return <VStack display={isOpen ? 'flex' : 'none'}>{props.children}</VStack>
 }
 
-const Sidebar = (props) => {
-  const { isMobile, isMini, isOpenSidebar, setIsOpenSidebar } = props
-  //const sidebarItems = props.routes || []
-  const [sidebarItems, setSidebarItems] = useState([])
-
-  useEffect(() => {
-    setSidebarItems(props.routes)
-  }, [])
-
+const MenuSearch = ({ sidebarItems, setSidebarItems, ...props }) => {
   const onChangeFilter = (value) => {
     //TODO have some more logic here
     let items = sidebarItems.map((pitem) => {
@@ -65,42 +60,98 @@ const Sidebar = (props) => {
     setSidebarItems(items)
   }
 
-  const showSearch = false
+  const onSubmitEditing = (value) => {
+    //navigate if one or just pick first
+    console.log('TODO:nav', value)
+  }
+
+  return (
+    <>
+      <Box p="$4">
+        <Input>
+          <InputField
+            onChangeText={onChangeFilter}
+            onSubmitEditing={onSubmitEditing}
+            placeholder="Filter menu items"
+          />
+        </Input>
+      </Box>
+    </>
+  )
+}
+
+const Sidebar = ({
+  isMobile,
+  isMini,
+  isOpenSidebar,
+  setIsOpenSidebar,
+  isSimpleMode,
+  setIsSimpleMode,
+  ...props
+}) => {
+  //const sidebarItems = props.routes || []
+  const [sidebarItems, setSidebarItems] = useState([])
+
+  useEffect(() => {
+    setSidebarItems(props.routes)
+  }, [])
+
+  const showSearch = true
 
   if (!sidebarItems.length) {
     return <></>
   }
 
   return (
-    <ScrollView
-      w={isMini ? '20' : '100%'}
-      borderRightWidth={isMobile ? '$0' : '$1'}
-      sx={{
-        _light: {
-          bg: '$sidebarBackgroundLight',
-          borderColor: '$coolGray100'
-        },
-        _dark: { bg: '$sidebarBackgroundDark', borderColor: '$coolGray800' }
-      }}
-    >
+    <>
+      <ScrollView
+        w={isMini ? '20' : '100%'}
+        borderRightWidth={isMobile ? '$0' : '$1'}
+        sx={{
+          _light: {
+            bg: '$sidebarBackgroundLight',
+            borderColor: '$coolGray100'
+          },
+          _dark: { bg: '$sidebarBackgroundDark', borderColor: '$coolGray800' }
+        }}
+      >
+        <SidebarItem
+          sidebarItems={sidebarItems}
+          level={0}
+          isMobile={isMobile}
+          isMini={isMini}
+          setIsOpenSidebar={setIsOpenSidebar}
+        />
+      </ScrollView>
       {showSearch ? (
-        <Box p="$4">
-          <Input>
-            <InputField
-              onChangeText={onChangeFilter}
-              placeholder="Search menu"
-            />
-          </Input>
-        </Box>
+        <>
+          <HStack w="$full">
+            <Button
+              flex={1}
+              size="sm"
+              rounded="$none"
+              variant={isSimpleMode ? 'solid' : 'outline'}
+              onPress={() => setIsSimpleMode(true)}
+            >
+              <ButtonText>Simple</ButtonText>
+            </Button>
+            <Button
+              flex={1}
+              size="sm"
+              rounded="$none"
+              variant={isSimpleMode ? 'outline' : 'solid'}
+              onPress={() => setIsSimpleMode(false)}
+            >
+              <ButtonText>Advance</ButtonText>
+            </Button>
+          </HStack>
+          <MenuSearch
+            sidebarItems={sidebarItems}
+            setSidebarItems={setSidebarItems}
+          />
+        </>
       ) : null}
-      <SidebarItem
-        sidebarItems={sidebarItems}
-        level={0}
-        isMobile={isMobile}
-        isMini={isMini}
-        setIsOpenSidebar={setIsOpenSidebar}
-      />
-    </ScrollView>
+    </>
   )
 }
 
@@ -308,7 +359,7 @@ export const CollapsibleSidebarItem = (props) => {
           py="$2.5"
         >
           <Box
-            flexShrink="1"
+            flexShrink={1}
             _text={{
               textTransform: 'uppercase',
               fontWeight: '600',
