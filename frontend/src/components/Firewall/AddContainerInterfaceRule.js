@@ -52,7 +52,6 @@ class AddContainerInterfaceRuleImpl extends React.Component {
   }
 
   handleChange(name, value) {
-    //TODO verify IP && port
     this.setState({ [name]: value })
   }
 
@@ -62,9 +61,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
     let crule = {
       SrcIP: this.state.SrcIP,
       Interface: this.state.Interface,
-      WAN: this.state.Groups.includes("wan"),
-      LAN: this.state.Groups.includes("lan"),
-      DNS: this.state.Groups.includes("dns")
+      Groups: this.state.Groups
     }
 
 
