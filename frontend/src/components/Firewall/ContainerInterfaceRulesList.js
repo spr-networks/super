@@ -35,7 +35,7 @@ const ContainerInterfaceRulesList = (props) => {
       props.notifyChange('custom_interface')
     }
 
-    firewallAPI.deleteContainerInterfaceRule(item).then(done)
+    firewallAPI.deleteCustomInterfaceRule(item).then(done)
   }
 
   const notifyChange = (t) => {

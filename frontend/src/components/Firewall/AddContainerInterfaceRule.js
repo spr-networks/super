@@ -70,12 +70,12 @@ class AddContainerInterfaceRuleImpl extends React.Component {
 
     const done = (res) => {
       if (this.props.notifyChange) {
-        this.props.notifyChange('container_interface')
+        this.props.notifyChange('custom_interface')
       }
     }
 
     firewallAPI
-      .addContainerInterfaceRule(crule)
+      .addCustomInterfaceRule(crule)
       .then(done)
       .catch((err) => {
         this.props.alertContext.error('Firewall API Failure', err)

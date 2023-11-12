@@ -61,12 +61,12 @@ export class APIFirewall extends API {
     return this.put('multicast', data)
   }
 
-  addContainerInterfaceRule(data) {
-    return this.put('container_interface', data)
+  addCustomInterfaceRule(data) {
+    return this.put('custom_interface', data)
   }
 
-  deleteContainerInterfaceRule(data) {
-    return this.delete('container_interface', data)
+  deleteCustomInterfaceRule(data) {
+    return this.delete('custom_interface', data)
   }
 
 }
