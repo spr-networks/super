@@ -54,9 +54,6 @@ type ForwardingBlockRule struct {
 }
 
 type ContainerInterfaceRule struct {
-	WAN       bool
-	LAN       bool
-	DNS       bool
 	Interface string
 	SrcIP     string
 	Groups    []string
@@ -595,7 +592,7 @@ func removeSupernetworkEntry(supernet string) {
 	modifySupernetworkEntry(supernet, "delete")
 }
 
-func modifyContainerInterfaceRules(w http.ResponseWriter, r *http.Request) {
+func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 	FWmtx.Lock()
 	defer FWmtx.Unlock()
 
@@ -1158,10 +1155,31 @@ func populateSets() {
 
 }
 
+// TBD in go 1.21 use slices.
+func includesGroupStd(slice []string) (bool, bool, bool) {
+	dns := false
+	wan := false
+	lan := false
+
+	for _, item := range slice {
+		if item == "dns" {
+			dns = true
+		} else if item == "wan" {
+			wan = true
+		} else if item == "lan" {
+			lan = true
+		}
+	}
+
+	return wan, dns, lan
+}
+
 func applyContainerInterfaceRule(container_rule ContainerInterfaceRule, action string, fthru bool) error {
 	var err error
 
-	if container_rule.WAN {
+	wan, lan, dns := includesGroupStd(container_rule.Groups)
+
+	if wan {
 		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_wan",
 			"{", container_rule.Interface, ".", container_rule.SrcIP, ":", "accept", "}").Run()
 		if err != nil {
@@ -1174,7 +1192,7 @@ func applyContainerInterfaceRule(container_rule ContainerInterfaceRule, action s
 		}
 	}
 
-	if container_rule.LAN {
+	if lan {
 		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_lan",
 			"{", container_rule.Interface, ".", container_rule.SrcIP, ":", "accept", "}").Run()
 		if err != nil {
@@ -1187,7 +1205,7 @@ func applyContainerInterfaceRule(container_rule ContainerInterfaceRule, action s
 		}
 	}
 
-	if container_rule.DNS {
+	if dns {
 		err = exec.Command("nft", action, "element", "inet", "filter", "dns_access",
 			"{", container_rule.SrcIP, ".", container_rule.Interface, ":", "accept", "}").Run()
 		if err != nil {
@@ -1201,6 +1219,9 @@ func applyContainerInterfaceRule(container_rule ContainerInterfaceRule, action s
 	}
 
 	for _, group := range container_rule.Groups {
+		if group == "lan" || group == "dns" || group == "wan" {
+			continue
+		}
 		addCustomVerdict(group, container_rule.SrcIP, container_rule.Interface)
 	}
 

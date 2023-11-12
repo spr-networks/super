@@ -2517,7 +2517,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/firewall/endpoint", modifyEndpoint).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/multicast", modifyMulticast).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/icmp", modifyIcmp).Methods("PUT")
-	external_router_authenticated.HandleFunc("/firewall/container_interface", modifyContainerInterfaceRules).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/custom_interface", modifyCustomInterfaceRules).Methods("PUT", "DELETE")
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
