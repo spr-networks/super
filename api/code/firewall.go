@@ -53,14 +53,14 @@ type ForwardingBlockRule struct {
 	SrcIP    string
 }
 
-type ContainerInterfaceRule struct {
+type CustomInterfaceRule struct {
 	Interface string
 	SrcIP     string
 	Groups    []string
 	Tags      []string //unused for now
 }
 
-func (c *ContainerInterfaceRule) Equals(other *ContainerInterfaceRule) bool {
+func (c *CustomInterfaceRule) Equals(other *CustomInterfaceRule) bool {
 	// Create copies of the Groups and Tags so that the original slices are not modified
 	cGroups := make([]string, len(c.Groups))
 	copy(cGroups, c.Groups)
@@ -78,7 +78,7 @@ func (c *ContainerInterfaceRule) Equals(other *ContainerInterfaceRule) bool {
 	sort.Strings(otherGroups)
 	sort.Strings(otherTags)
 
-	// Create a copy of ContainerInterfaceRule to compare the sorted slices
+	// Create a copy of CustomInterfaceRule to compare the sorted slices
 	cCopy := *c
 	otherCopy := *other
 	cCopy.Groups = cGroups
@@ -116,20 +116,20 @@ type MulticastPort struct {
 }
 
 type FirewallConfig struct {
-	ForwardingRules         []ForwardingRule
-	BlockRules              []BlockRule
-	ForwardingBlockRules    []ForwardingBlockRule
-	ContainerInterfaceRules []ContainerInterfaceRule
-	ServicePorts            []ServicePort
-	Endpoints               []Endpoint
-	MulticastPorts          []MulticastPort
-	PingLan                 bool
-	PingWan                 bool
+	ForwardingRules      []ForwardingRule
+	BlockRules           []BlockRule
+	ForwardingBlockRules []ForwardingBlockRule
+	CustomInterfaceRules []CustomInterfaceRule
+	ServicePorts         []ServicePort
+	Endpoints            []Endpoint
+	MulticastPorts       []MulticastPort
+	PingLan              bool
+	PingWan              bool
 }
 
 var FirewallConfigFile = TEST_PREFIX + "/configs/base/firewall.json"
 var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{},
-	[]ForwardingBlockRule{}, []ContainerInterfaceRule{}, []ServicePort{},
+	[]ForwardingBlockRule{}, []CustomInterfaceRule{}, []ServicePort{},
 	[]Endpoint{}, []MulticastPort{}, false, false}
 
 // IP -> Iface map
@@ -596,7 +596,7 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 	FWmtx.Lock()
 	defer FWmtx.Unlock()
 
-	crule := ContainerInterfaceRule{}
+	crule := CustomInterfaceRule{}
 	err := json.NewDecoder(r.Body).Decode(&crule)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
@@ -618,12 +618,12 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 	crule.Tags = normalizeStringSlice(crule.Tags)
 
 	if r.Method == http.MethodDelete {
-		for i := range gFirewallConfig.ContainerInterfaceRules {
-			a := gFirewallConfig.ContainerInterfaceRules[i]
+		for i := range gFirewallConfig.CustomInterfaceRules {
+			a := gFirewallConfig.CustomInterfaceRules[i]
 			if crule.Equals(&a) {
-				gFirewallConfig.ContainerInterfaceRules = append(gFirewallConfig.ContainerInterfaceRules[:i], gFirewallConfig.ContainerInterfaceRules[i+1:]...)
+				gFirewallConfig.CustomInterfaceRules = append(gFirewallConfig.CustomInterfaceRules[:i], gFirewallConfig.CustomInterfaceRules[i+1:]...)
 				saveFirewallRulesLocked()
-				err = applyContainerInterfaceRule(a, "delete", true)
+				err = applyCustomInterfaceRule(a, "delete", true)
 				if err != nil {
 					http.Error(w, err.Error(), 400)
 				}
@@ -634,7 +634,7 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gFirewallConfig.ContainerInterfaceRules = append(gFirewallConfig.ContainerInterfaceRules, crule)
+	gFirewallConfig.CustomInterfaceRules = append(gFirewallConfig.CustomInterfaceRules, crule)
 	saveFirewallRulesLocked()
 	applyFirewallRulesLocked()
 }
@@ -1174,7 +1174,7 @@ func includesGroupStd(slice []string) (bool, bool, bool) {
 	return wan, dns, lan
 }
 
-func applyContainerInterfaceRule(container_rule ContainerInterfaceRule, action string, fthru bool) error {
+func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string, fthru bool) error {
 	var err error
 
 	wan, lan, dns := includesGroupStd(container_rule.Groups)
@@ -1261,8 +1261,8 @@ func applyContainerInterfaces() {
 		}
 	}
 
-	for _, container_rule := range gFirewallConfig.ContainerInterfaceRules {
-		applyContainerInterfaceRule(container_rule, "add", false)
+	for _, container_rule := range gFirewallConfig.CustomInterfaceRules {
+		applyCustomInterfaceRule(container_rule, "add", false)
 	}
 
 	// TBD: clean up stale iface from dns_access (?) here
