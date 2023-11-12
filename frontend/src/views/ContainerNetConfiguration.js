@@ -179,7 +179,7 @@ const ContainerNetInfo = (props) => {
               if (netMap[network.Gateway] === undefined) {
                 netMap[network.Gateway] = [c]
               } else {
-                netMap[network.Gateway].append(c)
+                netMap[network.Gateway].push(c)
               }
             }
           }
