@@ -13,11 +13,6 @@ import {
   MenuIcon,
   MoonIcon,
   SunIcon,
-  /*TODO
-  Tooltip,
-  TooltipContent,
-  TooltipText,
-  */
   useColorMode
 } from '@gluestack-ui/themed'
 
@@ -26,10 +21,12 @@ import { LogOutIcon } from 'lucide-react-native'
 import { AppContext } from 'AppContext'
 
 const AdminNavbar = ({
+  version,
   isMobile,
   isOpenSidebar,
   setIsOpenSidebar,
-  version,
+  isSimpleMode,
+  setIsSimpleMode,
   toggleColorMode,
   ...props
 }) => {
@@ -67,7 +64,7 @@ const AdminNavbar = ({
         }}
         justifyContent="space-between"
       >
-        <HStack w="100%" alignItems="center" space={'sm'}>
+        <HStack w="100%" alignItems="center" space="sm">
           <Button
             variant="link"
             onPress={() => setIsOpenSidebar(!isOpenSidebar)}
@@ -105,6 +102,11 @@ const AdminNavbar = ({
           </Text>
 
           <HStack marginLeft="auto" space="2xl" alignItems="center">
+            {/*<ToggleViewMode
+              isSimpleMode={isSimpleMode}
+              setIsSimpleMode={setIsSimpleMode}
+            />*/}
+
             <Link
               isExternal
               href="https://www.supernetworks.org/pages/docs/intro"
@@ -140,6 +142,7 @@ const AdminNavbar = ({
             >
               <LinkText size="sm">API</LinkText>
             </Link>
+
             <Button
               onPress={() => {
                 toggleColorMode()
