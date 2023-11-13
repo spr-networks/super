@@ -115,7 +115,7 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
   }
 
   const scan = (iface) => {
-    setOptsSSIDs([{ label: 'Scanning...', value: null }])
+    setOptsSSIDs([{ label: 'Scanning...', value: {} }])
 
     //set interface up and scan
     wifiAPI.ipLinkState(iface, 'up').then(
