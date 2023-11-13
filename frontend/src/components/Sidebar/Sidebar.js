@@ -19,7 +19,8 @@ import {
   Text,
   useColorMode,
   Input,
-  InputField
+  InputField,
+  Switch
 } from '@gluestack-ui/themed'
 
 import { ChevronDownIcon } from 'lucide-react-native'
@@ -28,13 +29,16 @@ const Collapse = ({ isOpen, ...props }) => {
   return <VStack display={isOpen ? 'flex' : 'none'}>{props.children}</VStack>
 }
 
+//TODO add headers for subviews titles. keep items separate
 const MenuSearch = ({ sidebarItems, setSidebarItems, ...props }) => {
-  const onChangeFilter = (value) => {
-    //TODO have some more logic here
+  const [filterText, setFilterText] = useState('')
+  const navigate = useNavigate()
+
+  const filterSidebarItems = (value) => {
     let items = sidebarItems.map((pitem) => {
       if (pitem.views) {
         pitem.views = pitem.views.map((item) => {
-          item.hidden = !item.name.toLowerCase().startsWith(value.toLowerCase())
+          item.hidden = !item.name.toLowerCase().includes(value.toLowerCase())
 
           return item
         })
@@ -48,9 +52,7 @@ const MenuSearch = ({ sidebarItems, setSidebarItems, ...props }) => {
         }
       } else {
         if (pitem.name) {
-          pitem.hidden = !pitem.name
-            .toLowerCase()
-            .startsWith(value.toLowerCase())
+          pitem.hidden = !pitem.name.toLowerCase().includes(value.toLowerCase())
         }
       }
 
@@ -60,23 +62,90 @@ const MenuSearch = ({ sidebarItems, setSidebarItems, ...props }) => {
     setSidebarItems(items)
   }
 
+  const onChangeFilter = (value) => {
+    setFilterText(value)
+    filterSidebarItems(value)
+  }
+
   const onSubmitEditing = (value) => {
     //navigate if one or just pick first
-    console.log('TODO:nav', value)
+    if (!sidebarItems?.length) {
+      return
+    }
+
+    let item = null
+    for (let r of sidebarItems) {
+      if (r.redirect) continue
+      if (r.views) {
+        let found = false
+        for (let rr of r.views) {
+          if (!rr.hidden && rr.layout == 'admin' && rr.path && !rr.redirect) {
+            item = rr
+            found = true
+            break
+          }
+        }
+
+        if (found) break
+      }
+
+      if (!r.hidden && r.layout == 'admin' && r.path) {
+        item = r
+        break
+      }
+    }
+
+    if (item?.path) {
+      console.log('littlefag:', item)
+      setFilterText('')
+      filterSidebarItems('')
+
+      let url = `/${item.layout}/${item.path}`
+      navigate(url)
+    }
   }
 
   return (
-    <>
-      <Box p="$4">
-        <Input>
-          <InputField
-            onChangeText={onChangeFilter}
-            onSubmitEditing={onSubmitEditing}
-            placeholder="Filter menu items"
-          />
-        </Input>
-      </Box>
-    </>
+    <Box
+      px="$4"
+      borderWidth="$1"
+      display="none"
+      sx={{
+        '@md': { display: 'flex' },
+        _light: {
+          bg: '$sidebarBackgroundLight',
+          borderColor: '$coolGray100'
+        },
+        _dark: { bg: '$sidebarBackgroundDark', borderColor: '$coolGray800' }
+      }}
+    >
+      <Input rounded="$none" borderWidth="$0">
+        <InputField
+          value={filterText}
+          onChangeText={onChangeFilter}
+          onSubmitEditing={onSubmitEditing}
+          placeholder="Filter menu items..."
+        />
+      </Input>
+    </Box>
+  )
+}
+
+const ToggleViewMode = ({ isSimpleMode, setIsSimpleMode, ...props }) => {
+  return (
+    <HStack
+      justifyContent="center"
+      p="$4"
+      px="$8"
+      space="md"
+      sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
+    >
+      <Switch
+        value={!isSimpleMode}
+        onToggle={() => setIsSimpleMode(!isSimpleMode)}
+      />
+      <Text size="sm">{isSimpleMode ? 'Simple Mode' : 'Advanced Mode'}</Text>
+    </HStack>
   )
 }
 
@@ -96,7 +165,12 @@ const Sidebar = ({
     setSidebarItems(props.routes)
   }, [])
 
-  const showSearch = true
+  // when sidebarItems update - check
+  useEffect(() => {
+    console.log('toggle view mode!')
+  }, [isSimpleMode])
+
+  const showSearch = !isSimpleMode
 
   if (!sidebarItems.length) {
     return <></>
@@ -121,43 +195,27 @@ const Sidebar = ({
           isMobile={isMobile}
           isMini={isMini}
           setIsOpenSidebar={setIsOpenSidebar}
+          isSimpleMode={isSimpleMode}
         />
       </ScrollView>
       {showSearch ? (
-        <>
-          <HStack w="$full">
-            <Button
-              flex={1}
-              size="sm"
-              rounded="$none"
-              variant={isSimpleMode ? 'solid' : 'outline'}
-              onPress={() => setIsSimpleMode(true)}
-            >
-              <ButtonText>Simple</ButtonText>
-            </Button>
-            <Button
-              flex={1}
-              size="sm"
-              rounded="$none"
-              variant={isSimpleMode ? 'outline' : 'solid'}
-              onPress={() => setIsSimpleMode(false)}
-            >
-              <ButtonText>Advance</ButtonText>
-            </Button>
-          </HStack>
-          <MenuSearch
-            sidebarItems={sidebarItems}
-            setSidebarItems={setSidebarItems}
-          />
-        </>
+        <MenuSearch
+          sidebarItems={sidebarItems}
+          setSidebarItems={setSidebarItems}
+        />
       ) : null}
+      <ToggleViewMode
+        isSimpleMode={isSimpleMode}
+        setIsSimpleMode={setIsSimpleMode}
+      />
     </>
   )
 }
 
 const SidebarItem = (props) => {
   const { sidebarItems, level, isMobile, isMini, setIsOpenSidebar } = props
-  const { isWifiDisabled, isPlusDisabled, isMeshNode } = useContext(AppContext)
+  const { isWifiDisabled, isPlusDisabled, isMeshNode, isSimpleMode } =
+    useContext(AppContext)
   const { activeSidebarItem, setActiveSidebarItem } = useContext(AppContext)
   const navigate = useNavigate()
 
@@ -204,6 +262,10 @@ const SidebarItem = (props) => {
     }
 
     if (item.hidden) {
+      display = 'none'
+    }
+
+    if (item.hideSimple && isSimpleMode) {
       display = 'none'
     }
 

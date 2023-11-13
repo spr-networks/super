@@ -522,8 +522,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             isMobile={false}
             isOpenSidebar={isOpenSidebar}
             setIsOpenSidebar={setIsOpenSidebar}
-            isSimpleMode={isSimpleMode}
-            setIsSimpleMode={setIsSimpleMode}
             toggleColorMode={toggleColorMode}
           />
         </Box>
@@ -594,6 +592,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
                   isMini={false}
                   isOpenSidebar={isOpenSidebar}
                   setIsOpenSidebar={setIsOpenSidebar}
+                  isSimpleMode={isSimpleMode}
+                  setIsSimpleMode={setIsSimpleMode}
                   routes={routes}
                 />
               </Box>

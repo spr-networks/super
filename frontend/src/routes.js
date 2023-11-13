@@ -137,6 +137,7 @@ const routes = [
     path: 'containernets',
     name: 'Containers',
     icon: ContainerIcon,
+    hideSimple: true,
     component: ContainerNetConfiguration,
     layout: 'admin'
   },
@@ -172,6 +173,7 @@ const routes = [
         path: 'firewallSettings',
         name: 'Services',
         icon: Settings2Icon,
+        hideSimple: true,
         component: FirewallSettings,
         layout: 'admin'
       },
@@ -187,6 +189,7 @@ const routes = [
         path: 'supernets',
         name: 'Supernetworks',
         icon: NetworkIcon,
+        hideSimple: true,
         component: Supernetworks,
         layout: 'admin'
       }
@@ -207,6 +210,7 @@ const routes = [
         path: 'dnsOverride',
         name: 'DNS Overrides',
         icon: ShuffleIcon,
+        hideSimple: true,
         component: DNSOverride,
         layout: 'admin'
       },
@@ -221,6 +225,7 @@ const routes = [
         path: 'dnsLogEdit',
         name: 'DNS Log Settings',
         icon: SettingsIcon,
+        hideSimple: true,
         component: DNSLogEdit,
         layout: 'admin'
       },
@@ -228,6 +233,7 @@ const routes = [
         path: 'dyndns',
         name: 'Dynamic DNS',
         icon: ArrowUpCircleIcon,
+        hideSimple: true,
         component: DynDns,
         layout: 'admin'
       },
@@ -235,6 +241,7 @@ const routes = [
         path: 'dns',
         name: 'DNS Settings',
         icon: HammerIcon,
+        hideSimple: true,
         component: CoreDns,
         layout: 'admin'
       }
@@ -265,6 +272,7 @@ const routes = [
         path: 'signal/strength',
         name: 'Signal Strength',
         icon: SignalIcon,
+        hideSimple: true,
         component: SignalStrength,
         layout: 'admin'
       },
@@ -280,6 +288,7 @@ const routes = [
   {
     name: 'Events',
     state: 'eventsCollapse',
+    hideSimple: true,
     views: [
       {
         path: 'events',
@@ -307,6 +316,7 @@ const routes = [
   {
     name: 'System',
     state: 'systemCollapse',
+    hideSimple: true,
     views: [
       {
         path: 'info',
