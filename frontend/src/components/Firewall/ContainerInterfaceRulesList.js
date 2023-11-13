@@ -73,13 +73,19 @@ const ContainerInterfaceRulesList = (props) => {
             <Text>{item.Interface}</Text>
             <Text>{item.SrcIP}</Text>
             <HStack>
-            { ["DNS", "LAN", "WAN"].map((entry) => {
-              if (item[entry]) {
+            { item.Groups.map((entry) => {
                 return <Badge action="muted" variant="outline">
                   <BadgeText>{entry}</BadgeText>
                 </Badge>
-              }
             })}
+            </HStack>
+
+            <HStack>
+            { item.SetRoute ?
+              (<Badge action="muted" variant="outline">
+                  <BadgeText>setRoute</BadgeText>
+                </Badge>) : null
+            }
             </HStack>
 
             <Button
