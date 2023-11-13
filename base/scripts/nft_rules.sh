@@ -66,19 +66,19 @@ table inet filter {
   # src ip . dst ip
   map site_forward {
     type ipv4_addr . ipv4_addr . ifname : verdict;
-    flags interval;
+    flags interval, timeout;
   }
 
   # src ip . dst ip . dst port
   map site_forward_tcp_port {
     type ipv4_addr . ipv4_addr . inet_service . ifname: verdict;
-    flags interval;
+    flags interval, timeout;
   }
 
   # src ip . dst ip . dst port
   map site_forward_udp_port {
     type ipv4_addr . ipv4_addr . inet_service . ifname: verdict;
-    flags interval;
+    flags interval, timeout;
   }
 
 
@@ -176,7 +176,7 @@ table inet filter {
 
   map fwd_block {
     type ipv4_addr . ipv4_addr . inet_proto . inet_service : verdict;
-    flags interval
+    flags interval, timeout;
   }
 
   # If a client is a part of this group, it will have
@@ -447,32 +447,32 @@ table inet nat {
 
   map dnat_tcp_ipmap {
     type ipv4_addr . ipv4_addr . inet_service : ipv4_addr;
-    flags interval;
+    flags interval, timeout;
   }
 
   map dnat_tcp_portmap {
     type ipv4_addr . ipv4_addr . inet_service : inet_service;
-    flags interval;
+    flags interval, timeout;
   }
 
   map dnat_tcp_anymap {
     type ipv4_addr . ipv4_addr : ipv4_addr;
-    flags interval;
+    flags interval, timeout;
   }
 
   map dnat_udp_ipmap {
     type ipv4_addr . ipv4_addr . inet_service : ipv4_addr;
-    flags interval;
+    flags interval, timeout;
   }
 
   map dnat_udp_portmap {
     type ipv4_addr . ipv4_addr . inet_service : inet_service;
-    flags interval;
+    flags interval, timeout;
   }
 
   map dnat_udp_anymap {
     type ipv4_addr . ipv4_addr : ipv4_addr;
-    flags interval;
+    flags interval, timeout;
   }
 
 
@@ -576,19 +576,19 @@ table inet mangle {
   # src ip . dst ip
   map site_forward_mangle {
     type ipv4_addr . ipv4_addr : verdict;
-    flags interval;
+    flags interval, timeout;
   }
 
   # src ip . dst ip . dst port
   map site_forward_tcp_port_mangle {
     type ipv4_addr . ipv4_addr . inet_service: verdict;
-    flags interval;
+    flags interval, timeout;
   }
 
   # src ip . dst ip . dst port
   map site_forward_udp_port_mangle {
     type ipv4_addr . ipv4_addr . inet_service: verdict;
-    flags interval;
+    flags interval, timeout;
   }
 
   # see description above. duplicated since nftables doesnt have cross-table sets
