@@ -18,10 +18,11 @@ import {
   FormControlHelperText,
   FormControlLabel,
   FormControlLabelText,
+  HStack,
   Input,
   InputField,
+  Switch,
   Text,
-  HStack,
   VStack
 } from '@gluestack-ui/themed'
 
@@ -34,9 +35,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
   state = {
     SrcIP: '',
     Interface: '',
-    WAN: false,
-    LAN: false,
-    DNS: false,
+    SetRoute: false,
     Groups: [],
     Tags: [],
     GroupOptions: []
@@ -60,6 +59,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
 
     let crule = {
       SrcIP: this.state.SrcIP,
+      SetRoute: this.state.SetRoute,
       Interface: this.state.Interface,
       Groups: this.state.Groups
     }
@@ -113,6 +113,14 @@ class AddContainerInterfaceRuleImpl extends React.Component {
             <FormControlHelperText>IP address or CIDR</FormControlHelperText>
           </FormControlHelper>
         </FormControl>
+
+        <FormControlLabel>
+          <FormControlLabelText>Set Route</FormControlLabelText>
+        </FormControlLabel>
+        <Switch
+          value={this.state.SetRoute}
+          onToggle={() => this.handleChange('SetRoute', !this.state.SetRoute)}
+        />
 
         <FormControl isRequired>
           <FormControlLabel>

@@ -56,6 +56,7 @@ type ForwardingBlockRule struct {
 type CustomInterfaceRule struct {
 	Interface string
 	SrcIP     string
+	SetRoute  bool
 	Groups    []string
 	Tags      []string //unused for now
 }
@@ -1228,6 +1229,15 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 	/*
 		TBD: tags support?
 	*/
+
+	//set up route
+	if container_rule.SetRoute {
+		if action == "add" {
+			exec.Command("ip", "route", "add", container_rule.SrcIP, "dev", container_rule.Interface).Run()
+		} else if action == "delete" {
+			exec.Command("ip", "route", "del", container_rule.SrcIP, "dev", container_rule.Interface).Run()
+		}
+	}
 
 	return err
 }
