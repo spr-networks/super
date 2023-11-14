@@ -7,6 +7,7 @@ import {
   Box,
   Button,
   ButtonIcon,
+  ButtonText,
   FlatList,
   Input,
   InputField,
@@ -22,7 +23,9 @@ import {
   TooltipContent,
   TooltipText,
   ScrollView,
-  Spinner
+  Spinner,
+  ButtonSpinner,
+  CheckIcon
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
@@ -39,6 +42,7 @@ const PluginList = (props) => {
   const [token, setToken] = useState('')
   const [activeToken, setActiveToken] = useState('')
   const [updated, setUpdated] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const contextType = useContext(AppContext)
 
@@ -137,7 +141,7 @@ const PluginList = (props) => {
   }
 
   const handleTokenSubmit = () => {
-    navigate('/admin/plugins')
+    //navigate('/admin/plugins')
     if (updated) {
       setUpdated(false)
       pluginAPI
@@ -150,6 +154,20 @@ const PluginList = (props) => {
           alertState.error('Failed to install PLUS token: ' + err.message)
         })
     }
+  }
+
+  const verifyToken = () => {
+    setIsLoading(true)
+    pluginAPI
+      .validPlusToken()
+      .then((res) => {
+        setIsLoading(false)
+        alertState.success('Token login ok')
+      })
+      .catch((err) => {
+        setIsLoading(false)
+        alertState.error('failed to login using token')
+      })
   }
 
   const renderItem = ({ item }) => (
@@ -215,7 +233,7 @@ const PluginList = (props) => {
       </VStack>
 
       <HStack space="4xl">
-        <Box w="100" alignItems="center" alignSelf="center">
+        <Box w={100} alignItems="center" alignSelf="center">
           <Switch
             value={item.Enabled}
             onValueChange={() => handleChange(item, !item.Enabled)}
@@ -279,27 +297,48 @@ const PluginList = (props) => {
         </HStack>
       </ListHeader>
 
-      <Box
+      <VStack
+        space="md"
         p="$4"
         mb="$4"
         bg="$backgroundCardLight"
         sx={{
+          '@md': { flexDirection: 'row' },
           _dark: {
             bg: '$backgroundCardDark'
           }
         }}
       >
-        <Input>
+        <Input
+          sx={{
+            '@md': { width: 440 }
+          }}
+        >
           <InputField
             type="text"
             variant="underlined"
             placeholder={activeToken || 'Token'}
-            onChangeText={(value) => handleToken(value)}
+            onChangeText={handleToken}
             onSubmitEditing={handleTokenSubmit}
             onMouseLeave={handleTokenSubmit}
           />
         </Input>
-      </Box>
+        <Button onPress={handleTokenSubmit} isDisabled={!token?.length}>
+          <ButtonIcon as={CheckIcon} mr="$2" />
+
+          <ButtonText>Update token</ButtonText>
+        </Button>
+        {activeToken?.length ? (
+          <Button action="secondary" onPress={verifyToken}>
+            {isLoading ? (
+              <ButtonSpinner mr="$2" />
+            ) : (
+              <ButtonIcon as={CheckIcon} mr="$2" />
+            )}
+            <ButtonText>Verify token</ButtonText>
+          </Button>
+        ) : null}
+      </VStack>
     </ScrollView>
   )
 }
