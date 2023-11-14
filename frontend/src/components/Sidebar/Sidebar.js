@@ -169,7 +169,7 @@ const Sidebar = ({
     console.log('toggle view mode!')
   }, [isSimpleMode])
 
-  const showSearch = !isSimpleMode
+  const showSearch = false //!isSimpleMode
 
   if (!sidebarItems.length) {
     return <></>
