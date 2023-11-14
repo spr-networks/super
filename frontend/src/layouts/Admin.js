@@ -565,7 +565,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             <Sidebar
               isMobile={false}
               isMini={isOpenSidebar}
-              isOpenSidebar={true}
+              isOpenSidebar={isOpenSidebar}
               setIsOpenSidebar={setIsOpenSidebar}
               isSimpleMode={isSimpleMode}
               setIsSimpleMode={setIsSimpleMode}
@@ -573,7 +573,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             />
           </Box>
           {/*mobile*/}
-          {isOpenSidebar ? (
+          {isOpenSidebar && Platform.OS == 'ios' ? (
             <SafeAreaView
               style={{
                 width: '100%',

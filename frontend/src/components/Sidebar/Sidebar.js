@@ -96,7 +96,6 @@ const MenuSearch = ({ sidebarItems, setSidebarItems, ...props }) => {
     }
 
     if (item?.path) {
-      console.log('littlefag:', item)
       setFilterText('')
       filterSidebarItems('')
 
@@ -198,16 +197,21 @@ const Sidebar = ({
           isSimpleMode={isSimpleMode}
         />
       </ScrollView>
-      {showSearch ? (
-        <MenuSearch
-          sidebarItems={sidebarItems}
-          setSidebarItems={setSidebarItems}
-        />
+
+      {!isOpenSidebar ? (
+        <>
+          {showSearch ? (
+            <MenuSearch
+              sidebarItems={sidebarItems}
+              setSidebarItems={setSidebarItems}
+            />
+          ) : null}
+          <ToggleViewMode
+            isSimpleMode={isSimpleMode}
+            setIsSimpleMode={setIsSimpleMode}
+          />
+        </>
       ) : null}
-      <ToggleViewMode
-        isSimpleMode={isSimpleMode}
-        setIsSimpleMode={setIsSimpleMode}
-      />
     </>
   )
 }

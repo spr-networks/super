@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useNavigate } from 'react-router-dom'
@@ -13,12 +13,15 @@ import {
   MenuIcon,
   MoonIcon,
   SunIcon,
-  useColorMode
+  useColorMode,
+  Pressable
 } from '@gluestack-ui/themed'
 
 import { LogOutIcon } from 'lucide-react-native'
 
 import { AppContext } from 'AppContext'
+
+import RouteJump from './RouteJump'
 
 const AdminNavbar = ({
   version,
@@ -80,33 +83,33 @@ const AdminNavbar = ({
             />
           </Button>
 
-          <Text size="lg" bold onPress={() => navigate('/admin/home')}>
-            SPR
-          </Text>
-          {isMeshNode ? <Text size="lg">MESH</Text> : null}
+          <Pressable onPress={() => navigate('/admin/home')}>
+            <HStack space="sm">
+              <Text size="lg" bold>
+                SPR
+              </Text>
+              {isMeshNode ? <Text size="lg">MESH</Text> : null}
+              <Text
+                size="xs"
+                color="$muted600"
+                sx={{
+                  _dark: { color: '$muted400' }
+                }}
+                isTruncated
+                borderWidth={1}
+                borderColor="$muted500"
+                rounded="$2xl"
+                py="$0.5"
+                px="$2"
+              >
+                {`v${version}`}
+              </Text>
+            </HStack>
+          </Pressable>
 
-          <Text
-            size="xs"
-            color="$muted600"
-            sx={{
-              _dark: { color: '$muted400' }
-            }}
-            isTruncated
-            borderWidth={1}
-            borderColor="$muted500"
-            rounded="$2xl"
-            py="$0.5"
-            px="$2"
-          >
-            {`v${version}`}
-          </Text>
+          <RouteJump />
 
           <HStack marginLeft="auto" space="2xl" alignItems="center">
-            {/*<ToggleViewMode
-              isSimpleMode={isSimpleMode}
-              setIsSimpleMode={setIsSimpleMode}
-            />*/}
-
             <Link
               isExternal
               href="https://www.supernetworks.org/pages/docs/intro"
