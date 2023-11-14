@@ -111,7 +111,8 @@ const LANLinkSetConfig = ({ iface, onSubmit, ...props }) => {
     </VStack>
   )
 }
-*/}
+*/
+}
 
 const ContainerNetInfo = (props) => {
   const context = useContext(AlertContext)
@@ -124,10 +125,12 @@ const ContainerNetInfo = (props) => {
 
   const [iface, setIface] = useState(null)
 
-  {/*
+  {
+    /*
   const [showModal, setShowModal] = useState(false)
   const [modal, setModal] = useState('')
-  */}
+  */
+  }
 
   function isLocalIpAddress(ipAddress) {
     const ipv4Regex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/
@@ -168,14 +171,17 @@ const ContainerNetInfo = (props) => {
       })
       .catch((err) => context.error('fail ' + err))
 
-      api.get('/info/docker').then((docker) => {
-        let networked = docker.
-          filter((c) => c.State == "running" && c.NetworkSettings.Networks.host == null)
+    api
+      .get('/info/docker')
+      .then((docker) => {
+        let networked = docker.filter(
+          (c) => c.State == 'running' && c.NetworkSettings.Networks.host == null
+        )
 
         let netMap = {}
         for (let c of Object.values(networked)) {
           for (let network of Object.values(c.NetworkSettings.Networks)) {
-            if (network.IPAddress != "") {
+            if (network.IPAddress != '') {
               if (netMap[network.Gateway] === undefined) {
                 netMap[network.Gateway] = [c]
               } else {
@@ -186,8 +192,8 @@ const ContainerNetInfo = (props) => {
         }
 
         setDockerNetmap(netMap)
-      }).catch((err) => context.error('fail ' + err))
-
+      })
+      .catch((err) => context.error('fail ' + err))
   }
 
   useEffect(() => {
@@ -199,14 +205,18 @@ const ContainerNetInfo = (props) => {
   }, [])
 
   function getNetworkName(container, gateway) {
-      if (container && container.NetworkSettings && container.NetworkSettings.Networks) {
-          for (const device in container.NetworkSettings.Networks) {
-              if (container.NetworkSettings.Networks[device].Gateway === gateway) {
-                  return device;
-              }
-          }
+    if (
+      container &&
+      container.NetworkSettings &&
+      container.NetworkSettings.Networks
+    ) {
+      for (const device in container.NetworkSettings.Networks) {
+        if (container.NetworkSettings.Networks[device].Gateway === gateway) {
+          return device
+        }
       }
-      return null;
+    }
+    return null
   }
 
   const calcLinks = () => {
@@ -227,7 +237,6 @@ const ContainerNetInfo = (props) => {
         continue
       }
 
-
       for (let container_gateway of Object.keys(dockerNetmap)) {
         for (let link_ip of linkIPs[link]) {
           if (container_gateway == link_ip) {
@@ -237,13 +246,19 @@ const ContainerNetInfo = (props) => {
             for (let container of containers) {
               let type = 'Docker Network'
               let networkName = getNetworkName(container, container_gateway)
-              let c_ip = container.NetworkSettings.Networks[networkName].IPAddress
-              let c_prefix = container.NetworkSettings.Networks[networkName].IPPrefixLen
-              let entry = { Interface: link, IPs: linkIPs[link].sort(), Type: type,
+              let c_ip =
+                container.NetworkSettings.Networks[networkName].IPAddress
+              let c_prefix =
+                container.NetworkSettings.Networks[networkName].IPPrefixLen
+              let entry = {
+                Interface: link,
+                IPs: linkIPs[link].sort(),
+                Type: type,
                 Container: container,
-                ContainerIP:  c_ip,
+                ContainerIP: c_ip,
                 Prefix: c_prefix,
-                Gateway: container_gateway}
+                Gateway: container_gateway
+              }
               links.push(entry)
             }
           }
@@ -319,44 +334,45 @@ const ContainerNetInfo = (props) => {
   return (
     <ScrollView h="$full">
       <VStack space="md">
-        <ListHeader title="Container Networks"></ListHeader>
+        <ListHeader title="Container Networks" />
 
         <FlatList
           data={links}
           keyExtractor={(item) => `${item.Container}_${item.Gateway}`}
           renderItem={({ item }) => (
             <ListItem>
-              <Text flex={1} size="sm" bold>
-                {item.Interface}
-              </Text>
-              <VStack flex={1} space="sm">
+              <VStack
+                flex={1}
+                space="sm"
+                sx={{ '@md': { flexDirection: 'row' } }}
+              >
+                <Text minWidth="$1/4" size="sm" bold>
+                  {item.Interface}
+                </Text>
                 <Text size="sm">{item.Type}</Text>
-              </VStack>
-              <VStack flex={1} space="sm">
-                <Text size="sm">{getNetworkName(item.Container, item.Gateway)}</Text>
-              </VStack>
 
+                <Text size="sm">
+                  {getNetworkName(item.Container, item.Gateway)}
+                </Text>
 
-              <VStack flex={1} space="sm">
-                {item.IPs.map((ip) => (
-                      <Text size="sm" key={ip}>
-                        {ip}
-                      </Text>
-                ))}
-              </VStack>
-
-              <VStack flex={1} space="sm">
-                <Text size="sm">{item.Container?.Names[0].slice(1)}</Text>
-              </VStack>
-
-              <VStack flex={1} space="sm">
-                <Text size="sm">{item.ContainerIP}</Text>
-              </VStack>
-
-
-                <VStack flex={1} space="sm">
-                  <Text size="sm">{item.Prefix ? "/" + item.Prefix: ""}</Text>
+                <VStack space="sm">
+                  {item.IPs.map((ip) => (
+                    <Text size="sm" key={ip}>
+                      {ip}
+                    </Text>
+                  ))}
                 </VStack>
+              </VStack>
+
+              <VStack
+                flex={1}
+                space="sm"
+                sx={{ '@md': { flexDirection: 'row' } }}
+              >
+                <Text size="sm">{item.Container?.Names[0].slice(1)}</Text>
+                <Text size="sm">{item.ContainerIP}</Text>
+                <Text size="sm">{item.Prefix ? '/' + item.Prefix : ''}</Text>
+              </VStack>
 
               {/*<Box flex={1}>{moreMenu(item.Interface)}</Box>*/}
             </ListItem>
