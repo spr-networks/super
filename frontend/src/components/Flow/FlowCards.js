@@ -590,7 +590,7 @@ const actions = [
     title: 'TCP Port Forward to Site VPN, an Uplink, or a Custom Interface',
     cardType: 'action',
     description:
-      'Forward UDP traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
+      'Forward TCP traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
     color: '$purple400',
     icon: WaypointsIcon,
     params: [
