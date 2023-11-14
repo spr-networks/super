@@ -263,6 +263,10 @@ const Flow = ({ flow, edit, ...props }) => {
         return value.Identity || value.Group || value.SrcIP
       }
 
+      if (label == 'Dst' || label == 'OriginalDst') {
+        return value.IP || value.Domain
+      }
+
       if (Array.isArray(value)) {
         return value.join(',')
       }
@@ -437,7 +441,7 @@ const saveFlow = async (flow, context) => {
       ...(await action.preSubmit())
     }
   } catch (err) {
-    context.error(err.message)
+    context.error(err)
     return
   }
 
@@ -485,7 +489,7 @@ const convertBlockRuleCard = (rule, index) => {
     values: {
       Protocol: rule.Protocol,
       Client: rule.Client,
-      DstIP: rule.DstIP,
+      Dst: rule.Dst,
       DstPort: rule.DstPort
     }
   })
@@ -513,9 +517,9 @@ const convertForwardingRuleCard = (rule, index) => {
       values: {
         Protocol: rule.Protocol,
         Client: rule.Client,
-        OriginalDstIP: rule.OriginalDstIP,
+        OriginalDst: rule.OriginalDst,
         OriginalDstPort: rule.OriginalDstPort,
-        DstIP: rule.DstIP,
+        Dst: rule.Dst,
         DstPort: rule.DstPort
       }
     })
@@ -526,7 +530,7 @@ const convertForwardingRuleCard = (rule, index) => {
         cardType: 'action',
         values: {
           Client: rule.Client,
-          OriginalDstIP: rule.OriginalDstIP,
+          OriginalDst: rule.OriginalDst,
           DstInterface: rule.DstInterface
         }
       })
@@ -536,9 +540,9 @@ const convertForwardingRuleCard = (rule, index) => {
         cardType: 'action',
         values: {
           Client: rule.Client,
-          OriginalDstIP: rule.OriginalDstIP,
+          OriginalDst: rule.OriginalDst,
           OriginalDstPort: rule.OriginalDstPort,
-          DstIP: rule.DstIP,
+          Dst: rule.Dst,
           Protocol: rule.Protocol,
           DstInterface: rule.DstInterface
         }
@@ -620,19 +624,20 @@ const FlowList = (props) => {
     pfwAPI
       .config()
       .then((result) => {
-        let flows = [
-          ...result.BlockRules.map((x, i) => convertBlockRuleCard(x, i)),
-          ...result.ForwardingRules.map((x, i) =>
-            convertForwardingRuleCard(x, i)
-          ),
-          ...result.GroupRules.map((x, i) => convertGroupRuleCard(x, i)),
-          ...result.TagRules.map((x, i) => convertTagRuleCard(x, i))
-        ]
-
-        setFlows(flows)
+        if (result) {
+          let flows = [
+            ...result.BlockRules.map((x, i) => convertBlockRuleCard(x, i)),
+            ...result.ForwardingRules.map((x, i) =>
+              convertForwardingRuleCard(x, i)
+            ),
+            ...result.GroupRules.map((x, i) => convertGroupRuleCard(x, i)),
+            ...result.TagRules.map((x, i) => convertTagRuleCard(x, i))
+          ]
+          setFlows(flows)
+        }
       })
       .catch((err) => {
-        context.error(err)
+        context.error(err.message)
       })
   }
 

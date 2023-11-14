@@ -196,7 +196,7 @@ const Token = ({
       />
     )
   } else if (
-    (['Tags', 'Groups', 'DstInterface', 'Container', 'OriginalDstIP', 'Protocol'].includes(
+    (['Tags', 'Groups', 'DstInterface', 'Container', 'Protocol'].includes(
       label
     ) ||
       label.endsWith('Port')) &&

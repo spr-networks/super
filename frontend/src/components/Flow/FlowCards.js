@@ -47,6 +47,12 @@ import {
   toOption
 } from './Utils'
 
+const parseDst = (dst) => {
+  // handled under FlowCard.js onChange for now,
+  //which converts the value to an object {}
+  return dst
+}
+
 const labelsProtocol = [
   { label: 'tcp', value: 'tcp' },
   { label: 'udp', value: 'udp' }
@@ -63,7 +69,7 @@ const defaultOptions = async function (name) {
     ].map((opt) => ({ ...opt, icon: BinaryIcon }))
   }
 
-  if (name == 'OriginalDstIP') {
+  if (name == 'OriginalDst') {
     let addrs = await api.get('/ip/addr')
     addrs = addrs
       .map((a) => {
@@ -187,7 +193,7 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      { name: 'Dst', type: PropTypes.object, description: 'IP/CIDR, domain, or /regexp/' },
       {
         name: 'DstPort',
         type: PropTypes.string,
@@ -197,7 +203,7 @@ const actions = [
     values: {
       Protocol: 'tcp',
       Client: '0.0.0.0',
-      DstIP: '',
+      Dst: {'IP': '1.2.3.4'},
       DstPort: ''
     },
     getOptions: function (name = 'DstPort') {
@@ -209,8 +215,8 @@ const actions = [
     },
     preSubmit: async function () {
       let Client = parseClientIPOrIdentity(this.values.Client)
-
-      return { ...this.values, Client }
+      let Dst = parseDst(this.values.Dst)
+      return { ...this.values, Client, Dst }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
@@ -240,7 +246,7 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      { name: 'Dst', type: PropTypes.object, description: 'IP/CIDR, domain, or /regexp/' },
       {
         name: 'DstPort',
         type: PropTypes.string,
@@ -250,7 +256,7 @@ const actions = [
     values: {
       Protocol: 'udp',
       Client: '0.0.0.0',
-      DstIP: '',
+      Dst: {'IP': '1.2.3.4'},
       DstPort: ''
     },
     getOptions: function (name = 'DstPort') {
@@ -264,7 +270,8 @@ const actions = [
     preSubmit: async function () {
       return {
         ...this.values,
-        Client: parseClientIPOrIdentity(this.values.Client)
+        Client: parseClientIPOrIdentity(this.values.Client),
+        Dst: parseDst(this.values.Dst)
       }
     },
     submit: function (data, flow) {
@@ -295,14 +302,14 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'OriginalDstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      { name: 'OriginalDst', type: PropTypes.Object, description: 'IP: IP/CIDR, Domain: domain, or /regexp/' },
       {
         name: 'OriginalDstPort',
         type: PropTypes.string,
         description:
           'Original Destination port, range of ports, or empty for all'
       },
-      { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      { name: 'Dst', type: PropTypes.string, description: 'IP/CIDR' },
       {
         name: 'DstPort',
         type: PropTypes.string,
@@ -313,8 +320,8 @@ const actions = [
       Protocol: 'tcp',
       Client: '0.0.0.0',
       DstPort: '',
-      DstIP: '0.0.0.0',
-      OriginalDstIP: '0.0.0.0',
+      Dst: {'IP': '0.0.0.0'},
+      OriginalDst: {'IP': '0.0.0.0'},
       OriginalDstPort: ''
     },
     getOptions: async function (name = 'DstPort') {
@@ -322,16 +329,14 @@ const actions = [
         return defaultOptions(name)
       }
 
-      if (name == 'OriginalDstIP') {
-        return await defaultOptions(name)
-      }
-
       return []
     },
     preSubmit: async function () {
       return {
         ...this.values,
-        Client: parseClientIPOrIdentity(this.values.Client)
+        Client: parseClientIPOrIdentity(this.values.Client),
+        Dst: parseDst(this.values.Dst),
+        OriginalDst: parseDst(this.values.OriginalDst)
       }
     },
     submit: function (data, flow) {
@@ -367,14 +372,14 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'OriginalDstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      { name: 'OriginalDst', type: PropTypes.Object, description: 'IP/CIDR, domain, or /regexp/' },
       {
         name: 'OriginalDstPort',
         type: PropTypes.string,
         description:
           'Original Destination port, range of ports, or empty for all'
       },
-      { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      { name: 'Dst', type: PropTypes.object, description: 'IP/CIDR' },
       {
         name: 'DstPort',
         type: PropTypes.string,
@@ -384,8 +389,8 @@ const actions = [
     values: {
       Protocol: 'udp',
       Client: '0.0.0.0',
-      DstIP: '0.0.0.0',
-      OriginalDstIP: '',
+      Dst: {'IP': '0.0.0.0'},
+      OriginalDst: {'IP' : '0.0.0.0'},
       OriginalDstPort: '',
       DstPort: ''
     },
@@ -394,16 +399,14 @@ const actions = [
         return defaultOptions(name)
       }
 
-      if (name == 'OriginalDstIP') {
-        return await defaultOptions(name)
-      }
-
       return []
     },
     preSubmit: async function () {
       return {
         ...this.values,
-        Client: parseClientIPOrIdentity(this.values.Client)
+        Client: parseClientIPOrIdentity(this.values.Client),
+        Dst: parseDst(this.values.Dst),
+        OriginalDst: parseDst(this.values.OriginalDst)
       }
     },
     submit: function (data, flow) {
@@ -429,7 +432,7 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'OriginalDstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      { name: 'OriginalDst', type: PropTypes.Object, description: 'IP/CIDR, domain, or /regexp/' },
       {
         name: 'DstInterface',
         type: PropTypes.string,
@@ -437,16 +440,16 @@ const actions = [
           'Destination site (ex: site0, Must begin with "site" or be an Uplink interface)'
       },
       {
-        name: 'DstIP',
-        type: PropTypes.string,
+        name: 'Dst',
+        type: PropTypes.object,
         description:
           'IP destination, set as destination route, needed for containers'
       }
     ],
     values: {
       Client: '0.0.0.0',
-      OriginalDstIP: '0.0.0.0',
-      DstIP: '',
+      OriginalDst: {'IP': '0.0.0.0'},
+      Dst: {'IP': '1.2.3.4'},
       DstInterface: ''
     },
     getOptions: function (name = 'DstInterface') {
@@ -482,7 +485,9 @@ const actions = [
     preSubmit: async function () {
       return {
         ...this.values,
-        Client: parseClientIPOrIdentity(this.values.Client)
+        Client: parseClientIPOrIdentity(this.values.Client),
+        Dst: parseDst(this.values.Dst),
+        OriginalDst: parseDst(this.values.OriginalDst)
       }
     },
     submit: function (data, flow) {
@@ -508,7 +513,7 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'OriginalDstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      { name: 'OriginalDst', type: PropTypes.object, description: 'IP/CIDR, domain, or /regexp/' },
       {
         name: 'OriginalDstPort',
         type: PropTypes.string,
@@ -522,16 +527,16 @@ const actions = [
           'Destination site (ex: site0, Must begin with "site" or be an Uplink interface)'
       },
       {
-        name: 'DstIP',
-        type: PropTypes.string,
+        name: 'Dst',
+        type: PropTypes.object,
         description:
           'IP destination, set as destination route, needed for containers'
       }
     ],
     values: {
       Client: '0.0.0.0',
-      OriginalDstIP: '0.0.0.0',
-      DstIP: '',
+      OriginalDst: {'IP': '0.0.0.0'},
+      Dst: {'IP' : ''},
       OriginalDstPort: '',
       Protocol: 'udp',
       DstInterface: ''
@@ -573,7 +578,9 @@ const actions = [
     preSubmit: async function () {
       return {
         ...this.values,
-        Client: parseClientIPOrIdentity(this.values.Client)
+        Client: parseClientIPOrIdentity(this.values.Client),
+        Dst: parseDst(this.values.Dst),
+        OriginalDst: parseDst(this.values.OriginalDst)
       }
     },
     submit: function (data, flow) {
@@ -599,7 +606,7 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'OriginalDstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      { name: 'OriginalDst', type: PropTypes.string, description: 'IP/CIDR, domain, or /regexp/' },
       {
         name: 'OriginalDstPort',
         type: PropTypes.string,
@@ -613,16 +620,16 @@ const actions = [
           'Destination site (ex: site0, Must begin with "site" or be an Uplink interface)'
       },
       {
-        name: 'DstIP',
-        type: PropTypes.string,
+        name: 'Dst',
+        type: PropTypes.objects,
         description:
           'IP destination, set as destination route, needed for containers'
       }
     ],
     values: {
       Client: '0.0.0.0',
-      OriginalDstIP: '0.0.0.0',
-      DstIP: '',
+      OriginalDst: {'IP': '0.0.0.0'},
+      Dst: {'IP' :''},
       OriginalDstPort: '',
       Protocol: 'tcp',
       DstInterface: ''
@@ -664,7 +671,9 @@ const actions = [
     preSubmit: async function () {
       return {
         ...this.values,
-        Client: parseClientIPOrIdentity(this.values.Client)
+        Client: parseClientIPOrIdentity(this.values.Client),
+        Dst: parseDst(this.values.Dst),
+        OriginalDst: parseDst(this.values.OriginalDst)
       }
     },
     submit: function (data, flow) {
@@ -790,9 +799,9 @@ const actions = [
         description: 'IP/CIDR or Group'
       },
       {
-        name: 'OriginalDstIP',
-        type: PropTypes.string,
-        description: 'IP/CIDR'
+        name: 'OriginalDst',
+        type: PropTypes.object,
+        description: 'IP/CIDR, domain, or /regexp/'
       },
       {
         name: 'OriginalDstPort',
@@ -811,8 +820,8 @@ const actions = [
         description: 'Port exposed by container'
       },
       {
-        name: 'DstIP',
-        type: PropTypes.string,
+        name: 'Dst',
+        type: PropTypes.object,
         description: 'IP/CIDR',
         hidden: true
       },
@@ -828,10 +837,10 @@ const actions = [
       Client: { Group: 'lan' },
       Container: 'container',
       ContainerPort: '8080',
-      OriginalDstIP: '192.168.2.1',
+      OriginalDst: {'IP': '192.168.2.1'},
       OriginalDstPort: '8080',
       DstPort: '8080',
-      DstIP: '0.0.0.0'
+      Dst: {'IP': '0.0.0.0'}
     },
     niceDockerName: function (c) {
       return (c.Names[0] || c.Id.substr(0, 8)).replace(/^\//, '')
@@ -846,7 +855,7 @@ const actions = [
         return labelsProtocol
       }
 
-      if (name.endsWith('Port') || name == 'OriginalDstIP') {
+      if (name.endsWith('Port')) {
         return await defaultOptions(name)
       }
 
@@ -880,15 +889,15 @@ const actions = [
         return
       }
 
-      let DstIP
+      let Dst
 
       let networks = container.NetworkSettings.Networks
       if (networks.bridge) {
-        DstIP = container.NetworkSettings.Networks.bridge.IPAddress
+        Dst = {'IP': container.NetworkSettings.Networks.bridge.IPAddress}
       } else {
         let values = Object.values(container.NetworkSettings.Networks)
         if (values.length > 0) {
-          DstIP = values[0].IPAddress
+          Dst = {'IP': values[0].IPAddress}
         } else {
           context.error('container has no IP address')
           return
@@ -897,16 +906,12 @@ const actions = [
 
       let DstPort = this.values.ContainerPort
 
-      //TODO this should be a iface select
-      let OriginalDstIP = '192.168.2.1'
-
       let data = {
         Protocol: this.values.Protocol,
         Client: parseClientIPOrIdentity(this.values.Client),
-        //OriginalDstIP: this.values.OriginalDstIP,
-        OriginalDstIP,
         OriginalDstPort: this.values.OriginalDstPort,
-        DstIP,
+        Dst: parseDst(this.values.Dst),
+        OriginalDst: parseDst(this.values.OriginalDst),
         DstPort
       }
 

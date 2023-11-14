@@ -120,8 +120,7 @@ const flowObjParse = (x) => {
   if (typeof x !== 'object') {
     return x
   }
-
-  let cliKeys = ['Identity', 'Group', 'SrcIP', 'Tag', 'Endpoint']
+  let cliKeys = ['Identity', 'Group', 'SrcIP', 'Tag', 'Endpoint', 'Domain', 'IP']
   for (let k of cliKeys) {
     if (x[k]?.length) {
       return x[k]

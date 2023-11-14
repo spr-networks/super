@@ -127,7 +127,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
               label={p.name}
               value={
                 card.values && card.values[p.name] !== undefined
-                  ? p.name == 'Client'
+                  ? p.name == 'Client' || p.name == 'Dst' || p.name == 'OriginalDst'
                     ? flowObjParse(card.values[p.name])
                     : card.values[p.name]
                   : p.name
@@ -144,7 +144,17 @@ const FlowCard = ({ card, size, edit, ...props }) => {
   }
 
   const onChange = (name, value) => {
-    card.values[name] = value
+    if (name == 'Dst' || name == 'OriginalDst') {
+      //convert Dst/OriginalDst
+      try {
+        address = new Address4(value)
+        card.values[name] = {"IP": value}
+      } catch {
+        card.values[name] = {"Domain": value}
+      }
+    } else {
+      card.values[name] = value
+    }
 
     if (props.onChange) {
       props.onChange(card)
