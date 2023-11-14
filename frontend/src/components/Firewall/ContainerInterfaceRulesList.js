@@ -22,6 +22,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
+import { GroupItem } from 'components/TagItem'
 
 const ContainerInterfaceRulesList = (props) => {
   let list = props.list || []
@@ -43,7 +44,6 @@ const ContainerInterfaceRulesList = (props) => {
     props.notifyChange('custom_interface')
   }
 
-
   return (
     <VStack>
       <ListHeader
@@ -61,7 +61,10 @@ const ContainerInterfaceRulesList = (props) => {
           }}
           modalRef={refModal}
         >
-          <AddContainerInterfaceRule notifyChange={notifyChange} appContext={appContext} />
+          <AddContainerInterfaceRule
+            notifyChange={notifyChange}
+            appContext={appContext}
+          />
         </ModalForm>
       </ListHeader>
 
@@ -69,23 +72,20 @@ const ContainerInterfaceRulesList = (props) => {
         data={list}
         renderItem={({ item }) => (
           <ListItem>
-
             <Text>{item.Interface}</Text>
             <Text>{item.SrcIP}</Text>
-            <HStack>
-            { item.Groups.map((entry) => {
-                return <Badge action="muted" variant="outline">
-                  <BadgeText>{entry}</BadgeText>
-                </Badge>
-            })}
+            <HStack space="sm">
+              {item.Groups.map((entry) => (
+                <GroupItem key={entry} name={entry} />
+              ))}
             </HStack>
 
             <HStack>
-            { item.SetRoute ?
-              (<Badge action="muted" variant="outline">
+              {item.SetRoute ? (
+                <Badge action="muted" variant="outline">
                   <BadgeText>setRoute</BadgeText>
-                </Badge>) : null
-            }
+                </Badge>
+              ) : null}
             </HStack>
 
             <Button
