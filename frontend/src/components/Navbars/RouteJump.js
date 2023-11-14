@@ -37,7 +37,7 @@ const RouteJump = ({ ...props }) => {
 
   const trigger = (triggerProps) => (
     <Pressable px="$4" {...triggerProps} onPress={onPress}>
-      <Input rounded="$md">
+      <Input size="sm" rounded="$md">
         <InputSlot pl="$3">
           <InputIcon as={SearchIcon} />
         </InputSlot>
