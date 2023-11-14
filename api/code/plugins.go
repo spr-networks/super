@@ -400,6 +400,24 @@ func validPlusToken(token string) bool {
 	return false
 }
 
+func plusTokenValid(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	token := config.PlusToken
+	Configmtx.Unlock()
+
+	if token == "" {
+		http.Error(w, "Empty plus token", 400)
+		return
+	}
+	valid := validPlusToken(token)
+	if valid {
+		//200 for valid
+		return
+	}
+
+	http.Error(w, "Invalid plus token", 400)
+}
+
 func plusToken(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		w.Header().Set("Content-Type", "application/json")
