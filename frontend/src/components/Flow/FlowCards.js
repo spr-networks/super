@@ -31,7 +31,8 @@ import {
   ArrowDownUpIcon,
   ArrowUpDownIcon,
   BinaryIcon,
-  ArrowUp
+  ArrowUp,
+  ContainerIcon
 } from 'lucide-react-native'
 
 import { BrandIcons } from 'IconUtils'
@@ -47,8 +48,8 @@ import {
 } from './Utils'
 
 const labelsProtocol = [
-  {label: 'tcp', value: 'tcp'},
-  {label: 'udp', value: 'udp'},
+  { label: 'tcp', value: 'tcp' },
+  { label: 'udp', value: 'udp' }
 ]
 const defaultOptions = async function (name) {
   if (name.endsWith('Port')) {
@@ -418,7 +419,8 @@ const actions = [
   {
     title: 'Forward all traffic to Site VPN, an Uplink, or a Custom Interface',
     cardType: 'action',
-    description: 'Forward traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
+    description:
+      'Forward traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
     color: '$purple600',
     icon: WaypointsIcon,
     params: [
@@ -431,13 +433,15 @@ const actions = [
       {
         name: 'DstInterface',
         type: PropTypes.string,
-        description: 'Destination site (ex: site0, Must begin with "site" or be an Uplink interface)'
+        description:
+          'Destination site (ex: site0, Must begin with "site" or be an Uplink interface)'
       },
       {
         name: 'DstIP',
         type: PropTypes.string,
-        description: 'IP destination, set as destination route, needed for containers'
-      },
+        description:
+          'IP destination, set as destination route, needed for containers'
+      }
     ],
     values: {
       Client: '0.0.0.0',
@@ -494,7 +498,8 @@ const actions = [
   {
     title: 'UDP Port Forward to Site VPN, an Uplink, or a Custom Interface',
     cardType: 'action',
-    description: 'Forward UDP traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
+    description:
+      'Forward UDP traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
     color: '$purple400',
     icon: WaypointsIcon,
     params: [
@@ -513,13 +518,15 @@ const actions = [
       {
         name: 'DstInterface',
         type: PropTypes.string,
-        description: 'Destination site (ex: site0, Must begin with "site" or be an Uplink interface)'
+        description:
+          'Destination site (ex: site0, Must begin with "site" or be an Uplink interface)'
       },
       {
         name: 'DstIP',
         type: PropTypes.string,
-        description: 'IP destination, set as destination route, needed for containers'
-      },
+        description:
+          'IP destination, set as destination route, needed for containers'
+      }
     ],
     values: {
       Client: '0.0.0.0',
@@ -582,7 +589,8 @@ const actions = [
   {
     title: 'TCP Port Forward to Site VPN, an Uplink, or a Custom Interface',
     cardType: 'action',
-    description: 'Forward UDP traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
+    description:
+      'Forward UDP traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
     color: '$purple400',
     icon: WaypointsIcon,
     params: [
@@ -601,13 +609,15 @@ const actions = [
       {
         name: 'DstInterface',
         type: PropTypes.string,
-        description: 'Destination site (ex: site0, Must begin with "site" or be an Uplink interface)'
+        description:
+          'Destination site (ex: site0, Must begin with "site" or be an Uplink interface)'
       },
       {
         name: 'DstIP',
         type: PropTypes.string,
-        description: 'IP destination, set as destination route, needed for containers'
-      },
+        description:
+          'IP destination, set as destination route, needed for containers'
+      }
     ],
     values: {
       Client: '0.0.0.0',
@@ -772,7 +782,7 @@ const actions = [
     params: [
       {
         name: 'Protocol',
-        type: PropTypes.string,
+        type: PropTypes.string
       },
       {
         name: 'Client',
@@ -828,7 +838,7 @@ const actions = [
     },
     niceDockerLabel: function (c) {
       let name = this.niceDockerName(c)
-      let ports = c.Ports.filter((p) => p.IP != '::').map((p) => p.PublicPort) // p.Type
+      let ports = c.Ports.filter((p) => p.IP != '::').map((p) => p.PrivatePort) // p.Type
       return `${name}:${ports}`
     },
     getOptions: async function (name = 'DstPort') {
@@ -845,9 +855,10 @@ const actions = [
         let containers = await api.get('/info/docker')
 
         let opts = containers
-          .filter((c) => c.State == "running")
+          .filter((c) => c.State == 'running' && c.Ports?.length)
           .map((c) => {
             return {
+              icon: ContainerIcon,
               label: this.niceDockerLabel(c),
               value: this.niceDockerName(c)
             }
@@ -876,10 +887,10 @@ const actions = [
         DstIP = container.NetworkSettings.Networks.bridge.IPAddress
       } else {
         let values = Object.values(container.NetworkSettings.Networks)
-        if (values.length > 0 ) {
+        if (values.length > 0) {
           DstIP = values[0].IPAddress
         } else {
-          context.error("container has no IP address")
+          context.error('container has no IP address')
           return
         }
       }
