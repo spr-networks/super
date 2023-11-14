@@ -70,7 +70,12 @@ const RouteJump = ({ ...props }) => {
   }
 
   const trigger = (triggerProps) => (
-    <Pressable px="$4" {...triggerProps} onPress={onPress}>
+    <Pressable
+      px="$4"
+      {...triggerProps}
+      onPress={onPress}
+      sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
+    >
       <Input size="sm" rounded="$md" w={250}>
         <InputSlot pl="$3">
           <InputIcon as={SearchIcon} />

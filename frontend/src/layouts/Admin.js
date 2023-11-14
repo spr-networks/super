@@ -573,18 +573,18 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             />
           </Box>
           {/*mobile*/}
-          {isOpenSidebar && Platform.OS == 'ios' ? (
-            <SafeAreaView
-              style={{
-                width: '100%',
-                backgroundColor: colorMode == 'light' ? '#f9fafb' : 'black'
+          {isOpenSidebar ? (
+            <Box
+              w="100%"
+              zIndex={99}
+              sx={{
+                '@md': { display: 'none' }
               }}
             >
-              <Box
-                w="100%"
-                zIndex={99}
-                sx={{
-                  '@md': { display: 'none' }
+              <SafeAreaView
+                style={{
+                  width: '100%',
+                  backgroundColor: colorMode == 'light' ? '#f9fafb' : 'black'
                 }}
               >
                 <Sidebar
@@ -596,8 +596,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
                   setIsSimpleMode={setIsSimpleMode}
                   routes={routes}
                 />
-              </Box>
-            </SafeAreaView>
+              </SafeAreaView>
+            </Box>
           ) : null}
 
           <Box flex={1} ref={mainPanel}>
