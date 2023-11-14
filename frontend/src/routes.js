@@ -122,6 +122,7 @@ const routes = [
   {
     name: 'Network',
     state: 'netCollapse',
+    hideSimple: true,
     views: [
     {
       path: 'uplink',
