@@ -18,7 +18,7 @@ import {
   RouteIcon,
   RouteOffIcon,
   SplitIcon,
-  WaypointsIcon,
+  WaypointsIcon
 } from 'lucide-react-native'
 
 import { Accordion } from 'components/Accordion'
@@ -43,19 +43,18 @@ const Firewall = (props) => {
       ForwardingRules: 'PortForwarding',
       BlockRules: 'Inbound Traffic Block',
       ForwardingBlockRules: 'Forwarding Traffic Block',
-      ContainerInterfaceRules: 'Custom Interface Access',
+      CustomInterfaceRules: 'Custom Interface Access',
       MulticastPorts: 'Multicast Proxy'
     }
 
     let keys = Object.keys(keyLabels)
+    let defaults = []
     keys.map((key) => {
-      let defaults = []
       if (config[key]?.length) {
         defaults.push(keyLabels[key])
       }
-
-      setOpen(defaults)
     })
+    setOpen(defaults)
   }, [config])
 
   let items = [
