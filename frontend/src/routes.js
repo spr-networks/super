@@ -120,53 +120,63 @@ const routes = [
     layout: 'admin'
   },
   {
-    path: 'uplink',
-    name: 'Uplink',
-    icon: GlobeIcon,
-    component: UplinkConfiguration,
-    layout: 'admin'
-  },
-  {
-    path: 'lanlink',
-    name: 'LAN',
-    icon: CableIcon,
-    component: LANLinkConfiguration,
-    layout: 'admin'
-  },
-  {
-    path: 'containernets',
-    name: 'Containers',
-    icon: ContainerIcon,
-    hideSimple: true,
-    component: ContainerNetConfiguration,
-    layout: 'admin'
-  },
-  {
-    path: 'mesh',
-    name: 'MESH',
-    icon: RouterIcon,
-    component: Mesh,
-    layout: 'admin',
-    plus: true
-  },
-  {
-    path: 'wireguard',
-    name: 'VPN',
-    icon: WaypointsIcon,
-    component: Wireguard,
-    layout: 'admin'
-  },
-
+    name: 'Network',
+    state: 'netCollapse',
+    views: [
+    {
+      path: 'uplink',
+      name: 'Uplink',
+      icon: GlobeIcon,
+      component: UplinkConfiguration,
+      hideSimple: true,
+      layout: 'admin'
+    },
+    {
+      path: 'lanlink',
+      name: 'LAN',
+      icon: CableIcon,
+      component: LANLinkConfiguration,
+      hideSimple: true,
+      layout: 'admin'
+    },
+    {
+      path: 'containernets',
+      name: 'Containers',
+      icon: ContainerIcon,
+      hideSimple: true,
+      component: ContainerNetConfiguration,
+      layout: 'admin'
+    },
+    {
+      path: 'mesh',
+      name: 'MESH',
+      icon: RouterIcon,
+      component: Mesh,
+      hideSimple: true,
+      layout: 'admin',
+      plus: true
+    },
+    {
+      path: 'wireguard',
+      name: 'VPN',
+      icon: WaypointsIcon,
+      component: Wireguard,
+      hideSimple: true,
+      layout: 'admin'
+    },
+  ]},
   {
     name: 'Firewall',
     icon: FlameIcon,
     state: 'firewallCollapse',
+    hideSimple: true,
     views: [
       {
         path: 'firewall',
         name: 'Firewall',
         icon: FlameIcon,
         component: Firewall,
+        hideSimple: true,
         layout: 'admin'
       },
       {
@@ -182,6 +192,7 @@ const routes = [
         name: 'PFW',
         icon: FlameIcon,
         component: PFW,
+        hideSimple: true,
         layout: 'admin',
         plus: true
       },
