@@ -11,4 +11,3 @@
  **Fixes**
 * UI errors related to the gluestack migration (wifi uplink, PFW, misc)
 * Fix tag and group list normalization to remove empty entries
-*
