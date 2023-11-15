@@ -26,6 +26,7 @@ import {
 import { getCard } from './FlowCards'
 import Token from './Token'
 import { flowObjParse } from './Utils'
+import { Address4 } from 'ip-address'
 
 const FlowCard = ({ card, size, edit, ...props }) => {
   size = size || 'md'
@@ -145,12 +146,16 @@ const FlowCard = ({ card, size, edit, ...props }) => {
 
   const onChange = (name, value) => {
     if (name == 'Dst' || name == 'OriginalDst') {
-      //convert Dst/OriginalDst
-      try {
-        address = new Address4(value)
-        card.values[name] = {"IP": value}
-      } catch {
-        card.values[name] = {"Domain": value}
+      if (typeof value == 'object') {
+        card.values[name] = value
+      } else {
+        //convert Dst/OriginalDst
+        try {
+          let address = new Address4(value)
+          card.values[name] = {"IP": value}
+        } catch (err) {
+          card.values[name] = {"Domain": value}
+        }
       }
     } else {
       card.values[name] = value

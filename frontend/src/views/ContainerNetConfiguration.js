@@ -1,9 +1,3 @@
-/*
-  TBD -
-    configure a bonded interface
-      set load balancing, failover
-      test failover
-*/
 import React, { useContext, useEffect, useState } from 'react'
 import {
   Badge,
@@ -41,78 +35,6 @@ import { Address4 } from 'ip-address'
 
 import { Select } from 'components/Select'
 import { ListHeader, ListItem } from 'components/List'
-
-{
-  /*
-const LANLinkSetConfig = ({ iface, onSubmit, ...props }) => {
-  const type = 'config'
-  const context = useContext(AlertContext)
-  const [item, setItem] = useState({
-    Type: 'Downlink'
-  })
-
-  const [enable, setEnable] = useState(true)
-
-  const validate = () => {
-    if (
-      item.Type != 'Other' &&
-      item.Type != 'Downlink' &&
-      item.Type != 'VLAN'
-    ) {
-      context.error('Failed to validate Type')
-      return false
-    }
-
-    return true
-  }
-
-  const doSubmit = (item) => {
-    validate() ? onSubmit(item, type, enable) : null
-  }
-
-  let validTypes = [
-    { label: 'Downlink', value: 'Downlink' },
-    { label: 'VLAN Trunk Port', value: 'VLAN' },
-    { label: 'Other', value: 'Other' }
-  ]
-
-  return (
-    <VStack space="lg">
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Update Interface</FormControlLabelText>
-        </FormControlLabel>
-
-        <Checkbox value={enable} onChange={setEnable} defaultIsChecked>
-          <CheckboxIndicator mr="$2">
-            <CheckboxIcon />
-          </CheckboxIndicator>
-          <CheckboxLabel>Enabled</CheckboxLabel>
-        </Checkbox>
-      </FormControl>
-
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Set Interface Type</FormControlLabelText>
-        </FormControlLabel>
-        <Select
-          selectedValue={item.Type}
-          onValueChange={(Type) => setItem({ ...item, Type })}
-        >
-          {validTypes.map((opt) => (
-            <Select.Item key={opt.value} label={opt.label} value={opt.value} />
-          ))}
-        </Select>
-      </FormControl>
-
-      <Button action="primary" onPress={() => doSubmit(item)}>
-        <ButtonText>Save</ButtonText>
-      </Button>
-    </VStack>
-  )
-}
-*/
-}
 
 const ContainerNetInfo = (props) => {
   const context = useContext(AlertContext)

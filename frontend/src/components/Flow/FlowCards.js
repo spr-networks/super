@@ -302,14 +302,14 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'OriginalDst', type: PropTypes.Object, description: 'IP: IP/CIDR, Domain: domain, or /regexp/' },
+      { name: 'OriginalDst', type: PropTypes.object, description: 'IP: IP/CIDR, Domain: domain, or /regexp/' },
       {
         name: 'OriginalDstPort',
         type: PropTypes.string,
         description:
           'Original Destination port, range of ports, or empty for all'
       },
-      { name: 'Dst', type: PropTypes.string, description: 'IP/CIDR' },
+      { name: 'Dst', type: PropTypes.object, description: 'IP/CIDR' },
       {
         name: 'DstPort',
         type: PropTypes.string,
@@ -372,7 +372,7 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'OriginalDst', type: PropTypes.Object, description: 'IP/CIDR, domain, or /regexp/' },
+      { name: 'OriginalDst', type: PropTypes.object, description: 'IP/CIDR, domain, or /regexp/' },
       {
         name: 'OriginalDstPort',
         type: PropTypes.string,
@@ -432,12 +432,12 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'OriginalDst', type: PropTypes.Object, description: 'IP/CIDR, domain, or /regexp/' },
+      { name: 'OriginalDst', type: PropTypes.object, description: 'IP/CIDR, domain, or /regexp/' },
       {
         name: 'DstInterface',
         type: PropTypes.string,
         description:
-          'Destination site (ex: site0, Must begin with "site" or be an Uplink interface)'
+          'Destination site (ex: site0)'
       },
       {
         name: 'Dst',
@@ -536,7 +536,7 @@ const actions = [
     values: {
       Client: '0.0.0.0',
       OriginalDst: {'IP': '0.0.0.0'},
-      Dst: {'IP' : ''},
+      Dst: {'IP' : '1.2.3.4'},
       OriginalDstPort: '',
       Protocol: 'udp',
       DstInterface: ''
@@ -621,7 +621,7 @@ const actions = [
       },
       {
         name: 'Dst',
-        type: PropTypes.objects,
+        type: PropTypes.object,
         description:
           'IP destination, set as destination route, needed for containers'
       }
@@ -629,7 +629,7 @@ const actions = [
     values: {
       Client: '0.0.0.0',
       OriginalDst: {'IP': '0.0.0.0'},
-      Dst: {'IP' :''},
+      Dst: {'IP' :'1.2.3.4'},
       OriginalDstPort: '',
       Protocol: 'tcp',
       DstInterface: ''
@@ -817,7 +817,7 @@ const actions = [
       {
         name: 'ContainerPort',
         type: PropTypes.string,
-        description: 'Port exposed by container'
+        description: 'Listening port number internal to container'
       },
       {
         name: 'Dst',
@@ -840,7 +840,7 @@ const actions = [
       OriginalDst: {'IP': '192.168.2.1'},
       OriginalDstPort: '8080',
       DstPort: '8080',
-      Dst: {'IP': '0.0.0.0'}
+      Dst: {'IP': '1.2.3.4'}
     },
     niceDockerName: function (c) {
       return (c.Names[0] || c.Id.substr(0, 8)).replace(/^\//, '')
@@ -910,7 +910,7 @@ const actions = [
         Protocol: this.values.Protocol,
         Client: parseClientIPOrIdentity(this.values.Client),
         OriginalDstPort: this.values.OriginalDstPort,
-        Dst: parseDst(this.values.Dst),
+        Dst: parseDst(Dst),
         OriginalDst: parseDst(this.values.OriginalDst),
         DstPort
       }
