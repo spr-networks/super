@@ -240,6 +240,10 @@ table inet filter {
     # Allow wireguard from only WANIF interfaces to prevent loops
     iifname @uplink_interfaces udp dport $WIREGUARD_PORT counter accept
 
+    # Allow wireguard to lan services
+    iifname wg0 counter tcp dport vmap @lan_tcp_accept
+    iifname wg0 counter tcp dport vmap @lan_udp_accept
+
     # drop dhcp requests from upstream
     iifname @uplink_interfaces udp dport {67} counter goto DROPLOGINP
 
