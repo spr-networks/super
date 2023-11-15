@@ -254,54 +254,53 @@ const ContainerNetInfo = (props) => {
   }
 
   return (
-    <ScrollView h="$full">
-      <VStack space="md">
-        <ListHeader title="Container Networks" />
+    <VStack space="md">
+      <ListHeader title="Container Networks" />
 
-        <FlatList
-          data={links}
-          keyExtractor={(item) => `${item.Container}_${item.Gateway}`}
-          renderItem={({ item }) => (
-            <ListItem>
-              <VStack
-                flex={1}
-                space="sm"
-                sx={{ '@md': { flexDirection: 'row' } }}
-              >
-                <Text minWidth="$1/4" size="sm" bold>
-                  {item.Interface}
-                </Text>
-                <Text size="sm">{item.Type}</Text>
+      <FlatList
+        data={links}
+        keyExtractor={(item) => `${item.Container}_${item.Gateway}`}
+        renderItem={({ item }) => (
+          <ListItem>
+            <VStack
+              flex={1}
+              space="sm"
+              sx={{ '@md': { flexDirection: 'row' } }}
+            >
+              <Text minWidth="$1/4" size="sm" bold>
+                {item.Interface}
+              </Text>
+              <Text size="sm">{item.Type}</Text>
 
-                <Text size="sm">
-                  {getNetworkName(item.Container, item.Gateway)}
-                </Text>
+              <Text size="sm">
+                {getNetworkName(item.Container, item.Gateway)}
+              </Text>
 
-                <VStack space="sm">
-                  {item.IPs.map((ip) => (
-                    <Text size="sm" key={ip}>
-                      {ip}
-                    </Text>
-                  ))}
-                </VStack>
+              <VStack space="sm">
+                {item.IPs.map((ip) => (
+                  <Text size="sm" key={ip}>
+                    {ip}
+                  </Text>
+                ))}
               </VStack>
+            </VStack>
 
-              <VStack
-                flex={1}
-                space="sm"
-                sx={{ '@md': { flexDirection: 'row' } }}
-              >
-                <Text size="sm">{item.Container?.Names[0].slice(1)}</Text>
-                <Text size="sm">{item.ContainerIP}</Text>
-                <Text size="sm">{item.Prefix ? '/' + item.Prefix : ''}</Text>
-              </VStack>
+            <VStack
+              flex={1}
+              space="sm"
+              sx={{ '@md': { flexDirection: 'row' } }}
+            >
+              <Text size="sm">{item.Container?.Names[0].slice(1)}</Text>
+              <Text size="sm">{item.ContainerIP}</Text>
+              <Text size="sm">{item.Prefix ? '/' + item.Prefix : ''}</Text>
+            </VStack>
 
-              {/*<Box flex={1}>{moreMenu(item.Interface)}</Box>*/}
-            </ListItem>
-          )}
-        />
+            {/*<Box flex={1}>{moreMenu(item.Interface)}</Box>*/}
+          </ListItem>
+        )}
+      />
 
-        {/*
+      {/*
         <Modal
           isOpen={showModal}
           onClose={() => {
@@ -327,8 +326,7 @@ const ContainerNetInfo = (props) => {
           </ModalContent>
         </Modal>
         */}
-      </VStack>
-    </ScrollView>
+    </VStack>
   )
 }
 
