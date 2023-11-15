@@ -22,6 +22,7 @@ const AddPlugin = (props) => {
   const [Name, setName] = useState('')
   const [URI, setURI] = useState('')
   const [UnixPath, setUnixPath] = useState('')
+  const [ComposeFilePath, setComposeFilePath] = useState('')
 
   const handleChange = (name, value) => {
     if (name == 'Name') {
@@ -33,13 +34,16 @@ const AddPlugin = (props) => {
     if (name == 'UnixPath') {
       setUnixPath(value)
     }
+    if (name == 'ComposeFilePath') {
+      setComposeFilePath(value)
+    }
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
 
     // TODO validate
-    let plugin = { Name, URI, UnixPath }
+    let plugin = { Name, URI, UnixPath, ComposeFilePath }
     pluginAPI
       .add(plugin)
       .then((res) => {
@@ -105,6 +109,27 @@ const AddPlugin = (props) => {
             type="text"
             value={UnixPath}
             onChangeText={(value) => handleChange('UnixPath', value)}
+            autoFocus
+          />
+        </Input>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Plugin pathname for unix socket
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>ComposeFilePath</FormControlLabelText>
+        </FormControlLabel>
+
+        <Input variant="underlined">
+          <InputField
+            type="text"
+            value={ComposeFilePath}
+            onChangeText={(value) => handleChange('ComposeFilePath', value)}
             autoFocus
           />
         </Input>

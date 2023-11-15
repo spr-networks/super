@@ -259,6 +259,10 @@ const Flow = ({ flow, edit, ...props }) => {
     }
 
     const displayValue = (value, label) => {
+      if (!value) {
+        return value
+      }
+
       if (label == 'Client') {
         return value.Identity || value.Group || value.SrcIP
       }
