@@ -72,9 +72,17 @@ const ContainerInterfaceRulesList = (props) => {
         data={list}
         renderItem={({ item }) => (
           <ListItem>
-            <Text>{item.Interface}</Text>
-            <Text>{item.SrcIP}</Text>
-            <HStack space="sm">
+            <VStack
+              flex={1}
+              space="md"
+              sx={{ '@md': { flexDirection: 'row' } }}
+            >
+              <Text flex={2} bold>
+                {item.Interface}
+              </Text>
+              <Text flex={1}>{item.SrcIP}</Text>
+            </VStack>
+            <HStack flex={1} space="sm">
               {item.Groups.map((entry) => (
                 <GroupItem key={entry} name={entry} />
               ))}
