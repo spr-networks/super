@@ -246,6 +246,16 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 			validURI := regexp.MustCompile(`^[A-Za-z0-9\/\-]+$`).MatchString
 			validUnixPath := regexp.MustCompile(`^[A-Za-z0-9\/\-\._]+$`).MatchString
 
+			if plugin.GitURL != "" {
+				http.Error(w, "GitURL not supported", 400)
+				return
+			}
+
+			if plugin.Plus != false {
+				http.Error(w, "PLUS not supported", 400)
+				return
+			}
+
 			if !validName(plugin.Name) {
 				http.Error(w, "Invalid Name", 400)
 				return
