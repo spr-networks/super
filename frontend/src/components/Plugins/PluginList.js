@@ -37,6 +37,7 @@ import AddPlugin from 'components/Plugins/AddPlugin'
 
 const PluginList = (props) => {
   const [list, _setList] = useState([])
+  const [pluginVersions, setPluginVersions] = useState([])
   const [plusList, setPlusList] = useState([])
 
   const [token, setToken] = useState('')
@@ -68,6 +69,7 @@ const PluginList = (props) => {
     for (let i = 0; i < pluginsV.length; i++) {
       let v = await getPluginVersion(pluginsV[i]).catch((err) => {})
       pluginsV[i].Version = v || ''
+      setPluginVersions(pluginsV)
       setList(pluginsV)
     }
   }
@@ -104,6 +106,14 @@ const PluginList = (props) => {
     pluginAPI
       .update(plugin)
       .then((plugins) => {
+        // use cached version of plugins
+        plugins = plugins.map((p) => {
+          p.Version =
+            pluginVersions.find((pp) => pp.Name == p.Name)?.Version || ''
+
+          return p
+        })
+
         setList(plugins)
       })
       .catch((err) => {
