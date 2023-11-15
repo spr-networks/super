@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AppContext } from 'AppContext'
 
 import {
   HStack,
@@ -19,10 +20,7 @@ import {
   Heading,
   Icon,
   FormControl,
-  VStack,
-  Badge,
-  BadgeIcon,
-  BadgeText
+  VStack
 } from '@gluestack-ui/themed'
 
 import { SearchIcon, SlashIcon } from 'lucide-react-native'
@@ -30,6 +28,7 @@ import { SearchIcon, SlashIcon } from 'lucide-react-native'
 import { routes } from 'routes'
 
 const RouteJump = ({ ...props }) => {
+  const { activeSidebarItem, setActiveSidebarItem } = useContext(AppContext)
   const [isOpen, setIsOpen] = useState(false)
   const [items, setItems] = useState([])
 
@@ -148,6 +147,8 @@ const RouteJump = ({ ...props }) => {
   //navigate and reset form
   const navigateItem = (item) => {
     navigate(`/${item.layout || 'admin'}/${item.path}`)
+
+    setActiveSidebarItem(item.path)
 
     setFilterText('')
     filterItems('')

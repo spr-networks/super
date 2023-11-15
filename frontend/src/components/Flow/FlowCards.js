@@ -178,8 +178,7 @@ const actions = [
   {
     title: 'Block',
     cardType: 'action',
-    description:
-      'Block from source address or group to destination address',
+    description: 'Block from source address or group to destination address',
     color: '$red400',
     icon: BanIcon,
     params: [
@@ -192,7 +191,11 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'Dst', type: PropTypes.object, description: 'IP/CIDR, domain, or /regexp/' },
+      {
+        name: 'Dst',
+        type: PropTypes.object,
+        description: 'IP/CIDR, domain, or /regexp/'
+      },
       {
         name: 'DstPort',
         type: PropTypes.string,
@@ -202,7 +205,7 @@ const actions = [
     values: {
       Protocol: 'tcp',
       Client: '0.0.0.0',
-      Dst: {'IP': '1.2.3.4'},
+      Dst: { IP: '1.2.3.4' },
       DstPort: ''
     },
     getOptions: function (name = 'DstPort') {
@@ -234,8 +237,7 @@ const actions = [
   {
     title: 'Forward',
     cardType: 'action',
-    description:
-      'Forward for specified source to destination address and port',
+    description: 'Forward for specified source to destination address and port',
     color: '$emerald600',
     icon: SplitIcon,
     params: [
@@ -248,7 +250,11 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'OriginalDst', type: PropTypes.object, description: 'IP: IP/CIDR, Domain: domain, or /regexp/' },
+      {
+        name: 'OriginalDst',
+        type: PropTypes.object,
+        description: 'IP: IP/CIDR, Domain: domain, or /regexp/'
+      },
       {
         name: 'OriginalDstPort',
         type: PropTypes.string,
@@ -266,8 +272,8 @@ const actions = [
       Protocol: 'tcp',
       Client: '0.0.0.0',
       DstPort: '',
-      Dst: {'IP': '0.0.0.0'},
-      OriginalDst: {'IP': '0.0.0.0'},
+      Dst: { IP: '0.0.0.0' },
+      OriginalDst: { IP: '0.0.0.0' },
       OriginalDstPort: ''
     },
     getOptions: async function (name = 'DstPort') {
@@ -312,12 +318,15 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'OriginalDst', type: PropTypes.object, description: 'IP/CIDR, domain, or /regexp/' },
+      {
+        name: 'OriginalDst',
+        type: PropTypes.object,
+        description: 'IP/CIDR, domain, or /regexp/'
+      },
       {
         name: 'DstInterface',
         type: PropTypes.string,
-        description:
-          'Destination site (ex: site0)'
+        description: 'Destination site (ex: site0)'
       },
       {
         name: 'Dst',
@@ -328,8 +337,8 @@ const actions = [
     ],
     values: {
       Client: '0.0.0.0',
-      OriginalDst: {'IP': '0.0.0.0'},
-      Dst: {'IP': '1.2.3.4'},
+      OriginalDst: { IP: '0.0.0.0' },
+      Dst: { IP: '1.2.3.4' },
       DstInterface: ''
     },
     getOptions: function (name = 'DstInterface') {
@@ -384,20 +393,24 @@ const actions = [
     title: 'Port Forward to Site VPN, an Uplink, or a Custom Interface',
     cardType: 'action',
     description:
-      'Forward UDP traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
+      'Forward traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
     color: '$purple400',
     icon: WaypointsIcon,
     params: [
       {
         name: 'Protocol',
-        type: PropTypes.string,
+        type: PropTypes.string
       },
       {
         name: 'Client',
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'OriginalDst', type: PropTypes.object, description: 'IP/CIDR, domain, or /regexp/' },
+      {
+        name: 'OriginalDst',
+        type: PropTypes.object,
+        description: 'IP/CIDR, domain, or /regexp/'
+      },
       {
         name: 'OriginalDstPort',
         type: PropTypes.string,
@@ -419,8 +432,8 @@ const actions = [
     ],
     values: {
       Client: '0.0.0.0',
-      OriginalDst: {'IP': '0.0.0.0'},
-      Dst: {'IP' : '1.2.3.4'},
+      OriginalDst: { IP: '0.0.0.0' },
+      Dst: { IP: '1.2.3.4' },
       OriginalDstPort: '',
       Protocol: 'tcp',
       DstInterface: ''
@@ -632,10 +645,10 @@ const actions = [
       Client: { Group: 'lan' },
       Container: 'container',
       ContainerPort: '8080',
-      OriginalDst: {'IP': '192.168.2.1'},
+      OriginalDst: { IP: '192.168.2.1' },
       OriginalDstPort: '8080',
       DstPort: '8080',
-      Dst: {'IP': '1.2.3.4'}
+      Dst: { IP: '1.2.3.4' }
     },
     niceDockerName: function (c) {
       return (c.Names[0] || c.Id.substr(0, 8)).replace(/^\//, '')
@@ -688,11 +701,11 @@ const actions = [
 
       let networks = container.NetworkSettings.Networks
       if (networks.bridge) {
-        Dst = {'IP': container.NetworkSettings.Networks.bridge.IPAddress}
+        Dst = { IP: container.NetworkSettings.Networks.bridge.IPAddress }
       } else {
         let values = Object.values(container.NetworkSettings.Networks)
         if (values.length > 0) {
-          Dst = {'IP': values[0].IPAddress}
+          Dst = { IP: values[0].IPAddress }
         } else {
           context.error('container has no IP address')
           return
