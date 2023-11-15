@@ -344,6 +344,10 @@ type PPPIface struct {
 	MTU      string `json, optional`
 }
 
+type PPPConfig struct {
+	PPPs []PPPIface
+}
+
 func (p *PPPIface) Validate() error {
 	if !isValidIface(p.Iface) {
 		return fmt.Errorf("Iface field empty")
@@ -378,10 +382,6 @@ func (p *PPPIface) Validate() error {
 	}
 
 	return nil
-}
-
-type PPPConfig struct {
-	PPPs []PPPIface
 }
 
 func loadPPPConfig() (PPPConfig, error) {
@@ -617,13 +617,18 @@ func updateLinkIPConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if iconfig.VLAN != "" {
-		n, err := strconv.Atoi(iconfig.VLAN)
-		if err != nil || n < 0 {
-			err = fmt.Errorf("VLAN field must contain positive numeric value")
-			http.Error(w, err.Error(), 400)
-			return
-		}
-		iconfig.VLAN = fmt.Sprintf("%d", n)
+		http.Error(w, "VLAN Support not yet implemented for uplinks", 400)
+		return
+
+		/*
+			n, err := strconv.Atoi(iconfig.VLAN)
+			if err != nil || n < 0 {
+				err = fmt.Errorf("VLAN field must contain positive numeric value")
+				http.Error(w, err.Error(), 400)
+				return
+			}
+			iconfig.VLAN = fmt.Sprintf("%d", n)
+		*/
 	}
 
 	err = updateInterfaceIP(iconfig)

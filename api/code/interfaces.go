@@ -370,6 +370,20 @@ func updateInterfaceIP(iconfig InterfaceConfig) error {
 
 	if iconfig.Enabled {
 		if iconfig.DisableDHCP == true && iconfig.IP != "" {
+			//TBd. Note, DHCP client observes these.
+
+			/*
+						# Handle static IP assignments
+			jq -r '.[] | select(.Type == "Uplink" and .Enabled and .DisableDHCP == true) | "\(.Name) \(.IP) \(.Router)"' $JSON |
+			while IFS= read -r entry; do
+					read -r name ip router <<< "$entry"
+					echo "Set $name with address $ip route $router"
+					# Assign IP address and router.
+					ip addr flush dev $name
+					ip addr add $ip dev $name
+					ip route add 0.0.0.0/0 via $router dev $name
+			done
+			*/
 			//set IP address directly
 
 			//add route
