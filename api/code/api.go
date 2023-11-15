@@ -257,6 +257,29 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 		}()
 
 		data, err = cmd.Output()
+	} else if name == "dockernetworks" {
+		c := http.Client{}
+		c.Transport = &http.Transport{
+			Dial: func(network, addr string) (net.Conn, error) {
+				return net.Dial("unix", DockerSocketPath)
+			},
+		}
+		defer c.CloseIdleConnections()
+
+		req, err := http.NewRequest(http.MethodGet, "http://localhost/v1.41/networks", nil)
+		if err != nil {
+			http.Error(w, err.Error(), 404)
+			return
+		}
+
+		resp, err := c.Do(req)
+		if err != nil {
+			http.Error(w, err.Error(), 404)
+			return
+		}
+
+		defer resp.Body.Close()
+		data, err = ioutil.ReadAll(resp.Body)
 	} else if name == "docker" {
 		c := http.Client{}
 		c.Transport = &http.Transport{
