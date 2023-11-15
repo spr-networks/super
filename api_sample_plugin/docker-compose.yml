@@ -21,3 +21,4 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - "${SUPERDIR}./state/plugins/api_sample_plugin:/state/plugins/api_sample_plugin"
       - "${SUPERDIR}./state/public/:/state/public/:ro"
+#      - "${SUPERDIR}./state/api/:/state/api/:ro" #uncomment me for SPRBUS access

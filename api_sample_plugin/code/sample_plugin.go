@@ -11,6 +11,32 @@ import (
 	"github.com/gorilla/mux"
 )
 
+/*
+//SPRBUS example
+//to use, also uncomment the /state/api line in docker-compose.yml
+import (
+	"github.com/spr-networks/sprbus"
+)
+
+func handleDnsEvent(topic string, value string) {
+	fmt.Println(topic, value)
+}
+
+func busListener() {
+	go func() {
+		for i := 30; i > 0; i-- {
+			err := sprbus.HandleEvent("dns:serve:", handleDnsEvent)
+			if err != nil {
+				log.Println(err)
+			}
+			time.Sleep(3 * time.Second)
+		}
+		log.Fatal("failed to establish connection to sprbus")
+	}()
+}
+
+*/
+
 var UNIX_PLUGIN_LISTENER = "/state/plugins/sample_plugin/socket"
 
 
