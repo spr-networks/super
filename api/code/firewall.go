@@ -1223,7 +1223,9 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 		if group == "lan" || group == "dns" || group == "wan" {
 			continue
 		}
-		addCustomVerdict(group, container_rule.SrcIP, container_rule.Interface)
+		if action == "add" {
+			addCustomVerdict(group, container_rule.SrcIP, container_rule.Interface)
+		}
 	}
 
 	/*
