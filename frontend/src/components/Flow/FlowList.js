@@ -512,7 +512,7 @@ const convertForwardingRuleCard = (rule, index) => {
 
   if (rule.DstInterface == '' && rule.Protocol != '') {
     action = NewCard({
-      title: 'Forward ' + rule.Protocol.toUpperCase(),
+      title: 'Forward',
       cardType: 'action',
       values: {
         Protocol: rule.Protocol,
@@ -536,7 +536,7 @@ const convertForwardingRuleCard = (rule, index) => {
       })
     } else {
       action = NewCard({
-        title: rule.Protocol.toUpperCase() + ' Port Forward to Site VPN, an Uplink, or a Custom Interface',
+        title: 'Port Forward to Site VPN, an Uplink, or a Custom Interface',
         cardType: 'action',
         values: {
           Client: rule.Client,
@@ -722,7 +722,7 @@ const FlowList = (props) => {
     let actionTitle = flow.actions[0].title
 
     if (
-      actionTitle.match(/(Block|Forward) (TCP|UDP)/) ||
+      actionTitle.match(/(Block|Forward)/) ||
       actionTitle.match(/Forward to Site VPN/)
     ) {
       let ruleType = actionTitle.startsWith('Block')
