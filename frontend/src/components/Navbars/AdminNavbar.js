@@ -33,7 +33,7 @@ const AdminNavbar = ({
   toggleColorMode,
   ...props
 }) => {
-  const { isMeshNode } = useContext(AppContext)
+  const { isMeshNode, setActiveSidebarItem } = useContext(AppContext)
 
   const colorMode = useColorMode()
   //const toggleColorModeNB = useColorModeNB().toggleColorMode
@@ -83,7 +83,12 @@ const AdminNavbar = ({
             />
           </Button>
 
-          <Pressable onPress={() => navigate('/admin/home')}>
+          <Pressable
+            onPress={() => {
+              setActiveSidebarItem('home')
+              navigate('/admin/home')
+            }}
+          >
             <HStack space="sm">
               <Text size="lg" bold>
                 SPR
