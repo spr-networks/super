@@ -9,7 +9,7 @@ on:
 
 jobs:
   build_iso:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Check out the repo
