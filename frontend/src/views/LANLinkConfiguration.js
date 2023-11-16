@@ -310,9 +310,9 @@ const LANLinkInfo = (props) => {
   return (
     <ScrollView h="$full">
       <VStack space="md" sx={{ '@md': { maxWidth: '$3/4' } }}>
-        <ListHeader title="LAN Link Configuration"></ListHeader>
+        <ListHeader title="LAN Link Configuration" />
 
-        <VStack space="md" p="$4">
+        <VStack space="sm" px="$4">
           <Text size="sm" color="$muted500">
             Note: API support for multiple wired LAN interfaces is an upcoming
             feature.
@@ -328,7 +328,7 @@ const LANLinkInfo = (props) => {
           keyExtractor={(item) => `${item.Interface}_${item.Type}`}
           renderItem={({ item }) => (
             <ListItem>
-              <Text flex={1} size="sm" bold>
+              <Text flex={2} size="sm" bold>
                 {item.Interface}
               </Text>
               <VStack flex={1} space="sm">
@@ -337,7 +337,7 @@ const LANLinkInfo = (props) => {
                   {item.Subtype}
                 </Text>
               </VStack>
-              <VStack flex={2} space="sm">
+              <VStack flex={1} space="sm">
                 {truncateSupernetIps(item.IPs)
                   ? supernets.map((net) => <Text size="sm">{net}</Text>)
                   : item.IPs.map((ip) => (
@@ -353,7 +353,7 @@ const LANLinkInfo = (props) => {
                   </Badge>
                 ) : null}
               </HStack>
-              <Box flex={1}>{moreMenu(item.Interface)}</Box>
+              {moreMenu(item.Interface)}
             </ListItem>
           )}
         />
@@ -363,13 +363,13 @@ const LANLinkInfo = (props) => {
           keyExtractor={(item) => `${item.Interface}_${item.Type}`}
           renderItem={({ item }) => (
             <ListItem>
-              <Text flex={1} size="sm" bold>
+              <Text flex={2} size="sm" bold>
                 {item.Interface}
               </Text>
               <VStack flex={1} space="sm">
                 <Text size="sm">{item.Type}</Text>
               </VStack>
-              <VStack flex={3} space="sm">
+              <VStack flex={2} space="sm">
                 {truncateSupernetIps(item.IPs)
                   ? supernets.map((net) => <Text size="sm">{net}</Text>)
                   : item.IPs.map((ip) => (
@@ -378,7 +378,7 @@ const LANLinkInfo = (props) => {
                       </Text>
                     ))}
               </VStack>
-              <Box flex={1}>{moreMenu(item.Interface)}</Box>
+              {moreMenu(item.Interface)}
             </ListItem>
           )}
         />
