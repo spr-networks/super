@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Platform } from 'react-native'
+import { Dimensions, Platform } from 'react-native'
 import { useNavigate } from 'react-router-dom'
 /*import { useNavigate as useNavigateWeb } from 'react-router-dom'
 import { useNavigate as useNavigateNative } from 'react-router-native'*/
@@ -29,115 +29,14 @@ const Collapse = ({ isOpen, ...props }) => {
   return <VStack display={isOpen ? 'flex' : 'none'}>{props.children}</VStack>
 }
 
-//TODO add headers for subviews titles. keep items separate
-const MenuSearch = ({ sidebarItems, setSidebarItems, ...props }) => {
-  const [filterText, setFilterText] = useState('')
-  const navigate = useNavigate()
-
-  const filterSidebarItems = (value) => {
-    let items = sidebarItems.map((pitem) => {
-      if (pitem.views) {
-        pitem.views = pitem.views.map((item) => {
-          item.hidden = !item.name.toLowerCase().includes(value.toLowerCase())
-
-          return item
-        })
-
-        // hide main if no match
-        let isEmpty = pitem.views.filter((item) => !item.hidden).length == 0
-        if (isEmpty) {
-          pitem.hidden = true
-        } else {
-          pitem.hidden = false
-        }
-      } else {
-        if (pitem.name) {
-          pitem.hidden = !pitem.name.toLowerCase().includes(value.toLowerCase())
-        }
-      }
-
-      return pitem
-    })
-
-    setSidebarItems(items)
-  }
-
-  const onChangeFilter = (value) => {
-    setFilterText(value)
-    filterSidebarItems(value)
-  }
-
-  const onSubmitEditing = (value) => {
-    //navigate if one or just pick first
-    if (!sidebarItems?.length) {
-      return
-    }
-
-    let item = null
-    for (let r of sidebarItems) {
-      if (r.redirect) continue
-      if (r.views) {
-        let found = false
-        for (let rr of r.views) {
-          if (!rr.hidden && rr.layout == 'admin' && rr.path && !rr.redirect) {
-            item = rr
-            found = true
-            break
-          }
-        }
-
-        if (found) break
-      }
-
-      if (!r.hidden && r.layout == 'admin' && r.path) {
-        item = r
-        break
-      }
-    }
-
-    if (item?.path) {
-      setFilterText('')
-      filterSidebarItems('')
-
-      let url = `/${item.layout}/${item.path}`
-      navigate(url)
-    }
-  }
-
-  return (
-    <Box
-      px="$4"
-      borderWidth="$1"
-      display="none"
-      sx={{
-        '@md': { display: 'flex' },
-        _light: {
-          bg: '$sidebarBackgroundLight',
-          borderColor: '$coolGray100'
-        },
-        _dark: { bg: '$sidebarBackgroundDark', borderColor: '$coolGray800' }
-      }}
-    >
-      <Input rounded="$none" borderWidth="$0">
-        <InputField
-          value={filterText}
-          onChangeText={onChangeFilter}
-          onSubmitEditing={onSubmitEditing}
-          placeholder="Filter menu items..."
-        />
-      </Input>
-    </Box>
-  )
-}
-
 const ToggleViewMode = ({ isSimpleMode, setIsSimpleMode, ...props }) => {
   return (
     <HStack
       justifyContent="center"
+      alignItems="center"
       p="$4"
       px="$8"
       space="md"
-      sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
     >
       <Switch
         value={!isSimpleMode}
@@ -164,13 +63,6 @@ const Sidebar = ({
     setSidebarItems(props.routes)
   }, [])
 
-  // when sidebarItems update - check
-  useEffect(() => {
-    console.log('toggle view mode!')
-  }, [isSimpleMode])
-
-  const showSearch = false //!isSimpleMode
-
   if (!sidebarItems.length) {
     return <></>
   }
@@ -179,6 +71,7 @@ const Sidebar = ({
     <>
       <ScrollView
         w={isMini ? '20' : '100%'}
+        h="92%"
         borderRightWidth={isMobile ? '$0' : '$1'}
         sx={{
           _light: {
@@ -197,20 +90,28 @@ const Sidebar = ({
           isSimpleMode={isSimpleMode}
         />
       </ScrollView>
-
-      {!isOpenSidebar ? (
-        <>
-          {showSearch ? (
-            <MenuSearch
-              sidebarItems={sidebarItems}
-              setSidebarItems={setSidebarItems}
-            />
-          ) : null}
+      {!isOpenSidebar || isMobile ? (
+        <Box
+          h="8%"
+          borderTopWidth="$1"
+          sx={{
+            '@base': { display: 'flex' },
+            '@md': { display: 'flex', borderRightWidth: '$1' },
+            _light: {
+              bg: '$sidebarBackgroundLight',
+              borderColor: '$coolGray100'
+            },
+            _dark: {
+              bg: '$sidebarBackgroundDark',
+              borderColor: '$coolGray800'
+            }
+          }}
+        >
           <ToggleViewMode
             isSimpleMode={isSimpleMode}
             setIsSimpleMode={setIsSimpleMode}
           />
-        </>
+        </Box>
       ) : null}
     </>
   )
