@@ -24,6 +24,7 @@ import {
   MenuItem,
   MenuItemLabel,
   useColorMode,
+  CircleIcon,
   CopyIcon,
   TrashIcon,
   ThreeDotsIcon
@@ -389,7 +390,22 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
                     sx={{ '@md': { justifyContent: 'center' } }}
                     {...triggerProps}
                   >
-                    <Text bold>{device.Name || 'N/A'}</Text>
+                    <HStack space="xs">
+                      <Text bold>{device.Name || 'N/A'}</Text>
+                      <Icon
+                        as={CircleIcon}
+                        size="2xs"
+                        color={device.isConnected ? '$success500' : '$muted200'}
+                        sx={{
+                          '@md': { display: 'none' },
+                          _dark: {
+                            color: device.isConnected
+                              ? '$success500'
+                              : '$muted700'
+                          }
+                        }}
+                      />
+                    </HStack>
                     <Text
                       size="sm"
                       color="$muted500"
