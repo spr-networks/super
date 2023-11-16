@@ -469,7 +469,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const loadSettings = () => {
     AsyncStorage.getItem('settings')
       .then((settings) => {
-        let defaultSettings = { colorMode: 'light', isSimpleMode: false }
+        let defaultSettings = { colorMode: 'light', isSimpleMode: true }
 
         let viewSettings = JSON.parse(settings) || defaultSettings
         setViewSettings(viewSettings)
