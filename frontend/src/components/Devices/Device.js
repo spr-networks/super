@@ -380,6 +380,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
             */}
 
             <Tooltip
+              h={undefined}
               placement="bottom"
               trigger={(triggerProps) => {
                 return (
