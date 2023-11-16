@@ -8,6 +8,7 @@
 * Introduce "Simple" view for UI to reduce cognitive overload for new users
 * Wireguard clients can now access LAN services again
 * Add `base/configs/custom_compose_paths.json` support to superd, enabling loading of custom compose files from the UI
+* Pretty Events in Event Log
 
  **Fixes**
 * UI errors related to the gluestack migration (wifi uplink, PFW, misc)
