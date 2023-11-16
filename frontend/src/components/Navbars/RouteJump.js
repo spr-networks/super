@@ -63,6 +63,26 @@ const RouteJump = ({ ...props }) => {
     setItems(items)
   }, [])
 
+  /*
+  const [isCalled, setIsCalled] = useState(false)
+  const keydownListener = (e) => {
+    if (e.key !== '/') return
+    onPress()
+  }
+  useEffect(() => {
+    //TODO useMemo: https://github.com/react-native-netinfo/react-native-netinfo/issues/305
+    if (isCalled) {
+      return
+    }
+
+    setIsCalled(true)
+    window.addEventListener('keyup', keydownListener, true)
+    return () => {
+      window.removeEventListener('keyup', keydownListener, true)
+    }
+  }, [keydownListener])
+  */
+
   const onPress = () => {
     setIsOpen(true)
     refInput.current?.focus()
@@ -83,13 +103,13 @@ const RouteJump = ({ ...props }) => {
           value=""
           onChangeText={() => {}}
           onSubmitEditing={() => {}}
-          placeholder="Type / to search"
+          placeholder="Search"
         />
-        <InputSlot mr="$3.5">
+        {/*<InputSlot mr="$3.5">
           <Text size="xs" color="$muted500">
             /
           </Text>
-        </InputSlot>
+        </InputSlot>*/}
       </Input>
     </Pressable>
   )
