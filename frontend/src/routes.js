@@ -50,6 +50,7 @@ import {
   ContainerIcon,
   EyeIcon,
   FlameIcon,
+  GaugeCircleIcon,
   GaugeIcon,
   GlobeIcon,
   HammerIcon,
@@ -124,48 +125,49 @@ const routes = [
     state: 'netCollapse',
     hideSimple: true,
     views: [
-    {
-      path: 'uplink',
-      name: 'Uplink',
-      icon: GlobeIcon,
-      component: UplinkConfiguration,
-      hideSimple: true,
-      layout: 'admin'
-    },
-    {
-      path: 'lanlink',
-      name: 'LAN',
-      icon: CableIcon,
-      component: LANLinkConfiguration,
-      hideSimple: true,
-      layout: 'admin'
-    },
-    {
-      path: 'containernets',
-      name: 'Containers',
-      icon: ContainerIcon,
-      hideSimple: true,
-      component: ContainerNetConfiguration,
-      layout: 'admin'
-    },
-    {
-      path: 'mesh',
-      name: 'MESH',
-      icon: RouterIcon,
-      component: Mesh,
-      hideSimple: true,
-      layout: 'admin',
-      plus: true
-    },
-    {
-      path: 'wireguard',
-      name: 'VPN',
-      icon: WaypointsIcon,
-      component: Wireguard,
-      hideSimple: true,
-      layout: 'admin'
-    },
-  ]},
+      {
+        path: 'uplink',
+        name: 'Uplink',
+        icon: GlobeIcon,
+        component: UplinkConfiguration,
+        hideSimple: true,
+        layout: 'admin'
+      },
+      {
+        path: 'lanlink',
+        name: 'LAN',
+        icon: CableIcon,
+        component: LANLinkConfiguration,
+        hideSimple: true,
+        layout: 'admin'
+      },
+      {
+        path: 'containernets',
+        name: 'Containers',
+        icon: ContainerIcon,
+        hideSimple: true,
+        component: ContainerNetConfiguration,
+        layout: 'admin'
+      },
+      {
+        path: 'mesh',
+        name: 'MESH',
+        icon: RouterIcon,
+        component: Mesh,
+        hideSimple: true,
+        layout: 'admin',
+        plus: true
+      },
+      {
+        path: 'wireguard',
+        name: 'VPN',
+        icon: WaypointsIcon,
+        component: Wireguard,
+        hideSimple: true,
+        layout: 'admin'
+      }
+    ]
+  },
   {
     name: 'Firewall',
     icon: FlameIcon,
@@ -383,7 +385,7 @@ const routes = [
       {
         path: 'speedtest',
         name: 'Speed Test',
-        icon: GaugeIcon,
+        icon: GaugeCircleIcon,
         component: SpeedTest,
         layout: 'admin'
       }
