@@ -488,7 +488,7 @@ const convertBlockRuleCard = (rule, index) => {
   let trigger = convertTrigger(rule)
 
   let action = NewCard({
-    title: 'Block ' + rule.Protocol.toUpperCase(),
+    title: 'Block',
     cardType: 'action',
     values: {
       Protocol: rule.Protocol,
@@ -531,7 +531,7 @@ const convertForwardingRuleCard = (rule, index) => {
     if (rule.Protocol == '') {
       action = NewCard({
         title:
-          'Forward all traffic to Site VPN, an Uplink, or a Custom Interface',
+          'Forward all traffic to Interface, Site VPN or Uplink',
         cardType: 'action',
         values: {
           Client: rule.Client,
@@ -542,7 +542,7 @@ const convertForwardingRuleCard = (rule, index) => {
       })
     } else {
       action = NewCard({
-        title: 'Port Forward to Site VPN, an Uplink, or a Custom Interface',
+        title: 'Port Forward to Interface, Site VPN or Uplink',
         cardType: 'action',
         values: {
           Client: rule.Client,
