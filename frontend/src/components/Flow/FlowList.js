@@ -535,6 +535,7 @@ const convertForwardingRuleCard = (rule, index) => {
         values: {
           Client: rule.Client,
           OriginalDst: rule.OriginalDst,
+          Dst: rule.Dst,
           DstInterface: rule.DstInterface
         }
       })
