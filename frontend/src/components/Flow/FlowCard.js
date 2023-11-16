@@ -193,7 +193,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
       justifyContent="space-between"
       alignItems="center"
       sx={{
-        _dark: { bg: '$backgroundContentDark', borderColor: '$coolGray900' }
+        _dark: { bg: '$secondary900', borderColor: '$coolGray900' }
       }}
       p={size == 'xs' ? '$2' : '$4'}
       rounded="$md"
