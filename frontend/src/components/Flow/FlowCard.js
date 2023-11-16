@@ -61,7 +61,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
 
   let body = (
     <VStack space="md">
-      <Text noOfLines={2} w="$2/3" size="sm" color="$muted500">
+      <Text noOfLines={2} w="$3/4" size="sm" color="$muted500">
         {description}
       </Text>
       <HStack space="sm" flexWrap="wrap">
@@ -128,7 +128,9 @@ const FlowCard = ({ card, size, edit, ...props }) => {
               label={p.name}
               value={
                 card.values && card.values[p.name] !== undefined
-                  ? p.name == 'Client' || p.name == 'Dst' || p.name == 'OriginalDst'
+                  ? p.name == 'Client' ||
+                    p.name == 'Dst' ||
+                    p.name == 'OriginalDst'
                     ? flowObjParse(card.values[p.name])
                     : card.values[p.name]
                   : p.name
@@ -152,9 +154,9 @@ const FlowCard = ({ card, size, edit, ...props }) => {
         //convert Dst/OriginalDst
         try {
           let address = new Address4(value)
-          card.values[name] = {"IP": value}
+          card.values[name] = { IP: value }
         } catch (err) {
-          card.values[name] = {"Domain": value}
+          card.values[name] = { Domain: value }
         }
       }
     } else {
@@ -181,63 +183,60 @@ const FlowCard = ({ card, size, edit, ...props }) => {
   )
 
   return (
-    <Box
+    <HStack
       bg="$warmGray50"
       borderWidth="$1"
       borderColor="$coolGray200"
+      w="$full"
+      minHeight={edit ? 100 : 160}
+      space="md"
+      justifyContent="space-between"
+      alignItems="center"
       sx={{
         _dark: { bg: '$backgroundContentDark', borderColor: '$coolGray900' }
       }}
       p={size == 'xs' ? '$2' : '$4'}
       rounded="$md"
-      minW={320}
-      mr="$2"
       {...props}
     >
-      <HStack justifyContent="space-between" alignItems="center" space="md">
-        <Box
-          height={size == 'xs' ? 30 : 50}
-          rounded="full"
-          width={size == 'xs' ? 30 : 50}
-          justifyContent="center"
-          alignItems="center"
-        >
-          {icon}
-        </Box>
+      <Box
+        height={size == 'xs' ? 30 : 50}
+        rounded="full"
+        width={size == 'xs' ? 30 : 50}
+        justifyContent="center"
+        alignItems="center"
+      >
+        {icon}
+      </Box>
 
-        <VStack
-          flex={1}
-          alignContent="center"
-          space={size == 'xs' ? 'xs' : 'sm'}
-        >
-          <HStack space="sm" alignItems="center">
-            <Text size="sm" color="$muted400">
-              {title}
-            </Text>
-            {edit && description ? (
-              <Tooltip
-                h={undefined}
-                placement="bottom"
-                trigger={(triggerProps) => {
-                  return (
-                    <Button action="secondary" variant="link" {...triggerProps}>
-                      <ButtonIcon as={InfoIcon} color="$muted400" />
-                    </Button>
-                  )
-                }}
-              >
-                <TooltipContent>
-                  <TooltipText>{description}</TooltipText>
-                </TooltipContent>
-              </Tooltip>
-            ) : null}
-          </HStack>
-          {body}
-        </VStack>
+      <VStack flex={1} alignContent="center" space={size == 'xs' ? 'xs' : 'sm'}>
+        <HStack space="sm" alignItems="center">
+          <Text size="sm" color="$muted400">
+            {title}
+          </Text>
+          {edit && description ? (
+            <Tooltip
+              h={undefined}
+              placement="bottom"
+              trigger={(triggerProps) => {
+                return (
+                  <Button action="secondary" variant="link" {...triggerProps}>
+                    <ButtonIcon as={InfoIcon} color="$muted400" />
+                  </Button>
+                )
+              }}
+            >
+              <TooltipContent>
+                <TooltipText>{description}</TooltipText>
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
+        </HStack>
+        {body}
+      </VStack>
 
-        {edit ? moreMenu : null}
-      </HStack>
-    </Box>
+      {edit ? moreMenu : null}
+    </HStack>
   )
 }
 

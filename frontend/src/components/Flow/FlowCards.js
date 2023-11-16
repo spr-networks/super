@@ -306,7 +306,7 @@ const actions = [
     }
   },
   {
-    title: 'Forward all traffic to Site VPN, an Uplink, or a Custom Interface',
+    title: 'Forward all traffic to Interface, Site VPN or Uplink',
     cardType: 'action',
     description:
       'Forward traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
@@ -390,7 +390,7 @@ const actions = [
     }
   },
   {
-    title: 'Port Forward to Site VPN, an Uplink, or a Custom Interface',
+    title: 'Port Forward to Interface, Site VPN or Uplink',
     cardType: 'action',
     description:
       'Forward traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',

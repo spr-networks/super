@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { Dimensions } from 'react-native'
 
 import { FlowCard } from './FlowCard'
 import { getCards } from './FlowCards'
@@ -16,15 +17,19 @@ const AddFlowCard = ({ cardType, onSubmit, ...props }) => {
 
   const cards = getCards(cardType)
 
+  let numColumns = Dimensions.get('window').width > 1024 ? 2 : 1
+  let cardWidth = numColumns == 2 ? '$1/2' : '$full'
+
+  //TODO only if Device.width>=1024
   return (
     <VStack space="md">
-      <Text bold>Select a Card</Text>
       <FlatList
         data={cards}
+        numColumns={numColumns}
         keyExtractor={(item) => item.title}
         renderItem={({ item }) => (
-          <Pressable onPress={() => handleSelect(item)}>
-            <FlowCard edit={false} card={item} my="$2" />
+          <Pressable onPress={() => handleSelect(item)} w={cardWidth} px="$1">
+            <FlowCard edit={false} card={item} mb="$2" />
           </Pressable>
         )}
       />

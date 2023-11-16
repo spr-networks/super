@@ -126,7 +126,7 @@ const FlowCardList = ({
             key={`form${cardType}`}
             title={`Add ${cardType} to flow`}
             modalRef={refModal}
-            w="$full"
+            maxWidth="$full"
           >
             <ScrollView maxHeight={400}>
               <AddFlowCard cardType={cardType} onSubmit={handleAddCard} />
@@ -530,7 +530,8 @@ const convertForwardingRuleCard = (rule, index) => {
   } else if (rule.DstInterface != '') {
     if (rule.Protocol == '') {
       action = NewCard({
-        title: 'Forward all traffic to Site VPN, an Uplink, or a Custom Interface',
+        title:
+          'Forward all traffic to Site VPN, an Uplink, or a Custom Interface',
         cardType: 'action',
         values: {
           Client: rule.Client,
@@ -552,7 +553,6 @@ const convertForwardingRuleCard = (rule, index) => {
           DstInterface: rule.DstInterface
         }
       })
-
     }
   }
 
