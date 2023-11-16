@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Dimensions, Platform, SafeAreaView } from 'react-native'
 import { Outlet, useLocation } from 'react-router-dom'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import Notifications from 'Notifications'
 import {
@@ -53,6 +54,7 @@ import {
 
 import { routes } from 'routes'
 import { deviceAPI } from 'api'
+import { userEvent } from '@testing-library/react-native'
 
 const ConfirmTrafficAlert = (props) => {
   const { type, title, body, showAlert, onClose } = props
@@ -124,7 +126,7 @@ const AppAlert = (props) => {
   let alertType = type == 'danger' ? 'warning' : type
 
   return (
-    <Alert action={alertType}>
+    <Alert action={alertType} rounded="$none">
       <HStack space="md" w="$full">
         <AlertIcon as={alertIcon} size="xl" mr="$3" alignSelf="center" />
         <VStack space="xs" flex={1}>
@@ -459,13 +461,58 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       })
   }, [isWifiDisabled])
 
-  /*return (
-    <Box bg="$red200" p="$20">
-      <Text>TEST 2.0</Text>
-    </Box>
-  )*/
   const colorMode = useColorMode()
+
+  //View settings: colorMode, simpleMode. TODO: move more to App
+  const [viewSettings, setViewSettings] = useState(null)
+
+  const loadSettings = () => {
+    AsyncStorage.getItem('settings')
+      .then((settings) => {
+        let defaultSettings = { colorMode: 'light', isSimpleMode: false }
+
+        let viewSettings = JSON.parse(settings) || defaultSettings
+        setViewSettings(viewSettings)
+
+        setIsSimpleMode(viewSettings.isSimpleMode)
+      })
+      .catch((err) => {
+        console.error('ERR:', err)
+      })
+  }
+
+  const saveSettings = () => {
+    AsyncStorage.setItem('settings', JSON.stringify(viewSettings))
+      .then((res) => {})
+      .catch((err) => {})
+  }
+
+  useEffect(() => {
+    if (!viewSettings) {
+      loadSettings()
+      return
+    }
+
+    setViewSettings({ ...viewSettings, isSimpleMode, colorMode })
+  }, [isSimpleMode])
+
+  useEffect(() => {
+    if (viewSettings) {
+      saveSettings()
+    }
+  }, [viewSettings])
+
   const backgroundColor = colorMode === 'light' ? 'white' : 'black'
+
+  //this is to sync the settings. TODO: in App
+  const toggleColorModeHook = () => {
+    setViewSettings({
+      ...viewSettings,
+      colorMode: colorMode == 'light' ? 'dark' : 'light'
+    })
+
+    toggleColorMode()
+  }
 
   return (
     <AppContext.Provider
@@ -522,7 +569,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             isMobile={false}
             isOpenSidebar={isOpenSidebar}
             setIsOpenSidebar={setIsOpenSidebar}
-            toggleColorMode={toggleColorMode}
+            toggleColorMode={toggleColorModeHook}
           />
         </Box>
         {/*mobile*/}
@@ -542,7 +589,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             isMobile={true}
             isOpenSidebar={isOpenSidebar}
             setIsOpenSidebar={setIsOpenSidebar}
-            toggleColorMode={toggleColorMode}
+            toggleColorMode={toggleColorModeHook}
           />
         </Box>
 
@@ -646,9 +693,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
               display: showAlert ? 'block' : 'none'
             },
             '@md': {
-              _width: '$2/6',
-              _marginLeft: '-$1/6',
-              _left: '$1/2',
               width: isOpenSidebar
                 ? 'calc(100vw - 80px)'
                 : 'calc(100vw - 260px)',

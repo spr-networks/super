@@ -1,10 +1,11 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import {
   BrowserRouter as Router,
   Route,
   Routes,
   Navigate
 } from 'react-router-dom'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import AuthLayout from 'layouts/Auth'
 import AdminLayout from 'layouts/Admin'
@@ -18,6 +19,23 @@ export default function App() {
   const toggleColorMode = () => {
     setColorMode((prev) => (prev === 'light' ? 'dark' : 'light'))
   }
+
+  const loadSettings = () => {
+    AsyncStorage.getItem('settings')
+      .then((settings) => {
+        let viewSettings = JSON.parse(settings)
+        if (viewSettings?.colorMode && viewSettings.colorMode !== colorMode) {
+          toggleColorMode()
+        }
+      })
+      .catch((err) => {
+        console.error('ERR:', err)
+      })
+  }
+
+  useEffect(() => {
+    loadSettings()
+  }, [])
 
   return (
     <GluestackUIProvider config={config} colorMode={colorMode}>
