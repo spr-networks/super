@@ -48,7 +48,7 @@ export class APIFirewall extends API {
   addMulticastPort(data) {
     return this.put('multicast', data)
   }
-  
+
   deleteMulticastPort(data) {
     return this.delete('multicast', data)
   }
@@ -60,6 +60,15 @@ export class APIFirewall extends API {
   setMulticast(data) {
     return this.put('multicast', data)
   }
+
+  addCustomInterfaceRule(data) {
+    return this.put('custom_interface', data)
+  }
+
+  deleteCustomInterfaceRule(data) {
+    return this.delete('custom_interface', data)
+  }
+
 }
 
 export const firewallAPI = new APIFirewall()

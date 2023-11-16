@@ -49,6 +49,8 @@ import {
   CircleSlashIcon
 } from 'lucide-react-native'
 
+import { Tooltip } from 'components/Tooltip'
+
 const FlowCardList = ({
   title,
   cards: defaultCards,
@@ -124,7 +126,7 @@ const FlowCardList = ({
             key={`form${cardType}`}
             title={`Add ${cardType} to flow`}
             modalRef={refModal}
-            w="$full"
+            maxWidth="$full"
           >
             <ScrollView maxHeight={400}>
               <AddFlowCard cardType={cardType} onSubmit={handleAddCard} />
@@ -135,8 +137,7 @@ const FlowCardList = ({
             action="primary"
             variant="outline"
             onPress={() => addCard(cardType)}
-            __disabled={cardType == 'trigger' && cards.length}
-            display={{ base: cards.length ? 'none' : 'flex' }}
+            display={cards.length ? 'none' : 'flex'}
             key={'add' + cardType}
           >
             <ButtonText>Add card</ButtonText>
@@ -150,20 +151,17 @@ const FlowCardList = ({
 
 // Add/Edit flow
 const Flow = ({ flow, edit, ...props }) => {
-  const context = useContext(AlertContext)
   // NOTE we have multiple but only support one atm.
   const [title, setTitle] = useState(flow.title)
   const [triggers, setTriggers] = useState(flow.triggers)
   const [actions, setActions] = useState(flow.actions)
 
   useEffect(() => {
-    if (!flow || !flow.triggers || !flow.actions) {
-      return
+    if (flow?.triggers && flow?.actions) {
+      setTitle(flow.title)
+      setTriggers(flow.triggers)
+      setActions(flow.actions)
     }
-
-    setTitle(flow.title)
-    setTriggers(flow.triggers)
-    setActions(flow.actions)
   }, [flow])
 
   //set title when we update actions
@@ -261,8 +259,16 @@ const Flow = ({ flow, edit, ...props }) => {
     }
 
     const displayValue = (value, label) => {
+      if (!value) {
+        return value
+      }
+
       if (label == 'Client') {
         return value.Identity || value.Group || value.SrcIP
+      }
+
+      if (label == 'Dst' || label == 'OriginalDst') {
+        return value.IP || value.Domain
       }
 
       if (Array.isArray(value)) {
@@ -305,15 +311,21 @@ const Flow = ({ flow, edit, ...props }) => {
 
           <HStack space="sm" flexWrap="wrap">
             {Object.keys(trigger.values).map((key) => (
-              <Badge key={key} variant="outline" action="muted" size="xs">
-                <BadgeText>{displayValue(trigger.values[key], key)}</BadgeText>
-              </Badge>
+              <Tooltip key={key} label={key}>
+                <Badge variant="outline" action="muted" size="xs">
+                  <BadgeText>
+                    {displayValue(trigger.values[key], key)}
+                  </BadgeText>
+                </Badge>
+              </Tooltip>
             ))}
 
             {Object.keys(action.values).map((key) => (
-              <Badge key={key} variant="outline" action="muted" size="xs">
-                <BadgeText>{displayValue(action.values[key], key)}</BadgeText>
-              </Badge>
+              <Tooltip key={key} label={key}>
+                <Badge variant="outline" action="muted" size="xs">
+                  <BadgeText>{displayValue(action.values[key], key)}</BadgeText>
+                </Badge>
+              </Tooltip>
             ))}
           </HStack>
         </VStack>
@@ -418,7 +430,7 @@ const Flow = ({ flow, edit, ...props }) => {
   )
 }
 
-const saveFlow = async (flow) => {
+const saveFlow = async (flow, context) => {
   let trigger = flow.triggers[0],
     action = flow.actions[0]
 
@@ -434,6 +446,7 @@ const saveFlow = async (flow) => {
     }
   } catch (err) {
     context.error(err)
+    return
   }
 
   data.disabled = flow.disabled
@@ -475,12 +488,12 @@ const convertBlockRuleCard = (rule, index) => {
   let trigger = convertTrigger(rule)
 
   let action = NewCard({
-    title: 'Block ' + rule.Protocol.toUpperCase(),
+    title: 'Block',
     cardType: 'action',
     values: {
       Protocol: rule.Protocol,
       Client: rule.Client,
-      DstIP: rule.DstIP,
+      Dst: rule.Dst,
       DstPort: rule.DstPort
     }
   })
@@ -501,29 +514,46 @@ const convertForwardingRuleCard = (rule, index) => {
 
   //NOTE: titles have to match or they will be invisible
 
-  if (rule.Protocol != '') {
+  if (rule.DstInterface == '' && rule.Protocol != '') {
     action = NewCard({
-      title: 'Forward ' + rule.Protocol.toUpperCase(),
+      title: 'Forward',
       cardType: 'action',
       values: {
         Protocol: rule.Protocol,
         Client: rule.Client,
-        OriginalDstIP: rule.OriginalDstIP,
+        OriginalDst: rule.OriginalDst,
         OriginalDstPort: rule.OriginalDstPort,
-        DstIP: rule.DstIP,
+        Dst: rule.Dst,
         DstPort: rule.DstPort
       }
     })
   } else if (rule.DstInterface != '') {
-    action = NewCard({
-      title: 'Forward to Site VPN or Uplink Interface',
-      cardType: 'action',
-      values: {
-        Client: rule.Client,
-        OriginalDstIP: rule.OriginalDstIP,
-        DstInterface: rule.DstInterface
-      }
-    })
+    if (rule.Protocol == '') {
+      action = NewCard({
+        title:
+          'Forward all traffic to Interface, Site VPN or Uplink',
+        cardType: 'action',
+        values: {
+          Client: rule.Client,
+          OriginalDst: rule.OriginalDst,
+          Dst: rule.Dst,
+          DstInterface: rule.DstInterface
+        }
+      })
+    } else {
+      action = NewCard({
+        title: 'Port Forward to Interface, Site VPN or Uplink',
+        cardType: 'action',
+        values: {
+          Client: rule.Client,
+          OriginalDst: rule.OriginalDst,
+          OriginalDstPort: rule.OriginalDstPort,
+          Dst: rule.Dst,
+          Protocol: rule.Protocol,
+          DstInterface: rule.DstInterface
+        }
+      })
+    }
   }
 
   return {
@@ -599,19 +629,20 @@ const FlowList = (props) => {
     pfwAPI
       .config()
       .then((result) => {
-        let flows = [
-          ...result.BlockRules.map((x, i) => convertBlockRuleCard(x, i)),
-          ...result.ForwardingRules.map((x, i) =>
-            convertForwardingRuleCard(x, i)
-          ),
-          ...result.GroupRules.map((x, i) => convertGroupRuleCard(x, i)),
-          ...result.TagRules.map((x, i) => convertTagRuleCard(x, i))
-        ]
-
-        setFlows(flows)
+        if (result) {
+          let flows = [
+            ...result.BlockRules.map((x, i) => convertBlockRuleCard(x, i)),
+            ...result.ForwardingRules.map((x, i) =>
+              convertForwardingRuleCard(x, i)
+            ),
+            ...result.GroupRules.map((x, i) => convertGroupRuleCard(x, i)),
+            ...result.TagRules.map((x, i) => convertTagRuleCard(x, i))
+          ]
+          setFlows(flows)
+        }
       })
       .catch((err) => {
-        context.error(err)
+        context.error(err.message)
       })
   }
 
@@ -641,7 +672,7 @@ const FlowList = (props) => {
     }
 
     // send flow to api
-    saveFlow(flow)
+    saveFlow(flow, context)
       .then((res) => {
         // update ui
         fetchFlows()
@@ -696,7 +727,7 @@ const FlowList = (props) => {
     let actionTitle = flow.actions[0].title
 
     if (
-      actionTitle.match(/(Block|Forward) (TCP|UDP)/) ||
+      actionTitle.match(/(Block|Forward)/) ||
       actionTitle.match(/Forward to Site VPN/)
     ) {
       let ruleType = actionTitle.startsWith('Block')
@@ -728,8 +759,6 @@ const FlowList = (props) => {
       fetchFlows()
     })
   }
-
-  let h = Dimensions.get('window').height - (Platform.OS == 'ios' ? 64 * 2 : 64)
 
   return (
     <ScrollView sx={{ '@md': { height: '92vh' } }}>
@@ -780,16 +809,15 @@ const FlowList = (props) => {
           sx={{
             '@md': {
               ml: 'auto',
-              mr: '$4',
               maxHeight: '$3/4',
               maxWidth: '$1/2'
             }
           }}
           flex={1}
         >
-          <Heading size="sm" my="$4" px="$4">
+          {/*<Heading size="sm" my="$4" px="$4">
             Add &amp; Edit flow
-          </Heading>
+          </Heading>*/}
 
           <Box
             bg="$backgroundCardLight"

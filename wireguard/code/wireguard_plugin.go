@@ -643,6 +643,7 @@ func getSetEndpoints(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	spr.Endpoints = endpoints
 	saveSprConfig(spr)
 }
 

@@ -117,20 +117,17 @@ const toCron = (days, from, to) => {
 }
 
 const flowObjParse = (x) => {
-  if (typeof x == 'object') {
-    if (x.Identity != null && x.Identity != '') return x.Identity
-
-    if (x.Group != null && x.Group != '') return x.Group
-
-    if (x.SrcIP != null && x.SrcIP != '') return x.SrcIP
-
-    if (x.Tag != null && x.Tag != '') return x.Tag
-
-    if (x.Endpoint != null && x.Endpoint != '') return x.Endpoint
-
-    return JSON.stringify(x)
+  if (typeof x !== 'object') {
+    return x
   }
-  return x
+  let cliKeys = ['Identity', 'Group', 'SrcIP', 'Tag', 'Endpoint', 'Domain', 'IP']
+  for (let k of cliKeys) {
+    if (x[k]?.length) {
+      return x[k]
+    }
+  }
+
+  return JSON.stringify(x)
 }
 
 const parseClientIPOrIdentity = (cli) => {
@@ -142,6 +139,9 @@ const parseClientIPOrIdentity = (cli) => {
   }
   if (cli.split('.').length == 4) {
     Client.SrcIP = cli
+  } else if (cli.match(/^(lan|wan|dns)$/)) {
+    //TODO fetch and compare groups and tags
+    Client.Group = cli
   } else {
     Client.Identity = cli
   }

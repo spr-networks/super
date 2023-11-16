@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from 'react'
 import { Dimensions, Platform, SafeAreaView } from 'react-native'
 import { Outlet, useLocation } from 'react-router-dom'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import Notifications from 'Notifications'
-import { AppContext, AlertContext, alertState } from 'AppContext'
+import {
+  AppContext,
+  AlertContext,
+  alertState,
+  ModalContext,
+  modalState
+} from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Sidebar from 'components/Sidebar/Sidebar'
 import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
@@ -29,10 +36,15 @@ import {
   HStack,
   Icon,
   CheckCircleIcon,
-  CloseIcon,
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalContent,
+  ModalCloseButton,
+  ModalHeader,
   Pressable,
   VStack,
-  Text,
+  CloseIcon,
   SlashIcon,
   InfoIcon,
   useColorMode
@@ -41,7 +53,8 @@ import {
 //NOTE Slice transition for Alerts not available in gluestack-ui
 
 import { routes } from 'routes'
-import { Slash } from 'lucide-react-native'
+import { deviceAPI } from 'api'
+import { userEvent } from '@testing-library/react-native'
 
 const ConfirmTrafficAlert = (props) => {
   const { type, title, body, showAlert, onClose } = props
@@ -113,7 +126,7 @@ const AppAlert = (props) => {
   let alertType = type == 'danger' ? 'warning' : type
 
   return (
-    <Alert action={alertType}>
+    <Alert action={alertType} rounded="$none">
       <HStack space="md" w="$full">
         <AlertIcon as={alertIcon} size="xl" mr="$3" alignSelf="center" />
         <VStack space="xs" flex={1}>
@@ -134,10 +147,15 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
   const [showAlert, setShowAlert] = useState(false)
   const [showConfirmAlert, setShowConfirmAlert] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+
   const [alert, setAlert] = useState({})
   const [confirmAlert, setConfirmAlert] = useState({})
+  const [modal, setModal] = useState({})
+
   const toggleAlert = () => setShowAlert(!showAlert)
 
+  //setup alert context
   alertState.alert = (type = 'info', title, body = null) => {
     if (typeof title !== 'string') {
       title = JSON.stringify(title)
@@ -192,6 +210,19 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     setShowConfirmAlert(true)
   }
 
+  modalState.modal = (title, body, onClose) => {
+    if (typeof title === 'object') {
+      body = title.body
+      onClose = title.onClose
+      title = title.title
+    }
+
+    setModal({ title, body, onClose })
+    setShowModal(true)
+  }
+  modalState.setShowModal = setShowModal
+  modalState.toggleModal = () => setShowModal(!showModal)
+
   /*
   location = useLocation()
   useEffect(() => {
@@ -206,13 +237,50 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const [activeSidebarItem, setActiveSidebarItem] = useState(path)
   const [isOpenSidebar, setIsOpenSidebar] = useState(false)
   const [isNavbarOpen, setIsNavbarOpen] = useState(false)
+  const [isSimpleMode, setIsSimpleMode] = useState(false)
   const [isWifiDisabled, setIsWifiDisabled] = useState(null)
   const [isPlusDisabled, setIsPlusDisabled] = useState(true)
   const [isMeshNode, setIsMeshNode] = useState(false)
   const [version, setVersion] = useState('0.2.1')
   const [features, setFeatures] = useState([])
+  const [devices, setDevices] = useState([])
+  const [groups, setGroups] = useState([])
 
   const [notificationSettings, setNotificationSettings] = useState([])
+
+  // device context stuff
+  const getDevices = (forceFetch = false) => {
+    return new Promise((resolve, reject) => {
+      if (!forceFetch && devices?.length) {
+        return resolve(devices)
+      }
+
+      deviceAPI
+        .list()
+        .then((devices_) => {
+          setDevices(Object.values(devices_))
+          const uniqueGroups = [
+            ...new Set(Object.values(devices_).flatMap((d) => d.Groups))
+          ]
+          setGroups(uniqueGroups)
+          resolve(Object.values(devices_))
+        })
+        .catch(reject)
+    })
+  }
+
+  const getDevice = (value, type = 'MAC') =>
+    devices.find((d) => d[type] == value)
+
+  const getGroups = () => {
+    return new Promise((resolve, reject) => {
+      getDevices()
+        .then((d) => {
+          return resolve(groups)
+        })
+        .catch(reject)
+    })
+  }
 
   useEffect(() => {
     api
@@ -256,6 +324,10 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     // get stetings for notificaations
     notificationsAPI.list().then((settings) => {
       setNotificationSettings(settings)
+    })
+
+    getDevices().then((res) => {
+      //console.log('++ got', res.length, 'devices')
     })
 
     // callback for notifications, web & ios
@@ -389,13 +461,58 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       })
   }, [isWifiDisabled])
 
-  /*return (
-    <Box bg="$red200" p="$20">
-      <Text>TEST 2.0</Text>
-    </Box>
-  )*/
   const colorMode = useColorMode()
+
+  //View settings: colorMode, simpleMode. TODO: move more to App
+  const [viewSettings, setViewSettings] = useState(null)
+
+  const loadSettings = () => {
+    AsyncStorage.getItem('settings')
+      .then((settings) => {
+        let defaultSettings = { colorMode: 'light', isSimpleMode: true }
+
+        let viewSettings = JSON.parse(settings) || defaultSettings
+        setViewSettings(viewSettings)
+
+        setIsSimpleMode(viewSettings.isSimpleMode)
+      })
+      .catch((err) => {
+        console.error('ERR:', err)
+      })
+  }
+
+  const saveSettings = () => {
+    AsyncStorage.setItem('settings', JSON.stringify(viewSettings))
+      .then((res) => {})
+      .catch((err) => {})
+  }
+
+  useEffect(() => {
+    if (!viewSettings) {
+      loadSettings()
+      return
+    }
+
+    setViewSettings({ ...viewSettings, isSimpleMode, colorMode })
+  }, [isSimpleMode])
+
+  useEffect(() => {
+    if (viewSettings) {
+      saveSettings()
+    }
+  }, [viewSettings])
+
   const backgroundColor = colorMode === 'light' ? 'white' : 'black'
+
+  //this is to sync the settings. TODO: in App
+  const toggleColorModeHook = () => {
+    setViewSettings({
+      ...viewSettings,
+      colorMode: colorMode == 'light' ? 'dark' : 'light'
+    })
+
+    toggleColorMode()
+  }
 
   return (
     <AppContext.Provider
@@ -404,10 +521,16 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         setActiveSidebarItem,
         isNavbarOpen,
         setIsNavbarOpen,
+        isSimpleMode,
+        setIsSimpleMode,
         isWifiDisabled,
         isPlusDisabled,
         isMeshNode,
-        features
+        features,
+        devices,
+        getDevices,
+        getDevice,
+        getGroups
       }}
     >
       <SafeAreaView
@@ -416,6 +539,13 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         }}
       />
 
+      {/*<SafeAreaView
+        style={{
+          width: '100%',
+          backgroundColor: colorMode == 'light' ? '#f3f4f6' : 'black',
+          flex: 1
+        }}
+      >*/}
       <VStack
         bg="$backgroundContentLight"
         sx={{
@@ -439,7 +569,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             isMobile={false}
             isOpenSidebar={isOpenSidebar}
             setIsOpenSidebar={setIsOpenSidebar}
-            toggleColorMode={toggleColorMode}
+            toggleColorMode={toggleColorModeHook}
           />
         </Box>
         {/*mobile*/}
@@ -459,7 +589,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             isMobile={true}
             isOpenSidebar={isOpenSidebar}
             setIsOpenSidebar={setIsOpenSidebar}
-            toggleColorMode={toggleColorMode}
+            toggleColorMode={toggleColorModeHook}
           />
         </Box>
 
@@ -482,24 +612,26 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             <Sidebar
               isMobile={false}
               isMini={isOpenSidebar}
-              isOpenSidebar={true}
+              isOpenSidebar={isOpenSidebar}
               setIsOpenSidebar={setIsOpenSidebar}
+              isSimpleMode={isSimpleMode}
+              setIsSimpleMode={setIsSimpleMode}
               routes={routes}
             />
           </Box>
           {/*mobile*/}
           {isOpenSidebar ? (
-            <SafeAreaView
-              style={{
-                width: '100%',
-                backgroundColor: colorMode == 'light' ? '#f9fafb' : 'black'
+            <Box
+              w="100%"
+              zIndex={99}
+              sx={{
+                '@md': { display: 'none' }
               }}
             >
-              <Box
-                w="100%"
-                zIndex={99}
-                sx={{
-                  '@md': { display: 'none' }
+              <SafeAreaView
+                style={{
+                  width: '100%',
+                  backgroundColor: colorMode == 'light' ? '#f9fafb' : 'black'
                 }}
               >
                 <Sidebar
@@ -507,10 +639,12 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
                   isMini={false}
                   isOpenSidebar={isOpenSidebar}
                   setIsOpenSidebar={setIsOpenSidebar}
+                  isSimpleMode={isSimpleMode}
+                  setIsSimpleMode={setIsSimpleMode}
                   routes={routes}
                 />
-              </Box>
-            </SafeAreaView>
+              </SafeAreaView>
+            </Box>
           ) : null}
 
           <Box flex={1} ref={mainPanel}>
@@ -526,6 +660,29 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         </HStack>
       </VStack>
 
+      <ModalContext.Provider value={modalState}>
+        <Modal
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false)
+            if (modal.onClose) {
+              modal.onClose()
+            }
+          }}
+        >
+          <ModalBackdrop />
+          <ModalContent>
+            <ModalHeader>
+              <Heading size="sm">{modal.title}</Heading>
+              <ModalCloseButton>
+                <Icon as={CloseIcon} />
+              </ModalCloseButton>
+            </ModalHeader>
+            <ModalBody pb="$6">{modal.body}</ModalBody>
+          </ModalContent>
+        </Modal>
+      </ModalContext.Provider>
+
       <AlertContext.Provider value={alertState}>
         {/*<Slide in={showAlert} placement="top"></Slide>*/}
         <Box
@@ -536,9 +693,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
               display: showAlert ? 'block' : 'none'
             },
             '@md': {
-              _width: '$2/6',
-              _marginLeft: '-$1/6',
-              _left: '$1/2',
               width: isOpenSidebar
                 ? 'calc(100vw - 80px)'
                 : 'calc(100vw - 260px)',
@@ -565,49 +719,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           showAlert={showConfirmAlert}
           onClose={confirmAlert.onClose}
         />
-
-        {/*toast.show({render: ({ id }) => { return (<h2>custom toast!</h2>) })*/}
-
-        {/*
-                  <Slide in={showAlert} placement="top">
-                    <Box
-                      w="100%"
-                      position="absolute"
-                      p="4"
-                      borderRadius="xs"
-                      bg={alertType + '.200'}
-                      alignItems="center"
-                      justifyContent="center"
-                    >
-                      <HStack space={2}>
-                        <Icon
-                          icon={
-                            alertType == 'error'
-                              ? faCircleXmark
-                              : alertType == 'success'
-                              ? faCheckCircle
-                              : faCircleExclamation
-                          }
-                          size="sm"
-                          color={alertType + '.600'}
-                          _dark={{
-                            color: alertType + '.700'
-                          }}
-                        />
-                        <Text
-                          color={alertType + '.600'}
-                          textAlign="center"
-                          _dark={{
-                            color: alertType + '.700'
-                          }}
-                          fontWeight="medium"
-                        >
-                          <Text bold>{alertTitle}</Text> {alertBody}
-                        </Text>
-                      </HStack>
-                    </Box>
-                  </Slide>
-                  */}
       </AlertContext.Provider>
     </AppContext.Provider>
   )

@@ -63,7 +63,7 @@ const ModalForm = (props) => {
       {showModal ? (
         <Modal isOpen={showModal} onClose={onClose}>
           <ModalBackdrop />
-          <ModalContent>
+          <ModalContent maxWidth={props.maxWidth || 510}>
             <ModalHeader>
               <Heading size="sm">{props.title || 'Title'}</Heading>
               <ModalCloseButton>

@@ -10,9 +10,13 @@ import {
   Input,
   InputField,
   Text,
+  View,
   VStack,
   TrashIcon,
-  CloseIcon
+  CloseIcon,
+  FormControl,
+  FormControlLabel,
+  FormControlLabelText
 } from '@gluestack-ui/themed'
 
 import { api } from 'api'
@@ -71,69 +75,77 @@ const Supernetworks = (props) => {
   const list = tinyNets
 
   return (
-    <VStack sx={{ '@md': { w: '$3/4' } }}>
-      <ListHeader title="Supernetworks"></ListHeader>
+    <VStack space="md" sx={{ '@md': { w: '$3/4' } }}>
+      <ListHeader title="Supernetworks" />
 
-      <FlatList
-        data={list}
-        renderItem={({ item, index }) => (
-          <ListItem>
-            <Input flex={1} variant="outline">
-              <InputField
-                value={item}
-                onChangeText={(text) => updateTinyNet(text, index)}
-                onSubmitEditing={() => handleUpdate()}
-              />
-            </Input>
-            <HStack ml="auto" space="xl">
-              <Button
-                action="negative"
-                variant="link"
-                alignSelf="center"
-                onPress={() => deleteListItem(index)}
-              >
-                <ButtonIcon as={CloseIcon} color="$red700" />
-              </Button>
-            </HStack>
-          </ListItem>
-        )}
-        keyExtractor={(item) => `${item.Address}`}
-      />
+      <VStack
+        space="lg"
+        p="$4"
+        py="$8"
+        bg="$backgroundCardLight"
+        sx={{ _dark: { bg: '$backgroundCardDark' } }}
+      >
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>TinyNets</FormControlLabelText>
+          </FormControlLabel>
+          <FlatList
+            borderWidth={0}
+            borderColor="$primary500"
+            data={list}
+            renderItem={({ item, index }) => (
+              <ListItem py="$2" px="$0" borderBottomWidth={0}>
+                <Input flex={1} variant="outline">
+                  <InputField
+                    value={item}
+                    onChangeText={(text) => updateTinyNet(text, index)}
+                    onSubmitEditing={() => handleUpdate()}
+                  />
+                </Input>
+                <HStack ml="auto" space="xl">
+                  <Button
+                    action="negative"
+                    variant="link"
+                    alignSelf="center"
+                    onPress={() => deleteListItem(index)}
+                  >
+                    <ButtonIcon as={CloseIcon} color="$red700" />
+                  </Button>
+                </HStack>
+              </ListItem>
+            )}
+            ListFooterComponent={() => (
+              <HStack py="$2">
+                <Button
+                  action="primary"
+                  variant="outline"
+                  size="sm"
+                  onPress={addTinyNet}
+                >
+                  <ButtonText>Add Supernetwork</ButtonText>
+                  <ButtonIcon as={AddIcon} ml="$1" />
+                </Button>
+              </HStack>
+            )}
+            keyExtractor={(item) => `${item.Address}`}
+          />
+        </FormControl>
 
-      {/**/}
-      <VStack space="xl">
-        <Box flex="$1">
-          <Button
-            action="primary"
-            variant="solid"
-            rounded="$none"
-            onPress={addTinyNet}
-          >
-            <ButtonText>Add Supernetwork</ButtonText>
-            <ButtonIcon as={AddIcon} ml="$1" />
-          </Button>
-        </Box>
-
-        <Box flex="$1">
-          <HStack
-            space="md"
-            alignItems="center"
-            p="$4"
-            py="$8"
-            bg="white"
-            sx={{ _dark: { bg: '$blueGray700' } }}
-          >
-            <Text>Lease Time</Text>
-            <Input flex={1} variant="underlined">
-              <InputField
-                value={leaseTime}
-                onChangeText={(text) => {
-                  setLeaseTime(text)
-                  setIsUnsaved(true)
-                }}
-              />
-            </Input>
-          </HStack>
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Lease Time</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="outline">
+            <InputField
+              value={leaseTime}
+              onChangeText={(text) => {
+                setLeaseTime(text)
+                setIsUnsaved(true)
+              }}
+            />
+          </Input>
+        </FormControl>
+        <FormControl>
           <Button
             action="primary"
             variant="solid"
@@ -145,7 +157,7 @@ const Supernetworks = (props) => {
               {isUnsaved ? 'Save unsaved changes' : 'Save'}
             </ButtonText>
           </Button>
-        </Box>
+        </FormControl>
       </VStack>
     </VStack>
   )

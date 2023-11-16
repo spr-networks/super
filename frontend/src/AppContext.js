@@ -5,15 +5,28 @@ export const AppContext = createContext({
   setActiveSidebarItem: (sidebarItem) => {},
   isNavbarOpen: false,
   setIsNavbarOpen: (isNavbarOpen) => {},
+  isSimpleMode: false,
+  setIsSimpleMode: (isSimpleMode) => {},
   isWifiDisabled: false,
   isPlusDisabled: true,
   isMeshNode: false,
-  features: []
+  features: [],
+  devices: [],
+  getDevices: () => {},
+  getDevice: () => {},
+  getGroups: () => []
 })
 
 export const alertState = {
   alert: () => {}
 }
 
+export const modalState = {
+  modal: () => {},
+  setShowModal: () => {},
+  toggleModal: () => {}
+}
+
 // TODO Toast
 export const AlertContext = createContext(alertState)
+export const ModalContext = createContext(modalState)

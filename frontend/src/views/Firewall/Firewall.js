@@ -7,16 +7,18 @@ import ForwardList from 'components/Firewall/ForwardList'
 import BlockList from 'components/Firewall/BlockList'
 import ForwardBlockList from 'components/Firewall/ForwardBlockList'
 import MulticastPorts from 'components/Firewall/MulticastPorts'
+import ContainerInterfaceRulesList from 'components/Firewall/ContainerInterfaceRulesList'
 
 import {
+  ArrowLeftToLineIcon,
   ArrowRightFromLineIcon,
   BanIcon,
-  SplitIcon,
-  WaypointsIcon,
   CastIcon,
+  ContainerIcon,
   RouteIcon,
   RouteOffIcon,
-  ArrowLeftToLineIcon
+  SplitIcon,
+  WaypointsIcon
 } from 'lucide-react-native'
 
 import { Accordion } from 'components/Accordion'
@@ -28,7 +30,7 @@ const Firewall = (props) => {
     firewallAPI.config().then(setConfig)
   }
 
-  const [open, setOpen] = useState(['Endpoints', 'Multicast Proxy'])
+  const [open, setOpen] = useState(['Endpoints', 'Port Forwarding'])
 
   useEffect(() => {
     fetchConfig()
@@ -41,18 +43,18 @@ const Firewall = (props) => {
       ForwardingRules: 'PortForwarding',
       BlockRules: 'Inbound Traffic Block',
       ForwardingBlockRules: 'Forwarding Traffic Block',
+      CustomInterfaceRules: 'Custom Interface Access',
       MulticastPorts: 'Multicast Proxy'
     }
 
     let keys = Object.keys(keyLabels)
+    let defaults = []
     keys.map((key) => {
-      let defaults = []
       if (config[key]?.length) {
         defaults.push(keyLabels[key])
       }
-
-      setOpen(defaults)
     })
+    setOpen(defaults)
   }, [config])
 
   let items = [
@@ -93,6 +95,18 @@ const Firewall = (props) => {
         <ForwardBlockList
           title="Forwarding Traffic Block"
           list={config.ForwardingBlockRules}
+          notifyChange={fetchConfig}
+        />
+      )
+    },
+    {
+      label: 'Custom Interface Access',
+      description: 'Allow custom interfaces network access',
+      icon: ContainerIcon,
+      renderItem: () => (
+        <ContainerInterfaceRulesList
+          title="Custom Interface Access"
+          list={config.CustomInterfaceRules}
           notifyChange={fetchConfig}
         />
       )

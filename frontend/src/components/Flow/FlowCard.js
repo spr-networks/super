@@ -26,6 +26,7 @@ import {
 import { getCard } from './FlowCards'
 import Token from './Token'
 import { flowObjParse } from './Utils'
+import { Address4 } from 'ip-address'
 
 const FlowCard = ({ card, size, edit, ...props }) => {
   size = size || 'md'
@@ -50,6 +51,9 @@ const FlowCard = ({ card, size, edit, ...props }) => {
 
     if (Array.isArray(values[name])) {
       return values[name].join(',')
+    } else if (typeof values[name] === 'object') {
+      //Client have {Group: "lan", Identity: ""} etc.
+      return flowObjParse(values[name])
     }
 
     return values[name]
@@ -57,7 +61,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
 
   let body = (
     <VStack space="md">
-      <Text noOfLines={2} w="$2/3" size="sm" color="$muted500">
+      <Text noOfLines={2} w="$3/4" size="sm" color="$muted500">
         {description}
       </Text>
       <HStack space="sm" flexWrap="wrap">
@@ -86,19 +90,23 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     // autocomplete with dynamic options
     const [options, setOptions] = useState({})
 
-    useEffect(async () => {
-      if (card.getOptions) {
-        let optionsNew = { ...options }
+    const fetchOptions = async () => {
+      let optionsNew = { ...options }
 
-        for (let p of card.params) {
-          let name = p.name
-          let opts = await card.getOptions(name)
-          if (opts && opts.length) {
-            optionsNew[name] = opts
-          }
+      for (let p of card.params) {
+        let name = p.name
+        let opts = await card.getOptions(name)
+        if (opts && opts.length) {
+          optionsNew[name] = opts
         }
+      }
 
-        setOptions(optionsNew)
+      setOptions(optionsNew)
+    }
+
+    useEffect(() => {
+      if (card.getOptions) {
+        fetchOptions()
       }
     }, [])
 
@@ -120,7 +128,9 @@ const FlowCard = ({ card, size, edit, ...props }) => {
               label={p.name}
               value={
                 card.values && card.values[p.name] !== undefined
-                  ? p.name == 'Client'
+                  ? p.name == 'Client' ||
+                    p.name == 'Dst' ||
+                    p.name == 'OriginalDst'
                     ? flowObjParse(card.values[p.name])
                     : card.values[p.name]
                   : p.name
@@ -136,14 +146,22 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     )
   }
 
-  const trigger = (triggerProps) => (
-    <Button action="secondary" variant="link" ml="auto" {...triggerProps}>
-      <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
-    </Button>
-  )
-
   const onChange = (name, value) => {
-    card.values[name] = value
+    if (name == 'Dst' || name == 'OriginalDst') {
+      if (typeof value == 'object') {
+        card.values[name] = value
+      } else {
+        //convert Dst/OriginalDst
+        try {
+          let address = new Address4(value)
+          card.values[name] = { IP: value }
+        } catch (err) {
+          card.values[name] = { Domain: value }
+        }
+      }
+    } else {
+      card.values[name] = value
+    }
 
     if (props.onChange) {
       props.onChange(card)
@@ -156,92 +174,69 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     }
   }
 
-  let moreMenu = (
-    <Menu
-      trigger={trigger}
-      selectionMode="single"
-      onSelectionChange={(e) => {
-        let key = e.currentKey
-        if (key == 'delete') {
-          onDelete()
-        }
-      }}
-    >
-      <MenuItem key="delete" textValue="delete">
-        <TrashIcon color="$red700" ml="$2" />
-        <MenuItemLabel size="sm" color="$red700">
-          Delete
-        </MenuItemLabel>
-      </MenuItem>
-    </Menu>
-  )
-
   //only one item - show button
-  moreMenu = (
+
+  let moreMenu = (
     <Button action="secondary" variant="link" size="sm" onPress={onDelete}>
       <ButtonIcon as={CloseIcon} />
     </Button>
   )
 
   return (
-    <Box
+    <HStack
       bg="$warmGray50"
       borderWidth="$1"
       borderColor="$coolGray200"
+      w="$full"
+      minHeight={edit ? 100 : 160}
+      space="md"
+      justifyContent="space-between"
+      alignItems="center"
       sx={{
-        _dark: { bg: '$backgroundContentDark', borderColor: '$coolGray900' },
-        '@md': { shadow: 5 }
+        _dark: { bg: '$secondary900', borderColor: '$coolGray900' }
       }}
       p={size == 'xs' ? '$2' : '$4'}
       rounded="$md"
-      minW={320}
-      mr="$2"
       {...props}
     >
-      <HStack justifyContent="space-between" alignItems="center" space="md">
-        <Box
-          height={size == 'xs' ? 30 : 50}
-          rounded="full"
-          width={size == 'xs' ? 30 : 50}
-          justifyContent="center"
-          alignItems="center"
-        >
-          {icon}
-        </Box>
+      <Box
+        height={size == 'xs' ? 30 : 50}
+        rounded="full"
+        width={size == 'xs' ? 30 : 50}
+        justifyContent="center"
+        alignItems="center"
+      >
+        {icon}
+      </Box>
 
-        <VStack
-          flex={1}
-          alignContent="center"
-          space={size == 'xs' ? 'xs' : 'sm'}
-        >
-          <HStack space="sm" alignItems="center">
-            <Text size="sm" color="$muted400">
-              {title}
-            </Text>
-            {edit && description ? (
-              <Tooltip
-                h={undefined}
-                placement="bottom"
-                trigger={(triggerProps) => {
-                  return (
-                    <Button action="secondary" variant="link" {...triggerProps}>
-                      <ButtonIcon as={InfoIcon} color="$muted400" />
-                    </Button>
-                  )
-                }}
-              >
-                <TooltipContent>
-                  <TooltipText>{description}</TooltipText>
-                </TooltipContent>
-              </Tooltip>
-            ) : null}
-          </HStack>
-          {body}
-        </VStack>
+      <VStack flex={1} alignContent="center" space={size == 'xs' ? 'xs' : 'sm'}>
+        <HStack space="sm" alignItems="center">
+          <Text size="sm" color="$muted400">
+            {title}
+          </Text>
+          {edit && description ? (
+            <Tooltip
+              h={undefined}
+              placement="bottom"
+              trigger={(triggerProps) => {
+                return (
+                  <Button action="secondary" variant="link" {...triggerProps}>
+                    <ButtonIcon as={InfoIcon} color="$muted400" />
+                  </Button>
+                )
+              }}
+            >
+              <TooltipContent>
+                <TooltipText>{description}</TooltipText>
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
+        </HStack>
+        {body}
+      </VStack>
 
-        {edit ? moreMenu : null}
-      </HStack>
-    </Box>
+      {edit ? moreMenu : null}
+    </HStack>
   )
 }
 

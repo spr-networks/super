@@ -53,6 +53,7 @@ import { ListHeader, ListItem } from 'components/List'
 import {
   ArrowDownUpIcon,
   CableIcon,
+  CheckIcon,
   NetworkIcon,
   WifiIcon
 } from 'lucide-react-native'
@@ -115,7 +116,7 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
   }
 
   const scan = (iface) => {
-    setOptsSSIDs([{ label: 'Scanning...', value: null }])
+    setOptsSSIDs([{ label: 'Scanning...', value: {} }])
 
     //set interface up and scan
     wifiAPI.ipLinkState(iface, 'up').then(
@@ -766,7 +767,7 @@ const UplinkInfo = (props) => {
           keyExtractor={(item) => `${item.Interface}_${item.Type}`}
           renderItem={({ item }) => (
             <ListItem>
-              <Text flex={1} size="sm" bold>
+              <Text flex={2} size="sm" bold>
                 {item.Interface}
               </Text>
               <VStack flex={1} space="xs">
@@ -782,7 +783,7 @@ const UplinkInfo = (props) => {
                 </Text>
               </VStack>
 
-              <VStack flex={2} space={1}>
+              <VStack flex={2} space="sm">
                 {item.IPs.map((ip, i) => (
                   <Text size="sm" key={ip} display={i == 0 ? 'flex' : 'none'}>
                     {ip}
@@ -790,25 +791,34 @@ const UplinkInfo = (props) => {
                 ))}
               </VStack>
 
-              <HStack>
+              <HStack flex={1}>
                 {item.Enabled ? (
                   <Badge size="sm" action="success" variant="outline">
-                    <BadgeText>Enabled</BadgeText>
+                    <BadgeIcon as={CheckIcon} />
+                    <BadgeText
+                      ml="$1"
+                      display="none"
+                      sx={{ '@md': { display: 'flex' } }}
+                    >
+                      Enabled
+                    </BadgeText>
                   </Badge>
                 ) : null}
               </HStack>
 
-              <Box flex={1}>{moreMenu(item.Interface)}</Box>
+              {moreMenu(item.Interface)}
             </ListItem>
           )}
         />
+
+        <ListHeader title="Other Interfaces" />
 
         <FlatList
           data={links}
           keyExtractor={(item) => `${item.Interface}_${item.Type}`}
           renderItem={({ item }) => (
             <ListItem>
-              <Text flex={1} size="sm" bold>
+              <Text flex={2} size="sm" bold>
                 {item.Interface}
               </Text>
               <Text flex={1} size="sm">
@@ -823,8 +833,7 @@ const UplinkInfo = (props) => {
                       </Text>
                     ))}
               </VStack>
-
-              <Box flex={1}>{moreMenu(item.Interface)}</Box>
+              {moreMenu(item.Interface)}
             </ListItem>
           )}
         />

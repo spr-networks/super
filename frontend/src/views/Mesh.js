@@ -334,6 +334,12 @@ const Mesh = (props) => {
             <ModalForm
               title="Add Leaf Router"
               triggerText="Add Leaf Router"
+              triggerProps={{
+                sx: {
+                  '@base': { display: 'none' },
+                  '@md': { display: leafRouters.length ? 'flex' : 'flex' }
+                }
+              }}
               modalRef={refModal}
             >
               <AddLeafRouter notifyChange={notifyChange} />
@@ -427,9 +433,10 @@ const Mesh = (props) => {
                   </Button>
                 ) : (
                   <HStack
-                    justifyContent="space-between"
-                    alignItems="center"
                     p="$4"
+                    justifyContent="flex-start"
+                    alignItems="center"
+                    space="md"
                   >
                     <Text color="$muted500">API-Token</Text>
                     <TokenItem token={leafToken} />

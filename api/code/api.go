@@ -257,6 +257,29 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 		}()
 
 		data, err = cmd.Output()
+	} else if name == "dockernetworks" {
+		c := http.Client{}
+		c.Transport = &http.Transport{
+			Dial: func(network, addr string) (net.Conn, error) {
+				return net.Dial("unix", DockerSocketPath)
+			},
+		}
+		defer c.CloseIdleConnections()
+
+		req, err := http.NewRequest(http.MethodGet, "http://localhost/v1.41/networks", nil)
+		if err != nil {
+			http.Error(w, err.Error(), 404)
+			return
+		}
+
+		resp, err := c.Do(req)
+		if err != nil {
+			http.Error(w, err.Error(), 404)
+			return
+		}
+
+		defer resp.Body.Close()
+		data, err = ioutil.ReadAll(resp.Body)
 	} else if name == "docker" {
 		c := http.Client{}
 		c.Transport = &http.Transport{
@@ -1579,7 +1602,11 @@ func normalizeStringSlice(a []string) []string {
 	}
 	ret := []string{}
 	for _, entry := range a {
-		ret = append(ret, trimLower(entry))
+		next := trimLower(entry)
+		if next == "" {
+			continue
+		}
+		ret = append(ret, next)
 	}
 	return ret
 }
@@ -2513,6 +2540,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/firewall/endpoint", modifyEndpoint).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/multicast", modifyMulticast).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/icmp", modifyIcmp).Methods("PUT")
+	external_router_authenticated.HandleFunc("/firewall/custom_interface", modifyCustomInterfaceRules).Methods("PUT", "DELETE")
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
@@ -2598,6 +2626,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated)).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/plugins/{name}/restart", handleRestartPlugin).Methods("PUT")
 	external_router_authenticated.HandleFunc("/plusToken", plusToken).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/plusTokenValid", plusTokenValid).Methods("GET")
 	external_router_authenticated.HandleFunc("/stopPlusExtension", stopPlusExt).Methods("PUT")
 	external_router_authenticated.HandleFunc("/startPlusExtension", startPlusExt).Methods("PUT")
 

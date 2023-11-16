@@ -15,6 +15,7 @@ import TrafficTimeSeries from 'views/Traffic/TrafficTimeSeries'
 import TrafficList from 'views/Traffic/TrafficList'
 import UplinkConfiguration from 'views/UplinkConfiguration'
 import LANLinkConfiguration from 'views/LANLinkConfiguration'
+import ContainerNetConfiguration from 'views/ContainerNetConfiguration'
 import WirelessConfiguration from 'views/WirelessConfiguration'
 import Groups from 'views/Groups/Groups'
 import Tags from 'views/Tags'
@@ -46,8 +47,10 @@ import {
   BarChartHorizontalIcon,
   BellIcon,
   CableIcon,
+  ContainerIcon,
   EyeIcon,
   FlameIcon,
+  GaugeCircleIcon,
   GaugeIcon,
   GlobeIcon,
   HammerIcon,
@@ -56,7 +59,9 @@ import {
   LaptopIcon,
   LineChartIcon,
   ListTreeIcon,
+  NetworkIcon,
   PuzzleIcon,
+  RouterIcon,
   ScanSearchIcon,
   SeparatorVerticalIcon,
   Settings2Icon,
@@ -66,7 +71,6 @@ import {
   Table2Icon,
   TableIcon,
   TagsIcon,
-  TargetIcon,
   UsersIcon,
   WaypointsIcon,
   WifiIcon
@@ -117,51 +121,72 @@ const routes = [
     layout: 'admin'
   },
   {
-    path: 'uplink',
-    name: 'Uplink',
-    icon: GlobeIcon,
-    component: UplinkConfiguration,
-    layout: 'admin'
+    name: 'Network',
+    state: 'netCollapse',
+    hideSimple: true,
+    views: [
+      {
+        path: 'uplink',
+        name: 'Uplink',
+        icon: GlobeIcon,
+        component: UplinkConfiguration,
+        hideSimple: true,
+        layout: 'admin'
+      },
+      {
+        path: 'lanlink',
+        name: 'LAN',
+        icon: CableIcon,
+        component: LANLinkConfiguration,
+        hideSimple: true,
+        layout: 'admin'
+      },
+      {
+        path: 'containernets',
+        name: 'Containers',
+        icon: ContainerIcon,
+        hideSimple: true,
+        component: ContainerNetConfiguration,
+        layout: 'admin'
+      },
+      {
+        path: 'mesh',
+        name: 'MESH',
+        icon: RouterIcon,
+        component: Mesh,
+        hideSimple: true,
+        layout: 'admin',
+        plus: true
+      },
+      {
+        path: 'wireguard',
+        name: 'VPN',
+        icon: WaypointsIcon,
+        component: Wireguard,
+        hideSimple: true,
+        layout: 'admin'
+      }
+    ]
   },
-  {
-    path: 'lanlink',
-    name: 'LAN',
-    icon: CableIcon,
-    component: LANLinkConfiguration,
-    layout: 'admin'
-  },
-  {
-    path: 'mesh',
-    name: 'MESH',
-    icon: TargetIcon,
-    component: Mesh,
-    layout: 'admin',
-    plus: true
-  },
-  {
-    path: 'wireguard',
-    name: 'VPN',
-    icon: WaypointsIcon,
-    component: Wireguard,
-    layout: 'admin'
-  },
-
   {
     name: 'Firewall',
     icon: FlameIcon,
     state: 'firewallCollapse',
+    hideSimple: true,
     views: [
       {
         path: 'firewall',
         name: 'Firewall',
         icon: FlameIcon,
         component: Firewall,
+        hideSimple: true,
         layout: 'admin'
       },
       {
         path: 'firewallSettings',
         name: 'Services',
         icon: Settings2Icon,
+        hideSimple: true,
         component: FirewallSettings,
         layout: 'admin'
       },
@@ -170,13 +195,15 @@ const routes = [
         name: 'PFW',
         icon: FlameIcon,
         component: PFW,
+        hideSimple: true,
         layout: 'admin',
         plus: true
       },
       {
         path: 'supernets',
         name: 'Supernetworks',
-        icon: SeparatorVerticalIcon,
+        icon: NetworkIcon,
+        hideSimple: true,
         component: Supernetworks,
         layout: 'admin'
       }
@@ -197,6 +224,7 @@ const routes = [
         path: 'dnsOverride',
         name: 'DNS Overrides',
         icon: ShuffleIcon,
+        hideSimple: true,
         component: DNSOverride,
         layout: 'admin'
       },
@@ -211,6 +239,7 @@ const routes = [
         path: 'dnsLogEdit',
         name: 'DNS Log Settings',
         icon: SettingsIcon,
+        hideSimple: true,
         component: DNSLogEdit,
         layout: 'admin'
       },
@@ -218,6 +247,7 @@ const routes = [
         path: 'dyndns',
         name: 'Dynamic DNS',
         icon: ArrowUpCircleIcon,
+        hideSimple: true,
         component: DynDns,
         layout: 'admin'
       },
@@ -225,6 +255,7 @@ const routes = [
         path: 'dns',
         name: 'DNS Settings',
         icon: HammerIcon,
+        hideSimple: true,
         component: CoreDns,
         layout: 'admin'
       }
@@ -255,6 +286,7 @@ const routes = [
         path: 'signal/strength',
         name: 'Signal Strength',
         icon: SignalIcon,
+        hideSimple: true,
         component: SignalStrength,
         layout: 'admin'
       },
@@ -270,6 +302,7 @@ const routes = [
   {
     name: 'Events',
     state: 'eventsCollapse',
+    hideSimple: true,
     views: [
       {
         path: 'events',
@@ -297,6 +330,7 @@ const routes = [
   {
     name: 'System',
     state: 'systemCollapse',
+    hideSimple: true,
     views: [
       {
         path: 'info',
@@ -351,7 +385,7 @@ const routes = [
       {
         path: 'speedtest',
         name: 'Speed Test',
-        icon: GaugeIcon,
+        icon: GaugeCircleIcon,
         component: SpeedTest,
         layout: 'admin'
       }

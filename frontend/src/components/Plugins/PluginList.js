@@ -7,6 +7,7 @@ import {
   Box,
   Button,
   ButtonIcon,
+  ButtonText,
   FlatList,
   Input,
   InputField,
@@ -22,7 +23,9 @@ import {
   TooltipContent,
   TooltipText,
   ScrollView,
-  Spinner
+  Spinner,
+  ButtonSpinner,
+  CheckIcon
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
@@ -34,11 +37,13 @@ import AddPlugin from 'components/Plugins/AddPlugin'
 
 const PluginList = (props) => {
   const [list, _setList] = useState([])
+  const [pluginVersions, setPluginVersions] = useState([])
   const [plusList, setPlusList] = useState([])
 
   const [token, setToken] = useState('')
   const [activeToken, setActiveToken] = useState('')
   const [updated, setUpdated] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const contextType = useContext(AppContext)
 
@@ -64,6 +69,7 @@ const PluginList = (props) => {
     for (let i = 0; i < pluginsV.length; i++) {
       let v = await getPluginVersion(pluginsV[i]).catch((err) => {})
       pluginsV[i].Version = v || ''
+      setPluginVersions(pluginsV)
       setList(pluginsV)
     }
   }
@@ -100,6 +106,14 @@ const PluginList = (props) => {
     pluginAPI
       .update(plugin)
       .then((plugins) => {
+        // use cached version of plugins
+        plugins = plugins.map((p) => {
+          p.Version =
+            pluginVersions.find((pp) => pp.Name == p.Name)?.Version || ''
+
+          return p
+        })
+
         setList(plugins)
       })
       .catch((err) => {
@@ -137,7 +151,7 @@ const PluginList = (props) => {
   }
 
   const handleTokenSubmit = () => {
-    navigate('/admin/plugins')
+    //navigate('/admin/plugins')
     if (updated) {
       setUpdated(false)
       pluginAPI
@@ -150,6 +164,20 @@ const PluginList = (props) => {
           alertState.error('Failed to install PLUS token: ' + err.message)
         })
     }
+  }
+
+  const verifyToken = () => {
+    setIsLoading(true)
+    pluginAPI
+      .validPlusToken()
+      .then((res) => {
+        setIsLoading(false)
+        alertState.success('Token login ok')
+      })
+      .catch((err) => {
+        setIsLoading(false)
+        alertState.error('failed to login using token')
+      })
   }
 
   const renderItem = ({ item }) => (
@@ -215,7 +243,7 @@ const PluginList = (props) => {
       </VStack>
 
       <HStack space="4xl">
-        <Box w="100" alignItems="center" alignSelf="center">
+        <Box w={100} alignItems="center" alignSelf="center">
           <Switch
             value={item.Enabled}
             onValueChange={() => handleChange(item, !item.Enabled)}
@@ -273,23 +301,29 @@ const PluginList = (props) => {
       >
         <HStack space="md" alignItems="center">
           <InfoIcon color="$muted500" />
-          <Link isExternal href="https://www.supernetworks.org/">
+          <Link isExternal href="https://www.supernetworks.org/plus.html">
             <LinkText>Learn about PLUS Mode</LinkText>
           </Link>
         </HStack>
       </ListHeader>
 
-      <Box
+      <VStack
+        space="md"
         p="$4"
         mb="$4"
         bg="$backgroundCardLight"
         sx={{
+          '@md': { flexDirection: 'row' },
           _dark: {
             bg: '$backgroundCardDark'
           }
         }}
       >
-        <Input>
+        <Input
+          sx={{
+            '@md': { width: 440 }
+          }}
+        >
           <InputField
             onChangeText={(value) => handleToken(value)}
             onSubmitEditing={handleTokenSubmit}
@@ -297,9 +331,27 @@ const PluginList = (props) => {
             type="text"
             variant="underlined"
             placeholder={activeToken || 'Token'}
+            onChangeText={handleToken}
+            onSubmitEditing={handleTokenSubmit}
+            onMouseLeave={handleTokenSubmit}
           />
         </Input>
-      </Box>
+        <Button onPress={handleTokenSubmit} isDisabled={!token?.length}>
+          <ButtonIcon as={CheckIcon} mr="$2" />
+
+          <ButtonText>Update token</ButtonText>
+        </Button>
+        {activeToken?.length ? (
+          <Button action="secondary" onPress={verifyToken}>
+            {isLoading ? (
+              <ButtonSpinner mr="$2" />
+            ) : (
+              <ButtonIcon as={CheckIcon} mr="$2" />
+            )}
+            <ButtonText>Verify token</ButtonText>
+          </Button>
+        ) : null}
+      </VStack>
     </ScrollView>
   )
 }

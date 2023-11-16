@@ -106,7 +106,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           Icon: icon,
           Color: color
         })
-        .then((res) => {})
+        .then(notifyChange)
         .catch((error) => {
           context.error(`[API] updateStyle error: ${error.message}`)
         })
@@ -137,6 +137,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
 
     deviceAPI
       .updateTags(device.MAC || device.WGPubKey, tags)
+      .then(notifyChange)
       .catch((error) =>
         context.error('[API] updateDevice error: ' + error.message)
       )

@@ -2335,7 +2335,7 @@ export default function MockAPI() {
               Condition: '',
               Disabled: false,
               Protocol: 'tcp',
-              DstIP: '213.24.76.23',
+              Dst: {'IP': '213.24.76.23'},
               DstPort: '0-65535'
             }
           ],

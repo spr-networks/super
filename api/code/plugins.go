@@ -246,6 +246,16 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 			validURI := regexp.MustCompile(`^[A-Za-z0-9\/\-]+$`).MatchString
 			validUnixPath := regexp.MustCompile(`^[A-Za-z0-9\/\-\._]+$`).MatchString
 
+			if plugin.GitURL != "" {
+				http.Error(w, "GitURL not supported", 400)
+				return
+			}
+
+			if plugin.Plus != false {
+				http.Error(w, "PLUS not supported", 400)
+				return
+			}
+
 			if !validName(plugin.Name) {
 				http.Error(w, "Invalid Name", 400)
 				return
@@ -398,6 +408,24 @@ func validPlusToken(token string) bool {
 
 	fmt.Println("ls-remote failed to get expected result")
 	return false
+}
+
+func plusTokenValid(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	token := config.PlusToken
+	Configmtx.Unlock()
+
+	if token == "" {
+		http.Error(w, "Empty plus token", 400)
+		return
+	}
+	valid := validPlusToken(token)
+	if valid {
+		//200 for valid
+		return
+	}
+
+	http.Error(w, "Invalid plus token", 400)
 }
 
 func plusToken(w http.ResponseWriter, r *http.Request) {

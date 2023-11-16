@@ -1,8 +1,6 @@
 #!/bin/bash
 
 #TBD:
-#
-#- create PBR for load balacning across WAN interfaces for outbound  traffic
 #- can F_EST_RELATED be moved past MAC spoof check
 
 # Disable forwarding
@@ -60,10 +58,49 @@ table inet filter {
     $(if [ "$LANIF" ]; then echo "elements = { $LANIF }" ; fi )
   }
 
-  set dockerifs {
+  # Used for Site to Site VPNs
+  set outbound_sites {
     type ifname;
-    $(if [ "$DOCKERIF" ]; then echo "elements = { $DOCKERIF }" ; fi )
   }
+
+  # src ip . dst ip
+  map site_forward {
+    type ipv4_addr . ipv4_addr . ifname : verdict;
+    flags interval, timeout;
+  }
+
+  # src ip . dst ip . dst port
+  map site_forward_tcp_port {
+    type ipv4_addr . ipv4_addr . inet_service . ifname: verdict;
+    flags interval, timeout;
+  }
+
+  # src ip . dst ip . dst port
+  map site_forward_udp_port {
+    type ipv4_addr . ipv4_addr . inet_service . ifname: verdict;
+    flags interval, timeout;
+  }
+
+
+  # fwd_iface_* maps explicitly allow ranges, whereas @internet_access, @lan_access do not.
+  # We can consider rolling them in the same place later.
+
+  # iface /src range to forward to lan , for ex. for a custom docker network
+  # iifname . ip src addr : accept
+  map fwd_iface_lan {
+    type ifname . ipv4_addr : verdict;
+    flags interval
+    $(if [ "$DOCKERIF" ]; then echo "elements = { $DOCKERIF . $DOCKERNET : accept }" ; fi )
+  }
+
+  # iface /src range to forward to uplinks , for ex. for a custom docker network
+  # iifname . ip src addr : accept
+  map fwd_iface_wan {
+    type ifname . ipv4_addr : verdict;
+    flags interval
+    $(if [ "$DOCKERIF" ]; then echo "elements = { $DOCKERIF . $DOCKERNET : accept }" ; fi )
+  }
+
 
   # dynamically updated -- list of lan networks to pick client subnets from
   set supernetworks {
@@ -85,10 +122,17 @@ table inet filter {
 
   map dns_access {
     type ipv4_addr . ifname: verdict;
+    flags interval;
   }
 
   map internet_access {
     type ipv4_addr . ifname: verdict;
+  }
+
+  # oifname . ip saddr . iifname
+  map site_iface_access {
+    type ifname . ipv4_addr . ifname : verdict;
+    flags interval;
   }
 
   map lan_access {
@@ -132,7 +176,7 @@ table inet filter {
 
   map fwd_block {
     type ipv4_addr . ipv4_addr . inet_proto . inet_service : verdict;
-    flags interval
+    flags interval, timeout;
   }
 
   # If a client is a part of this group, it will have
@@ -191,10 +235,14 @@ table inet filter {
 
     # Drop input from the site to site output interfaces. They are only a sink,
     # Not a source that can connect into SPR services
-    counter iifname "site*" goto DROPLOGINP
+    counter iifname @outbound_sites goto DROPLOGINP
 
     # Allow wireguard from only WANIF interfaces to prevent loops
     iifname @uplink_interfaces udp dport $WIREGUARD_PORT counter accept
+
+    # Allow wireguard to lan services
+    iifname wg0 counter tcp dport vmap @lan_tcp_accept
+    iifname wg0 counter tcp dport vmap @lan_udp_accept
 
     # drop dhcp requests from upstream
     iifname @uplink_interfaces udp dport {67} counter goto DROPLOGINP
@@ -279,13 +327,6 @@ table inet filter {
     oifname @uplink_interfaces log prefix "wan:out " group 0
     oifname != @uplink_interfaces log prefix "lan:out " group 0
 
-    # allow docker containers to communicate upstream
-    $(if [ "$DOCKERIF" ]; then echo "iifname @dockerifs oifname @uplink_interfaces ip saddr $DOCKERNET counter accept" ; fi )
-
-
-    # allow docker containers to speak to LAN also
-    $(if [ "$DOCKERIF" ]; then echo "iifname @dockerifs oifname @lan_interfaces  ip saddr $DOCKERNET counter accept" ; fi )
-
     # Verify MAC addresses for LANIF/WIPHYs
     iifname @lan_interfaces jump DROP_MAC_SPOOF
 
@@ -297,15 +338,35 @@ table inet filter {
     # Drop private_rfc1918 access on upstream
     counter oifname @uplink_interfaces ip daddr vmap @drop_private_rfc1918
 
-    # Forward to Site VPN if client has internet access
-    counter oifname "site*" ip saddr . iifname vmap @internet_access
+    # Allow additional interfaces to communicate upstream
+    # This includes docker0, see fwd_iface definitions above
+    # Note: if they should have rfc1918 forwarding access they need
+    # to be added to @upstream_private_rfc1918_allowed.
+    # These maps explicitly allow ranges, whereas @internet_access, @lan_access do not.
+    # We can consider combining them later.
+
+    counter oifname @uplink_interfaces iifname . ip saddr vmap @fwd_iface_wan
+    counter oifname @lan_interfaces    iifname . ip saddr vmap @fwd_iface_lan
+
+    # Now accept LAN to the container/custom interface in reverse
+    counter iifname @lan_interfaces    oifname . ip daddr vmap @fwd_iface_lan
+
+
+    # Forward to Site VPN if client has site access
+    counter oifname @outbound_sites ip saddr . iifname vmap @internet_access
+
+    # Forward to site interfaces if client has site access, filtered by src+addr
+    counter ip saddr . ip daddr . oifname vmap @site_forward
+
+    # and port specific ones
+    counter ip saddr . ip daddr . tcp dport . oifname vmap @site_forward_tcp_port
+    counter ip saddr . ip daddr . udp dport . oifname vmap @site_forward_udp_port
 
     # Forward to uplink interfaces
-    # TBD NOW: needs PBR.
     counter oifname @uplink_interfaces ip saddr . iifname vmap @internet_access
 
     # The @lan_access dynamic verdict map implements the special LAN group in SPR.
-    # It and allows one-way access to all stations, without an explicit relationship by IP,
+    # It allows one-way access to all stations, without an explicit relationship by IP,
     #  with a NAT return path (F_EST_RELATED)
 
     # 1. Transmit to the LANIF interface
@@ -383,12 +444,6 @@ table inet nat {
     $(if [ "$LANIF" ]; then echo "elements = { $LANIF }" ; fi )
   }
 
-  # see description above. duplicated since nftables doesnt have cross-table sets
-  set dockerifs {
-    type ifname;
-    $(if [ "$DOCKERIF" ]; then echo "elements = { $DOCKERIF }" ; fi )
-  }
-
   map upstream_supernetworks_drop {
     type ifname . ipv4_addr : verdict;
     flags interval;
@@ -396,32 +451,32 @@ table inet nat {
 
   map dnat_tcp_ipmap {
     type ipv4_addr . ipv4_addr . inet_service : ipv4_addr;
-    flags interval;
+    flags interval, timeout;
   }
 
   map dnat_tcp_portmap {
     type ipv4_addr . ipv4_addr . inet_service : inet_service;
-    flags interval;
+    flags interval, timeout;
   }
 
   map dnat_tcp_anymap {
     type ipv4_addr . ipv4_addr : ipv4_addr;
-    flags interval;
+    flags interval, timeout;
   }
 
   map dnat_udp_ipmap {
     type ipv4_addr . ipv4_addr . inet_service : ipv4_addr;
-    flags interval;
+    flags interval, timeout;
   }
 
   map dnat_udp_portmap {
     type ipv4_addr . ipv4_addr . inet_service : inet_service;
-    flags interval;
+    flags interval, timeout;
   }
 
   map dnat_udp_anymap {
     type ipv4_addr . ipv4_addr : ipv4_addr;
-    flags interval;
+    flags interval, timeout;
   }
 
 
@@ -522,10 +577,22 @@ table inet mangle {
     $(if [ "$WANIF" ]; then echo "elements = { $WANIF }" ; fi )
   }
 
-  # see description above. duplicated since nftables doesnt have cross-table sets
+  # src ip . dst ip
   map site_forward_mangle {
     type ipv4_addr . ipv4_addr : verdict;
-    flags interval;
+    flags interval, timeout;
+  }
+
+  # src ip . dst ip . dst port
+  map site_forward_tcp_port_mangle {
+    type ipv4_addr . ipv4_addr . inet_service: verdict;
+    flags interval, timeout;
+  }
+
+  # src ip . dst ip . dst port
+  map site_forward_udp_port_mangle {
+    type ipv4_addr . ipv4_addr . inet_service: verdict;
+    flags interval, timeout;
   }
 
   # see description above. duplicated since nftables doesnt have cross-table sets
@@ -543,6 +610,11 @@ table inet mangle {
 
     # handle site-vpn marks first
     counter ip saddr . ip daddr vmap @site_forward_mangle
+
+    # and port specific ones
+    counter ip saddr . ip daddr . tcp dport vmap @site_forward_tcp_port_mangle
+    counter ip saddr . ip daddr . udp dport vmap @site_forward_udp_port_mangle
+
 
     # then go to load balancing if applied
     jump OUTBOUND_UPLINK

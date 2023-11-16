@@ -124,11 +124,12 @@ export default class WireguardAddSite extends React.Component {
           <Input variant="underlined">
             <InputField
               size="md"
+              placeholder="10.10.10.1"
               value={this.state.Address}
               onChangeText={(value) => this.handleChange('Address', value)}
               autoFocus
-              />
-          </Input> 
+            />
+          </Input>
 
           <FormControlHelper>
             <FormControlHelperText>

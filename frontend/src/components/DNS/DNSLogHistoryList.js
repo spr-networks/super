@@ -2,13 +2,15 @@ import React, { useContext, useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
-import { AlertContext } from 'layouts/Admin'
+import { format as timeAgo } from 'timeago.js'
+
+import { AlertContext, ModalContext } from 'AppContext'
 import ClientSelect from 'components/ClientSelect'
 import DNSAddOverride from './DNSAddOverride'
 import ModalForm from 'components/ModalForm'
+import JSONSyntax from 'components/SyntaxHighlighter'
 import { dbAPI, deviceAPI, logAPI } from 'api'
 import { prettyDate } from 'utils'
-import { format as timeAgo } from 'timeago.js'
 
 import {
   Badge,
@@ -37,6 +39,7 @@ import {
   useColorMode,
   ThreeDotsIcon,
   SlashIcon,
+  CheckIcon,
   TrashIcon,
   InputField,
   InputIcon,
@@ -44,7 +47,6 @@ import {
   InputSlot
 } from '@gluestack-ui/themed'
 
-//import { FlashList } from '@shopify/flash-list'
 import { FilterIcon } from 'lucide-react-native'
 
 const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
@@ -76,7 +78,7 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
       }}
     >
       <MenuItem key="permit">
-        <SlashIcon color="$green700" mr="$2" />
+        <CheckIcon color="$green700" mr="$2" />
         <MenuItemLabel size="sm">Permit Domain</MenuItemLabel>
       </MenuItem>
       <MenuItem key="block">
@@ -134,9 +136,11 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
             {item.FirstName}
           </Text>
 
-          <Text color="$muted500" onPress={() => triggerAlert(item)}>
-            {item.FirstAnswer || '0.0.0.0'}
-          </Text>
+          <HStack>
+            <Text color="$muted500" onPress={() => triggerAlert(item)}>
+              {item.FirstAnswer || '0.0.0.0'}
+            </Text>
+          </HStack>
           <Text color="$muted500" sx={{ '@md': { display: 'none' } }}>
             {timeAgo(new Date(item.Timestamp))}
           </Text>
@@ -167,30 +171,50 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
             h={undefined}
             placement="bottom"
             trigger={(triggerProps) => (
-              <Button
-                sx={{
-                  '@base': { display: 'none' },
-                  '@md': { display: 'flex' }
-                }}
-                variant="link"
-                {...triggerProps}
-                onPress={() =>
-                  handleClickDomain(
-                    item.Type === 'BLOCKED' ? 'permit' : 'block',
-                    item.FirstName
-                  )
-                }
-              >
-                <ButtonIcon as={SlashIcon} color="$red700" />
-              </Button>
+              <HStack>
+                <Button
+                  sx={{
+                    '@base': { display: 'none' },
+                    '@md': { display: 'flex' }
+                  }}
+                  variant="link"
+                  {...triggerProps}
+                  onPress={() => handleClickDomain('permit', item.FirstName)}
+                >
+                  {/*<ButtonText>{item.Type}</ButtonText>*/}
+                  <ButtonIcon as={CheckIcon} color="$green700" />
+                </Button>
+              </HStack>
             )}
           >
             <TooltipContent>
-              <TooltipText>Add Domain Block</TooltipText>
+              <TooltipText>Permit Domain</TooltipText>
             </TooltipContent>
           </Tooltip>
 
-          {moreMenu}
+          <Tooltip
+            h={undefined}
+            placement="bottom"
+            trigger={(triggerProps) => (
+              <HStack>
+                <Button
+                  sx={{
+                    '@base': { display: 'none' },
+                    '@md': { display: 'flex' }
+                  }}
+                  variant="link"
+                  {...triggerProps}
+                  onPress={() => handleClickDomain('block', item.FirstName)}
+                >
+                  <ButtonIcon as={SlashIcon} color="$red700" />
+                </Button>
+              </HStack>
+            )}
+          >
+            <TooltipContent>
+              <TooltipText>Block Domain</TooltipText>
+            </TooltipContent>
+          </Tooltip>
         </HStack>
       </HStack>
     </Box>
@@ -199,6 +223,7 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
 
 const DNSLogHistoryList = (props) => {
   const context = useContext(AlertContext)
+  const modalContext = useContext(ModalContext)
   const navigate = useNavigate()
 
   const [list, setList] = useState([])
@@ -347,11 +372,10 @@ const DNSLogHistoryList = (props) => {
   }
 
   const triggerAlert = (item) => {
-    context.alert(
-      'info',
+    modalContext.modal(
       'DNS query',
-      <ScrollView w="100%" h="400">
-        <Text size="xs">{JSON.stringify(item, null, '  ')}</Text>
+      <ScrollView w="100%" maxHeight={320}>
+        <JSONSyntax>{JSON.stringify(item, null, '  ')}</JSONSyntax>
       </ScrollView>
     )
   }
@@ -452,11 +476,7 @@ const DNSLogHistoryList = (props) => {
   return (
     <View h={h} display="flex">
       <ModalForm
-        title={
-          'Add ' +
-          (selectedType == 'block' ? 'block' : 'override') +
-          ' for Domain'
-        }
+        title={'Add override for Domain'}
         modalRef={modalRef}
         hideButton={true}
       >

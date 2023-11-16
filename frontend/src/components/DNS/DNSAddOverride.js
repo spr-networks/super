@@ -19,7 +19,13 @@ import {
   Input,
   InputField,
   VStack,
-  Text
+  HStack,
+  RadioGroup,
+  Radio,
+  RadioIndicator,
+  RadioIcon,
+  RadioLabel,
+  CircleIcon
 } from '@gluestack-ui/themed'
 
 export default class DNSAddOverride extends React.Component {
@@ -49,6 +55,7 @@ export default class DNSAddOverride extends React.Component {
     this.state.ResultIP = props.ResultIP || ''
     this.state.ClientIP = props.clientip || '*'
     this.state.check = {
+      Type: '',
       Domain: '',
       ResultIP: '',
       ClientIP: ''
@@ -60,7 +67,11 @@ export default class DNSAddOverride extends React.Component {
   }
 
   validateField(name, value) {
-    let check = { Domain: '', ResultIP: '', ClientIP: '' }
+    let check = { Type: '', Domain: '', ResultIP: '', ClientIP: '' }
+
+    if (name == 'Type' && !['block', 'permit'].includes(value)) {
+      check.Type = 'has-danger'
+    }
 
     if (name == 'Domain' && !value.length) {
       check.Domain = 'has-danger'
@@ -117,6 +128,50 @@ export default class DNSAddOverride extends React.Component {
   render() {
     return (
       <VStack space="md">
+        <FormControl isInvalid={this.state.check.Type == 'has-danger'}>
+          <FormControlLabel>
+            <FormControlLabelText>Type of override</FormControlLabelText>
+          </FormControlLabel>
+
+          <RadioGroup
+            flex={1}
+            defaultValue={this.state.Type}
+            accessibilityLabel="Select Type"
+            onChange={(type) => {
+              this.handleChange('Type', type)
+            }}
+          >
+            <HStack py="1" space="md">
+              <Radio key="block" value="block" size="md">
+                <RadioIndicator mr="$2">
+                  <RadioIcon as={CircleIcon} strokeWidth={1} />
+                </RadioIndicator>
+                <RadioLabel>Block</RadioLabel>
+              </Radio>
+
+              <Radio key="permit" value="permit" size="md">
+                <RadioIndicator mr="$2">
+                  <RadioIcon as={CircleIcon} strokeWidth={1} />
+                </RadioIndicator>
+                <RadioLabel>Permit</RadioLabel>
+              </Radio>
+            </HStack>
+          </RadioGroup>
+          {this.state.check.Type == 'has-danger' ? (
+            <FormControlError>
+              <FormControlErrorText>Invalid Block Type</FormControlErrorText>
+            </FormControlError>
+          ) : (
+            <FormControlHelper>
+              <FormControlHelperText>
+                {this.state.Type == 'block'
+                  ? 'Block custom domain lookups'
+                  : 'Override/Allow DNS lookup with a custom IP address'}
+              </FormControlHelperText>
+            </FormControlHelper>
+          )}
+        </FormControl>
+
         <FormControl
           isRequired
           isInvalid={this.state.check.Domain == 'has-danger'}
@@ -153,7 +208,7 @@ export default class DNSAddOverride extends React.Component {
             <FormControlLabelText>Result IP</FormControlLabelText>
           </FormControlLabel>
 
-          <Input variant="underlined">
+          <Input>
             <InputField
               type="text"
               name="ResultIP"

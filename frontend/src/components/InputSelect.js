@@ -100,14 +100,18 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
     }
 
     //item.icon is for devices and group icons
+    let itemIcon = <></> //<Icon as={LaptopIcon} mr="$2" size={20} />
+    if (item.icon?.length) {
+      itemIcon = (
+        <IconItem name={item.icon} color={item.color} size={20} mr="$2" />
+      )
+    } else if (typeof item.icon === 'object') {
+      itemIcon = <Icon as={item.icon} mr="$2" size={20} />
+    }
 
     return (
       <MenuItem key={value} textValue={value}>
-        {item.icon?.length > 0 ? (
-          <IconItem name={item.icon} color={item.color} size={20} mr="$2" />
-        ) : (
-          <Icon as={LaptopIcon} mr="$2" size={20} />
-        )}
+        {itemIcon}
         <MenuItemLabel size="xs">{item.label}</MenuItemLabel>
       </MenuItem>
     )

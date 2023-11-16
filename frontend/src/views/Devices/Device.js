@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useParams } from 'react-router-dom'
 import { ScrollView } from '@gluestack-ui/themed'
 import EditDevice from 'components/Devices/EditDevice'
-import { AlertContext } from 'layouts/Admin'
+import { AppContext, AlertContext } from 'AppContext'
 
 import useSwipe from 'components/useSwipe'
 import { deviceAPI } from 'api'
@@ -13,6 +13,7 @@ import { ListHeader } from 'components/List'
 //import AddDevice from 'components/Devices/AddDevice'
 
 const DeviceView = () => {
+  const appContext = useContext(AppContext)
   const context = useContext(AlertContext)
   const navigate = useNavigate()
   const params = useParams()
@@ -59,6 +60,7 @@ const DeviceView = () => {
   }, [])
 
   const refreshDevice = () => {
+    appContext.getDevices(true) // force update
     context.success('device updated')
   }
 

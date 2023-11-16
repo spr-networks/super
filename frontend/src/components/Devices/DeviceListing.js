@@ -52,7 +52,9 @@ const DeviceListing = (props) => {
     )
   }
 
-  const refreshDevices = () => {
+  const refreshDevices = (forceFetch = false) => {
+    //NOTE use appContext for devices to avoid fetching x2
+    //appContext.getDevices(forceFetch)
     deviceAPI
       .list()
       .then((devices) => {
@@ -60,9 +62,12 @@ const DeviceListing = (props) => {
           return
         }
 
-        let macs = Object.keys(devices).filter((id) => id.includes(':'))
+        if (!Array.isArray(devices)) {
+          devices = Object.values(devices)
+        }
 
-        devices = Object.values(devices)
+        let macs = devices.filter((d) => d.MAC.includes(':')).map((d) => d.MAC)
+
         setDevices(devices.sort(sortDevices))
 
         // set device oui if avail
@@ -161,7 +166,7 @@ const DeviceListing = (props) => {
   }
 
   useEffect(() => {
-    refreshDevices()
+    refreshDevices(true)
   }, [])
 
   const handleRedirect = () => {
@@ -179,7 +184,7 @@ const DeviceListing = (props) => {
       showMenu={true}
       groups={groups}
       tags={tags}
-      notifyChange={refreshDevices}
+      notifyChange={() => refreshDevices(true)}
     />
   )
 
@@ -199,7 +204,7 @@ const DeviceListing = (props) => {
     setDevices(newData)
     deviceAPI
       .deleteDevice(rowKey)
-      .then(refreshDevices)
+      .then(() => refreshDevices(true))
       .catch((error) =>
         context.error('[API] deleteDevice error: ' + error.message)
       )

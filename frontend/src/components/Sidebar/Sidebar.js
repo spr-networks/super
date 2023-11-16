@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Platform } from 'react-native'
+import { Dimensions, Platform } from 'react-native'
 import { useNavigate } from 'react-router-dom'
 /*import { useNavigate as useNavigateWeb } from 'react-router-dom'
 import { useNavigate as useNavigateNative } from 'react-router-native'*/
@@ -8,6 +8,9 @@ import { AppContext } from 'AppContext'
 
 import {
   Box,
+  Button,
+  ButtonGroup,
+  ButtonText,
   Pressable,
   ScrollView,
   HStack,
@@ -16,7 +19,8 @@ import {
   Text,
   useColorMode,
   Input,
-  InputField
+  InputField,
+  Switch
 } from '@gluestack-ui/themed'
 
 import { ChevronDownIcon } from 'lucide-react-native'
@@ -25,8 +29,33 @@ const Collapse = ({ isOpen, ...props }) => {
   return <VStack display={isOpen ? 'flex' : 'none'}>{props.children}</VStack>
 }
 
-const Sidebar = (props) => {
-  const { isMobile, isMini, isOpenSidebar, setIsOpenSidebar } = props
+const ToggleViewMode = ({ isSimpleMode, setIsSimpleMode, ...props }) => {
+  return (
+    <HStack
+      justifyContent="center"
+      alignItems="center"
+      p="$4"
+      px="$8"
+      space="md"
+    >
+      <Switch
+        value={!isSimpleMode}
+        onToggle={() => setIsSimpleMode(!isSimpleMode)}
+      />
+      <Text size="sm">{isSimpleMode ? 'Simple View' : 'Advanced View'}</Text>
+    </HStack>
+  )
+}
+
+const Sidebar = ({
+  isMobile,
+  isMini,
+  isOpenSidebar,
+  setIsOpenSidebar,
+  isSimpleMode,
+  setIsSimpleMode,
+  ...props
+}) => {
   //const sidebarItems = props.routes || []
   const [sidebarItems, setSidebarItems] = useState([])
 
@@ -34,79 +63,64 @@ const Sidebar = (props) => {
     setSidebarItems(props.routes)
   }, [])
 
-  const onChangeFilter = (value) => {
-    //TODO have some more logic here
-    let items = sidebarItems.map((pitem) => {
-      if (pitem.views) {
-        pitem.views = pitem.views.map((item) => {
-          item.hidden = !item.name.toLowerCase().startsWith(value.toLowerCase())
-
-          return item
-        })
-
-        // hide main if no match
-        let isEmpty = pitem.views.filter((item) => !item.hidden).length == 0
-        if (isEmpty) {
-          pitem.hidden = true
-        } else {
-          pitem.hidden = false
-        }
-      } else {
-        if (pitem.name) {
-          pitem.hidden = !pitem.name
-            .toLowerCase()
-            .startsWith(value.toLowerCase())
-        }
-      }
-
-      return pitem
-    })
-
-    setSidebarItems(items)
-  }
-
-  const showSearch = false
-
   if (!sidebarItems.length) {
     return <></>
   }
 
   return (
-    <ScrollView
-      w={isMini ? '20' : '100%'}
-      borderRightWidth={isMobile ? '$0' : '$1'}
-      sx={{
-        _light: {
-          bg: '$sidebarBackgroundLight',
-          borderColor: '$coolGray100'
-        },
-        _dark: { bg: '$sidebarBackgroundDark', borderColor: '$coolGray800' }
-      }}
-    >
-      {showSearch ? (
-        <Box p="$4">
-          <Input>
-            <InputField
-              onChangeText={onChangeFilter}
-              placeholder="Search menu"
-            />
-          </Input>
+    <>
+      <ScrollView
+        w={isMini ? '20' : '100%'}
+        h="92%"
+        borderRightWidth={isMobile ? '$0' : '$1'}
+        sx={{
+          _light: {
+            bg: '$sidebarBackgroundLight',
+            borderColor: '$coolGray100'
+          },
+          _dark: { bg: '$sidebarBackgroundDark', borderColor: '$coolGray800' }
+        }}
+      >
+        <SidebarItem
+          sidebarItems={sidebarItems}
+          level={0}
+          isMobile={isMobile}
+          isMini={isMini}
+          setIsOpenSidebar={setIsOpenSidebar}
+          isSimpleMode={isSimpleMode}
+        />
+      </ScrollView>
+      {!isOpenSidebar || isMobile ? (
+        <Box
+          h="8%"
+          borderTopWidth="$1"
+          sx={{
+            '@base': { display: 'flex' },
+            '@md': { display: 'flex', borderRightWidth: '$1' },
+            _light: {
+              bg: '$sidebarBackgroundLight',
+              borderColor: '$coolGray100'
+            },
+            _dark: {
+              bg: '$sidebarBackgroundDark',
+              borderColor: '$coolGray800'
+            }
+          }}
+        >
+          <ToggleViewMode
+            isSimpleMode={isSimpleMode}
+            setIsSimpleMode={setIsSimpleMode}
+          />
         </Box>
       ) : null}
-      <SidebarItem
-        sidebarItems={sidebarItems}
-        level={0}
-        isMobile={isMobile}
-        isMini={isMini}
-        setIsOpenSidebar={setIsOpenSidebar}
-      />
-    </ScrollView>
+    </>
   )
 }
 
 const SidebarItem = (props) => {
   const { sidebarItems, level, isMobile, isMini, setIsOpenSidebar } = props
-  const { isWifiDisabled, isPlusDisabled, isMeshNode } = useContext(AppContext)
+  const { isWifiDisabled, isPlusDisabled, isMeshNode, isSimpleMode } =
+    useContext(AppContext)
   const { activeSidebarItem, setActiveSidebarItem } = useContext(AppContext)
   const navigate = useNavigate()
 
@@ -156,6 +170,10 @@ const SidebarItem = (props) => {
       display = 'none'
     }
 
+    if (item.hideSimple && isSimpleMode) {
+      display = 'none'
+    }
+
     const colorMode = useColorMode()
 
     return (
@@ -197,13 +215,14 @@ const SidebarItem = (props) => {
           >
             <Box px="$8" py="$2.5">
               <HStack
-                space={'sm'}
+                space="sm"
                 alignItems="center"
                 pl={level > 1 ? level + 14 : '0'}
               >
                 {item.icon !== undefined ? (
                   <Icon
                     as={item.icon}
+                    size={18}
                     color={
                       colorMode == 'light' ? '$coolGray600' : '$coolGray400'
                     }
@@ -307,7 +326,7 @@ export const CollapsibleSidebarItem = (props) => {
           py="$2.5"
         >
           <Box
-            flexShrink="1"
+            flexShrink={1}
             _text={{
               textTransform: 'uppercase',
               fontWeight: '600',

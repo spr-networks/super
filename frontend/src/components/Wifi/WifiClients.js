@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 
 import { wifiAPI, deviceAPI } from 'api'
-import { AlertContext } from 'layouts/Admin'
+import { AppContext, AlertContext } from 'AppContext'
 import { prettySignal } from 'utils'
 
 import {
@@ -17,12 +17,14 @@ import {
 
 import { ListItem } from 'components/List'
 import { InterfaceItem } from 'components/TagItem'
+import DeviceItem from 'components/Devices/DeviceItem'
 
 //import { FlashList } from '@shopify/flash-list'
 
 const WifiClients = (props) => {
   const [clients, setClients] = useState([])
   const context = useContext(AlertContext)
+  const appContext = useContext(AppContext)
 
   const akmSuiteAuth = (suite) => {
     const suites = {
@@ -119,10 +121,7 @@ const WifiClients = (props) => {
       estimatedItemSize={100}
       renderItem={({ item }) => (
         <ListItem>
-          <Text flex={1} bold alignSelf="center">
-            {item.Name}
-          </Text>
-
+          <DeviceItem item={item} w="$1/2" justifyContent="space-between" />
           <Box
             flex={1}
             sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
@@ -130,20 +129,6 @@ const WifiClients = (props) => {
           >
             <InterfaceItem name={item.Iface} />
           </Box>
-
-          <VStack
-            flex={2}
-            space="sm"
-            justifyContent="center"
-            sx={{ '@md': { flexDirection: 'row' } }}
-          >
-            <Text size="sm" bold>
-              {item.RecentIP}
-            </Text>
-            <Text size="sm" color="$muted500">
-              {item.MAC}
-            </Text>
-          </VStack>
 
           <VStack
             flex={2}

@@ -27,7 +27,12 @@ import {
   SplitIcon,
   TagIcon,
   TagsIcon,
-  WaypointsIcon
+  WaypointsIcon,
+  ArrowDownUpIcon,
+  ArrowUpDownIcon,
+  BinaryIcon,
+  ArrowUp,
+  ContainerIcon
 } from 'lucide-react-native'
 
 import { BrandIcons } from 'IconUtils'
@@ -42,6 +47,16 @@ import {
   toOption
 } from './Utils'
 
+const parseDst = (dst) => {
+  // handled under FlowCard.js onChange for now,
+  //which converts the value to an object {}
+  return dst
+}
+
+const labelsProtocol = [
+  { label: 'tcp', value: 'tcp' },
+  { label: 'udp', value: 'udp' }
+]
 const defaultOptions = async function (name) {
   if (name.endsWith('Port')) {
     return [
@@ -51,10 +66,10 @@ const defaultOptions = async function (name) {
       { label: 'telnet', value: '23' },
       { label: '3000', value: '3000' },
       { label: '8080', value: '8080' }
-    ]
+    ].map((opt) => ({ ...opt, icon: BinaryIcon }))
   }
 
-  if (name == 'OriginalDstIP') {
+  if (name == 'OriginalDst') {
     let addrs = await api.get('/ip/addr')
     addrs = addrs
       .map((a) => {
@@ -63,9 +78,11 @@ const defaultOptions = async function (name) {
       })
       .filter((ais) => ais && ais.length)
       .map((ais) => ais[0].local)
-    let opts = addrs.map((value) => {
-      return { label: value, value }
+
+    let opts = [...new Set(addrs)].map((value) => {
+      return { label: value, value, icon: ArrowUpDownIcon }
     })
+
     return opts
   }
 }
@@ -159,16 +176,14 @@ const triggers = [
 // or they may become invisible.
 const actions = [
   {
-    title: 'Block TCP',
+    title: 'Block',
     cardType: 'action',
-    description:
-      'Block TCP from source address or group to destination address',
+    description: 'Block from source address or group to destination address',
     color: '$red400',
     icon: BanIcon,
     params: [
       {
         name: 'Protocol',
-        hidden: true,
         type: PropTypes.string
       },
       {
@@ -176,7 +191,11 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      {
+        name: 'Dst',
+        type: PropTypes.object,
+        description: 'IP/CIDR, domain, or /regexp/'
+      },
       {
         name: 'DstPort',
         type: PropTypes.string,
@@ -186,10 +205,14 @@ const actions = [
     values: {
       Protocol: 'tcp',
       Client: '0.0.0.0',
-      DstIP: '',
+      Dst: { IP: '1.2.3.4' },
       DstPort: ''
     },
     getOptions: function (name = 'DstPort') {
+      if (name == 'Protocol') {
+        return labelsProtocol
+      }
+
       if (name == 'DstPort') {
         return defaultOptions(name)
       }
@@ -198,8 +221,8 @@ const actions = [
     },
     preSubmit: async function () {
       let Client = parseClientIPOrIdentity(this.values.Client)
-
-      return { ...this.values, Client }
+      let Dst = parseDst(this.values.Dst)
+      return { ...this.values, Client, Dst }
     },
     submit: function (data, flow) {
       let isUpdate = flow.index !== undefined
@@ -212,71 +235,14 @@ const actions = [
     }
   },
   {
-    title: 'Block UDP',
+    title: 'Forward',
     cardType: 'action',
-    description:
-      'Block UDP from source address or group to destination address',
-    color: '$warning400',
-    icon: BanIcon,
-    params: [
-      {
-        name: 'Protocol',
-        hidden: true,
-        type: PropTypes.string
-      },
-      {
-        name: 'Client',
-        type: PropTypes.string,
-        description: 'IP/CIDR or Group'
-      },
-      { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
-      {
-        name: 'DstPort',
-        type: PropTypes.string,
-        description: 'Dest port, range of ports, or empty for all'
-      }
-    ],
-    values: {
-      Protocol: 'udp',
-      Client: '0.0.0.0',
-      DstIP: '',
-      DstPort: ''
-    },
-    getOptions: function (name = 'DstPort') {
-      if (name == 'DstPort') {
-        return defaultOptions(name)
-      }
-
-      return []
-    },
-    //NOTE same as TCP
-    preSubmit: async function () {
-      return {
-        ...this.values,
-        Client: parseClientIPOrIdentity(this.values.Client)
-      }
-    },
-    submit: function (data, flow) {
-      let isUpdate = flow.index !== undefined
-
-      if (isUpdate) {
-        return pfwAPI.updateBlock(data, flow.index)
-      }
-
-      return pfwAPI.addBlock(data)
-    }
-  },
-  {
-    title: 'Forward TCP',
-    cardType: 'action',
-    description:
-      'Forward TCP for specified source to destination address and port',
+    description: 'Forward for specified source to destination address and port',
     color: '$emerald600',
     icon: SplitIcon,
     params: [
       {
         name: 'Protocol',
-        hidden: true,
         type: PropTypes.string
       },
       {
@@ -284,14 +250,18 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'OriginalDstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      {
+        name: 'OriginalDst',
+        type: PropTypes.object,
+        description: 'IP: IP/CIDR, Domain: domain, or /regexp/'
+      },
       {
         name: 'OriginalDstPort',
         type: PropTypes.string,
         description:
           'Original Destination port, range of ports, or empty for all'
       },
-      { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      { name: 'Dst', type: PropTypes.object, description: 'IP/CIDR' },
       {
         name: 'DstPort',
         type: PropTypes.string,
@@ -302,17 +272,17 @@ const actions = [
       Protocol: 'tcp',
       Client: '0.0.0.0',
       DstPort: '',
-      DstIP: '0.0.0.0',
-      OriginalDstIP: '0.0.0.0',
+      Dst: { IP: '0.0.0.0' },
+      OriginalDst: { IP: '0.0.0.0' },
       OriginalDstPort: ''
     },
     getOptions: async function (name = 'DstPort') {
-      if (['DstPort', 'OriginalDstPort'].includes(name)) {
-        return defaultOptions(name)
+      if (name == 'Protocol') {
+        return labelsProtocol
       }
 
-      if (name == 'OriginalDstIP') {
-        return await defaultOptions(name)
+      if (['DstPort', 'OriginalDstPort'].includes(name)) {
+        return defaultOptions(name)
       }
 
       return []
@@ -320,7 +290,9 @@ const actions = [
     preSubmit: async function () {
       return {
         ...this.values,
-        Client: parseClientIPOrIdentity(this.values.Client)
+        Client: parseClientIPOrIdentity(this.values.Client),
+        Dst: parseDst(this.values.Dst),
+        OriginalDst: parseDst(this.values.OriginalDst)
       }
     },
     submit: function (data, flow) {
@@ -334,81 +306,10 @@ const actions = [
     }
   },
   {
-    title: 'Forward UDP',
+    title: 'Forward all traffic to Interface, Site VPN or Uplink',
     cardType: 'action',
     description:
-      'Forward UDP for specified source to destination address and port',
-    color: '$emerald400',
-    icon: SplitIcon,
-    params: [
-      {
-        name: 'Protocol',
-        hidden: true,
-        type: PropTypes.string
-      },
-      {
-        name: 'Protocol',
-        hidden: true,
-        type: PropTypes.string
-      },
-      {
-        name: 'Client',
-        type: PropTypes.string,
-        description: 'IP/CIDR or Group'
-      },
-      { name: 'OriginalDstIP', type: PropTypes.string, description: 'IP/CIDR' },
-      {
-        name: 'OriginalDstPort',
-        type: PropTypes.string,
-        description:
-          'Original Destination port, range of ports, or empty for all'
-      },
-      { name: 'DstIP', type: PropTypes.string, description: 'IP/CIDR' },
-      {
-        name: 'DstPort',
-        type: PropTypes.string,
-        description: 'New Destination port, range of ports, or empty for all'
-      }
-    ],
-    values: {
-      Protocol: 'udp',
-      Client: '0.0.0.0',
-      DstIP: '0.0.0.0',
-      OriginalDstIP: '',
-      OriginalDstPort: '',
-      DstPort: ''
-    },
-    getOptions: async function (name = 'DstPort') {
-      if (['DstPort', 'OriginalDstPort'].includes(name)) {
-        return defaultOptions(name)
-      }
-
-      if (name == 'OriginalDstIP') {
-        return await defaultOptions(name)
-      }
-
-      return []
-    },
-    preSubmit: async function () {
-      return {
-        ...this.values,
-        Client: parseClientIPOrIdentity(this.values.Client)
-      }
-    },
-    submit: function (data, flow) {
-      let isUpdate = flow.index !== undefined
-
-      if (isUpdate) {
-        return pfwAPI.updateForward(data, flow.index)
-      }
-
-      return pfwAPI.addForward(data)
-    }
-  },
-  {
-    title: 'Forward to Site VPN or Uplink Interface',
-    cardType: 'action',
-    description: 'Forward traffic over a Site VPN Gateway or Uplink Interface',
+      'Forward traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
     color: '$purple600',
     icon: WaypointsIcon,
     params: [
@@ -417,16 +318,27 @@ const actions = [
         type: PropTypes.string,
         description: 'IP/CIDR or Group'
       },
-      { name: 'OriginalDstIP', type: PropTypes.string, description: 'IP/CIDR' },
+      {
+        name: 'OriginalDst',
+        type: PropTypes.object,
+        description: 'IP/CIDR, domain, or /regexp/'
+      },
       {
         name: 'DstInterface',
         type: PropTypes.string,
         description: 'Destination site (ex: site0)'
+      },
+      {
+        name: 'Dst',
+        type: PropTypes.object,
+        description:
+          'IP destination, set as destination route, needed for containers'
       }
     ],
     values: {
       Client: '0.0.0.0',
-      OriginalDstIP: '0.0.0.0',
+      OriginalDst: { IP: '0.0.0.0' },
+      Dst: { IP: '1.2.3.4' },
       DstInterface: ''
     },
     getOptions: function (name = 'DstInterface') {
@@ -462,7 +374,114 @@ const actions = [
     preSubmit: async function () {
       return {
         ...this.values,
-        Client: parseClientIPOrIdentity(this.values.Client)
+        Client: parseClientIPOrIdentity(this.values.Client),
+        Dst: parseDst(this.values.Dst),
+        OriginalDst: parseDst(this.values.OriginalDst)
+      }
+    },
+    submit: function (data, flow) {
+      let isUpdate = flow.index !== undefined
+
+      if (isUpdate) {
+        return pfwAPI.updateForward(data, flow.index)
+      }
+
+      return pfwAPI.addForward(data)
+    }
+  },
+  {
+    title: 'Port Forward to Interface, Site VPN or Uplink',
+    cardType: 'action',
+    description:
+      'Forward traffic over a Site VPN Gateway, an Uplink, or a Custom Interface',
+    color: '$purple400',
+    icon: WaypointsIcon,
+    params: [
+      {
+        name: 'Protocol',
+        type: PropTypes.string
+      },
+      {
+        name: 'Client',
+        type: PropTypes.string,
+        description: 'IP/CIDR or Group'
+      },
+      {
+        name: 'OriginalDst',
+        type: PropTypes.object,
+        description: 'IP/CIDR, domain, or /regexp/'
+      },
+      {
+        name: 'OriginalDstPort',
+        type: PropTypes.string,
+        description:
+          'Original Destination port, range of ports, or empty for all'
+      },
+      {
+        name: 'DstInterface',
+        type: PropTypes.string,
+        description:
+          'Destination site (ex: site0, Must begin with "site" or be an Uplink interface)'
+      },
+      {
+        name: 'Dst',
+        type: PropTypes.object,
+        description:
+          'IP destination, set as destination route, needed for containers'
+      }
+    ],
+    values: {
+      Client: '0.0.0.0',
+      OriginalDst: { IP: '0.0.0.0' },
+      Dst: { IP: '1.2.3.4' },
+      OriginalDstPort: '',
+      Protocol: 'tcp',
+      DstInterface: ''
+    },
+    getOptions: function (name = 'DstInterface') {
+      if (name == 'Protocol') {
+        return labelsProtocol
+      }
+
+      if (['OriginalDstPort'].includes(name)) {
+        return defaultOptions(name)
+      }
+
+      if (name == 'DstInterface') {
+        return new Promise((resolve, reject) => {
+          pfwAPI.config().then((config) => {
+            let s = []
+            for (
+              let i = 0;
+              config.SiteVPNs != null && i < config.SiteVPNs.length;
+              i++
+            ) {
+              s.push({ label: 'site' + i, value: 'site' + i })
+            }
+
+            // pull in interfaces also
+            wifiAPI.interfacesConfiguration().then((ifaces) => {
+              for (let iface of ifaces) {
+                if (
+                  iface.Type == 'Uplink' &&
+                  iface.Subtype != 'pppup' &&
+                  iface.Enabled == true
+                ) {
+                  s.push({ label: iface.Name, value: iface.Name })
+                }
+              }
+              resolve(s)
+            })
+          })
+        })
+      }
+    },
+    preSubmit: async function () {
+      return {
+        ...this.values,
+        Client: parseClientIPOrIdentity(this.values.Client),
+        Dst: parseDst(this.values.Dst),
+        OriginalDst: parseDst(this.values.OriginalDst)
       }
     },
     submit: function (data, flow) {
@@ -498,7 +517,13 @@ const actions = [
     },
     getOptions: function (value = 'Groups') {
       return new Promise((resolve, reject) => {
-        deviceAPI.groups().then((groups) => resolve(groups.map(toOption)))
+        deviceAPI
+          .groups()
+          .then((groups) =>
+            resolve(
+              groups.map(toOption).map((opt) => ({ ...opt, icon: opt.value }))
+            )
+          )
       })
     },
     preSubmit: async function () {
@@ -540,7 +565,7 @@ const actions = [
     getOptions: function (value = 'Tags') {
       return new Promise((resolve, reject) => {
         deviceAPI.tags().then((tags) => {
-          resolve(tags.map(toOption))
+          resolve(tags.map(toOption).map((opt) => ({ ...opt, icon: TagIcon })))
         })
       })
     },
@@ -565,17 +590,16 @@ const actions = [
     }
   },
   {
-    title: 'Docker Forward TCP',
+    title: 'Docker Forward',
     cardType: 'action',
     description:
-      'Forward TCP for specified source to exposed port for a local container',
+      'Forward traffic to a local container. The container does NOT need to expose ports',
     color: '$blue500',
     icon: BrandIcons.Docker, //SplitIcon, //Platform.OS == 'ios' ? SplitIcon : 'Docker',
     params: [
       {
         name: 'Protocol',
-        type: PropTypes.string,
-        hidden: true
+        type: PropTypes.string
       },
       {
         name: 'Client',
@@ -583,9 +607,9 @@ const actions = [
         description: 'IP/CIDR or Group'
       },
       {
-        name: 'OriginalDstIP',
-        type: PropTypes.string,
-        description: 'IP/CIDR'
+        name: 'OriginalDst',
+        type: PropTypes.object,
+        description: 'IP/CIDR, domain, or /regexp/'
       },
       {
         name: 'OriginalDstPort',
@@ -601,11 +625,11 @@ const actions = [
       {
         name: 'ContainerPort',
         type: PropTypes.string,
-        description: 'Port exposed by container'
+        description: 'Listening port number internal to container'
       },
       {
-        name: 'DstIP',
-        type: PropTypes.string,
+        name: 'Dst',
+        type: PropTypes.object,
         description: 'IP/CIDR',
         hidden: true
       },
@@ -618,24 +642,28 @@ const actions = [
     ],
     values: {
       Protocol: 'tcp',
-      Client: 'lan',
+      Client: { Group: 'lan' },
       Container: 'container',
       ContainerPort: '8080',
-      OriginalDstIP: '192.168.2.1',
+      OriginalDst: { IP: '192.168.2.1' },
       OriginalDstPort: '8080',
       DstPort: '8080',
-      DstIP: '0.0.0.0'
+      Dst: { IP: '1.2.3.4' }
     },
     niceDockerName: function (c) {
       return (c.Names[0] || c.Id.substr(0, 8)).replace(/^\//, '')
     },
     niceDockerLabel: function (c) {
       let name = this.niceDockerName(c)
-      let ports = c.Ports.filter((p) => p.IP != '::').map((p) => p.PublicPort) // p.Type
+      let ports = c.Ports.filter((p) => p.IP != '::').map((p) => p.PrivatePort) // p.Type
       return `${name}:${ports}`
     },
     getOptions: async function (name = 'DstPort') {
-      if (name.endsWith('Port') || name == 'OriginalDstIP') {
+      if (name == 'Protocol') {
+        return labelsProtocol
+      }
+
+      if (name.endsWith('Port')) {
         return await defaultOptions(name)
       }
 
@@ -644,9 +672,10 @@ const actions = [
         let containers = await api.get('/info/docker')
 
         let opts = containers
-          .filter((c) => c.Ports && c.Ports.length)
+          .filter((c) => c.State == 'running' && c.Ports?.length)
           .map((c) => {
             return {
+              icon: ContainerIcon,
               label: this.niceDockerLabel(c),
               value: this.niceDockerName(c)
             }
@@ -668,19 +697,29 @@ const actions = [
         return
       }
 
-      let DstIP = container.NetworkSettings.Networks.bridge.IPAddress
-      let DstPort = this.values.ContainerPort
+      let Dst
 
-      //TODO this should be a iface select
-      let OriginalDstIP = '192.168.2.1'
+      let networks = container.NetworkSettings.Networks
+      if (networks.bridge) {
+        Dst = { IP: container.NetworkSettings.Networks.bridge.IPAddress }
+      } else {
+        let values = Object.values(container.NetworkSettings.Networks)
+        if (values.length > 0) {
+          Dst = { IP: values[0].IPAddress }
+        } else {
+          context.error('container has no IP address')
+          return
+        }
+      }
+
+      let DstPort = this.values.ContainerPort
 
       let data = {
         Protocol: this.values.Protocol,
         Client: parseClientIPOrIdentity(this.values.Client),
-        //OriginalDstIP: this.values.OriginalDstIP,
-        OriginalDstIP,
         OriginalDstPort: this.values.OriginalDstPort,
-        DstIP,
+        Dst: parseDst(Dst),
+        OriginalDst: parseDst(this.values.OriginalDst),
         DstPort
       }
 

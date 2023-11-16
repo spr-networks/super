@@ -142,13 +142,7 @@ export const Interfaces = (props) => {
         Interfaces
       </Heading>
 
-      <Divider
-        bg="$muted200"
-        sx={{
-          _dark: { bg: 'muted600' }
-        }}
-        my="$4"
-      />
+      <Divider my="$4" />
 
       <Box px="$10">
         {addrs.map((address, index) => (

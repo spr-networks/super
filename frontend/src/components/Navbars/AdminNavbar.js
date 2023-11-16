@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useNavigate } from 'react-router-dom'
@@ -13,27 +13,27 @@ import {
   MenuIcon,
   MoonIcon,
   SunIcon,
-  /*TODO
-  Tooltip,
-  TooltipContent,
-  TooltipText,
-  */
-  useColorMode
+  useColorMode,
+  Pressable
 } from '@gluestack-ui/themed'
 
 import { LogOutIcon } from 'lucide-react-native'
 
 import { AppContext } from 'AppContext'
 
+import RouteJump from './RouteJump'
+
 const AdminNavbar = ({
+  version,
   isMobile,
   isOpenSidebar,
   setIsOpenSidebar,
-  version,
+  isSimpleMode,
+  setIsSimpleMode,
   toggleColorMode,
   ...props
 }) => {
-  const { isMeshNode } = useContext(AppContext)
+  const { isMeshNode, setActiveSidebarItem } = useContext(AppContext)
 
   const colorMode = useColorMode()
   //const toggleColorModeNB = useColorModeNB().toggleColorMode
@@ -67,7 +67,7 @@ const AdminNavbar = ({
         }}
         justifyContent="space-between"
       >
-        <HStack w="100%" alignItems="center" space={'sm'}>
+        <HStack w="100%" alignItems="center" space="sm">
           <Button
             variant="link"
             onPress={() => setIsOpenSidebar(!isOpenSidebar)}
@@ -83,26 +83,36 @@ const AdminNavbar = ({
             />
           </Button>
 
-          <Text size="lg" bold onPress={() => navigate('/admin/home')}>
-            SPR
-          </Text>
-          {isMeshNode ? <Text size="lg">MESH</Text> : null}
-
-          <Text
-            size="xs"
-            color="$muted600"
-            sx={{
-              _dark: { color: '$muted400' }
+          <Pressable
+            onPress={() => {
+              setActiveSidebarItem('home')
+              navigate('/admin/home')
             }}
-            isTruncated
-            borderWidth={1}
-            borderColor="$muted500"
-            rounded="$2xl"
-            py="$0.5"
-            px="$2"
           >
-            {`v${version}`}
-          </Text>
+            <HStack space="sm">
+              <Text size="lg" bold>
+                SPR
+              </Text>
+              {isMeshNode ? <Text size="lg">MESH</Text> : null}
+              <Text
+                size="xs"
+                color="$muted600"
+                sx={{
+                  _dark: { color: '$muted400' }
+                }}
+                isTruncated
+                borderWidth={1}
+                borderColor="$muted500"
+                rounded="$2xl"
+                py="$0.5"
+                px="$2"
+              >
+                {`v${version}`}
+              </Text>
+            </HStack>
+          </Pressable>
+
+          <RouteJump />
 
           <HStack marginLeft="auto" space="2xl" alignItems="center">
             <Link
@@ -140,6 +150,7 @@ const AdminNavbar = ({
             >
               <LinkText size="sm">API</LinkText>
             </Link>
+
             <Button
               onPress={() => {
                 toggleColorMode()

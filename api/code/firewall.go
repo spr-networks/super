@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"reflect"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -51,6 +53,43 @@ type ForwardingBlockRule struct {
 	SrcIP    string
 }
 
+type CustomInterfaceRule struct {
+	Interface string
+	SrcIP     string
+	SetRoute  bool
+	Groups    []string
+	Tags      []string //unused for now
+}
+
+func (c *CustomInterfaceRule) Equals(other *CustomInterfaceRule) bool {
+	// Create copies of the Groups and Tags so that the original slices are not modified
+	cGroups := make([]string, len(c.Groups))
+	copy(cGroups, c.Groups)
+	cTags := make([]string, len(c.Tags))
+	copy(cTags, c.Tags)
+
+	otherGroups := make([]string, len(other.Groups))
+	copy(otherGroups, other.Groups)
+	otherTags := make([]string, len(other.Tags))
+	copy(otherTags, other.Tags)
+
+	// Sort the copies of Groups and Tags
+	sort.Strings(cGroups)
+	sort.Strings(cTags)
+	sort.Strings(otherGroups)
+	sort.Strings(otherTags)
+
+	// Create a copy of CustomInterfaceRule to compare the sorted slices
+	cCopy := *c
+	otherCopy := *other
+	cCopy.Groups = cGroups
+	cCopy.Tags = cTags
+	otherCopy.Groups = otherGroups
+	otherCopy.Tags = otherTags
+
+	return reflect.DeepEqual(cCopy, otherCopy)
+}
+
 type ServicePort struct {
 	Protocol        string
 	Port            string
@@ -81,6 +120,7 @@ type FirewallConfig struct {
 	ForwardingRules      []ForwardingRule
 	BlockRules           []BlockRule
 	ForwardingBlockRules []ForwardingBlockRule
+	CustomInterfaceRules []CustomInterfaceRule
 	ServicePorts         []ServicePort
 	Endpoints            []Endpoint
 	MulticastPorts       []MulticastPort
@@ -89,7 +129,9 @@ type FirewallConfig struct {
 }
 
 var FirewallConfigFile = TEST_PREFIX + "/configs/base/firewall.json"
-var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []ForwardingBlockRule{}, []ServicePort{}, []Endpoint{}, []MulticastPort{}, false, false}
+var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{},
+	[]ForwardingBlockRule{}, []CustomInterfaceRule{}, []ServicePort{},
+	[]Endpoint{}, []MulticastPort{}, false, false}
 
 // IP -> Iface map
 var gIfaceMap = map[string]string{}
@@ -549,6 +591,53 @@ func addSupernetworkEntry(supernet string) {
 
 func removeSupernetworkEntry(supernet string) {
 	modifySupernetworkEntry(supernet, "delete")
+}
+
+func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	crule := CustomInterfaceRule{}
+	err := json.NewDecoder(r.Body).Decode(&crule)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if CIDRorIP(crule.SrcIP) != nil {
+		http.Error(w, "Invalid SrcIP", 400)
+		return
+	}
+
+	if !isValidIface(crule.Interface) {
+		http.Error(w, "Invalid Interface", 400)
+		return
+	}
+
+	//we accept them, but they are not useful for now
+	crule.Groups = normalizeStringSlice(crule.Groups)
+	crule.Tags = normalizeStringSlice(crule.Tags)
+
+	if r.Method == http.MethodDelete {
+		for i := range gFirewallConfig.CustomInterfaceRules {
+			a := gFirewallConfig.CustomInterfaceRules[i]
+			if crule.Equals(&a) {
+				gFirewallConfig.CustomInterfaceRules = append(gFirewallConfig.CustomInterfaceRules[:i], gFirewallConfig.CustomInterfaceRules[i+1:]...)
+				saveFirewallRulesLocked()
+				err = applyCustomInterfaceRule(a, "delete", true)
+				if err != nil {
+					http.Error(w, err.Error(), 400)
+				}
+				return
+			}
+		}
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	gFirewallConfig.CustomInterfaceRules = append(gFirewallConfig.CustomInterfaceRules, crule)
+	saveFirewallRulesLocked()
+	applyFirewallRulesLocked()
 }
 
 func deleteBlock(br BlockRule) error {
@@ -1067,6 +1156,131 @@ func populateSets() {
 
 }
 
+// TBD in go 1.21 use slices.
+func includesGroupStd(slice []string) (bool, bool, bool) {
+	dns := false
+	wan := false
+	lan := false
+
+	for _, item := range slice {
+		if item == "dns" {
+			dns = true
+		} else if item == "wan" {
+			wan = true
+		} else if item == "lan" {
+			lan = true
+		}
+	}
+
+	return wan, dns, lan
+}
+
+func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string, fthru bool) error {
+	var err error
+
+	wan, lan, dns := includesGroupStd(container_rule.Groups)
+
+	if wan {
+		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_wan",
+			"{", container_rule.Interface, ".", container_rule.SrcIP, ":", "accept", "}").Run()
+		if err != nil {
+			if action != "delete" {
+				log.Println("failed to "+action+" "+container_rule.Interface+" "+container_rule.SrcIP+" on fwd_iface_wan", err)
+			}
+			if !fthru {
+				return err
+			}
+		}
+	}
+
+	if lan {
+		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_lan",
+			"{", container_rule.Interface, ".", container_rule.SrcIP, ":", "accept", "}").Run()
+		if err != nil {
+			if action != "delete" {
+				log.Println("failed to "+action+" "+container_rule.Interface+" "+container_rule.SrcIP+" on fwd_iface_lan", err)
+			}
+			if !fthru {
+				return err
+			}
+		}
+	}
+
+	if dns {
+		err = exec.Command("nft", action, "element", "inet", "filter", "dns_access",
+			"{", container_rule.SrcIP, ".", container_rule.Interface, ":", "accept", "}").Run()
+		if err != nil {
+			if action != "delete" {
+				log.Println("failed to  "+action+" "+container_rule.Interface+" "+container_rule.SrcIP+" on dns_access", err)
+			}
+			if !fthru {
+				return err
+			}
+		}
+	}
+
+	for _, group := range container_rule.Groups {
+		if group == "lan" || group == "dns" || group == "wan" {
+			continue
+		}
+		if action == "add" {
+			addCustomVerdict(group, container_rule.SrcIP, container_rule.Interface)
+		}
+	}
+
+	/*
+		TBD: tags support?
+	*/
+
+	//set up route
+	if container_rule.SetRoute {
+		if action == "add" {
+			exec.Command("ip", "route", "add", container_rule.SrcIP, "dev", container_rule.Interface).Run()
+		} else if action == "delete" {
+			exec.Command("ip", "route", "del", container_rule.SrcIP, "dev", container_rule.Interface).Run()
+		}
+	}
+
+	return err
+}
+
+func applyContainerInterfaces() {
+	err := exec.Command("nft", "flush", "map", "inet", "filter", "fwd_iface_wan").Run()
+	if err != nil {
+		log.Println("failed to flush fwd_iface_wan", err)
+	}
+
+	err = exec.Command("nft", "flush", "map", "inet", "filter", "fwd_iface_lan").Run()
+	if err != nil {
+		log.Println("failed to flush fwd_iface_lan", err)
+	}
+
+	dockerif := os.Getenv("DOCKERIF")
+	dockernet := os.Getenv("DOCKERNET")
+
+	if dockerif != "" && dockernet != "" {
+		//prepopulate default docker0
+		err = exec.Command("nft", "add", "element", "inet", "filter", "fwd_iface_wan",
+			"{", dockerif, ".", dockernet, ":", "accept", "}").Run()
+		if err != nil {
+			log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_wan", err)
+		}
+
+		err = exec.Command("nft", "add", "element", "inet", "filter", "fwd_iface_lan",
+			"{", dockerif, ".", dockernet, ":", "accept", "}").Run()
+		if err != nil {
+			log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_lan", err)
+		}
+	}
+
+	for _, container_rule := range gFirewallConfig.CustomInterfaceRules {
+		applyCustomInterfaceRule(container_rule, "add", false)
+	}
+
+	// TBD: clean up stale iface from dns_access (?) here
+
+}
+
 func applyFirewallRulesLocked() {
 
 	populateSets()
@@ -1085,6 +1299,7 @@ func applyFirewallRulesLocked() {
 
 	applyPingRules()
 
+	applyContainerInterfaces()
 }
 
 func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
@@ -1611,12 +1826,12 @@ func addCustomVerdict(ZoneName string, IP string, Iface string) {
 		// the {name}_dst_access map allows Inet packets to a certain IP/interface pair
 		//the {name}_src_access part allows Inet packets from a IP/IFace set
 
-		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_src_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "}").Run()
+		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_src_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "flags", "interval", ";", "}").Run()
 		if err != nil {
 			log.Println("addCustomVerdict Failed", err)
 			return
 		}
-		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_dst_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "}").Run()
+		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_dst_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "flags", "interval", ";", "}").Run()
 		if err != nil {
 			log.Println("addCustomVerdict Failed", err)
 			return
@@ -2122,7 +2337,8 @@ func ipIfaceMappings(w http.ResponseWriter, r *http.Request) {
 
 func establishDevice(entry DeviceEntry, new_iface string, established_route_device string, routeIP string, router string) {
 
-	log.Println("flushing route and vmaps ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
+	// too noisy
+	//log.Println("flushing route and vmaps ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
 
 	//1. delete arp entry
 	flushRoute(entry.MAC)
@@ -2137,7 +2353,8 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	exec.Command("ip", "route", "flush", routeIP).Run()
 	exec.Command("ip", "route", "add", routeIP, "dev", new_iface).Run()
 
-	log.Println("Populating route and vmaps", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
+	// too noisy
+	//log.Println("Populating route and vmaps", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
 
 	//4. update router IP for the new interface. first delete the old addr
 	updateAddr(router, new_iface)
