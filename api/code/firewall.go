@@ -1445,7 +1445,12 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 	if fwd.SrcPort != "any" && !re.MatchString(fwd.SrcPort) {
 		http.Error(w, "Invalid SrcPort", 400)
 		return
+	} else {
+		//convert to full range
+		fwd.SrcPort = "0-65535"
 	}
+
+
 
 	if fwd.DstPort != "any" {
 		_, err = strconv.Atoi(fwd.DstPort)
