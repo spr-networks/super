@@ -33,6 +33,8 @@ import ProtocolRadio from 'components/Form/ProtocolRadio'
 
 class AddContainerInterfaceRuleImpl extends React.Component {
   state = {
+    Disabled: false,
+    RuleName: ''
     SrcIP: '',
     Interface: '',
     SetRoute: false,
@@ -58,6 +60,8 @@ class AddContainerInterfaceRuleImpl extends React.Component {
     event.preventDefault()
 
     let crule = {
+      RuleName: this.state.RuleName,
+      Disabled: this.state.Disabled,
       SrcIP: this.state.SrcIP,
       SetRoute: this.state.SetRoute,
       Interface: this.state.Interface,
@@ -98,6 +102,22 @@ class AddContainerInterfaceRuleImpl extends React.Component {
 
     return (
       <VStack space="md">
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Rule Name</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              variant="underlined"
+              value={this.state.RuleName}
+              onChangeText={(value) => this.handleChange('RuleName', value)}
+            />
+          </Input>
+          <FormControlHelper>
+            <FormControlHelperText>IP address or CIDR</FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+
         <FormControl isRequired>
           <FormControlLabel>
             <FormControlLabelText>Interface Address Range</FormControlLabelText>

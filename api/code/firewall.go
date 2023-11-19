@@ -54,6 +54,7 @@ type ForwardingBlockRule struct {
 }
 
 type CustomInterfaceRule struct {
+	BaseRule
 	Interface string
 	SrcIP     string
 	SetRoute  bool
@@ -1178,7 +1179,7 @@ func includesGroupStd(slice []string) (bool, bool, bool) {
 func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string, fthru bool) error {
 	var err error
 
-	wan, lan, dns := includesGroupStd(container_rule.Groups)
+	wan, dns, lan := includesGroupStd(container_rule.Groups)
 
 	if wan {
 		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_wan",
