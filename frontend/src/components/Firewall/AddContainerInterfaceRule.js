@@ -34,7 +34,7 @@ import ProtocolRadio from 'components/Form/ProtocolRadio'
 class AddContainerInterfaceRuleImpl extends React.Component {
   state = {
     Disabled: false,
-    RuleName: ''
+    RuleName: '',
     SrcIP: '',
     Interface: '',
     SetRoute: false,
