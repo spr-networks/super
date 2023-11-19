@@ -205,6 +205,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 
 		var matchInfo mux.RouteMatch
 
+		reason := ""
 		//api token
 		token := ExtractRequestToken(r)
 		if token != "" {
@@ -212,6 +213,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 				authenticatedNext.ServeHTTP(w, r)
 				return
 			}
+			reason = "bad token"
 		}
 
 		//basic auth
@@ -220,6 +222,11 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 			if authenticateUser(username, password) {
 				authenticatedNext.ServeHTTP(w, r)
 				return
+			}
+			reason = "bad password"
+		} else {
+			if token == "" {
+				reason = "no credentials"
 			}
 		}
 
@@ -230,6 +237,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 		}
 
 		if authenticatedNext.Match(r, &matchInfo) || setupMode.Match(r, &matchInfo) {
+			sprbus.Publish("auth:failure", map[string]string{"reason": reason})
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		} else {
@@ -240,6 +248,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 			}
 		}
 
+		sprbus.Publish("auth:failure", map[string]string{"reason": "unknown route, no credentials"})
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	})
 }
