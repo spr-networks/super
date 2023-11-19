@@ -37,7 +37,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
     RuleName: '',
     SrcIP: '',
     Interface: '',
-    SetRoute: false,
+    RouteDst: '',
     Groups: [],
     Tags: [],
     GroupOptions: []
@@ -63,7 +63,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
       RuleName: this.state.RuleName,
       Disabled: this.state.Disabled,
       SrcIP: this.state.SrcIP,
-      SetRoute: this.state.SetRoute,
+      RouteDst: this.state.RouteDst,
       Interface: this.state.Interface,
       Groups: this.state.Groups
     }
@@ -114,7 +114,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
             />
           </Input>
           <FormControlHelper>
-            <FormControlHelperText>IP address or CIDR</FormControlHelperText>
+            <FormControlHelperText>Name</FormControlHelperText>
           </FormControlHelper>
         </FormControl>
 
@@ -134,13 +134,21 @@ class AddContainerInterfaceRuleImpl extends React.Component {
           </FormControlHelper>
         </FormControl>
 
-        <FormControlLabel>
-          <FormControlLabelText>Set Route</FormControlLabelText>
-        </FormControlLabel>
-        <Switch
-          value={this.state.SetRoute}
-          onToggle={() => this.handleChange('SetRoute', !this.state.SetRoute)}
-        />
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Set Route Destination (optional)</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              variant="underlined"
+              value={this.state.RouteDst}
+              onChangeText={(value) => this.handleChange('RouteDst', value)}
+            />
+          </Input>
+          <FormControlHelper>
+            <FormControlHelperText>IP address</FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
 
         <FormControl isRequired>
           <FormControlLabel>

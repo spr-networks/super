@@ -57,7 +57,7 @@ type CustomInterfaceRule struct {
 	BaseRule
 	Interface string
 	SrcIP     string
-	SetRoute  bool
+	RouteDst  string
 	Groups    []string
 	Tags      []string //unused for now
 }
@@ -608,6 +608,14 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 	if CIDRorIP(crule.SrcIP) != nil {
 		http.Error(w, "Invalid SrcIP", 400)
 		return
+	}
+
+	if crule.RouteDst != "" {
+		ip := net.ParseIP(crule.RouteDst)
+		if ip == nil {
+			http.Error(w, "invalid RouteDst ", 400)
+			return
+		}
 	}
 
 	if !isValidIface(crule.Interface) {
@@ -1234,11 +1242,17 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 	*/
 
 	//set up route
-	if container_rule.SetRoute {
+	if container_rule.RouteDst != "" {
+
+		ip := net.ParseIP(container_rule.RouteDst)
+		if ip == nil {
+			return fmt.Errorf("invalid ip " + container_rule.RouteDst)
+		}
+
 		if action == "add" {
-			exec.Command("ip", "route", "add", container_rule.SrcIP, "dev", container_rule.Interface).Run()
+			exec.Command("ip", "route", "add", container_rule.SrcIP, "via", container_rule.RouteDst).Run()
 		} else if action == "delete" {
-			exec.Command("ip", "route", "del", container_rule.SrcIP, "dev", container_rule.Interface).Run()
+			exec.Command("ip", "route", "del", container_rule.SrcIP, "via", container_rule.RouteDst).Run()
 		}
 	}
 
