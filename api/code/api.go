@@ -468,7 +468,7 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 func checkUpdates() {
 
 	//once an hour, check if auto updates are enabled
-	// if they are, then performan an update
+	// if they are, then perform an update
 	ticker := time.NewTicker(1 * time.Hour)
 	for {
 		select {
