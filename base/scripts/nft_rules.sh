@@ -49,6 +49,12 @@ table inet filter {
     $(if [ "$LANIF" ]; then echo "elements = { $LANIF }" ; fi )
   }
 
+
+  # this set contains misc interfaces with API access
+  set api_interfaces {
+    type ifname;
+  }
+
   # this set contains only the wired interfaces, for DHCP whitelisting.
   # without knowing the mac address for dhcp_access ahead of time.
   # VLANs are *not* placed here as VLANs are currently 1:1 per device.
@@ -274,6 +280,8 @@ table inet filter {
     # TCP services
     iifname @lan_interfaces counter tcp dport vmap @lan_tcp_accept
     iifname @uplink_interfaces counter tcp dport vmap @wan_tcp_accept
+    iifname @api_interfaces counter tcp dport 80 accept
+    iifname @api_interfaces counter tcp dport 443 accept
 
     # UDP services
     iifname @lan_interfaces counter udp dport vmap @lan_udp_accept

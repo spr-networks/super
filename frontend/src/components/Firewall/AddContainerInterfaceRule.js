@@ -43,7 +43,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
     GroupOptions: []
   }
 
-  defaultGroups = ['wan', 'dns', 'lan']
+  defaultGroups = ['wan', 'dns', 'lan', 'api']
 
   constructor(props) {
     super(props)

@@ -1166,10 +1166,11 @@ func populateSets() {
 }
 
 // TBD in go 1.21 use slices.
-func includesGroupStd(slice []string) (bool, bool, bool) {
+func includesGroupStd(slice []string) (bool, bool, bool, bool) {
 	dns := false
 	wan := false
 	lan := false
+	api := false
 
 	for _, item := range slice {
 		if item == "dns" {
@@ -1178,16 +1179,18 @@ func includesGroupStd(slice []string) (bool, bool, bool) {
 			wan = true
 		} else if item == "lan" {
 			lan = true
+		} else if item == "api" {
+			api = true
 		}
 	}
 
-	return wan, dns, lan
+	return wan, dns, lan, api
 }
 
 func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string, fthru bool) error {
 	var err error
 
-	wan, dns, lan := includesGroupStd(container_rule.Groups)
+	wan, dns, lan, api := includesGroupStd(container_rule.Groups)
 
 	if wan {
 		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_wan",
@@ -1228,8 +1231,21 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 		}
 	}
 
+	if api {
+		err = exec.Command("nft", action, "element", "inet", "filter", "api_interfaces",
+			"{", container_rule.Interface, "}").Run()
+		if err != nil {
+			if action != "delete" {
+				log.Println("failed to  "+action+" "+container_rule.Interface+" for @api_interfaces", err)
+			}
+			if !fthru {
+				return err
+			}
+		}
+	}
+
 	for _, group := range container_rule.Groups {
-		if group == "lan" || group == "dns" || group == "wan" {
+		if group == "lan" || group == "dns" || group == "wan" || group == "api" {
 			continue
 		}
 		if action == "add" {
