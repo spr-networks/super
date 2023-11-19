@@ -692,7 +692,7 @@ func applyForwarding(forwarding []ForwardingRule) error {
 
 	for _, f := range forwarding {
 		var cmd *exec.Cmd
-		if f.SrcPort == "any" {
+		if f.DstPort == "any" {
 			cmd = exec.Command("nft", "add", "element", "inet", "nat", f.Protocol+"anyfwd",
 				"{", f.SrcIP, ":",
 				f.DstIP, "}")
