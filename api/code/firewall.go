@@ -1087,7 +1087,7 @@ func applyPingRules() {
 				"{", "0.0.0.0/0", ".", os.Getenv("WANIF"), ":", "accept", "}")
 			err = cmd.Run()
 			if err != nil {
-				fmt.Println("[-] Ping rule failed to add", err)
+				fmt.Println("[-] Ping rule failed to add wan", err)
 			}
 		}
 
@@ -1096,8 +1096,18 @@ func applyPingRules() {
 				"{", "0.0.0.0/0", ".", os.Getenv("LANIF"), ":", "accept", "}")
 			err = cmd.Run()
 			if err != nil {
-				fmt.Println("[-] Ping rule failed to add", err)
+				fmt.Println("[-] Ping rule failed to add lan", err)
 			}
+
+			//also add wireguard to the ping rules
+			//future: gate this on wg being enabled
+			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
+				"{", "0.0.0.0/0", ".", "wg0", ":", "accept", "}")
+			err = cmd.Run()
+			if err != nil {
+				fmt.Println("[-] Ping rule failed to add wg0", err)
+			}
+
 		}
 
 		return
@@ -1449,8 +1459,6 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 		//convert to full range
 		fwd.SrcPort = "0-65535"
 	}
-
-
 
 	if fwd.DstPort != "any" {
 		_, err = strconv.Atoi(fwd.DstPort)
