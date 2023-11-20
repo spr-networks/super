@@ -101,24 +101,30 @@ func setReleaseChannel(Channel string) error {
 	return os.WriteFile(ReleaseChannelFile, []byte(channelFiltered), 0644)
 }
 
+func isVirtual() bool {
+	//when this is set, SPR is configured to run on
+	// its own network namespace.
+	return os.Getenv("VIRTUAL_SPR") != ""
+}
+
 func getDefaultCompose() string {
 	envCompose := os.Getenv("COMPOSE_FILE")
 	if envCompose != "" {
 		return envCompose
 	}
-	// when no SSID is set in configs/base/config.sh,
-	// assume virtual SPR is running
-	virtual_spr := os.Getenv("VIRTUAL_SPR")
-	if virtual_spr != "" {
+
+	if isVirtual() {
 		return "docker-compose-virt.yml"
 	}
 	return "docker-compose.yml"
 }
 
-func composeCommand(composeFile string, target string, command string, optional string, new_docker bool) {
+func composeCommand(composeFileIN string, target string, command string, optional string, new_docker bool) {
 	args := []string{}
 	release_channel := ""
 	release_version := ""
+
+	composeFile := composeFileIN
 
 	if !strings.Contains(composeFile, "plugins") {
 		// important to get/set release channel and version for rollbacks and dev channels etc
@@ -134,8 +140,9 @@ func composeCommand(composeFile string, target string, command string, optional 
 		os.Setenv("RELEASE_VERSION", release_version)
 	}
 
+	defaultCompose := getDefaultCompose()
 	if composeFile == "" {
-		composeFile = getDefaultCompose()
+		composeFile = defaultCompose
 	}
 
 	composeAllowed := false
@@ -151,7 +158,13 @@ func composeCommand(composeFile string, target string, command string, optional 
 		return
 	}
 
-	args = append(args, "-f", composeFile, command)
+	if composeFileIN != "" && composeFile != getDefaultCompose() && isVirtual() {
+		//we need to add the default in for virtual mode
+		// so that it can pick up service:base
+		args = append(args, "-f", defaultCompose, "-f", composeFile, command)
+	} else {
+		args = append(args, "-f", composeFile, command)
+	}
 
 	if optional != "" {
 		args = append(args, optional)
