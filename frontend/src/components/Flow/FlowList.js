@@ -630,6 +630,18 @@ const FlowList = (props) => {
       .config()
       .then((result) => {
         if (result) {
+          if (result.ForwardingRules == null) {
+            result.ForwardingRules = []
+          }
+          if (result.BlockRules == null) {
+            result.BlockRules = []
+          }
+          if (result.GroupRules == null) {
+            result.GroupRules = []
+          }
+          if (result.TagRules == null) {
+            result.TagRules = []
+          }
           let flows = [
             ...result.BlockRules.map((x, i) => convertBlockRuleCard(x, i)),
             ...result.ForwardingRules.map((x, i) =>
