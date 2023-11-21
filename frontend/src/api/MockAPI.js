@@ -28,7 +28,7 @@ export default function MockAPI() {
       serviceport: Model,
       token: Model,
       backup: Model,
-      pfwBlock: Model,
+      pfwBlockRule: Model,
       pfwForward: Model,
       uplink: Model,
       tinynets: Model
@@ -259,6 +259,23 @@ export default function MockAPI() {
       })
 
       server.create('tinynet', { Subnet: '192.168.2.0/24' })
+
+      server.create('pfwBlockRule', {
+        RuleName: 'Always block',
+        Client: { Identity: '', Group: '', SrcIP: '0.0.0.0', Tag: '' },
+        Time: {
+          CronExpr: '',
+          Start: '',
+          End: '',
+          Days: [0, 0, 0, 0, 0, 0, 0]
+        },
+        Expiration: 0,
+        Condition: '',
+        Disabled: false,
+        Protocol: 'tcp',
+        Dst: { IP: '213.24.76.23' },
+        DstPort: '0-65535'
+      })
     },
     routes() {
       // TODO hook for all
@@ -2319,26 +2336,11 @@ export default function MockAPI() {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
+        let BlockRules = schema.pfwBlockRules.all().models
+
         return {
           ForwardingRules: [],
-          BlockRules: [
-            {
-              RuleName: 'Always block',
-              Client: { Identity: '', Group: '', SrcIP: '0.0.0.0', Tag: '' },
-              Time: {
-                CronExpr: '',
-                Start: '',
-                End: '',
-                Days: [0, 0, 0, 0, 0, 0, 0]
-              },
-              Expiration: 0,
-              Condition: '',
-              Disabled: false,
-              Protocol: 'tcp',
-              Dst: {'IP': '213.24.76.23'},
-              DstPort: '0-65535'
-            }
-          ],
+          BlockRules,
           TagRules: [
             {
               RuleName: 'Set focus mode, midnight - 6pm',
@@ -2373,7 +2375,7 @@ export default function MockAPI() {
         }
 
         let attrs = JSON.parse(request.requestBody)
-        schema.pfwBlocks.create(attrs)
+        schema.pfwBlockRules.create(attrs)
 
         return attrs
       })
@@ -2383,10 +2385,10 @@ export default function MockAPI() {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
-        let index = request.params.index
+        let index = parseInt(request.params.index) + 1
 
         let attrs = JSON.parse(request.requestBody)
-        schema.pfwBlocks.find(index).update(attrs)
+        schema.pfwBlockRules.find(index).update(attrs)
 
         return attrs
       })
@@ -2396,8 +2398,8 @@ export default function MockAPI() {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
-        let index = request.params.index
-        return schema.pfwBlocks.find(index).destroy()
+        let index = parseInt(request.params.index) + 1
+        return schema.pfwBlockRules.find(index).destroy()
       })
 
       this.put('/plugins/pfw/forward', (schema, request) => {
