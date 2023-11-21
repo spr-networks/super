@@ -158,10 +158,10 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		return
 	}
 
-	if composeFileIN != "" && composeFile != getDefaultCompose() && isVirtual() {
+	if target != "" && composeFileIN != "" && composeFile != getDefaultCompose() && isVirtual() {
 		//we need to add the default in for virtual mode
 		// so that it can pick up service:base
-		args = append(args, "-f", defaultCompose, "-f", composeFile, command)
+		args = append(args, "-f", defaultCompose, "-f", composeFile, target, command)
 	} else {
 		args = append(args, "-f", composeFile, command)
 	}
