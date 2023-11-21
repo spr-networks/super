@@ -46,7 +46,8 @@ import {
   InputField,
   InputIcon,
   SearchIcon,
-  InputSlot
+  InputSlot,
+  CloseIcon
 } from '@gluestack-ui/themed'
 
 import { FilterIcon } from 'lucide-react-native'
@@ -68,7 +69,13 @@ const TooltipIconButton = ({ label, onPress, icon, color, ...props }) => (
   </Tooltip>
 )
 
-const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
+const ListItem = ({
+  item,
+  handleClickDomain,
+  hideClient,
+  triggerAlert,
+  setFilterText
+}) => {
   const colorByType = (type) => {
     let keys = {
       BLOCKED: 'error',
@@ -128,9 +135,15 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
           sx={{ '@md': { flexDirection: 'row', justifyContent: 'center' } }}
         >
           <VStack space="sm" flex={1}>
-            <Text bold isTruncated>
-              {item.FirstName}
-            </Text>
+            <HStack>
+              <Text
+                bold
+                isTruncated
+                onPress={() => setFilterText(item.FirstName)}
+              >
+                {item.FirstName}
+              </Text>
+            </HStack>
 
             <HStack>
               <Text color="$muted500" onPress={() => triggerAlert(item)}>
@@ -305,6 +318,10 @@ const DNSLogHistoryList = (props) => {
       listFiltered = list
     }
 
+    if (filterText.length) {
+      setTotal(listFiltered.length)
+    }
+
     // no pagination for listFiltered if filterText
     let perPage = filterText.length ? 100 : 20,
       offset = 0 //(page - 1) * perPage
@@ -367,23 +384,6 @@ const DNSLogHistoryList = (props) => {
       setDevices(devices)
       refreshList()
     })
-
-    /*
-    const interval = setInterval(() => {
-      console.log('ZZ', list.length, 'P=', page, 'ips=', filterIps)
-      if (!list.length) {
-        return
-      }
-
-      if (page > 1) {
-        return
-      }
-
-      refreshList()
-    }, 5 * 1e3)
-
-    return () => clearInterval(interval)
-    */
   }, [])
 
   useEffect(() => {
@@ -397,6 +397,13 @@ const DNSLogHistoryList = (props) => {
       navigate(`/admin/dnsLog/${filterIps.join(',')}/${filterText || ':text'}`)
     }
   }, [filterIps])
+
+  //catch on clear
+  useEffect(() => {
+    if (!filterText.length) {
+      refreshList()
+    }
+  }, [filterText])
 
   useEffect(() => {
     let max = new Date().toISOString()
@@ -456,16 +463,17 @@ const DNSLogHistoryList = (props) => {
 
       <ListHeader
         title={filterIps.join(',') + ' DNS Log'}
-        description={total ? `${total} records` : null}
+        description={total ? `${total} records` : 'hello'}
       >
         <Button
-          size="sm"
+          size="xs"
           action="negative"
           onPress={deleteHistory}
           sx={{
             '@base': { display: 'none' },
             '@md': { display: listFiltered.length ? 'flex' : 'none' }
           }}
+          isDisabled={!filterIps.length}
         >
           <ButtonIcon as={TrashIcon} mr="$2" />
           <ButtonText>Delete History</ButtonText>
@@ -512,6 +520,7 @@ const DNSLogHistoryList = (props) => {
         </HStack>
 
         <VStack
+          flex={1}
           space="md"
           sx={{
             '@base': {
@@ -521,7 +530,7 @@ const DNSLogHistoryList = (props) => {
             '@md': { flexDirection: 'row' }
           }}
         >
-          <FormControl>
+          <FormControl flex={1}>
             <FormControlLabel
               sx={{
                 '@base': { display: 'none' },
@@ -540,8 +549,18 @@ const DNSLogHistoryList = (props) => {
                 onChangeText={handleChange}
                 autoCapitalize="none"
               />
-              <InputSlot pr="$3">
-                <InputIcon as={SearchIcon} />
+              <InputSlot
+                pr="$3"
+                onPress={() => (filterText.length ? setFilterText('') : null)}
+              >
+                <InputIcon
+                  as={CloseIcon}
+                  display={filterText.length ? 'flex' : 'none'}
+                />
+                <InputIcon
+                  as={SearchIcon}
+                  display={filterText.length ? 'none' : 'flex'}
+                />
               </InputSlot>
             </Input>
           </FormControl>
@@ -578,6 +597,7 @@ const DNSLogHistoryList = (props) => {
             hideClient={hideClient}
             handleClickDomain={handleClickDomain}
             triggerAlert={triggerAlert}
+            setFilterText={setFilterText}
           />
         )}
         keyExtractor={(item) => item.Timestamp + item.Remote}
