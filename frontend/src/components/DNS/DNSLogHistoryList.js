@@ -2,15 +2,20 @@ import React, { useContext, useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { format as timeAgo } from 'timeago.js'
 
 import { AlertContext, ModalContext } from 'AppContext'
-import ClientSelect from 'components/ClientSelect'
 import DNSAddOverride from './DNSAddOverride'
+import ClientSelect from 'components/ClientSelect'
+import { Select } from 'components/Select'
 import ModalForm from 'components/ModalForm'
 import JSONSyntax from 'components/SyntaxHighlighter'
+import { Tooltip } from 'components/Tooltip'
 import { dbAPI, deviceAPI, logAPI } from 'api'
 import { prettyDate } from 'utils'
+import { ListHeader } from 'components/List'
+import Pagination from 'components/Pagination'
 
 import {
   Badge,
@@ -33,9 +38,6 @@ import {
   Text,
   View,
   ScrollView,
-  Tooltip,
-  TooltipContent,
-  TooltipText,
   useColorMode,
   ThreeDotsIcon,
   SlashIcon,
@@ -48,6 +50,23 @@ import {
 } from '@gluestack-ui/themed'
 
 import { FilterIcon } from 'lucide-react-native'
+
+const filterTypes = ['BLOCKED', 'NOERROR', 'NODATA', 'OTHERERROR', 'NXDOMAIN']
+
+const TooltipIconButton = ({ label, onPress, icon, color, ...props }) => (
+  <Tooltip label={label}>
+    <Button
+      sx={{
+        '@base': { display: 'none' },
+        '@md': { display: 'flex' }
+      }}
+      variant="link"
+      onPress={onPress}
+    >
+      <ButtonIcon as={icon} color={color || '$primary500'} />
+    </Button>
+  </Tooltip>
+)
 
 const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
   const colorByType = (type) => {
@@ -66,26 +85,6 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
     <Button variant="link" {...triggerProps}>
       <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
     </Button>
-  )
-
-  const moreMenu = (
-    <Menu
-      trigger={trigger}
-      selectionMode="single"
-      onSelectionChange={(e) => {
-        let action = e.currentKey
-        handleClickDomain(action, item.FirstName)
-      }}
-    >
-      <MenuItem key="permit">
-        <CheckIcon color="$green700" mr="$2" />
-        <MenuItemLabel size="sm">Permit Domain</MenuItemLabel>
-      </MenuItem>
-      <MenuItem key="block">
-        <SlashIcon color="$red700" mr="$2" />
-        <MenuItemLabel size="sm">Block Domain</MenuItemLabel>
-      </MenuItem>
-    </Menu>
   )
 
   return (
@@ -114,107 +113,55 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
           sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
           w="$20"
         >
-          <Badge variant="outline" action={colorByType(item.Type)}>
+          <Badge
+            variant="outline"
+            action={colorByType(item.Type)}
+            justifyContent="center"
+          >
             <BadgeText>{item.Type}</BadgeText>
           </Badge>
         </Box>
 
-        {hideClient ? null : (
-          <VStack flex={1} space={'md'} justifyItems="center">
-            <Text bold>{item.device.Name}</Text>
-            <Text
-              flex={1}
-              sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
-            >
-              {item.Remote.split(':')[0]}
+        <VStack
+          flex={3}
+          space="sm"
+          sx={{ '@md': { flexDirection: 'row', justifyContent: 'center' } }}
+        >
+          <VStack space="sm" flex={1}>
+            <Text bold isTruncated>
+              {item.FirstName}
             </Text>
+
+            <HStack>
+              <Text color="$muted500" onPress={() => triggerAlert(item)}>
+                {item.FirstAnswer || '0.0.0.0'}
+              </Text>
+            </HStack>
           </VStack>
-        )}
 
-        <VStack flex={3} space="sm">
-          <Text bold isTruncated>
-            {item.FirstName}
-          </Text>
-
-          <HStack>
-            <Text color="$muted500" onPress={() => triggerAlert(item)}>
-              {item.FirstAnswer || '0.0.0.0'}
-            </Text>
-          </HStack>
-          <Text color="$muted500" sx={{ '@md': { display: 'none' } }}>
-            {timeAgo(new Date(item.Timestamp))}
-          </Text>
+          <VStack sx={{ '@md': { justifyContent: 'center' } }}>
+            <Tooltip label={timeAgo(new Date(item.Timestamp))}>
+              <Text color="$muted500" size="xs">
+                {prettyDate(new Date(item.Timestamp))}
+              </Text>
+            </Tooltip>
+          </VStack>
         </VStack>
 
-        <Tooltip
-          h={undefined}
-          placement="bottom"
-          trigger={(triggerProps) => (
-            <Text
-              color="$muted500"
-              ml="auto"
-              size="xs"
-              sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
-              {...triggerProps}
-            >
-              {timeAgo(new Date(item.Timestamp))}
-            </Text>
-          )}
-        >
-          <TooltipContent>
-            <TooltipText>{prettyDate(item.Timestamp)}</TooltipText>
-          </TooltipContent>
-        </Tooltip>
+        <HStack space="lg" ml="auto">
+          <TooltipIconButton
+            label="Permit Domain"
+            icon={CheckIcon}
+            color="$green700"
+            onPress={() => handleClickDomain('permit', item.FirstName)}
+          />
 
-        <HStack space="md" ml="auto">
-          <Tooltip
-            h={undefined}
-            placement="bottom"
-            trigger={(triggerProps) => (
-              <HStack>
-                <Button
-                  sx={{
-                    '@base': { display: 'none' },
-                    '@md': { display: 'flex' }
-                  }}
-                  variant="link"
-                  {...triggerProps}
-                  onPress={() => handleClickDomain('permit', item.FirstName)}
-                >
-                  {/*<ButtonText>{item.Type}</ButtonText>*/}
-                  <ButtonIcon as={CheckIcon} color="$green700" />
-                </Button>
-              </HStack>
-            )}
-          >
-            <TooltipContent>
-              <TooltipText>Permit Domain</TooltipText>
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip
-            h={undefined}
-            placement="bottom"
-            trigger={(triggerProps) => (
-              <HStack>
-                <Button
-                  sx={{
-                    '@base': { display: 'none' },
-                    '@md': { display: 'flex' }
-                  }}
-                  variant="link"
-                  {...triggerProps}
-                  onPress={() => handleClickDomain('block', item.FirstName)}
-                >
-                  <ButtonIcon as={SlashIcon} color="$red700" />
-                </Button>
-              </HStack>
-            )}
-          >
-            <TooltipContent>
-              <TooltipText>Block Domain</TooltipText>
-            </TooltipContent>
-          </Tooltip>
+          <TooltipIconButton
+            label="Block Domain"
+            icon={SlashIcon}
+            color="$red700"
+            onPress={() => handleClickDomain('block', item.FirstName)}
+          />
         </HStack>
       </HStack>
     </Box>
@@ -230,6 +177,7 @@ const DNSLogHistoryList = (props) => {
   const [listFiltered, setListFiltered] = useState([])
   const [filterIps, setFilterIps] = useState([])
   const [filterText, setFilterText] = useState(props.filterText || '')
+  const [filterType, setFilterType] = useState('')
   const [selectedDomain, setSelectedDomain] = useState('')
   const [selectedType, setSelectedType] = useState('')
   const [page, setPage] = useState(1)
@@ -305,7 +253,7 @@ const DNSLogHistoryList = (props) => {
   }
 
   const filterList = () => {
-    let doFilter = filterText.length,
+    let doFilter = filterText.length || filterType.length,
       listFiltered = []
 
     if (doFilter) {
@@ -347,6 +295,10 @@ const DNSLogHistoryList = (props) => {
           }
         }
 
+        if (filterType && item.Type !== filterType) {
+          match = false
+        }
+
         return match
       })
     } else {
@@ -364,6 +316,17 @@ const DNSLogHistoryList = (props) => {
 
   const handleChangeIp = (ip) => {
     setFilterIps([ip])
+
+    AsyncStorage.getItem('select')
+      .then((oldSelect) => {
+        let select = JSON.parse(oldSelect) || {}
+
+        select.filterIps = [ip]
+        AsyncStorage.setItem('select', JSON.stringify(select))
+          .then((res) => {})
+          .catch((err) => {})
+      })
+      .catch((err) => {})
   }
 
   const handleChange = (value) => {
@@ -465,16 +428,19 @@ const DNSLogHistoryList = (props) => {
 
   useEffect(() => {
     setListFiltered(filterList())
-  }, [list, filterText])
+  }, [list, filterText, filterType])
 
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
-
-  let h = Platform.OS == 'web' ? Dimensions.get('window').height - 64 : '100%'
 
   const colorMode = useColorMode()
 
   return (
-    <View h={h} display="flex">
+    <View
+      h="$full"
+      sx={{
+        '@md': { h: '92vh' }
+      }}
+    >
       <ModalForm
         title={'Add override for Domain'}
         modalRef={modalRef}
@@ -488,12 +454,23 @@ const DNSLogHistoryList = (props) => {
         />
       </ModalForm>
 
-      <HStack space="md" p="$4" alignItems="center">
-        <Heading size="sm">{filterIps.join(',')} DNS Log</Heading>
-        {filterIps.length ? (
-          <Text color="$muted500">{total} records</Text>
-        ) : null}
-      </HStack>
+      <ListHeader
+        title={filterIps.join(',') + ' DNS Log'}
+        description={total ? `${total} records` : null}
+      >
+        <Button
+          size="sm"
+          action="negative"
+          onPress={deleteHistory}
+          sx={{
+            '@base': { display: 'none' },
+            '@md': { display: listFiltered.length ? 'flex' : 'none' }
+          }}
+        >
+          <ButtonIcon as={TrashIcon} mr="$2" />
+          <ButtonText>Delete History</ButtonText>
+        </Button>
+      </ListHeader>
 
       <VStack
         sx={{
@@ -534,71 +511,61 @@ const DNSLogHistoryList = (props) => {
           </Button>
         </HStack>
 
-        <FormControl
-          flex={1}
+        <VStack
+          space="md"
           sx={{
             '@base': {
               display:
                 filterIps.length && list.length && showForm ? 'flex' : 'none'
-            }
+            },
+            '@md': { flexDirection: 'row' }
           }}
         >
-          <FormControlLabel>
-            <FormControlLabelText
-              size="sm"
+          <FormControl>
+            <FormControlLabel
               sx={{
                 '@base': { display: 'none' },
                 '@md': { display: 'flex' }
               }}
             >
-              Search
-            </FormControlLabelText>
-          </FormControlLabel>
+              <FormControlLabelText size="sm">Search</FormControlLabelText>
+            </FormControlLabel>
 
-          <Input size="md">
-            <InputField
-              type="text"
-              name="filterText"
-              placeholder="Filter domain..."
-              value={filterText}
-              onChangeText={handleChange}
-              autoCapitalize="none"
-            />
-            <InputSlot pr="$3">
-              <InputIcon as={SearchIcon} />
-            </InputSlot>
-          </Input>
-        </FormControl>
+            <Input size="md">
+              <InputField
+                type="text"
+                name="filterText"
+                placeholder="Filter domain..."
+                value={filterText}
+                onChangeText={handleChange}
+                autoCapitalize="none"
+              />
+              <InputSlot pr="$3">
+                <InputIcon as={SearchIcon} />
+              </InputSlot>
+            </Input>
+          </FormControl>
 
-        <FormControl
-          flex={1}
-          sx={{
-            '@base': {
-              mt: 4,
-              display:
-                filterIps.length && list.length && showForm ? 'flex' : 'none'
-            },
-            '@md': {
-              mt: 0
-            }
-          }}
-        >
-          <FormControlLabel
-            sx={{
-              '@base': { display: 'none' },
-              '@md': { display: 'flex' }
-            }}
-          >
-            <FormControlLabelText size="sm">
-              Delete history
-            </FormControlLabelText>
-          </FormControlLabel>
-
-          <Button size="sm" action="negative" onPress={deleteHistory}>
-            <ButtonIcon as={TrashIcon}></ButtonIcon>
-            <ButtonText>Delete</ButtonText>
-          </Button>
-        </FormControl>
+          <FormControl>
+            <FormControlLabel
+              sx={{
+                '@base': { display: 'none' },
+                '@md': { display: 'flex' }
+              }}
+            >
+              <FormControlLabelText size="sm">Block Type</FormControlLabelText>
+            </FormControlLabel>
+            <Select
+              selectedValue={filterType}
+              onValueChange={(value) => setFilterType(value)}
+            >
+              <Select.Item label={'All'} value={''} />
+              {filterTypes.map((opt) => (
+                <Select.Item key={opt} label={opt} value={opt} />
+              ))}
+            </Select>
+          </FormControl>
+        </VStack>
       </VStack>
 
       <FlatList
@@ -617,27 +584,7 @@ const DNSLogHistoryList = (props) => {
       />
 
       {total > 20 && !filterText.length ? (
-        <HStack space="md" alignItems="flex-start">
-          <Button
-            flex={1}
-            action="secondary"
-            variant="link"
-            isDisabled={page <= 1}
-            size="sm"
-            onPress={() => setPage(/*page > 1 ? page - 1 : */ 1)}
-          >
-            <ButtonText>&larr; Start</ButtonText>
-          </Button>
-          <Button
-            flex={1}
-            action="secondary"
-            variant="link"
-            size="sm"
-            onPress={() => setPage(page + 1)}
-          >
-            <ButtonText>Next &rarr;</ButtonText>
-          </Button>
-        </HStack>
+        <Pagination page={page} pages={total} perPage={20} onChange={setPage} />
       ) : null}
     </View>
   )
