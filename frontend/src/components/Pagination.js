@@ -14,6 +14,7 @@ const Pagination = ({
   page,
   perPage,
   total,
+  onChange,
   onPrevPage,
   onNextPage,
   ...props
@@ -24,7 +25,7 @@ const Pagination = ({
         flex={1}
         variant="link"
         isDisabled={page <= 1}
-        onPress={onPrevPage}
+        onPress={() => onChange(1)}
       >
         <ButtonIcon as={ArrowLeftIcon} mr="$1" />
         <ButtonText>Start</ButtonText>
@@ -33,7 +34,7 @@ const Pagination = ({
         flex={1}
         variant="link"
         isDisabled={page >= Math.ceil(total / perPage)}
-        onPress={onNextPage}
+        onPress={() => onChange(page + 1)}
       >
         <ButtonText>Next</ButtonText>
         <ButtonIcon as={ArrowRightIcon} ml="$1" />
@@ -46,9 +47,7 @@ Pagination.propTypes = {
   page: PropTypes.number.isRequired,
   pages: PropTypes.number.isRequired,
   perPage: PropTypes.number.isRequired,
-  onNextPage: PropTypes.func,
-  onPrevPage: PropTypes.func,
-  onChange: PropTypes.func
+  onChange: PropTypes.func.isRequired
 }
 
 export default Pagination

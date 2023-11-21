@@ -134,9 +134,6 @@ const LogList = (props) => {
     setPage(page)
   }
 
-  const onPrevPage = () => updatePage(page > 1 ? page - 1 : 1, page)
-  const onNextPage = () => updatePage(page + 1, page)
-
   // filter on/off - only one at a time atm.
   const handleTopicFilter = (topic) => {
     let newFilter = {}
@@ -241,8 +238,7 @@ const LogList = (props) => {
           page={page}
           pages={total}
           perPage={perPage}
-          onPrevPage={onPrevPage}
-          onNextPage={onNextPage}
+          onChange={(p) => updatePage(p, page)}
         />
       ) : null}
     </View>
