@@ -50,7 +50,7 @@ import {
   CloseIcon
 } from '@gluestack-ui/themed'
 
-import { FilterIcon } from 'lucide-react-native'
+import { BarChartIcon, FilterIcon } from 'lucide-react-native'
 
 const filterTypes = ['BLOCKED', 'NOERROR', 'NODATA', 'OTHERERROR', 'NXDOMAIN']
 
@@ -439,6 +439,56 @@ const DNSLogHistoryList = (props) => {
 
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
 
+  const onPressStats = () => {
+    let nDomains = {}
+    list.map((item) => {
+      let k = item.FirstName
+      if (!nDomains[k]) {
+        nDomains[k] = 0
+      }
+
+      nDomains[k]++
+    })
+
+    let maxTime = list[0].time
+    let minTime = list[list.length - 1].time
+    let num = list.length
+
+    let title = `${prettyDate(minTime)} - ${prettyDate(
+      maxTime
+    )}\n${num} records for ${filterIps.join(',')}`
+
+    const onPressDomain = (domain) => {
+      modalContext.toggleModal()
+      setFilterText(domain)
+    }
+
+    modalContext.modal(
+      title,
+
+      <ScrollView w="100%" maxHeight={320}>
+        <VStack space="xs">
+          {Object.entries(nDomains)
+            .sort((a, b) => b[1] - a[1])
+            .map(([domain, num]) => (
+              <HStack key={domain} space="md">
+                <HStack w="$16" alignItems="center" justifyContent="flex-end">
+                  <Text size="sm" bold>
+                    {num}
+                  </Text>
+                </HStack>
+                <HStack flex={2}>
+                  <Text size="sm" onPress={() => onPressDomain(domain)}>
+                    {domain}
+                  </Text>
+                </HStack>
+              </HStack>
+            ))}
+        </VStack>
+      </ScrollView>
+    )
+  }
+
   const colorMode = useColorMode()
 
   return (
@@ -465,19 +515,32 @@ const DNSLogHistoryList = (props) => {
         title={filterIps.join(',') + ' DNS Log'}
         description={total ? `${total} records` : 'hello'}
       >
-        <Button
-          size="xs"
-          action="negative"
-          onPress={deleteHistory}
+        <HStack
+          space="md"
           sx={{
             '@base': { display: 'none' },
             '@md': { display: listFiltered.length ? 'flex' : 'none' }
           }}
-          isDisabled={!filterIps.length}
         >
-          <ButtonIcon as={TrashIcon} mr="$2" />
-          <ButtonText>Delete History</ButtonText>
-        </Button>
+          <Button
+            size="xs"
+            action="secondary"
+            onPress={onPressStats}
+            isDisabled={!filterIps.length}
+          >
+            <ButtonIcon as={BarChartIcon} mr="$2" />
+            <ButtonText>Stats</ButtonText>
+          </Button>
+          <Button
+            size="xs"
+            action="negative"
+            onPress={deleteHistory}
+            isDisabled={!filterIps.length}
+          >
+            <ButtonIcon as={TrashIcon} mr="$2" />
+            <ButtonText>Delete History</ButtonText>
+          </Button>
+        </HStack>
       </ListHeader>
 
       <VStack
