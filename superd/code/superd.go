@@ -204,6 +204,11 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 			d_args = append(d_args, "-e", "RELEASE_VERSION="+release_version)
 		}
 
+		if isVirtual() {
+			//need to propagate this variable
+			d_args = append(d_args, "-e", "VIRTUAL_SPR="+os.Getenv("VIRTUAL_SPR"))
+		}
+
 		//docker.io, ever annoying, integrated compose as a subcommand.
 		// so now we need to handle both cases
 
