@@ -158,6 +158,18 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		return
 	}
 
+	if target == "" && isVirtual() {
+		//define target for virtual to avoid total restart
+		//TBD; need a tenable solution for this. perhaps parse compose file and pull
+		//the first service.
+		if composeFile == "plugins/plus/pfw_extension/docker-compose.yml" {
+			target = "pfw"
+		} else if composeFile == "plugins/plus/mesh_extension/docker-compose.yml" {
+			target = "mesh"
+		}
+
+	}
+
 	if target != "" && composeFileIN != "" && composeFile != getDefaultCompose() && isVirtual() {
 		//we need to add the default in for virtual mode
 		// so that it can pick up service:base
