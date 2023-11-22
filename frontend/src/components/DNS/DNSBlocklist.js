@@ -259,6 +259,7 @@ const DNSBlocklist = ({ config, ...props }) => {
             ? `${blockedDomains.toLocaleString()} blocked domains`
             : 'Update running...'
         }
+        info="Use tags to apply blocks to specific devices"
       >
         {props.renderHeader ? props.renderHeader() : null}
       </ListHeader>
@@ -320,6 +321,7 @@ const DNSBlocklist = ({ config, ...props }) => {
                       key={item.URI + entry}
                       action="muted"
                       variant="outline"
+                      size="sm"
                     >
                       <BadgeText>{entry}</BadgeText>
                       <BadgeIcon as={TagIcon} ml="$1" />
