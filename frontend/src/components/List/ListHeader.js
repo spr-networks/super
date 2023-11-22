@@ -1,18 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import {
-  Heading,
-  VStack,
-  HStack,
-  Text,
-  Button,
-  ButtonIcon,
-  ButtonText,
-  AddIcon
-} from '@gluestack-ui/themed'
+import { VStack, Icon, Text, InfoIcon } from '@gluestack-ui/themed'
 
-const ListHeader = ({ title, description, ...props }) => {
+import { Tooltip } from 'components/Tooltip'
+
+const ListHeader = ({ title, description, info, ...props }) => {
   /*
       <Button size="sm" action="secondary" variant="outline">
         <ButtonIcon as={AddIcon} />
@@ -46,9 +39,11 @@ const ListHeader = ({ title, description, ...props }) => {
             {description}
           </Text>
         ) : null}
-        {/*description && typeof description !== 'string' ? (
-          <>{description}</>
-        ) : null*/}
+        {info ? (
+          <Tooltip label={info}>
+            <Icon as={InfoIcon} color="$muted500" />
+          </Tooltip>
+        ) : null}
       </VStack>
 
       {props.children}
@@ -60,5 +55,6 @@ export default ListHeader
 
 ListHeader.propTypes = {
   title: PropTypes.string,
-  description: PropTypes.oneOfType([PropTypes.string, PropTypes.object])
+  description: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+  info: PropTypes.string
 }
