@@ -30,6 +30,7 @@ import { copy } from 'utils'
 import { InterfaceItem } from 'components/TagItem'
 import DeviceItem from 'components/Devices/DeviceItem'
 import { FileJsonIcon, Maximize2Icon } from 'lucide-react-native'
+import { useNavigate } from 'react-router-native'
 
 //utils
 const levelToColor = (level) => {
@@ -121,6 +122,7 @@ const getPayloadHex = (obj) => {
 
 const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
   const context = useContext(AppContext)
+  const navigate = useNavigate()
 
   const [maxHeight, setMaxHeight] = useState(150)
 
@@ -201,11 +203,24 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     ),
 
     'dns:block:event': (item) => (
-      <>
-        <DeviceItem item={context.getDevice(item.ClientIP, 'RecentIP')} />
-        <Text size="md">block</Text>
-        <Text size="md">{item.Name}</Text>
-      </>
+      <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }} w="$full">
+        <DeviceItem
+          flex={1}
+          item={context.getDevice(item.ClientIP, 'RecentIP')}
+        />
+        <HStack space="md" justifyContent="space-between" alignItems="center">
+          <Text
+            size="md"
+            bold
+            onPress={() =>
+              navigate(`/admin/dnsLog/${item.ClientIP}/${item.Name}`)
+            }
+          >
+            {item.Name}
+          </Text>
+          <Text size="md">block</Text>
+        </HStack>
+      </VStack>
     ),
     'wifi:auth:success': () => (
       <>

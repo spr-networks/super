@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Dimensions, Platform } from 'react-native'
+import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -189,7 +189,7 @@ const DNSLogHistoryList = (props) => {
   const [list, setList] = useState([])
   const [listFiltered, setListFiltered] = useState([])
   const [filterIps, setFilterIps] = useState([])
-  const [filterText, setFilterText] = useState(props.filterText || '')
+  const [filterText, setFilterText] = useState('')
   const [filterType, setFilterType] = useState('')
   const [selectedDomain, setSelectedDomain] = useState('')
   const [selectedType, setSelectedType] = useState('')
@@ -388,7 +388,8 @@ const DNSLogHistoryList = (props) => {
 
   useEffect(() => {
     setFilterIps(props.ips)
-  }, [props.ips])
+    setFilterText(props.filterText)
+  }, [props.ips, props.filterText])
 
   useEffect(() => {
     refreshList()
@@ -396,7 +397,7 @@ const DNSLogHistoryList = (props) => {
     if (filterIps.length) {
       navigate(`/admin/dnsLog/${filterIps.join(',')}/${filterText || ':text'}`)
     }
-  }, [filterIps])
+  }, [filterIps, filterText])
 
   //catch on clear
   useEffect(() => {

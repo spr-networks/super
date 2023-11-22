@@ -19,19 +19,16 @@ const DNSLog = (props) => {
     let { ips, text } = params
     if (ips && ips != ':ips') {
       setFilterIps(ips.split(','))
+    } else {
+      AsyncStorage.getItem('select')
+        .then((oldSelect) => {
+          let select = JSON.parse(oldSelect) || {}
+          if (select?.filterIps) {
+            setFilterIps(select.filterIps)
+          }
+        })
+        .catch((err) => {})
     }
-
-    //TODO fetch from asyncstore
-
-    AsyncStorage.getItem('select')
-      .then((oldSelect) => {
-        let select = JSON.parse(oldSelect) || {}
-        console.log('>>presel=', select)
-        if (select?.filterIps) {
-          setFilterIps(select.filterIps)
-        }
-      })
-      .catch((err) => {})
 
     if (text && text != ':text') {
       setFilterText(text)
