@@ -29,7 +29,8 @@ export default function MockAPI() {
       token: Model,
       backup: Model,
       pfwBlockRule: Model,
-      pfwForward: Model,
+      pfwTagRule: Model,
+      pfwForwardRule: Model,
       uplink: Model,
       tinynets: Model
     },
@@ -275,6 +276,26 @@ export default function MockAPI() {
         Protocol: 'tcp',
         Dst: { IP: '213.24.76.23' },
         DstPort: '0-65535'
+      })
+
+      server.create('pfwTagRule', {
+        RuleName: 'Set focus mode, midnight - 6pm',
+        Client: {
+          Identity: '',
+          Group: '',
+          SrcIP: '192.168.2.14',
+          Tag: ''
+        },
+        Time: {
+          CronExpr: '',
+          Start: '00:00',
+          End: '18:00',
+          Days: [0, 1, 1, 1, 1, 1, 0]
+        },
+        Expiration: 0,
+        Condition: '',
+        Disabled: false,
+        Tags: ['focus']
       })
     },
     routes() {
@@ -2337,31 +2358,13 @@ export default function MockAPI() {
         }
 
         let BlockRules = schema.pfwBlockRules.all().models
+        let TagRules = schema.pfwTagRules.all().models
+        let ForwardingRules = schema.pfwForwardRules.all().models
 
         return {
-          ForwardingRules: [],
+          ForwardingRules,
           BlockRules,
-          TagRules: [
-            {
-              RuleName: 'Set focus mode, midnight - 6pm',
-              Client: {
-                Identity: '',
-                Group: '',
-                SrcIP: '192.168.2.14',
-                Tag: ''
-              },
-              Time: {
-                CronExpr: '',
-                Start: '00:00',
-                End: '18:00',
-                Days: [0, 1, 1, 1, 1, 1, 0]
-              },
-              Expiration: 0,
-              Condition: '',
-              Disabled: false,
-              Tags: ['focus']
-            }
-          ],
+          TagRules,
           GroupRules: [],
           Variables: {},
           SiteVPNs: [],
@@ -2380,58 +2383,51 @@ export default function MockAPI() {
         return attrs
       })
 
-      this.put('/plugins/pfw/block/:index', (schema, request) => {
-        if (!authOK(request)) {
-          return new Response(401, {}, { error: 'invalid auth' })
-        }
-
-        let index = parseInt(request.params.index) + 1
-
-        let attrs = JSON.parse(request.requestBody)
-        schema.pfwBlockRules.find(index).update(attrs)
-
-        return attrs
-      })
-
-      this.delete('/plugins/pfw/block/:index', (schema, request) => {
-        if (!authOK(request)) {
-          return new Response(401, {}, { error: 'invalid auth' })
-        }
-
-        let index = parseInt(request.params.index) + 1
-        return schema.pfwBlockRules.find(index).destroy()
-      })
-
       this.put('/plugins/pfw/forward', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
         let attrs = JSON.parse(request.requestBody)
-        schema.pfwForwards.create(attrs)
+        schema.pfwForwardRules.create(attrs)
 
         return attrs
       })
 
-      this.put('/plugins/pfw/forward/:index', (schema, request) => {
+      //update pfw rules
+      this.put('/plugins/pfw/:type/:index', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
-        let index = request.params.index
+        let type = request.params.type
+        let index = parseInt(request.params.index) + 1
         let attrs = JSON.parse(request.requestBody)
-        schema.pfwForwards.find(index).update(attrs)
+        if (type == 'block') {
+          schema.pfwBlockRules.find(index).update(attrs)
+        } else if (type == 'forward') {
+          schema.pfwForwardRules.find(index).update(attrs)
+        } else if (type == 'tag') {
+          schema.pfwTagRules.find(index).update(attrs)
+        }
 
         return attrs
       })
 
-      this.delete('/plugins/pfw/forward/:index', (schema, request) => {
+      this.delete('/plugins/pfw/:type/:index', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
-        let index = request.params.index
-        return schema.pfwForwards.find(index).destroy()
+        let type = request.params.type
+        let index = parseInt(request.params.index) + 1
+        if (type == 'block') {
+          return schema.pfwBlockRules.find(index).destroy()
+        } else if (type == 'forward') {
+          return schema.pfwForwardRules.find(index).destroy()
+        } else if (type == 'tag') {
+          return schema.pfwTagRules.find(index).destroy()
+        }
       })
 
       this.get('/plugins/mesh/config', (schema, request) => {
