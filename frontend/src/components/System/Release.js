@@ -20,7 +20,8 @@ import {
   CheckboxIcon,
   CheckboxIndicator,
   CheckboxLabel,
-  CheckIcon
+  CheckIcon,
+  ButtonSpinner
 } from '@gluestack-ui/themed'
 
 import { api } from 'api'
@@ -215,6 +216,7 @@ const UpdateReleaseInfo = ({
 const ReleaseInfo = ({ showModal, ...props }) => {
   const context = useContext(AlertContext)
   const [releaseInfo, setReleaseInfo] = useState(null)
+  const [waitFor, setWaitFor] = useState(null)
 
   const updateRelease = () => {
     api
@@ -232,25 +234,33 @@ const ReleaseInfo = ({ showModal, ...props }) => {
   const checkUpdate = () => {
     let current = releaseInfo.Current
 
-    api.get('/releasesAvailable?container=super_base').then((versions) => {
-      versions?.reverse() // sort by latest first
+    setWaitFor('check')
 
-      let latest = versions[0]
-      let latestDev = versions.find((v) => v.includes('-dev'))
+    api
+      .get('/releasesAvailable?container=super_base')
+      .then((versions) => {
+        versions?.reverse() // sort by latest first
 
-      // if latest get version
-      if (current.startsWith('latest')) {
-        current = current.includes('-dev') ? latestDev : latest
-      }
+        let latest = versions[0]
+        let latestDev = versions.find((v) => v.includes('-dev'))
 
-      if (current.includes('-dev') && current != latestDev) {
-        context.info(`Latest dev version is ${latestDev}, current ${current}`)
-      } else if (current != latest) {
-        context.info(`Latest version is ${latest}, current ${current}`)
-      } else {
-        context.success(`${current} is the latest version of spr`)
-      }
-    })
+        // if latest get version
+        if (current.startsWith('latest')) {
+          current = current.includes('-dev') ? latestDev : latest
+        }
+
+        if (current.includes('-dev') && current != latestDev) {
+          context.info(`Latest dev version is ${latestDev}, current ${current}`)
+        } else if (current != latest) {
+          context.info(`Latest version is ${latest}, current ${current}`)
+        } else {
+          context.success(`${current} is the latest version of spr`)
+        }
+      })
+      .catch((err) => {})
+      .finally(() => {
+        setWaitFor(null)
+      })
   }
 
   const runUpdate = () => {
@@ -377,7 +387,15 @@ const ReleaseInfo = ({ showModal, ...props }) => {
         >
           <Button size="sm" onPress={checkUpdate}>
             <ButtonText>Check</ButtonText>
-            <ButtonIcon as={RefreshCcwIcon} ml="$1" />
+            <ButtonSpinner
+              ml="$1"
+              display={waitFor == 'check' ? 'flex' : 'none'}
+            />
+            <ButtonIcon
+              as={RefreshCcwIcon}
+              ml="$1"
+              display={waitFor == 'check' ? 'none' : 'flex'}
+            />
           </Button>
 
           <Button size="sm" onPress={runUpdate}>
