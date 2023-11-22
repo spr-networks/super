@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react'
-import { Platform } from 'react-native'
+import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { format as timeAgo } from 'timeago.js'
 
-import { prettyDate, prettySize } from 'utils'
+import { prettySize } from 'utils'
 import { BrandIcons } from 'IconUtils'
 
 import {
@@ -13,15 +12,15 @@ import {
   Box,
   FlatList,
   HStack,
-  Icon,
   Pressable,
   Text,
   VStack
 } from '@gluestack-ui/themed'
-
-//import { FlashList } from '@shopify/flash-list'
+import { ModalContext } from 'AppContext'
+import { copy } from 'utils'
 
 const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
+  const modalContext = useContext(ModalContext)
   const regexLAN = /^192\.168\./ //TODO dont rely on this
 
   const [list, setList] = useState([])
@@ -99,14 +98,18 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
   const onPressIp = (e) => {
     let ip = e.target.innerText
 
-    // TODO handle this and show popover info with actions
-    if (!ip || !ip.match(regexLAN)) {
+    if (!ip) {
       return
     }
 
-    if (setFilterIps) {
+    if (ip.match(regexLAN) && setFilterIps) {
       setFilterIps([ip])
+      return
     }
+
+    return copy(ip)
+    // TODO handle this and show popover info with actions
+    //modalContext.modal(`${ip}`, <Text>{JSON.stringify(ip)}</Text>)
   }
 
   return (
