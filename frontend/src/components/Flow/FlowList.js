@@ -207,9 +207,9 @@ const Flow = ({ flow, edit, ...props }) => {
     const moreMenu = (
       <Menu
         flex={1}
-        closeOnSelect={true}
         trigger={triggerBtn}
         selectionMode="single"
+        closeOnSelect={true}
         onSelectionChange={(e) => {
           let key = e.currentKey
           if (key == 'disable') {
@@ -449,7 +449,7 @@ const saveFlow = async (flow, context) => {
     return
   }
 
-  data.disabled = flow.disabled
+  data.Disabled = flow.disabled
 
   console.log('flow. put:', data)
 
@@ -530,8 +530,7 @@ const convertForwardingRuleCard = (rule, index) => {
   } else if (rule.DstInterface != '') {
     if (rule.Protocol == '') {
       action = NewCard({
-        title:
-          'Forward all traffic to Interface, Site VPN or Uplink',
+        title: 'Forward all traffic to Interface, Site VPN or Uplink',
         cardType: 'action',
         values: {
           Client: rule.Client,
