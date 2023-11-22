@@ -6,7 +6,7 @@ import EditDevice from 'components/Devices/EditDevice'
 import { AppContext, AlertContext } from 'AppContext'
 
 import useSwipe from 'components/useSwipe'
-import { deviceAPI } from 'api'
+import { deviceAPI, blockAPI } from 'api'
 
 import { ListHeader } from 'components/List'
 
@@ -49,13 +49,29 @@ const DeviceView = () => {
             .flat()
         )
       ])
-      setTags([
+
+      let tags = [
         ...new Set(
           Object.values(devs)
             .map((device) => device.DeviceTags)
             .flat()
         )
-      ])
+      ]
+      setTags(tags)
+
+      //NOTE fetch all tags - dnsblock tags separate
+      blockAPI
+        .blocklists()
+        .then((res) => {
+          let tagsBlock = [
+            ...new Set([].concat(...res.map((l) => l.Tags)).filter((t) => t))
+          ]
+
+          if (tagsBlock) {
+            setTags([...tags, ...tagsBlock])
+          }
+        })
+        .catch((err) => {})
     })
   }, [])
 
