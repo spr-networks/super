@@ -23,6 +23,7 @@ import {
   Menu,
   MenuItem,
   MenuItemLabel,
+  Pressable,
   useColorMode,
   CircleIcon,
   CopyIcon,
@@ -253,6 +254,9 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
     </Button>
   )
 
+  const deviceURL = (device) =>
+    `/admin/devices/${device.MAC || encodeURIComponent(device.WGPubKey)}`
+
   const moreMenu = (
     <Menu
       trigger={trigger}
@@ -260,11 +264,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
       onSelectionChange={(e) => {
         let key = e.currentKey
         if (key == 'edit') {
-          navigate(
-            `/admin/devices/${
-              device.MAC || encodeURIComponent(device.WGPubKey)
-            }`
-          )
+          navigate(deviceURL(device))
         } else if (key == 'duplicate') {
           duplicateDevice()
         } else if (key == 'delete') {
@@ -310,7 +310,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   const colorMode = useColorMode()
 
   return (
-    <>
+    <Pressable onPress={() => navigate(deviceURL(device))}>
       <VStack
         key={device.MAC}
         bg="$backgroundCardLight"
@@ -511,7 +511,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
         onClose={() => setShowModal(false)}
         isOpen={showModal}
       />
-    </>
+    </Pressable>
   )
 })
 
