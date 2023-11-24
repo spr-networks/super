@@ -17,6 +17,7 @@ import { TotalTraffic } from 'components/Dashboard/TrafficWidgets'
 import {
   DNSMetrics,
   DNSBlockMetrics,
+  DNSBlockFullMetrics,
   DNSBlockPercent
 } from 'components/Dashboard/DNSMetricsWidgets'
 import { ServicesEnabled } from 'components/Dashboard/ServicesWidgets'
@@ -77,7 +78,7 @@ const Home = (props) => {
         p="$4"
         gap="$4"
       >
-        <VStack space="md" sx={{ '@md': { flex: 2 } }}>
+        <VStack space="md" sx={{ '@md': { flex: 5 } }}>
           {show.vpnInfo ? (
             <>
               <WireguardPeers flex={1} />
@@ -102,20 +103,23 @@ const Home = (props) => {
 
           <VStack space="md">
             {show.traffic ? <TotalTraffic /> : null}
-            <Interfaces />
+
+            {/*<Interfaces />*/}
           </VStack>
         </VStack>
 
-        <VStack flex={1} space="md">
+        <VStack flex={3} space="md">
           <ServicesEnabled features={services} />
           {show.dns ? (
             <VStack space="md">
-              <DNSMetrics />
+              {/*<DNSMetrics />
               <DNSBlockMetrics />
-              <DNSBlockPercent />
+              <DNSBlockPercent />*/}
+              <DNSBlockFullMetrics />
             </VStack>
           ) : null}
           {show.vpnSide ? <WireguardPeersActive /> : null}
+          <Interfaces />
         </VStack>
       </Box>
     </ScrollView>
