@@ -208,7 +208,7 @@ const DNSLogHistoryList = (props) => {
   const [page, setPage] = useState(1)
   const perPage = 20
   const [total, setTotal] = useState(0)
-  const [params, setParams] = useState({ num: 1000 })
+  const [params, setParams] = useState({ num: 20 })
   const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0])
 
   const modalRef = React.useRef(null)
@@ -392,18 +392,8 @@ const DNSLogHistoryList = (props) => {
   }, [filterIps, filterText])
 
   useEffect(() => {
-    console.log('>>FETCH')
     refreshList()
   }, [filterIps])
-
-  /*
-  //catch on clear
-  useEffect(() => {
-    if (!filterText.length) {
-      refreshList()
-    }
-  }, [filterText])
-  */
 
   const flatListRef = React.useRef(null)
 
@@ -440,10 +430,19 @@ const DNSLogHistoryList = (props) => {
     modalRef.current() // toggle modal
   }
 
+  // list updated or filter change: updated filtered list
   useEffect(() => {
     setListFiltered(filterList())
     //TODO if list date change -- change this in selector also
   }, [list, filterText, filterType])
+
+  useEffect(() => {
+    let num = filterText.length || filterType ? 1000 : 20
+    //NOTE if switch filterType we need to fetch again
+    if (true || num != params.num) {
+      setParams({ ...params, num })
+    }
+  }, [filterText, filterType])
 
   useEffect(() => {
     //NOTE same 24h
@@ -453,8 +452,6 @@ const DNSLogHistoryList = (props) => {
     let max = new Date(new Date(dateTo).toUTCString())
     max.setHours(23, 59, 59)
     max = max.toISOString()
-
-    //let num = filterText.length ? 1000 : 20
 
     setParams({
       ...params,
@@ -515,7 +512,9 @@ const DNSLogHistoryList = (props) => {
     )
   }
 
-  const colorMode = useColorMode()
+  const onSubmitFilterText = () => {
+    refreshList()
+  }
 
   return (
     <View
@@ -673,7 +672,7 @@ const DNSLogHistoryList = (props) => {
                 placeholder="Filter domain..."
                 value={filterText}
                 onChangeText={handleChange}
-                onSubmitEditing={refreshList}
+                onSubmitEditing={onSubmitFilterText}
                 autoCapitalize="none"
               />
               <InputSlot
