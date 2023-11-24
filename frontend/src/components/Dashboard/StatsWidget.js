@@ -5,7 +5,8 @@ import {
   HStack,
   Icon,
   Text,
-  useColorMode
+  useColorMode,
+  VStack
 } from '@gluestack-ui/themed'
 
 const StatsWidget = ({
@@ -29,27 +30,33 @@ const StatsWidget = ({
       shadow={4}
       {...props}
     >
-      <HStack p="$4" justifyContent="space-between">
+      <HStack p="$4" justifyContent="space-between" alignItems="center">
         <Box p="$2">
           <Icon as={icon} size={64} color={iconColor || '$warmGray50'} />
         </Box>
-        <Box>
-          <Text
-            textAlign="right"
-            size="sm"
-            fontWeight={300}
-            color={useColorMode() == 'light' ? '$muted800' : '$muted400'}
-          >
-            {title}
-          </Text>
-          <Text
-            textAlign="right"
-            size="xl"
-            color={useColorMode() == 'light' ? '$muted800' : '$muted400'}
-          >
-            {text}
-          </Text>
-        </Box>
+        {props.children ? (
+          <>{props.children}</>
+        ) : (
+          <VStack space="xs">
+            <Text
+              textAlign="right"
+              size="sm"
+              fontWeight={300}
+              color="$muted800"
+              sx={{ _dark: { color: '$muted400' } }}
+            >
+              {title}
+            </Text>
+            <Text
+              textAlign="right"
+              size="xl"
+              color="$muted800"
+              sx={{ _dark: { color: '$muted400' } }}
+            >
+              {text}
+            </Text>
+          </VStack>
+        )}
       </HStack>
 
       {textFooter ? (
