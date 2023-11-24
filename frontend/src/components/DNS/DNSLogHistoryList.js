@@ -1,3 +1,10 @@
+/*
+TODO show #filtered result vs total
+filterText
+num perPage or 1000 - handle this
+datePicker + mobile
+*/
+
 import React, { useContext, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
@@ -12,7 +19,7 @@ import { Select } from 'components/Select'
 import ModalForm from 'components/ModalForm'
 import JSONSyntax from 'components/SyntaxHighlighter'
 import { Tooltip } from 'components/Tooltip'
-import { dbAPI, deviceAPI, logAPI } from 'api'
+import { dbAPI, logAPI } from 'api'
 import { prettyDate } from 'utils'
 import { ListHeader } from 'components/List'
 import Pagination from 'components/Pagination'
@@ -28,13 +35,9 @@ import {
   FormControl,
   FormControlLabel,
   FormControlLabelText,
-  Heading,
   Input,
   HStack,
   VStack,
-  Menu,
-  MenuItem,
-  MenuItemLabel,
   Text,
   View,
   ScrollView,
@@ -47,12 +50,20 @@ import {
   InputIcon,
   SearchIcon,
   InputSlot,
-  CloseIcon
+  CloseIcon,
+  ButtonGroup
 } from '@gluestack-ui/themed'
 
-import { BarChartIcon, FilterIcon } from 'lucide-react-native'
+import {
+  BarChartIcon,
+  FilterIcon,
+  RefreshCwIcon,
+  Settings2Icon
+} from 'lucide-react-native'
 
 const filterTypes = ['BLOCKED', 'NOERROR', 'NODATA', 'OTHERERROR', 'NXDOMAIN']
+
+import DatePicker from 'components/DatePicker'
 
 const TooltipIconButton = ({ label, onPress, icon, color, ...props }) => (
   <Tooltip label={label}>
@@ -110,11 +121,12 @@ const ListItem = ({
         space="md"
         justifyContent="space-between"
         alignItems="center"
-        borderLeftWidth={2}
+        borderLeftWidth="$4"
         borderLeftColor={'$' + colorByType(item.Type) + '500'}
         py="$2"
         pl="$2"
         pr="$4"
+        sx={{ '@md': { paddingRight: '$8' } }}
       >
         <Box
           sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
@@ -194,16 +206,12 @@ const DNSLogHistoryList = (props) => {
   const [selectedDomain, setSelectedDomain] = useState('')
   const [selectedType, setSelectedType] = useState('')
   const [page, setPage] = useState(1)
+  const perPage = 20
   const [total, setTotal] = useState(0)
   const [params, setParams] = useState({ num: 1000 })
-
-  const [devices, setDevices] = useState({})
+  const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0])
 
   const modalRef = React.useRef(null)
-
-  const deviceByIp = (ip) => {
-    return Object.values(devices).find((device) => device.RecentIP == ip) || {}
-  }
 
   const refreshList = async () => {
     if (!filterIps.length) {
@@ -255,11 +263,6 @@ const DNSLogHistoryList = (props) => {
         (a, b) =>
           new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime()
       )
-
-      list = list.map((item) => {
-        item.device = deviceByIp(item.Remote.split(':')[0])
-        return item
-      })
 
       setList(list)
     })
@@ -323,10 +326,9 @@ const DNSLogHistoryList = (props) => {
     }
 
     // no pagination for listFiltered if filterText
-    let perPage = filterText.length ? 100 : 20,
-      offset = 0 //(page - 1) * perPage
+    let _perPage = filterText.length ? 100 : 20
 
-    listFiltered = listFiltered.slice(offset, offset + perPage)
+    listFiltered = listFiltered.slice(0, _perPage)
 
     return listFiltered
   }
@@ -348,7 +350,6 @@ const DNSLogHistoryList = (props) => {
 
   const handleChange = (value) => {
     setFilterText(value)
-    setPage(1)
   }
 
   const triggerAlert = (item) => {
@@ -380,31 +381,31 @@ const DNSLogHistoryList = (props) => {
   }
 
   useEffect(() => {
-    deviceAPI.list().then((devices) => {
-      setDevices(devices)
-      refreshList()
-    })
-  }, [])
-
-  useEffect(() => {
     setFilterIps(props.ips)
     setFilterText(props.filterText)
   }, [props.ips, props.filterText])
 
   useEffect(() => {
-    refreshList()
-
     if (filterIps.length) {
       navigate(`/admin/dnsLog/${filterIps.join(',')}/${filterText || ':text'}`)
     }
   }, [filterIps, filterText])
 
+  useEffect(() => {
+    console.log('>>FETCH')
+    refreshList()
+  }, [filterIps])
+
+  /*
   //catch on clear
   useEffect(() => {
     if (!filterText.length) {
       refreshList()
     }
   }, [filterText])
+  */
+
+  const flatListRef = React.useRef(null)
 
   useEffect(() => {
     let max = new Date().toISOString()
@@ -418,8 +419,13 @@ const DNSLogHistoryList = (props) => {
     setParams({ ...params, max })
   }, [page])
 
+  // when params change we fetch
   useEffect(() => {
-    refreshList()
+    if (params?.max) {
+      refreshList().then(() => {
+        flatListRef?.current?.scrollToOffset({ animated: false, offset: 0 })
+      })
+    }
   }, [params])
 
   const notifyChange = async () => {
@@ -436,7 +442,26 @@ const DNSLogHistoryList = (props) => {
 
   useEffect(() => {
     setListFiltered(filterList())
+    //TODO if list date change -- change this in selector also
   }, [list, filterText, filterType])
+
+  useEffect(() => {
+    //NOTE same 24h
+    let min = new Date(dateTo)
+    min = min.toISOString()
+
+    let max = new Date(new Date(dateTo).toUTCString())
+    max.setHours(23, 59, 59)
+    max = max.toISOString()
+
+    //let num = filterText.length ? 1000 : 20
+
+    setParams({
+      ...params,
+      min,
+      max
+    })
+  }, [dateTo])
 
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
 
@@ -451,8 +476,8 @@ const DNSLogHistoryList = (props) => {
       nDomains[k]++
     })
 
-    let maxTime = list[0].time
-    let minTime = list[list.length - 1].time
+    let maxTime = new Date(list[0].Timestamp)
+    let minTime = new Date(list[list.length - 1].Timestamp)
     let num = list.length
 
     let title = `${prettyDate(minTime)} - ${prettyDate(
@@ -514,49 +539,75 @@ const DNSLogHistoryList = (props) => {
 
       <ListHeader
         title={filterIps.join(',') + ' DNS Log'}
-        description={total ? `${total} records` : 'hello'}
+        description={total ? `${total} records` : ''}
       >
         <HStack
-          space="md"
+          space="xl"
           sx={{
             '@base': { display: 'none' },
             '@md': { display: listFiltered.length ? 'flex' : 'none' }
           }}
         >
-          <Button
-            size="xs"
-            action="secondary"
-            onPress={onPressStats}
-            isDisabled={!filterIps.length}
-          >
-            <ButtonIcon as={BarChartIcon} mr="$2" />
-            <ButtonText>Stats</ButtonText>
-          </Button>
-          <Button
-            size="xs"
-            action="negative"
-            onPress={deleteHistory}
-            isDisabled={!filterIps.length}
-          >
-            <ButtonIcon as={TrashIcon} mr="$2" />
-            <ButtonText>Delete History</ButtonText>
-          </Button>
+          <ButtonGroup space="xs" isAttached>
+            <Button
+              size="xs"
+              action="primary"
+              variant="solid"
+              onPress={refreshList}
+            >
+              <ButtonIcon as={RefreshCwIcon} />
+            </Button>
+
+            <Button
+              size="xs"
+              action="secondary"
+              variant="solid"
+              onPress={onPressStats}
+              isDisabled={!filterIps.length}
+            >
+              <ButtonIcon as={BarChartIcon} mr="$2" />
+              <ButtonText>Stats</ButtonText>
+            </Button>
+
+            <Button
+              size="xs"
+              action="secondary"
+              variant="solid"
+              onPress={() => navigate('/admin/dnsLogEdit')}
+            >
+              <ButtonIcon as={Settings2Icon} mr="$2" />
+              <ButtonText>Settings</ButtonText>
+            </Button>
+          </ButtonGroup>
+
+          <Tooltip label={`Delete history for ${filterIps.join(',')}`}>
+            <Button
+              size="xs"
+              action="negative"
+              onPress={deleteHistory}
+              isDisabled={!filterIps.length}
+            >
+              <ButtonIcon as={TrashIcon} mr="$2" />
+              <ButtonText>Delete History</ButtonText>
+            </Button>
+          </Tooltip>
         </HStack>
       </ListHeader>
 
       <VStack
+        bg="$backgroundCardLight"
+        space="md"
+        p="$4"
+        h={Platform.OS == 'web' ? 'auto' : showForm ? 180 : 70}
         sx={{
           '@md': {
             flexDirection: 'row',
             gap: 'md'
+          },
+          _dark: {
+            backgroundColor: '$backgroundCardDark'
           }
         }}
-        bg={
-          colorMode == 'light' ? '$backgroundCardLight' : '$backgroundCardDark'
-        }
-        space="md"
-        p="$4"
-        h={Platform.OS == 'web' ? 'auto' : showForm ? 200 : 70}
       >
         <HStack
           sx={{ '@base': { maxWidth: '100%' }, '@md': { maxWidth: '$1/3' } }}
@@ -585,7 +636,7 @@ const DNSLogHistoryList = (props) => {
 
         <VStack
           flex={1}
-          space="md"
+          space="sm"
           sx={{
             '@base': {
               display:
@@ -594,6 +645,17 @@ const DNSLogHistoryList = (props) => {
             '@md': { flexDirection: 'row' }
           }}
         >
+          <FormControl>
+            <FormControlLabel
+              sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
+            >
+              <FormControlLabelText size="sm">Date</FormControlLabelText>
+            </FormControlLabel>
+            <HStack space="sm">
+              <DatePicker value={dateTo} onChange={setDateTo} />
+            </HStack>
+          </FormControl>
+
           <FormControl flex={1}>
             <FormControlLabel
               sx={{
@@ -611,6 +673,7 @@ const DNSLogHistoryList = (props) => {
                 placeholder="Filter domain..."
                 value={filterText}
                 onChangeText={handleChange}
+                onSubmitEditing={refreshList}
                 autoCapitalize="none"
               />
               <InputSlot
@@ -652,6 +715,7 @@ const DNSLogHistoryList = (props) => {
       </VStack>
 
       <FlatList
+        ref={flatListRef}
         estimatedItemSize={100}
         flex={2}
         data={listFiltered}
@@ -667,8 +731,13 @@ const DNSLogHistoryList = (props) => {
         keyExtractor={(item) => item.Timestamp + item.Remote}
       />
 
-      {total > 20 && !filterText.length ? (
-        <Pagination page={page} pages={total} perPage={20} onChange={setPage} />
+      {total > perPage && !filterText.length ? (
+        <Pagination
+          page={page}
+          pages={total}
+          perPage={perPage}
+          onChange={setPage}
+        />
       ) : null}
     </View>
   )
