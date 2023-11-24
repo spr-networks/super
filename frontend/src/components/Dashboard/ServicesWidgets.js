@@ -4,6 +4,7 @@ import {
   Box,
   HStack,
   Icon,
+  Link,
   Text,
   VStack,
   useColorMode
@@ -36,52 +37,60 @@ const ServicesEnabled = ({ features, ...props }) => {
         space="lg"
         justifyContent="space-around"
         p="$4"
+        py="$7"
         rounded="lg"
         flexWrap="wrap"
       >
-        <VStack space="md">
-          <Box
-            p="$4"
-            rounded="$full"
-            bg={features.includes('wifi') ? colorOn : colorOff}
-          >
-            <Icon as={WifiIcon} color="$white" size={32} />
-          </Box>
-          <Text alignSelf="center">WiFi</Text>
-        </VStack>
+        <Link href="/admin/wireless">
+          <VStack space="md">
+            <Box
+              p="$4"
+              rounded="$full"
+              bg={features.includes('wifi') ? colorOn : colorOff}
+            >
+              <Icon as={WifiIcon} color="$white" size={32} />
+            </Box>
+            <Text alignSelf="center">WiFi</Text>
+          </VStack>
+        </Link>
 
-        <VStack space="md">
-          <Box
-            p="$4"
-            rounded="$full"
-            bg={features.includes('dns') ? colorOn : colorOff}
-          >
-            <Icon as={GlobeIcon} color="$white" size={32} />
-          </Box>
-          <Text alignSelf="center">DNS</Text>
-        </VStack>
+        <Link href="/admin/dnsLog/:ips/:text">
+          <VStack space="md">
+            <Box
+              p="$4"
+              rounded="$full"
+              bg={features.includes('dns') ? colorOn : colorOff}
+            >
+              <Icon as={GlobeIcon} color="$white" size={32} />
+            </Box>
+            <Text alignSelf="center">DNS</Text>
+          </VStack>
+        </Link>
+        <Link href="/admin/dnsBlock">
+          <VStack space="md">
+            <Box
+              p="$4"
+              rounded="$full"
+              bg={features.includes('dns-block') ? colorOn : colorOff}
+            >
+              <Icon as={BanIcon} color="$white" size={32} />
+            </Box>
+            <Text alignSelf="center">Block</Text>
+          </VStack>
+        </Link>
 
-        <VStack space="md">
-          <Box
-            p="$4"
-            rounded="$full"
-            bg={features.includes('dns-block') ? colorOn : colorOff}
-          >
-            <Icon as={BanIcon} color="$white" size={32} />
-          </Box>
-          <Text alignSelf="center">Block</Text>
-        </VStack>
-
-        <VStack space="md">
-          <Box
-            p="$4"
-            rounded="$full"
-            bg={features.includes('wireguard') ? colorOn : colorOff}
-          >
-            <Icon as={WaypointsIcon} color="$white" size={32} />
-          </Box>
-          <Text alignSelf="center">VPN</Text>
-        </VStack>
+        <Link href="/admin/wireguard">
+          <VStack space="md">
+            <Box
+              p="$4"
+              rounded="$full"
+              bg={features.includes('wireguard') ? colorOn : colorOff}
+            >
+              <Icon as={WaypointsIcon} color="$white" size={32} />
+            </Box>
+            <Text alignSelf="center">VPN</Text>
+          </VStack>
+        </Link>
       </HStack>
     </Box>
   )
