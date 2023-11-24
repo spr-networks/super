@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import {
   Box,
   HStack,
   Icon,
   Link,
+  Pressable,
   Text,
   VStack,
   useColorMode
@@ -18,6 +20,7 @@ import {
 } from 'lucide-react-native'
 
 const ServicesEnabled = ({ features, ...props }) => {
+  const navigate = useNavigate()
   useEffect(() => {}, [])
 
   const colorMode = useColorMode()
@@ -41,7 +44,11 @@ const ServicesEnabled = ({ features, ...props }) => {
         rounded="lg"
         flexWrap="wrap"
       >
-        <Link href="/admin/wireless">
+        <Pressable
+          onPress={() => {
+            navigate('/admin/wireless')
+          }}
+        >
           <VStack space="md">
             <Box
               p="$4"
@@ -52,9 +59,13 @@ const ServicesEnabled = ({ features, ...props }) => {
             </Box>
             <Text alignSelf="center">WiFi</Text>
           </VStack>
-        </Link>
+        </Pressable>
 
-        <Link href="/admin/dnsLog/:ips/:text">
+        <Pressable
+          onPress={() => {
+            navigate('/admin/dnsLog/:ips/:text')
+          }}
+        >
           <VStack space="md">
             <Box
               p="$4"
@@ -65,8 +76,9 @@ const ServicesEnabled = ({ features, ...props }) => {
             </Box>
             <Text alignSelf="center">DNS</Text>
           </VStack>
-        </Link>
-        <Link href="/admin/dnsBlock">
+        </Pressable>
+
+        <Pressable onPress={() => navigate('/admin/dnsBlock')}>
           <VStack space="md">
             <Box
               p="$4"
@@ -77,9 +89,9 @@ const ServicesEnabled = ({ features, ...props }) => {
             </Box>
             <Text alignSelf="center">Block</Text>
           </VStack>
-        </Link>
+        </Pressable>
 
-        <Link href="/admin/wireguard">
+        <Pressable onPress={() => navigate('/admin/wireguard')}>
           <VStack space="md">
             <Box
               p="$4"
@@ -90,7 +102,7 @@ const ServicesEnabled = ({ features, ...props }) => {
             </Box>
             <Text alignSelf="center">VPN</Text>
           </VStack>
-        </Link>
+        </Pressable>
       </HStack>
     </Box>
   )
