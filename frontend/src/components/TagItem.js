@@ -73,7 +73,7 @@ const GroupItem = React.memo(({ name, size }) => {
   )
 })
 
-const InterfaceItem = React.memo(({ name, size, ...props }) => {
+const InterfaceItem = React.memo(({ name, address, size, ...props }) => {
   let isWifi = name?.startsWith('wlan')
   let isOffline = !name?.length
   let colorMode = useColorMode()
@@ -112,7 +112,14 @@ const InterfaceItem = React.memo(({ name, size, ...props }) => {
       rounded="$lg"
     >
       {icon != PowerIcon ? <BadgeIcon color={fg} as={icon} mr="$1" /> : null}
-      <BadgeText color={fg}>{name?.length ? name : 'offline'}</BadgeText>
+      <BadgeText color={fg} bold={address ? true : false}>
+        {name?.length ? name : 'offline'}
+      </BadgeText>
+      {address ? (
+        <BadgeText color={fg} ml="$1">
+          {address}
+        </BadgeText>
+      ) : null}
     </Badge>
   )
 })
