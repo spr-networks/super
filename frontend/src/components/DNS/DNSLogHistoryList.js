@@ -213,58 +213,68 @@ const DNSLogHistoryList = (props) => {
 
   const modalRef = React.useRef(null)
 
-  const refreshList = async () => {
-    if (!filterIps.length) {
-      return setList([])
-    }
+  const refreshList = async (_params) => {
+    return new Promise((resolve, reject) => {
+      let apiParams = _params || params
 
-    // NOTE native dont support Promise.allSettled
-    const allSettled = (promises) => {
-      return Promise.all(
-        promises.map((promise) =>
-          promise
-            .then((value) => ({ status: 'fulfilled', value }))
-            .catch((reason) => ({ status: 'rejected', reason }))
-        )
-      )
-    }
-
-    allSettled(
-      filterIps.map(async (ip) => {
-        try {
-          let bucket = `dns:serve:${ip}`
-
-          let stats = await dbAPI.stats(bucket)
-          setTotal(stats.KeyN)
-
-          let list = await dbAPI.items(bucket, params)
-          return list
-        } catch (error) {
-          throw `${ip}`
-        }
-      })
-    ).then((results) => {
-      let rejected = results
-        .filter((r) => r.status == 'rejected')
-        .map((r) => r.reason)
-
-      if (rejected.length) {
-        context.error('No DNS query history for ' + rejected.join(','))
-        setFilterIps([])
+      if (!filterIps.length) {
+        return setList([])
       }
 
-      let lists = results
-        .filter((r) => r.value && r.value.length)
-        .map((r) => r.value)
+      // NOTE native dont support Promise.allSettled
+      const allSettled = (promises) => {
+        return Promise.all(
+          promises.map((promise) =>
+            promise
+              .then((value) => ({ status: 'fulfilled', value }))
+              .catch((reason) => ({ status: 'rejected', reason }))
+          )
+        )
+      }
 
-      // merge and sort lists desc
-      let list = [].concat.apply([], lists)
-      list.sort(
-        (a, b) =>
-          new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime()
+      allSettled(
+        filterIps.map(async (ip) => {
+          try {
+            let bucket = `dns:serve:${ip}`
+
+            let stats = await dbAPI.stats(bucket)
+            setTotal(stats.KeyN)
+
+            let list = await dbAPI.items(bucket, apiParams)
+            return list
+          } catch (error) {
+            throw `${ip}`
+          }
+        })
       )
+        .then((results) => {
+          let rejected = results
+            .filter((r) => r.status == 'rejected')
+            .map((r) => r.reason)
 
-      setList(list)
+          if (rejected.length) {
+            context.error('No DNS query history for ' + rejected.join(','))
+            setFilterIps([])
+          }
+
+          let lists = results
+            .filter((r) => r.value && r.value.length)
+            .map((r) => r.value)
+
+          // merge and sort lists desc
+          let list = [].concat.apply([], lists)
+          list.sort(
+            (a, b) =>
+              new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime()
+          )
+
+          setList(list)
+
+          resolve(list)
+        })
+        .catch((err) => {
+          reject(err)
+        })
     })
   }
 
@@ -462,7 +472,12 @@ const DNSLogHistoryList = (props) => {
 
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
 
-  const onPressStats = () => {
+  const onPressStats = async () => {
+    //TODO cleanup: this is to fetch 1000 insteaf of 20 when pagination
+    let num = 1000
+    setParams({ ...params, num })
+    let list = await refreshList({ ...params, num })
+
     let nDomains = {}
     list.map((item) => {
       let k = item.FirstName
@@ -475,11 +490,11 @@ const DNSLogHistoryList = (props) => {
 
     let maxTime = new Date(list[0].Timestamp)
     let minTime = new Date(list[list.length - 1].Timestamp)
-    let num = list.length
+    let numTotal = list.length
 
     let title = `${prettyDate(minTime)} - ${prettyDate(
       maxTime
-    )}\n${num} records for ${filterIps.join(',')}`
+    )}\n${numTotal} records for ${filterIps.join(',')}`
 
     const onPressDomain = (domain) => {
       modalContext.toggleModal()
@@ -488,7 +503,6 @@ const DNSLogHistoryList = (props) => {
 
     modalContext.modal(
       title,
-
       <ScrollView w="100%" maxHeight={320}>
         <VStack space="xs">
           {Object.entries(nDomains)
