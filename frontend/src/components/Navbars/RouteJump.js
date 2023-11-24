@@ -153,14 +153,13 @@ const RouteJump = ({ ...props }) => {
 
   //navigate and reset form
   const navigateItem = (item) => {
+    setIsOpen(false)
     navigate(`/${item.layout || 'admin'}/${item.path}`)
 
     setActiveSidebarItem(item.path)
 
     setFilterText('')
     filterItems('')
-
-    setIsOpen(false)
   }
 
   const keyMap = { SHOW_SEARCH: 'shift+/' }
@@ -181,8 +180,8 @@ const RouteJump = ({ ...props }) => {
         onClose={() => setIsOpen(!isOpen)}
         initialFocusRef={refInput}
         offset={-44}
+        display={isOpen ? 'flex' : 'none'}
       >
-        <PopoverBackdrop />
         <PopoverContent maxWidth={280}>
           <PopoverBody>
             {/*<PopoverCloseButton>
