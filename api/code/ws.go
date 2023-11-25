@@ -9,6 +9,7 @@ import (
 )
 import (
 	"github.com/gorilla/websocket"
+	"github.com/spr-networks/sprbus"
 )
 
 var WSClients []*websocket.Conn

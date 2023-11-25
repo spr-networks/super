@@ -246,7 +246,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 		}
 
 		if authenticatedNext.Match(r, &matchInfo) || setupMode.Match(r, &matchInfo) {
-			sprbus.Publish("auth:failure", map[string]string{"reason": reason, "type": failType, "name": tokenName || username})
+			sprbus.Publish("auth:failure", map[string]string{"reason": reason, "type": failType, "name": tokenName + username})
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		} else {
@@ -257,7 +257,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 			}
 		}
 
-		sprbus.Publish("auth:failure", map[string]string{"reason": "unknown route, no credentials", "type": failType, "name": tokenName || username})
+		sprbus.Publish("auth:failure", map[string]string{"reason": "unknown route, no credentials", "type": failType, "name": tokenName + username})
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	})
 }
