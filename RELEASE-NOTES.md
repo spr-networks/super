@@ -3,10 +3,11 @@
 ## v0.3.1
 
 * Add 'api' group for Custom Interface firewall rules, to enable SPR API Access
+* Custom Interface Rules now offer an optional route destination
 * New DNS View filters and search
 * Improved support for SPR Virtual mode and PLUS
 * Reduce DNS-Block memory consumption with BoltDB
-* New event for auth failures
+* Refactor www:auth events into auth:failure/ auth:success events
 * Scrubbed PSKs from device events from API
 
 ## v0.3
