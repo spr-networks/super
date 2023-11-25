@@ -12,6 +12,7 @@ x-labels:
 services:
   api_sample_plugin:
     container_name: superapi_sample_plugin
+    network_mode: ${VIRTUAL_SPR:+service:base:-host}
     build:
       context: .
       labels: *default-labels
