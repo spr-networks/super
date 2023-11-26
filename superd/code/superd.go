@@ -160,7 +160,12 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		return
 	}
 
-	if target == "" && isVirtual() {
+	/*
+		//upon testing this recreates service:base senselessly,
+		// causing the services to lose their network. dont do this,
+		// and take the restart hit for anything other than stop
+	*/
+	if command == "stop" && target == "" && isVirtual() {
 		//define target for virtual to avoid total restart
 		//TBD; need a tenable solution for this. perhaps parse compose file and pull
 		//the first service.
