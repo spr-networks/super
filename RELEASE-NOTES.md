@@ -9,6 +9,7 @@
 * Reduce DNS-Block memory consumption with BoltDB
 * Refactor www:auth events into auth:failure/ auth:success events
 * Scrubbed PSKs from device events from API
+* Keyboard shortcut for search on desktop: shift+/
 
 ## v0.3
 
