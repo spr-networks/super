@@ -219,6 +219,8 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		if isVirtual() {
 			//need to propagate this variable
 			d_args = append(d_args, "-e", "VIRTUAL_SPR="+os.Getenv("VIRTUAL_SPR"))
+			//set network mode
+			d_args = append(d_args, "-e", "NETWORK_MODE=service:base")
 		}
 
 		//docker.io, ever annoying, integrated compose as a subcommand.
