@@ -644,6 +644,17 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//lastly, check for duplicates on RouteDst, SrcIP, interface name
+	// and reject them
+	for _, current := range gFirewallConfig.CustomInterfaceRules {
+		if crule.SrcIP == current.SrcIP &&
+			crule.RouteDst == current.RouteDst &&
+			crule.Interface == current.Interface {
+			http.Error(w, "Duplicate rule", 400)
+			return
+		}
+	}
+
 	gFirewallConfig.CustomInterfaceRules = append(gFirewallConfig.CustomInterfaceRules, crule)
 	saveFirewallRulesLocked()
 	applyFirewallRulesLocked()
