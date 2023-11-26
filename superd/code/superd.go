@@ -126,8 +126,10 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 
 	composeFile := composeFileIN
 
-	if !strings.Contains(composeFile, "plugins") {
+	if !strings.Contains(composeFile, "plugins") || isVirtual() {
 		// important to get/set release channel and version for rollbacks and dev channels etc
+
+		//we ignore these if its a plugin and were not in virtual mode.
 		release_channel = getReleaseChannel()
 		release_version = getReleaseVersion()
 	}
