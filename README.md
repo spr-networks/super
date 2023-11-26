@@ -29,6 +29,7 @@ Firewall:
 - One-way connectivity to service resources
 - Device Groups & Isolation
 - Port Forwarding
+- Custom Interface rules for integrations 
 - Scheduling, Event-Based Triggers *
 - DNAT Rewriting * 
   
