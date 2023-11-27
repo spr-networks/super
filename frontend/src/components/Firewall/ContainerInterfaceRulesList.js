@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { firewallAPI } from 'api'
 import ModalForm from 'components/ModalForm'
 import AddContainerInterfaceRule from './AddContainerInterfaceRule'
-import { AppContext } from 'AppContext'
+import { AlertContext, AppContext } from 'AppContext'
 
 import {
   Badge,
@@ -30,6 +30,7 @@ const ContainerInterfaceRulesList = (props) => {
 
   let refModal = useRef(null)
   const appContext = useContext(AppContext)
+  const alertContext = useContext(AlertContext)
 
   const deleteListItem = (item) => {
     const done = (res) => {
@@ -37,6 +38,7 @@ const ContainerInterfaceRulesList = (props) => {
     }
 
     firewallAPI.deleteCustomInterfaceRule(item).then(done)
+      .catch((err) => {alertContext.error('Firewall API Failure', err)})
   }
 
   const notifyChange = (t) => {
@@ -80,7 +82,9 @@ const ContainerInterfaceRulesList = (props) => {
               <Text flex={2} bold>
                 {item.Interface}
               </Text>
+              <Text flex={1}>{item.RuleName}</Text>
               <Text flex={1}>{item.SrcIP}</Text>
+              <Text flex={1}>{item.RouteDst}</Text>
             </VStack>
             <HStack flex={1} space="sm">
               {item.Groups.map((entry) => (
@@ -107,7 +111,7 @@ const ContainerInterfaceRulesList = (props) => {
             </Button>
           </ListItem>
         )}
-        keyExtractor={(item) => `${item.Protocol}${item.SrcIP}${item.DstIP}`}
+        keyExtractor={(item) => `${list.indexOf(item)}-ciface`}
       />
 
       {!list.length ? (

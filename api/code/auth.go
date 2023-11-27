@@ -104,8 +104,10 @@ func ExtractRequestToken(r *http.Request) string {
 	return ""
 }
 
-func authenticateToken(token string) bool {
+func authenticateToken(token string) (bool, string, []string) {
 	exists := false
+	name := ""
+	paths := []string{}
 
 	if !exists {
 
@@ -122,6 +124,8 @@ func authenticateToken(token string) bool {
 			if subtle.ConstantTimeCompare([]byte(token), []byte(t.Token)) == 1 {
 				if t.Expire == 0 || t.Expire > time.Now().Unix() {
 					exists = true
+					name = t.Name
+					paths = t.ScopedPaths
 					break
 				}
 			}
@@ -129,7 +133,7 @@ func authenticateToken(token string) bool {
 
 	}
 
-	return exists
+	return exists, name, paths
 }
 
 func scopedPathMatch(pathToMatch string, paths []string) bool {
@@ -160,13 +164,10 @@ func authorizedToken(r *http.Request, token string) bool {
 				}
 			}
 			if t.Expire == 0 || t.Expire > time.Now().Unix() {
-				sprbus.Publish("www:auth:token:success", map[string]int64{"expire": t.Expire})
 				return true
 			}
 		}
 	}
-
-	sprbus.Publish("www:auth:token:fail", "")
 
 	return false
 }
@@ -185,12 +186,9 @@ func authenticateUser(username string, password string) bool {
 		expectedPasswordHash := sha256.Sum256([]byte(pwEntry))
 		passwordMatch := (subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1)
 		if passwordMatch {
-			sprbus.Publish("www:auth:user:success", map[string]string{"username": username})
 			return true
 		}
 	}
-
-	sprbus.Publish("www:auth:user:fail", map[string]string{"username": username})
 
 	return false
 }
@@ -205,21 +203,39 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 
 		var matchInfo mux.RouteMatch
 
+		reason := ""
 		//api token
+		failType := "token"
 		token := ExtractRequestToken(r)
+		tokenName := ""
 		if token != "" {
-			if authenticateToken(token) && authorizedToken(r, token) {
-				authenticatedNext.ServeHTTP(w, r)
-				return
+			goodToken, tokenName, _ := authenticateToken(token)
+			if goodToken {
+				if authorizedToken(r, token) {
+					sprbus.Publish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": "api"})
+					authenticatedNext.ServeHTTP(w, r)
+					return
+				} else {
+					reason = "unauthorized token"
+				}
+			} else {
+				reason = "unknown token"
 			}
 		}
 
 		//basic auth
 		username, password, ok := r.BasicAuth()
 		if ok {
+			failType = "user"
 			if authenticateUser(username, password) {
+				sprbus.Publish("auth:success", map[string]string{"type": "user", "username": username, "reason": "api"})
 				authenticatedNext.ServeHTTP(w, r)
 				return
+			}
+			reason = "bad password"
+		} else {
+			if token == "" {
+				reason = "no credentials"
 			}
 		}
 
@@ -230,6 +246,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 		}
 
 		if authenticatedNext.Match(r, &matchInfo) || setupMode.Match(r, &matchInfo) {
+			sprbus.Publish("auth:failure", map[string]string{"reason": reason, "type": failType, "name": tokenName + username})
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		} else {
@@ -240,6 +257,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 			}
 		}
 
+		sprbus.Publish("auth:failure", map[string]string{"reason": "unknown route, no credentials", "type": failType, "name": tokenName + username})
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	})
 }

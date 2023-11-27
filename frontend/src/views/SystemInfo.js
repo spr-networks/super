@@ -59,6 +59,7 @@ const SystemInfo = (props) => {
 
   return (
     <ScrollView h="$full" sx={{ '@md': { h: '92vh' } }}>
+      <ReleaseInfo />
       <VStack space="md">
         <HStack p="$4">
           <Heading size="md">System Info</Heading>
@@ -162,7 +163,6 @@ const SystemInfo = (props) => {
         </Box>
 
         <Database />
-        <ReleaseInfo />
         <ConfigsBackup />
         <DockerInfo />
       </VStack>

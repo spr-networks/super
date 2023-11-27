@@ -330,7 +330,6 @@ const routes = [
   {
     name: 'System',
     state: 'systemCollapse',
-    hideSimple: true,
     views: [
       {
         path: 'info',
@@ -344,6 +343,7 @@ const routes = [
         name: 'Plugins',
         icon: PuzzleIcon,
         component: Plugins,
+        hideSimple: true,
         layout: 'admin'
       },
       {
@@ -351,6 +351,7 @@ const routes = [
         name: 'Auth',
         icon: KeyIcon,
         component: AuthSettings,
+        hideSimple: true,
         layout: 'admin'
       },
       {
@@ -358,6 +359,7 @@ const routes = [
         name: 'DHCP Table',
         icon: TableIcon,
         component: Dhcp,
+        hideSimple: true,
         layout: 'admin'
       },
       {
@@ -365,6 +367,7 @@ const routes = [
         name: 'ARP Table',
         icon: Table2Icon,
         component: Arp,
+        hideSimple: true,
         layout: 'admin'
       },
       {
@@ -372,6 +375,7 @@ const routes = [
         name: 'Groups',
         icon: UsersIcon,
         component: Groups,
+        hideSimple: true,
         layout: 'admin'
       },
       {
@@ -379,6 +383,7 @@ const routes = [
         name: 'Tags',
         icon: TagsIcon,
         component: Tags,
+        hideSimple: true,
         layout: 'admin'
       },
 
@@ -387,6 +392,7 @@ const routes = [
         name: 'Speed Test',
         icon: GaugeCircleIcon,
         component: SpeedTest,
+        hideSimple: true,
         layout: 'admin'
       }
     ]

@@ -33,15 +33,17 @@ import ProtocolRadio from 'components/Form/ProtocolRadio'
 
 class AddContainerInterfaceRuleImpl extends React.Component {
   state = {
+    Disabled: false,
+    RuleName: '',
     SrcIP: '',
     Interface: '',
-    SetRoute: false,
+    RouteDst: '',
     Groups: [],
     Tags: [],
     GroupOptions: []
   }
 
-  defaultGroups = ['wan', 'dns', 'lan']
+  defaultGroups = ['wan', 'dns', 'lan', 'api']
 
   constructor(props) {
     super(props)
@@ -58,8 +60,10 @@ class AddContainerInterfaceRuleImpl extends React.Component {
     event.preventDefault()
 
     let crule = {
+      RuleName: this.state.RuleName,
+      Disabled: this.state.Disabled,
       SrcIP: this.state.SrcIP,
-      SetRoute: this.state.SetRoute,
+      RouteDst: this.state.RouteDst,
       Interface: this.state.Interface,
       Groups: this.state.Groups
     }
@@ -98,6 +102,22 @@ class AddContainerInterfaceRuleImpl extends React.Component {
 
     return (
       <VStack space="md">
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Rule Name</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              variant="underlined"
+              value={this.state.RuleName}
+              onChangeText={(value) => this.handleChange('RuleName', value)}
+            />
+          </Input>
+          <FormControlHelper>
+            <FormControlHelperText>Name</FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+
         <FormControl isRequired>
           <FormControlLabel>
             <FormControlLabelText>Interface Address Range</FormControlLabelText>
@@ -114,13 +134,21 @@ class AddContainerInterfaceRuleImpl extends React.Component {
           </FormControlHelper>
         </FormControl>
 
-        <FormControlLabel>
-          <FormControlLabelText>Set Route</FormControlLabelText>
-        </FormControlLabel>
-        <Switch
-          value={this.state.SetRoute}
-          onToggle={() => this.handleChange('SetRoute', !this.state.SetRoute)}
-        />
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Set Route Destination (optional)</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              variant="underlined"
+              value={this.state.RouteDst}
+              onChangeText={(value) => this.handleChange('RouteDst', value)}
+            />
+          </Input>
+          <FormControlHelper>
+            <FormControlHelperText>IP address</FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
 
         <FormControl isRequired>
           <FormControlLabel>

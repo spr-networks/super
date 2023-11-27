@@ -468,7 +468,7 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 func checkUpdates() {
 
 	//once an hour, check if auto updates are enabled
-	// if they are, then performan an update
+	// if they are, then perform an update
 	ticker := time.NewTicker(1 * time.Hour)
 	for {
 		select {
@@ -1000,15 +1000,19 @@ func restart(w http.ResponseWriter, r *http.Request) {
 
 var Devicesmtx sync.Mutex
 
+func scrubDevice(entry DeviceEntry) DeviceEntry {
+	new_entry := entry
+	if new_entry.PSKEntry.Psk != "" {
+		new_entry.PSKEntry.Psk = "**"
+	}
+	return new_entry
+}
+
 func convertDevicesPublic(devices map[string]DeviceEntry) map[string]DeviceEntry {
 	// do not pass PSK key material
 	scrubbed_devices := make(map[string]DeviceEntry)
 	for i, entry := range devices {
-		new_entry := entry
-		if new_entry.PSKEntry.Psk != "" {
-			new_entry.PSKEntry.Psk = "**"
-		}
-		scrubbed_devices[i] = new_entry
+		scrubbed_devices[i] = scrubDevice(entry)
 	}
 	return scrubbed_devices
 }
@@ -1415,7 +1419,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			val.PSKEntry.Psk = "**"
 		}
 
-		sprbus.Publish("device:update", val)
+		sprbus.Publish("device:update", scrubDevice(val))
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(val)
@@ -1464,7 +1468,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	devices[identity] = dev
 	saveDevicesJson(devices)
 
-	sprbus.Publish("device:save", dev)
+	sprbus.Publish("device:save", scrubDevice(dev))
 
 	if pskModified {
 		//psks updated -- update hostapd
@@ -1815,7 +1819,7 @@ func lookupWGDevice(devices *map[string]DeviceEntry, WGPubKey string, IP string)
 
 func refreshDeviceTags(dev DeviceEntry) {
 	applyPrivateNetworkUpstreamDevice(dev)
-	sprbus.Publish("device:tags:update", dev)
+	sprbus.Publish("device:tags:update", scrubDevice(dev))
 }
 
 func refreshDeviceGroups(dev DeviceEntry) {
@@ -1864,7 +1868,7 @@ func refreshDeviceGroups(dev DeviceEntry) {
 	//and re-add
 	populateVmapEntries(ipv4, dev.MAC, ifname, "")
 
-	sprbus.Publish("device:groups:update", dev)
+	sprbus.Publish("device:groups:update", scrubDevice(dev))
 }
 
 // from https://github.com/ItsJimi/go-arp/blob/master/arp.go

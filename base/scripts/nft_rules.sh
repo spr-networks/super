@@ -49,6 +49,12 @@ table inet filter {
     $(if [ "$LANIF" ]; then echo "elements = { $LANIF }" ; fi )
   }
 
+
+  # this set contains misc interfaces with API access
+  set api_interfaces {
+    type ifname;
+  }
+
   # this set contains only the wired interfaces, for DHCP whitelisting.
   # without knowing the mac address for dhcp_access ahead of time.
   # VLANs are *not* placed here as VLANs are currently 1:1 per device.
@@ -238,11 +244,11 @@ table inet filter {
     counter iifname @outbound_sites goto DROPLOGINP
 
     # Allow wireguard from only WANIF interfaces to prevent loops
-    iifname @uplink_interfaces udp dport $WIREGUARD_PORT counter accept
+    $(if [ "$WIREGUARD_PORT" ]; then echo "iifname @uplink_interfaces udp dport $WIREGUARD_PORT counter accept"; fi)
 
     # Allow wireguard to lan services
-    iifname wg0 counter tcp dport vmap @lan_tcp_accept
-    iifname wg0 counter tcp dport vmap @lan_udp_accept
+    $(if [ "$WIREGUARD_PORT" ]; then echo "iifname wg0 counter tcp dport vmap @lan_tcp_accept"; fi)
+    $(if [ "$WIREGUARD_PORT" ]; then echo "iifname wg0 counter tcp dport vmap @lan_udp_accept"; fi)
 
     # drop dhcp requests from upstream
     iifname @uplink_interfaces udp dport {67} counter goto DROPLOGINP
@@ -274,6 +280,8 @@ table inet filter {
     # TCP services
     iifname @lan_interfaces counter tcp dport vmap @lan_tcp_accept
     iifname @uplink_interfaces counter tcp dport vmap @wan_tcp_accept
+    iifname @api_interfaces counter tcp dport 80 accept
+    iifname @api_interfaces counter tcp dport 443 accept
 
     # UDP services
     iifname @lan_interfaces counter udp dport vmap @lan_udp_accept
@@ -373,7 +381,7 @@ table inet filter {
     counter oifname @lan_interfaces ip saddr . iifname vmap @lan_access
 
     # 2. Transmit to the wireguard interface
-    counter oifname wg0 ip saddr . iifname vmap @lan_access
+    $(if [ "$WIREGUARD_PORT" ]; then echo "counter oifname wg0 ip saddr . iifname vmap @lan_access"; fi)
 
     # 3. Forward to wireless stations. This verdict map is managed in firewall.go
     jump WIPHY_FORWARD_LAN

@@ -54,9 +54,10 @@ type ForwardingBlockRule struct {
 }
 
 type CustomInterfaceRule struct {
+	BaseRule
 	Interface string
 	SrcIP     string
-	SetRoute  bool
+	RouteDst  string
 	Groups    []string
 	Tags      []string //unused for now
 }
@@ -609,6 +610,14 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if crule.RouteDst != "" {
+		ip := net.ParseIP(crule.RouteDst)
+		if ip == nil {
+			http.Error(w, "invalid RouteDst ", 400)
+			return
+		}
+	}
+
 	if !isValidIface(crule.Interface) {
 		http.Error(w, "Invalid Interface", 400)
 		return
@@ -633,6 +642,17 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Error(w, "Not found", 404)
 		return
+	}
+
+	//lastly, check for duplicates on RouteDst, SrcIP, interface name
+	// and reject them
+	for _, current := range gFirewallConfig.CustomInterfaceRules {
+		if crule.SrcIP == current.SrcIP &&
+			crule.RouteDst == current.RouteDst &&
+			crule.Interface == current.Interface {
+			http.Error(w, "Duplicate rule", 400)
+			return
+		}
 	}
 
 	gFirewallConfig.CustomInterfaceRules = append(gFirewallConfig.CustomInterfaceRules, crule)
@@ -683,7 +703,7 @@ func applyForwarding(forwarding []ForwardingRule) error {
 
 	for _, f := range forwarding {
 		var cmd *exec.Cmd
-		if f.SrcPort == "any" {
+		if f.DstPort == "any" {
 			cmd = exec.Command("nft", "add", "element", "inet", "nat", f.Protocol+"anyfwd",
 				"{", f.SrcIP, ":",
 				f.DstIP, "}")
@@ -1078,7 +1098,7 @@ func applyPingRules() {
 				"{", "0.0.0.0/0", ".", os.Getenv("WANIF"), ":", "accept", "}")
 			err = cmd.Run()
 			if err != nil {
-				fmt.Println("[-] Ping rule failed to add", err)
+				fmt.Println("[-] Ping rule failed to add wan", err)
 			}
 		}
 
@@ -1087,8 +1107,18 @@ func applyPingRules() {
 				"{", "0.0.0.0/0", ".", os.Getenv("LANIF"), ":", "accept", "}")
 			err = cmd.Run()
 			if err != nil {
-				fmt.Println("[-] Ping rule failed to add", err)
+				fmt.Println("[-] Ping rule failed to add lan", err)
 			}
+
+			//also add wireguard to the ping rules
+			//future: gate this on wg being enabled
+			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
+				"{", "0.0.0.0/0", ".", "wg0", ":", "accept", "}")
+			err = cmd.Run()
+			if err != nil {
+				fmt.Println("[-] Ping rule failed to add wg0", err)
+			}
+
 		}
 
 		return
@@ -1157,10 +1187,11 @@ func populateSets() {
 }
 
 // TBD in go 1.21 use slices.
-func includesGroupStd(slice []string) (bool, bool, bool) {
+func includesGroupStd(slice []string) (bool, bool, bool, bool) {
 	dns := false
 	wan := false
 	lan := false
+	api := false
 
 	for _, item := range slice {
 		if item == "dns" {
@@ -1169,16 +1200,18 @@ func includesGroupStd(slice []string) (bool, bool, bool) {
 			wan = true
 		} else if item == "lan" {
 			lan = true
+		} else if item == "api" {
+			api = true
 		}
 	}
 
-	return wan, dns, lan
+	return wan, dns, lan, api
 }
 
 func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string, fthru bool) error {
 	var err error
 
-	wan, lan, dns := includesGroupStd(container_rule.Groups)
+	wan, dns, lan, api := includesGroupStd(container_rule.Groups)
 
 	if wan {
 		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_wan",
@@ -1219,8 +1252,21 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 		}
 	}
 
+	if api {
+		err = exec.Command("nft", action, "element", "inet", "filter", "api_interfaces",
+			"{", container_rule.Interface, "}").Run()
+		if err != nil {
+			if action != "delete" {
+				log.Println("failed to  "+action+" "+container_rule.Interface+" for @api_interfaces", err)
+			}
+			if !fthru {
+				return err
+			}
+		}
+	}
+
 	for _, group := range container_rule.Groups {
-		if group == "lan" || group == "dns" || group == "wan" {
+		if group == "lan" || group == "dns" || group == "wan" || group == "api" {
 			continue
 		}
 		if action == "add" {
@@ -1233,11 +1279,17 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 	*/
 
 	//set up route
-	if container_rule.SetRoute {
+	if container_rule.RouteDst != "" {
+
+		ip := net.ParseIP(container_rule.RouteDst)
+		if ip == nil {
+			return fmt.Errorf("invalid ip " + container_rule.RouteDst)
+		}
+
 		if action == "add" {
-			exec.Command("ip", "route", "add", container_rule.SrcIP, "dev", container_rule.Interface).Run()
+			exec.Command("ip", "route", "add", container_rule.SrcIP, "via", container_rule.RouteDst).Run()
 		} else if action == "delete" {
-			exec.Command("ip", "route", "del", container_rule.SrcIP, "dev", container_rule.Interface).Run()
+			exec.Command("ip", "route", "del", container_rule.SrcIP, "via", container_rule.RouteDst).Run()
 		}
 	}
 
@@ -1414,6 +1466,9 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 	if fwd.SrcPort != "any" && !re.MatchString(fwd.SrcPort) {
 		http.Error(w, "Invalid SrcPort", 400)
 		return
+	} else {
+		//convert to full range
+		fwd.SrcPort = "0-65535"
 	}
 
 	if fwd.DstPort != "any" {

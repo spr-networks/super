@@ -14,10 +14,6 @@ import {
   PopoverBackdrop,
   PopoverBody,
   PopoverContent,
-  PopoverCloseButton,
-  PopoverHeader,
-  CloseIcon,
-  Heading,
   Icon,
   FormControl,
   VStack
@@ -26,6 +22,9 @@ import {
 import { SearchIcon, SlashIcon } from 'lucide-react-native'
 
 import { routes } from 'routes'
+
+import { GlobalHotKeys, HotKeys } from 'react-hotkeys'
+import { Platform } from 'react-native'
 
 const RouteJump = ({ ...props }) => {
   const { activeSidebarItem, setActiveSidebarItem } = useContext(AppContext)
@@ -63,26 +62,6 @@ const RouteJump = ({ ...props }) => {
     setItems(items)
   }, [])
 
-  /*
-  const [isCalled, setIsCalled] = useState(false)
-  const keydownListener = (e) => {
-    if (e.key !== '/') return
-    onPress()
-  }
-  useEffect(() => {
-    //TODO useMemo: https://github.com/react-native-netinfo/react-native-netinfo/issues/305
-    if (isCalled) {
-      return
-    }
-
-    setIsCalled(true)
-    window.addEventListener('keyup', keydownListener, true)
-    return () => {
-      window.removeEventListener('keyup', keydownListener, true)
-    }
-  }, [keydownListener])
-  */
-
   const onPress = () => {
     setIsOpen(true)
     refInput.current?.focus()
@@ -103,13 +82,21 @@ const RouteJump = ({ ...props }) => {
           value=""
           onChangeText={() => {}}
           onSubmitEditing={() => {}}
-          placeholder="Search"
+          placeholder="Type / to search"
         />
-        {/*<InputSlot mr="$3.5">
-          <Text size="xs" color="$muted500">
+        {/*
+        <InputSlot mr="$2">
+          <Text
+            size="xs"
+            color="$muted400"
+            _bg="$muted100"
+            px="$2"
+            rounded="$md"
+          >
             /
           </Text>
-        </InputSlot>*/}
+        </InputSlot>
+        */}
       </Input>
     </Pressable>
   )
@@ -166,18 +153,26 @@ const RouteJump = ({ ...props }) => {
 
   //navigate and reset form
   const navigateItem = (item) => {
+    setIsOpen(false)
     navigate(`/${item.layout || 'admin'}/${item.path}`)
 
     setActiveSidebarItem(item.path)
 
     setFilterText('')
     filterItems('')
+  }
 
-    setIsOpen(false)
+  const keyMap = { SHOW_SEARCH: 'shift+/' }
+  const handlers = { SHOW_SEARCH: () => onPress() }
+
+  if (Platform.OS != 'web') {
+    return <></>
   }
 
   return (
     <>
+      <GlobalHotKeys keyMap={keyMap} handlers={handlers} />
+
       <Popover
         placement="bottom left"
         trigger={trigger}
@@ -185,8 +180,8 @@ const RouteJump = ({ ...props }) => {
         onClose={() => setIsOpen(!isOpen)}
         initialFocusRef={refInput}
         offset={-44}
+        display={isOpen ? 'flex' : 'none'}
       >
-        <PopoverBackdrop />
         <PopoverContent maxWidth={280}>
           <PopoverBody>
             {/*<PopoverCloseButton>

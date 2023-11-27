@@ -1,16 +1,28 @@
+/*
+TODO show #filtered result vs total
+filterText
+num perPage or 1000 - handle this
+datePicker + mobile
+*/
+
 import React, { useContext, useEffect, useState } from 'react'
-import { Dimensions, Platform } from 'react-native'
+import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { format as timeAgo } from 'timeago.js'
 
 import { AlertContext, ModalContext } from 'AppContext'
-import ClientSelect from 'components/ClientSelect'
 import DNSAddOverride from './DNSAddOverride'
+import ClientSelect from 'components/ClientSelect'
+import { Select } from 'components/Select'
 import ModalForm from 'components/ModalForm'
 import JSONSyntax from 'components/SyntaxHighlighter'
-import { dbAPI, deviceAPI, logAPI } from 'api'
+import { Tooltip } from 'components/Tooltip'
+import { dbAPI, logAPI } from 'api'
 import { prettyDate } from 'utils'
+import { ListHeader } from 'components/List'
+import Pagination from 'components/Pagination'
 
 import {
   Badge,
@@ -23,19 +35,12 @@ import {
   FormControl,
   FormControlLabel,
   FormControlLabelText,
-  Heading,
   Input,
   HStack,
   VStack,
-  Menu,
-  MenuItem,
-  MenuItemLabel,
   Text,
   View,
   ScrollView,
-  Tooltip,
-  TooltipContent,
-  TooltipText,
   useColorMode,
   ThreeDotsIcon,
   SlashIcon,
@@ -44,12 +49,44 @@ import {
   InputField,
   InputIcon,
   SearchIcon,
-  InputSlot
+  InputSlot,
+  CloseIcon,
+  ButtonGroup
 } from '@gluestack-ui/themed'
 
-import { FilterIcon } from 'lucide-react-native'
+import {
+  BarChartIcon,
+  FilterIcon,
+  RefreshCwIcon,
+  Settings2Icon
+} from 'lucide-react-native'
 
-const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
+const filterTypes = ['BLOCKED', 'NOERROR', 'NODATA', 'OTHERERROR', 'NXDOMAIN']
+
+import DatePicker from 'components/DatePicker'
+
+const TooltipIconButton = ({ label, onPress, icon, color, ...props }) => (
+  <Tooltip label={label}>
+    <Button
+      sx={{
+        '@base': { display: 'none' },
+        '@md': { display: 'flex' }
+      }}
+      variant="link"
+      onPress={onPress}
+    >
+      <ButtonIcon as={icon} color={color || '$primary500'} />
+    </Button>
+  </Tooltip>
+)
+
+const ListItem = ({
+  item,
+  handleClickDomain,
+  hideClient,
+  triggerAlert,
+  setFilterText
+}) => {
   const colorByType = (type) => {
     let keys = {
       BLOCKED: 'error',
@@ -68,26 +105,6 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
     </Button>
   )
 
-  const moreMenu = (
-    <Menu
-      trigger={trigger}
-      selectionMode="single"
-      onSelectionChange={(e) => {
-        let action = e.currentKey
-        handleClickDomain(action, item.FirstName)
-      }}
-    >
-      <MenuItem key="permit">
-        <CheckIcon color="$green700" mr="$2" />
-        <MenuItemLabel size="sm">Permit Domain</MenuItemLabel>
-      </MenuItem>
-      <MenuItem key="block">
-        <SlashIcon color="$red700" mr="$2" />
-        <MenuItemLabel size="sm">Block Domain</MenuItemLabel>
-      </MenuItem>
-    </Menu>
-  )
-
   return (
     <Box
       borderBottomWidth={1}
@@ -104,117 +121,72 @@ const ListItem = ({ item, handleClickDomain, hideClient, triggerAlert }) => {
         space="md"
         justifyContent="space-between"
         alignItems="center"
-        borderLeftWidth={2}
+        borderLeftWidth="$4"
         borderLeftColor={'$' + colorByType(item.Type) + '500'}
         py="$2"
         pl="$2"
         pr="$4"
+        sx={{ '@md': { paddingRight: '$8' } }}
       >
         <Box
           sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
           w="$20"
         >
-          <Badge variant="outline" action={colorByType(item.Type)}>
+          <Badge
+            variant="outline"
+            action={colorByType(item.Type)}
+            justifyContent="center"
+          >
             <BadgeText>{item.Type}</BadgeText>
           </Badge>
         </Box>
 
-        {hideClient ? null : (
-          <VStack flex={1} space={'md'} justifyItems="center">
-            <Text bold>{item.device.Name}</Text>
-            <Text
-              flex={1}
-              sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
-            >
-              {item.Remote.split(':')[0]}
-            </Text>
+        <VStack
+          flex={3}
+          space="sm"
+          sx={{ '@md': { flexDirection: 'row', justifyContent: 'center' } }}
+        >
+          <VStack space="sm" flex={1}>
+            <HStack>
+              <Text
+                bold
+                isTruncated
+                onPress={() => setFilterText(item.FirstName)}
+              >
+                {item.FirstName}
+              </Text>
+            </HStack>
+
+            <HStack>
+              <Text color="$muted500" onPress={() => triggerAlert(item)}>
+                {item.FirstAnswer || '0.0.0.0'}
+              </Text>
+            </HStack>
           </VStack>
-        )}
 
-        <VStack flex={3} space="sm">
-          <Text bold isTruncated>
-            {item.FirstName}
-          </Text>
-
-          <HStack>
-            <Text color="$muted500" onPress={() => triggerAlert(item)}>
-              {item.FirstAnswer || '0.0.0.0'}
-            </Text>
-          </HStack>
-          <Text color="$muted500" sx={{ '@md': { display: 'none' } }}>
-            {timeAgo(new Date(item.Timestamp))}
-          </Text>
+          <VStack sx={{ '@md': { justifyContent: 'center' } }}>
+            <Tooltip label={timeAgo(new Date(item.Timestamp))}>
+              <Text color="$muted500" size="xs">
+                {prettyDate(new Date(item.Timestamp))}
+              </Text>
+            </Tooltip>
+          </VStack>
         </VStack>
 
-        <Tooltip
-          h={undefined}
-          placement="bottom"
-          trigger={(triggerProps) => (
-            <Text
-              color="$muted500"
-              ml="auto"
-              size="xs"
-              sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
-              {...triggerProps}
-            >
-              {timeAgo(new Date(item.Timestamp))}
-            </Text>
-          )}
-        >
-          <TooltipContent>
-            <TooltipText>{prettyDate(item.Timestamp)}</TooltipText>
-          </TooltipContent>
-        </Tooltip>
+        <HStack space="lg" ml="auto">
+          <TooltipIconButton
+            label="Permit Domain"
+            icon={CheckIcon}
+            color="$green700"
+            onPress={() => handleClickDomain('permit', item.FirstName)}
+          />
 
-        <HStack space="md" ml="auto">
-          <Tooltip
-            h={undefined}
-            placement="bottom"
-            trigger={(triggerProps) => (
-              <HStack>
-                <Button
-                  sx={{
-                    '@base': { display: 'none' },
-                    '@md': { display: 'flex' }
-                  }}
-                  variant="link"
-                  {...triggerProps}
-                  onPress={() => handleClickDomain('permit', item.FirstName)}
-                >
-                  {/*<ButtonText>{item.Type}</ButtonText>*/}
-                  <ButtonIcon as={CheckIcon} color="$green700" />
-                </Button>
-              </HStack>
-            )}
-          >
-            <TooltipContent>
-              <TooltipText>Permit Domain</TooltipText>
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip
-            h={undefined}
-            placement="bottom"
-            trigger={(triggerProps) => (
-              <HStack>
-                <Button
-                  sx={{
-                    '@base': { display: 'none' },
-                    '@md': { display: 'flex' }
-                  }}
-                  variant="link"
-                  {...triggerProps}
-                  onPress={() => handleClickDomain('block', item.FirstName)}
-                >
-                  <ButtonIcon as={SlashIcon} color="$red700" />
-                </Button>
-              </HStack>
-            )}
-          >
-            <TooltipContent>
-              <TooltipText>Block Domain</TooltipText>
-            </TooltipContent>
-          </Tooltip>
+          <TooltipIconButton
+            label="Block Domain"
+            icon={SlashIcon}
+            color="$red700"
+            onPress={() => handleClickDomain('block', item.FirstName)}
+          />
         </HStack>
       </HStack>
     </Box>
@@ -229,83 +201,85 @@ const DNSLogHistoryList = (props) => {
   const [list, setList] = useState([])
   const [listFiltered, setListFiltered] = useState([])
   const [filterIps, setFilterIps] = useState([])
-  const [filterText, setFilterText] = useState(props.filterText || '')
+  const [filterText, setFilterText] = useState('')
+  const [filterType, setFilterType] = useState('')
   const [selectedDomain, setSelectedDomain] = useState('')
   const [selectedType, setSelectedType] = useState('')
   const [page, setPage] = useState(1)
+  const perPage = 20
   const [total, setTotal] = useState(0)
-  const [params, setParams] = useState({ num: 1000 })
-
-  const [devices, setDevices] = useState({})
+  const [params, setParams] = useState({ num: 20 })
+  const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0])
 
   const modalRef = React.useRef(null)
 
-  const deviceByIp = (ip) => {
-    return Object.values(devices).find((device) => device.RecentIP == ip) || {}
-  }
+  const refreshList = async (_params) => {
+    return new Promise((resolve, reject) => {
+      let apiParams = _params || params
 
-  const refreshList = async () => {
-    if (!filterIps.length) {
-      return setList([])
-    }
-
-    // NOTE native dont support Promise.allSettled
-    const allSettled = (promises) => {
-      return Promise.all(
-        promises.map((promise) =>
-          promise
-            .then((value) => ({ status: 'fulfilled', value }))
-            .catch((reason) => ({ status: 'rejected', reason }))
-        )
-      )
-    }
-
-    allSettled(
-      filterIps.map(async (ip) => {
-        try {
-          let bucket = `dns:serve:${ip}`
-
-          let stats = await dbAPI.stats(bucket)
-          setTotal(stats.KeyN)
-
-          let list = await dbAPI.items(bucket, params)
-          return list
-        } catch (error) {
-          throw `${ip}`
-        }
-      })
-    ).then((results) => {
-      let rejected = results
-        .filter((r) => r.status == 'rejected')
-        .map((r) => r.reason)
-
-      if (rejected.length) {
-        context.error('No DNS query history for ' + rejected.join(','))
-        setFilterIps([])
+      if (!filterIps.length) {
+        return setList([])
       }
 
-      let lists = results
-        .filter((r) => r.value && r.value.length)
-        .map((r) => r.value)
+      // NOTE native dont support Promise.allSettled
+      const allSettled = (promises) => {
+        return Promise.all(
+          promises.map((promise) =>
+            promise
+              .then((value) => ({ status: 'fulfilled', value }))
+              .catch((reason) => ({ status: 'rejected', reason }))
+          )
+        )
+      }
 
-      // merge and sort lists desc
-      let list = [].concat.apply([], lists)
-      list.sort(
-        (a, b) =>
-          new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime()
+      allSettled(
+        filterIps.map(async (ip) => {
+          try {
+            let bucket = `dns:serve:${ip}`
+
+            let stats = await dbAPI.stats(bucket)
+            setTotal(stats.KeyN)
+
+            let list = await dbAPI.items(bucket, apiParams)
+            return list
+          } catch (error) {
+            throw `${ip}`
+          }
+        })
       )
+        .then((results) => {
+          let rejected = results
+            .filter((r) => r.status == 'rejected')
+            .map((r) => r.reason)
 
-      list = list.map((item) => {
-        item.device = deviceByIp(item.Remote.split(':')[0])
-        return item
-      })
+          if (rejected.length) {
+            context.error('No DNS query history for ' + rejected.join(','))
+            setFilterIps([])
+          }
 
-      setList(list)
+          let lists = results
+            .filter((r) => r.value && r.value.length)
+            .map((r) => r.value)
+
+          // merge and sort lists desc
+          let list = [].concat.apply([], lists)
+          list.sort(
+            (a, b) =>
+              new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime()
+          )
+
+          setList(list)
+
+          resolve(list)
+        })
+        .catch((err) => {
+          reject(err)
+        })
     })
   }
 
   const filterList = () => {
-    let doFilter = filterText.length,
+    let doFilter = filterText.length || filterType.length,
       listFiltered = []
 
     if (doFilter) {
@@ -347,28 +321,45 @@ const DNSLogHistoryList = (props) => {
           }
         }
 
+        if (filterType && item.Type !== filterType) {
+          match = false
+        }
+
         return match
       })
     } else {
       listFiltered = list
     }
 
-    // no pagination for listFiltered if filterText
-    let perPage = filterText.length ? 100 : 20,
-      offset = 0 //(page - 1) * perPage
+    if (filterText.length) {
+      setTotal(listFiltered.length)
+    }
 
-    listFiltered = listFiltered.slice(offset, offset + perPage)
+    // no pagination for listFiltered if filterText
+    let _perPage = filterText.length ? 100 : 20
+
+    listFiltered = listFiltered.slice(0, _perPage)
 
     return listFiltered
   }
 
   const handleChangeIp = (ip) => {
     setFilterIps([ip])
+
+    AsyncStorage.getItem('select')
+      .then((oldSelect) => {
+        let select = JSON.parse(oldSelect) || {}
+
+        select.filterIps = [ip]
+        AsyncStorage.setItem('select', JSON.stringify(select))
+          .then((res) => {})
+          .catch((err) => {})
+      })
+      .catch((err) => {})
   }
 
   const handleChange = (value) => {
     setFilterText(value)
-    setPage(1)
   }
 
   const triggerAlert = (item) => {
@@ -400,40 +391,21 @@ const DNSLogHistoryList = (props) => {
   }
 
   useEffect(() => {
-    deviceAPI.list().then((devices) => {
-      setDevices(devices)
-      refreshList()
-    })
-
-    /*
-    const interval = setInterval(() => {
-      console.log('ZZ', list.length, 'P=', page, 'ips=', filterIps)
-      if (!list.length) {
-        return
-      }
-
-      if (page > 1) {
-        return
-      }
-
-      refreshList()
-    }, 5 * 1e3)
-
-    return () => clearInterval(interval)
-    */
-  }, [])
-
-  useEffect(() => {
     setFilterIps(props.ips)
-  }, [props.ips])
+    setFilterText(props.filterText)
+  }, [props.ips, props.filterText])
 
   useEffect(() => {
-    refreshList()
-
     if (filterIps.length) {
       navigate(`/admin/dnsLog/${filterIps.join(',')}/${filterText || ':text'}`)
     }
+  }, [filterIps, filterText])
+
+  useEffect(() => {
+    refreshList()
   }, [filterIps])
+
+  const flatListRef = React.useRef(null)
 
   useEffect(() => {
     let max = new Date().toISOString()
@@ -447,8 +419,13 @@ const DNSLogHistoryList = (props) => {
     setParams({ ...params, max })
   }, [page])
 
+  // when params change we fetch
   useEffect(() => {
-    refreshList()
+    if (params?.max) {
+      refreshList().then(() => {
+        flatListRef?.current?.scrollToOffset({ animated: false, offset: 0 })
+      })
+    }
   }, [params])
 
   const notifyChange = async () => {
@@ -463,18 +440,103 @@ const DNSLogHistoryList = (props) => {
     modalRef.current() // toggle modal
   }
 
+  // list updated or filter change: updated filtered list
   useEffect(() => {
     setListFiltered(filterList())
-  }, [list, filterText])
+    //TODO if list date change -- change this in selector also
+  }, [list, filterText, filterType])
+
+  useEffect(() => {
+    let num = filterText.length || filterType ? 1000 : 20
+    //NOTE if switch filterType we need to fetch again
+    if (true || num != params.num) {
+      setParams({ ...params, num })
+    }
+  }, [filterText, filterType])
+
+  useEffect(() => {
+    //NOTE same 24h
+    let min = new Date(dateTo)
+    min = min.toISOString()
+
+    let max = new Date(new Date(dateTo).toUTCString())
+    max.setHours(23, 59, 59)
+    max = max.toISOString()
+
+    setParams({
+      ...params,
+      min,
+      max
+    })
+  }, [dateTo])
 
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
 
-  let h = Platform.OS == 'web' ? Dimensions.get('window').height - 64 : '100%'
+  const onPressStats = async () => {
+    //TODO cleanup: this is to fetch 1000 insteaf of 20 when pagination
+    let num = 1000
+    setParams({ ...params, num })
+    let list = await refreshList({ ...params, num })
 
-  const colorMode = useColorMode()
+    let nDomains = {}
+    list.map((item) => {
+      let k = item.FirstName
+      if (!nDomains[k]) {
+        nDomains[k] = 0
+      }
+
+      nDomains[k]++
+    })
+
+    let maxTime = new Date(list[0].Timestamp)
+    let minTime = new Date(list[list.length - 1].Timestamp)
+    let numTotal = list.length
+
+    let title = `${prettyDate(minTime)} - ${prettyDate(
+      maxTime
+    )}\n${numTotal} records for ${filterIps.join(',')}`
+
+    const onPressDomain = (domain) => {
+      modalContext.toggleModal()
+      setFilterText(domain)
+    }
+
+    modalContext.modal(
+      title,
+      <ScrollView w="100%" maxHeight={320}>
+        <VStack space="xs">
+          {Object.entries(nDomains)
+            .sort((a, b) => b[1] - a[1])
+            .map(([domain, num]) => (
+              <HStack key={domain} space="md">
+                <HStack w="$16" alignItems="center" justifyContent="flex-end">
+                  <Text size="sm" bold>
+                    {num}
+                  </Text>
+                </HStack>
+                <HStack flex={2}>
+                  <Text size="sm" onPress={() => onPressDomain(domain)}>
+                    {domain}
+                  </Text>
+                </HStack>
+              </HStack>
+            ))}
+        </VStack>
+      </ScrollView>
+    )
+  }
+
+  const onSubmitFilterText = () => {
+    refreshList()
+  }
 
   return (
-    <View h={h} display="flex">
+    <View
+      h="$full"
+      sx={{
+        '@md': { h: '92vh' }
+      }}
+    >
       <ModalForm
         title={'Add override for Domain'}
         modalRef={modalRef}
@@ -488,26 +550,77 @@ const DNSLogHistoryList = (props) => {
         />
       </ModalForm>
 
-      <HStack space="md" p="$4" alignItems="center">
-        <Heading size="sm">{filterIps.join(',')} DNS Log</Heading>
-        {filterIps.length ? (
-          <Text color="$muted500">{total} records</Text>
-        ) : null}
-      </HStack>
+      <ListHeader
+        title={filterIps.join(',') + ' DNS Log'}
+        description={total ? `${total} records` : ''}
+      >
+        <HStack
+          space="xl"
+          sx={{
+            '@base': { display: 'none' },
+            '@md': { display: listFiltered.length ? 'flex' : 'none' }
+          }}
+        >
+          <ButtonGroup space="xs" isAttached>
+            <Button
+              size="xs"
+              action="primary"
+              variant="solid"
+              onPress={refreshList}
+            >
+              <ButtonIcon as={RefreshCwIcon} />
+            </Button>
+
+            <Button
+              size="xs"
+              action="secondary"
+              variant="solid"
+              onPress={onPressStats}
+              isDisabled={!filterIps.length}
+            >
+              <ButtonIcon as={BarChartIcon} mr="$2" />
+              <ButtonText>Stats</ButtonText>
+            </Button>
+
+            <Button
+              size="xs"
+              action="secondary"
+              variant="solid"
+              onPress={() => navigate('/admin/dnsLogEdit')}
+            >
+              <ButtonIcon as={Settings2Icon} mr="$2" />
+              <ButtonText>Settings</ButtonText>
+            </Button>
+          </ButtonGroup>
+
+          <Tooltip label={`Delete history for ${filterIps.join(',')}`}>
+            <Button
+              size="xs"
+              action="negative"
+              onPress={deleteHistory}
+              isDisabled={!filterIps.length}
+            >
+              <ButtonIcon as={TrashIcon} mr="$2" />
+              <ButtonText>Delete History</ButtonText>
+            </Button>
+          </Tooltip>
+        </HStack>
+      </ListHeader>
 
       <VStack
+        bg="$backgroundCardLight"
+        space="md"
+        p="$4"
+        h={Platform.OS == 'web' ? 'auto' : showForm ? 180 : 70}
         sx={{
           '@md': {
             flexDirection: 'row',
             gap: 'md'
+          },
+          _dark: {
+            backgroundColor: '$backgroundCardDark'
           }
         }}
-        bg={
-          colorMode == 'light' ? '$backgroundCardLight' : '$backgroundCardDark'
-        }
-        space="md"
-        p="$4"
-        h={Platform.OS == 'web' ? 'auto' : showForm ? 200 : 70}
       >
         <HStack
           sx={{ '@base': { maxWidth: '100%' }, '@md': { maxWidth: '$1/3' } }}
@@ -534,74 +647,88 @@ const DNSLogHistoryList = (props) => {
           </Button>
         </HStack>
 
-        <FormControl
+        <VStack
           flex={1}
+          space="sm"
           sx={{
             '@base': {
               display:
                 filterIps.length && list.length && showForm ? 'flex' : 'none'
-            }
+            },
+            '@md': { flexDirection: 'row' }
           }}
         >
-          <FormControlLabel>
-            <FormControlLabelText
-              size="sm"
+          <FormControl>
+            <FormControlLabel
+              sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
+            >
+              <FormControlLabelText size="sm">Date</FormControlLabelText>
+            </FormControlLabel>
+            <HStack space="sm">
+              <DatePicker value={dateTo} onChange={setDateTo} />
+            </HStack>
+          </FormControl>
+
+          <FormControl flex={1}>
+            <FormControlLabel
               sx={{
                 '@base': { display: 'none' },
                 '@md': { display: 'flex' }
               }}
             >
-              Search
-            </FormControlLabelText>
-          </FormControlLabel>
+              <FormControlLabelText size="sm">Search</FormControlLabelText>
+            </FormControlLabel>
 
-          <Input size="md">
-            <InputField
-              type="text"
-              name="filterText"
-              placeholder="Filter domain..."
-              value={filterText}
-              onChangeText={handleChange}
-              autoCapitalize="none"
-            />
-            <InputSlot pr="$3">
-              <InputIcon as={SearchIcon} />
-            </InputSlot>
-          </Input>
-        </FormControl>
+            <Input size="md">
+              <InputField
+                type="text"
+                name="filterText"
+                placeholder="Filter domain..."
+                value={filterText}
+                onChangeText={handleChange}
+                onSubmitEditing={onSubmitFilterText}
+                autoCapitalize="none"
+              />
+              <InputSlot
+                pr="$3"
+                onPress={() => (filterText.length ? setFilterText('') : null)}
+              >
+                <InputIcon
+                  as={CloseIcon}
+                  display={filterText.length ? 'flex' : 'none'}
+                />
+                <InputIcon
+                  as={SearchIcon}
+                  display={filterText.length ? 'none' : 'flex'}
+                />
+              </InputSlot>
+            </Input>
+          </FormControl>
 
-        <FormControl
-          flex={1}
-          sx={{
-            '@base': {
-              mt: 4,
-              display:
-                filterIps.length && list.length && showForm ? 'flex' : 'none'
-            },
-            '@md': {
-              mt: 0
-            }
-          }}
-        >
-          <FormControlLabel
-            sx={{
-              '@base': { display: 'none' },
-              '@md': { display: 'flex' }
-            }}
-          >
-            <FormControlLabelText size="sm">
-              Delete history
-            </FormControlLabelText>
-          </FormControlLabel>
-
-          <Button size="sm" action="negative" onPress={deleteHistory}>
-            <ButtonIcon as={TrashIcon}></ButtonIcon>
-            <ButtonText>Delete</ButtonText>
-          </Button>
-        </FormControl>
+          <FormControl>
+            <FormControlLabel
+              sx={{
+                '@base': { display: 'none' },
+                '@md': { display: 'flex' }
+              }}
+            >
+              <FormControlLabelText size="sm">Block Type</FormControlLabelText>
+            </FormControlLabel>
+            <Select
+              selectedValue={filterType}
+              onValueChange={(value) => setFilterType(value)}
+            >
+              <Select.Item label={'All'} value={''} />
+              {filterTypes.map((opt) => (
+                <Select.Item key={opt} label={opt} value={opt} />
+              ))}
+            </Select>
+          </FormControl>
+        </VStack>
       </VStack>
 
       <FlatList
+        ref={flatListRef}
         estimatedItemSize={100}
         flex={2}
         data={listFiltered}
@@ -611,33 +738,19 @@ const DNSLogHistoryList = (props) => {
             hideClient={hideClient}
             handleClickDomain={handleClickDomain}
             triggerAlert={triggerAlert}
+            setFilterText={setFilterText}
           />
         )}
         keyExtractor={(item) => item.Timestamp + item.Remote}
       />
 
-      {total > 20 && !filterText.length ? (
-        <HStack space="md" alignItems="flex-start">
-          <Button
-            flex={1}
-            action="secondary"
-            variant="link"
-            isDisabled={page <= 1}
-            size="sm"
-            onPress={() => setPage(/*page > 1 ? page - 1 : */ 1)}
-          >
-            <ButtonText>&larr; Start</ButtonText>
-          </Button>
-          <Button
-            flex={1}
-            action="secondary"
-            variant="link"
-            size="sm"
-            onPress={() => setPage(page + 1)}
-          >
-            <ButtonText>Next &rarr;</ButtonText>
-          </Button>
-        </HStack>
+      {total > perPage && !filterText.length ? (
+        <Pagination
+          page={page}
+          pages={total}
+          perPage={perPage}
+          onChange={setPage}
+        />
       ) : null}
     </View>
   )

@@ -173,6 +173,27 @@ func PlusEnabled() bool {
 	return config.PlusToken != ""
 }
 
+func validatePlus(plugin PluginConfig) bool {
+	//validate PLUS, GitURL and ComposeFilePath is whitelisted.
+
+	//let superd handle validating ComposeFilePath for custom plugins.
+	if plugin.Plus == true {
+		for _, plusPlugin := range gPlusExtensionDefaults {
+			if plusPlugin.GitURL == plugin.GitURL && plusPlugin.ComposeFilePath == plugin.ComposeFilePath {
+				//found a match
+				return true
+			}
+		}
+		return false
+	} else {
+		//only PLUS plugins have git urls for now
+		if plugin.GitURL != "" {
+			return false
+		}
+	}
+
+	return true
+}
 func getPlugins(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	Configmtx.Lock()
@@ -246,16 +267,6 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 			validURI := regexp.MustCompile(`^[A-Za-z0-9\/\-]+$`).MatchString
 			validUnixPath := regexp.MustCompile(`^[A-Za-z0-9\/\-\._]+$`).MatchString
 
-			if plugin.GitURL != "" {
-				http.Error(w, "GitURL not supported", 400)
-				return
-			}
-
-			if plugin.Plus != false {
-				http.Error(w, "PLUS not supported", 400)
-				return
-			}
-
 			if !validName(plugin.Name) {
 				http.Error(w, "Invalid Name", 400)
 				return
@@ -288,6 +299,11 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 			}
 
 			if !found {
+				//when creating, make sure these are known plus
+				if !validatePlus(plugin) {
+					http.Error(w, "invalid plugin options", 400)
+				}
+
 				config.Plugins = append(config.Plugins, plugin)
 			}
 		}

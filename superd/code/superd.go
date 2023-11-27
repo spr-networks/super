@@ -101,27 +101,35 @@ func setReleaseChannel(Channel string) error {
 	return os.WriteFile(ReleaseChannelFile, []byte(channelFiltered), 0644)
 }
 
+func isVirtual() bool {
+	//when this is set, SPR is configured to run on
+	// its own network namespace.
+	return os.Getenv("VIRTUAL_SPR") != ""
+}
+
 func getDefaultCompose() string {
 	envCompose := os.Getenv("COMPOSE_FILE")
 	if envCompose != "" {
 		return envCompose
 	}
-	// when no SSID is set in configs/base/config.sh,
-	// assume virtual SPR is running
-	virtual_spr := os.Getenv("VIRTUAL_SPR")
-	if virtual_spr != "" {
+
+	if isVirtual() {
 		return "docker-compose-virt.yml"
 	}
 	return "docker-compose.yml"
 }
 
-func composeCommand(composeFile string, target string, command string, optional string, new_docker bool) {
+func composeCommand(composeFileIN string, target string, command string, optional string, new_docker bool) {
 	args := []string{}
 	release_channel := ""
 	release_version := ""
 
-	if !strings.Contains(composeFile, "plugins") {
+	composeFile := composeFileIN
+
+	if !strings.Contains(composeFile, "plugins") || isVirtual() {
 		// important to get/set release channel and version for rollbacks and dev channels etc
+
+		//we ignore these if its a plugin and were not in virtual mode.
 		release_channel = getReleaseChannel()
 		release_version = getReleaseVersion()
 	}
@@ -134,8 +142,9 @@ func composeCommand(composeFile string, target string, command string, optional 
 		os.Setenv("RELEASE_VERSION", release_version)
 	}
 
+	defaultCompose := getDefaultCompose()
 	if composeFile == "" {
-		composeFile = getDefaultCompose()
+		composeFile = defaultCompose
 	}
 
 	composeAllowed := false
@@ -151,7 +160,30 @@ func composeCommand(composeFile string, target string, command string, optional 
 		return
 	}
 
-	args = append(args, "-f", composeFile, command)
+	/*
+		//upon testing this recreates service:base senselessly,
+		// causing the services to lose their network. dont do this,
+		// and take the restart hit for anything other than stop
+	*/
+	if command == "stop" && target == "" && isVirtual() {
+		//define target for virtual to avoid total restart
+		//TBD; need a tenable solution for this. perhaps parse compose file and pull
+		//the first service.
+		if composeFile == "plugins/plus/pfw_extension/docker-compose.yml" {
+			target = "pfw"
+		} else if composeFile == "plugins/plus/mesh_extension/docker-compose.yml" {
+			target = "mesh"
+		}
+
+	}
+
+	if composeFileIN != "" && composeFile != getDefaultCompose() && isVirtual() {
+		//we need to add the default in for virtual mode
+		// so that it can pick up service:base
+		args = append(args, "-f", defaultCompose, "-f", composeFile, command)
+	} else {
+		args = append(args, "-f", composeFile, command)
+	}
 
 	if optional != "" {
 		args = append(args, optional)
@@ -189,6 +221,13 @@ func composeCommand(composeFile string, target string, command string, optional 
 
 		if release_version != "" {
 			d_args = append(d_args, "-e", "RELEASE_VERSION="+release_version)
+		}
+
+		if isVirtual() {
+			//need to propagate this variable
+			d_args = append(d_args, "-e", "VIRTUAL_SPR="+os.Getenv("VIRTUAL_SPR"))
+			//set network mode
+			d_args = append(d_args, "-e", "NETWORK_MODE=service:base")
 		}
 
 		//docker.io, ever annoying, integrated compose as a subcommand.

@@ -14,6 +14,7 @@ import {
   VStack,
   useColorMode
 } from '@gluestack-ui/themed'
+import { InterfaceItem } from 'components/TagItem'
 
 export class WifiClientCount extends Component {
   state = { numberOfClients: 0 }
@@ -108,6 +109,67 @@ export const WifiInfo = (props) => {
 }
 
 export const Interfaces = (props) => {
+  const [addrs, setAddrs] = useState([])
+
+  useEffect(() => {
+    wifiAPI.ipAddr().then((data) => {
+      let ifaddrs = []
+      for (let entry of data) {
+        for (let address of entry.addr_info) {
+          if (address.scope == 'global') {
+            address.ifname = entry.ifname
+            ifaddrs.push(address)
+          }
+
+          break
+        }
+      }
+
+      ifaddrs.sort((a, b) => {
+        if (a.ifname.startsWith('wlan')) {
+          return -1000
+        } else if (b.ifname.startsWith('wlan')) {
+          return 1000
+        }
+        return a.ifname.indexOf(b.ifname)
+      })
+
+      setAddrs(ifaddrs)
+    })
+  }, [])
+
+  return (
+    <Box
+      bg={
+        useColorMode() == 'light'
+          ? '$backgroundCardLight'
+          : '$backgroundCardDark'
+      }
+      borderRadius={10}
+      p="$4"
+    >
+      <Heading size="md" fontWeight={300} textAlign="center">
+        Interfaces
+      </Heading>
+
+      <Divider my="$2" />
+
+      <HStack space="md" justifyContent="center" flexWrap="wrap">
+        {addrs.map((address, index) => (
+          <HStack key={`${address.local}.${index}`} space="md">
+            <InterfaceItem
+              size="sm"
+              name={address.ifname}
+              address={`${address.local}/${address.prefixlen}`}
+            />
+          </HStack>
+        ))}
+      </HStack>
+    </Box>
+  )
+}
+
+export const InterfacesFull = (props) => {
   const [addrs, setAddrs] = useState([])
 
   useEffect(() => {

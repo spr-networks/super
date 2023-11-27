@@ -421,7 +421,7 @@ const actions = [
         name: 'DstInterface',
         type: PropTypes.string,
         description:
-          'Destination site (ex: site0, Must begin with "site" or be an Uplink interface)'
+          'Destination site'
       },
       {
         name: 'Dst',

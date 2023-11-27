@@ -86,7 +86,7 @@ const WifiInterface = ({ iw, ...props }) => {
     <View
       key={iw.wiphy}
       bg="$backgroundCardLight"
-      minHeight={200}
+      minHeight={400}
       maxHeight={400}
       sx={{
         _dark: { bg: '$backgroundCardDark' },
@@ -105,37 +105,36 @@ const WifiInterface = ({ iw, ...props }) => {
         borderColor="$borderColorCardLight"
         flex={1}
       >
-        <VStack
-          borderRightWidth={1}
-          borderRightColor="$borderColorCardLight"
-          sx={{
-            _dark: { borderRightColor: '$borderColorCardDark' }
-          }}
-          p="$2"
-          px="$2"
-          flexDirection="row"
-          space="md"
-          flexWrap="wrap"
-        >
-          {tabList.map((tab) =>
-            iw[tab] || ['other', 'SPR compatibility'].includes(tab) ? (
-              <Button
-                key={tab}
-                action={activeTab === tab ? 'primary' : 'secondary'}
-                variant={activeTab === tab ? 'outline' : 'link'}
-                p="$1.5"
-                size="sm"
-                rounded={false}
-                justifyContent={'flex-start'}
-                onPress={() => setActiveTab(tab)}
-              >
-                <ButtonText>
-                  {tab.replace(/_/g, ' ').replace('supported ', '')}
-                </ButtonText>
-              </Button>
-            ) : null
-          )}
-        </VStack>
+        <ScrollView w="$full" horizontal pb="$2">
+          <HStack
+            sx={{
+              _dark: { borderRightColor: '$borderColorCardDark' }
+            }}
+            p="$2"
+            px="$2"
+            space="md"
+            w="$full"
+          >
+            {tabList.map((tab) =>
+              iw[tab] || ['other', 'SPR compatibility'].includes(tab) ? (
+                <Button
+                  key={tab}
+                  action={activeTab === tab ? 'primary' : 'secondary'}
+                  variant={activeTab === tab ? 'outline' : 'link'}
+                  p="$1.5"
+                  size="sm"
+                  rounded={false}
+                  justifyContent={'flex-start'}
+                  onPress={() => setActiveTab(tab)}
+                >
+                  <ButtonText>
+                    {tab.replace(/_/g, ' ').replace('supported ', '')}
+                  </ButtonText>
+                </Button>
+              ) : null
+            )}
+          </HStack>
+        </ScrollView>
 
         <ScrollView h="$full" p="$2" sx={{ '_@md': { w: '$2/3' } }}>
           {tabList.map((tab) =>

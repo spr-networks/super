@@ -13,4 +13,9 @@ umount /mnt/fs
 IMG="./data/spr.img"
 LOOP=$(losetup -j $IMG | cut -d: -f1)
 
+# shrink back img
+ef2sck -f ${LOOP}p2
+resize2fs ${LOOP}p2 7G
+
 losetup -d $LOOP 2>/dev/null
+truncate -s 8G $IMG
