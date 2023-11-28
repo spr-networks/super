@@ -70,6 +70,7 @@ const Sidebar = ({
   return (
     <>
       <ScrollView
+        showsVerticalScrollIndicator={false}
         w={isMini ? '20' : '100%'}
         h="92%"
         borderRightWidth={isMobile ? '$0' : '$1'}
