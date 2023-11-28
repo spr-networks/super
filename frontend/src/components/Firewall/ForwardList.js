@@ -100,7 +100,7 @@ const ForwardList = (props) => {
               <BadgeText>{item.Protocol}</BadgeText>
             </Badge>
 
-            <HStack space={1}>
+            <HStack flex={1} space={1} justifyContent="flex-end">
               <Text bold>
                 {item.deviceSrc ? item.deviceSrc.Name : item.SrcIP}
               </Text>
@@ -110,7 +110,7 @@ const ForwardList = (props) => {
 
             <ArrowRightIcon color="$muted500" />
 
-            <HStack space={1}>
+            <HStack flex={1} space={1}>
               <Text bold>
                 {item.deviceDst &&
                 item.deviceDst.Name &&
