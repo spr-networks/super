@@ -456,12 +456,16 @@ const DNSLogHistoryList = (props) => {
 
   useEffect(() => {
     //NOTE same 24h
+    let utcOffsetMS = new Date().getTimezoneOffset() * 60000;
     let min = new Date(dateTo)
+    min.setTime(min.getTime() + utcOffsetMS)
     min = min.toISOString()
 
-    let max = new Date(new Date(dateTo).toUTCString())
-    max.setHours(23, 59, 59)
-    max = max.toISOString()
+    let nextDay = new Date(dateTo);
+    nextDay.setTime(nextDay.getTime() + utcOffsetMS)
+    nextDay.setDate(nextDay.getDate() + 1)
+    let max = nextDay.toISOString()
+
 
     setParams({
       ...params,
