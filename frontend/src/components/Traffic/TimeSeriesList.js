@@ -16,11 +16,14 @@ import {
   Text,
   VStack
 } from '@gluestack-ui/themed'
-import { ModalContext } from 'AppContext'
+import { AppContext, ModalContext } from 'AppContext'
 import { copy } from 'utils'
+import DeviceItem from 'components/Devices/DeviceItem'
 
 const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
+  const context = useContext(AppContext)
   const modalContext = useContext(ModalContext)
+
   const regexLAN = /^192\.168\./ //TODO dont rely on this
 
   const [list, setList] = useState([])
@@ -95,13 +98,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
     return <></>
   })
 
-  const onPressIp = (e) => {
-    let ip = e.target.innerText
-
-    if (!ip) {
-      return
-    }
-
+  const onPressIp = (ip) => {
     if (ip.match(regexLAN) && setFilterIps) {
       setFilterIps([ip])
       return
@@ -137,7 +134,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
             justifyContent="space-between"
           >
             <HStack
-              flex={1}
+              flex={2}
               space="md"
               justifyContent="space-between"
               alignItems="center"
@@ -145,30 +142,45 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
               {/*['WanOut', 'LanOut', 'LanIn'].includes(type) ? (
                   <Text bold>{item.deviceSrc && item.deviceSrc.Name}</Text>
                 ) : null*/}
-              <Pressable flex={1} onPress={onPressIp}>
-                <Text size="sm">{item.Src}</Text>
-              </Pressable>
-              <Text size="sm">{item.SrcDomain}</Text>
+              <VStack flex={type.match(/Out$/) ? 2 : 3}>
+                <Text size="sm" bold>
+                  {item.SrcDomain}
+                </Text>
+                {type == 'WanOut' ? (
+                  <DeviceItem
+                    item={context.getDevice(item.Src, 'RecentIP')}
+                    size="sm"
+                  />
+                ) : (
+                  <Text size="sm" onPress={() => onPressIp(item.Src)}>
+                    {item.Src}
+                  </Text>
+                )}
+              </VStack>
               <Box alignText="center">
                 <ArrowRightIcon color="$muted200" />
               </Box>
-              {/*['WanIn', 'LanOut', 'LanIn'].includes(type) ? (
-                  <Text bold>{item.deviceDst && item.deviceDst.Name}</Text>
-                ) : null*/}
-              <Pressable flex={1} onPress={onPressIp}>
-                <Text size="sm" textAlign="right">
-                  {item.Dst}
-                </Text>
-                <Text size="sm" textAlign="right">
+              <VStack flex={type.match(/Out$/) ? 3 : 2}>
+                <Text size="sm" bold>
                   {item.DstDomain}
                 </Text>
-              </Pressable>
+                {type == 'WanIn' ? (
+                  <DeviceItem
+                    item={context.getDevice(item.Dst, 'RecentIP')}
+                    size="sm"
+                  />
+                ) : (
+                  <Text size="sm" onPress={() => onPressIp(item.Dst)}>
+                    {item.Dst}
+                  </Text>
+                )}
+              </VStack>
             </HStack>
             {showASN ? (
-              <HStack flex={1} alignItems="center">
+              <HStack flex={1} space="sm" alignItems="center">
                 {/*TODO also src depending on type*/}
                 <AsnIcon asn={item.Asn} />
-                <Text color="$muted500" size="sm" isTruncated>
+                <Text color="$muted500" size="xs" isTruncated>
                   {item.Asn}
                 </Text>
               </HStack>
