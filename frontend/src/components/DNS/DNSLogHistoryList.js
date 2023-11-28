@@ -657,7 +657,7 @@ const DNSLogHistoryList = (props) => {
           sx={{
             '@base': {
               display:
-                filterIps.length && list.length && showForm ? 'flex' : 'none'
+                filterIps.length && showForm ? 'flex' : 'none'
             },
             '@md': { flexDirection: 'row' }
           }}
