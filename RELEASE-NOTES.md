@@ -1,4 +1,6 @@
 # Secure Programmable Router (SPR) Release Notes
+## v0.3.2
+* Add Domain info from recent lookups to TrafficList and the packet event log
 
 ## v0.3.1
 
