@@ -132,7 +132,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
         >
           <VStack
             sx={{ '@md': { flexDirection: 'row' } }}
-            flex={2}
+            flex={5}
             space="md"
             justifyContent="space-between"
           >
@@ -148,6 +148,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
               <Pressable flex={1} onPress={onPressIp}>
                 <Text size="sm">{item.Src}</Text>
               </Pressable>
+              <Text size="sm">{item.SrcDomain}</Text>
               <Box alignText="center">
                 <ArrowRightIcon color="$muted200" />
               </Box>
@@ -157,6 +158,9 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
               <Pressable flex={1} onPress={onPressIp}>
                 <Text size="sm" textAlign="right">
                   {item.Dst}
+                </Text>
+                <Text size="sm" textAlign="right">
+                  {item.DstDomain}
                 </Text>
               </Pressable>
             </HStack>
