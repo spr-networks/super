@@ -65,7 +65,7 @@ const BlockList = (props) => {
         data={list}
         renderItem={({ item }) => (
           <ListItem>
-            <Badge action="info" variant="outline">
+            <Badge action="muted" variant="outline">
               <BadgeText>{item.Protocol}</BadgeText>
             </Badge>
 
