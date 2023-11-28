@@ -63,16 +63,13 @@ export default function MockAPI() {
         DeviceTags: ['private']
       })
 
-      for (let i = 3; i < 10; i++) {
+      let devs = ['phone', 'laptop', 'tv', 'desktop', 'iphone', 'android']
+
+      for (let i = 3; i < devs.length + 3; i++) {
+        let Name = devs[i - 3]
+
         server.create('device', {
-          Name: `${rpick([
-            'phone',
-            'laptop',
-            'tv',
-            'desktop',
-            'iphone',
-            'android'
-          ])}`,
+          Name,
           MAC: Array(6).fill(`${i}${i}`).join(':'),
           WGPubKey: 'pubkey',
           //VLANTag: 'vlantag',
@@ -148,22 +145,11 @@ export default function MockAPI() {
         DstIP: '192.168.1.102',
         Protocol: 'tcp'
       })
-      server.create('blockrule', {
-        SrcIP: '1.2.3.4',
-        DstIP: '0.0.0.0/0',
-        Protocol: 'udp'
-      })
 
       server.create('forwardblockrule', {
         SrcIP: '1.2.3.4',
         DstPort: '0-65535',
         DstIP: '6.7.8.9/24',
-        Protocol: 'tcp'
-      })
-      server.create('forwardblockrule', {
-        SrcIP: '1.2.3.4',
-        DstIP: '6.7.8.9/24',
-        DstPort: '0-65535',
         Protocol: 'tcp'
       })
 
