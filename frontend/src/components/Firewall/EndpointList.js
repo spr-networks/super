@@ -147,7 +147,7 @@ const EndpointList = (props) => {
     <VStack>
       <ListHeader
         title="Endpoints"
-        description="Describe Service Endpoints for building Firewall Rules"
+        description="Describe Service Endpoints for building One-Way Firewall Rules and short names"
       >
         <ModalForm
           title="Add Service Endpoint"

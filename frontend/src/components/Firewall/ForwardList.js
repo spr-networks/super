@@ -75,7 +75,7 @@ const ForwardList = (props) => {
     <VStack>
       <ListHeader
         title="Port Forwarding"
-        description="Set rules for DNAT forwarding of incoming traffic"
+        description="Set rules to forward of incoming traffic"
       >
         <ModalForm
           title="Add Port Forwarding Rule"

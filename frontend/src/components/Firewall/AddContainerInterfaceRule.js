@@ -114,7 +114,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
             />
           </Input>
           <FormControlHelper>
-            <FormControlHelperText>Name</FormControlHelperText>
+            <FormControlHelperText>Friendly name for rule</FormControlHelperText>
           </FormControlHelper>
         </FormControl>
 
@@ -130,7 +130,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
             />
           </Input>
           <FormControlHelper>
-            <FormControlHelperText>IP address or CIDR</FormControlHelperText>
+            <FormControlHelperText>IP address or CIDR allowed for interface</FormControlHelperText>
           </FormControlHelper>
         </FormControl>
 
@@ -183,6 +183,9 @@ class AddContainerInterfaceRuleImpl extends React.Component {
               onSelectionChange={this.handleGroups}
             />
           </HStack>
+          <FormControlHelper>
+            <FormControlHelperText>Add 'api' for access to SPR API. 'dns', 'wan' for internet access, and 'lan' for network access to all SPR devices</FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
         <Button action="primary" size="md" onPress={this.handleSubmit}>
