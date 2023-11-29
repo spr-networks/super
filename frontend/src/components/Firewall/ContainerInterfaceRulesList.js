@@ -22,7 +22,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
-import { GroupItem } from 'components/TagItem'
+import { GroupItem, TagItem } from 'components/TagItem'
 
 const ContainerInterfaceRulesList = (props) => {
   let list = props.list || []
@@ -87,10 +87,17 @@ const ContainerInterfaceRulesList = (props) => {
               <Text flex={1}>{item.RouteDst}</Text>
             </VStack>
             <HStack flex={1} space="sm">
-              {item.Groups.map((entry) => (
+              {item.Groups ? item.Groups.map((entry) => (
                 <GroupItem key={entry} name={entry} />
-              ))}
+              )) : null}
             </HStack>
+
+            <HStack flex={1} space="sm">
+              {item.Tags ? item.Tags.map((entry) => (
+                <TagItem key={entry} name={entry} />
+              )) : null}
+            </HStack>
+
 
             <HStack>
               {item.SetRoute ? (

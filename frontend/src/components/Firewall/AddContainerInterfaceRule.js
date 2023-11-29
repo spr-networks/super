@@ -44,6 +44,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
   }
 
   defaultGroups = ['wan', 'dns', 'lan', 'api']
+  defaultTags = ['lan_upstream']
 
   constructor(props) {
     super(props)
@@ -65,7 +66,8 @@ class AddContainerInterfaceRuleImpl extends React.Component {
       SrcIP: this.state.SrcIP,
       RouteDst: this.state.RouteDst,
       Interface: this.state.Interface,
-      Groups: this.state.Groups
+      Groups: this.state.Groups,
+      Tags: this.state.Tags,
     }
 
 
@@ -92,6 +94,10 @@ class AddContainerInterfaceRuleImpl extends React.Component {
 
   handleGroups = (groups) => {
     this.handleChange('Groups', groups)
+  }
+
+  handleTags = (tags) => {
+    this.handleChange('Tags', tags)
   }
 
   render() {
@@ -166,9 +172,9 @@ class AddContainerInterfaceRuleImpl extends React.Component {
           </FormControlHelper>
         </FormControl>
 
-        <FormControl isRequired>
+        <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Network Groups</FormControlLabelText>
+            <FormControlLabelText>Network Groups & Tags</FormControlLabelText>
           </FormControlLabel>
           <HStack flexWrap="wrap" w="$full" space="md">
             <HStack space="md" flexWrap="wrap" alignItems="center">
@@ -176,17 +182,31 @@ class AddContainerInterfaceRuleImpl extends React.Component {
                 <GroupItem key={group} name={group} size="sm" />
               ))}
             </HStack>
-
+            <HStack space="md" flexWrap="wrap" alignItems="center">
+              {this.state.Tags.map((tag) => (
+                <TagItem key={tag} name={tag} size="sm" />
+              ))}
+            </HStack>
+          </HStack>
+          <HStack space="md" flexWrap="wrap" alignItems="center">
             <GroupMenu
               items={[...new Set(this.defaultGroups.concat(this.state.GroupOptions))]}
               selectedKeys={this.state.Groups}
               onSelectionChange={this.handleGroups}
             />
+
+            <TagMenu
+              items={[...new Set(this.defaultTags.concat(this.state.TagOptions))]}
+              selectedKeys={this.state.Tags}
+              onSelectionChange={this.handleTags}
+            />
+
           </HStack>
           <FormControlHelper>
             <FormControlHelperText>Add 'api' for access to SPR API. 'dns', 'wan' for internet access, and 'lan' for network access to all SPR devices</FormControlHelperText>
           </FormControlHelper>
         </FormControl>
+
 
         <Button action="primary" size="md" onPress={this.handleSubmit}>
           <ButtonText>Save</ButtonText>
