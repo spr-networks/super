@@ -46,7 +46,11 @@ export default function MockAPI() {
           Psk: 'password'
         },
         Groups: ['lan', 'dns'],
-        DeviceTags: ['private']
+        DeviceTags: ['private'],
+        Style: {
+          Icon: 'Router',
+          Color: 'amber'
+        }
       })
 
       server.create('device', {
@@ -60,13 +64,31 @@ export default function MockAPI() {
           Psk: 'password'
         },
         Groups: ['lan', 'dns'],
-        DeviceTags: ['private']
+        DeviceTags: ['private'],
+        Style: {
+          Icon: 'Laptop',
+          Color: 'blueGray'
+        }
       })
 
       let devs = ['phone', 'laptop', 'tv', 'desktop', 'iphone', 'android']
 
       for (let i = 3; i < devs.length + 3; i++) {
         let Name = devs[i - 3]
+        let Icon = Name.match(/phone|android/) ? 'Mobile' : 'Laptop'
+        if (Name.match(/tv/)) Icon = 'Tv'
+        let Color = rpick([
+          'violet',
+          'purple',
+          'fuchsia',
+          'pink',
+          'red',
+          'tertiary',
+          'teal',
+          'cyan',
+          'blueGray',
+          'amber'
+        ])
 
         server.create('device', {
           Name,
@@ -79,7 +101,11 @@ export default function MockAPI() {
             Psk: `password${i}`
           },
           Groups: ['lan', 'dns'],
-          DeviceTags: ['private']
+          DeviceTags: ['private'],
+          Style: {
+            Icon,
+            Color
+          }
         })
       }
 
