@@ -627,6 +627,13 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 	crule.Groups = normalizeStringSlice(crule.Groups)
 	crule.Tags = normalizeStringSlice(crule.Tags)
 
+	if len(crule.Tags) > 0 {
+		if strings.Contains(crule.SrcIP, "/") {
+			http.Error(w, "Tags not yet supported with SrcIP ranges ", 400)
+			return
+		}
+	}
+
 	if r.Method == http.MethodDelete {
 		for i := range gFirewallConfig.CustomInterfaceRules {
 			a := gFirewallConfig.CustomInterfaceRules[i]
@@ -1274,9 +1281,27 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 		}
 	}
 
-	/*
-		TBD: tags support?
-	*/
+	if strings.Contains(container_rule.SrcIP, "/") && len(container_rule.Tags) > 0 {
+		log.Println("[-] Error : tags not supported for range on custom interface rule", container_rule.Interface, container_rule.SrcIP, container_rule.Tags)
+	} else {
+		foundTag := false
+		for _, tag := range container_rule.Tags {
+			if tag == DEVICE_TAG_PERMIT_PRIVATE_UPSTREAM_ACCESS {
+				foundTag = true
+				break
+			}
+		}
+
+		inUpstreamAllowed := hasPrivateUpstreamAccess(container_rule.SrcIP)
+
+		if foundTag && !inUpstreamAllowed {
+			//if has the tag but not in the verdict map, add it
+			allowPrivateUpstreamAccess(container_rule.SrcIP)
+		} else if !foundTag && inUpstreamAllowed {
+			//if in the verdict map but does not have the tag, remove it
+			removePrivateUpstreamAccess(container_rule.SrcIP)
+		}
+	}
 
 	//set up route
 	if container_rule.RouteDst != "" {
