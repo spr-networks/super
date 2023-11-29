@@ -475,7 +475,7 @@ export default function MockAPI() {
         ]
       })
 
-      this.get('/info/dockernetworks'), (schema, request) => {
+      this.get('/info/dockernetworks', (schema, request) => {
         return  [{
                   "Name": "none",
                   "Id": "0af4adec2d12a0429f0146259b0a4a8a2ba1a4a2749683b06d1bad065bae6923",
@@ -591,7 +591,7 @@ export default function MockAPI() {
                   },
                   "Labels": {}
               }]
-      }
+      })
 
       this.get('/nfmap/:id', (schema, request) => {
         let id = request.params.id
