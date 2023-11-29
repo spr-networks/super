@@ -1,7 +1,7 @@
-import React, { useRef, useContext } from 'react'
+import React, { useRef, useContext, useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
 
-import { firewallAPI } from 'api'
+import { firewallAPI, api } from 'api'
 import ModalForm from 'components/ModalForm'
 import AddContainerInterfaceRule from './AddContainerInterfaceRule'
 import { AlertContext, AppContext } from 'AppContext'
@@ -31,6 +31,33 @@ const ContainerInterfaceRulesList = (props) => {
   let refModal = useRef(null)
   const appContext = useContext(AppContext)
   const alertContext = useContext(AlertContext)
+  const [interfaceList, setInterfaceList] = useState([])
+  const [netBlocks, setNetblocks] = useState([])
+
+  useEffect(() => {
+
+    api
+      .get('/info/dockernetworks')
+      .then((docker) => {
+        let networked = docker.filter(
+          (n) => n.Options && n.Options["com.docker.network.bridge.name"]
+        )
+
+        let s = []
+        let blocks = []
+        for (let n of networked) {
+          let iface = n.Options["com.docker.network.bridge.name"]
+          s.push(iface)
+          if (n.IPAM?.Config?.[0]?.Subnet) {
+            blocks.push(n.IPAM.Config[0].Subnet)
+          }
+        }
+        setInterfaceList(s)
+        setNetblocks(blocks)
+      })
+      .catch((err) => context.error('fail ' + err))
+
+  }, [])
 
   const deleteListItem = (item) => {
     const done = (res) => {
@@ -66,6 +93,8 @@ const ContainerInterfaceRulesList = (props) => {
           <AddContainerInterfaceRule
             notifyChange={notifyChange}
             appContext={appContext}
+            interfaceList={interfaceList}
+            netBlocks={netBlocks}
           />
         </ModalForm>
       </ListHeader>

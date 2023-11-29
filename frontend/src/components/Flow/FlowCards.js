@@ -37,7 +37,7 @@ import {
 
 import { BrandIcons } from 'IconUtils'
 
-import { api, deviceAPI, wifiAPI } from 'api'
+import { api, deviceAPI, wifiAPI, firewallAPI } from 'api'
 import { pfwAPI } from 'api/Pfw'
 import {
   numToDays,
@@ -365,7 +365,16 @@ const actions = [
                   s.push({ label: iface.Name, value: iface.Name })
                 }
               }
-              resolve(s)
+
+
+              //and the fw config for custom interfaces
+              firewallAPI.config().then((fwconfig) => {
+                let ifaces = Array(...new Set(fwconfig.CustomInterfaceRules.map(a=>a.Interface)))
+                for (let iface of ifaces) {
+                  s.push({label: iface, value: iface})
+                }
+                resolve(s)
+              })
             })
           })
         })
@@ -470,7 +479,15 @@ const actions = [
                   s.push({ label: iface.Name, value: iface.Name })
                 }
               }
-              resolve(s)
+
+              firewallAPI.config().then((fwconfig) => {
+                let ifaces = Array(...new Set(fwconfig.CustomInterfaceRules.map(a=>a.Interface)))
+                for (let iface of ifaces) {
+                  s.push({label: iface, value: iface})
+                }
+                resolve(s)
+              })
+
             })
           })
         })
