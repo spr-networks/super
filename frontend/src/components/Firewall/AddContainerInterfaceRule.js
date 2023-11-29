@@ -30,6 +30,7 @@ import { TagItem, GroupItem } from 'components/TagItem'
 import { GroupMenu, TagMenu } from 'components/TagMenu'
 
 import ProtocolRadio from 'components/Form/ProtocolRadio'
+import InputSelect from 'components/InputSelect'
 
 class AddContainerInterfaceRuleImpl extends React.Component {
   state = {
@@ -44,6 +45,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
   }
 
   defaultGroups = ['wan', 'dns', 'lan', 'api']
+  defaultTags = ['lan_upstream']
 
   constructor(props) {
     super(props)
@@ -53,6 +55,12 @@ class AddContainerInterfaceRuleImpl extends React.Component {
   }
 
   handleChange(name, value) {
+    if (name == 'Interface') {
+      let ifaceIdx = this.props.interfaceList.indexOf(value)
+      if (ifaceIdx > -1) {
+        this.setState({ SrcIP : this.props.netBlocks[ifaceIdx] })
+      }
+    }
     this.setState({ [name]: value })
   }
 
@@ -65,7 +73,8 @@ class AddContainerInterfaceRuleImpl extends React.Component {
       SrcIP: this.state.SrcIP,
       RouteDst: this.state.RouteDst,
       Interface: this.state.Interface,
-      Groups: this.state.Groups
+      Groups: this.state.Groups,
+      Tags: this.state.Tags,
     }
 
 
@@ -94,12 +103,12 @@ class AddContainerInterfaceRuleImpl extends React.Component {
     this.handleChange('Groups', groups)
   }
 
-  render() {
-    //this.props.appContext.getGroups().then((g) => {
-//      alert(g)
-  //  })
-    //alert(this.props.appContext.getGroups())
+  handleTags = (tags) => {
+    this.handleChange('Tags', tags)
+  }
 
+  render() {
+    let interfaceOptions = this.props.interfaceList.map((n) => { return {label: n, value: n}})
     return (
       <VStack space="md">
         <FormControl>
@@ -114,13 +123,30 @@ class AddContainerInterfaceRuleImpl extends React.Component {
             />
           </Input>
           <FormControlHelper>
-            <FormControlHelperText>Name</FormControlHelperText>
+            <FormControlHelperText>Friendly name for rule</FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+
+
+        <FormControl isRequired>
+          <FormControlLabel>
+            <FormControlLabelText>Interface</FormControlLabelText>
+          </FormControlLabel>
+          <InputSelect
+            variant="underlined"
+            value={this.state.Interface}
+            options={interfaceOptions}
+            onChangeText={(value) => this.handleChange('Interface', value)}
+            onChange={(value) => this.handleChange('Interface', value)}
+          />
+          <FormControlHelper>
+            <FormControlHelperText>Interface name (type one if not in the list)</FormControlHelperText>
           </FormControlHelper>
         </FormControl>
 
         <FormControl isRequired>
           <FormControlLabel>
-            <FormControlLabelText>Interface Address Range</FormControlLabelText>
+            <FormControlLabelText>Container Address Range</FormControlLabelText>
           </FormControlLabel>
           <Input size="md" variant="underlined">
             <InputField
@@ -130,8 +156,9 @@ class AddContainerInterfaceRuleImpl extends React.Component {
             />
           </Input>
           <FormControlHelper>
-            <FormControlHelperText>IP address or CIDR</FormControlHelperText>
+            <FormControlHelperText>IP address or CIDR allowed as Source IPs for the interface.</FormControlHelperText>
           </FormControlHelper>
+
         </FormControl>
 
         <FormControl>
@@ -150,25 +177,9 @@ class AddContainerInterfaceRuleImpl extends React.Component {
           </FormControlHelper>
         </FormControl>
 
-        <FormControl isRequired>
+        <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Interface</FormControlLabelText>
-          </FormControlLabel>
-          <Input size="md" variant="underlined">
-            <InputField
-              variant="underlined"
-              value={this.state.Interface}
-              onChangeText={(value) => this.handleChange('Interface', value)}
-            />
-          </Input>
-          <FormControlHelper>
-            <FormControlHelperText>Interface name</FormControlHelperText>
-          </FormControlHelper>
-        </FormControl>
-
-        <FormControl isRequired>
-          <FormControlLabel>
-            <FormControlLabelText>Network Groups</FormControlLabelText>
+            <FormControlLabelText>Network Groups & Tags</FormControlLabelText>
           </FormControlLabel>
           <HStack flexWrap="wrap" w="$full" space="md">
             <HStack space="md" flexWrap="wrap" alignItems="center">
@@ -176,14 +187,34 @@ class AddContainerInterfaceRuleImpl extends React.Component {
                 <GroupItem key={group} name={group} size="sm" />
               ))}
             </HStack>
-
+            <HStack space="md" flexWrap="wrap" alignItems="center">
+              {this.state.Tags.map((tag) => (
+                <TagItem key={tag} name={tag} size="sm" />
+              ))}
+            </HStack>
+          </HStack>
+          <HStack space="md" flexWrap="wrap" alignItems="center">
             <GroupMenu
               items={[...new Set(this.defaultGroups.concat(this.state.GroupOptions))]}
               selectedKeys={this.state.Groups}
               onSelectionChange={this.handleGroups}
             />
+
+            <TagMenu
+              items={[...new Set(this.defaultTags.concat(this.state.TagOptions))]}
+              selectedKeys={this.state.Tags}
+              onSelectionChange={this.handleTags}
+            />
+
           </HStack>
+          <FormControlHelper>
+            <FormControlHelperText>Add 'api' for access to SPR API. 'dns', 'wan' for internet access, and 'lan' for network access to all SPR devices.</FormControlHelperText>
+          </FormControlHelper>
+          <FormControlHelper>
+            <FormControlHelperText>The lan_upstream tag is not accepted for a range at this time</FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
+
 
         <Button action="primary" size="md" onPress={this.handleSubmit}>
           <ButtonText>Save</ButtonText>
@@ -204,6 +235,8 @@ export default function AddContainerInterfaceRule(props) {
       notifyChange={props.notifyChange}
       alertContext={alertContext}
       appContext={props.appContext}
+      interfaceList={props.interfaceList}
+      netBlocks={props.netBlocks}
     ></AddContainerInterfaceRuleImpl>
   )
 }

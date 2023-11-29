@@ -7,11 +7,10 @@ const DatePicker = ({ value, onChange }) => {
   const inputRef = React.useRef(null)
 
   const setValue = (value) => {
-    let defaultValue = new Date().toISOString()
+    let defaultValue = new Date().toString()
     let v = value || defaultValue
     let splitChar = v.includes('T') ? 'T' : ' '
     v = v.split(splitChar)[0]
-
     inputRef.current.setAttribute('value', v)
   }
 
