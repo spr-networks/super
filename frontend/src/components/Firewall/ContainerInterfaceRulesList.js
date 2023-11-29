@@ -55,7 +55,7 @@ const ContainerInterfaceRulesList = (props) => {
         setInterfaceList(s)
         setNetblocks(blocks)
       })
-      .catch((err) => context.error('fail ' + err))
+      .catch((err) => alertContext.error('fail ' + err))
 
   }, [])
 
