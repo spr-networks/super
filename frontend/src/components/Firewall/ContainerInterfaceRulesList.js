@@ -35,18 +35,17 @@ const ContainerInterfaceRulesList = (props) => {
   const [netBlocks, setNetblocks] = useState([])
 
   useEffect(() => {
-
     api
       .get('/info/dockernetworks')
       .then((docker) => {
         let networked = docker.filter(
-          (n) => n.Options && n.Options["com.docker.network.bridge.name"]
+          (n) => n.Options && n.Options['com.docker.network.bridge.name']
         )
 
         let s = []
         let blocks = []
         for (let n of networked) {
-          let iface = n.Options["com.docker.network.bridge.name"]
+          let iface = n.Options['com.docker.network.bridge.name']
           s.push(iface)
           if (n.IPAM?.Config?.[0]?.Subnet) {
             blocks.push(n.IPAM.Config[0].Subnet)
@@ -55,8 +54,7 @@ const ContainerInterfaceRulesList = (props) => {
         setInterfaceList(s)
         setNetblocks(blocks)
       })
-      .catch((err) => context.error('fail ' + err))
-
+      .catch((err) => alertContext.error('fail ' + err))
   }, [])
 
   const deleteListItem = (item) => {
@@ -64,8 +62,12 @@ const ContainerInterfaceRulesList = (props) => {
       props.notifyChange('custom_interface')
     }
 
-    firewallAPI.deleteCustomInterfaceRule(item).then(done)
-      .catch((err) => {alertContext.error('Firewall API Failure', err)})
+    firewallAPI
+      .deleteCustomInterfaceRule(item)
+      .then(done)
+      .catch((err) => {
+        alertContext.error('Firewall API Failure', err)
+      })
   }
 
   const notifyChange = (t) => {
@@ -116,17 +118,18 @@ const ContainerInterfaceRulesList = (props) => {
               <Text flex={1}>{item.RouteDst}</Text>
             </VStack>
             <HStack flex={1} space="sm">
-              {item.Groups ? item.Groups.map((entry) => (
-                <GroupItem key={entry} name={entry} />
-              )) : null}
+              {item.Groups
+                ? item.Groups.map((entry) => (
+                    <GroupItem key={entry} name={entry} />
+                  ))
+                : null}
             </HStack>
 
             <HStack flex={1} space="sm">
-              {item.Tags ? item.Tags.map((entry) => (
-                <TagItem key={entry} name={entry} />
-              )) : null}
+              {item.Tags
+                ? item.Tags.map((entry) => <TagItem key={entry} name={entry} />)
+                : null}
             </HStack>
-
 
             <HStack>
               {item.SetRoute ? (
