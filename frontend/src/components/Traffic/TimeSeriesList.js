@@ -128,21 +128,18 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
           justifyContent="space-between"
         >
           <VStack
-            sx={{ '@md': { flexDirection: 'row' } }}
             flex={5}
             space="md"
             justifyContent="space-between"
+            sx={{ '@md': { flexDirection: 'row' } }}
           >
-            <HStack
+            <VStack
               flex={2}
               space="md"
               justifyContent="space-between"
-              alignItems="center"
+              sx={{ '@md': { flexDirection: 'row', alignItems: 'center' } }}
             >
-              {/*['WanOut', 'LanOut', 'LanIn'].includes(type) ? (
-                  <Text bold>{item.deviceSrc && item.deviceSrc.Name}</Text>
-                ) : null*/}
-              <VStack flex={type.match(/Out$/) ? 2 : 3}>
+              <VStack sx={{ '@md': { flex: type.match(/Out$/) ? 2 : 3 } }}>
                 <Text size="sm" bold>
                   {item.SrcDomain}
                 </Text>
@@ -157,7 +154,11 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
                   </Text>
                 )}
               </VStack>
-              <Box alignText="center">
+              <Box
+                alignText="center"
+                display="none"
+                sx={{ '@md': { display: 'flex' } }}
+              >
                 <ArrowRightIcon color="$muted200" />
               </Box>
               <VStack flex={type.match(/Out$/) ? 3 : 2}>
@@ -175,7 +176,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
                   </Text>
                 )}
               </VStack>
-            </HStack>
+            </VStack>
             {showASN ? (
               <HStack flex={1} space="sm" alignItems="center">
                 {/*TODO also src depending on type*/}
@@ -195,7 +196,12 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
             sx={{ '@md': { justifyContent: 'flex-end' } }}
           >
             <Text size="xs">{timeAgo(item.Timestamp)}</Text>
-            <Badge action="muted" variant="outline" alignSelf="center">
+            <Badge
+              size="sm"
+              action="muted"
+              variant="outline"
+              alignSelf="center"
+            >
               <BadgeText>{prettySize(item.Bytes)}</BadgeText>
             </Badge>
           </HStack>
