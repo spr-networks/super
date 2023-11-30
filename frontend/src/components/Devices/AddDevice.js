@@ -41,9 +41,13 @@ import {
   TooltipContent,
   TooltipText
 } from '@gluestack-ui/themed'
+import { AppContext } from 'AppContext'
+import { ListHeader } from 'components/List'
 
 const AddDevice = (props) => {
   const context = useContext(AlertContext)
+  const appContext = useContext(AppContext)
+  const isSimpleMode = appContext.isSimpleMode
 
   const [mac, setMac] = useState('')
   const [name, setName] = useState('')
@@ -246,107 +250,91 @@ const AddDevice = (props) => {
   }
 
   return (
-    <ScrollView
-      space="md"
-      width="$full"
+    <VStack
       sx={{
-        '@md': { width: '$5/6' }
+        '@lg': { width: '$5/6' }
       }}
-      h="$full"
     >
-      <Heading size="sm">Add a new WiFi Device</Heading>
-      <VStack mb="$4">
+      <ListHeader title="Add a new WiFi Device" />
+      <VStack display={isSimpleMode ? 'none' : 'flex'} px="$4">
         <Text color="$muted500" size="xs">
-          Wired devices do not need to be added here. They will show up when
-          they DHCP, and need WAN/DNS assignment for internet access.
+          Wired devices are added automatically & need WAN/DNS groups assigned
+          to them for internet access
         </Text>
         <Text color="$muted500" size="xs">
-          If they they need a VLAN Tag ID for a Managed Port do add the device
-          here.
+          If they need a VLAN Tag ID for a Managed Port do add the device here
         </Text>
       </VStack>
 
-      <VStack space="lg">
-        <FormControl isRequired isInvalid={'name' in errors}>
-          <FormControlLabel>
-            <FormControlLabelText>Device Name</FormControlLabelText>
-          </FormControlLabel>
-          <Input size="md">
-            <InputField
-              autoFocus
-              value={name}
-              onChangeText={(value) => handleChange('name', value)}
-              onBlur={() => handleChange('name', name)}
-              onSubmitEditing={handleSubmit}
-            />
-          </Input>
-          {'name' in errors ? (
-            <FormControlError>
-              <FormControlErrorIcon as={AlertCircleIcon} />
-              <FormControlErrorText>Cannot be empty</FormControlErrorText>
-            </FormControlError>
-          ) : (
-            <FormControlHelper>
-              <FormControlHelperText>
-                A unique name for the device
-              </FormControlHelperText>
-            </FormControlHelper>
-          )}
-        </FormControl>
-
-        <VStack space="md" minH={180}>
-          <FormControl flex={1} isInvalid={'mac' in errors}>
+      <VStack space="3xl" p="$4">
+        <VStack
+          space="md"
+          sx={{
+            '@md': { flexDirection: 'row' }
+          }}
+        >
+          <FormControl flex={1} isRequired isInvalid={'name' in errors}>
             <FormControlLabel>
-              <FormControlLabelText>MAC Address</FormControlLabelText>
+              <FormControlLabelText>Device Name</FormControlLabelText>
             </FormControlLabel>
-            <Input variant="underlined">
+            <Input size="md">
               <InputField
-                autoComplete="new-password"
-                onChangeText={(value) => handleChange('mac', value)}
+                autoFocus
+                value={name}
+                onChangeText={(value) => handleChange('name', value)}
+                onBlur={() => handleChange('name', name)}
+                onSubmitEditing={handleSubmit}
               />
             </Input>
-            {'mac' in errors ? (
+            {'name' in errors ? (
+              <FormControlError>
+                <FormControlErrorIcon as={AlertCircleIcon} />
+                <FormControlErrorText>Cannot be empty</FormControlErrorText>
+              </FormControlError>
+            ) : (
+              <FormControlHelper>
+                <FormControlHelperText>
+                  A unique name for the device
+                </FormControlHelperText>
+              </FormControlHelper>
+            )}
+          </FormControl>
+
+          <FormControl flex={1} isInvalid={'psk' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>Passphrase</FormControlLabelText>
+            </FormControlLabel>
+            <Input size="md">
+              <InputField
+                type="password"
+                autoComplete="new-password"
+                autoCorrect={false}
+                onChangeText={(value) => handleChange('psk', value)}
+              />
+            </Input>
+            {'psk' in errors ? (
               <FormControlError>
                 <FormControlErrorIcon as={AlertCircleIcon} />
                 <FormControlErrorText>
-                  format: 00:00:00:00:00:00
+                  must be at least 8 characters long
                 </FormControlErrorText>
               </FormControlError>
             ) : (
               <FormControlHelper>
                 <FormControlHelperText>
-                  Optional. Will be assigned on connect if empty
+                  Optional. If empty a random password will be generated
                 </FormControlHelperText>
               </FormControlHelper>
             )}
           </FormControl>
+        </VStack>
 
-          <FormControl flex={1} isInvalid={'VLAN' in errors}>
-            <FormControlLabel>
-              <FormControlLabelText>VLAN Tag ID</FormControlLabelText>
-            </FormControlLabel>
-            <Input variant="underlined">
-              <InputField
-                autoComplete="new-password"
-                onChangeText={(value) => handleChange('vlan', value)}
-              />
-            </Input>
-
-            {'VLAN' in errors ? (
-              <FormControlError>
-                <FormControlErrorIcon as={AlertCircleIcon} />
-                <FormControlErrorText>format: 1234</FormControlErrorText>
-              </FormControlError>
-            ) : (
-              <FormControlHelper>
-                <FormControlHelperText>
-                  Only needed for Wired devices on a managed port, set VLAN Tag
-                  ID
-                </FormControlHelperText>
-              </FormControlHelper>
-            )}
-          </FormControl>
-
+        <VStack
+          space="md"
+          sx={{
+            '@md': { flexDirection: 'row' }
+          }}
+        >
           <FormControl flex={1}>
             <FormControlLabel>
               <FormControlLabelText>Authentication</FormControlLabelText>
@@ -383,45 +371,8 @@ const AddDevice = (props) => {
               <FormControlHelperText>WPA3 is recommended</FormControlHelperText>
             </FormControlHelper>
           </FormControl>
-        </VStack>
 
-        <VStack
-          sx={{
-            '@md': { flexDirection: 'row' }
-          }}
-          space="md"
-          alignItems="flex-start"
-          pb="$8"
-        >
-          <FormControl flex="2" isInvalid={'psk' in errors}>
-            <FormControlLabel>
-              <FormControlLabelText>Passphrase</FormControlLabelText>
-            </FormControlLabel>
-            <Input variant="underlined">
-              <InputField
-                type="password"
-                autoComplete="new-password"
-                autoCorrect={false}
-                onChangeText={(value) => handleChange('psk', value)}
-              />
-            </Input>
-            {'psk' in errors ? (
-              <FormControlError>
-                <FormControlErrorIcon as={AlertCircleIcon} />
-                <FormControlErrorText>
-                  must be at least 8 characters long
-                </FormControlErrorText>
-              </FormControlError>
-            ) : (
-              <FormControlHelper>
-                <FormControlHelperText>
-                  Optional. If empty a random password will be generated
-                </FormControlHelperText>
-              </FormControlHelper>
-            )}
-          </FormControl>
-
-          <FormControl flex={2}>
+          <FormControl flex={1}>
             <FormControlLabel>
               <FormControlLabelText>Groups</FormControlLabelText>
             </FormControlLabel>
@@ -474,7 +425,7 @@ const AddDevice = (props) => {
             </FormControlHelper>
           </FormControl>
 
-          <FormControl flex={2}>
+          <FormControl flex={1} display={isSimpleMode ? 'none' : 'flex'}>
             <FormControlLabel>
               <FormControlLabelText>Tags</FormControlLabelText>
             </FormControlLabel>
@@ -516,43 +467,107 @@ const AddDevice = (props) => {
           </FormControl>
         </VStack>
 
-        <VStack>
-          <FormControl flex={2}>
+        <VStack
+          space="md"
+          display={isSimpleMode ? 'none' : 'flex'}
+          sx={{
+            '@md': { flexDirection: 'row' }
+          }}
+        >
+          <FormControl flex={1} isInvalid={'mac' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>MAC Address</FormControlLabelText>
+            </FormControlLabel>
+            <Input size="md">
+              <InputField
+                autoComplete="new-password"
+                onChangeText={(value) => handleChange('mac', value)}
+              />
+            </Input>
+            {'mac' in errors ? (
+              <FormControlError>
+                <FormControlErrorIcon as={AlertCircleIcon} />
+                <FormControlErrorText>
+                  format: 00:00:00:00:00:00
+                </FormControlErrorText>
+              </FormControlError>
+            ) : (
+              <FormControlHelper>
+                <FormControlHelperText>
+                  Optional. Will be assigned on connect if empty
+                </FormControlHelperText>
+              </FormControlHelper>
+            )}
+          </FormControl>
+
+          <FormControl flex={1} isInvalid={'VLAN' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>VLAN Tag ID</FormControlLabelText>
+            </FormControlLabel>
+            <Input size="md">
+              <InputField
+                autoComplete="new-password"
+                onChangeText={(value) => handleChange('vlan', value)}
+              />
+            </Input>
+
+            {'VLAN' in errors ? (
+              <FormControlError>
+                <FormControlErrorIcon as={AlertCircleIcon} />
+                <FormControlErrorText>format: 1234</FormControlErrorText>
+              </FormControlError>
+            ) : (
+              <FormControlHelper>
+                <FormControlHelperText>
+                  Only needed for Wired devices on a managed port, set VLAN Tag
+                  ID
+                </FormControlHelperText>
+              </FormControlHelper>
+            )}
+          </FormControl>
+        </VStack>
+
+        <VStack
+          space="md"
+          sx={{
+            '@md': { flexDirection: 'row', width: '$1/2' }
+          }}
+        >
+          <FormControl flex={1} display={isSimpleMode ? 'none' : 'flex'}>
             <FormControlLabel>
               <FormControlLabelText>Expiration</FormControlLabelText>
             </FormControlLabel>
 
-            <InputSelect
-              options={expirationOptions}
-              value={
-                expiration
-                  ? timeAgo(new Date(Date.now() + expiration * 1e3))
-                  : 'Never'
-              }
-              onChange={(v) => handleChange('Expiration', parseInt(v))}
-              onChangeText={(v) => handleChange('Expiration', parseInt(v))}
-            />
+            <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
+              <InputSelect
+                options={expirationOptions}
+                value={
+                  expiration
+                    ? timeAgo(new Date(Date.now() + expiration * 1e3))
+                    : 'Never'
+                }
+                onChange={(v) => handleChange('Expiration', parseInt(v))}
+                onChangeText={(v) => handleChange('Expiration', parseInt(v))}
+              />
+
+              <Checkbox
+                size="md"
+                value={deleteExpiry}
+                defaultIsChecked={deleteExpiry}
+                onChange={() => setDeleteExpiry(!deleteExpiry)}
+              >
+                <CheckboxIndicator mr="$2">
+                  <CheckboxIcon />
+                </CheckboxIndicator>
+                <CheckboxLabel>Delete on expiry</CheckboxLabel>
+              </Checkbox>
+            </VStack>
 
             <FormControlHelper>
               <FormControlHelperText>
                 If non zero has unix time for when the entry should disappear
               </FormControlHelperText>
             </FormControlHelper>
-
-            <FormControlLabel>
-              <FormControlLabelText>Delete on expiry</FormControlLabelText>
-            </FormControlLabel>
-
-            <Checkbox
-              value={deleteExpiry}
-              defaultIsChecked={deleteExpiry}
-              onChange={() => setDeleteExpiry(!deleteExpiry)}
-            >
-              <CheckboxIndicator mr="$2">
-                <CheckboxIcon />
-              </CheckboxIndicator>
-              <CheckboxLabel>Remove device</CheckboxLabel>
-            </Checkbox>
           </FormControl>
         </VStack>
 
@@ -560,7 +575,7 @@ const AddDevice = (props) => {
           <ButtonText>Save</ButtonText>
         </Button>
       </VStack>
-    </ScrollView>
+    </VStack>
   )
 }
 
