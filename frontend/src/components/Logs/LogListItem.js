@@ -7,7 +7,6 @@ import React, { useContext, useEffect, useState } from 'react'
 import { prettyDate } from 'utils'
 import { Buffer } from 'buffer'
 import { JSONSyntax, HEXSyntax } from 'components/SyntaxHighlighter'
-import Prism from 'prismjs';
 
 import {
   Badge,
