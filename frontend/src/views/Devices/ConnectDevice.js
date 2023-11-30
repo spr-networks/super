@@ -97,7 +97,7 @@ const WifiConnect = (props) => {
               {ssid}
             </Text>
           </HStack>
-          <HStack space={1}>
+          <HStack space="sm">
             <Text size="md" color="$muted500">
               Password
             </Text>
