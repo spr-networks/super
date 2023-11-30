@@ -7,6 +7,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import { prettyDate } from 'utils'
 import { Buffer } from 'buffer'
 import { JSONSyntax, HEXSyntax } from 'components/SyntaxHighlighter'
+import Prism from 'prismjs';
 
 import {
   Badge,
@@ -285,8 +286,8 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         borderWidth="$0"
         w="$full"
       >
-        <JSONSyntax>{jsonData}</JSONSyntax>
-        {hexLines ? <HEXSyntax>{hexLines}</HEXSyntax> : null}
+        <JSONSyntax code={jsonData} />
+        {hexLines ? <HEXSyntax code={hexLines}/> : null}
         <Button
           action="secondary"
           variant="link"
