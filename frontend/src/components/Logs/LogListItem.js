@@ -285,8 +285,8 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         borderWidth="$0"
         w="$full"
       >
-        <JSONSyntax>{jsonData}</JSONSyntax>
-        {hexLines ? <HEXSyntax>{hexLines}</HEXSyntax> : null}
+        <JSONSyntax code={jsonData} />
+        {hexLines ? <HEXSyntax code={hexLines}/> : null}
         <Button
           action="secondary"
           variant="link"

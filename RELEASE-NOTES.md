@@ -1,7 +1,11 @@
 # Secure Programmable Router (SPR) Release Notes
 ## v0.3.2
+* Fixes for DNS Log date picker 
 * Add Domain info from recent lookups to TrafficList and the packet event log
 * Add tag support and populating interfaces from Docker for Custom Interface rules
+* Further simplify some dialogues in simple mode
+* Fix reload of custom compose paths, without restarting superd
+* Reduce UI load size by switching syntax highlighter for events
 
 ## v0.3.1
 

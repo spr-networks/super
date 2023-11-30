@@ -1,5 +1,5 @@
-import { default as RNSyntaxHighlighter } from 'react-native-syntax-highlighter'
-import { github, ocean } from 'react-syntax-highlighter/styles/hljs'
+import React from "react";
+import { Highlight, themes } from "prism-react-renderer"
 import { useColorMode } from '@gluestack-ui/themed'
 
 //skip some properties
@@ -12,40 +12,53 @@ const dumpJSON = (item, clean = false) => {
   return JSON.stringify(rest)
 }
 
+
 const JSONSyntax = ({ language, ...props }) => {
   const colorMode = useColorMode()
-  const syntaxTheme = colorMode == 'light' ? github : ocean
+  const syntaxTheme = colorMode == 'light' ? themes.nightOwlLight : themes.nightOwlDark
 
   return (
-    <RNSyntaxHighlighter
-      highlighter="hljs"
-      language="json"
-      style={syntaxTheme}
-      wrapLongLines={true}
-      lineProps={{ style: { flexWrap: 'wrap', lineHeight: 1.5 } }} // Adjusted line height
-      customStyle={{
-        backgroundColor: 'transparent'
-      }}
+    <Highlight
+      theme={syntaxTheme}
+      code={props.code}
+      language="js"
     >
-      {props.children}
-    </RNSyntaxHighlighter>
+      {({ className, style, tokens, getLineProps, getTokenProps }) => (
+        <pre style={style}>
+          {tokens.map((line, i) => (
+            <div key={i} {...getLineProps({ line })}>
+              {line.map((token, key) => (
+                <span key={key} {...getTokenProps({ token })} />
+              ))}
+            </div>
+          ))}
+        </pre>
+      )}
+    </Highlight>
   )
 }
 
 const HEXSyntax = ({ ...props }) => {
   const colorMode = useColorMode()
-  const syntaxTheme = colorMode == 'light' ? github : ocean
-
+  const syntaxTheme = colorMode == 'light' ? themes.nightOwlLight : themes.nightOwlDark
   return (
-    <RNSyntaxHighlighter
-      language="brainfuck"
-      style={syntaxTheme}
-      customStyle={{
-        backgroundColor: 'transparent'
-      }}
+    <Highlight
+      theme={syntaxTheme}
+      code={props.code}
+      language="none"
     >
-      {props.children}
-    </RNSyntaxHighlighter>
+      {({ className, style, tokens, getLineProps, getTokenProps }) => (
+        <pre style={style}>
+          {tokens.map((line, i) => (
+            <div key={i} {...getLineProps({ line })}>
+              {line.map((token, key) => (
+                <span key={key} {...getTokenProps({ token })} />
+              ))}
+            </div>
+          ))}
+        </pre>
+      )}
+    </Highlight>
   )
 }
 
