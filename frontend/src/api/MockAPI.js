@@ -397,11 +397,22 @@ export default function MockAPI() {
           }
 
           let _dev = {
-            MAC,
-            Name: attrs.Name,
-            PSKEntry,
-            Groups: [],
-            DeviceTags: []
+            Name: 'newdevice',
+            MAC: '11:11:11:11:11:23',
+            WGPubKey: 'pubkey',
+            VLANTag: 'vlantag',
+            RecentIP: '192.168.2.123',
+            PSKEntry: {
+              Type: 'sae',
+              Psk: 'password'
+            },
+            Groups: ['lan', 'dns'],
+            DeviceTags: ['private'],
+            Style: {
+              Icon: 'Laptop',
+              Color: 'blueGray'
+            },
+            ...attrs
           }
 
           schema.devices.create(_dev)
@@ -488,121 +499,123 @@ export default function MockAPI() {
       })
 
       this.get('/info/dockernetworks', (schema, request) => {
-        return  [{
-                  "Name": "none",
-                  "Id": "0af4adec2d12a0429f0146259b0a4a8a2ba1a4a2749683b06d1bad065bae6923",
-                  "Created": "2023-11-16T17:27:11.145807881Z",
-                  "Scope": "local",
-                  "Driver": "null",
-                  "EnableIPv6": false,
-                  "IPAM": {
-                      "Driver": "default",
-                      "Options": null,
-                      "Config": []
-                  },
-                  "Internal": false,
-                  "Attachable": false,
-                  "Ingress": false,
-                  "ConfigFrom": {
-                      "Network": ""
-                  },
-                  "ConfigOnly": false,
-                  "Containers": {},
-                  "Options": {},
-                  "Labels": {}
-              },
-              {
-                  "Name": "spr-mitmproxy_mitmnet",
-                  "Id": "35dea03471420e9b1913b4046bf2d3983ff81505693d637a080127d6474eb802",
-                  "Created": "2023-11-17T03:32:38.507735167Z",
-                  "Scope": "local",
-                  "Driver": "bridge",
-                  "EnableIPv6": false,
-                  "IPAM": {
-                      "Driver": "default",
-                      "Options": null,
-                      "Config": [
-                          {
-                              "Subnet": "172.19.0.0/16",
-                              "Gateway": "172.19.0.1"
-                          }
-                      ]
-                  },
-                  "Internal": false,
-                  "Attachable": false,
-                  "Ingress": false,
-                  "ConfigFrom": {
-                      "Network": ""
-                  },
-                  "ConfigOnly": false,
-                  "Containers": {},
-                  "Options": {
-                      "com.docker.network.bridge.name": "mitmweb0"
-                  },
-                  "Labels": {
-                      "com.docker.compose.network": "mitmnet",
-                      "com.docker.compose.project": "spr-mitmproxy",
-                      "com.docker.compose.version": "2.21.0"
-                  }
-              },
-              {
-                  "Name": "host",
-                  "Id": "78ab816140fe23ba86c5ed5ba5e1d64fcecf063df07346d609ab8cd519dfbc94",
-                  "Created": "2023-11-16T17:27:11.194437585Z",
-                  "Scope": "local",
-                  "Driver": "host",
-                  "EnableIPv6": false,
-                  "IPAM": {
-                      "Driver": "default",
-                      "Options": null,
-                      "Config": []
-                  },
-                  "Internal": false,
-                  "Attachable": false,
-                  "Ingress": false,
-                  "ConfigFrom": {
-                      "Network": ""
-                  },
-                  "ConfigOnly": false,
-                  "Containers": {},
-                  "Options": {},
-                  "Labels": {}
-              },
-              {
-                  "Name": "bridge",
-                  "Id": "43a43805e2386fcc05130baa145f4291b901de2c8b6eae24ad286316e70f6416",
-                  "Created": "2023-11-25T09:02:59.603700795Z",
-                  "Scope": "local",
-                  "Driver": "bridge",
-                  "EnableIPv6": false,
-                  "IPAM": {
-                      "Driver": "default",
-                      "Options": null,
-                      "Config": [
-                          {
-                              "Subnet": "172.17.0.0/16",
-                              "Gateway": "172.17.0.1"
-                          }
-                      ]
-                  },
-                  "Internal": false,
-                  "Attachable": false,
-                  "Ingress": false,
-                  "ConfigFrom": {
-                      "Network": ""
-                  },
-                  "ConfigOnly": false,
-                  "Containers": {},
-                  "Options": {
-                      "com.docker.network.bridge.default_bridge": "true",
-                      "com.docker.network.bridge.enable_icc": "true",
-                      "com.docker.network.bridge.enable_ip_masquerade": "false",
-                      "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
-                      "com.docker.network.bridge.name": "docker0",
-                      "com.docker.network.driver.mtu": "1500"
-                  },
-                  "Labels": {}
-              }]
+        return [
+          {
+            Name: 'none',
+            Id: '0af4adec2d12a0429f0146259b0a4a8a2ba1a4a2749683b06d1bad065bae6923',
+            Created: '2023-11-16T17:27:11.145807881Z',
+            Scope: 'local',
+            Driver: 'null',
+            EnableIPv6: false,
+            IPAM: {
+              Driver: 'default',
+              Options: null,
+              Config: []
+            },
+            Internal: false,
+            Attachable: false,
+            Ingress: false,
+            ConfigFrom: {
+              Network: ''
+            },
+            ConfigOnly: false,
+            Containers: {},
+            Options: {},
+            Labels: {}
+          },
+          {
+            Name: 'spr-mitmproxy_mitmnet',
+            Id: '35dea03471420e9b1913b4046bf2d3983ff81505693d637a080127d6474eb802',
+            Created: '2023-11-17T03:32:38.507735167Z',
+            Scope: 'local',
+            Driver: 'bridge',
+            EnableIPv6: false,
+            IPAM: {
+              Driver: 'default',
+              Options: null,
+              Config: [
+                {
+                  Subnet: '172.19.0.0/16',
+                  Gateway: '172.19.0.1'
+                }
+              ]
+            },
+            Internal: false,
+            Attachable: false,
+            Ingress: false,
+            ConfigFrom: {
+              Network: ''
+            },
+            ConfigOnly: false,
+            Containers: {},
+            Options: {
+              'com.docker.network.bridge.name': 'mitmweb0'
+            },
+            Labels: {
+              'com.docker.compose.network': 'mitmnet',
+              'com.docker.compose.project': 'spr-mitmproxy',
+              'com.docker.compose.version': '2.21.0'
+            }
+          },
+          {
+            Name: 'host',
+            Id: '78ab816140fe23ba86c5ed5ba5e1d64fcecf063df07346d609ab8cd519dfbc94',
+            Created: '2023-11-16T17:27:11.194437585Z',
+            Scope: 'local',
+            Driver: 'host',
+            EnableIPv6: false,
+            IPAM: {
+              Driver: 'default',
+              Options: null,
+              Config: []
+            },
+            Internal: false,
+            Attachable: false,
+            Ingress: false,
+            ConfigFrom: {
+              Network: ''
+            },
+            ConfigOnly: false,
+            Containers: {},
+            Options: {},
+            Labels: {}
+          },
+          {
+            Name: 'bridge',
+            Id: '43a43805e2386fcc05130baa145f4291b901de2c8b6eae24ad286316e70f6416',
+            Created: '2023-11-25T09:02:59.603700795Z',
+            Scope: 'local',
+            Driver: 'bridge',
+            EnableIPv6: false,
+            IPAM: {
+              Driver: 'default',
+              Options: null,
+              Config: [
+                {
+                  Subnet: '172.17.0.0/16',
+                  Gateway: '172.17.0.1'
+                }
+              ]
+            },
+            Internal: false,
+            Attachable: false,
+            Ingress: false,
+            ConfigFrom: {
+              Network: ''
+            },
+            ConfigOnly: false,
+            Containers: {},
+            Options: {
+              'com.docker.network.bridge.default_bridge': 'true',
+              'com.docker.network.bridge.enable_icc': 'true',
+              'com.docker.network.bridge.enable_ip_masquerade': 'false',
+              'com.docker.network.bridge.host_binding_ipv4': '0.0.0.0',
+              'com.docker.network.bridge.name': 'docker0',
+              'com.docker.network.driver.mtu': '1500'
+            },
+            Labels: {}
+          }
+        ]
       })
 
       this.get('/nfmap/:id', (schema, request) => {
@@ -1506,7 +1519,7 @@ export default function MockAPI() {
       })
 
       this.get('/version', () => {
-        return '"0.2.26"'
+        return '"0.3.1"'
       })
 
       this.get('/info/hostname', () => {
