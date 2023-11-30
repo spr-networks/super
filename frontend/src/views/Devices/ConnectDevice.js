@@ -86,7 +86,7 @@ const WifiConnect = (props) => {
   }
 
   return (
-    <VStack>
+    <VStack p="$4">
       {ssids.map((ssid) => (
         <VStack key={ssid} space="md" alignItems="center">
           <HStack space="sm">
