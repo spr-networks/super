@@ -1,7 +1,7 @@
-import React, { useRef, useContext } from 'react'
+import React, { useRef, useContext, useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
 
-import { firewallAPI } from 'api'
+import { firewallAPI, api } from 'api'
 import ModalForm from 'components/ModalForm'
 import AddContainerInterfaceRule from './AddContainerInterfaceRule'
 import { AlertContext, AppContext } from 'AppContext'
@@ -22,7 +22,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
-import { GroupItem } from 'components/TagItem'
+import { GroupItem, TagItem } from 'components/TagItem'
 
 const ContainerInterfaceRulesList = (props) => {
   let list = props.list || []
@@ -31,14 +31,44 @@ const ContainerInterfaceRulesList = (props) => {
   let refModal = useRef(null)
   const appContext = useContext(AppContext)
   const alertContext = useContext(AlertContext)
+  const [interfaceList, setInterfaceList] = useState([])
+  const [netBlocks, setNetblocks] = useState([])
+
+  useEffect(() => {
+    api
+      .get('/info/dockernetworks')
+      .then((docker) => {
+        let networked = docker.filter(
+          (n) => n.Options && n.Options['com.docker.network.bridge.name']
+        )
+
+        let s = []
+        let blocks = []
+        for (let n of networked) {
+          let iface = n.Options['com.docker.network.bridge.name']
+          s.push(iface)
+          if (n.IPAM?.Config?.[0]?.Subnet) {
+            blocks.push(n.IPAM.Config[0].Subnet)
+          }
+        }
+        setInterfaceList(s)
+        setNetblocks(blocks)
+      })
+      //.catch((err) => alertContext.error('fail ' + err))
+      .catch((err) => {})
+  }, [])
 
   const deleteListItem = (item) => {
     const done = (res) => {
       props.notifyChange('custom_interface')
     }
 
-    firewallAPI.deleteCustomInterfaceRule(item).then(done)
-      .catch((err) => {alertContext.error('Firewall API Failure', err)})
+    firewallAPI
+      .deleteCustomInterfaceRule(item)
+      .then(done)
+      .catch((err) => {
+        alertContext.error('Firewall API Failure', err)
+      })
   }
 
   const notifyChange = (t) => {
@@ -66,6 +96,8 @@ const ContainerInterfaceRulesList = (props) => {
           <AddContainerInterfaceRule
             notifyChange={notifyChange}
             appContext={appContext}
+            interfaceList={interfaceList}
+            netBlocks={netBlocks}
           />
         </ModalForm>
       </ListHeader>
@@ -87,9 +119,17 @@ const ContainerInterfaceRulesList = (props) => {
               <Text flex={1}>{item.RouteDst}</Text>
             </VStack>
             <HStack flex={1} space="sm">
-              {item.Groups.map((entry) => (
-                <GroupItem key={entry} name={entry} />
-              ))}
+              {item.Groups
+                ? item.Groups.map((entry) => (
+                    <GroupItem key={entry} name={entry} />
+                  ))
+                : null}
+            </HStack>
+
+            <HStack flex={1} space="sm">
+              {item.Tags
+                ? item.Tags.map((entry) => <TagItem key={entry} name={entry} />)
+                : null}
             </HStack>
 
             <HStack>

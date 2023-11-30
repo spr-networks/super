@@ -10,14 +10,13 @@ import (
 	"github.com/florianl/go-nflog/v2"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/spr-networks/sprbus"
 	"log"
 	"net"
 	"os"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/spr-networks/sprbus"
 )
 
 var ServerEventSock = "/state/api/eventbus.sock"
@@ -31,24 +30,25 @@ type PacketEthernet struct {
 
 // new format
 type PacketInfo struct {
-	Ethernet  *PacketEthernet `json:"Ethernet,omitempty"`
-	TCP       *layers.TCP     `json:"TCP,omitempty"`
-	UDP       *layers.UDP     `json:"UDP,omitempty"`
-	IP        *layers.IPv4    `json:"IP,omitempty"`
-	DNS       *layers.DNS     `json:"DNS,omitempty"`
-	DHCP      *layers.DHCPv4  `json:"DHCP,omitempty"`
-	Prefix    string          `json:"Prefix"`
-	Action    string          `json:"Action"`
-	Timestamp time.Time       `json:"Timestamp"`
-	InDev     string          `json:"InDev"`
-	OutDev    string          `json:"OutDev"`
+	Ethernet        *PacketEthernet `json:"Ethernet,omitempty"`
+	TCP             *layers.TCP     `json:"TCP,omitempty"`
+	UDP             *layers.UDP     `json:"UDP,omitempty"`
+	IP              *layers.IPv4    `json:"IP,omitempty"`
+	DNS             *layers.DNS     `json:"DNS,omitempty"`
+	DHCP            *layers.DHCPv4  `json:"DHCP,omitempty"`
+	RecentDomainSrc string          `json:"RecentDomainSrc,omitempty"`
+	RecentDomainDst string          `json:"RecentDomainDst,omitempty"`
+	Prefix          string          `json:"Prefix"`
+	Action          string          `json:"Action"`
+	Timestamp       time.Time       `json:"Timestamp"`
+	InDev           string          `json:"InDev"`
+	OutDev          string          `json:"OutDev"`
 }
 
 var wg sync.WaitGroup
 
 func main() {
-	//this now runs in api container
-	//wg.Add(1)
+	busListener()
 
 	client, err := sprbus.NewClient(ServerEventSock)
 	defer client.Close()
@@ -168,6 +168,21 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 			}
 		}
 		result.Ethernet = &ethd
+
+		//populate RecentDomain based on IPs
+		DNSCachemtx.RLock()
+		if result.IP != nil {
+			src_domain, exists := DNSCache[result.IP.SrcIP.String()]
+			if exists {
+				result.RecentDomainSrc = src_domain
+			}
+			dst_domain, exists := DNSCache[result.IP.DstIP.String()]
+			if exists {
+				result.RecentDomainDst = dst_domain
+			}
+
+		}
+		DNSCachemtx.RUnlock()
 
 		data, err := json.Marshal(result)
 		if err != nil {

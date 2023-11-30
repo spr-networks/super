@@ -34,6 +34,9 @@
     "url": "https://github.com/spr-networks/super/issues"
   },
   "homepage": "https://www.supernetworks.org/",
+  "resolutions": {
+    "prismjs": "1.29.0"
+  },
   "dependencies": {
     "@babel/preset-react": "^7.18.6",
     "@fortawesome/fontawesome-svg-core": "^6.4.0",

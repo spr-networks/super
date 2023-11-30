@@ -96,7 +96,6 @@ table inet filter {
   map fwd_iface_lan {
     type ifname . ipv4_addr : verdict;
     flags interval
-    $(if [ "$DOCKERIF" ]; then echo "elements = { $DOCKERIF . $DOCKERNET : accept }" ; fi )
   }
 
   # iface /src range to forward to uplinks , for ex. for a custom docker network

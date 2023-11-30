@@ -35,7 +35,7 @@ export const prettyDate = (timestamp, locales = null) => {
 }
 
 export const prettySize = (sz, round = false) => {
-  let szType = 'bytes'
+  let szType = 'b'
 
   if (sz >= 1024 * 1e3) {
     sz /= 1024 * 1e3

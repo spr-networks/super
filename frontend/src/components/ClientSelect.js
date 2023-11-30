@@ -125,6 +125,7 @@ const ClientSelect = (props) => {
 
   return (
     <InputSelect
+      size={props.size || 'md'}
       title={title}
       groups={devOpts?.options ? gatherOps() : null}
       {...props}
@@ -140,7 +141,8 @@ ClientSelect.propTypes = {
     PropTypes.object
   ]),
   onChange: PropTypes.func,
-  onSubmitEditing: PropTypes.func
+  onSubmitEditing: PropTypes.func,
+  size: PropTypes.string
 }
 
 export default ClientSelect

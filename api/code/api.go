@@ -2709,6 +2709,8 @@ func main() {
 
 	// notifications, connect to eventbus
 	go NotificationsRunEventListener()
+	//listen and cache dns
+	go DNSEventListener()
 
 	// updates when enabled
 	go checkUpdates()

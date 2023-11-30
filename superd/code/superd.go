@@ -35,12 +35,14 @@ import (
 
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
-var ComposeAllowList = []string{"docker-compose.yml", "docker-compose-test.yml", "docker-compose-virt.yml",
+var ComposeAllowListDefaults = []string{"docker-compose.yml", "docker-compose-test.yml", "docker-compose-virt.yml",
 	"plugins/plus/pfw_extension/docker-compose.yml",
 	"plugins/plus/mesh_extension/docker-compose.yml",
 	"dyndns/docker-compose.yml",
 	"ppp/docker-compose.yml",
 	"wifi_uplink/docker-compose.yml"}
+
+var ComposeAllowList = ComposeAllowListDefaults
 
 var CUSTOM_ALLOW_PATH = "configs/base/custom_compose_paths.json"
 
@@ -146,6 +148,8 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 	if composeFile == "" {
 		composeFile = defaultCompose
 	}
+
+	reloadComposeWhitelist()
 
 	composeAllowed := false
 	for _, entry := range ComposeAllowList {
@@ -781,6 +785,21 @@ func compose_paths(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ComposeAllowList)
 }
 
+func reloadComposeWhitelist() {
+	//augment ComposeAllowList
+
+	data, err := ioutil.ReadFile(CUSTOM_ALLOW_PATH)
+	if err == nil {
+		newAllow := []string{}
+		err = json.Unmarshal(data, &newAllow)
+		if err != nil {
+			fmt.Println("Failed to load custom compose json", err)
+		} else {
+			ComposeAllowList = append(ComposeAllowListDefaults, newAllow...)
+		}
+	}
+
+}
 func setup() {
 	hostSuperDir := getHostSuperDir()
 
@@ -793,18 +812,7 @@ func setup() {
 
 	establishConfigsIfEmpty("/super/")
 
-	//augment ComposeAllowList
-
-	data, err := ioutil.ReadFile(CUSTOM_ALLOW_PATH)
-	if err == nil {
-		newAllow := []string{}
-		err = json.Unmarshal(data, &newAllow)
-		if err != nil {
-			fmt.Println("Failed to load custom compose json", err)
-		} else {
-			ComposeAllowList = append(ComposeAllowList, newAllow...)
-		}
-	}
+	reloadComposeWhitelist()
 
 }
 

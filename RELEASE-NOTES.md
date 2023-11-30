@@ -1,4 +1,7 @@
 # Secure Programmable Router (SPR) Release Notes
+## v0.3.2
+* Add Domain info from recent lookups to TrafficList and the packet event log
+* Add tag support and populating interfaces from Docker for Custom Interface rules
 
 ## v0.3.1
 

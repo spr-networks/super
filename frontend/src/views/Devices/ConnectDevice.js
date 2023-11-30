@@ -86,7 +86,7 @@ const WifiConnect = (props) => {
   }
 
   return (
-    <VStack>
+    <VStack p="$4">
       {ssids.map((ssid) => (
         <VStack key={ssid} space="md" alignItems="center">
           <HStack space="sm">
@@ -97,7 +97,7 @@ const WifiConnect = (props) => {
               {ssid}
             </Text>
           </HStack>
-          <HStack space={1}>
+          <HStack space="sm">
             <Text size="md" color="$muted500">
               Password
             </Text>

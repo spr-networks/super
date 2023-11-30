@@ -226,7 +226,7 @@ const InputSelect = (props) => {
 
   return (
     <>
-      <Input size="md" isDisabled={isDisabled}>
+      <Input size={props.size || 'md'} isDisabled={isDisabled}>
         <InputField
           placeholder={title || ''}
           value={displayValue(value)}
@@ -253,5 +253,6 @@ InputSelect.propTypes = {
     PropTypes.array,
     PropTypes.string
   ]),
-  onChange: PropTypes.func
+  onChange: PropTypes.func,
+  size: PropTypes.string
 }

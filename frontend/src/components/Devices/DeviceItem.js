@@ -8,22 +8,34 @@ import { HStack, Text, VStack } from '@gluestack-ui/themed'
 import IconItem from 'components/IconItem'
 
 //TODO make a component of this
-const DeviceItem = React.memo(({ item, ...props }) => {
+const DeviceItem = React.memo(({ item, show, size, ...props }) => {
   //TODO pass in as props. for now some hardcoded for mobile
-  let show = ['Style', 'Name', 'MAC', 'RecentIP']
+  let dShow = ['Style', 'Name', 'MAC', 'RecentIP']
 
+  if (show?.length) {
+    dShow = show
+  }
+
+  if (size == 'sm') {
+    dShow = ['Style', 'Name']
+  } else if (size == 'xs') {
+    dShow = ['Name']
+  }
+
+  let textSize = size || 'md'
+  let iconSize = size == 'sm' ? 24 : 32
   return (
     <HStack space="md" alignItems="center" {...props}>
-      {show.includes('Style') ? (
+      {dShow.includes('Style') ? (
         <IconItem
           name={item?.Style?.Icon || 'Laptop'}
           color={item?.Style?.Color}
-          size={32}
+          size={iconSize}
         />
       ) : null}
 
-      {show.includes('Name') ? (
-        <Text size="md" bold={!!item?.Name} w="$1/3" minWidth="$24">
+      {dShow.includes('Name') ? (
+        <Text size={textSize} bold={!!item?.Name} w="$1/3" minWidth="$24">
           {item?.Name || 'N/A'}
         </Text>
       ) : null}
@@ -36,17 +48,19 @@ const DeviceItem = React.memo(({ item, ...props }) => {
           }
         }}
       >
-        {show.includes('RecentIP') ? (
+        {dShow.includes('RecentIP') ? (
           <Text size="md">{item?.RecentIP}</Text>
         ) : null}
-        {show.includes('MAC') ? <Text size="sm">{item?.MAC}</Text> : null}
+        {dShow.includes('MAC') ? <Text size="sm">{item?.MAC}</Text> : null}
       </VStack>
     </HStack>
   )
 })
 
 DeviceItem.propTypes = {
-  item: PropTypes.object.isRequired
+  item: PropTypes.object.isRequired,
+  show: PropTypes.array,
+  size: PropTypes.string
 }
 
 export default DeviceItem

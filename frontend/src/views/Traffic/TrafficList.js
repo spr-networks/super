@@ -174,8 +174,6 @@ const TrafficList = (props) => {
   }
 
   useEffect(() => {
-    //console.log('eall')
-
     if (!list.length) {
       return
     }
@@ -202,10 +200,8 @@ const TrafficList = (props) => {
     setFilterIps([ip])
   }
 
-  let h = Platform.OS == 'web' ? Dimensions.get('window').height - 64 : '100%'
-
   return (
-    <View h={h}>
+    <View h="100%" sx={{ '@md': { height: '92vh' } }}>
       <VStack
         bg="$backgroundCardLight"
         minHeight={180}
@@ -223,21 +219,25 @@ const TrafficList = (props) => {
           onChange={(type) => {
             setFilterIps([])
             setType(type)
+            setPage(1)
           }}
         >
-          <HStack py="1" space="md">
+          <HStack py="$1" space="md">
             {types.map((type) => (
               <Radio key={type} value={type} size="md">
                 <RadioIndicator mr="$2">
                   <RadioIcon as={CircleIcon} strokeWidth={1} />
                 </RadioIndicator>
-                <RadioLabel>{type.replace(/(In|Out)/, ' $1')}</RadioLabel>
+                <RadioLabel size="sm">
+                  {type.replace(/(In|Out)/, ' $1')}
+                </RadioLabel>
               </Radio>
             ))}
           </HStack>
         </RadioGroup>
         <Box flex={1}>
           <ClientSelect
+            size="sm"
             value={filterIps && filterIps[0]}
             onChange={handleChangeClient}
             onSubmitEditing={handleChangeClient}

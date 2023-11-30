@@ -257,7 +257,7 @@ const DeviceListing = (props) => {
   )
 
   return (
-    <View h="$full" sx={{ '@md': { h: '92vh' } }}>
+    <View h="$full">
       <ListHeader title="Devices">
         <Button
           size="xs"
