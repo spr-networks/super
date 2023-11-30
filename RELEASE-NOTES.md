@@ -5,6 +5,7 @@
 * Add tag support and populating interfaces from Docker for Custom Interface rules
 * Further simplify some dialogues in simple mode
 * Fix reload of custom compose paths, without restarting superd
+* Reduce UI load size by switching syntax highlighter for events
 
 ## v0.3.1
 
