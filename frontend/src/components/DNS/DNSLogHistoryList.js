@@ -69,7 +69,7 @@ const TooltipIconButton = ({ label, onPress, icon, color, ...props }) => (
   <Tooltip label={label}>
     <Button
       sx={{
-        '@base': { display: 'none' },
+        '@base': { display: 'flex' },
         '@md': { display: 'flex' }
       }}
       variant="link"
@@ -456,16 +456,15 @@ const DNSLogHistoryList = (props) => {
 
   useEffect(() => {
     //NOTE same 24h
-    let utcOffsetMS = new Date().getTimezoneOffset() * 60000;
+    let utcOffsetMS = new Date().getTimezoneOffset() * 60000
     let min = new Date(dateTo)
     min.setTime(min.getTime() + utcOffsetMS)
     min = min.toISOString()
 
-    let nextDay = new Date(dateTo);
+    let nextDay = new Date(dateTo)
     nextDay.setTime(nextDay.getTime() + utcOffsetMS)
     nextDay.setDate(nextDay.getDate() + 1)
     let max = nextDay.toISOString()
-
 
     setParams({
       ...params,
@@ -656,8 +655,7 @@ const DNSLogHistoryList = (props) => {
           space="sm"
           sx={{
             '@base': {
-              display:
-                filterIps.length && showForm ? 'flex' : 'none'
+              display: filterIps.length && showForm ? 'flex' : 'none'
             },
             '@md': { flexDirection: 'row' }
           }}

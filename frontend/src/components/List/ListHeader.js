@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { VStack, Icon, Text, InfoIcon } from '@gluestack-ui/themed'
+import { HStack, VStack, Icon, Text, InfoIcon } from '@gluestack-ui/themed'
 
 import { Tooltip } from 'components/Tooltip'
 
@@ -34,16 +34,18 @@ const ListHeader = ({ title, description, info, ...props }) => {
         <Text size="md" bold>
           {title}
         </Text>
-        {description ? (
-          <Text size="sm" color="$muted500">
-            {description}
-          </Text>
-        ) : null}
-        {info ? (
-          <Tooltip label={info}>
-            <Icon as={InfoIcon} color="$muted500" />
-          </Tooltip>
-        ) : null}
+        <HStack space="sm">
+          {description ? (
+            <Text size="sm" color="$muted500">
+              {description}
+            </Text>
+          ) : null}
+          {info ? (
+            <Tooltip label={info}>
+              <Icon as={InfoIcon} color="$muted500" />
+            </Tooltip>
+          ) : null}
+        </HStack>
       </VStack>
 
       {props.children}
