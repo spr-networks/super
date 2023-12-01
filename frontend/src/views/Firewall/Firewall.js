@@ -127,7 +127,7 @@ const Firewall = (props) => {
   return (
     <ScrollView sx={{ '@md': { height: '92vh' } }}>
       <VStack space="lg">
-        <Accordion items={items} open={open} />
+        <Accordion items={items} open={open} showDescription={false} />
         {/*
         <EndpointList list={config.Endpoints} notifyChange={fetchConfig} />
         <ForwardList list={config.ForwardingRules} notifyChange={fetchConfig} />
