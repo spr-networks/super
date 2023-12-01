@@ -105,7 +105,7 @@ class AddForwardImpl extends React.Component {
 
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Destination IP address</FormControlLabelText>
+            <FormControlLabelText>Destination IP Address</FormControlLabelText>
           </FormControlLabel>
           <ClientSelect
             name="DstIP"
@@ -117,7 +117,7 @@ class AddForwardImpl extends React.Component {
         </FormControl>
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Dest Port</FormControlLabelText>
+            <FormControlLabelText>Destination Port</FormControlLabelText>
           </FormControlLabel>
           <Input size="md" variant="underlined">
             <InputField
