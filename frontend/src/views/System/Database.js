@@ -154,15 +154,14 @@ const Database = ({ ...props }) => {
           {renderConfigRow(
             'SaveEvents',
 
-            <Box
+            <VStack
               sx={{
                 '@base': { flexDirection: 'column', gap: 3 },
                 '@md': { flexDirection: 'row', gap: 3 }
               }}
-              alignItems={{ base: 'flex-start', md: 'center' }}
               flexWrap="wrap"
             >
-              <HStack space="sm" alignItems="center">
+              <HStack space="sm" alignItems="center" flexWrap="wrap">
                 {config['SaveEvents'].map((topic) => (
                   <TopicItem
                     key={topic}
@@ -171,7 +170,7 @@ const Database = ({ ...props }) => {
                   />
                 ))}
               </HStack>
-            </Box>
+            </VStack>
           )}
           {renderConfigRow(
             'MaxSize',
