@@ -286,7 +286,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         w="$full"
       >
         <JSONSyntax code={jsonData} />
-        {hexLines ? <HEXSyntax code={hexLines}/> : null}
+        {hexLines ? <HEXSyntax code={hexLines} /> : null}
         <Button
           action="secondary"
           variant="link"
@@ -335,7 +335,7 @@ const LogListItem = ({ item, selected, ...props }) => {
         px="$4"
       >
         <Text size="xs" bold>
-          {prettyDate(item.time)}
+          {prettyDate(item.Timestamp || item.time)}
         </Text>
         <ButtonGroup ml="auto" space="md">
           <Tooltip label="Toggle JSON data">
