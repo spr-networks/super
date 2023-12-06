@@ -40,12 +40,14 @@ import Supernetworks from 'views/Supernetworks'
 
 import {
   ActivityIcon,
+  AlertTriangleIcon,
   ArrowUpCircleIcon,
   BanIcon,
   BarChart3Icon,
   BarChartHorizontalIcon,
   BellIcon,
   CableIcon,
+  CogIcon,
   ContainerIcon,
   EyeIcon,
   FlameIcon,
@@ -304,6 +306,13 @@ const routes = [
     hideSimple: true,
     views: [
       {
+        path: 'alerts',
+        name: 'Alerts',
+        icon: AlertTriangleIcon,
+        component: Notifications,
+        layout: 'admin'
+      },
+      {
         path: 'events',
         name: 'Events',
         icon: EyeIcon,
@@ -311,9 +320,9 @@ const routes = [
         layout: 'admin'
       },
       {
-        path: 'notifications',
+        path: 'alertsettings',
         name: 'Settings',
-        icon: BellIcon,
+        icon: CogIcon,
         component: Notifications,
         layout: 'admin'
       }

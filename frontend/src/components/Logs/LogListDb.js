@@ -66,7 +66,7 @@ const LogList = (props) => {
 
   useEffect(() => {
     let filter = {}
-    let defaultFilter = 'dns:serve:192.168.2.250'
+    let defaultFilter = 'log:api'
     topics.map((topic) => {
       filter[topic] = topic == defaultFilter
     })
