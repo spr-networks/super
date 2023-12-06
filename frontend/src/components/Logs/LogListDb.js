@@ -66,7 +66,7 @@ const LogList = (props) => {
 
   useEffect(() => {
     let filter = {}
-    let defaultFilter = 'log:api'
+    let defaultFilter = 'dns:serve:192.168.2.250'
     topics.map((topic) => {
       filter[topic] = topic == defaultFilter
     })
@@ -136,6 +136,7 @@ const LogList = (props) => {
 
   // filter on/off - only one at a time atm.
   const handleTopicFilter = (topic) => {
+    setLogs([])
     let newFilter = {}
     for (let k in filter) {
       newFilter[k] = k == topic ? !newFilter[k] : false
