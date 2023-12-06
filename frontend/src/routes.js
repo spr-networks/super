@@ -30,7 +30,6 @@ import Firewall from 'views/Firewall/Firewall'
 import FirewallSettings from 'views/Firewall/FirewallSettings'
 import PFW from 'views/Firewall/Pfw'
 import Mesh from 'views/Mesh'
-import Logs from 'views/Logs'
 import Events from 'views/Events'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
@@ -312,15 +311,8 @@ const routes = [
         layout: 'admin'
       },
       {
-        path: 'logs/:containers',
-        name: 'Logs',
-        icon: ScanSearchIcon,
-        component: Logs,
-        layout: 'admin'
-      },
-      {
         path: 'notifications',
-        name: 'Notifications',
+        name: 'Settings',
         icon: BellIcon,
         component: Notifications,
         layout: 'admin'

@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
-import { useNavigate } from 'react-router-dom'
+//import { useNavigate } from 'react-router-dom'
 
 import { logsAPI } from 'api'
 import InputSelect from 'components/InputSelect'
@@ -38,7 +38,7 @@ const LogList = (props) => {
   const [total, setTotal] = useState(0)
 
   const contextType = useContext(AlertContext)
-  let navigate = useNavigate()
+  //let navigate = useNavigate()
 
   const refreshList = (next) => {
     logsAPI
@@ -127,7 +127,7 @@ const LogList = (props) => {
 
   useEffect(() => {
     if (filterContainers.length) {
-      navigate('/admin/logs/' + filterContainers.join(','))
+      //navigate('/admin/logs/' + filterContainers.join(','))
     }
 
     setListFiltered(filterList())

@@ -118,19 +118,11 @@ const PeerList = (props) => {
               </Text>
 
               <VStack
-                flex={1}
-                sx={{ '@md': { flexDirection: 'row', gap: 'md' } }}
+                flex={2}
+                sx={{ '@md': { flexDirection: 'row', gap: '16px' } }}
                 alignItems="flex-end"
               >
                 <Text size="sm">{item.AllowedIPs.trim()}</Text>
-                {/*<Text
-                  flex={2}
-                  display="none"
-                  size="xs"
-                  isTruncated
-                >
-                  {item.PublicKey}
-                </Text>*/}
 
                 {item.LatestHandshake ? (
                   <Text flex={1}>
