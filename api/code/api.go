@@ -2473,7 +2473,7 @@ func logRequest(handler http.Handler) http.Handler {
 	})
 }
 
-var ServerEventSock = "/state/api/eventbus.sock"
+var ServerEventSock = TEST_PREFIX + "/state/api/eventbus.sock"
 
 func startEventBus() {
 	// make sure the client dont connect to the prev socket
@@ -2555,6 +2555,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/arp", showARP).Methods("GET")
 
 	//Misc
+	external_router_authenticated.HandleFunc("/speedtest/{start:[0-9]+}-{end:[0-9]+}", speedTest).Methods("GET", "PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/restart", restart).Methods("PUT")
 	external_router_authenticated.HandleFunc("/backup", doConfigsBackup).Methods("PUT", "OPTIONS")
@@ -2634,11 +2635,12 @@ func main() {
 	external_router_authenticated.HandleFunc("/stopPlusExtension", stopPlusExt).Methods("PUT")
 	external_router_authenticated.HandleFunc("/startPlusExtension", startPlusExt).Methods("PUT")
 
-	// tokens api
+	// Auth api
 	external_router_authenticated.HandleFunc("/tokens", getAuthTokens).Methods("GET")
 	external_router_authenticated.HandleFunc("/tokens", updateAuthTokens).Methods("PUT", "DELETE")
-
-	external_router_authenticated.HandleFunc("/speedtest/{start:[0-9]+}-{end:[0-9]+}", speedTest).Methods("GET", "PUT", "OPTIONS")
+	external_router_authenticated.HandleFunc("/otp_register", otpRegister).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/otp_validate", generateOTPToken).Methods("PUT")
+	external_router_authenticated.HandleFunc("/otp_jwt_test", testJWTOTP).Methods("PUT")
 
 	// notifications
 	external_router_authenticated.HandleFunc("/notifications", getNotificationSettings).Methods("GET")
