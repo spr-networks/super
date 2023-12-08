@@ -2,6 +2,7 @@ import React, { Component, useEffect, useState } from 'react'
 import { wifiAPI, meshAPI } from 'api'
 import APIWifi from 'api/Wifi'
 import StatsWidget from './StatsWidget'
+import { AlertContext } from 'AppContext'
 
 import { ClockIcon, Laptop2Icon, WifiIcon } from 'lucide-react-native'
 import {
@@ -41,11 +42,14 @@ export class WifiClientCount extends Component {
                         .then((stations) => {
                           let connectedMACs = Object.keys(stations)
                           connectMACsList.push(...connectedMACs) // Push the 'connectedMACs' variable to the 'connectMACsList' array
+                          this.setState({
+                            numberOfWifiClients: count + connectMACsList.length
+                          })
                         })
                         .catch((err) => {})
                     }
                   })
-                })
+                }).catch((err) => {})
             })
 
             this.setState({
@@ -221,5 +225,6 @@ export const InterfacesFull = (props) => {
     </Box>
   )
 }
+WifiClients.contextType = AlertContext
 
 export default WifiClients
