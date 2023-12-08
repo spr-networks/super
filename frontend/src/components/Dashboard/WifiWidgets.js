@@ -38,10 +38,12 @@ export class WifiClientCount extends Component {
                   config.forEach((iface) => {
                     if (iface.Type == 'AP' && iface.Enabled == true) {
                       remoteWifiApi.allStations
+
                         .call(remoteWifiApi, iface.Name)
                         .then((stations) => {
                           let connectedMACs = Object.keys(stations)
                           connectMACsList.push(...connectedMACs) // Push the 'connectedMACs' variable to the 'connectMACsList' array
+                          //alert(connectMACsList)
                           this.setState({
                             numberOfWifiClients: count + connectMACsList.length
                           })

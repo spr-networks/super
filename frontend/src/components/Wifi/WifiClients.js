@@ -68,10 +68,10 @@ const WifiClients = (props) => {
   }
 
   const refreshAPI = async (api) => {
-    const ifaces = await api.interfaces.call(api, 'AP').catch((error) => {
+    const ifaces = await api.interfacesApi.call(api, api, 'AP').catch((error) => {
       context.error('WIFI API Failure', error)
     })
-
+    if (!ifaces) { return }
     let stations = {}
     for (let iface of ifaces) {
       let ret = await api.allStations.call(api, iface).catch((error) => {
@@ -99,7 +99,7 @@ const WifiClients = (props) => {
         client.Signal = station.signal
         client.Iface = station.Iface
         client.TXRate = station.tx_rate_info
-        client.AP = api.remoteURL
+        client.AP = api.remoteURL.replace("http://", "").replace("/", "")
         return client
       })
 
@@ -158,7 +158,7 @@ const WifiClients = (props) => {
             sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
             alignItems="center"
           >
-            <InterfaceItem name={item.Iface} />
+            <InterfaceItem name={item.Iface + "-" + item.AP} />
           </Box>
 
           <VStack
