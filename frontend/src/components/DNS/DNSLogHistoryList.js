@@ -209,7 +209,7 @@ const DNSLogHistoryList = (props) => {
   const perPage = 20
   const [total, setTotal] = useState(0)
   const [params, setParams] = useState({ num: 20 })
-  const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0])
+  const [dateTo, setDateTo] = useState(null)//new Date().toISOString().split('T')[0])
 
   const modalRef = React.useRef(null)
 
@@ -455,10 +455,14 @@ const DNSLogHistoryList = (props) => {
   }, [filterText, filterType])
 
   useEffect(() => {
+    if (dateTo == null) {
+      return
+    }
+
     //NOTE same 24h
     let utcOffsetMS = new Date().getTimezoneOffset() * 60000
     let min = new Date(dateTo)
-    min.setTime(min.getTime() + utcOffsetMS)
+    min.setTime(min.getTime() - utcOffsetMS)
     min = min.toISOString()
 
     let nextDay = new Date(dateTo)

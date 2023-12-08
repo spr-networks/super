@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
+import Logs from 'views/Logs'
 
 import {
   Box,
@@ -165,6 +166,7 @@ const SystemInfo = (props) => {
         <Database />
         <ConfigsBackup />
         <DockerInfo />
+        <Logs />
       </VStack>
     </ScrollView>
   )

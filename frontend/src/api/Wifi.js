@@ -108,6 +108,28 @@ export default class APIWifi extends API {
     });
   }
 
+  interfacesApi(api, typeFilter) {
+    //look up the interfaces from iw/dev
+    return api.iwDev().then((devs) => {
+      let ifaces = [];
+      for (let dev of Object.keys(devs)) {
+        let wifis = Object.keys(devs[dev]);
+        for (let wifi of wifis) {
+          //only grab devices in AP mode
+          if (typeFilter) {
+            if (!devs[dev][wifi].type.includes(typeFilter)) continue;
+          }
+          //ignore vlans
+          if (wifi.includes('.')) continue;
+          ifaces = ifaces.concat(wifi);
+        }
+      }
+
+      ifaces = ifaces.sort();
+      return ifaces;
+    });
+  }
+
   defaultInterface() {
     return new Promise((resolve, reject) => {
       this.interfaces('AP')

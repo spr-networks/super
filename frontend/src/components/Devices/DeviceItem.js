@@ -22,6 +22,10 @@ const DeviceItem = React.memo(({ item, show, size, ...props }) => {
     dShow = ['Name']
   }
 
+  if (props.hideMissing && !item) {
+    return null
+  }
+
   let textSize = size || 'md'
   let iconSize = size == 'sm' ? 24 : 32
   return (

@@ -241,6 +241,7 @@ export default class DNSAddOverride extends React.Component {
           <ClientSelect
             value={this.state.ClientIP}
             onChange={(value) => this.handleChange('ClientIP', value)}
+            onChangeText={(value) => this.handleChange('ClientIP', value)}
           />
 
           {this.state.check.ClientIP == 'has-danger' ? (

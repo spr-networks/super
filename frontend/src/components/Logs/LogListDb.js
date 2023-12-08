@@ -136,6 +136,7 @@ const LogList = (props) => {
 
   // filter on/off - only one at a time atm.
   const handleTopicFilter = (topic) => {
+    setLogs([])
     let newFilter = {}
     for (let k in filter) {
       newFilter[k] = k == topic ? !newFilter[k] : false

@@ -269,8 +269,10 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     })
   }
 
-  const getDevice = (value, type = 'MAC') =>
-    devices.find((d) => d[type] == value)
+  const getDevice = (value, type = 'MAC') => {
+    if (!value) return null
+    return devices.find((d) => d[type] == value)
+  }
 
   const getGroups = () => {
     return new Promise((resolve, reject) => {

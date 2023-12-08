@@ -19,11 +19,11 @@ const WirelessConfiguration = (props) => {
   const [routes] = useState([
     {
       key: 'first',
-      title: 'Interfaces'
+      title: 'Clients'
     },
     {
       key: 'second',
-      title: 'Clients'
+      title: 'Interfaces'
     },
     {
       key: 'third',
@@ -41,8 +41,8 @@ const WirelessConfiguration = (props) => {
   }
 
   const renderScene = SceneMap({
-    first: WifiInterfaceList,
-    second: WifiClients,
+    first: WifiClients,
+    second: WifiInterfaceList,
     third: WifiScan,
     fourth: WifiHostapd
   })

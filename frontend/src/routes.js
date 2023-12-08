@@ -30,7 +30,6 @@ import Firewall from 'views/Firewall/Firewall'
 import FirewallSettings from 'views/Firewall/FirewallSettings'
 import PFW from 'views/Firewall/Pfw'
 import Mesh from 'views/Mesh'
-import Logs from 'views/Logs'
 import Events from 'views/Events'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
@@ -41,12 +40,14 @@ import Supernetworks from 'views/Supernetworks'
 
 import {
   ActivityIcon,
+  AlertTriangleIcon,
   ArrowUpCircleIcon,
   BanIcon,
   BarChart3Icon,
   BarChartHorizontalIcon,
   BellIcon,
   CableIcon,
+  CogIcon,
   ContainerIcon,
   EyeIcon,
   FlameIcon,
@@ -305,6 +306,13 @@ const routes = [
     hideSimple: true,
     views: [
       {
+        path: 'alerts',
+        name: 'Alerts',
+        icon: AlertTriangleIcon,
+        component: Notifications,
+        layout: 'admin'
+      },
+      {
         path: 'events',
         name: 'Events',
         icon: EyeIcon,
@@ -312,16 +320,9 @@ const routes = [
         layout: 'admin'
       },
       {
-        path: 'logs/:containers',
-        name: 'Logs',
-        icon: ScanSearchIcon,
-        component: Logs,
-        layout: 'admin'
-      },
-      {
-        path: 'notifications',
-        name: 'Notifications',
-        icon: BellIcon,
+        path: 'alertsettings',
+        name: 'Settings',
+        icon: CogIcon,
         component: Notifications,
         layout: 'admin'
       }
