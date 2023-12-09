@@ -1,27 +1,40 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	logStd "log"
 	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	//	"github.com/google/gopacket/layers"
 	"github.com/gorilla/mux"
 	"github.com/spr-networks/sprbus"
-	"github.com/tidwall/gjson"
+
+	"github.com/PaesslerAG/gval"
+	"github.com/PaesslerAG/jsonpath"
 )
+
+//https://www.ietf.org/archive/id/draft-goessner-dispatch-jsonpath-00.html
+//https://goessner.net/articles/JsonPath/
 
 var AlertSettingsmtx sync.Mutex
 
 var AlertSettingsFile = "/configs/base/alerts.json"
 var gAlertTopicPrefix = "alerts:"
+var gDebugPrintAlert = false
+
+type Alert struct {
+	Topic string
+	Info  interface{}
+}
 
 type AlertSetting struct {
 	TopicPrefix string
@@ -34,27 +47,9 @@ type AlertSetting struct {
 	Validate func() error
 }
 
-const (
-	MString   = 0
-	MRegexp   = 1
-	MMinInt   = 2
-	MMaxInt   = 3
-	MMinFloat = 4
-	MMaxFloat = 5
-	MNil      = 6
-)
-
 // conditions can stack onto the same event,
 type ConditionEntry struct {
-	JPath     string //json path to event (gjson)
-	MatchType int    // type of match
-
-	MatchString   string  `json:"MatchString,omitempty"`
-	MatchRegexp   string  `json:"MatchRegexp,omitempty"`
-	MatchMinInt   int64   `json:"MatchMinInt,omitempty"`
-	MatchMaxInt   int64   `json:"MatchMaxInt,omitempty"`
-	MatchMinFloat float64 `json:"MatchMinFloat,omitempty"`
-	MatchMaxFloat float64 `json:"MatchMaxFloat,omitempty"`
+	JPath string //json path to event (gval+jsonpath)
 }
 
 // actions to take can stack
@@ -72,10 +67,6 @@ func validateConditionEntry(entry ConditionEntry) error {
 	if len(entry.JPath) == 0 {
 		return errors.New("JPath cannot be empty")
 	}
-
-	// validate MatchType
-
-	// ... (implement logic for validating MatchType and related fields)
 
 	return nil
 }
@@ -181,7 +172,7 @@ func modifyAlertSettings(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(gAlertsConfig)
 }
 
-func processAction(event gjson.Result, action ActionConfig) {
+func processAction(notifyChan chan<- Alert, storeChan chan<- Alert, event interface{}, action ActionConfig, values []interface{}) {
 	/*
 		// actions to take can stack
 		type ActionConfig struct {
@@ -196,58 +187,103 @@ func processAction(event gjson.Result, action ActionConfig) {
 	*/
 
 	//			var data map[string]interface{}
-	alert := []string{}
+	if gDebugPrintAlert {
+		fmt.Println("=== event ===")
+		fmt.Printf("%+v\n", event)
+		fmt.Println("=== action ===")
+		fmt.Printf("%+v\n", action)
+		fmt.Println("=== values ===")
+		fmt.Printf("%+v\n", values)
+		fmt.Println("--- --- ---")
+	}
 
+	topic := "alert:" + action.StoreTopicSuffix
+	Info := map[string]interface{}{}
+
+	if action.MessageTitle != "" {
+		Info["Title"] = action.MessageTitle
+	}
+	if action.MessageBody != "" {
+		Info["Body"] = action.MessageBody
+	}
+	Info["test"] = "test info"
+
+	alert := Alert{Topic: topic, Info: Info}
+
+	fmt.Println("beam out")
+	fmt.Println(alert)
+	//
 	if action.SendNotification {
-		WSNotifyValue("alert:"+action.StoreTopicSuffix, alert)
+		notifyChan <- alert
+		//		WSNotifyValue("alert:"+action.StoreTopicSuffix, alert)
 	}
 
 	if action.StoreAlert {
+		storeChan <- alert
 		//send the action to the DB Store
 		//StoreAlertQueue <- alert
 	}
 
 }
 
-func matchEventCondition(event gjson.Result, condition ConditionEntry) bool {
-	/*
-		type ConditionEntry struct {
-			JPath     string //json path to event (gjson)
-			MatchType int    // type of match
-
-			MatchString   string  `json:"MatchString,omitempty"`
-			MatchRegexp   string  `json:"MatchRegexp,omitempty"`
-			MatchMinInt   int64   `json:"MatchMinInt,omitempty"`
-			MatchMaxInt   int64   `json:"MatchMaxInt,omitempty"`
-			MatchMinFloat float64 `json:"MatchMinFloat,omitempty"`
-			MatchMaxFloat float64 `json:"MatchMaxFloat,omitempty"`
-		}
-	*/
-	value := event.Get(gjson.Escape(condition.JPath))
-	if value.Value() != nil {
-		//do stuff based on MatchType
-	} else if condition.MatchType == MNil {
-		//wanted to match nil
+func isEmpty(x interface{}) bool {
+	if x == nil {
 		return true
 	}
 
-	return false
+	v := reflect.ValueOf(x)
+	switch v.Kind() {
+	case reflect.Slice, reflect.Array, reflect.Map:
+		return v.Len() == 0
+	case reflect.String:
+		return v.Len() == 0
+	default:
+		// for other types, return false
+		return false
+	}
 }
 
-func processEventAlerts(topic string, value string) {
-	//make sure event settings dont change out from under us
-	AlertSettingsmtx.Lock()
-	defer AlertSettingsmtx.Lock()
+func matchEventCondition(event interface{}, condition ConditionEntry) (error, bool, interface{}) {
+	builder := gval.Full(jsonpath.PlaceholderExtension())
 
-	//gjson.Escape
-	event := gjson.Parse(value)
+	path, err := builder.NewEvaluable(condition.JPath)
+	if err != nil {
+		return err, false, nil
+	}
+
+	value, err := path(context.Background(), event)
+	if err != nil {
+		return err, false, nil
+	}
+
+	return nil, !isEmpty(value), value
+}
+
+func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic string, value string) {
+	//make sure event settings dont change out from under us
+
+	AlertSettingsmtx.Lock()
+	defer AlertSettingsmtx.Unlock()
+
+	event := interface{}(nil)
+	err := json.Unmarshal([]byte(value), &event)
+	if err != nil {
+		log.Println("invalid json for event", err)
+		return
+	}
+
 	for _, rule := range gAlertsConfig {
 		if strings.HasPrefix(topic, rule.TopicPrefix) {
-			matchCount := 0
-
+			values := []interface{}{}
 			for _, condition := range rule.Conditions {
-				if matchEventCondition(event, condition) {
-					matchCount += 1
+				err, matched, value := matchEventCondition(event, condition)
+				if err != nil {
+					log.Println("failed to build match condition", err, condition)
+					continue
+				}
+
+				if matched {
+					values = append(values, value)
 					if rule.MatchAnyOne {
 						//dont need to match all, just one, abort
 						break
@@ -255,14 +291,14 @@ func processEventAlerts(topic string, value string) {
 				}
 			}
 
-			matched := (matchCount == len(rule.Conditions)) || (rule.MatchAnyOne && matchCount > 0)
+			satisfied := (len(values) == len(rule.Conditions)) || (rule.MatchAnyOne && len(values) > 1)
 			if rule.InvertAlert {
-				matched = !matched
+				satisfied = !satisfied
 			}
 
-			if matched {
+			if satisfied {
 				for _, action := range rule.Actions {
-					processAction(event, action)
+					processAction(notifyChan, storeChan, event, action, values)
 				}
 			}
 		}
@@ -275,6 +311,9 @@ func AlertsRunEventListener() {
 	AlertSettingsmtx.Unlock()
 
 	log.Printf("alert settings: %v alert rules loaded\n", len(gAlertsConfig))
+
+	notifyChan := make(chan Alert)
+	storeChan := make(chan Alert)
 
 	busEvent := func(topic string, value string) {
 
@@ -291,7 +330,7 @@ func AlertsRunEventListener() {
 			WSNotifyValue(topic, data)
 		}
 
-		processEventAlerts(topic, value)
+		processEventAlerts(notifyChan, storeChan, topic, value)
 
 	}
 

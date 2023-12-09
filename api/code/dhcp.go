@@ -14,6 +14,7 @@ package main
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -215,7 +216,7 @@ func getSetDhcpConfig(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if prefix < 8 || prefix > 24 {
-				http.Error(w, "Invalid prefix length for TinyNets: "+string(prefix), 400)
+				http.Error(w, "Invalid prefix length for TinyNets: "+fmt.Sprint(prefix), 400)
 				return
 			}
 		}

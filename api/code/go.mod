@@ -3,11 +3,14 @@ module api
 go 1.20
 
 require (
-	github.com/google/gopacket v1.1.19
+	github.com/PaesslerAG/gval v1.2.2
+	github.com/PaesslerAG/jsonpath v0.1.1
+	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/influxdata/influxdb-client-go/v2 v2.12.3
+	github.com/pquerna/otp v1.4.0
 	github.com/spr-networks/sprbus v0.1.7
 )
 
@@ -35,7 +38,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.15.5 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
-	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/gomarkdown/markdown v0.0.0-20230922112808-5421fefb8386 // indirect
@@ -67,15 +69,12 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pquerna/otp v1.4.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/schollz/closestmatch v2.1.0+incompatible // indirect
+	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/tdewolff/minify/v2 v2.12.9 // indirect
 	github.com/tdewolff/parse/v2 v2.6.8 // indirect
-	github.com/tidwall/gjson v1.17.0 // indirect
-	github.com/tidwall/match v1.1.1 // indirect
-	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect

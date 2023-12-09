@@ -357,7 +357,7 @@ func setDefaultUplinkGateway(iface string, index int) {
 	cmd := exec.Command("ip", "route", "replace", "default", "via", gateway, "dev", iface, "table", table)
 	_, err = cmd.Output()
 	if err != nil {
-		log.Printf("Error with route setup", cmd, err)
+		log.Print("Error with route setup", cmd, err)
 	}
 
 	cmd = exec.Command("ip", "route", "flush", "cache")
