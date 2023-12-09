@@ -1,4 +1,11 @@
 # Secure Programmable Router (SPR) Release Notes
+## v0.3.3
+* Add OTP hardening for tokens, OTP support
+* Fix UI Tag, Group selection 
+* Add Events filters, Events UI Improvements
+* Migrate notifications to new Alerts view
+* Add easy Plugin install with OTP Check
+
 ## v0.3.2
 * Fixes for DNS Log date picker 
 * Add Domain info from recent lookups to TrafficList and the packet event log
