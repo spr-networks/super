@@ -2630,6 +2630,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
 	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated)).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/plugins/{name}/restart", handleRestartPlugin).Methods("PUT")
+	//TBD: API Docs
 	external_router_authenticated.HandleFunc("/plugins/custom_compose_paths", applyJwtOtpCheck(modifyCustomComposePaths)).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/plusToken", plusToken).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/plusTokenValid", plusTokenValid).Methods("GET")
@@ -2639,15 +2640,16 @@ func main() {
 	// Auth api
 	external_router_authenticated.HandleFunc("/tokens", applyJwtOtpCheck(getAuthTokens)).Methods("GET")
 	external_router_authenticated.HandleFunc("/tokens", applyJwtOtpCheck(updateAuthTokens)).Methods("PUT", "DELETE")
+	//TBD: API Docs OTP
 	external_router_authenticated.HandleFunc("/otp_register", otpRegister).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/otp_validate", generateOTPToken).Methods("PUT")
-	external_router_authenticated.HandleFunc("/otp_status", otpStatus).Methods("PUT")
+	external_router_authenticated.HandleFunc("/otp_status", otpStatus).Methods("GET")
 	external_router_authenticated.HandleFunc("/otp_jwt_test", applyJwtOtpCheck(testJWTOTP)).Methods("PUT")
 
-	// notifications
-	external_router_authenticated.HandleFunc("/notifications", getNotificationSettings).Methods("GET")
-	external_router_authenticated.HandleFunc("/notifications", modifyNotificationSettings).Methods("DELETE", "PUT")
-	external_router_authenticated.HandleFunc("/notifications/{index:[0-9]+}", modifyNotificationSettings).Methods("DELETE", "PUT")
+	// alerts
+	external_router_authenticated.HandleFunc("/alerts", getAlertSettings).Methods("GET")
+	external_router_authenticated.HandleFunc("/alerts", modifyAlertSettings).Methods("DELETE", "PUT")
+	external_router_authenticated.HandleFunc("/alerts/{index:[0-9]+}", modifyAlertSettings).Methods("DELETE", "PUT")
 
 	// allow leaf nodes to report PSK events also
 	external_router_authenticated.HandleFunc("/reportPSKAuthSuccess", reportPSKAuthSuccess).Methods("PUT")
@@ -2711,8 +2713,8 @@ func main() {
 	// collect traffic accounting statistics
 	trafficTimer()
 
-	// notifications, connect to eventbus
-	go NotificationsRunEventListener()
+	// alerts, connect to eventbus
+	go AlertsRunEventListener()
 	//listen and cache dns
 	go DNSEventListener()
 
