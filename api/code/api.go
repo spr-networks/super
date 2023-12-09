@@ -2636,11 +2636,12 @@ func main() {
 	external_router_authenticated.HandleFunc("/startPlusExtension", startPlusExt).Methods("PUT")
 
 	// Auth api
-	external_router_authenticated.HandleFunc("/tokens", getAuthTokens).Methods("GET")
-	external_router_authenticated.HandleFunc("/tokens", updateAuthTokens).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/tokens", applyJwtOtpCheck(getAuthTokens)).Methods("GET")
+	external_router_authenticated.HandleFunc("/tokens", applyJwtOtpCheck(updateAuthTokens)).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/otp_register", otpRegister).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/otp_validate", generateOTPToken).Methods("PUT")
-	external_router_authenticated.HandleFunc("/otp_jwt_test", testJWTOTP).Methods("PUT")
+	external_router_authenticated.HandleFunc("/otp_status", otpStatus).Methods("PUT")
+	external_router_authenticated.HandleFunc("/otp_jwt_test", applyJwtOtpCheck(testJWTOTP)).Methods("PUT")
 
 	// notifications
 	external_router_authenticated.HandleFunc("/notifications", getNotificationSettings).Methods("GET")
