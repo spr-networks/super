@@ -249,6 +249,10 @@ func matchEventCondition(event interface{}, condition ConditionEntry) (error, bo
 	return nil, !isEmpty(value), value
 }
 
+type Event struct {
+	data interface{}
+}
+
 func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic string, value string) {
 	//make sure event settings dont change out from under us
 
@@ -266,7 +270,7 @@ func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic s
 		if strings.HasPrefix(topic, rule.TopicPrefix) {
 			values := []interface{}{}
 			for _, condition := range rule.Conditions {
-				err, matched, value := matchEventCondition(event, condition)
+				err, matched, value := matchEventCondition([]interface{}{event}, condition)
 				if err != nil {
 					log.Println("failed to build match condition", err, condition)
 					continue

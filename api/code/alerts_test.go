@@ -63,8 +63,8 @@ func TestProcessEventAlerts(t *testing.T) {
 	wg.Add(1)
 	go getStore(storeChan)
 
-	testEventJSON := `{"data":{"fieldA":2,"value":"testValue"}}`
-	no_matches := `{"data":{"fieldX":2,"value":"nope"}}`
+	testEventJSON := `{"fieldA":2,"value":"testValue"}`
+	no_matches := `{"fieldX":2,"value":"nope"}`
 
 	processEventAlerts(notifyChan, storeChan, "test:topic", testEventJSON)
 	processEventAlerts(notifyChan, storeChan, "test:topic", no_matches)
@@ -93,7 +93,7 @@ func TestProcessEventAlerts(t *testing.T) {
 	}
 }
 
-var testEventJSON2 = `{"data":{"stringA":"abc","stringB":"xyz","stringC":"123"}}`
+var testEventJSON2 = `{"stringA":"abc","stringB":"xyz","stringC":"123"}`
 
 func mockAlertSettings2() []AlertSetting {
 
@@ -111,9 +111,9 @@ func mockAlertSettings2() []AlertSetting {
 		TopicPrefix: "test:topic",
 		MatchAnyOne: true,
 		Conditions: []ConditionEntry{
-			{JPath: "$[?(@.missingField == \"boo\")].stringA"},
-			{JPath: "$[?(@.stringB == \"xyz\")].stringA"},
-			{JPath: "$[?(@.stringC == \"xyz\")].stringA"},
+			{JPath: "$[?(@.missingField == \"boo\")]"},
+			{JPath: "$[?(@.stringB == \"xyz\")]"},
+			{JPath: "$[?(@.stringC == \"xyz\")]"},
 		},
 		Actions: []ActionConfig{
 			{SendNotification: true, StoreAlert: true, GrabEvent: true},
@@ -125,9 +125,9 @@ func mockAlertSettings2() []AlertSetting {
 		TopicPrefix: "test:topic",
 		MatchAnyOne: false,
 		Conditions: []ConditionEntry{
-			{JPath: "$[?(@.missingField == \"boo\")].stringA"},
-			{JPath: "$[?(@.stringB == \"xyz\")].stringA"},
-			{JPath: "$[?(@.stringC == \"xyz\")].stringA"},
+			{JPath: "$[?(@.missingField == \"boo\")]"},
+			{JPath: "$[?(@.stringB == \"xyz\")]"},
+			{JPath: "$[?(@.stringC == \"xyz\")]"},
 		},
 		Actions: []ActionConfig{
 			{SendNotification: true, StoreAlert: true, GrabEvent: true},
@@ -139,9 +139,9 @@ func mockAlertSettings2() []AlertSetting {
 		TopicPrefix: "test:topic",
 		MatchAnyOne: false,
 		Conditions: []ConditionEntry{
-			{JPath: "$[?(@.stringA == \"abc\")].stringA"},
-			{JPath: "$[?(@.stringB == \"xyz\")].stringA"},
-			{JPath: "$[?(@.stringC == \"123\")].stringA"},
+			{JPath: "$[?(@.stringA == \"abc\")]"},
+			{JPath: "$[?(@.stringB == \"xyz\")]"},
+			{JPath: "$[?(@.stringC == \"123\")]"},
 		},
 		Actions: []ActionConfig{
 			{SendNotification: true, StoreAlert: true, GrabEvent: true},
@@ -153,7 +153,7 @@ func mockAlertSettings2() []AlertSetting {
 		TopicPrefix: "test:topic",
 		MatchAnyOne: false,
 		Conditions: []ConditionEntry{
-			{JPath: "$[?(@.stringA == \"abc\" && @.stringB == \"xyz\")].stringA"},
+			{JPath: "$[?(@.stringA == \"abc\" && @.stringB == \"xyz\")]"},
 		},
 		Actions: []ActionConfig{
 			{SendNotification: true, StoreAlert: true, GrabEvent: true},
@@ -166,7 +166,7 @@ func mockAlertSettings2() []AlertSetting {
 		MatchAnyOne: false,
 		InvertRule:  true,
 		Conditions: []ConditionEntry{
-			{JPath: "$[?(@.stringA == \"abc\" && @.stringB == \"xyz\")].stringA"},
+			{JPath: "$[?(@.stringA == \"abc\" && @.stringB == \"xyz\")]"},
 		},
 		Actions: []ActionConfig{
 			{SendNotification: true, StoreAlert: true, GrabEvent: true},
@@ -179,9 +179,9 @@ func mockAlertSettings2() []AlertSetting {
 		MatchAnyOne: false,
 		InvertRule:  true,
 		Conditions: []ConditionEntry{
-			{JPath: "$[?(@.missingField == \"boo\")].stringA"},
-			{JPath: "$[?(@.stringB == \"xyz\")].stringA"},
-			{JPath: "$[?(@.stringC == \"xyz\")].stringA"},
+			{JPath: "$[?(@.missingField == \"boo\")]"},
+			{JPath: "$[?(@.stringB == \"xyz\")]"},
+			{JPath: "$[?(@.stringC == \"xyz\")]"},
 		},
 		Actions: []ActionConfig{
 			{SendNotification: true, StoreAlert: true, GrabEvent: true},
