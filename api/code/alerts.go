@@ -33,13 +33,13 @@ var gDebugPrintAlert = false
 
 type Alert struct {
 	Topic string
-	Info  interface{}
+	Info  map[string]interface{}
 }
 
 type AlertSetting struct {
 	TopicPrefix string
 	MatchAnyOne bool //when true, only one condition has to match. when false, all have to match
-	InvertAlert bool //when true, inverts the match conditions
+	InvertRule  bool //when true, inverts the match conditions
 	Conditions  []ConditionEntry
 	Actions     []ActionConfig
 	Name        string
@@ -281,8 +281,9 @@ func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic s
 				}
 			}
 
-			satisfied := (len(values) == len(rule.Conditions)) || (rule.MatchAnyOne && len(values) > 1)
-			if rule.InvertAlert {
+			satisfied := (len(values) == len(rule.Conditions)) || (rule.MatchAnyOne && len(values) > 0)
+
+			if rule.InvertRule {
 				satisfied = !satisfied
 			}
 
