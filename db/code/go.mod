@@ -9,9 +9,12 @@ require (
 )
 
 require (
+	github.com/PaesslerAG/gval v1.2.2 // indirect
+	github.com/PaesslerAG/jsonpath v0.1.1 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/moby/moby v23.0.3+incompatible // indirect
 	github.com/moby/pubsub v1.0.0 // indirect
+	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect

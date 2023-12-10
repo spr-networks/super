@@ -2,20 +2,24 @@ package boltapi
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"github.com/gorilla/mux"
 	"io/ioutil"
-	//"github.com/tidwall/gjson"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/PaesslerAG/gval"
+	"github.com/PaesslerAG/jsonpath"
 )
 
 import bolt "go.etcd.io/bbolt"
@@ -38,6 +42,7 @@ var (
 	ErrBucketItemCreate  = errors.New("error creating bucket item")
 	ErrBucketItemUpdate  = errors.New("error updating bucket item")
 	ErrBucketItemDelete  = errors.New("error deleting bucket item")
+	ErrBucketItemFilter  = errors.New("error filtering item")
 	seenEvents           = map[string]bool{}
 )
 
@@ -414,6 +419,43 @@ func keyOrDefault(s interface{}, defaultKey string) []byte {
 	return key
 }
 
+func isEmpty(x interface{}) bool {
+	if x == nil {
+		return true
+	}
+
+	v := reflect.ValueOf(x)
+	switch v.Kind() {
+	case reflect.Slice, reflect.Array, reflect.Map:
+		return v.Len() == 0
+	case reflect.String:
+		return v.Len() == 0
+	default:
+		// for other types, return false
+		return false
+	}
+}
+
+func testFilter(JPath string, event interface{}) (bool, error) {
+	//similar to api/alerts.go
+	//this will evaluate a JSONPath expression on an interface
+	//and can be applied as a filter.
+	// the returned value is ignored, this only tests for a match
+	builder := gval.Full(jsonpath.PlaceholderExtension())
+
+	path, err := builder.NewEvaluable(JPath)
+	if err != nil {
+		return false, err
+	}
+
+	value, err := path(context.Background(), event)
+	if err != nil {
+		return false, err
+	}
+
+	return !isEmpty(value), err
+}
+
 // array of .values, including time key
 func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 	DBPtr.RLock()
@@ -429,6 +471,7 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 	max_q := r.URL.Query().Get("max")
 	minKey = keyOrDefault(min_q, time.Now().UTC().Add(-time.Hour*24*365).Format(time.RFC3339Nano))
 	maxKey = keyOrDefault(max_q, time.Now().UTC().Format(time.RFC3339Nano))
+	filter := r.URL.Query().Get("filter")
 
 	// default 100, max 1000
 	maxNum := 1000
@@ -471,11 +514,21 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			items = append(items, jsonMap)
+			doAppend := true
+			if filter != "" {
+				doAppend, err = testFilter(filter, jsonMap)
+				if err != nil {
+					log.Println(ApiError{ErrBucketItemFilter, err})
+				}
+			}
 
-			numFetched += 1
-			if numFetched >= num {
-				return nil
+			if doAppend {
+				items = append(items, jsonMap)
+
+				numFetched += 1
+				if numFetched >= num {
+					return nil
+				}
 			}
 		}
 
