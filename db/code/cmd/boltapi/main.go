@@ -7,13 +7,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 )
 
 import (
 	"github.com/spr-networks/sprbus"
-	//"github.com/tidwall/gjson"
 )
 
 import bolt "go.etcd.io/bbolt"
@@ -22,13 +22,15 @@ import (
 	"boltapi"
 )
 
+var TEST_PREFIX = os.Getenv("TEST_PREFIX")
+
 var (
-	gDBPath     = flag.String("dbpath", "/state/plugins/db/logs.db", "Path to bolt database")
+	gDBPath     = flag.String("dbpath", TEST_PREFIX + "/state/plugins/db/logs.db", "Path to bolt database")
 	gDebug      = flag.Bool("debug", false, "verbose output")
-	gConfigPath = flag.String("config", "/configs/db/config.json", "Path to boltapi configuration")
+	gConfigPath = flag.String("config", TEST_PREFIX + "/configs/db/config.json", "Path to boltapi configuration")
 	gDump       = flag.Bool("dump", false, "list gBuckets. dont run http server")
 	gBucket     = flag.String("b", "", "bucket to dump. dont run http server")
-	gSocketPath = "/state/plugins/db/socket"
+	gSocketPath = TEST_PREFIX + "/state/plugins/db/socket"
 )
 
 func cli(db *bolt.DB, bucket string) {

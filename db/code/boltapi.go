@@ -437,6 +437,7 @@ func isEmpty(x interface{}) bool {
 }
 
 func testFilter(JPath string, event interface{}) (bool, error) {
+
 	//similar to api/alerts.go
 	//this will evaluate a JSONPath expression on an interface
 	//and can be applied as a filter.
@@ -516,9 +517,10 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 
 			doAppend := true
 			if filter != "" {
-				doAppend, err = testFilter(filter, jsonMap)
+				//NOTE: for performance we might want to consider filtering items later.
+				doAppend, err = testFilter(filter, []interface{}{jsonMap})
 				if err != nil {
-					log.Println(ApiError{ErrBucketItemFilter, err})
+					log.Println("api failure", ApiError{ErrBucketItemFilter, err}, err)
 				}
 			}
 
