@@ -25,12 +25,11 @@ func mockAlertSettings() []AlertSetting {
 				{JPath: path},
 			},
 			Actions: []ActionConfig{
-				{SendNotification: true},
+				{SendNotification: true, GrabEvent: true},
 			}}
 		alertSettings = append(alertSettings, copy)
 	}
 
-	fmt.Println(alertSettings)
 	return alertSettings
 }
 
@@ -48,7 +47,6 @@ func TestProcessEventAlerts(t *testing.T) {
 		defer wg.Done()
 		for message := range ch {
 			notifications = append(notifications, message)
-			fmt.Printf("Notify Received: %+v\n", message)
 		}
 	}
 
@@ -73,8 +71,7 @@ func TestProcessEventAlerts(t *testing.T) {
 
 	wg.Wait()
 
-	fmt.Println(notifications)
-	if len(notifications) != 1 {
+	if len(notifications) != 4 {
 		t.Errorf("notification mismatch")
 	}
 }
