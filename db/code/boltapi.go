@@ -138,44 +138,6 @@ func (item *BucketItem) DecodeValue(rawValue []byte) error {
 	return nil
 }
 
-func Serve(boltdb **bolt.DB, socketpath string) error {
-	db = boltdb
-	router := mux.NewRouter().StrictSlash(true)
-
-	router.HandleFunc("/buckets", ListBuckets).Methods("GET")
-	router.HandleFunc("/buckets", AddBucket).Methods("PUT")
-
-	router.HandleFunc("/bucket/{name}", GetBucket).Methods("GET")
-	router.HandleFunc("/bucket/{name}", AddBucketItem).Methods("PUT")
-	router.HandleFunc("/bucket/{name}", DeleteBucket).Methods("DELETE")
-
-	router.HandleFunc("/items/{name}", GetBucketItems).Methods("GET")
-
-	router.HandleFunc("/bucket/{name}/{key}", GetBucketItem).Methods("GET")
-	router.HandleFunc("/bucket/{name}/{key}", UpdateBucketItem).Methods("PUT")
-	router.HandleFunc("/bucket/{name}/{key}", DeleteBucketItem).Methods("DELETE")
-
-	router.HandleFunc("/config", GetSetConfig).Methods("GET", "PUT")
-	router.HandleFunc("/stats", GetStats).Methods("GET")
-	router.HandleFunc("/stats/{name}", GetBucketStats).Methods("GET")
-
-	router.HandleFunc("/topics", GetTopics).Methods("GET")
-
-	os.Remove(socketpath)
-	unixPluginListener, err := net.Listen("unix", socketpath)
-	if err != nil {
-		panic(err)
-	}
-
-	log.Println("starting http.Server...")
-
-	pluginServer := http.Server{Handler: logRequest(router)}
-	return pluginServer.Serve(unixPluginListener)
-	//pluginServer := http.Server{Addr: ":8080", Handler: logRequest(router)}
-	//return pluginServer.ListenAndServe()
-
-}
-
 func GetSetConfig(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		conf := loadConfig()
@@ -689,4 +651,39 @@ func logRequest(handler http.Handler) http.Handler {
 		//sprbus.Publish("log:db", map[string]int64{"method": r.Method})
 		handler.ServeHTTP(w, r)
 	})
+}
+
+func Serve(boltdb **bolt.DB, socketpath string) error {
+	db = boltdb
+	router := mux.NewRouter().StrictSlash(true)
+
+	router.HandleFunc("/buckets", ListBuckets).Methods("GET")
+	router.HandleFunc("/buckets", AddBucket).Methods("PUT")
+
+	router.HandleFunc("/bucket/{name}", GetBucket).Methods("GET")
+	router.HandleFunc("/bucket/{name}", AddBucketItem).Methods("PUT")
+	router.HandleFunc("/bucket/{name}", DeleteBucket).Methods("DELETE")
+
+	router.HandleFunc("/items/{name}", GetBucketItems).Methods("GET")
+
+	router.HandleFunc("/bucket/{name}/{key}", GetBucketItem).Methods("GET")
+	router.HandleFunc("/bucket/{name}/{key}", UpdateBucketItem).Methods("PUT")
+	router.HandleFunc("/bucket/{name}/{key}", DeleteBucketItem).Methods("DELETE")
+
+	router.HandleFunc("/config", GetSetConfig).Methods("GET", "PUT")
+	router.HandleFunc("/stats", GetStats).Methods("GET")
+	router.HandleFunc("/stats/{name}", GetBucketStats).Methods("GET")
+
+	router.HandleFunc("/topics", GetTopics).Methods("GET")
+
+	os.Remove(socketpath)
+	unixPluginListener, err := net.Listen("unix", socketpath)
+	if err != nil {
+		panic(err)
+	}
+
+	log.Println("starting http.Server...")
+
+	pluginServer := http.Server{Handler: logRequest(router)}
+	return pluginServer.Serve(unixPluginListener)
 }
