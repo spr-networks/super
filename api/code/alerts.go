@@ -60,6 +60,9 @@ type ActionConfig struct {
 	MessageTitle     string `json:"MessageTitle,omitempty"`
 	MessageBody      string `json:"MessageBody,omitempty"`
 	ActionType       string `json:"ActionType,omitempty"`
+	GrabEvent        bool
+	GrabValues       bool
+	GrabFields       []string `json:"ActionType,omitempty"`
 	//ActionSatisfied  bool //we can consider an action work queue later.
 }
 
@@ -173,20 +176,6 @@ func modifyAlertSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 func processAction(notifyChan chan<- Alert, storeChan chan<- Alert, event interface{}, action ActionConfig, values []interface{}) {
-	/*
-		// actions to take can stack
-		type ActionConfig struct {
-			SendNotification bool   //alerts can send immediate notifications
-			StoreAlert       bool   //alerts can also be stored without notifying
-			StoreTopicSuffix string `json:"BucketSuffix,omitempty"`
-			MessageTitle     string `json:"MessageTitle,omitempty"`
-			MessageBody      string `json:"MessageBody,omitempty"`
-			ActionType       string `json:"ActionType,omitempty"`
-			//ActionSatisfied  bool //we can consider an action work queue later.
-		}
-	*/
-
-	//			var data map[string]interface{}
 	if gDebugPrintAlert {
 		fmt.Println("=== event ===")
 		fmt.Printf("%+v\n", event)
@@ -206,22 +195,23 @@ func processAction(notifyChan chan<- Alert, storeChan chan<- Alert, event interf
 	if action.MessageBody != "" {
 		Info["Body"] = action.MessageBody
 	}
-	Info["test"] = "test info"
+
+	if action.GrabEvent {
+		Info["Event"] = event
+	}
+
+	if action.GrabValues {
+		Info["Values"] = values
+	}
 
 	alert := Alert{Topic: topic, Info: Info}
 
-	fmt.Println("beam out")
-	fmt.Println(alert)
-	//
 	if action.SendNotification {
 		notifyChan <- alert
-		//		WSNotifyValue("alert:"+action.StoreTopicSuffix, alert)
 	}
 
 	if action.StoreAlert {
 		storeChan <- alert
-		//send the action to the DB Store
-		//StoreAlertQueue <- alert
 	}
 
 }
@@ -306,6 +296,7 @@ func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic s
 }
 
 func AlertsRunEventListener() {
+	var wg sync.WaitGroup
 	AlertSettingsmtx.Lock()
 	loadAlertsConfig()
 	AlertSettingsmtx.Unlock()
@@ -314,6 +305,25 @@ func AlertsRunEventListener() {
 
 	notifyChan := make(chan Alert)
 	storeChan := make(chan Alert)
+
+	doNotify := func(ch <-chan Alert) {
+		defer wg.Done()
+		for message := range ch {
+			WSNotifyValue(message.Topic, message.Info)
+		}
+	}
+
+	doStore := func(ch <-chan Alert) {
+		defer wg.Done()
+		for message := range ch {
+			sprbus.Publish(message.Topic, message.Info)
+		}
+	}
+
+	wg.Add(1)
+	go doNotify(notifyChan)
+	wg.Add(1)
+	go doStore(storeChan)
 
 	busEvent := func(topic string, value string) {
 
@@ -352,5 +362,9 @@ func AlertsRunEventListener() {
 		time.Sleep(1 * time.Second)
 	}
 
+	close(notifyChan)
+	close(storeChan)
+
+	wg.Wait()
 	logStd.Println("sprbus client exit")
 }
