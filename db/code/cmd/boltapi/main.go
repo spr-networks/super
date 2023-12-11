@@ -89,6 +89,13 @@ func cli(db *bolt.DB, bucket string) {
 var config = boltapi.LogConfig{}
 
 func shouldLogEvent(topic string) bool {
+	//hard coded for now. always store alert events
+	//if someone does not want them they should disable the alert
+	//that generates it.
+	if strings.HasPrefix(topic, "alert:") {
+		return true
+	}
+
 	for _, event := range config.SaveEvents {
 		if strings.HasPrefix(topic, event) {
 			return true
