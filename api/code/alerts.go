@@ -261,7 +261,7 @@ func processAction(notifyChan chan<- Alert, storeChan chan<- Alert, event_topic 
 	topic := "alert:" + action.StoreTopicSuffix
 	Info := map[string]interface{}{}
 
-	info["Topic"] = event_topic
+	Info["Topic"] = event_topic
 
 	if action.MessageTitle != "" {
 		Info["Title"] = action.MessageTitle
