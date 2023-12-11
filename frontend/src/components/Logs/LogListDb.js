@@ -10,10 +10,12 @@ import { dbAPI } from 'api'
 import {
   Button,
   ButtonIcon,
+  ButtonText,
   FlatList,
   Heading,
   HStack,
   InfoIcon,
+  Icon,
   Input,
   InputField,
   InputIcon,
@@ -22,14 +24,20 @@ import {
   LinkText,
   Text,
   View,
-  useColorMode
+  useColorMode,
+  ChevronDownIcon
 } from '@gluestack-ui/themed'
 
-import { SearchIcon, Settings2Icon } from 'lucide-react-native'
+import {
+  SearchIcon,
+  Settings2Icon,
+  SlidersHorizontalIcon
+} from 'lucide-react-native'
 
 import { ModalContext } from 'AppContext'
 import { EditDatabase } from 'views/System/EditDatabase'
 import LogListItem from './LogListItem'
+import FilterSelect from './FilterSelect'
 import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
 import { Tooltip } from 'components/Tooltip'
@@ -44,7 +52,7 @@ const LogList = (props) => {
   const perPage = 20
   const [params, setParams] = useState({ num: perPage })
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
-  const [searchField, setSearchField] = useState("")
+  const [searchField, setSearchField] = useState('')
 
   const colorMode = useColorMode()
 
@@ -182,6 +190,21 @@ const LogList = (props) => {
     )
   }
 
+  const handlePressFilter = () => {
+    const onSubmit = (text) => {
+      setSearchField(text)
+      modalContext.toggleModal()
+    }
+    modalContext.modal(
+      'Set Filter',
+      <FilterSelect
+        query={searchField}
+        items={logs}
+        onSubmitEditing={onSubmit}
+      />
+    )
+  }
+
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
       <HStack space="md" p="$4" alignItems="center">
@@ -197,14 +220,29 @@ const LogList = (props) => {
           {total} items
         </Text>
 
-        <Input size="sm" rounded="$md" w={250}>
-          <InputField
-            autoFocus
-            value={searchField}
-            onChangeText={(x) => {setSearchField(x)}}
-            placeholder="Search"
-          />
-        </Input>
+        <HStack
+          display="none"
+          sx={{
+            '@md': {
+              w: '$1/2',
+              display: 'flex'
+            }
+          }}
+        >
+          <Input size="sm" rounded="$md" flex={1}>
+            <InputField
+              autoFocus
+              value={searchField}
+              onChangeText={(x) => {
+                setSearchField(x)
+              }}
+              placeholder="Search"
+            />
+            <InputSlot px="$2" onPress={handlePressFilter}>
+              <Icon as={SlidersHorizontalIcon} />
+            </InputSlot>
+          </Input>
+        </HStack>
 
         {/*
         <Tooltip label="Set filter for logs" ml="auto">
