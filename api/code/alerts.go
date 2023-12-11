@@ -93,7 +93,6 @@ func validateActionConfig(action ActionConfig) error {
 		}
 	}
 
-
 	return nil
 }
 
@@ -190,13 +189,13 @@ func grabReflectOld(fields []string, event interface{}) map[string]interface{} {
 	newEvent := map[string]interface{}{}
 	v := reflect.ValueOf(&event).Elem()
 	for _, field := range fields {
-	  // Get the field by name
-	  fieldValue := v.FieldByName(field)
-	  // Check if the field exists
-	  if fieldValue.IsValid() {
-	    // Add the field to the newEvent map
-	    newEvent[field] = fieldValue.Interface()
-	  }
+		// Get the field by name
+		fieldValue := v.FieldByName(field)
+		// Check if the field exists
+		if fieldValue.IsValid() {
+			// Add the field to the newEvent map
+			newEvent[field] = fieldValue.Interface()
+		}
 	}
 	return newEvent
 }
@@ -212,7 +211,6 @@ func grabReflect(fields []string, event interface{}) map[string]interface{} {
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
-
 
 	var patterns []*regexp.Regexp
 	for _, field := range fields {
@@ -249,9 +247,7 @@ func grabReflect(fields []string, event interface{}) map[string]interface{} {
 	return newEvent
 }
 
-
-
-func processAction(notifyChan chan<- Alert, storeChan chan<- Alert, event interface{}, action ActionConfig, values []interface{}) {
+func processAction(notifyChan chan<- Alert, storeChan chan<- Alert, event_topic string, event interface{}, action ActionConfig, values []interface{}) {
 	if gDebugPrintAlert {
 		fmt.Println("=== event ===")
 		fmt.Printf("%+v\n", event)
@@ -264,6 +260,8 @@ func processAction(notifyChan chan<- Alert, storeChan chan<- Alert, event interf
 
 	topic := "alert:" + action.StoreTopicSuffix
 	Info := map[string]interface{}{}
+
+	info["Topic"] = event_topic
 
 	if action.MessageTitle != "" {
 		Info["Title"] = action.MessageTitle
@@ -334,6 +332,7 @@ func matchEventCondition(event interface{}, condition ConditionEntry) (error, bo
 type Event struct {
 	data interface{}
 }
+
 func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic string, value string) {
 	//make sure event settings dont change out from under us
 
@@ -374,7 +373,7 @@ func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic s
 
 			if satisfied {
 				for _, action := range rule.Actions {
-					processAction(notifyChan, storeChan, event, action, values)
+					processAction(notifyChan, storeChan, topic, event, action, values)
 				}
 			}
 		}
