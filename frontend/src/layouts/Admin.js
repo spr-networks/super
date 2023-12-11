@@ -246,8 +246,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const [devices, setDevices] = useState([])
   const [groups, setGroups] = useState([])
 
-  const [notificationSettings, setNotificationSettings] = useState([])
-
   // device context stuff
   const getDevices = (forceFetch = false) => {
     return new Promise((resolve, reject) => {
@@ -323,14 +321,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       .then(setVersion)
       .catch((err) => {})
 
-    // get stetings for notificaations
-    notificationsAPI.list().then((settings) => {
-      setNotificationSettings(settings)
-    })
-
-    getDevices().then((res) => {
-      //console.log('++ got', res.length, 'devices')
-    })
 
     // callback for notifications, web & ios
     // action = allow,deny,cancel, data = nft data
