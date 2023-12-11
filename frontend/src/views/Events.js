@@ -4,6 +4,8 @@ import {
   View,
   Heading,
   Icon,
+  Input,
+  InputField,
   Modal,
   ModalBackdrop,
   ModalBody,

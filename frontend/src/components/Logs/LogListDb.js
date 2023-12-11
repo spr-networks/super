@@ -14,6 +14,10 @@ import {
   Heading,
   HStack,
   InfoIcon,
+  Input,
+  InputField,
+  InputIcon,
+  InputSlot,
   Link,
   LinkText,
   Text,
@@ -21,7 +25,7 @@ import {
   useColorMode
 } from '@gluestack-ui/themed'
 
-import { Settings2Icon } from 'lucide-react-native'
+import { SearchIcon, Settings2Icon } from 'lucide-react-native'
 
 import { ModalContext } from 'AppContext'
 import { EditDatabase } from 'views/System/EditDatabase'
@@ -40,6 +44,7 @@ const LogList = (props) => {
   const perPage = 20
   const [params, setParams] = useState({ num: perPage })
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
+  const [searchField, setSearchField] = useState("")
 
   const colorMode = useColorMode()
 
@@ -97,7 +102,12 @@ const LogList = (props) => {
     let stats = await dbAPI.stats(bucket)
     setTotal(stats.KeyN)
 
-    let result = await dbAPI.items(bucket, params)
+    let withFilter = params
+    withFilter['filter'] = searchField
+    let result = await dbAPI.items(bucket, withFilter)
+    if (result == null) {
+      result = []
+    }
     result = result.map((r) => parseLog(r, bucket))
 
     setLogs(result)
@@ -113,7 +123,7 @@ const LogList = (props) => {
   useEffect(() => {
     setLogs([])
     fetchLogs()
-  }, [params])
+  }, [params, searchField])
 
   const updatePage = (page, prevPage) => {
     //when page updates, fetch last log entry and use this as max ts for next page
@@ -186,6 +196,15 @@ const LogList = (props) => {
           {/*page={page}/{Math.ceil(total / perPage)}, total = {total}*/}
           {total} items
         </Text>
+
+        <Input size="sm" rounded="$md" w={250}>
+          <InputField
+            autoFocus
+            value={searchField}
+            onChangeText={(x) => {setSearchField(x)}}
+            placeholder="Search"
+          />
+        </Input>
 
         {/*
         <Tooltip label="Set filter for logs" ml="auto">
