@@ -373,7 +373,7 @@ func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic s
 
 			//if there are no conditions, assume we match on the topic alone.
 			if len(rule.Conditions) == 0 {
-				satisified = true
+				satisfied = true
 			}
 
 			if satisfied {
