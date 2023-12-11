@@ -44,8 +44,6 @@ type AlertSetting struct {
 	Conditions  []ConditionEntry
 	Actions     []ActionConfig
 	Name        string
-
-	Validate func() error
 }
 
 // conditions can stack onto the same event,
@@ -66,7 +64,35 @@ type ActionConfig struct {
 	GrabFields       []string `json:"GrabFields,omitempty"`
 }
 
-func validateConditionEntry(entry ConditionEntry) error {
+func (a *AlertSetting) Validate() error {
+	if a.TopicPrefix == "" {
+		return fmt.Errorf("TopicPrefix cannot be empty")
+	}
+
+	for _, condition := range a.Conditions {
+		if err := condition.Validate(); err != nil {
+			return fmt.Errorf("Invalid condition: %v", err)
+		}
+	}
+
+	if len(a.Actions) == 0 {
+		return fmt.Errorf("At least one ActionConfig is required")
+	}
+
+	for _, action := range a.Actions {
+		if err := action.Validate(); err != nil {
+			return fmt.Errorf("Invalid action: %v", err)
+		}
+	}
+
+	if a.Name == "" {
+		return fmt.Errorf("Name cannot be empty")
+	}
+
+	return nil
+}
+
+func (entry *ConditionEntry) Validate() error {
 	if len(entry.JPath) == 0 {
 		return errors.New("JPath cannot be empty")
 	}
@@ -74,7 +100,7 @@ func validateConditionEntry(entry ConditionEntry) error {
 	return nil
 }
 
-func validateActionConfig(action ActionConfig) error {
+func (action *ActionConfig) Validate() error {
 	// validate StoreTopicSuffix
 
 	// ... (implement logic for validating StoreTopicSuffix)
