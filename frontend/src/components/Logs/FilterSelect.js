@@ -67,7 +67,7 @@ const buildQuery = (values) => {
   for (let k of keys) {
     let op = values[k].op
     let value = values[k].value
-    qs.push(`@.${k} ${op} ${toType(value)}`)
+    qs.push(`@.${k}${op}${toType(value)}`)
   }
 
   let subqs = qs.join(' && ')
@@ -81,14 +81,19 @@ const FilterSelect = ({ items, onSubmitEditing, query, ...props }) => {
   const [values, setValues] = useState({})
   const [keys, setKeys] = useState([])
 
-  useEffect(() => {
-    if (!items) return
-    //TODO recursive if needed
+  const extractKeys = (items) => {
     let keys = Object.keys(Array.isArray(items) ? items[0] : items)
-
     keys = keys.filter((k) => {
       return !['bucket', 'time'].includes(k)
     })
+
+    return keys
+  }
+
+  useEffect(() => {
+    if (!items) return
+    //TODO recursive if needed
+    let keys = extractKeys(items)
 
     // TODO set defaults here from query
     if (query) {
