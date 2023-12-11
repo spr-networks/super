@@ -62,8 +62,7 @@ type ActionConfig struct {
 	ActionType       string `json:"ActionType,omitempty"`
 	GrabEvent        bool
 	GrabValues       bool
-	GrabFields       []string `json:"ActionType,omitempty"`
-	//ActionSatisfied  bool //we can consider an action work queue later.
+	GrabFields       []string `json:"GrabFields,omitempty"`
 }
 
 func validateConditionEntry(entry ConditionEntry) error {
@@ -203,6 +202,8 @@ func processAction(notifyChan chan<- Alert, storeChan chan<- Alert, event interf
 	if action.GrabValues {
 		Info["Values"] = values
 	}
+
+	Info["State"] = ""
 
 	alert := Alert{Topic: topic, Info: Info}
 

@@ -1949,8 +1949,10 @@ func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface str
 	//check if a device has its vmap entries established
 
 	//check ethernet filter entry is present
-	if !hasVerdictMac(entry.RecentIP, entry.MAC, Iface, "ethernet_filter", "return") {
-		return false
+	if entry.MAC != "" {
+		if !hasVerdictMac(entry.RecentIP, entry.MAC, Iface, "ethernet_filter", "return") {
+			return false
+		}
 	}
 
 	//check groups
@@ -2421,10 +2423,12 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	//log.Println("flushing route and vmaps ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
 
 	//1. delete arp entry
-	flushRoute(entry.MAC)
+	if entry.MAC != "" {
+		flushRoute(entry.MAC)
 
-	//2. delete this ip, mac from any existing verdict maps
-	flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
+		//2. delete this ip, mac from any existing verdict maps
+		flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
+	}
 
 	//3. delete the old router address
 	exec.Command("ip", "addr", "del", routeIP, "dev", established_route_device).Run()
@@ -2440,12 +2444,12 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	updateAddr(router, new_iface)
 
 	//5. Update the ARP entry
-	if new_iface != "wg0" {
+	if new_iface != "wg0" && entry.MAC != "" {
 		updateArp(new_iface, entry.RecentIP, entry.MAC)
 	}
 
 	//6. add entry to appropriate verdict maps
-	if new_iface != "wg0" {
+	if new_iface != "wg0" && entry.MAC != "" {
 		//add this MAC and IP to the ethernet filter
 		addVerdictMac(entry.RecentIP, entry.MAC, new_iface, "ethernet_filter", "return")
 	}
@@ -2453,7 +2457,9 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
 
-	populateVmapEntries(entry.RecentIP, entry.MAC, new_iface, entry.WGPubKey)
+	if entry.MAC != "" {
+		populateVmapEntries(entry.RecentIP, entry.MAC, new_iface, entry.WGPubKey)
+	}
 
 	//apply the tags
 	applyPrivateNetworkUpstreamDevice(entry)
