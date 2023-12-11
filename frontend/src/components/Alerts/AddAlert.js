@@ -27,7 +27,7 @@ const AddAlert = ({ onSubmit, ...props }) => {
   //only one action is supported now. in the future we will implement
   // different action types, for example, disconnecting a device.
   const [GrabFields, setGrabFields] = useState([])
-  const [ActionConfig, setActionConfig] = useState({})
+  const [ActionConfig, setActionConfig] = useState({GrabEvent: true, StoreAlert: true})
   const [Name, setName] = useState("")
 
 
@@ -77,6 +77,48 @@ const AddAlert = ({ onSubmit, ...props }) => {
 
   return (
     <VStack space="md">
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Alert Name</FormControlLabelText>
+        </FormControlLabel>
+        <Input type="text" variant="underlined">
+          <InputField
+            name="Name"
+            value={Name}
+            onChangeText={(value) => setName(value)}
+          />
+        </Input>
+      </FormControl>
+
+
+      <HStack>
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Message Title</FormControlLabelText>
+        </FormControlLabel>
+        <Input type="text" variant="underlined">
+          <InputField
+            name="MessageTitle"
+            value={ActionConfig.MessageTitle}
+            onChangeText={(value) => setActionConfig({ ...ActionConfig, MessageTitle: value })}
+          />
+        </Input>
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Message Body</FormControlLabelText>
+        </FormControlLabel>
+        <Input type="text" variant="underlined">
+          <InputField
+            name="MessageBody"
+            value={ActionConfig.MessageBody}
+            onChangeText={(value) => setActionConfig({ ...ActionConfig, MessageBody: value })}
+          />
+        </Input>
+      </FormControl>
+      </HStack>
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText>Event Filter Prefix</FormControlLabelText>
@@ -88,6 +130,9 @@ const AddAlert = ({ onSubmit, ...props }) => {
             onChangeText={(value) => setTopicPrefix(value)}
           />
         </Input>
+        <FormControlHelper>
+          <FormControlHelperText>Topic prefix filter</FormControlHelperText>
+        </FormControlHelper>
       </FormControl>
 
       { (Conditions.length > 1) ? (
@@ -134,7 +179,7 @@ const AddAlert = ({ onSubmit, ...props }) => {
         ))}
 
         <Button action="primary" size="sm" onPress={addCondition}>
-          <ButtonText>New Condition</ButtonText>
+          <ButtonText>Add Condition Filter</ButtonText>
         </Button>
 
 
@@ -164,9 +209,8 @@ const AddAlert = ({ onSubmit, ...props }) => {
               <FormControlHelperText>Store alert in DB</FormControlHelperText>
             </FormControlHelper>
           </FormControl>
-        </HStack>
 
-        <FormControl>
+        <FormControl style={{marginLeft: "25px"}}>
           <FormControlLabel>
             <FormControlLabelText>Alert Topic Suffix</FormControlLabelText>
           </FormControlLabel>
@@ -179,43 +223,19 @@ const AddAlert = ({ onSubmit, ...props }) => {
             />
           </Input>
         </FormControl>
+        </HStack>
+
 
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Message Title</FormControlLabelText>
-          </FormControlLabel>
-          <Input type="text" variant="underlined">
-            <InputField
-              name="MessageTitle"
-              value={ActionConfig.MessageTitle}
-              onChangeText={(value) => setActionConfig({ ...ActionConfig, MessageTitle: value })}
-            />
-          </Input>
-        </FormControl>
-
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText>Message Body</FormControlLabelText>
-          </FormControlLabel>
-          <Input type="text" variant="underlined">
-            <InputField
-              name="MessageBody"
-              value={ActionConfig.MessageBody}
-              onChangeText={(value) => setActionConfig({ ...ActionConfig, MessageBody: value })}
-            />
-          </Input>
-        </FormControl>
-
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText>Collect Event with Alert</FormControlLabelText>
+            <FormControlLabelText>Copy Event into Alert</FormControlLabelText>
           </FormControlLabel>
           <Switch
             value={ActionConfig.GrabEvent}
             onValueChange={() => setActionConfig({ ...ActionConfig, GrabEvent: !ActionConfig.GrabEvent })}
           />
           <FormControlHelper>
-            <FormControlHelperText>Add a custom field to specificy specific fields to collect</FormControlHelperText>
+            <FormControlHelperText>If no fields are specified, all fields are copied</FormControlHelperText>
           </FormControlHelper>
         </FormControl>
 
@@ -223,7 +243,7 @@ const AddAlert = ({ onSubmit, ...props }) => {
           <HStack key={index} space="md">
             <FormControl flex={5}>
               <FormControlLabel>
-                <FormControlLabelText>Grab Field</FormControlLabelText>
+                <FormControlLabelText>Field Name</FormControlLabelText>
               </FormControlLabel>
               <Input type="text" variant="underlined">
                 <InputField
@@ -240,22 +260,8 @@ const AddAlert = ({ onSubmit, ...props }) => {
         ))}
 
         <Button action="primary" size="sm" onPress={addGrabField}>
-          <ButtonText>Add Custom Field to Collect from Event</ButtonText>
+          <ButtonText>Add Field to Copy</ButtonText>
         </Button>
-
-
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Alert Name</FormControlLabelText>
-        </FormControlLabel>
-        <Input type="text" variant="underlined">
-          <InputField
-            name="Name"
-            value={Name}
-            onChangeText={(value) => setName(value)}
-          />
-        </Input>
-      </FormControl>
 
       <Button action="primary" size="md" onPress={handleSubmit}>
         <ButtonText>Save</ButtonText>
