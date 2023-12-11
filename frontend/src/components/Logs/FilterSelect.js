@@ -13,6 +13,7 @@ import {
   InputField,
   InputSlot,
   Pressable,
+  ScrollView,
   Text,
   useColorMode,
   VStack,
@@ -21,6 +22,8 @@ import {
   FormControlLabelText,
   FormControlHelperText
 } from '@gluestack-ui/themed'
+
+import { JSONSyntax } from 'components/SyntaxHighlighter'
 
 const KeyItem = ({ name, isSelected, onPress, ...props }) => {
   const colorMode = useColorMode()
@@ -82,13 +85,25 @@ const FilterSelect = ({ items, onSubmitEditing, query, ...props }) => {
   const [keys, setKeys] = useState([])
 
   const extractKeys = (items) => {
-    let keys = Object.keys(Array.isArray(items) ? items[0] : items)
-    keys = keys.filter((k) => {
-      return !['bucket', 'time'].includes(k)
-    })
+    if (!items) return [];
 
-    return keys
-  }
+    let item = Array.isArray(items) ? items[0] : items
+    if (!item) return []
+    
+    let keys = Object.keys(item);
+
+    keys = keys.filter((k) => !['bucket', 'time'].includes(k));
+
+    keys.forEach(key => {
+      if (typeof item[key] === 'object' && item[key] !== null) {
+        let commons = ["SrcIP", "DstIP", "IP", "DstMAC", "SrcMAC", "Length", "SrcPort", "DstPort"]
+        let z = extractKeys(item[key]).filter(k => commons.includes(k)).map(k => key+"."+k)
+        keys = keys.concat(z);
+      }
+    });
+
+    return keys;
+  };
 
   useEffect(() => {
     if (!items) return
@@ -208,7 +223,11 @@ const FilterSelect = ({ items, onSubmitEditing, query, ...props }) => {
         <Text size="xs" bold>
           Sample Item:
         </Text>
-        <Text size="xs">{JSON.stringify(items[0])}</Text>
+        <ScrollView
+          maxHeight={150}>
+          <Text size="xs">{JSON.stringify(items[0])}</Text>
+          {/* <JSONSyntax code={jsonData} />*/}
+        </ScrollView>
       </VStack>
     </VStack>
   )

@@ -65,7 +65,19 @@ const LogList = (props) => {
     setParams({ ...params, num, max })
 
     dbAPI.buckets().then((buckets) => {
+
+      const ignoreList = ["alert:"]
+      for (let ignore of ignoreList) {
+        buckets = buckets.filter(b => !b.startsWith(ignore))
+      }
+
       buckets.sort((a, b) => {
+        //force dns to the end as each client has its own bucket.
+        if (b.startsWith("dns:") && !a.startsWith("dns:")) {
+          return -1
+        }
+
+        //and force log: to the top
         if (a.startsWith('log:') && !b.startsWith('log:')) {
           return -1
         }

@@ -34,7 +34,7 @@ import Events from 'views/Events'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
 import SystemInfo from 'views/SystemInfo'
-import Notifications from 'views/Notifications'
+import Alerts from 'views/Alerts'
 import SpeedTest from 'views/SpeedTest'
 import Supernetworks from 'views/Supernetworks'
 
@@ -301,7 +301,7 @@ const routes = [
     ]
   },
   {
-    name: 'Events',
+    name: 'Monitor',
     state: 'eventsCollapse',
     hideSimple: true,
     views: [
@@ -309,7 +309,7 @@ const routes = [
         path: 'alerts',
         name: 'Alerts',
         icon: AlertTriangleIcon,
-        component: Notifications,
+        component: Alerts,
         layout: 'admin'
       },
       {
@@ -319,13 +319,6 @@ const routes = [
         component: Events,
         layout: 'admin'
       },
-      {
-        path: 'alertsettings',
-        name: 'Settings',
-        icon: CogIcon,
-        component: Notifications,
-        layout: 'admin'
-      }
     ]
   },
   {

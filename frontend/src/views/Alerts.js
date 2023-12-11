@@ -8,6 +8,9 @@ import {
   FlatList,
   HStack,
   Icon,
+  Input,
+  InputField,
+  InputSlot,
   Menu,
   MenuItem,
   MenuItemLabel,
@@ -18,15 +21,20 @@ import {
   ThreeDotsIcon
 } from '@gluestack-ui/themed'
 
-//import { FlashList } from '@shopify/flash-list'
-
-import { alertsAPI } from 'api'
+import { alertsAPI, dbAPI } from 'api'
 import AddAlert from 'components/Alerts/AddAlert'
 import { AlertContext } from 'layouts/Admin'
+import { ModalContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import { ListHeader } from 'components/List'
 import { ListItem } from 'components/List'
-import { BellIcon, BellOffIcon } from 'lucide-react-native'
+import { BellIcon, BellOffIcon, SlidersHorizontalIcon } from 'lucide-react-native'
+
+import LogListItem from 'components/Logs/LogListItem'
+import FilterSelect from 'components/Logs/FilterSelect'
+import { Select } from 'components/Select'
+import Pagination from 'components/Pagination'
+import { Tooltip } from 'components/Tooltip'
 
 const AlertItem = ({ item, index, onDelete, onToggle, ...props }) => {
   if (!item) {
@@ -102,26 +110,101 @@ const AlertItem = ({ item, index, onDelete, onToggle, ...props }) => {
   )
 }
 
-const Alert = (props) => {
-  const [alerts, setAlerts] = useState([])
+const Alerts = (props) => {
+  const [config, setConfig] = useState([])
+  const [topics, setTopics] = useState([])
   const context = useContext(AlertContext)
+  const modalContext = useContext(ModalContext)
+  const AlertPrefix = "nft:"
+
+  const [logs, setLogs] = useState([])
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const perPage = 20
+  const [params, setParams] = useState({ num: perPage })
+  const [searchField, setSearchField] = useState('')
 
   const fetchList = () => {
     alertsAPI
       .list()
-      .then((alerts) => setAlerts(alertws))
+      .then((config) => setConfig(config))
       .catch((err) => context.error(`failed to fetch alerts config`))
   }
 
+  const fetchAlertBuckets = () => {
+    dbAPI.buckets().then((buckets) => {
+      buckets = buckets.filter(b => b.startsWith(AlertPrefix))
+      buckets.sort()
+      setTopics(buckets)
+    })
+  }
+
+  const fetchLogs = async () => {
+    const parseLog = (r, bucket) => {
+      if (bucket == 'log:www:access') {
+        r.msg = `${r.method} ${r.path}`
+        r.level = r.remoteaddr
+      }
+
+      return { ...r, bucket: bucket.replace(/^log:/, '') }
+    }
+
+    let result = []
+    for (let bucket of topics) {
+      //let stats = await dbAPI.stats(bucket)
+      //setTotal(stats.KeyN)
+
+      let withFilter = params
+      withFilter['filter'] = searchField
+      let more_results = await dbAPI.items(bucket, withFilter)
+      if (more_results !== null) {
+        let mock_alerts = more_results.map(
+          (event) => {
+            return {
+              "Topic": bucket,
+              "Event": event
+            }
+          }
+        )
+        result = result.concat(mock_alerts)
+      }
+    }
+
+    //alert(result.length)
+    setLogs(result)
+  }
+
+  useEffect(() => {
+    setLogs([])
+    fetchLogs()
+  }, [params, searchField])
+
   useEffect(() => {
     fetchList()
+    fetchAlertBuckets()
+    fetchLogs()
   }, [])
+
+  const handlePressFilter = () => {
+    const onSubmit = (text) => {
+      setSearchField(text)
+      modalContext.toggleModal()
+    }
+    modalContext.modal(
+      'Set Filter',
+      <FilterSelect
+        query={searchField}
+        items={logs}
+        onSubmitEditing={onSubmit}
+      />
+    )
+  }
 
   const onDelete = (index) => {
     alertsAPI.remove(index).then((res) => {
       let _alerts = [...alerts]
       delete _alerts[index]
-      setAlerts(_alerts)
+      setConfig(_alerts)
     })
   }
 
@@ -131,7 +214,7 @@ const Alert = (props) => {
     alertsAPI.update(index, item).then((res) => {
       let _alerts = [...alerts]
       _alerts[index] = item
-      setAlerts(_alerts)
+      setConfig(_alerts)
     })
   }
 
@@ -163,8 +246,58 @@ const Alert = (props) => {
         </ModalForm>
       </ListHeader>
 
+      <HStack
+        display="none"
+        sx={{
+          '@md': {
+            w: '$1/2',
+            display: 'flex'
+          }
+        }}
+      >
+        <Input size="sm" rounded="$md" flex={1}>
+          <InputField
+            autoFocus
+            value={searchField}
+            onChangeText={(x) => {
+              setSearchField(x)
+            }}
+            placeholder="Search"
+          />
+          <InputSlot px="$2" onPress={handlePressFilter}>
+            <Icon as={SlidersHorizontalIcon} />
+          </InputSlot>
+        </Input>
+      </HStack>
       <FlatList
-        data={alerts}
+        flex={2}
+        data={logs}
+        estimatedItemSize={100}
+        renderItem={({ item }) => (
+          <HStack>
+          {/*
+            TBD: state will be something like
+              "" -> untriaged
+              "Triaged" -> event has been triaged, priority set till exempel
+              "Resolved" -> event has been resolved
+          */}
+            <Text>State: {item.State}</Text>
+            {/*
+              Title is an alert Title from the configuration
+            */}
+            <Text>Title: {item.Title}</Text>
+            {/*
+              Body is an alert body to be set from config
+            */}
+            <Text>Body: {item.Body}</Text>
+            <LogListItem item={item.Event} selected={item.Topic} />
+          </HStack>
+        )}
+        keyExtractor={(item, index) => item.time + index}
+      />
+
+      <FlatList
+        data={config}
         estimatedItemSize={100}
         renderItem={({ item, index }) => (
           <AlertItem
