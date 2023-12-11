@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -81,6 +82,17 @@ func validateActionConfig(action ActionConfig) error {
 	// validate ActionType
 
 	// ... (implement logic for validating ActionType)
+
+	// Attempt to compile regex patterns
+	for _, field := range action.GrabFields {
+		if isRegexp(field) {
+			_, err := regexp.Compile(field)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 
 	return nil
 }
@@ -174,6 +186,71 @@ func modifyAlertSettings(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(gAlertsConfig)
 }
 
+func grabReflectOld(fields []string, event interface{}) map[string]interface{} {
+	newEvent := map[string]interface{}{}
+	v := reflect.ValueOf(&event).Elem()
+	for _, field := range fields {
+	  // Get the field by name
+	  fieldValue := v.FieldByName(field)
+	  // Check if the field exists
+	  if fieldValue.IsValid() {
+	    // Add the field to the newEvent map
+	    newEvent[field] = fieldValue.Interface()
+	  }
+	}
+	return newEvent
+}
+
+func isRegexp(field string) bool {
+	return strings.HasPrefix(field, "/") && strings.HasSuffix(field, "/")
+}
+
+func grabReflect(fields []string, event interface{}) map[string]interface{} {
+	newEvent := map[string]interface{}{}
+	v := reflect.ValueOf(event)
+
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+
+	var patterns []*regexp.Regexp
+	for _, field := range fields {
+		if !isRegexp(field) {
+			continue
+		}
+		pattern, err := regexp.Compile(field)
+		if err != nil {
+			continue
+		}
+		patterns = append(patterns, pattern)
+	}
+
+	for i := 0; i < v.NumField(); i++ {
+		fieldValue := v.Field(i)
+		fieldType := v.Type().Field(i)
+
+		//check regex fields
+		for _, pattern := range patterns {
+			if pattern.MatchString(fieldType.Name) {
+				newEvent[fieldType.Name] = fieldValue.Interface()
+				continue
+			}
+		}
+
+		//check the rest
+		for _, field := range fields {
+			if !isRegexp(field) && fieldType.Name == field {
+				newEvent[fieldType.Name] = fieldValue.Interface()
+			}
+		}
+	}
+
+	return newEvent
+}
+
+
+
 func processAction(notifyChan chan<- Alert, storeChan chan<- Alert, event interface{}, action ActionConfig, values []interface{}) {
 	if gDebugPrintAlert {
 		fmt.Println("=== event ===")
@@ -196,7 +273,11 @@ func processAction(notifyChan chan<- Alert, storeChan chan<- Alert, event interf
 	}
 
 	if action.GrabEvent {
-		Info["Event"] = event
+		if len(action.GrabFields) != 0 {
+			Info["Event"] = grabReflect(action.GrabFields, event)
+		} else {
+			Info["Event"] = event
+		}
 	}
 
 	if action.GrabValues {
@@ -253,7 +334,6 @@ func matchEventCondition(event interface{}, condition ConditionEntry) (error, bo
 type Event struct {
 	data interface{}
 }
-
 func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic string, value string) {
 	//make sure event settings dont change out from under us
 
