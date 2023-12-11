@@ -321,6 +321,10 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       .then(setVersion)
       .catch((err) => {})
 
+    // cache devices
+    getDevices().then((res) => {
+      //console.log('++ got', res.length, 'devices')
+    })
 
     // callback for notifications, web & ios
     // action = allow,deny,cancel, data = nft data
