@@ -113,7 +113,7 @@ const FilterSelect = ({ items, onSubmitEditing, query, ...props }) => {
       delete vals[selected]
     } else {
       let op = '=='
-      //TODO more
+      //TODO support more: <,>,!=
       if (value.startsWith('^')) {
         op = '=~'
       }
