@@ -23,6 +23,7 @@ const AddAlert = ({ onSubmit, ...props }) => {
   const [MatchAnyOne, setMatchAnyOne] = useState(false)
   const [InvertRule, setInvertRule] = useState(false)
   const [Conditions, setConditions] = useState([])
+  const [Disabled, setDisabled] = useState(false)
 
   //only one action is supported now. in the future we will implement
   // different action types, for example, disconnecting a device.
@@ -44,6 +45,7 @@ const AddAlert = ({ onSubmit, ...props }) => {
       Conditions,
       Actions: [action],
       Name,
+      Disabled
     }
 
     onSubmit(item)
@@ -95,7 +97,7 @@ const AddAlert = ({ onSubmit, ...props }) => {
       <HStack>
       <FormControl>
         <FormControlLabel>
-          <FormControlLabelText>Message Title</FormControlLabelText>
+          <FormControlLabelText>Alert Title</FormControlLabelText>
         </FormControlLabel>
         <Input type="text" variant="underlined">
           <InputField
@@ -108,7 +110,7 @@ const AddAlert = ({ onSubmit, ...props }) => {
 
       <FormControl>
         <FormControlLabel>
-          <FormControlLabelText>Message Body</FormControlLabelText>
+          <FormControlLabelText>Alert Body</FormControlLabelText>
         </FormControlLabel>
         <Input type="text" variant="underlined">
           <InputField
@@ -169,6 +171,7 @@ const AddAlert = ({ onSubmit, ...props }) => {
                 <InputField
                   name={`JPath-${index}`}
                   value={condition.JPath}
+                  placeholder="TBD: JSONPath helper"
                   onChangeText={(value) => handleConditionChange(value, index)}
                 />
               </Input>
@@ -199,7 +202,7 @@ const AddAlert = ({ onSubmit, ...props }) => {
 
           <FormControl style={{marginLeft: "25px"}}>
             <FormControlLabel>
-              <FormControlLabelText>Peristent Event</FormControlLabelText>
+              <FormControlLabelText>Persistent Event</FormControlLabelText>
             </FormControlLabel>
             <Switch
               value={ActionConfig.StoreAlert}

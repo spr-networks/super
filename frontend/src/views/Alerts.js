@@ -14,6 +14,7 @@ import {
   Menu,
   MenuItem,
   MenuItemLabel,
+  Switch,
   View,
   VStack,
   Text,
@@ -36,85 +37,12 @@ import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
 import { Tooltip } from 'components/Tooltip'
 
-const AlertItem = ({ item, index, onDelete, onToggle, ...props }) => {
-  if (!item) {
-    return <></>
-  }
-
-  const trigger = (triggerProps) => (
-    <Button variant="link" ml="auto" {...triggerProps}>
-      <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
-    </Button>
-  )
-
-  const moreMenu = (
-    <Menu
-      trigger={trigger}
-      selectionMode="single"
-      onSelectionChange={(e) => {
-        let action = e.currentKey
-        if (action == 'delete') {
-          onDelete(index)
-        } else if (action == 'onoff') {
-          onToggle(index, item)
-        }
-      }}
-    >
-      <MenuItem key="delete" textValue="delete">
-        <TrashIcon color="$red700" mr="$2" />
-        <MenuItemLabel size="sm" color="$red700">
-          Delete
-        </MenuItemLabel>
-      </MenuItem>
-
-      <MenuItem key="onoff" textValue="onoff">
-        <Icon as={item.Notification ? BellIcon : BellOffIcon} mr="$2" />
-        <MenuItemLabel size="sm">
-          {item.Notification ? 'Disable' : 'Enable'}
-        </MenuItemLabel>
-      </MenuItem>
-    </Menu>
-  )
-
-  return (
-    <ListItem>
-      <VStack sx={{ '@md': { flexDirection: 'row' } }} space="md" w="$1/3">
-        <Text bold>{item.Conditions.Prefix || '*prefix'}</Text>
-        <HStack space="md">
-          <Text color="$muted500">Protocol</Text>
-          <Text>{item.Conditions.Protocol || 'any'}</Text>
-        </HStack>
-      </VStack>
-      <VStack sx={{ '@md': { flexDirection: 'row' } }} space="md" w="$1/3">
-        <HStack space="md">
-          <Text color="$muted500">Source</Text>
-          <Text>
-            {item.Conditions.SrcIP || '*'}:{item.Conditions.SrcPort || '*'}
-          </Text>
-        </HStack>
-        <HStack space="md">
-          <Text color="$muted500">Dest</Text>
-          <Text>
-            {item.Conditions.DstIP || '*'}:{item.Conditions.DstPort || '*'}
-          </Text>
-        </HStack>
-      </VStack>
-      <Box sx={{ '@base': { display: 'none', '@md': { display: 'flex' } } }}>
-        <Icon
-          as={item.Notification ? BellIcon : BellOffIcon}
-          color="$muted500"
-        />
-      </Box>
-      <Box>{moreMenu}</Box>
-    </ListItem>
-  )
-}
-
 const Alerts = (props) => {
   const [config, setConfig] = useState([])
   const [topics, setTopics] = useState([])
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
+  //TBD: this will be replaced with alert: and mock_alerts will not wrap
   const AlertPrefix = "nft:"
 
   const [logs, setLogs] = useState([])
@@ -202,17 +130,17 @@ const Alerts = (props) => {
 
   const onDelete = (index) => {
     alertsAPI.remove(index).then((res) => {
-      let _alerts = [...alerts]
-      delete _alerts[index]
+      let _alerts = [...config]
+      delete config[index]
       setConfig(_alerts)
     })
   }
 
   const onToggle = (index, item) => {
-    item.Notification = !item.Notification
+    item.Disabled = !item.Disabled
 
     alertsAPI.update(index, item).then((res) => {
-      let _alerts = [...alerts]
+      let _alerts = [...config]
       _alerts[index] = item
       setConfig(_alerts)
     })
@@ -235,7 +163,7 @@ const Alerts = (props) => {
   let h = Dimensions.get('window').height - (Platform.OS == 'ios' ? 64 * 2 : 64)
 
   return (
-    <View h={h}>
+    <View>
       <ListHeader title="Alerts">
         <ModalForm
           title="Add Alert"
@@ -269,6 +197,7 @@ const Alerts = (props) => {
           </InputSlot>
         </Input>
       </HStack>
+
       <FlatList
         flex={2}
         data={logs}
@@ -296,19 +225,6 @@ const Alerts = (props) => {
         keyExtractor={(item, index) => item.time + index}
       />
 
-      <FlatList
-        data={config}
-        estimatedItemSize={100}
-        renderItem={({ item, index }) => (
-          <AlertItem
-            item={item}
-            index={index}
-            onToggle={onToggle}
-            onDelete={onDelete}
-          />
-        )}
-        keyExtractor={(item, index) => `alert-${index}`}
-      />
     </View>
   )
 }

@@ -35,6 +35,7 @@ import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
 import SystemInfo from 'views/SystemInfo'
 import Alerts from 'views/Alerts'
+import AlertSettings from 'views/AlertSettings'
 import SpeedTest from 'views/SpeedTest'
 import Supernetworks from 'views/Supernetworks'
 
@@ -310,6 +311,13 @@ const routes = [
         name: 'Alerts',
         icon: AlertTriangleIcon,
         component: Alerts,
+        layout: 'admin'
+      },
+      {
+        path: 'alerts/settings',
+        name: 'AlertSettings',
+        icon: Settings2Icon,
+        component: AlertSettings,
         layout: 'admin'
       },
       {
