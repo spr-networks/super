@@ -994,14 +994,27 @@ func getConfigsBackup(w http.ResponseWriter, r *http.Request) {
 }
 
 func enableTLS(w http.ResponseWriter, r *http.Request) {
-
 	_, err := os.Stat("/configs/auth/www-api.pfx")
-	if err == nil || !os.IsNotExist(err) {
-		return false
+	haveTLSCert := err == nil || !os.IsNotExist(err)
+
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(haveTLSCert)
+		return
 	}
 
-	os.Setenv("SKIPPASS", "pass:")
-	err := exec.Command("/scripts/generate-certificate.sh").Run()
+	//for now, do not support regenerating if already exists
+	if haveTLSCert {
+		http.Error(w, "Already configured", 400)
+		return
+	}
+
+	os.Setenv("SKIPPASS", "pass:1234")
+	err = exec.Command("/scripts/generate-certificate.sh").Run()
+	if err != nil {
+		http.Error(w, "Failed to generate TLS certificate", 400)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode("Done")
@@ -2577,7 +2590,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/subnetConfig", getSetDhcpConfig).Methods("GET", "PUT", "OPTIONS")
-	external_router_authenticated.HandleFunc("/enableTLS", enableSSH).Methods("PUT")
+	external_router_authenticated.HandleFunc("/enableTLS", enableTLS).Methods("GET", "PUT")
 
 	external_router_authenticated.HandleFunc("/dnsSettings", dnsSettings).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/multicastSettings", multicastSettings).Methods("GET", "PUT")
