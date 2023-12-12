@@ -48,7 +48,7 @@ const Alerts = (props) => {
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
   //TBD: this will be replaced with alert: and mock_alerts will not wrap
-  const AlertPrefix = 'nft:'
+  const AlertPrefix = 'alert:'
 
   const [logs, setLogs] = useState([])
   const [page, setPage] = useState(1)
@@ -93,9 +93,10 @@ const Alerts = (props) => {
       let more_results = await dbAPI.items(bucket, withFilter)
       if (more_results !== null) {
         let mock_alerts = more_results.map((event) => {
+          return event
           return {
             Topic: bucket,
-            Event: event
+            Info: event
           }
         })
 
@@ -213,7 +214,7 @@ const Alerts = (props) => {
               "" -> untriaged
               "Triaged" -> event has been triaged, priority set till exempel
               "Resolved" -> event has been resolved
-              
+
               Title is an alert Title from the configuration
               Body is an alert body to be set from config
               */}
