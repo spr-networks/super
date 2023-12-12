@@ -147,7 +147,7 @@ class API {
       'Content-Type': 'application/json'
     }
 
-    if (gJWTOTPHeader) {
+    if (gJWTOTPHeader && this.remoteURL == "") {
       headers['X-JWT-OTP'] = gJWTOTPHeader
     }
 
