@@ -9,25 +9,25 @@ if [ ! -d "$D/configs" ]; then
 	D="${SCRIPT_DIR}/../.."
 fi
 
-if [ ! -d "$D/configs/base/cert" ]; then
-	mkdir "$D/configs/base/cert"
+if [ ! -d "$D/configs/auth/cert" ]; then
+	mkdir "$D/configs/auth/cert"
 fi
 
-CA_KEY="$D/configs/base/cert/${CERT_NAME}-ca.key"
-CA_CSR="$D/configs/base/cert/${CERT_NAME}-ca.csr"
-CA_CRT="$D/configs/base/cert/${CERT_NAME}-ca.crt"
-CA_PEM="$D/configs/base/cert/${CERT_NAME}-ca.pem"
+CA_KEY="$D/configs/auth/cert/${CERT_NAME}-ca.key"
+CA_CSR="$D/configs/auth/cert/${CERT_NAME}-ca.csr"
+CA_CRT="$D/configs/auth/cert/${CERT_NAME}-ca.crt"
+CA_PEM="$D/configs/auth/cert/${CERT_NAME}-ca.pem"
 
-INT_CRT="$D/configs/base/cert/${CERT_NAME}-inter.crt"
-INT_CSR="$D/configs/base/cert/${CERT_NAME}-inter.csr"
-INT_KEY="$D/configs/base/cert/${CERT_NAME}-inter.key"
+INT_CRT="$D/configs/auth/cert/${CERT_NAME}-inter.crt"
+INT_CSR="$D/configs/auth/cert/${CERT_NAME}-inter.csr"
+INT_KEY="$D/configs/auth/cert/${CERT_NAME}-inter.key"
 
-CERT_CSR="$D/configs/base/${CERT_NAME}.csr"
-CERT_CRT="$D/configs/base/${CERT_NAME}.crt"
-CERT_KEY="$D/configs/base/${CERT_NAME}.key"
-CERT_PFX="$D/configs/base/${CERT_NAME}.pfx"
+CERT_CSR="$D/configs/auth/${CERT_NAME}.csr"
+CERT_CRT="$D/configs/auth/${CERT_NAME}.crt"
+CERT_KEY="$D/configs/auth/${CERT_NAME}.key"
+CERT_PFX="$D/configs/auth/${CERT_NAME}.pfx"
 
-#CERT_SELF_SIGNED="$D/configs/base/self-signed-cert.ext"
+#CERT_SELF_SIGNED="$D/configs/auth/self-signed-cert.ext"
 #echo "subjectAltName = @alt_names\n[alt_names]\nDNS.1 = ${CN}\nDNS.2 = https-server" > $CERT_SELF_SIGNED
 
 # CA

@@ -45,8 +45,8 @@ var ConfigFile = TEST_PREFIX + "/configs/base/config.sh"
 var DNSConfigFile = TEST_PREFIX + "/configs/dns/Corefile"
 var MulticastConfigFile = TEST_PREFIX + "/configs/base/multicast.json"
 
-var ApiTlsCert = "/configs/base/www-api.crt"
-var ApiTlsKey = "/configs/base/www-api.key"
+var ApiTlsCert = "/configs/auth/www-api.crt"
+var ApiTlsKey = "/configs/auth/www-api.key"
 
 var SuperdSocketPath = TEST_PREFIX + "/state/plugins/superd/socket"
 
@@ -991,6 +991,20 @@ func getConfigsBackup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.ServeFile(w, r, backupFilePath)
+}
+
+func enableTLS(w http.ResponseWriter, r *http.Request) {
+
+	_, err := os.Stat("/configs/auth/www-api.pfx")
+	if err == nil || !os.IsNotExist(err) {
+		return false
+	}
+
+	os.Setenv("SKIPPASS", "pass:")
+	err := exec.Command("/scripts/generate-certificate.sh").Run()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode("Done")
 }
 
 func restart(w http.ResponseWriter, r *http.Request) {
@@ -2563,6 +2577,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/subnetConfig", getSetDhcpConfig).Methods("GET", "PUT", "OPTIONS")
+	external_router_authenticated.HandleFunc("/enableTLS", enableSSH).Methods("PUT")
 
 	external_router_authenticated.HandleFunc("/dnsSettings", dnsSettings).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/multicastSettings", multicastSettings).Methods("GET", "PUT")
