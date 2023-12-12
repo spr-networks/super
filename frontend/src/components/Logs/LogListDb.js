@@ -67,7 +67,7 @@ const LogList = (props) => {
     dbAPI.buckets().then((buckets) => {
       const ignoreList = ['alert:']
       for (let ignore of ignoreList) {
-        buckets = buckets.filter((b) => !b.startsWith(ignore))
+        buckets = buckets.filter(b => !b.startsWith(ignore))
       }
 
       buckets.sort((a, b) => {
