@@ -44,6 +44,7 @@ type AlertSetting struct {
 	Conditions  []ConditionEntry
 	Actions     []ActionConfig
 	Name        string
+	Disabled    bool
 }
 
 // conditions can stack onto the same event,
