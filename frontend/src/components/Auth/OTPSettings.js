@@ -65,7 +65,6 @@ const OTPSettings = (props) => {
       setJWTOTPHeader(res)
     })
     .catch((err) => {
-      alert("F" + JSON.stringify(err))
       context.error("Invalid OTP Code")
     })
   }
