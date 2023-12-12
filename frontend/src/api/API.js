@@ -5,6 +5,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 let gApiURL = null
 
+//TODO add unregister handlers. support only one for now
+const gErrorHandlers = {}
+export const registerErrorHandler = (status, fn) => {
+  gErrorHandlers[status] = [fn]
+}
+
 export const setApiURL = (url) => {
   if (url == 'mock') {
     gApiURL = url
@@ -57,7 +63,7 @@ let gAuthHeaders = null
 //tbd need to sync to mesh
 let gJWTOTPHeader = null
 
-export const setJWTOTPHeader = (jwt='') => {
+export const setJWTOTPHeader = (jwt = '') => {
   if (gJWTOTPHeader != jwt) {
     AsyncStorage.setItem(
       'jwt-otp',
@@ -87,9 +93,12 @@ class API {
     this.getAuthHeaders()
   }
 
+  registerErrorHandler(status, callback) {
+    registerErrorHandler(status, callback)
+  }
+
   // reads from Async/localStorage if no username provided
   async getAuthHeaders(username = null, password = null) {
-
     let otp = await AsyncStorage.getItem('jwt-otp')
     let jwt = JSON.parse(otp)
     if (jwt && jwt.jwt) {
@@ -165,30 +174,45 @@ class API {
     // if forced to not return data
     let skipReturnValue = method == 'DELETE'
 
+    return this.fetch(method, url, body)
+      .then((response) => {
+        if (!response.ok) {
+          return Promise.reject({
+            message: response.status,
+            status: response.status,
+            response
+          })
+        }
 
-    return this.fetch(method, url, body).then((response) => {
-      if (!response.ok) {
-        return Promise.reject({ message: response.status, response })
-      }
+        const contentType = response.headers.get('Content-Type')
+        if (!contentType || skipReturnValue) {
+          return Promise.resolve(true)
+        }
 
-      const contentType = response.headers.get('Content-Type')
-      if (!contentType || skipReturnValue) {
-        return Promise.resolve(true)
-      }
+        // weird behaviour from react-native
+        if (contentType.includes('text/html')) {
+          return response.json()
+        }
 
-      // weird behaviour from react-native
-      if (contentType.includes('text/html')) {
-        return response.json()
-      }
+        if (contentType.includes('application/json')) {
+          return response.json()
+        } else if (contentType.includes('text/plain')) {
+          return response.text()
+        }
 
-      if (contentType.includes('application/json')) {
-        return response.json()
-      } else if (contentType.includes('text/plain')) {
-        return response.text()
-      }
+        return Promise.reject({ message: 'unknown Content-Type' })
+      })
+      .catch((err) => {
+        //call registered handlers
+        let status = parseInt(err.status)
+        if (Array.isArray(gErrorHandlers[status])) {
+          gErrorHandlers[status].map((handler) => {
+            handler(err)
+          })
+        }
 
-      return Promise.reject({ message: 'unknown Content-Type' })
-    })
+        return Promise.reject(err)
+      })
   }
 
   get(url) {

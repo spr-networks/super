@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Dimensions, Platform, SafeAreaView } from 'react-native'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import Notifications from 'Notifications'
@@ -144,6 +144,7 @@ const AppAlert = (props) => {
 const AdminLayout = ({ toggleColorMode, ...props }) => {
   const mainPanel = React.useRef()
   const location = useLocation()
+  const navigate = useNavigate()
 
   const [showAlert, setShowAlert] = useState(false)
   const [showConfirmAlert, setShowConfirmAlert] = useState(false)
@@ -283,6 +284,19 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   }
 
   useEffect(() => {
+    //global handlers for api errors
+    api.registerErrorHandler(404, (err) =>
+      console.error('HTTP error 404', err.response.url)
+    )
+
+    const redirOnAuthError = (err) => {
+      console.error('HTTP auth error for url:', err.response.url)
+      navigate('/auth/login')
+    }
+
+    api.registerErrorHandler(401, redirOnAuthError)
+    api.registerErrorHandler(403, redirOnAuthError)
+
     api
       .features()
       .then((res) => {
