@@ -6,6 +6,7 @@ import {
   ButtonIcon,
   Box,
   FlatList,
+  Heading,
   HStack,
   Icon,
   Input,
@@ -29,10 +30,14 @@ import { ModalContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import { ListHeader } from 'components/List'
 import { ListItem } from 'components/List'
-import { BellIcon, BellOffIcon, SlidersHorizontalIcon } from 'lucide-react-native'
+import {
+  BellIcon,
+  BellOffIcon,
+  SlidersHorizontalIcon
+} from 'lucide-react-native'
 
 import LogListItem from 'components/Logs/LogListItem'
-import FilterSelect from 'components/Logs/FilterSelect'
+import FilterInputSelect from 'components/Logs/FilterInputSelect'
 import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
 import { Tooltip } from 'components/Tooltip'
@@ -43,7 +48,7 @@ const Alerts = (props) => {
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
   //TBD: this will be replaced with alert: and mock_alerts will not wrap
-  const AlertPrefix = "nft:"
+  const AlertPrefix = 'nft:'
 
   const [logs, setLogs] = useState([])
   const [page, setPage] = useState(1)
@@ -61,7 +66,7 @@ const Alerts = (props) => {
 
   const fetchAlertBuckets = () => {
     dbAPI.buckets().then((buckets) => {
-      buckets = buckets.filter(b => b.startsWith(AlertPrefix))
+      buckets = buckets.filter((b) => b.startsWith(AlertPrefix))
       buckets.sort()
       setTopics(buckets)
     })
@@ -78,6 +83,7 @@ const Alerts = (props) => {
     }
 
     let result = []
+
     for (let bucket of topics) {
       //let stats = await dbAPI.stats(bucket)
       //setTotal(stats.KeyN)
@@ -86,19 +92,17 @@ const Alerts = (props) => {
       withFilter['filter'] = searchField
       let more_results = await dbAPI.items(bucket, withFilter)
       if (more_results !== null) {
-        let mock_alerts = more_results.map(
-          (event) => {
-            return {
-              "Topic": bucket,
-              "Event": event
-            }
+        let mock_alerts = more_results.map((event) => {
+          return {
+            Topic: bucket,
+            Event: event
           }
-        )
+        })
+
         result = result.concat(mock_alerts)
       }
     }
 
-    //alert(result.length)
     setLogs(result)
   }
 
@@ -110,23 +114,16 @@ const Alerts = (props) => {
   useEffect(() => {
     fetchList()
     fetchAlertBuckets()
-    fetchLogs()
   }, [])
 
-  const handlePressFilter = () => {
-    const onSubmit = (text) => {
-      setSearchField(text)
-      modalContext.toggleModal()
+  //fetch logs after topics
+  useEffect(() => {
+    if (!topics.length) {
+      return
     }
-    modalContext.modal(
-      'Set Filter',
-      <FilterSelect
-        query={searchField}
-        items={logs}
-        onSubmitEditing={onSubmit}
-      />
-    )
-  }
+
+    fetchLogs()
+  }, [topics])
 
   const onDelete = (index) => {
     alertsAPI.remove(index).then((res) => {
@@ -160,10 +157,19 @@ const Alerts = (props) => {
 
   const refModal = useRef(null)
 
-  let h = Dimensions.get('window').height - (Platform.OS == 'ios' ? 64 * 2 : 64)
+  const InfoItem = ({ label, value, ...props }) => {
+    return (
+      <HStack space="md">
+        <Text size="sm" bold>
+          {label}
+        </Text>
+        <Text size="sm">{value}</Text>
+      </HStack>
+    )
+  }
 
   return (
-    <View>
+    <View h="$full" sx={{ '@md': { height: '92vh' } }}>
       <ListHeader title="Alerts">
         <ModalForm
           title="Add Alert"
@@ -174,57 +180,53 @@ const Alerts = (props) => {
         </ModalForm>
       </ListHeader>
 
-      <HStack
+      <VStack
         display="none"
         sx={{
           '@md': {
             w: '$1/2',
-            display: 'flex'
+            display: 'flex',
+            mx: '$4'
           }
         }}
       >
-        <Input size="sm" rounded="$md" flex={1}>
-          <InputField
-            autoFocus
-            value={searchField}
-            onChangeText={(x) => {
-              setSearchField(x)
-            }}
-            placeholder="Search"
-          />
-          <InputSlot px="$2" onPress={handlePressFilter}>
-            <Icon as={SlidersHorizontalIcon} />
-          </InputSlot>
-        </Input>
-      </HStack>
+        <FilterInputSelect
+          value={searchField}
+          items={logs}
+          onChangeText={setSearchField}
+          onSubmitEditing={setSearchField}
+        />
+      </VStack>
+
+      <Text size="xs" mx="$4">
+        #Items: {logs.length}, Topics: {topics.join(',')}
+      </Text>
 
       <FlatList
-        flex={2}
         data={logs}
         estimatedItemSize={100}
         renderItem={({ item }) => (
-          <HStack>
-          {/*
-            TBD: state will be something like
+          <VStack w="$full" sx={{ '@md': { flexDirection: 'row' } }}>
+            <VStack space="sm" p="$4" flex={1}>
+              {/*
+              TBD: state will be something like
               "" -> untriaged
               "Triaged" -> event has been triaged, priority set till exempel
               "Resolved" -> event has been resolved
-          */}
-            <Text>State: {item.State}</Text>
-            {/*
+              
               Title is an alert Title from the configuration
-            */}
-            <Text>Title: {item.Title}</Text>
-            {/*
               Body is an alert body to be set from config
-            */}
-            <Text>Body: {item.Body}</Text>
+              */}
+
+              {['State', 'Title', 'Body'].map((label) => (
+                <InfoItem key={label} label={label} value={item[label]} />
+              ))}
+            </VStack>
             <LogListItem item={item.Event} selected={item.Topic} />
-          </HStack>
+          </VStack>
         )}
         keyExtractor={(item, index) => item.time + index}
       />
-
     </View>
   )
 }

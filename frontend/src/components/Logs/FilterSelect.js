@@ -3,11 +3,9 @@ import PropTypes from 'prop-types'
 
 import {
   Button,
-  ButtonIcon,
   ButtonText,
   Badge,
   BadgeText,
-  BadgeIcon,
   HStack,
   Input,
   InputField,
@@ -85,25 +83,36 @@ const FilterSelect = ({ items, onSubmitEditing, query, ...props }) => {
   const [keys, setKeys] = useState([])
 
   const extractKeys = (items) => {
-    if (!items) return [];
+    if (!items) return []
 
     let item = Array.isArray(items) ? items[0] : items
     if (!item) return []
-    
-    let keys = Object.keys(item);
 
-    keys = keys.filter((k) => !['bucket', 'time'].includes(k));
+    let keys = Object.keys(item)
 
-    keys.forEach(key => {
+    keys = keys.filter((k) => !['bucket', 'time'].includes(k))
+
+    keys.forEach((key) => {
       if (typeof item[key] === 'object' && item[key] !== null) {
-        let commons = ["SrcIP", "DstIP", "IP", "DstMAC", "SrcMAC", "Length", "SrcPort", "DstPort"]
-        let z = extractKeys(item[key]).filter(k => commons.includes(k)).map(k => key+"."+k)
-        keys = keys.concat(z);
+        let commons = [
+          'SrcIP',
+          'DstIP',
+          'IP',
+          'DstMAC',
+          'SrcMAC',
+          'Length',
+          'SrcPort',
+          'DstPort'
+        ]
+        let z = extractKeys(item[key])
+          .filter((k) => commons.includes(k))
+          .map((k) => key + '.' + k)
+        keys = keys.concat(z)
       }
-    });
+    })
 
-    return keys;
-  };
+    return keys
+  }
 
   useEffect(() => {
     if (!items) return
@@ -223,8 +232,7 @@ const FilterSelect = ({ items, onSubmitEditing, query, ...props }) => {
         <Text size="xs" bold>
           Sample Item:
         </Text>
-        <ScrollView
-          maxHeight={150}>
+        <ScrollView maxHeight={150}>
           <Text size="xs">{JSON.stringify(items[0])}</Text>
           {/* <JSONSyntax code={jsonData} />*/}
         </ScrollView>
@@ -240,3 +248,5 @@ FilterSelect.propTypes = {
 }
 
 export default FilterSelect
+
+export { FilterSelect }

@@ -37,7 +37,7 @@ import {
 import { ModalContext } from 'AppContext'
 import { EditDatabase } from 'views/System/EditDatabase'
 import LogListItem from './LogListItem'
-import FilterSelect from './FilterSelect'
+import FilterInputSelect from './FilterInputSelect'
 import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
 import { Tooltip } from 'components/Tooltip'
@@ -65,15 +65,14 @@ const LogList = (props) => {
     setParams({ ...params, num, max })
 
     dbAPI.buckets().then((buckets) => {
-
-      const ignoreList = ["alert:"]
+      const ignoreList = ['alert:']
       for (let ignore of ignoreList) {
-        buckets = buckets.filter(b => !b.startsWith(ignore))
+        buckets = buckets.filter((b) => !b.startsWith(ignore))
       }
 
       buckets.sort((a, b) => {
         //force dns to the end as each client has its own bucket.
-        if (b.startsWith("dns:") && !a.startsWith("dns:")) {
+        if (b.startsWith('dns:') && !a.startsWith('dns:')) {
           return -1
         }
 
@@ -202,21 +201,6 @@ const LogList = (props) => {
     )
   }
 
-  const handlePressFilter = () => {
-    const onSubmit = (text) => {
-      setSearchField(text)
-      modalContext.toggleModal()
-    }
-    modalContext.modal(
-      'Set Filter',
-      <FilterSelect
-        query={searchField}
-        items={logs}
-        onSubmitEditing={onSubmit}
-      />
-    )
-  }
-
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
       <HStack space="md" p="$4" alignItems="center">
@@ -241,19 +225,12 @@ const LogList = (props) => {
             }
           }}
         >
-          <Input size="sm" rounded="$md" flex={1}>
-            <InputField
-              autoFocus
-              value={searchField}
-              onChangeText={(x) => {
-                setSearchField(x)
-              }}
-              placeholder="Search"
-            />
-            <InputSlot px="$2" onPress={handlePressFilter}>
-              <Icon as={SlidersHorizontalIcon} />
-            </InputSlot>
-          </Input>
+          <FilterInputSelect
+            value={searchField}
+            items={logs}
+            onChangeText={setSearchField}
+            onSubmitEditing={setSearchField}
+          />
         </HStack>
 
         {/*
