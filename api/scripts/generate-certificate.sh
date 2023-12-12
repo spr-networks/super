@@ -45,4 +45,4 @@ openssl req -new -subj "/C=US/ST=California/CN=${CN}" -newkey rsa:2048 -nodes -o
 openssl x509 -CA $INT_CRT -CAkey $INT_KEY -days 365 -req -in $CERT_CSR -set_serial 03 -out $CERT_CRT
 
 # export
-openssl pkcs12 -export -out $CERT_PFX -inkey $CERT_KEY -in $CERT_CRT -certfile $INT_CRT -certfile $CA_CRT
+openssl pkcs12 -export -out $CERT_PFX -inkey $CERT_KEY -in $CERT_CRT -certfile $INT_CRT -certfile $CA_CRT $SKIPPASS

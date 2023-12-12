@@ -111,6 +111,10 @@ fi
 
 
 cd /home/spr/super/
+
+# Generate self signed SSL certificates
+SKIPPASS="-password pass:1234" ./api/scripts/generate-certificate.sh
+
 docker-compose -f $COMPOSE_FILE pull
 ret=$?
 
