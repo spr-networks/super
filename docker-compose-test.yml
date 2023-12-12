@@ -65,7 +65,7 @@ services:
       - "base"
     logging: *default-logging
     volumes:
-      - ./configs/base/:/configs/base/
+      - ./configs/base/:/configs/base/:ro
       - ./configs/dhcp/:/configs/dhcp/
       - ./state/dhcp/:/state/dhcp/
       - ./state/plugins/mesh/:/state/plugins/mesh/:ro
@@ -128,7 +128,7 @@ services:
       - "dhcp"
       - "multicast_udp_proxy"
     volumes:
-      - ./configs/base/:/configs/base/
+      - ./configs/base/:/configs/base/:ro
       - ./configs/wifi/:/configs/wifi/
       - ./state/wifi/:/state/wifi/
   multicast_udp_proxy:
@@ -148,7 +148,7 @@ services:
       - "api"
     logging: *default-logging
     volumes:
-      - ./configs/base/:/configs/base/
+      - ./configs/base/:/configs/base/:ro
       - ./state/public/:/state/public/:ro
       - ./state/plugins/mesh/:/state/plugins/mesh/:ro
   wireguard:
@@ -169,7 +169,7 @@ services:
       - "api"
     logging: *default-logging
     volumes:
-      - ./configs/base/:/configs/base/
+      - ./configs/base/:/configs/base/:ro
       - ./configs/wireguard/:/configs/wireguard/
       - ./state/plugins/wireguard/:/state/plugins/wireguard/
       - ./state/plugins/mesh/:/state/plugins/mesh/:ro
@@ -263,7 +263,7 @@ services:
     volumes:
       - ./state/api/:/state/api/
       - ./state/plugins/packet_logs/:/state/plugins/packet_logs
-      - ./configs/base/:/configs/base/
+      - ./configs/base/:/configs/base/:ro
       - /dev/log:/dev/log
   db:
     container_name: superdb
@@ -280,7 +280,7 @@ services:
       - "api"
     logging: *default-logging
     volumes:
-      - ./configs/base/:/configs/base/
+      - ./configs/base/:/configs/base/:ro
       - ./configs/db/:/configs/db/
       - ./state/api/:/state/api/
       - ./state/plugins/db/:/state/plugins/db/
