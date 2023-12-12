@@ -29,7 +29,11 @@ import { ModalContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import { ListHeader } from 'components/List'
 import { ListItem } from 'components/List'
-import { BellIcon, BellOffIcon, SlidersHorizontalIcon } from 'lucide-react-native'
+import {
+  BellIcon,
+  BellOffIcon,
+  SlidersHorizontalIcon
+} from 'lucide-react-native'
 
 import LogListItem from 'components/Logs/LogListItem'
 import FilterSelect from 'components/Logs/FilterSelect'
@@ -78,15 +82,15 @@ const AlertItem = ({ item, index, onDelete, onToggle, ...props }) => {
   )
 
   return (
-      <ListItem>
+    <ListItem>
       <HStack sx={{ '@md': { flexDirection: 'row' } }} space="md" flex={1}>
-        <Text bold >{item.Name}</Text>
+        <Text bold>{item.Name}</Text>
 
         <Text>{item.TopicPrefix || 'N/A'}</Text>
 
         {item.Actions.map((action) => (
           <HStack>
-          {/*
+            {/*
           <HStack space="md">
             <Text color="$muted500">Message Title</Text>
             <Text>{action.MessageTitle || 'N/A'}</Text>
@@ -98,15 +102,11 @@ const AlertItem = ({ item, index, onDelete, onToggle, ...props }) => {
           </HStack>
           */}
 
-          <Switch
-            value={action.SendNotification}
-          />
+            <Switch value={action.SendNotification} />
 
-          <Switch
-            value={action.StoreAlert}
-          />
+            <Switch value={action.StoreAlert} />
 
-          {/*
+            {/*
           <HStack space="md">
             <Text color="$muted500">Alert Topic Suffix</Text>
             <Text>{action.StoreTopicSuffix || 'N/A'}</Text>
@@ -119,9 +119,7 @@ const AlertItem = ({ item, index, onDelete, onToggle, ...props }) => {
           </HStack>
           */}
           </HStack>
-
         ))}
-
 
         {/*item.Conditions.length > 0 && (
           <VStack space="md">
@@ -145,8 +143,6 @@ const AlertItem = ({ item, index, onDelete, onToggle, ...props }) => {
           <Text>{item.InvertRule ? 'Yes' : 'No'}</Text>
         </HStack>
         */}
-
-
       </HStack>
 
       <Box>{moreMenu}</Box>
@@ -157,10 +153,10 @@ const AlertItem = ({ item, index, onDelete, onToggle, ...props }) => {
 const AlertItemHeader = () => (
   //TBD spacing
   <ListHeader>
-      <Text bold>Name</Text>
-      <Text bold>Topic Filter</Text>
-      <Text bold>UI Notification</Text>
-      <Text bold>Save Alert</Text>
+    <Text bold>Name</Text>
+    <Text bold>Topic Filter</Text>
+    <Text bold>UI Notification</Text>
+    <Text bold>Save Alert</Text>
   </ListHeader>
 )
 
@@ -169,8 +165,8 @@ const AlertSettings = (props) => {
   const [topics, setTopics] = useState([])
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
-  //TBD: this will be replaced with alert: and mock_alerts will not wrap 
-  const AlertPrefix = "nft:"
+  //TBD: this will be replaced with alert: and mock_alerts will not wrap
+  const AlertPrefix = 'nft:'
 
   const [logs, setLogs] = useState([])
   const [page, setPage] = useState(1)
@@ -187,12 +183,11 @@ const AlertSettings = (props) => {
 
   const fetchAlertBuckets = () => {
     dbAPI.buckets().then((buckets) => {
-      buckets = buckets.filter(b => b.startsWith(AlertPrefix))
+      buckets = buckets.filter((b) => b.startsWith(AlertPrefix))
       buckets.sort()
       setTopics(buckets)
     })
   }
-
 
   useEffect(() => {
     setLogs([])
@@ -202,7 +197,6 @@ const AlertSettings = (props) => {
     fetchList()
     fetchAlertBuckets()
   }, [])
-
 
   const onDelete = (index) => {
     alertsAPI.remove(index).then((res) => {
@@ -235,10 +229,8 @@ const AlertSettings = (props) => {
 
   const refModal = useRef(null)
 
-  let h = Dimensions.get('window').height - (Platform.OS == 'ios' ? 64 * 2 : 64)
-
   return (
-    <View h={h}>
+    <View h="$full" sx={{ '@md': { height: '92vh' } }}>
       <ListHeader title="Alert Configuration">
         <ModalForm
           title="Add Alert"
