@@ -74,11 +74,11 @@ func doReloadPSKFiles() {
 		}
 	}
 
-	err := ioutil.WriteFile(TEST_PREFIX+"/configs/wifi/sae_passwords", []byte(sae), 0644)
+	err := ioutil.WriteFile(TEST_PREFIX+"/configs/wifi/sae_passwords", []byte(sae), 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = ioutil.WriteFile(TEST_PREFIX+"/configs/wifi/wpa2pskfile", []byte(wpa2), 0644)
+	err = ioutil.WriteFile(TEST_PREFIX+"/configs/wifi/wpa2pskfile", []byte(wpa2), 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -712,7 +712,7 @@ type ExtraBSS struct {
 var hostap_template string
 
 func createHostAPTemplate() {
-	err := ioutil.WriteFile(getHostapdConfigPath("template"), []byte(hostap_template), 0644)
+	err := ioutil.WriteFile(getHostapdConfigPath("template"), []byte(hostap_template), 0600)
 	if err != nil {
 		fmt.Println("Error creating hostap template")
 		return

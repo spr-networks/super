@@ -175,7 +175,7 @@ func configureInterface(interfaceType string, subType string, name string) error
 			configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+name)
 			configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+name)
 
-			err = ioutil.WriteFile(path, []byte(configData), 0644)
+			err = ioutil.WriteFile(path, []byte(configData), 0600)
 			if err != nil {
 				fmt.Println("Error creating", path)
 				return err

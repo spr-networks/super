@@ -1775,7 +1775,7 @@ func updateLocalMappings(IP string, Name string) {
 		new_data += ip + " " + hostname + "\n"
 	}
 	new_data += IP + " " + entryName + "\n"
-	ioutil.WriteFile(localMappingsPath, []byte(new_data), 0644)
+	ioutil.WriteFile(localMappingsPath, []byte(new_data), 0600)
 }
 
 func flushRoute(MAC string) {
@@ -2315,7 +2315,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 
 	// write to auth_users.json
 	users := fmt.Sprintf("{%q: %q}", "admin", conf.AdminPassword)
-	err = ioutil.WriteFile(AuthUsersFile, []byte(users), 0644)
+	err = ioutil.WriteFile(AuthUsersFile, []byte(users), 0600)
 	if err != nil {
 		http.Error(w, "Failed to write user auth file", 400)
 		panic(err)
@@ -2334,7 +2334,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 
 	configData = matchInterfaceUplink.ReplaceAllString(configData, "$1="+conf.InterfaceUplink)
 
-	err = ioutil.WriteFile(ConfigFile, []byte(configData), 0644)
+	err = ioutil.WriteFile(ConfigFile, []byte(configData), 0600)
 	if err != nil {
 		http.Error(w, "Failed to write config to "+ConfigFile, 400)
 		panic(err)
@@ -2360,7 +2360,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+conf.InterfaceAP)
 
 	hostapd_path := getHostapdConfigPath(conf.InterfaceAP)
-	err = ioutil.WriteFile(hostapd_path, []byte(configData), 0644)
+	err = ioutil.WriteFile(hostapd_path, []byte(configData), 0600)
 	if err != nil {
 		http.Error(w, "Failed to write config to "+hostapd_path, 400)
 		panic(err)
@@ -2372,7 +2372,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	// disable mdns advertising and set up default multicast rules
 	multicastSettingsSetupDone()
 
-	ioutil.WriteFile(SetupDonePath, []byte("true"), 0644)
+	ioutil.WriteFile(SetupDonePath, []byte("true"), 0600)
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
 	callSuperdRestart("", "")
