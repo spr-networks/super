@@ -569,7 +569,7 @@ func generatePFWAPIToken() {
 		//add the generated token and save it to the token file
 		tokens = append(tokens, pfw_token)
 		file, _ := json.MarshalIndent(tokens, "", " ")
-		err = ioutil.WriteFile(AuthTokensFile, file, 0660)
+		err = ioutil.WriteFile(AuthTokensFile, file, 0600)
 		if err != nil {
 			fmt.Println("failed to write tokens file", err)
 		}
@@ -588,7 +588,7 @@ func generatePFWAPIToken() {
 	pfw_config["APIToken"] = value
 
 	file, _ := json.MarshalIndent(pfw_config, "", " ")
-	err = ioutil.WriteFile(pfwConfigFile, file, 0660)
+	err = ioutil.WriteFile(pfwConfigFile, file, 0600)
 	if err != nil {
 		fmt.Println("failed to write pfw configuration", err)
 	}

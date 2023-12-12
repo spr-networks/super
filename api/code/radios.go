@@ -612,7 +612,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	// if anything goes is configured for the interface, enable it.
 	data = updateExtraBSS(iface, data)
 
-	err = ioutil.WriteFile(getHostapdConfigPath(iface), []byte(data), 0664)
+	err = ioutil.WriteFile(getHostapdConfigPath(iface), []byte(data), 0600)
 	if err != nil {
 		fmt.Println(err)
 		http.Error(w, err.Error(), 400)
@@ -802,7 +802,7 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 		if idx != -1 {
 			dataString = dataString[:idx]
 
-			err = ioutil.WriteFile(path, []byte(dataString), 0664)
+			err = ioutil.WriteFile(path, []byte(dataString), 0600)
 			if err != nil {
 				log.Printf("Error removing extrabss in new hostapd conf: %v", err)
 				http.Error(w, "can't write new hostapd config", http.StatusBadRequest)
@@ -853,7 +853,7 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 	// if anything goes is configured for the interface, enable it.
 	dataString := updateExtraBSS(iface, string(data))
 
-	err = ioutil.WriteFile(path, []byte(dataString), 0664)
+	err = ioutil.WriteFile(path, []byte(dataString), 0600)
 	if err != nil {
 		log.Printf("Error writing extrabss in new hostapd conf: %v", err)
 		http.Error(w, "can't write extrabss in new hostapd config", http.StatusBadRequest)

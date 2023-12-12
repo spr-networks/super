@@ -104,7 +104,7 @@ func loadOTPWebauthN() int {
 }
 
 func saveOTPWebauthN(data int) {
-	os.WriteFile(WebAuthnOtpFile, []byte(strconv.Itoa(data)), 0661)
+	os.WriteFile(WebAuthnOtpFile, []byte(strconv.Itoa(data)), 0600)
 }
 
 func genBearerToken() string {
@@ -366,7 +366,7 @@ func updateAuthTokens(w http.ResponseWriter, r *http.Request) {
 	}
 
 	file, _ := json.MarshalIndent(tokens, "", " ")
-	err = ioutil.WriteFile(AuthTokensFile, file, 0660)
+	err = ioutil.WriteFile(AuthTokensFile, file, 0600)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -378,7 +378,7 @@ func updateAuthTokens(w http.ResponseWriter, r *http.Request) {
 
 func otpSaveLocked(settings OTPSettings) error {
 	file, _ := json.MarshalIndent(settings, "", " ")
-	return ioutil.WriteFile(OTPSettingsFile, file, 0660)
+	return ioutil.WriteFile(OTPSettingsFile, file, 0600)
 }
 
 func otpLoadLocked() (OTPSettings, error) {
