@@ -54,6 +54,20 @@ export const getApiHostname = () => {
 }
 
 let gAuthHeaders = null
+//tbd need to sync to mesh
+let gJWTOTPHeader = null
+
+export const setJWTOTPHeader = (jwt='') => {
+  if (gJWTOTPHeader != jwt) {
+    AsyncStorage.setItem(
+      'jwt-otp',
+      JSON.stringify({
+        jwt: jwt
+      })
+    )
+    gJWTOTPHeader = jwt
+  }
+}
 
 //request helper
 class API {
@@ -75,6 +89,13 @@ class API {
 
   // reads from Async/localStorage if no username provided
   async getAuthHeaders(username = null, password = null) {
+
+    let otp = await AsyncStorage.getItem('jwt-otp')
+    let jwt = JSON.parse(otp)
+    if (jwt && jwt.jwt) {
+      setJWTOTPHeader(jwt.jwt)
+    }
+
     if (username && password) {
       return 'Basic ' + Base64.btoa(username + ':' + password)
     }
@@ -117,6 +138,10 @@ class API {
       'Content-Type': 'application/json'
     }
 
+    if (gJWTOTPHeader) {
+      headers['X-JWT-OTP'] = gJWTOTPHeader
+    }
+
     let opts = {
       method,
       headers
@@ -139,6 +164,7 @@ class API {
   async request(method = 'GET', url, body) {
     // if forced to not return data
     let skipReturnValue = method == 'DELETE'
+
 
     return this.fetch(method, url, body).then((response) => {
       if (!response.ok) {

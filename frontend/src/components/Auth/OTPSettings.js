@@ -1,14 +1,18 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { AlertContext } from 'layouts/Admin'
-import { authAPI } from 'api'
+import { authAPI, setJWTOTPHeader } from 'api'
+import QRCode from 'react-qr-code'
 
 import {
   Box,
   Button,
   ButtonText,
   ButtonGroup,
+  Input,
+  InputField,
   Text,
-  View
+  View,
+  VStack
 } from '@gluestack-ui/themed'
 
 import { api } from 'api'
@@ -21,97 +25,61 @@ let TOKEN = ''
 
 const OTPSettings = (props) => {
   const [status, setStatus] = useState('not configured')
+  const [qrCode, setQrCode] = useState(null)
+  const [code, setCode] = useState("")
+
   const context = useContext(AlertContext)
 
+  useEffect(() => {
+    getStatus()
+  }, [])
+
+  const getStatus = () => {
+    authAPI.statusOTP().then((status) => {
+      setStatus(status.State)
+    }).catch((e) => {
+      setStatus("unknown")
+      context.error("failed to get status")
+    })
+  }
+
   const register = (e) => {
-    return new Promise((resolve, reject) => {
-      let username = 'admin'
-
-      authAPI.registerOTP().then((res) => {
-
-      }).catch((err) => {
-        context.error(error.message)
-      })
+    authAPI.registerOTP(code).then((res) => {
+      for (let user of res.OTPUsers) {
+        if (user.Name == "admin") {
+          if (user.Secret) {
+            setQrCode(generateQRCode(user.Secret))
+            setStatus("register")
+          }
+        }
+      }
+    }).catch((err) => {
+      setStatus("failed")
+      context.error("Could not register. Already registered?")
     })
   }
 
   const otp = (e) => {
     let username = 'admin'
-    return new Promise((resolve, reject) => {
-      fetch(`${ApiBaseUrl}otp?username=${username}`, {
-        headers: { Authorization: api.getAuthHeaders() }
-      })
-        .then((res) => res.json())
-        .then((credentialRequestOptions) => {
-          TOKEN = credentialRequestOptions.publicKey.extensions['SPR-Bearer']
-
-          console.log('login TOKEN=', TOKEN)
-
-          credentialRequestOptions.publicKey.challenge = bufferDecode(
-            credentialRequestOptions.publicKey.challenge
-          )
-          credentialRequestOptions.publicKey.allowCredentials.forEach(function (
-            listItem
-          ) {
-            listItem.id = bufferDecode(listItem.id)
-          })
-
-          // call into otp provider
-          return navigator.credentials.get({
-            publicKey: credentialRequestOptions.publicKey
-          })
-        })
-        .then((assertion) => {
-          console.log(assertion)
-
-          let authData = assertion.response.authenticatorData
-          let clientDataJSON = assertion.response.clientDataJSON
-          let rawId = assertion.rawId
-          let sig = assertion.response.signature
-          let userHandle = assertion.response.userHandle
-
-          let body = JSON.stringify({
-            id: assertion.id,
-            rawId: bufferEncode(rawId),
-            type: assertion.type,
-            response: {
-              authenticatorData: bufferEncode(authData),
-              clientDataJSON: bufferEncode(clientDataJSON),
-              signature: bufferEncode(sig),
-              userHandle: bufferEncode(userHandle)
-            }
-          })
-
-          fetch(`${ApiBaseUrl}login?username=${username}`, {
-            method: 'POST',
-            body,
-            headers: { Authorization: `Bearer ${TOKEN}` }
-          })
-            .then((res) => res.json())
-            .then(resolve)
-            .catch(reject)
-        })
+    authAPI.validateOTP(code).then((res) => {
+      setJWTOTPHeader(res)
+    })
+    .catch((err) => {
+      alert("F" + JSON.stringify(err))
+      context.error("Invalid OTP Code")
     })
   }
 
   const handleClickRegister = () => {
     register()
-      .then((status) => {
-        setStatus(status)
-      })
-      .catch((error) => {
-        console.error('failed to register: ' + error)
-      })
   }
 
   const handleClickOTP = () => {
-    otp()
-      .then((status) => {
-        setStatus(status)
-      })
-      .catch((error) => {
-        console.error('failed to login: ' + error)
-      })
+    otp(code)
+  }
+
+  const generateQRCode = (secret, hidden = false) => {
+    return `otpauth://totp/Auth?secret=${secret}&issuer=SPR-OTP`
   }
 
   return (
@@ -135,6 +103,14 @@ const OTPSettings = (props) => {
         mb="$4"
       >
         <ButtonGroup size="md">
+          <Input w="$1/4">
+            <InputField
+              name="OTP"
+              value={code}
+              onChangeText={(value) => setCode(value)}
+            />
+          </Input>
+
           <Button action="primary" onPress={handleClickRegister}>
             <ButtonText>Register OTP</ButtonText>
           </Button>
@@ -144,6 +120,12 @@ const OTPSettings = (props) => {
           </Button>
         </ButtonGroup>
       </Box>
+      {qrCode ? (
+        <Box bg="$white" p="$4">
+          <QRCode value={qrCode} />
+        </Box>
+      ) : null}
+
     </View>
   )
 }

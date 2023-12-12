@@ -18,7 +18,15 @@ export class APIAuth extends API {
   }
 
   registerOTP(Otp) {
-    return this.put('otp_register', Otp)
+    return this.put('otp_register', {Name: 'admin', Code: Otp})
+  }
+
+  validateOTP(Otp) {
+    return this.put('otp_validate', {Name: 'admin', Code: Otp})
+  }
+
+  statusOTP(name='admin') {
+    return this.get(`otp_status?name=${name}`)
   }
 }
 
