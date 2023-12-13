@@ -1009,7 +1009,7 @@ func enableTLS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	os.Setenv("SKIPPASS", "pass:1234")
+	os.Setenv("SKIPPASS", "-password pass:1234")
 	err = exec.Command("/scripts/generate-certificate.sh").Run()
 	if err != nil {
 		http.Error(w, "Failed to generate TLS certificate", 400)
