@@ -168,8 +168,8 @@ const AlertItemHeader = () => (
     <Text flex={1} bold>Name</Text>
     <Text flex={1} bold>Topic Filter</Text>
     <HStack flex={1}>
-    <Text bold>UI Notification</Text>
-    <Text bold>Save Alert</Text>
+    <Text bold>UI Notification // </Text>
+    <Text bold>Store Alert</Text>
     </HStack>
   </ListHeader>
 )
@@ -217,7 +217,7 @@ const AlertSettings = (props) => {
   const onDelete = (index) => {
     alertsAPI.remove(index).then((res) => {
       let _alerts = [...config]
-      delete config[index]
+      delete _alerts[index]
       setConfig(_alerts)
     })
   }
@@ -253,7 +253,7 @@ const AlertSettings = (props) => {
     } else {
       //updates an existing one
       alertsAPI
-        .update(item, itemIndex)
+        .update(itemIndex, item)
         .then((res) => {
           refModal.current()
           fetchList()
@@ -270,7 +270,7 @@ const AlertSettings = (props) => {
   if (itemIndex != -1) {
     populateItem = config[itemIndex]
   }
-  
+
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
       <ListHeader title="Alert Configuration">

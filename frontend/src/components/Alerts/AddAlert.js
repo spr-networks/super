@@ -48,6 +48,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
   useEffect(() => {
     if (curItem != null) {
       //populate the modal from it
+      setName(curItem.Name)
       setTopicPrefix(curItem.TopicPrefix)
       setMatchAnyOne(curItem.MatchAnyOne)
       setInvertRule(curItem.InvertRule)
@@ -142,7 +143,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
 
   return (
     <VStack space="md">
-      <FormControl display="none">
+      <FormControl>
         <FormControlLabel>
           <FormControlLabelText>Alert Name</FormControlLabelText>
         </FormControlLabel>
@@ -214,7 +215,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
           <FormControlLabelText>Conditions</FormControlLabelText>
         </FormControlLabel>
         <VStack space="md">
-          {Conditions.length > 1 ? (
+          {Conditions.length > 0 ? (
             <HStack space="md">
               <FormControl flex={1}>
                 <HStack space="md">
@@ -223,7 +224,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
                     onValueChange={() => setMatchAnyOne(!MatchAnyOne)}
                   />
                   <Text size="sm" bold>
-                    Match Any Condition
+                    {MatchAnyOne ? "Match Any Condition" : "Match All Conditions"}
                   </Text>
                 </HStack>
               </FormControl>
