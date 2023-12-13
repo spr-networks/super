@@ -69,6 +69,14 @@ export class APIFirewall extends API {
     return this.delete('custom_interface', data)
   }
 
+  getTLS() {
+    return this.get('enableTLS')
+  }
+
+  setTLS() {
+    return this.put('enableTLS')
+  }
+
 }
 
 export const firewallAPI = new APIFirewall()

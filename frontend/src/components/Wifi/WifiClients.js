@@ -69,10 +69,12 @@ const WifiClients = (props) => {
 
   const refreshAPI = async (api) => {
     const ifaces = await api.interfacesApi.call(api, api, 'AP').catch((error) => {
-      context.error('WIFI API Failure', error)
+      context.error('WIFI API Failure ' + (api.remoteURL ? api.remoteURL : ""))
+      return
     })
     if (!ifaces) { return }
     let stations = {}
+
     for (let iface of ifaces) {
       let ret = await api.allStations.call(api, iface).catch((error) => {
         context.error('WIFI API Failure', error)

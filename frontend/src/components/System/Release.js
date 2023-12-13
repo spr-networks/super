@@ -217,6 +217,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
   const context = useContext(AlertContext)
   const [releaseInfo, setReleaseInfo] = useState(null)
   const [waitFor, setWaitFor] = useState(null)
+  const [checkUpdates, setCheckUpdates] = useState(false)
 
   const updateRelease = () => {
     api
@@ -385,6 +386,20 @@ const ReleaseInfo = ({ showModal, ...props }) => {
             '@md': { flexDirection: 'row', gap: '$3', alignItems: 'center' }
           }}
         >
+
+          <Checkbox
+            size="md"
+            value={checkUpdates}
+            isChecked={checkUpdates}
+            onChange={(enabled) => setCheckUpdates(!checkUpdates)}
+          >
+            <CheckboxIndicator mr="$2">
+              <CheckboxIcon as={CheckIcon} />
+            </CheckboxIndicator>
+            <CheckboxLabel>Auto-check Updates</CheckboxLabel>
+          </Checkbox>
+
+
           <Button size="sm" onPress={checkUpdate}>
             <ButtonText>Check</ButtonText>
             <ButtonSpinner

@@ -5,6 +5,11 @@ import { useNavigate } from 'react-router-dom'
 import {
   Box,
   Button,
+  Checkbox,
+  CheckboxIcon,
+  CheckboxIndicator,
+  CheckboxLabel,
+  CheckIcon,
   Text,
   View,
   Heading,
@@ -43,6 +48,8 @@ const Setup = (props) => {
   const [password, setPassword] = useState('')
   const [errors, setErrors] = React.useState({})
   const [isDone, setIsDone] = useState(false)
+  const [checkUpdates, setCheckUpdates] = useState(true)
+  const [reportInstall, setReportInstall] = useState(true)
 
   const countryCodes = [
     'AD',
@@ -418,7 +425,9 @@ const Setup = (props) => {
       CountryCode: countryWifi,
       InterfaceAP: interfaceWifi,
       AdminPassword: password,
-      TinyNets: tinynets
+      TinyNets: tinynets,
+      ReportInstall: reportInstall,
+      CheckUpdates: checkUpdates,
     }
 
     api
@@ -460,7 +469,7 @@ const Setup = (props) => {
           Setup
         </Heading>
         <VStack space="md" mt="$12">
-          {isDone ? (
+          {/*isDone*/ false ? (
             <>
               <VStack alignItems="center" space="md">
                 <InfoIcon color="$muted400" />
@@ -606,6 +615,30 @@ const Setup = (props) => {
                 ) : null}
               </FormControl>
 
+              <Checkbox
+                size="md"
+                value={checkUpdates}
+                isChecked={checkUpdates}
+                onChange={(enabled) => setCheckUpdates(!checkUpdates)}
+              >
+                <CheckboxIndicator mr="$2">
+                  <CheckboxIcon as={CheckIcon} />
+                </CheckboxIndicator>
+                <CheckboxLabel>Auto-Check for Updates</CheckboxLabel>
+              </Checkbox>
+
+              <Checkbox
+                size="md"
+                value={reportInstall}
+                isChecked={reportInstall}
+                onChange={(enabled) => setReportInstall(!reportInstall)}
+              >
+                <CheckboxIndicator mr="$2">
+                  <CheckboxIcon as={CheckIcon} />
+                </CheckboxIndicator>
+                <CheckboxLabel>Report Install Once</CheckboxLabel>
+              </Checkbox>
+
               <Button
                 mt="$8"
                 rounded="$full"
@@ -619,6 +652,8 @@ const Setup = (props) => {
               >
                 <ButtonText>Save</ButtonText>
               </Button>
+
+
               {'submit' in errors ? (
                 <HStack space="md" alignSelf="center" alignItems="center">
                   <AlertCircle color="$red700" />
