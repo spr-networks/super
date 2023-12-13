@@ -5,6 +5,9 @@
 * Add Events filters, Events UI Improvements
 * Migrate notifications to new Alerts view
 * Add easy Plugin install with OTP Check
+* Add TLS during install, TLS on in UI
+* Add Report Install/Auto Check for Updates flags
+* New Alerts functionality
 
 ## v0.3.2
 * Fixes for DNS Log date picker 
