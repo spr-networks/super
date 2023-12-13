@@ -226,6 +226,10 @@ const ReleaseInfo = ({ showModal, ...props }) => {
         setReleaseInfo(releaseInfo)
       })
       .catch((err) => context.error(err))
+
+    api.getCheckUpdates().then((state) => {
+      setCheckUpdates(state)
+    })
   }
 
   useEffect(() => {
@@ -242,7 +246,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
       .then((versions) => {
         versions?.reverse() // sort by latest first
 
-        let latest = versions[0]
+        let latest = versions.find((v) => !v.includes('-dev'))
         let latestDev = versions.find((v) => v.includes('-dev'))
 
         // if latest get version
@@ -341,6 +345,23 @@ const ReleaseInfo = ({ showModal, ...props }) => {
       })
   }
 
+  const toggleCheckUpdates = () => {
+    let newState = !checkUpdates
+    setCheckUpdates(newState)
+
+    //store into API
+    if (newState) {
+      api.setCheckUpdates().then((result) => {
+        context.success(`Enabled Automatically Checking for Updates `)
+      })
+    } else {
+      api.clearCheckUpdates().then((result) => {
+        context.success(`Disabled Automatically Checking for Updates`)
+      })
+    }
+
+  }
+
   const onSubmit = (info) => {
     if (
       info.CustomChannel != 'main' &&
@@ -391,12 +412,12 @@ const ReleaseInfo = ({ showModal, ...props }) => {
             size="md"
             value={checkUpdates}
             isChecked={checkUpdates}
-            onChange={(enabled) => setCheckUpdates(!checkUpdates)}
+            onChange={(enabled) => toggleCheckUpdates()}
           >
             <CheckboxIndicator mr="$2">
               <CheckboxIcon as={CheckIcon} />
             </CheckboxIndicator>
-            <CheckboxLabel>Auto-check Updates</CheckboxLabel>
+            <CheckboxLabel>Auto-Check for Updates</CheckboxLabel>
           </Checkbox>
 
 

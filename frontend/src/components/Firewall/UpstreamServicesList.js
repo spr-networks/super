@@ -113,8 +113,8 @@ const UpstreamServicesList = (props) => {
           mb="$4"
           px="$4"
         >
-        <Heading size="xs">HTTPS Settings</Heading>
-        <Text size="xs" bold>API Status: {tlsState} </Text>
+        <Heading size="sm">HTTPS Settings</Heading>
+        <Text size="sm" bold>API Status: {tlsState} </Text>
         {(tlsState != "enabled") ? (
         <HStack>
           <Button

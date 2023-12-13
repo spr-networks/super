@@ -238,6 +238,19 @@ class API {
     return this.get('/version')
   }
 
+  // auto-check-update status
+  getCheckUpdates() {
+    return this.get('/checkupdates')
+  }
+
+  setCheckUpdates() {
+    return this.put('/checkupdates')
+  }
+
+  clearCheckUpdates() {
+    return this.delete('/checkupdates')
+  }
+
   restart() {
     return this.put('/restart')
   }
