@@ -340,9 +340,9 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       .catch((err) => {})
 
     //global handlers for api errors
-    api.registerErrorHandler(404, (err) =>
-      console.error('HTTP error 404', err.response.url)
-    )
+    api.registerErrorHandler(404, (err) => {
+      //console.error('HTTP error 404', err.response.url)
+    })
 
     const redirOnAuthError = (err) => {
       console.error('HTTP auth error for url:', err.response.url)
