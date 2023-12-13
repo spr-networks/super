@@ -16,12 +16,28 @@ import { SlidersHorizontalIcon } from 'lucide-react-native'
 
 const FilterInputSelect = ({
   value,
+  topic,
   items,
+  isInline,
   onChangeText,
   onSubmitEditing,
   ...props
 }) => {
   const modalContext = useContext(ModalContext)
+
+  const onSubmitEditingPre = (text) => {
+    onSubmitEditing(text)
+    modalContext.toggleModal()
+  }
+
+  const filterSelect = (
+    <FilterSelect
+      query={value}
+      items={items}
+      topic={topic}
+      onSubmitEditing={onSubmitEditingPre}
+    />
+  )
 
   const handlePressFilter = () => {
     if (value.length) {
@@ -29,46 +45,39 @@ const FilterInputSelect = ({
       return
     }
 
-    const onSubmitEditingPre = (text) => {
-      onSubmitEditing(text)
-      modalContext.toggleModal()
-    }
-
-    modalContext.modal(
-      'Set Filter',
-      <FilterSelect
-        query={value}
-        items={items}
-        onSubmitEditing={onSubmitEditingPre}
-      />
-    )
+    modalContext.modal('Set Filter', filterSelect)
   }
 
   return (
-    <Input size="sm" rounded="$md" w="$full">
-      <InputField
-        autoFocus
-        value={value}
-        onChangeText={onChangeText}
-        placeholder="Search"
-      />
-
-      <InputSlot pr="$3" onPress={handlePressFilter}>
-        <InputIcon as={CloseIcon} display={value.length ? 'flex' : 'none'} />
-        <InputIcon
-          as={SlidersHorizontalIcon}
-          display={value.length ? 'none' : 'flex'}
+    <>
+      <Input size="sm" rounded="$md" w="$full" {...props}>
+        <InputField
+          autoFocus
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={props.placeholder || 'Search'}
         />
-      </InputSlot>
-    </Input>
+
+        <InputSlot pr="$3" onPress={handlePressFilter}>
+          <InputIcon as={CloseIcon} display={value.length ? 'flex' : 'none'} />
+          <InputIcon
+            as={SlidersHorizontalIcon}
+            display={value.length ? 'none' : 'flex'}
+          />
+        </InputSlot>
+      </Input>
+      {/*isInline ? filterSelect : null*/}
+    </>
   )
 }
 
 FilterInputSelect.propTypes = {
   value: PropTypes.string,
+  topic: PropTypes.string,
   items: PropTypes.array,
   onChangeText: PropTypes.func,
-  onSubmitEditing: PropTypes.func
+  onSubmitEditing: PropTypes.func,
+  placeholder: PropTypes.string
 }
 
 export default FilterInputSelect

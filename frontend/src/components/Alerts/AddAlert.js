@@ -9,6 +9,7 @@ import {
   FormControlHelperText,
   FormControlLabel,
   FormControlLabelText,
+  Icon,
   Input,
   InputField,
   Switch,
@@ -21,6 +22,10 @@ import {
 } from '@gluestack-ui/themed'
 
 import { Select } from 'components/Select'
+import FilterInputSelect from 'components/Logs/FilterInputSelect'
+
+import { dbAPI } from 'api'
+import { CheckCircle2Icon } from 'lucide-react-native'
 
 const AddAlert = ({ onSubmit, ...props }) => {
   const [TopicPrefix, setTopicPrefix] = useState('nft:wan:out')
@@ -28,6 +33,7 @@ const AddAlert = ({ onSubmit, ...props }) => {
   const [InvertRule, setInvertRule] = useState(false)
   const [Conditions, setConditions] = useState([])
   const [Disabled, setDisabled] = useState(false)
+  const [logItems, setLogItems] = useState([])
 
   //only one action is supported now. in the future we will implement
   // different action types, for example, disconnecting a device.
@@ -37,6 +43,35 @@ const AddAlert = ({ onSubmit, ...props }) => {
     StoreAlert: true
   })
   const [Name, setName] = useState('')
+
+  // fetch sample with this prefix to get json syntax
+  const getLogs = async (bucket) => {
+    // fuzzy match list of buckets, example: dns:serve:xxx
+    try {
+      let buckets = await dbAPI.buckets()
+
+      if (!buckets.includes(bucket)) {
+        for (let b of buckets) {
+          if (b.startsWith(bucket)) {
+            bucket = b
+            break
+          }
+        }
+      }
+
+      const items = await dbAPI.items(bucket)
+      if (items) {
+        setLogItems(items)
+      }
+    } catch (err) {
+      //console.error(err)
+      setLogItems([])
+    }
+  }
+
+  useEffect(() => {
+    getLogs(TopicPrefix)
+  }, [TopicPrefix])
 
   const handleSubmit = () => {
     //validate here?
@@ -130,8 +165,15 @@ const AddAlert = ({ onSubmit, ...props }) => {
         </FormControl>
       </HStack>
       <FormControl>
-        <FormControlLabel>
+        <FormControlLabel alignItems="center">
           <FormControlLabelText>Event Filter Prefix</FormControlLabelText>
+          <Icon
+            size="sm"
+            as={CheckCircle2Icon}
+            color="$success500"
+            ml="$1"
+            display={logItems.length ? 'flex' : 'none'}
+          />
         </FormControlLabel>
         <Input type="text" variant="underlined">
           <InputField
@@ -180,6 +222,7 @@ const AddAlert = ({ onSubmit, ...props }) => {
 
           {Conditions.map((condition, index) => (
             <HStack key={index} space="md">
+              {/*
               <Input flex={1} type="text" variant="solid">
                 <InputField
                   name={`JPath-${index}`}
@@ -188,6 +231,20 @@ const AddAlert = ({ onSubmit, ...props }) => {
                   onChangeText={(value) => handleConditionChange(value, index)}
                 />
               </Input>
+              */}
+              <FilterInputSelect
+                flex={1}
+                placeholder="JSONPath filter"
+                value={condition.JPath}
+                items={logItems}
+                topic={TopicPrefix}
+                onChangeText={(value) => {
+                  handleConditionChange(value, index)
+                }}
+                onSubmitEditing={(value) => {
+                  handleConditionChange(value, index)
+                }}
+              />
               <Button
                 action="danger"
                 variant="link"

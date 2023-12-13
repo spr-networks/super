@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 
 import {
   Button,
+  ButtonIcon,
   ButtonText,
   Badge,
   BadgeText,
@@ -18,7 +19,9 @@ import {
   FormControl,
   FormControlLabel,
   FormControlLabelText,
-  FormControlHelperText
+  FormControlHelperText,
+  EyeIcon,
+  EyeOffIcon
 } from '@gluestack-ui/themed'
 
 import { JSONSyntax } from 'components/SyntaxHighlighter'
@@ -77,10 +80,11 @@ const buildQuery = (values) => {
   return query
 }
 
-const FilterSelect = ({ items, onSubmitEditing, query, ...props }) => {
+const FilterSelect = ({ items, onSubmitEditing, topic, query, ...props }) => {
   const [selected, setSelected] = useState(null)
   const [values, setValues] = useState({})
   const [keys, setKeys] = useState([])
+  const [showSample, setShowSample] = useState(false)
 
   const extractKeys = (items) => {
     if (!items) return []
@@ -164,7 +168,7 @@ const FilterSelect = ({ items, onSubmitEditing, query, ...props }) => {
   }
 
   return (
-    <VStack space="md">
+    <VStack space="md" {...props}>
       <VStack space="md">
         <HStack space="sm" flexWrap="wrap">
           {keys.map((k) => (
@@ -223,20 +227,36 @@ const FilterSelect = ({ items, onSubmitEditing, query, ...props }) => {
             <Text size="sm">{buildQuery(values)}</Text>
           </HStack>
         </FormControl>
+      </VStack>
+
+      <HStack space="md">
         <Button onPress={onSelect}>
           <ButtonText>Select Query</ButtonText>
         </Button>
-      </VStack>
+        <Button
+          action="secondary"
+          variant="outline"
+          onPress={() => setShowSample(!showSample)}
+        >
+          <ButtonText>
+            {showSample
+              ? `Hide JSON for "${topic}"`
+              : `Show JSON for "${topic}"`}
+          </ButtonText>
+          <ButtonIcon as={showSample ? EyeOffIcon : EyeIcon} ml="$2" />
+        </Button>
+      </HStack>
 
-      <VStack space="sm">
-        <Text size="xs" bold>
-          Sample Item:
-        </Text>
-        <ScrollView maxHeight={150}>
-          <Text size="xs">{JSON.stringify(items[0])}</Text>
-          {/* <JSONSyntax code={jsonData} />*/}
-        </ScrollView>
-      </VStack>
+      <ScrollView
+        bg="$backgroundCardLight"
+        sx={{ _dark: { bg: '$backgroundCardDark' } }}
+        rounded="md"
+        p="$2"
+        maxHeight={150}
+        display={showSample ? 'flex' : 'none'}
+      >
+        <Text size="xs">{JSON.stringify(items[0], null, '  ')}</Text>
+      </ScrollView>
     </VStack>
   )
 }
