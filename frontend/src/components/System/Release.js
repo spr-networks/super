@@ -224,20 +224,34 @@ const ReleaseInfo = ({ showModal, ...props }) => {
       .get('/release')
       .then((releaseInfo) => {
         setReleaseInfo(releaseInfo)
+
+        api.getCheckUpdates().then((state) => {
+          setCheckUpdates(state)
+
+          if (state == true) {
+            checkUpdate(releaseInfo)
+          }
+        })
+
       })
       .catch((err) => context.error(err))
 
-    api.getCheckUpdates().then((state) => {
-      setCheckUpdates(state)
-    })
   }
 
   useEffect(() => {
     updateRelease()
   }, [])
 
-  const checkUpdate = () => {
-    let current = releaseInfo.Current
+  const checkUpdate = (arg) => {
+    let current
+    if (!releaseInfo) {
+      if (!arg) {
+        return
+      }
+      current = arg.Current
+    } else {
+      current = releaseInfo.Current
+    }
 
     setWaitFor('check')
 
