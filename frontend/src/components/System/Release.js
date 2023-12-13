@@ -225,17 +225,18 @@ const ReleaseInfo = ({ showModal, ...props }) => {
       .then((releaseInfo) => {
         setReleaseInfo(releaseInfo)
 
-        api.getCheckUpdates().then((state) => {
-          setCheckUpdates(state)
+        api
+          .getCheckUpdates()
+          .then((state) => {
+            setCheckUpdates(state)
 
-          if (state == true) {
-            checkUpdate(releaseInfo)
-          }
-        })
-
+            if (state == true) {
+              checkUpdate(releaseInfo)
+            }
+          })
+          .catch((err) => {})
       })
       .catch((err) => context.error(err))
-
   }
 
   useEffect(() => {
@@ -365,15 +366,20 @@ const ReleaseInfo = ({ showModal, ...props }) => {
 
     //store into API
     if (newState) {
-      api.setCheckUpdates().then((result) => {
-        context.success(`Enabled Automatically Checking for Updates `)
-      })
+      api
+        .setCheckUpdates()
+        .then((result) => {
+          context.success(`Enabled Automatically Checking for Updates `)
+        })
+        .catch((err) => {})
     } else {
-      api.clearCheckUpdates().then((result) => {
-        context.success(`Disabled Automatically Checking for Updates`)
-      })
+      api
+        .clearCheckUpdates()
+        .then((result) => {
+          context.success(`Disabled Automatically Checking for Updates`)
+        })
+        .catch((err) => {})
     }
-
   }
 
   const onSubmit = (info) => {
@@ -421,7 +427,6 @@ const ReleaseInfo = ({ showModal, ...props }) => {
             '@md': { flexDirection: 'row', gap: '$3', alignItems: 'center' }
           }}
         >
-
           <Checkbox
             size="md"
             value={checkUpdates}
@@ -433,7 +438,6 @@ const ReleaseInfo = ({ showModal, ...props }) => {
             </CheckboxIndicator>
             <CheckboxLabel>Auto-Check for Updates</CheckboxLabel>
           </Checkbox>
-
 
           <Button size="sm" onPress={checkUpdate}>
             <ButtonText>Check</ButtonText>
