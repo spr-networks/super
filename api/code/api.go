@@ -80,11 +80,14 @@ type MulticastSettings struct {
 }
 
 type APIConfig struct {
-	InfluxDB   InfluxConfig
-	Plugins    []PluginConfig
-	PlusToken  string
-	AutoUpdate bool
-	DNS        DNSSettings
+	InfluxDB        InfluxConfig
+	Plugins         []PluginConfig
+	PlusToken       string
+	AutoUpdate      bool //unused
+	CheckUpdates    bool
+	ReportInstall   bool
+	ReportedInstall bool
+	DNS             DNSSettings
 }
 
 type GroupEntry struct {
@@ -465,7 +468,7 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 	//fall through success
 }
 
-func checkUpdates() {
+func runAutoUpdates() {
 
 	//once an hour, check if auto updates are enabled
 	// if they are, then perform an update
@@ -473,12 +476,23 @@ func checkUpdates() {
 	for {
 		select {
 		case <-ticker.C:
-			if config.AutoUpdate == true {
+
+			Configmtx.Lock()
+			do_update := config.AutoUpdate
+			do_report := config.ReportInstall && !config.ReportedInstall
+			Configmtx.Unlock()
+
+			if do_report {
+				ReportInstall()
+			}
+
+			if do_update == true {
 				//TBD 1) check a release has aged?
 				//    2) check that a release is up to date
 
 				//performUpdate()
 			}
+			Configmtx.Unlock()
 		}
 	}
 }
@@ -699,13 +713,34 @@ func autoUpdate(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodDelete {
 		config.AutoUpdate = false
-		saveConfig()
+		saveConfigLocked()
 		// fall thru 200
 		return
 	}
 
 	config.AutoUpdate = true
-	saveConfig()
+	saveConfigLocked()
+}
+
+func checkUpdates(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(config.CheckUpdates)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		config.CheckUpdates = false
+		saveConfigLocked()
+		// fall thru 200
+		return
+	}
+
+	config.CheckUpdates = true
+	saveConfigLocked()
 }
 
 func update(w http.ResponseWriter, r *http.Request) {
@@ -2231,6 +2266,8 @@ type SetupConfig struct {
 	InterfaceAP     string
 	InterfaceUplink string
 	TinyNets        []string
+	CheckUpdates    bool
+	ReportInstall   bool
 }
 
 func isSetupMode() bool {
@@ -2240,6 +2277,38 @@ func isSetupMode() bool {
 	}
 
 	return true
+}
+
+func ReportInstall() {
+	Configmtx.Lock()
+	if config.ReportedInstall {
+		Configmtx.Unlock()
+		return
+	}
+	Configmtx.Unlock()
+
+	c := http.Client{}
+
+	defer c.CloseIdleConnections()
+
+	req, err := http.NewRequest(http.MethodGet, "http://spr-counter.spr-networks.org/spr_counter", nil)
+	if err != nil {
+		log.Println("Failed to construct counter request")
+		return
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		log.Println("Failed to GET on counter")
+		return
+	}
+
+	Configmtx.Lock()
+	config.ReportedInstall = true
+	saveConfigLocked()
+	Configmtx.Unlock()
+
+	resp.Body.Close()
 }
 
 // initial setup only available if there is no user/pass configured
@@ -2264,6 +2333,11 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+
+	Configmtx.Lock()
+	config.ReportInstall = conf.ReportInstall
+	config.CheckUpdates = conf.CheckUpdates
+	Configmtx.Unlock()
 
 	validCountry := regexp.MustCompile(`^[A-Z]{2}$`).MatchString // EN,SE
 	//SSID: up to 32 alphanumeric, case-sensitive, characters
@@ -2608,6 +2682,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/version", getContainerVersion).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/autoupdate", autoUpdate).Methods("GET", "PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/checkupdates", checkUpdates).Methods("GET", "PUT", "DELETE")
 
 	//device management
 	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")
@@ -2751,8 +2826,8 @@ func main() {
 	//listen and cache dns
 	go DNSEventListener()
 
-	// updates when enabled
-	go checkUpdates()
+	// updates when enabled. not implemented yet
+	go runAutoUpdates()
 
 	sslPort, runSSL := os.LookupEnv("API_SSL_PORT")
 
