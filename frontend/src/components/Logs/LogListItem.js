@@ -187,7 +187,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     ),
     'dhcp:request': (item) => (
       <>
-        <DeviceItem flex={1} item={context.getDevice(item.MAC, 'MAC')} />
+        <DeviceItem show={['Style', 'Name']} flex={1} item={context.getDevice(item.MAC, 'MAC')} />
 
         {['Identifier', 'Name'].map((t) =>
           item[t] ? (
@@ -208,7 +208,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     ),
     'dhcp:response': (item) => (
       <>
-        <DeviceItem flex={1} item={context.getDevice(item.IP, 'RecentIP')} />
+        <DeviceItem show={['Style', 'Name']} flex={1} item={context.getDevice(item.IP, 'RecentIP')} />
         {['LeaseTime', 'DNSIP', 'RouterIP'].map((t) =>
           item[t] ? (
             <HStack
@@ -275,7 +275,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     ),
     'wifi:auth:success': () => (
       <>
-        <DeviceItem flex={1} item={context.getDevice(item.MAC)} />
+        <DeviceItem show={['Style', 'Name']} flex={1} item={context.getDevice(item.MAC)} />
         {['Router', 'Status'].map((f) =>
           item[f]?.length ? (
             <HStack
@@ -299,7 +299,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     'wifi:auth:fail': () => (
       <>
         <HStack flex={1} justifyContent="space-between">
-          <DeviceItem hideMissing={true} item={context.getDevice(item.MAC)} />
+          <DeviceItem show={['Style', 'Name']} hideMissing={true} item={context.getDevice(item.MAC)} />
           <Text>{item.MAC}</Text>
           <Text>{item.Reason}</Text>
           <Text>{item.Type}</Text>
@@ -330,6 +330,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         <HStack flex={1} justifyContent="space-between">
           <VStack>
             <DeviceItem
+              show={['Style', 'Name']}
               flex={1}
               hideMissing={true}
               item={context.getDevice(item.Ethernet?.SrcMAC)}
@@ -357,6 +358,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
           <ArrowBigRightIcon />
           <VStack>
             <DeviceItem
+              show={['Style', 'Name']}
               flex={1}
               hideMissing={true}
               item={context.getDevice(item.Ethernet.DstMAC)}
@@ -389,6 +391,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         <HStack flex={1} justifyContent="space-between">
           <VStack>
             <DeviceItem
+              show={['Style', 'Name']}
               flex={1}
               hideMissing={true}
               item={context.getDevice(item.Ethernet?.SrcMAC)}
@@ -416,6 +419,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
           <ArrowBigRightIcon />
           <VStack>
             <DeviceItem
+              show={['Style', 'Name']}
               flex={1}
               hideMissing={true}
               item={context.getDevice(item.Ethernet.DstMAC)}
@@ -448,6 +452,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         <HStack flex={1} justifyContent="space-between">
           <VStack>
             <DeviceItem
+              size="sm"
               flex={1}
               hideMissing={true}
               item={context.getDevice(item.Ethernet.SrcMAC)}
@@ -475,6 +480,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
           <ArrowBigRightIcon />
           <VStack>
             <DeviceItem
+              show={['Style', 'Name']}
               flex={1}
               hideMissing={true}
               item={context.getDevice(item.Ethernet.DstMAC)}
@@ -507,6 +513,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         <HStack flex={1} justifyContent="space-between">
           <VStack>
             <DeviceItem
+              show={['Style', 'Name']}
               flex={1}
               hideMissing={true}
               item={context.getDevice(item.Ethernet.SrcMAC)}
@@ -531,6 +538,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
           <ArrowBigRightIcon />
           <VStack>
             <DeviceItem
+              show={['Style', 'Name']}
               flex={1}
               hideMissing={true}
               item={context.getDevice(item.Ethernet.DstMAC)}
@@ -626,6 +634,7 @@ const LogListItem = ({ item, selected, ...props }) => {
         _dark: { bg: '$secondary900', borderColor: '$secondary800' }
       }}
       space="$0"
+      {...props}
     >
       <HStack
         w="$full"

@@ -4,6 +4,7 @@ import { Dimensions, Platform } from 'react-native'
 import {
   Button,
   ButtonIcon,
+  ButtonText,
   Box,
   FlatList,
   Heading,
@@ -23,6 +24,16 @@ import {
   ThreeDotsIcon
 } from '@gluestack-ui/themed'
 
+import {
+  BellIcon,
+  BellOffIcon,
+  Inbox,
+  CheckSquare,
+  SlidersHorizontalIcon,
+  SquareSlash,
+} from 'lucide-react-native'
+
+
 import { alertsAPI, dbAPI } from 'api'
 import AddAlert from 'components/Alerts/AddAlert'
 import { AlertContext } from 'layouts/Admin'
@@ -30,12 +41,7 @@ import { ModalContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import { ListHeader } from 'components/List'
 import { ListItem } from 'components/List'
-import {
-  BellIcon,
-  BellOffIcon,
-  SlidersHorizontalIcon
-} from 'lucide-react-native'
-
+import InputSelect from 'components/InputSelect'
 import LogListItem from 'components/Logs/LogListItem'
 import FilterInputSelect from 'components/Logs/FilterInputSelect'
 import { Select } from 'components/Select'
@@ -55,6 +61,7 @@ const Alerts = (props) => {
   const perPage = 20
   const [params, setParams] = useState({ num: perPage })
   const [searchField, setSearchField] = useState('')
+  const [stateFilter, setStateFilter] = useState('All')
 
   const fetchList = () => {
     alertsAPI
@@ -91,6 +98,14 @@ const Alerts = (props) => {
       withFilter['filter'] = searchField
       let more_results = await dbAPI.items(bucket, withFilter)
       if (more_results) {
+        //filter alert state
+        if (stateFilter == 'New') {
+          more_results = more_results.filter((alert) => (alert.State == '' || alert.State == 'New'))
+        }
+        else if (stateFilter != 'All') {
+            more_results = more_results.filter((alert) => alert.State == stateFilter)
+        }
+
         result = result.concat(more_results)
       }
 
@@ -115,7 +130,7 @@ const Alerts = (props) => {
   useEffect(() => {
     setLogs([])
     fetchLogs()
-  }, [params, searchField])
+  }, [params, searchField, stateFilter])
 
   useEffect(() => {
     fetchList()
@@ -161,6 +176,14 @@ const Alerts = (props) => {
       .catch((err) => {})
   }
 
+  const onChangeStateFilter = (value) => {
+    setStateFilter(value)
+  }
+
+  const updateEventState = (event) => {
+    //TBD, this needs to write to db
+  }
+
   const refModal = useRef(null)
 
   const InfoItem = ({ label, value, ...props }) => {
@@ -173,6 +196,12 @@ const Alerts = (props) => {
       </HStack>
     )
   }
+  const stateChoices = ['New', 'Triaged', 'Resovled', 'All']
+
+  const options = stateChoices.map((value) => ({
+    label: value,
+    value
+  }))
 
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
@@ -186,7 +215,8 @@ const Alerts = (props) => {
         </ModalForm>
       </ListHeader>
 
-      <VStack
+      <HStack>
+      <VStack flex={2}
         display="none"
         sx={{
           '@md': {
@@ -203,10 +233,31 @@ const Alerts = (props) => {
           onSubmitEditing={setSearchField}
         />
       </VStack>
+      <HStack flex={1}>
+        <Text bold flex={1}>Filter</Text>
+        <InputSelect
+          flex={1}
+          options={options}
+          value={stateFilter}
+          onChange={(v) => onChangeStateFilter(v)}
+          onChangeText={(v) => onChangeStateFilter(v)}
+        />
+      </HStack>
+
+      </HStack>
 
       <Text size="xs" mx="$4">
         #Items: {logs.length}, Topics: {topics.join(',')}
       </Text>
+
+      <Button
+        size="sm"
+        onPress={()=>{}}
+        w="$1/4"
+      >
+        <ButtonText color="">Resolve All Alerts</ButtonText>
+      </Button>
+
 
       <FlatList
         data={logs}
@@ -231,11 +282,41 @@ const Alerts = (props) => {
               Body is an alert body to be set from config
               */}
 
-              {['State', 'Title', 'Body'].map((label) => (
+              {['Title', 'Body'].map((label) => (
                 <InfoItem key={label} label={label} value={item[label]} />
               ))}
+
+              <VStack>
+                <Button
+                  action="secondary"
+                  variant="outline"
+                  onPress={updateEventState(item, 'new')}
+
+                >
+                  <ButtonText color="">New</ButtonText>
+                  <ButtonIcon color="" as={Inbox} mr="$2" />
+                </Button>
+                <Button
+                  action="secondary"
+                  variant="outline"
+                  onPress={updateEventState(item, 'triaged')}
+
+                >
+                  <ButtonText color="$yellow400">Triaged</ButtonText>
+                  <ButtonIcon color="$yellow400" as={SquareSlash} mr="$2" />
+                </Button>
+                <Button
+                  action="secondary"
+                  variant="outline"
+                  onPress={updateEventState(item, 'resolve')}
+                >
+                  <ButtonText color="$green400">Resolved</ButtonText>
+                  <ButtonIcon color="$green400" as={CheckSquare} mr="$2" />
+                </Button>
+              </VStack>
+
             </VStack>
-            <LogListItem flex={2} item={item.Event} selected={item.Topic} />
+            <LogListItem flex={3} item={item.Event} selected={item.Topic} />
           </VStack>
         )}
         keyExtractor={(item, index) => item.time + index}
