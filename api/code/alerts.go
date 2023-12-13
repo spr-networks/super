@@ -374,6 +374,9 @@ func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic s
 	}
 
 	for _, rule := range gAlertsConfig {
+		if rule.Disabled {
+			continue
+		}
 		if strings.HasPrefix(topic, rule.TopicPrefix) {
 			values := []interface{}{}
 			for _, condition := range rule.Conditions {
