@@ -55,24 +55,30 @@ const WifiClients = (props) => {
   }
 
   const refreshClients = async () => {
-
-    refreshAPI(wifiAPI);
+    refreshAPI(wifiAPI)
 
     meshAPI
       .meshIter(() => new APIWifi())
       .then((r) => {
         r.forEach((remoteWifiApi) => {
-          refreshAPI(remoteWifiApi);
-        });
-      });
+          refreshAPI(remoteWifiApi)
+        })
+      })
+      .catch((err) => {})
   }
 
   const refreshAPI = async (api) => {
-    const ifaces = await api.interfacesApi.call(api, api, 'AP').catch((error) => {
-      context.error('WIFI API Failure ' + (api.remoteURL ? api.remoteURL : ""))
+    const ifaces = await api.interfacesApi
+      .call(api, api, 'AP')
+      .catch((error) => {
+        context.error(
+          'WIFI API Failure ' + (api.remoteURL ? api.remoteURL : '')
+        )
+        return
+      })
+    if (!ifaces) {
       return
-    })
-    if (!ifaces) { return }
+    }
     let stations = {}
 
     for (let iface of ifaces) {
@@ -101,12 +107,11 @@ const WifiClients = (props) => {
         client.Signal = station.signal
         client.Iface = station.Iface
         client.TXRate = station.tx_rate_info
-        client.AP = api.remoteURL.replace("http://", "").replace("/", "")
+        client.AP = api.remoteURL.replace('http://', '').replace('/', '')
         return client
       })
 
       setClients((prevClients) => {
-
         let merged = {}
         let add_me = []
         let prev = prevClients || []
@@ -120,7 +125,7 @@ const WifiClients = (props) => {
         }
 
         return add_me.concat(...prev)
-      } );
+      })
     }
   }
 
@@ -160,7 +165,7 @@ const WifiClients = (props) => {
             sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
             alignItems="center"
           >
-            <InterfaceItem name={item.Iface + "-" + item.AP} />
+            <InterfaceItem name={item.Iface + '-' + item.AP} />
           </Box>
 
           <VStack

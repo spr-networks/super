@@ -157,7 +157,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const toggleAlert = () => setShowAlert(!showAlert)
 
   const checkUpdate = () => {
-
     api
       .get('/releasesAvailable?container=super_base')
       .then((versions) => {
@@ -177,22 +176,22 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             }
 
             if (current.includes('-dev') && current != latestDev) {
-              alertState.info(`New SPR available: Latest dev version is ${latestDev}, current version is ${current}`)
+              alertState.info(
+                `New SPR available: Latest dev version is ${latestDev}, current version is ${current}`
+              )
             } else if (current != latest) {
-              alertState.info(`New SPR available: Latest version is ${latest}, current version is ${current}`)
+              alertState.info(
+                `New SPR available: Latest version is ${latest}, current version is ${current}`
+              )
             } else {
               alertState.success(`${current} is the latest version of spr`)
             }
-
           })
           .catch((err) => alertState.error(err))
-
       })
       .catch((err) => {})
-      .finally(() => {
-      })
+      .finally(() => {})
   }
-
 
   //setup alert context
   alertState.alert = (type = 'info', title, body = null) => {
@@ -322,18 +321,23 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   }
 
   useEffect(() => {
-    api.getCheckUpdates().then((state) => {
-      const lastCheckTime = localStorage.getItem('lastUpdateCheckTime');
+    api
+      .getCheckUpdates()
+      .then((state) => {
+        const lastCheckTime = localStorage.getItem('lastUpdateCheckTime')
 
-      const currentTime = new Date().getTime();
+        const currentTime = new Date().getTime()
 
-      if (state == true && (!lastCheckTime || currentTime - lastCheckTime >= 3600000)) {
-        checkUpdate();
+        if (
+          state == true &&
+          (!lastCheckTime || currentTime - lastCheckTime >= 3600000)
+        ) {
+          checkUpdate()
 
-        localStorage.setItem('lastUpdateCheckTime', currentTime);
-      }
-
-    })
+          localStorage.setItem('lastUpdateCheckTime', currentTime)
+        }
+      })
+      .catch((err) => {})
 
     //global handlers for api errors
     api.registerErrorHandler(404, (err) =>
