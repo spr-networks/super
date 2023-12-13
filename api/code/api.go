@@ -1016,7 +1016,10 @@ func enableTLS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	callSuperdRestart("","api")
+	go func() {
+		time.Sleep(1 * time.Second)
+		callSuperdRestart("", "api")
+	}()
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode("Done")
