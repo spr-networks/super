@@ -47,7 +47,6 @@ const Alerts = (props) => {
   const [topics, setTopics] = useState([])
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
-  //TBD: this will be replaced with alert: and mock_alerts will not wrap
   const AlertPrefix = 'alert:'
 
   const [logs, setLogs] = useState([])
@@ -91,6 +90,11 @@ const Alerts = (props) => {
       let withFilter = params
       withFilter['filter'] = searchField
       let more_results = await dbAPI.items(bucket, withFilter)
+      if (more_results) {
+        result = result.concat(more_results)
+      }
+
+      /*
       if (more_results !== null) {
         let mock_alerts = more_results.map((event) => {
           return event
@@ -102,6 +106,7 @@ const Alerts = (props) => {
 
         result = result.concat(mock_alerts)
       }
+      */
     }
 
     setLogs(result)
@@ -207,8 +212,15 @@ const Alerts = (props) => {
         data={logs}
         estimatedItemSize={100}
         renderItem={({ item }) => (
-          <VStack w="$full" sx={{ '@md': { flexDirection: 'row' } }}>
-            <VStack space="sm" p="$4" flex={1}>
+          <VStack
+           alignItems="center"
+           space="sm"
+           sx={{
+             '@md': { flexDirection: 'row', justifyContent: 'space-between' }
+           }}
+
+           >
+            <VStack  p="$4" flex={1} >
               {/*
               TBD: state will be something like
               "" -> untriaged
@@ -223,7 +235,7 @@ const Alerts = (props) => {
                 <InfoItem key={label} label={label} value={item[label]} />
               ))}
             </VStack>
-            <LogListItem item={item.Event} selected={item.Topic} />
+            <LogListItem flex={2} item={item.Event} selected={item.Topic} />
           </VStack>
         )}
         keyExtractor={(item, index) => item.time + index}

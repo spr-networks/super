@@ -27,13 +27,14 @@ import FilterInputSelect from 'components/Logs/FilterInputSelect'
 import { dbAPI } from 'api'
 import { CheckCircle2Icon } from 'lucide-react-native'
 
-const AddAlert = ({ onSubmit, ...props }) => {
-  const [TopicPrefix, setTopicPrefix] = useState('nft:wan:out')
+const AddAlert = ({ onSubmit, curItem, ...props }) => {
+  const [TopicPrefix, setTopicPrefix] = useState('nft:drop:input')
   const [MatchAnyOne, setMatchAnyOne] = useState(false)
   const [InvertRule, setInvertRule] = useState(false)
   const [Conditions, setConditions] = useState([])
   const [Disabled, setDisabled] = useState(false)
   const [logItems, setLogItems] = useState([])
+
 
   //only one action is supported now. in the future we will implement
   // different action types, for example, disconnecting a device.
@@ -43,6 +44,27 @@ const AddAlert = ({ onSubmit, ...props }) => {
     StoreAlert: true
   })
   const [Name, setName] = useState('')
+
+  useEffect(() => {
+    if (curItem != null) {
+      //populate the modal from it
+      setTopicPrefix(curItem.TopicPrefix)
+      setMatchAnyOne(curItem.MatchAnyOne)
+      setInvertRule(curItem.InvertRule)
+      if (curItem.Conditions) {
+        setConditions(curItem.Conditions)
+      }
+      setDisabled(curItem.Disabled)
+      if (curItem.GrabFields) {
+        setGrabFields(curItem.GrabFields)
+      }
+      //only one action supported currently
+      if (curItem.Actions) {
+        setActionConfig(curItem.Actions[0])
+      }
+    }
+  }, [])
+
 
   // fetch sample with this prefix to get json syntax
   const getLogs = async (bucket) => {

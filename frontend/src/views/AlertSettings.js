@@ -32,6 +32,7 @@ import { ListItem } from 'components/List'
 import {
   BellIcon,
   BellOffIcon,
+  PencilIcon,
   SlidersHorizontalIcon
 } from 'lucide-react-native'
 
@@ -41,7 +42,7 @@ import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
 import { Tooltip } from 'components/Tooltip'
 
-const AlertItem = ({ item, index, onDelete, onToggle, ...props }) => {
+const AlertItem = ({ item, index, onDelete, onToggle, onEdit, ...props }) => {
   if (!item) {
     return <></>
   }
@@ -62,13 +63,16 @@ const AlertItem = ({ item, index, onDelete, onToggle, ...props }) => {
           onDelete(index)
         } else if (action == 'onoff') {
           onToggle(index, item)
+        } else if (action == 'edit') {
+          onEdit(index, item)
         }
       }}
     >
-      <MenuItem key="delete" textValue="delete">
-        <TrashIcon color="$red700" mr="$2" />
-        <MenuItemLabel size="sm" color="$red700">
-          Delete
+
+      <MenuItem key="edit" textValue="edit">
+        <Icon as={PencilIcon} color="$muted500" mr="$2" />
+        <MenuItemLabel size="sm">
+          Edit
         </MenuItemLabel>
       </MenuItem>
 
@@ -78,18 +82,26 @@ const AlertItem = ({ item, index, onDelete, onToggle, ...props }) => {
           {item.Disabled ? 'Enable' : 'Disable'}
         </MenuItemLabel>
       </MenuItem>
+
+      <MenuItem key="delete" textValue="delete">
+        <TrashIcon color="$red700" mr="$2" />
+        <MenuItemLabel size="sm" color="$red700">
+          Delete
+        </MenuItemLabel>
+      </MenuItem>
+
     </Menu>
   )
 
   return (
     <ListItem>
       <HStack sx={{ '@md': { flexDirection: 'row' } }} space="md" flex={1}>
-        <Text bold>{item.Name}</Text>
+        <Text flex={1} bold>{item.Name}</Text>
 
-        <Text>{item.TopicPrefix || 'N/A'}</Text>
+        <Text flex={1} >{item.TopicPrefix || 'N/A'}</Text>
 
         {item.Actions.map((action) => (
-          <HStack>
+          <HStack flex={1}>
             {/*
           <HStack space="md">
             <Text color="$muted500">Message Title</Text>
@@ -153,10 +165,12 @@ const AlertItem = ({ item, index, onDelete, onToggle, ...props }) => {
 const AlertItemHeader = () => (
   //TBD spacing
   <ListHeader>
-    <Text bold>Name</Text>
-    <Text bold>Topic Filter</Text>
+    <Text flex={1} bold>Name</Text>
+    <Text flex={1} bold>Topic Filter</Text>
+    <HStack flex={1}>
     <Text bold>UI Notification</Text>
     <Text bold>Save Alert</Text>
+    </HStack>
   </ListHeader>
 )
 
@@ -173,6 +187,8 @@ const AlertSettings = (props) => {
   const [total, setTotal] = useState(0)
   const perPage = 20
   const [params, setParams] = useState({ num: perPage })
+
+  const [itemIndex, setItemIndex] = useState(-1)
 
   const fetchList = () => {
     alertsAPI
@@ -216,19 +232,45 @@ const AlertSettings = (props) => {
     })
   }
 
+  const onEdit = (index, item) => {
+    setItemIndex(index)
+    //preopulate the modal somehow
+    refModal.current()
+  }
+
   const onSubmit = (item) => {
-    //submit to api
-    alertsAPI
-      .add(item)
-      .then((res) => {
-        refModal.current()
-        fetchList()
-      })
-      .catch((err) => {})
+
+    if (itemIndex == -1) {
+      //create a new item
+      alertsAPI
+        .add(item)
+        .then((res) => {
+          refModal.current()
+          fetchList()
+        })
+        .catch((err) => {})
+
+    } else {
+      //updates an existing one
+      alertsAPI
+        .update(item, itemIndex)
+        .then((res) => {
+          refModal.current()
+          fetchList()
+        })
+        .catch((err) => {})
+
+      setItemIndex(-1)
+    }
   }
 
   const refModal = useRef(null)
 
+  let populateItem = null
+  if (itemIndex != -1) {
+    populateItem = config[itemIndex]
+  }
+  
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
       <ListHeader title="Alert Configuration">
@@ -237,7 +279,7 @@ const AlertSettings = (props) => {
           triggerText="Add Alert"
           modalRef={refModal}
         >
-          <AddAlert onSubmit={onSubmit} />
+          <AddAlert curItem={populateItem} onSubmit={onSubmit} />
         </ModalForm>
       </ListHeader>
 
@@ -251,6 +293,7 @@ const AlertSettings = (props) => {
             index={index}
             onToggle={onToggle}
             onDelete={onDelete}
+            onEdit={onEdit}
           />
         )}
         keyExtractor={(item, index) => `alert-${index}`}
