@@ -42,7 +42,7 @@ import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
 import { Tooltip } from 'components/Tooltip'
 
-const AlertItem = ({ item, index, onDelete, onToggle, onEdit, ...props }) => {
+const AlertItem = ({ item, index, onDelete, onToggle, onToggleUINotify, onToggleStore, onEdit, ...props }) => {
   if (!item) {
     return <></>
   }
@@ -96,9 +96,16 @@ const AlertItem = ({ item, index, onDelete, onToggle, onEdit, ...props }) => {
   return (
     <ListItem>
       <HStack sx={{ '@md': { flexDirection: 'row' } }} space="md" flex={1}>
-        <Text flex={1} bold>{item.Name}</Text>
+        {!item.Disabled ?
+          <Text flex={1} bold>{item.Name}</Text>
+          :
+          <Text flex={1} italic > {item.Name}</Text>
+        }
 
         <Text flex={1} >{item.TopicPrefix || 'N/A'}</Text>
+
+
+        <Text flex={1} >{item.Actions?.[0]?.MessageTitle || 'N/A'}</Text>
 
         {item.Actions.map((action) => (
           <HStack flex={1}>
@@ -114,9 +121,13 @@ const AlertItem = ({ item, index, onDelete, onToggle, onEdit, ...props }) => {
           </HStack>
           */}
 
-            <Switch value={action.SendNotification} />
+            <Switch value={action.SendNotification}
+              onValueChange={() => onToggleUINotify(index, item)}
+            />
 
-            <Switch value={action.StoreAlert} />
+            <Switch value={action.StoreAlert}
+              onValueChange={() => onToggleStore(index, item)}
+            />
 
             {/*
           <HStack space="md">
@@ -167,6 +178,7 @@ const AlertItemHeader = () => (
   <ListHeader>
     <Text flex={1} bold>Name</Text>
     <Text flex={1} bold>Topic Filter</Text>
+    <Text flex={1} bold>Title</Text>
     <HStack flex={1}>
     <Text bold>UI Notification // </Text>
     <Text bold>Store Alert</Text>
@@ -232,6 +244,35 @@ const AlertSettings = (props) => {
     })
   }
 
+  const onToggleUINotify = (index, item) => {
+    if (!item.Actions || !item.Actions[0]) {
+      return
+    }
+
+    item.Actions[0].SendNotification = !item.Actions[0].SendNotification
+
+    alertsAPI.update(index, item).then((res) => {
+      let _alerts = [...config]
+      _alerts[index] = item
+      setConfig(_alerts)
+    })
+  }
+
+  const onToggleStore = (index, item) => {
+    if (!item.Actions || !item.Actions[0]) {
+      return
+    }
+
+    item.Actions[0].StoreAlert = !item.Actions[0].StoreAlert
+
+    alertsAPI.update(index, item).then((res) => {
+      let _alerts = [...config]
+      _alerts[index] = item
+      setConfig(_alerts)
+    })
+  }
+
+
   const onEdit = (index, item) => {
     setItemIndex(index)
     //preopulate the modal somehow
@@ -292,6 +333,8 @@ const AlertSettings = (props) => {
             item={item}
             index={index}
             onToggle={onToggle}
+            onToggleStore={onToggleStore}
+            onToggleUINotify={onToggleUINotify}
             onDelete={onDelete}
             onEdit={onEdit}
           />

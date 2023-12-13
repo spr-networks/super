@@ -315,7 +315,7 @@ const routes = [
       },
       {
         path: 'alerts/settings',
-        name: 'AlertSettings',
+        name: 'Alerts Configuration',
         icon: Settings2Icon,
         component: AlertSettings,
         layout: 'admin'
