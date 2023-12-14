@@ -23,6 +23,7 @@ import {
 
 import { Select } from 'components/Select'
 import FilterInputSelect from 'components/Logs/FilterInputSelect'
+import InputSelect from 'components/InputSelect'
 
 import { dbAPI } from 'api'
 import { CheckCircle2Icon } from 'lucide-react-native'
@@ -34,16 +35,22 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
   const [Conditions, setConditions] = useState([])
   const [Disabled, setDisabled] = useState(false)
   const [logItems, setLogItems] = useState([])
-
+  const [notificationType, setNotificationType] = useState('info')
 
   //only one action is supported now. in the future we will implement
   // different action types, for example, disconnecting a device.
   const [GrabFields, setGrabFields] = useState([])
   const [ActionConfig, setActionConfig] = useState({
     GrabEvent: true,
-    StoreAlert: true
+    StoreAlert: true,
+    NotificationType: 'info',
   })
   const [Name, setName] = useState('')
+
+  const NotificationTypes = ['info', 'warning', 'success', 'error', 'danger'].map((x) => ({
+    label: x,
+    value: x
+  }))
 
   useEffect(() => {
     if (curItem != null) {
@@ -102,6 +109,8 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
     if (GrabFields.length > 0) {
       action.GrabFields = GrabFields
     }
+    action.NotificationType = notificationType
+
     let item = {
       TopicPrefix,
       MatchAnyOne,
@@ -155,6 +164,19 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
           />
         </Input>
       </FormControl>
+      <FormControl>
+        <FormControlLabel alignItems="center">
+          <FormControlLabelText>Notification Type</FormControlLabelText>
+        </FormControlLabel>
+        <InputSelect
+          flex={1}
+          options={NotificationTypes}
+          value={notificationType}
+          onChange={(v) => setNotificationType(v)}
+          onChangeText={(v) => setNotificationType(v)}
+        />
+      </FormControl>
+
 
       <HStack space="md">
         <FormControl flex={1}>
@@ -187,6 +209,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
           </Input>
         </FormControl>
       </HStack>
+
       <FormControl>
         <FormControlLabel alignItems="center">
           <FormControlLabelText>Event Filter Prefix</FormControlLabelText>

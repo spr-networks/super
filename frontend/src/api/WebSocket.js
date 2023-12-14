@@ -49,7 +49,16 @@ const parseLogMessage = async (msg) => {
     return null
   }
 
-  if (msgType.startsWith('wifi:auth')) {
+  const valid_types = ['info', 'warning', 'success', 'error', 'danger']
+  if (msgType.startsWith('alert:')) {
+    type = 'info'
+    if (valid_types.includes(data.NotificationType)) {
+      type = data.NotificationType
+    }
+    title = data.Title
+    body = data.Body
+    data = ''
+  } else if (msgType.startsWith('wifi:auth')) {
     if (msgType.includes('success')) {
       let name = data.MAC
 
