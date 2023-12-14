@@ -288,6 +288,7 @@ const Alerts = (props) => {
 
               <VStack>
                 <Button
+                  style={{display: ['', 'New'].includes(item.State) ? "none" : ""}}
                   action="secondary"
                   variant="outline"
                   onPress={updateEventState(item, 'new')}
@@ -297,6 +298,7 @@ const Alerts = (props) => {
                   <ButtonIcon color="" as={Inbox} mr="$2" />
                 </Button>
                 <Button
+                  style={{display: "none"}}
                   action="secondary"
                   variant="outline"
                   onPress={updateEventState(item, 'triaged')}
@@ -306,11 +308,12 @@ const Alerts = (props) => {
                   <ButtonIcon color="$yellow400" as={SquareSlash} mr="$2" />
                 </Button>
                 <Button
+                  style={{display: ['Resovled'].includes(item.State) ? "none" : ""}}
                   action="secondary"
                   variant="outline"
                   onPress={updateEventState(item, 'resolve')}
                 >
-                  <ButtonText color="$green400">Resolved</ButtonText>
+                  <ButtonText color="$green400">Resolve</ButtonText>
                   <ButtonIcon color="$green400" as={CheckSquare} mr="$2" />
                 </Button>
               </VStack>
