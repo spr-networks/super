@@ -62,6 +62,7 @@ type ActionConfig struct {
 	StoreTopicSuffix string `json:"BucketSuffix,omitempty"`
 	MessageTitle     string `json:"MessageTitle,omitempty"`
 	MessageBody      string `json:"MessageBody,omitempty"`
+	NotificationType string `json:"MessageTitle,omitempty"`
 	ActionType       string `json:"ActionType,omitempty"`
 	GrabEvent        bool
 	GrabValues       bool
@@ -296,6 +297,11 @@ func processAction(notifyChan chan<- Alert, storeChan chan<- Alert, event_topic 
 
 	Info["Topic"] = event_topic
 	Info["RuleId"] = RuleId
+
+	if action.NotificationType != "" {
+		Info["NotificationType"] = action.NotificationType
+	}
+
 	if action.MessageTitle != "" {
 		Info["Title"] = action.MessageTitle
 	}
