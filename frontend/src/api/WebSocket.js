@@ -27,6 +27,24 @@ async function connectWebsocket(messageCallback) {
   return ws
 }
 
+const eventTemplate = (template, event) => {
+  return template.replace(/\{\{([\w\.]+)\}\}/g, (match, path) => {
+      const levels = path.split('.');
+      let currentValue = event
+      for (let level of levels) {
+        if (!currentValue) {
+          return match
+        }
+        if (currentValue[level]) {
+          currentValue = currentValue[level]
+        } else {
+          return match
+        }
+      }
+      return currentValue
+  });
+};
+
 const parseLogMessage = async (msg) => {
   const msgType = msg.Type
   let data = null
@@ -55,8 +73,8 @@ const parseLogMessage = async (msg) => {
     if (valid_types.includes(data.NotificationType)) {
       type = data.NotificationType
     }
-    title = data.Title
-    body = data.Body
+    title = eventTemplate(data.Title, data.Event)
+    body = eventTemplate(data.Body, data.Event)
     data = ''
   } else if (msgType.startsWith('wifi:auth')) {
     if (msgType.includes('success')) {
