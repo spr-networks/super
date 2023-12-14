@@ -34,7 +34,8 @@ import {
   CheckSquareIcon,
   SlidersHorizontalIcon,
   SquareSlash,
-  EyeIcon
+  EyeIcon,
+  EyeOffIcon
 } from 'lucide-react-native'
 
 import { alertsAPI, dbAPI } from 'api'
@@ -188,10 +189,6 @@ const Alerts = (props) => {
     setStateFilter(value)
   }
 
-  const updateEventState = (event) => {
-    //TBD, this needs to write to db
-  }
-
   const refModal = useRef(null)
 
   const InfoItem = ({ label, value, ...props }) => {
@@ -210,10 +207,6 @@ const Alerts = (props) => {
     label: value,
     value
   }))
-
-  const toggleEvent = (item) => {
-    //TODO
-  }
 
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
@@ -262,103 +255,135 @@ const Alerts = (props) => {
       <FlatList
         data={logs}
         estimatedItemSize={100}
-        renderItem={({ item }) => (
-          <VStack my="$2">
-            <AlertItemHeader>
-              <Heading size="xs">
-                {eventTemplate(item.Title, item.Event) || item.Topic || 'Alert'}
-              </Heading>
-              <Text size="xs" bold>
-                {prettyDate(item.Timestamp || item.time)}
-              </Text>
-            </AlertItemHeader>
-            <ListItem
-              alignItems="flex-start"
-              flexDirection="row"
-              bg="$coolGray50"
-              borderColor="$secondary200"
-              sx={{
-                _dark: { bg: '$secondary900', borderColor: '$secondary800' }
-              }}
-              p="$0"
-            >
-              <VStack space="md" flex={2}>
-                {/*
-              TBD: state will be something like
-              "" -> untriaged
-              "Triaged" -> event has been triaged, priority set till exempel
-              "Resolved" -> event has been resolved
-
-              Title is an alert Title from the configuration
-              Body is an alert body to be set from config
-              */}
-
-                <VStack space="sm" display={item.Body ? 'flex' : 'none'} p="$4">
-                  <Text size="md">{eventTemplate(item.Body, item.Event)}</Text>
-                </VStack>
-
-                <LogListItem
-                  flex={1}
-                  display={item.Body ? 'none' : 'flex'}
-                  item={item.Event}
-                  selected={item.Topic}
-                  borderBottomWidth="$0"
-                />
-              </VStack>
-
-              <HStack flex={1} justifyContent="flex-end" p="$4">
-                <HStack px="$4">
-                  <Button
-                    action="primary"
-                    variant="outline"
-                    size="xs"
-                    display="none"
-                    onPress={() => toggleEvent(item)}
-                  >
-                    <ButtonText>Show Event</ButtonText>
-                    <ButtonIcon as={EyeIcon} ml="$2" />
-                  </Button>
-                </HStack>
-                <Button
-                  display={['', 'New'].includes(item.State) ? 'none' : 'flex'}
-                  size="xs"
-                  action="secondary"
-                  variant="outline"
-                  onPress={updateEventState(item, 'new')}
-                >
-                  <ButtonText>New</ButtonText>
-                  <ButtonIcon as={InboxIcon} mr="$2" />
-                </Button>
-                <Button
-                  display="none"
-                  size="xs"
-                  action="secondary"
-                  variant="outline"
-                  onPress={updateEventState(item, 'triaged')}
-                >
-                  <ButtonText>Triaged</ButtonText>
-                  <ButtonIcon as={SquareSlash} ml="$2" />
-                </Button>
-                <Button
-                  display={['Resovled'].includes(item.State) ? 'none' : 'flex'}
-                  size="xs"
-                  action="primary"
-                  variant="outline"
-                  onPress={updateEventState(item, 'resolve')}
-                >
-                  <ButtonText>Resolve</ButtonText>
-                  <ButtonIcon as={CheckIcon} ml="$2" />
-                </Button>
-              </HStack>
-            </ListItem>
-          </VStack>
-        )}
+        renderItem={({ item }) => <AlertItem item={item} />}
         keyExtractor={(item, index) => item.time + index}
       />
     </View>
   )
 }
 
+const AlertItem = ({ item, ...props }) => {
+  const [showEvent, setShowEvent] = useState(item?.Body ? false : true)
+  const updateEventState = (event) => {
+    //TBD, this needs to write to db
+  }
+
+  const toggleEvent = (item) => {
+    setShowEvent(!showEvent)
+  }
+
+  return (
+    <>
+      <AlertItemHeader>
+        <Heading size="xs">
+          {eventTemplate(item.Title, item.Event) || item.Topic || 'Alert'}
+        </Heading>
+        <Text size="xs" bold>
+          {prettyDate(item.Timestamp || item.time)}
+        </Text>
+      </AlertItemHeader>
+      <ListItem
+        alignItems="flex-start"
+        flexDirection="row"
+        bg="$coolGray50"
+        borderColor="$secondary200"
+        sx={{
+          _dark: { bg: '$secondary900', borderColor: '$secondary800' }
+        }}
+        p="$0"
+        mb="$1"
+      >
+        <VStack space="md" flex={2}>
+          {/*
+          TBD: state will be something like
+          "" -> untriaged
+          "Triaged" -> event has been triaged, priority set till exempel
+          "Resolved" -> event has been resolved
+
+          Title is an alert Title from the configuration
+          Body is an alert body to be set from config
+          */}
+
+          <Text size="sm" p="$4" display={!showEvent ? 'flex' : 'none'}>
+            {eventTemplate(item.Body, item.Event)}
+          </Text>
+
+          <LogListItem
+            flex={1}
+            item={item.Event}
+            selected={item.Topic}
+            borderBottomWidth="$0"
+            display={showEvent ? 'flex' : 'none'}
+          />
+        </VStack>
+
+        <HStack flex={1} space="sm" justifyContent="flex-end" p="$4">
+          <Button
+            action="secondary"
+            variant="outline"
+            size="xs"
+            onPress={() => toggleEvent(item)}
+            display={!item.Body ? 'none' : 'flex'}
+          >
+            <ButtonText>{showEvent ? 'Hide Event' : 'Show Event'}</ButtonText>
+            <ButtonIcon as={showEvent ? EyeOffIcon : EyeIcon} ml="$2" />
+          </Button>
+
+          <Button
+            display={['', 'New'].includes(item.State) ? 'none' : 'flex'}
+            size="xs"
+            action="primary"
+            variant="outline"
+            onPress={updateEventState(item, 'new')}
+          >
+            <ButtonText>New</ButtonText>
+            <ButtonIcon as={InboxIcon} mr="$2" />
+          </Button>
+          <Button
+            display="none"
+            size="xs"
+            action="secondary"
+            variant="outline"
+            onPress={updateEventState(item, 'triaged')}
+          >
+            <ButtonText>Triaged</ButtonText>
+            <ButtonIcon as={SquareSlash} ml="$2" />
+          </Button>
+          <Button
+            display={['Resovled'].includes(item.State) ? 'none' : 'flex'}
+            size="xs"
+            action="primary"
+            variant="outline"
+            onPress={updateEventState(item, 'resolve')}
+          >
+            <ButtonText>Resolve</ButtonText>
+            <ButtonIcon as={CheckIcon} ml="$2" />
+          </Button>
+        </HStack>
+      </ListItem>
+    </>
+  )
+}
+
+const AlertItemHeader = ({ ...props }) => {
+  return (
+    <HStack
+      w="$full"
+      bg="$coolGray100"
+      sx={{
+        _dark: { bg: '$secondary950' }
+      }}
+      alignItems="center"
+      justifyContent="space-between"
+      px="$4"
+      py="$0.5"
+    >
+      {props.children}
+    </HStack>
+  )
+}
+
+//TODO
 const StateButton = ({ item, onPress, ...props }) => {
   let actions = {
     Resolved: { action: 'resolve', icon: CheckSquareIcon },
@@ -412,24 +437,6 @@ const StateButton = ({ item, onPress, ...props }) => {
       </Button>
     </>
   )*/
-}
-
-const AlertItemHeader = ({ ...props }) => {
-  return (
-    <HStack
-      w="$full"
-      bg="$coolGray100"
-      sx={{
-        _dark: { bg: '$secondary950' }
-      }}
-      alignItems="center"
-      justifyContent="space-between"
-      px="$4"
-      py="$0.5"
-    >
-      {props.children}
-    </HStack>
-  )
 }
 
 export default Alerts
