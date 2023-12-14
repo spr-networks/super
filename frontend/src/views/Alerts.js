@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
+import { eventTemplate } from 'utils'
 
 import {
   Button,
@@ -177,7 +178,7 @@ const Alerts = (props) => {
         refModal.current()
         fetchList()
       })
-      .catch((err) => {})
+      .catch((err) => {context.error("failed to save rule", err)})
   }
 
   const onChangeStateFilter = (value) => {
@@ -206,6 +207,7 @@ const Alerts = (props) => {
     label: value,
     value
   }))
+
 
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
@@ -284,8 +286,9 @@ const Alerts = (props) => {
               Body is an alert body to be set from config
               */}
 
+
               {['Title', 'Body'].map((label) => (
-                <InfoItem key={label} label={label} value={item[label]} />
+                <InfoItem key={label} label={label} value={eventTemplate(item[label], item.Event)} />
               ))}
 
               <VStack>
