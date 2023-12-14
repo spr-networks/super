@@ -191,7 +191,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
           <Input type="text" variant="underlined">
             <InputField
               name="MessageTitle"
-              value={ActionConfig.MessageTitle || Name}
+              value={ActionConfig.MessageTitle}
               onChangeText={(value) =>
                 setActionConfig({ ...ActionConfig, MessageTitle: value })
               }

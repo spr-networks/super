@@ -187,7 +187,11 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     ),
     'dhcp:request': (item) => (
       <>
-        <DeviceItem show={['Style', 'Name']} flex={1} item={context.getDevice(item.MAC, 'MAC')} />
+        <DeviceItem
+          show={['Style', 'Name']}
+          flex={1}
+          item={context.getDevice(item.MAC, 'MAC')}
+        />
 
         {['Identifier', 'Name'].map((t) =>
           item[t] ? (
@@ -208,7 +212,11 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     ),
     'dhcp:response': (item) => (
       <>
-        <DeviceItem show={['Style', 'Name']} flex={1} item={context.getDevice(item.IP, 'RecentIP')} />
+        <DeviceItem
+          show={['Style', 'Name']}
+          flex={1}
+          item={context.getDevice(item.IP, 'RecentIP')}
+        />
         {['LeaseTime', 'DNSIP', 'RouterIP'].map((t) =>
           item[t] ? (
             <HStack
@@ -226,7 +234,11 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
       </>
     ),
     'dns:serve:': (item) => (
-      <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }} w="$full">
+      <VStack
+        space="md"
+        sx={{ '@md': { flexDirection: 'row', alignItems: 'center' } }}
+        w="$full"
+      >
         <HStack flex={1} space="md" alignItems="center">
           <DeviceItem
             show={['Style', 'Name']}
@@ -275,7 +287,11 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     ),
     'wifi:auth:success': () => (
       <>
-        <DeviceItem show={['Style', 'Name']} flex={1} item={context.getDevice(item.MAC)} />
+        <DeviceItem
+          show={['Style', 'Name']}
+          flex={1}
+          item={context.getDevice(item.MAC)}
+        />
         {['Router', 'Status'].map((f) =>
           item[f]?.length ? (
             <HStack
@@ -299,7 +315,11 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     'wifi:auth:fail': () => (
       <>
         <HStack flex={1} justifyContent="space-between">
-          <DeviceItem show={['Style', 'Name']} hideMissing={true} item={context.getDevice(item.MAC)} />
+          <DeviceItem
+            show={['Style', 'Name']}
+            hideMissing={true}
+            item={context.getDevice(item.MAC)}
+          />
           <Text>{item.MAC}</Text>
           <Text>{item.Reason}</Text>
           <Text>{item.Type}</Text>
@@ -623,6 +643,8 @@ const LogListItem = ({ item, selected, ...props }) => {
     setShowJSON(!isParsable)
   }, [isParsable])
 
+  const showHeader = false
+
   return (
     <ListItem
       alignItems="flex-start"
@@ -644,6 +666,8 @@ const LogListItem = ({ item, selected, ...props }) => {
         }}
         alignItems="center"
         px="$4"
+        py="$0.5"
+        display={showHeader ? 'flex' : 'none'}
       >
         <Text size="xs" bold>
           {prettyDate(item.Timestamp || item.time)}

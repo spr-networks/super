@@ -32,7 +32,6 @@ const DeviceItem = React.memo(({ item, show, size, ...props }) => {
     <HStack space="md" alignItems="center" {...props}>
       {dShow.includes('Style') ? (
         <IconItem
-          flex={1}
           name={item?.Style?.Icon || 'Laptop'}
           color={item?.Style?.Color}
           size={iconSize}
@@ -40,7 +39,13 @@ const DeviceItem = React.memo(({ item, show, size, ...props }) => {
       ) : null}
 
       {dShow.includes('Name') ? (
-        <Text flex={1} size={textSize} bold={!!item?.Name} w="$1/3" minWidth="$24">
+        <Text
+          flex={1}
+          size={textSize}
+          bold={!!item?.Name}
+          w="$1/3"
+          minWidth="$24"
+        >
           {item?.Name || 'N/A'}
         </Text>
       ) : null}

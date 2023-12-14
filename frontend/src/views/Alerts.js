@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Dimensions, Platform } from 'react-native'
-import { eventTemplate } from 'utils'
+import { eventTemplate, prettyDate } from 'utils'
 
 import {
   Button,
@@ -30,10 +30,11 @@ import {
 import {
   BellIcon,
   BellOffIcon,
-  Inbox,
-  CheckSquare,
+  InboxIcon,
+  CheckSquareIcon,
   SlidersHorizontalIcon,
-  SquareSlash
+  SquareSlash,
+  EyeIcon
 } from 'lucide-react-native'
 
 import { alertsAPI, dbAPI } from 'api'
@@ -178,7 +179,9 @@ const Alerts = (props) => {
         refModal.current()
         fetchList()
       })
-      .catch((err) => {context.error("failed to save rule", err)})
+      .catch((err) => {
+        context.error('failed to save rule', err)
+      })
   }
 
   const onChangeStateFilter = (value) => {
@@ -208,20 +211,35 @@ const Alerts = (props) => {
     value
   }))
 
+  const toggleEvent = (item) => {
+    //TODO
+  }
 
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
       <ListHeader title="Alerts">
         <HStack space="md">
-          <Button
-            action="primary"
-            variant="outline"
+          <FilterInputSelect
+            value={searchField}
+            items={logs}
+            onChangeText={setSearchField}
+            onSubmitEditing={setSearchField}
+            display="none"
+            sx={{
+              '@md': {
+                display: 'flex',
+                width: 300
+              }
+            }}
+          />
+          <InputSelect
+            flex={1}
             size="sm"
-            onPress={() => {}}
-          >
-            <ButtonText>Resolve All Alerts</ButtonText>
-            <ButtonIcon as={CheckIcon} ml="$2" />
-          </Button>
+            options={options}
+            value={stateFilter}
+            onChange={(v) => onChangeStateFilter(v)}
+            onChangeText={(v) => onChangeStateFilter(v)}
+          />
           <ModalForm
             title="Add Alert"
             triggerText="Add Alert"
@@ -229,54 +247,43 @@ const Alerts = (props) => {
           >
             <AddAlert onSubmit={onSubmit} />
           </ModalForm>
+          <Button
+            action="primary"
+            variant="outline"
+            size="sm"
+            onPress={() => {}}
+          >
+            <ButtonText>Resolve All</ButtonText>
+            <ButtonIcon as={CheckIcon} ml="$2" />
+          </Button>
         </HStack>
       </ListHeader>
-
-      <HStack space="md" mx="$4">
-        <VStack
-          flex={1}
-          display="none"
-          sx={{
-            '@md': {
-              display: 'flex'
-            }
-          }}
-        >
-          <FilterInputSelect
-            value={searchField}
-            items={logs}
-            onChangeText={setSearchField}
-            onSubmitEditing={setSearchField}
-          />
-        </VStack>
-
-        <InputSelect
-          flex={1}
-          size="sm"
-          options={options}
-          value={stateFilter}
-          onChange={(v) => onChangeStateFilter(v)}
-          onChangeText={(v) => onChangeStateFilter(v)}
-        />
-      </HStack>
-
-      <Text size="xs" mx="$4">
-        #Items: {logs.length}, Topics: {topics.join(',')}
-      </Text>
 
       <FlatList
         data={logs}
         estimatedItemSize={100}
         renderItem={({ item }) => (
-          <VStack
-            alignItems="center"
-            space="sm"
-            sx={{
-              '@md': { flexDirection: 'row', justifyContent: 'space-between' }
-            }}
-          >
-            <VStack p="$4" flex={1}>
-              {/*
+          <VStack my="$2">
+            <AlertItemHeader>
+              <Heading size="xs">
+                {eventTemplate(item.Title, item.Event) || item.Topic || 'Alert'}
+              </Heading>
+              <Text size="xs" bold>
+                {prettyDate(item.Timestamp || item.time)}
+              </Text>
+            </AlertItemHeader>
+            <ListItem
+              alignItems="flex-start"
+              flexDirection="row"
+              bg="$coolGray50"
+              borderColor="$secondary200"
+              sx={{
+                _dark: { bg: '$secondary900', borderColor: '$secondary800' }
+              }}
+              p="$0"
+            >
+              <VStack space="md" flex={2}>
+                {/*
               TBD: state will be something like
               "" -> untriaged
               "Triaged" -> event has been triaged, priority set till exempel
@@ -286,51 +293,142 @@ const Alerts = (props) => {
               Body is an alert body to be set from config
               */}
 
+                <VStack space="sm" display={item.Body ? 'flex' : 'none'} p="$4">
+                  <Text size="md">{eventTemplate(item.Body, item.Event)}</Text>
+                </VStack>
 
-              {['Title', 'Body'].map((label) => (
-                <InfoItem key={label} label={label} value={eventTemplate(item[label], item.Event)} />
-              ))}
+                <LogListItem
+                  flex={1}
+                  display={item.Body ? 'none' : 'flex'}
+                  item={item.Event}
+                  selected={item.Topic}
+                  borderBottomWidth="$0"
+                />
+              </VStack>
 
-              <VStack>
+              <HStack flex={1} justifyContent="flex-end" p="$4">
+                <HStack px="$4">
+                  <Button
+                    action="primary"
+                    variant="outline"
+                    size="xs"
+                    display="none"
+                    onPress={() => toggleEvent(item)}
+                  >
+                    <ButtonText>Show Event</ButtonText>
+                    <ButtonIcon as={EyeIcon} ml="$2" />
+                  </Button>
+                </HStack>
                 <Button
-                  style={{
-                    display: ['', 'New'].includes(item.State) ? 'none' : ''
-                  }}
+                  display={['', 'New'].includes(item.State) ? 'none' : 'flex'}
+                  size="xs"
                   action="secondary"
                   variant="outline"
                   onPress={updateEventState(item, 'new')}
                 >
-                  <ButtonText color="">New</ButtonText>
-                  <ButtonIcon color="" as={Inbox} mr="$2" />
+                  <ButtonText>New</ButtonText>
+                  <ButtonIcon as={InboxIcon} mr="$2" />
                 </Button>
                 <Button
-                  style={{ display: 'none' }}
+                  display="none"
+                  size="xs"
                   action="secondary"
                   variant="outline"
                   onPress={updateEventState(item, 'triaged')}
                 >
-                  <ButtonText color="$yellow400">Triaged</ButtonText>
-                  <ButtonIcon color="$yellow400" as={SquareSlash} mr="$2" />
+                  <ButtonText>Triaged</ButtonText>
+                  <ButtonIcon as={SquareSlash} ml="$2" />
                 </Button>
                 <Button
-                  style={{
-                    display: ['Resovled'].includes(item.State) ? 'none' : ''
-                  }}
-                  action="secondary"
+                  display={['Resovled'].includes(item.State) ? 'none' : 'flex'}
+                  size="xs"
+                  action="primary"
                   variant="outline"
                   onPress={updateEventState(item, 'resolve')}
                 >
-                  <ButtonText color="$green400">Resolve</ButtonText>
-                  <ButtonIcon color="$green400" as={CheckSquare} mr="$2" />
+                  <ButtonText>Resolve</ButtonText>
+                  <ButtonIcon as={CheckIcon} ml="$2" />
                 </Button>
-              </VStack>
-            </VStack>
-            <LogListItem flex={3} item={item.Event} selected={item.Topic} />
+              </HStack>
+            </ListItem>
           </VStack>
         )}
         keyExtractor={(item, index) => item.time + index}
       />
     </View>
+  )
+}
+
+const StateButton = ({ item, onPress, ...props }) => {
+  let actions = {
+    Resolved: { action: 'resolve', icon: CheckSquareIcon },
+    Triaged: { action: 'triaged', icon: SquareSlash },
+    New: { action: 'new', icon: InboxIcon },
+    '': { action: 'new', icon: InboxIcon }
+  }
+
+  let currentState = item.State || 'New'
+  let { action, icon } = actions[currentState]
+
+  return (
+    <Button
+      action="secondary"
+      variant="outline"
+      onPress={() => onPress(action)}
+    >
+      <ButtonText>{currentState}</ButtonText>
+      <ButtonIcon as={icon} ml="$2" />
+    </Button>
+  )
+
+  /*return (
+    <>
+      <Button
+        display={['', 'New'].includes(item.State) ? 'none' : 'flex'}
+        action="secondary"
+        variant="outline"
+        onPress={updateEventState(item, 'new')}
+      >
+        <ButtonText>New</ButtonText>
+        <ButtonIcon as={InboxIcon} mr="$2" />
+      </Button>
+      <Button
+        display="none"
+        action="secondary"
+        variant="outline"
+        onPress={updateEventState(item, 'triaged')}
+      >
+        <ButtonText>Triaged</ButtonText>
+        <ButtonIcon as={SquareSlash} ml="$2" />
+      </Button>
+      <Button
+        display={['Resovled'].includes(item.State) ? 'none' : 'flex'}
+        action="secondary"
+        variant="outline"
+        onPress={updateEventState(item, 'resolve')}
+      >
+        <ButtonText>Resolve</ButtonText>
+        <ButtonIcon as={CheckSquareIcon} ml="$2" />
+      </Button>
+    </>
+  )*/
+}
+
+const AlertItemHeader = ({ ...props }) => {
+  return (
+    <HStack
+      w="$full"
+      bg="$coolGray100"
+      sx={{
+        _dark: { bg: '$secondary950' }
+      }}
+      alignItems="center"
+      justifyContent="space-between"
+      px="$4"
+      py="$0.5"
+    >
+      {props.children}
+    </HStack>
   )
 }
 
