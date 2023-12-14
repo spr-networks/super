@@ -21,6 +21,8 @@ import (
 
 	"github.com/PaesslerAG/gval"
 	"github.com/PaesslerAG/jsonpath"
+
+	"github.com/google/uuid"
 )
 
 //https://www.ietf.org/archive/id/draft-goessner-dispatch-jsonpath-00.html
@@ -45,6 +47,7 @@ type AlertSetting struct {
 	Actions     []ActionConfig
 	Name        string
 	Disabled    bool
+	RuleId      string
 }
 
 // conditions can stack onto the same event,
@@ -201,8 +204,11 @@ func modifyAlertSettings(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodDelete {
 		gAlertsConfig = append(gAlertsConfig[:index], gAlertsConfig[index+1:]...)
 	} else if index_ok {
+		//copy over old rule id
+		setting.RuleId = gAlertsConfig[index].RuleId
 		gAlertsConfig[index] = setting
 	} else {
+		setting.RuleId = uuid.New().String()
 		gAlertsConfig = append(gAlertsConfig, setting)
 	}
 
@@ -274,7 +280,7 @@ func grabReflect(fields []string, event interface{}) map[string]interface{} {
 	return newEvent
 }
 
-func processAction(notifyChan chan<- Alert, storeChan chan<- Alert, event_topic string, event interface{}, action ActionConfig, values []interface{}) {
+func processAction(notifyChan chan<- Alert, storeChan chan<- Alert, event_topic string, event interface{}, action ActionConfig, values []interface{}, RuleId string) {
 	if gDebugPrintAlert {
 		fmt.Println("=== event ===")
 		fmt.Printf("%+v\n", event)
@@ -289,7 +295,7 @@ func processAction(notifyChan chan<- Alert, storeChan chan<- Alert, event_topic 
 	Info := map[string]interface{}{}
 
 	Info["Topic"] = event_topic
-
+	Info["RuleId"] = RuleId
 	if action.MessageTitle != "" {
 		Info["Title"] = action.MessageTitle
 	}
@@ -408,7 +414,7 @@ func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic s
 
 			if satisfied {
 				for _, action := range rule.Actions {
-					processAction(notifyChan, storeChan, topic, event, action, values)
+					processAction(notifyChan, storeChan, topic, event, action, values, rule.RuleId)
 				}
 			}
 		}
