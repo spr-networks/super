@@ -62,7 +62,7 @@ type ActionConfig struct {
 	StoreTopicSuffix string `json:"BucketSuffix,omitempty"`
 	MessageTitle     string `json:"MessageTitle,omitempty"`
 	MessageBody      string `json:"MessageBody,omitempty"`
-	NotificationType string `json:"MessageTitle,omitempty"`
+	NotificationType string `json:"NotificationType,omitempty"`
 	ActionType       string `json:"ActionType,omitempty"`
 	GrabEvent        bool
 	GrabValues       bool
