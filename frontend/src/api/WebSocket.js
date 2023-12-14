@@ -1,6 +1,7 @@
 import { getApiHostname } from './API'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { deviceAPI } from './Device'
+import { eventTemplate } from 'utils'
 
 async function connectWebsocket(messageCallback) {
   let login = await AsyncStorage.getItem('user')
@@ -27,27 +28,6 @@ async function connectWebsocket(messageCallback) {
   return ws
 }
 
-const eventTemplate = (template, event) => {
-  return template.replace(/\{\{([\w\.]+)\}\}/g, (match, path) => {
-      if (match.includes("__")) {
-        //disable double underscore matches
-        return match
-      }
-      const levels = path.split('.');
-      let currentValue = event
-      for (let level of levels) {
-        if (!currentValue) {
-          return match
-        }
-        if (currentValue[level]) {
-          currentValue = currentValue[level]
-        } else {
-          return match
-        }
-      }
-      return currentValue
-  });
-};
 
 const parseLogMessage = async (msg) => {
   const msgType = msg.Type

@@ -289,7 +289,7 @@ const AlertSettings = (props) => {
           refModal.current()
           fetchList()
         })
-        .catch((err) => {})
+        .catch((err) => {context.error("failed to save rule", err)})
 
     } else {
       //updates an existing one
@@ -299,7 +299,7 @@ const AlertSettings = (props) => {
           refModal.current()
           fetchList()
         })
-        .catch((err) => {})
+        .catch((err) => {context.error("failed to save rule", err)})
 
       setItemIndex(-1)
     }
