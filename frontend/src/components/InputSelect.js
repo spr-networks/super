@@ -232,6 +232,7 @@ const InputSelect = (props) => {
           value={displayValue(value)}
           onChangeText={handleChangeText}
           onSubmitEditing={onSubmitEditing}
+          size={'sm'}
         />
         <InputSlot>{elem}</InputSlot>
       </Input>
