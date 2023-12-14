@@ -29,6 +29,10 @@ async function connectWebsocket(messageCallback) {
 
 const eventTemplate = (template, event) => {
   return template.replace(/\{\{([\w\.]+)\}\}/g, (match, path) => {
+      if (match.includes("__")) {
+        //disable double underscore matches
+        return match
+      }
       const levels = path.split('.');
       let currentValue = event
       for (let level of levels) {
