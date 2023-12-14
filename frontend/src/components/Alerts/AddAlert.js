@@ -252,9 +252,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
                     onValueChange={() => setMatchAnyOne(!MatchAnyOne)}
                   />
                   <Text size="sm" bold>
-                    {MatchAnyOne
-                      ? 'Match Any Condition'
-                      : 'Match All Conditions'}
+                    {MatchAnyOne ? 'Match Any' : 'Match All'}
                   </Text>
                 </HStack>
               </FormControl>
@@ -324,7 +322,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
       <HStack space="lg">
         <FormControl flex={1}>
           <FormControlLabel>
-            <FormControlLabelText>Send Notification</FormControlLabelText>
+            <FormControlLabelText>Notification</FormControlLabelText>
           </FormControlLabel>
           <Switch
             value={ActionConfig.SendNotification}
@@ -366,7 +364,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
       <HStack space="lg">
         <FormControl flex={1}>
           <FormControlLabel>
-            <FormControlLabelText>Copy Event into Alert</FormControlLabelText>
+            <FormControlLabelText>Copy Event</FormControlLabelText>
           </FormControlLabel>
           <Switch
             value={ActionConfig.GrabEvent}
@@ -391,7 +389,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
           display={ActionConfig.StoreAlert ? 'flex' : 'none'}
         >
           <FormControlLabel>
-            <FormControlLabelText>Alert Topic Suffix</FormControlLabelText>
+            <FormControlLabelText>Alert Suffix</FormControlLabelText>
           </FormControlLabel>
           <Input type="text" variant="underlined">
             <InputField
