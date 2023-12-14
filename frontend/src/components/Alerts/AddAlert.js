@@ -43,11 +43,17 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
   const [ActionConfig, setActionConfig] = useState({
     GrabEvent: true,
     StoreAlert: true,
-    NotificationType: 'info',
+    NotificationType: 'info'
   })
   const [Name, setName] = useState('')
 
-  const NotificationTypes = ['info', 'warning', 'success', 'error', 'danger'].map((x) => ({
+  const NotificationTypes = [
+    'info',
+    'warning',
+    'success',
+    'error',
+    'danger'
+  ].map((x) => ({
     label: x,
     value: x
   }))
@@ -72,7 +78,6 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
       }
     }
   }, [])
-
 
   // fetch sample with this prefix to get json syntax
   const getLogs = async (bucket) => {
@@ -152,31 +157,31 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
 
   return (
     <VStack space="md">
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Alert Name</FormControlLabelText>
-        </FormControlLabel>
-        <Input type="text" variant="underlined">
-          <InputField
-            name="Name"
-            value={Name}
-            onChangeText={(value) => setName(value)}
+      <HStack space="md">
+        <FormControl flex={1}>
+          <FormControlLabel>
+            <FormControlLabelText>Alert Name</FormControlLabelText>
+          </FormControlLabel>
+          <Input type="text" variant="underlined">
+            <InputField
+              name="Name"
+              value={Name}
+              onChangeText={(value) => setName(value)}
+            />
+          </Input>
+        </FormControl>
+        <FormControl flex={1}>
+          <FormControlLabel alignItems="center">
+            <FormControlLabelText>Notification Type</FormControlLabelText>
+          </FormControlLabel>
+          <InputSelect
+            options={NotificationTypes}
+            value={notificationType}
+            onChange={(v) => setNotificationType(v)}
+            onChangeText={(v) => setNotificationType(v)}
           />
-        </Input>
-      </FormControl>
-      <FormControl>
-        <FormControlLabel alignItems="center">
-          <FormControlLabelText>Notification Type</FormControlLabelText>
-        </FormControlLabel>
-        <InputSelect
-          flex={1}
-          options={NotificationTypes}
-          value={notificationType}
-          onChange={(v) => setNotificationType(v)}
-          onChangeText={(v) => setNotificationType(v)}
-        />
-      </FormControl>
-
+        </FormControl>
+      </HStack>
 
       <HStack space="md">
         <FormControl flex={1}>
@@ -186,7 +191,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
           <Input type="text" variant="underlined">
             <InputField
               name="MessageTitle"
-              value={ActionConfig.MessageTitle}
+              value={ActionConfig.MessageTitle || Name}
               onChangeText={(value) =>
                 setActionConfig({ ...ActionConfig, MessageTitle: value })
               }
@@ -195,42 +200,42 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
         </FormControl>
 
         <FormControl flex={1}>
-          <FormControlLabel>
-            <FormControlLabelText>Body</FormControlLabelText>
+          <FormControlLabel alignItems="center">
+            <FormControlLabelText>Event Prefix</FormControlLabelText>
+            <Icon
+              size="sm"
+              as={CheckCircle2Icon}
+              color="$success500"
+              ml="$1"
+              display={logItems.length ? 'flex' : 'none'}
+            />
           </FormControlLabel>
           <Input type="text" variant="underlined">
             <InputField
-              name="MessageBody"
-              value={ActionConfig.MessageBody}
-              onChangeText={(value) =>
-                setActionConfig({ ...ActionConfig, MessageBody: value })
-              }
+              name="TopicPrefix"
+              value={TopicPrefix}
+              onChangeText={(value) => setTopicPrefix(value)}
             />
           </Input>
+          <FormControlHelper>
+            <FormControlHelperText>Topic prefix filter</FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
       </HStack>
 
       <FormControl>
-        <FormControlLabel alignItems="center">
-          <FormControlLabelText>Event Filter Prefix</FormControlLabelText>
-          <Icon
-            size="sm"
-            as={CheckCircle2Icon}
-            color="$success500"
-            ml="$1"
-            display={logItems.length ? 'flex' : 'none'}
-          />
+        <FormControlLabel>
+          <FormControlLabelText>Body</FormControlLabelText>
         </FormControlLabel>
         <Input type="text" variant="underlined">
           <InputField
-            name="TopicPrefix"
-            value={TopicPrefix}
-            onChangeText={(value) => setTopicPrefix(value)}
+            name="MessageBody"
+            value={ActionConfig.MessageBody}
+            onChangeText={(value) =>
+              setActionConfig({ ...ActionConfig, MessageBody: value })
+            }
           />
         </Input>
-        <FormControlHelper>
-          <FormControlHelperText>Topic prefix filter</FormControlHelperText>
-        </FormControlHelper>
       </FormControl>
 
       <FormControl>
@@ -247,7 +252,9 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
                     onValueChange={() => setMatchAnyOne(!MatchAnyOne)}
                   />
                   <Text size="sm" bold>
-                    {MatchAnyOne ? "Match Any Condition" : "Match All Conditions"}
+                    {MatchAnyOne
+                      ? 'Match Any Condition'
+                      : 'Match All Conditions'}
                   </Text>
                 </HStack>
               </FormControl>

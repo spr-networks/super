@@ -21,7 +21,9 @@ import {
   VStack,
   Text,
   TrashIcon,
-  ThreeDotsIcon
+  ThreeDotsIcon,
+  CloseIcon,
+  CheckIcon
 } from '@gluestack-ui/themed'
 
 import {
@@ -30,9 +32,8 @@ import {
   Inbox,
   CheckSquare,
   SlidersHorizontalIcon,
-  SquareSlash,
+  SquareSlash
 } from 'lucide-react-native'
-
 
 import { alertsAPI, dbAPI } from 'api'
 import AddAlert from 'components/Alerts/AddAlert'
@@ -100,10 +101,13 @@ const Alerts = (props) => {
       if (more_results) {
         //filter alert state
         if (stateFilter == 'New') {
-          more_results = more_results.filter((alert) => (alert.State == '' || alert.State == 'New'))
-        }
-        else if (stateFilter != 'All') {
-            more_results = more_results.filter((alert) => alert.State == stateFilter)
+          more_results = more_results.filter(
+            (alert) => alert.State == '' || alert.State == 'New'
+          )
+        } else if (stateFilter != 'All') {
+          more_results = more_results.filter(
+            (alert) => alert.State == stateFilter
+          )
         }
 
         result = result.concat(more_results)
@@ -206,37 +210,47 @@ const Alerts = (props) => {
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
       <ListHeader title="Alerts">
-        <ModalForm
-          title="Add Alert"
-          triggerText="Add Alert"
-          modalRef={refModal}
-        >
-          <AddAlert onSubmit={onSubmit} />
-        </ModalForm>
+        <HStack space="md">
+          <Button
+            action="primary"
+            variant="outline"
+            size="sm"
+            onPress={() => {}}
+          >
+            <ButtonText>Resolve All Alerts</ButtonText>
+            <ButtonIcon as={CheckIcon} ml="$2" />
+          </Button>
+          <ModalForm
+            title="Add Alert"
+            triggerText="Add Alert"
+            modalRef={refModal}
+          >
+            <AddAlert onSubmit={onSubmit} />
+          </ModalForm>
+        </HStack>
       </ListHeader>
 
-      <HStack>
-      <VStack flex={2}
-        display="none"
-        sx={{
-          '@md': {
-            w: '$1/2',
-            display: 'flex',
-            mx: '$4'
-          }
-        }}
-      >
-        <FilterInputSelect
-          value={searchField}
-          items={logs}
-          onChangeText={setSearchField}
-          onSubmitEditing={setSearchField}
-        />
-      </VStack>
-      <HStack flex={1}>
-        <Text bold flex={1}>Filter</Text>
+      <HStack space="md" mx="$4">
+        <VStack
+          flex={1}
+          display="none"
+          sx={{
+            '@md': {
+              display: 'flex'
+            }
+          }}
+        >
+          <FilterInputSelect
+            value={searchField}
+            items={logs}
+            onChangeText={setSearchField}
+            onSubmitEditing={setSearchField}
+          />
+        </VStack>
+
         <InputSelect
           flex={1}
+          size="sm"
           options={options}
           value={stateFilter}
           onChange={(v) => onChangeStateFilter(v)}
@@ -244,34 +258,22 @@ const Alerts = (props) => {
         />
       </HStack>
 
-      </HStack>
-
       <Text size="xs" mx="$4">
         #Items: {logs.length}, Topics: {topics.join(',')}
       </Text>
-
-      <Button
-        size="sm"
-        onPress={()=>{}}
-        w="$1/4"
-      >
-        <ButtonText color="">Resolve All Alerts</ButtonText>
-      </Button>
-
 
       <FlatList
         data={logs}
         estimatedItemSize={100}
         renderItem={({ item }) => (
           <VStack
-           alignItems="center"
-           space="sm"
-           sx={{
-             '@md': { flexDirection: 'row', justifyContent: 'space-between' }
-           }}
-
-           >
-            <VStack  p="$4" flex={1} >
+            alignItems="center"
+            space="sm"
+            sx={{
+              '@md': { flexDirection: 'row', justifyContent: 'space-between' }
+            }}
+          >
+            <VStack p="$4" flex={1}>
               {/*
               TBD: state will be something like
               "" -> untriaged
@@ -288,27 +290,29 @@ const Alerts = (props) => {
 
               <VStack>
                 <Button
-                  style={{display: ['', 'New'].includes(item.State) ? "none" : ""}}
+                  style={{
+                    display: ['', 'New'].includes(item.State) ? 'none' : ''
+                  }}
                   action="secondary"
                   variant="outline"
                   onPress={updateEventState(item, 'new')}
-
                 >
                   <ButtonText color="">New</ButtonText>
                   <ButtonIcon color="" as={Inbox} mr="$2" />
                 </Button>
                 <Button
-                  style={{display: "none"}}
+                  style={{ display: 'none' }}
                   action="secondary"
                   variant="outline"
                   onPress={updateEventState(item, 'triaged')}
-
                 >
                   <ButtonText color="$yellow400">Triaged</ButtonText>
                   <ButtonIcon color="$yellow400" as={SquareSlash} mr="$2" />
                 </Button>
                 <Button
-                  style={{display: ['Resovled'].includes(item.State) ? "none" : ""}}
+                  style={{
+                    display: ['Resovled'].includes(item.State) ? 'none' : ''
+                  }}
                   action="secondary"
                   variant="outline"
                   onPress={updateEventState(item, 'resolve')}
@@ -317,7 +321,6 @@ const Alerts = (props) => {
                   <ButtonIcon color="$green400" as={CheckSquare} mr="$2" />
                 </Button>
               </VStack>
-
             </VStack>
             <LogListItem flex={3} item={item.Event} selected={item.Topic} />
           </VStack>

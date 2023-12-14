@@ -42,7 +42,16 @@ import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
 import { Tooltip } from 'components/Tooltip'
 
-const AlertItem = ({ item, index, onDelete, onToggle, onToggleUINotify, onToggleStore, onEdit, ...props }) => {
+const AlertItem = ({
+  item,
+  index,
+  onDelete,
+  onToggle,
+  onToggleUINotify,
+  onToggleStore,
+  onEdit,
+  ...props
+}) => {
   if (!item) {
     return <></>
   }
@@ -68,12 +77,9 @@ const AlertItem = ({ item, index, onDelete, onToggle, onToggleUINotify, onToggle
         }
       }}
     >
-
       <MenuItem key="edit" textValue="edit">
         <Icon as={PencilIcon} color="$muted500" mr="$2" />
-        <MenuItemLabel size="sm">
-          Edit
-        </MenuItemLabel>
+        <MenuItemLabel size="sm">Edit</MenuItemLabel>
       </MenuItem>
 
       <MenuItem key="onoff" textValue="onoff">
@@ -89,44 +95,35 @@ const AlertItem = ({ item, index, onDelete, onToggle, onToggleUINotify, onToggle
           Delete
         </MenuItemLabel>
       </MenuItem>
-
     </Menu>
   )
 
   return (
     <ListItem>
-      <HStack sx={{ '@md': { flexDirection: 'row' } }} space="md" flex={1}>
-        {!item.Disabled ?
-          <Text flex={1} bold>{item.Name}</Text>
-          :
-          <Text flex={1} italic > {item.Name}</Text>
-        }
+      <Text flex={1} size="md" bold={!item.Disabled}>
+        {item.Name}
+      </Text>
+      <Text flex={1} size="md">
+        {item.TopicPrefix || 'N/A'}
+      </Text>
 
-        <Text flex={1} >{item.TopicPrefix || 'N/A'}</Text>
+      <Text flex={1} size="md">
+        {item.Actions?.[0]?.MessageTitle || 'N/A'}
+      </Text>
 
-
-        <Text flex={1} >{item.Actions?.[0]?.MessageTitle || 'N/A'}</Text>
-
+      <HStack flex={1}>
         {item.Actions.map((action) => (
-          <HStack flex={1}>
+          <VStack key={action.MessageTitle}>
             {/*
           <HStack space="md">
             <Text color="$muted500">Message Title</Text>
             <Text>{action.MessageTitle || 'N/A'}</Text>
           </HStack>
-
-          <HStack space="md">
-            <Text color="$muted500">Message Body</Text>
-            <Text>{action.MessageBody || 'N/A'}</Text>
-          </HStack>
           */}
 
-            <Switch value={action.SendNotification}
+            <Switch
+              value={action.SendNotification}
               onValueChange={() => onToggleUINotify(index, item)}
-            />
-
-            <Switch value={action.StoreAlert}
-              onValueChange={() => onToggleStore(index, item)}
             />
 
             {/*
@@ -141,10 +138,11 @@ const AlertItem = ({ item, index, onDelete, onToggle, onToggleUINotify, onToggle
             <Text>{action.GrabEvent ? 'Yes' : 'No'}</Text>
           </HStack>
           */}
-          </HStack>
+          </VStack>
         ))}
+      </HStack>
 
-        {/*item.Conditions.length > 0 && (
+      {/*item.Conditions.length > 0 && (
           <VStack space="md">
             {item.Conditions.map((condition, index) => (
               <HStack key={index} space="md">
@@ -155,7 +153,7 @@ const AlertItem = ({ item, index, onDelete, onToggle, onToggleUINotify, onToggle
           </VStack>
         )*/}
 
-        {/*
+      {/*
         <HStack space="md">
           <Text color="$muted500">Match Any Condition</Text>
           <Text>{item.MatchAnyOne ? 'Yes' : 'No'}</Text>
@@ -166,24 +164,29 @@ const AlertItem = ({ item, index, onDelete, onToggle, onToggleUINotify, onToggle
           <Text>{item.InvertRule ? 'Yes' : 'No'}</Text>
         </HStack>
         */}
-      </HStack>
 
-      <Box>{moreMenu}</Box>
+      {moreMenu}
     </ListItem>
   )
 }
 
 const AlertItemHeader = () => (
   //TBD spacing
-  <ListHeader>
-    <Text flex={1} bold>Name</Text>
-    <Text flex={1} bold>Topic Filter</Text>
-    <Text flex={1} bold>Title</Text>
-    <HStack flex={1}>
-    <Text bold>UI Notification // </Text>
-    <Text bold>Store Alert</Text>
-    </HStack>
-  </ListHeader>
+
+  <HStack space="sm" mx="$4" my="$2">
+    <Text flex={1} size="xs" bold>
+      Name
+    </Text>
+    <Text flex={1} size="xs" bold>
+      Topic
+    </Text>
+    <Text flex={1} size="xs" bold>
+      Title
+    </Text>
+    <Text flex={1} size="xs" bold>
+      Notification
+    </Text>
+  </HStack>
 )
 
 const AlertSettings = (props) => {
@@ -272,7 +275,6 @@ const AlertSettings = (props) => {
     })
   }
 
-
   const onEdit = (index, item) => {
     setItemIndex(index)
     //preopulate the modal somehow
@@ -280,7 +282,6 @@ const AlertSettings = (props) => {
   }
 
   const onSubmit = (item) => {
-
     if (itemIndex == -1) {
       //create a new item
       alertsAPI
@@ -290,7 +291,6 @@ const AlertSettings = (props) => {
           fetchList()
         })
         .catch((err) => {})
-
     } else {
       //updates an existing one
       alertsAPI
