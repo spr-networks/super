@@ -124,6 +124,14 @@ const InterfaceItem = React.memo(({ name, address, size, ...props }) => {
   )
 })
 
+const ProtocolItem = ({ name, size, ...props }) => {
+  return (
+    <Badge action="muted" variant="outline" size={size || 'md'} {...props}>
+      <BadgeText>{name}</BadgeText>
+    </Badge>
+  )
+}
+
 TagItem.propTypes = {
   name: PropTypes.string.isRequired,
   size: PropTypes.any
@@ -139,6 +147,11 @@ InterfaceItem.propTypes = {
   size: PropTypes.any
 }
 
+ProtocolItem.propTypes = {
+  name: PropTypes.string.isRequired,
+  size: PropTypes.any
+}
+
 export default TagItem
 
-export { TagItem, GroupItem, InterfaceItem }
+export { TagItem, GroupItem, InterfaceItem, ProtocolItem }
