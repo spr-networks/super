@@ -450,21 +450,27 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         borderWidth="$0"
         {...props}
       >
-        <JSONSyntax code={jsonData} />
-        {hexLines ? <HEXSyntax code={hexLines} /> : null}
-        <Button
-          action="secondary"
-          variant="link"
-          size="xs"
-          position="absolute"
-          right="$4"
-          onPress={() => {
-            setMaxHeight(maxHeight == '$full' ? 150 : '$full')
-          }}
-          isDisabled={numLines <= 8}
-        >
-          <ButtonIcon as={Maximize2Icon} color="$muted500" />
-        </Button>
+        {Platform.OS == 'web' ? (
+          <>
+            <JSONSyntax code={jsonData} />
+            {hexLines ? <HEXSyntax code={hexLines} /> : null}
+            <Button
+              action="secondary"
+              variant="link"
+              size="xs"
+              position="absolute"
+              right="$4"
+              onPress={() => {
+                setMaxHeight(maxHeight == '$full' ? 150 : '$full')
+              }}
+              isDisabled={numLines <= 8}
+            >
+              <ButtonIcon as={Maximize2Icon} color="$muted500" />
+            </Button>
+          </>
+        ) : (
+          <Text size="xs">{jsonData}</Text>
+        )}
       </ScrollView>
     )
   }
