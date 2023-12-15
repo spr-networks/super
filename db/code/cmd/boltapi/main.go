@@ -72,7 +72,9 @@ func cli(db *bolt.DB, bucket string) {
 
 					fmt.Printf("%s\n", name)
 					stats := bucket.Stats()
-					//fmt.Printf("%+v\n", stats)
+					if os.Getenv("DEBUG") != "" {
+						fmt.Printf("%+v\n", stats)						
+					}
 					total += stats.BranchAlloc + stats.LeafAlloc
 					return nil
 				})

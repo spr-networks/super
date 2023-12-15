@@ -48,21 +48,26 @@ func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool
 	}
 
 	//no need to sweep
-	if !force && uint64(fstat.Size()) < config.MaxSize {
+	if !force && uint64(fstat.Size()) < uint64(1.25*float64(config.MaxSize)) {
 		return nil, false
 	}
+
+	//going down this path, do a 25% haircut
+	// and then run compaction.
 
 	if debug {
 		log.Printf("cleanup: db size > max size: %v > %v\n", fstat.Size(), config.MaxSize)
 	}
 
-	pMinEntriesDelete := 100
+	pMinEntriesDelete := 1000
 
 	//1. get size of db + all buckets and num keys
 	if err := db.Update(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-			//delete 25% of each bucket with more than X entries
+			//ensure fill percent is migrated to 0.9
 			b.FillPercent = 0.9
+
+			//delete 25% of each bucket with more than X entries
 			c := b.Cursor()
 			count := 0
 			for k, _ := c.First(); k != nil; k, _ = c.Next() {
@@ -95,11 +100,6 @@ func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool
 	}
 
 	fstat, err = os.Stat(dbpath)
-
-	//if less than 25% over dont compact
-	if !force && uint64(fstat.Size()) < uint64(1.25*float64(config.MaxSize)) {
-		return nil, false
-	}
 
 	for _, limit := range config.TopicLimits {
 		updateTopicLimit(db, limit)
