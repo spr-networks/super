@@ -15,6 +15,7 @@ import {
   ButtonIcon,
   Link,
   HStack,
+  Icon,
   VStack,
   Text,
   LinkText,
@@ -27,10 +28,10 @@ import { AppContext } from 'AppContext'
 import { ListItem } from 'components/List'
 import { Tooltip } from 'components/Tooltip'
 import { copy } from 'utils'
-import { InterfaceItem } from 'components/TagItem'
+import { InterfaceItem, ProtocolItem } from 'components/TagItem'
 import DeviceItem from 'components/Devices/DeviceItem'
 import {
-  ArrowBigRightIcon,
+  ArrowRightIcon,
   FileJsonIcon,
   Maximize2Icon
 } from 'lucide-react-native'
@@ -143,15 +144,6 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     }
 
     return events[event] || event
-  }
-
-  let srcPort = item?.TCP?.SrcPort || item?.UDP?.SrcPort || null
-  let dstPort = item?.TCP?.DstPort || item?.UDP?.DstPort || null
-  let proto = ''
-  if (item.TCP) {
-    proto = 'tcp'
-  } else if (item.UDP) {
-    proto = 'udp'
   }
 
   let remoteIP = 'no'
@@ -345,245 +337,76 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         <Text size="md">failure</Text>
       </>
     ),
-    'nft:drop:private': (item) => (
-      <>
-        <HStack flex={1} justifyContent="space-between">
-          <VStack>
-            <DeviceItem
-              show={['Style', 'Name']}
-              flex={1}
-              hideMissing={true}
-              item={context.getDevice(item.Ethernet?.SrcMAC)}
-            />
-            <Text size="md" bold>
-              {item.Ethernet?.SrcMAC}{' '}
-            </Text>
-            <Text size="md" bold>
-              {item.IP.SrcIP}
-            </Text>
-            {srcPort ? (
-              <VStack>
-                <Text size="md" bold>
-                  {proto}
-                </Text>
-                <Text size="md" bold>
-                  {srcPort}
-                </Text>
-              </VStack>
-            ) : null}
-            <Text size="md" bold>
-              {item.InDev}
-            </Text>
-          </VStack>
-          <ArrowBigRightIcon />
-          <VStack>
-            <DeviceItem
-              show={['Style', 'Name']}
-              flex={1}
-              hideMissing={true}
-              item={context.getDevice(item.Ethernet.DstMAC)}
-            />
-            <Text size="md" bold>
-              {item.Ethernet.DstMAC}
-            </Text>
-            <Text size="md" bold style={{ color: redColor }}>
-              {item.IP.DstIP}
-            </Text>
-            {dstPort ? (
-              <VStack>
-                <Text size="md" bold>
-                  {proto}
-                </Text>
-                <Text size="md" bold>
-                  {dstPort}
-                </Text>
-              </VStack>
-            ) : null}
-            <Text size="md" bold>
-              {item.OutDev}
-            </Text>
-          </VStack>
+    'nft:drop:private': (item) => <NFTDropItem item={item} type="private" />,
+    'nft:drop:forward': (item) => <NFTDropItem item={item} type="forward" />,
+    'nft:drop:mac': (item) => <NFTDropItem item={item} type="mac" />,
+    'nft:drop:input': (item) => <NFTDropItem item={item} type={'input'} />
+  }
+
+  const NFTDropItem = ({ item, type, ...props }) => {
+    let srcPort = item?.TCP?.SrcPort || item?.UDP?.SrcPort || null
+    let dstPort = item?.TCP?.DstPort || item?.UDP?.DstPort || null
+    let proto = ''
+    if (item.TCP) {
+      proto = 'tcp'
+    } else if (item.UDP) {
+      proto = 'udp'
+    }
+
+    return (
+      <VStack
+        flex={1}
+        justifyContent="space-between"
+        sx={{ '@md': { flexDirection: 'row' } }}
+      >
+        <HStack flex={1} space="md" alignItems="center">
+          <DeviceItem
+            show={['Style', 'Name']}
+            flex={1}
+            hideMissing={true}
+            item={context.getDevice(item.Ethernet.SrcMAC)}
+          />
+          <Text size="sm" bold>
+            {item.IP.SrcIP}
+          </Text>
+          {srcPort ? (
+            <HStack space="sm">
+              <ProtocolItem name={proto} size="sm" />
+              <Text size="sm">{srcPort}</Text>
+            </HStack>
+          ) : null}
+          <InterfaceItem name={item.InDev} />
         </HStack>
-      </>
-    ),
-    'nft:drop:forward': (item) => (
-      <>
-        <HStack flex={1} justifyContent="space-between">
-          <VStack>
-            <DeviceItem
-              show={['Style', 'Name']}
-              flex={1}
-              hideMissing={true}
-              item={context.getDevice(item.Ethernet?.SrcMAC)}
-            />
-            <Text size="md" bold>
-              {item.Ethernet?.SrcMAC}{' '}
-            </Text>
-            <Text size="md" bold>
-              {item.IP.SrcIP}
-            </Text>
-            {srcPort ? (
-              <VStack>
-                <Text size="md" bold>
-                  {proto}
-                </Text>
-                <Text size="md" bold>
-                  {srcPort}
-                </Text>
-              </VStack>
-            ) : null}
-            <Text size="md" bold>
-              {item.InDev}
-            </Text>
-          </VStack>
-          <ArrowBigRightIcon />
-          <VStack>
-            <DeviceItem
-              show={['Style', 'Name']}
-              flex={1}
-              hideMissing={true}
-              item={context.getDevice(item.Ethernet.DstMAC)}
-            />
-            <Text size="md" bold>
-              {item.Ethernet.DstMAC}
-            </Text>
-            <Text size="md" bold>
-              {item.IP.DstIP}
-            </Text>
-            {dstPort ? (
-              <VStack>
-                <Text size="md" bold>
-                  {proto}
-                </Text>
-                <Text size="md" bold>
-                  {dstPort}
-                </Text>
-              </VStack>
-            ) : null}
-            <Text size="md" bold>
-              {item.OutDev}
-            </Text>
-          </VStack>
+
+        <Icon as={ArrowRightIcon} color="$muted500" mx="$4" />
+
+        <HStack
+          flex={1}
+          space="sm"
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          <DeviceItem
+            show={['Style', 'Name']}
+            flex={1}
+            hideMissing={true}
+            item={context.getDevice(item.Ethernet.DstMAC)}
+          />
+          <Text size="sm" bold>
+            {item.IP.DstIP}
+          </Text>
+          {dstPort ? (
+            <HStack space="sm">
+              <ProtocolItem name={proto} size="sm" />
+              <Text size="sm">{dstPort}</Text>
+            </HStack>
+          ) : null}
+          <InterfaceItem name={item.InDev} />
         </HStack>
-      </>
-    ),
-    'nft:drop:mac': (item) => (
-      <>
-        <HStack flex={1} justifyContent="space-between">
-          <VStack>
-            <DeviceItem
-              size="sm"
-              flex={1}
-              hideMissing={true}
-              item={context.getDevice(item.Ethernet.SrcMAC)}
-            />
-            <Text size="md" bold style={{ color: redColor }}>
-              {item.Ethernet.SrcMAC}{' '}
-            </Text>
-            <Text size="md" bold style={{ color: redColor }}>
-              {item.IP.SrcIP}
-            </Text>
-            {srcPort ? (
-              <VStack>
-                <Text size="md" bold>
-                  {proto}
-                </Text>
-                <Text size="md" bold>
-                  {srcPort}
-                </Text>
-              </VStack>
-            ) : null}
-            <Text size="md" bold>
-              {item.InDev}
-            </Text>
-          </VStack>
-          <ArrowBigRightIcon />
-          <VStack>
-            <DeviceItem
-              show={['Style', 'Name']}
-              flex={1}
-              hideMissing={true}
-              item={context.getDevice(item.Ethernet.DstMAC)}
-            />
-            <Text size="md" bold>
-              {item.Ethernet.DstMAC}
-            </Text>
-            <Text size="md" bold>
-              {item.IP.DstIP}
-            </Text>
-            {dstPort ? (
-              <VStack>
-                <Text size="md" bold>
-                  {proto}
-                </Text>
-                <Text size="md" bold>
-                  {dstPort}
-                </Text>
-              </VStack>
-            ) : null}
-            <Text size="md" bold>
-              {item.OutDev}
-            </Text>
-          </VStack>
-        </HStack>
-      </>
-    ),
-    'nft:drop:input': (item) => (
-      <>
-        <HStack flex={1} justifyContent="space-between">
-          <VStack>
-            <DeviceItem
-              show={['Style', 'Name']}
-              flex={1}
-              hideMissing={true}
-              item={context.getDevice(item.Ethernet.SrcMAC)}
-            />
-            <Text size="md" bold>
-              {item.IP.SrcIP}
-            </Text>
-            {srcPort ? (
-              <VStack>
-                <Text size="md" bold>
-                  {proto}
-                </Text>
-                <Text size="md" bold>
-                  {srcPort}
-                </Text>
-              </VStack>
-            ) : null}
-            <Text size="md" bold>
-              {item.InDev}
-            </Text>
-          </VStack>
-          <ArrowBigRightIcon />
-          <VStack>
-            <DeviceItem
-              show={['Style', 'Name']}
-              flex={1}
-              hideMissing={true}
-              item={context.getDevice(item.Ethernet.DstMAC)}
-            />
-            <Text size="md" bold>
-              {item.IP.DstIP}
-            </Text>
-            {dstPort ? (
-              <VStack>
-                <Text size="md" bold style={{ color: redColor }}>
-                  {proto}
-                </Text>
-                <Text size="md" bold style={{ color: redColor }}>
-                  {dstPort}
-                </Text>
-              </VStack>
-            ) : null}
-            <Text size="md" bold>
-              {item.OutDev}
-            </Text>
-          </VStack>
-        </HStack>
-      </>
+      </VStack>
     )
   }
+
   eventParsers['wifi:station:disconnect'] = eventParsers['wifi:auth:success']
 
   useEffect(() => {
