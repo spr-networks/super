@@ -6,25 +6,15 @@ import {
   Button,
   ButtonIcon,
   ButtonText,
-  Box,
   FlatList,
   Heading,
   HStack,
   Icon,
-  Input,
-  InputField,
-  InputSlot,
-  Menu,
-  MenuItem,
-  MenuItemLabel,
-  Switch,
   View,
   VStack,
   Text,
-  TrashIcon,
-  ThreeDotsIcon,
-  CloseIcon,
-  CheckIcon
+  CheckIcon,
+  MailIcon
 } from '@gluestack-ui/themed'
 
 import {
@@ -35,7 +25,10 @@ import {
   SlidersHorizontalIcon,
   SquareSlash,
   EyeIcon,
-  EyeOffIcon
+  EyeOffIcon,
+  AlertCircleIcon,
+  AlertTriangleIcon,
+  MailPlusIcon
 } from 'lucide-react-native'
 
 import { alertsAPI, dbAPI } from 'api'
@@ -83,32 +76,22 @@ const Alerts = (props) => {
   }
 
   const fetchLogs = async () => {
-    const parseLog = (r, bucket) => {
-      if (bucket == 'log:www:access') {
-        r.msg = `${r.method} ${r.path}`
-        r.level = r.remoteaddr
+    let result = []
+    for (let bucket of topics) {
+      let withFilter = params
+      if (searchField) {
+        withFilter['filter'] = searchField
       }
 
-      return { ...r, bucket: bucket.replace(/^log:/, '') }
-    }
-
-    let result = []
-
-    for (let bucket of topics) {
-      //let stats = await dbAPI.stats(bucket)
-      //setTotal(stats.KeyN)
-
-      let withFilter = params
-      withFilter['filter'] = searchField
       let more_results = await dbAPI.items(bucket, withFilter)
       if (more_results) {
-        more_results = more_results.map((entry) => {entry.AlertTopic = bucket; return entry})
-        //filter alert state
-        if (stateFilter == 'New') {
-          more_results = more_results.filter(
-            (alert) => alert.State == '' || alert.State == 'New'
-          )
-        } else if (stateFilter != 'All') {
+        more_results = more_results.map((entry) => {
+          entry.AlertTopic = bucket
+          entry.State = entry.State || 'New' // '' == 'New'
+          return entry
+        })
+
+        if (stateFilter != 'All') {
           more_results = more_results.filter(
             (alert) => alert.State == stateFilter
           )
@@ -116,20 +99,6 @@ const Alerts = (props) => {
 
         result = result.concat(more_results)
       }
-
-      /*
-      if (more_results !== null) {
-        let mock_alerts = more_results.map((event) => {
-          return event
-          return {
-            Topic: bucket,
-            Info: event
-          }
-        })
-
-        result = result.concat(mock_alerts)
-      }
-      */
     }
 
     setLogs(result)
@@ -154,7 +123,8 @@ const Alerts = (props) => {
     fetchLogs()
   }, [topics])
 
-  const onDelete = (index) => {
+  //TODO
+  /*const onDelete = (index) => {
     alertsAPI.remove(index).then((res) => {
       let _alerts = [...config]
       delete config[index]
@@ -170,7 +140,7 @@ const Alerts = (props) => {
       _alerts[index] = item
       setConfig(_alerts)
     })
-  }
+  }*/
 
   const onSubmit = (item) => {
     //submit to api
@@ -192,16 +162,6 @@ const Alerts = (props) => {
 
   const refModal = useRef(null)
 
-  const InfoItem = ({ label, value, ...props }) => {
-    return (
-      <HStack space="md">
-        <Text size="sm" bold>
-          {label}
-        </Text>
-        <Text size="sm">{value}</Text>
-      </HStack>
-    )
-  }
   const stateChoices = ['New', 'Triaged', 'Resolved', 'All']
 
   const options = stateChoices.map((value) => ({
@@ -209,10 +169,33 @@ const Alerts = (props) => {
     value
   }))
 
+  const onChangeEvent = (event) => {
+    let logsUpdated = logs.map((l) => (l.time == event.time ? event : l))
+    setLogs(logsUpdated)
+  }
+
+  const resolveAll = () => {
+    let logsResolved = logs
+      .filter((l) => l.State != 'Resolved')
+      .map((l) => {
+        return { ...l, State: 'Resolved' }
+      })
+      .slice(0, 20) // max resolve 20
+
+    Promise.all(
+      logsResolved.map((event) =>
+        dbAPI.putItem(event.AlertTopic, event.time, event)
+      )
+    ).then((res) => {
+      fetchLogs()
+    })
+  }
+
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
       <ListHeader title="Alerts">
-        <HStack space="md">
+        <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
+          {/*
           <FilterInputSelect
             value={searchField}
             items={logs}
@@ -226,6 +209,7 @@ const Alerts = (props) => {
               }
             }}
           />
+          */}
           <InputSelect
             flex={1}
             size="sm"
@@ -237,70 +221,106 @@ const Alerts = (props) => {
           <ModalForm
             title="Add Alert"
             triggerText="Add Alert"
+            triggerProps={{ action: 'secondary', variant: 'solid' }}
             modalRef={refModal}
           >
             <AddAlert onSubmit={onSubmit} />
           </ModalForm>
           <Button
             action="primary"
-            variant="outline"
+            variant="solid"
             size="sm"
-            onPress={() => {}}
+            onPress={resolveAll}
           >
             <ButtonText>Resolve All</ButtonText>
             <ButtonIcon as={CheckIcon} ml="$2" />
           </Button>
-        </HStack>
+        </VStack>
       </ListHeader>
 
       <FlatList
         data={logs}
         estimatedItemSize={100}
-        renderItem={({ item }) => <AlertItem item={item} />}
+        renderItem={({ item }) => (
+          <AlertItem item={item} notifyChange={onChangeEvent} />
+        )}
         keyExtractor={(item, index) => item.time + index}
       />
     </View>
   )
 }
 
-const AlertItem = ({ item, ...props }) => {
+const AlertItem = ({ item, notifyChange, ...props }) => {
+  const context = useContext(AlertContext)
+
   const [showEvent, setShowEvent] = useState(item?.Body ? false : true)
+
   const updateEventState = (event, newState) => {
     //TBD, this needs to write to db
     let bucketKey = event.time
     event.State = newState
-    dbAPI.putItem(event.AlertTopic, bucketKey, event)
-      .then(() => {})
-      .catch((err) => context.error("failed to update state", err))
+    dbAPI
+      .putItem(event.AlertTopic, bucketKey, event)
+      .then(() => {
+        notifyChange(event)
+      })
+      .catch((err) => context.error('failed to update state:' + err))
   }
 
   const toggleEvent = (item) => {
     setShowEvent(!showEvent)
   }
 
-  return (
+  let notificationType =
+    item?.NotificationType?.replace('danger', 'warning') || 'muted'
+  let color = `$${notificationType}500`
+
+  const isResolved = item.State == 'Resolved'
+
+  const TitleComponent = (
     <>
-      <AlertItemHeader>
+      <HStack
+        flex={1}
+        space="sm"
+        alignItems="center"
+        opacity={isResolved ? 0.5 : 1}
+      >
+        <Icon size="sm" as={AlertTriangleIcon} color={color} />
+
         <Heading size="xs">
           {eventTemplate(item.Title, item.Event) || item.Topic || 'Alert'}
         </Heading>
-        <Text size="xs" bold>
-          {prettyDate(item.Timestamp || item.time)}
-        </Text>
-      </AlertItemHeader>
-      <ListItem
-        alignItems="flex-start"
-        flexDirection="row"
-        bg="$coolGray50"
-        borderColor="$secondary200"
-        sx={{
-          _dark: { bg: '$secondary900', borderColor: '$secondary800' }
-        }}
-        p="$0"
-        mb="$1"
-      >
-        <VStack space="md" flex={2}>
-          {/*
+      </HStack>
+
+      <Tooltip label={showEvent ? 'Hide Event' : 'Show Event'}>
+        <Button
+          ml="auto"
+          action="primary"
+          variant="link"
+          size="sm"
+          onPress={() => toggleEvent(item)}
+          display={!item.Body ? 'none' : 'flex'}
+        >
+          <ButtonIcon as={showEvent ? EyeOffIcon : EyeIcon} ml="$2" />
+        </Button>
+      </Tooltip>
+    </>
+  )
+
+  return (
+    <ListItem
+      alignItems="flex-start"
+      flexDirection="row"
+      bg="$coolGray50"
+      borderColor="$secondary200"
+      sx={{
+        _dark: { bg: '$secondary900', borderColor: '$secondary800' }
+      }}
+      p="$0"
+      mb="$1"
+    >
+      <VStack space="md" flex={4}>
+        {/*
           TBD: state will be something like
           "" -> untriaged
           "Triaged" -> event has been triaged, priority set till exempel
@@ -310,64 +330,34 @@ const AlertItem = ({ item, ...props }) => {
           Body is an alert body to be set from config
           */}
 
-          <Text size="sm" p="$4" display={!showEvent ? 'flex' : 'none'}>
-            {eventTemplate(item.Body, item.Event)}
-          </Text>
-
-          <LogListItem
+        <LogListItem
+          item={item.Event}
+          selected={item.Topic}
+          borderBottomWidth="$0"
+          TitleComponent={TitleComponent}
+          isHidden={!showEvent}
+        >
+          <HStack
             flex={1}
-            item={item.Event}
-            selected={item.Topic}
-            borderBottomWidth="$0"
-            display={showEvent ? 'flex' : 'none'}
-          />
-        </VStack>
-
-        <HStack flex={1} space="sm" justifyContent="flex-end" p="$4">
-          <Button
-            action="secondary"
-            variant="outline"
-            size="xs"
-            onPress={() => toggleEvent(item)}
-            display={!item.Body ? 'none' : 'flex'}
+            p="$4"
+            display={!showEvent ? 'flex' : 'none'}
+            alignSelf="center"
           >
-            <ButtonText>{showEvent ? 'Hide Event' : 'Show Event'}</ButtonText>
-            <ButtonIcon as={showEvent ? EyeOffIcon : EyeIcon} ml="$2" />
-          </Button>
-
-          <Button
-            display={['', 'new'].includes(item.State.toLowerCase()) ? 'none' : 'flex'}
-            size="xs"
-            action="primary"
-            variant="outline"
-            onPress={() => {updateEventState(item, 'New')}}
+            <Text size="sm">{eventTemplate(item.Body, item.Event)}</Text>
+          </HStack>
+          <VStack
+            space="sm"
+            p="$4"
+            sx={{ '@md': { flexDirection: 'row', justifyContent: 'flex-end' } }}
           >
-            <ButtonText>New</ButtonText>
-            <ButtonIcon as={InboxIcon} mr="$2" />
-          </Button>
-          <Button
-            display="none"
-            size="xs"
-            action="secondary"
-            variant="outline"
-            onPress={() => {updateEventState(item, 'Triaged')}}
-          >
-            <ButtonText>Triaged</ButtonText>
-            <ButtonIcon as={SquareSlash} ml="$2" />
-          </Button>
-          <Button
-            display={['resolved'].includes(item.State.toLowerCase()) ? 'none' : 'flex'}
-            size="xs"
-            action="primary"
-            variant="outline"
-            onPress={() => {updateEventState(item, 'Resolved')}}
-          >
-            <ButtonText>Resolve</ButtonText>
-            <ButtonIcon as={CheckIcon} ml="$2" />
-          </Button>
-        </HStack>
-      </ListItem>
-    </>
+            <StateButton
+              item={item}
+              onPress={(action) => updateEventState(item, action)}
+            />
+          </VStack>
+        </LogListItem>
+      </VStack>
+    </ListItem>
   )
 }
 
@@ -389,60 +379,77 @@ const AlertItemHeader = ({ ...props }) => {
   )
 }
 
-//TODO
+//Flip from Resolved -> New, and New -> Resolved
 const StateButton = ({ item, onPress, ...props }) => {
   let actions = {
-    Resolved: { action: 'resolve', icon: CheckSquareIcon },
-    Triaged: { action: 'triaged', icon: SquareSlash },
-    New: { action: 'new', icon: InboxIcon },
-    '': { action: 'new', icon: InboxIcon }
+    New: { action: 'Resolved', icon: CheckIcon, text: 'Mark as Read' },
+    Resolved: { action: 'New', icon: MailIcon, text: 'Mark as Unread' }
+    //Triaged: { action: 'Triaged', icon: SquareSlash, text: 'Triaged' },
   }
 
   let currentState = item.State || 'New'
-  let { action, icon } = actions[currentState]
+  let { action, icon, text } = actions[currentState] || actions.New
 
   return (
     <Button
-      action="secondary"
-      variant="outline"
+      action={currentState == 'New' ? 'primary' : 'secondary'}
+      variant={currentState == 'New' ? 'solid' : 'outline'}
+      size="xs"
       onPress={() => onPress(action)}
     >
-      <ButtonText>{currentState}</ButtonText>
+      <ButtonText>{text}</ButtonText>
       <ButtonIcon as={icon} ml="$2" />
     </Button>
   )
 
-  /*return (
+  /*
+  const updateEventState = onPress
+
+  return (
     <>
       <Button
-        display={['', 'New'].includes(item.State) ? 'none' : 'flex'}
-        action="secondary"
+        display={
+          ['', 'new'].includes(item.State.toLowerCase()) ? 'none' : 'flex'
+        }
+        size="xs"
+        action="primary"
         variant="outline"
-        onPress={updateEventState(item, 'new')}
+        onPress={() => {
+          updateEventState(item, 'New')
+        }}
       >
-        <ButtonText>New</ButtonText>
-        <ButtonIcon as={InboxIcon} mr="$2" />
+        <ButtonText>Mark as unread</ButtonText>
+        <ButtonIcon as={InboxIcon} ml="$2" />
       </Button>
       <Button
         display="none"
+        size="xs"
         action="secondary"
         variant="outline"
-        onPress={updateEventState(item, 'triaged')}
+        onPress={() => {
+          updateEventState(item, 'Triaged')
+        }}
       >
         <ButtonText>Triaged</ButtonText>
         <ButtonIcon as={SquareSlash} ml="$2" />
       </Button>
       <Button
-        display={['Resolved'].includes(item.State) ? 'none' : 'flex'}
-        action="secondary"
+        display={
+          ['resolved'].includes(item.State.toLowerCase()) ? 'none' : 'flex'
+        }
+        size="xs"
+        action="primary"
         variant="outline"
-        onPress={updateEventState(item, 'resolve')}
+        onPress={() => {
+          updateEventState(item, 'Resolved')
+        }}
       >
         <ButtonText>Resolve</ButtonText>
-        <ButtonIcon as={CheckSquareIcon} ml="$2" />
+        <ButtonIcon as={CheckIcon} ml="$2" />
       </Button>
     </>
-  )*/
+  )
+  */
 }
 
 export default Alerts

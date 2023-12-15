@@ -595,11 +595,11 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
   if (!showJSON && eventParsers[selected]) {
     return (
       <HStack
-        w="$full"
         space="3xl"
         alignItems="center"
         p="$4"
         justifyContent="space-between"
+        {...props}
       >
         {eventParsers[selected](item)}
       </HStack>
@@ -613,7 +613,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         borderColor="$secondary200"
         sx={{ _dark: { borderColor: '$secondary700' } }}
         borderWidth="$0"
-        w="$full"
+        {...props}
       >
         <JSONSyntax code={jsonData} />
         {hexLines ? <HEXSyntax code={hexLines} /> : null}
@@ -635,7 +635,68 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
   }
 }
 
-const LogListItem = ({ item, selected, ...props }) => {
+const LogListItemHeader = ({
+  item,
+  TitleComponent,
+  isParsable,
+  showJSON,
+  setShowJSON,
+  ...props
+}) => {
+  return (
+    <HStack
+      w="$full"
+      bg="$coolGray100"
+      sx={{
+        _dark: { bg: '$secondary950' }
+      }}
+      alignItems="center"
+      px="$4"
+      py="$0.5"
+      space="md"
+    >
+      <Text size="xs" bold>
+        {prettyDate(item.Timestamp || item.time)}
+      </Text>
+
+      {TitleComponent}
+
+      <ButtonGroup ml="auto" space="md">
+        <Tooltip label="Toggle JSON data">
+          <Button
+            action="primary"
+            variant="link"
+            size="sm"
+            onPress={() => setShowJSON(!showJSON)}
+            isDisabled={!isParsable}
+          >
+            <ButtonIcon as={FileJsonIcon} />
+          </Button>
+        </Tooltip>
+
+        <Tooltip label="Copy JSON event">
+          <Button
+            action="primary"
+            variant="link"
+            size="sm"
+            onPress={() => copy(JSON.stringify(item))}
+          >
+            <ButtonIcon as={CopyIcon} />
+          </Button>
+        </Tooltip>
+      </ButtonGroup>
+    </HStack>
+  )
+}
+
+const LogListItem = ({
+  item,
+  isHidden,
+  selected,
+  TitleComponent,
+  children,
+  ...props
+}) => {
   const [isParsable, setIsParsable] = useState(true)
   const [showJSON, setShowJSON] = useState(false)
 
@@ -658,55 +719,30 @@ const LogListItem = ({ item, selected, ...props }) => {
       space="$0"
       {...props}
     >
-      <HStack
-        w="$full"
-        bg="$coolGray100"
-        sx={{
-          _dark: { bg: '$secondary950' }
-        }}
-        alignItems="center"
-        px="$4"
-        py="$0.5"
-        display={showHeader ? 'flex' : 'none'}
-      >
-        <Text size="xs" bold>
-          {prettyDate(item.Timestamp || item.time)}
-        </Text>
-        <ButtonGroup ml="auto" space="md">
-          <Tooltip label="Toggle JSON data">
-            <Button
-              action="primary"
-              variant="link"
-              size="sm"
-              onPress={() => setShowJSON(!showJSON)}
-              isDisabled={!isParsable}
-            >
-              <ButtonIcon as={FileJsonIcon} />
-            </Button>
-          </Tooltip>
-
-          <Tooltip label="Copy JSON event">
-            <Button
-              action="primary"
-              variant="link"
-              size="sm"
-              onPress={() => copy(JSON.stringify(item))}
-              {...props}
-            >
-              <ButtonIcon as={CopyIcon} />
-            </Button>
-          </Tooltip>
-        </ButtonGroup>
+      {showHeader ? (
+        <LogListItemHeader
+          item={item}
+          isParsable={isParsable}
+          showJSON={showJSON}
+          setShowJSON={setShowJSON}
+          TitleComponent={TitleComponent}
+        ></LogListItemHeader>
+      ) : null}
+      <HStack w="$full">
+        <PrettyItem
+          item={item}
+          selected={selected}
+          showJSON={showJSON}
+          setIsParsable={setIsParsable}
+          flex={1}
+          display={isHidden ? 'none' : 'flex'}
+        />
+        {children ? children : null}
       </HStack>
-
-      <PrettyItem
-        item={item}
-        selected={selected}
-        showJSON={showJSON}
-        setIsParsable={setIsParsable}
-      />
     </ListItem>
   )
 }
 
 export default LogListItem
+
+export { LogListItem, LogListItemHeader }

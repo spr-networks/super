@@ -126,6 +126,8 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
       Disabled
     }
 
+    console.log('!!SUBMIT=', item)
+
     onSubmit(item)
   }
 
