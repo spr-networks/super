@@ -1848,7 +1848,8 @@ func updateLocalMappings(IP string, Name string) {
 func flushRoute(MAC string) {
 	arp_entry, err := GetArpEntryFromMAC(MAC)
 	if err != nil {
-		log.Println("Arp entry not found, insufficient information to refresh", MAC)
+		//relax this verbose log
+		//log.Println("Arp entry not found, insufficient information to refresh", MAC)
 		return
 	}
 
