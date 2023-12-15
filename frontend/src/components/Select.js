@@ -12,6 +12,7 @@ import {
   SelectDragIndicatorWrapper,
   SelectDragIndicator,
   SelectItem,
+  SelectScrollView,
   ChevronDownIcon
 } from '@gluestack-ui/themed'
 
@@ -39,7 +40,7 @@ const Select = (props) => {
           <SelectDragIndicatorWrapper>
             <SelectDragIndicator />
           </SelectDragIndicatorWrapper>
-          {props.children}
+          <SelectScrollView>{props.children}</SelectScrollView>
         </SelectContent>
       </SelectPortal>
     </SelectGS>

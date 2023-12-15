@@ -15,11 +15,10 @@ import {
   HStack,
   Text,
   View,
-  useColorMode,
-  SelectScrollView
+  useColorMode
 } from '@gluestack-ui/themed'
 
-import { Settings2Icon } from 'lucide-react-native'
+import { SettingsIcon, Settings2Icon } from 'lucide-react-native'
 
 import { ModalContext } from 'AppContext'
 import { EditDatabase } from 'views/System/EditDatabase'
@@ -174,11 +173,9 @@ const LogList = (props) => {
         maxWidth="$32"
         sx={{ '@md': { maxWidth: '$full' } }}
       >
-        <SelectScrollView>
-          {options.map((value) => (
-            <Select.Item key={value} label={niceTopic(value)} value={value} />
-          ))}
-        </SelectScrollView>
+        {options.map((value) => (
+          <Select.Item key={value} label={niceTopic(value)} value={value} />
+        ))}
       </Select>
     )
   }
