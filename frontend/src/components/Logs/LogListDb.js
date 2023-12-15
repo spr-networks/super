@@ -15,10 +15,9 @@ import {
   HStack,
   Text,
   View,
-  useColorMode
+  useColorMode,
+  SettingsIcon
 } from '@gluestack-ui/themed'
-
-import { SettingsIcon, Settings2Icon } from 'lucide-react-native'
 
 import { ModalContext } from 'AppContext'
 import { EditDatabase } from 'views/System/EditDatabase'
@@ -241,7 +240,7 @@ const LogList = (props) => {
               action="primary"
               onPress={handlePressEdit}
             >
-              <ButtonIcon as={Settings2Icon} color="$primary500" />
+              <ButtonIcon as={SettingsIcon} color="$primary500" />
             </Button>
           </Tooltip>
           <SelectTopic
