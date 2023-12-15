@@ -92,7 +92,7 @@ const ListItem = ({
       BLOCKED: 'error',
       NOERROR: 'success',
       NODATA: 'warning',
-      OTHERERROR: 'danger',
+      OTHERERROR: 'warning',
       NXDOMAIN: 'info'
     }
 
@@ -209,7 +209,7 @@ const DNSLogHistoryList = (props) => {
   const perPage = 20
   const [total, setTotal] = useState(0)
   const [params, setParams] = useState({ num: 20 })
-  const [dateTo, setDateTo] = useState(null)//new Date().toISOString().split('T')[0])
+  const [dateTo, setDateTo] = useState(null) //new Date().toISOString().split('T')[0])
 
   const modalRef = React.useRef(null)
 
