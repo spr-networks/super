@@ -304,6 +304,9 @@ const AlertItem = ({ item, notifyChange, ...props }) => {
           <ButtonIcon as={showEvent ? EyeOffIcon : EyeIcon} ml="$2" />
         </Button>
       </Tooltip>
+      <Text size="xs" bold>
+        {prettyDate(item.Timestamp || item.time)}
+      </Text>
     </>
   )
 

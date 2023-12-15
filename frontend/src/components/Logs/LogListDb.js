@@ -10,29 +10,14 @@ import { dbAPI } from 'api'
 import {
   Button,
   ButtonIcon,
-  ButtonText,
   FlatList,
   Heading,
   HStack,
-  InfoIcon,
-  Icon,
-  Input,
-  InputField,
-  InputIcon,
-  InputSlot,
-  Link,
-  LinkText,
   Text,
   View,
   useColorMode,
-  ChevronDownIcon
+  SettingsIcon
 } from '@gluestack-ui/themed'
-
-import {
-  SearchIcon,
-  Settings2Icon,
-  SlidersHorizontalIcon
-} from 'lucide-react-native'
 
 import { ModalContext } from 'AppContext'
 import { EditDatabase } from 'views/System/EditDatabase'
@@ -67,7 +52,7 @@ const LogList = (props) => {
     dbAPI.buckets().then((buckets) => {
       const ignoreList = ['alert:']
       for (let ignore of ignoreList) {
-        buckets = buckets.filter(b => !b.startsWith(ignore))
+        buckets = buckets.filter((b) => !b.startsWith(ignore))
       }
 
       buckets.sort((a, b) => {
@@ -255,7 +240,7 @@ const LogList = (props) => {
               action="primary"
               onPress={handlePressEdit}
             >
-              <ButtonIcon as={Settings2Icon} color="$primary500" />
+              <ButtonIcon as={SettingsIcon} color="$primary500" />
             </Button>
           </Tooltip>
           <SelectTopic
