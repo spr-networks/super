@@ -34,6 +34,8 @@ var (
 )
 
 func cli(db *bolt.DB, bucket string) {
+	total := 0
+
 	if err := db.View(func(tx *bolt.Tx) error {
 		// list single or all gBucket(s)
 		if bucket != "" {
@@ -67,7 +69,11 @@ func cli(db *bolt.DB, bucket string) {
 		} else {
 			if err := db.View(func(tx *bolt.Tx) error {
 				return tx.ForEach(func(name []byte, bucket *bolt.Bucket) error {
+
 					fmt.Printf("%s\n", name)
+					stats := bucket.Stats()
+					//fmt.Printf("%+v\n", stats)
+					total += stats.BranchAlloc + stats.LeafAlloc
 					return nil
 				})
 			}); err != nil {
@@ -82,6 +88,22 @@ func cli(db *bolt.DB, bucket string) {
 		log.Println(err)
 		return
 	}
+
+	fmt.Println("TOTAL DB MB:", total/1024.0/1024.0)
+
+	/*
+	//test code
+	dst, err := bolt.Open("/tmp/compacted.db", 0600, nil)
+	defer dst.Close()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = bolt.Compact(dst, db, 0)
+	*/
+
+
 
 	return
 }

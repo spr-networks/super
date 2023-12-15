@@ -23,6 +23,7 @@ import (
 )
 
 import bolt "go.etcd.io/bbolt"
+import "github.com/hashicorp/go-msgpack/codec"
 
 var (
 	db                   **bolt.DB
@@ -56,9 +57,15 @@ type BucketItem struct {
 	Value interface{} `json:value`
 }
 
+type TopicLimit struct {
+	Name string
+	Size int
+}
+
 type LogConfig struct {
-	SaveEvents []string `json:"SaveEvents"`
-	MaxSize    uint64   `json:"MaxSize"`
+	SaveEvents  []string `json:"SaveEvents"`
+	MaxSize     uint64   `json:"MaxSize"`
+	TopicLimits []TopicLimit
 }
 
 func LogEvent(topic string) {
@@ -126,7 +133,7 @@ func (item *BucketItem) EncodeKey() []byte {
 	return []byte(item.Key)
 }
 
-func (item *BucketItem) EncodeValue() ([]byte, error) {
+func (item *BucketItem) EncodeValueJSON() ([]byte, error) {
 	buf, err := json.Marshal(item.Value)
 	if err != nil {
 		return nil, ErrBucketItemEncode
@@ -135,12 +142,44 @@ func (item *BucketItem) EncodeValue() ([]byte, error) {
 	return buf, nil
 }
 
-func (item *BucketItem) DecodeValue(rawValue []byte) error {
+func (item *BucketItem) EncodeValueMsgpack() ([]byte, error) {
+
+	var mh codec.MsgpackHandle
+	var buf []byte
+	encoder := codec.NewEncoderBytes(&buf, &mh)
+	err := encoder.Encode(item.Value)
+	if err != nil {
+		return nil, ErrBucketItemEncode
+	}
+
+	return buf, nil
+}
+
+func (item *BucketItem) DecodeValueJSON(rawValue []byte) error {
 	if err := json.Unmarshal(rawValue, &item.Value); err != nil {
 		return ErrBucketItemDecode
 	}
 
 	return nil
+}
+
+func (item *BucketItem) DecodeValueMsgpack(rawValue []byte) error {
+	var mh codec.MsgpackHandle
+	decoder := codec.NewDecoderBytes(rawValue, &mh)
+	err := decoder.Decode(&item.Value)
+	if err != nil {
+		return ErrBucketItemDecode
+	}
+
+	return nil
+}
+
+func (item *BucketItem) DecodeValue(rawValue []byte) error {
+	return item.DecodeValueJSON(rawValue)
+}
+
+func (item *BucketItem) EncodeValue() ([]byte, error) {
+	return item.EncodeValueJSON()
 }
 
 func GetSetConfig(w http.ResponseWriter, r *http.Request) {
@@ -520,7 +559,9 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 				//NOTE: for performance we might want to consider filtering items later.
 				doAppend, err = testFilter(filter, []interface{}{jsonMap})
 				if err != nil {
-					log.Println("api failure", ApiError{ErrBucketItemFilter, err}, err)
+					//busy error, ignore
+					//log.Println("api failure", ApiError{ErrBucketItemFilter, err}, err)
+
 				}
 			}
 
@@ -575,6 +616,8 @@ func PutItem(bucketName string, jsonData map[string]interface{}) (*BucketItem, e
 		if err != nil {
 			return ErrBucketMissing
 		}
+
+		bucket.FillPercent = 0.9
 
 		return bucket.Put(payload.EncodeKey(), encodedValue)
 	}); err != nil {
@@ -667,6 +710,7 @@ func UpdateBucketItem(w http.ResponseWriter, r *http.Request) {
 		if bucket == nil {
 			return ErrBucketMissing
 		}
+		bucket.FillPercent = 0.9
 		return bucket.Put(payload.EncodeKey(), encodedValue)
 	}); err != nil {
 		fail(ErrBucketItemUpdate, err)
@@ -689,7 +733,7 @@ func DeleteBucketItem(w http.ResponseWriter, r *http.Request) {
 		if bucket == nil {
 			return ErrBucketMissing
 		}
-
+		bucket.FillPercent = 0.9
 		return bucket.Delete([]byte(bucketItemKey))
 	}); err != nil {
 		log.Println(ApiError{ErrBucketItemDelete, err})

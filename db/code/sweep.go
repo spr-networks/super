@@ -15,6 +15,30 @@ func min(a, b int) int {
 	return b
 }
 
+func updateTopicLimit(db *bolt.DB, limit TopicLimit) {
+
+	var stats bolt.BucketStats
+	bucketName := limit.Name
+
+	if err := (*db).View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketName))
+		if bucket == nil {
+			return ErrBucketMissing
+		}
+
+		stats = bucket.Stats()
+
+		return nil
+	}); err != nil {
+		return
+	}
+
+	if stats.KeyN > limit.Size {
+		//do stuff
+	}
+
+}
+
 func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool) (error, bool) {
 	fstat, err := os.Stat(dbpath)
 
@@ -38,7 +62,7 @@ func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool
 	if err := db.Update(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			//delete 25% of each bucket with more than X entries
-
+			b.FillPercent = 0.9
 			c := b.Cursor()
 			count := 0
 			for k, _ := c.First(); k != nil; k, _ = c.Next() {
@@ -77,7 +101,10 @@ func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool
 		return nil, false
 	}
 
-	// over 25% of max, run a compact command
+	for _, limit := range config.TopicLimits {
+		updateTopicLimit(db, limit)
+	}
+	// over 25% of max, observe topic limits, and then run a compact command
 
 	dst, err := bolt.Open(dbpath+".tmp", fstat.Mode(), nil)
 	defer dst.Close()
