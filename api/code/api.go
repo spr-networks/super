@@ -492,7 +492,6 @@ func runAutoUpdates() {
 
 				//performUpdate()
 			}
-			Configmtx.Unlock()
 		}
 	}
 }
