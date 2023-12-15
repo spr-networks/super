@@ -112,6 +112,7 @@ const InterfaceItem = React.memo(({ name, address, size, ...props }) => {
       bg={bg}
       size={size || 'sm'}
       rounded="$lg"
+      {...props}
     >
       {icon != PowerIcon ? <BadgeIcon color={fg} as={icon} mr="$1" /> : null}
       <BadgeText color={fg} bold={address ? true : false}>
