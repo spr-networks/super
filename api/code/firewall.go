@@ -220,7 +220,7 @@ func getPortsFromPortVerdictMap(name string) []string {
 func setDefaultServicePortsLocked() {
 	//this firewall configuration does not know about
 	//the default service ports. Populate them and save
-
+	//note: spr_tcp_port_accept was deprecated.
 	ports := getPortsFromPortVerdictMap("spr_tcp_port_accept")
 
 	service_ports := []ServicePort{}
@@ -2010,6 +2010,11 @@ func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface str
 }
 
 func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, matchInterface bool) {
+	is_mesh := isMeshPluginEnabled()
+	mesh_downlink := ""
+	if is_mesh {
+		mesh_downlink = meshPluginDownlink()
+	}
 
 	for _, name := range vmap_names {
 		entries := getNFTVerdictMap(name)
@@ -2023,6 +2028,14 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 				}
 			} else if strings.HasPrefix(entry.ifname, "wg") {
 				continue
+			}
+
+			//when in mesh mode, dont flush the downlink
+			//for faster transitions
+			if is_mesh && name == "ethernet_filter" {
+				if entry.ifname == mesh_downlink {
+					continue
+				}
 			}
 
 			if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || (equalMAC(entry.mac, MAC) && (MAC != "")) {
@@ -2487,6 +2500,11 @@ func dynamicRouteLoop() {
 
 			lanif := os.Getenv("LANIF")
 			lanif_vlan_trunk := false
+			meshPluginEnabled := isMeshPluginEnabled()
+			meshDownlink := ""
+			if meshPluginEnabled {
+				meshDownlink = meshPluginDownlink()
+			}
 
 			wireguard_peers := getWireguardActivePeers()
 			wifi_peers := getWifiPeers()
@@ -2554,7 +2572,6 @@ func dynamicRouteLoop() {
 				newIfaceMap[entry.RecentIP] = new_iface
 
 				if !exists {
-					meshPluginEnabled := isMeshPluginEnabled()
 					wifiDevice := isWifiDevice(entry)
 					if lanif != "" && !wifiDevice {
 						// when mesh plugin is off and not a wifi device, then go for lanif
@@ -2568,7 +2585,7 @@ func dynamicRouteLoop() {
 						newIfaceMap[entry.RecentIP] = new_iface
 					} else if meshPluginEnabled && wifiDevice {
 						//mesh plugin was enabled and it was a wifi device
-						new_iface = meshPluginDownlink()
+						new_iface = meshDownlink
 						newIfaceMap[entry.RecentIP] = new_iface
 					} else {
 
@@ -2586,7 +2603,9 @@ func dynamicRouteLoop() {
 						continue
 					}
 
-					log.Println("[-] Missing vmap entries for mac=", ident, "new_iface=", new_iface)
+					if len(ident) < 20 {
+						log.Println("[-] Missing vmap entries for mac=", ident, "new_iface=", new_iface, meshDownlink)
+					}
 				}
 
 				//ex tinynet
