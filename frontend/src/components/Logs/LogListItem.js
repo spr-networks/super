@@ -643,7 +643,7 @@ const LogListItem = ({ item, selected, ...props }) => {
     setShowJSON(!isParsable)
   }, [isParsable])
 
-  const showHeader = false
+  const showHeader = true
 
   return (
     <ListItem

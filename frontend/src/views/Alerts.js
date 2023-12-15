@@ -102,6 +102,7 @@ const Alerts = (props) => {
       withFilter['filter'] = searchField
       let more_results = await dbAPI.items(bucket, withFilter)
       if (more_results) {
+        more_results = more_results.map((entry) => {entry.AlertTopic = bucket; return entry})
         //filter alert state
         if (stateFilter == 'New') {
           more_results = more_results.filter(
@@ -201,7 +202,7 @@ const Alerts = (props) => {
       </HStack>
     )
   }
-  const stateChoices = ['New', 'Triaged', 'Resovled', 'All']
+  const stateChoices = ['New', 'Triaged', 'Resolved', 'All']
 
   const options = stateChoices.map((value) => ({
     label: value,
@@ -264,8 +265,13 @@ const Alerts = (props) => {
 
 const AlertItem = ({ item, ...props }) => {
   const [showEvent, setShowEvent] = useState(item?.Body ? false : true)
-  const updateEventState = (event) => {
+  const updateEventState = (event, newState) => {
     //TBD, this needs to write to db
+    let bucketKey = event.time
+    event.State = newState
+    dbAPI.putItem(event.AlertTopic, bucketKey, event)
+      .then(() => {})
+      .catch((err) => context.error("failed to update state", err))
   }
 
   const toggleEvent = (item) => {
@@ -330,11 +336,11 @@ const AlertItem = ({ item, ...props }) => {
           </Button>
 
           <Button
-            display={['', 'New'].includes(item.State) ? 'none' : 'flex'}
+            display={['', 'new'].includes(item.State.toLowerCase()) ? 'none' : 'flex'}
             size="xs"
             action="primary"
             variant="outline"
-            onPress={updateEventState(item, 'new')}
+            onPress={() => {updateEventState(item, 'New')}}
           >
             <ButtonText>New</ButtonText>
             <ButtonIcon as={InboxIcon} mr="$2" />
@@ -344,17 +350,17 @@ const AlertItem = ({ item, ...props }) => {
             size="xs"
             action="secondary"
             variant="outline"
-            onPress={updateEventState(item, 'triaged')}
+            onPress={() => {updateEventState(item, 'Triaged')}}
           >
             <ButtonText>Triaged</ButtonText>
             <ButtonIcon as={SquareSlash} ml="$2" />
           </Button>
           <Button
-            display={['Resovled'].includes(item.State) ? 'none' : 'flex'}
+            display={['resolved'].includes(item.State.toLowerCase()) ? 'none' : 'flex'}
             size="xs"
             action="primary"
             variant="outline"
-            onPress={updateEventState(item, 'resolve')}
+            onPress={() => {updateEventState(item, 'Resolved')}}
           >
             <ButtonText>Resolve</ButtonText>
             <ButtonIcon as={CheckIcon} ml="$2" />
@@ -427,7 +433,7 @@ const StateButton = ({ item, onPress, ...props }) => {
         <ButtonIcon as={SquareSlash} ml="$2" />
       </Button>
       <Button
-        display={['Resovled'].includes(item.State) ? 'none' : 'flex'}
+        display={['Resolved'].includes(item.State) ? 'none' : 'flex'}
         action="secondary"
         variant="outline"
         onPress={updateEventState(item, 'resolve')}

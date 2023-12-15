@@ -28,6 +28,19 @@ export class APIDb extends API {
   items(bucket, params = {}) {
     return this.get(`items/${bucket}?${new URLSearchParams(params)}`)
   }
+
+  getItem(bucket, key) {
+    return this.get(`/bucket/${bucket}/${key}`)
+  }
+
+  deleteItem(bucket, key) {
+    return this.delete(`/bucket/${bucket}/${key}`)
+  }
+
+  putItem(bucket, key, entry) {
+    return this.put(`/bucket/${bucket}/${key}`, entry)
+  }
+
 }
 
 export const dbAPI = new APIDb()
