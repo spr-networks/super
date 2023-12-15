@@ -39,7 +39,7 @@ func updateTopicLimit(db *bolt.DB, limit TopicLimit) {
 
 }
 
-func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool) (error, bool) {
+func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool, force bool) (error, bool) {
 	fstat, err := os.Stat(dbpath)
 
 	if err != nil {
@@ -48,7 +48,7 @@ func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool
 	}
 
 	//no need to sweep
-	if uint64(fstat.Size()) < config.MaxSize {
+	if !force && uint64(fstat.Size()) < config.MaxSize {
 		return nil, false
 	}
 
@@ -118,11 +118,13 @@ func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool
 }
 
 func CheckSizeLoop(dbpath string, db **bolt.DB, config LogConfig, debug bool) {
+	forceFirstRun := true
 	for {
 		//lock db pointer during deletion
 
 		DBPtr.Lock()
-		err, compacted := CheckSizeIteration(dbpath, *db, config, debug)
+		err, compacted := CheckSizeIteration(dbpath, *db, config, debug, forceFirstRun)
+		forceFirstRun = false
 		if err != nil {
 			log.Println("db cleanup error:", err)
 		} else if compacted {
