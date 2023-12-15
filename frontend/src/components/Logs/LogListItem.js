@@ -496,11 +496,11 @@ const LogListItemHeader = ({
       py="$0.5"
       space="md"
     >
-      <Text size="xs" bold>
-        {prettyDate(item.Timestamp || item.time)}
-      </Text>
-
-      {TitleComponent}
+      {TitleComponent || (
+        <Text size="xs" bold>
+          {prettyDate(item.Timestamp || item.time)}
+        </Text>
+      )}
 
       <ButtonGroup ml="auto" space="md">
         <Tooltip label="Toggle JSON data">
