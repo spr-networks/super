@@ -97,7 +97,7 @@ func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool
 	fstat, err = os.Stat(dbpath)
 
 	//if less than 25% over dont compact
-	if uint64(fstat.Size()) < uint64(1.25*float64(config.MaxSize)) {
+	if !force && uint64(fstat.Size()) < uint64(1.25*float64(config.MaxSize)) {
 		return nil, false
 	}
 
