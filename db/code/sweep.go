@@ -59,7 +59,7 @@ func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool
 		log.Printf("cleanup: db size > max size: %v > %v\n", fstat.Size(), config.MaxSize)
 	}
 
-	pMinEntriesDelete := 1000
+	pMinEntriesDelete := 256
 
 	//1. get size of db + all buckets and num keys
 	if err := db.Update(func(tx *bolt.Tx) error {
