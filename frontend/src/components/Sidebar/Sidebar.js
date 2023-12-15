@@ -233,7 +233,8 @@ const SidebarItem = (props) => {
                 {isMini ? null : (
                   <Text
                     fontWeight="300"
-                    size="sm"
+                    _size="sm"
+                    fontSize={14}
                     color={colorMode == 'light' ? '#11181c' : '$coolGray300'}
                   >
                     {item.name}
