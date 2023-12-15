@@ -74,6 +74,8 @@ const GroupItem = React.memo(({ name, size }) => {
 })
 
 const InterfaceItem = React.memo(({ name, address, size, ...props }) => {
+  if (!name) return <></>
+
   let isWifi = name?.startsWith('wlan')
   let isOffline = !name?.length
   let colorMode = useColorMode()
