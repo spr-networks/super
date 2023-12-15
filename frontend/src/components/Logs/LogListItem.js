@@ -353,32 +353,44 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
       proto = 'udp'
     }
 
+    const desktopOnly = {
+      display: 'none',
+      sx: {
+        '@md': {
+          display: 'flex'
+        }
+      }
+    }
+
     return (
       <VStack
         flex={1}
         justifyContent="space-between"
+        space="md"
         sx={{ '@md': { flexDirection: 'row' } }}
       >
         <HStack flex={1} space="md" alignItems="center">
           <DeviceItem
             show={['Style', 'Name']}
             flex={1}
-            hideMissing={true}
+            hideMissing={false}
             item={context.getDevice(item.Ethernet.SrcMAC)}
           />
-          <Text size="sm" bold>
-            {item.IP.SrcIP}
-          </Text>
-          {srcPort ? (
-            <HStack space="sm">
-              <ProtocolItem name={proto} size="sm" />
-              <Text size="sm">{srcPort}</Text>
+          <HStack space="sm">
+            <InterfaceItem name={item.InDev} {...desktopOnly} />
+            <ProtocolItem name={proto} size="sm" />
+            <HStack>
+              <Text size="sm" bold>
+                {item.IP.SrcIP}
+              </Text>
+              {srcPort ? <Text size="sm">:{srcPort}</Text> : null}
             </HStack>
-          ) : null}
-          <InterfaceItem name={item.InDev} />
+          </HStack>
         </HStack>
 
-        <Icon as={ArrowRightIcon} color="$muted500" mx="$4" />
+        <HStack mx="$4" alignItems="center" justifyContent="center">
+          <Icon as={ArrowRightIcon} color="$muted500" />
+        </HStack>
 
         <HStack
           flex={1}
@@ -386,22 +398,22 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
           alignItems="center"
           justifyContent="space-between"
         >
+          <HStack flex={1} space="sm">
+            {/*<ProtocolItem name={proto} size="sm" />*/}
+            <HStack>
+              <Text size="sm" bold>
+                {item.IP.DstIP}
+              </Text>
+              {dstPort ? <Text size="sm">:{dstPort}</Text> : null}
+            </HStack>
+            <InterfaceItem {...desktopOnly} name={item.OutDev} />
+          </HStack>
           <DeviceItem
             show={['Style', 'Name']}
             flex={1}
             hideMissing={true}
             item={context.getDevice(item.Ethernet.DstMAC)}
           />
-          <Text size="sm" bold>
-            {item.IP.DstIP}
-          </Text>
-          {dstPort ? (
-            <HStack space="sm">
-              <ProtocolItem name={proto} size="sm" />
-              <Text size="sm">{dstPort}</Text>
-            </HStack>
-          ) : null}
-          <InterfaceItem name={item.InDev} />
         </HStack>
       </VStack>
     )
