@@ -4,6 +4,7 @@
  * pagination
  */
 import React, { useContext, useEffect, useState } from 'react'
+import { Platform } from 'react-native'
 import { prettyDate } from 'utils'
 import { Buffer } from 'buffer'
 import { JSONSyntax, HEXSyntax } from 'components/SyntaxHighlighter'
