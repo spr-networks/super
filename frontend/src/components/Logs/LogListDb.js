@@ -19,7 +19,7 @@ import {
   SettingsIcon
 } from '@gluestack-ui/themed'
 
-import { ModalContext } from 'AppContext'
+import { AlertContext, ModalContext } from 'AppContext'
 import { EditDatabase } from 'views/System/EditDatabase'
 import LogListItem from './LogListItem'
 import FilterInputSelect from './FilterInputSelect'
@@ -28,6 +28,7 @@ import Pagination from 'components/Pagination'
 import { Tooltip } from 'components/Tooltip'
 
 const LogList = (props) => {
+  const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
   const [topics, setTopics] = useState([])
   const [filter, setFilter] = useState({})
@@ -49,28 +50,33 @@ const LogList = (props) => {
 
     setParams({ ...params, num, max })
 
-    dbAPI.buckets().then((buckets) => {
-      const ignoreList = ['alert:']
-      for (let ignore of ignoreList) {
-        buckets = buckets.filter((b) => !b.startsWith(ignore))
-      }
-
-      buckets.sort((a, b) => {
-        //force dns to the end as each client has its own bucket.
-        if (b.startsWith('dns:') && !a.startsWith('dns:')) {
-          return -1
+    dbAPI
+      .buckets()
+      .then((buckets) => {
+        const ignoreList = ['alert:']
+        for (let ignore of ignoreList) {
+          buckets = buckets.filter((b) => !b.startsWith(ignore))
         }
 
-        //and force log: to the top
-        if (a.startsWith('log:') && !b.startsWith('log:')) {
-          return -1
-        }
+        buckets.sort((a, b) => {
+          //force dns to the end as each client has its own bucket.
+          if (b.startsWith('dns:') && !a.startsWith('dns:')) {
+            return -1
+          }
 
-        return a.localeCompare(b)
+          //and force log: to the top
+          if (a.startsWith('log:') && !b.startsWith('log:')) {
+            return -1
+          }
+
+          return a.localeCompare(b)
+        })
+
+        setTopics(buckets)
       })
-
-      setTopics(buckets)
-    })
+      .catch((err) => {
+        context.error(`db plugin not running`)
+      })
   }, [])
 
   useEffect(() => {
