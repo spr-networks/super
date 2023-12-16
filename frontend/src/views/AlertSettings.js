@@ -4,13 +4,9 @@ import { Dimensions, Platform } from 'react-native'
 import {
   Button,
   ButtonIcon,
-  Box,
   FlatList,
   HStack,
   Icon,
-  Input,
-  InputField,
-  InputSlot,
   Menu,
   MenuItem,
   MenuItemLabel,
@@ -19,28 +15,18 @@ import {
   VStack,
   Text,
   TrashIcon,
-  ThreeDotsIcon
+  ThreeDotsIcon,
+  Badge,
+  BadgeText
 } from '@gluestack-ui/themed'
 
 import { alertsAPI, dbAPI } from 'api'
 import AddAlert from 'components/Alerts/AddAlert'
-import { AlertContext } from 'layouts/Admin'
-import { ModalContext } from 'AppContext'
+import { AlertContext, ModalContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import { ListHeader } from 'components/List'
 import { ListItem } from 'components/List'
-import {
-  BellIcon,
-  BellOffIcon,
-  PencilIcon,
-  SlidersHorizontalIcon
-} from 'lucide-react-native'
-
-import LogListItem from 'components/Logs/LogListItem'
-import FilterSelect from 'components/Logs/FilterSelect'
-import { Select } from 'components/Select'
-import Pagination from 'components/Pagination'
-import { Tooltip } from 'components/Tooltip'
+import { BellIcon, BellOffIcon, PencilIcon } from 'lucide-react-native'
 
 const AlertItem = ({
   item,
@@ -110,6 +96,14 @@ const AlertItem = ({
       <Text flex={1} size="md">
         {item.Actions?.[0]?.MessageTitle || 'N/A'}
       </Text>
+
+      {/*<Badge
+        variant="outline"
+        action={item.Actions?.[0]?.NotificationType || 'info'}
+        rounded="$md"
+      >
+        <BadgeText>{item.Actions?.[0]?.NotificationType || 'info'}</BadgeText>
+      </Badge>*/}
 
       <HStack flex={1}>
         {item.Actions.map((action) => (
@@ -254,11 +248,16 @@ const AlertSettings = (props) => {
 
     item.Actions[0].SendNotification = !item.Actions[0].SendNotification
 
-    alertsAPI.update(index, item).then((res) => {
-      let _alerts = [...config]
-      _alerts[index] = item
-      setConfig(_alerts)
-    })
+    alertsAPI
+      .update(index, item)
+      .then((res) => {
+        let _alerts = [...config]
+        _alerts[index] = item
+        setConfig(_alerts)
+      })
+      .catch((err) => {
+        context.error('Failed to update alert')
+      })
   }
 
   const onToggleStore = (index, item) => {

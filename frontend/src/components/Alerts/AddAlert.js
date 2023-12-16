@@ -17,14 +17,35 @@ import {
   VStack,
   Text,
   TrashIcon,
-  AddIcon
+  AddIcon,
+  CheckIcon
 } from '@gluestack-ui/themed'
 
 import { Select } from 'components/Select'
 import FilterInputSelect from 'components/Logs/FilterInputSelect'
 
 import { dbAPI } from 'api'
-import { CheckCircle2Icon } from 'lucide-react-native'
+import { CheckCircle2Icon, XIcon } from 'lucide-react-native'
+
+const getAlertMessageForTopic = (topic) => {
+  if (topic.startsWith('dns:serve:')) {
+    return ['DNS', `DNS Lookup {{FirstName}}`]
+  }
+
+  if (topic.startsWith('nft:drop:input')) {
+    return ['Drop', `Src = {{Ethernet.SrcMAC}}`]
+  }
+
+  if (topic.startsWith('wifi:auth:success')) {
+    return ['WiFi Alert', `WiFi Connected {{MAC}}`]
+  }
+
+  if (topic.startsWith('wifi:station:disconnect')) {
+    return ['WiFi Alert', `WiFi Disconnect {{MAC}}`]
+  }
+
+  return ['', '']
+}
 
 const AddAlert = ({ onSubmit, curItem, ...props }) => {
   const [TopicPrefix, setTopicPrefix] = useState('nft:drop:input')
@@ -34,6 +55,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
   const [Disabled, setDisabled] = useState(false)
   const [logItems, setLogItems] = useState([])
   const [notificationType, setNotificationType] = useState('info')
+  const [Name, setName] = useState('Alert')
 
   //only one action is supported now. in the future we will implement
   // different action types, for example, disconnecting a device.
@@ -43,39 +65,57 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
     StoreAlert: true,
     NotificationType: 'info'
   })
-  const [Name, setName] = useState('')
 
-  const NotificationTypes = [
-    'info',
-    'warning',
-    'success',
-    'error'
-    //'danger'
-  ].map((x) => ({
-    label: x,
-    value: x
-  }))
+  const NotificationTypes = ['info', 'warning', 'success', 'error'].map(
+    (x) => ({
+      label: x,
+      value: x
+    })
+  )
 
   useEffect(() => {
-    if (curItem != null) {
-      //populate the modal from it
-      setName(curItem.Name)
-      setTopicPrefix(curItem.TopicPrefix)
-      setMatchAnyOne(curItem.MatchAnyOne)
-      setInvertRule(curItem.InvertRule)
-      if (curItem.Conditions) {
-        setConditions(curItem.Conditions)
-      }
-      setDisabled(curItem.Disabled)
-      if (curItem.GrabFields) {
-        setGrabFields(curItem.GrabFields)
-      }
-      //only one action supported currently
-      if (curItem.Actions) {
-        setActionConfig(curItem.Actions[0])
-      }
+    if (!curItem) {
+      return
     }
-  }, [])
+
+    //populate the modal from it
+    setName(curItem.Name)
+    setTopicPrefix(curItem.TopicPrefix)
+    setMatchAnyOne(curItem.MatchAnyOne)
+    setInvertRule(curItem.InvertRule)
+    if (curItem.Conditions) {
+      setConditions(curItem.Conditions)
+    }
+    setDisabled(curItem.Disabled)
+    if (curItem.GrabFields) {
+      setGrabFields(curItem.GrabFields)
+    }
+    //only one action supported currently
+    if (curItem.Actions) {
+      setActionConfig(curItem.Actions[0])
+    }
+  }, [curItem])
+
+  const getAlertFromData = (form) => {
+    let { TopicPrefix } = form
+    let [MessageTitle, MessageBody] = getAlertMessageForTopic(TopicPrefix)
+
+    return { ...form, MessageTitle, MessageBody }
+  }
+
+  //load default body from prefix
+  useEffect(() => {
+    if (ActionConfig.MessageBody?.length) {
+      return
+    }
+
+    let { MessageTitle, MessageBody } = getAlertFromData({
+      TopicPrefix,
+      ...ActionConfig
+    })
+
+    setActionConfig({ ...ActionConfig, MessageTitle, MessageBody })
+  }, [TopicPrefix])
 
   // fetch sample with this prefix to get json syntax
   const getLogs = async (bucket) => {
@@ -127,6 +167,10 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
     console.log('!!SUBMIT=', item)
 
     onSubmit(item)
+  }
+
+  const resetForm = () => {
+    setActionConfig({ ...ActionConfig, MessageTitle: '', MessageBody: '' })
   }
 
   const handleConditionChange = (value, index) => {
@@ -335,6 +379,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
               })
             }
           />
+
           <FormControlHelper>
             <FormControlHelperText>
               Show Notification on trigger
@@ -447,9 +492,24 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
         </Button>
       </VStack>
 
-      <Button action="primary" size="md" onPress={handleSubmit}>
-        <ButtonText>Save</ButtonText>
-      </Button>
+      <HStack space="md">
+        <Button flex={2} action="primary" size="md" onPress={handleSubmit}>
+          <ButtonText>Save</ButtonText>
+          <ButtonIcon as={CheckIcon} ml="$2" />
+        </Button>
+        {/*
+        <Button
+          flex={1}
+          action="secondary"
+          variant="outline"
+          size="md"
+          onPress={resetForm}
+        >
+          <ButtonText>Reset Form</ButtonText>
+          <ButtonIcon as={XIcon} ml="$2" />
+        </Button>
+        */}
+      </HStack>
     </VStack>
   )
 }
