@@ -17,13 +17,11 @@ import {
   VStack,
   Text,
   TrashIcon,
-  AddIcon,
-  Heading
+  AddIcon
 } from '@gluestack-ui/themed'
 
 import { Select } from 'components/Select'
 import FilterInputSelect from 'components/Logs/FilterInputSelect'
-import InputSelect from 'components/InputSelect'
 
 import { dbAPI } from 'api'
 import { CheckCircle2Icon } from 'lucide-react-native'
@@ -51,8 +49,8 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
     'info',
     'warning',
     'success',
-    'error',
-    'danger'
+    'error'
+    //'danger'
   ].map((x) => ({
     label: x,
     value: x
@@ -176,12 +174,14 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
           <FormControlLabel alignItems="center">
             <FormControlLabelText>Notification Type</FormControlLabelText>
           </FormControlLabel>
-          <InputSelect
-            options={NotificationTypes}
-            value={notificationType}
-            onChange={(v) => setNotificationType(v)}
-            onChangeText={(v) => setNotificationType(v)}
-          />
+          <Select
+            selectedValue={notificationType}
+            onValueChange={(value) => setNotificationType(value)}
+          >
+            {NotificationTypes.map((opt) => (
+              <Select.Item key={opt} label={opt.label} value={opt.value} />
+            ))}
+          </Select>
         </FormControl>
       </HStack>
 
