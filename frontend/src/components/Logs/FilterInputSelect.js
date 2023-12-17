@@ -56,6 +56,7 @@ const FilterInputSelect = ({
           value={value}
           onChangeText={onChangeText}
           placeholder={props.placeholder || 'Search'}
+          autoCapitalize="none"
         />
 
         <InputSlot pr="$3" onPress={handlePressFilter}>

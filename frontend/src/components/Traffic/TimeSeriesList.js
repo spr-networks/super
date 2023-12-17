@@ -88,7 +88,13 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
     for (let r in asnToIcon) {
       if (asnName.match(new RegExp(`${r}`))) {
         return (
-          <Box p={1} _dark={{ bg: 'muted.100', rounded: 'full' }} mr={1}>
+          <Box
+            p={1}
+            sx={{
+              _dark: { bg: '$muted100', rounded: '$full' }
+            }}
+            mr={1}
+          >
             {asnToIcon[r]}
           </Box>
         )

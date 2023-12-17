@@ -159,17 +159,19 @@ const WifiClients = (props) => {
       estimatedItemSize={100}
       renderItem={({ item }) => (
         <ListItem>
-          <DeviceItem item={item} w="$1/2" justifyContent="space-between" />
+          <DeviceItem item={item} flex={3} justifyContent="space-between" />
           <Box
-            flex={1}
-            sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
+            sx={{
+              '@base': { display: 'none' },
+              '@md': { display: 'flex', flex: 1 }
+            }}
             alignItems="center"
           >
             <InterfaceItem name={item.Iface + '-' + item.AP} />
           </Box>
 
           <VStack
-            flex={2}
+            flex={1}
             space="md"
             alignItems="flex-end"
             sx={{ '@md': { flexDirection: 'row' } }}

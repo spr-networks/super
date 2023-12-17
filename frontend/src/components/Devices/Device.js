@@ -449,7 +449,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
                           ? '$green600'
                           : colorMode == 'light'
                           ? '$muted200'
-                          : 'muted.700'
+                          : '$muted700'
                       }
                     />
                   </Box>
