@@ -80,7 +80,29 @@ const buildQuery = (values) => {
   return query
 }
 
+const prettyJSONPath = (query) => {
+  //sample query: $[?(@.InDev=="wlan1.1024")]
+  let q = query.replace(/\$\[\?\(([^\)]+)\)\]/, '$1')
+  // for now always an array of objects
+  q = q.replace(/^@\./, '')
+
+  return q
+}
+
+const prettyToJSONPath = (query) => {
+  if (query.startsWith('$[?(@.')) {
+    return query
+  }
+
+  //TODO if multiple: split & map to set @.
+  let subq = `@.${query}`
+  let q = `$[?(${subq})]`
+  return q
+}
+
 const FilterSelect = ({ items, onSubmitEditing, topic, query, ...props }) => {
+  const isMultiple = false // only edit one key at a time
+
   const [selected, setSelected] = useState(null)
   const [values, setValues] = useState({})
   const [keys, setKeys] = useState([])
@@ -146,6 +168,9 @@ const FilterSelect = ({ items, onSubmitEditing, topic, query, ...props }) => {
     if (!value) {
       delete vals[selected]
     } else {
+      if (!isMultiple) {
+        vals = {}
+      }
       let op = '=='
       //TODO support more: <,>,!=
       if (value.startsWith('^')) {
@@ -165,7 +190,7 @@ const FilterSelect = ({ items, onSubmitEditing, topic, query, ...props }) => {
       return false
     }*/
 
-    onSubmitEditing(query)
+    onSubmitEditing(prettyJSONPath(query))
   }
 
   return (
@@ -212,7 +237,7 @@ const FilterSelect = ({ items, onSubmitEditing, topic, query, ...props }) => {
         {/*<Text size="xs">{JSON.stringify(values)}</Text>*/}
       </VStack>
 
-      <VStack space="sm">
+      <VStack space="sm" display="none">
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText>Query</FormControlLabelText>
@@ -270,4 +295,4 @@ FilterSelect.propTypes = {
 
 export default FilterSelect
 
-export { FilterSelect }
+export { prettyJSONPath, prettyToJSONPath, FilterSelect }

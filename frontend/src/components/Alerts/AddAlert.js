@@ -23,9 +23,10 @@ import {
 
 import { Select } from 'components/Select'
 import FilterInputSelect from 'components/Logs/FilterInputSelect'
+import { prettyJSONPath, prettyToJSONPath } from 'components/Logs/FilterSelect'
 
 import { dbAPI } from 'api'
-import { CheckCircle2Icon, XIcon } from 'lucide-react-native'
+import { CheckCircle2Icon } from 'lucide-react-native'
 
 const getAlertMessageForTopic = (topic) => {
   if (topic.startsWith('dns:serve:')) {
@@ -84,7 +85,13 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
     setMatchAnyOne(curItem.MatchAnyOne)
     setInvertRule(curItem.InvertRule)
     if (curItem.Conditions) {
-      setConditions(curItem.Conditions)
+      let conditions = curItem.Conditions.map((c) => {
+        return {
+          ...c,
+          JPath: prettyJSONPath(c.JPath)
+        }
+      })
+      setConditions(conditions)
     }
     setDisabled(curItem.Disabled)
     if (curItem.GrabFields) {
@@ -154,19 +161,22 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
     if (GrabFields.length > 0) {
       action.GrabFields = GrabFields
     }
+
     action.NotificationType = notificationType
+
+    let conditions = Conditions.map((c) => {
+      return { ...c, JPath: prettyToJSONPath(c.JPath) }
+    })
 
     let item = {
       TopicPrefix,
       MatchAnyOne,
       InvertRule,
-      Conditions,
+      Conditions: conditions,
       Actions: [action],
       Name,
       Disabled
     }
-
-    console.log('!!SUBMIT=', item)
 
     onSubmit(item)
   }
