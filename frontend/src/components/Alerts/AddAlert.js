@@ -115,7 +115,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
     })
 
     //NOTE curItem and useEffect can race when setting on init
-    let config = { ...curItem.Actions[0], ...ActionConfig }
+    let config = { ...curItem?.Actions[0], ...ActionConfig }
     setActionConfig({ ...config, MessageTitle, MessageBody })
   }, [TopicPrefix])
 
