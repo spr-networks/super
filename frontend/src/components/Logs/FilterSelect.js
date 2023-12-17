@@ -112,6 +112,7 @@ const FilterSelect = ({ items, onSubmitEditing, topic, query, ...props }) => {
           .filter((k) => commons.includes(k))
           .map((k) => key + '.' + k)
         keys = keys.concat(z)
+        keys = keys.filter((k) => k != key) // remove objs
       }
     })
 
