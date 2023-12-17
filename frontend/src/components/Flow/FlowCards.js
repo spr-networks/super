@@ -1,18 +1,4 @@
-import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
-import {
-  faBan,
-  faBox,
-  faBroadcastTower,
-  faCircleArrowRight,
-  faClock,
-  faEllipsis,
-  faForward,
-  faObjectGroup,
-  faRepeat,
-  faTag,
-  faTags
-} from '@fortawesome/free-solid-svg-icons'
 
 import {
   BanIcon,
@@ -366,12 +352,15 @@ const actions = [
                 }
               }
 
-
               //and the fw config for custom interfaces
               firewallAPI.config().then((fwconfig) => {
-                let ifaces = Array(...new Set(fwconfig.CustomInterfaceRules.map(a=>a.Interface)))
+                let ifaces = Array(
+                  ...new Set(
+                    fwconfig.CustomInterfaceRules.map((a) => a.Interface)
+                  )
+                )
                 for (let iface of ifaces) {
-                  s.push({label: iface, value: iface})
+                  s.push({ label: iface, value: iface })
                 }
                 resolve(s)
               })
@@ -429,8 +418,7 @@ const actions = [
       {
         name: 'DstInterface',
         type: PropTypes.string,
-        description:
-          'Destination site'
+        description: 'Destination site'
       },
       {
         name: 'Dst',
@@ -481,13 +469,16 @@ const actions = [
               }
 
               firewallAPI.config().then((fwconfig) => {
-                let ifaces = Array(...new Set(fwconfig.CustomInterfaceRules.map(a=>a.Interface)))
+                let ifaces = Array(
+                  ...new Set(
+                    fwconfig.CustomInterfaceRules.map((a) => a.Interface)
+                  )
+                )
                 for (let iface of ifaces) {
-                  s.push({label: iface, value: iface})
+                  s.push({ label: iface, value: iface })
                 }
                 resolve(s)
               })
-
             })
           })
         })

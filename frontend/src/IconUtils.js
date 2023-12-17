@@ -1,78 +1,7 @@
 import React from 'react'
-import { FontAwesomeIcon as FontAwesomeIconNative } from '@fortawesome/react-native-fontawesome'
-import { FontAwesomeIcon as FontAwesomeIconReact } from '@fortawesome/react-fontawesome'
-import { Platform, StyleSheet } from 'react-native'
-import { Icon as IconNb, useToken } from '@gluestack-ui/themed'
-export * from '@fortawesome/react-native-fontawesome'
 
 import { createIcon } from '@gluestack-ui/themed'
 import { Svg, Path, Use, G, Symbol } from 'react-native-svg'
-
-const FontAwesomeIcon = FontAwesomeIconNative
-
-/*FaIcon.propTypes = {
-  icon: PropTypes.object,
-  color: PropTypes.string,
-  size: PropTypes.oneOfType([PropTypes.number, PropTypes.string])
-}*/
-
-export default function Icon({ color, icon, size, style, ...props }) {
-  // behave like native base
-  if (!parseInt(size)) {
-    let szs = {
-      xs: 3,
-      md: 4,
-      lg: 5,
-      xl: 6
-    }
-
-    size = szs[size] || 4
-  }
-
-  size = size ? parseInt(size) * 4 : 16
-  size = parseInt(size)
-
-  style = style || {}
-
-  if (props.mr) {
-    style.marginRight = props.mr * 4
-  }
-
-  if (props.ml) {
-    style.marginLeft = props.ml * 4
-  }
-
-  color = color?.replace(/^\$/, '')?.replace(/\./g, '') // amber.400, $amber400 => amber400
-
-  const webStyles = StyleSheet.flatten([
-    style,
-    {
-      color: useToken('colors', color),
-      width: size,
-      height: size
-    }
-  ])
-
-  /*if (typeof icon === 'string') {
-      return <FontAwesomeIconReact icon={solid('coffee')} style={webStyles} />
-    }*/
-
-  if (Platform.OS === 'web') {
-    return <FontAwesomeIconReact icon={icon} style={webStyles} />
-  }
-
-  return <FontAwesomeIconNative icon={icon} size={size} style={webStyles} />
-
-  /*return (
-    <IconNb
-      as={FontAwesomeIcon}
-      icon={icon}
-      size={size}
-      color={color}
-      {...props}
-    />
-  )*/
-}
 
 const Akamai = createIcon({
   viewBox: '0 0 24 24',
@@ -488,4 +417,4 @@ const BrandIcons = {
   Wireguard
 }
 
-export { Icon, FontAwesomeIcon, BrandIcons }
+export { BrandIcons }
