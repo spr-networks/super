@@ -92,7 +92,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
     }
     //only one action supported currently
     if (curItem.Actions) {
-      setActionConfig(curItem.Actions[0])
+      setActionConfig({ ...curItem.Actions[0] })
     }
   }, [curItem])
 
@@ -114,7 +114,9 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
       ...ActionConfig
     })
 
-    setActionConfig({ ...ActionConfig, MessageTitle, MessageBody })
+    //NOTE curItem and useEffect can race when setting on init
+    let config = { ...curItem.Actions[0], ...ActionConfig }
+    setActionConfig({ ...config, MessageTitle, MessageBody })
   }, [TopicPrefix])
 
   // fetch sample with this prefix to get json syntax
