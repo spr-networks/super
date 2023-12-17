@@ -167,7 +167,9 @@ const WifiClients = (props) => {
             }}
             alignItems="center"
           >
-            <InterfaceItem name={item.Iface + '-' + item.AP} />
+            <InterfaceItem
+              name={item.AP ? `${item.Iface}-${item.AP}` : item.Iface}
+            />
           </Box>
 
           <VStack
