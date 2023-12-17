@@ -43,8 +43,8 @@ const DeviceItem = React.memo(({ item, show, size, ...props }) => {
           flex={1}
           size={textSize}
           bold={!!item?.Name}
-          w="$1/3"
-          minWidth="$24"
+          w="$1/4"
+          minWidth="$20"
         >
           {item?.Name || 'N/A'}
         </Text>
