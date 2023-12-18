@@ -25,9 +25,9 @@ class AddForwardImpl extends React.Component {
   state = {
     Protocol: 'tcp',
     SrcIP: '0.0.0.0/0',
-    SrcPort: 'any',
+    SrcPort: '',
     DstIP: '',
-    DstPort: 'any'
+    DstPort: ''
   }
 
   constructor(props) {
@@ -46,9 +46,9 @@ class AddForwardImpl extends React.Component {
     let rule = {
       Protocol: this.state.Protocol,
       SrcIP: this.state.SrcIP,
-      SrcPort: this.state.SrcPort,
+      SrcPort: this.state.SrcPort || 'any',
       DstIP: this.state.DstIP,
-      DstPort: this.state.DstPort
+      DstPort: this.state.DstPort || 'any'
     }
 
     firewallAPI
@@ -104,7 +104,7 @@ class AddForwardImpl extends React.Component {
 
           <FormControlHelper>
             <FormControlHelperText>
-              Optional port or port range (leave empty for all ports)
+              Optional port or port range, leave empty for all ports
             </FormControlHelperText>
           </FormControlHelper>
         </FormControl>

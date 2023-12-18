@@ -112,7 +112,7 @@ class AddForwardBlockImpl extends React.Component {
           </Input>
           <FormControlHelper>
             <FormControlHelperText>
-              Optional port or port range (leave empty for all ports)
+              Optional port or port range, leave empty for all ports
             </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
