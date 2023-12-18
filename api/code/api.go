@@ -218,7 +218,8 @@ func getStatus(w http.ResponseWriter, r *http.Request) {
 func getFeatures(w http.ResponseWriter, r *http.Request) {
 	reply := []string{"dns"}
 	//check which features are enabled
-	if os.Getenv("VIRTUAL_SPR") == "" {
+	virtual_spr := os.Getenv("VIRTUAL_SPR")
+	if virtual_spr == "" || virtual_spr == "TEST" {
 		reply = append(reply, "wifi")
 	}
 
