@@ -70,8 +70,10 @@ const AuthTokenList = (props) => {
             if (data.includes("Invalid JWT")) {
               //re-log OTP
               setJWTOTPHeader('')
-              setAuthReturn('/admin/auth')
-              navigate('/auth/validate')
+              if (status == 'registered') {
+                setAuthReturn('/admin/auth')
+                navigate('/auth/validate')
+              }
             }
           })
           .catch(() => {
@@ -170,7 +172,12 @@ const AuthTokenList = (props) => {
 
       <VStack>
         {tokens !== null && tokens.length === 0 ? (
-          <Text alignSelf="center">There are no API tokens added yet</Text>
+            (status == 'registered') ? (
+              <Text alignSelf="center">There are no API tokens added yet</Text>
+            ) :
+            (
+              <Text alignSelf="center">Register an OTP Code to view and add tokens</Text>
+            )
         ) : null}
       </VStack>
     </View>

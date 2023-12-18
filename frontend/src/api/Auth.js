@@ -21,8 +21,13 @@ export class APIAuth extends API {
     return this.put('otp_register', {Name: 'admin', Code: Otp})
   }
 
-  validateOTP(Otp) {
-    return this.put('otp_validate', {Name: 'admin', Code: Otp})
+  validateOTP(Otp, UpdateAlwaysOn=false, AlwaysOn=false) {
+    let v = {Name: 'admin', Code: Otp}
+    if (UpdateAlwaysOn) {
+      v["UpdateAlwaysOn"] = UpdateAlwaysOn
+      v["AlwaysOn"] = AlwaysOn
+    }
+    return this.put('otp_validate', v)
   }
 
   statusOTP(name='admin') {
