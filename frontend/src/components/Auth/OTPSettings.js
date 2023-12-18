@@ -70,6 +70,7 @@ const OTPSettings = (props) => {
     authAPI.validateOTP(code, true, alwaysOn).then((res) => {
       setJWTOTPHeader(res)
       context.success("OTP Validated")
+      setStatus("registered")
     })
     .catch((err) => {
       context.error("Invalid OTP Code")
