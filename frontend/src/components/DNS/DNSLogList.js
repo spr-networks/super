@@ -102,8 +102,9 @@ const DNSLogList = ({ title, description, ...props }) => {
     if (value.length == 0) {
       return
     }
-    if (value.charAt(value.length-1) != '.') {
-      //append trailing dot
+
+    //append trailing dot
+    if (type == 'Domain' && !value.endsWith('.')) {
       value = value + '.'
     }
 
