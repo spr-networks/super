@@ -101,6 +101,12 @@ class AddForwardImpl extends React.Component {
               onChangeText={(value) => this.handleChange('SrcPort', value)}
             />
           </Input>
+
+          <FormControlHelper>
+            <FormControlHelperText>
+              Optional port or port range (leave empty for all ports)
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
         <FormControl>
