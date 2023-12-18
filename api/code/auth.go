@@ -248,6 +248,8 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 			}
 		}
 
+		redirect_validate := false
+
 		//basic auth
 		username, password, ok := r.BasicAuth()
 		if ok {
@@ -256,6 +258,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 				//check if all user requests should have a JWT check, if so, use it.
 				if shouldCheckOTPJWT(username) && !hasValidJwtOtpHeader(username, w, r) {
 					reason = "invalid or missing JWT OTP"
+					redirect_validate = true
 				} else {
 					sprbus.Publish("auth:success", map[string]string{"type": "user", "username": username, "reason": "api"})
 
@@ -279,7 +282,12 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 
 		if authenticatedNext.Match(r, &matchInfo) || setupMode.Match(r, &matchInfo) {
 			sprbus.Publish("auth:failure", map[string]string{"reason": reason, "type": failType, "name": tokenName + username})
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+
+			if redirect_validate {
+				http.Redirect(w, r, "/auth/validate", 302)
+			} else {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			}
 			return
 		} else {
 			//last try public route
@@ -290,7 +298,11 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 		}
 
 		sprbus.Publish("auth:failure", map[string]string{"reason": "unknown route, no credentials", "type": failType, "name": tokenName + username})
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		if redirect_validate {
+			http.Redirect(w, r, "/auth/validate", 302)
+		} else {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		}
 	})
 }
 
@@ -581,6 +593,10 @@ func initJwtOtpSecret() {
 	}
 }
 
+func initAuth() {
+	initJwtOtpSecret()
+}
+
 func generateOTPToken(w http.ResponseWriter, r *http.Request) {
 	Tokensmtx.Lock()
 	defer Tokensmtx.Unlock()
@@ -595,8 +611,6 @@ func generateOTPToken(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "OTP Validation Failed", 400)
 		return
 	}
-
-	initJwtOtpSecret()
 
 	if len(gJwtOtpSecret) != 32 {
 		http.Error(w, "JWT OTP Setup Failed", 400)

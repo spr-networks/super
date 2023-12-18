@@ -2810,6 +2810,8 @@ func main() {
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
+	initAuth()
+
 	//set up dhcp
 	initDHCP()
 	//initialize firewall rules
