@@ -256,7 +256,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 			failType = "user"
 			if authenticateUser(username, password) {
 				//check if all user requests should have a JWT check, if so, use it.
-				if shouldCheckOTPJWT(username) && !hasValidJwtOtpHeader(username, w, r) {
+				if shouldCheckOTPJWT(r, username) && !hasValidJwtOtpHeader(username, r) {
 					reason = "invalid or missing JWT OTP"
 					redirect_validate = true
 				} else {
@@ -634,15 +634,19 @@ func generateOTPToken(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(tokenString)
 }
 
-func hasValidJwtOtpHeader(username string, w http.ResponseWriter, r *http.Request) bool {
+func hasValidJwtOtpHeader(username string, r *http.Request) bool {
 	jwtOtpHeaderString := r.Header.Get(gJwtOtpHeader)
 	if jwtOtpHeaderString == "" {
 		log.Println("missing JWT Header for validation")
 		return false
 	}
 
+	return validateJwt(username, jwtOtpHeaderString)
+}
+
+func validateJwt(username string, jwtString string) bool {
 	// Parsing the token
-	token, err := jwt.Parse(jwtOtpHeaderString, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(jwtString, func(token *jwt.Token) (interface{}, error) {
 		// Validating the algorithm used is what you expect
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
@@ -681,7 +685,7 @@ func applyJwtOtpCheck(handler http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		if !hasValidJwtOtpHeader(username, w, r) {
+		if !hasValidJwtOtpHeader(username, r) {
 			http.Error(w, "Invalid JWT", 400)
 			return
 		}
@@ -689,7 +693,12 @@ func applyJwtOtpCheck(handler http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func shouldCheckOTPJWT(username string) bool {
+func shouldCheckOTPJWT(r *http.Request, username string) bool {
+
+	if r.URL.Path == "/otp_validate" {
+		return false
+	}
+
 	settings, err := otpLoadLocked()
 	if err == nil {
 		for _, entry := range settings.OTPUsers {
