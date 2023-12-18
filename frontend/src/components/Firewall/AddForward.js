@@ -93,7 +93,9 @@ class AddForwardImpl extends React.Component {
         </FormControl>
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Incoming Port</FormControlLabelText>
+            <FormControlLabelText>
+              Original Destination Port
+            </FormControlLabelText>
           </FormControlLabel>
           <Input size="md" variant="underlined">
             <InputField
