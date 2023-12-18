@@ -106,7 +106,9 @@ func webSocket(w http.ResponseWriter, r *http.Request) {
 		if len(pieces) > 1 && authenticateUser(pieces[0], pieces[1]) {
 			if shouldCheckOTPJWT(r, pieces[0]) {
 				if len(pieces) != 3 || !validateJwt(pieces[0], pieces[2]) {
-					http.Redirect(w, r, "/auth/validate", 302)
+					//tell WS it a JWT was needed
+					c.WriteMessage(websocket.TextMessage, []byte("Invalid JWT OTP"))
+					c.Close()
 					return
 				}
 			}
