@@ -37,7 +37,7 @@ const Alerts = (props) => {
   const perPage = 20
   const [params, setParams] = useState({ num: perPage })
   const [searchField, setSearchField] = useState('')
-  const [stateFilter, setStateFilter] = useState('All')
+  const [stateFilter, setStateFilter] = useState('New')
 
   const fetchList = () => {
     alertsAPI
@@ -141,7 +141,7 @@ const Alerts = (props) => {
 
   const refModal = useRef(null)
 
-  const stateChoices = ['New', 'Triaged', 'Resolved', 'All']
+  const stateChoices = ['New', 'Resolved', 'All']
 
   const options = stateChoices.map((value) => ({
     label: value,
