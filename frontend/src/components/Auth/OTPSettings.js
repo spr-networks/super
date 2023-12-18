@@ -73,15 +73,14 @@ const OTPSettings = (props) => {
 
   const otp = (e) => {
     let username = 'admin'
-    authAPI
-      .validateOTP(code, true, alwaysOn)
-      .then((res) => {
-        setJWTOTPHeader(res)
-        context.success('OTP Validated')
-      })
-      .catch((err) => {
-        context.error('Invalid OTP Code')
-      })
+    authAPI.validateOTP(code, true, alwaysOn).then((res) => {
+      setJWTOTPHeader(res)
+      context.success("OTP Validated")
+      setStatus("registered")
+    })
+    .catch((err) => {
+      context.error("Invalid OTP Code")
+    })
   }
 
   const handleClickRegister = () => {
