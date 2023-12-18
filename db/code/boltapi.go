@@ -547,8 +547,6 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 
 			jsonMap := bucketItem.Value.(map[string]interface{})
 
-			jsonMap["Key"] = string(k)
-
 			if _, exists := jsonMap["time"]; !exists {
 				// derive time from key
 				if timeStr, err := keyToTimeString(k); err == nil {
@@ -690,10 +688,20 @@ func UpdateBucketItem(w http.ResponseWriter, r *http.Request) {
 	fail := func(cusromErr, origErr error) {
 		log.Println(ApiError{cusromErr, origErr})
 		http.Error(w, cusromErr.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	bucketName := mux.Vars(r)["name"]
 	bucketItemKey := mux.Vars(r)["key"]
+
+	if strings.HasPrefix("bucketItemKey", "timekey:") {
+		b, err := TimeKey(bucketItemKey[len("timekey:"):])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		bucketItemKey = string(b)
+	}
 
 	payload := &BucketItem{Key: bucketItemKey}
 	if err := json.NewDecoder(r.Body).Decode(&payload.Value); err != nil {
