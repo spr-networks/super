@@ -419,18 +419,18 @@ func keyToTimeString(key []byte) (string, error) {
 
 	if len(key) == 8 {
 		ts = time.Unix(0, int64(binary.BigEndian.Uint64(key)))
-	} else if tsp, err := time.Parse(time.RFC3339, string(key)); err == nil {
+	} else if tsp, err := time.Parse(time.RFC3339Nano, string(key)); err == nil {
 		ts = tsp
 	} else {
 		err = errors.New("failed to parse date")
 	}
 
-	return ts.UTC().Format(time.RFC3339), err
+	return ts.UTC().Format(time.RFC3339Nano), err
 }
 
 // timestamp to 8 byte key
 func TimeKey(s string) ([]byte, error) {
-	ts, err := time.Parse(time.RFC3339, s)
+	ts, err := time.Parse(time.RFC3339Nano, s)
 	if err != nil {
 		return nil, errors.New("failed to parse date")
 	}

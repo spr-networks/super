@@ -54,7 +54,7 @@ func cli(db *bolt.DB, bucket string) {
 				if _, exists := jsonMap["time"]; !exists {
 					// time from key
 					t := time.Unix(0, int64(binary.BigEndian.Uint64(k))).UTC()
-					jsonMap["time"] = t.Format(time.RFC3339)
+					jsonMap["time"] = t.Format(time.RFC3339Nano)
 				}
 
 				//x, ok := gjson.Parse(string(v)).Value().(map[string]interface{})
@@ -73,7 +73,7 @@ func cli(db *bolt.DB, bucket string) {
 					fmt.Printf("%s\n", name)
 					stats := bucket.Stats()
 					if os.Getenv("DEBUG") != "" {
-						fmt.Printf("%+v\n", stats)						
+						fmt.Printf("%+v\n", stats)
 					}
 					total += stats.BranchAlloc + stats.LeafAlloc
 					return nil
