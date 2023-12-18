@@ -287,7 +287,6 @@ const InputSelect = (props) => {
         h="$full"
         variant="link"
         rounded="$none"
-        onPress={() => setIsOpen(!isOpen)}
         {...triggerProps}
       >
         <ButtonIcon as={isOpen ? ChevronUpIcon : ChevronDownIcon} />
