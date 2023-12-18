@@ -48,8 +48,10 @@ type OTPUser struct {
 }
 
 type OTPUserRequest struct {
-	Name string
-	Code string
+	Name           string
+	Code           string
+	UpdateAlwaysOn bool
+	AlwaysOn       bool
 }
 
 type OTPSettings struct {
@@ -563,6 +565,11 @@ func validateOTP(w http.ResponseWriter, r *http.Request) (bool, string, error) {
 			current_secret = entry.Secret
 			confirmed = entry.Confirmed
 			settings.OTPUsers[idx].Confirmed = true
+
+			if otpUserReq.UpdateAlwaysOn {
+				settings.OTPUsers[idx].AlwaysOn = otpUserReq.AlwaysOn
+			}
+
 			break
 		}
 	}
