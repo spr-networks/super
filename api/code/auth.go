@@ -559,14 +559,19 @@ func validateOTP(w http.ResponseWriter, r *http.Request) (bool, string, error) {
 
 	code := otpUserReq.Code
 	current_secret := ""
-	confirmed := false
+	update := false
 	for idx, entry := range settings.OTPUsers {
 		if entry.Name == otpUserReq.Name {
 			current_secret = entry.Secret
-			confirmed = entry.Confirmed
+			confirmed := entry.Confirmed
+			if !confirmed {
+				update = true
+			}
 			settings.OTPUsers[idx].Confirmed = true
-
 			if otpUserReq.UpdateAlwaysOn {
+				if settings.OTPUsers[idx].AlwaysOn != otpUserReq.AlwaysOn {
+					update = true
+				}
 				settings.OTPUsers[idx].AlwaysOn = otpUserReq.AlwaysOn
 			}
 
@@ -582,7 +587,7 @@ func validateOTP(w http.ResponseWriter, r *http.Request) (bool, string, error) {
 		return false, "", fmt.Errorf("Invalid OTP Code")
 	}
 
-	if !confirmed {
+	if update {
 		//update confirmed state to True
 		otpSaveLocked(settings)
 	}
