@@ -434,6 +434,10 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         return
       } else if (event.data == 'Authentication failure') {
         return alertState.error('Websocket failed to authenticate')
+      } else if (event.data == 'Invalid JWT OTP') {
+        //user needed an OTP validation
+        navigate('/auth/validate')
+        return
       }
 
       let eventData = JSON.parse(event.data)

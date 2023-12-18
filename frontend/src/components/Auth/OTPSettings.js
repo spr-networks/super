@@ -8,6 +8,10 @@ import {
   Button,
   ButtonText,
   ButtonGroup,
+  Checkbox,
+  CheckboxIcon,
+  CheckboxLabel,
+  CheckboxIndicator,
   Input,
   InputField,
   Text,
@@ -27,6 +31,7 @@ const OTPSettings = (props) => {
   const [status, setStatus] = useState('not configured')
   const [qrCode, setQrCode] = useState(null)
   const [code, setCode] = useState("")
+  const [alwaysOn, setAlwaysOn] = useState(false)
 
   const context = useContext(AlertContext)
 
@@ -37,6 +42,7 @@ const OTPSettings = (props) => {
   const getStatus = () => {
     authAPI.statusOTP().then((status) => {
       setStatus(status.State)
+      setAlwaysOn(status.AlwaysOn)
     }).catch((e) => {
       setStatus("unknown")
       context.error("failed to get status")
@@ -49,7 +55,7 @@ const OTPSettings = (props) => {
         if (user.Name == "admin") {
           if (user.Secret) {
             setQrCode(generateQRCode(user.Secret))
-            setStatus("register")
+            setStatus("registered")
           }
         }
       }
@@ -117,6 +123,16 @@ const OTPSettings = (props) => {
           <Button action="secondary" onPress={handleClickOTP}>
             <ButtonText>Verify OTP Code</ButtonText>
           </Button>
+
+          <Checkbox
+            value={alwaysOn}
+            onChange={setAlwaysOn}>
+            <CheckboxIndicator mr="$2">
+              <CheckboxIcon />
+            </CheckboxIndicator>
+            <CheckboxLabel>Require For Login (Verify to set)</CheckboxLabel>
+          </Checkbox>
+
         </ButtonGroup>
       </Box>
       {qrCode ? (

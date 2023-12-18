@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { format as timeAgo } from 'timeago.js'
+import { useNavigate } from 'react-router-dom'
 
 import {
   AddIcon,
@@ -18,7 +19,7 @@ import {
 
 import { ListHeader, ListItem } from 'components/List'
 
-import { authAPI } from 'api'
+import { authAPI, setJWTOTPHeader, setAuthReturn } from 'api'
 import { AlertContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import AddAuthToken from 'components/Auth/AddAuthToken'
@@ -31,6 +32,7 @@ const AuthTokenList = (props) => {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const refModal = useRef(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     refreshList()
@@ -55,12 +57,27 @@ const AuthTokenList = (props) => {
   }
 
   const refreshList = () => {
+
     authAPI
       .tokens()
       .then((tokens) => {
         setTokens(tokens)
       })
-      .catch((err) => context.error('Auth Token API', err))
+      .catch((err) => {
+        err.response
+          .text()
+          .then((data) => {
+            if (data.includes("Invalid JWT")) {
+              //re-log OTP
+              setJWTOTPHeader('')
+              setAuthReturn('/admin/auth')
+              navigate('/auth/validate')
+            }
+          })
+          .catch(() => {
+            context.error('Auth Token API ' + JSON.stringify(err), err)
+          })
+      })
   }
 
   const notifyChange = () => {

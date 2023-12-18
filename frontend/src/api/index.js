@@ -8,7 +8,10 @@ export {
   getApiURL,
   setApiURL,
   getApiHostname,
-  setJWTOTPHeader
+  getWsURL,
+  setJWTOTPHeader,
+  setAuthReturn,
+  getAuthReturn
 } from './API'
 export { connectWebsocket } from './WebSocket'
 export { dbAPI } from './Db'

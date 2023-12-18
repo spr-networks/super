@@ -5,6 +5,7 @@ import {
   ButtonIcon,
   ButtonText,
   FlatList,
+  Text,
   View,
   VStack,
   CheckIcon
@@ -220,7 +221,9 @@ const Alerts = (props) => {
         data={logs}
         estimatedItemSize={100}
         renderItem={({ item }) => (
-          <AlertListItem item={item} notifyChange={onChangeEvent} />
+          <VStack>
+            <AlertListItem item={item} notifyChange={onChangeEvent} />
+          </VStack>
         )}
         keyExtractor={(item, index) => item.time + index}
       />

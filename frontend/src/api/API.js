@@ -53,6 +53,16 @@ export const getApiURL = () => {
   return document.location.origin + '/'
 }
 
+export const getWsURL = () => {
+  let url = getApiURL()
+  if (url.startsWith("https://")) {
+    return url.replace('https://', "wss://") + "ws"
+  } else {
+    return url.replace('http://', "ws://") + "ws"
+  }
+}
+
+
 export const getApiHostname = () => {
   return getApiURL()
     .replace(/^https?:\/\//, '')
@@ -62,6 +72,24 @@ export const getApiHostname = () => {
 let gAuthHeaders = null
 //tbd need to sync to mesh
 let gJWTOTPHeader = null
+
+export const setAuthReturn = (url) => {
+  AsyncStorage.setItem(
+    'auth-return',
+    JSON.stringify({
+      url: url
+    })
+  )
+}
+
+export const getAuthReturn = () => {
+  return AsyncStorage.getItem('auth-return')
+    .then((good) => {
+      let x = JSON.parse(good)
+      return x.url ? x.url : '/admin/home'
+    })
+}
+
 
 export const setJWTOTPHeader = (jwt = '') => {
   if (gJWTOTPHeader != jwt) {
@@ -73,6 +101,7 @@ export const setJWTOTPHeader = (jwt = '') => {
     )
     gJWTOTPHeader = jwt
   }
+  return gJWTOTPHeader
 }
 
 //request helper
@@ -176,6 +205,11 @@ class API {
 
     return this.fetch(method, url, body)
       .then((response) => {
+
+        if (response.redirected) {
+          window.location = '/auth/validate'
+        }
+
         if (!response.ok) {
           return Promise.reject({
             message: response.status,

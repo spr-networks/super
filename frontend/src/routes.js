@@ -33,6 +33,7 @@ import Mesh from 'views/Mesh'
 import Events from 'views/Events'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
+import AuthValidate from 'views/AuthValidate'
 import SystemInfo from 'views/SystemInfo'
 import Alerts from 'views/Alerts'
 import AlertSettings from 'views/AlertSettings'
@@ -407,6 +408,11 @@ const routes = [
   {
     path: 'setup',
     component: Setup,
+    layout: 'auth'
+  },
+  {
+    path: 'validate',
+    component: AuthValidate,
     layout: 'auth'
   }
 ]

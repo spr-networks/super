@@ -28,8 +28,7 @@ const AlertListItem = ({ item, notifyChange, ...props }) => {
   const [showEvent, setShowEvent] = useState(item?.Body ? false : true)
 
   const updateEventState = (event, newState) => {
-    //TBD, this needs to write to db
-    let bucketKey = event.time
+    let bucketKey = 'timekey:' + event.time
     event.State = newState
     dbAPI
       .putItem(event.AlertTopic, bucketKey, event)

@@ -1,4 +1,4 @@
-import { getApiHostname } from './API'
+import { getApiHostname, getWsURL } from './API'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { deviceAPI } from './Device'
 import { eventTemplate } from 'utils'
@@ -9,16 +9,24 @@ async function connectWebsocket(messageCallback) {
     ws = null
 
   try {
-    let host = getApiHostname()
-    ws = new WebSocket(`ws://${host}/ws`)
+    ws = new WebSocket(getWsURL())
   } catch (err) {
     // mock error
-    console.error('[webSocket]', 'failed to connect to', getApiHostname())
+    console.error('[webSocket]', 'failed to connect to', getWsURL())
     return
   }
 
   ws.addEventListener('open', (event) => {
-    ws.send(userData['username'] + ':' + userData['password'])
+
+    AsyncStorage.getItem('jwt-otp').then((string) => {
+      let jwt = JSON.parse(string)
+      if (jwt) {
+        ws.send(userData['username'] + ':' + userData['password'] + ':' + jwt.jwt)
+      } else {
+        ws.send(userData['username'] + ':' + userData['password'])
+      }
+    })
+
   })
 
   ws.addEventListener('message', (event) => {
