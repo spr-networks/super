@@ -16,7 +16,8 @@ import {
   InputField,
   Text,
   View,
-  VStack
+  VStack,
+  HStack
 } from '@gluestack-ui/themed'
 
 import { api } from 'api'
@@ -26,11 +27,10 @@ import { ListHeader } from 'components/List'
 let ApiBaseUrl = api.baseURL
 let TOKEN = ''
 
-
 const OTPSettings = (props) => {
   const [status, setStatus] = useState('not configured')
   const [qrCode, setQrCode] = useState(null)
-  const [code, setCode] = useState("")
+  const [code, setCode] = useState('')
   const [alwaysOn, setAlwaysOn] = useState(false)
 
   const context = useContext(AlertContext)
@@ -40,40 +40,48 @@ const OTPSettings = (props) => {
   }, [])
 
   const getStatus = () => {
-    authAPI.statusOTP().then((status) => {
-      setStatus(status.State)
-      setAlwaysOn(status.AlwaysOn)
-    }).catch((e) => {
-      setStatus("unknown")
-      context.error("failed to get status")
-    })
+    authAPI
+      .statusOTP()
+      .then((status) => {
+        setStatus(status.State)
+        setAlwaysOn(status.AlwaysOn)
+      })
+      .catch((e) => {
+        setStatus('unknown')
+        context.error('failed to get status')
+      })
   }
 
   const register = (e) => {
-    authAPI.registerOTP(code).then((res) => {
-      for (let user of res.OTPUsers) {
-        if (user.Name == "admin") {
-          if (user.Secret) {
-            setQrCode(generateQRCode(user.Secret))
-            setStatus("registered")
+    authAPI
+      .registerOTP(code)
+      .then((res) => {
+        for (let user of res.OTPUsers) {
+          if (user.Name == 'admin') {
+            if (user.Secret) {
+              setQrCode(generateQRCode(user.Secret))
+              setStatus('registered')
+            }
           }
         }
-      }
-    }).catch((err) => {
-      setStatus("failed")
-      context.error("Could not register. Already registered?")
-    })
+      })
+      .catch((err) => {
+        setStatus('failed')
+        context.error('Could not register. Already registered?')
+      })
   }
 
   const otp = (e) => {
     let username = 'admin'
-    authAPI.validateOTP(code, true, alwaysOn).then((res) => {
-      setJWTOTPHeader(res)
-      context.success("OTP Validated")
-    })
-    .catch((err) => {
-      context.error("Invalid OTP Code")
-    })
+    authAPI
+      .validateOTP(code, true, alwaysOn)
+      .then((res) => {
+        setJWTOTPHeader(res)
+        context.success('OTP Validated')
+      })
+      .catch((err) => {
+        context.error('Invalid OTP Code')
+      })
   }
 
   const handleClickRegister = () => {
@@ -88,16 +96,24 @@ const OTPSettings = (props) => {
     return `otpauth://totp/Auth?secret=${secret}&issuer=SPR-OTP`
   }
 
+  const description = (
+    <Text
+      marginLeft="auto"
+      size="sm"
+      color={status.startsWith('registered') ? '$success500' : '$muted500'}
+    >
+      {status}
+    </Text>
+  )
+
   return (
     <View>
-      <ListHeader title="OTP Settings">
-        <Text
-          marginLeft="auto"
-          pt="$2"
-          color={status.startsWith('success') ? '$success500' : '$muted500'}
-        >
-          {status}
-        </Text>
+      <ListHeader title="OTP Settings" description={description}>
+        <HStack space="sm" alignItems="center">
+          <Button action="primary" size="sm" onPress={handleClickRegister}>
+            <ButtonText>Register OTP</ButtonText>
+          </Button>
+        </HStack>
       </ListHeader>
 
       <Box
@@ -108,41 +124,41 @@ const OTPSettings = (props) => {
         p="$4"
         mb="$4"
       >
-        <ButtonGroup size="md">
-          <Input w="$1/4">
+        <VStack
+          space="md"
+          sx={{ '@md': { flexDirection: 'row', width: '$3/5', gap: '$4' } }}
+        >
+          <Input>
             <InputField
+              placeholder="OTP Code"
               name="OTP"
               value={code}
               onChangeText={(value) => setCode(value)}
             />
           </Input>
 
-          <Button action="primary" onPress={handleClickRegister}>
-            <ButtonText>Register OTP</ButtonText>
-          </Button>
-
           <Button action="secondary" onPress={handleClickOTP}>
             <ButtonText>Verify OTP Code</ButtonText>
           </Button>
 
           <Checkbox
+            size="sm"
             value={alwaysOn}
             onChange={setAlwaysOn}
-            isChecked={alwaysOn}>
+            isChecked={alwaysOn}
+          >
             <CheckboxIndicator mr="$2">
               <CheckboxIcon />
             </CheckboxIndicator>
             <CheckboxLabel>Require For Login (Verify to set)</CheckboxLabel>
           </Checkbox>
-
-        </ButtonGroup>
+        </VStack>
       </Box>
       {qrCode ? (
         <Box bg="$white" p="$4">
           <QRCode value={qrCode} />
         </Box>
       ) : null}
-
     </View>
   )
 }
