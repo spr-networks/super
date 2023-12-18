@@ -11,6 +11,7 @@ Key Fixes
 * Fix Mesh UI Display error
 * Fix UI Tag, Group selection 
 * Fixed DB Compaction logic to store more events, increased fill limit
+* Fix SrcPort 
 
 ## v0.3.2
 * Fixes for DNS Log date picker 
