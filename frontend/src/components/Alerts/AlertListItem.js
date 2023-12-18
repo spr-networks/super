@@ -110,6 +110,7 @@ const AlertListItem = ({ item, notifyChange, ...props }) => {
           borderBottomWidth="$0"
           TitleComponent={TitleComponent}
           isHidden={!showEvent}
+          onPress={(t, w) => setShowEvent(true)}
         >
           <HStack
             flex={1}

@@ -537,6 +537,7 @@ const LogListItem = ({
   selected,
   TitleComponent,
   children,
+  onPress,
   ...props
 }) => {
   const [isParsable, setIsParsable] = useState(true)
@@ -547,6 +548,13 @@ const LogListItem = ({
   }, [isParsable])
 
   const showHeader = true
+
+  const hookSetShowJSON = (v) => {
+    setShowJSON(v)
+    if (onPress) {
+      onPress('json', v)
+    }
+  }
 
   return (
     <ListItem
@@ -566,7 +574,7 @@ const LogListItem = ({
           item={item}
           isParsable={isParsable}
           showJSON={showJSON}
-          setShowJSON={setShowJSON}
+          setShowJSON={hookSetShowJSON}
           TitleComponent={TitleComponent}
         ></LogListItemHeader>
       ) : null}
