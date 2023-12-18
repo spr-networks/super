@@ -547,6 +547,8 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 
 			jsonMap := bucketItem.Value.(map[string]interface{})
 
+			jsonMap["Key"] = string(k)
+
 			if _, exists := jsonMap["time"]; !exists {
 				// derive time from key
 				if timeStr, err := keyToTimeString(k); err == nil {
