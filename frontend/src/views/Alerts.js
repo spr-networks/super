@@ -163,7 +163,7 @@ const Alerts = (props) => {
 
     Promise.all(
       logsResolved.map((event) =>
-        dbAPI.putItem(event.AlertTopic, event.time, event)
+        dbAPI.putItem(event.AlertTopic, `timekey:${event.time}`, event)
       )
     ).then((res) => {
       fetchLogs()
