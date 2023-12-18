@@ -29,6 +29,7 @@ import Wireguard from 'views/Wireguard'
 import Firewall from 'views/Firewall/Firewall'
 import FirewallSettings from 'views/Firewall/FirewallSettings'
 import PFW from 'views/Firewall/Pfw'
+import PFWTasks from 'views/System/PfwTasks'
 import Mesh from 'views/Mesh'
 import Events from 'views/Events'
 import Plugins from 'views/Plugins'
@@ -64,6 +65,7 @@ import {
   ListTreeIcon,
   NetworkIcon,
   PuzzleIcon,
+  Repeat2,
   RouterIcon,
   ScanSearchIcon,
   SeparatorVerticalIcon,
@@ -327,7 +329,16 @@ const routes = [
         icon: EyeIcon,
         component: Events,
         layout: 'admin'
-      },
+      },/*
+      {
+        path: 'pfw_tasks',
+        name: 'Tasks',
+        icon: Repeat2,
+        component: PFWTasks,
+        hideSimple: true,
+        layout: 'admin',
+        plus: true
+      },*/
     ]
   },
   {

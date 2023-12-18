@@ -69,6 +69,10 @@ export class APIPfw extends API {
    testExpression(expr) {
      return this.post('testExpression', expr);
    }
+
+   getTaskConfig() {
+     return this.get('/tasks/config')
+   }
 }
 
 export const pfwAPI = new APIPfw()
