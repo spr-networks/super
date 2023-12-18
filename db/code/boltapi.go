@@ -694,7 +694,7 @@ func UpdateBucketItem(w http.ResponseWriter, r *http.Request) {
 	bucketName := mux.Vars(r)["name"]
 	bucketItemKey := mux.Vars(r)["key"]
 
-	if strings.HasPrefix("bucketItemKey", "timekey:") {
+	if strings.HasPrefix(bucketItemKey, "timekey:") {
 		b, err := TimeKey(bucketItemKey[len("timekey:"):])
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
