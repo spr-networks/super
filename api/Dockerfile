@@ -16,6 +16,11 @@ RUN --mount=type=tmpfs,target=/tmpfs \
     [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
     go build -ldflags "-s -w" -o /api
 
+RUN git clone https://github.com/spr-networks/sprbus --depth 1
+WORKDIR /code/sprbus/cmd/
+RUN --mount=type=tmpfs,target=/tmpfs \
+    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
+    go build -ldflags "-s -w" -o /sprbus
 
 FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
