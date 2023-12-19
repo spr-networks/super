@@ -25,7 +25,7 @@ class AddForwardImpl extends React.Component {
   state = {
     Protocol: 'tcp',
     SrcIP: '0.0.0.0/0',
-    SrcPort: '',
+    SrcPort: 'any',
     DstIP: '',
     DstPort: ''
   }
