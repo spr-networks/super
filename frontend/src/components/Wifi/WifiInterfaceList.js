@@ -260,7 +260,7 @@ const WifiInterface = ({ iw, ...props }) => {
                               ))}
                             </HStack>
 
-                            <Heading size="sm" color="muted.500">
+                            <Heading size="sm" color="$muted500">
                               valid interface combinations
                             </Heading>
                             <Text italic>

@@ -26,6 +26,7 @@ var PfwGitURL = "github.com/spr-networks/pfw_extension"
 var MeshGitURL = "github.com/spr-networks/mesh_extension"
 
 var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
+var CustomComposeAllowPath = TEST_PREFIX + "/configs/base/custom_compose_paths.json"
 
 type PluginConfig struct {
 	Name            string
@@ -568,7 +569,7 @@ func generatePFWAPIToken() {
 		//add the generated token and save it to the token file
 		tokens = append(tokens, pfw_token)
 		file, _ := json.MarshalIndent(tokens, "", " ")
-		err = ioutil.WriteFile(AuthTokensFile, file, 0660)
+		err = ioutil.WriteFile(AuthTokensFile, file, 0600)
 		if err != nil {
 			fmt.Println("failed to write tokens file", err)
 		}
@@ -587,7 +588,7 @@ func generatePFWAPIToken() {
 	pfw_config["APIToken"] = value
 
 	file, _ := json.MarshalIndent(pfw_config, "", " ")
-	err = ioutil.WriteFile(pfwConfigFile, file, 0660)
+	err = ioutil.WriteFile(pfwConfigFile, file, 0600)
 	if err != nil {
 		fmt.Println("failed to write pfw configuration", err)
 	}
@@ -963,4 +964,36 @@ func updateMeshPluginPSKReload(devices map[string]DeviceEntry) {
 func updateMeshPluginGlobalSSID(SSID string) {
 	jsonValue, _ := json.Marshal(SSID)
 	go updateMeshPluginPut("setSSID", jsonValue)
+}
+
+func modifyCustomComposePaths(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
+	if r.Method == http.MethodGet {
+		curList := []string{}
+		data, err := ioutil.ReadFile(CustomComposeAllowPath)
+		if err == nil {
+			_ = json.Unmarshal(data, &curList)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(curList)
+		return
+	}
+
+	newList := []string{}
+	err := json.NewDecoder(r.Body).Decode(&newList)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	file, _ := json.MarshalIndent(newList, "", " ")
+	err = ioutil.WriteFile(CustomComposeAllowPath, file, 0600)
+	if err != nil {
+		log.Println("failed to write custom compose paths configuration", err)
+		http.Error(w, err.Error(), 400)
+		return
+	}
 }

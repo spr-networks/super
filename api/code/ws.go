@@ -102,8 +102,16 @@ func webSocket(w http.ResponseWriter, r *http.Request) {
 
 	msgs := string(msg)
 	if strings.Index(msgs, ":") != -1 {
-		pieces := strings.SplitN(msgs, ":", 2)
-		if len(pieces) == 2 && authenticateUser(pieces[0], pieces[1]) {
+		pieces := strings.SplitN(msgs, ":", 3)
+		if len(pieces) > 1 && authenticateUser(pieces[0], pieces[1]) {
+			if shouldCheckOTPJWT(r, pieces[0]) {
+				if len(pieces) != 3 || !validateJwt(pieces[0], pieces[2]) {
+					//tell WS it a JWT was needed
+					c.WriteMessage(websocket.TextMessage, []byte("Invalid JWT OTP"))
+					c.Close()
+					return
+				}
+			}
 			c.WriteMessage(websocket.TextMessage, []byte("success"))
 			WSMtx.Lock()
 			WSClients = append(WSClients, c)

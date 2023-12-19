@@ -4,6 +4,7 @@
  * pagination
  */
 import React, { useContext, useEffect, useState } from 'react'
+import { Platform } from 'react-native'
 import { prettyDate } from 'utils'
 import { Buffer } from 'buffer'
 import { JSONSyntax, HEXSyntax } from 'components/SyntaxHighlighter'
@@ -15,6 +16,7 @@ import {
   ButtonIcon,
   Link,
   HStack,
+  Icon,
   VStack,
   Text,
   LinkText,
@@ -27,10 +29,16 @@ import { AppContext } from 'AppContext'
 import { ListItem } from 'components/List'
 import { Tooltip } from 'components/Tooltip'
 import { copy } from 'utils'
-import { InterfaceItem } from 'components/TagItem'
+import { InterfaceItem, ProtocolItem } from 'components/TagItem'
 import DeviceItem from 'components/Devices/DeviceItem'
-import { FileJsonIcon, Maximize2Icon } from 'lucide-react-native'
+import {
+  ArrowRightIcon,
+  FileJsonIcon,
+  Maximize2Icon
+} from 'lucide-react-native'
 import { useNavigate } from 'react-router-native'
+
+const redColor = '#C70039'
 
 //utils
 const levelToColor = (level) => {
@@ -124,6 +132,10 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
   const context = useContext(AppContext)
   const navigate = useNavigate()
 
+  if (selected.startsWith('dns:serve:')) {
+    selected = 'dns:serve:'
+  }
+
   const [maxHeight, setMaxHeight] = useState(150)
 
   const niceEvent = (event) => {
@@ -133,6 +145,11 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     }
 
     return events[event] || event
+  }
+
+  let remoteIP = 'no'
+  if (item.Remote) {
+    remoteIP = item.Remote.split(':')[0]
   }
 
   const eventParsers = {
@@ -163,7 +180,11 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     ),
     'dhcp:request': (item) => (
       <>
-        <DeviceItem flex={1} item={context.getDevice(item.MAC, 'MAC')} />
+        <DeviceItem
+          show={['Style', 'Name']}
+          flex={1}
+          item={context.getDevice(item.MAC, 'MAC')}
+        />
 
         {['Identifier', 'Name'].map((t) =>
           item[t] ? (
@@ -184,7 +205,11 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     ),
     'dhcp:response': (item) => (
       <>
-        <DeviceItem flex={1} item={context.getDevice(item.IP, 'RecentIP')} />
+        <DeviceItem
+          show={['Style', 'Name']}
+          flex={1}
+          item={context.getDevice(item.IP, 'RecentIP')}
+        />
         {['LeaseTime', 'DNSIP', 'RouterIP'].map((t) =>
           item[t] ? (
             <HStack
@@ -201,7 +226,38 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         )}
       </>
     ),
-
+    'dns:serve:': (item) => (
+      <VStack
+        space="md"
+        sx={{ '@md': { flexDirection: 'row', alignItems: 'center' } }}
+        w="$full"
+      >
+        <HStack flex={1} space="md" alignItems="center">
+          <DeviceItem
+            show={['Style', 'Name']}
+            item={context.getDevice(remoteIP, 'RecentIP')}
+          />
+        </HStack>
+        <VStack
+          flex={2}
+          space="sm"
+          sx={{
+            '@md': { flexDirection: 'row', justifyContent: 'space-between' }
+          }}
+        >
+          <Text
+            size="md"
+            bold
+            onPress={() =>
+              navigate(`/admin/dnsLog/${remoteIP}/${item.FirstName}`)
+            }
+          >
+            {item.FirstName}
+          </Text>
+          <Text size="md">{item.FirstAnswer}</Text>
+        </VStack>
+      </VStack>
+    ),
     'dns:block:event': (item) => (
       <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }} w="$full">
         <DeviceItem
@@ -224,7 +280,11 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     ),
     'wifi:auth:success': () => (
       <>
-        <DeviceItem flex={1} item={context.getDevice(item.MAC)} />
+        <DeviceItem
+          show={['Style', 'Name']}
+          flex={1}
+          item={context.getDevice(item.MAC)}
+        />
         {['Router', 'Status'].map((f) =>
           item[f]?.length ? (
             <HStack
@@ -245,15 +305,121 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         <InterfaceItem name={item.Iface} />
       </>
     ),
-    'www:auth:user:success': (item) => (
+    'wifi:auth:fail': () => (
+      <>
+        <HStack flex={1} justifyContent="space-between">
+          <DeviceItem
+            show={['Style', 'Name']}
+            hideMissing={true}
+            item={context.getDevice(item.MAC)}
+          />
+          <Text>{item.MAC}</Text>
+          <Text>{item.Reason}</Text>
+          <Text>{item.Type}</Text>
+        </HStack>
+      </>
+    ),
+    'auth:success': (item) => (
       <>
         <Text size="md" bold>
-          {item.username}
+          {item.username || item.token}
         </Text>
-        <Text size="md">login</Text>
+        <Text size="md">{item.type}</Text>
+        <Text size="md">{item.reason}</Text>
       </>
+    ),
+    'auth:failure': (item) => (
+      <>
+        <Text size="md" bold>
+          {item.username || item.token}
+        </Text>
+        <Text size="md">{item.type}</Text>
+        <Text size="md">{item.reason}</Text>
+        <Text size="md">failure</Text>
+      </>
+    ),
+    'nft:drop:private': (item) => <NFTDropItem item={item} type="private" />,
+    'nft:drop:forward': (item) => <NFTDropItem item={item} type="forward" />,
+    'nft:drop:mac': (item) => <NFTDropItem item={item} type="mac" />,
+    'nft:drop:input': (item) => <NFTDropItem item={item} type={'input'} />
+  }
+
+  const NFTDropItem = ({ item, type, ...props }) => {
+    let srcPort = item?.TCP?.SrcPort || item?.UDP?.SrcPort || null
+    let dstPort = item?.TCP?.DstPort || item?.UDP?.DstPort || null
+    let proto = ''
+    if (item.TCP) {
+      proto = 'tcp'
+    } else if (item.UDP) {
+      proto = 'udp'
+    }
+
+    const desktopOnly = {
+      display: 'none',
+      sx: {
+        '@md': {
+          display: 'flex'
+        }
+      }
+    }
+
+    return (
+      <VStack
+        flex={1}
+        justifyContent="space-between"
+        space="md"
+        sx={{ '@md': { flexDirection: 'row' } }}
+      >
+        <HStack flex={1} space="md" alignItems="center">
+          <DeviceItem
+            show={['Style', 'Name']}
+            flex={1}
+            hideMissing={false}
+            item={context.getDevice(item.Ethernet.SrcMAC)}
+          />
+          <HStack space="sm">
+            <InterfaceItem name={item.InDev} {...desktopOnly} />
+            <ProtocolItem name={proto} size="sm" />
+            <HStack>
+              <Text size="sm" bold>
+                {item.IP.SrcIP}
+              </Text>
+              {srcPort ? <Text size="sm">:{srcPort}</Text> : null}
+            </HStack>
+          </HStack>
+        </HStack>
+
+        <HStack mx="$4" alignItems="center" justifyContent="center">
+          <Icon as={ArrowRightIcon} color="$muted500" />
+        </HStack>
+
+        <HStack
+          flex={1}
+          space="sm"
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          <HStack flex={1} space="sm">
+            {/*<ProtocolItem name={proto} size="sm" />*/}
+            <HStack>
+              <Text size="sm" bold>
+                {item.IP.DstIP}
+              </Text>
+              {dstPort ? <Text size="sm">:{dstPort}</Text> : null}
+            </HStack>
+            <InterfaceItem {...desktopOnly} name={item.OutDev} />
+          </HStack>
+          <DeviceItem
+            show={['Style', 'Name']}
+            flex={1}
+            hideMissing={true}
+            item={context.getDevice(item.Ethernet.DstMAC)}
+          />
+        </HStack>
+      </VStack>
     )
   }
+
   eventParsers['wifi:station:disconnect'] = eventParsers['wifi:auth:success']
 
   useEffect(() => {
@@ -265,11 +431,11 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
   if (!showJSON && eventParsers[selected]) {
     return (
       <HStack
-        w="$full"
         space="3xl"
         alignItems="center"
         p="$4"
         justifyContent="space-between"
+        {...props}
       >
         {eventParsers[selected](item)}
       </HStack>
@@ -283,35 +449,112 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
         borderColor="$secondary200"
         sx={{ _dark: { borderColor: '$secondary700' } }}
         borderWidth="$0"
-        w="$full"
+        {...props}
       >
-        <JSONSyntax code={jsonData} />
-        {hexLines ? <HEXSyntax code={hexLines}/> : null}
-        <Button
-          action="secondary"
-          variant="link"
-          size="xs"
-          position="absolute"
-          right="$4"
-          onPress={() => {
-            setMaxHeight(maxHeight == '$full' ? 150 : '$full')
-          }}
-          isDisabled={numLines <= 8}
-        >
-          <ButtonIcon as={Maximize2Icon} color="$muted500" />
-        </Button>
+        {Platform.OS == 'web' ? (
+          <>
+            <JSONSyntax code={jsonData} />
+            {hexLines ? <HEXSyntax code={hexLines} /> : null}
+            <Button
+              action="secondary"
+              variant="link"
+              size="xs"
+              position="absolute"
+              right="$4"
+              onPress={() => {
+                setMaxHeight(maxHeight == '$full' ? 150 : '$full')
+              }}
+              isDisabled={numLines <= 8}
+            >
+              <ButtonIcon as={Maximize2Icon} color="$muted500" />
+            </Button>
+          </>
+        ) : (
+          <Text size="xs">{jsonData}</Text>
+        )}
       </ScrollView>
     )
   }
 }
 
-const LogListItem = ({ item, selected, ...props }) => {
+const LogListItemHeader = ({
+  item,
+  TitleComponent,
+  isParsable,
+  showJSON,
+  setShowJSON,
+  ...props
+}) => {
+  return (
+    <HStack
+      w="$full"
+      bg="$coolGray100"
+      sx={{
+        _dark: { bg: '$secondary950' }
+      }}
+      alignItems="center"
+      px="$4"
+      py="$0.5"
+      space="md"
+    >
+      {TitleComponent || (
+        <Text size="xs" bold>
+          {prettyDate(item.Timestamp || item.time)}
+        </Text>
+      )}
+
+      <ButtonGroup ml="auto" space="md">
+        <Tooltip label="Toggle JSON data">
+          <Button
+            action="primary"
+            variant="link"
+            size="sm"
+            onPress={() => setShowJSON(!showJSON)}
+            isDisabled={!isParsable}
+          >
+            <ButtonIcon as={FileJsonIcon} />
+          </Button>
+        </Tooltip>
+
+        <Tooltip label="Copy JSON event">
+          <Button
+            action="primary"
+            variant="link"
+            size="sm"
+            onPress={() => copy(JSON.stringify(item))}
+          >
+            <ButtonIcon as={CopyIcon} />
+          </Button>
+        </Tooltip>
+      </ButtonGroup>
+    </HStack>
+  )
+}
+
+const LogListItem = ({
+  item,
+  isHidden,
+  selected,
+  TitleComponent,
+  children,
+  onPress,
+  ...props
+}) => {
   const [isParsable, setIsParsable] = useState(true)
   const [showJSON, setShowJSON] = useState(false)
 
   useEffect(() => {
     setShowJSON(!isParsable)
   }, [isParsable])
+
+  const showHeader = true
+
+  const hookSetShowJSON = (v) => {
+    setShowJSON(v)
+    if (onPress) {
+      onPress('json', v)
+    }
+  }
 
   return (
     <ListItem
@@ -324,54 +567,32 @@ const LogListItem = ({ item, selected, ...props }) => {
         _dark: { bg: '$secondary900', borderColor: '$secondary800' }
       }}
       space="$0"
+      {...props}
     >
-      <HStack
-        w="$full"
-        bg="$coolGray100"
-        sx={{
-          _dark: { bg: '$secondary950' }
-        }}
-        alignItems="center"
-        px="$4"
-      >
-        <Text size="xs" bold>
-          {prettyDate(item.time)}
-        </Text>
-        <ButtonGroup ml="auto" space="md">
-          <Tooltip label="Toggle JSON data">
-            <Button
-              action="primary"
-              variant="link"
-              size="sm"
-              onPress={() => setShowJSON(!showJSON)}
-              isDisabled={!isParsable}
-            >
-              <ButtonIcon as={FileJsonIcon} />
-            </Button>
-          </Tooltip>
-
-          <Tooltip label="Copy JSON event">
-            <Button
-              action="primary"
-              variant="link"
-              size="sm"
-              onPress={() => copy(JSON.stringify(item))}
-              {...props}
-            >
-              <ButtonIcon as={CopyIcon} />
-            </Button>
-          </Tooltip>
-        </ButtonGroup>
+      {showHeader ? (
+        <LogListItemHeader
+          item={item}
+          isParsable={isParsable}
+          showJSON={showJSON}
+          setShowJSON={hookSetShowJSON}
+          TitleComponent={TitleComponent}
+        ></LogListItemHeader>
+      ) : null}
+      <HStack w="$full">
+        <PrettyItem
+          item={item}
+          selected={selected}
+          showJSON={showJSON}
+          setIsParsable={setIsParsable}
+          flex={1}
+          display={isHidden ? 'none' : 'flex'}
+        />
+        {children ? children : null}
       </HStack>
-
-      <PrettyItem
-        item={item}
-        selected={selected}
-        showJSON={showJSON}
-        setIsParsable={setIsParsable}
-      />
     </ListItem>
   )
 }
 
 export default LogListItem
+
+export { LogListItem, LogListItemHeader }

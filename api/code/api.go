@@ -45,8 +45,8 @@ var ConfigFile = TEST_PREFIX + "/configs/base/config.sh"
 var DNSConfigFile = TEST_PREFIX + "/configs/dns/Corefile"
 var MulticastConfigFile = TEST_PREFIX + "/configs/base/multicast.json"
 
-var ApiTlsCert = "/configs/base/www-api.crt"
-var ApiTlsKey = "/configs/base/www-api.key"
+var ApiTlsCert = "/configs/auth/www-api.crt"
+var ApiTlsKey = "/configs/auth/www-api.key"
 
 var SuperdSocketPath = TEST_PREFIX + "/state/plugins/superd/socket"
 
@@ -80,11 +80,14 @@ type MulticastSettings struct {
 }
 
 type APIConfig struct {
-	InfluxDB   InfluxConfig
-	Plugins    []PluginConfig
-	PlusToken  string
-	AutoUpdate bool
-	DNS        DNSSettings
+	InfluxDB        InfluxConfig
+	Plugins         []PluginConfig
+	PlusToken       string
+	AutoUpdate      bool //unused
+	CheckUpdates    bool
+	ReportInstall   bool
+	ReportedInstall bool
+	DNS             DNSSettings
 }
 
 type GroupEntry struct {
@@ -215,7 +218,8 @@ func getStatus(w http.ResponseWriter, r *http.Request) {
 func getFeatures(w http.ResponseWriter, r *http.Request) {
 	reply := []string{"dns"}
 	//check which features are enabled
-	if os.Getenv("VIRTUAL_SPR") == "" {
+	virtual_spr := os.Getenv("VIRTUAL_SPR")
+	if virtual_spr == "" || virtual_spr == "TEST" {
 		reply = append(reply, "wifi")
 	}
 
@@ -465,7 +469,7 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 	//fall through success
 }
 
-func checkUpdates() {
+func runAutoUpdates() {
 
 	//once an hour, check if auto updates are enabled
 	// if they are, then perform an update
@@ -473,7 +477,17 @@ func checkUpdates() {
 	for {
 		select {
 		case <-ticker.C:
-			if config.AutoUpdate == true {
+
+			Configmtx.Lock()
+			do_update := config.AutoUpdate
+			do_report := config.ReportInstall && !config.ReportedInstall
+			Configmtx.Unlock()
+
+			if do_report {
+				ReportInstall()
+			}
+
+			if do_update == true {
 				//TBD 1) check a release has aged?
 				//    2) check that a release is up to date
 
@@ -699,13 +713,34 @@ func autoUpdate(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodDelete {
 		config.AutoUpdate = false
-		saveConfig()
+		saveConfigLocked()
 		// fall thru 200
 		return
 	}
 
 	config.AutoUpdate = true
-	saveConfig()
+	saveConfigLocked()
+}
+
+func checkUpdates(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(config.CheckUpdates)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		config.CheckUpdates = false
+		saveConfigLocked()
+		// fall thru 200
+		return
+	}
+
+	config.CheckUpdates = true
+	saveConfigLocked()
 }
 
 func update(w http.ResponseWriter, r *http.Request) {
@@ -991,6 +1026,38 @@ func getConfigsBackup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.ServeFile(w, r, backupFilePath)
+}
+
+func enableTLS(w http.ResponseWriter, r *http.Request) {
+	_, err := os.Stat("/configs/auth/www-api.pfx")
+	haveTLSCert := err == nil || !os.IsNotExist(err)
+
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(haveTLSCert)
+		return
+	}
+
+	//for now, do not support regenerating if already exists
+	if haveTLSCert {
+		http.Error(w, "Already configured", 400)
+		return
+	}
+
+	os.Setenv("SKIPPASS", "-password pass:1234")
+	err = exec.Command("/scripts/generate-certificate.sh").Run()
+	if err != nil {
+		http.Error(w, "Failed to generate TLS certificate", 400)
+		return
+	}
+
+	go func() {
+		time.Sleep(1 * time.Second)
+		callSuperdRestart("", "api")
+	}()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode("Done")
 }
 
 func restart(w http.ResponseWriter, r *http.Request) {
@@ -1775,13 +1842,14 @@ func updateLocalMappings(IP string, Name string) {
 		new_data += ip + " " + hostname + "\n"
 	}
 	new_data += IP + " " + entryName + "\n"
-	ioutil.WriteFile(localMappingsPath, []byte(new_data), 0644)
+	ioutil.WriteFile(localMappingsPath, []byte(new_data), 0600)
 }
 
 func flushRoute(MAC string) {
 	arp_entry, err := GetArpEntryFromMAC(MAC)
 	if err != nil {
-		log.Println("Arp entry not found, insufficient information to refresh", MAC)
+		//relax this verbose log
+		//log.Println("Arp entry not found, insufficient information to refresh", MAC)
 		return
 	}
 
@@ -1815,11 +1883,6 @@ func lookupWGDevice(devices *map[string]DeviceEntry, WGPubKey string, IP string)
 		}
 	}
 	return DeviceEntry{}, false
-}
-
-func refreshDeviceTags(dev DeviceEntry) {
-	applyPrivateNetworkUpstreamDevice(dev)
-	sprbus.Publish("device:tags:update", scrubDevice(dev))
 }
 
 func refreshDeviceGroups(dev DeviceEntry) {
@@ -2199,6 +2262,8 @@ type SetupConfig struct {
 	InterfaceAP     string
 	InterfaceUplink string
 	TinyNets        []string
+	CheckUpdates    bool
+	ReportInstall   bool
 }
 
 func isSetupMode() bool {
@@ -2208,6 +2273,38 @@ func isSetupMode() bool {
 	}
 
 	return true
+}
+
+func ReportInstall() {
+	Configmtx.Lock()
+	if config.ReportedInstall {
+		Configmtx.Unlock()
+		return
+	}
+	Configmtx.Unlock()
+
+	c := http.Client{}
+
+	defer c.CloseIdleConnections()
+
+	req, err := http.NewRequest(http.MethodGet, "http://spr-counter.spr-networks.org/spr_counter", nil)
+	if err != nil {
+		log.Println("Failed to construct counter request")
+		return
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		log.Println("Failed to GET on counter")
+		return
+	}
+
+	Configmtx.Lock()
+	config.ReportedInstall = true
+	saveConfigLocked()
+	Configmtx.Unlock()
+
+	resp.Body.Close()
 }
 
 // initial setup only available if there is no user/pass configured
@@ -2232,6 +2329,11 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+
+	Configmtx.Lock()
+	config.ReportInstall = conf.ReportInstall
+	config.CheckUpdates = conf.CheckUpdates
+	Configmtx.Unlock()
 
 	validCountry := regexp.MustCompile(`^[A-Z]{2}$`).MatchString // EN,SE
 	//SSID: up to 32 alphanumeric, case-sensitive, characters
@@ -2283,7 +2385,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if prefix < 8 || prefix > 24 {
-				http.Error(w, "Invalid prefix length for TinyNets: "+string(prefix), 400)
+				http.Error(w, "Invalid prefix length for TinyNets: "+fmt.Sprint(prefix), 400)
 				return
 			}
 
@@ -2315,7 +2417,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 
 	// write to auth_users.json
 	users := fmt.Sprintf("{%q: %q}", "admin", conf.AdminPassword)
-	err = ioutil.WriteFile(AuthUsersFile, []byte(users), 0644)
+	err = ioutil.WriteFile(AuthUsersFile, []byte(users), 0600)
 	if err != nil {
 		http.Error(w, "Failed to write user auth file", 400)
 		panic(err)
@@ -2334,7 +2436,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 
 	configData = matchInterfaceUplink.ReplaceAllString(configData, "$1="+conf.InterfaceUplink)
 
-	err = ioutil.WriteFile(ConfigFile, []byte(configData), 0644)
+	err = ioutil.WriteFile(ConfigFile, []byte(configData), 0600)
 	if err != nil {
 		http.Error(w, "Failed to write config to "+ConfigFile, 400)
 		panic(err)
@@ -2360,7 +2462,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+conf.InterfaceAP)
 
 	hostapd_path := getHostapdConfigPath(conf.InterfaceAP)
-	err = ioutil.WriteFile(hostapd_path, []byte(configData), 0644)
+	err = ioutil.WriteFile(hostapd_path, []byte(configData), 0600)
 	if err != nil {
 		http.Error(w, "Failed to write config to "+hostapd_path, 400)
 		panic(err)
@@ -2372,7 +2474,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	// disable mdns advertising and set up default multicast rules
 	multicastSettingsSetupDone()
 
-	ioutil.WriteFile(SetupDonePath, []byte("true"), 0644)
+	ioutil.WriteFile(SetupDonePath, []byte("true"), 0600)
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
 	callSuperdRestart("", "")
@@ -2473,7 +2575,7 @@ func logRequest(handler http.Handler) http.Handler {
 	})
 }
 
-var ServerEventSock = "/state/api/eventbus.sock"
+var ServerEventSock = TEST_PREFIX + "/state/api/eventbus.sock"
 
 func startEventBus() {
 	// make sure the client dont connect to the prev socket
@@ -2545,6 +2647,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/firewall/multicast", modifyMulticast).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/icmp", modifyIcmp).Methods("PUT")
 	external_router_authenticated.HandleFunc("/firewall/custom_interface", modifyCustomInterfaceRules).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/enableTLS", enableTLS).Methods("GET", "PUT")
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
@@ -2555,6 +2658,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/arp", showARP).Methods("GET")
 
 	//Misc
+	external_router_authenticated.HandleFunc("/speedtest/{start:[0-9]+}-{end:[0-9]+}", speedTest).Methods("GET", "PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/restart", restart).Methods("PUT")
 	external_router_authenticated.HandleFunc("/backup", doConfigsBackup).Methods("PUT", "OPTIONS")
@@ -2574,6 +2678,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/version", getContainerVersion).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/autoupdate", autoUpdate).Methods("GET", "PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/checkupdates", checkUpdates).Methods("GET", "PUT", "DELETE")
 
 	//device management
 	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")
@@ -2629,21 +2734,26 @@ func main() {
 	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
 	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated)).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/plugins/{name}/restart", handleRestartPlugin).Methods("PUT")
+	//TBD: API Docs
+	external_router_authenticated.HandleFunc("/plugins/custom_compose_paths", applyJwtOtpCheck(modifyCustomComposePaths)).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/plusToken", plusToken).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/plusTokenValid", plusTokenValid).Methods("GET")
 	external_router_authenticated.HandleFunc("/stopPlusExtension", stopPlusExt).Methods("PUT")
 	external_router_authenticated.HandleFunc("/startPlusExtension", startPlusExt).Methods("PUT")
 
-	// tokens api
-	external_router_authenticated.HandleFunc("/tokens", getAuthTokens).Methods("GET")
-	external_router_authenticated.HandleFunc("/tokens", updateAuthTokens).Methods("PUT", "DELETE")
+	// Auth api
+	external_router_authenticated.HandleFunc("/tokens", applyJwtOtpCheck(getAuthTokens)).Methods("GET")
+	external_router_authenticated.HandleFunc("/tokens", applyJwtOtpCheck(updateAuthTokens)).Methods("PUT", "DELETE")
+	//TBD: API Docs OTP
+	external_router_authenticated.HandleFunc("/otp_register", otpRegister).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/otp_validate", generateOTPToken).Methods("PUT")
+	external_router_authenticated.HandleFunc("/otp_status", otpStatus).Methods("GET")
+	external_router_authenticated.HandleFunc("/otp_jwt_test", applyJwtOtpCheck(testJWTOTP)).Methods("PUT")
 
-	external_router_authenticated.HandleFunc("/speedtest/{start:[0-9]+}-{end:[0-9]+}", speedTest).Methods("GET", "PUT", "OPTIONS")
-
-	// notifications
-	external_router_authenticated.HandleFunc("/notifications", getNotificationSettings).Methods("GET")
-	external_router_authenticated.HandleFunc("/notifications", modifyNotificationSettings).Methods("DELETE", "PUT")
-	external_router_authenticated.HandleFunc("/notifications/{index:[0-9]+}", modifyNotificationSettings).Methods("DELETE", "PUT")
+	// alerts
+	external_router_authenticated.HandleFunc("/alerts", getAlertSettings).Methods("GET")
+	external_router_authenticated.HandleFunc("/alerts", modifyAlertSettings).Methods("DELETE", "PUT")
+	external_router_authenticated.HandleFunc("/alerts/{index:[0-9]+}", modifyAlertSettings).Methods("DELETE", "PUT")
 
 	// allow leaf nodes to report PSK events also
 	external_router_authenticated.HandleFunc("/reportPSKAuthSuccess", reportPSKAuthSuccess).Methods("PUT")
@@ -2692,9 +2802,11 @@ func main() {
 	dhcpdServer := http.Server{Handler: logRequest(unix_dhcpd_router)}
 	wireguardServer := http.Server{Handler: logRequest(unix_wireguard_router)}
 
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "SPR-Bearer"})
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "SPR-Bearer", "X-JWT-OTP"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
+
+	initAuth()
 
 	//set up dhcp
 	initDHCP()
@@ -2707,13 +2819,13 @@ func main() {
 	// collect traffic accounting statistics
 	trafficTimer()
 
-	// notifications, connect to eventbus
-	go NotificationsRunEventListener()
+	// alerts, connect to eventbus
+	go AlertsRunEventListener()
 	//listen and cache dns
 	go DNSEventListener()
 
-	// updates when enabled
-	go checkUpdates()
+	// updates when enabled. not implemented yet
+	go runAutoUpdates()
 
 	sslPort, runSSL := os.LookupEnv("API_SSL_PORT")
 

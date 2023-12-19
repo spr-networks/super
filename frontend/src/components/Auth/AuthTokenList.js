@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { format as timeAgo } from 'timeago.js'
+import { useNavigate } from 'react-router-dom'
 
 import {
   AddIcon,
@@ -18,7 +19,7 @@ import {
 
 import { ListHeader, ListItem } from 'components/List'
 
-import { authAPI } from 'api'
+import { authAPI, setJWTOTPHeader, setAuthReturn } from 'api'
 import { AlertContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import AddAuthToken from 'components/Auth/AddAuthToken'
@@ -31,10 +32,12 @@ const AuthTokenList = (props) => {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const refModal = useRef(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     refreshList()
   }, [])
+
 
   const deleteListItem = (row) => {
     authAPI
@@ -55,12 +58,41 @@ const AuthTokenList = (props) => {
   }
 
   const refreshList = () => {
+
     authAPI
-      .tokens()
-      .then((tokens) => {
-        setTokens(tokens)
+      .statusOTP()
+      .then((s) => {
+        setStatus(s.State)
+
+        authAPI
+          .tokens()
+          .then((tokens) => {
+            setTokens(tokens)
+          })
+          .catch((err) => {
+            err.response
+              .text()
+              .then((data) => {
+                if (data.includes("Invalid JWT")) {
+                  //re-log OTP
+                  setJWTOTPHeader('')
+                  if (s.State == 'registered') {
+                    setAuthReturn('/admin/auth')
+                    navigate('/auth/validate')
+                  }
+                }
+              })
+              .catch(() => {
+                context.error('Auth Token API ' + JSON.stringify(err), err)
+              })
+          })
+
       })
-      .catch((err) => context.error('Auth Token API', err))
+      .catch((e) => {
+        setStatus('unknown')
+        context.error('failed to get status', e)
+      })
+
   }
 
   const notifyChange = () => {
@@ -153,7 +185,12 @@ const AuthTokenList = (props) => {
 
       <VStack>
         {tokens !== null && tokens.length === 0 ? (
-          <Text alignSelf="center">There are no API tokens added yet</Text>
+            (status == 'registered') ? (
+              <Text alignSelf="center">There are no API tokens added yet</Text>
+            ) :
+            (
+              <Text alignSelf="center">{status} Register an OTP Code to view and add tokens</Text>
+            )
         ) : null}
       </VStack>
     </View>

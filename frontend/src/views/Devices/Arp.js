@@ -1,6 +1,8 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
+import { AppContext } from 'AppContext'
+import DeviceItem from 'components/Devices/DeviceItem'
 
 import {
   Badge,
@@ -20,7 +22,8 @@ import { InterfaceItem } from 'components/TagItem'
 const Arp = (props) => {
   const [list, setList] = useState()
 
-  const context = useContext(AlertContext)
+  const alertContext = useContext(AlertContext)
+  const context = useContext(AppContext)
 
   let translateFlags = (number) => {
     number = parseInt(number, 16)
@@ -40,7 +43,7 @@ const Arp = (props) => {
 
   const refreshList = async () => {
     let arp = await wifiAPI.arp().catch((error) => {
-      this.context.error('API Failure: ' + error.message)
+      this.alertContext.error('API Failure: ' + error.message)
     })
 
     arp = arp.sort((a, b) => {
@@ -74,19 +77,22 @@ const Arp = (props) => {
         renderItem={({ item }) => (
           <ListItem>
             <VStack
+              flex={2}
               minW="40%"
               sx={{ '@md': { flexDirection: 'row' } }}
               space={'md'}
               justifyContent="space-between"
             >
-              <Text size="sm" bold>
+              <Text flex={1} size="sm" bold>
                 {item.IP}
               </Text>
-              <Text size="sm" color="$muted500">
+              <Text flex={2} size="sm" color="$muted500">
                 {item.MAC}
               </Text>
+              <DeviceItem flex={1} hideMissing={true} show={['Name']} item={context.getDevice(item.MAC, 'MAC')} />
             </VStack>
             <VStack
+              flex={2}
               minW="40%"
               sx={{ '@md': { flexDirection: 'row' } }}
               space={'md'}

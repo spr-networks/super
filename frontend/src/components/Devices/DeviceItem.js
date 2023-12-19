@@ -22,6 +22,10 @@ const DeviceItem = React.memo(({ item, show, size, ...props }) => {
     dShow = ['Name']
   }
 
+  if (props.hideMissing && !item) {
+    return null
+  }
+
   let textSize = size || 'md'
   let iconSize = size == 'sm' ? 24 : 32
   return (
@@ -35,11 +39,18 @@ const DeviceItem = React.memo(({ item, show, size, ...props }) => {
       ) : null}
 
       {dShow.includes('Name') ? (
-        <Text size={textSize} bold={!!item?.Name} w="$1/3" minWidth="$24">
+        <Text
+          flex={1}
+          size={textSize}
+          bold={!!item?.Name}
+          w="$1/4"
+          minWidth="$20"
+        >
           {item?.Name || 'N/A'}
         </Text>
       ) : null}
       <VStack
+        flex={3}
         sx={{
           '@md': {
             flexDirection: 'row-reverse',

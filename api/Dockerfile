@@ -5,8 +5,8 @@ RUN apt-get install -y --no-install-recommends nftables iproute2 netcat-traditio
 RUN mkdir /code
 WORKDIR /code
 ARG TARGETARCH
-RUN curl -O https://dl.google.com/go/go1.20.linux-${TARGETARCH}.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.20.linux-${TARGETARCH}.tar.gz
+RUN curl -O https://dl.google.com/go/go1.21.5.linux-${TARGETARCH}.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.21.5.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 COPY code/ /code/
 
@@ -16,6 +16,11 @@ RUN --mount=type=tmpfs,target=/tmpfs \
     [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
     go build -ldflags "-s -w" -o /api
 
+RUN git clone https://github.com/spr-networks/sprbus --depth 1
+WORKDIR /code/sprbus/cmd/
+RUN --mount=type=tmpfs,target=/tmpfs \
+    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
+    go build -ldflags "-s -w" -o /sprbus
 
 FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive

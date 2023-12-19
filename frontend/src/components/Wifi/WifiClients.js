@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 
-import { wifiAPI, deviceAPI } from 'api'
+import { wifiAPI, meshAPI, deviceAPI } from 'api'
+import APIWifi from 'api/Wifi'
 import { AppContext, AlertContext } from 'AppContext'
 import { prettySignal } from 'utils'
 
@@ -54,13 +55,34 @@ const WifiClients = (props) => {
   }
 
   const refreshClients = async () => {
-    const ifaces = await wifiAPI.interfaces('AP').catch((error) => {
-      context.error('WIFI API Failure', error)
-    })
+    refreshAPI(wifiAPI)
 
+    meshAPI
+      .meshIter(() => new APIWifi())
+      .then((r) => {
+        r.forEach((remoteWifiApi) => {
+          refreshAPI(remoteWifiApi)
+        })
+      })
+      .catch((err) => {})
+  }
+
+  const refreshAPI = async (api) => {
+    const ifaces = await api.interfacesApi
+      .call(api, api, 'AP')
+      .catch((error) => {
+        context.error(
+          'WIFI API Failure ' + (api.remoteURL ? api.remoteURL : '')
+        )
+        return
+      })
+    if (!ifaces) {
+      return
+    }
     let stations = {}
+
     for (let iface of ifaces) {
-      let ret = await wifiAPI.allStations(iface).catch((error) => {
+      let ret = await api.allStations.call(api, iface).catch((error) => {
         context.error('WIFI API Failure', error)
       })
 
@@ -75,19 +97,35 @@ const WifiClients = (props) => {
     })
 
     if (devices && stations) {
-      let clients = Object.values(devices).filter((device) =>
+      let new_clients = Object.values(devices).filter((device) =>
         Object.keys(stations).includes(device.MAC)
       )
 
-      clients = clients.map((client) => {
+      new_clients = new_clients.map((client) => {
         let station = stations[client.MAC]
         client.Auth = akmSuiteAuth(station.AKMSuiteSelector)
         client.Signal = station.signal
         client.Iface = station.Iface
         client.TXRate = station.tx_rate_info
+        client.AP = api.remoteURL.replace('http://', '').replace('/', '')
         return client
       })
-      setClients(clients)
+
+      setClients((prevClients) => {
+        let merged = {}
+        let add_me = []
+        let prev = prevClients || []
+        for (let client of prev) {
+          merged[client.MAC] = 1
+        }
+        for (let new_client of new_clients) {
+          if (merged[new_client.MAC] != 1) {
+            add_me.push(new_client)
+          }
+        }
+
+        return add_me.concat(...prev)
+      })
     }
   }
 
@@ -121,17 +159,21 @@ const WifiClients = (props) => {
       estimatedItemSize={100}
       renderItem={({ item }) => (
         <ListItem>
-          <DeviceItem item={item} w="$1/2" justifyContent="space-between" />
+          <DeviceItem item={item} flex={3} justifyContent="space-between" />
           <Box
-            flex={1}
-            sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
+            sx={{
+              '@base': { display: 'none' },
+              '@md': { display: 'flex', flex: 1 }
+            }}
             alignItems="center"
           >
-            <InterfaceItem name={item.Iface} />
+            <InterfaceItem
+              name={item.AP ? `${item.Iface}-${item.AP}` : item.Iface}
+            />
           </Box>
 
           <VStack
-            flex={2}
+            flex={1}
             space="md"
             alignItems="flex-end"
             sx={{ '@md': { flexDirection: 'row' } }}

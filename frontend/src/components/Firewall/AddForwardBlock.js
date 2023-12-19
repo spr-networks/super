@@ -72,7 +72,7 @@ class AddForwardBlockImpl extends React.Component {
       <VStack space="md">
         <FormControl isRequired>
           <FormControlLabel>
-            <FormControlLabelText>Source address</FormControlLabelText>
+            <FormControlLabelText>Source IP Address</FormControlLabelText>
           </FormControlLabel>
           <ClientSelect
             name="SrcIP"
@@ -86,7 +86,7 @@ class AddForwardBlockImpl extends React.Component {
         </FormControl>
         <FormControl isRequired>
           <FormControlLabel>
-            <FormControlLabelText>Destination address</FormControlLabelText>
+            <FormControlLabelText>Destination IP Address</FormControlLabelText>
           </FormControlLabel>
           <ClientSelect
             name="DstIP"
@@ -112,7 +112,7 @@ class AddForwardBlockImpl extends React.Component {
           </Input>
           <FormControlHelper>
             <FormControlHelperText>
-              Optional port or port range (leave empty for all ports)
+              Optional port or port range, leave empty for all ports
             </FormControlHelperText>
           </FormControlHelper>
         </FormControl>

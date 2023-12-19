@@ -29,24 +29,28 @@ import Wireguard from 'views/Wireguard'
 import Firewall from 'views/Firewall/Firewall'
 import FirewallSettings from 'views/Firewall/FirewallSettings'
 import PFW from 'views/Firewall/Pfw'
+import PFWTasks from 'views/System/PfwTasks'
 import Mesh from 'views/Mesh'
-import Logs from 'views/Logs'
 import Events from 'views/Events'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
+import AuthValidate from 'views/AuthValidate'
 import SystemInfo from 'views/SystemInfo'
-import Notifications from 'views/Notifications'
+import Alerts from 'views/Alerts'
+import AlertSettings from 'views/AlertSettings'
 import SpeedTest from 'views/SpeedTest'
 import Supernetworks from 'views/Supernetworks'
 
 import {
   ActivityIcon,
+  AlertTriangleIcon,
   ArrowUpCircleIcon,
   BanIcon,
   BarChart3Icon,
   BarChartHorizontalIcon,
   BellIcon,
   CableIcon,
+  CogIcon,
   ContainerIcon,
   EyeIcon,
   FlameIcon,
@@ -61,6 +65,7 @@ import {
   ListTreeIcon,
   NetworkIcon,
   PuzzleIcon,
+  Repeat2,
   RouterIcon,
   ScanSearchIcon,
   SeparatorVerticalIcon,
@@ -300,10 +305,24 @@ const routes = [
     ]
   },
   {
-    name: 'Events',
+    name: 'Monitor',
     state: 'eventsCollapse',
     hideSimple: true,
     views: [
+      {
+        path: 'alerts',
+        name: 'Alerts',
+        icon: AlertTriangleIcon,
+        component: Alerts,
+        layout: 'admin'
+      },
+      {
+        path: 'alerts/settings',
+        name: 'Alerts Configuration',
+        icon: Settings2Icon,
+        component: AlertSettings,
+        layout: 'admin'
+      },
       {
         path: 'events',
         name: 'Events',
@@ -312,19 +331,14 @@ const routes = [
         layout: 'admin'
       },
       {
-        path: 'logs/:containers',
-        name: 'Logs',
-        icon: ScanSearchIcon,
-        component: Logs,
-        layout: 'admin'
+        path: 'pfw_tasks',
+        name: 'Tasks',
+        icon: Repeat2,
+        component: PFWTasks,
+        hideSimple: true,
+        layout: 'admin',
+        plus: true
       },
-      {
-        path: 'notifications',
-        name: 'Notifications',
-        icon: BellIcon,
-        component: Notifications,
-        layout: 'admin'
-      }
     ]
   },
   {
@@ -405,6 +419,11 @@ const routes = [
   {
     path: 'setup',
     component: Setup,
+    layout: 'auth'
+  },
+  {
+    path: 'validate',
+    component: AuthValidate,
     layout: 'auth'
   }
 ]

@@ -99,6 +99,15 @@ const DNSLogList = ({ title, description, ...props }) => {
 
   const handleSubmit = (value) => {
     setIsModalOpen(false)
+    if (value.length == 0) {
+      return
+    }
+
+    //append trailing dot
+    if (type == 'Domain' && !value.endsWith('.')) {
+      value = value + '.'
+    }
+
     addListItem(value)
   }
 

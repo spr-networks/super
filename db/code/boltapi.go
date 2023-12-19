@@ -2,23 +2,28 @@ package boltapi
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"github.com/gorilla/mux"
 	"io/ioutil"
-	//"github.com/tidwall/gjson"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/PaesslerAG/gval"
+	"github.com/PaesslerAG/jsonpath"
 )
 
 import bolt "go.etcd.io/bbolt"
+import "github.com/hashicorp/go-msgpack/codec"
 
 var (
 	db                   **bolt.DB
@@ -38,6 +43,7 @@ var (
 	ErrBucketItemCreate  = errors.New("error creating bucket item")
 	ErrBucketItemUpdate  = errors.New("error updating bucket item")
 	ErrBucketItemDelete  = errors.New("error deleting bucket item")
+	ErrBucketItemFilter  = errors.New("error filtering item")
 	seenEvents           = map[string]bool{}
 )
 
@@ -51,9 +57,15 @@ type BucketItem struct {
 	Value interface{} `json:value`
 }
 
+type TopicLimit struct {
+	Name string
+	Size int
+}
+
 type LogConfig struct {
-	SaveEvents []string `json:"SaveEvents"`
-	MaxSize    uint64   `json:"MaxSize"`
+	SaveEvents  []string `json:"SaveEvents"`
+	MaxSize     uint64   `json:"MaxSize"`
+	TopicLimits []TopicLimit
 }
 
 func LogEvent(topic string) {
@@ -121,7 +133,7 @@ func (item *BucketItem) EncodeKey() []byte {
 	return []byte(item.Key)
 }
 
-func (item *BucketItem) EncodeValue() ([]byte, error) {
+func (item *BucketItem) EncodeValueJSON() ([]byte, error) {
 	buf, err := json.Marshal(item.Value)
 	if err != nil {
 		return nil, ErrBucketItemEncode
@@ -130,7 +142,20 @@ func (item *BucketItem) EncodeValue() ([]byte, error) {
 	return buf, nil
 }
 
-func (item *BucketItem) DecodeValue(rawValue []byte) error {
+func (item *BucketItem) EncodeValueMsgpack() ([]byte, error) {
+
+	var mh codec.MsgpackHandle
+	var buf []byte
+	encoder := codec.NewEncoderBytes(&buf, &mh)
+	err := encoder.Encode(item.Value)
+	if err != nil {
+		return nil, ErrBucketItemEncode
+	}
+
+	return buf, nil
+}
+
+func (item *BucketItem) DecodeValueJSON(rawValue []byte) error {
 	if err := json.Unmarshal(rawValue, &item.Value); err != nil {
 		return ErrBucketItemDecode
 	}
@@ -138,42 +163,23 @@ func (item *BucketItem) DecodeValue(rawValue []byte) error {
 	return nil
 }
 
-func Serve(boltdb **bolt.DB, socketpath string) error {
-	db = boltdb
-	router := mux.NewRouter().StrictSlash(true)
-
-	router.HandleFunc("/buckets", ListBuckets).Methods("GET")
-	router.HandleFunc("/buckets", AddBucket).Methods("PUT")
-
-	router.HandleFunc("/bucket/{name}", GetBucket).Methods("GET")
-	router.HandleFunc("/bucket/{name}", AddBucketItem).Methods("PUT")
-	router.HandleFunc("/bucket/{name}", DeleteBucket).Methods("DELETE")
-
-	router.HandleFunc("/items/{name}", GetBucketItems).Methods("GET")
-
-	router.HandleFunc("/bucket/{name}/{key}", GetBucketItem).Methods("GET")
-	router.HandleFunc("/bucket/{name}/{key}", UpdateBucketItem).Methods("PUT")
-	router.HandleFunc("/bucket/{name}/{key}", DeleteBucketItem).Methods("DELETE")
-
-	router.HandleFunc("/config", GetSetConfig).Methods("GET", "PUT")
-	router.HandleFunc("/stats", GetStats).Methods("GET")
-	router.HandleFunc("/stats/{name}", GetBucketStats).Methods("GET")
-
-	router.HandleFunc("/topics", GetTopics).Methods("GET")
-
-	os.Remove(socketpath)
-	unixPluginListener, err := net.Listen("unix", socketpath)
+func (item *BucketItem) DecodeValueMsgpack(rawValue []byte) error {
+	var mh codec.MsgpackHandle
+	decoder := codec.NewDecoderBytes(rawValue, &mh)
+	err := decoder.Decode(&item.Value)
 	if err != nil {
-		panic(err)
+		return ErrBucketItemDecode
 	}
 
-	log.Println("starting http.Server...")
+	return nil
+}
 
-	pluginServer := http.Server{Handler: logRequest(router)}
-	return pluginServer.Serve(unixPluginListener)
-	//pluginServer := http.Server{Addr: ":8080", Handler: logRequest(router)}
-	//return pluginServer.ListenAndServe()
+func (item *BucketItem) DecodeValue(rawValue []byte) error {
+	return item.DecodeValueJSON(rawValue)
+}
 
+func (item *BucketItem) EncodeValue() ([]byte, error) {
+	return item.EncodeValueJSON()
 }
 
 func GetSetConfig(w http.ResponseWriter, r *http.Request) {
@@ -413,18 +419,18 @@ func keyToTimeString(key []byte) (string, error) {
 
 	if len(key) == 8 {
 		ts = time.Unix(0, int64(binary.BigEndian.Uint64(key)))
-	} else if tsp, err := time.Parse(time.RFC3339, string(key)); err == nil {
+	} else if tsp, err := time.Parse(time.RFC3339Nano, string(key)); err == nil {
 		ts = tsp
 	} else {
 		err = errors.New("failed to parse date")
 	}
 
-	return ts.UTC().Format(time.RFC3339), err
+	return ts.UTC().Format(time.RFC3339Nano), err
 }
 
 // timestamp to 8 byte key
 func TimeKey(s string) ([]byte, error) {
-	ts, err := time.Parse(time.RFC3339, s)
+	ts, err := time.Parse(time.RFC3339Nano, s)
 	if err != nil {
 		return nil, errors.New("failed to parse date")
 	}
@@ -452,6 +458,44 @@ func keyOrDefault(s interface{}, defaultKey string) []byte {
 	return key
 }
 
+func isEmpty(x interface{}) bool {
+	if x == nil {
+		return true
+	}
+
+	v := reflect.ValueOf(x)
+	switch v.Kind() {
+	case reflect.Slice, reflect.Array, reflect.Map:
+		return v.Len() == 0
+	case reflect.String:
+		return v.Len() == 0
+	default:
+		// for other types, return false
+		return false
+	}
+}
+
+func testFilter(JPath string, event interface{}) (bool, error) {
+
+	//similar to api/alerts.go
+	//this will evaluate a JSONPath expression on an interface
+	//and can be applied as a filter.
+	// the returned value is ignored, this only tests for a match
+	builder := gval.Full(jsonpath.PlaceholderExtension())
+
+	path, err := builder.NewEvaluable(JPath)
+	if err != nil {
+		return false, err
+	}
+
+	value, err := path(context.Background(), event)
+	if err != nil {
+		return false, err
+	}
+
+	return !isEmpty(value), err
+}
+
 // array of .values, including time key
 func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 	DBPtr.RLock()
@@ -467,6 +511,7 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 	max_q := r.URL.Query().Get("max")
 	minKey = keyOrDefault(min_q, time.Now().UTC().Add(-time.Hour*24*365).Format(time.RFC3339Nano))
 	maxKey = keyOrDefault(max_q, time.Now().UTC().Format(time.RFC3339Nano))
+	filter := r.URL.Query().Get("filter")
 
 	// default 100, max 1000
 	maxNum := 1000
@@ -509,11 +554,24 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			items = append(items, jsonMap)
+			doAppend := true
+			if filter != "" {
+				//NOTE: for performance we might want to consider filtering items later.
+				doAppend, err = testFilter(filter, []interface{}{jsonMap})
+				if err != nil {
+					//busy error, ignore
+					//log.Println("api failure", ApiError{ErrBucketItemFilter, err}, err)
 
-			numFetched += 1
-			if numFetched >= num {
-				return nil
+				}
+			}
+
+			if doAppend {
+				items = append(items, jsonMap)
+
+				numFetched += 1
+				if numFetched >= num {
+					return nil
+				}
 			}
 		}
 
@@ -558,6 +616,8 @@ func PutItem(bucketName string, jsonData map[string]interface{}) (*BucketItem, e
 		if err != nil {
 			return ErrBucketMissing
 		}
+
+		bucket.FillPercent = 0.9
 
 		return bucket.Put(payload.EncodeKey(), encodedValue)
 	}); err != nil {
@@ -628,10 +688,20 @@ func UpdateBucketItem(w http.ResponseWriter, r *http.Request) {
 	fail := func(cusromErr, origErr error) {
 		log.Println(ApiError{cusromErr, origErr})
 		http.Error(w, cusromErr.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	bucketName := mux.Vars(r)["name"]
 	bucketItemKey := mux.Vars(r)["key"]
+
+	if strings.HasPrefix(bucketItemKey, "timekey:") {
+		b, err := TimeKey(bucketItemKey[len("timekey:"):])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		bucketItemKey = string(b)
+	}
 
 	payload := &BucketItem{Key: bucketItemKey}
 	if err := json.NewDecoder(r.Body).Decode(&payload.Value); err != nil {
@@ -650,6 +720,7 @@ func UpdateBucketItem(w http.ResponseWriter, r *http.Request) {
 		if bucket == nil {
 			return ErrBucketMissing
 		}
+		bucket.FillPercent = 0.9
 		return bucket.Put(payload.EncodeKey(), encodedValue)
 	}); err != nil {
 		fail(ErrBucketItemUpdate, err)
@@ -672,7 +743,7 @@ func DeleteBucketItem(w http.ResponseWriter, r *http.Request) {
 		if bucket == nil {
 			return ErrBucketMissing
 		}
-
+		bucket.FillPercent = 0.9
 		return bucket.Delete([]byte(bucketItemKey))
 	}); err != nil {
 		log.Println(ApiError{ErrBucketItemDelete, err})
@@ -689,4 +760,39 @@ func logRequest(handler http.Handler) http.Handler {
 		//sprbus.Publish("log:db", map[string]int64{"method": r.Method})
 		handler.ServeHTTP(w, r)
 	})
+}
+
+func Serve(boltdb **bolt.DB, socketpath string) error {
+	db = boltdb
+	router := mux.NewRouter().StrictSlash(true)
+
+	router.HandleFunc("/buckets", ListBuckets).Methods("GET")
+	router.HandleFunc("/buckets", AddBucket).Methods("PUT")
+
+	router.HandleFunc("/bucket/{name}", GetBucket).Methods("GET")
+	router.HandleFunc("/bucket/{name}", AddBucketItem).Methods("PUT")
+	router.HandleFunc("/bucket/{name}", DeleteBucket).Methods("DELETE")
+
+	router.HandleFunc("/items/{name}", GetBucketItems).Methods("GET")
+
+	router.HandleFunc("/bucket/{name}/{key}", GetBucketItem).Methods("GET")
+	router.HandleFunc("/bucket/{name}/{key}", UpdateBucketItem).Methods("PUT")
+	router.HandleFunc("/bucket/{name}/{key}", DeleteBucketItem).Methods("DELETE")
+
+	router.HandleFunc("/config", GetSetConfig).Methods("GET", "PUT")
+	router.HandleFunc("/stats", GetStats).Methods("GET")
+	router.HandleFunc("/stats/{name}", GetBucketStats).Methods("GET")
+
+	router.HandleFunc("/topics", GetTopics).Methods("GET")
+
+	os.Remove(socketpath)
+	unixPluginListener, err := net.Listen("unix", socketpath)
+	if err != nil {
+		panic(err)
+	}
+
+	log.Println("starting http.Server...")
+
+	pluginServer := http.Server{Handler: logRequest(router)}
+	return pluginServer.Serve(unixPluginListener)
 }

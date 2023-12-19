@@ -10,6 +10,7 @@ const Logs = (props) => {
   const params = useParams()
 
   useEffect(() => {
+    //note: useNavigate needs to be re-enabled for this to work
     let { containers } = params
     if (containers && containers != ':containers') {
       setContainers(containers.split(','))

@@ -36,7 +36,7 @@ const ItemMenu = ({
     ))
 
   const handleSubmitNew = (item) => {
-    onSelectionChange([...new Set([...items, item])])
+    onSelectionChange([...new Set([...selectedKeys, item])])
   }
 
   return (

@@ -1,7 +1,6 @@
 import React, { useContext } from 'react'
 import PropTypes from 'prop-types'
 
-import ClientSelect from 'components/ClientSelect'
 import { firewallAPI } from 'api'
 import { AlertContext, AppContext } from 'AppContext'
 
@@ -58,7 +57,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
     if (name == 'Interface') {
       let ifaceIdx = this.props.interfaceList.indexOf(value)
       if (ifaceIdx > -1) {
-        this.setState({ SrcIP : this.props.netBlocks[ifaceIdx] })
+        this.setState({ SrcIP: this.props.netBlocks[ifaceIdx] })
       }
     }
     this.setState({ [name]: value })
@@ -74,9 +73,8 @@ class AddContainerInterfaceRuleImpl extends React.Component {
       RouteDst: this.state.RouteDst,
       Interface: this.state.Interface,
       Groups: this.state.Groups,
-      Tags: this.state.Tags,
+      Tags: this.state.Tags
     }
-
 
     const done = (res) => {
       if (this.props.notifyChange) {
@@ -93,8 +91,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
   }
 
   componentDidMount() {
-    this.props.appContext.getGroups()
-    .then((groups) => {
+    this.props.appContext.getGroups().then((groups) => {
       this.handleChange('GroupOptions', groups) //groups.map(x => ({label: x, value: x})))
     })
   }
@@ -108,7 +105,9 @@ class AddContainerInterfaceRuleImpl extends React.Component {
   }
 
   render() {
-    let interfaceOptions = this.props.interfaceList.map((n) => { return {label: n, value: n}})
+    let interfaceOptions = this.props.interfaceList.map((n) => {
+      return { label: n, value: n }
+    })
     return (
       <VStack space="md">
         <FormControl>
@@ -123,10 +122,11 @@ class AddContainerInterfaceRuleImpl extends React.Component {
             />
           </Input>
           <FormControlHelper>
-            <FormControlHelperText>Friendly name for rule</FormControlHelperText>
+            <FormControlHelperText>
+              Friendly name for rule
+            </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
-
 
         <FormControl isRequired>
           <FormControlLabel>
@@ -140,7 +140,9 @@ class AddContainerInterfaceRuleImpl extends React.Component {
             onChange={(value) => this.handleChange('Interface', value)}
           />
           <FormControlHelper>
-            <FormControlHelperText>Interface name (type one if not in the list)</FormControlHelperText>
+            <FormControlHelperText>
+              Interface name (type one if not in the list)
+            </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
 
@@ -156,14 +158,17 @@ class AddContainerInterfaceRuleImpl extends React.Component {
             />
           </Input>
           <FormControlHelper>
-            <FormControlHelperText>IP address or CIDR allowed as Source IPs for the interface.</FormControlHelperText>
+            <FormControlHelperText>
+              IP address or CIDR allowed as Source IPs for the interface.
+            </FormControlHelperText>
           </FormControlHelper>
-
         </FormControl>
 
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Set Route Destination (optional)</FormControlLabelText>
+            <FormControlLabelText>
+              Set Route Destination (optional)
+            </FormControlLabelText>
           </FormControlLabel>
           <Input size="md" variant="underlined">
             <InputField
@@ -195,26 +200,34 @@ class AddContainerInterfaceRuleImpl extends React.Component {
           </HStack>
           <HStack space="md" flexWrap="wrap" alignItems="center">
             <GroupMenu
-              items={[...new Set(this.defaultGroups.concat(this.state.GroupOptions))]}
+              items={[
+                ...new Set(this.defaultGroups.concat(this.state.GroupOptions))
+              ]}
               selectedKeys={this.state.Groups}
               onSelectionChange={this.handleGroups}
             />
 
             <TagMenu
-              items={[...new Set(this.defaultTags.concat(this.state.TagOptions))]}
+              items={[
+                ...new Set(this.defaultTags.concat(this.state.TagOptions))
+              ]}
               selectedKeys={this.state.Tags}
               onSelectionChange={this.handleTags}
             />
-
           </HStack>
+
           <FormControlHelper>
-            <FormControlHelperText>Add 'api' for access to SPR API. 'dns', 'wan' for internet access, and 'lan' for network access to all SPR devices.</FormControlHelperText>
+            <FormControlHelperText>
+              Add 'api' for access to SPR API. 'dns', 'wan' for internet access,
+              and 'lan' for network access to all SPR devices.
+            </FormControlHelperText>
           </FormControlHelper>
           <FormControlHelper>
-            <FormControlHelperText>The lan_upstream tag is not accepted for a range at this time</FormControlHelperText>
+            <FormControlHelperText>
+              The lan_upstream tag is not accepted for a range at this time
+            </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
-
 
         <Button action="primary" size="md" onPress={this.handleSubmit}>
           <ButtonText>Save</ButtonText>

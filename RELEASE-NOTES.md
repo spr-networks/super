@@ -1,4 +1,18 @@
 # Secure Programmable Router (SPR) Release Notes
+## v0.3.3
+* New Alerts functionality 
+* New Events filters, Events UI Improvements
+* Migrate notifications to new Alerts view
+* Add OTP hardening for tokens, OTP support
+* Add Easy Plugin install with OTP Check
+* Add TLS during install, TLS on in UI
+* Add Report Install/Auto Check for Updates flags
+Key Fixes
+* Fix Mesh UI Display error
+* Fix UI Tag, Group selection 
+* Fixed DB Compaction logic to store more events, increased fill limit
+* Fix SrcPort 
+
 ## v0.3.2
 * Fixes for DNS Log date picker 
 * Add Domain info from recent lookups to TrafficList and the packet event log

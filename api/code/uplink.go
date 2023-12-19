@@ -48,7 +48,7 @@ func saveUplinksConfig(config UplinksConfig) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(gAPIUplinksConfigPath, file, 0660)
+	err = ioutil.WriteFile(gAPIUplinksConfigPath, file, 0600)
 	if err != nil {
 		return err
 	}

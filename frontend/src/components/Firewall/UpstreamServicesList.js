@@ -29,12 +29,29 @@ const UpstreamServicesList = (props) => {
   const context = useContext(AlertContext)
 
   const [list, setList] = useState([])
+  const [tlsState, setTlsState] = useState('unknown')
 
   const refreshList = () => {
     firewallAPI.config().then((config) => {
       //setList(config.ForwardingRules)
       let flist = config.ServicePorts
       setList(flist)
+    })
+  }
+
+  const refreshTlsState = () => {
+    firewallAPI.getTLS().then((state) => {
+      setTlsState(state ? "enabled" : "disabled")
+    }).catch((err) => {
+
+    })
+  }
+
+  const enableTLS = () => {
+    firewallAPI.setTLS().then((state) => {
+      setTlsState(state ? "enabled" : "disabled")
+    }).catch((err) => {
+      context.error('Firewall API could not enable TLS ', err)
     })
   }
 
@@ -46,6 +63,7 @@ const UpstreamServicesList = (props) => {
 
   useEffect(() => {
     refreshList()
+    refreshTlsState()
   }, [])
 
   let refModal = useRef(null)
@@ -89,6 +107,24 @@ const UpstreamServicesList = (props) => {
       </ListHeader>
 
       <Box>
+        <VStack
+          space="md"
+          justifyContent="space-between"
+          mb="$4"
+          px="$4"
+        >
+        <Heading size="sm">HTTPS Settings</Heading>
+        <Text size="sm" bold>API Status: {tlsState} </Text>
+        {(tlsState != "enabled") ? (
+        <HStack>
+          <Button
+            onPress={() => enableTLS()}
+          >
+            <ButtonText>Click to enable TLS API</ButtonText>
+          </Button>
+        </HStack>
+      ) : null}
+        </VStack>
         <HStack
           space="md"
           justifyContent="space-between"

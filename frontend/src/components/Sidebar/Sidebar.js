@@ -141,11 +141,13 @@ const SidebarItem = (props) => {
       'Auth',
       'Events',
       'Uplink',
+      'LAN',
       'Logs',
       'Notifications',
       'Home',
       'Wifi',
       'MESH',
+      'Network',
       'System',
       'Plugins',
       'System Info',
@@ -154,7 +156,6 @@ const SidebarItem = (props) => {
 
     if (isMeshNode && !meshItems.includes(item.name)) {
       display = 'none'
-      return null
     }
 
     // menu items hidden when wifi mode is disabled
@@ -171,7 +172,7 @@ const SidebarItem = (props) => {
       display = 'none'
     }
 
-    if (item.hideSimple && isSimpleMode) {
+    if (item.hideSimple && isSimpleMode && !isMeshNode) {
       display = 'none'
     }
 
@@ -232,7 +233,7 @@ const SidebarItem = (props) => {
                 {isMini ? null : (
                   <Text
                     fontWeight="300"
-                    size="sm"
+                    fontSize={14}
                     color={colorMode == 'light' ? '#11181c' : '$coolGray300'}
                   >
                     {item.name}

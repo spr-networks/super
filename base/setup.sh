@@ -27,3 +27,7 @@ echo network: {config: disabled} > /etc/cloud/cloud.cfg.d/99-disable-network-con
 
 # disable iptables for  docker
 echo -e "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
+
+#generate self signed certificate
+SKIPPASS="-password pass:1234" ./api/scripts/generate-certificate.sh
+

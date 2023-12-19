@@ -43,12 +43,14 @@ export class APIDNSLog extends API {
   deleteDomainIgnore(item) {
     return this.delete(`/domain_ignore/${item}`, {});
   }
+  /*
   history(ip) {
     return this.get(`/history/${ip}`, {});
   }
   deleteHistory(ip) {
     return this.delete(`/history/${ip}`);
   }
+  */
 
 }
 

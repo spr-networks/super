@@ -100,7 +100,7 @@ func copyInterfacesConfigToPublic() {
 	Interfacesmtx.Lock()
 	config := loadInterfacesPublicConfigLocked()
 	file, _ := json.MarshalIndent(config, "", " ")
-	ioutil.WriteFile(gAPIInterfacesPublicPath, file, 0660)
+	ioutil.WriteFile(gAPIInterfacesPublicPath, file, 0600)
 	Interfacesmtx.Unlock()
 }
 
@@ -175,7 +175,7 @@ func configureInterface(interfaceType string, subType string, name string) error
 			configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+name)
 			configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+name)
 
-			err = ioutil.WriteFile(path, []byte(configData), 0644)
+			err = ioutil.WriteFile(path, []byte(configData), 0600)
 			if err != nil {
 				fmt.Println("Error creating", path)
 				return err
@@ -449,7 +449,7 @@ func writeInterfacesConfigLocked(config []InterfaceConfig) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(gAPIInterfacesPath, file, 0660)
+	err = ioutil.WriteFile(gAPIInterfacesPath, file, 0600)
 	if err != nil {
 		return err
 	}
@@ -461,7 +461,7 @@ func writeInterfacesConfigLocked(config []InterfaceConfig) error {
 	}
 
 	//write a copy to the public path
-	return ioutil.WriteFile(gAPIInterfacesPublicPath, file, 0660)
+	return ioutil.WriteFile(gAPIInterfacesPublicPath, file, 0600)
 }
 
 /* VLAN Trunking Support */

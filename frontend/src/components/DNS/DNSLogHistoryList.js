@@ -69,7 +69,7 @@ const TooltipIconButton = ({ label, onPress, icon, color, ...props }) => (
   <Tooltip label={label}>
     <Button
       sx={{
-        '@base': { display: 'none' },
+        '@base': { display: 'flex' },
         '@md': { display: 'flex' }
       }}
       variant="link"
@@ -92,7 +92,7 @@ const ListItem = ({
       BLOCKED: 'error',
       NOERROR: 'success',
       NODATA: 'warning',
-      OTHERERROR: 'danger',
+      OTHERERROR: 'warning',
       NXDOMAIN: 'info'
     }
 
@@ -209,7 +209,7 @@ const DNSLogHistoryList = (props) => {
   const perPage = 20
   const [total, setTotal] = useState(0)
   const [params, setParams] = useState({ num: 20 })
-  const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0])
+  const [dateTo, setDateTo] = useState(null) //new Date().toISOString().split('T')[0])
 
   const modalRef = React.useRef(null)
 
@@ -379,7 +379,6 @@ const DNSLogHistoryList = (props) => {
     for (let ip of filterIps) {
       try {
         await dbAPI.deleteBucket(`dns:serve:${ip}`)
-        await logAPI.deleteHistory(ip) // TODO this is old
       } catch (err) {
         context.error(`Failed to delete dns history for ${ip}`)
       }
@@ -455,17 +454,20 @@ const DNSLogHistoryList = (props) => {
   }, [filterText, filterType])
 
   useEffect(() => {
+    if (dateTo == null) {
+      return
+    }
+
     //NOTE same 24h
-    let utcOffsetMS = new Date().getTimezoneOffset() * 60000;
+    let utcOffsetMS = new Date().getTimezoneOffset() * 60000
     let min = new Date(dateTo)
-    min.setTime(min.getTime() + utcOffsetMS)
+    min.setTime(min.getTime() - utcOffsetMS)
     min = min.toISOString()
 
-    let nextDay = new Date(dateTo);
+    let nextDay = new Date(dateTo)
     nextDay.setTime(nextDay.getTime() + utcOffsetMS)
     nextDay.setDate(nextDay.getDate() + 1)
     let max = nextDay.toISOString()
-
 
     setParams({
       ...params,
@@ -656,8 +658,7 @@ const DNSLogHistoryList = (props) => {
           space="sm"
           sx={{
             '@base': {
-              display:
-                filterIps.length && showForm ? 'flex' : 'none'
+              display: filterIps.length && showForm ? 'flex' : 'none'
             },
             '@md': { flexDirection: 'row' }
           }}

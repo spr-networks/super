@@ -7,13 +7,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 )
 
 import (
 	"github.com/spr-networks/sprbus"
-	//"github.com/tidwall/gjson"
 )
 
 import bolt "go.etcd.io/bbolt"
@@ -22,16 +22,20 @@ import (
 	"boltapi"
 )
 
+var TEST_PREFIX = os.Getenv("TEST_PREFIX")
+
 var (
-	gDBPath     = flag.String("dbpath", "/state/plugins/db/logs.db", "Path to bolt database")
+	gDBPath     = flag.String("dbpath", TEST_PREFIX + "/state/plugins/db/logs.db", "Path to bolt database")
 	gDebug      = flag.Bool("debug", false, "verbose output")
-	gConfigPath = flag.String("config", "/configs/db/config.json", "Path to boltapi configuration")
+	gConfigPath = flag.String("config", TEST_PREFIX + "/configs/db/config.json", "Path to boltapi configuration")
 	gDump       = flag.Bool("dump", false, "list gBuckets. dont run http server")
 	gBucket     = flag.String("b", "", "bucket to dump. dont run http server")
-	gSocketPath = "/state/plugins/db/socket"
+	gSocketPath = TEST_PREFIX + "/state/plugins/db/socket"
 )
 
 func cli(db *bolt.DB, bucket string) {
+	total := 0
+
 	if err := db.View(func(tx *bolt.Tx) error {
 		// list single or all gBucket(s)
 		if bucket != "" {
@@ -50,7 +54,7 @@ func cli(db *bolt.DB, bucket string) {
 				if _, exists := jsonMap["time"]; !exists {
 					// time from key
 					t := time.Unix(0, int64(binary.BigEndian.Uint64(k))).UTC()
-					jsonMap["time"] = t.Format(time.RFC3339)
+					jsonMap["time"] = t.Format(time.RFC3339Nano)
 				}
 
 				//x, ok := gjson.Parse(string(v)).Value().(map[string]interface{})
@@ -65,7 +69,13 @@ func cli(db *bolt.DB, bucket string) {
 		} else {
 			if err := db.View(func(tx *bolt.Tx) error {
 				return tx.ForEach(func(name []byte, bucket *bolt.Bucket) error {
+
 					fmt.Printf("%s\n", name)
+					stats := bucket.Stats()
+					if os.Getenv("DEBUG") != "" {
+						fmt.Printf("%+v\n", stats)
+					}
+					total += stats.BranchAlloc + stats.LeafAlloc
 					return nil
 				})
 			}); err != nil {
@@ -81,12 +91,35 @@ func cli(db *bolt.DB, bucket string) {
 		return
 	}
 
+	fmt.Println("TOTAL DB MB:", total/1024.0/1024.0)
+
+	/*
+	//test code
+	dst, err := bolt.Open("/tmp/compacted.db", 0600, nil)
+	defer dst.Close()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = bolt.Compact(dst, db, 0)
+	*/
+
+
+
 	return
 }
 
 var config = boltapi.LogConfig{}
 
 func shouldLogEvent(topic string) bool {
+	//hard coded for now. always store alert events
+	//if someone does not want them they should disable the alert
+	//that generates it.
+	if strings.HasPrefix(topic, "alert:") {
+		return true
+	}
+
 	for _, event := range config.SaveEvents {
 		if strings.HasPrefix(topic, event) {
 			return true

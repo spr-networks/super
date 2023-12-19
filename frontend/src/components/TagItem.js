@@ -74,6 +74,8 @@ const GroupItem = React.memo(({ name, size }) => {
 })
 
 const InterfaceItem = React.memo(({ name, address, size, ...props }) => {
+  if (!name) return <></>
+
   let isWifi = name?.startsWith('wlan')
   let isOffline = !name?.length
   let colorMode = useColorMode()
@@ -110,6 +112,7 @@ const InterfaceItem = React.memo(({ name, address, size, ...props }) => {
       bg={bg}
       size={size || 'sm'}
       rounded="$lg"
+      {...props}
     >
       {icon != PowerIcon ? <BadgeIcon color={fg} as={icon} mr="$1" /> : null}
       <BadgeText color={fg} bold={address ? true : false}>
@@ -123,6 +126,14 @@ const InterfaceItem = React.memo(({ name, address, size, ...props }) => {
     </Badge>
   )
 })
+
+const ProtocolItem = ({ name, size, ...props }) => {
+  return (
+    <Badge action="muted" variant="outline" size={size || 'md'} {...props}>
+      <BadgeText>{name}</BadgeText>
+    </Badge>
+  )
+}
 
 TagItem.propTypes = {
   name: PropTypes.string.isRequired,
@@ -139,6 +150,11 @@ InterfaceItem.propTypes = {
   size: PropTypes.any
 }
 
+ProtocolItem.propTypes = {
+  name: PropTypes.string.isRequired,
+  size: PropTypes.any
+}
+
 export default TagItem
 
-export { TagItem, GroupItem, InterfaceItem }
+export { TagItem, GroupItem, InterfaceItem, ProtocolItem }

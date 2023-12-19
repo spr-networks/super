@@ -217,12 +217,24 @@ const ReleaseInfo = ({ showModal, ...props }) => {
   const context = useContext(AlertContext)
   const [releaseInfo, setReleaseInfo] = useState(null)
   const [waitFor, setWaitFor] = useState(null)
+  const [checkUpdates, setCheckUpdates] = useState(false)
 
   const updateRelease = () => {
     api
       .get('/release')
       .then((releaseInfo) => {
         setReleaseInfo(releaseInfo)
+
+        api
+          .getCheckUpdates()
+          .then((state) => {
+            setCheckUpdates(state)
+
+            if (state == true) {
+              checkUpdate(releaseInfo)
+            }
+          })
+          .catch((err) => {})
       })
       .catch((err) => context.error(err))
   }
@@ -231,8 +243,16 @@ const ReleaseInfo = ({ showModal, ...props }) => {
     updateRelease()
   }, [])
 
-  const checkUpdate = () => {
-    let current = releaseInfo.Current
+  const checkUpdate = (arg) => {
+    let current
+    if (!releaseInfo) {
+      if (!arg) {
+        return
+      }
+      current = arg.Current
+    } else {
+      current = releaseInfo.Current
+    }
 
     setWaitFor('check')
 
@@ -241,7 +261,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
       .then((versions) => {
         versions?.reverse() // sort by latest first
 
-        let latest = versions[0]
+        let latest = versions.find((v) => !v.includes('-dev'))
         let latestDev = versions.find((v) => v.includes('-dev'))
 
         // if latest get version
@@ -340,6 +360,28 @@ const ReleaseInfo = ({ showModal, ...props }) => {
       })
   }
 
+  const toggleCheckUpdates = () => {
+    let newState = !checkUpdates
+    setCheckUpdates(newState)
+
+    //store into API
+    if (newState) {
+      api
+        .setCheckUpdates()
+        .then((result) => {
+          context.success(`Enabled Automatically Checking for Updates `)
+        })
+        .catch((err) => {})
+    } else {
+      api
+        .clearCheckUpdates()
+        .then((result) => {
+          context.success(`Disabled Automatically Checking for Updates`)
+        })
+        .catch((err) => {})
+    }
+  }
+
   const onSubmit = (info) => {
     if (
       info.CustomChannel != 'main' &&
@@ -385,6 +427,18 @@ const ReleaseInfo = ({ showModal, ...props }) => {
             '@md': { flexDirection: 'row', gap: '$3', alignItems: 'center' }
           }}
         >
+          <Checkbox
+            size="md"
+            value={checkUpdates}
+            isChecked={checkUpdates}
+            onChange={(enabled) => toggleCheckUpdates()}
+          >
+            <CheckboxIndicator mr="$2">
+              <CheckboxIcon as={CheckIcon} />
+            </CheckboxIndicator>
+            <CheckboxLabel>Auto-Check for Updates</CheckboxLabel>
+          </Checkbox>
+
           <Button size="sm" onPress={checkUpdate}>
             <ButtonText>Check</ButtonText>
             <ButtonSpinner

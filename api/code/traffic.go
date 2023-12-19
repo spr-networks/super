@@ -263,7 +263,7 @@ func saveTrafficHistory(t TrafficHistory) {
 	defer Trafficmtx.Unlock()
 
 	file, _ := json.MarshalIndent(t, "", " ")
-	err := ioutil.WriteFile(TrafficStatePath, file, 0644)
+	err := ioutil.WriteFile(TrafficStatePath, file, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}

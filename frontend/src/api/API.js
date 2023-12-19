@@ -5,6 +5,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 let gApiURL = null
 
+//TODO add unregister handlers. support only one for now
+const gErrorHandlers = {}
+export const registerErrorHandler = (status, fn) => {
+  gErrorHandlers[status] = [fn]
+}
+
 export const setApiURL = (url) => {
   if (url == 'mock') {
     gApiURL = url
@@ -47,6 +53,16 @@ export const getApiURL = () => {
   return document.location.origin + '/'
 }
 
+export const getWsURL = () => {
+  let url = getApiURL()
+  if (url.startsWith("https://")) {
+    return url.replace('https://', "wss://") + "ws"
+  } else {
+    return url.replace('http://', "ws://") + "ws"
+  }
+}
+
+
 export const getApiHostname = () => {
   return getApiURL()
     .replace(/^https?:\/\//, '')
@@ -54,6 +70,39 @@ export const getApiHostname = () => {
 }
 
 let gAuthHeaders = null
+//tbd need to sync to mesh
+let gJWTOTPHeader = null
+
+export const setAuthReturn = (url) => {
+  AsyncStorage.setItem(
+    'auth-return',
+    JSON.stringify({
+      url: url
+    })
+  )
+}
+
+export const getAuthReturn = () => {
+  return AsyncStorage.getItem('auth-return')
+    .then((good) => {
+      let x = JSON.parse(good)
+      return x.url ? x.url : '/admin/home'
+    })
+}
+
+
+export const setJWTOTPHeader = (jwt = '') => {
+  if (gJWTOTPHeader != jwt) {
+    AsyncStorage.setItem(
+      'jwt-otp',
+      JSON.stringify({
+        jwt: jwt
+      })
+    )
+    gJWTOTPHeader = jwt
+  }
+  return gJWTOTPHeader
+}
 
 //request helper
 class API {
@@ -73,8 +122,18 @@ class API {
     this.getAuthHeaders()
   }
 
+  registerErrorHandler(status, callback) {
+    registerErrorHandler(status, callback)
+  }
+
   // reads from Async/localStorage if no username provided
   async getAuthHeaders(username = null, password = null) {
+    let otp = await AsyncStorage.getItem('jwt-otp')
+    let jwt = JSON.parse(otp)
+    if (jwt && jwt.jwt) {
+      setJWTOTPHeader(jwt.jwt)
+    }
+
     if (username && password) {
       return 'Basic ' + Base64.btoa(username + ':' + password)
     }
@@ -117,6 +176,10 @@ class API {
       'Content-Type': 'application/json'
     }
 
+    if (gJWTOTPHeader && this.remoteURL == "") {
+      headers['X-JWT-OTP'] = gJWTOTPHeader
+    }
+
     let opts = {
       method,
       headers
@@ -140,29 +203,50 @@ class API {
     // if forced to not return data
     let skipReturnValue = method == 'DELETE'
 
-    return this.fetch(method, url, body).then((response) => {
-      if (!response.ok) {
-        return Promise.reject({ message: response.status, response })
-      }
+    return this.fetch(method, url, body)
+      .then((response) => {
 
-      const contentType = response.headers.get('Content-Type')
-      if (!contentType || skipReturnValue) {
-        return Promise.resolve(true)
-      }
+        if (response.redirected) {
+          window.location = '/auth/validate'
+        }
 
-      // weird behaviour from react-native
-      if (contentType.includes('text/html')) {
-        return response.json()
-      }
+        if (!response.ok) {
+          return Promise.reject({
+            message: response.status,
+            status: response.status,
+            response
+          })
+        }
 
-      if (contentType.includes('application/json')) {
-        return response.json()
-      } else if (contentType.includes('text/plain')) {
-        return response.text()
-      }
+        const contentType = response.headers.get('Content-Type')
+        if (!contentType || skipReturnValue) {
+          return Promise.resolve(true)
+        }
 
-      return Promise.reject({ message: 'unknown Content-Type' })
-    })
+        // weird behaviour from react-native
+        if (contentType.includes('text/html')) {
+          return response.json()
+        }
+
+        if (contentType.includes('application/json')) {
+          return response.json()
+        } else if (contentType.includes('text/plain')) {
+          return response.text()
+        }
+
+        return Promise.reject({ message: 'unknown Content-Type' })
+      })
+      .catch((err) => {
+        //call registered handlers
+        let status = parseInt(err.status)
+        if (Array.isArray(gErrorHandlers[status])) {
+          gErrorHandlers[status].map((handler) => {
+            handler(err)
+          })
+        }
+
+        return Promise.reject(err)
+      })
   }
 
   get(url) {
@@ -186,6 +270,19 @@ class API {
       return this.get('/version?plugin=' + plugin)
     }
     return this.get('/version')
+  }
+
+  // auto-check-update status
+  getCheckUpdates() {
+    return this.get('/checkupdates')
+  }
+
+  setCheckUpdates() {
+    return this.put('/checkupdates')
+  }
+
+  clearCheckUpdates() {
+    return this.delete('/checkupdates')
   }
 
   restart() {

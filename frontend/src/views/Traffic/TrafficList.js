@@ -198,6 +198,7 @@ const TrafficList = (props) => {
 
   const handleChangeClient = (ip) => {
     setFilterIps([ip])
+    setPage(1)
   }
 
   return (

@@ -46,14 +46,16 @@ const WifiConnect = (props) => {
               device.PSKEntry.Type
             )
           })
-          setConnectQRs(qrs)
-          setSsids(results)
+          if (Object.keys(qrs).length == 0) {
+            context.error("Failed to add device or configured properly -- check wifid, or reset wifi settings under WiFi->Radio settings")
+          } else {
+            setConnectQRs(qrs)
+            setSsids(results)
+          }
         })
       })
       .catch((err) => {
-        setError(
-          'could not find wireless interfaces -- check wifid service logs'
-        )
+        context.error("Failed to add device or configured properly -- check wifid, or reset wifi settings")
       })
   }, [])
 

@@ -14,7 +14,9 @@ import {
   MoonIcon,
   SunIcon,
   useColorMode,
-  Pressable
+  Pressable,
+  Badge,
+  BadgeText
 } from '@gluestack-ui/themed'
 
 import { LogOutIcon } from 'lucide-react-native'
@@ -94,21 +96,18 @@ const AdminNavbar = ({
                 SPR
               </Text>
               {isMeshNode ? <Text size="lg">MESH</Text> : null}
-              <Text
-                size="xs"
-                color="$muted600"
-                sx={{
-                  _dark: { color: '$muted400' }
-                }}
-                isTruncated
-                borderWidth={1}
-                borderColor="$muted500"
+              <Badge
+                variant="outline"
+                action="muted"
+                bg="$transparent"
                 rounded="$2xl"
-                py="$0.5"
-                px="$2"
+                size="md"
               >
-                {`v${version}`}
-              </Text>
+                <BadgeText
+                  color="$muted500"
+                  textTransform="none"
+                >{`v${version}`}</BadgeText>
+              </Badge>
             </HStack>
           </Pressable>
 

@@ -32,6 +32,8 @@ useradd -m -s /bin/bash ubuntu
 echo "ubuntu:ubuntu" | chpasswd
 usermod -aG sudo ubuntu
 passwd --expire ubuntu
+# so that cd ~spr works
+useradd -m -s /bin/true spr 
 echo spr > /etc/hostname
 echo "127.0.0.1      spr" >> /etc/hosts
 

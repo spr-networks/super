@@ -311,14 +311,13 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
 
   return (
     <Pressable onPress={() => navigate(deviceURL(device))}>
-      <VStack
+      <HStack
         key={device.MAC}
         bg="$backgroundCardLight"
         borderColor="$coolGray200"
         p="$4"
         my="$1"
         mx="$0"
-        flexDirection="column-reverse"
         sx={{
           '@md': {
             flexDirection: 'row',
@@ -355,31 +354,6 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
             justifyContent="space-between"
             sx={{ '@md': { flexDirection: 'row', w: '$1/3' } }}
           >
-            {/*<Tooltip label={getDates(device)} isDisabled={!getDates(device)}>
-              <VStack
-                justifyContent="flex-end"
-                sx={{"@md": {justifyContent:"center"}}}
-              >
-                *inlineEdit ? (
-                  <Input size="lg" variant="underlined" w="100%">
-                    <InputField
-                      type="text"
-                      value={name}
-                      autoFocus={false}
-                      onChangeText={(value) => handleName(value)}
-                      onSubmitEditing={handleSubmit}
-                    />
-                  </Input>
-                ) : (
-                  <Text bold>{device.Name || 'N/A'}</Text>
-                )
-                <Text size="sm" color="$muted500" isTruncated maxW={150}>
-                  {device.oui || ' '}
-                </Text>
-              </VStack>
-            </Tooltip>
-            */}
-
             <Tooltip
               h={undefined}
               placement="bottom"
@@ -390,22 +364,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
                     sx={{ '@md': { justifyContent: 'center' } }}
                     {...triggerProps}
                   >
-                    <HStack space="xs">
-                      <Text bold>{device.Name || 'N/A'}</Text>
-                      <Icon
-                        as={CircleIcon}
-                        size="2xs"
-                        color={device.isConnected ? '$success500' : '$muted200'}
-                        sx={{
-                          '@md': { display: 'none' },
-                          _dark: {
-                            color: device.isConnected
-                              ? '$success500'
-                              : '$muted700'
-                          }
-                        }}
-                      />
-                    </HStack>
+                    <Text bold>{device.Name || 'N/A'}</Text>
                     <Text
                       size="sm"
                       color="$muted500"
@@ -439,24 +398,23 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
                   />
                 </Input>
               ) : (
-                <HStack space="md" alignItems="center">
+                <HStack space="sm" alignItems="center">
+                  <Text size="md" bold>
+                    {ip}
+                  </Text>
                   <Box sx={{ '@md': { display: 'none' } }}>
                     <Icon
                       as={device.MAC ? WifiIcon : WaypointsIcon}
-                      size={3}
+                      size="sm"
                       color={
                         device.isConnected
                           ? '$green600'
                           : colorMode == 'light'
                           ? '$muted200'
-                          : 'muted.700'
+                          : '$muted700'
                       }
                     />
                   </Box>
-
-                  <Text size="md" bold>
-                    {ip}
-                  </Text>
                 </HStack>
               )}
 
@@ -488,7 +446,6 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
           </VStack>
           <HStack
             space="sm"
-            alignItems="center"
             justifyContent="flex-start"
             flexWrap="wrap"
             alignItems="flex-start"
@@ -504,7 +461,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
           </HStack>
         </VStack>
         {showMenu ? moreMenu : null}
-      </VStack>
+      </HStack>
       <ModalConfirm
         type={modalType}
         onSubmit={handleSubmitNew}

@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -16,16 +17,47 @@ import (
 	"time"
 )
 import (
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
+	"github.com/pquerna/otp/totp"
 	"github.com/spr-networks/sprbus"
 )
 
 var AuthUsersFile = TEST_PREFIX + "/configs/auth/auth_users.json"
 var AuthTokensFile = TEST_PREFIX + "/configs/auth/auth_tokens.json"
 
-var AuthOtpFile = TEST_PREFIX + "/state/api/webauthn_otp"
+var gOtpPeriod = 30
+var OTPSettingsFile = TEST_PREFIX + "/configs/auth/otp_settings.json"
+
+var WebAuthnOtpFile = TEST_PREFIX + "/state/api/webauthn_otp"
 var AuthWebAuthnFile = TEST_PREFIX + "/state/api/webauthn.json"
 var Tokensmtx sync.Mutex
+
+type Token struct {
+	Name        string
+	Token       string
+	Expire      int64
+	ScopedPaths []string
+}
+
+type OTPUser struct {
+	Name      string
+	Secret    string
+	Confirmed bool
+	AlwaysOn  bool
+}
+
+type OTPUserRequest struct {
+	Name           string
+	Code           string
+	UpdateAlwaysOn bool
+	AlwaysOn       bool
+}
+
+type OTPSettings struct {
+	OTPUsers           []OTPUser
+	JWTDurationSeconds int64
+}
 
 func makeDstIfMissing(destFilePath string, srcFilePath string) {
 
@@ -62,8 +94,8 @@ func migrateAuthAPI() {
 	makeDstIfMissing(AuthTokensFile, oldAuthTokensFile)
 }
 
-func loadOTP() int {
-	data, err := os.ReadFile(AuthOtpFile)
+func loadOTPWebauthN() int {
+	data, err := os.ReadFile(WebAuthnOtpFile)
 	if err == nil {
 		result, err := strconv.Atoi(string(data))
 		if err == nil {
@@ -73,15 +105,8 @@ func loadOTP() int {
 	return 0
 }
 
-func saveOTP(data int) {
-	os.WriteFile(AuthOtpFile, []byte(strconv.Itoa(data)), 0661)
-}
-
-type Token struct {
-	Name        string
-	Token       string
-	Expire      int64
-	ScopedPaths []string
+func saveOTPWebauthN(data int) {
+	os.WriteFile(WebAuthnOtpFile, []byte(strconv.Itoa(data)), 0600)
 }
 
 func genBearerToken() string {
@@ -211,6 +236,8 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 		if token != "" {
 			goodToken, tokenName, _ := authenticateToken(token)
 			if goodToken {
+				//NOTE: tokens dont check JWT OTP
+
 				if authorizedToken(r, token) {
 					sprbus.Publish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": "api"})
 					authenticatedNext.ServeHTTP(w, r)
@@ -223,16 +250,26 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 			}
 		}
 
+		redirect_validate := false
+
 		//basic auth
 		username, password, ok := r.BasicAuth()
 		if ok {
 			failType = "user"
 			if authenticateUser(username, password) {
-				sprbus.Publish("auth:success", map[string]string{"type": "user", "username": username, "reason": "api"})
-				authenticatedNext.ServeHTTP(w, r)
-				return
+				//check if all user requests should have a JWT check, if so, use it.
+				if shouldCheckOTPJWT(r, username) && !hasValidJwtOtpHeader(username, r) {
+					reason = "invalid or missing JWT OTP"
+					redirect_validate = true
+				} else {
+					sprbus.Publish("auth:success", map[string]string{"type": "user", "username": username, "reason": "api"})
+
+					authenticatedNext.ServeHTTP(w, r)
+					return
+				}
+			} else {
+				reason = "bad password"
 			}
-			reason = "bad password"
 		} else {
 			if token == "" {
 				reason = "no credentials"
@@ -247,7 +284,12 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 
 		if authenticatedNext.Match(r, &matchInfo) || setupMode.Match(r, &matchInfo) {
 			sprbus.Publish("auth:failure", map[string]string{"reason": reason, "type": failType, "name": tokenName + username})
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+
+			if redirect_validate {
+				http.Redirect(w, r, "/auth/validate", 302)
+			} else {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			}
 			return
 		} else {
 			//last try public route
@@ -258,7 +300,11 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 		}
 
 		sprbus.Publish("auth:failure", map[string]string{"reason": "unknown route, no credentials", "type": failType, "name": tokenName + username})
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		if redirect_validate {
+			http.Redirect(w, r, "/auth/validate", 302)
+		} else {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		}
 	})
 }
 
@@ -334,7 +380,7 @@ func updateAuthTokens(w http.ResponseWriter, r *http.Request) {
 	}
 
 	file, _ := json.MarshalIndent(tokens, "", " ")
-	err = ioutil.WriteFile(AuthTokensFile, file, 0660)
+	err = ioutil.WriteFile(AuthTokensFile, file, 0600)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -342,4 +388,336 @@ func updateAuthTokens(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(token)
+}
+
+func otpSaveLocked(settings OTPSettings) error {
+	file, _ := json.MarshalIndent(settings, "", " ")
+	return ioutil.WriteFile(OTPSettingsFile, file, 0600)
+}
+
+func otpLoadLocked() (OTPSettings, error) {
+	settings := OTPSettings{}
+
+	data, err := os.ReadFile(OTPSettingsFile)
+
+	if err == nil {
+		err = json.Unmarshal(data, &settings)
+		if err == nil {
+			if settings.JWTDurationSeconds != 0 {
+				gJwtTokenExpireTime = time.Duration(settings.JWTDurationSeconds) * time.Second
+			} else {
+				gJwtTokenExpireTime = gJwtTokenExpireTimeDefault
+			}
+
+		}
+	}
+
+	return settings, err
+}
+
+type OTPStatus struct {
+	State    string
+	AlwaysOn bool
+}
+
+func otpStatus(w http.ResponseWriter, r *http.Request) {
+	Tokensmtx.Lock()
+	defer Tokensmtx.Unlock()
+
+	settings, _ := otpLoadLocked()
+	//ignore load error, and make a new file
+
+	status := OTPStatus{}
+	status.State = "unregistered"
+	user := r.URL.Query().Get("name")
+
+	for _, entry := range settings.OTPUsers {
+		if entry.Name == user {
+			status.State = "registered"
+			status.AlwaysOn = entry.AlwaysOn
+			break
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(status)
+}
+
+func otpRegister(w http.ResponseWriter, r *http.Request) {
+	Tokensmtx.Lock()
+	defer Tokensmtx.Unlock()
+
+	settings, _ := otpLoadLocked()
+	//ignore load error, and make a new file
+
+	otpUserReq := OTPUserRequest{}
+	err := json.NewDecoder(r.Body).Decode(&otpUserReq)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if otpUserReq.Name != "admin" {
+		http.Error(w, fmt.Errorf("Unsupported username for OTP").Error(), 400)
+		return
+	}
+
+	code := otpUserReq.Code
+	otpUser := OTPUser{}
+	otpUser.Name = otpUserReq.Name
+
+	// to update, if already configured, the code has to be valid
+	current_secret := ""
+
+	for _, entry := range settings.OTPUsers {
+		if entry.Name == otpUser.Name && entry.Confirmed == true {
+			current_secret = entry.Secret
+			break
+		}
+	}
+
+	if current_secret != "" {
+		if code == "" || !totp.Validate(code, current_secret) {
+			http.Error(w, fmt.Errorf("OTP setting already exists, and code did not match").Error(), 400)
+			return
+		}
+	}
+
+	if r.Method == http.MethodDelete {
+		found := false
+		for idx, entry := range settings.OTPUsers {
+			if entry.Name == otpUser.Name {
+				settings.OTPUsers = append(settings.OTPUsers[:idx], settings.OTPUsers[idx+1:]...)
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			http.Error(w, "Not found", 404)
+			return
+		}
+	} else {
+		//generate a new token
+		key, err := totp.Generate(totp.GenerateOpts{
+			Issuer:      "SPR-OTP",
+			AccountName: otpUser.Name,
+		})
+
+		otpUser.Secret = key.Secret()
+		if otpUser.Secret == "" {
+			http.Error(w, fmt.Errorf("OTP setting failed to make secret").Error(), 400)
+			return
+		}
+
+		//remove old entry
+		for idx, entry := range settings.OTPUsers {
+			if entry.Name == otpUser.Name {
+				settings.OTPUsers = append(settings.OTPUsers[:idx], settings.OTPUsers[idx+1:]...)
+				break
+			}
+		}
+		settings.OTPUsers = append(settings.OTPUsers, otpUser)
+
+		err = otpSaveLocked(settings)
+		if err != nil {
+			http.Error(w, fmt.Errorf("OTP setting failed to save").Error(), 400)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(settings)
+	}
+
+	//falls through to 200
+}
+
+const gJwtTokenExpireTimeDefault = 1 * time.Hour
+
+var (
+	gJwtOtpSecret       = []byte{}
+	gJwtTokenExpireTime = gJwtTokenExpireTimeDefault
+	gJwtOtpHeader       = "X-JWT-OTP"
+)
+
+func validateOTP(w http.ResponseWriter, r *http.Request) (bool, string, error) {
+	settings, err := otpLoadLocked()
+	if err != nil {
+		return false, "", err
+	}
+
+	otpUserReq := OTPUserRequest{}
+	err = json.NewDecoder(r.Body).Decode(&otpUserReq)
+	if err != nil {
+		return false, "", err
+	}
+
+	if otpUserReq.Name != "admin" {
+		err = fmt.Errorf("Unsupported username for OTP")
+		return false, "", err
+	}
+
+	code := otpUserReq.Code
+	current_secret := ""
+	update := false
+	for idx, entry := range settings.OTPUsers {
+		if entry.Name == otpUserReq.Name {
+			current_secret = entry.Secret
+			confirmed := entry.Confirmed
+			if !confirmed {
+				update = true
+			}
+			settings.OTPUsers[idx].Confirmed = true
+			if otpUserReq.UpdateAlwaysOn {
+				if settings.OTPUsers[idx].AlwaysOn != otpUserReq.AlwaysOn {
+					update = true
+				}
+				settings.OTPUsers[idx].AlwaysOn = otpUserReq.AlwaysOn
+			}
+
+			break
+		}
+	}
+
+	if current_secret == "" {
+		return false, "", fmt.Errorf("Missing OTP Enrollment")
+	}
+
+	if code == "" || !totp.Validate(code, current_secret) {
+		return false, "", fmt.Errorf("Invalid OTP Code")
+	}
+
+	if update {
+		//update confirmed state to True
+		otpSaveLocked(settings)
+	}
+
+	return true, otpUserReq.Name, nil
+}
+
+func initJwtOtpSecret() {
+	if len(gJwtOtpSecret) != 32 {
+		b := make([]byte, 32)
+		n, err := crand.Read(b) // Read random bytes into the byte slice
+		if err == nil && n == 32 {
+			gJwtOtpSecret = b
+		}
+	}
+}
+
+func initAuth() {
+	initJwtOtpSecret()
+}
+
+func generateOTPToken(w http.ResponseWriter, r *http.Request) {
+	Tokensmtx.Lock()
+	defer Tokensmtx.Unlock()
+
+	isValid, user, err := validateOTP(w, r)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if !isValid {
+		http.Error(w, "OTP Validation Failed", 400)
+		return
+	}
+
+	if len(gJwtOtpSecret) != 32 {
+		http.Error(w, "JWT OTP Setup Failed", 400)
+		return
+	}
+
+	claims := &jwt.RegisteredClaims{
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(gJwtTokenExpireTime)),
+		Issuer:    "SPR-OTP",
+		Subject:   user,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(gJwtOtpSecret))
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tokenString)
+}
+
+func hasValidJwtOtpHeader(username string, r *http.Request) bool {
+	jwtOtpHeaderString := r.Header.Get(gJwtOtpHeader)
+	if jwtOtpHeaderString == "" {
+		log.Println("missing JWT Header for validation")
+		return false
+	}
+
+	return validateJwt(username, jwtOtpHeaderString)
+}
+
+func validateJwt(username string, jwtString string) bool {
+	// Parsing the token
+	token, err := jwt.Parse(jwtString, func(token *jwt.Token) (interface{}, error) {
+		// Validating the algorithm used is what you expect
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		return gJwtOtpSecret, nil
+	})
+
+	if err != nil {
+		log.Println("nwt Parse failure", err)
+		return false
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		//double check issuer matches and subject is the correct username
+		if claims["iss"] == "SPR-OTP" && claims["sub"] == username {
+			return true
+		} else {
+			log.Println("JWT Unknown issuer/subject")
+		}
+	} else {
+		log.Println("Invalid JWT Token")
+	}
+
+	return false
+}
+
+func testJWTOTP(w http.ResponseWriter, r *http.Request) {
+	//200fallthru
+}
+
+func applyJwtOtpCheck(handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		username, _, ok := r.BasicAuth()
+		if !ok {
+			http.Error(w, "Missing username", 400)
+			return
+		}
+
+		if !hasValidJwtOtpHeader(username, r) {
+			http.Error(w, "Invalid JWT", 400)
+			return
+		}
+		handler(w, r)
+	}
+}
+
+func shouldCheckOTPJWT(r *http.Request, username string) bool {
+
+	if r.URL.Path == "/otp_validate" {
+		return false
+	}
+
+	settings, err := otpLoadLocked()
+	if err == nil {
+		for _, entry := range settings.OTPUsers {
+			if entry.Name == username && entry.AlwaysOn == true {
+				return true
+			}
+		}
+	}
+	return false
 }

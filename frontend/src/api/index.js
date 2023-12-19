@@ -7,7 +7,11 @@ export {
   saveLogin,
   getApiURL,
   setApiURL,
-  getApiHostname
+  getApiHostname,
+  getWsURL,
+  setJWTOTPHeader,
+  setAuthReturn,
+  getAuthReturn
 } from './API'
 export { connectWebsocket } from './WebSocket'
 export { dbAPI } from './Db'
@@ -24,4 +28,5 @@ export { firewallAPI } from './Firewall'
 export { authAPI } from './Auth'
 export { pfwAPI } from './Pfw'
 export { notificationsAPI } from './Notifications'
+export { alertsAPI } from './Alerts'
 export { meshAPI } from './mesh'

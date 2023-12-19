@@ -13,24 +13,22 @@ import {
   FlatList,
   Heading,
   HStack,
-  InfoIcon,
-  Link,
-  LinkText,
   Text,
   View,
-  useColorMode
+  useColorMode,
+  SettingsIcon
 } from '@gluestack-ui/themed'
 
-import { Settings2Icon } from 'lucide-react-native'
-
-import { ModalContext } from 'AppContext'
+import { AlertContext, ModalContext } from 'AppContext'
 import { EditDatabase } from 'views/System/EditDatabase'
 import LogListItem from './LogListItem'
+import FilterInputSelect from './FilterInputSelect'
 import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
 import { Tooltip } from 'components/Tooltip'
 
 const LogList = (props) => {
+  const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
   const [topics, setTopics] = useState([])
   const [filter, setFilter] = useState({})
@@ -40,6 +38,7 @@ const LogList = (props) => {
   const perPage = 20
   const [params, setParams] = useState({ num: perPage })
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
+  const [searchField, setSearchField] = useState('')
 
   const colorMode = useColorMode()
 
@@ -51,17 +50,33 @@ const LogList = (props) => {
 
     setParams({ ...params, num, max })
 
-    dbAPI.buckets().then((buckets) => {
-      buckets.sort((a, b) => {
-        if (a.startsWith('log:') && !b.startsWith('log:')) {
-          return -1
+    dbAPI
+      .buckets()
+      .then((buckets) => {
+        const ignoreList = ['alert:']
+        for (let ignore of ignoreList) {
+          buckets = buckets.filter((b) => !b.startsWith(ignore))
         }
 
-        return a.localeCompare(b)
-      })
+        buckets.sort((a, b) => {
+          //force dns to the end as each client has its own bucket.
+          if (b.startsWith('dns:') && !a.startsWith('dns:')) {
+            return -1
+          }
 
-      setTopics(buckets)
-    })
+          //and force log: to the top
+          if (a.startsWith('log:') && !b.startsWith('log:')) {
+            return -1
+          }
+
+          return a.localeCompare(b)
+        })
+
+        setTopics(buckets)
+      })
+      .catch((err) => {
+        context.error(`db plugin not running`)
+      })
   }, [])
 
   useEffect(() => {
@@ -97,7 +112,12 @@ const LogList = (props) => {
     let stats = await dbAPI.stats(bucket)
     setTotal(stats.KeyN)
 
-    let result = await dbAPI.items(bucket, params)
+    let withFilter = params
+    withFilter['filter'] = searchField
+    let result = await dbAPI.items(bucket, withFilter)
+    if (result == null) {
+      result = []
+    }
     result = result.map((r) => parseLog(r, bucket))
 
     setLogs(result)
@@ -113,7 +133,7 @@ const LogList = (props) => {
   useEffect(() => {
     setLogs([])
     fetchLogs()
-  }, [params])
+  }, [params, searchField])
 
   const updatePage = (page, prevPage) => {
     //when page updates, fetch last log entry and use this as max ts for next page
@@ -136,6 +156,7 @@ const LogList = (props) => {
 
   // filter on/off - only one at a time atm.
   const handleTopicFilter = (topic) => {
+    setLogs([])
     let newFilter = {}
     for (let k in filter) {
       newFilter[k] = k == topic ? !newFilter[k] : false
@@ -186,6 +207,23 @@ const LogList = (props) => {
           {total} items
         </Text>
 
+        <HStack
+          display="none"
+          sx={{
+            '@md': {
+              w: '$1/2',
+              display: 'flex'
+            }
+          }}
+        >
+          <FilterInputSelect
+            value={searchField}
+            items={logs}
+            onChangeText={setSearchField}
+            onSubmitEditing={setSearchField}
+          />
+        </HStack>
+
         {/*
         <Tooltip label="Set filter for logs" ml="auto">
           <Button
@@ -208,7 +246,7 @@ const LogList = (props) => {
               action="primary"
               onPress={handlePressEdit}
             >
-              <ButtonIcon as={Settings2Icon} color="$primary500" />
+              <ButtonIcon as={SettingsIcon} color="$primary500" />
             </Button>
           </Tooltip>
           <SelectTopic

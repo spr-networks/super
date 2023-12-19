@@ -22,6 +22,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+import (
+	"github.com/spr-networks/sprbus"
+)
+
 var FWmtx sync.Mutex
 
 type BaseRule struct {
@@ -148,7 +152,7 @@ const firstOutboundRouteTable = 11
 func SyncBaseContainer() {
 	// Wait for the base container to grab the flock
 
-	file, err := os.OpenFile(BASE_READY, os.O_RDWR|os.O_CREATE, 0644)
+	file, err := os.OpenFile(BASE_READY, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		log.Println("[-] Failed to open base ready file", err)
 		return
@@ -220,7 +224,7 @@ func getPortsFromPortVerdictMap(name string) []string {
 func setDefaultServicePortsLocked() {
 	//this firewall configuration does not know about
 	//the default service ports. Populate them and save
-
+	//note: spr_tcp_port_accept was deprecated.
 	ports := getPortsFromPortVerdictMap("spr_tcp_port_accept")
 
 	service_ports := []ServicePort{}
@@ -357,7 +361,7 @@ func setDefaultUplinkGateway(iface string, index int) {
 	cmd := exec.Command("ip", "route", "replace", "default", "via", gateway, "dev", iface, "table", table)
 	_, err = cmd.Output()
 	if err != nil {
-		log.Printf("Error with route setup", cmd, err)
+		log.Print("Error with route setup", cmd, err)
 	}
 
 	cmd = exec.Command("ip", "route", "flush", "cache")
@@ -1076,6 +1080,16 @@ func applyBuiltinTagFirewallRules() {
 	}
 }
 
+func refreshDeviceTags(dev DeviceEntry) {
+	go func() {
+		FWmtx.Lock()
+		applyPrivateNetworkUpstreamDevice(dev)
+		applyEndpointRules(dev)
+		FWmtx.Unlock()
+	}()
+	sprbus.Publish("device:tags:update", scrubDevice(dev))
+}
+
 func applyPingRules() {
 	Interfacesmtx.Lock()
 	interfaces := loadInterfacesConfigLocked()
@@ -1491,9 +1505,6 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 	if fwd.SrcPort != "any" && !re.MatchString(fwd.SrcPort) {
 		http.Error(w, "Invalid SrcPort", 400)
 		return
-	} else {
-		//convert to full range
-		fwd.SrcPort = "0-65535"
 	}
 
 	if fwd.DstPort != "any" {
@@ -1949,8 +1960,10 @@ func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface str
 	//check if a device has its vmap entries established
 
 	//check ethernet filter entry is present
-	if !hasVerdictMac(entry.RecentIP, entry.MAC, Iface, "ethernet_filter", "return") {
-		return false
+	if entry.MAC != "" {
+		if !hasVerdictMac(entry.RecentIP, entry.MAC, Iface, "ethernet_filter", "return") {
+			return false
+		}
 	}
 
 	//check groups
@@ -2008,6 +2021,11 @@ func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface str
 }
 
 func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, matchInterface bool) {
+	is_mesh := isMeshPluginEnabled()
+	mesh_downlink := ""
+	if is_mesh {
+		mesh_downlink = meshPluginDownlink()
+	}
 
 	for _, name := range vmap_names {
 		entries := getNFTVerdictMap(name)
@@ -2021,6 +2039,14 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 				}
 			} else if strings.HasPrefix(entry.ifname, "wg") {
 				continue
+			}
+
+			//when in mesh mode, dont flush the downlink
+			//for faster transitions
+			if is_mesh && name == "ethernet_filter" {
+				if entry.ifname == mesh_downlink {
+					continue
+				}
 			}
 
 			if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || (equalMAC(entry.mac, MAC) && (MAC != "")) {
@@ -2421,10 +2447,12 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	//log.Println("flushing route and vmaps ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
 
 	//1. delete arp entry
-	flushRoute(entry.MAC)
+	if entry.MAC != "" {
+		flushRoute(entry.MAC)
 
-	//2. delete this ip, mac from any existing verdict maps
-	flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
+		//2. delete this ip, mac from any existing verdict maps
+		flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
+	}
 
 	//3. delete the old router address
 	exec.Command("ip", "addr", "del", routeIP, "dev", established_route_device).Run()
@@ -2440,12 +2468,12 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	updateAddr(router, new_iface)
 
 	//5. Update the ARP entry
-	if new_iface != "wg0" {
+	if new_iface != "wg0" && entry.MAC != "" {
 		updateArp(new_iface, entry.RecentIP, entry.MAC)
 	}
 
 	//6. add entry to appropriate verdict maps
-	if new_iface != "wg0" {
+	if new_iface != "wg0" && entry.MAC != "" {
 		//add this MAC and IP to the ethernet filter
 		addVerdictMac(entry.RecentIP, entry.MAC, new_iface, "ethernet_filter", "return")
 	}
@@ -2453,7 +2481,9 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
 
-	populateVmapEntries(entry.RecentIP, entry.MAC, new_iface, entry.WGPubKey)
+	if entry.MAC != "" {
+		populateVmapEntries(entry.RecentIP, entry.MAC, new_iface, entry.WGPubKey)
+	}
 
 	//apply the tags
 	applyPrivateNetworkUpstreamDevice(entry)
@@ -2481,6 +2511,11 @@ func dynamicRouteLoop() {
 
 			lanif := os.Getenv("LANIF")
 			lanif_vlan_trunk := false
+			meshPluginEnabled := isMeshPluginEnabled()
+			meshDownlink := ""
+			if meshPluginEnabled {
+				meshDownlink = meshPluginDownlink()
+			}
 
 			wireguard_peers := getWireguardActivePeers()
 			wifi_peers := getWifiPeers()
@@ -2548,7 +2583,6 @@ func dynamicRouteLoop() {
 				newIfaceMap[entry.RecentIP] = new_iface
 
 				if !exists {
-					meshPluginEnabled := isMeshPluginEnabled()
 					wifiDevice := isWifiDevice(entry)
 					if lanif != "" && !wifiDevice {
 						// when mesh plugin is off and not a wifi device, then go for lanif
@@ -2562,7 +2596,7 @@ func dynamicRouteLoop() {
 						newIfaceMap[entry.RecentIP] = new_iface
 					} else if meshPluginEnabled && wifiDevice {
 						//mesh plugin was enabled and it was a wifi device
-						new_iface = meshPluginDownlink()
+						new_iface = meshDownlink
 						newIfaceMap[entry.RecentIP] = new_iface
 					} else {
 
@@ -2580,7 +2614,9 @@ func dynamicRouteLoop() {
 						continue
 					}
 
-					log.Println("[-] Missing vmap entries for mac=", ident, "new_iface=", new_iface)
+					if len(ident) < 20 {
+						log.Println("[-] Missing vmap entries for mac=", ident, "new_iface=", new_iface, meshDownlink)
+					}
 				}
 
 				//ex tinynet

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Dimensions, Platform, SafeAreaView } from 'react-native'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import Notifications from 'Notifications'
@@ -144,6 +144,7 @@ const AppAlert = (props) => {
 const AdminLayout = ({ toggleColorMode, ...props }) => {
   const mainPanel = React.useRef()
   const location = useLocation()
+  const navigate = useNavigate()
 
   const [showAlert, setShowAlert] = useState(false)
   const [showConfirmAlert, setShowConfirmAlert] = useState(false)
@@ -154,6 +155,43 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const [modal, setModal] = useState({})
 
   const toggleAlert = () => setShowAlert(!showAlert)
+
+  const checkUpdate = () => {
+    api
+      .get('/releasesAvailable?container=super_base')
+      .then((versions) => {
+        versions?.reverse() // sort by latest first
+
+        let latest = versions.find((v) => !v.includes('-dev'))
+        let latestDev = versions.find((v) => v.includes('-dev'))
+
+        api
+          .get('/release')
+          .then((releaseInfo) => {
+            let current = releaseInfo.Current
+
+            // if latest get version
+            if (current.startsWith('latest')) {
+              current = current.includes('-dev') ? latestDev : latest
+            }
+
+            if (current.includes('-dev') && current != latestDev) {
+              alertState.info(
+                `New SPR available: Latest dev version is ${latestDev}, current version is ${current}`
+              )
+            } else if (current != latest) {
+              alertState.info(
+                `New SPR available: Latest version is ${latest}, current version is ${current}`
+              )
+            } else {
+              alertState.success(`${current} is the latest version of spr`)
+            }
+          })
+          .catch((err) => alertState.error(err))
+      })
+      .catch((err) => {})
+      .finally(() => {})
+  }
 
   //setup alert context
   alertState.alert = (type = 'info', title, body = null) => {
@@ -246,8 +284,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const [devices, setDevices] = useState([])
   const [groups, setGroups] = useState([])
 
-  const [notificationSettings, setNotificationSettings] = useState([])
-
   // device context stuff
   const getDevices = (forceFetch = false) => {
     return new Promise((resolve, reject) => {
@@ -269,8 +305,10 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     })
   }
 
-  const getDevice = (value, type = 'MAC') =>
-    devices.find((d) => d[type] == value)
+  const getDevice = (value, type = 'MAC') => {
+    if (!value) return null
+    return devices.find((d) => d[type] == value)
+  }
 
   const getGroups = () => {
     return new Promise((resolve, reject) => {
@@ -283,6 +321,37 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   }
 
   useEffect(() => {
+    api
+      .getCheckUpdates()
+      .then((state) => {
+        const lastCheckTime = localStorage.getItem('lastUpdateCheckTime')
+
+        const currentTime = new Date().getTime()
+
+        if (
+          state == true &&
+          (!lastCheckTime || currentTime - lastCheckTime >= 3600000)
+        ) {
+          checkUpdate()
+
+          localStorage.setItem('lastUpdateCheckTime', currentTime)
+        }
+      })
+      .catch((err) => {})
+
+    //global handlers for api errors
+    api.registerErrorHandler(404, (err) => {
+      //console.error('HTTP error 404', err.response.url)
+    })
+
+    const redirOnAuthError = (err) => {
+      console.error('HTTP auth error for url:', err.response.url)
+      navigate('/auth/login')
+    }
+
+    api.registerErrorHandler(401, redirOnAuthError)
+    api.registerErrorHandler(403, redirOnAuthError)
+
     api
       .features()
       .then((res) => {
@@ -321,11 +390,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       .then(setVersion)
       .catch((err) => {})
 
-    // get stetings for notificaations
-    notificationsAPI.list().then((settings) => {
-      setNotificationSettings(settings)
-    })
-
+    // cache devices
     getDevices().then((res) => {
       //console.log('++ got', res.length, 'devices')
     })
@@ -369,6 +434,10 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         return
       } else if (event.data == 'Authentication failure') {
         return alertState.error('Websocket failed to authenticate')
+      } else if (event.data == 'Invalid JWT OTP') {
+        //user needed an OTP validation
+        navigate('/auth/validate')
+        return
       }
 
       let eventData = JSON.parse(event.data)

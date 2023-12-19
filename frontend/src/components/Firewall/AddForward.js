@@ -27,7 +27,7 @@ class AddForwardImpl extends React.Component {
     SrcIP: '0.0.0.0/0',
     SrcPort: 'any',
     DstIP: '',
-    DstPort: 'any'
+    DstPort: ''
   }
 
   constructor(props) {
@@ -46,9 +46,9 @@ class AddForwardImpl extends React.Component {
     let rule = {
       Protocol: this.state.Protocol,
       SrcIP: this.state.SrcIP,
-      SrcPort: this.state.SrcPort,
+      SrcPort: this.state.SrcPort || 'any',
       DstIP: this.state.DstIP,
-      DstPort: this.state.DstPort
+      DstPort: this.state.DstPort || 'any'
     }
 
     firewallAPI
@@ -93,7 +93,9 @@ class AddForwardImpl extends React.Component {
         </FormControl>
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Incoming Port</FormControlLabelText>
+            <FormControlLabelText>
+              Original Destination Port
+            </FormControlLabelText>
           </FormControlLabel>
           <Input size="md" variant="underlined">
             <InputField
@@ -101,11 +103,17 @@ class AddForwardImpl extends React.Component {
               onChangeText={(value) => this.handleChange('SrcPort', value)}
             />
           </Input>
+
+          <FormControlHelper>
+            <FormControlHelperText>
+              Optional port or port range, leave empty for all ports
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Destination IP address</FormControlLabelText>
+            <FormControlLabelText>Destination IP Address</FormControlLabelText>
           </FormControlLabel>
           <ClientSelect
             name="DstIP"
@@ -117,7 +125,7 @@ class AddForwardImpl extends React.Component {
         </FormControl>
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Dest Port</FormControlLabelText>
+            <FormControlLabelText>Destination Port</FormControlLabelText>
           </FormControlLabel>
           <Input size="md" variant="underlined">
             <InputField

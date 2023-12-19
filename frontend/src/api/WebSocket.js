@@ -1,6 +1,7 @@
-import { getApiHostname } from './API'
+import { getApiHostname, getWsURL } from './API'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { deviceAPI } from './Device'
+import { eventTemplate } from 'utils'
 
 async function connectWebsocket(messageCallback) {
   let login = await AsyncStorage.getItem('user')
@@ -8,16 +9,24 @@ async function connectWebsocket(messageCallback) {
     ws = null
 
   try {
-    let host = getApiHostname()
-    ws = new WebSocket(`ws://${host}/ws`)
+    ws = new WebSocket(getWsURL())
   } catch (err) {
     // mock error
-    console.error('[webSocket]', 'failed to connect to', getApiHostname())
+    console.error('[webSocket]', 'failed to connect to', getWsURL())
     return
   }
 
   ws.addEventListener('open', (event) => {
-    ws.send(userData['username'] + ':' + userData['password'])
+
+    AsyncStorage.getItem('jwt-otp').then((string) => {
+      let jwt = JSON.parse(string)
+      if (jwt) {
+        ws.send(userData['username'] + ':' + userData['password'] + ':' + jwt.jwt)
+      } else {
+        ws.send(userData['username'] + ':' + userData['password'])
+      }
+    })
+
   })
 
   ws.addEventListener('message', (event) => {
@@ -26,6 +35,7 @@ async function connectWebsocket(messageCallback) {
 
   return ws
 }
+
 
 const parseLogMessage = async (msg) => {
   const msgType = msg.Type
@@ -49,7 +59,16 @@ const parseLogMessage = async (msg) => {
     return null
   }
 
-  if (msgType.startsWith('wifi:auth')) {
+  const valid_types = ['info', 'warning', 'success', 'error', 'danger']
+  if (msgType.startsWith('alert:')) {
+    type = 'info'
+    if (valid_types.includes(data.NotificationType)) {
+      type = data.NotificationType
+    }
+    title = eventTemplate(data.Title, data.Event)
+    body = eventTemplate(data.Body, data.Event)
+    data = ''
+  } else if (msgType.startsWith('wifi:auth')) {
     if (msgType.includes('success')) {
       let name = data.MAC
 

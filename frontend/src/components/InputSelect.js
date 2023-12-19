@@ -12,11 +12,66 @@ import {
   ChevronUpIcon,
   Menu,
   MenuItem,
-  MenuItemLabel
+  MenuItemLabel,
+  Actionsheet,
+  ActionsheetBackdrop,
+  ActionsheetContent,
+  ActionsheetDragIndicatorWrapper,
+  ActionsheetDragIndicator,
+  ActionsheetItem,
+  ActionsheetItemText,
+  ActionsheetScrollView
 } from '@gluestack-ui/themed'
-import { LaptopIcon, TagIcon, WifiIcon, UsersIcon } from 'lucide-react-native'
+
 import { ucFirst } from 'utils'
 import IconItem from './IconItem'
+
+const prefixValue = (value) => {
+  if (typeof value == 'object') {
+    let prefix = 'group',
+      v = 'empty'
+
+    if (value.Tag) {
+      prefix = 'tag'
+      v = value.Tag
+    } else {
+      v = value.Group
+    }
+
+    value = `${prefix}:${v}`
+  }
+
+  return value
+}
+
+const prefixToKeyValue = (newValue) => {
+  //TODO handle multiple
+  //translate tag:t1 to {Tag:"t1"}, group:dns to {Group:"dns"}
+  if (typeof newValue == 'string') {
+    if (newValue.match(/^(group|tag):/)) {
+      let [prefix, v] = newValue.split(':')
+      let key = ucFirst(prefix)
+      newValue = { [key]: v }
+    }
+  }
+  return newValue
+}
+
+const getItemIcon = (item) => {
+  //item.value.Tag TagIcon, group= UserIcon -- same as prefix check
+
+  //item.icon is for devices and group icons
+  let itemIcon = <></>
+  if (item.icon?.length) {
+    itemIcon = (
+      <IconItem name={item.icon} color={item.color} size={20} mr="$2" />
+    )
+  } else if (typeof item.icon === 'object') {
+    itemIcon = <Icon as={item.icon} mr="$2" size={20} />
+  }
+
+  return itemIcon
+}
 
 const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
   const [groups, setGroups] = useState([])
@@ -43,23 +98,12 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
 
   const handleChange = (value) => {
     let newValue = Array.isArray(value) ? value.join(',') : value
-
-    //TODO handle multiple
-    //translate tag:t1 to {Tag:"t1"}, group:dns to {Group:"dns"}
-    if (typeof newValue == 'string') {
-      if (newValue.match(/^(group|tag):/)) {
-        let [prefix, v] = newValue.split(':')
-        let key = ucFirst(prefix)
-        newValue = { [key]: v }
-      }
-    }
+    newValue = prefixToKeyValue(newValue)
 
     if (onChange) {
       onChange(newValue)
     }
   }
-
-  let closeOnSelect = !isMultiple
 
   /*return (
     <Menu w={200} maxH={360} closeOnSelect={closeOnSelect} trigger={trigger}>
@@ -82,32 +126,8 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
   )*/
 
   const menuItem = (item) => {
-    let value = item.value
-    let icon = LaptopIcon
-    if (typeof value == 'object') {
-      let prefix = 'group',
-        v = 'empty'
-      icon = UsersIcon //GroupIcon
-      if (value.Tag) {
-        prefix = 'tag'
-        v = value.Tag
-        icon = TagIcon
-      } else {
-        v = value.Group
-      }
-
-      value = `${prefix}:${v}`
-    }
-
-    //item.icon is for devices and group icons
-    let itemIcon = <></> //<Icon as={LaptopIcon} mr="$2" size={20} />
-    if (item.icon?.length) {
-      itemIcon = (
-        <IconItem name={item.icon} color={item.color} size={20} mr="$2" />
-      )
-    } else if (typeof item.icon === 'object') {
-      itemIcon = <Icon as={item.icon} mr="$2" size={20} />
-    }
+    let value = prefixValue(item.value)
+    let itemIcon = getItemIcon(item)
 
     return (
       <MenuItem key={value} textValue={value}>
@@ -118,16 +138,100 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
   }
 
   return (
-    <Menu
-      trigger={trigger}
-      selectionMode="single"
-      closeOnSelect={true}
-      onSelectionChange={(e) => handleChange(e.currentKey)}
-    >
-      {groups.map((group) => {
-        return group.options?.map(menuItem)
-      })}
-    </Menu>
+    <>
+      <Menu
+        trigger={trigger}
+        selectionMode="single"
+        closeOnSelect={true}
+        onSelectionChange={(e) => handleChange(e.currentKey)}
+        maxHeight={532}
+        overflow="scroll"
+      >
+        {groups.map((group) => {
+          return group.options?.map(menuItem)
+        })}
+      </Menu>
+    </>
+  )
+}
+
+const ActionSheetMenu = ({
+  value,
+  onChange,
+  isMultiple,
+  trigger,
+  isOpen,
+  setIsOpen,
+  ...props
+}) => {
+  const [groups, setGroups] = useState([])
+
+  useEffect(() => {
+    setGroups([{ title: props.title || 'Select', options: props.options }])
+  }, [props.options])
+
+  useEffect(() => {
+    if (!props.groups?.length) {
+      return
+    }
+
+    setGroups(props.groups)
+  }, [props.groups])
+
+  const type = isMultiple ? 'checkbox' : 'radio'
+  const title = props.title || ''
+  const defaultValue = value
+    ? isMultiple && !Array.isArray(value)
+      ? value.split(',')
+      : value
+    : ''
+
+  const handleChange = (value) => {
+    let newValue = Array.isArray(value) ? value.join(',') : value
+    newValue = prefixToKeyValue(newValue)
+    if (onChange) {
+      onChange(newValue)
+    }
+  }
+
+  const menuItem = (item) => {
+    let value = prefixValue(item.value)
+    let itemIcon = getItemIcon(item)
+
+    return (
+      <ActionsheetItem
+        onPress={() => {
+          handleChange(item.value)
+          setIsOpen(!isOpen)
+        }}
+      >
+        {itemIcon}
+        <ActionsheetItemText>{item.label}</ActionsheetItemText>
+      </ActionsheetItem>
+    )
+  }
+
+  return (
+    <>
+      {trigger()}
+      <Actionsheet
+        isOpen={isOpen}
+        onClose={() => setIsOpen(!isOpen)}
+        zIndex={999}
+      >
+        <ActionsheetBackdrop />
+        <ActionsheetContent h={'$1/2'} zIndex={999}>
+          <ActionsheetScrollView>
+            <ActionsheetDragIndicatorWrapper>
+              <ActionsheetDragIndicator />
+            </ActionsheetDragIndicatorWrapper>
+            {groups.map((group) => {
+              return group.options?.map(menuItem)
+            })}
+          </ActionsheetScrollView>
+        </ActionsheetContent>
+      </Actionsheet>
+    </>
   )
 }
 
@@ -157,6 +261,10 @@ const InputSelect = (props) => {
   const handleChange = (newValue) => {
     setValue(newValue)
 
+    if (!isMultiple) {
+      setIsOpen(false)
+    }
+
     let values = isMultiple ? newValue.split(',') : newValue
 
     if (onChange) {
@@ -179,7 +287,6 @@ const InputSelect = (props) => {
         h="$full"
         variant="link"
         rounded="$none"
-        onPress={() => setIsOpen(!isOpen)}
         {...triggerProps}
       >
         <ButtonIcon as={isOpen ? ChevronUpIcon : ChevronDownIcon} />
@@ -198,9 +305,18 @@ const InputSelect = (props) => {
     menuProps.options = props.options
   }
 
-  const elem = (
-    <SelectMenu onChange={handleChange} value={value} {...menuProps} />
-  )
+  let elem = <SelectMenu onChange={handleChange} value={value} {...menuProps} />
+
+  //NOTE uncomment for ActionSheet version
+  /*elem = (
+    <ActionSheetMenu
+      onChange={handleChange}
+      value={value}
+      isOpen={isOpen}
+      setIsOpen={setIsOpen}
+      {...menuProps}
+    />
+  )*/
 
   const isDisabled =
     props.isDisabled !== undefined ? props.isDisabled : isMultiple
@@ -232,6 +348,7 @@ const InputSelect = (props) => {
           value={displayValue(value)}
           onChangeText={handleChangeText}
           onSubmitEditing={onSubmitEditing}
+          size={'sm'}
         />
         <InputSlot>{elem}</InputSlot>
       </Input>

@@ -81,15 +81,18 @@ const Mesh = (props) => {
         }
         setLeafRouters(routers)
 
+        //tbd refactor with meshIter
+
         let checkedRouters = routers.map(async (router) => {
           let rApi = new api()
           rApi.setRemoteURL('http://' + router.IP + '/')
           rApi.setAuthTokenHeaders(router.APIToken)
 
           return rApi
-            .get('/status')
-            .then((result) => {
+            .get('/version')
+            .then((version) => {
               router.status = 'API OK'
+              router.version = version
 
               let rMeshAPI = new APIMesh()
               //if API is okay, reach further.
@@ -105,6 +108,7 @@ const Mesh = (props) => {
                   } else {
                     router.status = 'Mesh Leaf Not Enabled'
                   }
+
                   return router
                 })
                 .catch((e) => {
@@ -195,13 +199,6 @@ const Mesh = (props) => {
                   remoteWifiApi.allStations
                     .call(remoteWifiApi, iface.Name)
                     .then((stations) => {
-                      console.log(
-                        'do it ... ' +
-                          remoteWifiApi.remoteURL +
-                          ' ' +
-                          iface.Name
-                      )
-
                       let x = {
                         [remoteWifiApi.remoteURL]: {
                           [iface.Name]: Object.keys(stations)
@@ -244,10 +241,6 @@ const Mesh = (props) => {
       props.notifyChange('mesh')
     }
     refreshLeaves()
-  }
-
-  const renderLeafStatus = (item) => {
-    return <Text>{item.status}</Text>
   }
 
   const doMeshReset = () => {
@@ -358,6 +351,7 @@ const Mesh = (props) => {
                 >
                   <Heading size="sm">Router IP</Heading>
                   <Heading size="sm">Status</Heading>
+                  <Heading size="sm">SPR Version</Heading>
                   <Heading size="sm">Token</Heading>
                   <Text></Text>
                 </HStack>
@@ -365,14 +359,15 @@ const Mesh = (props) => {
             }}
             renderItem={({ item }) => (
               <ListItem>
-                <Text>{item.IP}</Text>
-                {renderLeafStatus(item)}
-                <TokenItem token={item.APIToken} />
-
+                <Text flex={2}>{item.IP}</Text>
+                <Text flex={3}>{item.status}</Text>
+                <Text flex={2}>{item.version}</Text>
+                <TokenItem flex={2} token={item.APIToken} />
                 <Button
                   size="sm"
                   variant="link"
                   onPress={() => deleteListItem(item)}
+                  flex={1}
                 >
                   <ButtonIcon as={CloseIcon} />
                 </Button>

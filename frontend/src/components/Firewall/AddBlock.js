@@ -69,7 +69,7 @@ class AddBlockImpl extends React.Component {
       <VStack space="md">
         <FormControl isRequired>
           <FormControlLabel>
-            <FormControlLabelText>Source address</FormControlLabelText>
+            <FormControlLabelText>Source IP Address</FormControlLabelText>
           </FormControlLabel>
 
           <Input size="md" variant="underlined">
@@ -84,7 +84,7 @@ class AddBlockImpl extends React.Component {
         </FormControl>
         <FormControl isRequired>
           <FormControlLabel>
-            <FormControlLabelText>Destination address</FormControlLabelText>
+            <FormControlLabelText>Destination IP Address</FormControlLabelText>
           </FormControlLabel>
           <ClientSelect
             name="DstIP"

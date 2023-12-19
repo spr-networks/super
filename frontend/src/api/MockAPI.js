@@ -2697,78 +2697,99 @@ export default function MockAPI() {
         }
       })
 
-      this.get('/plugins/db/items/:ip', (schema, request) => {
+      this.get('/plugins/db/items/:bucket', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
         let types = ['NOERROR', 'NODATA', 'OTHERERROR', 'BLOCKED']
-        let ip = request.params.ip
-        let revip = ip.split('').reverse().join('')
-        let day = 1 + parseInt(Math.random() * 28)
-        day = day.toString().padStart(2, '0')
+        let bucket = request.params.bucket
 
-        return [
-          {
-            Q: [
-              {
-                Name: `${revip}.in-addr.arpa.`,
-                Qtype: 12,
-                Qclass: 1
-              }
-            ],
-            A: [
-              {
-                Hdr: {
+        if (bucket.startsWith('dns:serve:')) {
+          let ip = bucket.replace(/^dns:serve:/, '')
+          let revip = ip.split('').reverse().join('')
+          let day = 1 + parseInt(Math.random() * 28)
+          day = day.toString().padStart(2, '0')
+
+          return [
+            {
+              Q: [
+                {
                   Name: `${revip}.in-addr.arpa.`,
-                  Rrtype: 12,
-                  Class: 1,
-                  Ttl: 30,
-                  Rdlength: 0
-                },
-                Ptr: 'rpi4.lan.'
-              }
-            ],
-            Type: 'NOERROR',
-            FirstName: `${revip}.in-addr.arpa.`,
-            FirstAnswer: 'rpi4.lan.',
-            Local: '[::]:53',
-            Remote: `${ip}:50862`,
-            Timestamp: `2022-03-${day}T08:05:34.983138386Z`
-          },
-          {
-            Q: [
-              {
-                Name: 'caldav.fe.apple-dns.net.',
-                Qtype: 65,
-                Qclass: 1
-              }
-            ],
-            A: [],
-            Type: 'NODATA',
-            FirstName: 'caldav.fe.apple-dns.net.',
-            FirstAnswer: '',
-            Local: '[::]:53',
-            Remote: `${ip}:50216`,
-            Timestamp: `2022-03-${day}T08:05:34.01579228Z`
-          },
-          {
-            Q: [
-              {
-                Name: `lb._dns-sd._udp.${revip}.in-addr.arpa.`,
-                Qtype: 12,
-                Qclass: 1
-              }
-            ],
-            A: [],
-            Type: 'OTHERERROR',
-            FirstName: `lb._dns-sd._udp.${revip}.in-addr.arpa.`,
-            FirstAnswer: '',
-            Local: '[::]:53',
-            Remote: `${ip}:64151`,
+                  Qtype: 12,
+                  Qclass: 1
+                }
+              ],
+              A: [
+                {
+                  Hdr: {
+                    Name: `${revip}.in-addr.arpa.`,
+                    Rrtype: 12,
+                    Class: 1,
+                    Ttl: 30,
+                    Rdlength: 0
+                  },
+                  Ptr: 'rpi4.lan.'
+                }
+              ],
+              Type: 'NOERROR',
+              FirstName: `${revip}.in-addr.arpa.`,
+              FirstAnswer: 'rpi4.lan.',
+              Local: '[::]:53',
+              Remote: `${ip}:50862`,
+              Timestamp: `2022-03-${day}T08:05:34.983138386Z`
+            },
+            {
+              Q: [
+                {
+                  Name: 'caldav.fe.apple-dns.net.',
+                  Qtype: 65,
+                  Qclass: 1
+                }
+              ],
+              A: [],
+              Type: 'NODATA',
+              FirstName: 'caldav.fe.apple-dns.net.',
+              FirstAnswer: '',
+              Local: '[::]:53',
+              Remote: `${ip}:50216`,
+              Timestamp: `2022-03-${day}T08:05:34.01579228Z`
+            },
+            {
+              Q: [
+                {
+                  Name: `lb._dns-sd._udp.${revip}.in-addr.arpa.`,
+                  Qtype: 12,
+                  Qclass: 1
+                }
+              ],
+              A: [],
+              Type: 'OTHERERROR',
+              FirstName: `lb._dns-sd._udp.${revip}.in-addr.arpa.`,
+              FirstAnswer: '',
+              Local: '[::]:53',
+              Remote: `${ip}:64151`,
+              Timestamp: `2022-03-${day}T08:05:29.976935196Z`
+            }
+          ]
+        }
+
+        //log:api
+        let res = []
+        for (let i = 0; i < 10; i++) {
+          let day = `${i + 1}`.padStart(2, '0')
+          let log = {
+            file: '/code/firewall.go:1264',
+            func: 'main.establishDevice',
+            level: 'info',
+            msg: 'Populating route and vmaps aa:c0:6c:34:aa:20 192.168.2.10 ` eth0 ` wlan1.4303',
             Timestamp: `2022-03-${day}T08:05:29.976935196Z`
           }
-        ]
+
+          res.push(log)
+        }
+
+        return res
       })
 
       this.get('/uplink/wifi', (schema, request) => {
