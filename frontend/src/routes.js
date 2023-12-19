@@ -329,7 +329,7 @@ const routes = [
         icon: EyeIcon,
         component: Events,
         layout: 'admin'
-      },/*
+      },
       {
         path: 'pfw_tasks',
         name: 'Tasks',
@@ -338,7 +338,7 @@ const routes = [
         hideSimple: true,
         layout: 'admin',
         plus: true
-      },*/
+      },
     ]
   },
   {

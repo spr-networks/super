@@ -73,6 +73,15 @@ export class APIPfw extends API {
    getTaskConfig() {
      return this.get('/tasks/config')
    }
+
+   saveWifiScanTask(data) {
+     return this.put('/tasks/configure/wifi-scan', data)
+   }
+
+   saveUplinkCheckTask(data) {
+     return this.put('/tasks/configure/uplink-check', data)
+   }
+
 }
 
 export const pfwAPI = new APIPfw()
