@@ -38,6 +38,7 @@ const AuthTokenList = (props) => {
     refreshList()
   }, [])
 
+
   const deleteListItem = (row) => {
     authAPI
       .deleteToken(row.Token)
@@ -59,27 +60,39 @@ const AuthTokenList = (props) => {
   const refreshList = () => {
 
     authAPI
-      .tokens()
-      .then((tokens) => {
-        setTokens(tokens)
-      })
-      .catch((err) => {
-        err.response
-          .text()
-          .then((data) => {
-            if (data.includes("Invalid JWT")) {
-              //re-log OTP
-              setJWTOTPHeader('')
-              if (status == 'registered') {
-                setAuthReturn('/admin/auth')
-                navigate('/auth/validate')
-              }
-            }
+      .statusOTP()
+      .then((s) => {
+        setStatus(s.State)
+
+        authAPI
+          .tokens()
+          .then((tokens) => {
+            setTokens(tokens)
           })
-          .catch(() => {
-            context.error('Auth Token API ' + JSON.stringify(err), err)
+          .catch((err) => {
+            err.response
+              .text()
+              .then((data) => {
+                if (data.includes("Invalid JWT")) {
+                  //re-log OTP
+                  setJWTOTPHeader('')
+                  if (s.State == 'registered') {
+                    setAuthReturn('/admin/auth')
+                    navigate('/auth/validate')
+                  }
+                }
+              })
+              .catch(() => {
+                context.error('Auth Token API ' + JSON.stringify(err), err)
+              })
           })
+
       })
+      .catch((e) => {
+        setStatus('unknown')
+        context.error('failed to get status', e)
+      })
+
   }
 
   const notifyChange = () => {
@@ -176,7 +189,7 @@ const AuthTokenList = (props) => {
               <Text alignSelf="center">There are no API tokens added yet</Text>
             ) :
             (
-              <Text alignSelf="center">Register an OTP Code to view and add tokens</Text>
+              <Text alignSelf="center">{status} Register an OTP Code to view and add tokens</Text>
             )
         ) : null}
       </VStack>
