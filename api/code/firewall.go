@@ -22,6 +22,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+import (
+	"github.com/spr-networks/sprbus"
+)
+
 var FWmtx sync.Mutex
 
 type BaseRule struct {
@@ -1074,6 +1078,16 @@ func applyBuiltinTagFirewallRules() {
 		applyPrivateNetworkUpstreamDevice(device)
 		applyEndpointRules(device)
 	}
+}
+
+func refreshDeviceTags(dev DeviceEntry) {
+	go func() {
+		FWmtx.Lock()
+		applyPrivateNetworkUpstreamDevice(dev)
+		applyEndpointRules(dev)
+		FWmtx.Unlock()
+	}()
+	sprbus.Publish("device:tags:update", scrubDevice(dev))
 }
 
 func applyPingRules() {

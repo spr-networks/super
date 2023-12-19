@@ -1885,11 +1885,6 @@ func lookupWGDevice(devices *map[string]DeviceEntry, WGPubKey string, IP string)
 	return DeviceEntry{}, false
 }
 
-func refreshDeviceTags(dev DeviceEntry) {
-	applyPrivateNetworkUpstreamDevice(dev)
-	sprbus.Publish("device:tags:update", scrubDevice(dev))
-}
-
 func refreshDeviceGroups(dev DeviceEntry) {
 	if dev.WGPubKey != "" {
 		//refresh wg based on WGPubKey
