@@ -4,6 +4,7 @@ import { Dimensions, Platform } from 'react-native'
 import {
   Button,
   ButtonIcon,
+  ButtonText,
   FlatList,
   HStack,
   Icon,
@@ -27,6 +28,93 @@ import ModalForm from 'components/ModalForm'
 import { ListHeader } from 'components/List'
 import { ListItem } from 'components/List'
 import { BellIcon, BellOffIcon, PencilIcon } from 'lucide-react-native'
+
+const alertTemplates = [
+    {
+        "TopicPrefix": "nft:drop:private",
+        "MatchAnyOne": false,
+        "InvertRule": false,
+        "Conditions": [],
+        "Actions": [
+            {
+                "SendNotification": true,
+                "StoreAlert": true,
+                "MessageTitle": "Firewall Drop private network request (rfc1918)",
+                "MessageBody": "Request from {{IP.SrcIP}} to {{IP.DstIP}}",
+                "NotificationType": "info",
+                "GrabEvent": true,
+                "GrabValues": false
+            }
+        ],
+        "Name": "drop private",
+        "Disabled": false,
+        "RuleId": ""
+    },
+    {
+        "TopicPrefix": "nft:drop:mac",
+        "MatchAnyOne": false,
+        "InvertRule": false,
+        "Conditions": [],
+        "Actions": [
+            {
+                "SendNotification": true,
+                "StoreAlert": true,
+                "MessageTitle": "Firewall Drop MAC",
+                "MessageBody": "MAC IP Violation {{IP.SrcIP}} {{Ethernet.SrcMAC}} to {{IP.DstIP}} {{Ethernet.DstMAC}}",
+                "NotificationType": "danger",
+                "GrabEvent": true,
+                "GrabValues": false
+            }
+        ],
+        "Name": "drop mac violation",
+        "Disabled": false,
+        "RuleId": ""
+    },
+    {
+        "TopicPrefix": "wifi:auth:fail",
+        "MatchAnyOne": false,
+        "InvertRule": false,
+        "Conditions": [],
+        "Actions": [
+            {
+                "SendNotification": true,
+                "StoreAlert": true,
+                "MessageTitle": "WiFi Auth Failure",
+                "MessageBody": "{{MAC}} failed wifi auth {{Reason}} with type {{Type}}",
+                "NotificationType": "info",
+                "GrabEvent": true,
+                "GrabValues": false
+            }
+        ],
+        "Name": "wifi auth failure",
+        "Disabled": false,
+        "RuleId": "5712aeed-9ab8-45b3-aeed-37085935d9ee"
+    },
+    {
+        "TopicPrefix": "auth:failure",
+        "MatchAnyOne": false,
+        "InvertRule": false,
+        "Conditions": [
+            {
+                "JPath": "$[?(@.type==\"user\")]"
+            }
+        ],
+        "Actions": [
+            {
+                "SendNotification": true,
+                "StoreAlert": true,
+                "MessageTitle": "Login Failure",
+                "MessageBody": "{{name}} failed to login with {{reason}}",
+                "NotificationType": "error",
+                "GrabEvent": true,
+                "GrabValues": false
+            }
+        ],
+        "Name": "user login failure",
+        "Disabled": false,
+        "RuleId": "d9586e92-f9c7-44f6-a528-e03e6033d9da"
+    }
+]
 
 const AlertItem = ({
   item,
@@ -83,6 +171,7 @@ const AlertItem = ({
       </MenuItem>
     </Menu>
   )
+
 
   return (
     <ListItem>
@@ -315,6 +404,40 @@ const AlertSettings = (props) => {
     populateItem = config[itemIndex]
   }
 
+
+  const populateTemplates = () => {
+    //alertTemplates
+    let newConfig = config
+    let templateFound = []
+    for (let j = 0; j < alertTemplates.length; j++) {
+      let found = false
+      for (let i = 0; i < newConfig.length; i++) {
+        if (alertTemplates[j].Name == newConfig[i].Name) {
+          found = true
+          break
+        }
+      }
+      templateFound.push(found)
+    }
+
+    const addPromises = [];
+    for (let j = 0; j < alertTemplates.length; j++) {
+      if (templateFound[j] == false) {
+        addPromises.push(alertsAPI.add(alertTemplates[j]));
+      }
+    }
+
+    if (addPromises.length == 0) {
+      context.success("Templates already exist")
+    } else {
+      Promise.all(addPromises).then(() => {
+        context.success("Added " + addPromises.length + " templates")
+        fetchList()
+      });
+    }
+  }
+
+
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
       <ListHeader title="Alert Configuration">
@@ -344,6 +467,11 @@ const AlertSettings = (props) => {
         )}
         keyExtractor={(item, index) => `alert-${index}`}
       />
+
+      <Button w="$1/4" onPress={populateTemplates}>
+        <ButtonText>Add Templates</ButtonText>
+      </Button>
+
     </View>
   )
 }
