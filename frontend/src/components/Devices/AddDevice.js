@@ -93,6 +93,7 @@ const AddDevice = (props) => {
   }, [])
 
   const filterMAC = (value) => {
+    value = value.toLowerCase()
     //must be of the format 00:00:00:00:00:00
     const hexChars = '0123456789abcdef'
     let digits = ''
