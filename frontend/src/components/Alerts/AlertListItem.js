@@ -154,8 +154,10 @@ const StateButton = ({ item, onPress, ...props }) => {
       size="xs"
       onPress={() => onPress(action)}
     >
-      <ButtonText>{text}</ButtonText>
-      <ButtonIcon as={icon} ml="$2" />
+      <ButtonText display="none" sx={{ '@md': { display: 'flex' } }}>
+        {text}
+      </ButtonText>
+      <ButtonIcon as={icon} sx={{ '@md': { marginLeft: '$2' } }} />
     </Button>
   )
 }
