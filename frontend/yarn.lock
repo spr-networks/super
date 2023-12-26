@@ -1451,28 +1451,19 @@
   resolved "https://registry.yarnpkg.com/@gluestack-style/legend-motion-animation-driver/-/legend-motion-animation-driver-1.0.3.tgz#e2408ff8515ced92cb75f096f5eeff1f9636a0da"
   integrity sha512-sD6aFS6Tq5XpyjrboFEIc8LrRY4TA4kodFYHzk6mDchvbkdLODijtjnaDQB1UqihOkMRg49e7ANRAOzc7eymaQ==
 
-"@gluestack-style/react@^1.0.18":
-  version "1.0.26"
-  resolved "https://registry.yarnpkg.com/@gluestack-style/react/-/react-1.0.26.tgz#97437088060505a0c80c4d636cddcb94a31bd1ef"
-  integrity sha512-mw7R6edM1HGQewUxFGUzZOtUvv4worzdiAaNLv1IRFjoirFRcZ+SIumPWG3exEb+WBkHFwH7ZjpQWqY9oHsOcQ==
+"@gluestack-style/react@^1.0.30":
+  version "1.0.30"
+  resolved "https://registry.yarnpkg.com/@gluestack-style/react/-/react-1.0.30.tgz#76aefe437c3020f416a760696c593d7b65f09747"
+  integrity sha512-mzBWp+GzbiNi/tAhjGyJiuoxPl9Djaev4rm/rOscL+hpmx3UBNdgt8IB5J32alZ461lOikzmAaMIiaLwoOLHtw==
   dependencies:
     inline-style-prefixer "^6.0.1"
     normalize-css-color "^1.0.2"
 
-"@gluestack-style/react@^1.0.29":
-  version "1.0.29"
-  resolved "https://registry.yarnpkg.com/@gluestack-style/react/-/react-1.0.29.tgz#253f92dbb78d4a49ef9c53b8c9c02872ff11dd31"
-  integrity sha512-NoI5kcVQsrhYYDld410YhuP7DVuB+k99b5ycOcarM1T55ZhZrmgwPBfG83/lVWT1w0wHcumHn6+pUSNBYQyr9g==
+"@gluestack-ui/accordion@^0.0.3":
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/@gluestack-ui/accordion/-/accordion-0.0.3.tgz#75f7e116dd5ddfe17dcb7ac55d85686b1457bb09"
+  integrity sha512-aF3AzV46irgsY2lTObpIC7JjNzs+d9IlkUfAk7kaRqUikEdj8oVP8M9mGieQCjFW3kMHfd7EKZhuj4l9uctB+w==
   dependencies:
-    inline-style-prefixer "^6.0.1"
-    normalize-css-color "^1.0.2"
-
-"@gluestack-ui/accordion@^0.0.2":
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@gluestack-ui/accordion/-/accordion-0.0.2.tgz#fb6ea69133169262c327c67f5bd2c0d3b6396a86"
-  integrity sha512-t9aTPgGPHVkfvIBpDm3NALfMNZKrkirG+R2ARHClyeAr+Ok8XslcAqup+g1apZUxJPhXCuEn2FCjVFW+1ROxzw==
-  dependencies:
-    "@gluestack-style/react" "^1.0.18"
     "@gluestack-ui/utils" "^0.1.12"
     "@react-native-aria/accordion" "^0.0.2"
     "@react-native-aria/focus" "^0.2.9"
@@ -1515,10 +1506,10 @@
   dependencies:
     "@gluestack-ui/utils" "^0.1.12"
 
-"@gluestack-ui/button@^0.1.33":
-  version "0.1.33"
-  resolved "https://registry.yarnpkg.com/@gluestack-ui/button/-/button-0.1.33.tgz#fbfe2bc9fbdb866fc2ac3f8d4158b3425cd878c7"
-  integrity sha512-qB+Jc6ZVJLMhVn99tbnnjGSpNkC1jJMpWEN0DI7UtV+YjAHwO3fyb+wNFovS683cY1F3Rj8FsZSUT1gIlSvelQ==
+"@gluestack-ui/button@0.1.34":
+  version "0.1.34"
+  resolved "https://registry.yarnpkg.com/@gluestack-ui/button/-/button-0.1.34.tgz#f635aba6a9023d153f5dd82cd96a3785b6244951"
+  integrity sha512-xuU1yxZqBFpNo0G8lENaNH2Rrbw/cxDflfJ8kStXkRW9vF6OIYLmytGqlybjp5WEBOtgJnvJiJV4cdGS+tYDxQ==
   dependencies:
     "@gluestack-ui/utils" "0.1.12"
     "@react-native-aria/focus" "^0.2.9"
@@ -1766,20 +1757,20 @@
     "@gluestack-ui/utils" "^0.1.12"
     "@react-native-aria/focus" "^0.2.9"
 
-"@gluestack-ui/themed@^1.0.30":
-  version "1.0.30"
-  resolved "https://registry.yarnpkg.com/@gluestack-ui/themed/-/themed-1.0.30.tgz#7bba2335296f6902875f9f335eff41c83e57e76b"
-  integrity sha512-axzyF1W5O+d8dQjeaj7KgJwjmZKzIi3Zx3ztkPwzJy6XXJJJpLuxYZdyry9f9Z3URPjL2N/29Z1PnlaXFyd5wQ==
+"@gluestack-ui/themed@^1.0.32":
+  version "1.0.32"
+  resolved "https://registry.yarnpkg.com/@gluestack-ui/themed/-/themed-1.0.32.tgz#a9b1a0bb354b15c6f564f0fd50f59e8114140b7a"
+  integrity sha512-lf0q/AdYa1rmSzUwJjOZQU4bTf4t5PR8N64mcyAlktLJyKrN0WZU1O0j4K3jjzdjkJymQhsegr6AqwRdE+pdfQ==
   dependencies:
     "@expo/html-elements" latest
     "@gluestack-style/animation-resolver" "1.0.3"
     "@gluestack-style/legend-motion-animation-driver" "1.0.3"
-    "@gluestack-ui/accordion" "^0.0.2"
+    "@gluestack-ui/accordion" "^0.0.3"
     "@gluestack-ui/actionsheet" "0.2.35"
     "@gluestack-ui/alert" "^0.1.12"
     "@gluestack-ui/alert-dialog" "^0.1.23"
     "@gluestack-ui/avatar" "^0.1.15"
-    "@gluestack-ui/button" "^0.1.33"
+    "@gluestack-ui/button" "0.1.34"
     "@gluestack-ui/checkbox" "^0.1.22"
     "@gluestack-ui/divider" "^0.1.8"
     "@gluestack-ui/fab" "^0.1.17"
