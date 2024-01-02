@@ -310,7 +310,11 @@ export const CollapsibleSidebarItem = (props) => {
               </Text>
             </Box>
             <RotatingView isCollapsed={isCollapsed}>
-              <Icon as={ChevronDownIcon} color="$coolGray400" />
+              <Icon
+                as={ChevronDownIcon}
+                color="$coolGray400"
+                display={isMini ? 'none' : 'flex'}
+              />
             </RotatingView>
           </HStack>
         </Pressable>
