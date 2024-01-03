@@ -1,9 +1,9 @@
 import { getApiHostname, getWsURL } from './API'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { deviceAPI } from './Device'
-import { eventTemplate } from 'utils'
+import {eventTemplate} from 'components/Alerts/AlertUtil'
 
-async function connectWebsocket(messageCallback) {
+async function connectWebsocket(context, messageCallback) {
   let login = await AsyncStorage.getItem('user')
   let userData = JSON.parse(login),
     ws = null
@@ -30,14 +30,14 @@ async function connectWebsocket(messageCallback) {
   })
 
   ws.addEventListener('message', (event) => {
-    messageCallback(event)
+    messageCallback(context, event)
   })
 
   return ws
 }
 
 
-const parseLogMessage = async (msg) => {
+const parseLogMessage = async (context, msg) => {
   const msgType = msg.Type
   let data = null
 
@@ -65,8 +65,8 @@ const parseLogMessage = async (msg) => {
     if (valid_types.includes(data.NotificationType)) {
       type = data.NotificationType
     }
-    title = eventTemplate(data.Title, data.Event)
-    body = eventTemplate(data.Body, data.Event)
+    title = eventTemplate(context, data.Title, data.Event)
+    body = eventTemplate(context, data.Body, data.Event)
     data = ''
   } else if (msgType.startsWith('wifi:auth')) {
     if (msgType.includes('success')) {

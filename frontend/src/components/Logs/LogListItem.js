@@ -341,7 +341,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     'nft:drop:private': (item) => <NFTDropItem item={item} type="private" />,
     'nft:drop:forward': (item) => <NFTDropItem item={item} type="forward" />,
     'nft:drop:mac': (item) => <NFTDropItem item={item} type="mac" />,
-    'nft:drop:input': (item) => <NFTDropItem item={item} type={'input'} />
+    'nft:drop:input': (item) => <NFTDropItem item={item} type="input" />
   }
 
   const NFTDropItem = ({ item, type, ...props }) => {

@@ -13,7 +13,6 @@ export {
   setAuthReturn,
   getAuthReturn
 } from './API'
-export { connectWebsocket } from './WebSocket'
 export { dbAPI } from './Db'
 export { deviceAPI } from './Device'
 export { groupAPI } from './Group'

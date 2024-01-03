@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { Dimensions, Platform, SafeAreaView } from 'react-native'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -284,6 +284,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const [devices, setDevices] = useState([])
   const [groups, setGroups] = useState([])
 
+  let context = useContext(AppContext)
+
   // device context stuff
   const getDevices = (forceFetch = false) => {
     return new Promise((resolve, reject) => {
@@ -429,7 +431,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       }
     }
 
-    const handleWebSocketEvent = async (event) => {
+    const handleWebSocketEvent = async (context, event) => {
       if (event.data == 'success') {
         return
       } else if (event.data == 'Authentication failure') {
@@ -448,7 +450,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         return
       }
 
-      const res = await parseLogMessage(eventData)
+      const res = await parseLogMessage(context, eventData)
       if (res) {
         //console.log('[NOTIFICATION]', JSON.stringify(res))
         let { type, title, body, data } = res
@@ -487,7 +489,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       }
     }
 
-    connectWebsocket(handleWebSocketEvent)
+    connectWebsocket(context, handleWebSocketEvent)
 
     let notificationArgs = {}
     if (Platform.OS == 'ios') {
