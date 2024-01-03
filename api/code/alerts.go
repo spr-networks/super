@@ -102,6 +102,13 @@ func (entry *ConditionEntry) Validate() error {
 		return errors.New("JPath cannot be empty")
 	}
 
+	//make sure it compiles
+	builder := gval.Full(jsonpath.PlaceholderExtension())
+	_, err := builder.NewEvaluable(entry.JPath)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
