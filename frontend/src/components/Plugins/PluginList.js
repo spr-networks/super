@@ -25,6 +25,7 @@ import {
   ScrollView,
   Spinner,
   ButtonSpinner,
+  AddIcon,
   CheckIcon
 } from '@gluestack-ui/themed'
 
@@ -265,13 +266,23 @@ const PluginList = (props) => {
   return (
     <ScrollView sx={{ '@md': { h: '92vh' } }}>
       <ListHeader title="Plugins" description="">
-        <ModalForm
-          title="Add a new Plugin"
-          triggerText="Add Plugin"
-          modalRef={refModal}
-        >
-          <AddPlugin notifyChange={notifyChange} />
-        </ModalForm>
+        <HStack space="sm">
+          <Button
+            size="sm"
+            action="secondary"
+            onPress={() => navigate('/admin/custom_plugin')}
+          >
+            <ButtonText>Custom Plugin</ButtonText>
+            <ButtonIcon as={AddIcon} ml="$2" />
+          </Button>
+          <ModalForm
+            title="Add a new Plugin"
+            triggerText="Add Plugin"
+            modalRef={refModal}
+          >
+            <AddPlugin notifyChange={notifyChange} />
+          </ModalForm>
+        </HStack>
       </ListHeader>
 
       <FlatList
