@@ -601,7 +601,9 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         devices,
         getDevices,
         getDevice,
-        getGroups
+        getGroups,
+        viewSettings,
+        setViewSettings
       }}
     >
       <SafeAreaView
