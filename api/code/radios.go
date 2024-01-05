@@ -120,6 +120,7 @@ type HostapdConfigEntry struct {
 	Time_advertisement           int
 	Rrm_neighbor_report          int
 	Rrm_beacon_report            int
+	Op_class                     int
 }
 
 func RunHostapdAllStations(iface string) (map[string]map[string]string, error) {
@@ -178,6 +179,8 @@ type CalculatedChannelParameters struct {
 	He_oper_centr_freq_seg0_idx  int
 	Vht_oper_chwidth             int
 	He_oper_chwidth              int
+	Op_class                     int
+	Is_6e                        bool
 	Freq1                        int
 	Freq2                        int
 	Freq3                        int
@@ -188,7 +191,12 @@ func ChanCalc(mode string, channel int, bw int, ht_enabled bool, vht_enabled boo
 	freq2 := 0
 	freq3 := 0 //for 80+80, not supported right now
 
-	calculated := CalculatedChannelParameters{-1, -1, 0, 0, 0, 0, 0}
+	is_6e := false
+
+	calculated := CalculatedChannelParameters{-1, -1, 0, 0, 0, false, 0, 0, 0}
+
+	//in the future consider always providing Op_class
+	//https://android.googlesource.com/platform/external/wpa_supplicant_8/+/master/src/common/ieee802_11_common.c#1889
 
 	base := 5000
 	if mode == "b" || mode == "g" {
@@ -202,16 +210,36 @@ func ChanCalc(mode string, channel int, bw int, ht_enabled bool, vht_enabled boo
 	} else if mode == "a" {
 		//5 ghz
 		freq1 = base + channel*5
+
+		if channel%2 == 1 {
+			is_6e = true
+			freq1 = 5950 + channel*5
+		} else if channel == 2 {
+			is_6e = true
+			//they assigned numbers with madness.
+			freq1 = 5935
+		}
 	}
+
+	calculated.Is_6e = is_6e
 
 	center_channel := 0
 
 	switch bw {
 	case 20:
 		//freq1 was all needed
+		if is_6e {
+			calculated.Op_class = 131
+			if channel == 2 {
+				calculated.Op_class = 136
+			}
+		}
 	case 40:
 		//center is 10 mhz above freq1 center
 		center_channel = channel + 2
+		if is_6e {
+			calculated.Op_class = 132
+		}
 	case 80:
 		//center is 30 mhz above freq1 center
 		center_channel = channel + 6
@@ -221,6 +249,10 @@ func ChanCalc(mode string, channel int, bw int, ht_enabled bool, vht_enabled boo
 		if he_enabled {
 			calculated.He_oper_chwidth = 1
 		}
+
+		if is_6e {
+			calculated.Op_class = 133
+		}
 	case 160:
 		center_channel = channel + 14
 		if vht_enabled {
@@ -229,7 +261,21 @@ func ChanCalc(mode string, channel int, bw int, ht_enabled bool, vht_enabled boo
 		if he_enabled {
 			calculated.He_oper_chwidth = 2
 		}
+		if is_6e {
+			calculated.Op_class = 134
+		}
+	case 320:
+		if is_6e {
+			center_channel = channel + 30
+			calculated.Op_class = 135
+		}
+	case 8080:
+		if is_6e {
+			calculated.Op_class = 137
+		}
 	}
+
+	//fun part, the calculation for 6-e is different.
 
 	if center_channel != 0 {
 		freq2 = base + center_channel*5
@@ -601,6 +647,13 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	if _, ok := newInput["Time_advertisement"]; ok {
 		conf["time_advertisement"] = newConf.Time_advertisement
+	}
+
+	if _, ok := newInput["Op_class"]; ok {
+		conf["op_class"] = newConf.Op_class
+	} else {
+		//remove op_class otherwise. in the future we may want to calculate this always.
+		delete(conf, "op_class")
 	}
 
 	// write new conf
