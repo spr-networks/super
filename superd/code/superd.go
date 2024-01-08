@@ -35,6 +35,7 @@ import (
 
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
+var UserAddons = "plugins/user"
 var ComposeAllowListDefaults = []string{"docker-compose.yml", "docker-compose-test.yml", "docker-compose-virt.yml",
 	"plugins/plus/pfw_extension/docker-compose.yml",
 	"plugins/plus/mesh_extension/docker-compose.yml",
@@ -392,15 +393,21 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 	}
 
 	os.Chdir("/super")
-	if _, err := os.Stat(PlusAddons); os.IsNotExist(err) {
-		err := os.MkdirAll(PlusAddons, 0755)
+
+	directory := PlusAddons
+	if creds.Plus == false {
+		directory = UserAddons
+	}
+
+	if _, err := os.Stat(directory); os.IsNotExist(err) {
+		err := os.MkdirAll(directory, 0755)
 		if err != nil {
-			http.Error(w, "Could not create addons", 500)
+			http.Error(w, "Could not create addons "+directory, 500)
 			return
 		}
 	}
 
-	err = os.Chdir(PlusAddons)
+	err = os.Chdir(directory)
 	if err != nil {
 		http.Error(w, "Could not find addons directory", 500)
 		os.Chdir("/super")
@@ -655,6 +662,7 @@ func establishConfigsIfEmpty(SuperDir string) {
 type GhcrCreds struct {
 	Username string
 	Secret   string
+	Plus     bool
 }
 
 func remote_container_tags(w http.ResponseWriter, r *http.Request) {
