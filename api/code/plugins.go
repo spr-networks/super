@@ -37,11 +37,12 @@ type PluginConfig struct {
 	Plus            bool
 	GitURL          string
 	ComposeFilePath string
+	UIURL           string
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
-	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml"},
-	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml"},
+	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", ""},
+	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", ""},
 }
 
 var gPluginTemplates = []PluginConfig{
@@ -287,7 +288,7 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 				idx = idx_
 				if entry.Name == name || entry.Name == plugin.Name {
 					found = true
-					oldComposeFilePath = plugin.ComposeFilePath
+					oldComposeFilePath = entry.ComposeFilePath
 					break
 				}
 			}
@@ -304,16 +305,22 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 					http.Error(w, "OTP Token invalid for Remote Install", 400)
 					return
 				}
-			}
 
-			if plugin.Enabled == false {
-				//plugin is on longer enabled, send stop
-				stopExtension(oldComposeFilePath)
+				//clone but don't auto-config.
+				ret := downloadUserExtension(plugin.GitURL, false)
+				if ret == false {
+					fmt.Println("Failed to download extension " + plugin.GitURL)
+					// fall thru, dont fail
+				}
 			}
 
 			if !found {
 				config.Plugins = append(config.Plugins, plugin)
 			} else {
+				if plugin.Enabled == false {
+					//plugin is on longer enabled, send stop
+					stopExtension(oldComposeFilePath)
+				}
 				config.Plugins[idx] = plugin
 			}
 		}
@@ -509,10 +516,11 @@ func getMeshdClient() http.Client {
 	return c
 }
 
-type GhcrCreds struct {
-	Username string
-	Secret   string
-	Plus     bool
+type GitOptions struct {
+	Username   string
+	Secret     string
+	Plus       bool
+	AutoConfig bool
 }
 
 func ghcrSuperdLogin() bool {
@@ -520,7 +528,7 @@ func ghcrSuperdLogin() bool {
 		return false
 	}
 
-	creds := GhcrCreds{PlusUser, config.PlusToken, true}
+	creds := GitOptions{PlusUser, config.PlusToken, true, false}
 	jsonValue, _ := json.Marshal(creds)
 
 	req, err := http.NewRequest(http.MethodPut, "http://localhost/ghcr_auth", bytes.NewBuffer(jsonValue))
@@ -605,11 +613,11 @@ func generatePFWAPIToken() {
 
 }
 
-func downloadExtension(user string, secret string, gitURL string, Plus bool) bool {
+func downloadExtension(user string, secret string, gitURL string, Plus bool, AutoConfig bool) bool {
 	params := url.Values{}
 	params.Set("git_url", gitURL)
 
-	creds := GhcrCreds{user, secret, Plus}
+	creds := GitOptions{user, secret, Plus, AutoConfig}
 	jsonValue, _ := json.Marshal(creds)
 
 	req, err := http.NewRequest(http.MethodPut, "http://localhost/update_git?"+params.Encode(), bytes.NewBuffer(jsonValue))
@@ -627,24 +635,34 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool) boo
 	}
 
 	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
+	data, err := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		fmt.Println("failed to download extension: "+gitURL, resp.StatusCode)
 		return false
 	}
 
-	generatePFWAPIToken()
+	if AutoConfig {
+		plugin := PluginConfig{}
+		err = json.Unmarshal(data, &plugin)
+		if err == nil {
+			return installUserPluginConfig(plugin)
+		}
+	}
 
 	return true
 }
 
 func downloadPlusExtension(gitURL string) bool {
-	return downloadExtension(PlusUser, config.PlusToken, gitURL, true)
+	ret := downloadExtension(PlusUser, config.PlusToken, gitURL, true, false)
+	if ret == true && gitURL == PfwGitURL {
+		generatePFWAPIToken()
+	}
+	return ret
 }
 
-func downloadUserExtension(gitURL string) bool {
-	return downloadExtension("", "", gitURL, false)
+func downloadUserExtension(gitURL string, AutoConfig bool) bool {
+	return downloadExtension("", "", gitURL, false, AutoConfig)
 }
 
 func startExtension(composeFilePath string) bool {
@@ -1026,27 +1044,67 @@ func getRepoName(gitURL string) string {
 }
 
 // Given a git URL, install a plugin. must be OTP auth'd.
-func installUserPluginGitUrl(w http.ResponseWriter, r *http.Request) {
-	Configmtx.Lock()
-	defer Configmtx.Unlock()
+func installUserPluginGitUrl(router *mux.Router) func(http.ResponseWriter, *http.Request) {
+	return applyJwtOtpCheck(func(w http.ResponseWriter, r *http.Request) {
+		Configmtx.Lock()
+		defer Configmtx.Unlock()
 
-	url := ""
-	err := json.NewDecoder(r.Body).Decode(&url)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
+		url := ""
+		err := json.NewDecoder(r.Body).Decode(&url)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		repo := getRepoName(url)
+		if repo == "" {
+			http.Error(w, "Invalid url "+url, 400)
+			return
+		}
+
+		//1. Git clone it to plugins/user/<>
+		success := downloadUserExtension(url, true)
+		if !success {
+			http.Error(w, "Failed to install plugin", 400)
+			return
+		}
+
+		//2. save and update routes
+		saveConfigLocked()
+		PluginRoutes(router)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(config.Plugins)
+	})
+}
+
+func installUserPluginConfig(plugin PluginConfig) bool {
+
+	//should not be a Plus module
+	if plugin.Plus != false {
+		return false
 	}
 
-	repo := getRepoName(url)
-	if repo == "" {
-		http.Error(w, "Invalid url "+url, 400)
-		return
+	found := false
+	idx := -1
+	oldComposeFilePath := plugin.ComposeFilePath
+	for idx_, entry := range config.Plugins {
+		idx = idx_
+		if entry.Name == plugin.Name {
+			found = true
+			oldComposeFilePath = entry.ComposeFilePath
+			break
+		}
 	}
 
-	//1. Git clone it to plugins/user/<>
-	success := downloadUserExtension(url)
-	if !success {
-		http.Error(w, "Failed to install plugin", 400)
-		return
+	if !found {
+		config.Plugins = append(config.Plugins, plugin)
+	} else {
+		if plugin.Enabled == false {
+			//plugin is on longer enabled, send stop
+			stopExtension(oldComposeFilePath)
+		}
+		config.Plugins[idx] = plugin
 	}
+
+	return true
 }
