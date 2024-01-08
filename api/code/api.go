@@ -829,7 +829,7 @@ func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 
 	append := "?" + params.Encode()
 
-	creds := GhcrCreds{PlusUser, config.PlusToken}
+	creds := GhcrCreds{PlusUser, config.PlusToken, true}
 	jsonValue, _ := json.Marshal(creds)
 
 	req, err := http.NewRequest(http.MethodPost, "http://localhost/remote_container_tags"+append, bytes.NewBuffer(jsonValue))
@@ -2736,6 +2736,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/plugins/{name}/restart", handleRestartPlugin).Methods("PUT")
 	//TBD: API Docs
 	external_router_authenticated.HandleFunc("/plugins/custom_compose_paths", applyJwtOtpCheck(modifyCustomComposePaths)).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/plugins/install_user_url", applyJwtOtpCheck(installUserPluginGitUrl)).Methods("PUT")
 	external_router_authenticated.HandleFunc("/plusToken", plusToken).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/plusTokenValid", plusTokenValid).Methods("GET")
 	external_router_authenticated.HandleFunc("/stopPlusExtension", stopPlusExt).Methods("PUT")

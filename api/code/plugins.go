@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -186,11 +187,6 @@ func validatePlus(plugin PluginConfig) bool {
 			}
 		}
 		return false
-	} else {
-		//only PLUS plugins have git urls for now
-		if plugin.GitURL != "" {
-			return false
-		}
 	}
 
 	return true
@@ -285,27 +281,40 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 
 			// check if exists -- if so update, else create a new entry
 			found := false
-			for idx, entry := range config.Plugins {
+			idx := -1
+			oldComposeFilePath := plugin.ComposeFilePath
+			for idx_, entry := range config.Plugins {
+				idx = idx_
 				if entry.Name == name || entry.Name == plugin.Name {
 					found = true
-					config.Plugins[idx] = plugin
-
-					if plugin.Enabled == false {
-						//plugin is on longer enabled, send stop
-						stopExtension(entry.ComposeFilePath)
-					}
-
+					oldComposeFilePath = plugin.ComposeFilePath
 					break
 				}
 			}
 
-			if !found {
-				//when creating, make sure these are known plus
-				if !validatePlus(plugin) {
-					http.Error(w, "invalid plugin options", 400)
-				}
+			//make sure these are known plus
+			if !validatePlus(plugin) {
+				http.Error(w, "invalid plugin options", 400)
+				return
+			}
 
+			//if a GitURL is set, ensure OTP authentication for 'admin'
+			if !plugin.Plus && plugin.GitURL != "" {
+				if hasValidJwtOtpHeader("admin", r) {
+					http.Error(w, "OTP Token invalid for Remote Install", 400)
+					return
+				}
+			}
+
+			if plugin.Enabled == false {
+				//plugin is on longer enabled, send stop
+				stopExtension(oldComposeFilePath)
+			}
+
+			if !found {
 				config.Plugins = append(config.Plugins, plugin)
+			} else {
+				config.Plugins[idx] = plugin
 			}
 		}
 
@@ -503,6 +512,7 @@ func getMeshdClient() http.Client {
 type GhcrCreds struct {
 	Username string
 	Secret   string
+	Plus     bool
 }
 
 func ghcrSuperdLogin() bool {
@@ -510,7 +520,7 @@ func ghcrSuperdLogin() bool {
 		return false
 	}
 
-	creds := GhcrCreds{PlusUser, config.PlusToken}
+	creds := GhcrCreds{PlusUser, config.PlusToken, true}
 	jsonValue, _ := json.Marshal(creds)
 
 	req, err := http.NewRequest(http.MethodPut, "http://localhost/ghcr_auth", bytes.NewBuffer(jsonValue))
@@ -595,11 +605,11 @@ func generatePFWAPIToken() {
 
 }
 
-func downloadPlusExtension(gitURL string) bool {
+func downloadExtension(user string, secret string, gitURL string, Plus bool) bool {
 	params := url.Values{}
 	params.Set("git_url", gitURL)
 
-	creds := GhcrCreds{PlusUser, config.PlusToken}
+	creds := GhcrCreds{user, secret, Plus}
 	jsonValue, _ := json.Marshal(creds)
 
 	req, err := http.NewRequest(http.MethodPut, "http://localhost/update_git?"+params.Encode(), bytes.NewBuffer(jsonValue))
@@ -627,6 +637,14 @@ func downloadPlusExtension(gitURL string) bool {
 	generatePFWAPIToken()
 
 	return true
+}
+
+func downloadPlusExtension(gitURL string) bool {
+	return downloadExtension(PlusUser, config.PlusToken, gitURL, true)
+}
+
+func downloadUserExtension(gitURL string) bool {
+	return downloadExtension("", "", gitURL, false)
 }
 
 func startExtension(composeFilePath string) bool {
@@ -994,6 +1012,41 @@ func modifyCustomComposePaths(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("failed to write custom compose paths configuration", err)
 		http.Error(w, err.Error(), 400)
+		return
+	}
+}
+
+func getRepoName(gitURL string) string {
+	trimmedURL := strings.TrimSuffix(gitURL, ".git")
+	repoName := filepath.Base(trimmedURL)
+	if strings.Contains(repoName, "..") {
+		return ""
+	}
+	return repoName
+}
+
+// Given a git URL, install a plugin. must be OTP auth'd.
+func installUserPluginGitUrl(w http.ResponseWriter, r *http.Request) {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
+	url := ""
+	err := json.NewDecoder(r.Body).Decode(&url)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	repo := getRepoName(url)
+	if repo == "" {
+		http.Error(w, "Invalid url "+url, 400)
+		return
+	}
+
+	//1. Git clone it to plugins/user/<>
+	success := downloadUserExtension(url)
+	if !success {
+		http.Error(w, "Failed to install plugin", 400)
 		return
 	}
 }
