@@ -431,11 +431,10 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	basename := filepath.Base(git_url)
-	err = os.Chdir(basename)
+	err = os.Chdir(repo)
 
 	if err != nil {
-		http.Error(w, "Could not clone repository", 400)
+		http.Error(w, "Could not cd to repository", 400)
 		os.Chdir("/super")
 		return
 	}
