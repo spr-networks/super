@@ -23,21 +23,64 @@ import {
 } from '@gluestack-ui/themed'
 
 import { AlertContext } from 'AppContext'
+import { api, pluginAPI } from 'api'
 
 const InstallPlugin = ({ ...props }) => {
   const context = useContext(AlertContext)
   const [url, setUrl] = useState('')
   const [isRunning, setIsRunning] = useState(false)
+
+  //should be https://github.com/spr-networks/spr-mitmproxy.git
+  const validUrl = (url) => {
+    try {
+      let u = new URL(url)
+      if (u.protocol !== 'https:' || u.hostname !== 'github.com') {
+        return false
+      }
+
+      if (u.pathname.split('/').length !== 3) {
+        return false
+      }
+
+      if (!u.pathname.endsWith('.git')) {
+        return false
+      }
+    } catch (err) {
+      return false
+    }
+
+    return true
+  }
+
   const handleSubmit = () => {
+    if (!validUrl(url)) {
+      context.error(
+        `Invalid url, only github repositories for now. Example: https://github.com/spr-networks/spr-mitmproxy.git`
+      )
+      return
+    }
+
     setIsRunning(true)
     //TODO fetch github repo, show notification:
     // * plugin.json is parsed successfully
     // * plugin build done and installed & running
+    /*
+    api
+      .put('/plugin/install_user_url', JSON.stringify(url))
+      .then((res) => {
+        context.success(`Plugin installing...`)
+        setIsRunning(false)
+      })
+      .catch((err) => {
+        context.error(`API Error: ${err}`)
+      })
+      */
     context.success(`TODO, Plugin parsed... build it`)
     setTimeout(() => {
       setIsRunning(false)
     }, 1500)
   }
+
   return (
     <VStack
       p="$4"
@@ -66,7 +109,6 @@ const InstallPlugin = ({ ...props }) => {
           </Input>
         </FormControl>
         <FormControl>
-          {/*TODO spinner*/}
           <Button
             action="primary"
             onPress={handleSubmit}
