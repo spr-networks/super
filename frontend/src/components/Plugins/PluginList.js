@@ -272,12 +272,12 @@ const PluginList = (props) => {
             action="secondary"
             onPress={() => navigate('/admin/custom_plugin')}
           >
-            <ButtonText>Custom Plugin</ButtonText>
+            <ButtonText>Add Plugin from URL</ButtonText>
             <ButtonIcon as={AddIcon} ml="$2" />
           </Button>
           <ModalForm
             title="Add a new Plugin"
-            triggerText="Add Plugin"
+            triggerText="Configure New Plugin"
             modalRef={refModal}
           >
             <AddPlugin notifyChange={notifyChange} />

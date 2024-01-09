@@ -104,7 +104,7 @@ const CustomPluginForm = () => {
                 action={isConnected ? 'negative' : 'positive'}
               >
                 <ButtonText>
-                  {isConnected ? 'Disconnect' : 'Start dev mode'}
+                  {isConnected ? 'Disconnect' : 'Test Render from URL'}
                 </ButtonText>
               </Button>
             </FormControl>
@@ -113,7 +113,7 @@ const CustomPluginForm = () => {
             <Button size="sm" action="secondary" variant="outline">
               <Link
                 isExternal
-                href="https://github.com/spr-networks/super"
+                href="https://github.com/spr-networks/spr-plugin-ui"
                 sx={linkSx}
               >
                 <LinkText size="sm">Example Code</LinkText>
