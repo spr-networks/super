@@ -1106,5 +1106,25 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 		config.Plugins[idx] = plugin
 	}
 
+	curList := []string{}
+	data, err := ioutil.ReadFile(CustomComposeAllowPath)
+	if err == nil {
+		_ = json.Unmarshal(data, &curList)
+
+		for _, entry := range curList {
+			if entry == plugin.ComposeFilePath {
+				return true
+			}
+		}
+
+		//add ComposeFilePath to whitelist
+		curList = append(curList, plugin.ComposeFilePath)
+		file, _ := json.MarshalIndent(curList, "", " ")
+		err = ioutil.WriteFile(CustomComposeAllowPath, file, 0600)
+		if err != nil {
+			log.Println("failed to write custom compose paths configuration", err)
+		}
+	}
+
 	return true
 }
