@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useContext, useState } from 'react'
 import CustomPlugin from 'components/Plugins/CustomPlugin'
 import InstallPlugin from 'components/Plugins/InstallPlugin'
 import {
@@ -19,7 +19,11 @@ import {
   useColorMode
 } from '@gluestack-ui/themed'
 
+import { AlertContext } from 'AppContext'
+
 const CustomPluginForm = () => {
+  const context = useContext(AlertContext)
+
   const colorMode = useColorMode()
 
   const [isConnected, setIsConnected] = useState(false)
@@ -31,6 +35,34 @@ const CustomPluginForm = () => {
       color:
         colorMode == 'light' ? '$navbarTextColorLight' : '$navbarTextColorDark'
     }
+  }
+
+  const validSrc = (value) => {
+    try {
+      let url = new URL(value)
+      if (!url.protocol.match(/^https?:$/)) {
+        return false
+      }
+
+      if (!url.hostname.match(/^localhost|spr.local$/)) {
+        return false
+      }
+    } catch (err) {
+      console.error(err)
+      return false
+    }
+
+    return true
+  }
+
+  const handlePress = () => {
+    if (!validSrc(src)) {
+      context.error(
+        'Invalid url specifed, support http://localhost or http://spr.local for now'
+      )
+      return
+    }
+    setIsConnected(!isConnected)
   }
 
   return (
@@ -55,7 +87,7 @@ const CustomPluginForm = () => {
               <FormControlLabel>
                 <FormControlLabelText>Iframe Source URL</FormControlLabelText>
               </FormControlLabel>
-              <Input size="md" isDisabled>
+              <Input size="md" _isDisabled>
                 <InputField
                   autoFocus
                   value={src}
@@ -67,7 +99,7 @@ const CustomPluginForm = () => {
             <FormControl>
               <Button
                 size="sm"
-                onPress={() => setIsConnected(!isConnected)}
+                onPress={handlePress}
                 variant="solid"
                 action={isConnected ? 'negative' : 'positive'}
               >
