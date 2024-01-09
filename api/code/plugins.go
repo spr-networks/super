@@ -638,7 +638,7 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 	data, err := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("failed to download extension: "+gitURL, resp.StatusCode)
+		fmt.Println("failed to download extension: "+gitURL, resp.Status)
 		return false
 	}
 
