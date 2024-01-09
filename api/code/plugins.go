@@ -30,14 +30,16 @@ var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
 var CustomComposeAllowPath = TEST_PREFIX + "/configs/base/custom_compose_paths.json"
 
 type PluginConfig struct {
-	Name            string
-	URI             string
-	UnixPath        string
-	Enabled         bool
-	Plus            bool
-	GitURL          string
-	ComposeFilePath string
-	UIURL           string
+	Name             string
+	URI              string
+	UnixPath         string
+	Enabled          bool
+	Plus             bool
+	GitURL           string
+	ComposeFilePath  string
+	UIURL            string
+	InstallTokenPath string
+	ScopedPaths      []string
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
@@ -559,8 +561,7 @@ func ghcrSuperdLogin() bool {
 func generatePFWAPIToken() {
 	//install API token for PLUS
 	var pfwConfigFile = TEST_PREFIX + "/configs/pfw/rules.json"
-	value := genBearerToken()
-	pfw_token := Token{"PLUS-API-Token", value, 0, []string{}}
+	pfw_token := generateToken("PLUS-API-Token", []string{})
 
 	Tokensmtx.Lock()
 	defer Tokensmtx.Unlock()
@@ -574,9 +575,7 @@ func generatePFWAPIToken() {
 		for _, token := range tokens {
 			if token.Name == pfw_token.Name {
 				//re-use the PFW token
-				value = token.Token
-				pfw_token.Token = value
-				//re-use existing token
+				pfw_token.Token = token.Token
 				foundToken = true
 				break
 			}
@@ -596,14 +595,14 @@ func generatePFWAPIToken() {
 	//now save the rules.json with this token
 	pfw_config := make(map[string]interface{})
 
-	data, err = os.ReadFile(AuthTokensFile)
+	data, err = os.ReadFile(pfwConfigFile)
 	if err == nil {
 		//read existing configuration
 		_ = json.Unmarshal(data, &pfw_config)
 	}
 
 	//set the API token
-	pfw_config["APIToken"] = value
+	pfw_config["APIToken"] = pfw_token.Token
 
 	file, _ := json.MarshalIndent(pfw_config, "", " ")
 	err = ioutil.WriteFile(pfwConfigFile, file, 0600)
@@ -1124,6 +1123,15 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 	err = ioutil.WriteFile(CustomComposeAllowPath, file, 0600)
 	if err != nil {
 		log.Println("failed to write custom compose paths configuration", err)
+	}
+
+	if plugin.InstallTokenPath != "" {
+		token, err := generateToken(plugin.Name+"-install-token", plugin.ScopedPaths)
+		if err == nil {
+			ioutil.WriteFile(InstallTokenPath, []byte(token.Token), 0600)
+		} else {
+			log.Println("Failed to generate token for plugin")
+		}
 	}
 
 	return true
