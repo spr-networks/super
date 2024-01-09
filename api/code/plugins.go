@@ -43,8 +43,8 @@ type PluginConfig struct {
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
-	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", ""},
-	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", ""},
+	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", "", "", []string{}},
+	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", "", "", []string{}},
 }
 
 var gPluginTemplates = []PluginConfig{
@@ -561,41 +561,12 @@ func ghcrSuperdLogin() bool {
 func generatePFWAPIToken() {
 	//install API token for PLUS
 	var pfwConfigFile = TEST_PREFIX + "/configs/pfw/rules.json"
-	pfw_token := generateToken("PLUS-API-Token", []string{})
-
-	Tokensmtx.Lock()
-	defer Tokensmtx.Unlock()
-
-	tokens := []Token{}
-	data, err := os.ReadFile(AuthTokensFile)
-
-	foundToken := false
-	if err == nil {
-		_ = json.Unmarshal(data, &tokens)
-		for _, token := range tokens {
-			if token.Name == pfw_token.Name {
-				//re-use the PFW token
-				pfw_token.Token = token.Token
-				foundToken = true
-				break
-			}
-		}
-	}
-
-	if !foundToken {
-		//add the generated token and save it to the token file
-		tokens = append(tokens, pfw_token)
-		file, _ := json.MarshalIndent(tokens, "", " ")
-		err = ioutil.WriteFile(AuthTokensFile, file, 0600)
-		if err != nil {
-			fmt.Println("failed to write tokens file", err)
-		}
-	}
+	pfw_token, err := generateOrGetToken("PLUS-API-Token", []string{})
 
 	//now save the rules.json with this token
 	pfw_config := make(map[string]interface{})
 
-	data, err = os.ReadFile(pfwConfigFile)
+	data, err := os.ReadFile(pfwConfigFile)
 	if err == nil {
 		//read existing configuration
 		_ = json.Unmarshal(data, &pfw_config)
@@ -1126,9 +1097,9 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 	}
 
 	if plugin.InstallTokenPath != "" {
-		token, err := generateToken(plugin.Name+"-install-token", plugin.ScopedPaths)
+		token, err := generateOrGetToken(plugin.Name+"-install-token", plugin.ScopedPaths)
 		if err == nil {
-			ioutil.WriteFile(InstallTokenPath, []byte(token.Token), 0600)
+			ioutil.WriteFile(plugin.InstallTokenPath, []byte(token.Token), 0600)
 		} else {
 			log.Println("Failed to generate token for plugin")
 		}

@@ -721,3 +721,47 @@ func shouldCheckOTPJWT(r *http.Request, username string) bool {
 	}
 	return false
 }
+
+func generateOrGetToken(name string, paths []string) (Token, error) {
+	value := genBearerToken()
+	new_token := Token{"PLUS-API-Token", value, 0, paths}
+
+	Tokensmtx.Lock()
+	defer Tokensmtx.Unlock()
+
+	tokens := []Token{}
+	data, err := os.ReadFile(AuthTokensFile)
+
+	if err == nil {
+		err = json.Unmarshal(data, &tokens)
+	}
+
+	if err != nil {
+		return new_token, err
+	}
+
+	foundToken := false
+	if err == nil {
+		_ = json.Unmarshal(data, &tokens)
+		for _, token := range tokens {
+			if token.Name == new_token.Name {
+				//re-use the PFW token
+				new_token = token
+				foundToken = true
+				break
+			}
+		}
+	}
+
+	if !foundToken {
+		//add the generated token and save it to the token file
+		tokens = append(tokens, new_token)
+		file, _ := json.MarshalIndent(tokens, "", " ")
+		err = ioutil.WriteFile(AuthTokensFile, file, 0600)
+		if err != nil {
+			fmt.Println("failed to write tokens file", err)
+		}
+	}
+
+	return new_token, err
+}
