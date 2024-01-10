@@ -511,7 +511,7 @@ func updateExtraBSS(iface string, data string) string {
 				} else {
 					data += "wpa=" + entry.ExtraBSS[i].Wpa + "\n"
 					data += "wpa_key_mgmt=" + entry.ExtraBSS[i].WpaKeyMgmt + "\n"
-					data += "rsn_pairwise=CCMP\n"
+					data += "rsn_pairwise=CCMP CCMP-256 GCMP GCMP-256\n"
 					data += "wpa_psk_file=/configs/wifi/wpa2pskfile\n"
 				}
 
