@@ -161,14 +161,22 @@ func authenticateToken(token string) (bool, string, []string) {
 	return exists, name, paths
 }
 
-func scopedPathMatch(pathToMatch string, paths []string) bool {
+func scopedPathMatch(method string, pathToMatch string, paths []string) bool {
 	for _, entry := range paths {
+		parts := strings.Split(entry, ":")
+		if len(parts) > 1 {
+			if parts[1] == "r" && method != http.MethodGet {
+				return false
+			}
+			entry = parts[0]
+		}
 		if strings.HasPrefix(pathToMatch, entry) {
 			return true
 		}
 	}
 	return false
 }
+
 func authorizedToken(r *http.Request, token string) bool {
 	Tokensmtx.Lock()
 	//check api tokens
@@ -182,7 +190,7 @@ func authorizedToken(r *http.Request, token string) bool {
 	for _, t := range tokens {
 		if subtle.ConstantTimeCompare([]byte(token), []byte(t.Token)) == 1 {
 			if len(t.ScopedPaths) != 0 {
-				if !scopedPathMatch(r.URL.Path, t.ScopedPaths) {
+				if !scopedPathMatch(r.Method, r.URL.Path, t.ScopedPaths) {
 					//this url path did not match any of the scoped paths,
 					// continue
 					continue
