@@ -528,6 +528,18 @@ func updateExtraBSS(iface string, data string) string {
 	return data
 }
 
+func transition6e(conf map[string]interface{}) {
+	//we require PMF
+	conf["ieee80211w"] = 2
+	conf["wpa_key_mgmt"] = "SAE"
+}
+
+func relax6e(conf map[string]interface{}) {
+	//relax PMF to transitional again and more compatibility
+	conf["ieee80211w"] = 1
+	conf["wpa_key_mgmt"] = "WPA-PSK WPA-PSK-SHA256 SAE"
+}
+
 func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
 	if !isValidIface(iface) {
@@ -651,9 +663,16 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	if _, ok := newInput["Op_class"]; ok {
 		conf["op_class"] = newConf.Op_class
+
+		if newConf.Op_class > 130 && newConf.Op_class < 138 {
+			transition6e(conf)
+		} else {
+			relax6e(conf)
+		}
 	} else {
 		//remove op_class otherwise. in the future we may want to calculate this always.
 		delete(conf, "op_class")
+		relax6e(conf)
 	}
 
 	// write new conf
