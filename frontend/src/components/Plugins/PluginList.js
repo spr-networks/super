@@ -35,6 +35,7 @@ import { api, pluginAPI } from 'api'
 import { AppContext, alertState } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import AddPlugin from 'components/Plugins/AddPlugin'
+import { MonitorCheckIcon } from 'lucide-react-native'
 
 const PluginList = (props) => {
   const [list, _setList] = useState([])
@@ -183,12 +184,12 @@ const PluginList = (props) => {
 
   const renderItem = ({ item }) => (
     <ListItem>
-      <VStack space="sm">
+      <VStack flex={1} space="sm">
         <Tooltip
           h={undefined}
           placement="top"
           trigger={(triggerProps) => (
-            <Text bold {...triggerProps}>
+            <Text size="md" bold {...triggerProps}>
               {item.Name}
             </Text>
           )}
@@ -198,41 +199,58 @@ const PluginList = (props) => {
           </TooltipContent>
         </Tooltip>
 
-        <HStack>
+        <HStack space="sm">
           {item.Version === undefined ? (
             <Spinner size="small" />
           ) : (
             <Badge
               variant="outline"
               action={item.Version ? 'success' : 'muted'}
-              alignSelf="flex-start"
+              alignSelf="center"
             >
               <BadgeText>{item.Version || 'none'}</BadgeText>
             </Badge>
           )}
+
+          {item.Enabled && item.UIURL ? (
+            <Button
+              variant="link"
+              action="secondary"
+              size="sm"
+              onPress={() =>
+                navigate(
+                  '/admin/custom_plugin/' + encodeURIComponent(item.UIURL)
+                )
+              }
+            >
+              <ButtonIcon as={MonitorCheckIcon} size={24} />
+            </Button>
+          ) : null}
         </HStack>
       </VStack>
 
       <VStack
-        flex={1}
+        flex={2}
         space="md"
         sx={{
           '@base': { display: 'none' },
-          '@md': { display: 'none' }
+          '@md': { display: 'flex' }
         }}
+        alignItems="flex-end"
       >
-        <Text size="sm" isTruncated>
-          {item.UnixPath}
-        </Text>
+        {/*item.UnixPath ? (
+          <HStack space="sm">
+            <Text size="sm" color="$muted500">
+              Socket Path
+            </Text>
+            <Text size="sm" isTruncated>
+              {item.UnixPath}
+            </Text>
+          </HStack>
+        ) : null*/}
 
         {item.ComposeFilePath ? (
-          <HStack
-            space="sm"
-            sx={{
-              '@base': { display: 'none' },
-              '@base': { display: 'flex' }
-            }}
-          >
+          <HStack space="sm">
             <Text size="sm" color="$muted500">
               Compose Path
             </Text>
@@ -270,7 +288,7 @@ const PluginList = (props) => {
           <Button
             size="sm"
             action="secondary"
-            onPress={() => navigate('/admin/custom_plugin')}
+            onPress={() => navigate('/admin/custom_plugin/:name')}
           >
             <ButtonText>Add Plugin from URL</ButtonText>
             <ButtonIcon as={AddIcon} ml="$2" />

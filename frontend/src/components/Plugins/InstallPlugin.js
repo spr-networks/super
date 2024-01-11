@@ -42,9 +42,9 @@ const InstallPlugin = ({ ...props }) => {
         return false
       }
 
-      if (!u.pathname.endsWith('.git')) {
+      /*if (!u.pathname.endsWith('.git')) {
         return false
-      }
+      }*/
     } catch (err) {
       return false
     }
@@ -64,9 +64,9 @@ const InstallPlugin = ({ ...props }) => {
     //TODO fetch github repo, show notification:
     // * plugin.json is parsed successfully
     // * plugin build done and installed & running
-    /*
+
     api
-      .put('/plugin/install_user_url', JSON.stringify(url))
+      .put('/plugin/install_user_url', url)
       .then((res) => {
         context.success(`Plugin installing...`)
         setIsRunning(false)
@@ -74,8 +74,8 @@ const InstallPlugin = ({ ...props }) => {
       .catch((err) => {
         context.error(`API Error: ${err}`)
       })
-      */
-    context.success(`TODO, Plugin parsed... build it`)
+
+    //context.success(`TODO, Plugin parsed... build it`)
     setTimeout(() => {
       setIsRunning(false)
     }, 1500)
@@ -101,7 +101,7 @@ const InstallPlugin = ({ ...props }) => {
           </FormControlLabel>
           <Input>
             <InputField
-              placeholder="https://github.com/spr-networks/spr-sample-plugin-ui"
+              placeholder="https://github.com/spr-networks/spr-sample-plugin.git"
               value={url}
               onChangeText={(value) => setUrl(value)}
               autoFocus

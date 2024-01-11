@@ -363,7 +363,7 @@ const routes = [
       },
       {
         layout: 'admin',
-        path: 'custom_plugin',
+        path: 'custom_plugin/:name',
         redirect: true,
         component: CustomPlugin
       },

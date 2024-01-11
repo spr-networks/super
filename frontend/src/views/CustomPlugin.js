@@ -1,6 +1,9 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
+
 import CustomPlugin from 'components/Plugins/CustomPlugin'
 import InstallPlugin from 'components/Plugins/InstallPlugin'
+
 import {
   Button,
   ButtonText,
@@ -20,6 +23,63 @@ import {
 } from '@gluestack-ui/themed'
 
 import { AlertContext } from 'AppContext'
+import { api, API } from 'api'
+
+const getPluginHTML = async (name) => {
+  // fetch html from api using auth
+  let Authorization = await api.getAuthHeaders()
+  let headers = {
+    Authorization
+  }
+
+  let pathname = `/plugins/${name}`
+
+  let u = new URL(api.getApiURL())
+  u.pathname = pathname
+
+  let url = u.toString()
+  let res = await fetch(url, { headers })
+  let html = await res.text()
+
+  return html
+}
+
+const validSrc = (value) => {
+  try {
+    let url = new URL(value)
+    if (!url.protocol.match(/^https?:$/)) {
+      return false
+    }
+
+    if (!url.hostname.match(/^localhost|spr.local$/)) {
+      return false
+    }
+  } catch (err) {
+    console.error(err)
+    return false
+  }
+
+  return true
+}
+
+const PluginFrame = ({ name, ...props }) => {
+  const [srcDoc, setSrcDoc] = useState(null)
+  const fetchHTML = async () => {
+    try {
+      let html = await getPluginHTML(name)
+      setSrcDoc(html)
+    } catch (err) {
+      context.error(`Failed to fetch html: ${err}`)
+    }
+  }
+
+  useEffect(() => {
+    //TODO verify plugin exists and is running - fetch from plugin api
+    fetchHTML()
+  }, [name])
+
+  return <CustomPlugin srcdoc={srcDoc} />
+}
 
 const CustomPluginForm = () => {
   const context = useContext(AlertContext)
@@ -28,6 +88,7 @@ const CustomPluginForm = () => {
 
   const [isConnected, setIsConnected] = useState(false)
   const [src, setSrc] = useState('http://localhost:8080')
+  const [srcDoc, setSrcDoc] = useState(null)
 
   let linkSx = {
     _text: {
@@ -37,32 +98,33 @@ const CustomPluginForm = () => {
     }
   }
 
-  const validSrc = (value) => {
-    try {
-      let url = new URL(value)
-      if (!url.protocol.match(/^https?:$/)) {
-        return false
+  const handlePress = async () => {
+    if (!isConnected) {
+      // if srcDoc type (defined plugin), setup
+      if (false && src.match(/^\//)) {
+        /*
+        //NOTE This is only for testing
+        try {
+          let html = await getPluginHTML(src)
+          setSrcDoc(html)
+          setIsConnected(!isConnected)
+        } catch (err) {
+          context.error(`Failed to fetch html: ${err}`)
+        }
+        */
+      } else {
+        if (!validSrc(src)) {
+          context.error(
+            'Invalid url specifed, support http://localhost or http://spr.local for now'
+          )
+          return
+        }
+
+        setIsConnected(!isConnected)
       }
-
-      if (!url.hostname.match(/^localhost|spr.local$/)) {
-        return false
-      }
-    } catch (err) {
-      console.error(err)
-      return false
+    } else {
+      setIsConnected(!isConnected)
     }
-
-    return true
-  }
-
-  const handlePress = () => {
-    if (!validSrc(src)) {
-      context.error(
-        'Invalid url specifed, support http://localhost or http://spr.local for now'
-      )
-      return
-    }
-    setIsConnected(!isConnected)
   }
 
   return (
@@ -87,9 +149,8 @@ const CustomPluginForm = () => {
               <FormControlLabel>
                 <FormControlLabelText>Iframe Source URL</FormControlLabelText>
               </FormControlLabel>
-              <Input size="md" _isDisabled>
+              <Input size="md">
                 <InputField
-                  autoFocus
                   value={src}
                   onChangeText={(value) => setSrc(value)}
                   onSubmitEditing={(value) => setSrc(value)}
@@ -113,7 +174,7 @@ const CustomPluginForm = () => {
             <Button size="sm" action="secondary" variant="outline">
               <Link
                 isExternal
-                href="https://github.com/spr-networks/spr-plugin-ui"
+                href="https://github.com/spr-networks/spr-sample-plugin"
                 sx={linkSx}
               >
                 <LinkText size="sm">Example Code</LinkText>
@@ -131,16 +192,37 @@ const CustomPluginForm = () => {
           </HStack>
         </VStack>
       </VStack>
-      {isConnected ? <CustomPlugin src={src} /> : null}
+
+      {isConnected ? <CustomPlugin src={src} srcdoc={srcDoc} /> : null}
     </>
   )
 }
 
 const CustomPluginView = ({ ...props }) => {
+  const [name, setName] = useState(null)
+  const params = useParams()
+
+  useEffect(() => {
+    let { name } = params
+    //default=:name
+    if (name !== ':name') {
+      setName(name)
+    }
+  }, [])
+
   return (
     <VStack space="md" h="$full">
-      <InstallPlugin />
-      <CustomPluginForm />
+      {name ? (
+        <VStack space="md" p="$4" h="$full">
+          <Heading size="md">{name}</Heading>
+          <PluginFrame name={name} />
+        </VStack>
+      ) : (
+        <>
+          <InstallPlugin />
+          <CustomPluginForm />
+        </>
+      )}
     </VStack>
   )
 }
