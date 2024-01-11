@@ -693,12 +693,12 @@ func applyJwtOtpCheck(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		username, _, ok := r.BasicAuth()
 		if !ok {
-			http.Error(w, "Missing username", 400)
+			http.Error(w, "Missing username", 401)
 			return
 		}
 
 		if !hasValidJwtOtpHeader(username, r) {
-			http.Error(w, "Invalid JWT", 400)
+			http.Error(w, "Invalid JWT", 401)
 			return
 		}
 		handler(w, r)
