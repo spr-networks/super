@@ -531,6 +531,7 @@ func updateExtraBSS(iface string, data string) string {
 func transition6e(conf map[string]interface{}) {
 	//we require PMF
 	conf["ieee80211w"] = 2
+	conf["country3"] = 0x49
 	conf["wpa_key_mgmt"] = "SAE"
 }
 
