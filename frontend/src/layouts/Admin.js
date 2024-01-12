@@ -14,7 +14,7 @@ import {
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Sidebar from 'components/Sidebar/Sidebar'
 import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
-import { api, notificationsAPI, meshAPI, pfwAPI, wifiAPI } from 'api'
+import { api, deviceAPI, meshAPI, pfwAPI, pluginAPI, wifiAPI } from 'api'
 import { ucFirst } from 'utils'
 
 import {
@@ -50,11 +50,12 @@ import {
   useColorMode
 } from '@gluestack-ui/themed'
 
+import CustomPluginView from 'views/CustomPlugin'
+
 //NOTE Slice transition for Alerts not available in gluestack-ui
 
-import { routes } from 'routes'
-import { deviceAPI } from 'api'
-import { userEvent } from '@testing-library/react-native'
+import { routes as allRoutes } from 'routes'
+import { PuzzleIcon } from 'lucide-react-native'
 
 const ConfirmTrafficAlert = (props) => {
   const { type, title, body, showAlert, onClose } = props
@@ -283,6 +284,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const [features, setFeatures] = useState([])
   const [devices, setDevices] = useState([])
   const [groups, setGroups] = useState([])
+  const [routes, setRoutes] = useState(allRoutes)
 
   let context = useContext(AppContext)
 
@@ -322,6 +324,35 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     })
   }
 
+  const registerPluginRoutes = () => {
+    if (routes.filter((r) => r.name == 'Custom Plugins')?.length) {
+      return
+    }
+
+    pluginAPI
+      .list()
+      .then((plugins) => {
+        let pluginsWithUI = plugins.filter((p) => p.UIURL.length) // TODO .HasUI
+        let pluginRoutes = pluginsWithUI.map((p) => ({
+          layout: 'admin',
+          name: p.Name,
+          path: `custom_plugin/${encodeURIComponent(p.URI)}`,
+          icon: PuzzleIcon,
+          Component: CustomPluginView
+        }))
+
+        let routesNav = {
+          name: 'Custom Plugins',
+          state: 'customPluginsCollape',
+          views: pluginRoutes
+        }
+
+        setRoutes([...routes, routesNav])
+      })
+      .catch((err) => {})
+  }
+
+  //main init here
   useEffect(() => {
     api
       .getCheckUpdates()
@@ -505,6 +536,11 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     }
 
     Notifications.init(notificationArgs)
+
+    // add routes with plugins on web
+    if (Platform.OS == 'web') {
+      registerPluginRoutes()
+    }
   }, [])
 
   // this will trigger after the features check
