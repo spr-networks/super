@@ -42,9 +42,9 @@ const getPluginHTML = async (name) => {
   let res = await fetch(url, { headers })
   let html = await res.text()
 
-  let scriptTag = `<script>var SPR_API_URL = "${api_url}";</script>`;
+  let scriptTag = `<script>var SPR_API_URL = "${api_url}";</script>`
   // Insert the script tag into the HTML, ideally in the head
-  html = html.replace('</head>', `${scriptTag}</head>`);
+  html = html.replace('</head>', `${scriptTag}</head>`)
 
   return html
 }
@@ -70,12 +70,10 @@ const PluginFrame = ({ name, ...props }) => {
 
 const CustomPluginForm = () => {
   const context = useContext(AlertContext)
-
   const colorMode = useColorMode()
 
   const [isConnected, setIsConnected] = useState(false)
   const [src, setSrc] = useState('http://localhost:8080')
-  const [srcDoc, setSrcDoc] = useState(null)
 
   let linkSx = {
     _text: {
@@ -85,7 +83,26 @@ const CustomPluginForm = () => {
     }
   }
 
+  const validSrc = (value) => {
+    try {
+      let url = new URL(value)
+      if (!url.protocol.match(/^https?:$/)) {
+        return false
+      }
+    } catch (err) {
+      return false
+    }
+
+    return true
+  }
+
   const handlePress = async () => {
+    if (!validSrc(src)) {
+      context.error(
+        'Invalid protocol for URL specified. Example: http://localhost:8080'
+      )
+      return
+    }
     setIsConnected(!isConnected)
   }
 
@@ -155,7 +172,7 @@ const CustomPluginForm = () => {
         </VStack>
       </VStack>
 
-      {isConnected ? <CustomPlugin src={src} srcdoc={srcDoc} /> : null}
+      {isConnected ? <CustomPlugin src={src} /> : null}
     </>
   )
 }
@@ -172,19 +189,23 @@ const CustomPluginView = ({ ...props }) => {
     }
   }, [])
 
+  let page = null
+  if (name == null) {
+    page = <InstallPlugin />
+  } else if (name == ':dev') {
+    page = <CustomPluginForm />
+  } else {
+    page = (
+      <VStack space="md" p="$4" h="$full">
+        <Heading size="md">{name}</Heading>
+        <PluginFrame name={name} />
+      </VStack>
+    )
+  }
+
   return (
     <VStack space="md" h="$full">
-      {name ? (
-        <VStack space="md" p="$4" h="$full">
-          <Heading size="md">{name}</Heading>
-          <PluginFrame name={name} />
-        </VStack>
-      ) : (
-        <>
-          <InstallPlugin />
-          <CustomPluginForm />
-        </>
-      )}
+      {page}
     </VStack>
   )
 }
