@@ -65,7 +65,7 @@ const CustomPlugin = ({ ...props }) => {
 
   const ref = React.useRef(null)
 
-  const sandbox = 'allow-scripts'
+  const sandbox = 'allow-scripts allow-same-origin'
 
   return React.createElement('iframe', {
     src,
