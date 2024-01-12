@@ -34,32 +34,19 @@ const getPluginHTML = async (name) => {
 
   let pathname = `/plugins/${name}`
 
-  let u = new URL(api.getApiURL())
+  let api_url = api.getApiURL()
+  let u = new URL(api_url)
   u.pathname = pathname
 
   let url = u.toString()
   let res = await fetch(url, { headers })
   let html = await res.text()
 
+  let scriptTag = `<script>var SPR_API_URL = "${api_url}";</script>`;
+  // Insert the script tag into the HTML, ideally in the head
+  html = html.replace('</head>', `${scriptTag}</head>`);
+
   return html
-}
-
-const validSrc = (value) => {
-  try {
-    let url = new URL(value)
-    if (!url.protocol.match(/^https?:$/)) {
-      return false
-    }
-
-    if (!url.hostname.match(/^localhost|spr.local$/)) {
-      return false
-    }
-  } catch (err) {
-    console.error(err)
-    return false
-  }
-
-  return true
 }
 
 const PluginFrame = ({ name, ...props }) => {
@@ -99,32 +86,7 @@ const CustomPluginForm = () => {
   }
 
   const handlePress = async () => {
-    if (!isConnected) {
-      // if srcDoc type (defined plugin), setup
-      if (false && src.match(/^\//)) {
-        /*
-        //NOTE This is only for testing
-        try {
-          let html = await getPluginHTML(src)
-          setSrcDoc(html)
-          setIsConnected(!isConnected)
-        } catch (err) {
-          context.error(`Failed to fetch html: ${err}`)
-        }
-        */
-      } else {
-        if (!validSrc(src)) {
-          context.error(
-            'Invalid url specifed, support http://localhost or http://spr.local for now'
-          )
-          return
-        }
-
-        setIsConnected(!isConnected)
-      }
-    } else {
-      setIsConnected(!isConnected)
-    }
+    setIsConnected(!isConnected)
   }
 
   return (

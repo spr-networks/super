@@ -65,13 +65,16 @@ const CustomPlugin = ({ ...props }) => {
 
   const ref = React.useRef(null)
 
+  const sandbox = 'allow-scripts'
+
   return React.createElement('iframe', {
     src,
     srcDoc,
     ref,
     width,
     height,
-    style: { borderWidth: 0 }
+    style: { borderWidth: 0 },
+    sandbox
   })
 }
 
