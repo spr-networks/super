@@ -81,6 +81,8 @@ const InstallPlugin = ({ ...props }) => {
     }, 1500)
   }
 
+  const colorMode = useColorMode()
+
   return (
     <VStack
       p="$4"
@@ -92,7 +94,7 @@ const InstallPlugin = ({ ...props }) => {
 
       <HStack
         space="md"
-        sx={{ '@md': { maxWidth: '$1/2' } }}
+        sx={{ '@md': { maxWidth: '$2/3' } }}
         alignItems="flex-end"
       >
         <FormControl flex={1}>
@@ -116,6 +118,32 @@ const InstallPlugin = ({ ...props }) => {
           >
             <ButtonText>Add Plugin</ButtonText>
             <ButtonSpinner ml="$2" display={isRunning ? 'flex' : 'none'} />
+          </Button>
+        </FormControl>
+        <FormControl>
+          <Button
+            sx={{
+              '@base': { display: 'none' },
+              '@md': { display: 'flex' }
+            }}
+            size="md"
+            action="secondary"
+            variant="outline"
+          >
+            <Link
+              href="/admin/custom_plugin/:dev"
+              sx={{
+                _text: {
+                  textDecorationLine: 'none',
+                  color:
+                    colorMode == 'light'
+                      ? '$navbarTextColorLight'
+                      : '$navbarTextColorDark'
+                }
+              }}
+            >
+              <LinkText size="sm">Dev Mode</LinkText>
+            </Link>
           </Button>
         </FormControl>
       </HStack>
