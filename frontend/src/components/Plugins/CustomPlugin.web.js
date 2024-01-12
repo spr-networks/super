@@ -25,11 +25,11 @@ const CustomPlugin = ({ ...props }) => {
   const context = useContext(AppContext)
   const [isReady, setIsReady] = useState(false)
 
-  const isDoc = props.srcdoc ? true : false
+  const isDoc = props.srcDoc ? true : false
 
   //NOTE can pass both src and srcdoc, src is for dev mode
   let src = !isDoc && props.src ? buildURL(props.src) : null
-  let srcdoc = (isDoc && props.srcdoc) || null
+  let srcDoc = (isDoc && props.srcDoc) || null
   let width = '100%',
     height = '100%'
 
@@ -67,7 +67,7 @@ const CustomPlugin = ({ ...props }) => {
 
   return React.createElement('iframe', {
     src,
-    srcdoc,
+    srcDoc,
     ref,
     width,
     height,
@@ -77,7 +77,7 @@ const CustomPlugin = ({ ...props }) => {
 
 CustomPlugin.propTypes = {
   src: PropTypes.string,
-  srcdoc: PropTypes.string
+  srcDoc: PropTypes.string
 }
 
 export default CustomPlugin

@@ -78,7 +78,7 @@ const PluginFrame = ({ name, ...props }) => {
     fetchHTML()
   }, [name])
 
-  return <CustomPlugin srcdoc={srcDoc} />
+  return <CustomPlugin srcDoc={srcDoc} />
 }
 
 const CustomPluginForm = () => {
