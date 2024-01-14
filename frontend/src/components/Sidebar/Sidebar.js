@@ -61,11 +61,11 @@ const Sidebar = ({
 
   useEffect(() => {
     setSidebarItems(props.routes)
-  }, [])
+  }, [props.routes])
 
-  if (!sidebarItems.length) {
+  /*if (!sidebarItems.length) {
     return <></>
-  }
+  }*/
 
   return (
     <>
@@ -124,6 +124,7 @@ const SidebarItem = (props) => {
     useContext(AppContext)
   const { activeSidebarItem, setActiveSidebarItem } = useContext(AppContext)
   const navigate = useNavigate()
+  const colorMode = useColorMode()
 
   /*useEffect(() => {
     window.scrollTo(0, 0)
@@ -175,8 +176,6 @@ const SidebarItem = (props) => {
     if (item.hideSimple && isSimpleMode && !isMeshNode) {
       display = 'none'
     }
-
-    const colorMode = useColorMode()
 
     return (
       <Box key={index} w="100%" display={display}>

@@ -19,9 +19,6 @@ import {
   Text,
   CloseIcon,
   LinkText,
-  Tooltip,
-  TooltipContent,
-  TooltipText,
   ScrollView,
   Spinner,
   ButtonSpinner,
@@ -30,6 +27,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
+import { Tooltip } from 'components/Tooltip'
 
 import { api, pluginAPI } from 'api'
 import { AppContext, alertState } from 'AppContext'
@@ -185,18 +183,10 @@ const PluginList = (props) => {
   const renderItem = ({ item }) => (
     <ListItem>
       <VStack flex={1} space="sm">
-        <Tooltip
-          h={undefined}
-          placement="top"
-          trigger={(triggerProps) => (
-            <Text size="md" bold {...triggerProps}>
-              {item.Name}
-            </Text>
-          )}
-        >
-          <TooltipContent>
-            <TooltipText>{`URI: ${item.URI}`}</TooltipText>
-          </TooltipContent>
+        <Tooltip label={`URI: ${item.URI || 'not set'}`}>
+          <Text size="md" bold>
+            {item.Name}
+          </Text>
         </Tooltip>
 
         <HStack space="sm">
@@ -213,18 +203,20 @@ const PluginList = (props) => {
           )}
 
           {item.Enabled && item.UIURL ? (
-            <Button
-              variant="link"
-              action="secondary"
-              size="sm"
-              onPress={() =>
-                navigate(
-                  '/admin/custom_plugin/' + encodeURIComponent(item.UIURL)
-                )
-              }
-            >
-              <ButtonIcon as={MonitorCheckIcon} size={24} />
-            </Button>
+            <Tooltip label={'Show plugin UI'}>
+              <Button
+                variant="link"
+                action="secondary"
+                size="sm"
+                onPress={() =>
+                  navigate(
+                    '/admin/custom_plugin/' + encodeURIComponent(item.UIURL)
+                  )
+                }
+              >
+                <ButtonIcon as={MonitorCheckIcon} size={24} />
+              </Button>
+            </Tooltip>
           ) : null}
         </HStack>
       </VStack>
