@@ -210,8 +210,7 @@ const PluginList = (props) => {
                 size="sm"
                 onPress={() =>
                   navigate(
-                    '/admin/custom_plugin/' +
-                      encodeURIComponent('user/' + item.Name)
+                    '/admin/custom_plugin/' + encodeURIComponent(item.URI)
                   )
                 }
               >

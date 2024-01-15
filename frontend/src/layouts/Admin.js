@@ -336,7 +336,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         let pluginRoutes = pluginsWithUI.map((p) => ({
           layout: 'admin',
           name: p.Name,
-          path: `custom_plugin/${encodeURIComponent('user/' + p.Name)}`,
+          path: `custom_plugin/${encodeURIComponent(p.URI)}`,
           icon: PuzzleIcon,
           Component: CustomPluginView
         }))
