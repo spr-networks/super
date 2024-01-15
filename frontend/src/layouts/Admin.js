@@ -379,7 +379,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
     const redirOnAuthError = (err) => {
       console.error('HTTP auth error for url:', err.response.url)
-      navigate('/auth/login')
+      navigate('/auth/validate')
     }
 
     api.registerErrorHandler(401, redirOnAuthError)
