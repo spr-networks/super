@@ -332,11 +332,11 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     pluginAPI
       .list()
       .then((plugins) => {
-        let pluginsWithUI = plugins.filter((p) => p.UIURL.length) // TODO .HasUI
+        let pluginsWithUI = plugins.filter((p) => p.HasUI)
         let pluginRoutes = pluginsWithUI.map((p) => ({
           layout: 'admin',
           name: p.Name,
-          path: `custom_plugin/${encodeURIComponent(p.URI)}`,
+          path: `custom_plugin/${encodeURIComponent('user/' + p.Name)}`,
           icon: PuzzleIcon,
           Component: CustomPluginView
         }))

@@ -202,7 +202,7 @@ const PluginList = (props) => {
             </Badge>
           )}
 
-          {item.Enabled && item.UIURL ? (
+          {item.Enabled && item.HasUI ? (
             <Tooltip label={'Show plugin UI'}>
               <Button
                 variant="link"
@@ -210,7 +210,8 @@ const PluginList = (props) => {
                 size="sm"
                 onPress={() =>
                   navigate(
-                    '/admin/custom_plugin/' + encodeURIComponent(item.UIURL)
+                    '/admin/custom_plugin/' +
+                      encodeURIComponent('user/' + item.Name)
                   )
                 }
               >
