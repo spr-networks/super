@@ -287,7 +287,7 @@ const PluginList = (props) => {
           </Button>
           <ModalForm
             title="Add a new Plugin"
-            triggerText="Configure New Plugin"
+            triggerText="New Plugin"
             modalRef={refModal}
           >
             <AddPlugin notifyChange={notifyChange} />
