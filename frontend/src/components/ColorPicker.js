@@ -26,7 +26,8 @@ export default ({ value, onChange, ...props }) => {
     'teal',
     'cyan',
     'blueGray',
-    'amber'
+    'amber',
+    'orange'
   ]
 
   const onPress = (color) => {
