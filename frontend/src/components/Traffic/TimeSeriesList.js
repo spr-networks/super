@@ -19,6 +19,7 @@ import {
 import { AppContext, ModalContext } from 'AppContext'
 import { copy } from 'utils'
 import DeviceItem from 'components/Devices/DeviceItem'
+import { Tooltip } from 'components/Tooltip'
 
 const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
   const context = useContext(AppContext)
@@ -146,9 +147,11 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
               sx={{ '@md': { flexDirection: 'row', alignItems: 'center' } }}
             >
               <VStack sx={{ '@md': { flex: type.match(/Out$/) ? 2 : 3 } }}>
-                <Text size="sm" bold>
-                  {item.SrcDomain}
-                </Text>
+                <Tooltip label={item.SrcDomain}>
+                  <Text size="sm" bold isTruncated>
+                    {item.SrcDomain}
+                  </Text>
+                </Tooltip>
                 {type == 'WanOut' ? (
                   <DeviceItem
                     item={context.getDevice(item.Src, 'RecentIP')}
@@ -168,9 +171,11 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
                 <ArrowRightIcon color="$muted200" />
               </Box>
               <VStack flex={type.match(/Out$/) ? 3 : 2}>
-                <Text size="sm" bold>
-                  {item.DstDomain}
-                </Text>
+                <Tooltip label={item.DstDomain}>
+                  <Text size="sm" bold isTruncated>
+                    {item.DstDomain}
+                  </Text>
+                </Tooltip>
                 {type == 'WanIn' ? (
                   <DeviceItem
                     item={context.getDevice(item.Dst, 'RecentIP')}
