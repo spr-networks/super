@@ -78,7 +78,7 @@ const Home = (props) => {
         p="$4"
         gap="$4"
       >
-        <VStack space="md" sx={{ '@md': { flex: 5 } }}>
+        <VStack space="md" sx={{ '@md': { flex: 7 } }}>
           {show.vpnInfo ? (
             <>
               <WireguardPeers flex={1} />
