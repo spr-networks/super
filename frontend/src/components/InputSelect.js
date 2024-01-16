@@ -144,7 +144,7 @@ const SelectMenu = ({ value, onChange, isMultiple, trigger, ...props }) => {
         selectionMode="single"
         closeOnSelect={true}
         onSelectionChange={(e) => handleChange(e.currentKey)}
-        maxHeight={532}
+        maxHeight={350}
         overflow="scroll"
       >
         {groups.map((group) => {
