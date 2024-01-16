@@ -80,7 +80,6 @@ const GroupListing = ({ group, ...props }) => {
     return name
   }
 
-
   const list = getGroupMembers(group)
   return (
     <FlatList
@@ -94,23 +93,9 @@ const GroupListing = ({ group, ...props }) => {
       estimatedItemSize={100}
       renderItem={({ item }) => (
         <ListItem>
-          {/*
-          <Text flex={1} bold size="sm">
-            {item.Name}
-          </Text>
-
-          <VStack flex={2} space="sm">
-            <Text size="sm" bold>
-              {item.IP || ' '}
-            </Text>
-            <Text size="sm" color="$muted500">
-              {item.MAC}
-            </Text>
-          </VStack>
-            */}
           <DeviceItem
             item={appContext.getDevice(item.MAC, 'MAC')}
-            w="$1/2"
+            sx={{ '@md': { width: '$1/2' } }}
             justifyContent="space-between"
           />
 
