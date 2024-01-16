@@ -28,19 +28,22 @@ const ServicesEnabled = ({ features, ...props }) => {
   const colorOn = colorMode == 'light' ? '$blueGray500' : '$blueGray600',
     colorOff = colorMode == 'light' ? '$muted300' : '$muted500'
 
+  const size = 32
+
   return (
     <Box
+      minHeight={150}
       bg="$backgroundCardLight"
       sx={{
         _dark: { bg: '$backgroundCardDark' }
       }}
       borderRadius={10}
+      justifyContent="center"
     >
       <HStack
         space="lg"
         justifyContent="space-around"
         p="$4"
-        py="$7"
         rounded="lg"
         flexWrap="wrap"
       >
@@ -51,13 +54,15 @@ const ServicesEnabled = ({ features, ...props }) => {
         >
           <VStack space="md">
             <Box
-              p="$4"
+              p="$3"
               rounded="$full"
               bg={features.includes('wifi') ? colorOn : colorOff}
             >
-              <Icon as={WifiIcon} color="$white" size={32} />
+              <Icon as={WifiIcon} color="$white" size={size} />
             </Box>
-            <Text alignSelf="center">WiFi</Text>
+            <Text alignSelf="center" size="sm">
+              WiFi
+            </Text>
           </VStack>
         </Pressable>
 
@@ -68,39 +73,45 @@ const ServicesEnabled = ({ features, ...props }) => {
         >
           <VStack space="md">
             <Box
-              p="$4"
+              p="$3"
               rounded="$full"
               bg={features.includes('dns') ? colorOn : colorOff}
             >
-              <Icon as={GlobeIcon} color="$white" size={32} />
+              <Icon as={GlobeIcon} color="$white" size={size} />
             </Box>
-            <Text alignSelf="center">DNS</Text>
+            <Text alignSelf="center" size="sm">
+              DNS
+            </Text>
           </VStack>
         </Pressable>
 
         <Pressable onPress={() => navigate('/admin/dnsBlock')}>
           <VStack space="md">
             <Box
-              p="$4"
+              p="$3"
               rounded="$full"
               bg={features.includes('dns-block') ? colorOn : colorOff}
             >
-              <Icon as={BanIcon} color="$white" size={32} />
+              <Icon as={BanIcon} color="$white" size={size} />
             </Box>
-            <Text alignSelf="center">Block</Text>
+            <Text alignSelf="center" size="sm">
+              Block
+            </Text>
           </VStack>
         </Pressable>
 
         <Pressable onPress={() => navigate('/admin/wireguard')}>
           <VStack space="md">
             <Box
-              p="$4"
+              p="$3"
               rounded="$full"
               bg={features.includes('wireguard') ? colorOn : colorOff}
             >
-              <Icon as={WaypointsIcon} color="$white" size={32} />
+              <Icon as={WaypointsIcon} color="$white" size={size} />
             </Box>
-            <Text alignSelf="center">VPN</Text>
+            <Text alignSelf="center" size="sm">
+              VPN
+            </Text>
           </VStack>
         </Pressable>
       </HStack>

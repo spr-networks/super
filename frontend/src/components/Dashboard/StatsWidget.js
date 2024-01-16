@@ -27,7 +27,6 @@ const StatsWidget = ({
           : '$backgroundCardDark'
       }
       borderRadius={10}
-      shadow={4}
       {...props}
     >
       <HStack p="$4" justifyContent="space-between" alignItems="center">
