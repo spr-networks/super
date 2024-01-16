@@ -105,6 +105,7 @@ export const DeviceTraffic = ({ minutes, hideEmpty, ...props }) => {
               total[ip] = { ip, device, WanIn: [WanIn], WanOut: [WanOut] }
             } else {
               total[ip] = {
+                ip,
                 device,
                 WanIn: [...total[ip].WanIn, WanIn],
                 WanOut: [...total[ip].WanOut, WanOut]
@@ -162,13 +163,14 @@ export const DeviceTraffic = ({ minutes, hideEmpty, ...props }) => {
       <VStack space="md">
         {total.map((item) => (
           <HStack space="sm">
-            <DeviceItem flex={1} size="sm" item={item.device} />
-            <HStack
-              minWidth={200}
-              flex={1}
-              space="xs"
-              justifyContent="flex-end"
-            >
+            {item.device ? (
+              <DeviceItem flex={1} size="sm" item={item.device} />
+            ) : (
+              <Text flex={1} size="sm" bold>
+                {item.ip}
+              </Text>
+            )}
+            <HStack flex={1} space="xs" justifyContent="flex-end">
               <HStack space="sm" alignItems="center" justifyContent="flex-end">
                 <Icon size="xs" as={ArrowDownIcon} />
                 <Text size="xs">{prettySize(diffSize(item.WanIn))}</Text>

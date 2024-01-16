@@ -107,10 +107,10 @@ const Home = (props) => {
           <VStack space="md">
             {show.traffic ? <TotalTraffic /> : null}
 
-            <HStack space="md">
+            <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
               <DeviceTraffic flex={1} minutes={5} hideEmpty={false} />
               <DeviceTraffic flex={1} minutes={60} hideEmpty={false} />
-            </HStack>
+            </VStack>
           </VStack>
         </VStack>
 
