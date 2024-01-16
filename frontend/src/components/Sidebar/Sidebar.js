@@ -93,11 +93,11 @@ const Sidebar = ({
       </ScrollView>
       {!isOpenSidebar || isMobile ? (
         <Box
-          h="8%"
+          h="20%"
           borderTopWidth="$1"
           sx={{
             '@base': { display: 'flex' },
-            '@md': { display: 'flex', borderRightWidth: '$1' },
+            '@md': { display: 'flex', height: '8%', borderRightWidth: '$1' },
             _light: {
               bg: '$sidebarBackgroundLight',
               borderColor: '$coolGray100'
