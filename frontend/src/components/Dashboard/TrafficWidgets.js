@@ -98,15 +98,13 @@ export const DeviceTraffic = ({ minutes, hideEmpty, ...props }) => {
           time.setMinutes(start.getMinutes() - numMinutes++)
 
           for (let ip in timeWindow) {
-            let device = context.getDevice(ip, 'RecentIP')
             let { WanIn, WanOut } = timeWindow[ip]
 
             if (!total[ip]) {
-              total[ip] = { ip, device, WanIn: [WanIn], WanOut: [WanOut] }
+              total[ip] = { ip, WanIn: [WanIn], WanOut: [WanOut] }
             } else {
               total[ip] = {
                 ip,
-                device,
                 WanIn: [...total[ip].WanIn, WanIn],
                 WanOut: [...total[ip].WanOut, WanOut]
               }
@@ -163,13 +161,7 @@ export const DeviceTraffic = ({ minutes, hideEmpty, ...props }) => {
       <VStack space="md">
         {total.map((item) => (
           <HStack space="sm">
-            {item.device ? (
-              <DeviceItem flex={1} size="sm" item={item.device} />
-            ) : (
-              <Text flex={1} size="sm" bold>
-                {item.ip}
-              </Text>
-            )}
+            <DeviceItem flex={1} size="sm" item={context.getDevice(item.ip, 'RecentIP')} />
             <HStack flex={1} space="xs" justifyContent="flex-end">
               <HStack space="sm" alignItems="center" justifyContent="flex-end">
                 <Icon size="xs" as={ArrowDownIcon} />
