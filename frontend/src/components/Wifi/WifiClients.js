@@ -130,6 +130,9 @@ const WifiClients = (props) => {
   }
 
   const getWifiSpeedString = (txrate) => {
+    if (!txrate) {
+      return '802.11'
+    }
     if (txrate.includes(' he')) {
       return '802.11ax'
     } else if (txrate.includes('vht')) {

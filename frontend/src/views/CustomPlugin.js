@@ -42,9 +42,8 @@ const getPluginHTML = async (name) => {
   let res = await fetch(url, { headers })
   let html = await res.text()
 
-  let scriptTag = `<script>var SPR_API_URL = "${api_url}";</script>`
-  // Insert the script tag into the HTML, ideally in the head
-  html = html.replace('</head>', `${scriptTag}</head>`)
+  let scriptTag = `<script>var SPR_API_URL = "${api_url}";</script>`;
+  html = html.replace('</head>', `${scriptTag}</head>`);
 
   return html
 }
