@@ -13,7 +13,7 @@ import {
 } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Sidebar from 'components/Sidebar/Sidebar'
-import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
+import WebSocketComponent from 'api/WebSocket'
 import { api, deviceAPI, meshAPI, pfwAPI, pluginAPI, wifiAPI } from 'api'
 import { ucFirst } from 'utils'
 
@@ -196,16 +196,13 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
   //setup alert context
   alertState.alert = (type = 'info', title, body = null) => {
-    if (typeof title !== 'string') {
-      title = JSON.stringify(title)
-    }
 
     if (!body) {
       body = title
       title = ucFirst(type)
     }
 
-    const showAlert = (type, title, body) => {
+    const alertFunc = (type, title, body) => {
       // web desktop notification
       if (['error', 'success'].includes(type) && Platform.OS == 'web') {
         Notifications.notification(title, body)
@@ -223,13 +220,13 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       body.response
         .text()
         .then((data) => {
-          showAlert(type, title, data)
+          alertFunc(type, title, data)
         })
         .catch((err) => {
-          showAlert(type, title, JSON.stringify(body))
+          alertFunc(type, title, JSON.stringify(body))
         })
     } else {
-      showAlert(type, title, body)
+      alertFunc(type, title, body)
     }
   }
 
@@ -285,8 +282,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const [devices, setDevices] = useState([])
   const [groups, setGroups] = useState([])
   const [routes, setRoutes] = useState(allRoutes)
-
-  let context = useContext(AppContext)
 
   // device context stuff
   const getDevices = (forceFetch = false) => {
@@ -462,66 +457,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       }
     }
 
-    const handleWebSocketEvent = async (context, event) => {
-      if (event.data == 'success') {
-        return
-      } else if (event.data == 'Authentication failure') {
-        return alertState.error('Websocket failed to authenticate')
-      } else if (event.data == 'Invalid JWT OTP') {
-        //user needed an OTP validation
-        navigate('/auth/validate')
-        return
-      }
-
-      let eventData = JSON.parse(event.data)
-
-      // if false it means event is streamed for logs or cli
-      // this is set temporarily when viewing the sprbus via ws
-      if (!eventData.Notification) {
-        return
-      }
-
-      const res = await parseLogMessage(context, eventData)
-      if (res) {
-        //console.log('[NOTIFICATION]', JSON.stringify(res))
-        let { type, title, body, data } = res
-
-        if (title == 'StatusCalled') {
-          //ignore debug message
-          return
-        }
-
-        //console.log('plus disabled:', isPlusDisabled)
-
-        // confirm notifications use pfw
-        if (isPlusDisabled && type == 'confirm') {
-          type = 'info'
-        }
-
-        if (Platform.OS == 'ios') {
-          // for now we have default = only msg & confirm = userAction
-          //Notifications.notification(title, body, category)
-          if (type == 'confirm') {
-            Notifications.confirm(title, body, data)
-          } else {
-            Notifications.notification(title, body)
-          }
-        } else {
-          if (type == 'confirm') {
-            alertState.confirm(title, body, (action) => {
-              setShowConfirmAlert(false)
-
-              confirmTrafficAction(action, data)
-            })
-          } else {
-            alertState[type](title, body)
-          }
-        }
-      }
-    }
-
-    connectWebsocket(context, handleWebSocketEvent)
-
     let notificationArgs = {}
     if (Platform.OS == 'ios') {
       //for ios we get an event - no callback
@@ -621,6 +556,43 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     toggleColorMode()
   }
 
+  const webConfirm = (title, body, data) => {
+    alertState.confirm(title, body, (action) => {
+      setShowConfirmAlert(false)
+
+      confirmTrafficAction(action, data)
+    })
+  }
+
+  const webNotify = (type, title, body) => {
+    alertState[type](title, body)
+  }
+
+  const iosConfirm = (title, body, data) => {
+    Notifications.confirm(title, body, data)
+  }
+
+  const iosNotify = (type, title, body) => {
+    Notifications.notification(title, body)
+  }
+
+  const doConfirm = (title, body, data) => {
+    if (Platform.OS == 'ios') {
+      iosConfirm(title, body, data)
+    } else {
+      webConfirm(title, body, data)
+    }
+  }
+
+  const doNotify = (type, title, body) => {
+    if (Platform.OS == 'ios') {
+      iosNotify(type, title, body)
+    } else {
+      webNotify(type, title, body)
+    }
+  }
+
+
   return (
     <AppContext.Provider
       value={{
@@ -642,6 +614,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         setViewSettings
       }}
     >
+      <WebSocketComponent notify={doNotify} confirm={doConfirm}  />
       <SafeAreaView
         style={{
           backgroundColor

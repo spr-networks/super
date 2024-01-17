@@ -18,92 +18,52 @@ export const transformTag = (context, tag, value) => {
       //no-op.
     }
 
+    let deviceItem = undefined
+    if (tag.startsWith("Device")) {
+      deviceItem = context.getDevice(value, type)
+
+      if (deviceItem === undefined) {
+        //alert("failed to find " + value + " " + type)
+      }
+    }
+
     if (tag == "Interface") {
       return <InterfaceItem name={value} />
     } else if (tag == "Device") {
       return <DeviceItem
         show={['Style', 'Name']}
         flex={1}
-        item={context.getDevice(value, type)}
+        item={deviceItem}
       />
     } else if (tag == "DeviceIcon") {
       return <DeviceItem
         show={['Style']}
         flex={1}
-        item={context.getDevice(value, type)}
+        item={deviceItem}
       />
     } else if (tag == "DeviceName") {
       return <DeviceItem
         show={['Name']}
         flex={1}
-        item={context.getDevice(value, type)}
+        item={deviceItem}
       />
     } else if (tag == "DeviceIP") {
       return <DeviceItem
         show={['RecentIP']}
         flex={1}
-        item={context.getDevice(value, type)}
+        item={deviceItem}
       />
     } else if (tag == "DeviceMAC") {
       return <DeviceItem
         show={['MAC']}
         flex={1}
-        item={context.getDevice(value, type)}
+        item={deviceItem}
       />
     }
   }
 
   return value + "#" + tag
 }
-
-export const badeventTemplate = (context, template, event) => {
-  if (!template || !event) {
-    return ""
-  }
-
-  let children = []
-  let result = template.replace(/\{\{([\w\.]+)(?:#(\w+))?\}\}/g, (match, path, tag) => {
-    if (match.includes("__")) {
-      //disable double underscore matches
-      return ""
-    }
-    const levels = path.split('.');
-    let currentValue = event
-    for (let level of levels) {
-      if (!currentValue) {
-        return ""
-      }
-      if (currentValue[level]) {
-        currentValue = currentValue[level]
-      } else {
-        return ""
-      }
-    }
-    if (tag) {
-       children.push(transformTag(context, tag, currentValue))
-       return ""
-    }
-    return currentValue
-  });
-
-  if (children) {
-    return (
-      <>
-        <Text>{result}</Text>
-        {children.map(child => (
-          <HStack key={child.id}>{child}</HStack>
-        ))}
-      </>)
-  } else {
-    return (
-      <>
-        <Text>No Child</Text>
-        {result}
-      </>)
-  }
-
-};
-
 
 export const eventTemplate = (context, template, event) => {
   if (!template || !event) {

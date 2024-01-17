@@ -123,7 +123,6 @@ const Alerts = (props) => {
 
   const onSubmit = (item) => {
     //submit to api
-    console.log('add:', item)
     alertsAPI
       .add(item)
       .then((res) => {
