@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -19,6 +20,10 @@ import (
 
 import (
 	"github.com/gorilla/mux"
+)
+
+import (
+	"github.com/spr-networks/sprbus"
 )
 
 var PlusUser = "lts-super-plus"
@@ -29,18 +34,21 @@ var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
 var CustomComposeAllowPath = TEST_PREFIX + "/configs/base/custom_compose_paths.json"
 
 type PluginConfig struct {
-	Name            string
-	URI             string
-	UnixPath        string
-	Enabled         bool
-	Plus            bool
-	GitURL          string
-	ComposeFilePath string
+	Name             string
+	URI              string
+	UnixPath         string
+	Enabled          bool
+	Plus             bool
+	GitURL           string
+	ComposeFilePath  string
+	HasUI            bool
+	InstallTokenPath string
+	ScopedPaths      []string
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
-	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml"},
-	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml"},
+	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, "", []string{}},
+	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, "", []string{}},
 }
 
 var gPluginTemplates = []PluginConfig{
@@ -186,11 +194,6 @@ func validatePlus(plugin PluginConfig) bool {
 			}
 		}
 		return false
-	} else {
-		//only PLUS plugins have git urls for now
-		if plugin.GitURL != "" {
-			return false
-		}
 	}
 
 	return true
@@ -285,27 +288,46 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 
 			// check if exists -- if so update, else create a new entry
 			found := false
-			for idx, entry := range config.Plugins {
+			idx := -1
+			oldComposeFilePath := plugin.ComposeFilePath
+			for idx_, entry := range config.Plugins {
+				idx = idx_
 				if entry.Name == name || entry.Name == plugin.Name {
 					found = true
-					config.Plugins[idx] = plugin
-
-					if plugin.Enabled == false {
-						//plugin is on longer enabled, send stop
-						stopExtension(entry.ComposeFilePath)
-					}
-
+					oldComposeFilePath = entry.ComposeFilePath
 					break
 				}
 			}
 
-			if !found {
-				//when creating, make sure these are known plus
-				if !validatePlus(plugin) {
-					http.Error(w, "invalid plugin options", 400)
+			//make sure these are known plus
+			if !validatePlus(plugin) {
+				http.Error(w, "invalid plugin options", 400)
+				return
+			}
+
+			//if a GitURL is set, ensure OTP authentication for 'admin'
+			if !plugin.Plus && plugin.GitURL != "" {
+				if hasValidJwtOtpHeader("admin", r) {
+					http.Error(w, "OTP Token invalid for Remote Install", 400)
+					return
 				}
 
+				//clone but don't auto-config.
+				ret := downloadUserExtension(plugin.GitURL, false)
+				if ret == false {
+					fmt.Println("Failed to download extension " + plugin.GitURL)
+					// fall thru, dont fail
+				}
+			}
+
+			if !found {
 				config.Plugins = append(config.Plugins, plugin)
+			} else {
+				if plugin.Enabled == false {
+					//plugin is on longer enabled, send stop
+					stopExtension(oldComposeFilePath)
+				}
+				config.Plugins[idx] = plugin
 			}
 		}
 
@@ -500,9 +522,11 @@ func getMeshdClient() http.Client {
 	return c
 }
 
-type GhcrCreds struct {
-	Username string
-	Secret   string
+type GitOptions struct {
+	Username   string
+	Secret     string
+	Plus       bool
+	AutoConfig bool
 }
 
 func ghcrSuperdLogin() bool {
@@ -510,7 +534,7 @@ func ghcrSuperdLogin() bool {
 		return false
 	}
 
-	creds := GhcrCreds{PlusUser, config.PlusToken}
+	creds := GitOptions{PlusUser, config.PlusToken, true, false}
 	jsonValue, _ := json.Marshal(creds)
 
 	req, err := http.NewRequest(http.MethodPut, "http://localhost/ghcr_auth", bytes.NewBuffer(jsonValue))
@@ -541,51 +565,19 @@ func ghcrSuperdLogin() bool {
 func generatePFWAPIToken() {
 	//install API token for PLUS
 	var pfwConfigFile = TEST_PREFIX + "/configs/pfw/rules.json"
-	value := genBearerToken()
-	pfw_token := Token{"PLUS-API-Token", value, 0, []string{}}
-
-	Tokensmtx.Lock()
-	defer Tokensmtx.Unlock()
-
-	tokens := []Token{}
-	data, err := os.ReadFile(AuthTokensFile)
-
-	foundToken := false
-	if err == nil {
-		_ = json.Unmarshal(data, &tokens)
-		for _, token := range tokens {
-			if token.Name == pfw_token.Name {
-				//re-use the PFW token
-				value = token.Token
-				pfw_token.Token = value
-				//re-use existing token
-				foundToken = true
-				break
-			}
-		}
-	}
-
-	if !foundToken {
-		//add the generated token and save it to the token file
-		tokens = append(tokens, pfw_token)
-		file, _ := json.MarshalIndent(tokens, "", " ")
-		err = ioutil.WriteFile(AuthTokensFile, file, 0600)
-		if err != nil {
-			fmt.Println("failed to write tokens file", err)
-		}
-	}
+	pfw_token, err := generateOrGetToken("PLUS-API-Token", []string{})
 
 	//now save the rules.json with this token
 	pfw_config := make(map[string]interface{})
 
-	data, err = os.ReadFile(AuthTokensFile)
+	data, err := os.ReadFile(pfwConfigFile)
 	if err == nil {
 		//read existing configuration
 		_ = json.Unmarshal(data, &pfw_config)
 	}
 
 	//set the API token
-	pfw_config["APIToken"] = value
+	pfw_config["APIToken"] = pfw_token.Token
 
 	file, _ := json.MarshalIndent(pfw_config, "", " ")
 	err = ioutil.WriteFile(pfwConfigFile, file, 0600)
@@ -595,11 +587,11 @@ func generatePFWAPIToken() {
 
 }
 
-func downloadPlusExtension(gitURL string) bool {
+func downloadExtension(user string, secret string, gitURL string, Plus bool, AutoConfig bool) bool {
 	params := url.Values{}
 	params.Set("git_url", gitURL)
 
-	creds := GhcrCreds{PlusUser, config.PlusToken}
+	creds := GitOptions{user, secret, Plus, AutoConfig}
 	jsonValue, _ := json.Marshal(creds)
 
 	req, err := http.NewRequest(http.MethodPut, "http://localhost/update_git?"+params.Encode(), bytes.NewBuffer(jsonValue))
@@ -617,16 +609,36 @@ func downloadPlusExtension(gitURL string) bool {
 	}
 
 	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
+	data, err := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("failed to download extension: "+gitURL, resp.StatusCode)
+		fmt.Println("failed to download extension: "+gitURL, resp.Status)
 		return false
 	}
 
-	generatePFWAPIToken()
+	sprbus.Publish("plugin:download:success", map[string]string{"GitURL": gitURL})
+
+	if AutoConfig {
+		plugin := PluginConfig{}
+		err = json.Unmarshal(data, &plugin)
+		if err == nil {
+			return installUserPluginConfig(plugin)
+		}
+	}
 
 	return true
+}
+
+func downloadPlusExtension(gitURL string) bool {
+	ret := downloadExtension(PlusUser, config.PlusToken, gitURL, true, false)
+	if ret == true && gitURL == PfwGitURL {
+		generatePFWAPIToken()
+	}
+	return ret
+}
+
+func downloadUserExtension(gitURL string, AutoConfig bool) bool {
+	return downloadExtension("", "", gitURL, false, AutoConfig)
 }
 
 func startExtension(composeFilePath string) bool {
@@ -996,4 +1008,108 @@ func modifyCustomComposePaths(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+}
+
+func getRepoName(gitURL string) string {
+	trimmedURL := strings.TrimSuffix(gitURL, ".git")
+	repoName := filepath.Base(trimmedURL)
+	if strings.Contains(repoName, "..") {
+		return ""
+	}
+	return repoName
+}
+
+// Given a git URL, install a plugin. must be OTP auth'd.
+func installUserPluginGitUrl(router *mux.Router) func(http.ResponseWriter, *http.Request) {
+	return applyJwtOtpCheck(func(w http.ResponseWriter, r *http.Request) {
+		Configmtx.Lock()
+		defer Configmtx.Unlock()
+
+		url := ""
+		err := json.NewDecoder(r.Body).Decode(&url)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		repo := getRepoName(url)
+		if repo == "" {
+			http.Error(w, "Invalid url "+url, 400)
+			return
+		}
+
+		//1. Git clone it to plugins/user/<>
+		success := downloadUserExtension(url, true)
+		if !success {
+			http.Error(w, "Failed to install plugin", 400)
+			return
+		}
+
+		//2. save and update routes
+		saveConfigLocked()
+		PluginRoutes(router)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(config.Plugins)
+	})
+}
+
+func installUserPluginConfig(plugin PluginConfig) bool {
+
+	//should not be a Plus module
+	if plugin.Plus != false {
+		return false
+	}
+
+	found := false
+	idx := -1
+	oldComposeFilePath := plugin.ComposeFilePath
+	for idx_, entry := range config.Plugins {
+		idx = idx_
+		if entry.Name == plugin.Name {
+			found = true
+			oldComposeFilePath = entry.ComposeFilePath
+			break
+		}
+	}
+
+	if !found {
+		config.Plugins = append(config.Plugins, plugin)
+	} else {
+		if plugin.Enabled == false {
+			//plugin is on longer enabled, send stop
+			stopExtension(oldComposeFilePath)
+		}
+		config.Plugins[idx] = plugin
+	}
+
+	curList := []string{}
+	data, err := ioutil.ReadFile(CustomComposeAllowPath)
+	if err == nil {
+		_ = json.Unmarshal(data, &curList)
+
+		for _, entry := range curList {
+			if entry == plugin.ComposeFilePath {
+				return true
+			}
+		}
+	}
+
+	//add ComposeFilePath to whitelist
+	curList = append(curList, plugin.ComposeFilePath)
+	file, _ := json.MarshalIndent(curList, "", " ")
+	err = ioutil.WriteFile(CustomComposeAllowPath, file, 0600)
+	if err != nil {
+		log.Println("failed to write custom compose paths configuration", err)
+	}
+
+	if plugin.InstallTokenPath != "" {
+		token, err := generateOrGetToken(plugin.Name+"-install-token", plugin.ScopedPaths)
+		if err == nil {
+			ioutil.WriteFile(plugin.InstallTokenPath, []byte(token.Token), 0600)
+		} else {
+			log.Println("Failed to generate token for plugin")
+		}
+	}
+
+	return true
 }

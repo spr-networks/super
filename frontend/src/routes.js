@@ -80,6 +80,7 @@ import {
   WaypointsIcon,
   WifiIcon
 } from 'lucide-react-native'
+import CustomPlugin from 'views/CustomPlugin'
 
 //import { BrandIcons } from 'IconUtils'
 
@@ -338,7 +339,7 @@ const routes = [
         hideSimple: true,
         layout: 'admin',
         plus: true
-      },
+      }
     ]
   },
   {
@@ -359,6 +360,12 @@ const routes = [
         component: Plugins,
         hideSimple: true,
         layout: 'admin'
+      },
+      {
+        layout: 'admin',
+        path: 'custom_plugin/:name',
+        redirect: true,
+        component: CustomPlugin
       },
       {
         path: 'auth/',

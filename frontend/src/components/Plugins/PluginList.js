@@ -19,21 +19,21 @@ import {
   Text,
   CloseIcon,
   LinkText,
-  Tooltip,
-  TooltipContent,
-  TooltipText,
   ScrollView,
   Spinner,
   ButtonSpinner,
+  AddIcon,
   CheckIcon
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
+import { Tooltip } from 'components/Tooltip'
 
 import { api, pluginAPI } from 'api'
 import { AppContext, alertState } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import AddPlugin from 'components/Plugins/AddPlugin'
+import { MonitorCheckIcon } from 'lucide-react-native'
 
 const PluginList = (props) => {
   const [list, _setList] = useState([])
@@ -182,56 +182,67 @@ const PluginList = (props) => {
 
   const renderItem = ({ item }) => (
     <ListItem>
-      <VStack space="sm">
-        <Tooltip
-          h={undefined}
-          placement="top"
-          trigger={(triggerProps) => (
-            <Text bold {...triggerProps}>
-              {item.Name}
-            </Text>
-          )}
-        >
-          <TooltipContent>
-            <TooltipText>{`URI: ${item.URI}`}</TooltipText>
-          </TooltipContent>
+      <VStack flex={1} space="sm">
+        <Tooltip label={`URI: ${item.URI || 'not set'}`}>
+          <Text size="md" bold>
+            {item.Name}
+          </Text>
         </Tooltip>
 
-        <HStack>
+        <HStack space="sm">
           {item.Version === undefined ? (
             <Spinner size="small" />
           ) : (
             <Badge
               variant="outline"
               action={item.Version ? 'success' : 'muted'}
-              alignSelf="flex-start"
+              alignSelf="center"
             >
               <BadgeText>{item.Version || 'none'}</BadgeText>
             </Badge>
           )}
+
+          {item.Enabled && item.HasUI ? (
+            <Tooltip label={'Show plugin UI'}>
+              <Button
+                variant="link"
+                action="secondary"
+                size="sm"
+                onPress={() =>
+                  navigate(
+                    '/admin/custom_plugin/' + encodeURIComponent(item.URI)
+                  )
+                }
+              >
+                <ButtonIcon as={MonitorCheckIcon} size={24} />
+              </Button>
+            </Tooltip>
+          ) : null}
         </HStack>
       </VStack>
 
       <VStack
-        flex={1}
+        flex={2}
         space="md"
         sx={{
           '@base': { display: 'none' },
-          '@md': { display: 'none' }
+          '@md': { display: 'flex' }
         }}
+        alignItems="flex-end"
       >
-        <Text size="sm" isTruncated>
-          {item.UnixPath}
-        </Text>
+        {/*item.UnixPath ? (
+          <HStack space="sm">
+            <Text size="sm" color="$muted500">
+              Socket Path
+            </Text>
+            <Text size="sm" isTruncated>
+              {item.UnixPath}
+            </Text>
+          </HStack>
+        ) : null*/}
 
         {item.ComposeFilePath ? (
-          <HStack
-            space="sm"
-            sx={{
-              '@base': { display: 'none' },
-              '@base': { display: 'flex' }
-            }}
-          >
+          <HStack space="sm">
             <Text size="sm" color="$muted500">
               Compose Path
             </Text>
@@ -265,13 +276,23 @@ const PluginList = (props) => {
   return (
     <ScrollView sx={{ '@md': { h: '92vh' } }}>
       <ListHeader title="Plugins" description="">
-        <ModalForm
-          title="Add a new Plugin"
-          triggerText="Add Plugin"
-          modalRef={refModal}
-        >
-          <AddPlugin notifyChange={notifyChange} />
-        </ModalForm>
+        <HStack space="sm">
+          <Button
+            size="sm"
+            action="secondary"
+            onPress={() => navigate('/admin/custom_plugin/:name')}
+          >
+            <ButtonText>Add Plugin from URL</ButtonText>
+            <ButtonIcon as={AddIcon} ml="$2" />
+          </Button>
+          <ModalForm
+            title="Add a new Plugin"
+            triggerText="New Plugin"
+            modalRef={refModal}
+          >
+            <AddPlugin notifyChange={notifyChange} />
+          </ModalForm>
+        </HStack>
       </ListHeader>
 
       <FlatList

@@ -35,6 +35,7 @@ import (
 
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
+var UserAddons = "plugins/user"
 var ComposeAllowListDefaults = []string{"docker-compose.yml", "docker-compose-test.yml", "docker-compose-virt.yml",
 	"plugins/plus/pfw_extension/docker-compose.yml",
 	"plugins/plus/mesh_extension/docker-compose.yml",
@@ -301,7 +302,7 @@ func ghcr_auth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	creds := GhcrCreds{}
+	creds := GitOptions{}
 
 	if err := json.Unmarshal(body, &creds); err != nil {
 		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)
@@ -364,7 +365,7 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	creds := GhcrCreds{}
+	creds := GitOptions{}
 
 	if err := json.Unmarshal(body, &creds); err != nil {
 		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)
@@ -390,17 +391,28 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(string(out))
 		return
 	}
-
 	os.Chdir("/super")
-	if _, err := os.Stat(PlusAddons); os.IsNotExist(err) {
-		err := os.MkdirAll(PlusAddons, 0755)
+
+	repo := getRepoName(git_url)
+	if repo == "" {
+		http.Error(w, "Invalid git url "+git_url, 400)
+		return
+	}
+
+	directory := PlusAddons
+	if creds.Plus == false {
+		directory = UserAddons
+	}
+
+	if _, err := os.Stat(directory); os.IsNotExist(err) {
+		err := os.MkdirAll(directory, 0755)
 		if err != nil {
-			http.Error(w, "Could not create addons", 500)
+			http.Error(w, "Could not create addons "+directory, 500)
 			return
 		}
 	}
 
-	err = os.Chdir(PlusAddons)
+	err = os.Chdir(directory)
 	if err != nil {
 		http.Error(w, "Could not find addons directory", 500)
 		os.Chdir("/super")
@@ -419,19 +431,53 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	basename := filepath.Base(git_url)
-	err = os.Chdir(basename)
+	err = os.Chdir(repo)
 
 	if err != nil {
-		http.Error(w, "Could not clone repository", 400)
+		http.Error(w, "Could not cd to repository", 400)
 		os.Chdir("/super")
 		return
 	}
 
 	out, _ = exec.Command("git", "pull").CombinedOutput()
 	fmt.Println(string(out))
+
+	if creds.Plus == false && creds.AutoConfig == true {
+		data, err := configureUserPlugin(repo)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+		if len(data) == 0 {
+			http.Error(w, "Empty plugin configuration", 400)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(data)
+	}
+
 	os.Chdir("/super")
 
+}
+
+func getRepoName(gitURL string) string {
+	trimmedURL := strings.TrimSuffix(gitURL, ".git")
+	repoName := filepath.Base(trimmedURL)
+	if strings.Contains(repoName, "..") {
+		return ""
+	}
+	return repoName
+}
+
+func configureUserPlugin(repoName string) ([]byte, error) {
+	pluginConfigPath := filepath.Join("/super", "plugins", "user", repoName, "plugin.json")
+	if _, err := os.Stat(pluginConfigPath); os.IsNotExist(err) {
+		return []byte{}, fmt.Errorf("Could not find user plugin config " + pluginConfigPath)
+	}
+
+	data, err := os.ReadFile(pluginConfigPath)
+
+	return data, err
 }
 
 func logRequest(handler http.Handler) http.Handler {
@@ -652,9 +698,11 @@ func establishConfigsIfEmpty(SuperDir string) {
 
 }
 
-type GhcrCreds struct {
-	Username string
-	Secret   string
+type GitOptions struct {
+	Username   string
+	Secret     string
+	Plus       bool
+	AutoConfig bool
 }
 
 func remote_container_tags(w http.ResponseWriter, r *http.Request) {
@@ -665,7 +713,7 @@ func remote_container_tags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	creds := GhcrCreds{}
+	creds := GitOptions{}
 
 	if err := json.Unmarshal(body, &creds); err != nil {
 		http.Error(w, "Failed to retrieve credentials "+err.Error(), 400)

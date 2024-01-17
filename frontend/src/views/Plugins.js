@@ -4,7 +4,11 @@ import { ScrollView } from '@gluestack-ui/themed'
 
 const Plugins = (props) => {
   //TODO split up component & have plus as separate list
-  return <PluginList />
+  return (
+    <>
+      <PluginList />
+    </>
+  )
 }
 
 export default Plugins

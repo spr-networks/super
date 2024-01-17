@@ -161,14 +161,22 @@ func authenticateToken(token string) (bool, string, []string) {
 	return exists, name, paths
 }
 
-func scopedPathMatch(pathToMatch string, paths []string) bool {
+func scopedPathMatch(method string, pathToMatch string, paths []string) bool {
 	for _, entry := range paths {
+		parts := strings.Split(entry, ":")
+		if len(parts) > 1 {
+			if parts[1] == "r" && method != http.MethodGet {
+				return false
+			}
+			entry = parts[0]
+		}
 		if strings.HasPrefix(pathToMatch, entry) {
 			return true
 		}
 	}
 	return false
 }
+
 func authorizedToken(r *http.Request, token string) bool {
 	Tokensmtx.Lock()
 	//check api tokens
@@ -182,7 +190,7 @@ func authorizedToken(r *http.Request, token string) bool {
 	for _, t := range tokens {
 		if subtle.ConstantTimeCompare([]byte(token), []byte(t.Token)) == 1 {
 			if len(t.ScopedPaths) != 0 {
-				if !scopedPathMatch(r.URL.Path, t.ScopedPaths) {
+				if !scopedPathMatch(r.Method, r.URL.Path, t.ScopedPaths) {
 					//this url path did not match any of the scoped paths,
 					// continue
 					continue
@@ -720,4 +728,48 @@ func shouldCheckOTPJWT(r *http.Request, username string) bool {
 		}
 	}
 	return false
+}
+
+func generateOrGetToken(name string, paths []string) (Token, error) {
+	value := genBearerToken()
+	new_token := Token{name, value, 0, paths}
+
+	Tokensmtx.Lock()
+	defer Tokensmtx.Unlock()
+
+	tokens := []Token{}
+	data, err := os.ReadFile(AuthTokensFile)
+
+	if err == nil {
+		err = json.Unmarshal(data, &tokens)
+	}
+
+	if err != nil {
+		return new_token, err
+	}
+
+	foundToken := false
+	if err == nil {
+		_ = json.Unmarshal(data, &tokens)
+		for _, token := range tokens {
+			if token.Name == new_token.Name {
+				//re-use the PFW token
+				new_token = token
+				foundToken = true
+				break
+			}
+		}
+	}
+
+	if !foundToken {
+		//add the generated token and save it to the token file
+		tokens = append(tokens, new_token)
+		file, _ := json.MarshalIndent(tokens, "", " ")
+		err = ioutil.WriteFile(AuthTokensFile, file, 0600)
+		if err != nil {
+			fmt.Println("failed to write tokens file", err)
+		}
+	}
+
+	return new_token, err
 }
