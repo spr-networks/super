@@ -160,19 +160,22 @@ export const DeviceTraffic = ({ minutes, hideEmpty, ...props }) => {
       </Heading>
       <VStack space="md">
         {total.map((item) => (
-          <HStack space="sm">
-            <DeviceItem flex={1} size="sm" item={context.getDevice(item.ip, 'RecentIP')} />
-            <HStack flex={1} space="xs" justifyContent="flex-end">
-              <HStack space="sm" alignItems="center" justifyContent="flex-end">
-                <Icon size="xs" as={ArrowDownIcon} />
-                <Text size="xs">{prettySize(diffSize(item.WanIn))}</Text>
-              </HStack>
-              <HStack space="sm" alignItems="center" justifyContent="flex-end">
-                <Icon size="xs" as={ArrowUpIcon} />
-                <Text size="xs">{prettySize(diffSize(item.WanOut))}</Text>
+          (diffSize(item.WanIn) !=0 || diffSize(item.WanOut) != 0) ?
+            <HStack space="sm">
+              <DeviceItem flex={1} size="sm" item={context.getDevice(item.ip, 'RecentIP')} />
+              <HStack flex={1} space="xs" justifyContent="flex-end">
+                <HStack space="sm" alignItems="center" justifyContent="flex-end">
+                  <Icon size="xs" as={ArrowDownIcon} />
+                  <Text size="xs">{prettySize(diffSize(item.WanIn))}</Text>
+                </HStack>
+                <HStack space="sm" alignItems="center" justifyContent="flex-end">
+                  <Icon size="xs" as={ArrowUpIcon} />
+                  <Text size="xs">{prettySize(diffSize(item.WanOut))}</Text>
+                </HStack>
               </HStack>
             </HStack>
-          </HStack>
+          :
+          null
         ))}
       </VStack>
     </VStack>
