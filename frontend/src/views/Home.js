@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react'
-import { Box, VStack, ScrollView } from '@gluestack-ui/themed'
+import { Box, VStack, ScrollView, HStack } from '@gluestack-ui/themed'
 import { AppContext } from 'AppContext'
 import { pluginAPI, wifiAPI } from 'api'
 
@@ -13,7 +13,10 @@ import {
   WireguardPeersActive
 } from 'components/Dashboard/WireguardWidgets'
 
-import { TotalTraffic } from 'components/Dashboard/TrafficWidgets'
+import {
+  TotalTraffic,
+  DeviceTraffic
+} from 'components/Dashboard/TrafficWidgets'
 import {
   DNSMetrics,
   DNSBlockMetrics,
@@ -78,7 +81,7 @@ const Home = (props) => {
         p="$4"
         gap="$4"
       >
-        <VStack space="md" sx={{ '@md': { flex: 5 } }}>
+        <VStack space="md" sx={{ '@md': { flex: 7 } }}>
           {show.vpnInfo ? (
             <>
               <WireguardPeers flex={1} />
@@ -104,7 +107,10 @@ const Home = (props) => {
           <VStack space="md">
             {show.traffic ? <TotalTraffic /> : null}
 
-            {/*<Interfaces />*/}
+            <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
+              <DeviceTraffic flex={1} minutes={5} hideEmpty={false} />
+              <DeviceTraffic flex={1} minutes={60} hideEmpty={false} />
+            </VStack>
           </VStack>
         </VStack>
 

@@ -332,7 +332,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     pluginAPI
       .list()
       .then((plugins) => {
-        let pluginsWithUI = plugins.filter((p) => p.UIURL.length) // TODO .HasUI
+        let pluginsWithUI = plugins.filter((p) => p.HasUI)
         let pluginRoutes = pluginsWithUI.map((p) => ({
           layout: 'admin',
           name: p.Name,
@@ -379,7 +379,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
     const redirOnAuthError = (err) => {
       console.error('HTTP auth error for url:', err.response.url)
-      navigate('/auth/login')
+      navigate('/auth/validate')
     }
 
     api.registerErrorHandler(401, redirOnAuthError)

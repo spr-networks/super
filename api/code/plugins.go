@@ -22,6 +22,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+import (
+	"github.com/spr-networks/sprbus"
+)
+
 var PlusUser = "lts-super-plus"
 var PfwGitURL = "github.com/spr-networks/pfw_extension"
 var MeshGitURL = "github.com/spr-networks/mesh_extension"
@@ -37,14 +41,14 @@ type PluginConfig struct {
 	Plus             bool
 	GitURL           string
 	ComposeFilePath  string
-	UIURL            string
+	HasUI            bool
 	InstallTokenPath string
 	ScopedPaths      []string
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
-	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", "", "", []string{}},
-	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", "", "", []string{}},
+	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, "", []string{}},
+	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, "", []string{}},
 }
 
 var gPluginTemplates = []PluginConfig{
@@ -611,6 +615,8 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 		fmt.Println("failed to download extension: "+gitURL, resp.Status)
 		return false
 	}
+
+	sprbus.Publish("plugin:download:success", map[string]string{"GitURL": gitURL})
 
 	if AutoConfig {
 		plugin := PluginConfig{}

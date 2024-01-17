@@ -107,6 +107,7 @@ const WifiClients = (props) => {
         client.Signal = station.signal
         client.Iface = station.Iface
         client.TXRate = station.tx_rate_info
+        client.Flags = station.flags
         client.AP = api.remoteURL.replace('http://', '').replace('/', '')
         return client
       })
@@ -133,11 +134,11 @@ const WifiClients = (props) => {
     if (!txrate) {
       return '802.11'
     }
-    if (txrate.includes(' he')) {
+    if (txrate.includes('[HE]')) {
       return '802.11ax'
-    } else if (txrate.includes('vht')) {
+    } else if (txrate.includes('[VHT]')) {
       return '802.11ac'
-    } else if (txrate.includes('ht')) {
+    } else if (txrate.includes('[HT]')) {
       return '802.11n'
     } else {
       return '802.11a/b/g'
@@ -188,13 +189,13 @@ const WifiClients = (props) => {
                 trigger={(triggerProps) => {
                   return (
                     <Text size="sm" {...triggerProps}>
-                      {getWifiSpeedString(item.TXRate)}
+                      {getWifiSpeedString(item.Flags)}
                     </Text>
                   )
                 }}
               >
                 <TooltipContent>
-                  <TooltipText>{item.TXRate}</TooltipText>
+                  <TooltipText>{item.Flags}</TooltipText>
                 </TooltipContent>
               </Tooltip>
             </HStack>

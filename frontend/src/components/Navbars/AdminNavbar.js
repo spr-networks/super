@@ -46,6 +46,15 @@ const AdminNavbar = ({
     navigate('/')
   }
 
+  const niceVersion = (v) => {
+    //avoid vxyz if running custom/latest tag
+    if (v.match(/^[0-9]/)) {
+      return `v${v}`
+    }
+
+    return v
+  }
+
   return (
     <>
       <HStack
@@ -103,10 +112,9 @@ const AdminNavbar = ({
                 rounded="$2xl"
                 size="md"
               >
-                <BadgeText
-                  color="$muted500"
-                  textTransform="none"
-                >{`v${version}`}</BadgeText>
+                <BadgeText color="$muted500" textTransform="none">
+                  {niceVersion(version)}
+                </BadgeText>
               </Badge>
             </HStack>
           </Pressable>

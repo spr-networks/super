@@ -1,4 +1,4 @@
-import React, {useContext, useEffect, useState} from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { AlertContext } from 'layouts/Admin'
 import {
   Button,
@@ -17,12 +17,12 @@ import {
   Input,
   InputField,
   Text,
-  VStack
+  VStack,
+  Heading
 } from '@gluestack-ui/themed'
 import { wifiAPI, pfwAPI } from 'api'
 import { Select } from 'components/Select'
 import { ListHeader } from 'components/List'
-
 
 const PFWTasks = (props) => {
   const [taskConfig, setTaskConfig] = useState({})
@@ -33,7 +33,7 @@ const PFWTasks = (props) => {
   const [uplinkExpr, setUplinkExpr] = useState('10 Minutes')
 
   const [scanIface, setScanIface] = useState('N/A')
-  const [devSelect, setDevSelect] = useState([{value: '', label: 'N/A'}])
+  const [devSelect, setDevSelect] = useState([{ value: '', label: 'N/A' }])
 
   const [uplinkCheckType, setUplinkCheckType] = useState('')
   const [uplinkCheckAddress, setUplinkCheckAddress] = useState('')
@@ -56,7 +56,7 @@ const PFWTasks = (props) => {
 
         if (config?.UplinkCheck?.Addresses?.length > 0) {
           let addr = config.UplinkCheck.Addresses[0]
-          let pieces = addr.split(":")
+          let pieces = addr.split(':')
           if (pieces.length > 0) {
             setUplinkCheckType(pieces[0])
           }
@@ -68,8 +68,8 @@ const PFWTasks = (props) => {
           }
         }
 
-        setWifiScanEnabled(!(config?.WiFiScan?.Disabled))
-        setUplinkCheckEnabled(!(config?.WiFiScan?.Disabled))
+        setWifiScanEnabled(!config?.WiFiScan?.Disabled)
+        setUplinkCheckEnabled(!config?.WiFiScan?.Disabled)
 
         //back-set the time expressions
         let cron = config?.WiFiScan?.Time?.CronExpr
@@ -99,12 +99,12 @@ const PFWTasks = (props) => {
 
   const getIW = () => {
     wifiAPI.iwDev().then((devs) => {
-      let devS = [{value: '', label: 'N/A'}]
+      let devS = [{ value: '', label: 'N/A' }]
       for (let phy in devs) {
         for (let iface in devs[phy]) {
           let iface_map = devs[phy][iface]
-          if (iface_map.type == "managed") {
-            devS.push({label: iface, value: iface})
+          if (iface_map.type == 'managed') {
+            devS.push({ label: iface, value: iface })
           }
         }
         setDevSelect(devS)
@@ -119,104 +119,119 @@ const PFWTasks = (props) => {
     setTaskConfig(newConfig)
   }
 
-  const toggleUplinkCheck = (v) => {
-
-  }
+  const toggleUplinkCheck = (v) => {}
 
   const submitWiFiTask = () => {
     if (scanIface == '' || scanIface == 'N/A') {
-      context.error("No interface selected")
+      context.error('No interface selected')
       return
     }
-    pfwAPI.
-      saveWifiScanTask({
+    pfwAPI
+      .saveWifiScanTask({
         Disabled: !wifiScanEnabled,
         Interfaces: [scanIface],
         Time: {
           CronExpr: timeMap[scanExpr]
         }
-      }).then((ok) => {
-        context.success("Saved WiFi Scan Task")
-      }).catch((err) => {
-        context.error("Failed to save wifi task", err)
+      })
+      .then((ok) => {
+        context.success('Saved WiFi Scan Task')
+      })
+      .catch((err) => {
+        context.error('Failed to save wifi task', err)
       })
   }
 
   const submitUplinkTask = () => {
     if (uplinkCheckAddress == '') {
-      context.error("No address, need an IP")
+      context.error('No address, need an IP')
       return
     }
 
-    let addr = uplinkCheckType + ":" + uplinkCheckAddress
+    let addr = uplinkCheckType + ':' + uplinkCheckAddress
     if (uplinkCheckType == 'tcp') {
       if (uplinkCheckPort == '') {
-        context.error("No port, need a port for TCP checks")
+        context.error('No port, need a port for TCP checks')
         return
       }
 
-      addr = uplinkCheckType + ":" + uplinkCheckAddress + ":" + uplinkCheckPort
+      addr = uplinkCheckType + ':' + uplinkCheckAddress + ':' + uplinkCheckPort
     }
-    pfwAPI.
-      saveUplinkCheckTask({
+    pfwAPI
+      .saveUplinkCheckTask({
         Disabled: !wifiScanEnabled,
         Addresses: [addr],
         Time: {
           CronExpr: timeMap[scanExpr]
         }
-      }).then((ok) => {
-        context.success("Saved Uplink Check Task")
-      }).catch((err) => {
-        context.error("Failed to save wifi task", err)
+      })
+      .then((ok) => {
+        context.success('Saved Uplink Check Task')
+      })
+      .catch((err) => {
+        context.error('Failed to save wifi task', err)
       })
   }
   const timeMap = {
-    "5 Minutes": "*/5 * * * *",
-    "10 Minutes": "*/10 * * * *",
-    "15 Minutes": "*/15 * * * *",
-    "30 Minutes": "0,30 * * * *",
-    "Hourly": "0 * * * *",
-    "Every 12 Hours": "0 */12 * * *",
-    "Daily": "0 0 * * *"
+    '5 Minutes': '*/5 * * * *',
+    '10 Minutes': '*/10 * * * *',
+    '15 Minutes': '*/15 * * * *',
+    '30 Minutes': '0,30 * * * *',
+    Hourly: '0 * * * *',
+    'Every 12 Hours': '0 */12 * * *',
+    Daily: '0 0 * * *'
   }
 
   const timeOptions = Object.keys(timeMap).map((value) => ({
     label: value,
-    value,
+    value
     //icon: ClockIcon
   }))
 
   return (
-    <VStack space="md">
-      <Text
-        bold
-        size="lg">
-          Schedule periodic tasks that publish "task:" events.
-      </Text>
+    <VStack
+      space="md"
+      p="$4"
+      bg="$backgroundCardLight"
+      sx={{
+        _dark: { bg: '$backgroundCardDark' }
+      }}
+    >
+      <Heading size="md">
+        Schedule periodic tasks that publish "task:" events.
+      </Heading>
 
-      <Text>Scan Wireless APs</Text>
-      <VStack w="$1/2" space="md">
-        <FormControl>
-          <Checkbox
-            size="sm"
-            value={wifiScanEnabled}
-            isChecked={wifiScanEnabled}
-            onChange={toggleWifiScan}
-          >
-            <CheckboxIndicator mr="$2">
-              <CheckboxIcon />
-            </CheckboxIndicator>
-            <CheckboxLabel>Enabled</CheckboxLabel>
-          </Checkbox>
-        </FormControl>
+      <VStack
+        space="4xl"
+        sx={{
+          '@md': { flexDirection: 'row', maxWidth: '$3/4' }
+        }}
+      >
+        <VStack flex={1} space="md">
+          <Text bold>Scan Wireless APs</Text>
+          <FormControl>
+            <Checkbox
+              size="sm"
+              value={wifiScanEnabled}
+              isChecked={wifiScanEnabled}
+              onChange={toggleWifiScan}
+            >
+              <CheckboxIndicator mr="$2">
+                <CheckboxIcon />
+              </CheckboxIndicator>
+              <CheckboxLabel>Enabled</CheckboxLabel>
+            </Checkbox>
+          </FormControl>
 
-        <FormControl flex={1} w="$2/3">
-          <FormControlLabel>
-            <FormControlLabelText>WiFi Interface</FormControlLabelText>
-          </FormControlLabel>
+          <FormControl w="$2/3">
+            <FormControlLabel>
+              <FormControlLabelText>WiFi Interface</FormControlLabelText>
+            </FormControlLabel>
             <Select
               selectedValue={scanIface}
-              onValueChange={(value) => { setScanIface(value) }}
+              onValueChange={(value) => {
+                setScanIface(value)
+              }}
               accessibilityLabel="Wifi Interface"
             >
               {devSelect.map((dev) => (
@@ -227,125 +242,112 @@ const PFWTasks = (props) => {
                 />
               ))}
             </Select>
-        </FormControl>
+          </FormControl>
 
-        <FormControl w="$2/3">
-          <FormControlLabel>
-            <FormControlLabelText>Frequency</FormControlLabelText>
-          </FormControlLabel>
-          <Select
-            selectedValue={scanExpr}
-            onValueChange={(v) => setScanExpr(v)}
-          >
-          {timeOptions.map((dev) => (
-            <Select.Item
-              key={dev.label}
-              label={dev.label}
-              value={dev.value}
-            />
-          ))}
-          </Select>
-        </FormControl>
-
-        <Button w="$2/3" action="primary" onPress={submitWiFiTask}>
-          <ButtonText>Save</ButtonText>
-        </Button>
-      </VStack>
-
-      <Text>Check Connectivity to IP or TCP Destination</Text>
-
-      <VStack w="$1/2" space="md">
-        <FormControl>
-          <Checkbox
-            size="sm"
-            value={taskConfig.UplinkCheck?.Disabled ? false : true}
-            onChange={toggleUplinkCheck}
-            isChecked={taskConfig.UplinkCheck?.Disabled  ? false : true}
-          >
-            <CheckboxIndicator mr="$2">
-              <CheckboxIcon />
-            </CheckboxIndicator>
-            <CheckboxLabel>Enabled</CheckboxLabel>
-          </Checkbox>
-        </FormControl>
-
-        <FormControl w="$2/3">
-          <HStack>
-            <VStack flex={1}>
-              <Select
-                selectedValue={uplinkCheckType}
-                onValueChange={(v) => setUplinkCheckType(v)}
-              >
+          <FormControl w="$2/3">
+            <FormControlLabel>
+              <FormControlLabelText>Frequency</FormControlLabelText>
+            </FormControlLabel>
+            <Select
+              selectedValue={scanExpr}
+              onValueChange={(v) => setScanExpr(v)}
+            >
+              {timeOptions.map((dev) => (
                 <Select.Item
-                  key='ip'
-                  label='ip'
-                  value='ip'
+                  key={dev.label}
+                  label={dev.label}
+                  value={dev.value}
                 />
-                <Select.Item
-                  key='tcp'
-                  label='tcp'
-                  value='tcp'
-                />
-              </Select>
-              <FormControlHelper>
-                <FormControlHelperText>Type</FormControlHelperText>
-              </FormControlHelper>
-            </VStack>
+              ))}
+            </Select>
+          </FormControl>
 
-            <VStack flex={1}>
-              <Input type="text">
-                <InputField
-                  value={uplinkCheckAddress}
-                  onChangeText={(value) =>
-                    setUplinkCheckAddress(value)
-                  }
-                />
-              </Input>
-              <FormControlHelper>
-                <FormControlHelperText>Address</FormControlHelperText>
-              </FormControlHelper>
-            </VStack>
+          <Button action="primary" onPress={submitWiFiTask}>
+            <ButtonText>Save</ButtonText>
+          </Button>
+        </VStack>
 
-            {uplinkCheckType == 'tcp' ?  (
+        <VStack flex={1} space="md">
+          <Text bold>Check Connectivity to IP or TCP Destination</Text>
+          <FormControl>
+            <Checkbox
+              size="sm"
+              value={taskConfig.UplinkCheck?.Disabled ? false : true}
+              onChange={toggleUplinkCheck}
+              isChecked={taskConfig.UplinkCheck?.Disabled ? false : true}
+            >
+              <CheckboxIndicator mr="$2">
+                <CheckboxIcon />
+              </CheckboxIndicator>
+              <CheckboxLabel>Enabled</CheckboxLabel>
+            </Checkbox>
+          </FormControl>
+
+          <FormControl>
+            <HStack space="md">
+              <VStack flex={1}>
+                <Select
+                  selectedValue={uplinkCheckType}
+                  onValueChange={(v) => setUplinkCheckType(v)}
+                >
+                  <Select.Item key="ip" label="ip" value="ip" />
+                  <Select.Item key="tcp" label="tcp" value="tcp" />
+                </Select>
+                <FormControlHelper>
+                  <FormControlHelperText>Type</FormControlHelperText>
+                </FormControlHelper>
+              </VStack>
+
               <VStack flex={1}>
                 <Input type="text">
                   <InputField
-                    value={uplinkCheckPort}
-                    onChangeText={(value) =>
-                      setUplinkCheckPort(value)
-                    }
+                    value={uplinkCheckAddress}
+                    onChangeText={(value) => setUplinkCheckAddress(value)}
                   />
                 </Input>
                 <FormControlHelper>
-                  <FormControlHelperText>Port</FormControlHelperText>
+                  <FormControlHelperText>Address</FormControlHelperText>
                 </FormControlHelper>
               </VStack>
-            ) : null }
-          </HStack>
-        </FormControl>
 
-        <FormControl w="$2/3">
-          <FormControlLabel>
-            <FormControlLabelText>Frequency</FormControlLabelText>
-          </FormControlLabel>
-          <Select
-            selectedValue={uplinkExpr}
-            onValueChange={(v) => setUplinkExpr(v)}
-          >
-          {timeOptions.map((dev) => (
-            <Select.Item
-              key={dev.label}
-              label={dev.label}
-              value={dev.value}
-            />
-          ))}
-          </Select>
-        </FormControl>
+              {uplinkCheckType == 'tcp' ? (
+                <VStack flex={1}>
+                  <Input type="text">
+                    <InputField
+                      value={uplinkCheckPort}
+                      onChangeText={(value) => setUplinkCheckPort(value)}
+                    />
+                  </Input>
+                  <FormControlHelper>
+                    <FormControlHelperText>Port</FormControlHelperText>
+                  </FormControlHelper>
+                </VStack>
+              ) : null}
+            </HStack>
+          </FormControl>
 
-        <Button w="$2/3" action="primary" onPress={submitUplinkTask}>
-          <ButtonText>Save</ButtonText>
-        </Button>
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Frequency</FormControlLabelText>
+            </FormControlLabel>
+            <Select
+              selectedValue={uplinkExpr}
+              onValueChange={(v) => setUplinkExpr(v)}
+            >
+              {timeOptions.map((dev) => (
+                <Select.Item
+                  key={dev.label}
+                  label={dev.label}
+                  value={dev.value}
+                />
+              ))}
+            </Select>
+          </FormControl>
 
+          <Button action="primary" onPress={submitUplinkTask}>
+            <ButtonText>Save</ButtonText>
+          </Button>
+        </VStack>
       </VStack>
     </VStack>
   )
