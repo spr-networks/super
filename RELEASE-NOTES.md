@@ -1,4 +1,12 @@
 # Secure Programmable Router (SPR) Release Notes
+## v0.3.4
+* Support for 6-e channel calculation in API
+* Add decorators to alert templates
+* Plugin UI support
+* Fast Plugin install
+Key Fixes
+* Work around React Gluestack channel selection state errors
+
 ## v0.3.3
 * New Alerts functionality 
 * New Events filters, Events UI Improvements
