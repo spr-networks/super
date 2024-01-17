@@ -732,7 +732,7 @@ func shouldCheckOTPJWT(r *http.Request, username string) bool {
 
 func generateOrGetToken(name string, paths []string) (Token, error) {
 	value := genBearerToken()
-	new_token := Token{"PLUS-API-Token", value, 0, paths}
+	new_token := Token{name, value, 0, paths}
 
 	Tokensmtx.Lock()
 	defer Tokensmtx.Unlock()

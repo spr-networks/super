@@ -275,7 +275,6 @@ func ChanCalc(mode string, channel int, bw int, ht_enabled bool, vht_enabled boo
 		}
 	}
 
-	//fun part, the calculation for 6-e is different.
 
 	if center_channel != 0 {
 		freq2 = base + center_channel*5
