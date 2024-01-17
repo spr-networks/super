@@ -30,92 +30,112 @@ import { ListHeader } from 'components/List'
 import { ListItem } from 'components/List'
 import { BellIcon, BellOffIcon, PencilIcon } from 'lucide-react-native'
 
-const alertTemplates = [
-  {
-    TopicPrefix: 'nft:drop:private',
-    MatchAnyOne: false,
-    InvertRule: false,
-    Conditions: [],
-    Actions: [
-      {
-        SendNotification: true,
-        StoreAlert: true,
-        MessageTitle: 'Firewall Drop private network request (rfc1918)',
-        MessageBody: 'Request from {{IP.SrcIP}} to {{IP.DstIP}}',
-        NotificationType: 'info',
-        GrabEvent: true,
-        GrabValues: false
-      }
-    ],
-    Name: 'drop private',
-    Disabled: false,
-    RuleId: ''
-  },
-  {
-    TopicPrefix: 'nft:drop:mac',
-    MatchAnyOne: false,
-    InvertRule: false,
-    Conditions: [],
-    Actions: [
-      {
-        SendNotification: true,
-        StoreAlert: true,
-        MessageTitle: 'Firewall Drop MAC',
-        MessageBody:
-          'MAC IP Violation {{IP.SrcIP}} {{Ethernet.SrcMAC}} to {{IP.DstIP}} {{Ethernet.DstMAC}}',
-        NotificationType: 'danger',
-        GrabEvent: true,
-        GrabValues: false
-      }
-    ],
-    Name: 'drop mac violation',
-    Disabled: false,
-    RuleId: ''
-  },
-  {
-    TopicPrefix: 'wifi:auth:fail',
-    MatchAnyOne: false,
-    InvertRule: false,
-    Conditions: [],
-    Actions: [
-      {
-        SendNotification: true,
-        StoreAlert: true,
-        MessageTitle: 'WiFi Auth Failure',
-        MessageBody: '{{MAC}} failed wifi auth {{Reason}} with type {{Type}}',
-        NotificationType: 'info',
-        GrabEvent: true,
-        GrabValues: false
-      }
-    ],
-    Name: 'wifi auth failure',
-    Disabled: false,
-    RuleId: '5712aeed-9ab8-45b3-aeed-37085935d9ee'
-  },
-  {
-    TopicPrefix: 'auth:failure',
-    MatchAnyOne: false,
-    InvertRule: false,
-    Conditions: [
-      {
-        JPath: '$[?(@.type=="user")]'
-      }
-    ],
-    Actions: [
-      {
-        SendNotification: true,
-        StoreAlert: true,
-        MessageTitle: 'Login Failure',
-        MessageBody: '{{name}} failed to login with {{reason}}',
-        NotificationType: 'error',
-        GrabEvent: true,
-        GrabValues: false
-      }
-    ],
-    Name: 'user login failure',
-    Disabled: false,
-    RuleId: 'd9586e92-f9c7-44f6-a528-e03e6033d9da'
-  }
+const alertTemplates =
+[
+ {
+  "TopicPrefix": "nft:drop:mac",
+  "MatchAnyOne": false,
+  "InvertRule": false,
+  "Conditions": [],
+  "Actions": [
+   {
+    "SendNotification": true,
+    "StoreAlert": true,
+    "MessageTitle": "MAC Filter Violation",
+    "MessageBody": "MAC IP Violation {{IP.SrcIP#Device}} {{IP.SrcIP}} {{Ethernet.SrcMAC}} to {{IP.DstIP}} {{Ethernet.DstMAC}}",
+    "NotificationType": "info",
+    "GrabEvent": true,
+    "GrabValues": false
+   }
+  ],
+  "Name": "MAC Filter Violation",
+  "Disabled": false,
+  "RuleId": "7f3266dd-7697-44ce-8ddd-36a006043509"
+ },
+ {
+  "TopicPrefix": "auth:failure",
+  "MatchAnyOne": false,
+  "InvertRule": false,
+  "Conditions": [
+   {
+    "JPath": "$[?(@.type==\"user\")]"
+   }
+  ],
+  "Actions": [
+   {
+    "SendNotification": true,
+    "StoreAlert": true,
+    "MessageTitle": "Login Failure",
+    "MessageBody": "{{name}} failed to login with {{reason}}",
+    "NotificationType": "info",
+    "GrabEvent": true,
+    "GrabValues": false
+   }
+  ],
+  "Name": "User Login Failure",
+  "Disabled": false,
+  "RuleId": "ea676ee7-ec68-4a23-aba4-ba69feee4d8c"
+ },
+ {
+  "TopicPrefix": "nft:drop:private",
+  "MatchAnyOne": false,
+  "InvertRule": false,
+  "Conditions": [],
+  "Actions": [
+   {
+    "SendNotification": true,
+    "StoreAlert": true,
+    "MessageTitle": "Firewall Drop Private Network Request (rfc1918)",
+    "MessageBody": "Dropped Traffic from {{IP.SrcIP#Device}} {{IP.SrcIP}} {{InDev#Interface}} to {{IP.DstIP}} {{OutDev#Interface}}",
+    "NotificationType": "info",
+    "GrabEvent": true,
+    "GrabValues": false
+   }
+  ],
+  "Name": "Drop Private Request",
+  "Disabled": false,
+  "RuleId": "2adbec19-6b47-4a99-a499-ab0b8da652a8"
+ },
+ {
+  "TopicPrefix": "wifi:auth:fail",
+  "MatchAnyOne": false,
+  "InvertRule": false,
+  "Conditions": [],
+  "Actions": [
+   {
+    "SendNotification": true,
+    "StoreAlert": true,
+    "MessageTitle": "WiFi Auth Failure",
+    "MessageBody": "{{MAC#Device}} {{MAC}} failed wifi authentication {{Reason}} with type {{Type}}",
+    "NotificationType": "info",
+    "GrabEvent": true,
+    "GrabValues": false
+   }
+  ],
+  "Name": "Wifi Auth Failure",
+  "Disabled": false,
+  "RuleId": "f16e9a58-9f80-455c-a280-211bd8b1fd05"
+ },
+ {
+  "TopicPrefix": "nft:drop:input",
+  "MatchAnyOne": false,
+  "InvertRule": false,
+  "Conditions": [],
+  "Actions": [
+   {
+    "SendNotification": false,
+    "StoreAlert": true,
+    "MessageTitle": "Dropped Input",
+    "MessageBody": "Drop Incoming Traffic to Router from {{IP.SrcIP}} to port {{TCP.DstPort}} {{UDP.DstPort}}",
+    "NotificationType": "info",
+    "GrabEvent": true,
+    "GrabValues": false
+   }
+  ],
+  "Name": "Dropped Input",
+  "Disabled": true,
+  "RuleId": "481822f4-a20c-4cec-92d9-dad032d2c450"
+ }
 ]
 
 const AlertItem = ({
@@ -315,9 +335,9 @@ const AlertSettings = (props) => {
 
   const onDelete = (index) => {
     alertsAPI.remove(index).then((res) => {
-      let _alerts = [...config]
-      delete _alerts[index]
-      setConfig(_alerts)
+      fetchList()
+    }).catch(() => {
+
     })
   }
 
@@ -412,7 +432,7 @@ const AlertSettings = (props) => {
     for (let j = 0; j < alertTemplates.length; j++) {
       let found = false
       for (let i = 0; i < newConfig.length; i++) {
-        if (alertTemplates[j].Name == newConfig[i].Name) {
+        if (alertTemplates[j] && alertTemplates[j].Name == newConfig[i].Name) {
           found = true
           break
         }
