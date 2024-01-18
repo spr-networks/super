@@ -219,7 +219,7 @@ const TrafficList = (props) => {
     <View h="100%" sx={{ '@md': { height: '92vh' } }}>
       <VStack
         bg="$backgroundCardLight"
-        minHeight={180}
+        minHeight={100}
         sx={{
           '@lg': { flexDirection: 'row', minHeight: 60 },
           _dark: { bg: '$backgroundCardDark' }
