@@ -194,7 +194,6 @@ const TrafficList = (props) => {
   //init
   useEffect(() => {
     let { ips } = params
-    console.log('ips::', ips)
     if (ips != ':ips') {
       ips = ips.split(',')
       setFilterIps(ips)
