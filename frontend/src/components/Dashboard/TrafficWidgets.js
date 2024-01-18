@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import StatsChartWidget from './StatsChartWidget'
 import StatsWidget from './StatsWidget'
 import { AppContext } from 'AppContext'
@@ -10,6 +11,7 @@ import {
   Heading,
   HStack,
   Icon,
+  Pressable,
   Text,
   useColorMode,
   VStack
@@ -79,9 +81,11 @@ export const TotalTraffic = (props) => {
   )
 }
 
-export const DeviceTraffic = ({ minutes, hideEmpty, ...props }) => {
+export const DeviceTraffic = ({ minutes, showEmpty, ...props }) => {
   const context = useContext(AppContext)
   const [total, setTotal] = useState([])
+  const navigate = useNavigate()
+
   let windowMinutes = minutes || 60
 
   const fetchData = () => {
@@ -114,7 +118,7 @@ export const DeviceTraffic = ({ minutes, hideEmpty, ...props }) => {
 
         let totalWithData = Object.values(total)
 
-        if (hideEmpty === true) {
+        if (!showEmpty) {
           totalWithData = totalWithData.filter((v) => {
             return diffSize(v.WanIn) && diffSize(v.WanOut)
           })
@@ -160,22 +164,27 @@ export const DeviceTraffic = ({ minutes, hideEmpty, ...props }) => {
       </Heading>
       <VStack space="md">
         {total.map((item) => (
-          (diffSize(item.WanIn) !=0 || diffSize(item.WanOut) != 0) ?
-            <HStack space="sm">
-              <DeviceItem flex={1} size="sm" item={context.getDevice(item.ip, 'RecentIP')} />
-              <HStack flex={1} space="xs" justifyContent="flex-end">
-                <HStack space="sm" alignItems="center" justifyContent="flex-end">
-                  <Icon size="xs" as={ArrowDownIcon} />
-                  <Text size="xs">{prettySize(diffSize(item.WanIn))}</Text>
-                </HStack>
-                <HStack space="sm" alignItems="center" justifyContent="flex-end">
-                  <Icon size="xs" as={ArrowUpIcon} />
-                  <Text size="xs">{prettySize(diffSize(item.WanOut))}</Text>
-                </HStack>
+          <HStack space="sm">
+            <Pressable
+              onPress={() => navigate(`/admin/trafficlist/${item.ip}`)}
+            >
+              <DeviceItem
+                flex={1}
+                size="sm"
+                item={context.getDevice(item.ip, 'RecentIP')}
+              />
+            </Pressable>
+            <HStack flex={1} space="xs" justifyContent="flex-end">
+              <HStack space="sm" alignItems="center" justifyContent="flex-end">
+                <Icon size="xs" as={ArrowDownIcon} />
+                <Text size="xs">{prettySize(diffSize(item.WanIn))}</Text>
+              </HStack>
+              <HStack space="sm" alignItems="center" justifyContent="flex-end">
+                <Icon size="xs" as={ArrowUpIcon} />
+                <Text size="xs">{prettySize(diffSize(item.WanOut))}</Text>
               </HStack>
             </HStack>
-          :
-          null
+          </HStack>
         ))}
       </VStack>
     </VStack>
