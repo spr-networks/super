@@ -7,6 +7,7 @@ export class APIGroup extends API {
 
   list() { return this.get('/groups') }
   groups() { return this.get('/groups').then((res) => res.map((g) => g.Name)) }
+  deleteGroup(name) { return this.delete('/groups', {Name: name})}
 }
 
 export const groupDescriptions = {

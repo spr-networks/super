@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import { ScrollView, VStack } from '@gluestack-ui/themed'
 
-import { wifiAPI, deviceAPI, nfmapAPI } from 'api'
+import { wifiAPI, deviceAPI, nfmapAPI, groupAPI } from 'api'
 import GroupListing from 'components/Groups/GroupListing'
 import { AlertContext } from 'layouts/Admin'
 
@@ -78,6 +78,14 @@ export default class Dhcp extends Component {
     }
 
     refreshList()
+  }
+
+  deleteGroup(name) {
+    groupAPI.deleteGroup(name).then(() => {
+      refreshGroups()
+    }).catch((err) => {
+      this.context.error('API Failure, failed to delete group ' + err.message)
+    })
   }
 
   render() {

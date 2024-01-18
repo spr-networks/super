@@ -7,8 +7,11 @@ import {
   BadgeIcon,
   BadgeText,
   Box,
+  Button,
+  ButtonIcon,
   FlatList,
   HStack,
+  TrashIcon,
   Text,
   VStack,
   useColorMode
@@ -67,7 +70,7 @@ const getGroupMembers = (group) => {
   })
 }
 
-const GroupListing = ({ group, ...props }) => {
+const GroupListing = ({ group, deleteGroup, ...props }) => {
   const appContext = useContext(AppContext)
   const translateName = (name) => {
     if (name === 'dns') {
@@ -81,35 +84,49 @@ const GroupListing = ({ group, ...props }) => {
   }
 
   const list = getGroupMembers(group)
-  return (
-    <FlatList
-      ListHeaderComponent={
-        <ListHeader
-          title={translateName(group.Name)}
-          description={groupDescriptions[group.Name] || ''}
-        />
-      }
-      data={list}
-      estimatedItemSize={100}
-      renderItem={({ item }) => (
-        <ListItem>
-          <DeviceItem
-            item={appContext.getDevice(item.MAC, 'MAC')}
-            sx={{ '@md': { width: '$1/2' } }}
-            justifyContent="space-between"
-          />
 
-          <HStack justifyContent="flex-end">
-            <InterfaceItem name={item?.ifname} />
-          </HStack>
-        </ListItem>
-      )}
-    />
+  return (
+    <HStack>
+      <FlatList
+        ListHeaderComponent={
+          <ListHeader
+            title={translateName(group.Name)}
+            description={groupDescriptions[group.Name] || ''}
+          />
+        }
+        data={list}
+        estimatedItemSize={100}
+        renderItem={({ item }) => (
+          <ListItem>
+            <DeviceItem
+              item={appContext.getDevice(item.MAC, 'MAC')}
+              sx={{ '@md': { width: '$1/2' } }}
+              justifyContent="space-between"
+            />
+
+            <HStack justifyContent="flex-end">
+              <InterfaceItem name={item?.ifname} />
+            </HStack>
+          </ListItem>
+        )}
+      />
+      {deleteGroup && list.length == 0 ? (
+        <Button
+          action="danger"
+          variant="link"
+          size="sm"
+          onPress={() => deleteGroup(group.Name)}
+        >
+          <ButtonIcon as={TrashIcon} color="$red700" />
+        </Button>
+      ) : null}
+    </HStack>
   )
 }
 
 GroupListing.propTypes = {
-  group: PropTypes.object
+  group: PropTypes.object,
+  deleteGroup: PropTypes.func
 }
 
 export default GroupListing
