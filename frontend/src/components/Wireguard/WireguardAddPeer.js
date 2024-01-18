@@ -34,7 +34,7 @@ export default class WireguardAddPeer extends React.Component {
     AllowedIPs: '',
     PrivateKey: '',
     PublicKey: '',
-    Endpoint: '',
+    Endpoint: `${this.props.defaultEndpoints?.[0]}:${this.props.config.listenPort || 1024 }` ,
     addrs: [],
     config: null,
     groups: ['dns', 'wan'],
@@ -211,6 +211,7 @@ export default class WireguardAddPeer extends React.Component {
       return <WireguardConfig config={this.state.config} />
     }
 
+
     let endpoints = this.state.addrs.map((addr) => {
       let listenPort = this.props.config.listenPort || 1024 //51280
       return {
@@ -265,7 +266,7 @@ export default class WireguardAddPeer extends React.Component {
 
           <InputSelect
             options={endpoints}
-            value={this.state.endpoint}
+            value={this.state.Endpoint}
             onChange={this.handleChangeEndpoint}
             onChangeText={this.handleChangeEndpoint}
           />
