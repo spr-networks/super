@@ -297,7 +297,7 @@ const routes = [
         layout: 'admin'
       },
       {
-        path: 'trafficlist',
+        path: 'trafficlist/:ips',
         name: 'Traffic',
         icon: BarChartHorizontalIcon,
         component: TrafficList,
