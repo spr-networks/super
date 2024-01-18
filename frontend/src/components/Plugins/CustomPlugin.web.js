@@ -65,17 +65,30 @@ const CustomPlugin = ({ ...props }) => {
 
   const ref = React.useRef(null)
 
-  const sandbox = 'allow-scripts allow-same-origin'
+  //in the future, we will also support a more restricted plugin
+  //without access to login credentials.
+  if (props.isSandboxed === true) {
+    const sandbox = 'allow-scripts'
+    return React.createElement('iframe', {
+      src,
+      srcDoc,
+      ref,
+      width,
+      height,
+      style: { borderWidth: 0 },
+      sandbox
+    })
+  } else {
+    return React.createElement('iframe', {
+      src,
+      srcDoc,
+      ref,
+      width,
+      height,
+      style: { borderWidth: 0 },
+    })
+  }
 
-  return React.createElement('iframe', {
-    src,
-    srcDoc,
-    ref,
-    width,
-    height,
-    style: { borderWidth: 0 },
-    sandbox
-  })
 }
 
 CustomPlugin.propTypes = {

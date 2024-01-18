@@ -64,7 +64,7 @@ const PluginFrame = ({ name, ...props }) => {
     fetchHTML()
   }, [name])
 
-  return <CustomPlugin srcDoc={srcDoc} />
+  return <CustomPlugin srcDoc={srcDoc} isSandboxed={props.isSandboxed}/>
 }
 
 const CustomPluginForm = () => {
@@ -197,7 +197,7 @@ const CustomPluginView = ({ ...props }) => {
     page = (
       <VStack space="md" p="$4" h="$full">
         <Heading size="md">{name}</Heading>
-        <PluginFrame name={name} />
+        <PluginFrame name={name} isSandboxed={props.isSandboxed} />
       </VStack>
     )
   }

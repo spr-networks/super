@@ -333,7 +333,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           name: p.Name,
           path: `custom_plugin/${encodeURIComponent(p.URI)}`,
           icon: PuzzleIcon,
-          Component: CustomPluginView
+          Component: CustomPluginView,
+          isSandboxed: p.SandboxedUI
         }))
 
         let routesNav = {
