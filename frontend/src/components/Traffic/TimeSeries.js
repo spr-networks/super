@@ -16,8 +16,8 @@ import { ListHeader } from 'components/List'
 
 const TimeSeries = (props) => {
   const [filterIPs, setFilterIPs] = useState([])
-  const [offset, setOffset] = useState('All Time')
-  const [chartMode, setChartMode] = useState(props.chartMode || 'data')
+  const [offset, setOffset] = useState(props.scale || 'All Time')
+  const [chartMode, setChartMode] = useState(props.chartMode || 'percent')
 
   const handleChangeTime = (value) => {
     setOffset(value)
@@ -94,6 +94,7 @@ TimeSeries.propTypes = {
   type: PropTypes.string.isRequired,
   title: PropTypes.string,
   chartMode: PropTypes.string,
+  data: PropTypes.object,
   handleChangeTime: PropTypes.func
 }
 
