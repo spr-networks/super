@@ -164,7 +164,7 @@ export const DeviceTraffic = ({ minutes, showEmpty, ...props }) => {
       </Heading>
       <VStack space="md">
         {total.map((item) => (
-          <HStack space="sm">
+          <HStack space="sm" key={item.ip}>
             <Pressable
               onPress={() => navigate(`/admin/trafficlist/${item.ip}`)}
             >
