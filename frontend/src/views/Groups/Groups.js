@@ -71,11 +71,14 @@ export default (props) => {
   }
 
   const deleteGroup = (name) => {
-    groupAPI.deleteGroup(name).then(() => {
-      refreshGroups()
-    }).catch((err) => {
-      context.error('API Failure, failed to delete group ' + err.message)
-    })
+    groupAPI
+      .deleteGroup(name)
+      .then(() => {
+        refreshGroups()
+      })
+      .catch((err) => {
+        context.error('API Failure, failed to delete group ' + err.message)
+      })
   }
 
   useEffect(() => {
@@ -106,7 +109,9 @@ export default (props) => {
     label: group.Name,
     description: groupDescriptions[group.Name] || '',
     icon: groupIcons[group.Name] || GlobeIcon,
-    renderItem: () => <GroupListing key={group.Name} group={group} deleteGroup={deleteGroup}/>
+    renderItem: () => (
+      <GroupListing key={group.Name} group={group} deleteGroup={deleteGroup} />
+    )
   }))
   let open = ['wan']
 

@@ -9,6 +9,7 @@ import {
   Box,
   Button,
   ButtonIcon,
+  ButtonText,
   FlatList,
   HStack,
   TrashIcon,
@@ -86,41 +87,41 @@ const GroupListing = ({ group, deleteGroup, ...props }) => {
   const list = getGroupMembers(group)
 
   return (
-    <HStack>
-      <FlatList
-        ListHeaderComponent={
-          <ListHeader
-            title={translateName(group.Name)}
-            description={groupDescriptions[group.Name] || ''}
-          />
-        }
-        data={list}
-        estimatedItemSize={100}
-        renderItem={({ item }) => (
-          <ListItem>
-            <DeviceItem
-              item={appContext.getDevice(item.MAC, 'MAC')}
-              sx={{ '@md': { width: '$1/2' } }}
-              justifyContent="space-between"
-            />
-
-            <HStack justifyContent="flex-end">
-              <InterfaceItem name={item?.ifname} />
-            </HStack>
-          </ListItem>
-        )}
-      />
-      {deleteGroup && list.length == 0 ? (
-        <Button
-          action="danger"
-          variant="link"
-          size="sm"
-          onPress={() => deleteGroup(group.Name)}
+    <FlatList
+      ListHeaderComponent={
+        <ListHeader
+          title={translateName(group.Name)}
+          description={groupDescriptions[group.Name] || ''}
         >
-          <ButtonIcon as={TrashIcon} color="$red700" />
-        </Button>
-      ) : null}
-    </HStack>
+          {deleteGroup && list.length == 0 ? (
+            <Button
+              action="negative"
+              variant="solid"
+              size="sm"
+              onPress={() => deleteGroup(group.Name)}
+            >
+              <ButtonText>Delete</ButtonText>
+              <ButtonIcon as={TrashIcon} ml="$2" />
+            </Button>
+          ) : null}
+        </ListHeader>
+      }
+      data={list}
+      estimatedItemSize={100}
+      renderItem={({ item }) => (
+        <ListItem>
+          <DeviceItem
+            item={appContext.getDevice(item.MAC, 'MAC')}
+            sx={{ '@md': { width: '$1/2' } }}
+            justifyContent="space-between"
+          />
+
+          <HStack justifyContent="flex-end">
+            <InterfaceItem name={item?.ifname} />
+          </HStack>
+        </ListItem>
+      )}
+    />
   )
 }
 
