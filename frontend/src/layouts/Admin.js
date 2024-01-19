@@ -196,7 +196,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
   //setup alert context
   alertState.alert = (type = 'info', title, body = null) => {
-
     if (!body) {
       body = title
       title = ucFirst(type)
@@ -593,7 +592,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     }
   }
 
-
   return (
     <AppContext.Provider
       value={{
@@ -615,7 +613,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         setViewSettings
       }}
     >
-      <WebSocketComponent notify={doNotify} confirm={doConfirm}  />
+      <WebSocketComponent notify={doNotify} confirm={doConfirm} />
       <SafeAreaView
         style={{
           backgroundColor
