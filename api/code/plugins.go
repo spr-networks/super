@@ -539,13 +539,24 @@ type GitOptions struct {
 }
 
 func superdRequest(pathname string, params url.Values, body io.Reader) ([]byte, error) {
+	data, statusCode, err := superdRequestMethod(http.MethodPut, pathname, params, body)
+
+	if statusCode != http.StatusOK {
+		fmt.Println("superd call failed for ", pathname, "params=", params, ". status=", statusCode)
+		return data, errors.New("Got invalid status code from superd")
+	}
+
+	return data, err
+}
+
+func superdRequestMethod(method string, pathname string, params url.Values, body io.Reader) ([]byte, int, error) {
 	u := url.URL{Scheme: "http", Host: "localhost"}
 	u.Path = pathname
 	u.RawQuery = params.Encode()
 
-	req, err := http.NewRequest(http.MethodPut, u.String(), body)
+	req, err := http.NewRequest(method, u.String(), body)
 	if err != nil {
-		return nil, err
+		return nil, -1, err
 	}
 
 	c := getSuperdClient()
@@ -554,21 +565,16 @@ func superdRequest(pathname string, params url.Values, body io.Reader) ([]byte, 
 	resp, err := c.Do(req)
 	if err != nil {
 		fmt.Println("superd request failed", err)
-		return nil, err
+		return nil, -1, err
 	}
 
 	defer resp.Body.Close()
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, resp.StatusCode, err
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("superd call failed for ", pathname, "params=", params, ". status=", resp.StatusCode)
-		return data, errors.New("Got invalid status code from superd")
-	}
-
-	return data, nil
+	return data, resp.StatusCode, err
 }
 
 func ghcrSuperdLogin() bool {
@@ -618,6 +624,15 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 
 	creds := GitOptions{user, secret, Plus, AutoConfig}
 	jsonValue, _ := json.Marshal(creds)
+
+	if AutoConfig {
+		//check if the directory already exists and make an event
+		_, statusCode, _ := superdRequestMethod(http.MethodGet, params, nil)
+		if statusCode == 200 {
+			sprbus.Publish("plugin:download:exists", map[string]string{"GitURL": gitURL, "Reason": "exists"})
+		}
+	}
+
 
 	data, err := superdRequest("update_git", params, bytes.NewBuffer(jsonValue))
 	if err != nil {
