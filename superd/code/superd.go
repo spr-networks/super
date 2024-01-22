@@ -286,8 +286,7 @@ func stop(w http.ResponseWriter, r *http.Request) {
 	go composeCommand(compose, target, "stop", "", false)
 }
 
-// NOTE only for user plugins
-func remove(w http.ResponseWriter, r *http.Request) {
+func removeUserContainer(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
 
@@ -296,12 +295,36 @@ func remove(w http.ResponseWriter, r *http.Request) {
 	isUserPlugin := regexp.MustCompile(`^plugins/user/[A-Za-z0-9\-]+$`).MatchString
 	if isUserPlugin(dirName) {
 		go func() {
-			fmt.Println("Removing container and dir for user plugin:" + dirName)
+			fmt.Println("Removing container for user plugin:" + dirName)
 			composeCommand(compose, target, "rm", "-fs", false)
-
-			os.RemoveAll(dirName)
 		}()
 	}
+}
+
+func userPluginExists(w http.ResponseWriter, r *http.Request) {
+	filePath := r.URL.Query().Get("name")
+
+	// if user plugin, remove container, image and dir
+	dirName := filepath.Dir(filePath)
+	isUserPlugin := regexp.MustCompile(`^plugins/user/[A-Za-z0-9\-]+$`).MatchString
+
+	if !isUserPlugin(dirName) {
+		http.Error(w, "Not a user plugin", 400)
+	}
+
+	_, err := os.Stat(dirName)
+	if err == nil {
+		//200
+		return
+	} else {
+		if os.IsNotExist(err) {
+			http.Error(w, "Not found", 404)
+		}
+	}
+
+	//error
+	http.Error(w, "Failed to check status "+err.Error(), 400)
+	return
 }
 
 func build(w http.ResponseWriter, r *http.Request) {
@@ -905,8 +928,9 @@ func main() {
 	unix_plugin_router.HandleFunc("/start", start).Methods("PUT")
 	unix_plugin_router.HandleFunc("/update", update).Methods("PUT")
 	unix_plugin_router.HandleFunc("/stop", stop).Methods("PUT")
-	unix_plugin_router.HandleFunc("/remove", remove).Methods("PUT")
+	unix_plugin_router.HandleFunc("/remove", removeUserContainer).Methods("PUT")
 	unix_plugin_router.HandleFunc("/build", build).Methods("PUT")
+	unix_plugin_router.HandleFunc("/user_plugin_exists", userPluginExists).Methods("GET")
 
 	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("PUT")
 	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("PUT")
