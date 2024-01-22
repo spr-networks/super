@@ -627,12 +627,11 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 
 	if AutoConfig {
 		//check if the directory already exists and make an event
-		_, statusCode, _ := superdRequestMethod(http.MethodGet, params, nil)
+		_, statusCode, _ := superdRequestMethod(http.MethodGet, "user_plugin_exists", params, nil)
 		if statusCode == 200 {
 			sprbus.Publish("plugin:download:exists", map[string]string{"GitURL": gitURL, "Reason": "exists"})
 		}
 	}
-
 
 	data, err := superdRequest("update_git", params, bytes.NewBuffer(jsonValue))
 	if err != nil {
@@ -760,7 +759,7 @@ func stopExtension(composeFilePath string) bool {
 	return true
 }
 
-// remove from fs
+// remove container from docker
 func removeExtension(composeFilePath string) bool {
 	fmt.Println("!! removing plugin=", composeFilePath)
 
