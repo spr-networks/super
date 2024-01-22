@@ -42,6 +42,7 @@ type PluginConfig struct {
 	GitURL           string
 	ComposeFilePath  string
 	HasUI            bool
+	SandboxedUI      bool
 	InstallTokenPath string
 	ScopedPaths      []string
 }
