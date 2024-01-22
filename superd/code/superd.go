@@ -298,8 +298,6 @@ func remove(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			fmt.Println("Removing container and dir for user plugin:" + dirName)
 			composeCommand(compose, target, "rm", "-fs", false)
-
-			os.RemoveAll(dirName)
 		}()
 	}
 }
@@ -906,7 +904,7 @@ func main() {
 	unix_plugin_router.HandleFunc("/update", update).Methods("PUT")
 	unix_plugin_router.HandleFunc("/stop", stop).Methods("PUT")
 	unix_plugin_router.HandleFunc("/remove", remove).Methods("PUT")
-	unix_plugin_router.HandleFunc("/build", build).Methods("PUT")
+	//unix_plugin_router.HandleFunc("/build", build).Methods("PUT")
 
 	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("PUT")
 	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("PUT")
