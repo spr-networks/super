@@ -49,8 +49,8 @@ type PluginConfig struct {
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
-	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, "", []string{}},
-	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, "", []string{}},
+	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, "", []string{}},
+	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, false, "", []string{}},
 }
 
 var gPluginTemplates = []PluginConfig{
@@ -538,7 +538,6 @@ type GitOptions struct {
 	AutoConfig bool
 }
 
-// PUT request to superd
 func superdRequest(pathname string, params url.Values, body io.Reader) ([]byte, error) {
 	u := url.URL{Scheme: "http", Host: "localhost"}
 	u.Path = pathname
@@ -622,6 +621,7 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 
 	data, err := superdRequest("update_git", params, bytes.NewBuffer(jsonValue))
 	if err != nil {
+		sprbus.Publish("plugin:download:failure", map[string]string{"GitURL": gitURL, "Reason": err.Error()})
 		return false
 	}
 
