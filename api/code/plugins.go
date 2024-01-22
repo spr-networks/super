@@ -629,7 +629,7 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 		//check if the directory already exists and make an event
 		_, statusCode, _ := superdRequestMethod(http.MethodGet, "user_plugin_exists", params, nil)
 		if statusCode == 200 {
-			sprbus.Publish("plugin:download:exists", map[string]string{"GitURL": gitURL, "Reason": "exists"})
+			sprbus.Publish("plugin:download:exists", map[string]string{"GitURL": gitURL})
 		}
 	}
 
