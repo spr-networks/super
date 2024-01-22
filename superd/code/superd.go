@@ -286,6 +286,31 @@ func stop(w http.ResponseWriter, r *http.Request) {
 	go composeCommand(compose, target, "stop", "", false)
 }
 
+// NOTE only for user plugins
+func remove(w http.ResponseWriter, r *http.Request) {
+	target := r.URL.Query().Get("service")
+	compose := r.URL.Query().Get("compose_file")
+
+	// if user plugin, remove container, image and dir
+	dirName := filepath.Dir(compose)
+	isUserPlugin := regexp.MustCompile(`^plugins/user/[A-Za-z0-9\-]+$`).MatchString
+	if isUserPlugin(dirName) {
+		go func() {
+			fmt.Println("Removing container and dir for user plugin:" + dirName)
+			composeCommand(compose, target, "rm", "-fs", false)
+
+			os.RemoveAll(dirName)
+		}()
+	}
+}
+
+func build(w http.ResponseWriter, r *http.Request) {
+	target := r.URL.Query().Get("service")
+	compose := r.URL.Query().Get("compose_file")
+	opt := "--no-cache" // force rebuild
+	go composeCommand(compose, target, "build", opt, false)
+}
+
 func restart(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
@@ -880,6 +905,8 @@ func main() {
 	unix_plugin_router.HandleFunc("/start", start).Methods("PUT")
 	unix_plugin_router.HandleFunc("/update", update).Methods("PUT")
 	unix_plugin_router.HandleFunc("/stop", stop).Methods("PUT")
+	unix_plugin_router.HandleFunc("/remove", remove).Methods("PUT")
+	unix_plugin_router.HandleFunc("/build", build).Methods("PUT")
 
 	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("PUT")
 	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("PUT")

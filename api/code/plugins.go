@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -258,6 +259,13 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 
 					// plugin was deleted, stop it
 					stopExtension(entry.ComposeFilePath)
+					// also remove if its a custom plugin
+					dirName := filepath.Dir(entry.ComposeFilePath)
+					isUserPlugin := regexp.MustCompile(`^plugins/user/[A-Za-z0-9\-]+$`).MatchString
+					if isUserPlugin(dirName) {
+						removeExtension(entry.ComposeFilePath)
+					}
+
 					break
 				}
 			}
@@ -530,17 +538,15 @@ type GitOptions struct {
 	AutoConfig bool
 }
 
-func ghcrSuperdLogin() bool {
-	if config.PlusToken == "" {
-		return false
-	}
+// PUT request to superd
+func superdRequest(pathname string, params url.Values, body io.Reader) ([]byte, error) {
+	u := url.URL{Scheme: "http", Host: "localhost"}
+	u.Path = pathname
+	u.RawQuery = params.Encode()
 
-	creds := GitOptions{PlusUser, config.PlusToken, true, false}
-	jsonValue, _ := json.Marshal(creds)
-
-	req, err := http.NewRequest(http.MethodPut, "http://localhost/ghcr_auth", bytes.NewBuffer(jsonValue))
+	req, err := http.NewRequest(http.MethodPut, u.String(), body)
 	if err != nil {
-		return false
+		return nil, err
 	}
 
 	c := getSuperdClient()
@@ -549,14 +555,33 @@ func ghcrSuperdLogin() bool {
 	resp, err := c.Do(req)
 	if err != nil {
 		fmt.Println("superd request failed", err)
-		return false
+		return nil, err
 	}
 
 	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("ghcr login failed", resp.StatusCode)
+		fmt.Println("superd call failed for ", pathname, "params=", params, ". status=", resp.StatusCode)
+		return data, errors.New("Got invalid status code from superd")
+	}
+
+	return data, nil
+}
+
+func ghcrSuperdLogin() bool {
+	if config.PlusToken == "" {
+		return false
+	}
+
+	creds := GitOptions{PlusUser, config.PlusToken, true, false}
+	jsonValue, _ := json.Marshal(creds)
+
+	_, err := superdRequest("ghcr_auth", url.Values{}, bytes.NewBuffer(jsonValue))
+	if err != nil {
 		return false
 	}
 
@@ -595,25 +620,8 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 	creds := GitOptions{user, secret, Plus, AutoConfig}
 	jsonValue, _ := json.Marshal(creds)
 
-	req, err := http.NewRequest(http.MethodPut, "http://localhost/update_git?"+params.Encode(), bytes.NewBuffer(jsonValue))
+	data, err := superdRequest("update_git", params, bytes.NewBuffer(jsonValue))
 	if err != nil {
-		return false
-	}
-
-	c := getSuperdClient()
-	defer c.CloseIdleConnections()
-
-	resp, err := c.Do(req)
-	if err != nil {
-		fmt.Println("superd request failed", err)
-		return false
-	}
-
-	defer resp.Body.Close()
-	data, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("failed to download extension: "+gitURL, resp.Status)
 		return false
 	}
 
@@ -647,28 +655,9 @@ func startExtension(composeFilePath string) bool {
 		//no-op
 		return true
 	}
-	params := url.Values{}
-	params.Set("compose_file", composeFilePath)
 
-	req, err := http.NewRequest(http.MethodPut, "http://localhost/start?"+params.Encode(), nil)
+	_, err := superdRequest("start", url.Values{"compose_file": {composeFilePath}}, nil)
 	if err != nil {
-		return false
-	}
-
-	c := getSuperdClient()
-	defer c.CloseIdleConnections()
-
-	resp, err := c.Do(req)
-	if err != nil {
-		fmt.Println("superd request failed", err)
-		return false
-	}
-
-	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("failed to start "+composeFilePath+"  extension", resp.StatusCode)
 		return false
 	}
 
@@ -676,28 +665,8 @@ func startExtension(composeFilePath string) bool {
 }
 
 func updateExtension(composeFilePath string) bool {
-	params := url.Values{}
-	params.Set("compose_file", composeFilePath)
-
-	req, err := http.NewRequest(http.MethodPut, "http://localhost/update?"+params.Encode(), nil)
+	_, err := superdRequest("update", url.Values{"compose_file": {composeFilePath}}, nil)
 	if err != nil {
-		return false
-	}
-
-	c := getSuperdClient()
-	defer c.CloseIdleConnections()
-
-	resp, err := c.Do(req)
-	if err != nil {
-		fmt.Println("superd request failed", err)
-		return false
-	}
-
-	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("failed to update pfw extension", resp.StatusCode)
 		return false
 	}
 
@@ -761,7 +730,6 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 }
 
 func stopExtension(composeFilePath string) bool {
-
 	if composeFilePath == "" {
 		//if theres no custom compose path,
 		// this is a built-in plugin in the superd compose file
@@ -769,28 +737,24 @@ func stopExtension(composeFilePath string) bool {
 		return true
 	}
 
-	params := url.Values{}
-	params.Set("compose_file", composeFilePath)
-
-	req, err := http.NewRequest(http.MethodPut, "http://localhost/stop?"+params.Encode(), nil)
+	_, err := superdRequest("stop", url.Values{"compose_file": {composeFilePath}}, nil)
 	if err != nil {
 		return false
 	}
 
-	c := getSuperdClient()
-	defer c.CloseIdleConnections()
+	return true
+}
 
-	resp, err := c.Do(req)
-	if err != nil {
-		fmt.Println("superd request failed", err)
-		return false
+// remove from fs
+func removeExtension(composeFilePath string) bool {
+	fmt.Println("!! removing plugin=", composeFilePath)
+
+	if composeFilePath == "" {
+		return true
 	}
 
-	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("failed to stop "+composeFilePath+" extension", resp.StatusCode)
+	_, err := superdRequest("remove", url.Values{"compose_file": {composeFilePath}}, nil)
+	if err != nil {
 		return false
 	}
 
