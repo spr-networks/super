@@ -302,15 +302,11 @@ func removeUserContainer(w http.ResponseWriter, r *http.Request) {
 }
 
 func userPluginExists(w http.ResponseWriter, r *http.Request) {
-	filePath := r.URL.Query().Get("name")
+	git_url := r.URL.Query().Get("git_url")
 
-	// if user plugin, remove container, image and dir
-	dirName := filepath.Dir(filePath)
-	isUserPlugin := regexp.MustCompile(`^plugins/user/[A-Za-z0-9\-]+$`).MatchString
-
-	if !isUserPlugin(dirName) {
-		http.Error(w, "Not a user plugin", 400)
-	}
+	baseName := filepath.Base(git_url)
+	pluginName := strings.TrimSuffix(baseName, ".git")
+	dirName := filepath.Join("/super", "plugins", "user", pluginName)
 
 	_, err := os.Stat(dirName)
 	if err == nil {
