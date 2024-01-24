@@ -2269,6 +2269,18 @@ func getWifiPeers() map[string]string {
 	interfacesConfig := loadInterfacesConfigLocked()
 	Interfacesmtx.Unlock()
 
+	is_setup := isSetupMode()
+	setup_ap := "wlan0"
+	//in setup mode, allow "wlan0" without a vlan_id
+	if is_setup {
+		wifi_peers, err := RunHostapdAllStations(setup_ap)
+		if err == nil {
+			for k, _ := range wifi_peers {
+				peers[k] = setup_ap
+			}
+		}
+	}
+
 	for _, entry := range interfacesConfig {
 		if entry.Enabled == true && entry.Type == "AP" {
 			wifi_peers, err := RunHostapdAllStations(entry.Name)
