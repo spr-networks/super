@@ -14,7 +14,15 @@ import {
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Sidebar from 'components/Sidebar/Sidebar'
 import WebSocketComponent from 'api/WebSocket'
-import { api, deviceAPI, meshAPI, pfwAPI, pluginAPI, wifiAPI } from 'api'
+import {
+  api,
+  deviceAPI,
+  meshAPI,
+  pfwAPI,
+  pluginAPI,
+  wifiAPI,
+  setAuthReturn
+} from 'api'
 import { ucFirst } from 'utils'
 
 import {
@@ -56,6 +64,8 @@ import CustomPluginView from 'views/CustomPlugin'
 
 import { routes as allRoutes } from 'routes'
 import { PuzzleIcon } from 'lucide-react-native'
+
+import { KeyboardAvoidingView } from '@gluestack-ui/themed'
 
 const ConfirmTrafficAlert = (props) => {
   const { type, title, body, showAlert, onClose } = props
@@ -336,13 +346,15 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           isSandboxed: p.SandboxedUI
         }))
 
-        let routesNav = {
-          name: 'Custom Plugins',
-          state: 'customPluginsCollape',
-          views: pluginRoutes
-        }
+        if (pluginRoutes.length) {
+          let routesNav = {
+            name: 'Custom Plugins',
+            state: 'customPluginsCollape',
+            views: pluginRoutes
+          }
 
-        setRoutes([...routes, routesNav])
+          setRoutes([...routes, routesNav])
+        }
       })
       .catch((err) => {})
   }
@@ -374,6 +386,10 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
     const redirOnAuthError = (err) => {
       console.error('HTTP auth error for url:', err.response.url)
+
+      let pathname = location.pathname
+      setAuthReturn(pathname)
+
       navigate('/auth/validate')
     }
 
@@ -614,136 +630,139 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       }}
     >
       <WebSocketComponent notify={doNotify} confirm={doConfirm} />
-      <SafeAreaView
-        style={{
-          backgroundColor
-        }}
-      />
 
-      {/*<SafeAreaView
+      <KeyboardAvoidingView behavior="height" flex={1}>
+        <SafeAreaView
+          style={{
+            backgroundColor
+          }}
+        />
+
+        {/*<SafeAreaView
         style={{
           width: '100%',
           backgroundColor: colorMode == 'light' ? '#f3f4f6' : 'black',
           flex: 1
         }}
       >*/}
-      <VStack
-        bg="$backgroundContentLight"
-        sx={{
-          _dark: {
-            bg: '$backgroundContentDark'
-          }
-        }}
-        flex={1}
-      >
-        {/*desktop*/}
-        <Box
-          display="none"
+        <VStack
+          bg="$backgroundContentLight"
           sx={{
-            '@md': { display: 'flex', position: 'static' }
+            _dark: {
+              bg: '$backgroundContentDark'
+            }
           }}
-          zIndex={99}
-          style={{ backdropFilter: 'blur(10px)' }}
-        >
-          <AdminNavbar
-            version={version}
-            isMobile={false}
-            isOpenSidebar={isOpenSidebar}
-            setIsOpenSidebar={setIsOpenSidebar}
-            toggleColorMode={toggleColorModeHook}
-          />
-        </Box>
-        {/*mobile*/}
-        <Box
-          sx={{
-            '@base': {
-              display: 'flex',
-              position: Platform.OS == 'web' ? 'sticky' : 'static'
-            },
-            '@md': { display: 'none' }
-          }}
-          top={0}
-          zIndex={99}
-        >
-          <AdminNavbar
-            version={version}
-            isMobile={true}
-            isOpenSidebar={isOpenSidebar}
-            setIsOpenSidebar={setIsOpenSidebar}
-            toggleColorMode={toggleColorModeHook}
-          />
-        </Box>
-
-        <HStack
-          position={Platform.OS == 'web' ? 'sticky' : 'static'}
-          top={Platform.OS == 'web' ? 16 : 0}
           flex={1}
         >
           {/*desktop*/}
           <Box
             display="none"
             sx={{
-              '@md': {
-                display: 'flex',
-                height: Dimensions.get('window').height - 64
-              }
+              '@md': { display: 'flex', position: 'static' }
             }}
-            width={isOpenSidebar ? 80 : 260}
+            zIndex={99}
+            style={{ backdropFilter: 'blur(10px)' }}
           >
-            <Sidebar
+            <AdminNavbar
+              version={version}
               isMobile={false}
-              isMini={isOpenSidebar}
               isOpenSidebar={isOpenSidebar}
               setIsOpenSidebar={setIsOpenSidebar}
-              isSimpleMode={isSimpleMode}
-              setIsSimpleMode={setIsSimpleMode}
-              routes={routes}
+              toggleColorMode={toggleColorModeHook}
             />
           </Box>
           {/*mobile*/}
-          {isOpenSidebar ? (
+          <Box
+            sx={{
+              '@base': {
+                display: 'flex',
+                position: Platform.OS == 'web' ? 'sticky' : 'static'
+              },
+              '@md': { display: 'none' }
+            }}
+            top={0}
+            zIndex={99}
+          >
+            <AdminNavbar
+              version={version}
+              isMobile={true}
+              isOpenSidebar={isOpenSidebar}
+              setIsOpenSidebar={setIsOpenSidebar}
+              toggleColorMode={toggleColorModeHook}
+            />
+          </Box>
+
+          <HStack
+            position={Platform.OS == 'web' ? 'sticky' : 'static'}
+            top={Platform.OS == 'web' ? 16 : 0}
+            flex={1}
+          >
+            {/*desktop*/}
             <Box
-              w="100%"
-              zIndex={99}
+              display="none"
               sx={{
-                '@md': { display: 'none' }
+                '@md': {
+                  display: 'flex',
+                  height: Dimensions.get('window').height - 64
+                }
               }}
+              width={isOpenSidebar ? 80 : 260}
             >
+              <Sidebar
+                isMobile={false}
+                isMini={isOpenSidebar}
+                isOpenSidebar={isOpenSidebar}
+                setIsOpenSidebar={setIsOpenSidebar}
+                isSimpleMode={isSimpleMode}
+                setIsSimpleMode={setIsSimpleMode}
+                routes={routes}
+              />
+            </Box>
+            {/*mobile*/}
+            {isOpenSidebar ? (
+              <Box
+                w="100%"
+                zIndex={99}
+                sx={{
+                  '@md': { display: 'none' }
+                }}
+              >
+                <SafeAreaView
+                  style={{
+                    width: '100%',
+                    backgroundColor: colorMode == 'light' ? '#f9fafb' : 'black'
+                  }}
+                >
+                  <Sidebar
+                    isMobile={true}
+                    isMini={false}
+                    isOpenSidebar={isOpenSidebar}
+                    setIsOpenSidebar={setIsOpenSidebar}
+                    isSimpleMode={isSimpleMode}
+                    setIsSimpleMode={setIsSimpleMode}
+                    routes={routes}
+                  />
+                </SafeAreaView>
+              </Box>
+            ) : null}
+
+            <Box flex={1} ref={mainPanel}>
               <SafeAreaView
                 style={{
                   width: '100%',
-                  backgroundColor: colorMode == 'light' ? '#f9fafb' : 'black'
+                  height:
+                    Platform.OS == 'web'
+                      ? Dimensions.get('window').height - 64
+                      : 'auto',
+                  backgroundColor: colorMode == 'light' ? '#f3f4f6' : 'black'
                 }}
               >
-                <Sidebar
-                  isMobile={true}
-                  isMini={false}
-                  isOpenSidebar={isOpenSidebar}
-                  setIsOpenSidebar={setIsOpenSidebar}
-                  isSimpleMode={isSimpleMode}
-                  setIsSimpleMode={setIsSimpleMode}
-                  routes={routes}
-                />
+                <Outlet />
               </SafeAreaView>
             </Box>
-          ) : null}
-
-          <Box flex={1} ref={mainPanel}>
-            <SafeAreaView
-              style={{
-                width: '100%',
-                height:
-                  Platform.OS == 'web'
-                    ? Dimensions.get('window').height - 64
-                    : 'auto',
-                backgroundColor: colorMode == 'light' ? '#f3f4f6' : 'black'
-              }}
-            >
-              <Outlet />
-            </SafeAreaView>
-          </Box>
-        </HStack>
-      </VStack>
+          </HStack>
+        </VStack>
+      </KeyboardAvoidingView>
 
       <ModalContext.Provider value={modalState}>
         <Modal

@@ -39,7 +39,7 @@ const Login = (props) => {
   const doLogin = (username, password) => {
     testLogin(username, password, async (success) => {
       if (success) {
-        await saveLogin(username, password)
+        await saveLogin(username, password, hostname)
         setLoggedin(true)
         setErrors({})
         navigate('/admin/home')
@@ -83,7 +83,10 @@ const Login = (props) => {
       if (login) {
         setUsername(login.username)
         setPassword(login.password)
-        //doLogin(login.username, login.password)
+
+        if (login.hostname) {
+          setHostname(login.hostname)
+        }
       }
     })
   }, [])

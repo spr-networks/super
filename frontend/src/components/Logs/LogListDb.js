@@ -172,7 +172,7 @@ const LogList = (props) => {
       <Select
         size="xs"
         selectedValue={selectedValue}
-        selectedLabel={selectedValue}
+        initialLabel={selectedValue}
         onValueChange={onValueChange}
         minWidth="$32"
         maxWidth="$32"

@@ -112,7 +112,6 @@ const WifiChannelParameters = ({
     setBandwidth(x)
   }, [bandwidthLabel])
 
-
   useEffect(() => {
     //props.config.interface should match TBD
 
@@ -143,7 +142,10 @@ const WifiChannelParameters = ({
     }
 
     setBandwidth(newBandwidth)
-    handleBandwidthChange(config.hw_mode == 'a' ? bandwidth5 : bandwidth24, newBandwidth)
+    handleBandwidthChange(
+      config.hw_mode == 'a' ? bandwidth5 : bandwidth24,
+      newBandwidth
+    )
 
     if (config.ieee80211ax == 1) {
       setGroupValues(['wifi6'])
@@ -343,7 +345,6 @@ const WifiChannelParameters = ({
     onSubmit(wifiParameters)
   }
 
-
   let checkboxProps = disableWifi6 ? { isDisabled: true } : {}
   let wpa1CheckboxProps = disableExtraBSS ? { isDisabled: true } : {}
 
@@ -373,8 +374,7 @@ const WifiChannelParameters = ({
             <FormControlLabel>
               <FormControlLabelText>Frequency Band</FormControlLabelText>
             </FormControlLabel>
-            {
-            /*
+            {/*
             <Select
               selectedValue={channel}
               onValueChange={(value) => setChannel(parseInt(value))}
@@ -391,7 +391,10 @@ const WifiChannelParameters = ({
               */}
             <Select
               selectedValue={modeLabel}
-              onValueChange={(value) => {setModeLabel(value)}}
+              initialLabel={modeLabel}
+              onValueChange={(value) => {
+                setModeLabel(value)
+              }}
             >
               {modes.map((item) => (
                 <Select.Item
