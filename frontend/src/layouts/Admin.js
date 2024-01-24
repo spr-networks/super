@@ -14,7 +14,15 @@ import {
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Sidebar from 'components/Sidebar/Sidebar'
 import WebSocketComponent from 'api/WebSocket'
-import { api, deviceAPI, meshAPI, pfwAPI, pluginAPI, wifiAPI } from 'api'
+import {
+  api,
+  deviceAPI,
+  meshAPI,
+  pfwAPI,
+  pluginAPI,
+  wifiAPI,
+  setAuthReturn
+} from 'api'
 import { ucFirst } from 'utils'
 
 import {
@@ -336,13 +344,15 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           isSandboxed: p.SandboxedUI
         }))
 
-        let routesNav = {
-          name: 'Custom Plugins',
-          state: 'customPluginsCollape',
-          views: pluginRoutes
-        }
+        if (pluginRoutes.length) {
+          let routesNav = {
+            name: 'Custom Plugins',
+            state: 'customPluginsCollape',
+            views: pluginRoutes
+          }
 
-        setRoutes([...routes, routesNav])
+          setRoutes([...routes, routesNav])
+        }
       })
       .catch((err) => {})
   }
@@ -374,6 +384,10 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
     const redirOnAuthError = (err) => {
       console.error('HTTP auth error for url:', err.response.url)
+
+      let pathname = location.pathname
+      setAuthReturn(pathname)
+
       navigate('/auth/validate')
     }
 
