@@ -1531,7 +1531,8 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		refreshGroups = true
 	}
 
-	handleExpirations(&val, &dev)
+	handleExpirations(&dev, &dev)
+
 	devices[identity] = dev
 	saveDevicesJson(devices)
 
