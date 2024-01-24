@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Platform } from 'react-native'
 import { authAPI, setJWTOTPHeader, getAuthReturn } from 'api'
 import { useNavigate } from 'react-router-dom'
 
@@ -78,7 +79,7 @@ const OTPValidate = (props) => {
         <Button
           action="secondary"
           variant="outline"
-          onPress={() => navigate(-3)}
+          onPress={() => navigate(Platform.OS == 'web' ? -2 : -3)}
         >
           <ButtonText>Back</ButtonText>
         </Button>
