@@ -40,19 +40,23 @@ const UpstreamServicesList = (props) => {
   }
 
   const refreshTlsState = () => {
-    firewallAPI.getTLS().then((state) => {
-      setTlsState(state ? "enabled" : "disabled")
-    }).catch((err) => {
-
-    })
+    firewallAPI
+      .getTLS()
+      .then((state) => {
+        setTlsState(state ? 'enabled' : 'disabled')
+      })
+      .catch((err) => {})
   }
 
   const enableTLS = () => {
-    firewallAPI.setTLS().then((state) => {
-      setTlsState(state ? "enabled" : "disabled")
-    }).catch((err) => {
-      context.error('Firewall API could not enable TLS ', err)
-    })
+    firewallAPI
+      .setTLS()
+      .then((state) => {
+        setTlsState(state ? 'enabled' : 'disabled')
+      })
+      .catch((err) => {
+        context.error('Firewall API could not enable TLS', err)
+      })
   }
 
   const deleteListItem = (item) => {
@@ -85,6 +89,22 @@ const UpstreamServicesList = (props) => {
       })
   }
 
+  const TLSEnable = ({ isEnabled, onToggle, ...props }) => {
+    //Note disabled=true if isEnabled, no disable currently
+    return (
+      <VStack>
+        <ListHeader
+          title="HTTPS Settings"
+          description={'Status: ' + (isEnabled ? 'enabled' : 'disabled')}
+        />
+        <ListItem>
+          <Text bold>Enable TLS API</Text>
+          <Switch disabled={isEnabled} value={isEnabled} onToggle={onToggle} />
+        </ListItem>
+      </VStack>
+    )
+  }
+
   return (
     <>
       <ListHeader
@@ -106,30 +126,11 @@ const UpstreamServicesList = (props) => {
         </ModalForm>
       </ListHeader>
 
-      <Box>
-        <VStack
-          space="md"
-          justifyContent="space-between"
-          mb="$4"
-          px="$4"
-        >
-        <Heading size="sm">HTTPS Settings</Heading>
-        <Text size="sm" bold>API Status: {tlsState} </Text>
-        {(tlsState != "enabled") ? (
-        <HStack>
-          <Button
-            onPress={() => enableTLS()}
-          >
-            <ButtonText>Click to enable TLS API</ButtonText>
-          </Button>
-        </HStack>
-      ) : null}
-        </VStack>
+      <VStack space="md">
         <HStack
           space="md"
           justifyContent="space-between"
           alignItems="center"
-          mb="$4"
           px="$4"
         >
           <Heading size="xs">Protocol</Heading>
@@ -168,25 +169,28 @@ const UpstreamServicesList = (props) => {
           }
         />
 
-        <VStack>
-          {!list.length ? (
+        {!list.length ? (
+          <VStack>
             <Text px={{ base: 4, md: 0 }} flexWrap="wrap">
               No upstream services added
             </Text>
-          ) : null}
-          <Button
-            sx={{ '@md': { display: list.length ? 'none' : 'flex' } }}
-            action="primary"
-            variant="solid"
-            rounded="$none"
-            onPress={() => refModal.current()}
-            mt={0}
-          >
-            <ButtonText>Add Service Port</ButtonText>
-            <ButtonIcon as={AddIcon} />
-          </Button>
-        </VStack>
-      </Box>
+
+            <Button
+              sx={{ '@md': { display: list.length ? 'none' : 'flex' } }}
+              action="primary"
+              variant="solid"
+              rounded="$none"
+              onPress={() => refModal.current()}
+              mt={0}
+            >
+              <ButtonText>Add Service Port</ButtonText>
+              <ButtonIcon as={AddIcon} />
+            </Button>
+          </VStack>
+        ) : null}
+
+        <TLSEnable isEnabled={tlsState == 'enabled'} onToggle={enableTLS} />
+      </VStack>
     </>
   )
 }
