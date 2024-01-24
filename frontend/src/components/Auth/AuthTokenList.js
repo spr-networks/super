@@ -38,7 +38,6 @@ const AuthTokenList = (props) => {
     refreshList()
   }, [])
 
-
   const deleteListItem = (row) => {
     authAPI
       .deleteToken(row.Token)
@@ -58,7 +57,6 @@ const AuthTokenList = (props) => {
   }
 
   const refreshList = () => {
-
     authAPI
       .statusOTP()
       .then((s) => {
@@ -73,7 +71,7 @@ const AuthTokenList = (props) => {
             err.response
               .text()
               .then((data) => {
-                if (data.includes("Invalid JWT")) {
+                if (data.includes('Invalid JWT')) {
                   //re-log OTP
                   setJWTOTPHeader('')
                   if (s.State == 'registered') {
@@ -86,13 +84,11 @@ const AuthTokenList = (props) => {
                 context.error('Auth Token API ' + JSON.stringify(err), err)
               })
           })
-
       })
       .catch((e) => {
         setStatus('unknown')
         context.error('failed to get status', e)
       })
-
   }
 
   const notifyChange = () => {
@@ -185,12 +181,13 @@ const AuthTokenList = (props) => {
 
       <VStack>
         {tokens !== null && tokens.length === 0 ? (
-            (status == 'registered') ? (
-              <Text alignSelf="center">There are no API tokens added yet</Text>
-            ) :
-            (
-              <Text alignSelf="center">{status} Register an OTP Code to view and add tokens</Text>
-            )
+          status == 'registered' ? (
+            <Text alignSelf="center">There are no API tokens added yet</Text>
+          ) : (
+            <Text alignSelf="center">
+              {status} Register an OTP Code to view and add tokens
+            </Text>
+          )
         ) : null}
       </VStack>
     </View>
