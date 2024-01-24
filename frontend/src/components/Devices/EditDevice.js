@@ -61,10 +61,15 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [tags, setTags] = useState(device.DeviceTags.sort())
   const [color, setColor] = useState(device.Style?.Color || 'blueGray')
   const [icon, setIcon] = useState(device.Style?.Icon || 'Laptop')
+  const [expiration, setExpiration] = useState(
+    device.DeviceExpiration ? device.DeviceExpiration : 0
+  )
+  const [deleteExpiry, setDeleteExpiry] = useState(
+    device.DeleteExpiration || false
+  )
+
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState('')
-  const [expiration, setExpiration] = useState(0)
-  const [deleteExpiry, setDeleteExpiry] = useState(false)
 
   // for adding
   const defaultGroups = props.groups || ['wan', 'dns', 'lan']
@@ -76,7 +81,15 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     { label: '1 Day', value: 60 * 60 * 24 },
     { label: '1 Week', value: 60 * 60 * 24 * 7 },
     { label: '4 Weeks', value: 60 * 60 * 24 * 7 * 4 }
-  ]
+  ] /*.map((opt) => {
+    let value = !opt.value
+      ? 0
+      : parseInt(new Date(Date.now() + opt.value * 1e3).getTime() / 1e3)
+    return {
+      ...opt,
+      value
+    }
+  })*/
 
   const navigate = useNavigate()
 
@@ -271,13 +284,40 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     }
   }
 
+  useEffect(() => {
+    let id = device.MAC || device.WGPubKey
+
+    if (
+      expiration != device.DeviceExpiration ||
+      deleteExpiry != device.DeleteExpiration
+    ) {
+      //NOTE we submit timestamp from now, but get a timestamp in the future
+      let DeviceExpiration =
+        expiration < 0 ? -1 : parseInt(Date.now() / 1e3) - expiration
+      deviceAPI
+        .update(id, {
+          DeviceExpiration,
+          DeleteExpiration: deleteExpiry
+        })
+        .then(notifyChange)
+        .catch((err) => {
+          context.error(`update device failed: ${err}`)
+        })
+    }
+
+    saveDevice()
+  }, [expiration, deleteExpiry])
+
   const handleChange = (name, value) => {
     if (name == 'Expiration') {
       if (value == 0 && expiration != 0) {
         //gotcha in the API is to reset should set to -1
         //this is so that setting 0 does not update expiry
         value = -1
+      } else {
+        value = parseInt(Date.now() / 1e3) + value
       }
+
       setExpiration(value)
     }
   }
@@ -456,35 +496,39 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         </FormControl>
       </VStack>
 
-      <VStack space="lg">
-        <FormControl>
+      <VStack
+        space="lg"
+        sx={{ '@md': { flexDirection: 'row', maxWidth: '$1/2' } }}
+      >
+        <FormControl flex={1}>
           <FormControlLabel>
             <FormControlLabelText>Expiration</FormControlLabelText>
           </FormControlLabel>
 
           <InputSelect
             options={expirationOptions}
+            isDisabled
             value={
-              expiration
-                ? timeAgo(new Date(Date.now() + expiration * 1e3))
+              expiration > 0
+                ? new Date(expiration * 1e3).toUTCString()
                 : 'Never'
             }
             onChange={(v) => handleChange('Expiration', parseInt(v))}
-            onChangeText={(v) => handleChange('Expiration', parseInt(v))}
           />
 
           <FormControlHelper>
             <FormControlHelperText>
-              If non zero has unix time for when the entry should disappear
+              {/*If non zero has unix time for when the entry should disappear*/}
+              {expiration > 0
+                ? `Expire in ${timeAgo(
+                    new Date(expiration * 1e3).toUTCString()
+                  )}`
+                : null}
             </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
 
-        <FormControl mt="$2">
-          <FormControlLabel>
-            <FormControlLabelText>Delete on expiry</FormControlLabelText>
-          </FormControlLabel>
-
+        <FormControl sx={{ '@md': { marginTop: '$9' } }}>
           <Checkbox
             accessibilityLabel="Enabled"
             value={deleteExpiry}
@@ -494,7 +538,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
             <CheckboxIndicator mr="$2">
               <CheckboxIcon as={CheckIcon} />
             </CheckboxIndicator>
-            <CheckboxLabel>Remove device</CheckboxLabel>
+            <CheckboxLabel>Delete on expiry</CheckboxLabel>
           </Checkbox>
         </FormControl>
       </VStack>
