@@ -7,6 +7,7 @@ import ModalConfirm from 'components/ModalConfirm'
 
 import { format as timeAgo } from 'timeago.js'
 import InputSelect from 'components/InputSelect'
+import DeviceExpiry from './DeviceExpiry'
 
 import {
   Button,
@@ -74,22 +75,6 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   // for adding
   const defaultGroups = props.groups || ['wan', 'dns', 'lan']
   const defaultTags = props.tags || ['lan_upstream']
-
-  const expirationOptions = [
-    { label: 'Never', value: 0 },
-    { label: '1 Hour', value: 60 * 60 },
-    { label: '1 Day', value: 60 * 60 * 24 },
-    { label: '1 Week', value: 60 * 60 * 24 * 7 },
-    { label: '4 Weeks', value: 60 * 60 * 24 * 7 * 4 }
-  ] /*.map((opt) => {
-    let value = !opt.value
-      ? 0
-      : parseInt(new Date(Date.now() + opt.value * 1e3).getTime() / 1e3)
-    return {
-      ...opt,
-      value
-    }
-  })*/
 
   const navigate = useNavigate()
 
@@ -293,7 +278,8 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     ) {
       //NOTE we submit timestamp from now, but get a timestamp in the future
       let DeviceExpiration =
-        expiration < 0 ? -1 : parseInt(Date.now() / 1e3) - expiration
+        expiration < 0 ? -1 : expiration - parseInt(Date.now() / 1e3)
+
       deviceAPI
         .update(id, {
           DeviceExpiration,
@@ -505,15 +491,9 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
             <FormControlLabelText>Expiration</FormControlLabelText>
           </FormControlLabel>
 
-          <InputSelect
-            options={expirationOptions}
-            isDisabled
-            value={
-              expiration > 0
-                ? new Date(expiration * 1e3).toUTCString()
-                : 'Never'
-            }
-            onChange={(v) => handleChange('Expiration', parseInt(v))}
+          <DeviceExpiry
+            value={expiration}
+            onChange={(v) => handleChange('Expiration', v)}
           />
 
           <FormControlHelper>
