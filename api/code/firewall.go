@@ -2135,21 +2135,21 @@ var RecentDHCPIface = map[string]string{}
 func notifyFirewallDHCP(device DeviceEntry, iface string) {
 	addLanInterface(iface)
 
+	if device.MAC != "" {
+		RecentDHCPIface[device.MAC] = iface
+	}
+
 	if device.WGPubKey == "" {
 		return
 	}
 
-	// for wireguard clilents only below
-
+	// for wireguard clients only below
 	cur_time := time.Now().Unix()
 
 	FWmtx.Lock()
 	defer FWmtx.Unlock()
 
 	RecentDHCPWG[device.WGPubKey] = cur_time
-	if device.MAC != "" {
-		RecentDHCPIface[device.MAC] = iface
-	}
 }
 
 func getWireguardActivePeers() []string {

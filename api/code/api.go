@@ -2268,7 +2268,7 @@ type SetupConfig struct {
 }
 
 func isSetupMode() bool {
-	_, err := os.Stat(AuthUsersFile)
+	_, err := os.Stat(SetupDonePath)
 	if err == nil || !os.IsNotExist(err) {
 		return false
 	}

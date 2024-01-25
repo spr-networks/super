@@ -243,9 +243,6 @@ func getSetDhcpConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
-
-	addLanInterface(Iface)
-
 	devices := getDevicesJson()
 	val, exists := devices[MAC]
 
