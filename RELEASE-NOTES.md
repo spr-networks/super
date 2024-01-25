@@ -2,10 +2,9 @@
 ## v0.3.4
 * Support for 6-e channel calculation in API
 * Add decorators to alert templates
-* Plugin UI support
-* Fast Plugin install
+* Fast Plugin install with URL & OTP
 Key Fixes
-* Work around React Gluestack channel selection state errors
+* Multitude of UI/Gluestack fixes (see github issue tracker)
 
 ## v0.3.3
 * New Alerts functionality 
