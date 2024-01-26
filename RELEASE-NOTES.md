@@ -3,6 +3,7 @@
 * Support for 6-e channel calculation in API
 * Add decorators to alert templates
 * Fast Plugin install with URL & OTP
+* For Pis, enable a Setup AP for easy access
 Key Fixes
 * Multitude of UI/Gluestack fixes (see github issue tracker)
 
