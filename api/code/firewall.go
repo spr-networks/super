@@ -2135,21 +2135,21 @@ var RecentDHCPIface = map[string]string{}
 func notifyFirewallDHCP(device DeviceEntry, iface string) {
 	addLanInterface(iface)
 
+	if device.MAC != "" {
+		RecentDHCPIface[device.MAC] = iface
+	}
+
 	if device.WGPubKey == "" {
 		return
 	}
 
-	// for wireguard clilents only below
-
+	// for wireguard clients only below
 	cur_time := time.Now().Unix()
 
 	FWmtx.Lock()
 	defer FWmtx.Unlock()
 
 	RecentDHCPWG[device.WGPubKey] = cur_time
-	if device.MAC != "" {
-		RecentDHCPIface[device.MAC] = iface
-	}
 }
 
 func getWireguardActivePeers() []string {
@@ -2268,6 +2268,18 @@ func getWifiPeers() map[string]string {
 	Interfacesmtx.Lock()
 	interfacesConfig := loadInterfacesConfigLocked()
 	Interfacesmtx.Unlock()
+
+	is_setup := isSetupMode()
+	setup_ap := "wlan0"
+	//in setup mode, allow "wlan0" without a vlan_id
+	if is_setup {
+		wifi_peers, err := RunHostapdAllStations(setup_ap)
+		if err == nil {
+			for k, _ := range wifi_peers {
+				peers[k] = setup_ap
+			}
+		}
+	}
 
 	for _, entry := range interfacesConfig {
 		if entry.Enabled == true && entry.Type == "AP" {

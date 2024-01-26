@@ -1,9 +1,13 @@
 import { getApiHostname, getWsURL } from './API'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { deviceAPI } from './Device'
-import { eventTemplate } from 'utils'
+import {eventTemplate} from 'components/Alerts/AlertUtil'
 
-async function connectWebsocket(messageCallback) {
+import { useContext } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { alertState, AppContext } from 'AppContext'
+
+async function connectWebsocket(context, messageCallback) {
   let login = await AsyncStorage.getItem('user')
   let userData = JSON.parse(login),
     ws = null
@@ -30,14 +34,14 @@ async function connectWebsocket(messageCallback) {
   })
 
   ws.addEventListener('message', (event) => {
-    messageCallback(event)
+    messageCallback(context, event)
   })
 
   return ws
 }
 
 
-const parseLogMessage = async (msg) => {
+const parseLogMessage = async (context, msg) => {
   const msgType = msg.Type
   let data = null
 
@@ -65,8 +69,8 @@ const parseLogMessage = async (msg) => {
     if (valid_types.includes(data.NotificationType)) {
       type = data.NotificationType
     }
-    title = eventTemplate(data.Title, data.Event)
-    body = eventTemplate(data.Body, data.Event)
+    title = eventTemplate(context, data.Title, data.Event)
+    body = eventTemplate(context, data.Body, data.Event)
     data = ''
   } else if (msgType.startsWith('wifi:auth')) {
     if (msgType.includes('success')) {
@@ -115,4 +119,61 @@ const parseLogMessage = async (msg) => {
   }
 }
 
-export { connectWebsocket, parseLogMessage }
+const WebSocketComponent = ({confirm, notify,   ...props }) => {
+
+  const context = useContext(AppContext)
+  const navigate = useNavigate()
+
+  const handleWebSocketEvent = async (context, event) => {
+    if (event.data == 'success') {
+      return
+    } else if (event.data == 'Authentication failure') {
+      return alertState.error('Websocket failed to authenticate')
+    } else if (event.data == 'Invalid JWT OTP') {
+      //user needed an OTP validation
+      navigate('/auth/validate')
+      return
+    }
+
+    let eventData = JSON.parse(event.data)
+
+    // if false it means event is streamed for logs or cli
+    // this is set temporarily when viewing the sprbus via ws
+    if (!eventData.Notification) {
+      return
+    }
+
+    const res = await parseLogMessage(context, eventData)
+    if (res) {
+      //console.log('[NOTIFICATION]', JSON.stringify(res))
+      let { type, title, body, data } = res
+
+      if (title == 'StatusCalled') {
+        //ignore debug message
+        return
+      }
+
+      //console.log('plus disabled:', isPlusDisabled)
+
+      // confirm notifications use pfw
+      if (context.isPlusDisabled && type == 'confirm') {
+        type = 'info'
+      }
+
+      if (type == 'confirm') {
+        confirm(title, body, data)
+      } else {
+        notify(type, title, body)
+      }
+    }
+  }
+
+  connectWebsocket(context, handleWebSocketEvent)
+
+  return (
+    <>
+    </>
+  )
+}
+
+export default WebSocketComponent

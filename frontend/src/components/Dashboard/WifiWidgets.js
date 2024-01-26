@@ -51,7 +51,8 @@ export class WifiClientCount extends Component {
                         .catch((err) => {})
                     }
                   })
-                }).catch((err) => {})
+                })
+                .catch((err) => {})
             })
 
             this.setState({

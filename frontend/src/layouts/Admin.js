@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { Dimensions, Platform, SafeAreaView } from 'react-native'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -13,8 +13,16 @@ import {
 } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Sidebar from 'components/Sidebar/Sidebar'
-import { connectWebsocket, parseLogMessage } from 'api/WebSocket'
-import { api, notificationsAPI, meshAPI, pfwAPI, wifiAPI } from 'api'
+import WebSocketComponent from 'api/WebSocket'
+import {
+  api,
+  deviceAPI,
+  meshAPI,
+  pfwAPI,
+  pluginAPI,
+  wifiAPI,
+  setAuthReturn
+} from 'api'
 import { ucFirst } from 'utils'
 
 import {
@@ -50,11 +58,14 @@ import {
   useColorMode
 } from '@gluestack-ui/themed'
 
+import CustomPluginView from 'views/CustomPlugin'
+
 //NOTE Slice transition for Alerts not available in gluestack-ui
 
-import { routes } from 'routes'
-import { deviceAPI } from 'api'
-import { userEvent } from '@testing-library/react-native'
+import { routes as allRoutes } from 'routes'
+import { PuzzleIcon } from 'lucide-react-native'
+
+import { KeyboardAvoidingView } from '@gluestack-ui/themed'
 
 const ConfirmTrafficAlert = (props) => {
   const { type, title, body, showAlert, onClose } = props
@@ -195,16 +206,12 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
   //setup alert context
   alertState.alert = (type = 'info', title, body = null) => {
-    if (typeof title !== 'string') {
-      title = JSON.stringify(title)
-    }
-
     if (!body) {
       body = title
       title = ucFirst(type)
     }
 
-    const showAlert = (type, title, body) => {
+    const alertFunc = (type, title, body) => {
       // web desktop notification
       if (['error', 'success'].includes(type) && Platform.OS == 'web') {
         Notifications.notification(title, body)
@@ -222,13 +229,13 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       body.response
         .text()
         .then((data) => {
-          showAlert(type, title, data)
+          alertFunc(type, title, data)
         })
         .catch((err) => {
-          showAlert(type, title, JSON.stringify(body))
+          alertFunc(type, title, JSON.stringify(body))
         })
     } else {
-      showAlert(type, title, body)
+      alertFunc(type, title, body)
     }
   }
 
@@ -283,6 +290,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const [features, setFeatures] = useState([])
   const [devices, setDevices] = useState([])
   const [groups, setGroups] = useState([])
+  const [routes, setRoutes] = useState(allRoutes)
 
   // device context stuff
   const getDevices = (forceFetch = false) => {
@@ -320,6 +328,38 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     })
   }
 
+  const registerPluginRoutes = () => {
+    if (routes.filter((r) => r.name == 'Custom Plugins')?.length) {
+      return
+    }
+
+    pluginAPI
+      .list()
+      .then((plugins) => {
+        let pluginsWithUI = plugins.filter((p) => p.HasUI)
+        let pluginRoutes = pluginsWithUI.map((p) => ({
+          layout: 'admin',
+          name: p.Name,
+          path: `custom_plugin/${encodeURIComponent(p.URI)}`,
+          icon: PuzzleIcon,
+          Component: CustomPluginView,
+          isSandboxed: p.SandboxedUI
+        }))
+
+        if (pluginRoutes.length) {
+          let routesNav = {
+            name: 'Custom Plugins',
+            state: 'customPluginsCollape',
+            views: pluginRoutes
+          }
+
+          setRoutes([...routes, routesNav])
+        }
+      })
+      .catch((err) => {})
+  }
+
+  //main init here
   useEffect(() => {
     api
       .getCheckUpdates()
@@ -346,7 +386,11 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
     const redirOnAuthError = (err) => {
       console.error('HTTP auth error for url:', err.response.url)
-      navigate('/auth/login')
+
+      let pathname = location.pathname
+      setAuthReturn(pathname)
+
+      navigate('/auth/validate')
     }
 
     api.registerErrorHandler(401, redirOnAuthError)
@@ -429,66 +473,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       }
     }
 
-    const handleWebSocketEvent = async (event) => {
-      if (event.data == 'success') {
-        return
-      } else if (event.data == 'Authentication failure') {
-        return alertState.error('Websocket failed to authenticate')
-      } else if (event.data == 'Invalid JWT OTP') {
-        //user needed an OTP validation
-        navigate('/auth/validate')
-        return
-      }
-
-      let eventData = JSON.parse(event.data)
-
-      // if false it means event is streamed for logs or cli
-      // this is set temporarily when viewing the sprbus via ws
-      if (!eventData.Notification) {
-        return
-      }
-
-      const res = await parseLogMessage(eventData)
-      if (res) {
-        //console.log('[NOTIFICATION]', JSON.stringify(res))
-        let { type, title, body, data } = res
-
-        if (title == 'StatusCalled') {
-          //ignore debug message
-          return
-        }
-
-        //console.log('plus disabled:', isPlusDisabled)
-
-        // confirm notifications use pfw
-        if (isPlusDisabled && type == 'confirm') {
-          type = 'info'
-        }
-
-        if (Platform.OS == 'ios') {
-          // for now we have default = only msg & confirm = userAction
-          //Notifications.notification(title, body, category)
-          if (type == 'confirm') {
-            Notifications.confirm(title, body, data)
-          } else {
-            Notifications.notification(title, body)
-          }
-        } else {
-          if (type == 'confirm') {
-            alertState.confirm(title, body, (action) => {
-              setShowConfirmAlert(false)
-
-              confirmTrafficAction(action, data)
-            })
-          } else {
-            alertState[type](title, body)
-          }
-        }
-      }
-    }
-
-    connectWebsocket(handleWebSocketEvent)
-
     let notificationArgs = {}
     if (Platform.OS == 'ios') {
       //for ios we get an event - no callback
@@ -503,6 +487,11 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     }
 
     Notifications.init(notificationArgs)
+
+    // add routes with plugins on web
+    if (Platform.OS == 'web') {
+      registerPluginRoutes()
+    }
   }, [])
 
   // this will trigger after the features check
@@ -583,6 +572,42 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     toggleColorMode()
   }
 
+  const webConfirm = (title, body, data) => {
+    alertState.confirm(title, body, (action) => {
+      setShowConfirmAlert(false)
+
+      confirmTrafficAction(action, data)
+    })
+  }
+
+  const webNotify = (type, title, body) => {
+    alertState[type](title, body)
+  }
+
+  const iosConfirm = (title, body, data) => {
+    Notifications.confirm(title, body, data)
+  }
+
+  const iosNotify = (type, title, body) => {
+    Notifications.notification(title, body)
+  }
+
+  const doConfirm = (title, body, data) => {
+    if (Platform.OS == 'ios') {
+      iosConfirm(title, body, data)
+    } else {
+      webConfirm(title, body, data)
+    }
+  }
+
+  const doNotify = (type, title, body) => {
+    if (Platform.OS == 'ios') {
+      iosNotify(type, title, body)
+    } else {
+      webNotify(type, title, body)
+    }
+  }
+
   return (
     <AppContext.Provider
       value={{
@@ -599,139 +624,145 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         devices,
         getDevices,
         getDevice,
-        getGroups
+        getGroups,
+        viewSettings,
+        setViewSettings
       }}
     >
-      <SafeAreaView
-        style={{
-          backgroundColor
-        }}
-      />
+      <WebSocketComponent notify={doNotify} confirm={doConfirm} />
 
-      {/*<SafeAreaView
+      <KeyboardAvoidingView behavior="height" flex={1}>
+        <SafeAreaView
+          style={{
+            backgroundColor
+          }}
+        />
+
+        {/*<SafeAreaView
         style={{
           width: '100%',
           backgroundColor: colorMode == 'light' ? '#f3f4f6' : 'black',
           flex: 1
         }}
       >*/}
-      <VStack
-        bg="$backgroundContentLight"
-        sx={{
-          _dark: {
-            bg: '$backgroundContentDark'
-          }
-        }}
-        flex={1}
-      >
-        {/*desktop*/}
-        <Box
-          display="none"
+        <VStack
+          bg="$backgroundContentLight"
           sx={{
-            '@md': { display: 'flex', position: 'static' }
+            _dark: {
+              bg: '$backgroundContentDark'
+            }
           }}
-          zIndex={99}
-          style={{ backdropFilter: 'blur(10px)' }}
-        >
-          <AdminNavbar
-            version={version}
-            isMobile={false}
-            isOpenSidebar={isOpenSidebar}
-            setIsOpenSidebar={setIsOpenSidebar}
-            toggleColorMode={toggleColorModeHook}
-          />
-        </Box>
-        {/*mobile*/}
-        <Box
-          sx={{
-            '@base': {
-              display: 'flex',
-              position: Platform.OS == 'web' ? 'sticky' : 'static'
-            },
-            '@md': { display: 'none' }
-          }}
-          top={0}
-          zIndex={99}
-        >
-          <AdminNavbar
-            version={version}
-            isMobile={true}
-            isOpenSidebar={isOpenSidebar}
-            setIsOpenSidebar={setIsOpenSidebar}
-            toggleColorMode={toggleColorModeHook}
-          />
-        </Box>
-
-        <HStack
-          position={Platform.OS == 'web' ? 'sticky' : 'static'}
-          top={Platform.OS == 'web' ? 16 : 0}
           flex={1}
         >
           {/*desktop*/}
           <Box
             display="none"
             sx={{
-              '@md': {
-                display: 'flex',
-                height: Dimensions.get('window').height - 64
-              }
+              '@md': { display: 'flex', position: 'static' }
             }}
-            width={isOpenSidebar ? 80 : 260}
+            zIndex={99}
+            style={{ backdropFilter: 'blur(10px)' }}
           >
-            <Sidebar
+            <AdminNavbar
+              version={version}
               isMobile={false}
-              isMini={isOpenSidebar}
               isOpenSidebar={isOpenSidebar}
               setIsOpenSidebar={setIsOpenSidebar}
-              isSimpleMode={isSimpleMode}
-              setIsSimpleMode={setIsSimpleMode}
-              routes={routes}
+              toggleColorMode={toggleColorModeHook}
             />
           </Box>
           {/*mobile*/}
-          {isOpenSidebar ? (
+          <Box
+            sx={{
+              '@base': {
+                display: 'flex',
+                position: Platform.OS == 'web' ? 'sticky' : 'static'
+              },
+              '@md': { display: 'none' }
+            }}
+            top={0}
+            zIndex={99}
+          >
+            <AdminNavbar
+              version={version}
+              isMobile={true}
+              isOpenSidebar={isOpenSidebar}
+              setIsOpenSidebar={setIsOpenSidebar}
+              toggleColorMode={toggleColorModeHook}
+            />
+          </Box>
+
+          <HStack
+            position={Platform.OS == 'web' ? 'sticky' : 'static'}
+            top={Platform.OS == 'web' ? 16 : 0}
+            flex={1}
+          >
+            {/*desktop*/}
             <Box
-              w="100%"
-              zIndex={99}
+              display="none"
               sx={{
-                '@md': { display: 'none' }
+                '@md': {
+                  display: 'flex',
+                  height: Dimensions.get('window').height - 64
+                }
               }}
+              width={isOpenSidebar ? 80 : 260}
             >
+              <Sidebar
+                isMobile={false}
+                isMini={isOpenSidebar}
+                isOpenSidebar={isOpenSidebar}
+                setIsOpenSidebar={setIsOpenSidebar}
+                isSimpleMode={isSimpleMode}
+                setIsSimpleMode={setIsSimpleMode}
+                routes={routes}
+              />
+            </Box>
+            {/*mobile*/}
+            {isOpenSidebar ? (
+              <Box
+                w="100%"
+                zIndex={99}
+                sx={{
+                  '@md': { display: 'none' }
+                }}
+              >
+                <SafeAreaView
+                  style={{
+                    width: '100%',
+                    backgroundColor: colorMode == 'light' ? '#f9fafb' : 'black'
+                  }}
+                >
+                  <Sidebar
+                    isMobile={true}
+                    isMini={false}
+                    isOpenSidebar={isOpenSidebar}
+                    setIsOpenSidebar={setIsOpenSidebar}
+                    isSimpleMode={isSimpleMode}
+                    setIsSimpleMode={setIsSimpleMode}
+                    routes={routes}
+                  />
+                </SafeAreaView>
+              </Box>
+            ) : null}
+
+            <Box flex={1} ref={mainPanel}>
               <SafeAreaView
                 style={{
                   width: '100%',
-                  backgroundColor: colorMode == 'light' ? '#f9fafb' : 'black'
+                  height:
+                    Platform.OS == 'web'
+                      ? Dimensions.get('window').height - 64
+                      : 'auto',
+                  backgroundColor: colorMode == 'light' ? '#f3f4f6' : 'black'
                 }}
               >
-                <Sidebar
-                  isMobile={true}
-                  isMini={false}
-                  isOpenSidebar={isOpenSidebar}
-                  setIsOpenSidebar={setIsOpenSidebar}
-                  isSimpleMode={isSimpleMode}
-                  setIsSimpleMode={setIsSimpleMode}
-                  routes={routes}
-                />
+                <Outlet />
               </SafeAreaView>
             </Box>
-          ) : null}
-
-          <Box flex={1} ref={mainPanel}>
-            <SafeAreaView
-              style={{
-                width: '100%',
-                height:
-                  Platform.OS == 'web'
-                    ? Dimensions.get('window').height - 64
-                    : 'auto',
-                backgroundColor: colorMode == 'light' ? '#f3f4f6' : 'black'
-              }}
-            >
-              <Outlet />
-            </SafeAreaView>
-          </Box>
-        </HStack>
-      </VStack>
+          </HStack>
+        </VStack>
+      </KeyboardAvoidingView>
 
       <ModalContext.Provider value={modalState}>
         <Modal

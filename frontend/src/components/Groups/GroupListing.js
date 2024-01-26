@@ -7,8 +7,12 @@ import {
   BadgeIcon,
   BadgeText,
   Box,
+  Button,
+  ButtonIcon,
+  ButtonText,
   FlatList,
   HStack,
+  TrashIcon,
   Text,
   VStack,
   useColorMode
@@ -67,7 +71,7 @@ const getGroupMembers = (group) => {
   })
 }
 
-const GroupListing = ({ group, ...props }) => {
+const GroupListing = ({ group, deleteGroup, ...props }) => {
   const appContext = useContext(AppContext)
   const translateName = (name) => {
     if (name === 'dns') {
@@ -80,37 +84,35 @@ const GroupListing = ({ group, ...props }) => {
     return name
   }
 
-
   const list = getGroupMembers(group)
+
   return (
     <FlatList
       ListHeaderComponent={
         <ListHeader
           title={translateName(group.Name)}
           description={groupDescriptions[group.Name] || ''}
-        />
+        >
+          {deleteGroup && list.length == 0 ? (
+            <Button
+              action="negative"
+              variant="solid"
+              size="sm"
+              onPress={() => deleteGroup(group.Name)}
+            >
+              <ButtonText>Delete</ButtonText>
+              <ButtonIcon as={TrashIcon} ml="$2" />
+            </Button>
+          ) : null}
+        </ListHeader>
       }
       data={list}
       estimatedItemSize={100}
       renderItem={({ item }) => (
         <ListItem>
-          {/*
-          <Text flex={1} bold size="sm">
-            {item.Name}
-          </Text>
-
-          <VStack flex={2} space="sm">
-            <Text size="sm" bold>
-              {item.IP || ' '}
-            </Text>
-            <Text size="sm" color="$muted500">
-              {item.MAC}
-            </Text>
-          </VStack>
-            */}
           <DeviceItem
             item={appContext.getDevice(item.MAC, 'MAC')}
-            w="$1/2"
+            sx={{ '@md': { width: '$1/2' } }}
             justifyContent="space-between"
           />
 
@@ -124,7 +126,8 @@ const GroupListing = ({ group, ...props }) => {
 }
 
 GroupListing.propTypes = {
-  group: PropTypes.object
+  group: PropTypes.object,
+  deleteGroup: PropTypes.func
 }
 
 export default GroupListing

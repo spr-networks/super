@@ -157,7 +157,7 @@ const Wireguard = (props) => {
       </Box>
 
       <ListHeader
-        title="Default Endpoints"
+        title="Default Endpoint"
         description="Set default endpoint clients should connect to"
       ></ListHeader>
       <FlatList

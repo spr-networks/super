@@ -1,47 +1,32 @@
-import React, { useContext, Component } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 
 import { ScrollView, VStack } from '@gluestack-ui/themed'
 
 import { deviceAPI, trafficAPI } from 'api'
-import { AlertContext } from 'layouts/Admin'
+import { AppContext, AlertContext } from 'AppContext'
 import chroma from 'chroma-js'
 
 import TimeSeries from 'components/Traffic/TimeSeries'
 
-class TrafficTimeSeries extends Component {
-  state = {
-    clients: [],
-    WanIn_scale: 'All Time',
-    LanIn_scale: 'All Time',
-    WanOut_scale: 'All Time',
-    LanOut_scale: 'All Time',
-    WanIn: {},
-    WanOut: {},
-    LanIn: {},
-    LanOut: {},
-    chartModes: {}
-  }
+const TrafficTimeSeries = ({ ...props }) => {
+  const [data, setData] = useState({})
+  const [chartModes, setChartModes] = useState({})
+  const [scales, setScales] = useState({})
 
-  constructor(props) {
-    super(props)
-    let chartModes = {},
-      types = ['WanOut', 'WanIn', 'LanIn', 'LanOut']
+  const context = useContext(AppContext)
+  const alertContext = useContext(AlertContext)
 
-    types.map((type) => (chartModes[type] = 'percent'))
-    this.state.chartModes = chartModes
-  }
+  let cached_traffic_data = null
 
-  cached_traffic_data = null
-
-  async fetchData() {
+  const fetchData = async () => {
     let traffic_data
-    if (this.cached_traffic_data !== null) {
-      traffic_data = this.cached_traffic_data
+    if (cached_traffic_data !== null) {
+      traffic_data = cached_traffic_data
     } else {
-      traffic_data = this.cached_traffic_data = await trafficAPI
+      traffic_data = cached_traffic_data = await trafficAPI
         .history()
         .catch((error) => {
-          this.context.error(
+          alertContext.error(
             'API Failure get traffic history: ' + error.message
           )
         })
@@ -50,18 +35,20 @@ class TrafficTimeSeries extends Component {
     return traffic_data
   }
 
-  async buildTimeSeries(target = '') {
-    let chartMode = this.state.chartModes[target]
+  const buildTimeSeries = async (
+    target = '',
+    chartMode = 'percent',
+    scale = 'All Time'
+  ) => {
     // data = [ {1 minute array of IP => stats, }, ...]
-    let traffic_data = await this.fetchData()
+    let traffic_data = await fetchData()
 
     const scaleOffset = {
       '1 Hour': 60 - 1,
       '1 Day': 60 * 24 - 1,
-      '15 Minutes': 15 - 1
+      '15 Minutes': 15 - 1,
+      'All Time': traffic_data.length - 1
     }
-
-    let scale = this.state[`${target}_scale`]
 
     let offset = scaleOffset[scale] || 0
     traffic_data = offset ? traffic_data.slice(0, offset) : traffic_data
@@ -156,9 +143,7 @@ class TrafficTimeSeries extends Component {
     }
 
     const labelByIP = (ip) => {
-      let client = this.state.clients.filter((client) => client.IP == ip)
-      client = client ? client[0] : null
-      return client && client.Name ? client.Name : ip
+      return context.getDevice(ip, 'RecentIP')?.Name || ip
     }
 
     // setup datasets
@@ -192,72 +177,86 @@ class TrafficTimeSeries extends Component {
     return datasets
   }
 
-  componentDidMount() {
+  const initData = async () => {
+    let targets = ['WanOut', 'WanIn', 'LanOut', 'LanIn']
+    let data = {}
+    for (let target of targets) {
+      let datasets = await buildTimeSeries(target)
+      data[target] = { datasets }
+    }
+
+    setData(data)
+  }
+
+  useEffect(() => {
+    //init selects
     let targets = ['WanOut', 'WanIn', 'LanOut', 'LanIn']
 
-    deviceAPI.list().then((devices) => {
-      let clients = Object.values(devices).map((d) => {
-        return { Name: d.Name, IP: d.RecentIP, MAC: d.MAC }
-      })
+    setChartModes(
+      targets.reduce((m, o) => {
+        m[o] = 'percent'
+        return m
+      }, {})
+    )
+    setScales(
+      targets.reduce((m, o) => {
+        m[o] = 'All Time'
+        return m
+      }, {})
+    )
 
-      this.setState({ clients })
-    })
+    initData()
+  }, [])
 
-    targets.map(async (target) => {
-      let datasets = await this.buildTimeSeries(target)
-      this.setState({ [target]: { datasets } })
+  /*useEffect(() => {
+    initData()
+  }, [context.devices])*/
+
+  const handleChangeTime = (value, type) => {
+    setScales({ ...scales, [type]: value })
+    buildTimeSeries(type, chartModes[type], value).then((datasets) => {
+      setData({ ...data, [type]: { datasets } })
     })
   }
 
-  render() {
-    const rebuildTimeSeries = (type) => {
-      this.buildTimeSeries(type).then((datasets) => {
-        this.setState({ [type]: { datasets: datasets } })
-      })
-    }
+  const handleChangeMode = (value, type) => {
+    setChartModes({ ...chartModes, [type]: value })
+    buildTimeSeries(type, value, scales[type]).then((datasets) => {
+      setData({ ...data, [type]: { datasets } })
+    })
+  }
 
-    const handleChangeTime = (value, type) => {
-      this.setState({ [`${type}_scale`]: value })
-      rebuildTimeSeries(type)
-    }
+  const prettyTitle = (type) => {
+    return {
+      WanIn: 'WAN incoming',
+      WanOut: 'WAN outgoing',
+      LanIn: 'LAN incoming',
+      LanOut: 'LAN outgoing'
+    }[type]
+  }
 
-    const handleChangeMode = (value, type) => {
-      let chartModes = this.state.chartModes
-      chartModes[type] = value
-      this.setState({ chartModes }, () => rebuildTimeSeries(type))
-    }
-
-    const prettyTitle = (type) => {
-      return {
-        WanIn: 'WAN incoming',
-        WanOut: 'WAN outgoing',
-        LanIn: 'LAN incoming',
-        LanOut: 'LAN outgoing'
-      }[type]
-    }
-
-    return (
-      <ScrollView sx={{ '@md': { height: '92vh' } }}>
-        <VStack space="md">
-          {['WanOut', 'WanIn', 'LanIn', 'LanOut'].map((type) => {
-            return (
+  return (
+    <ScrollView h="$full">
+      <VStack space="md">
+        {Object.keys(data).length ? (
+          <>
+            {['WanOut', 'WanIn', 'LanIn', 'LanOut'].map((type) => (
               <TimeSeries
-                key={type}
+                key={`${type}:${chartModes[type]}`}
                 type={type}
                 title={prettyTitle(type)}
-                data={this.state[type]}
-                chartMode={this.state.chartModes[type]}
+                data={data[type]}
+                chartMode={chartModes[type] || 'percent'}
+                scale={scales[type] || 'All Time'}
                 handleChangeTime={handleChangeTime}
                 handleChangeMode={handleChangeMode}
               />
-            )
-          })}
-        </VStack>
-      </ScrollView>
-    )
-  }
+            ))}
+          </>
+        ) : null}
+      </VStack>
+    </ScrollView>
+  )
 }
-
-TrafficTimeSeries.contextType = AlertContext
 
 export default TrafficTimeSeries

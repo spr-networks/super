@@ -341,7 +341,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     'nft:drop:private': (item) => <NFTDropItem item={item} type="private" />,
     'nft:drop:forward': (item) => <NFTDropItem item={item} type="forward" />,
     'nft:drop:mac': (item) => <NFTDropItem item={item} type="mac" />,
-    'nft:drop:input': (item) => <NFTDropItem item={item} type={'input'} />
+    'nft:drop:input': (item) => <NFTDropItem item={item} type="input" />
   }
 
   const NFTDropItem = ({ item, type, ...props }) => {
@@ -375,7 +375,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
             show={['Style', 'Name']}
             flex={1}
             hideMissing={false}
-            item={context.getDevice(item.Ethernet.SrcMAC)}
+            item={context.getDevice(item.Ethernet?.SrcMAC)}
           />
           <HStack space="sm">
             <InterfaceItem name={item.InDev} {...desktopOnly} />
@@ -413,7 +413,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
             show={['Style', 'Name']}
             flex={1}
             hideMissing={true}
-            item={context.getDevice(item.Ethernet.DstMAC)}
+            item={context.getDevice(item.Ethernet?.DstMAC)}
           />
         </HStack>
       </VStack>

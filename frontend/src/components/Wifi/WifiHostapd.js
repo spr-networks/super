@@ -773,7 +773,7 @@ const WifiHostapd = (props) => {
 
   // when selected and click save in channel form
   const updateChannels = (wifiParameters) => {
-    let updateConfig = (params) => {
+    let updateChannelInfo = (params) => {
       let data = { ...params, ...wifiParameters }
 
       if (wifiParameters.Mode == 'b' || wifiParameters.Mode == 'g') {
@@ -790,6 +790,8 @@ const WifiHostapd = (props) => {
 
       data.Hw_mode = data.Mode
 
+      //data will have inherited Op_class from the channel calculation
+
       wifiAPI
         .updateConfig(iface, data)
         .then((config) => {
@@ -803,7 +805,7 @@ const WifiHostapd = (props) => {
 
     wifiAPI
       .calcChannel(wifiParameters)
-      .then(updateConfig)
+      .then(updateChannelInfo)
       .catch((e) => {
         context.error('API Failure: ' + e.message)
       })

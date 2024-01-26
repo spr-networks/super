@@ -28,6 +28,7 @@ import { prettyJSONPath, prettyToJSONPath } from 'components/Logs/FilterSelect'
 import { dbAPI } from 'api'
 import { CheckCircle2Icon } from 'lucide-react-native'
 
+//note: unused
 const getAlertMessageForTopic = (topic) => {
   if (topic.startsWith('dns:serve:')) {
     return ['DNS', `DNS Lookup {{FirstName}}`]
@@ -102,29 +103,6 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
       setActionConfig({ ...curItem.Actions[0] })
     }
   }, [curItem])
-
-  const getAlertFromData = (form) => {
-    let { TopicPrefix } = form
-    let [MessageTitle, MessageBody] = getAlertMessageForTopic(TopicPrefix)
-
-    return { ...form, MessageTitle, MessageBody }
-  }
-
-  //load default body from prefix
-  useEffect(() => {
-    if (ActionConfig.MessageBody?.length) {
-      return
-    }
-
-    let { MessageTitle, MessageBody } = getAlertFromData({
-      TopicPrefix,
-      ...ActionConfig
-    })
-
-    //NOTE curItem and useEffect can race when setting on init
-    let config = { ...curItem?.Actions[0], ...ActionConfig }
-    setActionConfig({ ...config, MessageTitle, MessageBody })
-  }, [TopicPrefix])
 
   // fetch sample with this prefix to get json syntax
   const getLogs = async (bucket) => {

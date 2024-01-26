@@ -117,29 +117,3 @@ export const Base64 = {
     return output
   }
 }
-
-export const eventTemplate = (template, event) => {
-  if (!template || !event) {
-    return ""
-  }
-
-  return template.replace(/\{\{([\w\.]+)\}\}/g, (match, path) => {
-      if (match.includes("__")) {
-        //disable double underscore matches
-        return ""
-      }
-      const levels = path.split('.');
-      let currentValue = event
-      for (let level of levels) {
-        if (!currentValue) {
-          return ""
-        }
-        if (currentValue[level]) {
-          currentValue = currentValue[level]
-        } else {
-          return ""
-        }
-      }
-      return currentValue
-  });
-};

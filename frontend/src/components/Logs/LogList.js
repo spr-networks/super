@@ -158,7 +158,7 @@ const LogList = (props) => {
   return (
     <View h={h}>
       <VStack
-        h="120"
+        h={120}
         sx={{
           '@md': { flexDirection: 'row', h: '$20' }
         }}
@@ -181,9 +181,9 @@ const LogList = (props) => {
           )}
         </VStack>
 
-        <HStack flex="2" space="sm">
+        <HStack flex={2} space="sm" alignItems="center">
           {list ? (
-            <Box flex="2">
+            <Box flex={2}>
               <InputSelect
                 isMultiple
                 options={containersOptions}
@@ -192,12 +192,7 @@ const LogList = (props) => {
               />
             </Box>
           ) : null}
-          <Button
-            action="primary"
-            marginLeft="auto"
-            alignSelf="center"
-            onPress={handleClickRefresh}
-          >
+          <Button action="primary" onPress={handleClickRefresh} size="md">
             <ButtonIcon as={RefreshCwIcon} />
           </Button>
         </HStack>

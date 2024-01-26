@@ -43,6 +43,7 @@ import {
 } from '@gluestack-ui/themed'
 import { AppContext } from 'AppContext'
 import { ListHeader } from 'components/List'
+import DeviceExpiry from './DeviceExpiry'
 
 const AddDevice = (props) => {
   const context = useContext(AlertContext)
@@ -65,14 +66,6 @@ const AddDevice = (props) => {
 
   const [errors, setErrors] = useState({})
 
-  const expirationOptions = [
-    { label: 'Never', value: 0 },
-    { label: '1 Hour', value: 60 * 60 },
-    { label: '1 Day', value: 60 * 60 * 24 },
-    { label: '1 Week', value: 60 * 60 * 24 * 7 },
-    { label: '4 Weeks', value: 60 * 60 * 24 * 7 * 4 }
-  ]
-
   const tagTips = {
     guest: 'This is a guest device',
     lan_upstream:
@@ -93,6 +86,7 @@ const AddDevice = (props) => {
   }, [])
 
   const filterMAC = (value) => {
+    value = value.toLowerCase()
     //must be of the format 00:00:00:00:00:00
     const hexChars = '0123456789abcdef'
     let digits = ''
@@ -188,7 +182,10 @@ const AddDevice = (props) => {
         //gotcha in the API is to reset should set to -1
         //this is so that setting 0 does not update expiry
         value = -1
+      } else {
+        value = parseInt(Date.now() / 1e3) + value
       }
+
       setExpiration(value)
     }
 
@@ -208,6 +205,9 @@ const AddDevice = (props) => {
       }
     }
 
+    let DeviceExpiration =
+      expiration < 0 ? -1 : expiration - parseInt(Date.now() / 1e3)
+
     let data = {
       MAC: mac || 'pending',
       Name: name,
@@ -217,7 +217,7 @@ const AddDevice = (props) => {
         Psk: psk,
         Type: wpa
       },
-      DeviceExpiration: expiration,
+      DeviceExpiration,
       DeleteExpiration: deleteExpiry,
       DeviceDisabled: deviceDisabled
     }
@@ -539,15 +539,9 @@ const AddDevice = (props) => {
             </FormControlLabel>
 
             <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
-              <InputSelect
-                options={expirationOptions}
-                value={
-                  expiration
-                    ? timeAgo(new Date(Date.now() + expiration * 1e3))
-                    : 'Never'
-                }
-                onChange={(v) => handleChange('Expiration', parseInt(v))}
-                onChangeText={(v) => handleChange('Expiration', parseInt(v))}
+              <DeviceExpiry
+                value={expiration}
+                onChange={(v) => handleChange('Expiration', v)}
               />
 
               <Checkbox
@@ -565,7 +559,12 @@ const AddDevice = (props) => {
 
             <FormControlHelper>
               <FormControlHelperText>
-                If non zero has unix time for when the entry should disappear
+                {/*If non zero has unix time for when the entry should disappear*/}
+                {expiration > 0
+                  ? `Expire in ${timeAgo(
+                      new Date(expiration * 1e3).toUTCString()
+                    )}`
+                  : null}
               </FormControlHelperText>
             </FormControlHelper>
           </FormControl>

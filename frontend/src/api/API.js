@@ -55,13 +55,12 @@ export const getApiURL = () => {
 
 export const getWsURL = () => {
   let url = getApiURL()
-  if (url.startsWith("https://")) {
-    return url.replace('https://', "wss://") + "ws"
+  if (url.startsWith('https://')) {
+    return url.replace('https://', 'wss://') + 'ws'
   } else {
-    return url.replace('http://', "ws://") + "ws"
+    return url.replace('http://', 'ws://') + 'ws'
   }
 }
-
 
 export const getApiHostname = () => {
   return getApiURL()
@@ -83,13 +82,11 @@ export const setAuthReturn = (url) => {
 }
 
 export const getAuthReturn = () => {
-  return AsyncStorage.getItem('auth-return')
-    .then((good) => {
-      let x = JSON.parse(good)
-      return x.url ? x.url : '/admin/home'
-    })
+  return AsyncStorage.getItem('auth-return').then((good) => {
+    let x = JSON.parse(good)
+    return x.url ? x.url : '/admin/home'
+  })
 }
-
 
 export const setJWTOTPHeader = (jwt = '') => {
   if (gJWTOTPHeader != jwt) {
@@ -176,7 +173,7 @@ class API {
       'Content-Type': 'application/json'
     }
 
-    if (gJWTOTPHeader && this.remoteURL == "") {
+    if (gJWTOTPHeader && this.remoteURL == '') {
       headers['X-JWT-OTP'] = gJWTOTPHeader
     }
 
@@ -205,7 +202,6 @@ class API {
 
     return this.fetch(method, url, body)
       .then((response) => {
-
         if (response.redirected) {
           window.location = '/auth/validate'
         }
@@ -305,15 +301,18 @@ export const testLogin = (username, password, callback) => {
     })
 }
 
-export const saveLogin = (username, password) => {
+export const saveLogin = (username, password, hostname = null) => {
   gAuthHeaders = 'Basic ' + Base64.btoa(username + ':' + password)
+
+  let authdata = Base64.btoa(username + ':' + password)
 
   return AsyncStorage.setItem(
     'user',
     JSON.stringify({
-      authdata: Base64.btoa(username + ':' + password),
-      username: username,
-      password: password
+      authdata,
+      username,
+      password,
+      hostname
     })
   )
 }

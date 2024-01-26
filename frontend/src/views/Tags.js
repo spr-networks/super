@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import {
   Box,
   HStack,
-  View,
+  ScrollView,
   SectionList,
   Text,
   VStack
@@ -52,7 +52,7 @@ const Tags = (props) => {
   }, [])
 
   return (
-    <View h="$full">
+    <ScrollView h="$full">
       <VStack space="md">
         <ListHeader title="Tags" />
 
@@ -79,7 +79,7 @@ const Tags = (props) => {
           <Text px="$4">No tags configured for devices or services</Text>
         ) : null}
       </VStack>
-    </View>
+    </ScrollView>
   )
 }
 

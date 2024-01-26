@@ -61,11 +61,11 @@ const Sidebar = ({
 
   useEffect(() => {
     setSidebarItems(props.routes)
-  }, [])
+  }, [props.routes])
 
-  if (!sidebarItems.length) {
+  /*if (!sidebarItems.length) {
     return <></>
-  }
+  }*/
 
   return (
     <>
@@ -93,11 +93,11 @@ const Sidebar = ({
       </ScrollView>
       {!isOpenSidebar || isMobile ? (
         <Box
-          h="8%"
+          h="20%"
           borderTopWidth="$1"
           sx={{
             '@base': { display: 'flex' },
-            '@md': { display: 'flex', borderRightWidth: '$1' },
+            '@md': { display: 'flex', height: '8%', borderRightWidth: '$1' },
             _light: {
               bg: '$sidebarBackgroundLight',
               borderColor: '$coolGray100'
@@ -124,6 +124,7 @@ const SidebarItem = (props) => {
     useContext(AppContext)
   const { activeSidebarItem, setActiveSidebarItem } = useContext(AppContext)
   const navigate = useNavigate()
+  const colorMode = useColorMode()
 
   /*useEffect(() => {
     window.scrollTo(0, 0)
@@ -175,8 +176,6 @@ const SidebarItem = (props) => {
     if (item.hideSimple && isSimpleMode && !isMeshNode) {
       display = 'none'
     }
-
-    const colorMode = useColorMode()
 
     return (
       <Box key={index} w="100%" display={display}>
@@ -310,7 +309,11 @@ export const CollapsibleSidebarItem = (props) => {
               </Text>
             </Box>
             <RotatingView isCollapsed={isCollapsed}>
-              <Icon as={ChevronDownIcon} color="$coolGray400" />
+              <Icon
+                as={ChevronDownIcon}
+                color="$coolGray400"
+                display={isMini ? 'none' : 'flex'}
+              />
             </RotatingView>
           </HStack>
         </Pressable>

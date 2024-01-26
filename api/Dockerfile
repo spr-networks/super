@@ -31,4 +31,5 @@ RUN mkdir -p /root/.local/share/jc/jcparsers
 COPY scripts/iw*.py /root/.local/share/jc/jcparsers
 
 COPY --from=builder /api /
+COPY --from=builder /sprbus /
 ENTRYPOINT ["/scripts/startup.sh"]

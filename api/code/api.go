@@ -829,7 +829,7 @@ func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 
 	append := "?" + params.Encode()
 
-	creds := GhcrCreds{PlusUser, config.PlusToken}
+	creds := GitOptions{PlusUser, config.PlusToken, true, false}
 	jsonValue, _ := json.Marshal(creds)
 
 	req, err := http.NewRequest(http.MethodPost, "http://localhost/remote_container_tags"+append, bytes.NewBuffer(jsonValue))
@@ -1531,7 +1531,8 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		refreshGroups = true
 	}
 
-	handleExpirations(&val, &dev)
+	handleExpirations(&dev, &dev)
+
 	devices[identity] = dev
 	saveDevicesJson(devices)
 
@@ -2267,7 +2268,7 @@ type SetupConfig struct {
 }
 
 func isSetupMode() bool {
-	_, err := os.Stat(AuthUsersFile)
+	_, err := os.Stat(SetupDonePath)
 	if err == nil || !os.IsNotExist(err) {
 		return false
 	}
@@ -2735,7 +2736,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated)).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/plugins/{name}/restart", handleRestartPlugin).Methods("PUT")
 	//TBD: API Docs
-	external_router_authenticated.HandleFunc("/plugins/custom_compose_paths", applyJwtOtpCheck(modifyCustomComposePaths)).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/plugin/custom_compose_paths", applyJwtOtpCheck(modifyCustomComposePaths)).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/plugin/install_user_url", installUserPluginGitUrl(external_router_authenticated)).Methods("PUT")
 	external_router_authenticated.HandleFunc("/plusToken", plusToken).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/plusTokenValid", plusTokenValid).Methods("GET")
 	external_router_authenticated.HandleFunc("/stopPlusExtension", stopPlusExt).Methods("PUT")

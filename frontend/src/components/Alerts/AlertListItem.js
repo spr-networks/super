@@ -1,5 +1,5 @@
 import React, { useContext, useState } from 'react'
-import { eventTemplate, prettyDate } from 'utils'
+import { prettyDate } from 'utils'
 
 import {
   Button,
@@ -17,13 +17,15 @@ import {
 import { EyeIcon, EyeOffIcon, AlertTriangleIcon } from 'lucide-react-native'
 
 import { dbAPI } from 'api'
-import { AlertContext } from 'AppContext'
+import { AlertContext, AppContext } from 'AppContext'
 import { ListItem } from 'components/List'
 import LogListItem from 'components/Logs/LogListItem'
 import { Tooltip } from 'components/Tooltip'
+import {eventTemplate} from 'components/Alerts/AlertUtil'
 
 const AlertListItem = ({ item, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
+  const appContext = useContext(AppContext)
 
   const [showEvent, setShowEvent] = useState(item?.Body ? false : true)
 
@@ -59,7 +61,7 @@ const AlertListItem = ({ item, notifyChange, ...props }) => {
         <Icon size="sm" as={AlertTriangleIcon} color={color} />
 
         <Heading size="xs">
-          {eventTemplate(item.Title, item.Event) || item.Topic || 'Alert'}
+          {eventTemplate(appContext, item.Title, item.Event) || item.Topic || 'Alert'}
         </Heading>
       </HStack>
 
@@ -118,7 +120,10 @@ const AlertListItem = ({ item, notifyChange, ...props }) => {
             display={!showEvent ? 'flex' : 'none'}
             alignSelf="center"
           >
-            <Text size="sm">{eventTemplate(item.Body, item.Event)}</Text>
+            <Text size="sm">
+              {eventTemplate(appContext, item.Body, item.Event)}
+            </Text>
+
           </HStack>
           <VStack
             space="sm"
@@ -154,8 +159,10 @@ const StateButton = ({ item, onPress, ...props }) => {
       size="xs"
       onPress={() => onPress(action)}
     >
-      <ButtonText>{text}</ButtonText>
-      <ButtonIcon as={icon} ml="$2" />
+      <ButtonText display="none" sx={{ '@md': { display: 'flex' } }}>
+        {text}
+      </ButtonText>
+      <ButtonIcon as={icon} sx={{ '@md': { marginLeft: '$2' } }} />
     </Button>
   )
 }

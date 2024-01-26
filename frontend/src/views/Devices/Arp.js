@@ -5,13 +5,11 @@ import { AppContext } from 'AppContext'
 import DeviceItem from 'components/Devices/DeviceItem'
 
 import {
-  Badge,
-  BadgeText,
   FlatList,
-  View,
-  Box,
+  ScrollView,
   Text,
-  VStack
+  VStack,
+  HStack
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
@@ -68,7 +66,7 @@ const Arp = (props) => {
   }, [])
 
   return (
-    <View>
+    <ScrollView h="$full">
       <ListHeader title="ARP Table"></ListHeader>
 
       <FlatList
@@ -83,13 +81,19 @@ const Arp = (props) => {
               space={'md'}
               justifyContent="space-between"
             >
+              <HStack flex={1}>
+                <DeviceItem
+                  hideMissing={true}
+                  show={['Name']}
+                  item={context.getDevice(item.MAC, 'MAC')}
+                />
+              </HStack>
               <Text flex={1} size="sm" bold>
                 {item.IP}
               </Text>
               <Text flex={2} size="sm" color="$muted500">
                 {item.MAC}
               </Text>
-              <DeviceItem flex={1} hideMissing={true} show={['Name']} item={context.getDevice(item.MAC, 'MAC')} />
             </VStack>
             <VStack
               flex={2}
@@ -97,6 +101,7 @@ const Arp = (props) => {
               sx={{ '@md': { flexDirection: 'row' } }}
               space={'md'}
               justifyContent="space-between"
+              alignItems="flex-end"
             >
               <Text size="xs">Flags: {translateFlags(item.Flags)}</Text>
 
@@ -106,7 +111,7 @@ const Arp = (props) => {
         )}
         keyExtractor={(item) => item.IP + item.Device}
       />
-    </View>
+    </ScrollView>
   )
 }
 

@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react'
-import { Dimensions, Platform } from 'react-native'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
   Box,
   Button,
@@ -37,6 +37,8 @@ const TrafficList = (props) => {
   const [asns, setAsns] = useState({})
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
+  const params = useParams()
+  const navigate = useNavigate()
 
   const perPage = 13
 
@@ -184,6 +186,18 @@ const TrafficList = (props) => {
   }, [devices, list, type, filterIps, asns])
 
   useEffect(() => {
+    if (filterIps.length) {
+      navigate(`/admin/trafficlist/${filterIps.join(',')}`)
+    }
+  }, [filterIps])
+
+  //init
+  useEffect(() => {
+    let { ips } = params
+    if (ips != ':ips') {
+      ips = ips.split(',')
+      setFilterIps(ips)
+    }
     refreshList()
 
     const interval = setInterval(refreshList, 10 * 1e3)
@@ -205,7 +219,7 @@ const TrafficList = (props) => {
     <View h="100%" sx={{ '@md': { height: '92vh' } }}>
       <VStack
         bg="$backgroundCardLight"
-        minHeight={180}
+        minHeight={100}
         sx={{
           '@lg': { flexDirection: 'row', minHeight: 60 },
           _dark: { bg: '$backgroundCardDark' }

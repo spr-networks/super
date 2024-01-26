@@ -1,4 +1,11 @@
 # Secure Programmable Router (SPR) Release Notes
+## v0.3.4
+* Support for 6-e channel calculation in API
+* Add decorators to alert templates
+* Fast Plugin install with URL & OTP
+Key Fixes
+* Multitude of UI/Gluestack fixes (see github issue tracker)
+
 ## v0.3.3
 * New Alerts functionality 
 * New Events filters, Events UI Improvements
