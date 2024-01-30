@@ -66,6 +66,7 @@ import { routes as allRoutes } from 'routes'
 import { PuzzleIcon } from 'lucide-react-native'
 
 import { KeyboardAvoidingView } from '@gluestack-ui/themed'
+import OTPValidate from 'components/Auth/OTPValidate'
 
 const ConfirmTrafficAlert = (props) => {
   const { type, title, body, showAlert, onClose } = props
@@ -387,10 +388,17 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     const redirOnAuthError = (err) => {
       console.error('HTTP auth error for url:', err.response.url)
 
-      let pathname = location.pathname
+      /*let pathname = location.pathname
       setAuthReturn(pathname)
-
-      navigate('/auth/validate')
+      navigate('/auth/validate')*/
+      modalState.modal(
+        'OTP Validate',
+        <OTPValidate
+          onSuccess={() => {
+            modalState.setShowModal(false)
+          }}
+        />
+      )
     }
 
     api.registerErrorHandler(401, redirOnAuthError)
