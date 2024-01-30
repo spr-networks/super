@@ -115,7 +115,7 @@ const DeviceInfo = ({ identity, ...props }) => {
   }
 
   return ssids.map((ssid) => (
-    <VStack space="md">
+    <VStack key={ssid} space="md">
       <HStack space="md" justifyContent="center">
         <Text size="md" bold>
           SSID
@@ -358,20 +358,19 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
         <Icon as={PencilIcon} color="$muted500" mr="$2" />
         <MenuItemLabel size="sm">Edit</MenuItemLabel>
       </MenuItem>
-
       <MenuItem key="duplicate">
         <Icon as={CopyIcon} color="$muted500" mr="$2" />
         <MenuItemLabel size="sm">Duplicate</MenuItemLabel>
       </MenuItem>
-      <MenuItem key="delete">
-        <Icon as={TrashIcon} color="$muted500" mr="$2" />
-        <MenuItemLabel size="sm" color="$red700">
-          Delete
-        </MenuItemLabel>
-      </MenuItem>
       <MenuItem key="info">
         <Icon as={WifiIcon} color="$muted500" mr="$2" />
         <MenuItemLabel size="sm">Show password</MenuItemLabel>
+      </MenuItem>
+      <MenuItem key="delete">
+        <Icon as={TrashIcon} color="$red700" mr="$2" />
+        <MenuItemLabel size="sm" color="$red700">
+          Delete
+        </MenuItemLabel>
       </MenuItem>
     </Menu>
   )
