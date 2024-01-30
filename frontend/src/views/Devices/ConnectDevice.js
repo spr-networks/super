@@ -1,9 +1,9 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import QRCode from 'react-qr-code'
 
 import { deviceAPI, wifiAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
+import DeviceQRCode from 'components/Devices/DeviceQRCode'
 
 import {
   Box,
@@ -23,7 +23,6 @@ const WifiConnect = (props) => {
 
   const [success, setSuccess] = useState(false)
   const [ssids, setSsids] = useState([])
-  const [connectQRs, setConnectQRs] = useState({})
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -37,33 +36,16 @@ const WifiConnect = (props) => {
               return status['ssid[0]']
             })
           })
-        ).then((results) => {
-          let qrs = {}
-          results.map((ssid) => {
-            qrs[ssid] = generateQRCode(
-              ssid,
-              device.PSKEntry.Psk,
-              device.PSKEntry.Type
-            )
-          })
-          if (Object.keys(qrs).length == 0) {
-            context.error("Failed to add device or configured properly -- check wifid, or reset wifi settings under WiFi->Radio settings")
-          } else {
-            setConnectQRs(qrs)
-            setSsids(results)
-          }
+        ).then((ssids) => {
+          setSsids(ssids)
         })
       })
       .catch((err) => {
-        context.error("Failed to add device or configured properly -- check wifid, or reset wifi settings")
+        context.error(
+          'Failed to add device or configured properly -- check wifid, or reset wifi settings'
+        )
       })
   }, [])
-
-  // set qrcode
-  const generateQRCode = (_ssid, password, type, hidden = false) => {
-    type = 'WPA' //type.toUpperCase()
-    return `WIFI:S:${_ssid};P:${password};T:${type};${hidden};`
-  }
 
   const checkPendingStatus = () => {
     deviceAPI
@@ -132,11 +114,11 @@ const WifiConnect = (props) => {
             </>
           )}
 
-          {connectQRs[ssid] ? (
-            <Box bg="$white" p="$4">
-              <QRCode value={connectQRs[ssid]} />
-            </Box>
-          ) : null}
+          <DeviceQRCode
+            ssid={ssid}
+            psk={device.PSKEntry.Psk}
+            type={device.PSKEntry.Type}
+          />
 
           <Button w="$1/3" action="secondary" variant="solid" onPress={goBack}>
             <ButtonIcon as={ArrowLeftIcon} />
