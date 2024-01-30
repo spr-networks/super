@@ -1441,20 +1441,20 @@
   dependencies:
     tslib "^2.4.0"
 
-"@gluestack-style/animation-resolver@1.0.3":
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/@gluestack-style/animation-resolver/-/animation-resolver-1.0.3.tgz#88ed314cf2e6f15b888cb09f5a7d970b0fe9ee30"
-  integrity sha512-SfBHBBY0PVlLDpYRMz0KKEcyc6GtZJpbt1yYlaaErVaRqPKI1cbBcgWAS29e23i2Q7iwLLRhRZnbnELigcp55w==
+"@gluestack-style/animation-resolver@1.0.4":
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/@gluestack-style/animation-resolver/-/animation-resolver-1.0.4.tgz#93be3e67221ccb0ce064ddd260852bcc13612240"
+  integrity sha512-AeAQ61u41j9F2fxWTGiR6C7G3KG7qSCAYVi3jCE+aUiOEPEctfurUCT70DnrKp1Tg/Bl29a+OUwutaW/3YKvQw==
 
 "@gluestack-style/legend-motion-animation-driver@1.0.3":
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/@gluestack-style/legend-motion-animation-driver/-/legend-motion-animation-driver-1.0.3.tgz#e2408ff8515ced92cb75f096f5eeff1f9636a0da"
   integrity sha512-sD6aFS6Tq5XpyjrboFEIc8LrRY4TA4kodFYHzk6mDchvbkdLODijtjnaDQB1UqihOkMRg49e7ANRAOzc7eymaQ==
 
-"@gluestack-style/react@^1.0.43":
-  version "1.0.43"
-  resolved "https://registry.yarnpkg.com/@gluestack-style/react/-/react-1.0.43.tgz#8663ecd9929276917514ee8afb73545fe908dfba"
-  integrity sha512-4AbSm9M9oAkXd3fHiw5a4xxTGKeYbsHV6VUtYJB/pgxOHP2lv4L/GT8ODRuwrP5m84/7W+2jwVwUwJYm8NedWw==
+"@gluestack-style/react@^1.0.44":
+  version "1.0.44"
+  resolved "https://registry.yarnpkg.com/@gluestack-style/react/-/react-1.0.44.tgz#aeb40569fded541f40e906828bdf539810bbe8c7"
+  integrity sha512-9TVGuutpM0J4G1rGMOPMWtWaLLQZBDCYCE7yxJDUGcHy2IuniC92WmPiZw5qT+65zdZhwgF7uqPlUxvWd+r9gQ==
   dependencies:
     inline-style-prefixer "^6.0.1"
     normalize-css-color "^1.0.2"
@@ -1588,13 +1588,6 @@
     "@gluestack-ui/utils" "^0.1.12"
     "@react-native-aria/focus" "^0.2.9"
     "@react-native-aria/interactions" "^0.2.11"
-
-"@gluestack-ui/linear-gradient@0.1.2":
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/@gluestack-ui/linear-gradient/-/linear-gradient-0.1.2.tgz#5eea2673339456723f1003b4c456e3387498b83a"
-  integrity sha512-bdZ8Y38odGJm0gYdOcafZkszmivuhgA5CLAAkb1ZcW+b4E+kvhDBFtD4WHXEZILPF3xVQtTDffmhAl4SVpBjRw==
-  dependencies:
-    expo-linear-gradient "12.3.0"
 
 "@gluestack-ui/link@0.1.16":
   version "0.1.16"
@@ -1758,13 +1751,13 @@
     "@gluestack-ui/utils" "^0.1.12"
     "@react-native-aria/focus" "^0.2.9"
 
-"@gluestack-ui/themed@^1.1.0":
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/@gluestack-ui/themed/-/themed-1.1.0.tgz#ed95eb744370d027febd9679ebe73d187ea43afa"
-  integrity sha512-Vjj7hZ5g/A5TvmzCPjfdG/JgIdIwkqsqNyrqWkZRoz9jz943jj3fSaa666viO8ou4gMcDVj3hWZKXpZfqjLsbQ==
+"@gluestack-ui/themed@^1.1.2":
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/@gluestack-ui/themed/-/themed-1.1.2.tgz#5823b2349bca406e2383ef7e3cb1d47e25512453"
+  integrity sha512-zmEi6cL0fNaMj4Feh9ZOFb4kglvCrRPbOOAt5WoLaEcvN9aIzbKXD+YvKLRnrn4MNwyrcqV+GsZEdWWB+46kjg==
   dependencies:
     "@expo/html-elements" latest
-    "@gluestack-style/animation-resolver" "1.0.3"
+    "@gluestack-style/animation-resolver" "1.0.4"
     "@gluestack-style/legend-motion-animation-driver" "1.0.3"
     "@gluestack-ui/accordion" "1.0.0"
     "@gluestack-ui/actionsheet" "0.2.36"
@@ -1779,7 +1772,6 @@
     "@gluestack-ui/icon" "0.1.20"
     "@gluestack-ui/image" "0.1.7"
     "@gluestack-ui/input" "0.1.23"
-    "@gluestack-ui/linear-gradient" "0.1.2"
     "@gluestack-ui/link" "0.1.16"
     "@gluestack-ui/menu" "0.2.27"
     "@gluestack-ui/modal" "0.1.28"
@@ -7006,11 +6998,6 @@ expect@^29.7.0:
     jest-matcher-utils "^29.7.0"
     jest-message-util "^29.7.0"
     jest-util "^29.7.0"
-
-expo-linear-gradient@12.3.0:
-  version "12.3.0"
-  resolved "https://registry.yarnpkg.com/expo-linear-gradient/-/expo-linear-gradient-12.3.0.tgz#7abd8fedbf0138c86805aebbdfbbf5e5fa865f19"
-  integrity sha512-f9e+Oxe5z7fNQarTBZXilMyswlkbYWQHONVfq8MqmiEnW3h9XsxxmVJLG8uVQSQPUsbW+x1UUT/tnU6mkMWeLg==
 
 express@^4.17.3:
   version "4.18.2"

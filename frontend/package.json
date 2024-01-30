@@ -39,9 +39,9 @@
   },
   "dependencies": {
     "@babel/preset-react": "^7.18.6",
-    "@gluestack-style/react": "^1.0.43",
+    "@gluestack-style/react": "^1.0.44",
     "@gluestack-ui/config": "^1.1.1",
-    "@gluestack-ui/themed": "^1.1.0",
+    "@gluestack-ui/themed": "^1.1.2",
     "@react-aria/ssr": "^3.3.0",
     "@react-native-async-storage/async-storage": "^1.17.7",
     "@react-native-clipboard/clipboard": "^1.10.0",
