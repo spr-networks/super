@@ -1156,6 +1156,35 @@ func getDevices(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(devices)
 }
 
+func getDevice(w http.ResponseWriter, r *http.Request) {
+	identity := r.URL.Query().Get("identity")
+	if strings.Contains(identity, ":") {
+		identity = trimLower(identity)
+	}
+
+	//nomask := r.URL.Query().Get("nomask")
+	//if nomask != "" {}
+
+	if identity == "" {
+		http.Error(w, "Invalid device identity", 400)
+		return
+	}
+
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+
+	devices := getDevicesJson()
+
+	dev, exists := devices[identity]
+	if !exists {
+		http.Error(w, "Invalid device identity", 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(dev)
+}
+
 func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 	identity := r.URL.Query().Get("identity")
 
@@ -2685,6 +2714,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/groups", getGroups).Methods("GET")
 	external_router_authenticated.HandleFunc("/groups", updateGroups).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/devices", getDevices).Methods("GET")
+	external_router_authenticated.HandleFunc("/device", applyJwtOtpCheck(getDevice)).Methods("GET")
 	external_router_authenticated.HandleFunc("/device", handleUpdateDevice).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/devices", syncDevices).Methods("PUT")
 
