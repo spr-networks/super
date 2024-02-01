@@ -53,7 +53,7 @@ const AuthValidate = (props) => {
         <Button
           action="secondary"
           variant="outline"
-          onPress={() => navigate(Platform.OS == 'web' ? -2 : -3)}
+          onPress={() => navigate(Platform.OS == 'web' ? -2 : -2)}
         >
           <ButtonText>Back</ButtonText>
         </Button>

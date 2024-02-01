@@ -386,19 +386,23 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     })
 
     const redirOnAuthError = (err) => {
-      console.error('HTTP auth error for url:', err.response.url)
+      let url = err.response.url
+      console.error('HTTP auth error for url:', url)
 
-      /*let pathname = location.pathname
-      setAuthReturn(pathname)
-      navigate('/auth/validate')*/
-      modalState.modal(
-        'OTP Validate',
-        <OTPValidate
-          onSuccess={() => {
-            modalState.setShowModal(false)
-          }}
-        />
-      )
+      //custom handler for /admin/auth page
+      if (url.endsWith('/tokens')) {
+        //setAuthReturn('/admin/auth/')
+        //navigate('/auth/validate')
+      } else {
+        modalState.modal(
+          'OTP Validate',
+          <OTPValidate
+            onSuccess={() => {
+              modalState.setShowModal(false)
+            }}
+          />
+        )
+      }
     }
 
     api.registerErrorHandler(401, redirOnAuthError)
