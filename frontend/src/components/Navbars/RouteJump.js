@@ -182,7 +182,7 @@ const RouteJump = ({ ...props }) => {
         offset={-44}
         display={isOpen ? 'flex' : 'none'}
       >
-        <PopoverContent maxWidth={280}>
+        <PopoverContent w={280}>
           <PopoverBody>
             {/*<PopoverCloseButton>
               <Icon as={CloseIcon} />
