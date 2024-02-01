@@ -90,6 +90,10 @@ const prettyJSONPath = (query) => {
 }
 
 const prettyToJSONPath = (query) => {
+  if (!query?.length) {
+    return query
+  }
+
   if (query.startsWith('$[?(@.')) {
     return query
   }

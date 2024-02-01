@@ -23,6 +23,7 @@ import { AlertContext, ModalContext } from 'AppContext'
 import { EditDatabase } from 'views/System/EditDatabase'
 import LogListItem from './LogListItem'
 import FilterInputSelect from './FilterInputSelect'
+import { prettyToJSONPath } from './FilterSelect'
 import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
 import { Tooltip } from 'components/Tooltip'
@@ -113,7 +114,7 @@ const LogList = (props) => {
     setTotal(stats.KeyN)
 
     let withFilter = params
-    withFilter['filter'] = searchField
+    withFilter['filter'] = prettyToJSONPath(searchField)
     let result = await dbAPI.items(bucket, withFilter)
     if (result == null) {
       result = []
