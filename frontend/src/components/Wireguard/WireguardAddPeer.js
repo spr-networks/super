@@ -34,7 +34,7 @@ export default class WireguardAddPeer extends React.Component {
     AllowedIPs: '',
     PrivateKey: '',
     PublicKey: '',
-    Endpoint: `${this.props.defaultEndpoints?.[0]}:${this.props.config.listenPort || 1024 }` ,
+    Endpoint: ``,
     addrs: [],
     config: null,
     groups: ['dns', 'wan'],
@@ -175,6 +175,14 @@ export default class WireguardAddPeer extends React.Component {
   }
 
   componentDidMount() {
+    if (this.props.defaultEndpoints?.length) {
+      let Endpoint = `${this.props.defaultEndpoints[0]}:${
+        this.props.config.listenPort || 51280
+      }`
+
+      this.setState({ Endpoint })
+    }
+
     wifiAPI.ipAddr().then((data) => {
       api.get('/subnetConfig').then((config) => {
         let addrs = this.props.defaultEndpoints.map((e) => {
@@ -210,7 +218,6 @@ export default class WireguardAddPeer extends React.Component {
     if (this.state.config) {
       return <WireguardConfig config={this.state.config} />
     }
-
 
     let endpoints = this.state.addrs.map((addr) => {
       let listenPort = this.props.config.listenPort || 1024 //51280
