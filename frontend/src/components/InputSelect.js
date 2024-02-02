@@ -11,6 +11,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   Menu,
+  Box,
   MenuItem,
   MenuItemLabel,
   Actionsheet,
@@ -212,15 +213,25 @@ const ActionSheetMenu = ({
   }
 
   return (
-    <>
-      {trigger()}
+    <Box>
+      <Button
+        size="xs"
+        w="$12"
+        h="$full"
+        variant="link"
+        rounded="$none"
+        onPress={() => setIsOpen(!isOpen)}
+      >
+        <ButtonIcon as={isOpen ? ChevronUpIcon : ChevronDownIcon} />
+      </Button>
       <Actionsheet
         isOpen={isOpen}
         onClose={() => setIsOpen(!isOpen)}
         zIndex={999}
+        useRNModal
       >
         <ActionsheetBackdrop />
-        <ActionsheetContent h={'$1/2'} zIndex={999}>
+        <ActionsheetContent h={'$96'} zIndex={999}>
           <ActionsheetScrollView>
             <ActionsheetDragIndicatorWrapper>
               <ActionsheetDragIndicator />
@@ -231,7 +242,7 @@ const ActionSheetMenu = ({
           </ActionsheetScrollView>
         </ActionsheetContent>
       </Actionsheet>
-    </>
+    </Box>
   )
 }
 
@@ -307,16 +318,18 @@ const InputSelect = (props) => {
 
   let elem = <SelectMenu onChange={handleChange} value={value} {...menuProps} />
 
-  //NOTE uncomment for ActionSheet version
-  /*elem = (
-    <ActionSheetMenu
-      onChange={handleChange}
-      value={value}
-      isOpen={isOpen}
-      setIsOpen={setIsOpen}
-      {...menuProps}
-    />
-  )*/
+  // NOTE this is better for more items. TODO filter list
+  if (menuProps.groups?.[0].options?.length > 6) {
+    elem = (
+      <ActionSheetMenu
+        onChange={handleChange}
+        value={value}
+        isOpen={isOpen}
+        setIsOpen={setIsOpen}
+        {...menuProps}
+      />
+    )
+  }
 
   const isDisabled =
     props.isDisabled !== undefined ? props.isDisabled : isMultiple
