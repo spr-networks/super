@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
+import { Platform } from 'react-native'
 
 import {
   Button,
@@ -156,7 +157,11 @@ const ModalConfirm = (props) => {
     <>
       {trigger ? updateTrigger() : null}
 
-      <Modal isOpen={isOpen} onClose={handleClose}>
+      <Modal
+        isOpen={isOpen}
+        onClose={handleClose}
+        useRNModal={Platform.OS == 'web'}
+      >
         <ModalBackdrop />
         <ModalContent>
           <ModalHeader>

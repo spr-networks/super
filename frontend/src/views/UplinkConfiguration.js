@@ -5,6 +5,7 @@
       test failover
 */
 import React, { useContext, useEffect, useState } from 'react'
+import { Platform } from 'react-native'
 import {
   Badge,
   BadgeText,
@@ -460,6 +461,8 @@ const UplinkSetIP = ({ iface, onSubmit, ...props }) => {
 }
 
 const UplinkAddPPP = ({ iface, onSubmit, ...props }) => {
+  const context = useContext(AlertContext)
+
   const type = 'ppp'
   const [item, setItem] = useState({
     Username: '',
@@ -843,6 +846,7 @@ const UplinkInfo = (props) => {
           onClose={() => {
             setShowModal(false)
           }}
+          useRNModal={Platform.OS == 'web'}
         >
           <ModalBackdrop />
           <ModalContent>

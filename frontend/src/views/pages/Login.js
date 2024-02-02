@@ -44,7 +44,14 @@ const Login = (props) => {
         setErrors({})
         navigate('/admin/home')
       } else {
-        setErrors({ login: true })
+        if (
+          hostname.length &&
+          !hostname.match(/^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)$/)
+        ) {
+          setErrors({ hostname: true })
+        } else {
+          setErrors({ login: true })
+        }
       }
     })
   }
@@ -80,7 +87,8 @@ const Login = (props) => {
 
     AsyncStorage.getItem('user').then((login) => {
       login = JSON.parse(login)
-      if (login) {
+
+      if (login?.username) {
         setUsername(login.username)
         setPassword(login.password)
 
@@ -118,6 +126,7 @@ const Login = (props) => {
           Login
         </Heading>
         <FormControl
+          isInvalid={'hostname' in errors}
           sx={{
             '@base': { display: Platform.OS === 'web' ? 'none' : 'flex' }
           }}
@@ -134,6 +143,12 @@ const Login = (props) => {
               <InputIcon as={GlobeIcon} color="$muted400" />
             </InputSlot>
           </Input>
+          {'hostname' in errors ? (
+            <FormControlError>
+              <FormControlErrorIcon as={AlertCircleIcon} />
+              <FormControlErrorText>Invalid IP address</FormControlErrorText>
+            </FormControlError>
+          ) : null}
         </FormControl>
 
         <FormControl>
