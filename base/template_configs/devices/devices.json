@@ -6,8 +6,8 @@
   "VLANMatch": "",
   "RecentIP": "",
   "PSKEntry": {
-   "Type": "sae",
-   "Psk": "secure passphrase"
+   "Type": "",
+   "Psk": ""
   },
   "Groups": [
    "dns",
