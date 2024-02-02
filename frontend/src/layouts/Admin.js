@@ -785,6 +785,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
               modal.onClose()
             }
           }}
+          useRNModal={Platform.OS == 'web'}
         >
           <ModalBackdrop />
           <ModalContent>
