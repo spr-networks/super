@@ -256,7 +256,6 @@ export default class WireguardAddPeer extends React.Component {
               placeholder="base64 pubkey"
               value={this.state.PublicKey}
               onChangeText={(value) => this.handleChange('PublicKey', value)}
-              autoFocus
             />
           </Input>
           <FormControlHelper>
