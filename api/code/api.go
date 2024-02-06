@@ -181,7 +181,7 @@ func ipAddr(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Println("ipAddr failed", err)
-		http.Error(w, "Not found", 404)
+		http.Error(w, "Not found", 400)
 		return
 	}
 
@@ -272,13 +272,13 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 
 		req, err := http.NewRequest(http.MethodGet, "http://localhost/v1.41/networks", nil)
 		if err != nil {
-			http.Error(w, err.Error(), 404)
+			http.Error(w, err.Error(), 400)
 			return
 		}
 
 		resp, err := c.Do(req)
 		if err != nil {
-			http.Error(w, err.Error(), 404)
+			http.Error(w, err.Error(), 400)
 			return
 		}
 
@@ -295,13 +295,13 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 
 		req, err := http.NewRequest(http.MethodGet, "http://localhost/v1.41/containers/json?all=1", nil)
 		if err != nil {
-			http.Error(w, err.Error(), 404)
+			http.Error(w, err.Error(), 400)
 			return
 		}
 
 		resp, err := c.Do(req)
 		if err != nil {
-			http.Error(w, err.Error(), 404)
+			http.Error(w, err.Error(), 400)
 			return
 		}
 
@@ -318,7 +318,7 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 	} else if name == "ss" {
 		data, err = exec.Command("jc", "-p", "ss", "-4", "-n").Output()
 	} else {
-		http.Error(w, "Invalid info", 404)
+		http.Error(w, "Invalid info", 400)
 		return
 	}
 
@@ -2776,7 +2776,7 @@ func main() {
 	// Auth api
 	external_router_authenticated.HandleFunc("/tokens", applyJwtOtpCheck(getAuthTokens)).Methods("GET")
 	external_router_authenticated.HandleFunc("/tokens", applyJwtOtpCheck(updateAuthTokens)).Methods("PUT", "DELETE")
-	//TBD: API Docs OTP
+
 	external_router_authenticated.HandleFunc("/otp_register", otpRegister).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/otp_validate", generateOTPToken).Methods("PUT")
 	external_router_authenticated.HandleFunc("/otp_status", otpStatus).Methods("GET")
@@ -2784,7 +2784,7 @@ func main() {
 
 	// alerts
 	external_router_authenticated.HandleFunc("/alerts", getAlertSettings).Methods("GET")
-	external_router_authenticated.HandleFunc("/alerts", modifyAlertSettings).Methods("DELETE", "PUT")
+	external_router_authenticated.HandleFunc("/alerts", modifyAlertSettings).Methods("PUT")
 	external_router_authenticated.HandleFunc("/alerts/{index:[0-9]+}", modifyAlertSettings).Methods("DELETE", "PUT")
 
 	// allow leaf nodes to report PSK events also

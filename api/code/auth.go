@@ -26,7 +26,6 @@ import (
 var AuthUsersFile = TEST_PREFIX + "/configs/auth/auth_users.json"
 var AuthTokensFile = TEST_PREFIX + "/configs/auth/auth_tokens.json"
 
-var gOtpPeriod = 30
 var OTPSettingsFile = TEST_PREFIX + "/configs/auth/otp_settings.json"
 
 var WebAuthnOtpFile = TEST_PREFIX + "/state/api/webauthn_otp"
