@@ -1451,10 +1451,10 @@
   resolved "https://registry.yarnpkg.com/@gluestack-style/legend-motion-animation-driver/-/legend-motion-animation-driver-1.0.3.tgz#e2408ff8515ced92cb75f096f5eeff1f9636a0da"
   integrity sha512-sD6aFS6Tq5XpyjrboFEIc8LrRY4TA4kodFYHzk6mDchvbkdLODijtjnaDQB1UqihOkMRg49e7ANRAOzc7eymaQ==
 
-"@gluestack-style/react@^1.0.44":
-  version "1.0.44"
-  resolved "https://registry.yarnpkg.com/@gluestack-style/react/-/react-1.0.44.tgz#aeb40569fded541f40e906828bdf539810bbe8c7"
-  integrity sha512-9TVGuutpM0J4G1rGMOPMWtWaLLQZBDCYCE7yxJDUGcHy2IuniC92WmPiZw5qT+65zdZhwgF7uqPlUxvWd+r9gQ==
+"@gluestack-style/react@^1.0.45":
+  version "1.0.45"
+  resolved "https://registry.yarnpkg.com/@gluestack-style/react/-/react-1.0.45.tgz#c7c7e59571eceb5a7d1b9e491578133e6a30907b"
+  integrity sha512-aMGKPX3Z30ZS9mBcyF2Q2IjDsVbNjqxi1WByyLOYdgosMTAHJwnp4lSjB7MT7B/jcLnIS8pd+WwCM/5toa8jFg==
   dependencies:
     inline-style-prefixer "^6.0.1"
     normalize-css-color "^1.0.2"
@@ -1529,10 +1529,10 @@
     "@react-native-aria/utils" "^0.2.10"
     "@react-stately/checkbox" "^3.4.2"
 
-"@gluestack-ui/config@^1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@gluestack-ui/config/-/config-1.1.1.tgz#6d5b84af0d7028ef4c6a870872de49ee2e26109b"
-  integrity sha512-BSeUtUfO1PgLF9Qmb9ZSngwfMiZB4fIDSNVYYwak2a2NHysRBGMSDXcvIvvyIDGAeCd4/gET9ycZDTLs6848OQ==
+"@gluestack-ui/config@^1.1.2":
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/@gluestack-ui/config/-/config-1.1.2.tgz#6c93d85a7844efd2deb6bf1b2aef05d746621e91"
+  integrity sha512-r0gp34udSqSH9Z5AWYR6Qdk/ZpyGkOLtjPMEpkhDPMLYeYv4+bNkLQSZa/zw9C0rn4hwgv4bKhbUWBG8IlnnqQ==
 
 "@gluestack-ui/divider@0.1.8":
   version "0.1.8"
@@ -1751,10 +1751,10 @@
     "@gluestack-ui/utils" "^0.1.12"
     "@react-native-aria/focus" "^0.2.9"
 
-"@gluestack-ui/themed@^1.1.2":
-  version "1.1.2"
-  resolved "https://registry.yarnpkg.com/@gluestack-ui/themed/-/themed-1.1.2.tgz#5823b2349bca406e2383ef7e3cb1d47e25512453"
-  integrity sha512-zmEi6cL0fNaMj4Feh9ZOFb4kglvCrRPbOOAt5WoLaEcvN9aIzbKXD+YvKLRnrn4MNwyrcqV+GsZEdWWB+46kjg==
+"@gluestack-ui/themed@^1.1.3":
+  version "1.1.3"
+  resolved "https://registry.yarnpkg.com/@gluestack-ui/themed/-/themed-1.1.3.tgz#3162b12a45789666618a8bd480c003596bed6997"
+  integrity sha512-Jh3InxWvBag6XYe2mfYgdfYmbM4yIWawHS0EfPTCWA+XAyBpcoXfb4/uBBp8+vrYrDOXS2ucI9rGN5rz75C95w==
   dependencies:
     "@expo/html-elements" latest
     "@gluestack-style/animation-resolver" "1.0.4"
