@@ -8,7 +8,8 @@ import {
   Text,
   View,
   VStack,
-  CheckIcon
+  CheckIcon,
+  HStack
 } from '@gluestack-ui/themed'
 
 import { alertsAPI, dbAPI } from 'api'
@@ -16,7 +17,6 @@ import AddAlert from 'components/Alerts/AddAlert'
 import { AlertContext, ModalContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import { ListHeader } from 'components/List'
-import InputSelect from 'components/InputSelect'
 import FilterInputSelect from 'components/Logs/FilterInputSelect'
 import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
@@ -188,14 +188,20 @@ const Alerts = (props) => {
             }}
           />
           */}
-          <InputSelect
-            flex={1}
-            size="sm"
-            options={options}
-            value={stateFilter}
-            onChange={(v) => onChangeStateFilter(v)}
-            onChangeText={(v) => onChangeStateFilter(v)}
-          />
+          <Select
+            initialLabel={stateFilter}
+            selectedValue={stateFilter}
+            onValueChange={(v) => onChangeStateFilter(v)}
+          >
+            {options.map((opt) => (
+              <Select.Item
+                key={opt.value}
+                label={opt.label}
+                value={opt.value}
+              />
+            ))}
+          </Select>
+
           <ModalForm
             title="Add Alert"
             triggerText="Add Alert"
