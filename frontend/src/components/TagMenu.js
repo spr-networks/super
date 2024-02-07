@@ -62,6 +62,9 @@ const ItemMenu = ({
           }
         }}
       >
+        <MenuItem key="newItem" textValue="newItem">
+          <MenuItemLabel size="sm">{`New ${type}`}</MenuItemLabel>
+        </MenuItem>
         {items.map((item) => (
           <MenuItem
             key={
@@ -77,9 +80,6 @@ const ItemMenu = ({
           </MenuItem>
         ))}
 
-        <MenuItem key="newItem" textValue="newItem">
-          <MenuItemLabel size="sm">{`New ${type}...`}</MenuItemLabel>
-        </MenuItem>
       </Menu>
       <ModalConfirm
         type={modalType}
