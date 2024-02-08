@@ -52,7 +52,6 @@ const FilterInputSelect = ({
     <>
       <Input size="sm" rounded="$md" w="$full" {...props}>
         <InputField
-          autoFocus
           value={value}
           onChangeText={onChangeText}
           placeholder={props.placeholder || 'Search'}
