@@ -16,6 +16,8 @@ import {
   HStack,
   VStack,
   Text,
+  Textarea,
+  TextareaInput,
   TrashIcon,
   AddIcon,
   CheckIcon
@@ -263,15 +265,15 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
         <FormControlLabel>
           <FormControlLabelText>Body</FormControlLabelText>
         </FormControlLabel>
-        <Input type="text" variant="underlined">
-          <InputField
-            name="MessageBody"
+        <Textarea size="sm" h="$16">
+          <TextareaInput
+            placeholder="Message body"
             value={ActionConfig.MessageBody}
             onChangeText={(value) =>
               setActionConfig({ ...ActionConfig, MessageBody: value })
             }
           />
-        </Input>
+        </Textarea>
       </FormControl>
 
       <FormControl>
