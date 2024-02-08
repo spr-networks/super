@@ -1866,7 +1866,7 @@ func updateLocalMappings(IP string, Name string) {
 		}
 		ip := pieces[0]
 		hostname := pieces[1]
-		if ip == IP || entryName == hostname {
+		if entryName == hostname {
 			continue
 		}
 		new_data += ip + " " + hostname + "\n"
