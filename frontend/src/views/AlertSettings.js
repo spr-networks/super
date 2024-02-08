@@ -19,7 +19,8 @@ import {
   ThreeDotsIcon,
   Badge,
   BadgeText,
-  AddIcon
+  AddIcon,
+  ScrollView
 } from '@gluestack-ui/themed'
 
 import { alertsAPI, dbAPI } from 'api'
@@ -199,16 +200,35 @@ const AlertItem = ({
 
   return (
     <ListItem>
-      <Text flex={1} size="md" bold={!item.Disabled}>
-        {item.Name}
-      </Text>
-      <Text flex={1} size="md">
-        {item.TopicPrefix || 'N/A'}
-      </Text>
+      <VStack
+        space="sm"
+        flex={3}
+        alignItems="flex-start"
+        sx={{
+          '@md': {
+            flexDirection: 'row'
+          }
+        }}
+      >
+        <VStack space="md" flex={1}>
+          <HStack space="sm">
+            <Text bold>{item.Name}</Text>
+            {item.Disabled ? (
+              <Text size="xs" color="$muted500">
+                Disabled
+              </Text>
+            ) : null}
+          </HStack>
 
-      <Text flex={1} size="md">
-        {item.Actions?.[0]?.MessageTitle || 'N/A'}
-      </Text>
+          <Badge variant="outline" action="muted" alignSelf="flex-start">
+            <BadgeText>{item.TopicPrefix || 'N/A'}</BadgeText>
+          </Badge>
+        </VStack>
+
+        <Text flex={1} size="sm">
+          {item.Actions?.[0]?.MessageTitle || 'N/A'}
+        </Text>
+      </VStack>
 
       {/*<Badge
         variant="outline"
@@ -228,18 +248,18 @@ const AlertItem = ({
           </HStack>
           */}
 
-            <Switch
-              value={action.SendNotification}
-              onValueChange={() => onToggleUINotify(index, item)}
-            />
+            <VStack space="md" alignItems="center">
+              <Switch
+                value={action.SendNotification}
+                onValueChange={() => onToggleUINotify(index, item)}
+              />
+            </VStack>
 
             {/*
           <HStack space="md">
             <Text color="$muted500">Alert Topic Suffix</Text>
             <Text>{action.StoreTopicSuffix || 'N/A'}</Text>
           </HStack>
-
-
           <HStack space="md">
             <Text color="$muted500">Copy Event into Alert</Text>
             <Text>{action.GrabEvent ? 'Yes' : 'No'}</Text>
@@ -249,29 +269,6 @@ const AlertItem = ({
         ))}
       </HStack>
 
-      {/*item.Conditions.length > 0 && (
-          <VStack space="md">
-            {item.Conditions.map((condition, index) => (
-              <HStack key={index} space="md">
-                <Text color="$muted500">Condition {index + 1}</Text>
-                <Text>{condition.JPath || 'N/A'}</Text>
-              </HStack>
-            ))}
-          </VStack>
-        )*/}
-
-      {/*
-        <HStack space="md">
-          <Text color="$muted500">Match Any Condition</Text>
-          <Text>{item.MatchAnyOne ? 'Yes' : 'No'}</Text>
-        </HStack>
-
-        <HStack space="md">
-          <Text color="$muted500">Invert Rule</Text>
-          <Text>{item.InvertRule ? 'Yes' : 'No'}</Text>
-        </HStack>
-        */}
-
       {moreMenu}
     </ListItem>
   )
@@ -280,18 +277,25 @@ const AlertItem = ({
 const AlertItemHeader = () => (
   //TBD spacing
 
-  <HStack space="sm" mx="$4" my="$2">
+  <HStack
+    space="sm"
+    mx="$4"
+    my="$2"
+    display="none"
+    sx={{ '@md': { display: 'flex' } }}
+    w="95%"
+  >
+    <HStack flex={3}>
+      <Text flex={1} size="xs" bold>
+        Name & Topic
+      </Text>
+
+      <Text flex={1} size="xs" bold>
+        Title
+      </Text>
+    </HStack>
     <Text flex={1} size="xs" bold>
-      Name
-    </Text>
-    <Text flex={1} size="xs" bold>
-      Topic
-    </Text>
-    <Text flex={1} size="xs" bold>
-      Title
-    </Text>
-    <Text flex={1} size="xs" bold>
-      Notification
+      Show Notification
     </Text>
   </HStack>
 )
@@ -462,7 +466,7 @@ const AlertSettings = (props) => {
   }
 
   return (
-    <View h="$full" sx={{ '@md': { height: '92vh' } }}>
+    <ScrollView h="$full">
       <ListHeader title="Alert Configuration">
         <HStack space="sm">
           <Button size="sm" action="secondary" onPress={populateTemplates}>
@@ -496,7 +500,7 @@ const AlertSettings = (props) => {
         )}
         keyExtractor={(item, index) => `alert-${index}`}
       />
-    </View>
+    </ScrollView>
   )
 }
 
