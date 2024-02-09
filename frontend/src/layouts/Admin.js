@@ -807,18 +807,19 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             '@base': {
               maxWidth: '100%',
               width: '100%',
-              display: showAlert ? 'block' : 'none'
+              display: showAlert ? 'flex' : 'none',
+              top: '14%'
             },
             '@md': {
               width: isOpenSidebar
                 ? 'calc(100vw - 80px)'
                 : 'calc(100vw - 260px)',
-              left: isOpenSidebar ? 80 : 260
+              left: isOpenSidebar ? 80 : 260,
+              top: '$16'
             }
           }}
           flexWrap="wrap"
-          position="fixed"
-          top="$16"
+          position="absolute"
           alignSelf="center"
         >
           <AppAlert
