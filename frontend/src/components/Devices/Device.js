@@ -344,7 +344,14 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
       onSelectionChange={(e) => {
         let key = e.currentKey
         if (key == 'edit') {
-          navigate(deviceURL(device))
+          if (device.MAC == 'pending') {
+            context.warning(
+              `Device is pending`,
+              `Wait for device to connect or add a new one`
+            )
+          } else {
+            navigate(deviceURL(device))
+          }
         } else if (key == 'duplicate') {
           duplicateDevice()
         } else if (key == 'delete') {
@@ -395,7 +402,10 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   const colorMode = useColorMode()
 
   return (
-    <Pressable onPress={() => navigate(deviceURL(device))}>
+    <Pressable
+      onPress={() => navigate(deviceURL(device))}
+      disabled={device.MAC == 'pending'}
+    >
       <HStack
         key={device.MAC}
         bg="$backgroundCardLight"
