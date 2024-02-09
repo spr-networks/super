@@ -217,6 +217,10 @@ const AddDevice = (props) => {
         Psk: psk,
         Type: wpa
       },
+      Style: {
+        Color: 'blueGray',
+        Icon: 'Laptop'
+      },
       DeviceExpiration,
       DeleteExpiration: deleteExpiry,
       DeviceDisabled: deviceDisabled
