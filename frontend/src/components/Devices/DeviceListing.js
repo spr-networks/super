@@ -220,6 +220,7 @@ const DeviceListing = (props) => {
         cursor="pointer"
         bg="$coolGray200"
         justifyContent="center"
+        disabled={data.item.MAC == 'pending'}
         onPress={() =>
           navigate(
             `/admin/devices/${
