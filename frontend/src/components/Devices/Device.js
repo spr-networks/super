@@ -70,7 +70,7 @@ const DeviceIcon = ({ icon, color: _color, isConnected, ...props }) => {
 const DeviceInfo = ({ identity, ...props }) => {
   const [ssids, setSsids] = useState([])
   const [device, setDevice] = useState(null)
-  const [showPassword, setShowPassword] = useState(false)
+  const [showPassword, setShowPassword] = useState(true)
 
   //TODO fetch from otp'd /device?identity=device.MAC
 
@@ -116,13 +116,13 @@ const DeviceInfo = ({ identity, ...props }) => {
 
   return ssids.map((ssid) => (
     <VStack key={ssid} space="md">
-      <HStack space="md" justifyContent="center">
+      <VStack space="xs" alignItems="center">
         <Text size="md" bold>
           SSID
         </Text>
         <Text size="md">{ssid}</Text>
-      </HStack>
-      <HStack space="md" justifyContent="center">
+      </VStack>
+      <VStack space="xs" alignItems="center">
         <Text size="md" bold>
           Password
         </Text>
@@ -133,7 +133,7 @@ const DeviceInfo = ({ identity, ...props }) => {
             </Text>
           </Pressable>
         </Tooltip>
-      </HStack>
+      </VStack>
       <HStack justifyContent="center">
         <DeviceQRCode ssid={ssid} psk={device.PSKEntry.Psk} type="WPA" />
       </HStack>
