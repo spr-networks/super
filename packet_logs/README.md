@@ -1,14 +1,13 @@
-# code
+# SPR Packet Logs
 
 The event bus is using moby pub-sub: 
 https://github.com/spr-networks/sprbus
 
-# setup
+Read more in the [documentation](https://www.supernetworks.org/pages/docs/services/packet_logs) about packet logs.
 
 ## flow
 
-* ulogd get syslog msgs from /dev/log with netfilter log prefix + group and packet info
-* ulogd logfile is read by code/main.go
+* get packets from netfilter
 * if prefix is matched, forward to eventbus
 * api/client code is connected to eventbus listening for ntf: -prefixed messages
 	* send to WebSocket if user specified to notify for this (filtered by log Prefix, DestIp, etc.)
@@ -102,16 +101,6 @@ we use netfilter groups to categorize the packet:
 * group 1 == deny
 
 and set action depending on what group is set for the packet
-
-## OLD log pcap files
-* modifiy Dockerfile to add ulogd2-pcap
-* enable pcap in ulogd.conf, see comments
-
-```sh
-mknod /state/plugins/packet_logs/ulogd.pcap p
-docker-compose up -d packet_logs
-tail -f /state/plugins/packet_logs/ulogd.pcap | tcpdump -r - -qtnp
-```
 
 ## OLD json format
 
