@@ -13,4 +13,4 @@ cd installer
 cp ./data/spr.clean.img ./data/spr.img
 ./scripts/resize-clearfog.sh
 ./scripts/containers.sh
-docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ --platform=aarch64 ubuntu /scripts/go-clearfog.sh
+docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ --platform=aarch64 ubuntu:23.10 /scripts/go-clearfog.sh

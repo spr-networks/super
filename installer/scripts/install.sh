@@ -2,6 +2,7 @@
 
 # do not use systemd-resolvd, we will use our own container later
 systemctl disable systemd-resolved
+
 rm -f /etc/resolv.conf
 echo nameserver 1.1.1.1 > /etc/resolv.conf
 
@@ -9,9 +10,9 @@ echo nameserver 1.1.1.1 > /etc/resolv.conf
 # is no longer sufficient to work with a complex docker-compose file.
 # Install the upstream docker packages then.
 apt-get update
-apt-get install ca-certificates curl gnupg
+apt-get -y install ca-certificates curl gnupg
 install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 chmod a+r /etc/apt/keyrings/docker.gpg
 
 # Add the repository to Apt sources:
@@ -22,18 +23,16 @@ echo \
 apt-get update
 
 apt-get -y install --download-only linux-modules-extra-raspi linux-firmware
-apt-get -y install nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack
+apt-get -y install --no-install-recommends nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack
 # install docker and buildx
-apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+apt-get -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-# dont use this
-rm /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
 useradd -m -s /bin/bash ubuntu
 echo "ubuntu:ubuntu" | chpasswd
 usermod -aG sudo ubuntu
 passwd --expire ubuntu
 # so that cd ~spr works
-useradd -m -s /bin/true spr 
+useradd -m -s /bin/true spr
 echo spr > /etc/hostname
 echo "127.0.0.1      spr" >> /etc/hosts
 
@@ -41,13 +40,17 @@ echo "127.0.0.1      spr" >> /etc/hosts
 git clone --depth 1 https://github.com/openwrt/mt76 /root/mt76
 cp -R /root/mt76/firmware/. /lib/firmware/mediatek/
 
+# disable dhclient on the WANIF, since we will run our own dhcp
+# dont use this
 touch /etc/cloud/cloud-init.disabled
+apt-get -y purge cloud-init
+rm /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
+echo "network: {config: disabled}" > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+
 # Add a bug fix for scatter/gather bugs with USB:
 echo "options mt76_usb disable_usb_sg=1" > /etc/modprobe.d/mt76_usb.conf
 
 
-# disable dhclient on the WANIF, since we will run our own dhcp
-#RUN echo "network: {config: disabled}" > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
 
 
 # SPR setup
