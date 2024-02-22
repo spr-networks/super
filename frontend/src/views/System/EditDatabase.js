@@ -158,7 +158,13 @@ const EditDatabase = ({ onSubmit, ...props }) => {
 
   //this one is to make sure defaultTopics is also included
   const [allEvents, setAllEvents] = useState([])
-  const defaultTopics = ['nft:drop:', 'wifi:', 'dhcp:', 'dns:serve', "auth:failure:"]
+  const defaultTopics = [
+    'nft:drop:',
+    'wifi:',
+    'dhcp:',
+    'dns:serve',
+    'auth:failure'
+  ]
   const apiError = (err) => context.error('db api error:', err)
 
   useEffect(() => {

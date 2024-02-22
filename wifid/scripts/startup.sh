@@ -27,6 +27,10 @@ PI_SETUP_PENDING=false
 
 # Check if /proc/cpuinfo contains "Raspberry Pi"
 if grep -q "Raspberry Pi" /proc/cpuinfo; then
+    # reset wlan0 state always, this makes sure setup ap is gone
+    # if wifid was restarted
+    ip link set dev wlan0 down
+    ip link set dev wlan0 up
     # Check if /configs/base/.setup_done does not exist
     if [ ! -f /configs/base/.setup_done ]; then
         PI_SETUP_PENDING=true

@@ -66,6 +66,7 @@ import { routes as allRoutes } from 'routes'
 import { PuzzleIcon } from 'lucide-react-native'
 
 import { KeyboardAvoidingView } from '@gluestack-ui/themed'
+import OTPValidate from 'components/Auth/OTPValidate'
 
 const ConfirmTrafficAlert = (props) => {
   const { type, title, body, showAlert, onClose } = props
@@ -385,12 +386,23 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     })
 
     const redirOnAuthError = (err) => {
-      console.error('HTTP auth error for url:', err.response.url)
+      let url = err.response.url
+      console.error('HTTP auth error for url:', url)
 
-      let pathname = location.pathname
-      setAuthReturn(pathname)
-
-      navigate('/auth/validate')
+      //custom handler for /admin/auth page
+      if (url.endsWith('/tokens')) {
+        //setAuthReturn('/admin/auth/')
+        //navigate('/auth/validate')
+      } else {
+        modalState.modal(
+          'OTP Validate',
+          <OTPValidate
+            onSuccess={() => {
+              modalState.setShowModal(false)
+            }}
+          />
+        )
+      }
     }
 
     api.registerErrorHandler(401, redirOnAuthError)
@@ -773,6 +785,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
               modal.onClose()
             }
           }}
+          useRNModal={Platform.OS == 'web'}
         >
           <ModalBackdrop />
           <ModalContent>
@@ -794,18 +807,19 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             '@base': {
               maxWidth: '100%',
               width: '100%',
-              display: showAlert ? 'block' : 'none'
+              display: showAlert ? 'flex' : 'none',
+              top: '14%'
             },
             '@md': {
               width: isOpenSidebar
                 ? 'calc(100vw - 80px)'
                 : 'calc(100vw - 260px)',
-              left: isOpenSidebar ? 80 : 260
+              left: isOpenSidebar ? 80 : 260,
+              top: '$16'
             }
           }}
           flexWrap="wrap"
-          position="fixed"
-          top="$16"
+          position="absolute"
           alignSelf="center"
         >
           <AppAlert

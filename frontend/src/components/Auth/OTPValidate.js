@@ -1,7 +1,6 @@
-import React, { useState } from 'react'
-import { Platform } from 'react-native'
-import { authAPI, setJWTOTPHeader, getAuthReturn } from 'api'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
+import PropTypes from 'prop-types'
+import { authAPI, setJWTOTPHeader } from 'api'
 
 import {
   AlertCircleIcon,
@@ -13,18 +12,12 @@ import {
   FormControlErrorText,
   Input,
   InputField,
-  Text,
-  View,
   VStack
 } from '@gluestack-ui/themed'
 
-import { api } from 'api'
-
-const OTPValidate = (props) => {
+const OTPValidate = ({ onSuccess, ...props }) => {
   const [code, setCode] = useState('')
   const [errors, setErrors] = useState({})
-
-  const navigate = useNavigate()
 
   const otp = (e) => {
     authAPI
@@ -33,14 +26,7 @@ const OTPValidate = (props) => {
         setJWTOTPHeader(res)
         setErrors({})
 
-        let url = '/admin/home'
-        try {
-          url = await getAuthReturn()
-        } catch {
-          url = '/admin/home'
-        }
-
-        navigate(url)
+        onSuccess()
       })
       .catch((err) => {
         setErrors({ validate: 'Invalid OTP Code' })
@@ -50,6 +36,12 @@ const OTPValidate = (props) => {
   const handleClickOTP = () => {
     otp(code)
   }
+
+  useEffect(() => {
+    if (!code.length) {
+      setErrors({})
+    }
+  }, [code])
 
   return (
     <VStack space="md">
@@ -63,11 +55,6 @@ const OTPValidate = (props) => {
             onSubmitEditing={handleClickOTP}
           />
         </Input>
-      </FormControl>
-      <FormControl>
-        <Button action="primary" onPress={handleClickOTP}>
-          <ButtonText>Verify OTP Code</ButtonText>
-        </Button>
         {'validate' in errors ? (
           <FormControlError>
             <FormControlErrorIcon as={AlertCircleIcon} />
@@ -76,16 +63,16 @@ const OTPValidate = (props) => {
         ) : null}
       </FormControl>
       <FormControl>
-        <Button
-          action="secondary"
-          variant="outline"
-          onPress={() => navigate(Platform.OS == 'web' ? -2 : -3)}
-        >
-          <ButtonText>Back</ButtonText>
+        <Button action="primary" onPress={handleClickOTP}>
+          <ButtonText>Verify OTP Code</ButtonText>
         </Button>
       </FormControl>
     </VStack>
   )
+}
+
+OTPValidate.propTypes = {
+  onSuccess: PropTypes.func.isRequired
 }
 
 export default OTPValidate

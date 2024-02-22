@@ -105,7 +105,6 @@ export default class WireguardAddSite extends React.Component {
               onChangeText={(value) =>
                 this.handleChange('PeerPublicKey', value)
               }
-              autoFocus
             />
           </Input>
 
@@ -127,7 +126,6 @@ export default class WireguardAddSite extends React.Component {
               placeholder="10.10.10.1"
               value={this.state.Address}
               onChangeText={(value) => this.handleChange('Address', value)}
-              autoFocus
             />
           </Input>
 
@@ -148,7 +146,6 @@ export default class WireguardAddSite extends React.Component {
               placeholder="base64 pubkey"
               value={this.state.PresharedKey}
               onChangeText={(value) => this.handleChange('PresharedKey', value)}
-              autoFocus
             />
           </Input>
 
@@ -170,7 +167,6 @@ export default class WireguardAddSite extends React.Component {
                 placeholder="base64 pubkey"
                 value={this.state.PrivateKey}
                 onChangeText={(value) => this.handleChange('PrivateKey', value)}
-                autoFocus
               />
             </Input>
 

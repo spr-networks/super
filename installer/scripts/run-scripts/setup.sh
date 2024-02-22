@@ -138,5 +138,5 @@ else
 fi
 
 touch /home/spr/.spr-setup-done
-
+# we will use our own later
 reboot

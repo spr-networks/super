@@ -243,7 +243,7 @@ const Token = ({
         onClose={() => setIsOpen(!isOpen)}
       >
         <PopoverBackdrop />
-        <PopoverContent minW={180}>
+        <PopoverContent w={260}>
           <PopoverHeader>
             <Heading size="sm">{label}</Heading>
             <PopoverCloseButton>
@@ -251,23 +251,22 @@ const Token = ({
             </PopoverCloseButton>
           </PopoverHeader>
           <PopoverBody>
-            <HStack space="md">
-              <FormControl flex={1}>
-                {/*<FormControlLabel>
+            <FormControl flex={1}>
+              {/*<FormControlLabel>
                   <FormControlLabelText>{label}</FormControlLabelText>
                 </FormControlLabel>*/}
 
-                {inputElement}
-                <FormControlHelper>
-                  <FormControlHelperText>{description}</FormControlHelperText>
-                </FormControlHelper>
-              </FormControl>
-              {/*<IconButton
+              {inputElement}
+
+              <FormControlHelper>
+                <FormControlHelperText>{description}</FormControlHelperText>
+              </FormControlHelper>
+            </FormControl>
+            {/*<IconButton
                 ml="auto"
                 colorScheme="light"
                 icon={<Icon icon={faTag} />}
               />*/}
-            </HStack>
           </PopoverBody>
         </PopoverContent>
       </Popover>

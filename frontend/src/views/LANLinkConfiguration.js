@@ -5,6 +5,7 @@
       test failover
 */
 import React, { useContext, useEffect, useState } from 'react'
+import { Platform } from 'react-native'
 import {
   Badge,
   BadgeText,
@@ -388,6 +389,7 @@ const LANLinkInfo = (props) => {
           onClose={() => {
             setShowModal(false)
           }}
+          useRNModal={Platform.OS == 'web'}
         >
           <ModalBackdrop />
           <ModalContent>

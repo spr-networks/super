@@ -19,7 +19,8 @@ import {
   ThreeDotsIcon,
   Badge,
   BadgeText,
-  AddIcon
+  AddIcon,
+  ScrollView
 } from '@gluestack-ui/themed'
 
 import { alertsAPI, dbAPI } from 'api'
@@ -30,112 +31,115 @@ import { ListHeader } from 'components/List'
 import { ListItem } from 'components/List'
 import { BellIcon, BellOffIcon, PencilIcon } from 'lucide-react-native'
 
-const alertTemplates =
-[
- {
-  "TopicPrefix": "nft:drop:mac",
-  "MatchAnyOne": false,
-  "InvertRule": false,
-  "Conditions": [],
-  "Actions": [
-   {
-    "SendNotification": true,
-    "StoreAlert": true,
-    "MessageTitle": "MAC Filter Violation",
-    "MessageBody": "MAC IP Violation {{IP.SrcIP#Device}} {{IP.SrcIP}} {{Ethernet.SrcMAC}} to {{IP.DstIP}} {{Ethernet.DstMAC}}",
-    "NotificationType": "info",
-    "GrabEvent": true,
-    "GrabValues": false
-   }
-  ],
-  "Name": "MAC Filter Violation",
-  "Disabled": false,
-  "RuleId": "7f3266dd-7697-44ce-8ddd-36a006043509"
- },
- {
-  "TopicPrefix": "auth:failure",
-  "MatchAnyOne": false,
-  "InvertRule": false,
-  "Conditions": [
-   {
-    "JPath": "$[?(@.type==\"user\")]"
-   }
-  ],
-  "Actions": [
-   {
-    "SendNotification": true,
-    "StoreAlert": true,
-    "MessageTitle": "Login Failure",
-    "MessageBody": "{{name}} failed to login with {{reason}}",
-    "NotificationType": "info",
-    "GrabEvent": true,
-    "GrabValues": false
-   }
-  ],
-  "Name": "User Login Failure",
-  "Disabled": false,
-  "RuleId": "ea676ee7-ec68-4a23-aba4-ba69feee4d8c"
- },
- {
-  "TopicPrefix": "nft:drop:private",
-  "MatchAnyOne": false,
-  "InvertRule": false,
-  "Conditions": [],
-  "Actions": [
-   {
-    "SendNotification": true,
-    "StoreAlert": true,
-    "MessageTitle": "Firewall Drop Private Network Request (rfc1918)",
-    "MessageBody": "Dropped Traffic from {{IP.SrcIP#Device}} {{IP.SrcIP}} {{InDev#Interface}} to {{IP.DstIP}} {{OutDev#Interface}}",
-    "NotificationType": "info",
-    "GrabEvent": true,
-    "GrabValues": false
-   }
-  ],
-  "Name": "Drop Private Request",
-  "Disabled": false,
-  "RuleId": "2adbec19-6b47-4a99-a499-ab0b8da652a8"
- },
- {
-  "TopicPrefix": "wifi:auth:fail",
-  "MatchAnyOne": false,
-  "InvertRule": false,
-  "Conditions": [],
-  "Actions": [
-   {
-    "SendNotification": true,
-    "StoreAlert": true,
-    "MessageTitle": "WiFi Auth Failure",
-    "MessageBody": "{{MAC#Device}} {{MAC}} failed wifi authentication {{Reason}} with type {{Type}}",
-    "NotificationType": "info",
-    "GrabEvent": true,
-    "GrabValues": false
-   }
-  ],
-  "Name": "Wifi Auth Failure",
-  "Disabled": false,
-  "RuleId": "f16e9a58-9f80-455c-a280-211bd8b1fd05"
- },
- {
-  "TopicPrefix": "nft:drop:input",
-  "MatchAnyOne": false,
-  "InvertRule": false,
-  "Conditions": [],
-  "Actions": [
-   {
-    "SendNotification": false,
-    "StoreAlert": true,
-    "MessageTitle": "Dropped Input",
-    "MessageBody": "Drop Incoming Traffic to Router from {{IP.SrcIP}} to port {{TCP.DstPort}} {{UDP.DstPort}}",
-    "NotificationType": "info",
-    "GrabEvent": true,
-    "GrabValues": false
-   }
-  ],
-  "Name": "Dropped Input",
-  "Disabled": true,
-  "RuleId": "481822f4-a20c-4cec-92d9-dad032d2c450"
- }
+const alertTemplates = [
+  {
+    TopicPrefix: 'nft:drop:mac',
+    MatchAnyOne: false,
+    InvertRule: false,
+    Conditions: [],
+    Actions: [
+      {
+        SendNotification: true,
+        StoreAlert: true,
+        MessageTitle: 'MAC Filter Violation',
+        MessageBody:
+          'MAC IP Violation {{IP.SrcIP#Device}} {{IP.SrcIP}} {{Ethernet.SrcMAC}} to {{IP.DstIP}} {{Ethernet.DstMAC}}',
+        NotificationType: 'info',
+        GrabEvent: true,
+        GrabValues: false
+      }
+    ],
+    Name: 'MAC Filter Violation',
+    Disabled: false,
+    RuleId: '7f3266dd-7697-44ce-8ddd-36a006043509'
+  },
+  {
+    TopicPrefix: 'auth:failure',
+    MatchAnyOne: false,
+    InvertRule: false,
+    Conditions: [
+      {
+        JPath: '$[?(@.type=="user")]'
+      }
+    ],
+    Actions: [
+      {
+        SendNotification: true,
+        StoreAlert: true,
+        MessageTitle: 'Login Failure',
+        MessageBody: '{{name}} failed to login with {{reason}}',
+        NotificationType: 'error',
+        GrabEvent: true,
+        GrabValues: false
+      }
+    ],
+    Name: 'User Login Failure',
+    Disabled: false,
+    RuleId: 'ea676ee7-ec68-4a23-aba4-ba69feee4d8c'
+  },
+  {
+    TopicPrefix: 'nft:drop:private',
+    MatchAnyOne: false,
+    InvertRule: false,
+    Conditions: [],
+    Actions: [
+      {
+        SendNotification: true,
+        StoreAlert: true,
+        MessageTitle: 'Firewall Drop Private Network Request (rfc1918)',
+        MessageBody:
+          'Dropped Traffic from {{IP.SrcIP#Device}} {{IP.SrcIP}} {{InDev#Interface}} to {{IP.DstIP}} {{OutDev#Interface}}',
+        NotificationType: 'info',
+        GrabEvent: true,
+        GrabValues: false
+      }
+    ],
+    Name: 'Drop Private Request',
+    Disabled: false,
+    RuleId: '2adbec19-6b47-4a99-a499-ab0b8da652a8'
+  },
+  {
+    TopicPrefix: 'wifi:auth:fail',
+    MatchAnyOne: false,
+    InvertRule: false,
+    Conditions: [],
+    Actions: [
+      {
+        SendNotification: true,
+        StoreAlert: true,
+        MessageTitle: 'WiFi Auth Failure',
+        MessageBody:
+          '{{MAC#Device}} {{MAC}} failed wifi authentication {{Reason}} with type {{Type}}',
+        NotificationType: 'warning',
+        GrabEvent: true,
+        GrabValues: false
+      }
+    ],
+    Name: 'Wifi Auth Failure',
+    Disabled: false,
+    RuleId: 'f16e9a58-9f80-455c-a280-211bd8b1fd05'
+  },
+  {
+    TopicPrefix: 'nft:drop:input',
+    MatchAnyOne: false,
+    InvertRule: false,
+    Conditions: [],
+    Actions: [
+      {
+        SendNotification: false,
+        StoreAlert: true,
+        MessageTitle: 'Dropped Input',
+        MessageBody:
+          'Drop Incoming Traffic to Router from {{IP.SrcIP}} to port {{TCP.DstPort}} {{UDP.DstPort}}',
+        NotificationType: 'info',
+        GrabEvent: true,
+        GrabValues: false
+      }
+    ],
+    Name: 'Dropped Input',
+    Disabled: true,
+    RuleId: '481822f4-a20c-4cec-92d9-dad032d2c450'
+  }
 ]
 
 const AlertItem = ({
@@ -196,16 +200,35 @@ const AlertItem = ({
 
   return (
     <ListItem>
-      <Text flex={1} size="md" bold={!item.Disabled}>
-        {item.Name}
-      </Text>
-      <Text flex={1} size="md">
-        {item.TopicPrefix || 'N/A'}
-      </Text>
+      <VStack
+        space="sm"
+        flex={3}
+        alignItems="flex-start"
+        sx={{
+          '@md': {
+            flexDirection: 'row'
+          }
+        }}
+      >
+        <VStack space="md" flex={1}>
+          <HStack space="sm">
+            <Text bold>{item.Name}</Text>
+            {item.Disabled ? (
+              <Text size="xs" color="$muted500">
+                Disabled
+              </Text>
+            ) : null}
+          </HStack>
 
-      <Text flex={1} size="md">
-        {item.Actions?.[0]?.MessageTitle || 'N/A'}
-      </Text>
+          <Badge variant="outline" action="muted" alignSelf="flex-start">
+            <BadgeText>{item.TopicPrefix || 'N/A'}</BadgeText>
+          </Badge>
+        </VStack>
+
+        <Text flex={1} size="sm">
+          {item.Actions?.[0]?.MessageTitle || 'N/A'}
+        </Text>
+      </VStack>
 
       {/*<Badge
         variant="outline"
@@ -225,18 +248,18 @@ const AlertItem = ({
           </HStack>
           */}
 
-            <Switch
-              value={action.SendNotification}
-              onValueChange={() => onToggleUINotify(index, item)}
-            />
+            <VStack space="md" alignItems="center">
+              <Switch
+                value={action.SendNotification}
+                onValueChange={() => onToggleUINotify(index, item)}
+              />
+            </VStack>
 
             {/*
           <HStack space="md">
             <Text color="$muted500">Alert Topic Suffix</Text>
             <Text>{action.StoreTopicSuffix || 'N/A'}</Text>
           </HStack>
-
-
           <HStack space="md">
             <Text color="$muted500">Copy Event into Alert</Text>
             <Text>{action.GrabEvent ? 'Yes' : 'No'}</Text>
@@ -246,29 +269,6 @@ const AlertItem = ({
         ))}
       </HStack>
 
-      {/*item.Conditions.length > 0 && (
-          <VStack space="md">
-            {item.Conditions.map((condition, index) => (
-              <HStack key={index} space="md">
-                <Text color="$muted500">Condition {index + 1}</Text>
-                <Text>{condition.JPath || 'N/A'}</Text>
-              </HStack>
-            ))}
-          </VStack>
-        )*/}
-
-      {/*
-        <HStack space="md">
-          <Text color="$muted500">Match Any Condition</Text>
-          <Text>{item.MatchAnyOne ? 'Yes' : 'No'}</Text>
-        </HStack>
-
-        <HStack space="md">
-          <Text color="$muted500">Invert Rule</Text>
-          <Text>{item.InvertRule ? 'Yes' : 'No'}</Text>
-        </HStack>
-        */}
-
       {moreMenu}
     </ListItem>
   )
@@ -277,18 +277,25 @@ const AlertItem = ({
 const AlertItemHeader = () => (
   //TBD spacing
 
-  <HStack space="sm" mx="$4" my="$2">
+  <HStack
+    space="sm"
+    mx="$4"
+    my="$2"
+    display="none"
+    sx={{ '@md': { display: 'flex' } }}
+    w="95%"
+  >
+    <HStack flex={3}>
+      <Text flex={1} size="xs" bold>
+        Name & Topic
+      </Text>
+
+      <Text flex={1} size="xs" bold>
+        Title
+      </Text>
+    </HStack>
     <Text flex={1} size="xs" bold>
-      Name
-    </Text>
-    <Text flex={1} size="xs" bold>
-      Topic
-    </Text>
-    <Text flex={1} size="xs" bold>
-      Title
-    </Text>
-    <Text flex={1} size="xs" bold>
-      Notification
+      Show Notification
     </Text>
   </HStack>
 )
@@ -334,11 +341,12 @@ const AlertSettings = (props) => {
   }, [])
 
   const onDelete = (index) => {
-    alertsAPI.remove(index).then((res) => {
-      fetchList()
-    }).catch(() => {
-
-    })
+    alertsAPI
+      .remove(index)
+      .then((res) => {
+        fetchList()
+      })
+      .catch(() => {})
   }
 
   const onToggle = (index, item) => {
@@ -458,7 +466,7 @@ const AlertSettings = (props) => {
   }
 
   return (
-    <View h="$full" sx={{ '@md': { height: '92vh' } }}>
+    <ScrollView h="$full">
       <ListHeader title="Alert Configuration">
         <HStack space="sm">
           <Button size="sm" action="secondary" onPress={populateTemplates}>
@@ -492,7 +500,7 @@ const AlertSettings = (props) => {
         )}
         keyExtractor={(item, index) => `alert-${index}`}
       />
-    </View>
+    </ScrollView>
   )
 }
 

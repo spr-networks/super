@@ -10,7 +10,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { AlertContext } from 'AppContext'
-import InputSelect from 'components/InputSelect'
+import { Select } from 'components/Select'
 import { blockAPI } from 'api/DNS'
 
 const DNSBlocklistSettings = ({ notifyChange, ...props }) => {
@@ -65,12 +65,15 @@ const DNSBlocklistSettings = ({ notifyChange, ...props }) => {
   return (
     <VStack space="md">
       <Text bold>Refresh Frequency</Text>
-      <InputSelect
-        options={options}
-        value={seconds}
-        onChange={(v) => onChangeText('seconds', v)}
-        onChangeText={(v) => onChangeText('seconds', v)}
-      />
+      <Select
+        selectedValue={seconds}
+        onValueChange={(v) => onChangeText('seconds', v)}
+        accessibilityLabel={`Choose Refresh Frequency`}
+      >
+        {options.map((o) => (
+          <Select.Item key={o.value} label={o.label} value={o.value} />
+        ))}
+      </Select>
       <Button action="primary" onPress={() => submitRefresh(seconds)}>
         <ButtonText>Save</ButtonText>
       </Button>

@@ -196,12 +196,14 @@ const DeviceListing = (props) => {
 
   const deleteRow = (rowMap, rowKey) => {
     closeRow(rowMap, rowKey)
+
     const newData = [...devices]
     const prevIndex = devices.findIndex(
       (item) => item.MAC === rowKey || item.WGPubKey == rowKey
     )
     newData.splice(prevIndex, 1)
     setDevices(newData)
+
     deviceAPI
       .deleteDevice(rowKey)
       .then(() => refreshDevices(true))
@@ -218,6 +220,7 @@ const DeviceListing = (props) => {
         cursor="pointer"
         bg="$coolGray200"
         justifyContent="center"
+        disabled={data.item.MAC == 'pending'}
         onPress={() =>
           navigate(
             `/admin/devices/${
@@ -289,6 +292,7 @@ const DeviceListing = (props) => {
           data={devices}
           renderItem={renderItem}
           renderHiddenItem={renderHiddenItem}
+          keyExtractor={(item, index) => item.MAC || item.WGPubKey || index}
           rightOpenValue={-140}
         />
       ) : (

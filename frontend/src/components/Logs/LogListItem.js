@@ -321,8 +321,8 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     ),
     'auth:success': (item) => (
       <>
-        <Text size="md" bold>
-          {item.username || item.token}
+        <Text flex={1} size="md" bold>
+          {item.username || item.name}
         </Text>
         <Text size="md">{item.type}</Text>
         <Text size="md">{item.reason}</Text>
@@ -330,12 +330,30 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     ),
     'auth:failure': (item) => (
       <>
-        <Text size="md" bold>
-          {item.username || item.token}
+        <Text flex={1} size="md" bold>
+          {item.username || item.name}
         </Text>
         <Text size="md">{item.type}</Text>
         <Text size="md">{item.reason}</Text>
         <Text size="md">failure</Text>
+      </>
+    ),
+    'log:www:access': (item) => (
+      <>
+        <HStack space="md">
+          <Text size="md" bold>
+            {item.method}
+          </Text>
+          <Text size="md">{item.path}</Text>
+        </HStack>
+        <DeviceItem
+          show={['Style', 'Name']}
+          hideMissing={false}
+          item={context.getDevice(
+            item.remoteaddr.replace(/:.*/, ''),
+            'RecentIP'
+          )}
+        />
       </>
     ),
     'nft:drop:private': (item) => <NFTDropItem item={item} type="private" />,

@@ -9,6 +9,10 @@ export class APIDevice extends API {
     return this.get('/devices')
   }
 
+  getDevice(identity) {
+    return this.get(`/device?identity=${identity}`)
+  }
+
   update(id, data) {
     if (data === undefined) {
       data = id

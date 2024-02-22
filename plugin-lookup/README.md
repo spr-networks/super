@@ -1,4 +1,4 @@
-# SPR plugin-asn
+# SPR plugin-lookup
 
 This plugin provides api endpoints to query for IP address ASN & MAC address OUI information.
 
@@ -12,6 +12,6 @@ For ASN lookups its using this:
 https://iptoasn.com/data/ip2asn-v4.tsv.gz
 
 And the OUI vendor list from Wireshark:
-https://gitlab.com/wireshark/wireshark/-/raw/master/manuf
+https://www.wireshark.org/download/automated/data/manuf
 
 Files are downloaded on startup of the container

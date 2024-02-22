@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
+import { Platform } from 'react-native'
 
 import {
   Button,
@@ -61,7 +62,11 @@ const ModalForm = (props) => {
       ) : null}
 
       {showModal ? (
-        <Modal isOpen={showModal} onClose={onClose}>
+        <Modal
+          isOpen={showModal}
+          onClose={onClose}
+          useRNModal={Platform.OS == 'web'}
+        >
           <ModalBackdrop />
           <ModalContent maxWidth={props.maxWidth || 510}>
             <ModalHeader>

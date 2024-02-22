@@ -21,7 +21,7 @@ import { AlertContext, AppContext } from 'AppContext'
 import { ListItem } from 'components/List'
 import LogListItem from 'components/Logs/LogListItem'
 import { Tooltip } from 'components/Tooltip'
-import {eventTemplate} from 'components/Alerts/AlertUtil'
+import { eventTemplate } from 'components/Alerts/AlertUtil'
 
 const AlertListItem = ({ item, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
@@ -61,7 +61,9 @@ const AlertListItem = ({ item, notifyChange, ...props }) => {
         <Icon size="sm" as={AlertTriangleIcon} color={color} />
 
         <Heading size="xs">
-          {eventTemplate(appContext, item.Title, item.Event) || item.Topic || 'Alert'}
+          {eventTemplate(appContext, item.Title, item.Event) ||
+            item.Topic ||
+            'Alert'}
         </Heading>
       </HStack>
 
@@ -123,7 +125,6 @@ const AlertListItem = ({ item, notifyChange, ...props }) => {
             <Text size="sm">
               {eventTemplate(appContext, item.Body, item.Event)}
             </Text>
-
           </HStack>
           <VStack
             space="sm"

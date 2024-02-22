@@ -67,7 +67,6 @@ const AddPlugin = (props) => {
             name="Name"
             value={Name}
             onChangeText={(value) => handleChange('Name', value)}
-            autoFocus
           />
         </Input>
 
@@ -88,7 +87,6 @@ const AddPlugin = (props) => {
             name="URI"
             value={URI}
             onChangeText={(value) => handleChange('URI', value)}
-            autoFocus
           />
         </Input>
 
@@ -109,7 +107,6 @@ const AddPlugin = (props) => {
             type="text"
             value={UnixPath}
             onChangeText={(value) => handleChange('UnixPath', value)}
-            autoFocus
           />
         </Input>
 
@@ -130,7 +127,6 @@ const AddPlugin = (props) => {
             type="text"
             value={ComposeFilePath}
             onChangeText={(value) => handleChange('ComposeFilePath', value)}
-            autoFocus
           />
         </Input>
 

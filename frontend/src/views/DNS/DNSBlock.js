@@ -75,7 +75,7 @@ const DNSBlock = (props) => {
         )}
       />
 
-      <ModalForm title="DNS Blocklist Settingts" modalRef={refModalSettings}>
+      <ModalForm title="DNS Blocklist Settings" modalRef={refModalSettings}>
         <DNSBlocklistSettings notifyChange={() => notifyChange('settings')} />
       </ModalForm>
 

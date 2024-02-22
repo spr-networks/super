@@ -242,6 +242,11 @@ func getSetDhcpConfig(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(gDhcpConfig)
 }
 
+func normalizeName(Name string) string {
+	re := regexp.MustCompile("[^a-zA-Z0-9]")
+	return trimLower(re.ReplaceAllString(Name, "-"))
+}
+
 func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
 	devices := getDevicesJson()
 	val, exists := devices[MAC]
@@ -289,6 +294,8 @@ func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
 
 	if Name != "" {
 		// update local mappings file for DNS
+		updateLocalMappings(IP, normalizeName(val.Name))
+		// and the DHCP name also
 		updateLocalMappings(IP, Name)
 	}
 }

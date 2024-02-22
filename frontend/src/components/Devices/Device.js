@@ -1,10 +1,12 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import { useNavigate } from 'react-router-dom'
 import PropTypes from 'prop-types'
-import { AlertContext } from 'layouts/Admin'
-import { deviceAPI } from 'api/Device'
+import { AlertContext, ModalContext } from 'AppContext'
+import { deviceAPI, wifiAPI } from 'api'
 import ModalConfirm from 'components/ModalConfirm'
+import DeviceQRCode from './DeviceQRCode'
+import { Tooltip } from 'components/Tooltip'
 import { prettyDate } from 'utils'
 
 import {
@@ -17,9 +19,6 @@ import {
   HStack,
   VStack,
   Text,
-  Tooltip,
-  TooltipContent,
-  TooltipText,
   Menu,
   MenuItem,
   MenuItemLabel,
@@ -35,7 +34,12 @@ import { Address4 } from 'ip-address'
 
 import { TagItem, GroupItem } from 'components/TagItem'
 import IconItem from 'components/IconItem'
-import { PencilIcon, WaypointsIcon, WifiIcon } from 'lucide-react-native'
+import {
+  EyeIcon,
+  PencilIcon,
+  WaypointsIcon,
+  WifiIcon
+} from 'lucide-react-native'
 
 const DeviceIcon = ({ icon, color: _color, isConnected, ...props }) => {
   let color = _color ? `$${_color}400` : '$blueGray400'
@@ -63,8 +67,84 @@ const DeviceIcon = ({ icon, color: _color, isConnected, ...props }) => {
   )
 }
 
+const DeviceInfo = ({ identity, ...props }) => {
+  const [ssids, setSsids] = useState([])
+  const [device, setDevice] = useState(null)
+  const [showPassword, setShowPassword] = useState(true)
+
+  //TODO fetch from otp'd /device?identity=device.MAC
+
+  useEffect(() => {
+    //TODO check valid mac
+    if (!identity) {
+      return
+    }
+
+    deviceAPI
+      .getDevice(identity)
+      .then((device) => {
+        setDevice(device)
+      })
+      .catch((err) => {
+        console.error('API Error:', err)
+      })
+  }, [identity])
+
+  useEffect(() => {
+    // fetch ap name
+    wifiAPI
+      .interfaces('AP')
+      .then((ifaces) => {
+        Promise.all(
+          ifaces.map((iface) => {
+            return wifiAPI.status(iface).then((status) => {
+              return status['ssid[0]']
+            })
+          })
+        ).then((ssids) => {
+          setSsids(ssids)
+        })
+      })
+      .catch((err) => {
+        //ERR
+      })
+  }, [])
+
+  if (!device) {
+    return <Text>....{identity}</Text>
+  }
+
+  return ssids.map((ssid) => (
+    <VStack key={ssid} space="md">
+      <VStack space="xs" alignItems="center">
+        <Text size="md" bold>
+          SSID
+        </Text>
+        <Text size="md">{ssid}</Text>
+      </VStack>
+      <VStack space="xs" alignItems="center">
+        <Text size="md" bold>
+          Password
+        </Text>
+        <Tooltip label="Toggle password">
+          <Pressable onPress={() => setShowPassword(!showPassword)}>
+            <Text size="md">
+              {showPassword ? device.PSKEntry.Psk : '*'.repeat(12)}
+            </Text>
+          </Pressable>
+        </Tooltip>
+      </VStack>
+      <HStack justifyContent="center">
+        <DeviceQRCode ssid={ssid} psk={device.PSKEntry.Psk} type="WPA" />
+      </HStack>
+    </VStack>
+  ))
+}
+
 const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
+  const modalContext = useContext(ModalContext)
+
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(device.Name)
   const [ip, setIP] = useState(device.RecentIP)
@@ -264,11 +344,20 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
       onSelectionChange={(e) => {
         let key = e.currentKey
         if (key == 'edit') {
-          navigate(deviceURL(device))
+          if (device.MAC == 'pending') {
+            context.warning(
+              `Device is pending`,
+              `Wait for device to connect or add a new one`
+            )
+          } else {
+            navigate(deviceURL(device))
+          }
         } else if (key == 'duplicate') {
           duplicateDevice()
         } else if (key == 'delete') {
           removeDevice()
+        } else if (key == 'info') {
+          modalContext.modal('', <DeviceInfo identity={device.MAC} />)
         }
       }}
     >
@@ -276,13 +365,16 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
         <Icon as={PencilIcon} color="$muted500" mr="$2" />
         <MenuItemLabel size="sm">Edit</MenuItemLabel>
       </MenuItem>
-
       <MenuItem key="duplicate">
-        <CopyIcon color="$muted500" mr="$2" />
+        <Icon as={CopyIcon} color="$muted500" mr="$2" />
         <MenuItemLabel size="sm">Duplicate</MenuItemLabel>
       </MenuItem>
+      <MenuItem key="info">
+        <Icon as={WifiIcon} color="$muted500" mr="$2" />
+        <MenuItemLabel size="sm">Show password</MenuItemLabel>
+      </MenuItem>
       <MenuItem key="delete">
-        <TrashIcon color="$red700" mr="$2" />
+        <Icon as={TrashIcon} color="$red700" mr="$2" />
         <MenuItemLabel size="sm" color="$red700">
           Delete
         </MenuItemLabel>
@@ -310,7 +402,10 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   const colorMode = useColorMode()
 
   return (
-    <Pressable onPress={() => navigate(deviceURL(device))}>
+    <Pressable
+      onPress={() => navigate(deviceURL(device))}
+      disabled={device.MAC == 'pending'}
+    >
       <HStack
         key={device.MAC}
         bg="$backgroundCardLight"
@@ -354,32 +449,16 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
             justifyContent="space-between"
             sx={{ '@md': { flexDirection: 'row', w: '$1/3' } }}
           >
-            <Tooltip
-              h={undefined}
-              placement="bottom"
-              trigger={(triggerProps) => {
-                return (
-                  <VStack
-                    justifyContent="flex-end"
-                    sx={{ '@md': { justifyContent: 'center' } }}
-                    {...triggerProps}
-                  >
-                    <Text bold>{device.Name || 'N/A'}</Text>
-                    <Text
-                      size="sm"
-                      color="$muted500"
-                      maxWidth={180}
-                      isTruncated
-                    >
-                      {device.oui || ' '}
-                    </Text>
-                  </VStack>
-                )
-              }}
-            >
-              <TooltipContent>
-                <TooltipText>{getDates(device)}</TooltipText>
-              </TooltipContent>
+            <Tooltip label={getDates(device) || 'No DHCP'}>
+              <VStack
+                justifyContent="flex-end"
+                sx={{ '@md': { justifyContent: 'center' } }}
+              >
+                <Text bold>{device.Name || 'N/A'}</Text>
+                <Text size="sm" color="$muted500" maxWidth={180} isTruncated>
+                  {device.oui || ' '}
+                </Text>
+              </VStack>
             </Tooltip>
 
             <VStack
