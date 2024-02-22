@@ -5,8 +5,8 @@ RUN apt-get install -y --no-install-recommends nftables iproute2 netcat-traditio
 RUN mkdir /code/
 WORKDIR /code/
 ARG TARGETARCH
-RUN curl -O https://dl.google.com/go/go1.21.5-linux-${TARGETARCH}.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.21.5-linux-${TARGETARCH}.tar.gz
+RUN curl -O https://dl.google.com/go/go1.21.5.linux-${TARGETARCH}.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.21.5.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 RUN git clone https://github.com/TimothyYe/godns.git
 WORKDIR godns/cmd/godns
