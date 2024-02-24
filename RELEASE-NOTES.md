@@ -1,4 +1,8 @@
 # Secure Programmable Router (SPR) Release Notes
+
+## v0.3.6
+* Fix regression with VPN only mode devices
+
 ## v0.3.5
 * Alert view fixes & UI Fixes
 * Catch auth:failure events by default
