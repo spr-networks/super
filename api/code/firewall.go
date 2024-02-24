@@ -2493,9 +2493,7 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
 
-	if entry.MAC != "" {
-		populateVmapEntries(entry.RecentIP, entry.MAC, new_iface, entry.WGPubKey)
-	}
+	populateVmapEntries(entry.RecentIP, entry.MAC, new_iface, entry.WGPubKey)
 
 	//apply the tags
 	applyPrivateNetworkUpstreamDevice(entry)
