@@ -174,11 +174,12 @@ const WifiChannelParameters = ({
         for (let band of iw.bands) {
           if (band.vht_capabilities) {
             for (let capability of band.vht_capabilities) {
-              if (capability.includes('160 MHz')) {
+              if (capability.includes('160 MHz') || capability.includes('160Mhz')) {
                 setDisable160(false)
               }
             }
           }
+
           if (band.he_phy_capabilities) {
             setDisableWifi6(false)
           }

@@ -38,6 +38,7 @@ if [ ! -f configs/base/config.sh ]; then
 	mv configs/base/virtual-config.sh configs/base/config.sh
 	# generate dhcp config
 	./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
+	touch configs/base/.setup_done
 fi
 
 CONTAINER_CHECK=superapi

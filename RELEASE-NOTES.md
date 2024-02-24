@@ -1,4 +1,14 @@
 # Secure Programmable Router (SPR) Release Notes
+
+## v0.3.6
+* Fix regression with VPN only mode devices
+
+## v0.3.5
+* Alert view fixes & UI Fixes
+* Catch auth:failure events by default
+* Add device names as '.lan' domains
+* Update base image to 23.10 mantic for pi5 support with the 6.5 kernel
+
 ## v0.3.4
 * Support for 6-e channel calculation in API
 * Add decorators to alert templates
