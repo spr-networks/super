@@ -28,7 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssh-client 
 COPY scripts /scripts/
 # iw list json parser
 RUN mkdir -p /root/.local/share/jc/jcparsers
-COPY scripts/iw*.py /root/.local/share/jc/jcparsers
+COPY scripts/iw*.py /root/.local/share/jc/jcparsers/
 
 COPY --from=builder /api /
 COPY --from=builder /sprbus /
