@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import { Dimensions, Platform, SafeAreaView } from 'react-native'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { Base64 } from 'utils'
 
 import Notifications from 'Notifications'
 import {
@@ -490,11 +491,83 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       //for ios we get an event - no callback
       //this function is called when user clicks a local notification
       notificationArgs.onLocalNotification = (notification) => {
+        console.log('++ onLocalNotification --')
+
+        //TODO set confirm only if it is, else skip
+        const action = notification.getActionIdentifier() // open, allow, deny
+        //else: com.apple.UNNotificationDefaultActionIdentifier
+
         const userInfo = notification.getData() //=userInfo
         const isClicked = userInfo.userInteraction === 1
-        const action = notification.getActionIdentifier() // open, allow, deny
         const { data } = userInfo
-        confirmTrafficAction(action, data)
+        console.log('++ >> onLocalNotification:', action, 'data:', data)
+        console.log('++ clicked:', String(isClicked))
+        //confirmTrafficAction(action, data)
+      }
+
+      notificationArgs.onNotification = (notification, next) => {
+        console.log('++ onRemoteNotification ++')
+        //NOTE category should always be SECRET here
+        //category: SECRET|PLAIN, PLAIN for testing / not enc.
+        //const action = notification.getActionIdentifier() // open, allow, deny
+
+        const data = notification.getData()
+        const isClicked = data.userInteraction === 1
+
+        console.log(`
+        Title:  ${notification.getTitle()}
+        Message: ${notification.getMessage()}
+        category: ${notification.getCategory()}
+        content-available: ${notification.getContentAvailable()}
+        Clicked: ${String(isClicked)}
+        Data: ${JSON.stringify(data)}`)
+
+        category = notification.getCategory()
+        if (category == 'SECRET' && data.ENCRYPTED_DATA) {
+          try {
+            let d = Base64.atob(data.ENCRYPTED_DATA)
+            let alert = JSON.parse(d)
+            //TODO decrypt here
+            let { title, body } = alert
+
+            //forward decrypted notification to notificationCenter
+            //handle click in localNotification
+            Notifications.notification(title, body)
+          } catch (err) {
+            console.error(
+              'FAILED to decode notification data:',
+              data.ENCRYPTED_DATA,
+              'err=',
+              err
+            )
+          }
+        } else if (category == 'PLAIN') {
+          let title = notification.getTitle()
+          let body = notification.getMessage()
+          if (title && body) {
+            Notifications.notification(title, body)
+          } else {
+            console.error(`plain notification missing title||body`)
+          }
+        } else {
+          console.error(
+            'weird notification category:',
+            category,
+            'notification:',
+            notification
+          )
+        }
+
+        notification.finish('UIBackgroundFetchResultFailed')
+        //notification.finish('UIBackgroundFetchResultNoData')
+      }
+
+      notificationArgs.onRegister = (token) => {
+        //TODO set token in asyncStore
+        console.log('++++ DeviceToken=', token)
+        AsyncStorage.setItem('deviceToken', token)
+          .then((res) => {})
+          .catch((err) => {})
       }
     }
 
@@ -503,6 +576,12 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     // add routes with plugins on web
     if (Platform.OS == 'web') {
       registerPluginRoutes()
+    }
+
+    return () => {
+      if (Platform.OS == 'ios') {
+        Notifications.cleanup()
+      }
     }
   }, [])
 
