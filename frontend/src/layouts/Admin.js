@@ -565,6 +565,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       notificationArgs.onRegister = (token) => {
         //TODO set token in asyncStore
         console.log('++++ DeviceToken=', token)
+        //TODO notificationSettings={deviceToken, privateKey, publicKey}
         AsyncStorage.setItem('deviceToken', token)
           .then((res) => {})
           .catch((err) => {})
