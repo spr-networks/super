@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react'
-import { SafeAreaView } from 'react-native'
 import {
   NativeRouter as Router,
   Route,
@@ -7,6 +6,7 @@ import {
   Navigate
 } from 'react-router-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import PushNotificationIOS from '@react-native-community/push-notification-ios'
 
 import AuthLayout from 'layouts/Auth'
 import AdminLayout from 'layouts/Admin'
@@ -14,6 +14,7 @@ import { routesAuth, routesAdmin } from 'routes'
 
 import { GluestackUIProvider } from '@gluestack-ui/themed'
 import { config } from 'gluestack-ui.config'
+import { Base64 } from 'utils'
 
 export default function App() {
   const [colorMode, setColorMode] = React.useState('light')
@@ -36,6 +37,66 @@ export default function App() {
 
   useEffect(() => {
     loadSettings()
+
+    //Notifications TODO move all this code to a js, register callbacks for confirm in future
+    PushNotificationIOS.addEventListener('register', (token) => {
+      console.log('** nTOKEN=', token)
+      AsyncStorage.setItem('deviceToken', token)
+    })
+
+    PushNotificationIOS.addEventListener('notification', (notification) => {
+      const category = notification.getCategory()
+      // data is if we pass any other data in the notification
+      const data = notification.getData()
+
+      console.log('** HANDLER, category=', category)
+      let req = {
+        id: new Date().toString(),
+        title: '',
+        body: '',
+        badge: 0, // counter on home screen
+        threadId: 'thread-id'
+      }
+
+      if (category == 'PLAIN') {
+        req.title = notification.getTitle()
+        req.body = notification.getMessage()
+      } else if (category == 'SECRET' && data.ENCRYPTED_DATA) {
+        try {
+          let d = Base64.atob(data.ENCRYPTED_DATA)
+          let alert = JSON.parse(d)
+          //TODO decrypt here
+          req.title = alert.title
+          req.body = alert.body
+        } catch (err) {
+          //TODO SKIP showing if bork
+        }
+      } else {
+        req.title = 'Unknown notification'
+        req.body = 'Unknown'
+      }
+
+      if (req.title?.length) {
+        PushNotificationIOS.addNotificationRequest(req)
+      }
+
+      notification.finish('UIBackgroundFetchResultNoData')
+    })
+
+    PushNotificationIOS.requestPermissions({
+      alert: true,
+      badge: true,
+      sound: true,
+      critical: true
+    }).then(
+      (data) => {},
+      (data) => {}
+    )
+
+    return () => {
+      PushNotificationIOS.removeEventListener('notification')
+      PushNotificationIOS.removeEventListener('register')
+    }
   }, [])
 
   return (

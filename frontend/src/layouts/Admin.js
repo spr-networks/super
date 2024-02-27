@@ -505,7 +505,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         //confirmTrafficAction(action, data)
       }
 
-      notificationArgs.onNotification = (notification, next) => {
+      notificationArgs.onNotification = (notification) => {
         console.log('++ onRemoteNotification ++')
         //NOTE category should always be SECRET here
         //category: SECRET|PLAIN, PLAIN for testing / not enc.
@@ -558,8 +558,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           )
         }
 
-        notification.finish('UIBackgroundFetchResultFailed')
-        //notification.finish('UIBackgroundFetchResultNoData')
+        //notification.finish('UIBackgroundFetchResultFailed')
+        notification.finish('UIBackgroundFetchResultNoData')
       }
 
       notificationArgs.onRegister = (token) => {
@@ -572,7 +572,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       }
     }
 
-    Notifications.init(notificationArgs)
+    //Notifications.init(notificationArgs)
 
     // add routes with plugins on web
     if (Platform.OS == 'web') {
