@@ -31,6 +31,7 @@ import (
 var AlertSettingsmtx sync.Mutex
 
 var AlertSettingsFile = "/configs/base/alerts.json"
+var AlertDevicesFile = "/configs/base/alert_devices.json"
 var gAlertTopicPrefix = "alerts:"
 var gDebugPrintAlert = false
 
@@ -224,6 +225,113 @@ func modifyAlertSettings(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(gAlertsConfig)
+}
+
+// AlertDevices
+type AlertDevice struct {
+	DeviceId    string
+	DeviceToken string
+	PublicKey   string
+	LastActive  time.Time
+}
+
+func (a *AlertDevice) Validate() error {
+	//TODO DeviceId
+	validId := regexp.MustCompile(`^[0-9a-fA-F]{64}$`).MatchString
+	if !validId(a.DeviceToken) {
+		return fmt.Errorf("Invalid DeviceToken")
+	}
+
+	//TODO
+	if a.PublicKey == "" {
+		return fmt.Errorf("Invalid PublicKey")
+	}
+
+	return nil
+}
+
+var AlertDevicesmtx sync.Mutex
+
+var gAlertDevices = []AlertDevice{}
+
+func loadAlertDevices() {
+	data, err := ioutil.ReadFile(AlertDevicesFile)
+	if err != nil {
+		log.Println(err)
+	} else {
+		err = json.Unmarshal(data, &gAlertDevices)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+}
+
+func saveAlertDevices() {
+	//assumes lock is held
+	file, _ := json.MarshalIndent(gAlertDevices, "", " ")
+	err := ioutil.WriteFile(AlertDevicesFile, file, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func registerAlertDevice(w http.ResponseWriter, r *http.Request) {
+	AlertDevicesmtx.Lock()
+	defer AlertDevicesmtx.Unlock()
+
+	loadAlertDevices()
+
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(gAlertDevices)
+		return
+	}
+
+	setting := AlertDevice{}
+	if r.Method == http.MethodPut {
+		err := json.NewDecoder(r.Body).Decode(&setting)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		// validate
+		err = setting.Validate()
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+	}
+
+	index := -1
+	for i, entry := range gAlertDevices {
+		//TODO also have a id for the device here
+		if entry.DeviceId == setting.DeviceId {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 && r.Method == http.MethodDelete {
+		http.Error(w, "Invalid DeviceId", 400)
+		return
+	}
+
+	setting.LastActive = time.Now()
+
+	// delete, update, append
+	if r.Method == http.MethodDelete {
+		gAlertDevices = append(gAlertDevices[:index], gAlertDevices[index+1:]...)
+	} else if index >= 0 {
+		gAlertDevices[index] = setting
+	} else {
+		gAlertDevices = append(gAlertDevices, setting)
+	}
+
+	saveAlertDevices()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(gAlertDevices)
 }
 
 func grabReflectOld(fields []string, event interface{}) map[string]interface{} {
