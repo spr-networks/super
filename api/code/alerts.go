@@ -236,9 +236,15 @@ type AlertDevice struct {
 }
 
 func (a *AlertDevice) Validate() error {
-	//TODO DeviceId
-	validId := regexp.MustCompile(`^[0-9a-fA-F]{64}$`).MatchString
-	if !validId(a.DeviceToken) {
+	// iOS: "FCDBD8EF-62FC-4ECB-B2F5-92C9E79AC7F9"
+	// Android: "dd96dec43fb81c97"
+	validId := regexp.MustCompile(`^[0-9a-fA-F\-]{36}$`).MatchString
+	if !validId(a.DeviceId) {
+		return fmt.Errorf("Invalid DeviceId")
+	}
+
+	validToken := regexp.MustCompile(`^[0-9a-fA-F]{64}$`).MatchString
+	if !validToken(a.DeviceToken) {
 		return fmt.Errorf("Invalid DeviceToken")
 	}
 
