@@ -475,24 +475,24 @@ const AlertSettings = (props) => {
 
   // tmp modal to show
   const handleDev = async () => {
-    let token = '01'.repeat(32)
+    let info = {}
 
     try {
-      t = await AsyncStorage.getItem('deviceToken')
-      if (t) {
-        token = t
+      let dev = await AsyncStorage.getItem('device')
+      if (dev) {
+        info = JSON.parse(dev)
       }
     } catch {}
 
     modalContext.modal(
       'Notifications Device Token',
       <VStack space="md">
-        <Text size="xs">{token}</Text>
+        <Text size="xs">{JSON.stringify(info)}</Text>
         <Button
           size="xs"
           action="primary"
           variant="outline"
-          onPress={() => copy(token)}
+          onPress={() => copy(info?.DeviceToken)}
         >
           <ButtonText>Copy Token</ButtonText>
           <ButtonIcon as={CopyIcon} ml="$2" />

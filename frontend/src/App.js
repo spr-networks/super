@@ -7,6 +7,8 @@ import {
 } from 'react-router-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import PushNotificationIOS from '@react-native-community/push-notification-ios'
+import { getUniqueId } from 'react-native-device-info'
+import { RSA } from 'react-native-rsa-native'
 
 import AuthLayout from 'layouts/Auth'
 import AdminLayout from 'layouts/Admin'
@@ -18,6 +20,7 @@ import { Base64 } from 'utils'
 
 export default function App() {
   const [colorMode, setColorMode] = React.useState('light')
+  const [deviceInfo, setDeviceInfo] = React.useState({})
   const toggleColorMode = () => {
     setColorMode((prev) => (prev === 'light' ? 'dark' : 'light'))
   }
@@ -35,13 +38,55 @@ export default function App() {
       })
   }
 
+  const loadDeviceInfo = () => {
+    AsyncStorage.getItem('device')
+      .then(async (info) => {
+        let deviceInfo = {}
+        // parse if stored
+        try {
+          let d = JSON.parse(info)
+          if (d) {
+            deviceInfo = d
+          }
+        } catch (e) {}
+
+        let DeviceId = await getUniqueId()
+        deviceInfo.DeviceId = DeviceId
+
+        // Generating keypair takes ~0.9s on iPhoneSE
+        if (!deviceInfo.PrivateKey) {
+          let t = Date.now()
+          let keys = await RSA.generateKeys(4096)
+          console.log('KeyTime=', (Date.now() - t) / 1e3, 's')
+          let PrivateKey = keys.private,
+            PublicKey = keys.public
+
+          deviceInfo = { ...deviceInfo, PrivateKey, PublicKey }
+        }
+
+        //TODO post this to /alerts_register
+
+        setDeviceInfo(deviceInfo)
+      })
+      .catch((err) => {
+        console.error('ERR:', err)
+      })
+  }
+
+  useEffect(() => {
+    console.log('save deviceInfo', JSON.stringify(deviceInfo))
+    AsyncStorage.setItem('device', JSON.stringify(deviceInfo))
+  }, [deviceInfo])
+
   useEffect(() => {
     loadSettings()
+    loadDeviceInfo()
 
     //Notifications TODO move all this code to a js, register callbacks for confirm in future
-    PushNotificationIOS.addEventListener('register', (token) => {
-      console.log('** nTOKEN=', token)
-      AsyncStorage.setItem('deviceToken', token)
+    //DeviceInfoSync or smtg
+    PushNotificationIOS.addEventListener('register', async (DeviceToken) => {
+      console.log('** nTOKEN=', DeviceToken)
+      setDeviceInfo({ ...deviceInfo, DeviceToken })
     })
 
     PushNotificationIOS.addEventListener('notification', (notification) => {

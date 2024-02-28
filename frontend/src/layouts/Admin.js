@@ -486,6 +486,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       }
     }
 
+    /*
     let notificationArgs = {}
     if (Platform.OS == 'ios') {
       //for ios we get an event - no callback
@@ -572,7 +573,36 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       }
     }
 
-    //Notifications.init(notificationArgs)
+    //Notifications.init(notificationArgs)    
+    */
+
+    // store info if ios
+    if (Platform.OS == 'ios') {
+      AsyncStorage.getItem('device').then((info) => {
+        let deviceInfo = info ? JSON.parse(info) : null
+        if (!deviceInfo) {
+          console.error('missing device info')
+          return
+        }
+
+        let data = {
+          DeviceId: deviceInfo.DeviceId,
+          DeviceToken: deviceInfo.DeviceToken,
+          PublicKey: deviceInfo.PublicKey
+        }
+
+        console.log('>>SendToApi:', data)
+
+        api
+          .put('/alerts_register', data)
+          .then((res) => {
+            console.log('reqToAlertsRegister==', res)
+          })
+          .catch((err) => {
+            console.error(err)
+          })
+      })
+    }
 
     // add routes with plugins on web
     if (Platform.OS == 'web') {
