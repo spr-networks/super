@@ -64,29 +64,37 @@ export default function App() {
           deviceInfo = { ...deviceInfo, PrivateKey, PublicKey }
         }
 
-        //TODO post this to /alerts_register
-
         setDeviceInfo(deviceInfo)
+        AsyncStorage.setItem('device', JSON.stringify(deviceInfo))
       })
       .catch((err) => {
         console.error('ERR:', err)
       })
   }
 
+  // fetch other deviceInfo when we have the token
   useEffect(() => {
-    console.log('save deviceInfo', JSON.stringify(deviceInfo))
-    AsyncStorage.setItem('device', JSON.stringify(deviceInfo))
+    if (!deviceInfo?.DeviceToken || deviceInfo?.DeviceId) {
+      return
+    }
+
+    loadDeviceInfo()
   }, [deviceInfo])
 
   useEffect(() => {
     loadSettings()
-    loadDeviceInfo()
 
     //Notifications TODO move all this code to a js, register callbacks for confirm in future
     //DeviceInfoSync or smtg
     PushNotificationIOS.addEventListener('register', async (DeviceToken) => {
-      console.log('** nTOKEN=', DeviceToken)
-      setDeviceInfo({ ...deviceInfo, DeviceToken })
+      if (DeviceToken.length > 64) {
+        console.log('** got iosSim deviceToken')
+        DeviceToken = '1'.repeat(64)
+      }
+
+      console.log('** DeviceToken=', DeviceToken)
+      let deviceInfo = { ...deviceInfo, DeviceToken }
+      setDeviceInfo(deviceInfo)
     })
 
     PushNotificationIOS.addEventListener('notification', (notification) => {

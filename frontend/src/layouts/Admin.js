@@ -577,6 +577,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     */
 
     // store info if ios
+    //TODO also move this code
     if (Platform.OS == 'ios') {
       AsyncStorage.getItem('device').then((info) => {
         let deviceInfo = info ? JSON.parse(info) : null
@@ -591,15 +592,14 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           PublicKey: deviceInfo.PublicKey
         }
 
-        console.log('>>SendToApi:', data)
-
         api
           .put('/alerts_register', data)
           .then((res) => {
-            console.log('reqToAlertsRegister==', res)
+            console.log('num alert devices registered=', res.length)
           })
-          .catch((err) => {
-            console.error(err)
+          .catch(async (err) => {
+            let errorMessage = await err.response.text()
+            console.error('Error saving device info:', errorMessage, err)
           })
       })
     }

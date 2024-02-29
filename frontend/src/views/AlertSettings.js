@@ -487,7 +487,7 @@ const AlertSettings = (props) => {
     modalContext.modal(
       'Notifications Device Token',
       <VStack space="md">
-        <Text size="xs">{JSON.stringify(info)}</Text>
+        <Text size="xs">{JSON.stringify(Object.keys(info))}</Text>
         <Button
           size="xs"
           action="primary"
