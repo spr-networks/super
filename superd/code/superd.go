@@ -36,7 +36,13 @@ import (
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
 var UserAddons = "plugins/user"
-var ComposeAllowListDefaults = []string{"docker-compose.yml", "docker-compose-test.yml", "docker-compose-virt.yml",
+
+var ComposeAllowListDefaults = []string{"podman/podman-compose.yml",
+	"podman/podman-compose-virt.yml",
+	"podman/podman-compose-test.yml",
+	"docker-compose.yml",
+	"docker-compose-test.yml",
+	"docker-compose-virt.yml",
 	"plugins/plus/pfw_extension/docker-compose.yml",
 	"plugins/plus/mesh_extension/docker-compose.yml",
 	"dyndns/docker-compose.yml",
@@ -110,14 +116,30 @@ func isVirtual() bool {
 	return os.Getenv("VIRTUAL_SPR") != ""
 }
 
+func isPodman() bool {
+	_, err := os.Stat("/var/run/podman.sock")
+	if err == nil {
+		return true
+	}
+	return false
+}
+
 func getDefaultCompose() string {
 	envCompose := os.Getenv("COMPOSE_FILE")
 	if envCompose != "" {
 		return envCompose
 	}
 
+	use_podman := isPodman()
+
 	if isVirtual() {
+		if use_podman {
+			return "podman/podman-compose-virt.yml"
+		}
 		return "docker-compose-virt.yml"
+	}
+	if use_podman {
+		return "podman/podman-compose.yml"
 	}
 	return "docker-compose.yml"
 }
@@ -126,6 +148,16 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 	args := []string{}
 	release_channel := ""
 	release_version := ""
+
+	CONTAINER_SOCKET := "/var/run/docker.sock:/var/run/docker.sock:ro"
+	CONTAINER_COMMAND := "docker"
+
+	use_podman := isPodman()
+
+	if use_podman {
+		CONTAINER_SOCKET = "/var/run/podman.sock:/var/run/podman.sock:ro"
+		CONTAINER_COMMAND = "podman"
+	}
 
 	composeFile := composeFileIN
 
@@ -198,10 +230,13 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		args = append(args, target)
 	}
 
-	cmd := "docker-compose"
+	compose_cmd := "docker-compose"
+	if use_podman {
+		compose_cmd = "podman-compose"
+	}
 
 	haveOldDC := true
-	_, err := exec.LookPath("docker-compose")
+	_, err := exec.LookPath(compose_cmd)
 	if err != nil {
 		haveOldDC = false
 	}
@@ -213,10 +248,9 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 
 		superdir := getHostSuperDir()
 
-		cmd = "docker"
 		d_args := append([]string{}, "run",
 			"-v", superdir+":"+superdir,
-			"-v", "/var/run/docker.sock:/var/run/docker.sock",
+			"-v", CONTAINER_SOCKET,
 			"-w", superdir,
 			"-e", "SUPERDIR="+superdir)
 
@@ -238,11 +272,11 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		//docker.io, ever annoying, integrated compose as a subcommand.
 		// so now we need to handle both cases
 
-		if haveOldDC {
+		if haveOldDC || use_podman {
 			args = append(d_args, "--entrypoint=/bin/bash",
 				"ghcr.io/spr-networks/super_superd",
 				"-c",
-				"docker-compose "+strings.Join(args, " "))
+				compose_cmd+" "+strings.Join(args, " "))
 		} else {
 			args = append(d_args, "--entrypoint=/bin/bash",
 				"ghcr.io/spr-networks/super_superd",
@@ -252,17 +286,16 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 
 	}
 
-	if !new_docker && !haveOldDC {
+	if !new_docker && !haveOldDC && !use_podman {
 		//need to run docker compose instead of docker-compose
 		// if new_docker then this is already handled.
 		// but if not new_docker and dont have old docker compose, this fixes it
-		cmd = "docker"
 		args = append([]string{"compose"}, args...)
 	}
 
-	_, err = exec.Command(cmd, args...).Output()
+	_, err = exec.Command(CONTAINER_COMMAND, args...).Output()
 	if err != nil {
-		argS := fmt.Sprintf(cmd + " " + strings.Join(args, " "))
+		argS := fmt.Sprintf(CONTAINER_COMMAND + " " + strings.Join(args, " "))
 		fmt.Println("failure: " + err.Error() + " |" + argS)
 	}
 
@@ -370,7 +403,13 @@ func ghcr_auth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := exec.Command("docker", "login", "ghcr.io", "-u", username, "--password-stdin")
+	container_cmd := "docker"
+	use_podman := isPodman()
+	if use_podman {
+		container_cmd = "podman"
+	}
+
+	cmd := exec.Command(container_cmd, "login", "ghcr.io", "-u", username, "--password-stdin")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		fmt.Println(err) //replace with logger, or anything you want
@@ -535,7 +574,13 @@ func getHostSuperDir() string {
 
 	f := "'{{index .Config.Labels \"com.docker.compose.project.working_dir\"}}'"
 
-	cmd := exec.Command("docker", "inspect", "--format="+f, "superd")
+	container_cmd := "docker"
+	use_podman := isPodman()
+	if use_podman {
+		container_cmd = "podman"
+	}
+
+	cmd := exec.Command(container_cmd, "inspect", "--format="+f, "superd")
 	stdout, err := cmd.Output()
 
 	if err != nil {
@@ -578,7 +623,13 @@ func lastTagForRepository(path string) string {
 }
 
 func dockerImageLabel(image string, labelName string) (string, error) {
-	cmd := exec.Command("docker", "inspect", "--format={{index .Config.Labels \""+labelName+"\"}}", image)
+	container_cmd := "docker"
+	use_podman := isPodman()
+	if use_podman {
+		container_cmd = "podman"
+	}
+
+	cmd := exec.Command(container_cmd, "inspect", "--format={{index .Config.Labels \""+labelName+"\"}}", image)
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -589,7 +640,7 @@ func dockerImageLabel(image string, labelName string) (string, error) {
 		spr_prefix := "ghcr.io/spr-networks/super_"
 		image_name := strings.Replace(image, "super", "", 1)
 		image_name = strings.ReplaceAll(image_name, "-", "_")
-		cmd = exec.Command("docker", "inspect", "--format={{index .Config.Labels \""+labelName+"\"}}", spr_prefix+image_name)
+		cmd = exec.Command(container_cmd, "inspect", "--format={{index .Config.Labels \""+labelName+"\"}}", spr_prefix+image_name)
 
 		var out bytes.Buffer
 		cmd.Stdout = &out
