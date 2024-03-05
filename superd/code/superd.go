@@ -37,9 +37,9 @@ var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
 var UserAddons = "plugins/user"
 
-var ComposeAllowListDefaults = []string{"podman/podman-compose.yml",
-	"podman/podman-compose-virt.yml",
-	"podman/podman-compose-test.yml",
+var ComposeAllowListDefaults = []string{"podman-compose.yml",
+	"podman-compose-virt.yml",
+	"podman-compose-test.yml",
 	"docker-compose.yml",
 	"docker-compose-test.yml",
 	"docker-compose-virt.yml",
@@ -134,12 +134,12 @@ func getDefaultCompose() string {
 
 	if isVirtual() {
 		if use_podman {
-			return "podman/podman-compose-virt.yml"
+			return "podman-compose-virt.yml"
 		}
 		return "docker-compose-virt.yml"
 	}
 	if use_podman {
-		return "podman/podman-compose.yml"
+		return "podman-compose.yml"
 	}
 	return "docker-compose.yml"
 }
