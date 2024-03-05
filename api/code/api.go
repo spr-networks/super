@@ -235,9 +235,24 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(reply)
 }
 
+func isPodman() bool {
+	_, err := os.Stat("/var/run/podman.sock")
+	if err == nil {
+		return true
+	}
+	return false
+}
+
+func GetDockerSocketPath() string {
+	if isPodman() {
+		return "/var/run/podman.sock"
+	} else {
+		return "/var/run/docker.sock"
+	}
+}
 // system info: uptime, docker ps etc.
 func getInfo(w http.ResponseWriter, r *http.Request) {
-	DockerSocketPath := "/var/run/docker.sock"
+	DockerSocketPath := GetDockerSocketPath()
 
 	name := mux.Vars(r)["name"]
 
