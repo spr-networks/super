@@ -1,5 +1,14 @@
-import React, { useContext, useState, useEffect } from 'react'
-import { Box, VStack, ScrollView, HStack } from '@gluestack-ui/themed'
+import React, { useContext, useState, useEffect, useRef } from 'react'
+import { AppState, RefreshControl } from 'react-native'
+
+import {
+  Box,
+  Text,
+  VStack,
+  ScrollView,
+  HStack,
+  Spinner
+} from '@gluestack-ui/themed'
 import { AppContext } from 'AppContext'
 import { pluginAPI, wifiAPI } from 'api'
 
@@ -26,9 +35,10 @@ import {
 import { ServicesEnabled } from 'components/Dashboard/ServicesWidgets'
 
 const Home = (props) => {
+  const context = useContext(AppContext)
+
   const [pluginsEnabled, setPluginsEnabled] = useState([])
   const [interfaces, setInterfaces] = useState([])
-  const context = useContext(AppContext)
 
   useEffect(() => {
     pluginAPI
@@ -41,6 +51,33 @@ const Home = (props) => {
         )
       })
       .catch((error) => error)
+  }, [])
+
+  const [refreshing, setRefreshing] = useState(false)
+  const appState = useRef(AppState.currentState)
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true)
+    setTimeout(() => {
+      setRefreshing(false)
+    }, 1)
+  }, [])
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        onRefresh()
+      }
+
+      appState.current = nextAppState
+    })
+
+    return () => {
+      subscription.remove()
+    }
   }, [])
 
   useEffect(() => {
@@ -69,8 +106,18 @@ const Home = (props) => {
   let featuresNoVPN = context.features.filter((f) => f != 'wireguard')
   services = [...services, ...featuresNoVPN]
 
+  if (refreshing) {
+    //return <Spinner mt="$16" size="large" />
+    return <></>
+  }
+
   return (
-    <ScrollView sx={{ '@md': { h: '92vh' } }}>
+    <ScrollView
+      sx={{ '@md': { h: '92vh' } }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
       <Box
         flexDirection="row"
         sx={{
