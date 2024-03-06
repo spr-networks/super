@@ -148,7 +148,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(device.Name)
   const [ip, setIP] = useState(device.RecentIP)
-  const [policies, setPolicies] = useState(device.Policies.sort())
+  const [policies, setPolicies] = useState(device.Policies?.sort() || [])
   const [groups, setGroups] = useState(device.Groups.sort())
   const [tags, setTags] = useState(device.DeviceTags.sort())
   const [showModal, setShowModal] = useState(false)

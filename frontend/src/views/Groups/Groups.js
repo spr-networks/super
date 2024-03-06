@@ -22,8 +22,8 @@ export default (props) => {
   const [groups, setGroups] = useState([])
 
   const refreshGroups = async () => {
-    let groups
-    let devices
+    let groups = []
+    let devices = []
 
     try {
       groups = await groupAPI.list()
