@@ -35,6 +35,7 @@
   },
   "homepage": "https://www.supernetworks.org/",
   "resolutions": {
+    "@gluestack-ui/**/@expo/html-elements": "0.5.1",
     "prismjs": "1.29.0"
   },
   "dependencies": {
