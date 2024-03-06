@@ -19,6 +19,7 @@ const DeviceView = () => {
   const params = useParams()
   const [device, setDevice] = useState(null)
   const [groups, setGroups] = useState([])
+  const [policies, setPolicies] = useState([])
   const [tags, setTags] = useState([])
 
   useEffect(() => {
@@ -46,6 +47,14 @@ const DeviceView = () => {
         ...new Set(
           Object.values(devs)
             .map((device) => device.Groups)
+            .flat()
+        )
+      ])
+
+      setPolicies([
+        ...new Set(
+          Object.values(devs)
+            .map((device) => device.Policies)
             .flat()
         )
       ])
@@ -101,11 +110,10 @@ const DeviceView = () => {
         <EditDevice
           key={device.MAC || device.WGPubKey}
           device={device}
+          policies={policies}
           groups={groups}
           tags={tags}
           notifyChange={refreshDevice}
-          allGroups={groups}
-          allTags={tags}
         />
       ) : null}
     </ScrollView>

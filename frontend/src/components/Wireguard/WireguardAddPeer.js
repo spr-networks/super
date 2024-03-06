@@ -37,7 +37,7 @@ export default class WireguardAddPeer extends React.Component {
     Endpoint: ``,
     addrs: [],
     config: null,
-    groups: ['dns', 'wan'],
+    policies: ['dns', 'wan'],
     deviceName: ''
   }
 
@@ -112,7 +112,7 @@ export default class WireguardAddPeer extends React.Component {
             } else {
               // will create a new device for the peer
               deviceAPI
-                .updateGroups(peer.PublicKey, this.state.groups)
+                .updatePolicies(peer.PublicKey, this.state.policies)
                 .catch((error) =>
                   this.context.error(
                     '[API] updateDevice error: ' + error.message
@@ -227,7 +227,7 @@ export default class WireguardAddPeer extends React.Component {
       }
     })
 
-    const allGroups = ['wan', 'dns', 'lan']
+    const allPolicies = ['wan', 'dns', 'lan', 'lan_upstream', 'disabled']
 
     let newPeer = this.state.AllowedIPs == ''
 
@@ -307,17 +307,17 @@ export default class WireguardAddPeer extends React.Component {
 
             <FormControl>
               <FormControlLabel>
-                <FormControlLabelText>Groups</FormControlLabelText>
+                <FormControlLabelText>Policies</FormControlLabelText>
               </FormControlLabel>
 
               <CheckboxGroup
-                value={this.state.groups}
-                accessibilityLabel="Set Device Groups"
-                onChange={(values) => this.handleChange('groups', values)}
+                value={this.state.policies}
+                accessibilityLabel="Set Device Policies"
+                onChange={(values) => this.handleChange('policies', values)}
                 py="$1"
               >
                 <HStack space="xl">
-                  {allGroups.map((group) => (
+                  {allPolicies.map((group) => (
                     <Checkbox key={group} value={group} colorScheme="primary">
                       <CheckboxIndicator mr="$2">
                         <CheckboxIcon />
@@ -330,7 +330,7 @@ export default class WireguardAddPeer extends React.Component {
 
               <FormControlHelper>
                 <FormControlHelperText>
-                  Assign device to groups for network access
+                  Assign device policies for network access
                 </FormControlHelperText>
               </FormControlHelper>
             </FormControl>

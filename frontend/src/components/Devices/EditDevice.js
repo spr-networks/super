@@ -45,11 +45,11 @@ import {
 
 import { Address4 } from 'ip-address'
 
-import { TagItem, GroupItem } from 'components/TagItem'
+import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
 import ColorPicker from 'components/ColorPicker'
 import IconPicker from 'components/IconPicker'
 
-import { GroupMenu, TagMenu } from 'components/TagMenu'
+import { GroupMenu, PolicyMenu, TagMenu } from 'components/TagMenu'
 
 const EditDevice = ({ device, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
@@ -58,6 +58,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [rawIP, setRawIP] = useState(device.RecentIP)
   const [ip, setIP] = useState(device.RecentIP)
   const [vlantag, setVlanTag] = useState(device.VLANTag)
+  const [policies, setPolicies] = useState(device.Policies?.sort() || [])
   const [groups, setGroups] = useState(device.Groups.sort())
   const [tags, setTags] = useState(device.DeviceTags.sort())
   const [color, setColor] = useState(device.Style?.Color || 'blueGray')
@@ -73,8 +74,9 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [modalType, setModalType] = useState('')
 
   // for adding
-  const defaultGroups = props.groups || ['wan', 'dns', 'lan']
-  const defaultTags = props.tags || ['lan_upstream']
+  const defaultPolicies = ['wan', 'dns', 'lan', 'lan_upstream', 'disabled']
+  const defaultGroups = props.groups || []
+  const defaultTags = props.tags || []
 
   const navigate = useNavigate()
 
@@ -120,6 +122,21 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
 
     deviceAPI
       .updateGroups(device.MAC || device.WGPubKey, groups)
+      .then(notifyChange)
+      .catch((error) =>
+        this.context.error('[API] updateDevice error: ' + error.message)
+      )
+  }
+
+  const handlePolicies = (policies) => {
+    if (!device.MAC && !device.WGPubKey) {
+      return
+    }
+
+    setPolicies([...new Set(policies.filter((v) => typeof v === 'string'))])
+
+    deviceAPI
+      .updatePolicies(device.MAC || device.WGPubKey, policies)
       .then(notifyChange)
       .catch((error) =>
         this.context.error('[API] updateDevice error: ' + error.message)
@@ -264,7 +281,9 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const handleSubmitNew = (value) => {
     if (modalType.match(/Group/i)) {
       handleGroups(groups.concat(value))
-    } else {
+    } else if (modalType.match(/Policy/i)) {
+      handlePolicies(policies.concat(value))
+    } else if (modalType.match(/Tag/i)) {
       handleTags(tags.concat(value))
     }
   }
@@ -419,6 +438,25 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
 
       <FormControl>
         <FormControlLabel>
+          <FormControlLabelText>Policies</FormControlLabelText>
+        </FormControlLabel>
+        <HStack flexWrap="wrap" w="$full" space="md">
+          <HStack space="md" flexWrap="wrap" alignItems="center">
+            {policies.map((policy) => (
+              <PolicyItem key={policy} name={policy} size="sm" />
+            ))}
+          </HStack>
+
+          <PolicyMenu
+            items={[...new Set(defaultPolicies.concat(policies))]}
+            selectedKeys={policies}
+            onSelectionChange={handlePolicies}
+          />
+        </HStack>
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
           <FormControlLabelText>Groups</FormControlLabelText>
         </FormControlLabel>
         <HStack flexWrap="wrap" w="$full" space="md">
@@ -542,6 +580,7 @@ EditDevice.propTypes = {
   device: PropTypes.object.isRequired,
   edit: PropTypes.bool,
   groups: PropTypes.array,
+  policies: PropTypes.array,
   tags: PropTypes.array
 }
 

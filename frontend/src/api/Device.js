@@ -56,6 +56,10 @@ export class APIDevice extends API {
     return this.update(id, { Groups })
   }
 
+  updatePolicies(id, Policies) {
+    return this.update(id, { Policies })
+  }
+
   updateTags(id, DeviceTags) {
     return this.update(id, { DeviceTags })
   }

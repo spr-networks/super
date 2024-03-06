@@ -45,7 +45,8 @@ export default function MockAPI() {
           Type: 'sae',
           Psk: 'password'
         },
-        Groups: ['lan', 'dns'],
+        Policies: ['lan', 'dns'],
+        Groups: [],
         DeviceTags: ['private'],
         Style: {
           Icon: 'Router',
@@ -63,7 +64,8 @@ export default function MockAPI() {
           Type: 'wpa2',
           Psk: 'password'
         },
-        Groups: ['lan', 'dns'],
+        Policies: ['lan', 'dns'],
+        Groups: [],
         DeviceTags: ['private'],
         Style: {
           Icon: 'Laptop',
@@ -100,7 +102,8 @@ export default function MockAPI() {
             Type: rpick(['wpa2', 'sae']),
             Psk: `password${i}`
           },
-          Groups: ['lan', 'dns'],
+          Policies: ['lan', 'dns'],
+          Groups: [],
           DeviceTags: ['private'],
           Style: {
             Icon,
@@ -109,9 +112,9 @@ export default function MockAPI() {
         })
       }
 
-      server.create('group', { Name: 'lan', disabled: false, GroupTags: [] })
-      server.create('group', { Name: 'wan', disabled: false, GroupTags: [] })
-      server.create('group', { Name: 'dns', disabled: false, GroupTags: [] })
+      server.create('group', { Name: 'testing', disabled: false, GroupTags: [] })
+      server.create('group', { Name: 'testing2', disabled: false, GroupTags: [] })
+      server.create('group', { Name: 'testing3', disabled: false, GroupTags: [] })
 
       server.create('plugin', {
         Name: 'dns-block',
@@ -406,7 +409,8 @@ export default function MockAPI() {
               Type: 'sae',
               Psk: 'password'
             },
-            Groups: ['lan', 'dns'],
+            Policies: ['lan', 'dns'],
+            Groups: [],
             DeviceTags: ['private'],
             Style: {
               Icon: 'Laptop',

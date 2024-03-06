@@ -17,6 +17,7 @@ import ModalConfirm from './ModalConfirm'
 
 //TODO support multiple/single picking
 const ItemMenu = ({
+  newDisabled,
   type,
   items,
   selectedKeys,
@@ -26,11 +27,16 @@ const ItemMenu = ({
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState(type || 'Item')
 
+  let letext = `Edit ${type}s`
+  if (type == 'Policy') {
+    letext = `Edit Policies`
+  }
+
   const trigger =
     props.trigger ||
     ((triggerProps) => (
       <Button action="secondary" variant="outline" size="xs" {...triggerProps}>
-        <ButtonText>{`Edit ${type}s`}</ButtonText>
+        <ButtonText>{letext}</ButtonText>
         <ButtonIcon as={AddIcon} ml="$1" />
       </Button>
     ))
@@ -62,9 +68,11 @@ const ItemMenu = ({
           }
         }}
       >
-        <MenuItem key="newItem" textValue="newItem">
-          <MenuItemLabel size="sm">{`New ${type}`}</MenuItemLabel>
-        </MenuItem>
+        {(newDisabled ? null : (
+          <MenuItem key="newItem" textValue="newItem">
+            <MenuItemLabel size="sm">{`New ${type}`}</MenuItemLabel>
+          </MenuItem>
+        ))}
         {items.map((item) => (
           <MenuItem
             key={
@@ -99,12 +107,17 @@ const GroupMenu = (props) => {
   return <ItemMenu type="Group" {...props} />
 }
 
+const PolicyMenu = (props) => {
+  return <ItemMenu newDisabled={true} type="Policy" {...props} />
+}
+
 ItemMenu.propTypes = {
   type: PropTypes.string.isRequired,
   items: PropTypes.array.isRequired,
   selectedKeys: PropTypes.array,
   onSelectionChange: PropTypes.func,
-  trigger: PropTypes.func
+  trigger: PropTypes.func,
+  newDisabled: PropTypes.boolean
 }
 
 TagMenu.propTypes = {
@@ -121,6 +134,13 @@ GroupMenu.propTypes = {
   trigger: PropTypes.func
 }
 
+PolicyMenu.propTypes = {
+  items: PropTypes.array.isRequired,
+  selectedKeys: PropTypes.array,
+  onSelectionChange: PropTypes.func,
+  trigger: PropTypes.func
+}
+
 export default TagMenu
 
-export { ItemMenu, TagMenu, GroupMenu }
+export { ItemMenu, TagMenu, GroupMenu, PolicyMenu }

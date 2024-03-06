@@ -25,8 +25,8 @@ import {
   VStack
 } from '@gluestack-ui/themed'
 
-import { TagItem, GroupItem } from 'components/TagItem'
-import { GroupMenu, TagMenu } from 'components/TagMenu'
+import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
+import { GroupMenu, TagMenu, PolicyMenu } from 'components/TagMenu'
 
 import ProtocolRadio from 'components/Form/ProtocolRadio'
 import InputSelect from 'components/InputSelect'
@@ -38,13 +38,15 @@ class AddContainerInterfaceRuleImpl extends React.Component {
     SrcIP: '',
     Interface: '',
     RouteDst: '',
+    Policies: [],
     Groups: [],
     Tags: [],
     GroupOptions: []
   }
 
-  defaultGroups = ['wan', 'dns', 'lan', 'api']
-  defaultTags = ['lan_upstream']
+  defaultPolicies = ['wan', 'dns', 'lan', 'api', 'lan_upstream', 'disabled']
+  defaultGroups = []
+  defaultTags = []
 
   constructor(props) {
     super(props)
@@ -72,6 +74,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
       SrcIP: this.state.SrcIP,
       RouteDst: this.state.RouteDst,
       Interface: this.state.Interface,
+      Policies: this.state.Policies,
       Groups: this.state.Groups,
       Tags: this.state.Tags
     }
@@ -94,6 +97,10 @@ class AddContainerInterfaceRuleImpl extends React.Component {
     this.props.appContext.getGroups().then((groups) => {
       this.handleChange('GroupOptions', groups) //groups.map(x => ({label: x, value: x})))
     })
+  }
+
+  handlePolicies = (policies) => {
+    this.handleChange('Policies', policies)
   }
 
   handleGroups = (groups) => {
@@ -184,9 +191,14 @@ class AddContainerInterfaceRuleImpl extends React.Component {
 
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Network Groups & Tags</FormControlLabelText>
+            <FormControlLabelText>Network Policies, Groups, & Tags</FormControlLabelText>
           </FormControlLabel>
           <HStack flexWrap="wrap" w="$full" space="md">
+            <HStack space="md" flexWrap="wrap" alignItems="center">
+              {this.state.Policies.map((policy) => (
+                <PolicyItem key={policy} name={policy} size="sm" />
+              ))}
+            </HStack>
             <HStack space="md" flexWrap="wrap" alignItems="center">
               {this.state.Groups.map((group) => (
                 <GroupItem key={group} name={group} size="sm" />
@@ -199,6 +211,14 @@ class AddContainerInterfaceRuleImpl extends React.Component {
             </HStack>
           </HStack>
           <HStack space="md" flexWrap="wrap" alignItems="center">
+            <PolicyMenu
+              items={[
+                ...new Set(this.defaultPolicies)
+              ]}
+              selectedKeys={this.state.Policies}
+              onSelectionChange={this.handlePolicies}
+            />
+
             <GroupMenu
               items={[
                 ...new Set(this.defaultGroups.concat(this.state.GroupOptions))
