@@ -2587,7 +2587,7 @@ func migrateDevicePolicies() {
 			}
 		}
 
-		if len(new_policies) != 0 {
+		if len(new_policies) != 0 || dev.Policies == nil {
 			//update it
 			updated = true
 			dev.Policies = new_policies
