@@ -10,11 +10,13 @@ import InputSelect from 'components/InputSelect'
 import DeviceExpiry from './DeviceExpiry'
 
 import {
+  Box,
   Button,
   ButtonText,
   Checkbox,
   CheckboxIcon,
   CheckboxIndicator,
+  CheckboxGroup,
   CheckboxLabel,
   CheckIcon,
   FormControl,
@@ -75,6 +77,13 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
 
   // for adding
   const defaultPolicies = ['wan', 'dns', 'lan', 'lan_upstream', 'disabled']
+  const policyTips = {
+    wan: 'Allow Internet Access',
+    dns: 'Allow DNS Queries',
+    lan: 'Allow access to ALL other devices on the network',
+    lan_upstream: 'Allow device to reach private LANs upstream',
+    disabled: 'Override all policies and groups, to disconnect device'
+  }
   const defaultGroups = props.groups || []
   const defaultTags = props.tags || []
 
@@ -436,23 +445,57 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         </FormControl>
       </HStack>
 
-      <FormControl>
+      <FormControl flex={4}>
         <FormControlLabel>
           <FormControlLabelText>Policies</FormControlLabelText>
         </FormControlLabel>
-        <HStack flexWrap="wrap" w="$full" space="md">
-          <HStack space="md" flexWrap="wrap" alignItems="center">
-            {policies.map((policy) => (
-              <PolicyItem key={policy} name={policy} size="sm" />
-            ))}
-          </HStack>
 
-          <PolicyMenu
-            items={[...new Set(defaultPolicies.concat(policies))]}
-            selectedKeys={policies}
-            onSelectionChange={handlePolicies}
-          />
-        </HStack>
+        <CheckboxGroup
+          value={policies}
+          accessibilityLabel="Set Device Policies"
+          onChange={(values) => setPolicies(values)}
+          py="$1"
+        >
+          <HStack space="xl">
+            {defaultPolicies.map((policy) =>
+              policyTips[policy] !== null ? (
+                <Tooltip
+                  h={undefined}
+                  placement="bottom"
+                  trigger={(triggerProps) => {
+                    return (
+                      <Box {...triggerProps}>
+                        <Checkbox value={policy} colorScheme="primary">
+                          <CheckboxIndicator mr="$2">
+                            <CheckboxIcon />
+                          </CheckboxIndicator>
+                          <CheckboxLabel>{policy}</CheckboxLabel>
+                        </Checkbox>
+                      </Box>
+                    )
+                  }}
+                >
+                  <TooltipContent>
+                    <TooltipText>{policyTips[policy]}</TooltipText>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <Checkbox value={policy} colorScheme="primary">
+                  <CheckboxIndicator mr="$2">
+                    <CheckboxIcon />
+                  </CheckboxIndicator>
+                  <CheckboxLabel>{policy}</CheckboxLabel>
+                </Checkbox>
+              )
+            )}
+          </HStack>
+        </CheckboxGroup>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Assign device policies for network access
+          </FormControlHelperText>
+        </FormControlHelper>
       </FormControl>
 
       <FormControl>
