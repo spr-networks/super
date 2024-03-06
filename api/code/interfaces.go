@@ -30,14 +30,24 @@ type InterfaceConfig struct {
 	IP          string     `json:",omitempty"`
 	Router      string     `json:",omitempty"`
 	VLAN        string     `json:",omitempty"`
+	MACOverride string     `json:",omitempty"`
 }
 
 // this will be exported to all containers in public/interfaces.json
 type PublicInterfaceConfig struct {
-	Name    string
-	Type    string
-	Subtype string
-	Enabled bool
+	Name        string
+	Type        string
+	Subtype     string
+	Enabled     bool
+	MACOverride string `json:",omitempty"`
+}
+
+func isValidMAC(MAC string) bool {
+	if MAC == "" {
+		return false
+	}
+	var validMacAddress = regexp.MustCompile(`^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$`).MatchString
+	return validMacAddress(MAC)
 }
 
 func isValidIface(Iface string) bool {
@@ -185,7 +195,7 @@ func configureInterface(interfaceType string, subType string, name string) error
 
 	}
 
-	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", ""}
+	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", ""}
 
 	config := loadInterfacesConfigLocked()
 
@@ -413,14 +423,15 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 		if iface.Name == iconfig.Name {
 			found = true
 			if interfaces[i].Enabled != iconfig.Enabled ||
-				interfaces[i].Type != iconfig.Type {
+				interfaces[i].Type != iconfig.Type ||
+				interfaces[i].MACOverride != iconfig.MACOverride {
 				prev_type = iconfig.Type
 				prev_subtype = iconfig.Subtype
 				prev_enabled = iconfig.Enabled
 				changed = true
 				interfaces[i].Enabled = iconfig.Enabled
 				interfaces[i].Type = iconfig.Type
-
+				interfaces[i].MACOverride = iconfig.MACOverride
 			}
 			break
 		}
@@ -433,6 +444,8 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 
 	if changed {
 		err := writeInterfacesConfigLocked(interfaces)
+
+		refreshInterfaceOverridesLocked()
 
 		//reset with previous settings
 		resetInterface(interfaces, iconfig.Name, prev_type, prev_subtype, prev_enabled)
@@ -643,6 +656,26 @@ func refreshVLANTrunks() {
 
 }
 
+func refreshInterfaceOverrides() {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	refreshInterfaceOverridesLocked()
+}
+
+func refreshInterfaceOverridesLocked() {
+	interfaces := loadInterfacesConfigLocked()
+	for _, ifconfig := range interfaces {
+		if ifconfig.MACOverride != "" {
+			err := exec.Command("ip", "link", "set", "dev", ifconfig.Name, "address", ifconfig.MACOverride).Run()
+			if err != nil {
+				log.Println("Failed to set address "+ifconfig.MACOverride, err)
+			}
+		}
+	}
+
+}
+
 func refreshDownlinks() {
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
@@ -689,6 +722,13 @@ func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 	if !isValidIfaceType(iconfig.Type) {
 		http.Error(w, "Invalid type", 400)
 		return
+	}
+
+	if iconfig.MACOverride != "" {
+		if !isValidMAC(iconfig.MACOverride) {
+			http.Error(w, "Invalid MAC Override", 400)
+			return
+		}
 	}
 
 	//AP has a separate path for configuration

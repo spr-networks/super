@@ -2820,6 +2820,8 @@ func initFirewallRules() {
 
 	applyRadioInterfaces(interfaces)
 
+	refreshInterfaceOverrides()
+
 	refreshVLANTrunks()
 
 	refreshDownlinks()
