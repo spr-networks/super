@@ -77,6 +77,13 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
 
   // for adding
   const defaultPolicies = ['wan', 'dns', 'lan', 'lan_upstream', 'disabled']
+  const policyName = {
+    wan: 'Internet Access',
+    dns: 'DNS Resolution',
+    lan: 'Local Network',
+    lan_upstream: 'Upstream Private Networks',
+    disabled: 'Disabled'
+  }
   const policyTips = {
     wan: 'Allow Internet Access',
     dns: 'Allow DNS Queries',
@@ -456,7 +463,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           onChange={(values) => setPolicies(values)}
           py="$1"
         >
-          <HStack space="xl">
+          <HStack flex={1} space="md" w="$full" flexWrap="wrap">
             {defaultPolicies.map((policy) =>
               policyTips[policy] !== null ? (
                 <Tooltip
@@ -469,7 +476,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
                           <CheckboxIndicator mr="$2">
                             <CheckboxIcon />
                           </CheckboxIndicator>
-                          <CheckboxLabel>{policy}</CheckboxLabel>
+                          <CheckboxLabel>{policyName[policy]}</CheckboxLabel>
                         </Checkbox>
                       </Box>
                     )
@@ -515,6 +522,13 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
             onSelectionChange={handleGroups}
           />
         </HStack>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Assign to network access group
+          </FormControlHelperText>
+        </FormControlHelper>
+
       </FormControl>
 
       <FormControl>

@@ -134,6 +134,13 @@ const AddDevice = (props) => {
     lan: 'Allow access to ALL other devices on the network',
     lan_upstream: 'Allow device to reach private LANs upstream'
   }
+  const policyName = {
+    wan: 'Internet Access',
+    dns: 'DNS Resolution',
+    lan: 'Local Network',
+    lan_upstream: 'Upstream Private Networks',
+    disabled: 'Disabled'
+  }
   const allTags = ['guest']
 
   const isPositiveNumber = (str) => {
@@ -352,7 +359,7 @@ const AddDevice = (props) => {
               accessibilityLabel="Auth"
               onChange={(value) => handleChange('wpa', value)}
             >
-              <HStack py="$1" space="md">
+              <HStack py="$1" space="md" w="$full" flexWrap="wrap">
                 <Radio value="sae" size="md">
                   <RadioIndicator mr="$2">
                     <RadioIcon as={CircleIcon} strokeWidth={1} />
@@ -390,7 +397,7 @@ const AddDevice = (props) => {
               onChange={(values) => setPolicies(values)}
               py="$1"
             >
-              <HStack space="xl">
+              <HStack space="xl" space="md" w="$full" flexWrap="wrap">
                 {allPolicies.map((policy) =>
                   policyTips[policy] !== null ? (
                     <Tooltip
@@ -403,7 +410,7 @@ const AddDevice = (props) => {
                               <CheckboxIndicator mr="$2">
                                 <CheckboxIcon />
                               </CheckboxIndicator>
-                              <CheckboxLabel>{policy}</CheckboxLabel>
+                              <CheckboxLabel>{policyName[policy]}</CheckboxLabel>
                             </Checkbox>
                           </Box>
                         )
