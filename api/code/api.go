@@ -2562,6 +2562,21 @@ func migrateDevicePolicies() {
 
 	updated := false
 
+	Groupsmtx.Lock()
+	defer Groupsmtx.Unlock()
+	old_groups := getGroupsJson()
+	groups := []GroupEntry{}
+
+	// rm policy groups
+	for _, entry := range old_groups {
+		if !slices.Contains(ValidPolicyStrings, entry.Name) {
+			groups = append(groups, entry)
+		} else {
+			//skipping a group
+			updated = true
+		}
+	}
+
 	for i, dev := range devices {
 		new_policies := []string{}
 		new_groups := []string{}
@@ -2600,6 +2615,7 @@ func migrateDevicePolicies() {
 	if updated {
 		log.Println("Updated device groups and tags with policies")
 		saveDevicesJson(devices)
+		saveGroupsJson(groups)
 	}
 }
 
