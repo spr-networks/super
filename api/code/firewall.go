@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -62,6 +63,7 @@ type CustomInterfaceRule struct {
 	Interface string
 	SrcIP     string
 	RouteDst  string
+	Policies  []string
 	Groups    []string
 	Tags      []string //unused for now
 }
@@ -255,7 +257,43 @@ func loadFirewallRules() error {
 	if len(gFirewallConfig.ServicePorts) == 0 {
 		setDefaultServicePortsLocked()
 	}
+
+	migrateFirewallGroupsToPolicies()
+
 	return nil
+}
+
+func migrateFirewallGroupsToPolicies() {
+	//0.3.7  introduces policies in addition to tags and groups
+
+	updated := false
+	for i := range gFirewallConfig.CustomInterfaceRules {
+		a := gFirewallConfig.CustomInterfaceRules[i]
+
+		new_policies := []string{}
+		new_groups := []string{}
+		for _, group_name := range a.Groups {
+			if slices.Contains(ValidPolicyStrings, group_name) {
+				new_policies = append(new_policies, group_name)
+			} else {
+				new_groups = append(new_groups, group_name)
+			}
+		}
+
+		if len(new_policies) != 0 {
+			//update it
+			updated = true
+			a.Policies = new_policies
+			a.Groups = new_groups
+			gFirewallConfig.CustomInterfaceRules[i] = a
+		}
+	}
+
+	//flush changes to disk
+	if updated {
+		log.Println("Migrating container interface rules")
+		saveFirewallRulesLocked()
+	}
 }
 
 // getDefaultGatewayForSubnet returns the first possible host IP for a given subnet
@@ -1090,6 +1128,58 @@ func refreshDeviceTags(dev DeviceEntry) {
 	sprbus.Publish("device:tags:update", scrubDevice(dev))
 }
 
+func refreshDeviceGroupsAndPolicy(dev DeviceEntry) {
+	if dev.WGPubKey != "" {
+		//refresh wg based on WGPubKey
+		refreshWireguardDevice(dev.MAC, dev.RecentIP, dev.WGPubKey, "wg0", "", true)
+	}
+
+	ifname := ""
+	ipv4 := dev.RecentIP
+
+	if ipv4 == "" {
+		//check arp tables for the MAC to get the IP
+		arp_entry, err := GetArpEntryFromMAC(dev.MAC)
+		if err == nil {
+			ipv4 = arp_entry.IP
+		} else {
+			log.Println("Missing IP for device, could not refresh device groups with MAC " + dev.MAC)
+			return
+		}
+	}
+
+	//check dhcp vmap for the interface
+	entries := getNFTVerdictMap("dhcp_access")
+	for _, entry := range entries {
+		if equalMAC(entry.mac, dev.MAC) {
+			ifname = entry.ifname
+		}
+	}
+
+	if ifname == "" {
+		ifname = getRouteInterface(dev.RecentIP)
+	}
+
+	if ifname == "" {
+		log.Println("dhcp_access entry not found, route not found, insufficient information to refresh", dev.RecentIP)
+		return
+	}
+
+	//remove from existing verdict maps
+	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname))
+
+	device_disabled := slices.Contains(dev.Policies, "disabled")
+	if !device_disabled {
+		//add this MAC and IP to the ethernet filter
+		addVerdictMac(ipv4, dev.MAC, ifname, "ethernet_filter", "return")
+
+		//and re-add
+		populateVmapEntries(ipv4, dev.MAC, ifname, "")
+	}
+
+	sprbus.Publish("device:groups:update", scrubDevice(dev))
+}
+
 func applyPingRules() {
 	Interfacesmtx.Lock()
 	interfaces := loadInterfacesConfigLocked()
@@ -1232,7 +1322,7 @@ func includesGroupStd(slice []string) (bool, bool, bool, bool) {
 func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string, fthru bool) error {
 	var err error
 
-	wan, dns, lan, api := includesGroupStd(container_rule.Groups)
+	wan, dns, lan, api := includesGroupStd(container_rule.Policies)
 
 	if wan {
 		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_wan",
@@ -1288,6 +1378,7 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 
 	for _, group := range container_rule.Groups {
 		if group == "lan" || group == "dns" || group == "wan" || group == "api" {
+			log.Println("Warning, unexpected migrated group in container rule " + group)
 			continue
 		}
 		if action == "add" {
@@ -1967,11 +2058,11 @@ func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface str
 	}
 
 	//check groups
-	zones := getGroupsJson()
-	zonesDisabled := map[string]bool{}
+	groups := getGroupsJson()
+	groupsDisabled := map[string]bool{}
 
-	for _, zone := range zones {
-		zonesDisabled[zone.Name] = zone.Disabled
+	for _, group := range groups {
+		groupsDisabled[group.Name] = group.Disabled
 	}
 
 	val, exists := devices[entry.MAC]
@@ -1989,31 +2080,21 @@ func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface str
 		}
 	}
 
-	for _, zone_name := range val.Groups {
+	for _, group_name := range val.Groups {
 		//skip zones that are disabled
-		if zonesDisabled[zone_name] {
+		if groupsDisabled[group_name] {
 			continue
 		}
-		switch zone_name {
-		case "isolated":
+
+		//warn about deprecated group names
+		if slices.Contains(ignore_groups, group_name) {
+			log.Println("Warning, unexpected migrated group " + group_name + " for " + entry.RecentIP)
 			continue
-		case "dns":
-			if !hasVerdict(entry.RecentIP, Iface, "dns_access") {
-				return false
-			}
-		case "lan":
-			if !hasVerdict(entry.RecentIP, Iface, "lan_access") {
-				return false
-			}
-		case "wan":
-			if !hasVerdict(entry.RecentIP, Iface, "internet_access") {
-				return false
-			}
-		default:
-			//custom group
-			if !hasCustomVerdict(zone_name, entry.RecentIP, Iface) {
-				return false
-			}
+		}
+
+		//custom group
+		if !hasCustomVerdict(group_name, entry.RecentIP, Iface) {
+			return false
 		}
 	}
 
@@ -2365,14 +2446,15 @@ func getRouteGatewayForTable(Table string) string {
 }
 
 func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
-	zones := getGroupsJson()
-	zonesDisabled := map[string]bool{}
-	serviceZones := map[string][]string{}
 
-	for _, zone := range zones {
-		zonesDisabled[zone.Name] = zone.Disabled
-		if len(zone.ServiceDestinations) > 0 {
-			serviceZones[zone.Name] = zone.ServiceDestinations
+	groups := getGroupsJson()
+	groupsDisabled := map[string]bool{}
+	serviceGroups := map[string][]string{}
+
+	for _, group := range groups {
+		groupsDisabled[group.Name] = group.Disabled
+		if len(group.ServiceDestinations) > 0 {
+			serviceGroups[group.Name] = group.ServiceDestinations
 		}
 	}
 
@@ -2392,29 +2474,48 @@ func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
 		}
 	}
 
-	for _, zone_name := range val.Groups {
-		//skip zones that are disabled
-		if zonesDisabled[zone_name] {
+	//first check for the disabled policy. if so, then do not
+	// apply any verdict maps
+	if slices.Contains(val.Policies, "disabled") {
+		return
+	}
+
+	for _, group_name := range val.Groups {
+		//skip groups that are disabled
+		if groupsDisabled[group_name] {
 			continue
 		}
-		//skip service zones
-		_, has_service := serviceZones[zone_name]
+
+		//skip service groups
+		_, has_service := serviceGroups[group_name]
 		if has_service {
 			continue
 		}
 
-		switch zone_name {
-		case "isolated":
+		if slices.Contains(ignore_groups, group_name) {
+			log.Println("Warning, unexpected migrated group " + group_name + " for " + val.RecentIP)
 			continue
+		}
+
+		addCustomVerdict(group_name, IP, Iface)
+	}
+
+	//now apply the policies
+
+	for _, policy_name := range val.Policies {
+		switch policy_name {
 		case "dns":
 			addDNSVerdict(IP, Iface)
 		case "lan":
 			addLANVerdict(IP, Iface)
 		case "wan":
 			addInternetVerdict(IP, Iface)
+		case "api":
+			//tbd -> can constrain API/website access by device later.
+		case "disabled":
+			log.Println("Unexpected disabled here. Should have aborted earlier")
 		default:
-			//custom group
-			addCustomVerdict(zone_name, IP, Iface)
+			log.Println("Unknown policy: " + policy_name)
 		}
 	}
 
@@ -2461,10 +2562,10 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	//1. delete arp entry
 	if entry.MAC != "" {
 		flushRoute(entry.MAC)
-
-		//2. delete this ip, mac from any existing verdict maps
-		flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
 	}
+
+	//2. delete this ip, mac from any existing verdict maps
+	flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
 
 	//3. delete the old router address
 	exec.Command("ip", "addr", "del", routeIP, "dev", established_route_device).Run()
@@ -2618,9 +2719,16 @@ func dynamicRouteLoop() {
 				//happy state -- the established interface matches the calculated interface to route to
 				if established_route_device != "" && established_route_device == new_iface {
 
+					device_disabled := slices.Contains(entry.Policies, "disabled")
+
 					//investigate verdict maps and make sure device is there
 					if hasVmapEntries(devices, entry, new_iface) {
 						//vmaps happy, skip updating this device
+
+						if device_disabled {
+							//do flush the device
+							flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
+						}
 						continue
 					}
 

@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -91,9 +92,11 @@ type APIConfig struct {
 }
 
 type GroupEntry struct {
-	Name                string
-	Disabled            bool
-	GroupTags           []string
+	Name     string
+	Disabled bool
+	//tags that belong to a group
+	GroupTags []string
+	//Services that belong to a group
 	ServiceDestinations []string
 }
 
@@ -114,6 +117,7 @@ type DeviceEntry struct {
 	VLANTag          string
 	RecentIP         string
 	PSKEntry         PSKEntry
+	Policies         []string
 	Groups           []string
 	DeviceTags       []string
 	DHCPFirstTime    string
@@ -123,6 +127,8 @@ type DeviceEntry struct {
 	DeleteExpiration bool
 	DeviceDisabled   bool
 }
+
+var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "disabled"}
 
 var config = APIConfig{}
 
@@ -1259,7 +1265,7 @@ func syncDevices(w http.ResponseWriter, r *http.Request) {
 	saveDevicesJson(devices)
 
 	for _, val := range devices {
-		refreshDeviceGroups(val)
+		refreshDeviceGroupsAndPolicy(val)
 		refreshDeviceTags(val)
 	}
 
@@ -1270,7 +1276,7 @@ func deleteDeviceLocked(devices map[string]DeviceEntry, identity string) {
 	val := devices[identity]
 	delete(devices, identity)
 	saveDevicesJson(devices)
-	refreshDeviceGroups(val)
+	refreshDeviceGroupsAndPolicy(val)
 	doReloadPSKFiles()
 
 	//if the device had a VLAN Tag, also refresh vlans
@@ -1327,9 +1333,32 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		return "invalid color", 400
 	}
 
-	//normalize groups and tags
+	//normalize groups, policies, and tags
+	dev.Policies = normalizeStringSlice(dev.Policies)
+
+	//validate policies now
+	for _, policy := range dev.Policies {
+		if !slices.Contains(ValidPolicyStrings, policy) {
+			return "Invalid policy name provided", 400
+		}
+	}
+
 	dev.Groups = normalizeStringSlice(dev.Groups)
 	dev.DeviceTags = normalizeStringSlice(dev.DeviceTags)
+
+	//dont allow groups or tags to collide with policy
+	for _, group := range dev.Groups {
+		if slices.Contains(ValidPolicyStrings, group) {
+			return "Invalid group name provided collides with policy name", 400
+		}
+	}
+
+	for _, tag := range dev.DeviceTags {
+		if slices.Contains(ValidPolicyStrings, tag) {
+			return "Invalid tag name provided collides with policy name", 400
+		}
+	}
+
 	dev.MAC = trimLower(dev.MAC)
 
 	val, exists := devices[identity]
@@ -1353,6 +1382,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	pskGenerated := false
 	pskModified := false
 	refreshGroups := false
+	refreshPolicies := false
 	refreshTags := false
 	refreshVlanTrunks := false
 
@@ -1463,6 +1493,11 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			refreshGroups = true
 		}
 
+		if dev.Policies != nil && !equalStringSlice(val.Policies, dev.Policies) {
+			val.Policies = dev.Policies
+			refreshPolicies = true
+		}
+
 		if dev.Style.Icon != "" {
 			val.Style.Icon = dev.Style.Icon
 		}
@@ -1481,8 +1516,8 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			doReloadPSKFiles()
 		}
 
-		if refreshGroups {
-			refreshDeviceGroups(val)
+		if refreshPolicies || refreshGroups {
+			refreshDeviceGroupsAndPolicy(val)
 		}
 
 		if refreshTags {
@@ -1555,9 +1590,17 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		dev.Groups = []string{}
 	}
 
+	if dev.Policies == nil {
+		dev.Policies = []string{}
+	}
+
 	if len(dev.Groups) != 0 {
 		//update verdict maps for the device
 		refreshGroups = true
+	}
+
+	if len(dev.Policies) != 0 {
+		refreshPolicies = true
 	}
 
 	handleExpirations(&dev, &dev)
@@ -1572,8 +1615,8 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		doReloadPSKFiles()
 	}
 
-	if refreshGroups {
-		refreshDeviceGroups(val)
+	if refreshGroups || refreshPolicies {
+		refreshDeviceGroupsAndPolicy(val)
 	}
 
 	if pskGenerated == false {
@@ -1727,8 +1770,9 @@ func equalStringSlice(a []string, b []string) bool {
 }
 
 var (
-	builtin_maps  = []string{"internet_access", "dns_access", "lan_access", "ethernet_filter"}
-	default_zones = []string{"isolated", "lan", "wan", "dns"}
+	builtin_maps = []string{"internet_access", "dns_access", "lan_access", "ethernet_filter"}
+
+	ignore_groups = []string{"isolated", "lan", "wan", "dns", "api"}
 )
 
 func getVerdictMapNames() []string {
@@ -1737,7 +1781,8 @@ func getVerdictMapNames() []string {
 	zones := getGroupsJson()
 	for _, z := range zones {
 		skip := false
-		for _, y := range default_zones {
+		//ignore deprecated groups, these are now policies.
+		for _, y := range ignore_groups {
 			if y == z.Name {
 				skip = true
 				break
@@ -1913,55 +1958,6 @@ func lookupWGDevice(devices *map[string]DeviceEntry, WGPubKey string, IP string)
 		}
 	}
 	return DeviceEntry{}, false
-}
-
-func refreshDeviceGroups(dev DeviceEntry) {
-	if dev.WGPubKey != "" {
-		//refresh wg based on WGPubKey
-		refreshWireguardDevice(dev.MAC, dev.RecentIP, dev.WGPubKey, "wg0", "", true)
-	}
-
-	ifname := ""
-	ipv4 := dev.RecentIP
-
-	if ipv4 == "" {
-		//check arp tables for the MAC to get the IP
-		arp_entry, err := GetArpEntryFromMAC(dev.MAC)
-		if err == nil {
-			ipv4 = arp_entry.IP
-		} else {
-			log.Println("Missing IP for device, could not refresh device groups with MAC " + dev.MAC)
-			return
-		}
-	}
-
-	//check dhcp vmap for the interface
-	entries := getNFTVerdictMap("dhcp_access")
-	for _, entry := range entries {
-		if equalMAC(entry.mac, dev.MAC) {
-			ifname = entry.ifname
-		}
-	}
-
-	if ifname == "" {
-		ifname = getRouteInterface(dev.RecentIP)
-	}
-
-	if ifname == "" {
-		log.Println("dhcp_access entry not found, route not found, insufficient information to refresh", dev.RecentIP)
-		return
-	}
-
-	//remove from existing verdict maps
-	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname))
-
-	//add this MAC and IP to the ethernet filter
-	addVerdictMac(ipv4, dev.MAC, ifname, "ethernet_filter", "return")
-
-	//and re-add
-	populateVmapEntries(ipv4, dev.MAC, ifname, "")
-
-	sprbus.Publish("device:groups:update", scrubDevice(dev))
 }
 
 // from https://github.com/ItsJimi/go-arp/blob/master/arp.go
@@ -2558,6 +2554,55 @@ func migrateMDNS() {
 	saveMulticastJsonLocked(settings)
 }
 
+func migrateDevicePolicies() {
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+
+	devices := getDevicesJson()
+
+	updated := false
+
+	for i, dev := range devices {
+		new_policies := []string{}
+		new_groups := []string{}
+		new_tags := []string{}
+
+		for _, group_name := range dev.Groups {
+			if slices.Contains(ValidPolicyStrings, group_name) {
+				if !slices.Contains(new_policies, group_name) {
+					new_policies = append(new_policies, group_name)
+				}
+			} else {
+				new_groups = append(new_groups, group_name)
+			}
+		}
+
+		for _, tag := range dev.DeviceTags {
+			if slices.Contains(ValidPolicyStrings, tag) {
+				if !slices.Contains(new_policies, tag) {
+					new_policies = append(new_policies, tag)
+				}
+			} else {
+				new_tags = append(new_tags, tag)
+			}
+		}
+
+		if len(new_policies) != 0 {
+			//update it
+			updated = true
+			dev.Policies = new_policies
+			dev.Groups = new_groups
+			dev.DeviceTags = new_tags
+			devices[i] = dev
+		}
+	}
+
+	if updated {
+		log.Println("Updated device groups and tags with policies")
+		saveDevicesJson(devices)
+	}
+}
+
 // set up SPA handler. From gorilla mux's documentation
 type spaHandler struct {
 	staticPath string
@@ -2627,6 +2672,8 @@ func main() {
 	migrateAuthAPI()
 	//update multicast.json
 	migrateMDNS()
+	//v0.3.7 migration of groups into policies
+	migrateDevicePolicies()
 
 	loadConfig()
 
