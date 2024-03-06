@@ -281,7 +281,8 @@ const UplinkSetConfig = ({ iface, onSubmit, ...props }) => {
   const context = useContext(AlertContext)
 
   const [item, setItem] = useState({
-    Type: 'Uplink'
+    Type: 'Uplink',
+    MACOverride: ''
   })
 
   const [errors, setErrors] = useState({})
@@ -293,6 +294,15 @@ const UplinkSetConfig = ({ iface, onSubmit, ...props }) => {
       context.error('Failed to validate Type')
       return false
     }
+
+    const macAddressRegex = /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/;
+    if (item.MACOverride != '') {
+      if (!macAddressRegex.test(item.MACOverride)) {
+        context.error('Invalid MAC address')
+        return false
+      }
+    }
+
     return true
   }
 
@@ -340,6 +350,20 @@ const UplinkSetConfig = ({ iface, onSubmit, ...props }) => {
         </Select>
       </FormControl>
 
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Override MAC Address</FormControlLabelText>
+        </FormControlLabel>
+        <Input variant="underlined">
+          <InputField
+            placeholder="01:02:03:04:05:06"
+            value={item.MACOverride}
+            onChangeText={(MACOverride) => setItem({ ...item, MACOverride })}
+            autoFocus
+          />
+        </Input>
+      </FormControl>
+
       <Button colorScheme="primary" onPress={() => doSubmit(item)}>
         <ButtonText>Save</ButtonText>
       </Button>
@@ -355,7 +379,7 @@ const UplinkSetIP = ({ iface, onSubmit, ...props }) => {
     DisableDHCP: false,
     IP: '',
     Router: '',
-    VLAN: ''
+    VLAN: '',
   })
 
   const [errors, setErrors] = useState({})
@@ -567,6 +591,7 @@ const UplinkInfo = (props) => {
 
   const [interfaces, setInterfaces] = useState({})
   const [linkIPs, setLinkIPs] = useState({})
+  const [linkMACs, setLinkMACs] = useState({})
   const [links, setLinks] = useState([])
   const [uplinks, setUplinks] = useState([])
 
@@ -601,6 +626,7 @@ const UplinkInfo = (props) => {
       .ipAddr()
       .then((ifaces) => {
         let x = {}
+        let y = {}
         for (let iface of ifaces) {
           let ips = []
           for (let addr_info of iface.addr_info) {
@@ -611,8 +637,10 @@ const UplinkInfo = (props) => {
             }
           }
           x[iface.ifname] = ips
+          y[iface.ifname] = iface.address
         }
         setLinkIPs(x)
+        setLinkMACs(y)
       })
       .catch((err) => context.error('fail ' + err))
 
@@ -773,6 +801,9 @@ const UplinkInfo = (props) => {
               <Text flex={2} size="sm" bold>
                 {item.Interface}
               </Text>
+              <Text flex={2} size="sm">
+                {linkMACs[item.Interface]}
+              </Text>
               <VStack flex={1} space="xs">
                 <Text size="sm">{item.Type}</Text>
                 <Text
@@ -823,6 +854,9 @@ const UplinkInfo = (props) => {
             <ListItem>
               <Text flex={2} size="sm" bold>
                 {item.Interface}
+              </Text>
+              <Text flex={2} size="sm">
+                {linkMACs[item.Interface]}
               </Text>
               <Text flex={1} size="sm">
                 {item.Type}
