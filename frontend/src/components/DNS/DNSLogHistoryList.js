@@ -366,7 +366,7 @@ const DNSLogHistoryList = (props) => {
     modalContext.modal(
       'DNS query',
       <ScrollView w="100%" maxHeight={320}>
-        <JSONSyntax>{JSON.stringify(item, null, '  ')}</JSONSyntax>
+        <JSONSyntax code={JSON.stringify(item, null, '  ')} />
       </ScrollView>
     )
   }
