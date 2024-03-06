@@ -117,7 +117,7 @@ docker-compose up -d
 * FAQ https://www.supernetworks.org/pages/docs/faq
 * Get the iOS App https://apps.apple.com/us/app/secure-programmable-router/id6443709201
 * Join the Discord chat https://discord.gg/EUjTKJPPAX
-* Launch a Digital Ocean Droplet for $4/month https://cloud.digitalocean.com/droplets/new?app=spr&onboarding_origin=marketplace&appId=145188909&refcode=24603f3ca4bd&region=nyc1&size=s-1vcpu-512mb-10gb&type=applications&image=supernetworks-spr
+* Virtual Setup Guide (Personal VPN): https://www.supernetworks.org/pages/docs/setup_guides/virtual_spr#setup-and-connect-to-vpn
 
 
 
