@@ -10,6 +10,9 @@
    "Psk": "asdfasdf"
   },
   "Groups": [
+
+  ],
+  "Policies": [
    "dns",
    "wan",
    "lan"
@@ -29,6 +32,9 @@
    "Psk": "asdfasdf"
   },
   "Groups": [
+
+  ],
+  "Policies": [
    "dns",
    "wan"
   ],
