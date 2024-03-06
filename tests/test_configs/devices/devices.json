@@ -15,10 +15,10 @@
   "Policies": [
    "dns",
    "wan",
-   "lan"
+   "lan",
+   "lan_upstream"
   ],
   "DeviceTags": [
-   "lan_upstream"
   ]
  },
  "02:00:00:00:03:00": {

@@ -6,7 +6,8 @@ describe('device', () => {
     let dev = {
       MAC: 'pending',
       Name: 'devName',
-      Groups: ['dns', 'wan'],
+      Policies: ['dns', 'wan'],
+      Groups: [],
       DeviceTags: [],
       PSKEntry: { Psk: 'password', Type: 'sae' }
     }
