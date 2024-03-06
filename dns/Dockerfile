@@ -2,7 +2,6 @@ FROM ubuntu:23.04 as builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends nftables iproute2 netcat-traditional inetutils-ping net-tools nano ca-certificates git curl
-RUN apt-get install -y --no-install-recommends clang
 RUN mkdir /code
 WORKDIR /code
 
@@ -10,9 +9,6 @@ ARG TARGETARCH
 RUN curl -O https://dl.google.com/go/go1.21.8.linux-${TARGETARCH}.tar.gz
 RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.21.8.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
-
-
-ENV CC=clang
 
 # Use a ram disk for golang src
 ARG COREDNS_VER=unknown
@@ -32,7 +28,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
    sed -i 's/metadata:metadata/metadata:metadata\njsonlog:github.com\/spr-networks\/coredns-jsonlog/g' plugin.cfg && \
    sed -i 's/etcd:etcd/etcd:etcd\nblock:github.com\/spr-networks\/coredns-block\nrebinding_protection:github.com\/spr-networks\/coredns-rebinding_protection/g' plugin.cfg && \
    go generate && \
-   go mod tidy -compat=1.19 && \
+   go mod tidy && \
    go build -o /coredns
 
 FROM ghcr.io/spr-networks/container_template:latest
