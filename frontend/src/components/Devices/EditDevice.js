@@ -460,7 +460,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         <CheckboxGroup
           value={policies}
           accessibilityLabel="Set Device Policies"
-          onChange={(values) => setPolicies(values)}
+          onChange={(values) => handlePolicies(values)}
           py="$1"
         >
           <HStack flex={1} space="md" w="$full" flexWrap="wrap">
