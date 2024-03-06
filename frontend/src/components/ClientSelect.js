@@ -3,9 +3,17 @@ import PropTypes from 'prop-types'
 import { Select } from 'components/Select'
 import { groupAPI, deviceAPI, firewallAPI } from 'api'
 import InputSelect from './InputSelect'
-import { GlobeIcon, TagIcon } from 'lucide-react-native'
+import { GlobeIcon, TagIcon, BookCheckIcon } from 'lucide-react-native'
 
 const ClientSelect = (props) => {
+
+  let policyOptions = ['api', 'wan', 'lan', 'dns', 'lan_upstream', 'disabled'].map((t) => {
+    return { label: t, value: { Policy: t }, icon: BookCheckIcon }
+  })
+  const [policyOpts, setPolicyOpts] = useState({
+    title: 'Select Policies',
+    options: policyOptions
+  })
   const [devOpts, setDevOpts] = useState(null)
   const [groupOpts, setGroupOpts] = useState(null)
   const [tagOpts, setTagOpts] = useState(null)
@@ -94,6 +102,10 @@ const ClientSelect = (props) => {
 
   const gatherOps = () => {
     let ops = [devOpts]
+
+    if (props.showPolicies) {
+      ops.push(policyOpts)
+    }
 
     if (groupOpts) {
       ops.push(groupOpts)
