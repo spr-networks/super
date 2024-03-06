@@ -2504,7 +2504,7 @@ func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
 	}
 
 	//apply other policies
-	applyPrivateNetworkUpstreamDevice(dev)
+	applyPrivateNetworkUpstreamDevice(val)
 
 }
 
@@ -2584,7 +2584,7 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	populateVmapEntries(entry.RecentIP, entry.MAC, new_iface, entry.WGPubKey)
 
 	//apply the tags
-	applyEndpointRules(device)
+	applyEndpointRules(entry)
 }
 
 func dynamicRouteLoop() {
