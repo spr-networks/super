@@ -128,7 +128,7 @@ type DeviceEntry struct {
 	DeviceDisabled   bool
 }
 
-var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "disabled"}
+var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "disabled"}
 
 var config = APIConfig{}
 

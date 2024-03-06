@@ -144,10 +144,9 @@ var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{},
 var gIfaceMap = map[string]string{}
 
 var WireguardSocketPath = TEST_PREFIX + "/state/plugins/wireguard/wireguard_plugin"
-
-var DEVICE_TAG_PERMIT_PRIVATE_UPSTREAM_ACCESS = "lan_upstream"
-
 var BASE_READY = TEST_PREFIX + "/state/base/ready"
+
+var DEVICE_POLICY_PERMIT_PRIVATE_UPSTREAM_ACCESS = "lan_upstream"
 
 const firstOutboundRouteTable = 11
 
@@ -1088,20 +1087,13 @@ func applyPrivateNetworkUpstreamDevice(device DeviceEntry) {
 		return
 	}
 
-	foundTag := false
-	for _, tag := range device.DeviceTags {
-		if tag == DEVICE_TAG_PERMIT_PRIVATE_UPSTREAM_ACCESS {
-			foundTag = true
-			break
-		}
-	}
-
+	foundPolicy := slices.Contains(device.Policies, DEVICE_POLICY_PERMIT_PRIVATE_UPSTREAM_ACCESS)
 	inUpstreamAllowed := hasPrivateUpstreamAccess(IP)
 
-	if foundTag && !inUpstreamAllowed {
+	if foundPolicy && !inUpstreamAllowed {
 		//if has the tag but not in the verdict map, add it
 		allowPrivateUpstreamAccess(IP)
-	} else if !foundTag && inUpstreamAllowed {
+	} else if !foundPolicy && inUpstreamAllowed {
 		//if in the verdict map but does not have the tag, remove it
 		removePrivateUpstreamAccess(IP)
 	}
@@ -1113,7 +1105,6 @@ func applyBuiltinTagFirewallRules() {
 	Devicesmtx.Unlock()
 
 	for _, device := range devices {
-		applyPrivateNetworkUpstreamDevice(device)
 		applyEndpointRules(device)
 	}
 }
@@ -1121,7 +1112,6 @@ func applyBuiltinTagFirewallRules() {
 func refreshDeviceTags(dev DeviceEntry) {
 	go func() {
 		FWmtx.Lock()
-		applyPrivateNetworkUpstreamDevice(dev)
 		applyEndpointRules(dev)
 		FWmtx.Unlock()
 	}()
@@ -1386,23 +1376,17 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 		}
 	}
 
-	if strings.Contains(container_rule.SrcIP, "/") && len(container_rule.Tags) > 0 {
-		log.Println("[-] Error : tags not supported for range on custom interface rule", container_rule.Interface, container_rule.SrcIP, container_rule.Tags)
+	if strings.Contains(container_rule.SrcIP, "/") && len(container_rule.Policies) > 0 {
+		log.Println("[-] Error : policies not supported for range on custom interface rule", container_rule.Interface, container_rule.SrcIP, container_rule.Tags)
 	} else {
-		foundTag := false
-		for _, tag := range container_rule.Tags {
-			if tag == DEVICE_TAG_PERMIT_PRIVATE_UPSTREAM_ACCESS {
-				foundTag = true
-				break
-			}
-		}
+		foundPolicy := slices.Contains(container_rule.Policies, DEVICE_POLICY_PERMIT_PRIVATE_UPSTREAM_ACCESS)
 
 		inUpstreamAllowed := hasPrivateUpstreamAccess(container_rule.SrcIP)
 
-		if foundTag && !inUpstreamAllowed {
+		if foundPolicy && !inUpstreamAllowed {
 			//if has the tag but not in the verdict map, add it
 			allowPrivateUpstreamAccess(container_rule.SrcIP)
-		} else if !foundTag && inUpstreamAllowed {
+		} else if !foundPolicy && inUpstreamAllowed {
 			//if in the verdict map but does not have the tag, remove it
 			removePrivateUpstreamAccess(container_rule.SrcIP)
 		}
@@ -2519,6 +2503,9 @@ func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
 		}
 	}
 
+	//apply other policies
+	applyPrivateNetworkUpstreamDevice(dev)
+
 }
 
 func stringMapsAreEqual(map1, map2 map[string]string) bool {
@@ -2597,7 +2584,7 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	populateVmapEntries(entry.RecentIP, entry.MAC, new_iface, entry.WGPubKey)
 
 	//apply the tags
-	applyPrivateNetworkUpstreamDevice(entry)
+	applyEndpointRules(device)
 }
 
 func dynamicRouteLoop() {
