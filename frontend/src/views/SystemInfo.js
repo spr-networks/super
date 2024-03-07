@@ -6,6 +6,12 @@ import {
   Heading,
   HStack,
   FlatList,
+  FormControl,
+  FormControlLabel,
+  FormControlLabelText,
+  Input,
+  InputField,
+  Icon,
   Text,
   VStack,
   ScrollView,
@@ -54,9 +60,16 @@ const SystemInfo = (props) => {
     return () => clearInterval(interval)
   }, [])
 
+  const updateHostname = (hostname) => {
+    api.put('/info/hostname', hostname)
+    .then(setHostname(hostname))
+    .catch((err) => context.error(err.message))
+  }
+
   const niceKey = (key) => ucFirst(key.replace(/_/, ' ').replace(/m$/, ' min'))
 
   const colorMode = useColorMode()
+  const item = {}
 
   return (
     <ScrollView h="$full" sx={{ '@md': { h: '92vh' } }}>
@@ -80,7 +93,15 @@ const SystemInfo = (props) => {
               justifyContent="space-between"
             >
               <Text size="sm">Hostname</Text>
-              <Text color="$muted500">{hostname}</Text>
+              <FormControl>
+                <Input variant="underlined">
+                  <InputField
+                    value={hostname}
+                    onChangeText={(hostname) => updateHostname(hostname)}
+                    autoFocus
+                  />
+                </Input>
+              </FormControl>
             </HStack>
             <HStack
               flex={1}
