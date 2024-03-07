@@ -33,6 +33,7 @@ import (
 var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
 var SetupDonePath = TEST_PREFIX + "/configs/base/.setup_done"
+var HostnameConfigPath = TEST_PREFIX + "/configs/base/hostname"
 
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
 var DevicesConfigFile = DevicesConfigPath + "devices.json"
@@ -247,6 +248,29 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 
 	name := mux.Vars(r)["name"]
 
+	if r.Method == http.MethodPut {
+		if name == "hostname" {
+			//rename the host
+			newName := []byte{}
+			err := json.NewDecoder(r.Body).Decode(&newName)
+
+			var validHostname = regexp.MustCompile(`^[a-zA-Z0-9-]+$`).MatchString
+			if !validHostname(string(newName)) {
+				http.Error(w, "Unsupported hostname", 400)
+				return
+			}
+
+			err = ioutil.WriteFile(HostnameConfigPath, newName, 0600)
+			if err != nil {
+				http.Error(w, err.Error(), 400)
+			}
+			return
+
+		}
+
+		return
+	}
+
 	var data []byte
 	var err error
 
@@ -314,13 +338,19 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 		defer resp.Body.Close()
 		data, err = ioutil.ReadAll(resp.Body)
 	} else if name == "hostname" {
-		hostname, err := os.Hostname()
-		if err != nil {
-			http.Error(w, err.Error(), 400)
-			return
+		data, err := ioutil.ReadFile(HostnameConfigPath)
+		if err == nil && len(data) > 0 {
+			//accept from hostname config path instead
+		} else {
+			hostname, err := os.Hostname()
+			if err != nil {
+				http.Error(w, err.Error(), 400)
+				return
+			}
+
+			data = []byte(fmt.Sprintf("%q", hostname))
 		}
 
-		data = []byte(fmt.Sprintf("%q", hostname))
 	} else if name == "ss" {
 		data, err = exec.Command("jc", "-p", "ss", "-4", "-n").Output()
 	} else {
@@ -2757,7 +2787,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/backup", doConfigsBackup).Methods("PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup/{name}", getConfigsBackup).Methods("GET", "DELETE", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
-	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS", "PUT")
 	external_router_authenticated.HandleFunc("/subnetConfig", getSetDhcpConfig).Methods("GET", "PUT", "OPTIONS")
 
 	external_router_authenticated.HandleFunc("/dnsSettings", dnsSettings).Methods("GET", "PUT")
