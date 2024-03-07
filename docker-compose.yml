@@ -259,7 +259,7 @@ services:
     volumes:
       - ./state/api/:/state/api/
       - ./state/plugins/packet_logs/:/state/plugins/packet_logs
-      - ./configs/base/:/configs/base/
+      - ./configs/base/:/configs/base/:ro
       - /dev/log:/dev/log
   db:
     container_name: superdb
@@ -276,7 +276,7 @@ services:
       - "api"
     logging: *default-logging
     volumes:
-      - ./configs/base/:/configs/base/
+      - ./configs/base/:/configs/base/:ro
       - ./configs/db/:/configs/db/
       - ./state/api/:/state/api/
       - ./state/plugins/db/:/state/plugins/db/
