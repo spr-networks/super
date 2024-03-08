@@ -2317,7 +2317,7 @@ func ReportInstall() {
 
 	defer c.CloseIdleConnections()
 
-	req, err := http.NewRequest(http.MethodGet, "http://spr-counter.spr-networks.org/spr_counter", nil)
+	req, err := http.NewRequest(http.MethodGet, "http://spr-counter.supernetworks.org/spr_counter", nil)
 	if err != nil {
 		log.Println("Failed to construct counter request")
 		return
