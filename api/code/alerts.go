@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,6 +24,8 @@ import (
 	"github.com/PaesslerAG/jsonpath"
 
 	"github.com/google/uuid"
+
+	"github.com/spr-networks/spr-apns-proxy"
 )
 
 //https://www.ietf.org/archive/id/draft-goessner-dispatch-jsonpath-00.html
@@ -257,7 +260,6 @@ func (a *AlertDevice) Validate() error {
 }
 
 var AlertDevicesmtx sync.Mutex
-
 var gAlertDevices = []AlertDevice{}
 
 func loadAlertDevices() {
@@ -338,6 +340,111 @@ func registerAlertDevice(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(gAlertDevices)
+}
+
+//NOTE only for testing, can remove this later
+func testSendAlertDevice(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Invalid method", 400)
+		return
+	}
+
+	vars := mux.Vars(r)
+	deviceToken, deviceToken_ok := vars["deviceToken"]
+
+	if !deviceToken_ok {
+		http.Error(w, "Invalid deviceToken", 400)
+		return
+	}
+
+	alert := apnsproxy.APNSAlert{}
+	err := json.NewDecoder(r.Body).Decode(&alert)
+
+	if alert.Title == "" {
+		http.Error(w, "Missing title", 400)
+		return
+	}
+
+	if alert.Body == "" {
+		http.Error(w, "Missing body", 400)
+		return
+	}
+
+	err = sendDeviceAlert(deviceToken, alert.Title, alert.Body)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	//TODO return ok
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(alert)
+}
+
+func sendDeviceAlert(deviceToken string, title string, message string) error {
+	/*
+			   deviceToken is stored here:
+			   /configs/base/alert_devices.json
+
+			   fetch the .PublicKey for the device, set as .EncryptedData
+
+		       the device will also have a .LastActive set, see struct
+		       checks if device have logged in within 1 month
+	*/
+
+	AlertDevicesmtx.Lock()
+	defer AlertDevicesmtx.Unlock()
+
+	loadAlertDevices()
+
+	//TODO read from settings, will change to https://notifications.supernetworks.org
+	proxyUrl := "http://localhost:8000"
+
+	device := AlertDevice{}
+	for _, entry := range gAlertDevices {
+		//TODO also have a id for the device here
+		if entry.DeviceToken == deviceToken {
+			device = entry
+			break
+		}
+	}
+
+	if device.DeviceId == "" {
+		return fmt.Errorf("Invalid deviceToken")
+	}
+
+	var apns apnsproxy.APNS
+
+	if device.LastActive.Before(time.Now().AddDate(0, -1, 0)) {
+		//TODO cleanup
+		fmt.Println("device expired:", device.DeviceId, "lastActive:", device.LastActive)
+		return fmt.Errorf("Device have not been active, skipping")
+	}
+
+	if device.PublicKey == "" {
+		apns = apnsproxy.APNS{
+			Aps: apnsproxy.APNSAps{
+				Category: "PLAIN", //used for testing
+				Alert: &apnsproxy.APNSAlert{
+					Title: title,
+					Body:  message,
+				},
+			},
+		}
+	} else {
+		//NOTE we encrypt the json data here to be able to set more stuff in the future
+		//TODO data=encrypted wih pubkey, base64 now
+		alert := apnsproxy.APNSAlert{Title: title, Body: message}
+		jsonValue, _ := json.Marshal(alert)
+		data := base64.StdEncoding.EncodeToString([]byte(jsonValue))
+
+		apns = apnsproxy.APNS{
+			EncryptedData: data,
+		}
+	}
+
+	return apnsproxy.SendProxyNotification(proxyUrl, deviceToken, apns)
 }
 
 func grabReflectOld(fields []string, event interface{}) map[string]interface{} {
@@ -563,6 +670,7 @@ func AlertsRunEventListener() {
 		defer wg.Done()
 		for message := range ch {
 			WSNotifyValue(message.Topic, message.Info)
+			//TODO push notification if settings say so
 		}
 	}
 
