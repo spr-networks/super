@@ -14,6 +14,7 @@ require (
 	github.com/gorilla/websocket v1.5.1
 	github.com/influxdata/influxdb-client-go/v2 v2.13.0
 	github.com/pquerna/otp v1.4.0
+	github.com/spr-networks/spr-apns-proxy v0.0.0-20240308140111-1ed50ee9f26f
 	github.com/spr-networks/sprbus v0.1.7
 )
 

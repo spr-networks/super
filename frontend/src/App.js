@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react'
-import { SafeAreaView } from 'react-native'
 import {
   NativeRouter as Router,
   Route,
@@ -7,6 +6,9 @@ import {
   Navigate
 } from 'react-router-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import PushNotificationIOS from '@react-native-community/push-notification-ios'
+import { getUniqueId } from 'react-native-device-info'
+import { RSA } from 'react-native-rsa-native'
 
 import AuthLayout from 'layouts/Auth'
 import AdminLayout from 'layouts/Admin'
@@ -14,9 +16,11 @@ import { routesAuth, routesAdmin } from 'routes'
 
 import { GluestackUIProvider } from '@gluestack-ui/themed'
 import { config } from 'gluestack-ui.config'
+import { Base64 } from 'utils'
 
 export default function App() {
   const [colorMode, setColorMode] = React.useState('light')
+  const [deviceInfo, setDeviceInfo] = React.useState({})
   const toggleColorMode = () => {
     setColorMode((prev) => (prev === 'light' ? 'dark' : 'light'))
   }
@@ -34,8 +38,118 @@ export default function App() {
       })
   }
 
+  const loadDeviceInfo = () => {
+    AsyncStorage.getItem('device')
+      .then(async (info) => {
+        let deviceInfo = {}
+        // parse if stored
+        try {
+          let d = JSON.parse(info)
+          if (d) {
+            deviceInfo = d
+          }
+        } catch (e) {}
+
+        let DeviceId = await getUniqueId()
+        deviceInfo.DeviceId = DeviceId
+
+        // Generating keypair takes ~0.9s on iPhoneSE
+        if (!deviceInfo.PrivateKey) {
+          let t = Date.now()
+          let keys = await RSA.generateKeys(4096)
+          console.log('KeyTime=', (Date.now() - t) / 1e3, 's')
+          let PrivateKey = keys.private,
+            PublicKey = keys.public
+
+          deviceInfo = { ...deviceInfo, PrivateKey, PublicKey }
+        }
+
+        setDeviceInfo(deviceInfo)
+        AsyncStorage.setItem('device', JSON.stringify(deviceInfo))
+      })
+      .catch((err) => {
+        console.error('ERR:', err)
+      })
+  }
+
+  // fetch other deviceInfo when we have the token
+  useEffect(() => {
+    if (!deviceInfo?.DeviceToken || deviceInfo?.DeviceId) {
+      return
+    }
+
+    loadDeviceInfo()
+  }, [deviceInfo])
+
   useEffect(() => {
     loadSettings()
+
+    //Notifications TODO move all this code to a js, register callbacks for confirm in future
+    //DeviceInfoSync or smtg
+    PushNotificationIOS.addEventListener('register', async (DeviceToken) => {
+      if (DeviceToken.length > 64) {
+        console.log('** got iosSim deviceToken')
+        DeviceToken = '1'.repeat(64)
+      }
+
+      console.log('** DeviceToken=', DeviceToken)
+      let deviceInfo = { ...deviceInfo, DeviceToken }
+      setDeviceInfo(deviceInfo)
+    })
+
+    PushNotificationIOS.addEventListener('notification', (notification) => {
+      const category = notification.getCategory()
+      // data is if we pass any other data in the notification
+      const data = notification.getData()
+
+      console.log('** HANDLER, category=', category)
+      let req = {
+        id: new Date().toString(),
+        title: '',
+        body: '',
+        badge: 0, // counter on home screen
+        threadId: 'thread-id'
+      }
+
+      if (category == 'PLAIN') {
+        req.title = notification.getTitle()
+        req.body = notification.getMessage()
+      } else if (category == 'SECRET' && data.ENCRYPTED_DATA) {
+        try {
+          let d = Base64.atob(data.ENCRYPTED_DATA)
+          let alert = JSON.parse(d)
+          //TODO decrypt here
+          req.title = alert.title
+          req.body = alert.body
+        } catch (err) {
+          //TODO SKIP showing if bork
+        }
+      } else {
+        req.title = 'Unknown notification'
+        req.body = 'Unknown'
+      }
+
+      if (req.title?.length) {
+        PushNotificationIOS.addNotificationRequest(req)
+      }
+
+      notification.finish('UIBackgroundFetchResultNoData')
+    })
+
+    PushNotificationIOS.requestPermissions({
+      alert: true,
+      badge: true,
+      sound: true,
+      critical: true
+    }).then(
+      (data) => {},
+      (data) => {}
+    )
+
+    return () => {
+      PushNotificationIOS.removeEventListener('notification')
+      PushNotificationIOS.removeEventListener('register')
+    }
   }, [])
 
   return (

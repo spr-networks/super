@@ -47,9 +47,9 @@ const prefixValue = (value) => {
 
 const prefixToKeyValue = (newValue) => {
   //TODO handle multiple
-  //translate tag:t1 to {Tag:"t1"}, group:dns to {Group:"dns"}
+  //translate tag:t1 to {Tag:"t1"}, group:blah to {Group:"blah"}
   if (typeof newValue == 'string') {
-    if (newValue.match(/^(group|tag):/)) {
+    if (newValue.match(/^(group|tag|policy):/)) {
       let [prefix, v] = newValue.split(':')
       let key = ucFirst(prefix)
       newValue = { [key]: v }

@@ -1,6 +1,33 @@
 import PushNotificationIOS from '@react-native-community/push-notification-ios'
 
-const init = ({ onLocalNotification, onRemoteNotification, ...props }) => {
+const init = ({
+  onLocalNotification,
+  onNotification,
+  onRegister,
+  ...props
+}) => {
+  //NOTE useEffect in layouts/Admin
+
+  console.log('+ ios notifications init')
+
+  if (onLocalNotification) {
+    console.log('+ setup notification handler: localNotification')
+    PushNotificationIOS.addEventListener(
+      'localNotification',
+      onLocalNotification
+    )
+  }
+
+  if (onNotification) {
+    console.log('+ setup notification handler: notification')
+    PushNotificationIOS.addEventListener('notification', onNotification)
+  }
+
+  if (onRegister) {
+    console.log('+ setup notification handler: register')
+    PushNotificationIOS.addEventListener('register', onRegister)
+  }
+
   // init notifications
   PushNotificationIOS.requestPermissions({
     alert: true,
@@ -50,27 +77,16 @@ const init = ({ onLocalNotification, onRemoteNotification, ...props }) => {
       ]
     }
   ])
-
-  //const type = 'notification' //remove
-  //NOTE useEffect
-
-  if (onLocalNotification) {
-    const type = 'localNotification'
-    PushNotificationIOS.addEventListener(type, onLocalNotification)
-    return () => {
-      PushNotificationIOS.removeEventListener(type)
-    }
-  }
-
-  if (onRemoteNotification) {
-    const type = 'notification'
-    PushNotificationIOS.addEventListener(type, onRemoteNotification)
-    return () => {
-      PushNotificationIOS.removeEventListener(type)
-    }
-  }
 }
 
+// remove eventListeners
+const cleanup = () => {
+  PushNotificationIOS.removeEventListener('register')
+  PushNotificationIOS.removeEventListener('notification')
+  PushNotificationIOS.removeEventListener('localNotification')
+}
+
+/*
 // notification reply
 const onLocalNotification = (notification) => {
   const data = notification.getData()
@@ -109,6 +125,7 @@ const onRemoteNotification = (notification) => {
     console.log('[notification] text', userText)
   }
 }
+*/
 
 const notification = (title, body, category = null, userInfo = {}) => {
   // use id here to link with a callback ?
@@ -126,8 +143,6 @@ const notification = (title, body, category = null, userInfo = {}) => {
   if (category) {
     req.category = category
   }
-
-  console.log('notification with userinfo : ', userInfo)
 
   PushNotificationIOS.addNotificationRequest(req)
 
@@ -156,6 +171,7 @@ const confirm = (title, body, data = null) => {
 
 export default {
   init,
+  cleanup,
   notification,
   confirm
 }

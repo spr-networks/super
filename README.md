@@ -10,7 +10,9 @@
 
 Create an adaptive, micro-segmented network for managing WiFi devices, remote VPN access, and wired systems.
 
-Firewall rules dynamically enforce policy for fine-grained device connectivity and internet access. 
+* One Password Per WiFi Device
+* Policy Based / Zero Trust Network Access
+* Per-Device DNS Rules & Ad Block Lists
 
 ![image](https://github.com/spr-networks/super/assets/37549748/d3295f0a-1f7c-40de-ac4f-c63b17e36402)
 

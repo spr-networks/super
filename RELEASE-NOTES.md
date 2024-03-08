@@ -1,5 +1,8 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v0.3.7
+* Rename builtin groups as Policies, to clarify Group vs Tag vs Policy
+
 ## v0.3.6
 * Fix regression with VPN only mode devices
 

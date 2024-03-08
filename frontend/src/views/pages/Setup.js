@@ -344,6 +344,9 @@ const Setup = (props) => {
         }
 
         setUplinkInterfaces(uplinkInterfaces)
+        if (uplinkInterfaces.includes("eth2")) {
+          setInterfaceUplink("eth2")
+        }
       })
     })
   }, [])

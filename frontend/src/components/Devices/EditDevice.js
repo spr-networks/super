@@ -10,11 +10,13 @@ import InputSelect from 'components/InputSelect'
 import DeviceExpiry from './DeviceExpiry'
 
 import {
+  Box,
   Button,
   ButtonText,
   Checkbox,
   CheckboxIcon,
   CheckboxIndicator,
+  CheckboxGroup,
   CheckboxLabel,
   CheckIcon,
   FormControl,
@@ -45,11 +47,11 @@ import {
 
 import { Address4 } from 'ip-address'
 
-import { TagItem, GroupItem } from 'components/TagItem'
+import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
 import ColorPicker from 'components/ColorPicker'
 import IconPicker from 'components/IconPicker'
 
-import { GroupMenu, TagMenu } from 'components/TagMenu'
+import { GroupMenu, PolicyMenu, TagMenu } from 'components/TagMenu'
 
 const EditDevice = ({ device, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
@@ -58,6 +60,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [rawIP, setRawIP] = useState(device.RecentIP)
   const [ip, setIP] = useState(device.RecentIP)
   const [vlantag, setVlanTag] = useState(device.VLANTag)
+  const [policies, setPolicies] = useState(device.Policies?.sort() || [])
   const [groups, setGroups] = useState(device.Groups.sort())
   const [tags, setTags] = useState(device.DeviceTags.sort())
   const [color, setColor] = useState(device.Style?.Color || 'blueGray')
@@ -73,8 +76,23 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [modalType, setModalType] = useState('')
 
   // for adding
-  const defaultGroups = props.groups || ['wan', 'dns', 'lan']
-  const defaultTags = props.tags || ['lan_upstream']
+  const defaultPolicies = ['wan', 'dns', 'lan', 'lan_upstream', 'disabled']
+  const policyName = {
+    wan: 'Internet Access',
+    dns: 'DNS Resolution',
+    lan: 'Local Network',
+    lan_upstream: 'Upstream Private Networks',
+    disabled: 'Disabled'
+  }
+  const policyTips = {
+    wan: 'Allow Internet Access',
+    dns: 'Allow DNS Queries',
+    lan: 'Allow access to ALL other devices on the network',
+    lan_upstream: 'Allow device to reach private LANs upstream',
+    disabled: 'Override all policies and groups, to disconnect device'
+  }
+  const defaultGroups = props.groups || []
+  const defaultTags = props.tags || []
 
   const navigate = useNavigate()
 
@@ -120,6 +138,21 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
 
     deviceAPI
       .updateGroups(device.MAC || device.WGPubKey, groups)
+      .then(notifyChange)
+      .catch((error) =>
+        this.context.error('[API] updateDevice error: ' + error.message)
+      )
+  }
+
+  const handlePolicies = (policies) => {
+    if (!device.MAC && !device.WGPubKey) {
+      return
+    }
+
+    setPolicies([...new Set(policies.filter((v) => typeof v === 'string'))])
+
+    deviceAPI
+      .updatePolicies(device.MAC || device.WGPubKey, policies)
       .then(notifyChange)
       .catch((error) =>
         this.context.error('[API] updateDevice error: ' + error.message)
@@ -264,7 +297,9 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const handleSubmitNew = (value) => {
     if (modalType.match(/Group/i)) {
       handleGroups(groups.concat(value))
-    } else {
+    } else if (modalType.match(/Policy/i)) {
+      handlePolicies(policies.concat(value))
+    } else if (modalType.match(/Tag/i)) {
       handleTags(tags.concat(value))
     }
   }
@@ -417,6 +452,59 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         </FormControl>
       </HStack>
 
+      <FormControl flex={4}>
+        <FormControlLabel>
+          <FormControlLabelText>Policies</FormControlLabelText>
+        </FormControlLabel>
+
+        <CheckboxGroup
+          value={policies}
+          accessibilityLabel="Set Device Policies"
+          onChange={(values) => handlePolicies(values)}
+          py="$1"
+        >
+          <HStack flex={1} space="md" w="$full" flexWrap="wrap">
+            {defaultPolicies.map((policy) =>
+              policyTips[policy] !== null ? (
+                <Tooltip
+                  h={undefined}
+                  placement="bottom"
+                  trigger={(triggerProps) => {
+                    return (
+                      <Box {...triggerProps}>
+                        <Checkbox value={policy} colorScheme="primary">
+                          <CheckboxIndicator mr="$2">
+                            <CheckboxIcon />
+                          </CheckboxIndicator>
+                          <CheckboxLabel>{policyName[policy]}</CheckboxLabel>
+                        </Checkbox>
+                      </Box>
+                    )
+                  }}
+                >
+                  <TooltipContent>
+                    <TooltipText>{policyTips[policy]}</TooltipText>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <Checkbox value={policy} colorScheme="primary">
+                  <CheckboxIndicator mr="$2">
+                    <CheckboxIcon />
+                  </CheckboxIndicator>
+                  <CheckboxLabel>{policy}</CheckboxLabel>
+                </Checkbox>
+              )
+            )}
+          </HStack>
+        </CheckboxGroup>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Assign device policies for network access
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText>Groups</FormControlLabelText>
@@ -434,6 +522,13 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
             onSelectionChange={handleGroups}
           />
         </HStack>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Assign to network access group
+          </FormControlHelperText>
+        </FormControlHelper>
+
       </FormControl>
 
       <FormControl>
@@ -542,6 +637,7 @@ EditDevice.propTypes = {
   device: PropTypes.object.isRequired,
   edit: PropTypes.bool,
   groups: PropTypes.array,
+  policies: PropTypes.array,
   tags: PropTypes.array
 }
 

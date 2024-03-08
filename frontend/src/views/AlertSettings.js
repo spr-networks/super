@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Dimensions, Platform } from 'react-native'
+import { Platform } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import {
   Button,
@@ -12,7 +13,6 @@ import {
   MenuItem,
   MenuItemLabel,
   Switch,
-  View,
   VStack,
   Text,
   TrashIcon,
@@ -29,7 +29,15 @@ import { AlertContext, ModalContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import { ListHeader } from 'components/List'
 import { ListItem } from 'components/List'
-import { BellIcon, BellOffIcon, PencilIcon } from 'lucide-react-native'
+import {
+  BellIcon,
+  BellOffIcon,
+  BugPlayIcon,
+  CopyIcon,
+  PencilIcon
+} from 'lucide-react-native'
+
+import { copy } from 'utils'
 
 const alertTemplates = [
   {
@@ -465,10 +473,48 @@ const AlertSettings = (props) => {
     }
   }
 
+  // tmp modal to show
+  const handleDev = async () => {
+    let info = {}
+
+    try {
+      let dev = await AsyncStorage.getItem('device')
+      if (dev) {
+        info = JSON.parse(dev)
+      }
+    } catch {}
+
+    modalContext.modal(
+      'Notifications Device Token',
+      <VStack space="md">
+        <Text size="xs">{JSON.stringify(Object.keys(info))}</Text>
+        <Button
+          size="xs"
+          action="primary"
+          variant="outline"
+          onPress={() => copy(info?.DeviceToken)}
+        >
+          <ButtonText>Copy Token</ButtonText>
+          <ButtonIcon as={CopyIcon} ml="$2" />
+        </Button>
+      </VStack>
+    )
+  }
+
   return (
     <ScrollView h="$full">
       <ListHeader title="Alert Configuration">
         <HStack space="sm">
+          <Button
+            size="sm"
+            action="secondary"
+            variant="outline"
+            onPress={handleDev}
+            _display={Platform.OS == 'ios' ? 'flex' : 'none'}
+          >
+            <ButtonText>Dev</ButtonText>
+            <ButtonIcon as={BugPlayIcon} ml="$2" />
+          </Button>
           <Button size="sm" action="secondary" onPress={populateTemplates}>
             <ButtonText>Add Templates</ButtonText>
             <ButtonIcon as={AddIcon} ml="$2" />

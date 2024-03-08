@@ -52,7 +52,8 @@ const AddDevice = (props) => {
 
   const [mac, setMac] = useState('')
   const [name, setName] = useState('')
-  const [groups, setGroups] = useState(['dns', 'wan'])
+  const [policies, setPolicies] = useState(['dns', 'wan'])
+  const [groups, setGroups] = useState([''])
   const [tags, setTags] = useState([])
   const [wpa, setWpa] = useState('sae')
   const [psk, setPsk] = useState('')
@@ -126,13 +127,21 @@ const AddDevice = (props) => {
     return false
   }
 
-  const allGroups = ['wan', 'dns', 'lan']
-  const groupTips = {
+  const allPolicies = ['wan', 'dns', 'lan', 'lan_upstream']
+  const policyTips = {
     wan: 'Allow Internet Access',
     dns: 'Allow DNS Queries',
-    lan: 'Allow access to ALL other devices on the network'
+    lan: 'Allow access to ALL other devices on the network',
+    lan_upstream: 'Allow device to reach private LANs upstream'
   }
-  const allTags = ['lan_upstream', 'guest']
+  const policyName = {
+    wan: 'Internet Access',
+    dns: 'DNS Resolution',
+    lan: 'Local Network',
+    lan_upstream: 'Upstream Private Networks',
+    disabled: 'Disabled'
+  }
+  const allTags = ['guest']
 
   const isPositiveNumber = (str) => {
     let num = parseFloat(str)
@@ -212,6 +221,7 @@ const AddDevice = (props) => {
       MAC: mac || 'pending',
       Name: name,
       Groups: groups,
+      Policies: policies,
       DeviceTags: tags,
       PSKEntry: {
         Psk: psk,
@@ -262,7 +272,7 @@ const AddDevice = (props) => {
       <ListHeader title="Add a new WiFi Device" />
       <VStack display={isSimpleMode ? 'none' : 'flex'} px="$4">
         <Text color="$muted500" size="xs">
-          Wired devices are added automatically & need WAN/DNS groups assigned
+          Wired devices are added automatically & need WAN/DNS policies assigned
           to them for internet access
         </Text>
         <Text color="$muted500" size="xs">
@@ -339,7 +349,7 @@ const AddDevice = (props) => {
             '@md': { flexDirection: 'row' }
           }}
         >
-          <FormControl flex={1}>
+          <FormControl flex={3}>
             <FormControlLabel>
               <FormControlLabelText>Authentication</FormControlLabelText>
             </FormControlLabel>
@@ -349,7 +359,7 @@ const AddDevice = (props) => {
               accessibilityLabel="Auth"
               onChange={(value) => handleChange('wpa', value)}
             >
-              <HStack py="$1" space="md">
+              <HStack py="$1" space="md" w="$full" flexWrap="wrap">
                 <Radio value="sae" size="md">
                   <RadioIndicator mr="$2">
                     <RadioIcon as={CircleIcon} strokeWidth={1} />
@@ -376,46 +386,46 @@ const AddDevice = (props) => {
             </FormControlHelper>
           </FormControl>
 
-          <FormControl flex={1}>
+          <FormControl flex={4}>
             <FormControlLabel>
-              <FormControlLabelText>Groups</FormControlLabelText>
+              <FormControlLabelText>Policies</FormControlLabelText>
             </FormControlLabel>
 
             <CheckboxGroup
-              value={groups}
-              accessibilityLabel="Set Device Groups"
-              onChange={(values) => setGroups(values)}
+              value={policies}
+              accessibilityLabel="Set Device Policies"
+              onChange={(values) => setPolicies(values)}
               py="$1"
             >
-              <HStack space="xl">
-                {allGroups.map((group) =>
-                  groupTips[group] !== null ? (
+              <HStack space="xl" space="md" w="$full" flexWrap="wrap">
+                {allPolicies.map((policy) =>
+                  policyTips[policy] !== null ? (
                     <Tooltip
                       h={undefined}
                       placement="bottom"
                       trigger={(triggerProps) => {
                         return (
                           <Box {...triggerProps}>
-                            <Checkbox value={group} colorScheme="primary">
+                            <Checkbox value={policy} colorScheme="primary">
                               <CheckboxIndicator mr="$2">
                                 <CheckboxIcon />
                               </CheckboxIndicator>
-                              <CheckboxLabel>{group}</CheckboxLabel>
+                              <CheckboxLabel>{policyName[policy]}</CheckboxLabel>
                             </Checkbox>
                           </Box>
                         )
                       }}
                     >
                       <TooltipContent>
-                        <TooltipText>{groupTips[group]}</TooltipText>
+                        <TooltipText>{policyTips[policy]}</TooltipText>
                       </TooltipContent>
                     </Tooltip>
                   ) : (
-                    <Checkbox value={group} colorScheme="primary">
+                    <Checkbox value={policy} colorScheme="primary">
                       <CheckboxIndicator mr="$2">
                         <CheckboxIcon />
                       </CheckboxIndicator>
-                      <CheckboxLabel>{group}</CheckboxLabel>
+                      <CheckboxLabel>{policy}</CheckboxLabel>
                     </Checkbox>
                   )
                 )}
@@ -424,12 +434,12 @@ const AddDevice = (props) => {
 
             <FormControlHelper>
               <FormControlHelperText>
-                Assign device to groups for network access
+                Assign device policies for network access
               </FormControlHelperText>
             </FormControlHelper>
           </FormControl>
 
-          <FormControl flex={1} display={isSimpleMode ? 'none' : 'flex'}>
+          <FormControl flex={2} display={isSimpleMode ? 'none' : 'flex'}>
             <FormControlLabel>
               <FormControlLabelText>Tags</FormControlLabelText>
             </FormControlLabel>
