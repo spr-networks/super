@@ -38,6 +38,18 @@ export default function App() {
       })
   }
 
+  const getDeviceInfo = async () => {
+    let info = await AsyncStorage.getItem('device')
+
+    let deviceInfo = {}
+
+    try {
+      deviceInfo = JSON.parse(info) || {}
+    } catch (e) {}
+
+    return deviceInfo
+  }
+
   const loadDeviceInfo = () => {
     AsyncStorage.getItem('device')
       .then(async (info) => {
@@ -86,7 +98,7 @@ export default function App() {
 
     //Notifications TODO move all this code to a js, register callbacks for confirm in future
     //DeviceInfoSync or smtg
-    PushNotificationIOS.addEventListener('register', async (DeviceToken) => {
+    PushNotificationIOS.addEventListener('register', (DeviceToken) => {
       if (DeviceToken.length > 64) {
         console.log('** got iosSim deviceToken')
         DeviceToken = '1'.repeat(64)
@@ -97,44 +109,66 @@ export default function App() {
       setDeviceInfo(deviceInfo)
     })
 
-    PushNotificationIOS.addEventListener('notification', (notification) => {
-      const category = notification.getCategory()
-      // data is if we pass any other data in the notification
-      const data = notification.getData()
+    PushNotificationIOS.addEventListener(
+      'notification',
+      async (notification) => {
+        const category = notification.getCategory()
+        // data is if we pass any other data in the notification
+        const data = notification.getData()
 
-      console.log('** HANDLER, category=', category)
-      let req = {
-        id: new Date().toString(),
-        title: '',
-        body: '',
-        badge: 0, // counter on home screen
-        threadId: 'thread-id'
-      }
-
-      if (category == 'PLAIN') {
-        req.title = notification.getTitle()
-        req.body = notification.getMessage()
-      } else if (category == 'SECRET' && data.ENCRYPTED_DATA) {
-        try {
-          let d = Base64.atob(data.ENCRYPTED_DATA)
-          let alert = JSON.parse(d)
-          //TODO decrypt here
-          req.title = alert.title
-          req.body = alert.body
-        } catch (err) {
-          //TODO SKIP showing if bork
+        console.log('** HANDLER, category=', category)
+        let req = {
+          id: new Date().toString(),
+          title: '',
+          body: '',
+          badge: 0, // counter on home screen
+          threadId: 'thread-id'
         }
-      } else {
-        req.title = 'Unknown notification'
-        req.body = 'Unknown'
-      }
 
-      if (req.title?.length) {
-        PushNotificationIOS.addNotificationRequest(req)
-      }
+        //NOTE need to fetch it when within the handler
+        let deviceInfo = await getDeviceInfo()
+        //console.log('deviceInfo=', deviceInfo)
 
-      notification.finish('UIBackgroundFetchResultNoData')
-    })
+        if (category == 'PLAIN') {
+          req.title = notification.getTitle()
+          req.body = notification.getMessage()
+        } else if (category == 'SECRET' && data.ENCRYPTED_DATA) {
+          try {
+            if (!deviceInfo.PrivateKey) {
+              throw `Missing key to decrypt data`
+            }
+
+            //data is in base64
+            let jsonData = await RSA.decrypt(
+              data.ENCRYPTED_DATA,
+              deviceInfo.PrivateKey
+            )
+
+            if (!jsonData) {
+              throw 'invalid data'
+            }
+
+            let alert = JSON.parse(jsonData)
+
+            req.title = alert.title
+            req.body = alert.body
+          } catch (err) {
+            console.error('Failed to decrypt notification:', err)
+            //console.error('ENCRYPTED_DATA=', data.ENCRYPTED_DATA)
+          }
+        } else {
+          req.title = 'Unknown notification'
+          req.body = 'Unknown'
+        }
+
+        if (req.title?.length) {
+          //TODO also able to set confirm-stuff for buttons and more data
+          PushNotificationIOS.addNotificationRequest(req)
+        }
+
+        notification.finish('UIBackgroundFetchResultNoData')
+      }
+    )
 
     PushNotificationIOS.requestPermissions({
       alert: true,
