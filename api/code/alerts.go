@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -434,10 +438,24 @@ func sendDeviceAlert(deviceToken string, title string, message string) error {
 		}
 	} else {
 		//NOTE we encrypt the json data here to be able to set more stuff in the future
-		//TODO data=encrypted wih pubkey, base64 now
 		alert := apnsproxy.APNSAlert{Title: title, Body: message}
 		jsonValue, _ := json.Marshal(alert)
-		data := base64.StdEncoding.EncodeToString([]byte(jsonValue))
+
+		pubPem, _ := pem.Decode([]byte(device.PublicKey))
+		parsedKey, err := x509.ParsePKIXPublicKey(pubPem.Bytes)
+
+		var pubKey *rsa.PublicKey
+		pubKey, ok := parsedKey.(*rsa.PublicKey)
+		if !ok {
+			return fmt.Errorf("invalid pubkey for device")
+		}
+
+		dataRaw, err := rsa.EncryptPKCS1v15(rand.Reader, pubKey, []byte(jsonValue))
+		if err != nil {
+			return err
+		}
+
+		data := base64.StdEncoding.EncodeToString([]byte(dataRaw))
 
 		apns = apnsproxy.APNS{
 			EncryptedData: data,
