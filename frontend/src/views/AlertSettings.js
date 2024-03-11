@@ -510,9 +510,9 @@ const AlertSettings = (props) => {
             action="secondary"
             variant="outline"
             onPress={handleDev}
-            _display={Platform.OS == 'ios' ? 'flex' : 'none'}
+            display={Platform.OS == 'ios' ? 'flex' : 'none'}
           >
-            <ButtonText>Dev</ButtonText>
+            <ButtonText>iOS</ButtonText>
             <ButtonIcon as={BugPlayIcon} ml="$2" />
           </Button>
           <Button size="sm" action="secondary" onPress={populateTemplates}>
