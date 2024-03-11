@@ -38,8 +38,7 @@ export default function App() {
   }
 
   const getDeviceInfo = async () => {
-    let info = await AsyncStorage.getItem('device')
-
+    let info = await AsyncStorage.getItem('deviceInfo')
     let deviceInfo = {}
 
     try {
@@ -50,7 +49,7 @@ export default function App() {
   }
 
   const loadDeviceInfo = () => {
-    AsyncStorage.getItem('device')
+    AsyncStorage.getItem('deviceInfo')
       .then(async (info) => {
         let deviceInfo = {}
         // parse if stored
@@ -76,7 +75,7 @@ export default function App() {
         }
 
         setDeviceInfo(deviceInfo)
-        AsyncStorage.setItem('device', JSON.stringify(deviceInfo))
+        AsyncStorage.setItem('deviceInfo', JSON.stringify(deviceInfo))
       })
       .catch((err) => {
         console.error('ERR:', err)
@@ -98,14 +97,13 @@ export default function App() {
     //Notifications TODO move all this code to a js, register callbacks for confirm in future
     //DeviceInfoSync or smtg
     PushNotificationIOS.addEventListener('register', (DeviceToken) => {
-      if (DeviceToken.length > 64) {
+      /*if (DeviceToken.length > 64) {
         console.log('** got iosSim deviceToken')
         DeviceToken = '1'.repeat(64)
-      }
+      }*/
 
       console.log('** DeviceToken=', DeviceToken)
-      let deviceInfo = { ...deviceInfo, DeviceToken }
-      setDeviceInfo(deviceInfo)
+      setDeviceInfo({ ...deviceInfo, DeviceToken })
     })
 
     PushNotificationIOS.addEventListener(

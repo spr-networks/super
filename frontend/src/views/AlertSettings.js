@@ -478,7 +478,7 @@ const AlertSettings = (props) => {
     let info = {}
 
     try {
-      let dev = await AsyncStorage.getItem('device')
+      let dev = await AsyncStorage.getItem('deviceInfo')
       if (dev) {
         info = JSON.parse(dev)
       }
