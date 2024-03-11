@@ -48,43 +48,40 @@ export default function App() {
     return deviceInfo
   }
 
-  const loadDeviceInfo = () => {
-    AsyncStorage.getItem('deviceInfo')
-      .then(async (info) => {
-        let deviceInfo = {}
-        // parse if stored
-        try {
-          let d = JSON.parse(info)
-          if (d) {
-            deviceInfo = d
-          }
-        } catch (e) {}
+  const loadDeviceInfo = async () => {
+    try {
+      let info = await AsyncStorage.getItem('deviceInfo')
+      let deviceInfo = {}
+      // parse if stored
+      let d = JSON.parse(info)
+      if (d) {
+        deviceInfo = d
+      }
 
-        let DeviceId = await getUniqueId()
-        deviceInfo.DeviceId = DeviceId
+      let DeviceId = await getUniqueId()
+      deviceInfo.DeviceId = DeviceId
 
-        // Generating keypair takes ~0.9s on iPhoneSE
-        if (!deviceInfo.PrivateKey) {
-          let t = Date.now()
-          let keys = await RSA.generateKeys(4096)
-          console.log('KeyTime=', (Date.now() - t) / 1e3, 's')
-          let PrivateKey = keys.private,
-            PublicKey = keys.public
+      // Generating keypair takes ~0.9s on iPhoneSE
+      if (!deviceInfo.PrivateKey) {
+        let t = Date.now()
+        let keys = await RSA.generateKeys(4096)
+        console.log('KeyTime=', (Date.now() - t) / 1e3, 's')
+        let PrivateKey = keys.private,
+          PublicKey = keys.public
 
-          deviceInfo = { ...deviceInfo, PrivateKey, PublicKey }
-        }
+        deviceInfo = { ...deviceInfo, PrivateKey, PublicKey }
+      }
 
-        setDeviceInfo(deviceInfo)
-        AsyncStorage.setItem('deviceInfo', JSON.stringify(deviceInfo))
-      })
-      .catch((err) => {
-        console.error('ERR:', err)
-      })
+      setDeviceInfo(deviceInfo)
+      AsyncStorage.setItem('deviceInfo', JSON.stringify(deviceInfo))
+    } catch (e) {
+      console.error(e)
+    }
   }
 
   // fetch other deviceInfo when we have the token
   useEffect(() => {
-    if (!deviceInfo?.DeviceToken || deviceInfo?.DeviceId) {
+    if (!deviceInfo.DeviceToken || deviceInfo.DeviceId) {
       return
     }
 
@@ -103,7 +100,9 @@ export default function App() {
       }*/
 
       console.log('** DeviceToken=', DeviceToken)
-      setDeviceInfo({ ...deviceInfo, DeviceToken })
+      let deviceInfo = { ...deviceInfo, DeviceToken }
+      AsyncStorage.setItem('deviceInfo', JSON.stringify(deviceInfo))
+      setDeviceInfo(deviceInfo)
     })
 
     PushNotificationIOS.addEventListener(
