@@ -16,7 +16,6 @@ import { routesAuth, routesAdmin } from 'routes'
 
 import { GluestackUIProvider } from '@gluestack-ui/themed'
 import { config } from 'gluestack-ui.config'
-import { Base64 } from 'utils'
 
 export default function App() {
   const [colorMode, setColorMode] = React.useState('light')
