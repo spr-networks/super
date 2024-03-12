@@ -486,11 +486,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       }
     }
 
-    /*
-    let notificationArgs = {}
-    Notifications.init(notificationArgs)
-    */
-
     // store info if ios
     //TODO also move this code
     if (Platform.OS == 'ios') {
@@ -517,6 +512,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             console.error('Error saving device info:', errorMessage, err)
           })
       })
+    } else {
+      //Notifications.init({})
     }
 
     // add routes with plugins on web

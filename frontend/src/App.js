@@ -19,7 +19,7 @@ import { config } from 'gluestack-ui.config'
 
 export default function App() {
   const [colorMode, setColorMode] = React.useState('light')
-  const [deviceInfo, setDeviceInfo] = React.useState({})
+
   const toggleColorMode = () => {
     setColorMode((prev) => (prev === 'light' ? 'dark' : 'light'))
   }
@@ -37,72 +37,46 @@ export default function App() {
       })
   }
 
-  const getDeviceInfo = async () => {
-    let info = await AsyncStorage.getItem('deviceInfo')
-    let deviceInfo = {}
-
-    try {
-      deviceInfo = JSON.parse(info) || {}
-    } catch (e) {}
-
-    return deviceInfo
-  }
-
-  const loadDeviceInfo = async () => {
-    try {
-      let info = await AsyncStorage.getItem('deviceInfo')
-      let deviceInfo = {}
-      // parse if stored
-      let d = JSON.parse(info)
-      if (d) {
-        deviceInfo = d
-      }
-
-      let DeviceId = await getUniqueId()
-      deviceInfo.DeviceId = DeviceId
-
-      // Generating keypair takes ~0.9s on iPhoneSE
-      if (!deviceInfo.PrivateKey) {
-        let t = Date.now()
-        let keys = await RSA.generateKeys(4096)
-        console.log('KeyTime=', (Date.now() - t) / 1e3, 's')
-        let PrivateKey = keys.private,
-          PublicKey = keys.public
-
-        deviceInfo = { ...deviceInfo, PrivateKey, PublicKey }
-      }
-
-      setDeviceInfo(deviceInfo)
-      AsyncStorage.setItem('deviceInfo', JSON.stringify(deviceInfo))
-    } catch (e) {
-      console.error(e)
-    }
-  }
-
-  // fetch other deviceInfo when we have the token
-  useEffect(() => {
-    if (!deviceInfo.DeviceToken || deviceInfo.DeviceId) {
-      return
-    }
-
-    loadDeviceInfo()
-  }, [deviceInfo])
-
   useEffect(() => {
     loadSettings()
 
-    //Notifications TODO move all this code to a js, register callbacks for confirm in future
-    //DeviceInfoSync or smtg
-    PushNotificationIOS.addEventListener('register', (DeviceToken) => {
-      /*if (DeviceToken.length > 64) {
-        console.log('** got iosSim deviceToken')
-        DeviceToken = '1'.repeat(64)
-      }*/
+    /*
+    first get saved settings
+    populate token if unset or updated
+    set deviceId
+    set keys if unset
 
-      console.log('** DeviceToken=', DeviceToken)
-      let deviceInfo = { ...deviceInfo, DeviceToken }
-      AsyncStorage.setItem('deviceInfo', JSON.stringify(deviceInfo))
-      setDeviceInfo(deviceInfo)
+    result is stored & put to api on login
+    */
+    AsyncStorage.getItem('deviceInfo').then((res) => {
+      let info = res ? JSON.parse(res) : {}
+      console.log('** pre=', Object.keys(info))
+
+      PushNotificationIOS.addEventListener('register', async (DeviceToken) => {
+        console.log('** DeviceToken=', DeviceToken)
+        info = { ...info, DeviceToken }
+
+        try {
+          info.DeviceId = await getUniqueId()
+
+          // Generating keypair takes ~0.9s on iPhoneSE
+          if (!info.PrivateKey) {
+            let t = Date.now()
+            let keys = await RSA.generateKeys(4096)
+            console.log('** KeyTime=', (Date.now() - t) / 1e3, 's')
+            let PrivateKey = keys.private,
+              PublicKey = keys.public
+
+            info = { ...info, PrivateKey, PublicKey }
+          }
+
+          console.log('** set=', Object.keys(info))
+
+          AsyncStorage.setItem('deviceInfo', JSON.stringify(info))
+        } catch (e) {
+          console.error(e)
+        }
+      })
     })
 
     PushNotificationIOS.addEventListener(
