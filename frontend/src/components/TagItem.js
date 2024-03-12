@@ -73,12 +73,12 @@ const PolicyItem = React.memo(({ name, size }) => {
   )
 })
 
-const GroupItem = React.memo(({ name, size }) => {
+const GroupItem = React.memo(({ name, size, ...props }) => {
   let colorMode = useColorMode()
 
   let icon = UsersIcon
-  let bg = '$muted200'
-  let fg = colorMode == 'light' ? '$muted800' : '$muted100'
+  let bg = props.bg || (colorMode == 'light' ? '$blueGray100' : '$blueGray600')
+  let fg = props.color || (colorMode == 'light' ? '$muted800' : '$muted100')
 
   return (
     <Badge
