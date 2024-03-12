@@ -1,6 +1,4 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Platform } from 'react-native'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import {
   Button,
@@ -258,6 +256,7 @@ const AlertItem = ({
 
             <VStack space="md" alignItems="center">
               <Switch
+                size="sm"
                 value={action.SendNotification}
                 onValueChange={() => onToggleUINotify(index, item)}
               />
@@ -473,34 +472,6 @@ const AlertSettings = (props) => {
     }
   }
 
-  // tmp modal to show
-  const handleDev = async () => {
-    let info = {}
-
-    try {
-      let dev = await AsyncStorage.getItem('deviceInfo')
-      if (dev) {
-        info = JSON.parse(dev)
-      }
-    } catch {}
-
-    modalContext.modal(
-      'Notifications Device Token',
-      <VStack space="md">
-        <Text size="xs">{JSON.stringify(Object.keys(info))}</Text>
-        <Button
-          size="xs"
-          action="primary"
-          variant="outline"
-          onPress={() => copy(info?.DeviceToken)}
-        >
-          <ButtonText>Copy Token</ButtonText>
-          <ButtonIcon as={CopyIcon} ml="$2" />
-        </Button>
-      </VStack>
-    )
-  }
-
   return (
     <ScrollView h="$full">
       <ListHeader title="Alert Configuration">
@@ -509,13 +480,8 @@ const AlertSettings = (props) => {
             size="sm"
             action="secondary"
             variant="outline"
-            onPress={handleDev}
-            display={Platform.OS == 'ios' ? 'flex' : 'none'}
+            onPress={populateTemplates}
           >
-            <ButtonText>iOS</ButtonText>
-            <ButtonIcon as={BugPlayIcon} ml="$2" />
-          </Button>
-          <Button size="sm" action="secondary" onPress={populateTemplates}>
             <ButtonText>Add Templates</ButtonText>
             <ButtonIcon as={AddIcon} ml="$2" />
           </Button>
