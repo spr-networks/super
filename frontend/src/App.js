@@ -95,6 +95,11 @@ export default function App() {
           threadId: 'thread-id'
         }
 
+        const getDeviceInfo = async () => {
+          let res = await AsyncStorage.getItem('deviceInfo')
+          return res ? JSON.parse(res) : {}
+        }
+
         //NOTE need to fetch it when within the handler
         let deviceInfo = await getDeviceInfo()
         //console.log('deviceInfo=', deviceInfo)
