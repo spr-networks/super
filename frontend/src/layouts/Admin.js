@@ -494,7 +494,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     // store info if ios
     //TODO also move this code
     if (Platform.OS == 'ios') {
-      AsyncStorage.getItem('device').then((info) => {
+      AsyncStorage.getItem('deviceInfo').then((info) => {
         let deviceInfo = info ? JSON.parse(info) : null
         if (!deviceInfo) {
           console.error('missing device info')
