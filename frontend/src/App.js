@@ -16,11 +16,10 @@ import { routesAuth, routesAdmin } from 'routes'
 
 import { GluestackUIProvider } from '@gluestack-ui/themed'
 import { config } from 'gluestack-ui.config'
-import { Base64 } from 'utils'
 
 export default function App() {
   const [colorMode, setColorMode] = React.useState('light')
-  const [deviceInfo, setDeviceInfo] = React.useState({})
+
   const toggleColorMode = () => {
     setColorMode((prev) => (prev === 'light' ? 'dark' : 'light'))
   }
@@ -38,103 +37,121 @@ export default function App() {
       })
   }
 
-  const loadDeviceInfo = () => {
-    AsyncStorage.getItem('device')
-      .then(async (info) => {
-        let deviceInfo = {}
-        // parse if stored
-        try {
-          let d = JSON.parse(info)
-          if (d) {
-            deviceInfo = d
-          }
-        } catch (e) {}
-
-        let DeviceId = await getUniqueId()
-        deviceInfo.DeviceId = DeviceId
-
-        // Generating keypair takes ~0.9s on iPhoneSE
-        if (!deviceInfo.PrivateKey) {
-          let t = Date.now()
-          let keys = await RSA.generateKeys(4096)
-          console.log('KeyTime=', (Date.now() - t) / 1e3, 's')
-          let PrivateKey = keys.private,
-            PublicKey = keys.public
-
-          deviceInfo = { ...deviceInfo, PrivateKey, PublicKey }
-        }
-
-        setDeviceInfo(deviceInfo)
-        AsyncStorage.setItem('device', JSON.stringify(deviceInfo))
-      })
-      .catch((err) => {
-        console.error('ERR:', err)
-      })
-  }
-
-  // fetch other deviceInfo when we have the token
-  useEffect(() => {
-    if (!deviceInfo?.DeviceToken || deviceInfo?.DeviceId) {
-      return
-    }
-
-    loadDeviceInfo()
-  }, [deviceInfo])
-
   useEffect(() => {
     loadSettings()
 
-    //Notifications TODO move all this code to a js, register callbacks for confirm in future
-    //DeviceInfoSync or smtg
-    PushNotificationIOS.addEventListener('register', async (DeviceToken) => {
-      if (DeviceToken.length > 64) {
-        console.log('** got iosSim deviceToken')
-        DeviceToken = '1'.repeat(64)
-      }
+    /*
+    first get saved settings
+    populate token if unset or updated
+    set deviceId
+    set keys if unset
 
-      console.log('** DeviceToken=', DeviceToken)
-      let deviceInfo = { ...deviceInfo, DeviceToken }
-      setDeviceInfo(deviceInfo)
-    })
+    result is stored & put to api on login
+    */
+    AsyncStorage.getItem('deviceInfo').then((res) => {
+      let info = res ? JSON.parse(res) : {}
+      console.log('** pre=', Object.keys(info))
 
-    PushNotificationIOS.addEventListener('notification', (notification) => {
-      const category = notification.getCategory()
-      // data is if we pass any other data in the notification
-      const data = notification.getData()
+      PushNotificationIOS.addEventListener('register', async (DeviceToken) => {
+        console.log('** DeviceToken=', DeviceToken)
+        info = { ...info, DeviceToken }
 
-      console.log('** HANDLER, category=', category)
-      let req = {
-        id: new Date().toString(),
-        title: '',
-        body: '',
-        badge: 0, // counter on home screen
-        threadId: 'thread-id'
-      }
-
-      if (category == 'PLAIN') {
-        req.title = notification.getTitle()
-        req.body = notification.getMessage()
-      } else if (category == 'SECRET' && data.ENCRYPTED_DATA) {
         try {
-          let d = Base64.atob(data.ENCRYPTED_DATA)
-          let alert = JSON.parse(d)
-          //TODO decrypt here
-          req.title = alert.title
-          req.body = alert.body
-        } catch (err) {
-          //TODO SKIP showing if bork
+          info.DeviceId = await getUniqueId()
+
+          // Generating keypair takes ~0.9s on iPhoneSE
+          if (!info.PrivateKey) {
+            let t = Date.now()
+            let keys = await RSA.generateKeys(4096)
+            console.log('** KeyTime=', (Date.now() - t) / 1e3, 's')
+            let PrivateKey = keys.private,
+              PublicKey = keys.public
+
+            info = { ...info, PrivateKey, PublicKey }
+          }
+
+          console.log('** set=', Object.keys(info))
+
+          AsyncStorage.setItem('deviceInfo', JSON.stringify(info))
+        } catch (e) {
+          console.error(e)
         }
-      } else {
-        req.title = 'Unknown notification'
-        req.body = 'Unknown'
-      }
-
-      if (req.title?.length) {
-        PushNotificationIOS.addNotificationRequest(req)
-      }
-
-      notification.finish('UIBackgroundFetchResultNoData')
+      })
     })
+
+    PushNotificationIOS.addEventListener(
+      'notification',
+      async (notification) => {
+        const category = notification.getCategory()
+        // data is if we pass any other data in the notification
+        const data = notification.getData()
+
+        console.log('** HANDLER, category=', category)
+        let req = {
+          id: new Date().toString(),
+          title: '',
+          body: '',
+          badge: 0, // counter on home screen
+          threadId: 'thread-id'
+        }
+
+        const getDeviceInfo = async () => {
+          let res = await AsyncStorage.getItem('deviceInfo')
+          return res ? JSON.parse(res) : {}
+        }
+
+        //NOTE need to fetch it when within the handler
+        let deviceInfo = await getDeviceInfo()
+        //console.log('deviceInfo=', deviceInfo)
+
+        if (category == 'PLAIN') {
+          req.title = notification.getTitle()
+          req.body = notification.getMessage()
+        } else if (category == 'SECRET' && data.ENCRYPTED_DATA) {
+          try {
+            if (!deviceInfo.PrivateKey) {
+              throw `Missing key to decrypt data`
+            }
+
+            //data is in base64
+            let jsonData = await RSA.decrypt(
+              data.ENCRYPTED_DATA,
+              deviceInfo.PrivateKey
+            )
+
+            if (!jsonData) {
+              throw 'invalid data'
+            }
+
+            let alert = JSON.parse(jsonData)
+            //NOTE decrypted alert data is the same format as websocket notifications
+            //default is .title and .body , websocket data is .Title, .Body, other
+            if (alert?.Title) {
+              //parseLogMessage(context, alert)
+              req.title = alert.Title || 'Alert'
+              req.body = alert.Body || 'Empty body'
+            } else {
+              //old version
+              req.title = alert?.title || 'Alert Title'
+              req.body = alert?.body || 'Alert Body'
+            }
+          } catch (err) {
+            console.error('Failed to decrypt notification:', err)
+            //console.error('ENCRYPTED_DATA=', data.ENCRYPTED_DATA)
+          }
+        } else {
+          req.title = 'Unknown notification'
+          req.body = 'Unknown'
+        }
+
+        if (req.title?.length) {
+          //TODO also able to set confirm-stuff for buttons and more data
+          PushNotificationIOS.addNotificationRequest(req)
+        }
+
+        notification.finish('UIBackgroundFetchResultNoData')
+      }
+    )
 
     PushNotificationIOS.requestPermissions({
       alert: true,

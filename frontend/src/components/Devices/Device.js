@@ -155,7 +155,12 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   const [modalType, setModalType] = useState('')
   const navigate = useNavigate()
 
-  const defaultPolicies = props.policies || ['wan', 'dns', 'lan', 'lan_upstream']
+  const defaultPolicies = props.policies || [
+    'wan',
+    'dns',
+    'lan',
+    'lan_upstream'
+  ]
   const defaultGroups = props.groups || []
   const defaultTags = props.tags || []
 
@@ -548,7 +553,7 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
             alignItems="flex-start"
             sx={{ '@md': { w: '$2/5', alignSelf: 'center' } }}
           >
-          {policies.map((policy) => (
+            {policies.map((policy) => (
               <PolicyItem key={policy} name={policy} />
             ))}
 

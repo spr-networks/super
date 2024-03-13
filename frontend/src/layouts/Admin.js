@@ -237,7 +237,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           alertFunc(type, title, JSON.stringify(body))
         })
     } else {
-      alertFunc(type, title, body)
+      alertFunc(type, title, body.toString())
     }
   }
 
@@ -486,100 +486,10 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       }
     }
 
-    /*
-    let notificationArgs = {}
-    if (Platform.OS == 'ios') {
-      //for ios we get an event - no callback
-      //this function is called when user clicks a local notification
-      notificationArgs.onLocalNotification = (notification) => {
-        console.log('++ onLocalNotification --')
-
-        //TODO set confirm only if it is, else skip
-        const action = notification.getActionIdentifier() // open, allow, deny
-        //else: com.apple.UNNotificationDefaultActionIdentifier
-
-        const userInfo = notification.getData() //=userInfo
-        const isClicked = userInfo.userInteraction === 1
-        const { data } = userInfo
-        console.log('++ >> onLocalNotification:', action, 'data:', data)
-        console.log('++ clicked:', String(isClicked))
-        //confirmTrafficAction(action, data)
-      }
-
-      notificationArgs.onNotification = (notification) => {
-        console.log('++ onRemoteNotification ++')
-        //NOTE category should always be SECRET here
-        //category: SECRET|PLAIN, PLAIN for testing / not enc.
-        //const action = notification.getActionIdentifier() // open, allow, deny
-
-        const data = notification.getData()
-        const isClicked = data.userInteraction === 1
-
-        console.log(`
-        Title:  ${notification.getTitle()}
-        Message: ${notification.getMessage()}
-        category: ${notification.getCategory()}
-        content-available: ${notification.getContentAvailable()}
-        Clicked: ${String(isClicked)}
-        Data: ${JSON.stringify(data)}`)
-
-        category = notification.getCategory()
-        if (category == 'SECRET' && data.ENCRYPTED_DATA) {
-          try {
-            let d = Base64.atob(data.ENCRYPTED_DATA)
-            let alert = JSON.parse(d)
-            //TODO decrypt here
-            let { title, body } = alert
-
-            //forward decrypted notification to notificationCenter
-            //handle click in localNotification
-            Notifications.notification(title, body)
-          } catch (err) {
-            console.error(
-              'FAILED to decode notification data:',
-              data.ENCRYPTED_DATA,
-              'err=',
-              err
-            )
-          }
-        } else if (category == 'PLAIN') {
-          let title = notification.getTitle()
-          let body = notification.getMessage()
-          if (title && body) {
-            Notifications.notification(title, body)
-          } else {
-            console.error(`plain notification missing title||body`)
-          }
-        } else {
-          console.error(
-            'weird notification category:',
-            category,
-            'notification:',
-            notification
-          )
-        }
-
-        //notification.finish('UIBackgroundFetchResultFailed')
-        notification.finish('UIBackgroundFetchResultNoData')
-      }
-
-      notificationArgs.onRegister = (token) => {
-        //TODO set token in asyncStore
-        console.log('++++ DeviceToken=', token)
-        //TODO notificationSettings={deviceToken, privateKey, publicKey}
-        AsyncStorage.setItem('deviceToken', token)
-          .then((res) => {})
-          .catch((err) => {})
-      }
-    }
-
-    //Notifications.init(notificationArgs)    
-    */
-
     // store info if ios
     //TODO also move this code
     if (Platform.OS == 'ios') {
-      AsyncStorage.getItem('device').then((info) => {
+      AsyncStorage.getItem('deviceInfo').then((info) => {
         let deviceInfo = info ? JSON.parse(info) : null
         if (!deviceInfo) {
           console.error('missing device info')
@@ -602,6 +512,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             console.error('Error saving device info:', errorMessage, err)
           })
       })
+    } else {
+      //Notifications.init({})
     }
 
     // add routes with plugins on web

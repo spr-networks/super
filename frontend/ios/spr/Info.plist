@@ -33,8 +33,10 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Location for WiFi</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string>Location for WiFi</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
