@@ -124,9 +124,17 @@ export default function App() {
             }
 
             let alert = JSON.parse(jsonData)
-
-            req.title = alert.title
-            req.body = alert.body
+            //NOTE decrypted alert data is the same format as websocket notifications
+            //default is .title and .body , websocket data is .Title, .Body, other
+            if (alert?.Title) {
+              //parseLogMessage(context, alert)
+              req.title = alert.Title || 'Alert'
+              req.body = alert.Body || 'Empty body'
+            } else {
+              //old version
+              req.title = alert?.title || 'Alert Title'
+              req.body = alert?.body || 'Alert Body'
+            }
           } catch (err) {
             console.error('Failed to decrypt notification:', err)
             //console.error('ENCRYPTED_DATA=', data.ENCRYPTED_DATA)
