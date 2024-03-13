@@ -70,8 +70,6 @@ export default function App() {
             info = { ...info, PrivateKey, PublicKey }
           }
 
-          console.log('** set=', Object.keys(info))
-
           AsyncStorage.setItem('deviceInfo', JSON.stringify(info))
         } catch (e) {
           console.error(e)
