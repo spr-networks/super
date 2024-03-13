@@ -94,7 +94,7 @@ https://github.com/spr-networks/sprbus
 ## Updating 
 #### Building from scratch
 ```bash
-./build_docker_compose.sh
+./build_docker_compose.sh --load
 docker-compose up -d
 ```
 
