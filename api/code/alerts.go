@@ -346,7 +346,7 @@ func registerAlertDevice(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(gAlertDevices)
 }
 
-//NOTE only for testing, can remove this later
+// NOTE only for testing, can remove this later
 func testSendAlertDevice(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Invalid method", 400)

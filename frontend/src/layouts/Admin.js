@@ -503,7 +503,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         }
 
         api
-          .put('/alerts_register', data)
+          .put('/alerts_register_ios', data)
           .then((res) => {
             console.log('num alert devices registered=', res.length)
           })
