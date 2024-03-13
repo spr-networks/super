@@ -237,7 +237,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           alertFunc(type, title, JSON.stringify(body))
         })
     } else {
-      alertFunc(type, title, body)
+      alertFunc(type, title, body.toString())
     }
   }
 
