@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useContext, useEffect } from 'react'
 import {
   NativeRouter as Router,
   Route,
@@ -14,7 +14,7 @@ import AuthLayout from 'layouts/Auth'
 import AdminLayout from 'layouts/Admin'
 
 import { AppContext } from 'AppContext'
-import {parseLogMessage} from 'api/WebSocket'
+import { parseLogMessage } from 'api/WebSocket'
 
 import { routesAuth, routesAdmin } from 'routes'
 
@@ -28,7 +28,7 @@ export default function App() {
     setColorMode((prev) => (prev === 'light' ? 'dark' : 'light'))
   }
 
-  const context = useContext(AppContext)
+  //const context = useContext(AppContext)
 
   const loadSettings = () => {
     AsyncStorage.getItem('settings')
@@ -131,11 +131,11 @@ export default function App() {
             //NOTE decrypted alert data is the same format as websocket notifications
             //default is .title and .body , websocket data is .Title, .Body, other
             if (alert?.Title) {
-              const res = await parseLogMessage(context, eventData)
               //TBD(?)
+              /*const res = await parseLogMessage(context, eventData)
               if (res) {
-                //let { type, title, body, data } = res
-              }
+                let { type, title, body, data } = res
+              }*/
               req.title = alert.Title || 'Alert'
               req.body = alert.Body || 'Empty body'
             } else {
