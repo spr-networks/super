@@ -26,7 +26,10 @@ import {
   Tooltip,
   TrashIcon,
   ThreeDotsIcon,
-  VStack
+  VStack,
+  FormControl,
+  FormControlLabel,
+  FormControlLabelText
 } from '@gluestack-ui/themed'
 
 import { alertsAPI, dbAPI, api } from 'api'
@@ -337,99 +340,86 @@ type AlertDevice struct {
 
 const EditAlertSettings = ({ onSubmit, ...props }) => {
   const modalContext = useContext(ModalContext)
-  const [proxyDisabled, setProxyDisabled] = useState(false)
-  const [proxyDomain, setProxyDomain] = useState("")
+  const [proxySettings, setProxySettings] = useState({
+    Disabled: false,
+    APNSDomain: ''
+  })
+
   const [alertDevices, setAlertDevices] = useState([])
   const context = useContext(AlertContext)
 
-//  const apiError = (err) => context.error('db api error:', err)
-
   useEffect(() => {
-    api.get('/alerts_mobile_proxy').then((config) => {
-      setProxyDisabled(config.Disabled)
-      setProxyDomain(config.APNSDomain)
-    }).catch((error) => {
-      context.error(error)
-    })
-
-    api.get('/alerts_register_ios').then((config) => {
-      setAlertDevices(config)
-    }).catch((error) => {
-      context.error(error)
-    })
-
-
+    api.get('/alerts_mobile_proxy').then(setProxySettings).catch(context.error)
+    api.get('/alerts_register_ios').then(setAlertDevices).catch(context.error)
   }, [])
 
-  const onChangeText = (newText) => {
-    setProxyDomain(newText)
-  }
-
-  const submitSettings = () => {
-    let newSettings = {
-      Disabled: proxyDisabled,
-      APNSDomain: proxyDomain
-    }
-    api.put('/alerts_mobile_proxy', newSettings).then(() => {
-      context.success("Saved settings")
-    }).catch((err) => {
-      context.error(err)
-    })
-  }
-
-  const setDisableAPNS = (value) => {
-    let newSettings = {
-      Disabled: value,
-      APNSDomain: proxyDomain
-    }
-    api.put('/alerts_mobile_proxy', newSettings).then(() => {
-      setProxyDisabled(value)
-      context.success("Saved settings")
-    }).catch((err) => {
-      context.error(err)
-    })
-
+  const submitSettings = (config) => {
+    api
+      .put('/alerts_mobile_proxy', config)
+      .then((config) => {
+        modalContext.setShowModal(false)
+        context.success('Saved settings')
+      })
+      .catch((err) => {
+        context.error(err)
+      })
   }
 
   return (
     <VStack space="lg" flex="">
-      <Text> {alertDevices.length} iOS device{alertDevices.length == 1 ? "" : "s"} enrolled </Text>
-      <Checkbox
-        value={proxyDisabled}
-        defaultIsChecked={proxyDisabled}
-        onChange={setDisableAPNS}
-      >
-        <CheckboxIndicator mr="$2">
-          <CheckboxIcon />
-        </CheckboxIndicator>
-        <CheckboxLabel>Disable Apple Push Notifications</CheckboxLabel>
-      </Checkbox>
+      <Text>
+        {alertDevices.length} iOS device{alertDevices.length == 1 ? '' : 's'}
+        enrolled
+      </Text>
+      <FormControl>
+        <Checkbox
+          value={proxySettings.Disabled}
+          isChecked={proxySettings.Disabled}
+          onChange={(Disabled) =>
+            //submitSettings({ ...proxySettings, Disabled })
+            setProxySettings({ ...proxySettings, Disabled })
+          }
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Disable Apple Push Notifications</CheckboxLabel>
+        </Checkbox>
+      </FormControl>
 
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Custom Proxy Domain</FormControlLabelText>
+        </FormControlLabel>
 
-      <Text bold>Custom Proxy Domain</Text>
-      <Input variant="underlined">
-        <InputField
-          value={proxyDomain}
-          onChangeText={(v) => setProxyDomain(v)}
-          onSubmitEditing={submitSettings}
-        />
-      </Input>
+        <Input _variant="underlined">
+          <InputField
+            value={proxySettings.APNSDomain}
+            onChangeText={(APNSDomain) =>
+              setProxySettings({ ...proxySettings, APNSDomain })
+            }
+            onSubmitEditing={() => submitSettings({ ...proxySettings })}
+          />
+        </Input>
+      </FormControl>
 
-      <Button
-        variant="solid"
-        action="primary"
-        onPress={() => submitSettings}
-      >
-        <ButtonText>Save</ButtonText>
-      </Button>
+      <HStack space="md">
+        <Button
+          variant="solid"
+          action="primary"
+          onPress={() => submitSettings(proxySettings)}
+        >
+          <ButtonText>Save</ButtonText>
+        </Button>
 
-      <Button
-        variant="solid"
-        action="secondary"
-        onPress={() => modalContext.setShowModal(false)}
-      >
-        <ButtonText>Close</ButtonText>
-      </Button>
+        <Button
+          variant="solid"
+          action="secondary"
+          onPress={() => modalContext.setShowModal(false)}
+        >
+          <ButtonText>Close</ButtonText>
+        </Button>
+      </HStack>
     </VStack>
   )
 }
@@ -610,11 +600,7 @@ const AlertSettings = (props) => {
     <ScrollView h="$full">
       <ListHeader title="Alert Configuration">
         <HStack space="sm" marginLeft="auto">
-          <Button
-            variant="outline"
-            action="primary"
-            onPress={handlePressEdit}
-          >
+          <Button variant="outline" action="primary" onPress={handlePressEdit}>
             <ButtonIcon as={SettingsIcon} color="$primary500" />
           </Button>
         </HStack>
