@@ -337,7 +337,8 @@ type AlertDevice struct {
 
 const EditAlertSettings = ({ onSubmit, ...props }) => {
   const modalContext = useContext(ModalContext)
-  const [proxySettings, setProxySettings] = useState({Disabled: false, APNSDomain: ""})
+  const [proxyDisabled, setProxyDisabled] = useState(false)
+  const [proxyDomain, setProxyDomain] = useState("")
   const [alertDevices, setAlertDevices] = useState([])
   const context = useContext(AlertContext)
 
@@ -345,7 +346,8 @@ const EditAlertSettings = ({ onSubmit, ...props }) => {
 
   useEffect(() => {
     api.get('/alerts_mobile_proxy').then((config) => {
-      setProxySettings(config)
+      setProxyDisabled(config.Disabled)
+      setProxyDomain(config.APNSDomain)
     }).catch((error) => {
       context.error(error)
     })
@@ -360,10 +362,12 @@ const EditAlertSettings = ({ onSubmit, ...props }) => {
   }, [])
 
   const onChangeText = (newText) => {
-    api.put('/alerts_mobile_proxy', {
-      Disabled: proxySettings.Disabled,
+    let newSettings = {
+      Disabled: proxyDisabled,
       APNSDomain: newText
-    }).then(() => {
+    }
+    api.put('/alerts_mobile_proxy', newSettings).then(() => {
+      setProxyDomain(newText)
       context.success("Saved settings")
     }).catch((err) => {
       context.error(err)
@@ -371,10 +375,12 @@ const EditAlertSettings = ({ onSubmit, ...props }) => {
   }
 
   const setDisableAPNS = (value) => {
-    api.put('/alerts_mobile_proxy', {
+    let newSettings = {
       Disabled: value,
-      APNSDomain: proxySettings.APNSDomain
-    }).then(() => {
+      APNSDomain: proxyDomain
+    }
+    api.put('/alerts_mobile_proxy', newSettings).then(() => {
+      setProxyDisabled(value)
       context.success("Saved settings")
     }).catch((err) => {
       context.error(err)
@@ -386,8 +392,8 @@ const EditAlertSettings = ({ onSubmit, ...props }) => {
     <VStack space="lg" flex="">
       <Text> {alertDevices.length} iOS device{alertDevices.length == 1 ? "" : "s"} enrolled </Text>
       <Checkbox
-        value={proxySettings.Disabled}
-        defaultIsChecked={proxySettings.Disabled}
+        value={proxyDisabled}
+        defaultIsChecked={proxyDisabled}
         onChange={setDisableAPNS}
       >
         <CheckboxIndicator mr="$2">
@@ -400,7 +406,7 @@ const EditAlertSettings = ({ onSubmit, ...props }) => {
       <Text bold>Custom Proxy Domain</Text>
       <Input variant="underlined">
         <InputField
-          value={proxySettings.APNSDomain}
+          value={proxyDomain}
           onChangeText={(v) => onChangeText(v)}
         />
       </Input>
