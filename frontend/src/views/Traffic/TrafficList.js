@@ -137,7 +137,7 @@ const TrafficList = (props) => {
           })
         )
       })
-      .catch((err) => reject(err))
+      .catch((err) => context.error(err))
   }
 
   const refreshAsns = () => {
