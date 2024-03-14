@@ -1,6 +1,9 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 
 import {
+  AddIcon,
+  Badge,
+  BadgeText,
   Button,
   ButtonIcon,
   ButtonText,
@@ -10,15 +13,14 @@ import {
   Menu,
   MenuItem,
   MenuItemLabel,
+  ScrollView,
+  SettingsIcon,
   Switch,
-  VStack,
   Text,
+  Tooltip,
   TrashIcon,
   ThreeDotsIcon,
-  Badge,
-  BadgeText,
-  AddIcon,
-  ScrollView
+  VStack
 } from '@gluestack-ui/themed'
 
 import { alertsAPI, dbAPI } from 'api'
@@ -307,6 +309,28 @@ const AlertItemHeader = () => (
   </HStack>
 )
 
+const EditAlertSettings = ({ onSubmit, ...props }) => {
+  const modalContext = useContext(ModalContext)
+  const [config, setConfig] = useState(null)
+
+//  const apiError = (err) => context.error('db api error:', err)
+
+  useEffect(() => {
+  }, [])
+
+  return (
+    <VStack space="lg">
+      <Button
+        variant="solid"
+        action="secondary"
+        onPress={() => modalContext.setShowModal(false)}
+      >
+        <ButtonText>Close</ButtonText>
+      </Button>
+    </VStack>
+  )
+}
+
 const AlertSettings = (props) => {
   const [config, setConfig] = useState([])
   const [topics, setTopics] = useState([])
@@ -472,9 +496,26 @@ const AlertSettings = (props) => {
     }
   }
 
+  const handlePressEdit = () => {
+    modalContext.modal(
+      'Alert Settings',
+      <EditAlertSettings onSubmit={() => {}} />
+    )
+  }
+
   return (
     <ScrollView h="$full">
       <ListHeader title="Alert Configuration">
+        <HStack space="sm" marginLeft="auto">
+          <Button
+            variant="outline"
+            action="primary"
+            onPress={handlePressEdit}
+          >
+            <ButtonIcon as={SettingsIcon} color="$primary500" />
+          </Button>
+        </HStack>
+
         <HStack space="sm">
           <Button
             size="sm"
