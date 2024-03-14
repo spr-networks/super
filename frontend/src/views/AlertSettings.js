@@ -7,9 +7,15 @@ import {
   Button,
   ButtonIcon,
   ButtonText,
+  Checkbox,
+  CheckboxIcon,
+  CheckboxLabel,
+  CheckboxIndicator,
   FlatList,
   HStack,
   Icon,
+  Input,
+  InputField,
   Menu,
   MenuItem,
   MenuItemLabel,
@@ -23,7 +29,7 @@ import {
   VStack
 } from '@gluestack-ui/themed'
 
-import { alertsAPI, dbAPI } from 'api'
+import { alertsAPI, dbAPI, api } from 'api'
 import AddAlert from 'components/Alerts/AddAlert'
 import { AlertContext, ModalContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
@@ -309,17 +315,96 @@ const AlertItemHeader = () => (
   </HStack>
 )
 
+/*
+
+external_router_authenticated.HandleFunc("/alerts_register_ios", registerAlertDevice).Methods("DELETE", "PUT", "GET")
+external_router_authenticated.HandleFunc("/alerts_mobile_proxy", alertsMobileProxySettings).Methods("PUT", "GET")
+
+
+type MobileAlertProxySettings struct {
+	Disabled   bool
+	APNSDomain string
+}
+
+type AlertDevice struct {
+	DeviceId    string
+	DeviceToken string
+	PublicKey   string
+	LastActive  time.Time
+}
+
+*/
+
 const EditAlertSettings = ({ onSubmit, ...props }) => {
   const modalContext = useContext(ModalContext)
-  const [config, setConfig] = useState(null)
+  const [proxySettings, setProxySettings] = useState({Disabled: false, APNSDomain: ""})
+  const [alertDevices, setAlertDevices] = useState([])
+  const context = useContext(AlertContext)
 
 //  const apiError = (err) => context.error('db api error:', err)
 
   useEffect(() => {
+    api.get('/alerts_mobile_proxy').then((config) => {
+      setProxySettings(config)
+    }).catch((error) => {
+      context.error(error)
+    })
+
+    api.get('/alerts_register_ios').then((config) => {
+      setAlertDevices(config)
+    }).catch((error) => {
+      context.error(error)
+    })
+
+
   }, [])
 
+  const onChangeText = (newText) => {
+    api.put('/alerts_mobile_proxy', {
+      Disabled: proxySettings.Disabled,
+      APNSDomain: newText
+    }).then(() => {
+      context.success("Saved settings")
+    }).catch((err) => {
+      context.error(err)
+    })
+  }
+
+  const setDisableAPNS = (value) => {
+    api.put('/alerts_mobile_proxy', {
+      Disabled: value,
+      APNSDomain: proxySettings.APNSDomain
+    }).then(() => {
+      context.success("Saved settings")
+    }).catch((err) => {
+      context.error(err)
+    })
+
+  }
+
   return (
-    <VStack space="lg">
+    <VStack space="lg" flex="">
+      <Text> {alertDevices.length} iOS device{alertDevices.length == 1 ? "" : "s"} enrolled </Text>
+      <Checkbox
+        value={proxySettings.Disabled}
+        defaultIsChecked={proxySettings.Disabled}
+        onChange={setDisableAPNS}
+      >
+        <CheckboxIndicator mr="$2">
+          <CheckboxIcon />
+        </CheckboxIndicator>
+        <CheckboxLabel>Disable Apple Push Notifications</CheckboxLabel>
+      </Checkbox>
+
+
+      <Text bold>Custom Proxy Domain</Text>
+      <Input variant="underlined">
+        <InputField
+          value={proxySettings.APNSDomain}
+          onChangeText={(v) => onChangeText(v)}
+        />
+      </Input>
+
       <Button
         variant="solid"
         action="secondary"
