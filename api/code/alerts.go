@@ -479,18 +479,12 @@ func sendDeviceAlertByToken(deviceToken string, title string, message string) er
 	ProxySettingsmtx.RLock()
 	defer ProxySettingsmtx.RUnlock()
 
-	if gMobileAlertProxySettings.Disabled {
-		//disabled, do not send
-		return nil
-	}
-
 	loadAlertDevices()
 
-	device := AlertDevice{}
 	for _, entry := range gAlertDevices {
 		//TODO also have a id for the device here
 		if entry.DeviceToken == deviceToken {
-			return sendDeviceAlertLocked(device, title, message)
+			return sendDeviceAlertLocked(entry, title, message)
 		}
 	}
 
@@ -498,6 +492,8 @@ func sendDeviceAlertByToken(deviceToken string, title string, message string) er
 }
 
 func sendDeviceAlertLocked(device AlertDevice, title string, message string) error {
+	loadMobileProxySettings()
+
 	if gMobileAlertProxySettings.Disabled {
 		//disabled, do not send
 		return nil
