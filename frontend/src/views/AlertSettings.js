@@ -362,12 +362,15 @@ const EditAlertSettings = ({ onSubmit, ...props }) => {
   }, [])
 
   const onChangeText = (newText) => {
+    setProxyDomain(newText)
+  }
+
+  const submitDomain = () => {
     let newSettings = {
       Disabled: proxyDisabled,
-      APNSDomain: newText
+      APNSDomain: proxyDomain
     }
     api.put('/alerts_mobile_proxy', newSettings).then(() => {
-      setProxyDomain(newText)
       context.success("Saved settings")
     }).catch((err) => {
       context.error(err)
@@ -407,7 +410,8 @@ const EditAlertSettings = ({ onSubmit, ...props }) => {
       <Input variant="underlined">
         <InputField
           value={proxyDomain}
-          onChangeText={(v) => onChangeText(v)}
+          onChangeText={(v) => setProxyDomain(v)}
+          onSubmitEditing={submitDomain}
         />
       </Input>
 
