@@ -37,9 +37,9 @@ import (
 
 var AlertSettingsmtx sync.RWMutex
 
-var AlertSettingsFile = "/configs/base/alerts.json"
-var AlertDevicesFile = "/configs/base/alert_devices.json"
-var MobileProxySettingsFile = "/configs/base/alert_proxy.json"
+var AlertSettingsFile = TEST_PREFIX + "/configs/base/alerts.json"
+var AlertDevicesFile = TEST_PREFIX + "/configs/base/alert_devices.json"
+var MobileProxySettingsFile = TEST_PREFIX + "/configs/base/alert_proxy.json"
 var gAlertTopicPrefix = "alerts:"
 var gDebugPrintAlert = false
 
@@ -427,14 +427,12 @@ func alertsMobileProxySettings(w http.ResponseWriter, r *http.Request) {
 	} else {
 		setting := MobileAlertProxySettings{}
 		err := json.NewDecoder(r.Body).Decode(&setting)
-		if err != nil {
+		if err == nil {
 			gMobileAlertProxySettings = setting
 			saveMobileProxySettings()
 		} else {
-			if err != nil {
-				http.Error(w, err.Error(), 400)
-				return
-			}
+			http.Error(w, err.Error(), 400)
+			return
 		}
 	}
 
