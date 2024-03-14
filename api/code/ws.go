@@ -52,7 +52,8 @@ func WSRunBroadcast() {
 
 		bytes, err := json.Marshal(message)
 		if err != nil {
-			panic(err)
+			log.Println("Failed to marsha", err)
+			continue
 		}
 
 		WSMtx.Lock()
@@ -67,7 +68,14 @@ func WSRunBroadcast() {
 		}
 		//swap tmp and WSClients
 		WSClients = tmp
+		clients_len := len(WSClients)
 		WSMtx.Unlock()
+
+		//if no WS clients got data sent, then run APNS instead
+		if clients_len == 0 {
+			APNSNotify(message.Type, message.Data)
+		}
+
 	}
 }
 

@@ -784,8 +784,6 @@ func AlertsRunEventListener() {
 		defer wg.Done()
 		for message := range ch {
 			WSNotifyValue(message.Topic, message.Info)
-			//TODO push notification if settings say so
-			APNSNotify(message.Topic, message.Info)
 		}
 	}
 
