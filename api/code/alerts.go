@@ -35,16 +35,22 @@ import (
 //https://www.ietf.org/archive/id/draft-goessner-dispatch-jsonpath-00.html
 //https://goessner.net/articles/JsonPath/
 
-var AlertSettingsmtx sync.Mutex
+var AlertSettingsmtx sync.RWMutex
 
 var AlertSettingsFile = "/configs/base/alerts.json"
 var AlertDevicesFile = "/configs/base/alert_devices.json"
+var MobileProxySettingsFile = "/configs/base/alert_proxy.json"
 var gAlertTopicPrefix = "alerts:"
 var gDebugPrintAlert = false
 
 type Alert struct {
 	Topic string
 	Info  map[string]interface{}
+}
+
+type MobileAlertProxySettings struct {
+	Disabled   bool
+	APNSDomain string
 }
 
 type AlertSetting struct {
@@ -263,7 +269,7 @@ func (a *AlertDevice) Validate() error {
 	return nil
 }
 
-var AlertDevicesmtx sync.Mutex
+var AlertDevicesmtx sync.RWMutex
 var gAlertDevices = []AlertDevice{}
 
 func loadAlertDevices() {
@@ -374,7 +380,7 @@ func testSendAlertDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = sendDeviceAlert(deviceToken, alert.Title, alert.Body)
+	err = sendDeviceAlertByToken(deviceToken, alert.Title, alert.Body)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -386,7 +392,78 @@ func testSendAlertDevice(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(alert)
 }
 
-func sendDeviceAlert(deviceToken string, title string, message string) error {
+var gMobileAlertProxySettings = MobileAlertProxySettings{}
+
+func loadMobileProxySettings() {
+	//assumes lock is held
+	data, err := ioutil.ReadFile(MobileProxySettingsFile)
+	if err != nil {
+		log.Println(err)
+	} else {
+		err = json.Unmarshal(data, &gMobileAlertProxySettings)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+}
+
+func saveMobileProxySettings() {
+	//assumes lock is held
+	file, _ := json.MarshalIndent(gMobileAlertProxySettings, "", " ")
+	err := ioutil.WriteFile(MobileProxySettingsFile, file, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+var ProxySettingsmtx sync.RWMutex
+
+func alertsMobileProxySettings(w http.ResponseWriter, r *http.Request) {
+	ProxySettingsmtx.Lock()
+	defer ProxySettingsmtx.Unlock()
+
+	if r.Method == http.MethodGet {
+		loadAlertsConfig()
+	} else {
+		setting := MobileAlertProxySettings{}
+		err := json.NewDecoder(r.Body).Decode(&setting)
+		if err != nil {
+			gMobileAlertProxySettings = setting
+			saveMobileProxySettings()
+		} else {
+			if err != nil {
+				http.Error(w, err.Error(), 400)
+				return
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(gMobileAlertProxySettings)
+}
+
+func APNSNotify(msg_type string, data interface{}) {
+
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		log.Println("invalid json for APNS event", err)
+		return
+	}
+
+	AlertDevicesmtx.RLock()
+	defer AlertDevicesmtx.RUnlock()
+	ProxySettingsmtx.RLock()
+	defer ProxySettingsmtx.RUnlock()
+
+	for _, entry := range gAlertDevices {
+		err = sendDeviceAlertLocked(entry, msg_type, string(bytes))
+		if err != nil {
+			log.Println("Failed to send event", err, "to", entry.DeviceId)
+		}
+	}
+}
+
+func sendDeviceAlertByToken(deviceToken string, title string, message string) error {
 	/*
 			   deviceToken is stored here:
 			   /configs/base/alert_devices.json
@@ -396,22 +473,41 @@ func sendDeviceAlert(deviceToken string, title string, message string) error {
 		       the device will also have a .LastActive set, see struct
 		       checks if device have logged in within 1 month
 	*/
+	AlertDevicesmtx.RLock()
+	defer AlertDevicesmtx.RUnlock()
 
-	AlertDevicesmtx.Lock()
-	defer AlertDevicesmtx.Unlock()
+	ProxySettingsmtx.RLock()
+	defer ProxySettingsmtx.RUnlock()
+
+	if gMobileAlertProxySettings.Disabled {
+		//disabled, do not send
+		return nil
+	}
 
 	loadAlertDevices()
-
-	//TODO read from settings, will change to https://notifications.supernetworks.org
-	proxyUrl := "http://localhost:8000"
 
 	device := AlertDevice{}
 	for _, entry := range gAlertDevices {
 		//TODO also have a id for the device here
 		if entry.DeviceToken == deviceToken {
-			device = entry
-			break
+			return sendDeviceAlertLocked(device, title, message)
 		}
+	}
+
+	return fmt.Errorf("could not find device " + deviceToken)
+}
+
+func sendDeviceAlertLocked(device AlertDevice, title string, message string) error {
+	if gMobileAlertProxySettings.Disabled {
+		//disabled, do not send
+		return nil
+	}
+
+	//TODO read from settings, will change to https://notifications.supernetworks.org
+	proxyUrl := "https://notifications.supernetworks.org"
+	//grab APNSDomain when enabled
+	if gMobileAlertProxySettings.APNSDomain != "" {
+		proxyUrl = gMobileAlertProxySettings.APNSDomain
 	}
 
 	if device.DeviceId == "" {
@@ -423,7 +519,7 @@ func sendDeviceAlert(deviceToken string, title string, message string) error {
 	if device.LastActive.Before(time.Now().AddDate(0, -1, 0)) {
 		//TODO cleanup
 		fmt.Println("device expired:", device.DeviceId, "lastActive:", device.LastActive)
-		return fmt.Errorf("Device have not been active, skipping")
+		return fmt.Errorf("Device has not been active, skipping")
 	}
 
 	if device.PublicKey == "" {
@@ -462,7 +558,7 @@ func sendDeviceAlert(deviceToken string, title string, message string) error {
 		}
 	}
 
-	return apnsproxy.SendProxyNotification(proxyUrl, deviceToken, apns)
+	return apnsproxy.SendProxyNotification(proxyUrl, device.DeviceToken, apns)
 }
 
 func grabReflectOld(fields []string, event interface{}) map[string]interface{} {
@@ -689,6 +785,7 @@ func AlertsRunEventListener() {
 		for message := range ch {
 			WSNotifyValue(message.Topic, message.Info)
 			//TODO push notification if settings say so
+			APNSNotify(message.Topic, message.Info)
 		}
 	}
 

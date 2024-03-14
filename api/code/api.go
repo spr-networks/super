@@ -2880,6 +2880,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/alerts", modifyAlertSettings).Methods("PUT")
 	external_router_authenticated.HandleFunc("/alerts/{index:[0-9]+}", modifyAlertSettings).Methods("DELETE", "PUT")
 	external_router_authenticated.HandleFunc("/alerts_register_ios", registerAlertDevice).Methods("DELETE", "PUT", "GET")
+	external_router_authenticated.HandleFunc("/alerts_mobile_proxy", alertsMobileProxySettings).Methods("PUT", "GET")
 	external_router_authenticated.HandleFunc("/alerts_test/{deviceToken:[0-9a-h]+}", testSendAlertDevice).Methods("PUT")
 
 	// allow leaf nodes to report PSK events also
