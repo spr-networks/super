@@ -365,7 +365,7 @@ const EditAlertSettings = ({ onSubmit, ...props }) => {
     setProxyDomain(newText)
   }
 
-  const submitDomain = () => {
+  const submitSettings = () => {
     let newSettings = {
       Disabled: proxyDisabled,
       APNSDomain: proxyDomain
@@ -411,9 +411,17 @@ const EditAlertSettings = ({ onSubmit, ...props }) => {
         <InputField
           value={proxyDomain}
           onChangeText={(v) => setProxyDomain(v)}
-          onSubmitEditing={submitDomain}
+          onSubmitEditing={submitSettings}
         />
       </Input>
+
+      <Button
+        variant="solid"
+        action="primary"
+        onPress={() => submitSettings}
+      >
+        <ButtonText>Save</ButtonText>
+      </Button>
 
       <Button
         variant="solid"
