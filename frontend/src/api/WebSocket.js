@@ -176,4 +176,4 @@ const WebSocketComponent = ({confirm, notify,   ...props }) => {
   )
 }
 
-export default WebSocketComponent
+export { WebSocketComponent, parseLogMessage }

@@ -14,7 +14,7 @@ import {
 } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Sidebar from 'components/Sidebar/Sidebar'
-import WebSocketComponent from 'api/WebSocket'
+import {WebSocketComponent} from 'api/WebSocket'
 import {
   api,
   deviceAPI,
