@@ -315,6 +315,7 @@ func userPluginExists(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if os.IsNotExist(err) {
 			http.Error(w, "Not found", 404)
+			return
 		}
 	}
 
