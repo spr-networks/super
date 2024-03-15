@@ -103,6 +103,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
     //only one action supported currently
     if (curItem.Actions) {
       setActionConfig({ ...curItem.Actions[0] })
+      setNotificationType(curItem.Actions[0].NotificationType)
     }
   }, [curItem])
 
