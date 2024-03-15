@@ -10,10 +10,11 @@ import PushNotificationIOS from '@react-native-community/push-notification-ios'
 import { getUniqueId } from 'react-native-device-info'
 import { RSA } from 'react-native-rsa-native'
 
+import DeviceInfo from 'DeviceInfo'
+
 import AuthLayout from 'layouts/Auth'
 import AdminLayout from 'layouts/Admin'
 
-import { AppContext } from 'AppContext'
 import { parseLogMessage } from 'api/WebSocket'
 
 import { routesAuth, routesAdmin } from 'routes'
@@ -27,8 +28,6 @@ export default function App() {
   const toggleColorMode = () => {
     setColorMode((prev) => (prev === 'light' ? 'dark' : 'light'))
   }
-
-  //const context = useContext(AppContext)
 
   const loadSettings = () => {
     AsyncStorage.getItem('settings')
@@ -46,42 +45,8 @@ export default function App() {
   useEffect(() => {
     loadSettings()
 
-    /*
-    first get saved settings
-    populate token if unset or updated
-    set deviceId
-    set keys if unset
-
-    result is stored & put to api on login
-    */
-    AsyncStorage.getItem('deviceInfo').then((res) => {
-      let info = res ? JSON.parse(res) : {}
-      console.log('** pre=', Object.keys(info))
-
-      PushNotificationIOS.addEventListener('register', async (DeviceToken) => {
-        console.log('** DeviceToken=', DeviceToken)
-        info = { ...info, DeviceToken }
-
-        try {
-          info.DeviceId = await getUniqueId()
-
-          // Generating keypair takes ~0.9s on iPhoneSE
-          if (!info.PrivateKey) {
-            let t = Date.now()
-            let keys = await RSA.generateKeys(4096)
-            console.log('** KeyTime=', (Date.now() - t) / 1e3, 's')
-            let PrivateKey = keys.private,
-              PublicKey = keys.public
-
-            info = { ...info, PrivateKey, PublicKey }
-          }
-
-          AsyncStorage.setItem('deviceInfo', JSON.stringify(info))
-        } catch (e) {
-          console.error(e)
-        }
-      })
-    })
+    //iOS specific, setup notifications
+    DeviceInfo.initDevice()
 
     PushNotificationIOS.addEventListener(
       'notification',
@@ -99,14 +64,8 @@ export default function App() {
           threadId: 'thread-id'
         }
 
-        const getDeviceInfo = async () => {
-          let res = await AsyncStorage.getItem('deviceInfo')
-          return res ? JSON.parse(res) : {}
-        }
-
         //NOTE need to fetch it when within the handler
-        let deviceInfo = await getDeviceInfo()
-        //console.log('deviceInfo=', deviceInfo)
+        let deviceInfo = await DeviceInfo.getDeviceInfo()
 
         if (category == 'PLAIN') {
           req.title = notification.getTitle()
@@ -131,11 +90,35 @@ export default function App() {
             //NOTE decrypted alert data is the same format as websocket notifications
             //default is .title and .body , websocket data is .Title, .Body, other
             if (alert?.Title) {
-              //TBD(?)
-              /*const res = await parseLogMessage(context, eventData)
-              if (res) {
-                let { type, title, body, data } = res
-              }*/
+              //try parse with context here
+              let devices = []
+              try {
+                let res = await AsyncStorage.getItem('devices')
+                let d = JSON.parse(res)
+                if (d) {
+                  devices = d
+                }
+
+                const context = {
+                  getDevice: (value, type = 'MAC') => {
+                    if (!value) return null
+                    return devices.find((d) => d[type] == value)
+                  }
+                }
+
+                const parsed = await parseLogMessage(context, alert)
+                if (parsed) {
+                  let { type, title, body, data } = parsed
+                  //TODO type == confirm
+                  if (title && body) {
+                    alert.Title = title
+                    alert.Body = body
+                  }
+                }
+              } catch (e) {
+                console.error('-- parse fail:', e)
+              }
+
               req.title = alert.Title || 'Alert'
               req.body = alert.Body || 'Empty body'
             } else {

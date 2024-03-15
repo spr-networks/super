@@ -1,7 +1,7 @@
 import { getApiHostname, getWsURL } from './API'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { deviceAPI } from './Device'
-import {eventTemplate} from 'components/Alerts/AlertUtil'
+import { eventTemplate } from 'components/Alerts/AlertUtil'
 
 import { useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -21,16 +21,16 @@ async function connectWebsocket(context, messageCallback) {
   }
 
   ws.addEventListener('open', (event) => {
-
     AsyncStorage.getItem('jwt-otp').then((string) => {
       let jwt = JSON.parse(string)
       if (jwt) {
-        ws.send(userData['username'] + ':' + userData['password'] + ':' + jwt.jwt)
+        ws.send(
+          userData['username'] + ':' + userData['password'] + ':' + jwt.jwt
+        )
       } else {
         ws.send(userData['username'] + ':' + userData['password'])
       }
     })
-
   })
 
   ws.addEventListener('message', (event) => {
@@ -39,7 +39,6 @@ async function connectWebsocket(context, messageCallback) {
 
   return ws
 }
-
 
 const parseLogMessage = async (context, msg) => {
   const msgType = msg.Type
@@ -119,8 +118,7 @@ const parseLogMessage = async (context, msg) => {
   }
 }
 
-const WebSocketComponent = ({confirm, notify,   ...props }) => {
-
+const WebSocketComponent = ({ confirm, notify, ...props }) => {
   const context = useContext(AppContext)
   const navigate = useNavigate()
 
@@ -148,6 +146,8 @@ const WebSocketComponent = ({confirm, notify,   ...props }) => {
       //console.log('[NOTIFICATION]', JSON.stringify(res))
       let { type, title, body, data } = res
 
+      console.log('NNNN:', res)
+
       if (title == 'StatusCalled') {
         //ignore debug message
         return
@@ -170,10 +170,7 @@ const WebSocketComponent = ({confirm, notify,   ...props }) => {
 
   connectWebsocket(context, handleWebSocketEvent)
 
-  return (
-    <>
-    </>
-  )
+  return <></>
 }
 
 export { WebSocketComponent, parseLogMessage }

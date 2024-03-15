@@ -1,8 +1,7 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Dimensions, Platform, SafeAreaView } from 'react-native'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { Base64 } from 'utils'
 
 import Notifications from 'Notifications'
 import {
@@ -14,16 +13,8 @@ import {
 } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Sidebar from 'components/Sidebar/Sidebar'
-import {WebSocketComponent} from 'api/WebSocket'
-import {
-  api,
-  deviceAPI,
-  meshAPI,
-  pfwAPI,
-  pluginAPI,
-  wifiAPI,
-  setAuthReturn
-} from 'api'
+import { WebSocketComponent } from 'api/WebSocket'
+import { api, deviceAPI, meshAPI, pfwAPI, pluginAPI, wifiAPI } from 'api'
 import { ucFirst } from 'utils'
 
 import {
@@ -60,6 +51,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import CustomPluginView from 'views/CustomPlugin'
+import DeviceInfo from 'DeviceInfo'
 
 //NOTE Slice transition for Alerts not available in gluestack-ui
 
@@ -237,7 +229,12 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           alertFunc(type, title, JSON.stringify(body))
         })
     } else {
-      alertFunc(type, title, body.toString())
+      //handle if react elems or not
+      if (typeof body == 'object' && !body.props) {
+        body = body.toString()
+      }
+
+      alertFunc(type, title, body)
     }
   }
 
@@ -310,6 +307,11 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           ]
           setGroups(uniqueGroups)
           resolve(Object.values(devices_))
+          //store version in asyncstore for cache in notification handler
+          AsyncStorage.setItem(
+            'devices',
+            JSON.stringify(Object.values(devices_))
+          )
         })
         .catch(reject)
     })
@@ -487,44 +489,13 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     }
 
     // store info if ios
-    //TODO also move this code
     if (Platform.OS == 'ios') {
-      AsyncStorage.getItem('deviceInfo').then((info) => {
-        let deviceInfo = info ? JSON.parse(info) : null
-        if (!deviceInfo) {
-          console.error('missing device info')
-          return
-        }
-
-        let data = {
-          DeviceId: deviceInfo.DeviceId,
-          DeviceToken: deviceInfo.DeviceToken,
-          PublicKey: deviceInfo.PublicKey
-        }
-
-        api
-          .put('/alerts_register_ios', data)
-          .then((res) => {
-            console.log('num alert devices registered=', res.length)
-          })
-          .catch(async (err) => {
-            let errorMessage = await err.response.text()
-            console.error('Error saving device info:', errorMessage, err)
-          })
-      })
-    } else {
+      DeviceInfo.saveDeviceInfo()
+    } else if (Platform.OS == 'web') {
       //Notifications.init({})
-    }
 
-    // add routes with plugins on web
-    if (Platform.OS == 'web') {
+      // add routes with plugins on web
       registerPluginRoutes()
-    }
-
-    return () => {
-      if (Platform.OS == 'ios') {
-        Notifications.cleanup()
-      }
     }
   }, [])
 
