@@ -453,6 +453,21 @@ func APNSNotify(msg_type string, data interface{}) {
 	ProxySettingsmtx.RLock()
 	defer ProxySettingsmtx.RUnlock()
 
+	loadAlertDevices()
+
+	//cleanup devices not active in the last month
+	devices := gAlertDevices[:0]
+	for _, entry := range gAlertDevices {
+		if entry.LastActive.After(time.Now().AddDate(0, -1, 0)) {
+			devices = append(devices, entry)
+		}
+	}
+
+	if len(devices) != len(gAlertDevices) {
+		gAlertDevices = devices
+		saveAlertDevices()
+	}
+
 	for _, entry := range gAlertDevices {
 		err = sendDeviceAlertLocked(entry, msg_type, string(bytes))
 		if err != nil {
@@ -509,12 +524,6 @@ func sendDeviceAlertLocked(device AlertDevice, title string, message string) err
 	}
 
 	var apns apnsproxy.APNS
-
-	if device.LastActive.Before(time.Now().AddDate(0, -1, 0)) {
-		//TODO cleanup
-		fmt.Println("device expired:", device.DeviceId, "lastActive:", device.LastActive)
-		return fmt.Errorf("Device has not been active, skipping")
-	}
 
 	if device.PublicKey == "" {
 		apns = apnsproxy.APNS{
