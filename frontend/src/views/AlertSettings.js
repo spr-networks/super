@@ -368,8 +368,7 @@ const EditAlertSettings = ({ onSubmit, ...props }) => {
   return (
     <VStack space="lg" flex="">
       <Text>
-        {alertDevices.length} iOS device{alertDevices.length == 1 ? '' : 's'}
-        enrolled
+        {alertDevices.length} iOS device{alertDevices.length == 1 ? '' : 's'} enrolled
       </Text>
       <FormControl>
         <Checkbox
