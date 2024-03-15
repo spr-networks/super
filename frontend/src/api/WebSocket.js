@@ -1,44 +1,12 @@
+import { useContext, useEffect, useRef } from 'react'
+
 import { getApiHostname, getWsURL } from './API'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { deviceAPI } from './Device'
 import { eventTemplate } from 'components/Alerts/AlertUtil'
 
-import { useContext, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { alertState, AppContext } from 'AppContext'
-
-async function connectWebsocket(context, messageCallback) {
-  let login = await AsyncStorage.getItem('user')
-  let userData = JSON.parse(login),
-    ws = null
-
-  try {
-    ws = new WebSocket(getWsURL())
-  } catch (err) {
-    // mock error
-    console.error('[webSocket]', 'failed to connect to', getWsURL())
-    return
-  }
-
-  ws.addEventListener('open', (event) => {
-    AsyncStorage.getItem('jwt-otp').then((string) => {
-      let jwt = JSON.parse(string)
-      if (jwt) {
-        ws.send(
-          userData['username'] + ':' + userData['password'] + ':' + jwt.jwt
-        )
-      } else {
-        ws.send(userData['username'] + ':' + userData['password'])
-      }
-    })
-  })
-
-  ws.addEventListener('message', (event) => {
-    messageCallback(context, event)
-  })
-
-  return ws
-}
 
 const parseLogMessage = async (context, msg) => {
   const msgType = msg.Type
@@ -121,8 +89,9 @@ const parseLogMessage = async (context, msg) => {
 const WebSocketComponent = ({ confirm, notify, ...props }) => {
   const context = useContext(AppContext)
   const navigate = useNavigate()
+  const ws = useRef(null)
 
-  const handleWebSocketEvent = async (context, event) => {
+  const handleWebSocketEvent = async (event) => {
     if (event.data == 'success') {
       return
     } else if (event.data == 'Authentication failure') {
@@ -146,13 +115,6 @@ const WebSocketComponent = ({ confirm, notify, ...props }) => {
       //console.log('[NOTIFICATION]', JSON.stringify(res))
       let { type, title, body, data } = res
 
-      if (title == 'StatusCalled') {
-        //ignore debug message
-        return
-      }
-
-      //console.log('plus disabled:', isPlusDisabled)
-
       // confirm notifications use pfw
       if (context.isPlusDisabled && type == 'confirm') {
         type = 'info'
@@ -167,14 +129,39 @@ const WebSocketComponent = ({ confirm, notify, ...props }) => {
   }
 
   useEffect(() => {
-    let ws = connectWebsocket(context, handleWebSocketEvent)
+    try {
+      ws.current = new WebSocket(getWsURL())
+    } catch (err) {
+      // mock error
+      console.error('[webSocket]', 'failed to connect to', getWsURL())
+      return
+    }
+
+    const wsCurrent = ws.current
+
+    AsyncStorage.getItem('user').then((login) => {
+      let userData = JSON.parse(login)
+
+      wsCurrent.addEventListener('open', (event) => {
+        AsyncStorage.getItem('jwt-otp').then((string) => {
+          let jwt = JSON.parse(string)
+          if (jwt) {
+            wsCurrent.send(
+              userData['username'] + ':' + userData['password'] + ':' + jwt.jwt
+            )
+          } else {
+            wsCurrent.send(userData['username'] + ':' + userData['password'])
+          }
+        })
+      })
+
+      wsCurrent.addEventListener('message', handleWebSocketEvent)
+    })
 
     return () => {
-      ws.close()
+      wsCurrent?.close()
     }
   }, [])
-
-  return <></>
 }
 
 export { WebSocketComponent, parseLogMessage }
