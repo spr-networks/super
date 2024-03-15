@@ -60,9 +60,9 @@ const SystemInfo = (props) => {
     return () => clearInterval(interval)
   }, [])
 
-  const updateHostname = (hostname) => {
+  const updateHostname = () => {
     api.put('/info/hostname', hostname)
-    .then(setHostname(hostname))
+    .then(context.success("Updated hostname"))
     .catch((err) => context.error(err.message))
   }
 
@@ -97,7 +97,8 @@ const SystemInfo = (props) => {
                 <Input variant="underlined">
                   <InputField
                     value={hostname}
-                    onChangeText={(hostname) => updateHostname(hostname)}
+                    onChangeText={(v) => setHostname(v)}
+                    onSubmitEditing={(hostname) => updateHostname(hostname)}
                     autoFocus
                   />
                 </Input>
