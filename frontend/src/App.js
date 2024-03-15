@@ -91,6 +91,7 @@ export default function App() {
             //default is .title and .body , websocket data is .Title, .Body, other
             if (alert?.Title) {
               //try parse with context here
+              /*
               let devices = []
               try {
                 let res = await AsyncStorage.getItem('devices')
@@ -117,7 +118,7 @@ export default function App() {
                 }
               } catch (e) {
                 console.error('-- parse fail:', e)
-              }
+              }*/
 
               req.title = alert.Title || 'Alert'
               req.body = alert.Body || 'Empty body'
