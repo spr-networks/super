@@ -146,8 +146,6 @@ const WebSocketComponent = ({ confirm, notify, ...props }) => {
       //console.log('[NOTIFICATION]', JSON.stringify(res))
       let { type, title, body, data } = res
 
-      console.log('NNNN:', res)
-
       if (title == 'StatusCalled') {
         //ignore debug message
         return
