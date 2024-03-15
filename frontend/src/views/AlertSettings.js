@@ -318,26 +318,6 @@ const AlertItemHeader = () => (
   </HStack>
 )
 
-/*
-
-external_router_authenticated.HandleFunc("/alerts_register_ios", registerAlertDevice).Methods("DELETE", "PUT", "GET")
-external_router_authenticated.HandleFunc("/alerts_mobile_proxy", alertsMobileProxySettings).Methods("PUT", "GET")
-
-
-type MobileAlertProxySettings struct {
-	Disabled   bool
-	APNSDomain string
-}
-
-type AlertDevice struct {
-	DeviceId    string
-	DeviceToken string
-	PublicKey   string
-	LastActive  time.Time
-}
-
-*/
-
 const EditAlertSettings = ({ onSubmit, ...props }) => {
   const modalContext = useContext(ModalContext)
   const [proxySettings, setProxySettings] = useState({
@@ -366,9 +346,11 @@ const EditAlertSettings = ({ onSubmit, ...props }) => {
   }
 
   return (
-    <VStack space="lg" flex="">
+    <VStack space="lg">
       <Text>
-        {alertDevices.length} iOS device{alertDevices.length == 1 ? '' : 's'} enrolled
+        {`${alertDevices.length} iOS device${
+          alertDevices.length == 1 ? '' : 's'
+        } enrolled`}
       </Text>
       <FormControl>
         <Checkbox
@@ -598,13 +580,15 @@ const AlertSettings = (props) => {
   return (
     <ScrollView h="$full">
       <ListHeader title="Alert Configuration">
-        <HStack space="sm" marginLeft="auto">
-          <Button variant="outline" action="primary" onPress={handlePressEdit}>
+        <HStack space="sm">
+          <Button
+            size="sm"
+            action="secondary"
+            variant="outline"
+            onPress={handlePressEdit}
+          >
             <ButtonIcon as={SettingsIcon} color="$primary500" />
           </Button>
-        </HStack>
-
-        <HStack space="sm">
           <Button
             size="sm"
             action="secondary"
@@ -617,6 +601,7 @@ const AlertSettings = (props) => {
           <ModalForm
             title="Add Alert"
             triggerText="Add Alert"
+            triggerProps={{ sz: 'sm' }}
             modalRef={refModal}
           >
             <AddAlert curItem={populateItem} onSubmit={onSubmit} />

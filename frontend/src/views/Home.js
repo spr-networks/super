@@ -60,7 +60,7 @@ const Home = (props) => {
     setRefreshing(true)
     setTimeout(() => {
       setRefreshing(false)
-    }, 1)
+    }, 340)
   }, [])
 
   useEffect(() => {

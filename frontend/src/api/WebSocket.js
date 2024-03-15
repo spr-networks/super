@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { deviceAPI } from './Device'
 import { eventTemplate } from 'components/Alerts/AlertUtil'
 
-import { useContext } from 'react'
+import { useContext, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { alertState, AppContext } from 'AppContext'
 
@@ -146,8 +146,6 @@ const WebSocketComponent = ({ confirm, notify, ...props }) => {
       //console.log('[NOTIFICATION]', JSON.stringify(res))
       let { type, title, body, data } = res
 
-      console.log('NNNN:', res)
-
       if (title == 'StatusCalled') {
         //ignore debug message
         return
@@ -168,7 +166,13 @@ const WebSocketComponent = ({ confirm, notify, ...props }) => {
     }
   }
 
-  connectWebsocket(context, handleWebSocketEvent)
+  useEffect(() => {
+    let ws = connectWebsocket(context, handleWebSocketEvent)
+
+    return () => {
+      ws.close()
+    }
+  }, [])
 
   return <></>
 }
