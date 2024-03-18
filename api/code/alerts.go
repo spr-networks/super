@@ -537,8 +537,8 @@ func sendDeviceAlertLocked(device AlertDevice, title string, message string) err
 		}
 	} else {
 		//NOTE we encrypt the json data here to be able to set more stuff in the future
-		alert := apnsproxy.APNSAlert{Title: title, Body: message}
-		jsonValue, _ := json.Marshal(alert)
+		//message is already json string of data to send
+		jsonValue := message
 
 		pubPem, _ := pem.Decode([]byte(device.PublicKey))
 		parsedKey, err := x509.ParsePKIXPublicKey(pubPem.Bytes)
