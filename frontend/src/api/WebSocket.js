@@ -41,14 +41,7 @@ const parseLogMessage = async (context, msg) => {
     data = ''
   } else if (msgType.startsWith('wifi:auth')) {
     if (msgType.includes('success')) {
-      let name = data.MAC
-
-      try {
-        let devices = await deviceAPI.list()
-        let device = devices[data.MAC] || null
-
-        name = device.Name || data.MAC
-      } catch (err) {}
+      let name = context.getDevice(data.MAC)?.Name || data.MAC
 
       type = 'success'
       body = `Authentication success for ${name}`
