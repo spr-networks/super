@@ -48,7 +48,7 @@ export const transformTag = (context, tag, value) => {
 
 export const eventTemplate = (context, template, event) => {
   if (!template || !event) {
-    return null
+    return template
   }
 
   let elements = []
