@@ -109,7 +109,6 @@ export default function App() {
                 }
 
                 const parsed = await parseLogMessage(context, alert)
-
                 if (parsed) {
                   let { type, title, body, data } = parsed
                   //TODO type == confirm
