@@ -219,7 +219,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     }
 
     // error response from api - get error msg instead of status
-    if (typeof body == 'object' && body.response !== undefined) {
+    if (body && typeof body == 'object' && body?.response !== undefined) {
       body.response
         .text()
         .then((data) => {
@@ -230,7 +230,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         })
     } else {
       //handle if react elems or not
-      if (typeof body == 'object' && !body.props) {
+      if (body && typeof body == 'object' && !body?.props) {
         body = body.toString()
       }
 
