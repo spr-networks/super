@@ -87,11 +87,12 @@ export default function App() {
             }
 
             let alert = JSON.parse(jsonData)
+
             //NOTE decrypted alert data is the same format as websocket notifications
             //default is .title and .body , websocket data is .Title, .Body, other
-            if (alert?.Title) {
+            if (alert?.Body) {
+              console.log('++ ok alert:', alert)
               //try parse with context here
-              /*
               let devices = []
               try {
                 let res = await AsyncStorage.getItem('devices')
@@ -108,6 +109,7 @@ export default function App() {
                 }
 
                 const parsed = await parseLogMessage(context, alert)
+
                 if (parsed) {
                   let { type, title, body, data } = parsed
                   //TODO type == confirm
@@ -117,23 +119,21 @@ export default function App() {
                   }
                 }
               } catch (e) {
-                console.error('-- parse fail:', e)
-              }*/
+                console.error('parse fail:', e)
+              }
 
-              req.title = alert.Title || 'Alert'
-              req.body = alert.Body || 'Empty body'
+              //req.title = alert.Title || 'Alert'
+              //req.body = alert.Body || 'Empty body'
             } else {
+              console.log('-- weird/old alert msg:', alert)
               //old version
-              req.title = alert?.title || 'Alert Title'
-              req.body = alert?.body || 'Alert Body'
+              //req.title = alert?.title || 'Alert Title'
+              //req.body = alert?.body || 'Alert Body'
             }
           } catch (err) {
             console.error('Failed to decrypt notification:', err)
             //console.error('ENCRYPTED_DATA=', data.ENCRYPTED_DATA)
           }
-        } else {
-          req.title = 'Unknown notification'
-          req.body = 'Unknown'
         }
 
         if (req.title?.length) {
