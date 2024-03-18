@@ -91,7 +91,7 @@ export default function App() {
             //NOTE decrypted alert data is the same format as websocket notifications
             //default is .title and .body , websocket data is .Title, .Body, other
             if (alert?.Body) {
-              console.log('++ ok alert:', alert)
+              //console.log('++ ok alert:', alert)
               //try parse with context here
               let devices = []
               try {
@@ -114,16 +114,13 @@ export default function App() {
                   let { type, title, body, data } = parsed
                   //TODO type == confirm
                   if (title && body) {
-                    alert.Title = title
-                    alert.Body = body
+                    req.title = title
+                    req.body = body
                   }
                 }
               } catch (e) {
                 console.error('parse fail:', e)
               }
-
-              //req.title = alert.Title || 'Alert'
-              //req.body = alert.Body || 'Empty body'
             } else {
               console.log('-- weird/old alert msg:', alert)
               //old version
