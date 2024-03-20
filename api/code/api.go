@@ -251,16 +251,16 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPut {
 		if name == "hostname" {
 			//rename the host
-			newName := []byte{}
+			newName := ""
 			err := json.NewDecoder(r.Body).Decode(&newName)
 
 			var validHostname = regexp.MustCompile(`^[a-zA-Z0-9-]+$`).MatchString
-			if !validHostname(string(newName)) {
+			if !validHostname(newName) {
 				http.Error(w, "Unsupported hostname", 400)
 				return
 			}
 
-			err = ioutil.WriteFile(HostnameConfigPath, newName, 0600)
+			err = ioutil.WriteFile(HostnameConfigPath, []byte(newName), 0600)
 			if err != nil {
 				http.Error(w, err.Error(), 400)
 			}
