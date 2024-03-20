@@ -1064,22 +1064,23 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 		config.Plugins[idx] = plugin
 	}
 
-	// generate install token
 	if plugin.InstallTokenPath != "" {
-
 		cleanPath := filepath.Clean(plugin.InstallTokenPath)
 		if !strings.HasPrefix(cleanPath, "./config/plugins/") {
-			// Handle the case when the path doesn't start with "./config/plugins"
-			// You can return an error, log a warning, or take appropriate action
 			log.Println("invalid InstallTokenPath")
 			sprbus.Publish("plugin:install:failure", map[string]string{"GitURL": plugin.GitURL, "Reason": "Invalid InstallTokenPath, must start with ./config/plugins/"})
 		} else {
 			token, err := generateOrGetToken(plugin.Name+"-install-token", plugin.ScopedPaths)
 			if err == nil {
-				ioutil.WriteFile(plugin.InstallTokenPath, []byte(token.Token), 0600)
+				err = ioutil.WriteFile(plugin.InstallTokenPath, []byte(token.Token), 0600)
+				if err == nil {
+					sprbus.Publish("plugin:install:status", map[string]string{"GitURL": plugin.GitURL, "Reason": "Installed API token"})
+				} else {
+					sprbus.Publish("plugin:install:failure", map[string]string{"GitURL": plugin.GitURL, "Reason": "Failed to write API token for plugin"})
+				}
 			} else {
 				log.Println("Failed to generate token for plugin")
-				sprbus.Publish("plugin:install:failure", map[string]string{"GitURL": plugin.GitURL, "Reason": "Failed to generate token for plugin"})
+				sprbus.Publish("plugin:install:failure", map[string]string{"GitURL": plugin.GitURL, "Reason": "Failed to generate API token for plugin"})
 			}
 		}
 
@@ -1093,6 +1094,7 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 
 		for _, entry := range curList {
 			if entry == plugin.ComposeFilePath {
+				sprbus.Publish("plugin:install:status", map[string]string{"GitURL": plugin.GitURL, "Reason": "Already in compose whitelist"})
 				return true
 			}
 		}
@@ -1107,5 +1109,6 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 		sprbus.Publish("plugin:install:failure", map[string]string{"GitURL": plugin.GitURL, "Reason": "Failed to add compose file to whitelist"})
 	}
 
+	sprbus.Publish("plugin:install:status", map[string]string{"GitURL": plugin.GitURL, "Reason": "Added to compose whitelist"})
 	return true
 }
