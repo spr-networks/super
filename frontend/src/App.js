@@ -132,6 +132,8 @@ export default function App() {
             }
           } catch (err) {
             console.error('Failed to decrypt notification:', err)
+            req.title = 'Alert error'
+            req.body = '' + err
             //console.error('ENCRYPTED_DATA=', data.ENCRYPTED_DATA)
           }
         }
