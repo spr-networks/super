@@ -108,7 +108,10 @@ export default function App() {
                   }
                 }
 
-                const parsed = await parseLogMessage(context, { Data: alert })
+                const parsed = await parseLogMessage(context, {
+                  Type: 'alert:',
+                  Data: alert
+                })
                 if (parsed) {
                   let { type, title, body, data } = parsed
                   //TODO type == confirm
