@@ -126,7 +126,8 @@ export default function App() {
             } else {
               console.log('-- weird/old alert msg:', alert)
               //old version
-              //req.title = alert?.title || 'Alert Title'
+              req.title = alert?.title || 'Alert Title'
+              req.body = JSON.stringify(alert)
               //req.body = alert?.body || 'Alert Body'
             }
           } catch (err) {
