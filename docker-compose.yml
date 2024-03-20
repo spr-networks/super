@@ -207,6 +207,7 @@ services:
       - ./configs/base/:/configs/base/
       - ./configs/devices/:/configs/devices/
       - ./configs/dns:/configs/dns/
+      - ./configs/plugins/:/configs/plugins/
       - ./configs/ppp:/configs/ppp/
       - ./configs/wifi/:/configs/wifi/
       - ./configs/wifi_uplink/:/configs/wifi_uplink/
