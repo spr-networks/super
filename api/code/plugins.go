@@ -646,6 +646,9 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 		err = json.Unmarshal(data, &plugin)
 		if err == nil {
 			return installUserPluginConfig(plugin)
+		} else {
+			sprbus.Publish("plugin:install:failure", map[string]string{"GitURL": gitURL, "Reason": err.Error()})
+			return false
 		}
 	}
 
@@ -1061,6 +1064,17 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 		config.Plugins[idx] = plugin
 	}
 
+	// generate install token
+	if plugin.InstallTokenPath != "" {
+		token, err := generateOrGetToken(plugin.Name+"-install-token", plugin.ScopedPaths)
+		if err == nil {
+			ioutil.WriteFile(plugin.InstallTokenPath, []byte(token.Token), 0600)
+		} else {
+			log.Println("Failed to generate token for plugin")
+		}
+	}
+
+	// update custom compose allow list
 	curList := []string{}
 	data, err := ioutil.ReadFile(CustomComposeAllowPath)
 	if err == nil {
@@ -1079,15 +1093,6 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 	err = ioutil.WriteFile(CustomComposeAllowPath, file, 0600)
 	if err != nil {
 		log.Println("failed to write custom compose paths configuration", err)
-	}
-
-	if plugin.InstallTokenPath != "" {
-		token, err := generateOrGetToken(plugin.Name+"-install-token", plugin.ScopedPaths)
-		if err == nil {
-			ioutil.WriteFile(plugin.InstallTokenPath, []byte(token.Token), 0600)
-		} else {
-			log.Println("Failed to generate token for plugin")
-		}
 	}
 
 	return true
