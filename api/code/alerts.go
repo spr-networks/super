@@ -804,9 +804,9 @@ func AlertsRunEventListener() {
 
 	busEvent := func(topic string, value string) {
 
-		//wifi:auth events are special, we always send them up the websocket
+		//wifi:auth events and plugin: events are special, we always send them up the websocket
 		// for the UI to react to
-		if strings.HasPrefix(topic, "wifi:auth") {
+		if strings.HasPrefix(topic, "wifi:auth") || strings.HasPrefix(topic, "plugin:") {
 			var data map[string]interface{}
 
 			if err := json.Unmarshal([]byte(value), &data); err != nil {
