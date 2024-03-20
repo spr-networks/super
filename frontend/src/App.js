@@ -127,13 +127,13 @@ export default function App() {
               console.log('-- weird/old alert msg:', alert)
               //old version
               req.title = alert?.title || 'Alert Title'
-              req.body = JSON.stringify(alert)
+              req.body = alert?.body || JSON.stringify(alert)
               //req.body = alert?.body || 'Alert Body'
             }
           } catch (err) {
             console.error('Failed to decrypt notification:', err)
-            req.title = 'Alert error'
-            req.body = '' + err
+            //req.title = 'Alert error'
+            //req.body = '' + err
             //console.error('ENCRYPTED_DATA=', data.ENCRYPTED_DATA)
           }
         }
