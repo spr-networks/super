@@ -645,6 +645,8 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 		plugin := PluginConfig{}
 		err = json.Unmarshal(data, &plugin)
 		if err == nil {
+			//override GitURL
+			plugin.GitURL = gitURL
 			return installUserPluginConfig(plugin)
 		} else {
 			sprbus.Publish("plugin:install:failure", map[string]string{"GitURL": gitURL, "Reason": err.Error()})
@@ -1066,21 +1068,21 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 
 	if plugin.InstallTokenPath != "" {
 		cleanPath := filepath.Clean(plugin.InstallTokenPath)
-		if !strings.HasPrefix(cleanPath, "/config/plugins/") {
+		if !strings.HasPrefix(cleanPath, "/configs/plugins/") {
 			log.Println("invalid InstallTokenPath")
-			sprbus.Publish("plugin:install:failure", map[string]string{"GitURL": plugin.GitURL, "Reason": "Invalid InstallTokenPath, must start with /config/plugins/"})
+			sprbus.Publish("plugin:install:failure", map[string]string{"Name": plugin.Name, "GitURL": plugin.GitURL, "Reason": "Invalid InstallTokenPath, must start with /configs/plugins/"})
 		} else {
 			token, err := generateOrGetToken(plugin.Name+"-install-token", plugin.ScopedPaths)
 			if err == nil {
 				err = ioutil.WriteFile(plugin.InstallTokenPath, []byte(token.Token), 0600)
 				if err == nil {
-					sprbus.Publish("plugin:install:status", map[string]string{"GitURL": plugin.GitURL, "Reason": "Installed API token"})
+					sprbus.Publish("plugin:install:status", map[string]string{"Name": plugin.Name, "GitURL": plugin.GitURL, "Reason": "Installed API token"})
 				} else {
-					sprbus.Publish("plugin:install:failure", map[string]string{"GitURL": plugin.GitURL, "Reason": "Failed to write API token for plugin"})
+					sprbus.Publish("plugin:install:failure", map[string]string{"Name": plugin.Name, "GitURL": plugin.GitURL, "Reason": "Failed to write API token for plugin"})
 				}
 			} else {
 				log.Println("Failed to generate token for plugin")
-				sprbus.Publish("plugin:install:failure", map[string]string{"GitURL": plugin.GitURL, "Reason": "Failed to generate API token for plugin"})
+				sprbus.Publish("plugin:install:failure", map[string]string{"Name": plugin.Name, "GitURL": plugin.GitURL, "Reason": "Failed to generate API token for plugin"})
 			}
 		}
 
