@@ -1066,9 +1066,9 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 
 	if plugin.InstallTokenPath != "" {
 		cleanPath := filepath.Clean(plugin.InstallTokenPath)
-		if !strings.HasPrefix(cleanPath, "./config/plugins/") {
+		if !strings.HasPrefix(cleanPath, "/config/plugins/") {
 			log.Println("invalid InstallTokenPath")
-			sprbus.Publish("plugin:install:failure", map[string]string{"GitURL": plugin.GitURL, "Reason": "Invalid InstallTokenPath, must start with ./config/plugins/"})
+			sprbus.Publish("plugin:install:failure", map[string]string{"GitURL": plugin.GitURL, "Reason": "Invalid InstallTokenPath, must start with /config/plugins/"})
 		} else {
 			token, err := generateOrGetToken(plugin.Name+"-install-token", plugin.ScopedPaths)
 			if err == nil {
