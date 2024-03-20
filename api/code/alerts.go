@@ -380,7 +380,14 @@ func testSendAlertDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = sendDeviceAlertByToken(deviceToken, alert.Title, alert.Body)
+	bytes, err := json.Marshal(alert)
+	if err != nil {
+		log.Println("invalid json for alert", err)
+		return
+	}
+
+	// note title will be within the json body
+	err = sendDeviceAlertByToken(deviceToken, alert.Title, string(bytes))
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -504,6 +511,11 @@ func sendDeviceAlertByToken(deviceToken string, title string, message string) er
 	return fmt.Errorf("could not find device " + deviceToken)
 }
 
+/*
+NOTE if device have a PublicKey title is ignored and message need to be a
+json blob of alert, example: {Title: "", Body: ""}
+PLAIN category is not used.
+*/
 func sendDeviceAlertLocked(device AlertDevice, title string, message string) error {
 	loadMobileProxySettings()
 
