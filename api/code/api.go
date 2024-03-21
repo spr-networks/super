@@ -349,6 +349,7 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 			}
 
 			data = []byte(fmt.Sprintf("%q", hostname))
+			err = nil
 		}
 
 	} else if name == "ss" {
