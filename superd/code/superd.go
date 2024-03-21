@@ -187,7 +187,7 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		// so that it can pick up service:base
 
 		//docker buildkit has introduced a bug with contexts, this is a workaround.
-		args = append(args, "-e", "BUILDCTX=", filepath.Dir(composeFile))
+		args = append(args, "-e", "BUILDCTX="+filepath.Dir(composeFile))
 
 		args = append(args, "-f", defaultCompose, "-f", composeFile, command)
 	} else {
