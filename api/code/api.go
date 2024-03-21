@@ -338,7 +338,7 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 		defer resp.Body.Close()
 		data, err = ioutil.ReadAll(resp.Body)
 	} else if name == "hostname" {
-		data, err := ioutil.ReadFile(HostnameConfigPath)
+		data, err = ioutil.ReadFile(HostnameConfigPath)
 		if err == nil && len(data) > 0 {
 			//accept from hostname config path instead
 		} else {
@@ -351,14 +351,6 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 			data = []byte(fmt.Sprintf("%q", hostname))
 			err = nil
 		}
-
-		//and json encode the hostname
-		data, err = json.Marshal(string(data))
-		if err != nil {
-			http.Error(w, err.Error(), 400)
-			return
-		}
-
 	} else if name == "ss" {
 		data, err = exec.Command("jc", "-p", "ss", "-4", "-n").Output()
 	} else {
