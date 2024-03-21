@@ -49,7 +49,6 @@ const parseLogMessage = async (context, msg) => {
       let wpaTypes = { sae: 'WPA3', wpa: 'WPA2' },
         wpaType = wpaTypes[data.Type] || data.Type,
         reasonString = 'unknown'
-
       if (data.Reason == 'noentry') {
         reasonString = `Unknown device with ${wpaType}`
       } else if (data.Reason == 'mismatch') {
@@ -57,6 +56,24 @@ const parseLogMessage = async (context, msg) => {
       }
 
       body = `Authentication failure for MAC ${data.MAC}: ${reasonString}`
+    }
+  } else if (msgType.startsWith('plugin:')) {
+    type = 'warning'
+    switch(msgType) {
+      case 'plugin:download:success':
+        type = 'success'
+        body = `Successfully downloaded ${data.GitURL}`
+        break
+      case 'plugin:download:exists':
+        type = 'info'
+        body = `Found existing download for ${data.GitURL}`
+        break
+      case 'plugin:download:failure':
+        body = `Failed to download ${data.GitURL}`
+        break
+      case 'plugin:install:failure':
+        body = `Failed to install ${data.GitURL} ${msgType}`
+        break
     }
   } else if (msgType.startsWith('nft')) {
     // data.Action ==  allowed || blocked

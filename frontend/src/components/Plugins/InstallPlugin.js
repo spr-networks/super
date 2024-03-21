@@ -72,7 +72,20 @@ const InstallPlugin = ({ ...props }) => {
         setIsRunning(false)
       })
       .catch((err) => {
-        context.error(`API Error: ${err}`)
+        if (err.response) {
+          err.response
+            .text()
+            .then((data) => {
+              if (data.includes('Invalid JWT')) {
+                context.error(`One Time Passcode Authentication Required, failure: ${data}`)
+              } else {
+                context.error(`Check Plugin URL: ${data}`)
+              }
+            }
+          )
+        } else {
+          context.error(`API Error`, err)          
+        }
       })
 
     //context.success(`TODO, Plugin parsed... build it`)

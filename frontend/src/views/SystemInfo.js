@@ -39,18 +39,17 @@ const SystemInfo = (props) => {
       api
         .get('/info/uptime')
         .then(setUptime)
-        .catch((err) => context.error(err))
+        .catch((err) => context.error("/info/uptime failed", err))
 
       api
         .get('/info/hostname')
         .then(setHostname)
-
-        .catch((err) => context.error(err))
+        .catch((err) => context.error("/info/hostname failed", err))
 
       api
         .get('/version')
         .then(setVersion)
-        .catch((err) => context.error(err))
+        .catch((err) => context.error("/version failed", err))
     }
 
     fetchInfo()
@@ -63,7 +62,7 @@ const SystemInfo = (props) => {
   const updateHostname = () => {
     api.put('/info/hostname', hostname)
     .then(context.success("Updated hostname"))
-    .catch((err) => context.error(err.message))
+    .catch((err) => context.error("hostname update", err))
   }
 
   const niceKey = (key) => ucFirst(key.replace(/_/, ' ').replace(/m$/, ' min'))
