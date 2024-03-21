@@ -260,7 +260,8 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			err = ioutil.WriteFile(HostnameConfigPath, []byte(newName), 0600)
+			encoded := []byte(fmt.Sprintf("%q", hostname))
+			err = ioutil.WriteFile(HostnameConfigPath, encoded, 0600)
 			if err != nil {
 				http.Error(w, err.Error(), 400)
 			}
