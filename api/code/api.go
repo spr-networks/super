@@ -352,6 +352,13 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 			err = nil
 		}
 
+		//and json encode the hostname
+		data, err = json.Marshal(string(data))
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
 	} else if name == "ss" {
 		data, err = exec.Command("jc", "-p", "ss", "-4", "-n").Output()
 	} else {
