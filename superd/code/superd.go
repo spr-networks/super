@@ -185,6 +185,10 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 	if composeFileIN != "" && composeFile != getDefaultCompose() && isVirtual() {
 		//we need to add the default in for virtual mode
 		// so that it can pick up service:base
+
+		//docker buildkit has introduced a bug with contexts, this is a workaround.
+		args = append(args, "-e", "BUILDCTX", filepath.Dir(composeFile))
+
 		args = append(args, "-f", defaultCompose, "-f", composeFile, command)
 	} else {
 		args = append(args, "-f", composeFile, command)
@@ -264,6 +268,7 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 	if err != nil {
 		argS := fmt.Sprintf(cmd + " " + strings.Join(args, " "))
 		fmt.Println("failure: " + err.Error() + " |" + argS)
+		//tbd good place for a sprbus event
 	}
 
 }
