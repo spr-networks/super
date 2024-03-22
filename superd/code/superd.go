@@ -33,6 +33,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+import (
+	"github.com/spr-networks/sprbus"
+)
+
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
 var UserAddons = "plugins/user"
@@ -272,8 +276,11 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 	_, err = exec.Command(cmd, args...).Output()
 	if err != nil {
 		argS := fmt.Sprintf(cmd + " " + strings.Join(args, " "))
-		fmt.Println("failure: " + err.Error() + " |" + argS)
+		errString := err.Error() + " |" + argS
+		fmt.Println("failure: " + errString)
 		//tbd good place for a sprbus event
+		sprbus.Publish("plugin:docker:failure", map[string]string{"Reason": "docker command failed", "Message": errString, "ComposeFile": composeFileIN})
+
 	}
 
 }
