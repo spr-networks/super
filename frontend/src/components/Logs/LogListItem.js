@@ -148,7 +148,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
   }
 
   let remoteIP = 'no'
-  if (item.Remote) {
+  if (item?.Remote) {
     remoteIP = item.Remote.split(':')[0]
   }
 
@@ -573,6 +573,8 @@ const LogListItem = ({
       onPress('json', v)
     }
   }
+
+  if (!item) return <></>
 
   return (
     <ListItem
