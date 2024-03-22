@@ -110,7 +110,8 @@ export default function App() {
 
                 const parsed = await parseLogMessage(context, {
                   Type: 'alert:',
-                  Data: alert
+                  NotificationType: 'info',
+                  Data: JSON.stringify(alert)
                 })
                 if (parsed) {
                   let { type, title, body, data } = parsed
@@ -124,16 +125,16 @@ export default function App() {
                 console.error('parse fail:', e)
               }
             } else {
-              console.log('-- weird/old alert msg:', alert)
+              //console.log('-- weird/old alert msg:', alert)
               //old version
-              req.title = alert?.title || 'Alert Title'
-              req.body = alert?.body || JSON.stringify(alert)
+              req.title = alert?.title || 'Alert'
+              req.body = alert?.body || alert?.Body || JSON.stringify(alert)
               //req.body = alert?.body || 'Alert Body'
             }
           } catch (err) {
-            console.error('Failed to decrypt notification:', err)
-            //req.title = 'Alert error'
-            //req.body = '' + err
+            //console.error('Failed to decrypt notification:', err)
+            req.title = 'Alert error'
+            req.body = '' + err
             //console.error('ENCRYPTED_DATA=', data.ENCRYPTED_DATA)
           }
         }
