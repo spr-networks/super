@@ -447,14 +447,7 @@ func alertsMobileProxySettings(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(gMobileAlertProxySettings)
 }
 
-func APNSNotify(msg_type string, data interface{}) {
-
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		log.Println("invalid json for APNS event", err)
-		return
-	}
-
+func APNSNotify(msg_type string, data string) {
 	AlertDevicesmtx.RLock()
 	defer AlertDevicesmtx.RUnlock()
 	ProxySettingsmtx.RLock()
@@ -476,7 +469,7 @@ func APNSNotify(msg_type string, data interface{}) {
 	}
 
 	for _, entry := range gAlertDevices {
-		err = sendDeviceAlertLocked(entry, msg_type, string(bytes))
+		err := sendDeviceAlertLocked(entry, msg_type, data)
 		if err != nil {
 			log.Println("Failed to send event", err, "to", entry.DeviceId)
 		}
