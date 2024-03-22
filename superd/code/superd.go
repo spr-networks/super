@@ -182,12 +182,13 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 
 	}
 
+	add_buildctx := ""
 	if composeFileIN != "" && composeFile != getDefaultCompose() && isVirtual() {
 		//we need to add the default in for virtual mode
 		// so that it can pick up service:base
 
 		//docker buildkit has introduced a bug with contexts, this is a workaround.
-		args = append(args, "-e", "BUILDCTX="+filepath.Dir(composeFile))
+		add_buildctx = "BUILDCTX=" + filepath.Dir(composeFile)
 
 		args = append(args, "-f", defaultCompose, "-f", composeFile, command)
 	} else {
@@ -223,6 +224,10 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 			"-v", "/var/run/docker.sock:/var/run/docker.sock",
 			"-w", superdir,
 			"-e", "SUPERDIR="+superdir)
+
+		if add_buildctx != "" {
+			d_args = append(d_args, "-e", add_buildctx)
+		}
 
 		if release_channel != "" {
 			d_args = append(d_args, "-e", "RELEASE_CHANNEL="+release_channel)
