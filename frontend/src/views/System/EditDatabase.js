@@ -163,7 +163,8 @@ const EditDatabase = ({ onSubmit, ...props }) => {
     'wifi:',
     'dhcp:',
     'dns:serve',
-    'auth:failure'
+    'auth:failure',
+    'plugin:'
   ]
   const apiError = (err) => context.error('db api error:', err)
 

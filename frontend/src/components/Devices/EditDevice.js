@@ -322,7 +322,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         })
         .then(notifyChange)
         .catch((err) => {
-          context.error(`update device failed: ${err}`)
+          context.error(`update device failed:`, err)
         })
     }
 

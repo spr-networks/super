@@ -251,16 +251,17 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPut {
 		if name == "hostname" {
 			//rename the host
-			newName := []byte{}
+			newName := ""
 			err := json.NewDecoder(r.Body).Decode(&newName)
 
 			var validHostname = regexp.MustCompile(`^[a-zA-Z0-9-]+$`).MatchString
-			if !validHostname(string(newName)) {
+			if !validHostname(newName) {
 				http.Error(w, "Unsupported hostname", 400)
 				return
 			}
 
-			err = ioutil.WriteFile(HostnameConfigPath, newName, 0600)
+			encoded := []byte(fmt.Sprintf("%q", newName))
+			err = ioutil.WriteFile(HostnameConfigPath, encoded, 0600)
 			if err != nil {
 				http.Error(w, err.Error(), 400)
 			}
@@ -338,19 +339,19 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 		defer resp.Body.Close()
 		data, err = ioutil.ReadAll(resp.Body)
 	} else if name == "hostname" {
-		data, err := ioutil.ReadFile(HostnameConfigPath)
+		data, err = ioutil.ReadFile(HostnameConfigPath)
 		if err == nil && len(data) > 0 {
 			//accept from hostname config path instead
 		} else {
-			hostname, err := os.Hostname()
-			if err != nil {
+			hostname, err2 := os.Hostname()
+			if err2 != nil {
 				http.Error(w, err.Error(), 400)
 				return
 			}
 
 			data = []byte(fmt.Sprintf("%q", hostname))
+			err = nil
 		}
-
 	} else if name == "ss" {
 		data, err = exec.Command("jc", "-p", "ss", "-4", "-n").Output()
 	} else {

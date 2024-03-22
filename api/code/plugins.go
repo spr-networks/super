@@ -645,7 +645,12 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 		plugin := PluginConfig{}
 		err = json.Unmarshal(data, &plugin)
 		if err == nil {
+			//override GitURL
+			plugin.GitURL = gitURL
 			return installUserPluginConfig(plugin)
+		} else {
+			sprbus.Publish("plugin:install:failure", map[string]string{"GitURL": gitURL, "Reason": err.Error()})
+			return false
 		}
 	}
 
@@ -1061,6 +1066,29 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 		config.Plugins[idx] = plugin
 	}
 
+	if plugin.InstallTokenPath != "" {
+		cleanPath := filepath.Clean(plugin.InstallTokenPath)
+		if !strings.HasPrefix(cleanPath, "/configs/plugins/") {
+			log.Println("invalid InstallTokenPath")
+			sprbus.Publish("plugin:install:failure", map[string]string{"Name": plugin.Name, "GitURL": plugin.GitURL, "Reason": "Invalid InstallTokenPath, must start with /configs/plugins/"})
+		} else {
+			token, err := generateOrGetToken(plugin.Name+"-install-token", plugin.ScopedPaths)
+			if err == nil {
+				err = ioutil.WriteFile(plugin.InstallTokenPath, []byte(token.Token), 0600)
+				if err == nil {
+					sprbus.Publish("plugin:install:status", map[string]string{"Name": plugin.Name, "GitURL": plugin.GitURL, "Reason": "Installed API token"})
+				} else {
+					sprbus.Publish("plugin:install:failure", map[string]string{"Name": plugin.Name, "GitURL": plugin.GitURL, "Reason": "Failed to write API token for plugin"})
+				}
+			} else {
+				log.Println("Failed to generate token for plugin")
+				sprbus.Publish("plugin:install:failure", map[string]string{"Name": plugin.Name, "GitURL": plugin.GitURL, "Reason": "Failed to generate API token for plugin"})
+			}
+		}
+
+	}
+
+	// update custom compose allow list
 	curList := []string{}
 	data, err := ioutil.ReadFile(CustomComposeAllowPath)
 	if err == nil {
@@ -1068,6 +1096,7 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 
 		for _, entry := range curList {
 			if entry == plugin.ComposeFilePath {
+				sprbus.Publish("plugin:install:status", map[string]string{"GitURL": plugin.GitURL, "Reason": "Already in compose whitelist"})
 				return true
 			}
 		}
@@ -1079,16 +1108,9 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 	err = ioutil.WriteFile(CustomComposeAllowPath, file, 0600)
 	if err != nil {
 		log.Println("failed to write custom compose paths configuration", err)
+		sprbus.Publish("plugin:install:failure", map[string]string{"GitURL": plugin.GitURL, "Reason": "Failed to add compose file to whitelist"})
 	}
 
-	if plugin.InstallTokenPath != "" {
-		token, err := generateOrGetToken(plugin.Name+"-install-token", plugin.ScopedPaths)
-		if err == nil {
-			ioutil.WriteFile(plugin.InstallTokenPath, []byte(token.Token), 0600)
-		} else {
-			log.Println("Failed to generate token for plugin")
-		}
-	}
-
+	sprbus.Publish("plugin:install:status", map[string]string{"GitURL": plugin.GitURL, "Reason": "Added to compose whitelist"})
 	return true
 }

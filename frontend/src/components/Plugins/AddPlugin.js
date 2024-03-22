@@ -51,7 +51,9 @@ const AddPlugin = (props) => {
           props.notifyChange('plugin')
         }
       })
-      .catch((err) => contextType.error(`API Error: ${err}`))
+      .catch((err) => {
+        contextType.error(`XX API Error:`, err)
+      })
   }
 
   return (
