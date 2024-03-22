@@ -48,6 +48,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./configs/base/:/configs/base/
+      - ./state/api/eventbus.sock:/state/api/eventbus.sock
       - ./:/super/
   dhcp:
     container_name: superdhcp
