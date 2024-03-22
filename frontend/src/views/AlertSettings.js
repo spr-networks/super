@@ -47,6 +47,7 @@ import {
 } from 'lucide-react-native'
 
 import { copy } from 'utils'
+import { useNavigate } from 'react-router-native'
 
 const alertTemplates = [
   {
@@ -410,6 +411,8 @@ const AlertSettings = (props) => {
   const [topics, setTopics] = useState([])
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
+  const navigate = useNavigate()
+
   //TBD: this will be replaced with alert: and mock_alerts will not wrap
   const AlertPrefix = 'nft:'
 
@@ -498,9 +501,10 @@ const AlertSettings = (props) => {
   }
 
   const onEdit = (index, item) => {
-    setItemIndex(index)
+    navigate(`/admin/alerts/${index}`)
+    /*setItemIndex(index)
     //preopulate the modal somehow
-    refModal.current()
+    refModal.current()*/
   }
 
   const onSubmit = (item) => {

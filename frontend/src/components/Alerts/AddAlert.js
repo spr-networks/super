@@ -20,12 +20,15 @@ import {
   TextareaInput,
   TrashIcon,
   AddIcon,
-  CheckIcon
+  CheckIcon,
+  Badge,
+  BadgeText
 } from '@gluestack-ui/themed'
 
 import { Select } from 'components/Select'
 import FilterInputSelect from 'components/Logs/FilterInputSelect'
 import { prettyJSONPath, prettyToJSONPath } from 'components/Logs/FilterSelect'
+import { ItemMenu } from 'components/TagMenu'
 
 import { dbAPI } from 'api'
 import { CheckCircle2Icon, Settings2Icon } from 'lucide-react-native'
@@ -61,6 +64,8 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
   const [notificationType, setNotificationType] = useState('info')
   const [Name, setName] = useState('Alert')
 
+  const [showAdvanced, setShowAdvanced] = useState(false)
+
   //only one action is supported now. in the future we will implement
   // different action types, for example, disconnecting a device.
   const [GrabFields, setGrabFields] = useState([])
@@ -82,6 +87,8 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
       return
     }
 
+    setShowAdvanced(true)
+
     //populate the modal from it
     setName(curItem.Name)
     setTopicPrefix(curItem.TopicPrefix)
@@ -97,13 +104,14 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
       setConditions(conditions)
     }
     setDisabled(curItem.Disabled)
-    if (curItem.GrabFields) {
-      setGrabFields(curItem.GrabFields)
-    }
+
     //only one action supported currently
     if (curItem.Actions) {
       setActionConfig({ ...curItem.Actions[0] })
       setNotificationType(curItem.Actions[0].NotificationType)
+      if (curItem.Actions[0]?.GrabFields) {
+        setGrabFields(curItem.Actions[0]?.GrabFields)
+      }
     }
   }, [curItem])
 
@@ -197,8 +205,6 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
     newGrabFields[index] = value
     setGrabFields(newGrabFields)
   }
-
-  const [showAdvanced, setShowAdvanced] = useState(false)
 
   return (
     <VStack space="md">
@@ -462,11 +468,37 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
         </HStack>
 
         <VStack space="md" display={ActionConfig.GrabEvent ? 'none' : 'flex'}>
-          <VStack space="md">
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText size="sm">
+                Event Fields
+              </FormControlLabelText>
+            </FormControlLabel>
+
+            <HStack space="md" alignItems="center">
+              <HStack space="sm">
+                {GrabFields.map((field, index) => (
+                  <Badge action="muted" variant="outline">
+                    <BadgeText>{field}</BadgeText>
+                  </Badge>
+                ))}
+              </HStack>
+              <ItemMenu
+                type="Event Field"
+                items={GrabFields}
+                selectedKeys={GrabFields}
+                onSelectionChange={(items) => {
+                  setGrabFields([...items])
+                }}
+              />
+            </HStack>
+          </FormControl>
+
+          {/*<VStack space="md">
             {GrabFields.map((field, index) => (
               <FormControl key={index}>
-                <FormControlLabel>
-                  <FormControlLabelText size="sm">
+              <FormControlLabel>
+              <FormControlLabelText size="sm">
                     Field Name
                   </FormControlLabelText>
                 </FormControlLabel>
@@ -502,6 +534,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
             <ButtonText>Add Field to copy from Event</ButtonText>
             <ButtonIcon as={AddIcon} mr="$2" />
           </Button>
+          */}
         </VStack>
       </VStack>
 
