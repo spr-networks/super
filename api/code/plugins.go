@@ -164,9 +164,7 @@ func PluginProxy(config PluginConfig) (*httputil.ReverseProxy, error) {
 func PluginRequestHandler(proxy *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rest := mux.Vars(r)["rest"]
-		if rest != "" {
-			r.URL.Path = "/" + rest
-		}
+		r.URL.Path = "/" + rest
 		proxy.ServeHTTP(w, r)
 	}
 }
