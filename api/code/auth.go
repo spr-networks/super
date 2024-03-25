@@ -164,15 +164,26 @@ func scopedPathMatch(method string, pathToMatch string, paths []string) bool {
 	for _, entry := range paths {
 		parts := strings.Split(entry, ":")
 		if len(parts) > 1 {
-			if parts[1] == "r" && method != http.MethodGet {
-				return false
+			if !strings.HasPrefix(pathToMatch, parts[0]) {
+				//prefix did not match, carry on
+				continue
 			}
-			entry = parts[0]
-		}
-		if strings.HasPrefix(pathToMatch, entry) {
-			return true
+			if parts[1] == "r" && method == http.MethodGet {
+				return true
+			} else if parts[1] == "r" {
+				//wrong method. skip
+				continue
+			}
+			//this falls through into failure.
+			// :r is the only one that is valid right now
+			// so we can ignore the others
+		} else {
+			if strings.HasPrefix(pathToMatch, entry) {
+				return true
+			}
 		}
 	}
+	//no positive match
 	return false
 }
 
