@@ -22,7 +22,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
-import { GroupItem, TagItem } from 'components/TagItem'
+import { PolicyItem, GroupItem, TagItem } from 'components/TagItem'
 
 const ContainerInterfaceRulesList = (props) => {
   let list = props.list || []
@@ -118,6 +118,13 @@ const ContainerInterfaceRulesList = (props) => {
               <Text flex={1}>{item.SrcIP}</Text>
               <Text flex={1}>{item.RouteDst}</Text>
             </VStack>
+            <HStack flex={1} space="sm">
+              {item.Policies
+                ? item.Policies.map((entry) => (
+                    <PolicyItem key={entry} name={entry} />
+                  ))
+                : null}
+            </HStack>
             <HStack flex={1} space="sm">
               {item.Groups
                 ? item.Groups.map((entry) => (
