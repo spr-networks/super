@@ -646,22 +646,30 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if CIDRorIP(crule.SrcIP) != nil {
-		http.Error(w, "Invalid SrcIP", 400)
+	doDelete := r.Method == http.MethodDelete
+	err = modifyCustomInterfaceRulesImpl(crule, doDelete)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
 		return
+	}
+
+}
+
+func modifyCustomInterfaceRulesImpl(crule CustomInterfaceRule, doDelete bool) error {
+
+	if CIDRorIP(crule.SrcIP) != nil {
+		return fmt.Errorf("Invalid SrcIP")
 	}
 
 	if crule.RouteDst != "" {
 		ip := net.ParseIP(crule.RouteDst)
 		if ip == nil {
-			http.Error(w, "invalid RouteDst ", 400)
-			return
+			return fmt.Errorf("Invalid RouteDst")
 		}
 	}
 
 	if !isValidIface(crule.Interface) {
-		http.Error(w, "Invalid Interface", 400)
-		return
+		return fmt.Errorf("Invalid Interface")
 	}
 
 	//we accept them, but they are not useful for now
@@ -670,26 +678,24 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 
 	if len(crule.Tags) > 0 {
 		if strings.Contains(crule.SrcIP, "/") {
-			http.Error(w, "Tags not yet supported with SrcIP ranges ", 400)
-			return
+			return fmt.Errorf("Tags not yet supported with SrcIP ranges")
 		}
 	}
 
-	if r.Method == http.MethodDelete {
+	if doDelete {
 		for i := range gFirewallConfig.CustomInterfaceRules {
 			a := gFirewallConfig.CustomInterfaceRules[i]
 			if crule.Equals(&a) {
 				gFirewallConfig.CustomInterfaceRules = append(gFirewallConfig.CustomInterfaceRules[:i], gFirewallConfig.CustomInterfaceRules[i+1:]...)
 				saveFirewallRulesLocked()
-				err = applyCustomInterfaceRule(a, "delete", true)
+				err := applyCustomInterfaceRule(a, "delete", true)
 				if err != nil {
-					http.Error(w, err.Error(), 400)
+					return err
 				}
-				return
+				return nil
 			}
 		}
-		http.Error(w, "Not found", 404)
-		return
+		return fmt.Errorf("Not found")
 	}
 
 	//lastly, check for duplicates on RouteDst, SrcIP, interface name
@@ -698,14 +704,14 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 		if crule.SrcIP == current.SrcIP &&
 			crule.RouteDst == current.RouteDst &&
 			crule.Interface == current.Interface {
-			http.Error(w, "Duplicate rule", 400)
-			return
+			return fmt.Errorf("Duplicate rule")
 		}
 	}
 
 	gFirewallConfig.CustomInterfaceRules = append(gFirewallConfig.CustomInterfaceRules, crule)
 	saveFirewallRulesLocked()
 	applyFirewallRulesLocked()
+	return nil
 }
 
 func deleteBlock(br BlockRule) error {

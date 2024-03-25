@@ -35,22 +35,23 @@ var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
 var CustomComposeAllowPath = TEST_PREFIX + "/configs/base/custom_compose_paths.json"
 
 type PluginConfig struct {
-	Name             string
-	URI              string
-	UnixPath         string
-	Enabled          bool
-	Plus             bool
-	GitURL           string
-	ComposeFilePath  string
-	HasUI            bool
-	SandboxedUI      bool
-	InstallTokenPath string
-	ScopedPaths      []string
+	Name                string
+	URI                 string
+	UnixPath            string
+	Enabled             bool
+	Plus                bool
+	GitURL              string
+	ComposeFilePath     string
+	HasUI               bool
+	SandboxedUI         bool
+	InstallTokenPath    string
+	ScopedPaths         []string
+	CustomInterfaceRule CustomInterfaceRule
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
-	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, "", []string{}},
-	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, false, "", []string{}},
+	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, "", []string{}, CustomInterfaceRule{}},
+	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, false, "", []string{}, CustomInterfaceRule{}},
 }
 
 var gPluginTemplates = []PluginConfig{
@@ -1083,7 +1084,13 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 				sprbus.Publish("plugin:install:failure", map[string]string{"Name": plugin.Name, "GitURL": plugin.GitURL, "Reason": "Failed to generate API token for plugin"})
 			}
 		}
+	}
 
+	if plugin.CustomInterfaceRule.Interface != "" {
+		err := modifyCustomInterfaceRulesImpl(plugin.CustomInterfaceRule, false)
+		if err != nil {
+			sprbus.Publish("plugin:install:warning", map[string]string{"Name": plugin.Name, "GitURL": plugin.GitURL, "Reason": "Failed to program interface rule " + err.Error()})
+		}
 	}
 
 	// update custom compose allow list
