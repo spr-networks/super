@@ -38,6 +38,7 @@ import AuthValidate from 'views/AuthValidate'
 import SystemInfo from 'views/SystemInfo'
 import Alerts from 'views/Alerts'
 import AlertSettings from 'views/AlertSettings'
+import AddAlert from 'views/Alerts/AddAlert'
 import SpeedTest from 'views/SpeedTest'
 import Supernetworks from 'views/Supernetworks'
 
@@ -322,6 +323,13 @@ const routes = [
         name: 'Alerts Configuration',
         icon: Settings2Icon,
         component: AlertSettings,
+        layout: 'admin'
+      },
+      {
+        name: 'Alert',
+        path: 'alerts/:id',
+        component: AddAlert,
+        hidden: true,
         layout: 'admin'
       },
       {

@@ -65,6 +65,7 @@ type DeviceEntry struct {
 	VLANTag  string
 	RecentIP string
 	//PSKEntry       PSKEntry // not used by proxy
+	Policies      []string
 	Groups        []string
 	DeviceTags    []string
 	DHCPFirstTime string

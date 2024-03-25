@@ -43,6 +43,7 @@ services:
     logging: *default-logging
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./state/api/eventbus.sock:/state/api/eventbus.sock
       - ./configs/base/:/configs/base/
       - ./:/super/
   dhcp:
@@ -207,6 +208,7 @@ services:
       - ./configs/base/:/configs/base/
       - ./configs/devices/:/configs/devices/
       - ./configs/dns:/configs/dns/
+      - ./configs/plugins/:/configs/plugins/
       - ./configs/ppp:/configs/ppp/
       - ./configs/wifi/:/configs/wifi/
       - ./configs/wifi_uplink/:/configs/wifi_uplink/
@@ -259,7 +261,7 @@ services:
     volumes:
       - ./state/api/:/state/api/
       - ./state/plugins/packet_logs/:/state/plugins/packet_logs
-      - ./configs/base/:/configs/base/
+      - ./configs/base/:/configs/base/:ro
       - /dev/log:/dev/log
   db:
     container_name: superdb
@@ -276,7 +278,7 @@ services:
       - "api"
     logging: *default-logging
     volumes:
-      - ./configs/base/:/configs/base/
+      - ./configs/base/:/configs/base/:ro
       - ./configs/db/:/configs/db/
       - ./state/api/:/state/api/
       - ./state/plugins/db/:/state/plugins/db/

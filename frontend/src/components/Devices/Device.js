@@ -32,7 +32,7 @@ import {
 
 import { Address4 } from 'ip-address'
 
-import { TagItem, GroupItem } from 'components/TagItem'
+import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
 import IconItem from 'components/IconItem'
 import {
   EyeIcon,
@@ -148,13 +148,20 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(device.Name)
   const [ip, setIP] = useState(device.RecentIP)
+  const [policies, setPolicies] = useState(device.Policies?.sort() || [])
   const [groups, setGroups] = useState(device.Groups.sort())
   const [tags, setTags] = useState(device.DeviceTags.sort())
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState('')
   const navigate = useNavigate()
 
-  const defaultGroups = props.groups || ['wan', 'dns', 'lan']
+  const defaultPolicies = props.policies || [
+    'wan',
+    'dns',
+    'lan',
+    'lan_upstream'
+  ]
+  const defaultGroups = props.groups || []
   const defaultTags = props.tags || []
 
   const handleGroups = (groups) => {
@@ -166,6 +173,20 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
 
     deviceAPI
       .updateGroups(device.MAC || device.WGPubKey, groups)
+      .catch((error) =>
+        this.context.error('[API] updateDevice error: ' + error.message)
+      )
+  }
+
+  const handlePolicies = (policies) => {
+    if (!device.MAC && !device.WGPubKey) {
+      return
+    }
+
+    setPolicies([...new Set(policies.filter((v) => typeof v === 'string'))])
+
+    deviceAPI
+      .updatePolicies(device.MAC || device.WGPubKey, policies)
       .catch((error) =>
         this.context.error('[API] updateDevice error: ' + error.message)
       )
@@ -306,7 +327,9 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
   const handleSubmitNew = (value) => {
     if (modalType.match(/Group/i)) {
       handleGroups(groups.concat(value))
-    } else {
+    } else if (modalType.match(/Policy/i)) {
+      handlePolicies(policies.concat(value))
+    } else if (modalType.match(/Tag/i)) {
       handleTags(tags.concat(value))
     }
   }
@@ -530,6 +553,10 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
             alignItems="flex-start"
             sx={{ '@md': { w: '$2/5', alignSelf: 'center' } }}
           >
+            {policies.map((policy) => (
+              <PolicyItem key={policy} name={policy} />
+            ))}
+
             {groups.map((group) => (
               <GroupItem key={group} name={group} />
             ))}
@@ -555,7 +582,8 @@ Device.propTypes = {
   device: PropTypes.object.isRequired,
   showMenu: PropTypes.bool,
   groups: PropTypes.array,
-  tags: PropTypes.array
+  tags: PropTypes.array,
+  policies: PropTypes.array
 }
 
 export default Device

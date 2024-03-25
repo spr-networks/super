@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Dimensions, Platform, SafeAreaView } from 'react-native'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -13,16 +13,8 @@ import {
 } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Sidebar from 'components/Sidebar/Sidebar'
-import WebSocketComponent from 'api/WebSocket'
-import {
-  api,
-  deviceAPI,
-  meshAPI,
-  pfwAPI,
-  pluginAPI,
-  wifiAPI,
-  setAuthReturn
-} from 'api'
+import { WebSocketComponent } from 'api/WebSocket'
+import { api, deviceAPI, meshAPI, pfwAPI, pluginAPI, wifiAPI } from 'api'
 import { ucFirst } from 'utils'
 
 import {
@@ -59,6 +51,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import CustomPluginView from 'views/CustomPlugin'
+import DeviceInfo from 'DeviceInfo'
 
 //NOTE Slice transition for Alerts not available in gluestack-ui
 
@@ -226,7 +219,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     }
 
     // error response from api - get error msg instead of status
-    if (typeof body == 'object' && body.response !== undefined) {
+    if (body && typeof body == 'object' && body?.response !== undefined) {
       body.response
         .text()
         .then((data) => {
@@ -236,6 +229,11 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           alertFunc(type, title, JSON.stringify(body))
         })
     } else {
+      //handle if react elems or not
+      if (body && typeof body == 'object' && !body?.props) {
+        body = body.toString()
+      }
+
       alertFunc(type, title, body)
     }
   }
@@ -309,6 +307,11 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           ]
           setGroups(uniqueGroups)
           resolve(Object.values(devices_))
+          //store version in asyncstore for cache in notification handler
+          AsyncStorage.setItem(
+            'devices',
+            JSON.stringify(Object.values(devices_))
+          )
         })
         .catch(reject)
     })
@@ -485,23 +488,13 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       }
     }
 
-    let notificationArgs = {}
+    // store info if ios
     if (Platform.OS == 'ios') {
-      //for ios we get an event - no callback
-      //this function is called when user clicks a local notification
-      notificationArgs.onLocalNotification = (notification) => {
-        const userInfo = notification.getData() //=userInfo
-        const isClicked = userInfo.userInteraction === 1
-        const action = notification.getActionIdentifier() // open, allow, deny
-        const { data } = userInfo
-        confirmTrafficAction(action, data)
-      }
-    }
+      DeviceInfo.saveDeviceInfo()
+    } else if (Platform.OS == 'web') {
+      //Notifications.init({})
 
-    Notifications.init(notificationArgs)
-
-    // add routes with plugins on web
-    if (Platform.OS == 'web') {
+      // add routes with plugins on web
       registerPluginRoutes()
     }
   }, [])

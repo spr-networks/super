@@ -37,8 +37,8 @@ const TagItem = React.memo(({ name, size, ...props }) => {
   )
 })
 
-const GroupItem = React.memo(({ name, size }) => {
-  let groupIcons = {
+const PolicyItem = React.memo(({ name, size }) => {
+  let policyIcons = {
     wan: Globe2Icon,
     dns: GlobeIcon,
     lan: RouteIcon //NetworkIcon is crammed
@@ -46,15 +46,39 @@ const GroupItem = React.memo(({ name, size }) => {
 
   let colorMode = useColorMode()
 
-  let groupColors = {
+  let policyColors = {
     dns: colorMode == 'light' ? '$blueGray200' : '$blueGray700',
     lan: colorMode == 'light' ? '$blueGray100' : '$blueGray600',
     wan: colorMode == 'light' ? '$blueGray200' : '$blueGray700'
   }
 
-  let icon = groupIcons[name] || UsersIcon
-  let bg = groupColors[name] || '$muted200'
+  let icon = policyIcons[name] || UsersIcon
+  let bg = policyColors[name] || '$muted200'
   let fg = colorMode == 'light' ? '$muted800' : '$muted100'
+
+  return (
+    <Badge
+      key={name}
+      action="muted"
+      variant="solid"
+      bg={bg}
+      size={size || 'sm'}
+      py="$1"
+      px="$2"
+      rounded="$lg"
+    >
+      <BadgeText color={fg}>{name}</BadgeText>
+      <BadgeIcon color={fg} as={icon} ml="$1" />
+    </Badge>
+  )
+})
+
+const GroupItem = React.memo(({ name, size, ...props }) => {
+  let colorMode = useColorMode()
+
+  let icon = UsersIcon
+  let bg = props.bg || (colorMode == 'light' ? '$blueGray100' : '$blueGray600')
+  let fg = props.color || (colorMode == 'light' ? '$muted800' : '$muted100')
 
   return (
     <Badge
@@ -145,6 +169,11 @@ GroupItem.propTypes = {
   size: PropTypes.any
 }
 
+PolicyItem.propTypes = {
+  name: PropTypes.string.isRequired,
+  size: PropTypes.any
+}
+
 InterfaceItem.propTypes = {
   name: PropTypes.string.isRequired,
   size: PropTypes.any
@@ -157,4 +186,4 @@ ProtocolItem.propTypes = {
 
 export default TagItem
 
-export { TagItem, GroupItem, InterfaceItem, ProtocolItem }
+export { TagItem, GroupItem, InterfaceItem, ProtocolItem, PolicyItem }

@@ -171,7 +171,7 @@ PRESHARED_KEY=$(echo $RET | jq -r .Peer.PresharedKey)
 DNS_IP=$(echo $RET | jq -r .Interface.DNS)
 
 # Update the Groups for the Device and Name
-RET=$(curl -s -H "Authorization: Bearer ${TOKEN}" -X PUT http://localhost:8000/device?identity=${PUBLIC_KEY_ESCAPED} --data "{\"Groups\": [\"wan\", \"lan\", \"dns\"], \"Name\": \"peer${NUM_PEERS}\"}")
+RET=$(curl -s -H "Authorization: Bearer ${TOKEN}" -X PUT http://localhost:8000/device?identity=${PUBLIC_KEY_ESCAPED} --data "{\"Policies\": [\"wan\", \"dns\"], \"Name\": \"peer${NUM_PEERS}\"}")
 
 # wg client config
 _IFS=$IFS

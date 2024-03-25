@@ -33,6 +33,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+import (
+	"github.com/spr-networks/sprbus"
+)
+
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var PlusAddons = "plugins/plus"
 var UserAddons = "plugins/user"
@@ -182,9 +186,14 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 
 	}
 
+	add_buildctx := ""
 	if composeFileIN != "" && composeFile != getDefaultCompose() && isVirtual() {
 		//we need to add the default in for virtual mode
 		// so that it can pick up service:base
+
+		//docker buildkit has introduced a bug with contexts, this is a workaround.
+		add_buildctx = "BUILDCTX=" + filepath.Dir(composeFile)
+
 		args = append(args, "-f", defaultCompose, "-f", composeFile, command)
 	} else {
 		args = append(args, "-f", composeFile, command)
@@ -219,6 +228,10 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 			"-v", "/var/run/docker.sock:/var/run/docker.sock",
 			"-w", superdir,
 			"-e", "SUPERDIR="+superdir)
+
+		if add_buildctx != "" {
+			d_args = append(d_args, "-e", add_buildctx)
+		}
 
 		if release_channel != "" {
 			d_args = append(d_args, "-e", "RELEASE_CHANNEL="+release_channel)
@@ -263,7 +276,11 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 	_, err = exec.Command(cmd, args...).Output()
 	if err != nil {
 		argS := fmt.Sprintf(cmd + " " + strings.Join(args, " "))
-		fmt.Println("failure: " + err.Error() + " |" + argS)
+		errString := err.Error() + " |" + argS
+		fmt.Println("failure: " + errString)
+		//tbd good place for a sprbus event
+		sprbus.Publish("plugin:docker:failure", map[string]string{"Reason": "docker command failed", "Message": errString, "ComposeFile": composeFileIN})
+
 	}
 
 }
@@ -315,6 +332,7 @@ func userPluginExists(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if os.IsNotExist(err) {
 			http.Error(w, "Not found", 404)
+			return
 		}
 	}
 

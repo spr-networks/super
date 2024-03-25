@@ -10,8 +10,10 @@
    "Psk": ""
   },
   "Groups": [
-   "dns",
-   "wan"
+  ],
+  "Policies": [
+    "dns",
+    "wan"    
   ],
   "DeviceTags": []
  }

@@ -13,6 +13,7 @@ export class APIDNSBlock extends API {
   deleteOverride(data) { return this.delete('/override', data) }
   metrics(){ return this.get('/metrics') }
   setRefresh(seconds) { return this.put(`/setRefresh?seconds=${seconds}`);  }
+  disableRebinding(value) { return this.put(`/disableRebinding?value=${value}`);  }
 }
 
 export class APIDNSLog extends API {

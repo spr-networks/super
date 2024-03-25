@@ -1,35 +1,53 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Dimensions, Platform } from 'react-native'
 
 import {
+  AddIcon,
+  Badge,
+  BadgeText,
   Button,
   ButtonIcon,
   ButtonText,
+  Checkbox,
+  CheckboxIcon,
+  CheckboxLabel,
+  CheckboxIndicator,
   FlatList,
   HStack,
   Icon,
+  Input,
+  InputField,
   Menu,
   MenuItem,
   MenuItemLabel,
+  ScrollView,
+  SettingsIcon,
   Switch,
-  View,
-  VStack,
   Text,
+  Tooltip,
   TrashIcon,
   ThreeDotsIcon,
-  Badge,
-  BadgeText,
-  AddIcon,
-  ScrollView
+  VStack,
+  FormControl,
+  FormControlLabel,
+  FormControlLabelText
 } from '@gluestack-ui/themed'
 
-import { alertsAPI, dbAPI } from 'api'
+import { alertsAPI, dbAPI, api } from 'api'
 import AddAlert from 'components/Alerts/AddAlert'
 import { AlertContext, ModalContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import { ListHeader } from 'components/List'
 import { ListItem } from 'components/List'
-import { BellIcon, BellOffIcon, PencilIcon } from 'lucide-react-native'
+import {
+  BellIcon,
+  BellOffIcon,
+  BugPlayIcon,
+  CopyIcon,
+  PencilIcon
+} from 'lucide-react-native'
+
+import { copy } from 'utils'
+import { useNavigate } from 'react-router-native'
 
 const alertTemplates = [
   {
@@ -250,6 +268,7 @@ const AlertItem = ({
 
             <VStack space="md" alignItems="center">
               <Switch
+                size="sm"
                 value={action.SendNotification}
                 onValueChange={() => onToggleUINotify(index, item)}
               />
@@ -300,11 +319,100 @@ const AlertItemHeader = () => (
   </HStack>
 )
 
+const EditAlertSettings = ({ onSubmit, ...props }) => {
+  const modalContext = useContext(ModalContext)
+  const [proxySettings, setProxySettings] = useState({
+    Disabled: false,
+    APNSDomain: ''
+  })
+
+  const [alertDevices, setAlertDevices] = useState([])
+  const context = useContext(AlertContext)
+
+  useEffect(() => {
+    api.get('/alerts_mobile_proxy').then(setProxySettings).catch(context.error)
+    api.get('/alerts_register_ios').then(setAlertDevices).catch(context.error)
+  }, [])
+
+  const submitSettings = (config) => {
+    api
+      .put('/alerts_mobile_proxy', config)
+      .then((config) => {
+        modalContext.setShowModal(false)
+        context.success('Saved settings')
+      })
+      .catch((err) => {
+        context.error(err)
+      })
+  }
+
+  return (
+    <VStack space="lg">
+      <Text>
+        {`${alertDevices.length} iOS device${
+          alertDevices.length == 1 ? '' : 's'
+        } enrolled`}
+      </Text>
+      <FormControl>
+        <Checkbox
+          value={proxySettings.Disabled}
+          isChecked={proxySettings.Disabled}
+          onChange={(Disabled) =>
+            //submitSettings({ ...proxySettings, Disabled })
+            setProxySettings({ ...proxySettings, Disabled })
+          }
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Disable Apple Push Notifications</CheckboxLabel>
+        </Checkbox>
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Custom Proxy Domain</FormControlLabelText>
+        </FormControlLabel>
+
+        <Input _variant="underlined">
+          <InputField
+            value={proxySettings.APNSDomain}
+            onChangeText={(APNSDomain) =>
+              setProxySettings({ ...proxySettings, APNSDomain })
+            }
+            onSubmitEditing={() => submitSettings({ ...proxySettings })}
+          />
+        </Input>
+      </FormControl>
+
+      <HStack space="md">
+        <Button
+          variant="solid"
+          action="primary"
+          onPress={() => submitSettings(proxySettings)}
+        >
+          <ButtonText>Save</ButtonText>
+        </Button>
+
+        <Button
+          variant="solid"
+          action="secondary"
+          onPress={() => modalContext.setShowModal(false)}
+        >
+          <ButtonText>Close</ButtonText>
+        </Button>
+      </HStack>
+    </VStack>
+  )
+}
+
 const AlertSettings = (props) => {
   const [config, setConfig] = useState([])
   const [topics, setTopics] = useState([])
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
+  const navigate = useNavigate()
+
   //TBD: this will be replaced with alert: and mock_alerts will not wrap
   const AlertPrefix = 'nft:'
 
@@ -393,9 +501,10 @@ const AlertSettings = (props) => {
   }
 
   const onEdit = (index, item) => {
-    setItemIndex(index)
+    navigate(`/admin/alerts/${index}`)
+    /*setItemIndex(index)
     //preopulate the modal somehow
-    refModal.current()
+    refModal.current()*/
   }
 
   const onSubmit = (item) => {
@@ -465,17 +574,38 @@ const AlertSettings = (props) => {
     }
   }
 
+  const handlePressEdit = () => {
+    modalContext.modal(
+      'Alert Settings',
+      <EditAlertSettings onSubmit={() => {}} />
+    )
+  }
+
   return (
     <ScrollView h="$full">
       <ListHeader title="Alert Configuration">
         <HStack space="sm">
-          <Button size="sm" action="secondary" onPress={populateTemplates}>
+          <Button
+            size="sm"
+            action="secondary"
+            variant="outline"
+            onPress={handlePressEdit}
+          >
+            <ButtonIcon as={SettingsIcon} color="$primary500" />
+          </Button>
+          <Button
+            size="sm"
+            action="secondary"
+            variant="outline"
+            onPress={populateTemplates}
+          >
             <ButtonText>Add Templates</ButtonText>
             <ButtonIcon as={AddIcon} ml="$2" />
           </Button>
           <ModalForm
             title="Add Alert"
             triggerText="Add Alert"
+            triggerProps={{ sz: 'sm' }}
             modalRef={refModal}
           >
             <AddAlert curItem={populateItem} onSubmit={onSubmit} />

@@ -6,6 +6,12 @@ import {
   Heading,
   HStack,
   FlatList,
+  FormControl,
+  FormControlLabel,
+  FormControlLabelText,
+  Input,
+  InputField,
+  Icon,
   Text,
   VStack,
   ScrollView,
@@ -33,18 +39,17 @@ const SystemInfo = (props) => {
       api
         .get('/info/uptime')
         .then(setUptime)
-        .catch((err) => context.error(err))
+        .catch((err) => context.error("/info/uptime failed", err))
 
       api
         .get('/info/hostname')
         .then(setHostname)
-
-        .catch((err) => context.error(err))
+        .catch((err) => context.error("/info/hostname failed", err))
 
       api
         .get('/version')
         .then(setVersion)
-        .catch((err) => context.error(err))
+        .catch((err) => context.error("/version failed", err))
     }
 
     fetchInfo()
@@ -54,9 +59,16 @@ const SystemInfo = (props) => {
     return () => clearInterval(interval)
   }, [])
 
+  const updateHostname = () => {
+    api.put('/info/hostname', hostname)
+    .then(context.success("Updated hostname"))
+    .catch((err) => context.error("hostname update", err))
+  }
+
   const niceKey = (key) => ucFirst(key.replace(/_/, ' ').replace(/m$/, ' min'))
 
   const colorMode = useColorMode()
+  const item = {}
 
   return (
     <ScrollView h="$full" sx={{ '@md': { h: '92vh' } }}>
@@ -80,7 +92,16 @@ const SystemInfo = (props) => {
               justifyContent="space-between"
             >
               <Text size="sm">Hostname</Text>
-              <Text color="$muted500">{hostname}</Text>
+              <FormControl>
+                <Input variant="underlined">
+                  <InputField
+                    value={hostname}
+                    onChangeText={(v) => setHostname(v)}
+                    onSubmitEditing={(hostname) => updateHostname(hostname)}
+                    autoFocus
+                  />
+                </Input>
+              </FormControl>
             </HStack>
             <HStack
               flex={1}

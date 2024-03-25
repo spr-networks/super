@@ -2,7 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -23,20 +28,29 @@ import (
 	"github.com/PaesslerAG/jsonpath"
 
 	"github.com/google/uuid"
+
+	"github.com/spr-networks/spr-apns-proxy"
 )
 
 //https://www.ietf.org/archive/id/draft-goessner-dispatch-jsonpath-00.html
 //https://goessner.net/articles/JsonPath/
 
-var AlertSettingsmtx sync.Mutex
+var AlertSettingsmtx sync.RWMutex
 
-var AlertSettingsFile = "/configs/base/alerts.json"
+var AlertSettingsFile = TEST_PREFIX + "/configs/base/alerts.json"
+var AlertDevicesFile = TEST_PREFIX + "/configs/base/alert_devices.json"
+var MobileProxySettingsFile = TEST_PREFIX + "/configs/base/alert_proxy.json"
 var gAlertTopicPrefix = "alerts:"
 var gDebugPrintAlert = false
 
 type Alert struct {
 	Topic string
 	Info  map[string]interface{}
+}
+
+type MobileAlertProxySettings struct {
+	Disabled   bool
+	APNSDomain string
 }
 
 type AlertSetting struct {
@@ -224,6 +238,335 @@ func modifyAlertSettings(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(gAlertsConfig)
+}
+
+// AlertDevices
+type AlertDevice struct {
+	DeviceId    string
+	DeviceToken string
+	PublicKey   string
+	LastActive  time.Time
+}
+
+func (a *AlertDevice) Validate() error {
+	// iOS: "FCDBD8EF-62FC-4ECB-B2F5-92C9E79AC7F9"
+	// Android: "dd96dec43fb81c97"
+	validId := regexp.MustCompile(`^[0-9a-fA-F\-]{36}$`).MatchString
+	if !validId(a.DeviceId) {
+		return fmt.Errorf("Invalid DeviceId")
+	}
+
+	validToken := regexp.MustCompile(`^[0-9a-fA-F]{64}$`).MatchString
+	if !validToken(a.DeviceToken) {
+		return fmt.Errorf("Invalid DeviceToken")
+	}
+
+	//TODO
+	if a.PublicKey == "" {
+		return fmt.Errorf("Invalid PublicKey")
+	}
+
+	return nil
+}
+
+var AlertDevicesmtx sync.RWMutex
+var gAlertDevices = []AlertDevice{}
+
+func loadAlertDevices() {
+	data, err := ioutil.ReadFile(AlertDevicesFile)
+	if err != nil {
+		log.Println(err)
+	} else {
+		err = json.Unmarshal(data, &gAlertDevices)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+}
+
+func saveAlertDevices() {
+	//assumes lock is held
+	file, _ := json.MarshalIndent(gAlertDevices, "", " ")
+	err := ioutil.WriteFile(AlertDevicesFile, file, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func registerAlertDevice(w http.ResponseWriter, r *http.Request) {
+	AlertDevicesmtx.Lock()
+	defer AlertDevicesmtx.Unlock()
+
+	loadAlertDevices()
+
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(gAlertDevices)
+		return
+	}
+
+	setting := AlertDevice{}
+	if r.Method == http.MethodPut {
+		err := json.NewDecoder(r.Body).Decode(&setting)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		// validate
+		err = setting.Validate()
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+	}
+
+	index := -1
+	for i, entry := range gAlertDevices {
+		//TODO also have a id for the device here
+		if entry.DeviceId == setting.DeviceId {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 && r.Method == http.MethodDelete {
+		http.Error(w, "Invalid DeviceId", 400)
+		return
+	}
+
+	setting.LastActive = time.Now()
+
+	// delete, update, append
+	if r.Method == http.MethodDelete {
+		gAlertDevices = append(gAlertDevices[:index], gAlertDevices[index+1:]...)
+	} else if index >= 0 {
+		gAlertDevices[index] = setting
+	} else {
+		gAlertDevices = append(gAlertDevices, setting)
+	}
+
+	saveAlertDevices()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(gAlertDevices)
+}
+
+// NOTE only for testing, can remove this later
+func testSendAlertDevice(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Invalid method", 400)
+		return
+	}
+
+	vars := mux.Vars(r)
+	deviceToken, deviceToken_ok := vars["deviceToken"]
+
+	if !deviceToken_ok {
+		http.Error(w, "Invalid deviceToken", 400)
+		return
+	}
+
+	alert := apnsproxy.APNSAlert{}
+	err := json.NewDecoder(r.Body).Decode(&alert)
+
+	if alert.Title == "" {
+		http.Error(w, "Missing title", 400)
+		return
+	}
+
+	if alert.Body == "" {
+		http.Error(w, "Missing body", 400)
+		return
+	}
+
+	bytes, err := json.Marshal(alert)
+	if err != nil {
+		log.Println("invalid json for alert", err)
+		return
+	}
+
+	// note title will be within the json body
+	err = sendDeviceAlertByToken(deviceToken, alert.Title, string(bytes))
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	//TODO return ok
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(alert)
+}
+
+var gMobileAlertProxySettings = MobileAlertProxySettings{}
+
+func loadMobileProxySettings() {
+	//assumes lock is held
+	data, err := ioutil.ReadFile(MobileProxySettingsFile)
+	if err != nil {
+		log.Println(err)
+	} else {
+		err = json.Unmarshal(data, &gMobileAlertProxySettings)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+}
+
+func saveMobileProxySettings() {
+	//assumes lock is held
+	file, _ := json.MarshalIndent(gMobileAlertProxySettings, "", " ")
+	err := ioutil.WriteFile(MobileProxySettingsFile, file, 0600)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+var ProxySettingsmtx sync.RWMutex
+
+func alertsMobileProxySettings(w http.ResponseWriter, r *http.Request) {
+	ProxySettingsmtx.Lock()
+	defer ProxySettingsmtx.Unlock()
+
+	if r.Method == http.MethodGet {
+		loadAlertsConfig()
+	} else {
+		setting := MobileAlertProxySettings{}
+		err := json.NewDecoder(r.Body).Decode(&setting)
+		if err == nil {
+			gMobileAlertProxySettings = setting
+			saveMobileProxySettings()
+		} else {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(gMobileAlertProxySettings)
+}
+
+func APNSNotify(msg_type string, data string) {
+	AlertDevicesmtx.RLock()
+	defer AlertDevicesmtx.RUnlock()
+	ProxySettingsmtx.RLock()
+	defer ProxySettingsmtx.RUnlock()
+
+	loadAlertDevices()
+
+	//cleanup devices not active in the last month
+	devices := gAlertDevices[:0]
+	for _, entry := range gAlertDevices {
+		if entry.LastActive.After(time.Now().AddDate(0, -1, 0)) {
+			devices = append(devices, entry)
+		}
+	}
+
+	if len(devices) != len(gAlertDevices) {
+		gAlertDevices = devices
+		saveAlertDevices()
+	}
+
+	for _, entry := range gAlertDevices {
+		err := sendDeviceAlertLocked(entry, msg_type, data)
+		if err != nil {
+			log.Println("Failed to send event", err, "to", entry.DeviceId)
+		}
+	}
+}
+
+func sendDeviceAlertByToken(deviceToken string, title string, message string) error {
+	/*
+			   deviceToken is stored here:
+			   /configs/base/alert_devices.json
+
+			   fetch the .PublicKey for the device, set as .EncryptedData
+
+		       the device will also have a .LastActive set, see struct
+		       checks if device have logged in within 1 month
+	*/
+	AlertDevicesmtx.RLock()
+	defer AlertDevicesmtx.RUnlock()
+
+	ProxySettingsmtx.RLock()
+	defer ProxySettingsmtx.RUnlock()
+
+	loadAlertDevices()
+
+	for _, entry := range gAlertDevices {
+		//TODO also have a id for the device here
+		if entry.DeviceToken == deviceToken {
+			return sendDeviceAlertLocked(entry, title, message)
+		}
+	}
+
+	return fmt.Errorf("could not find device " + deviceToken)
+}
+
+/*
+NOTE if device have a PublicKey title is ignored and message need to be a
+json blob of alert, example: {Title: "", Body: ""}
+PLAIN category is not used.
+*/
+func sendDeviceAlertLocked(device AlertDevice, title string, message string) error {
+	loadMobileProxySettings()
+
+	if gMobileAlertProxySettings.Disabled {
+		//disabled, do not send
+		return nil
+	}
+
+	//TODO read from settings, will change to https://notifications.supernetworks.org
+	proxyUrl := "https://notifications.supernetworks.org"
+	//grab APNSDomain when enabled
+	if gMobileAlertProxySettings.APNSDomain != "" {
+		proxyUrl = gMobileAlertProxySettings.APNSDomain
+	}
+
+	if device.DeviceId == "" {
+		return fmt.Errorf("Invalid deviceToken")
+	}
+
+	var apns apnsproxy.APNS
+
+	if device.PublicKey == "" {
+		apns = apnsproxy.APNS{
+			Aps: apnsproxy.APNSAps{
+				Category: "PLAIN", //used for testing
+				Alert: &apnsproxy.APNSAlert{
+					Title: title,
+					Body:  message,
+				},
+			},
+		}
+	} else {
+		//NOTE we encrypt the json data here to be able to set more stuff in the future
+		//message is already json string of data to send
+		jsonValue := message
+
+		pubPem, _ := pem.Decode([]byte(device.PublicKey))
+		parsedKey, err := x509.ParsePKIXPublicKey(pubPem.Bytes)
+
+		var pubKey *rsa.PublicKey
+		pubKey, ok := parsedKey.(*rsa.PublicKey)
+		if !ok {
+			return fmt.Errorf("invalid pubkey for device")
+		}
+
+		dataRaw, err := rsa.EncryptPKCS1v15(rand.Reader, pubKey, []byte(jsonValue))
+		if err != nil {
+			return err
+		}
+
+		data := base64.StdEncoding.EncodeToString([]byte(dataRaw))
+
+		apns = apnsproxy.APNS{
+			EncryptedData: data,
+		}
+	}
+
+	return apnsproxy.SendProxyNotification(proxyUrl, device.DeviceToken, apns)
 }
 
 func grabReflectOld(fields []string, event interface{}) map[string]interface{} {
@@ -466,9 +809,9 @@ func AlertsRunEventListener() {
 
 	busEvent := func(topic string, value string) {
 
-		//wifi:auth events are special, we always send them up the websocket
+		//wifi:auth events and plugin: events are special, we always send them up the websocket
 		// for the UI to react to
-		if strings.HasPrefix(topic, "wifi:auth") {
+		if strings.HasPrefix(topic, "wifi:auth") || strings.HasPrefix(topic, "plugin:") {
 			var data map[string]interface{}
 
 			if err := json.Unmarshal([]byte(value), &data); err != nil {

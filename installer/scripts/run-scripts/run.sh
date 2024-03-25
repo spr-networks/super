@@ -11,6 +11,14 @@ if ! which docker-compose > /dev/null 2>&1; then
     alias docker-compose='docker compose'
 fi
 
+#update the hostname
+if [[ -f /etc/hostname && -f /home/spr/super/configs/base/hostname ]]; then
+  if ! diff -q <(tr -dc '[:alnum:]-' < /home/spr/super/configs/base/hostname) <(tr -dc '[:alnum:]-' < /etc/hostname); then
+    tr -dc '[:alnum:]-' < /home/spr/super/configs/base/hostname > /etc/hostname
+    hostname < /etc/hostname
+  fi
+fi
+
 # Work-around for USB bug with Ubuntu & TP-Link adapters
 if grep --quiet Raspberry /proc/cpuinfo; then
   # Reset the bus for TP-Link adapter

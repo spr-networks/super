@@ -20,15 +20,18 @@ import {
   TextareaInput,
   TrashIcon,
   AddIcon,
-  CheckIcon
+  CheckIcon,
+  Badge,
+  BadgeText
 } from '@gluestack-ui/themed'
 
 import { Select } from 'components/Select'
 import FilterInputSelect from 'components/Logs/FilterInputSelect'
 import { prettyJSONPath, prettyToJSONPath } from 'components/Logs/FilterSelect'
+import { ItemMenu } from 'components/TagMenu'
 
 import { dbAPI } from 'api'
-import { CheckCircle2Icon } from 'lucide-react-native'
+import { CheckCircle2Icon, Settings2Icon } from 'lucide-react-native'
 
 //note: unused
 const getAlertMessageForTopic = (topic) => {
@@ -61,12 +64,14 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
   const [notificationType, setNotificationType] = useState('info')
   const [Name, setName] = useState('Alert')
 
+  const [showAdvanced, setShowAdvanced] = useState(false)
+
   //only one action is supported now. in the future we will implement
   // different action types, for example, disconnecting a device.
   const [GrabFields, setGrabFields] = useState([])
   const [ActionConfig, setActionConfig] = useState({
-    GrabEvent: true,
-    StoreAlert: true,
+    GrabEvent: false,
+    StoreAlert: false,
     NotificationType: 'info'
   })
 
@@ -81,6 +86,8 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
     if (!curItem) {
       return
     }
+
+    setShowAdvanced(true)
 
     //populate the modal from it
     setName(curItem.Name)
@@ -97,12 +104,14 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
       setConditions(conditions)
     }
     setDisabled(curItem.Disabled)
-    if (curItem.GrabFields) {
-      setGrabFields(curItem.GrabFields)
-    }
+
     //only one action supported currently
     if (curItem.Actions) {
       setActionConfig({ ...curItem.Actions[0] })
+      setNotificationType(curItem.Actions[0].NotificationType)
+      if (curItem.Actions[0]?.GrabFields) {
+        setGrabFields(curItem.Actions[0]?.GrabFields)
+      }
     }
   }, [curItem])
 
@@ -191,6 +200,12 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
     setGrabFields(newGrabFields)
   }
 
+  const handleGrabFieldChange = (value, index) => {
+    let newGrabFields = [...GrabFields]
+    newGrabFields[index] = value
+    setGrabFields(newGrabFields)
+  }
+
   return (
     <VStack space="md">
       <HStack space="md">
@@ -276,42 +291,43 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
         </Textarea>
       </FormControl>
 
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Conditions</FormControlLabelText>
-        </FormControlLabel>
-        <VStack space="md">
-          {Conditions.length > 0 ? (
-            <HStack space="md">
-              <FormControl flex={1}>
-                <HStack space="md">
-                  <Switch
-                    value={MatchAnyOne}
-                    onValueChange={() => setMatchAnyOne(!MatchAnyOne)}
-                  />
-                  <Text size="sm" bold>
-                    {MatchAnyOne ? 'Match Any' : 'Match All'}
-                  </Text>
-                </HStack>
-              </FormControl>
+      <VStack space="md" display={showAdvanced ? 'flex' : 'none'}>
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Conditions</FormControlLabelText>
+          </FormControlLabel>
+          <VStack space="md">
+            {Conditions.length > 0 ? (
+              <HStack space="md">
+                <FormControl flex={1}>
+                  <HStack space="md">
+                    <Switch
+                      value={MatchAnyOne}
+                      onValueChange={() => setMatchAnyOne(!MatchAnyOne)}
+                    />
+                    <Text size="sm" bold>
+                      {MatchAnyOne ? 'Match Any' : 'Match All'}
+                    </Text>
+                  </HStack>
+                </FormControl>
 
-              <FormControl flex={1}>
-                <HStack space="md">
-                  <Switch
-                    value={InvertRule}
-                    onValueChange={() => setInvertRule(!InvertRule)}
-                  />
-                  <Text size="sm" bold>
-                    Invert Rule
-                  </Text>
-                </HStack>
-              </FormControl>
-            </HStack>
-          ) : null}
+                <FormControl flex={1}>
+                  <HStack space="md">
+                    <Switch
+                      value={InvertRule}
+                      onValueChange={() => setInvertRule(!InvertRule)}
+                    />
+                    <Text size="sm" bold>
+                      Invert Rule
+                    </Text>
+                  </HStack>
+                </FormControl>
+              </HStack>
+            ) : null}
 
-          {Conditions.map((condition, index) => (
-            <HStack key={index} space="md">
-              {/*
+            {Conditions.map((condition, index) => (
+              <HStack key={index} space="md">
+                {/*
               <Input flex={1} type="text" variant="solid">
                 <InputField
                   name={`JPath-${index}`}
@@ -321,174 +337,224 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
                 />
               </Input>
               */}
-              <FilterInputSelect
-                flex={1}
-                placeholder="JSONPath filter"
-                value={condition.JPath}
-                items={logItems}
-                topic={TopicPrefix}
-                onChangeText={(value) => {
-                  handleConditionChange(value, index)
-                }}
-                onSubmitEditing={(value) => {
-                  handleConditionChange(value, index)
-                }}
-              />
-              <Button
-                action="danger"
-                variant="link"
-                size="sm"
-                onPress={() => removeCondition(index)}
-              >
-                <ButtonIcon as={TrashIcon} color="$red700" />
-              </Button>
-            </HStack>
-          ))}
-        </VStack>
-      </FormControl>
-
-      <Button
-        action="secondary"
-        variant="outline"
-        size="sm"
-        onPress={addCondition}
-      >
-        <ButtonText>Add Condition Filter</ButtonText>
-        <ButtonIcon as={AddIcon} mr="$2" />
-      </Button>
-
-      <HStack space="lg">
-        <FormControl flex={1}>
-          <FormControlLabel>
-            <FormControlLabelText>Notification</FormControlLabelText>
-          </FormControlLabel>
-          <Switch
-            value={ActionConfig.SendNotification}
-            onValueChange={() =>
-              setActionConfig({
-                ...ActionConfig,
-                SendNotification: !ActionConfig.SendNotification
-              })
-            }
-          />
-
-          <FormControlHelper>
-            <FormControlHelperText>
-              Show Notification on trigger
-            </FormControlHelperText>
-          </FormControlHelper>
-        </FormControl>
-
-        <FormControl flex={1}>
-          <FormControlLabel>
-            <FormControlLabelText>Persistent Event</FormControlLabelText>
-          </FormControlLabel>
-          <Switch
-            value={ActionConfig.StoreAlert}
-            onValueChange={() =>
-              setActionConfig({
-                ...ActionConfig,
-                StoreAlert: !ActionConfig.StoreAlert
-              })
-            }
-          />
-          <FormControlHelper>
-            <FormControlHelperText>
-              Store alert in database
-            </FormControlHelperText>
-          </FormControlHelper>
-        </FormControl>
-      </HStack>
-
-      <HStack space="lg">
-        <FormControl flex={1}>
-          <FormControlLabel>
-            <FormControlLabelText>Copy Event</FormControlLabelText>
-          </FormControlLabel>
-          <Switch
-            value={ActionConfig.GrabEvent}
-            onValueChange={() =>
-              setActionConfig({
-                ...ActionConfig,
-                GrabEvent: !ActionConfig.GrabEvent
-              })
-            }
-          />
-          <FormControlHelper>
-            <FormControlHelperText>
-              {ActionConfig.GrabEvent
-                ? 'Uncheck to select fields to copy'
-                : 'Select fields to copy'}
-            </FormControlHelperText>
-          </FormControlHelper>
-        </FormControl>
-
-        <FormControl
-          flex={1}
-          display={ActionConfig.StoreAlert ? 'flex' : 'none'}
-        >
-          <FormControlLabel>
-            <FormControlLabelText>Alert Suffix</FormControlLabelText>
-          </FormControlLabel>
-          <Input type="text" variant="underlined">
-            <InputField
-              placeholder="Optional"
-              name="StoreTopicSuffix"
-              value={ActionConfig.StoreTopicSuffix}
-              onChangeText={(value) =>
-                setActionConfig({ ...ActionConfig, StoreTopicSuffix: value })
-              }
-            />
-          </Input>
-        </FormControl>
-      </HStack>
-
-      <VStack space="md" display={ActionConfig.GrabEvent ? 'none' : 'flex'}>
-        <VStack space="md">
-          {GrabFields.map((field, index) => (
-            <FormControl key={index}>
-              <FormControlLabel>
-                <FormControlLabelText>Field Name</FormControlLabelText>
-              </FormControlLabel>
-              <HStack key={index} space="md">
-                <Input flex={1} type="text" variant="solid">
-                  <InputField
-                    name={`GrabField-${index}`}
-                    value={field}
-                    onChangeText={(value) =>
-                      handleGrabFieldChange(value, index)
-                    }
-                  />
-                </Input>
+                <FilterInputSelect
+                  flex={1}
+                  placeholder="JSONPath filter"
+                  value={condition.JPath}
+                  items={logItems}
+                  topic={TopicPrefix}
+                  onChangeText={(value) => {
+                    handleConditionChange(value, index)
+                  }}
+                  onSubmitEditing={(value) => {
+                    handleConditionChange(value, index)
+                  }}
+                />
                 <Button
                   action="danger"
                   variant="link"
                   size="sm"
-                  onPress={() => removeGrabField(index)}
+                  onPress={() => removeCondition(index)}
                 >
                   <ButtonIcon as={TrashIcon} color="$red700" />
                 </Button>
               </HStack>
-            </FormControl>
-          ))}
-        </VStack>
+            ))}
+          </VStack>
+        </FormControl>
 
         <Button
           action="secondary"
           variant="outline"
           size="sm"
-          onPress={addGrabField}
+          onPress={addCondition}
         >
-          <ButtonText>Add Field to copy from Event</ButtonText>
+          <ButtonText>Add Condition Filter</ButtonText>
           <ButtonIcon as={AddIcon} mr="$2" />
         </Button>
+
+        <HStack space="lg">
+          <FormControl flex={1}>
+            <FormControlLabel>
+              <FormControlLabelText size="sm">
+                Notification
+              </FormControlLabelText>
+            </FormControlLabel>
+            <Switch
+              size="sm"
+              value={ActionConfig.SendNotification}
+              onValueChange={() =>
+                setActionConfig({
+                  ...ActionConfig,
+                  SendNotification: !ActionConfig.SendNotification
+                })
+              }
+            />
+
+            <FormControlHelper>
+              <FormControlHelperText size="xs">
+                Show Notification
+              </FormControlHelperText>
+            </FormControlHelper>
+          </FormControl>
+
+          <FormControl flex={1}>
+            <FormControlLabel>
+              <FormControlLabelText size="sm">Persistent</FormControlLabelText>
+            </FormControlLabel>
+            <Switch
+              size="sm"
+              value={ActionConfig.StoreAlert}
+              onValueChange={() =>
+                setActionConfig({
+                  ...ActionConfig,
+                  StoreAlert: !ActionConfig.StoreAlert
+                })
+              }
+            />
+            <FormControlHelper>
+              <FormControlHelperText size="xs">
+                Store alert in database
+              </FormControlHelperText>
+            </FormControlHelper>
+          </FormControl>
+
+          <FormControl flex={1}>
+            <FormControlLabel>
+              <FormControlLabelText size="sm">Copy Event</FormControlLabelText>
+            </FormControlLabel>
+            <Switch
+              size="sm"
+              value={ActionConfig.GrabEvent}
+              onValueChange={() =>
+                setActionConfig({
+                  ...ActionConfig,
+                  GrabEvent: !ActionConfig.GrabEvent
+                })
+              }
+            />
+            <FormControlHelper>
+              <FormControlHelperText size="xs">
+                {ActionConfig.GrabEvent
+                  ? 'Uncheck to select'
+                  : 'Select fields to copy'}
+              </FormControlHelperText>
+            </FormControlHelper>
+          </FormControl>
+
+          <FormControl
+            flex={1}
+            display={ActionConfig.StoreAlert ? 'flex' : 'none'}
+          >
+            <FormControlLabel>
+              <FormControlLabelText size="sm">
+                Alert Suffix
+              </FormControlLabelText>
+            </FormControlLabel>
+            <Input type="text" variant="underlined">
+              <InputField
+                placeholder="Optional"
+                name="StoreTopicSuffix"
+                value={ActionConfig.StoreTopicSuffix}
+                onChangeText={(value) =>
+                  setActionConfig({
+                    ...ActionConfig,
+                    StoreTopicSuffix: value
+                  })
+                }
+              />
+            </Input>
+          </FormControl>
+        </HStack>
+
+        <VStack space="md" display={ActionConfig.GrabEvent ? 'none' : 'flex'}>
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText size="sm">
+                Event Fields
+              </FormControlLabelText>
+            </FormControlLabel>
+
+            <HStack space="md" alignItems="center">
+              <HStack space="sm">
+                {GrabFields.map((field, index) => (
+                  <Badge action="muted" variant="outline">
+                    <BadgeText>{field}</BadgeText>
+                  </Badge>
+                ))}
+              </HStack>
+              <ItemMenu
+                type="Event Field"
+                items={GrabFields}
+                selectedKeys={GrabFields}
+                onSelectionChange={(items) => {
+                  setGrabFields([...items])
+                }}
+              />
+            </HStack>
+          </FormControl>
+
+          {/*<VStack space="md">
+            {GrabFields.map((field, index) => (
+              <FormControl key={index}>
+              <FormControlLabel>
+              <FormControlLabelText size="sm">
+                    Field Name
+                  </FormControlLabelText>
+                </FormControlLabel>
+                <HStack key={index} space="md">
+                  <Input flex={1} type="text" variant="solid">
+                    <InputField
+                      name={`GrabField-${index}`}
+                      value={field}
+                      onChangeText={(value) =>
+                        handleGrabFieldChange(value, index)
+                      }
+                    />
+                  </Input>
+                  <Button
+                    action="danger"
+                    variant="link"
+                    size="sm"
+                    onPress={() => removeGrabField(index)}
+                  >
+                    <ButtonIcon as={TrashIcon} color="$red700" />
+                  </Button>
+                </HStack>
+              </FormControl>
+            ))}
+          </VStack>
+
+          <Button
+            action="secondary"
+            variant="outline"
+            size="sm"
+            onPress={addGrabField}
+          >
+            <ButtonText>Add Field to copy from Event</ButtonText>
+            <ButtonIcon as={AddIcon} mr="$2" />
+          </Button>
+          */}
+        </VStack>
       </VStack>
 
       <HStack space="md">
-        <Button flex={2} action="primary" size="md" onPress={handleSubmit}>
+        <Button flex={1} action="primary" size="md" onPress={handleSubmit}>
           <ButtonText>Save</ButtonText>
           <ButtonIcon as={CheckIcon} ml="$2" />
         </Button>
+
+        <Button
+          flex={1}
+          action="secondary"
+          variant="outline"
+          size="md"
+          onPress={() => setShowAdvanced(!showAdvanced)}
+        >
+          <ButtonText>Advanced</ButtonText>
+          <ButtonIcon as={Settings2Icon} ml="$2" />
+        </Button>
+
         {/*
         <Button
           flex={1}

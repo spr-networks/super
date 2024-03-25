@@ -1,5 +1,14 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v0.3.7
+* Rename builtin groups as Policies, to clarify Group vs Tag vs Policy
+* Merged dns rebinding and block plugin, added UI to turn off rebinding protection
+* Changed cache behavior to no longer cache NXDomain, so permit override is instant
+* Added iOS Push Notification Support
+* Can now name router from UI
+* Can now override MAC addresses for interfaces
+* Fixed Scoped Token Paths to allow :r path to come first
+
 ## v0.3.6
 * Fix regression with VPN only mode devices
 

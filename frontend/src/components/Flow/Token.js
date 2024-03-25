@@ -69,7 +69,7 @@ const Token = ({
     }
 
     if (value == '') {
-      if (['Tags', 'Groups'].includes(label)) {
+      if (['Tags', 'Policies', 'Groups'].includes(label)) {
         return `Select ${label}`
       }
 
@@ -80,7 +80,7 @@ const Token = ({
   }
 
   // TODO autocomplete for selecting values:
-  // groups, clients, ports
+  // groups, policies, clients, ports
 
   const onChangeText = (value) => {
     //only update if correct format
@@ -182,6 +182,7 @@ const Token = ({
   } else if (label == 'Client') {
     inputElement = (
       <ClientSelect
+        showPolicies
         showGroups
         showTags
         value={value}
@@ -196,7 +197,7 @@ const Token = ({
       />
     )
   } else if (
-    (['Tags', 'Groups', 'DstInterface', 'Container', 'Protocol'].includes(
+    (['Tags', 'Policies', 'Groups', 'DstInterface', 'Container', 'Protocol'].includes(
       label
     ) ||
       label.endsWith('Port')) &&
@@ -210,7 +211,7 @@ const Token = ({
     }
 
     let isDisabled = false
-    let isMultiple = ['Tags', 'Groups'].includes(label)
+    let isMultiple = ['Tags', 'Policies', 'Groups'].includes(label)
     inputElement = (
       <InputSelect
         isDisabled={isDisabled}

@@ -115,7 +115,7 @@ const StatsChartWidget = (props) => {
             datasets,
             legend
           }}
-          width={Dimensions.get('window').width - 25}
+          width={Dimensions.get('window').width - 40}
           height={270}
           yAxisSuffix={yAxisSuffix}
           chartConfig={{

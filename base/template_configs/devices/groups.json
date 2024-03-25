@@ -1,17 +1,3 @@
 [
- {
-  "Name": "dns",
-  "Disabled": false,
-  "GroupTags": []
- },
- {
-  "Name": "lan",
-  "Disabled": false,
-  "GroupTags": []
- },
- {
-  "Name": "wan",
-  "Disabled": false,
-  "GroupTags": []
- }
+ 
 ]

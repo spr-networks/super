@@ -25,7 +25,7 @@ const AuthLayout = () => {
           w="100vw"
           resizeMode="cover"
         />
-        <View marginTop="-90vh">
+        <View marginTop="-92vh">
           <Outlet />
           <Footer
             color="$light200"
@@ -33,6 +33,8 @@ const AuthLayout = () => {
             bottom={2}
             right={2}
             justifyContent="center"
+            display="none"
+            sx={{ '@md': { display: 'flex' } }}
           />
         </View>
       </View>

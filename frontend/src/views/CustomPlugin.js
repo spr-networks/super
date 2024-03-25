@@ -55,7 +55,7 @@ const PluginFrame = ({ name, ...props }) => {
       let html = await getPluginHTML(name)
       setSrcDoc(html)
     } catch (err) {
-      context.error(`Failed to fetch html: ${err}`)
+      context.error(`Failed to fetch html:`, err)
     }
   }
 

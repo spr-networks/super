@@ -3,6 +3,7 @@ import InputSelect from 'components/InputSelect'
 import { AppContext, alertState } from 'AppContext'
 
 import { CoreDNS } from 'api/CoreDNS'
+import { blockAPI } from 'api/DNS'
 
 import {
   Box,
@@ -28,6 +29,7 @@ const CoreDns = (props) => {
   const [ip, setIp] = useState('')
   const [host, setHost] = useState('')
   const [enableTls, setEnableTls] = useState(true)
+  const [disableRebindingCheck, setDisableRebindingCheck] = useState(false)
 
   const contextType = useContext(AppContext)
 
@@ -52,9 +54,17 @@ const CoreDns = (props) => {
     let config = {
       UpstreamIPAddress: ip,
       UpstreamTLSHost: host,
-      DisableTls: !enableTls
-    }
+      DisableTls: !enableTls,    }
     CoreDNS.setConfig(config).then(
+      () => {
+        alertState.success('Updated DNS Settings')
+      },
+      (e) => {
+        alertState.error('API Failure: ' + e.message)
+      }
+    )
+
+    blockAPI.disableRebinding(disableRebindingCheck).then(
       () => {
         alertState.success('Updated DNS Settings')
       },
@@ -131,6 +141,22 @@ const CoreDns = (props) => {
             </CheckboxIndicator>
             <CheckboxLabel>Enabled</CheckboxLabel>
           </Checkbox>
+
+          <Text bold>
+            Disable DNS Rebinding Protection
+          </Text>
+
+          <Checkbox
+            value={disableRebindingCheck}
+            defaultIsChecked={disableRebindingCheck}
+            onChange={setDisableRebindingCheck}
+          >
+            <CheckboxIndicator mr="$2">
+              <CheckboxIcon />
+            </CheckboxIndicator>
+            <CheckboxLabel>Disabled</CheckboxLabel>
+          </Checkbox>
+
           <HStack>
             <Button action="primary" onPress={submitSettings}>
               <ButtonText>Save</ButtonText>

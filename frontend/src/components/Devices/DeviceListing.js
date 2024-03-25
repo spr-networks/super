@@ -36,7 +36,8 @@ const DeviceListing = (props) => {
 
   const [devices, setDevices] = useState(null)
   const navigate = useNavigate()
-  const [groups, setGroups] = useState(['wan', 'dns', 'lan'])
+  const [policies, setPolicies] = useState(['wan', 'dns', 'lan'])
+  const [groups, setGroups] = useState([])
   const [tags, setTags] = useState([])
 
   const sortDevices = (a, b) => {
@@ -84,6 +85,7 @@ const DeviceListing = (props) => {
           })
           .catch((err) => {})
 
+        setPolicies([...new Set(devices.map((device) => device.Policies).flat())])
         setGroups([...new Set(devices.map((device) => device.Groups).flat())])
         setTags([...new Set(devices.map((device) => device.DeviceTags).flat())])
         // TODO check wg status for virt
@@ -183,6 +185,7 @@ const DeviceListing = (props) => {
       device={item}
       showMenu={true}
       groups={groups}
+      policies={policies}
       tags={tags}
       notifyChange={() => refreshDevices(true)}
     />
