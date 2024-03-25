@@ -7,6 +7,7 @@
 * Added iOS Push Notification Support
 * Can now name router from UI
 * Can now override MAC addresses for interfaces
+* Fixed Scoped Token Paths to allow :r path to come first
 
 ## v0.3.6
 * Fix regression with VPN only mode devices
