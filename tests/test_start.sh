@@ -8,7 +8,7 @@ docker build tests/sta1 -t sta1
 rm -rf configs
 cp -R tests/test_configs configs
 
-docker-compose -f docker-compose-test.yml up -d
+docker compose -f docker-compose-test.yml up -d
 
 
 

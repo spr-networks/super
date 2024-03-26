@@ -6,7 +6,6 @@ describe('get firewall configuration', () => {
   it('should get status', (done) => {
     agent
       .get('/firewall/config')
-      .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
         assert(res.status == 200)
@@ -25,7 +24,6 @@ describe('open router ports', () => {
     agent
       .put('/firewall/service_port')
       .send({Port: "4040", Protocol: "tcp", UpstreamEnabled: false})
-      .expect(200)
       .end((err, res) => {
         assert(res.status == 200)
 
@@ -67,7 +65,6 @@ describe('open router ports', () => {
     agent
       .put('/firewall/service_port')
       .send({Port: "4040", Protocol: "tcp", UpstreamEnabled: true})
-      .expect(200)
       .end((err, res) => {
         assert(res.status == 200)
 
@@ -112,7 +109,6 @@ describe('open router ports', () => {
     agent
       .put('/firewall/service_port')
       .send({Port: "4040", Protocol: "tcp", UpstreamEnabled: false})
-      .expect(200)
       .end((err, res) => {
         assert(res.status == 200)
 
@@ -156,7 +152,6 @@ describe('open router ports', () => {
     agent
       .delete('/firewall/service_port')
       .send({Port: "4040", Protocol: "tcp", UpstreamEnabled: false})
-      .expect(200)
       .end((err, res) => {
         assert(res.status == 200)
 

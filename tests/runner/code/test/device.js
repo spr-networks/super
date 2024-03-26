@@ -17,8 +17,8 @@ describe('device', () => {
       .send(dev)
       .set('Accept', 'application/json')
       .expect('Content-Type', /json/)
-      .expect(200)
       .end((err, res) => {
+        assert(res.status == 200)
         assert.equal(res.body.Name, 'devName')
         assert.equal(res.body.PSKEntry.Psk, '**', 'password not masked')
 
@@ -29,9 +29,9 @@ describe('device', () => {
   it('should list devices', (done) => {
     agent
       .get('/devices')
-      .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
+        assert(res.status == 200)
         assert(Object.keys(res.body).length > 0, 'missing devices')
 
         done()

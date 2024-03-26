@@ -6,7 +6,6 @@ describe('dhcp', () => {
   it('should get subnet configuration', (done) => {
     agent
       .get('/subnetConfig')
-      .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
         assert(res.status == 200)
@@ -22,7 +21,6 @@ describe('dhcp', () => {
       .send(x)
       .set('Accept', 'application/json')
       .expect('Content-Type', /json/)
-      .expect(200)
       .end((err, res) => {
         assert(res.status != 200)
         done()
@@ -36,7 +34,6 @@ describe('dhcp', () => {
       .send(x)
       .set('Accept', 'application/json')
       .expect('Content-Type', /json/)
-      .expect(200)
       .end((err, res) => {
         assert(res.status != 200)
         done()
@@ -51,7 +48,6 @@ describe('dhcp', () => {
       .send(x)
       .set('Accept', 'application/json')
       .expect('Content-Type', /json/)
-      .expect(200)
       .end((err, res) => {
         assert(res.status != 200)
         done()
@@ -67,7 +63,6 @@ describe('dhcp', () => {
       .send(config)
       .set('Accept', 'application/json')
       .expect('Content-Type', /json/)
-      .expect(200)
       .end((err, res) => {
         assert(res.status == 200)
         done()
@@ -79,7 +74,6 @@ describe('dhcp', () => {
 
     agent
       .get('/subnetConfig')
-      .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
         assert(res.status == 200)

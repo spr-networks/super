@@ -5,9 +5,9 @@ describe('get interfaces', () => {
   it('should get status', (done) => {
     agent
       .get('/interfacesConfiguration')
-      .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
+        assert(res.status == 200)
         assert(res.body.length > 0, 'missing interface status')
         let passed = 0;
         for (let i = 0; i < res.body.length; i++){
@@ -41,14 +41,16 @@ describe('calc channel', () => {
     agent
       .put('/hostapd/calcChannel')
       .send(chanData)
-      .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
+        assert(res.status == 200)
         let expected ={
           Vht_oper_centr_freq_seg0_idx: 42,
           He_oper_centr_freq_seg0_idx: 42,
           Vht_oper_chwidth: 1,
           He_oper_chwidth: 1,
+          Op_class:0,
+          Is_6e: false,
           Freq1: 5180,
           Freq2: 5210,
           Freq3: 0}
@@ -67,7 +69,6 @@ describe('enable extra bss', () => {
     agent
       .put('/hostapd/wlan1/enableExtraBSS')
       .send(extraData)
-      .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
         assert(res.status == 200)
@@ -78,9 +79,9 @@ describe('enable extra bss', () => {
   it("should show extra bss enabled", (done) => {
    agent
      .get('/interfacesConfiguration')
-     .expect(200)
      .expect('Content-Type', /json/)
      .end((err, res) => {
+       assert(res.status == 200)
        assert(res.body.length > 0, 'missing interface status')
        let passed = 0
        for (let i = 0; i < res.body.length; i++) {
@@ -125,9 +126,9 @@ describe('enable extra bss', () => {
    agent
      .put('/hostapd/wlan1/config')
      .send(newConfig)
-     .expect(200)
      .expect('Content-Type', /json/)
      .end((err, res) => {
+       assert(res.status == 200)
        assert(Object.keys(res.body).length > 0, 'missing config')
        let config = res.body
        assert(config.channel == 149)
@@ -158,9 +159,9 @@ describe('enable extra bss', () => {
    agent
      .put('/hostapd/wlan1/config')
      .send(newConfig)
-     .expect(200)
      .expect('Content-Type', /json/)
      .end((err, res) => {
+       assert(res.status == 200)
        assert(Object.keys(res.body).length > 0, 'missing config')
        let config = res.body
        assert(config.channel == 36)
@@ -170,5 +171,5 @@ describe('enable extra bss', () => {
 
   //TBD: would be good to
   // verify stations connect to channel 149
-  // verify stations connect to WPA1 BSS 
+  // verify stations connect to WPA1 BSS
 })
