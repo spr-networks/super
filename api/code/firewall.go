@@ -2185,7 +2185,9 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 				}
 			}
 
-			if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || ((MAC != "") && equalMAC(entry.mac, MAC)) {
+			if Ifname == "" {
+				//no ifname, cant do anything with these
+			} else if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || ((MAC != "") && equalMAC(entry.mac, MAC)) {
 				if entry.mac != "" {
 					err := exec.Command("nft", "delete", "element", "inet", "filter", name, "{", entry.ipv4, ".", entry.ifname, ".", entry.mac, ":", verdict, "}").Run()
 					if err != nil {
@@ -2204,9 +2206,6 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 }
 
 func addVerdictMac(IP string, MAC string, Iface string, Table string, Verdict string) {
-	if Iface == "" {
-		return
-	}
 	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ".", MAC, ":", Verdict, "}").Run()
 	if err != nil {
 		log.Println("addVerdictMac Failed", MAC, Iface, Table, err)
@@ -2635,6 +2634,12 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 
 	//3. Update the route interface
 	exec.Command("ip", "route", "flush", routeIP).Run()
+
+	// no interface set. abort now
+	if new_iface == "" {
+		return
+	}
+
 	exec.Command("ip", "route", "add", routeIP, "dev", new_iface).Run()
 
 	// too noisy
