@@ -2559,6 +2559,8 @@ func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
 			//tbd -> can constrain API/website access by device later.
 		case "disabled":
 			log.Println("Unexpected disabled here. Should have aborted earlier")
+		case "lan_upstream":
+			continue //handled in applyPrivateNetworkUpstreamDevice below
 		default:
 			log.Println("Unknown policy: " + policy_name)
 		}
