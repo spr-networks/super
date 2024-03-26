@@ -646,50 +646,62 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if CIDRorIP(crule.SrcIP) != nil {
-		http.Error(w, "Invalid SrcIP", 400)
+	doDelete := r.Method == http.MethodDelete
+	err = modifyCustomInterfaceRulesImpl(crule, doDelete)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
 		return
+	}
+
+}
+
+func modifyCustomInterfaceRulesImpl(crule CustomInterfaceRule, doDelete bool) error {
+	if CIDRorIP(crule.SrcIP) != nil {
+		return fmt.Errorf("Invalid SrcIP")
 	}
 
 	if crule.RouteDst != "" {
 		ip := net.ParseIP(crule.RouteDst)
 		if ip == nil {
-			http.Error(w, "invalid RouteDst ", 400)
-			return
+			return fmt.Errorf("Invalid RouteDst")
 		}
 	}
 
 	if !isValidIface(crule.Interface) {
-		http.Error(w, "Invalid Interface", 400)
-		return
+		return fmt.Errorf("Invalid Interface")
 	}
 
-	//we accept them, but they are not useful for now
 	crule.Groups = normalizeStringSlice(crule.Groups)
+	crule.Policies = normalizeStringSlice(crule.Policies)
+	//tags not used for anything yet
 	crule.Tags = normalizeStringSlice(crule.Tags)
 
-	if len(crule.Tags) > 0 {
+	if slices.Contains(crule.Policies, DEVICE_POLICY_PERMIT_PRIVATE_UPSTREAM_ACCESS) {
 		if strings.Contains(crule.SrcIP, "/") {
-			http.Error(w, "Tags not yet supported with SrcIP ranges ", 400)
-			return
+			return fmt.Errorf("lan_upstream policy not yet supported with SrcIP ranges")
 		}
 	}
 
-	if r.Method == http.MethodDelete {
+	if len(crule.Tags) > 0 {
+		if strings.Contains(crule.SrcIP, "/") {
+			return fmt.Errorf("Tags not yet supported with SrcIP ranges")
+		}
+	}
+
+	if doDelete {
 		for i := range gFirewallConfig.CustomInterfaceRules {
 			a := gFirewallConfig.CustomInterfaceRules[i]
 			if crule.Equals(&a) {
 				gFirewallConfig.CustomInterfaceRules = append(gFirewallConfig.CustomInterfaceRules[:i], gFirewallConfig.CustomInterfaceRules[i+1:]...)
 				saveFirewallRulesLocked()
-				err = applyCustomInterfaceRule(a, "delete", true)
+				err := applyCustomInterfaceRule(gFirewallConfig.CustomInterfaceRules, a, "delete", true)
 				if err != nil {
-					http.Error(w, err.Error(), 400)
+					return err
 				}
-				return
+				return nil
 			}
 		}
-		http.Error(w, "Not found", 404)
-		return
+		return fmt.Errorf("Not found")
 	}
 
 	//lastly, check for duplicates on RouteDst, SrcIP, interface name
@@ -698,14 +710,14 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 		if crule.SrcIP == current.SrcIP &&
 			crule.RouteDst == current.RouteDst &&
 			crule.Interface == current.Interface {
-			http.Error(w, "Duplicate rule", 400)
-			return
+			return fmt.Errorf("Duplicate rule")
 		}
 	}
 
 	gFirewallConfig.CustomInterfaceRules = append(gFirewallConfig.CustomInterfaceRules, crule)
 	saveFirewallRulesLocked()
 	applyFirewallRulesLocked()
+	return nil
 }
 
 func deleteBlock(br BlockRule) error {
@@ -1309,12 +1321,43 @@ func includesGroupStd(slice []string) (bool, bool, bool, bool) {
 	return wan, dns, lan, api
 }
 
-func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string, fthru bool) error {
+func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container_rule CustomInterfaceRule, action string, fthru bool) error {
+	current_rules := []CustomInterfaceRule{}
+	for _, rule := range current_rules_all {
+		if rule.Interface == container_rule.Interface {
+			current_rules = append(current_rules, rule)
+		}
+	}
+
+	wan_count := 0
+	dns_count := 0
+	lan_count := 0
+	api_count := 0
+	if action == "delete" {
+		for _, rule := range current_rules {
+			//for matching interface names, count their policies
+			wan_, dns_, lan_, api_ := includesGroupStd(rule.Policies)
+			if wan_ {
+				wan_count++
+			}
+			if dns_ {
+				dns_count++
+			}
+			if lan_ {
+				lan_count++
+			}
+			if api_ {
+				api_count++
+			}
+		}
+	}
+
 	var err error
 
 	wan, dns, lan, api := includesGroupStd(container_rule.Policies)
 
-	if wan {
+	//if action is delete, ensure no other rules use this policy on this interface
+	if wan && (action != "delete" || wan_count == 0) {
 		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_wan",
 			"{", container_rule.Interface, ".", container_rule.SrcIP, ":", "accept", "}").Run()
 		if err != nil {
@@ -1327,7 +1370,7 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 		}
 	}
 
-	if lan {
+	if lan && (action != "delete" || lan_count == 0) {
 		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_lan",
 			"{", container_rule.Interface, ".", container_rule.SrcIP, ":", "accept", "}").Run()
 		if err != nil {
@@ -1340,7 +1383,7 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 		}
 	}
 
-	if dns {
+	if dns && (action != "delete" || dns_count == 0) {
 		err = exec.Command("nft", action, "element", "inet", "filter", "dns_access",
 			"{", container_rule.SrcIP, ".", container_rule.Interface, ":", "accept", "}").Run()
 		if err != nil {
@@ -1353,7 +1396,7 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 		}
 	}
 
-	if api {
+	if api && (action != "delete" || api_count == 0) {
 		err = exec.Command("nft", action, "element", "inet", "filter", "api_interfaces",
 			"{", container_rule.Interface, "}").Run()
 		if err != nil {
@@ -1372,15 +1415,36 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 			continue
 		}
 		if action == "add" {
+			Groupsmtx.Lock()
+			addGroupsIfMissing(getGroupsJson(), []string{group})
+			Groupsmtx.Unlock()
 			addCustomVerdict(group, container_rule.SrcIP, container_rule.Interface)
+		} else {
+			delete_group_names := []string{}
+
+			for _, nameOne := range container_rule.Groups {
+				found := false
+				for _, rule := range current_rules {
+					if slices.Contains(rule.Groups, nameOne) {
+						found = true
+						break
+					}
+				}
+				//if no other rule with this interface had this group, mark for deletion
+				if !found {
+					delete_group_names = append(delete_group_names, nameOne)
+				}
+			}
+
+			log.Println("Deleting groups for interface", container_rule.Interface, delete_group_names)
+			flushVmaps(container_rule.SrcIP, "", container_rule.Interface, delete_group_names, true)
 		}
 	}
 
-	if strings.Contains(container_rule.SrcIP, "/") && len(container_rule.Policies) > 0 {
-		log.Println("[-] Error : policies not supported for range on custom interface rule", container_rule.Interface, container_rule.SrcIP, container_rule.Tags)
+	foundPolicy := slices.Contains(container_rule.Policies, DEVICE_POLICY_PERMIT_PRIVATE_UPSTREAM_ACCESS)
+	if strings.Contains(container_rule.SrcIP, "/") && foundPolicy {
+		log.Println("[-] Error : DEVICE_POLICY_PERMIT_PRIVATE_UPSTREAM_ACCESS not supported for range on custom interface rule", container_rule.Interface, container_rule.SrcIP, container_rule.Policies)
 	} else {
-		foundPolicy := slices.Contains(container_rule.Policies, DEVICE_POLICY_PERMIT_PRIVATE_UPSTREAM_ACCESS)
-
 		inUpstreamAllowed := hasPrivateUpstreamAccess(container_rule.SrcIP)
 
 		if foundPolicy && !inUpstreamAllowed {
@@ -1440,7 +1504,7 @@ func applyContainerInterfaces() {
 	}
 
 	for _, container_rule := range gFirewallConfig.CustomInterfaceRules {
-		applyCustomInterfaceRule(container_rule, "add", false)
+		applyCustomInterfaceRule(gFirewallConfig.CustomInterfaceRules, container_rule, "add", false)
 	}
 
 	// TBD: clean up stale iface from dns_access (?) here
@@ -2114,7 +2178,7 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 				}
 			}
 
-			if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || (equalMAC(entry.mac, MAC) && (MAC != "")) {
+			if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || ((MAC != "") && equalMAC(entry.mac, MAC)) {
 				if entry.mac != "" {
 					err := exec.Command("nft", "delete", "element", "inet", "filter", name, "{", entry.ipv4, ".", entry.ifname, ".", entry.mac, ":", verdict, "}").Run()
 					if err != nil {

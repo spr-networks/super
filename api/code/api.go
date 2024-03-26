@@ -1303,6 +1303,31 @@ func syncDevices(w http.ResponseWriter, r *http.Request) {
 	doReloadPSKFiles()
 }
 
+func addGroupsIfMissing(groups []GroupEntry, newGroups []string) {
+	saveGroups := false
+
+	for _, entry := range newGroups {
+		foundGroup := false
+		for _, group := range groups {
+			if group.Name == entry {
+				foundGroup = true
+				break
+			}
+		}
+
+		if !foundGroup {
+			saveGroups = true
+			newGroup := GroupEntry{}
+			newGroup.Name = entry
+			newGroup.GroupTags = []string{}
+			groups = append(groups, newGroup)
+		}
+	}
+
+	if saveGroups {
+		saveGroupsJson(groups)
+	}
+}
 func deleteDeviceLocked(devices map[string]DeviceEntry, identity string) {
 	val := devices[identity]
 	delete(devices, identity)
@@ -1495,32 +1520,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		if dev.Groups != nil && !equalStringSlice(val.Groups, dev.Groups) {
 			val.Groups = dev.Groups
-
-			saveGroups := false
-
-			//create a new zone if it does not exist yet
-			for _, entry := range dev.Groups {
-				foundGroup := false
-				for _, group := range groups {
-					if group.Name == entry {
-						foundGroup = true
-						break
-					}
-				}
-
-				if !foundGroup {
-					saveGroups = true
-					newGroup := GroupEntry{}
-					newGroup.Name = entry
-					newGroup.GroupTags = []string{}
-					groups = append(groups, newGroup)
-				}
-			}
-
-			if saveGroups {
-				saveGroupsJson(groups)
-			}
-
+			addGroupsIfMissing(groups, dev.Groups)
 			refreshGroups = true
 		}
 
@@ -1806,8 +1806,7 @@ var (
 	ignore_groups = []string{"isolated", "lan", "wan", "dns", "api"}
 )
 
-func getVerdictMapNames() []string {
-	//get custom maps from zones
+func getGroupVerdictMapNames() []string {
 	custom_maps := []string{}
 	zones := getGroupsJson()
 	for _, z := range zones {
@@ -1824,6 +1823,11 @@ func getVerdictMapNames() []string {
 			custom_maps = append(custom_maps, z.Name+"_dst_access")
 		}
 	}
+	return custom_maps
+}
+
+func getVerdictMapNames() []string {
+	custom_maps := getGroupVerdictMapNames()
 	return append(builtin_maps, custom_maps...)
 }
 
