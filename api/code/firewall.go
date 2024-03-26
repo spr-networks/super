@@ -1442,9 +1442,7 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 	}
 
 	foundPolicy := slices.Contains(container_rule.Policies, DEVICE_POLICY_PERMIT_PRIVATE_UPSTREAM_ACCESS)
-	if strings.Contains(container_rule.SrcIP, "/") {
-
-	} else {
+	if !strings.Contains(container_rule.SrcIP, "/") {
 		inUpstreamAllowed := hasPrivateUpstreamAccess(container_rule.SrcIP)
 		if foundPolicy && !inUpstreamAllowed {
 			//if has the tag but not in the verdict map, add it
