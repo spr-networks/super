@@ -1324,7 +1324,9 @@ func includesGroupStd(slice []string) (bool, bool, bool, bool) {
 func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container_rule CustomInterfaceRule, action string, fthru bool) error {
 	current_rules := []CustomInterfaceRule{}
 	for _, rule := range current_rules_all {
-		if rule.Interface == container_rule.Interface {
+		//if the Interface name and IP are the same, consider them as affecting
+		// the same policy.
+		if rule.Interface == container_rule.Interface && rule.SrcIP == container_rule.SrcIP {
 			current_rules = append(current_rules, rule)
 		}
 	}
@@ -1334,20 +1336,27 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 	lan_count := 0
 	api_count := 0
 	if action == "delete" {
-		for _, rule := range current_rules {
-			//for matching interface names, count their policies
+		for _, rule := range current_rules_all {
 			wan_, dns_, lan_, api_ := includesGroupStd(rule.Policies)
-			if wan_ {
-				wan_count++
+
+			//api_interfaces is only on Interface naem
+			if rule.Interface == container_rule.Interface {
+				if api_ {
+					api_count++
+				}
 			}
-			if dns_ {
-				dns_count++
-			}
-			if lan_ {
-				lan_count++
-			}
-			if api_ {
-				api_count++
+
+			//for others its Interface + SrcIP
+			if rule.Interface == container_rule.Interface && rule.SrcIP == container_rule.SrcIP {
+				if wan_ {
+					wan_count++
+				}
+				if dns_ {
+					dns_count++
+				}
+				if lan_ {
+					lan_count++
+				}
 			}
 		}
 	}
@@ -2195,6 +2204,9 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 }
 
 func addVerdictMac(IP string, MAC string, Iface string, Table string, Verdict string) {
+	if Iface == "" {
+		return
+	}
 	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ".", MAC, ":", Verdict, "}").Run()
 	if err != nil {
 		log.Println("addVerdictMac Failed", MAC, Iface, Table, err)
