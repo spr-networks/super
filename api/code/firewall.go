@@ -1431,19 +1431,17 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 		} else {
 			delete_group_names := []string{}
 
-			for _, nameOne := range container_rule.Groups {
-				found := false
-				for _, rule := range current_rules {
-					if slices.Contains(rule.Groups, nameOne) {
-						found = true
-						break
-					}
+			found := false
+			for _, rule := range current_rules {
+				if slices.Contains(rule.Groups, group) {
+					found = true
+					break
 				}
-				//if no other rule with this interface had this group, mark for deletion
-				if !found {
-					delete_group_names = append(delete_group_names, nameOne+"_src_access")
-					delete_group_names = append(delete_group_names, nameOne+"_dst_access")
-				}
+			}
+			//if no other rule with this interface had this group, mark for deletion
+			if !found {
+				delete_group_names = append(delete_group_names, group+"_src_access")
+				delete_group_names = append(delete_group_names, group+"_dst_access")
 			}
 
 			log.Println("Deleting groups for interface", container_rule.Interface, delete_group_names)
