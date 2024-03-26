@@ -1432,7 +1432,8 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 				}
 				//if no other rule with this interface had this group, mark for deletion
 				if !found {
-					delete_group_names = append(delete_group_names, nameOne)
+					delete_group_names = append(delete_group_names, nameOne+"_src_access")
+					delete_group_names = append(delete_group_names, nameOne+"_dst_access")
 				}
 			}
 
