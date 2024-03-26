@@ -30,7 +30,7 @@ describe('open router ports', () => {
         let dataString = "SPR Planet"
 
         var outBuf = ""
-        const server = spawn('/bin/bash', ['-c', 'docker exec superbase bash -c "timeout 10 nc -w 1 -l -p 4040"'], {
+        const server = spawn('/bin/bash', ['-c', 'docker exec superbase bash -c "timeout 10 nc -w 10 -l -p 4040"'], {
           detached: true,
           stdio: ['ignore', 'pipe', 'inherit']
         })
@@ -39,7 +39,7 @@ describe('open router ports', () => {
           outBuf += data
         })
 
-        exec('docker exec superbase ip a l eth0 | awk \'/inet/ {print $2}\' | cut -d/ -f1', (error, stdout, stderr) => {
+        exec('docker exec superbase ip a l eth0 | awk \'/inet/ {print $2}\' | cut -d/ -f1 | head -n 1', (error, stdout, stderr) => {
           let upstream_ip = stdout.trim()
           assert(upstream_ip.length != 0)
 
@@ -48,7 +48,7 @@ describe('open router ports', () => {
             assert(error != null)
             assert(error.code == 1)
 
-            exec('docker exec sta1 bash -c "sleep 0.1; echo ' + dataString + ' | nc -w 2 192.168.100.1 4040"', (error, stdout, stderr) => {
+            exec('docker exec sta2 bash -c "sleep 0.1; echo ' + dataString + ' | nc -w 2 192.168.100.1 4040"', (error, stdout, stderr) => {
               assert(error == null)
               assert(outBuf.trim() == dataString.trim())
               done()
@@ -60,7 +60,7 @@ describe('open router ports', () => {
   })
 
   it('should open 4040 to wan and lan', function(done) {
-    this.timeout(5000)
+    this.timeout(10000)
 
     agent
       .put('/firewall/service_port')
@@ -72,7 +72,7 @@ describe('open router ports', () => {
         let dataString = "SPR Planet"
 
         var outBuf = ""
-        const server = spawn('/bin/bash', ['-c', 'docker exec superbase bash -c "timeout 10 nc -w 1 -l -p 4040;  timeout 10 nc -w 1 -l -p 4040"'], {
+        const server = spawn('/bin/bash', ['-c', 'docker exec superbase bash -c "timeout 10 nc -w 10 -l -p 4040;  timeout 10 nc -w 10 -l -p 4040"'], {
           detached: true,
           stdio: ['ignore', 'pipe', 'inherit']
         })
@@ -81,16 +81,17 @@ describe('open router ports', () => {
           outBuf += data
         })
 
-        exec('docker exec superbase ip a l eth0 | awk \'/inet/ {print $2}\' | cut -d/ -f1', (error, stdout, stderr) => {
+        exec('docker exec superbase ip a l eth0 | awk \'/inet/ {print $2}\' | cut -d/ -f1 | head -n 1', (error, stdout, stderr) => {
           let upstream_ip = stdout.trim()
           assert(upstream_ip.length != 0)
 
-          //ensure connection fails
-          exec('echo asdf | nc -w 1 ' + upstream_ip + ' 4040', (error, stdout, stderr) => {
-            assert(error == null)
+          //ensure connection got data
+          exec('echo asdf | nc -w 3 ' + upstream_ip + ' 4040', (error, stdout, stderr) => {
+            assert(error == null && "port 4040 should not have failed from wan")
+            assert(outBuf.trim() == 'asdf')
 
             outBuf = ""
-            exec('docker exec sta1 bash -c "sleep 0.1; echo ' + dataString + ' | nc -w 2 192.168.100.1 4040"', (error, stdout, stderr) => {
+            exec('docker exec sta2 bash -c "sleep 0.1; echo ' + dataString + ' | nc -w 3 192.168.100.1 4040"', (error, stdout, stderr) => {
               assert(error == null)
               assert(outBuf.trim() == dataString.trim())
               done()
@@ -102,7 +103,6 @@ describe('open router ports', () => {
 
       })
   })
-
 
   it('should open 4040 to lan only again', function(done) {
     this.timeout(5000)
@@ -115,7 +115,7 @@ describe('open router ports', () => {
         let dataString = "SPR Planet"
 
         var outBuf = ""
-        const server = spawn('/bin/bash', ['-c', 'docker exec superbase bash -c "timeout 10 nc -w 1 -l -p 4040"'], {
+        const server = spawn('/bin/bash', ['-c', 'docker exec superbase bash -c "timeout 10 nc -w 5 -l -p 4040"'], {
           detached: true,
           stdio: ['ignore', 'pipe', 'inherit']
         })
@@ -124,7 +124,7 @@ describe('open router ports', () => {
           outBuf += data
         })
 
-        exec('docker exec superbase ip a l eth0 | awk \'/inet/ {print $2}\' | cut -d/ -f1', (error, stdout, stderr) => {
+        exec('docker exec superbase ip a l eth0 | awk \'/inet/ {print $2}\' | cut -d/ -f1 | head -n 1', (error, stdout, stderr) => {
           let upstream_ip = stdout.trim()
           assert(upstream_ip.length != 0)
 
@@ -133,7 +133,7 @@ describe('open router ports', () => {
             assert(error != null)
             assert(error.code == 1)
 
-            exec('docker exec sta1 bash -c "sleep 0.1; echo ' + dataString + ' | nc -w 2 192.168.100.1 4040"', (error, stdout, stderr) => {
+            exec('docker exec sta2 bash -c "sleep 0.1; echo ' + dataString + ' | nc -w 2 192.168.100.1 4040"', (error, stdout, stderr) => {
               assert(error == null)
               assert(outBuf.trim() == dataString.trim())
               done()
@@ -147,7 +147,7 @@ describe('open router ports', () => {
 
 
   it('should delete port 4040 and no longer be reachable on LAN nor WAN', function(done) {
-    this.timeout(5000)
+    this.timeout(10000)
 
     agent
       .delete('/firewall/service_port')
@@ -159,7 +159,7 @@ describe('open router ports', () => {
         let dataString = "SPR Planet"
 
         var outBuf = ""
-        const server = spawn('/bin/bash', ['-c', 'docker exec superbase bash -c "timeout 10 nc -w 1 -l -p 4040"'], {
+        const server = spawn('/bin/bash', ['-c', 'docker exec superbase bash -c "timeout 10 nc -w 5 -l -p 4040"'], {
           detached: true,
           stdio: ['ignore', 'pipe', 'inherit']
         })
@@ -168,16 +168,16 @@ describe('open router ports', () => {
           outBuf += data
         })
 
-        exec('docker exec superbase ip a l eth0 | awk \'/inet/ {print $2}\' | cut -d/ -f1', (error, stdout, stderr) => {
+        exec('docker exec superbase ip a l eth0 | awk \'/inet/ {print $2}\' | cut -d/ -f1 | head -n 1', (error, stdout, stderr) => {
           let upstream_ip = stdout.trim()
           assert(upstream_ip.length != 0)
 
           //ensure connection fails
-          exec('nc -w 1 ' + upstream_ip + ' 4040', (error, stdout, stderr) => {
+          exec('nc -w 5 ' + upstream_ip + ' 4040', (error, stdout, stderr) => {
             assert(error != null)
             assert(error.code == 1)
 
-            exec('docker exec sta1 bash -c "sleep 0.1; echo ' + dataString + ' | nc -w 2 192.168.100.1 4040"', (error, stdout, stderr) => {
+            exec('docker exec sta2 bash -c "sleep 0.1; echo ' + dataString + ' | nc -w 2 192.168.100.1 4040"', (error, stdout, stderr) => {
               assert(error != null)
               assert(error.code == 1)
               done()
