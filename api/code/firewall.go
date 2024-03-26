@@ -1429,8 +1429,6 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 			Groupsmtx.Unlock()
 			addCustomVerdict(group, container_rule.SrcIP, container_rule.Interface)
 		} else {
-			delete_group_names := []string{}
-
 			found := false
 			for _, rule := range current_rules {
 				if slices.Contains(rule.Groups, group) {
@@ -1438,14 +1436,20 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 					break
 				}
 			}
-			//if no other rule with this interface had this group, mark for deletion
+
 			if !found {
-				delete_group_names = append(delete_group_names, group+"_src_access")
-				delete_group_names = append(delete_group_names, group+"_dst_access")
+				//clear rule from group.
+				err := exec.Command("nft", "delete", "element", "inet", "filter", group+"_src_access", "{", container_rule.SrcIP, ".", container_rule.Interface, ":", "accept", "}").Run()
+				if err != nil {
+					log.Println("[-] Error container_interface group nft delete failed", err)
+				}
+
+				err = exec.Command("nft", "delete", "element", "inet", "filter", group+"_dst_access", "{", container_rule.SrcIP, ".", container_rule.Interface, ":", "continue", "}").Run()
+				if err != nil {
+					log.Println("[-]  Error container_interface group  nft delete failed", err)
+				}
 			}
 
-			log.Println("Deleting groups for interface", container_rule.Interface, delete_group_names)
-			flushVmaps(container_rule.SrcIP, "", container_rule.Interface, delete_group_names, true)
 		}
 	}
 
