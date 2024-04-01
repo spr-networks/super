@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -54,6 +55,14 @@ func doReloadPSKFiles() {
 	sae := ""
 
 	for keyval, entry := range devices {
+		if entry.DeviceDisabled == true {
+			continue
+		}
+
+		if slices.Contains(entry.Policies, "disabled") {
+			continue
+		}
+
 		if keyval == "pending" {
 			//set wildcard password at front. hostapd uses a FILO for the sae keys
 			if entry.PSKEntry.Type == "sae" {

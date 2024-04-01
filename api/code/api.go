@@ -124,9 +124,9 @@ type DeviceEntry struct {
 	DHCPFirstTime    string
 	DHCPLastTime     string
 	Style            DeviceStyle
-	DeviceExpiration int64 //tbd need to observe this.
+	DeviceExpiration int64
 	DeleteExpiration bool
-	DeviceDisabled   bool
+	DeviceDisabled   bool //tbd deprecate this in favor of only using the policy name.
 }
 
 var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "disabled"}
@@ -1259,18 +1259,39 @@ func handleExpirations(val *DeviceEntry, req *DeviceEntry) {
 	}
 	val.DeleteExpiration = req.DeleteExpiration
 	val.DeviceDisabled = req.DeviceDisabled
+
+	if val.DeviceDisabled && !slices.Contains(val.Policies, "disabled") {
+		val.Policies = append(val.Policies, "disabled")
+	} else if !val.DeviceDisabled && slices.Contains(val.Policies, "disabled") {
+		//remove disabled
+		policies := []string{}
+		for _, entry := range val.Policies {
+			if entry != "disabled" {
+				policies = append(policies, entry)
+			}
+		}
+		val.Policies = policies
+	}
+
 }
 
 func checkDeviceExpiries(devices map[string]DeviceEntry) {
 	curtime := time.Now().Unix()
 	todelete := []string{}
+	doUpdate := false
 	for k, entry := range devices {
 		if entry.DeviceDisabled == false && entry.DeviceExpiration != 0 {
 			if entry.DeviceExpiration < curtime {
+				doUpdate = true
 				//expire the device
 				entry.DeviceDisabled = true
 				if entry.DeleteExpiration {
 					todelete = append(todelete, k)
+				} else {
+					//not deleting, make sure it gets the Disabled policy.
+					if !slices.Contains(entry.Policies, "disabled") {
+						entry.Policies = append(entry.Policies, "disabled")
+					}
 				}
 			}
 		}
@@ -1280,6 +1301,10 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 		deleteDeviceLocked(devices, k)
 	}
 
+	//did not delete anything but a disable happened, save.
+	if doUpdate && len(todelete) == 0 {
+		saveDevicesJson(devices)
+	}
 }
 
 func syncDevices(w http.ResponseWriter, r *http.Request) {
