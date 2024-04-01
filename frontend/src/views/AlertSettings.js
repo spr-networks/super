@@ -12,6 +12,9 @@ import {
   CheckboxIcon,
   CheckboxLabel,
   CheckboxIndicator,
+  Fab,
+  FabIcon,
+  FabLabel,
   FlatList,
   HStack,
   Icon,
@@ -592,8 +595,8 @@ const AlertSettings = (props) => {
             variant="outline"
             onPress={handlePressEdit}
           >
-            {/*<ButtonText>iOS</ButtonText>*/}
-            <ButtonIcon as={SettingsIcon} color="$primary500" />
+            <ButtonText>iOS</ButtonText>
+            <ButtonIcon as={SettingsIcon} color="$primary500" ml="$2" />
           </Button>
           {/*<Button
             size="sm"
@@ -607,7 +610,7 @@ const AlertSettings = (props) => {
           <ModalForm
             title="Add Alert"
             triggerText="Add Alert"
-            triggerProps={{ size: 'sm' }}
+            triggerProps={{ display: 'none', size: 'sm' }}
             modalRef={refModal}
           >
             <AddAlert curItem={populateItem} onSubmit={onSubmit} />
@@ -632,6 +635,16 @@ const AlertSettings = (props) => {
         )}
         keyExtractor={(item, index) => `alert-${index}`}
       />
+      <Fab
+        renderInPortal={false}
+        shadow={2}
+        size="sm"
+        onPress={() => refModal.current()}
+        bg="$primary500"
+      >
+        <FabIcon as={AddIcon} mr="$1" />
+        <FabLabel>Add Alert</FabLabel>
+      </Fab>
     </View>
   )
 }
