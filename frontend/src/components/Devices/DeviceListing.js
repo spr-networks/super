@@ -85,7 +85,9 @@ const DeviceListing = (props) => {
           })
           .catch((err) => {})
 
-        setPolicies([...new Set(devices.map((device) => device.Policies).flat())])
+        setPolicies([
+          ...new Set(devices.map((device) => device.Policies).flat())
+        ])
         setGroups([...new Set(devices.map((device) => device.Groups).flat())])
         setTags([...new Set(devices.map((device) => device.DeviceTags).flat())])
         // TODO check wg status for virt
@@ -265,7 +267,7 @@ const DeviceListing = (props) => {
   return (
     <View h="$full">
       <ListHeader title="Devices">
-        <Button
+        {/*<Button
           size="xs"
           action="primary"
           variant="solid"
@@ -277,7 +279,7 @@ const DeviceListing = (props) => {
         >
           <ButtonText>Add</ButtonText>
           <ButtonIcon as={AddIcon} ml="$2" />
-        </Button>
+        </Button>*/}
 
         {/*<Button
             size="sm"
