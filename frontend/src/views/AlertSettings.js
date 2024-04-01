@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import {
   AddIcon,
@@ -26,6 +27,7 @@ import {
   Tooltip,
   TrashIcon,
   ThreeDotsIcon,
+  View,
   VStack,
   FormControl,
   FormControlLabel,
@@ -47,7 +49,6 @@ import {
 } from 'lucide-react-native'
 
 import { copy } from 'utils'
-import { useNavigate } from 'react-router-native'
 
 const alertTemplates = [
   {
@@ -582,7 +583,7 @@ const AlertSettings = (props) => {
   }
 
   return (
-    <ScrollView h="$full">
+    <View h="$full">
       <ListHeader title="Alert Configuration">
         <HStack space="sm">
           <Button
@@ -591,9 +592,10 @@ const AlertSettings = (props) => {
             variant="outline"
             onPress={handlePressEdit}
           >
+            {/*<ButtonText>iOS</ButtonText>*/}
             <ButtonIcon as={SettingsIcon} color="$primary500" />
           </Button>
-          <Button
+          {/*<Button
             size="sm"
             action="secondary"
             variant="outline"
@@ -601,11 +603,11 @@ const AlertSettings = (props) => {
           >
             <ButtonText>Add Templates</ButtonText>
             <ButtonIcon as={AddIcon} ml="$2" />
-          </Button>
+          </Button>*/}
           <ModalForm
             title="Add Alert"
             triggerText="Add Alert"
-            triggerProps={{ sz: 'sm' }}
+            triggerProps={{ size: 'sm' }}
             modalRef={refModal}
           >
             <AddAlert curItem={populateItem} onSubmit={onSubmit} />
@@ -630,7 +632,7 @@ const AlertSettings = (props) => {
         )}
         keyExtractor={(item, index) => `alert-${index}`}
       />
-    </ScrollView>
+    </View>
   )
 }
 

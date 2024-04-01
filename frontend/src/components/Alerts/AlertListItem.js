@@ -61,9 +61,10 @@ const AlertListItem = ({ item, notifyChange, ...props }) => {
         <Icon size="sm" as={AlertTriangleIcon} color={color} />
 
         <Heading size="xs">
-          {eventTemplate(appContext, item.Title, item.Event) ||
+          {/*eventTemplate(appContext, item.Title, item.Event) ||
             item.Topic ||
-            'Alert'}
+  'Alert'*/}
+          {item.Title || item.Topic || 'Alert'}
         </Heading>
       </HStack>
 
@@ -121,10 +122,9 @@ const AlertListItem = ({ item, notifyChange, ...props }) => {
             p="$4"
             display={!showEvent ? 'flex' : 'none'}
             alignSelf="center"
+            alignItems="center"
           >
-            <Text size="sm">
-              {eventTemplate(appContext, item.Body, item.Event)}
-            </Text>
+            {eventTemplate(appContext, item.Body, item.Event)}
           </HStack>
           <VStack
             space="sm"
@@ -156,7 +156,7 @@ const StateButton = ({ item, onPress, ...props }) => {
   return (
     <Button
       action={currentState == 'New' ? 'primary' : 'secondary'}
-      variant={currentState == 'New' ? 'solid' : 'outline'}
+      variant={currentState == 'New' ? 'outline' : 'outline'}
       size="xs"
       onPress={() => onPress(action)}
     >

@@ -1,16 +1,24 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import {
   Button,
   ButtonIcon,
   ButtonText,
+  Fab,
+  FabIcon,
+  FabLabel,
   FlatList,
   Text,
   View,
   VStack,
+  AddIcon,
   CheckIcon,
+  SettingsIcon,
   HStack
 } from '@gluestack-ui/themed'
+
+import { Settings2Icon } from 'lucide-react-native'
 
 import { alertsAPI, dbAPI } from 'api'
 import AddAlert from 'components/Alerts/AddAlert'
@@ -29,6 +37,8 @@ const Alerts = (props) => {
   const [topics, setTopics] = useState([])
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
+  const navigate = useNavigate()
+
   const AlertPrefix = 'alert:'
 
   const [logs, setLogs] = useState([])
@@ -205,11 +215,24 @@ const Alerts = (props) => {
           <ModalForm
             title="Add Alert"
             triggerText="Add Alert"
-            triggerProps={{ action: 'secondary', variant: 'solid' }}
+            triggerProps={{
+              display: 'none',
+              action: 'secondary',
+              variant: 'solid'
+            }}
             modalRef={refModal}
           >
             <AddAlert onSubmit={onSubmit} />
           </ModalForm>
+          {/*<Button
+            action="primary"
+            variant="outline"
+            size="sm"
+            onPress={() => navigate(`/admin/alerts/settings`)}
+          >
+            <ButtonText>Settings</ButtonText>
+            <ButtonIcon as={SettingsIcon} ml="$2" />
+          </Button>*/}
           <Button
             action="primary"
             variant="solid"
@@ -231,7 +254,30 @@ const Alerts = (props) => {
           </VStack>
         )}
         keyExtractor={(item, index) => item.time + index}
+        contentContainerStyle={{ paddingBottom: 48 }}
       />
+
+      <Fab
+        renderInPortal={false}
+        shadow={2}
+        size="sm"
+        onPress={() => refModal.current()}
+        bg="$primary500"
+      >
+        <FabIcon as={AddIcon} mr="$1" />
+        <FabLabel>Add</FabLabel>
+      </Fab>
+      <Fab
+        renderInPortal={false}
+        shadow={2}
+        size="sm"
+        onPress={() => navigate(`/admin/alerts/settings`)}
+        bg="$secondary500"
+        mr="$20"
+      >
+        <FabIcon as={Settings2Icon} mr="$1" />
+        <FabLabel>Settings</FabLabel>
+      </Fab>
     </View>
   )
 }

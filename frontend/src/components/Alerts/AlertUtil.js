@@ -27,15 +27,15 @@ export const transformTag = (context, tag, value) => {
     if (tag == 'Interface') {
       return <InterfaceItem name={value} />
     } else if (tag == 'Device') {
-      return <DeviceItem show={['Style', 'Name']} flex={1} item={deviceItem} />
+      return <DeviceItem show={['Style', 'Name']} item={deviceItem} />
     } else if (tag == 'DeviceIcon') {
-      return <DeviceItem show={['Style']} flex={1} item={deviceItem} />
+      return <DeviceItem show={['Style']} item={deviceItem} />
     } else if (tag == 'DeviceName') {
-      return <DeviceItem show={['Name']} flex={1} item={deviceItem} />
+      return <DeviceItem show={['Name']} item={deviceItem} />
     } else if (tag == 'DeviceIP') {
-      return <DeviceItem show={['RecentIP']} flex={1} item={deviceItem} />
+      return <DeviceItem show={['RecentIP']} item={deviceItem} />
     } else if (tag == 'DeviceMAC') {
-      return <DeviceItem show={['MAC']} flex={1} item={deviceItem} />
+      return <DeviceItem show={['MAC']} item={deviceItem} />
     }
   }
 
@@ -94,7 +94,11 @@ export const eventTemplate = (context, template, event) => {
 
   // Add any remaining text after the last match.
   if (lastIndex < template.length) {
-    elements.push(template.slice(lastIndex))
+    if (supportTags) {
+      elements.push(<Text size="sm">{template.slice(lastIndex)}</Text>)
+    } else {
+      elements.push(template.slice(lastIndex))
+    }
   }
 
   if (supportTags) {
