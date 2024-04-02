@@ -4,7 +4,7 @@ import DeviceItem from 'components/Devices/DeviceItem'
 
 import { InterfaceItem } from 'components/TagItem'
 
-import { HStack, Text } from '@gluestack-ui/themed'
+import { Text } from '@gluestack-ui/themed'
 
 export const transformTag = (context, tag, value) => {
   if (context) {
@@ -46,7 +46,13 @@ export const transformTag = (context, tag, value) => {
   )
 }
 
-export const eventTemplate = (context, template, event) => {
+// if supportTags=false string is returned, else list of react elements
+export const eventTemplate = (
+  context,
+  template,
+  event,
+  supportTags = false
+) => {
   if (!template || !event) {
     return template
   }
@@ -54,14 +60,21 @@ export const eventTemplate = (context, template, event) => {
   let elements = []
   let lastIndex = 0
 
-  const supportTags = Platform.OS == 'web'
+  //const supportTags = Platform.OS == 'web'
+  const addElement = (val) => {
+    if (supportTags) {
+      elements.push(<Text size="sm">{val}</Text>)
+    } else {
+      elements.push(val)
+    }
+  }
 
   template.replace(
     /\{\{([\w\.]+)(?:#(\w+))?\}\}/g,
     (match, path, tag, index) => {
       // Add the text before the match.
       if (index > lastIndex) {
-        elements.push(template.slice(lastIndex, index))
+        addElement(template.slice(lastIndex, index))
       }
 
       if (match.includes('__')) {
@@ -82,9 +95,9 @@ export const eventTemplate = (context, template, event) => {
       }
 
       if (tag && supportTags) {
-        elements.push(transformTag(context, tag, currentValue))
+        addElement(transformTag(context, tag, currentValue))
       } else {
-        elements.push(currentValue)
+        addElement(currentValue)
       }
 
       lastIndex = index + match.length
@@ -94,11 +107,7 @@ export const eventTemplate = (context, template, event) => {
 
   // Add any remaining text after the last match.
   if (lastIndex < template.length) {
-    if (supportTags) {
-      elements.push(<Text size="sm">{template.slice(lastIndex)}</Text>)
-    } else {
-      elements.push(template.slice(lastIndex))
-    }
+    addElement(template.slice(lastIndex))
   }
 
   if (supportTags) {
@@ -114,3 +123,13 @@ export const eventTemplate = (context, template, event) => {
   // return string
   return elements.join('')
 }
+
+/*
+export const eventTemplateElements = (context, template, event) => {
+  return eventTemplate(context, template, event, true)
+}
+
+export const eventTemplateString = (context, template, event) => {
+  return eventTemplate(context, template, event, false)
+}
+*/

@@ -1,4 +1,6 @@
 import React, { useContext, useState } from 'react'
+import { Platform } from 'react-native'
+
 import { prettyDate } from 'utils'
 
 import {
@@ -61,10 +63,9 @@ const AlertListItem = ({ item, notifyChange, ...props }) => {
         <Icon size="sm" as={AlertTriangleIcon} color={color} />
 
         <Heading size="xs">
-          {/*eventTemplate(appContext, item.Title, item.Event) ||
+          {eventTemplate(appContext, item.Title, item.Event) ||
             item.Topic ||
-  'Alert'*/}
-          {item.Title || item.Topic || 'Alert'}
+            'Alert'}
         </Heading>
       </HStack>
 
@@ -124,7 +125,7 @@ const AlertListItem = ({ item, notifyChange, ...props }) => {
             alignSelf="center"
             alignItems="center"
           >
-            {eventTemplate(appContext, item.Body, item.Event)}
+            {eventTemplate(appContext, item.Body, item.Event, true)}
           </HStack>
           <VStack
             space="sm"

@@ -7,6 +7,7 @@ import { eventTemplate } from 'components/Alerts/AlertUtil'
 
 import { useNavigate } from 'react-router-dom'
 import { alertState, AppContext } from 'AppContext'
+import { Platform } from 'react-native'
 
 const parseLogMessage = async (context, msg) => {
   const msgType = msg.Type
@@ -36,8 +37,12 @@ const parseLogMessage = async (context, msg) => {
     if (valid_types.includes(data.NotificationType)) {
       type = data.NotificationType
     }
-    title = eventTemplate(context, data.Title, data.Event)
-    body = eventTemplate(context, data.Body, data.Event)
+
+    //NOTE have todo this since parseLogMessage is also used for push alerts
+    let supportTags = Platform.OS == 'web'
+
+    title = eventTemplate(context, data.Title, data.Event, false)
+    body = eventTemplate(context, data.Body, data.Event, supportTags)
     data = ''
   } else if (msgType.startsWith('wifi:auth')) {
     if (msgType.includes('success')) {
@@ -59,7 +64,7 @@ const parseLogMessage = async (context, msg) => {
     }
   } else if (msgType.startsWith('plugin:')) {
     type = 'warning'
-    switch(msgType) {
+    switch (msgType) {
       case 'plugin:download:success':
         type = 'success'
         body = `Successfully downloaded ${data.GitURL}`

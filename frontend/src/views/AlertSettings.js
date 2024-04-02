@@ -634,12 +634,13 @@ const AlertSettings = (props) => {
           />
         )}
         keyExtractor={(item, index) => `alert-${index}`}
+        contentContainerStyle={{ paddingBottom: 48 }}
       />
       <Fab
         renderInPortal={false}
         shadow={2}
         size="sm"
-        onPress={() => refModal.current()}
+        onPress={() => navigate(`/admin/alerts/:id`)}
         bg="$primary500"
       >
         <FabIcon as={AddIcon} mr="$1" />

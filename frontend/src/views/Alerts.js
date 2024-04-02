@@ -261,7 +261,7 @@ const Alerts = (props) => {
         renderInPortal={false}
         shadow={2}
         size="sm"
-        onPress={() => refModal.current()}
+        onPress={() => navigate(`/admin/alerts/:id`)}
         bg="$primary500"
       >
         <FabIcon as={AddIcon} mr="$1" />
