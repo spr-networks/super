@@ -1,6 +1,6 @@
 # A Secure Programmable Router
 
-📡 SPR: Open Source, secure, user friendly and fast wifi routers for your home. One wifi password per device. Ad Blocking & Privacy Blocklists. Policy Based Network Access
+## 📡 SPR: Open Source, secure, user friendly and fast wifi routers for your home. 
 
 [![release version](https://img.shields.io/github/v/release/spr-networks/super)](https://github.com/spr-networks/super/releases/latest)
 ![version](https://img.shields.io/github/v/tag/spr-networks/super?sort=semver&label=version)
