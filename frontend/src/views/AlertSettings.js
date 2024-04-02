@@ -44,6 +44,7 @@ import ModalForm from 'components/ModalForm'
 import { ListHeader } from 'components/List'
 import { ListItem } from 'components/List'
 import {
+  AlertTriangleIcon,
   BellIcon,
   BellOffIcon,
   BugPlayIcon,
@@ -220,6 +221,14 @@ const AlertItem = ({
     </Menu>
   )
 
+  let notificationType =
+    (item.Actions?.[0]?.NotificationType || 'info').replace(
+      'danger',
+      'warning'
+    ) || 'muted'
+
+  let color = `$${notificationType}500`
+
   return (
     <ListItem>
       <VStack
@@ -233,7 +242,8 @@ const AlertItem = ({
         }}
       >
         <VStack space="md" flex={1}>
-          <HStack space="sm">
+          <HStack space="sm" alignItems="center">
+            <Icon size="sm" as={AlertTriangleIcon} color={color} />
             <Text bold>{item.Name}</Text>
             {item.Disabled ? (
               <Text size="xs" color="$muted500">
@@ -252,23 +262,15 @@ const AlertItem = ({
         </Text>
       </VStack>
 
-      {/*<Badge
-        variant="outline"
-        action={item.Actions?.[0]?.NotificationType || 'info'}
-        rounded="$md"
-      >
-        <BadgeText>{item.Actions?.[0]?.NotificationType || 'info'}</BadgeText>
-      </Badge>*/}
-
       <HStack flex={1}>
         {item.Actions.map((action) => (
           <VStack key={action.MessageTitle}>
             {/*
-          <HStack space="md">
-            <Text color="$muted500">Message Title</Text>
-            <Text>{action.MessageTitle || 'N/A'}</Text>
-          </HStack>
-          */}
+            <HStack space="md">
+              <Text color="$muted500">Message Title</Text>
+              <Text>{action.MessageTitle || 'N/A'}</Text>
+            </HStack>
+            */}
 
             <VStack space="md" alignItems="center">
               <Switch
