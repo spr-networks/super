@@ -476,7 +476,12 @@ const AlertSettings = (props) => {
       return
     }
 
-    item.Actions[0].SendNotification = !item.Actions[0].SendNotification
+    let SendNotification = !item.Actions[0].SendNotification
+    item.Actions[0].SendNotification = SendNotification
+    //if switch to on, make sure its enabled
+    if (SendNotification) {
+      item.Disabled = false
+    }
 
     alertsAPI
       .update(index, item)
