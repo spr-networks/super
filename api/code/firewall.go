@@ -1170,7 +1170,7 @@ func refreshDeviceGroupsAndPolicy(dev DeviceEntry) {
 	//remove from existing verdict maps
 	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname))
 
-	device_disabled := slices.Contains(dev.Policies, "disabled")
+	device_disabled := slices.Contains(dev.Policies, "disabled") || dev.DeviceDisabled == true
 	if !device_disabled {
 		//add this MAC and IP to the ethernet filter
 		addVerdictMac(ipv4, dev.MAC, ifname, "ethernet_filter", "return")
