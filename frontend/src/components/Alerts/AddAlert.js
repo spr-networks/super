@@ -70,6 +70,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
   // different action types, for example, disconnecting a device.
   const [GrabFields, setGrabFields] = useState([])
   const [ActionConfig, setActionConfig] = useState({
+    SendNotification: true,
     GrabEvent: false,
     StoreAlert: false,
     NotificationType: 'info'
