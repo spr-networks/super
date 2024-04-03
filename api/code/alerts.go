@@ -274,9 +274,7 @@ var gAlertDevices = []AlertDevice{}
 
 func loadAlertDevices() {
 	data, err := ioutil.ReadFile(AlertDevicesFile)
-	if err != nil {
-		log.Println(err)
-	} else {
+	if err == nil {
 		err = json.Unmarshal(data, &gAlertDevices)
 		if err != nil {
 			log.Println(err)
@@ -609,22 +607,22 @@ func grabReflect(fields []string, event interface{}) map[string]interface{} {
 	}
 
 	if v.Kind() == reflect.Map {
-			for _, keyValue := range v.MapKeys() {
-				key := keyValue.String()
-				for _, pattern := range patterns {
-					if pattern.MatchString(key) {
-						newEvent[key] = v.MapIndex(keyValue).Interface()
-						continue
-					}
-				}
-
-				for _, field := range fields {
-					if !isRegexp(field) && key == field {
-						newEvent[key] = v.MapIndex(keyValue).Interface()
-					}
+		for _, keyValue := range v.MapKeys() {
+			key := keyValue.String()
+			for _, pattern := range patterns {
+				if pattern.MatchString(key) {
+					newEvent[key] = v.MapIndex(keyValue).Interface()
+					continue
 				}
 			}
-			return newEvent
+
+			for _, field := range fields {
+				if !isRegexp(field) && key == field {
+					newEvent[key] = v.MapIndex(keyValue).Interface()
+				}
+			}
+		}
+		return newEvent
 	} else if v.Kind() != reflect.Struct {
 		fmt.Println("[-] Unexpected event kind", v.Kind())
 		log.Println("[-] Unexpected event kind", v.Kind())
