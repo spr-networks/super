@@ -10,7 +10,7 @@
         "StoreAlert": true,
         "MessageTitle": "MAC Filter Violation",
         "MessageBody": "MAC IP Violation {{IP.SrcIP#Device}} {{IP.SrcIP}} {{Ethernet.SrcMAC}} to {{IP.DstIP}} {{Ethernet.DstMAC}}",
-        "NotificationType": "info",
+        "NotificationType": "warning",
         "GrabEvent": true,
         "GrabValues": false
       }
@@ -54,7 +54,7 @@
         "StoreAlert": true,
         "MessageTitle": "Firewall Drop Private Network Request (rfc1918)",
         "MessageBody": "Dropped Traffic from {{IP.SrcIP#Device}} {{IP.SrcIP}} {{InDev#Interface}} to {{IP.DstIP}} {{OutDev#Interface}}",
-        "NotificationType": "info",
+        "NotificationType": "warning",
         "GrabEvent": true,
         "GrabValues": false
       }
@@ -70,7 +70,7 @@
     "Conditions": [],
     "Actions": [
       {
-        "SendNotification": false,
+        "SendNotification": true,
         "StoreAlert": true,
         "MessageTitle": "WiFi Auth Failure",
         "MessageBody": "{{MAC#Device}} {{MAC}} failed wifi authentication {{Reason}} with type {{Type}}",
@@ -80,8 +80,31 @@
       }
     ],
     "Name": "Wifi Auth Failure",
-    "Disabled": true,
+    "Disabled": false,
     "RuleId": "f16e9a58-9f80-455c-a280-211bd8b1fd05"
+  },
+  {
+    "TopicPrefix": "wifi:auth:success",
+    "MatchAnyOne": false,
+    "InvertRule": false,
+    "Conditions": [],
+    "Actions": [
+      {
+        "SendNotification": true,
+        "StoreAlert": false,
+        "MessageTitle": "Device Connected",
+        "MessageBody": "Authentication success for {{MAC#Device}}",
+        "NotificationType": "success",
+        "GrabEvent": true,
+        "GrabValues": false,
+        "GrabFields": [
+          "MAC"
+        ]
+      }
+    ],
+    "Name": "Device Connected",
+    "Disabled": false,
+    "RuleId": "387c3a9d-b072-4ba7-b6ff-895f484db4ec"
   },
   {
     "TopicPrefix": "nft:drop:input",
@@ -94,7 +117,7 @@
         "StoreAlert": true,
         "MessageTitle": "Dropped Input",
         "MessageBody": "Drop Incoming Traffic to Router from {{IP.SrcIP}} to port {{TCP.DstPort}} {{UDP.DstPort}}",
-        "NotificationType": "info",
+        "NotificationType": "warning",
         "GrabEvent": true,
         "GrabValues": false
       }
