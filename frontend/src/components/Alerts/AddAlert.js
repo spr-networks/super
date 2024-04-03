@@ -208,7 +208,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
   }
 
   return (
-    <VStack space="md">
+    <VStack space="md" p="$4">
       <HStack space="md">
         <FormControl flex={1}>
           <FormControlLabel>

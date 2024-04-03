@@ -65,8 +65,7 @@ const AddAlertView = () => {
       bg="$backgroundCardLight"
       h="$full"
       sx={{
-        _dark: { bg: '$backgroundCardDark' },
-        p: '$4'
+        _dark: { bg: '$backgroundCardDark' }
       }}
       {...swipeHandlers}
     >
