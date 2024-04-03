@@ -6,7 +6,7 @@ import { InterfaceItem } from 'components/TagItem'
 
 import { Text } from '@gluestack-ui/themed'
 
-export const transformTag = (context, tag, value) => {
+export const transformTag = (context, tag, value, supportTags = true) => {
   if (context) {
     let type = 'RecentIP'
     if (value.includes(':')) {
@@ -24,18 +24,29 @@ export const transformTag = (context, tag, value) => {
       }
     }
 
+    //translate to string
+    if (!supportTags) {
+      if (tag.match(/Interface/)) {
+        return value
+      } else if (tag.match(/IP/)) {
+        return deviceItem?.RecentIP || value
+      } else if (tag.match(/Device/)) {
+        return deviceItem?.Name || value
+      }
+    }
+
     if (tag == 'Interface') {
-      return <InterfaceItem name={value} />
+      return <InterfaceItem size="sm" name={value} />
     } else if (tag == 'Device') {
-      return <DeviceItem show={['Style', 'Name']} item={deviceItem} />
+      return <DeviceItem size="sm" show={['Style', 'Name']} item={deviceItem} />
     } else if (tag == 'DeviceIcon') {
-      return <DeviceItem show={['Style']} item={deviceItem} />
+      return <DeviceItem size="sm" show={['Style']} item={deviceItem} />
     } else if (tag == 'DeviceName') {
-      return <DeviceItem show={['Name']} item={deviceItem} />
+      return <DeviceItem size="sm" show={['Name']} item={deviceItem} />
     } else if (tag == 'DeviceIP') {
-      return <DeviceItem show={['RecentIP']} item={deviceItem} />
+      return <DeviceItem size="sm" show={['RecentIP']} item={deviceItem} />
     } else if (tag == 'DeviceMAC') {
-      return <DeviceItem show={['MAC']} item={deviceItem} />
+      return <DeviceItem size="sm" show={['MAC']} item={deviceItem} />
     }
   }
 
@@ -94,8 +105,8 @@ export const eventTemplate = (
         }
       }
 
-      if (tag && supportTags) {
-        addElement(transformTag(context, tag, currentValue))
+      if (tag) {
+        addElement(transformTag(context, tag, currentValue, supportTags))
       } else {
         addElement(currentValue)
       }
