@@ -34,7 +34,8 @@ import {
   VStack,
   FormControl,
   FormControlLabel,
-  FormControlLabelText
+  FormControlLabelText,
+  Pressable
 } from '@gluestack-ui/themed'
 
 import { alertsAPI, dbAPI, api } from 'api'
@@ -241,25 +242,27 @@ const AlertItem = ({
           }
         }}
       >
-        <VStack space="md" flex={1}>
-          <HStack space="sm" alignItems="center">
-            <Icon size="sm" as={AlertTriangleIcon} color={color} />
-            <Text bold>{item.Name}</Text>
-            {item.Disabled ? (
-              <Text size="xs" color="$muted500">
-                Disabled
-              </Text>
-            ) : null}
-          </HStack>
+        <Pressable onPress={() => onEdit(index, item)}>
+          <VStack space="md" flex={1}>
+            <HStack space="sm" alignItems="center">
+              <Icon size="sm" as={AlertTriangleIcon} color={color} />
+              <Text bold>{item.Actions?.[0]?.MessageTitle || item.Name}</Text>
+              {item.Disabled ? (
+                <Text size="xs" color="$muted500">
+                  Disabled
+                </Text>
+              ) : null}
+            </HStack>
 
-          <Badge variant="outline" action="muted" alignSelf="flex-start">
-            <BadgeText>{item.TopicPrefix || 'N/A'}</BadgeText>
-          </Badge>
-        </VStack>
+            <Badge variant="outline" action="muted" alignSelf="flex-start">
+              <BadgeText>{item.TopicPrefix || 'N/A'}</BadgeText>
+            </Badge>
+          </VStack>
+        </Pressable>
 
-        <Text flex={1} size="sm">
+        {/*<Text flex={1} size="sm">
           {item.Actions?.[0]?.MessageTitle || 'N/A'}
-        </Text>
+        </Text>*/}
       </VStack>
 
       <HStack flex={1}>
@@ -315,9 +318,9 @@ const AlertItemHeader = () => (
         Name & Topic
       </Text>
 
-      <Text flex={1} size="xs" bold>
+      {/*<Text flex={1} size="xs" bold>
         Title
-      </Text>
+      </Text>*/}
     </HStack>
     <Text flex={1} size="xs" bold>
       Show Notification
