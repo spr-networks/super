@@ -219,6 +219,7 @@ const LogList = (props) => {
         >
           <FilterInputSelect
             value={searchField}
+            topic={Object.keys(filter).find((f) => filter[f])}
             items={logs}
             onChangeText={setSearchField}
             onSubmitEditing={setSearchField}
