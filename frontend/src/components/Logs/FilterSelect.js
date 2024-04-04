@@ -104,6 +104,39 @@ const prettyToJSONPath = (query) => {
   return q
 }
 
+const extractKeys = (items) => {
+  if (!items) return []
+
+  let item = Array.isArray(items) ? items[0] : items
+  if (!item) return []
+
+  let keys = Object.keys(item)
+
+  keys = keys.filter((k) => !['bucket', 'time'].includes(k))
+
+  keys.forEach((key) => {
+    if (typeof item[key] === 'object' && item[key] !== null) {
+      let commons = [
+        'SrcIP',
+        'DstIP',
+        'IP',
+        'DstMAC',
+        'SrcMAC',
+        'Length',
+        'SrcPort',
+        'DstPort'
+      ]
+      let z = extractKeys(item[key])
+        .filter((k) => commons.includes(k))
+        .map((k) => key + '.' + k)
+      keys = keys.concat(z)
+      keys = keys.filter((k) => k != key) // remove objs
+    }
+  })
+
+  return keys
+}
+
 const FilterSelect = ({ items, onSubmitEditing, topic, query, ...props }) => {
   const isMultiple = false // only edit one key at a time
 
@@ -111,39 +144,6 @@ const FilterSelect = ({ items, onSubmitEditing, topic, query, ...props }) => {
   const [values, setValues] = useState({})
   const [keys, setKeys] = useState([])
   const [showSample, setShowSample] = useState(false)
-
-  const extractKeys = (items) => {
-    if (!items) return []
-
-    let item = Array.isArray(items) ? items[0] : items
-    if (!item) return []
-
-    let keys = Object.keys(item)
-
-    keys = keys.filter((k) => !['bucket', 'time'].includes(k))
-
-    keys.forEach((key) => {
-      if (typeof item[key] === 'object' && item[key] !== null) {
-        let commons = [
-          'SrcIP',
-          'DstIP',
-          'IP',
-          'DstMAC',
-          'SrcMAC',
-          'Length',
-          'SrcPort',
-          'DstPort'
-        ]
-        let z = extractKeys(item[key])
-          .filter((k) => commons.includes(k))
-          .map((k) => key + '.' + k)
-        keys = keys.concat(z)
-        keys = keys.filter((k) => k != key) // remove objs
-      }
-    })
-
-    return keys
-  }
 
   useEffect(() => {
     if (!items) return
@@ -299,4 +299,4 @@ FilterSelect.propTypes = {
 
 export default FilterSelect
 
-export { prettyJSONPath, prettyToJSONPath, FilterSelect }
+export { prettyJSONPath, prettyToJSONPath, extractKeys, FilterSelect }
