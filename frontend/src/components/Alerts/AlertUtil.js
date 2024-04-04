@@ -8,11 +8,15 @@ import { Text } from '@gluestack-ui/themed'
 
 export const transformTag = (context, tag, value, supportTags = true) => {
   if (context) {
+    //fuzzymatch if its ip or mac
     let type = 'RecentIP'
-    if (value.includes(':')) {
+    if (value.split(':')?.length == 6) {
       type = 'MAC'
-    } else if (value.includes('.')) {
-      //no-op.
+    }
+
+    if (type == 'RecentIP') {
+      //.Remote etc have ip:port, skip this
+      value = value.replace(/:.*/, '')
     }
 
     let deviceItem = undefined
