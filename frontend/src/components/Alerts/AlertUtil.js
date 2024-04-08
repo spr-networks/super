@@ -4,7 +4,7 @@ import DeviceItem from 'components/Devices/DeviceItem'
 
 import { InterfaceItem } from 'components/TagItem'
 
-import { Text } from '@gluestack-ui/themed'
+import { HStack, Text } from '@gluestack-ui/themed'
 
 export const transformTag = (context, tag, value, supportTags = true) => {
   if (context) {
@@ -127,11 +127,11 @@ export const eventTemplate = (
 
   if (supportTags) {
     return (
-      <>
+      <HStack space="xs" justifyContent="flex-start" flexWrap="wrap">
         {elements.map((element, idx) => (
           <React.Fragment key={idx}>{element}</React.Fragment>
         ))}
-      </>
+      </HStack>
     )
   }
 
