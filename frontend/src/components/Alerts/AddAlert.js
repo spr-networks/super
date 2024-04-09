@@ -437,7 +437,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
             {Conditions.length > 0 ? (
               <HStack space="lg">
                 <FormControl>
-                  <HStack space="sm">
+                  <HStack space="sm" alignItems="center">
                     <Switch
                       size="sm"
                       value={MatchAnyOne}

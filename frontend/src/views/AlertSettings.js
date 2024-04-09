@@ -119,38 +119,27 @@ const AlertItem = ({
 
   return (
     <ListItem>
-      <VStack
-        space="sm"
-        flex={3}
-        alignItems="flex-start"
-        sx={{
-          '@md': {
-            flexDirection: 'row'
-          }
-        }}
-      >
-        <Pressable onPress={() => onEdit(index, item)}>
-          <VStack space="md" flex={1}>
-            <HStack space="sm" alignItems="center">
-              <Icon size="sm" as={AlertTriangleIcon} color={color} />
-              <Text bold>{item.Actions?.[0]?.MessageTitle || item.Name}</Text>
-              {item.Disabled ? (
-                <Text size="xs" color="$muted500">
-                  Disabled
-                </Text>
-              ) : null}
-            </HStack>
+      <Pressable flex={3} onPress={() => onEdit(index, item)}>
+        <VStack space="md" flex={1}>
+          <HStack space="sm" alignItems="center">
+            <Icon size="sm" as={AlertTriangleIcon} color={color} />
+            <Text bold>{item.Actions?.[0]?.MessageTitle || item.Name}</Text>
+            {item.Disabled ? (
+              <Text size="xs" color="$muted500">
+                Disabled
+              </Text>
+            ) : null}
+          </HStack>
 
-            <Badge variant="outline" action="muted" alignSelf="flex-start">
-              <BadgeText>{item.TopicPrefix || 'N/A'}</BadgeText>
-            </Badge>
-          </VStack>
-        </Pressable>
+          <Badge variant="outline" action="muted" alignSelf="flex-start">
+            <BadgeText>{item.TopicPrefix || 'N/A'}</BadgeText>
+          </Badge>
+        </VStack>
+      </Pressable>
 
-        {/*<Text flex={1} size="sm">
+      {/*<Text flex={1} size="sm">
           {item.Actions?.[0]?.MessageTitle || 'N/A'}
         </Text>*/}
-      </VStack>
 
       <HStack flex={1}>
         {item.Actions.map((action) => (

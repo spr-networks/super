@@ -268,11 +268,7 @@ const FilterSelect = ({ items, onSubmitEditing, topic, query, ...props }) => {
           variant="outline"
           onPress={() => setShowSample(!showSample)}
         >
-          <ButtonText>
-            {showSample
-              ? `Hide JSON for "${topic}"`
-              : `Show JSON for "${topic}"`}
-          </ButtonText>
+          <ButtonText>{showSample ? `JSON` : `JSON`}</ButtonText>
           <ButtonIcon as={showSample ? EyeOffIcon : EyeIcon} ml="$2" />
         </Button>
       </HStack>
