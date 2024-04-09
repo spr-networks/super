@@ -2292,17 +2292,18 @@ func notifyFirewallDHCP(device DeviceEntry, iface string) {
 	RecentDHCPWG[device.WGPubKey] = cur_time
 }
 
-func getWireguardActivePeers() []string {
+func getWireguardActivePeers() ([]string, []string) {
 	var data map[string]interface{}
 	var data2 map[string]interface{}
 	var data3 map[string]interface{}
 	var data4 map[string]interface{}
 	var data5 []interface{}
 	handshakes := []string{}
+	remote_endpoints := []string{}
 
 	req, err := http.NewRequest(http.MethodGet, "http://api-wg/status", nil)
 	if err != nil {
-		return handshakes
+		return handshakes, remote_endpoints
 	}
 
 	c := getWireguardClient()
@@ -2310,7 +2311,7 @@ func getWireguardActivePeers() []string {
 	resp, err := c.Do(req)
 	if err != nil {
 		log.Println("wireguard request failed", err)
-		return handshakes
+		return handshakes, remote_endpoints
 	}
 
 	defer resp.Body.Close()
@@ -2318,13 +2319,13 @@ func getWireguardActivePeers() []string {
 
 	if resp.StatusCode != http.StatusOK {
 		log.Println("failed to retrieve wireguard information", resp.StatusCode)
-		return handshakes
+		return handshakes, remote_endpoints
 	}
 
 	err = json.Unmarshal(output, &data)
 	if err != nil {
 		log.Println(err)
-		return handshakes
+		return handshakes, remote_endpoints
 	}
 
 	cur_time := time.Now().Unix()
@@ -2332,7 +2333,7 @@ func getWireguardActivePeers() []string {
 	_, exists := data["wg0"]
 	if !exists {
 		log.Println("Failed to retrieve wg0 from wireguard status")
-		return handshakes
+		return handshakes, remote_endpoints
 	}
 
 	//iterate through peers
@@ -2364,12 +2365,17 @@ func getWireguardActivePeers() []string {
 				if s != "" {
 					pieces := strings.Split(s, "/")
 					handshakes = append(handshakes, pieces[0])
+
+					//also grab the endpoint
+					data6 := data4["endpoint"].(string)
+					remote_endpoints = append(remote_endpoints, data6)
 				}
 			}
+
 		}
 	}
 
-	return handshakes
+	return handshakes, remote_endpoints
 }
 
 var MESH_ENABLED_LEAF_PATH = TEST_PREFIX + "/state/plugins/mesh/enabled"
@@ -2670,6 +2676,46 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	applyEndpointRules(entry)
 }
 
+var gPreviousVpnPeers = []string{}
+
+type VpnNotification struct {
+	VPNType        string
+	DeviceIP       string
+	RemoteEndpoint string
+	Status         string
+}
+
+func notifyVpnActivity(new_vpn_peers []string, endpoints []string) {
+	//look for a new peer (active <3 minutes ago)
+	for i, peer := range new_vpn_peers {
+		//if this peer is new
+		if !slices.Contains(gPreviousVpnPeers, peer) {
+			notification := VpnNotification{
+				VPNType:        "wireguard",
+				DeviceIP:       peer,
+				RemoteEndpoint: endpoints[i],
+				Status:         "online",
+			}
+			sprbus.Publish("device:vpn:online", notification)
+		}
+	}
+
+	for i, peer := range gPreviousVpnPeers {
+		if !slices.Contains(gPreviousVpnPeers, peer) {
+			notification := VpnNotification{
+				VPNType:        "wireguard",
+				DeviceIP:       peer,
+				RemoteEndpoint: endpoints[i],
+				Status:         "offline",
+			}
+			sprbus.Publish("device:vpn:offline", notification)
+		}
+	}
+
+	//tbd, device:vpn:offline when they leave ?
+	gPreviousVpnPeers = new_vpn_peers
+}
+
 func dynamicRouteLoop() {
 	//mesh APs do not need routes, as they use the bridge
 	if isLeafRouter() {
@@ -2677,6 +2723,7 @@ func dynamicRouteLoop() {
 	}
 
 	ticker := time.NewTicker(1 * time.Second)
+
 	for {
 		select {
 		case <-ticker.C:
@@ -2698,8 +2745,10 @@ func dynamicRouteLoop() {
 				meshDownlink = meshPluginDownlink()
 			}
 
-			wireguard_peers := getWireguardActivePeers()
+			wireguard_peers, remote_endpoints := getWireguardActivePeers()
 			wifi_peers := getWifiPeers()
+
+			notifyVpnActivity(wireguard_peers, remote_endpoints)
 
 			suggested_device := map[string]string{}
 
