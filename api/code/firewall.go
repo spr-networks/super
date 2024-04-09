@@ -2677,6 +2677,7 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 }
 
 var gPreviousVpnPeers = []string{}
+var gPreviousEndpoints = []string{}
 
 type VpnNotification struct {
 	VPNType        string
@@ -2705,15 +2706,15 @@ func notifyVpnActivity(new_vpn_peers []string, endpoints []string) {
 			notification := VpnNotification{
 				VPNType:        "wireguard",
 				DeviceIP:       peer,
-				RemoteEndpoint: endpoints[i],
+				RemoteEndpoint: gPreviousEndpoints[i],
 				Status:         "offline",
 			}
 			sprbus.Publish("device:vpn:offline", notification)
 		}
 	}
 
-	//tbd, device:vpn:offline when they leave ?
 	gPreviousVpnPeers = new_vpn_peers
+	gPreviousEndpoints = endpoints
 }
 
 func dynamicRouteLoop() {
