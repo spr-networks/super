@@ -2701,7 +2701,7 @@ func notifyVpnActivity(new_vpn_peers []string, endpoints []string) {
 	}
 
 	for i, peer := range gPreviousVpnPeers {
-		if !slices.Contains(gPreviousVpnPeers, peer) {
+		if !slices.Contains(new_vpn_peers, peer) {
 			notification := VpnNotification{
 				VPNType:        "wireguard",
 				DeviceIP:       peer,
