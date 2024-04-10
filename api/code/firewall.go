@@ -2701,6 +2701,7 @@ func notifyVpnActivity(new_vpn_peers []string, endpoints []string) {
 		}
 	}
 
+	//if an old peer went away
 	for i, peer := range gPreviousVpnPeers {
 		if !slices.Contains(new_vpn_peers, peer) {
 			notification := VpnNotification{

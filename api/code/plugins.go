@@ -1072,6 +1072,10 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 		} else {
 			token, err := generateOrGetToken(plugin.Name+"-install-token", plugin.ScopedPaths)
 			if err == nil {
+				err = os.MkdirAll(filepath.Dir(cleanPath), os.ModePerm)
+				if err != nil {
+					sprbus.Publish("plugin:install:failure", map[string]string{"Name": plugin.Name, "GitURL": plugin.GitURL, "Reason": "Failed to make path for API token for plugin"})
+				}
 				err = ioutil.WriteFile(plugin.InstallTokenPath, []byte(token.Token), 0600)
 				if err == nil {
 					sprbus.Publish("plugin:install:status", map[string]string{"Name": plugin.Name, "GitURL": plugin.GitURL, "Reason": "Installed API token"})
