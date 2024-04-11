@@ -1,5 +1,11 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v0.3.8
+* Improve e2e testing 
+* Add fixes for 'disabled' policy handling 
+* Fix policy handling for multiple container interface rules
+* Alerting improvements
+
 ## v0.3.7
 * Rename builtin groups as Policies, to clarify Group vs Tag vs Policy
 * Merged dns rebinding and block plugin, added UI to turn off rebinding protection
