@@ -126,10 +126,9 @@ export default function App() {
               }
             } else {
               //console.log('-- weird/old alert msg:', alert)
-              //old version
-              req.title = alert?.title || 'Alert'
-              req.body = alert?.body || alert?.Body || JSON.stringify(alert)
-              //req.body = alert?.body || 'Alert Body'
+              //NOTE wifi:auth or plugin: stuff, ignore
+              //req.title = alert?.title || 'Alert'
+              //req.body = alert?.body || alert?.Body || JSON.stringify(alert)
             }
           } catch (err) {
             //console.error('Failed to decrypt notification:', err)

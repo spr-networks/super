@@ -6,13 +6,17 @@ import { InterfaceItem } from 'components/TagItem'
 
 import { HStack, Text } from '@gluestack-ui/themed'
 
-export const transformTag = (context, tag, value) => {
+export const transformTag = (context, tag, value, supportTags = true) => {
   if (context) {
+    //fuzzymatch if its ip or mac
     let type = 'RecentIP'
-    if (value.includes(':')) {
+    if (value.split(':')?.length == 6) {
       type = 'MAC'
-    } else if (value.includes('.')) {
-      //no-op.
+    }
+
+    if (type == 'RecentIP') {
+      //.Remote etc have ip:port, skip this
+      value = value.replace(/:.*/, '')
     }
 
     let deviceItem = undefined
@@ -24,18 +28,29 @@ export const transformTag = (context, tag, value) => {
       }
     }
 
+    //translate to string
+    if (!supportTags) {
+      if (tag.match(/Interface/)) {
+        return value
+      } else if (tag.match(/IP/)) {
+        return deviceItem?.RecentIP || value
+      } else if (tag.match(/Device/)) {
+        return deviceItem?.Name || value
+      }
+    }
+
     if (tag == 'Interface') {
-      return <InterfaceItem name={value} />
+      return <InterfaceItem size="sm" name={value} />
     } else if (tag == 'Device') {
-      return <DeviceItem show={['Style', 'Name']} flex={1} item={deviceItem} />
+      return <DeviceItem size="sm" show={['Style', 'Name']} item={deviceItem} />
     } else if (tag == 'DeviceIcon') {
-      return <DeviceItem show={['Style']} flex={1} item={deviceItem} />
+      return <DeviceItem size="sm" show={['Style']} item={deviceItem} />
     } else if (tag == 'DeviceName') {
-      return <DeviceItem show={['Name']} flex={1} item={deviceItem} />
+      return <DeviceItem size="sm" show={['Name']} item={deviceItem} />
     } else if (tag == 'DeviceIP') {
-      return <DeviceItem show={['RecentIP']} flex={1} item={deviceItem} />
+      return <DeviceItem size="sm" show={['RecentIP']} item={deviceItem} />
     } else if (tag == 'DeviceMAC') {
-      return <DeviceItem show={['MAC']} flex={1} item={deviceItem} />
+      return <DeviceItem size="sm" show={['MAC']} item={deviceItem} />
     }
   }
 
@@ -46,7 +61,13 @@ export const transformTag = (context, tag, value) => {
   )
 }
 
-export const eventTemplate = (context, template, event) => {
+// if supportTags=false string is returned, else list of react elements
+export const eventTemplate = (
+  context,
+  template,
+  event,
+  supportTags = false
+) => {
   if (!template || !event) {
     return template
   }
@@ -54,14 +75,21 @@ export const eventTemplate = (context, template, event) => {
   let elements = []
   let lastIndex = 0
 
-  const supportTags = Platform.OS == 'web'
+  //const supportTags = Platform.OS == 'web'
+  const addElement = (val) => {
+    if (supportTags) {
+      elements.push(<Text size="sm">{val}</Text>)
+    } else {
+      elements.push(val)
+    }
+  }
 
   template.replace(
     /\{\{([\w\.]+)(?:#(\w+))?\}\}/g,
     (match, path, tag, index) => {
       // Add the text before the match.
       if (index > lastIndex) {
-        elements.push(template.slice(lastIndex, index))
+        addElement(template.slice(lastIndex, index))
       }
 
       if (match.includes('__')) {
@@ -81,10 +109,10 @@ export const eventTemplate = (context, template, event) => {
         }
       }
 
-      if (tag && supportTags) {
-        elements.push(transformTag(context, tag, currentValue))
+      if (tag) {
+        addElement(transformTag(context, tag, currentValue, supportTags))
       } else {
-        elements.push(currentValue)
+        addElement(currentValue)
       }
 
       lastIndex = index + match.length
@@ -94,19 +122,29 @@ export const eventTemplate = (context, template, event) => {
 
   // Add any remaining text after the last match.
   if (lastIndex < template.length) {
-    elements.push(template.slice(lastIndex))
+    addElement(template.slice(lastIndex))
   }
 
   if (supportTags) {
     return (
-      <>
+      <HStack space="xs" justifyContent="flex-start" flexWrap="wrap">
         {elements.map((element, idx) => (
           <React.Fragment key={idx}>{element}</React.Fragment>
         ))}
-      </>
+      </HStack>
     )
   }
 
   // return string
   return elements.join('')
 }
+
+/*
+export const eventTemplateElements = (context, template, event) => {
+  return eventTemplate(context, template, event, true)
+}
+
+export const eventTemplateString = (context, template, event) => {
+  return eventTemplate(context, template, event, false)
+}
+*/

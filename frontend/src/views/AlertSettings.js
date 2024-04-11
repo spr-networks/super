@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import {
   AddIcon,
@@ -11,6 +12,9 @@ import {
   CheckboxIcon,
   CheckboxLabel,
   CheckboxIndicator,
+  Fab,
+  FabIcon,
+  FabLabel,
   FlatList,
   HStack,
   Icon,
@@ -26,139 +30,28 @@ import {
   Tooltip,
   TrashIcon,
   ThreeDotsIcon,
+  View,
   VStack,
   FormControl,
   FormControlLabel,
-  FormControlLabelText
+  FormControlLabelText,
+  Pressable
 } from '@gluestack-ui/themed'
 
-import { alertsAPI, dbAPI, api } from 'api'
+import { alertsAPI, api } from 'api'
 import AddAlert from 'components/Alerts/AddAlert'
 import { AlertContext, ModalContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import { ListHeader } from 'components/List'
 import { ListItem } from 'components/List'
 import {
+  AlertTriangleIcon,
   BellIcon,
   BellOffIcon,
-  BugPlayIcon,
-  CopyIcon,
   PencilIcon
 } from 'lucide-react-native'
 
-import { copy } from 'utils'
-import { useNavigate } from 'react-router-native'
-
-const alertTemplates = [
-  {
-    TopicPrefix: 'nft:drop:mac',
-    MatchAnyOne: false,
-    InvertRule: false,
-    Conditions: [],
-    Actions: [
-      {
-        SendNotification: true,
-        StoreAlert: true,
-        MessageTitle: 'MAC Filter Violation',
-        MessageBody:
-          'MAC IP Violation {{IP.SrcIP#Device}} {{IP.SrcIP}} {{Ethernet.SrcMAC}} to {{IP.DstIP}} {{Ethernet.DstMAC}}',
-        NotificationType: 'info',
-        GrabEvent: true,
-        GrabValues: false
-      }
-    ],
-    Name: 'MAC Filter Violation',
-    Disabled: false,
-    RuleId: '7f3266dd-7697-44ce-8ddd-36a006043509'
-  },
-  {
-    TopicPrefix: 'auth:failure',
-    MatchAnyOne: false,
-    InvertRule: false,
-    Conditions: [
-      {
-        JPath: '$[?(@.type=="user")]'
-      }
-    ],
-    Actions: [
-      {
-        SendNotification: true,
-        StoreAlert: true,
-        MessageTitle: 'Login Failure',
-        MessageBody: '{{name}} failed to login with {{reason}}',
-        NotificationType: 'error',
-        GrabEvent: true,
-        GrabValues: false
-      }
-    ],
-    Name: 'User Login Failure',
-    Disabled: false,
-    RuleId: 'ea676ee7-ec68-4a23-aba4-ba69feee4d8c'
-  },
-  {
-    TopicPrefix: 'nft:drop:private',
-    MatchAnyOne: false,
-    InvertRule: false,
-    Conditions: [],
-    Actions: [
-      {
-        SendNotification: true,
-        StoreAlert: true,
-        MessageTitle: 'Firewall Drop Private Network Request (rfc1918)',
-        MessageBody:
-          'Dropped Traffic from {{IP.SrcIP#Device}} {{IP.SrcIP}} {{InDev#Interface}} to {{IP.DstIP}} {{OutDev#Interface}}',
-        NotificationType: 'info',
-        GrabEvent: true,
-        GrabValues: false
-      }
-    ],
-    Name: 'Drop Private Request',
-    Disabled: false,
-    RuleId: '2adbec19-6b47-4a99-a499-ab0b8da652a8'
-  },
-  {
-    TopicPrefix: 'wifi:auth:fail',
-    MatchAnyOne: false,
-    InvertRule: false,
-    Conditions: [],
-    Actions: [
-      {
-        SendNotification: true,
-        StoreAlert: true,
-        MessageTitle: 'WiFi Auth Failure',
-        MessageBody:
-          '{{MAC#Device}} {{MAC}} failed wifi authentication {{Reason}} with type {{Type}}',
-        NotificationType: 'warning',
-        GrabEvent: true,
-        GrabValues: false
-      }
-    ],
-    Name: 'Wifi Auth Failure',
-    Disabled: false,
-    RuleId: 'f16e9a58-9f80-455c-a280-211bd8b1fd05'
-  },
-  {
-    TopicPrefix: 'nft:drop:input',
-    MatchAnyOne: false,
-    InvertRule: false,
-    Conditions: [],
-    Actions: [
-      {
-        SendNotification: false,
-        StoreAlert: true,
-        MessageTitle: 'Dropped Input',
-        MessageBody:
-          'Drop Incoming Traffic to Router from {{IP.SrcIP}} to port {{TCP.DstPort}} {{UDP.DstPort}}',
-        NotificationType: 'info',
-        GrabEvent: true,
-        GrabValues: false
-      }
-    ],
-    Name: 'Dropped Input',
-    Disabled: true,
-    RuleId: '481822f4-a20c-4cec-92d9-dad032d2c450'
-  }
-]
+import AlertTemplates from 'components/Alerts/AlertTemplates'
 
 const AlertItem = ({
   item,
@@ -216,21 +109,21 @@ const AlertItem = ({
     </Menu>
   )
 
+  let notificationType =
+    (item.Actions?.[0]?.NotificationType || 'info').replace(
+      'danger',
+      'warning'
+    ) || 'muted'
+
+  let color = `$${notificationType}500`
+
   return (
     <ListItem>
-      <VStack
-        space="sm"
-        flex={3}
-        alignItems="flex-start"
-        sx={{
-          '@md': {
-            flexDirection: 'row'
-          }
-        }}
-      >
+      <Pressable flex={3} onPress={() => onEdit(index, item)}>
         <VStack space="md" flex={1}>
-          <HStack space="sm">
-            <Text bold>{item.Name}</Text>
+          <HStack space="sm" alignItems="center">
+            <Icon size="sm" as={AlertTriangleIcon} color={color} />
+            <Text bold>{item.Actions?.[0]?.MessageTitle || item.Name}</Text>
             {item.Disabled ? (
               <Text size="xs" color="$muted500">
                 Disabled
@@ -242,29 +135,21 @@ const AlertItem = ({
             <BadgeText>{item.TopicPrefix || 'N/A'}</BadgeText>
           </Badge>
         </VStack>
+      </Pressable>
 
-        <Text flex={1} size="sm">
+      {/*<Text flex={1} size="sm">
           {item.Actions?.[0]?.MessageTitle || 'N/A'}
-        </Text>
-      </VStack>
-
-      {/*<Badge
-        variant="outline"
-        action={item.Actions?.[0]?.NotificationType || 'info'}
-        rounded="$md"
-      >
-        <BadgeText>{item.Actions?.[0]?.NotificationType || 'info'}</BadgeText>
-      </Badge>*/}
+        </Text>*/}
 
       <HStack flex={1}>
         {item.Actions.map((action) => (
           <VStack key={action.MessageTitle}>
             {/*
-          <HStack space="md">
-            <Text color="$muted500">Message Title</Text>
-            <Text>{action.MessageTitle || 'N/A'}</Text>
-          </HStack>
-          */}
+            <HStack space="md">
+              <Text color="$muted500">Message Title</Text>
+              <Text>{action.MessageTitle || 'N/A'}</Text>
+            </HStack>
+            */}
 
             <VStack space="md" alignItems="center">
               <Switch
@@ -294,8 +179,6 @@ const AlertItem = ({
 }
 
 const AlertItemHeader = () => (
-  //TBD spacing
-
   <HStack
     space="sm"
     mx="$4"
@@ -306,12 +189,12 @@ const AlertItemHeader = () => (
   >
     <HStack flex={3}>
       <Text flex={1} size="xs" bold>
-        Name & Topic
+        Alert & Topic
       </Text>
 
-      <Text flex={1} size="xs" bold>
+      {/*<Text flex={1} size="xs" bold>
         Title
-      </Text>
+      </Text>*/}
     </HStack>
     <Text flex={1} size="xs" bold>
       Show Notification
@@ -408,21 +291,9 @@ const EditAlertSettings = ({ onSubmit, ...props }) => {
 
 const AlertSettings = (props) => {
   const [config, setConfig] = useState([])
-  const [topics, setTopics] = useState([])
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
   const navigate = useNavigate()
-
-  //TBD: this will be replaced with alert: and mock_alerts will not wrap
-  const AlertPrefix = 'nft:'
-
-  const [logs, setLogs] = useState([])
-  const [page, setPage] = useState(1)
-  const [total, setTotal] = useState(0)
-  const perPage = 20
-  const [params, setParams] = useState({ num: perPage })
-
-  const [itemIndex, setItemIndex] = useState(-1)
 
   const fetchList = () => {
     alertsAPI
@@ -431,21 +302,8 @@ const AlertSettings = (props) => {
       .catch((err) => context.error(`failed to fetch alerts config`))
   }
 
-  const fetchAlertBuckets = () => {
-    dbAPI.buckets().then((buckets) => {
-      buckets = buckets.filter((b) => b.startsWith(AlertPrefix))
-      buckets.sort()
-      setTopics(buckets)
-    })
-  }
-
-  useEffect(() => {
-    setLogs([])
-  }, [params])
-
   useEffect(() => {
     fetchList()
-    fetchAlertBuckets()
   }, [])
 
   const onDelete = (index) => {
@@ -472,7 +330,12 @@ const AlertSettings = (props) => {
       return
     }
 
-    item.Actions[0].SendNotification = !item.Actions[0].SendNotification
+    let SendNotification = !item.Actions[0].SendNotification
+    item.Actions[0].SendNotification = SendNotification
+    //if switch to on, make sure its enabled
+    if (SendNotification) {
+      item.Disabled = false
+    }
 
     alertsAPI
       .update(index, item)
@@ -507,7 +370,7 @@ const AlertSettings = (props) => {
     refModal.current()*/
   }
 
-  const onSubmit = (item) => {
+  /*const onSubmit = (item) => {
     if (itemIndex == -1) {
       //create a new item
       alertsAPI
@@ -535,34 +398,15 @@ const AlertSettings = (props) => {
     }
   }
 
-  const refModal = useRef(null)
-
-  let populateItem = null
-  if (itemIndex != -1) {
-    populateItem = config[itemIndex]
-  }
+  const refModal = useRef(null)*/
 
   const populateTemplates = () => {
-    //alertTemplates
-    let newConfig = config
-    let templateFound = []
-    for (let j = 0; j < alertTemplates.length; j++) {
-      let found = false
-      for (let i = 0; i < newConfig.length; i++) {
-        if (alertTemplates[j] && alertTemplates[j].Name == newConfig[i].Name) {
-          found = true
-          break
-        }
-      }
-      templateFound.push(found)
-    }
+    let addedNames = config.map((t) => t.Name)
+    let addTemplates = AlertTemplates.filter(
+      (t) => !addedNames.includes(t.Name)
+    )
 
-    const addPromises = []
-    for (let j = 0; j < alertTemplates.length; j++) {
-      if (templateFound[j] == false) {
-        addPromises.push(alertsAPI.add(alertTemplates[j]))
-      }
-    }
+    let addPromises = addTemplates.map((t) => alertsAPI.add(t))
 
     if (addPromises.length == 0) {
       context.success('Templates already exist')
@@ -582,7 +426,7 @@ const AlertSettings = (props) => {
   }
 
   return (
-    <ScrollView h="$full">
+    <View h="$full">
       <ListHeader title="Alert Configuration">
         <HStack space="sm">
           <Button
@@ -591,7 +435,8 @@ const AlertSettings = (props) => {
             variant="outline"
             onPress={handlePressEdit}
           >
-            <ButtonIcon as={SettingsIcon} color="$primary500" />
+            <ButtonText>iOS</ButtonText>
+            <ButtonIcon as={SettingsIcon} color="$primary500" ml="$2" />
           </Button>
           <Button
             size="sm"
@@ -602,14 +447,14 @@ const AlertSettings = (props) => {
             <ButtonText>Add Templates</ButtonText>
             <ButtonIcon as={AddIcon} ml="$2" />
           </Button>
-          <ModalForm
+          {/*<ModalForm
             title="Add Alert"
             triggerText="Add Alert"
-            triggerProps={{ sz: 'sm' }}
+            triggerProps={{ display: 'none', size: 'sm' }}
             modalRef={refModal}
           >
             <AddAlert curItem={populateItem} onSubmit={onSubmit} />
-          </ModalForm>
+          </ModalForm>*/}
         </HStack>
       </ListHeader>
 
@@ -629,8 +474,19 @@ const AlertSettings = (props) => {
           />
         )}
         keyExtractor={(item, index) => `alert-${index}`}
+        contentContainerStyle={{ paddingBottom: 48 }}
       />
-    </ScrollView>
+      <Fab
+        renderInPortal={false}
+        shadow={2}
+        size="sm"
+        onPress={() => navigate(`/admin/alerts/:id`)}
+        bg="$primary500"
+      >
+        <FabIcon as={AddIcon} mr="$1" />
+        <FabLabel>Add Alert</FabLabel>
+      </Fab>
+    </View>
   )
 }
 

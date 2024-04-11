@@ -20,6 +20,8 @@ export AUTH="admin:admin"
 
 echo "~ running tests @ $API_URL"
 
+#docker run -it --network host --privileged -e API_URL=http://localhost:8000 -e AUTH=admin:admin -w --entrypoint=/bin/bash /code runner
+
 ID=$(docker run --network host \
 	--privileged \
 	-d \

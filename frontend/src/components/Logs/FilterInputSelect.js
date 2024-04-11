@@ -45,7 +45,7 @@ const FilterInputSelect = ({
       return
     }
 
-    modalContext.modal('Set Filter', filterSelect)
+    modalContext.modal(`Set filter for ${topic}`, filterSelect)
   }
 
   return (

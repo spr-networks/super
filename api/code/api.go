@@ -124,9 +124,9 @@ type DeviceEntry struct {
 	DHCPFirstTime    string
 	DHCPLastTime     string
 	Style            DeviceStyle
-	DeviceExpiration int64 //tbd need to observe this.
+	DeviceExpiration int64
 	DeleteExpiration bool
-	DeviceDisabled   bool
+	DeviceDisabled   bool //tbd deprecate this in favor of only using the policy name.
 }
 
 var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "disabled"}
@@ -1259,18 +1259,39 @@ func handleExpirations(val *DeviceEntry, req *DeviceEntry) {
 	}
 	val.DeleteExpiration = req.DeleteExpiration
 	val.DeviceDisabled = req.DeviceDisabled
+
+	if val.DeviceDisabled && !slices.Contains(val.Policies, "disabled") {
+		val.Policies = append(val.Policies, "disabled")
+	} else if !val.DeviceDisabled && slices.Contains(val.Policies, "disabled") {
+		//remove disabled
+		policies := []string{}
+		for _, entry := range val.Policies {
+			if entry != "disabled" {
+				policies = append(policies, entry)
+			}
+		}
+		val.Policies = policies
+	}
+
 }
 
 func checkDeviceExpiries(devices map[string]DeviceEntry) {
 	curtime := time.Now().Unix()
 	todelete := []string{}
+	doUpdate := false
 	for k, entry := range devices {
 		if entry.DeviceDisabled == false && entry.DeviceExpiration != 0 {
 			if entry.DeviceExpiration < curtime {
+				doUpdate = true
 				//expire the device
 				entry.DeviceDisabled = true
 				if entry.DeleteExpiration {
 					todelete = append(todelete, k)
+				} else {
+					//not deleting, make sure it gets the Disabled policy.
+					if !slices.Contains(entry.Policies, "disabled") {
+						entry.Policies = append(entry.Policies, "disabled")
+					}
 				}
 			}
 		}
@@ -1280,6 +1301,10 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 		deleteDeviceLocked(devices, k)
 	}
 
+	//did not delete anything but a disable happened, save.
+	if doUpdate && len(todelete) == 0 {
+		saveDevicesJson(devices)
+	}
 }
 
 func syncDevices(w http.ResponseWriter, r *http.Request) {
@@ -1303,6 +1328,31 @@ func syncDevices(w http.ResponseWriter, r *http.Request) {
 	doReloadPSKFiles()
 }
 
+func addGroupsIfMissing(groups []GroupEntry, newGroups []string) {
+	saveGroups := false
+
+	for _, entry := range newGroups {
+		foundGroup := false
+		for _, group := range groups {
+			if group.Name == entry {
+				foundGroup = true
+				break
+			}
+		}
+
+		if !foundGroup {
+			saveGroups = true
+			newGroup := GroupEntry{}
+			newGroup.Name = entry
+			newGroup.GroupTags = []string{}
+			groups = append(groups, newGroup)
+		}
+	}
+
+	if saveGroups {
+		saveGroupsJson(groups)
+	}
+}
 func deleteDeviceLocked(devices map[string]DeviceEntry, identity string) {
 	val := devices[identity]
 	delete(devices, identity)
@@ -1495,32 +1545,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		if dev.Groups != nil && !equalStringSlice(val.Groups, dev.Groups) {
 			val.Groups = dev.Groups
-
-			saveGroups := false
-
-			//create a new zone if it does not exist yet
-			for _, entry := range dev.Groups {
-				foundGroup := false
-				for _, group := range groups {
-					if group.Name == entry {
-						foundGroup = true
-						break
-					}
-				}
-
-				if !foundGroup {
-					saveGroups = true
-					newGroup := GroupEntry{}
-					newGroup.Name = entry
-					newGroup.GroupTags = []string{}
-					groups = append(groups, newGroup)
-				}
-			}
-
-			if saveGroups {
-				saveGroupsJson(groups)
-			}
-
+			addGroupsIfMissing(groups, dev.Groups)
 			refreshGroups = true
 		}
 
@@ -1806,8 +1831,7 @@ var (
 	ignore_groups = []string{"isolated", "lan", "wan", "dns", "api"}
 )
 
-func getVerdictMapNames() []string {
-	//get custom maps from zones
+func getGroupVerdictMapNames() []string {
 	custom_maps := []string{}
 	zones := getGroupsJson()
 	for _, z := range zones {
@@ -1824,6 +1848,11 @@ func getVerdictMapNames() []string {
 			custom_maps = append(custom_maps, z.Name+"_dst_access")
 		}
 	}
+	return custom_maps
+}
+
+func getVerdictMapNames() []string {
+	custom_maps := getGroupVerdictMapNames()
 	return append(builtin_maps, custom_maps...)
 }
 

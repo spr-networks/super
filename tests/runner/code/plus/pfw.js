@@ -152,9 +152,9 @@ describe('pfw', () => {
   it('get config', (done) => {
     agent
       .get('/plugins/pfw/config')
-      .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
+        assert(res.status == 200)
         assert(
           Object.keys(res.body).includes('ForwardingRules'),
           'no forward rules'
@@ -170,8 +170,8 @@ describe('pfw', () => {
   it('mask token', (done) => {
     agent
       .get('/plugins/pfw/config')
-      .expect(200)
       .end((err, res) => {
+        assert(res.status == 200)
         assert(res.body.APIToken == '*masked*', 'no forward rules')
 
         done()
@@ -192,13 +192,12 @@ describe('pfw', () => {
     agent
       .put('/plugins/pfw/block')
       .send(block)
-      .expect(200)
       .end((err, res) => {
+        assert(res.status == 200)
         assert(err == null, "failed to put rule")
         //done()
         agent
           .get('/plugins/pfw/config')
-          .expect(200)
           .end((err, res) => {
             assert(res.body.BlockRules && res.body.BlockRules.length > 0, 'failed to add block')
 
@@ -208,8 +207,8 @@ describe('pfw', () => {
             agent
               .delete(`/plugins/pfw/block/${id}`)
               .send({})
-              .expect(200)
               .end((err, res) => {
+                assert(res.status == 200)
                 assert(err == null, "failed to delete block rule")
                 done()
               })
@@ -231,13 +230,13 @@ describe('pfw', () => {
     agent
       .put('/plugins/pfw/block')
       .send(block)
-      .expect(200)
       .end((err, res) => {
+        assert(res.status == 200)
         //done()
         agent
           .get('/plugins/pfw/config')
-          .expect(200)
           .end((err, res) => {
+            assert(res.status == 200)
             assert(res.body.BlockRules && res.body.BlockRules.length > 0, 'failed to add block')
 
             let id = 0
@@ -246,8 +245,8 @@ describe('pfw', () => {
             agent
               .delete(`/plugins/pfw/block/${id}`)
               .send({})
-              .expect(200)
               .end((err, res) => {
+                assert(res.status == 200)
                 assert(err == null, "failed to delete udp block rule")
                 done()
               })
@@ -271,8 +270,8 @@ describe('pfw', () => {
     agent
       .put('/plugins/pfw/forward')
       .send(fwd)
-      .expect(200)
       .end((err, res) => {
+        assert(res.status == 200)
         if (err != null) {
           console.log(res.text)
         }
@@ -280,8 +279,8 @@ describe('pfw', () => {
         //done()
         agent
           .get('/plugins/pfw/config')
-          .expect(200)
           .end((err, res) => {
+            assert(res.status == 200)
             assert(res.body.ForwardingRules && res.body.ForwardingRules.length > 0, 'failed to add fowrard')
 
             delay(1100, () => {
@@ -292,8 +291,8 @@ describe('pfw', () => {
                 agent
                   .delete(`/plugins/pfw/forward/${id}`)
                   .send({})
-                  .expect(200)
                   .end((err, res) => {
+                    assert(res.status == 200)
                     assert(err == null, "failed to delete rule")
                     NFT_verify_site_forward_tcp_empty()
                     .then(ok => {
@@ -327,8 +326,8 @@ describe('pfw', () => {
     agent
       .put('/plugins/pfw/forward')
       .send(fwd)
-      .expect(200)
       .end((err, res) => {
+        assert(res.status == 200)
         if (err != null) {
           console.log(res.text)
         }
@@ -336,8 +335,8 @@ describe('pfw', () => {
         //done()
         agent
           .get('/plugins/pfw/config')
-          .expect(200)
           .end((err, res) => {
+            assert(res.status == 200)
             assert(res.body.ForwardingRules && res.body.ForwardingRules.length > 0, 'failed to add fowrard')
 
             delay(1100, () => {
@@ -348,8 +347,8 @@ describe('pfw', () => {
                 agent
                   .delete(`/plugins/pfw/forward/${id}`)
                   .send({})
-                  .expect(200)
                   .end((err, res) => {
+                    assert(res.status == 200)
                     assert(err == null, "failed to delete rule")
                     NFT_verify_dnat_forward_empty("tcp")
                     .then(ok => {
@@ -382,8 +381,8 @@ describe('pfw', () => {
     agent
       .put('/plugins/pfw/forward')
       .send(fwd)
-      .expect(200)
       .end((err, res) => {
+        assert(res.status == 200)
         if (err != null) {
           console.log(res.text)
         }
@@ -391,8 +390,8 @@ describe('pfw', () => {
         //done()
         agent
           .get('/plugins/pfw/config')
-          .expect(200)
           .end((err, res) => {
+            assert(res.status == 200)
             assert(res.body.ForwardingRules && res.body.ForwardingRules.length > 0, 'failed to add fowrard')
 
             delay(1100, () => {
@@ -403,8 +402,8 @@ describe('pfw', () => {
                 agent
                   .delete(`/plugins/pfw/forward/${id}`)
                   .send({})
-                  .expect(200)
                   .end((err, res) => {
+                    assert(res.status == 200)
                     assert(err == null, "failed to delete rule")
                     NFT_verify_dnat_forward_empty("udp")
                     .then(ok => {

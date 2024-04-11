@@ -5,9 +5,9 @@ describe('status', () => {
   it('should get status', (done) => {
     agent
       .get('/plugins/wireguard/status')
-      .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
+        assert(res.status == 200)
         assert(Object.keys(res.body).length > 0, 'missing interface status')
 
         done()
@@ -19,9 +19,9 @@ describe('generate keys', () => {
   it('should generate keys', (done) => {
     agent
       .get('/plugins/wireguard/genkey')
-      .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
+        assert(res.status == 200)
         assert(
           Object.keys(res.body).includes('PrivateKey'),
           'missing private key'
@@ -49,8 +49,8 @@ describe('adding and removing peer', () => {
       .send(peer)
       .set('Accept', 'application/json')
       .expect('Content-Type', /json/)
-      .expect(200)
       .end((err, res) => {
+        assert(res.status == 200)
         assert(res.body.Interface.PrivateKey.length > 0, 'missing PrivateKey')
         assert(res.body.Peer.PublicKey.length > 0, 'missing PublicKey')
 
@@ -61,9 +61,9 @@ describe('adding and removing peer', () => {
   it('should list peers', (done) => {
     agent
       .get('/plugins/wireguard/peers')
-      .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
+        assert(res.status == 200)
         assert(res.body.length > 0, 'missing peers')
 
         addedPeer = res.body[res.body.length - 1]
@@ -76,9 +76,9 @@ describe('adding and removing peer', () => {
     agent
       .delete('/plugins/wireguard/peer')
       .send(addedPeer)
-      .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
+        assert(res.status == 200)
         //assert(Object.keys(res.body).length > 0, 'missing peers')
 
         done()

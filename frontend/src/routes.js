@@ -323,7 +323,8 @@ const routes = [
         name: 'Alerts Configuration',
         icon: Settings2Icon,
         component: AlertSettings,
-        layout: 'admin'
+        layout: 'admin',
+        hidden: true
       },
       {
         name: 'Alert',

@@ -1,4 +1,6 @@
 import React, { useContext, useState } from 'react'
+import { Platform } from 'react-native'
+
 import { prettyDate } from 'utils'
 
 import {
@@ -121,10 +123,9 @@ const AlertListItem = ({ item, notifyChange, ...props }) => {
             p="$4"
             display={!showEvent ? 'flex' : 'none'}
             alignSelf="center"
+            alignItems="center"
           >
-            <Text size="sm">
-              {eventTemplate(appContext, item.Body, item.Event)}
-            </Text>
+            {eventTemplate(appContext, item.Body, item.Event, true)}
           </HStack>
           <VStack
             space="sm"
@@ -156,7 +157,7 @@ const StateButton = ({ item, onPress, ...props }) => {
   return (
     <Button
       action={currentState == 'New' ? 'primary' : 'secondary'}
-      variant={currentState == 'New' ? 'solid' : 'outline'}
+      variant={currentState == 'New' ? 'outline' : 'outline'}
       size="xs"
       onPress={() => onPress(action)}
     >

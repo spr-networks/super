@@ -7,7 +7,9 @@ import { eventTemplate } from 'components/Alerts/AlertUtil'
 
 import { useNavigate } from 'react-router-dom'
 import { alertState, AppContext } from 'AppContext'
+import { Platform } from 'react-native'
 
+// NOTE this function checks if its a alert, if not return null
 const parseLogMessage = async (context, msg) => {
   const msgType = msg.Type
   let data = null
@@ -25,8 +27,8 @@ const parseLogMessage = async (context, msg) => {
     type = 'info',
     body = typeof data === 'string' ? data : JSON.stringify(data)
 
-  //skip
-  if (msgType.match(/^(dhcp|www):/)) {
+  //skip events, only parse if alert: prefix
+  if (msgType.match(/^(dhcp|www|wifi):/)) {
     return null
   }
 
@@ -36,10 +38,14 @@ const parseLogMessage = async (context, msg) => {
     if (valid_types.includes(data.NotificationType)) {
       type = data.NotificationType
     }
-    title = eventTemplate(context, data.Title, data.Event)
-    body = eventTemplate(context, data.Body, data.Event)
+
+    //NOTE have todo this since parseLogMessage is also used for push alerts
+    let supportTags = false //Platform.OS == 'web'
+
+    title = eventTemplate(context, data.Title, data.Event, false)
+    body = eventTemplate(context, data.Body, data.Event, supportTags)
     data = ''
-  } else if (msgType.startsWith('wifi:auth')) {
+  } /* else if (msgType.startsWith('wifi:auth')) {
     if (msgType.includes('success')) {
       let name = context.getDevice(data.MAC)?.Name || data.MAC
 
@@ -57,9 +63,9 @@ const parseLogMessage = async (context, msg) => {
 
       body = `Authentication failure for MAC ${data.MAC}: ${reasonString}`
     }
-  } else if (msgType.startsWith('plugin:')) {
+  }*/ else if (msgType.startsWith('plugin:')) {
     type = 'warning'
-    switch(msgType) {
+    switch (msgType) {
       case 'plugin:download:success':
         type = 'success'
         body = `Successfully downloaded ${data.GitURL}`

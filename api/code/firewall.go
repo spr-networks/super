@@ -646,50 +646,62 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if CIDRorIP(crule.SrcIP) != nil {
-		http.Error(w, "Invalid SrcIP", 400)
+	doDelete := r.Method == http.MethodDelete
+	err = modifyCustomInterfaceRulesImpl(crule, doDelete)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
 		return
+	}
+
+}
+
+func modifyCustomInterfaceRulesImpl(crule CustomInterfaceRule, doDelete bool) error {
+	if CIDRorIP(crule.SrcIP) != nil {
+		return fmt.Errorf("Invalid SrcIP")
 	}
 
 	if crule.RouteDst != "" {
 		ip := net.ParseIP(crule.RouteDst)
 		if ip == nil {
-			http.Error(w, "invalid RouteDst ", 400)
-			return
+			return fmt.Errorf("Invalid RouteDst")
 		}
 	}
 
 	if !isValidIface(crule.Interface) {
-		http.Error(w, "Invalid Interface", 400)
-		return
+		return fmt.Errorf("Invalid Interface")
 	}
 
-	//we accept them, but they are not useful for now
 	crule.Groups = normalizeStringSlice(crule.Groups)
+	crule.Policies = normalizeStringSlice(crule.Policies)
+	//tags not used for anything yet
 	crule.Tags = normalizeStringSlice(crule.Tags)
 
-	if len(crule.Tags) > 0 {
+	if slices.Contains(crule.Policies, DEVICE_POLICY_PERMIT_PRIVATE_UPSTREAM_ACCESS) {
 		if strings.Contains(crule.SrcIP, "/") {
-			http.Error(w, "Tags not yet supported with SrcIP ranges ", 400)
-			return
+			return fmt.Errorf("lan_upstream policy not yet supported with SrcIP ranges")
 		}
 	}
 
-	if r.Method == http.MethodDelete {
+	if len(crule.Tags) > 0 {
+		if strings.Contains(crule.SrcIP, "/") {
+			return fmt.Errorf("Tags not yet supported with SrcIP ranges")
+		}
+	}
+
+	if doDelete {
 		for i := range gFirewallConfig.CustomInterfaceRules {
 			a := gFirewallConfig.CustomInterfaceRules[i]
 			if crule.Equals(&a) {
 				gFirewallConfig.CustomInterfaceRules = append(gFirewallConfig.CustomInterfaceRules[:i], gFirewallConfig.CustomInterfaceRules[i+1:]...)
 				saveFirewallRulesLocked()
-				err = applyCustomInterfaceRule(a, "delete", true)
+				err := applyCustomInterfaceRule(gFirewallConfig.CustomInterfaceRules, a, "delete", true)
 				if err != nil {
-					http.Error(w, err.Error(), 400)
+					return err
 				}
-				return
+				return nil
 			}
 		}
-		http.Error(w, "Not found", 404)
-		return
+		return fmt.Errorf("Not found")
 	}
 
 	//lastly, check for duplicates on RouteDst, SrcIP, interface name
@@ -698,14 +710,14 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 		if crule.SrcIP == current.SrcIP &&
 			crule.RouteDst == current.RouteDst &&
 			crule.Interface == current.Interface {
-			http.Error(w, "Duplicate rule", 400)
-			return
+			return fmt.Errorf("Duplicate rule")
 		}
 	}
 
 	gFirewallConfig.CustomInterfaceRules = append(gFirewallConfig.CustomInterfaceRules, crule)
 	saveFirewallRulesLocked()
 	applyFirewallRulesLocked()
+	return nil
 }
 
 func deleteBlock(br BlockRule) error {
@@ -1158,7 +1170,7 @@ func refreshDeviceGroupsAndPolicy(dev DeviceEntry) {
 	//remove from existing verdict maps
 	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname))
 
-	device_disabled := slices.Contains(dev.Policies, "disabled")
+	device_disabled := slices.Contains(dev.Policies, "disabled") || dev.DeviceDisabled == true
 	if !device_disabled {
 		//add this MAC and IP to the ethernet filter
 		addVerdictMac(ipv4, dev.MAC, ifname, "ethernet_filter", "return")
@@ -1309,12 +1321,52 @@ func includesGroupStd(slice []string) (bool, bool, bool, bool) {
 	return wan, dns, lan, api
 }
 
-func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string, fthru bool) error {
+func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container_rule CustomInterfaceRule, action string, fthru bool) error {
+	current_rules := []CustomInterfaceRule{}
+	for _, rule := range current_rules_all {
+		//if the Interface name and IP are the same, consider them as affecting
+		// the same policy.
+		if rule.Interface == container_rule.Interface && rule.SrcIP == container_rule.SrcIP {
+			current_rules = append(current_rules, rule)
+		}
+	}
+
+	wan_count := 0
+	dns_count := 0
+	lan_count := 0
+	api_count := 0
+	if action == "delete" {
+		for _, rule := range current_rules_all {
+			wan_, dns_, lan_, api_ := includesGroupStd(rule.Policies)
+
+			//api_interfaces is only on Interface naem
+			if rule.Interface == container_rule.Interface {
+				if api_ {
+					api_count++
+				}
+			}
+
+			//for others its Interface + SrcIP
+			if rule.Interface == container_rule.Interface && rule.SrcIP == container_rule.SrcIP {
+				if wan_ {
+					wan_count++
+				}
+				if dns_ {
+					dns_count++
+				}
+				if lan_ {
+					lan_count++
+				}
+			}
+		}
+	}
+
 	var err error
 
 	wan, dns, lan, api := includesGroupStd(container_rule.Policies)
 
-	if wan {
+	//if action is delete, ensure no other rules use this policy on this interface
+	if wan && (action != "delete" || wan_count == 0) {
 		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_wan",
 			"{", container_rule.Interface, ".", container_rule.SrcIP, ":", "accept", "}").Run()
 		if err != nil {
@@ -1327,7 +1379,7 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 		}
 	}
 
-	if lan {
+	if lan && (action != "delete" || lan_count == 0) {
 		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_lan",
 			"{", container_rule.Interface, ".", container_rule.SrcIP, ":", "accept", "}").Run()
 		if err != nil {
@@ -1340,7 +1392,7 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 		}
 	}
 
-	if dns {
+	if dns && (action != "delete" || dns_count == 0) {
 		err = exec.Command("nft", action, "element", "inet", "filter", "dns_access",
 			"{", container_rule.SrcIP, ".", container_rule.Interface, ":", "accept", "}").Run()
 		if err != nil {
@@ -1353,7 +1405,7 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 		}
 	}
 
-	if api {
+	if api && (action != "delete" || api_count == 0) {
 		err = exec.Command("nft", action, "element", "inet", "filter", "api_interfaces",
 			"{", container_rule.Interface, "}").Run()
 		if err != nil {
@@ -1372,17 +1424,38 @@ func applyCustomInterfaceRule(container_rule CustomInterfaceRule, action string,
 			continue
 		}
 		if action == "add" {
+			Groupsmtx.Lock()
+			addGroupsIfMissing(getGroupsJson(), []string{group})
+			Groupsmtx.Unlock()
 			addCustomVerdict(group, container_rule.SrcIP, container_rule.Interface)
+		} else {
+			found := false
+			for _, rule := range current_rules {
+				if slices.Contains(rule.Groups, group) {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				//clear rule from group.
+				err := exec.Command("nft", "delete", "element", "inet", "filter", group+"_src_access", "{", container_rule.SrcIP, ".", container_rule.Interface, ":", "accept", "}").Run()
+				if err != nil {
+					log.Println("[-] Error container_interface group nft delete failed", err)
+				}
+
+				err = exec.Command("nft", "delete", "element", "inet", "filter", group+"_dst_access", "{", container_rule.SrcIP, ".", container_rule.Interface, ":", "continue", "}").Run()
+				if err != nil {
+					log.Println("[-]  Error container_interface group  nft delete failed", err)
+				}
+			}
+
 		}
 	}
 
-	if strings.Contains(container_rule.SrcIP, "/") && len(container_rule.Policies) > 0 {
-		log.Println("[-] Error : policies not supported for range on custom interface rule", container_rule.Interface, container_rule.SrcIP, container_rule.Tags)
-	} else {
-		foundPolicy := slices.Contains(container_rule.Policies, DEVICE_POLICY_PERMIT_PRIVATE_UPSTREAM_ACCESS)
-
+	foundPolicy := slices.Contains(container_rule.Policies, DEVICE_POLICY_PERMIT_PRIVATE_UPSTREAM_ACCESS)
+	if !strings.Contains(container_rule.SrcIP, "/") {
 		inUpstreamAllowed := hasPrivateUpstreamAccess(container_rule.SrcIP)
-
 		if foundPolicy && !inUpstreamAllowed {
 			//if has the tag but not in the verdict map, add it
 			allowPrivateUpstreamAccess(container_rule.SrcIP)
@@ -1440,7 +1513,7 @@ func applyContainerInterfaces() {
 	}
 
 	for _, container_rule := range gFirewallConfig.CustomInterfaceRules {
-		applyCustomInterfaceRule(container_rule, "add", false)
+		applyCustomInterfaceRule(gFirewallConfig.CustomInterfaceRules, container_rule, "add", false)
 	}
 
 	// TBD: clean up stale iface from dns_access (?) here
@@ -2114,7 +2187,9 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 				}
 			}
 
-			if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || (equalMAC(entry.mac, MAC) && (MAC != "")) {
+			if Ifname == "" {
+				//no ifname, cant do anything with these
+			} else if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || ((MAC != "") && equalMAC(entry.mac, MAC)) {
 				if entry.mac != "" {
 					err := exec.Command("nft", "delete", "element", "inet", "filter", name, "{", entry.ipv4, ".", entry.ifname, ".", entry.mac, ":", verdict, "}").Run()
 					if err != nil {
@@ -2217,17 +2292,18 @@ func notifyFirewallDHCP(device DeviceEntry, iface string) {
 	RecentDHCPWG[device.WGPubKey] = cur_time
 }
 
-func getWireguardActivePeers() []string {
+func getWireguardActivePeers() ([]string, []string) {
 	var data map[string]interface{}
 	var data2 map[string]interface{}
 	var data3 map[string]interface{}
 	var data4 map[string]interface{}
 	var data5 []interface{}
 	handshakes := []string{}
+	remote_endpoints := []string{}
 
 	req, err := http.NewRequest(http.MethodGet, "http://api-wg/status", nil)
 	if err != nil {
-		return handshakes
+		return handshakes, remote_endpoints
 	}
 
 	c := getWireguardClient()
@@ -2235,7 +2311,7 @@ func getWireguardActivePeers() []string {
 	resp, err := c.Do(req)
 	if err != nil {
 		log.Println("wireguard request failed", err)
-		return handshakes
+		return handshakes, remote_endpoints
 	}
 
 	defer resp.Body.Close()
@@ -2243,13 +2319,13 @@ func getWireguardActivePeers() []string {
 
 	if resp.StatusCode != http.StatusOK {
 		log.Println("failed to retrieve wireguard information", resp.StatusCode)
-		return handshakes
+		return handshakes, remote_endpoints
 	}
 
 	err = json.Unmarshal(output, &data)
 	if err != nil {
 		log.Println(err)
-		return handshakes
+		return handshakes, remote_endpoints
 	}
 
 	cur_time := time.Now().Unix()
@@ -2257,7 +2333,7 @@ func getWireguardActivePeers() []string {
 	_, exists := data["wg0"]
 	if !exists {
 		log.Println("Failed to retrieve wg0 from wireguard status")
-		return handshakes
+		return handshakes, remote_endpoints
 	}
 
 	//iterate through peers
@@ -2289,12 +2365,17 @@ func getWireguardActivePeers() []string {
 				if s != "" {
 					pieces := strings.Split(s, "/")
 					handshakes = append(handshakes, pieces[0])
+
+					//also grab the endpoint
+					data6 := data4["endpoint"].(string)
+					remote_endpoints = append(remote_endpoints, data6)
 				}
 			}
+
 		}
 	}
 
-	return handshakes
+	return handshakes, remote_endpoints
 }
 
 var MESH_ENABLED_LEAF_PATH = TEST_PREFIX + "/state/plugins/mesh/enabled"
@@ -2498,6 +2579,8 @@ func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
 			//tbd -> can constrain API/website access by device later.
 		case "disabled":
 			log.Println("Unexpected disabled here. Should have aborted earlier")
+		case "lan_upstream":
+			continue //handled in applyPrivateNetworkUpstreamDevice below
 		default:
 			log.Println("Unknown policy: " + policy_name)
 		}
@@ -2559,6 +2642,12 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 
 	//3. Update the route interface
 	exec.Command("ip", "route", "flush", routeIP).Run()
+
+	// no interface set. abort now
+	if new_iface == "" {
+		return
+	}
+
 	exec.Command("ip", "route", "add", routeIP, "dev", new_iface).Run()
 
 	// too noisy
@@ -2587,6 +2676,48 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	applyEndpointRules(entry)
 }
 
+var gPreviousVpnPeers = []string{}
+var gPreviousEndpoints = []string{}
+
+type VpnNotification struct {
+	VPNType        string
+	DeviceIP       string
+	RemoteEndpoint string
+	Status         string
+}
+
+func notifyVpnActivity(new_vpn_peers []string, endpoints []string) {
+	//look for a new peer (active <3 minutes ago)
+	for i, peer := range new_vpn_peers {
+		//if this peer is new
+		if !slices.Contains(gPreviousVpnPeers, peer) {
+			notification := VpnNotification{
+				VPNType:        "wireguard",
+				DeviceIP:       peer,
+				RemoteEndpoint: endpoints[i],
+				Status:         "online",
+			}
+			sprbus.Publish("device:vpn:online", notification)
+		}
+	}
+
+	//if an old peer went away
+	for i, peer := range gPreviousVpnPeers {
+		if !slices.Contains(new_vpn_peers, peer) {
+			notification := VpnNotification{
+				VPNType:        "wireguard",
+				DeviceIP:       peer,
+				RemoteEndpoint: gPreviousEndpoints[i],
+				Status:         "offline",
+			}
+			sprbus.Publish("device:vpn:offline", notification)
+		}
+	}
+
+	gPreviousVpnPeers = new_vpn_peers
+	gPreviousEndpoints = endpoints
+}
+
 func dynamicRouteLoop() {
 	//mesh APs do not need routes, as they use the bridge
 	if isLeafRouter() {
@@ -2594,6 +2725,7 @@ func dynamicRouteLoop() {
 	}
 
 	ticker := time.NewTicker(1 * time.Second)
+
 	for {
 		select {
 		case <-ticker.C:
@@ -2615,8 +2747,10 @@ func dynamicRouteLoop() {
 				meshDownlink = meshPluginDownlink()
 			}
 
-			wireguard_peers := getWireguardActivePeers()
+			wireguard_peers, remote_endpoints := getWireguardActivePeers()
 			wifi_peers := getWifiPeers()
+
+			notifyVpnActivity(wireguard_peers, remote_endpoints)
 
 			suggested_device := map[string]string{}
 

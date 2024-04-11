@@ -6,9 +6,9 @@ describe('releases', () => {
   it('should get release info', (done) => {
     agent
       .get('/release')
-      .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
+        assert(res.status == 200)
         assert(res.body.Current != undefined, 'missing current')
         assert(res.body.CustomChannel != undefined, 'missing custom channel')
         assert(res.body.CustomVersion != undefined, 'missing custom version')
@@ -19,9 +19,9 @@ describe('releases', () => {
   it('should get release channels', (done) => {
     agent
       .get('/releaseChannels')
-      .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
+        assert(res.status == 200)
         assert(res.body.includes('main'), 'missing stable')
         assert(res.body.includes('-dev'), 'missing dev channel')
         done()
@@ -60,9 +60,9 @@ describe('releases', () => {
   it('should get the running version', (done) => {
     agent
       .get('/version')
-      .expect(200)
       .expect('Content-Type', /json/)
       .end((err, res) => {
+        assert(res.status == 200)
         assert(res.body != "", 'missing version')
         done()
       })

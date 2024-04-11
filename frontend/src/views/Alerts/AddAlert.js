@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useNavigate } from 'react-router-dom'
 
@@ -7,9 +7,12 @@ import { ScrollView } from '@gluestack-ui/themed'
 import useSwipe from 'components/useSwipe'
 import AddAlert from 'components/Alerts/AddAlert'
 
+import { AlertContext } from 'AppContext'
+
 import { alertsAPI } from 'api'
 
 const AddAlertView = () => {
+  const context = useContext(AlertContext)
   const [config, setConfig] = useState([])
   const [item, setItem] = useState(null)
 
@@ -65,8 +68,7 @@ const AddAlertView = () => {
       bg="$backgroundCardLight"
       h="$full"
       sx={{
-        _dark: { bg: '$backgroundCardDark' },
-        p: '$4'
+        _dark: { bg: '$backgroundCardDark' }
       }}
       {...swipeHandlers}
     >

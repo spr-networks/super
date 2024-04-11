@@ -400,7 +400,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
             <ProtocolItem name={proto} size="sm" />
             <HStack>
               <Text size="sm" bold>
-                {item.IP.SrcIP}
+                {item.IP?.SrcIP}
               </Text>
               {srcPort ? <Text size="sm">:{srcPort}</Text> : null}
             </HStack>
@@ -421,7 +421,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
             {/*<ProtocolItem name={proto} size="sm" />*/}
             <HStack>
               <Text size="sm" bold>
-                {item.IP.DstIP}
+                {item.IP?.DstIP}
               </Text>
               {dstPort ? <Text size="sm">:{dstPort}</Text> : null}
             </HStack>
