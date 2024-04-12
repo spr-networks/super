@@ -99,7 +99,6 @@ const SystemInfo = (props) => {
                     value={hostname}
                     onChangeText={(v) => setHostname(v)}
                     onSubmitEditing={(hostname) => updateHostname(hostname)}
-                    autoFocus
                   />
                 </Input>
               </FormControl>
