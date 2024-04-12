@@ -91,9 +91,12 @@ const SystemInfo = (props) => {
                   : '$backgroundCardDark'
               }
               justifyContent="space-between"
+              alignItems="center"
             >
-              <Text size="sm">Hostname</Text>
-              <FormControl>
+              <Text flex={1} size="sm">
+                Hostname
+              </Text>
+              <FormControl flex={1}>
                 <Input variant="underlined">
                   <InputField
                     value={hostname}
