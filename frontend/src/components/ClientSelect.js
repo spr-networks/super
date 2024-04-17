@@ -6,8 +6,14 @@ import InputSelect from './InputSelect'
 import { GlobeIcon, TagIcon, BookCheckIcon } from 'lucide-react-native'
 
 const ClientSelect = (props) => {
-
-  let policyOptions = ['api', 'wan', 'lan', 'dns', 'lan_upstream', 'disabled'].map((t) => {
+  let policyOptions = [
+    'api',
+    'wan',
+    'lan',
+    'dns',
+    'lan_upstream',
+    'disabled'
+  ].map((t) => {
     return { label: t, value: { Policy: t }, icon: BookCheckIcon }
   })
   const [policyOpts, setPolicyOpts] = useState({
@@ -45,7 +51,7 @@ const ClientSelect = (props) => {
     return groupAPI.list().then((groups) => {
       let options = groups.map((g) => g.Name)
       options = options.map((value) => {
-        return { label: value, value: { Group: value }, icon: value }
+        return { label: value, value: { Group: value }, icon: GlobeIcon }
       })
 
       setGroupOpts({

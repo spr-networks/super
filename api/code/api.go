@@ -342,6 +342,7 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 		data, err = ioutil.ReadFile(HostnameConfigPath)
 		if err == nil && len(data) > 0 {
 			//accept from hostname config path instead
+			data = []byte(fmt.Sprintf("%q", data))
 		} else {
 			hostname, err2 := os.Hostname()
 			if err2 != nil {
