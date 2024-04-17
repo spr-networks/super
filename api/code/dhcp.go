@@ -315,6 +315,12 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	wanif := getWanif()
+	if dhcp.Iface == wanif {
+		http.Error(w, "Refuse dhcp from wanif", 400)
+		return
+	}
+
 	Groupsmtx.Lock()
 	defer Groupsmtx.Unlock()
 

@@ -1274,13 +1274,34 @@ func applyPingRules() {
 
 }
 
-func populateSets() {
-	//dhcp config loading already handles supernetworks mana
+func getWanif() string {
+	//tbd, use interfaces.json ?
+	return os.Getenv("WANIF")
+}
+
+func getWanifs() []string {
 	Interfacesmtx.Lock()
 	interfaces := loadInterfacesConfigLocked()
 	Interfacesmtx.Unlock()
 
-	wanif := os.Getenv("WANIF")
+	wanifs := []string{}
+
+	for _, iface := range interfaces {
+		if iface.Type == "Uplink" && iface.Enabled == true {
+			wanifs = append(wanifs, iface.Name)
+		}
+	}
+
+	return wanifs
+}
+
+func populateSets() {
+	//dhcp config loading already handles supernetworks
+	Interfacesmtx.Lock()
+	interfaces := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
+
+	wanif := getWanif()
 	found_wanif := false
 	for _, iface := range interfaces {
 		if iface.Name == wanif {
