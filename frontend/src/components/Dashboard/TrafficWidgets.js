@@ -166,10 +166,10 @@ export const DeviceTraffic = ({ minutes, showEmpty, ...props }) => {
         {total.map((item) => (
           <HStack space="sm" key={item.ip}>
             <Pressable
+              flex={1}
               onPress={() => navigate(`/admin/trafficlist/${item.ip}`)}
             >
               <DeviceItem
-                flex={1}
                 size="sm"
                 item={context.getDevice(item.ip, 'RecentIP')}
               />

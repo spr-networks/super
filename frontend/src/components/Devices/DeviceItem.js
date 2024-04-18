@@ -28,6 +28,9 @@ const DeviceItem = React.memo(({ item, show, size, ...props }) => {
 
   let textSize = size || 'md'
   let iconSize = size == 'sm' ? 24 : 32
+
+  let showInfo = dShow.includes('RecentIP') || dShow.includes('MAC')
+
   return (
     <HStack space="md" alignItems="center" {...props}>
       {dShow.includes('Style') ? (
@@ -43,21 +46,24 @@ const DeviceItem = React.memo(({ item, show, size, ...props }) => {
           {item?.Name || 'N/A'}
         </Text>
       ) : null}
-      <VStack
-        flex={3}
-        sx={{
-          '@md': {
-            flexDirection: 'row-reverse',
-            gap: '$8',
-            alignItems: 'center'
-          }
-        }}
-      >
-        {dShow.includes('RecentIP') ? (
-          <Text size="md">{item?.RecentIP}</Text>
-        ) : null}
-        {dShow.includes('MAC') ? <Text size="sm">{item?.MAC}</Text> : null}
-      </VStack>
+
+      {showInfo ? (
+        <VStack
+          flex={3}
+          sx={{
+            '@md': {
+              flexDirection: 'row-reverse',
+              gap: '$8',
+              alignItems: 'center'
+            }
+          }}
+        >
+          {dShow.includes('RecentIP') ? (
+            <Text size="md">{item?.RecentIP}</Text>
+          ) : null}
+          {dShow.includes('MAC') ? <Text size="sm">{item?.MAC}</Text> : null}
+        </VStack>
+      ) : null}
     </HStack>
   )
 })

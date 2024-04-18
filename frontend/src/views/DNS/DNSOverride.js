@@ -58,6 +58,17 @@ const DNSBlock = (props) => {
     refreshConfig()
   }
 
+  const deleteListItem = async (item) => {
+    blockAPI
+      .deleteOverride(item)
+      .then((res) => {
+        notifyChange('config')
+      })
+      .catch((error) => {
+        context.error('API Failure: ' + error.message)
+      })
+  }
+
   if (!enabled) {
     return <PluginDisabled plugin="dns" />
   }
@@ -74,6 +85,7 @@ const DNSBlock = (props) => {
             list={BlockDomains}
             title="Block Custom Domain"
             notifyChange={notifyChange}
+            deleteListItem={deleteListItem}
             renderHeader={() => (
               <ModalForm
                 title="Add Block for Custom Domain"
@@ -96,6 +108,7 @@ const DNSBlock = (props) => {
             list={PermitDomains}
             title="Permit Domain Override"
             notifyChange={notifyChange}
+            deleteListItem={deleteListItem}
             renderHeader={() => (
               <ModalForm
                 title="Add Permit Domain Override"

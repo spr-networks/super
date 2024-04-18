@@ -30,8 +30,8 @@ services:
       - "127.0.0.1:4443:443"
     logging: *default-logging
     volumes:
-      - ./configs/base/:/configs/base/
-      - ./state/base/:/state/base/
+      - ${PWD}/configs/base/:/configs/base/
+      - ${PWD}/state/base/:/state/base/
   superd:
     container_name: superd
     image: ghcr.io/spr-networks/super_superd:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
@@ -42,9 +42,9 @@ services:
     logging: *default-logging
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./configs/base/:/configs/base/
-      - ./state/api/eventbus.sock:/state/api/eventbus.sock
-      - ./:/super/
+      - ${PWD}/configs/base/:/configs/base/
+      - ${PWD}/state/api/eventbus.sock:/state/api/eventbus.sock
+      - ${PWD}/:/super/
   dhcp:
     container_name: superdhcp
     image: ghcr.io/spr-networks/super_dhcp:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
@@ -56,10 +56,10 @@ services:
       - "base"
     logging: *default-logging
     volumes:
-      - ./configs/base/:/configs/base/:ro
-      - ./configs/dhcp/:/configs/dhcp/
-      - ./state/dhcp/:/state/dhcp/
-      - ./state/plugins/mesh/:/state/plugins/mesh/:ro
+      - ${PWD}/configs/base/:/configs/base/:ro
+      - ${PWD}/configs/dhcp/:/configs/dhcp/
+      - ${PWD}/state/dhcp/:/state/dhcp/
+      - ${PWD}/state/plugins/mesh/:/state/plugins/mesh/:ro
       - /sys/fs/bpf:/sys/fs/bpf
   dns:
     container_name: superdns
@@ -72,11 +72,11 @@ services:
     depends_on:
       - "base"
     volumes:
-      - ./configs/dns/:/configs/dns/
-      - ./state/api/:/state/api/
-      - ./state/dns/:/state/dns/
-      - ./state/public/:/state/public/:ro
-      - ./state/plugins/mesh/:/state/plugins/mesh/:ro
+      - ${PWD}/configs/dns/:/configs/dns/
+      - ${PWD}/state/api/:/state/api/
+      - ${PWD}/state/dns/:/state/dns/
+      - ${PWD}/state/public/:/state/public/:ro
+      - ${PWD}/state/plugins/mesh/:/state/plugins/mesh/:ro
   multicast_udp_proxy:
     container_name: super_multicast_udp_proxy
     image: ghcr.io/spr-networks/super_multicast_udp_proxy:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
@@ -88,9 +88,9 @@ services:
       - "base"
     logging: *default-logging
     volumes:
-      - ./configs/base/:/configs/base/:ro
-      - ./state/public/:/state/public/:ro
-      - ./state/plugins/mesh/:/state/plugins/mesh/:ro
+      - ${PWD}/configs/base/:/configs/base/:ro
+      - ${PWD}/state/public/:/state/public/:ro
+      - ${PWD}/state/plugins/mesh/:/state/plugins/mesh/:ro
   wireguard:
     container_name: superwireguard
     image: ghcr.io/spr-networks/super_wireguard:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
@@ -107,11 +107,11 @@ services:
       - "api"
     logging: *default-logging
     volumes:
-      - ./configs/base/:/configs/base/:ro
-      - ./configs/wireguard/:/configs/wireguard/
-      - ./state/plugins/wireguard/:/state/plugins/wireguard/
-      - ./state/dhcp/:/state/dhcp/
-      - ./state/plugins/mesh/:/state/plugins/mesh/:ro
+      - ${PWD}/configs/base/:/configs/base/:ro
+      - ${PWD}/configs/wireguard/:/configs/wireguard/
+      - ${PWD}/state/plugins/wireguard/:/state/plugins/wireguard/
+      - ${PWD}/state/dhcp/:/state/dhcp/
+      - ${PWD}/state/plugins/mesh/:/state/plugins/mesh/:ro
   frontend:
     container_name: superfrontend
     image: ghcr.io/spr-networks/super_frontend:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
@@ -121,7 +121,7 @@ services:
       labels: *default-labels
     network_mode: none
     volumes:
-      - ./frontend/:/frontend
+      - ${PWD}/frontend/:/frontend
   api:
     container_name: superapi
     image: ghcr.io/spr-networks/super_api:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
@@ -138,26 +138,26 @@ services:
       - "superd"
     logging: *default-logging
     volumes:
-      - ./configs/auth/:/configs/auth/
-      - ./configs/base/:/configs/base/
-      - ./configs/devices/:/configs/devices/
-      - ./configs/dns:/configs/dns/
-      - ./configs/plugins/:/configs/plugins/
-      - ./configs/ppp:/configs/ppp/
-      - ./configs/wifi/:/configs/wifi/
-      - ./configs/wifi_uplink/:/configs/wifi_uplink/
-      - ./configs/wireguard/:/configs/wireguard/
-      - ./configs/scripts/:/configs/scripts/
-      - ./configs/pfw/:/configs/pfw/
-      - ./state/wifi/:/state/wifi/
-      - ./state/dhcp/:/state/dhcp/
-      - ./state/dns/:/state/dns/
-      - ./state/api/:/state/api/
-      - ./state/backups/:/state/backups/
-      - ./state/base/:/state/base/
-      - ./state/plugins/:/state/plugins/
-      - ./state/public/:/state/public/
-      - ./frontend/build:/ui/
+      - ${PWD}/configs/auth/:/configs/auth/
+      - ${PWD}/configs/base/:/configs/base/
+      - ${PWD}/configs/devices/:/configs/devices/
+      - ${PWD}/configs/dns:/configs/dns/
+      - ${PWD}/configs/plugins/:/configs/plugins/
+      - ${PWD}/configs/ppp:/configs/ppp/
+      - ${PWD}/configs/wifi/:/configs/wifi/
+      - ${PWD}/configs/wifi_uplink/:/configs/wifi_uplink/
+      - ${PWD}/configs/wireguard/:/configs/wireguard/
+      - ${PWD}/configs/scripts/:/configs/scripts/
+      - ${PWD}/configs/pfw/:/configs/pfw/
+      - ${PWD}/state/wifi/:/state/wifi/
+      - ${PWD}/state/dhcp/:/state/dhcp/
+      - ${PWD}/state/dns/:/state/dns/
+      - ${PWD}/state/api/:/state/api/
+      - ${PWD}/state/backups/:/state/backups/
+      - ${PWD}/state/base/:/state/base/
+      - ${PWD}/state/plugins/:/state/plugins/
+      - ${PWD}/state/public/:/state/public/
+      - ${PWD}/frontend/build:/ui/
       - /var/log/journal:/var/log/journal:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
   plugin-lookup:
@@ -172,7 +172,7 @@ services:
       - "base"
       - "dns"
     volumes:
-      - ./state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
+      - ${PWD}/state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
   db:
     container_name: superdb
     image: ghcr.io/spr-networks/super_db:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
@@ -188,7 +188,7 @@ services:
       - "api"
     logging: *default-logging
     volumes:
-      - ./configs/base/:/configs/base/:ro
-      - ./configs/db/:/configs/db/
-      - ./state/api/:/state/api
-      - ./state/plugins/db/:/state/plugins/db/
+      - ${PWD}/configs/base/:/configs/base/:ro
+      - ${PWD}/configs/db/:/configs/db/
+      - ${PWD}/state/api/:/state/api
+      - ${PWD}/state/plugins/db/:/state/plugins/db/
