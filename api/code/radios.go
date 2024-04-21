@@ -55,7 +55,7 @@ func doReloadPSKFiles() {
 	sae := ""
 
 	//apple downgrade workaround https://feedbackassistant.apple.com/feedback/9991042
-	downgradeWorkaround := false
+	downgradeWorkaround := true
 
 	for keyval, entry := range devices {
 		if entry.DeviceDisabled == true {
