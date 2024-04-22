@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import Device from 'components/Devices/Device'
 import { AlertContext } from 'layouts/Admin'
 import { AppContext } from 'AppContext'
+import { strToDate } from 'utils'
 
 import {
   Button,
@@ -173,6 +174,47 @@ const DeviceListing = (props) => {
     refreshDevices(true)
   }, [])
 
+  const sortByDate = () => {
+    let x = devices.sort((a,b) => {
+      if (a.DHCPLastTime == '') {
+        return 1
+      }
+      if (b.DHCPLastTime == '') {
+        return -1
+      }
+
+      return strToDate(b.DHCPLastTime) - strToDate(a.DHCPLastTime)
+    })
+
+    setDevices(x)
+  }
+
+  const sortByName = () => {
+    let x = devices.sort((a,b) => {
+      return a.Name > b.Name
+    })
+    setDevices(x)
+  }
+
+  const sortByIP = () => {
+    const parseIP = (ip) => {
+      return ip.split('.').map(Number);
+    };
+
+    let x = devices.sort((a, b) => {
+      const aIP = parseIP(a.RecentIP);
+      const bIP = parseIP(b.RecentIP);
+
+      for (let i = 0; i <= 4; i++) {
+        if (aIP[i] !== bIP[i]) {
+          return aIP[i] - bIP[i];
+        }
+      }
+      return 0;
+    });
+    setDevices(x)
+  }
+
   const handleRedirect = () => {
     if (appContext.isWifiDisabled) {
       navigate('/admin/wireguard')
@@ -290,6 +332,41 @@ const DeviceListing = (props) => {
             >
             Filter
           </Button>*/}
+
+          <HStack>
+            <Button
+              sx={{ '@md': { display:  'flex' } }}
+              action="primary"
+              variant="solid"
+              rounded="$none"
+              onPress={() => sortByDate()}
+              mt={0}
+            >
+              <ButtonText>Sort by Date</ButtonText>
+            </Button>
+
+            <Button
+              sx={{ '@md': { display:  'flex' } }}
+              action="primary"
+              variant="solid"
+              rounded="$none"
+              onPress={() => sortByName()}
+              mt={0}
+            >
+              <ButtonText>Sort by Name</ButtonText>
+            </Button>
+
+            <Button
+              sx={{ '@md': { display:  'flex' } }}
+              action="primary"
+              variant="solid"
+              rounded="$none"
+              onPress={() => sortByIP()}
+              mt={0}
+            >
+              <ButtonText>Sort by IP</ButtonText>
+            </Button>
+          </HStack>
       </ListHeader>
 
       {Platform.OS == 'ios' ? (
