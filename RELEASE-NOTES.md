@@ -1,5 +1,12 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v0.3.10
+* Revert wpa2 behavior for wpa3 devices for now
+
+## v0.3.9
+* Various bug fixes
+* Stop applying wpa2 to wpa3 devices
+
 ## v0.3.8
 * Improve e2e testing 
 * Add fixes for 'disabled' policy handling 

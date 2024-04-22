@@ -736,7 +736,7 @@ func deleteBlock(br BlockRule) error {
 
 func deleteForwarding(f ForwardingRule) error {
 	var cmd *exec.Cmd
-	if f.SrcPort == "any" {
+	if f.DstPort == "any" {
 		cmd = exec.Command("nft", "delete", "element", "inet", "nat", f.Protocol+"anyfwd",
 			"{", f.SrcIP, ":",
 			f.DstIP, "}")
