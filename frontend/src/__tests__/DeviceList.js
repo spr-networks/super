@@ -11,7 +11,8 @@ import {
 //import { BrowserRouter, Router } from 'react-router-dom'
 
 import AdminLayout from 'layouts/Admin'
-import DeviceListing from 'components/Devices/DeviceListing'
+import Devices from 'views/Devices/Devices'
+//import DeviceList from 'components/Devices/DeviceList'
 import createServer from 'api/MockAPI'
 import { deviceAPI, saveLogin } from 'api'
 import { Platform } from 'react-native'
@@ -41,7 +42,7 @@ it('show devices', async () => {
     <Router>
       <Routes>
         <Route element={<AdminLayout toggleColorMode={toggleColorMode} />}>
-          <Route path="*" element={<DeviceListing />} />
+          <Route path="*" element={<Devices />} />
         </Route>
       </Routes>
     </Router>
