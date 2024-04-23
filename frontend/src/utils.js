@@ -26,13 +26,14 @@ export const copy = (data) => {
 // util functions
 export const strToDate = (timestamp, locales = null) => {
   let ts = timestamp
+  if (!ts) return null
   //golang UTC date format:
   //2023-07-20 12:57:32.039846038 +0000 UTC m=+92926.449526088
   if (typeof ts == 'string' && ts.includes('m=')) {
     ts = ts.replace(/\sm=.*/g, '')
   }
 
-  if (ts.includes("+0000 UTC")) {
+  if (typeof ts == 'string' && ts.includes("+0000 UTC")) {
     ts = ts.replace(" +0000 UTC", "Z")
     ts = ts.replace(" ", "T")
   }
