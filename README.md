@@ -113,7 +113,7 @@ docker-compose up -d
 * [API Docs](https://www.supernetworks.org/pages/api/0)
 * [Documentation Home](https://www.supernetworks.org/pages/docs/intro)
 * [Raspberry Pi 4 Setup Guide](https://www.supernetworks.org/pages/docs/setup_guides/pi4b)
-* [General Setup Guide](https://www.supernetworks.org/pages/docs/setup_run_spr)
+* [General Setup Guide](https://www.supernetworks.org/pages/docs/setup_guides/setup_run_spr)
 * [Virtual Setup Guide (Personal VPN)](https://www.supernetworks.org/pages/docs/setup_guides/virtual_spr)
 
 * [FAQ](https://www.supernetworks.org/pages/docs/faq)
