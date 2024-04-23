@@ -119,29 +119,8 @@ const SiteVPN = (props) => {
 
       </HStack>
     )
-
-      /*
-      {siteStatus[item.Interface]?.peers[item.PeerPublicKey]?.LatestHandshake ? (
-        <Text flex={1}>
-          fff {prettyDate(new Date(siteStatus[item.Interface].peers[item.PeerPublicKey].LatestHandshake * 1e3))}
-        </Text>
-      ) : null}
-
-      {siteStatus[item.Interface]?.TransferRx ? (
-        <HStack flex={1} space="sm">
-          <HStack space="xs" alignItems="center">
-            <Icon as={ArrowUpCircleIcon} color="$muted500" />
-            <Text size="xs">{prettySize(siteStatus[item.Interface].TransferTx)}</Text>
-          </HStack>
-          <HStack space="xs" alignItems="center">
-            <Icon as={ArrowDownCircleIcon} color="$muted500" />
-            <Text size="xs">{prettySize(siteStatus[item.Interface].TransferRx)}</Text>
-          </HStack>
-        </HStack>
-      ) : null}
-*/
   }
-
+  
   return (
     <>
       <ListHeader title="Site-To-Site VPNs">
