@@ -8,6 +8,7 @@ import { prettyDate, prettySize } from 'utils'
 
 import {
   AddIcon,
+  AlertCircleIcon,
   Button,
   ButtonIcon,
   ButtonText,
@@ -97,12 +98,19 @@ const SiteVPN = (props) => {
 
     return (
       <HStack>
-        {isOnlineWithinLastHour && (
+        {isOnlineWithinLastHour ? (
           <HStack>
             <Icon as={CheckCircleIcon} color="$success600" size="lg" />
             <Text size="lg" bold> Online </Text>
           </HStack>
-        )}
+        ) :
+        (
+          <HStack>
+            <Icon as={AlertCircleIcon} color="$error600" size="lg" />
+            <Text size="lg" bold> Offline </Text>
+          </HStack>
+        )
+        }
 
         {peer.transferRx ? (
           <HStack flex={1} space="sm">
@@ -120,7 +128,7 @@ const SiteVPN = (props) => {
       </HStack>
     )
   }
-  
+
   return (
     <>
       <ListHeader title="Site-To-Site VPNs">
