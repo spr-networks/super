@@ -54,7 +54,7 @@ const saveDeviceInfo = () => {
   AsyncStorage.getItem('deviceInfo').then((info) => {
     let deviceInfo = info ? JSON.parse(info) : null
     if (!deviceInfo) {
-      console.error('missing device info')
+      //console.error('missing device info')
       return
     }
 
