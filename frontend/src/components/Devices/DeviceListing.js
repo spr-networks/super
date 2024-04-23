@@ -175,7 +175,7 @@ const DeviceListing = (props) => {
   }, [])
 
   const sortByDate = () => {
-    let x = devices.sort((a,b) => {
+    let x = devices.sort((a, b) => {
       if (a.DHCPLastTime == '') {
         return 1
       }
@@ -190,7 +190,7 @@ const DeviceListing = (props) => {
   }
 
   const sortByName = () => {
-    let x = devices.sort((a,b) => {
+    let x = devices.sort((a, b) => {
       return a.Name > b.Name
     })
     setDevices(x)
@@ -198,20 +198,20 @@ const DeviceListing = (props) => {
 
   const sortByIP = () => {
     const parseIP = (ip) => {
-      return ip.split('.').map(Number);
-    };
+      return ip.split('.').map(Number)
+    }
 
     let x = devices.sort((a, b) => {
-      const aIP = parseIP(a.RecentIP);
-      const bIP = parseIP(b.RecentIP);
+      const aIP = parseIP(a.RecentIP)
+      const bIP = parseIP(b.RecentIP)
 
       for (let i = 0; i <= 4; i++) {
         if (aIP[i] !== bIP[i]) {
-          return aIP[i] - bIP[i];
+          return aIP[i] - bIP[i]
         }
       }
-      return 0;
-    });
+      return 0
+    })
     setDevices(x)
   }
 
@@ -333,40 +333,40 @@ const DeviceListing = (props) => {
             Filter
           </Button>*/}
 
-          <HStack>
-            <Button
-              sx={{ '@md': { display:  'flex' } }}
-              action="primary"
-              variant="solid"
-              rounded="$none"
-              onPress={() => sortByDate()}
-              mt={0}
-            >
-              <ButtonText>Sort by Date</ButtonText>
-            </Button>
+        <HStack>
+          <Button
+            sx={{ '@md': { display: 'flex' } }}
+            action="primary"
+            variant="solid"
+            rounded="$none"
+            onPress={() => sortByDate()}
+            mt={0}
+          >
+            <ButtonText>Sort by Date</ButtonText>
+          </Button>
 
-            <Button
-              sx={{ '@md': { display:  'flex' } }}
-              action="primary"
-              variant="solid"
-              rounded="$none"
-              onPress={() => sortByName()}
-              mt={0}
-            >
-              <ButtonText>Sort by Name</ButtonText>
-            </Button>
+          <Button
+            sx={{ '@md': { display: 'flex' } }}
+            action="primary"
+            variant="solid"
+            rounded="$none"
+            onPress={() => sortByName()}
+            mt={0}
+          >
+            <ButtonText>Sort by Name</ButtonText>
+          </Button>
 
-            <Button
-              sx={{ '@md': { display:  'flex' } }}
-              action="primary"
-              variant="solid"
-              rounded="$none"
-              onPress={() => sortByIP()}
-              mt={0}
-            >
-              <ButtonText>Sort by IP</ButtonText>
-            </Button>
-          </HStack>
+          <Button
+            sx={{ '@md': { display: 'flex' } }}
+            action="primary"
+            variant="solid"
+            rounded="$none"
+            onPress={() => sortByIP()}
+            mt={0}
+          >
+            <ButtonText>Sort by IP</ButtonText>
+          </Button>
+        </HStack>
       </ListHeader>
 
       {Platform.OS == 'ios' ? (
