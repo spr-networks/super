@@ -155,11 +155,11 @@ const SiteVPN = (props) => {
               <Text flex={1} bold>
                 {item.Interface}
               </Text>
-              <Text flex={1}>{item.Address}</Text>
-              <Text flex={1}>{item.Endpoint}</Text>
 
               {getOnlineStatus(item)}
 
+              <Text flex={1}>{item.Address}</Text>
+              <Text flex={1}>{item.Endpoint}</Text>
               <Text
                 sx={{
                   '@base': { display: 'none' },
