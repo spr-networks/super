@@ -37,15 +37,12 @@ import { MonitorCheckIcon } from 'lucide-react-native'
 
 const PluginList = (props) => {
   const [list, _setList] = useState([])
-  const [pluginVersions, setPluginVersions] = useState([])
   const [plusList, setPlusList] = useState([])
 
   const [token, setToken] = useState('')
   const [activeToken, setActiveToken] = useState('')
   const [updated, setUpdated] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-
-  const contextType = useContext(AppContext)
 
   const navigate = useNavigate()
 
@@ -54,24 +51,26 @@ const PluginList = (props) => {
     setPlusList(plugins.filter((x) => x.Plus == true))
   }
 
-  const getPluginVersion = (plugin) => {
+  const getPluginVersionName = (plugin) => {
     let name = plugin.Name.toLowerCase()
     if (name.match(/^dns-(block|log)-extension$/)) {
       name = 'dns'
     }
 
-    return api.version(`super${name}`)
+    return `super${name}`
   }
 
   //get each plugin version
   const fetchVersions = async (plugins) => {
-    let pluginsV = [...plugins]
-    for (let i = 0; i < pluginsV.length; i++) {
-      let v = await getPluginVersion(pluginsV[i]).catch((err) => {})
-      pluginsV[i].Version = v || ''
-      setPluginVersions(pluginsV)
-      setList(pluginsV)
-    }
+    let names = plugins.map(getPluginVersionName)
+    let res = await api.version(names)
+    let pluginsV = [...plugins].map((p) => {
+      let k = getPluginVersionName(p)
+      p.Version = res[k] || 'none'
+      return p
+    })
+
+    setList(pluginsV)
   }
 
   const refreshList = (next) => {
@@ -106,14 +105,6 @@ const PluginList = (props) => {
     pluginAPI
       .update(plugin)
       .then((plugins) => {
-        // use cached version of plugins
-        plugins = plugins.map((p) => {
-          p.Version =
-            pluginVersions.find((pp) => pp.Name == p.Name)?.Version || ''
-
-          return p
-        })
-
         setList(plugins)
       })
       .catch((err) => {
