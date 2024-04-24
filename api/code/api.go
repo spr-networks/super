@@ -911,42 +911,54 @@ func releaseChannels(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(reply)
 }
 
+// return "version" if <= 1 params else {"name": "version"}
 func getContainerVersion(w http.ResponseWriter, r *http.Request) {
-	container := r.URL.Query().Get("plugin")
-	params := url.Values{}
-	params.Set("container", container)
-
-	req, err := http.NewRequest(http.MethodGet, "http://localhost/container_version?"+params.Encode(), nil)
-	if err != nil {
-		http.Error(w, fmt.Errorf("failed to make request for version "+container).Error(), 400)
-		return
+	var containers []string
+	r.ParseForm()
+	containers = r.Form["plugin"]
+	if len(containers) == 0 {
+		containers = append(containers, "superd")
 	}
 
-	c := getSuperdClient()
-	defer c.CloseIdleConnections()
+	containerVersions := make(map[string]string)
+	for _, container := range containers {
+		//TODO have superd support +1 params
+		//container := r.URL.Query().Get("plugin")
+		params := url.Values{}
+		params.Set("container", container)
 
-	resp, err := c.Do(req)
-	if err != nil {
-		http.Error(w, fmt.Errorf("failed to request version from superd "+container).Error(), 400)
-		return
+		data, statusCode, err := superdRequestMethod(http.MethodGet, "container_version", params, nil)
+		if err != nil || statusCode != http.StatusOK {
+			containerVersions[container] = ""
+			continue
+		}
+
+		version := ""
+		err = json.Unmarshal(data, &version)
+		if err != nil {
+			containerVersions[container] = ""
+			continue
+		}
+
+		containerVersions[container] = version
 	}
 
-	defer resp.Body.Close()
+	if len(containerVersions) == 1 {
+		for container, version := range containerVersions {
+			if version == "" {
+				http.Error(w, fmt.Errorf("failed to get version for %s", container).Error(), 400)
+				return
+			}
 
-	version := ""
-	err = json.NewDecoder(resp.Body).Decode(&version)
-	if err != nil {
-		http.Error(w, fmt.Errorf("failed to get version for %s", container).Error(), 400)
-		return
-	}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(version)
 
-	if resp.StatusCode != http.StatusOK {
-		http.Error(w, fmt.Errorf("failed to get version %s", container+" "+fmt.Sprint(resp.StatusCode)).Error(), 400)
-		return
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(version)
+	json.NewEncoder(w).Encode(containerVersions)
 }
 
 func doConfigsBackup(w http.ResponseWriter, r *http.Request) {
