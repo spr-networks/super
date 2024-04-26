@@ -1,11 +1,9 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Dimensions, Platform } from 'react-native'
+import React, { useContext, useEffect, useState } from 'react'
 
-import ModalForm from 'components/ModalForm'
 import { AlertContext } from 'AppContext'
-import { FlowCard, NewCard } from './FlowCard'
+import { NewCard } from './FlowCard'
 import { numToDays, toCron } from './FlowCards'
-import AddFlowCard from './AddFlowCard'
+import EditFlow from './EditFlow'
 import { pfwAPI } from 'api/Pfw'
 
 import {
@@ -13,18 +11,10 @@ import {
   BadgeText,
   Box,
   Button,
-  ButtonText,
   ButtonIcon,
   FlatList,
-  FormControl,
-  FormControlHelper,
-  FormControlHelperText,
-  FormControlLabel,
-  FormControlLabelText,
   Heading,
   Icon,
-  Input,
-  InputField,
   HStack,
   VStack,
   Text,
@@ -32,125 +22,19 @@ import {
   Menu,
   MenuItem,
   MenuItemLabel,
-  AddIcon,
   ThreeDotsIcon,
   TrashIcon,
   CheckIcon,
-  CloseIcon,
   CopyIcon
 } from '@gluestack-ui/themed'
 
 import { dateArrayToStr } from './Utils'
-import {
-  CircleIcon,
-  PencilIcon,
-  ToggleLeftIcon,
-  ToggleRightIcon,
-  CircleSlashIcon
-} from 'lucide-react-native'
+import { PencilIcon, CircleSlashIcon } from 'lucide-react-native'
 
 import { Tooltip } from 'components/Tooltip'
 
-const FlowCardList = ({
-  title,
-  cards: defaultCards,
-  cardType,
-  edit,
-  ...props
-}) => {
-  const [cards, setCardsCall] = useState(defaultCards)
-  let refModal = useRef(null)
-
-  const setCards = (cards) => {
-    if (props.onChange) {
-      props.onChange(cards)
-    }
-    setCardsCall(cards)
-  }
-
-  useEffect(() => {
-    setCards(defaultCards)
-  }, [defaultCards])
-
-  const addCard = (type) => {
-    refModal.current()
-  }
-
-  const handleAddCard = (item) => {
-    // one trigger, multiple actions
-    if (
-      cardType == 'trigger' &&
-      cards.filter((card) => card.title === item.title).length
-    ) {
-      return
-    }
-
-    refModal.current()
-    setCards(cards.concat(item))
-  }
-
-  const onChange = (item) => {
-    setCards(cards.map((card) => (card.title == item.title ? item : card)))
-  }
-
-  const deleteCard = (index) => {
-    let newCards = [...cards]
-    newCards.splice(index, 1)
-    setCards(newCards)
-  }
-
-  return (
-    <VStack space="sm">
-      <Text bold size="sm">
-        {title}
-      </Text>
-
-      <FlatList
-        data={cards}
-        listKey={`list${cardType}`}
-        keyExtractor={(item, index) => index}
-        renderItem={({ item, index }) => (
-          <FlowCard
-            edit={edit}
-            card={item}
-            onChange={onChange}
-            onDelete={() => deleteCard(index)}
-            mb="$2"
-          />
-        )}
-      />
-
-      {edit ? (
-        <>
-          <ModalForm
-            key={`form${cardType}`}
-            title={`Add ${cardType} to flow`}
-            modalRef={refModal}
-            maxWidth="$full"
-          >
-            <ScrollView maxHeight={400}>
-              <AddFlowCard cardType={cardType} onSubmit={handleAddCard} />
-            </ScrollView>
-          </ModalForm>
-
-          <Button
-            action="primary"
-            variant="outline"
-            onPress={() => addCard(cardType)}
-            display={cards.length ? 'none' : 'flex'}
-            key={'add' + cardType}
-          >
-            <ButtonText>Add card</ButtonText>
-            <ButtonIcon as={AddIcon} ml="$1" />
-          </Button>
-        </>
-      ) : null}
-    </VStack>
-  )
-}
-
-// Add/Edit flow
-const Flow = ({ flow, edit, ...props }) => {
+// Show flow card
+const Flow = ({ flow, ...props }) => {
   // NOTE we have multiple but only support one atm.
   const [title, setTitle] = useState(flow.title)
   const [triggers, setTriggers] = useState(flow.triggers)
@@ -173,259 +57,161 @@ const Flow = ({ flow, edit, ...props }) => {
   }, [actions])
 
   //mini
-  if (!edit) {
-    const triggerBtn = (triggerProps) => (
-      <Button action="secondary" variant="link" ml="auto" {...triggerProps}>
-        <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
-      </Button>
-    )
 
-    const onEdit = () => {
-      if (props.onEdit) {
-        props.onEdit(flow)
-      }
+  const triggerBtn = (triggerProps) => (
+    <Button action="secondary" variant="link" ml="auto" {...triggerProps}>
+      <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
+    </Button>
+  )
+
+  const onEdit = () => {
+    if (props.onEdit) {
+      props.onEdit(flow)
     }
+  }
 
-    const onDelete = () => {
-      if (props.onDelete) {
-        props.onDelete(flow)
-      }
+  const onDelete = () => {
+    if (props.onDelete) {
+      props.onDelete(flow)
     }
+  }
 
-    const onDuplicate = () => {
-      if (props.onDuplicate) {
-        props.onDuplicate(flow)
-      }
+  const onDuplicate = () => {
+    if (props.onDuplicate) {
+      props.onDuplicate(flow)
     }
+  }
 
-    const onDisable = () => {
-      if (props.onDisable) {
-        props.onDisable(flow)
-      }
+  const onDisable = () => {
+    if (props.onDisable) {
+      props.onDisable(flow)
     }
+  }
 
-    const moreMenu = (
-      <Menu
-        flex={1}
-        trigger={triggerBtn}
-        selectionMode="single"
-        closeOnSelect={true}
-        onSelectionChange={(e) => {
-          let key = e.currentKey
-          if (key == 'disable') {
-            onDisable()
-          } else if (key == 'edit') {
-            onEdit()
-          } else if (key == 'duplicate') {
-            onDuplicate()
-          } else if (key == 'delete') {
-            onDelete()
-          }
-        }}
-      >
-        <MenuItem key="disable">
-          <Icon
-            as={flow.disabled ? CheckIcon : CircleSlashIcon}
-            color={flow.disabled ? '$success700' : '$red700'}
-            mr="$2"
-          />
-          <MenuItemLabel size="sm">
-            {flow.disabled ? 'Enable' : 'Disable'}
-          </MenuItemLabel>
-        </MenuItem>
-        <MenuItem key="edit">
-          <Icon as={PencilIcon} color="$muted500" mr="$2" />
-          <MenuItemLabel size="sm">Edit</MenuItemLabel>
-        </MenuItem>
-        <MenuItem key="duplicate">
-          <CopyIcon color="$muted500" mr="$2" />
-          <MenuItemLabel size="sm">Duplicate</MenuItemLabel>
-        </MenuItem>
+  const moreMenu = (
+    <Menu
+      flex={1}
+      trigger={triggerBtn}
+      selectionMode="single"
+      closeOnSelect={true}
+      onSelectionChange={(e) => {
+        let key = e.currentKey
+        if (key == 'disable') {
+          onDisable()
+        } else if (key == 'edit') {
+          onEdit()
+        } else if (key == 'duplicate') {
+          onDuplicate()
+        } else if (key == 'delete') {
+          onDelete()
+        }
+      }}
+    >
+      <MenuItem key="disable">
+        <Icon
+          as={flow.disabled ? CheckIcon : CircleSlashIcon}
+          color={flow.disabled ? '$success700' : '$red700'}
+          mr="$2"
+        />
+        <MenuItemLabel size="sm">
+          {flow.disabled ? 'Enable' : 'Disable'}
+        </MenuItemLabel>
+      </MenuItem>
+      <MenuItem key="edit">
+        <Icon as={PencilIcon} color="$muted500" mr="$2" />
+        <MenuItemLabel size="sm">Edit</MenuItemLabel>
+      </MenuItem>
+      <MenuItem key="duplicate">
+        <CopyIcon color="$muted500" mr="$2" />
+        <MenuItemLabel size="sm">Duplicate</MenuItemLabel>
+      </MenuItem>
 
-        <MenuItem key="delete">
-          <TrashIcon color="$red700" mr="$2" />
-          <MenuItemLabel color="$red700">Delete</MenuItemLabel>
-        </MenuItem>
-      </Menu>
-    )
+      <MenuItem key="delete">
+        <TrashIcon color="$red700" mr="$2" />
+        <MenuItemLabel color="$red700">Delete</MenuItemLabel>
+      </MenuItem>
+    </Menu>
+  )
 
-    // TODO mini component
+  // TODO mini component
 
-    let trigger = triggers[0],
-      action = actions[0]
+  let trigger = triggers[0],
+    action = actions[0]
 
-    if (!trigger || !action) {
-      return <></>
-    }
+  if (!trigger || !action) {
+    return <></>
+  }
 
-    const displayValue = (value, label) => {
-      if (!value) {
-        return value
-      }
-
-      if (label == 'Client') {
-        return value.Identity || value.Group || value.SrcIP
-      }
-
-      if (label == 'Dst' || label == 'OriginalDst') {
-        return value.IP || value.Domain
-      }
-
-      if (Array.isArray(value)) {
-        return value.join(',')
-      }
-
-      if (label == 'days') {
-        return dateArrayToStr(value.split(','))
-      }
-
+  const displayValue = (value, label) => {
+    if (!value) {
       return value
     }
 
-    return (
-      <VStack
-        p="$4"
-        py="$4"
-        sx={{
-          '@base': { flexDirection: 'column-reverse' },
-          '@md': { flexDirection: 'row', p: '$8' },
-          _dark: { bg: '$backgroundCardDark' }
-        }}
-        bg="$backgroundCardLight"
-        space="md"
-        shadow={2}
-      >
-        <VStack flex={1} space="md">
-          <HStack space="md" alignItems="center">
-            <HStack space="md">
-              <Icon as={trigger.icon} color={trigger.color} />
-              <Icon as={action.icon} color={action.color} />
-            </HStack>
-            <Text bold>{title}</Text>
-            {flow.disabled ? (
-              <Text size="xs" color="$muted500">
-                Disabled
-              </Text>
-            ) : null}
-          </HStack>
-
-          <HStack space="sm" flexWrap="wrap">
-            {Object.keys(trigger.values).map((key) => (
-              <Tooltip key={key} label={key}>
-                <Badge variant="outline" action="muted" size="xs">
-                  <BadgeText>
-                    {displayValue(trigger.values[key], key)}
-                  </BadgeText>
-                </Badge>
-              </Tooltip>
-            ))}
-
-            {Object.keys(action.values).map((key) => (
-              <Tooltip key={key} label={key}>
-                <Badge variant="outline" action="muted" size="xs">
-                  <BadgeText>{displayValue(action.values[key], key)}</BadgeText>
-                </Badge>
-              </Tooltip>
-            ))}
-          </HStack>
-        </VStack>
-        {moreMenu}
-      </VStack>
-    )
-  }
-
-  const onSubmit = () => {
-    let data = []
-
-    data.push(
-      triggers.map((card) => {
-        return { title: card.title, values: card.values }
-      })
-    )
-
-    data.push(
-      actions.map((card) => {
-        return { title: card.title, values: card.values }
-      })
-    )
-
-    if (props.onSubmit) {
-      let newFlow = { title, triggers, actions }
-      // update
-      if (flow.index !== undefined) {
-        newFlow.index = flow.index
-      }
-
-      props.onSubmit(newFlow)
+    if (label == 'Client') {
+      return value.Identity || value.Group || value.SrcIP
     }
-  }
 
-  const onReset = () => {
-    if (props.onReset) {
-      props.onReset()
+    if (label == 'Dst' || label == 'OriginalDst') {
+      return value.IP || value.Domain
     }
+
+    if (Array.isArray(value)) {
+      return value.join(',')
+    }
+
+    if (label == 'days') {
+      return dateArrayToStr(value.split(','))
+    }
+
+    return value
   }
 
   return (
-    <VStack maxW={380} sx={{ '@md': { maxW: '$full' } }} space="md">
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Name</FormControlLabelText>
-        </FormControlLabel>
-        <Input variant="underlined">
-          <InputField
-            value={title}
-            onChangeText={(value) => setTitle(value)}
-            onSubmitEditing={onSubmit}
-            placeholder="Name"
-          />
-        </Input>
-
-        <FormControlHelper>
-          <FormControlHelperText>
-            Use a unique name to identify this flow
-          </FormControlHelperText>
-        </FormControlHelper>
-      </FormControl>
-      <VStack flexDirection={edit ? 'column' : 'row'} space="md">
-        <FlowCardList
-          title="When..."
-          cards={triggers}
-          onChange={setTriggers}
-          cardType="trigger"
-          edit={edit}
-        />
-        <FlowCardList
-          title="Then..."
-          cards={actions}
-          onChange={setActions}
-          cardType="action"
-          edit={edit}
-        />
-
-        {edit ? (
-          <HStack my="$2" space="md">
-            <Button
-              flex={1}
-              action="primary"
-              variant="solid"
-              onPress={onSubmit}
-            >
-              <ButtonText>Save</ButtonText>
-              <ButtonIcon as={CheckIcon} ml="$1" />
-            </Button>
-            <Button
-              flex={1}
-              action="secondary"
-              variant="outline"
-              onPress={onReset}
-            >
-              <ButtonText>Reset</ButtonText>
-              <ButtonIcon as={CloseIcon} ml="$1" />
-            </Button>
+    <VStack
+      p="$4"
+      py="$4"
+      sx={{
+        '@base': { flexDirection: 'column-reverse' },
+        '@md': { flexDirection: 'row', p: '$8' },
+        _dark: { bg: '$backgroundCardDark' }
+      }}
+      bg="$backgroundCardLight"
+      space="md"
+      shadow={2}
+    >
+      <VStack flex={1} space="md">
+        <HStack space="md" alignItems="center">
+          <HStack space="md">
+            <Icon as={trigger.icon} color={trigger.color} />
+            <Icon as={action.icon} color={action.color} />
           </HStack>
-        ) : null}
+          <Text bold>{title}</Text>
+          {flow.disabled ? (
+            <Text size="xs" color="$muted500">
+              Disabled
+            </Text>
+          ) : null}
+        </HStack>
+
+        <HStack space="sm" flexWrap="wrap">
+          {Object.keys(trigger.values).map((key) => (
+            <Tooltip key={key} label={key}>
+              <Badge variant="outline" action="muted" size="xs">
+                <BadgeText>{displayValue(trigger.values[key], key)}</BadgeText>
+              </Badge>
+            </Tooltip>
+          ))}
+
+          {Object.keys(action.values).map((key) => (
+            <Tooltip key={key} label={key}>
+              <Badge variant="outline" action="muted" size="xs">
+                <BadgeText>{displayValue(action.values[key], key)}</BadgeText>
+              </Badge>
+            </Tooltip>
+          ))}
+        </HStack>
       </VStack>
+      {moreMenu}
     </VStack>
   )
 }
@@ -802,12 +588,11 @@ const FlowList = (props) => {
                 }}
               >
                 <Flow
-                  edit={false}
-                  onDelete={() => onDelete(item, index)}
-                  onDuplicate={onDuplicate}
-                  onDisable={toggleDisable}
-                  onEdit={() => onEdit(item, index)}
                   flow={item}
+                  onDelete={() => onDelete(item, index)}
+                  onDisable={toggleDisable}
+                  onDuplicate={onDuplicate}
+                  onEdit={() => onEdit(item, index)}
                 />
               </Box>
             )}
@@ -839,7 +624,7 @@ const FlowList = (props) => {
             minH={450}
             p="$4"
           >
-            <Flow
+            <EditFlow
               edit={true}
               flow={flow}
               onSubmit={onSubmit}
