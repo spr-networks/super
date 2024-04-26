@@ -21,15 +21,113 @@ import {
   CloseIcon
 } from '@gluestack-ui/themed'
 
-import { FlowCard, NewCard } from './FlowCard'
+import { FlowCard } from './FlowCard'
+import EditItem from './EditItem'
 import ModalForm from 'components/ModalForm'
 import AddFlowCard from './AddFlowCard'
+import { flowObjParse } from './Utils'
+import { Address4 } from 'ip-address'
 
+const ActionForm = ({ item, onChange, onDelete, getOptions, ...props }) => {
+  // autocomplete with dynamic options
+  const [options, setOptions] = useState({})
+
+  const fetchOptions = async () => {
+    let optionsNew = { ...options }
+
+    for (let p of item.params) {
+      let name = p.name
+      let opts = await getOptions(name)
+      if (opts && opts.length) {
+        optionsNew[name] = opts
+      }
+    }
+
+    setOptions(optionsNew)
+  }
+
+  const onChangeValue = (name, value) => {
+    if (name == 'Dst' || name == 'OriginalDst') {
+      if (typeof value == 'object') {
+        item.values[name] = value
+      } else {
+        //convert Dst/OriginalDst
+        try {
+          let address = new Address4(value)
+          item.values[name] = { IP: value }
+        } catch (err) {
+          item.values[name] = { Domain: value }
+        }
+      }
+    } else {
+      item.values[name] = value
+    }
+
+    if (props.onChange) {
+      props.onChange(card)
+    }
+  }
+
+  useEffect(() => {
+    if (getOptions) {
+      fetchOptions()
+    }
+  }, [])
+
+  return (
+    <>
+      <VStack flex={1} space="md">
+        {item.params
+          .filter((p) => !p.hidden)
+          .map((p) => (
+            <HStack
+              flexDirection="column"
+              space="md"
+              justifyContent="space-between"
+              key={p.name}
+            >
+              <VStack
+                space="xs"
+                sx={{ '@md': { alignItems: 'flex-end', flexDirection: 'row' } }}
+              >
+                <Text size="sm" bold>
+                  {p.name}
+                </Text>
+                <Text size="xs" color="$muted400">
+                  {p.description}
+                </Text>
+              </VStack>
+              <EditItem
+                key={p.name}
+                label={p.name}
+                value={
+                  item.values && item.values[p.name] !== undefined
+                    ? p.name == 'Client' ||
+                      p.name == 'Dst' ||
+                      p.name == 'OriginalDst'
+                      ? flowObjParse(item.values[p.name])
+                      : item.values[p.name]
+                    : p.name
+                }
+                options={options[p.name]}
+                description={p.description}
+                format={p.format}
+                size={Object.keys(item.values).length > 10 ? 'xs' : 'xs'}
+                onChange={(value) => onChangeValue(p.name, value)}
+              />
+            </HStack>
+          ))}
+      </VStack>
+    </>
+  )
+}
+
+//a list of cards
 const FlowCardList = ({
   title,
   cards: defaultCards,
   cardType,
-  edit,
+  showForm,
   ...props
 }) => {
   const [cards, setCardsCall] = useState(defaultCards)
@@ -64,6 +162,7 @@ const FlowCardList = ({
   }
 
   const onChange = (item) => {
+    console.log('UPDATE>>', item)
     setCards(cards.map((card) => (card.title == item.title ? item : card)))
   }
 
@@ -71,6 +170,29 @@ const FlowCardList = ({
     let newCards = [...cards]
     newCards.splice(index, 1)
     setCards(newCards)
+  }
+
+  const renderItem = ({ item, index }) => {
+    if (showForm) {
+      return (
+        <ActionForm
+          item={item}
+          getOptions={item.getOptions}
+          onChange={onChange}
+          onDelete={() => deleteCard(index)}
+        />
+      )
+    }
+
+    return (
+      <FlowCard
+        edit={true}
+        card={item}
+        onChange={onChange}
+        onDelete={() => deleteCard(index)}
+        mb="$2"
+      />
+    )
   }
 
   return (
@@ -83,42 +205,30 @@ const FlowCardList = ({
         data={cards}
         listKey={`list${cardType}`}
         keyExtractor={(item, index) => index}
-        renderItem={({ item, index }) => (
-          <FlowCard
-            edit={edit}
-            card={item}
-            onChange={onChange}
-            onDelete={() => deleteCard(index)}
-            mb="$2"
-          />
-        )}
+        renderItem={renderItem}
       />
 
-      {edit ? (
-        <>
-          <ModalForm
-            key={`form${cardType}`}
-            title={`Add ${cardType} to flow`}
-            modalRef={refModal}
-            maxWidth="$full"
-          >
-            <ScrollView maxHeight={400}>
-              <AddFlowCard cardType={cardType} onSubmit={handleAddCard} />
-            </ScrollView>
-          </ModalForm>
+      <ModalForm
+        key={`form${cardType}`}
+        title={`Add ${cardType} to flow`}
+        modalRef={refModal}
+        maxWidth="$full"
+      >
+        <ScrollView maxHeight={400}>
+          <AddFlowCard cardType={cardType} onSubmit={handleAddCard} />
+        </ScrollView>
+      </ModalForm>
 
-          <Button
-            action="primary"
-            variant="outline"
-            onPress={() => addCard(cardType)}
-            display={cards.length ? 'none' : 'flex'}
-            key={'add' + cardType}
-          >
-            <ButtonText>Add card</ButtonText>
-            <ButtonIcon as={AddIcon} ml="$1" />
-          </Button>
-        </>
-      ) : null}
+      <Button
+        action="primary"
+        variant="outline"
+        onPress={() => addCard(cardType)}
+        display={cards.length ? 'none' : 'flex'}
+        key={'add' + cardType}
+      >
+        <ButtonText>Add card</ButtonText>
+        <ButtonIcon as={AddIcon} ml="$1" />
+      </Button>
     </VStack>
   )
 }
@@ -204,14 +314,14 @@ const EditFlow = ({ flow, ...props }) => {
           cards={triggers}
           onChange={setTriggers}
           cardType="trigger"
-          edit={true}
         />
+
         <FlowCardList
           title="Then..."
           cards={actions}
           onChange={setActions}
           cardType="action"
-          edit={true}
+          showForm
         />
 
         <HStack my="$2" space="md">
