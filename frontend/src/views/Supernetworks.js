@@ -76,7 +76,7 @@ const Supernetworks = (props) => {
 
   return (
     <VStack space="md" sx={{ '@md': { w: '$3/4' } }}>
-      <ListHeader title="Supernetworks" />
+      <ListHeader title="DHCP Settings" />
 
       <VStack
         space="lg"
@@ -87,7 +87,7 @@ const Supernetworks = (props) => {
       >
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>TinyNets</FormControlLabelText>
+            <FormControlLabelText>Subnets to assign device IPs from. Each /24 hosts 64 devices with SPR.</FormControlLabelText>
           </FormControlLabel>
           <FlatList
             borderWidth={0}
@@ -133,7 +133,7 @@ const Supernetworks = (props) => {
 
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Lease Time</FormControlLabelText>
+            <FormControlLabelText>DHCP Lease Time</FormControlLabelText>
           </FormControlLabel>
           <Input size="md" variant="outline">
             <InputField

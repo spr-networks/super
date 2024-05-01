@@ -1,8 +1,10 @@
 import React, { useContext, useEffect, useState } from 'react'
-import Logs from 'views/Logs'
 
 import {
   Box,
+  Button,
+  ButtonText,
+  ButtonIcon,
   Heading,
   HStack,
   FlatList,
@@ -12,6 +14,7 @@ import {
   Input,
   InputField,
   Icon,
+  RepeatIcon,
   Text,
   VStack,
   ScrollView,
@@ -22,7 +25,6 @@ import { api } from 'api'
 import { AlertContext } from 'AppContext'
 import { ucFirst } from 'utils'
 
-import DockerInfo from 'views/System/Docker'
 import ReleaseInfo from 'components/System/Release'
 import ConfigsBackup from 'views/System/Configs'
 import Database from 'views/System/Database'
@@ -66,6 +68,13 @@ const SystemInfo = (props) => {
       .catch((err) => context.error('hostname update', err))
   }
 
+  const doRestart = () => {
+    api
+      .put('/restart', hostname)
+      .then(context.success('Sent restart request'))
+      .catch((err) => context.error('failed to call restart', err))
+  }
+
   const niceKey = (key) => ucFirst(key.replace(/_/, ' ').replace(/m$/, ' min'))
 
   const colorMode = useColorMode()
@@ -78,6 +87,17 @@ const SystemInfo = (props) => {
         <HStack p="$4">
           <Heading size="md">System Info</Heading>
         </HStack>
+
+        <Box>
+        <Button
+          action="primary"
+          size="sm"
+          onPress={doRestart}
+        >
+          <ButtonText>Restart SPR</ButtonText>
+          <ButtonIcon as={RepeatIcon} mr="$2" />
+        </Button>
+        </Box>
 
         <Box>
           <VStack space="md" mb="$4" sx={{ '@md': { flexDirection: 'row' } }}>
@@ -93,6 +113,7 @@ const SystemInfo = (props) => {
               justifyContent="space-between"
               alignItems="center"
             >
+
               <Text flex={1} size="sm">
                 Hostname
               </Text>
@@ -189,8 +210,6 @@ const SystemInfo = (props) => {
 
         <Database />
         <ConfigsBackup />
-        <DockerInfo />
-        <Logs />
       </VStack>
     </ScrollView>
   )

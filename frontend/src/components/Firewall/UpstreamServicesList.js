@@ -97,10 +97,12 @@ const UpstreamServicesList = (props) => {
           title="HTTPS Settings"
           description={'Status: ' + (isEnabled ? 'enabled' : 'disabled')}
         />
+        {isEnabled == false &&
         <ListItem>
           <Text bold>Enable TLS API</Text>
-          <Switch disabled={isEnabled} value={isEnabled} onToggle={onToggle} />
+            <Switch disabled={isEnabled} value={isEnabled} onToggle={onToggle} />
         </ListItem>
+      }
       </VStack>
     )
   }

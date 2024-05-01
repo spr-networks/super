@@ -15,7 +15,6 @@ import TrafficTimeSeries from 'views/Traffic/TrafficTimeSeries'
 import TrafficList from 'views/Traffic/TrafficList'
 import UplinkConfiguration from 'views/UplinkConfiguration'
 import LANLinkConfiguration from 'views/LANLinkConfiguration'
-import ContainerNetConfiguration from 'views/ContainerNetConfiguration'
 import WirelessConfiguration from 'views/WirelessConfiguration'
 import Groups from 'views/Groups/Groups'
 import Tags from 'views/Tags'
@@ -36,6 +35,7 @@ import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
 import AuthValidate from 'views/AuthValidate'
 import SystemInfo from 'views/SystemInfo'
+import SystemInfoTabView from 'views/SystemInfoTabView'
 import Alerts from 'views/Alerts'
 import AlertSettings from 'views/AlertSettings'
 import AddAlert from 'views/Alerts/AddAlert'
@@ -149,14 +149,6 @@ const routes = [
         layout: 'admin'
       },
       {
-        path: 'containernets',
-        name: 'Containers',
-        icon: ContainerIcon,
-        hideSimple: true,
-        component: ContainerNetConfiguration,
-        layout: 'admin'
-      },
-      {
         path: 'mesh',
         name: 'MESH',
         icon: RouterIcon,
@@ -208,7 +200,7 @@ const routes = [
       },
       {
         path: 'supernets',
-        name: 'Supernetworks',
+        name: 'DHCP Settings',
         icon: NetworkIcon,
         hideSimple: true,
         component: Supernetworks,
@@ -240,14 +232,6 @@ const routes = [
         name: 'DNS Log',
         icon: ListTreeIcon,
         component: DNSLog,
-        layout: 'admin'
-      },
-      {
-        path: 'dnsLogEdit',
-        name: 'DNS Log Settings',
-        icon: SettingsIcon,
-        hideSimple: true,
-        component: DNSLogEdit,
         layout: 'admin'
       },
       {
@@ -359,7 +343,7 @@ const routes = [
         path: 'info',
         name: 'System Info',
         icon: ActivityIcon,
-        component: SystemInfo,
+        component: SystemInfoTabView,
         layout: 'admin'
       },
       {

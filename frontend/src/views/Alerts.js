@@ -183,6 +183,7 @@ const Alerts = (props) => {
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
       <ListHeader title="Alerts">
         <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
+          {logs.length}
           {
           <FilterInputSelect
             value={searchField}

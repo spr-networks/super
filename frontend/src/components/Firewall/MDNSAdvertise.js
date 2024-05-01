@@ -107,6 +107,7 @@ const MDNSAdvertise = (props) => {
           <Switch value={!config.DisableMDNSAdvertise} onToggle={toggleMDNS} />
         </ListItem>
 
+        { !config.DisableMDNSAdvertise &&
         <VStack
           space="md"
           bg="$backgroundCardLight"
@@ -140,6 +141,7 @@ const MDNSAdvertise = (props) => {
             </HStack>
           </VStack>
         </VStack>
+        }
       </VStack>
     </>
   )
