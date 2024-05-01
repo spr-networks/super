@@ -5,7 +5,6 @@ import ConnectDevice from 'views/Devices/ConnectDevice'
 import Arp from 'views/Devices/Arp'
 import Devices from 'views/Devices/Devices'
 import Device from 'views/Devices/Device'
-import Dhcp from 'views/Groups/Dhcp'
 import Home from 'views/Home'
 import Login from 'views/pages/Login'
 import Setup from 'views/pages/Setup'
@@ -365,14 +364,6 @@ const routes = [
         name: 'Auth',
         icon: KeyIcon,
         component: AuthSettings,
-        hideSimple: true,
-        layout: 'admin'
-      },
-      {
-        path: 'dhcp',
-        name: 'DHCP Table',
-        icon: TableIcon,
-        component: Dhcp,
         hideSimple: true,
         layout: 'admin'
       },

@@ -28,7 +28,6 @@ import Logs from 'views/Logs'
 const SystemInfoContainers = (props) => {
   const context = useContext(AlertContext)
 
-
   const colorMode = useColorMode()
   const item = {}
 

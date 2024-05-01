@@ -5,6 +5,8 @@ import {
   Button,
   ButtonIcon,
   ButtonText,
+  EyeIcon,
+  EyeOffIcon,
   FlatList,
   HStack,
   Input,
@@ -23,12 +25,14 @@ import { api } from 'api'
 import { AlertContext } from 'AppContext'
 
 import { ListHeader, ListItem } from 'components/List'
+import Dhcp from 'views/Groups/Dhcp'
 
 const Supernetworks = (props) => {
   const context = useContext(AlertContext)
   const [tinyNets, setTinyNets] = useState([])
   const [leaseTime, setLeaseTime] = useState('')
   const [isUnsaved, setIsUnsaved] = useState(false)
+  const [showDHCPTable, setShowDHCPTable] = useState(false)
 
   const fetchConfig = () => {
     api.get('/subnetConfig').then((config) => {
@@ -158,6 +162,25 @@ const Supernetworks = (props) => {
             </ButtonText>
           </Button>
         </FormControl>
+
+        <ListHeader title="DHCP Table" >
+          <Button
+            ml="auto"
+            size="sm"
+            action="muted"
+            variant="link"
+            onPress={() => setShowDHCPTable(!showDHCPTable)}
+          >
+            <ButtonText color="$muted500">
+              {showDHCPTable ? 'Hide info' : 'Show info'}
+            </ButtonText>
+            <ButtonIcon as={showDHCPTable ? EyeOffIcon : EyeIcon} ml="$1" />
+          </Button>
+        </ListHeader>
+
+        { showDHCPTable &&
+          <Dhcp/>
+        }
       </VStack>
     </VStack>
   )
