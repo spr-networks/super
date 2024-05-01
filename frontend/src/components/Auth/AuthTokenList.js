@@ -62,6 +62,11 @@ const AuthTokenList = (props) => {
       .then((s) => {
         setStatus(s.State)
 
+        //dont refresh tokens if OTP token is not registered and set
+        if (!(s.State == "registered") || !s.Confirmed) {
+          return
+        }
+
         authAPI
           .tokens()
           .then((tokens) => {
