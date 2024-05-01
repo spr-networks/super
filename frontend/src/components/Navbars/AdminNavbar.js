@@ -19,7 +19,7 @@ import {
   BadgeText
 } from '@gluestack-ui/themed'
 
-import { LogOutIcon } from 'lucide-react-native'
+import { BookOpenText, LogOutIcon } from 'lucide-react-native'
 
 import { AppContext } from 'AppContext'
 
@@ -137,25 +137,7 @@ const AdminNavbar = ({
                 }
               }}
             >
-              <LinkText size="sm">Docs</LinkText>
-            </Link>
-            <Link
-              size="md"
-              isExternal
-              href="https://www.supernetworks.org/pages/api/0"
-              sx={{
-                '@base': { display: 'none' },
-                '@lg': { display: 'flex' },
-                _text: {
-                  textDecorationLine: 'none',
-                  color:
-                    colorMode == 'light'
-                      ? '$navbarTextColorLight'
-                      : '$navbarTextColorDark'
-                }
-              }}
-            >
-              <LinkText size="sm">API</LinkText>
+              <ButtonIcon as={BookOpenText} size="lg" />
             </Link>
 
             <Button
