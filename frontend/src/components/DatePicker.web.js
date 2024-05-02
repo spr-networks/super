@@ -26,8 +26,8 @@ const DatePicker = ({ value, onChange }) => {
   }, [value])
 
   return (
-    <Input value={value}>
-      <InputField ref={inputRef} onChange={(e) => onChange(e.target.value)} />
+    <Input>
+      <InputField value={value} ref={inputRef} onChange={(e) => onChange(e.target.value)} />
     </Input>
   )
 }
