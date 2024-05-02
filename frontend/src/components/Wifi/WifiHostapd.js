@@ -508,6 +508,8 @@ const WifiHostapd = (props) => {
     if (iface == '') {
       wifiAPI.defaultInterface().then((defIface) => {
         setIface(defIface)
+      }).catch((e)=> {
+        
       })
     }
 

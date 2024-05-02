@@ -434,8 +434,9 @@ func otpLoadLocked() (OTPSettings, error) {
 }
 
 type OTPStatus struct {
-	State    string
-	AlwaysOn bool
+	State     string
+	AlwaysOn  bool
+	Confirmed bool
 }
 
 func otpStatus(w http.ResponseWriter, r *http.Request) {
@@ -452,7 +453,11 @@ func otpStatus(w http.ResponseWriter, r *http.Request) {
 	for _, entry := range settings.OTPUsers {
 		if entry.Name == user {
 			status.State = "registered"
+			if entry.Confirmed == false {
+				status.State = "not yet validated"
+			}
 			status.AlwaysOn = entry.AlwaysOn
+			status.Confirmed = entry.Confirmed
 			break
 		}
 	}

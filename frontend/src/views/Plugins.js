@@ -179,11 +179,7 @@ const Plugins = (props) => {
           </ModalForm>
         </HStack>
       </ListHeader>
-      <PluginList
-        list={list}
-        deleteListItem={deleteListItem}
-        notifyChange={refreshList}
-      />
+
       {activeToken !== '' ? (
         <>
           <ListHeader title="PLUS Plugins" />
@@ -194,7 +190,6 @@ const Plugins = (props) => {
           />
         </>
       ) : null}
-
       <ListHeader
         title={activeToken == '' ? 'Enable PLUS' : 'Reset PLUS Token'}
       >
@@ -251,6 +246,14 @@ const Plugins = (props) => {
           </Button>
         ) : null}
       </VStack>
+
+      <PluginList
+        list={list}
+        deleteListItem={deleteListItem}
+        notifyChange={refreshList}
+      />
+
+
     </ScrollView>
   )
 }

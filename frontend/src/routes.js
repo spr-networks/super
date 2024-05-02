@@ -5,7 +5,6 @@ import ConnectDevice from 'views/Devices/ConnectDevice'
 import Arp from 'views/Devices/Arp'
 import Devices from 'views/Devices/Devices'
 import Device from 'views/Devices/Device'
-import Dhcp from 'views/Groups/Dhcp'
 import Home from 'views/Home'
 import Login from 'views/pages/Login'
 import Setup from 'views/pages/Setup'
@@ -15,7 +14,6 @@ import TrafficTimeSeries from 'views/Traffic/TrafficTimeSeries'
 import TrafficList from 'views/Traffic/TrafficList'
 import UplinkConfiguration from 'views/UplinkConfiguration'
 import LANLinkConfiguration from 'views/LANLinkConfiguration'
-import ContainerNetConfiguration from 'views/ContainerNetConfiguration'
 import WirelessConfiguration from 'views/WirelessConfiguration'
 import Groups from 'views/Groups/Groups'
 import Tags from 'views/Tags'
@@ -36,6 +34,7 @@ import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
 import AuthValidate from 'views/AuthValidate'
 import SystemInfo from 'views/SystemInfo'
+import SystemInfoTabView from 'views/SystemInfoTabView'
 import Alerts from 'views/Alerts'
 import AlertSettings from 'views/AlertSettings'
 import AddAlert from 'views/Alerts/AddAlert'
@@ -133,6 +132,22 @@ const routes = [
     hideSimple: true,
     views: [
       {
+        path: 'wireguard',
+        name: 'VPN',
+        icon: WaypointsIcon,
+        component: Wireguard,
+        hideSimple: true,
+        layout: 'admin'
+      },
+      {
+        path: 'supernets',
+        name: 'DHCP Settings',
+        icon: NetworkIcon,
+        hideSimple: true,
+        component: Supernetworks,
+        layout: 'admin'
+      },
+      {
         path: 'uplink',
         name: 'Uplink',
         icon: GlobeIcon,
@@ -149,14 +164,6 @@ const routes = [
         layout: 'admin'
       },
       {
-        path: 'containernets',
-        name: 'Containers',
-        icon: ContainerIcon,
-        hideSimple: true,
-        component: ContainerNetConfiguration,
-        layout: 'admin'
-      },
-      {
         path: 'mesh',
         name: 'MESH',
         icon: RouterIcon,
@@ -166,13 +173,13 @@ const routes = [
         plus: true
       },
       {
-        path: 'wireguard',
-        name: 'VPN',
-        icon: WaypointsIcon,
-        component: Wireguard,
+        path: 'speedtest',
+        name: 'Speed Test',
+        icon: GaugeCircleIcon,
+        component: SpeedTest,
         hideSimple: true,
         layout: 'admin'
-      }
+      },      
     ]
   },
   {
@@ -206,14 +213,6 @@ const routes = [
         layout: 'admin',
         plus: true
       },
-      {
-        path: 'supernets',
-        name: 'Supernetworks',
-        icon: NetworkIcon,
-        hideSimple: true,
-        component: Supernetworks,
-        layout: 'admin'
-      }
     ]
   },
   {
@@ -240,14 +239,6 @@ const routes = [
         name: 'DNS Log',
         icon: ListTreeIcon,
         component: DNSLog,
-        layout: 'admin'
-      },
-      {
-        path: 'dnsLogEdit',
-        name: 'DNS Log Settings',
-        icon: SettingsIcon,
-        hideSimple: true,
-        component: DNSLogEdit,
         layout: 'admin'
       },
       {
@@ -359,7 +350,7 @@ const routes = [
         path: 'info',
         name: 'System Info',
         icon: ActivityIcon,
-        component: SystemInfo,
+        component: SystemInfoTabView,
         layout: 'admin'
       },
       {
@@ -381,14 +372,6 @@ const routes = [
         name: 'Auth',
         icon: KeyIcon,
         component: AuthSettings,
-        hideSimple: true,
-        layout: 'admin'
-      },
-      {
-        path: 'dhcp',
-        name: 'DHCP Table',
-        icon: TableIcon,
-        component: Dhcp,
         hideSimple: true,
         layout: 'admin'
       },
@@ -416,15 +399,6 @@ const routes = [
         hideSimple: true,
         layout: 'admin'
       },
-
-      {
-        path: 'speedtest',
-        name: 'Speed Test',
-        icon: GaugeCircleIcon,
-        component: SpeedTest,
-        hideSimple: true,
-        layout: 'admin'
-      }
     ]
   },
   {

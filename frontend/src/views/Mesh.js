@@ -42,8 +42,13 @@ const Mesh = (props) => {
 
   let alertContext = useContext(AlertContext)
   let refModal = useRef(null)
+  let [meshAvailable, setMeshAvailable] = useState(true)
 
   const catchMeshErr = (err) => {
+    if (err?.message == 404 || err?.message == 502) {
+      setMeshAvailable(false)
+      return
+    }
     alertContext.error(
       'Mesh API Failure',
       err?.message == 404 ? 'Is mesh plugin enabled?' : err
@@ -318,7 +323,7 @@ const Mesh = (props) => {
             </Text>
           </VStack>
         </VStack>
-      ) : (
+      ) : (meshAvailable ? (
         <VStack>
           <ListHeader
             title=" Mesh Setup"
@@ -441,6 +446,7 @@ const Mesh = (props) => {
             </>
           ) : null}
         </VStack>
+      ) : ( <Text> Mesh plugin not enabled </Text> )
       )}
     </>
   )

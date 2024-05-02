@@ -2,6 +2,8 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import {
+  Badge,
+  BadgeText,
   Button,
   ButtonIcon,
   ButtonText,
@@ -9,6 +11,7 @@ import {
   FabIcon,
   FabLabel,
   FlatList,
+  Pressable,
   Text,
   View,
   VStack,
@@ -35,6 +38,8 @@ import AlertListItem from 'components/Alerts/AlertListItem'
 const Alerts = (props) => {
   const [config, setConfig] = useState([])
   const [topics, setTopics] = useState([])
+  const [bucketCounts, setBucketCounts] = useState({})
+  const [selectedBucket, setSelectedBucket] = useState(null)
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
   const navigate = useNavigate()
@@ -49,6 +54,13 @@ const Alerts = (props) => {
   const [searchField, setSearchField] = useState('')
   const [stateFilter, setStateFilter] = useState('New')
 
+  const prettyBucket = (bucket) => {
+    let newName = bucket.replace(AlertPrefix, '')
+    if (newName === '') {
+      return "Alerts"
+    }
+    return newName
+  }
   const fetchList = () => {
     alertsAPI
       .list()
@@ -56,61 +68,74 @@ const Alerts = (props) => {
       .catch((err) => context.error(`failed to fetch alerts config`))
   }
 
-  const fetchAlertBuckets = () => {
-    dbAPI.buckets().then((buckets) => {
-      buckets = buckets.filter((b) => b.startsWith(AlertPrefix))
-      buckets.sort()
-      setTopics(buckets)
-    })
-  }
+  const fetchAlertBuckets = async () => {
+    let buckets = await dbAPI.buckets()
+    buckets = buckets.filter((b) => b.startsWith(AlertPrefix))
+    buckets.sort()
+    setTopics(buckets)
 
-  const fetchLogs = async () => {
-    let result = []
-    for (let bucket of topics) {
+    const counts = {}
+    for (let bucket of buckets) {
+
       let withFilter = params
       if (searchField) {
         withFilter['filter'] = searchField
       }
 
-      let more_results = await dbAPI.items(bucket, withFilter)
-      if (more_results) {
-        more_results = more_results.map((entry) => {
-          entry.AlertTopic = bucket
-          entry.State = entry.State || 'New' // '' == 'New'
-          return entry
-        })
-
-        if (stateFilter != 'All') {
-          more_results = more_results.filter(
-            (alert) => alert.State == stateFilter
-          )
-        }
-
-        result = result.concat(more_results)
+      const result = await dbAPI.items(bucket, withFilter)
+      const bucketName = prettyBucket(bucket)
+      if (stateFilter === 'Resolved') {
+        const filteredItems = result.filter((item) => item.State === 'Resolved');
+        counts[bucketName] = filteredItems.length
+      } else if (stateFilter === 'New') {
+        const filteredItems = result.filter((item) => item.State !== 'Resolved');
+        counts[bucketName] = filteredItems.length
+      } else {
+        counts[bucketName] = result.length
       }
     }
+    setBucketCounts(counts)
+  }
 
+  const fetchLogs = async () => {
+    let result = []
+    let bucket = selectedBucket
+
+    let withFilter = params
+    if (searchField) {
+      withFilter['filter'] = searchField
+    }
+
+    let more_results = await dbAPI.items(bucket, withFilter)
+    if (more_results) {
+      more_results = more_results.map((entry) => {
+        entry.AlertTopic = bucket
+        entry.State = entry.State || 'New' // '' == 'New'
+        return entry
+      })
+
+      if (stateFilter != 'All') {
+        more_results = more_results.filter(
+          (alert) => alert.State == stateFilter
+        )
+      }
+
+      result = result.concat(more_results)
+    }
     setLogs(result)
   }
 
   useEffect(() => {
-    setLogs([])
-    fetchLogs()
-  }, [params, searchField, stateFilter])
+    if (selectedBucket) {
+      fetchLogs()
+    }
+  }, [selectedBucket, params, searchField, stateFilter])
 
   useEffect(() => {
     fetchList()
     fetchAlertBuckets()
-  }, [])
+  }, [params, searchField, stateFilter])
 
-  //fetch logs after topics
-  useEffect(() => {
-    if (!topics.length) {
-      return
-    }
-
-    fetchLogs()
-  }, [topics])
 
   //TODO
   /*const onDelete = (index) => {
@@ -160,6 +185,7 @@ const Alerts = (props) => {
   const onChangeEvent = (event) => {
     let logsUpdated = logs.map((l) => (l.time == event.time ? event : l))
     setLogs(logsUpdated)
+    fetchAlertBuckets()
   }
 
   const resolveAll = () => {
@@ -168,7 +194,7 @@ const Alerts = (props) => {
       .map((l) => {
         return { ...l, State: 'Resolved' }
       })
-      .slice(0, 20) // max resolve 20
+      .slice(0, perPage) // max resolve 20
 
     Promise.all(
       logsResolved.map((event) =>
@@ -176,6 +202,7 @@ const Alerts = (props) => {
       )
     ).then((res) => {
       fetchLogs()
+      fetchAlertBuckets()
     })
   }
 
@@ -245,17 +272,52 @@ const Alerts = (props) => {
         </VStack>
       </ListHeader>
 
-      <FlatList
-        data={logs}
-        estimatedItemSize={100}
-        renderItem={({ item }) => (
-          <VStack>
-            <AlertListItem item={item} notifyChange={onChangeEvent} />
-          </VStack>
-        )}
-        keyExtractor={(item, index) => item.time + index}
-        contentContainerStyle={{ paddingBottom: 48 }}
-      />
+
+      {topics.map((bucket) => (bucketCounts[prettyBucket(bucket)] != 0 &&
+        <Pressable
+          key={bucket}
+          onPress={() => setSelectedBucket(selectedBucket === bucket ? null : bucket)}
+        >
+          <HStack  alignItems="left" p="$4" bg="$gray200">
+            <Badge
+              action="muted"
+              bg="$transparent"
+              rounded="$2xl"
+              size="md"
+            >
+              <Text sx="$lg" fontWeight="$bold" >
+                {prettyBucket(bucket)}
+              </Text>
+              <View
+                bg="$warning400"
+                borderRadius="$full"
+                px="$2"
+                py="$1"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <Text color="$white" fontSize="$sm" fontWeight="$bold">
+                  {bucketCounts[prettyBucket(bucket)] || 0}
+                </Text>
+              </View>
+            </Badge>
+          </HStack>
+          {selectedBucket === bucket && (
+            <FlatList
+              data={logs}
+              estimatedItemSize={100}
+              renderItem={({ item }) => (
+                <VStack>
+                  <AlertListItem item={item} notifyChange={onChangeEvent} />
+                </VStack>
+              )}
+              keyExtractor={(item, index) => item.time + index}
+              contentContainerStyle={{ paddingBottom: 48 }}
+            />
+          )}
+        </Pressable>
+      ))}
+
 
       <Fab
         renderInPortal={false}
