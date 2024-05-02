@@ -45,7 +45,7 @@ const Mesh = (props) => {
   let [meshAvailable, setMeshAvailable] = useState(true)
 
   const catchMeshErr = (err) => {
-    if (err?.message == 404) {
+    if (err?.message == 404 || err?.message == 502) {
       setMeshAvailable(false)
       return
     }
@@ -323,7 +323,7 @@ const Mesh = (props) => {
             </Text>
           </VStack>
         </VStack>
-      ) : (meshAvailable &&
+      ) : (meshAvailable ? (
         <VStack>
           <ListHeader
             title=" Mesh Setup"
@@ -446,6 +446,7 @@ const Mesh = (props) => {
             </>
           ) : null}
         </VStack>
+      ) : ( <Text> Mesh plugin not enabled </Text> )
       )}
     </>
   )
