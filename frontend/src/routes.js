@@ -132,6 +132,22 @@ const routes = [
     hideSimple: true,
     views: [
       {
+        path: 'wireguard',
+        name: 'VPN',
+        icon: WaypointsIcon,
+        component: Wireguard,
+        hideSimple: true,
+        layout: 'admin'
+      },
+      {
+        path: 'supernets',
+        name: 'DHCP Settings',
+        icon: NetworkIcon,
+        hideSimple: true,
+        component: Supernetworks,
+        layout: 'admin'
+      },
+      {
         path: 'uplink',
         name: 'Uplink',
         icon: GlobeIcon,
@@ -157,13 +173,13 @@ const routes = [
         plus: true
       },
       {
-        path: 'wireguard',
-        name: 'VPN',
-        icon: WaypointsIcon,
-        component: Wireguard,
+        path: 'speedtest',
+        name: 'Speed Test',
+        icon: GaugeCircleIcon,
+        component: SpeedTest,
         hideSimple: true,
         layout: 'admin'
-      }
+      },      
     ]
   },
   {
@@ -197,14 +213,6 @@ const routes = [
         layout: 'admin',
         plus: true
       },
-      {
-        path: 'supernets',
-        name: 'DHCP Settings',
-        icon: NetworkIcon,
-        hideSimple: true,
-        component: Supernetworks,
-        layout: 'admin'
-      }
     ]
   },
   {
@@ -391,15 +399,6 @@ const routes = [
         hideSimple: true,
         layout: 'admin'
       },
-
-      {
-        path: 'speedtest',
-        name: 'Speed Test',
-        icon: GaugeCircleIcon,
-        component: SpeedTest,
-        hideSimple: true,
-        layout: 'admin'
-      }
     ]
   },
   {
