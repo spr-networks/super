@@ -40,7 +40,7 @@ const MDNSAdvertise = (props) => {
     setConfig({ ...config, MDNSName: value })
   }
 
-  const submitSettings = (value) => {
+  const submitSettings = () => {
     Multicast.setConfig(config)
       .then(() => {
         let proxy_mdns = false
@@ -86,7 +86,9 @@ const MDNSAdvertise = (props) => {
   }
 
   useEffect(() => {
-    Multicast.config().then(setConfig)
+    Multicast.config().then((x) => {
+      setConfig(x)
+    })
   }, [])
 
   return (
@@ -129,8 +131,8 @@ const MDNSAdvertise = (props) => {
               Defaults to 'spr.local'. Set the name without the .local part or
               leave empty to use hostname
             </Text>
-            <Input value={config.MDNSName} onChangeText={onChangeText}>
-              <InputField type="text" placeholder="spr" />
+            <Input>
+              <InputField value={config.MDNSName} type="text" onChange={(e) => onChangeText(e.target.value)} placeholder="spr" />
             </Input>
 
             <HStack>
