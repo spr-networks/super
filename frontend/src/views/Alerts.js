@@ -2,6 +2,8 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import {
+  Badge,
+  BadgeText,
   Button,
   ButtonIcon,
   ButtonText,
@@ -271,25 +273,34 @@ const Alerts = (props) => {
       </ListHeader>
 
 
-      {topics.map((bucket) => (
+      {topics.map((bucket) => (bucketCounts[prettyBucket(bucket)] != 0 &&
         <Pressable
           key={bucket}
           onPress={() => setSelectedBucket(selectedBucket === bucket ? null : bucket)}
         >
           <HStack  alignItems="left" p="$4" bg="$gray200">
-            <Text sx="$lg" fontWeight="$bold">{prettyBucket(bucket)} </Text>
-            <View
-              bg="$warning400"
-              borderRadius="$full"
-              px="$2"
-              py="$1"
-              alignItems="center"
-              justifyContent="center"
+            <Badge
+              action="muted"
+              bg="$transparent"
+              rounded="$2xl"
+              size="md"
             >
-              <Text color="$white" fontSize="$sm" fontWeight="$bold">
-                {bucketCounts[prettyBucket(bucket)] || 0}
+              <Text sx="$lg" fontWeight="$bold" >
+                {prettyBucket(bucket)}
               </Text>
-            </View>
+              <View
+                bg="$warning400"
+                borderRadius="$full"
+                px="$2"
+                py="$1"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <Text color="$white" fontSize="$sm" fontWeight="$bold">
+                  {bucketCounts[prettyBucket(bucket)] || 0}
+                </Text>
+              </View>
+            </Badge>
           </HStack>
           {selectedBucket === bucket && (
             <FlatList
