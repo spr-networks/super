@@ -663,7 +663,7 @@ func processAction(notifyChan chan<- Alert, storeChan chan<- Alert, event_topic 
 		fmt.Println("--- --- ---")
 	}
 
-	topic := "alert:" + event_topic + action.StoreTopicSuffix
+	topic := "alert:" + event_topic + ":" + action.StoreTopicSuffix
 	Info := map[string]interface{}{}
 
 	Info["Topic"] = event_topic
