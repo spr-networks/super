@@ -43,7 +43,7 @@ services:
     logging: *default-logging
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${PWD}/state/api/eventbus.sock:/state/api/eventbus.sock
+      - ${PWD}/state/api/eventbus.sock:/state/api/eventbus.sock:ro
       - ${PWD}/configs/base/:/configs/base/
       - ${PWD}/:/super/
   dhcp:
