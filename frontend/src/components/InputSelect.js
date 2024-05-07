@@ -28,7 +28,7 @@ import { ucFirst } from 'utils'
 import IconItem from './IconItem'
 
 const prefixValue = (value) => {
-  if (typeof value == 'object') {
+  if (value && typeof value == 'object') {
     let prefix = 'group',
       v = 'empty'
 
