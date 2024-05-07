@@ -5,16 +5,15 @@ import {
   Text,
   HStack,
   Button,
-  ButtonGroup,
   ButtonText,
   Fab,
   FabIcon,
   FabLabel,
   AddIcon,
-  FormControl,
-  FormControlLabel,
   FormControlLabelText
 } from '@gluestack-ui/themed'
+
+import { SelectMenu } from 'components/InputSelect'
 
 import { deviceAPI, wifiAPI, meshAPI } from 'api'
 import APIWifi from 'api/Wifi'
@@ -26,13 +25,82 @@ import DeviceList from 'components/Devices/DeviceList'
 import { Select } from 'components/Select'
 import { strToDate } from 'utils'
 
+//import ActionSheet from 'components/ActionSheet'
+import { XIcon, TagIcon, UsersIcon } from 'lucide-react-native'
+
+//TODO support multi on/off select
+const TagSelect = ({ sections, value, onChange, ...props }) => {
+  const [isOpen, setIsOpen] = useState(false)
+
+  let menuProps = {}
+  let options = [{ label: 'Show All', value: null, icon: XIcon }]
+  for (let s of sections) {
+    if (s.title == 'Groups') {
+      let opts = s.data.map((v) => ({
+        label: v,
+        value: { Group: v },
+        icon: UsersIcon
+      }))
+      options = [...options, ...opts]
+    } else if (s.title == 'Tags') {
+      let opts = s.data.map((v) => ({
+        label: v,
+        value: { Tag: v },
+        icon: TagIcon
+      }))
+      options = [...options, ...opts]
+    }
+  }
+
+  menuProps.options = options
+
+  menuProps.trigger = (triggerProps) => {
+    return (
+      <Button size="xs" action="primary" variant="outline" {...triggerProps}>
+        <ButtonText>{value || 'Groups and tags'}</ButtonText>
+      </Button>
+    )
+  }
+
+  return (
+    <SelectMenu
+      onChange={(v) => {
+        onChange(v)
+      }}
+      value={value}
+      {...menuProps}
+    />
+  )
+
+  /*return (
+    <>
+      <ActionSheet
+        onChange={onChange}
+        value={value}
+        placeholder="Tags and groups"
+        isOpen={isOpen}
+        setIsOpen={setIsOpen}
+        sections={[
+          {
+            data: ['Show All']
+          },
+          ...sections
+        ]}
+      />
+    </>
+  )*/
+}
+
 const Devices = (props) => {
   const context = useContext(AlertContext)
   const appContext = useContext(AppContext)
   const navigate = useNavigate()
 
   const [list, setList] = useState([])
+  const [tags, setTags] = useState([])
+  const [groups, setGroups] = useState([])
   const [sortBy, setSortBy] = useState('online')
+  const [filter, setFilter] = useState({}) // filter groups,tags
 
   const sortDevices = (a, b) => {
     const parseIP = (ip) => {
@@ -88,6 +156,24 @@ const Devices = (props) => {
 
         setList(devices.sort(sortDevices))
 
+        setTags([
+          ...new Set(
+            devices
+              .map((d) => d.DeviceTags)
+              .filter((t) => t.length)
+              .flat()
+          )
+        ])
+
+        setGroups([
+          ...new Set(
+            devices
+              .map((d) => d.Groups)
+              .filter((t) => t.length)
+              .flat()
+          )
+        ])
+
         // set device oui if avail
         deviceAPI
           .ouis(macs)
@@ -122,9 +208,7 @@ const Devices = (props) => {
                       return dev
                     })
 
-                    devs.sort(sortDevices)
-
-                    setList(devs)
+                    setList(devs.sort(sortDevices))
                   })
                   .catch((err) => {
                     //context.error('WIFI API Failure', err)
@@ -199,6 +283,35 @@ const Devices = (props) => {
     }
   }, [sortBy])
 
+  useEffect(() => {
+    setList(
+      list.map((d) => {
+        //filter.group, filter.tag
+        let match = false
+
+        if (!filter.Tag && !filter.Group) {
+          match = true
+        } else {
+          d.DeviceTags?.map((deviceTag) => {
+            if (deviceTag.toLowerCase().startsWith(filter.Tag?.toLowerCase())) {
+              match = true
+            }
+          })
+
+          d.Groups?.map((group) => {
+            if (group.toLowerCase().startsWith(filter.Group?.toLowerCase())) {
+              match = true
+            }
+          })
+        }
+
+        d.hidden = match ? false : true
+
+        return d
+      })
+    )
+  }, [filter])
+
   const deleteListItem = (id) => {
     deviceAPI
       .deleteDevice(id)
@@ -238,6 +351,24 @@ const Devices = (props) => {
         {/*TODO selector here, and filter toggle*/}
 
         <HStack space="md" alignItems="center">
+          <TagSelect
+            sections={[
+              {
+                title: 'Groups',
+                data: groups
+              },
+              {
+                title: 'Tags',
+                data: tags
+              }
+            ]}
+            value={filter.Tag || filter.Group}
+            onChange={(v) => {
+              // v is either {Tag: t} or {Group: g}
+              setFilter(v)
+            }}
+          />
+
           <FormControlLabelText size="sm">Sort by</FormControlLabelText>
 
           <Select
@@ -270,7 +401,7 @@ const Devices = (props) => {
       </ListHeader>
 
       <DeviceList
-        list={list}
+        list={list.filter((d) => d.hidden !== true)}
         notifyChange={refreshDevices}
         deleteListItem={deleteListItem}
       />
