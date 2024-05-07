@@ -371,7 +371,7 @@ const InputSelect = (props) => {
 
 export default InputSelect //React.memo(InputSelect)
 
-export { InputSelect, SelectMenu }
+export { ActionSheetMenu, InputSelect, SelectMenu }
 
 InputSelect.propTypes = {
   isDisabled: PropTypes.bool,
