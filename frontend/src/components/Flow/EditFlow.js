@@ -162,7 +162,6 @@ const FlowCardList = ({
   }
 
   const onChange = (item) => {
-    console.log('UPDATE>>', item)
     setCards(cards.map((card) => (card.title == item.title ? item : card)))
   }
 
@@ -184,6 +183,7 @@ const FlowCardList = ({
       )
     }
 
+    //NOTE only for Always + Date triggers now
     return (
       <FlowCard
         edit={true}
@@ -197,9 +197,9 @@ const FlowCardList = ({
 
   return (
     <VStack space="sm">
-      <Text bold size="sm">
+      {/*<Text bold size="sm">
         {title}
-      </Text>
+      </Text>*/}
 
       <FlatList
         data={cards}
@@ -226,7 +226,7 @@ const FlowCardList = ({
         display={cards.length ? 'none' : 'flex'}
         key={'add' + cardType}
       >
-        <ButtonText>Add card</ButtonText>
+        <ButtonText>Add {cardType}</ButtonText>
         <ButtonIcon as={AddIcon} ml="$1" />
       </Button>
     </VStack>
@@ -291,9 +291,9 @@ const EditFlow = ({ flow, ...props }) => {
     <VStack maxW={380} sx={{ '@md': { maxW: '$full' } }} space="md">
       <FormControl>
         <FormControlLabel>
-          <FormControlLabelText>Name</FormControlLabelText>
+          <FormControlLabelText size="sm">Name</FormControlLabelText>
         </FormControlLabel>
-        <Input variant="underlined">
+        <Input>
           <InputField
             value={title}
             onChangeText={(value) => setTitle(value)}
@@ -301,13 +301,8 @@ const EditFlow = ({ flow, ...props }) => {
             placeholder="Name"
           />
         </Input>
-
-        <FormControlHelper>
-          <FormControlHelperText>
-            Use a unique name to identify this flow
-          </FormControlHelperText>
-        </FormControlHelper>
       </FormControl>
+
       <VStack space="md">
         <FlowCardList
           title="When..."
