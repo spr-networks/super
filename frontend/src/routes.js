@@ -179,7 +179,7 @@ const routes = [
         component: SpeedTest,
         hideSimple: true,
         layout: 'admin'
-      },      
+      }
     ]
   },
   {
@@ -212,7 +212,7 @@ const routes = [
         hideSimple: true,
         layout: 'admin',
         plus: true
-      },
+      }
     ]
   },
   {
@@ -382,7 +382,7 @@ const routes = [
         component: Arp,
         hideSimple: true,
         layout: 'admin'
-      },
+      } /*
       {
         path: 'groups',
         name: 'Groups',
@@ -398,7 +398,7 @@ const routes = [
         component: Tags,
         hideSimple: true,
         layout: 'admin'
-      },
+      }*/
     ]
   },
   {
