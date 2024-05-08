@@ -174,7 +174,7 @@ const Devices = (props) => {
           )
         ])
 
-        if (true) { //macs && macs.length > 0) {
+        if (macs && macs.length > 0) {
           // set device oui if avail
           deviceAPI
             .ouis(macs)
