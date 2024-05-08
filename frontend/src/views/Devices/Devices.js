@@ -174,19 +174,21 @@ const Devices = (props) => {
           )
         ])
 
-        // set device oui if avail
-        deviceAPI
-          .ouis(macs)
-          .then((ouis) => {
-            let devs = devices.map((d) => {
-              let oui = ouis.find((o) => o.MAC == d.MAC)
-              d.oui = oui ? oui.Vendor : ''
-              return d
-            })
+        if (true) { //macs && macs.length > 0) {
+          // set device oui if avail
+          deviceAPI
+            .ouis(macs)
+            .then((ouis) => {
+              let devs = devices.map((d) => {
+                let oui = ouis.find((o) => o.MAC == d.MAC)
+                d.oui = oui ? oui.Vendor : ''
+                return d
+              })
 
-            setList(devs.sort(sortDevices))
-          })
-          .catch((err) => {})
+              setList(devs.sort(sortDevices))
+            })
+            .catch((err) => {})
+        }
 
         // TODO check wg status for virt
         if (!appContext.isWifiDisabled) {

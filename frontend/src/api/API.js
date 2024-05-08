@@ -203,7 +203,10 @@ class API {
     return this.fetch(method, url, body)
       .then((response) => {
         if (response.redirected) {
-          window.location = '/auth/validate'
+          const is_plugin_redirect = url.startsWith('/plugins/') && url.endsWith('/')
+          if (!is_plugin_redirect) {
+            window.location = '/auth/validate'
+          }
         }
 
         if (!response.ok) {
