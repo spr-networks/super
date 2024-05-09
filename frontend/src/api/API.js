@@ -202,12 +202,15 @@ class API {
 
     return this.fetch(method, url, body)
       .then((response) => {
-        if (response.redirected) {
-          const is_plugin_redirect = url.startsWith('/plugins/') && url.endsWith('/')
-          if (!is_plugin_redirect) {
-            window.location = '/auth/validate'
-          }
-        }
+        //response.status == 302 if /auth/validate else 301 if .redirected
+        //if (response.redirected) {
+        /*if (
+          response.redirected &&
+          response.status == 302 &&
+          response.url == '/auth/validate'
+        ) {
+          window.location = '/auth/validate'
+        }*/
 
         if (!response.ok) {
           return Promise.reject({
@@ -237,6 +240,7 @@ class API {
       })
       .catch((err) => {
         //call registered handlers
+        //console.log('-- Throoow', err)
         let status = parseInt(err.status)
         if (Array.isArray(gErrorHandlers[status])) {
           gErrorHandlers[status].map((handler) => {
