@@ -323,7 +323,7 @@ const Mesh = (props) => {
             </Text>
           </VStack>
         </VStack>
-      ) : (meshAvailable ? (
+      ) : meshAvailable ? (
         <VStack>
           <ListHeader
             title=" Mesh Setup"
@@ -446,7 +446,8 @@ const Mesh = (props) => {
             </>
           ) : null}
         </VStack>
-      ) : ( <Text> Mesh plugin not enabled </Text> )
+      ) : (
+        <Text p="$4"> Mesh plugin not enabled </Text>
       )}
     </>
   )
