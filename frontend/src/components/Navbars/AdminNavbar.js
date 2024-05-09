@@ -17,6 +17,7 @@ import {
   MenuIcon,
   MoonIcon,
   SunIcon,
+  VStack,
   useColorMode,
   Pressable,
 } from '@gluestack-ui/themed'
@@ -151,12 +152,14 @@ const AdminNavbar = ({
                 {isMeshNode ? <Text size="lg">MESH</Text> : null}
               </Pressable>
 
+              <VStack justifyContent="flex-end">
               <Badge
                 variant="outline"
                 action="muted"
                 bg="$transparent"
                 rounded="$2xl"
-                size="md"
+                size="sm"
+                height="24px"
               >
 
                 <Pressable
@@ -164,7 +167,7 @@ const AdminNavbar = ({
                   onPress={() => navigate('/admin/info')}
                 >
                 <HStack>
-                <BadgeText color={versionStatus=='' ? "$muted500" : "$warning300"} textTransform="none">
+                <BadgeText mb="$1" color={versionStatus=='' ? "$muted500" : "$warning300"} textTransform="none">
                   {niceVersion(version)}
                 </BadgeText>
 
@@ -174,6 +177,7 @@ const AdminNavbar = ({
                 </HStack>
                 </Pressable>
               </Badge>
+              </VStack>
             </HStack>
 
           <RouteJump />
