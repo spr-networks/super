@@ -226,7 +226,6 @@ const Alerts = (props) => {
           />
           }
           <Select
-            initialLabel={stateFilter}
             selectedValue={stateFilter}
             onValueChange={(v) => onChangeStateFilter(v)}
           >

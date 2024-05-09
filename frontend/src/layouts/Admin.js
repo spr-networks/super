@@ -394,8 +394,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
       //custom handler for /admin/auth page
       if (url.endsWith('/tokens')) {
-        //setAuthReturn('/admin/auth/')
-        //navigate('/auth/validate')
+        //NOTE we have a custom .catch on tokens page
       } else {
         modalState.modal(
           'OTP Validate',

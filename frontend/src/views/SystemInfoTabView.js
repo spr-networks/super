@@ -23,6 +23,11 @@ const SystemInfoTabView = (props) => {
       key: 'second',
       title: 'Containers'
     },
+    /*
+    {
+      key: 'third',
+      title: 'Misc'
+    }*/
   ])
 
   const initialLayout = {
@@ -33,6 +38,7 @@ const SystemInfoTabView = (props) => {
   const renderScene = SceneMap({
     first: SystemInfo,
     second: SystemInfoContainers,
+//    third: SystemInfoMisc
   })
 
   const renderTabBar = (props) => {
