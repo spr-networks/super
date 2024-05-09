@@ -63,7 +63,7 @@ const AuthTokenList = (props) => {
         setStatus(s.State)
 
         //dont refresh tokens if OTP token is not registered and set
-        if (!(s.State == "registered") || !s.Confirmed) {
+        if (!(s.State == 'registered') || !s.Confirmed) {
           return
         }
 
@@ -116,7 +116,7 @@ const AuthTokenList = (props) => {
   }
 
   return (
-    <View h={'100%'}>
+    <>
       <ListHeader title="API Tokens">
         <ModalForm
           title="Create new Auth Token"
@@ -126,6 +126,16 @@ const AuthTokenList = (props) => {
           <AddAuthToken notifyChange={notifyChange} />
         </ModalForm>
       </ListHeader>
+
+      {tokens?.length === 0 ? (
+        <VStack p="$4">
+          {status == 'registered' ? (
+            <Text>There are no API tokens added yet</Text>
+          ) : (
+            <Text>{status} Register an OTP Code to view and add tokens</Text>
+          )}
+        </VStack>
+      ) : null}
 
       <FlatList
         data={tokens}
@@ -183,19 +193,7 @@ const AuthTokenList = (props) => {
         )}
         keyExtractor={(item) => item.Token}
       />
-
-      <VStack>
-        {tokens !== null && tokens.length === 0 ? (
-          status == 'registered' ? (
-            <Text alignSelf="center">There are no API tokens added yet</Text>
-          ) : (
-            <Text alignSelf="center">
-              {status} Register an OTP Code to view and add tokens
-            </Text>
-          )
-        ) : null}
-      </VStack>
-    </View>
+    </>
   )
 }
 
