@@ -174,7 +174,10 @@ const WifiChannelParameters = ({
         for (let band of iw.bands) {
           if (band.vht_capabilities) {
             for (let capability of band.vht_capabilities) {
-              if (capability.includes('160 MHz') || capability.includes('160Mhz')) {
+              if (
+                capability.includes('160 MHz') ||
+                capability.includes('160Mhz')
+              ) {
                 setDisable160(false)
               }
             }
@@ -392,7 +395,7 @@ const WifiChannelParameters = ({
               */}
             <Select
               selectedValue={modeLabel}
-              initialLabel={modeLabel}
+              defaultValue={modeLabel}
               onValueChange={(value) => {
                 setModeLabel(value)
               }}
