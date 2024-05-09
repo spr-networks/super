@@ -392,7 +392,6 @@ const WifiChannelParameters = ({
               */}
             <Select
               selectedValue={modeLabel}
-              initialLabel={modeLabel}
               onValueChange={(value) => {
                 setModeLabel(value)
               }}
