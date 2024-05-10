@@ -202,15 +202,6 @@ class API {
 
     return this.fetch(method, url, body)
       .then((response) => {
-        //response.status == 302 if /auth/validate else 301 if .redirected
-        //if (response.redirected) {
-        /*if (
-          response.redirected &&
-          response.status == 302 &&
-          response.url == '/auth/validate'
-        ) {
-          window.location = '/auth/validate'
-        }*/
 
         if (!response.ok) {
           return Promise.reject({
