@@ -79,8 +79,10 @@ const Alerts = (props) => {
     for (let bucket of buckets) {
 
       let withFilter = params
-      if (searchField) {
+      if (searchField && searchField !== '') {
         withFilter['filter'] = prettyToJSONPath(searchField)
+      } else {
+        withFilter['filter'] = ''
       }
 
       const result = await dbAPI.items(bucket, withFilter)
@@ -107,6 +109,8 @@ const Alerts = (props) => {
     let withFilter = params
     if (searchField) {
       withFilter['filter'] = prettyToJSONPath(searchField)
+    } else {
+      withFilter['filter'] = ''
     }
 
     let more_results = await dbAPI.items(bucket, withFilter)
