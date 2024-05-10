@@ -64,7 +64,7 @@ const AlertChart = ({ fieldCounts, onBarClick }) => {
         const clickedValue = leValues[clickedIndex];
         onBarClick(clickedLabel, clickedValue);
       }
-    },    
+    },
   };
 
   return (

@@ -35,6 +35,7 @@ import { prettyToJSONPath } from 'components/Logs/FilterSelect'
 import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
 import { Tooltip } from 'components/Tooltip'
+import { countFields } from 'components/Alerts/AlertUtil'
 
 import AlertListItem from 'components/Alerts/AlertListItem'
 
@@ -48,9 +49,6 @@ const Alerts = (props) => {
   const navigate = useNavigate()
 
   const [fieldCounts, setFieldCounts] = useState({});
-
-
-
 
   const AlertPrefix = 'alert:'
 
@@ -134,22 +132,7 @@ const Alerts = (props) => {
         )
       }
 
-      const counts = {};
-
-      more_results.forEach((entry) => {
-        Object.entries(entry.Event).forEach(([field, value]) => {
-          if (!value || value === "") {
-
-          } else {
-            let entry = field+":"+value
-            if (counts[entry]) {
-              counts[entry]++;
-            } else {
-              counts[entry] = 1;
-            }
-          }
-        });
-      });
+      const counts = countFields(more_results, true)
 
       setFieldCounts(counts);
 

@@ -13,6 +13,7 @@ import {
   FlatList,
   Heading,
   HStack,
+  ScrollView,
   Text,
   View,
   useColorMode,
@@ -27,6 +28,8 @@ import { prettyToJSONPath } from './FilterSelect'
 import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
 import { Tooltip } from 'components/Tooltip'
+import AlertChart from 'components/Alerts/AlertChart'
+import { countFields } from 'components/Alerts/AlertUtil'
 
 const LogList = (props) => {
   const context = useContext(AlertContext)
@@ -40,6 +43,7 @@ const LogList = (props) => {
   const [params, setParams] = useState({ num: perPage })
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
   const [searchField, setSearchField] = useState('')
+  const [fieldCounts, setFieldCounts] = useState({});
 
   const colorMode = useColorMode()
 
@@ -121,6 +125,10 @@ const LogList = (props) => {
     }
     result = result.map((r) => parseLog(r, bucket))
 
+    const counts = countFields(result)
+
+    setFieldCounts(counts);
+
     setLogs(result)
   }
 
@@ -192,6 +200,13 @@ const LogList = (props) => {
     )
   }
 
+  const handleBarClick = (label, count) => {
+    let parts = label.split(':', 2)
+    if (parts.length == 2) {
+      setSearchField(parts[0] + '=="' + label.substr(parts[0].length+1) + '"')
+    }
+  };
+
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
       <HStack space="md" p="$4" alignItems="center">
@@ -258,24 +273,27 @@ const LogList = (props) => {
         </HStack>
       </HStack>
 
-      <FlatList
-        flex={2}
-        data={logs}
-        estimatedItemSize={100}
-        renderItem={({ item }) => (
-          <LogListItem item={item} selected={getCurrentBucket()} />
-        )}
-        keyExtractor={(item, index) => item.time + index}
-      />
-
-      {total > perPage ? (
-        <Pagination
-          page={page}
-          pages={total}
-          perPage={perPage}
-          onChange={(p) => updatePage(p, page)}
+      <ScrollView>
+        <AlertChart fieldCounts={fieldCounts} onBarClick={handleBarClick} />
+        {total > perPage ? (
+          <Pagination
+            page={page}
+            pages={total}
+            perPage={perPage}
+            onChange={(p) => updatePage(p, page)}
+          />
+        ) : null}
+        <FlatList
+          flex={2}
+          data={logs}
+          estimatedItemSize={100}
+          renderItem={({ item }) => (
+            <LogListItem item={item} selected={getCurrentBucket()} />
+          )}
+          keyExtractor={(item, index) => item.time + index}
         />
-      ) : null}
+
+      </ScrollView>
     </View>
   )
 }
