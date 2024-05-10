@@ -39,7 +39,7 @@ const LogList = (props) => {
   const [logs, setLogs] = useState([])
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
-  const perPage = 20
+  const perPage = 50
   const [params, setParams] = useState({ num: perPage })
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
   const [searchField, setSearchField] = useState('')
@@ -51,7 +51,7 @@ const LogList = (props) => {
     //TODO map logs, merge timestamps
     let min = new Date('2023-01-12T00:00:00Z').toISOString()
     let max = new Date().toISOString()
-    let num = 20
+    let num = perPage
 
     setParams({ ...params, num, max })
 
