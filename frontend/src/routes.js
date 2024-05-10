@@ -241,6 +241,14 @@ const routes = [
         layout: 'admin'
       },
       {
+        path: 'dnsLogEdit',
+        name: 'DNS Log Settings',
+        icon: ListTreeIcon,
+        component: DNSLogEdit,
+        layout: 'admin',
+        hidden: true
+      },
+      {
         path: 'dyndns',
         name: 'Dynamic DNS',
         icon: ArrowUpCircleIcon,
