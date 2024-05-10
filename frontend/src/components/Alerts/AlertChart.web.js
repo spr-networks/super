@@ -1,9 +1,14 @@
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS } from 'chart.js/auto'
 
+import {
+  useColorMode
+} from '@gluestack-ui/themed'
+
 const AlertChart = ({ fieldCounts, onBarClick }) => {
   const leLabels = Object.keys(fieldCounts).sort();
   const leValues = Object.values(fieldCounts);
+  const colorMode = useColorMode()
 
   const data = {
     labels: leLabels,
@@ -32,6 +37,7 @@ const AlertChart = ({ fieldCounts, onBarClick }) => {
           font: {
             size: 14,
             weight: 'bold',
+            color: colorMode == 'light' ? 'black' : 'white'
           },
           color: 'rgba(0, 0, 0, 0.7)',
         },
@@ -45,7 +51,7 @@ const AlertChart = ({ fieldCounts, onBarClick }) => {
             size: 14,
             weight: 'bold',
           },
-          color: 'rgba(0, 0, 0, 0.7)',
+          color: colorMode == 'light' ? 'black' : 'white'
         },
       },
     },
