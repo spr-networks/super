@@ -27,14 +27,33 @@ import { GlobalHotKeys, HotKeys } from 'react-hotkeys'
 import { Platform } from 'react-native'
 
 const RouteJump = ({ ...props }) => {
-  const { activeSidebarItem, setActiveSidebarItem } = useContext(AppContext)
+  const { activeSidebarItem, setActiveSidebarItem, getDevices } = useContext(AppContext)
   const [isOpen, setIsOpen] = useState(false)
   const [items, setItems] = useState([])
-
+  const [devices, setDevices] = useState([])
   const [filterText, setFilterText] = useState('')
   const navigate = useNavigate()
 
   const refInput = React.useRef(null)
+
+  const sortDevices = (a, b) => {
+    const parseIP = (ip) => {
+      return ip.split('.').map(Number)
+      //b.RecentIP.replace(/[^0-9]+/g, '')
+    }
+
+    const aIP = parseIP(a.RecentIP)
+    const bIP = parseIP(b.RecentIP)
+
+    for (let i = 0; i <= 4; i++) {
+      if (aIP[i] !== bIP[i]) {
+        return aIP[i] - bIP[i]
+      }
+    }
+
+    return 0
+  }
+
 
   useEffect(() => {
     let items = []
@@ -59,8 +78,13 @@ const RouteJump = ({ ...props }) => {
       }
     })
 
+    getDevices().then((d) => {
+      setDevices(d.sort(sortDevices))
+    }).catch(() => {})
+
     setItems(items)
   }, [])
+
 
   const onPress = () => {
     setIsOpen(true)
@@ -110,7 +134,24 @@ const RouteJump = ({ ...props }) => {
       return item
     })
 
+
+    const ipv4Pattern =  /^(\d{1,3}\.){0,3}\d{0,3}$/;
+    const ip_form = ipv4Pattern.test(value)
+
+    let newDevices = devices?.map((device) => {
+      if (ip_form) {
+        device.hidden = !device.RecentIP.includes(value.toLowerCase())
+      } else if (device.Name) {
+          device.hidden = !device.Name.toLowerCase().includes(value.toLowerCase())
+      } else {
+          device.hidden = true
+      }
+
+      return device
+    })
+
     setItems(newItems)
+    setDevices(newDevices)
   }
 
   const onChangeText = (value) => {
@@ -151,6 +192,19 @@ const RouteJump = ({ ...props }) => {
     }
   }
 
+  const navigateDevice = (device) => {
+    setIsOpen(false)
+    if (device.MAC) {
+      navigate(`/admin/devices/${device.MAC}`)
+    } else {
+      navigate(`/admin/devices/${device.WGPubKey}`)
+    }
+    setActiveSidebarItem('/admin/devices')
+
+    setFilterText('')
+    filterItems('')
+  }
+
   //navigate and reset form
   const navigateItem = (item) => {
     setIsOpen(false)
@@ -168,6 +222,8 @@ const RouteJump = ({ ...props }) => {
   if (Platform.OS != 'web') {
     return <></>
   }
+
+  //uses app context  cache
 
   return (
     <>
@@ -232,6 +288,38 @@ const RouteJump = ({ ...props }) => {
                       </HStack>
                     </Pressable>
                   ))}
+
+                  <HStack>
+                    <Icon  mr="$2" size="md" />
+                    <Text bold size="sm">Devices List</Text>
+                  </HStack>
+
+
+                  {devices.map((device) => (
+                    <Pressable
+                      key={`${device.Name}:${device.RecentIP}`}
+                      onPress={() => navigateDevice(device)}
+                      display={device.hidden ? 'none' : 'flex'}
+                      borderWidth="$1"
+                      borderColor="$primary200"
+                      px="$4"
+                      py="$2"
+                      rounded="$md"
+                      sx={{
+                        ':hover': { borderColor: '$primary400' },
+                        _dark: {
+                          borderColor: '$coolGray600',
+                          ':hover': { borderColor: '$coolGray700' }
+                        }
+                      }}
+                    >
+                      <HStack justifyContent="space-between">
+                        <Text size="sm">{device.Name}</Text>
+                        <Text bold size="sm">{device.RecentIP}</Text>
+                      </HStack>
+                    </Pressable>
+                  ))}
+
                 </VStack>
               </FormControl>
             </VStack>

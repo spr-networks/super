@@ -159,7 +159,6 @@ const AdminNavbar = ({
                 bg="$transparent"
                 rounded="$2xl"
                 size="sm"
-                height="24px"
               >
 
                 <Pressable
