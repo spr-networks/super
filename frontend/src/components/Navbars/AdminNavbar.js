@@ -39,7 +39,6 @@ const AdminNavbar = ({
   ...props
 }) => {
   const { isMeshNode, setActiveSidebarItem } = useContext(AppContext)
-  const [checkUpdates, setCheckUpdates] = useState(false)
   const [versionStatus, setVersionStatus] = useState('')
 
   const colorMode = useColorMode()
@@ -87,18 +86,26 @@ const AdminNavbar = ({
 
 
   useEffect(() => {
-    api
-      .getCheckUpdates()
-      .then((state) => {
-        setCheckUpdates(state)
-        if (state === true) {
-          checkUpdate()
-        } else {
-        }
-      })
-      .catch((err) => {})
+      api
+        .getCheckUpdates()
+        .then((state) => {
+          const lastCheckTime = localStorage.getItem('lastUpdateCheckTime')
+
+          const currentTime = new Date().getTime()
+
+          if (
+            state == true &&
+            (!lastCheckTime || currentTime - lastCheckTime >= 3600000)
+          ) {
+            checkUpdate()
+
+            localStorage.setItem('lastUpdateCheckTime', currentTime)
+          }
+        })
+        .catch((err) => {})
 
   }, [version, checkUpdate])
+
 
   return (
     <>
