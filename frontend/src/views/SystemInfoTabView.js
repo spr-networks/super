@@ -3,6 +3,7 @@ import React, { useContext, useState } from 'react'
 import { AlertContext } from 'layouts/Admin'
 import SystemInfo from 'views/SystemInfo'
 import SystemInfoContainers from 'views/SystemInfoContainers'
+import SystemInfoNetworkMisc from 'views/SystemInfoNetworkMisc'
 
 import { Animated, Dimensions, Platform } from 'react-native'
 import { TabView, SceneMap } from 'react-native-tab-view'
@@ -23,11 +24,10 @@ const SystemInfoTabView = (props) => {
       key: 'second',
       title: 'Containers'
     },
-    /*
     {
       key: 'third',
-      title: 'Misc'
-    }*/
+      title: 'Network Info'
+    }
   ])
 
   const initialLayout = {
@@ -38,7 +38,7 @@ const SystemInfoTabView = (props) => {
   const renderScene = SceneMap({
     first: SystemInfo,
     second: SystemInfoContainers,
-//    third: SystemInfoMisc
+    third: SystemInfoNetworkMisc
   })
 
   const renderTabBar = (props) => {

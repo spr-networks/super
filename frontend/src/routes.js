@@ -2,7 +2,6 @@ import { Platform } from 'react-native'
 
 import AddDevice from 'views/Devices/AddDevice'
 import ConnectDevice from 'views/Devices/ConnectDevice'
-import Arp from 'views/Devices/Arp'
 import Devices from 'views/Devices/Devices'
 import Device from 'views/Devices/Device'
 import Home from 'views/Home'
@@ -375,30 +374,6 @@ const routes = [
         hideSimple: true,
         layout: 'admin'
       },
-      {
-        path: 'arp',
-        name: 'ARP Table',
-        icon: Table2Icon,
-        component: Arp,
-        hideSimple: true,
-        layout: 'admin'
-      } /*
-      {
-        path: 'groups',
-        name: 'Groups',
-        icon: UsersIcon,
-        component: Groups,
-        hideSimple: true,
-        layout: 'admin'
-      },
-      {
-        path: 'tags',
-        name: 'Tags',
-        icon: TagsIcon,
-        component: Tags,
-        hideSimple: true,
-        layout: 'admin'
-      }*/
     ]
   },
   {
