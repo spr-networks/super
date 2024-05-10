@@ -278,32 +278,34 @@ const Alerts = (props) => {
 
 
       {topics.map((bucket) => (bucketCounts[prettyBucket(bucket)] != 0 &&
-        <Pressable
-          key={bucket}
-          onPress={() => setSelectedBucket(selectedBucket === bucket ? null : bucket)}
-        >
+        <>
           <HStack  alignItems="left" p="$4" bg="$gray200">
-            <Badge
-              action={(bucket == selectedBucket) ? "success" : "muted"}
-              rounded="$2xl"
-              size="md"
+            <Pressable
+              key={bucket}
+              onPress={() => setSelectedBucket(selectedBucket === bucket ? null : bucket)}
             >
-              <Text sx="$lg" fontWeight="$bold" >
-                {prettyBucket(bucket)}
-              </Text>
-              <View
-                bg="$warning400"
-                borderRadius="$full"
-                px="$2"
-                py="$1"
-                alignItems="center"
-                justifyContent="center"
+              <Badge
+                action={(bucket == selectedBucket) ? "success" : "muted"}
+                rounded="$2xl"
+                size="md"
               >
-                <Text color="$white" fontSize="$sm" fontWeight="$bold">
-                  {bucketCounts[prettyBucket(bucket)] || 0}
+                <Text sx="$lg" fontWeight="$bold" >
+                  {prettyBucket(bucket)}
                 </Text>
-              </View>
-            </Badge>
+                <View
+                  bg="$warning400"
+                  borderRadius="$full"
+                  px="$2"
+                  py="$1"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <Text color="$white" fontSize="$sm" fontWeight="$bold">
+                    {bucketCounts[prettyBucket(bucket)] || 0}
+                  </Text>
+                </View>
+              </Badge>
+            </Pressable>
           </HStack>
           {selectedBucket === bucket && (
             <FlatList
@@ -318,7 +320,7 @@ const Alerts = (props) => {
               contentContainerStyle={{ paddingBottom: 48 }}
             />
           )}
-        </Pressable>
+          </>
       ))}
 
 
