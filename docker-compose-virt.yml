@@ -22,6 +22,7 @@ services:
     build:
       context: base
       labels: *default-labels
+    restart: always
     privileged: true
     ports:
       - "51280:51280/udp"
@@ -38,6 +39,7 @@ services:
     build:
       context: superd
       labels: *default-labels
+    restart: always
     privileged: true
     logging: *default-logging
     volumes:
@@ -51,6 +53,7 @@ services:
     build:
       context: dhcp
       labels: *default-labels
+    restart: always
     network_mode: service:base
     depends_on:
       - "base"
@@ -67,6 +70,7 @@ services:
     build:
       context: dns
       labels: *default-labels
+    restart: always
     network_mode: service:base
     logging: *default-logging
     depends_on:
@@ -83,6 +87,7 @@ services:
     build:
       context: multicast_udp_proxy
       labels: *default-labels
+    restart: always
     network_mode: service:base
     depends_on:
       - "base"
@@ -97,6 +102,7 @@ services:
     build:
       context: wireguard
       labels: *default-labels
+    restart: always
     network_mode: service:base
     cap_add:
       - net_admin
@@ -163,6 +169,7 @@ services:
   plugin-lookup:
     container_name: superplugin-lookup
     image: ghcr.io/spr-networks/super_plugin-lookup:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    restart: always
     build:
       context: plugin-lookup
       labels: *default-labels
@@ -183,6 +190,7 @@ services:
         tags:
         - ghcr.io/spr-networks/super_db:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_db:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    restart: always
     network_mode: service:base
     depends_on:
       - "api"
