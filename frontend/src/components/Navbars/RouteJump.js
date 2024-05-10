@@ -16,7 +16,8 @@ import {
   PopoverContent,
   Icon,
   FormControl,
-  VStack
+  VStack,
+  ScrollView
 } from '@gluestack-ui/themed'
 
 import { SearchIcon, SlashIcon } from 'lucide-react-native'
@@ -27,7 +28,8 @@ import { GlobalHotKeys, HotKeys } from 'react-hotkeys'
 import { Platform } from 'react-native'
 
 const RouteJump = ({ ...props }) => {
-  const { activeSidebarItem, setActiveSidebarItem, getDevices } = useContext(AppContext)
+  const { activeSidebarItem, setActiveSidebarItem, getDevices } =
+    useContext(AppContext)
   const [isOpen, setIsOpen] = useState(false)
   const [items, setItems] = useState([])
   const [devices, setDevices] = useState([])
@@ -54,7 +56,6 @@ const RouteJump = ({ ...props }) => {
     return 0
   }
 
-
   useEffect(() => {
     let items = []
     //flatten the routes
@@ -78,13 +79,14 @@ const RouteJump = ({ ...props }) => {
       }
     })
 
-    getDevices().then((d) => {
-      setDevices(d.sort(sortDevices))
-    }).catch(() => {})
+    getDevices()
+      .then((d) => {
+        setDevices(d.sort(sortDevices))
+      })
+      .catch(() => {})
 
     setItems(items)
   }, [])
-
 
   const onPress = () => {
     setIsOpen(true)
@@ -134,17 +136,16 @@ const RouteJump = ({ ...props }) => {
       return item
     })
 
-
-    const ipv4Pattern =  /^(\d{1,3}\.){0,3}\d{0,3}$/;
+    const ipv4Pattern = /^(\d{1,3}\.){0,3}\d{0,3}$/
     const ip_form = ipv4Pattern.test(value)
 
     let newDevices = devices?.map((device) => {
       if (ip_form) {
         device.hidden = !device.RecentIP.includes(value.toLowerCase())
       } else if (device.Name) {
-          device.hidden = !device.Name.toLowerCase().includes(value.toLowerCase())
+        device.hidden = !device.Name.toLowerCase().includes(value.toLowerCase())
       } else {
-          device.hidden = true
+        device.hidden = true
       }
 
       return device
@@ -188,17 +189,19 @@ const RouteJump = ({ ...props }) => {
     }
 
     if (item?.path) {
-      navigateItem(item)
+      return navigateItem(item)
+    }
+
+    // find device
+    let device = devices.find((d) => !d.hidden)
+    if (device) {
+      return navigateDevice(device)
     }
   }
 
   const navigateDevice = (device) => {
     setIsOpen(false)
-    if (device.MAC) {
-      navigate(`/admin/devices/${device.MAC}`)
-    } else {
-      navigate(`/admin/devices/${device.WGPubKey}`)
-    }
+    navigate(`/admin/devices/${device.MAC || device.WGPubKey}`)
     setActiveSidebarItem('/admin/devices')
 
     setFilterText('')
@@ -224,6 +227,9 @@ const RouteJump = ({ ...props }) => {
   }
 
   //uses app context  cache
+
+  const isDeviceMatch =
+    devices.map((d) => d.hidden).filter((hidden) => !hidden).length > 0
 
   return (
     <>
@@ -262,7 +268,7 @@ const RouteJump = ({ ...props }) => {
                   </InputSlot>
                 </Input>
               </FormControl>
-              <FormControl>
+              <ScrollView maxHeight={520} showsVerticalScrollIndicator={false}>
                 <VStack space="sm" justifyContent="flex-start">
                   {items.map((item) => (
                     <Pressable
@@ -289,11 +295,11 @@ const RouteJump = ({ ...props }) => {
                     </Pressable>
                   ))}
 
-                  <HStack>
-                    <Icon  mr="$2" size="md" />
-                    <Text bold size="sm">Devices List</Text>
+                  <HStack display={isDeviceMatch ? 'flex' : 'none'}>
+                    <Text bold size="xs">
+                      Devices
+                    </Text>
                   </HStack>
-
 
                   {devices.map((device) => (
                     <Pressable
@@ -315,13 +321,14 @@ const RouteJump = ({ ...props }) => {
                     >
                       <HStack justifyContent="space-between">
                         <Text size="sm">{device.Name}</Text>
-                        <Text bold size="sm">{device.RecentIP}</Text>
+                        <Text bold size="sm">
+                          {device.RecentIP}
+                        </Text>
                       </HStack>
                     </Pressable>
                   ))}
-
                 </VStack>
-              </FormControl>
+              </ScrollView>
             </VStack>
           </PopoverBody>
         </PopoverContent>
