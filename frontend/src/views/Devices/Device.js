@@ -82,7 +82,7 @@ const DeviceView = () => {
         })
         .catch((err) => {})
     })
-  }, [])
+  }, [params])
 
   const refreshDevice = () => {
     appContext.getDevices(true) // force update
