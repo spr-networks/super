@@ -12,6 +12,7 @@ import {
   FabLabel,
   FlatList,
   Pressable,
+  ScrollView,
   Text,
   View,
   VStack,
@@ -25,6 +26,7 @@ import { Settings2Icon } from 'lucide-react-native'
 
 import { alertsAPI, dbAPI } from 'api'
 import AddAlert from 'components/Alerts/AddAlert'
+import AlertChart from 'components/Alerts/AlertChart'
 import { AlertContext, ModalContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import { ListHeader } from 'components/List'
@@ -44,6 +46,11 @@ const Alerts = (props) => {
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
   const navigate = useNavigate()
+
+  const [fieldCounts, setFieldCounts] = useState({});
+
+
+
 
   const AlertPrefix = 'alert:'
 
@@ -126,6 +133,26 @@ const Alerts = (props) => {
           (alert) => alert.State == stateFilter
         )
       }
+
+      const counts = {};
+
+      more_results.forEach((entry) => {
+        Object.entries(entry.Event).forEach(([field, value]) => {
+          if (!value || value === "") {
+
+          } else {
+            let entry = field+":"+value
+            if (counts[entry]) {
+              counts[entry]++;
+            } else {
+              counts[entry] = 1;
+            }
+          }
+        });
+      });
+
+      setFieldCounts(counts);
+
 
       result = result.concat(more_results)
     }
@@ -212,6 +239,15 @@ const Alerts = (props) => {
       fetchAlertBuckets()
     })
   }
+
+  const handleBarClick = (label, count) => {
+    let parts = label.split(':', 2)
+    if (parts.length == 2) {
+      //alert(`Clicked bar: Label = ${parts[0]}, Value = ${parts[1]}`);
+      setSearchField("Event." + parts[0] + '=="' + label.substr(parts[0].length+1) + '"')
+    }
+    // Perform any desired actions with the clicked label and value
+  };
 
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
@@ -312,17 +348,20 @@ const Alerts = (props) => {
             </Pressable>
           </HStack>
           {selectedBucket === bucket && (
-            <FlatList
-              data={logs}
-              estimatedItemSize={100}
-              renderItem={({ item }) => (
-                <VStack>
-                  <AlertListItem item={item} notifyChange={onChangeEvent} />
-                </VStack>
-              )}
-              keyExtractor={(item, index) => item.time + index}
-              contentContainerStyle={{ paddingBottom: 48 }}
-            />
+            <ScrollView>
+              <AlertChart fieldCounts={fieldCounts} onBarClick={handleBarClick} />
+              <FlatList
+                data={logs}
+                estimatedItemSize={100}
+                renderItem={({ item }) => (
+                  <VStack>
+                    <AlertListItem item={item} notifyChange={onChangeEvent} />
+                  </VStack>
+                )}
+                keyExtractor={(item, index) => item.time + index}
+                contentContainerStyle={{ paddingBottom: 48 }}
+              />
+            </ScrollView>
           )}
           </>
       ))}
