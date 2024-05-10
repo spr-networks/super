@@ -322,7 +322,7 @@ const Alerts = (props) => {
                   justifyContent="center"
                 >
                   <Text color="$white" fontSize="$sm" fontWeight="$bold">
-                    {bucketCounts[prettyBucket(bucket)] || 0}
+                    {bucketCounts[prettyBucket(bucket)] == perPage ? perPage + "+" : bucketCounts[prettyBucket(bucket)] || 0}
                   </Text>
                 </View>
               </Badge>
