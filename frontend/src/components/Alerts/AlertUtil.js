@@ -161,10 +161,10 @@ export const countFields = (result, getEvent) => {
       } else if (typeof value === "object") {
         // Recursively process nested objects
         processEntry(value, prefix + field + ".");
-      } else if (ftl.includes("time")) {
+      } else if (ftl.includes("time") || ftl == "bucket") {
         // Skip fields containing "time"
       } else {
-        if (prefix !== "" && commons.includes(field)) {
+        if (prefix === "" || commons.includes(field)) {
           const key = prefix + field + ":" + value;
           counts[key] = (counts[key] || 0) + 1;
         }
