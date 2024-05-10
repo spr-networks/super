@@ -243,10 +243,8 @@ const Alerts = (props) => {
   const handleBarClick = (label, count) => {
     let parts = label.split(':', 2)
     if (parts.length == 2) {
-      //alert(`Clicked bar: Label = ${parts[0]}, Value = ${parts[1]}`);
       setSearchField("Event." + parts[0] + '=="' + label.substr(parts[0].length+1) + '"')
     }
-    // Perform any desired actions with the clicked label and value
   };
 
   return (
