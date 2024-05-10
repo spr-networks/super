@@ -29,6 +29,7 @@ import { AlertContext, ModalContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import { ListHeader } from 'components/List'
 import FilterInputSelect from 'components/Logs/FilterInputSelect'
+import { prettyToJSONPath } from 'components/Logs/FilterSelect'
 import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
 import { Tooltip } from 'components/Tooltip'
@@ -79,19 +80,21 @@ const Alerts = (props) => {
 
       let withFilter = params
       if (searchField) {
-        withFilter['filter'] = searchField
+        withFilter['filter'] = prettyToJSONPath(searchField)
       }
 
       const result = await dbAPI.items(bucket, withFilter)
-      const bucketName = prettyBucket(bucket)
-      if (stateFilter === 'Resolved') {
-        const filteredItems = result.filter((item) => item.State === 'Resolved');
-        counts[bucketName] = filteredItems.length
-      } else if (stateFilter === 'New') {
-        const filteredItems = result.filter((item) => item.State !== 'Resolved');
-        counts[bucketName] = filteredItems.length
-      } else {
-        counts[bucketName] = result.length
+      if (result) {
+        const bucketName = prettyBucket(bucket)
+        if (stateFilter === 'Resolved') {
+          const filteredItems = result.filter((item) => item.State === 'Resolved');
+          counts[bucketName] = filteredItems.length
+        } else if (stateFilter === 'New') {
+          const filteredItems = result.filter((item) => item.State !== 'Resolved');
+          counts[bucketName] = filteredItems.length
+        } else {
+          counts[bucketName] = result.length
+        }
       }
     }
     setBucketCounts(counts)
@@ -103,7 +106,7 @@ const Alerts = (props) => {
 
     let withFilter = params
     if (searchField) {
-      withFilter['filter'] = searchField
+      withFilter['filter'] = prettyToJSONPath(searchField)
     }
 
     let more_results = await dbAPI.items(bucket, withFilter)
@@ -212,6 +215,8 @@ const Alerts = (props) => {
         <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
           {
           <FilterInputSelect
+            NoFilterCommon={true}
+            topic={selectedBucket}
             value={searchField}
             items={logs}
             onChangeText={setSearchField}
@@ -279,8 +284,7 @@ const Alerts = (props) => {
         >
           <HStack  alignItems="left" p="$4" bg="$gray200">
             <Badge
-              action="muted"
-              bg="$transparent"
+              action={(bucket == selectedBucket) ? "success" : "muted"}
               rounded="$2xl"
               size="md"
             >

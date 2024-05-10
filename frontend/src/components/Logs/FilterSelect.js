@@ -104,7 +104,7 @@ const prettyToJSONPath = (query) => {
   return q
 }
 
-const extractKeys = (items) => {
+const extractKeys = (items, noFilterCommon) => {
   if (!items) return []
 
   let item = Array.isArray(items) ? items[0] : items
@@ -124,11 +124,18 @@ const extractKeys = (items) => {
         'SrcMAC',
         'Length',
         'SrcPort',
-        'DstPort'
+        'DstPort',
+        'MAC'
       ]
-      let z = extractKeys(item[key])
-        .filter((k) => commons.includes(k))
-        .map((k) => key + '.' + k)
+      let z
+      if (noFilterCommon) {
+        z = extractKeys(item[key], noFilterCommon)
+          .map((k) => key + '.' + k)
+      } else {
+        z = extractKeys(item[key], noFilterCommon)
+          .filter((k) => commons.includes(k))
+          .map((k) => key + '.' + k)
+      }
       keys = keys.concat(z)
       keys = keys.filter((k) => k != key) // remove objs
     }
@@ -148,7 +155,7 @@ const FilterSelect = ({ items, onSubmitEditing, topic, query, ...props }) => {
   useEffect(() => {
     if (!items) return
     //TODO recursive if needed
-    let keys = extractKeys(items)
+    let keys = extractKeys(items, props.NoFilterCommon)
 
     // TODO set defaults here from query
     if (query) {
@@ -198,7 +205,14 @@ const FilterSelect = ({ items, onSubmitEditing, topic, query, ...props }) => {
   }
 
   return (
+    <VStack>
+    {(topic === null || topic === undefined) ?
+      (
+        <Text> Select an Topic first </Text>
+      ) : (
+
     <VStack space="md" {...props}>
+
       <VStack space="md">
         <HStack space="sm" flexWrap="wrap">
           {keys.map((k) => (
@@ -284,6 +298,9 @@ const FilterSelect = ({ items, onSubmitEditing, topic, query, ...props }) => {
         <Text size="xs">{JSON.stringify(items[0], null, '  ')}</Text>
       </ScrollView>
     </VStack>
+    )}
+
+  </VStack>
   )
 }
 

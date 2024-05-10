@@ -9,6 +9,7 @@ import {
   InputField,
   InputIcon,
   InputSlot,
+  Text,
   CloseIcon
 } from '@gluestack-ui/themed'
 
@@ -32,6 +33,7 @@ const FilterInputSelect = ({
 
   const filterSelect = (
     <FilterSelect
+      NoFilterCommon={props.NoFilterCommon}
       query={value}
       items={items}
       topic={topic}
