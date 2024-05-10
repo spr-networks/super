@@ -1,5 +1,22 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v0.3.11
+Major change
+* Image builder set to 24.04 base.
+Key Fixes
+* Plugin events from superd introduced a problem with older versions of docker, causing restart issues. now fixed in dev branch
+* Fixed incorrect UI redirect when no devices with a MAC address were left
+Improvements
+* New Device view, faster, with sorting by IP, Time, Name, Tag & Group
+* Rendered Devices are now clickable throughout the UI
+* WiFi Channel selection fixed. It would hang on the wrong band when switching interfaces
+* Moved version check into badge on top instead of popups
+* Alerts view now categorizes by alert type and are searchable
+* Simple field counts for the Alerts & Events views
+* Container networking is now under a Containers Tab under System Info
+* Arp under System Info -> Network Info Tab
+* Supernetworks view is now "DHCP Settings"
+
 ## v0.3.10
 * Revert wpa2 behavior for wpa3 devices for now
 
