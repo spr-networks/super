@@ -139,6 +139,50 @@ export const eventTemplate = (
   return elements.join('')
 }
 
+export const countFields = (result, getEvent) => {
+  const counts = {};
+
+  const commons = [
+    'SrcIP',
+    'DstIP',
+    'IP',
+    'DstMAC',
+    'SrcMAC',
+    'SrcPort',
+    'DstPort',
+    'MAC'
+  ]
+
+  function processEntry(entry, prefix = "") {
+    Object.entries(entry).forEach(([field, value]) => {
+      let ftl = field.toLowerCase()
+      if (!value || value === "") {
+        // Skip empty or null values
+      } else if (typeof value === "object") {
+        // Recursively process nested objects
+        processEntry(value, prefix + field + ".");
+      } else if (ftl.includes("time") || ftl == "bucket") {
+        // Skip fields containing "time"
+      } else {
+        if (prefix === "" || commons.includes(field)) {
+          const key = prefix + field + ":" + value;
+          counts[key] = (counts[key] || 0) + 1;
+        }
+      }
+    });
+  }
+
+  result.forEach((entry) => {
+    if (getEvent) {
+      processEntry(entry.Event)
+    } else {
+      processEntry(entry);
+    }
+  });
+
+  return counts;
+}
+
 /*
 export const eventTemplateElements = (context, template, event) => {
   return eventTemplate(context, template, event, true)

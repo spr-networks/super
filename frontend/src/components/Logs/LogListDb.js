@@ -13,6 +13,7 @@ import {
   FlatList,
   Heading,
   HStack,
+  ScrollView,
   Text,
   View,
   useColorMode,
@@ -27,6 +28,8 @@ import { prettyToJSONPath } from './FilterSelect'
 import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
 import { Tooltip } from 'components/Tooltip'
+import AlertChart from 'components/Alerts/AlertChart'
+import { countFields } from 'components/Alerts/AlertUtil'
 
 const LogList = (props) => {
   const context = useContext(AlertContext)
@@ -36,10 +39,11 @@ const LogList = (props) => {
   const [logs, setLogs] = useState([])
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
-  const perPage = 20
+  const perPage = 50
   const [params, setParams] = useState({ num: perPage })
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
   const [searchField, setSearchField] = useState('')
+  const [fieldCounts, setFieldCounts] = useState({});
 
   const colorMode = useColorMode()
 
@@ -47,7 +51,7 @@ const LogList = (props) => {
     //TODO map logs, merge timestamps
     let min = new Date('2023-01-12T00:00:00Z').toISOString()
     let max = new Date().toISOString()
-    let num = 20
+    let num = perPage
 
     setParams({ ...params, num, max })
 
@@ -121,6 +125,10 @@ const LogList = (props) => {
     }
     result = result.map((r) => parseLog(r, bucket))
 
+    const counts = countFields(result)
+
+    setFieldCounts(counts);
+
     setLogs(result)
   }
 
@@ -173,7 +181,6 @@ const LogList = (props) => {
       <Select
         size="xs"
         selectedValue={selectedValue}
-        initialLabel={selectedValue}
         onValueChange={onValueChange}
         minWidth="$32"
         maxWidth="$32"
@@ -192,6 +199,13 @@ const LogList = (props) => {
       <EditDatabase onSubmit={() => {}} />
     )
   }
+
+  const handleBarClick = (label, count) => {
+    let parts = label.split(':', 2)
+    if (parts.length == 2) {
+      setSearchField(parts[0] + '=="' + label.substr(parts[0].length+1) + '"')
+    }
+  };
 
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
@@ -259,24 +273,27 @@ const LogList = (props) => {
         </HStack>
       </HStack>
 
-      <FlatList
-        flex={2}
-        data={logs}
-        estimatedItemSize={100}
-        renderItem={({ item }) => (
-          <LogListItem item={item} selected={getCurrentBucket()} />
-        )}
-        keyExtractor={(item, index) => item.time + index}
-      />
-
-      {total > perPage ? (
-        <Pagination
-          page={page}
-          pages={total}
-          perPage={perPage}
-          onChange={(p) => updatePage(p, page)}
+      <ScrollView>
+        <AlertChart fieldCounts={fieldCounts} onBarClick={handleBarClick} />
+        {total > perPage ? (
+          <Pagination
+            page={page}
+            pages={total}
+            perPage={perPage}
+            onChange={(p) => updatePage(p, page)}
+          />
+        ) : null}
+        <FlatList
+          flex={2}
+          data={logs}
+          estimatedItemSize={100}
+          renderItem={({ item }) => (
+            <LogListItem item={item} selected={getCurrentBucket()} />
+          )}
+          keyExtractor={(item, index) => item.time + index}
         />
-      ) : null}
+
+      </ScrollView>
     </View>
   )
 }

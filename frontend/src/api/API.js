@@ -202,9 +202,6 @@ class API {
 
     return this.fetch(method, url, body)
       .then((response) => {
-        if (response.redirected) {
-          window.location = '/auth/validate'
-        }
 
         if (!response.ok) {
           return Promise.reject({
@@ -234,6 +231,7 @@ class API {
       })
       .catch((err) => {
         //call registered handlers
+        //console.log('-- Throoow', err)
         let status = parseInt(err.status)
         if (Array.isArray(gErrorHandlers[status])) {
           gErrorHandlers[status].map((handler) => {
@@ -261,11 +259,19 @@ class API {
     return this.get('/features')
   }
 
-  version(plugin = '') {
-    if (plugin !== '') {
-      return this.get('/version?plugin=' + plugin)
+  //plugins = array or string
+  version(plugins = null) {
+    let params = new URLSearchParams()
+
+    if (plugins?.length) {
+      if (!Array.isArray(plugins)) {
+        plugins = ['' + plugins]
+      }
+
+      plugins.map((p) => params.append('plugin', p))
     }
-    return this.get('/version')
+
+    return this.get(`/version?${params}`)
   }
 
   // auto-check-update status

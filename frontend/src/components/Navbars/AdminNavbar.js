@@ -2,8 +2,12 @@ import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useNavigate } from 'react-router-dom'
+import { api } from 'api'
 
 import {
+  Badge,
+  BadgeIcon,
+  BadgeText,
   Button,
   ButtonIcon,
   HStack,
@@ -13,13 +17,12 @@ import {
   MenuIcon,
   MoonIcon,
   SunIcon,
+  VStack,
   useColorMode,
   Pressable,
-  Badge,
-  BadgeText
 } from '@gluestack-ui/themed'
 
-import { LogOutIcon } from 'lucide-react-native'
+import { BookOpenText, AlertCircleIcon, LogOutIcon } from 'lucide-react-native'
 
 import { AppContext } from 'AppContext'
 
@@ -36,6 +39,7 @@ const AdminNavbar = ({
   ...props
 }) => {
   const { isMeshNode, setActiveSidebarItem } = useContext(AppContext)
+  const [versionStatus, setVersionStatus] = useState('')
 
   const colorMode = useColorMode()
   //const toggleColorModeNB = useColorModeNB().toggleColorMode
@@ -54,6 +58,54 @@ const AdminNavbar = ({
 
     return v
   }
+
+  const checkUpdate = () => {
+
+    api
+      .get('/releasesAvailable?container=super_base')
+      .then((versions) => {
+        versions?.reverse() // sort by latest first
+        let latest = versions.find((v) => !v.includes('-dev'))
+        let latestDev = versions.find((v) => v.includes('-dev'))
+
+        let current = version
+        // if latest get version
+        //if (current.startsWith('latest')) {
+        //  current = current.includes('-dev') ? latestDev : latest
+        //
+        if (current != 'default' && current != latest && current != latestDev) {
+          setVersionStatus("Mismatch")
+        } else {
+          setVersionStatus("")
+        }
+      })
+      .catch((err) => {})
+      .finally(() => {
+      })
+  }
+
+
+  useEffect(() => {
+      api
+        .getCheckUpdates()
+        .then((state) => {
+          const lastCheckTime = localStorage.getItem('lastUpdateCheckTime')
+
+          const currentTime = new Date().getTime()
+
+          if (
+            state == true &&
+            (!lastCheckTime || currentTime - lastCheckTime >= 3600000)
+          ) {
+            checkUpdate()
+
+            localStorage.setItem('lastUpdateCheckTime', currentTime)
+          }
+        })
+        .catch((err) => {})
+
+  }, [version, checkUpdate])
+
 
   return (
     <>
@@ -94,30 +146,45 @@ const AdminNavbar = ({
             />
           </Button>
 
-          <Pressable
-            onPress={() => {
-              setActiveSidebarItem('home')
-              navigate('/admin/home')
-            }}
-          >
             <HStack space="sm">
-              <Text size="lg" bold>
-                SPR
-              </Text>
-              {isMeshNode ? <Text size="lg">MESH</Text> : null}
+              <Pressable
+                onPress={() => {
+                  setActiveSidebarItem('home')
+                  navigate('/admin/home')
+                }}
+              >
+                <Text size="lg" bold>
+                  SPR
+                </Text>
+                {isMeshNode ? <Text size="lg">MESH</Text> : null}
+              </Pressable>
+
+              <VStack justifyContent="flex-end">
               <Badge
                 variant="outline"
                 action="muted"
                 bg="$transparent"
                 rounded="$2xl"
-                size="md"
+                size="sm"
               >
-                <BadgeText color="$muted500" textTransform="none">
+
+                <Pressable
+                  key={"version"}
+                  onPress={() => navigate('/admin/info')}
+                >
+                <HStack>
+                <BadgeText mb="$1" color={versionStatus=='' ? "$muted500" : "$warning300"} textTransform="none">
                   {niceVersion(version)}
                 </BadgeText>
+
+                {versionStatus!=='' &&
+                  <BadgeIcon color={versionStatus=='' ? "$muted500" : "$warning300"} as={AlertCircleIcon}  />
+                }
+                </HStack>
+                </Pressable>
               </Badge>
+              </VStack>
             </HStack>
-          </Pressable>
 
           <RouteJump />
 
@@ -137,25 +204,7 @@ const AdminNavbar = ({
                 }
               }}
             >
-              <LinkText size="sm">Docs</LinkText>
-            </Link>
-            <Link
-              size="md"
-              isExternal
-              href="https://www.supernetworks.org/pages/api/0"
-              sx={{
-                '@base': { display: 'none' },
-                '@lg': { display: 'flex' },
-                _text: {
-                  textDecorationLine: 'none',
-                  color:
-                    colorMode == 'light'
-                      ? '$navbarTextColorLight'
-                      : '$navbarTextColorDark'
-                }
-              }}
-            >
-              <LinkText size="sm">API</LinkText>
+              <ButtonIcon as={BookOpenText} size="lg" />
             </Link>
 
             <Button

@@ -1,8 +1,10 @@
 import React, { useContext, useEffect, useState } from 'react'
-import Logs from 'views/Logs'
 
 import {
   Box,
+  Button,
+  ButtonText,
+  ButtonIcon,
   Heading,
   HStack,
   FlatList,
@@ -12,6 +14,7 @@ import {
   Input,
   InputField,
   Icon,
+  RepeatIcon,
   Text,
   VStack,
   ScrollView,
@@ -22,10 +25,10 @@ import { api } from 'api'
 import { AlertContext } from 'AppContext'
 import { ucFirst } from 'utils'
 
-import DockerInfo from 'views/System/Docker'
 import ReleaseInfo from 'components/System/Release'
 import ConfigsBackup from 'views/System/Configs'
 import Database from 'views/System/Database'
+import { ListHeader } from 'components/List'
 
 const SystemInfo = (props) => {
   const context = useContext(AlertContext)
@@ -66,6 +69,13 @@ const SystemInfo = (props) => {
       .catch((err) => context.error('hostname update', err))
   }
 
+  const doRestart = () => {
+    api
+      .put('/restart', hostname)
+      .then(context.success('Sent restart request'))
+      .catch((err) => context.error('failed to call restart', err))
+  }
+
   const niceKey = (key) => ucFirst(key.replace(/_/, ' ').replace(/m$/, ' min'))
 
   const colorMode = useColorMode()
@@ -75,9 +85,12 @@ const SystemInfo = (props) => {
     <ScrollView h="$full" sx={{ '@md': { h: '92vh' } }}>
       <ReleaseInfo />
       <VStack space="md">
-        <HStack p="$4">
-          <Heading size="md">System Info</Heading>
-        </HStack>
+        <ListHeader title="System Info">
+          <Button action="primary" size="sm" onPress={doRestart}>
+            <ButtonText>Restart SPR</ButtonText>
+            <ButtonIcon as={RepeatIcon} ml="$2" />
+          </Button>
+        </ListHeader>
 
         <Box>
           <VStack space="md" mb="$4" sx={{ '@md': { flexDirection: 'row' } }}>
@@ -189,8 +202,6 @@ const SystemInfo = (props) => {
 
         <Database />
         <ConfigsBackup />
-        <DockerInfo />
-        <Logs />
       </VStack>
     </ScrollView>
   )

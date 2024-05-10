@@ -167,7 +167,7 @@ const WifiClients = (props) => {
           <Box
             sx={{
               '@base': { display: 'none' },
-              '@md': { display: 'flex', flex: 1 }
+              '@md': { display: 'flex', flex: 0.5 }
             }}
             alignItems="center"
           >

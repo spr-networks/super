@@ -8,10 +8,23 @@ global.XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest
 //TODO mock-socket or alternative
 global.WebSocket = class {
   addEventListener(event, fn) {}
+  close() {}
 }
 jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage)
 jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter')
 jest.mock('react-native-chart-kit', () => () => <></>)
+
+jest.mock('react-native-device-info', () => {
+  return {
+    getUniqueId: () => 1234
+  }
+})
+
+jest.mock('react-native-rsa-native', () => {
+  return {
+    RSA: {}
+  }
+})
 
 jest.mock('@react-native-community/push-notification-ios', () => {
   return {

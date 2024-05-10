@@ -13,7 +13,7 @@ export default class AuthSettings extends Component {
 
   render() {
     return (
-      <View>
+      <View h="$full">
         <OTPSettings />
         {/*<WebAuthn />*/}
         <AuthTokenList />

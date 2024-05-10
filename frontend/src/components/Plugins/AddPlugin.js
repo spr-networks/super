@@ -68,6 +68,7 @@ const AddPlugin = (props) => {
             type="text"
             name="Name"
             value={Name}
+            autoFocus
             onChangeText={(value) => handleChange('Name', value)}
           />
         </Input>

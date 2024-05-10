@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import { AlertContext, ModalContext } from 'AppContext'
 import { deviceAPI, wifiAPI } from 'api'
-import ModalConfirm from 'components/ModalConfirm'
 import DeviceQRCode from './DeviceQRCode'
 import { Tooltip } from 'components/Tooltip'
 import { prettyDate } from 'utils'
@@ -14,8 +13,6 @@ import {
   ButtonIcon,
   Box,
   Icon,
-  Input,
-  InputField,
   HStack,
   VStack,
   Text,
@@ -24,22 +21,14 @@ import {
   MenuItemLabel,
   Pressable,
   useColorMode,
-  CircleIcon,
   CopyIcon,
   TrashIcon,
   ThreeDotsIcon
 } from '@gluestack-ui/themed'
 
-import { Address4 } from 'ip-address'
-
 import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
 import IconItem from 'components/IconItem'
-import {
-  EyeIcon,
-  PencilIcon,
-  WaypointsIcon,
-  WifiIcon
-} from 'lucide-react-native'
+import { PencilIcon, WaypointsIcon, WifiIcon } from 'lucide-react-native'
 
 const DeviceIcon = ({ icon, color: _color, isConnected, ...props }) => {
   let color = _color ? `$${_color}400` : '$blueGray400'
@@ -141,121 +130,15 @@ const DeviceInfo = ({ identity, ...props }) => {
   ))
 }
 
-const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
+const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
-
-  const [editing, setEditing] = useState(false)
-  const [name, setName] = useState(device.Name)
-  const [ip, setIP] = useState(device.RecentIP)
-  const [policies, setPolicies] = useState(device.Policies?.sort() || [])
-  const [groups, setGroups] = useState(device.Groups.sort())
-  const [tags, setTags] = useState(device.DeviceTags.sort())
-  const [showModal, setShowModal] = useState(false)
-  const [modalType, setModalType] = useState('')
   const navigate = useNavigate()
-
-  const defaultPolicies = props.policies || [
-    'wan',
-    'dns',
-    'lan',
-    'lan_upstream'
-  ]
-  const defaultGroups = props.groups || []
-  const defaultTags = props.tags || []
-
-  const handleGroups = (groups) => {
-    if (!device.MAC && !device.WGPubKey) {
-      return
-    }
-
-    setGroups([...new Set(groups.filter((v) => typeof v === 'string'))])
-
-    deviceAPI
-      .updateGroups(device.MAC || device.WGPubKey, groups)
-      .catch((error) =>
-        this.context.error('[API] updateDevice error: ' + error.message)
-      )
-  }
-
-  const handlePolicies = (policies) => {
-    if (!device.MAC && !device.WGPubKey) {
-      return
-    }
-
-    setPolicies([...new Set(policies.filter((v) => typeof v === 'string'))])
-
-    deviceAPI
-      .updatePolicies(device.MAC || device.WGPubKey, policies)
-      .catch((error) =>
-        this.context.error('[API] updateDevice error: ' + error.message)
-      )
-  }
-
-  const handleTags = (tags) => {
-    if (!device.MAC && !device.WGPubKey) {
-      return
-    }
-
-    setTags([...new Set(tags.filter((v) => typeof v === 'string'))])
-
-    deviceAPI
-      .updateTags(device.MAC || device.WGPubKey, tags)
-      .catch((error) =>
-        context.error('[API] updateDevice error: ' + error.message)
-      )
-  }
-
-  const handleName = (name) => {
-    setName(name)
-    setEditing(name != device.Name)
-  }
-
-  function toLong(ipAddress) {
-    return ipAddress.parsedAddress.reduce(
-      (accumulator, octet) => (accumulator << 8) + Number(octet),
-      0
-    )
-  }
-
-  function fromLong(long) {
-    return [
-      (long >>> 24) & 0xff,
-      (long >>> 16) & 0xff,
-      (long >>> 8) & 0xff,
-      long & 0xff
-    ].join('.')
-  }
-
-  function makeTinyAddress(ipAddress) {
-    let subnet
-    let address
-    try {
-      address = new Address4(ipAddress)
-      subnet = new Address4(address.startAddress().address + '/30')
-    } catch {
-      return ipAddress
-    }
-
-    return fromLong(toLong(subnet.startAddress()) + 2)
-  }
-
-  const handleIP = (ip) => {
-    //transform ip into a tinynet address , and notify
-    let new_ip = makeTinyAddress(ip)
-    if (ip != new_ip) {
-      context.info(
-        'SPR Micro-Segmentation Uses /30 network IP assignments, forcing IP to device IP'
-      )
-      ip = new_ip
-    }
-    setIP(ip)
-    setEditing(ip != device.RecentIP)
-  }
 
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
   let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
 
+  //NOTE dup code, same in view for deleteListItem
   const removeDevice = () => {
     let id = device.MAC || device.WGPubKey || 'pending'
 
@@ -273,7 +156,8 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
     let data = {
       MAC: 'pending',
       Name: `${device.Name} #copy`,
-      Groups: groups
+      Groups: device.Groups?.sort() || [],
+      DeviceTags: device.DeviceTags?.sort() || []
     }
 
     deviceAPI
@@ -289,67 +173,6 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
         context.error('Failed to duplicate device', error)
       })
   }
-
-  const saveDevice = async () => {
-    let id = device.MAC || device.WGPubKey
-    if (!name) {
-      return
-    }
-
-    if (name != device.Name) {
-      deviceAPI
-        .updateName(id, name)
-        .then(notifyChange)
-        .catch((error) =>
-          context.error('[API] updateName error: ' + error.message)
-        )
-    }
-
-    if (ip != device.RecentIP) {
-      deviceAPI
-        .updateIP(id, ip)
-        .then(notifyChange)
-        .catch((error) =>
-          context.error(
-            '[API] updateIP error: ' +
-              error.message +
-              '. IP not in range or not a valid Supernetwork Device IP'
-          )
-        )
-    }
-  }
-
-  const handleSubmit = () => {
-    setEditing(false)
-    saveDevice()
-  }
-
-  const handleSubmitNew = (value) => {
-    if (modalType.match(/Group/i)) {
-      handleGroups(groups.concat(value))
-    } else if (modalType.match(/Policy/i)) {
-      handlePolicies(policies.concat(value))
-    } else if (modalType.match(/Tag/i)) {
-      handleTags(tags.concat(value))
-    }
-  }
-
-  /*
-  let colors = [
-    'violet',
-    'fuchsia',
-    'purple',
-    'pink',
-    'tertiary',
-    'teal',
-    'cyan',
-    'blueGray',
-    'dark',
-    'amber'
-  ]
-
-  let idx = (device.Name.charCodeAt(0) || 0) % colors.length
-  */
 
   const trigger = (triggerProps) => (
     <Button action="secondary" variant="link" ml="auto" {...triggerProps}>
@@ -421,7 +244,6 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
     return res
   }
 
-  const inlineEdit = false
   const colorMode = useColorMode()
 
   return (
@@ -489,36 +311,24 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
                 '@md': { justifyContent: 'center', alignItems: 'flex-end' }
               }}
             >
-              {inlineEdit ? (
-                <Input size="lg" variant="underlined" w="100%">
-                  <InputField
-                    type="text"
-                    value={ip}
-                    autoFocus={false}
-                    onChangeText={(value) => handleIP(value)}
-                    onSubmitEditing={handleSubmit}
+              <HStack space="sm" alignItems="center">
+                <Text size="md" bold>
+                  {device.RecentIP}
+                </Text>
+                <Box sx={{ '@md': { display: 'none' } }}>
+                  <Icon
+                    as={device.MAC ? WifiIcon : WaypointsIcon}
+                    size="sm"
+                    color={
+                      device.isConnected
+                        ? '$green600'
+                        : colorMode == 'light'
+                        ? '$muted200'
+                        : '$muted700'
+                    }
                   />
-                </Input>
-              ) : (
-                <HStack space="sm" alignItems="center">
-                  <Text size="md" bold>
-                    {ip}
-                  </Text>
-                  <Box sx={{ '@md': { display: 'none' } }}>
-                    <Icon
-                      as={device.MAC ? WifiIcon : WaypointsIcon}
-                      size="sm"
-                      color={
-                        device.isConnected
-                          ? '$green600'
-                          : colorMode == 'light'
-                          ? '$muted200'
-                          : '$muted700'
-                      }
-                    />
-                  </Box>
-                </HStack>
-              )}
+                </Box>
+              </HStack>
 
               <Text size="sm" color="$muted500">
                 {device.MAC || ' '}
@@ -553,37 +363,29 @@ const Device = React.memo(({ device, showMenu, notifyChange, ...props }) => {
             alignItems="flex-start"
             sx={{ '@md': { w: '$2/5', alignSelf: 'center' } }}
           >
-            {policies.map((policy) => (
+            {device.Policies?.sort().map((policy) => (
               <PolicyItem key={policy} name={policy} />
             ))}
 
-            {groups.map((group) => (
+            {device.Groups?.sort().map((group) => (
               <GroupItem key={group} name={group} />
             ))}
 
-            {tags.map((tag) => (
+            {device.DeviceTags?.sort().map((tag) => (
               <TagItem key={tag} name={tag} />
             ))}
           </HStack>
         </VStack>
         {showMenu ? moreMenu : null}
       </HStack>
-      <ModalConfirm
-        type={modalType}
-        onSubmit={handleSubmitNew}
-        onClose={() => setShowModal(false)}
-        isOpen={showModal}
-      />
     </Pressable>
   )
 })
 
 Device.propTypes = {
   device: PropTypes.object.isRequired,
-  showMenu: PropTypes.bool,
-  groups: PropTypes.array,
-  tags: PropTypes.array,
-  policies: PropTypes.array
+  notifyChange: PropTypes.func.isRequired,
+  showMenu: PropTypes.bool
 }
 
 export default Device

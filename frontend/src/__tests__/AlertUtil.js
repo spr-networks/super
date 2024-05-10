@@ -11,17 +11,25 @@ const mockContext = {
 }
 
 describe('Parse Message', () => {
-  test('wifi:auth:success', async () => {
+  test('alert:wifi:auth:success', async () => {
     let Data = {
-      Event: 'AP-STA-CONNECTED',
-      Iface: 'wlan1.4108',
-      MAC: '11:22:33:44:55:66',
-      Router: '',
-      Status: ''
+      Title: 'Wifi Station Connected',
+      Body: 'Authentication success for {{MAC#Device}}',
+      Event: {
+        Event: 'AP-STA-CONNECTED',
+        Iface: 'wlan1.4108',
+        MAC: '11:22:33:44:55:66',
+        Router: '',
+        Status: ''
+      },
+      NotificationType: 'info',
+      RuleId: 'cb738c6f-aa20-4673-9012-1fc1646b83af',
+      State: '',
+      Topic: 'wifi:auth:success'
     }
-
-    let msg = { Data, Notification: true, Type: 'wifi:auth:success' }
+    let msg = { Data, Notification: true, Type: 'alert:' }
     const parsed = await parseLogMessage(mockContext, msg)
+    expect(parsed != null)
     expect(parsed.body).toMatch(/^Authentication success for Device#11$/)
   })
 

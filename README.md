@@ -109,15 +109,16 @@ docker-compose up -d
 
 ## Useful Links
 
-* Our website: https://www.supernetworks.org/
-* API Docs https://www.supernetworks.org/pages/api/0
-* Documentation Home: https://www.supernetworks.org/pages/docs/intro/
-* Raspberry Pi 4 Setup https://www.supernetworks.org/pages/docs/pi4b
-* General Setup Guide https://www.supernetworks.org/pages/docs/setup_run_spr
-* FAQ https://www.supernetworks.org/pages/docs/faq
-* Get the iOS App https://apps.apple.com/us/app/secure-programmable-router/id6443709201
-* Join the Discord chat https://discord.gg/EUjTKJPPAX
-* Virtual Setup Guide (Personal VPN): https://www.supernetworks.org/pages/docs/setup_guides/virtual_spr#setup-and-connect-to-vpn
+* [supernetworks.org](https://www.supernetworks.org/)
+* [API Docs](https://www.supernetworks.org/pages/api/0)
+* [Documentation Home](https://www.supernetworks.org/pages/docs/intro)
+* [Raspberry Pi 4 Setup Guide](https://www.supernetworks.org/pages/docs/setup_guides/pi4b)
+* [General Setup Guide](https://www.supernetworks.org/pages/docs/setup_guides/setup_run_spr)
+* [Virtual Setup Guide (Personal VPN)](https://www.supernetworks.org/pages/docs/setup_guides/virtual_spr)
+
+* [FAQ](https://www.supernetworks.org/pages/docs/faq)
+* [Get the iOS App](https://apps.apple.com/us/app/secure-programmable-router/id6443709201)
+* [Join the Discord chat](https://discord.gg/EUjTKJPPAX)
 
 
 

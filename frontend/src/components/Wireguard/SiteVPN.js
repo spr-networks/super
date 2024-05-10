@@ -1,42 +1,75 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useContext, useEffect, useRef } from 'react'
 
-import { pfwAPI } from 'api'
+import { api, pfwAPI, wireguardAPI } from 'api'
 import WireguardAddSite from 'components/Wireguard/WireguardAddSite'
 import ModalForm from 'components/ModalForm'
+import { AlertContext } from 'AppContext'
+import { prettyDate, prettySize } from 'utils'
 
 import {
+  AddIcon,
+  AlertCircleIcon,
   Button,
   ButtonIcon,
   ButtonText,
+  CheckCircleIcon,
+  CloseIcon,
   FlatList,
   HStack,
+  Icon,
   Text,
   VStack,
-  AddIcon,
-  CloseIcon
 } from '@gluestack-ui/themed'
+
+import { ArrowUpCircleIcon, ArrowDownCircleIcon } from 'lucide-react-native'
 
 import { ListHeader, ListItem } from 'components/List'
 
 const SiteVPN = (props) => {
   const [sites, setSites] = useState(null)
+  const [siteStatus, setSiteStatus] = useState({})
+  const context = useContext(AlertContext)
 
   const refreshSites = () => {
     pfwAPI.config().then((config) => {
-      let s = []
+      let s = [];
       for (let i = 0; i < config.SiteVPNs.length; i++) {
         let extension = {
           Index: i,
-          Interface: 'site' + i
-        }
-        let new_obj = { ...extension, ...config.SiteVPNs[i] }
-        s.push(new_obj)
+          Interface: 'site' + i,
+        };
+        let new_obj = { ...extension, ...config.SiteVPNs[i] };
+        s.push(new_obj);
       }
 
-      setSites(s)
-    })
-  }
 
+      //wake up each site first
+      const putPromises = s.map((site) => {
+        return api.put(`/ping/${site.Interface}/127.0.0.1`).catch(() => {});
+      });
+
+      Promise.all(putPromises)
+        .then(() => {
+          //now get wireguard status
+          wireguardAPI
+            .status()
+            .then((status) => {
+              let newStatus = {}
+              for (let entry of s) {
+                if (status[entry.Interface]) {
+                  newStatus[entry.Interface] = status[entry.Interface]
+                }
+              }
+              setSiteStatus(newStatus)
+              setSites(s)
+              //alert(JSON.stringify(newStatus["site0"].peers[]))
+            })
+        })
+        .catch((e) => {
+          context.error('Failed to query pfw', e);
+        });
+    });
+  };
   useEffect(() => {
     refreshSites()
   }, [])
@@ -52,6 +85,48 @@ const SiteVPN = (props) => {
 
   const triggerModal = () => {
     refModal.current()
+  }
+
+  const getOnlineStatus = (item) => {
+    let itemStatus = siteStatus[item.Interface]
+    if (!itemStatus) { return null }
+    let peer = Object.keys(itemStatus.peers)[0]
+    if (!peer) { return null }
+    peer = itemStatus.peers[peer]
+    if (!peer) { return null }
+    const isOnlineWithinLastHour = peer.latestHandshake && Date.now() - peer.latestHandshake * 1e3 < 60 * 60 * 1000;
+
+    return (
+      <HStack>
+        {isOnlineWithinLastHour ? (
+          <HStack>
+            <Icon as={CheckCircleIcon} color="$success600" size="lg" />
+            <Text size="lg" bold> Online </Text>
+          </HStack>
+        ) :
+        (
+          <HStack>
+            <Icon as={AlertCircleIcon} color="$error600" size="lg" />
+            <Text size="lg" bold> Offline </Text>
+          </HStack>
+        )
+        }
+
+        {peer.transferRx ? (
+          <HStack flex={1} space="sm">
+            <HStack space="xs" alignItems="center">
+              <Icon as={ArrowUpCircleIcon} color="$muted500" />
+              <Text size="xs">{prettySize(peer.transferTx)}</Text>
+            </HStack>
+            <HStack space="xs" alignItems="center">
+              <Icon as={ArrowDownCircleIcon} color="$muted500" />
+              <Text size="xs">{prettySize(peer.transferRx)}</Text>
+            </HStack>
+          </HStack>
+        ) : null}
+
+      </HStack>
+    )
   }
 
   return (
@@ -72,7 +147,6 @@ const SiteVPN = (props) => {
           <WireguardAddSite notifyChange={refreshSites} />
         </ModalForm>
       </ListHeader>
-
       {sites !== null && sites.length ? (
         <FlatList
           data={sites}
@@ -81,6 +155,9 @@ const SiteVPN = (props) => {
               <Text flex={1} bold>
                 {item.Interface}
               </Text>
+
+              {getOnlineStatus(item)}
+
               <Text flex={1}>{item.Address}</Text>
               <Text flex={1}>{item.Endpoint}</Text>
               <Text

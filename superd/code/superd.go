@@ -940,6 +940,7 @@ func main() {
 	unix_plugin_router := mux.NewRouter().StrictSlash(true)
 	unix_plugin_router.HandleFunc("/restart", restart).Methods("PUT")
 	unix_plugin_router.HandleFunc("/start", start).Methods("PUT")
+	unix_plugin_router.HandleFunc("/stop", stop).Methods("PUT")
 	unix_plugin_router.HandleFunc("/update", update).Methods("PUT")
 	unix_plugin_router.HandleFunc("/remove", removeUserContainer).Methods("PUT")
 	unix_plugin_router.HandleFunc("/build", build).Methods("PUT")

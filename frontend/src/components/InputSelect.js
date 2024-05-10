@@ -28,7 +28,7 @@ import { ucFirst } from 'utils'
 import IconItem from './IconItem'
 
 const prefixValue = (value) => {
-  if (typeof value == 'object') {
+  if (value && typeof value == 'object') {
     let prefix = 'group',
       v = 'empty'
 
@@ -371,7 +371,7 @@ const InputSelect = (props) => {
 
 export default InputSelect //React.memo(InputSelect)
 
-export { InputSelect, SelectMenu }
+export { ActionSheetMenu, InputSelect, SelectMenu }
 
 InputSelect.propTypes = {
   isDisabled: PropTypes.bool,

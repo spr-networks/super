@@ -152,5 +152,45 @@ export default [
     Name: 'dns resolve',
     Disabled: true,
     RuleId: 'f6bdb6ee-ffcb-41af-b3c7-6270cba936fb'
-  }
+  },
+  {
+   TopicPrefix: "device:vpn:online",
+   MatchAnyOne: false,
+   InvertRule: false,
+   Conditions: [],
+   Actions: [
+    {
+     SendNotification: true,
+     StoreAlert: false,
+     MessageTitle: "{{DeviceIP#Device}} connected via {{VPNType}} from {{RemoteEndpoint}}",
+     MessageBody: "{{DeviceIP#Device}} connected via {{VPNType}} from {{RemoteEndpoint}}",
+     NotificationType: "info",
+     GrabEvent: true,
+     GrabValues: false
+    }
+   ],
+   Name: "VPN Connection",
+   Disabled: false,
+   RuleId: "6d3c9a04-8ad4-4ad3-8e7d-4fe61fd3c592"
+ },
+ {
+  TopicPrefix: "device:vpn:offline",
+  MatchAnyOne: false,
+  InvertRule: false,
+  Conditions: [],
+  Actions: [
+   {
+    SendNotification: true,
+    StoreAlert: false,
+    MessageTitle: "{{DeviceIP#Device}} disconnected from {{VPNType}} by {{RemoteEndpoint}}",
+    MessageBody: "{{DeviceIP#Device}} disconnected from {{VPNType}} by {{RemoteEndpoint}}",
+    NotificationType: "info",
+    GrabEvent: true,
+    GrabValues: false
+   }
+  ],
+  Name: "VPN Connection",
+  Disabled: false,
+  RuleId: "6d3c9a04-8ad4-4ad3-8e7d-4fe61fd3c593"
+},
 ]

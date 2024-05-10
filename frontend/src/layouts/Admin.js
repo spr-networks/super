@@ -161,42 +161,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
   const toggleAlert = () => setShowAlert(!showAlert)
 
-  const checkUpdate = () => {
-    api
-      .get('/releasesAvailable?container=super_base')
-      .then((versions) => {
-        versions?.reverse() // sort by latest first
-
-        let latest = versions.find((v) => !v.includes('-dev'))
-        let latestDev = versions.find((v) => v.includes('-dev'))
-
-        api
-          .get('/release')
-          .then((releaseInfo) => {
-            let current = releaseInfo.Current
-
-            // if latest get version
-            if (current.startsWith('latest')) {
-              current = current.includes('-dev') ? latestDev : latest
-            }
-
-            if (current.includes('-dev') && current != latestDev) {
-              alertState.info(
-                `New SPR available: Latest dev version is ${latestDev}, current version is ${current}`
-              )
-            } else if (current != latest) {
-              alertState.info(
-                `New SPR available: Latest version is ${latest}, current version is ${current}`
-              )
-            } else {
-              alertState.success(`${current} is the latest version of spr`)
-            }
-          })
-          .catch((err) => alertState.error(err))
-      })
-      .catch((err) => {})
-      .finally(() => {})
-  }
 
   //setup alert context
   alertState.alert = (type = 'info', title, body = null) => {
@@ -285,7 +249,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const [isWifiDisabled, setIsWifiDisabled] = useState(null)
   const [isPlusDisabled, setIsPlusDisabled] = useState(true)
   const [isMeshNode, setIsMeshNode] = useState(false)
-  const [version, setVersion] = useState('0.2.1')
+  const [version, setVersion] = useState('default')
   const [features, setFeatures] = useState([])
   const [devices, setDevices] = useState([])
   const [groups, setGroups] = useState([])
@@ -365,23 +329,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
   //main init here
   useEffect(() => {
-    api
-      .getCheckUpdates()
-      .then((state) => {
-        const lastCheckTime = localStorage.getItem('lastUpdateCheckTime')
-
-        const currentTime = new Date().getTime()
-
-        if (
-          state == true &&
-          (!lastCheckTime || currentTime - lastCheckTime >= 3600000)
-        ) {
-          checkUpdate()
-
-          localStorage.setItem('lastUpdateCheckTime', currentTime)
-        }
-      })
-      .catch((err) => {})
 
     //global handlers for api errors
     api.registerErrorHandler(404, (err) => {
@@ -394,8 +341,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
       //custom handler for /admin/auth page
       if (url.endsWith('/tokens')) {
-        //setAuthReturn('/admin/auth/')
-        //navigate('/auth/validate')
+        //NOTE we have a custom .catch on tokens page
       } else {
         modalState.modal(
           'OTP Validate',

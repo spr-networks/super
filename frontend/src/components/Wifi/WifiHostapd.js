@@ -25,6 +25,52 @@ import {
   VStack
 } from '@gluestack-ui/themed'
 
+/*
+<HStack space="md" alignItems="center">
+  <Icon
+    as={
+      iw.supported_ciphers.includes(
+        'GCMP-128 (00-0f-ac:8)'
+      )
+        ? CheckCircleIcon
+        : AlertCircleIcon
+    }
+    color={
+      iw.supported_ciphers.includes(
+        'GCMP-128 (00-0f-ac:8)'
+      )
+        ? '$success600'
+        : '$warning600'
+    }
+    size="lg"
+  />
+
+  <Text w={100}>WPA3/SAE</Text>
+  <Text
+    flex={1}
+    color="$muted500"
+    size="sm"
+    flexWrap="wrap"
+  >
+    Recommended for better security
+  </Text>
+</HStack>
+<HStack space="md" alignItems="center">
+  <Icon
+    as={
+      iw.supported_interface_modes.includes('AP/VLAN')
+        ? CheckCircleIcon
+        : AlertCircleIcon
+    }
+    color={
+      iw.supported_interface_modes.includes('AP/VLAN')
+        ? '$success600'
+        : '$error600'
+    }
+    size="lg"
+  />
+*/
+
 import { RotateCwIcon, WifiIcon } from 'lucide-react-native'
 
 import { Select } from 'components/Select'
@@ -508,10 +554,12 @@ const WifiHostapd = (props) => {
     if (iface == '') {
       wifiAPI.defaultInterface().then((defIface) => {
         setIface(defIface)
+      }).catch((e)=> {
+
       })
     }
 
-    if (iface == '') {
+    if (iface === '') {
       return
     }
 
@@ -940,7 +988,7 @@ const WifiHostapd = (props) => {
         </FormControl>
       </Box>
 
-      {config.interface && interfaceEnabled == true ? (
+      {config.interface && interfaceEnabled === true ? (
         <WifiChannelParameters
           iface={iface}
           iws={iws}

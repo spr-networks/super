@@ -172,6 +172,7 @@ export const DeviceTraffic = ({ minutes, showEmpty, ...props }) => {
               <DeviceItem
                 size="sm"
                 item={context.getDevice(item.ip, 'RecentIP')}
+                noPress
               />
             </Pressable>
             <HStack flex={1} space="xs" justifyContent="flex-end">

@@ -229,10 +229,6 @@ const ReleaseInfo = ({ showModal, ...props }) => {
           .getCheckUpdates()
           .then((state) => {
             setCheckUpdates(state)
-
-            if (state == true) {
-              checkUpdate(releaseInfo)
-            }
           })
           .catch((err) => {})
       })

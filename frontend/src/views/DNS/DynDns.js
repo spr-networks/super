@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import { dyndnsAPI } from 'api/Dyndns'
 import { AlertContext } from 'AppContext'
 import { ucFirst } from 'utils'
+import { Navigate } from 'react-router-dom';
 
 import {
   Box,
@@ -51,7 +52,7 @@ const Subdomain = ({ entry, domain, updateSubdomain, deleteSubdomain }) => (
 )
 
 export default class DynDns extends Component {
-  state = { isUp: true, config: {} }
+  state = { isUp: true, config: {}, navigate: false }
   constructor(props) {
     super(props)
     this.config = {}
@@ -67,6 +68,10 @@ export default class DynDns extends Component {
     this.deleteSubdomain = this.deleteSubdomain.bind(this)
     this.updateSubdomain = this.updateSubdomain.bind(this)
   }
+
+  handleButtonClick = () => {
+    this.setState({ navigate: true });
+  };
 
   getConfig() {
     dyndnsAPI
@@ -199,6 +204,11 @@ export default class DynDns extends Component {
   }
 
   render() {
+
+    if (this.state.navigate) {
+      return <Navigate to="/admin/plugins" replace={true} />;
+    }
+
     let domainData = []
     if (this.state.config.domains) {
       this.state.config.domains.forEach((entry) => {
@@ -225,12 +235,12 @@ export default class DynDns extends Component {
               Read the documentation
             </LinkText>
           </Link>
-          <Switch
+          {/*<Switch
             marginLeft="auto"
             value={this.state.isUp}
             defaultIsChecked={this.state.isUp}
             onValueChange={this.handleChange}
-          />
+          />*/}
         </ListHeader>
 
         <Box
@@ -376,7 +386,14 @@ export default class DynDns extends Component {
                 </Button>
               </VStack>
             ) : (
-              <Text>DynDNS Plugin is not running</Text>
+              <Button
+                size="sm"
+                action="secondary"
+                onPress={this.handleButtonClick}
+              >
+                <ButtonText>DynDNS Plugin is not running, enable under Plugins</ButtonText>
+                <ButtonIcon as={AddIcon} ml="$2" />
+              </Button>
             )}
           </VStack>
         </Box>

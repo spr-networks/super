@@ -43,7 +43,9 @@ const OTPSettings = (props) => {
     authAPI
       .statusOTP()
       .then((status) => {
-        setStatus(status.State)
+        if (status.Confirmed === true) {
+          setStatus(status.State)
+        }
         setAlwaysOn(status.AlwaysOn)
       })
       .catch((e) => {
@@ -60,7 +62,7 @@ const OTPSettings = (props) => {
           if (user.Name == 'admin') {
             if (user.Secret) {
               setQrCode(generateQRCode(user.Secret))
-              setStatus('registered')
+              setStatus('validate to set...')
             }
           }
         }

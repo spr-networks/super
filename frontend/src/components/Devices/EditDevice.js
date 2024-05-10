@@ -510,7 +510,12 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           <FormControlLabelText>Groups</FormControlLabelText>
         </FormControlLabel>
         <HStack flexWrap="wrap" w="$full" space="md">
-          <HStack space="md" flexWrap="wrap" alignItems="center">
+          <HStack
+            space="md"
+            flexWrap="wrap"
+            alignItems="center"
+            display={groups?.length ? 'flex' : 'none'}
+          >
             {groups.map((group) => (
               <GroupItem key={group} name={group} size="sm" />
             ))}
@@ -528,7 +533,6 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
             Assign to network access group
           </FormControlHelperText>
         </FormControlHelper>
-
       </FormControl>
 
       <FormControl>

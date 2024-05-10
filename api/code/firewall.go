@@ -2874,9 +2874,6 @@ func dynamicRouteLoop() {
 						continue
 					}
 
-					if len(ident) < 20 {
-						log.Println("[-] Missing vmap entries for mac=", ident, "new_iface=", new_iface, meshDownlink)
-					}
 				}
 
 				//ex tinynet
