@@ -511,7 +511,7 @@ func main() {
 				for _, target := range interfaces {
 					match_name := target.Name
 					if target.Type == "Uplink" {
-						return false
+						continue
 					}
 					if target.Type == "AP" {
 						match_name += "."
