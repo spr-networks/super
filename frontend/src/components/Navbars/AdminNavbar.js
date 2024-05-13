@@ -159,24 +159,18 @@ const AdminNavbar = ({
             <Pressable key={'version'} onPress={() => navigate('/admin/info')}>
               <Badge
                 variant="outline"
-                action="muted"
+                action={versionStatus == '' ? 'muted' : 'warning'}
                 bg="$transparent"
                 rounded="$2xl"
                 size="md"
                 py="$1"
               >
-                <BadgeText
-                  color={versionStatus == '' ? '$muted500' : '$warning300'}
-                  textTransform="none"
-                >
+                <BadgeText textTransform="none">
                   {niceVersion(version)}
                 </BadgeText>
 
                 {versionStatus !== '' && (
-                  <BadgeIcon
-                    color={versionStatus == '' ? '$muted500' : '$warning300'}
-                    as={AlertCircleIcon}
-                  />
+                  <BadgeIcon as={AlertCircleIcon} ml="$1" />
                 )}
               </Badge>
             </Pressable>
