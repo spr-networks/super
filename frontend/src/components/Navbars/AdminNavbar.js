@@ -19,7 +19,7 @@ import {
   SunIcon,
   VStack,
   useColorMode,
-  Pressable,
+  Pressable
 } from '@gluestack-ui/themed'
 
 import { BookOpenText, AlertCircleIcon, LogOutIcon } from 'lucide-react-native'
@@ -60,7 +60,6 @@ const AdminNavbar = ({
   }
 
   const checkUpdate = () => {
-
     api
       .get('/releasesAvailable?container=super_base')
       .then((versions) => {
@@ -74,38 +73,34 @@ const AdminNavbar = ({
         //  current = current.includes('-dev') ? latestDev : latest
         //
         if (current != 'default' && current != latest && current != latestDev) {
-          setVersionStatus("Mismatch")
+          setVersionStatus('Mismatch')
         } else {
-          setVersionStatus("")
+          setVersionStatus('')
         }
       })
       .catch((err) => {})
-      .finally(() => {
-      })
+      .finally(() => {})
   }
 
-
   useEffect(() => {
-      api
-        .getCheckUpdates()
-        .then((state) => {
-          const lastCheckTime = localStorage.getItem('lastUpdateCheckTime')
+    api
+      .getCheckUpdates()
+      .then((state) => {
+        const lastCheckTime = localStorage.getItem('lastUpdateCheckTime')
 
-          const currentTime = new Date().getTime()
+        const currentTime = new Date().getTime()
 
-          if (
-            state == true &&
-            (!lastCheckTime || currentTime - lastCheckTime >= 3600000)
-          ) {
-            checkUpdate()
+        if (
+          state == true &&
+          (!lastCheckTime || currentTime - lastCheckTime >= 3600000)
+        ) {
+          checkUpdate()
 
-            localStorage.setItem('lastUpdateCheckTime', currentTime)
-          }
-        })
-        .catch((err) => {})
-
+          localStorage.setItem('lastUpdateCheckTime', currentTime)
+        }
+      })
+      .catch((err) => {})
   }, [version, checkUpdate])
-
 
   return (
     <>
@@ -146,45 +141,46 @@ const AdminNavbar = ({
             />
           </Button>
 
-            <HStack space="sm">
-              <Pressable
-                onPress={() => {
-                  setActiveSidebarItem('home')
-                  navigate('/admin/home')
-                }}
-              >
+          <HStack space="sm" alignItems="center">
+            <Pressable
+              onPress={() => {
+                setActiveSidebarItem('home')
+                navigate('/admin/home')
+              }}
+            >
+              <HStack>
                 <Text size="lg" bold>
                   SPR
                 </Text>
                 {isMeshNode ? <Text size="lg">MESH</Text> : null}
-              </Pressable>
+              </HStack>
+            </Pressable>
 
-              <VStack justifyContent="flex-end">
+            <Pressable key={'version'} onPress={() => navigate('/admin/info')}>
               <Badge
                 variant="outline"
                 action="muted"
                 bg="$transparent"
                 rounded="$2xl"
-                size="sm"
+                size="md"
+                py="$1"
               >
-
-                <Pressable
-                  key={"version"}
-                  onPress={() => navigate('/admin/info')}
+                <BadgeText
+                  color={versionStatus == '' ? '$muted500' : '$warning300'}
+                  textTransform="none"
                 >
-                <HStack>
-                <BadgeText mb="$1" color={versionStatus=='' ? "$muted500" : "$warning300"} textTransform="none">
                   {niceVersion(version)}
                 </BadgeText>
 
-                {versionStatus!=='' &&
-                  <BadgeIcon color={versionStatus=='' ? "$muted500" : "$warning300"} as={AlertCircleIcon}  />
-                }
-                </HStack>
-                </Pressable>
+                {versionStatus !== '' && (
+                  <BadgeIcon
+                    color={versionStatus == '' ? '$muted500' : '$warning300'}
+                    as={AlertCircleIcon}
+                  />
+                )}
               </Badge>
-              </VStack>
-            </HStack>
+            </Pressable>
+          </HStack>
 
           <RouteJump />
 
