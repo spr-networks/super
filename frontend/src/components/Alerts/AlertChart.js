@@ -2,8 +2,7 @@ import React, { useContext } from 'react'
 
 //empty for iOS, default
 const AlertChart = (props) => {
-  return (
-  )
+  return <></>
 }
 
 export default AlertChart
