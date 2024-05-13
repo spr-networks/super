@@ -19,7 +19,8 @@ import {
   AddIcon,
   CheckIcon,
   SettingsIcon,
-  HStack
+  HStack,
+  useColorMode
 } from '@gluestack-ui/themed'
 
 import { Settings2Icon } from 'lucide-react-native'
@@ -48,7 +49,7 @@ const Alerts = (props) => {
   const modalContext = useContext(ModalContext)
   const navigate = useNavigate()
 
-  const [fieldCounts, setFieldCounts] = useState({});
+  const [fieldCounts, setFieldCounts] = useState({})
 
   const AlertPrefix = 'alert:'
 
@@ -63,7 +64,7 @@ const Alerts = (props) => {
   const prettyBucket = (bucket) => {
     let newName = bucket.replace(AlertPrefix, '')
     if (newName === '') {
-      return "Alerts"
+      return 'Alerts'
     }
     return newName
   }
@@ -82,7 +83,6 @@ const Alerts = (props) => {
 
     const counts = {}
     for (let bucket of buckets) {
-
       let withFilter = params
       if (searchField && searchField !== '') {
         withFilter['filter'] = prettyToJSONPath(searchField)
@@ -94,10 +94,14 @@ const Alerts = (props) => {
       if (result) {
         const bucketName = prettyBucket(bucket)
         if (stateFilter === 'Resolved') {
-          const filteredItems = result.filter((item) => item.State === 'Resolved');
+          const filteredItems = result.filter(
+            (item) => item.State === 'Resolved'
+          )
           counts[bucketName] = filteredItems.length
         } else if (stateFilter === 'New') {
-          const filteredItems = result.filter((item) => item.State !== 'Resolved');
+          const filteredItems = result.filter(
+            (item) => item.State !== 'Resolved'
+          )
           counts[bucketName] = filteredItems.length
         } else {
           counts[bucketName] = result.length
@@ -134,8 +138,7 @@ const Alerts = (props) => {
 
       const counts = countFields(more_results, true)
 
-      setFieldCounts(counts);
-
+      setFieldCounts(counts)
 
       result = result.concat(more_results)
     }
@@ -152,7 +155,6 @@ const Alerts = (props) => {
     fetchList()
     fetchAlertBuckets()
   }, [params, searchField, stateFilter])
-
 
   //TODO
   /*const onDelete = (index) => {
@@ -226,30 +228,34 @@ const Alerts = (props) => {
   const handleBarClick = (label, count) => {
     let parts = label.split(':', 2)
     if (parts.length == 2) {
-      setSearchField("Event." + parts[0] + '=="' + label.substr(parts[0].length+1) + '"')
+      setSearchField(
+        'Event.' + parts[0] + '=="' + label.substr(parts[0].length + 1) + '"'
+      )
     }
-  };
+  }
+
+  const colorMode = useColorMode()
 
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
       <ListHeader title="Alerts">
         <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
           {
-          <FilterInputSelect
-            NoFilterCommon={true}
-            topic={selectedBucket}
-            value={searchField}
-            items={logs}
-            onChangeText={setSearchField}
-            onSubmitEditing={setSearchField}
-            display="none"
-            sx={{
-              '@md': {
-                display: 'flex',
-                width: 300
-              }
-            }}
-          />
+            <FilterInputSelect
+              NoFilterCommon={true}
+              topic={selectedBucket}
+              value={searchField}
+              items={logs}
+              onChangeText={setSearchField}
+              onSubmitEditing={setSearchField}
+              display="none"
+              sx={{
+                '@md': {
+                  display: 'flex',
+                  width: 300
+                }
+              }}
+            />
           }
           <Select
             selectedValue={stateFilter}
@@ -297,56 +303,66 @@ const Alerts = (props) => {
         </VStack>
       </ListHeader>
 
-
-      {topics.map((bucket) => (bucketCounts[prettyBucket(bucket)] != 0 &&
-        <>
-          <HStack  alignItems="left" p="$4" bg="$gray200">
-            <Pressable
-              key={bucket}
-              onPress={() => setSelectedBucket(selectedBucket === bucket ? null : bucket)}
-            >
-              <Badge
-                action={(bucket == selectedBucket) ? "success" : "muted"}
-                rounded="$2xl"
-                size="md"
+      {topics.map(
+        (bucket) =>
+          bucketCounts[prettyBucket(bucket)] != 0 && (
+            <>
+              <Pressable
+                key={bucket}
+                onPress={() =>
+                  setSelectedBucket(selectedBucket === bucket ? null : bucket)
+                }
               >
-                <Text sx="$lg" fontWeight="$bold" >
-                  {prettyBucket(bucket)}
-                </Text>
-                <View
-                  bg="$warning400"
-                  borderRadius="$full"
-                  px="$2"
-                  py="$1"
-                  alignItems="center"
-                  justifyContent="center"
+                <HStack
+                  p="$4"
+                  space="md"
+                  borderBottomWidth={1}
+                  borderColor={
+                    colorMode == 'light' ? '$coolGray200' : '$coolGray800'
+                  }
                 >
-                  <Text color="$white" fontSize="$sm" fontWeight="$bold">
-                    {bucketCounts[prettyBucket(bucket)] == perPage ? perPage + "+" : bucketCounts[prettyBucket(bucket)] || 0}
+                  <Text sx="$md" bold>
+                    {prettyBucket(bucket)}
                   </Text>
-                </View>
-              </Badge>
-            </Pressable>
-          </HStack>
-          {selectedBucket === bucket && (
-            <ScrollView>
-              <AlertChart fieldCounts={fieldCounts} onBarClick={handleBarClick} />
-              <FlatList
-                data={logs}
-                estimatedItemSize={100}
-                renderItem={({ item }) => (
-                  <VStack>
-                    <AlertListItem item={item} notifyChange={onChangeEvent} />
-                  </VStack>
-                )}
-                keyExtractor={(item, index) => item.time + index}
-                contentContainerStyle={{ paddingBottom: 48 }}
-              />
-            </ScrollView>
-          )}
-          </>
-      ))}
-
+                  <Badge
+                    action={bucket == selectedBucket ? 'success' : 'muted'}
+                    borderRadius={'$full'}
+                    variant="outline"
+                    size="md"
+                  >
+                    <BadgeText>
+                      {bucketCounts[prettyBucket(bucket)] == perPage
+                        ? perPage + '+'
+                        : bucketCounts[prettyBucket(bucket)] || 0}
+                    </BadgeText>
+                  </Badge>
+                </HStack>
+              </Pressable>
+              {selectedBucket === bucket && (
+                <ScrollView>
+                  <AlertChart
+                    fieldCounts={fieldCounts}
+                    onBarClick={handleBarClick}
+                  />
+                  <FlatList
+                    data={logs}
+                    estimatedItemSize={100}
+                    renderItem={({ item }) => (
+                      <VStack>
+                        <AlertListItem
+                          item={item}
+                          notifyChange={onChangeEvent}
+                        />
+                      </VStack>
+                    )}
+                    keyExtractor={(item, index) => item.time + index}
+                    contentContainerStyle={{ paddingBottom: 48 }}
+                  />
+                </ScrollView>
+              )}
+            </>
+          )
+      )}
 
       <Fab
         renderInPortal={false}
