@@ -735,7 +735,7 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 
 	args := strings.Split(command, "/")
 	if command == "reg" {
-		args = {}string["get"]
+		args = []string{"reg", "get"}
 	}
 	cmd := exec.Command("iw", args...)
 	data, err := cmd.Output()
