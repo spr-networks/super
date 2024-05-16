@@ -287,22 +287,23 @@ const WifiChannelParameters = ({
             }
           }
 
-          //bandwith check
+          //bandwith check, do not list start indices that
+          // are nonsense for 5/6ghz.
           if (mode == 'a') {
             if (bandwidth == 160) {
               //5 ghz and 6ghz offsets
               if (frequency % 160 != 60 && frequency % 160 != 35) {
-                isDisabled = true
+                continue
               }
             } else if (bandwidth == 80) {
               //5 ghz and 6ghz offsets
               if (frequency % 80 != 60 && frequency % 80 != 35) {
-                isDisabled = true
+                continue
               }
             } else if (bandwidth == 40) {
               //5 ghz and 6ghz offsets
               if (frequency % 40 != 20 && frequency % 40 != 35) {
-                isDisabled = true
+                continue
               }
             }
           }
