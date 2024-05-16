@@ -847,9 +847,8 @@ const WifiHostapd = (props) => {
 
       //data will have inherited Op_class from the channel calculation
       //the backend handles 6-e transition and relaxation.
-
       if (wifiParameters.Channel == 0 ) {
-        //let the backend know to enable auto selection 
+        //let the backend know to enable auto selection
         data.AutoSelectChannel = true
       }
 
@@ -864,9 +863,24 @@ const WifiHostapd = (props) => {
         })
     }
 
+    let is_6e = wifiParameters.Channel == "6GHz"
+
+    if (is_6e) {
+      //figure out how to set up class?
+      //temp set chan to 1
+      wifiParameters.Channel = 1
+    } else {
+      wifiParameters.Channel = parseInt(wifiParameters.Channel)
+    }
+
     wifiAPI
       .calcChannel(wifiParameters)
-      .then(updateChannelInfo)
+      .then((r) => {
+        if (is_6e) {
+          wifiParameters.Channel = 0
+          updateChannelInfo(r)
+        }
+      })
       .catch((e) => {
         context.error('API Failure: ' + e.message)
       })

@@ -258,13 +258,7 @@ const WifiChannelParameters = ({
   const enumerateChannelOptions = () => {
     //const iface = props.config.interface
     let validChannels = []
-
-    validChannels.push({
-      value: 0,
-      label: "Automatic Channel Selection",
-      toolTip: "Automatic Channel Selection",
-      disabled: false
-    })
+    let saw_6e = false
 
     let expectedFreq = mode == 'a' ? '5' : '2'
     for (let iw of iws) {
@@ -281,6 +275,10 @@ const WifiChannelParameters = ({
 
         for (let freq of band.frequencies) {
           let frequency = parseInt(freq.split(' ')[0])
+
+          if (frequency > 5900) {
+            saw_6e = true
+          }
           let channelNumber = parseInt(freq.split(' ')[2].slice(1, -1))
           let channelLabel = channelNumber
           let isDisabled = false
@@ -334,6 +332,22 @@ const WifiChannelParameters = ({
       }
     }
 
+    validChannels.push({
+      value: 0,
+      label: "Automatic Channel Selection",
+      toolTip: "Automatic Channel Selection",
+      disabled: false
+    })
+
+    if (saw_6e) {
+      validChannels.push({
+        value: "6GHz",
+        label: "[6Ghz] Automatic Channel Selection",
+        toolTip: "[6Ghz] Automatic Channel Selection",
+        disabled: false
+      })
+    }
+
     //move enabled to top
     validChannels.sort((a, b) => {
       if (a.disabled && !b.disabled) {
@@ -341,14 +355,7 @@ const WifiChannelParameters = ({
       } else if (!a.disabled && b.disabled) {
         return -1
       } else {
-        //move ACS after the other valids.
-        if (a.value == 0 && b.value != 0) {
-          return 1
-        } else if (b.value == 0 && a.value != 0) {
-          return -1
-        } else {
-          return 0
-        }
+        return 0
       }
     });
 
@@ -531,7 +538,7 @@ const WifiChannelParameters = ({
             </FormControlLabel>
             <Select
               selectedValue={channel}
-              onValueChange={(value) => setChannel(parseInt(value))}
+              onValueChange={(value, label) => setChannel(value)}
             >
               {enumerateChannelOptions().map((item) => (
                 <Select.Item
