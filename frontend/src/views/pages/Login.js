@@ -31,8 +31,8 @@ const Login = (props) => {
   const navigate = useNavigate()
 
   const [hostname, setHostname] = useState('')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
+  const [username, setUsername] = useState('admin')
+  const [password, setPassword] = useState('admin')
   const [loggedIn, setLoggedin] = useState(false)
   const [errors, setErrors] = React.useState({})
 
