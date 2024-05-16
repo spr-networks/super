@@ -46,10 +46,10 @@ export default function MockAPI() {
         VLANTag: 'vlantag',
         RecentIP: '192.168.2.101',
         PSKEntry: {
-          Type: 'sae',
-          Psk: 'password'
+          Type: 'None',
+          Psk: null
         },
-        Policies: ['lan', 'dns'],
+        Policies: ['lan', 'wan', 'lan_upstream', 'dns'],
         Groups: [],
         DeviceTags: ['private'],
         Style: {
@@ -68,7 +68,7 @@ export default function MockAPI() {
           Type: 'wpa2',
           Psk: 'password'
         },
-        Policies: ['lan', 'dns'],
+        Policies: ['wan', 'dns'],
         Groups: [],
         DeviceTags: ['private'],
         Style: {
@@ -106,8 +106,8 @@ export default function MockAPI() {
             Type: rpick(['wpa2', 'sae']),
             Psk: `password${i}`
           },
-          Policies: ['lan', 'dns'],
-          Groups: [],
+          Policies: ['wan', 'dns'],
+          Groups: [rpick(['first_group', 'second_group'])],
           DeviceTags: ['private'],
           Style: {
             Icon,
