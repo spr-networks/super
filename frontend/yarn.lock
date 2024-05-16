@@ -9525,7 +9525,7 @@ jsonfile@^6.0.1:
 
 jsonpath@^1.1.1:
   version "1.1.1"
-  resolved "https://registry.npmjs.org/jsonpath/-/jsonpath-1.1.1.tgz"
+  resolved "https://registry.yarnpkg.com/jsonpath/-/jsonpath-1.1.1.tgz#0ca1ed8fb65bb3309248cc9d5466d12d5b0b9901"
   integrity sha512-l6Cg7jRpixfbgoWgkrl77dgEj8RPvND0wMH6TwQmi9Qs4TFfS9u5cUFnbeKTwj5ga5Y3BTGGNI28k117LJ009w==
   dependencies:
     esprima "1.2.2"

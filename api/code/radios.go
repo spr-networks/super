@@ -726,7 +726,7 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 	   allowed commands for now:
 	   iw/list, iw/dev iw/dev/wlan0-9/scan
 	*/
-	validCommand := regexp.MustCompile(`^(list|dev)/?([a-z0-9\.]+\/scan)?$`).MatchString
+	validCommand := regexp.MustCompile(`^(list|dev|reg)/?([a-z0-9\.]+\/scan)?$`).MatchString
 	if !validCommand(command) {
 		fmt.Println("invalid iw command")
 		http.Error(w, "Invalid command", 400)
@@ -743,7 +743,7 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// use json parsers if available (iwlist, iwdev, iw-scan)
-	if command == "list" || command == "dev" || strings.HasSuffix(command, "scan") {
+	if command == "list" || command == "dev" || command == "reg" || strings.HasSuffix(command, "scan") {
 		parser := "--iw" + command // bug: jc dont allow - when using local parsers
 		if strings.HasSuffix(command, "scan") {
 			parser = "--iw-scan"

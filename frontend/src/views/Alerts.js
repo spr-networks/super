@@ -145,6 +145,30 @@ const Alerts = (props) => {
     setLogs(result)
   }
 
+
+/*
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (selectedBucket) {
+        fetchList()
+        fetchAlertBuckets()
+      }
+    }, 1000)
+
+    return () => clearTimeout(timer) // this will clear the timer in case inputValue changes within 2 seconds
+  }, [params, searchField, stateFilter])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (selectedBucket) {
+        fetchLogs()
+      }
+    }, 1000)
+
+    return () => clearTimeout(timer) // this will clear the timer in case inputValue changes within 2 seconds
+  }, [selectedBucket, params, searchField, stateFilter])
+*/
+
   useEffect(() => {
     if (selectedBucket) {
       fetchLogs()

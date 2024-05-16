@@ -420,6 +420,7 @@ const WifiHostapd = (props) => {
   const [tooltips, setTooltips] = useState({})
   const [devices, setDevices] = useState([])
   const [iws, setIws] = useState([])
+  const [regs, setRegs] = useState({})
   const [iwMap, setIwMap] = useState({})
 
   //make sure to update commitConfig when updating these
@@ -520,6 +521,12 @@ const WifiHostapd = (props) => {
   const updateIWS = () => {
     wifiAPI.iwDev().then((devs) => {
       setDevices(devs)
+
+      wifiAPI.iwRegs().then((regs) => {
+        setRegs(regs)
+      }).catch((e) => {
+        
+      })
 
       wifiAPI.iwList().then((iws) => {
         iws = iws.map((iw) => {
@@ -992,6 +999,7 @@ const WifiHostapd = (props) => {
         <WifiChannelParameters
           iface={iface}
           iws={iws}
+          regs={regs}
           curInterface={curIface}
           setIface={setIface}
           config={config}

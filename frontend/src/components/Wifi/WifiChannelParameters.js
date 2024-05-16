@@ -31,11 +31,37 @@ let modes = [
   { label: '2.4 GHz', value: 'g' }
 ]
 
+let convertChannelToFrequency = (band, channel) => {
+  let frequency;
+
+  if (band === "2.4") {
+    frequency = 2412 + (channel - 1) * 5;
+    if (channel === 14) {
+      frequency = 2484;
+    }
+  } else if (band === "5") {
+    if (channel >= 1 && channel <= 144) {
+      frequency = 5000 + channel * 5;
+    } else if (channel >= 149 && channel <= 169) {
+      frequency = 5000 + (channel - 1) * 5;
+    } else if (channel >= 184 && channel <= 196) {
+      frequency = 4000 + channel * 5;
+    }
+  } else if (band === "6") {
+    if (channel >= 1 && channel <= 253) {
+      frequency = 5940 + channel * 5;
+    }
+  }
+
+  return frequency
+}
+
 const WifiChannelParameters = ({
   iface,
   setIface,
   config,
   iws,
+  regs,
   curInterface,
   onSubmit,
   updateExtraBSS,
@@ -164,6 +190,8 @@ const WifiChannelParameters = ({
       }
     }
 
+    let regstest = {"country":"US","dfs":"DFS-FCC","bands":[{"start":902,"end":904,"max_bandwidth":2,"max_antenna_gain":null,"max_eirp":30.0,"flags":["N/A"]},{"start":904,"end":920,"max_bandwidth":16,"max_antenna_gain":null,"max_eirp":30.0,"flags":["N/A"]},{"start":920,"end":928,"max_bandwidth":8,"max_antenna_gain":null,"max_eirp":30.0,"flags":["N/A"]},{"start":2400,"end":2472,"max_bandwidth":40,"max_antenna_gain":null,"max_eirp":30.0,"flags":["N/A"]},{"start":5150,"end":5250,"max_bandwidth":80,"max_antenna_gain":null,"max_eirp":23.0,"flags":["N/A","AUTO-BW"]},{"start":5250,"end":5350,"max_bandwidth":80,"max_antenna_gain":null,"max_eirp":24.0,"flags":["0 ms","DFS","AUTO-BW"]},{"start":5470,"end":5730,"max_bandwidth":160,"max_antenna_gain":null,"max_eirp":24.0,"flags":["0 ms","DFS"]},{"start":5730,"end":5850,"max_bandwidth":80,"max_antenna_gain":null,"max_eirp":30.0,"flags":["N/A","AUTO-BW"]},{"start":5850,"end":5895,"max_bandwidth":40,"max_antenna_gain":null,"max_eirp":27.0,"flags":["N/A","NO-OUTDOOR","AUTO-BW","PASSIVE-SCAN"]},{"start":5925,"end":7125,"max_bandwidth":320,"max_antenna_gain":null,"max_eirp":12.0,"flags":["N/A","NO-OUTDOOR","PASSIVE-SCAN"]},{"start":57240,"end":71000,"max_bandwidth":2160,"max_antenna_gain":null,"max_eirp":40.0,"flags":["N/A"]}]}
+
     //set bw and channels
     for (let iw of iws) {
       if (iw.devices[iface]) {
@@ -178,7 +206,12 @@ const WifiChannelParameters = ({
                 capability.includes('160 MHz') ||
                 capability.includes('160Mhz')
               ) {
-                setDisable160(false)
+                if (regstest.country) {
+                  //                  alert(JSON.stringify(regstest))
+
+                } else {
+                  setDisable160(false)
+                }
               }
             }
           }
@@ -239,6 +272,7 @@ const WifiChannelParameters = ({
         if (!band.frequencies || band.frequencies[0][0] != expectedFreq) {
           continue
         }
+
 
         for (let freq of band.frequencies) {
           let channelNumber = parseInt(freq.split(' ')[2].slice(1, -1))
