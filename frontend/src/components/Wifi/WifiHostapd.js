@@ -846,6 +846,12 @@ const WifiHostapd = (props) => {
       data.Hw_mode = data.Mode
 
       //data will have inherited Op_class from the channel calculation
+      //the backend handles 6-e transition and relaxation.
+
+      if (wifiParameters.Channel == 0 ) {
+        //let the backend know to enable auto selection 
+        data.AutoSelectChannel = true
+      }
 
       wifiAPI
         .updateConfig(iface, data)

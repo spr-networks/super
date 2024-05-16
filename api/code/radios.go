@@ -602,6 +602,10 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		conf["channel"] = newConf.Channel
 	}
 
+	if newConf.AutoSelectChannel {
+		conf["channel"] = "0"
+	}
+
 	if _, ok := newInput["Vht_oper_centr_freq_seg0_idx"]; ok {
 		if newConf.Vht_oper_centr_freq_seg0_idx == -1 {
 			delete(conf, "vht_oper_centr_freq_seg0_idx")

@@ -13,6 +13,9 @@ import {
   CheckboxIndicator,
   CheckboxLabel,
   FormControl,
+  FormControlError,
+  FormControlErrorText,
+  FormControlErrorIcon,
   FormControlLabel,
   FormControlLabelText,
   Heading,
@@ -256,6 +259,13 @@ const WifiChannelParameters = ({
     //const iface = props.config.interface
     let validChannels = []
 
+    validChannels.push({
+      value: "0",
+      label: "Automatic Channel Selection",
+      toolTip: "Automatic Channel Selection",
+      disabled: false
+    })
+
     let expectedFreq = mode == 'a' ? '5' : '2'
     for (let iw of iws) {
       if (!iw.devices[iface]) {
@@ -344,7 +354,7 @@ const WifiChannelParameters = ({
       return false
     }
 
-    if (!channel) {
+    if (channel != 0 && !channel) {
       setErrors({ channel: true })
       return false
     }
@@ -500,11 +510,11 @@ const WifiChannelParameters = ({
               ))}
             </Select>
             {'bandwidth' in errors ? (
-              <FormControlErrorMessage>
-                <FormControlErrorMessageText>
+              <FormControlError>
+                <FormControlErrorText>
                   Invalid Bandwidth
-                </FormControlErrorMessageText>
-              </FormControlErrorMessage>
+                </FormControlErrorText>
+              </FormControlError>
             ) : null}
           </FormControl>
 
@@ -527,11 +537,11 @@ const WifiChannelParameters = ({
               ))}
             </Select>
             {'channel' in errors ? (
-              <FormControlErrorMessage>
-                <FormControlErrorMessageText>
+              <FormControlError>
+                <FormControlErrorText>
                   Invalid Channel
-                </FormControlErrorMessageText>
-              </FormControlErrorMessage>
+                </FormControlErrorText>
+              </FormControlError>
             ) : null}
           </FormControl>
 

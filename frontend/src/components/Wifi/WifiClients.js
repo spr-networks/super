@@ -85,7 +85,7 @@ const WifiClients = (props) => {
       let ret = await api.allStations.call(api, iface).catch((error) => {
         context.error('WIFI API Failure', error)
       })
-
+      if (!ret) continue
       for (let mac of Object.keys(ret)) {
         ret[mac].Iface = iface
       }
