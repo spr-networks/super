@@ -260,7 +260,7 @@ const WifiChannelParameters = ({
     let validChannels = []
 
     validChannels.push({
-      value: "0",
+      value: 0,
       label: "Automatic Channel Selection",
       toolTip: "Automatic Channel Selection",
       disabled: false
@@ -337,11 +337,18 @@ const WifiChannelParameters = ({
     //move enabled to top
     validChannels.sort((a, b) => {
       if (a.disabled && !b.disabled) {
-        return 1;
+        return 1
       } else if (!a.disabled && b.disabled) {
-        return -1;
+        return -1
       } else {
-        return 0;
+        //move ACS after the other valids.
+        if (a.value == 0 && b.value != 0) {
+          return 1
+        } else if (b.value == 0 && a.value != 0) {
+          return -1
+        } else {
+          return 0
+        }
       }
     });
 
@@ -526,7 +533,6 @@ const WifiChannelParameters = ({
               selectedValue={channel}
               onValueChange={(value) => setChannel(parseInt(value))}
             >
-              <Select.Item label="" value={0} />
               {enumerateChannelOptions().map((item) => (
                 <Select.Item
                   key={item.label}
