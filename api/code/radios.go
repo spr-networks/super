@@ -116,6 +116,7 @@ func hostapdSyncMesh(w http.ResponseWriter, r *http.Request) {
 }
 
 type HostapdConfigEntry struct {
+	AutoSelectChannel            bool
 	Country_code                 string
 	Vht_capab                    string
 	Ht_capab                     string
