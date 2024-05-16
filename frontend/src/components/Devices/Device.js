@@ -136,7 +136,8 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
   const navigate = useNavigate()
 
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
-  let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
+  let wifi_type = protocolAuth[device.PSKEntry.Type] || 'Wired'
+  let wifi_icon = wifi_type == 'Wired' ? <IconItem name={"Wire"} size={32} /> : <IconItem name={"Wifi"} size={32} />
 
   //NOTE dup code, same in view for deleteListItem
   const removeDevice = () => {
@@ -354,7 +355,9 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
             justifyContent="center"
             alignItems="center"
           >
-            <Text size="sm">{wifi_type}</Text>
+            <Tooltip label={wifi_type}>
+              {wifi_icon}
+            </Tooltip>
           </VStack>
           <HStack
             space="sm"
