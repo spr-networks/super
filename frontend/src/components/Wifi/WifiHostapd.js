@@ -522,10 +522,10 @@ const WifiHostapd = (props) => {
     wifiAPI.iwDev().then((devs) => {
       setDevices(devs)
 
-      wifiAPI.iwRegs().then((regs) => {
+      wifiAPI.iwReg().then((regs) => {
         setRegs(regs)
       }).catch((e) => {
-        
+
       })
 
       wifiAPI.iwList().then((iws) => {

@@ -49,8 +49,8 @@ export default class APIWifi extends API {
     return this.get('iw/list');
   }
 
-  iwRegs() {
-    return this.get('iw/regs');
+  iwReg() {
+    return this.get('iw/reg');
   }
 
 
