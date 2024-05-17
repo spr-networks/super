@@ -8,9 +8,8 @@ Improvements
 * LAN Link under one view
 * Device List UI improvements
 * ACS support 
-* WiFi Failsafe Loading
-* Hostapd updated
-
+* If something goes wrong with WiFi config/channels, load a failsafe
+* Hostapd updated from upstream
 
 ## v0.3.11
 Major change
