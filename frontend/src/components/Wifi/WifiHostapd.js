@@ -138,7 +138,7 @@ const default2Ghz = {
   wpa_psk_file: '/configs/wifi/wpa2pskfile'
 }
 
-const default6Ghz = JSON.parse(JSON.stringify(default5Ghz))
+const default6GHz = JSON.parse(JSON.stringify(default5Ghz))
 
 const htCapab = [
   '[LDPC]',
@@ -726,7 +726,7 @@ const WifiHostapd = (props) => {
         )
       } else if (band.includes('Band 4') && wanted_band == 4) {
         defaultConfig = filterCapabilities(
-          default6Ghz,
+          default6GHz,
           ht_capstr,
           vht_capstr,
           4
@@ -863,9 +863,9 @@ const WifiHostapd = (props) => {
         })
     }
 
-    let is_6e = wifiParameters.Channel == "6GHz"
+    let is_6e_acs = wifiParameters.Channel == "6GHz"
 
-    if (is_6e) {
+    if (is_6e_acs) {
       //figure out how to set up class?
       //temp set chan to 1
       wifiParameters.Channel = 1
@@ -876,10 +876,10 @@ const WifiHostapd = (props) => {
     wifiAPI
       .calcChannel(wifiParameters)
       .then((r) => {
-        if (is_6e) {
+        if (is_6e_acs) {
           wifiParameters.Channel = 0
-          updateChannelInfo(r)
         }
+        updateChannelInfo(r)
       })
       .catch((e) => {
         context.error('API Failure: ' + e.message)

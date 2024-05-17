@@ -150,7 +150,7 @@ const WifiChannelParameters = ({
     setSelectedMode(modes.find((v) => v.value == config.hw_mode))
     if (config.op_class > 130 && config.channel == 0) {
       //select the 6-e acs in this case
-      setChannel("6Ghz")
+      setChannel("6GHz")
     } else {
       setChannel(config.channel)
     }
@@ -330,7 +330,7 @@ const WifiChannelParameters = ({
           }
 
           validChannels.push({
-            value: channelNumber,
+            value: channelNumber.toString(),
             label: channelLabel,
             toolTip: freq,
             disabled: isDisabled
@@ -340,7 +340,7 @@ const WifiChannelParameters = ({
     }
 
     validChannels.push({
-      value: 0,
+      value: "0",
       label: "Automatic Channel Selection",
       toolTip: "Automatic Channel Selection",
       disabled: false
@@ -349,8 +349,8 @@ const WifiChannelParameters = ({
     if (saw_6e) {
       validChannels.push({
         value: "6GHz",
-        label: "[6Ghz] Automatic Channel Selection",
-        toolTip: "[6Ghz] Automatic Channel Selection",
+        label: "[6GHz] Automatic Channel Selection",
+        toolTip: "[6GHz] Automatic Channel Selection",
         disabled: false
       })
     }
@@ -541,15 +541,14 @@ const WifiChannelParameters = ({
 
           <FormControl flex={1} isInvalid={'channel' in errors}>
             <FormControlLabel for="Channel">
-              <FormControlLabelText>Channel</FormControlLabelText>
+              <FormControlLabelText>Channel {channel}</FormControlLabelText>
             </FormControlLabel>
             <Select
               selectedValue={channel}
-              onValueChange={(value, label) => setChannel(value)}
+              onValueChange={(value) => setChannel(value)}
             >
               {enumerateChannelOptions().map((item) => (
                 <Select.Item
-                  key={item.label}
                   label={item.label}
                   value={item.value}
                   isDisabled={item.disabled}
