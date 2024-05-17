@@ -2936,7 +2936,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/enableExtraBSS", hostapdEnableExtraBSS).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/hostapd/syncMesh", hostapdSyncMesh).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/restart", restartWifi).Methods("PUT")
-	external_router_setup.HandleFunc("/hostapd/{interface}/failsafe", hostapdFailsafeStatus).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/failsafe", hostapdFailsafeStatus).Methods("GET")
 
 	//ip information
 	external_router_authenticated.HandleFunc("/ip/addr", ipAddr).Methods("GET")
