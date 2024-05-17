@@ -29,7 +29,7 @@ install_deps() {
 		tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 	apt update
-	apt-get -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker compose-plugin
+	apt-get -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 	apt install -y curl git jq qrencode iproute2 wireguard-tools
 
 	git clone https://github.com/spr-networks/super.git
