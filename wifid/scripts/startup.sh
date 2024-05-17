@@ -90,9 +90,9 @@ check_status() {
             PHY=$(iw $IFACE info | grep -v ssid | grep wiphy | awk '{print $2}')
             BAND=$(iw phy phy$PHY info | grep -m 1 Band | tr ':' ' '| awk '{print $2}')
             if [ "$BAND" == "1" ]; then
-                cp /configs/wifi/hostapd_failsafe_band1.conf /configs/wifi/hostapd_failsafe_${IFACE}.conf
+                cp /scripts/hostapd_failsafe_band1.conf /configs/wifi/hostapd_failsafe_${IFACE}.conf
             elif [ "$BAND" == "2" ]; then
-                cp /configs/wifi/hostapd_failsafe_band2.conf /configs/wifi/hostapd_failsafe_${IFACE}.conf
+                cp /scripts/hostapd_failsafe_band2.conf /configs/wifi/hostapd_failsafe_${IFACE}.conf
             fi
 
             sed -i "s/wlan0/$IFACE/g" /configs/wifi/hostapd_failsafe_${IFACE}.conf
