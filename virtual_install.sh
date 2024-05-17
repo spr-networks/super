@@ -14,6 +14,12 @@ if [ $UID -ne 0 ]; then
 	exit
 fi
 
+docker compose 2>/dev/null >/dev/null
+HAS_NEWDC=$?
+if [ $HAS_NEWDC -eq 0 ]; then
+	alias docker-compose="docker compose"
+fi
+
 install_deps() {
 	# install deps
 	apt update && \
