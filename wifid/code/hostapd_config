@@ -11,7 +11,7 @@
 
 CONFIG_SAE=y
 
-CONFIG_SAE_PK=y
+#CONFIG_SAE_PK=y
 
 # Driver interface for Host AP driver
 CONFIG_DRIVER_HOSTAP=y
