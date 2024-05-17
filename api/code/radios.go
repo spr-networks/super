@@ -471,6 +471,23 @@ func getHostapdJson(iface string) (map[string]interface{}, error) {
 	return conf, nil
 }
 
+func hostapdFailsafeStatus(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	if !isValidIface(iface) {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	status := "ok"
+	failsafe_path := TEST_PREFIX + "/state/wifi/failsafe_" + iface
+	_, err := os.Stat(failsafe_path)
+	if err == nil {
+		status = "failsafe running"
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(status)
+}
 func hostapdConfig(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
 	if !isValidIface(iface) {

@@ -2849,6 +2849,7 @@ func main() {
 	// intial setup
 	external_router_public.HandleFunc("/setup", setup).Methods("GET", "PUT")
 	external_router_setup.HandleFunc("/ip/addr", ipAddr).Methods("GET")
+	external_router_setup.HandleFunc("/hostapd/{interface}/failsafe", hostapdFailsafeStatus).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdUpdateConfig).Methods("PUT")
 	external_router_setup.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
