@@ -46,7 +46,7 @@ fi
 
 docker compose 2>/dev/null >/dev/null
 HAS_NEWDC=$?
-if [ $HAS_NEWDC -eq 0 ]; then
+if [ $HAS_NEWDC -neq 0 ]; then
 	echo "[-] A newer version of docker is required"
 	exit 1
 fi
