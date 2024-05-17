@@ -317,19 +317,6 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
               }}
             >
               <HStack space="sm" alignItems="center">
-                <Tooltip label={wifi_type}>
-                  <IconItem
-                    name={wifi_type == 'Wired' ? 'Wire' : 'Wifi'}
-                    size={16}
-                    color={
-                      device.isConnected
-                        ? '$green600'
-                        : colorMode == 'light'
-                        ? '$muted300'
-                        : '$muted700'
-                    }
-                  />
-                </Tooltip>
 
                 <Text size="md" bold>
                   {device.RecentIP}
@@ -347,6 +334,23 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
                 </HStack>
               ) : null}
             </VStack>
+          </VStack>
+
+          <VStack
+            display="none"
+            sx={{
+              '@md': {
+                display: 'flex',
+                w: '8%'
+              }
+            }}
+            justifyContent="center"
+            alignItems="center"
+          >
+            <Tooltip label={wifi_type}>
+              <IconItem name={wifi_type == 'Wired' ? 'Wire' : 'Wifi'} size={32}
+                />
+            </Tooltip>
           </VStack>
 
           <HStack
