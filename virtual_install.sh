@@ -30,7 +30,7 @@ install_deps() {
 
 	apt update
 	apt-get -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker compose-plugin
-	apt install -y curl git docker.io jq qrencode iproute2 wireguard-tools
+	apt install -y curl git jq qrencode iproute2 wireguard-tools
 
 	git clone https://github.com/spr-networks/super.git
 	cd super
