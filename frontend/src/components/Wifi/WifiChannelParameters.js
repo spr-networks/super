@@ -241,8 +241,8 @@ const WifiChannelParameters = ({
   }, [iface, config, iws, curInterface])
 
   const checkRegsDisable = (frequency, bandwidth) => {
-    if (!regs) return false
-    for (let reg_band of regs?.bands) {
+    if (!regs || !regs.bands) return false
+    for (let reg_band of regs.bands) {
       if (frequency >= reg_band.start && frequency < reg_band.end) {
         //too much bandwidth asked for, ex reg says 80, but asking for 160
         if (bandwidth > reg_band.max_bandwidth) {
