@@ -148,7 +148,12 @@ const WifiChannelParameters = ({
     setMode(config.hw_mode)
     handleModeChange(config.hw_mode)
     setSelectedMode(modes.find((v) => v.value == config.hw_mode))
-    setChannel(config.channel)
+    if (config.op_class > 130 && config.channel == 0) {
+      //select the 6-e acs in this case
+      setChannel("6Ghz")
+    } else {
+      setChannel(config.channel)
+    }
     setExtraSSID(config.ssid + '-extra')
 
     let newBandwidth = 40
