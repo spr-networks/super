@@ -1,4 +1,4 @@
-;#!/bin/bash
+#!/bin/bash
 
 IFACES=$(curl --unix-socket /state/wifi/apisock http://localhost/interfaces)
 RET=$?
