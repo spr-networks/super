@@ -6,6 +6,8 @@ import { AlertContext } from 'AppContext'
 import { Platform } from 'react-native'
 
 import {
+  Badge,
+  BadgeText,
   Box,
   Button,
   ButtonIcon,
@@ -13,17 +15,17 @@ import {
   FormControl,
   FormControlLabel,
   FormControlLabelText,
+  FormControlError,
+  FormControlErrorText,
   Heading,
   HStack,
   Input,
   InputField,
   ScrollView,
   Text,
-  Tooltip,
-  TooltipContent,
-  TooltipText,
   VStack
 } from '@gluestack-ui/themed'
+import { Tooltip } from 'components/Tooltip'
 
 /*
 <HStack space="md" alignItems="center">
@@ -423,6 +425,8 @@ const WifiHostapd = (props) => {
   const [regs, setRegs] = useState({})
   const [iwMap, setIwMap] = useState({})
 
+  const [failsafeErrors, setFailsafeErrors] = useState("FAIL")
+
   //make sure to update commitConfig when updating these
   const canEditString = [
     'ssid',
@@ -528,11 +532,12 @@ const WifiHostapd = (props) => {
 
       })
 
-      wifiAPI.iwList().then((iws) => {
-        iws = iws.map((iw) => {
-          iw.devices = devs[iw.wiphy]
-          return iw
-        })
+      wifiAPI.iwList().then(async (iws) => {
+        iws = await Promise.all(iws.map(async (iw) => {
+          iw.devices = devs[iw.wiphy];
+          iw.failsafeStatus = await wifiAPI.checkFailsafe(iw.wiphy);
+          return iw;
+        }));
 
         //make a phy to iws map and devname to iw map
         let iwMap = {}
@@ -540,8 +545,14 @@ const WifiHostapd = (props) => {
           iwMap[iw.wiphy] = iw
           Object.keys(iw.devices).forEach((dev) => {
             iwMap[dev] = iw
+            iwMap[iw.wiphy].dev = dev
           })
         })
+
+        iws = await Promise.all(iws.map(async (iw) => {
+          iw.failsafeStatus = await wifiAPI.checkFailsafe(iwMap[iw.wiphy].dev);
+          return iw;
+        }));
         setIwMap(iwMap)
         setIws(iws)
       })
@@ -978,6 +989,7 @@ const WifiHostapd = (props) => {
 
   return (
     <ScrollView pb="$20">
+
       <ListHeader title="Wifi Interface">
         <Button size="sm" action="secondary" onPress={restartWifi}>
           <ButtonText>Restart All Wifi Devices</ButtonText>
@@ -1013,7 +1025,23 @@ const WifiHostapd = (props) => {
             </Select>
           ) : null}
         </FormControl>
+
       </Box>
+
+      <VStack flex={1} space={4}>
+        {iws.map((iw) => (
+          <Box w="20%" flex={1} key={iw.wiphy}>
+            {iw.failsafeStatus !== 'ok' && (
+              <Tooltip label="Reconfigure the interface">
+                <Badge action="warning" variant="outline">
+                  <BadgeText>⚠️ {iwMap[iw.wiphy].dev} In Failsafe Mode</BadgeText>
+                </Badge>
+              </Tooltip>
+            )}
+
+          </Box>
+        ))}
+      </VStack>
 
       {config.interface && interfaceEnabled === true ? (
         <WifiChannelParameters
@@ -1091,32 +1119,22 @@ const WifiHostapd = (props) => {
 
                 {canEdit.includes(label) ? (
                   tooltips[label] ? (
-                    <Tooltip
-                      placement="bottom"
-                      trigger={(triggerProps) => {
-                        return (
-                          <Input
-                            size="md"
-                            variant="underlined"
-                            flex={2}
-                            {...triggerProps}
-                          >
-                            <InputField
-                              type="text"
-                              value={config[label]}
-                              onChangeText={(value) =>
-                                handleChange(label, value)
-                              }
-                              onSubmitEditing={handleSubmit}
-                              onMouseLeave={handleSubmit}
-                            />
-                          </Input>
-                        )
-                      }}
-                    >
-                      <TooltipContent>
-                        <TooltipText>{tooltips[label]}</TooltipText>
-                      </TooltipContent>
+                    <Tooltip label={tooltips[label]}>
+                      <Input
+                        size="md"
+                        variant="underlined"
+                        flex={2}
+                      >
+                        <InputField
+                          type="text"
+                          value={config[label]}
+                          onChangeText={(value) =>
+                            handleChange(label, value)
+                          }
+                          onSubmitEditing={handleSubmit}
+                          onMouseLeave={handleSubmit}
+                        />
+                      </Input>
                     </Tooltip>
                   ) : (
                     <Input size="md" flex={2} variant="underlined">

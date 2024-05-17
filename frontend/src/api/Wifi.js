@@ -29,6 +29,10 @@ export default class APIWifi extends API {
     return this.get(`hostapd/${iface}/status`);
   }
 
+  checkFailsafe(iface) {
+    return this.get(`hostapd/${iface}/failsafe`);
+  }
+
   arp() {
     return this.get('arp');
   }
