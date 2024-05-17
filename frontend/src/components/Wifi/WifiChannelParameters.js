@@ -241,7 +241,7 @@ const WifiChannelParameters = ({
   }, [iface, config, iws, curInterface])
 
   const checkRegsDisable = (frequency, bandwidth) => {
-
+    if (!regs) return false
     for (let reg_band of regs?.bands) {
       if (frequency >= reg_band.start && frequency < reg_band.end) {
         //too much bandwidth asked for, ex reg says 80, but asking for 160
@@ -281,9 +281,6 @@ const WifiChannelParameters = ({
         for (let freq of band.frequencies) {
           let frequency = parseInt(freq.split(' ')[0])
 
-          if (frequency > 5900) {
-            saw_6e = true
-          }
           let channelNumber = parseInt(freq.split(' ')[2].slice(1, -1))
           let channelLabel = channelNumber
           let isDisabled = false
@@ -322,6 +319,11 @@ const WifiChannelParameters = ({
           }
 
           if (isDisabled == false) {
+
+            if (frequency > 5900) {
+              saw_6e = true
+            }
+
             //if not disabled yet, check the regs db also for validity
             //6095 MHz [29] (12.0 dBm) (no IR)
             isDisabled = checkRegsDisable(frequency, bandwidth)
