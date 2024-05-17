@@ -23,8 +23,13 @@ import {
   InputField,
   ScrollView,
   Text,
+  TooltipText,
+  TooltipContent,
   VStack
 } from '@gluestack-ui/themed'
+
+import {Tooltip as TooltipOrig} from '@gluestack-ui/themed'
+
 import { Tooltip } from 'components/Tooltip'
 
 /*
@@ -1028,9 +1033,9 @@ const WifiHostapd = (props) => {
 
       </Box>
 
-      <VStack flex={1} space={4}>
+      <VStack space={4}>
         {iws.map((iw) => (
-          <Box w="20%" flex={1} key={iw.wiphy}>
+          <Box w="20%"  key={iw.wiphy}>
             {iw.failsafeStatus !== 'ok' && (
               <Tooltip label="Reconfigure the interface">
                 <Badge action="warning" variant="outline">
@@ -1119,23 +1124,33 @@ const WifiHostapd = (props) => {
 
                 {canEdit.includes(label) ? (
                   tooltips[label] ? (
-                    <Tooltip label={tooltips[label]}>
-                      <Input
-                        size="md"
-                        variant="underlined"
-                        flex={2}
-                      >
-                        <InputField
-                          type="text"
-                          value={config[label]}
-                          onChangeText={(value) =>
-                            handleChange(label, value)
-                          }
-                          onSubmitEditing={handleSubmit}
-                          onMouseLeave={handleSubmit}
-                        />
-                      </Input>
-                    </Tooltip>
+                    <TooltipOrig
+                      placement="bottom"
+                      trigger={(triggerProps) => {
+                        return (
+                          <Input
+                            size="md"
+                            variant="underlined"
+                            flex={2}
+                            {...triggerProps}
+                          >
+                            <InputField
+                              type="text"
+                              value={config[label]}
+                              onChangeText={(value) =>
+                                handleChange(label, value)
+                              }
+                              onSubmitEditing={handleSubmit}
+                              onMouseLeave={handleSubmit}
+                            />
+                          </Input>
+                        )
+                      }}
+                    >
+                      <TooltipContent>
+                        <TooltipText>{tooltips[label]}</TooltipText>
+                      </TooltipContent>
+                    </TooltipOrig>
                   ) : (
                     <Input size="md" flex={2} variant="underlined">
                       <InputField
