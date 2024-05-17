@@ -150,7 +150,9 @@ export const countFields = (result, getEvent) => {
     'SrcMAC',
     'SrcPort',
     'DstPort',
-    'MAC'
+    'MAC',
+    'FirstAnswer',
+    'FirstName'
   ]
 
   function processEntry(entry, prefix = "") {
