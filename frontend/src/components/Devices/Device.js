@@ -32,8 +32,10 @@ import { PencilIcon, WaypointsIcon, WifiIcon } from 'lucide-react-native'
 
 const DeviceIcon = ({ icon, color: _color, isConnected, ...props }) => {
   let color = _color ? `$${_color}400` : '$blueGray400'
-  let opacity = isConnected ? 1 : 0.65
+  let opacity = isConnected ? 1 : 0.4
   let borderColor = isConnected ? '$green600' : '$muted500'
+
+  //return <IconItem name={icon} color={color} size={32} />
 
   return (
     <Box
@@ -45,7 +47,7 @@ const DeviceIcon = ({ icon, color: _color, isConnected, ...props }) => {
         },
         _dark: { bg: '$blueGray700' }
       }}
-      p="$4"
+      p="$3"
       rounded="$full"
       opacity={opacity}
       borderColor={borderColor}
@@ -136,7 +138,7 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
   const navigate = useNavigate()
 
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
-  let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
+  let wifi_type = protocolAuth[device.PSKEntry.Type] || 'Wired'
 
   //NOTE dup code, same in view for deleteListItem
   const removeDevice = () => {
@@ -257,7 +259,6 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
         borderColor="$coolGray200"
         p="$4"
         my="$1"
-        mx="$0"
         sx={{
           '@md': {
             flexDirection: 'row',
@@ -268,43 +269,47 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
           },
           _dark: { bg: '$backgroundCardDark', borderColor: '$muted700' }
         }}
-        space="md"
         justifyContent="space-between"
         alignItems="center"
         borderBottomWidth={0}
         minH={120}
       >
         <VStack
-          sx={{ '@md': { flexDirection: 'row' } }}
-          space="md"
           flex={1}
+          space="md"
           justifyContent="space-between"
-          w="$full"
+          sx={{
+            '@md': { flexDirection: 'row', gap: '$8', alignItems: 'center' }
+          }}
         >
-          {Platform.OS == 'web' ? (
+          <VStack
+            space="md"
+            justifyContent="space-between"
+            sx={{ '@md': { flexDirection: 'row', gap: '$4', flex: 1 } }}
+          >
             <DeviceIcon
               icon={device.Style?.Icon || 'Laptop'}
               color={device.Style?.Color}
               isConnected={device.isConnected}
             />
-          ) : null}
-
-          <VStack
-            space="md"
-            justifyContent="space-between"
-            sx={{ '@md': { flexDirection: 'row', w: '$1/3' } }}
-          >
-            <Tooltip label={getDates(device) || 'No DHCP'}>
-              <VStack
-                justifyContent="flex-end"
-                sx={{ '@md': { justifyContent: 'center' } }}
-              >
+            <VStack
+              flex={1}
+              justifyContent="flex-end"
+              sx={{ '@md': { justifyContent: 'center' } }}
+            >
+              <Tooltip label={getDates(device) || 'No DHCP'}>
                 <Text bold>{device.Name || 'N/A'}</Text>
-                <Text size="sm" color="$muted500" maxWidth={180} isTruncated>
+                <Text
+                  size="sm"
+                  color="$muted500"
+                  maxWidth={280}
+                  h="$5"
+                  isTruncated
+                >
                   {device.oui || ' '}
                 </Text>
-              </VStack>
-            </Tooltip>
+              </Tooltip>
+            </VStack>
 
             <VStack
               sx={{
@@ -312,22 +317,10 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
               }}
             >
               <HStack space="sm" alignItems="center">
+
                 <Text size="md" bold>
                   {device.RecentIP}
                 </Text>
-                <Box sx={{ '@md': { display: 'none' } }}>
-                  <Icon
-                    as={device.MAC ? WifiIcon : WaypointsIcon}
-                    size="sm"
-                    color={
-                      device.isConnected
-                        ? '$green600'
-                        : colorMode == 'light'
-                        ? '$muted200'
-                        : '$muted700'
-                    }
-                  />
-                </Box>
               </HStack>
 
               <Text size="sm" color="$muted500">
@@ -354,14 +347,18 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
             justifyContent="center"
             alignItems="center"
           >
-            <Text size="sm">{wifi_type}</Text>
+            <Tooltip label={wifi_type}>
+              <IconItem name={wifi_type == 'Wired' ? 'Wire' : 'Wifi'} size={32}
+                />
+            </Tooltip>
           </VStack>
+
           <HStack
             space="sm"
             justifyContent="flex-start"
             flexWrap="wrap"
             alignItems="flex-start"
-            sx={{ '@md': { w: '$2/5', alignSelf: 'center' } }}
+            sx={{ '@md': { flex: 1, alignSelf: 'center' } }}
           >
             {device.Policies?.sort().map((policy) => (
               <PolicyItem key={policy} name={policy} />

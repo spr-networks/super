@@ -3,7 +3,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends nftables iproute2 netcat-traditional inetutils-ping net-tools nano ca-certificates git curl
 RUN apt-get install -y --no-install-recommends clang
-RUN apt-get install -y pkg-config gcc llvm m4 emacs libpcap-dev libelf-dev make libnl-genl-3-dev libssl-dev
+RUN apt-get install -y pkg-config gcc llvm m4 emacs libpcap-dev libelf-dev make libnl-route-3-dev libnl-genl-3-dev libssl-dev
 RUN mkdir /code
 WORKDIR /code
 RUN git clone -b v1.2.0 --depth 1 https://github.com/xdp-project/xdp-tools.git
@@ -36,7 +36,7 @@ RUN make install
 
 FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends libnl-genl-3-dev iw && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends libnl-genl-3-dev libnl-route-3-dev iw lshw && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /code/hostap/hostapd/hostapd /usr/local/bin/
 COPY --from=builder /code/hostap/hostapd/hostapd_cli /usr/local/bin/
 COPY --from=builder /hostap_dhcp_helper /

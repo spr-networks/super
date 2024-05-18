@@ -11,8 +11,6 @@ import SignalStrength from 'views/Traffic/SignalStrength'
 import Traffic from 'views/Traffic/Traffic'
 import TrafficTimeSeries from 'views/Traffic/TrafficTimeSeries'
 import TrafficList from 'views/Traffic/TrafficList'
-import UplinkConfiguration from 'views/UplinkConfiguration'
-import LANLinkConfiguration from 'views/LANLinkConfiguration'
 import WirelessConfiguration from 'views/WirelessConfiguration'
 import Groups from 'views/Groups/Groups'
 import Tags from 'views/Tags'
@@ -32,8 +30,8 @@ import Events from 'views/Events'
 import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
 import AuthValidate from 'views/AuthValidate'
-import SystemInfo from 'views/SystemInfo'
 import SystemInfoTabView from 'views/SystemInfoTabView'
+import LinkConfigurationTabView from 'views/LinkConfigurationTabView'
 import Alerts from 'views/Alerts'
 import AlertSettings from 'views/AlertSettings'
 import AddAlert from 'views/Alerts/AddAlert'
@@ -51,6 +49,7 @@ import {
   CableIcon,
   CogIcon,
   ContainerIcon,
+  EarthLockIcon,
   EyeIcon,
   FlameIcon,
   GaugeCircleIcon,
@@ -118,22 +117,22 @@ const routes = [
     component: ConnectDevice
   },
   {
-    path: 'wireless',
-    name: 'Wifi',
-    icon: WifiIcon,
-    wifi: true,
-    component: WirelessConfiguration,
-    layout: 'admin'
-  },
-  {
     name: 'Network',
     state: 'netCollapse',
     hideSimple: true,
     views: [
       {
+        path: 'wireless',
+        name: 'Wifi',
+        icon: WifiIcon,
+        wifi: true,
+        component: WirelessConfiguration,
+        layout: 'admin'
+      },
+      {
         path: 'wireguard',
         name: 'VPN',
-        icon: WaypointsIcon,
+        icon: EarthLockIcon,
         component: Wireguard,
         hideSimple: true,
         layout: 'admin'
@@ -148,17 +147,9 @@ const routes = [
       },
       {
         path: 'uplink',
-        name: 'Uplink',
-        icon: GlobeIcon,
-        component: UplinkConfiguration,
-        hideSimple: true,
-        layout: 'admin'
-      },
-      {
-        path: 'lanlink',
-        name: 'LAN',
-        icon: CableIcon,
-        component: LANLinkConfiguration,
+        name: 'Link Settings',
+        icon: WaypointsIcon,
+        component: LinkConfigurationTabView,
         hideSimple: true,
         layout: 'admin'
       },

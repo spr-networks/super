@@ -7,28 +7,48 @@
 # add custom blocks with DNS_BLOCK=hosts,ads,facebook
 # if configs are already setup it'll only show the login info
 # for a clean reset:
-# docker-compose -f docker-compose-virt.yml down && rm -rf configs && ./virtual_install.sh
+# docker compose -f docker-compose-virt.yml down && rm -rf configs && ./virtual_install.sh
 
 if [ $UID -ne 0 ]; then
 	echo "[-] run as root or with sudo"
 	exit
 fi
 
+
 install_deps() {
-	# install deps
-	apt update && \
-		apt install -y curl git docker-compose docker.io jq qrencode iproute2 wireguard-tools
+	# install upstream docker
+	apt-get update
+	apt-get -y install ca-certificates curl gnupg
+	install -m 0755 -d /etc/apt/keyrings
+	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg
+	chmod a+r /etc/apt/keyrings/docker.gpg
+
+	echo \
+		"deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+		"$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+		tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+	apt update
+	apt-get -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+	apt install -y curl git jq qrencode iproute2 wireguard-tools
 
 	git clone https://github.com/spr-networks/super.git
 	cd super
 
-	# overwrite docker-compose.yml
+	# overwrite docker compose.yml
 	cp docker-compose-virt.yml docker-compose.yml
 }
 
 # if not git dir is available
 if [ ! -f "./docker-compose-virt.yml" ]; then
 	install_deps
+fi
+
+docker compose 2>/dev/null >/dev/null
+HAS_NEWDC=$?
+if [ $HAS_NEWDC -ne 0 ]; then
+	echo "[-] A newer version of docker is required"
+	exit 1
 fi
 
 # generate default configs
@@ -48,8 +68,8 @@ docker inspect "$CONTAINER_CHECK" > /dev/null 2>&1
 if [ $? -eq 1 ]; then
 	echo "[+] starting spr..."
 
-	docker-compose -f docker-compose-virt.yml pull
-	docker-compose -f docker-compose-virt.yml up -d
+	docker compose -f docker-compose-virt.yml pull
+	docker compose -f docker-compose-virt.yml up -d
 else
 	echo "[+] spr already running"
 fi
@@ -204,5 +224,5 @@ fi
 
 # reload dns if we have modified blocks
 if [ ! -z "$DNS_BLOCK" ]; then
-	docker-compose -f docker-compose-virt.yml restart dns >/dev/null 2>&1 &
+	docker compose -f docker-compose-virt.yml restart dns >/dev/null 2>&1 &
 fi

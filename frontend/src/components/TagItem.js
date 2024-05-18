@@ -5,13 +5,16 @@ import { Badge, BadgeIcon, BadgeText, useColorMode } from '@gluestack-ui/themed'
 import {
   CableIcon,
   RouteIcon,
+  FileSearch,
   TagIcon,
   NetworkIcon,
   GlobeIcon,
   Globe2Icon,
   UsersIcon,
   WifiIcon,
-  PowerIcon
+  PowerIcon,
+  ArrowUpFromDot,
+  ArrowLeftRight
 } from 'lucide-react-native'
 
 const TagItem = React.memo(({ name, size, ...props }) => {
@@ -40,16 +43,22 @@ const TagItem = React.memo(({ name, size, ...props }) => {
 const PolicyItem = React.memo(({ name, size }) => {
   let policyIcons = {
     wan: Globe2Icon,
-    dns: GlobeIcon,
-    lan: RouteIcon //NetworkIcon is crammed
+    dns: FileSearch,
+    lan: ArrowLeftRight, //NetworkIcon is crammed
+    api: RouteIcon,
+    lan_upstream: ArrowUpFromDot,
+    disabled: RouteIcon,
   }
 
   let colorMode = useColorMode()
 
   let policyColors = {
-    dns: colorMode == 'light' ? '$blueGray200' : '$blueGray700',
-    lan: colorMode == 'light' ? '$blueGray100' : '$blueGray600',
-    wan: colorMode == 'light' ? '$blueGray200' : '$blueGray700'
+    dns: colorMode == 'light' ? '$blueGray300' : '$blueGray700',
+    lan: colorMode == 'light' ? '$blueGray300' : '$blueGray700',
+    wan: colorMode == 'light' ? '$blueGray300' : '$blueGray700',
+    api: colorMode == 'light' ? '$blueGray300' : '$blueGray700',
+    lan_upstream: colorMode == 'light' ? '$blueGray300' : '$blueGray700',
+    disabled: colorMode == 'light' ? '$blueGray300' : '$blueGray700',
   }
 
   let icon = policyIcons[name] || UsersIcon

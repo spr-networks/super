@@ -13,6 +13,9 @@ import {
   CheckboxIndicator,
   CheckboxLabel,
   FormControl,
+  FormControlError,
+  FormControlErrorText,
+  FormControlErrorIcon,
   FormControlLabel,
   FormControlLabelText,
   Heading,
@@ -31,11 +34,37 @@ let modes = [
   { label: '2.4 GHz', value: 'g' }
 ]
 
+let convertChannelToFrequency = (band, channel) => {
+  let frequency;
+
+  if (band === "2.4") {
+    frequency = 2412 + (channel - 1) * 5;
+    if (channel === 14) {
+      frequency = 2484;
+    }
+  } else if (band === "5") {
+    if (channel >= 1 && channel <= 144) {
+      frequency = 5000 + channel * 5;
+    } else if (channel >= 149 && channel <= 169) {
+      frequency = 5000 + (channel - 1) * 5;
+    } else if (channel >= 184 && channel <= 196) {
+      frequency = 4000 + channel * 5;
+    }
+  } else if (band === "6") {
+    if (channel >= 1 && channel <= 253) {
+      frequency = 5940 + channel * 5;
+    }
+  }
+
+  return frequency
+}
+
 const WifiChannelParameters = ({
   iface,
   setIface,
   config,
   iws,
+  regs,
   curInterface,
   onSubmit,
   updateExtraBSS,
@@ -119,7 +148,12 @@ const WifiChannelParameters = ({
     setMode(config.hw_mode)
     handleModeChange(config.hw_mode)
     setSelectedMode(modes.find((v) => v.value == config.hw_mode))
-    setChannel(config.channel)
+    if (config.op_class > 130 && config.channel == 0) {
+      //select the 6-e acs in this case
+      setChannel("6GHz")
+    } else {
+      setChannel(config.channel)
+    }
     setExtraSSID(config.ssid + '-extra')
 
     let newBandwidth = 40
@@ -178,6 +212,8 @@ const WifiChannelParameters = ({
                 capability.includes('160 MHz') ||
                 capability.includes('160Mhz')
               ) {
+                //does card support 160, but doesnt account for regulatory
+                //we do that under channel lists later.
                 setDisable160(false)
               }
             }
@@ -200,33 +236,34 @@ const WifiChannelParameters = ({
           }
         }
 
-        //in the future, iw needs to be polled
-        // to parse this correctly
-        // along with an explanation about restarts
-        //get bandwidth and channel
-        /*
-        if (cur_device.channel) {
-          let parts = cur_device.channel.split(',')
-
-          let start_freq = parts[0].split(' ')[1].substring(1)[0]
-          if (start_freq == '2') {
-            setMode('g')
-          } else if (start_freq == '5') {
-            setMode('a')
-          }
-
-          let channel = parseInt(parts[0].split(' ')[0])
-          let bandwidth = parseInt(parts[1].split(' ')[2])
-
-        }
-          */
       }
     }
   }, [iface, config, iws, curInterface])
 
+  const checkRegsDisable = (frequency, bandwidth) => {
+    if (!regs || !regs.bands) return false
+    for (let reg_band of regs.bands) {
+      if (frequency >= reg_band.start && frequency < reg_band.end) {
+        //too much bandwidth asked for, ex reg says 80, but asking for 160
+        if (bandwidth > reg_band.max_bandwidth) {
+          return true
+        }
+        //160 runs past end of band
+        //we subract 10 because the center frequency is what is described
+        if (frequency >= reg_band.start && (frequency + bandwidth - 10 > reg_band.end)) {
+          return true
+        }
+        break
+      }
+    }
+
+    return false
+  }
+
   const enumerateChannelOptions = () => {
     //const iface = props.config.interface
     let validChannels = []
+    let saw_6e = false
 
     let expectedFreq = mode == 'a' ? '5' : '2'
     for (let iw of iws) {
@@ -240,7 +277,10 @@ const WifiChannelParameters = ({
           continue
         }
 
+
         for (let freq of band.frequencies) {
+          let frequency = parseInt(freq.split(' ')[0])
+
           let channelNumber = parseInt(freq.split(' ')[2].slice(1, -1))
           let channelLabel = channelNumber
           let isDisabled = false
@@ -257,8 +297,40 @@ const WifiChannelParameters = ({
             }
           }
 
+          //bandwith check, do not list start indices that
+          // are nonsense for 5/6ghz.
+          if (mode == 'a') {
+            if (bandwidth == 160) {
+              //5 ghz and 6ghz offsets
+              if (frequency % 160 != 60 && frequency % 160 != 35) {
+                continue
+              }
+            } else if (bandwidth == 80) {
+              //5 ghz and 6ghz offsets
+              if (frequency % 80 != 60 && frequency % 80 != 35) {
+                continue
+              }
+            } else if (bandwidth == 40) {
+              //5 ghz and 6ghz offsets
+              if (frequency % 40 != 20 && frequency % 40 != 35) {
+                continue
+              }
+            }
+          }
+
+          if (isDisabled == false) {
+
+            if (frequency > 5900) {
+              saw_6e = true
+            }
+
+            //if not disabled yet, check the regs db also for validity
+            //6095 MHz [29] (12.0 dBm) (no IR)
+            isDisabled = checkRegsDisable(frequency, bandwidth)
+          }
+
           validChannels.push({
-            value: channelNumber,
+            value: channelNumber.toString(),
             label: channelLabel,
             toolTip: freq,
             disabled: isDisabled
@@ -266,6 +338,33 @@ const WifiChannelParameters = ({
         }
       }
     }
+
+    validChannels.push({
+      value: "0",
+      label: "Automatic Channel Selection",
+      toolTip: "Automatic Channel Selection",
+      disabled: false
+    })
+
+    if (saw_6e) {
+      validChannels.push({
+        value: "6GHz",
+        label: "[6GHz] Automatic Channel Selection",
+        toolTip: "[6GHz] Automatic Channel Selection",
+        disabled: false
+      })
+    }
+
+    //move enabled to top
+    validChannels.sort((a, b) => {
+      if (a.disabled && !b.disabled) {
+        return 1
+      } else if (!a.disabled && b.disabled) {
+        return -1
+      } else {
+        return 0
+      }
+    });
 
     return validChannels
   }
@@ -276,7 +375,7 @@ const WifiChannelParameters = ({
       return false
     }
 
-    if (!channel) {
+    if (channel != 0 && !channel) {
       setErrors({ channel: true })
       return false
     }
@@ -432,26 +531,24 @@ const WifiChannelParameters = ({
               ))}
             </Select>
             {'bandwidth' in errors ? (
-              <FormControlErrorMessage>
-                <FormControlErrorMessageText>
+              <FormControlError>
+                <FormControlErrorText>
                   Invalid Bandwidth
-                </FormControlErrorMessageText>
-              </FormControlErrorMessage>
+                </FormControlErrorText>
+              </FormControlError>
             ) : null}
           </FormControl>
 
           <FormControl flex={1} isInvalid={'channel' in errors}>
             <FormControlLabel for="Channel">
-              <FormControlLabelText>Channel</FormControlLabelText>
+              <FormControlLabelText>Channel {channel}</FormControlLabelText>
             </FormControlLabel>
             <Select
               selectedValue={channel}
-              onValueChange={(value) => setChannel(parseInt(value))}
+              onValueChange={(value) => setChannel(value)}
             >
-              <Select.Item label="" value={0} />
               {enumerateChannelOptions().map((item) => (
                 <Select.Item
-                  key={item.label}
                   label={item.label}
                   value={item.value}
                   isDisabled={item.disabled}
@@ -459,11 +556,11 @@ const WifiChannelParameters = ({
               ))}
             </Select>
             {'channel' in errors ? (
-              <FormControlErrorMessage>
-                <FormControlErrorMessageText>
+              <FormControlError>
+                <FormControlErrorText>
                   Invalid Channel
-                </FormControlErrorMessageText>
-              </FormControlErrorMessage>
+                </FormControlErrorText>
+              </FormControlError>
             ) : null}
           </FormControl>
 

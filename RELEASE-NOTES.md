@@ -1,5 +1,19 @@
 # Secure Programmable Router (SPR) Release Notes
 
+<<<<<<< HEAD
+=======
+## v0.3.12
+
+Key Fixes
+* Fix multicast proxy skipping AP interfaces incorrectly
+Improvements
+* LAN Link under one view
+* Device List UI improvements
+* ACS support 
+* If something goes wrong with WiFi config/channels, load a failsafe
+* Hostapd updated from upstream
+
+>>>>>>> dev
 ## v0.3.11
 Major change
 * Image builder set to 24.04 base.

@@ -1,16 +1,15 @@
 import React, { useContext, useState } from 'react'
 
 import { AlertContext } from 'layouts/Admin'
-import SystemInfo from 'views/System/SystemInfo'
-import SystemInfoContainers from 'views/System/SystemInfoContainers'
-import SystemInfoNetworkMisc from 'views/System/SystemInfoNetworkMisc'
+import LANLinkConfiguration from 'views/LinkConfiguration/LANLinkConfiguration'
+import UplinkConfiguration from 'views/LinkConfiguration/UplinkConfiguration'
 
 import { Animated, Dimensions, Platform } from 'react-native'
 import { TabView, SceneMap } from 'react-native-tab-view'
 
 import { Box, View, Pressable, useColorMode } from '@gluestack-ui/themed'
 
-const SystemInfoTabView = (props) => {
+const LinkConfigurationTabView = (props) => {
   const [index, setIndex] = useState(0) //1)
 
   const context = useContext(AlertContext)
@@ -18,15 +17,11 @@ const SystemInfoTabView = (props) => {
   const [routes] = useState([
     {
       key: 'first',
-      title: 'System'
+      title: 'Uplinks'
     },
     {
       key: 'second',
-      title: 'Containers'
-    },
-    {
-      key: 'third',
-      title: 'Network Info'
+      title: 'LAN/Downlinks'
     }
   ])
 
@@ -36,9 +31,8 @@ const SystemInfoTabView = (props) => {
   }
 
   const renderScene = SceneMap({
-    first: SystemInfo,
-    second: SystemInfoContainers,
-    third: SystemInfoNetworkMisc
+    first: UplinkConfiguration,
+    second: LANLinkConfiguration
   })
 
   const renderTabBar = (props) => {
@@ -123,4 +117,4 @@ const SystemInfoTabView = (props) => {
   )
 }
 
-export default SystemInfoTabView
+export default LinkConfigurationTabView

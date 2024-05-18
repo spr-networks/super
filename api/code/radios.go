@@ -116,6 +116,7 @@ func hostapdSyncMesh(w http.ResponseWriter, r *http.Request) {
 }
 
 type HostapdConfigEntry struct {
+	AutoSelectChannel            bool
 	Country_code                 string
 	Vht_capab                    string
 	Ht_capab                     string
@@ -470,6 +471,23 @@ func getHostapdJson(iface string) (map[string]interface{}, error) {
 	return conf, nil
 }
 
+func hostapdFailsafeStatus(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	if !isValidIface(iface) {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	status := "ok"
+	failsafe_path := TEST_PREFIX + "/state/wifi/failsafe_" + iface
+	_, err := os.Stat(failsafe_path)
+	if err == nil {
+		status = "failsafe running"
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(status)
+}
 func hostapdConfig(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
 	if !isValidIface(iface) {
@@ -602,6 +620,10 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		conf["channel"] = newConf.Channel
 	}
 
+	if newConf.AutoSelectChannel {
+		conf["channel"] = 0
+	}
+
 	if _, ok := newInput["Vht_oper_centr_freq_seg0_idx"]; ok {
 		if newConf.Vht_oper_centr_freq_seg0_idx == -1 {
 			delete(conf, "vht_oper_centr_freq_seg0_idx")
@@ -726,7 +748,7 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 	   allowed commands for now:
 	   iw/list, iw/dev iw/dev/wlan0-9/scan
 	*/
-	validCommand := regexp.MustCompile(`^(list|dev)/?([a-z0-9\.]+\/scan)?$`).MatchString
+	validCommand := regexp.MustCompile(`^(list|dev|reg)/?([a-z0-9\.]+\/scan)?$`).MatchString
 	if !validCommand(command) {
 		fmt.Println("invalid iw command")
 		http.Error(w, "Invalid command", 400)
@@ -734,6 +756,9 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 	}
 
 	args := strings.Split(command, "/")
+	if command == "reg" {
+		args = []string{"reg", "get"}
+	}
 	cmd := exec.Command("iw", args...)
 	data, err := cmd.Output()
 	if err != nil {
@@ -743,7 +768,7 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// use json parsers if available (iwlist, iwdev, iw-scan)
-	if command == "list" || command == "dev" || strings.HasSuffix(command, "scan") {
+	if command == "list" || command == "dev" || command == "reg" || strings.HasSuffix(command, "scan") {
 		parser := "--iw" + command // bug: jc dont allow - when using local parsers
 		if strings.HasSuffix(command, "scan") {
 			parser = "--iw-scan"

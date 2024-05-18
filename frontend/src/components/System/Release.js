@@ -432,7 +432,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
             <CheckboxIndicator mr="$2">
               <CheckboxIcon as={CheckIcon} />
             </CheckboxIndicator>
-            <CheckboxLabel>Auto-Check for Updates</CheckboxLabel>
+            <CheckboxLabel size="sm">Auto-Check for Updates</CheckboxLabel>
           </Checkbox>
 
           <Button size="sm" onPress={checkUpdate}>

@@ -85,7 +85,7 @@ const WifiClients = (props) => {
       let ret = await api.allStations.call(api, iface).catch((error) => {
         context.error('WIFI API Failure', error)
       })
-
+      if (!ret) continue
       for (let mac of Object.keys(ret)) {
         ret[mac].Iface = iface
       }
@@ -107,6 +107,7 @@ const WifiClients = (props) => {
         client.Signal = station.signal
         client.Iface = station.Iface
         client.TXRate = station.tx_rate_info
+        client.RXRate = station.rx_rate_info
         client.Flags = station.flags
         client.AP = api.remoteURL.replace('http://', '').replace('/', '')
         return client
@@ -195,7 +196,7 @@ const WifiClients = (props) => {
                 }}
               >
                 <TooltipContent>
-                  <TooltipText>{item.Flags}</TooltipText>
+                  <TooltipText>{item.Flags} TX: {item.TXRate} RX: {item.RXRate}</TooltipText>
                 </TooltipContent>
               </Tooltip>
             </HStack>

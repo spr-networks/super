@@ -282,7 +282,9 @@ const Mesh = (props) => {
         func('')
       })
       .catch((e) => {
-        alertContext.error('Could not list API Tokens')
+        alertContext.error('Could not list API Tokens. Verify OTP on Auth page')
+        //setAuthReturn('/admin/mesh')
+        //navigate('/auth/validate')
       })
   }
 

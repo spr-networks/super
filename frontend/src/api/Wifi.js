@@ -29,6 +29,10 @@ export default class APIWifi extends API {
     return this.get(`hostapd/${iface}/status`);
   }
 
+  checkFailsafe(iface) {
+    return this.get(`hostapd/${iface}/failsafe`);
+  }
+
   arp() {
     return this.get('arp');
   }
@@ -48,6 +52,11 @@ export default class APIWifi extends API {
   iwList() {
     return this.get('iw/list');
   }
+
+  iwReg() {
+    return this.get('iw/reg');
+  }
+
 
   iwScan(iface) {
     return this.get(`iw/dev/${iface}/scan`);
