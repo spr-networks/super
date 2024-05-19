@@ -321,6 +321,11 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
                   <IconItem
                     name={wifi_type == 'Wired' ? 'Wire' : 'Wifi'}
                     size={16}
+                    sx={{
+                      '@md': {
+                        display: 'none'
+                      }
+                    }}
                     color={
                       device.isConnected
                         ? '$green600'
