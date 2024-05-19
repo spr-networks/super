@@ -2633,13 +2633,17 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	configureInterface("AP", "", conf.InterfaceAP)
 	configureInterface("Uplink", "ethernet", conf.InterfaceUplink)
 
+	fmt.Fprintf(w, "{\"status\": \"done\"}")
+	callSuperdRestart("", "")
+}
+
+func finalizeSetup(w http.ResponseWriter, r *http.Request) {
 	// disable mdns advertising and set up default multicast rules
 	multicastSettingsSetupDone()
 
 	ioutil.WriteFile(SetupDonePath, []byte("true"), 0600)
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
-	callSuperdRestart("", "")
 }
 
 func multicastSettingsSetupDone() {
@@ -2848,12 +2852,19 @@ func main() {
 
 	// intial setup
 	external_router_public.HandleFunc("/setup", setup).Methods("GET", "PUT")
+	external_router_setup.HandleFunc("/setup", setup).Methods("PUT")
+	external_router_setup.HandleFunc("/setup_done", finalizeSetup).Methods("PUT")
 	external_router_setup.HandleFunc("/ip/addr", ipAddr).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdUpdateConfig).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/{interface}/status", hostapdStatus).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
 	external_router_setup.HandleFunc("/hostapd/calcChannel", hostapdChannelCalc).Methods("PUT")
 	external_router_setup.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")
+	//to add a new wifi device
+	external_router_setup.HandleFunc("/device", handleUpdateDevice).Methods("PUT")
+	external_router_setup.HandleFunc("/devices", getDevices).Methods("GET")
+	external_router_setup.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 
 	//download cert from http
 	external_router_public.HandleFunc("/cert", getCert).Methods("GET")
