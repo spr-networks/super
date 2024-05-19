@@ -34,7 +34,7 @@ const WifiConnect = (props) => {
           ifaces.map((iface) => {
             return wifiAPI.status(iface).then((status) => {
               return status['ssid[0]']
-            })
+            }).catch((e) => {})
           })
         ).then((ssids) => {
           setSsids(ssids)
@@ -64,8 +64,20 @@ const WifiConnect = (props) => {
   }, [1000])
 
   const goBack = () => {
+    //override goBack to go back success
+    if (success && props.goBackSuccess)  {
+      props.goBackSuccess()
+    }
     if (props.goBack) {
       props.goBack()
+    }
+  }
+
+  const goBackSuccess = () => {
+    if (props.goBackSuccess) {
+      props.goBackSuccess()
+    } else {
+      navigate('/admin/devices')
     }
   }
 
@@ -96,7 +108,7 @@ const WifiConnect = (props) => {
               action="success"
               variant="solid"
               bg="$green500"
-              onPress={() => navigate('/admin/devices')}
+              onPress={goBackSuccess}
             >
               <ButtonText>Success</ButtonText>
             </Button>
