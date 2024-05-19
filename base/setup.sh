@@ -1,7 +1,23 @@
 #!/bin/bash
 apt-get update
 apt-get -y upgrade
-apt-get -y install docker.io docker-compose nftables wireless-regdb conntrack
+apt-get -y install nftables wireless-regdb conntrack
+
+# install upstream docker
+apt-get -y install ca-certificates curl gnupg
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
+
+echo \
+  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+  tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+apt update
+apt-get -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+
 
 if grep --quiet Raspberry /proc/cpuinfo; then
   apt-get -y install linux-modules-extra-raspi
@@ -30,4 +46,3 @@ echo -e "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
 
 #generate self signed certificate
 SKIPPASS="-password pass:1234" ./api/scripts/generate-certificate.sh
-
