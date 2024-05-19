@@ -2354,69 +2354,6 @@ func speedTest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func pingTest(w http.ResponseWriter, r *http.Request) {
-	iface := mux.Vars(r)["interface"]
-	address := mux.Vars(r)["address"]
-
-	if !isValidIface(iface) {
-		http.Error(w, "Invalid interface name", 400)
-		return
-	}
-
-	ief, err := net.InterfaceByName(iface)
-	if err != nil {
-		http.Error(w, "Invalid interface", 400)
-		return
-	}
-
-	ipAddr, err := net.ResolveIPAddr("ip", address)
-	if err != nil {
-		http.Error(w, "Invalid address", 400)
-		return
-	}
-
-	network := "ip4:icmp"
-	if ipAddr.IP.To4() == nil {
-		network = "ip6:ipv6-icmp"
-	}
-
-	result := []string{}
-
-	for i := 0; i < 4; i++ {
-		start := time.Now()
-
-		conn, err := net.ListenPacket(network, ief.Name)
-		if err != nil {
-			http.Error(w, "Failed to listen on interface", 400)
-			return
-		}
-		defer conn.Close()
-
-		_, err = conn.WriteTo([]byte{}, ipAddr)
-		if err != nil {
-			continue
-		}
-
-		err = conn.SetDeadline(time.Now().Add(time.Second * 1))
-		if err != nil {
-			http.Error(w, "Failed to set deadline", 400)
-			return
-		}
-
-		_, _, err = conn.ReadFrom(make([]byte, 1500))
-		if err != nil {
-			result = append(result, "timeout")
-			continue
-		}
-
-		duration := time.Since(start)
-		result = append(result, duration.String())
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
-}
-
 type SetupConfig struct {
 	SSID            string
 	CountryCode     string
@@ -2900,6 +2837,7 @@ func main() {
 	//Misc
 	external_router_authenticated.HandleFunc("/speedtest/{start:[0-9]+}-{end:[0-9]+}", speedTest).Methods("GET", "PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/ping/{interface}/{address}", pingTest).Methods("PUT")
+	external_router_authenticated.HandleFunc("/ping/{interface}/{address}/udp", udpTest).Methods("PUT")
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/restart", restart).Methods("PUT")
 	external_router_authenticated.HandleFunc("/backup", doConfigsBackup).Methods("PUT", "OPTIONS")

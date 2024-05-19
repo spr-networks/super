@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 )
 
 import "github.com/gorilla/mux"
@@ -753,4 +754,141 @@ func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+}
+
+func pingTest(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	address := mux.Vars(r)["address"]
+
+	if !isValidIface(iface) {
+		http.Error(w, "Invalid interface name", 400)
+		return
+	}
+
+	ief, err := net.InterfaceByName(iface)
+	if err != nil {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	ipAddr, err := net.ResolveIPAddr("ip", address)
+	if err != nil {
+		http.Error(w, "Invalid address", 400)
+		return
+	}
+
+	network := "ip4:icmp"
+	if ipAddr.IP.To4() == nil {
+		network = "ip6:ipv6-icmp"
+	}
+
+	result := []string{}
+
+	for i := 0; i < 4; i++ {
+		start := time.Now()
+
+		conn, err := net.ListenPacket(network, ief.Name)
+		if err != nil {
+			http.Error(w, "Failed to listen on interface", 400)
+			return
+		}
+		defer conn.Close()
+
+		_, err = conn.WriteTo([]byte{}, ipAddr)
+		if err != nil {
+			continue
+		}
+
+		err = conn.SetDeadline(time.Now().Add(time.Second * 1))
+		if err != nil {
+			http.Error(w, "Failed to set deadline", 400)
+			return
+		}
+
+		_, _, err = conn.ReadFrom(make([]byte, 1500))
+		if err != nil {
+			result = append(result, "timeout")
+			continue
+		}
+
+		duration := time.Since(start)
+		result = append(result, duration.String())
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func udpTest(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	address := mux.Vars(r)["address"]
+
+	if !isValidIface(iface) {
+		http.Error(w, "Invalid interface name", 400)
+		return
+	}
+
+	ief, err := net.InterfaceByName(iface)
+	if err != nil {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	udpAddr, err := net.ResolveUDPAddr("udp", address)
+	if err != nil {
+		http.Error(w, "Invalid address", 400)
+		return
+	}
+
+	result := []string{}
+
+	for i := 0; i < 4; i++ {
+		start := time.Now()
+
+		addrs, err := ief.Addrs()
+		if err != nil {
+			http.Error(w, "Failed to get interface addresses", 400)
+			return
+		}
+
+		var conn *net.UDPConn
+		for _, addr := range addrs {
+			if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
+				conn, err = net.ListenUDP("udp", &net.UDPAddr{IP: ipNet.IP})
+				if err == nil {
+					break
+				}
+			}
+		}
+		if conn == nil {
+			http.Error(w, "Failed to listen on interface", 400)
+			return
+		}
+		defer conn.Close()
+
+		message := []byte("ping")
+		_, err = conn.WriteTo(message, udpAddr)
+		if err != nil {
+			continue
+		}
+
+		err = conn.SetDeadline(time.Now().Add(time.Second * 1))
+		if err != nil {
+			http.Error(w, "Failed to set deadline", 400)
+			return
+		}
+
+		buffer := make([]byte, 1500)
+		_, _, err = conn.ReadFrom(buffer)
+		if err != nil {
+			result = append(result, "timeout")
+			continue
+		}
+
+		duration := time.Since(start)
+		result = append(result, duration.String())
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
