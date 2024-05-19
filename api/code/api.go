@@ -2857,6 +2857,7 @@ func main() {
 	external_router_setup.HandleFunc("/ip/addr", ipAddr).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdUpdateConfig).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/{interface}/status", hostapdStatus).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
 	external_router_setup.HandleFunc("/hostapd/calcChannel", hostapdChannelCalc).Methods("PUT")
 	external_router_setup.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")
