@@ -83,7 +83,7 @@ const AddDevice = (props) => {
           `Device "${pendingDevice.Name}" is added but not connected. Adding a new device will overwrite it`
         )
       }
-    })
+    }).catch((e) => {})
   }, [])
 
   const filterMAC = (value) => {
@@ -260,7 +260,7 @@ const AddDevice = (props) => {
   }
 
   if (submitted) {
-    return <WifiConnect device={device} goBack={() => setSubmitted(false)} />
+    return <WifiConnect device={device} goBackSuccess={props.deviceAddedCallback} goBack={() => setSubmitted(false)} />
   }
 
   return (
@@ -269,17 +269,20 @@ const AddDevice = (props) => {
         '@lg': { width: '$5/6' }
       }}
     >
-      <ListHeader title="Add a new WiFi Device" />
-      <VStack display={isSimpleMode ? 'none' : 'flex'} px="$4">
-        <Text color="$muted500" size="xs">
-          Wired devices are added automatically & need WAN/DNS policies assigned
-          to them for internet access
-        </Text>
-        <Text color="$muted500" size="xs">
-          If they need a VLAN Tag ID for a Managed Port do add the device here
-        </Text>
-      </VStack>
-
+    {!props.slimView && (
+      <>
+        <ListHeader title="Add a new WiFi Device" />
+        <VStack display={isSimpleMode ? 'none' : 'flex'} px="$4">
+          <Text color="$muted500" size="xs">
+            Wired devices are added automatically & need WAN/DNS policies assigned
+            to them for internet access
+          </Text>
+          <Text color="$muted500" size="xs">
+            If they need a VLAN Tag ID for a Managed Port do add the device here
+          </Text>
+        </VStack>
+      </>
+      )}
       <VStack space="3xl" p="$4">
         <VStack
           space="md"
@@ -439,6 +442,8 @@ const AddDevice = (props) => {
             </FormControlHelper>
           </FormControl>
 
+          {!props.slimView && (
+
           <FormControl flex={2} display={isSimpleMode ? 'none' : 'flex'}>
             <FormControlLabel>
               <FormControlLabelText>Tags</FormControlLabelText>
@@ -474,13 +479,15 @@ const AddDevice = (props) => {
                 ))}
               </HStack>
             </CheckboxGroup>
-
             <FormControlHelper>
               <FormControlHelperText>Assign device tags</FormControlHelperText>
             </FormControlHelper>
           </FormControl>
+        )}
         </VStack>
 
+        {!props.slimView && (
+        <>
         <VStack
           space="md"
           display={isSimpleMode ? 'none' : 'flex'}
@@ -583,6 +590,8 @@ const AddDevice = (props) => {
             </FormControlHelper>
           </FormControl>
         </VStack>
+        </>
+        )}
 
         <Button action="primary" size="md" onPress={handleSubmit}>
           <ButtonText>Save</ButtonText>

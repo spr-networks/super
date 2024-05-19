@@ -168,9 +168,12 @@ class API {
     }
 
     let headers = {
-      Authorization: this.authHeaders,
       'X-Requested-With': 'react',
       'Content-Type': 'application/json'
+    }
+
+    if (this.authHeaders) {
+      headers.Authorization = this.authHeaders
     }
 
     if (gJWTOTPHeader && this.remoteURL == '') {

@@ -1,6 +1,8 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { api, wifiAPI } from 'api'
 import { useNavigate } from 'react-router-dom'
+import AddDevice from 'components/Devices/AddDevice'
+import { countryCodes } from 'utils'
 
 import {
   Box,
@@ -26,7 +28,8 @@ import {
   FormControlError,
   FormControlErrorText,
   InfoIcon,
-  ScrollView
+  ScrollView,
+  useColorMode
 } from '@gluestack-ui/themed'
 
 import { Select } from 'components/Select'
@@ -34,8 +37,20 @@ import { Select } from 'components/Select'
 import { AlertContext } from 'AppContext'
 import { AlertCircle, KeyRoundIcon } from 'lucide-react-native'
 
+
+const AlertError = (props) => {
+  return (
+    <>
+    {props.alertBody && (
+      <Text>{props.alertBody}</Text>
+    )}
+    </>
+  )
+}
+
 const Setup = (props) => {
   const context = useContext(AlertContext)
+
   const navigate = useNavigate()
   //TBD, not currently used for anything. in the future roll in channel selection
   const [config, setConfig] = useState({})
@@ -53,257 +68,21 @@ const Setup = (props) => {
   const [checkUpdates, setCheckUpdates] = useState(true)
   const [reportInstall, setReportInstall] = useState(true)
 
-  const countryCodes = [
-    'AD',
-    'AE',
-    'AF',
-    'AG',
-    'AI',
-    'AL',
-    'AM',
-    'AO',
-    'AQ',
-    'AR',
-    'AS',
-    'AT',
-    'AU',
-    'AW',
-    'AX',
-    'AZ',
-    'BA',
-    'BB',
-    'BD',
-    'BE',
-    'BF',
-    'BG',
-    'BH',
-    'BI',
-    'BJ',
-    'BL',
-    'BM',
-    'BN',
-    'BO',
-    'BQ',
-    'BR',
-    'BS',
-    'BT',
-    'BV',
-    'BW',
-    'BY',
-    'BZ',
-    'CA',
-    'CC',
-    'CD',
-    'CF',
-    'CG',
-    'CH',
-    'CI',
-    'CK',
-    'CL',
-    'CM',
-    'CN',
-    'CO',
-    'CR',
-    'CU',
-    'CV',
-    'CW',
-    'CX',
-    'CY',
-    'CZ',
-    'DE',
-    'DJ',
-    'DK',
-    'DM',
-    'DO',
-    'DZ',
-    'EC',
-    'EE',
-    'EG',
-    'EH',
-    'ER',
-    'ES',
-    'ET',
-    'FI',
-    'FJ',
-    'FK',
-    'FM',
-    'FO',
-    'FR',
-    'GA',
-    'GB',
-    'GD',
-    'GE',
-    'GF',
-    'GG',
-    'GH',
-    'GI',
-    'GL',
-    'GM',
-    'GN',
-    'GP',
-    'GQ',
-    'GR',
-    'GS',
-    'GT',
-    'GU',
-    'GW',
-    'GY',
-    'HK',
-    'HM',
-    'HN',
-    'HR',
-    'HT',
-    'HU',
-    'ID',
-    'IE',
-    'IL',
-    'IM',
-    'IN',
-    'IO',
-    'IQ',
-    'IR',
-    'IS',
-    'IT',
-    'JE',
-    'JM',
-    'JO',
-    'JP',
-    'KE',
-    'KG',
-    'KH',
-    'KI',
-    'KM',
-    'KN',
-    'KP',
-    'KR',
-    'KW',
-    'KY',
-    'KZ',
-    'LA',
-    'LB',
-    'LC',
-    'LI',
-    'LK',
-    'LR',
-    'LS',
-    'LT',
-    'LU',
-    'LV',
-    'LY',
-    'MA',
-    'MC',
-    'MD',
-    'ME',
-    'MF',
-    'MG',
-    'MH',
-    'MK',
-    'ML',
-    'MM',
-    'MN',
-    'MO',
-    'MP',
-    'MQ',
-    'MR',
-    'MS',
-    'MT',
-    'MU',
-    'MV',
-    'MW',
-    'MX',
-    'MY',
-    'MZ',
-    'NA',
-    'NC',
-    'NE',
-    'NF',
-    'NG',
-    'NI',
-    'NL',
-    'NO',
-    'NP',
-    'NR',
-    'NU',
-    'NZ',
-    'OM',
-    'PA',
-    'PE',
-    'PF',
-    'PG',
-    'PH',
-    'PK',
-    'PL',
-    'PM',
-    'PN',
-    'PR',
-    'PS',
-    'PT',
-    'PW',
-    'PY',
-    'QA',
-    'RE',
-    'RO',
-    'RS',
-    'RU',
-    'RW',
-    'SA',
-    'SB',
-    'SC',
-    'SD',
-    'SE',
-    'SG',
-    'SH',
-    'SI',
-    'SJ',
-    'SK',
-    'SL',
-    'SM',
-    'SN',
-    'SO',
-    'SR',
-    'SS',
-    'ST',
-    'SV',
-    'SX',
-    'SY',
-    'SZ',
-    'TC',
-    'TD',
-    'TF',
-    'TG',
-    'TH',
-    'TJ',
-    'TK',
-    'TL',
-    'TM',
-    'TN',
-    'TO',
-    'TR',
-    'TT',
-    'TV',
-    'TW',
-    'TZ',
-    'UA',
-    'UG',
-    'UM',
-    'US',
-    'UY',
-    'UZ',
-    'VA',
-    'VC',
-    'VE',
-    'VG',
-    'VI',
-    'VN',
-    'VU',
-    'WF',
-    'WS',
-    'YE',
-    'YT',
-    'ZA',
-    'ZM',
-    'ZW'
-  ]
+  const [setupStage, setSetupStage] = useState(1)
+  const [alertType, setAlertType] = useState("")
+  const [alertBody, setAlertBody] = useState("")
+
+  const setupAlert = (title, body) => {
+    setAlertType(title)
+    setAlertBody(body)
+  }
+
+  context.success = (title, body) => setupAlert('success', title, body)
+  context.warning = (title, body) => setupAlert('warning', title, body)
+  context.danger = (title, body) => setupAlert('danger', title, body)
+  context.error = (title, body) => setupAlert('error', title, body)
+  context.info = (title, body) => setupAlert('info', title, body)
+
 
   useEffect(() => {
     api
@@ -311,6 +90,8 @@ const Setup = (props) => {
       .then((res) => {})
       .catch(async (err) => {
         let msg = await err.response.text() // setup already done
+
+        //tbd this might not be correct
         setIsDone(true)
       })
 
@@ -319,7 +100,7 @@ const Setup = (props) => {
         setConfig(conf)
       },
       [interfaceWifi]
-    )
+    ).catch((e) => {})
 
     wifiAPI.ipAddr().then((ipAddr) => {
       wifiAPI.iwDev().then((iwDev) => {
@@ -348,7 +129,7 @@ const Setup = (props) => {
           setInterfaceUplink("eth2")
         }
       })
-    })
+    }).catch((e) => {})
   }, [])
 
   useEffect(() => {
@@ -368,6 +149,8 @@ const Setup = (props) => {
       setErrors({})
     }
   }, [tinynet])
+
+
 
   const handlePress = () => {
     if (
@@ -439,7 +222,8 @@ const Setup = (props) => {
       .put('/setup', data)
       .then((res) => {
         //res.status==='done'
-        setIsDone(true)
+        //setIsDone(true)
+        setSetupStage(2)
       })
       .catch(async (err) => {
         let msg = await err.response.text()
@@ -447,6 +231,136 @@ const Setup = (props) => {
         //setIsDone(true)
       })
   }
+
+  const handlePressFinish = () => {
+
+    api
+      .put('/setup_done')
+      .then((res) => {
+        setIsDone(true)
+        navigate('/auth/login')
+      })
+      .catch(async (err) => {
+        //let msg = await err.response.text()
+        //setErrors({ ...errors, submit: msg })
+        //setIsDone(true)
+        //navigate('/auth/login')
+      })
+
+  }
+
+  const deviceAdded = () => {
+    setSetupStage(3)
+  }
+
+  if (setupStage === 2) {
+    return (
+      <ScrollView
+        h="$full"
+        w="$full"
+        px="$4"
+        bg="$white"
+        sx={{
+          _dark: { bg: '$blueGray900' },
+          '@md': {
+            rounded: 10,
+            w: '60%',
+            alignSelf: 'center'
+          }
+        }}
+      >
+      <VStack space="md" my="$4">
+          <Heading
+            size="lg"
+            fontWeight="300"
+            color="$coolGray800"
+            sx={{
+              _dark: { color: '$warmGray50' }
+            }}
+            alignSelf="center"
+          >
+            Add Your First WiFi Device
+          </Heading>
+
+        <AddDevice slimView={true} deviceAddedCallback={deviceAdded} />
+
+        <Button
+          mt="$4"
+          action="secondary"
+          sx={{
+            _hover: {
+              bg: '#fab526'
+            },
+            w: '$5/6'
+          }}
+          onPress={deviceAdded}
+        >
+          <ButtonText>Skip</ButtonText>
+        </Button>
+
+        <AlertError alertBody={alertBody} />
+      </VStack>
+      </ScrollView>
+    )
+  }
+
+
+  if (setupStage === 3) {
+    return (
+      <ScrollView
+        h="$full"
+        w="$full"
+        px="$4"
+        bg="$white"
+        sx={{
+          _dark: { bg: '$blueGray900' },
+          '@md': {
+            rounded: 10,
+            w: '90%',
+            maxWidth: 360,
+            alignSelf: 'center'
+          }
+        }}
+      >
+      <VStack space="md" my="$4">
+          <Heading
+            size="lg"
+            fontWeight="300"
+            color="$coolGray800"
+            sx={{
+              _dark: { color: '$warmGray50' }
+            }}
+            alignSelf="center"
+          >
+            Setup
+          </Heading>
+          <HStack space="sm" alignSelf="center" alignItems="center">
+            <InfoIcon color="$muted400" />
+
+            <Text flex={1} color="$muted500">
+              Thanks for installing. SPR is now configured!
+            </Text>
+          </HStack>
+        <Button
+          mt="$4"
+          rounded="$full"
+          bg="#fbc658"
+          sx={{
+            _hover: {
+              bg: '#fab526'
+            }
+          }}
+          onPress={handlePressFinish}
+        >
+          <ButtonText>Finish</ButtonText>
+        </Button>
+        <AlertError alertBody={alertBody} />
+        </VStack>
+      </ScrollView>
+    )
+  }
+
+
 
   return (
     <ScrollView
