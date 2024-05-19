@@ -2863,6 +2863,7 @@ func main() {
 	external_router_setup.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")
 	//to add a new wifi device
 	external_router_setup.HandleFunc("/device", handleUpdateDevice).Methods("PUT")
+	external_router_setup.HandleFunc("/devices", getDevices).Methods("GET")
 	external_router_setup.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 
 	//download cert from http
