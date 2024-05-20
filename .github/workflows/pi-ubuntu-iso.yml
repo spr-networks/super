@@ -22,6 +22,8 @@ jobs:
         run: echo "RELEASE_VERSION_TAG=$(git tag --contains $(git rev-parse HEAD) | grep -v clearfog)" >> $GITHUB_ENV
       - name: Set up Qemu emulation
         run: ./installer/qemu-setup-linux.sh
+      - name: Set up Upstream DOcker
+        run: ./installer/upstream-docker.sh
       - name: Download the image
         working-directory: ./installer
         run: ./pi-download-image.sh
