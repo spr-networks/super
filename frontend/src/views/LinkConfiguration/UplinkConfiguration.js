@@ -31,7 +31,7 @@ import {
   ModalHeader,
   Text,
   VStack,
-  View,
+  ScrollView,
   Checkbox,
   CheckboxIcon,
   CheckboxIndicator,
@@ -65,15 +65,16 @@ let keymgmts = [
   { value: 'SAE', label: 'WPA3' }
 ]
 
-const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
+const UplinkAddWifi = ({ curItem, iface, onSubmit, ...props }) => {
   const type = 'wifi'
   const [item, setItem] = useState({
-    Disabled: false,
-    Password: '',
-    SSID: '',
-    KeyMgmt: 'WPA-PSK WPA-PSK-SHA256 SAE',
-    Priority: '1',
-    BSSID: ''
+    ...curItem,
+    Disabled: curItem.Disabled || false,
+    Password: curItem.Password || '',
+    SSID: curItem.SSID ||'',
+    KeyMgmt: curItem.KeyMgmt ||'WPA-PSK WPA-PSK-SHA256 SAE',
+    Priority: curItem.Priority || '1',
+    BSSID: curItem.BSSID ||''
   })
 
   const [ssids, setSSIDs] = useState([])
@@ -123,6 +124,8 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
     wifiAPI.ipLinkState(iface, 'up').then(
       wifiAPI.iwScan(iface).then((scanList) => {
         setSSIDs(scanList)
+      }).catch((e) => {
+        context.error(e)
       })
     )
   }
@@ -260,7 +263,7 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
 
         <Checkbox
           value={!item.Disabled}
-          defaultIsChecked
+          defaultIsChecked={item.Enabled}
           onChange={(val) => setItem({ ...item, Disabled: !val })}
         >
           <CheckboxIndicator mr="$2">
@@ -276,13 +279,14 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
   )
 }
 
-const UplinkSetConfig = ({ iface, onSubmit, ...props }) => {
+const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
   const type = 'config'
   const context = useContext(AlertContext)
 
   const [item, setItem] = useState({
     Type: 'Uplink',
-    MACOverride: ''
+    MACOverride: curItem.MACOverride || '',
+    Enabled: curItem.Enabled
   })
 
   const [errors, setErrors] = useState({})
@@ -324,7 +328,7 @@ const UplinkSetConfig = ({ iface, onSubmit, ...props }) => {
 
         <Checkbox
           value={enable}
-          defaultIsChecked
+          defaultIsChecked={item.Enabled}
           onChange={(value) => {
             setEnable(value)
           }}
@@ -371,15 +375,15 @@ const UplinkSetConfig = ({ iface, onSubmit, ...props }) => {
   )
 }
 
-const UplinkSetIP = ({ iface, onSubmit, ...props }) => {
+const UplinkSetIP = ({ curItem, iface, onSubmit, ...props }) => {
   const type = 'ip'
   const context = useContext(AlertContext)
 
   const [item, setItem] = useState({
-    DisableDHCP: false,
-    IP: '',
-    Router: '',
-    VLAN: '',
+    DisableDHCP: curItem.DisableDHCP ||false,
+    IP: curItem.IP || '',
+    Router: curItem.Router || '',
+    VLAN: curItem.VLAN || '',
   })
 
   const [errors, setErrors] = useState({})
@@ -435,6 +439,7 @@ const UplinkSetIP = ({ iface, onSubmit, ...props }) => {
         </FormControlLabel>
         <Checkbox
           value={item.DisableDHCP}
+          defaultIsChecked={item.DisableDHCP}
           onChange={(value) => {
             setItem({ ...item, DisableDHCP: value })
           }}
@@ -484,15 +489,15 @@ const UplinkSetIP = ({ iface, onSubmit, ...props }) => {
   )
 }
 
-const UplinkAddPPP = ({ iface, onSubmit, ...props }) => {
+const UplinkAddPPP = ({ curItem, iface, onSubmit, ...props }) => {
   const context = useContext(AlertContext)
 
   const type = 'ppp'
   const [item, setItem] = useState({
-    Username: '',
-    Secret: '',
-    VLAN: '',
-    MTU: ''
+    Username: curItem.Username || '',
+    Secret: curItem.Secret || '',
+    VLAN: curItem.VLAN || '',
+    MTU: curItem.MTU || ''
   })
 
   const [enable, setEnable] = useState(true)
@@ -596,6 +601,7 @@ const UplinkInfo = (props) => {
   const [uplinks, setUplinks] = useState([])
 
   const [iface, setIface] = useState(null)
+  const [currentItem, setCurrentItem] = useState(null)
 
   const [showModal, setShowModal] = useState(false)
   const [modal, setModal] = useState('')
@@ -683,6 +689,7 @@ const UplinkInfo = (props) => {
       //check if its in the interfaces configuration
       if (interfaces[link]?.Type == 'Uplink') {
         let entry = {
+          ...interfaces[link],
           Interface: link,
           IPs: linkIPs[link].sort(),
           Type: interfaces[link].Type,
@@ -692,7 +699,12 @@ const UplinkInfo = (props) => {
         uplinks.push(entry)
       } else {
         let Type = interfaces[link]?.Type || 'Other'
-        let entry = { Interface: link, IPs: linkIPs[link].sort(), Type }
+        let entry = {
+          ...interfaces[link],
+          Interface: link,
+          IPs: linkIPs[link].sort(),
+          Type
+        }
         links.push(entry)
       }
     }
@@ -724,12 +736,13 @@ const UplinkInfo = (props) => {
     return false
   }
 
-  const moreMenu = (iface) => (
+  const moreMenu = (iface, item) => (
     <Menu
       trigger={trigger}
       selectionMode="single"
       onSelectionChange={(e) => {
         setIface(iface)
+        setCurrentItem(item)
         setModal(e.currentKey)
         setShowModal(true)
       }}
@@ -787,7 +800,7 @@ const UplinkInfo = (props) => {
   }
 
   return (
-    <View h={'100%'}>
+    <ScrollView h={'100%'}>
       <VStack space="md" sx={{ '@md': { maxWidth: '$3/4' } }}>
         <ListHeader title="Uplink Configuration" />
 
@@ -840,7 +853,7 @@ const UplinkInfo = (props) => {
                 ) : null}
               </HStack>
 
-              {moreMenu(item.Interface)}
+              {moreMenu(item.Interface, item)}
             </ListItem>
           )}
         />
@@ -870,7 +883,7 @@ const UplinkInfo = (props) => {
                       </Text>
                     ))}
               </VStack>
-              {moreMenu(item.Interface)}
+              {moreMenu(item.Interface, item)}
             </ListItem>
           )}
         />
@@ -894,22 +907,22 @@ const UplinkInfo = (props) => {
             </ModalHeader>
             <ModalBody pb="$6">
               {iface && modal == 'wifi' ? (
-                <UplinkAddWifi iface={iface} onSubmit={onSubmit} />
+                <UplinkAddWifi curItem={currentItem} iface={iface} onSubmit={onSubmit} />
               ) : null}
               {iface && modal == 'config' ? (
-                <UplinkSetConfig iface={iface} onSubmit={onSubmit} />
+                <UplinkSetConfig curItem={currentItem} iface={iface} onSubmit={onSubmit} />
               ) : null}
               {iface && modal == 'ip' ? (
-                <UplinkSetIP iface={iface} onSubmit={onSubmit} />
+                <UplinkSetIP curItem={currentItem} iface={iface} onSubmit={onSubmit} />
               ) : null}
               {iface && modal == 'ppp' ? (
-                <UplinkAddPPP iface={iface} onSubmit={onSubmit} />
+                <UplinkAddPPP curItem={currentItem} iface={iface} onSubmit={onSubmit} />
               ) : null}
             </ModalBody>
           </ModalContent>
         </Modal>
       </VStack>
-    </View>
+    </ScrollView>
   )
 }
 

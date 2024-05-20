@@ -45,16 +45,17 @@ import { Address4 } from 'ip-address'
 import { Select } from 'components/Select'
 import { ListHeader, ListItem } from 'components/List'
 
-const LANLinkSetConfig = ({ iface, onSubmit, ...props }) => {
+const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
   const type = 'config'
   const context = useContext(AlertContext)
 
   const [item, setItem] = useState({
-    Type: 'Downlink',
-    MACOverride: ''
+    ...curItem,
+    Type: curItem.Type || 'Downlink',
+    MACOverride: curItem.MACOverride || ''
   })
 
-  const [enable, setEnable] = useState(true)
+  const [enable, setEnable] = useState(curItem.Enabled)
 
   const validate = () => {
     if (
@@ -94,7 +95,9 @@ const LANLinkSetConfig = ({ iface, onSubmit, ...props }) => {
           <FormControlLabelText>Update Interface</FormControlLabelText>
         </FormControlLabel>
 
-        <Checkbox value={enable} onChange={setEnable} defaultIsChecked>
+        <Checkbox value={enable}
+          onChange={setEnable}
+          defaultIsChecked={item.Enabled}>
           <CheckboxIndicator mr="$2">
             <CheckboxIcon />
           </CheckboxIndicator>
@@ -147,6 +150,7 @@ const LANLinkInfo = (props) => {
   const [lanLinks, setLanLinks] = useState([])
 
   const [iface, setIface] = useState(null)
+  const [currentItem, setCurrentItem] = useState(null)
 
   const [showModal, setShowModal] = useState(false)
   const [modal, setModal] = useState('')
@@ -237,6 +241,7 @@ const LANLinkInfo = (props) => {
         interfaces[link].Type != 'Uplink'
       ) {
         let entry = {
+          ...interfaces[link],
           Interface: link,
           Enabled: interfaces[link].Enabled,
           IPs: linkIPs[link].sort(),
@@ -249,7 +254,12 @@ const LANLinkInfo = (props) => {
         if (interfaces[link] && interfaces[link].Type) {
           type = interfaces[link].Type
         }
-        let entry = { Interface: link, IPs: linkIPs[link].sort(), Type: type }
+        let entry = {
+          ...interfaces[link],
+          Interface: link,
+          IPs: linkIPs[link].sort(),
+          Type: type
+        }
         links.push(entry)
       }
     }
@@ -280,12 +290,13 @@ const LANLinkInfo = (props) => {
     return false
   }
 
-  const moreMenu = (iface) => (
+  const moreMenu = (iface, item) => (
     <Button
       variant="link"
       ml="auto"
       onPress={() => {
         setIface(iface)
+        setCurrentItem(item)
         setModal('config')
         setShowModal(true)
       }}
@@ -317,11 +328,10 @@ const LANLinkInfo = (props) => {
       .put(`/link/${type}`, new_entry)
       .then((res2) => {
         fetchInfo()
-        onClose()
+        setShowModal(false)
       })
       .catch((err) => {
         context.error(err)
-        onClose()
       })
 
     //update VLAN Subtype
@@ -329,11 +339,10 @@ const LANLinkInfo = (props) => {
       .put(`link/vlan/${iface}/${state}`)
       .then((res2) => {
         fetchInfo()
-        onClose()
+        setShowModal(false)
       })
       .catch((err) => {
         context.error(err)
-        onClose()
       })
   }
 
@@ -386,7 +395,7 @@ const LANLinkInfo = (props) => {
                   </Badge>
                 ) : null}
               </HStack>
-              {moreMenu(item.Interface)}
+              {moreMenu(item.Interface, item)}
             </ListItem>
           )}
         />
@@ -414,7 +423,7 @@ const LANLinkInfo = (props) => {
                       </Text>
                     ))}
               </VStack>
-              {moreMenu(item.Interface)}
+              {moreMenu(item.Interface, item)}
             </ListItem>
           )}
         />
@@ -438,7 +447,7 @@ const LANLinkInfo = (props) => {
             </ModalHeader>
             <ModalBody pb="$6">
               {iface && modal == 'config' ? (
-                <LANLinkSetConfig iface={iface} onSubmit={onSubmit} />
+                <LANLinkSetConfig curItem={currentItem} iface={iface} onSubmit={onSubmit} />
               ) : null}
             </ModalBody>
           </ModalContent>
