@@ -459,7 +459,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           .then((res) => {})
           .catch((err) => {
             alertState.error(
-              `hostapd for {iface} failed to start - check wifid service logs`
+              `hostapd for ${iface} failed to start - check wifid service logs`
             )
           })
       })
