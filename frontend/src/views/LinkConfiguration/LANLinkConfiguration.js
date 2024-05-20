@@ -97,7 +97,7 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
 
         <Checkbox value={enable}
           onChange={setEnable}
-          defaultIsChecked={item.Enabled}>
+          isChecked={item ? item.Enabled : false}>
           <CheckboxIndicator mr="$2">
             <CheckboxIcon />
           </CheckboxIndicator>

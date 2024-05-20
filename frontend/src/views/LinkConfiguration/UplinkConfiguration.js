@@ -65,16 +65,15 @@ let keymgmts = [
   { value: 'SAE', label: 'WPA3' }
 ]
 
-const UplinkAddWifi = ({ curItem, iface, onSubmit, ...props }) => {
+const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
   const type = 'wifi'
   const [item, setItem] = useState({
-    ...curItem,
-    Disabled: curItem.Disabled || false,
-    Password: curItem.Password || '',
-    SSID: curItem.SSID ||'',
-    KeyMgmt: curItem.KeyMgmt ||'WPA-PSK WPA-PSK-SHA256 SAE',
-    Priority: curItem.Priority || '1',
-    BSSID: curItem.BSSID ||''
+    Disabled: false,
+    Password: '',
+    SSID: '',
+    KeyMgmt: 'WPA-PSK WPA-PSK-SHA256 SAE',
+    Priority:  '1',
+    BSSID: ''
   })
 
   const [ssids, setSSIDs] = useState([])
@@ -157,7 +156,7 @@ const UplinkAddWifi = ({ curItem, iface, onSubmit, ...props }) => {
         })
       )
     }
-  }, [ssids])
+  }, [ssids, item])
 
   useEffect(() => {
     // scan on init
@@ -166,7 +165,7 @@ const UplinkAddWifi = ({ curItem, iface, onSubmit, ...props }) => {
     }
 
     getWifiClients()
-  }, [])
+  }, [iface])
 
   return (
     <VStack space="lg">
@@ -260,10 +259,9 @@ const UplinkAddWifi = ({ curItem, iface, onSubmit, ...props }) => {
         <FormControlLabel>
           <FormControlLabelText>Status</FormControlLabelText>
         </FormControlLabel>
-
         <Checkbox
+          isChecked={item ? !item.Disabled : false}
           value={!item.Disabled}
-          defaultIsChecked={item.Enabled}
           onChange={(val) => setItem({ ...item, Disabled: !val })}
         >
           <CheckboxIndicator mr="$2">
@@ -329,6 +327,7 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
         <Checkbox
           value={enable}
           defaultIsChecked={item.Enabled}
+          isChecked={item ? item.Enabled : false}
           onChange={(value) => {
             setEnable(value)
           }}
@@ -440,6 +439,7 @@ const UplinkSetIP = ({ curItem, iface, onSubmit, ...props }) => {
         <Checkbox
           value={item.DisableDHCP}
           defaultIsChecked={item.DisableDHCP}
+          isChecked={item ? item.DisableDHCP : false}
           onChange={(value) => {
             setItem({ ...item, DisableDHCP: value })
           }}
@@ -907,7 +907,7 @@ const UplinkInfo = (props) => {
             </ModalHeader>
             <ModalBody pb="$6">
               {iface && modal == 'wifi' ? (
-                <UplinkAddWifi curItem={currentItem} iface={iface} onSubmit={onSubmit} />
+                <UplinkAddWifi iface={iface} onSubmit={onSubmit} />
               ) : null}
               {iface && modal == 'config' ? (
                 <UplinkSetConfig curItem={currentItem} iface={iface} onSubmit={onSubmit} />
