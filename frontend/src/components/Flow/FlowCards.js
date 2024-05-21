@@ -425,6 +425,11 @@ const actions = [
         type: PropTypes.object,
         description:
           'IP destination, set as destination route, needed for containers'
+      },
+      {
+        name: 'DstPort',
+        type: PropTypes.string,
+        description: 'New Destination port, range of ports, or empty for all'
       }
     ],
     values: {
@@ -433,14 +438,15 @@ const actions = [
       Dst: { IP: '1.2.3.4' },
       OriginalDstPort: '',
       Protocol: 'tcp',
-      DstInterface: ''
+      DstInterface: '',
+      DstPort: ''
     },
     getOptions: function (name = 'DstInterface') {
       if (name == 'Protocol') {
         return labelsProtocol
       }
 
-      if (['OriginalDstPort'].includes(name)) {
+      if (['DstPort', 'OriginalDstPort'].includes(name)) {
         return defaultOptions(name)
       }
 
