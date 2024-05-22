@@ -8,6 +8,7 @@ function run_dhcp() {
   # clear out the dhcp states
   rm ${STATE}/coredhcp*.json
   rm /var/run/dhclient_*.lease
+  rm ${STATE}/gateway.*
 
 
   if [ "$RUN_WAN_DHCP" ]; then
