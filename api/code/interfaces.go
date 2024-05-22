@@ -722,7 +722,7 @@ func generateRandomMAC(cloak bool) string {
 					randomPrefix[:2],
 					randomPrefix[2:4],
 					randomPrefix[4:],
-				}, ":")
+				}, ":") + ":"
 
 				for i := 0; i < 3; i++ {
 					octet := make([]byte, 1)
