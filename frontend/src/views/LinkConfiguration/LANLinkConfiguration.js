@@ -52,7 +52,10 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
   const [item, setItem] = useState({
     ...curItem,
     Type: curItem.Type || 'Downlink',
-    MACOverride: curItem.MACOverride || ''
+    MACOverride: curItem.MACOverride || '',
+    Enabled: curItem.Enabled,
+    MACRandomize: curItem.MACRandomize,
+    MACCloak: curItem.MACCloak
   })
 
   const [enable, setEnable] = useState(curItem.Enabled)
@@ -61,6 +64,7 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
     if (
       item.Type != 'Other' &&
       item.Type != 'Downlink' &&
+      item.Type != 'AP' &&
       item.Type != 'VLAN'
     ) {
       context.error('Failed to validate Type')
@@ -133,6 +137,40 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
         </Input>
       </FormControl>
 
+      <HStack flex={1} space="md">
+      <FormControl>
+        <Checkbox
+          value={item.MACRandomize}
+          isChecked={item ? item.MACRandomize : false}
+          onChange={(value) => {
+            setItem({ ...item, MACRandomize: value })
+          }}
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Randomize MAC</CheckboxLabel>
+        </Checkbox>
+      </FormControl>
+
+      { item.MACRandomize && (
+          <FormControl>
+            <Checkbox
+              value={item.MACCloak}
+              isChecked={item ? item.MACCloak : false}
+              onChange={(value) => {
+                setItem({ ...item, MACCloak: value })
+              }}
+            >
+              <CheckboxIndicator mr="$2">
+                <CheckboxIcon />
+              </CheckboxIndicator>
+              <CheckboxLabel>Cloak Common OUI</CheckboxLabel>
+            </Checkbox>
+          </FormControl>
+      )}
+      </HStack>
+      
       <Button action="primary" onPress={() => doSubmit(item)}>
         <ButtonText>Save</ButtonText>
       </Button>
