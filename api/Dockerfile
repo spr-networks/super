@@ -24,7 +24,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
 
 FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends openssh-client git hostapd iw jc systemd && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends openssh-client git hostapd iw jc systemd macchanger && rm -rf /var/lib/apt/lists/*
 COPY scripts /scripts/
 # iw list json parser
 RUN mkdir -p /root/.local/share/jc/jcparsers

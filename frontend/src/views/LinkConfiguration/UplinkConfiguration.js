@@ -284,7 +284,8 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
   const [item, setItem] = useState({
     Type: 'Uplink',
     MACOverride: curItem.MACOverride || '',
-    Enabled: curItem.Enabled
+    Enabled: curItem.Enabled,
+    MACRandomize: curItem.MACRandomize
   })
 
   const [errors, setErrors] = useState({})
@@ -365,6 +366,21 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
             autoFocus
           />
         </Input>
+      </FormControl>
+
+      <FormControl>
+        <Checkbox
+          value={item.MACRandomize}
+          isChecked={item ? item.MACRandomize : false}
+          onChange={(value) => {
+            setItem({ ...item, MACRandomize: value })
+          }}
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Randomize MAC</CheckboxLabel>
+        </Checkbox>
       </FormControl>
 
       <Button colorScheme="primary" onPress={() => doSubmit(item)}>
