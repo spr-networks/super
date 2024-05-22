@@ -65,5 +65,7 @@ run_dhcp
 
 while true; do
   inotifywait -e modify "$JSON"
+  killall -1 coredhcp_client
+  killall -1 dhclient
   run_dhcp
 done
