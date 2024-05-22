@@ -38,7 +38,7 @@ if grep --quiet Raspberry /proc/cpuinfo; then
   # ensure system assigns wlan0 to built-in broadcom wifi
 
   cat > /etc/udev/rules.d/10-network.rules << EOF
-ACTION=="add", SUBSYSTEM=="net", DEVPATH=="/devices/platform/soc/*", DRIVERS=="brcmfmac", NAME!="wlan0", RUN+="/etc/udev/wlan0-swap.sh %k"
+ACTION=="add", SUBSYSTEM=="net", SUBSYSTEMS=="sdio", DRIVERS=="brcmfmac", NAME!="wlan0", RUN+="/etc/udev/wlan0-swap.sh %k"
 EOF
 
   cat > /etc/udev/wlan0-swap.sh << 'EOF'
