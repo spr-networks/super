@@ -684,7 +684,6 @@ func refreshVLANTrunks() {
 var rand_oui_prefixes []string
 
 func load_rand_oui_prefixes() {
-	// Read the OUI prefixes from the file and store them in memory
 	file, err := os.Open(TEST_PREFIX + "/scripts/rand_oui_prefixes")
 	if err != nil {
 		fmt.Println("Error opening file:", err)
@@ -704,19 +703,16 @@ func load_rand_oui_prefixes() {
 }
 
 func generateRandomMAC(cloak bool) string {
-
 	if cloak {
 		if len(rand_oui_prefixes) == 0 {
 			load_rand_oui_prefixes()
 		}
 
 		if len(rand_oui_prefixes) != 0 {
-			// Pick a random OUI prefix from the prefixes slice
 			nBig, err := rand.Int(rand.Reader, big.NewInt(int64(len(rand_oui_prefixes)-1)))
 			if err == nil {
 				randomPrefix := rand_oui_prefixes[nBig.Int64()]
 
-				// Generate the remaining 3 bytes of the MAC address
 				hexDigits := "0123456789ABCDEF"
 				macAddress := randomPrefix
 
@@ -842,12 +838,6 @@ func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid MAC Override", 400)
 			return
 		}
-	}
-
-	//AP has a separate path for configuration
-	if iconfig.Type == "AP" {
-		http.Error(w, "Set interface in AP mode using hostapd API instead", 400)
-		return
 	}
 
 	if iconfig.Subtype != "" {
