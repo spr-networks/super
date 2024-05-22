@@ -5,6 +5,10 @@ JSON=/configs/base/interfaces.json
 STATE=/state/dhcp-client/
 
 function run_dhcp() {
+  # clear out the dhcp states
+  rm ${STATE}/coredhcp*.json
+  rm /var/run/dhclient_*.lease
+
 
   if [ "$RUN_WAN_DHCP" ]; then
 
