@@ -282,7 +282,7 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
   const context = useContext(AlertContext)
 
   const [item, setItem] = useState({
-    Type: 'Uplink',
+    Type: curItem.Type || 'Uplink',
     MACOverride: curItem.MACOverride || '',
     Enabled: curItem.Enabled,
     MACRandomize: curItem.MACRandomize,
@@ -294,7 +294,7 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
   const [enable, setEnable] = useState(true)
 
   const validate = () => {
-    if (item.Type != 'Other' && item.Type != 'Uplink') {
+    if (item.Type != 'Other' && item.Type != 'Uplink' && item.Type != 'AP') {
       context.error('Failed to validate Type')
       return false
     }
@@ -315,6 +315,7 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
   }
 
   let validTypes = [
+    { label: 'AP', value: 'AP' },
     { label: 'Uplink', value: 'Uplink' },
     { label: 'Other', value: 'Other' }
   ]
