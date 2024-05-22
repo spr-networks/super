@@ -474,6 +474,10 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 
 		//reset with previous settings
 		resetInterface(interfaces, iconfig.Name, prev_type, prev_subtype, prev_enabled, reset_random)
+		if prev_type != "AP" && iconfig.Type == "AP" {
+			//restart wifid
+			callSuperdRestart("", "wifid")
+		}
 
 		refreshDownlinksLocked()
 		return err
