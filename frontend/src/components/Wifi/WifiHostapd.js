@@ -638,7 +638,7 @@ const WifiHostapd = (props) => {
     }
 
     wifiAPI.updateConfig(iface, data).then((curConfig) => {
-      setConfig(curConfig)
+      setConfig(sortConf(curConfig))
     })
   }
 
@@ -657,7 +657,7 @@ const WifiHostapd = (props) => {
     }
 
     wifiAPI.updateConfig(iface, data).then((curConfig) => {
-      setConfig(curConfig)
+      setConfig(sortConf(curConfig))
     })
   }
 
