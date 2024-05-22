@@ -798,6 +798,8 @@ func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 	i.Name = iconfig.Name
 	i.Type = iconfig.Type
 	i.Enabled = iconfig.Enabled
+	i.MACRandomize = iconfig.MACRandomize
+	i.MACOverride = iconfig.MACOverride
 
 	err = updateInterfaceConfig(i)
 	if err != nil {
