@@ -4,10 +4,12 @@ Routines for managing the interfaces
 package main
 
 import (
+	"bufio"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net"
 	"net/http"
 	"os"
@@ -34,6 +36,7 @@ type InterfaceConfig struct {
 	VLAN         string     `json:",omitempty"`
 	MACOverride  string     `json:",omitempty"`
 	MACRandomize bool       `json:",omitempty"`
+	MACCloak     bool       `json:",omitempty"`
 }
 
 // this will be exported to all containers in public/interfaces.json
@@ -44,6 +47,7 @@ type PublicInterfaceConfig struct {
 	Enabled      bool
 	MACOverride  string `json:",omitempty"`
 	MACRandomize bool   `json:",omitempty"`
+	MACCloak     bool   `json:",omitempty"`
 }
 
 func isValidMAC(MAC string) bool {
@@ -208,7 +212,7 @@ func configureInterface(interfaceType string, subType string, name string) error
 
 	}
 
-	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", "", false}
+	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", "", false, false}
 
 	config := loadInterfacesConfigLocked()
 
@@ -439,6 +443,7 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 			if interfaces[i].Enabled != iconfig.Enabled ||
 				interfaces[i].Type != iconfig.Type ||
 				interfaces[i].MACRandomize != iconfig.MACRandomize ||
+				interfaces[i].MACCloak != iconfig.MACCloak ||
 				interfaces[i].MACOverride != iconfig.MACOverride {
 				prev_type = interfaces[i].Type
 				prev_subtype = interfaces[i].Subtype
@@ -451,6 +456,7 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 				interfaces[i].Type = iconfig.Type
 				interfaces[i].MACOverride = iconfig.MACOverride
 				interfaces[i].MACRandomize = iconfig.MACRandomize
+				interfaces[i].MACCloak = iconfig.MACCloak
 			}
 			break
 		}
@@ -675,7 +681,62 @@ func refreshVLANTrunks() {
 
 }
 
-func generateRandomMAC() string {
+var rand_oui_prefixes []string
+
+func load_rand_oui_prefixes() {
+	// Read the OUI prefixes from the file and store them in memory
+	file, err := os.Open(TEST_PREFIX + "/scripts/rand_oui_prefixes")
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		rand_oui_prefixes = append(rand_oui_prefixes, scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Println("Error reading file:", err)
+		return
+	}
+}
+
+func generateRandomMAC(cloak bool) string {
+
+	if cloak {
+		if len(rand_oui_prefixes) == 0 {
+			load_rand_oui_prefixes()
+		}
+
+		if len(rand_oui_prefixes) != 0 {
+			// Pick a random OUI prefix from the prefixes slice
+			nBig, err := rand.Int(rand.Reader, big.NewInt(int64(len(rand_oui_prefixes)-1)))
+			if err == nil {
+				randomPrefix := rand_oui_prefixes[nBig.Int64()]
+
+				// Generate the remaining 3 bytes of the MAC address
+				hexDigits := "0123456789ABCDEF"
+				macAddress := randomPrefix
+
+				for i := 0; i < 3; i++ {
+					octet := make([]byte, 1)
+					rand.Read(octet)
+					macAddress += string(hexDigits[octet[0]>>4])
+					macAddress += string(hexDigits[octet[0]&0x0f])
+					if i < 2 {
+						macAddress += ":"
+					}
+				}
+
+				return macAddress
+			}
+		}
+
+		//fall thru if no prefixes available.
+	}
+
 	hexDigits := "0123456789ABCDEF"
 	macAddress := ""
 	firstOctet := make([]byte, 1)
@@ -710,7 +771,7 @@ func refreshInterfaceOverridesLocked() {
 	interfaces := loadInterfacesConfigLocked()
 	for _, ifconfig := range interfaces {
 		if ifconfig.MACRandomize == true {
-			target := generateRandomMAC()
+			target := generateRandomMAC(ifconfig.MACCloak)
 			exec.Command("ip", "link", "set", "dev", ifconfig.Name, "down").Run()
 			err := exec.Command("ip", "link", "set", "dev", ifconfig.Name, "address", target).Run()
 			exec.Command("ip", "link", "set", "dev", ifconfig.Name, "up").Run()
@@ -799,6 +860,7 @@ func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 	i.Type = iconfig.Type
 	i.Enabled = iconfig.Enabled
 	i.MACRandomize = iconfig.MACRandomize
+	i.MACCloak = iconfig.MACCloak
 	i.MACOverride = iconfig.MACOverride
 
 	err = updateInterfaceConfig(i)

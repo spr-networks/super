@@ -285,7 +285,8 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
     Type: 'Uplink',
     MACOverride: curItem.MACOverride || '',
     Enabled: curItem.Enabled,
-    MACRandomize: curItem.MACRandomize
+    MACRandomize: curItem.MACRandomize,
+    MACCloak: curItem.MACCloak
   })
 
   const [errors, setErrors] = useState({})
@@ -368,6 +369,7 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
         </Input>
       </FormControl>
 
+      <HStack flex={1} space="md">
       <FormControl>
         <Checkbox
           value={item.MACRandomize}
@@ -382,6 +384,24 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
           <CheckboxLabel>Randomize MAC</CheckboxLabel>
         </Checkbox>
       </FormControl>
+
+      { item.MACRandomize && (
+          <FormControl>
+            <Checkbox
+              value={item.MACCloak}
+              isChecked={item ? item.MACCloak : false}
+              onChange={(value) => {
+                setItem({ ...item, MACCloak: value })
+              }}
+            >
+              <CheckboxIndicator mr="$2">
+                <CheckboxIcon />
+              </CheckboxIndicator>
+              <CheckboxLabel>Cloak Common OUI</CheckboxLabel>
+            </Checkbox>
+          </FormControl>
+      )}
+      </HStack>
 
       <Button colorScheme="primary" onPress={() => doSubmit(item)}>
         <ButtonText>Save</ButtonText>
