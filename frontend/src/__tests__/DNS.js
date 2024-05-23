@@ -2,6 +2,7 @@ import React from 'react'
 import { render, screen, waitFor, waitForElementToBeRemoved } from 'test-utils'
 
 import DNSBlock from 'views/DNS/DNSBlock'
+import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
 //import DNSBlocklist from 'components/DNS/DNSBlocklist'
 //import DNSOverrideList from 'components/DNS/DNSOverrideList'
 import { saveLogin, blockAPI } from 'api'
@@ -21,7 +22,7 @@ const setup = async () => {
   return utils
 }
 
-describe('DNS Block', () => {
+describe('DNS Blocklist', () => {
   test('DNS block lists loaded', async () => {
     await setup()
 
@@ -44,20 +45,6 @@ describe('DNS Block', () => {
     )
   })
 
-  test('press Add to show form', async () => {
-    await setup()
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy()
-    })
-
-    fireEvent.press(screen.getByRole('button', { name: 'Add' }))
-
-    await waitFor(() => {
-      expect(screen.getByText('Add DNS Blocklist')).toBeTruthy()
-    })
-  })
-
   test('disable blocklist item', async () => {
     await setup()
 
@@ -77,6 +64,43 @@ describe('DNS Block', () => {
     await waitFor(() =>
       expect(screen.getAllByText('Enabled').length).toBeLessThan(numEnabled)
     )
+  })
+})
+
+test('press Add to show form', async () => {
+  await setup()
+
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy()
+  })
+
+  fireEvent.press(screen.getByRole('button', { name: 'Add' }))
+
+  await waitFor(() => {
+    expect(screen.getByText('Add DNS Blocklist')).toBeTruthy()
+  })
+
+  //TODO fill out form && verify submit works
+  //Also have separate test for add component
+})
+
+describe('DNS Blocklist Add', () => {
+  test('verify add form works', async () => {
+    const onChange = jest.fn()
+    const utils = render(<DNSAddBlocklist notifyChange={onChange} />)
+
+    const input = screen.getByPlaceholderText('https://...')
+    expect(input).toBeTruthy()
+
+    expect(onChange).toHaveBeenCalledTimes(0)
+
+    fireEvent.changeText(input, 'http://test.spr/test-blocklist.txt')
+
+    fireEvent.press(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(onChange).toHaveBeenCalledTimes(1)
+    })
   })
 })
 
