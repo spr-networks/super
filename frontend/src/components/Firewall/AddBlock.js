@@ -92,6 +92,7 @@ class AddBlockImpl extends React.Component {
             onSubmitEditing={(value) => this.handleChange('DstIP', value)}
             onChangeText={(value) => this.handleChange('DstIP', value)}
             onChange={(value) => this.handleChange('DstIP', value)}
+            show_CIDR_Defaults={true}
           />
           <FormControlHelper>
             <FormControlHelperText>IP address or CIDR</FormControlHelperText>

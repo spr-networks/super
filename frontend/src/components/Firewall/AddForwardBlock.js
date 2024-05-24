@@ -79,6 +79,7 @@ class AddForwardBlockImpl extends React.Component {
             value={this.state.SrcIP}
             onChangeText={(value) => this.handleChange('SrcIP', value)}
             onChange={(value) => this.handleChange('SrcIP', value)}
+            show_CIDR_Defaults={true}
           />
           <FormControlHelper>
             <FormControlHelperText>IP address or CIDR</FormControlHelperText>
@@ -94,6 +95,7 @@ class AddForwardBlockImpl extends React.Component {
             onSubmitEditing={(value) => this.handleChange('DstIP', value)}
             onChangeText={(value) => this.handleChange('DstIP', value)}
             onChange={(value) => this.handleChange('DstIP', value)}
+            show_CIDR_Defaults={true}
           />
           <FormControlHelper>
             <FormControlHelperText>IP address or CIDR</FormControlHelperText>
