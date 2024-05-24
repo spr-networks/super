@@ -101,7 +101,7 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
 
         <Checkbox value={enable}
           onChange={setEnable}
-          isChecked={item ? item.Enabled : false}>
+          isChecked={enable}>
           <CheckboxIndicator mr="$2">
             <CheckboxIcon />
           </CheckboxIndicator>
@@ -170,7 +170,7 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
           </FormControl>
       )}
       </HStack>
-      
+
       <Button action="primary" onPress={() => doSubmit(item)}>
         <ButtonText>Save</ButtonText>
       </Button>

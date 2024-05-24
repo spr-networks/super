@@ -330,7 +330,7 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
         <Checkbox
           value={enable}
           defaultIsChecked={item.Enabled}
-          isChecked={item ? item.Enabled : false}
+          isChecked={enable}
           onChange={(value) => {
             setEnable(value)
           }}
