@@ -6,6 +6,13 @@ import { blockAPI } from 'api/DNS'
 import { AlertContext } from 'layouts/Admin'
 import ModalConfirm from 'components/ModalConfirm'
 
+
+import { Animated, Dimensions } from 'react-native'
+import { TabView, SceneMap } from 'react-native-tab-view'
+import { Box, View, Pressable } from '@gluestack-ui/themed'
+
+import DNSOverride from 'views/DNS/DNSOverride'
+
 import {
   Badge,
   BadgeIcon,
@@ -400,4 +407,132 @@ DNSBlocklist.propTypes = {
   renderHeader: PropTypes.func
 }
 
-export default DNSBlocklist
+
+
+const DNSBlocklistView = (props) => {
+  const [index, setIndex] = useState(0) //1)
+  const [routes] = useState([
+    {
+      key: 'first',
+      title: 'DNS Blocklists',
+    },
+    {
+      key: 'second',
+      title: 'Overrides'
+    },
+  ])
+
+  /*
+  would be cool to bring back in icons for the tabs
+  {
+    path: 'dnsOverride',
+    name: 'DNS Overrides',
+    icon: ShuffleIcon,
+    hideSimple: true,
+    component: DNSOverride,
+    layout: 'admin'
+  },
+  */
+
+  const initialLayout = {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height
+  }
+
+  const renderScene = SceneMap({
+    first: DNSBlocklist,
+    second: DNSOverride,
+  })
+
+  const renderTabBar = (props) => {
+    const inputRange = props.navigationState.routes.map((x, i) => i)
+    return (
+      <Box flexDirection="row">
+        {props.navigationState.routes.map((route, i) => {
+          const opacity = props.position.interpolate({
+            inputRange,
+            outputRange: inputRange.map((inputIndex) =>
+              inputIndex === i ? 1 : 0.5
+            )
+          })
+
+          const colorMode = useColorMode()
+          const color =
+            index === i
+              ? colorMode == 'light'
+                ? '#000'
+                : '#e5e5e5'
+              : colorMode == 'light'
+              ? '#1f2937'
+              : '#a1a1aa'
+          const borderColor =
+            index === i
+              ? '$cyan500'
+              : colorMode == 'light'
+              ? '$coolGray200'
+              : '$gray400'
+          return (
+            <Box
+              key={route.title}
+              borderBottomWidth={3}
+              borderColor={borderColor}
+              flex={1}
+              alignItems="center"
+              px="$2"
+              py="$4"
+              cursor="pointer"
+            >
+              {route.icon}
+              <Pressable
+                onPress={() => {
+                  setIndex(i)
+                }}
+              >
+                <Animated.Text
+                  style={{
+                    color
+                  }}
+                >
+                  {route.title}
+                </Animated.Text>
+              </Pressable>
+            </Box>
+          )
+        })}
+      </Box>
+    )
+  }
+
+  // also have the tabs
+  let navbarHeight = 64
+  let tabsHeight = 32
+  let heightContent =
+    Platform.OS == 'web'
+      ? Dimensions.get('window').height - navbarHeight
+      : '100%'
+
+  if (Platform.OS == 'web') {
+    return (
+      <View h={heightContent}>
+        <TabView
+          navigationState={{
+            index,
+            routes
+          }}
+          renderScene={renderScene}
+          renderTabBar={renderTabBar}
+          onIndexChange={setIndex}
+          initialLayout={initialLayout}
+        />
+      </View>
+    )
+  } else {
+    return (
+      <View>
+        <DNSLog {...props}/>
+      </View>
+    )
+  }
+}
+
+export default DNSBlocklistView

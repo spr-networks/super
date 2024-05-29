@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import DNSLogHistoryList from 'components/DNS/DNSLogHistoryList'
-import DNSChart from 'components/DNS/DNSChart'
+//import DNSChart from 'components/DNS/DNSChart'
+import DNSLogEdit from 'views/DNS/DNSLogEdit'
 import PluginDisabled from 'views/PluginDisabled'
 import { logAPI } from 'api/DNS'
 
@@ -61,8 +62,14 @@ const DNSTabView = (props) => {
     },
     {
       key: 'second',
-      title: 'Graphs'
+      title: 'Log Settings'
     }
+/*    ,
+    {
+      key: 'third',
+      title: 'Graph'
+    }
+*/
   ])
 
   const initialLayout = {
@@ -71,8 +78,9 @@ const DNSTabView = (props) => {
   }
 
   const renderScene = SceneMap({
-    first: DNSChart,
-    second: DNSLog
+    first: DNSLog,
+    second: DNSLogEdit,
+//    third: DNSChart
   })
 
   const renderTabBar = (props) => {

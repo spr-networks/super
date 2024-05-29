@@ -217,14 +217,6 @@ const routes = [
         layout: 'admin'
       },
       {
-        path: 'dnsOverride',
-        name: 'DNS Overrides',
-        icon: ShuffleIcon,
-        hideSimple: true,
-        component: DNSOverride,
-        layout: 'admin'
-      },
-      {
         path: 'dnsLog/:ips/:text',
         name: 'DNS Log',
         icon: ListTreeIcon,

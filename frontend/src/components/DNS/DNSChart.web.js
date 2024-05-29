@@ -6,6 +6,8 @@ import { AlertContext } from 'AppContext';
 import PluginDisabled from 'views/PluginDisabled';
 import { dbAPI, logAPI } from 'api';
 import { Box, View, Text, Pressable, useColorMode, HStack, VStack, Heading, Select, Input, ScrollView } from '@gluestack-ui/themed';
+import ClientSelect from 'components/ClientSelect'
+import DatePicker from 'components/DatePicker';
 
 const DNSChartView = ({ responseTypeCounts, onSegmentClick }) => {
   const responseTypes = Object.keys(responseTypeCounts);
@@ -146,8 +148,8 @@ const DNSChart = () => {
   const [isEnabled, setIsEnabled] = useState(true);
   const [responseTypeCounts, setResponseTypeCounts] = useState({});
   const [domainCounts, setDomainCounts] = useState({});
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(null)
+  const [endDate, setEndDate] = useState(null);
   const [clientIP, setClientIP] = useState('');
   const [domainFrequency, setDomainFrequency] = useState({ labels: [], datasets: {} });
   const context = useContext(AlertContext);
@@ -157,6 +159,25 @@ const DNSChart = () => {
     logAPI.config().catch((error) => setIsEnabled(false));
     fetchData();
   }, [startDate, endDate, clientIP]);
+
+  useEffect(() => {
+    if (endDate === null) {
+      return;
+    }
+
+    let utcOffsetMS = new Date().getTimezoneOffset() * 60000;
+    let min = new Date(endDate);
+    min.setTime(min.getTime() - utcOffsetMS);
+    min = min.toISOString();
+
+    let nextDay = new Date(endDate);
+    nextDay.setTime(nextDay.getTime() + utcOffsetMS);
+    nextDay.setDate(nextDay.getDate() + 1);
+    let max = nextDay.toISOString();
+
+    setStartDate(min);
+    setEndDate(max);
+  }, [endDate]);
 
   const fetchData = () => {
     dbAPI
@@ -249,15 +270,21 @@ const DNSChart = () => {
       <HStack space={4}>
         <VStack space={2}>
           <Text>Start Date:</Text>
-          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          <DatePicker value={startDate} onChange={setStartDate} />
         </VStack>
         <VStack space={2}>
           <Text>End Date:</Text>
-          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          <DatePicker value={endDate} onChange={setEndDate} />
         </VStack>
         <VStack space={2}>
           <Text>Client IP:</Text>
-          <Input value={clientIP} onChange={(e) => setClientIP(e.target.value)} />
+          <ClientSelect
+            name="DNSIP"
+            value={clientIP}
+            onSubmitEditing={(value) => setClientIP(value)}
+            onChangeText={(value) => setClientIP(value)}
+            onChange={(value) => setClientIP(value)}
+          />
         </VStack>
       </HStack>
       <HStack space={4}>
