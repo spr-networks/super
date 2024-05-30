@@ -13,7 +13,6 @@ import { TabView, SceneMap } from 'react-native-tab-view'
 
 import { Box, View, Pressable, useColorMode } from '@gluestack-ui/themed'
 
-
 const DNSLog = (props) => {
   const [isEnabled, setIsEnabled] = useState(true)
   const [filterText, setFilterText] = useState('')
@@ -47,11 +46,8 @@ const DNSLog = (props) => {
     return <PluginDisabled plugin="dns" />
   }
 
-  return (
-    <DNSLogHistoryList ips={filterIps} filterText={filterText} />
-  )
+  return <DNSLogHistoryList ips={filterIps} filterText={filterText} />
 }
-
 
 const DNSTabView = (props) => {
   const [index, setIndex] = useState(0) //1)
@@ -64,7 +60,7 @@ const DNSTabView = (props) => {
       key: 'second',
       title: 'Log Settings'
     }
-/*    ,
+    /*    ,
     {
       key: 'third',
       title: 'Graph'
@@ -79,8 +75,8 @@ const DNSTabView = (props) => {
 
   const renderScene = SceneMap({
     first: DNSLog,
-    second: DNSLogEdit,
-//    third: DNSChart
+    second: DNSLogEdit
+    //    third: DNSChart
   })
 
   const renderTabBar = (props) => {
@@ -141,17 +137,9 @@ const DNSTabView = (props) => {
     )
   }
 
-  // also have the tabs
-  let navbarHeight = 64
-  let tabsHeight = 32
-  let heightContent =
-    Platform.OS == 'web'
-      ? Dimensions.get('window').height - navbarHeight
-      : '100%'
-
   if (Platform.OS == 'web') {
     return (
-      <View h={heightContent}>
+      <View h="$full">
         <TabView
           navigationState={{
             index,
@@ -167,7 +155,7 @@ const DNSTabView = (props) => {
   } else {
     return (
       <View>
-        <DNSLog {...props}/>
+        <DNSLog {...props} />
       </View>
     )
   }
