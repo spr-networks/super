@@ -10,7 +10,8 @@ fi
 cd installer
 cp ./data/spr.clean.img ./data/spr.img
 ./scripts/resize.sh
-DOCKER_DEFAULT_PLATFORM=linux/arm64 docker-compose pull
+# pull default containers and default plugins
+DOCKER_DEFAULT_PLATFORM=linux/arm64 docker-compose pull -f docker-compose.yml  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull
 ./scripts/containers.sh
 #use host for next ubuntu
 DOCKER_DEFAULT_PLATFORM="" docker-compose pull ubuntu:24.04

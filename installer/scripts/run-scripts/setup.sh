@@ -5,7 +5,7 @@ set -a
 . /spr-environment.sh
 
 ip link set $WANIF up
-dhclient $WANIF
+dhcpcd $WANIF || dhclient $WANIF
 dpkg-reconfigure openssh-server
 
 # Resize to full disk
