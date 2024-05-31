@@ -31,7 +31,7 @@ echo "network: {config: disabled}" > /etc/cloud/cloud.cfg.d/99-disable-network-c
 echo "options mt76_usb disable_usb_sg=1" > /etc/modprobe.d/mt76_usb.conf
 
 # SPR setup
-if [ ! -d /home/spr]; then
+if [ ! -d /home/spr ]; then
   mkdir /home/spr
 fi
 
