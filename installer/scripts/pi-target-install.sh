@@ -1,4 +1,5 @@
 #!/bin/bash
+shopt -s expand_aliases
 export DEBIAN_FRONTEND=noninteractive
 
 # finish downloaded install
