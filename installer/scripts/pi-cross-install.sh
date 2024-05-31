@@ -3,11 +3,12 @@
 # This script runs apt onto the mounted image,
 # to download everything without needing `qemu`
 #
+shopt -s expand_aliases
 
 export DEBIAN_FRONTEND=noninteractive
 # for host
 apt-get update
-apt-get install -y --no-install-recommends  curl ca-certificates gpg apt-utils less vim git
+apt-get install -y --no-install-recommends curl ca-certificates gpg git
 
 #for cross
 STATE='-o Dir::Cache="/mnt/fs/var/cache/apt" -o Dir::State="/mnt/fs/var/lib/apt" -o Dir::Etc::Sourcelist="/mnt/fs/etc/apt/sources.list" -o Dir::Etc::Sourceparts="/mnt/fs/etc/apt/sources.list.d" -o Dir::State::Lists="/mnt/fs/var/lib/apt/lists" -o APT::Architecture="arm64" -o APT::Architectures="arm64"'

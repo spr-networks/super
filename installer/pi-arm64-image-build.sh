@@ -12,5 +12,6 @@ cd installer
 cp ./data/spr.clean.img ./data/spr.img
 ./scripts/resize.sh
 ./scripts/containers.sh
+docker pull ubuntu:24.04
 docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ ubuntu:24.04 /scripts/go-pi.sh
 docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ --platform=aarch64 ubuntu:24.04 /scripts/go-pi-target.sh

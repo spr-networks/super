@@ -7,7 +7,7 @@ cp -R /data/containers /mnt/fs/containers/
 mount --bind /dev/ /mnt/fs/dev/
 # this just downloads packages onto the image. not much else.
 # the rest is done on an aarch64 conatiner with pi-target-install.sh
-chroot /mnt/fs /tmp/pi-cross-install.sh
+bash /scripts/pi-cross-install.sh
 
 # disable iface renaming on the boot image.
 if ! grep -q "net.ifnames=0 biosdevname=0" /mnt/boot/firmware/cmdline.txt; then
