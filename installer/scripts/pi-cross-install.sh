@@ -19,12 +19,14 @@ alias apty="apt-get $STATE"
 # Install the upstream docker packages then.
 apty update
 apty -y install ca-certificates curl gpg
+install -m 0755 -d /etc/apt/keyrings
 install -m 0755 -d /mnt/fs/etc/apt/keyrings
 # palce on target for later
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /mnt/fs/etc/apt/keyrings/docker.gpg
 #needed on host `apt`
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 chmod a+r /mnt/fs/etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
 
 # Add the repository to Apt sources:
 echo \
