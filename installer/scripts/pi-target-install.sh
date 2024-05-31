@@ -6,10 +6,10 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get -y --fix-broken --fix-missing --no-download install
 dpkg --configure -a
 
-apty -y upgrade --no-download
-apty -y install --no-download nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack
+apt -y upgrade --no-download
+apt -y install --no-download nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack
 # install docker and buildx
-apty -y install --no-download docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+apt -y install --no-download docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 touch /mnt/fs/etc/cloud/cloud-init.disabled
 # slow commands
