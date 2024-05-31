@@ -15,4 +15,4 @@ resize2fs ${LOOP}p2 4G
 losetup -d $LOOP
 
 # truncate image
-truncate -s 5 $IMG
+truncate -s 5G $IMG
