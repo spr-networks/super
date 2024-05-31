@@ -7,12 +7,13 @@ if ! which docker-compose > /dev/null 2>&1; then
     alias docker-compose='docker compose'
 fi
 
-#DOCKER_DEFAULT_PLATFORM=linux/arm64 docker-compose pull
 cd installer
 cp ./data/spr.clean.img ./data/spr.img
 ./scripts/resize.sh
+DOCKER_DEFAULT_PLATFORM=linux/arm64 docker-compose pull
 ./scripts/containers.sh
-docker pull ubuntu:24.04
+#use host for next ubuntu
+DOCKER_DEFAULT_PLATFORM="" docker-compose pull ubuntu:24.04
 docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ ubuntu:24.04 /scripts/go-pi.sh
 docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ --platform=aarch64 ubuntu:24.04 /scripts/go-pi-target.sh
 ./scripts/shrink.sh
