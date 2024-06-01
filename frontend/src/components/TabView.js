@@ -16,7 +16,11 @@ import {
 const TabViewComponent = ({ tabs, ...props }) => {
   const [index, setIndex] = useState(0)
   const [routes] = useState(
-    tabs.map((tab, key) => ({ key, title: tab.title, icon: tab.icon }))
+    tabs.map((tab, key) => ({
+      key: `tab${key}`,
+      title: tab.title,
+      icon: tab.icon
+    }))
   )
 
   const initialLayout = {
@@ -25,7 +29,9 @@ const TabViewComponent = ({ tabs, ...props }) => {
   }
 
   //NOTE key maps to title in routes
-  let sceneMap = Object.fromEntries(tabs.map((tab, i) => [i, tab.component]))
+  let sceneMap = Object.fromEntries(
+    tabs.map((tab, i) => [`tab${i}`, tab.component])
+  )
   const renderScene = SceneMap(sceneMap)
 
   const renderTabBar = (props) => {
@@ -41,20 +47,14 @@ const TabViewComponent = ({ tabs, ...props }) => {
           })
 
           const colorMode = useColorMode()
-          const color =
-            index === i
-              ? colorMode == 'light'
-                ? '#000'
-                : '#e5e5e5'
-              : colorMode == 'light'
-              ? '#1f2937'
-              : '#a1a1aa'
-          const borderColor =
-            index === i
-              ? '$cyan500'
-              : colorMode == 'light'
-              ? '$coolGray200'
-              : '$gray400'
+          let color = colorMode == 'light' ? '$muted600' : '$muted600'
+          let borderColor = colorMode == 'light' ? '$muted200' : '$muted800'
+
+          if (index === i) {
+            color = colorMode == 'light' ? '$muted700' : '$muted400'
+            borderColor = '$cyan500'
+          }
+
           return (
             <Box
               key={route.title}
@@ -73,8 +73,12 @@ const TabViewComponent = ({ tabs, ...props }) => {
               >
                 {/*<Animated.Text style={{color}}>{route.title}</Animated.Text>*/}
                 <HStack space="xs" alignItems="center">
-                  {route.icon ? <Icon as={route.icon} size="xs" /> : null}
-                  <Text size="sm">{route.title}</Text>
+                  {route.icon ? (
+                    <Icon as={route.icon} color={color} size="xs" />
+                  ) : null}
+                  <Text size="sm" color={color}>
+                    {route.title}
+                  </Text>
                 </HStack>
               </Pressable>
             </Box>
