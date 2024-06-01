@@ -103,4 +103,5 @@ const TabViewComponent = ({ tabs, ...props }) => {
 TabViewComponent.propTypes = {
   tabs: PropTypes.array
 }
+
 export default TabViewComponent
