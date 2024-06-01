@@ -1,13 +1,15 @@
 import React, { useState } from 'react'
-
+import PropTypes from 'prop-types'
 import { Dimensions } from 'react-native'
 import { TabView, SceneMap } from 'react-native-tab-view'
+
 import {
   Box,
   HStack,
   Icon,
   Pressable,
   Text,
+  View,
   useColorMode
 } from '@gluestack-ui/themed'
 
@@ -83,17 +85,22 @@ const TabViewComponent = ({ tabs, ...props }) => {
   }
 
   return (
-    <TabView
-      navigationState={{
-        index,
-        routes
-      }}
-      renderScene={renderScene}
-      renderTabBar={renderTabBar}
-      onIndexChange={setIndex}
-      initialLayout={initialLayout}
-    />
+    <View h="$full">
+      <TabView
+        navigationState={{
+          index,
+          routes
+        }}
+        renderScene={renderScene}
+        renderTabBar={renderTabBar}
+        onIndexChange={setIndex}
+        initialLayout={initialLayout}
+      />
+    </View>
   )
 }
 
+TabViewComponent.propTypes = {
+  tabs: PropTypes.array
+}
 export default TabViewComponent
