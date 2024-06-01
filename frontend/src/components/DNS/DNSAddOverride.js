@@ -166,7 +166,7 @@ export default class DNSAddOverride extends React.Component {
               <FormControlHelperText>
                 {this.state.Type == 'block'
                   ? 'Block custom domain lookups'
-                  : 'Override/Allow DNS lookup with a custom IP address'}
+                  : 'Override/Allow DNS lookup'}
               </FormControlHelperText>
             </FormControlHelper>
           )}
@@ -197,7 +197,7 @@ export default class DNSAddOverride extends React.Component {
           ) : (
             <FormControlHelper>
               <FormControlHelperText>
-                Trailing dot for domain name is to avoid prefix matching
+                Trailing dot to avoid prefix matching
               </FormControlHelperText>
             </FormControlHelper>
           )}
