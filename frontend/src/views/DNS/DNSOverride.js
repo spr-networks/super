@@ -78,7 +78,7 @@ const DNSBlock = (props) => {
   ]*/
 
   return (
-    <View h="$full" sx={{ '@md': { h: '92vh' } }}>
+    <View h="$full">
       <ScrollView h="$full">
         <VStack space="sm" pb="$16">
           <DNSOverrideList
