@@ -1079,7 +1079,8 @@ func getConfigsBackup(w http.ResponseWriter, r *http.Request) {
 }
 
 func enableTLS(w http.ResponseWriter, r *http.Request) {
-	_, err := os.Stat("/configs/auth/www-api.pfx")
+	//NOTE crt and key both need to exist to set API_SSL_PORT == enable tls
+	_, err := os.Stat(ApiTlsCert)
 	haveTLSCert := err == nil || !os.IsNotExist(err)
 
 	if r.Method == http.MethodGet {
@@ -1088,17 +1089,25 @@ func enableTLS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//for now, do not support regenerating if already exists
-	if haveTLSCert {
-		http.Error(w, "Already configured", 400)
-		return
-	}
+	if r.Method == http.MethodDelete {
+		if !haveTLSCert {
+			http.Error(w, "Not configured", 400)
+			return
+		}
 
-	os.Setenv("SKIPPASS", "-password pass:1234")
-	err = exec.Command("/scripts/generate-certificate.sh").Run()
-	if err != nil {
-		http.Error(w, "Failed to generate TLS certificate", 400)
-		return
+		os.Remove(ApiTlsCert)
+	} else {
+		//for now, do not support regenerating if already exists
+		if haveTLSCert {
+			http.Error(w, "Already configured", 400)
+			return
+		}
+
+		err = exec.Command("/scripts/generate-certificate.sh").Run()
+		if err != nil {
+			http.Error(w, "Failed to generate TLS certificate", 400)
+			return
+		}
 	}
 
 	go func() {
@@ -2824,7 +2833,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/firewall/multicast", modifyMulticast).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/icmp", modifyIcmp).Methods("PUT")
 	external_router_authenticated.HandleFunc("/firewall/custom_interface", modifyCustomInterfaceRules).Methods("PUT", "DELETE")
-	external_router_authenticated.HandleFunc("/firewall/enableTLS", enableTLS).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/firewall/enableTLS", enableTLS).Methods("GET", "PUT", "DELETE")
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
