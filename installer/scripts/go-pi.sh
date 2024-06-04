@@ -17,5 +17,7 @@ fi
 
 cp /mnt/fs/boot/initrd.img /data/initrd
 cp /mnt/fs/boot/vmlinuz /data/vmlinuz
+echo copy $?
+ls -alhtr /data/
 
 /scripts/unmount.sh
