@@ -12,7 +12,7 @@
 
 CERT_NAME="www-api"
 CN="spr"
-ALTNAME="DNS:spr, DNS:spr.local"
+ALTNAME="IP:192.168.2.1,DNS:spr.local,DNS:spr"
 
 D="/"
 if [ ! -d "$D/configs" ]; then
