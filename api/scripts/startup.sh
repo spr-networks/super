@@ -10,9 +10,9 @@ if [ -f "/configs/auth/www-api.key" ] && [ -f "/configs/auth/www-api.crt" ]; the
 
     # fix update old cert <= 0.3.12
     if [ -f "/configs/auth/cert/www-api-inter.crt" ]; then
-        echo "+ old cert found, generating new..."
-        rm -f /configs/auth/cert/www-api-inter.*
-        /scripts/generate-certificate.sh
+        echo "+ old cert found, generate new with scripts/generate-certificate.sh"
+        #rm -f /configs/auth/cert/www-api-inter.*
+        #/scripts/generate-certificate.sh
     fi
 fi
 
