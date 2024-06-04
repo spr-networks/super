@@ -1,11 +1,6 @@
 name: PI Ubuntu ISO Installer
 
-on:
-  workflow_run:
-    workflows: ["Docker Image CI"]
-    types:
-      - completed
-    branches: [ main ]
+on: [ push ]
 
 jobs:
   build_iso:
@@ -50,5 +45,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./installer/data/spr.img.xz
-          asset_name: spr.img.xz
+          asset_name: test-spr.img.xz
           asset_content_type: application/x-xz
