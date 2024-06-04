@@ -145,6 +145,6 @@ dockerd  &
 containerd &
 
 # pull in default containers
-docker compose -f $COMPOSE_FILE  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull
+docker compose -f docker-compose.yml  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull
 
 halt -f
