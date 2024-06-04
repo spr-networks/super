@@ -1,4 +1,9 @@
 #!/bin/bash
+#
+# This file runs inside of a qemu aarch64 host
+# and finishes the install. It runs as the systemd init target.
+# and should not run the per-install specialization (setup.sh)
+
 shopt -s expand_aliases
 export DEBIAN_FRONTEND=noninteractive
 
@@ -42,8 +47,8 @@ if [ ! -d /home/spr ]; then
 fi
 
 cd /home/spr
-cp /tmp/setup.sh .
-cp /tmp/run.sh .
+mv /setup.sh .
+mv /run.sh .
 git clone --depth 1 https://github.com/spr-networks/super
 cd /home/spr/super
 cp -R base/template_configs configs
@@ -58,8 +63,6 @@ ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules
 # update sshd config to allow password login
 sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config
 sed -i "s/#PasswordAuthentication yes/PasswordAuthentication yes/" /etc/ssh/sshd_config
-
-
 
 cat > /etc/udev/rules.d/10-network.rules << EOF
 ACTION=="add", SUBSYSTEM=="net", SUBSYSTEMS=="sdio", DRIVERS=="brcmfmac", NAME!="wlan0", RUN+="/etc/udev/wlan0-swap.sh %k"
@@ -129,6 +132,19 @@ EOF
 #    /var/lib/apt/lists/* \
 #    ~/.bash_history
 
-### TBD: move spr-environment.sh to /boot/ . VFAT = easy to modify
-###   wizard?
-###
+# launch dockerd
+mkdir -p /sys/fs/cgroup
+mount -t cgroup -o all cgroup /sys/fs/cgroup
+mkdir -p /sys/fs/cgroup/devices
+mount -t cgroup -o devices devices /sys/fs/cgroup/devices
+
+# disable iptables for docker
+echo -ne "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
+
+dockerd  &
+containerd &
+
+# pull in default containers
+docker compose -f $COMPOSE_FILE  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull
+
+halt -f

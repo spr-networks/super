@@ -18,11 +18,6 @@ PARTNUM=$(echo $ROOTPART | sed 's/^.*[^0-9]\([0-9]\+\)$/\1/')
 growpart $PART $PARTNUM
 resize2fs $ROOTPART
 
-# disable iptables for  docker
-echo -ne "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
-
-service docker restart
-
 #try docker-compose pull, else, load the offline containers
 
 shopt -s expand_aliases
@@ -41,14 +36,16 @@ docker-compose -f $COMPOSE_FILE pull
 ret=$?
 
 if [ "$ret" -ne "0" ]; then
-cd /containers
-  for x in `ls *.tar.gz`
-  do
-    docker load -i $x
-  done
+  if [ -d /containers ]; then
+    cd /containers
+      for x in `ls *.tar.gz`
+      do
+        docker load -i $x
+      done
+    rm -f /containers
+  fi
 fi
 
-rm -f /containers
 if grep --quiet Raspberry /proc/cpuinfo; then
   :
 else

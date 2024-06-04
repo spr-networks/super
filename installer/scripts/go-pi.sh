@@ -14,4 +14,7 @@ if ! grep -q "net.ifnames=0 biosdevname=0" /mnt/boot/firmware/cmdline.txt; then
   sed -i '$s/$/ net.ifnames=0 biosdevname=0/' /mnt/boot/firmware/cmdline.txt
 fi
 
+cp /mnt/fs/boot/initrd.img /data/initrd
+cp /mnt/fs/boot/vmlinuz /data/vmlinuz
+
 /scripts/unmount.sh
