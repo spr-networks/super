@@ -22,10 +22,9 @@ cp ./data/spr.clean.img ./data/spr.img
 #use host for next ubuntu
 DOCKER_DEFAULT_PLATFORM="" docker pull ubuntu:24.04
 docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ ubuntu:24.04 /scripts/go-pi.sh
-#docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ --platform=aarch64 ubuntu:24.04 /scripts/go-pi-target.sh
 
 pushd data
-qemu-system-aarch64 -machine virt -cpu cortex-a72 -smp 2 -m 1G -initrd initrd -kernel vmlinuz -append "root=/dev/vda2 rootfstype=ext4 rw panic=0 net.ifnames=0 biosdevname=0 init=/load.sh"   -drive file=spr.img,format=raw,if=none,id=hd0 -device virtio-blk-pci,drive=hd0  -netdev user,id=mynet -device virtio-net-pci,netdev=mynet -nographic
+qemu-system-aarch64 -machine virt -cpu cortex-a72 -smp 2 -m 1G -initrd initrd -kernel vmlinuz -append "root=/dev/vda2 rootfstype=ext4 rw panic=0 net.ifnames=0 biosdevname=0 init=/pi-target-install.sh"   -drive file=spr.img,format=raw,if=none,id=hd0 -device virtio-blk-pci,drive=hd0  -netdev user,id=mynet -device virtio-net-pci,netdev=mynet -nographic
 popd
 
 ./scripts/shrink.sh

@@ -7,6 +7,8 @@
 shopt -s expand_aliases
 export DEBIAN_FRONTEND=noninteractive
 
+dhcpcd eth0
+
 # finish downloaded install
 apt-get -y --fix-broken --fix-missing --no-download install
 dpkg --configure -a
@@ -144,7 +146,12 @@ echo -ne "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
 dockerd  &
 containerd &
 
+cd /home/spr/super
+
 # pull in default containers
 docker compose -f docker-compose.yml  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull
 
+# remove script
+rm /pi-target-install.sh
+sync
 halt -f
