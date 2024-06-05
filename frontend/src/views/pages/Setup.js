@@ -93,10 +93,10 @@ const Setup = (props) => {
         if (err.response) {
           let msg = await err.response.text() // setup already done
           setErrors({ ...errors, submit: msg })
+          setIsDone(true)
         } else {
           //alert(err)
         }
-        setIsDone(true)
       })
 
 
@@ -255,11 +255,9 @@ const Setup = (props) => {
       api
         .put('/setup', data)
         .then((res) => {
-          //restart wifid
-          /*
           wifiAPI.restartWifi().then().catch(e => {
             alert(e)
-          })*/
+          })
           setSetupStage(2)
         })
         .catch(async (err) => {
@@ -293,8 +291,8 @@ const Setup = (props) => {
         He_mu_beamformer: parseInt(defaultConfig.he_mu_beamformer)
       }
 
-      wifiAPI.updateConfig(iface, data).then((curConfig) => {
-        wifiAPI.enableInterface(iface).then(() => {
+      wifiAPI.enableInterface(iface).then(() => {
+        wifiAPI.updateConfig(iface, data).then((curConfig) => {
           if (randomizeBSSIDs) {
             let data = {
               Name: iface,
@@ -317,11 +315,11 @@ const Setup = (props) => {
 
         })
         .catch((e) => {
-          alert("error enable interface " + JSON.stringify(e))
+          alert("error update hostapd config " + JSON.stringify(e))
         })
       }).catch((e) => {
         //...
-        alert("error update hostapd config " + JSON.stringify(e))
+        alert("error enable interface " + JSON.stringify(e))
       })
     }
 
@@ -435,7 +433,7 @@ const Setup = (props) => {
             <InfoIcon color="$muted400" />
 
             <Text flex={1} color="$muted500">
-              Thanks for installing. SPR is now configured!
+              Thanks for installing. SPR is now configured! Note: SSH is enabled. Log in and change the password.
             </Text>
           </HStack>
         <Button
