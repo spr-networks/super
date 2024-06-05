@@ -329,25 +329,26 @@ const Setup = (props) => {
   }
 
   const handlePressFinish = () => {
+    const finishSetup = () => {
+      api
+        .put('/setup_done')
+        .then((res) => {
+          setIsDone(true)
+          navigate('/auth/login')
+          //send a restart wifi command to disable sprlab-setup
+          wifiAPI.restartWifi().then()
+        })
+        .catch(async (err) => {
+          setTimeout(finishSetup, 2000);
+        })
 
-    api
-      .put('/setup_done')
-      .then((res) => {
-        setIsDone(true)
-        navigate('/auth/login')
-      })
-      .catch(async (err) => {
-        //let msg = await err.response.text()
-        //setErrors({ ...errors, submit: msg })
-        //navigate('/auth/login')
-      })
+    };
 
+    finishSetup();
   }
 
   const deviceAdded = () => {
     setSetupStage(3)
-    //send a restart wifi command to disable sprlab-setup
-    wifiAPI.restartWifi().then()
   }
 
   if (setupStage === 2) {

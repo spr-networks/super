@@ -37,14 +37,17 @@ const WifiConnect = (props) => {
               }).catch((e) => {});
             })
           ).then((ssids) => {
-            let x = ssids.filter(x => x !== 'sprlab-setup');
+            let x = ssids.filter(x => x !== 'sprlab-setup' && x != '' && x != null);
             setSsids(x);
             if (x.length === 0) {
               setTimeout(fetchSSIDs, 2000);
+            } else {
+              setError(null)
             }
           });
         })
         .catch((err) => {
+          setTimeout(fetchSSIDs, 2000);
           context.error(
             'Failed to add device or configured properly -- check wifid, or reset wifi settings'
           );
@@ -90,6 +93,13 @@ const WifiConnect = (props) => {
 
   return (
     <VStack p="$4">
+      {ssids.length == 0 && (
+        <VStack key="loading" space="md" alignItems="center">
+          <Text size="lg" color="$muted500">
+            Waiting for SPR... (You may need to reconnect to sprlab-setup for wifi setup)
+          </Text>
+        </VStack>
+      )}
       {ssids.map((ssid) => (
         <VStack key={ssid} space="md" alignItems="center">
           <HStack space="sm">
