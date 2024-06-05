@@ -69,7 +69,7 @@ if grep -q "Raspberry Pi" /proc/cpuinfo; then
   if $PI_SETUP_PENDING; then
       cp /scripts/pi-setup.conf /configs/wifi/pi-setup_${PI_WLAN}.conf
       sed -i "s/wlan0/$PI_WLAN/g" /configs/wifi/pi-setup_${PI_WLAN}.conf
-      hostapd -B /scripts/pi-setup.conf
+      hostapd -B /configs/wifi/pi-setup_${PI_WLAN}.conf
       hostapd_cli -B -p /state/wifi/control_${PI_WLAN} -a /scripts/action-setup.sh
   fi
 
