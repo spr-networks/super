@@ -2754,6 +2754,7 @@ func main() {
 	external_router_setup.HandleFunc("/hostapd/{interface}/enable", hostapdEnableInterface).Methods("PUT")
 	external_router_setup.HandleFunc("/hostapd/{interface}/status", hostapdStatus).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/restart", restartWifi).Methods("PUT")
 	external_router_setup.HandleFunc("/hostapd/calcChannel", hostapdChannelCalc).Methods("PUT")
 	external_router_setup.HandleFunc("/link/config", updateLinkConfig).Methods("PUT")
 
