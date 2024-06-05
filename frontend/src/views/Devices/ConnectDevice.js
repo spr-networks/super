@@ -26,26 +26,33 @@ const WifiConnect = (props) => {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    // fetch ap name
-    wifiAPI
-      .interfaces('AP')
-      .then((ifaces) => {
-        Promise.all(
-          ifaces.map((iface) => {
-            return wifiAPI.status(iface).then((status) => {
-              return status['ssid[0]']
-            }).catch((e) => {})
-          })
-        ).then((ssids) => {
-          setSsids(ssids)
+    const fetchSSIDs = () => {
+      wifiAPI
+        .interfaces('AP')
+        .then((ifaces) => {
+          Promise.all(
+            ifaces.map((iface) => {
+              return wifiAPI.status(iface).then((status) => {
+                return status['ssid[0]'];
+              }).catch((e) => {});
+            })
+          ).then((ssids) => {
+            let x = ssids.filter(x => x !== 'sprlab-setup');
+            setSsids(x);
+            if (x.length === 0) {
+              setTimeout(fetchSSIDs, 2000);
+            }
+          });
         })
-      })
-      .catch((err) => {
-        context.error(
-          'Failed to add device or configured properly -- check wifid, or reset wifi settings'
-        )
-      })
-  }, [])
+        .catch((err) => {
+          context.error(
+            'Failed to add device or configured properly -- check wifid, or reset wifi settings'
+          );
+        });
+    };
+
+    fetchSSIDs();
+  }, []);
 
   const checkPendingStatus = () => {
     deviceAPI
