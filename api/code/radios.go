@@ -908,9 +908,10 @@ func hostapdEnableInterface(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rmac, cmac := getRandomizeBSSIDState(iface)
 	//make a call to configure the interface,
 	// which ensures that a hostapd configuration is created
-	err := configureInterface("AP", "", iface)
+	err := configureInterface("AP", "", iface, rmac, cmac)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -1119,8 +1120,10 @@ func hostapdResetInterface(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	rmac, cmac := getRandomizeBSSIDState(iface)
+
 	//with the file renamed, configureInterface will write a default config
-	configureInterface("AP", "", iface)
+	configureInterface("AP", "", iface, rmac, cmac)
 
 	//toggle will also kick off the restart
 	err = toggleInterface(iface, true)

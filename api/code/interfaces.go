@@ -162,7 +162,7 @@ func resetInterface(interfaces []InterfaceConfig, name string, prev_type string,
 
 }
 
-func configureInterface(interfaceType string, subType string, name string) error {
+func configureInterface(interfaceType string, subType string, name string, MACRandomize bool, MACCloak bool) error {
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
 
@@ -212,7 +212,7 @@ func configureInterface(interfaceType string, subType string, name string) error
 
 	}
 
-	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", "", false, false}
+	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", "", MACRandomize, MACCloak}
 
 	config := loadInterfacesConfigLocked()
 
@@ -1004,4 +1004,23 @@ func udpTest(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
+}
+
+func getRandomizeBSSIDState(iface string) (bool, bool) {
+	rMAC := false
+	cMAC := false
+
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	//read the old configuration
+	config := loadInterfacesConfigLocked()
+
+	for _, entry := range config {
+		if entry.Name == iface {
+			return entry.MACRandomize, entry.MACCloak
+		}
+	}
+
+	return rMAC, cMAC
 }

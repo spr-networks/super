@@ -2367,11 +2367,13 @@ type SetupConfig struct {
 	SSID            string
 	CountryCode     string
 	AdminPassword   string
-	InterfaceAP     string
+	InterfaceAPs    []string
 	InterfaceUplink string
 	TinyNets        []string
 	CheckUpdates    bool
 	ReportInstall   bool
+	RandomizeBSSIDs bool
+	CloakBSSIDs     bool
 }
 
 func isSetupMode() bool {
@@ -2449,9 +2451,11 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	//The first character cannot be !, #, or ; character
 	validSSID := regexp.MustCompile(`^[^!#;+\]\/"\t][^+\]\/"\t]{0,30}[^ +\]\/"\t]$|^[^ !#;+\]\/"\t]$[ \t]+$`).MatchString
 
-	if conf.InterfaceAP == "" || !isValidIface(conf.InterfaceAP) {
-		http.Error(w, "Invalid AP interface", 400)
-		return
+	for _, ap := range conf.InterfaceAPs {
+		if ap == "" || !isValidIface(ap) {
+			http.Error(w, "Invalid AP interface", 400)
+			return
+		}
 	}
 
 	if conf.InterfaceUplink == "" || !isValidIface(conf.InterfaceUplink) {
@@ -2565,19 +2569,22 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	matchControl := regexp.MustCompile(`(?m)^(ctrl_interface)=(.*)`)
 
 	configData = matchSSID.ReplaceAllString(configData, "$1="+conf.SSID)
-	configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+conf.InterfaceAP)
 	configData = matchCountry.ReplaceAllString(configData, "$1="+conf.CountryCode)
-	configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+conf.InterfaceAP)
 
-	hostapd_path := getHostapdConfigPath(conf.InterfaceAP)
-	err = ioutil.WriteFile(hostapd_path, []byte(configData), 0600)
-	if err != nil {
-		http.Error(w, "Failed to write config to "+hostapd_path, 400)
-		panic(err)
+	for _, ap := range conf.InterfaceAPs {
+		configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+ap)
+		configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+ap)
+		hostapd_path := getHostapdConfigPath(ap)
+		err = ioutil.WriteFile(hostapd_path, []byte(configData), 0600)
+		if err != nil {
+			http.Error(w, "Failed to write config to "+hostapd_path, 400)
+			panic(err)
+		}
+
+		configureInterface("AP", "", ap, conf.RandomizeBSSIDs, conf.CloakBSSIDs)
 	}
 
-	configureInterface("AP", "", conf.InterfaceAP)
-	configureInterface("Uplink", "ethernet", conf.InterfaceUplink)
+	configureInterface("Uplink", "ethernet", conf.InterfaceUplink, false, false)
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
 	callSuperdRestart("", "")
