@@ -2364,16 +2364,11 @@ func speedTest(w http.ResponseWriter, r *http.Request) {
 }
 
 type SetupConfig struct {
-	SSID            string
-	CountryCode     string
 	AdminPassword   string
-	InterfaceAPs    []string
 	InterfaceUplink string
 	TinyNets        []string
 	CheckUpdates    bool
 	ReportInstall   bool
-	RandomizeBSSIDs bool
-	CloakBSSIDs     bool
 }
 
 func isSetupMode() bool {
@@ -2445,32 +2440,8 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	config.CheckUpdates = conf.CheckUpdates
 	Configmtx.Unlock()
 
-	validCountry := regexp.MustCompile(`^[A-Z]{2}$`).MatchString // EN,SE
-	//SSID: up to 32 alphanumeric, case-sensitive, characters
-	//Invalid characters: +, ], /, ", TAB, and trailing spaces
-	//The first character cannot be !, #, or ; character
-	validSSID := regexp.MustCompile(`^[^!#;+\]\/"\t][^+\]\/"\t]{0,30}[^ +\]\/"\t]$|^[^ !#;+\]\/"\t]$[ \t]+$`).MatchString
-
-	for _, ap := range conf.InterfaceAPs {
-		if ap == "" || !isValidIface(ap) {
-			http.Error(w, "Invalid AP interface", 400)
-			return
-		}
-	}
-
 	if conf.InterfaceUplink == "" || !isValidIface(conf.InterfaceUplink) {
 		http.Error(w, "Invalid Uplink interface", 400)
-		return
-	}
-
-	if !validSSID(conf.SSID) {
-		http.Error(w, "Invalid SSID", 400)
-		return
-	}
-
-	// TODO country => channels
-	if !validCountry(conf.CountryCode) {
-		http.Error(w, "Invalid Country Code", 400)
 		return
 	}
 
@@ -2552,36 +2523,6 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Failed to write config to "+ConfigFile, 400)
 		panic(err)
-	}
-
-	//generate and write to hostapd_iface.conf
-	data, err = ioutil.ReadFile(getHostapdConfigPath("template"))
-	if err != nil {
-		// we can use default template config here but better to copy it before in bash
-		http.Error(w, "Missing default hostapd config", 400)
-		return
-	}
-
-	configData = string(data)
-	matchSSID := regexp.MustCompile(`(?m)^(ssid)=(.*)`)
-	matchInterfaceAP := regexp.MustCompile(`(?m)^(interface)=(.*)`)
-	matchCountry := regexp.MustCompile(`(?m)^(country_code)=(.*)`)
-	matchControl := regexp.MustCompile(`(?m)^(ctrl_interface)=(.*)`)
-
-	configData = matchSSID.ReplaceAllString(configData, "$1="+conf.SSID)
-	configData = matchCountry.ReplaceAllString(configData, "$1="+conf.CountryCode)
-
-	for _, ap := range conf.InterfaceAPs {
-		configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+ap)
-		configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+ap)
-		hostapd_path := getHostapdConfigPath(ap)
-		err = ioutil.WriteFile(hostapd_path, []byte(configData), 0600)
-		if err != nil {
-			http.Error(w, "Failed to write config to "+hostapd_path, 400)
-			panic(err)
-		}
-
-		configureInterface("AP", "", ap, conf.RandomizeBSSIDs, conf.CloakBSSIDs)
 	}
 
 	configureInterface("Uplink", "ethernet", conf.InterfaceUplink, false, false)

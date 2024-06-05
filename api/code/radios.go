@@ -162,6 +162,8 @@ func (h *HostapdConfigEntry) Validate() error {
 		return fmt.Errorf("Ssid exceeds the maximum length of 32")
 	}
 
+	//	validSSID := regexp.MustCompile(`^[^!#;+\]\/"\t][^+\]\/"\t]{0,30}[^ +\]\/"\t]$|^[^ !#;+\]\/"\t]$[ \t]+$`).MatchString
+
 	return nil
 }
 
