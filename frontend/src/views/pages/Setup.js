@@ -255,9 +255,11 @@ const Setup = (props) => {
       api
         .put('/setup', data)
         .then((res) => {
+          /*
           wifiAPI.restartWifi().then().catch(e => {
             alert(e)
           })
+          */
           setSetupStage(2)
         })
         .catch(async (err) => {
