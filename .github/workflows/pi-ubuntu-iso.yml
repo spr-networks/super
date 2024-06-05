@@ -24,7 +24,7 @@ jobs:
         run: ./pi-download-image.sh
       - name: Build install image
         working-directory: ./installer
-        run: ./pi-arm64-image-build.sh
+        run: sudo ./pi-arm64-image-build.sh
       - name: Compress image
         run: xz ./installer/data/spr.img
       - name: Create Release
