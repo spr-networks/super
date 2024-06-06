@@ -2364,10 +2364,7 @@ func speedTest(w http.ResponseWriter, r *http.Request) {
 }
 
 type SetupConfig struct {
-	SSID            string
-	CountryCode     string
 	AdminPassword   string
-	InterfaceAP     string
 	InterfaceUplink string
 	TinyNets        []string
 	CheckUpdates    bool
@@ -2443,30 +2440,8 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	config.CheckUpdates = conf.CheckUpdates
 	Configmtx.Unlock()
 
-	validCountry := regexp.MustCompile(`^[A-Z]{2}$`).MatchString // EN,SE
-	//SSID: up to 32 alphanumeric, case-sensitive, characters
-	//Invalid characters: +, ], /, ", TAB, and trailing spaces
-	//The first character cannot be !, #, or ; character
-	validSSID := regexp.MustCompile(`^[^!#;+\]\/"\t][^+\]\/"\t]{0,30}[^ +\]\/"\t]$|^[^ !#;+\]\/"\t]$[ \t]+$`).MatchString
-
-	if conf.InterfaceAP == "" || !isValidIface(conf.InterfaceAP) {
-		http.Error(w, "Invalid AP interface", 400)
-		return
-	}
-
 	if conf.InterfaceUplink == "" || !isValidIface(conf.InterfaceUplink) {
 		http.Error(w, "Invalid Uplink interface", 400)
-		return
-	}
-
-	if !validSSID(conf.SSID) {
-		http.Error(w, "Invalid SSID", 400)
-		return
-	}
-
-	// TODO country => channels
-	if !validCountry(conf.CountryCode) {
-		http.Error(w, "Invalid Country Code", 400)
 		return
 	}
 
@@ -2550,34 +2525,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	//generate and write to hostapd_iface.conf
-	data, err = ioutil.ReadFile(getHostapdConfigPath("template"))
-	if err != nil {
-		// we can use default template config here but better to copy it before in bash
-		http.Error(w, "Missing default hostapd config", 400)
-		return
-	}
-
-	configData = string(data)
-	matchSSID := regexp.MustCompile(`(?m)^(ssid)=(.*)`)
-	matchInterfaceAP := regexp.MustCompile(`(?m)^(interface)=(.*)`)
-	matchCountry := regexp.MustCompile(`(?m)^(country_code)=(.*)`)
-	matchControl := regexp.MustCompile(`(?m)^(ctrl_interface)=(.*)`)
-
-	configData = matchSSID.ReplaceAllString(configData, "$1="+conf.SSID)
-	configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+conf.InterfaceAP)
-	configData = matchCountry.ReplaceAllString(configData, "$1="+conf.CountryCode)
-	configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+conf.InterfaceAP)
-
-	hostapd_path := getHostapdConfigPath(conf.InterfaceAP)
-	err = ioutil.WriteFile(hostapd_path, []byte(configData), 0600)
-	if err != nil {
-		http.Error(w, "Failed to write config to "+hostapd_path, 400)
-		panic(err)
-	}
-
-	configureInterface("AP", "", conf.InterfaceAP)
-	configureInterface("Uplink", "ethernet", conf.InterfaceUplink)
+	configureInterface("Uplink", "ethernet", conf.InterfaceUplink, false, false)
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
 	callSuperdRestart("", "")
@@ -2803,9 +2751,13 @@ func main() {
 	external_router_setup.HandleFunc("/ip/addr", ipAddr).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdUpdateConfig).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/{interface}/enable", hostapdEnableInterface).Methods("PUT")
 	external_router_setup.HandleFunc("/hostapd/{interface}/status", hostapdStatus).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/restart", restartWifi).Methods("PUT")
 	external_router_setup.HandleFunc("/hostapd/calcChannel", hostapdChannelCalc).Methods("PUT")
+	external_router_setup.HandleFunc("/link/config", updateLinkConfig).Methods("PUT")
+
 	external_router_setup.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")
 	//to add a new wifi device
 	external_router_setup.HandleFunc("/device", handleUpdateDevice).Methods("PUT")

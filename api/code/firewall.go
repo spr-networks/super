@@ -383,7 +383,7 @@ func setDefaultUplinkGateway(iface string, index int) {
 	gateway, err := getDefaultGatewayLocked(iface)
 	if err != nil || gateway == "" {
 		//no gateway found, continue on
-		if (err != nil) {
+		if err != nil {
 			//only log when err is not nil
 			log.Println("failed to set default gw for "+iface+": not found", err)
 		}
@@ -1318,7 +1318,7 @@ func populateSets() {
 	//As a migration: when no longer in setup mode,
 	//import WANIF into interfaces.json
 	if !isSetupMode() && found_wanif == false {
-		configureInterface("Uplink", "ethernet", wanif)
+		configureInterface("Uplink", "ethernet", wanif, false, false)
 	}
 
 }

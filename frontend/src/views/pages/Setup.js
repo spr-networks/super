@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { api, wifiAPI } from 'api'
+import {generateCapabilitiesString, generateConfigForBand, getBestWifiConfig, isSPRCompat} from 'api/Wifi'
 import { useNavigate } from 'react-router-dom'
 import AddDevice from 'components/Devices/AddDevice'
 import { countryCodes } from 'utils'
@@ -52,21 +53,21 @@ const Setup = (props) => {
   const context = useContext(AlertContext)
 
   const navigate = useNavigate()
-  //TBD, not currently used for anything. in the future roll in channel selection
-  const [config, setConfig] = useState({})
-  const [wifiInterfaces, setWifiInterfaces] = useState([])
   const [uplinkInterfaces, setUplinkInterfaces] = useState([])
 
   const [ssid, setSsid] = useState('SPRLab')
   const [countryWifi, setCountryWifi] = useState('US')
-  const [interfaceWifi, setInterfaceWifi] = useState('wlan1')
+  const [wifiInterfaces, setWifiInterfaces] = useState([])
+  const [iwMap, setIwMap] = useState({})
   const [interfaceUplink, setInterfaceUplink] = useState('eth0')
   const [tinynet, setTinynet] = useState('192.168.2.0/24')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = React.useState({})
   const [isDone, setIsDone] = useState(false)
   const [checkUpdates, setCheckUpdates] = useState(true)
-  const [reportInstall, setReportInstall] = useState(true)
+  const [randomizeBSSIDs, setRandomizeBSSIDs] = useState(false)
+  const [cloakBSSIDs, setCloakBSSIDs] = useState(false)
+  const [reportInstall, setReportInstall] = useState(false)
 
   const [setupStage, setSetupStage] = useState(1)
   const [alertType, setAlertType] = useState("")
@@ -89,48 +90,83 @@ const Setup = (props) => {
       .get('/setup')
       .then((res) => {})
       .catch(async (err) => {
-        let msg = await err.response.text() // setup already done
-
-        //tbd this might not be correct
-        setIsDone(true)
+        if (err.response) {
+          let msg = await err.response.text() // setup already done
+          setErrors({ ...errors, submit: msg })
+          setIsDone(true)
+        } else {
+          //alert(err)
+        }
       })
 
-    wifiAPI.config(interfaceWifi).then(
-      (conf) => {
-        setConfig(conf)
-      },
-      [interfaceWifi]
-    ).catch((e) => {})
 
     wifiAPI.ipAddr().then((ipAddr) => {
-      wifiAPI.iwDev().then((iwDev) => {
-        let wifiInterfaces = []
-        for (let dev of Object.values(iwDev)) {
-          wifiInterfaces.push(...Object.keys(dev))
-        }
-        wifiInterfaces.sort()
-        setWifiInterfaces(wifiInterfaces)
+      wifiAPI.iwList().then((iws) => {
+        wifiAPI.iwDev().then((iwDev) => {
 
-        let uplinkInterfaces = []
-        for (let entry of ipAddr) {
-          if (entry.link_type == 'ether') {
-            if (entry.ifname.startsWith('docker')) {
-              continue
+          iws = iws.map((iw) => {
+            iw.devices = iwDev[iw.wiphy];
+            return iw;
+          });
+
+          //make a phy to iws map and devname to iw map
+          let iwMap = {}
+          iws.forEach((iw) => {
+            iwMap[iw.wiphy] = iw
+            Object.keys(iw.devices).forEach((dev) => {
+              iwMap[dev] = iw
+              iwMap[iw.wiphy].dev = dev
+            })
+          })
+
+          setIwMap(iwMap)
+
+          let validPhys = []
+          for (let iw of iws) {
+            if (isSPRCompat(iw)) {
+              validPhys.push(iw.wiphy)
             }
-            if (entry.ifname.startsWith('veth')) {
-              continue
-            }
-            uplinkInterfaces.push(entry.ifname)
           }
-        }
 
-        setUplinkInterfaces(uplinkInterfaces)
-        if (uplinkInterfaces.includes("eth2")) {
-          setInterfaceUplink("eth2")
-        }
-      })
+          if (validPhys.length == 0) {
+            alert("No compatible wifi interfaces found")
+
+          }
+
+          let newWiFiInterfaces = []
+          let keys = Object.keys(iwDev)
+          for (let phyName of keys) {
+            if (!validPhys.includes(phyName)) continue
+            let dev = iwDev[phyName]
+            //check for SPR compatibility
+            newWiFiInterfaces.push(...Object.keys(dev))
+          }
+          newWiFiInterfaces.sort()
+          setWifiInterfaces(newWiFiInterfaces)
+          //now go thru
+
+          let uplinkInterfaces = []
+          for (let entry of ipAddr) {
+            if (entry.link_type == 'ether') {
+              if (entry.ifname.startsWith('docker')) {
+                continue
+              }
+              if (entry.ifname.startsWith('veth')) {
+                continue
+              }
+              uplinkInterfaces.push(entry.ifname)
+            }
+          }
+
+          setUplinkInterfaces(uplinkInterfaces)
+          if (uplinkInterfaces.includes("eth2")) {
+            setInterfaceUplink("eth2")
+          }
+        })
+      }).catch((e) => {})
     }).catch((e) => {})
   }, [])
+
 
   useEffect(() => {
     if ('login' in errors && password.length) {
@@ -207,29 +243,87 @@ const Setup = (props) => {
       return
     }
 
-    const data = {
-      InterfaceUplink: interfaceUplink,
-      SSID: ssid,
-      CountryCode: countryWifi,
-      InterfaceAP: interfaceWifi,
-      AdminPassword: password,
-      TinyNets: tinynets,
-      ReportInstall: reportInstall,
-      CheckUpdates: checkUpdates
+    const finishSetup = () => {
+      const data = {
+        InterfaceUplink: interfaceUplink,
+        AdminPassword: password,
+        TinyNets: tinynets,
+        ReportInstall: reportInstall,
+        CheckUpdates: checkUpdates
+      }
+
+      api
+        .put('/setup', data)
+        .then((res) => {
+          wifiAPI.restartWifi().then().catch(e => {
+            alert(e)
+          })
+          setSetupStage(2)
+        })
+        .catch(async (err) => {
+          if (err.response) {
+            let msg = await err.response.text()
+            setErrors({ ...errors, submit: msg })
+          } else {
+            alert(err)
+          }
+        })
     }
 
-    api
-      .put('/setup', data)
-      .then((res) => {
-        //res.status==='done'
-        //setIsDone(true)
-        setSetupStage(2)
+    for (let iface of wifiInterfaces) {
+      let defaultConfig = generateConfigForBand(iwMap, iface, 2) ||
+        generateConfigForBand(iwMap, iface, 1) ||
+        generateConfigForBand(iwMap, iface, 4)
+
+      //max out the settings
+      let bestConfig = getBestWifiConfig(iwMap, iface, defaultConfig)
+
+      let data = {
+        Ssid: ssid,
+//        Channel: defaultConfig.channel, //tbd?
+        Country_code: countryWifi,
+        Vht_capab: defaultConfig.vht_capab,
+        Ht_capab: defaultConfig.ht_capab,
+        Hw_mode: defaultConfig.hw_mode,
+        Ieee80211ax: parseInt(defaultConfig.ieee80211ax),
+        He_su_beamformer: parseInt(defaultConfig.he_su_beamformer),
+        He_su_beamformee: parseInt(defaultConfig.he_su_beamformee),
+        He_mu_beamformer: parseInt(defaultConfig.he_mu_beamformer)
+      }
+
+      wifiAPI.enableInterface(iface).then(() => {
+        wifiAPI.updateConfig(iface, data).then((curConfig) => {
+          if (randomizeBSSIDs) {
+            let data = {
+              Name: iface,
+              Type: "AP",
+              MACRandomize: randomizeBSSIDs,
+              MACCloak: cloakBSSIDs,
+              Enabled: true
+            }
+            api
+              .put('/link/config', data)
+              .then((res) => {
+                finishSetup()
+              })
+              .catch((e) => {
+                alert("error link/config" + JSON.stringify(e))
+              })
+          } else {
+            finishSetup()
+          }
+
+        })
+        .catch((e) => {
+          alert("error update hostapd config " + JSON.stringify(e))
+        })
+      }).catch((e) => {
+        //...
+        alert("error enable interface " + JSON.stringify(e))
       })
-      .catch(async (err) => {
-        let msg = await err.response.text()
-        setErrors({ ...errors, submit: msg })
-        //setIsDone(true)
-      })
+    }
+
+
   }
 
   const handlePressFinish = () => {
@@ -243,7 +337,6 @@ const Setup = (props) => {
       .catch(async (err) => {
         //let msg = await err.response.text()
         //setErrors({ ...errors, submit: msg })
-        //setIsDone(true)
         //navigate('/auth/login')
       })
 
@@ -251,6 +344,8 @@ const Setup = (props) => {
 
   const deviceAdded = () => {
     setSetupStage(3)
+    //send a restart wifi command to disable sprlab-setup
+    wifiAPI.restartWifi().then()
   }
 
   if (setupStage === 2) {
@@ -338,7 +433,7 @@ const Setup = (props) => {
             <InfoIcon color="$muted400" />
 
             <Text flex={1} color="$muted500">
-              Thanks for installing. SPR is now configured!
+              Thanks for installing. SPR is now configured! Note: SSH is enabled. Log in and change the password.
             </Text>
           </HStack>
         <Button
@@ -456,19 +551,31 @@ const Setup = (props) => {
               </Select>
             </FormControl>
 
-            <FormControl isInvalid={'wifi' in errors}>
-              <FormControlLabel>
-                <FormControlLabelText>Wifi Interface</FormControlLabelText>
-              </FormControlLabel>
-              <Select
-                selectedValue={interfaceWifi}
-                onValueChange={(value) => setInterfaceWifi(value)}
+            <Checkbox
+              size="md"
+              value={randomizeBSSIDs}
+              isChecked={randomizeBSSIDs}
+              onChange={(enabled) => setRandomizeBSSIDs(!randomizeBSSIDs)}
+            >
+              <CheckboxIndicator mr="$2">
+                <CheckboxIcon as={CheckIcon} />
+              </CheckboxIndicator>
+              <CheckboxLabel>Randomize BSSID for Location Privacy</CheckboxLabel>
+            </Checkbox>
+
+            { randomizeBSSIDs && (
+              <Checkbox
+                size="md"
+                value={cloakBSSIDs}
+                isChecked={cloakBSSIDs}
+                onChange={(enabled) => setCloakBSSIDs(!cloakBSSIDs)}
               >
-                {wifiInterfaces.map((wif) => (
-                  <Select.Item key={wif} label={wif} value={wif} />
-                ))}
-              </Select>
-            </FormControl>
+                <CheckboxIndicator mr="$2">
+                  <CheckboxIcon as={CheckIcon} />
+                </CheckboxIndicator>
+                <CheckboxLabel>Randomize to Common AP Vendor</CheckboxLabel>
+              </Checkbox>
+            )}
 
             <FormControl isInvalid={'uplink' in errors}>
               <FormControlLabel>

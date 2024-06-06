@@ -165,7 +165,7 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
               <CheckboxIndicator mr="$2">
                 <CheckboxIcon />
               </CheckboxIndicator>
-              <CheckboxLabel>Cloak Common OUI</CheckboxLabel>
+              <CheckboxLabel>Cloak Common AP Vendor</CheckboxLabel>
             </Checkbox>
           </FormControl>
       )}

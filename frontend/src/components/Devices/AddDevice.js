@@ -79,7 +79,7 @@ const AddDevice = (props) => {
 
       if (pendingDevice) {
         context.info(
-          'Got Pending Device',
+          'Have Pending Device',
           `Device "${pendingDevice.Name}" is added but not connected. Adding a new device will overwrite it`
         )
       }
@@ -215,7 +215,7 @@ const AddDevice = (props) => {
     }
 
     let DeviceExpiration =
-      expiration < 0 ? -1 : expiration - parseInt(Date.now() / 1e3)
+      expiration <= 0 ? -1 : expiration - parseInt(Date.now() / 1e3)
 
     let data = {
       MAC: mac || 'pending',
