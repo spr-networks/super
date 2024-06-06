@@ -2,7 +2,12 @@ import React, { useContext, useEffect, useState } from 'react'
 
 import { wifiAPI } from 'api'
 
-import {generateCapabilitiesString, generateConfigForBand, sortConf, isSPRCompat} from 'api/Wifi'
+import {
+  generateCapabilitiesString,
+  generateConfigForBand,
+  sortConf,
+  isSPRCompat
+} from 'api/Wifi'
 
 import { AlertContext } from 'AppContext'
 
@@ -31,7 +36,7 @@ import {
   VStack
 } from '@gluestack-ui/themed'
 
-import {Tooltip as TooltipOrig} from '@gluestack-ui/themed'
+import { Tooltip as TooltipOrig } from '@gluestack-ui/themed'
 
 import { Tooltip } from 'components/Tooltip'
 
@@ -101,7 +106,7 @@ const WifiHostapd = (props) => {
   const [regs, setRegs] = useState({})
   const [iwMap, setIwMap] = useState({})
 
-  const [failsafeErrors, setFailsafeErrors] = useState("FAIL")
+  const [failsafeErrors, setFailsafeErrors] = useState('FAIL')
 
   //make sure to update commitConfig when updating these
   const canEditString = [
@@ -118,7 +123,6 @@ const WifiHostapd = (props) => {
     'he_mu_beamformer'
   ]
   const canEdit = canEditInt.concat(canEditString)
-
 
   const updateCapabilitiesTooltips = () => {
     //update the tooltips for vht_capab, ht_capab
@@ -155,19 +159,21 @@ const WifiHostapd = (props) => {
     wifiAPI.iwDev().then((devs) => {
       setDevices(devs)
 
-      wifiAPI.iwReg().then((regs) => {
-        setRegs(regs)
-      }).catch((e) => {
-
-      })
+      wifiAPI
+        .iwReg()
+        .then((regs) => {
+          setRegs(regs)
+        })
+        .catch((e) => {})
 
       wifiAPI.iwList().then(async (iws) => {
-        iws = await Promise.all(iws.map(async (iw) => {
-          iw.devices = devs[iw.wiphy];
-          iw.failsafeStatus = await wifiAPI.checkFailsafe(iw.wiphy);
-          return iw;
-        }));
-
+        iws = await Promise.all(
+          iws.map(async (iw) => {
+            iw.devices = devs[iw.wiphy]
+            iw.failsafeStatus = await wifiAPI.checkFailsafe(iw.wiphy)
+            return iw
+          })
+        )
 
         //make a phy to iws map and devname to iw map
         let iwMap = {}
@@ -184,10 +190,12 @@ const WifiHostapd = (props) => {
           })
         })
 
-        iws = await Promise.all(iws.map(async (iw) => {
-          iw.failsafeStatus = await wifiAPI.checkFailsafe(iwMap[iw.wiphy].dev);
-          return iw;
-        }));
+        iws = await Promise.all(
+          iws.map(async (iw) => {
+            iw.failsafeStatus = await wifiAPI.checkFailsafe(iwMap[iw.wiphy].dev)
+            return iw
+          })
+        )
 
         setIwMap(iwMap)
         setIws(iws)
@@ -206,11 +214,12 @@ const WifiHostapd = (props) => {
     updateIWS()
 
     if (iface == '') {
-      wifiAPI.defaultInterface().then((defIface) => {
-        setIface(defIface)
-      }).catch((e)=> {
-
-      })
+      wifiAPI
+        .defaultInterface()
+        .then((defIface) => {
+          setIface(defIface)
+        })
+        .catch((e) => {})
     }
 
     if (iface === '') {
@@ -303,7 +312,6 @@ const WifiHostapd = (props) => {
     commitConfig()
   }
 
-
   const generateHostAPConfiguration = () => {
     //band 1 -> 2.4GHz
     //band 2 -> 5GHz
@@ -392,7 +400,7 @@ const WifiHostapd = (props) => {
 
       //data will have inherited Op_class from the channel calculation
       //the backend handles 6-e transition and relaxation.
-      if (wifiParameters.Channel == 0 ) {
+      if (wifiParameters.Channel == 0) {
         //let the backend know to enable auto selection
         data.AutoSelectChannel = true
       }
@@ -408,7 +416,7 @@ const WifiHostapd = (props) => {
         })
     }
 
-    let is_6e_acs = wifiParameters.Channel == "6GHz"
+    let is_6e_acs = wifiParameters.Channel == '6GHz'
 
     if (is_6e_acs) {
       //figure out how to set up class?
@@ -445,7 +453,7 @@ const WifiHostapd = (props) => {
       devsSelect.push({
         label,
         value: _iface,
-        isDisabled: _iface.includes('.') || (iwMap[_iface].spr_compat == false)
+        isDisabled: _iface.includes('.') || iwMap[_iface]?.spr_compat == false
       })
 
       if (_iface == iface) {
@@ -523,7 +531,6 @@ const WifiHostapd = (props) => {
 
   return (
     <ScrollView pb="$20">
-
       <ListHeader title="Wifi Interface">
         <Button size="sm" action="secondary" onPress={restartWifi}>
           <ButtonText>Restart All Wifi Devices</ButtonText>
@@ -559,20 +566,20 @@ const WifiHostapd = (props) => {
             </Select>
           ) : null}
         </FormControl>
-
       </Box>
 
       <VStack space={4}>
         {iws.map((iw) => (
-          <Box w="20%"  key={iw.wiphy}>
+          <Box w="20%" key={iw.wiphy}>
             {iw.failsafeStatus !== 'ok' && (
               <Tooltip label="Reconfigure the interface">
                 <Badge action="warning" variant="outline">
-                  <BadgeText>⚠️ {iwMap[iw.wiphy].dev} In Failsafe Mode</BadgeText>
+                  <BadgeText>
+                    ⚠️ {iwMap[iw.wiphy].dev} In Failsafe Mode
+                  </BadgeText>
                 </Badge>
               </Tooltip>
             )}
-
           </Box>
         ))}
       </VStack>
