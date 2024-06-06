@@ -27,11 +27,6 @@ fi
 CA_KEY="$D/configs/auth/cert/${CERT_NAME}-ca.key"
 CA_CSR="$D/configs/auth/cert/${CERT_NAME}-ca.csr"
 CA_CRT="$D/configs/auth/cert/${CERT_NAME}-ca.crt"
-CA_PEM="$D/configs/auth/cert/${CERT_NAME}-ca.pem"
-
-INT_CRT="$D/configs/auth/cert/${CERT_NAME}-inter.crt"
-INT_CSR="$D/configs/auth/cert/${CERT_NAME}-inter.csr"
-INT_KEY="$D/configs/auth/cert/${CERT_NAME}-inter.key"
 
 CERT_CSR="$D/configs/auth/${CERT_NAME}.csr"
 CERT_CRT="$D/configs/auth/${CERT_NAME}.crt"
@@ -73,22 +68,44 @@ if [ $GENERATE_CA -gt 0 ]; then
 
 echo "+ generating ca..."
 
-# CA
-openssl req -new -subj "/C=US/ST=California/CN=${CN}" -newkey rsa:2048 -nodes -out $CA_CSR -keyout $CA_KEY -extensions v3_ca
-openssl x509 -signkey $CA_KEY -days $DAYS_CA -req -in $CA_CSR -set_serial 01 -out $CA_CRT
-
-# INT
-openssl req -new -subj "/C=US/ST=California/CN=${CN}" -newkey rsa:2048 -nodes -out $INT_CSR -keyout $INT_KEY -addext basicConstraints=CA:TRUE
-openssl x509 -CA $CA_CRT -CAkey $CA_KEY -days $DAYS_CA -req -in $INT_CSR -set_serial 02 -out $INT_CRT
+openssl genrsa -out $CA_KEY 4096
+openssl req -x509 -new -subj "/C=US/ST=California/CN=${CN}" -nodes -key $CA_KEY -sha256 -days $DAYS_CA -out $CA_CRT
 
 fi
 
 echo "+ generating cert..."
-# test cert
-openssl req -new -subj "/C=US/ST=California/CN=${CN}" -newkey rsa:2048 -nodes -out $CERT_CSR -keyout $CERT_KEY
 
-# sign
-openssl x509 -CA $INT_CRT -CAkey $INT_KEY -days $DAYS_CERT -req -in $CERT_CSR -set_serial 03 -extfile <(printf "subjectAltName=${ALTNAME}") -out $CERT_CRT
+openssl genrsa -out $CERT_KEY 4096
+cat > /tmp/cert.conf <<__EOF
+[ req ]
+prompt             = no
+default_bits       = 4096
+distinguished_name = req_distinguished_name
+req_extensions     = req_ext
+[ req_distinguished_name ]
+countryName                = US
+localityName               = California
+organizationName           = spr
+commonName                 = 192.168.2.1
+[ req_ext ]
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = spr.local
+IP.1 = 192.168.2.1
+__EOF
+
+openssl req -new -key $CERT_KEY -config /tmp/cert.conf -out $CERT_CSR
+
+#verify
+#openssl req -in $CERT_CSR -noout -text
+
+#issue cert
+openssl x509 -req -in $CERT_CSR -CA $CA_CRT -CAkey $CA_KEY -CAcreateserial \
+    -out $CERT_CRT -days $DAYS_CERT \
+    -sha256 -extfile /tmp/cert.conf -extensions req_ext
+
+rm -f /tmp/cert.conf
 
 # export
-openssl pkcs12 -export -out $CERT_PFX -inkey $CERT_KEY -in $CERT_CRT -certfile $INT_CRT -certfile $CA_CRT $SKIPPASS
+openssl pkcs12 -export -out $CERT_PFX -inkey $CERT_KEY -in $CERT_CRT -certfile $CA_CRT $SKIPPASS
