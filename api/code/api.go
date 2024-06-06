@@ -48,6 +48,7 @@ var DNSConfigFile = TEST_PREFIX + "/configs/dns/Corefile"
 var MulticastConfigFile = TEST_PREFIX + "/configs/base/multicast.json"
 
 var ApiTlsCert = "/configs/auth/www-api.crt"
+var ApiTlsCaCert = "/configs/auth/cert/www-api-ca.crt"
 var ApiTlsKey = "/configs/auth/www-api.key"
 
 var SuperdSocketPath = TEST_PREFIX + "/state/plugins/superd/socket"
@@ -2300,8 +2301,8 @@ func getLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 func getCert(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain")
-	http.ServeFile(w, r, ApiTlsCert)
+	w.Header().Set("Content-Type", "application/x-x509-ca-cert")
+	http.ServeFile(w, r, ApiTlsCaCert)
 }
 
 func speedTest(w http.ResponseWriter, r *http.Request) {
