@@ -205,7 +205,6 @@ class API {
 
     return this.fetch(method, url, body)
       .then((response) => {
-
         if (!response.ok) {
           return Promise.reject({
             message: response.status,
@@ -310,7 +309,12 @@ export const testLogin = (username, password, callback) => {
     })
 }
 
-export const saveLogin = (username, password, hostname = null) => {
+export const saveLogin = (
+  username,
+  password,
+  hostname = null,
+  protocol = null
+) => {
   gAuthHeaders = 'Basic ' + Base64.btoa(username + ':' + password)
 
   let authdata = Base64.btoa(username + ':' + password)
@@ -321,7 +325,8 @@ export const saveLogin = (username, password, hostname = null) => {
       authdata,
       username,
       password,
-      hostname
+      hostname,
+      protocol
     })
   )
 }
