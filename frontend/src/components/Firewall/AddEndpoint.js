@@ -100,6 +100,7 @@ class AddEndpointImpl extends React.Component {
             onSubmitEditing={(value) => this.handleChange('IP', value)}
             onChangeText={(value) => this.handleChange('IP', value)}
             onChange={(value) => this.handleChange('IP', value)}
+            show_CIDR_Defaults={true}
           />
           <FormControlHelper>
             <FormControlHelperText>Accepts IP or CIDR</FormControlHelperText>

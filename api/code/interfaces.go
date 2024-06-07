@@ -4,15 +4,19 @@ Routines for managing the interfaces
 package main
 
 import (
+	"bufio"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 )
 
 import "github.com/gorilla/mux"
@@ -21,25 +25,29 @@ var gAPIInterfacesPath = TEST_PREFIX + "/configs/base/interfaces.json"
 var gAPIInterfacesPublicPath = TEST_PREFIX + "/state/public/interfaces.json"
 
 type InterfaceConfig struct {
-	Name        string
-	Type        string
-	Subtype     string
-	Enabled     bool
-	ExtraBSS    []ExtraBSS `json:",omitempty"`
-	DisableDHCP bool       `json:",omitempty"`
-	IP          string     `json:",omitempty"`
-	Router      string     `json:",omitempty"`
-	VLAN        string     `json:",omitempty"`
-	MACOverride string     `json:",omitempty"`
+	Name         string
+	Type         string
+	Subtype      string
+	Enabled      bool
+	ExtraBSS     []ExtraBSS `json:",omitempty"`
+	DisableDHCP  bool       `json:",omitempty"`
+	IP           string     `json:",omitempty"`
+	Router       string     `json:",omitempty"`
+	VLAN         string     `json:",omitempty"`
+	MACOverride  string     `json:",omitempty"`
+	MACRandomize bool       `json:",omitempty"`
+	MACCloak     bool       `json:",omitempty"`
 }
 
 // this will be exported to all containers in public/interfaces.json
 type PublicInterfaceConfig struct {
-	Name        string
-	Type        string
-	Subtype     string
-	Enabled     bool
-	MACOverride string `json:",omitempty"`
+	Name         string
+	Type         string
+	Subtype      string
+	Enabled      bool
+	MACOverride  string `json:",omitempty"`
+	MACRandomize bool   `json:",omitempty"`
+	MACCloak     bool   `json:",omitempty"`
 }
 
 func isValidMAC(MAC string) bool {
@@ -114,9 +122,18 @@ func copyInterfacesConfigToPublic() {
 	Interfacesmtx.Unlock()
 }
 
-func resetInterface(interfaces []InterfaceConfig, name string, prev_type string, prev_subtype string, enabled bool) {
+func resetInterface(interfaces []InterfaceConfig, name string, prev_type string, prev_subtype string, enabled bool, reset_address bool) {
 	//NOTE: must run *after* write  has happened
 	// as gateway code depends on an updated interfaces list.
+
+	if reset_address {
+		exec.Command("ip", "link", "set", "dev", name, "down").Run()
+		err := exec.Command("macchanger", "-p", name).Run()
+		exec.Command("ip", "link", "set", "dev", name, "up").Run()
+		if err != nil {
+			log.Println("Failed to restore mac address "+name, err)
+		}
+	}
 
 	if prev_type == "" {
 		//nothing to do
@@ -145,7 +162,7 @@ func resetInterface(interfaces []InterfaceConfig, name string, prev_type string,
 
 }
 
-func configureInterface(interfaceType string, subType string, name string) error {
+func configureInterface(interfaceType string, subType string, name string, MACRandomize bool, MACCloak bool) error {
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
 
@@ -195,7 +212,7 @@ func configureInterface(interfaceType string, subType string, name string) error
 
 	}
 
-	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", ""}
+	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", "", MACRandomize, MACCloak}
 
 	config := loadInterfacesConfigLocked()
 
@@ -225,7 +242,7 @@ func configureInterface(interfaceType string, subType string, name string) error
 	}
 
 	if prev_type != "" {
-		resetInterface(config, name, prev_type, prev_subtype, false)
+		resetInterface(config, name, prev_type, prev_subtype, false, false)
 	}
 
 	if interfaceType == "Uplink" {
@@ -262,7 +279,7 @@ func toggleInterface(name string, enabled bool) error {
 
 	if madeChange {
 		err := writeInterfacesConfigLocked(config)
-		resetInterface(config, config[i].Name, config[i].Type, config[i].Subtype, enabled)
+		resetInterface(config, config[i].Name, config[i].Type, config[i].Subtype, enabled, false)
 
 		if config[i].Type == "Uplink" && enabled {
 			addUplinkEntry(config[i].Name, config[i].Subtype)
@@ -333,7 +350,7 @@ func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool
 	if changed {
 		err := writeInterfacesConfigLocked(interfaces)
 		if reset {
-			resetInterface(interfaces, Iface, prev_type, prev_subtype, Enabled)
+			resetInterface(interfaces, Iface, prev_type, prev_subtype, Enabled, false)
 
 			if Type == "Uplink" && Enabled {
 				addUplinkEntry(Iface, Subtype)
@@ -406,7 +423,7 @@ func updateInterfaceIP(iconfig InterfaceConfig) error {
 }
 
 func updateInterfaceConfig(iconfig InterfaceConfig) error {
-	//asumes iconfig has been sanitized
+	//assumes iconfig has been sanitized
 
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
@@ -418,20 +435,28 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 	prev_type := ""
 	prev_subtype := ""
 	prev_enabled := false
+	reset_random := false
 
 	for i, iface := range interfaces {
 		if iface.Name == iconfig.Name {
 			found = true
 			if interfaces[i].Enabled != iconfig.Enabled ||
 				interfaces[i].Type != iconfig.Type ||
+				interfaces[i].MACRandomize != iconfig.MACRandomize ||
+				interfaces[i].MACCloak != iconfig.MACCloak ||
 				interfaces[i].MACOverride != iconfig.MACOverride {
-				prev_type = iconfig.Type
-				prev_subtype = iconfig.Subtype
-				prev_enabled = iconfig.Enabled
+				prev_type = interfaces[i].Type
+				prev_subtype = interfaces[i].Subtype
+				prev_enabled = interfaces[i].Enabled
+				if interfaces[i].MACRandomize == true && iconfig.MACRandomize == false {
+					reset_random = true
+				}
 				changed = true
 				interfaces[i].Enabled = iconfig.Enabled
 				interfaces[i].Type = iconfig.Type
 				interfaces[i].MACOverride = iconfig.MACOverride
+				interfaces[i].MACRandomize = iconfig.MACRandomize
+				interfaces[i].MACCloak = iconfig.MACCloak
 			}
 			break
 		}
@@ -448,7 +473,11 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 		refreshInterfaceOverridesLocked()
 
 		//reset with previous settings
-		resetInterface(interfaces, iconfig.Name, prev_type, prev_subtype, prev_enabled)
+		resetInterface(interfaces, iconfig.Name, prev_type, prev_subtype, prev_enabled, reset_random)
+		if prev_type != "AP" && iconfig.Type == "AP" {
+			//restart wifid
+			callSuperdRestart("", "wifid")
+		}
 
 		refreshDownlinksLocked()
 		return err
@@ -656,6 +685,85 @@ func refreshVLANTrunks() {
 
 }
 
+var rand_oui_prefixes []string
+
+func load_rand_oui_prefixes() {
+	file, err := os.Open(TEST_PREFIX + "/scripts/rand_oui_prefixes")
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		rand_oui_prefixes = append(rand_oui_prefixes, scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Println("Error reading file:", err)
+		return
+	}
+}
+
+func generateRandomMAC(cloak bool) string {
+	if cloak {
+		if len(rand_oui_prefixes) == 0 {
+			load_rand_oui_prefixes()
+		}
+
+		if len(rand_oui_prefixes) != 0 {
+			nBig, err := rand.Int(rand.Reader, big.NewInt(int64(len(rand_oui_prefixes)-1)))
+			if err == nil {
+				randomPrefix := rand_oui_prefixes[nBig.Int64()]
+
+				hexDigits := "0123456789ABCDEF"
+				macAddress := strings.Join([]string{
+					randomPrefix[:2],
+					randomPrefix[2:4],
+					randomPrefix[4:],
+				}, ":") + ":"
+
+				for i := 0; i < 3; i++ {
+					octet := make([]byte, 1)
+					rand.Read(octet)
+					macAddress += string(hexDigits[octet[0]>>4])
+					macAddress += string(hexDigits[octet[0]&0x0f])
+					if i < 2 {
+						macAddress += ":"
+					}
+				}
+
+				return macAddress
+			}
+		}
+
+		//fall thru if no prefixes available.
+	}
+
+	hexDigits := "0123456789ABCDEF"
+	macAddress := ""
+	firstOctet := make([]byte, 1)
+	rand.Read(firstOctet)
+	//unicast, LAA address
+	firstOctet[0] = (firstOctet[0] & 0xfe) | 0x02
+	macAddress += string(hexDigits[firstOctet[0]>>4])
+	macAddress += string(hexDigits[firstOctet[0]&0x0f])
+	macAddress += ":"
+
+	for i := 0; i < 5; i++ {
+		octet := make([]byte, 1)
+		rand.Read(octet)
+		macAddress += string(hexDigits[octet[0]>>4])
+		macAddress += string(hexDigits[octet[0]&0x0f])
+		if i < 4 {
+			macAddress += ":"
+		}
+	}
+
+	return macAddress
+}
+
 func refreshInterfaceOverrides() {
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
@@ -666,14 +774,23 @@ func refreshInterfaceOverrides() {
 func refreshInterfaceOverridesLocked() {
 	interfaces := loadInterfacesConfigLocked()
 	for _, ifconfig := range interfaces {
-		if ifconfig.MACOverride != "" {
+		if ifconfig.MACRandomize == true {
+			target := generateRandomMAC(ifconfig.MACCloak)
+			exec.Command("ip", "link", "set", "dev", ifconfig.Name, "down").Run()
+			err := exec.Command("ip", "link", "set", "dev", ifconfig.Name, "address", target).Run()
+			exec.Command("ip", "link", "set", "dev", ifconfig.Name, "up").Run()
+			if err != nil {
+				log.Println("Failed to set random address "+target, err)
+			}
+		} else if ifconfig.MACOverride != "" {
+			exec.Command("ip", "link", "set", "dev", ifconfig.Name, "down").Run()
 			err := exec.Command("ip", "link", "set", "dev", ifconfig.Name, "address", ifconfig.MACOverride).Run()
+			exec.Command("ip", "link", "set", "dev", ifconfig.Name, "up").Run()
 			if err != nil {
 				log.Println("Failed to set address "+ifconfig.MACOverride, err)
 			}
 		}
 	}
-
 }
 
 func refreshDownlinks() {
@@ -731,12 +848,6 @@ func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	//AP has a separate path for configuration
-	if iconfig.Type == "AP" {
-		http.Error(w, "Set interface in AP mode using hostapd API instead", 400)
-		return
-	}
-
 	if iconfig.Subtype != "" {
 		http.Error(w, "Settting subtype not supported", 400)
 		return
@@ -746,6 +857,9 @@ func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 	i.Name = iconfig.Name
 	i.Type = iconfig.Type
 	i.Enabled = iconfig.Enabled
+	i.MACRandomize = iconfig.MACRandomize
+	i.MACCloak = iconfig.MACCloak
+	i.MACOverride = iconfig.MACOverride
 
 	err = updateInterfaceConfig(i)
 	if err != nil {
@@ -753,4 +867,160 @@ func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+}
+
+func pingTest(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	address := mux.Vars(r)["address"]
+
+	if !isValidIface(iface) {
+		http.Error(w, "Invalid interface name", 400)
+		return
+	}
+
+	ief, err := net.InterfaceByName(iface)
+	if err != nil {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	ipAddr, err := net.ResolveIPAddr("ip", address)
+	if err != nil {
+		http.Error(w, "Invalid address", 400)
+		return
+	}
+
+	network := "ip4:icmp"
+	if ipAddr.IP.To4() == nil {
+		network = "ip6:ipv6-icmp"
+	}
+
+	result := []string{}
+
+	for i := 0; i < 4; i++ {
+		start := time.Now()
+
+		conn, err := net.ListenPacket(network, ief.Name)
+		if err != nil {
+			http.Error(w, "Failed to listen on interface", 400)
+			return
+		}
+		defer conn.Close()
+
+		_, err = conn.WriteTo([]byte{}, ipAddr)
+		if err != nil {
+			continue
+		}
+
+		err = conn.SetDeadline(time.Now().Add(time.Second * 1))
+		if err != nil {
+			http.Error(w, "Failed to set deadline", 400)
+			return
+		}
+
+		_, _, err = conn.ReadFrom(make([]byte, 1500))
+		if err != nil {
+			result = append(result, "timeout")
+			continue
+		}
+
+		duration := time.Since(start)
+		result = append(result, duration.String())
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func udpTest(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	address := mux.Vars(r)["address"]
+
+	if !isValidIface(iface) {
+		http.Error(w, "Invalid interface name", 400)
+		return
+	}
+
+	ief, err := net.InterfaceByName(iface)
+	if err != nil {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	udpAddr, err := net.ResolveUDPAddr("udp", address)
+	if err != nil {
+		http.Error(w, "Invalid address", 400)
+		return
+	}
+
+	result := []string{}
+
+	for i := 0; i < 4; i++ {
+		start := time.Now()
+
+		addrs, err := ief.Addrs()
+		if err != nil {
+			http.Error(w, "Failed to get interface addresses", 400)
+			return
+		}
+
+		var conn *net.UDPConn
+		for _, addr := range addrs {
+			if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
+				conn, err = net.ListenUDP("udp", &net.UDPAddr{IP: ipNet.IP})
+				if err == nil {
+					break
+				}
+			}
+		}
+		if conn == nil {
+			http.Error(w, "Failed to listen on interface", 400)
+			return
+		}
+		defer conn.Close()
+
+		message := []byte("ping")
+		_, err = conn.WriteTo(message, udpAddr)
+		if err != nil {
+			continue
+		}
+
+		err = conn.SetDeadline(time.Now().Add(time.Second * 1))
+		if err != nil {
+			http.Error(w, "Failed to set deadline", 400)
+			return
+		}
+
+		buffer := make([]byte, 1500)
+		_, _, err = conn.ReadFrom(buffer)
+		if err != nil {
+			result = append(result, "timeout")
+			continue
+		}
+
+		duration := time.Since(start)
+		result = append(result, duration.String())
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func getRandomizeBSSIDState(iface string) (bool, bool) {
+	rMAC := false
+	cMAC := false
+
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	//read the old configuration
+	config := loadInterfacesConfigLocked()
+
+	for _, entry := range config {
+		if entry.Name == iface {
+			return entry.MACRandomize, entry.MACCloak
+		}
+	}
+
+	return rMAC, cMAC
 }

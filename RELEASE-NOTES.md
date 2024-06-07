@@ -1,9 +1,14 @@
 # Secure Programmable Router (SPR) Release Notes
 
-<<<<<<< HEAD
-=======
-## v0.3.12
+## v0.3.13
+Improvements
+* New BSSID Randomization Feature
+* New Setup flow for SPR
+* New PI installer with qemu aarch64
+* Improved TLS Support
+* Reworked UI for more tabbed views where logical
 
+## v0.3.12
 Key Fixes
 * Fix multicast proxy skipping AP interfaces incorrectly
 Improvements
@@ -13,7 +18,6 @@ Improvements
 * If something goes wrong with WiFi config/channels, load a failsafe
 * Hostapd updated from upstream
 
->>>>>>> dev
 ## v0.3.11
 Major change
 * Image builder set to 24.04 base.

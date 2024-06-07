@@ -59,14 +59,6 @@ const Firewall = (props) => {
 
   let items = [
     {
-      label: 'Endpoints',
-      description: 'Describe Service Endpoints for building Firewall Rules',
-      icon: RouteIcon, //WaypointsIcon,
-      renderItem: () => (
-        <EndpointList list={config.Endpoints} notifyChange={fetchConfig} />
-      )
-    },
-    {
       label: 'Port Forwarding',
       description: 'Set rules for DNAT forwarding of incoming traffic',
       icon: SplitIcon,
@@ -97,6 +89,14 @@ const Firewall = (props) => {
           list={config.ForwardingBlockRules}
           notifyChange={fetchConfig}
         />
+      )
+    },
+    {
+      label: 'Endpoints',
+      description: 'Describe Service Endpoints for building Firewall Rules',
+      icon: RouteIcon, //WaypointsIcon,
+      renderItem: () => (
+        <EndpointList list={config.Endpoints} notifyChange={fetchConfig} />
       )
     },
     {

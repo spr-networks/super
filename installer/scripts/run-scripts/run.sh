@@ -33,7 +33,6 @@ fi
 cd /home/spr/super/
 docker-compose -f $COMPOSE_FILE up -d
 
-
 ret=$?
 
 if [ "$ret" -ne "0" ]; then

@@ -81,33 +81,33 @@ const Alerts = (props) => {
     buckets.sort()
     setTopics(buckets)
 
-    const counts = {}
-    for (let bucket of buckets) {
-      let withFilter = params
-      if (searchField && searchField !== '') {
-        withFilter['filter'] = prettyToJSONPath(searchField)
-      } else {
-        withFilter['filter'] = ''
-      }
+    let withFilter = params
+    if (searchField && searchField !== '') {
+      withFilter['filter'] = prettyToJSONPath(searchField)
+    } else {
+      withFilter['filter'] = ''
+    }
 
-      const result = await dbAPI.items(bucket, withFilter)
-      if (result) {
-        const bucketName = prettyBucket(bucket)
-        if (stateFilter === 'Resolved') {
-          const filteredItems = result.filter(
-            (item) => item.State === 'Resolved'
-          )
-          counts[bucketName] = filteredItems.length
-        } else if (stateFilter === 'New') {
-          const filteredItems = result.filter(
-            (item) => item.State !== 'Resolved'
-          )
-          counts[bucketName] = filteredItems.length
-        } else {
-          counts[bucketName] = result.length
-        }
+    const counts = {}
+    //TODO: Promise.allSettled(buckets.map(bucket => {
+    for (let bucket of buckets) {
+      try {
+        const result = await dbAPI.items(bucket, withFilter).then((result) => {
+          if (result) {
+            const filterFuncs = {
+              Resolved: (item) => item.State === 'Resolved',
+              New: (item) => item.State !== 'Resolved'
+            }
+            const filterFunc = filterFuncs[stateFilter] || ((item) => item)
+            const bucketName = prettyBucket(bucket)
+            counts[bucketName] = result.filter(filterFunc).length
+          }
+        })
+      } catch (err) {
+        console.error(err)
       }
     }
+
     setBucketCounts(counts)
   }
 
@@ -145,8 +145,7 @@ const Alerts = (props) => {
     setLogs(result)
   }
 
-
-/*
+  /*
   useEffect(() => {
     const timer = setTimeout(() => {
       if (selectedBucket) {

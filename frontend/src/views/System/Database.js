@@ -160,6 +160,7 @@ const Database = ({ ...props }) => {
                 '@md': { flexDirection: 'row', gap: 3 }
               }}
               flexWrap="wrap"
+              flex={1}
             >
               <HStack space="sm" alignItems="center" flexWrap="wrap">
                 {config['SaveEvents'].map((topic) => (

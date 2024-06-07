@@ -14,23 +14,30 @@ import {
   FormControlError,
   FormControlErrorIcon,
   FormControlErrorText,
+  Heading,
+  Icon,
   Input,
   InputField,
   InputIcon,
   InputSlot,
-  Heading,
-  View,
+  Link,
+  LinkText,
+  Text,
   VStack,
   useColorMode,
   GlobeIcon,
   LockIcon,
-  AlertCircleIcon
+  AlertCircleIcon,
+  HStack
 } from '@gluestack-ui/themed'
+import { InfoIcon } from 'lucide-react-native'
 
 const Login = (props) => {
   const navigate = useNavigate()
+  //TODO for desktop get location.protocol
 
   const [hostname, setHostname] = useState('')
+  const [protocol, setProtocol] = useState('http:') //for iOS, TODO show msg if http & have https + cert install
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loggedIn, setLoggedin] = useState(false)
@@ -39,14 +46,14 @@ const Login = (props) => {
   const doLogin = (username, password) => {
     testLogin(username, password, async (success) => {
       if (success) {
-        await saveLogin(username, password, hostname)
+        await saveLogin(username, password, hostname, protocol)
         setLoggedin(true)
         setErrors({})
         navigate('/admin/home')
       } else {
         if (
           hostname.length &&
-          !hostname.match(/^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)$/)
+          !hostname.match(/^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)|(spr\.local)$/)
         ) {
           setErrors({ hostname: true })
         } else {
@@ -58,7 +65,8 @@ const Login = (props) => {
 
   const handleLogin = () => {
     if (Platform.OS !== 'web') {
-      let url = `http://${hostname}/`
+      //TODO use URL to set/parse
+      let url = `${protocol}//${hostname}/`
       if (hostname.match(/mock|test/g)) {
         url = 'mock'
       }
@@ -72,6 +80,11 @@ const Login = (props) => {
   useEffect(() => {
     let hostname = getApiHostname()
     setHostname(hostname)
+
+    //NOTE useLocation dont have .protocol
+    if (Platform.OS == 'web') {
+      setProtocol(window?.location?.protocol == 'https:' ? 'https:' : 'http:')
+    }
 
     api
       .get('/setup')
@@ -92,26 +105,42 @@ const Login = (props) => {
         setUsername(login.username)
         setPassword(login.password)
 
-        if (login.hostname) {
-          setHostname(login.hostname)
+        //hostname, protocol only for mobile
+        if (Platform.OS != 'web') {
+          if (login.hostname) {
+            setHostname(login.hostname)
+          }
+
+          if (login.protocol?.match(/^http?s:/g)) {
+            setProtocol(login.protocol)
+          }
         }
       }
     })
   }, [])
 
+  const switchProtocol = () =>
+    setProtocol(protocol == 'https:' ? 'http:' : 'https:')
+
   const colorMode = useColorMode()
 
   return (
-    <Box
+    <VStack
       px="$4"
       py="$8"
       sx={{
-        '@base': { w: '$full', mt: '$1/4' },
-        '@md': { w: '$1/4', mt: '$0', alignSelf: 'center', rounded: 10 }
+        '@base': { h: '$full', w: '$full', mt: '$1/4' },
+        '@md': {
+          h: 'auto',
+          w: '$1/4',
+          mt: '$0',
+          alignSelf: 'center',
+          rounded: 10
+        }
       }}
       bg={colorMode === 'light' ? 'white' : '$blueGray900'}
     >
-      <VStack space="lg">
+      <VStack space="lg" flex={2}>
         <Heading
           alignSelf="center"
           size="lg"
@@ -132,6 +161,15 @@ const Login = (props) => {
           }}
         >
           <Input>
+            <InputSlot>
+              <Button variant="link" pl="$3" onPress={switchProtocol}>
+                <ButtonText
+                  color={protocol == 'https:' ? '$success500' : '$muted500'}
+                >
+                  {protocol}//
+                </ButtonText>
+              </Button>
+            </InputSlot>
             <InputField
               value={hostname}
               onChangeText={(value) => setHostname(value)}
@@ -197,7 +235,41 @@ const Login = (props) => {
           <ButtonText>Login</ButtonText>
         </Button>
       </VStack>
-    </Box>
+
+      <VStack flex={1} display={Platform.OS != 'web' ? 'flex' : 'none'}>
+        <Button
+          variant="outline"
+          action={protocol == 'http:' ? 'positive' : 'secondary'}
+          size="xs"
+          onPress={switchProtocol}
+        >
+          <ButtonText>
+            Switch to {protocol == 'https:' ? 'http:' : 'https:'}
+          </ButtonText>
+        </Button>
+        {Platform.OS != 'web' && protocol == 'http:' ? (
+          <VStack mt="$2" space="md" alignItems="center">
+            <HStack space="sm">
+              <Icon as={InfoIcon} />
+              <Text size="sm">
+                https not selected, verify WiFi is connected to SPR
+              </Text>
+            </HStack>
+            <HStack w="$full" space="md" justifyContent="space-evenly">
+              <Link href="http://spr.local/cert">
+                <LinkText size="sm">Download Certificate</LinkText>
+              </Link>
+              <Link
+                href="https://www.supernetworks.org/pages/docs/apis/ssl_support#install-ca-certificate-on-ios"
+                isExternal
+              >
+                <LinkText size="sm">How to install Certificate</LinkText>
+              </Link>
+            </HStack>
+          </VStack>
+        ) : null}
+      </VStack>
+    </VStack>
   )
 }
 

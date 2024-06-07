@@ -3,10 +3,12 @@ import { useParams } from 'react-router-dom'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import DNSLogHistoryList from 'components/DNS/DNSLogHistoryList'
+//import DNSChart from 'components/DNS/DNSChart'
+import DNSLogEdit from 'views/DNS/DNSLogEdit'
 import PluginDisabled from 'views/PluginDisabled'
 import { logAPI } from 'api/DNS'
 
-import { View } from '@gluestack-ui/themed'
+import TabView from 'components/TabView'
 
 const DNSLog = (props) => {
   const [isEnabled, setIsEnabled] = useState(true)
@@ -41,11 +43,18 @@ const DNSLog = (props) => {
     return <PluginDisabled plugin="dns" />
   }
 
+  return <DNSLogHistoryList ips={filterIps} filterText={filterText} />
+}
+
+const DNSTabView = (props) => {
   return (
-    <View>
-      <DNSLogHistoryList ips={filterIps} filterText={filterText} />
-    </View>
+    <TabView
+      tabs={[
+        { title: 'DNS Log', component: DNSLog },
+        { title: 'Log Settings', component: DNSLogEdit }
+      ]}
+    />
   )
 }
 
-export default DNSLog
+export default DNSTabView

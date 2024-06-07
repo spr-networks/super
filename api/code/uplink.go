@@ -152,8 +152,8 @@ ctrl_interface=DIR=/var/run/wpa_supplicant_` + wpa.Iface + `
 {{range .Networks}}
 {{if not .Disabled}}
 network={
-	ssid="{{.SSID}}"
-	psk="{{.Password}}"
+	ssid={{printf "%x" .SSID}}
+	psk={{printf "%q" .Password}}
 	{{if .Priority}}priority={{.Priority}}{{end}}
 	{{if .BSSID}}bssid={{.BSSID}}{{end}}
   key_mgmt={{.KeyMgmt}}

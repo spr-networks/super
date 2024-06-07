@@ -2,80 +2,113 @@ import React from 'react'
 import { render, screen, waitFor, waitForElementToBeRemoved } from 'test-utils'
 
 import DNSBlock from 'views/DNS/DNSBlock'
+import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
 //import DNSBlocklist from 'components/DNS/DNSBlocklist'
 //import DNSOverrideList from 'components/DNS/DNSOverrideList'
 import { saveLogin, blockAPI } from 'api'
+import { fireEvent, within } from '@testing-library/react-native'
 
 beforeAll(() => saveLogin('admin', 'admin'))
 
-describe('DNS Block', () => {
-  let container = null,
-    getByText = null
+const setup = async () => {
+  const utils = render(<DNSBlock />)
 
-  /*beforeEach(() => {
-    const inset = {
-      frame: { x: 0, y: 0, width: 0, height: 0 },
-      insets: { top: 0, left: 0, right: 0, bottom: 0 }
-    }
+  await waitFor(() =>
+    expect(
+      screen.getAllByText(/BlockList Project/).length
+    ).toBeGreaterThanOrEqual(5)
+  )
 
-    container = render(
-      <NativeBaseProvider initialWindowMetrics={inset}>
-        <DNSBlock />
-      </NativeBaseProvider>
-    )
+  return utils
+}
 
-    getByText = container.getByText
-    expect(getByText('DNS Blocklists')).toBeInTheDocument()
-  })*/
-
-  test('DNS block list', async () => {
-    const utils = render(<DNSBlock />)
+describe('DNS Blocklist', () => {
+  test('DNS block lists loaded', async () => {
+    await setup()
 
     await waitFor(() => {
       expect(screen.getByText('DNS Blocklists')).toBeTruthy()
     })
 
-    // wait for data to be populated
-    /*await waitFor(async () => {
-      const example = await getByText('example.com.')
-      expect(example).toBeTruthy()
-
-      // find override content
-      //const ip = await getByText('192.168.2.102')
-      //expect(ip).toBeTruthy()
-    })*/
-  })
-
-  /*
-  test('remove blocklist item', async () => {
     // wait fo async data
     await waitFor(() =>
-      expect(getByText('example.com.')).toBeInTheDocument()
+      expect(
+        screen.getAllByText(/BlockList Project/).length
+      ).toBeGreaterThanOrEqual(5)
     )
 
-    let tables = screen.getAllByRole('table'),
-      blocklist = within(tables[0]), // blocklist is the first table
-      rows = blocklist.getAllByRole('row'),
-      lastRow = rows[rows.length - 1]
-
-    let buttonRemove = within(lastRow).getByRole('button')
-
-    expect(rows.length).toBeGreaterThanOrEqual(2)
-
-    fireEvent.click(buttonRemove)
-
-    await waitForElementToBeRemoved(lastRow)
+    //expand menu
+    await waitFor(() =>
+      expect(
+        screen.getAllByText(/BlockList Project/).length
+      ).toBeGreaterThanOrEqual(5)
+    )
   })
-  */
+
+  test('disable blocklist item', async () => {
+    await setup()
+
+    //expand menu
+    let expandbtn = screen.getAllByRole('button', { expanded: false })[0]
+    expect(expandbtn).toBeTruthy()
+    fireEvent.press(expandbtn)
+
+    expect(screen.getByText('Disable')).toBeTruthy()
+    expect(screen.getByText('Delete')).toBeTruthy()
+    expect(screen.getByText('New Tag...')).toBeTruthy()
+
+    let numEnabled = screen.getAllByText('Enabled').length
+
+    fireEvent.press(screen.getByText('Disable'))
+
+    await waitFor(() =>
+      expect(screen.getAllByText('Enabled').length).toBeLessThan(numEnabled)
+    )
+  })
 })
 
-/*
-describe('API DNS Plugin', () => {
-  test('fetches config', async () => {
+test('press Add to show form', async () => {
+  await setup()
+
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy()
+  })
+
+  fireEvent.press(screen.getByRole('button', { name: 'Add' }))
+
+  await waitFor(() => {
+    expect(screen.getByText('Add DNS Blocklist')).toBeTruthy()
+  })
+
+  //TODO fill out form && verify submit works
+  //Also have separate test for add component
+})
+
+describe('DNS Blocklist Add', () => {
+  test('verify add form works', async () => {
+    const onChange = jest.fn()
+    const utils = render(<DNSAddBlocklist notifyChange={onChange} />)
+
+    const input = screen.getByPlaceholderText('https://...')
+    expect(input).toBeTruthy()
+
+    expect(onChange).toHaveBeenCalledTimes(0)
+
+    fireEvent.changeText(input, 'http://test.spr/test-blocklist.txt')
+
+    fireEvent.press(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(onChange).toHaveBeenCalledTimes(1)
+    })
+  })
+})
+
+describe('DNS block API', () => {
+  test('fetch config', async () => {
     let config = await blockAPI.config()
     expect(config).toHaveProperty('BlockLists')
     expect(config).toHaveProperty('BlockDomains')
     expect(config).toHaveProperty('PermitDomains')
   })
 })
-*/

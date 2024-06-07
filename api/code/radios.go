@@ -136,6 +136,35 @@ type HostapdConfigEntry struct {
 	Rrm_neighbor_report          int
 	Rrm_beacon_report            int
 	Op_class                     int
+
+	//update below Validate when adding strings
+}
+
+func (h *HostapdConfigEntry) Validate() error {
+	// Check for newlines in string fields
+	if strings.ContainsAny(h.Country_code, "\n") {
+		return fmt.Errorf("Country_code contains newlines")
+	}
+	if strings.ContainsAny(h.Vht_capab, "\n") {
+		return fmt.Errorf("Vht_capab contains newlines")
+	}
+	if strings.ContainsAny(h.Ht_capab, "\n") {
+		return fmt.Errorf("Ht_capab contains newlines")
+	}
+	if strings.ContainsAny(h.Hw_mode, "\n") {
+		return fmt.Errorf("Hw_mode contains newlines")
+	}
+	if strings.ContainsAny(h.Ssid, "\n") {
+		return fmt.Errorf("Ssid contains newlines")
+	}
+
+	if len(h.Ssid) > 32 {
+		return fmt.Errorf("Ssid exceeds the maximum length of 32")
+	}
+
+	//	validSSID := regexp.MustCompile(`^[^!#;+\]\/"\t][^+\]\/"\t]{0,30}[^ +\]\/"\t]$|^[^ !#;+\]\/"\t]$[ \t]+$`).MatchString
+
+	return nil
 }
 
 func RunHostapdAllStations(iface string) (map[string]map[string]string, error) {
@@ -478,16 +507,28 @@ func hostapdFailsafeStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	//read the old configuration
+	config := loadInterfacesConfigLocked()
+
 	status := "ok"
-	failsafe_path := TEST_PREFIX + "/state/wifi/failsafe_" + iface
-	_, err := os.Stat(failsafe_path)
-	if err == nil {
-		status = "failsafe running"
+
+	for _, entry := range config {
+		if entry.Name == iface && entry.Enabled == true && entry.Type == "AP" {
+			failsafe_path := TEST_PREFIX + "/state/wifi/failsafe_" + iface
+			_, err := os.Stat(failsafe_path)
+			if err == nil {
+				status = "failsafe running"
+			}
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(status)
 }
+
 func hostapdConfig(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
 	if !isValidIface(iface) {
@@ -595,6 +636,12 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 	err = json.NewDecoder(r.Body).Decode(&newConf)
 
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	err = newConf.Validate()
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -815,6 +862,24 @@ type ExtraBSS struct {
 	DisableIsolation bool
 }
 
+func (e *ExtraBSS) Validate() error {
+	// Check for newlines in string fields
+	if strings.ContainsAny(e.Ssid, "\n") {
+		return fmt.Errorf("Ssid contains newlines")
+	}
+	if strings.ContainsAny(e.Bssid, "\n") {
+		return fmt.Errorf("Bssid contains newlines")
+	}
+	if strings.ContainsAny(e.Wpa, "\n") {
+		return fmt.Errorf("Wpa contains newlines")
+	}
+	if strings.ContainsAny(e.WpaKeyMgmt, "\n") {
+		return fmt.Errorf("WpaKeyMgmt contains newlines")
+	}
+
+	return nil
+}
+
 /*
  Simple upgrade path to using templates
 */
@@ -845,9 +910,10 @@ func hostapdEnableInterface(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rmac, cmac := getRandomizeBSSIDState(iface)
 	//make a call to configure the interface,
 	// which ensures that a hostapd configuration is created
-	err := configureInterface("AP", "", iface)
+	err := configureInterface("AP", "", iface, rmac, cmac)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -940,6 +1006,10 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 			err = fmt.Errorf("ssid needed")
 		} else if extra.Bssid == "" {
 			err = fmt.Errorf("bssid needed")
+		}
+
+		if err == nil {
+			err = extra.Validate()
 		}
 	}
 
@@ -1052,8 +1122,10 @@ func hostapdResetInterface(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	rmac, cmac := getRandomizeBSSIDState(iface)
+
 	//with the file renamed, configureInterface will write a default config
-	configureInterface("AP", "", iface)
+	configureInterface("AP", "", iface, rmac, cmac)
 
 	//toggle will also kick off the restart
 	err = toggleInterface(iface, true)

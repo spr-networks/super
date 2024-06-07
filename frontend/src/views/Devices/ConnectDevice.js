@@ -26,26 +26,36 @@ const WifiConnect = (props) => {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    // fetch ap name
-    wifiAPI
-      .interfaces('AP')
-      .then((ifaces) => {
-        Promise.all(
-          ifaces.map((iface) => {
-            return wifiAPI.status(iface).then((status) => {
-              return status['ssid[0]']
+    const fetchSSIDs = () => {
+      wifiAPI
+        .interfaces('AP')
+        .then((ifaces) => {
+          Promise.all(
+            ifaces.map((iface) => {
+              return wifiAPI.status(iface).then((status) => {
+                return status['ssid[0]'];
+              }).catch((e) => {});
             })
-          })
-        ).then((ssids) => {
-          setSsids(ssids)
+          ).then((ssids) => {
+            let x = ssids.filter(x => x !== 'sprlab-setup' && x != '' && x != null);
+            setSsids(x);
+            if (x.length === 0) {
+              setTimeout(fetchSSIDs, 2000);
+            } else {
+              setError(null)
+            }
+          });
         })
-      })
-      .catch((err) => {
-        context.error(
-          'Failed to add device or configured properly -- check wifid, or reset wifi settings'
-        )
-      })
-  }, [])
+        .catch((err) => {
+          setTimeout(fetchSSIDs, 2000);
+          context.error(
+            'Failed to add device or configured properly -- check wifid, or reset wifi settings'
+          );
+        });
+    };
+
+    fetchSSIDs();
+  }, []);
 
   const checkPendingStatus = () => {
     deviceAPI
@@ -64,13 +74,32 @@ const WifiConnect = (props) => {
   }, [1000])
 
   const goBack = () => {
+    //override goBack to go back success
+    if (success && props.goBackSuccess)  {
+      props.goBackSuccess()
+    }
     if (props.goBack) {
       props.goBack()
     }
   }
 
+  const goBackSuccess = () => {
+    if (props.goBackSuccess) {
+      props.goBackSuccess()
+    } else {
+      navigate('/admin/devices')
+    }
+  }
+
   return (
     <VStack p="$4">
+      {ssids.length == 0 && (
+        <VStack key="loading" space="md" alignItems="center">
+          <Text size="lg" color="$muted500">
+            Waiting for SPR... (You may need to reconnect to sprlab-setup for wifi setup)
+          </Text>
+        </VStack>
+      )}
       {ssids.map((ssid) => (
         <VStack key={ssid} space="md" alignItems="center">
           <HStack space="sm">
@@ -96,7 +125,7 @@ const WifiConnect = (props) => {
               action="success"
               variant="solid"
               bg="$green500"
-              onPress={() => navigate('/admin/devices')}
+              onPress={goBackSuccess}
             >
               <ButtonText>Success</ButtonText>
             </Button>

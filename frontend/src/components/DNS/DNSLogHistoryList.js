@@ -19,7 +19,7 @@ import { Select } from 'components/Select'
 import ModalForm from 'components/ModalForm'
 import JSONSyntax from 'components/SyntaxHighlighter'
 import { Tooltip } from 'components/Tooltip'
-import { dbAPI, logAPI } from 'api'
+import { dbAPI } from 'api'
 import { prettyDate } from 'utils'
 import { ListHeader } from 'components/List'
 import Pagination from 'components/Pagination'
@@ -537,12 +537,7 @@ const DNSLogHistoryList = (props) => {
   }
 
   return (
-    <View
-      h="$full"
-      sx={{
-        '@md': { h: '92vh' }
-      }}
-    >
+    <View h="$full">
       <ModalForm
         title={'Add override for Domain'}
         modalRef={modalRef}
@@ -588,7 +583,7 @@ const DNSLogHistoryList = (props) => {
               <ButtonText>Stats</ButtonText>
             </Button>
 
-            <Button
+            {/*<Button
               size="xs"
               action="secondary"
               variant="solid"
@@ -596,7 +591,7 @@ const DNSLogHistoryList = (props) => {
             >
               <ButtonIcon as={Settings2Icon} mr="$2" />
               <ButtonText>Settings</ButtonText>
-            </Button>
+            </Button>*/}
           </ButtonGroup>
 
           <Tooltip label={`Delete history for ${filterIps.join(',')}`}>

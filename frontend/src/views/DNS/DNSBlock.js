@@ -1,17 +1,22 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { Platform } from 'react-native'
 import DNSBlocklist from 'components/DNS/DNSBlocklist'
 import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
 import DNSBlocklistSettings from 'components/DNS/DNSBlocklistSettings'
 
 import ModalForm from 'components/ModalForm'
+import TabView from 'components/TabView'
 import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 import PluginDisabled from 'views/PluginDisabled'
 
 import { View, Fab, FabIcon, FabLabel, AddIcon } from '@gluestack-ui/themed'
-import { Settings2Icon } from 'lucide-react-native'
 
-const DNSBlock = (props) => {
+import DNSOverride from 'views/DNS/DNSOverride'
+
+import { BanIcon, Settings2Icon, ShuffleIcon } from 'lucide-react-native'
+
+const DNSBlockListTabs = (props) => {
   const context = useContext(AlertContext)
   const [enabled, setEnabled] = useState(true)
   const [config, setConfig] = useState({})
@@ -58,7 +63,7 @@ const DNSBlock = (props) => {
   }
 
   return (
-    <View h="$full" sx={{ '@md': { h: '92vh' } }}>
+    <View h="$full">
       <DNSBlocklist
         config={config}
         renderHeader={() => (
@@ -104,4 +109,21 @@ const DNSBlock = (props) => {
   )
 }
 
-export default DNSBlock
+const DNSBlockTabs = (props) => {
+  return (
+    <TabView
+      tabs={[
+        {
+          title: 'DNS Blocklists',
+          component: DNSBlockListTabs,
+          icon: BanIcon
+        },
+        { title: 'Overrides', component: DNSOverride, icon: ShuffleIcon }
+      ]}
+    />
+  )
+}
+
+//
+
+export default DNSBlockTabs

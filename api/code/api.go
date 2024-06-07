@@ -48,6 +48,7 @@ var DNSConfigFile = TEST_PREFIX + "/configs/dns/Corefile"
 var MulticastConfigFile = TEST_PREFIX + "/configs/base/multicast.json"
 
 var ApiTlsCert = "/configs/auth/www-api.crt"
+var ApiTlsCaCert = "/configs/auth/cert/www-api-ca.crt"
 var ApiTlsKey = "/configs/auth/www-api.key"
 
 var SuperdSocketPath = TEST_PREFIX + "/state/plugins/superd/socket"
@@ -1079,7 +1080,8 @@ func getConfigsBackup(w http.ResponseWriter, r *http.Request) {
 }
 
 func enableTLS(w http.ResponseWriter, r *http.Request) {
-	_, err := os.Stat("/configs/auth/www-api.pfx")
+	//NOTE crt and key both need to exist to set API_SSL_PORT == enable tls
+	_, err := os.Stat(ApiTlsCert)
 	haveTLSCert := err == nil || !os.IsNotExist(err)
 
 	if r.Method == http.MethodGet {
@@ -1088,17 +1090,25 @@ func enableTLS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//for now, do not support regenerating if already exists
-	if haveTLSCert {
-		http.Error(w, "Already configured", 400)
-		return
-	}
+	if r.Method == http.MethodDelete {
+		if !haveTLSCert {
+			http.Error(w, "Not configured", 400)
+			return
+		}
 
-	os.Setenv("SKIPPASS", "-password pass:1234")
-	err = exec.Command("/scripts/generate-certificate.sh").Run()
-	if err != nil {
-		http.Error(w, "Failed to generate TLS certificate", 400)
-		return
+		os.Remove(ApiTlsCert)
+	} else {
+		//for now, do not support regenerating if already exists
+		if haveTLSCert {
+			http.Error(w, "Already configured", 400)
+			return
+		}
+
+		err = exec.Command("/scripts/generate-certificate.sh").Run()
+		if err != nil {
+			http.Error(w, "Failed to generate TLS certificate", 400)
+			return
+		}
 	}
 
 	go func() {
@@ -2291,8 +2301,8 @@ func getLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 func getCert(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain")
-	http.ServeFile(w, r, ApiTlsCert)
+	w.Header().Set("Content-Type", "application/x-x509-ca-cert")
+	http.ServeFile(w, r, ApiTlsCaCert)
 }
 
 func speedTest(w http.ResponseWriter, r *http.Request) {
@@ -2354,74 +2364,8 @@ func speedTest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func pingTest(w http.ResponseWriter, r *http.Request) {
-	iface := mux.Vars(r)["interface"]
-	address := mux.Vars(r)["address"]
-
-	if !isValidIface(iface) {
-		http.Error(w, "Invalid interface name", 400)
-		return
-	}
-
-	ief, err := net.InterfaceByName(iface)
-	if err != nil {
-		http.Error(w, "Invalid interface", 400)
-		return
-	}
-
-	ipAddr, err := net.ResolveIPAddr("ip", address)
-	if err != nil {
-		http.Error(w, "Invalid address", 400)
-		return
-	}
-
-	network := "ip4:icmp"
-	if ipAddr.IP.To4() == nil {
-		network = "ip6:ipv6-icmp"
-	}
-
-	result := []string{}
-
-	for i := 0; i < 4; i++ {
-		start := time.Now()
-
-		conn, err := net.ListenPacket(network, ief.Name)
-		if err != nil {
-			http.Error(w, "Failed to listen on interface", 400)
-			return
-		}
-		defer conn.Close()
-
-		_, err = conn.WriteTo([]byte{}, ipAddr)
-		if err != nil {
-			continue
-		}
-
-		err = conn.SetDeadline(time.Now().Add(time.Second * 1))
-		if err != nil {
-			http.Error(w, "Failed to set deadline", 400)
-			return
-		}
-
-		_, _, err = conn.ReadFrom(make([]byte, 1500))
-		if err != nil {
-			result = append(result, "timeout")
-			continue
-		}
-
-		duration := time.Since(start)
-		result = append(result, duration.String())
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
-}
-
 type SetupConfig struct {
-	SSID            string
-	CountryCode     string
 	AdminPassword   string
-	InterfaceAP     string
 	InterfaceUplink string
 	TinyNets        []string
 	CheckUpdates    bool
@@ -2497,30 +2441,8 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	config.CheckUpdates = conf.CheckUpdates
 	Configmtx.Unlock()
 
-	validCountry := regexp.MustCompile(`^[A-Z]{2}$`).MatchString // EN,SE
-	//SSID: up to 32 alphanumeric, case-sensitive, characters
-	//Invalid characters: +, ], /, ", TAB, and trailing spaces
-	//The first character cannot be !, #, or ; character
-	validSSID := regexp.MustCompile(`^[^!#;+\]\/"\t][^+\]\/"\t]{0,30}[^ +\]\/"\t]$|^[^ !#;+\]\/"\t]$[ \t]+$`).MatchString
-
-	if conf.InterfaceAP == "" || !isValidIface(conf.InterfaceAP) {
-		http.Error(w, "Invalid AP interface", 400)
-		return
-	}
-
 	if conf.InterfaceUplink == "" || !isValidIface(conf.InterfaceUplink) {
 		http.Error(w, "Invalid Uplink interface", 400)
-		return
-	}
-
-	if !validSSID(conf.SSID) {
-		http.Error(w, "Invalid SSID", 400)
-		return
-	}
-
-	// TODO country => channels
-	if !validCountry(conf.CountryCode) {
-		http.Error(w, "Invalid Country Code", 400)
 		return
 	}
 
@@ -2604,42 +2526,19 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	//generate and write to hostapd_iface.conf
-	data, err = ioutil.ReadFile(getHostapdConfigPath("template"))
-	if err != nil {
-		// we can use default template config here but better to copy it before in bash
-		http.Error(w, "Missing default hostapd config", 400)
-		return
-	}
+	configureInterface("Uplink", "ethernet", conf.InterfaceUplink, false, false)
 
-	configData = string(data)
-	matchSSID := regexp.MustCompile(`(?m)^(ssid)=(.*)`)
-	matchInterfaceAP := regexp.MustCompile(`(?m)^(interface)=(.*)`)
-	matchCountry := regexp.MustCompile(`(?m)^(country_code)=(.*)`)
-	matchControl := regexp.MustCompile(`(?m)^(ctrl_interface)=(.*)`)
+	fmt.Fprintf(w, "{\"status\": \"done\"}")
+	callSuperdRestart("", "")
+}
 
-	configData = matchSSID.ReplaceAllString(configData, "$1="+conf.SSID)
-	configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+conf.InterfaceAP)
-	configData = matchCountry.ReplaceAllString(configData, "$1="+conf.CountryCode)
-	configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+conf.InterfaceAP)
-
-	hostapd_path := getHostapdConfigPath(conf.InterfaceAP)
-	err = ioutil.WriteFile(hostapd_path, []byte(configData), 0600)
-	if err != nil {
-		http.Error(w, "Failed to write config to "+hostapd_path, 400)
-		panic(err)
-	}
-
-	configureInterface("AP", "", conf.InterfaceAP)
-	configureInterface("Uplink", "ethernet", conf.InterfaceUplink)
-
+func finalizeSetup(w http.ResponseWriter, r *http.Request) {
 	// disable mdns advertising and set up default multicast rules
 	multicastSettingsSetupDone()
 
 	ioutil.WriteFile(SetupDonePath, []byte("true"), 0600)
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
-	callSuperdRestart("", "")
 }
 
 func multicastSettingsSetupDone() {
@@ -2848,12 +2747,23 @@ func main() {
 
 	// intial setup
 	external_router_public.HandleFunc("/setup", setup).Methods("GET", "PUT")
+	external_router_setup.HandleFunc("/setup", setup).Methods("PUT")
+	external_router_setup.HandleFunc("/setup_done", finalizeSetup).Methods("PUT")
 	external_router_setup.HandleFunc("/ip/addr", ipAddr).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/config", hostapdUpdateConfig).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/{interface}/enable", hostapdEnableInterface).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/{interface}/status", hostapdStatus).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/restart", restartWifi).Methods("PUT")
 	external_router_setup.HandleFunc("/hostapd/calcChannel", hostapdChannelCalc).Methods("PUT")
+	external_router_setup.HandleFunc("/link/config", updateLinkConfig).Methods("PUT")
+
 	external_router_setup.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")
+	//to add a new wifi device
+	external_router_setup.HandleFunc("/device", handleUpdateDevice).Methods("PUT")
+	external_router_setup.HandleFunc("/devices", getDevices).Methods("GET")
+	external_router_setup.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 
 	//download cert from http
 	external_router_public.HandleFunc("/cert", getCert).Methods("GET")
@@ -2876,7 +2786,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/firewall/multicast", modifyMulticast).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/icmp", modifyIcmp).Methods("PUT")
 	external_router_authenticated.HandleFunc("/firewall/custom_interface", modifyCustomInterfaceRules).Methods("PUT", "DELETE")
-	external_router_authenticated.HandleFunc("/firewall/enableTLS", enableTLS).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/firewall/enableTLS", enableTLS).Methods("GET", "PUT", "DELETE")
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
@@ -2889,6 +2799,7 @@ func main() {
 	//Misc
 	external_router_authenticated.HandleFunc("/speedtest/{start:[0-9]+}-{end:[0-9]+}", speedTest).Methods("GET", "PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/ping/{interface}/{address}", pingTest).Methods("PUT")
+	external_router_authenticated.HandleFunc("/ping/{interface}/{address}/udp", udpTest).Methods("PUT")
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/restart", restart).Methods("PUT")
 	external_router_authenticated.HandleFunc("/backup", doConfigsBackup).Methods("PUT", "OPTIONS")

@@ -5,6 +5,15 @@ import { groupAPI, deviceAPI, firewallAPI } from 'api'
 import InputSelect from './InputSelect'
 import { GlobeIcon, TagIcon, BookCheckIcon } from 'lucide-react-native'
 
+
+const CIDR_DEFAULTS = [
+  {
+    label: "All Traffic (0.0.0.0/0)",
+    value: "0.0.0.0/0",
+    icon: GlobeIcon,
+  }
+]
+
 const ClientSelect = (props) => {
   let policyOptions = [
     'api',
@@ -92,10 +101,15 @@ const ClientSelect = (props) => {
             }
           })
 
+          if (props.show_CIDR_Defaults) {
+            options = CIDR_DEFAULTS.concat(...options)
+          }
+
         let deviceOpts = {
           title: props.isMultiple ? 'Select Clients' : 'Select Client',
           options
         }
+
 
         setDevOpts(deviceOpts)
 
