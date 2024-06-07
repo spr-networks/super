@@ -9,7 +9,7 @@ IMG="./data/spr.img"
 losetup -Pf $IMG
 LOOP=$(losetup -j $IMG | cut -d: -f1)
 # fsck
-e2fsck -f ${LOOP}p2
+e2fsck -pf ${LOOP}p2
 # resize
 resize2fs ${LOOP}p2 4G
 losetup -d $LOOP
