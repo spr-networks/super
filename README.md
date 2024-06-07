@@ -14,7 +14,8 @@ Create an adaptive, micro-segmented network for managing WiFi devices, remote VP
 * Policy Based / Zero Trust Network Access
 * Per-Device DNS Rules & Ad Block Lists
 
-![image](https://github.com/spr-networks/super/assets/37549748/d3295f0a-1f7c-40de-ac4f-c63b17e36402)
+<img width="1218" alt="image" src="https://github.com/spr-networks/super/assets/37549748/c0ebf4fe-0a29-4087-a039-53968c87a00b">
+
 
 ## How it Works
 
