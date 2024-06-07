@@ -99,6 +99,7 @@ const TabViewComponent = ({ tabs, ...props }) => {
         renderTabBar={renderTabBar}
         onIndexChange={setIndex}
         initialLayout={initialLayout}
+        swipeEnabled={false}
       />
     </View>
   )
