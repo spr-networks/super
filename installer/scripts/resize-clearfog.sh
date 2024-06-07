@@ -1,4 +1,7 @@
 #!/bin/bash
+
+apt-get install -y  qemu-utils cloud-guest-utils
+
 IMG="./data/spr.img"
 qemu-img resize $IMG 10G
 growpart $IMG 1
