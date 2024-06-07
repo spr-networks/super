@@ -4,6 +4,7 @@
 Improvements
 * New BSSID Randomization Feature
 * New Setup flow for SPR
+* New PI installer with qemu aarch64
 * Improved TLS Support
 * Reworked UI for more tabbed views where logical
 
