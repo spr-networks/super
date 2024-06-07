@@ -2,7 +2,10 @@ import 'react-native'
 import React from 'react'
 import { cleanup, render, screen, fireEvent, waitFor, within } from 'test-utils'
 
+import { saveLogin } from 'api'
 import ClientSelect from 'components/ClientSelect'
+
+beforeAll(() => saveLogin('admin', 'admin'))
 
 afterEach(cleanup)
 
