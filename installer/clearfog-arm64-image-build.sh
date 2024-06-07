@@ -11,6 +11,9 @@ fi
 DOCKER_DEFAULT_PLATFORM=linux/arm64 docker-compose pull
 cd installer
 cp ./data/spr.clean.img ./data/spr.img
-./scripts/resize-clearfog.sh
 ./scripts/containers.sh
-docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ --platform=aarch64 ubuntu:23.10 /scripts/go-clearfog.sh
+
+./scripts/resize-clearfog.sh
+DOCKER_DEFAULT_PLATFORM="" docker pull ubuntu:24.04
+docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ ubuntu:24.04 /scripts/resize-clearfog.sh
+docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ --platform=aarch64 ubuntu:24.04 /scripts/go-clearfog.sh
