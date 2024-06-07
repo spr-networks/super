@@ -1,6 +1,11 @@
 # Secure Programmable Router (SPR) Release Notes
 
 ## v0.3.13
+Improvements
+* New BSSID Randomization Feature
+* New Setup flow for SPR
+* Improved TLS Support
+* Reworked UI for more tabbed views where logical
 
 ## v0.3.12
 Key Fixes
