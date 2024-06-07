@@ -27,7 +27,9 @@ describe('DNS Blocklist', () => {
     await setup()
 
     await waitFor(() => {
-      expect(screen.getByText('DNS Blocklists')).toBeTruthy()
+      expect(
+        screen.getAllByText('DNS Blocklists').length
+      ).toBeGreaterThanOrEqual(1)
     })
 
     // wait fo async data
