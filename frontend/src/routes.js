@@ -119,7 +119,7 @@ const routes = [
   {
     name: 'Network',
     state: 'netCollapse',
-    hideSimple: true,
+
     views: [
       {
         path: 'wireless',
@@ -364,7 +364,7 @@ const routes = [
         component: AuthSettings,
         hideSimple: true,
         layout: 'admin'
-      },
+      }
     ]
   },
   {
