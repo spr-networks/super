@@ -2211,6 +2211,16 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 			delete(devices, "pending")
 			saveDevicesJson(devices)
 			doReloadPSKFiles()
+		} else if devices[pska.MAC].PSKEntry.Type == "" {
+			//we do have the device. but does it have a wifi password assigned yet?
+			// if it does not, we assign the pending PSK password to it
+			//this can happen during setup.
+			device := devices[pska.MAC]
+			device.PSKEntry = pendingPsk.PSKEntry
+			devices[pska.MAC] = device
+			delete(devices, "pending")
+			saveDevicesJson(devices)
+			doReloadPSKFiles()
 		}
 	}
 
