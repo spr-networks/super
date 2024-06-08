@@ -119,7 +119,6 @@ const routes = [
   {
     name: 'Network',
     state: 'netCollapse',
-
     views: [
       {
         path: 'wireless',
