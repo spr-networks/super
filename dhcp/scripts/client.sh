@@ -68,6 +68,10 @@ function run_dhcp() {
 
 run_dhcp
 
+if [ ! -e "$JSON" ]; then
+ echo "[]" > "$JSON"
+end
+
 while true; do
   inotifywait -e modify "$JSON"
   killall -1 coredhcp_client
