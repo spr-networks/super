@@ -124,6 +124,9 @@ RUN+="/usr/sbin/modprobe mt7921u",
 RUN+="/bin/sh -c 'echo 0846 9060 > /sys/bus/usb/drivers/mt7921u/new_id'"
 EOF
 
+# we need the pcie-32bit-dma enabled for the mediatek cards
+fdtoverlay -i /boot/firmware/bcm2712-rpi-5-b.dtb -o /boot/firmware/bcm2712-rpi-5-b.dtb /boot/firmware/overlays/pcie-32bit-dma-pi5.dtbo
+
 # cleanup
 #apt-get autoremove -y && apt-get clean
 #rm -rf \
