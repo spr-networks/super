@@ -374,7 +374,7 @@ export const generateConfigForBand = (iwmap, iface, wanted_band) => {
   let ht_capstr = ''
   let vht_capstr = ''
 
-  let defaultConfig
+  let defaultConfig = {}
 
   for (let i = 0; i < iwinfo.bands.length; i++) {
     let band = iwinfo.bands[i].band
