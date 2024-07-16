@@ -58,6 +58,7 @@ if grep -q "Raspberry Pi" /proc/cpuinfo; then
     # reset PI_WLAN state always, this makes sure setup ap is gone
     # if wifid was restarted
     ip link set dev $PI_WLAN down
+    ip addr flush dev $PI_WLAN
     iw dev $PI_WLAN set type managed
     ip link set dev $PI_WLAN up
     # Check if /configs/base/.setup_done does not exist

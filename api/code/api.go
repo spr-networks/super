@@ -1386,21 +1386,21 @@ func deleteDeviceLocked(devices map[string]DeviceEntry, identity string) {
 	//if the device had a VLAN Tag, also refresh vlans
 	// upon deletion
 	if val.VLANTag != "" {
-		Devicesmtx.Unlock()
 		Groupsmtx.Unlock()
+		Devicesmtx.Unlock()
 		refreshVLANTrunks()
-		Devicesmtx.Lock()
 		Groupsmtx.Lock()
+		Devicesmtx.Lock()
 	}
 
 }
 
 func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, identity string) (string, int) {
 
-	Devicesmtx.Lock()
-	defer Devicesmtx.Unlock()
 	Groupsmtx.Lock()
 	defer Groupsmtx.Unlock()
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
 
 	devices := getDevicesJson()
 	groups := getGroupsJson()
@@ -1617,11 +1617,11 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		//locks no longer needed
 
 		if refreshVlanTrunks {
-			Devicesmtx.Unlock()
 			Groupsmtx.Unlock()
+			Devicesmtx.Unlock()
 			refreshVLANTrunks()
-			Devicesmtx.Lock()
 			Groupsmtx.Lock()
+			Devicesmtx.Lock()
 		}
 
 		//mask the PSK if set and not generated
@@ -1704,11 +1704,11 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 	// create vlans
 	if refreshVlanTrunks {
-		Devicesmtx.Unlock()
 		Groupsmtx.Unlock()
+		Devicesmtx.Unlock()
 		refreshVLANTrunks()
-		Devicesmtx.Lock()
 		Groupsmtx.Lock()
+		Devicesmtx.Lock()
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -2590,6 +2590,9 @@ func migrateMDNS() {
 }
 
 func migrateDevicePolicies() {
+	Groupsmtx.Lock()
+	defer Groupsmtx.Unlock()
+
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
 
@@ -2597,8 +2600,6 @@ func migrateDevicePolicies() {
 
 	updated := false
 
-	Groupsmtx.Lock()
-	defer Groupsmtx.Unlock()
 	old_groups := getGroupsJson()
 	groups := []GroupEntry{}
 
