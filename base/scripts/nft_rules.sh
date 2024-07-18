@@ -247,7 +247,7 @@ table inet filter {
 
     # Allow wireguard to lan services
     $(if [ "$WIREGUARD_PORT" ]; then echo "iifname wg0 counter tcp dport vmap @lan_tcp_accept"; fi)
-    $(if [ "$WIREGUARD_PORT" ]; then echo "iifname wg0 counter tcp dport vmap @lan_udp_accept"; fi)
+    $(if [ "$WIREGUARD_PORT" ]; then echo "iifname wg0 counter udp dport vmap @lan_udp_accept"; fi)
 
     # drop dhcp requests from upstream
     iifname @uplink_interfaces udp dport {67} counter goto DROPLOGINP
