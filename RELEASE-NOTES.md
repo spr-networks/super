@@ -1,4 +1,9 @@
 # Secure Programmable Router (SPR) Release Notes
+## v0.3.14
+
+Improvements
+* Add wireguard hardening for shadow port attacks
+
 
 ## v0.3.13
 Improvements

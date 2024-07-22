@@ -242,12 +242,15 @@ table inet filter {
     # Not a source that can connect into SPR services
     counter iifname @outbound_sites goto DROPLOGINP
 
+    # shadow port mitigation, block wireguard as a udp source port
+    $(if [ "$WIREGUARD_PORT" ]; then echo "iifname @uplink_interfaces udp sport $WIREGUARD_PORT counter drop"; fi)
+
     # Allow wireguard from only WANIF interfaces to prevent loops
     $(if [ "$WIREGUARD_PORT" ]; then echo "iifname @uplink_interfaces udp dport $WIREGUARD_PORT counter accept"; fi)
 
     # Allow wireguard to lan services
     $(if [ "$WIREGUARD_PORT" ]; then echo "iifname wg0 counter tcp dport vmap @lan_tcp_accept"; fi)
-    $(if [ "$WIREGUARD_PORT" ]; then echo "iifname wg0 counter tcp dport vmap @lan_udp_accept"; fi)
+    $(if [ "$WIREGUARD_PORT" ]; then echo "iifname wg0 counter udp dport vmap @lan_udp_accept"; fi)
 
     # drop dhcp requests from upstream
     iifname @uplink_interfaces udp dport {67} counter goto DROPLOGINP

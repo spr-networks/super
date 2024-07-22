@@ -2003,23 +2003,6 @@ func updateLocalMappings(IP string, Name string) {
 	ioutil.WriteFile(localMappingsPath, []byte(new_data), 0600)
 }
 
-func flushRoute(MAC string) {
-	arp_entry, err := GetArpEntryFromMAC(MAC)
-	if err != nil {
-		//relax this verbose log
-		//log.Println("Arp entry not found, insufficient information to refresh", MAC)
-		return
-	}
-
-	if !isTinyNetIP(arp_entry.IP) {
-		log.Println("[] Error: Trying to flush non tiny IP: ", arp_entry.IP)
-		return
-	}
-	//delete previous arp entry and route
-	router := RouterFromTinyIP(arp_entry.IP)
-	exec.Command("ip", "addr", "del", router, "dev", arp_entry.Device).Run()
-	exec.Command("arp", "-i", arp_entry.Device, "-d", arp_entry.IP).Run()
-}
 
 func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface string, Name string, Create bool) {
 	if Create {
@@ -2128,6 +2111,22 @@ type PSKAuthFailure struct {
 	Status string
 }
 
+type PSKAuthSuccess struct {
+	Iface  string
+	Event  string
+	MAC    string
+	Status string
+	Router string
+}
+
+type StationDisconnect struct {
+	Iface  string
+	Event  string
+	MAC    string
+	Status string
+	Router string
+}
+
 func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
@@ -2151,22 +2150,6 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 	//no longer assign MAC on Auth Failure due to noentry
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pskf)
-}
-
-type PSKAuthSuccess struct {
-	Iface  string
-	Event  string
-	MAC    string
-	Status string
-	Router string
-}
-
-type StationDisconnect struct {
-	Iface  string
-	Event  string
-	MAC    string
-	Status string
-	Router string
 }
 
 func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {

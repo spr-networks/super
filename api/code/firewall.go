@@ -2231,6 +2231,24 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 	}
 }
 
+func flushRouteFromArp(MAC string) {
+	arp_entry, err := GetArpEntryFromMAC(MAC)
+	if err != nil {
+		//relax this verbose log
+		//log.Println("Arp entry not found, insufficient information to refresh", MAC)
+		return
+	}
+
+	if !isTinyNetIP(arp_entry.IP) {
+		log.Println("[] Error: Trying to flush non tiny IP: ", arp_entry.IP)
+		return
+	}
+	//delete previous arp entry and route
+	router := RouterFromTinyIP(arp_entry.IP)
+	exec.Command("ip", "addr", "del", router, "dev", arp_entry.Device).Run()
+	exec.Command("arp", "-i", arp_entry.Device, "-d", arp_entry.IP).Run()
+}
+
 func addVerdictMac(IP string, MAC string, Iface string, Table string, Verdict string) {
 	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ".", MAC, ":", Verdict, "}").Run()
 	if err != nil {
@@ -2655,7 +2673,7 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 
 	//1. delete arp entry
 	if entry.MAC != "" {
-		flushRoute(entry.MAC)
+		flushRouteFromArp(entry.MAC)
 	}
 
 	//2. delete this ip, mac from any existing verdict maps
@@ -2666,6 +2684,9 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 
 	//3. Update the route interface
 	exec.Command("ip", "route", "flush", routeIP).Run()
+
+	//remove route form conntrack
+	clearConntrackSrcIP(routeIP)
 
 	// no interface set. abort now
 	if new_iface == "" {
@@ -2735,11 +2756,18 @@ func notifyVpnActivity(new_vpn_peers []string, endpoints []string) {
 				Status:         "offline",
 			}
 			sprbus.Publish("device:vpn:offline", notification)
+			//recommended hardening against shadow port attacks
+			//https://petsymposium.org/popets/2024/popets-2024-0070.pdf
+			clearConntrackSrcIP(peer)
 		}
 	}
 
 	gPreviousVpnPeers = new_vpn_peers
 	gPreviousEndpoints = endpoints
+}
+
+func clearConntrackSrcIP(peer string) {
+	exec.Command("conntrack", "-D", "-src="+peer).Run()
 }
 
 func dynamicRouteLoop() {
