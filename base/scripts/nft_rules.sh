@@ -173,6 +173,9 @@ table inet filter {
 
   map wan_udp_accept {
     type inet_service : verdict;
+    elements = {
+      68: accept
+    }
   }
 
   map lan_udp_accept {

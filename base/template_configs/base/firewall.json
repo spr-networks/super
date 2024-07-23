@@ -9,6 +9,11 @@
    "UpstreamEnabled": true
   },
   {
+   "Protocol": "udp",
+   "Port": "68",
+   "UpstreamEnabled": true
+  },
+  {
    "Protocol": "tcp",
    "Port": "80",
    "UpstreamEnabled": true
