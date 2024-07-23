@@ -1320,10 +1320,16 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 			}
 		}
 
-		if entry.DeviceDisabled == false && slices.Contains(entry.Tags, "guest") {
+		if entry.DeviceDisabled == false && slices.Contains(entry.DeviceTags, "guest") {
 			//if a device has the guest tag, check if RecentDHCP > 30 days, if so, then delete it.
-			cur_time := time.Now().Unix()
-			if cur_time-val.DHCPLastTime > 60*60*24*30 {
+			lastTime, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", entry.DHCPLastTime)
+			if err != nil {
+				// Handle error
+				log.Printf("Error parsing time: %v", err)
+				return
+			}
+
+			if time.Since(lastTime) > 30*24*time.Hour {
 				entry.DeviceDisabled = true
 			}
 		}
