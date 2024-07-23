@@ -4,6 +4,7 @@ import {generateCapabilitiesString, generateConfigForBand, getBestWifiConfig, is
 import { useNavigate } from 'react-router-dom'
 import AddDevice from 'components/Devices/AddDevice'
 import { countryCodes } from 'utils'
+import { Tooltip } from 'components/Tooltip'
 
 import {
   Box,
@@ -62,12 +63,13 @@ const Setup = (props) => {
   const [interfaceUplink, setInterfaceUplink] = useState('eth0')
   const [tinynet, setTinynet] = useState('192.168.2.0/24')
   const [password, setPassword] = useState('')
+  const [passwordConfirm, setPasswordConfirm] = useState('')
   const [errors, setErrors] = React.useState({})
   const [isDone, setIsDone] = useState(false)
   const [checkUpdates, setCheckUpdates] = useState(true)
   const [randomizeBSSIDs, setRandomizeBSSIDs] = useState(true)
   const [cloakBSSIDs, setCloakBSSIDs] = useState(false)
-  const [reportInstall, setReportInstall] = useState(false)
+  const [reportInstall, setReportInstall] = useState(true)
 
   const [setupStage, setSetupStage] = useState(1)
   const [alertType, setAlertType] = useState("")
@@ -93,7 +95,7 @@ const Setup = (props) => {
         if (err.response) {
           let msg = await err.response.text() // setup already done
           setErrors({ ...errors, submit: msg })
-          setIsDone(true)
+          setIsDone(false)
         } else {
           //alert(err)
         }
@@ -239,6 +241,14 @@ const Setup = (props) => {
       setErrors({
         ...errors,
         login: 'Password needs to be at least 5 characters'
+      })
+      return
+    }
+
+    if (password != passwordConfirm) {
+      setErrors({
+        ...errors,
+        login: 'Password confirmation mismatch'
       })
       return
     }
@@ -554,17 +564,19 @@ const Setup = (props) => {
               </Select>
             </FormControl>
 
-            <Checkbox
-              size="md"
-              value={randomizeBSSIDs}
-              isChecked={randomizeBSSIDs}
-              onChange={(enabled) => setRandomizeBSSIDs(!randomizeBSSIDs)}
-            >
-              <CheckboxIndicator mr="$2">
-                <CheckboxIcon as={CheckIcon} />
-              </CheckboxIndicator>
-              <CheckboxLabel>Randomize BSSID for Location Privacy</CheckboxLabel>
-            </Checkbox>
+            <Tooltip label={'The BSSID (AP MAC Address) and SSID is stored by companies in location tracking databases. Randomizing it makes the AP\'s physical location private.'}>
+              <Checkbox
+                size="md"
+                value={randomizeBSSIDs}
+                isChecked={randomizeBSSIDs}
+                onChange={(enabled) => setRandomizeBSSIDs(!randomizeBSSIDs)}
+              >
+                <CheckboxIndicator mr="$2">
+                  <CheckboxIcon as={CheckIcon} />
+                </CheckboxIndicator>
+                <CheckboxLabel>Randomize BSSID for Location Privacy</CheckboxLabel>
+              </Checkbox>
+            </Tooltip>
 
             { randomizeBSSIDs && (
               <Checkbox
@@ -633,6 +645,19 @@ const Setup = (props) => {
                   <InputIcon as={KeyRoundIcon} mr="$2" />
                 </InputSlot>
               </Input>
+              <Input variant="outline" size="md">
+                <InputField
+                  type="password"
+                  value={passwordConfirm}
+                  placeholder="Confirm Password"
+                  onChangeText={(value) => setPasswordConfirm(value)}
+                  onSubmitEditing={handlePress}
+                />
+                <InputSlot>
+                  <InputIcon as={KeyRoundIcon} mr="$2" />
+                </InputSlot>
+              </Input>
+
               {'login' in errors ? (
                 <FormControlError>
                   <FormControlErrorText>{errors.login}</FormControlErrorText>
@@ -652,17 +677,20 @@ const Setup = (props) => {
               <CheckboxLabel>Auto-Check for Updates</CheckboxLabel>
             </Checkbox>
 
-            <Checkbox
-              size="md"
-              value={reportInstall}
-              isChecked={reportInstall}
-              onChange={(enabled) => setReportInstall(!reportInstall)}
-            >
-              <CheckboxIndicator mr="$2">
-                <CheckboxIcon as={CheckIcon} />
-              </CheckboxIndicator>
-              <CheckboxLabel>Report Install Once</CheckboxLabel>
-            </Checkbox>
+
+            <Tooltip label={'Help the Supernetworks Team count your installation by counting the install'}>
+              <Checkbox
+                size="md"
+                value={reportInstall}
+                isChecked={reportInstall}
+                onChange={(enabled) => setReportInstall(!reportInstall)}
+              >
+                <CheckboxIndicator mr="$2">
+                  <CheckboxIcon as={CheckIcon} />
+                </CheckboxIndicator>
+                <CheckboxLabel>Register Install</CheckboxLabel>
+              </Checkbox>
+            </Tooltip>
 
             <Button
               mt="$4"
