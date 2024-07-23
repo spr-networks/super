@@ -65,7 +65,7 @@ const Setup = (props) => {
   const [errors, setErrors] = React.useState({})
   const [isDone, setIsDone] = useState(false)
   const [checkUpdates, setCheckUpdates] = useState(true)
-  const [randomizeBSSIDs, setRandomizeBSSIDs] = useState(false)
+  const [randomizeBSSIDs, setRandomizeBSSIDs] = useState(true)
   const [cloakBSSIDs, setCloakBSSIDs] = useState(false)
   const [reportInstall, setReportInstall] = useState(false)
 
