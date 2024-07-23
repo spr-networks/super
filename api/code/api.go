@@ -1301,6 +1301,7 @@ func handleExpirations(val *DeviceEntry, req *DeviceEntry) {
 func checkDeviceExpiries(devices map[string]DeviceEntry) {
 	curtime := time.Now().Unix()
 	todelete := []string{}
+
 	doUpdate := false
 	for k, entry := range devices {
 		if entry.DeviceDisabled == false && entry.DeviceExpiration != 0 {
@@ -1318,6 +1319,20 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 				}
 			}
 		}
+
+		if entry.DeviceDisabled == false && slices.Contains(entry.DeviceTags, "guest") {
+			//if a device has the guest tag, check if RecentDHCP > 30 days, if so, then delete it.
+			lastTime, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", entry.DHCPLastTime)
+			if err != nil {
+				// Handle error
+				log.Printf("Error parsing time: %v", err)
+				return
+			}
+
+			if time.Since(lastTime) > 30*24*time.Hour {
+				entry.DeviceDisabled = true
+			}
+		}
 	}
 
 	for _, k := range todelete {
@@ -1328,6 +1343,7 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 	if doUpdate && len(todelete) == 0 {
 		saveDevicesJson(devices)
 	}
+
 }
 
 func syncDevices(w http.ResponseWriter, r *http.Request) {
@@ -1392,6 +1408,9 @@ func deleteDeviceLocked(devices map[string]DeviceEntry, identity string) {
 		Groupsmtx.Lock()
 		Devicesmtx.Lock()
 	}
+
+	//notify the bus
+	sprbus.Publish("device:delete", scrubDevice(val))
 
 }
 
@@ -2002,7 +2021,6 @@ func updateLocalMappings(IP string, Name string) {
 	new_data += IP + " " + entryName + "\n"
 	ioutil.WriteFile(localMappingsPath, []byte(new_data), 0600)
 }
-
 
 func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface string, Name string, Create bool) {
 	if Create {

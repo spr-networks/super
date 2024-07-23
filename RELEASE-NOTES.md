@@ -1,5 +1,7 @@
 # Secure Programmable Router (SPR) Release Notes
 ## v0.3.14
+Fixes
+* Fix deadlock in API with Devices mutex
 
 Improvements
 * Add wireguard hardening for shadow port attacks

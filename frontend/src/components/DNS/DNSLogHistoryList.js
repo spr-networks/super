@@ -558,7 +558,6 @@ const DNSLogHistoryList = (props) => {
         <HStack
           space="xl"
           sx={{
-            '@base': { display: 'none' },
             '@md': { display: listFiltered.length ? 'flex' : 'none' }
           }}
         >
