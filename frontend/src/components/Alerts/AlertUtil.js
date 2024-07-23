@@ -51,6 +51,14 @@ export const transformTag = (context, tag, value, supportTags = true) => {
       return <DeviceItem size="sm" show={['RecentIP']} item={deviceItem} />
     } else if (tag == 'DeviceMAC') {
       return <DeviceItem size="sm" show={['MAC']} item={deviceItem} />
+    } else if (tag == 'Disabled') {
+      if (deviceItem === undefined) {
+        return <Text> Unknown </Text>
+      } else if (deviceItem && deviceItem.Enabled) {
+        return <Text> Enabled </Text>
+      } else {
+        return <Text> Disabled </Text>        
+      }
     }
   }
 
