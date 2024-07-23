@@ -10,7 +10,7 @@ export default [
         StoreAlert: true,
         MessageTitle: 'MAC Filter Violation',
         MessageBody:
-          'MAC IP Violation {{IP.SrcIP#Device}} {{IP.SrcIP}} {{Ethernet.SrcMAC}} to {{IP.DstIP}} {{Ethernet.DstMAC}}',
+          'MAC IP Violation {{InDev#Interface}} {{IP.SrcIP#Device}} {{IP.SrcIP}} {{Ethernet.SrcMAC}} to {{IP.DstIP}} {{Ethernet.DstMAC}}',
         NotificationType: 'warning',
         GrabEvent: true,
         GrabValues: false
