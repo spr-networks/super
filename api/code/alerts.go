@@ -823,17 +823,21 @@ func AlertsRunEventListener() {
 
 	busEvent := func(topic string, value string) {
 
+		var data map[string]interface{}
+		decodeErr := json.Unmarshal([]byte(value), &data)
+		if decodeErr == nil {
+			WSNotifyWildcardListeners(topic, data)
+		} else {
+			log.Println("failed to decode eventbus json:", decodeErr)
+			return
+		}
+
 		//wifi:auth events and plugin: events are special, we always send them up the websocket
 		// for the UI to react to
 		if strings.HasPrefix(topic, "wifi:auth") || strings.HasPrefix(topic, "plugin:") {
-			var data map[string]interface{}
-
-			if err := json.Unmarshal([]byte(value), &data); err != nil {
-				log.Println("failed to decode eventbus json:", err)
-				return
+			if decodeErr == nil {
+				WSNotifyValue(topic, data)
 			}
-
-			WSNotifyValue(topic, data)
 		}
 
 		event := interface{}(nil)

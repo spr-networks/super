@@ -2746,6 +2746,7 @@ func main() {
 
 	//public websocket with internal authentication
 	external_router_public.HandleFunc("/ws", webSocket).Methods("GET")
+	external_router_public.HandleFunc("/ws_events_all", webSocketWildcard).Methods("GET")
 
 	// intial setup
 	external_router_public.HandleFunc("/setup", setup).Methods("GET", "PUT")
