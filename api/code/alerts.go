@@ -743,18 +743,11 @@ type Event struct {
 	data interface{}
 }
 
-func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic string, value string) {
+func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic string, event interface{}) {
 	//make sure event settings dont change out from under us
 
 	AlertSettingsmtx.Lock()
 	defer AlertSettingsmtx.Unlock()
-
-	event := interface{}(nil)
-	err := json.Unmarshal([]byte(value), &event)
-	if err != nil {
-		log.Println("invalid json for event", err)
-		return
-	}
 
 	for _, rule := range gAlertsConfig {
 		if rule.Disabled {
@@ -843,7 +836,14 @@ func AlertsRunEventListener() {
 			WSNotifyValue(topic, data)
 		}
 
-		processEventAlerts(notifyChan, storeChan, topic, value)
+		event := interface{}(nil)
+		err := json.Unmarshal([]byte(value), &event)
+		if err != nil {
+			log.Println("invalid json for event", err)
+			return
+		}
+
+		processEventAlerts(notifyChan, storeChan, topic, event)
 
 	}
 
