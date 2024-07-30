@@ -156,6 +156,18 @@ const Setup = (props) => {
               if (entry.ifname.startsWith('veth')) {
                 continue
               }
+              if (entry.ifname.startsWith('sprloop')) {
+                continue
+              }
+              if (entry.addr_info && entry.addr_info.length > 0) {
+                entry.IP = entry.addr_info[0].local
+
+                if (entry.IP.startsWith("192")) {
+                  let x = entry.IP.split('.').map(Number)
+                  x[2] += 1
+                  setTinynet('192.168.' + x[2] + '.0/24')
+                }
+              }
               uplinkInterfaces.push(entry.ifname)
             }
           }
