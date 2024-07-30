@@ -1,5 +1,3 @@
-version: '3.4'
-
 x-labels:
   &default-labels
   org.supernetworks.ci: ${CI:-false}
