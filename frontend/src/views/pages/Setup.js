@@ -408,6 +408,13 @@ const Setup = (props) => {
           >
             Add Your First WiFi Device
           </Heading>
+          {myIP != '' && (
+            <HStack space="sm" alignSelf="center" alignItems="center">
+              <Text flex={1} color="$muted500">
+                Uplink IP: {myIP}
+              </Text>
+            </HStack>
+          )}
 
         <AddDevice slimView={true} deviceAddedCallback={deviceAdded} />
 
@@ -459,8 +466,15 @@ const Setup = (props) => {
             }}
             alignSelf="center"
           >
-            Setup
+            Setup Finished
           </Heading>
+          {myIP != '' && (
+            <HStack space="sm" alignSelf="center" alignItems="center">
+              <Text flex={1} color="$muted500">
+                Uplink IP: {myIP}
+              </Text>
+            </HStack>
+          )}
           <VStack space="md" my="$4" flex={1}>
             <HStack space="sm">
               <InfoIcon color="$muted400" />
@@ -557,7 +571,7 @@ const Setup = (props) => {
         {myIP != '' && (
           <HStack space="sm" alignSelf="center" alignItems="center">
             <Text flex={1} color="$muted500">
-              IP: {myIP}
+              Uplink IP: {myIP}
             </Text>
           </HStack>
         )}
