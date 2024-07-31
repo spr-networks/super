@@ -2772,9 +2772,6 @@ func main() {
 	//download cert from http
 	external_router_public.HandleFunc("/cert", getCert).Methods("GET")
 
-	spa := spaHandler{staticPath: "/ui", indexPath: "index.html"}
-	external_router_public.PathPrefix("/").Handler(spa)
-
 	//nftable helpers
 	external_router_authenticated.HandleFunc("/nfmap/{name}", showNFMap).Methods("GET")
 	external_router_authenticated.HandleFunc("/nftables", listNFTables).Methods("GET")
@@ -2880,11 +2877,11 @@ func main() {
 
 	//plugins
 	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
-	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated)).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated, external_router_public)).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/plugins/{name}/restart", handleRestartPlugin).Methods("PUT")
 	//TBD: API Docs
 	external_router_authenticated.HandleFunc("/plugin/custom_compose_paths", applyJwtOtpCheck(modifyCustomComposePaths)).Methods("GET", "PUT")
-	external_router_authenticated.HandleFunc("/plugin/install_user_url", installUserPluginGitUrl(external_router_authenticated)).Methods("PUT")
+	external_router_authenticated.HandleFunc("/plugin/install_user_url", installUserPluginGitUrl(external_router_authenticated, external_router_public)).Methods("PUT")
 	external_router_authenticated.HandleFunc("/plusToken", plusToken).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/plusTokenValid", plusTokenValid).Methods("GET")
 	external_router_authenticated.HandleFunc("/stopPlusExtension", stopPlusExt).Methods("PUT")
@@ -2948,7 +2945,11 @@ func main() {
 		panic(err)
 	}
 
-	PluginRoutes(external_router_authenticated)
+	// publish static files for plugins before spa handler
+	PluginRoutes(external_router_authenticated, external_router_public)
+
+	spa := spaHandler{staticPath: "/ui", indexPath: "index.html"}
+	external_router_public.PathPrefix("/").Handler(spa)
 
 	wifidServer := http.Server{Handler: logRequest(unix_wifid_router)}
 	dhcpdServer := http.Server{Handler: logRequest(unix_dhcpd_router)}

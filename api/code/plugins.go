@@ -169,6 +169,15 @@ func PluginRequestHandler(proxy *httputil.ReverseProxy) func(http.ResponseWriter
 	}
 }
 
+//NOTE this should only forward to /static/css|js/x.y and other static files
+func PluginRequestHandlerPublic(proxy *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		rest := mux.Vars(r)["rest"]
+		r.URL.Path = "/static/" + rest
+		proxy.ServeHTTP(w, r)
+	}
+}
+
 func PluginEnabled(name string) bool {
 	for _, entry := range config.Plugins {
 		if entry.Name == name && entry.Enabled == true {
@@ -228,7 +237,7 @@ func getPlugins(w http.ResponseWriter, r *http.Request) {
 // this is a nested function since
 // we have to update the router when plugins
 // are managed.
-func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) {
+func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name := mux.Vars(r)["name"]
 		name = trimLower(name)
@@ -339,13 +348,13 @@ func updatePlugins(router *mux.Router) func(http.ResponseWriter, *http.Request) 
 		}
 
 		saveConfigLocked()
-		PluginRoutes(router)
+		PluginRoutes(router, router_public)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(config.Plugins)
 	}
 }
 
-func PluginRoutes(external_router_authenticated *mux.Router) {
+func PluginRoutes(external_router_authenticated *mux.Router, external_router_public *mux.Router) {
 	for _, entry := range config.Plugins {
 		if !entry.Enabled {
 			continue
@@ -363,6 +372,13 @@ func PluginRoutes(external_router_authenticated *mux.Router) {
 
 		external_router_authenticated.HandleFunc("/plugins/"+entry.URI+"/", PluginRequestHandler(proxy))
 		external_router_authenticated.HandleFunc("/plugins/"+entry.URI+"/"+"{rest:.*}", PluginRequestHandler(proxy))
+
+		if entry.HasUI {
+			//plugin index.html is fetch with auth @ /plugins/xyz/index.html
+			//static files are available at /admin/custom_plugin/xyz/static/css|js/ to match the react url
+
+			external_router_public.HandleFunc("/admin/custom_plugin/"+entry.URI+"/static/"+"{rest:.*}", PluginRequestHandlerPublic(proxy))
+		}
 	}
 
 	//start extension
@@ -1002,7 +1018,7 @@ func getRepoName(gitURL string) string {
 }
 
 // Given a git URL, install a plugin. must be OTP auth'd.
-func installUserPluginGitUrl(router *mux.Router) func(http.ResponseWriter, *http.Request) {
+func installUserPluginGitUrl(router *mux.Router, router_public *mux.Router) func(http.ResponseWriter, *http.Request) {
 	return applyJwtOtpCheck(func(w http.ResponseWriter, r *http.Request) {
 		Configmtx.Lock()
 		defer Configmtx.Unlock()
@@ -1029,7 +1045,7 @@ func installUserPluginGitUrl(router *mux.Router) func(http.ResponseWriter, *http
 
 		//2. save and update routes
 		saveConfigLocked()
-		PluginRoutes(router)
+		PluginRoutes(router, router_public)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(config.Plugins)
 	})
