@@ -13,8 +13,9 @@ dhcpcd eth0
 apt-get -y --fix-broken --fix-missing --no-download install
 dpkg --configure -a
 
+# sync with install.sh and cross-install.sh
 apt -y upgrade --no-download
-apt -y install --no-download nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack
+apt -y install --no-download nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools
 # install docker and buildx
 apt -y install --no-download docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
