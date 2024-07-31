@@ -35,8 +35,9 @@ echo \
   tee /mnt/fs/etc/apt/sources.list.d/docker.list > /dev/null
 apty update
 
+# NOTE: also check /scripts/install.sh when making updates
 apty -y upgrade --download-only
 apty -y install linux-firmware
-apty -y install --download-only nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack
+apty -y install --download-only nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools
 # install docker and buildx
 apty -y install --download-only docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
