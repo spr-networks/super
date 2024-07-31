@@ -63,7 +63,7 @@ watch_setup_done() {
     file_to_watch=".setup_done"
 
     while true; do
-        if inotifywait -q -e create,modify,move_to "$dir_to_watch"; then
+        if inotifywait -q -e create,modify,move "$dir_to_watch"; then
             if [[ -f "$dir_to_watch/$file_to_watch" ]]; then
                 P=$(cat configs/auth/auth_users.json  | jq -r .admin)
                 (echo $P; echo $P)| passwd ubuntu
