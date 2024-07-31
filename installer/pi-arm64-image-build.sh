@@ -17,7 +17,7 @@ pushd ..
 DOCKER_DEFAULT_PLATFORM=linux/arm64 docker-compose -f docker-compose.yml  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull
 popd
 
-#./scripts/containers.sh
+./scripts/containers.sh
 
 #use host for next ubuntu
 DOCKER_DEFAULT_PLATFORM="" docker pull ubuntu:24.04
