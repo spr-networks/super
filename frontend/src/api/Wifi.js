@@ -377,8 +377,7 @@ export const generateConfigForBand = (iwmap, iface, wanted_band) => {
   let defaultConfig = {}
 
   for (let i = 0; i < iwinfo.bands.length; i++) {
-    let band = iwinfo.bands[i].band
-
+    let band = iwinfo.bands[i]
     if (band.he_phy_capabilities) {
       has_wifi6 = true
     }
@@ -394,7 +393,7 @@ export const generateConfigForBand = (iwmap, iface, wanted_band) => {
       vht_capstr = iwinfo.bands[i].vht_capabilities[0]
     }
 
-    if (band.includes('Band 2') && wanted_band == 2) {
+    if (band.band.includes('Band 2') && wanted_band == 2) {
       defaultConfig = filterCapabilities(
         default5Ghz,
         ht_capstr,
@@ -402,14 +401,14 @@ export const generateConfigForBand = (iwmap, iface, wanted_band) => {
         2
       )
       break
-    } else if (band.includes('Band 1') && wanted_band == 1) {
+    } else if (band.band.includes('Band 1') && wanted_band == 1) {
       defaultConfig = filterCapabilities(
         default2Ghz,
         ht_capstr,
         vht_capstr,
         1
       )
-    } else if (band.includes('Band 4') && wanted_band == 4) {
+    } else if (band.band.includes('Band 4') && wanted_band == 4) {
       defaultConfig = filterCapabilities(
         default6GHz,
         ht_capstr,
@@ -431,7 +430,6 @@ export const generateConfigForBand = (iwmap, iface, wanted_band) => {
     defaultConfig.he_su_beamformer = '0'
     defaultConfig.ieee80211ax = '0'
   }
-
 
   return defaultConfig
 }
@@ -600,6 +598,10 @@ export default class APIWifi extends API {
 
   restartWifi() {
     return this.put(`hostapd/restart`);
+  }
+
+  restartSetupWifi() {
+    return this.put(`hostapd/restart_setup`);
   }
 
   syncMesh() {

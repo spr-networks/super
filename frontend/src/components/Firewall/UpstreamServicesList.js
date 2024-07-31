@@ -111,7 +111,7 @@ const UpstreamServicesList = (props) => {
     <>
       <ListHeader
         title="Allowed SPR Services"
-        description="Ports to allow from upstream"
+        description="Ports to allow to the router"
       >
         <ModalForm
           title="Add Port"
