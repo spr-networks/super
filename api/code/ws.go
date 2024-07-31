@@ -12,7 +12,12 @@ import (
 	"github.com/spr-networks/sprbus"
 )
 
-var WSClients []*websocket.Conn
+type WSClient struct {
+	*websocket.Conn
+	WildcardListener bool
+}
+
+var WSClients []*WSClient
 var WSMtx sync.Mutex
 
 var WSNotify = make(chan WSMessage)
@@ -21,27 +26,32 @@ type WSMessage struct {
 	Type         string
 	Data         string
 	Notification bool
+	WildcardAll  bool
 }
 
 // if notification is set user will see a notification
 // this is to separate so we can show sprbus messages in ui/cli
-func WSNotifyMessage(msg_type string, data interface{}, notification bool) {
+func WSNotifyMessage(msg_type string, data interface{}, notification bool, wildcard bool) {
 	bytes, err := json.Marshal(data)
 	if err != nil {
 		panic(err)
 	}
 	go func() {
-		WSNotify <- WSMessage{msg_type, string(bytes), notification}
+		WSNotify <- WSMessage{msg_type, string(bytes), notification, wildcard}
 	}()
 }
 
 func WSNotifyValue(msg_type string, data interface{}) {
-	WSNotifyMessage(msg_type, data, true)
+	WSNotifyMessage(msg_type, data, true, false)
+}
+
+func WSNotifyWildcardListeners(msg_type string, data interface{}) {
+	WSNotifyMessage(msg_type, data, false, true)
 }
 
 func WSNotifyString(msg_type string, data string) {
 	go func() {
-		WSNotify <- WSMessage{msg_type, data, true}
+		WSNotify <- WSMessage{msg_type, data, true, false}
 	}()
 }
 
@@ -52,7 +62,7 @@ func WSRunBroadcast() {
 
 		bytes, err := json.Marshal(message)
 		if err != nil {
-			log.Println("Failed to marsha", err)
+			log.Println("Failed to marshal", err)
 			continue
 		}
 
@@ -60,6 +70,14 @@ func WSRunBroadcast() {
 		//use a tmp array to keep track of active clients to keep
 		tmp := WSClients[:0]
 		for _, client := range WSClients {
+
+			if message.WildcardAll {
+				//dont send wildcard messages to clients that are not listening to them.
+				if !client.WildcardListener {
+					continue
+				}
+			}
+
 			err := client.WriteMessage(websocket.TextMessage, bytes)
 			if err == nil {
 				//keep client around
@@ -83,7 +101,7 @@ func WSRunNotify() {
 	go WSRunBroadcast()
 }
 
-func webSocket(w http.ResponseWriter, r *http.Request) {
+func handleWebsocket(w http.ResponseWriter, r *http.Request, wildcard bool) {
 
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -122,7 +140,13 @@ func webSocket(w http.ResponseWriter, r *http.Request) {
 			}
 			c.WriteMessage(websocket.TextMessage, []byte("success"))
 			WSMtx.Lock()
-			WSClients = append(WSClients, c)
+
+			newClient := &WSClient{
+				Conn:             c,
+				WildcardListener: wildcard,
+			}
+
+			WSClients = append(WSClients, newClient)
 			WSMtx.Unlock()
 			sprbus.Publish("auth:success", map[string]string{"type": "user", "name": pieces[0], "reason": "websocket"})
 			return
@@ -139,7 +163,11 @@ func webSocket(w http.ResponseWriter, r *http.Request) {
 			} else {
 				c.WriteMessage(websocket.TextMessage, []byte("success"))
 				WSMtx.Lock()
-				WSClients = append(WSClients, c)
+				newClient := &WSClient{
+					Conn:             c,
+					WildcardListener: wildcard,
+				}
+				WSClients = append(WSClients, newClient)
 				WSMtx.Unlock()
 				sprbus.Publish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": "websocket"})
 			}
@@ -150,4 +178,12 @@ func webSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	c.WriteMessage(websocket.TextMessage, []byte("Authentication failure"))
 	c.Close()
+}
+
+func webSocket(w http.ResponseWriter, r *http.Request) {
+	handleWebsocket(w, r, false)
+}
+
+func webSocketWildcard(w http.ResponseWriter, r *http.Request) {
+	handleWebsocket(w, r, true)
 }

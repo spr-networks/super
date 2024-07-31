@@ -25,7 +25,7 @@ apt-get update
 #linux-modules-extra-raspi is cleaned up now
 #https://bugs.launchpad.net/ubuntu/+source/linux-raspi/+bug/2048862
 apt-get -y install --download-only linux-firmware
-apt-get -y install --no-install-recommends nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack
+apt-get -y install --no-install-recommends nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools
 # install docker and buildx
 apt-get -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
