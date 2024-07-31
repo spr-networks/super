@@ -13,9 +13,9 @@ cp ./data/spr.clean.img ./data/spr.img
 ./scripts/resize.sh
 
 # pull default containers and default plugins
-#pushd ..
-#DOCKER_DEFAULT_PLATFORM=linux/arm64 docker-compose -f docker-compose.yml  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull
-#popd
+pushd ..
+DOCKER_DEFAULT_PLATFORM=linux/arm64 docker-compose -f docker-compose.yml  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull
+popd
 
 #./scripts/containers.sh
 
