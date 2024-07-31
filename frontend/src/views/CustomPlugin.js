@@ -42,8 +42,8 @@ const getPluginHTML = async (name) => {
   let res = await fetch(url, { headers })
   let html = await res.text()
 
-  let scriptTag = `<script>var SPR_API_URL = "${api_url}";</script>`;
-  html = html.replace('</head>', `${scriptTag}</head>`);
+  let scriptTag = `<script>var SPR_API_URL = "${api_url}";</script>`
+  html = html.replace('</head>', `${scriptTag}</head>`)
 
   return html
 }
@@ -64,7 +64,7 @@ const PluginFrame = ({ name, ...props }) => {
     fetchHTML()
   }, [name])
 
-  return <CustomPlugin srcDoc={srcDoc} isSandboxed={props.isSandboxed}/>
+  return <CustomPlugin srcDoc={srcDoc} isSandboxed={props.isSandboxed} />
 }
 
 const CustomPluginForm = () => {
@@ -196,7 +196,7 @@ const CustomPluginView = ({ ...props }) => {
   } else {
     page = (
       <VStack space="md" p="$4" h="$full">
-        <Heading size="md">{name}</Heading>
+        {/*<Heading size="md">{name}</Heading>*/}
         <PluginFrame name={name} isSandboxed={props.isSandboxed} />
       </VStack>
     )
