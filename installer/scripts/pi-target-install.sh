@@ -126,6 +126,7 @@ EOF
 
 # we need the pcie-32bit-dma enabled for the mediatek cards
 fdtoverlay -i /boot/firmware/bcm2712-rpi-5-b.dtb -o /boot/firmware/bcm2712-rpi-5-b.dtb /boot/firmware/overlays/pcie-32bit-dma-pi5.dtbo
+echo "dtparam=pciex1" >> /boot/firmware/config.txt
 
 # cleanup
 #apt-get autoremove -y && apt-get clean
