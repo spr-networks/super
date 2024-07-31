@@ -296,7 +296,6 @@ const Setup = (props) => {
               setErrors({ ...errors, submit: msg })
               setSetupStage(2)
             } else {
-              alert(err)
             }
           })
         })
@@ -305,8 +304,6 @@ const Setup = (props) => {
             let msg = await err.response.text()
             setErrors({ ...errors, submit: msg })
           } else {
-            alert("?")
-            alert(err)
           }
         })
     }
