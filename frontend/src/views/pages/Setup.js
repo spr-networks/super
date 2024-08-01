@@ -356,21 +356,21 @@ const Setup = (props) => {
 
   }
 
-  const removeSetupAP = () => {
+  const removeSetupAP = (done) => {
     api.put("/setup_done")
     .then( () => {
           wifiAPI.restartSetupWifi().then(() => {
-
+            done()
           }).catch(err => {
-
+            done()
           })
     })
     .catch( (err) => {
 
       wifiAPI.restartSetupWifi().then(() => {
-
+        done()
       }).catch(err => {
-
+        done()
       })
 
     })
@@ -380,9 +380,9 @@ const Setup = (props) => {
 
   const handlePressFinish = () => {
       //send a restart wifi command to disable sprlab-setup
-      removeSetupAP()
-
-      navigate('/auth/login')
+      removeSetupAP(() => }{
+        navigate("/auth/login")        
+      })
   }
 
   const deviceAdded = () => {
