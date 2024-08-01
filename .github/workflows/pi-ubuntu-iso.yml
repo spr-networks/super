@@ -31,7 +31,7 @@ jobs:
         working-directory: ./installer
         run: sudo ./pi-arm64-image-build.sh
       - name: Compress image
-        run: xz ./installer/data/spr.img
+        run: sudo xz ./installer/data/spr.img
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1

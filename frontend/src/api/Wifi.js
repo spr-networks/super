@@ -424,6 +424,7 @@ export const generateConfigForBand = (iwmap, iface, wanted_band) => {
   if (defaultConfig.ap_isolate != 1) {
     return null
   }
+
   //enable wifi 6 by default
   if (has_wifi6 == true) {
     defaultConfig.he_mu_beamformer = '1'

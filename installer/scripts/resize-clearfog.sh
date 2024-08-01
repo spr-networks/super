@@ -1,4 +1,7 @@
 #!/bin/bash
+apt-get update
+apt-get install -y --no-install-recommends qemu-utils cloud-guest-utils
+
 IMG="./data/spr.img"
 qemu-img resize $IMG 10G
 growpart $IMG 1
@@ -21,7 +24,7 @@ export LOOP_ROOT="${LOOP}p1"
 
 echo "+ loop is $LOOP"
 
-e2fsck -f $LOOP_ROOT
+e2fsck -pf $LOOP_ROOT
 resize2fs $LOOP_ROOT
 
 losetup -d $LOOP 2>/dev/null

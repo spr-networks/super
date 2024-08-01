@@ -5,7 +5,6 @@ cp /scripts/run-scripts/rc-local /mnt/fs/etc/rc.local
 cp /scripts/run-scripts/setup.sh /mnt/fs/
 cp /scripts/run-scripts/run.sh /mnt/fs/
 cp /scripts/spr-environment.sh /mnt/fs/
-#cp -R /data/containers /mnt/fs/containers/
 cp /scripts/pi-target-install.sh /mnt/fs/pi-target-install.sh
 mount --bind /dev/ /mnt/fs/dev/
 # this just downloads packages onto the image. not much else.

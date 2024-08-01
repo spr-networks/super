@@ -54,6 +54,17 @@ const AlertError = (props) => {
   )
 }
 
+
+const AlertError = (props) => {
+  return (
+    <>
+    {props.alertBody && (
+      <Text>{props.alertBody}</Text>
+    )}
+    </>
+  )
+}
+
 const Setup = (props) => {
   const context = useContext(AlertContext)
 
@@ -67,8 +78,8 @@ const Setup = (props) => {
   const [interfaceUplink, setInterfaceUplink] = useState('eth0')
   const [myIP, setMyIP] = useState('')
   const [tinynet, setTinynet] = useState('192.168.2.0/24')
-  const [password, setPassword] = useState('sprlab')
-  const [passwordConfirm, setPasswordConfirm] = useState('sprlab')
+  const [password, setPassword] = useState('')
+  const [passwordConfirm, setPasswordConfirm] = useState('')
   const [errors, setErrors] = React.useState({})
   const [isDone, setIsDone] = useState(false)
   const [checkUpdates, setCheckUpdates] = useState(true)
@@ -299,6 +310,7 @@ const Setup = (props) => {
 
     for (let iface of wifiInterfaces) {
       if (iface.includes(".")) continue;
+
       let defaultConfig = generateConfigForBand(iwMap, iface, 2) ||
         generateConfigForBand(iwMap, iface, 1) ||
         generateConfigForBand(iwMap, iface, 4)
@@ -549,6 +561,7 @@ const Setup = (props) => {
   // log out.
   AsyncStorage.removeItem('user')
 
+
   return (
     <ScrollView
       h="$full"
@@ -656,6 +669,7 @@ const Setup = (props) => {
                 value={randomizeBSSIDs}
                 isChecked={randomizeBSSIDs}
                 onChange={(enabled) => setRandomizeBSSIDs(!randomizeBSSIDs)}
+
               >
                 <CheckboxIndicator mr="$2">
                   <CheckboxIcon as={CheckIcon} />
