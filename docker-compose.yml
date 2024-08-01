@@ -126,28 +126,6 @@ services:
       - ${PWD}/configs/base/:/configs/base/:ro
       - ${PWD}/configs/wifi/:/configs/wifi/
       - ${PWD}/state/wifi/:/state/wifi/
-  wifid-setup:
-    container_name: superwifid-setup
-    image: ghcr.io/spr-networks/super_wifid:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
-    entrypoint: /scripts/setup.sh
-    build:
-      context: wifid
-      labels: *default-labels
-      x-bake:
-        tags:
-        - ghcr.io/spr-networks/super_wifid:latest${RELEASE_CHANNEL:-}
-        - ghcr.io/spr-networks/super_wifid:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
-    network_mode: host
-    privileged: true
-    logging: *default-logging
-    depends_on:
-      - "api"
-      - "dhcp"
-      - "multicast_udp_proxy"
-    volumes:
-      - ${PWD}/configs/base/:/configs/base/:ro
-      - ${PWD}/configs/wifi/:/configs/wifi/
-      - ${PWD}/state/wifi/:/state/wifi/
   multicast_udp_proxy:
     container_name: super_multicast_udp_proxy
     image: ghcr.io/spr-networks/super_multicast_udp_proxy:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}

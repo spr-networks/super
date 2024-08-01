@@ -781,7 +781,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		callSuperdRestart("", "wifid")
+		callSuperdRestart("wifid-setup/docker-compose.yml", "wifid-setup")
 	}
 
 	w.Header().Set("Content-Type", "application/json")
