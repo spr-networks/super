@@ -2198,8 +2198,13 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 		var foundPSK = false
 		for _, device := range devices {
 			if device.MAC == pska.MAC {
-				foundPSK = true
-				break
+				if device.PSKEntry.Psk != "" {
+					foundPSK = true
+					break
+				} else {
+					// psk was empty, we re-claim this mac entry
+					// and assign pending to it
+				}
 			}
 		}
 
