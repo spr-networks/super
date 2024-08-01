@@ -2313,6 +2313,7 @@ func getWireguardClient() http.Client {
 // map of wg pubkeys to time of last DHCP
 var RecentDHCPWG = map[string]int64{}
 var RecentDHCPIface = map[string]string{}
+var SetupDHCPIPv4 = map[string]string{}
 
 func notifyFirewallDHCP(device DeviceEntry, iface string) {
 	addLanInterface(iface)
@@ -2470,7 +2471,7 @@ func getWifiPeers() map[string]string {
 				peers[k] = setup_ap
 				//add to ethernet filter if we have an ip.
 				//establish route below may drop. or client may not dhcp again just yet
-				ipv4, exists := RecentDHCPIface[k]
+				ipv4, exists := SetupDHCPIPv4[k]
 				if exists {
 					addVerdictMac(ipv4, k, setup_ap, "ethernet_filter", "return")
 				}

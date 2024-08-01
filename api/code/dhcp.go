@@ -251,6 +251,8 @@ func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
 
 	if isSetupMode() && Iface == "wlan0" {
 		// dont save to devices during setup mode
+		//but do update the DHCP list
+		SetupDHCPIPv4[MAC] = IP
 		return
 	}
 
