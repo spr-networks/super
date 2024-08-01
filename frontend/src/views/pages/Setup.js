@@ -497,7 +497,7 @@ const Setup = (props) => {
             <HStack space="sm">
               <InfoIcon color="$muted400" />
               <Text flex={1} color="$muted500">
-                Note: The `ubuntu` password will be set to your admin password during the initial boot and installation.
+                Note: The `ubuntu` password will be set to your admin password during the initial installation.
               </Text>
             </HStack>
 
