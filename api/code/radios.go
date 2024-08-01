@@ -781,7 +781,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		callSuperdRestart("wifid-setup/docker-compose.yml", "wifid-setup")
+		callSuperdRestart("", "wifid")
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -1148,7 +1148,7 @@ func restartWifi(w http.ResponseWriter, r *http.Request) {
 
 func restartSetupWifi(w http.ResponseWriter, r *http.Request) {
 	resetRadioFirewall()
-	callSuperdRestart("", "wifid-setup")
+	callSuperdRestart("wifid-setup/docker-compose.yml", "wifid-setup")
 }
 
 func initRadios() {
