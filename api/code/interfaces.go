@@ -591,6 +591,14 @@ func getVLANInterfaces(parent string) ([]net.Interface, error) {
 	return vlanInterfaces, nil
 }
 
+func addApiInterface(iface string) {
+	exec.Command("nft", "add", "element", "inet", "filter", "api_interfaces", "{", iface, "}").Run()
+}
+
+func deleteApiInterface(iface string) {
+	exec.Command("nft", "add", "element", "inet", "filter", "api_interfaces", "{", iface, "}").Run()
+}
+
 func addLanInterface(iface string) {
 	exec.Command("nft", "add", "element", "inet", "filter", "lan_interfaces", "{", iface, "}").Run()
 	exec.Command("nft", "add", "element", "inet", "nat", "lan_interfaces", "{", iface, "}").Run()

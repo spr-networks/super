@@ -503,6 +503,12 @@ func genNewDeviceIP(devices *map[string]DeviceEntry) (string, string) {
 		}
 	}
 
+	if isSetupMode() {
+		for mac, IP := range SetupDHCPIPv4 {
+			IPMap[IP] = mac
+		}
+	}
+
 	/*
 	   Each tiny subnet is a /30 containing 4 addresses
 
