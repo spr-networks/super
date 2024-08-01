@@ -12,13 +12,6 @@ services:
     container_name: superwifid-setup
     image: ghcr.io/spr-networks/super_wifid:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     entrypoint: /scripts/setup.sh
-    build:
-      context: wifid
-      labels: *default-labels
-      x-bake:
-        tags:
-        - ghcr.io/spr-networks/super_wifid:latest${RELEASE_CHANNEL:-}
-        - ghcr.io/spr-networks/super_wifid:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     network_mode: host
     privileged: true
     logging: *default-logging
