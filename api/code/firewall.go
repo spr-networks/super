@@ -2462,12 +2462,18 @@ func getWifiPeers() map[string]string {
 	//in setup mode, allow "wlan0" without a vlan_id
 	if is_setup {
 		//ensure setup ap is a valid interface for input ports.
-		addLanInterface(setup_ap);
+		addLanInterface(setup_ap)
 
 		wifi_peers, err := RunHostapdAllStations(setup_ap)
 		if err == nil {
 			for k, _ := range wifi_peers {
 				peers[k] = setup_ap
+				//add to ethernet filter if we have an ip.
+				//establish route below may drop. or client may not dhcp again just yet
+				ipv4, exists := RecentDHCPIface[k]
+				if exists {
+					addVerdictMac(ipv4, k, setup_ap, "ethernet_filter", "return")
+				}
 			}
 		}
 	}
