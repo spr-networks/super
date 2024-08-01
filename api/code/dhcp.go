@@ -248,6 +248,12 @@ func normalizeName(Name string) string {
 }
 
 func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
+
+	if isSetupMode() && Iface == "wlan0" {
+		// dont save to devices during setup mode
+		return
+	}
+
 	devices := getDevicesJson()
 	val, exists := devices[MAC]
 
