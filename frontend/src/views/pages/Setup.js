@@ -44,16 +44,6 @@ import { Select } from 'components/Select'
 import { AlertContext } from 'AppContext'
 import { AlertCircle, BookOpenText, KeyRoundIcon } from 'lucide-react-native'
 
-const AlertError = (props) => {
-  return (
-    <>
-    {props.alertBody && (
-      <Text>{props.alertBody}</Text>
-    )}
-    </>
-  )
-}
-
 
 const AlertError = (props) => {
   return (
