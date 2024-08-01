@@ -3005,5 +3005,9 @@ func main() {
 
 	go dhcpdServer.Serve(unixDhcpdListener)
 
+	if isSetupMode() {
+		startExtension("wifid-setup/docker-compose.yml")
+	}
+
 	wireguardServer.Serve(unixWireguardListener)
 }
