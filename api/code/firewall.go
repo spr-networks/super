@@ -2313,7 +2313,6 @@ func getWireguardClient() http.Client {
 // map of wg pubkeys to time of last DHCP
 var RecentDHCPWG = map[string]int64{}
 var RecentDHCPIface = map[string]string{}
-var SetupDHCPIPv4 = map[string]string{}
 
 func notifyFirewallDHCP(device DeviceEntry, iface string) {
 	addLanInterface(iface)
@@ -2457,21 +2456,6 @@ func getWifiPeers() map[string]string {
 	Interfacesmtx.Lock()
 	interfacesConfig := loadInterfacesConfigLocked()
 	Interfacesmtx.Unlock()
-
-	is_setup := isSetupMode()
-	setup_ap := "wlan0"
-	//in setup mode, allow "wlan0" without a vlan_id
-	if is_setup {
-		//ensure setup ap is a valid interface for input ports.
-		addApiInterface(setup_ap)
-
-		wifi_peers, err := RunHostapdAllStations(setup_ap)
-		if err == nil {
-			for k, _ := range wifi_peers {
-				peers[k] = setup_ap
-			}
-		}
-	}
 
 	for _, entry := range interfacesConfig {
 		if entry.Enabled == true && entry.Type == "AP" {
@@ -2668,6 +2652,10 @@ func updateIfaceMap(ifaceMap map[string]string) {
 func ipIfaceMappings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(gIfaceMap)
+}
+
+func updateAddr(Router string, Ifname string) {
+	exec.Command("ip", "addr", "add", Router+"/30", "dev", Ifname).Run()
 }
 
 func establishDevice(entry DeviceEntry, new_iface string, established_route_device string, routeIP string, router string) {

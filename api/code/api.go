@@ -1627,7 +1627,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 				iface := getRouteInterface(val.RecentIP)
 				if iface != "" {
 					//if the device is currently routed, then update it
-					handleDHCPResult(val.MAC, val.RecentIP, "", iface)
+					handleDHCPResult(val.MAC, val.RecentIP, "", val.Name, iface)
 				}
 			}
 
@@ -1986,10 +1986,6 @@ func updateArp(Ifname string, IP string, MAC string) {
 		log.Println("arp -i", Ifname, IP, MAC, "failed", err)
 		return
 	}
-}
-
-func updateAddr(Router string, Ifname string) {
-	exec.Command("ip", "addr", "add", Router+"/30", "dev", Ifname).Run()
 }
 
 var LocalMappingsmtx sync.Mutex
@@ -2922,7 +2918,6 @@ func main() {
 	unix_wifid_router.HandleFunc("/interfaces", getEnabledAPInterfaces).Methods("GET")
 
 	// DHCP actions
-	unix_dhcpd_router.HandleFunc("/dhcpUpdate", dhcpUpdate).Methods("PUT") //deprecated now
 	unix_dhcpd_router.HandleFunc("/dhcpRequest", dhcpRequest).Methods("PUT")
 	unix_dhcpd_router.HandleFunc("/abstractDhcpRequest", abstractDhcpRequest).Methods("PUT")
 
