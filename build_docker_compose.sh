@@ -57,7 +57,7 @@ mkdir -p state/dns/
 mkdir -p state/wifi/
 touch state/dns/local_mappings state/dhcp/leases.txt
 
-PLUGINS="dyndns ppp wifi_uplink wifid-setup"
+PLUGINS="dyndns ppp wifi_uplink"
 BUILDARGS=""
 if [ -f .github_creds ]; then
   BUILDARGS="--set *.args.GITHUB_CREDS=`cat .github_creds`"
