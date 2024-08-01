@@ -2,10 +2,13 @@
 ## v0.3.14
 Fixes
 * Fix deadlock in API with Devices mutex
+* Fix setup transitions, rework setup flow
 
 Improvements
 * Add wireguard hardening for shadow port attacks
-
+* Add static public routes for plugins
+* Support SPR WiFI6e hats by default in spr build images
+* Support submodules for plugin code 
 
 ## v0.3.13
 Improvements
@@ -21,7 +24,7 @@ Key Fixes
 Improvements
 * LAN Link under one view
 * Device List UI improvements
-* ACS support 
+* ACS support
 * If something goes wrong with WiFi config/channels, load a failsafe
 * Hostapd updated from upstream
 
@@ -50,8 +53,8 @@ Improvements
 * Stop applying wpa2 to wpa3 devices
 
 ## v0.3.8
-* Improve e2e testing 
-* Add fixes for 'disabled' policy handling 
+* Improve e2e testing
+* Add fixes for 'disabled' policy handling
 * Fix policy handling for multiple container interface rules
 * Alerting improvements
 
@@ -82,7 +85,7 @@ Key Fixes
 * Multitude of UI/Gluestack fixes (see github issue tracker)
 
 ## v0.3.3
-* New Alerts functionality 
+* New Alerts functionality
 * New Events filters, Events UI Improvements
 * Migrate notifications to new Alerts view
 * Add OTP hardening for tokens, OTP support
@@ -91,12 +94,12 @@ Key Fixes
 * Add Report Install/Auto Check for Updates flags
 Key Fixes
 * Fix Mesh UI Display error
-* Fix UI Tag, Group selection 
+* Fix UI Tag, Group selection
 * Fixed DB Compaction logic to store more events, increased fill limit
-* Fix SrcPort 
+* Fix SrcPort
 
 ## v0.3.2
-* Fixes for DNS Log date picker 
+* Fixes for DNS Log date picker
 * Add Domain info from recent lookups to TrafficList and the packet event log
 * Add tag support and populating interfaces from Docker for Custom Interface rules
 * Further simplify some dialogues in simple mode
@@ -116,7 +119,7 @@ Key Fixes
 
 ## v0.3
 
-* New API `/firewall/custom_interface` for joining new interfaces to the network, as if they were devices. Supports assigning device groups such as `wan`, `lan`, `dns` and custom groups. 
+* New API `/firewall/custom_interface` for joining new interfaces to the network, as if they were devices. Supports assigning device groups such as `wan`, `lan`, `dns` and custom groups.
 * New container networks view for an overview of the docker containers on custom (non-default) networks.
 * Firewall view has new `Custom Interface Access` rules for updating `custom_interface` rules
 * Introduce "Simple" view for UI to reduce cognitive overload for new users
