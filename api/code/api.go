@@ -2808,6 +2808,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS", "PUT")
 	external_router_authenticated.HandleFunc("/subnetConfig", getSetDhcpConfig).Methods("GET", "PUT", "OPTIONS")
+	external_router_authenticated.HandleFunc("/setup_done", finalizeSetup).Methods("PUT")
 
 	external_router_authenticated.HandleFunc("/dnsSettings", dnsSettings).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/multicastSettings", multicastSettings).Methods("GET", "PUT")
