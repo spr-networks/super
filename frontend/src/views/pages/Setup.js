@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { api, wifiAPI, firewallAPI, saveLogin } from 'api'
+import * as xapi from 'api';
 import {generateCapabilitiesString, generateConfigForBand, getBestWifiConfig, isSPRCompat} from 'api/Wifi'
 import { useNavigate } from 'react-router-dom'
 import AddDevice from 'components/Devices/AddDevice'
@@ -66,8 +67,8 @@ const Setup = (props) => {
   const [interfaceUplink, setInterfaceUplink] = useState('eth0')
   const [myIP, setMyIP] = useState('')
   const [tinynet, setTinynet] = useState('192.168.2.0/24')
-  const [password, setPassword] = useState('')
-  const [passwordConfirm, setPasswordConfirm] = useState('')
+  const [password, setPassword] = useState('sprlab')
+  const [passwordConfirm, setPasswordConfirm] = useState('sprlab')
   const [errors, setErrors] = React.useState({})
   const [isDone, setIsDone] = useState(false)
   const [checkUpdates, setCheckUpdates] = useState(true)
@@ -271,6 +272,7 @@ const Setup = (props) => {
       return
     }
 
+
     const finishSetup = () => {
       const data = {
         InterfaceUplink: interfaceUplink,
@@ -283,23 +285,10 @@ const Setup = (props) => {
       api
         .put('/setup', data)
         .then((res) => {
-          api
-            .put('/setup_done')
-            .then((res) => {
-              saveLogin('admin', passwordConfirm)
-              setIsDone(true)
-              setSetupStage(2)
-          }).catch(async err => {
-            if (err.response) {
-              let msg = await err.response.text()
-              saveLogin('admin', passwordConfirm)
-              setErrors({ ...errors, submit: msg })
-              setSetupStage(2)
-            } else {
-            }
-          })
-        })
-        .catch(async (err) => {
+          saveLogin('admin', passwordConfirm)
+          setIsDone(true)
+          setSetupStage(2)
+        }).catch(async (err) => {
           if (err.response) {
             let msg = await err.response.text()
             setErrors({ ...errors, submit: msg })
@@ -309,6 +298,7 @@ const Setup = (props) => {
     }
 
     for (let iface of wifiInterfaces) {
+      if (iface.includes(".")) continue;
       let defaultConfig = generateConfigForBand(iwMap, iface, 2) ||
         generateConfigForBand(iwMap, iface, 1) ||
         generateConfigForBand(iwMap, iface, 4)
@@ -318,7 +308,7 @@ const Setup = (props) => {
 
       let data = {
         Ssid: ssid,
-//        Channel: defaultConfig.channel, //tbd?
+        Channel: bestConfig.channel, //tbd?
         Country_code: countryWifi,
         Vht_capab: bestConfig.vht_capab,
         Ht_capab: bestConfig.ht_capab,
@@ -364,13 +354,32 @@ const Setup = (props) => {
 
   }
 
-  const handlePressFinish = () => {
-      //send a restart wifi command to disable sprlab-setup
+  const removeSetupAP = () => {
+    api.put("/setup_done")
+    .then( () => {
+          wifiAPI.restartSetupWifi().then(() => {
+
+          }).catch(err => {
+
+          })
+    })
+    .catch( (err) => {
+
       wifiAPI.restartSetupWifi().then(() => {
 
       }).catch(err => {
 
       })
+
+    })
+
+  }
+
+
+  const handlePressFinish = () => {
+      //send a restart wifi command to disable sprlab-setup
+      removeSetupAP()
+
       navigate('/auth/login')
   }
 

@@ -408,6 +408,7 @@ export const generateConfigForBand = (iwmap, iface, wanted_band) => {
         vht_capstr,
         1
       )
+      break
     } else if (band.band.includes('Band 4') && wanted_band == 4) {
       defaultConfig = filterCapabilities(
         default6GHz,
@@ -415,9 +416,14 @@ export const generateConfigForBand = (iwmap, iface, wanted_band) => {
         vht_capstr,
         4
       )
+      break
     }
   }
 
+  //got no config, return empty
+  if (defaultConfig.ap_isolate != 1) {
+    return null
+  }
   //enable wifi 6 by default
   if (has_wifi6 == true) {
     defaultConfig.he_mu_beamformer = '1'
