@@ -160,7 +160,7 @@ const Setup = (props) => {
               if (entry.ifname.startsWith('veth')) {
                 continue
               }
-              if (entry.ifname.startsWith('sprloop')) {
+              if (entry.ifname.startsWith('sprloop') || entry.ifname.startsWith("wlan")) {
                 continue
               }
               if (entry.addr_info && entry.addr_info.length > 0) {
