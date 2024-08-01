@@ -169,7 +169,7 @@ func PluginRequestHandler(proxy *httputil.ReverseProxy) func(http.ResponseWriter
 	}
 }
 
-//NOTE this should only forward to /static/css|js/x.y and other static files
+// NOTE this should only forward to /static/css|js/x.y and other static files
 func PluginRequestHandlerPublic(proxy *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rest := mux.Vars(r)["rest"]
