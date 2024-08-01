@@ -2461,6 +2461,9 @@ func getWifiPeers() map[string]string {
 	setup_ap := "wlan0"
 	//in setup mode, allow "wlan0" without a vlan_id
 	if is_setup {
+		//ensure setup ap is a valid interface for input ports.
+		addLanInterface(setup_ap);
+
 		wifi_peers, err := RunHostapdAllStations(setup_ap)
 		if err == nil {
 			for k, _ := range wifi_peers {
