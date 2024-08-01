@@ -1,0 +1,21 @@
+x-labels:
+  &default-labels
+  org.supernetworks.ci: ${CI:-false}
+  org.supernetworks.version: ${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+
+x-logging:
+  &default-logging
+  driver: journald
+
+services:
+  wifid-setup:
+    container_name: superwifid-setup
+    image: ghcr.io/spr-networks/super_wifid:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    entrypoint: /scripts/setup.sh
+    network_mode: host
+    privileged: true
+    logging: *default-logging
+    volumes:
+      - ${SUPERDIR}/configs/base/:/configs/base/:ro
+      - ${SUPERDIR}/configs/wifi/:/configs/wifi/
+      - ${SUPERDIR}/state/wifi/:/state/wifi/

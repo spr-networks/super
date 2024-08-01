@@ -161,7 +161,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
   const toggleAlert = () => setShowAlert(!showAlert)
 
-
   //setup alert context
   alertState.alert = (type = 'info', title, body = null) => {
     if (!body) {
@@ -308,7 +307,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         let pluginRoutes = pluginsWithUI.map((p) => ({
           layout: 'admin',
           name: p.Name,
-          path: `custom_plugin/${encodeURIComponent(p.URI)}`,
+          path: `custom_plugin/${encodeURIComponent(p.URI)}/`,
           icon: PuzzleIcon,
           Component: CustomPluginView,
           isSandboxed: p.SandboxedUI
@@ -329,7 +328,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
 
   //main init here
   useEffect(() => {
-
     //global handlers for api errors
     api.registerErrorHandler(404, (err) => {
       //console.error('HTTP error 404', err.response.url)

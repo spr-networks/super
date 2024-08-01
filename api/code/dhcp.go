@@ -247,7 +247,31 @@ func normalizeName(Name string) string {
 	return trimLower(re.ReplaceAllString(Name, "-"))
 }
 
-func handleDHCPResult(MAC string, IP string, Name string, Iface string) {
+var SetupDHCPIPv4 = map[string]string{}
+var SetupAP = "wlan0"
+
+func add_setup_peer(MAC string, IP string, Router string) {
+	SetupDHCPIPv4[MAC] = IP
+
+	//ensure setup ap is a valid interface for input ports.
+	addApiInterface(SetupAP)
+	//likewise it should not be a lan interface
+	deleteLanInterface(SetupAP)
+
+	//add /30 route to device
+	updateAddr(Router, SetupAP)
+}
+
+func handleDHCPResult(MAC string, IP string, Router string, Name string, Iface string) {
+
+	//edge case -> setup mode over SetupAP
+	if isSetupMode() && Iface == SetupAP {
+		// dont save to devices during setup mode
+		//but do update the DHCP list via SetupDHCPIPv4
+		add_setup_peer(MAC, IP, Router)
+		return
+	}
+
 	devices := getDevicesJson()
 	val, exists := devices[MAC]
 
@@ -351,7 +375,7 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 
 	LeaseTime := gDhcpConfig.LeaseTime
 
-	handleDHCPResult(dhcp.MAC, IP, dhcp.Name, dhcp.Iface)
+	handleDHCPResult(dhcp.MAC, IP, Router, dhcp.Name, dhcp.Iface)
 
 	response := DHCPResponse{dhcp.MAC, IP, Router, getLANIP(), LeaseTime}
 
@@ -359,37 +383,6 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
-}
-
-// this struct is going away
-type DHCPUpdate struct {
-	IP     string
-	MAC    string
-	Name   string
-	Iface  string
-	Router string
-}
-
-// THIS is being removed
-func dhcpUpdate(w http.ResponseWriter, r *http.Request) {
-	//Handle networking tasks upon a DHCP
-	dhcp := DHCPUpdate{}
-	err := json.NewDecoder(r.Body).Decode(&dhcp)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	//just for testing right now.
-	sprbus.Publish("dhcp:update", dhcp)
-
-	Groupsmtx.Lock()
-	defer Groupsmtx.Unlock()
-
-	Devicesmtx.Lock()
-	defer Devicesmtx.Unlock()
-
-	handleDHCPResult(dhcp.MAC, dhcp.IP, dhcp.Name, dhcp.Iface)
 }
 
 // NOTE: this code will fail on actual big endian archs
@@ -492,6 +485,12 @@ func genNewDeviceIP(devices *map[string]DeviceEntry) (string, string) {
 			} else {
 				IPMap[device.RecentIP] = device.WGPubKey
 			}
+		}
+	}
+
+	if isSetupMode() {
+		for mac, IP := range SetupDHCPIPv4 {
+			IPMap[IP] = mac
 		}
 	}
 

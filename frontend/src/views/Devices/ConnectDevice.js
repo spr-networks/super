@@ -159,4 +159,95 @@ const WifiConnect = (props) => {
   )
 }
 
-export default WifiConnect
+const WiredConnect = (props) => {
+  const context = useContext(AlertContext)
+  const { device } = props
+  const navigate = useNavigate()
+
+  const [success, setSuccess] = useState(true)
+  const [error, setError] = useState(null)
+
+  const goBack = () => {
+    //override goBack to go back success
+    if (success && props.goBackSuccess)  {
+      props.goBackSuccess()
+    }
+    if (props.goBack) {
+      props.goBack()
+    }
+  }
+
+  const goBackSuccess = () => {
+    if (props.goBackSuccess) {
+      props.goBackSuccess()
+    } else {
+      navigate('/admin/devices')
+    }
+  }
+
+  //  //44:44:44:44:44:44
+  return (
+    <VStack p="$4">
+      <VStack space="md" alignItems="center">
+        <HStack space="sm">
+          <Text size="lg" color="$muted500">
+            Added wired Device:
+          </Text>
+          <Text bold size="lg">
+            {device.Name}
+          </Text>
+        </HStack>
+        <HStack space="sm">
+          <Text size="lg" color="$muted500">
+            MAC:
+          </Text>
+          <Text bold size="lg">
+            {device.MAC}
+          </Text>
+        </HStack>
+        {device.VLANTag != '' && (
+          <HStack space="sm">
+            <Text size="md" color="$muted500">
+              VLAN Tag:
+            </Text>
+            <Text bold size="md">
+              {device.VLANTag}
+            </Text>
+          </HStack>
+        )}
+
+        {success ? (
+          <Button
+            w="$2/5"
+            action="success"
+            variant="solid"
+            bg="$green500"
+            onPress={goBackSuccess}
+          >
+            <ButtonText>Success</ButtonText>
+          </Button>
+        ) : (
+          <>
+            {error ? (
+              <Text key="err" color="$red500">
+                Error: {error}
+              </Text>
+            ) : (
+              <Button key="wait" action="secondary" variant="link">
+                <ButtonText>Waiting for connection...</ButtonText>
+              </Button>
+            )}
+          </>
+        )}
+
+
+        <Button w="$1/3" action="secondary" variant="solid" onPress={goBack}>
+          <ButtonIcon as={ArrowLeftIcon} />
+          <ButtonText>Back</ButtonText>
+        </Button>
+      </VStack>
+    </VStack>
+  )
+}
+
+export {WifiConnect, WiredConnect}

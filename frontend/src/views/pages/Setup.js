@@ -1,23 +1,26 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { api, wifiAPI } from 'api'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { api, wifiAPI, firewallAPI, saveLogin } from 'api'
+import * as xapi from 'api';
 import {generateCapabilitiesString, generateConfigForBand, getBestWifiConfig, isSPRCompat} from 'api/Wifi'
 import { useNavigate } from 'react-router-dom'
 import AddDevice from 'components/Devices/AddDevice'
 import { countryCodes } from 'utils'
+import { Tooltip } from 'components/Tooltip'
+import FirewallSettings from 'views/Firewall/FirewallSettings'
 
 import {
   Box,
   Button,
+  ButtonIcon,
   Checkbox,
   CheckboxIcon,
   CheckboxIndicator,
   CheckboxLabel,
   CheckIcon,
-  Text,
-  View,
+  Link,
   Heading,
   HStack,
-  VStack,
   FormControl,
   FormControlLabel,
   FormControlLabelText,
@@ -30,13 +33,16 @@ import {
   FormControlErrorText,
   InfoIcon,
   ScrollView,
+  Text,
+  View,
+  VStack,
   useColorMode
 } from '@gluestack-ui/themed'
 
 import { Select } from 'components/Select'
 
 import { AlertContext } from 'AppContext'
-import { AlertCircle, KeyRoundIcon } from 'lucide-react-native'
+import { AlertCircle, BookOpenText, KeyRoundIcon } from 'lucide-react-native'
 
 
 const AlertError = (props) => {
@@ -55,19 +61,21 @@ const Setup = (props) => {
   const navigate = useNavigate()
   const [uplinkInterfaces, setUplinkInterfaces] = useState([])
 
-  const [ssid, setSsid] = useState('SPRLab')
+  const [ssid, setSsid] = useState('SPRNet')
   const [countryWifi, setCountryWifi] = useState('US')
   const [wifiInterfaces, setWifiInterfaces] = useState([])
   const [iwMap, setIwMap] = useState({})
   const [interfaceUplink, setInterfaceUplink] = useState('eth0')
+  const [myIP, setMyIP] = useState('')
   const [tinynet, setTinynet] = useState('192.168.2.0/24')
   const [password, setPassword] = useState('')
+  const [passwordConfirm, setPasswordConfirm] = useState('')
   const [errors, setErrors] = React.useState({})
   const [isDone, setIsDone] = useState(false)
   const [checkUpdates, setCheckUpdates] = useState(true)
-  const [randomizeBSSIDs, setRandomizeBSSIDs] = useState(false)
+  const [randomizeBSSIDs, setRandomizeBSSIDs] = useState(true)
   const [cloakBSSIDs, setCloakBSSIDs] = useState(false)
-  const [reportInstall, setReportInstall] = useState(false)
+  const [reportInstall, setReportInstall] = useState(true)
 
   const [setupStage, setSetupStage] = useState(1)
   const [alertType, setAlertType] = useState("")
@@ -153,6 +161,20 @@ const Setup = (props) => {
               }
               if (entry.ifname.startsWith('veth')) {
                 continue
+              }
+              if (entry.ifname.startsWith('sprloop') || entry.ifname.startsWith("wlan")) {
+                continue
+              }
+              if (entry.addr_info && entry.addr_info.length > 0) {
+                entry.IP = entry.addr_info[0].local
+                if (entry.IP.includes('.')) {
+                  setMyIP(entry.IP)
+                }
+                if (entry.IP.startsWith("192")) {
+                  let x = entry.IP.split('.').map(Number)
+                  x[2] += 1
+                  setTinynet('192.168.' + x[2] + '.0/24')
+                }
               }
               uplinkInterfaces.push(entry.ifname)
             }
@@ -243,6 +265,15 @@ const Setup = (props) => {
       return
     }
 
+    if (password != passwordConfirm) {
+      setErrors({
+        ...errors,
+        login: 'Password confirmation mismatch'
+      })
+      return
+    }
+
+
     const finishSetup = () => {
       const data = {
         InterfaceUplink: interfaceUplink,
@@ -255,24 +286,21 @@ const Setup = (props) => {
       api
         .put('/setup', data)
         .then((res) => {
-          /*
-          wifiAPI.restartWifi().then().catch(e => {
-            alert(e)
-          })
-          */
+          saveLogin('admin', passwordConfirm)
+          setIsDone(true)
           setSetupStage(2)
-        })
-        .catch(async (err) => {
+        }).catch(async (err) => {
           if (err.response) {
             let msg = await err.response.text()
             setErrors({ ...errors, submit: msg })
           } else {
-            alert(err)
           }
         })
     }
 
     for (let iface of wifiInterfaces) {
+      if (iface.includes(".")) continue;
+
       let defaultConfig = generateConfigForBand(iwMap, iface, 2) ||
         generateConfigForBand(iwMap, iface, 1) ||
         generateConfigForBand(iwMap, iface, 4)
@@ -282,15 +310,15 @@ const Setup = (props) => {
 
       let data = {
         Ssid: ssid,
-//        Channel: defaultConfig.channel, //tbd?
+        Channel: bestConfig.channel, //tbd?
         Country_code: countryWifi,
-        Vht_capab: defaultConfig.vht_capab,
-        Ht_capab: defaultConfig.ht_capab,
-        Hw_mode: defaultConfig.hw_mode,
-        Ieee80211ax: parseInt(defaultConfig.ieee80211ax),
-        He_su_beamformer: parseInt(defaultConfig.he_su_beamformer),
-        He_su_beamformee: parseInt(defaultConfig.he_su_beamformee),
-        He_mu_beamformer: parseInt(defaultConfig.he_mu_beamformer)
+        Vht_capab: bestConfig.vht_capab,
+        Ht_capab: bestConfig.ht_capab,
+        Hw_mode: bestConfig.hw_mode,
+        Ieee80211ax: parseInt(bestConfig.ieee80211ax),
+        He_su_beamformer: parseInt(bestConfig.he_su_beamformer),
+        He_su_beamformee: parseInt(bestConfig.he_su_beamformee),
+        He_mu_beamformer: parseInt(bestConfig.he_mu_beamformer)
       }
 
       wifiAPI.enableInterface(iface).then(() => {
@@ -328,28 +356,40 @@ const Setup = (props) => {
 
   }
 
+  const removeSetupAP = () => {
+    api.put("/setup_done")
+    .then( () => {
+          wifiAPI.restartSetupWifi().then(() => {
+
+          }).catch(err => {
+
+          })
+    })
+    .catch( (err) => {
+
+      wifiAPI.restartSetupWifi().then(() => {
+
+      }).catch(err => {
+
+      })
+
+    })
+
+  }
+
+
   const handlePressFinish = () => {
-    const finishSetup = () => {
-      api
-        .put('/setup_done')
-        .then((res) => {
-          setIsDone(true)
-          navigate('/auth/login')
-          //send a restart wifi command to disable sprlab-setup
-          wifiAPI.restartWifi().then()
-        })
-        .catch(async (err) => {
-          setTimeout(finishSetup, 2000);
-        })
+      //send a restart wifi command to disable sprlab-setup
+      removeSetupAP()
 
-    };
-
-    finishSetup();
+      navigate('/auth/login')
   }
 
   const deviceAdded = () => {
     setSetupStage(3)
   }
+
+  const colorMode = useColorMode()
 
   if (setupStage === 2) {
     return (
@@ -379,6 +419,13 @@ const Setup = (props) => {
           >
             Add Your First WiFi Device
           </Heading>
+          {myIP != '' && (
+            <HStack space="sm" alignSelf="center" alignItems="center">
+              <Text flex={1} color="$muted500">
+                Uplink IP: {myIP}
+              </Text>
+            </HStack>
+          )}
 
         <AddDevice slimView={true} deviceAddedCallback={deviceAdded} />
 
@@ -415,7 +462,7 @@ const Setup = (props) => {
           '@md': {
             rounded: 10,
             w: '90%',
-            maxWidth: 360,
+            maxWidth: 520,
             alignSelf: 'center'
           }
         }}
@@ -430,34 +477,79 @@ const Setup = (props) => {
             }}
             alignSelf="center"
           >
-            Setup
+            Setup Finished
           </Heading>
-          <HStack space="sm" alignSelf="center" alignItems="center">
-            <InfoIcon color="$muted400" />
+          {myIP != '' && (
+            <HStack space="sm" alignSelf="center" alignItems="center">
+              <Text flex={1} color="$muted500">
+                Uplink IP: {myIP}
+              </Text>
+            </HStack>
+          )}
+          <VStack space="md" my="$4" flex={1}>
+            <HStack space="sm">
+              <InfoIcon color="$muted400" />
+              <Text flex={1} color="$muted500">
+                SPR is now configured!
+              </Text>
+            </HStack>
 
-            <Text flex={1} color="$muted500">
-              Thanks for installing. SPR is now configured! Note: SSH is enabled. Log in and change the password.
-            </Text>
-          </HStack>
-        <Button
-          mt="$4"
-          rounded="$full"
-          bg="#fbc658"
-          sx={{
-            _hover: {
-              bg: '#fab526'
-            }
-          }}
-          onPress={handlePressFinish}
-        >
-          <ButtonText>Finish</ButtonText>
-        </Button>
+            <HStack space="sm">
+              <InfoIcon color="$muted400" />
+              <Text flex={1} color="$muted500">
+                Note: The `ubuntu` password will be set to your admin password during the initial installation.
+              </Text>
+            </HStack>
+
+            <HStack space="sm">
+              <InfoIcon color="$muted400" />
+              <Link
+                isExternal
+                href="https://www.supernetworks.org/pages/docs/guides_plus/mesh"
+                sx={{
+                  '@base': { display: 'none' },
+                  '@lg': { display: 'flex' },
+                  _text: {
+                    textDecorationLine: 'none',
+                    color:
+                      colorMode == 'light'
+                        ? '$navbarTextColorLight'
+                        : '$navbarTextColorDark'
+                  }
+                }}
+              >
+              <Text flex={1} color="$muted500">
+                PLUS Mesh Setup Guide
+              </Text>
+                <ButtonIcon as={BookOpenText} size="lg" />
+              </Link>
+            </HStack>
+
+            <FirewallSettings/>
+
+          <Button
+            mt="$4"
+            rounded="$full"
+            bg="#fbc658"
+            sx={{
+              _hover: {
+                bg: '#fab526'
+              }
+            }}
+            onPress={handlePressFinish}
+          >
+            <ButtonText>Finish</ButtonText>
+          </Button>
+        </VStack>
         <AlertError alertBody={alertBody} />
         </VStack>
       </ScrollView>
     )
   }
 
+
+  // log out.
+  AsyncStorage.removeItem('user')
 
 
   return (
@@ -488,6 +580,13 @@ const Setup = (props) => {
         >
           Setup
         </Heading>
+        {myIP != '' && (
+          <HStack space="sm" alignSelf="center" alignItems="center">
+            <Text flex={1} color="$muted500">
+              Uplink IP: {myIP}
+            </Text>
+          </HStack>
+        )}
         {isDone ? (
           <>
             <HStack space="sm" alignSelf="center" alignItems="center">
@@ -554,17 +653,20 @@ const Setup = (props) => {
               </Select>
             </FormControl>
 
-            <Checkbox
-              size="md"
-              value={randomizeBSSIDs}
-              isChecked={randomizeBSSIDs}
-              onChange={(enabled) => setRandomizeBSSIDs(!randomizeBSSIDs)}
-            >
-              <CheckboxIndicator mr="$2">
-                <CheckboxIcon as={CheckIcon} />
-              </CheckboxIndicator>
-              <CheckboxLabel>Randomize BSSID for Location Privacy</CheckboxLabel>
-            </Checkbox>
+            <Tooltip label={'The BSSID (AP MAC Address) and SSID is stored by companies in location tracking databases. Randomizing it makes the AP\'s physical location private.'}>
+              <Checkbox
+                size="md"
+                value={randomizeBSSIDs}
+                isChecked={randomizeBSSIDs}
+                onChange={(enabled) => setRandomizeBSSIDs(!randomizeBSSIDs)}
+
+              >
+                <CheckboxIndicator mr="$2">
+                  <CheckboxIcon as={CheckIcon} />
+                </CheckboxIndicator>
+                <CheckboxLabel>Randomize BSSID for Location Privacy</CheckboxLabel>
+              </Checkbox>
+            </Tooltip>
 
             { randomizeBSSIDs && (
               <Checkbox
@@ -633,6 +735,19 @@ const Setup = (props) => {
                   <InputIcon as={KeyRoundIcon} mr="$2" />
                 </InputSlot>
               </Input>
+              <Input variant="outline" size="md">
+                <InputField
+                  type="password"
+                  value={passwordConfirm}
+                  placeholder="Confirm Password"
+                  onChangeText={(value) => setPasswordConfirm(value)}
+                  onSubmitEditing={handlePress}
+                />
+                <InputSlot>
+                  <InputIcon as={KeyRoundIcon} mr="$2" />
+                </InputSlot>
+              </Input>
+
               {'login' in errors ? (
                 <FormControlError>
                   <FormControlErrorText>{errors.login}</FormControlErrorText>
@@ -652,17 +767,20 @@ const Setup = (props) => {
               <CheckboxLabel>Auto-Check for Updates</CheckboxLabel>
             </Checkbox>
 
-            <Checkbox
-              size="md"
-              value={reportInstall}
-              isChecked={reportInstall}
-              onChange={(enabled) => setReportInstall(!reportInstall)}
-            >
-              <CheckboxIndicator mr="$2">
-                <CheckboxIcon as={CheckIcon} />
-              </CheckboxIndicator>
-              <CheckboxLabel>Report Install Once</CheckboxLabel>
-            </Checkbox>
+
+            <Tooltip label={'Help the Supernetworks Team count your installation by counting the install'}>
+              <Checkbox
+                size="md"
+                value={reportInstall}
+                isChecked={reportInstall}
+                onChange={(enabled) => setReportInstall(!reportInstall)}
+              >
+                <CheckboxIndicator mr="$2">
+                  <CheckboxIcon as={CheckIcon} />
+                </CheckboxIndicator>
+                <CheckboxLabel>Register Install</CheckboxLabel>
+              </Checkbox>
+            </Tooltip>
 
             <Button
               mt="$4"

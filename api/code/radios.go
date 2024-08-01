@@ -1146,6 +1146,11 @@ func restartWifi(w http.ResponseWriter, r *http.Request) {
 	callSuperdRestart("", "wifid")
 }
 
+func restartSetupWifi(w http.ResponseWriter, r *http.Request) {
+	resetRadioFirewall()
+	callSuperdRestart("wifid-setup/docker-compose.yml", "wifid-setup")
+}
+
 func initRadios() {
 	copyInterfacesConfigToPublic()
 }

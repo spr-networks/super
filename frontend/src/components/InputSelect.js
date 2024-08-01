@@ -353,10 +353,13 @@ const InputSelect = (props) => {
     return JSON.stringify(value)
   }
 
+  const autoFocus = props.autoFocus || false
+
   return (
     <>
       <Input size={props.size || 'md'} isDisabled={isDisabled}>
         <InputField
+          autoFocus={autoFocus}
           placeholder={title || ''}
           value={displayValue(value)}
           onChangeText={handleChangeText}
@@ -374,6 +377,7 @@ export default InputSelect //React.memo(InputSelect)
 export { ActionSheetMenu, InputSelect, SelectMenu }
 
 InputSelect.propTypes = {
+  autoFocus: PropTypes.bool,
   isDisabled: PropTypes.bool,
   isMultiple: PropTypes.bool,
   title: PropTypes.string,

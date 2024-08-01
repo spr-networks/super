@@ -743,18 +743,11 @@ type Event struct {
 	data interface{}
 }
 
-func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic string, value string) {
+func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic string, event interface{}) {
 	//make sure event settings dont change out from under us
 
 	AlertSettingsmtx.Lock()
 	defer AlertSettingsmtx.Unlock()
-
-	event := interface{}(nil)
-	err := json.Unmarshal([]byte(value), &event)
-	if err != nil {
-		log.Println("invalid json for event", err)
-		return
-	}
 
 	for _, rule := range gAlertsConfig {
 		if rule.Disabled {
@@ -830,20 +823,31 @@ func AlertsRunEventListener() {
 
 	busEvent := func(topic string, value string) {
 
+		var data map[string]interface{}
+		decodeErr := json.Unmarshal([]byte(value), &data)
+		if decodeErr == nil {
+			WSNotifyWildcardListeners(topic, data)
+		} else {
+			log.Println("failed to decode eventbus json:", decodeErr)
+			return
+		}
+
 		//wifi:auth events and plugin: events are special, we always send them up the websocket
 		// for the UI to react to
 		if strings.HasPrefix(topic, "wifi:auth") || strings.HasPrefix(topic, "plugin:") {
-			var data map[string]interface{}
-
-			if err := json.Unmarshal([]byte(value), &data); err != nil {
-				log.Println("failed to decode eventbus json:", err)
-				return
+			if decodeErr == nil {
+				WSNotifyValue(topic, data)
 			}
-
-			WSNotifyValue(topic, data)
 		}
 
-		processEventAlerts(notifyChan, storeChan, topic, value)
+		event := interface{}(nil)
+		err := json.Unmarshal([]byte(value), &event)
+		if err != nil {
+			log.Println("invalid json for event", err)
+			return
+		}
+
+		processEventAlerts(notifyChan, storeChan, topic, event)
 
 	}
 

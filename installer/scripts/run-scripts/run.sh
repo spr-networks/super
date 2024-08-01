@@ -41,3 +41,26 @@ if [ "$ret" -ne "0" ]; then
    docker-compose -f $COMPOSE_FILE pull
    docker-compose -f $COMPOSE_FILE up -d
 fi
+
+
+
+# Reset the `ubuntu` password to the admin password when a user enables one
+# We only attempt this on the first setup, once.,
+watch_setup_done() {
+    dir_to_watch="/home/spr/super/configs/base/"
+    file_to_watch=".setup_done"
+
+    while true; do
+        if inotifywait -q -e create,modify,move "$dir_to_watch"; then
+            if [[ -f "$dir_to_watch/$file_to_watch" ]]; then
+                P=$(cat configs/auth/auth_users.json  | jq -r .admin)
+                (echo $P; echo $P)| passwd ubuntu
+                break
+            fi
+        fi
+    done
+}
+
+if [ ! -f /home/spr/super/configs/base/.setup_done ]; then
+  watch_setup_done &
+fi

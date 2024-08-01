@@ -45,6 +45,8 @@ var ComposeAllowListDefaults = []string{"docker-compose.yml", "docker-compose-te
 	"plugins/plus/mesh_extension/docker-compose.yml",
 	"dyndns/docker-compose.yml",
 	"ppp/docker-compose.yml",
+	"wifid-setup/docker-compose.yml",
+	"wifid-setup/docker-compose-test.yml",
 	"wifi_uplink/docker-compose.yml"}
 
 var ComposeAllowList = ComposeAllowListDefaults
@@ -482,7 +484,7 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 	}
 
 	os.Setenv("GIT_TERMINAL_PROMPT", "0")
-	out, _ := exec.Command("git", "clone", git_url).CombinedOutput()
+	out, _ := exec.Command("git", "clone", "--recurse-submodule", git_url).CombinedOutput()
 	fmt.Println(string(out))
 
 	if strings.Contains(string(out), "fatal") {

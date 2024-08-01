@@ -65,8 +65,22 @@ func TestProcessEventAlerts(t *testing.T) {
 	testEventJSON := `{"fieldA":2,"value":"testValue"}`
 	no_matches := `{"fieldX":2,"value":"nope"}`
 
-	processEventAlerts(notifyChan, storeChan, "test:topic", testEventJSON)
-	processEventAlerts(notifyChan, storeChan, "test:topic", no_matches)
+	event := interface{}(nil)
+	err := json.Unmarshal([]byte(testEventJSON), &event)
+	if err != nil {
+		log.Println("invalid json for event", err)
+		return
+	}
+
+	processEventAlerts(notifyChan, storeChan, "test:topic", event)
+
+	err = json.Unmarshal([]byte(no_matches), &event)
+	if err != nil {
+		log.Println("invalid json for event", err)
+		return
+	}
+
+	processEventAlerts(notifyChan, storeChan, "test:topic", event)
 
 	close(notifyChan)
 	close(storeChan)
@@ -208,8 +222,8 @@ func TestProcessEventAlerts2(t *testing.T) {
 	var wg sync.WaitGroup
 	gAlertsConfig = mockAlertSettings2()
 
-	notifyChan := make(chan Alert)
 	storeChan := make(chan Alert)
+	notifyChan := make(chan Alert)
 
 	notifications := []Alert{}
 	stores := []Alert{}
@@ -233,7 +247,14 @@ func TestProcessEventAlerts2(t *testing.T) {
 	wg.Add(1)
 	go getStore(storeChan)
 
-	processEventAlerts(notifyChan, storeChan, "test:topic", testEventJSON2)
+	event := interface{}(nil)
+	err := json.Unmarshal([]byte(testEventJSON2), &event)
+	if err != nil {
+		log.Println("invalid json for event", err)
+		return
+	}
+
+	processEventAlerts(notifyChan, storeChan, "test:topic", event)
 	close(notifyChan)
 	close(storeChan)
 
@@ -307,7 +328,15 @@ func TestProcessBugAlerts(t *testing.T) {
 
 	auth_event := `{"name":"admin","reason":"bad password","type":"user"}`
 	//crash test cases
-	processEventAlerts(notifyChan, storeChan, "auth:failure", auth_event)
+
+	event := interface{}(nil)
+	err := json.Unmarshal([]byte(auth_event), &event)
+	if err != nil {
+		log.Println("invalid json for event", err)
+		return
+	}
+
+	processEventAlerts(notifyChan, storeChan, "auth:failure", event)
 
 	close(notifyChan)
 	close(storeChan)

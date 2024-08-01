@@ -1,4 +1,4 @@
-FROM ubuntu:23.04 as builder
+FROM ubuntu:23.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends nftables iproute2 netcat-traditional inetutils-ping net-tools nano ca-certificates git curl
@@ -15,7 +15,7 @@ ARG COREDNS_VER=unknown
 ARG PLUGINS_VER=unknown
 ENV GOPRIVATE=github.com/spr-networks/*
 ARG CACHEBUST=1
-RUN git clone --depth 1 --branch v1.11.1 https://github.com/coredns/coredns.git
+RUN git clone --depth 1 --branch v1.11.3 https://github.com/coredns/coredns.git
 WORKDIR /code/coredns/
 
 ARG USE_TMPFS=true

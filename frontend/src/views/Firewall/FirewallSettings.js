@@ -7,7 +7,7 @@ import MDNSAdvertise from 'components/Firewall/MDNSAdvertise'
 
 const FWSettings = (props) => {
   return (
-    <ScrollView sx={{ '@md': { __width: '$3/4', height: '92vh' } }}>
+    <ScrollView sx={{ '@md': { __width: '$3/4' } }}>
       <VStack space="lg">
         <ICMP />
         <UpstreamServicesList />

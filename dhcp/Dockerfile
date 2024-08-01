@@ -1,4 +1,4 @@
-FROM ubuntu:23.04 as builder
+FROM ubuntu:23.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends nftables iproute2 netcat-traditional inetutils-ping net-tools nano ca-certificates git curl
@@ -25,7 +25,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
 
 FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends jq ethtool isc-dhcp-client inotify-tools && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends jq ethtool isc-dhcp-client inotify-tools psmisc && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /coredhcpd /
 COPY --from=builder /coredhcp_client /
 COPY scripts /scripts

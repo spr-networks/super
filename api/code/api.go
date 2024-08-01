@@ -1301,6 +1301,7 @@ func handleExpirations(val *DeviceEntry, req *DeviceEntry) {
 func checkDeviceExpiries(devices map[string]DeviceEntry) {
 	curtime := time.Now().Unix()
 	todelete := []string{}
+
 	doUpdate := false
 	for k, entry := range devices {
 		if entry.DeviceDisabled == false && entry.DeviceExpiration != 0 {
@@ -1318,6 +1319,20 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 				}
 			}
 		}
+
+		if entry.DeviceDisabled == false && slices.Contains(entry.DeviceTags, "guest") {
+			//if a device has the guest tag, check if RecentDHCP > 30 days, if so, then delete it.
+			lastTime, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", entry.DHCPLastTime)
+			if err != nil {
+				// Handle error
+				log.Printf("Error parsing time: %v", err)
+				return
+			}
+
+			if time.Since(lastTime) > 30*24*time.Hour {
+				entry.DeviceDisabled = true
+			}
+		}
 	}
 
 	for _, k := range todelete {
@@ -1328,6 +1343,7 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 	if doUpdate && len(todelete) == 0 {
 		saveDevicesJson(devices)
 	}
+
 }
 
 func syncDevices(w http.ResponseWriter, r *http.Request) {
@@ -1386,21 +1402,24 @@ func deleteDeviceLocked(devices map[string]DeviceEntry, identity string) {
 	//if the device had a VLAN Tag, also refresh vlans
 	// upon deletion
 	if val.VLANTag != "" {
-		Devicesmtx.Unlock()
 		Groupsmtx.Unlock()
+		Devicesmtx.Unlock()
 		refreshVLANTrunks()
-		Devicesmtx.Lock()
 		Groupsmtx.Lock()
+		Devicesmtx.Lock()
 	}
+
+	//notify the bus
+	sprbus.Publish("device:delete", scrubDevice(val))
 
 }
 
 func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, identity string) (string, int) {
 
-	Devicesmtx.Lock()
-	defer Devicesmtx.Unlock()
 	Groupsmtx.Lock()
 	defer Groupsmtx.Unlock()
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
 
 	devices := getDevicesJson()
 	groups := getGroupsJson()
@@ -1608,7 +1627,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 				iface := getRouteInterface(val.RecentIP)
 				if iface != "" {
 					//if the device is currently routed, then update it
-					handleDHCPResult(val.MAC, val.RecentIP, "", iface)
+					handleDHCPResult(val.MAC, val.RecentIP, "", val.Name, iface)
 				}
 			}
 
@@ -1617,11 +1636,11 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		//locks no longer needed
 
 		if refreshVlanTrunks {
-			Devicesmtx.Unlock()
 			Groupsmtx.Unlock()
+			Devicesmtx.Unlock()
 			refreshVLANTrunks()
-			Devicesmtx.Lock()
 			Groupsmtx.Lock()
+			Devicesmtx.Lock()
 		}
 
 		//mask the PSK if set and not generated
@@ -1704,11 +1723,11 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 	// create vlans
 	if refreshVlanTrunks {
-		Devicesmtx.Unlock()
 		Groupsmtx.Unlock()
+		Devicesmtx.Unlock()
 		refreshVLANTrunks()
-		Devicesmtx.Lock()
 		Groupsmtx.Lock()
+		Devicesmtx.Lock()
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -1969,10 +1988,6 @@ func updateArp(Ifname string, IP string, MAC string) {
 	}
 }
 
-func updateAddr(Router string, Ifname string) {
-	exec.Command("ip", "addr", "add", Router+"/30", "dev", Ifname).Run()
-}
-
 var LocalMappingsmtx sync.Mutex
 
 func updateLocalMappings(IP string, Name string) {
@@ -2001,24 +2016,6 @@ func updateLocalMappings(IP string, Name string) {
 	}
 	new_data += IP + " " + entryName + "\n"
 	ioutil.WriteFile(localMappingsPath, []byte(new_data), 0600)
-}
-
-func flushRoute(MAC string) {
-	arp_entry, err := GetArpEntryFromMAC(MAC)
-	if err != nil {
-		//relax this verbose log
-		//log.Println("Arp entry not found, insufficient information to refresh", MAC)
-		return
-	}
-
-	if !isTinyNetIP(arp_entry.IP) {
-		log.Println("[] Error: Trying to flush non tiny IP: ", arp_entry.IP)
-		return
-	}
-	//delete previous arp entry and route
-	router := RouterFromTinyIP(arp_entry.IP)
-	exec.Command("ip", "addr", "del", router, "dev", arp_entry.Device).Run()
-	exec.Command("arp", "-i", arp_entry.Device, "-d", arp_entry.IP).Run()
 }
 
 func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface string, Name string, Create bool) {
@@ -2128,6 +2125,22 @@ type PSKAuthFailure struct {
 	Status string
 }
 
+type PSKAuthSuccess struct {
+	Iface  string
+	Event  string
+	MAC    string
+	Status string
+	Router string
+}
+
+type StationDisconnect struct {
+	Iface  string
+	Event  string
+	MAC    string
+	Status string
+	Router string
+}
+
 func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
@@ -2151,22 +2164,6 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 	//no longer assign MAC on Auth Failure due to noentry
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pskf)
-}
-
-type PSKAuthSuccess struct {
-	Iface  string
-	Event  string
-	MAC    string
-	Status string
-	Router string
-}
-
-type StationDisconnect struct {
-	Iface  string
-	Event  string
-	MAC    string
-	Status string
-	Router string
 }
 
 func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
@@ -2197,8 +2194,13 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 		var foundPSK = false
 		for _, device := range devices {
 			if device.MAC == pska.MAC {
-				foundPSK = true
-				break
+				if device.PSKEntry.Psk != "" {
+					foundPSK = true
+					break
+				} else {
+					// psk was empty, we re-claim this mac entry
+					// and assign pending to it
+				}
 			}
 		}
 
@@ -2600,6 +2602,9 @@ func migrateMDNS() {
 }
 
 func migrateDevicePolicies() {
+	Groupsmtx.Lock()
+	defer Groupsmtx.Unlock()
+
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
 
@@ -2607,8 +2612,6 @@ func migrateDevicePolicies() {
 
 	updated := false
 
-	Groupsmtx.Lock()
-	defer Groupsmtx.Unlock()
 	old_groups := getGroupsJson()
 	groups := []GroupEntry{}
 
@@ -2754,6 +2757,7 @@ func main() {
 
 	//public websocket with internal authentication
 	external_router_public.HandleFunc("/ws", webSocket).Methods("GET")
+	external_router_public.HandleFunc("/ws_events_all", webSocketWildcard).Methods("GET")
 
 	// intial setup
 	external_router_public.HandleFunc("/setup", setup).Methods("GET", "PUT")
@@ -2766,7 +2770,9 @@ func main() {
 	external_router_setup.HandleFunc("/hostapd/{interface}/status", hostapdStatus).Methods("GET")
 	external_router_setup.HandleFunc("/hostapd/{interface}/setChannel", hostapdChannelSwitch).Methods("PUT")
 	external_router_setup.HandleFunc("/hostapd/restart", restartWifi).Methods("PUT")
-	external_router_setup.HandleFunc("/hostapd/calcChannel", hostapdChannelCalc).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/restart_setup", restartSetupWifi).Methods("PUT")
+
+  external_router_setup.HandleFunc("/hostapd/calcChannel", hostapdChannelCalc).Methods("PUT")
 	external_router_setup.HandleFunc("/link/config", updateLinkConfig).Methods("PUT")
 
 	external_router_setup.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")
@@ -2777,9 +2783,6 @@ func main() {
 
 	//download cert from http
 	external_router_public.HandleFunc("/cert", getCert).Methods("GET")
-
-	spa := spaHandler{staticPath: "/ui", indexPath: "index.html"}
-	external_router_public.PathPrefix("/").Handler(spa)
 
 	//nftable helpers
 	external_router_authenticated.HandleFunc("/nfmap/{name}", showNFMap).Methods("GET")
@@ -2817,6 +2820,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS", "PUT")
 	external_router_authenticated.HandleFunc("/subnetConfig", getSetDhcpConfig).Methods("GET", "PUT", "OPTIONS")
+	external_router_authenticated.HandleFunc("/setup_done", finalizeSetup).Methods("PUT")
 
 	external_router_authenticated.HandleFunc("/dnsSettings", dnsSettings).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/multicastSettings", multicastSettings).Methods("GET", "PUT")
@@ -2857,6 +2861,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/enableExtraBSS", hostapdEnableExtraBSS).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/hostapd/syncMesh", hostapdSyncMesh).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/restart", restartWifi).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/restart_setup", restartSetupWifi).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/failsafe", hostapdFailsafeStatus).Methods("GET")
 
 	//ip information
@@ -2885,11 +2890,11 @@ func main() {
 
 	//plugins
 	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
-	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated)).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated, external_router_public)).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/plugins/{name}/restart", handleRestartPlugin).Methods("PUT")
 	//TBD: API Docs
 	external_router_authenticated.HandleFunc("/plugin/custom_compose_paths", applyJwtOtpCheck(modifyCustomComposePaths)).Methods("GET", "PUT")
-	external_router_authenticated.HandleFunc("/plugin/install_user_url", installUserPluginGitUrl(external_router_authenticated)).Methods("PUT")
+	external_router_authenticated.HandleFunc("/plugin/install_user_url", installUserPluginGitUrl(external_router_authenticated, external_router_public)).Methods("PUT")
 	external_router_authenticated.HandleFunc("/plusToken", plusToken).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/plusTokenValid", plusTokenValid).Methods("GET")
 	external_router_authenticated.HandleFunc("/stopPlusExtension", stopPlusExt).Methods("PUT")
@@ -2924,7 +2929,6 @@ func main() {
 	unix_wifid_router.HandleFunc("/interfaces", getEnabledAPInterfaces).Methods("GET")
 
 	// DHCP actions
-	unix_dhcpd_router.HandleFunc("/dhcpUpdate", dhcpUpdate).Methods("PUT") //deprecated now
 	unix_dhcpd_router.HandleFunc("/dhcpRequest", dhcpRequest).Methods("PUT")
 	unix_dhcpd_router.HandleFunc("/abstractDhcpRequest", abstractDhcpRequest).Methods("PUT")
 
@@ -2953,7 +2957,11 @@ func main() {
 		panic(err)
 	}
 
-	PluginRoutes(external_router_authenticated)
+	// publish static files for plugins before spa handler
+	PluginRoutes(external_router_authenticated, external_router_public)
+
+	spa := spaHandler{staticPath: "/ui", indexPath: "index.html"}
+	external_router_public.PathPrefix("/").Handler(spa)
 
 	wifidServer := http.Server{Handler: logRequest(unix_wifid_router)}
 	dhcpdServer := http.Server{Handler: logRequest(unix_dhcpd_router)}
@@ -3002,6 +3010,10 @@ func main() {
 	go wifidServer.Serve(unixWifidListener)
 
 	go dhcpdServer.Serve(unixDhcpdListener)
+
+	if isSetupMode() {
+		startExtension("wifid-setup/docker-compose.yml")
+	}
 
 	wireguardServer.Serve(unixWireguardListener)
 }

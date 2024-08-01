@@ -1,13 +1,16 @@
 import React, { Component, useEffect, useState } from 'react'
-import { wifiAPI, meshAPI } from 'api'
+import  {api, wifiAPI, meshAPI } from 'api'
+
 import APIWifi from 'api/Wifi'
 import StatsWidget from './StatsWidget'
 import { AlertContext } from 'AppContext'
 
 import { ClockIcon, Laptop2Icon, WifiIcon } from 'lucide-react-native'
 import {
-  Divider,
   Box,
+  Button,
+  ButtonText,
+  Divider,
   Heading,
   HStack,
   Icon,
@@ -85,6 +88,101 @@ export class WifiClients extends WifiClientCount {
   }
 }
 
+
+const WifiWidget = ({
+  title,
+  text,
+  textFooter,
+  icon,
+  iconColor,
+  iconFooter,
+
+  ...props
+}) => {
+
+  const finishSetup = () => {
+
+    api.put("/setup_done")
+    .then( () => {
+          wifiAPI.restartSetupWifi().then(() => {
+          }).catch(err => {
+          })
+    })
+    .catch( (err) => {
+
+      wifiAPI.restartSetupWifi().then(() => {
+      }).catch(err => {
+      })
+
+    })
+
+
+  }
+
+  return (
+    <Box
+      bg={
+        useColorMode() == 'light'
+          ? '$backgroundCardLight'
+          : '$backgroundCardDark'
+      }
+      borderRadius={10}
+      {...props}
+    >
+      <HStack p="$4" justifyContent="space-between" alignItems="center">
+        <Box p="$2">
+          <Icon as={icon} size={64} color={iconColor || '$warmGray50'} />
+        </Box>
+        {props.children ? (
+          <>{props.children}</>
+        ) : (
+          <VStack space="xs">
+            <Text
+              textAlign="right"
+              size="sm"
+              fontWeight={300}
+              color="$muted800"
+              sx={{ _dark: { color: '$muted400' } }}
+            >
+              {title}
+            </Text>
+            <Text
+              textAlign="right"
+              size="xl"
+              color="$muted800"
+              sx={{ _dark: { color: '$muted400' } }}
+            >
+              {text}
+            </Text>
+            {text == 'sprlab-setup' && (
+              <Button
+                action="secondary"
+                size="md"
+                onPress={finishSetup}
+              >
+                <ButtonText>Complete Setup</ButtonText>
+              </Button>
+            )}
+          </VStack>
+        )}
+      </HStack>
+
+      {textFooter ? (
+        <Box>
+          <Divider />
+          <HStack space="md" p="$2" px="$4" alignItems="center">
+            {/*<Icon icon={iconFooter} color="$warmGray500" />*/}
+            <Text color="$muted500" size="xs" fontWeight={300}>
+              {textFooter}
+            </Text>
+          </HStack>
+        </Box>
+      ) : null}
+    </Box>
+  )
+}
+
+
 export const WifiInfo = (props) => {
   const [ssid, setSsid] = useState('')
   const [channel, setChannel] = useState(0)
@@ -103,7 +201,7 @@ export const WifiInfo = (props) => {
 
   let title = 'AP ' + props.iface
   return (
-    <StatsWidget
+    <WifiWidget
       {...props}
       icon={WifiIcon}
       iconColor={colorMode == 'light' ? '$info400' : '$info700'}

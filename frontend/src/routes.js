@@ -1,7 +1,7 @@
 import { Platform } from 'react-native'
 
 import AddDevice from 'views/Devices/AddDevice'
-import ConnectDevice from 'views/Devices/ConnectDevice'
+import {WifiConnect} from 'views/Devices/ConnectDevice'
 import Devices from 'views/Devices/Devices'
 import Device from 'views/Devices/Device'
 import Home from 'views/Home'
@@ -114,12 +114,11 @@ const routes = [
     layout: 'admin',
     path: 'connect_device',
     redirect: true,
-    component: ConnectDevice
+    component: WifiConnect
   },
   {
     name: 'Network',
     state: 'netCollapse',
-    hideSimple: true,
     views: [
       {
         path: 'wireless',
@@ -364,7 +363,7 @@ const routes = [
         component: AuthSettings,
         hideSimple: true,
         layout: 'admin'
-      },
+      }
     ]
   },
   {

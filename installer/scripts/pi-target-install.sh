@@ -13,8 +13,9 @@ dhcpcd eth0
 apt-get -y --fix-broken --fix-missing --no-download install
 dpkg --configure -a
 
+# sync with install.sh and cross-install.sh
 apt -y upgrade --no-download
-apt -y install --no-download nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack
+apt -y install --no-download nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools
 # install docker and buildx
 apt -y install --no-download docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
@@ -123,6 +124,14 @@ ENV{ID_MODEL_ID}=="9060",
 RUN+="/usr/sbin/modprobe mt7921u",
 RUN+="/bin/sh -c 'echo 0846 9060 > /sys/bus/usb/drivers/mt7921u/new_id'"
 EOF
+
+mkdir /boot/firmware
+mount /dev/vda1 /boot/firmware
+# we need the pcie-32bit-dma enabled for the mediatek cards
+fdtoverlay -i /boot/firmware/bcm2712-rpi-5-b.dtb -o /boot/firmware/bcm2712-rpi-5-b.dtb /boot/firmware/overlays/pcie-32bit-dma-pi5.dtbo
+echo "dtparam=pciex1" >> /boot/firmware/config.txt
+umount /boot/firmware
+rmdir /boot/firmware
 
 # cleanup
 #apt-get autoremove -y && apt-get clean

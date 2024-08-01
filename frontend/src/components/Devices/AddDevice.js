@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from 'react'
 
 import { deviceAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
-import WifiConnect from 'views/Devices/ConnectDevice'
+import {WifiConnect, WiredConnect} from 'views/Devices/ConnectDevice'
 import { format as timeAgo } from 'timeago.js'
 import InputSelect from 'components/InputSelect'
 
@@ -258,9 +258,12 @@ const AddDevice = (props) => {
         context.error('DEVICE API:', error)
       })
   }
-
   if (submitted) {
-    return <WifiConnect device={device} goBackSuccess={props.deviceAddedCallback} goBack={() => setSubmitted(false)} />
+    if (wpa != 'none') {
+      return <WifiConnect device={device} goBackSuccess={props.deviceAddedCallback} goBack={() => setSubmitted(false)} />
+    } else {
+      return <WiredConnect device={device} goBackSuccess={props.deviceAddedCallback} goBack={() => setSubmitted(false)} />
+    }
   }
 
   return (
