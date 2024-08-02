@@ -289,7 +289,7 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 
 		go func() {
 			defer stdin.Close()
-			io.WriteString(stdin, string(output))
+			io.WriteString(stdin, strings.Replace(string(output), "0 user,", "0 users,", 1))
 		}()
 
 		data, err = cmd.Output()
