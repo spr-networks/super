@@ -380,7 +380,7 @@ const Setup = (props) => {
 
   const handlePressFinish = () => {
       //send a restart wifi command to disable sprlab-setup
-      removeSetupAP(() => }{
+      removeSetupAP(() => {
         navigate("/auth/login")        
       })
   }
