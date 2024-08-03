@@ -9,7 +9,6 @@ import (
 )
 import (
 	"github.com/gorilla/websocket"
-	"github.com/spr-networks/sprbus"
 )
 
 type WSClient struct {
@@ -20,7 +19,7 @@ type WSClient struct {
 var WSClients []*WSClient
 var WSMtx sync.Mutex
 
-var WSNotify = make(chan WSMessage, 100)
+var WSNotify = make(chan *WSMessage, 100)
 
 type WSMessage struct {
 	Type         string
@@ -37,7 +36,7 @@ func WSNotifyMessage(msg_type string, data interface{}, notification bool, wildc
 		panic(err)
 	}
 	go func() {
-		WSNotify <- WSMessage{msg_type, string(bytes), notification, wildcard}
+		WSNotify <- &WSMessage{msg_type, string(bytes), notification, wildcard}
 	}()
 }
 
@@ -46,13 +45,29 @@ func WSNotifyValue(msg_type string, data interface{}) {
 }
 
 func WSNotifyWildcardListeners(msg_type string, data interface{}) {
-	WSNotifyMessage(msg_type, data, false, true)
+	//slow path we have a broadcast listener, otherwise just skip altogether
+	WSMtx.Lock()
+	has_wildcard := WSHasWildcardListenerUnlocked()
+	WSMtx.Unlock()
+	if has_wildcard {
+		WSNotifyMessage(msg_type, data, false, true)
+	}
 }
 
 func WSNotifyString(msg_type string, data string) {
 	go func() {
-		WSNotify <- WSMessage{msg_type, data, true, false}
+		WSNotify <- &WSMessage{msg_type, data, true, false}
 	}()
+}
+
+func WSHasWildcardListenerUnlocked() bool {
+	//use a tmp array to keep track of active clients to keep
+	for _, client := range WSClients {
+		if client.WildcardListener {
+			return true
+		}
+	}
+	return false
 }
 
 func WSRunBroadcast() {
