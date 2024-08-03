@@ -23,10 +23,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-import (
-	"github.com/spr-networks/sprbus"
-)
-
 var FWmtx sync.Mutex
 
 type BaseRule struct {

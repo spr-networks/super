@@ -23,10 +23,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-import (
-	"github.com/spr-networks/sprbus"
-)
-
 var PlusUser = "lts-super-plus"
 var PfwGitURL = "github.com/spr-networks/pfw_extension"
 var MeshGitURL = "github.com/spr-networks/mesh_extension"

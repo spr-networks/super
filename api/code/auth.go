@@ -20,7 +20,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
 	"github.com/pquerna/otp/totp"
-	"github.com/spr-networks/sprbus"
 )
 
 var AuthUsersFile = TEST_PREFIX + "/configs/auth/auth_users.json"

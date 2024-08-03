@@ -25,8 +25,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/spr-networks/sprbus"
 )
 
 var gDHCPConfigPath = TEST_PREFIX + "/configs/base/dhcp.json"
