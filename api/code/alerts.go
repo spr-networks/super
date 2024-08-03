@@ -812,7 +812,7 @@ func AlertsRunEventListener() {
 	doStore := func(ch <-chan Alert) {
 		defer wg.Done()
 		for message := range ch {
-			sprbus.Publish(message.Topic, message.Info)
+			SprbusPublish(message.Topic, message.Info)
 		}
 	}
 

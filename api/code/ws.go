@@ -149,10 +149,10 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, wildcard bool) {
 
 			WSClients = append(WSClients, newClient)
 			WSMtx.Unlock()
-			sprbus.Publish("auth:success", map[string]string{"type": "user", "name": pieces[0], "reason": "websocket"})
+			SprbusPublish("auth:success", map[string]string{"type": "user", "name": pieces[0], "reason": "websocket"})
 			return
 		} else {
-			sprbus.Publish("auth:failure", map[string]string{"type": "user", "name": pieces[0], "reason": "bad credentails on websocket"})
+			SprbusPublish("auth:failure", map[string]string{"type": "user", "name": pieces[0], "reason": "bad credentails on websocket"})
 		}
 	} else {
 		token := msgs
@@ -160,7 +160,7 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, wildcard bool) {
 		if goodToken {
 			if len(paths) > 0 {
 				//scoped tokens get rejected for WS
-				sprbus.Publish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": "unsupported scopes on websocket"})
+				SprbusPublish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": "unsupported scopes on websocket"})
 			} else {
 				c.WriteMessage(websocket.TextMessage, []byte("success"))
 				WSMtx.Lock()
@@ -170,11 +170,11 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, wildcard bool) {
 				}
 				WSClients = append(WSClients, newClient)
 				WSMtx.Unlock()
-				sprbus.Publish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": "websocket"})
+				SprbusPublish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": "websocket"})
 			}
 			return
 		} else {
-			sprbus.Publish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": "unknown token"})
+			SprbusPublish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": "unknown token"})
 		}
 	}
 	c.WriteMessage(websocket.TextMessage, []byte("Authentication failure"))

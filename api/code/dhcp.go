@@ -332,7 +332,7 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sprbus.Publish("dhcp:request", dhcp)
+	SprbusPublish("dhcp:request", dhcp)
 
 	if dhcp.MAC == "" || dhcp.Iface == "" {
 		http.Error(w, "need MAC and Iface to dhcp", 400)
@@ -379,7 +379,7 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 
 	response := DHCPResponse{dhcp.MAC, IP, Router, getLANIP(), LeaseTime}
 
-	sprbus.Publish("dhcp:response", response)
+	SprbusPublish("dhcp:response", response)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
@@ -620,7 +620,7 @@ func wireguardUpdate(w http.ResponseWriter, r *http.Request) {
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
 
-	sprbus.Publish("wg:update", wg)
+	SprbusPublish("wg:update", wg)
 
 	devices := getDevicesJson()
 	val, exists := lookupWGDevice(&devices, wg.PublicKey, wg.IP)
