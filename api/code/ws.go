@@ -91,7 +91,7 @@ func WSRunBroadcast() {
 
 		//if no WS clients got data sent, then run APNS instead
 		// if it was not a wildcardall message
-		if clients_len == 0  && !message.WildcardAll {
+		if clients_len == 0 && !message.WildcardAll {
 			APNSNotify(message.Type, message.Data)
 		}
 
