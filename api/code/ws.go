@@ -20,7 +20,7 @@ type WSClient struct {
 var WSClients []*WSClient
 var WSMtx sync.Mutex
 
-var WSNotify = make(chan WSMessage)
+var WSNotify = make(chan WSMessage, 100)
 
 type WSMessage struct {
 	Type         string
