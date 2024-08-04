@@ -1327,7 +1327,6 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 			lastTime, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", entry.DHCPLastTime)
 			if err != nil {
 				// Handle error
-				log.Printf("Error parsing time: %v", err)
 				return
 			}
 

@@ -33,11 +33,21 @@ type WSMessage struct {
 func WSNotifyMessage(msg_type string, data interface{}, notification bool, wildcard bool) {
 	bytes, err := json.Marshal(data)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to marshal data: %v", err)
+		return
 	}
-	go func() {
-		WSNotify <- &WSMessage{msg_type, string(bytes), notification, wildcard}
-	}()
+
+	message := &WSMessage{msg_type, string(bytes), notification, wildcard}
+
+	select {
+	case WSNotify <- message:
+	default:
+		//channel was full, send async
+		go func() {
+			WSNotify <- message
+		}()
+	}
+
 }
 
 func WSNotifyValue(msg_type string, data interface{}) {
@@ -52,12 +62,6 @@ func WSNotifyWildcardListeners(msg_type string, data interface{}) {
 	if has_wildcard {
 		WSNotifyMessage(msg_type, data, false, true)
 	}
-}
-
-func WSNotifyString(msg_type string, data string) {
-	go func() {
-		WSNotify <- &WSMessage{msg_type, data, true, false}
-	}()
 }
 
 func WSHasWildcardListenerUnlocked() bool {
