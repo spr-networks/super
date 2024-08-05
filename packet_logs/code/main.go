@@ -12,7 +12,6 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/spr-networks/sprbus"
 	"log"
-	"net"
 	"os"
 	"strings"
 	"sync"
@@ -46,8 +45,12 @@ type PacketInfo struct {
 }
 
 var wg sync.WaitGroup
+var interfaceMap *InterfaceMap
+var gDebug = os.Getenv("DEBUG") != ""
 
 func main() {
+	interfaceMap = NewInterfaceMap()
+
 	busListener()
 
 	client, err := sprbus.NewClient(ServerEventSock)
@@ -107,16 +110,16 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 
 		// get devices
 		if attrs.InDev != nil {
-			iface, _ := net.InterfaceByIndex(int(*attrs.InDev))
-			if iface != nil {
-				result.InDev = iface.Name
+			iface := interfaceMap.GetInterfaceName(int(*attrs.InDev))
+			if iface != "" {
+				result.InDev = iface
 			}
 		}
 
 		if attrs.OutDev != nil {
-			iface, _ := net.InterfaceByIndex(int(*attrs.OutDev))
-			if iface != nil {
-				result.OutDev = iface.Name
+			iface := interfaceMap.GetInterfaceName(int(*attrs.OutDev))
+			if iface != "" {
+				result.OutDev = iface
 			}
 		}
 
