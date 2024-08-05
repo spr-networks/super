@@ -8,6 +8,8 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/net/icmp"
+	"golang.org/x/net/ipv4"
 	"io/ioutil"
 	"math/big"
 	"net"
@@ -915,7 +917,23 @@ func pingTest(w http.ResponseWriter, r *http.Request) {
 		}
 		defer conn.Close()
 
-		_, err = conn.WriteTo([]byte{}, ipAddr)
+		msg := icmp.Message{
+			Type: ipv4.ICMPTypeEcho,
+			Code: 0,
+			Body: &icmp.Echo{
+				ID:   1,
+				Seq:  i,
+				Data: []byte("HELLO"),
+			},
+		}
+
+		msgBytes, err := msg.Marshal(nil)
+		if err != nil {
+			http.Error(w, "Failed to marshal ping", 400)
+			return
+		}
+
+		_, err = conn.WriteTo(msgBytes, ipAddr)
 		if err != nil {
 			continue
 		}
