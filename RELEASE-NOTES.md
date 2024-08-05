@@ -1,4 +1,16 @@
 # Secure Programmable Router (SPR) Release Notes
+
+## v0.3.15
+
+Fixes
+* Address APNS memory consumption bug 
+* Ping API call was broken 
+* Undo shadowports mitigation as it breaks sitevpn use cases
+
+Improvements
+* API performance refactoring with the event bus & notifications channel
+* Improved packet_logs performance with cached interface name lookups
+
 ## v0.3.14
 Fixes
 * Fix deadlock in API with Devices mutex

@@ -25,14 +25,14 @@ import {
 import { AlertContext } from 'AppContext'
 import { api, API } from 'api'
 
-const getPluginHTML = async (name) => {
+const getPluginHTML = async (plugin) => {
   // fetch html from api using auth
   let Authorization = await api.getAuthHeaders()
   let headers = {
     Authorization
   }
 
-  let pathname = `/plugins/${name}`
+  let pathname = `/plugins/${plugin.URI}`
 
   let api_url = api.getApiURL()
   let u = new URL(api_url)
@@ -42,17 +42,28 @@ const getPluginHTML = async (name) => {
   let res = await fetch(url, { headers })
   let html = await res.text()
 
-  let scriptTag = `<script>var SPR_API_URL = "${api_url}";</script>`
+  const pluginInfo = Object.keys(plugin)
+    .filter((key) => ['Name', 'URI', 'GitURL'].includes(key))
+    .reduce((obj, key) => {
+      obj[key] = plugin[key]
+      return obj
+    }, {})
+
+  let scriptTag = `<script>window.SPR_API_URL = ${JSON.stringify(
+    api_url
+  )}; window.SPR_PLUGIN = ${JSON.stringify(pluginInfo)};</script>`
   html = html.replace('</head>', `${scriptTag}</head>`)
 
   return html
 }
 
 const PluginFrame = ({ name, ...props }) => {
+  const context = useContext(AlertContext)
+
   const [srcDoc, setSrcDoc] = useState(null)
-  const fetchHTML = async () => {
+  const fetchHTML = async (plugin) => {
     try {
-      let html = await getPluginHTML(name)
+      let html = await getPluginHTML(plugin)
       setSrcDoc(html)
     } catch (err) {
       context.error(`Failed to fetch html:`, err)
@@ -60,8 +71,19 @@ const PluginFrame = ({ name, ...props }) => {
   }
 
   useEffect(() => {
-    //TODO verify plugin exists and is running - fetch from plugin api
-    fetchHTML()
+    api
+      .get('/plugins')
+      .then((plugins) => {
+        let plugin = plugins.find((p) => p.URI == name)
+        if (!plugin) {
+          throw new Error(`Failed to find plugin: ${name}`)
+        }
+
+        fetchHTML(plugin)
+      })
+      .catch((err) => {
+        context.error(err)
+      })
   }, [name])
 
   return <CustomPlugin srcDoc={srcDoc} isSandboxed={props.isSandboxed} />

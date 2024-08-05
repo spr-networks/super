@@ -9,7 +9,6 @@ import (
 )
 import (
 	"github.com/gorilla/websocket"
-	"github.com/spr-networks/sprbus"
 )
 
 type WSClient struct {
@@ -20,7 +19,7 @@ type WSClient struct {
 var WSClients []*WSClient
 var WSMtx sync.Mutex
 
-var WSNotify = make(chan WSMessage)
+var WSNotify = make(chan *WSMessage, 100)
 
 type WSMessage struct {
 	Type         string
@@ -34,11 +33,21 @@ type WSMessage struct {
 func WSNotifyMessage(msg_type string, data interface{}, notification bool, wildcard bool) {
 	bytes, err := json.Marshal(data)
 	if err != nil {
-		panic(err)
+		log.Printf("Failed to marshal data: %v", err)
+		return
 	}
-	go func() {
-		WSNotify <- WSMessage{msg_type, string(bytes), notification, wildcard}
-	}()
+
+	message := &WSMessage{msg_type, string(bytes), notification, wildcard}
+
+	select {
+	case WSNotify <- message:
+	default:
+		//channel was full, send async
+		go func() {
+			WSNotify <- message
+		}()
+	}
+
 }
 
 func WSNotifyValue(msg_type string, data interface{}) {
@@ -46,13 +55,23 @@ func WSNotifyValue(msg_type string, data interface{}) {
 }
 
 func WSNotifyWildcardListeners(msg_type string, data interface{}) {
-	WSNotifyMessage(msg_type, data, false, true)
+	//slow path we have a broadcast listener, otherwise just skip altogether
+	WSMtx.Lock()
+	has_wildcard := WSHasWildcardListenerUnlocked()
+	WSMtx.Unlock()
+	if has_wildcard {
+		WSNotifyMessage(msg_type, data, false, true)
+	}
 }
 
-func WSNotifyString(msg_type string, data string) {
-	go func() {
-		WSNotify <- WSMessage{msg_type, data, true, false}
-	}()
+func WSHasWildcardListenerUnlocked() bool {
+	//use a tmp array to keep track of active clients to keep
+	for _, client := range WSClients {
+		if client.WildcardListener {
+			return true
+		}
+	}
+	return false
 }
 
 func WSRunBroadcast() {
@@ -90,7 +109,8 @@ func WSRunBroadcast() {
 		WSMtx.Unlock()
 
 		//if no WS clients got data sent, then run APNS instead
-		if clients_len == 0 {
+		// if it was not a wildcardall message
+		if clients_len == 0 && !message.WildcardAll {
 			APNSNotify(message.Type, message.Data)
 		}
 
@@ -148,10 +168,10 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, wildcard bool) {
 
 			WSClients = append(WSClients, newClient)
 			WSMtx.Unlock()
-			sprbus.Publish("auth:success", map[string]string{"type": "user", "name": pieces[0], "reason": "websocket"})
+			SprbusPublish("auth:success", map[string]string{"type": "user", "name": pieces[0], "reason": "websocket"})
 			return
 		} else {
-			sprbus.Publish("auth:failure", map[string]string{"type": "user", "name": pieces[0], "reason": "bad credentails on websocket"})
+			SprbusPublish("auth:failure", map[string]string{"type": "user", "name": pieces[0], "reason": "bad credentails on websocket"})
 		}
 	} else {
 		token := msgs
@@ -159,7 +179,7 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, wildcard bool) {
 		if goodToken {
 			if len(paths) > 0 {
 				//scoped tokens get rejected for WS
-				sprbus.Publish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": "unsupported scopes on websocket"})
+				SprbusPublish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": "unsupported scopes on websocket"})
 			} else {
 				c.WriteMessage(websocket.TextMessage, []byte("success"))
 				WSMtx.Lock()
@@ -169,11 +189,11 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, wildcard bool) {
 				}
 				WSClients = append(WSClients, newClient)
 				WSMtx.Unlock()
-				sprbus.Publish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": "websocket"})
+				SprbusPublish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": "websocket"})
 			}
 			return
 		} else {
-			sprbus.Publish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": "unknown token"})
+			SprbusPublish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": "unknown token"})
 		}
 	}
 	c.WriteMessage(websocket.TextMessage, []byte("Authentication failure"))

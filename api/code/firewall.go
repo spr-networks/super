@@ -23,10 +23,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-import (
-	"github.com/spr-networks/sprbus"
-)
-
 var FWmtx sync.Mutex
 
 type BaseRule struct {
@@ -1130,7 +1126,7 @@ func refreshDeviceTags(dev DeviceEntry) {
 		applyEndpointRules(dev)
 		FWmtx.Unlock()
 	}()
-	sprbus.Publish("device:tags:update", scrubDevice(dev))
+	SprbusPublish("device:tags:update", scrubDevice(dev))
 }
 
 func refreshDeviceGroupsAndPolicy(dev DeviceEntry) {
@@ -1182,7 +1178,7 @@ func refreshDeviceGroupsAndPolicy(dev DeviceEntry) {
 		populateVmapEntries(ipv4, dev.MAC, ifname, "")
 	}
 
-	sprbus.Publish("device:groups:update", scrubDevice(dev))
+	SprbusPublish("device:groups:update", scrubDevice(dev))
 }
 
 func applyPingRules() {
@@ -2734,7 +2730,7 @@ func notifyVpnActivity(new_vpn_peers []string, endpoints []string) {
 				RemoteEndpoint: endpoints[i],
 				Status:         "online",
 			}
-			sprbus.Publish("device:vpn:online", notification)
+			SprbusPublish("device:vpn:online", notification)
 		}
 	}
 
@@ -2747,7 +2743,7 @@ func notifyVpnActivity(new_vpn_peers []string, endpoints []string) {
 				RemoteEndpoint: gPreviousEndpoints[i],
 				Status:         "offline",
 			}
-			sprbus.Publish("device:vpn:offline", notification)
+			SprbusPublish("device:vpn:offline", notification)
 			//recommended hardening against shadow port attacks
 			//https://petsymposium.org/popets/2024/popets-2024-0070.pdf
 			clearConntrackSrcIP(peer)

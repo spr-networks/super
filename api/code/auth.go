@@ -20,7 +20,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
 	"github.com/pquerna/otp/totp"
-	"github.com/spr-networks/sprbus"
 )
 
 var AuthUsersFile = TEST_PREFIX + "/configs/auth/auth_users.json"
@@ -257,7 +256,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 				//NOTE: tokens dont check JWT OTP
 
 				if authorizedToken(r, token) {
-					sprbus.Publish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": "api"})
+					SprbusPublish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": "api"})
 					authenticatedNext.ServeHTTP(w, r)
 					return
 				} else {
@@ -280,7 +279,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 					reason = "invalid or missing JWT OTP"
 					redirect_validate = true
 				} else {
-					sprbus.Publish("auth:success", map[string]string{"type": "user", "username": username, "reason": "api"})
+					SprbusPublish("auth:success", map[string]string{"type": "user", "username": username, "reason": "api"})
 
 					authenticatedNext.ServeHTTP(w, r)
 					return
@@ -301,7 +300,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 		}
 
 		if authenticatedNext.Match(r, &matchInfo) || setupMode.Match(r, &matchInfo) {
-			sprbus.Publish("auth:failure", map[string]string{"reason": reason, "type": failType, "name": tokenName + username})
+			SprbusPublish("auth:failure", map[string]string{"reason": reason, "type": failType, "name": tokenName + username})
 
 			if redirect_validate {
 				http.Redirect(w, r, "/auth/validate", 302)
@@ -317,7 +316,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 			}
 		}
 
-		sprbus.Publish("auth:failure", map[string]string{"reason": "unknown route, no credentials", "type": failType, "name": tokenName + username})
+		SprbusPublish("auth:failure", map[string]string{"reason": "unknown route, no credentials", "type": failType, "name": tokenName + username})
 		if redirect_validate {
 			http.Redirect(w, r, "/auth/validate", 302)
 		} else {

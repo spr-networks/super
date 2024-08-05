@@ -8,6 +8,9 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/net/icmp"
+	"golang.org/x/net/ipv4"
+	"syscall"
 	"io/ioutil"
 	"math/big"
 	"net"
@@ -898,24 +901,55 @@ func pingTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	network := "ip4:icmp"
-	if ipAddr.IP.To4() == nil {
-		network = "ip6:ipv6-icmp"
-	}
 
 	result := []string{}
 
 	for i := 0; i < 4; i++ {
 		start := time.Now()
 
-		conn, err := net.ListenPacket(network, ief.Name)
+		fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_ICMP)
 		if err != nil {
-			http.Error(w, "Failed to listen on interface", 400)
+			http.Error(w, "Error creating raw socket: %v\n", 400)
+			return
+		}
+		defer syscall.Close(fd)
+
+		if err := syscall.BindToDevice(fd, ief.Name); err != nil {
+			http.Error(w, "Error binding to interface", 400)
+			return
+		}
+
+		f := os.NewFile(uintptr(fd), "")
+		conn, err := net.FilePacketConn(f)
+		if err != nil {
+			http.Error(w, "Error creating ICMP connection", 400)
 			return
 		}
 		defer conn.Close()
 
-		_, err = conn.WriteTo([]byte{}, ipAddr)
+		err = syscall.BindToDevice(fd, ief.Name)
+		if err != nil {
+			http.Error(w, "Failed to listen on interface", 400)
+			return
+		}
+
+		msg := icmp.Message{
+			Type: ipv4.ICMPTypeEcho,
+			Code: 0,
+			Body: &icmp.Echo{
+				ID:   1,
+				Seq:  i,
+				Data: []byte("HELLO"),
+			},
+		}
+
+		msgBytes, err := msg.Marshal(nil)
+		if err != nil {
+			http.Error(w, "Failed to marshal ping", 400)
+			return
+		}
+
+		_, err = conn.WriteTo(msgBytes, ipAddr)
 		if err != nil {
 			continue
 		}

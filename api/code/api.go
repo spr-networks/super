@@ -56,6 +56,8 @@ var SuperdSocketPath = TEST_PREFIX + "/state/plugins/superd/socket"
 // NOTE .Fire will dial, print to stdout/stderr if sprbus not started
 var log = sprbus.NewLog("log:api")
 
+var gSprbusClient *sprbus.Client
+
 type InfluxConfig struct {
 	URL    string
 	Org    string
@@ -289,7 +291,7 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 
 		go func() {
 			defer stdin.Close()
-			io.WriteString(stdin, string(output))
+			io.WriteString(stdin, strings.Replace(string(output), "0 user,", "0 users,", 1))
 		}()
 
 		data, err = cmd.Output()
@@ -1162,7 +1164,7 @@ func saveDevicesJson(devices map[string]DeviceEntry) {
 	scrubbed_devices := convertDevicesPublic(devices)
 	savePublicDevicesJson(scrubbed_devices)
 
-	sprbus.Publish("devices:save", scrubbed_devices)
+	SprbusPublish("devices:save", scrubbed_devices)
 }
 
 func getDevicesJson() map[string]DeviceEntry {
@@ -1325,7 +1327,6 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 			lastTime, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", entry.DHCPLastTime)
 			if err != nil {
 				// Handle error
-				log.Printf("Error parsing time: %v", err)
 				return
 			}
 
@@ -1410,7 +1411,7 @@ func deleteDeviceLocked(devices map[string]DeviceEntry, identity string) {
 	}
 
 	//notify the bus
-	sprbus.Publish("device:delete", scrubDevice(val))
+	SprbusPublish("device:delete", scrubDevice(val))
 
 }
 
@@ -1648,7 +1649,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 			val.PSKEntry.Psk = "**"
 		}
 
-		sprbus.Publish("device:update", scrubDevice(val))
+		SprbusPublish("device:update", scrubDevice(val))
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(val)
@@ -1706,7 +1707,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	devices[identity] = dev
 	saveDevicesJson(devices)
 
-	sprbus.Publish("device:save", scrubDevice(dev))
+	SprbusPublish("device:save", scrubDevice(dev))
 
 	if pskModified {
 		//psks updated -- update hostapd
@@ -2152,7 +2153,7 @@ func reportPSKAuthFailure(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sprbus.Publish("wifi:auth:fail", pskf)
+	SprbusPublish("wifi:auth:fail", pskf)
 
 	if pskf.MAC == "" || (pskf.Type != "sae" && pskf.Type != "wpa") || (pskf.Reason != "noentry" && pskf.Reason != "mismatch") {
 		http.Error(w, "malformed data", 400)
@@ -2177,7 +2178,7 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sprbus.Publish("wifi:auth:success", pska)
+	SprbusPublish("wifi:auth:success", pska)
 
 	if pska.Iface == "" || pska.Event != "AP-STA-CONNECTED" || pska.MAC == "" {
 		http.Error(w, "malformed data", 400)
@@ -2243,7 +2244,7 @@ func reportDisconnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sprbus.Publish("wifi:station:disconnect", event)
+	SprbusPublish("wifi:station:disconnect", event)
 
 	if event.Iface == "" || event.Event != "AP-STA-DISCONNECTED" || event.MAC == "" {
 		http.Error(w, "malformed data", 400)
@@ -2708,13 +2709,25 @@ func logRequest(handler http.Handler) http.Handler {
 		logs["remoteaddr"] = r.RemoteAddr
 		logs["method"] = r.Method
 		logs["path"] = r.URL.Path
-		sprbus.Publish("log:www:access", logs)
+		SprbusPublish("log:www:access", logs)
 
 		handler.ServeHTTP(w, r)
 	})
 }
 
 var ServerEventSock = TEST_PREFIX + "/state/api/eventbus.sock"
+
+// SprbusPublish() using default socket, make sure bytes are json
+func SprbusPublish(topic string, bytes interface{}) error {
+	value, err := json.Marshal(bytes)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = gSprbusClient.Publish(topic, string(value))
+	return err
+}
 
 func startEventBus() {
 	// make sure the client dont connect to the prev socket
@@ -2730,6 +2743,16 @@ func startEventBus() {
 	// not reached
 }
 
+func registerEventClient() {
+	//tbd, sprbus needs an update to allow Publish from server
+	// as pub/service are private and theres no method.
+	client, err := sprbus.NewClient(ServerEventSock)
+	if err != nil {
+		log.Fatal(err)
+	}
+	gSprbusClient = client
+}
+
 func main() {
 
 	//update auth API
@@ -2743,6 +2766,7 @@ func main() {
 
 	// start eventbus
 	go startEventBus()
+	registerEventClient()
 
 	unix_dhcpd_router := mux.NewRouter().StrictSlash(true)
 	unix_wifid_router := mux.NewRouter().StrictSlash(true)
@@ -2772,7 +2796,7 @@ func main() {
 	external_router_setup.HandleFunc("/hostapd/restart", restartWifi).Methods("PUT")
 	external_router_setup.HandleFunc("/hostapd/restart_setup", restartSetupWifi).Methods("PUT")
 
-  external_router_setup.HandleFunc("/hostapd/calcChannel", hostapdChannelCalc).Methods("PUT")
+	external_router_setup.HandleFunc("/hostapd/calcChannel", hostapdChannelCalc).Methods("PUT")
 	external_router_setup.HandleFunc("/link/config", updateLinkConfig).Methods("PUT")
 
 	external_router_setup.HandleFunc("/iw/{command:.*}", iwCommand).Methods("GET")

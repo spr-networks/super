@@ -33,6 +33,7 @@ import {
   FormControlErrorText,
   InfoIcon,
   ScrollView,
+  Spinner,
   Text,
   View,
   VStack,
@@ -51,6 +52,25 @@ const AlertError = (props) => {
     {props.alertBody && (
       <Text>{props.alertBody}</Text>
     )}
+    </>
+  )
+}
+
+const ApiLoading = (props) => {
+  return (
+    <>
+    {props.online ? (
+      <></>
+    ) : (
+      <HStack flex={1} space="sm" alignSelf="center" alignItems="center">
+        <Tooltip label={'Reload the page or reconnect to the SPR Setup AP'}>
+          <InfoIcon color="$muted400" />
+        </Tooltip>
+        <Text>API Loading...</Text>
+        <Spinner size="small"/>
+      </HStack>
+    )
+    }
     </>
   )
 }
@@ -81,6 +101,9 @@ const Setup = (props) => {
   const [alertType, setAlertType] = useState("")
   const [alertBody, setAlertBody] = useState("")
 
+  const [apiReachable, setApiReachable] = useState(false)
+  const pollingRef = useRef(null);
+
   const setupAlert = (title, body) => {
     setAlertType(title)
     setAlertBody(body)
@@ -91,6 +114,28 @@ const Setup = (props) => {
   context.danger = (title, body) => setupAlert('danger', title, body)
   context.error = (title, body) => setupAlert('error', title, body)
   context.info = (title, body) => setupAlert('info', title, body)
+
+
+  const pollApiReachable = async () => {
+    if (pollingRef.current) return;
+    pollingRef.current = true;
+
+    while (true) {
+      await wifiAPI.ipAddr().then(() => {
+        //clear errors
+        setErrors({})
+        setApiReachable(true)
+      }).catch((err) => {
+        setApiReachable(false)
+        setErrors({"submit": 'API not reachable ' + JSON.stringify(err) })
+      })
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+  }
+
+  useEffect(() => {
+    pollApiReachable()
+  })
 
 
   useEffect(() => {
@@ -356,21 +401,21 @@ const Setup = (props) => {
 
   }
 
-  const removeSetupAP = () => {
+  const removeSetupAP = (done) => {
     api.put("/setup_done")
     .then( () => {
           wifiAPI.restartSetupWifi().then(() => {
-
+            done()
           }).catch(err => {
-
+            done()
           })
     })
     .catch( (err) => {
 
       wifiAPI.restartSetupWifi().then(() => {
-
+        done()
       }).catch(err => {
-
+        done()
       })
 
     })
@@ -380,9 +425,9 @@ const Setup = (props) => {
 
   const handlePressFinish = () => {
       //send a restart wifi command to disable sprlab-setup
-      removeSetupAP()
-
-      navigate('/auth/login')
+      removeSetupAP(() => {
+        navigate("/auth/login")
+      })
   }
 
   const deviceAdded = () => {
@@ -419,6 +464,8 @@ const Setup = (props) => {
           >
             Add Your First WiFi Device
           </Heading>
+          <ApiLoading
+            online={apiReachable}/>
           {myIP != '' && (
             <HStack space="sm" alignSelf="center" alignItems="center">
               <Text flex={1} color="$muted500">
@@ -439,6 +486,7 @@ const Setup = (props) => {
             w: '$5/6'
           }}
           onPress={deviceAdded}
+          disabled={!apiReachable}
         >
           <ButtonText>Skip</ButtonText>
         </Button>
@@ -479,6 +527,8 @@ const Setup = (props) => {
           >
             Setup Finished
           </Heading>
+          <ApiLoading
+            online={apiReachable}/>
           {myIP != '' && (
             <HStack space="sm" alignSelf="center" alignItems="center">
               <Text flex={1} color="$muted500">
@@ -537,8 +587,13 @@ const Setup = (props) => {
               }
             }}
             onPress={handlePressFinish}
+            disabled={!apiReachable}
           >
-            <ButtonText>Finish</ButtonText>
+            { apiReachable ? (
+              <ButtonText>Finish</ButtonText>
+            ) : (
+              <ButtonText>Waiting for API</ButtonText>
+            )}
           </Button>
         </VStack>
         <AlertError alertBody={alertBody} />
@@ -580,6 +635,8 @@ const Setup = (props) => {
         >
           Setup
         </Heading>
+        <ApiLoading
+          online={apiReachable}/>
         {myIP != '' && (
           <HStack space="sm" alignSelf="center" alignItems="center">
             <Text flex={1} color="$muted500">
@@ -792,8 +849,13 @@ const Setup = (props) => {
                 }
               }}
               onPress={handlePress}
+              disabled={!apiReachable}
             >
-              <ButtonText>Save</ButtonText>
+              {apiReachable ? (
+                <ButtonText>Save</ButtonText>
+              ) : (
+                <ButtonText>...waiting for API</ButtonText>
+              )}
             </Button>
 
             {'submit' in errors ? (
@@ -802,6 +864,14 @@ const Setup = (props) => {
                 <Text color="$red700">{errors.submit}</Text>
               </HStack>
             ) : null}
+
+            {'api' in errors ? (
+              <HStack space="md" alignSelf="center" alignItems="center">
+                <AlertCircle color="$red700" />
+                <Text color="$red700">{errors.api}</Text>
+              </HStack>
+            ) : null}
+
           </>
         )}
       </VStack>

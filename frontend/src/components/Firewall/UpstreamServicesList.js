@@ -29,6 +29,7 @@ const UpstreamServicesList = (props) => {
   const context = useContext(AlertContext)
 
   const [list, setList] = useState([])
+  const [configSuccess, setConfigSuccess] = useState(false)
   const [tlsState, setTlsState] = useState('unknown')
 
   const refreshList = () => {
@@ -36,6 +37,7 @@ const UpstreamServicesList = (props) => {
       //setList(config.ForwardingRules)
       let flist = config.ServicePorts
       setList(flist)
+      setConfigSuccess(true)
     })
   }
 
@@ -173,10 +175,17 @@ const UpstreamServicesList = (props) => {
 
         {!list.length ? (
           <VStack>
-            <Text px={{ base: 4, md: 0 }} flexWrap="wrap">
-              No upstream services added
-            </Text>
+            { configSuccess ?  (
+              <Text px={{ base: 4, md: 0 }} flexWrap="wrap">
+                No upstream services added
+              </Text>
+            )
+              : (
+              <Text px={{ base: 4, md: 0 }} flexWrap="wrap">
 
+              </Text>
+            )
+            }
             <Button
               sx={{ '@md': { display: list.length ? 'none' : 'flex' } }}
               action="primary"
