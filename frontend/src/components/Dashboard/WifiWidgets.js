@@ -14,6 +14,7 @@ import {
   Heading,
   HStack,
   Icon,
+  Spinner,
   Text,
   VStack,
   useColorMode
@@ -89,6 +90,8 @@ export class WifiClients extends WifiClientCount {
 }
 
 
+const SetupAPName = 'sprlab-setup'
+
 const WifiWidget = ({
   title,
   text,
@@ -96,27 +99,61 @@ const WifiWidget = ({
   icon,
   iconColor,
   iconFooter,
-
+  onSetupComplete,
+  showSpinner,
   ...props
 }) => {
 
-  const finishSetup = () => {
+  const finishSetup = async () => {
+    try {
+      await api.put("/setup_done");
+    } catch (err) {
+      console.error("Error in setup_done:", err);
+    }
 
-    api.put("/setup_done")
-    .then( () => {
-          wifiAPI.restartSetupWifi().then(() => {
-          }).catch(err => {
-          })
-    })
-    .catch( (err) => {
+    try {
+      await wifiAPI.restartSetupWifi();
+    } catch (err) {
+      console.error("Error in restartSetupWifi:", err);
+    }
 
-      wifiAPI.restartSetupWifi().then(() => {
-      }).catch(err => {
-      })
+    if (onSetupComplete) {
+      onSetupComplete();
+    }
+  };
 
-    })
-
-
+  if (text === '') {
+    return (
+      <Box
+        bg={
+          useColorMode() == 'light'
+            ? '$backgroundCardLight'
+            : '$backgroundCardDark'
+        }
+        borderRadius={10}
+        {...props}
+      >
+      <HStack p="$4" justifyContent="space-between" alignItems="center">
+        <Box p="$2">
+          <Icon as={icon} size={64} color={iconColor || '$warmGray50'} />
+        </Box>
+        {props.children ? (
+          <>{props.children}</>
+        ) : (
+          <VStack space="xs">
+            <Text
+              size="lg"
+              fontWeight={300}
+              color="$muted800"
+              sx={{ _dark: { color: '$muted400' } }}
+            >
+              Setup Complete
+            </Text>
+          </VStack>
+        )}
+      </HStack>
+      </Box>
+    )
   }
 
   return (
@@ -154,7 +191,7 @@ const WifiWidget = ({
             >
               {text}
             </Text>
-            {text == 'sprlab-setup' && (
+            {showSpinner == false && text == SetupAPName && (
               <Button
                 action="secondary"
                 size="md"
@@ -163,6 +200,10 @@ const WifiWidget = ({
                 <ButtonText>Complete Setup</ButtonText>
               </Button>
             )}
+            {showSpinner == true && (
+              <Spinner size="small" />
+            )
+            }
           </VStack>
         )}
       </HStack>
@@ -186,18 +227,37 @@ const WifiWidget = ({
 export const WifiInfo = (props) => {
   const [ssid, setSsid] = useState('')
   const [channel, setChannel] = useState(0)
+  const [showSpinner, setShowSpinner] = useState(false)
 
   const colorMode = useColorMode()
 
-  useEffect(() => {
+  const getWiFiStatus = () => {
     wifiAPI
       .status(props.iface)
       .then((status) => {
         setSsid(status['ssid[0]'])
         setChannel(status['channel'])
       })
-      .catch((err) => {})
+      .catch((err) => {
+        setSsid('')
+        setChannel(0)
+        setShowSpinner(false)
+      })
+  }
+
+  useEffect(() => {
+    getWiFiStatus()
   }, [])
+
+  const pollSetupRestarted = async () => {
+    while (ssid === SetupAPName) {
+      setShowSpinner(true)
+      await new Promise(resolve => setTimeout(resolve, 5000))
+      await getWiFiStatus()
+    }
+    setShowSpinner(false)
+  }
+
 
   let title = 'AP ' + props.iface
   return (
@@ -209,6 +269,8 @@ export const WifiInfo = (props) => {
       text={ssid}
       textFooter={'Channel ' + channel}
       iconFooter={WifiIcon}
+      onSetupComplete={pollSetupRestarted}
+      showSpinner={showSpinner}
     />
   )
 }
