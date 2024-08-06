@@ -56,7 +56,7 @@ const PluginListItem = ({ item, deleteListItem, handleChange, ...props }) => {
                 size="sm"
                 onPress={() =>
                   navigate(
-                    '/admin/custom_plugin/' + encodeURIComponent(item.URI)
+                    `/admin/custom_plugin/${encodeURIComponent(item.URI)}/`
                   )
                 }
               >
