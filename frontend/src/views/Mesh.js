@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { AlertContext } from 'AppContext'
 import { copy } from 'utils'
+import { useNavigate } from 'react-router-dom'
 
 import {
   Button,
@@ -19,17 +20,17 @@ import {
   CopyIcon
 } from '@gluestack-ui/themed'
 
-import { RefreshCwIcon } from 'lucide-react-native'
-
-import api, { wifiAPI, meshAPI, authAPI } from 'api'
-import APIWifi from 'api/Wifi'
-
-import APIMesh from 'api/mesh'
-
 import ModalForm from 'components/ModalForm'
 import AddLeafRouter from 'components/Mesh/AddLeafRouter'
 import { ListHeader, ListItem } from 'components/List'
 import TokenItem from 'components/TokenItem'
+
+
+import { RefreshCwIcon } from 'lucide-react-native'
+
+import api, { wifiAPI, meshAPI, authAPI, setAuthReturn } from 'api'
+import APIWifi from 'api/Wifi'
+import APIMesh from 'api/mesh'
 
 const Mesh = (props) => {
   const [leafRouters, setLeafRouters] = useState([])
@@ -39,10 +40,11 @@ const Mesh = (props) => {
   const [ssid, setSsid] = useState('')
 
   const [mesh, setMesh] = useState({})
+  let [meshAvailable, setMeshAvailable] = useState(true)
 
   let alertContext = useContext(AlertContext)
   let refModal = useRef(null)
-  let [meshAvailable, setMeshAvailable] = useState(true)
+  const navigate = useNavigate()
 
   const catchMeshErr = (err) => {
     if (err?.message == 404 || err?.message == 502) {
@@ -283,8 +285,8 @@ const Mesh = (props) => {
       })
       .catch((e) => {
         alertContext.error('Could not list API Tokens. Verify OTP on Auth page')
-        //setAuthReturn('/admin/mesh')
-        //navigate('/auth/validate')
+        setAuthReturn('/admin/auth')
+        navigate('/auth/validate')
       })
   }
 
