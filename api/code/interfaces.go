@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
-	"syscall"
 	"io/ioutil"
 	"math/big"
 	"net"
@@ -19,6 +18,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -900,7 +900,6 @@ func pingTest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid address", 400)
 		return
 	}
-
 
 	result := []string{}
 
