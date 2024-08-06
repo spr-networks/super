@@ -73,18 +73,16 @@ const InstallPlugin = ({ ...props }) => {
       })
       .catch((err) => {
         if (err.response) {
-          err.response
-            .text()
-            .then((data) => {
-              if (data.includes('Invalid JWT')) {
-                context.error(`One Time Passcode Authentication Required, failure: ${data}`)
-              } else {
-                context.error(`Check Plugin URL: ${data}`)
-              }
+          err.response.text().then((data) => {
+            if (data.includes('Invalid JWT')) {
+              //context.error(`One Time Passcode Authentication Required, failure: ${data}`)
+              //NOTE this is catched outside of here and will show the OTP modal
+            } else {
+              context.error(`Check Plugin URL: ${data}`)
             }
-          )
+          })
         } else {
-          context.error(`API Error`, err)          
+          context.error(`API Error`, err)
         }
       })
 
