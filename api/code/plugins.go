@@ -693,6 +693,20 @@ func startExtension(composeFilePath string) bool {
 	return true
 }
 
+func restartExtension(composeFilePath string) bool {
+	if composeFilePath == "" {
+		//no-op
+		return true
+	}
+
+	_, err := superdRequest("restart", url.Values{"compose_file": {composeFilePath}}, nil)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
 func updateExtension(composeFilePath string) bool {
 	_, err := superdRequest("update", url.Values{"compose_file": {composeFilePath}}, nil)
 	if err != nil {
@@ -831,11 +845,27 @@ func startExtensionServices() error {
 				if !updateExtension(entry.ComposeFilePath) {
 					return errors.New("Could not update Extension at " + entry.ComposeFilePath)
 				}
+
+				//if it is pfw we restart for fw rules to refresh after api
+				if entry.Name == "PFW" {
+					if !restartExtension(entry.ComposeFilePath) {
+						//try a start
+						if !startExtension(entry.ComposeFilePath) {
+							return errors.New("Could not start Extension at " + entry.ComposeFilePath)
+						}
+					}
+				} else {
+					if !startExtension(entry.ComposeFilePath) {
+						return errors.New("Could not start Extension at " + entry.ComposeFilePath)
+					}
+				}
+
+			} else {
+				if !startExtension(entry.ComposeFilePath) {
+					return errors.New("Could not start Extension at " + entry.ComposeFilePath)
+				}
 			}
 
-			if !startExtension(entry.ComposeFilePath) {
-				return errors.New("Could not start Extension at " + entry.ComposeFilePath)
-			}
 		}
 	}
 	return nil
