@@ -2981,22 +2981,7 @@ func main() {
 		panic(err)
 	}
 
-	// publish static files for plugins before spa handler
-	PluginRoutes(external_router_authenticated, external_router_public)
-
-	spa := spaHandler{staticPath: "/ui", indexPath: "index.html"}
-	external_router_public.PathPrefix("/").Handler(spa)
-
-	wifidServer := http.Server{Handler: logRequest(unix_wifid_router)}
-	dhcpdServer := http.Server{Handler: logRequest(unix_dhcpd_router)}
-	wireguardServer := http.Server{Handler: logRequest(unix_wireguard_router)}
-
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "SPR-Bearer", "X-JWT-OTP"})
-	originsOk := handlers.AllowedOrigins([]string{"*"})
-	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
-
 	initAuth()
-
 	//set up dhcp
 	initDHCP()
 	//initialize firewall rules
@@ -3015,6 +3000,20 @@ func main() {
 
 	// updates when enabled. not implemented yet
 	go runAutoUpdates()
+
+	// publish static files for plugins before spa handler
+	PluginRoutes(external_router_authenticated, external_router_public)
+
+	spa := spaHandler{staticPath: "/ui", indexPath: "index.html"}
+	external_router_public.PathPrefix("/").Handler(spa)
+
+	wifidServer := http.Server{Handler: logRequest(unix_wifid_router)}
+	dhcpdServer := http.Server{Handler: logRequest(unix_dhcpd_router)}
+	wireguardServer := http.Server{Handler: logRequest(unix_wireguard_router)}
+
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "SPR-Bearer", "X-JWT-OTP"})
+	originsOk := handlers.AllowedOrigins([]string{"*"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
 	sslPort, runSSL := os.LookupEnv("API_SSL_PORT")
 
