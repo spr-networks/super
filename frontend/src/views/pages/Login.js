@@ -133,7 +133,7 @@ const Login = (props) => {
         '@md': {
           h: 'auto',
           w: '$1/4',
-          mt: '$0',
+          mt: '8vh',
           alignSelf: 'center',
           rounded: 10
         }

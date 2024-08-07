@@ -26,7 +26,7 @@ const AuthValidate = (props) => {
       py="$8"
       sx={{
         '@base': { w: '$full', mt: '$1/4' },
-        '@md': { w: '$1/4', mt: '$0', alignSelf: 'center', rounded: 10 },
+        '@md': { w: '$1/4', mt: '8vh', alignSelf: 'center', rounded: 10 },
         _dark: {
           bg: '$blueGray900'
         }
