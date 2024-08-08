@@ -93,7 +93,6 @@ const Home = (props) => {
   }, [])
 
   useEffect(() => {
-    //if null || false
     AsyncStorage.getItem('intro-done')
       .then((res) => {
         //set to true when clicked
