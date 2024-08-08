@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { api, wifiAPI, firewallAPI, saveLogin } from 'api'
+import { api, wifiAPI, saveLogin } from 'api'
 import {
   generateCapabilitiesString,
   generateConfigForBand,
@@ -11,7 +11,6 @@ import { useNavigate } from 'react-router-dom'
 import AddDevice from 'components/Devices/AddDevice'
 import { countryCodes } from 'utils'
 import { Tooltip } from 'components/Tooltip'
-import FirewallSettings from 'views/Firewall/FirewallSettings'
 
 import {
   Button,
@@ -611,8 +610,6 @@ const Setup = (props) => {
               </Text>
             </Link>
           </HStack>
-
-          {/*<FirewallSettings />*/}
 
           <Button
             mt="$4"
