@@ -319,7 +319,7 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 
 			//if a GitURL is set, ensure OTP authentication for 'admin'
 			if !plugin.Plus && plugin.GitURL != "" {
-				if hasValidJwtOtpHeader("admin", r) {
+				if !hasValidJwtOtpHeader("admin", r) {
 					http.Error(w, "OTP Token invalid for Remote Install", 400)
 					return
 				}
