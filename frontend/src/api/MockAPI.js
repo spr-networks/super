@@ -1881,6 +1881,7 @@ export default function MockAPI() {
           per_sta_vif: 1,
           preamble: 1,
           rsn_pairwise: 'CCMP',
+          sae_pwe: 2,
           sae_psk_file: '/configs/wifi/sae_passwords',
           ssid: 'TestLab',
           vht_capab:
