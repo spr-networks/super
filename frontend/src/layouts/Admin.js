@@ -360,11 +360,14 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       .then((res) => {
         setFeatures([...res])
         setIsWifiDisabled(!res.includes('wifi'))
-
         meshAPI
           .leafMode()
-          .then((res) => setIsMeshNode(JSON.parse(res) === true))
-          .catch((err) => {})
+          .then((res) => {
+            setIsMeshNode(JSON.parse(res) === true)
+          })
+          .catch((err) => {
+            console.log(err)
+          })
       })
       .catch((err) => {
         setIsWifiDisabled(true)

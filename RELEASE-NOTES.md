@@ -1,7 +1,13 @@
 # Secure Programmable Router (SPR) Release Notes
 
-## v0.3.15
+## v0.3.16
+Fixes
+* Security fix for OTP bypass on plugin update
+* Clean up Plugin URI route
+* Fix PFW Abort
+* Clean up OTP handling 
 
+## v0.3.15
 Fixes
 * Address APNS memory consumption bug 
 * Ping API call was broken 

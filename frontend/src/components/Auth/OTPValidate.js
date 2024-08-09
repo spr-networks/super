@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
+import { useNavigate } from 'react-router-dom'
+
 import { authAPI, setJWTOTPHeader } from 'api'
 
 import {
@@ -12,11 +14,14 @@ import {
   FormControlErrorText,
   Input,
   InputField,
+  Text,
   VStack
 } from '@gluestack-ui/themed'
 
 const OTPValidate = ({ onSuccess, ...props }) => {
+  const navigate = useNavigate()
   const [code, setCode] = useState('')
+  const [status, setStatus] = useState('')
   const [errors, setErrors] = useState({})
 
   const otp = (e) => {
@@ -38,10 +43,34 @@ const OTPValidate = ({ onSuccess, ...props }) => {
   }
 
   useEffect(() => {
+    authAPI
+      .statusOTP()
+      .then((res) => {
+        setStatus(res.State)
+      })
+      .catch((err) => {})
+
     if (!code.length) {
       setErrors({})
     }
   }, [code])
+
+  if (status == 'unregistered') {
+    return (
+      <VStack space="md">
+        <Text>Need to setup OTP auth for this feature</Text>
+        <Button
+          variant="outline"
+          onPress={() => {
+            navigate('/admin/auth')
+            onSuccess() // only to close the modal
+          }}
+        >
+          <ButtonText>Setup OTP</ButtonText>
+        </Button>
+      </VStack>
+    )
+  }
 
   return (
     <VStack space="md">

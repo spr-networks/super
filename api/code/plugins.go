@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -42,6 +43,20 @@ type PluginConfig struct {
 	SandboxedUI      bool
 	InstallTokenPath string
 	ScopedPaths      []string
+}
+
+func (p PluginConfig) MatchesData(q PluginConfig) bool {
+	//compare all but Enabled.
+	return p.Name == q.Name &&
+		p.URI == q.URI &&
+		p.UnixPath == q.UnixPath &&
+		p.Plus == q.Plus &&
+		p.GitURL == q.GitURL &&
+		p.ComposeFilePath == q.ComposeFilePath &&
+		p.HasUI == q.HasUI &&
+		p.SandboxedUI == q.SandboxedUI &&
+		p.InstallTokenPath == q.InstallTokenPath &&
+		slices.Compare(p.ScopedPaths, q.ScopedPaths) == 0
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
@@ -302,10 +317,13 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 			found := false
 			idx := -1
 			oldComposeFilePath := plugin.ComposeFilePath
+			currentPlugin := PluginConfig{}
+
 			for idx_, entry := range config.Plugins {
 				idx = idx_
 				if entry.Name == name || entry.Name == plugin.Name {
 					found = true
+					currentPlugin = entry
 					oldComposeFilePath = entry.ComposeFilePath
 					break
 				}
@@ -319,16 +337,28 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 
 			//if a GitURL is set, ensure OTP authentication for 'admin'
 			if !plugin.Plus && plugin.GitURL != "" {
-				if hasValidJwtOtpHeader("admin", r) {
-					http.Error(w, "OTP Token invalid for Remote Install", 400)
+
+				check_otp := true
+				if found {
+					if currentPlugin.MatchesData(plugin) {
+						//for on/off with Enabled state don't need to validate the otp
+						check_otp = false
+					}
+				}
+
+				if check_otp && !hasValidJwtOtpHeader("admin", r) {
+					http.Redirect(w, r, "/auth/validate", 302)
 					return
 				}
 
-				//clone but don't auto-config.
-				ret := downloadUserExtension(plugin.GitURL, false)
-				if ret == false {
-					fmt.Println("Failed to download extension " + plugin.GitURL)
-					// fall thru, dont fail
+				//download new plugins
+				if !found {
+					//clone but don't auto-config.
+					ret := downloadUserExtension(plugin.GitURL, false)
+					if ret == false {
+						fmt.Println("Failed to download extension " + plugin.GitURL)
+						// fall thru, dont fail
+					}
 				}
 			}
 
@@ -693,6 +723,20 @@ func startExtension(composeFilePath string) bool {
 	return true
 }
 
+func restartExtension(composeFilePath string) bool {
+	if composeFilePath == "" {
+		//no-op
+		return true
+	}
+
+	_, err := superdRequest("restart", url.Values{"compose_file": {composeFilePath}}, nil)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
 func updateExtension(composeFilePath string) bool {
 	_, err := superdRequest("update", url.Values{"compose_file": {composeFilePath}}, nil)
 	if err != nil {
@@ -831,11 +875,27 @@ func startExtensionServices() error {
 				if !updateExtension(entry.ComposeFilePath) {
 					return errors.New("Could not update Extension at " + entry.ComposeFilePath)
 				}
+
+				//if it is pfw we restart for fw rules to refresh after api
+				if entry.Name == "PFW" {
+					if !restartExtension(entry.ComposeFilePath) {
+						//try a start
+						if !startExtension(entry.ComposeFilePath) {
+							return errors.New("Could not start Extension at " + entry.ComposeFilePath)
+						}
+					}
+				} else {
+					if !startExtension(entry.ComposeFilePath) {
+						return errors.New("Could not start Extension at " + entry.ComposeFilePath)
+					}
+				}
+
+			} else {
+				if !startExtension(entry.ComposeFilePath) {
+					return errors.New("Could not start Extension at " + entry.ComposeFilePath)
+				}
 			}
 
-			if !startExtension(entry.ComposeFilePath) {
-				return errors.New("Could not start Extension at " + entry.ComposeFilePath)
-			}
 		}
 	}
 	return nil

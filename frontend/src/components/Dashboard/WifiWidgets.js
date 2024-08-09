@@ -147,7 +147,7 @@ const WifiWidget = ({
               color="$muted800"
               sx={{ _dark: { color: '$muted400' } }}
             >
-              Setup Complete
+              
             </Text>
           </VStack>
         )}

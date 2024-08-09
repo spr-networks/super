@@ -89,6 +89,10 @@ const Wireguard = (props) => {
   }
 
   const updateNewDomain = () => {
+    if (!pendingEndpoint.length) {
+      return context.error('Missing endpoint domain')
+    }
+
     let s = endpoints ? endpoints.concat(pendingEndpoint) : [pendingEndpoint]
     setPendingEndpoint('')
     setShowInput(false)

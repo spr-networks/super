@@ -44,6 +44,7 @@ var DevicesPublicConfigFile = TEST_PREFIX + "/state/public/devices-public.json"
 var InterfacesPublicConfigFile = TEST_PREFIX + "/state/public/interfaces.json"
 var PublicIPIfaceMapFile = TEST_PREFIX + "/state/public/ip-iface-map.json"
 var MulticastConfigFile = TEST_PREFIX + "/configs/base/multicast.json"
+var SetupDoneFile = TEST_PREFIX + "/configs/base/.setup_done"
 
 type MulticastAddress struct {
 	Address  string //address:port pair
@@ -461,6 +462,16 @@ func mdnsPublish(settings MulticastSettings) {
 
 	if !wanif_covered {
 		mdnsPublishIface(settings, wanif)
+	}
+
+	_, err = os.Stat(SetupDoneFile)
+	if err != nil {
+		//in setup mode, start publishing over wlan0
+		data, err := ioutil.ReadFile(DevicesPublicConfigFile)
+		if err == nil && (strings.Contains(string(data), "Raspberry Pi 4") ||
+			strings.Contains(string(data), "Raspberry Pi 5")) {
+			mdnsPublishIface(settings, "wlan0")
+		}
 	}
 
 	select {}
