@@ -21,6 +21,7 @@ import (
 
 import (
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 )
 
 var PlusUser = "lts-super-plus"
@@ -374,6 +375,11 @@ func PluginRoutes(external_router_authenticated *mux.Router, external_router_pub
 			//static files are available at /admin/custom_plugin/xyz/static/css|js/ to match the react url
 
 			external_router_public.HandleFunc("/admin/custom_plugin/"+entry.URI+"/static/"+"{rest:.*}", PluginRequestHandlerPublic(proxy))
+
+			//create a ws proxy handler
+			// for future consideration
+			//external_router_public.HandleFunc("/admin/custom_plugin/ws/"+entry.URI+"/"+"{rest:.*}", WebSocketPluginHandler(entry))
+
 		}
 	}
 
@@ -1157,4 +1163,66 @@ func installUserPluginConfig(plugin PluginConfig) bool {
 
 	SprbusPublish("plugin:install:status", map[string]string{"GitURL": plugin.GitURL, "Reason": "Added to compose whitelist"})
 	return true
+}
+
+// for future consideration
+func WebSocketPluginHandler(config PluginConfig) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		// Perform the WebSocket upgrade
+		var upgrader = websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+			CheckOrigin:     func(r *http.Request) bool { return true },
+		}
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer c.Close()
+
+		//for the plugin proxy, we dont check otp
+		if !authWebsocket(r, c, true) {
+			return
+		}
+
+		rest := mux.Vars(r)["rest"]
+		targetURL := "ws://127.0.0.1/" + rest
+
+		dialer := websocket.Dialer{
+			NetDial: func(network, addr string) (net.Conn, error) {
+				return net.Dial("unix", config.UnixPath)
+			},
+		}
+
+		// Perform the WebSocket handshake with the target
+		targetConn, _, err := dialer.Dial(targetURL, nil)
+		if err != nil {
+			c.WriteMessage(websocket.TextMessage, []byte("Failed to connect to plugin"))
+			return
+		}
+		defer targetConn.Close()
+
+		// Start proxying WebSocket messages
+		errc := make(chan error, 2)
+		go proxyWebSocket(targetConn, c, errc)
+		go proxyWebSocket(c, targetConn, errc)
+		<-errc
+	}
+}
+
+func proxyWebSocket(dst, src *websocket.Conn, errc chan error) {
+	for {
+		messageType, p, err := src.ReadMessage()
+		if err != nil {
+			errc <- err
+			return
+		}
+		err = dst.WriteMessage(messageType, p)
+		if err != nil {
+			errc <- err
+			return
+		}
+	}
 }

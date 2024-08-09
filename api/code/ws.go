@@ -121,6 +121,60 @@ func WSRunNotify() {
 	go WSRunBroadcast()
 }
 
+func authWebsocket(r *http.Request, c *websocket.Conn, OtpOff bool) bool {
+	//wait for authentication information
+	mt, msg, err := c.ReadMessage()
+	if err != nil {
+		fmt.Println("Invalid auth packet")
+		c.Close()
+		return false
+	}
+
+	if mt != websocket.TextMessage {
+		fmt.Println("Invalid auth message type")
+		c.Close()
+		return false
+	}
+
+	msgs := string(msg)
+	if strings.Index(msgs, ":") != -1 {
+		pieces := strings.SplitN(msgs, ":", 3)
+		if len(pieces) > 1 && authenticateUser(pieces[0], pieces[1]) {
+			if !OtpOff && shouldCheckOTPJWT(r, pieces[0]) {
+				if len(pieces) != 3 || !validateJwt(pieces[0], pieces[2]) {
+					//tell WS it a JWT was needed
+					c.WriteMessage(websocket.TextMessage, []byte("Invalid JWT OTP"))
+					c.Close()
+					return false
+				}
+			}
+			c.WriteMessage(websocket.TextMessage, []byte("success"))
+			SprbusPublish("auth:success", map[string]string{"type": "user", "name": pieces[0], "reason": "websocket"})
+			return true
+		} else {
+			SprbusPublish("auth:failure", map[string]string{"type": "user", "name": pieces[0], "reason": "bad credentails on websocket"})
+		}
+	} else {
+		token := msgs
+		goodToken, tokenName, paths := authenticateToken(token)
+		if goodToken {
+			if len(paths) > 0 {
+				//scoped tokens get rejected for WS
+				SprbusPublish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": "unsupported scopes on websocket"})
+			} else {
+				c.WriteMessage(websocket.TextMessage, []byte("success"))
+				SprbusPublish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": "websocket"})
+				return true
+			}
+		} else {
+			SprbusPublish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": "unknown token"})
+		}
+	}
+	c.WriteMessage(websocket.TextMessage, []byte("Authentication failure"))
+	c.Close()
+	return false
+}
+
 func handleWebsocket(w http.ResponseWriter, r *http.Request, wildcard bool) {
 
 	var upgrader = websocket.Upgrader{
@@ -135,69 +189,18 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, wildcard bool) {
 		return
 	}
 
-	//wait for authentication information
-	mt, msg, err := c.ReadMessage()
-	if err != nil {
-		fmt.Println("Invalid auth packet")
-		return
-	}
-	if mt != websocket.TextMessage {
-		fmt.Println("Invalid auth message type")
-		return
-	}
+	if authWebsocket(r, c, false) == true {
+		WSMtx.Lock()
 
-	msgs := string(msg)
-	if strings.Index(msgs, ":") != -1 {
-		pieces := strings.SplitN(msgs, ":", 3)
-		if len(pieces) > 1 && authenticateUser(pieces[0], pieces[1]) {
-			if shouldCheckOTPJWT(r, pieces[0]) {
-				if len(pieces) != 3 || !validateJwt(pieces[0], pieces[2]) {
-					//tell WS it a JWT was needed
-					c.WriteMessage(websocket.TextMessage, []byte("Invalid JWT OTP"))
-					c.Close()
-					return
-				}
-			}
-			c.WriteMessage(websocket.TextMessage, []byte("success"))
-			WSMtx.Lock()
-
-			newClient := &WSClient{
-				Conn:             c,
-				WildcardListener: wildcard,
-			}
-
-			WSClients = append(WSClients, newClient)
-			WSMtx.Unlock()
-			SprbusPublish("auth:success", map[string]string{"type": "user", "name": pieces[0], "reason": "websocket"})
-			return
-		} else {
-			SprbusPublish("auth:failure", map[string]string{"type": "user", "name": pieces[0], "reason": "bad credentails on websocket"})
+		newClient := &WSClient{
+			Conn:             c,
+			WildcardListener: wildcard,
 		}
-	} else {
-		token := msgs
-		goodToken, tokenName, paths := authenticateToken(token)
-		if goodToken {
-			if len(paths) > 0 {
-				//scoped tokens get rejected for WS
-				SprbusPublish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": "unsupported scopes on websocket"})
-			} else {
-				c.WriteMessage(websocket.TextMessage, []byte("success"))
-				WSMtx.Lock()
-				newClient := &WSClient{
-					Conn:             c,
-					WildcardListener: wildcard,
-				}
-				WSClients = append(WSClients, newClient)
-				WSMtx.Unlock()
-				SprbusPublish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": "websocket"})
-			}
-			return
-		} else {
-			SprbusPublish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": "unknown token"})
-		}
+
+		WSClients = append(WSClients, newClient)
+		WSMtx.Unlock()
 	}
-	c.WriteMessage(websocket.TextMessage, []byte("Authentication failure"))
-	c.Close()
+
 }
 
 func webSocket(w http.ResponseWriter, r *http.Request) {
