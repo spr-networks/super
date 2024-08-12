@@ -32,30 +32,35 @@ const WifiConnect = (props) => {
         .then((ifaces) => {
           Promise.all(
             ifaces.map((iface) => {
-              return wifiAPI.status(iface).then((status) => {
-                return status['ssid[0]'];
-              }).catch((e) => {});
+              return wifiAPI
+                .status(iface)
+                .then((status) => {
+                  return status['ssid[0]']
+                })
+                .catch((e) => {})
             })
           ).then((ssids) => {
-            let x = ssids.filter(x => x !== 'sprlab-setup' && x != '' && x != null);
-            setSsids(x);
+            let x = ssids.filter(
+              (x) => x !== 'sprlab-setup' && x != '' && x != null
+            )
+            setSsids(x)
             if (x.length === 0) {
-              setTimeout(fetchSSIDs, 2000);
+              setTimeout(fetchSSIDs, 2000)
             } else {
               setError(null)
             }
-          });
+          })
         })
         .catch((err) => {
-          setTimeout(fetchSSIDs, 2000);
+          setTimeout(fetchSSIDs, 2000)
           context.error(
             'Failed to add device or configured properly -- check wifid, or reset wifi settings'
-          );
-        });
-    };
+          )
+        })
+    }
 
-    fetchSSIDs();
-  }, []);
+    fetchSSIDs()
+  }, [])
 
   const checkPendingStatus = () => {
     deviceAPI
@@ -75,7 +80,7 @@ const WifiConnect = (props) => {
 
   const goBack = () => {
     //override goBack to go back success
-    if (success && props.goBackSuccess)  {
+    if (success && props.goBackSuccess) {
       props.goBackSuccess()
     }
     if (props.goBack) {
@@ -96,7 +101,8 @@ const WifiConnect = (props) => {
       {ssids.length == 0 && (
         <VStack key="loading" space="md" alignItems="center">
           <Text size="lg" color="$muted500">
-            Waiting for SPR... (You may need to reconnect to sprlab-setup for wifi setup)
+            Waiting for SPR... (You may need to reconnect to sprlab-setup for
+            wifi setup)
           </Text>
         </VStack>
       )}
@@ -169,7 +175,7 @@ const WiredConnect = (props) => {
 
   const goBack = () => {
     //override goBack to go back success
-    if (success && props.goBackSuccess)  {
+    if (success && props.goBackSuccess) {
       props.goBackSuccess()
     }
     if (props.goBack) {
@@ -240,7 +246,6 @@ const WiredConnect = (props) => {
           </>
         )}
 
-
         <Button w="$1/3" action="secondary" variant="solid" onPress={goBack}>
           <ButtonIcon as={ArrowLeftIcon} />
           <ButtonText>Back</ButtonText>
@@ -250,4 +255,4 @@ const WiredConnect = (props) => {
   )
 }
 
-export {WifiConnect, WiredConnect}
+export { WifiConnect, WiredConnect }
