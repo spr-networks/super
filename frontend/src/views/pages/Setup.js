@@ -8,7 +8,7 @@ import {
   isSPRCompat
 } from 'api/Wifi'
 import { useNavigate } from 'react-router-dom'
-import AddDevice from 'components/Devices/AddDevice'
+import AddDevice from 'components/Setup/AddDevice'
 import { countryCodes } from 'utils'
 import { Tooltip } from 'components/Tooltip'
 
@@ -41,7 +41,8 @@ import {
   VStack,
   useColorMode,
   Badge,
-  BadgeText
+  BadgeText,
+  BadgeIcon
 } from '@gluestack-ui/themed'
 
 import { Select } from 'components/Select'
@@ -50,7 +51,8 @@ import { AlertContext } from 'AppContext'
 import {
   AlertCircle,
   BookOpenTextIcon,
-  KeyRoundIcon
+  KeyRoundIcon,
+  WifiIcon
 } from 'lucide-react-native'
 
 const AlertError = (props) => {
@@ -129,6 +131,8 @@ const Setup = (props) => {
   const [alertBody, setAlertBody] = useState('')
 
   const [apiReachable, setApiReachable] = useState(false)
+  const [ssidUp, setSsidUp] = useState(false)
+
   const pollingRef = useRef(null)
 
   const setupAlert = (title, body) => {
@@ -142,29 +146,60 @@ const Setup = (props) => {
   context.error = (title, body) => setupAlert('error', title, body)
   context.info = (title, body) => setupAlert('info', title, body)
 
-  const pollApiReachable = async () => {
-    if (pollingRef.current) return
-    pollingRef.current = true
+  const pollApi = async () => {
+    try {
+      await wifiAPI.ipAddr()
+      setApiReachable(true)
+      setErrors({})
 
-    while (true) {
-      try {
-        await wifiAPI.ipAddr()
-        setApiReachable(true)
-        setErrors({})
+      //check if ap is up
+      if (setupStage == 1) {
+        clearInterval(pollingRef?.current)
+      } else if (setupStage == 2) {
+        const ifaces = await wifiAPI.interfaces('AP') // should be one
+        for (let iface of ifaces) {
+          const status = await wifiAPI.status(iface)
+          const _ssid = status['ssid[0]']
+          if (_ssid == ssid) {
+            setSsidUp(true)
 
-        break //TODO setInterval
-      } catch (err) {
-        setApiReachable(false)
-        setErrors({ ...errors, submit: 'API not reachable' })
+            clearInterval(pollingRef?.current)
+            break
+          }
+        }
+      } else {
+        //TODO 3 == call /setup_done once
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      return
+    } catch (err) {
+      setApiReachable(false)
+      setErrors({ ...errors, submit: 'API not reachable' })
     }
   }
 
+  const pollApiReachable = async () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current)
+    }
+
+    const interval = setInterval(() => {
+      pollApi()
+    }, 2 * 1e3)
+
+    pollingRef.current = interval
+
+    return interval
+  }
+
+  //call polling for each stage, stop when reachable
   useEffect(() => {
-    pollApiReachable()
-  }, [])
+    const interval = pollApiReachable()
+
+    return () => {
+      clearInterval(interval)
+    }
+  }, [setupStage])
 
   useEffect(() => {
     api
@@ -473,7 +508,7 @@ const Setup = (props) => {
 
   const colorMode = useColorMode()
 
-  const SetupHeading = ({ title, isDone, children, ...props }) => {
+  const SetupHeading = ({ title, children, ...props }) => {
     const heading = (
       <Heading
         size="lg"
@@ -488,23 +523,14 @@ const Setup = (props) => {
       </Heading>
     )
 
-    if (isDone) {
-      return heading
-    }
-
     return (
-      <HStack justifyContent="space-between">
+      <HStack
+        justifyContent="space-between"
+        borderBottomColor="$muted200"
+        borderBottomWidth={1}
+        pb="$4"
+      >
         {heading}
-
-        {(!isDone || setupStage > 1) && (
-          <>
-            {apiReachable ? (
-              <UplinkIP ip={myIP} />
-            ) : (
-              <ApiLoading online={apiReachable} />
-            )}
-          </>
-        )}
         {children}
       </HStack>
     )
@@ -520,31 +546,47 @@ const Setup = (props) => {
         <BadgeText>Uplink IP: {ip}</BadgeText>
       </Badge>
     )
+  }
 
-    /*return (
-      <HStack space="sm" alignSelf="center" alignItems="center">
-        <Text flex={1} color="$muted500">
-          Uplink IP: {ip}
-        </Text>
-      </HStack>
-    )*/
+  const SSIDInfo = ({ online, ...props }) => {
+    return (
+      <Badge
+        variant="outline"
+        action={online ? 'success' : 'muted'}
+        rounded="$md"
+      >
+        {online ? <BadgeIcon as={WifiIcon} /> : <Spinner size="small" />}
+
+        <BadgeText textTransform="none" ml="$2">
+          {online ? ssid : `Waiting for ${ssid}...`}
+        </BadgeText>
+      </Badge>
+    )
   }
 
   if (setupStage === 2) {
     return (
       <SetupScrollView>
-        <SetupHeading title="Add Your First WiFi Device" />
-        <VStack alignItems="center">
-          <AddDevice slimView={true} deviceAddedCallback={deviceAdded} />
+        <SetupHeading title="Add Your First WiFi Device">
+          <SSIDInfo online={ssidUp} ssid={ssid} />
+        </SetupHeading>
+        <VStack>
+          <Text size="md">
+            Add & connect your first device. Use your current device or a new
+            one
+          </Text>
+
+          <AddDevice deviceAddedCallback={deviceAdded} onClose={deviceAdded} />
 
           <HStack
             space="md"
             px="$4"
             pb="$4"
-            sx={{
+            _sx={{
               '@lg': { width: '$5/6' }
             }}
           >
+            {/*
             <Button
               action="secondary"
               variant="outline"
@@ -561,6 +603,22 @@ const Setup = (props) => {
                 {apiReachable ? 'Skip' : 'API not reachable'}
               </ButtonText>
             </Button>
+*/}
+
+            {/*
+
+Connecting with this device???
+Then here is the login info me friend
+
+Hook all dem skip btnzz
+
+~ so not confuse admin password with device password
+
++ Show QR & connect info
++ /setup_done
+
+=>=>=>>> SHOW AP IS RUNNING [WIFIIcon] SSID in header now
+*/}
           </HStack>
 
           <AlertError alertBody={alertBody} />
@@ -630,7 +688,6 @@ const Setup = (props) => {
             )}
           </Button>
         </VStack>
-        <AlertError alertBody={alertBody} />
       </SetupScrollView>
     )
   }
@@ -642,7 +699,7 @@ const Setup = (props) => {
   if (isDone) {
     return (
       <SetupScrollView>
-        <SetupHeading title="Setup" isDone={isDone} />
+        <SetupHeading title="Setup" />
         <HStack space="sm" alignSelf="center" alignItems="center">
           <InfoIcon color="$muted400" />
           <Text flex={1} color="$muted500">
@@ -672,7 +729,15 @@ const Setup = (props) => {
 
   return (
     <SetupScrollView>
-      <SetupHeading title="Setup" />
+      <SetupHeading title="Setup">
+        <>
+          {apiReachable ? (
+            <UplinkIP ip={myIP} />
+          ) : (
+            <ApiLoading online={apiReachable} />
+          )}
+        </>
+      </SetupHeading>
 
       <>
         {/*NOTE Safari will autofill as contact if using Name in label and/or placeholder*/}

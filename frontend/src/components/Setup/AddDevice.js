@@ -1,0 +1,266 @@
+import React, { useContext, useState } from 'react'
+
+import { deviceAPI } from 'api'
+import { AlertContext } from 'layouts/Admin'
+import { WifiConnect, WiredConnect } from 'views/Devices/ConnectDevice'
+
+import {
+  Box,
+  Button,
+  ButtonText,
+  FormControl,
+  FormControlLabel,
+  FormControlLabelText,
+  FormControlHelper,
+  FormControlHelperText,
+  FormControlError,
+  FormControlErrorIcon,
+  FormControlErrorText,
+  HStack,
+  Input,
+  InputField,
+  RadioGroup,
+  Radio,
+  RadioIndicator,
+  RadioIcon,
+  RadioLabel,
+  VStack,
+  AlertCircleIcon,
+  CircleIcon
+} from '@gluestack-ui/themed'
+import { AppContext } from 'AppContext'
+
+const AddDevice = ({ onClose, ...props }) => {
+  const context = useContext(AlertContext)
+  const appContext = useContext(AppContext)
+
+  const [name, setName] = useState('adminDevice')
+  const [policies, setPolicies] = useState(['dns', 'wan', 'lan'])
+  const [wpa, setWpa] = useState('sae')
+  const [psk, setPsk] = useState('')
+  const [device, setDevice] = useState({})
+  const [submitted, setSubmitted] = useState(false)
+  const [errors, setErrors] = useState({})
+
+  const validatePassphrase = (value) => {
+    if (value == '' || value.length >= 8) {
+      return true
+    }
+
+    return false
+  }
+
+  const handleChange = (name, value) => {
+    if (name == 'name') {
+      setName(value)
+
+      if (value.length < 1) {
+        return setErrors({ ...errors, name: 'invalid name' })
+      }
+    }
+
+    if (name == 'psk') {
+      if (!validatePassphrase(value)) {
+        return setErrors({ ...errors, psk: 'invalid passphrase' })
+      }
+
+      setPsk(value)
+    }
+
+    if (name == 'wpa') {
+      setWpa(value)
+    }
+
+    setErrors({})
+  }
+
+  const handleSubmit = () => {
+    if (Object.keys(errors).length) {
+      return context.error('Invalid fields: ' + Object.keys(errors).join(','))
+    }
+
+    let data = {
+      MAC: 'pending',
+      Name: name,
+      Policies: policies,
+      Groups: [],
+      DeviceTags: [],
+      PSKEntry: {
+        Psk: psk,
+        Type: wpa
+      }
+    }
+
+    //now submit to the API
+    deviceAPI
+      .update(data)
+      .then((device) => {
+        if (psk.length) {
+          device.PSKEntry.Psk = psk
+        } else {
+          setPsk(device.PSKEntry.Psk)
+        }
+
+        setDevice(device)
+        setSubmitted(true)
+      })
+      .catch((error) => {
+        context.error(`Failed to add device, already added?`)
+      })
+  }
+
+  /*return (
+    <WifiConnect
+      device={{ PSKEntry: { Type: 'sae', Psk: 'dopesho' } }}
+      goBackSuccess={props.deviceAddedCallback}
+      goBack={() => setSubmitted(false)}
+    />
+  )*/
+
+  if (submitted) {
+    if (wpa != 'none') {
+      return (
+        <WifiConnect
+          device={device}
+          goBackSuccess={props.deviceAddedCallback}
+          goBack={() => setSubmitted(false)}
+        />
+      )
+    } else {
+      return (
+        <WiredConnect
+          device={device}
+          goBackSuccess={props.deviceAddedCallback}
+          goBack={() => setSubmitted(false)}
+        />
+      )
+    }
+  }
+
+  return (
+    <VStack
+      space="3xl"
+      p="$4"
+      _sx={{
+        '@lg': { width: '$5/6' }
+      }}
+    >
+      <VStack
+        space="3xl"
+        sx={{
+          '@md': { flexDirection: 'row' }
+        }}
+      >
+        {/*<FormControl flex={1} isRequired isInvalid={'name' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>Device Name</FormControlLabelText>
+            </FormControlLabel>
+            <Input size="md">
+              <InputField
+                autoFocus
+                value={name}
+                onChangeText={(value) => handleChange('name', value)}
+                onBlur={() => handleChange('name', name)}
+                onSubmitEditing={handleSubmit}
+              />
+            </Input>
+            {'name' in errors ? (
+              <FormControlError>
+                <FormControlErrorIcon as={AlertCircleIcon} />
+                <FormControlErrorText>Cannot be empty</FormControlErrorText>
+              </FormControlError>
+            ) : (
+              <FormControlHelper>
+                <FormControlHelperText>
+                  A unique name for the device
+                </FormControlHelperText>
+              </FormControlHelper>
+            )}
+          </FormControl>*/}
+
+        <FormControl flex={1} isInvalid={'psk' in errors}>
+          <FormControlLabel>
+            <FormControlLabelText>Passphrase</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md">
+            <InputField
+              autoFocus
+              type="password"
+              autoComplete="new-password"
+              autoCorrect={false}
+              onChangeText={(value) => handleChange('psk', value)}
+            />
+          </Input>
+          {'psk' in errors ? (
+            <FormControlError>
+              <FormControlErrorIcon as={AlertCircleIcon} />
+              <FormControlErrorText>
+                must be at least 8 characters long
+              </FormControlErrorText>
+            </FormControlError>
+          ) : (
+            <FormControlHelper>
+              <FormControlHelperText>
+                Optional. If empty a random password will be generated
+              </FormControlHelperText>
+            </FormControlHelper>
+          )}
+        </FormControl>
+
+        <FormControl flex={1}>
+          <FormControlLabel>
+            <FormControlLabelText>Authentication</FormControlLabelText>
+          </FormControlLabel>
+
+          <RadioGroup
+            defaultValue={'sae'}
+            accessibilityLabel="Auth"
+            onChange={(value) => handleChange('wpa', value)}
+          >
+            <HStack py="$1" space="md" w="$full" flexWrap="wrap">
+              <Radio value="sae" size="md">
+                <RadioIndicator mr="$2">
+                  <RadioIcon as={CircleIcon} strokeWidth={1} />
+                </RadioIndicator>
+                <RadioLabel>WPA3</RadioLabel>
+              </Radio>
+              <Radio value="wpa2" size="md">
+                <RadioIndicator mr="$2">
+                  <RadioIcon as={CircleIcon} strokeWidth={1} />
+                </RadioIndicator>
+                <RadioLabel>WPA2</RadioLabel>
+              </Radio>
+              <Radio value="none" size="md">
+                <RadioIndicator mr="$2">
+                  <RadioIcon as={CircleIcon} strokeWidth={1} />
+                </RadioIndicator>
+                <RadioLabel>Wired</RadioLabel>
+              </Radio>
+            </HStack>
+          </RadioGroup>
+
+          <FormControlHelper>
+            <FormControlHelperText>WPA3 is recommended</FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+      </VStack>
+
+      <HStack space="lg">
+        <Button flex={1} action="primary" size="md" onPress={handleSubmit}>
+          <ButtonText>Connect Device</ButtonText>
+        </Button>
+        <Button
+          flex={1}
+          action="secondary"
+          variant="outline"
+          size="md"
+          onPress={onClose}
+        >
+          <ButtonText>Skip</ButtonText>
+        </Button>
+      </HStack>
+    </VStack>
+  )
+}
+
+export default AddDevice
