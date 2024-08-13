@@ -473,11 +473,11 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 	if changed {
 		err := writeInterfacesConfigLocked(interfaces)
 
-		refreshInterfaceOverridesLocked()
+		restart_wifid := refreshInterfaceOverridesLocked()
 
 		//reset with previous settings
 		resetInterface(interfaces, iconfig.Name, prev_type, prev_subtype, prev_enabled, reset_random)
-		if prev_type != "AP" && iconfig.Type == "AP" {
+		if restart_wifid || (prev_type != "AP" && iconfig.Type == "AP") {
 			//restart wifid
 			callSuperdRestart("", "wifid")
 		}
@@ -779,10 +779,15 @@ func refreshInterfaceOverrides() {
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
 
-	refreshInterfaceOverridesLocked()
+	restart_wifid := refreshInterfaceOverridesLocked()
+	//restart hostap if the mac has changed
+	if restart_wifid {
+		callSuperdRestart("", "wifid")
+	}
 }
 
-func refreshInterfaceOverridesLocked() {
+func refreshInterfaceOverridesLocked() bool {
+	do_restart_wifid := false
 	interfaces := loadInterfacesConfigLocked()
 	for _, ifconfig := range interfaces {
 		if ifconfig.MACRandomize == true {
@@ -793,6 +798,7 @@ func refreshInterfaceOverridesLocked() {
 			if err != nil {
 				log.Println("Failed to set random address "+target, err)
 			}
+			do_restart_wifid = true
 		} else if ifconfig.MACOverride != "" {
 			exec.Command("ip", "link", "set", "dev", ifconfig.Name, "down").Run()
 			err := exec.Command("ip", "link", "set", "dev", ifconfig.Name, "address", ifconfig.MACOverride).Run()
@@ -802,6 +808,7 @@ func refreshInterfaceOverridesLocked() {
 			}
 		}
 	}
+	return do_restart_wifid
 }
 
 func refreshDownlinks() {
