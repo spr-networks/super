@@ -18,7 +18,7 @@ import {
 
 const WifiConnect = (props) => {
   const context = useContext(AlertContext)
-  const { device } = props
+  const { device, ssid, onSuccess, hideBackOnSuccess } = props
   const navigate = useNavigate()
 
   const [success, setSuccess] = useState(false)
@@ -59,13 +59,22 @@ const WifiConnect = (props) => {
         })
     }
 
-    fetchSSIDs()
+    //provided as prop
+    if (ssid) {
+      setSsids([ssid])
+    } else {
+      fetchSSIDs()
+    }
   }, [])
 
   const checkPendingStatus = () => {
     deviceAPI
       .pendingPSK()
       .then((gotPending) => {
+        if (!success && gotPending === false && onSuccess) {
+          onSuccess()
+        }
+
         setSuccess(gotPending === false)
       })
       .catch((error) => {
@@ -76,7 +85,7 @@ const WifiConnect = (props) => {
   useEffect(() => {
     const id = setInterval(checkPendingStatus, 1000)
     return () => clearInterval(id)
-  }, [1000])
+  }, [])
 
   const goBack = () => {
     //override goBack to go back success
@@ -155,7 +164,13 @@ const WifiConnect = (props) => {
             type={device.PSKEntry.Type}
           />
 
-          <Button w="$1/3" action="secondary" variant="solid" onPress={goBack}>
+          <Button
+            w="$1/3"
+            action="secondary"
+            variant="solid"
+            onPress={goBack}
+            display={hideBackOnSuccess ? 'none' : 'flex'}
+          >
             <ButtonIcon as={ArrowLeftIcon} />
             <ButtonText>Back</ButtonText>
           </Button>

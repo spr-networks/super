@@ -1,12 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { api, wifiAPI, saveLogin } from 'api'
-import {
-  generateCapabilitiesString,
-  generateConfigForBand,
-  getBestWifiConfig,
-  isSPRCompat
-} from 'api/Wifi'
+import { generateConfigForBand, getBestWifiConfig, isSPRCompat } from 'api/Wifi'
 import { useNavigate } from 'react-router-dom'
 import AddDevice from 'components/Setup/AddDevice'
 import { countryCodes } from 'utils'
@@ -122,7 +117,7 @@ const Setup = (props) => {
   const [errors, setErrors] = useState({})
   const [isDone, setIsDone] = useState(false)
   const [checkUpdates, setCheckUpdates] = useState(true)
-  const [randomizeBSSIDs, setRandomizeBSSIDs] = useState(true)
+  const [randomizeBSSIDs, setRandomizeBSSIDs] = useState(false)
   const [cloakBSSIDs, setCloakBSSIDs] = useState(false)
   const [reportInstall, setReportInstall] = useState(true)
 
@@ -167,8 +162,10 @@ const Setup = (props) => {
             break
           }
         }
-      } else {
-        //TODO 3 == call /setup_done once
+      } else if (setupStage == 3) {
+        //3 == call /setup_done once
+        clearInterval(pollingRef?.current)
+        removeSetupAP()
       }
 
       return
@@ -321,6 +318,13 @@ const Setup = (props) => {
     }
   }, [password])
 
+  //send a restart wifi command to disable sprlab-setup
+  const removeSetupAP = async (done) => {
+    api
+      .put('/setup_done')
+      .finally(() => wifiAPI.restartSetupWifi().finally(done))
+  }
+
   const handlePress = () => {
     if (
       !ssid.match(
@@ -470,33 +474,7 @@ const Setup = (props) => {
     }
   }
 
-  const removeSetupAP = (done) => {
-    api
-      .put('/setup_done')
-      .then(() => {
-        wifiAPI
-          .restartSetupWifi()
-          .then(() => {
-            done()
-          })
-          .catch((err) => {
-            done()
-          })
-      })
-      .catch((err) => {
-        wifiAPI
-          .restartSetupWifi()
-          .then(() => {
-            done()
-          })
-          .catch((err) => {
-            done()
-          })
-      })
-  }
-
   const handlePressFinish = () => {
-    //send a restart wifi command to disable sprlab-setup
     removeSetupAP(() => {
       navigate('/auth/login')
     })
@@ -565,61 +543,25 @@ const Setup = (props) => {
   }
 
   if (setupStage === 2) {
+    //when cli connects, navigate to next stage
+    const onDeviceConnect = () => {
+      setTimeout(() => {
+        setSetupStage(setupStage + 1)
+      }, 1000)
+    }
+
     return (
       <SetupScrollView>
         <SetupHeading title="Add Your First WiFi Device">
           <SSIDInfo online={ssidUp} ssid={ssid} />
         </SetupHeading>
         <VStack>
-          <Text size="md">
-            Add & connect your first device. Use your current device or a new
-            one
-          </Text>
-
-          <AddDevice deviceAddedCallback={deviceAdded} onClose={deviceAdded} />
-
-          <HStack
-            space="md"
-            px="$4"
-            pb="$4"
-            _sx={{
-              '@lg': { width: '$5/6' }
-            }}
-          >
-            {/*
-            <Button
-              action="secondary"
-              variant="outline"
-              w="$full"
-              sx={{
-                _hover: {
-                  bg: '#fab526'
-                }
-              }}
-              onPress={deviceAdded}
-              disabled={!apiReachable}
-            >
-              <ButtonText>
-                {apiReachable ? 'Skip' : 'API not reachable'}
-              </ButtonText>
-            </Button>
-*/}
-
-            {/*
-
-Connecting with this device???
-Then here is the login info me friend
-
-Hook all dem skip btnzz
-
-~ so not confuse admin password with device password
-
-+ Show QR & connect info
-+ /setup_done
-
-=>=>=>>> SHOW AP IS RUNNING [WIFIIcon] SSID in header now
-*/}
-          </HStack>
+          <AddDevice
+            deviceAddedCallback={deviceAdded}
+            onClose={deviceAdded}
+            onConnect={onDeviceConnect}
+            disabled={!ssidUp}
+          />
 
           <AlertError alertBody={alertBody} />
         </VStack>

@@ -24,15 +24,15 @@ import {
   RadioIndicator,
   RadioIcon,
   RadioLabel,
+  Text,
   VStack,
   AlertCircleIcon,
   CircleIcon
 } from '@gluestack-ui/themed'
 import { AppContext } from 'AppContext'
 
-const AddDevice = ({ onClose, ...props }) => {
+const AddDevice = ({ disabled, onClose, onConnect, ...props }) => {
   const context = useContext(AlertContext)
-  const appContext = useContext(AppContext)
 
   const [name, setName] = useState('adminDevice')
   const [policies, setPolicies] = useState(['dns', 'wan', 'lan'])
@@ -88,6 +88,10 @@ const AddDevice = ({ onClose, ...props }) => {
       PSKEntry: {
         Psk: psk,
         Type: wpa
+      },
+      Style: {
+        Color: 'blueGray',
+        Icon: 'Laptop'
       }
     }
 
@@ -105,26 +109,25 @@ const AddDevice = ({ onClose, ...props }) => {
         setSubmitted(true)
       })
       .catch((error) => {
-        context.error(`Failed to add device, already added?`)
+        context.error(`Failed to add device: ${error}`)
       })
   }
-
-  /*return (
-    <WifiConnect
-      device={{ PSKEntry: { Type: 'sae', Psk: 'dopesho' } }}
-      goBackSuccess={props.deviceAddedCallback}
-      goBack={() => setSubmitted(false)}
-    />
-  )*/
 
   if (submitted) {
     if (wpa != 'none') {
       return (
-        <WifiConnect
-          device={device}
-          goBackSuccess={props.deviceAddedCallback}
-          goBack={() => setSubmitted(false)}
-        />
+        <VStack space="md">
+          <Text size="md" textAlign="center">
+            Now connect your device
+          </Text>
+          <WifiConnect
+            device={device}
+            goBackSuccess={props.deviceAddedCallback}
+            goBack={() => setSubmitted(false)}
+            onSuccess={onConnect}
+            hideBackOnSuccess
+          />
+        </VStack>
       )
     } else {
       return (
@@ -138,46 +141,17 @@ const AddDevice = ({ onClose, ...props }) => {
   }
 
   return (
-    <VStack
-      space="3xl"
-      p="$4"
-      _sx={{
-        '@lg': { width: '$5/6' }
-      }}
-    >
+    <VStack space="3xl" p="$4">
+      <Text size="md">
+        Add & connect your first device. In the next step, connect using your
+        current device or a new one
+      </Text>
       <VStack
         space="3xl"
         sx={{
           '@md': { flexDirection: 'row' }
         }}
       >
-        {/*<FormControl flex={1} isRequired isInvalid={'name' in errors}>
-            <FormControlLabel>
-              <FormControlLabelText>Device Name</FormControlLabelText>
-            </FormControlLabel>
-            <Input size="md">
-              <InputField
-                autoFocus
-                value={name}
-                onChangeText={(value) => handleChange('name', value)}
-                onBlur={() => handleChange('name', name)}
-                onSubmitEditing={handleSubmit}
-              />
-            </Input>
-            {'name' in errors ? (
-              <FormControlError>
-                <FormControlErrorIcon as={AlertCircleIcon} />
-                <FormControlErrorText>Cannot be empty</FormControlErrorText>
-              </FormControlError>
-            ) : (
-              <FormControlHelper>
-                <FormControlHelperText>
-                  A unique name for the device
-                </FormControlHelperText>
-              </FormControlHelper>
-            )}
-          </FormControl>*/}
-
         <FormControl flex={1} isInvalid={'psk' in errors}>
           <FormControlLabel>
             <FormControlLabelText>Passphrase</FormControlLabelText>
@@ -246,8 +220,14 @@ const AddDevice = ({ onClose, ...props }) => {
       </VStack>
 
       <HStack space="lg">
-        <Button flex={1} action="primary" size="md" onPress={handleSubmit}>
-          <ButtonText>Connect Device</ButtonText>
+        <Button
+          flex={1}
+          action="primary"
+          size="md"
+          onPress={handleSubmit}
+          disabled={disabled}
+        >
+          <ButtonText>Add Device</ButtonText>
         </Button>
         <Button
           flex={1}
