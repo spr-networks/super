@@ -1,5 +1,9 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v0.3.17
+Fixes
+* After applying BSSID randomization, always restart wifid 
+
 ## v0.3.16
 Fixes
 * Security fix for OTP bypass on plugin update
