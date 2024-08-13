@@ -1,18 +1,18 @@
 # Secure Programmable Router (SPR) Release Notes
 
 ## v0.3.17
-Fixes
+**Fixes**
 * After applying BSSID randomization, always restart wifid 
 
 ## v0.3.16
-Fixes
+**Fixes**
 * Security fix for OTP bypass on plugin update
 * Clean up Plugin URI route
 * Fix PFW Abort
 * Clean up OTP handling 
 
 ## v0.3.15
-Fixes
+**Fixes**
 * Address APNS memory consumption bug 
 * Ping API call was broken 
 * Undo shadowports mitigation as it breaks sitevpn use cases
@@ -22,7 +22,7 @@ Improvements
 * Improved packet_logs performance with cached interface name lookups
 
 ## v0.3.14
-Fixes
+**Fixes**
 * Fix deadlock in API with Devices mutex
 * Fix setup transitions, rework setup flow
 
