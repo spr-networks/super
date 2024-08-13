@@ -158,6 +158,16 @@ const triggers = [
   }
 ]
 
+const niceDockerName = (c) => {
+  return (c.Names[0] || c.Id.substr(0, 8)).replace(/^\//, '')
+}
+
+const niceDockerLabel = (c) => {
+  let name = niceDockerName(c)
+  let ports = c.Ports.filter((p) => p.IP != '::').map((p) => p.PrivatePort) // p.Type
+  return `${name}:${ports}`
+}
+
 //NOTE: titles have to match FlowList.js
 // or they may become invisible.
 const actions = [
@@ -664,14 +674,6 @@ const actions = [
       DstPort: '8080',
       Dst: { IP: '1.2.3.4' }
     },
-    niceDockerName: function (c) {
-      return (c.Names[0] || c.Id.substr(0, 8)).replace(/^\//, '')
-    },
-    niceDockerLabel: function (c) {
-      let name = this.niceDockerName(c)
-      let ports = c.Ports.filter((p) => p.IP != '::').map((p) => p.PrivatePort) // p.Type
-      return `${name}:${ports}`
-    },
     getOptions: async function (name = 'DstPort') {
       if (name == 'Protocol') {
         return labelsProtocol
@@ -690,8 +692,8 @@ const actions = [
           .map((c) => {
             return {
               icon: ContainerIcon,
-              label: this.niceDockerLabel(c),
-              value: this.niceDockerName(c)
+              label: niceDockerLabel(c),
+              value: niceDockerName(c)
             }
           })
 
@@ -703,7 +705,7 @@ const actions = [
     preSubmit: async function () {
       let containers = await api.get('/info/docker')
       let container = containers.find(
-        (c) => this.niceDockerName(c) == this.values.Container
+        (c) => niceDockerName(c) == this.values.Container
       )
 
       if (!container) {
