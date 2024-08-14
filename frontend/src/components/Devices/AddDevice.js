@@ -1,10 +1,9 @@
 import React, { useContext, useEffect, useState } from 'react'
 
 import { deviceAPI } from 'api'
-import { AlertContext } from 'layouts/Admin'
+import { AlertContext, AppContext } from 'AppContext'
 import { WifiConnect, WiredConnect } from 'views/Devices/ConnectDevice'
 import { format as timeAgo } from 'timeago.js'
-import InputSelect from 'components/InputSelect'
 
 import {
   Box,
@@ -23,7 +22,6 @@ import {
   FormControlError,
   FormControlErrorIcon,
   FormControlErrorText,
-  Heading,
   HStack,
   Input,
   InputField,
@@ -32,7 +30,6 @@ import {
   RadioIndicator,
   RadioIcon,
   RadioLabel,
-  ScrollView,
   VStack,
   Text,
   AlertCircleIcon,
@@ -41,7 +38,6 @@ import {
   TooltipContent,
   TooltipText
 } from '@gluestack-ui/themed'
-import { AppContext } from 'AppContext'
 import { ListHeader } from 'components/List'
 import DeviceExpiry from './DeviceExpiry'
 
