@@ -1,22 +1,23 @@
-import React from 'react'
+import React, { useState } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useNavigate } from 'react-router-native'
 
 import {
-  Divider,
   Box,
   HStack,
   Icon,
+  Link,
   Text,
   useColorMode,
   VStack,
   Pressable,
   Button,
   ButtonText,
-  ButtonIcon
+  ButtonIcon,
+  CloseIcon
 } from '@gluestack-ui/themed'
 
-import { Flame, FlameIcon, Settings2Icon } from 'lucide-react-native'
+import { LaptopIcon, PlusIcon, Settings2Icon } from 'lucide-react-native'
 
 const IntroWidget = ({
   title,
@@ -24,30 +25,32 @@ const IntroWidget = ({
 
   ...props
 }) => {
+  const [showAlert, setShowAlert] = useState(true)
   const navigate = useNavigate()
 
-  const onPress = () => {
+  const onPressClose = () => {
     AsyncStorage.setItem('intro-done', 'true')
-    navigate('/admin/firewallSettings')
+    setShowAlert(false)
   }
 
   return (
-    <Pressable onPress={onPress}>
-      <Box
-        minHeight={150}
-        bg={
-          useColorMode() == 'light'
-            ? '$backgroundCardLight'
-            : '$backgroundCardDark'
-        }
-        borderRadius={10}
-        {...props}
-      >
-        <HStack
+    <Box
+      minHeight={150}
+      bg={
+        useColorMode() == 'light'
+          ? '$backgroundCardLight'
+          : '$backgroundCardDark'
+      }
+      borderRadius={10}
+      display={showAlert ? 'flex' : 'none'}
+      {...props}
+    >
+      <HStack space="md" w="$full" py="$2">
+        <VStack
+          flex={1}
           p="$4"
           justifyContent="space-between"
           alignItems="center"
-          flexDirection="column"
         >
           <VStack space="md" alignItems="center" mb="$4">
             <Text
@@ -64,24 +67,48 @@ const IntroWidget = ({
               sx={{ _dark: { color: '$muted400' } }}
               textAlign="center"
             >
-              Click here to setup what services and ports to allow
+              Setup what services and ports to allow, or add a new device
             </Text>
           </VStack>
-          <VStack>
+          <VStack space="md" sx={{ '@md': { flexDirection: 'row', gap: 16 } }}>
             <Button
               size="xs"
               action="primary"
               variant="outline"
               rounded="$lg"
-              onPress={onPress}
+              onPress={() => navigate('/admin/firewallSettings')}
             >
               <ButtonIcon mr="$2" as={Settings2Icon} />
               <ButtonText>Setup services</ButtonText>
             </Button>
+            <Button
+              size="xs"
+              action="primary"
+              variant="outline"
+              rounded="$lg"
+              onPress={() => navigate('/admin/add_device')}
+            >
+              <ButtonIcon mr="$2" as={LaptopIcon} />
+              <ButtonText>Add Device</ButtonText>
+            </Button>
+            <Link isExternal href="https://www.supernetworks.org/plus.html">
+              <Button
+                size="xs"
+                action="primary"
+                variant="outline"
+                rounded="$lg"
+              >
+                <ButtonIcon mr="$2" as={PlusIcon} />
+                <ButtonText>Get PLUS</ButtonText>
+              </Button>
+            </Link>
           </VStack>
-        </HStack>
-      </Box>
-    </Pressable>
+        </VStack>
+        <Pressable ml="auto" mr="$2" onPress={onPressClose}>
+          <Icon as={CloseIcon} color="$muted500" />
+        </Pressable>
+      </HStack>
+    </Box>
   )
 }
 
