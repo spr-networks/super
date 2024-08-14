@@ -150,6 +150,7 @@ const SidebarItem = (props) => {
       'MESH',
       'Network',
       'System',
+      'Services',
       'Plugins',
       'System Info',
       'Signal Strength'

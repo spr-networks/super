@@ -92,7 +92,7 @@ const Mesh = (props) => {
 
         let checkedRouters = routers.map(async (router) => {
           let rApi = new api()
-          rApi.setRemoteURL('http://' + router.IP + '/')
+          rApi.setRemoteURL(window.location.protocol + '//' + router.IP + '/')
           rApi.setAuthTokenHeaders(router.APIToken)
 
           return rApi
@@ -103,7 +103,7 @@ const Mesh = (props) => {
 
               let rMeshAPI = new APIMesh()
               //if API is okay, reach further.
-              rMeshAPI.setRemoteURL('http://' + router.IP + '/')
+              rMeshAPI.setRemoteURL(window.location.protocol + '//' + router.IP + '/')
               rMeshAPI.setAuthTokenHeaders(router.APIToken)
 
               return rMeshAPI

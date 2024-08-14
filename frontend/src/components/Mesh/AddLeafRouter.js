@@ -52,7 +52,7 @@ class AddLeafRouterImpl extends React.Component {
 
     //first, verify that the API Token is correct
     let rMeshAPI = new APIMesh()
-    rMeshAPI.setRemoteURL('http://' + leaf.IP + '/')
+    rMeshAPI.setRemoteURL(window.location.protocol + '//' + leaf.IP + '/')
     rMeshAPI.setAuthTokenHeaders(leaf.APIToken)
 
     rMeshAPI
@@ -126,7 +126,7 @@ class AddLeafRouterImpl extends React.Component {
 
         //restart the leaf router
         let rAPI = new api()
-        rAPI.setRemoteURL('http://' + leaf.IP + '/')
+        rAPI.setRemoteURL(window.location.protocol + '//' + leaf.IP + '/')
         rAPI.setAuthTokenHeaders(leaf.APIToken)
         await rAPI.restart()
       })
