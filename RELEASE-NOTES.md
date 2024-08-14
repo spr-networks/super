@@ -2,20 +2,19 @@
 
 ## v0.3.17
 Fixes
-* After applying BSSID randomization, always restart wifid 
+* After applying BSSID randomization, always restart wifid
 
 ## v0.3.16
 Fixes
 * Security fix for OTP bypass on plugin update
 * Clean up Plugin URI route
 * Fix PFW Abort
-* Clean up OTP handling 
+* Clean up OTP handling
 
 ## v0.3.15
-
 Fixes
-* Address APNS memory consumption bug 
-* Ping API call was broken 
+* Address APNS memory consumption bug
+* Ping API call was broken
 * Undo shadowports mitigation as it breaks sitevpn use cases
 
 Improvements
@@ -31,7 +30,7 @@ Improvements
 * Add wireguard hardening for shadow port attacks
 * Add static public routes for plugins
 * Support SPR WiFI6e hats by default in spr build images
-* Support submodules for plugin code 
+* Support submodules for plugin code
 
 ## v0.3.13
 Improvements
