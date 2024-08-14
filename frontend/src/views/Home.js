@@ -1,4 +1,5 @@
 import React, { useContext, useState, useEffect, useRef } from 'react'
+import { Platform } from 'react-native'
 import { AppState, RefreshControl } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
@@ -112,7 +113,7 @@ const Home = (props) => {
       !context.isMeshNode &&
       pluginsEnabled.includes('wireguard'),
     traffic: !context.isMeshNode,
-    intro: showIntro
+    intro: showIntro && Platform.OS == 'web'
   }
 
   //NOTE wireguard listed as feature when not enabled
