@@ -2,9 +2,9 @@ import React, { useContext } from 'react'
 
 import ClientSelect from 'components/ClientSelect'
 
-import { AlertContext } from 'AppContext'
+import { AppContext, AlertContext } from 'AppContext'
 import APIMesh from 'api/mesh'
-import api, { authAPI, meshAPI, wifiAPI } from 'api'
+import api, {api as xapi, devices, authAPI, meshAPI, wifiAPI } from 'api'
 
 import {
   Button,
@@ -41,9 +41,27 @@ class AddLeafRouterImpl extends React.Component {
   handleSubmit(event) {
     event.preventDefault()
 
+    const meshProtocol = () => {
+        //return 'https:'
+        return window.location.protocol
+    }
+
     let leaf = {
       IP: this.state.IP,
       APIToken: this.state.APIToken
+    }
+
+    //check if the IP has a vlan tag, and abort if so
+
+    if (this.props.context) {
+      let device = this.props.context.getDevice(leaf.IP, 'RecentIP')
+      if (device) {
+        if (device.VLANTag != "") {
+          this.props.alertContext.error(`The device at ${leaf.IP} has a VLAN Tag. Remove the VLAN Tag before making it an AP Mesh Node`)
+          this.props.notifyChange('leaf')
+          return
+        }
+      }
     }
 
     const done = (res) => {
@@ -58,7 +76,7 @@ class AddLeafRouterImpl extends React.Component {
 
     //first, verify that the API Token is correct
     let rMeshAPI = new APIMesh()
-    rMeshAPI.setRemoteURL(window.location.protocol + '//' + leaf.IP + '/')
+    rMeshAPI.setRemoteURL(meshProtocol() + '//' + leaf.IP + '/')
     rMeshAPI.setAuthTokenHeaders(leaf.APIToken)
 
     rMeshAPI
@@ -69,7 +87,16 @@ class AddLeafRouterImpl extends React.Component {
 
         //1. Generate an API Token for the remote Mesh to send in API events
 
-        let tokens = await authAPI.tokens()
+
+        let tokens
+        try {
+          tokens = await authAPI.tokens()
+        } catch (e) {
+           this.props.alertContext.error('Could not set API Tokens. Verify OTP on Auth page')
+           //setAuthReturn('/admin/auth')
+           //navigate('/auth/validate')
+        }
+
         let parentAPIToken = ''
 
         for (let i = 0; i < tokens.length; i++) {
@@ -98,7 +125,7 @@ class AddLeafRouterImpl extends React.Component {
         let lanIP = leaf.IP.split('.').slice(0, 3).join('.') + '.1'
 
         // we will program the leaf node to trust our CA
-        let our_ca = await api.get('/cert')
+        let our_ca = await xapi.get('/cert')
 
         let status = await rMeshAPI.setParentCredentials({
           ParentAPIToken: parentAPIToken,
@@ -121,7 +148,7 @@ class AddLeafRouterImpl extends React.Component {
 
         meshAPI
           .addLeafRouter(leaf)
-          .then(done)
+          .then(() => {})
           .catch((err) => {
             this.props.alertContext.error('Mesh API Failure', err)
           })
@@ -137,14 +164,18 @@ class AddLeafRouterImpl extends React.Component {
 
         //restart the leaf router
         let rAPI = new api()
-        rAPI.setRemoteURL(window.location.protocol + '//' + leaf.IP + '/')
+        rAPI.setRemoteURL(meshProtocol() + '//' + leaf.IP + '/')
         rAPI.setAuthTokenHeaders(leaf.APIToken)
         await rAPI.restart()
       })
       .catch((e) => {
-        this.setState({spinning: false})
-        console.log(e)
-        this.props.alertContext.error('API Failure, Mesh Plugin On?')
+          this.setState({spinning: false})
+          console.log(e)
+          this.props.alertContext.error('API Failure, Mesh Plugin On?')
+          if (this.props.notifyChange) {
+            this.props.notifyChange('mesh')
+          }
+
       })
   }
 
@@ -154,11 +185,11 @@ class AddLeafRouterImpl extends React.Component {
     if (this.state.spinning) {
       return (
         <VStack space="md">
-        <FormControl flex={1} isRequired>
+        <FormControl flex={1}>
           <FormControlLabel>
             <FormControlLabelText>Updating mesh node</FormControlLabelText>
           </FormControlLabel>
-          <Spinner size="medium" />
+          <Spinner size="small" />
         </FormControl>
         </VStack>
       )
@@ -206,12 +237,15 @@ class AddLeafRouterImpl extends React.Component {
   }
 }
 
+
 export default function AddLeafRouter(props) {
   let alertContext = useContext(AlertContext)
+  let context = useContext(AppContext)
   return (
     <AddLeafRouterImpl
       notifyChange={props.notifyChange}
       alertContext={alertContext}
+      context={context}
     ></AddLeafRouterImpl>
   )
 }
