@@ -2703,13 +2703,16 @@ func setSecurityHeaders(next http.Handler) http.Handler {
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		//use logStd here so we dont get dupes
-		logStd.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
 
-		logs := map[string]interface{}{}
-		logs["remoteaddr"] = r.RemoteAddr
-		logs["method"] = r.Method
-		logs["path"] = r.URL.Path
-		SprbusPublish("log:www:access", logs)
+		if os.Getenv("DEBUGHTTP") {
+			logStd.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+
+			logs := map[string]interface{}{}
+			logs["remoteaddr"] = r.RemoteAddr
+			logs["method"] = r.Method
+			logs["path"] = r.URL.Path
+			SprbusPublish("log:www:access", logs)
+		}
 
 		handler.ServeHTTP(w, r)
 	})

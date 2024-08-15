@@ -649,7 +649,9 @@ func getSetEndpoints(w http.ResponseWriter, r *http.Request) {
 
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		if os.Getenv("DEBUGHTTP") {
+			fmt.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		}
 		handler.ServeHTTP(w, r)
 	})
 }
