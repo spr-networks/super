@@ -17,7 +17,12 @@ import {
   CloseIcon
 } from '@gluestack-ui/themed'
 
-import { LaptopIcon, PlusIcon, Settings2Icon } from 'lucide-react-native'
+import {
+  LaptopIcon,
+  PlusIcon,
+  Settings2Icon,
+  WifiIcon
+} from 'lucide-react-native'
 
 const IntroWidget = ({
   title,
@@ -90,6 +95,16 @@ const IntroWidget = ({
             >
               <ButtonIcon mr="$2" as={LaptopIcon} />
               <ButtonText>Add Device</ButtonText>
+            </Button>
+            <Button
+              size="xs"
+              action="primary"
+              variant="outline"
+              rounded="$lg"
+              onPress={() => navigate('/admin/uplink')}
+            >
+              <ButtonIcon mr="$2" as={WifiIcon} />
+              <ButtonText>Wifi Uplink</ButtonText>
             </Button>
             <Link isExternal href="https://www.supernetworks.org/plus.html">
               <Button
