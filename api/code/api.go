@@ -47,9 +47,9 @@ var ConfigFile = TEST_PREFIX + "/configs/base/config.sh"
 var DNSConfigFile = TEST_PREFIX + "/configs/dns/Corefile"
 var MulticastConfigFile = TEST_PREFIX + "/configs/base/multicast.json"
 
-var ApiTlsCert = "/configs/auth/www-api.crt"
-var ApiTlsCaCert = "/configs/auth/cert/www-api-ca.crt"
-var ApiTlsKey = "/configs/auth/www-api.key"
+var ApiTlsCert = TEST_PREFIX + "/configs/auth/www-api.crt"
+var ApiTlsCaCert = TEST_PREFIX + "/configs/auth/cert/www-api-ca.crt"
+var ApiTlsKey = TEST_PREFIX + "/configs/auth/www-api.key"
 
 var SuperdSocketPath = TEST_PREFIX + "/state/plugins/superd/socket"
 
@@ -2807,6 +2807,7 @@ func main() {
 
 	//download cert from http
 	external_router_public.HandleFunc("/cert", getCert).Methods("GET")
+	external_router_authenticated.HandleFunc("/cert", getCert).Methods("GET")
 
 	//nftable helpers
 	external_router_authenticated.HandleFunc("/nfmap/{name}", showNFMap).Methods("GET")

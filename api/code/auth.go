@@ -24,9 +24,7 @@ import (
 
 var AuthUsersFile = TEST_PREFIX + "/configs/auth/auth_users.json"
 var AuthTokensFile = TEST_PREFIX + "/configs/auth/auth_tokens.json"
-
 var OTPSettingsFile = TEST_PREFIX + "/configs/auth/otp_settings.json"
-
 var WebAuthnOtpFile = TEST_PREFIX + "/state/api/webauthn_otp"
 var AuthWebAuthnFile = TEST_PREFIX + "/state/api/webauthn.json"
 var Tokensmtx sync.Mutex
