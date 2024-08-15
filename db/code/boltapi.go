@@ -756,7 +756,7 @@ func DeleteBucketItem(w http.ResponseWriter, r *http.Request) {
 // TODO
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if os.Getenv("DEBUGHTTP") {
+		if os.Getenv("DEBUGHTTP") != "" {
 			log.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
 		}
 		//sprbus.Publish("log:db", map[string]int64{"method": r.Method})
