@@ -16,13 +16,15 @@ import {
   FormControlHelperText,
   Input,
   InputField,
+  Spinner,
   VStack
 } from '@gluestack-ui/themed'
 
 class AddLeafRouterImpl extends React.Component {
   state = {
     APIToken: '',
-    IP: ''
+    IP: '',
+    Spinning: false,
   }
 
   constructor(props) {
@@ -45,10 +47,14 @@ class AddLeafRouterImpl extends React.Component {
     }
 
     const done = (res) => {
+      this.setState({spinning: false})
       if (this.props.notifyChange) {
         this.props.notifyChange('leaf')
       }
     }
+
+    // turn on a setting up spinner
+    this.setState({spinning: true})
 
     //first, verify that the API Token is correct
     let rMeshAPI = new APIMesh()
@@ -58,6 +64,7 @@ class AddLeafRouterImpl extends React.Component {
     rMeshAPI
       .leafMode()
       .then(async (result) => {
+
         //At this point, communication with the remote Mesh plugins is correct.
 
         //1. Generate an API Token for the remote Mesh to send in API events
@@ -90,9 +97,13 @@ class AddLeafRouterImpl extends React.Component {
         //tbd Fix with fetch of LANIP
         let lanIP = leaf.IP.split('.').slice(0, 3).join('.') + '.1'
 
+        // we will program the leaf node to trust our CA
+        let our_ca = await api.get('/cert')
+
         let status = await rMeshAPI.setParentCredentials({
           ParentAPIToken: parentAPIToken,
-          ParentIP: lanIP
+          ParentIP: lanIP,
+          ParentCA: our_ca
         })
         if (status != true) {
           this.props.alertContext.error(
@@ -131,6 +142,7 @@ class AddLeafRouterImpl extends React.Component {
         await rAPI.restart()
       })
       .catch((e) => {
+        this.setState({spinning: false})
         console.log(e)
         this.props.alertContext.error('API Failure, Mesh Plugin On?')
       })
@@ -139,6 +151,19 @@ class AddLeafRouterImpl extends React.Component {
   componentDidMount() {}
 
   render() {
+    if (this.state.spinning) {
+      return (
+        <VStack space="md">
+        <FormControl flex={1} isRequired>
+          <FormControlLabel>
+            <FormControlLabelText>Updating mesh node</FormControlLabelText>
+          </FormControlLabel>
+          <Spinner size="medium" />
+        </FormControl>
+        </VStack>
+      )
+    }
+
     return (
       <VStack space="md">
         <FormControl flex={1} isRequired>
