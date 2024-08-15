@@ -2640,7 +2640,7 @@ The multicast proxy depends on this for applying tags to broadcasts.
 func updateIfaceMap(ifaceMap map[string]string) {
 	file, _ := json.MarshalIndent(ifaceMap, "", " ")
 	err := ioutil.WriteFile(PublicIfaceMapFile, file, 0600)
-	if err != nil {
+	if err == nil {
 		gIfaceMap = ifaceMap
 	}
 }
