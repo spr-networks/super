@@ -158,6 +158,7 @@ func loadDHCPConfig() {
 		}
 	}
 	updateFirewallSubnets(getLANIP(), gDhcpConfig.TinyNets)
+	updateLanIPs(gDhcpConfig.TinyNets)
 }
 
 func saveDHCPConfig() {
