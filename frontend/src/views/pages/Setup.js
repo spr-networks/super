@@ -45,7 +45,9 @@ import { Select } from 'components/Select'
 import { AlertContext } from 'AppContext'
 import {
   AlertCircle,
+  AlertCircleIcon,
   BookOpenTextIcon,
+  CheckCircleIcon,
   KeyRoundIcon,
   WifiIcon
 } from 'lucide-react-native'
@@ -99,6 +101,21 @@ const SetupScrollView = ({ children, ...props }) => {
   )
 }
 
+const ButtonSetup = ({ children, ...props }) => (
+  <Button
+    rounded="$full"
+    bg="#fbc658"
+    sx={{
+      _hover: {
+        bg: '#fab526'
+      }
+    }}
+    {...props}
+  >
+    {children}
+  </Button>
+)
+
 const Setup = (props) => {
   const context = useContext(AlertContext)
 
@@ -121,10 +138,11 @@ const Setup = (props) => {
   const [cloakBSSIDs, setCloakBSSIDs] = useState(false)
   const [reportInstall, setReportInstall] = useState(true)
 
-  const [setupStage, setSetupStage] = useState(1)
+  const [setupStage, setSetupStage] = useState(0)
   const [alertType, setAlertType] = useState('')
   const [alertBody, setAlertBody] = useState('')
 
+  const [addrs, setAddrs] = useState([])
   const [apiReachable, setApiReachable] = useState(false)
   const [ssidUp, setSsidUp] = useState(false)
 
@@ -143,9 +161,11 @@ const Setup = (props) => {
 
   const pollApi = async () => {
     try {
-      await wifiAPI.ipAddr()
+      const addrs = await wifiAPI.ipAddr()
       setApiReachable(true)
       setErrors({})
+
+      setAddrs(addrs)
 
       //check if ap is up
       if (setupStage == 1) {
@@ -484,46 +504,37 @@ const Setup = (props) => {
     setSetupStage(3)
   }
 
-  const colorMode = useColorMode()
-
   const SetupHeading = ({ title, children, ...props }) => {
-    const heading = (
-      <Heading
-        size="lg"
-        fontWeight="300"
-        color="$coolGray800"
-        sx={{
-          _dark: { color: '$warmGray50' }
-        }}
-        alignSelf="center"
-      >
-        {title}
-      </Heading>
-    )
-
     return (
       <HStack
         justifyContent="space-between"
         borderBottomColor="$muted200"
         borderBottomWidth={1}
         pb="$4"
+        {...props}
       >
-        {heading}
+        <Heading
+          size="lg"
+          fontWeight="300"
+          color="$coolGray800"
+          sx={{
+            _dark: { color: '$warmGray50' }
+          }}
+          alignSelf="center"
+        >
+          {title}
+        </Heading>
         {children}
       </HStack>
     )
   }
 
   const UplinkIP = ({ ip, ...props }) => {
-    if (!ip) {
-      return <></>
-    }
-
-    return (
+    return ip ? (
       <Badge variant="outline" action="success" rounded="$md">
         <BadgeText>Uplink IP: {ip}</BadgeText>
       </Badge>
-    )
+    ) : null
   }
 
   const SSIDInfo = ({ online, ...props }) => {
@@ -534,11 +545,66 @@ const Setup = (props) => {
         rounded="$md"
       >
         {online ? <BadgeIcon as={WifiIcon} /> : <Spinner size="small" />}
-
         <BadgeText textTransform="none" ml="$2">
           {online ? ssid : `Waiting for ${ssid}...`}
         </BadgeText>
       </Badge>
+    )
+  }
+
+  const Status = ({ addrs, online, ...props }) => {
+    const ethsConnected = addrs.filter((a) =>
+      a.ifname.startsWith('eth') && a.operstate == 'UP' ? a : null
+    )
+
+    const SuccessItem = ({ text, error, isOK, ...props }) => {
+      const icon = isOK ? CheckCircleIcon : AlertCircleIcon
+      const color = isOK ? '$success600' : '$warning600'
+      return (
+        <HStack space="sm" alignItems="center">
+          <Icon as={icon} color={color} />
+          <Text>{isOK ? text : error}</Text>
+        </HStack>
+      )
+    }
+
+    return (
+      <VStack space="sm" alignItems="center">
+        <Heading size="sm">Status</Heading>
+
+        {online ? (
+          <>
+            <SuccessItem
+              text="Network cable connected"
+              error="No network cable connected"
+              isOK={ethsConnected.length}
+            />
+            <SuccessItem
+              text="Wifi card detected"
+              error="Could not find any wifi card compatible with spr"
+              isOK={wifiInterfaces.length}
+            />
+
+            <HStack
+              space="xs"
+              display={apiReachable && !ethsConnected.length ? 'flex' : 'none'}
+            >
+              <Text size="sm" italic>
+                Note:
+              </Text>
+              <Text size="sm">
+                If you want to use wifi for internet access, this can be setup
+                after the install under Network: Link Settings.
+              </Text>
+            </HStack>
+          </>
+        ) : (
+          <HStack space="sm">
+            <Spinner size="small" />
+            <Text>API Loading...</Text>
+          </HStack>
+        )}
+      </VStack>
     )
   }
 
@@ -576,17 +642,14 @@ const Setup = (props) => {
 
         <VStack space="xl" my="$4">
           <HStack space="sm" alignItems="center">
-            <CheckIcon color="success500" />
-            <Text flex={1} color="$muted500">
-              SPR is now configured!
-            </Text>
+            <CheckIcon color="$success500" />
+            <Text>SPR is now configured!</Text>
           </HStack>
 
           <HStack space="sm" alignItems="center">
             <InfoIcon color="$muted500" />
-            <Text flex={1} color="$muted500">
+            <Text>
               Note: The `ubuntu` password will be set to your admin password
-              during the initial installation
             </Text>
           </HStack>
 
@@ -595,40 +658,18 @@ const Setup = (props) => {
             <Link
               isExternal
               href="https://www.supernetworks.org/pages/docs/guides_plus/mesh"
-              sx={{
-                _text: {
-                  textDecorationLine: 'none',
-                  color:
-                    colorMode == 'light'
-                      ? '$navbarTextColorLight'
-                      : '$navbarTextColorDark'
-                }
-              }}
             >
-              <Text flex={1} color="$muted500">
-                PLUS Mesh Setup Guide
-              </Text>
+              <Text>PLUS Mesh Setup Guide</Text>
             </Link>
           </HStack>
 
-          <Button
-            mt="$4"
-            rounded="$full"
-            bg="#fbc658"
-            sx={{
-              _hover: {
-                bg: '#fab526'
-              }
-            }}
-            onPress={handlePressFinish}
-            disabled={!apiReachable}
-          >
+          <ButtonSetup onPress={handlePressFinish} disabled={!apiReachable}>
             {apiReachable ? (
               <ButtonText>Finish</ButtonText>
             ) : (
               <ButtonText>Waiting for API</ButtonText>
             )}
-          </Button>
+          </ButtonSetup>
         </VStack>
       </SetupScrollView>
     )
@@ -649,247 +690,238 @@ const Setup = (props) => {
           </Text>
         </HStack>
 
-        <Button
-          mt="$2"
-          mx="$auto"
-          rounded="$full"
-          colorScheme="yellow"
-          bg="#fbc658"
-          sx={{
-            _hover: {
-              bg: '#fab526'
-            }
-          }}
-          px="$8"
-          onPress={() => navigate('/auth/login')}
-        >
+        <ButtonSetup onPress={() => navigate('/auth/login')}>
           <ButtonText>Click here to login</ButtonText>
-        </Button>
+        </ButtonSetup>
+      </SetupScrollView>
+    )
+  }
+
+  if (setupStage == 1) {
+    return (
+      <SetupScrollView>
+        <SetupHeading title="Setup">
+          <>
+            {apiReachable ? (
+              <UplinkIP ip={myIP} />
+            ) : (
+              <ApiLoading online={apiReachable} />
+            )}
+          </>
+        </SetupHeading>
+
+        <>
+          {/*NOTE Safari will autofill as contact if using Name in label and/or placeholder*/}
+          <FormControl isInvalid={'ssid' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>
+                {'Wifi N\u0430me (SSID)'}
+              </FormControlLabelText>
+            </FormControlLabel>
+            <Input size="md">
+              <InputField
+                autoFocus
+                value={ssid}
+                placeholder={'N\u0430me of your Wireless Network'}
+                onChangeText={(value) => setSsid(value)}
+              />
+            </Input>
+            {'ssid' in errors ? (
+              <FormControlError>
+                <FormControlErrorText>{errors.ssid}</FormControlErrorText>
+              </FormControlError>
+            ) : null}
+          </FormControl>
+          <FormControl isInvalid={'country' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>Wifi Country Code</FormControlLabelText>
+            </FormControlLabel>
+
+            <Select
+              selectedValue={countryWifi}
+              onValueChange={(value) => setCountryWifi(value)}
+              accessibilityLabel={`Choose Country Code`}
+            >
+              {countryCodes.map((code) => (
+                <Select.Item key={code} label={code} value={code} />
+              ))}
+            </Select>
+          </FormControl>
+
+          <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
+            <Tooltip
+              label={
+                "The BSSID (AP MAC Address) and SSID is stored by companies in location tracking databases.\nRandomizing it makes the AP's physical location private."
+              }
+            >
+              <Checkbox
+                size="md"
+                value={randomizeBSSIDs}
+                isChecked={randomizeBSSIDs}
+                onChange={(enabled) => setRandomizeBSSIDs(!randomizeBSSIDs)}
+              >
+                <CheckboxIndicator mr="$2">
+                  <CheckboxIcon as={CheckIcon} />
+                </CheckboxIndicator>
+                <CheckboxLabel>
+                  Randomize BSSID for Location Privacy
+                </CheckboxLabel>
+              </Checkbox>
+            </Tooltip>
+
+            {randomizeBSSIDs && (
+              <Checkbox
+                size="md"
+                value={cloakBSSIDs}
+                isChecked={cloakBSSIDs}
+                onChange={(enabled) => setCloakBSSIDs(!cloakBSSIDs)}
+              >
+                <CheckboxIndicator mr="$2">
+                  <CheckboxIcon as={CheckIcon} />
+                </CheckboxIndicator>
+                <CheckboxLabel>Randomize to Common AP Vendor</CheckboxLabel>
+              </Checkbox>
+            )}
+          </VStack>
+
+          <FormControl isInvalid={'uplink' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>
+                Uplink Interface (Internet)
+              </FormControlLabelText>
+            </FormControlLabel>
+            <Select
+              selectedValue={interfaceUplink}
+              onValueChange={(value) => setInterfaceUplink(value)}
+            >
+              {uplinkInterfaces.map((wif) => (
+                <Select.Item key={wif} label={wif} value={wif} />
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl isInvalid={'tinynet' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>
+                Private Network Subnet
+              </FormControlLabelText>
+            </FormControlLabel>
+            <Input>
+              <InputField
+                value={tinynet}
+                placeholder={'Private subnet for network'}
+                onChangeText={(value) => setTinynet(value)}
+              />
+            </Input>
+            {'tinynet' in errors ? (
+              <FormControlError>
+                <FormControlErrorText>{errors.tinynet}</FormControlErrorText>
+              </FormControlError>
+            ) : null}
+          </FormControl>
+
+          <FormControl isInvalid={'login' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>Admin Password</FormControlLabelText>
+            </FormControlLabel>
+            <Input variant="outline" size="md">
+              <InputField
+                type="password"
+                value={password}
+                placeholder="Password"
+                onChangeText={(value) => setPassword(value)}
+                onSubmitEditing={handlePress}
+              />
+              <InputSlot>
+                <InputIcon as={KeyRoundIcon} mr="$2" />
+              </InputSlot>
+            </Input>
+            <Input variant="outline" size="md" mt="$2">
+              <InputField
+                type="password"
+                value={passwordConfirm}
+                placeholder="Confirm Password"
+                onChangeText={(value) => setPasswordConfirm(value)}
+                onSubmitEditing={handlePress}
+              />
+              <InputSlot>
+                <InputIcon as={KeyRoundIcon} mr="$2" />
+              </InputSlot>
+            </Input>
+
+            {'login' in errors ? (
+              <FormControlError>
+                <FormControlErrorText>{errors.login}</FormControlErrorText>
+              </FormControlError>
+            ) : null}
+          </FormControl>
+
+          <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
+            <Checkbox
+              size="md"
+              value={checkUpdates}
+              isChecked={checkUpdates}
+              onChange={(enabled) => setCheckUpdates(!checkUpdates)}
+            >
+              <CheckboxIndicator mr="$2">
+                <CheckboxIcon as={CheckIcon} />
+              </CheckboxIndicator>
+              <CheckboxLabel>Auto-Check for Updates</CheckboxLabel>
+            </Checkbox>
+
+            <Tooltip
+              label={'Help the Supernetworks Team count your installation'}
+            >
+              <Checkbox
+                size="md"
+                value={reportInstall}
+                isChecked={reportInstall}
+                onChange={(enabled) => setReportInstall(!reportInstall)}
+              >
+                <CheckboxIndicator mr="$2">
+                  <CheckboxIcon as={CheckIcon} />
+                </CheckboxIndicator>
+                <CheckboxLabel>Register Install</CheckboxLabel>
+              </Checkbox>
+            </Tooltip>
+          </VStack>
+
+          <ButtonSetup onPress={handlePress} disabled={!apiReachable} mt="$4">
+            {apiReachable ? (
+              <ButtonText>Save</ButtonText>
+            ) : (
+              <ButtonText>...waiting for API</ButtonText>
+            )}
+          </ButtonSetup>
+
+          {'submit' in errors ? (
+            <HStack space="md" alignSelf="center" alignItems="center">
+              <AlertCircle color="$red700" />
+              <Text color="$red700">{errors.submit}</Text>
+            </HStack>
+          ) : null}
+
+          {'api' in errors ? (
+            <HStack space="md" alignSelf="center" alignItems="center">
+              <AlertCircle color="$red700" />
+              <Text color="$red700">{errors.api}</Text>
+            </HStack>
+          ) : null}
+        </>
       </SetupScrollView>
     )
   }
 
   return (
     <SetupScrollView>
-      <SetupHeading title="Setup">
-        <>
-          {apiReachable ? (
-            <UplinkIP ip={myIP} />
-          ) : (
-            <ApiLoading online={apiReachable} />
-          )}
-        </>
-      </SetupHeading>
-
-      <>
-        {/*NOTE Safari will autofill as contact if using Name in label and/or placeholder*/}
-        <FormControl isInvalid={'ssid' in errors}>
-          <FormControlLabel>
-            <FormControlLabelText>
-              {'Wifi N\u0430me (SSID)'}
-            </FormControlLabelText>
-          </FormControlLabel>
-          <Input size="md">
-            <InputField
-              autoFocus
-              value={ssid}
-              placeholder={'N\u0430me of your Wireless Network'}
-              onChangeText={(value) => setSsid(value)}
-            />
-          </Input>
-          {'ssid' in errors ? (
-            <FormControlError>
-              <FormControlErrorText>{errors.ssid}</FormControlErrorText>
-            </FormControlError>
-          ) : null}
-        </FormControl>
-        <FormControl isInvalid={'country' in errors}>
-          <FormControlLabel>
-            <FormControlLabelText>Wifi Country Code</FormControlLabelText>
-          </FormControlLabel>
-
-          <Select
-            selectedValue={countryWifi}
-            onValueChange={(value) => setCountryWifi(value)}
-            accessibilityLabel={`Choose Country Code`}
-          >
-            {countryCodes.map((code) => (
-              <Select.Item key={code} label={code} value={code} />
-            ))}
-          </Select>
-        </FormControl>
-
-        <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
-          <Tooltip
-            label={
-              "The BSSID (AP MAC Address) and SSID is stored by companies in location tracking databases.\nRandomizing it makes the AP's physical location private."
-            }
-          >
-            <Checkbox
-              size="md"
-              value={randomizeBSSIDs}
-              isChecked={randomizeBSSIDs}
-              onChange={(enabled) => setRandomizeBSSIDs(!randomizeBSSIDs)}
-            >
-              <CheckboxIndicator mr="$2">
-                <CheckboxIcon as={CheckIcon} />
-              </CheckboxIndicator>
-              <CheckboxLabel>
-                Randomize BSSID for Location Privacy
-              </CheckboxLabel>
-            </Checkbox>
-          </Tooltip>
-
-          {randomizeBSSIDs && (
-            <Checkbox
-              size="md"
-              value={cloakBSSIDs}
-              isChecked={cloakBSSIDs}
-              onChange={(enabled) => setCloakBSSIDs(!cloakBSSIDs)}
-            >
-              <CheckboxIndicator mr="$2">
-                <CheckboxIcon as={CheckIcon} />
-              </CheckboxIndicator>
-              <CheckboxLabel>Randomize to Common AP Vendor</CheckboxLabel>
-            </Checkbox>
-          )}
-        </VStack>
-
-        <FormControl isInvalid={'uplink' in errors}>
-          <FormControlLabel>
-            <FormControlLabelText>
-              Uplink Interface (Internet)
-            </FormControlLabelText>
-          </FormControlLabel>
-          <Select
-            selectedValue={interfaceUplink}
-            onValueChange={(value) => setInterfaceUplink(value)}
-          >
-            {uplinkInterfaces.map((wif) => (
-              <Select.Item key={wif} label={wif} value={wif} />
-            ))}
-          </Select>
-        </FormControl>
-
-        <FormControl isInvalid={'tinynet' in errors}>
-          <FormControlLabel>
-            <FormControlLabelText>
-              Private Network Subnet(s)
-            </FormControlLabelText>
-          </FormControlLabel>
-          <Input>
-            <InputField
-              value={tinynet}
-              placeholder={'Private subnet for network'}
-              onChangeText={(value) => setTinynet(value)}
-            />
-          </Input>
-          {'tinynet' in errors ? (
-            <FormControlError>
-              <FormControlErrorText>{errors.tinynet}</FormControlErrorText>
-            </FormControlError>
-          ) : null}
-        </FormControl>
-
-        <FormControl isInvalid={'login' in errors}>
-          <FormControlLabel>
-            <FormControlLabelText>Admin Password</FormControlLabelText>
-          </FormControlLabel>
-          <Input variant="outline" size="md">
-            <InputField
-              type="password"
-              value={password}
-              placeholder="Password"
-              onChangeText={(value) => setPassword(value)}
-              onSubmitEditing={handlePress}
-            />
-            <InputSlot>
-              <InputIcon as={KeyRoundIcon} mr="$2" />
-            </InputSlot>
-          </Input>
-          <Input variant="outline" size="md" mt="$2">
-            <InputField
-              type="password"
-              value={passwordConfirm}
-              placeholder="Confirm Password"
-              onChangeText={(value) => setPasswordConfirm(value)}
-              onSubmitEditing={handlePress}
-            />
-            <InputSlot>
-              <InputIcon as={KeyRoundIcon} mr="$2" />
-            </InputSlot>
-          </Input>
-
-          {'login' in errors ? (
-            <FormControlError>
-              <FormControlErrorText>{errors.login}</FormControlErrorText>
-            </FormControlError>
-          ) : null}
-        </FormControl>
-
-        <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
-          <Checkbox
-            size="md"
-            value={checkUpdates}
-            isChecked={checkUpdates}
-            onChange={(enabled) => setCheckUpdates(!checkUpdates)}
-          >
-            <CheckboxIndicator mr="$2">
-              <CheckboxIcon as={CheckIcon} />
-            </CheckboxIndicator>
-            <CheckboxLabel>Auto-Check for Updates</CheckboxLabel>
-          </Checkbox>
-
-          <Tooltip
-            label={'Help the Supernetworks Team count your installation'}
-          >
-            <Checkbox
-              size="md"
-              value={reportInstall}
-              isChecked={reportInstall}
-              onChange={(enabled) => setReportInstall(!reportInstall)}
-            >
-              <CheckboxIndicator mr="$2">
-                <CheckboxIcon as={CheckIcon} />
-              </CheckboxIndicator>
-              <CheckboxLabel>Register Install</CheckboxLabel>
-            </Checkbox>
-          </Tooltip>
-        </VStack>
-
-        <Button
-          mt="$4"
-          rounded="$full"
-          bg="#fbc658"
-          sx={{
-            _hover: {
-              bg: '#fab526'
-            }
-          }}
-          onPress={handlePress}
-          disabled={!apiReachable}
-        >
-          {apiReachable ? (
-            <ButtonText>Save</ButtonText>
-          ) : (
-            <ButtonText>...waiting for API</ButtonText>
-          )}
-        </Button>
-
-        {'submit' in errors ? (
-          <HStack space="md" alignSelf="center" alignItems="center">
-            <AlertCircle color="$red700" />
-            <Text color="$red700">{errors.submit}</Text>
-          </HStack>
-        ) : null}
-
-        {'api' in errors ? (
-          <HStack space="md" alignSelf="center" alignItems="center">
-            <AlertCircle color="$red700" />
-            <Text color="$red700">{errors.api}</Text>
-          </HStack>
-        ) : null}
-      </>
+      <SetupHeading title="Welcome to SPR!" justifyContent="center" />
+      <VStack space="xl" alignItems="center">
+        <Status online={apiReachable} addrs={addrs} />
+        <Text>Press Start to configure your new Wifi</Text>
+        <ButtonSetup onPress={() => setSetupStage(1)} px="$8">
+          <ButtonText>Start</ButtonText>
+        </ButtonSetup>
+      </VStack>
     </SetupScrollView>
   )
 }
