@@ -10,6 +10,7 @@ import {
   FlatList,
   HStack,
   VStack,
+  Spinner,
   Text,
   Tooltip,
   TooltipContent,
@@ -24,6 +25,7 @@ import DeviceItem from 'components/Devices/DeviceItem'
 
 const WifiClients = (props) => {
   const [clients, setClients] = useState([])
+  const [spinner, setSpinner] = useState(true)
   const context = useContext(AlertContext)
   const appContext = useContext(AppContext)
 
@@ -68,6 +70,7 @@ const WifiClients = (props) => {
   }
 
   const refreshAPI = async (api) => {
+    setSpinner(true)
     const ifaces = await api.interfacesApi
       .call(api, api, 'AP')
       .catch((error) => {
@@ -129,6 +132,8 @@ const WifiClients = (props) => {
         return add_me.concat(...prev)
       })
     }
+    setSpinner(false)
+
   }
 
   const getWifiSpeedString = (txrate) => {
@@ -159,6 +164,9 @@ const WifiClients = (props) => {
   }, [])
 
   return (
+    <VStack>
+    {(spinner &&
+      <Spinner size="small"/>)}
     <FlatList
       data={clients}
       estimatedItemSize={100}
@@ -214,6 +222,7 @@ const WifiClients = (props) => {
       )}
       keyExtractor={(item) => item.Name}
     />
+    </VStack>
   )
 }
 

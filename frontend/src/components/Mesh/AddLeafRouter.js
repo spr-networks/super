@@ -1,10 +1,12 @@
 import React, { useContext } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import ClientSelect from 'components/ClientSelect'
 
 import { AppContext, AlertContext } from 'AppContext'
 import APIMesh from 'api/mesh'
-import api, {api as xapi, devices, authAPI, meshAPI, wifiAPI } from 'api'
+import APIFirewall from 'api/Firewall'
+import api, {api as xapi, devices, authAPI, meshAPI, wifiAPI, setAuthReturn } from 'api'
 
 import {
   Button,
@@ -38,7 +40,7 @@ class AddLeafRouterImpl extends React.Component {
     this.setState({ [name]: value })
   }
 
-  handleSubmit(event) {
+  handleSubmit(event)  {
     event.preventDefault()
 
     const meshProtocol = () => {
@@ -79,6 +81,9 @@ class AddLeafRouterImpl extends React.Component {
     rMeshAPI.setRemoteURL(meshProtocol() + '//' + leaf.IP + '/')
     rMeshAPI.setAuthTokenHeaders(leaf.APIToken)
 
+    //fconfig = await firewallAPI.config()
+    //ServicePorts
+
     rMeshAPI
       .leafMode()
       .then(async (result) => {
@@ -93,8 +98,9 @@ class AddLeafRouterImpl extends React.Component {
           tokens = await authAPI.tokens()
         } catch (e) {
            this.props.alertContext.error('Could not set API Tokens. Verify OTP on Auth page')
-           //setAuthReturn('/admin/auth')
-           //navigate('/auth/validate')
+           setAuthReturn('/admin/auth')
+           this.props.navigate('/auth/validate')
+           return
         }
 
         let parentAPIToken = ''
@@ -241,11 +247,13 @@ class AddLeafRouterImpl extends React.Component {
 export default function AddLeafRouter(props) {
   let alertContext = useContext(AlertContext)
   let context = useContext(AppContext)
+  let navigate = useNavigate()
   return (
     <AddLeafRouterImpl
       notifyChange={props.notifyChange}
       alertContext={alertContext}
       context={context}
+      navigate={navigate}
     ></AddLeafRouterImpl>
   )
 }
