@@ -79,7 +79,7 @@ const IntroWidget = ({
               onPress={() => navigate('/admin/firewallSettings')}
             >
               <ButtonIcon mr="$2" as={Settings2Icon} />
-              <ButtonText>Setup services</ButtonText>
+              <ButtonText>Setup Services</ButtonText>
             </Button>
             <Button
               size="xs"
