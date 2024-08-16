@@ -190,6 +190,13 @@ func PluginRequestHandlerPublic(proxy *httputil.ReverseProxy) func(http.Response
 	}
 }
 
+func PluginRequestHandlerCert(proxy *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r.URL.Path = "/cert"
+		proxy.ServeHTTP(w, r)
+	}
+}
+
 func PluginEnabled(name string) bool {
 	for _, entry := range config.Plugins {
 		if entry.Name == name && entry.Enabled == true {
@@ -402,7 +409,7 @@ func PluginRoutes(external_router_authenticated *mux.Router, external_router_pub
 
 		// auth-less exception to avoid MITM attacks on Auth Token.
 		if entry.Plus && entry.URI == "mesh" {
-			external_router_public.HandleFunc("/mesh/cert", PluginRequestHandlerPublic(proxy))
+			external_router_public.HandleFunc("/mesh/cert", PluginRequestHandlerCert(proxy))
 		}
 
 		if entry.HasUI {
