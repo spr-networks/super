@@ -37,6 +37,10 @@ export default class APIMesh extends API {
     return this.put(`setSSID`, data);
   }
 
+  syncOTP() {
+    return this.put(`syncOTP`, null);
+  }
+
   meshIter(protocb) {
     return this.leafRouters().then((routers) => {
       if (routers == null) {
@@ -45,7 +49,7 @@ export default class APIMesh extends API {
       let apis = []
       for (let i = 0; i < routers.length; i++) {
         let r = protocb()
-        r.setRemoteURL('http://' + routers[i].IP + '/')
+        r.setRemoteURL(window.location.protocol + '//' + routers[i].IP + '/')
         r.setAuthTokenHeaders(routers[i].APIToken)
         apis.push(r)
       }

@@ -1,10 +1,9 @@
 import React, { useContext, useEffect, useState } from 'react'
 
 import { deviceAPI } from 'api'
-import { AlertContext } from 'layouts/Admin'
-import {WifiConnect, WiredConnect} from 'views/Devices/ConnectDevice'
+import { AlertContext, AppContext } from 'AppContext'
+import { WifiConnect, WiredConnect } from 'views/Devices/ConnectDevice'
 import { format as timeAgo } from 'timeago.js'
-import InputSelect from 'components/InputSelect'
 
 import {
   Box,
@@ -23,7 +22,6 @@ import {
   FormControlError,
   FormControlErrorIcon,
   FormControlErrorText,
-  Heading,
   HStack,
   Input,
   InputField,
@@ -32,7 +30,6 @@ import {
   RadioIndicator,
   RadioIcon,
   RadioLabel,
-  ScrollView,
   VStack,
   Text,
   AlertCircleIcon,
@@ -41,7 +38,6 @@ import {
   TooltipContent,
   TooltipText
 } from '@gluestack-ui/themed'
-import { AppContext } from 'AppContext'
 import { ListHeader } from 'components/List'
 import DeviceExpiry from './DeviceExpiry'
 
@@ -74,16 +70,19 @@ const AddDevice = (props) => {
   }
 
   useEffect(() => {
-    deviceAPI.list().then((devs) => {
-      let pendingDevice = devs.pending !== undefined ? devs.pending : null
+    deviceAPI
+      .list()
+      .then((devs) => {
+        let pendingDevice = devs.pending !== undefined ? devs.pending : null
 
-      if (pendingDevice) {
-        context.info(
-          'Have Pending Device',
-          `Device "${pendingDevice.Name}" is added but not connected. Adding a new device will overwrite it`
-        )
-      }
-    }).catch((e) => {})
+        if (pendingDevice) {
+          context.info(
+            'Have Pending Device',
+            `Device "${pendingDevice.Name}" is added but not connected. Adding a new device will overwrite it`
+          )
+        }
+      })
+      .catch((e) => {})
   }, [])
 
   const filterMAC = (value) => {
@@ -260,9 +259,21 @@ const AddDevice = (props) => {
   }
   if (submitted) {
     if (wpa != 'none') {
-      return <WifiConnect device={device} goBackSuccess={props.deviceAddedCallback} goBack={() => setSubmitted(false)} />
+      return (
+        <WifiConnect
+          device={device}
+          goBackSuccess={props.deviceAddedCallback}
+          goBack={() => setSubmitted(false)}
+        />
+      )
     } else {
-      return <WiredConnect device={device} goBackSuccess={props.deviceAddedCallback} goBack={() => setSubmitted(false)} />
+      return (
+        <WiredConnect
+          device={device}
+          goBackSuccess={props.deviceAddedCallback}
+          goBack={() => setSubmitted(false)}
+        />
+      )
     }
   }
 
@@ -272,19 +283,20 @@ const AddDevice = (props) => {
         '@lg': { width: '$5/6' }
       }}
     >
-    {!props.slimView && (
-      <>
-        <ListHeader title="Add a new WiFi Device" />
-        <VStack display={isSimpleMode ? 'none' : 'flex'} px="$4">
-          <Text color="$muted500" size="xs">
-            Wired devices are added automatically & need WAN/DNS policies assigned
-            to them for internet access
-          </Text>
-          <Text color="$muted500" size="xs">
-            If they need a VLAN Tag ID for a Managed Port do add the device here
-          </Text>
-        </VStack>
-      </>
+      {!props.slimView && (
+        <>
+          <ListHeader title="Add a new WiFi Device" />
+          <VStack display={isSimpleMode ? 'none' : 'flex'} px="$4">
+            <Text color="$muted500" size="xs">
+              Wired devices are added automatically & need WAN/DNS policies
+              assigned to them for internet access
+            </Text>
+            <Text color="$muted500" size="xs">
+              If they need a VLAN Tag ID for a Managed Port do add the device
+              here
+            </Text>
+          </VStack>
+        </>
       )}
       <VStack space="3xl" p="$4">
         <VStack
@@ -416,7 +428,9 @@ const AddDevice = (props) => {
                               <CheckboxIndicator mr="$2">
                                 <CheckboxIcon />
                               </CheckboxIndicator>
-                              <CheckboxLabel>{policyName[policy]}</CheckboxLabel>
+                              <CheckboxLabel>
+                                {policyName[policy]}
+                              </CheckboxLabel>
                             </Checkbox>
                           </Box>
                         )
@@ -446,154 +460,155 @@ const AddDevice = (props) => {
           </FormControl>
 
           {!props.slimView && (
-
-          <FormControl flex={2} display={isSimpleMode ? 'none' : 'flex'}>
-            <FormControlLabel>
-              <FormControlLabelText>Tags</FormControlLabelText>
-            </FormControlLabel>
-            <CheckboxGroup
-              defaultValue={tags}
-              accessibilityLabel="Set Device Tags"
-              onChange={(values) => setTags(values)}
-              py={1}
-            >
-              <HStack space="md">
-                {allTags.map((tag) => (
-                  <Tooltip
-                    h={undefined}
-                    placement="bottom"
-                    trigger={(triggerProps) => {
-                      return (
-                        <Box {...triggerProps}>
-                          <Checkbox value={tag} colorScheme="primary">
-                            <CheckboxIndicator mr="$2">
-                              <CheckboxIcon />
-                            </CheckboxIndicator>
-                            <CheckboxLabel>{tag}</CheckboxLabel>
-                          </Checkbox>
-                        </Box>
-                      )
-                    }}
-                  >
-                    <TooltipContent>
-                      <TooltipText>{tagTips[tag] || ''}</TooltipText>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-              </HStack>
-            </CheckboxGroup>
-            <FormControlHelper>
-              <FormControlHelperText>Assign device tags</FormControlHelperText>
-            </FormControlHelper>
-          </FormControl>
-        )}
+            <FormControl flex={2} display={isSimpleMode ? 'none' : 'flex'}>
+              <FormControlLabel>
+                <FormControlLabelText>Tags</FormControlLabelText>
+              </FormControlLabel>
+              <CheckboxGroup
+                defaultValue={tags}
+                accessibilityLabel="Set Device Tags"
+                onChange={(values) => setTags(values)}
+                py={1}
+              >
+                <HStack space="md">
+                  {allTags.map((tag) => (
+                    <Tooltip
+                      h={undefined}
+                      placement="bottom"
+                      trigger={(triggerProps) => {
+                        return (
+                          <Box {...triggerProps}>
+                            <Checkbox value={tag} colorScheme="primary">
+                              <CheckboxIndicator mr="$2">
+                                <CheckboxIcon />
+                              </CheckboxIndicator>
+                              <CheckboxLabel>{tag}</CheckboxLabel>
+                            </Checkbox>
+                          </Box>
+                        )
+                      }}
+                    >
+                      <TooltipContent>
+                        <TooltipText>{tagTips[tag] || ''}</TooltipText>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </HStack>
+              </CheckboxGroup>
+              <FormControlHelper>
+                <FormControlHelperText>
+                  Assign device tags
+                </FormControlHelperText>
+              </FormControlHelper>
+            </FormControl>
+          )}
         </VStack>
 
         {!props.slimView && (
-        <>
-        <VStack
-          space="md"
-          display={isSimpleMode ? 'none' : 'flex'}
-          sx={{
-            '@md': { flexDirection: 'row' }
-          }}
-        >
-          <FormControl flex={1} isInvalid={'mac' in errors}>
-            <FormControlLabel>
-              <FormControlLabelText>MAC Address</FormControlLabelText>
-            </FormControlLabel>
-            <Input size="md">
-              <InputField
-                autoComplete="new-password"
-                onChangeText={(value) => handleChange('mac', value)}
-              />
-            </Input>
-            {'mac' in errors ? (
-              <FormControlError>
-                <FormControlErrorIcon as={AlertCircleIcon} />
-                <FormControlErrorText>
-                  format: 00:00:00:00:00:00
-                </FormControlErrorText>
-              </FormControlError>
-            ) : (
-              <FormControlHelper>
-                <FormControlHelperText>
-                  Optional. Will be assigned on connect if empty
-                </FormControlHelperText>
-              </FormControlHelper>
-            )}
-          </FormControl>
+          <>
+            <VStack
+              space="md"
+              display={isSimpleMode ? 'none' : 'flex'}
+              sx={{
+                '@md': { flexDirection: 'row' }
+              }}
+            >
+              <FormControl flex={1} isInvalid={'mac' in errors}>
+                <FormControlLabel>
+                  <FormControlLabelText>MAC Address</FormControlLabelText>
+                </FormControlLabel>
+                <Input size="md">
+                  <InputField
+                    autoComplete="new-password"
+                    onChangeText={(value) => handleChange('mac', value)}
+                  />
+                </Input>
+                {'mac' in errors ? (
+                  <FormControlError>
+                    <FormControlErrorIcon as={AlertCircleIcon} />
+                    <FormControlErrorText>
+                      format: 00:00:00:00:00:00
+                    </FormControlErrorText>
+                  </FormControlError>
+                ) : (
+                  <FormControlHelper>
+                    <FormControlHelperText>
+                      Optional. Will be assigned on connect if empty
+                    </FormControlHelperText>
+                  </FormControlHelper>
+                )}
+              </FormControl>
 
-          <FormControl flex={1} isInvalid={'VLAN' in errors}>
-            <FormControlLabel>
-              <FormControlLabelText>VLAN Tag ID</FormControlLabelText>
-            </FormControlLabel>
-            <Input size="md">
-              <InputField
-                autoComplete="new-password"
-                onChangeText={(value) => handleChange('vlan', value)}
-              />
-            </Input>
+              <FormControl flex={1} isInvalid={'VLAN' in errors}>
+                <FormControlLabel>
+                  <FormControlLabelText>VLAN Tag ID</FormControlLabelText>
+                </FormControlLabel>
+                <Input size="md">
+                  <InputField
+                    autoComplete="new-password"
+                    onChangeText={(value) => handleChange('vlan', value)}
+                  />
+                </Input>
 
-            {'VLAN' in errors ? (
-              <FormControlError>
-                <FormControlErrorIcon as={AlertCircleIcon} />
-                <FormControlErrorText>format: 1234</FormControlErrorText>
-              </FormControlError>
-            ) : (
-              <FormControlHelper>
-                <FormControlHelperText>
-                  Only needed for Wired devices on a managed port, set VLAN Tag
-                  ID
-                </FormControlHelperText>
-              </FormControlHelper>
-            )}
-          </FormControl>
-        </VStack>
-
-        <VStack
-          space="md"
-          sx={{
-            '@md': { flexDirection: 'row', width: '$1/2' }
-          }}
-        >
-          <FormControl flex={1} display={isSimpleMode ? 'none' : 'flex'}>
-            <FormControlLabel>
-              <FormControlLabelText>Expiration</FormControlLabelText>
-            </FormControlLabel>
-
-            <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
-              <DeviceExpiry
-                value={expiration}
-                onChange={(v) => handleChange('Expiration', v)}
-              />
-
-              <Checkbox
-                size="md"
-                value={deleteExpiry}
-                defaultIsChecked={deleteExpiry}
-                onChange={() => setDeleteExpiry(!deleteExpiry)}
-              >
-                <CheckboxIndicator mr="$2">
-                  <CheckboxIcon />
-                </CheckboxIndicator>
-                <CheckboxLabel>Delete on expiry</CheckboxLabel>
-              </Checkbox>
+                {'VLAN' in errors ? (
+                  <FormControlError>
+                    <FormControlErrorIcon as={AlertCircleIcon} />
+                    <FormControlErrorText>format: 1234</FormControlErrorText>
+                  </FormControlError>
+                ) : (
+                  <FormControlHelper>
+                    <FormControlHelperText>
+                      Only needed for Wired devices on a managed port, set VLAN
+                      Tag ID
+                    </FormControlHelperText>
+                  </FormControlHelper>
+                )}
+              </FormControl>
             </VStack>
 
-            <FormControlHelper>
-              <FormControlHelperText>
-                {/*If non zero has unix time for when the entry should disappear*/}
-                {expiration > 0
-                  ? `Expire in ${timeAgo(
-                      new Date(expiration * 1e3).toUTCString()
-                    )}`
-                  : null}
-              </FormControlHelperText>
-            </FormControlHelper>
-          </FormControl>
-        </VStack>
-        </>
+            <VStack
+              space="md"
+              sx={{
+                '@md': { flexDirection: 'row', width: '$1/2' }
+              }}
+            >
+              <FormControl flex={1} display={isSimpleMode ? 'none' : 'flex'}>
+                <FormControlLabel>
+                  <FormControlLabelText>Expiration</FormControlLabelText>
+                </FormControlLabel>
+
+                <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
+                  <DeviceExpiry
+                    value={expiration}
+                    onChange={(v) => handleChange('Expiration', v)}
+                  />
+
+                  <Checkbox
+                    size="md"
+                    value={deleteExpiry}
+                    defaultIsChecked={deleteExpiry}
+                    onChange={() => setDeleteExpiry(!deleteExpiry)}
+                  >
+                    <CheckboxIndicator mr="$2">
+                      <CheckboxIcon />
+                    </CheckboxIndicator>
+                    <CheckboxLabel>Delete on expiry</CheckboxLabel>
+                  </Checkbox>
+                </VStack>
+
+                <FormControlHelper>
+                  <FormControlHelperText>
+                    {/*If non zero has unix time for when the entry should disappear*/}
+                    {expiration > 0
+                      ? `Expire in ${timeAgo(
+                          new Date(expiration * 1e3).toUTCString()
+                        )}`
+                      : null}
+                  </FormControlHelperText>
+                </FormControlHelper>
+              </FormControl>
+            </VStack>
+          </>
         )}
 
         <Button action="primary" size="md" onPress={handleSubmit}>

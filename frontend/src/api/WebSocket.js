@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef } from 'react'
+import { useContext, useEffect, useState, useRef } from 'react'
 
 import { getApiHostname, getWsURL } from './API'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -7,7 +7,6 @@ import { eventTemplate } from 'components/Alerts/AlertUtil'
 
 import { useNavigate } from 'react-router-dom'
 import { alertState, AppContext } from 'AppContext'
-import { Platform } from 'react-native'
 
 // NOTE this function checks if its a alert, if not return null
 const parseLogMessage = async (context, msg) => {
@@ -103,7 +102,7 @@ const parseLogMessage = async (context, msg) => {
 }
 
 const WebSocketComponent = ({ confirm, notify, ...props }) => {
-  const context = useContext(AppContext)
+  //const context = useContext(AppContext)
   const navigate = useNavigate()
   const ws = useRef(null)
 
@@ -113,7 +112,7 @@ const WebSocketComponent = ({ confirm, notify, ...props }) => {
     } else if (event.data == 'Authentication failure') {
       return alertState.error('Websocket failed to authenticate')
     } else if (event.data == 'Invalid JWT OTP') {
-      //user needed an OTP validation
+      //user needed an OTP validation. TODO dont navigate here
       navigate('/auth/validate')
       return
     }
@@ -121,9 +120,25 @@ const WebSocketComponent = ({ confirm, notify, ...props }) => {
     let eventData = JSON.parse(event.data)
 
     // if false it means event is streamed for logs or cli
-    // this is set temporarily when viewing the sprbus via ws
     if (!eventData.Notification) {
       return
+    }
+
+    //context does not work here
+    let devices = []
+    try {
+      let res = await AsyncStorage.getItem('devices')
+      let d = JSON.parse(res)
+      if (d) {
+        devices = d
+      }
+    } catch (err) {}
+
+    const context = {
+      getDevice: (value, type = 'MAC') => {
+        if (!value) return null
+        return devices.find((d) => d[type] == value)
+      }
     }
 
     const res = await parseLogMessage(context, eventData)

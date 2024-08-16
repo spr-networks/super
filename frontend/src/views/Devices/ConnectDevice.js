@@ -18,7 +18,7 @@ import {
 
 const WifiConnect = (props) => {
   const context = useContext(AlertContext)
-  const { device } = props
+  const { device, ssid, onSuccess, hideBackOnSuccess } = props
   const navigate = useNavigate()
 
   const [success, setSuccess] = useState(false)
@@ -32,35 +32,49 @@ const WifiConnect = (props) => {
         .then((ifaces) => {
           Promise.all(
             ifaces.map((iface) => {
-              return wifiAPI.status(iface).then((status) => {
-                return status['ssid[0]'];
-              }).catch((e) => {});
+              return wifiAPI
+                .status(iface)
+                .then((status) => {
+                  return status['ssid[0]']
+                })
+                .catch((e) => {})
             })
           ).then((ssids) => {
-            let x = ssids.filter(x => x !== 'sprlab-setup' && x != '' && x != null);
-            setSsids(x);
+            let x = ssids.filter(
+              (x) => x !== 'sprlab-setup' && x != '' && x != null
+            )
+            setSsids(x)
             if (x.length === 0) {
-              setTimeout(fetchSSIDs, 2000);
+              setTimeout(fetchSSIDs, 2000)
             } else {
               setError(null)
             }
-          });
+          })
         })
         .catch((err) => {
-          setTimeout(fetchSSIDs, 2000);
+          setTimeout(fetchSSIDs, 2000)
           context.error(
             'Failed to add device or configured properly -- check wifid, or reset wifi settings'
-          );
-        });
-    };
+          )
+        })
+    }
 
-    fetchSSIDs();
-  }, []);
+    //provided as prop
+    if (ssid) {
+      setSsids([ssid])
+    } else {
+      fetchSSIDs()
+    }
+  }, [])
 
   const checkPendingStatus = () => {
     deviceAPI
       .pendingPSK()
       .then((gotPending) => {
+        if (!success && gotPending === false && onSuccess) {
+          onSuccess()
+        }
+
         setSuccess(gotPending === false)
       })
       .catch((error) => {
@@ -71,11 +85,11 @@ const WifiConnect = (props) => {
   useEffect(() => {
     const id = setInterval(checkPendingStatus, 1000)
     return () => clearInterval(id)
-  }, [1000])
+  }, [])
 
   const goBack = () => {
     //override goBack to go back success
-    if (success && props.goBackSuccess)  {
+    if (success && props.goBackSuccess) {
       props.goBackSuccess()
     }
     if (props.goBack) {
@@ -96,7 +110,8 @@ const WifiConnect = (props) => {
       {ssids.length == 0 && (
         <VStack key="loading" space="md" alignItems="center">
           <Text size="lg" color="$muted500">
-            Waiting for SPR... (You may need to reconnect to sprlab-setup for wifi setup)
+            Waiting for SPR... (You may need to reconnect to sprlab-setup for
+            wifi setup)
           </Text>
         </VStack>
       )}
@@ -149,7 +164,13 @@ const WifiConnect = (props) => {
             type={device.PSKEntry.Type}
           />
 
-          <Button w="$1/3" action="secondary" variant="solid" onPress={goBack}>
+          <Button
+            w="$1/3"
+            action="secondary"
+            variant="solid"
+            onPress={goBack}
+            display={hideBackOnSuccess ? 'none' : 'flex'}
+          >
             <ButtonIcon as={ArrowLeftIcon} />
             <ButtonText>Back</ButtonText>
           </Button>
@@ -169,7 +190,7 @@ const WiredConnect = (props) => {
 
   const goBack = () => {
     //override goBack to go back success
-    if (success && props.goBackSuccess)  {
+    if (success && props.goBackSuccess) {
       props.goBackSuccess()
     }
     if (props.goBack) {
@@ -240,7 +261,6 @@ const WiredConnect = (props) => {
           </>
         )}
 
-
         <Button w="$1/3" action="secondary" variant="solid" onPress={goBack}>
           <ButtonIcon as={ArrowLeftIcon} />
           <ButtonText>Back</ButtonText>
@@ -250,4 +270,4 @@ const WiredConnect = (props) => {
   )
 }
 
-export {WifiConnect, WiredConnect}
+export { WifiConnect, WiredConnect }

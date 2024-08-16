@@ -1,12 +1,13 @@
 import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
-import { AlertContext } from 'layouts/Admin'
+import { AlertContext, AppContext } from 'AppContext'
 import { deviceAPI } from 'api/Device'
+import { meshAPI } from 'api'
+
 import ModalConfirm from 'components/ModalConfirm'
 
 import { format as timeAgo } from 'timeago.js'
-import InputSelect from 'components/InputSelect'
 import DeviceExpiry from './DeviceExpiry'
 
 import {
@@ -24,25 +25,16 @@ import {
   FormControlLabelText,
   FormControlHelper,
   FormControlHelperText,
-  Heading,
   HStack,
-  Icon,
   Input,
   InputField,
-  ScrollView,
   VStack,
   Text,
   Tooltip,
   TooltipContent,
   TooltipText,
   ButtonIcon,
-  ThreeDotsIcon,
-  ArrowLeftIcon,
-  Menu,
-  MenuItem,
-  MenuItemLabel,
-  AddIcon,
-  CloseIcon
+  ArrowLeftIcon
 } from '@gluestack-ui/themed'
 
 import { Address4 } from 'ip-address'
@@ -55,6 +47,9 @@ import { GroupMenu, PolicyMenu, TagMenu } from 'components/TagMenu'
 
 const EditDevice = ({ device, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
+  const appContext = useContext(AppContext)
+  const isSimpleMode = appContext.isSimpleMode
+
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(device.Name)
   const [rawIP, setRawIP] = useState(device.RecentIP)
@@ -249,6 +244,22 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
   let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
 
+  const isMeshNode = async () => {
+    if (appContext.isPlusDisabled) {
+      return false
+    }
+
+    //for plus mode check mesh
+    let config = await meshAPI.config()
+    for (let leaf of config.LeafRouters) {
+      if (leaf.IP == ip) {
+        return true
+      }
+    }
+
+    return false
+  }
+
   const saveDevice = async () => {
     let id = device.MAC || device.WGPubKey
     if (!name) {
@@ -280,6 +291,15 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     if (vlantag != device.VLANTag) {
       //api cant distinguish empty on assignment,
       // so set it to "0"
+
+      if (vlantag != '' && vlantag != '0') {
+        let result = await isMeshNode(device)
+        if (result == true) {
+          context.error('This device is SPR Mesh Node, VLAN Assignment not supported')
+          setVlanTag('')
+        }
+      }
+
       deviceAPI
         .updateVLANTag(id, vlantag == '' ? '0' : vlantag)
         .then(notifyChange)
@@ -288,6 +308,8 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         )
     }
   }
+
+
 
   const handleSubmit = () => {
     setEditing(false)
@@ -375,7 +397,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         ) : null}
       </FormControl>
 
-      <FormControl>
+      <FormControl display={isSimpleMode ? 'none' : 'flex'}>
         <Tooltip
           placement="bottom"
           trigger={(triggerProps) => {
@@ -394,7 +416,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           </TooltipContent>
         </Tooltip>
 
-        <Input variant="underlined">
+        <Input variant="solid">
           <InputField
             type="text"
             value={rawIP}
@@ -405,7 +427,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         </Input>
       </FormControl>
 
-      <FormControl>
+      <FormControl display={isSimpleMode ? 'none' : 'flex'}>
         <Tooltip
           placement="bottom"
           trigger={(triggerProps) => {
@@ -423,7 +445,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           </TooltipContent>
         </Tooltip>
 
-        <Input variant="underlined">
+        <Input variant="solid">
           <InputField
             type="text"
             value={vlantag}
@@ -582,6 +604,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       </VStack>
 
       <VStack
+        display={isSimpleMode ? 'none' : 'flex'}
         space="lg"
         sx={{ '@md': { flexDirection: 'row', maxWidth: '$1/2' } }}
       >

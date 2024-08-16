@@ -47,9 +47,9 @@ var ConfigFile = TEST_PREFIX + "/configs/base/config.sh"
 var DNSConfigFile = TEST_PREFIX + "/configs/dns/Corefile"
 var MulticastConfigFile = TEST_PREFIX + "/configs/base/multicast.json"
 
-var ApiTlsCert = "/configs/auth/www-api.crt"
-var ApiTlsCaCert = "/configs/auth/cert/www-api-ca.crt"
-var ApiTlsKey = "/configs/auth/www-api.key"
+var ApiTlsCert = TEST_PREFIX + "/configs/auth/www-api.crt"
+var ApiTlsCaCert = TEST_PREFIX + "/configs/auth/cert/www-api-ca.crt"
+var ApiTlsKey = TEST_PREFIX + "/configs/auth/www-api.key"
 
 var SuperdSocketPath = TEST_PREFIX + "/state/plugins/superd/socket"
 
@@ -2703,13 +2703,16 @@ func setSecurityHeaders(next http.Handler) http.Handler {
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		//use logStd here so we dont get dupes
-		logStd.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
 
-		logs := map[string]interface{}{}
-		logs["remoteaddr"] = r.RemoteAddr
-		logs["method"] = r.Method
-		logs["path"] = r.URL.Path
-		SprbusPublish("log:www:access", logs)
+		if os.Getenv("DEBUGHTTP") != "" {
+			logStd.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+
+			logs := map[string]interface{}{}
+			logs["remoteaddr"] = r.RemoteAddr
+			logs["method"] = r.Method
+			logs["path"] = r.URL.Path
+			SprbusPublish("log:www:access", logs)
+		}
 
 		handler.ServeHTTP(w, r)
 	})
@@ -2807,6 +2810,7 @@ func main() {
 
 	//download cert from http
 	external_router_public.HandleFunc("/cert", getCert).Methods("GET")
+	external_router_authenticated.HandleFunc("/cert", getCert).Methods("GET")
 
 	//nftable helpers
 	external_router_authenticated.HandleFunc("/nfmap/{name}", showNFMap).Methods("GET")
@@ -2981,22 +2985,7 @@ func main() {
 		panic(err)
 	}
 
-	// publish static files for plugins before spa handler
-	PluginRoutes(external_router_authenticated, external_router_public)
-
-	spa := spaHandler{staticPath: "/ui", indexPath: "index.html"}
-	external_router_public.PathPrefix("/").Handler(spa)
-
-	wifidServer := http.Server{Handler: logRequest(unix_wifid_router)}
-	dhcpdServer := http.Server{Handler: logRequest(unix_dhcpd_router)}
-	wireguardServer := http.Server{Handler: logRequest(unix_wireguard_router)}
-
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "SPR-Bearer", "X-JWT-OTP"})
-	originsOk := handlers.AllowedOrigins([]string{"*"})
-	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
-
 	initAuth()
-
 	//set up dhcp
 	initDHCP()
 	//initialize firewall rules
@@ -3015,6 +3004,20 @@ func main() {
 
 	// updates when enabled. not implemented yet
 	go runAutoUpdates()
+
+	// publish static files for plugins before spa handler
+	PluginRoutes(external_router_authenticated, external_router_public)
+
+	spa := spaHandler{staticPath: "/ui", indexPath: "index.html"}
+	external_router_public.PathPrefix("/").Handler(spa)
+
+	wifidServer := http.Server{Handler: logRequest(unix_wifid_router)}
+	dhcpdServer := http.Server{Handler: logRequest(unix_dhcpd_router)}
+	wireguardServer := http.Server{Handler: logRequest(unix_wireguard_router)}
+
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "SPR-Bearer", "X-JWT-OTP"})
+	originsOk := handlers.AllowedOrigins([]string{"*"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
 
 	sslPort, runSSL := os.LookupEnv("API_SSL_PORT")
 

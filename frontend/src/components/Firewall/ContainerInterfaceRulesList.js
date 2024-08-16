@@ -80,7 +80,7 @@ const ContainerInterfaceRulesList = (props) => {
     <VStack>
       <ListHeader
         title={title}
-        description="Manage network access for custom interface names"
+        description="Manage network access policy for custom interfaces"
       >
         <ModalForm
           title={`Add Custom Interface Rule`}

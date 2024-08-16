@@ -13,6 +13,7 @@ import {
   HStack,
   FlatList,
   Text,
+  Spinner,
   Tooltip,
   VStack,
   AddIcon,
@@ -41,10 +42,16 @@ const Mesh = (props) => {
 
   const [mesh, setMesh] = useState({})
   let [meshAvailable, setMeshAvailable] = useState(true)
+  let [spinning, setSpinning] = useState(false)
 
   let alertContext = useContext(AlertContext)
   let refModal = useRef(null)
   const navigate = useNavigate()
+
+  const meshProtocol = () => {
+      //return 'https:'
+      return window.location.protocol
+  }
 
   const catchMeshErr = (err) => {
     if (err?.message == 404 || err?.message == 502) {
@@ -55,17 +62,22 @@ const Mesh = (props) => {
       'Mesh API Failure',
       err?.message == 404 ? 'Is mesh plugin enabled?' : err
     )
+    setSpinning(false)
   }
 
   const refreshLeaves = () => {
-    retrieveLeafToken((token) => {
-      setLeafToken(token)
-    })
+    setSpinning(true)
 
     meshAPI
       .leafMode()
       .then((result) => {
-        setIsLeafMode(JSON.parse(result))
+        let r = JSON.parse(result)
+        setIsLeafMode(r)
+        if (r == true) {
+          retrieveLeafToken((token) => {
+            setLeafToken(token)
+          })
+        }
       })
       .catch(catchMeshErr)
 
@@ -92,7 +104,7 @@ const Mesh = (props) => {
 
         let checkedRouters = routers.map(async (router) => {
           let rApi = new api()
-          rApi.setRemoteURL('http://' + router.IP + '/')
+          rApi.setRemoteURL(meshProtocol() + '//' + router.IP + '/')
           rApi.setAuthTokenHeaders(router.APIToken)
 
           return rApi
@@ -103,7 +115,7 @@ const Mesh = (props) => {
 
               let rMeshAPI = new APIMesh()
               //if API is okay, reach further.
-              rMeshAPI.setRemoteURL('http://' + router.IP + '/')
+              rMeshAPI.setRemoteURL(meshProtocol() + '//' + router.IP + '/')
               rMeshAPI.setAuthTokenHeaders(router.APIToken)
 
               return rMeshAPI
@@ -133,9 +145,11 @@ const Mesh = (props) => {
         Promise.all(checkedRouters)
           .then((results) => {
             setLeafRouters(results)
+            setSpinning(false)
           })
           .catch((e) => {
             alertContext.error('Remote API Failure', e)
+            setSpinning(false)
           })
       })
       .catch(catchMeshErr)
@@ -233,6 +247,7 @@ const Mesh = (props) => {
   }, [])
 
   const deleteListItem = (item) => {
+    setSpinning(true)
     const done = (res) => {
       refreshLeaves()
     }
@@ -267,7 +282,15 @@ const Mesh = (props) => {
     if (ssid == '') {
       return
     }
-    meshAPI.setSSID(ssid).then((result) => {})
+    meshAPI.setSSID(ssid).then((result) => {}).catch((e) => {
+      alertContext.error('Mesh API failed to sync ssids')
+    })
+  }
+
+  const doSyncOTP = () => {
+    meshAPI.syncOTP().then((result) => {}).catch((e) => {
+      alertContext.error('Mesh API failed to sync otp')
+    })
   }
 
   const retrieveLeafToken = (func) => {
@@ -302,6 +325,8 @@ const Mesh = (props) => {
           .catch((e) => {
             alertContext.error('Could not generate API Token')
           })
+      } else {
+        setLeafToken(t)
       }
     })
   }
@@ -331,11 +356,11 @@ const Mesh = (props) => {
         <VStack>
           <ListHeader
             title=" Mesh Setup"
-            description="Configure downstream routers for mesh networking. Only wired backhaul is supported for now."
+            description="Configure Access Points for mesh networking. Only wired backhaul is supported for now."
           >
             <ModalForm
-              title="Add Leaf Router"
-              triggerText="Add Leaf Router"
+              title="Add Mesh Node AP"
+              triggerText="Add Mesh Node AP"
               triggerProps={{
                 sx: {
                   '@base': { display: 'none' },
@@ -387,8 +412,12 @@ const Mesh = (props) => {
 
           <VStack space="md" p="$4">
             {!leafRouters.length ? (
-              <Text>There are no leaf routers configured yet</Text>
+              <Text>There are no mesh Access Points configured yet</Text>
             ) : null}
+
+            { spinning && (
+              <Spinner size="medium" />
+            )}
 
             <ButtonGroup
               flexDirection="column"
@@ -401,14 +430,19 @@ const Mesh = (props) => {
                 action="primary"
                 onPress={() => refModal.current()}
               >
-                <ButtonText>Add Leaf Router</ButtonText>
+                <ButtonText>Add Mesh Access Point</ButtonText>
                 <ButtonIcon as={AddIcon} ml="$1" />
               </Button>
-
-              <Button action="secondary" onPress={() => doSyncSSID()}>
-                <ButtonText>Sync SSID Across Devices: {ssid}</ButtonText>
-                <ButtonIcon as={RefreshCwIcon} ml="$1" />
-              </Button>
+              <VStack>
+                <Button mt="$4"  action="secondary" onPress={() => doSyncSSID()}>
+                  <ButtonText>Sync SSID Across Access Points: {ssid}</ButtonText>
+                  <ButtonIcon as={RefreshCwIcon} ml="$1" />
+                </Button>
+                <Button mt="$4" action="secondary" onPress={() => doSyncOTP()}>
+                  <ButtonText>Sync OTP Code Across Access Points</ButtonText>
+                  <ButtonIcon as={RefreshCwIcon} ml="$1" />
+                </Button>
+              </VStack>
             </ButtonGroup>
           </VStack>
 
@@ -416,7 +450,7 @@ const Mesh = (props) => {
             <>
               <ListHeader
                 title="Device Token"
-                description="Generate an API token to use this device as a leaf router."
+                description="Generate an API token to use this device as a mesh Access Point."
               ></ListHeader>
 
               <Box

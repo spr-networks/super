@@ -1,18 +1,14 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { api, wifiAPI, firewallAPI, saveLogin } from 'api'
-import * as xapi from 'api';
-import {generateCapabilitiesString, generateConfigForBand, getBestWifiConfig, isSPRCompat} from 'api/Wifi'
+import { api, wifiAPI, saveLogin } from 'api'
+import { generateConfigForBand, getBestWifiConfig, isSPRCompat } from 'api/Wifi'
 import { useNavigate } from 'react-router-dom'
-import AddDevice from 'components/Devices/AddDevice'
+import AddDevice from 'components/Setup/AddDevice'
 import { countryCodes } from 'utils'
 import { Tooltip } from 'components/Tooltip'
-import FirewallSettings from 'views/Firewall/FirewallSettings'
 
 import {
-  Box,
   Button,
-  ButtonIcon,
   Checkbox,
   CheckboxIcon,
   CheckboxIndicator,
@@ -21,6 +17,7 @@ import {
   Link,
   Heading,
   HStack,
+  Icon,
   FormControl,
   FormControlLabel,
   FormControlLabelText,
@@ -37,43 +34,87 @@ import {
   Text,
   View,
   VStack,
-  useColorMode
+  useColorMode,
+  Badge,
+  BadgeText,
+  BadgeIcon
 } from '@gluestack-ui/themed'
 
 import { Select } from 'components/Select'
 
 import { AlertContext } from 'AppContext'
-import { AlertCircle, BookOpenText, KeyRoundIcon } from 'lucide-react-native'
-
+import {
+  AlertCircle,
+  AlertCircleIcon,
+  BookOpenTextIcon,
+  CheckCircleIcon,
+  KeyRoundIcon,
+  WifiIcon
+} from 'lucide-react-native'
 
 const AlertError = (props) => {
-  return (
-    <>
-    {props.alertBody && (
-      <Text>{props.alertBody}</Text>
-    )}
-    </>
-  )
+  return <>{props.alertBody && <Text>{props.alertBody}</Text>}</>
 }
 
 const ApiLoading = (props) => {
+  const navigate = useNavigate()
+
+  if (props.online) {
+    return <></>
+  }
   return (
-    <>
-    {props.online ? (
-      <></>
-    ) : (
-      <HStack flex={1} space="sm" alignSelf="center" alignItems="center">
-        <Tooltip label={'Reload the page or reconnect to the SPR Setup AP'}>
-          <InfoIcon color="$muted400" />
-        </Tooltip>
-        <Text>API Loading...</Text>
-        <Spinner size="small"/>
-      </HStack>
-    )
-    }
-    </>
+    <HStack space="sm" alignSelf="center" alignItems="center">
+      <Spinner size="small" />
+      <Tooltip
+        label={'Reload the page or reconnect to the SPR Setup AP'}
+        onPress={() => navigate('/auth/setup')}
+      >
+        <Text size="md">API Loading...</Text>
+      </Tooltip>
+    </HStack>
   )
 }
+
+const SetupScrollView = ({ children, ...props }) => {
+  return (
+    <ScrollView h="$full" w="$full" sx={{ '@md': { h: '92vh', pb: '$8' } }}>
+      <View
+        h="$full"
+        px="$4"
+        bg="$white"
+        sx={{
+          _dark: { bg: '$blueGray900' },
+          '@md': {
+            rounded: 10,
+            w: '60%',
+            mt: '$8',
+            px: '$8',
+            alignSelf: 'center'
+          }
+        }}
+      >
+        <VStack space="md" my="$4">
+          {children}
+        </VStack>
+      </View>
+    </ScrollView>
+  )
+}
+
+const ButtonSetup = ({ children, ...props }) => (
+  <Button
+    rounded="$full"
+    bg="#fbc658"
+    sx={{
+      _hover: {
+        bg: '#fab526'
+      }
+    }}
+    {...props}
+  >
+    {children}
+  </Button>
+)
 
 const Setup = (props) => {
   const context = useContext(AlertContext)
@@ -90,19 +131,22 @@ const Setup = (props) => {
   const [tinynet, setTinynet] = useState('192.168.2.0/24')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
-  const [errors, setErrors] = React.useState({})
+  const [errors, setErrors] = useState({})
   const [isDone, setIsDone] = useState(false)
   const [checkUpdates, setCheckUpdates] = useState(true)
   const [randomizeBSSIDs, setRandomizeBSSIDs] = useState(true)
   const [cloakBSSIDs, setCloakBSSIDs] = useState(false)
   const [reportInstall, setReportInstall] = useState(true)
 
-  const [setupStage, setSetupStage] = useState(1)
-  const [alertType, setAlertType] = useState("")
-  const [alertBody, setAlertBody] = useState("")
+  const [setupStage, setSetupStage] = useState(0)
+  const [alertType, setAlertType] = useState('')
+  const [alertBody, setAlertBody] = useState('')
 
+  const [addrs, setAddrs] = useState([])
   const [apiReachable, setApiReachable] = useState(false)
-  const pollingRef = useRef(null);
+  const [ssidUp, setSsidUp] = useState(false)
+
+  const pollingRef = useRef(null)
 
   const setupAlert = (title, body) => {
     setAlertType(title)
@@ -115,28 +159,64 @@ const Setup = (props) => {
   context.error = (title, body) => setupAlert('error', title, body)
   context.info = (title, body) => setupAlert('info', title, body)
 
+  const pollApi = async () => {
+    try {
+      const addrs = await wifiAPI.ipAddr()
+      setApiReachable(true)
+      setErrors({})
 
-  const pollApiReachable = async () => {
-    if (pollingRef.current) return;
-    pollingRef.current = true;
+      setAddrs(addrs)
 
-    while (true) {
-      await wifiAPI.ipAddr().then(() => {
-        //clear errors
-        setErrors({})
-        setApiReachable(true)
-      }).catch((err) => {
-        setApiReachable(false)
-        setErrors({"submit": 'API not reachable ' + JSON.stringify(err) })
-      })
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      //check if ap is up
+      if (setupStage == 1) {
+        clearInterval(pollingRef?.current)
+      } else if (setupStage == 2) {
+        const ifaces = await wifiAPI.interfaces('AP') // should be one
+        for (let iface of ifaces) {
+          const status = await wifiAPI.status(iface)
+          const _ssid = status['ssid[0]']
+          if (_ssid == ssid) {
+            setSsidUp(true)
+
+            clearInterval(pollingRef?.current)
+            break
+          }
+        }
+      } else if (setupStage == 3) {
+        //3 == call /setup_done once
+        clearInterval(pollingRef?.current)
+        removeSetupAP()
+      }
+
+      return
+    } catch (err) {
+      setApiReachable(false)
+      setErrors({ ...errors, submit: 'API not reachable' })
     }
   }
 
-  useEffect(() => {
-    pollApiReachable()
-  })
+  const pollApiReachable = async () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current)
+    }
 
+    const interval = setInterval(() => {
+      pollApi()
+    }, 2 * 1e3)
+
+    pollingRef.current = interval
+
+    return interval
+  }
+
+  //call polling for each stage, stop when reachable
+  useEffect(() => {
+    const interval = pollApiReachable()
+
+    return () => {
+      clearInterval(interval)
+    }
+  }, [setupStage])
 
   useEffect(() => {
     api
@@ -148,98 +228,97 @@ const Setup = (props) => {
           setErrors({ ...errors, submit: msg })
           setIsDone(true)
         } else {
-          //alert(err)
+          //unknown error
         }
       })
 
+    wifiAPI
+      .ipAddr()
+      .then((ipAddr) => {
+        wifiAPI
+          .iwList()
+          .then((iws) => {
+            wifiAPI.iwDev().then((iwDev) => {
+              iws = iws.map((iw) => {
+                iw.devices = iwDev[iw.wiphy]
+                return iw
+              })
 
-    wifiAPI.ipAddr().then((ipAddr) => {
-      wifiAPI.iwList().then((iws) => {
-        wifiAPI.iwDev().then((iwDev) => {
+              //make a phy to iws map and devname to iw map
+              let iwMap = {}
+              iws.forEach((iw) => {
+                iwMap[iw.wiphy] = iw
+                Object.keys(iw.devices).forEach((dev) => {
+                  iwMap[dev] = iw
+                  iwMap[iw.wiphy].dev = dev
+                })
+              })
 
-          iws = iws.map((iw) => {
-            iw.devices = iwDev[iw.wiphy];
-            return iw;
-          });
+              setIwMap(iwMap)
 
-          //make a phy to iws map and devname to iw map
-          let iwMap = {}
-          iws.forEach((iw) => {
-            iwMap[iw.wiphy] = iw
-            Object.keys(iw.devices).forEach((dev) => {
-              iwMap[dev] = iw
-              iwMap[iw.wiphy].dev = dev
+              let validPhys = []
+              for (let iw of iws) {
+                if (isSPRCompat(iw)) {
+                  validPhys.push(iw.wiphy)
+                }
+              }
+
+              if (validPhys.length == 0) {
+                alert('No compatible wifi interfaces found')
+              }
+
+              let newWiFiInterfaces = []
+              let keys = Object.keys(iwDev)
+              for (let phyName of keys) {
+                if (!validPhys.includes(phyName)) continue
+                let dev = iwDev[phyName]
+                //check for SPR compatibility
+                newWiFiInterfaces.push(...Object.keys(dev))
+              }
+              newWiFiInterfaces.sort()
+              setWifiInterfaces(newWiFiInterfaces)
+              //now go thru
+
+              let uplinkInterfaces = []
+              for (let entry of ipAddr) {
+                if (entry.link_type == 'ether') {
+                  if (entry.ifname.startsWith('docker')) {
+                    continue
+                  }
+                  if (entry.ifname.startsWith('veth')) {
+                    continue
+                  }
+                  if (
+                    entry.ifname.startsWith('sprloop') ||
+                    entry.ifname.startsWith('wlan')
+                  ) {
+                    continue
+                  }
+                  if (entry.addr_info && entry.addr_info.length > 0) {
+                    entry.IP = entry.addr_info[0].local
+                    if (entry.IP.includes('.')) {
+                      setMyIP(entry.IP)
+                    }
+                    if (entry.IP.startsWith('192')) {
+                      let x = entry.IP.split('.').map(Number)
+                      x[2] += 1
+                      setTinynet('192.168.' + x[2] + '.0/24')
+                    }
+                  }
+                  uplinkInterfaces.push(entry.ifname)
+                }
+              }
+
+              setUplinkInterfaces(uplinkInterfaces)
+              if (uplinkInterfaces.includes('eth2')) {
+                setInterfaceUplink('eth2')
+              }
             })
           })
-
-          setIwMap(iwMap)
-
-          let validPhys = []
-          for (let iw of iws) {
-            if (isSPRCompat(iw)) {
-              validPhys.push(iw.wiphy)
-            }
-          }
-
-          if (validPhys.length == 0) {
-            alert("No compatible wifi interfaces found")
-
-          }
-
-          let newWiFiInterfaces = []
-          let keys = Object.keys(iwDev)
-          for (let phyName of keys) {
-            if (!validPhys.includes(phyName)) continue
-            let dev = iwDev[phyName]
-            //check for SPR compatibility
-            newWiFiInterfaces.push(...Object.keys(dev))
-          }
-          newWiFiInterfaces.sort()
-          setWifiInterfaces(newWiFiInterfaces)
-          //now go thru
-
-          let uplinkInterfaces = []
-          for (let entry of ipAddr) {
-            if (entry.link_type == 'ether') {
-              if (entry.ifname.startsWith('docker')) {
-                continue
-              }
-              if (entry.ifname.startsWith('veth')) {
-                continue
-              }
-              if (entry.ifname.startsWith('sprloop') || entry.ifname.startsWith("wlan")) {
-                continue
-              }
-              if (entry.addr_info && entry.addr_info.length > 0) {
-                entry.IP = entry.addr_info[0].local
-                if (entry.IP.includes('.')) {
-                  setMyIP(entry.IP)
-                }
-                if (entry.IP.startsWith("192")) {
-                  let x = entry.IP.split('.').map(Number)
-                  x[2] += 1
-                  setTinynet('192.168.' + x[2] + '.0/24')
-                }
-              }
-              uplinkInterfaces.push(entry.ifname)
-            }
-          }
-
-          setUplinkInterfaces(uplinkInterfaces)
-          if (uplinkInterfaces.includes("eth2")) {
-            setInterfaceUplink("eth2")
-          }
-        })
-      }).catch((e) => {})
-    }).catch((e) => {})
+          .catch((e) => {})
+      })
+      .catch((e) => {})
   }, [])
-
-
-  useEffect(() => {
-    if ('login' in errors && password.length) {
-      setErrors({})
-    }
-  }, [password])
 
   useEffect(() => {
     if ('ssid' in errors && ssid.length) {
@@ -253,7 +332,18 @@ const Setup = (props) => {
     }
   }, [tinynet])
 
+  useEffect(() => {
+    if ('login' in errors && password.length) {
+      setErrors({})
+    }
+  }, [password])
 
+  //send a restart wifi command to disable sprlab-setup
+  const removeSetupAP = async (done) => {
+    api
+      .put('/setup_done')
+      .finally(() => wifiAPI.restartSetupWifi().finally(done))
+  }
 
   const handlePress = () => {
     if (
@@ -318,7 +408,6 @@ const Setup = (props) => {
       return
     }
 
-
     const finishSetup = () => {
       const data = {
         InterfaceUplink: interfaceUplink,
@@ -334,7 +423,8 @@ const Setup = (props) => {
           saveLogin('admin', passwordConfirm)
           setIsDone(true)
           setSetupStage(2)
-        }).catch(async (err) => {
+        })
+        .catch(async (err) => {
           if (err.response) {
             let msg = await err.response.text()
             setErrors({ ...errors, submit: msg })
@@ -344,9 +434,10 @@ const Setup = (props) => {
     }
 
     for (let iface of wifiInterfaces) {
-      if (iface.includes(".")) continue;
+      if (iface.includes('.')) continue
 
-      let defaultConfig = generateConfigForBand(iwMap, iface, 2) ||
+      let defaultConfig =
+        generateConfigForBand(iwMap, iface, 2) ||
         generateConfigForBand(iwMap, iface, 1) ||
         generateConfigForBand(iwMap, iface, 4)
 
@@ -366,264 +457,62 @@ const Setup = (props) => {
         He_mu_beamformer: parseInt(bestConfig.he_mu_beamformer)
       }
 
-      wifiAPI.enableInterface(iface).then(() => {
-        wifiAPI.updateConfig(iface, data).then((curConfig) => {
-          if (randomizeBSSIDs) {
-            let data = {
-              Name: iface,
-              Type: "AP",
-              MACRandomize: randomizeBSSIDs,
-              MACCloak: cloakBSSIDs,
-              Enabled: true
-            }
-            api
-              .put('/link/config', data)
-              .then((res) => {
+      wifiAPI
+        .enableInterface(iface)
+        .then(() => {
+          wifiAPI
+            .updateConfig(iface, data)
+            .then((curConfig) => {
+              if (randomizeBSSIDs) {
+                let data = {
+                  Name: iface,
+                  Type: 'AP',
+                  MACRandomize: randomizeBSSIDs,
+                  MACCloak: cloakBSSIDs,
+                  Enabled: true
+                }
+                api
+                  .put('/link/config', data)
+                  .then((res) => {
+                    finishSetup()
+                  })
+                  .catch((e) => {
+                    alert('error link/config' + JSON.stringify(e))
+                  })
+              } else {
                 finishSetup()
-              })
-              .catch((e) => {
-                alert("error link/config" + JSON.stringify(e))
-              })
-          } else {
-            finishSetup()
-          }
-
+              }
+            })
+            .catch((e) => {
+              alert('error update hostapd config ' + JSON.stringify(e))
+            })
         })
         .catch((e) => {
-          alert("error update hostapd config " + JSON.stringify(e))
+          //...
+          alert('error enable interface ' + JSON.stringify(e))
         })
-      }).catch((e) => {
-        //...
-        alert("error enable interface " + JSON.stringify(e))
-      })
     }
-
-
   }
-
-  const removeSetupAP = (done) => {
-    api.put("/setup_done")
-    .then( () => {
-          wifiAPI.restartSetupWifi().then(() => {
-            done()
-          }).catch(err => {
-            done()
-          })
-    })
-    .catch( (err) => {
-
-      wifiAPI.restartSetupWifi().then(() => {
-        done()
-      }).catch(err => {
-        done()
-      })
-
-    })
-
-  }
-
 
   const handlePressFinish = () => {
-      //send a restart wifi command to disable sprlab-setup
-      removeSetupAP(() => {
-        navigate("/auth/login")
-      })
+    removeSetupAP(() => {
+      navigate('/auth/login')
+    })
   }
 
   const deviceAdded = () => {
     setSetupStage(3)
   }
 
-  const colorMode = useColorMode()
-
-  if (setupStage === 2) {
+  const SetupHeading = ({ title, children, ...props }) => {
     return (
-      <ScrollView
-        h="$full"
-        w="$full"
-        px="$4"
-        bg="$white"
-        sx={{
-          _dark: { bg: '$blueGray900' },
-          '@md': {
-            rounded: 10,
-            w: '60%',
-            alignSelf: 'center'
-          }
-        }}
+      <HStack
+        justifyContent="space-between"
+        borderBottomColor="$muted200"
+        borderBottomWidth={1}
+        pb="$4"
+        {...props}
       >
-      <VStack space="md" my="$4">
-          <Heading
-            size="lg"
-            fontWeight="300"
-            color="$coolGray800"
-            sx={{
-              _dark: { color: '$warmGray50' }
-            }}
-            alignSelf="center"
-          >
-            Add Your First WiFi Device
-          </Heading>
-          <ApiLoading
-            online={apiReachable}/>
-          {myIP != '' && (
-            <HStack space="sm" alignSelf="center" alignItems="center">
-              <Text flex={1} color="$muted500">
-                Uplink IP: {myIP}
-              </Text>
-            </HStack>
-          )}
-
-        <AddDevice slimView={true} deviceAddedCallback={deviceAdded} />
-
-        <Button
-          mt="$4"
-          action="secondary"
-          sx={{
-            _hover: {
-              bg: '#fab526'
-            },
-            w: '$5/6'
-          }}
-          onPress={deviceAdded}
-          disabled={!apiReachable}
-        >
-          <ButtonText>Skip</ButtonText>
-        </Button>
-
-        <AlertError alertBody={alertBody} />
-      </VStack>
-      </ScrollView>
-    )
-  }
-
-
-  if (setupStage === 3) {
-    return (
-      <ScrollView
-        h="$full"
-        w="$full"
-        px="$4"
-        bg="$white"
-        sx={{
-          _dark: { bg: '$blueGray900' },
-          '@md': {
-            rounded: 10,
-            w: '90%',
-            maxWidth: 520,
-            alignSelf: 'center'
-          }
-        }}
-      >
-      <VStack space="md" my="$4">
-          <Heading
-            size="lg"
-            fontWeight="300"
-            color="$coolGray800"
-            sx={{
-              _dark: { color: '$warmGray50' }
-            }}
-            alignSelf="center"
-          >
-            Setup Finished
-          </Heading>
-          <ApiLoading
-            online={apiReachable}/>
-          {myIP != '' && (
-            <HStack space="sm" alignSelf="center" alignItems="center">
-              <Text flex={1} color="$muted500">
-                Uplink IP: {myIP}
-              </Text>
-            </HStack>
-          )}
-          <VStack space="md" my="$4" flex={1}>
-            <HStack space="sm">
-              <InfoIcon color="$muted400" />
-              <Text flex={1} color="$muted500">
-                SPR is now configured!
-              </Text>
-            </HStack>
-
-            <HStack space="sm">
-              <InfoIcon color="$muted400" />
-              <Text flex={1} color="$muted500">
-                Note: The `ubuntu` password will be set to your admin password during the initial installation.
-              </Text>
-            </HStack>
-
-            <HStack space="sm">
-              <InfoIcon color="$muted400" />
-              <Link
-                isExternal
-                href="https://www.supernetworks.org/pages/docs/guides_plus/mesh"
-                sx={{
-                  '@base': { display: 'none' },
-                  '@lg': { display: 'flex' },
-                  _text: {
-                    textDecorationLine: 'none',
-                    color:
-                      colorMode == 'light'
-                        ? '$navbarTextColorLight'
-                        : '$navbarTextColorDark'
-                  }
-                }}
-              >
-              <Text flex={1} color="$muted500">
-                PLUS Mesh Setup Guide
-              </Text>
-                <ButtonIcon as={BookOpenText} size="lg" />
-              </Link>
-            </HStack>
-
-            <FirewallSettings/>
-
-          <Button
-            mt="$4"
-            rounded="$full"
-            bg="#fbc658"
-            sx={{
-              _hover: {
-                bg: '#fab526'
-              }
-            }}
-            onPress={handlePressFinish}
-            disabled={!apiReachable}
-          >
-            { apiReachable ? (
-              <ButtonText>Finish</ButtonText>
-            ) : (
-              <ButtonText>Waiting for API</ButtonText>
-            )}
-          </Button>
-        </VStack>
-        <AlertError alertBody={alertBody} />
-        </VStack>
-      </ScrollView>
-    )
-  }
-
-
-  // log out.
-  AsyncStorage.removeItem('user')
-
-
-  return (
-    <ScrollView
-      h="$full"
-      w="$full"
-      px="$4"
-      bg="$white"
-      sx={{
-        _dark: { bg: '$blueGray900' },
-        '@md': {
-          rounded: 10,
-          w: '90%',
-          maxWidth: 360,
-          alignSelf: 'center'
-        }
-      }}
-    >
-      <VStack space="md" my="$4">
         <Heading
           size="lg"
           fontWeight="300"
@@ -633,99 +522,254 @@ const Setup = (props) => {
           }}
           alignSelf="center"
         >
-          Setup
+          {title}
         </Heading>
-        <ApiLoading
-          online={apiReachable}/>
-        {myIP != '' && (
-          <HStack space="sm" alignSelf="center" alignItems="center">
-            <Text flex={1} color="$muted500">
-              Uplink IP: {myIP}
-            </Text>
-          </HStack>
-        )}
-        {isDone ? (
-          <>
-            <HStack space="sm" alignSelf="center" alignItems="center">
-              <InfoIcon color="$muted400" />
+        {children}
+      </HStack>
+    )
+  }
 
-              <Text flex={1} color="$muted500">
-                SPR is configured!
+  const UplinkIP = ({ ip, ...props }) => {
+    return ip ? (
+      <Badge variant="outline" action="success" rounded="$md">
+        <BadgeText>Uplink IP: {ip}</BadgeText>
+      </Badge>
+    ) : null
+  }
+
+  const SSIDInfo = ({ online, ...props }) => {
+    return (
+      <Badge
+        variant="outline"
+        action={online ? 'success' : 'muted'}
+        rounded="$md"
+      >
+        {online ? <BadgeIcon as={WifiIcon} /> : <Spinner size="small" />}
+        <BadgeText textTransform="none" ml="$2">
+          {online ? ssid : `Waiting for ${ssid}...`}
+        </BadgeText>
+      </Badge>
+    )
+  }
+
+  const Status = ({ addrs, online, ...props }) => {
+    const ethsConnected = addrs.filter((a) =>
+      a.ifname.startsWith('eth') && a.operstate == 'UP' ? a : null
+    )
+
+    const SuccessItem = ({ text, error, isOK, ...props }) => {
+      const icon = isOK ? CheckCircleIcon : AlertCircleIcon
+      const color = isOK ? '$success600' : '$warning600'
+      return (
+        <HStack space="sm" alignItems="center">
+          <Icon as={icon} color={color} />
+          <Text>{isOK ? text : error}</Text>
+        </HStack>
+      )
+    }
+
+    return (
+      <VStack space="sm" alignItems="center">
+        <Heading size="sm">Status</Heading>
+
+        {online ? (
+          <>
+            <SuccessItem
+              text="Network cable connected"
+              error="No network cable connected"
+              isOK={ethsConnected.length}
+            />
+            <SuccessItem
+              text="Wifi card detected"
+              error="Could not find any wifi card compatible with spr"
+              isOK={wifiInterfaces.length}
+            />
+
+            <HStack
+              space="xs"
+              display={apiReachable && !ethsConnected.length ? 'flex' : 'none'}
+            >
+              <Text size="sm" italic>
+                Note:
+              </Text>
+              <Text size="sm">
+                If you want to use wifi for internet access, this can be setup
+                after the install under Network: Link Settings.
               </Text>
             </HStack>
-
-            <Button
-              mt="$2"
-              mx="$auto"
-              rounded="$full"
-              colorScheme="yellow"
-              bg="#fbc658"
-              sx={{
-                _hover: {
-                  bg: '#fab526'
-                }
-              }}
-              px="$8"
-              onPress={() => navigate('/auth/login')}
-            >
-              <ButtonText>Click here to login</ButtonText>
-            </Button>
           </>
         ) : (
+          <HStack space="sm">
+            <Spinner size="small" />
+            <Text>API Loading...</Text>
+          </HStack>
+        )}
+      </VStack>
+    )
+  }
+
+  if (setupStage === 2) {
+    //when cli connects, navigate to next stage
+    const onDeviceConnect = () => {
+      setTimeout(() => {
+        setSetupStage(setupStage + 1)
+      }, 1000)
+    }
+
+    return (
+      <SetupScrollView>
+        <SetupHeading title="Add Your First WiFi Device">
+          <SSIDInfo online={ssidUp} ssid={ssid} />
+        </SetupHeading>
+        <VStack>
+          <AddDevice
+            deviceAddedCallback={deviceAdded}
+            onClose={deviceAdded}
+            onConnect={onDeviceConnect}
+            disabled={!ssidUp}
+          />
+
+          <AlertError alertBody={alertBody} />
+        </VStack>
+      </SetupScrollView>
+    )
+  }
+
+  if (setupStage === 3) {
+    return (
+      <SetupScrollView>
+        <SetupHeading title="Setup Finished" />
+
+        <VStack space="xl" my="$4">
+          <HStack space="sm" alignItems="center">
+            <CheckIcon color="$success500" />
+            <Text>SPR is now configured!</Text>
+          </HStack>
+
+          <HStack space="sm" alignItems="center">
+            <InfoIcon color="$muted500" />
+            <Text>
+              Note: The `ubuntu` password will be set to your admin password
+            </Text>
+          </HStack>
+
+          <HStack space="sm" alignItems="center">
+            <Icon as={BookOpenTextIcon} color="$muted500" />
+            <Link
+              isExternal
+              href="https://www.supernetworks.org/pages/docs/guides_plus/mesh"
+            >
+              <Text>PLUS Mesh Setup Guide</Text>
+            </Link>
+          </HStack>
+
+          <ButtonSetup onPress={handlePressFinish} disabled={!apiReachable}>
+            {apiReachable ? (
+              <ButtonText>Finish</ButtonText>
+            ) : (
+              <ButtonText>Waiting for API</ButtonText>
+            )}
+          </ButtonSetup>
+        </VStack>
+      </SetupScrollView>
+    )
+  }
+
+  // log out.
+  AsyncStorage.removeItem('user')
+
+  // this is when visiting setup when already configured
+  if (isDone) {
+    return (
+      <SetupScrollView>
+        <SetupHeading title="Setup" />
+        <HStack space="sm" alignSelf="center" alignItems="center">
+          <InfoIcon color="$muted400" />
+          <Text flex={1} color="$muted500">
+            SPR is configured!
+          </Text>
+        </HStack>
+
+        <ButtonSetup onPress={() => navigate('/auth/login')}>
+          <ButtonText>Click here to login</ButtonText>
+        </ButtonSetup>
+      </SetupScrollView>
+    )
+  }
+
+  if (setupStage == 1) {
+    return (
+      <SetupScrollView>
+        <SetupHeading title="Setup">
           <>
-            {/*NOTE Safari will autofill as contact if using Name in label and/or placeholder*/}
-            <FormControl isInvalid={'ssid' in errors}>
-              <FormControlLabel>
-                <FormControlLabelText>
-                  {'Wifi N\u0430me (SSID)'}
-                </FormControlLabelText>
-              </FormControlLabel>
-              <Input>
-                <InputField
-                  value={ssid}
-                  placeholder={'N\u0430me of your Wireless Network'}
-                  onChangeText={(value) => setSsid(value)}
-                  autoFocus
-                />
-              </Input>
-              {'ssid' in errors ? (
-                <FormControlError>
-                  <FormControlErrorText>{errors.ssid}</FormControlErrorText>
-                </FormControlError>
-              ) : null}
-            </FormControl>
-            <FormControl isInvalid={'country' in errors}>
-              <FormControlLabel>
-                <FormControlLabelText>Wifi Country Code</FormControlLabelText>
-              </FormControlLabel>
+            {apiReachable ? (
+              <UplinkIP ip={myIP} />
+            ) : (
+              <ApiLoading online={apiReachable} />
+            )}
+          </>
+        </SetupHeading>
 
-              <Select
-                selectedValue={countryWifi}
-                onValueChange={(value) => setCountryWifi(value)}
-                accessibilityLabel={`Choose Country Code`}
-              >
-                {countryCodes.map((code) => (
-                  <Select.Item key={code} label={code} value={code} />
-                ))}
-              </Select>
-            </FormControl>
+        <>
+          {/*NOTE Safari will autofill as contact if using Name in label and/or placeholder*/}
+          <FormControl isInvalid={'ssid' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>
+                {'Wifi N\u0430me (SSID)'}
+              </FormControlLabelText>
+            </FormControlLabel>
+            <Input size="md">
+              <InputField
+                autoFocus
+                value={ssid}
+                placeholder={'N\u0430me of your Wireless Network'}
+                onChangeText={(value) => setSsid(value)}
+              />
+            </Input>
+            {'ssid' in errors ? (
+              <FormControlError>
+                <FormControlErrorText>{errors.ssid}</FormControlErrorText>
+              </FormControlError>
+            ) : null}
+          </FormControl>
+          <FormControl isInvalid={'country' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>Wifi Country Code</FormControlLabelText>
+            </FormControlLabel>
 
-            <Tooltip label={'The BSSID (AP MAC Address) and SSID is stored by companies in location tracking databases. Randomizing it makes the AP\'s physical location private.'}>
+            <Select
+              selectedValue={countryWifi}
+              onValueChange={(value) => setCountryWifi(value)}
+              accessibilityLabel={`Choose Country Code`}
+            >
+              {countryCodes.map((code) => (
+                <Select.Item key={code} label={code} value={code} />
+              ))}
+            </Select>
+          </FormControl>
+
+          <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
+            <Tooltip
+              label={
+                "The BSSID (AP MAC Address) and SSID is stored by companies in location tracking databases.\nRandomizing it makes the AP's physical location private."
+              }
+            >
               <Checkbox
                 size="md"
                 value={randomizeBSSIDs}
                 isChecked={randomizeBSSIDs}
                 onChange={(enabled) => setRandomizeBSSIDs(!randomizeBSSIDs)}
-
               >
                 <CheckboxIndicator mr="$2">
                   <CheckboxIcon as={CheckIcon} />
                 </CheckboxIndicator>
-                <CheckboxLabel>Randomize BSSID for Location Privacy</CheckboxLabel>
+                <CheckboxLabel>
+                  Randomize BSSID for Location Privacy
+                </CheckboxLabel>
               </Checkbox>
             </Tooltip>
 
-            { randomizeBSSIDs && (
+            {randomizeBSSIDs && (
               <Checkbox
                 size="md"
                 value={cloakBSSIDs}
@@ -738,80 +782,81 @@ const Setup = (props) => {
                 <CheckboxLabel>Randomize to Common AP Vendor</CheckboxLabel>
               </Checkbox>
             )}
+          </VStack>
 
-            <FormControl isInvalid={'uplink' in errors}>
-              <FormControlLabel>
-                <FormControlLabelText>
-                  Uplink Interface (Internet)
-                </FormControlLabelText>
-              </FormControlLabel>
-              <Select
-                selectedValue={interfaceUplink}
-                onValueChange={(value) => setInterfaceUplink(value)}
-              >
-                {uplinkInterfaces.map((wif) => (
-                  <Select.Item key={wif} label={wif} value={wif} />
-                ))}
-              </Select>
-            </FormControl>
+          <FormControl isInvalid={'uplink' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>
+                Uplink Interface (Internet)
+              </FormControlLabelText>
+            </FormControlLabel>
+            <Select
+              selectedValue={interfaceUplink}
+              onValueChange={(value) => setInterfaceUplink(value)}
+            >
+              {uplinkInterfaces.map((wif) => (
+                <Select.Item key={wif} label={wif} value={wif} />
+              ))}
+            </Select>
+          </FormControl>
 
-            <FormControl isInvalid={'tinynet' in errors}>
-              <FormControlLabel>
-                <FormControlLabelText>
-                  Private Network Subnet(s)
-                </FormControlLabelText>
-              </FormControlLabel>
-              <Input>
-                <InputField
-                  value={tinynet}
-                  placeholder={'Private subnet for network'}
-                  onChangeText={(value) => setTinynet(value)}
-                  autoFocus
-                />
-              </Input>
-              {'tinynet' in errors ? (
-                <FormControlError>
-                  <FormControlErrorText>{errors.tinynet}</FormControlErrorText>
-                </FormControlError>
-              ) : null}
-            </FormControl>
+          <FormControl isInvalid={'tinynet' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>
+                Private Network Subnet
+              </FormControlLabelText>
+            </FormControlLabel>
+            <Input>
+              <InputField
+                value={tinynet}
+                placeholder={'Private subnet for network'}
+                onChangeText={(value) => setTinynet(value)}
+              />
+            </Input>
+            {'tinynet' in errors ? (
+              <FormControlError>
+                <FormControlErrorText>{errors.tinynet}</FormControlErrorText>
+              </FormControlError>
+            ) : null}
+          </FormControl>
 
-            <FormControl isInvalid={'login' in errors}>
-              <FormControlLabel>
-                <FormControlLabelText>Admin Password</FormControlLabelText>
-              </FormControlLabel>
-              <Input variant="outline" size="md">
-                <InputField
-                  type="password"
-                  value={password}
-                  placeholder="Password"
-                  onChangeText={(value) => setPassword(value)}
-                  onSubmitEditing={handlePress}
-                />
-                <InputSlot>
-                  <InputIcon as={KeyRoundIcon} mr="$2" />
-                </InputSlot>
-              </Input>
-              <Input variant="outline" size="md">
-                <InputField
-                  type="password"
-                  value={passwordConfirm}
-                  placeholder="Confirm Password"
-                  onChangeText={(value) => setPasswordConfirm(value)}
-                  onSubmitEditing={handlePress}
-                />
-                <InputSlot>
-                  <InputIcon as={KeyRoundIcon} mr="$2" />
-                </InputSlot>
-              </Input>
+          <FormControl isInvalid={'login' in errors}>
+            <FormControlLabel>
+              <FormControlLabelText>Admin Password</FormControlLabelText>
+            </FormControlLabel>
+            <Input variant="outline" size="md">
+              <InputField
+                type="password"
+                value={password}
+                placeholder="Password"
+                onChangeText={(value) => setPassword(value)}
+                onSubmitEditing={handlePress}
+              />
+              <InputSlot>
+                <InputIcon as={KeyRoundIcon} mr="$2" />
+              </InputSlot>
+            </Input>
+            <Input variant="outline" size="md" mt="$2">
+              <InputField
+                type="password"
+                value={passwordConfirm}
+                placeholder="Confirm Password"
+                onChangeText={(value) => setPasswordConfirm(value)}
+                onSubmitEditing={handlePress}
+              />
+              <InputSlot>
+                <InputIcon as={KeyRoundIcon} mr="$2" />
+              </InputSlot>
+            </Input>
 
-              {'login' in errors ? (
-                <FormControlError>
-                  <FormControlErrorText>{errors.login}</FormControlErrorText>
-                </FormControlError>
-              ) : null}
-            </FormControl>
+            {'login' in errors ? (
+              <FormControlError>
+                <FormControlErrorText>{errors.login}</FormControlErrorText>
+              </FormControlError>
+            ) : null}
+          </FormControl>
 
+          <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
             <Checkbox
               size="md"
               value={checkUpdates}
@@ -824,8 +869,9 @@ const Setup = (props) => {
               <CheckboxLabel>Auto-Check for Updates</CheckboxLabel>
             </Checkbox>
 
-
-            <Tooltip label={'Help the Supernetworks Team count your installation by counting the install'}>
+            <Tooltip
+              label={'Help the Supernetworks Team count your installation'}
+            >
               <Checkbox
                 size="md"
                 value={reportInstall}
@@ -838,44 +884,45 @@ const Setup = (props) => {
                 <CheckboxLabel>Register Install</CheckboxLabel>
               </Checkbox>
             </Tooltip>
+          </VStack>
 
-            <Button
-              mt="$4"
-              rounded="$full"
-              bg="#fbc658"
-              sx={{
-                _hover: {
-                  bg: '#fab526'
-                }
-              }}
-              onPress={handlePress}
-              disabled={!apiReachable}
-            >
-              {apiReachable ? (
-                <ButtonText>Save</ButtonText>
-              ) : (
-                <ButtonText>...waiting for API</ButtonText>
-              )}
-            </Button>
+          <ButtonSetup onPress={handlePress} disabled={!apiReachable} mt="$4">
+            {apiReachable ? (
+              <ButtonText>Save</ButtonText>
+            ) : (
+              <ButtonText>...waiting for API</ButtonText>
+            )}
+          </ButtonSetup>
 
-            {'submit' in errors ? (
-              <HStack space="md" alignSelf="center" alignItems="center">
-                <AlertCircle color="$red700" />
-                <Text color="$red700">{errors.submit}</Text>
-              </HStack>
-            ) : null}
+          {'submit' in errors ? (
+            <HStack space="md" alignSelf="center" alignItems="center">
+              <AlertCircle color="$red700" />
+              <Text color="$red700">{errors.submit}</Text>
+            </HStack>
+          ) : null}
 
-            {'api' in errors ? (
-              <HStack space="md" alignSelf="center" alignItems="center">
-                <AlertCircle color="$red700" />
-                <Text color="$red700">{errors.api}</Text>
-              </HStack>
-            ) : null}
+          {'api' in errors ? (
+            <HStack space="md" alignSelf="center" alignItems="center">
+              <AlertCircle color="$red700" />
+              <Text color="$red700">{errors.api}</Text>
+            </HStack>
+          ) : null}
+        </>
+      </SetupScrollView>
+    )
+  }
 
-          </>
-        )}
+  return (
+    <SetupScrollView>
+      <SetupHeading title="Welcome to SPR!" justifyContent="center" />
+      <VStack space="xl" alignItems="center">
+        <Status online={apiReachable} addrs={addrs} />
+        <Text>Press Start to configure your new Wifi</Text>
+        <ButtonSetup onPress={() => setSetupStage(1)} px="$8">
+          <ButtonText>Start</ButtonText>
+        </ButtonSetup>
       </VStack>
-    </ScrollView>
+    </SetupScrollView>
   )
 }
 

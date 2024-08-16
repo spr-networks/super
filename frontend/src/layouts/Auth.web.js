@@ -17,15 +17,17 @@ const AuthLayout = () => {
       alignItems="center"
       justifyContent="center"
     >
-      <View w="100vw" h="100vh" bg="$black">
+      <View w="100vw" h="100vh" bg="$white" sx={{ '@md': { bg: '$black' } }}>
         <Image
           source="/bg.jpg"
           opacity={0.4}
           h="100vh"
           w="100vw"
           resizeMode="cover"
+          display="none"
+          sx={{ '@md': { display: 'flex' } }}
         />
-        <View marginTop="-92vh">
+        <View sx={{ '@md': { marginTop: '-100vh' } }}>
           <Outlet />
           <Footer
             color="$light200"

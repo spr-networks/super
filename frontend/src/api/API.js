@@ -202,7 +202,7 @@ class API {
   async request(method = 'GET', url, body) {
     // if forced to not return data
     let skipReturnValue = method == 'DELETE'
-
+    
     return this.fetch(method, url, body)
       .then((response) => {
         if (!response.ok) {
@@ -226,6 +226,8 @@ class API {
         if (contentType.includes('application/json')) {
           return response.json()
         } else if (contentType.includes('text/plain')) {
+          return response.text()
+        } else if (contentType.includes('application/x-x509-ca-cert')) {
           return response.text()
         }
 

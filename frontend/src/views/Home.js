@@ -1,5 +1,7 @@
 import React, { useContext, useState, useEffect, useRef } from 'react'
+import { Platform } from 'react-native'
 import { AppState, RefreshControl } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import {
   Box,
@@ -33,12 +35,14 @@ import {
   DNSBlockPercent
 } from 'components/Dashboard/DNSMetricsWidgets'
 import { ServicesEnabled } from 'components/Dashboard/ServicesWidgets'
+import IntroWidget from 'components/Dashboard/Intro'
 
 const Home = (props) => {
   const context = useContext(AppContext)
 
   const [pluginsEnabled, setPluginsEnabled] = useState([])
   const [interfaces, setInterfaces] = useState([])
+  const [showIntro, setShowIntro] = useState(false)
 
   useEffect(() => {
     pluginAPI
@@ -89,6 +93,17 @@ const Home = (props) => {
       .catch((error) => error)
   }, [])
 
+  useEffect(() => {
+    AsyncStorage.getItem('intro-done')
+      .then((res) => {
+        //set to true when clicked
+        if (JSON.parse(res) !== true) {
+          setShowIntro(true)
+        }
+      })
+      .catch((err) => {})
+  }, [])
+
   let show = {
     dns: pluginsEnabled.includes('dns-block') && !context.isMeshNode,
     wifi: !context.isWifiDisabled,
@@ -97,7 +112,8 @@ const Home = (props) => {
       !context.isWifiDisabled &&
       !context.isMeshNode &&
       pluginsEnabled.includes('wireguard'),
-    traffic: !context.isMeshNode
+    traffic: !context.isMeshNode,
+    intro: showIntro && Platform.OS == 'web'
   }
 
   //NOTE wireguard listed as feature when not enabled
@@ -129,6 +145,7 @@ const Home = (props) => {
         gap="$4"
       >
         <VStack space="md" sx={{ '@md': { flex: 7 } }}>
+          {show.intro ? <IntroWidget /> : null}
           {show.vpnInfo ? (
             <>
               <WireguardPeers flex={1} />

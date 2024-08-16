@@ -1,5 +1,12 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v0.3.18
+Improvements
+* TLS support for mesh setup
+* Improved setup flow UI
+* Reduce logging on HTTP services
+* H2E support in wifid
+
 ## v0.3.17
 **Fixes**
 * After applying BSSID randomization, always restart wifid 
@@ -9,7 +16,7 @@
 * Security fix for OTP bypass on plugin update
 * Clean up Plugin URI route
 * Fix PFW Abort
-* Clean up OTP handling 
+* Clean up OTP handling
 
 ## v0.3.15
 **Fixes**
@@ -30,7 +37,7 @@ Improvements
 * Add wireguard hardening for shadow port attacks
 * Add static public routes for plugins
 * Support SPR WiFI6e hats by default in spr build images
-* Support submodules for plugin code 
+* Support submodules for plugin code
 
 ## v0.3.13
 Improvements
