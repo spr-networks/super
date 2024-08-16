@@ -402,7 +402,7 @@ func PluginRoutes(external_router_authenticated *mux.Router, external_router_pub
 
 		// auth-less exception to avoid MITM attacks on Auth Token.
 		if entry.Plus && entry.URI == "mesh" {
-			external_router_public.HandleFunc("/plugins/mesh/cert", PluginRequestHandlerPublic(proxy))
+			external_router_public.HandleFunc("/mesh/cert", PluginRequestHandlerPublic(proxy))
 		}
 
 		if entry.HasUI {
