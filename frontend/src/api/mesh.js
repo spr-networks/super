@@ -37,6 +37,10 @@ export default class APIMesh extends API {
     return this.put(`setSSID`, data);
   }
 
+  syncOTP() {
+    return this.put(`syncOTP`, null);
+  }
+
   meshIter(protocb) {
     return this.leafRouters().then((routers) => {
       if (routers == null) {

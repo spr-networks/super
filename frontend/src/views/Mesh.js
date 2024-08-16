@@ -282,7 +282,15 @@ const Mesh = (props) => {
     if (ssid == '') {
       return
     }
-    meshAPI.setSSID(ssid).then((result) => {})
+    meshAPI.setSSID(ssid).then((result) => {}).catch((e) => {
+      alertContext.error('Mesh API failed to sync ssids')
+    })
+  }
+
+  const doSyncOTP = () => {
+    meshAPI.syncOTP().then((result) => {}).catch((e) => {
+      alertContext.error('Mesh API failed to sync otp')
+    })
   }
 
   const retrieveLeafToken = (func) => {
@@ -348,11 +356,11 @@ const Mesh = (props) => {
         <VStack>
           <ListHeader
             title=" Mesh Setup"
-            description="Configure downstream routers for mesh networking. Only wired backhaul is supported for now."
+            description="Configure Access Points for mesh networking. Only wired backhaul is supported for now."
           >
             <ModalForm
-              title="Add Leaf Router"
-              triggerText="Add Leaf Router"
+              title="Add Mesh Node AP"
+              triggerText="Add Mesh Node AP"
               triggerProps={{
                 sx: {
                   '@base': { display: 'none' },
@@ -404,7 +412,7 @@ const Mesh = (props) => {
 
           <VStack space="md" p="$4">
             {!leafRouters.length ? (
-              <Text>There are no leaf routers configured yet</Text>
+              <Text>There are no mesh Access Points configured yet</Text>
             ) : null}
 
             { spinning && (
@@ -422,13 +430,19 @@ const Mesh = (props) => {
                 action="primary"
                 onPress={() => refModal.current()}
               >
-                <ButtonText>Add Leaf Router</ButtonText>
+                <ButtonText>Add Mesh Access Point</ButtonText>
                 <ButtonIcon as={AddIcon} ml="$1" />
               </Button>
-              <Button action="secondary" onPress={() => doSyncSSID()}>
-                <ButtonText>Sync SSID Across Devices: {ssid}</ButtonText>
-                <ButtonIcon as={RefreshCwIcon} ml="$1" />
-              </Button>
+              <VStack>
+                <Button mt="$4"  action="secondary" onPress={() => doSyncSSID()}>
+                  <ButtonText>Sync SSID Across Access Points: {ssid}</ButtonText>
+                  <ButtonIcon as={RefreshCwIcon} ml="$1" />
+                </Button>
+                <Button mt="$4" action="secondary" onPress={() => doSyncOTP()}>
+                  <ButtonText>Sync OTP Code Across Access Points</ButtonText>
+                  <ButtonIcon as={RefreshCwIcon} ml="$1" />
+                </Button>
+              </VStack>
             </ButtonGroup>
           </VStack>
 
@@ -436,7 +450,7 @@ const Mesh = (props) => {
             <>
               <ListHeader
                 title="Device Token"
-                description="Generate an API token to use this device as a leaf router."
+                description="Generate an API token to use this device as a mesh Access Point."
               ></ListHeader>
 
               <Box

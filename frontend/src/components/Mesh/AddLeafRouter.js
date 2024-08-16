@@ -131,8 +131,7 @@ class AddLeafRouterImpl extends React.Component {
         let lanIP = leaf.IP.split('.').slice(0, 3).join('.') + '.1'
 
         // we will program the leaf node to trust our CA
-        let our_ca = await xapi.get('/cert')
-
+        let our_ca = await xapi.get('/plugins/mesh/cert')
         let status = await rMeshAPI.setParentCredentials({
           ParentAPIToken: parentAPIToken,
           ParentIP: lanIP,
@@ -205,7 +204,7 @@ class AddLeafRouterImpl extends React.Component {
       <VStack space="md">
         <FormControl flex={1} isRequired>
           <FormControlLabel>
-            <FormControlLabelText>Leaf Router IP</FormControlLabelText>
+            <FormControlLabelText>Mesh Node Access Point IP</FormControlLabelText>
           </FormControlLabel>
           <ClientSelect
             name="IP"
@@ -230,7 +229,7 @@ class AddLeafRouterImpl extends React.Component {
           </Input>
           <FormControlHelper>
             <FormControlHelperText>
-              API Token for downstream device. Log in and generate an API token
+              API Token for downstream device. Log in to the device and generate an API token with the Mesh Plugin
             </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
