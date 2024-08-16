@@ -400,6 +400,11 @@ func PluginRoutes(external_router_authenticated *mux.Router, external_router_pub
 		external_router_authenticated.HandleFunc("/plugins/"+entry.URI+"/", PluginRequestHandler(proxy))
 		external_router_authenticated.HandleFunc("/plugins/"+entry.URI+"/"+"{rest:.*}", PluginRequestHandler(proxy))
 
+		// auth-less exception to avoid MITM attacks on Auth Token.
+		if entry.Plus && entry.URI == "mesh" {
+			external_router_public.HandleFunc("/plugins/mesh/cert", PluginRequestHandlerPublic(proxy))
+		}
+
 		if entry.HasUI {
 			//plugin index.html is fetch with auth @ /plugins/xyz/index.html
 			//static files are available at /admin/custom_plugin/xyz/static/css|js/ to match the react url
