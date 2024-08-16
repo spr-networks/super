@@ -667,7 +667,7 @@ const Setup = (props) => {
             {apiReachable ? (
               <ButtonText>Finish</ButtonText>
             ) : (
-              <ButtonText>Waiting for API</ButtonText>
+              <ButtonText>Waiting for API...</ButtonText>
             )}
           </ButtonSetup>
         </VStack>
@@ -890,7 +890,7 @@ const Setup = (props) => {
             {apiReachable ? (
               <ButtonText>Save</ButtonText>
             ) : (
-              <ButtonText>...waiting for API</ButtonText>
+              <ButtonText>Waiting for API...</ButtonText>
             )}
           </ButtonSetup>
 
