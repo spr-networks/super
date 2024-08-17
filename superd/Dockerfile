@@ -30,10 +30,8 @@ RUN echo \
 apt-get update && \
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && \
 apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin git openssh-client && \
-rm -rf /var/lib/apt/lists/*
+  rm -rf /var/lib/apt/lists/*
 
-
->>>>>>> 120fda2d ([build] Update to latest docker suggested install commands)
 COPY --from=builder /superd /
 COPY scripts /scripts
 COPY scripts/docker-compose /usr/bin/docker-compose
