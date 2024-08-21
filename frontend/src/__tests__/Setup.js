@@ -173,5 +173,6 @@ describe('Setup', () => {
     )
 
     //=> stage3
+    //TODO /hostapd/restart_setup call
   })
 })

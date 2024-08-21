@@ -90,7 +90,7 @@ describe('Device List', () => {
     expect(numItemsFiltered).toBeLessThan(numItems)
 
     //disable filter - show all, note text value == first_group
-    fireEvent.press(screen.getByRole('button', { name: /_group|private/ }))
+    fireEvent.press(filterbtn)
     fireEvent.press(screen.getAllByRole('menuitem')[0]) // Show All
 
     let numItemsReset = screen.getAllByRole('button', {
