@@ -433,6 +433,9 @@ const Setup = (props) => {
         })
     }
 
+    if (wifiInterfaces.length == 0)  {
+      finishSetup()
+    }
     for (let iface of wifiInterfaces) {
       if (iface.includes('.')) continue
 
