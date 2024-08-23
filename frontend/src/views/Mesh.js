@@ -467,14 +467,14 @@ const Mesh = (props) => {
                 }}
                 p="$4"
               >
+                <Text color="$muted500">Configure Mesh Node:</Text>
                 {leafToken == '' ? (
                   <Button
                     action="secondary"
                     onPress={() => generateLeafToken()}
                     mt="$4"
                   >
-                    <ButtonText>Generate API Token</ButtonText>
-                    <ButtonIcon as={AddIcon} ml="$1" />
+                    <ButtonText>Generate Mesh Node Token</ButtonText>
                   </Button>
                 ) : (
                   <HStack
