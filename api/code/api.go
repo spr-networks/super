@@ -1319,6 +1319,10 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 						entry.Policies = append(entry.Policies, "disabled")
 					}
 				}
+				if entry.MAC != "" {
+					//deauth the station
+					deauthConnectedStation(entry.MAC)
+				}
 			}
 		}
 
@@ -1342,6 +1346,7 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 
 	//did not delete anything but a disable happened, save.
 	if doUpdate && len(todelete) == 0 {
+		doReloadPSKFiles()
 		saveDevicesJson(devices)
 	}
 
