@@ -3037,7 +3037,10 @@ func main() {
 		go http.ListenAndServeTLS(listenAddr, ApiTlsCert, ApiTlsKey, logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
 	}
 
-	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
+	//refuse HTTP for setup mode, which may be over the open wireless connection
+	if !isSetupMode() {
+		go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
+	}
 
 	go wifidServer.Serve(unixWifidListener)
 
