@@ -467,7 +467,7 @@ func mdnsPublish(settings MulticastSettings) {
 	_, err = os.Stat(SetupDoneFile)
 	if err != nil {
 		//in setup mode, start publishing over wlan0
-		data, err := ioutil.ReadFile(DevicesPublicConfigFile)
+		data, err := ioutil.ReadFile("/proc/cpuinfo")
 		if err == nil && (strings.Contains(string(data), "Raspberry Pi 4") ||
 			strings.Contains(string(data), "Raspberry Pi 5")) {
 			mdnsPublishIface(settings, "wlan0")
