@@ -2656,7 +2656,7 @@ func setupAPInit() {
 	for _, subnetString := range gDhcpConfig.TinyNets {
 		start_ip, _, _ := net.ParseCIDR(subnetString)
 		router_ip := TwiddleTinyIP(start_ip, 1)
-		exec.Command("ip", "addr", "add", Router+"/24", "dev", Ifname).Run()
+		exec.Command("ip", "addr", "add", router_ip.String()+"/24", "dev", SetupAP).Run()
 	}
 }
 
