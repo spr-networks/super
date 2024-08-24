@@ -632,6 +632,8 @@ export default class APIWifi extends API {
           if (typeFilter) {
             if (!devs[dev][wifi].type.includes(typeFilter)) continue;
           }
+          //ignore the set up ap
+          if (typeFilter == 'AP' && devs[dev][wifi].ssid === 'spr-setup') continue;
           //ignore vlans
           if (wifi.includes('.')) continue;
           ifaces = ifaces.concat(wifi);

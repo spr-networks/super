@@ -342,7 +342,7 @@ const Setup = (props) => {
     }
   }, [password])
 
-  //send a restart wifi command to disable sprlab-setup
+  //send a restart wifi command to disable spr-setup
   const removeSetupAP = async (done) => {
     api
       .put('/setup_done')

@@ -932,9 +932,6 @@ func hostapdEnableInterface(w http.ResponseWriter, r *http.Request) {
 	resetRadioFirewall()
 }
 
-/*
-curl -u admin:sprlab localhost/hostapd/wlan1/enableExtraBSS -vv -X PUT --data '{"Ssid":"spr-extra", "Bssid": "06:a6:7e:6b:6e:35", "WpaKeyMgmt": "WPA-PSK WPA-PSK-SHA256"}'
-*/
 func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
 	if !isValidIface(iface) {

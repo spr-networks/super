@@ -41,7 +41,7 @@ const WifiConnect = (props) => {
             })
           ).then((ssids) => {
             let x = ssids.filter(
-              (x) => x !== 'sprlab-setup' && x != '' && x != null
+              (x) => x !== 'spr-setup' && x != '' && x != null
             )
             setSsids(x)
             if (x.length === 0) {
@@ -110,7 +110,7 @@ const WifiConnect = (props) => {
       {ssids.length == 0 && (
         <VStack key="loading" space="md" alignItems="center">
           <Text size="lg" color="$muted500">
-            Waiting for SPR... (You may need to reconnect to sprlab-setup for
+            Waiting for SPR... (You may need to reconnect to spr-setup for
             wifi setup)
           </Text>
         </VStack>
