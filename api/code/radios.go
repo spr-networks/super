@@ -53,6 +53,7 @@ func doReloadPSKFiles() {
 
 	wpa2 := ""
 	sae := ""
+	client_deauth := []string{}
 
 	//apple downgrade workaround https://feedbackassistant.apple.com/feedback/9991042
 	downgradeWorkaround := true
@@ -63,6 +64,7 @@ func doReloadPSKFiles() {
 		}
 
 		if slices.Contains(entry.Policies, "disabled") {
+			client_deauth = append(client_deauth, entry.MAC)
 			continue
 		}
 

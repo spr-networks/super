@@ -62,8 +62,8 @@ const OTPValidate = ({ onSuccess, ...props }) => {
         <Button
           variant="outline"
           onPress={() => {
-            navigate('/admin/auth')
             onSuccess() // only to close the modal
+            navigate('/admin/auth')
           }}
         >
           <ButtonText>Setup OTP</ButtonText>

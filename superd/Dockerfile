@@ -17,11 +17,13 @@ RUN --mount=type=tmpfs,target=/tmpfs \
 
 FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update
 RUN apt-get install ca-certificates curl
 RUN install -m 0755 -d /etc/apt/keyrings
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 RUN chmod a+r /etc/apt/keyrings/docker.asc
+
 # Add the repository to Apt sources:
 RUN echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
@@ -30,7 +32,8 @@ RUN echo \
 apt-get update && \
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && \
 apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin git openssh-client && \
-  rm -rf /var/lib/apt/lists/*
+rm -rf /var/lib/apt/lists/*
+
 
 COPY --from=builder /superd /
 COPY scripts /scripts

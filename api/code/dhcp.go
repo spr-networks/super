@@ -249,15 +249,25 @@ func normalizeName(Name string) string {
 var SetupDHCPIPv4 = map[string]string{}
 var SetupAP = "wlan0"
 
+
+func getSetupIP(MAC string) (string, string) {
+	IP, exists := SetupDHCPIPv4[MAC]
+	if exists {
+		Router := RouterFromTinyIP(IP)
+		return IP, Router
+	}
+	return "", ""
+}
+
 func add_setup_peer(MAC string, IP string, Router string) {
 	SetupDHCPIPv4[MAC] = IP
 
 	//ensure setup ap is a valid interface for input ports.
-	addApiInterface(SetupAP)
+	addSetupInterface(SetupAP)
 	//likewise it should not be a lan interface
 	deleteLanInterface(SetupAP)
 
-	//add /30 route to device
+	//add  route to device
 	updateAddr(Router, SetupAP)
 }
 
@@ -363,7 +373,12 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 		IP = val.RecentIP
 		Router = RouterFromTinyIP(IP)
 	} else {
-		IP, Router = genNewDeviceIP(&devices)
+		if isSetupMode() {
+			IP, Router = getSetupIP(dhcp.MAC)
+		}
+		if IP == "" {
+			IP, Router = genNewDeviceIP(&devices)
+		}
 	}
 
 	if IP == "" {

@@ -602,6 +602,14 @@ func deleteApiInterface(iface string) {
 	exec.Command("nft", "add", "element", "inet", "filter", "api_interfaces", "{", iface, "}").Run()
 }
 
+func addSetupInterface(iface string) {
+	exec.Command("nft", "add", "element", "inet", "filter", "setup_interfaces", "{", iface, "}").Run()
+}
+
+func deleteSetupInterface(iface string) {
+	exec.Command("nft", "add", "element", "inet", "filter", "setup_interfaces", "{", iface, "}").Run()
+}
+
 func addLanInterface(iface string) {
 	exec.Command("nft", "add", "element", "inet", "filter", "lan_interfaces", "{", iface, "}").Run()
 	exec.Command("nft", "add", "element", "inet", "nat", "lan_interfaces", "{", iface, "}").Run()

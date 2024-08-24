@@ -55,6 +55,11 @@ table inet filter {
     type ifname;
   }
 
+  # this set contains setup interfaces with API access
+  set setup_interfaces {
+    type ifname;
+  }
+
   # this set contains only the wired interfaces, for DHCP whitelisting.
   # without knowing the mac address for dhcp_access ahead of time.
   # VLANs are *not* placed here as VLANs are currently 1:1 per device.
@@ -245,7 +250,7 @@ table inet filter {
     # Not a source that can connect into SPR services
     counter iifname @outbound_sites goto DROPLOGINP
 
-    # potential shadow port mitigation, block wireguard as a udp source port, 
+    # potential shadow port mitigation, block wireguard as a udp source port,
     # we should only use this if theres no site vpn set up
     # $(if [ "$WIREGUARD_PORT" ]; then echo "iifname @uplink_interfaces udp sport $WIREGUARD_PORT counter drop"; fi)
 
@@ -269,6 +274,8 @@ table inet filter {
     # DHCP Allow rules
     # Wired lan
     iifname @wired_lan_interfaces udp dport 67 counter accept
+    #accept dhcp from setup interfaces also
+    iifname @setup_interfaces counter udp dport 67 accept
 
     # Authorized wireless stations & MACs. They do not have an ip address yet
     counter udp dport 67 iifname . ether saddr vmap @dhcp_access
@@ -288,6 +295,9 @@ table inet filter {
     iifname @uplink_interfaces counter tcp dport vmap @wan_tcp_accept
     iifname @api_interfaces counter tcp dport 80 accept
     iifname @api_interfaces counter tcp dport 443 accept
+    # for setup only allow HTTPS and ssh
+    iifname @setup_interfaces counter tcp dport 22 accept
+    iifname @setup_interfaces counter tcp dport 443 accept
 
     # UDP services
     iifname @lan_interfaces counter udp dport vmap @lan_udp_accept
@@ -298,6 +308,7 @@ table inet filter {
     # to know the port and interface combo to allow.
     ip daddr 224.0.0.0/4 iifname @lan_interfaces counter udp dport vmap @multicast_lan_udp_accept
     ip daddr 224.0.0.0/4 iifname @uplink_interfaces counter udp dport vmap @multicast_wan_udp_accept
+    ip daddr 224.0.0.0/4 iifname @setup_interfaces counter udp dport vmap @multicast_lan_udp_accept
 
     icmp type { echo-reply, echo-request } ip saddr . iifname vmap @ping_rules
 

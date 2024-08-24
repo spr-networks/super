@@ -393,11 +393,16 @@ func mdnsPublishIface(settings MulticastSettings, wanif string) {
 		return
 	}
 
-	// verify iface have an ip addr
+	// verify iface has an ip address
 	ip, err := ifaceAddr(iface)
 	if err != nil {
-		fmt.Println(err)
-		return
+		//grab the lanip then since we're coming in over LAN
+		data, err := ioutil.ReadFile(TEST_PREFIX + "/configs/base/lanip")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		ip = strings.Replace(string(data), "\n", "", 1)
 	}
 
 	addr, err := net.ResolveUDPAddr("udp", mdns.DefaultAddress)
@@ -467,7 +472,7 @@ func mdnsPublish(settings MulticastSettings) {
 	_, err = os.Stat(SetupDoneFile)
 	if err != nil {
 		//in setup mode, start publishing over wlan0
-		data, err := ioutil.ReadFile(DevicesPublicConfigFile)
+		data, err := ioutil.ReadFile("/proc/cpuinfo")
 		if err == nil && (strings.Contains(string(data), "Raspberry Pi 4") ||
 			strings.Contains(string(data), "Raspberry Pi 5")) {
 			mdnsPublishIface(settings, "wlan0")

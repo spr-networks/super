@@ -54,6 +54,7 @@ const Mesh = (props) => {
   }
 
   const catchMeshErr = (err) => {
+    setSpinning(false)
     if (err?.message == 404 || err?.message == 502) {
       setMeshAvailable(false)
       return
@@ -66,8 +67,6 @@ const Mesh = (props) => {
   }
 
   const refreshLeaves = () => {
-    setSpinning(true)
-
     meshAPI
       .leafMode()
       .then((result) => {
@@ -142,6 +141,8 @@ const Mesh = (props) => {
             })
         })
 
+        setSpinning(true)
+
         Promise.all(checkedRouters)
           .then((results) => {
             setLeafRouters(results)
@@ -153,6 +154,7 @@ const Mesh = (props) => {
           })
       })
       .catch(catchMeshErr)
+
   }
 
   useEffect(() => {
@@ -250,6 +252,7 @@ const Mesh = (props) => {
     setSpinning(true)
     const done = (res) => {
       refreshLeaves()
+      setSpinning(false)
     }
 
     meshAPI.delLeafRouter(item).then(done)
@@ -433,17 +436,21 @@ const Mesh = (props) => {
                 <ButtonText>Add Mesh Access Point</ButtonText>
                 <ButtonIcon as={AddIcon} ml="$1" />
               </Button>
-              <VStack>
-                <Button mt="$4"  action="secondary" onPress={() => doSyncSSID()}>
-                  <ButtonText>Sync SSID Across Access Points: {ssid}</ButtonText>
-                  <ButtonIcon as={RefreshCwIcon} ml="$1" />
-                </Button>
-                <Button mt="$4" action="secondary" onPress={() => doSyncOTP()}>
-                  <ButtonText>Sync OTP Code Across Access Points</ButtonText>
-                  <ButtonIcon as={RefreshCwIcon} ml="$1" />
-                </Button>
-              </VStack>
             </ButtonGroup>
+
+            {leafRouters.length > 0 && (
+
+            <VStack>
+              <Button mt="$4"  action="secondary" onPress={() => doSyncSSID()}>
+                <ButtonText>Sync SSID Across Access Points: {ssid}</ButtonText>
+                <ButtonIcon as={RefreshCwIcon} ml="$1" />
+              </Button>
+              <Button mt="$4" action="secondary" onPress={() => doSyncOTP()}>
+                <ButtonText>Sync OTP Code Across Access Points</ButtonText>
+                <ButtonIcon as={RefreshCwIcon} ml="$1" />
+              </Button>
+            </VStack>
+            )}
           </VStack>
 
           {leafRouters.length == 0 ? (
@@ -460,14 +467,14 @@ const Mesh = (props) => {
                 }}
                 p="$4"
               >
+                <Text color="$muted500">Configure Mesh Node:</Text>
                 {leafToken == '' ? (
                   <Button
                     action="secondary"
                     onPress={() => generateLeafToken()}
                     mt="$4"
                   >
-                    <ButtonText>Generate API Token</ButtonText>
-                    <ButtonIcon as={AddIcon} ml="$1" />
+                    <ButtonText>Generate Mesh Node Token</ButtonText>
                   </Button>
                 ) : (
                   <HStack

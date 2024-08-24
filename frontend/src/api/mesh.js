@@ -26,6 +26,7 @@ export default class APIMesh extends API {
   }
 
   delLeafRouter(data) {
+    data.TLSCA=""
     return this.delete(`leafRouter`, data);
   }
 

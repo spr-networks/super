@@ -1319,6 +1319,10 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 						entry.Policies = append(entry.Policies, "disabled")
 					}
 				}
+				if entry.MAC != "" {
+					//deauth the station
+					deauthConnectedStation(entry.MAC)
+				}
 			}
 		}
 
@@ -1342,6 +1346,7 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 
 	//did not delete anything but a disable happened, save.
 	if doUpdate && len(todelete) == 0 {
+		doReloadPSKFiles()
 		saveDevicesJson(devices)
 	}
 
@@ -3032,6 +3037,8 @@ func main() {
 		go http.ListenAndServeTLS(listenAddr, ApiTlsCert, ApiTlsKey, logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
 	}
 
+	//side note, firewall has HTTPs only for setup interface, not http. see nft_rules.sh
+
 	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
 
 	go wifidServer.Serve(unixWifidListener)
@@ -3039,6 +3046,7 @@ func main() {
 	go dhcpdServer.Serve(unixDhcpdListener)
 
 	if isSetupMode() {
+		setupAPInit()
 		startExtension("wifid-setup/docker-compose.yml")
 	}
 

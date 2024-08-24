@@ -1,17 +1,23 @@
 import { createServer, Model, Response } from 'miragejs'
 import { Base64 } from 'utils'
-let server = null
-import AlertTemplates from 'components/Alerts/AlertTemplates'
-import {wifiAuthFail, nftDrop, authFail} from 'api/mock/alertbucket'
 
-import * as jsonpath from 'jsonpath';
+import { wifiAuthFail, nftDrop, authFail } from 'api/mock/alertbucket'
+
+import * as jsonpath from 'jsonpath'
+
+let server = null
+let opts = {}
 
 // helper function for random and random value in array
 const r = (n) => parseInt(Math.random() * n)
 const rpick = (l) => l[parseInt(r(l.length))]
 
 // TODO alot of this can be parsed from OpenAPI definitions
-export default function MockAPI() {
+export default function MockAPI(props = null) {
+  if (props) {
+    opts = { ...props }
+  }
+
   if (server) {
     return server
   }
@@ -116,9 +122,21 @@ export default function MockAPI() {
         })
       }
 
-      server.create('group', { Name: 'testing', disabled: false, GroupTags: [] })
-      server.create('group', { Name: 'testing2', disabled: false, GroupTags: [] })
-      server.create('group', { Name: 'testing3', disabled: false, GroupTags: [] })
+      server.create('group', {
+        Name: 'testing',
+        disabled: false,
+        GroupTags: []
+      })
+      server.create('group', {
+        Name: 'testing2',
+        disabled: false,
+        GroupTags: []
+      })
+      server.create('group', {
+        Name: 'testing3',
+        disabled: false,
+        GroupTags: []
+      })
 
       server.create('plugin', {
         Name: 'dns-block',
@@ -320,9 +338,16 @@ export default function MockAPI() {
     routes() {
       // TODO hook for all
       const authOK = (request) => {
+        return true //TODO
+        if (opts.isSetup) {
+          //TODO urls: /setup , /ip/addr and others used
+          return true
+        }
         try {
-          let [type, b64auth] = request.requestHeaders.Authorization.split(' ')
-          return type == 'Basic' && Base64.atob(b64auth) == 'admin:admin'
+          let [type, b64auth] = request.requestHeaders.Authorization?.split(' ')
+          return (
+            type == 'Basic' && b64auth && Base64.atob(b64auth) == 'admin:admin'
+          )
         } catch (err) {
           console.error('B64 err:', err)
           return false
@@ -330,7 +355,26 @@ export default function MockAPI() {
       }
 
       this.get('/setup', (schema, request) => {
+        if (opts.isSetup) {
+          return { status: 'ok' }
+        }
+
         return new Response(400, {}, { error: 'already set up' })
+      })
+
+      this.put('/setup', (schema, request) => {
+        //if (opts.isSetup) {}
+        return { status: 'ok' }
+        //return new Response(400, {}, { error: 'already set up' })
+      })
+
+      this.put('/hostapd/:iface/:action', (schema, request) => {
+        //action==enable|config
+        return { status: 'ok' }
+      })
+
+      this.put('/link/config', (schema, request) => {
+        return { status: 'ok' }
       })
 
       this.get('/status', (schema, request) => {
@@ -1278,7 +1322,7 @@ export default function MockAPI() {
               'TKIP (00-0f-ac:2)',
               'CCMP-128 (00-0f-ac:4)',
               'CCMP-256 (00-0f-ac:10)',
-              'GCMP-128 (00-0f-ac:8)',
+              //'GCMP-128 (00-0f-ac:8)',
               'GCMP-256 (00-0f-ac:9)',
               'CMAC (00-0f-ac:6)',
               'CMAC-256 (00-0f-ac:13)',
@@ -1990,7 +2034,7 @@ export default function MockAPI() {
       })
 
       this.get('/hostapd/:dev/failsafe', (schema) => {
-        return "ok"
+        return 'ok'
       })
 
       // plugins
@@ -2675,12 +2719,12 @@ export default function MockAPI() {
           'nft:lan:in',
           'nft:wan:in',
           'www:auth:user:success',
-          "alert:auth:failure:",
-          "alert:nft:drop:input:",
-          "alert:wifi:auth:fail:",
-          "nft:drop:input",
-          "wifi:auth:fail",
-          "wifi:auth:success"
+          'alert:auth:failure:',
+          'alert:nft:drop:input:',
+          'alert:wifi:auth:fail:',
+          'nft:drop:input',
+          'wifi:auth:fail',
+          'wifi:auth:success'
         ]
       })
 
@@ -2722,11 +2766,11 @@ export default function MockAPI() {
         }
 
         let bucket = request.params.bucket
-        let filter = request.queryParams.filter;
+        let filter = request.queryParams.filter
 
         // Decode the URL-encoded filter parameter
         if (filter) {
-          filter = decodeURIComponent(filter);
+          filter = decodeURIComponent(filter)
         }
 
         if (bucket.startsWith('dns:serve:')) {
@@ -2800,26 +2844,25 @@ export default function MockAPI() {
         } else if (bucket.startsWith('alert:auth:failure:')) {
           try {
             if (filter) return jsonpath.query(authFail, filter)
-          } catch(e) {
+          } catch (e) {
             alert(e)
           }
           return authFail
         } else if (bucket.startsWith('alert:nft:drop:input')) {
           try {
             if (filter) return jsonpath.query(nftDrop, filter)
-          } catch(e) {
+          } catch (e) {
             alert(e)
           }
           return nftDrop
         } else if (bucket.startsWith('alert:wifi:auth:fail')) {
           try {
             if (filter) return jsonpath.query(wifiAuthFail, filter)
-          } catch(e) {
+          } catch (e) {
             alert(e)
           }
           return wifiAuthFail
         }
-
 
         //log:api
         let res = []
@@ -2943,206 +2986,208 @@ export default function MockAPI() {
         return logs
       })
 
-
       this.get('/alerts', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
         let alerts = [
           {
-              "TopicPrefix": "nft:drop:mac",
-              "MatchAnyOne": false,
-              "InvertRule": false,
-              "Conditions": [],
-              "Actions": [
-                  {
-                      "SendNotification": false,
-                      "StoreAlert": true,
-                      "MessageTitle": "MAC Filter Violation",
-                      "MessageBody": "MAC IP Violation {{IP.SrcIP#Device}} {{IP.SrcIP}} {{Ethernet.SrcMAC}} to {{IP.DstIP}} {{Ethernet.DstMAC}}",
-                      "NotificationType": "warning",
-                      "GrabEvent": true,
-                      "GrabValues": false
-                  }
-              ],
-              "Name": "MAC Filter Violation",
-              "Disabled": true,
-              "RuleId": "7f3266dd-7697-44ce-8ddd-36a006043509"
+            TopicPrefix: 'nft:drop:mac',
+            MatchAnyOne: false,
+            InvertRule: false,
+            Conditions: [],
+            Actions: [
+              {
+                SendNotification: false,
+                StoreAlert: true,
+                MessageTitle: 'MAC Filter Violation',
+                MessageBody:
+                  'MAC IP Violation {{IP.SrcIP#Device}} {{IP.SrcIP}} {{Ethernet.SrcMAC}} to {{IP.DstIP}} {{Ethernet.DstMAC}}',
+                NotificationType: 'warning',
+                GrabEvent: true,
+                GrabValues: false
+              }
+            ],
+            Name: 'MAC Filter Violation',
+            Disabled: true,
+            RuleId: '7f3266dd-7697-44ce-8ddd-36a006043509'
           },
           {
-              "TopicPrefix": "auth:failure",
-              "MatchAnyOne": false,
-              "InvertRule": false,
-              "Conditions": [
-                  {
-                      "JPath": "$[?(@.type==\"user\")]"
-                  }
-              ],
-              "Actions": [
-                  {
-                      "SendNotification": false,
-                      "StoreAlert": true,
-                      "MessageTitle": "Login Failure",
-                      "MessageBody": "{{name}} failed to login with {{reason}}",
-                      "NotificationType": "error",
-                      "GrabEvent": true,
-                      "GrabValues": false
-                  }
-              ],
-              "Name": "User Login Failure",
-              "Disabled": true,
-              "RuleId": "ea676ee7-ec68-4a23-aba4-ba69feee4d8c"
+            TopicPrefix: 'auth:failure',
+            MatchAnyOne: false,
+            InvertRule: false,
+            Conditions: [
+              {
+                JPath: '$[?(@.type=="user")]'
+              }
+            ],
+            Actions: [
+              {
+                SendNotification: false,
+                StoreAlert: true,
+                MessageTitle: 'Login Failure',
+                MessageBody: '{{name}} failed to login with {{reason}}',
+                NotificationType: 'error',
+                GrabEvent: true,
+                GrabValues: false
+              }
+            ],
+            Name: 'User Login Failure',
+            Disabled: true,
+            RuleId: 'ea676ee7-ec68-4a23-aba4-ba69feee4d8c'
           },
           {
-              "TopicPrefix": "nft:drop:private",
-              "MatchAnyOne": false,
-              "InvertRule": false,
-              "Conditions": [],
-              "Actions": [
-                  {
-                      "SendNotification": false,
-                      "StoreAlert": true,
-                      "MessageTitle": "Drop Private Network Request",
-                      "MessageBody": "Dropped Traffic from {{IP.SrcIP#Device}} {{IP.SrcIP}} {{InDev#Interface}} to {{IP.DstIP}} {{OutDev#Interface}}",
-                      "NotificationType": "warning",
-                      "GrabEvent": true,
-                      "GrabValues": false
-                  }
-              ],
-              "Name": "Drop Private Request",
-              "Disabled": true,
-              "RuleId": "2adbec19-6b47-4a99-a499-ab0b8da652a8"
+            TopicPrefix: 'nft:drop:private',
+            MatchAnyOne: false,
+            InvertRule: false,
+            Conditions: [],
+            Actions: [
+              {
+                SendNotification: false,
+                StoreAlert: true,
+                MessageTitle: 'Drop Private Network Request',
+                MessageBody:
+                  'Dropped Traffic from {{IP.SrcIP#Device}} {{IP.SrcIP}} {{InDev#Interface}} to {{IP.DstIP}} {{OutDev#Interface}}',
+                NotificationType: 'warning',
+                GrabEvent: true,
+                GrabValues: false
+              }
+            ],
+            Name: 'Drop Private Request',
+            Disabled: true,
+            RuleId: '2adbec19-6b47-4a99-a499-ab0b8da652a8'
           },
           {
-              "TopicPrefix": "wifi:auth:fail",
-              "MatchAnyOne": false,
-              "InvertRule": false,
-              "Conditions": [],
-              "Actions": [
-                  {
-                      "SendNotification": true,
-                      "StoreAlert": true,
-                      "MessageTitle": "WiFi Auth Failure",
-                      "MessageBody": "{{MAC#Device}} {{MAC}} failed wifi authentication {{Reason}} with type {{Type}}",
-                      "NotificationType": "warning",
-                      "GrabEvent": true,
-                      "GrabValues": false
-                  }
-              ],
-              "Name": "Wifi Auth Failure",
-              "Disabled": false,
-              "RuleId": "f16e9a58-9f80-455c-a280-211bd8b1fd05"
+            TopicPrefix: 'wifi:auth:fail',
+            MatchAnyOne: false,
+            InvertRule: false,
+            Conditions: [],
+            Actions: [
+              {
+                SendNotification: true,
+                StoreAlert: true,
+                MessageTitle: 'WiFi Auth Failure',
+                MessageBody:
+                  '{{MAC#Device}} {{MAC}} failed wifi authentication {{Reason}} with type {{Type}}',
+                NotificationType: 'warning',
+                GrabEvent: true,
+                GrabValues: false
+              }
+            ],
+            Name: 'Wifi Auth Failure',
+            Disabled: false,
+            RuleId: 'f16e9a58-9f80-455c-a280-211bd8b1fd05'
           },
           {
-              "TopicPrefix": "wifi:auth:success",
-              "MatchAnyOne": false,
-              "InvertRule": false,
-              "Conditions": [],
-              "Actions": [
-                  {
-                      "SendNotification": true,
-                      "StoreAlert": false,
-                      "MessageTitle": "Device Connected",
-                      "MessageBody": "Authentication success for {{MAC#Device}}",
-                      "NotificationType": "success",
-                      "GrabEvent": true,
-                      "GrabValues": false,
-                      "GrabFields": [
-                          "MAC"
-                      ]
-                  }
-              ],
-              "Name": "Device Connected",
-              "Disabled": false,
-              "RuleId": "387c3a9d-b072-4ba7-b6ff-895f484db4ec"
+            TopicPrefix: 'wifi:auth:success',
+            MatchAnyOne: false,
+            InvertRule: false,
+            Conditions: [],
+            Actions: [
+              {
+                SendNotification: true,
+                StoreAlert: false,
+                MessageTitle: 'Device Connected',
+                MessageBody: 'Authentication success for {{MAC#Device}}',
+                NotificationType: 'success',
+                GrabEvent: true,
+                GrabValues: false,
+                GrabFields: ['MAC']
+              }
+            ],
+            Name: 'Device Connected',
+            Disabled: false,
+            RuleId: '387c3a9d-b072-4ba7-b6ff-895f484db4ec'
           },
           {
-              "TopicPrefix": "nft:drop:input",
-              "MatchAnyOne": false,
-              "InvertRule": false,
-              "Conditions": [],
-              "Actions": [
-                  {
-                      "SendNotification": false,
-                      "StoreAlert": true,
-                      "MessageTitle": "Dropped Input",
-                      "MessageBody": "Drop Incoming Traffic to Router from {{IP.SrcIP}} to port {{TCP.DstPort}} {{UDP.DstPort}}",
-                      "NotificationType": "warning",
-                      "GrabEvent": true,
-                      "GrabValues": false
-                  }
-              ],
-              "Name": "Dropped Input",
-              "Disabled": true,
-              "RuleId": "481822f4-a20c-4cec-92d9-dad032d2c450"
+            TopicPrefix: 'nft:drop:input',
+            MatchAnyOne: false,
+            InvertRule: false,
+            Conditions: [],
+            Actions: [
+              {
+                SendNotification: false,
+                StoreAlert: true,
+                MessageTitle: 'Dropped Input',
+                MessageBody:
+                  'Drop Incoming Traffic to Router from {{IP.SrcIP}} to port {{TCP.DstPort}} {{UDP.DstPort}}',
+                NotificationType: 'warning',
+                GrabEvent: true,
+                GrabValues: false
+              }
+            ],
+            Name: 'Dropped Input',
+            Disabled: true,
+            RuleId: '481822f4-a20c-4cec-92d9-dad032d2c450'
           },
           {
-              "TopicPrefix": "dns:serve:",
-              "MatchAnyOne": false,
-              "InvertRule": false,
-              "Conditions": [
-                  {
-                      "JPath": "$[?(@.FirstName==\"c2h.se.\")]"
-                  }
-              ],
-              "Actions": [
-                  {
-                      "SendNotification": false,
-                      "StoreAlert": false,
-                      "MessageTitle": "Domain resolve",
-                      "MessageBody": "{{Remote#Device}} domain lookup: {{FirstName}}",
-                      "NotificationType": "info",
-                      "GrabEvent": true,
-                      "GrabValues": false,
-                      "GrabFields": [
-                          "FirstName",
-                          "Remote"
-                      ]
-                  }
-              ],
-              "Name": "dns resolve",
-              "Disabled": true,
-              "RuleId": "f6bdb6ee-ffcb-41af-b3c7-6270cba936fb"
+            TopicPrefix: 'dns:serve:',
+            MatchAnyOne: false,
+            InvertRule: false,
+            Conditions: [
+              {
+                JPath: '$[?(@.FirstName=="c2h.se.")]'
+              }
+            ],
+            Actions: [
+              {
+                SendNotification: false,
+                StoreAlert: false,
+                MessageTitle: 'Domain resolve',
+                MessageBody: '{{Remote#Device}} domain lookup: {{FirstName}}',
+                NotificationType: 'info',
+                GrabEvent: true,
+                GrabValues: false,
+                GrabFields: ['FirstName', 'Remote']
+              }
+            ],
+            Name: 'dns resolve',
+            Disabled: true,
+            RuleId: 'f6bdb6ee-ffcb-41af-b3c7-6270cba936fb'
           },
           {
-              "TopicPrefix": "device:vpn:online",
-              "MatchAnyOne": false,
-              "InvertRule": false,
-              "Conditions": [],
-              "Actions": [
-                  {
-                      "SendNotification": true,
-                      "StoreAlert": false,
-                      "MessageTitle": "{{DeviceIP#Device}} connected via {{VPNType}} from {{RemoteEndpoint}}",
-                      "MessageBody": "{{DeviceIP#Device}} connected via {{VPNType}} from {{RemoteEndpoint}}",
-                      "NotificationType": "info",
-                      "GrabEvent": true,
-                      "GrabValues": false
-                  }
-              ],
-              "Name": "VPN Connection",
-              "Disabled": false,
-              "RuleId": "5e87c42b-d3da-45fa-a58f-ae689134c2a7"
+            TopicPrefix: 'device:vpn:online',
+            MatchAnyOne: false,
+            InvertRule: false,
+            Conditions: [],
+            Actions: [
+              {
+                SendNotification: true,
+                StoreAlert: false,
+                MessageTitle:
+                  '{{DeviceIP#Device}} connected via {{VPNType}} from {{RemoteEndpoint}}',
+                MessageBody:
+                  '{{DeviceIP#Device}} connected via {{VPNType}} from {{RemoteEndpoint}}',
+                NotificationType: 'info',
+                GrabEvent: true,
+                GrabValues: false
+              }
+            ],
+            Name: 'VPN Connection',
+            Disabled: false,
+            RuleId: '5e87c42b-d3da-45fa-a58f-ae689134c2a7'
           },
           {
-              "TopicPrefix": "device:vpn:offline",
-              "MatchAnyOne": false,
-              "InvertRule": false,
-              "Conditions": [],
-              "Actions": [
-                  {
-                      "SendNotification": true,
-                      "StoreAlert": false,
-                      "MessageTitle": "{{DeviceIP#Device}} disconnected from {{VPNType}} by {{RemoteEndpoint}}",
-                      "MessageBody": "{{DeviceIP#Device}} disconnected from {{VPNType}} by {{RemoteEndpoint}}",
-                      "NotificationType": "info",
-                      "GrabEvent": true,
-                      "GrabValues": false
-                  }
-              ],
-              "Name": "VPN Connection",
-              "Disabled": false,
-              "RuleId": "95b8992a-53ff-46ad-a6d8-9882fc13241f"
+            TopicPrefix: 'device:vpn:offline',
+            MatchAnyOne: false,
+            InvertRule: false,
+            Conditions: [],
+            Actions: [
+              {
+                SendNotification: true,
+                StoreAlert: false,
+                MessageTitle:
+                  '{{DeviceIP#Device}} disconnected from {{VPNType}} by {{RemoteEndpoint}}',
+                MessageBody:
+                  '{{DeviceIP#Device}} disconnected from {{VPNType}} by {{RemoteEndpoint}}',
+                NotificationType: 'info',
+                GrabEvent: true,
+                GrabValues: false
+              }
+            ],
+            Name: 'VPN Connection',
+            Disabled: false,
+            RuleId: '95b8992a-53ff-46ad-a6d8-9882fc13241f'
           }
         ]
         return alerts
@@ -3154,7 +3199,6 @@ export default function MockAPI() {
         }
         return []
       })
-
     }
   })
 
