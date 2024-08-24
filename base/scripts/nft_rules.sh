@@ -274,8 +274,8 @@ table inet filter {
     # DHCP Allow rules
     # Wired lan
     iifname @wired_lan_interfaces udp dport 67 counter accept
-    #accept dhcp from setup interfaces also
-    iifname @setup_interfaces counter udp dport 67 accept
+    #accept dhcp, dns from setup interfaces also
+    iifname @setup_interfaces counter udp dport {53, 67} accept
 
     # Authorized wireless stations & MACs. They do not have an ip address yet
     counter udp dport 67 iifname . ether saddr vmap @dhcp_access
