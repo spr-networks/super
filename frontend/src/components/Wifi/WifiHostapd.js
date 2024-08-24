@@ -5,6 +5,7 @@ import { wifiAPI } from 'api'
 import {
   generateCapabilitiesString,
   generateConfigForBand,
+  getBestWifiConfig,
   sortConf,
   isSPRCompat
 } from 'api/Wifi'
