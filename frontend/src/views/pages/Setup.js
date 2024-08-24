@@ -129,6 +129,7 @@ const Setup = (props) => {
   const [interfaceUplink, setInterfaceUplink] = useState('eth0')
   const [myIP, setMyIP] = useState('')
   const [tinynet, setTinynet] = useState('192.168.2.0/24')
+  const [needIPReload, setNeedIPReload] = useState(false)
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [errors, setErrors] = useState({})
@@ -302,7 +303,10 @@ const Setup = (props) => {
                     if (entry.IP.startsWith('192')) {
                       let x = entry.IP.split('.').map(Number)
                       x[2] += 1
-                      setTinynet('192.168.' + x[2] + '.0/24')
+                      if (x[2] != '2') {
+                        setTinynet('192.168.' + x[2] + '.0/24')
+                        setNeedIPReload(true)
+                      }
                     }
                   }
                   uplinkInterfaces.push(entry.ifname)
@@ -423,6 +427,15 @@ const Setup = (props) => {
           saveLogin('admin', passwordConfirm)
           setIsDone(true)
           setSetupStage(2)
+          if (needIPReload === true) {
+            let newIP  = tinynet
+            if (tinynet.includes("/")) {
+              newIP = tinynet.split("/")[0]
+              let x = entry.IP.split('.').map(Number)
+              newIP = x[0] + "." + x[1] + "." + x[2] + "." + "1"
+              window.location = window.location.protocol + "//" + newIP + "/auth/setup"
+            }
+          }
         })
         .catch(async (err) => {
           if (err.response) {
@@ -480,7 +493,7 @@ const Setup = (props) => {
                     finishSetup()
                   })
                   .catch((e) => {
-                    alert('error link/config' + JSON.stringify(e))
+                    alert('error link/config ' + iface + " " + JSON.stringify(e))
                   })
               } else {
                 finishSetup()
@@ -813,7 +826,7 @@ const Setup = (props) => {
               <InputField
                 value={tinynet}
                 placeholder={'Private subnet for network'}
-                onChangeText={(value) => setTinynet(value)}
+                onChangeText={(value) => {setTinynet(value); setNeedIPReload(true) } }
               />
             </Input>
             {'tinynet' in errors ? (
