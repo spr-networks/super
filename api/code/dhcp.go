@@ -528,11 +528,6 @@ func genNewDeviceIP(devices *map[string]DeviceEntry) (string, string) {
 			if !exists {
 				router := TwiddleTinyIP(device_ip, -1)
 
-				if isSetupMode() {
-					//in setup mode we turn .1 and /24 for the router
-					router = TwiddleTinyIP(start_ip, 1)
-				}
-
 				return device_ip.String(), router.String()
 			}
 
