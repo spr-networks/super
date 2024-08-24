@@ -17,7 +17,6 @@ RUN --mount=type=tmpfs,target=/tmpfs \
 
 FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
-RUN echo https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable
 
 RUN apt-get update
 RUN apt-get install ca-certificates curl
