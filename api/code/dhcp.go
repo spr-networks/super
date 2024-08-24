@@ -253,7 +253,7 @@ func add_setup_peer(MAC string, IP string, Router string) {
 	SetupDHCPIPv4[MAC] = IP
 
 	//ensure setup ap is a valid interface for input ports.
-	addApiInterface(SetupAP)
+	addSetupInterface(SetupAP)
 	//likewise it should not be a lan interface
 	deleteLanInterface(SetupAP)
 

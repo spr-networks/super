@@ -2658,6 +2658,8 @@ func setupAPInit() {
 		router_ip := TwiddleTinyIP(start_ip, 1)
 		exec.Command("ip", "addr", "add", router_ip.String()+"/24", "dev", SetupAP).Run()
 	}
+
+	addSetupInterface(SetupAP)
 }
 
 func updateAddr(Router string, Ifname string) {
