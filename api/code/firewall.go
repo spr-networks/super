@@ -2650,7 +2650,21 @@ func ipIfaceMappings(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(gIfaceMap)
 }
 
+func setupAPInit() {
+	//kick off the the firewall rules for each configured subnet
+	//for the setup ap
+	for _, subnetString := range gDhcpConfig.TinyNets {
+		start_ip, _, _ := net.ParseCIDR(subnetString)
+		router_ip := TwiddleTinyIP(start_ip, 1)
+		updateAddr(router_ip.String(), SetupAP)
+	}
+}
+
 func updateAddr(Router string, Ifname string) {
+	if isSetupMode() {
+		exec.Command("ip", "addr", "add", Router+"/24", "dev", Ifname).Run()
+		return
+	}
 	exec.Command("ip", "addr", "add", Router+"/30", "dev", Ifname).Run()
 }
 

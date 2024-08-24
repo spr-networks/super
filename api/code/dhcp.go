@@ -257,7 +257,7 @@ func add_setup_peer(MAC string, IP string, Router string) {
 	//likewise it should not be a lan interface
 	deleteLanInterface(SetupAP)
 
-	//add /30 route to device
+	//add  route to device
 	updateAddr(Router, SetupAP)
 }
 
@@ -527,6 +527,12 @@ func genNewDeviceIP(devices *map[string]DeviceEntry) (string, string) {
 			_, exists := IPMap[device_ip.String()]
 			if !exists {
 				router := TwiddleTinyIP(device_ip, -1)
+
+				if isSetupMode() {
+					//in setup mode we turn .1 and /24 for the router
+					router = TwiddleTinyIP(start_ip, 1)
+				}
+
 				return device_ip.String(), router.String()
 			}
 

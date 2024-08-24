@@ -3047,6 +3047,7 @@ func main() {
 	go dhcpdServer.Serve(unixDhcpdListener)
 
 	if isSetupMode() {
+		setupAPInit()
 		startExtension("wifid-setup/docker-compose.yml")
 	}
 
