@@ -393,11 +393,16 @@ func mdnsPublishIface(settings MulticastSettings, wanif string) {
 		return
 	}
 
-	// verify iface have an ip addr
+	// verify iface has an ip address
 	ip, err := ifaceAddr(iface)
 	if err != nil {
-		fmt.Println(err)
-		return
+		//grab the lanip then since we're coming in over LAN
+		data, err := ioutil.ReadFile(TEST_PREFIX + "/configs/base/lanip")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		ip = strings.Replace(string(data), "\n", "", 1)
 	}
 
 	addr, err := net.ResolveUDPAddr("udp", mdns.DefaultAddress)
