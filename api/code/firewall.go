@@ -2653,13 +2653,19 @@ func ipIfaceMappings(w http.ResponseWriter, r *http.Request) {
 func setupAPInit() {
 	//kick off the the firewall rules for each configured subnet
 	//for the setup ap
+	setup_name := false
 	for _, subnetString := range gDhcpConfig.TinyNets {
 		start_ip, _, _ := net.ParseCIDR(subnetString)
 		router_ip := TwiddleTinyIP(start_ip, 1)
+		if !setup_name {
+			updateLocalMappings(router_ip.String(), "spr.setup")
+			setup_name = true
+		}
 		exec.Command("ip", "addr", "add", router_ip.String()+"/24", "dev", SetupAP).Run()
 	}
 
 	addSetupInterface(SetupAP)
+
 }
 
 func updateAddr(Router string, Ifname string) {
