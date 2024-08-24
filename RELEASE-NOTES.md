@@ -1,5 +1,10 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v0.3.19
+**Fixes**
+* Better setup 
+* Better Mesh UI
+
 ## v0.3.18
 Improvements
 * TLS support for mesh setup
