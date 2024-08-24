@@ -249,6 +249,16 @@ func normalizeName(Name string) string {
 var SetupDHCPIPv4 = map[string]string{}
 var SetupAP = "wlan0"
 
+
+func getSetupIP(MAC string) (string, string) {
+	IP, exists := SetupDHCPIPv4[MAC]
+	if exists {
+		Router := RouterFromTinyIP(IP)
+		return IP, Router
+	}
+	return "", ""
+}
+
 func add_setup_peer(MAC string, IP string, Router string) {
 	SetupDHCPIPv4[MAC] = IP
 
@@ -363,7 +373,12 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 		IP = val.RecentIP
 		Router = RouterFromTinyIP(IP)
 	} else {
-		IP, Router = genNewDeviceIP(&devices)
+		if isSetupMode() {
+			IP, Router = getSetupIP(dhcp.MAC)
+		}
+		if IP == "" {
+			IP, Router = genNewDeviceIP(&devices)
+		}
 	}
 
 	if IP == "" {
@@ -527,7 +542,6 @@ func genNewDeviceIP(devices *map[string]DeviceEntry) (string, string) {
 			_, exists := IPMap[device_ip.String()]
 			if !exists {
 				router := TwiddleTinyIP(device_ip, -1)
-
 				return device_ip.String(), router.String()
 			}
 
