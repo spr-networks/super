@@ -2815,7 +2815,7 @@ func main() {
 
 	//download cert from http
 	external_router_public.HandleFunc("/cert", getCert).Methods("GET")
-	external_router_authenticated.HandleFunc("/cert", getCert).Methods("GET")
+	external_router_authenticated.HandleFunc("/cert/authorized", getCert).Methods("GET")
 
 	//nftable helpers
 	external_router_authenticated.HandleFunc("/nfmap/{name}", showNFMap).Methods("GET")
