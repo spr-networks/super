@@ -958,10 +958,12 @@ const Setup = (props) => {
           </ButtonSetup>
           <Link
             display={sslConnected ? 'none' : 'flex'}
-            href={`https://${window.location.hostname}${window.location.pathname}`}
+            href={`https://${window?.location?.hostname}${window?.location?.pathname}`}
           >
             <ButtonSetup variant="outline" action="positive" bg="$none">
-              <ButtonText>Visit https://{window.location.hostname}</ButtonText>
+              <ButtonText>
+                Visit https://{window?.location?.hostname}
+              </ButtonText>
             </ButtonSetup>
           </Link>
         </HStack>
