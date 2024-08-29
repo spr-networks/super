@@ -295,7 +295,7 @@ table inet filter {
     iifname @uplink_interfaces counter tcp dport vmap @wan_tcp_accept
     iifname @api_interfaces counter tcp dport 80 accept
     iifname @api_interfaces counter tcp dport 443 accept
-    # for setup allow ssh, HTTP, HTTPS
+    # for setup allow SSH, HTTP, HTTPS
     iifname @setup_interfaces counter tcp dport 22 accept
     iifname @setup_interfaces counter tcp dport 80 accept
     iifname @setup_interfaces counter tcp dport 443 accept
