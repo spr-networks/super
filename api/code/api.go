@@ -2705,12 +2705,16 @@ func setSecurityHeaders(next http.Handler) http.Handler {
 	})
 }
 
+func remoteIP(r *http.Request) string {
+	return r.RemoteAddr
+}
+
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		//use logStd here so we dont get dupes
 
 		if os.Getenv("DEBUGHTTP") != "" {
-			logStd.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+			logStd.Printf("%s %s %s\n", remoteIP(r), r.Method, r.URL)
 
 			logs := map[string]interface{}{}
 			logs["remoteaddr"] = r.RemoteAddr
