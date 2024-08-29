@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+import { Platform } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { api, wifiAPI, saveLogin } from 'api'
 import { generateConfigForBand, getBestWifiConfig, isSPRCompat } from 'api/Wifi'
@@ -146,6 +147,10 @@ const Setup = (props) => {
   const [addrs, setAddrs] = useState([])
   const [apiReachable, setApiReachable] = useState(false)
   const [ssidUp, setSsidUp] = useState(false)
+
+  const [sslConnected, setSslConnected] = useState(
+    Platform.OS == 'web' && window?.location?.protocol == 'https:'
+  )
 
   const pollingRef = useRef(null)
 
@@ -428,12 +433,13 @@ const Setup = (props) => {
           setIsDone(true)
           setSetupStage(2)
           if (needIPReload === true) {
-            let newIP  = tinynet
-            if (tinynet.includes("/")) {
-              newIP = tinynet.split("/")[0]
+            let newIP = tinynet
+            if (tinynet.includes('/')) {
+              newIP = tinynet.split('/')[0]
               let x = entry.IP.split('.').map(Number)
-              newIP = x[0] + "." + x[1] + "." + x[2] + "." + "1"
-              window.location = window.location.protocol + "//" + newIP + "/auth/setup"
+              newIP = x[0] + '.' + x[1] + '.' + x[2] + '.' + '1'
+              window.location =
+                window.location.protocol + '//' + newIP + '/auth/setup'
             }
           }
         })
@@ -446,7 +452,7 @@ const Setup = (props) => {
         })
     }
 
-    if (wifiInterfaces.length == 0)  {
+    if (wifiInterfaces.length == 0) {
       finishSetup()
     }
     for (let iface of wifiInterfaces) {
@@ -493,7 +499,9 @@ const Setup = (props) => {
                     finishSetup()
                   })
                   .catch((e) => {
-                    alert('error link/config ' + iface + " " + JSON.stringify(e))
+                    alert(
+                      'error link/config ' + iface + ' ' + JSON.stringify(e)
+                    )
                   })
               } else {
                 finishSetup()
@@ -514,10 +522,6 @@ const Setup = (props) => {
     removeSetupAP(() => {
       navigate('/auth/login')
     })
-  }
-
-  const deviceAdded = () => {
-    setSetupStage(3)
   }
 
   const SetupHeading = ({ title, children, ...props }) => {
@@ -601,6 +605,12 @@ const Setup = (props) => {
               isOK={wifiInterfaces.length}
             />
 
+            <SuccessItem
+              text="Connected over https"
+              error="Not connected using https"
+              isOK={sslConnected}
+            />
+
             <HStack
               space="xs"
               display={apiReachable && !ethsConnected.length ? 'flex' : 'none'}
@@ -630,6 +640,11 @@ const Setup = (props) => {
       setTimeout(() => {
         setSetupStage(setupStage + 1)
       }, 1000)
+    }
+
+    //skip or click success button
+    const deviceAdded = () => {
+      setSetupStage(setupStage + 1)
     }
 
     return (
@@ -826,7 +841,10 @@ const Setup = (props) => {
               <InputField
                 value={tinynet}
                 placeholder={'Private subnet for network'}
-                onChangeText={(value) => {setTinynet(value); setNeedIPReload(true) } }
+                onChangeText={(value) => {
+                  setTinynet(value)
+                  setNeedIPReload(true)
+                }}
               />
             </Input>
             {'tinynet' in errors ? (
@@ -934,9 +952,19 @@ const Setup = (props) => {
       <VStack space="xl" alignItems="center">
         <Status online={apiReachable} addrs={addrs} />
         <Text>Press Start to configure your new Wifi</Text>
-        <ButtonSetup onPress={() => setSetupStage(1)} px="$8">
-          <ButtonText>Start</ButtonText>
-        </ButtonSetup>
+        <HStack space="lg">
+          <ButtonSetup onPress={() => setSetupStage(1)} px="$8">
+            <ButtonText>Start</ButtonText>
+          </ButtonSetup>
+          <Link
+            display={sslConnected ? 'none' : 'flex'}
+            href={`https://${window.location.hostname}${location.pathname}`}
+          >
+            <ButtonSetup variant="outline" action="positive" bg="$none">
+              <ButtonText>Visit https://{window.location.hostname}</ButtonText>
+            </ButtonSetup>
+          </Link>
+        </HStack>
       </VStack>
     </SetupScrollView>
   )
