@@ -57,7 +57,7 @@
    "UnixPath": "/state/plugins/pfw/socket",
    "Enabled": true,
    "Plus": true,
-   "GitURL": "github.com/spr-networks/pfw_extension",
+   "GitURL": "git.plus.supernetworks.org/spr-networks/pfw_extension",
    "ComposeFilePath": "plugins/plus/pfw_extension/docker-compose.yml"
   },
   {
@@ -66,7 +66,7 @@
    "UnixPath": "/state/plugins/mesh/socket",
    "Enabled": true,
    "Plus": true,
-   "GitURL": "github.com/spr-networks/mesh_extension",
+   "GitURL": "git.plus.supernetworks.org/spr-networks/mesh_extension",
    "ComposeFilePath": "plugins/plus/mesh_extension/docker-compose.yml"
   }
  ]
