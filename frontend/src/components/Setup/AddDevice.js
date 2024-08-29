@@ -72,11 +72,7 @@ const AddDevice = ({ disabled, onClose, onConnect, ...props }) => {
     setErrors({})
   }
 
-  const handleSubmit = () => {
-    if (Object.keys(errors).length) {
-      return context.error('Invalid fields: ' + Object.keys(errors).join(','))
-    }
-
+  const submitData = () => {
     let data = {
       MAC: 'pending',
       Name: name,
@@ -93,7 +89,6 @@ const AddDevice = ({ disabled, onClose, onConnect, ...props }) => {
       }
     }
 
-    //now submit to the API
     deviceAPI
       .update(data)
       .then((device) => {
@@ -107,9 +102,23 @@ const AddDevice = ({ disabled, onClose, onConnect, ...props }) => {
         setSubmitted(true)
       })
       .catch((error) => {
-        //TODO api might be down here, verify
-        context.error(`Failed to add device: ${error}`)
+        let msg = error.toString()
+        //api might be restarting - try again
+        if (msg.match(/Failed to fetch/)) {
+          setTimeout(submitData, 1000)
+        } else {
+          context.error(`Failed to add device: ${msg}`)
+        }
       })
+  }
+
+  const handleSubmit = () => {
+    if (Object.keys(errors).length) {
+      return context.error('Invalid fields: ' + Object.keys(errors).join(','))
+    }
+
+    //now submit to the API
+    submitData()
   }
 
   if (submitted) {
