@@ -368,6 +368,14 @@ export default function MockAPI(props = null) {
         //return new Response(400, {}, { error: 'already set up' })
       })
 
+      this.put('/setup_done', (schema, request) => {
+        return { status: 'ok' }
+      })
+
+      this.put('/hostapd/restart_setup', (schema, request) => {
+        return { status: 'ok' }
+      })
+
       this.put('/hostapd/:iface/:action', (schema, request) => {
         //action==enable|config
         return { status: 'ok' }
