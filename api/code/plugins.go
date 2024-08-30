@@ -28,8 +28,8 @@ import (
 var PlusUser = "lts-super-plus"
 var PfwGitURL = "git.plus.supernetworks.org/spr-networks/pfw_extension"
 var MeshGitURL = "git.plus.supernetworks.org/spr-networks/mesh_extension"
-var OldPfwGitURL = "git.plus.supernetworks.org/spr-networks/pfw_extension"
-var OldMeshGitURL = "git.plus.supernetworks.org/spr-networks/mesh_extension"
+var OldPfwGitURL = "github.com/spr-networks/pfw_extension"
+var OldMeshGitURL = "github.com/spr-networks/mesh_extension"
 
 var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
 var CustomComposeAllowPath = TEST_PREFIX + "/configs/base/custom_compose_paths.json"
