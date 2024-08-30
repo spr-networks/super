@@ -2,7 +2,7 @@
 set -e
 
 mkdir data
-VERSION="24.04"
+VERSION="24.04.1"
 IMG="ubuntu-${VERSION}-preinstalled-server-arm64+raspi.img.xz"
 
 cd ./data
