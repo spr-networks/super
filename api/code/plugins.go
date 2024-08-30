@@ -26,8 +26,10 @@ import (
 )
 
 var PlusUser = "lts-super-plus"
-var PfwGitURL = "github.com/spr-networks/pfw_extension"
-var MeshGitURL = "github.com/spr-networks/mesh_extension"
+var PfwGitURL = "git.plus.supernetworks.org/spr-networks/pfw_extension"
+var MeshGitURL = "git.plus.supernetworks.org/spr-networks/mesh_extension"
+var OldPfwGitURL = "github.com/spr-networks/pfw_extension"
+var OldMeshGitURL = "github.com/spr-networks/mesh_extension"
 
 var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
 var CustomComposeAllowPath = TEST_PREFIX + "/configs/base/custom_compose_paths.json"
@@ -216,9 +218,10 @@ func validatePlus(plugin PluginConfig) bool {
 	//let superd handle validating ComposeFilePath for custom plugins.
 	if plugin.Plus == true {
 		for _, plusPlugin := range gPlusExtensionDefaults {
-			if plusPlugin.GitURL == plugin.GitURL && plusPlugin.ComposeFilePath == plugin.ComposeFilePath {
-				//found a match
-				return true
+			if plusPlugin.GitURL == plugin.GitURL || plugin.GitURL == OldMeshGitURL || plugin.GitURL == OldPfwGitURL {
+				if plusPlugin.ComposeFilePath == plugin.ComposeFilePath {
+					return true
+				}
 			}
 		}
 		return false
@@ -717,7 +720,7 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 
 func downloadPlusExtension(gitURL string) bool {
 	ret := downloadExtension(PlusUser, config.PlusToken, gitURL, true, false)
-	if ret == true && gitURL == PfwGitURL {
+	if ret == true && gitURL == PfwGitURL || gitURL == OldPfwGitURL {
 		generatePFWAPIToken()
 	}
 	return ret

@@ -90,7 +90,7 @@ export class WifiClients extends WifiClientCount {
 }
 
 
-const SetupAPName = 'sprlab-setup'
+const SetupAPName = 'spr-setup'
 
 const WifiWidget = ({
   title,

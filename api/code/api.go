@@ -2705,12 +2705,16 @@ func setSecurityHeaders(next http.Handler) http.Handler {
 	})
 }
 
+func remoteIP(r *http.Request) string {
+	return r.RemoteAddr
+}
+
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		//use logStd here so we dont get dupes
 
 		if os.Getenv("DEBUGHTTP") != "" {
-			logStd.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+			logStd.Printf("%s %s %s\n", remoteIP(r), r.Method, r.URL)
 
 			logs := map[string]interface{}{}
 			logs["remoteaddr"] = r.RemoteAddr
@@ -3036,8 +3040,6 @@ func main() {
 
 		go http.ListenAndServeTLS(listenAddr, ApiTlsCert, ApiTlsKey, logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
 	}
-
-	//side note, firewall has HTTPs only for setup interface, not http. see nft_rules.sh
 
 	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
 

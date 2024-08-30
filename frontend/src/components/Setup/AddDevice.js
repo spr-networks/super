@@ -2,10 +2,9 @@ import React, { useContext, useState } from 'react'
 
 import { deviceAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
-import { WifiConnect, WiredConnect } from 'views/Devices/ConnectDevice'
+import { WifiConnect } from 'views/Devices/ConnectDevice'
 
 import {
-  Box,
   Button,
   ButtonText,
   FormControl,
@@ -29,7 +28,6 @@ import {
   AlertCircleIcon,
   CircleIcon
 } from '@gluestack-ui/themed'
-import { AppContext } from 'AppContext'
 
 const AddDevice = ({ disabled, onClose, onConnect, ...props }) => {
   const context = useContext(AlertContext)
@@ -74,11 +72,7 @@ const AddDevice = ({ disabled, onClose, onConnect, ...props }) => {
     setErrors({})
   }
 
-  const handleSubmit = () => {
-    if (Object.keys(errors).length) {
-      return context.error('Invalid fields: ' + Object.keys(errors).join(','))
-    }
-
+  const submitData = () => {
     let data = {
       MAC: 'pending',
       Name: name,
@@ -95,7 +89,6 @@ const AddDevice = ({ disabled, onClose, onConnect, ...props }) => {
       }
     }
 
-    //now submit to the API
     deviceAPI
       .update(data)
       .then((device) => {
@@ -109,8 +102,23 @@ const AddDevice = ({ disabled, onClose, onConnect, ...props }) => {
         setSubmitted(true)
       })
       .catch((error) => {
-        context.error(`Failed to add device: ${error}`)
+        let msg = error.toString()
+        //api might be restarting - try again
+        if (msg.match(/Failed to fetch/)) {
+          setTimeout(submitData, 1000)
+        } else {
+          context.error(`Failed to add device: ${msg}`)
+        }
       })
+  }
+
+  const handleSubmit = () => {
+    if (Object.keys(errors).length) {
+      return context.error('Invalid fields: ' + Object.keys(errors).join(','))
+    }
+
+    //now submit to the API
+    submitData()
   }
 
   if (submitted) {
@@ -127,16 +135,22 @@ const AddDevice = ({ disabled, onClose, onConnect, ...props }) => {
             onSuccess={onConnect}
             hideBackOnSuccess
           />
+          <HStack space="lg">
+            <Button
+              flex={1}
+              action="secondary"
+              variant="outline"
+              size="md"
+              onPress={onClose}
+            >
+              <ButtonText>Skip</ButtonText>
+            </Button>
+          </HStack>
         </VStack>
       )
     } else {
-      return (
-        <WiredConnect
-          device={device}
-          goBackSuccess={props.deviceAddedCallback}
-          goBack={() => setSubmitted(false)}
-        />
-      )
+      onConnect()
+      return <Text>Wired device added</Text>
     }
   }
 

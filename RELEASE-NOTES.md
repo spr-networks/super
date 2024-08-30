@@ -1,5 +1,17 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v0.3.20
+**Changes**
+- PLUS users now use plus.supernetworks.org for git and registry
+**Fixes**
+- WiFi selection bug with 149,165 on 80mhz has been fixed
+- Setup improvements, enable HTTP setup again
+- Embed docker gpg key in superd to fix github CI flakiness
+**Improvements**
+- Add IP addresses to auth events
+- Change setup ap name
+
+
 ## v0.3.19
 **Fixes**
 * Better setup 

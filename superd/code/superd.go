@@ -390,7 +390,7 @@ func ghcr_auth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := exec.Command("docker", "login", "ghcr.io", "-u", username, "--password-stdin")
+	cmd := exec.Command("docker", "login", "containers.plus.supernetworks.org", "-u", username, "--password-stdin")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		fmt.Println(err) //replace with logger, or anything you want
@@ -798,6 +798,11 @@ func remote_container_tags(w http.ResponseWriter, r *http.Request) {
 	username := creds.Username
 	secret := creds.Secret
 	container := url.QueryEscape(r.URL.Query().Get("container"))
+	host := "ghcr.io"
+
+	if creds.Plus && secret != "" {
+		host = "containers.plus.supernetworks.org"
+	}
 
 	params := url.Values{}
 	params.Set("service", "ghcr.io")
@@ -806,7 +811,7 @@ func remote_container_tags(w http.ResponseWriter, r *http.Request) {
 	append := "?" + params.Encode()
 
 	// Set up the request to get the token
-	req, err := http.NewRequest("GET", "https://ghcr.io/token"+append, nil)
+	req, err := http.NewRequest("GET", "https://" + host + "/token"+append, nil)
 	if err != nil {
 		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
 		return
@@ -852,7 +857,7 @@ func remote_container_tags(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set up the request to get the list of tags
-	tagsURL := "https://ghcr.io/v2/spr-networks/" + container + "/tags/list"
+	tagsURL := "https://" + host + "/v2/spr-networks/" + container + "/tags/list"
 	req, err = http.NewRequest("GET", tagsURL, nil)
 	if err != nil {
 		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)

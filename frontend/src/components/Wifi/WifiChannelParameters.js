@@ -283,6 +283,8 @@ const WifiChannelParameters = ({
 
           let channelNumber = parseInt(freq.split(' ')[2].slice(1, -1))
           let channelLabel = channelNumber
+
+
           let isDisabled = false
           if (freq.includes('disabled')) {
             isDisabled = true
@@ -307,7 +309,7 @@ const WifiChannelParameters = ({
               }
             } else if (bandwidth == 80) {
               //5 ghz and 6ghz offsets
-              if (frequency % 80 != 60 && frequency % 80 != 35) {
+              if (frequency % 80 != 60 && frequency % 80 != 35 && frequency % 80 != 65) {
                 continue
               }
             } else if (bandwidth == 40) {

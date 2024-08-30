@@ -149,10 +149,10 @@ func authWebsocket(r *http.Request, c *websocket.Conn, OtpOff bool) bool {
 				}
 			}
 			c.WriteMessage(websocket.TextMessage, []byte("success"))
-			SprbusPublish("auth:success", map[string]string{"type": "user", "name": pieces[0], "reason": "websocket"})
+			SprbusPublish("auth:success", map[string]string{"type": "user", "name": pieces[0], "reason": remoteIP(r) + ":" + "websocket", "ip": remoteIP(r)})
 			return true
 		} else {
-			SprbusPublish("auth:failure", map[string]string{"type": "user", "name": pieces[0], "reason": "bad credentails on websocket"})
+			SprbusPublish("auth:failure", map[string]string{"type": "user", "name": pieces[0], "reason": remoteIP(r) + ":" + "bad credentails on websocket", "ip": remoteIP(r)})
 		}
 	} else {
 		token := msgs
@@ -160,14 +160,14 @@ func authWebsocket(r *http.Request, c *websocket.Conn, OtpOff bool) bool {
 		if goodToken {
 			if len(paths) > 0 {
 				//scoped tokens get rejected for WS
-				SprbusPublish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": "unsupported scopes on websocket"})
+				SprbusPublish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": remoteIP(r) + ":" + "unsupported scopes on websocket", "ip": remoteIP(r)})
 			} else {
 				c.WriteMessage(websocket.TextMessage, []byte("success"))
-				SprbusPublish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": "websocket"})
+				SprbusPublish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": remoteIP(r) + ":" + "websocket", "ip": remoteIP(r)})
 				return true
 			}
 		} else {
-			SprbusPublish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": "unknown token"})
+			SprbusPublish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": remoteIP(r) + ":" + "unknown token", "ip": remoteIP(r)})
 		}
 	}
 	c.WriteMessage(websocket.TextMessage, []byte("Authentication failure"))

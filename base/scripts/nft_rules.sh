@@ -274,8 +274,8 @@ table inet filter {
     # DHCP Allow rules
     # Wired lan
     iifname @wired_lan_interfaces udp dport 67 counter accept
-    #accept dhcp from setup interfaces also
-    iifname @setup_interfaces counter udp dport 67 accept
+    #accept dhcp, dns from setup interfaces also
+    iifname @setup_interfaces counter udp dport {53, 67} accept
 
     # Authorized wireless stations & MACs. They do not have an ip address yet
     counter udp dport 67 iifname . ether saddr vmap @dhcp_access
@@ -295,8 +295,9 @@ table inet filter {
     iifname @uplink_interfaces counter tcp dport vmap @wan_tcp_accept
     iifname @api_interfaces counter tcp dport 80 accept
     iifname @api_interfaces counter tcp dport 443 accept
-    # for setup only allow HTTPS and ssh
+    # for setup allow SSH, HTTP, HTTPS
     iifname @setup_interfaces counter tcp dport 22 accept
+    iifname @setup_interfaces counter tcp dport 80 accept
     iifname @setup_interfaces counter tcp dport 443 accept
 
     # UDP services
