@@ -89,27 +89,41 @@ const AddDevice = ({ disabled, onClose, onConnect, ...props }) => {
       }
     }
 
+    const handleErr = (error) => {
+      let msg = error.toString()
+      //api might be restarting - try again
+      if (msg.match(/Failed to fetch/)) {
+        setTimeout(submitData, 1000)
+      } else {
+        context.error(`Failed to add device: ${msg}`)
+      }
+    }
+
     deviceAPI
-      .update(data)
-      .then((device) => {
-        if (psk.length) {
-          device.PSKEntry.Psk = psk
-        } else {
-          setPsk(device.PSKEntry.Psk)
+      .list()
+      .then((devices) => {
+        //if a previous request got through and connected, dont add again
+        if (Object.values(devices).find((x) => x.Name == data.Name)) {
+          setDevice(data)
+          setSubmitted(true)
+          return
         }
 
-        setDevice(device)
-        setSubmitted(true)
+        deviceAPI
+          .update(data)
+          .then((device) => {
+            if (psk.length) {
+              device.PSKEntry.Psk = psk
+            } else {
+              setPsk(device.PSKEntry.Psk)
+            }
+
+            setDevice(device)
+            setSubmitted(true)
+          })
+          .catch(handleErr)
       })
-      .catch((error) => {
-        let msg = error.toString()
-        //api might be restarting - try again
-        if (msg.match(/Failed to fetch/)) {
-          setTimeout(submitData, 1000)
-        } else {
-          context.error(`Failed to add device: ${msg}`)
-        }
-      })
+      .catch(handleErr)
   }
 
   const handleSubmit = () => {
