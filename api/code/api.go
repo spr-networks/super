@@ -1303,6 +1303,7 @@ func handleExpirations(val *DeviceEntry, req *DeviceEntry) {
 func checkDeviceExpiries(devices map[string]DeviceEntry) {
 	curtime := time.Now().Unix()
 	todelete := []string{}
+	updates := make(map[string]DeviceEntry)
 
 	doUpdate := false
 	for k, entry := range devices {
@@ -1336,8 +1337,17 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 
 			if time.Since(lastTime) > 30*24*time.Hour {
 				entry.DeviceDisabled = true
+				doUpdate = true
 			}
 		}
+
+		if doUpdate {
+			updates[k] = entry
+		}
+	}
+
+	for k, v := range updates {
+		devices[k] = v
 	}
 
 	for _, k := range todelete {
@@ -1622,10 +1632,12 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		if refreshPolicies || refreshGroups {
 			refreshDeviceGroupsAndPolicy(val)
+			SprbusPublish("device:groups:update", scrubDevice(dev))
 		}
 
 		if refreshTags {
 			refreshDeviceTags(val)
+			SprbusPublish("device:tags:update", scrubDevice(dev))
 		}
 
 		if refreshIP {

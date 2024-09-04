@@ -1126,7 +1126,6 @@ func refreshDeviceTags(dev DeviceEntry) {
 		applyEndpointRules(dev)
 		FWmtx.Unlock()
 	}()
-	SprbusPublish("device:tags:update", scrubDevice(dev))
 }
 
 func refreshDeviceGroupsAndPolicy(dev DeviceEntry) {
@@ -1178,7 +1177,6 @@ func refreshDeviceGroupsAndPolicy(dev DeviceEntry) {
 		populateVmapEntries(ipv4, dev.MAC, ifname, "")
 	}
 
-	SprbusPublish("device:groups:update", scrubDevice(dev))
 }
 
 func applyPingRules() {
