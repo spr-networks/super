@@ -111,9 +111,15 @@ const Devices = (props) => {
         unknown_macs.push(mac)
       }
     }
-    if (unknown_macs.length != 0) {
-      context.warning("Devices attempting to connect, but may have the wrong wifi password: " + (unknown_macs).join(", "))
-    }
+
+    setUnknownMacs(u => {
+      let newArray = new Array(...new Set(u.concat(unknown_macs)))
+      if (newArray.length != 0) {
+        context.warning("Devices attempting to connect, but may have the wrong wifi password: " + (newArray).join(", "))
+      }
+      return newArray
+    })
+
   }
 
   const gatherStationsByFlag = (stations, flag, invert) => {
