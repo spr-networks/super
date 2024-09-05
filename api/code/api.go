@@ -1366,25 +1366,48 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 
 }
 
+var (
+	isProcessingSync  bool
+	processingSyncMtx sync.Mutex
+)
+
 func syncDevices(w http.ResponseWriter, r *http.Request) {
-	Devicesmtx.Lock()
-	defer Devicesmtx.Unlock()
+	processingSyncMtx.Lock()
+	if isProcessingSync {
+		processingSyncMtx.Unlock()
+		http.Error(w, "A sync request is already in progress", http.StatusServiceUnavailable)
+		return
+	}
+	isProcessingSync = true
+	processingSyncMtx.Unlock()
 
 	devices := map[string]DeviceEntry{}
 	err := json.NewDecoder(r.Body).Decode(&devices)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	saveDevicesJson(devices)
+	go func() {
+		defer func() {
+			processingSyncMtx.Lock()
+			isProcessingSync = false
+			processingSyncMtx.Unlock()
+		}()
 
-	for _, val := range devices {
-		refreshDeviceGroupsAndPolicy(val)
-		refreshDeviceTags(val)
-	}
+		Devicesmtx.Lock()
+		defer Devicesmtx.Unlock()
 
-	doReloadPSKFiles()
+		saveDevicesJson(devices)
+		for _, val := range devices {
+			refreshDeviceGroupsAndPolicy(val)
+			refreshDeviceTags(val)
+		}
+		doReloadPSKFiles()
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Sync completed successfully"))
+	}()
 }
 
 func addGroupsIfMissing(groups []GroupEntry, newGroups []string) {
