@@ -101,6 +101,20 @@ const Devices = (props) => {
   const [groups, setGroups] = useState([])
   const [sortBy, setSortBy] = useState('online')
   const [filter, setFilter] = useState({}) // filter groups,tags
+  const [unknownMacs, setUnknownMacs] = useState([])
+
+  const warnUnknown = (context, devices, associated) => {
+    let macs = devices.map(dev => dev.MAC)
+    let unknown_macs  = []
+    for (let mac of associated) {
+      if (!macs.includes(mac)) {
+        unknown_macs.push(mac)
+      }
+    }
+    if (unknown_macs.length != 0) {
+      context.warning("Devices attempting to connect, but may have the wrong wifi password: " + (unknown_macs).join(", "))
+    }
+  }
 
   const gatherStationsByFlag = (stations, flag, invert) => {
     let authorized = []
@@ -215,6 +229,7 @@ const Devices = (props) => {
                   .then((stations) => {
                     let connectedMACs = gatherStationsByFlag(stations, "[AUTHORIZED]", false)
                     let associatedNotConnected = gatherStationsByFlag(stations, "[AUTHORIZED]", true)
+                    warnUnknown(context, devices, associatedNotConnected)
 
                     let devs = devices.map((dev) => {
                       if (dev.isConnected !== true) {
@@ -251,6 +266,7 @@ const Devices = (props) => {
                           .then((stations) => {
                             let connectedMACs = gatherStationsByFlag(stations, "[AUTHORIZED]", false)
                             let associatedNotConnected = gatherStationsByFlag(stations, "[AUTHORIZED]", true)
+                            warnUnknown(context, devices, associatedNotConnected)
 
                             setList(
                               devices.map((dev) => {
