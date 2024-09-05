@@ -40,8 +40,32 @@ echo spr > /etc/hostname
 echo "127.0.0.1      spr" >> /etc/hosts
 
 #update mediatek firmware
-git clone --depth 1 https://github.com/openwrt/mt76 /root/mt76
+git clone --depth 1 --no-checkout https://github.com/openwrt/mt76 /root/mt76
+# d6611d015efd725706ee285308dedbff24b9ea03 is last confirmed good firmware
+cd /root/mt76
+git fetch --depth 1 origin 65bbd4c394a9d51f1ca5a0531166c22ff07d4e56
+git checkout 65bbd4c394a9d51f1ca5a0531166c22ff07d4e56
+
 cp -R /root/mt76/firmware/. /lib/firmware/mediatek/
+
+# set up ntpdate
+cat > /tmp/ntpdate.service << EOF
+[Unit]
+Description=NTP Time Synchronization
+
+[Service]
+ExecStart=/usr/sbin/ntpdate time.nist.gov
+
+[Install]
+WantedBy=multi-user.target
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1d
+EOF
+
+cp /tmp/ntpdate.service /usr/lib/systemd/system/
+ln -s /usr/lib/systemd/system/ntpdate.service /etc/systemd/system/multi-user.target.wants/ntpdate.service
 
 # disable dhclient on the WANIF, since we will run our own dhcp
 # dont use this

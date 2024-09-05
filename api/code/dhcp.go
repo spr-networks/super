@@ -249,7 +249,6 @@ func normalizeName(Name string) string {
 var SetupDHCPIPv4 = map[string]string{}
 var SetupAP = "wlan0"
 
-
 func getSetupIP(MAC string) (string, string) {
 	IP, exists := SetupDHCPIPv4[MAC]
 	if exists {
