@@ -102,6 +102,19 @@ const Devices = (props) => {
   const [sortBy, setSortBy] = useState('online')
   const [filter, setFilter] = useState({}) // filter groups,tags
 
+  const gatherStationsByFlag = (stations, flag, invert) => {
+    let authorized = []
+    for (let station in stations) {
+      let includes = stations[station].flags.includes(flag)
+      if (invert != true && includes) {
+        authorized.push(station)
+      } else if (invert && !includes) {
+        authorized.push(station)
+      }
+    }
+    return authorized
+  }
+
   const sortDevices = (a, b) => {
     const parseIP = (ip) => {
       return ip.split('.').map(Number)
@@ -200,12 +213,15 @@ const Devices = (props) => {
                 wifiAPI
                   .allStations(iface.Name)
                   .then((stations) => {
-                    let connectedMACs = Object.keys(stations)
+                    let connectedMACs = gatherStationsByFlag(stations, "[AUTHORIZED]", false)
+                    let associatedNotConnected = gatherStationsByFlag(stations, "[AUTHORIZED]", true)
 
                     let devs = devices.map((dev) => {
                       if (dev.isConnected !== true) {
                         dev.isConnected = connectedMACs.includes(dev.MAC)
+                        dev.isAssociatedOnly = associatedNotConnected.includes(dev.MAC)
                       }
+
 
                       return dev
                     })
@@ -233,13 +249,16 @@ const Devices = (props) => {
                         remoteWifiApi.allStations
                           .call(remoteWifiApi, iface.Name)
                           .then((stations) => {
-                            let connectedMACs = Object.keys(stations)
+                            let connectedMACs = gatherStationsByFlag(stations, "[AUTHORIZED]", false)
+                            let associatedNotConnected = gatherStationsByFlag(stations, "[AUTHORIZED]", true)
+
                             setList(
                               devices.map((dev) => {
                                 if (dev.isConnected !== true) {
                                   dev.isConnected = connectedMACs.includes(
                                     dev.MAC
                                   )
+                                  dev.isAssociatedOnly = associatedNotConnected.includes(dev.MAC)
                                 }
 
                                 return dev
