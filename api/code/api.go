@@ -1341,6 +1341,7 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 			if time.Since(lastTime) > 30*24*time.Hour {
 				entry.DeviceDisabled = true
 				doUpdate = true
+				updated = true
 			}
 		}
 
