@@ -857,7 +857,7 @@ func remote_container_tags(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set up the request to get the list of tags
-	tagsURL := "https://" + host + "/v2/spr-networks/" + container + "/tags/list"
+	tagsURL := "https://" + host + "/v2/spr-networks/" + container + "/tags/list?n=99999999999"
 	req, err = http.NewRequest("GET", tagsURL, nil)
 	if err != nil {
 		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
