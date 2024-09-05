@@ -30,6 +30,28 @@ import ConfigsBackup from 'views/System/Configs'
 import Database from 'views/System/Database'
 import { ListHeader } from 'components/List'
 
+
+const TimeDisplay = ({ utcTime }) => {
+  const convertToLocalTime = (utcTimeString) => {
+    const currentDate = new Date();
+    const currentDateString = currentDate.toISOString().split('T')[0];
+    const utcDate = new Date(`${currentDateString}T${utcTimeString}Z`);
+
+    return utcDate.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false // Use 24-hour format
+    });
+  };
+
+  return (
+    <Text color="$muted500">
+      {convertToLocalTime(utcTime)}
+    </Text>
+  );
+};
+
 const SystemInfo = (props) => {
   const context = useContext(AlertContext)
 
@@ -166,7 +188,11 @@ const SystemInfo = (props) => {
                   justifyContent="space-between"
                 >
                   <Text size="sm">{niceKey(item)}</Text>
-                  <Text color="$muted500">{uptime[item]}</Text>
+                  {item == 'time' ? (
+                    <TimeDisplay utcTime={uptime[item]}/>
+                  ) : (
+                    <Text color="$muted500">{uptime[item]}</Text>
+                  )}
                 </HStack>
               )}
             />
