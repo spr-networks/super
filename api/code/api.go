@@ -1307,9 +1307,12 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 
 	doUpdate := false
 	for k, entry := range devices {
+		updated := false
+
 		if entry.DeviceDisabled == false && entry.DeviceExpiration != 0 {
 			if entry.DeviceExpiration < curtime {
 				doUpdate = true
+				updated = true
 				//expire the device
 				entry.DeviceDisabled = true
 				if entry.DeleteExpiration {
@@ -1341,7 +1344,7 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 			}
 		}
 
-		if doUpdate {
+		if updated {
 			updates[k] = entry
 		}
 	}
@@ -2743,6 +2746,11 @@ var ServerEventSock = TEST_PREFIX + "/state/api/eventbus.sock"
 
 // SprbusPublish() using default socket, make sure bytes are json
 func SprbusPublish(topic string, bytes interface{}) error {
+
+	if gSprbusClient == nil {
+		return fmt.Errorf("[-] sprbus not ready yet")
+	}
+
 	value, err := json.Marshal(bytes)
 
 	if err != nil {
