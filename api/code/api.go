@@ -1388,6 +1388,9 @@ func syncDevices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Sync requested successfully"))
+
 	go func() {
 		defer func() {
 			processingSyncMtx.Lock()
@@ -1404,9 +1407,6 @@ func syncDevices(w http.ResponseWriter, r *http.Request) {
 			refreshDeviceTags(val)
 		}
 		doReloadPSKFiles()
-
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Sync completed successfully"))
 	}()
 }
 
