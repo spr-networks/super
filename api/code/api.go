@@ -2541,7 +2541,6 @@ func setup(w http.ResponseWriter, r *http.Request) {
 			tinyNets = append(tinyNets, normalized_net.String())
 		}
 	}
-
 	//update DHCP config
 	DHCPmtx.Lock()
 	gDhcpConfig.TinyNets = tinyNets
