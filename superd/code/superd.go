@@ -305,6 +305,24 @@ func stop(w http.ResponseWriter, r *http.Request) {
 	go composeCommand(compose, target, "stop", "", false)
 }
 
+func docker_ps(w http.ResponseWriter, r *http.Request) {
+	target := r.URL.Query().Get("service")
+	compose := r.URL.Query().Get("compose_file")
+
+	cmd := exec.Command("docker", "compose", "ps", "--format", "json", target)
+	if compose != "" {
+		cmd = exec.Command("docker", "compose", "-f", compose, "ps", "--format", "json", target)
+	}
+
+	out, err := cmd.Output()
+	if err != nil {
+		http.Error(w, "Command failed", 400)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(out)
+}
+
 func removeUserContainer(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
@@ -811,7 +829,7 @@ func remote_container_tags(w http.ResponseWriter, r *http.Request) {
 	append := "?" + params.Encode()
 
 	// Set up the request to get the token
-	req, err := http.NewRequest("GET", "https://" + host + "/token"+append, nil)
+	req, err := http.NewRequest("GET", "https://"+host+"/token"+append, nil)
 	if err != nil {
 		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
 		return
@@ -962,6 +980,8 @@ func main() {
 	unix_plugin_router.HandleFunc("/container_version", container_version).Methods("GET")
 
 	unix_plugin_router.HandleFunc("/remote_container_tags", remote_container_tags).Methods("POST")
+
+	unix_plugin_router.HandleFunc("/docker_ps", docker_ps).Methods("GET")
 
 	// get/set release channel
 	unix_plugin_router.HandleFunc("/release", release_info).Methods("GET", "PUT", "DELETE")
