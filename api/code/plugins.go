@@ -963,6 +963,52 @@ func callSuperdRestart(composePath string, target string) {
 	_, err = ioutil.ReadAll(resp.Body)
 }
 
+func callSuperdDockerPS(composePath string, target string) string {
+	c := http.Client{}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", SuperdSocketPath)
+		},
+	}
+	defer c.CloseIdleConnections()
+
+	append := ""
+	do_append := false
+	params := url.Values{}
+
+	if target != "" {
+		params.Set("service", target)
+		do_append = true
+	}
+
+	if composePath != "" {
+		params.Set("compose_file", composePath)
+		do_append = true
+	}
+
+	if do_append {
+		append += "?" + params.Encode()
+	}
+
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/docker_ps"+append, nil)
+	if err != nil {
+		return ""
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return ""
+	}
+
+	defer resp.Body.Close()
+	outString := ""
+	err = json.NewDecoder(resp.Body).Decode(&outString)
+	if err == nil {
+		return outString
+	}
+	return ""
+}
+
 // mesh support
 func updateMeshPluginPut(endpoint string, jsonValue []byte) {
 

@@ -1127,6 +1127,21 @@ func restart(w http.ResponseWriter, r *http.Request) {
 	go callSuperdRestart("", "")
 }
 
+func dockerPS(w http.ResponseWriter, r *http.Request) {
+	target := r.URL.Query().Get("service")
+	compose := r.URL.Query().Get("compose_file")
+
+	//restart all containers
+	out := callSuperdDockerPS(compose, target)
+	if out == "" {
+		http.Error(w, "Not found", 404)
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(out)
+	}
+
+}
+
 var Devicesmtx sync.Mutex
 
 func scrubDevice(entry DeviceEntry) DeviceEntry {
@@ -2895,6 +2910,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/ping/{interface}/{address}/udp", udpTest).Methods("PUT")
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/restart", restart).Methods("PUT")
+	external_router_authenticated.HandleFunc("/dockerPS", dockerPS).Methods("GET")
 	external_router_authenticated.HandleFunc("/backup", doConfigsBackup).Methods("PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup/{name}", getConfigsBackup).Methods("GET", "DELETE", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
