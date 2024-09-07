@@ -2244,10 +2244,9 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	pska.Status = "Okay"
 
-	if (isSetupMode() && pska.Iface == SetupAP) {
+	if isSetupMode() && pska.Iface == SetupAP {
 		//abort early on setup mode
 		pska.Status = "Okay-setup"
 		w.Header().Set("Content-Type", "application/json")
