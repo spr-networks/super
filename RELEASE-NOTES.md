@@ -1,5 +1,23 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v0.3.23
+- Various fixes for Setup
+- Show up to date subnet info when restoring from backup
+- Devices list will now only show authorized as green, and associated only as Yellow
+- Have mesh sync back off while work is runing
+**Improvements**
+- Show time in current browser's timezone
+- Add docker service status API
+- Add health check to home page
+- Keep SSID on wifi config reset 
+
+## v0.3.22 
+- Fix for device expiries
+
+## v0.3.21
+- Switch to 24.04.1 base image
+
+
 ## v0.3.20
 **Changes**
 - PLUS users now use plus.supernetworks.org for git and registry
