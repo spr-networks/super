@@ -963,6 +963,7 @@ func callSuperdRestart(composePath string, target string) {
 	_, err = ioutil.ReadAll(resp.Body)
 }
 
+// docker ps can infer service status
 func callSuperdDockerPS(composePath string, target string) string {
 	c := http.Client{}
 	c.Transport = &http.Transport{
@@ -990,7 +991,7 @@ func callSuperdDockerPS(composePath string, target string) string {
 		append += "?" + params.Encode()
 	}
 
-	req, err := http.NewRequest(http.MethodPut, "http://localhost/docker_ps"+append, nil)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/docker_ps"+append, nil)
 	if err != nil {
 		return ""
 	}
@@ -1007,6 +1008,21 @@ func callSuperdDockerPS(composePath string, target string) string {
 		return outString
 	}
 	return ""
+}
+
+func dockerPS(w http.ResponseWriter, r *http.Request) {
+	target := r.URL.Query().Get("service")
+	compose := r.URL.Query().Get("compose_file")
+
+	//restart all containers
+	out := callSuperdDockerPS(compose, target)
+	if out == "" {
+		http.Error(w, "Not found", 404)
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(out)
+	}
+
 }
 
 // mesh support
