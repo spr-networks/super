@@ -363,11 +363,13 @@ const WifiHostapd = (props) => {
   }
 
   const resetInterfaceConfig = () => {
+    let prevSSID = config.ssid
     wifiAPI.resetInterfaceConfig(iface).then(
       wifiAPI
         .config(iface)
         .then((conf) => {
-          setConfig(sortConf(conf))
+          conf.ssid = prevSSID
+          pushConfig(conf) //this will call setConfig
         })
         .catch((err) => {
           //configuration not found. How to handle?
