@@ -76,7 +76,7 @@ export const HealthCheck = () => {
             />*/}
             <Text>{service.toUpperCase()}</Text>
             <Text color={criticalStatus[service] ? '$success500' : '$error500'}>
-              {criticalStatus[service] ? 'Running' : 'Stopped'}
+              {criticalStatus[service] ? 'OK' : 'Stopped'}
             </Text>
           </HStack>
         ))}
