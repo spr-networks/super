@@ -2244,7 +2244,16 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+
 	pska.Status = "Okay"
+
+	if (isSetupMode() && pska.Iface == SetupAP) {
+		//abort early on setup mode
+		pska.Status = "Okay-setup"
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(pska)
+		return
+	}
 
 	//check if there is a pending psk to assign. if the mac is not known, then it was the pending psk
 
