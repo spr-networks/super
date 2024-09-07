@@ -2652,7 +2652,8 @@ func setupAPInit() {
 	//kick off the the firewall rules for each configured subnet
 	//for the setup ap
 	setup_name := false
-	for _, subnetString := range gDhcpConfig.TinyNets {
+	dhcpConfig := loadWithLockingDHCPConfig()
+	for _, subnetString := range dhcpConfig.TinyNets {
 		start_ip, _, _ := net.ParseCIDR(subnetString)
 		router_ip := TwiddleTinyIP(start_ip, 1)
 		if !setup_name {

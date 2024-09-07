@@ -169,7 +169,7 @@ const WifiConnect = (props) => {
             action="secondary"
             variant="solid"
             onPress={goBack}
-            display={hideBackOnSuccess ? 'none' : 'flex'}
+            display={(hideBackOnSuccess && success) ? 'none' : 'flex'}
           >
             <ButtonIcon as={ArrowLeftIcon} />
             <ButtonText>Back</ButtonText>

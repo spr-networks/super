@@ -963,6 +963,68 @@ func callSuperdRestart(composePath string, target string) {
 	_, err = ioutil.ReadAll(resp.Body)
 }
 
+// docker ps can infer service status
+func callSuperdDockerPS(composePath string, target string) string {
+	c := http.Client{}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", SuperdSocketPath)
+		},
+	}
+	defer c.CloseIdleConnections()
+
+	append := ""
+	do_append := false
+	params := url.Values{}
+
+	if target != "" {
+		params.Set("service", target)
+		do_append = true
+	}
+
+	if composePath != "" {
+		params.Set("compose_file", composePath)
+		do_append = true
+	}
+
+	if do_append {
+		append += "?" + params.Encode()
+	}
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/docker_ps"+append, nil)
+	if err != nil {
+		return ""
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return ""
+	}
+
+	defer resp.Body.Close()
+	outString := ""
+	err = json.NewDecoder(resp.Body).Decode(&outString)
+	if err == nil {
+		return outString
+	}
+	return ""
+}
+
+func dockerPS(w http.ResponseWriter, r *http.Request) {
+	target := r.URL.Query().Get("service")
+	compose := r.URL.Query().Get("compose_file")
+
+	//restart all containers
+	out := callSuperdDockerPS(compose, target)
+	if out == "" {
+		http.Error(w, "Not found", 404)
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(out)
+	}
+
+}
+
 // mesh support
 func updateMeshPluginPut(endpoint string, jsonValue []byte) {
 

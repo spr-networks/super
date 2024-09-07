@@ -24,6 +24,7 @@ import {
   WireguardPeersActive
 } from 'components/Dashboard/WireguardWidgets'
 
+import HealthCheck from 'components/Dashboard/HealthCheck'
 import {
   TotalTraffic,
   DeviceTraffic
@@ -190,6 +191,7 @@ const Home = (props) => {
           ) : null}
           {show.vpnSide ? <WireguardPeersActive /> : null}
           <Interfaces />
+          <HealthCheck />
         </VStack>
       </Box>
     </ScrollView>
