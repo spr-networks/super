@@ -311,16 +311,31 @@ func docker_ps(w http.ResponseWriter, r *http.Request) {
 
 	cmd := exec.Command("docker", "compose", "ps", "--format", "json", target)
 	if compose != "" {
+
+		composeAllowed := false
+		for _, entry := range ComposeAllowList {
+			if entry == compose {
+				composeAllowed = true
+				break
+			}
+		}
+
+		if composeAllowed == false {
+			http.Error(w, "Invalid compose file, failed", 400)
+			return
+		}
+
 		cmd = exec.Command("docker", "compose", "-f", compose, "ps", "--format", "json", target)
 	}
 
 	out, err := cmd.Output()
 	if err != nil {
 		http.Error(w, "Command failed", 400)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(out)
+	json.NewEncoder(w).Encode(string(out))
 }
 
 func removeUserContainer(w http.ResponseWriter, r *http.Request) {
