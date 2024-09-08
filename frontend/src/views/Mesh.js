@@ -30,7 +30,6 @@ import TokenItem from 'components/TokenItem'
 import { RefreshCwIcon } from 'lucide-react-native'
 
 import api, { wifiAPI, meshAPI, authAPI, setAuthReturn } from 'api'
-import APIWifi from 'api/Wifi'
 import APIMesh from 'api/mesh'
 
 const Mesh = (props) => {
@@ -40,7 +39,6 @@ const Mesh = (props) => {
   const [leafToken, setLeafToken] = useState('')
   const [ssid, setSsid] = useState('')
 
-  const [mesh, setMesh] = useState({})
   let [meshAvailable, setMeshAvailable] = useState(true)
   let [spinning, setSpinning] = useState(false)
 
@@ -179,73 +177,6 @@ const Mesh = (props) => {
       })
       .catch((err) => {})
 
-    function updateX(k, prevState, x) {
-      let prev = prevState[k]
-      if (prev) {
-        let prevs = Object.keys(prev)
-        for (let i = 0; i < prevs.length; i++) {
-          if (x[k][prevs[i]] == undefined) {
-            x[k][prevs[i]] = prev[prevs[i]]
-          }
-        }
-      }
-      return { ...prevState, ...x }
-    }
-
-    wifiAPI.interfacesConfiguration().then((config) => {
-      config.forEach((iface) => {
-        if (iface.Type == 'AP' && iface.Enabled == true) {
-          wifiAPI
-            .allStations(iface.Name)
-            .then((stations) => {
-              let x = { '192.168.2.1': { [iface.Name]: Object.keys(stations) } }
-              setMesh((prevState, props) =>
-                updateX('192.168.2.1', prevState, x)
-              )
-            })
-            .catch((err) => {
-              console.log('WIFI API Failure', err)
-            })
-        }
-      })
-    })
-
-    meshAPI
-      .meshIter(() => new APIWifi())
-      .then((r) =>
-        r.forEach((remoteWifiApi) => {
-          remoteWifiApi.interfacesConfiguration
-            .call(remoteWifiApi)
-            .then((config) => {
-              config.forEach((iface) => {
-                if (iface.Type == 'AP' && iface.Enabled == true) {
-                  remoteWifiApi.allStations
-                    .call(remoteWifiApi, iface.Name)
-                    .then((stations) => {
-                      let x = {
-                        [remoteWifiApi.remoteURL]: {
-                          [iface.Name]: Object.keys(stations)
-                        }
-                      }
-                      setMesh((prevState, props) =>
-                        updateX(remoteWifiApi.remoteURL, prevState, x)
-                      )
-                    })
-                    .catch((err) => {
-                      console.log(
-                        'WIFI API Failure ' +
-                          remoteWifiApi.remoteURL +
-                          ' ' +
-                          iface.Name
-                      )
-                      console.log(err)
-                    })
-                }
-              })
-            })
-        })
-      )
-      .catch((err) => {})
   }, [])
 
   const deleteListItem = (item) => {
