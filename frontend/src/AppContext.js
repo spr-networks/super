@@ -10,6 +10,7 @@ export const AppContext = createContext({
   isWifiDisabled: false,
   isPlusDisabled: true,
   isMeshNode: false,
+  isFeaturesInitialized: false,
   features: [],
   devices: [],
   getDevices: () => {},

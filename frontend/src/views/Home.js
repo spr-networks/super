@@ -44,6 +44,7 @@ const Home = (props) => {
   const [pluginsEnabled, setPluginsEnabled] = useState([])
   const [interfaces, setInterfaces] = useState([])
   const [showIntro, setShowIntro] = useState(false)
+  const [show, setShow] = useState({})
 
   useEffect(() => {
     pluginAPI
@@ -105,17 +106,21 @@ const Home = (props) => {
       .catch((err) => {})
   }, [])
 
-  let show = {
-    dns: pluginsEnabled.includes('dns-block') && !context.isMeshNode,
-    wifi: !context.isWifiDisabled,
-    vpnInfo: context.isWifiDisabled && context.features.includes('wireguard'),
-    vpnSide:
-      !context.isWifiDisabled &&
-      !context.isMeshNode &&
-      pluginsEnabled.includes('wireguard'),
-    traffic: !context.isMeshNode,
-    intro: showIntro && Platform.OS == 'web'
-  }
+  useEffect(() => {
+    let show_ = {
+      dns: pluginsEnabled.includes('dns-block') && !context.isMeshNode ,
+      wifi: !context.isWifiDisabled,
+      vpnInfo: context.isWifiDisabled && context.features.includes('wireguard'),
+      vpnSide:
+        !context.isWifiDisabled &&
+        !context.isMeshNode &&
+        pluginsEnabled.includes('wireguard'),
+      traffic: !context.isMeshNode,
+      intro: showIntro && Platform.OS == 'web'
+    }
+    setShow(show_)
+  }, [context.isWifiDisabled, context.isMeshNode, context.isFeaturesInitialized])
+
 
   //NOTE wireguard listed as feature when not enabled
   //features=dns,ppp,wifi,wireguard
