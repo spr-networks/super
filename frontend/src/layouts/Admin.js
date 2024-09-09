@@ -373,6 +373,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           })
           .catch((err) => {
             console.log(err)
+            setIsFeaturesInitialized(true)
           })
       })
       .catch((err) => {
