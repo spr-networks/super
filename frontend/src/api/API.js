@@ -202,7 +202,7 @@ class API {
   async request(method = 'GET', url, body) {
     // if forced to not return data
     let skipReturnValue = method == 'DELETE'
-    
+
     return this.fetch(method, url, body)
       .then((response) => {
         if (!response.ok) {
@@ -229,6 +229,8 @@ class API {
           return response.text()
         } else if (contentType.includes('application/x-x509-ca-cert')) {
           return response.text()
+        } else if (contentType.startsWith('application/x-gtar-compressed')) {
+          return response.blob()
         }
 
         return Promise.reject({ message: 'unknown Content-Type' })

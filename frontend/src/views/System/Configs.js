@@ -47,17 +47,15 @@ const ConfigsBackup = (props) => {
     let url = `/backup/${filename}`
 
     api
-      .fetch(url)
-      .then((res) => {
-        res.blob().then((blob) => {
-          var url = window.URL.createObjectURL(blob)
-          var a = document.createElement('a')
-          a.href = url
-          a.download = filename
-          document.body.appendChild(a)
-          a.click()
-          a.remove()
-        })
+      .get(url)
+      .then((blob) => {
+        var url = window.URL.createObjectURL(blob)
+        var a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
       })
       .catch((err) => {
         context.error('Failed to download backup', err)
