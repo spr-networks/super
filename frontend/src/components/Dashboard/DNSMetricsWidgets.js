@@ -119,7 +119,7 @@ export const DNSBlockFullMetrics = (props) => {
   })
 
   let percent = Math.round((blockedQueries / totalQueries) * 100)
-
+  if (totalQueries == 0) percent = 0
   return (
     <StatsWidget
       icon={GlobeIcon}
@@ -178,6 +178,9 @@ export const DNSBlockPercent = (props) => {
 
   let data = [blockedQueries, totalQueries]
   let percent = Math.round((blockedQueries / totalQueries) * 100)
+  if (totalQueries == 0) {
+    percent = 0
+  }
 
   return (
     <StatsChartWidget

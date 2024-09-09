@@ -1307,9 +1307,12 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 
 	doUpdate := false
 	for k, entry := range devices {
+		updated := false
+
 		if entry.DeviceDisabled == false && entry.DeviceExpiration != 0 {
 			if entry.DeviceExpiration < curtime {
 				doUpdate = true
+				updated = true
 				//expire the device
 				entry.DeviceDisabled = true
 				if entry.DeleteExpiration {
@@ -1338,10 +1341,11 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 			if time.Since(lastTime) > 30*24*time.Hour {
 				entry.DeviceDisabled = true
 				doUpdate = true
+				updated = true
 			}
 		}
 
-		if doUpdate {
+		if updated {
 			updates[k] = entry
 		}
 	}
@@ -1362,25 +1366,48 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 
 }
 
+var (
+	isProcessingSync  bool
+	processingSyncMtx sync.Mutex
+)
+
 func syncDevices(w http.ResponseWriter, r *http.Request) {
-	Devicesmtx.Lock()
-	defer Devicesmtx.Unlock()
+	processingSyncMtx.Lock()
+	if isProcessingSync {
+		processingSyncMtx.Unlock()
+		http.Error(w, "A sync request is already in progress", http.StatusServiceUnavailable)
+		return
+	}
+	isProcessingSync = true
+	processingSyncMtx.Unlock()
 
 	devices := map[string]DeviceEntry{}
 	err := json.NewDecoder(r.Body).Decode(&devices)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	saveDevicesJson(devices)
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Sync requested successfully"))
 
-	for _, val := range devices {
-		refreshDeviceGroupsAndPolicy(val)
-		refreshDeviceTags(val)
-	}
+	go func() {
+		defer func() {
+			processingSyncMtx.Lock()
+			isProcessingSync = false
+			processingSyncMtx.Unlock()
+		}()
 
-	doReloadPSKFiles()
+		Devicesmtx.Lock()
+		defer Devicesmtx.Unlock()
+
+		saveDevicesJson(devices)
+		for _, val := range devices {
+			refreshDeviceGroupsAndPolicy(val)
+			refreshDeviceTags(val)
+		}
+		doReloadPSKFiles()
+	}()
 }
 
 func addGroupsIfMissing(groups []GroupEntry, newGroups []string) {
@@ -2204,6 +2231,14 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 
 	pska.Status = "Okay"
 
+	if isSetupMode() && pska.Iface == SetupAP {
+		//abort early on setup mode
+		pska.Status = "Okay-setup"
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(pska)
+		return
+	}
+
 	//check if there is a pending psk to assign. if the mac is not known, then it was the pending psk
 
 	devices := getDevicesJson()
@@ -2514,7 +2549,6 @@ func setup(w http.ResponseWriter, r *http.Request) {
 			tinyNets = append(tinyNets, normalized_net.String())
 		}
 	}
-
 	//update DHCP config
 	DHCPmtx.Lock()
 	gDhcpConfig.TinyNets = tinyNets
@@ -2743,6 +2777,11 @@ var ServerEventSock = TEST_PREFIX + "/state/api/eventbus.sock"
 
 // SprbusPublish() using default socket, make sure bytes are json
 func SprbusPublish(topic string, bytes interface{}) error {
+
+	if gSprbusClient == nil {
+		return fmt.Errorf("[-] sprbus not ready yet")
+	}
+
 	value, err := json.Marshal(bytes)
 
 	if err != nil {
@@ -2864,6 +2903,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/ping/{interface}/{address}/udp", udpTest).Methods("PUT")
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/restart", restart).Methods("PUT")
+	external_router_authenticated.HandleFunc("/dockerPS", dockerPS).Methods("GET")
 	external_router_authenticated.HandleFunc("/backup", doConfigsBackup).Methods("PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup/{name}", getConfigsBackup).Methods("GET", "DELETE", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")

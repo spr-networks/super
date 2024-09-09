@@ -248,6 +248,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   const [isWifiDisabled, setIsWifiDisabled] = useState(null)
   const [isPlusDisabled, setIsPlusDisabled] = useState(true)
   const [isMeshNode, setIsMeshNode] = useState(false)
+  const [isFeaturesInitialized, setIsFeaturesInitialized] = useState(false)
   const [version, setVersion] = useState('default')
   const [features, setFeatures] = useState([])
   const [devices, setDevices] = useState([])
@@ -364,6 +365,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           .leafMode()
           .then((res) => {
             setIsMeshNode(JSON.parse(res) === true)
+            setIsFeaturesInitialized(true)
           })
           .catch((err) => {
             console.log(err)
@@ -572,6 +574,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         isWifiDisabled,
         isPlusDisabled,
         isMeshNode,
+        isFeaturesInitialized,
         features,
         devices,
         getDevices,

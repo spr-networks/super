@@ -30,11 +30,10 @@ import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
 import IconItem from 'components/IconItem'
 import { PencilIcon, WaypointsIcon, WifiIcon } from 'lucide-react-native'
 
-const DeviceIcon = ({ icon, color: _color, isConnected, ...props }) => {
+const DeviceIcon = ({ icon, color: _color, isConnected, isAssociatedOnly, ...props }) => {
   let color = _color ? `$${_color}400` : '$blueGray400'
   let opacity = isConnected ? 1 : 0.4
-  let borderColor = isConnected ? '$green600' : '$muted500'
-
+  let borderColor = isConnected ? '$green600' : (isAssociatedOnly ? '$yellow400' : '$muted500')
   //return <IconItem name={icon} color={color} size={32} />
 
   return (
@@ -246,6 +245,16 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
     return res
   }
 
+  const getConnectedColor = (device) => {
+    if (device.isConnected) {
+      return '$green600'
+    }
+    if (colorMode == 'light') {
+      return '$muted300'
+    }
+    return '$muted700'
+  }
+
   const colorMode = useColorMode()
 
   return (
@@ -291,6 +300,7 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
               icon={device.Style?.Icon || 'Laptop'}
               color={device.Style?.Color}
               isConnected={device.isConnected}
+              isAssociatedOnly={device.isAssociatedOnly}
             />
             <VStack
               flex={1}
@@ -326,13 +336,7 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
                         display: 'none'
                       }
                     }}
-                    color={
-                      device.isConnected
-                        ? '$green600'
-                        : colorMode == 'light'
-                        ? '$muted300'
-                        : '$muted700'
-                    }
+                    color={getConnectedColor(device)}
                   />
                 </Tooltip>
 

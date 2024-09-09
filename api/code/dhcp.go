@@ -161,6 +161,14 @@ func loadDHCPConfig() {
 	updateLanIPs(gDhcpConfig.TinyNets)
 }
 
+func loadWithLockingDHCPConfig() DHCPConfig {
+	DHCPmtx.Lock()
+	loadDHCPConfig()
+	tmp := gDhcpConfig
+	DHCPmtx.Unlock()
+	return tmp
+}
+
 func saveDHCPConfig() {
 	file, _ := json.MarshalIndent(gDhcpConfig, "", " ")
 	err := ioutil.WriteFile(gDHCPConfigPath, file, 0600)
@@ -186,6 +194,9 @@ func getSetDhcpConfig(w http.ResponseWriter, r *http.Request) {
 	defer DHCPmtx.Unlock()
 
 	if r.Method == http.MethodGet {
+		//reload it from disk before returning it
+		loadDHCPConfig()
+
 		json.NewEncoder(w).Encode(gDhcpConfig)
 		return
 	}
@@ -238,7 +249,7 @@ func getSetDhcpConfig(w http.ResponseWriter, r *http.Request) {
 	gDhcpConfig = conf
 	saveDHCPConfig()
 
-	json.NewEncoder(w).Encode(gDhcpConfig)
+	json.NewEncoder(w).Encode(conf)
 }
 
 func normalizeName(Name string) string {

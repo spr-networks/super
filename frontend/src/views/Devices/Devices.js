@@ -101,6 +101,39 @@ const Devices = (props) => {
   const [groups, setGroups] = useState([])
   const [sortBy, setSortBy] = useState('online')
   const [filter, setFilter] = useState({}) // filter groups,tags
+  const [unknownMacs, setUnknownMacs] = useState([])
+
+  const warnUnknown = (context, devices, associated) => {
+    let macs = devices.map(dev => dev.MAC)
+    let unknown_macs  = []
+    for (let mac of associated) {
+      if (!macs.includes(mac)) {
+        unknown_macs.push(mac)
+      }
+    }
+
+    setUnknownMacs(u => {
+      let newArray = new Array(...new Set(u.concat(unknown_macs)))
+      if (newArray.length != 0) {
+        context.warning("Devices attempting to connect, but may have the wrong wifi password: " + (newArray).join(", "))
+      }
+      return newArray
+    })
+
+  }
+
+  const gatherStationsByFlag = (stations, flag, invert) => {
+    let authorized = []
+    for (let station in stations) {
+      let includes = stations[station].flags.includes(flag)
+      if (invert != true && includes) {
+        authorized.push(station)
+      } else if (invert && !includes) {
+        authorized.push(station)
+      }
+    }
+    return authorized
+  }
 
   const sortDevices = (a, b) => {
     const parseIP = (ip) => {
@@ -200,12 +233,16 @@ const Devices = (props) => {
                 wifiAPI
                   .allStations(iface.Name)
                   .then((stations) => {
-                    let connectedMACs = Object.keys(stations)
+                    let connectedMACs = gatherStationsByFlag(stations, "[AUTHORIZED]", false)
+                    let associatedNotConnected = gatherStationsByFlag(stations, "[AUTHORIZED]", true)
+                    warnUnknown(context, devices, associatedNotConnected)
 
                     let devs = devices.map((dev) => {
                       if (dev.isConnected !== true) {
                         dev.isConnected = connectedMACs.includes(dev.MAC)
+                        dev.isAssociatedOnly = associatedNotConnected.includes(dev.MAC)
                       }
+
 
                       return dev
                     })
@@ -233,13 +270,17 @@ const Devices = (props) => {
                         remoteWifiApi.allStations
                           .call(remoteWifiApi, iface.Name)
                           .then((stations) => {
-                            let connectedMACs = Object.keys(stations)
+                            let connectedMACs = gatherStationsByFlag(stations, "[AUTHORIZED]", false)
+                            let associatedNotConnected = gatherStationsByFlag(stations, "[AUTHORIZED]", true)
+                            warnUnknown(context, devices, associatedNotConnected)
+
                             setList(
                               devices.map((dev) => {
                                 if (dev.isConnected !== true) {
                                   dev.isConnected = connectedMACs.includes(
                                     dev.MAC
                                   )
+                                  dev.isAssociatedOnly = associatedNotConnected.includes(dev.MAC)
                                 }
 
                                 return dev
