@@ -43,6 +43,7 @@ const Home = (props) => {
   const alertContext = useContext(AlertContext)
 
   const [pluginsEnabled, setPluginsEnabled] = useState([])
+  const [pluginsConfig, setPluginsConfig] = useState({})
   const [interfaces, setInterfaces] = useState([])
   const [showIntro, setShowIntro] = useState(false)
   const [show, setShow] = useState({})
@@ -54,6 +55,9 @@ const Home = (props) => {
   const checkStatus = () => {
     if (context.isFeaturesInitialized === true) {
       let toCheck = context.isMeshNode ? [] : ['dns', 'dhcp']
+      if (pluginsEnabled.includes('MESH')) {
+        toCheck.push("mesh")
+      }
       if (!context.isWifiDisabled) {
         toCheck.push('wifid')
       }
@@ -68,7 +72,14 @@ const Home = (props) => {
       }
 
       toCheck.forEach((s, idx) => {
-        api.get(`/dockerPS?service=${s}`)
+        let url = `/dockerPS?service=${s}`
+        if (s == 'mesh') {
+          let meshConfig = pluginsConfig.filter(x => x.Name == 'MESH')
+          if (meshConfig.length == 1) {
+            url = `/dockerPS?service=${s}&compose_file=${meshConfig[0].ComposeFilePath}`
+          }
+        }
+        api.get(url)
           .then(() => {
             setCriticalStatus(prev => ({ ...prev, [s]: true }))
             complete()
@@ -90,6 +101,7 @@ const Home = (props) => {
     pluginAPI
       .list()
       .then((plugins) => {
+        setPluginsConfig(plugins)
         setPluginsEnabled(
           plugins
             .filter((p) => p.Enabled)
@@ -227,7 +239,9 @@ const Home = (props) => {
         </VStack>
 
         <VStack flex={3} space="md">
-          <ServicesEnabled features={services}
+          <ServicesEnabled
+            features={services}
+            isFeaturesInitialized={context.isFeaturesInitialized}
             isMeshNode={context.isMeshNode && context.isFeaturesInitialized}
             serviceStatus={criticalStatus}
           />
