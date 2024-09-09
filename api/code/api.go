@@ -2905,7 +2905,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/restart", restart).Methods("PUT")
 	external_router_authenticated.HandleFunc("/dockerPS", dockerPS).Methods("GET")
 	external_router_authenticated.HandleFunc("/backup", doConfigsBackup).Methods("PUT", "OPTIONS")
-	external_router_authenticated.HandleFunc("/backup/{name}", getConfigsBackup).Methods("GET", "DELETE", "OPTIONS")
+	external_router_authenticated.HandleFunc("/backup/{name}", applyJwtOtpCheck(getConfigsBackup)).Methods("GET", "DELETE", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS", "PUT")
 	external_router_authenticated.HandleFunc("/subnetConfig", getSetDhcpConfig).Methods("GET", "PUT", "OPTIONS")
