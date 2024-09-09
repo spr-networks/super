@@ -348,6 +348,10 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
             onSuccess={() => {
               modalState.setShowModal(false)
             }}
+            onSetup={() => {
+              modalState.setShowModal(false)
+              navigate('/admin/auth')
+            }}
           />
         )
       }
