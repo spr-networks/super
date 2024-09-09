@@ -128,6 +128,20 @@ const getPayloadHex = (obj) => {
   return null
 }
 
+/*
+const LogListItem = ({ item, selectedBuckets }) => {
+  const isSelected = selectedBuckets.some(bucket => item.bucket.startsWith(bucket));
+
+  return (
+    <View style={isSelected ? styles.selectedItem : styles.item}>
+      <Text>{item.time}</Text>
+      <Text>{item.msg}</Text>
+      <Text>{item.bucket}</Text>
+      <Text>{item.level}</Text>
+    </View>
+  );
+};
+*/
 const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
   const context = useContext(AppContext)
   const navigate = useNavigate()

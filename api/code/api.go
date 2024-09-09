@@ -2904,7 +2904,11 @@ func main() {
 	external_router_authenticated.HandleFunc("/status", getStatus).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/restart", restart).Methods("PUT")
 	external_router_authenticated.HandleFunc("/dockerPS", dockerPS).Methods("GET")
+<<<<<<< Updated upstream
 	external_router_authenticated.HandleFunc("/backup", doConfigsBackup).Methods("PUT", "OPTIONS")
+=======
+	external_router_authenticated.HandleFunc("/backup", applyJwtOtpCheck(doConfigsBackup)).Methods("PUT", "OPTIONS")
+>>>>>>> Stashed changes
 	external_router_authenticated.HandleFunc("/backup/{name}", applyJwtOtpCheck(getConfigsBackup)).Methods("GET", "DELETE", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS", "PUT")
