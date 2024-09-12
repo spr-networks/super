@@ -6,6 +6,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import { dbAPI } from 'api'
+import DateTimePicker from 'react-datetime-picker';
 
 import {
   Button,
@@ -14,20 +15,21 @@ import {
   FlatList,
   Heading,
   HStack,
+  Input,
   ScrollView,
   Text,
   View,
   VStack,
   useColorMode,
   SettingsIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
+  CalendarDaysIcon,
 } from '@gluestack-ui/themed'
 
 import { AlertContext, ModalContext } from 'AppContext'
 import { EditDatabase } from 'views/System/EditDatabase'
 import LogListItem from './LogListItem'
 import FilterInputSelect from './FilterInputSelect'
+//import TimeInputSelect from './TimeInputSelect'
 import { prettyToJSONPath } from './FilterSelect'
 import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
@@ -52,9 +54,45 @@ const LogList = (props) => {
   const [searchField, setSearchField] = useState('')
   const [fieldCounts, setFieldCounts] = useState({});
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showTimeline, setShowTimeline] = useState(true);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [selectRange, setSelectRange] = useState(false)
   const [multiMappingValues, setMultiMappingValues] = useState({})
   const colorMode = useColorMode()
+
+  const [startDateTime, setStartDateTime] = useState(undefined);
+  const [endDateTime, setEndDateTime] = useState(undefined);
+
+  const handleStartDateTimeChange = (event) => {
+    let newMin = new Date(event.target.value)
+    if(!isNaN(newMin)) {
+      setStartDateTime(newMin);
+      if (selectRange) {
+        let min = newMin.toISOString()
+        setParams({ ...params, min })
+      }
+    }
+  };
+
+  const resetTime = (event) => {
+    setStartDateTime(undefined)
+    setEndDateTime(undefined)
+    let max = new Date().toISOString()
+    setParams({ ...params, min:0, max })
+  }
+
+  const handleEndDateTimeChange = (event) => {
+    let newMax = new Date(event.target.value)
+    if(!isNaN(newMax)) {
+      setEndDateTime(newMax);
+
+      if (selectRange) {
+        let max = newMax.toISOString()
+        setParams({ ...params, max })
+      }
+
+    }
+  };
+
 
   const multiMappings = ['dns:serve:']
 
@@ -68,6 +106,11 @@ const LogList = (props) => {
 
   const toggleTimeline = () => {
     setShowTimeline(!showTimeline)
+  }
+
+  const toggleSelectRange = () => {
+    if (selectRange) resetTime()
+    setSelectRange(!selectRange)
   }
 
   useEffect(() => {
@@ -117,7 +160,7 @@ const LogList = (props) => {
   }, [])
 
   useEffect(() => {
-    let defaultFilters = ['wifi:', 'dhcp:']
+    let defaultFilters = ['wifi:auth:', 'dhcp:']
     let filter = {}
     topics.forEach((topic) => {
       filter[topic] = defaultFilters.some(def => topic.startsWith(def))
@@ -177,6 +220,17 @@ const LogList = (props) => {
     const counts = countFields(allLogs)
     setFieldCounts(counts);
 
+    //parse dates
+    if (allLogs.length > 1) {
+      //if wasnt set or its not active, set it
+      //otherwise we cant update it properly.
+      if (startDateTime === undefined || !selectRange) {
+        setStartDateTime(new Date(allLogs[allLogs.length-1].time))
+      }
+      if (endDateTime === undefined || !selectRange) {
+        setEndDateTime(new Date(allLogs[0].time))
+      }
+    }
     setLogs(allLogs)
   }
 
@@ -250,9 +304,25 @@ const LogList = (props) => {
     }
   };
 
+  const formatDateForInput = (date) => {
+    if (!date) {
+      return
+    }
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
+
       <VStack space="md" p="$4">
+
+
         <HStack space="md" p="$4" alignItems="center">
           <Heading size="sm">Events</Heading>
           <Text
@@ -282,6 +352,8 @@ const LogList = (props) => {
               onChangeText={setSearchField}
               onSubmitEditing={setSearchField}
             />
+
+
           </HStack>
 
         {/*
@@ -300,6 +372,14 @@ const LogList = (props) => {
         </Tooltip>
         */}
           <HStack space="sm" marginLeft="auto">
+            <Button
+              variant="outline"
+              onPress={toggleSelectRange}
+            >
+              <ButtonText>
+              {!selectRange ? "Time" : "Clear"}
+              </ButtonText>
+            </Button>
             <Button
               variant="outline"
               onPress={toggleTimeline}
@@ -326,6 +406,7 @@ const LogList = (props) => {
               </Button>
             </Tooltip>
           </HStack>
+
         </HStack>
 
         {isExpanded && (
@@ -343,6 +424,29 @@ const LogList = (props) => {
             </HStack>
           </ScrollView>
         )}
+
+        {selectRange && (
+        <HStack space="md" flexWrap="wrap">
+          <VStack>
+            <Text size="sm" fontWeight="$medium">Start Time</Text>
+            <input
+              placeholder="Select start date and time"
+              value={formatDateForInput(startDateTime)}
+              onChange={handleStartDateTimeChange}
+              type="datetime-local"
+            />
+          </VStack>
+          <VStack>
+            <Text size="sm" fontWeight="$medium">End Time</Text>
+            <input
+              placeholder="Select end date and time"
+              value={formatDateForInput(endDateTime)}
+              onChange={handleEndDateTimeChange}
+              type="datetime-local"
+            />
+          </VStack>
+        </HStack>
+      )}
       </VStack>
 
         {showTimeline ? (
