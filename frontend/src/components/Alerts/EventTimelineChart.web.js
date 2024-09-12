@@ -1,15 +1,22 @@
-import React from 'react';
+import React, {useState} from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS } from 'chart.js/auto'
 
 import {
   Button,
   ButtonIcon,
+  Center,
   FlatList,
   Heading,
   HStack,
   ScrollView,
+  Slider,
+  SliderTrack,
+  SliderFilledTrack,
+  SliderThumb,
   Text,
+  Tooltip,
+  TooltipContent,
   View,
   VStack,
   SettingsIcon,
@@ -39,6 +46,7 @@ const TimelineChart = ({ topics, data, onBarClick }) => {
   let minTime = new Date()
 
   for (let item of data) {
+    if (item.selected !== 'wifi:station:disconnect') continue
     if (!eventTimeByTopic[item.selected]) {
       //unexpected
       eventTimeByTopic[item.selected] = []
@@ -52,15 +60,16 @@ const TimelineChart = ({ topics, data, onBarClick }) => {
   }
 
   let width = (maxTime.getTime() - minTime.getTime())/100
-  let chartMaxTime = new Date(maxTime.getTime() + width)
+  let chartMaxTime = new Date(maxTime.getTime() + width*10)
+  let chartMinTime = new Date(maxTime.getTime() - width*10)
 
   const datasets = topics.map((topic, index) => {
       return {
         label: topic,
         data: eventTimeByTopic[topic].map(event => ({
-          x: [ event.getTime() - minTime.getTime(),
+          x: index,
+          y: [ event.getTime() - minTime.getTime(),
               (new Date(event.getTime()+ width)) - minTime.getTime()],
-          y: 1,
           backgroundColor: `hsl(${index * 30}, 70%, 50%)`,
           borderColor: `hsl(${index * 30}, 70%, 40%)`,
           borderWidth: 1,
@@ -76,13 +85,16 @@ const TimelineChart = ({ topics, data, onBarClick }) => {
   };
 
   const options = {
-    indexAxis: 'y',
+    legend: {
+      show: false,
+    },
+    indexAxis: 'x',
     scales: {
-      x: {
+      y: {
         type: 'linear',
         position: 'bottom',
         min: 0,
-        max: chartMaxTime.getTime() - minTime.getTime(),
+        max: chartMaxTime.getTime() - chartMinTime.getTime(),
         ticks: {
           callback: function(value) {
             const date = new Date(minTime.getTime() + value);
@@ -94,12 +106,11 @@ const TimelineChart = ({ topics, data, onBarClick }) => {
           text: 'Time'
         }
       },
-      y: {
+      x: {
+        type: 'category',
+        labels: topics,
         stacked: true,
-        title: {
-          display: true,
-          text: 'Topics'
-        }
+        position: 'top',
       }
     },
     plugins: {
@@ -127,10 +138,13 @@ const TimelineChart = ({ topics, data, onBarClick }) => {
     maintainAspectRatio: false,
   };
 
+
   return (
-    <ScrollView>
-      <Bar data={chartData} options={options} />
-    </ScrollView>
+    <VStack>
+      <ScrollView>
+        <Bar data={chartData} options={options} />
+      </ScrollView>
+   </VStack>
   );
 };
 
