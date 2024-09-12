@@ -6,7 +6,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import { dbAPI } from 'api'
-import DateTimePicker from 'react-datetime-picker';
 
 import {
   Button,
