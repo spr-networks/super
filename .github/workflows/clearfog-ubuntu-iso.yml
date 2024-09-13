@@ -38,7 +38,7 @@ jobs:
           release_name: Clearfog Release ${{ env.RELEASE_VERSION_TAG }}
           tag_name: clearfog-${{ env.RELEASE_VERSION_TAG }}
           draft: false
-          prerelease: false
+          prerelease: true
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
