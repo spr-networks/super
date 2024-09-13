@@ -392,7 +392,7 @@ const LogList = (props) => {
               onPress={toggleExpand}
             >
               <ButtonText>
-              {isExpanded ? "Hide Buckets" : "Show Buckets"}
+              {isExpanded ? "Hide Events" : "Select Events"}
               </ButtonText>
             </Button>
             <Tooltip label="Edit events & database settings">
