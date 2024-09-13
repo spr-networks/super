@@ -351,7 +351,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
 
   const onReset = (info) => {
     api
-      .delete('/release')
+      .delete('/releaseSet')
       .then((result) => {
         refModal.current()
 
@@ -399,7 +399,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
     }
 
     api
-      .put('/release', info)
+      .put('/releaseSet', info)
       .then((result) => {
         //TODO call /update
         /*api.put('/update').then(() => {
