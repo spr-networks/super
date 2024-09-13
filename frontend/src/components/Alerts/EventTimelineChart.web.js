@@ -76,8 +76,8 @@ const TimelineChart = ({ topics, data, onBarClick }) => {
         let ban = ['selected','bucket','time']
         return {
           label: topic + "",
-          borderColor: c,
-          backgroundColor: c,
+          backgroundColor:  `rgba(75, 192, ${192 + index * 20}, 0.6)`,
+          borderColor: `rgba(75, 192, ${192 + index * 20}, 1)`,
           borderWidth: 1,
           pointStyle: 'rect',
           data: eventTimeByTopic[topic].map(event => ({
