@@ -73,9 +73,8 @@ const LogList = (props) => {
   const [startDateTime, setStartDateTime] = useState(undefined)
   const [endDateTime, setEndDateTime] = useState(undefined)
 
-  const handleStartDateTimeChange = (event) => {
-    if (!event?.target) return
-    let newMin = new Date(event.target.value)
+  const handleStartDateTimeChange = (value) => {
+    let newMin = new Date(value)
     if (!isNaN(newMin)) {
       setStartDateTime(newMin)
       if (selectRange) {
@@ -92,9 +91,8 @@ const LogList = (props) => {
     setParams({ ...params, min: 0, max })
   }
 
-  const handleEndDateTimeChange = (event) => {
-    if (!event?.target) return
-    let newMax = new Date(event.target.value)
+  const handleEndDateTimeChange = (value) => {
+    let newMax = new Date(value)
     if (!isNaN(newMax)) {
       setEndDateTime(newMax)
 
