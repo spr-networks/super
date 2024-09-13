@@ -134,7 +134,7 @@ const TimelineChart = ({ topics, data, onBarClick }) => {
             const date = new Date(minTime.getTime() + context.parsed.x);
             const dataset = chartData.datasets[context.datasetIndex];
             const datapoint = dataset.data[context.dataIndex];
-            return [`${context.dataset.label}: ${date.toLocaleString()}`, ...datapoint.customLabel];
+            return [`${date.toLocaleString()}`, ...datapoint.customLabel];
           }
         }
       }
