@@ -66,12 +66,13 @@ const LogList = (props) => {
   const [fieldCounts, setFieldCounts] = useState({})
   const [isExpanded, setIsExpanded] = useState(false)
   const [showTimeline, setShowTimeline] = useState(false)
-  const [selectRange, setSelectRange] = useState(false)
+  const [selectRange, setSelectRange] = useState(true)
   const [multiMappingValues, setMultiMappingValues] = useState({})
   const colorMode = useColorMode()
 
-  const [startDateTime, setStartDateTime] = useState(undefined)
-  const [endDateTime, setEndDateTime] = useState(undefined)
+  const [startDateTime, setStartDateTime] = useState(new Date('2023-01-12T00:00:00Z'))
+  const [endDateTime, setEndDateTime] = useState(new Date())
+  const [initializedTimes, setInitializedTimes] = useState(false)
 
   const handleStartDateTimeChange = (value) => {
     let newMin = new Date(value)
@@ -84,12 +85,13 @@ const LogList = (props) => {
     }
   }
 
+  /*
   const resetTime = (event) => {
     setStartDateTime(undefined)
     setEndDateTime(undefined)
     let max = new Date().toISOString()
     setParams({ ...params, min: 0, max })
-  }
+  }*/
 
   const handleEndDateTimeChange = (value) => {
     let newMax = new Date(value)
@@ -117,18 +119,18 @@ const LogList = (props) => {
     setShowTimeline(!showTimeline)
   }
 
+  /*
   const toggleSelectRange = () => {
     if (selectRange) resetTime()
     setSelectRange(!selectRange)
   }
+  */
 
   useEffect(() => {
     //TODO map logs, merge timestamps
-    let min = new Date('2023-01-12T00:00:00Z').toISOString()
-    let max = new Date().toISOString()
     let num = perPage
 
-    setParams({ ...params, num, max })
+    setParams({ ...params, num, min: startDateTime.toISOString(), max: endDateTime.toISOString()})
 
     dbAPI
       .buckets()
@@ -233,11 +235,10 @@ const LogList = (props) => {
     if (allLogs.length > 1) {
       //if wasnt set or its not active, set it
       //otherwise we cant update it properly.
-      if (startDateTime === undefined || !selectRange) {
+      if (!initializedTimes) {
         setStartDateTime(new Date(allLogs[allLogs.length - 1].time))
-      }
-      if (endDateTime === undefined || !selectRange) {
         setEndDateTime(new Date(allLogs[0].time))
+        setInitializedTimes(true)
       }
     }
     setLogs(allLogs)
@@ -245,9 +246,10 @@ const LogList = (props) => {
 
   // fetch logs for selected filter
   useEffect(() => {
-    // reset date start to now
-    let max = new Date().toISOString()
-    setParams({ ...params, max })
+    // reset dates
+    setEndDateTime(new Date())
+    setStartDateTime(new Date('2023-01-12T00:00:00Z'))
+    setParams({ ...params, max:endDateTime.toISOString(), min:startDateTime.toISOString()  })
   }, [filter])
 
   useEffect(() => {
@@ -259,8 +261,15 @@ const LogList = (props) => {
     //when page updates, fetch last log entry and use this as max ts for next page
     //just go to start if prev, we sort desc - new items fk it up
     //TODO rely on timestamps for pagination
+    let max
+    if (endDateTime && !isNaN(endDateTime)) {
+      max = endDateTime.toISOString()
+    } else {
+      max = new Date().toISOString()
+    }
+
     if (page < prevPage) {
-      setParams({ ...params, max: new Date().toISOString() })
+      setParams({ ...params, max })
       setPage(1)
       return
     }
