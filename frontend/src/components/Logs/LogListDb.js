@@ -10,26 +10,46 @@ import { dbAPI } from 'api'
 import {
   Button,
   ButtonIcon,
+  ButtonText,
+  ButtonGroup,
   FlatList,
+  FormControl,
+  FormControlLabel,
+  FormControlLabelText,
   Heading,
   HStack,
+  Input,
   ScrollView,
   Text,
   View,
+  VStack,
   useColorMode,
-  SettingsIcon
+  SettingsIcon,
+  CalendarDaysIcon,
+  InputField
 } from '@gluestack-ui/themed'
 
 import { AlertContext, ModalContext } from 'AppContext'
 import { EditDatabase } from 'views/System/EditDatabase'
 import LogListItem from './LogListItem'
 import FilterInputSelect from './FilterInputSelect'
+//import TimeInputSelect from './TimeInputSelect'
 import { prettyToJSONPath } from './FilterSelect'
 import { Select } from 'components/Select'
 import Pagination from 'components/Pagination'
 import { Tooltip } from 'components/Tooltip'
 import AlertChart from 'components/Alerts/AlertChart'
+import EventTimelineChart from 'components/Alerts/EventTimelineChart'
+import DatePicker from 'components/DatePicker'
+
 import { countFields } from 'components/Alerts/AlertUtil'
+import { TopicItem } from 'views/System/EditDatabase'
+import {
+  BarChartIcon,
+  BarChartHorizontalIcon,
+  FilterIcon,
+  FilterXIcon
+} from 'lucide-react-native'
 
 const LogList = (props) => {
   const context = useContext(AlertContext)
@@ -43,17 +63,74 @@ const LogList = (props) => {
   const [params, setParams] = useState({ num: perPage })
   const [showForm, setShowForm] = useState(Platform.OS == 'web')
   const [searchField, setSearchField] = useState('')
-  const [fieldCounts, setFieldCounts] = useState({});
-
+  const [fieldCounts, setFieldCounts] = useState({})
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [showTimeline, setShowTimeline] = useState(false)
+  const [selectRange, setSelectRange] = useState(true)
+  const [multiMappingValues, setMultiMappingValues] = useState({})
   const colorMode = useColorMode()
+
+  const [startDateTime, setStartDateTime] = useState(new Date('2023-01-12T00:00:00Z'))
+  const [endDateTime, setEndDateTime] = useState(new Date())
+  const [initializedTimes, setInitializedTimes] = useState(false)
+
+  const handleStartDateTimeChange = (value) => {
+    let newMin = new Date(value)
+    if (!isNaN(newMin)) {
+      setStartDateTime(newMin)
+      if (selectRange) {
+        let min = newMin.toISOString()
+        setParams({ ...params, min })
+      }
+    }
+  }
+
+  /*
+  const resetTime = (event) => {
+    setStartDateTime(undefined)
+    setEndDateTime(undefined)
+    let max = new Date().toISOString()
+    setParams({ ...params, min: 0, max })
+  }*/
+
+  const handleEndDateTimeChange = (value) => {
+    let newMax = new Date(value)
+    if (!isNaN(newMax)) {
+      setEndDateTime(newMax)
+
+      if (selectRange) {
+        let max = newMax.toISOString()
+        setParams({ ...params, max })
+      }
+    }
+  }
+
+  const multiMappings = ['dns:serve:']
+
+  const getMultiTopics = (mapping) => {
+    return multiMappingValues[mapping] || []
+  }
+
+  const toggleExpand = () => {
+    setIsExpanded(!isExpanded)
+  }
+
+  const toggleTimeline = () => {
+    setShowTimeline(!showTimeline)
+  }
+
+  /*
+  const toggleSelectRange = () => {
+    if (selectRange) resetTime()
+    setSelectRange(!selectRange)
+  }
+  */
 
   useEffect(() => {
     //TODO map logs, merge timestamps
-    let min = new Date('2023-01-12T00:00:00Z').toISOString()
-    let max = new Date().toISOString()
     let num = perPage
 
-    setParams({ ...params, num, max })
+    setParams({ ...params, num, min: startDateTime.toISOString(), max: endDateTime.toISOString()})
 
     dbAPI
       .buckets()
@@ -77,6 +154,14 @@ const LogList = (props) => {
           return a.localeCompare(b)
         })
 
+        // multi-mappings
+        for (let multi of multiMappings) {
+          let multiValue = buckets.filter((n) => n.startsWith(multi))
+          buckets = buckets.filter((n) => !n.startsWith(multi))
+          buckets.push(multi)
+          setMultiMappingValues((prev) => ({ ...prev, [multi]: multiValue }))
+        }
+
         setTopics(buckets)
       })
       .catch((err) => {
@@ -85,16 +170,16 @@ const LogList = (props) => {
   }, [])
 
   useEffect(() => {
+    let defaultFilters = ['wifi:auth:', 'dhcp:']
     let filter = {}
-    let defaultFilter = 'log:api'
-    topics.map((topic) => {
-      filter[topic] = topic == defaultFilter
+    topics.forEach((topic) => {
+      filter[topic] = defaultFilters.some((def) => topic.startsWith(def))
     })
 
     setFilter(filter)
   }, [topics])
 
-  const getCurrentBucket = () => Object.keys(filter).find((k) => filter[k])
+  const getCurrentBuckets = () => Object.keys(filter).filter((k) => filter[k])
 
   const fetchLogs = async () => {
     const parseLog = (r, bucket) => {
@@ -103,40 +188,68 @@ const LogList = (props) => {
         r.level = r.remoteaddr
       }
 
-      return { ...r, bucket: bucket.replace(/^log:/, '') }
+      return { ...r, selected: bucket, bucket: bucket.replace(/^log:/, '') }
     }
 
     // NOTE will only be one bucket for now
     //let buckets = Object.keys(filter).filter((k) => filter[k])
     //buckets.map(async (bucket) => {
-    let bucket = getCurrentBucket()
-    if (!bucket) {
+    let buckets = getCurrentBuckets()
+    if (buckets.length === 0) {
       return
     }
 
-    let stats = await dbAPI.stats(bucket)
-    setTotal(stats.KeyN)
+    let totalCount = 0
+    let allLogs = []
 
-    let withFilter = params
-    withFilter['filter'] = prettyToJSONPath(searchField)
-    let result = await dbAPI.items(bucket, withFilter)
-    if (result == null) {
-      result = []
+    await Promise.all(
+      buckets.map(async (bucket) => {
+        let topics = [bucket]
+        if (multiMappings.includes(bucket)) {
+          topics = getMultiTopics(topics)
+        }
+        for (let topic of topics) {
+          let stats = await dbAPI.stats(topic)
+          totalCount += stats.KeyN
+
+          let withFilter = { ...params, filter: prettyToJSONPath(searchField) }
+          let result = await dbAPI.items(topic, withFilter)
+          if (result == null) {
+            result = []
+          }
+          result = result.map((r) => parseLog(r, bucket))
+          allLogs = allLogs.concat(result)
+        }
+      })
+    )
+
+    setTotal(totalCount)
+
+    // Sort all logs by timestamp
+    allLogs.sort((a, b) => new Date(b.time) - new Date(a.time))
+
+    const counts = countFields(allLogs)
+    setFieldCounts(counts)
+
+    //parse dates
+    if (allLogs.length > 1) {
+      //if wasnt set or its not active, set it
+      //otherwise we cant update it properly.
+      if (!initializedTimes) {
+        setStartDateTime(new Date(allLogs[allLogs.length - 1].time))
+        setEndDateTime(new Date(allLogs[0].time))
+        setInitializedTimes(true)
+      }
     }
-    result = result.map((r) => parseLog(r, bucket))
-
-    const counts = countFields(result)
-
-    setFieldCounts(counts);
-
-    setLogs(result)
+    setLogs(allLogs)
   }
 
   // fetch logs for selected filter
   useEffect(() => {
-    // reset date start to now
-    let max = new Date().toISOString()
-    setParams({ ...params, max })
+    // reset dates
+    setEndDateTime(new Date())
+    setStartDateTime(new Date('2023-01-12T00:00:00Z'))
+    setParams({ ...params, max:endDateTime.toISOString(), min:startDateTime.toISOString()  })
   }, [filter])
 
   useEffect(() => {
@@ -148,8 +261,15 @@ const LogList = (props) => {
     //when page updates, fetch last log entry and use this as max ts for next page
     //just go to start if prev, we sort desc - new items fk it up
     //TODO rely on timestamps for pagination
+    let max
+    if (endDateTime && !isNaN(endDateTime)) {
+      max = endDateTime.toISOString()
+    } else {
+      max = new Date().toISOString()
+    }
+
     if (page < prevPage) {
-      setParams({ ...params, max: new Date().toISOString() })
+      setParams({ ...params, max })
       setPage(1)
       return
     }
@@ -163,15 +283,9 @@ const LogList = (props) => {
     setPage(page)
   }
 
-  // filter on/off - only one at a time atm.
   const handleTopicFilter = (topic) => {
     setLogs([])
-    let newFilter = {}
-    for (let k in filter) {
-      newFilter[k] = k == topic ? !newFilter[k] : false
-    }
-    setFilter(newFilter)
-    ///setFilter({ ...filter, [topic]: !filter[topic] })
+    setFilter((prev) => ({ ...prev, [topic]: !prev[topic] }))
   }
 
   const niceTopic = (topic) => topic && topic.replace(/^log:/, '')
@@ -203,97 +317,213 @@ const LogList = (props) => {
   const handleBarClick = (label, count) => {
     let parts = label.split(':', 2)
     if (parts.length == 2) {
-      setSearchField(parts[0] + '=="' + label.substr(parts[0].length+1) + '"')
+      setSearchField(parts[0] + '=="' + label.substr(parts[0].length + 1) + '"')
     }
-  };
+  }
+
+  const formatDateForInput = (date) => {
+    if (!date) {
+      return
+    }
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  }
 
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
-      <HStack space="md" p="$4" alignItems="center">
-        <Heading size="sm">Events</Heading>
-        <Text
-          color="$muted500"
-          sx={{
-            '@base': { display: 'none' },
-            '@md': { display: total ? 'flex' : 'none' }
-          }}
-        >
-          {/*page={page}/{Math.ceil(total / perPage)}, total = {total}*/}
-          {total} items
-        </Text>
-
-        <HStack
-          display="none"
-          sx={{
-            '@md': {
-              w: '$1/2',
-              display: 'flex'
-            }
-          }}
-        >
-          <FilterInputSelect
-            value={searchField}
-            topic={Object.keys(filter).find((f) => filter[f])}
-            items={logs}
-            onChangeText={setSearchField}
-            onSubmitEditing={setSearchField}
-          />
-        </HStack>
-
-        {/*
-        <Tooltip label="Set filter for logs" ml="auto">
-          <Button
-            ml="auto"
-            size="sm"
-            action="secondary"
-            variant="link"
-            onPress={() => setShowForm(!showForm)}
-          >
-            <ButtonIcon
-              as={showForm ? FilterXIcon : FilterIcon}
-            />
-          </Button>
-        </Tooltip>
-        */}
-        <HStack space="sm" marginLeft="auto">
-          <Tooltip label="Edit events & database settings">
-            <Button
-              variant="outline"
-              action="primary"
-              onPress={handlePressEdit}
+      <VStack space="md" p="$4">
+        <HStack space="md" p="$4" alignItems="center">
+          <VStack>
+            <Heading size="sm">Events</Heading>
+            <Text
+              color="$muted500"
+              size="xs"
+              sx={{
+                '@base': { display: 'none' },
+                '@md': { display: total ? 'flex' : 'none' }
+              }}
             >
-              <ButtonIcon as={SettingsIcon} color="$primary500" />
-            </Button>
-          </Tooltip>
-          <SelectTopic
-            options={Object.keys(filter)}
-            selectedValue={Object.keys(filter).find((f) => filter[f])}
-            onValueChange={handleTopicFilter}
-          />
+              {/*page={page}/{Math.ceil(total / perPage)}, total = {total}*/}
+              {total} items
+            </Text>
+          </VStack>
+
+          <HStack
+            display="none"
+            space="sm"
+            sx={{
+              '@md': {
+                flex: 1,
+                display: 'flex'
+              }
+            }}
+          >
+            <FilterInputSelect
+              value={searchField}
+              topic={Object.keys(filter).find((f) => filter[f])}
+              items={logs}
+              onChangeText={setSearchField}
+              onSubmitEditing={setSearchField}
+              flex={1}
+            />
+            <Tooltip label="Select events and time range">
+              <Button size="sm" variant="outline" onPress={toggleExpand}>
+                <ButtonIcon
+                  as={isExpanded ? FilterXIcon : FilterIcon}
+                  mr="$2"
+                />
+                <ButtonText>Filter</ButtonText>
+              </Button>
+            </Tooltip>
+          </HStack>
+
+          <HStack space="sm" marginLeft="auto">
+            <ButtonGroup size="sm" isAttached colorScheme="primary">
+              <Button
+                variant={showTimeline ? 'solid' : 'outline'}
+                onPress={toggleTimeline}
+              >
+                <ButtonIcon as={BarChartHorizontalIcon} mr="$2" />
+                <ButtonText>Timeline</ButtonText>
+              </Button>
+              <Button
+                variant={showTimeline ? 'outline' : 'solid'}
+                onPress={toggleTimeline}
+              >
+                <ButtonIcon as={BarChartIcon} mr="$2" />
+                <ButtonText>Log</ButtonText>
+              </Button>
+            </ButtonGroup>
+
+            <Tooltip label="Edit events & database settings">
+              <Button
+                size="sm"
+                variant="outline"
+                action="primary"
+                onPress={handlePressEdit}
+              >
+                <ButtonIcon as={SettingsIcon} color="$primary500" />
+              </Button>
+            </Tooltip>
+          </HStack>
         </HStack>
-      </HStack>
 
-      <ScrollView>
-        <AlertChart fieldCounts={fieldCounts} onBarClick={handleBarClick} />
-        {total > perPage ? (
-          <Pagination
-            page={page}
-            pages={total}
-            perPage={perPage}
-            onChange={(p) => updatePage(p, page)}
-          />
-        ) : null}
-        <FlatList
-          flex={2}
+        {isExpanded && (
+          <VStack
+            space="md"
+            px="$4"
+            pb="$4"
+            borderBottomWidth={1}
+            borderBottomColor={
+              colorMode == 'light' ? '$coolGray200' : '$coolGray800'
+            }
+            flexDirection="row"
+          >
+            <FormControl flex={1}>
+              <FormControlLabel
+                sx={{
+                  '@base': { display: 'none' },
+                  '@md': { display: 'flex' }
+                }}
+              >
+                <FormControlLabelText size="sm">
+                  Select Events
+                </FormControlLabelText>
+              </FormControlLabel>
+              <ScrollView showsHorizontalScrollIndicator={false}>
+                <HStack space="sm" flexWrap="wrap" mb="$1">
+                  {topics.map((topic) => (
+                    <TopicItem
+                      key={topic}
+                      topic={topic}
+                      onPress={() => handleTopicFilter(topic)}
+                      isDisabled={!filter[topic]}
+                    />
+                  ))}
+                </HStack>
+              </ScrollView>
+            </FormControl>
+
+            <HStack space="md">
+              <FormControl>
+                <FormControlLabel
+                  sx={{
+                    '@base': { display: 'none' },
+                    '@md': { display: 'flex' }
+                  }}
+                >
+                  <FormControlLabelText size="sm">
+                    Start Time
+                  </FormControlLabelText>
+                </FormControlLabel>
+                <HStack space="sm">
+                  <DatePicker
+                    value={formatDateForInput(startDateTime)}
+                    onChange={handleStartDateTimeChange}
+                    type="datetime-local"
+                    size="sm"
+                  />
+                </HStack>
+              </FormControl>
+
+              <FormControl>
+                <FormControlLabel
+                  sx={{
+                    '@base': { display: 'none' },
+                    '@md': { display: 'flex' }
+                  }}
+                >
+                  <FormControlLabelText size="sm">
+                    End Time
+                  </FormControlLabelText>
+                </FormControlLabel>
+                <HStack space="sm">
+                  <DatePicker
+                    value={formatDateForInput(endDateTime)}
+                    onChange={handleEndDateTimeChange}
+                    type="datetime-local"
+                    size="sm"
+                  />
+                </HStack>
+              </FormControl>
+            </HStack>
+          </VStack>
+        )}
+      </VStack>
+
+      {showTimeline ? (
+        <EventTimelineChart
+          topics={getCurrentBuckets()}
           data={logs}
-          estimatedItemSize={100}
-          renderItem={({ item }) => (
-            <LogListItem item={item} selected={getCurrentBucket()} />
-          )}
-          keyExtractor={(item, index) => item.time + index}
+          onBarClick={() => {}}
         />
-
-      </ScrollView>
+      ) : (
+        <ScrollView>
+          <AlertChart fieldCounts={fieldCounts} onBarClick={handleBarClick} />
+          {total > perPage ? (
+            <Pagination
+              page={page}
+              pages={total}
+              perPage={perPage}
+              onChange={(p) => updatePage(p, page)}
+            />
+          ) : null}
+          <FlatList
+            flex={2}
+            data={logs}
+            estimatedItemSize={100}
+            renderItem={({ item }) => (
+              <LogListItem item={item} selected={item.selected} />
+            )}
+            keyExtractor={(item, index) => item.time + index}
+          />
+        </ScrollView>
+      )}
     </View>
   )
 }

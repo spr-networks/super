@@ -18,30 +18,44 @@ export const HealthCheck = () => {
   const colorMode = useColorMode()
   const alertContext = useContext(AlertContext)
   const appContext = useContext(AppContext)
-
-
-  let criticalToCheck = appContext.isMeshNode ? [] : ['dns', 'dhcp']
-
-  if (!appContext.isWifiDisabled) {
-    criticalToCheck.push('wifid')
-  }
-
-  const getServicesStatus = () => {
-    criticalToCheck.forEach(s => {
-      api.get(`/dockerPS?service=${s}`)
-        .then(() => {
-          setCriticalStatus(prev => ({ ...prev, [s]: true }))
-        })
-        .catch(() => {
-          setCriticalStatus(prev => ({ ...prev, [s]: false }))
-          alertContext.warning(s + " service is not running")
-        })
-    })
-  }
+  const [criticalToCheck, setCriticalToCheck] = useState([])
+  const [processed, setIsProcessed] = useState(false)
 
   useEffect(() => {
-    getServicesStatus()
-  }, [])
+
+    if (appContext.isFeaturesInitialized === true) {
+      let toCheck = appContext.isMeshNode ? [] : ['dns', 'dhcp']
+      if (!appContext.isWifiDisabled) {
+        toCheck.push('wifid')
+      }
+
+      let counter = 0
+
+      const complete = () => {
+        counter += 1
+        if (counter == toCheck.length) {
+          setIsProcessed(true)
+        }
+      }
+
+      toCheck.forEach((s, idx) => {
+        api.get(`/dockerPS?service=${s}`)
+          .then(() => {
+            setCriticalStatus(prev => ({ ...prev, [s]: true }))
+            complete()
+            counter += 1
+          })
+          .catch(() => {
+            setCriticalStatus(prev => ({ ...prev, [s]: false }))
+            alertContext.warning(s + " service is not running")
+            complete()
+          })
+      })
+
+
+      setCriticalToCheck(toCheck)
+    }
+  }, [appContext.isMeshNode, appContext.isFeaturesInitialized, appContext.isWifiDisabled])
 
   const getServiceIcon = (service) => {
     switch (service) {
@@ -67,7 +81,7 @@ export const HealthCheck = () => {
       </Heading>
       <Divider my="$2" />
       <VStack space="md" alignItems="center">
-        {criticalToCheck.map((service) => (
+        {processed && criticalToCheck.map((service) => (
           <HStack key={service} space="md" alignItems="center">
             {/*<Icon
               as={getServiceIcon(service)}
@@ -85,5 +99,4 @@ export const HealthCheck = () => {
   )
 }
 
-HealthCheck.contextType = AlertContext
 export default HealthCheck

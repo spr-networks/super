@@ -62,20 +62,26 @@ const UpdateReleaseInfo = ({
       setCustomChannel(releaseInfo.CustomChannel)
     }
 
-    api.get('/releasesAvailable?container=super_base').then((versions) => {
-      versions?.reverse()
-      let updatedVersions = versions?.filter((v) => v.match(/^\d+.\d+.\d+$/))
-      updatedVersions?.unshift('latest')
-      setVersions(updatedVersions)
-    })
+    api
+      .get('/releasesAvailable?container=super_base')
+      .then((versions) => {
+        versions?.reverse()
+        let updatedVersions = versions?.filter((v) => v.match(/^\d+.\d+.\d+$/))
+        updatedVersions?.unshift('latest')
+        setVersions(updatedVersions)
+      })
+      .catch((err) => {})
 
-    api.get('/releaseChannels').then((channels) => {
-      let newChannels = []
-      for (let channel of channels) {
-        newChannels.push(channel)
-      }
-      setChannels(newChannels)
-    })
+    api
+      .get('/releaseChannels')
+      .then((channels) => {
+        let newChannels = []
+        for (let channel of channels) {
+          newChannels.push(channel)
+        }
+        setChannels(newChannels)
+      })
+      .catch((err) => {})
   }, [])
 
   const checkVersionChange = (currentVersion, newVersion) => {
@@ -345,7 +351,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
 
   const onReset = (info) => {
     api
-      .delete('/release')
+      .delete('/releaseSet')
       .then((result) => {
         refModal.current()
 
@@ -393,7 +399,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
     }
 
     api
-      .put('/release', info)
+      .put('/releaseSet', info)
       .then((result) => {
         //TODO call /update
         /*api.put('/update').then(() => {

@@ -105,7 +105,7 @@ const IntroWidget = ({
               onPress={() => navigate('/admin/dnsBlock')}
             >
               <ButtonIcon mr="$2" as={BanIcon} />
-              <ButtonText>DNS Blocklists</ButtonText>
+              <ButtonText>DNS Ad Blocking</ButtonText>
             </Button>
             <Button
               size="xs"

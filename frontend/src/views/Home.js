@@ -11,8 +11,8 @@ import {
   HStack,
   Spinner
 } from '@gluestack-ui/themed'
-import { AppContext } from 'AppContext'
-import { pluginAPI, wifiAPI } from 'api'
+import { AppContext, AlertContext } from 'AppContext'
+import { pluginAPI, wifiAPI, api } from 'api'
 
 import {
   WifiClients,
@@ -40,15 +40,68 @@ import IntroWidget from 'components/Dashboard/Intro'
 
 const Home = (props) => {
   const context = useContext(AppContext)
+  const alertContext = useContext(AlertContext)
 
   const [pluginsEnabled, setPluginsEnabled] = useState([])
+  const [pluginsConfig, setPluginsConfig] = useState({})
   const [interfaces, setInterfaces] = useState([])
   const [showIntro, setShowIntro] = useState(false)
+  const [show, setShow] = useState({})
+
+  const [criticalStatus, setCriticalStatus] = useState({})
+  const [criticalToCheck, setCriticalToCheck] = useState([])
+  const [processed, setIsProcessed] = useState(false)
+
+  const checkStatus = () => {
+    if (context.isFeaturesInitialized === true) {
+      let toCheck = context.isMeshNode ? [] : ['dns', 'dhcp']
+      if (pluginsEnabled.includes('MESH')) {
+        toCheck.push("mesh")
+      }
+      if (!context.isWifiDisabled) {
+        toCheck.push('wifid')
+      }
+
+      let counter = 0
+
+      const complete = () => {
+        counter += 1
+        if (counter == toCheck.length) {
+          setIsProcessed(true)
+        }
+      }
+
+      toCheck.forEach((s, idx) => {
+        let url = `/dockerPS?service=${s}`
+        if (s == 'mesh') {
+          let meshConfig = pluginsConfig.filter(x => x.Name == 'MESH')
+          if (meshConfig.length == 1) {
+            url = `/dockerPS?service=${s}&compose_file=${meshConfig[0].ComposeFilePath}`
+          }
+        }
+        api.get(url)
+          .then(() => {
+            setCriticalStatus(prev => ({ ...prev, [s]: true }))
+            complete()
+            counter += 1
+          })
+          .catch(() => {
+            setCriticalStatus(prev => ({ ...prev, [s]: false }))
+            alertContext.warning(s + " service is not running")
+            complete()
+          })
+      })
+
+
+      setCriticalToCheck(toCheck)
+    }
+  }
 
   useEffect(() => {
     pluginAPI
       .list()
       .then((plugins) => {
+        setPluginsConfig(plugins)
         setPluginsEnabled(
           plugins
             .filter((p) => p.Enabled)
@@ -105,23 +158,29 @@ const Home = (props) => {
       .catch((err) => {})
   }, [])
 
-  let show = {
-    dns: pluginsEnabled.includes('dns-block') && !context.isMeshNode,
-    wifi: !context.isWifiDisabled,
-    vpnInfo: context.isWifiDisabled && context.features.includes('wireguard'),
-    vpnSide:
-      !context.isWifiDisabled &&
-      !context.isMeshNode &&
-      pluginsEnabled.includes('wireguard'),
-    traffic: !context.isMeshNode,
-    intro: showIntro && Platform.OS == 'web'
-  }
+  useEffect(() => {
+    checkStatus()
+    let show_ = {
+      dns: pluginsEnabled.includes('dns-block') && !context.isMeshNode ,
+      wifi: !context.isWifiDisabled,
+      vpnInfo: context.isWifiDisabled && context.features.includes('wireguard'),
+      vpnSide:
+        !context.isWifiDisabled &&
+        !context.isMeshNode &&
+        pluginsEnabled.includes('wireguard'),
+      traffic: !context.isMeshNode,
+      intro: showIntro && Platform.OS == 'web'
+    }
+    setShow(show_)
+  }, [context.isWifiDisabled, context.isMeshNode, context.isFeaturesInitialized])
+
 
   //NOTE wireguard listed as feature when not enabled
   //features=dns,ppp,wifi,wireguard
   let services = [...pluginsEnabled]
   let featuresNoVPN = context.features.filter((f) => f != 'wireguard')
   services = [...services, ...featuresNoVPN]
+
 
   if (refreshing) {
     //return <Spinner mt="$16" size="large" />
@@ -180,7 +239,12 @@ const Home = (props) => {
         </VStack>
 
         <VStack flex={3} space="md">
-          <ServicesEnabled features={services} />
+          <ServicesEnabled
+            features={services}
+            isFeaturesInitialized={context.isFeaturesInitialized}
+            isMeshNode={context.isMeshNode && context.isFeaturesInitialized}
+            serviceStatus={criticalStatus}
+          />
           {show.dns ? (
             <VStack space="md">
               {/*<DNSMetrics />
@@ -191,7 +255,6 @@ const Home = (props) => {
           ) : null}
           {show.vpnSide ? <WireguardPeersActive /> : null}
           <Interfaces />
-          <HealthCheck />
         </VStack>
       </Box>
     </ScrollView>

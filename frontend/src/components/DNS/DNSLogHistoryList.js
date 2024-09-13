@@ -159,7 +159,7 @@ const ListItem = ({
 
             <HStack>
               <Text color="$muted500" onPress={() => triggerAlert(item)}>
-                {item.FirstAnswer || '0.0.0.0'}
+                {item.FirstAnswer || ''}
               </Text>
             </HStack>
           </VStack>
@@ -328,7 +328,7 @@ const DNSLogHistoryList = (props) => {
         return match
       })
     } else {
-      listFiltered = list
+      listFiltered = list.filter(i => i.Type != "NODATA" || i.FirstAnswer)
     }
 
     if (filterText.length) {

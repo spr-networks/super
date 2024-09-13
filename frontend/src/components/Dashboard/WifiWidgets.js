@@ -1,5 +1,5 @@
 import React, { Component, useEffect, useState } from 'react'
-import  {api, wifiAPI, meshAPI } from 'api'
+import { api, wifiAPI, meshAPI } from 'api'
 
 import APIWifi from 'api/Wifi'
 import StatsWidget from './StatsWidget'
@@ -89,7 +89,6 @@ export class WifiClients extends WifiClientCount {
   }
 }
 
-
 const SetupAPName = 'spr-setup'
 
 const WifiWidget = ({
@@ -103,24 +102,23 @@ const WifiWidget = ({
   showSpinner,
   ...props
 }) => {
-
   const finishSetup = async () => {
     try {
-      await api.put("/setup_done");
+      await api.put('/setup_done')
     } catch (err) {
-      console.error("Error in setup_done:", err);
+      console.error('Error in setup_done:', err)
     }
 
     try {
-      await wifiAPI.restartSetupWifi();
+      await wifiAPI.restartSetupWifi()
     } catch (err) {
-      console.error("Error in restartSetupWifi:", err);
+      console.error('Error in restartSetupWifi:', err)
     }
 
     if (onSetupComplete) {
-      onSetupComplete();
+      onSetupComplete()
     }
-  };
+  }
 
   if (text === '') {
     return (
@@ -133,25 +131,23 @@ const WifiWidget = ({
         borderRadius={10}
         {...props}
       >
-      <HStack p="$4" justifyContent="space-between" alignItems="center">
-        <Box p="$2">
-          <Icon as={icon} size={64} color={iconColor || '$warmGray50'} />
-        </Box>
-        {props.children ? (
-          <>{props.children}</>
-        ) : (
-          <VStack space="xs">
-            <Text
-              size="lg"
-              fontWeight={300}
-              color="$muted800"
-              sx={{ _dark: { color: '$muted400' } }}
-            >
-              
-            </Text>
-          </VStack>
-        )}
-      </HStack>
+        <HStack p="$4" justifyContent="space-between" alignItems="center">
+          <Box p="$2">
+            <Icon as={icon} size={64} color={iconColor || '$warmGray50'} />
+          </Box>
+          {props.children ? (
+            <>{props.children}</>
+          ) : (
+            <VStack space="xs">
+              <Text
+                size="lg"
+                fontWeight={300}
+                color="$muted800"
+                sx={{ _dark: { color: '$muted400' } }}
+              ></Text>
+            </VStack>
+          )}
+        </HStack>
       </Box>
     )
   }
@@ -170,42 +166,36 @@ const WifiWidget = ({
         <Box p="$2">
           <Icon as={icon} size={64} color={iconColor || '$warmGray50'} />
         </Box>
-        {props.children ? (
-          <>{props.children}</>
-        ) : (
-          <VStack space="xs">
-            <Text
-              textAlign="right"
-              size="sm"
-              fontWeight={300}
-              color="$muted800"
-              sx={{ _dark: { color: '$muted400' } }}
-            >
-              {title}
-            </Text>
-            <Text
-              textAlign="right"
-              size="xl"
-              color="$muted800"
-              sx={{ _dark: { color: '$muted400' } }}
-            >
-              {text}
-            </Text>
-            {showSpinner == false && text == SetupAPName && (
-              <Button
-                action="secondary"
-                size="md"
-                onPress={finishSetup}
+        <VStack space="xs">
+          {title && text ? (
+            <>
+              <Text
+                textAlign="right"
+                size="sm"
+                fontWeight={300}
+                color="$muted800"
+                sx={{ _dark: { color: '$muted400' } }}
               >
-                <ButtonText>Complete Setup</ButtonText>
-              </Button>
-            )}
-            {showSpinner == true && (
-              <Spinner size="small" />
-            )
-            }
-          </VStack>
-        )}
+                {title}
+              </Text>
+              <Text
+                textAlign="right"
+                size="xl"
+                color="$muted800"
+                sx={{ _dark: { color: '$muted400' } }}
+              >
+                {text}
+              </Text>
+              {showSpinner == false && text == SetupAPName && (
+                <Button action="secondary" size="md" onPress={finishSetup}>
+                  <ButtonText>Complete Setup</ButtonText>
+                </Button>
+              )}
+              {showSpinner == true && <Spinner size="small" />}
+            </>
+          ) : null}
+          {props.children ? <>{props.children}</> : null}
+        </VStack>
       </HStack>
 
       {textFooter ? (
@@ -223,20 +213,21 @@ const WifiWidget = ({
   )
 }
 
-
 export const WifiInfo = (props) => {
   const [ssid, setSsid] = useState('')
   const [channel, setChannel] = useState(0)
+  const [freq, setFreq] = useState(0)
   const [showSpinner, setShowSpinner] = useState(false)
 
   const colorMode = useColorMode()
 
   const getWiFiStatus = () => {
-    wifiAPI
+    return wifiAPI
       .status(props.iface)
       .then((status) => {
         setSsid(status['ssid[0]'])
         setChannel(status['channel'])
+        setFreq(status['freq'])
       })
       .catch((err) => {
         setSsid('')
@@ -252,14 +243,13 @@ export const WifiInfo = (props) => {
   const pollSetupRestarted = async () => {
     while (ssid === SetupAPName) {
       setShowSpinner(true)
-      await new Promise(resolve => setTimeout(resolve, 5000))
+      await new Promise((resolve) => setTimeout(resolve, 5000))
       await getWiFiStatus()
     }
     setShowSpinner(false)
   }
 
-
-  let title = 'AP ' + props.iface
+  let title = `AP ${props.iface}`
   return (
     <WifiWidget
       {...props}
@@ -267,11 +257,15 @@ export const WifiInfo = (props) => {
       iconColor={colorMode == 'light' ? '$info400' : '$info700'}
       title={title}
       text={ssid}
-      textFooter={'Channel ' + channel}
+      textFooter={`Channel ${channel}`}
       iconFooter={WifiIcon}
       onSetupComplete={pollSetupRestarted}
       showSpinner={showSpinner}
-    />
+    >
+      <Text size="sm" textAlign="right" fontWeight="$light">
+        {(freq / 1e3).toFixed(2)}GHz
+      </Text>
+    </WifiWidget>
   )
 }
 

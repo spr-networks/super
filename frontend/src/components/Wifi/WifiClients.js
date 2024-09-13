@@ -111,6 +111,7 @@ const WifiClients = (props) => {
         client.Iface = station.Iface
         client.TXRate = station.tx_rate_info
         client.RXRate = station.rx_rate_info
+        client.VLanID = station.vlan_id
         client.Flags = station.flags
         client.AP = api.remoteURL.replace('http://', '').replace('/', '')
         return client
@@ -204,7 +205,7 @@ const WifiClients = (props) => {
                 }}
               >
                 <TooltipContent>
-                  <TooltipText>{item.Flags} TX: {item.TXRate} RX: {item.RXRate}</TooltipText>
+                  <TooltipText>VLAN {item.VLanID}: {item.Flags} TX: {item.TXRate} RX: {item.RXRate}</TooltipText>
                 </TooltipContent>
               </Tooltip>
             </HStack>

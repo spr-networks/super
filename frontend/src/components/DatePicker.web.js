@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 
 import { Input, InputField } from '@gluestack-ui/themed'
 
-const DatePicker = ({ value, onChange }) => {
+const DatePicker = ({ value, onChange, type, ...props }) => {
   const inputRef = React.useRef(null)
 
   const setValue = (value) => {
@@ -16,7 +16,7 @@ const DatePicker = ({ value, onChange }) => {
 
   useEffect(() => {
     if (inputRef?.current) {
-      inputRef.current.setAttribute('type', 'date')
+      inputRef.current.setAttribute('type', type || 'date')
       setValue(value)
     }
   }, [inputRef?.current])
@@ -26,15 +26,20 @@ const DatePicker = ({ value, onChange }) => {
   }, [value])
 
   return (
-    <Input>
-      <InputField value={value} ref={inputRef} onChange={(e) => onChange(e.target.value)} />
+    <Input size={props.size || 'md'}>
+      <InputField
+        value={value}
+        ref={inputRef}
+        onChange={(e) => onChange(e.target.value)}
+      />
     </Input>
   )
 }
 
 DatePicker.propTypes = {
   value: PropTypes.string,
-  onChange: PropTypes.func
+  onChange: PropTypes.func,
+  type: PropTypes.string
 }
 
 export default DatePicker

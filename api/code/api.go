@@ -2905,7 +2905,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/restart", restart).Methods("PUT")
 	external_router_authenticated.HandleFunc("/dockerPS", dockerPS).Methods("GET")
 	external_router_authenticated.HandleFunc("/backup", doConfigsBackup).Methods("PUT", "OPTIONS")
-	external_router_authenticated.HandleFunc("/backup/{name}", getConfigsBackup).Methods("GET", "DELETE", "OPTIONS")
+	external_router_authenticated.HandleFunc("/backup/{name}", applyJwtOtpCheck(getConfigsBackup)).Methods("GET", "DELETE", "OPTIONS")
 	external_router_authenticated.HandleFunc("/backup", getConfigsBackup).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/info/{name}", getInfo).Methods("GET", "OPTIONS", "PUT")
 	external_router_authenticated.HandleFunc("/subnetConfig", getSetDhcpConfig).Methods("GET", "PUT", "OPTIONS")
@@ -2915,7 +2915,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/multicastSettings", multicastSettings).Methods("GET", "PUT")
 
 	//updates, version, feature info
-	external_router_authenticated.HandleFunc("/release", releaseInfo).Methods("GET", "PUT", "DELETE", "OPTIONS")
+	external_router_authenticated.HandleFunc("/release", releaseInfo).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/releaseSet", applyJwtOtpCheck(releaseInfo)).Methods("PUT", "DELETE", "OPTIONS")
 	external_router_authenticated.HandleFunc("/releaseChannels", releaseChannels).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/releasesAvailable", releasesAvailable).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/update", update).Methods("PUT", "OPTIONS")

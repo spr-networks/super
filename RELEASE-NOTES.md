@@ -1,6 +1,16 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v0.3.24
+**Improvements**
+- Service healthcheck 
+- Events view with multiple event types
+- Timeline view for events
+- WiFi AP Widget now shows frequency
+**Fixes**
+- OTP Code required for backups, feature setting
+
 ## v0.3.23
+**Fixes**
 - Various fixes for Setup
 - Show up to date subnet info when restoring from backup
 - Devices list will now only show authorized as green, and associated only as Yellow

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import { useNavigate } from 'react-router-dom'
 
 import { authAPI, setJWTOTPHeader } from 'api'
 
@@ -18,8 +17,7 @@ import {
   VStack
 } from '@gluestack-ui/themed'
 
-const OTPValidate = ({ onSuccess, ...props }) => {
-  const navigate = useNavigate()
+const OTPValidate = ({ onSuccess, onSetup, ...props }) => {
   const [code, setCode] = useState('')
   const [status, setStatus] = useState('')
   const [errors, setErrors] = useState({})
@@ -59,13 +57,7 @@ const OTPValidate = ({ onSuccess, ...props }) => {
     return (
       <VStack space="md">
         <Text>Need to setup OTP auth for this feature</Text>
-        <Button
-          variant="outline"
-          onPress={() => {
-            onSuccess() // only to close the modal
-            navigate('/admin/auth')
-          }}
-        >
+        <Button variant="outline" onPress={onSetup}>
           <ButtonText>Setup OTP</ButtonText>
         </Button>
       </VStack>
@@ -101,7 +93,8 @@ const OTPValidate = ({ onSuccess, ...props }) => {
 }
 
 OTPValidate.propTypes = {
-  onSuccess: PropTypes.func.isRequired
+  onSuccess: PropTypes.func.isRequired,
+  onSetup: PropTypes.func.isRequired
 }
 
 export default OTPValidate
