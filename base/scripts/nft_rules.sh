@@ -268,6 +268,7 @@ table inet filter {
     # https://github.com/moby/moby/issues/22054 This is an open issue with docker leaving forwarding open...
     # Can disable this hardening by setting VIRTUAL_SPR_API_INTERNET=1
     $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WAN_NET" ]]; then echo "counter iifname @uplink_interfaces tcp dport 80, 443 ip saddr != $WAN_NET drop"; fi)
+    $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WAN_NET" ]]; then echo "counter iifname @uplink_interfaces udp dport 53, 67 ip saddr != $WAN_NET drop"; fi)
 
     counter jump F_EST_RELATED
 
@@ -337,6 +338,7 @@ table inet filter {
     # https://github.com/moby/moby/issues/22054 This is an open issue with docker leaving forwarding open...
     # Can disable this hardening by setting VIRTUAL_SPR_API_INTERNET=1
     $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WANIF" && "$WAN_NET" ]]; then echo "counter iifname @uplink_interfaces tcp dport 80, 443 ip saddr != $WAN_NET goto DROPLOGFWD"; fi)
+    $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WANIF" && "$WAN_NET" ]]; then echo "counter iifname @uplink_interfaces udp dport 53, 67 ip saddr != $WAN_NET goto DROPLOGFWD"; fi)
 
     # Allow DNAT for port forwarding
     counter ct status dnat accept
