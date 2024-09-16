@@ -1,5 +1,9 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v0.3.25
+**Improvements**
+- In the base container, removed xattr for ping, to increase kernel compatibility
+
 ## v0.3.24
 **Improvements**
 - Service healthcheck 
