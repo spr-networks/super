@@ -16,12 +16,14 @@ import {
   Spinner,
   Text,
   View,
-  ButtonText
+  ButtonText,
+  ButtonSpinner
 } from '@gluestack-ui/themed'
 
 //import { FlashList } from '@shopify/flash-list'
 import { WifiIcon } from 'lucide-react-native'
 import { ListItem } from 'components/List'
+import WifiSignal from './WifiSignal'
 
 const WifiScan = (props) => {
   const context = useContext(AlertContext)
@@ -93,7 +95,7 @@ const WifiScan = (props) => {
       : '100%'
 
   return (
-    <View h={h}>
+    <View flex={1}>
       <HStack
         space="md"
         bg="$backgroundCardLight"
@@ -105,33 +107,40 @@ const WifiScan = (props) => {
           <InputSelect options={devsScan} value={iface} onChange={onChange} />
         </Box>
 
-        <Button action="primary" onPress={() => scan(iface)}>
+        <Button action="primary" onPress={() => scan(iface)} disabled={loading}>
           <ButtonText>Scan</ButtonText>
-          <ButtonIcon as={WifiIcon} ml="$1" />
+          {loading ? (
+            <ButtonSpinner ml="$2" />
+          ) : (
+            <ButtonIcon as={WifiIcon} ml="$2" />
+          )}
         </Button>
       </HStack>
 
-      {loading ? (
+      {/*loading ? (
         <HStack
           space="sm"
           bg="$backgroundCardLight"
           sx={{ _dark: { bg: '$backgroundCardDark' } }}
           p="$4"
         >
-          <Spinner accessibilityLabel="Loading logs" />
-          <Text>Loading...</Text>
+          <Spinner accessibilityLabel="Scanning..." />
+          <Text>Scanning...</Text>
         </HStack>
-      ) : null}
+      ) : null*/}
 
       <FlatList
         data={list}
         estimatedItemSize={100}
         renderItem={({ item }) => (
           <ListItem>
-            <VStack flex={2} space="md">
-              <Text bold onPress={(e) => triggerAlert(item)}>
-                {item.ssid}
-              </Text>
+            <VStack flex={2} space="sm">
+              <HStack space="sm" alignItems="center">
+                <WifiSignal signal={item.signal_dbm} size={20} />
+                <Text bold onPress={(e) => triggerAlert(item)} isTruncated>
+                  {item.ssid}
+                </Text>
+              </HStack>
 
               <Text color="$muted400" size="sm">
                 {item.bssid}
@@ -174,6 +183,7 @@ const WifiScan = (props) => {
                 </Text>
                 <Text size="sm">{prettySignal(item.signal_dbm)}</Text>
               </HStack>
+
               <HStack space="sm">
                 <Text
                   sx={{

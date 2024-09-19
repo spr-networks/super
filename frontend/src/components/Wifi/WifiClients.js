@@ -3,25 +3,14 @@ import React, { useContext, useEffect, useState } from 'react'
 import { wifiAPI, meshAPI, deviceAPI } from 'api'
 import APIWifi from 'api/Wifi'
 import { AppContext, AlertContext } from 'AppContext'
-import { prettySignal } from 'utils'
 
-import {
-  Box,
-  FlatList,
-  HStack,
-  VStack,
-  Spinner,
-  Text,
-  Tooltip,
-  TooltipContent,
-  TooltipText
-} from '@gluestack-ui/themed'
+import { Box, FlatList, HStack, VStack, Text } from '@gluestack-ui/themed'
 
 import { ListItem } from 'components/List'
 import { InterfaceItem } from 'components/TagItem'
 import DeviceItem from 'components/Devices/DeviceItem'
-
-//import { FlashList } from '@shopify/flash-list'
+import { Tooltip } from 'components/Tooltip'
+import WifiSignal from './WifiSignal'
 
 const WifiClients = (props) => {
   const [clients, setClients] = useState([])
@@ -134,7 +123,6 @@ const WifiClients = (props) => {
       })
     }
     setSpinner(false)
-
   }
 
   const getWifiSpeedString = (txrate) => {
@@ -166,63 +154,56 @@ const WifiClients = (props) => {
 
   return (
     <VStack>
-    {(spinner &&
-      <Spinner size="small"/>)}
-    <FlatList
-      data={clients}
-      estimatedItemSize={100}
-      renderItem={({ item }) => (
-        <ListItem>
-          <DeviceItem item={item} flex={3} justifyContent="space-between" />
-          <Box
-            sx={{
-              '@base': { display: 'none' },
-              '@md': { display: 'flex', flex: 0.5 }
-            }}
-            alignItems="center"
-          >
-            <InterfaceItem
-              name={item.AP ? `${item.Iface}-${item.AP}` : item.Iface}
-            />
-          </Box>
+      {/*spinner && <Spinner size="small" />*/}
+      <FlatList
+        data={clients}
+        estimatedItemSize={100}
+        renderItem={({ item }) => (
+          <ListItem>
+            <DeviceItem item={item} flex={1} justifyContent="space-between" />
+            <Box
+              sx={{
+                '@base': { display: 'none' },
+                '@md': { display: 'flex', flex: 0.5 }
+              }}
+              alignItems="center"
+            >
+              <InterfaceItem
+                name={item.AP ? `${item.Iface}-${item.AP}` : item.Iface}
+              />
+            </Box>
 
-          <VStack
-            flex={1}
-            space="md"
-            alignItems="flex-end"
-            sx={{ '@md': { flexDirection: 'row' } }}
-          >
-            <HStack space="sm" alignItems="center">
+            <VStack
+              alignItems="flex-end"
+              sx={{
+                '@md': { flexDirection: 'row', gap: '$4', alignItems: 'center' }
+              }}
+            >
+              <HStack space="sm" alignItems="center">
+                {/*<Text color="$muted400" size="sm">
+                  Signal
+                </Text>*/}
+                <WifiSignal
+                  signal={item.Signal}
+                  label={`Signal strength/RSSI: ${item.Signal}`}
+                />
+                <WifiSignal signal={item.Signal} onlyText />
+              </HStack>
+
               <Tooltip
-                h={undefined}
-                placement="bottom"
-                trigger={(triggerProps) => {
-                  return (
-                    <Text size="sm" {...triggerProps}>
-                      {getWifiSpeedString(item.Flags)}
-                    </Text>
-                  )
-                }}
+                label={`VLAN ${item.VLanID}: ${item.Flags}\nTX: ${item.TXRate} RX: ${item.RXRate}`}
               >
-                <TooltipContent>
-                  <TooltipText>VLAN {item.VLanID}: {item.Flags} TX: {item.TXRate} RX: {item.RXRate}</TooltipText>
-                </TooltipContent>
+                <Text size="sm">{getWifiSpeedString(item.Flags)}</Text>
               </Tooltip>
-            </HStack>
-            <HStack space="sm" alignItems="center">
-              <Text color="$muted400" size="sm">
-                Signal
+
+              <Text flexWrap="nowrap" size="sm">
+                {item.Auth}
               </Text>
-              {prettySignal(item.Signal)}
-            </HStack>
-            <Text flexWrap="nowrap" size="sm">
-              {item.Auth}
-            </Text>
-          </VStack>
-        </ListItem>
-      )}
-      keyExtractor={(item) => item.Name}
-    />
+            </VStack>
+          </ListItem>
+        )}
+        keyExtractor={(item) => item.Name}
+      />
     </VStack>
   )
 }
