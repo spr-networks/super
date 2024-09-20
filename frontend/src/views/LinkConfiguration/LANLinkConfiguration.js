@@ -44,6 +44,7 @@ import { Address4 } from 'ip-address'
 
 import { Select } from 'components/Select'
 import { ListHeader, ListItem } from 'components/List'
+import { InterfaceTypeItem } from 'components/TagItem'
 
 const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
   const type = 'config'
@@ -71,7 +72,7 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
       return false
     }
 
-    const macAddressRegex = /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/;
+    const macAddressRegex = /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/
     if (item.MACOverride != '') {
       if (!macAddressRegex.test(item.MACOverride)) {
         context.error('Invalid MAC address')
@@ -99,9 +100,7 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
           <FormControlLabelText>Update Interface</FormControlLabelText>
         </FormControlLabel>
 
-        <Checkbox value={enable}
-          onChange={setEnable}
-          isChecked={enable}>
+        <Checkbox value={enable} onChange={setEnable} isChecked={enable}>
           <CheckboxIndicator mr="$2">
             <CheckboxIcon />
           </CheckboxIndicator>
@@ -138,22 +137,22 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
       </FormControl>
 
       <HStack flex={1} space="md">
-      <FormControl>
-        <Checkbox
-          value={item.MACRandomize}
-          isChecked={item ? item.MACRandomize : false}
-          onChange={(value) => {
-            setItem({ ...item, MACRandomize: value })
-          }}
-        >
-          <CheckboxIndicator mr="$2">
-            <CheckboxIcon />
-          </CheckboxIndicator>
-          <CheckboxLabel>Randomize MAC</CheckboxLabel>
-        </Checkbox>
-      </FormControl>
+        <FormControl>
+          <Checkbox
+            value={item.MACRandomize}
+            isChecked={item ? item.MACRandomize : false}
+            onChange={(value) => {
+              setItem({ ...item, MACRandomize: value })
+            }}
+          >
+            <CheckboxIndicator mr="$2">
+              <CheckboxIcon />
+            </CheckboxIndicator>
+            <CheckboxLabel>Randomize MAC</CheckboxLabel>
+          </Checkbox>
+        </FormControl>
 
-      { item.MACRandomize && (
+        {item.MACRandomize && (
           <FormControl>
             <Checkbox
               value={item.MACCloak}
@@ -168,7 +167,7 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
               <CheckboxLabel>Cloak Common AP Vendor</CheckboxLabel>
             </Checkbox>
           </FormControl>
-      )}
+        )}
       </HStack>
 
       <Button action="primary" onPress={() => doSubmit(item)}>
@@ -181,6 +180,7 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
 const LANLinkInfo = (props) => {
   const context = useContext(AlertContext)
 
+  const [ifaces, setIfaces] = useState([])
   const [interfaces, setInterfaces] = useState({})
   const [linkIPs, setLinkIPs] = useState({})
   const [linkMACs, setLinkMACs] = useState({})
@@ -218,22 +218,7 @@ const LANLinkInfo = (props) => {
     wifiAPI
       .ipAddr()
       .then((ifaces) => {
-        let x = {}
-        let y = {}
-        for (let iface of ifaces) {
-          let ips = []
-          for (let addr_info of iface.addr_info) {
-            if (addr_info.family == 'inet' || addr_info.family == 'inet6') {
-              if (addr_info.scope == 'global') {
-                ips.push(addr_info.local)
-              }
-            }
-          }
-          x[iface.ifname] = ips
-          y[iface.ifname] = iface.address
-        }
-        setLinkIPs(x)
-        setLinkMACs(y)
+        setIfaces(ifaces)
       })
       .catch((err) => context.error('fail ' + err))
 
@@ -252,6 +237,25 @@ const LANLinkInfo = (props) => {
       setSupernets(config.TinyNets)
     })
   }
+
+  useEffect(() => {
+    let x = {}
+    let y = {}
+    for (let iface of ifaces) {
+      let ips = []
+      for (let addr_info of iface.addr_info) {
+        if (addr_info.family == 'inet' || addr_info.family == 'inet6') {
+          if (addr_info.scope == 'global') {
+            ips.push(addr_info.local)
+          }
+        }
+      }
+      x[iface.ifname] = ips
+      y[iface.ifname] = iface.address
+    }
+    setLinkIPs(x)
+    setLinkMACs(y)
+  }, [ifaces])
 
   useEffect(() => {
     calcLinks()
@@ -446,17 +450,22 @@ const LANLinkInfo = (props) => {
               <Text flex={2} size="sm" bold>
                 {item.Interface}
               </Text>
+              <HStack flex={1} space="xs">
+                <InterfaceTypeItem
+                  item={item}
+                  operstate={
+                    ifaces.find((i) => i.ifname == item.Interface)?.operstate
+                  }
+                />
+              </HStack>
               <Text flex={2} size="sm">
                 {linkMACs[item.Interface]}
               </Text>
-              <VStack flex={1} space="sm">
-                <Text size="sm">{item.Type}</Text>
-              </VStack>
               <VStack flex={2} space="sm">
                 {truncateSupernetIps(item.IPs)
                   ? supernets.map((net) => <Text size="sm">{net}</Text>)
                   : item.IPs.map((ip) => (
-                      <Text size="sm" key={ip}>
+                      <Text size="sm" bold key={ip}>
                         {ip}
                       </Text>
                     ))}
@@ -485,7 +494,11 @@ const LANLinkInfo = (props) => {
             </ModalHeader>
             <ModalBody pb="$6">
               {iface && modal == 'config' ? (
-                <LANLinkSetConfig curItem={currentItem} iface={iface} onSubmit={onSubmit} />
+                <LANLinkSetConfig
+                  curItem={currentItem}
+                  iface={iface}
+                  onSubmit={onSubmit}
+                />
               ) : null}
             </ModalBody>
           </ModalContent>
