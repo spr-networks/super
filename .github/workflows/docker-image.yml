@@ -45,6 +45,7 @@ jobs:
         run: echo "event = ${{ github.event_name }}, ref_name = ${{ github.ref_name }}. push main == push to ghcr"
       -
         name: Build and push with bake action
+        id: bake
         uses: docker/bake-action@v5
         with:
           sbom: true
@@ -56,3 +57,9 @@ jobs:
           set: |
             *.platform=linux/amd64,linux/arm64
           push: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
+
+      - name: Echo bake-action outputs
+        run: |
+          echo "Digest: ${{ steps.bake.outputs.digest }}"
+          echo "Metadata: ${{ steps.bake.outputs.metadata }}"
+          echo "Imageid: ${{ steps.bake.outputs.imageid }}"
