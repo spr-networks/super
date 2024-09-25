@@ -56,6 +56,9 @@ jobs:
             dyndns/docker-compose.yml
           set: |
             *.platform=linux/amd64,linux/arm64
+            dyndns*.context=./dyndns
+            wifi_uplink*.context=./wifi_uplink
+            ppp*.context=./ppp
           push: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
 
       - name: Echo bake-action outputs
