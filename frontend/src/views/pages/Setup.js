@@ -935,12 +935,12 @@ const Setup = (props) => {
             </HStack>
           ) : null}
 
-          {'api' in errors ? (
+          {/*'api' in errors ? (
             <HStack space="md" alignSelf="center" alignItems="center">
               <AlertCircle color="$red700" />
               <Text color="$red700">{errors.api}</Text>
             </HStack>
-          ) : null}
+          ) : null*/}
         </>
       </SetupScrollView>
     )
