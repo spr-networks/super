@@ -44,9 +44,15 @@ jobs:
         name: Build and push status
         run: echo "event = ${{ github.event_name }}, ref_name = ${{ github.ref_name }}. push main == push to ghcr"
       -
-        name: Build and push containers
-        run: |
-          cp -R base/template_configs configs
-          ./build_docker_compose.sh \
-            --set "*.platform=linux/amd64,linux/arm64" \
-            `[[ "${{ github.event_name }}" = "workflow_run" && ("${{ github.ref_name }}" = "main")  || ( ! -z $RELEASE_CHANNEL && ("${{ github.event_name }}" = "push")) ]] && echo "--push"` || exit 1
+        name: Build and push with bake action
+        uses: docker/bake-action@v5
+        with:
+          sbom: true
+          files: |
+            docker-compose.yml
+            ppp/docker-compose.yml
+            wifi_uplink/docker-compose.yml
+            dyndns/docker-compose.yml
+          set: |
+            *.platform=linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
