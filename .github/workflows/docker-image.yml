@@ -61,8 +61,27 @@ jobs:
             ppp*.context=./ppp
           push: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
 
-      - name: Echo bake-action outputs
+      - name: Extract image information
+        id: extract_info
         run: |
-          echo "Digest: ${{ steps.bake.outputs.digest }}"
-          echo "Metadata: ${{ steps.bake.outputs.metadata }}"
-          echo "Imageid: ${{ steps.bake.outputs.imageid }}"
+          echo 'IMAGE_INFO<<EOF' >> $GITHUB_OUTPUT
+          echo '${{ steps.bake.outputs.metadata }}' |
+          jq -r 'to_entries[] |
+          select(.key != "buildx.build.warnings") |
+          .value |
+          [.["image.name"] | split(",")[0], .["containerimage.digest"]] |
+          @tsv' >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+
+      # Install the cosign tool
+      # https://github.com/sigstore/cosign-installer
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.6.0
+
+      - name: Sign the images with GitHub OIDC Token
+        if: ${{ (github.event_name == 'push' && github.ref_name == 'main') }}
+        run: |
+          while IFS=$'\t' read -r image_name digest; do
+            echo "Signing $image_name@$digest"
+            cosign cosign sign --yes "${image_name}@${digest}"
+          done <<< "${{ steps.extract_info.outputs.IMAGE_INFO }}"
