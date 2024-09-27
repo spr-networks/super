@@ -69,11 +69,10 @@ jobs:
         run: |
           echo 'IMAGE_INFO<<EOF' >> $GITHUB_OUTPUT
           jq -r 'to_entries[] |
-          select(.key != "buildx.build.warnings") |
-          .value |
-          (.["image.name"] | split(",")[]) as $name |
-          $name + "@" + .["containerimage.digest"]
-          >> $GITHUB_OUTPUT
+            select(.key != "buildx.build.warnings") |
+            .value |
+            (.["image.name"] | split(",")[]) as $name |
+            $name + "@" + .["containerimage.digest"]'
           echo 'EOF' >> $GITHUB_OUTPUT
 
       # Install the cosign tool
