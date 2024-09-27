@@ -66,6 +66,7 @@ jobs:
           push: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
 
       - name: Extract images and digests
+        id: extract_info
         run: |
           echo 'IMAGE_INFO<<EOF' >> $GITHUB_OUTPUT
           jq -r 'to_entries[] |
