@@ -81,6 +81,6 @@ jobs:
         uses: sigstore/cosign-installer@v3.6.0
 
       - name: Sign the images with GitHub OIDC Token
-        if: ${{ (github.event_name == 'push' && github.ref_name == 'main') }}
+        if: ${{ (github.event_name == 'push' && github.ref_name == 'main')  || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
         run: |
           cosign sign --yes "${{ steps.extract_info.outputs.IMAGE_INFO }}"
