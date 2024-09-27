@@ -69,6 +69,7 @@ jobs:
         id: extract_info
         run: |
           echo 'IMAGE_INFO<<EOF' >> $GITHUB_OUTPUT
+	  echo '${{ steps.bake.outputs.metadata }}' |
           jq -r 'to_entries[] |
             select(.key != "buildx.build.warnings") |
             .value |
