@@ -6,12 +6,12 @@ on:
     types:
       - completed
     branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   id-token: write
   attestations: write
   contents: read
-  workflow_dispatch:
 
 jobs:
   build_iso:
