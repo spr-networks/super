@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 )
@@ -109,6 +110,8 @@ func setConfiguration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+
+	config.Provider = strings.Title(config.Provider)
 
 	err = validateConfig(config)
 	if err != nil {
