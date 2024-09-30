@@ -34,6 +34,7 @@ jobs:
         run: sudo xz ./installer/data/spr.img
       - name: Create Release
         id: create_release
+        if: ${{ github.ref_name == 'main' }}
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -46,8 +47,9 @@ jobs:
         uses: actions/attest-build-provenance@v1
         with:
         subject-path: "./installer/data/spr.img.xz"
-        subject-name: "spr.img.xz"
+        subject-name: "spr.img.xz-test"
       - name: Upload Release Asset
+        if: ${{ github.ref_name == 'main' }}
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
         env:

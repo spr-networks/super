@@ -35,6 +35,7 @@ jobs:
       - name: Compress image
         run: xz ./installer/data/spr.img
       - name: Create Release
+        if: ${{ github.ref_name == 'main' }}
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -48,8 +49,9 @@ jobs:
         uses: actions/attest-build-provenance@v1
         with:
         subject-path: "./installer/data/spr.img.xz"
-        subject-name: "clearfog-spr.img.xz"
+        subject-name: "clearfog-spr.img.xz-test"
       - name: Upload Release Asset
+        if: ${{ github.ref_name == 'main' }}
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
         env:
