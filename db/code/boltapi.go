@@ -543,8 +543,12 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 		for k, v := c.Seek(kStart); k != nil && bytes.Compare(k, minKey) >= 0; k, v = c.Prev() {
 			//for k, v := c.Seek(minKey); k != nil && bytes.Compare(k, maxKey) <= 0; k, v = c.Next() {
 			bucketItem := &BucketItem{Key: string(k)}
-			bucketItem.DecodeValue(v)
+			err := bucketItem.DecodeValue(v)
 
+			if err != nil || bucketItem.Value == nil {
+				log.Println(ApiError{ErrBucketItemDecode, err})
+				return nil
+			}
 			jsonMap := bucketItem.Value.(map[string]interface{})
 
 			if _, exists := jsonMap["time"]; !exists {
