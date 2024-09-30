@@ -8,6 +8,11 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  attestations: write
+  contents: read
+
 jobs:
   build_iso:
     runs-on: ubuntu-latest
