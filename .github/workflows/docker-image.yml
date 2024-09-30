@@ -85,4 +85,4 @@ jobs:
       - name: Sign the images with GitHub OIDC Token
         if: ${{ (github.event_name == 'push' && github.ref_name == 'main')  || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
         run: |
-          cosign sign --yes "${{ steps.extract_info.outputs.IMAGE_INFO }}"
+          cosign sign --yes ${{ steps.extract_info.outputs.IMAGE_INFO }}
