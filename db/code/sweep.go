@@ -83,7 +83,7 @@ func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool
 				for k, _ := c.First(); k != nil && deleted < toDelete; k = nextKey {
 					nextKey, _ = c.Next()
 					if err := b.Delete(k); err != nil {
-						log.Println("Failed to delete key: %s", err)
+						log.Printf("Failed to delete key: %s", err)
 						return err
 					}
 
