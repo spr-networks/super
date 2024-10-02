@@ -80,15 +80,6 @@ jobs:
           ] | join(" ")' >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
 
-      - name: Attest Build Provenance
-        if: ${{ (github.event_name == 'push' && github.ref_name == 'main') }}
-        id: attest-latest
-        uses: actions/attest-build-provenance@v1
-        with:
-          subject-name: ghcr.io/spr-networks/container_template
-          subject-digest: ${{ steps.build-and-push.outputs.digest }}
-          push-to-registry: true
-
       # Install the cosign tool
       # https://github.com/sigstore/cosign-installer
       - name: Install Cosign
