@@ -98,7 +98,7 @@ jobs:
 
   attest:
     needs: build-images
-    if: ${{ (github.event_name == 'push' && github.ref_name == 'main') }}
+    if: ${{ (github.event_name == 'push' && github.ref_name == 'main')  || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
