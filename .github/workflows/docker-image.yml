@@ -102,6 +102,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      packages: write
       attestations: write
     needs: build-images
     if: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch' }}
