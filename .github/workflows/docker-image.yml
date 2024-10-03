@@ -112,6 +112,9 @@ jobs:
         image: ${{ fromJSON(needs.build-images.outputs.container_digests) }}
 
     steps:
+      -
+        name: Authenticate to ghcr
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Attest Build Provenance
         uses: actions/attest-build-provenance@v1
         with:
