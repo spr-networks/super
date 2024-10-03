@@ -93,7 +93,7 @@ jobs:
       - name: Prepare Attestation Matrix
         id: container_digests
         run: |
-          matrix=$(echo ${{ steps.extract_info.outputs.IMAGE_INFO }} | jq -R -s -c 'split(" ") | map(split("@") | {name:  (.[0] | split(":")[0]), digest: .[1] | rtrimstr("\n") })')
+          matrix=$(echo ${{ steps.extract_info.outputs.IMAGE_INFO }} | jq -R -s -c 'split(" ") | map(split("@") | {name:  (.[0] | split(":")[0]), digest: .[1] | rtrimstr("\n") }) | group_by(.name) | map(.[0]) ')
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
     outputs:
       container_digests: ${{ steps.container_digests.outputs.matrix}}  
