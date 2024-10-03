@@ -95,9 +95,8 @@ jobs:
         run: |
           matrix=$(echo ${{ steps.extract_info.outputs.IMAGE_INFO }} | jq -R -s -c 'split(" ") | map(split("@") | {name:  (.[0] | split(":")[0]), digest: .[1] | rtrimstr("\n") })')
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
-
-      - name: Check matrix output
-        run: echo "${{ steps.container_digests.outputs.matrix }}"
+    outputs:
+      container_digests: ${{ steps.container_digests.outputs.matrix}}  
 
   attest:
     needs: build-images
@@ -105,7 +104,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image: ${{ fromJSON(needs.build-images.container_digests.outputs.matrix) }}
+        image: ${{ fromJSON(needs.build-images.outputs.container_digests) }}
 
     steps:
       - name: Attest Build Provenance
