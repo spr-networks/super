@@ -91,7 +91,7 @@ jobs:
           cosign sign --yes ${{ steps.extract_info.outputs.IMAGE_INFO }}
 
       - name: Prepare Attestation Matrix
-        id: containter_digests
+        id: container_digests
         run: |
           echo matrix=${{ steps.extract_info.outputs.IMAGE_INFO }} | jq -R -s -c 'split(" ") | map(split("@") | {name:  (.[0] | split(":")[0]), digest: .[1]})' >> $GITHUB_OUTPUT
 
@@ -102,7 +102,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image: ${{fromJson(needs.build-images.outputs.containter_digests.matrix)}}
+        image: ${{fromJson(needs.build-images.outputs.container_digests.matrix)}}
     steps:
       - name: Attest Build Provenance
         uses: actions/attest-build-provenance@v1
