@@ -593,7 +593,7 @@ const WifiChannelParameters = ({
               <CheckboxLabel>Wifi 6 (AX)</CheckboxLabel>
             </Checkbox>
 
-            <Checkbox {...checkboxProps} value={'extrabss'}>
+            <Checkbox {...wpa1CheckboxProps} value={'extrabss'}>
               <CheckboxIndicator mr="$2">
                 <CheckboxIcon />
               </CheckboxIndicator>
