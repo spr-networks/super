@@ -58,6 +58,7 @@ import {
   NetworkIcon,
   WifiIcon
 } from 'lucide-react-native'
+import { InterfaceTypeItem } from 'components/TagItem'
 
 let keymgmts = [
   { value: 'WPA-PSK WPA-PSK-SHA256 SAE', label: 'WPA2/WPA3' },
@@ -72,7 +73,7 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
     Password: '',
     SSID: '',
     KeyMgmt: 'WPA-PSK WPA-PSK-SHA256 SAE',
-    Priority:  '1',
+    Priority: '1',
     BSSID: ''
   })
 
@@ -121,11 +122,14 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
 
     //set interface up and scan
     wifiAPI.ipLinkState(iface, 'up').then(
-      wifiAPI.iwScan(iface).then((scanList) => {
-        setSSIDs(scanList)
-      }).catch((e) => {
-        context.error(e)
-      })
+      wifiAPI
+        .iwScan(iface)
+        .then((scanList) => {
+          setSSIDs(scanList)
+        })
+        .catch((e) => {
+          context.error(e)
+        })
     )
   }
 
@@ -299,7 +303,7 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
       return false
     }
 
-    const macAddressRegex = /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/;
+    const macAddressRegex = /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/
     if (item.MACOverride != '') {
       if (!macAddressRegex.test(item.MACOverride)) {
         context.error('Invalid MAC address')
@@ -371,22 +375,22 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
       </FormControl>
 
       <HStack flex={1} space="md">
-      <FormControl>
-        <Checkbox
-          value={item.MACRandomize}
-          isChecked={item ? item.MACRandomize : false}
-          onChange={(value) => {
-            setItem({ ...item, MACRandomize: value })
-          }}
-        >
-          <CheckboxIndicator mr="$2">
-            <CheckboxIcon />
-          </CheckboxIndicator>
-          <CheckboxLabel>Randomize MAC</CheckboxLabel>
-        </Checkbox>
-      </FormControl>
+        <FormControl>
+          <Checkbox
+            value={item.MACRandomize}
+            isChecked={item ? item.MACRandomize : false}
+            onChange={(value) => {
+              setItem({ ...item, MACRandomize: value })
+            }}
+          >
+            <CheckboxIndicator mr="$2">
+              <CheckboxIcon />
+            </CheckboxIndicator>
+            <CheckboxLabel>Randomize MAC</CheckboxLabel>
+          </Checkbox>
+        </FormControl>
 
-      { item.MACRandomize && (
+        {item.MACRandomize && (
           <FormControl>
             <Checkbox
               value={item.MACCloak}
@@ -401,7 +405,7 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
               <CheckboxLabel>Cloak Common OUI</CheckboxLabel>
             </Checkbox>
           </FormControl>
-      )}
+        )}
       </HStack>
 
       <Button colorScheme="primary" onPress={() => doSubmit(item)}>
@@ -416,10 +420,10 @@ const UplinkSetIP = ({ curItem, iface, onSubmit, ...props }) => {
   const context = useContext(AlertContext)
 
   const [item, setItem] = useState({
-    DisableDHCP: curItem.DisableDHCP ||false,
+    DisableDHCP: curItem.DisableDHCP || false,
     IP: curItem.IP || '',
     Router: curItem.Router || '',
-    VLAN: curItem.VLAN || '',
+    VLAN: curItem.VLAN || ''
   })
 
   const [errors, setErrors] = useState({})
@@ -631,6 +635,7 @@ const UplinkAddPPP = ({ curItem, iface, onSubmit, ...props }) => {
 const UplinkInfo = (props) => {
   const context = useContext(AlertContext)
 
+  const [ifaces, setIfaces] = useState([])
   const [interfaces, setInterfaces] = useState({})
   const [linkIPs, setLinkIPs] = useState({})
   const [linkMACs, setLinkMACs] = useState({})
@@ -645,45 +650,11 @@ const UplinkInfo = (props) => {
 
   const [supernets, setSupernets] = useState([])
 
-  function isLocalIpAddress(ipAddress) {
-    const ipv4Regex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/
-    const ipv6Regex = /([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}/
-
-    const ipv4LocalRanges = [/^127\./]
-
-    const ipv6LocalRanges = [/^fc00:/, /^fd/, /^fe80:/, /^::1$/]
-
-    if (ipv4Regex.test(ipAddress)) {
-      return ipv4LocalRanges.some((range) => range.test(ipAddress))
-    }
-
-    if (ipv6Regex.test(ipAddress)) {
-      return ipv6LocalRanges.some((range) => range.test(ipAddress))
-    }
-
-    throw new Error('The string is not a valid IP address.')
-  }
-
   const fetchInfo = () => {
     wifiAPI
       .ipAddr()
       .then((ifaces) => {
-        let x = {}
-        let y = {}
-        for (let iface of ifaces) {
-          let ips = []
-          for (let addr_info of iface.addr_info) {
-            if (addr_info.family == 'inet' || addr_info.family == 'inet6') {
-              if (addr_info.scope == 'global') {
-                ips.push(addr_info.local)
-              }
-            }
-          }
-          x[iface.ifname] = ips
-          y[iface.ifname] = iface.address
-        }
-        setLinkIPs(x)
-        setLinkMACs(y)
+        setIfaces(ifaces)
       })
       .catch((err) => context.error('fail ' + err))
 
@@ -702,6 +673,25 @@ const UplinkInfo = (props) => {
       setSupernets(config.TinyNets)
     })
   }
+
+  useEffect(() => {
+    let x = {}
+    let y = {}
+    for (let iface of ifaces) {
+      let ips = []
+      for (let addr_info of iface.addr_info) {
+        if (addr_info.family == 'inet' || addr_info.family == 'inet6') {
+          if (addr_info.scope == 'global') {
+            ips.push(addr_info.local)
+          }
+        }
+      }
+      x[iface.ifname] = ips
+      y[iface.ifname] = iface.address
+    }
+    setLinkIPs(x)
+    setLinkMACs(y)
+  }, [ifaces])
 
   useEffect(() => {
     fetchInfo()
@@ -747,7 +737,11 @@ const UplinkInfo = (props) => {
     }
 
     setUplinks(uplinks)
-    setLinks(links)
+    setLinks(
+      links.sort((a, b) => {
+        return a.Interface.length - b.Interface.length
+      })
+    )
   }
 
   const trigger = ({ ...triggerProps }) => (
@@ -839,7 +833,10 @@ const UplinkInfo = (props) => {
   return (
     <ScrollView h={'100%'}>
       <VStack space="md" sx={{ '@md': { maxWidth: '$3/4' } }}>
-        <ListHeader title="Uplink Configuration" />
+        <ListHeader
+          title="Uplink Configuration"
+          info="Interfaces connected to other networks & internet"
+        />
 
         {/* for each uplink, display a pleasant table with the interface name and the ip address*/}
 
@@ -851,25 +848,28 @@ const UplinkInfo = (props) => {
               <Text flex={2} size="sm" bold>
                 {item.Interface}
               </Text>
-              <Text flex={2} size="sm">
+
+              <HStack flex={1} space="xs">
+                <InterfaceTypeItem
+                  item={item}
+                  operstate={
+                    ifaces.find((i) => i.ifname == item.Interface)?.operstate
+                  }
+                />
+              </HStack>
+
+              <Text flex={2} size="sm" color="$muted500">
                 {linkMACs[item.Interface]}
               </Text>
-              <VStack flex={1} space="xs">
-                <Text size="sm">{item.Type}</Text>
-                <Text
-                  size="sm"
-                  sx={{
-                    '@base': { display: 'none' },
-                    '@md': { display: 'flex' }
-                  }}
-                >
-                  {item.Subtype}
-                </Text>
-              </VStack>
 
               <VStack flex={2} space="sm">
                 {item.IPs.map((ip, i) => (
-                  <Text size="sm" key={ip} display={i == 0 ? 'flex' : 'none'}>
+                  <Text
+                    size="sm"
+                    bold
+                    key={ip}
+                    display={i == 0 ? 'flex' : 'none'}
+                  >
                     {ip}
                   </Text>
                 ))}
@@ -877,7 +877,7 @@ const UplinkInfo = (props) => {
 
               <HStack flex={1}>
                 {item.Enabled ? (
-                  <Badge size="sm" action="success" variant="outline">
+                  <Badge size="sm" action="success" variant="solid" size="sm">
                     <BadgeIcon as={CheckIcon} />
                     <BadgeText
                       ml="$1"
@@ -895,7 +895,10 @@ const UplinkInfo = (props) => {
           )}
         />
 
-        <ListHeader title="Other Interfaces" />
+        <ListHeader
+          title="Other Interfaces"
+          info="AP, Clients and other interfaces"
+        />
 
         <FlatList
           data={links}
@@ -905,17 +908,24 @@ const UplinkInfo = (props) => {
               <Text flex={2} size="sm" bold>
                 {item.Interface}
               </Text>
+
+              <HStack flex={1} space="xs">
+                <InterfaceTypeItem
+                  item={item}
+                  operstate={
+                    ifaces.find((i) => i.ifname == item.Interface)?.operstate
+                  }
+                />
+              </HStack>
+
               <Text flex={2} size="sm">
                 {linkMACs[item.Interface]}
-              </Text>
-              <Text flex={1} size="sm">
-                {item.Type}
               </Text>
               <VStack flex={3} space="sm">
                 {truncateSupernetIps(item.IPs)
                   ? supernets.map((net) => <Text size="sm">{net}</Text>)
                   : item.IPs.map((ip) => (
-                      <Text size="sm" key={ip}>
+                      <Text size="sm" bold key={ip}>
                         {ip}
                       </Text>
                     ))}
@@ -947,13 +957,25 @@ const UplinkInfo = (props) => {
                 <UplinkAddWifi iface={iface} onSubmit={onSubmit} />
               ) : null}
               {iface && modal == 'config' ? (
-                <UplinkSetConfig curItem={currentItem} iface={iface} onSubmit={onSubmit} />
+                <UplinkSetConfig
+                  curItem={currentItem}
+                  iface={iface}
+                  onSubmit={onSubmit}
+                />
               ) : null}
               {iface && modal == 'ip' ? (
-                <UplinkSetIP curItem={currentItem} iface={iface} onSubmit={onSubmit} />
+                <UplinkSetIP
+                  curItem={currentItem}
+                  iface={iface}
+                  onSubmit={onSubmit}
+                />
               ) : null}
               {iface && modal == 'ppp' ? (
-                <UplinkAddPPP curItem={currentItem} iface={iface} onSubmit={onSubmit} />
+                <UplinkAddPPP
+                  curItem={currentItem}
+                  iface={iface}
+                  onSubmit={onSubmit}
+                />
               ) : null}
             </ModalBody>
           </ModalContent>

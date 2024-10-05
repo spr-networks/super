@@ -1,7 +1,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { Badge, BadgeIcon, BadgeText, useColorMode } from '@gluestack-ui/themed'
+import {
+  Badge,
+  BadgeIcon,
+  BadgeText,
+  HStack,
+  useColorMode
+} from '@gluestack-ui/themed'
 import {
   CableIcon,
   RouteIcon,
@@ -16,6 +22,8 @@ import {
   ArrowUpFromDot,
   ArrowLeftRight
 } from 'lucide-react-native'
+
+import { Tooltip } from './Tooltip'
 
 const TagItem = React.memo(({ name, size, ...props }) => {
   //TODO - also use + fix tagItem component
@@ -47,7 +55,7 @@ const PolicyItem = React.memo(({ name, size }) => {
     lan: ArrowLeftRight, //NetworkIcon is crammed
     api: RouteIcon,
     lan_upstream: ArrowUpFromDot,
-    disabled: RouteIcon,
+    disabled: RouteIcon
   }
 
   let colorMode = useColorMode()
@@ -58,7 +66,7 @@ const PolicyItem = React.memo(({ name, size }) => {
     wan: colorMode == 'light' ? '$blueGray300' : '$blueGray700',
     api: colorMode == 'light' ? '$blueGray300' : '$blueGray700',
     lan_upstream: colorMode == 'light' ? '$blueGray300' : '$blueGray700',
-    disabled: colorMode == 'light' ? '$blueGray300' : '$blueGray700',
+    disabled: colorMode == 'light' ? '$blueGray300' : '$blueGray700'
   }
 
   let icon = policyIcons[name] || UsersIcon
@@ -106,10 +114,10 @@ const GroupItem = React.memo(({ name, size, ...props }) => {
   )
 })
 
-const InterfaceItem = React.memo(({ name, address, size, ...props }) => {
+const InterfaceItem = React.memo(({ name, address, size, type, ...props }) => {
   if (!name) return <></>
 
-  let isWifi = name?.startsWith('wlan')
+  let isWifi = name?.startsWith('wlan') || type == 'wifi'
   let isOffline = !name?.length
   let colorMode = useColorMode()
 
@@ -160,6 +168,53 @@ const InterfaceItem = React.memo(({ name, address, size, ...props }) => {
   )
 })
 
+const InterfaceTypeItem = ({ item, operstate, ...props }) => {
+  let name = item.Interface.match(/wlan(\d+)\.(\d+)/) ? 'client' : item.Type
+  let type = item.Interface.startsWith('wlan') ? 'wifi' : 'other'
+  let icon = item.Interface.startsWith('wlan') ? WifiIcon : CableIcon
+
+  let label = `state: ${operstate?.toLowerCase()}`
+
+  let action = 'muted'
+  if (operstate == 'UP') {
+    action = 'success'
+  } else if (item.Interface.startsWith('eth') && (operstate = 'DOWN')) {
+    action = 'warning'
+    label = 'Cable not connected'
+  } else if (name == 'client') {
+    action = 'info'
+  }
+
+  return (
+    <Tooltip label={label}>
+      <Badge
+        action={action}
+        variant="solid"
+        size={'sm'}
+        rounded="$lg"
+        {...props}
+      >
+        {icon != PowerIcon ? <BadgeIcon as={icon} mr="$1" /> : null}
+        <BadgeText>{name?.length ? name : 'offline'}</BadgeText>
+      </Badge>
+    </Tooltip>
+  )
+
+  /*
+  //use interfaceitem for same look here
+  return (
+    <HStack space="md">
+      <InterfaceItem
+        name={item.Interface.match(/wlan(\d+)\.(\d+)/) ? 'client' : item.Type}
+        type={item.Interface.startsWith('wlan') ? 'wifi' : 'other'}
+      />
+      <Badge variant="solid" action={operstate == 'UP' ? 'success' : 'warning'}>
+        <BadgeText>{operstate}</BadgeText>
+      </Badge>
+    </HStack>
+  )*/
+}
+
 const ProtocolItem = ({ name, size, ...props }) => {
   return (
     <Badge action="muted" variant="outline" size={size || 'md'} {...props}>
@@ -188,6 +243,10 @@ InterfaceItem.propTypes = {
   size: PropTypes.any
 }
 
+InterfaceTypeItem.propTypes = {
+  item: PropTypes.object.isRequired
+}
+
 ProtocolItem.propTypes = {
   name: PropTypes.string.isRequired,
   size: PropTypes.any
@@ -195,4 +254,11 @@ ProtocolItem.propTypes = {
 
 export default TagItem
 
-export { TagItem, GroupItem, InterfaceItem, ProtocolItem, PolicyItem }
+export {
+  TagItem,
+  GroupItem,
+  InterfaceItem,
+  InterfaceTypeItem,
+  ProtocolItem,
+  PolicyItem
+}

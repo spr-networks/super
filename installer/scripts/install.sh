@@ -85,7 +85,7 @@ mkdir /home/spr
 cd /home/spr
 cp /tmp/setup.sh .
 cp /tmp/run.sh .
-git clone https://github.com/spr-networks/super
+git clone --depth 1 https://github.com/spr-networks/super
 cd /home/spr/super
 cp -R base/template_configs configs
 

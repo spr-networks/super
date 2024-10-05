@@ -75,6 +75,7 @@ const LogList = (props) => {
   const [initializedTimes, setInitializedTimes] = useState(false)
 
   const handleStartDateTimeChange = (value) => {
+    setParams({ ...params, strict: true })
     let newMin = new Date(value)
     if (!isNaN(newMin)) {
       setStartDateTime(newMin)
@@ -94,6 +95,7 @@ const LogList = (props) => {
   }*/
 
   const handleEndDateTimeChange = (value) => {
+    setParams({ ...params, strict: true })
     let newMax = new Date(value)
     if (!isNaN(newMax)) {
       setEndDateTime(newMax)
@@ -249,7 +251,7 @@ const LogList = (props) => {
     // reset dates
     setEndDateTime(new Date())
     setStartDateTime(new Date('2023-01-12T00:00:00Z'))
-    setParams({ ...params, max:endDateTime.toISOString(), min:startDateTime.toISOString()  })
+    setParams({ ...params, max:endDateTime.toISOString(), min:startDateTime.toISOString() })
   }, [filter])
 
   useEffect(() => {

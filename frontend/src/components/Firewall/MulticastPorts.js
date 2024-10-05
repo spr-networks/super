@@ -16,7 +16,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { AlertContext } from 'layouts/Admin'
-
+import { Tooltip } from 'components/Tooltip'
 import { TagIcon } from 'lucide-react-native'
 
 import { firewallAPI } from 'api'
@@ -145,9 +145,11 @@ const MulticastPorts = (props) => {
         }
       ></Tooltip>*/
     return (
-      <Button variant="link" {...triggerProps}>
-        <Icon as={TagIcon} color="$muted600" />
-      </Button>
+      <Tooltip label="Set a tag here and on the target devices, to whitelist interfaces that will receive this multicast service. NOTE: wired downlinks not isolated without VLANs">
+        <Button variant="link" {...triggerProps}>
+          <Icon as={TagIcon} color="$muted600" />
+        </Button>
+      </Tooltip>
     )
   }
 
@@ -189,7 +191,7 @@ const MulticastPorts = (props) => {
             <HStack ml="auto" space="xl">
               <TagMenu
                 items={[...new Set(defaultTags.concat(item?.Tags || []))]}
-                selectedKeys={item?.Tags}
+                selectedKeys={item?.Tags || []}
                 onSelectionChange={(tags) => handleTags(item, tags)}
                 trigger={trigger}
               />

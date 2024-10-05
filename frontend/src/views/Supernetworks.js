@@ -24,7 +24,8 @@ import {
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
 
-import { ListHeader, ListItem } from 'components/List'
+import TabView from 'components/TabView'
+import { ListItem } from 'components/List'
 import Dhcp from 'views/Groups/Dhcp'
 
 const Supernetworks = (props) => {
@@ -32,7 +33,6 @@ const Supernetworks = (props) => {
   const [tinyNets, setTinyNets] = useState([])
   const [leaseTime, setLeaseTime] = useState('')
   const [isUnsaved, setIsUnsaved] = useState(false)
-  const [showDHCPTable, setShowDHCPTable] = useState(false)
 
   const fetchConfig = () => {
     api.get('/subnetConfig').then((config) => {
@@ -80,8 +80,6 @@ const Supernetworks = (props) => {
 
   return (
     <VStack space="md" sx={{ '@md': { w: '$3/4' } }}>
-      <ListHeader title="DHCP Settings" />
-
       <VStack
         space="lg"
         p="$4"
@@ -91,7 +89,10 @@ const Supernetworks = (props) => {
       >
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Subnets to assign device IPs from. Each /24 hosts 64 devices with SPR.</FormControlLabelText>
+            <FormControlLabelText>
+              Subnets to assign device IPs from. Each /24 hosts 64 devices with
+              SPR.
+            </FormControlLabelText>
           </FormControlLabel>
           <FlatList
             borderWidth={0}
@@ -162,27 +163,23 @@ const Supernetworks = (props) => {
             </ButtonText>
           </Button>
         </FormControl>
-
-        <ListHeader title="DHCP Table" >
-          <Button
-            ml="auto"
-            size="sm"
-            action="muted"
-            variant="link"
-            onPress={() => setShowDHCPTable(!showDHCPTable)}
-          >
-            <ButtonText color="$muted500">
-              {showDHCPTable ? 'Hide info' : 'Show info'}
-            </ButtonText>
-            <ButtonIcon as={showDHCPTable ? EyeOffIcon : EyeIcon} ml="$1" />
-          </Button>
-        </ListHeader>
-
-        { showDHCPTable &&
-          <Dhcp/>
-        }
       </VStack>
     </VStack>
   )
 }
-export default Supernetworks
+
+const DHCPTabView = ({ ...props }) => {
+  return (
+    <TabView
+      tabs={[
+        {
+          title: 'DHCP Settings',
+          component: Supernetworks
+        },
+        { title: 'DHCP Table', component: Dhcp }
+      ]}
+    />
+  )
+}
+
+export default DHCPTabView

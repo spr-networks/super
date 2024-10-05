@@ -1,5 +1,19 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.0
+**Improvements**
+- CI has Attestation with cosign, gh attest now for containers & isos
+- Improved Link Settings UI with icons
+- DB API now supports strict min/max and ordering asc/dsc
+
+**Fixes**
+- Fix default service port flush for lan interfaces
+- Fix DB Locking
+
+## v0.3.25
+**Improvements**
+- In the base container, removed xattr for ping, to increase kernel compatibility
+
 ## v0.3.24
 **Improvements**
 - Service healthcheck 

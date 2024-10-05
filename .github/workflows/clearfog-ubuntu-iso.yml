@@ -6,6 +6,12 @@ on:
     types:
       - completed
     branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  attestations: write
+  contents: read
 
 jobs:
   build_iso:
@@ -30,6 +36,7 @@ jobs:
       - name: Compress image
         run: xz ./installer/data/spr.img
       - name: Create Release
+        if: ${{ github.ref_name == 'main' }}
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -38,8 +45,14 @@ jobs:
           release_name: Clearfog Release ${{ env.RELEASE_VERSION_TAG }}
           tag_name: clearfog-${{ env.RELEASE_VERSION_TAG }}
           draft: false
-          prerelease: false
+          prerelease: true
+      - name: Attest ISO Provenance
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: "./installer/data/spr.img.xz"
+          subject-name: "clearfog-spr.img.xz"
       - name: Upload Release Asset
+        if: ${{ github.ref_name == 'main' }}
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
         env:

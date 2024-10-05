@@ -1,10 +1,10 @@
 #!/bin/bash
 apt-get update
 apt-get -y upgrade
-apt-get -y install nftables wireless-regdb conntrack
+apt-get -y install nftables wireless-regdb conntrack 
 
 # install upstream docker
-apt-get -y install ca-certificates curl gnupg
+apt-get -y install ca-certificates curl gnupg 
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg
 chmod a+r /etc/apt/keyrings/docker.gpg
@@ -46,3 +46,6 @@ echo -e "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
 
 #generate self signed certificate
 SKIPPASS="-password pass:1234" ./api/scripts/generate-certificate.sh
+
+cp -R base/template_configs configs
+ ./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml

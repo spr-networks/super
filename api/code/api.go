@@ -1478,6 +1478,9 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		dev.PSKEntry.Type = sourceDevice.PSKEntry.Type
 		dev.PSKEntry.Psk = sourceDevice.PSKEntry.Psk
+		dev.Groups = sourceDevice.Groups
+		dev.Policies = sourceDevice.Policies
+		dev.DeviceTags = sourceDevice.DeviceTags
 	}
 
 	if dev.PSKEntry.Type != "" {

@@ -911,10 +911,10 @@ func addServicePort(port ServicePort) error {
 
 func applyServicePorts(servicePorts []ServicePort) error {
 
-	exec.Command("nft", "flush", "map", "ip", "filter", "lan_tcp_accept").Run()
-	exec.Command("nft", "flush", "map", "ip", "filter", "wan_tcp_accept").Run()
-	exec.Command("nft", "flush", "map", "ip", "filter", "lan_udp_accept").Run()
-	exec.Command("nft", "flush", "map", "ip", "filter", "wan_udp_accept").Run()
+	exec.Command("nft", "flush", "map", "inet", "filter", "lan_tcp_accept").Run()
+	exec.Command("nft", "flush", "map", "inet", "filter", "wan_tcp_accept").Run()
+	exec.Command("nft", "flush", "map", "inet", "filter", "lan_udp_accept").Run()
+	exec.Command("nft", "flush", "map", "inet", "filter", "wan_udp_accept").Run()
 
 	for _, port := range servicePorts {
 		addServicePort(port)

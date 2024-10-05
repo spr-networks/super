@@ -330,8 +330,8 @@ func ListBuckets(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteBucket(w http.ResponseWriter, r *http.Request) {
-	DBPtr.RLock()
-	defer DBPtr.RUnlock()
+	DBPtr.Lock()
+	defer DBPtr.Unlock()
 	bucketName := mux.Vars(r)["name"]
 
 	if err := (*db).Update(func(tx *bolt.Tx) error {
@@ -345,8 +345,8 @@ func DeleteBucket(w http.ResponseWriter, r *http.Request) {
 }
 
 func AddBucket(w http.ResponseWriter, r *http.Request) {
-	DBPtr.RLock()
-	defer DBPtr.RUnlock()
+	DBPtr.Lock()
+	defer DBPtr.Unlock()
 
 	fail := func(cusromErr, origErr error) {
 		log.Println(ApiError{cusromErr, origErr})
@@ -441,6 +441,17 @@ func TimeKey(s string) ([]byte, error) {
 	return key, nil
 }
 
+func keyStrict(s interface{}) []byte {
+	if strTime, ok := s.(string); ok {
+		key, err := TimeKey(strTime)
+
+		if err == nil {
+			return key
+		}
+	}
+	return []byte{}
+}
+
 func keyOrDefault(s interface{}, defaultKey string) []byte {
 	if strTime, ok := s.(string); ok {
 		key, err := TimeKey(strTime)
@@ -496,6 +507,21 @@ func testFilter(JPath string, event interface{}) (bool, error) {
 	return !isEmpty(value), err
 }
 
+func advance(c *bolt.Cursor, descending bool) (key []byte, value []byte) {
+	if descending == true {
+		return c.Prev()
+	}
+	return c.Next()
+}
+
+func checkIter(key []byte, kStop []byte, descending bool) bool {
+	if descending == true {
+		return bytes.Compare(key, kStop) >= 0
+	} else {
+		return bytes.Compare(key, kStop) <= 0
+	}
+}
+
 // array of .values, including time key
 func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 	DBPtr.RLock()
@@ -509,9 +535,27 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 
 	min_q := r.URL.Query().Get("min")
 	max_q := r.URL.Query().Get("max")
-	minKey = keyOrDefault(min_q, time.Now().UTC().Add(-time.Hour*24*365).Format(time.RFC3339Nano))
-	maxKey = keyOrDefault(max_q, time.Now().UTC().Format(time.RFC3339Nano))
+
+	//when using strict, only return between min and max without defaults
+	strict := r.URL.Query().Get("strict")
+	isStrict := strict != ""
+
+	if isStrict {
+		minKey = keyStrict(min_q)
+		maxKey = keyStrict(max_q)
+	} else {
+		minKey = keyOrDefault(min_q, time.Now().UTC().Add(-time.Hour*24*365).Format(time.RFC3339Nano))
+		maxKey = keyOrDefault(max_q, time.Now().UTC().Format(time.RFC3339Nano))
+	}
+
 	filter := r.URL.Query().Get("filter")
+	//asc or dsc order
+	order := r.URL.Query().Get("order")
+
+	isDescending := true
+	if order == "asc" {
+		isDescending = false
+	}
 
 	// default 100, max 1000
 	maxNum := 1000
@@ -535,16 +579,44 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 
 		// seek to last if specified key is not available
 		c := bucket.Cursor()
+
 		kStart, _ := c.Seek(maxKey)
-		if kStart == nil {
+		kStop := minKey
+		if kStart == nil && !isStrict {
+			//seek returns the next available key. for the max key it is possible
+			//theres no other.
 			kStart, _ = c.Last()
+		} else if isStrict {
+			//ensure kStart is < maxKey since Seek returns Next item.
+
+			for bytes.Compare(kStart, maxKey) >= 0 {
+				kStart, _ = c.Prev()
+			}
+
 		}
 
-		for k, v := c.Seek(kStart); k != nil && bytes.Compare(k, minKey) >= 0; k, v = c.Prev() {
-			//for k, v := c.Seek(minKey); k != nil && bytes.Compare(k, maxKey) <= 0; k, v = c.Next() {
-			bucketItem := &BucketItem{Key: string(k)}
-			bucketItem.DecodeValue(v)
+		if !isDescending {
+			kStop = maxKey
+			kStart, _ = c.Seek(minKey)
+			if kStart == nil && !isStrict {
+				//if nothing was after min, non strict mode will attempt to grab the first
+				kStart, _ = c.First()
+			}
+		}
 
+		if kStart == nil || len(kStart) == 0 || len(kStop) == 0 {
+			//start and stop were empty , abort
+			return nil
+		}
+
+		for k, v := c.Seek(kStart); k != nil && checkIter(k, kStop, isDescending); k, v = advance(c, isDescending) {
+			bucketItem := &BucketItem{Key: string(k)}
+			err := bucketItem.DecodeValue(v)
+
+			if err != nil || bucketItem.Value == nil {
+				log.Println(ApiError{ErrBucketItemDecode, err})
+				return nil
+			}
 			jsonMap := bucketItem.Value.(map[string]interface{})
 
 			if _, exists := jsonMap["time"]; !exists {
@@ -628,8 +700,8 @@ func PutItem(bucketName string, jsonData map[string]interface{}) (*BucketItem, e
 }
 
 func AddBucketItem(w http.ResponseWriter, r *http.Request) {
-	DBPtr.RLock()
-	defer DBPtr.RUnlock()
+	DBPtr.Lock()
+	defer DBPtr.Unlock()
 
 	fail := func(cusromErr, origErr error) {
 		log.Println(ApiError{cusromErr, origErr})
@@ -732,8 +804,8 @@ func UpdateBucketItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteBucketItem(w http.ResponseWriter, r *http.Request) {
-	DBPtr.RLock()
-	defer DBPtr.RUnlock()
+	DBPtr.Lock()
+	defer DBPtr.Unlock()
 
 	bucketName := mux.Vars(r)["name"]
 	bucketItemKey := mux.Vars(r)["key"]

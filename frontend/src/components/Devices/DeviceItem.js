@@ -10,7 +10,6 @@ import IconItem from 'components/IconItem'
 
 //TODO make a component of this
 const DeviceItem = React.memo(({ item, show, size, ...props }) => {
-
   const navigate = useNavigate()
 
   //TODO pass in as props. for now some hardcoded for mobile
@@ -58,14 +57,21 @@ const DeviceItem = React.memo(({ item, show, size, ...props }) => {
             '@md': {
               flexDirection: 'row-reverse',
               gap: '$8',
-              alignItems: 'center'
+              alignItems: 'center',
+              justifyContent: 'center'
             }
           }}
         >
           {dShow.includes('RecentIP') ? (
-            <Text size="md">{item?.RecentIP}</Text>
+            <Text size="md" bold>
+              {item?.RecentIP}
+            </Text>
           ) : null}
-          {dShow.includes('MAC') ? <Text size="sm">{item?.MAC}</Text> : null}
+          {dShow.includes('MAC') ? (
+            <Text size="sm" color="$muted500">
+              {item?.MAC}
+            </Text>
+          ) : null}
         </VStack>
       ) : null}
     </HStack>
@@ -75,7 +81,10 @@ const DeviceItem = React.memo(({ item, show, size, ...props }) => {
     return content
   } else {
     return (
-      <Pressable flex={1} onPress={() => navigate(`/admin/devices/${item?.MAC}`)}>
+      <Pressable
+        flex={1}
+        onPress={() => navigate(`/admin/devices/${item?.MAC}`)}
+      >
         {content}
       </Pressable>
     )

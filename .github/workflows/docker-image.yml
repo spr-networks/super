@@ -9,11 +9,17 @@ on:
     branches: [main]
   push:
     branches: [dev]
+  workflow_dispatch:
 
 jobs:
   build-images:
     name: Build images
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
     steps:
       -
         name: Checkout
@@ -44,9 +50,74 @@ jobs:
         name: Build and push status
         run: echo "event = ${{ github.event_name }}, ref_name = ${{ github.ref_name }}. push main == push to ghcr"
       -
-        name: Build and push containers
+        name: Build and push with bake action
+        id: bake
+        uses: docker/bake-action@v5
+        with:
+          sbom: true
+          files: |
+            docker-compose.yml
+            ppp/docker-compose.yml
+            wifi_uplink/docker-compose.yml
+            dyndns/docker-compose.yml
+          set: |
+            *.platform=linux/amd64,linux/arm64
+            dyndns*.context=./dyndns
+            wifi_uplink*.context=./wifi_uplink
+            ppp*.context=./ppp
+          push: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
+
+      - name: Extract images and digests
+        id: extract_info
         run: |
-          cp -R base/template_configs configs
-          ./build_docker_compose.sh \
-            --set "*.platform=linux/amd64,linux/arm64" \
-            `[[ "${{ github.event_name }}" = "workflow_run" && ("${{ github.ref_name }}" = "main")  || ( ! -z $RELEASE_CHANNEL && ("${{ github.event_name }}" = "push")) ]] && echo "--push"` || exit 1
+          echo 'IMAGE_INFO<<EOF' >> $GITHUB_OUTPUT
+          echo '${{ steps.bake.outputs.metadata }}' | \
+          jq -r '[ to_entries[] |
+             select(.key != "buildx.build.warnings") |
+            .value |
+            (.["image.name"] | split(",")[]) as $name |
+            $name + "@" + .["containerimage.digest"]
+          ] | join(" ")' >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+
+      # Install the cosign tool
+      # https://github.com/sigstore/cosign-installer
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.6.0
+
+      - name: Sign the images with GitHub OIDC Token
+        if: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
+        run: |
+          cosign sign --yes ${{ steps.extract_info.outputs.IMAGE_INFO }}
+
+      - name: Prepare Attestation Matrix
+        id: container_digests
+        run: |
+          matrix=$(echo ${{ steps.extract_info.outputs.IMAGE_INFO }} | jq -R -s -c 'split(" ") | map(split("@") | {name:  (.[0] | split(":")[0]), digest: .[1] | rtrimstr("\n") }) | group_by(.name) | map(.[0]) ')
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+    outputs:
+      container_digests: ${{ steps.container_digests.outputs.matrix}}  
+
+  attest:
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+      attestations: write
+    needs: build-images
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.build-images.outputs.container_digests) }}
+
+    steps:
+      -
+        name: Authenticate to ghcr
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Attest Build Provenance
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ matrix.image.name }}
+          subject-digest: ${{ matrix.image.digest }}
+          push-to-registry: true

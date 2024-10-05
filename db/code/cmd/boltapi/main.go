@@ -134,6 +134,7 @@ func handleLogEvent(topic string, value string) {
 	// keep a list of unique events
 	boltapi.LogEvent(topic)
 
+
 	if !shouldLogEvent(topic) {
 		return
 	}
@@ -198,7 +199,9 @@ func main() {
 			}
 			time.Sleep(3 * time.Second)
 		}
-		log.Fatal("failed to establish connection to sprbus")
+		if os.Getenv(TEST_PREFIX) == "" {
+			log.Fatal("failed to establish connection to sprbus")
+		}
 	}()
 
 	log.Println("serving", gSocketPath)
