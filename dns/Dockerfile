@@ -23,8 +23,8 @@ RUN --mount=type=tmpfs,target=/tmpfs \
    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
    go generate && \
    go get github.com/spr-networks/coredns-jsonlog && \
-   go get github.com/spr-networks/coredns-block@rebinding-merge && \
-   go get github.com/spr-networks/coredns-rebinding_protection@rebinding-merge && \
+   go get github.com/spr-networks/coredns-block && \
+   go get github.com/spr-networks/coredns-rebinding_protection && \
    go get github.com/spr-networks/coredns-spr_cache && \
    sed -i 's/metadata:metadata/metadata:metadata\njsonlog:github.com\/spr-networks\/coredns-jsonlog/g' plugin.cfg && \
    sed -i 's/etcd:etcd/etcd:etcd\nblock:github.com\/spr-networks\/coredns-block\nrebinding_protection:github.com\/spr-networks\/coredns-rebinding_protection/g' plugin.cfg && \
