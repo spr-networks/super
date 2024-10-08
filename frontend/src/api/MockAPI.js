@@ -1579,8 +1579,14 @@ export default function MockAPI(props = null) {
       })
 
       this.get('/version', () => {
-        return '"0.3.12"'
+        return '"1.0"'
       })
+
+      this.get('/dockerPS', () => {
+        return "{\"Command\":\"\\\"/bin/sh -c /scripts…\\\"\",\"CreatedAt\":\"2024-10-07 18:31:59 +0000 UTC\",\"ExitCode\":0,\"Health\":\"\",\"ID\":\"a720a74de915\",\"Image\":\"ghcr.io/spr-networks/super_wifid:latest\",\"Labels\":\"org.supernetworks.ci=true,org.supernetworks.version=1.0.0,com.docker.compose.config-hash=4e49328bc88bfe331c914d70a838bfd858fe425dc050e2304790a97c8146cf2b,com.docker.compose.container-number=1,com.docker.compose.oneoff=False,com.docker.compose.project=super,com.docker.compose.replace=da075df406ce9c78f57cdecd96f827d78ce5c765d337ce3e08c469f97a5310d9,com.docker.compose.version=2.29.1,com.docker.compose.depends_on=api:service_started:false,dhcp:service_started:false,multicast_udp_proxy:service_started:false,com.docker.compose.image=sha256:70e6e4accc180149637409c8c41062cb8e51a3dda74e1b2c22c4884a4920cf70,com.docker.compose.project.config_files=/home/spr/super/docker-compose.yml,com.docker.compose.project.working_dir=/home/spr/super,com.docker.compose.service=wifid\",\"LocalVolumes\":\"0\",\"Mounts\":\"/home/spr/supe…,/home/spr/supe…,/home/spr/supe…\",\"Name\":\"superwifid\",\"Names\":\"superwifid\",\"Networks\":\"host\",\"Ports\":\"\",\"Project\":\"super\",\"Publishers\":[],\"RunningFor\":\"26 hours ago\",\"Service\":\"wifid\",\"Size\":\"0B\",\"State\":\"running\",\"Status\":\"Up 26 minutes\"}\n"
+      })
+
+
 
       this.get('/info/hostname', () => {
         return '"ubuntu"'
