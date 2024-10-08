@@ -139,7 +139,6 @@ func isWifiUplinkIfaceEnabled(Name string, interfaces []InterfaceConfig) bool {
 
 func escapeWPAPassword(s string) string {
 	s = strings.Replace(s, `"`, `\"`, -1)
-	s = strings.Replace(s, "\n", `\n`, -1)
 	return s
 }
 
