@@ -1967,7 +1967,8 @@ export default function MockAPI(props = null) {
       this.get('/hostapd/wlan1/status', (schema) => {
         return {
           'ssid[0]': 'TestAP',
-          channel: 36
+          channel: 36,
+          freq: 5180
         }
       })
 
