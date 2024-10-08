@@ -171,7 +171,7 @@ network={
 	psk={{escapeWPAPassword .Password}}
 	{{if .Priority}}priority={{.Priority}}{{end}}
 	{{if .BSSID}}bssid={{.BSSID}}{{end}}
-  key_mgmt={{.KeyMgmt}}
+	key_mgmt={{.KeyMgmt}}
 }
 {{end}}
 {{end}}`)
