@@ -5,6 +5,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -136,6 +137,16 @@ func isWifiUplinkIfaceEnabled(Name string, interfaces []InterfaceConfig) bool {
 	return false
 }
 
+func escapeWPAPassword(s string) string {
+	s = strings.Replace(s, `"`, `\"`, -1)
+	s = strings.Replace(s, "\n", `\n`, -1)
+	return s
+}
+
+func encodeSSID(ssid string) string {
+	return hex.EncodeToString([]byte(ssid))
+}
+
 func writeWPAs(interfaces []InterfaceConfig, config WPASupplicantConfig) error {
 	//assumes lock is held
 
@@ -152,8 +163,8 @@ ctrl_interface=DIR=/var/run/wpa_supplicant_` + wpa.Iface + `
 {{range .Networks}}
 {{if not .Disabled}}
 network={
-	ssid={{printf "%x" .SSID}}
-	psk={{printf "%q" .Password}}
+	ssid={{encodeSSID .SSID}}
+	psk={{escapeWPAPassword .Password}}
 	{{if .Priority}}priority={{.Priority}}{{end}}
 	{{if .BSSID}}bssid={{.BSSID}}{{end}}
   key_mgmt={{.KeyMgmt}}
