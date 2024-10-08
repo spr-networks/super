@@ -139,7 +139,7 @@ func isWifiUplinkIfaceEnabled(Name string, interfaces []InterfaceConfig) bool {
 
 func escapeWPAPassword(s string) string {
 	s = strings.Replace(s, `"`, `\"`, -1)
-	return s
+	return `"` + s + `"`
 }
 
 func encodeSSID(ssid string) string {
