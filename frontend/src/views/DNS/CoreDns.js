@@ -35,6 +35,7 @@ const CoreDns = (props) => {
 
   let presets = {
     '1.1.1.1': 'cloudflare-dns.com',
+    '1.1.1.3': 'cloudflare-dns.com',
     '9.9.9.9': 'dns.quad9.net',
     '8.8.8.8': 'dns.google'
   }
@@ -96,6 +97,7 @@ const CoreDns = (props) => {
 
   let options = [
     { label: 'Cloudflare (1.1.1.1)', value: '1.1.1.1' },
+    { label: 'Cloudflare (1.1.1.3) Family Filter', value: '1.1.1.3' },
     { label: 'Quad9 (9.9.9.9)', value: '9.9.9.9' },
     { label: 'Google (8.8.8.8)', value: '8.8.8.8' }
   ] //[{ label: t, value: { Tag: t } }]
