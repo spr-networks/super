@@ -508,6 +508,11 @@ table inet nat {
   }
 
 
+  map custom_dns_devices {
+      type ipv4_addr : ipv4_addr
+  }
+
+
   map udpfwd {
     type ipv4_addr . inet_service : ipv4_addr . inet_service;
     flags interval;
@@ -565,6 +570,7 @@ table inet nat {
   }
 
   chain DNS_DNAT {
+    ip saddr vmap @custom_dns_devices dnat to :53
     udp dport 53 counter dnat ip to $LANIP:53
     tcp dport 53 counter dnat ip to $LANIP:53
   }
