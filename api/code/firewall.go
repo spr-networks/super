@@ -2605,6 +2605,8 @@ func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
 			log.Println("Unexpected disabled here. Should have aborted earlier")
 		case "lan_upstream":
 			continue //handled in applyPrivateNetworkUpstreamDevice below
+		case "quarantine":
+		case "dns:family":
 		default:
 			log.Println("Unknown policy: " + policy_name)
 		}
