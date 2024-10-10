@@ -1,4 +1,4 @@
-FROM ubuntu:23.04 AS builder
+FROM ubuntu:24.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends nftables iproute2 netcat-traditional inetutils-ping net-tools nano ca-certificates git curl
@@ -23,11 +23,13 @@ RUN --mount=type=tmpfs,target=/tmpfs \
    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
    go generate && \
    go get github.com/spr-networks/coredns-jsonlog && \
-   go get github.com/spr-networks/coredns-block && \
-   go get github.com/spr-networks/coredns-spr_cache && \
-   sed -i 's/metadata:metadata/metadata:metadata\njsonlog:github.com\/spr-networks\/coredns-jsonlog/g' plugin.cfg && \
-   sed -i 's/etcd:etcd/etcd:etcd\nblock:github.com\/spr-networks\/coredns-block\nrebinding_protection:github.com\/spr-networks\/coredns-rebinding_protection/g' plugin.cfg && \
+   go get github.com/spr-networks/coredns-block@policy_tag && \
+   go get github.com/spr-networks/coredns-spr_cache@policy_tag && \
+   go get github.com/spr-networks/coredns-spr_forward && \
+   sed -i 's/metadata:metadata/metadata:metadata\njsonlog:github.com\/spr-networks\/coredns-jsonlog\nblock:github.com\/spr-networks\/coredns-block/g' plugin.cfg && \
+   sed -i 's/etcd:etcd/etcd:etcd\nrebinding_protection:github.com\/spr-networks\/coredns-rebinding_protection/g' plugin.cfg && \
    sed -i 's/cache:cache/cache:github.com\/spr-networks\/coredns-spr_cache/g' plugin.cfg && \
+   sed -i 's/forward:forward/forward:github.com\/spr-networks\/coredns-spr_forward/g' plugin.cfg && \
    go generate && \
    go mod tidy && \
    go build -o /coredns
