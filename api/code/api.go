@@ -912,7 +912,7 @@ func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 	filteredTags := []string{}
 	for _, tag := range tagsResp.Tags {
 		if !strings.HasPrefix(tag, "sha256-") {
-			filteredTags = append(filteredTags, "wut")
+			filteredTags = append(filteredTags, tag)
 		}
 	}
 	tagsResp.Tags = filteredTags
