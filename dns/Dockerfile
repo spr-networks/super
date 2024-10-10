@@ -30,6 +30,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
    sed -i 's/etcd:etcd/etcd:etcd\nrebinding_protection:github.com\/spr-networks\/coredns-rebinding_protection/g' plugin.cfg && \
    sed -i 's/cache:cache/block:github.com\/spr-networks\/coredns-block\ncache:github.com\/spr-networks\/coredns-spr_cache/g' plugin.cfg && \
    sed -i 's/forward:forward/forward:github.com\/spr-networks\/coredns-spr_forward/g' plugin.cfg && \
+   sed -i 's/on:github.com\/coredns\/caddy\/onevent//g' plugin.cfg && \
    go generate && \
    go mod tidy && \
    go build -o /coredns
