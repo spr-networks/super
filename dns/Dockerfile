@@ -6,8 +6,8 @@ RUN mkdir /code
 WORKDIR /code
 
 ARG TARGETARCH
-RUN curl -O https://dl.google.com/go/go1.21.8.linux-${TARGETARCH}.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.21.8.linux-${TARGETARCH}.tar.gz
+RUN curl -O https://dl.google.com/go/go1.23.2.linux-${TARGETARCH}.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.2.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 
 # Use a ram disk for golang src
