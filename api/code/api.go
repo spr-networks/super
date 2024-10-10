@@ -132,7 +132,7 @@ type DeviceEntry struct {
 	DeviceDisabled   bool //tbd deprecate this in favor of only using the policy name.
 }
 
-var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "disabled"}
+var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "disabled", "quarantine", "dns:family"}
 
 var config = APIConfig{}
 
@@ -686,6 +686,10 @@ func dnsSettings(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(config.DNS)
 }
 
+func migrateDNSSettings() {
+	//add fam dns
+}
+
 func saveMulticastJsonLocked(settings MulticastSettings) {
 	file, _ := json.MarshalIndent(settings, "", " ")
 	err := ioutil.WriteFile(MulticastConfigFile, file, 0600)
@@ -868,12 +872,12 @@ func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 	params := url.Values{}
 	params.Set("container", container)
 
-	append := "?" + params.Encode()
+	appended := "?" + params.Encode()
 
 	creds := GitOptions{PlusUser, config.PlusToken, true, false}
 	jsonValue, _ := json.Marshal(creds)
 
-	req, err := http.NewRequest(http.MethodPost, "http://localhost/remote_container_tags"+append, bytes.NewBuffer(jsonValue))
+	req, err := http.NewRequest(http.MethodPost, "http://localhost/remote_container_tags"+appended, bytes.NewBuffer(jsonValue))
 	if err != nil {
 		http.Error(w, fmt.Errorf("failed to make request for tags "+container).Error(), 400)
 		return
@@ -884,7 +888,7 @@ func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := c.Do(req)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to request tags from superd "+append).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to request tags from superd "+appended).Error(), 400)
 		return
 	}
 
@@ -903,6 +907,15 @@ func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Errorf("failed to get tags %s", container+" "+fmt.Sprint(resp.StatusCode)).Error(), 400)
 		return
 	}
+
+	// Filter build provenance tags starting with "sha256-"
+	filteredTags := []string{}
+	for _, tag := range tagsResp.Tags {
+		if !strings.HasPrefix(tag, "sha256-") {
+			filteredTags = append(filteredTags, "wut")
+		}
+	}
+	tagsResp.Tags = filteredTags
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tagsResp.Tags)
@@ -2827,6 +2840,8 @@ func main() {
 	migrateMDNS()
 	//v0.3.7 migration of groups into policies
 	migrateDevicePolicies()
+
+	migrateDNSSettings()
 
 	loadConfig()
 
