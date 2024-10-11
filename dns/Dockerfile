@@ -6,6 +6,8 @@ RUN mkdir /code
 WORKDIR /code
 
 ARG TARGETARCH
+RUN host dl.google.com
+RUN curl https://dl.google.com/robots.txt
 RUN curl -O https://dl.google.com/go/go1.23.2.linux-${TARGETARCH}.tar.gz
 RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.2.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
