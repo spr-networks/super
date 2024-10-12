@@ -2977,6 +2977,24 @@ func updateFirewallSubnets(DNSIP string, TinyNets []string) {
 		return
 	}
 
+	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
+		"ip", "saddr", "@custom_dns_devices", "meta", "l4proto",
+		"udp", "dnat", "to", "ip", "saddr", "map", "@custom_dns_devices:53")
+	_, err = cmd.Output()
+	if err != nil {
+		log.Println("failed to add udp custom_dns_devices", err)
+		return
+	}
+
+	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
+		"ip", "saddr", "@custom_dns_devices", "meta", "l4proto",
+		"tcp", "dnat", "to", "ip", "saddr", "map", "@custom_dns_devices:53")
+	_, err = cmd.Output()
+	if err != nil {
+		log.Println("failed to add tcp custom_dns_devices", err)
+		return
+	}
+
 	//#    $(if [ "$VLANSIF" ]; then echo "counter iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF"; fi)
 	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
 		"udp", "dport", "53", "counter", "dnat", "ip", "to", DNSIP+":53")
