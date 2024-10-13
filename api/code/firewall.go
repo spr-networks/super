@@ -2692,9 +2692,6 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	//3. Update the route interface
 	exec.Command("ip", "route", "flush", routeIP).Run()
 
-	//remove route form conntrack
-	clearConntrackSrcIP(routeIP)
-
 	// no interface set. abort now
 	if new_iface == "" {
 		return
