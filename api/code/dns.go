@@ -12,9 +12,12 @@ import (
 )
 
 type DNSSettings struct {
-	UpstreamTLSHost   string
-	UpstreamIPAddress string
-	TlsDisable        bool
+	UpstreamTLSHost         string
+	UpstreamIPAddress       string
+	UpstreamFamilyIPAddress string
+	UpstreamFamilyTLSHost   string
+	DisableTls              bool
+	DisableFamilyTls        bool
 }
 
 func parseDNSCorefile() DNSSettings {
@@ -25,30 +28,74 @@ func parseDNSCorefile() DNSSettings {
 		fmt.Printf("Error opening file: %v\n", err)
 		return settings
 	}
-	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Printf("error reading file: %v\n", err)
+		return settings
+	}
+	file.Close()
 
 	ipRegex := regexp.MustCompile(`\b(?:[a-zA-Z]+:\/\/)?\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`)
 	serverNameRegex := regexp.MustCompile(`tls_servername\s+([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,})`)
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
+	hasDnsFamilyPolicy := false
+	inDnsFamilyPolicy := false
+
+	for i, line := range lines {
 		if strings.Contains(line, "forward . ") {
+			for index := i; index < len(lines); index++ {
+				if strings.Contains(lines[index], "spr_policy") && strings.Contains(lines[index], "dns:family") {
+					hasDnsFamilyPolicy = true
+					inDnsFamilyPolicy = true
+				}
+				if strings.Contains(lines[index], "}") {
+					break
+				}
+			}
+
 			ipMatch := ipRegex.FindStringSubmatch(line)
 			if len(ipMatch) > 1 {
-				settings.UpstreamIPAddress = ipMatch[1]
+				if inDnsFamilyPolicy {
+					settings.UpstreamFamilyIPAddress = ipMatch[1]
+				} else {
+					settings.UpstreamIPAddress = ipMatch[1]
+				}
 			}
 		}
+
 		if strings.Contains(line, "tls_servername") {
 			serverNameMatch := serverNameRegex.FindStringSubmatch(line)
 			if len(serverNameMatch) > 1 {
-				settings.UpstreamTLSHost = serverNameMatch[1]
+				if inDnsFamilyPolicy {
+					settings.UpstreamFamilyTLSHost = serverNameMatch[1]
+				} else {
+					settings.UpstreamTLSHost = serverNameMatch[1]
+				}
 			}
 		}
+
+		if strings.Contains(line, "}") {
+			inDnsFamilyPolicy = false
+		}
+
 	}
 
 	if settings.UpstreamIPAddress != "" && settings.UpstreamTLSHost == "" {
-		settings.TlsDisable = true
+		settings.DisableTls = true
+	}
+
+	if settings.UpstreamFamilyIPAddress != "" && settings.UpstreamFamilyTLSHost == "" {
+		settings.DisableFamilyTls = true
+	}
+
+	if hasDnsFamilyPolicy == false {
+		settings.UpstreamFamilyTLSHost = "cloudflare-dns.com"
+		settings.UpstreamFamilyIPAddress = "1.1.1.3"
 	}
 
 	return settings
@@ -61,20 +108,55 @@ func updateDNSCorefile(dns DNSSettings) {
 		fmt.Printf("Error opening file: %v\n", err)
 		return
 	}
-	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Printf("error reading file: %v\n", err)
+		return
+	}
+	file.Close()
 
 	ipRegex := regexp.MustCompile(`\b(?:[a-zA-Z]+:\/\/)?\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`)
 	serverNameRegex := regexp.MustCompile(`tls_servername\s+([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,})`)
 
 	var updatedLines []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
+
+	hasDnsFamilyPolicy := false
+	inDnsFamilyPolicy := false
+	lastForward := -1
+
+	for i, line := range lines {
 		if strings.Contains(line, "forward . ") {
-			if dns.TlsDisable == true {
-				line = ipRegex.ReplaceAllString(line, dns.UpstreamIPAddress) // Replace with the new IP
+			lastForward = i
+
+			for index := i; index < len(lines); index++ {
+				if strings.Contains(lines[index], "spr_policy") && strings.Contains(lines[index], "dns:family") {
+					hasDnsFamilyPolicy = true
+					inDnsFamilyPolicy = true
+				}
+				if strings.Contains(lines[index], "}") {
+					break
+				}
+			}
+
+			targetIP := dns.UpstreamIPAddress
+			targetHost := dns.UpstreamTLSHost
+			targetTlsDisabled := dns.DisableTls
+
+			if inDnsFamilyPolicy {
+				targetIP = dns.UpstreamFamilyIPAddress
+				targetHost = dns.UpstreamFamilyTLSHost
+				targetTlsDisabled = dns.DisableFamilyTls
+			}
+
+			if targetTlsDisabled == true {
+				line = ipRegex.ReplaceAllString(line, targetIP) // Replace with the new IP
 			} else {
-				line = ipRegex.ReplaceAllString(line, "tls://"+dns.UpstreamIPAddress) // Replace with the new IP
+				line = ipRegex.ReplaceAllString(line, "tls://"+targetHost) // Replace with the new IP
 			}
 
 			//only pick one for now
@@ -86,14 +168,33 @@ func updateDNSCorefile(dns DNSSettings) {
 			}
 
 		}
-		if !dns.TlsDisable && strings.Contains(line, "tls_servername") {
-			line = serverNameRegex.ReplaceAllString(line, "tls_servername "+dns.UpstreamTLSHost) // Replace with the new server name
+
+		if strings.Contains(line, "}") {
+			inDnsFamilyPolicy = false
+		}
+
+		if inDnsFamilyPolicy {
+			if !dns.DisableFamilyTls && strings.Contains(line, "tls_servername") {
+				line = serverNameRegex.ReplaceAllString(line, "tls_servername "+dns.UpstreamFamilyTLSHost) // Replace with the new server name
+			}
+
+		} else {
+			if !dns.DisableTls && strings.Contains(line, "tls_servername") {
+				line = serverNameRegex.ReplaceAllString(line, "tls_servername "+dns.UpstreamTLSHost) // Replace with the new server name
+			}
 		}
 		updatedLines = append(updatedLines, line)
 	}
-	if err := scanner.Err(); err != nil {
-		fmt.Printf("Error reading file: %v\n", err)
-		return
+
+	if !hasDnsFamilyPolicy && lastForward != -1 {
+		//we did not see a dns:family forwarded. populate one
+		newForwarder := []string{"  forward . tls://" + dns.UpstreamFamilyIPAddress + " {",
+			"    spr_policy dns:family",
+			"    tls_servername " + dns.UpstreamFamilyTLSHost,
+			"    max_concurrent 1000",
+			"}"}
+
+		updatedLines = append(updatedLines[:lastForward], append(newForwarder, updatedLines[lastForward:]...)...)
 	}
 
 	// Write the updated content back to the file
@@ -132,14 +233,14 @@ func dnsSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if settings.TlsDisable == true && settings.UpstreamTLSHost != "" {
+		if settings.DisableTls == true && settings.UpstreamTLSHost != "" {
 			http.Error(w, fmt.Errorf("Unexpected TLS Host when TLS is disabled").Error(), 400)
 			return
 		}
 
 		const dnsPattern = `^(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}\.?)$`
 		dnsRegex := regexp.MustCompile(dnsPattern)
-		if settings.TlsDisable == false && !dnsRegex.MatchString(settings.UpstreamTLSHost) {
+		if settings.DisableTls == false && !dnsRegex.MatchString(settings.UpstreamTLSHost) {
 			http.Error(w, fmt.Errorf("Invalid DNS TLS host name").Error(), 400)
 			return
 		}
@@ -166,5 +267,14 @@ func dnsSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 func migrateDNSSettings() {
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
 	//add fam dns
+	if config.DNS.UpstreamFamilyIPAddress == "" {
+		config.DNS.UpstreamFamilyTLSHost = "cloudflare-dns.com"
+		config.DNS.UpstreamFamilyIPAddress = "1.1.1.3"
+		saveConfigLocked()
+		updateDNSCorefile(config.DNS)
+		callSuperdRestart("", "dns")
+	}
 }
