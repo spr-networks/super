@@ -174,10 +174,10 @@ func updateDNSCorefile(dns DNSSettings) {
 		if strings.Contains(line, "tls_servername") {
 			if inDnsFamilyPolicy && !dns.DisableFamilyTls {
 				line = serverNameRegex.ReplaceAllString(line, "tls_servername "+dns.UpstreamFamilyTLSHost) // Replace with the new server name
-        updatedLines = append(updatedLines, line)
-			     } else if !dns.DisableTls {
+				updatedLines = append(updatedLines, line)
+			} else if !dns.DisableTls {
 				line = serverNameRegex.ReplaceAllString(line, "tls_servername "+dns.UpstreamTLSHost) // Replace with the new server name
-        updatedLines = append(updatedLines, line)
+				updatedLines = append(updatedLines, line)
 			}
 		} else {
 			updatedLines = append(updatedLines, line)
@@ -190,7 +190,7 @@ func updateDNSCorefile(dns DNSSettings) {
 			"    spr_policy dns:family",
 			"    tls_servername " + dns.UpstreamFamilyTLSHost,
 			"    max_concurrent 1000",
-			"}"}
+			"  }"}
 
 		updatedLines = append(updatedLines[:lastForward], append(newForwarder, updatedLines[lastForward:]...)...)
 	}
