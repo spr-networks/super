@@ -79,7 +79,7 @@ func parseDNSCorefile() DNSSettings {
 			}
 		}
 
-		if strings.Contains(line, "}") {
+		if inDnsFamilyPolicy && strings.Contains(line, "}") {
 			inDnsFamilyPolicy = false
 		}
 
@@ -169,7 +169,7 @@ func updateDNSCorefile(dns DNSSettings) {
 
 		}
 
-		if strings.Contains(line, "}") {
+		if inDnsFamilyPolicy && strings.Contains(line, "}") {
 			inDnsFamilyPolicy = false
 		}
 
@@ -269,12 +269,27 @@ func dnsSettings(w http.ResponseWriter, r *http.Request) {
 func migrateDNSSettings() {
 	Configmtx.Lock()
 	defer Configmtx.Unlock()
+	restart := false
+	if config.DNS.UpstreamIPAddress == "" {
+		ret := parseDNSCorefile()
+		if ret.UpstreamIPAddress != "" {
+			config.DNS = ret
+			saveConfigLocked()
+			updateDNSCorefile(config.DNS)
+			restart = true
+		}
+	}
+
 	//add fam dns
 	if config.DNS.UpstreamFamilyIPAddress == "" {
 		config.DNS.UpstreamFamilyTLSHost = "cloudflare-dns.com"
 		config.DNS.UpstreamFamilyIPAddress = "1.1.1.3"
 		saveConfigLocked()
 		updateDNSCorefile(config.DNS)
+		restart = true
+	}
+
+	if restart {
 		callSuperdRestart("", "dns")
 	}
 }
