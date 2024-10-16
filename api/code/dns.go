@@ -40,7 +40,7 @@ func parseDNSCorefile() DNSSettings {
 	}
 	file.Close()
 
-	ipRegex := regexp.MustCompile(`\b(?:[a-zA-Z]+:\/\/)?\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`)
+	ipRegex := regexp.MustCompile(`\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`)
 	serverNameRegex := regexp.MustCompile(`tls_servername\s+([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,})`)
 
 	hasDnsFamilyPolicy := false
@@ -59,11 +59,11 @@ func parseDNSCorefile() DNSSettings {
 			}
 
 			ipMatch := ipRegex.FindStringSubmatch(line)
-			if len(ipMatch) > 1 {
+			if len(ipMatch) >= 1 {
 				if inDnsFamilyPolicy {
-					settings.UpstreamFamilyIPAddress = ipMatch[1]
+					settings.UpstreamFamilyIPAddress = ipMatch[0]
 				} else {
-					settings.UpstreamIPAddress = ipMatch[1]
+					settings.UpstreamIPAddress = ipMatch[0]
 				}
 			}
 		}
@@ -120,7 +120,8 @@ func updateDNSCorefile(dns DNSSettings) {
 	}
 	file.Close()
 
-	ipRegex := regexp.MustCompile(`\b(?:[a-zA-Z]+:\/\/)?\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`)
+	ipRegexTls := regexp.MustCompile(`\b(?:[a-zA-Z]+:\/\/)?\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`)
+	ipRegex := regexp.MustCompile(`\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`)
 	serverNameRegex := regexp.MustCompile(`tls_servername\s+([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,})`)
 
 	var updatedLines []string
@@ -144,27 +145,25 @@ func updateDNSCorefile(dns DNSSettings) {
 			}
 
 			targetIP := dns.UpstreamIPAddress
-			targetHost := dns.UpstreamTLSHost
 			targetTlsDisabled := dns.DisableTls
 
 			if inDnsFamilyPolicy {
 				targetIP = dns.UpstreamFamilyIPAddress
-				targetHost = dns.UpstreamFamilyTLSHost
 				targetTlsDisabled = dns.DisableFamilyTls
+			}
+
+			//only pick one for now
+			matches := ipRegexTls.FindAllStringIndex(line, -1)
+			if len(matches) > 1 {
+				for _, match := range matches[1:] {
+					line = line[:match[0]] + "" + line[match[1]:]
+				}
 			}
 
 			if targetTlsDisabled == true {
 				line = ipRegex.ReplaceAllString(line, targetIP) // Replace with the new IP
 			} else {
-				line = ipRegex.ReplaceAllString(line, "tls://"+targetHost) // Replace with the new IP
-			}
-
-			//only pick one for now
-			matches := ipRegex.FindAllStringIndex(line, -1)
-			if len(matches) > 1 {
-				for _, match := range matches[1:] {
-					line = line[:match[0]] + "" + line[match[1]:]
-				}
+				line = ipRegex.ReplaceAllString(line, "tls://"+targetIP) // Replace with the new IP
 			}
 
 		}
@@ -173,17 +172,15 @@ func updateDNSCorefile(dns DNSSettings) {
 			inDnsFamilyPolicy = false
 		}
 
-		if inDnsFamilyPolicy {
-			if !dns.DisableFamilyTls && strings.Contains(line, "tls_servername") {
+		if strings.Contains(line, "tls_servername") {
+			if inDnsFamilyPolicy && !dns.DisableFamilyTls {
 				line = serverNameRegex.ReplaceAllString(line, "tls_servername "+dns.UpstreamFamilyTLSHost) // Replace with the new server name
-			}
-
-		} else {
-			if !dns.DisableTls && strings.Contains(line, "tls_servername") {
+			} else if !dns.DisableTls {
 				line = serverNameRegex.ReplaceAllString(line, "tls_servername "+dns.UpstreamTLSHost) // Replace with the new server name
 			}
+		} else {
+			updatedLines = append(updatedLines, line)
 		}
-		updatedLines = append(updatedLines, line)
 	}
 
 	if !hasDnsFamilyPolicy && lastForward != -1 {
