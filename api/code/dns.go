@@ -175,8 +175,10 @@ func updateDNSCorefile(dns DNSSettings) {
 		if strings.Contains(line, "tls_servername") {
 			if inDnsFamilyPolicy && !dns.DisableFamilyTls {
 				line = serverNameRegex.ReplaceAllString(line, "tls_servername "+dns.UpstreamFamilyTLSHost) // Replace with the new server name
+        updatedLines = append(updatedLines, line)
 			} else if !dns.DisableTls {
 				line = serverNameRegex.ReplaceAllString(line, "tls_servername "+dns.UpstreamTLSHost) // Replace with the new server name
+        updatedLines = append(updatedLines, line)
 			}
 		} else {
 			updatedLines = append(updatedLines, line)
