@@ -1,5 +1,15 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.0.1
+**Improvements**
+- Emoji support for ssids in wifi uplink, dashboard
+- Policy based DNS Selection for devices, for Family Friendly DNS
+- DNS Blocklists can now categorize logs and optionally block
+**Fixes**
+- Hardens conntrack #375. UDP IP spoofing from LAN address was possible for externally exposed services on SPR
+- #375 also prevents UDP spoofing across VLANs by moving the MAC filter before conntrack
+- Packet_logs sometimes dropped messages with unsupported payload types
+
 ## v1.0
 **Improvements**
 - CI has Attestation with cosign, gh attest now for containers & isos
