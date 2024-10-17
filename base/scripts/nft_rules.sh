@@ -1,8 +1,5 @@
 #!/bin/bash
 
-#TBD:
-#- can F_EST_RELATED be moved past MAC spoof check
-
 # Disable forwarding
 sysctl net.ipv4.ip_forward=0
 
@@ -248,6 +245,7 @@ table inet filter {
 
     # block lan ranges from uplink interfaces
     iifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGINP
+    iifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGINP
 
     # Drop input from the site to site output interfaces. They are only a sink,
     # Not a source that can connect into SPR services
@@ -348,8 +346,9 @@ table inet filter {
     counter ct status dnat accept
 
     # block lan ranges from uplink interfaces
+    # uplinks can not NAT FROM @supernetworks source addresses
     iifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGFWD
-    oifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGFWD
+    # uplinks can not receive @supernewtorks destination addresses
     oifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGFWD
 
     # Verify MAC addresses for LANIF/WIPHYs
