@@ -246,6 +246,10 @@ table inet filter {
     iifname @uplink_interfaces log prefix "wan:in " group 0
     iifname != @uplink_interfaces log prefix "lan:in " group 0
 
+    # block lan ranges from uplink interfaces
+    iifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGINP
+    iifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGINP
+
     # Drop input from the site to site output interfaces. They are only a sink,
     # Not a source that can connect into SPR services
     counter iifname @outbound_sites goto DROPLOGINP
@@ -270,7 +274,6 @@ table inet filter {
     $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WAN_NET" ]]; then echo "counter iifname @uplink_interfaces tcp dport 80, 443 ip saddr != $WAN_NET drop"; fi)
     $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WAN_NET" ]]; then echo "counter iifname @uplink_interfaces udp dport 53, 67 ip saddr != $WAN_NET drop"; fi)
 
-    counter jump F_EST_RELATED
 
     # DHCP Allow rules
     # Wired lan
@@ -283,6 +286,8 @@ table inet filter {
 
     # Prevent MAC Spoofing from LANIF, wired interfaces
     iifname @lan_interfaces jump DROP_MAC_SPOOF
+
+    counter jump F_EST_RELATED
 
     # DNS Allow rules
     # Docker can DNS
@@ -343,6 +348,13 @@ table inet filter {
     # Allow DNAT for port forwarding
     counter ct status dnat accept
 
+    # block lan ranges from uplink interfaces
+    iifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGINP
+    iifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGINP
+
+    # Verify MAC addresses for LANIF/WIPHYs
+    iifname @lan_interfaces jump DROP_MAC_SPOOF
+
     counter jump F_EST_RELATED
 
     # Do not forward from uplink interfaces after dnat
@@ -355,8 +367,6 @@ table inet filter {
     oifname @uplink_interfaces log prefix "wan:out " group 0
     oifname != @uplink_interfaces log prefix "lan:out " group 0
 
-    # Verify MAC addresses for LANIF/WIPHYs
-    iifname @lan_interfaces jump DROP_MAC_SPOOF
 
     # After MAC SPOOF check, but before rfc1918 check
     # These rules allow permits via endpoint verdict maps
@@ -472,11 +482,6 @@ table inet nat {
     $(if [ "$LANIF" ]; then echo "elements = { $LANIF }" ; fi )
   }
 
-  map upstream_supernetworks_drop {
-    type ifname . ipv4_addr : verdict;
-    flags interval;
-  }
-
   map dnat_tcp_ipmap {
     type ipv4_addr . ipv4_addr . inet_service : ipv4_addr;
     flags interval, timeout;
@@ -535,9 +540,6 @@ table inet nat {
 
   chain PREROUTING {
     type nat hook prerouting priority -100; policy accept;
-
-    # DROP supernetwork src ips from uplinks
-    counter iifname . ip saddr vmap @upstream_supernetworks_drop
 
     # Block rules
     counter ip saddr . ip daddr . ip protocol  vmap @block
